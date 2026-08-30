@@ -138,7 +138,7 @@ fun MapCompThm bnf (t1,t2,t3) = bMapCompThm bnf (t1,t2,t3)
 
 (* naturality for argument i of the bundle: the source and target set
    functions are F's i-th, at the two tuples the bundle maps between.  For
-   i = 0 this is Natural, for a parameter it is NaturalP, whose statement
+   i = 0 this is bnfNatural, for a parameter it is bnfNaturalP, whose statement
    also quantifies over the function the recursive argument gets — which
    the parameter's atoms don't depend on. *)
 (* |- setᵢ (map f fs x) = IMAGE fᵢ (setᵢ x), with the function the
@@ -247,7 +247,7 @@ fun bcong bnf (t1,t2) (us,vs) =
       (f, hd gs, x, DISCH hyp (MP th (LIST_CONJ (facts (conjs, parts)))))
     end
 
-(* |- MapCong (bmapOp bnf (t1,t2) fs) (F's set for the recursive
+(* |- bnfMapCong (bmapOp bnf (t1,t2) fs) (F's set for the recursive
    argument): the parameters are treated the same on both sides *)
 fun bMapCongThm bnf (t1,t2) fs =
     let val (f,g,x,th) = bcong bnf (t1,t2) (fs,fs)
@@ -259,7 +259,7 @@ fun bMapCongThm bnf (t1,t2) fs =
 
 fun MapCongThm bnf (t1,t2) = bMapCongThm bnf (t1,t2) (paramIs bnf)
 
-(* |- MapCongP mp1 mp2 stn sbᵢ uᵢ vᵢ, for two bundles that differ in the
+(* |- bnfMapCongP mp1 mp2 stn sbᵢ uᵢ vᵢ, for two bundles that differ in the
    i-th parameter alone *)
 fun bMapCongPThm bnf i (t1,t2) (us,vs) =
     let val (f,g,x,th) = bcong bnf (t1,t2) (us,vs)
@@ -440,7 +440,7 @@ fun initialAlgebra bnf =
                           INST_TYPE [target |-> fpty] init,
                           INST_TYPE [target |-> prodty] init])
         (* IALG_INHABITED and IALG_ind mention the algebra's map and set
-           parameters only inside IALG, so they are pinned by matching
+           parameters only inside bnfIALG, so they are pinned by matching
            that subterm against the algebra just built *)
         val IALG_tm = repeat rator alg
         fun atAlg th =
@@ -492,7 +492,7 @@ fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
                       (#repabs_pseudo_id itype)
         val abs = #term_ABS_t itype and rep = #term_REP_t itype
         val fnty = functorAt bnf newty
-        (* the constructor is NCONS at this instance; defining it that
+        (* the constructor is bnfNCONS at this instance; defining it that
            way rather than as the unfolded lambda is what lets the
            recursion theorem be folded back to mention it *)
         val NCONS_tm = repeat rator (lhs (concl (SPEC_ALL NCONS_def)))

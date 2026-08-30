@@ -46,9 +46,6 @@ src/pred_set/src
 src/datatype/record
 src/datatype
 !src/datatype/theory_tests
-# the BNF datatype package, which Datatype falls back on: before lists,
-# because that is what it defines
-src/datatype/bnf
 src/monad
 src/list/src
 src/quantHeuristics

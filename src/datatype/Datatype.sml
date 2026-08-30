@@ -777,19 +777,16 @@ fun Hol_datatype q =
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Hol_datatype" e)
 
-(* A package that can build specifications this one cannot — one that
-   recurses under another type operator, say — registers itself here,
-   by being loaded.  Nothing is loaded on its account: a session that
-   never mentions such a package never has one. *)
-val fallback : (hol_type quotation -> unit) option ref = ref NONE
-
+(* A specification this construction cannot build — one that recurses
+   under another type operator, say — goes to the BNF package, which
+   takes the fixed point of the functor the specification describes.  A
+   specification neither can build reports this one's failure, which is
+   the message developments know. *)
 fun Datatype q =
     astHol_datatype (ParseDatatype.hparse (type_grammar()) q)
     handle e as HOL_ERR _ =>
-    case !fallback of
-        SOME f => (f q handle HOL_ERR _ =>
-                     render_exn (wrap_exn "Datatype" "Datatype" e))
-      | NONE => render_exn (wrap_exn "Datatype" "Datatype" e)
+    bnfDatatypeLib.bnfDatatype q
+    handle HOL_ERR _ => render_exn (wrap_exn "Datatype" "Datatype" e)
 
 val _ = Parse.temp_set_grammars ambient_grammars
 

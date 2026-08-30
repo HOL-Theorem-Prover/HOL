@@ -1,5 +1,0 @@
-ifdef POLY
-HOLHEAP = ../../num/termination/numheap
-endif
-
-INCLUDES = $(dprot $(HOLDIR)/src/datatype)

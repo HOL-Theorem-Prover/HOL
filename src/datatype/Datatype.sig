@@ -46,9 +46,5 @@ sig
  val Hol_datatype  : hol_type quotation -> unit
  val Datatype : hol_type quotation -> unit
 
- (* A package that builds what this one cannot registers itself here.
-    Datatype tries it when its own construction fails, and reports its
-    own failure when there is none or when that one fails too. *)
- val fallback : (hol_type quotation -> unit) option ref
 
 end

@@ -248,15 +248,4 @@ fun bnfDatatypeInfo q =
 
 fun bnfDatatype q = ignore (bnfDatatypeInfo q)
 
-(* ----------------------------------------------------------------------
-    Loading this library is what puts it behind the old package: a
-    specification the old one cannot build — one that recurses under
-    another type operator, say — is a fixed point over the functor it
-    describes, which is what this one takes.  So a script that names
-    this library in its Libs can write `Datatype: ... End` for either
-    kind, and one that does not is unaffected.
-   ---------------------------------------------------------------------- *)
-
-val () = Datatype.fallback := SOME bnfDatatype
-
 end

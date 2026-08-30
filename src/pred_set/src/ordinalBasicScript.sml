@@ -57,8 +57,8 @@ Theorem ordlt_WF0 = ordlt_WF0
 Theorem ordlt_WF =
   REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0
 
-Overload "<" = ``ordlt``
-Overload "<=" = ``\a b. ~(b < a)``
+Overload "<"[local] = ``ordlt``
+Overload "<="[local] = ``\a b. ~(b < a)``
 
 Theorem ordlt_trichotomy = ordlt_trichotomy
 
@@ -250,7 +250,7 @@ QED
 Definition ordSUC_def:
   ordSUC a = oleast b. a < b
 End
-Overload TC = ``ordSUC``
+Overload TC[local] = ``ordSUC``
 
 Definition fromNat_def:
   (fromNat 0 = oleast a. T) /\
@@ -258,7 +258,15 @@ Definition fromNat_def:
 End
 Theorem fromNat_SUC[simp] = fromNat_def |> CONJUNCT2
 
-val _ = add_numeral_form (#"o", SOME "fromNat")
+(* The numerals — 0o, 1o, and an unsuffixed numeral wherever the type
+   says ordinal — are available here and exported by ordinalTheory
+   rather than by this theory, as the notation above is.  Everything
+   that declares a datatype loads this theory, because the datatype
+   package's construction counts in ordinals, and this theory's notation
+   would otherwise be everybody's: `+` would be ordinal addition, `<`
+   ordinal comparison, `TC` a successor rather than a transitive
+   closure, and a numeral whose type is not pinned an ordinal. *)
+val _ = temp_add_numeral_form (#"o", SOME "fromNat")
 
 (* recursion principles *)
 Theorem restrict_away[local]:
@@ -417,7 +425,7 @@ Theorem omax_preds_SUC[simp]: omax (preds a^+) = SOME a
 Proof metis_tac [preds_omax_SOME_SUC]
 QED
 
-Overload islimit = ``\a:'a ordinal. omax (preds a) = NONE``
+Overload islimit[local] = ``\a:'a ordinal. omax (preds a) = NONE``
 
 Theorem ord_RECURSION:
   !(z:'b) (sf:'a ordinal -> 'b -> 'b) (lf:'a ordinal -> 'b set -> 'b).
@@ -530,7 +538,7 @@ val ordADD_def = new_specification(
                 |> Q.GEN `b`
                 |> CONV_RULE SKOLEM_CONV)
 val _ = export_rewrites ["ordADD_def"]
-Overload "+" = ``ordADD``
+Overload "+"[local] = ``ordADD``
 
 Theorem sup_preds_omax_NONE:
     (omax (preds a) = NONE) <=> (sup (preds a) = a)
@@ -871,7 +879,7 @@ QED
 Definition omega_def:
   omega = sup { fromNat i | T }
 End
-Overload "ω" = ``omega``
+Overload "ω"[local] = ``omega``
 
 Definition csuc_def:
   csuc (a : 'a ordinal) =

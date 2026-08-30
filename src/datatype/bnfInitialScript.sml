@@ -24,6 +24,17 @@ fun rw ths = BasicProvers.SRW_TAC [] ths
 val metis_tac = metisLib.METIS_TAC
 fun SRULE ths th = SIMP_RULE (srw_ss()) ths th
 val qexists = Q.EXISTS_TAC
+
+(* The construction counts in ordinals, whose notation ordinalTheory
+   exports and this theory must not: everything that declares a datatype
+   loads this one.  So the notation is here for these proofs alone. *)
+Overload "<"[local] = “ordlt”
+Overload "<="[local] = “\a b. ~ordlt b a”
+Overload "+"[local] = “ordADD”
+Overload "ω"[local] = “omega”
+Overload islimit[local] = “\a:'a ordinal. omax (preds a) = NONE”
+Overload TC[local] = “ordSUC”   (* which is what writes a successor a⁺ *)
+val _ = temp_add_numeral_form (#"o", SOME "fromNat")
 val op >~ = Q.>~
 val op >>~ = Q.>>~
 
@@ -46,60 +57,60 @@ val op >>~ = Q.>>~
 
 (* the elements of F[α] all of whose α-atoms lie in As *)
 Definition FIN_def:
-  FIN (sta : 'f -> 'a set) As = { a : 'f | sta a ⊆ As }
+  bnfFIN (sta : 'f -> 'a set) As = { a : 'f | sta a ⊆ As }
 End
 
 Theorem IN_FIN[simp]:
-  a ∈ FIN sta As ⇔ sta a ⊆ As
+  a ∈ bnfFIN sta As ⇔ sta a ⊆ As
 Proof
   simp[FIN_def]
 QED
 
 Theorem FIN_UNIV[simp]:
-  FIN sta UNIV = UNIV
+  bnfFIN sta UNIV = UNIV
 Proof
   simp[EXTENSION]
 QED
 
 Definition ALG_def:
-  ALG (sta : 'f -> 'a set) (A, s) ⇔ ∀x. x ∈ FIN sta A ⇒ s x ∈ A
+  bnfALG (sta : 'f -> 'a set) (A, s) ⇔ ∀x. x ∈ bnfFIN sta A ⇒ s x ∈ A
 End
 
 (* the pointwise form: ALG_def's own right-hand side has a leading
    quantifier, which no backward step can match against a goal about one
    element *)
 Theorem ALG_closed:
-  ALG sta (A,s) ∧ sta x ⊆ A ⇒ s x ∈ A
+  bnfALG sta (A,s) ∧ sta x ⊆ A ⇒ s x ∈ A
 Proof
   simp[ALG_def]
 QED
 
 Theorem ALG_UNIV[simp]:
-  ALG sta (UNIV, s)
+  bnfALG sta (UNIV, s)
 Proof
   simp[ALG_def]
 QED
 
 Definition MINSET_def:
-  MINSET (sta : 'f -> 'a set) s = BIGINTER { B | ALG sta (B,s) }
+  bnfMINSET (sta : 'f -> 'a set) s = BIGINTER { B | bnfALG sta (B,s) }
 End
 
 Theorem MINSET_is_ALG[simp]:
-  ALG sta (MINSET sta s, s)
+  bnfALG sta (bnfMINSET sta s, s)
 Proof
   simp[MINSET_def, ALG_def, SUBSET_BIGINTER]
 QED
 
 Theorem IN_MINSET:
-  x ∈ MINSET sta s ⇔ ∀A. ALG sta (A,s) ⇒ x ∈ A
+  x ∈ bnfMINSET sta s ⇔ ∀A. bnfALG sta (A,s) ⇒ x ∈ A
 Proof
   simp[MINSET_def]
 QED
 
 Definition HOM_def:
-  HOM (mp : ('a -> 'b) -> 'f -> 'g) sta stb h (A,s) (B,t) ⇔
-    ALG sta (A,s) ∧ ALG stb (B,t) ∧ (∀a. a ∈ A ⇒ h a ∈ B) ∧
-    ∀af. af ∈ FIN sta A ⇒ t (mp h af) = h (s af)
+  bnfHOM (mp : ('a -> 'b) -> 'f -> 'g) sta stb h (A,s) (B,t) ⇔
+    bnfALG sta (A,s) ∧ bnfALG stb (B,t) ∧ (∀a. a ∈ A ⇒ h a ∈ B) ∧
+    ∀af. af ∈ bnfFIN sta A ⇒ t (mp h af) = h (s af)
 End
 
 (* ----------------------------------------------------------------------
@@ -109,30 +120,30 @@ End
    ---------------------------------------------------------------------- *)
 
 Definition MapId_def:
-  MapId (mp : ('a -> 'a) -> 'f -> 'f) ⇔ ∀x. mp I x = x
+  bnfMapId (mp : ('a -> 'a) -> 'f -> 'f) ⇔ ∀x. mp I x = x
 End
 
 Definition MapComp_def:
-  MapComp (mp_ab : ('a -> 'b) -> 'f -> 'g)
+  bnfMapComp (mp_ab : ('a -> 'b) -> 'f -> 'g)
           (mp_bc : ('b -> 'c) -> 'g -> 'h)
           (mp_ac : ('a -> 'c) -> 'f -> 'h) ⇔
     ∀f g x. mp_bc g (mp_ab f x) = mp_ac (g o f) x
 End
 
 Definition Natural_def:
-  Natural (mp : ('a -> 'b) -> 'f -> 'g) sta stb ⇔
+  bnfNatural (mp : ('a -> 'b) -> 'f -> 'g) sta stb ⇔
     ∀f x. stb (mp f x) = IMAGE f (sta x)
 End
 
 Definition MapCong_def:
-  MapCong (mp : ('a -> 'b) -> 'f -> 'g) sta ⇔
+  bnfMapCong (mp : ('a -> 'b) -> 'f -> 'g) sta ⇔
     ∀f g x. (∀a. a ∈ sta x ⇒ f a = g a) ⇒ mp f x = mp g x
 End
 
-(* MapCong comes first because it fixes both mp and sta, so drule can
+(* bnfMapCong comes first because it fixes both mp and sta, so drule can
    resolve it against an assumption and know what the rest means *)
 Theorem Map_eq_id:
-  MapCong mp sta ∧ MapId mp ⇒
+  bnfMapCong mp sta ∧ bnfMapId mp ⇒
   ∀f x. (∀a. a ∈ sta x ⇒ f a = a) ⇒ mp f x = x
 Proof
   simp[MapId_def, MapCong_def] >> rpt strip_tac >>
@@ -145,15 +156,15 @@ QED
    ---------------------------------------------------------------------- *)
 
 Theorem ALG_nonempty:
-  (∃w:'f. sta w = ∅) ⇒ ALG sta (A, s) ⇒ A ≠ ∅
+  (∃w:'f. sta w = ∅) ⇒ bnfALG sta (A, s) ⇒ A ≠ ∅
 Proof
   rpt strip_tac >> gvs[ALG_def] >> metis_tac[SUBSET_REFL, NOT_IN_EMPTY]
 QED
 
 Theorem HOMs_on_same_domain:
-  MapCong mp sta ⇒
-  HOM mp sta stb h (A,s) (B,t) ∧ (∀a. a ∈ A ⇒ h' a = h a) ⇒
-  HOM mp sta stb h' (A,s) (B,t)
+  bnfMapCong mp sta ⇒
+  bnfHOM mp sta stb h (A,s) (B,t) ∧ (∀a. a ∈ A ⇒ h' a = h a) ⇒
+  bnfHOM mp sta stb h' (A,s) (B,t)
 Proof
   simp[HOM_def, MapCong_def] >> rw[] >>
   ‘s af ∈ A’ by gs[ALG_def] >> simp[] >>
@@ -176,10 +187,10 @@ fun byrule rule pats ttac =
    existential in this order for a use site to name *)
 Theorem HOMs_compose:
   ∀stb mp_ab mp_bc (B:'b set) t.
-    MapComp mp_ab mp_bc mp_ac ∧ Natural mp_ab sta stb ∧
-    HOM mp_ab sta stb f (A:'a set,s) (B,t) ∧
-    HOM mp_bc stb stc g (B,t) (C:'c set,u) ⇒
-    HOM mp_ac sta stc (g o f) (A,s) (C,u)
+    bnfMapComp mp_ab mp_bc mp_ac ∧ bnfNatural mp_ab sta stb ∧
+    bnfHOM mp_ab sta stb f (A:'a set,s) (B,t) ∧
+    bnfHOM mp_bc stb stc g (B,t) (C:'c set,u) ⇒
+    bnfHOM mp_ac sta stc (g o f) (A,s) (C,u)
 Proof
   simp[MapComp_def, Natural_def] >> rpt gen_tac >> strip_tac >>
   gs[HOM_def] >> rw[] >>
@@ -190,14 +201,14 @@ Proof
 QED
 
 Theorem MINSET_ind:
-  ∀P. (∀x. sta x ⊆ MINSET sta s ∧ (∀y. y ∈ sta x ⇒ P y) ⇒ P (s x)) ⇒
-      ∀x. x ∈ MINSET sta s ⇒ P x
+  ∀P. (∀x. sta x ⊆ bnfMINSET sta s ∧ (∀y. y ∈ sta x ⇒ P y) ⇒ P (s x)) ⇒
+      ∀x. x ∈ bnfMINSET sta s ⇒ P x
 Proof
   gen_tac >> strip_tac >>
-  ‘MINSET sta s ⊆ P INTER MINSET sta s’
+  ‘bnfMINSET sta s ⊆ P INTER bnfMINSET sta s’
     suffices_by simp[SUBSET_DEF, IN_DEF] >>
   simp[MINSET_def, SimpL “$SUBSET”] >> irule BIGINTER_SUBSET >>
-  qexists_tac ‘P INTER MINSET sta s’ >>
+  qexists_tac ‘P INTER bnfMINSET sta s’ >>
   simp[ALG_def, SUBSET_DEF] >> rw[]
   >- gs[IN_DEF, SUBSET_DEF] >>
   ntac 2 (last_x_assum (K ALL_TAC)) >>
@@ -205,17 +216,17 @@ Proof
 QED
 
 Theorem MINSET_ind':
-  ∀P. (∀x. (∀y. y ∈ sta x ⇒ y ∈ MINSET sta s ∧ P y) ⇒ P (s x)) ⇒
-      ∀x. x ∈ MINSET sta s ⇒ P x
+  ∀P. (∀x. (∀y. y ∈ sta x ⇒ y ∈ bnfMINSET sta s ∧ P y) ⇒ P (s x)) ⇒
+      ∀x. x ∈ bnfMINSET sta s ⇒ P x
 Proof
   metis_tac[MINSET_ind, SUBSET_DEF]
 QED
 
 Theorem MINSET_unique_homs:
-  MapCong mp sta ∧
-  HOM mp sta stb h1 (MINSET sta s, s) (B,t) ∧
-  HOM mp sta stb h2 (MINSET sta s, s) (B,t) ⇒
-  ∀a. a ∈ MINSET sta s ⇒ h1 a = h2 a
+  bnfMapCong mp sta ∧
+  bnfHOM mp sta stb h1 (bnfMINSET sta s, s) (B,t) ∧
+  bnfHOM mp sta stb h2 (bnfMINSET sta s, s) (B,t) ⇒
+  ∀a. a ∈ bnfMINSET sta s ⇒ h1 a = h2 a
 Proof
   simp[MapCong_def] >> strip_tac >>
   ho_match_mp_tac MINSET_ind' >> gs[HOM_def] >>
@@ -224,27 +235,27 @@ Proof
 QED
 
 Definition SUBALG_def:
-  SUBALG sta (A,s) (B,t) ⇔
-    ALG sta (A,s) ∧ ALG sta (B,t) ∧
-    (∀af. af ∈ FIN sta A ⇒ s af = t af) ∧ A ⊆ B
+  bnfSUBALG sta (A,s) (B,t) ⇔
+    bnfALG sta (A,s) ∧ bnfALG sta (B,t) ∧
+    (∀af. af ∈ bnfFIN sta A ⇒ s af = t af) ∧ A ⊆ B
 End
 
 Theorem SUBALGs_preserve_homs:
-  SUBALG sta A1 A2 ∧ HOM mp sta stb f A2 C ⇒ HOM mp sta stb f A1 C
+  bnfSUBALG sta A1 A2 ∧ bnfHOM mp sta stb f A2 C ⇒ bnfHOM mp sta stb f A1 C
 Proof
   Cases_on ‘A1’ >> Cases_on ‘A2’ >> Cases_on ‘C’ >>
   simp[HOM_def, SUBALG_def] >> metis_tac[SUBSET_DEF]
 QED
 
 Theorem MINSET_SUBALG:
-  ALG sta (A,s) ⇒ SUBALG sta (MINSET sta s, s) (A,s)
+  bnfALG sta (A,s) ⇒ bnfSUBALG sta (bnfMINSET sta s, s) (A,s)
 Proof
   simp[SUBALG_def, MINSET_def] >> strip_tac >>
   irule BIGINTER_SUBSET >> simp[] >> metis_tac[SUBSET_REFL]
 QED
 
 Theorem MINSET_I_HOM:
-  MapId mp ⇒ ALG sta (A,s) ⇒ HOM mp sta sta I (MINSET sta s, s) (A,s)
+  bnfMapId mp ⇒ bnfALG sta (A,s) ⇒ bnfHOM mp sta sta I (bnfMINSET sta s, s) (A,s)
 Proof
   simp[MapId_def] >> rpt strip_tac >> drule MINSET_SUBALG >>
   simp[HOM_def, SUBALG_def, SUBSET_DEF]
@@ -259,48 +270,48 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition MKALG_def:
-  MKALG (sta : 'f -> 'a set) p = if ALG sta p then p else (UNIV, SND p)
+  bnfMKALG (sta : 'f -> 'a set) p = if bnfALG sta p then p else (UNIV, SND p)
 End
 
 Theorem MKALG_ALG[simp]:
-  ALG sta (MKALG sta p)
+  bnfALG sta (bnfMKALG sta p)
 Proof
   rw[MKALG_def] >> Cases_on ‘p’ >> simp[]
 QED
 
 Theorem MKALG_ID:
-  ALG sta p ⇒ MKALG sta p = p
+  bnfALG sta p ⇒ bnfMKALG sta p = p
 Proof
   simp[MKALG_def]
 QED
 
 Definition BIGPROD_def:
-  BIGPROD (mp : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f) sta =
-    ({ ff : ('a set # ('f -> 'a)) -> 'a | ∀i. ff i ∈ FST (MKALG sta i) },
-     λ(fv:'fp) i. SND (MKALG sta i) (mp (λff. ff i) fv))
+  bnfBIGPROD (mp : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f) sta =
+    ({ ff : ('a set # ('f -> 'a)) -> 'a | ∀i. ff i ∈ FST (bnfMKALG sta i) },
+     λ(fv:'fp) i. SND (bnfMKALG sta i) (mp (λff. ff i) fv))
 End
 
 Theorem BIGPROD_ALG[simp]:
-  Natural mp stp sta ⇒ ALG stp (BIGPROD mp sta)
+  bnfNatural mp stp sta ⇒ bnfALG stp (bnfBIGPROD mp sta)
 Proof
   simp[Natural_def] >> strip_tac >>
   simp[BIGPROD_def, ALG_def] >> rpt strip_tac >>
-  Cases_on ‘MKALG sta i’ >> rename [‘MKALG sta i = (A,s)’] >>
-  ‘ALG sta (A,s)’ by metis_tac[MKALG_ALG] >> simp[] >>
+  Cases_on ‘bnfMKALG sta i’ >> rename [‘bnfMKALG sta i = (A,s)’] >>
+  ‘bnfALG sta (A,s)’ by metis_tac[MKALG_ALG] >> simp[] >>
   gs[ALG_def] >> first_assum irule >>
   gs[SUBSET_DEF, PULL_EXISTS] >> metis_tac[FST]
 QED
 
 Theorem BIGPROD_proj:
-  Natural mp stp sta ⇒
-  ALG sta (A,s) ⇒
-  HOM mp stp sta (λff. ff (A,s)) (BIGPROD mp sta) (A,s)
+  bnfNatural mp stp sta ⇒
+  bnfALG sta (A,s) ⇒
+  bnfHOM mp stp sta (λff. ff (A,s)) (bnfBIGPROD mp sta) (A,s)
 Proof
   strip_tac >> strip_tac >> simp[HOM_def, BIGPROD_def] >> rpt strip_tac
   >- metis_tac[BIGPROD_ALG, BIGPROD_def]
-  >- (‘MKALG sta (A,s) = (A,s)’ by metis_tac[MKALG_ID] >>
+  >- (‘bnfMKALG sta (A,s) = (A,s)’ by metis_tac[MKALG_ID] >>
       first_x_assum $ qspec_then ‘(A,s)’ mp_tac >> simp[]) >>
-  ‘MKALG sta (A,s) = (A,s)’ by metis_tac[MKALG_ID] >> simp[]
+  ‘bnfMKALG sta (A,s) = (A,s)’ by metis_tac[MKALG_ID] >> simp[]
 QED
 
 (* ----------------------------------------------------------------------
@@ -309,7 +320,7 @@ QED
    ---------------------------------------------------------------------- *)
 
 val KK_def = new_specification(
-  "KK_def", ["KK"],
+  "KK_def", ["bnfKK"],
   ord_RECURSION |> Q.ISPEC ‘∅ : 'c set’
                 |> Q.SPEC ‘λx r. r ∪ { s(x) | sta x ⊆ r }’
                 |> Q.SPEC ‘λx rs. BIGUNION rs’
@@ -318,7 +329,7 @@ val KK_def = new_specification(
                 |> CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV));
 
 Theorem KK_mono:
-  ∀b a. a < b ⇒ KK sta s a ⊆ KK sta s b
+  ∀b a. a < b ⇒ bnfKK sta s a ⊆ bnfKK sta s b
 Proof
   ho_match_mp_tac simple_ord_induction >>
   simp[KK_def, ordlt_SUC_DISCRETE, DISJ_IMP_THM, FORALL_AND_THM] >>
@@ -330,31 +341,31 @@ Proof
 QED
 
 Theorem KK_mono_LE:
-  ∀a b. a ≤ b ⇒ KK sta s a ⊆ KK sta s b
+  ∀a b. a ≤ b ⇒ bnfKK sta s a ⊆ bnfKK sta s b
 Proof
   metis_tac[SUBSET_REFL, KK_mono, ordle_lteq]
 QED
 
 Theorem KK_SUB_MINSET:
-  ∀a. KK sta s a ⊆ MINSET sta s
+  ∀a. bnfKK sta s a ⊆ bnfMINSET sta s
 Proof
   ho_match_mp_tac simple_ord_induction >> simp[KK_def] >> rw[]
   >- (simp[SUBSET_DEF, PULL_EXISTS] >> rpt strip_tac >>
-      ‘ALG sta (MINSET sta s, s)’ by simp[] >>
+      ‘bnfALG sta (bnfMINSET sta s, s)’ by simp[] >>
       gs[ALG_def, Excl "MINSET_is_ALG"] >>
       metis_tac[SUBSET_DEF]) >>
   simp[SUBSET_DEF, PULL_EXISTS] >> metis_tac[SUBSET_DEF]
 QED
 
 Theorem KK_fixp_is_ALG:
-  { s x | x | sta x ⊆ KK sta s e } = KK sta s e ⇒ ALG sta (KK sta s e, s)
+  { s x | x | sta x ⊆ bnfKK sta s e } = bnfKK sta s e ⇒ bnfALG sta (bnfKK sta s e, s)
 Proof
   rw[ALG_def] >> gs[EXTENSION] >> metis_tac[]
 QED
 
 Theorem KK_sup:
   ords ≼ 𝕌(:num + 'g) ⇒
-  KK sta s (sup ords : 'g ordinal) = BIGUNION (IMAGE (KK sta s) ords)
+  bnfKK sta s (sup ords : 'g ordinal) = BIGUNION (IMAGE (bnfKK sta s) ords)
 Proof
   strip_tac >> Cases_on ‘ords = ∅’ >> simp[KK_def] >>
   Cases_on ‘omax ords’
@@ -375,7 +386,7 @@ Proof
 QED
 
 Theorem KK_preds_subset:
-  BIGUNION (IMAGE (KK sta s) (preds a)) ⊆ KK sta s a
+  BIGUNION (IMAGE (bnfKK sta s) (preds a)) ⊆ bnfKK sta s a
 Proof
   qid_spec_tac ‘a’ >> ho_match_mp_tac simple_ord_induction >>
   rw[]
@@ -385,8 +396,8 @@ Proof
 QED
 
 Theorem KK_thm:
-  KK sta s a = if a = 0 then ∅
-               else BIGUNION (IMAGE (λb. { s fv | fv | sta fv ⊆ KK sta s b})
+  bnfKK sta s a = if a = 0 then ∅
+               else BIGUNION (IMAGE (λb. { s fv | fv | sta fv ⊆ bnfKK sta s b})
                               (preds a))
 Proof
   qid_spec_tac ‘a’ >> ho_match_mp_tac simple_ord_induction >>
@@ -394,17 +405,17 @@ Proof
   >- simp[KK_def]
   >- (simp[preds_nat] >> ‘count 1 = {0}’ by simp[EXTENSION] >>
       simp[KK_def, GSYM ORD_ONE, Excl "ORD_ONE"])
-  >- (qpat_x_assum ‘KK _ _ _ = BIGUNION _’ (assume_tac o SYM) >>
+  >- (qpat_x_assum ‘bnfKK _ _ _ = BIGUNION _’ (assume_tac o SYM) >>
       simp[KK_def, preds_ordSUC, UNION_COMM]) >>
   pop_assum (assume_tac o GSYM) >>
   simp[KK_def] >> irule SUBSET_ANTISYM >> conj_tac >>
   simp[Once SUBSET_DEF, PULL_EXISTS]
-  >- (rpt strip_tac >> rename [‘v ∈ KK sta s b’] >>
+  >- (rpt strip_tac >> rename [‘v ∈ bnfKK sta s b’] >>
       ‘b ≠ 0’ by (strip_tac >> gs[KK_def]) >>
-      ‘KK sta s b = BIGUNION (IMAGE (λb0. { s fv | fv | sta fv ⊆ KK sta s b0})
+      ‘bnfKK sta s b = BIGUNION (IMAGE (λb0. { s fv | fv | sta fv ⊆ bnfKK sta s b0})
                               (preds b))’ by metis_tac[] >>
       gs[PULL_EXISTS] >> metis_tac[ordlt_TRANS]) >>
-  rpt strip_tac >> rename [‘b < a’, ‘sta fv ⊆ KK sta s b’] >>
+  rpt strip_tac >> rename [‘b < a’, ‘sta fv ⊆ bnfKK sta s b’] >>
   qexists_tac ‘b⁺’ >> simp[KK_def] >> metis_tac[islimit_SUC_lt]
 QED
 
@@ -414,19 +425,19 @@ QED
 
 Theorem sucbnd_suffices:
   ω ≤ (bd : 'g ordinal) ∧ (∀x : 'f. sta x ≼ preds bd) ⇒
-  ALG sta (KK sta (s : 'f -> 'a) (csuc bd), s)
+  bnfALG sta (bnfKK sta (s : 'f -> 'a) (csuc bd), s)
 Proof
   strip_tac >>
   ‘INFINITE (preds bd)’ by (simp[FINITE_preds] >> rpt strip_tac >> gvs[]) >>
   irule KK_fixp_is_ALG >> irule SUBSET_ANTISYM >> conj_tac >>
   ONCE_REWRITE_TAC [SUBSET_DEF] >> simp[PULL_EXISTS] >>
   rpt strip_tac
-  >- (rename [‘s fv ∈ KK sta s _’] >>
+  >- (rename [‘s fv ∈ bnfKK sta s _’] >>
       drule_then strip_assume_tac csuc_is_nonzero_limit >>
       simp[KK_def, PULL_EXISTS, lt_csuc] >>
       gs[SUBSET_DEF, KK_def, PULL_EXISTS, lt_csuc] >>
       gs[GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >>
-      rename [‘_ ∈ KK sta s (g _)’, ‘preds (g _) ≼ preds bd’] >>
+      rename [‘_ ∈ bnfKK sta s (g _)’, ‘preds (g _) ≼ preds bd’] >>
       qabbrev_tac ‘B = sup (IMAGE g $ sta fv)’ >>
       ‘IMAGE g $ sta fv ≼ univ(:num + ('g + num -> bool))’
         by (irule IMAGE_cardleq_rwt >>
@@ -440,14 +451,14 @@ Proof
           simp[Abbr‘B’, preds_sup, dclose_BIGUNION] >>
           irule CARD_BIGUNION >>
           simp[IMAGE_cardleq_rwt, PULL_EXISTS]) >>
-      ‘KK sta s B = BIGUNION (IMAGE (KK sta s) (IMAGE g (sta fv)))’
+      ‘bnfKK sta s B = BIGUNION (IMAGE (bnfKK sta s) (IMAGE g (sta fv)))’
         by simp[KK_sup, Abbr‘B’] >> disj2_tac >>
       qexists_tac ‘fv’ >> simp[SUBSET_DEF, PULL_EXISTS] >> metis_tac[]) >>
-  rename [‘v ∈ KK sta s (csuc bd)’] >>
+  rename [‘v ∈ bnfKK sta s (csuc bd)’] >>
   drule_then strip_assume_tac csuc_is_nonzero_limit >>
   gvs[KK_def] >>
-  rename [‘v ∈ KK sta s a’, ‘a < csuc bd’] >>
-  qpat_x_assum ‘v ∈ KK sta s a’ mp_tac >> simp[Once KK_thm] >> rw[] >>
+  rename [‘v ∈ bnfKK sta s a’, ‘a < csuc bd’] >>
+  qpat_x_assum ‘v ∈ bnfKK sta s a’ mp_tac >> simp[Once KK_thm] >> rw[] >>
   gs[] >> qexists_tac ‘fv’ >> simp[] >> irule SUBSET_BIGUNION_SUBSET_I >>
   simp[PULL_EXISTS] >> metis_tac[ordlt_TRANS]
 QED
@@ -456,14 +467,14 @@ QED
    parameterisation makes that explicit where a real functor would have
    made it implicit *)
 Theorem KKbnd_EQ_MINSET:
-  MapId (mp : ('a -> 'a) -> 'f -> 'f) ⇒
+  bnfMapId (mp : ('a -> 'a) -> 'f -> 'f) ⇒
   ω ≤ (bd : 'g ordinal) ∧ (∀x : 'f. (sta : 'f -> 'a set) x ≼ preds bd) ⇒
-  KK sta (s : 'f -> 'a) (csuc bd) = MINSET sta s
+  bnfKK sta (s : 'f -> 'a) (csuc bd) = bnfMINSET sta s
 Proof
   strip_tac >> strip_tac >>
   drule_all_then (qspec_then ‘s’ assume_tac) sucbnd_suffices >>
   irule SUBSET_ANTISYM >> simp[KK_SUB_MINSET] >>
-  ‘HOM mp sta sta I (MINSET sta s, s) (KK sta s (csuc bd), s)’
+  ‘bnfHOM mp sta sta I (bnfMINSET sta s, s) (bnfKK sta s (csuc bd), s)’
     by (irule MINSET_I_HOM >> simp[]) >>
   gs[HOM_def, SUBSET_DEF]
 QED
@@ -474,9 +485,9 @@ QED
    ---------------------------------------------------------------------- *)
 
 Theorem NontrivialBs:
-  Natural (mp : ('c -> 'a) -> 'h -> 'f) stc sta ⇒
+  bnfNatural (mp : ('c -> 'a) -> 'h -> 'f) stc sta ⇒
   (∃x:'h. stc x ≠ ∅) ⇒
-  ∀B:'a set. B ≼ FIN sta B
+  ∀B:'a set. B ≼ bnfFIN sta B
 Proof
   simp[Natural_def] >> strip_tac >> strip_tac >> strip_tac >>
   simp[cardleq_def] >>
@@ -490,16 +501,16 @@ Proof
 QED
 
 Theorem FIN_MONO:
-  s ⊆ t ⇒ (FIN sta s : 'f set) ⊆ FIN sta t
+  s ⊆ t ⇒ (bnfFIN sta s : 'f set) ⊆ bnfFIN sta t
 Proof
   simp[SUBSET_DEF] >> metis_tac[]
 QED
 
 Theorem FIN_cardleq:
-  MapId (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧ MapCong mp_aa sta ∧
-  Natural (mp_ab : ('a -> 'b) -> 'f -> 'g) sta stb ∧
-  MapComp mp_ab (mp_ba : ('b -> 'a) -> 'g -> 'f) mp_aa ⇒
-  s ≼ t ⇒ (FIN sta s : 'f set) ≼ (FIN stb t : 'g set)
+  bnfMapId (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧ bnfMapCong mp_aa sta ∧
+  bnfNatural (mp_ab : ('a -> 'b) -> 'f -> 'g) sta stb ∧
+  bnfMapComp mp_ab (mp_ba : ('b -> 'a) -> 'g -> 'f) mp_aa ⇒
+  s ≼ t ⇒ (bnfFIN sta s : 'f set) ≼ (bnfFIN stb t : 'g set)
 Proof
   strip_tac >>
   drule_then (drule_then assume_tac) Map_eq_id >>
@@ -527,7 +538,7 @@ QED
     Isabelle/HOL", ITP 2014.
    ---------------------------------------------------------------------- *)
 
-Overload "𝟙" = “{()}”
+Overload "𝟙"[local] = “{()}”
 
 (* CARDEQ_IMP_CARDLEQ and cardleq_INFINITE duplicate cardinalTheory's
    CARDEQ_SUBSET_CARDLEQ and CARD_LE_INFINITE, which this theory already
@@ -553,31 +564,31 @@ Proof
 QED
 
 Theorem CBDb:
-  Natural (mp_a2o : ('a -> 'g ordinal) -> 'f -> 'fo) sta sto ∧
-  Natural (mp_o2a : ('g ordinal -> 'a) -> 'fo -> 'f) sto sta ∧
-  MapComp mp_a2o mp_o2a (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧
-  MapId mp_aa ∧ MapCong mp_aa sta ∧
-  (∀C : 'g ordinal set. C ≼ FIN sto C) ⇒
+  bnfNatural (mp_a2o : ('a -> 'g ordinal) -> 'f -> 'fo) sta sto ∧
+  bnfNatural (mp_o2a : ('g ordinal -> 'a) -> 'fo -> 'f) sto sta ∧
+  bnfMapComp mp_a2o mp_o2a (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧
+  bnfMapId mp_aa ∧ bnfMapCong mp_aa sta ∧
+  (∀C : 'g ordinal set. C ≼ bnfFIN sto C) ⇒
   ω ≤ (bd : 'g ordinal) ∧ (∀x:'f. sta x ≼ preds bd) ⇒
   ∀B:'a set. 𝟚 ≼ B ⇒
-             (FIN sta B : 'f set) ≼ B ** cardSUC (FIN sto (preds bd))
+             (bnfFIN sta B : 'f set) ≼ B ** cardSUC (bnfFIN sto (preds bd))
 Proof
   strip_tac >>
   drule_then (drule_then assume_tac) Map_eq_id >>
   rpt strip_tac >>
-  qabbrev_tac ‘kA = (FIN sto (preds bd) : 'fo set) CROSS (B ** preds bd)’ >>
+  qabbrev_tac ‘kA = (bnfFIN sto (preds bd) : 'fo set) CROSS (B ** preds bd)’ >>
   qmatch_abbrev_tac ‘_ ≼ B ** k’ >>
   ‘kA ≼ B ** k’
     by (simp[Abbr‘k’, Abbr‘kA’] >> irule CARD_MUL2_ABSORB_LE >>
         simp[] >> rpt strip_tac >~
         [‘𝟚 ≼ B’, ‘B ≼ 𝟙’] >- (drule_all cardleq_TRANS >> simp[]) >~
-        [‘INFINITE (FIN sto (preds bd))’]
+        [‘INFINITE (bnfFIN sto (preds bd))’]
         >- (disj2_tac >>
             irule (ISPEC “preds (bd:'g ordinal)” cardleq_INFINITE) >>
             qexists_tac ‘bd’ >> conj_tac
             >- (simp[FINITE_preds] >> rpt strip_tac >> gvs[]) >>
             simp[]) >~
-        [‘FIN sto (preds bd) ≼ B ** cardSUC _’]
+        [‘bnfFIN sto (preds bd) ≼ B ** cardSUC _’]
         >- (resolve_then (Pos last) irule CARD_LE_EXP cardleq_TRANS >>
             simp[]) >>
         irule set_exp_cardle_cong >> simp[] >> rpt strip_tac >>
@@ -619,9 +630,9 @@ Proof
 QED
 
 Theorem preds_bd_lemma:
-  (∀C : 'g ordinal set. C ≼ FIN sto C) ⇒
+  (∀C : 'g ordinal set. C ≼ bnfFIN sto C) ⇒
   preds (bd:'g ordinal) ≼
-  preds (oleast a:'fo ordinal. preds a ≈ (FIN sto (preds bd) : 'fo set))
+  preds (oleast a:'fo ordinal. preds a ≈ (bnfFIN sto (preds bd) : 'fo set))
 Proof
   strip_tac >> first_x_assum (qspec_then ‘preds bd’ assume_tac) >>
   pop_assum mp_tac >>
@@ -672,13 +683,13 @@ QED
    FIN_cardleq and CBDb at the instances it uses, so the driver chains
    the lemmas rather than re-supplying their hypotheses here. *)
 Theorem ALG_cardinality_bound:
-  (∀C : 'g ordinal set. C ≼ FIN sto C) ∧
+  (∀C : 'g ordinal set. C ≼ bnfFIN sto C) ∧
   (∀u:'a set. ∀v:('a + bool) set.
-     u ≼ v ⇒ (FIN sta u : 'f set) ≼ (FIN stab v : 'fab set)) ∧
+     u ≼ v ⇒ (bnfFIN sta u : 'f set) ≼ (bnfFIN stab v : 'fab set)) ∧
   (∀B : ('a + bool) set.
-     𝟚 ≼ B ⇒ (FIN stab B : 'fab set) ≼ B ** cardSUC (FIN sto (preds bd))) ⇒
+     𝟚 ≼ B ⇒ (bnfFIN stab B : 'fab set) ≼ B ** cardSUC (bnfFIN sto (preds bd))) ⇒
   ω ≤ (bd : 'g ordinal) ⇒
-  KK sta (s : 'f -> 'a) (csuc bd) ≼ 𝟚 ** cardSUC (FIN sto (preds bd))
+  bnfKK sta (s : 'f -> 'a) (csuc bd) ≼ 𝟚 ** cardSUC (bnfFIN sto (preds bd))
 Proof
   strip_tac >> strip_tac >>
   qmatch_abbrev_tac ‘_ ≼ 𝟚 ** BD’ >>
@@ -689,8 +700,8 @@ Proof
         >- (simp[FINITE_preds] >> rpt strip_tac >> gvs[]) >>
         simp[]) >>
   ‘BD ≠ ∅’ by (rpt strip_tac >> gs[]) >>
-  qpat_assum ‘∀C. _ ≼ FIN sto _’ (assume_tac o MATCH_MP preds_bd_lemma) >>
-  ‘∀i. i < csuc bd ⇒ KK sta s i ≼ 𝟚 ** BD’
+  qpat_assum ‘∀C. _ ≼ bnfFIN sto _’ (assume_tac o MATCH_MP preds_bd_lemma) >>
+  ‘∀i. i < csuc bd ⇒ bnfKK sta s i ≼ 𝟚 ** BD’
     suffices_by (strip_tac >> simp[KK_def, csuc_is_nonzero_limit] >>
                  irule CARD_BIGUNION >> simp[PULL_EXISTS] >>
                  irule IMAGE_cardleq_rwt >>
@@ -714,13 +725,13 @@ Proof
       simp[Abbr‘BD’] >>
       drule_all_then MATCH_ACCEPT_TAC preds_cardSUC_cardleq) >>
   qx_gen_tac ‘j’ >> strip_tac >>
-  ‘{ s fv | fv | sta fv ⊆ KK sta s j} = IMAGE s (FIN sta (KK sta s j))’
+  ‘{ s fv | fv | sta fv ⊆ bnfKK sta s j} = IMAGE s (bnfFIN sta (bnfKK sta s j))’
     by simp[EXTENSION] >> simp[] >>
   irule IMAGE_cardleq_rwt >>
-  ‘(FIN sta (KK sta s j) : 'f set) ≼ (FIN stab (KK sta s j +_c 𝟚) : 'fab set)’
+  ‘(bnfFIN sta (bnfKK sta s j) : 'f set) ≼ (bnfFIN stab (bnfKK sta s j +_c 𝟚) : 'fab set)’
     by (first_x_assum irule >> simp[CARD_LE_ADDR]) >>
   pop_assum (C (resolve_then (Pos hd) irule) cardleq_TRANS) >>
-  first_x_assum (qspec_then ‘KK sta s j +_c 𝟚’ mp_tac) >>
+  first_x_assum (qspec_then ‘bnfKK sta s j +_c 𝟚’ mp_tac) >>
   impl_tac >- simp[CARD_LE_ADDL] >>
   disch_then $ C (resolve_then (Pos hd) irule) cardleq_TRANS >>
   first_x_assum $ qspec_then ‘j’ mp_tac >> simp[] >>
@@ -758,13 +769,13 @@ QED
    leaving them to be guessed *)
 Theorem copy_alg_back:
   ∀(mp_aa : ('a -> 'a) -> 'f -> 'f) (B : 'b set).
-    Natural (mp_ba : ('b -> 'a) -> 'g -> 'f) stb sta ∧
-    Natural (mp_ab : ('a -> 'b) -> 'f -> 'g) sta stb ∧
-    MapComp mp_ab mp_ba mp_aa ∧ MapId mp_aa ∧ MapCong mp_aa sta ∧
-    (A:'a set) ≼ B ∧ ALG sta (A, s : 'f -> 'a) ⇒
+    bnfNatural (mp_ba : ('b -> 'a) -> 'g -> 'f) stb sta ∧
+    bnfNatural (mp_ab : ('a -> 'b) -> 'f -> 'g) sta stb ∧
+    bnfMapComp mp_ab mp_ba mp_aa ∧ bnfMapId mp_aa ∧ bnfMapCong mp_aa sta ∧
+    (A:'a set) ≼ B ∧ bnfALG sta (A, s : 'f -> 'a) ⇒
     ∃(B0:'b set) (s' : 'g -> 'b) h j.
-      HOM mp_ba stb sta h (B0,s') (A,s) ∧
-      HOM mp_ab sta stb j (A,s) (B0,s') ∧
+      bnfHOM mp_ba stb sta h (B0,s') (A,s) ∧
+      bnfHOM mp_ab sta stb j (A,s) (B0,s') ∧
       (∀a. a ∈ A ⇒ h (j a) = a) ∧ (∀b. b ∈ B0 ⇒ j (h b) = b)
 Proof
   rpt gen_tac >> simp[cardleq_def] >> strip_tac >>
@@ -774,7 +785,7 @@ Proof
                 ‘LINV h0 A’, ‘h0’] >>
   csimp[HOM_def, PULL_EXISTS] >>
   drule_then assume_tac LINV_DEF >> gs[Natural_def] >> rw[] >~
-  [‘ALG stb (IMAGE h0 A, _)’]
+  [‘bnfALG stb (IMAGE h0 A, _)’]
   >- (gs[ALG_def, SUBSET_DEF] >> rw[] >>
       irule_at Any EQ_REFL >> first_assum irule >>
       simp[PULL_EXISTS] >> rw[] >> first_assum drule >>
@@ -824,43 +835,43 @@ Proof
 QED
 
 Theorem MINSET_CARDLEQ:
-  MapId (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧ MapCong mp_aa sta ∧
-  Natural (mp_ab : ('a -> 'a + bool) -> 'f -> 'fab) sta stab ∧
-  MapComp mp_ab (mp_ba : ('a + bool -> 'a) -> 'fab -> 'f) mp_aa ∧
-  MapId (mp_bb : ('a + bool -> 'a + bool) -> 'fab -> 'fab) ∧
-  MapCong mp_bb stab ∧
-  Natural (mp_bo : ('a + bool -> 'g ordinal) -> 'fab -> 'fo) stab sto ∧
-  Natural (mp_ob : ('g ordinal -> 'a + bool) -> 'fo -> 'fab) sto stab ∧
-  MapComp mp_bo mp_ob mp_bb ∧
-  Natural (mp_oo : ('g ordinal -> 'g ordinal) -> 'fo -> 'fo) sto sto ∧
+  bnfMapId (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧ bnfMapCong mp_aa sta ∧
+  bnfNatural (mp_ab : ('a -> 'a + bool) -> 'f -> 'fab) sta stab ∧
+  bnfMapComp mp_ab (mp_ba : ('a + bool -> 'a) -> 'fab -> 'f) mp_aa ∧
+  bnfMapId (mp_bb : ('a + bool -> 'a + bool) -> 'fab -> 'fab) ∧
+  bnfMapCong mp_bb stab ∧
+  bnfNatural (mp_bo : ('a + bool -> 'g ordinal) -> 'fab -> 'fo) stab sto ∧
+  bnfNatural (mp_ob : ('g ordinal -> 'a + bool) -> 'fo -> 'fab) sto stab ∧
+  bnfMapComp mp_bo mp_ob mp_bb ∧
+  bnfNatural (mp_oo : ('g ordinal -> 'g ordinal) -> 'fo -> 'fo) sto sto ∧
   (∃x : 'fo. sto x ≠ ∅) ∧
   ω ≤ (bd : 'g ordinal) ∧ (∀x. sta x ≼ preds bd) ∧
   (∀x. stab x ≼ preds bd) ⇒
-  ∀s. MINSET sta (s : 'f -> 'a) ≼ 𝟚 ** cardSUC (FIN sto (preds bd))
+  ∀s. bnfMINSET sta (s : 'f -> 'a) ≼ 𝟚 ** cardSUC (bnfFIN sto (preds bd))
 Proof
   strip_tac >> gen_tac >>
-  ‘∀C : 'g ordinal set. C ≼ FIN sto C’
-    by (byrule NontrivialBs [‘Natural mp_oo sto sto’] irule >>
+  ‘∀C : 'g ordinal set. C ≼ bnfFIN sto C’
+    by (byrule NontrivialBs [‘bnfNatural mp_oo sto sto’] irule >>
         qpat_assum ‘sto _ ≠ ∅’ (irule_at Any)) >>
   ‘∀u:'a set. ∀v:('a + bool) set.
-     u ≼ v ⇒ (FIN sta u : 'f set) ≼ (FIN stab v : 'fab set)’
+     u ≼ v ⇒ (bnfFIN sta u : 'f set) ≼ (bnfFIN stab v : 'fab set)’
     by (rpt strip_tac >>
         byrule FIN_cardleq
-          [‘MapId mp_aa’, ‘MapCong mp_aa sta’, ‘Natural mp_ab sta stab’,
-           ‘MapComp mp_ab mp_ba mp_aa’]
+          [‘bnfMapId mp_aa’, ‘bnfMapCong mp_aa sta’, ‘bnfNatural mp_ab sta stab’,
+           ‘bnfMapComp mp_ab mp_ba mp_aa’]
           irule >> simp[]) >>
   ‘∀B : ('a + bool) set.
-     𝟚 ≼ B ⇒ (FIN stab B : 'fab set) ≼ B ** cardSUC (FIN sto (preds bd))’
+     𝟚 ≼ B ⇒ (bnfFIN stab B : 'fab set) ≼ B ** cardSUC (bnfFIN sto (preds bd))’
     by (byrule CBDb
-          [‘Natural mp_bo stab sto’, ‘Natural mp_ob sto stab’,
-           ‘MapComp mp_bo mp_ob mp_bb’, ‘MapId mp_bb’, ‘MapCong mp_bb stab’,
-           ‘∀C : 'g ordinal set. C ≼ FIN sto C’]
+          [‘bnfNatural mp_bo stab sto’, ‘bnfNatural mp_ob sto stab’,
+           ‘bnfMapComp mp_bo mp_ob mp_bb’, ‘bnfMapId mp_bb’, ‘bnfMapCong mp_bb stab’,
+           ‘∀C : 'g ordinal set. C ≼ bnfFIN sto C’]
           (fn th => mp_tac th >> simp[])) >>
-  byrule KKbnd_EQ_MINSET [‘MapId mp_aa’]
-    (fn th => ‘KK sta s (csuc bd) = MINSET sta s’ by (irule th >> simp[])) >>
+  byrule KKbnd_EQ_MINSET [‘bnfMapId mp_aa’]
+    (fn th => ‘bnfKK sta s (csuc bd) = bnfMINSET sta s’ by (irule th >> simp[])) >>
   pop_assum (SUBST1_TAC o SYM) >>
   byrule ALG_cardinality_bound
-    [‘∀C : 'g ordinal set. C ≼ FIN sto C’,
+    [‘∀C : 'g ordinal set. C ≼ bnfFIN sto C’,
      ‘∀u:'a set. ∀v:('a + bool) set. u ≼ v ⇒ _’,
      ‘∀B : ('a + bool) set. 𝟚 ≼ B ⇒ _’]
     (fn th => irule th >> simp[])
@@ -870,43 +881,43 @@ QED
     The initial algebra: the minimal sub-algebra of the product of all
     algebras over the bounded carrier type.
 
-    Both are parameterised by the same data as BIGPROD, so nothing here
+    Both are parameterised by the same data as bnfBIGPROD, so nothing here
     is specific to a functor.
    ---------------------------------------------------------------------- *)
 
 Definition ICONS_def:
-  ICONS (mp : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f) sta =
-    SND (BIGPROD mp sta)
+  bnfICONS (mp : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f) sta =
+    SND (bnfBIGPROD mp sta)
 End
 
 Definition IALG_def:
-  IALG stp (mp : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f) sta =
-    MINSET stp (ICONS mp sta)
+  bnfIALG stp (mp : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f) sta =
+    bnfMINSET stp (bnfICONS mp sta)
 End
 
 Theorem BIGPROD_ALG'[simp]:
-  Natural mp stp sta ⇒ ALG stp (FST (BIGPROD mp sta), ICONS mp sta)
+  bnfNatural mp stp sta ⇒ bnfALG stp (FST (bnfBIGPROD mp sta), bnfICONS mp sta)
 Proof
   strip_tac >> drule BIGPROD_ALG >> simp[ICONS_def]
 QED
 
 Theorem BIGPROD_proj':
-  Natural mp stp sta ⇒ ALG sta (A,s) ⇒
-  HOM mp stp sta (λff. ff (A,s)) (FST (BIGPROD mp sta), ICONS mp sta) (A,s)
+  bnfNatural mp stp sta ⇒ bnfALG sta (A,s) ⇒
+  bnfHOM mp stp sta (λff. ff (A,s)) (FST (bnfBIGPROD mp sta), bnfICONS mp sta) (A,s)
 Proof
   rpt strip_tac >> drule_all BIGPROD_proj >> simp[ICONS_def]
 QED
 
 Theorem IALG_ALG[simp]:
-  ALG stp (IALG stp mp sta, ICONS mp sta)
+  bnfALG stp (bnfIALG stp mp sta, bnfICONS mp sta)
 Proof
   simp[IALG_def]
 QED
 
 Theorem IALG_I_HOM:
-  MapId mp_pp ∧ Natural mp_pa stp sta ⇒
-  HOM mp_pp stp stp I (IALG stp mp_pa sta, ICONS mp_pa sta)
-      (FST (BIGPROD mp_pa sta), ICONS mp_pa sta)
+  bnfMapId mp_pp ∧ bnfNatural mp_pa stp sta ⇒
+  bnfHOM mp_pp stp stp I (bnfIALG stp mp_pa sta, bnfICONS mp_pa sta)
+      (FST (bnfBIGPROD mp_pa sta), bnfICONS mp_pa sta)
 Proof
   strip_tac >> simp[IALG_def] >> irule MINSET_I_HOM >> simp[]
 QED
@@ -917,26 +928,26 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition ARBIFY_def:
-  ARBIFY A f x = if x ∈ A then f x else ARB
+  bnfARBIFY A f x = if x ∈ A then f x else ARB
 End
 
 Theorem HOM_ARBIFY:
-  MapCong mp sta ⇒
-  (HOM mp sta stb (ARBIFY A f) (A,s) (B,t) ⇔ HOM mp sta stb f (A,s) (B,t))
+  bnfMapCong mp sta ⇒
+  (bnfHOM mp sta stb (bnfARBIFY A f) (A,s) (B,t) ⇔ bnfHOM mp sta stb f (A,s) (B,t))
 Proof
   simp[MapCong_def] >> strip_tac >>
-  simp[HOM_def, ARBIFY_def] >> Cases_on ‘ALG sta (A,s)’ >> simp[] >>
-  ‘∀af. af ∈ FIN sta A ⇒ s af ∈ A’ by gs[ALG_def] >> simp[] >>
+  simp[HOM_def, ARBIFY_def] >> Cases_on ‘bnfALG sta (A,s)’ >> simp[] >>
+  ‘∀af. af ∈ bnfFIN sta A ⇒ s af ∈ A’ by gs[ALG_def] >> simp[] >>
   rw[EQ_IMP_THM] >> RULE_ASSUM_TAC GSYM >> simp[] >> AP_TERM_TAC >>
   first_x_assum irule >> simp[ARBIFY_def] >> gs[SUBSET_DEF]
 QED
 
 Theorem HOM_arbification:
-  MapCong mp sta ⇒
-  HOM mp sta stb h (A,s) (B,t) ⇒
-  ∃j. HOM mp sta stb j (A,s) (B,t) ∧ ∀x. x ∉ A ⇒ j x = ARB
+  bnfMapCong mp sta ⇒
+  bnfHOM mp sta stb h (A,s) (B,t) ⇒
+  ∃j. bnfHOM mp sta stb j (A,s) (B,t) ∧ ∀x. x ∉ A ⇒ j x = ARB
 Proof
-  rpt strip_tac >> qexists_tac ‘ARBIFY A h’ >>
+  rpt strip_tac >> qexists_tac ‘bnfARBIFY A h’ >>
   simp[ARBIFY_def] >> drule (iffRL HOM_ARBIFY) >> simp[]
 QED
 
@@ -944,58 +955,58 @@ QED
     Existence of a homomorphism out of the initial algebra.
 
     The chain is
-        IALG --I--> BIGPROD --proj--> (B0,s') --hh--> MINSET stc t --I--> G
+        bnfIALG --I--> bnfBIGPROD --proj--> (B0,s') --hh--> bnfMINSET stc t --I--> G
     where (B0,s') is the minimal sub-algebra of (G,t) copied onto the
     bounded carrier type 'a, which is what makes it an index of the
     product.
    ---------------------------------------------------------------------- *)
 
 Theorem IALG_HOM_ANY:
-  Natural (mp_pa : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f)
+  bnfNatural (mp_pa : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f)
           stp sta ∧
-  Natural mp_pp stp stp ∧ MapId mp_pp ∧ MapComp mp_pp mp_pa mp_pa ∧
-  Natural mp_pc stp (stc : 'fc -> 'c set) ∧ MapComp mp_pa mp_ac mp_pc ∧
-  MapComp mp_pc mp_cc mp_pc ∧
-  Natural mp_ac sta stc ∧ Natural mp_ca stc sta ∧
-  MapComp mp_ca mp_ac mp_cc ∧ MapId mp_cc ∧ MapCong mp_cc stc ∧
-  (∀t : 'fc -> 'c. MINSET stc t ≼ 𝕌(:'a)) ⇒
-  ∀t G. ALG stc (G,t) ⇒
-        ∃h. HOM mp_pc stp stc h (IALG stp mp_pa sta, ICONS mp_pa sta) (G,t)
+  bnfNatural mp_pp stp stp ∧ bnfMapId mp_pp ∧ bnfMapComp mp_pp mp_pa mp_pa ∧
+  bnfNatural mp_pc stp (stc : 'fc -> 'c set) ∧ bnfMapComp mp_pa mp_ac mp_pc ∧
+  bnfMapComp mp_pc mp_cc mp_pc ∧
+  bnfNatural mp_ac sta stc ∧ bnfNatural mp_ca stc sta ∧
+  bnfMapComp mp_ca mp_ac mp_cc ∧ bnfMapId mp_cc ∧ bnfMapCong mp_cc stc ∧
+  (∀t : 'fc -> 'c. bnfMINSET stc t ≼ 𝕌(:'a)) ⇒
+  ∀t G. bnfALG stc (G,t) ⇒
+        ∃h. bnfHOM mp_pc stp stc h (bnfIALG stp mp_pa sta, bnfICONS mp_pa sta) (G,t)
 Proof
   strip_tac >> rpt strip_tac >>
   (* the minimal sub-algebra of (G,t), copied onto the bounded carrier *)
   ‘∃B0 s' hh jj.
-     HOM mp_ac sta stc hh (B0,s') (MINSET stc t, t) ∧
-     HOM mp_ca stc sta jj (MINSET stc t, t) (B0,s') ∧
-     (∀a. a ∈ MINSET stc t ⇒ hh (jj a) = a) ∧
+     bnfHOM mp_ac sta stc hh (B0,s') (bnfMINSET stc t, t) ∧
+     bnfHOM mp_ca stc sta jj (bnfMINSET stc t, t) (B0,s') ∧
+     (∀a. a ∈ bnfMINSET stc t ⇒ hh (jj a) = a) ∧
      (∀b. b ∈ B0 ⇒ jj (hh b) = b)’
     by (irule copy_alg_back >> simp[] >> rpt conj_tac >~
-        [‘MINSET stc t ≼ _’] >- (qexists_tac ‘𝕌(:'a)’ >> simp[]) >>
+        [‘bnfMINSET stc t ≼ _’] >- (qexists_tac ‘𝕌(:'a)’ >> simp[]) >>
         qexists_tac ‘mp_cc’ >> simp[]) >>
-  ‘ALG sta (B0,s')’ by gs[HOM_def] >>
+  ‘bnfALG sta (B0,s')’ by gs[HOM_def] >>
   (* being an algebra on the bounded carrier, (B0,s') indexes the
      product, so the product projects onto it *)
-  ‘HOM mp_pa stp sta (λff. ff (B0,s'))
-       (FST (BIGPROD mp_pa sta), ICONS mp_pa sta) (B0,s')’
+  ‘bnfHOM mp_pa stp sta (λff. ff (B0,s'))
+       (FST (bnfBIGPROD mp_pa sta), bnfICONS mp_pa sta) (B0,s')’
     by (irule BIGPROD_proj' >> simp[]) >>
-  ‘HOM mp_pp stp stp I (IALG stp mp_pa sta, ICONS mp_pa sta)
-       (FST (BIGPROD mp_pa sta), ICONS mp_pa sta)’
+  ‘bnfHOM mp_pp stp stp I (bnfIALG stp mp_pa sta, bnfICONS mp_pa sta)
+       (FST (bnfBIGPROD mp_pa sta), bnfICONS mp_pa sta)’
     by (irule IALG_I_HOM >> simp[]) >>
   byrule HOMs_compose
-    [‘MapComp mp_pp mp_pa mp_pa’, ‘Natural mp_pp stp stp’,
-     ‘HOM mp_pp stp stp I _ _’, ‘HOM mp_pa stp sta _ _ (B0,s')’]
+    [‘bnfMapComp mp_pp mp_pa mp_pa’, ‘bnfNatural mp_pp stp stp’,
+     ‘bnfHOM mp_pp stp stp I _ _’, ‘bnfHOM mp_pa stp sta _ _ (B0,s')’]
     assume_tac >>
   byrule HOMs_compose
-    [‘MapComp mp_pa mp_ac mp_pc’, ‘Natural mp_pa stp sta’,
-     ‘HOM mp_pa stp sta (_ o I) (IALG stp mp_pa sta, _) _’,
-     ‘HOM mp_ac sta stc hh _ (MINSET stc t, t)’]
+    [‘bnfMapComp mp_pa mp_ac mp_pc’, ‘bnfNatural mp_pa stp sta’,
+     ‘bnfHOM mp_pa stp sta (_ o I) (bnfIALG stp mp_pa sta, _) _’,
+     ‘bnfHOM mp_ac sta stc hh _ (bnfMINSET stc t, t)’]
     assume_tac >>
-  ‘HOM mp_cc stc stc I (MINSET stc t, t) (G,t)’
+  ‘bnfHOM mp_cc stc stc I (bnfMINSET stc t, t) (G,t)’
     by (irule MINSET_I_HOM >> simp[]) >>
   byrule HOMs_compose
-    [‘MapComp mp_pc mp_cc mp_pc’, ‘Natural mp_pc stp stc’,
-     ‘HOM mp_pc stp stc _ (IALG stp mp_pa sta, _) (MINSET stc t, t)’,
-     ‘HOM mp_cc stc stc I _ (G,t)’]
+    [‘bnfMapComp mp_pc mp_cc mp_pc’, ‘bnfNatural mp_pc stp stc’,
+     ‘bnfHOM mp_pc stp stc _ (bnfIALG stp mp_pa sta, _) (bnfMINSET stc t, t)’,
+     ‘bnfHOM mp_cc stc stc I _ (G,t)’]
     (irule_at Any)
 QED
 
@@ -1005,37 +1016,37 @@ QED
     unique.
    ---------------------------------------------------------------------- *)
 
-(* the hypotheses are MapCong followed by *exactly* IALG_HOM_ANY's, so
+(* the hypotheses are bnfMapCong followed by *exactly* IALG_HOM_ANY's, so
    the second conjunct of the bundle can be MATCH_MPed straight into
    that theorem with nothing left to guess *)
 Theorem INITIALITY0:
-  MapCong mp_pc stp ∧
-  (Natural (mp_pa : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f)
+  bnfMapCong mp_pc stp ∧
+  (bnfNatural (mp_pa : ((('a set # ('f -> 'a)) -> 'a) -> 'a) -> 'fp -> 'f)
            stp sta ∧
-   Natural mp_pp stp stp ∧ MapId mp_pp ∧ MapComp mp_pp mp_pa mp_pa ∧
-   Natural mp_pc stp (stc : 'fc -> 'c set) ∧ MapComp mp_pa mp_ac mp_pc ∧
-   MapComp mp_pc mp_cc mp_pc ∧
-   Natural mp_ac sta stc ∧ Natural mp_ca stc sta ∧
-   MapComp mp_ca mp_ac mp_cc ∧ MapId mp_cc ∧ MapCong mp_cc stc ∧
-   (∀t : 'fc -> 'c. MINSET stc t ≼ 𝕌(:'a))) ⇒
+   bnfNatural mp_pp stp stp ∧ bnfMapId mp_pp ∧ bnfMapComp mp_pp mp_pa mp_pa ∧
+   bnfNatural mp_pc stp (stc : 'fc -> 'c set) ∧ bnfMapComp mp_pa mp_ac mp_pc ∧
+   bnfMapComp mp_pc mp_cc mp_pc ∧
+   bnfNatural mp_ac sta stc ∧ bnfNatural mp_ca stc sta ∧
+   bnfMapComp mp_ca mp_ac mp_cc ∧ bnfMapId mp_cc ∧ bnfMapCong mp_cc stc ∧
+   (∀t : 'fc -> 'c. bnfMINSET stc t ≼ 𝕌(:'a))) ⇒
   ∀t G.
-    ALG stc (G,t) ⇒
-    ∃!h. HOM mp_pc stp stc h (IALG stp mp_pa sta, ICONS mp_pa sta) (G,t) ∧
-         ∀x. x ∉ IALG stp mp_pa sta ⇒ h x = ARB
+    bnfALG stc (G,t) ⇒
+    ∃!h. bnfHOM mp_pc stp stc h (bnfIALG stp mp_pa sta, bnfICONS mp_pa sta) (G,t) ∧
+         ∀x. x ∉ bnfIALG stp mp_pa sta ⇒ h x = ARB
 Proof
   (* the bundle is kept whole as well as split: the whole one is what
      applies forward to IALG_HOM_ANY *)
   disch_then (fn th => strip_assume_tac th >> assume_tac th) >>
   rpt strip_tac >> simp[EXISTS_UNIQUE_THM] >> conj_tac
   >- (irule HOM_arbification >> simp[] >>
-      qpat_assum ‘MapCong mp_pc stp ∧ _’
+      qpat_assum ‘bnfMapCong mp_pc stp ∧ _’
         (fn th => irule (MATCH_MP IALG_HOM_ANY (CONJUNCT2 th))) >>
       simp[]) >>
   rpt strip_tac >> simp[FUN_EQ_THM] >> qx_gen_tac ‘a’ >>
-  Cases_on ‘a ∈ IALG stp mp_pa sta’ >> simp[] >> gs[IALG_def] >>
+  Cases_on ‘a ∈ bnfIALG stp mp_pa sta’ >> simp[] >> gs[IALG_def] >>
   byrule MINSET_unique_homs
-    [‘MapCong mp_pc stp’,
-     ‘HOM mp_pc stp stc h _ _’, ‘HOM mp_pc stp stc h' _ _’]
+    [‘bnfMapCong mp_pc stp’,
+     ‘bnfHOM mp_pc stp stc h _ _’, ‘bnfHOM mp_pc stp stc h' _ _’]
     (fn th => simp[th])
 QED
 
@@ -1045,11 +1056,11 @@ QED
 
     F's own carrier is a fourth instance: 'p is the algebra's carrier,
     'fp is F['p], and 'ffp is F['fp], the carrier of the algebra
-    (FIN stp A, mp_Fp s).
+    (bnfFIN stp A, mp_Fp s).
    ---------------------------------------------------------------------- *)
 
 Theorem ALG_FIN:
-  Natural mp_Fp stF stp ⇒ ALG stp (A,s) ⇒ ALG stF (FIN stp A, mp_Fp s)
+  bnfNatural mp_Fp stF stp ⇒ bnfALG stp (A,s) ⇒ bnfALG stF (bnfFIN stp A, mp_Fp s)
 Proof
   simp[Natural_def] >> rpt strip_tac >>
   simp[ALG_def, SUBSET_DEF, PULL_EXISTS] >> rw[] >>
@@ -1057,63 +1068,63 @@ Proof
 QED
 
 Theorem HOM_FIN:
-  Natural mp_Fp stF stp ⇒ ALG stp (A,s) ⇒
-  HOM mp_Fp stF stp s (FIN stp A, mp_Fp s) (A,s)
+  bnfNatural mp_Fp stF stp ⇒ bnfALG stp (A,s) ⇒
+  bnfHOM mp_Fp stF stp s (bnfFIN stp A, mp_Fp s) (A,s)
 Proof
   rpt strip_tac >> drule_all_then assume_tac ALG_FIN >>
   simp[HOM_def] >> gs[ALG_def]
 QED
 
 Theorem LAMBEK:
-  MapCong (mp_pp : ('p -> 'p) -> 'fp -> 'fp) stp ∧ MapId mp_pp ∧
-  Natural (mp_Fp : ('fp -> 'p) -> 'ffp -> 'fp) stF stp ∧
-  MapComp (mp_pF : ('p -> 'fp) -> 'fp -> 'ffp) mp_Fp mp_pp ∧
-  MapCong mp_pF stp ∧ Natural mp_pF stp stF ∧
-  ALG stp (A,s) ∧
-  (∀t G. ALG stF (G,t) ⇒
-         ∃!h. HOM mp_pF stp stF h (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ h x = ARB) ∧
-  (∀t G. ALG stp (G,t) ⇒
-         ∃!h. HOM mp_pp stp stp h (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ h x = ARB) ⇒
-  BIJ s (FIN stp A) A
+  bnfMapCong (mp_pp : ('p -> 'p) -> 'fp -> 'fp) stp ∧ bnfMapId mp_pp ∧
+  bnfNatural (mp_Fp : ('fp -> 'p) -> 'ffp -> 'fp) stF stp ∧
+  bnfMapComp (mp_pF : ('p -> 'fp) -> 'fp -> 'ffp) mp_Fp mp_pp ∧
+  bnfMapCong mp_pF stp ∧ bnfNatural mp_pF stp stF ∧
+  bnfALG stp (A,s) ∧
+  (∀t G. bnfALG stF (G,t) ⇒
+         ∃!h. bnfHOM mp_pF stp stF h (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ h x = ARB) ∧
+  (∀t G. bnfALG stp (G,t) ⇒
+         ∃!h. bnfHOM mp_pp stp stp h (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ h x = ARB) ⇒
+  BIJ s (bnfFIN stp A) A
 Proof
   strip_tac >>
   drule_all_then assume_tac ALG_FIN >>
-  ‘HOM mp_Fp stF stp s (FIN stp A, mp_Fp s) (A,s)’
+  ‘bnfHOM mp_Fp stF stp s (bnfFIN stp A, mp_Fp s) (A,s)’
     by (irule HOM_FIN >> simp[]) >>
-  (* the unique homomorphism into the algebra (FIN stp A, mp_Fp s) *)
-  qpat_x_assum ‘∀t G. ALG stF (G,t) ⇒ _’
-    (qspecl_then [‘mp_Fp s’, ‘FIN stp A’] mp_tac) >>
+  (* the unique homomorphism into the algebra (bnfFIN stp A, mp_Fp s) *)
+  qpat_x_assum ‘∀t G. bnfALG stF (G,t) ⇒ _’
+    (qspecl_then [‘mp_Fp s’, ‘bnfFIN stp A’] mp_tac) >>
   simp[EXISTS_UNIQUE_ALT] >> disch_then (qx_choose_then ‘H’ assume_tac) >>
-  ‘HOM mp_pF stp stF H (A,s) (FIN stp A, mp_Fp s) ∧ ∀x. x ∉ A ⇒ H x = ARB’
+  ‘bnfHOM mp_pF stp stF H (A,s) (bnfFIN stp A, mp_Fp s) ∧ ∀x. x ∉ A ⇒ H x = ARB’
     by (first_assum (irule o iffRL) >> simp[]) >>
   byrule HOMs_compose
-    [‘MapComp mp_pF mp_Fp mp_pp’, ‘Natural mp_pF stp stF’,
-     ‘HOM mp_pF stp stF H (A,s) _’, ‘HOM mp_Fp stF stp s _ (A,s)’]
+    [‘bnfMapComp mp_pF mp_Fp mp_pp’, ‘bnfNatural mp_pF stp stF’,
+     ‘bnfHOM mp_pF stp stF H (A,s) _’, ‘bnfHOM mp_Fp stF stp s _ (A,s)’]
     assume_tac >>
   (* s o H and I are both endomorphisms of (A,s), so they agree on A *)
-  ‘HOM mp_pp stp stp (ARBIFY A (s o H)) (A,s) (A,s)’
-    by (byrule HOM_ARBIFY [‘MapCong mp_pp stp’] (fn th => simp[th])) >>
-  ‘HOM mp_pp stp stp (ARBIFY A I) (A,s) (A,s)’
-    by (byrule HOM_ARBIFY [‘MapCong mp_pp stp’] (fn th => simp[th]) >>
+  ‘bnfHOM mp_pp stp stp (bnfARBIFY A (s o H)) (A,s) (A,s)’
+    by (byrule HOM_ARBIFY [‘bnfMapCong mp_pp stp’] (fn th => simp[th])) >>
+  ‘bnfHOM mp_pp stp stp (bnfARBIFY A I) (A,s) (A,s)’
+    by (byrule HOM_ARBIFY [‘bnfMapCong mp_pp stp’] (fn th => simp[th]) >>
         simp[HOM_def] >> gs[MapId_def]) >>
-  qpat_x_assum ‘∀t G. ALG stp (G,t) ⇒ _’
+  qpat_x_assum ‘∀t G. bnfALG stp (G,t) ⇒ _’
     (qspecl_then [‘s’, ‘A’] mp_tac) >>
   simp[EXISTS_UNIQUE_ALT] >> disch_then (qx_choose_then ‘K0’ assume_tac) >>
-  ‘K0 = ARBIFY A (s o H) ∧ K0 = ARBIFY A I’
+  ‘K0 = bnfARBIFY A (s o H) ∧ K0 = bnfARBIFY A I’
     by (conj_tac >> first_assum (irule o iffLR) >> simp[ARBIFY_def]) >>
   ‘∀a. a ∈ A ⇒ s (H a) = a’
-    by (rpt strip_tac >> ‘ARBIFY A (s o H) a = ARBIFY A I a’ by metis_tac[] >>
+    by (rpt strip_tac >> ‘bnfARBIFY A (s o H) a = bnfARBIFY A I a’ by metis_tac[] >>
         gs[ARBIFY_def]) >>
   simp[BIJ_IFF_INV] >> conj_tac >- gs[ALG_def] >>
   qexists_tac ‘H’ >> rpt conj_tac
   >- gs[HOM_def]
-  >- (* H (s af) = af: push s o H through the map and use MapId *)
+  >- (* H (s af) = af: push s o H through the map and use bnfMapId *)
      (qx_gen_tac ‘af’ >> strip_tac >>
       ‘mp_Fp s (mp_pF H af) = H (s af)’ by gs[HOM_def] >>
       pop_assum (SUBST1_TAC o SYM) >>
       ‘mp_Fp s (mp_pF H af) = mp_pp (s o H) af’ by gs[MapComp_def] >>
       pop_assum SUBST1_TAC >>
-      byrule Map_eq_id [‘MapCong mp_pp stp’, ‘MapId mp_pp’] irule >>
+      byrule Map_eq_id [‘bnfMapCong mp_pp stp’, ‘bnfMapId mp_pp’] irule >>
       gs[SUBSET_DEF]) >>
   simp[]
 QED
@@ -1124,26 +1135,26 @@ QED
    ---------------------------------------------------------------------- *)
 
 Theorem IALG_NONEMPTY:
-  (∃w. stp w = ∅) ⇒ IALG stp mp_pa sta ≠ ∅
+  (∃w. stp w = ∅) ⇒ bnfIALG stp mp_pa sta ≠ ∅
 Proof
   strip_tac >> simp[GSYM MEMBER_NOT_EMPTY] >>
-  qexists_tac ‘ICONS mp_pa sta w’ >> irule ALG_closed >>
+  qexists_tac ‘bnfICONS mp_pa sta w’ >> irule ALG_closed >>
   qexists_tac ‘stp’ >> simp[]
 QED
 
 (* the form new_type_definition wants: the carrier as a predicate *)
 Theorem IALG_INHABITED:
-  (∃w. stp w = ∅) ⇒ ∃x. IALG stp mp_pa sta x
+  (∃w. stp w = ∅) ⇒ ∃x. bnfIALG stp mp_pa sta x
 Proof
   strip_tac >>
-  ‘IALG stp mp_pa sta ≠ ∅’ by (irule IALG_NONEMPTY >> metis_tac[]) >>
+  ‘bnfIALG stp mp_pa sta ≠ ∅’ by (irule IALG_NONEMPTY >> metis_tac[]) >>
   gs[GSYM MEMBER_NOT_EMPTY, IN_DEF] >> first_assum (irule_at Any)
 QED
 
 Theorem IALG_ind:
-  ∀P. (∀x. stp x ⊆ IALG stp mp_pa sta ∧ (∀y. y ∈ stp x ⇒ P y) ⇒
-           P (ICONS mp_pa sta x)) ⇒
-      ∀x. x ∈ IALG stp mp_pa sta ⇒ P x
+  ∀P. (∀x. stp x ⊆ bnfIALG stp mp_pa sta ∧ (∀y. y ∈ stp x ⇒ P y) ⇒
+           P (bnfICONS mp_pa sta x)) ⇒
+      ∀x. x ∈ bnfIALG stp mp_pa sta ⇒ P x
 Proof
   simp[IALG_def] >> MATCH_ACCEPT_TAC MINSET_ind
 QED
@@ -1157,21 +1168,21 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition NCONS_def:
-  NCONS (mp_np : ('n -> 'p) -> 'fn -> 'fp) s rep abs af =
+  bnfNCONS (mp_np : ('n -> 'p) -> 'fn -> 'fp) s rep abs af =
     abs (s (mp_np rep af))
 End
 
 Theorem ALG_NCONS[simp]:
-  ALG stn (𝕌(:'n), NCONS mp_np s rep abs)
+  bnfALG stn (𝕌(:'n), bnfNCONS mp_np s rep abs)
 Proof
   simp[ALG_def]
 QED
 
 Theorem HOM_ABS:
-  MapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
-  MapId mp_pp ∧ MapCong mp_pp stp ∧
-  (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ ALG stp (A,s) ⇒
-  HOM mp_pn stp stn abs (A,s) (𝕌(:'n), NCONS mp_np s rep abs)
+  bnfMapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
+  bnfMapId mp_pp ∧ bnfMapCong mp_pp stp ∧
+  (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ bnfALG stp (A,s) ⇒
+  bnfHOM mp_pn stp stn abs (A,s) (𝕌(:'n), bnfNCONS mp_np s rep abs)
 Proof
   strip_tac >> drule_then (drule_then assume_tac) Map_eq_id >>
   simp[HOM_def, NCONS_def] >> rpt strip_tac >>
@@ -1180,9 +1191,9 @@ Proof
 QED
 
 Theorem HOM_REP:
-  Natural (mp_np : ('n -> 'p) -> 'fn -> 'fp) stn stp ∧
-  (∀n. rep n ∈ A) ∧ (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ ALG stp (A,s) ⇒
-  HOM mp_np stn stp rep (𝕌(:'n), NCONS mp_np s rep abs) (A,s)
+  bnfNatural (mp_np : ('n -> 'p) -> 'fn -> 'fp) stn stp ∧
+  (∀n. rep n ∈ A) ∧ (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ bnfALG stp (A,s) ⇒
+  bnfHOM mp_np stn stp rep (𝕌(:'n), bnfNCONS mp_np s rep abs) (A,s)
 Proof
   strip_tac >> simp[HOM_def, NCONS_def] >> rpt strip_tac >>
   irule EQ_SYM >> first_x_assum irule >> irule ALG_closed >>
@@ -1190,56 +1201,56 @@ Proof
 QED
 
 Theorem NEWTYPE_INITIALITY:
-  MapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
-  MapId mp_pp ∧ MapCong mp_pp stp ∧
-  Natural mp_np stn stp ∧ Natural mp_pn stp stn ∧
-  MapComp mp_np (mp_pc : ('p -> 'c) -> 'fp -> 'fc) mp_nc ∧
-  MapComp mp_pn mp_nc mp_pc ∧ MapCong mp_pc stp ∧
+  bnfMapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
+  bnfMapId mp_pp ∧ bnfMapCong mp_pp stp ∧
+  bnfNatural mp_np stn stp ∧ bnfNatural mp_pn stp stn ∧
+  bnfMapComp mp_np (mp_pc : ('p -> 'c) -> 'fp -> 'fc) mp_nc ∧
+  bnfMapComp mp_pn mp_nc mp_pc ∧ bnfMapCong mp_pc stp ∧
   (∀n. abs (rep n) = n) ∧ (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ (∀n. rep n ∈ A) ∧
-  ALG stp (A,s) ∧
-  (∀t G. ALG stc (G,t) ⇒
-         ∃!h. HOM mp_pc stp stc h (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ h x = ARB) ⇒
-  ∀t G. ALG stc (G,t) ⇒
-        ∃!h. HOM mp_nc stn stc h (𝕌(:'n), NCONS mp_np s rep abs) (G,t)
+  bnfALG stp (A,s) ∧
+  (∀t G. bnfALG stc (G,t) ⇒
+         ∃!h. bnfHOM mp_pc stp stc h (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ h x = ARB) ⇒
+  ∀t G. bnfALG stc (G,t) ⇒
+        ∃!h. bnfHOM mp_nc stn stc h (𝕌(:'n), bnfNCONS mp_np s rep abs) (G,t)
 Proof
   strip_tac >> rpt strip_tac >>
-  ‘HOM mp_np stn stp rep (𝕌(:'n), NCONS mp_np s rep abs) (A,s)’
+  ‘bnfHOM mp_np stn stp rep (𝕌(:'n), bnfNCONS mp_np s rep abs) (A,s)’
     by (irule HOM_REP >> simp[]) >>
   (* mp_pp appears only in HOM_ABS's hypotheses, so this one is forward *)
   byrule HOM_ABS
-    [‘MapComp mp_pn mp_np mp_pp’, ‘MapId mp_pp’, ‘MapCong mp_pp stp’,
-     ‘∀p. p ∈ A ⇒ rep (abs p) = p’, ‘ALG stp (A,s)’]
+    [‘bnfMapComp mp_pn mp_np mp_pp’, ‘bnfMapId mp_pp’, ‘bnfMapCong mp_pp stp’,
+     ‘∀p. p ∈ A ⇒ rep (abs p) = p’, ‘bnfALG stp (A,s)’]
     assume_tac >>
   (* the rewrite goes on the assumption: EXISTS_UNIQUE_ALT on the goal
      would put it in a shape the rest of the proof does not expect *)
   first_x_assum (qspecl_then [‘t’,‘G’] mp_tac) >> simp[] >>
   disch_then (qx_choose_then ‘H’ assume_tac o SRULE[EXISTS_UNIQUE_ALT]) >>
   simp[EXISTS_UNIQUE_THM] >> conj_tac
-  >- (‘HOM mp_pc stp stc H (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ H x = ARB’
+  >- (‘bnfHOM mp_pc stp stc H (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ H x = ARB’
         by (first_assum (irule o iffRL) >> simp[]) >>
       byrule HOMs_compose
-        [‘MapComp mp_np mp_pc mp_nc’, ‘Natural mp_np stn stp’,
-         ‘HOM mp_np stn stp rep _ (A,s)’, ‘HOM mp_pc stp stc H (A,s) (G,t)’]
+        [‘bnfMapComp mp_np mp_pc mp_nc’, ‘bnfNatural mp_np stn stp’,
+         ‘bnfHOM mp_np stn stp rep _ (A,s)’, ‘bnfHOM mp_pc stp stc H (A,s) (G,t)’]
         (irule_at Any)) >>
   (* uniqueness: both give homomorphisms out of (A,s) once composed
      with abs, and those are unique *)
   qx_genl_tac [‘h1’, ‘h2’] >> strip_tac >>
-  ‘∀h. HOM mp_nc stn stc h (𝕌(:'n), NCONS mp_np s rep abs) (G,t) ⇒
-       H = ARBIFY A (h o abs)’
+  ‘∀h. bnfHOM mp_nc stn stc h (𝕌(:'n), bnfNCONS mp_np s rep abs) (G,t) ⇒
+       H = bnfARBIFY A (h o abs)’
     by (rpt strip_tac >> first_assum (irule o iffLR) >>
         simp[ARBIFY_def] >>
-        byrule HOM_ARBIFY [‘MapCong mp_pc stp’] (fn th => simp[th]) >>
+        byrule HOM_ARBIFY [‘bnfMapCong mp_pc stp’] (fn th => simp[th]) >>
         byrule HOMs_compose
-          [‘MapComp mp_pn mp_nc mp_pc’, ‘Natural mp_pn stp stn’,
-           ‘HOM mp_pn stp stn abs (A,s) _’,
-           ‘HOM mp_nc stn stc _ _ (G,t)’]
+          [‘bnfMapComp mp_pn mp_nc mp_pc’, ‘bnfNatural mp_pn stp stn’,
+           ‘bnfHOM mp_pn stp stn abs (A,s) _’,
+           ‘bnfHOM mp_nc stn stc _ _ (G,t)’]
           (irule_at Any)) >>
-  ‘ARBIFY A (h1 o abs) = ARBIFY A (h2 o abs)’ by metis_tac[] >>
+  ‘bnfARBIFY A (h1 o abs) = bnfARBIFY A (h2 o abs)’ by metis_tac[] >>
   simp[FUN_EQ_THM] >> qx_gen_tac ‘n’ >>
   (* stating the instance rather than AP_TERMing a quotation: a rule's
      quotation is parsed with no goal context, so rep would come back at
      a fresh type *)
-  ‘ARBIFY A (h1 o abs) (rep n) = ARBIFY A (h2 o abs) (rep n)’ by simp[] >>
+  ‘bnfARBIFY A (h1 o abs) (rep n) = bnfARBIFY A (h2 o abs) (rep n)’ by simp[] >>
   gs[ARBIFY_def]
 QED
 
@@ -1264,9 +1275,9 @@ Theorem NEWTYPE_RECURSION =
    ---------------------------------------------------------------------- *)
 
 Theorem PRIM_REC_OF_ITER:
-  MapComp (mp_nq : ('n -> 'n # 'c) -> 'fn -> 'fq) mp_qn mp_nn ∧
-  MapComp mp_nq (mp_qc : ('n # 'c -> 'c) -> 'fq -> 'fc) mp_nc ∧
-  MapId mp_nn ∧
+  bnfMapComp (mp_nq : ('n -> 'n # 'c) -> 'fn -> 'fq) mp_qn mp_nn ∧
+  bnfMapComp mp_nq (mp_qc : ('n # 'c -> 'c) -> 'fq -> 'fc) mp_nc ∧
+  bnfMapId mp_nn ∧
   (∀t : 'fq -> 'n # 'c. ∃!h. ∀af. h (cons af) = t (mp_nq h af)) ∧
   (∀t : 'fn -> 'n. ∃!h. ∀af. h (cons af) = t (mp_nn h af)) ⇒
   ∀t : 'fn -> 'fc -> 'c. ∃!h. ∀af. h (cons af) = t af (mp_nc h af)
@@ -1311,16 +1322,16 @@ QED
    ---------------------------------------------------------------------- *)
 
 Theorem NEWTYPE_IND:
-  MapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
-  MapId mp_pp ∧ MapCong mp_pp stp ∧ Natural mp_pn stp stn ∧
-  (∀n. abs (rep n) = n) ∧ (∀p. p ∈ MINSET stp s ⇒ rep (abs p) = p) ∧
-  (∀n. rep n ∈ MINSET stp s) ⇒
-  ∀P. (∀af. (∀y. y ∈ stn af ⇒ P y) ⇒ P (NCONS mp_np s rep abs af)) ⇒
+  bnfMapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
+  bnfMapId mp_pp ∧ bnfMapCong mp_pp stp ∧ bnfNatural mp_pn stp stn ∧
+  (∀n. abs (rep n) = n) ∧ (∀p. p ∈ bnfMINSET stp s ⇒ rep (abs p) = p) ∧
+  (∀n. rep n ∈ bnfMINSET stp s) ⇒
+  ∀P. (∀af. (∀y. y ∈ stn af ⇒ P y) ⇒ P (bnfNCONS mp_np s rep abs af)) ⇒
       ∀n. P n
 Proof
   strip_tac >> gen_tac >> strip_tac >>
   drule_then (drule_then assume_tac) Map_eq_id >>
-  ‘∀p. p ∈ MINSET stp s ⇒ P (abs p)’
+  ‘∀p. p ∈ bnfMINSET stp s ⇒ P (abs p)’
     by (ho_match_mp_tac MINSET_ind' >> qx_gen_tac ‘x’ >> strip_tac >>
         first_x_assum (qspec_then ‘mp_pn abs x’ mp_tac) >>
         simp[NCONS_def] >>

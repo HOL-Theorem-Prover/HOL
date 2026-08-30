@@ -5,6 +5,19 @@ Ancestors
 Libs
   boolSimps
 
+(* The ordinals' notation is exported here rather than by ordinalBasic,
+   which the datatype package's construction ancestors and everything
+   that declares a datatype therefore loads: `+`, `<` and `TC` would
+   otherwise mean what they mean here everywhere, and a numeral whose
+   type is not pinned would be an ordinal. *)
+Overload "<" = “ordlt”
+Overload "<=" = “\a b. ~ordlt b a”
+Overload TC = “ordSUC”
+Overload islimit = “\a:'a ordinal. omax (preds a) = NONE”
+Overload "+" = “ordADD”
+Overload "ω" = “omega”
+val _ = add_numeral_form (#"o", SOME "fromNat")
+
 Theorem ordlt_preds_mono:
   a < b ==> preds a <<= preds b
 Proof

@@ -58,7 +58,7 @@ val op >>~ = Q.>>~
    whose occurrences of *either* type have been mapped by the
    corresponding function *)
 Definition MUTREC_def:
-  MUTREC (cn1 : 'fn1 -> 'n1) (cn2 : 'fn2 -> 'n2) mpK mpQ t1 t2 h1 h2 ⇔
+  bnfMUTREC (cn1 : 'fn1 -> 'n1) (cn2 : 'fn2 -> 'n2) mpK mpQ t1 t2 h1 h2 ⇔
     (∀af. h1 (cn1 af) = t1 (mpK h1 h2 af)) ∧
     (∀af. h2 (cn2 af) = t2 (mpQ h1 h2 af))
 End
@@ -67,15 +67,15 @@ End
    predicate: the map is the one over that type's functor, so the
    hypotheses below can name it *)
 Definition SREC_def:
-  SREC (cn : 'f -> 'n) (mp : ('n -> 'c) -> 'f -> 'g) ⇔
+  bnfSREC (cn : 'f -> 'n) (mp : ('n -> 'c) -> 'f -> 'g) ⇔
     ∀t. ∃!h. ∀af. h (cn af) = t (mp h af)
 End
 
 (* and the sibling's map, at every function it might be given: not
-   FIXMAP, because the map operator here is the sibling's map itself
+   bnfFIXMAP, because the map operator here is the sibling's map itself
    rather than a parameter to be solved for *)
 Definition SMAP_def:
-  SMAP (cn2 : 'fn2 -> 'n2) cm2 mpBg smap ⇔
+  bnfSMAP (cn2 : 'fn2 -> 'n2) cm2 mpBg smap ⇔
     ∀g af. smap g (cn2 af) = cm2 (mpBg g af)
 End
 
@@ -83,12 +83,12 @@ End
    pair of target functions there is exactly one pair of functions
    satisfying the two equations *)
 Definition MUTITER_def:
-  MUTITER (cn1 : 'fn1 -> 'n1) (cn2 : 'fn2 -> 'n2) mpK mpQ ⇔
+  bnfMUTITER (cn1 : 'fn1 -> 'n1) (cn2 : 'fn2 -> 'n2) mpK mpQ ⇔
     ∀t1 t2.
-      (∃h1 h2. MUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2) ∧
+      (∃h1 h2. bnfMUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2) ∧
       ∀h1 h2 k1 k2.
-        MUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2 ∧
-        MUTREC cn1 cn2 mpK mpQ t1 t2 k1 k2 ⇒ h1 = k1 ∧ h2 = k2
+        bnfMUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2 ∧
+        bnfMUTREC cn1 cn2 mpK mpQ t1 t2 k1 k2 ⇒ h1 = k1 ∧ h2 = k2
 End
 
 (* Mapping a functor's own argument and then the sibling's answers is
@@ -96,37 +96,37 @@ End
    functors need this, in the same shape: for F1 the first map is its own
    recursion, and for F2 it is the sibling's map at the same time. *)
 Definition MUTMAP_def:
-  MUTMAP (mpG : ('n1 -> 'c1) -> 'fn1 -> 'fg1) mpH mpK smap ⇔
+  bnfMUTMAP (mpG : ('n1 -> 'c1) -> 'fn1 -> 'fg1) mpH mpK smap ⇔
     ∀g k af. mpH k (mpG g af) = mpK g (k o smap g) af
 End
 
 (* the two functors' composition laws, as rewrites in either direction:
    the map through the sibling is what has to be introduced on one side
    and eliminated on the other *)
-val f1fwd = qpat_assum ‘MUTMAP mpG mpH mpK smap’
+val f1fwd = qpat_assum ‘bnfMUTMAP mpG mpH mpK smap’
               (fn th => REWRITE_TAC[SRULE [MUTMAP_def] th])
-val f1bwd = qpat_assum ‘MUTMAP mpG mpH mpK smap’
+val f1bwd = qpat_assum ‘bnfMUTMAP mpG mpH mpK smap’
               (fn th => REWRITE_TAC[GSYM (SRULE [MUTMAP_def] th)])
-val f2bwd = qpat_assum ‘MUTMAP mpBg mp2c mpQ smap’
+val f2bwd = qpat_assum ‘bnfMUTMAP mpBg mp2c mpQ smap’
               (fn th => REWRITE_TAC[GSYM (SRULE [MUTMAP_def] th)])
 
 (* mapping a functor's own argument and the sibling's separately is
    mapping both at once *)
 Definition MUTSPLIT_def:
-  MUTSPLIT (mpQ : ('n1 -> 'c1) -> ('n2 -> 'c2) -> 'fn2 -> 'fc2) mp1a mp2n ⇔
+  bnfMUTSPLIT (mpQ : ('n1 -> 'c1) -> ('n2 -> 'c2) -> 'fn2 -> 'fc2) mp1a mp2n ⇔
     ∀g k af. mpQ g k af = mp1a g (mp2n k af)
 End
 
 Theorem MUTUAL_RECURSION:
   (* T1's recursion, nested through the sibling *)
-  SREC cn1 mpG ∧
+  bnfSREC cn1 mpG ∧
   (* the sibling's own recursion, over the answers and over T1 *)
-  SREC cm2 mp2c ∧ SREC cn2 mp2n ∧
+  bnfSREC cm2 mp2c ∧ bnfSREC cn2 mp2n ∧
   (* the sibling's map, and the functors' composition laws *)
-  SMAP cn2 cm2 mpBg smap ∧
-  MUTMAP mpG mpH mpK smap ∧ MUTMAP mpBg mp2c mpQ smap ∧
-  MUTSPLIT mpQ mp1a mp2n ⇒
-  MUTITER cn1 cn2 mpK mpQ
+  bnfSMAP cn2 cm2 mpBg smap ∧
+  bnfMUTMAP mpG mpH mpK smap ∧ bnfMUTMAP mpBg mp2c mpQ smap ∧
+  bnfMUTSPLIT mpQ mp1a mp2n ⇒
+  bnfMUTITER cn1 cn2 mpK mpQ
 Proof
   simp[MUTITER_def] >> strip_tac >>
   (* the predicates are there so that a driver's facts can be matched
@@ -152,7 +152,7 @@ Proof
        (strip_assume_tac o SRULE[EXISTS_UNIQUE_THM])) >>
   rename [‘∀af. hh (cn1 af) = t1 (mpH fold (mpG hh af))’] >>
   (* so there is only one solution, and this is it *)
-  ‘∀h1 h2. MUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2 ⇒
+  ‘∀h1 h2. bnfMUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2 ⇒
            h1 = hh ∧ h2 = fold o smap hh’
     by (simp[MUTREC_def] >> rpt gen_tac >> strip_tac >>
         ‘h2 = fold o smap h1’
@@ -180,13 +180,13 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition NESTSET_def:
-  NESTSET (stn1 : 'fn1 -> 'n1 set) sb1 sa1 S21 ⇔
+  bnfNESTSET (stn1 : 'fn1 -> 'n1 set) sb1 sa1 S21 ⇔
     ∀af. stn1 af = sb1 af ∪ BIGUNION (IMAGE S21 (sa1 af))
 End
 
 Theorem MUTUAL_INDUCTION:
-  FIXIND cn1 stn1 ∧ FIXIND cn2 st2 ∧
-  NESTSET stn1 sb1 sa1 S21 ∧ FIXSET cn2 st2 sb2 S21 ⇒
+  bnfFIXIND cn1 stn1 ∧ bnfFIXIND cn2 st2 ∧
+  bnfNESTSET stn1 sb1 sa1 S21 ∧ bnfFIXSET cn2 st2 sb2 S21 ⇒
   ∀P1 P2.
     (∀af. (∀y. y ∈ sb1 af ⇒ P1 y) ∧ (∀z. z ∈ sa1 af ⇒ P2 z) ⇒ P1 (cn1 af)) ∧
     (∀af. (∀y. y ∈ sb2 af ⇒ P1 y) ∧ (∀z. z ∈ st2 af ⇒ P2 z) ⇒ P2 (cn2 af)) ⇒
@@ -241,23 +241,23 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition MapId2_def:
-  MapId2 (mp : ('a -> 'a) -> ('b -> 'b) -> 'f -> 'f) ⇔ ∀x. mp I I x = x
+  bnfMapId2 (mp : ('a -> 'a) -> ('b -> 'b) -> 'f -> 'f) ⇔ ∀x. mp I I x = x
 End
 
 Definition MapComp2_def:
-  MapComp2 (mp_ab : ('a1 -> 'b1) -> ('a2 -> 'b2) -> 'f -> 'g)
+  bnfMapComp2 (mp_ab : ('a1 -> 'b1) -> ('a2 -> 'b2) -> 'f -> 'g)
            (mp_bc : ('b1 -> 'c1) -> ('b2 -> 'c2) -> 'g -> 'h)
            (mp_ac : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'f -> 'h) ⇔
     ∀f1 f2 g1 g2 x. mp_bc g1 g2 (mp_ab f1 f2 x) = mp_ac (g1 o f1) (g2 o f2) x
 End
 
 Theorem MUTUAL_PRIM_REC:
-  MUTITER cn1 cn2
+  bnfMUTITER cn1 cn2
           (mpq1 : ('n1 -> 'n1 # 'c1) -> ('n2 -> 'n2 # 'c2) -> 'fn1 -> 'fq1)
           mpq2 ∧
-  MUTITER cn1 cn2 mpn1 mpn2 ∧
-  MapComp2 mpq1 mpqn1 mpn1 ∧ MapComp2 mpq1 mpqc1 mpc1 ∧ MapId2 mpn1 ∧
-  MapComp2 mpq2 mpqn2 mpn2 ∧ MapComp2 mpq2 mpqc2 mpc2 ∧ MapId2 mpn2 ⇒
+  bnfMUTITER cn1 cn2 mpn1 mpn2 ∧
+  bnfMapComp2 mpq1 mpqn1 mpn1 ∧ bnfMapComp2 mpq1 mpqc1 mpc1 ∧ bnfMapId2 mpn1 ∧
+  bnfMapComp2 mpq2 mpqn2 mpn2 ∧ bnfMapComp2 mpq2 mpqc2 mpc2 ∧ bnfMapId2 mpn2 ⇒
   ∀t1 t2.
     (∃(h1 : 'n1 -> 'c1) (h2 : 'n2 -> 'c2).
        (∀af. h1 (cn1 af) = t1 af (mpc1 h1 h2 af)) ∧
@@ -270,7 +270,7 @@ Theorem MUTUAL_PRIM_REC:
 Proof
   strip_tac >> rpt gen_tac >>
   (* the paired iterator: alongside the answer it rebuilds its argument *)
-  qpat_assum ‘MUTITER cn1 cn2 mpq1 mpq2’
+  qpat_assum ‘bnfMUTITER cn1 cn2 mpq1 mpq2’
     (fn th =>
         qspecl_then
           [‘λv. (cn1 (mpqn1 FST FST v),
@@ -281,7 +281,7 @@ Proof
           (SRULE [MUTITER_def, MUTREC_def] th)) >>
   (* and rebuilding is the identity: it and the constructors solve the
      iteration at the types themselves, which has one solution *)
-  qpat_assum ‘MUTITER cn1 cn2 mpn1 mpn2’
+  qpat_assum ‘bnfMUTITER cn1 cn2 mpn1 mpn2’
     (fn th =>
         qspecl_then [‘cn1’, ‘cn2’] (strip_assume_tac o SRULE [])
                     (SRULE [MUTITER_def, MUTREC_def] th)) >>

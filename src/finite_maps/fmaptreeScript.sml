@@ -2,7 +2,7 @@ Theory fmaptree
 Ancestors
   finite_map pred_set
 Libs
-  BasicProvers boolSimps bnfDatatypeLib
+  BasicProvers boolSimps
 
 (* an fmaptree is a type of tree, where branching is controlled by a
    finite-map.  The one constructor is
@@ -23,8 +23,7 @@ Libs
 *)
 
 (* this specification recurses under a finite map, which the old
-   construction cannot build; naming bnfDatatypeLib in the Libs above is
-   what puts the BNF package behind Datatype *)
+   construction cannot build and the BNF package behind Datatype can *)
 Datatype: fmaptree = FTNode 'value ('key |-> fmaptree)
 End
 

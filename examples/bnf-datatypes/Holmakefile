@@ -1,3 +1,2 @@
 INCLUDES = $(dprot $(HOLDIR)/src/pred_set/src/more_theories) \
-           $(dprot $(HOLDIR)/src/finite_maps) \
-           $(dprot $(HOLDIR)/src/datatype/bnf)
+           $(dprot $(HOLDIR)/src/finite_maps)
