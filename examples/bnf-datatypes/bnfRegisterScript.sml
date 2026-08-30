@@ -265,7 +265,7 @@ val _ = checkthm "and the nested type's case constant is derived anyway"
     (∀(a:'b1) l (v:'r) f. rose_CASE (RNode a l) v f = f a l)”
 
 val mylist_tyinfo =
-    hd (typeBaseInfo {axiom = mylist_axiom, induction = mylist_induction,
+    hd (typeBaseInfo {axiom = #axiom cs, induction = mylist_induction,
                       case_defs = [mylist_case],
                       rewrites = [[mylistMAP_thm, mylistSET_thm]]})
 
@@ -352,7 +352,7 @@ val _ =
     The same definition, through the axiom rather than by hand.
    ---------------------------------------------------------------------- *)
 
-val rsize2_def =
+val {definition = rsize2_def, unique = rsize2_unique} =
     defineRecursion {
       name = "rsize2_def",
       axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
@@ -376,7 +376,7 @@ val _ =
    set-based one, since a nested recursion has no other, and TypeBase
    reads the existence half of the axiom *)
 val rose_tyinfos =
-    typeBaseInfo {axiom = #existential_axiom rcs,
+    typeBaseInfo {axiom = #axiom rcs,
                   induction = #set_induction rcs,
                   case_defs = [rose_case], rewrites = [[]]}
 val _ = TypeBase.export rose_tyinfos
@@ -406,14 +406,14 @@ val _ =
 
 (* The other way round — a function of its own over the operator
    recursed under, which is how the old package's nested axioms take a
-   definition — is a well-founded recursion, and the measure it wants is
-   a size function, which the package does not define yet.
+   definition — is a well-founded recursion.  What it wants is a
+   measure, and the entry brought one: the size, and the lemma that
+   connects its two shapes.
 
-   `Define` itself cannot be called here: its wrapper hands the failure
-   to `Feedback.render_exn`, which in a script prints and exits rather
-   than raising.  One layer down raises the HOL_ERR it should. *)
+   `Define` itself cannot be called here: its wrapper hands a failure to
+   `Feedback.render_exn`, which in a script prints and exits rather than
+   raising.  One layer down raises the HOL_ERR it should. *)
 
-(* before the connecting lemma below, that is *)
 val _ = tprint "a function of its own over the operator recursed under"
 val _ =
     let val dfn = Defn.Hol_defn "rsize4_def"
@@ -423,8 +423,8 @@ val _ =
                      rsizel (MyCons r rs) = rsize4 r + rsizel rs’
     in
       case Lib.total TotalDefn.primDefine dfn of
-          NONE => OK()      (* the connecting lemma is not there yet *)
-        | SOME _ => die "accepted"
+          NONE => die "not accepted"
+        | SOME _ => OK()   (* and no measure was supplied *)
     end
 
 val _ = tprint "defineRecursion says so rather than guessing"
@@ -442,53 +442,37 @@ val _ =
            then OK() else die (Feedback.message_of e)
 
 (* ----------------------------------------------------------------------
-    The lemma that connects the two shapes of a nested size.
+    What a termination proof needs, which the entry brought with it.
 
     A size of a nested argument is a fold — `mylist_size (rose_size f) l`
-    — and what the axiom hands over is a map, so the size defined above
-    reads `mylist_size (λx. x) (mylistMAP (rose_size f) l)`.  The two are
-    the same, and saying so as a *termination* simplification is what
-    lets TFL find the well-founded relation for a definition written the
-    old way: with that, `Define` takes one with a function of its own
-    over the operator recursed under, and needs no measure supplied.
-
-    This is the piece the package should prove and export for each type
-    it registers; here it is done by hand, over its own induction.
+    — and what the axiom hands over is a map, so the size reads
+    `mylist_size (λx. x) (mylistMAP (rose_size f) l)`.  The two are
+    connected by a lemma the registration proves and exports as a
+    *termination* simplification, and with it Define finds the
+    well-founded relation for a definition written the old way by
+    itself.
    ---------------------------------------------------------------------- *)
-Theorem mylist_size_MAP[simp,tfl_termsimp]:
-  ∀f l. mylist_size (λx. x) (mylistMAP f l) = mylist_size f l
-Proof
-  Induct_on ‘l’ >> simp[]
-QED
 
-(* the inequality a measure over the two types turns on *)
+val _ = tprint "the size lemma the entry proved"
+val _ =
+    let val th = DB.fetch "-" "mylist_size_MAP"
+    in
+      if null (hyp th) andalso
+         same (concl th)
+              “∀f l. mylist_size (λx. x) (mylistMAP f l) = mylist_size f l”
+      then OK() else die (thm_to_string th)
+    end
+
 val _ = tprint "a sub-term is smaller, with the sizes as defined"
 val _ =
     let val th = Q.prove (‘∀f a l. mylist_size (rose_size f) l <
                                    rose_size f (RNode a l)’,
                           simp[#2 (TypeBase.size_of “:'a rose”),
                                #2 (TypeBase.size_of “:'a mylist”),
-                               mylist_size_MAP])
+                               DB.fetch "-" "mylist_size_MAP"])
     in
       if null (hyp th) then OK() else die "not proved"
     end
-
-val _ = tprint "and automatically, without a measure being supplied"
-val _ =
-    let val dfn = Defn.Hol_defn "rsize7_def"
-                    ‘rsize7 RLeaf = 0n ∧
-                     rsize7 (RNode a l) = 1 + rsizel7 l ∧
-                     rsizel7 MyNil = 0n ∧
-                     rsizel7 (MyCons r rs) = rsize7 r + rsizel7 rs’
-    in
-      case Lib.total TotalDefn.primDefine dfn of
-          NONE => die "not automatic"
-        | SOME _ => OK()
-    end
-
-(* ----------------------------------------------------------------------
-    and the sizes themselves, which the entry carries
-   ---------------------------------------------------------------------- *)
 
 val _ = tprint "the types' size functions"
 val _ =
@@ -509,3 +493,8 @@ val _ =
                          mylist_size (λx. x) (mylistMAP (rose_size f) l)”
       then OK() else die (thm_to_string rth)
     end
+
+val _ = print ("PROBE unique: " ^
+               (case rsize2_unique of
+                    NONE => "none"
+                  | SOME th => thm_to_string th) ^ "\n")

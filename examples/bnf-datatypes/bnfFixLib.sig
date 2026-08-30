@@ -399,12 +399,20 @@ sig
       for one under a functor — and an axiom over a family takes the
       clauses for all of its functions at once.
      ---------------------------------------------------------------------- *)
-  val defineRecursion : {name : string, axiom : thm, def : term} -> thm
+  val defineRecursion : {name : string, axiom : thm, def : term} ->
+                        {definition : thm, unique : thm option}
 
   (* the size function, out of what the axiom says: what a constructor
      is worth is one plus what each argument's own type's size says of
      it.  NONE when some argument has no size — a function space, say *)
-  val defineSize : {tyname : string} -> thm -> (term list * thm) option
+  val defineSize : {tyname : string} -> thm ->
+                   {sizes : term list, definition : thm,
+                    unique : thm option} option
+
+  (* and what connects a nested size's two shapes, which a termination
+     proof over the operator recursed under needs *)
+  val sizeMapLemma : {unique : thm, sizedef : thm, mapeqn : thm,
+                      sizes : term list} -> thm
 
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
                       rewrites : thm list list} ->

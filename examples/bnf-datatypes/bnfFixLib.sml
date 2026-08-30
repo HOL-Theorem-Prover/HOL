@@ -2743,8 +2743,8 @@ fun defineRecursion {name, axiom, def} =
     let
       (* the axiom, as existence over the functions it defines *)
       val (fvars, body0) = strip_forall (concl axiom)
-      val ax = if is_exists1 body0 then
-                 GENL fvars (EXISTENCE (SPECL fvars axiom))
+      val unique = is_exists1 body0
+      val ax = if unique then GENL fvars (EXISTENCE (SPECL fvars axiom))
                else axiom
       fun clauseOf tm =
           let val (args, eq) = strip_forall tm
@@ -2859,8 +2859,38 @@ fun defineRecursion {name, axiom, def} =
       val closed = if null params then solved
                    else CONV_RULE (skolemAll (length hvars))
                                   (GENL params solved)
+      val def = new_specification (name, List.map (#1 o dest_var) fns, closed)
+      (* what the axiom's own uniqueness says of the function just
+         defined: anything satisfying the same clauses is it *)
+      val uniqueness =
+          if not unique then NONE
+          else
+            let
+              val insts = List.map instOf fvars
+              val uq = CONV_RULE (DEPTH_CONV BETA_CONV)
+                         (CONJUNCT2
+                            (CONV_RULE Conv.EXISTS_UNIQUE_CONV
+                               (SPECL insts (INST_TYPE tyS axiom))))
+              val (hs, _) = strip_forall (concl uq)
+              val consts =
+                  List.map (#1 o strip_comb o lhs o #2 o strip_forall)
+                           (strip_conj (#2 (strip_forall (concl def))))
+              fun theOne v =
+                  case List.find (fn c => #1 (dest_const c) =
+                                          #1 (dest_var v)) consts of
+                      SOME c => list_mk_comb (c, params)
+                    | NONE => raise ERR "defineRecursion" "no constant"
+              val hvs = List.take (hs, length hvars)
+              val spec = SPECL (hvs @ List.map theOne fns) uq
+              val (ant, _) = dest_imp (concl spec)
+              val (mine, theirs) = dest_conj ant
+            in
+              SOME (GENL (params @ hvs)
+                         (DISCH mine (MP spec (CONJ (ASSUME mine)
+                                                    (SPECL params def)))))
+            end
     in
-      new_specification (name, List.map (#1 o dest_var) fns, closed)
+      {definition = def, unique = uniqueness}
     end
 
 
@@ -2890,18 +2920,20 @@ fun defineRecursion {name, axiom, def} =
 fun defineSize {tyname} axiom =
     let
       val (fvars0, body0) = strip_forall (concl axiom)
-      val ax = if is_exists1 body0 then
-                 GENL fvars0 (EXISTENCE (SPECL fvars0 axiom))
-               else axiom
+      val axE = if is_exists1 body0 then
+                  GENL fvars0 (EXISTENCE (SPECL fvars0 axiom))
+                else axiom
       val num = numSyntax.num
-      (* the answers a size gives are numbers *)
-      val ax =
-          let val (hs, _) = strip_exists (#2 (strip_forall (concl ax)))
-          in
-            INST_TYPE (List.map (fn h => #2 (dom_rng (type_of h)) |-> num) hs)
-                      ax
-          end
-      val (hvars, body) = strip_exists (#2 (strip_forall (concl ax)))
+      (* the answers a size gives are numbers.  What the clauses are read
+         off is the existence half; what defines the function is the
+         axiom as it came, since its uniqueness is what the size's own
+         lemma turns on. *)
+      val theta =
+          let val (hs, _) = strip_exists (#2 (strip_forall (concl axE)))
+          in List.map (fn h => #2 (dom_rng (type_of h)) |-> num) hs end
+      val axE = INST_TYPE theta axE
+      val ax = INST_TYPE theta axiom
+      val (hvars, body) = strip_exists (#2 (strip_forall (concl axE)))
       val tys = List.map (#1 o dom_rng o type_of) hvars
       val targs = #Args (dest_thy_type (hd tys))
       val _ = List.all (fn ty => #Args (dest_thy_type ty) = targs) tys orelse
@@ -2975,8 +3007,9 @@ fun defineSize {tyname} axiom =
           end
       val clauses =
           list_mk_conj (List.map (clauseOf 0) (strip_conj body))
-      val def = defineRecursion {name = tyname ^ "_size_def", axiom = ax,
-                                def = clauses}
+      val {definition = def, unique = uq} =
+          defineRecursion {name = tyname ^ "_size_def", axiom = ax,
+                           def = clauses}
       (* what the entry keeps is the constant the definition made, not
          the variable the clauses were written with *)
       val consts =
@@ -2988,7 +3021,79 @@ fun defineSize {tyname} axiom =
               SOME c => c
             | NONE => raise ERR "defineSize" "the definition made no constant"
     in
-      SOME (List.map constFor sizes, def)
+      SOME {sizes = List.map constFor sizes, definition = def, unique = uq}
+    end
+
+
+(* ----------------------------------------------------------------------
+    The lemma that connects the two shapes of a nested size.
+
+    A size of a nested argument is a fold — `mylist_size (rose_size f) l`
+    — and what the axiom hands over is a map, so the size defined above
+    reads `mylist_size (\x. x) (mylistMAP (rose_size f) l)`.  A measure
+    over the operator recursed under is written the first way, so the two
+    have to be connected, and as a *termination* simplification: TFL's
+    prover keeps its own set and does not read the ambient one.
+
+    No induction is needed.  `\x. T_size (\x. x) (TMAP f x)` satisfies
+    the very clauses the size was defined by — the constructor case by
+    the map equation, the size equation and the component's own
+    composition law — so the axiom's uniqueness says it *is* the size at
+    those functions.
+   ---------------------------------------------------------------------- *)
+
+fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
+    let
+      val (uvars, ubody) = strip_forall (concl unique)
+      val (params, hvar) =
+          (List.take (uvars, length uvars - 1), List.last uvars)
+      (* the map, at the numbers the sizes give *)
+      val mapapp = lhs (#2 (strip_forall (hd (strip_conj (concl mapeqn)))))
+      val (mtm, margs) = strip_comb mapapp
+      val mfs = List.take (margs, length margs - 1)
+      val theta = List.map (fn f => #2 (dom_rng (type_of f)) |->
+                                    numSyntax.num)
+                           mfs
+      val mtm = Term.inst theta mtm
+      val gs = ListPair.mapEq (fn (f,p) => mk_var (#1 (dest_var f),
+                                                   type_of p))
+                              (List.map (Term.inst theta) mfs, params)
+      val mapAt = list_mk_comb (mtm, gs)
+      (* the size at the identity, of what the map produced: the same
+         constant, at the numbers the map lands in *)
+      val sizetm = List.hd sizes
+      val numty = numSyntax.num
+      val idfns = List.map (fn _ => let val v = mk_var ("x", numty)
+                                    in mk_abs (v, v) end)
+                           params
+      val x = mk_var ("x", #1 (dom_rng (type_of mapAt)))
+      val sizeAtNum =
+          let val wanted =
+                  List.foldr (op -->)
+                             (#2 (dom_rng (type_of mapAt)) --> numty)
+                             (List.map type_of idfns)
+          in
+            Term.inst (match_type (type_of sizetm) wanted) sizetm
+          end
+      val S = mk_abs (x, list_mk_comb (sizeAtNum,
+                                       idfns @ [mk_comb (mapAt, x)]))
+      (* what it has to satisfy is the clause set the size was defined
+         by, and both sides of each clause reach the same normal form *)
+      val spec = SPECL (gs @ [S]) unique
+      val (ant, _) = dest_imp (concl spec)
+      val rws = [mapeqn, SPEC_ALL sizedef, combinTheory.o_DEF,
+                 combinTheory.I_THM]
+      fun proveClause cl =
+          let val (vs, eq) = strip_forall cl
+          in
+            GENL vs (normEqWith rws (lhs eq, rhs eq))
+          end
+      val clauses = LIST_CONJ (List.map proveClause (strip_conj ant))
+      val isSize = MP spec clauses
+      val y = mk_var ("y", type_of x)
+    in
+      GENL (gs @ [y])
+           (CONV_RULE (LAND_CONV BETA_CONV) (AP_THM isSize y))
     end
 
 
@@ -3011,8 +3116,15 @@ fun defineSize {tyname} axiom =
 
 fun typeBaseInfo {axiom, induction, case_defs, rewrites} =
     let
+      (* TypeBase reads the existence half; the size's own lemma wants
+         the uniqueness, so an axiom that carries it is welcome here *)
+      val (fvars, body) = strip_forall (concl axiom)
+      val existence = if is_exists1 body then
+                        GENL fvars (EXISTENCE (SPECL fvars axiom))
+                      else axiom
       val tyinfos = TypeBasePure.gen_datatype_info
-                      {ax = axiom, ind = induction, case_defs = case_defs}
+                      {ax = existence, ind = induction,
+                       case_defs = case_defs}
       val _ = length rewrites = length tyinfos orelse
               raise ERR "typeBaseInfo" "a rewrite list per type, please"
       (* the size, which is what a well-founded recursion over the type
@@ -3026,12 +3138,38 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites} =
               case defineSize {tyname = #2 (TypeBasePure.ty_name_of ti)}
                               axiom of
                   NONE => NONE
-                | SOME (szs, def) =>
-                  SOME (szs, def, TypeBasePure.ty_name_of ti)
+                | SOME {sizes, definition, unique} =>
+                  SOME (sizes, definition, unique,
+                        TypeBasePure.ty_name_of ti)
+      (* and what a termination proof over this type needs to know
+         about its size, proved and exported where the size is made *)
+      val _ =
+          case sized of
+              SOME (szs, def, SOME uq, (_, tyname)) =>
+              let
+                fun aboutTy th =
+                    let val l = lhs (#2 (strip_forall
+                                           (hd (strip_conj (concl th)))))
+                    in
+                      #Tyop (dest_thy_type (type_of l)) = tyname
+                    end handle HOL_ERR _ => false
+              in
+                case List.find aboutTy (List.concat rewrites) of
+                    NONE => ()
+                  | SOME mapeqn =>
+                    let val nm = tyname ^ "_size_MAP"
+                        val lem = sizeMapLemma {unique = uq, sizedef = def,
+                                                mapeqn = mapeqn, sizes = szs}
+                    in
+                      ignore (save_thm (nm, lem))
+                    ; TotalDefn.export_termsimp nm
+                    end
+              end
+            | _ => ()
       fun withSize (i, tyi) =
           case sized of
               NONE => tyi
-            | SOME (szs, def, orig) =>
+            | SOME (szs, def, _, orig) =>
               let val {convs, rewrs} = TypeBasePure.simpls_of tyi
               in
                 TypeBasePure.put_size
