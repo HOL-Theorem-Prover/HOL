@@ -97,14 +97,19 @@ fun specToFunctors specs =
       val names = List.map #1 specs
       val n = length names
       val (st, ftys) = mmap specToFunctor0 (List.map #2 specs) empty_cstate
-      (* the specification's own variables, in the order they were met *)
-      fun byIndex ty =
-          Option.valOf (Int.fromString (String.extract (dest_vartype ty, 2,
-                                                        NONE)))
-          handle Option => 0
+      (* The specification's own variables, numbered 'b1, 'b2 ... in the
+         order the specification's own names sort in — which is the
+         order the new type's arguments come out in, since a type
+         definition sorts the variables of the predicate that defines
+         it.  Numbering them in the order they were *met* instead would
+         give a type whose arguments are in neither the order the user
+         wrote nor the one the old package produces. *)
+      val written = List.map #2 (Symtab.dest (#1 (#tyvars st)))
       val params =
-          Listsort.sort (fn (t1,t2) => Int.compare (byIndex t1, byIndex t2))
-                        (List.map #2 (Symtab.dest (#1 (#tyvars st))))
+          List.tabulate (length written,
+                         fn i => mk_vartype ("'b" ^ Int.toString (i + 1)))
+      val renumber = ListPair.map (op |->) (written, params)
+      val ftys = List.map (type_subst renumber) ftys
       val mvtab = #1 (#mutrecvars st)
       (* a member no functor mentions still needs a slot of its own *)
       fun freshFrom i avoid =
@@ -123,8 +128,13 @@ fun specToFunctors specs =
       fun slotsFor j =
           List.tabulate (n, fn k => if k = j then alpha
                                     else List.nth (slots, k))
+      (* and the variables the specification itself wrote, alongside the
+         ones standing in for them *)
+      val origins =
+          ListPair.map (fn (p, (nm, _)) => (p, mk_vartype nm))
+                       (params, Symtab.dest (#1 (#tyvars st)))
     in
-      {tynames = names, params = params,
+      {tynames = names, params = params, origins = origins,
        functors = List.tabulate (n, fn j => (List.nth (ftys, j), slotsFor j))}
     end
 
