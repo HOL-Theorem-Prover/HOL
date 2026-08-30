@@ -204,6 +204,12 @@ val _ = op THEN : list_tactic * tactic -> list_tactic ;
  * Converts a list of tactics to a single list_tactic
  *---------------------------------------------------------------------------*)
 
+(* See Tactical.sig.  `fn () => tac g ctxt' must not shrink to `tac g':
+   that is the whole point -- the flag has to still be set when the
+   tactic runs, not merely when its closure is built. *)
+fun trace_tac (nm, i) (tac: tactic) : tactic =
+    fn g => fn ctxt => Feedback.trace (nm, i) (fn () => tac g ctxt) ()
+
 fun TACS_TO_LT (tacl: tactic list) : list_tactic =
    fn gl => fn ctxt =>
       let

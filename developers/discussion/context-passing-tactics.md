@@ -2216,6 +2216,35 @@ comes first --- `tac g` builds a closure, so anything wrapping it alone
 closes before the tactic works, which is the bug class this migration
 had.
 
+#### The same bug, in a shape nobody was looking for: `trace`
+
+`Feedback.trace (nm,i) f x` sets the flag, evaluates `f x`, restores it.
+Given a *tactic*, `f x` is `tac g` --- a closure --- so the flag is back
+to its old value before the tactic does any work.  Wrapping a rule or a
+conversion is fine, because those are fully applied; wrapping a tactic
+silently does nothing.
+
+It cost a real proof.  `examples/category/limitScript.sml` had
+
+    trace ("BasicProvers.var_eq_old", 1) (srw_tac [][cone_cat_maps_to])
+
+so the simplifier ran *without* `var_eq_old`; a later
+`srw_tac [][restrict_def]` then left three subgoals where the script's
+`>|[_,_]` expects two, and `TACS_TO_LT`'s `itlist2` raised "lists of
+different length" --- an error naming neither the trace nor the tactic
+that actually changed behaviour.  The build failure is in
+`is_binary_product_thm`, some ninety lines below the cause.
+
+`Tactical.trace_tac` spans the context application:
+
+    fun trace_tac (nm, i) (tac: tactic) : tactic =
+        fn g => fn ctxt => Feedback.trace (nm, i) (fn () => tac g ctxt) ()
+
+Four sites in the tree wrap a tactic this way and all now use it.  The
+other three are `trace ("metis", 0) (METIS_TAC ...)`, which were quietly
+failing to quieten metis --- the same bug, cosmetic rather than wrong.
+Of the ~180 other `trace` uses, none wraps a tactic.
+
 The Docfiles needed more than the two the estimate named: **21
 transcripts across 10 files** apply a tactic to a goal and print the
 result, and every one of them now prints
