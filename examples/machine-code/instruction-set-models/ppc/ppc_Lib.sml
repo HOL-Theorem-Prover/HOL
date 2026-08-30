@@ -5,7 +5,8 @@ open HolKernel boolLib bossLib;
 open wordsLib stringLib listSyntax simpLib listTheory wordsTheory;
 open opmonTheory bit_listTheory combinTheory;
 
-open ppc_Theory ppc_seq_monadTheory ppc_opsemTheory ppc_astTheory ppc_coretypesTheory;
+open ppc_Theory ppc_seq_monadTheory ppc_opsemTheory ppc_astTheory ppc_coretypesTheory
+     ppc_LibContextTheory;
 
 
 (* decoder *)
@@ -49,18 +50,14 @@ val w2bytes4 = SIMP_CONV std_ss [Ntimes word2bytes_def 7,ASR_ADD] ``word2bytes 4
 
 val lemma1 = REWRITE_RULE [WORD_ADD_0] (Q.SPECL [`v`,`0w`,`x`] WORD_EQ_ADD_LCANCEL)
 val lemma2 = REWRITE_RULE [WORD_ADD_0] (Q.SPECL [`v`,`x`,`0w`] WORD_EQ_ADD_LCANCEL)
-val address_lemma = prove(
-  ``~(0w = 1w:word32) /\ ~(0w = 2w:word32) /\ ~(0w = 3w:word32) /\
-    ~(1w = 2w:word32) /\ ~(1w = 3w:word32) /\ ~(2w = 3w:word32)``,EVAL_TAC);
+val address_lemma = ppc_LibContextTheory.address_lemma;
 
 val w_conv = SIMP_CONV std_ss [ppc_write_mem_aux_def,GSYM WORD_ADD_ASSOC, word_add_n2w]
 val ppc_write_mem_aux_lemma1 = w_conv ``ppc_write_mem_aux ii addr [x0]``
 val ppc_write_mem_aux_lemma2 = w_conv ``ppc_write_mem_aux ii addr [x0;x1]``
 val ppc_write_mem_aux_lemma3 = w_conv ``ppc_write_mem_aux ii addr [x0;x1;x2;x3]``
 
-val if_SOME = prove(
-  ``(if b then SOME((),x:ppc_state) else SOME((),y)) = SOME ((),if b then x else y)``,
-  Cases_on `b` THEN SIMP_TAC std_ss []);
+val if_SOME = ppc_LibContextTheory.if_SOME;
 
 val ss = rewrites [OK_nextinstr_def, PWRITE_M_LIST_def,
   bit_update_def, const_high_def, const_low_def, const_high_s_def,

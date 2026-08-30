@@ -6,7 +6,7 @@ open wordsLib stringLib listSyntax simpLib listTheory wordsTheory;
 open opmonTheory bit_listTheory combinTheory ConseqConv;
 
 open x86_Theory x86_seq_monadTheory x86_opsemTheory x86_astTheory;
-open x86_coretypesTheory x86_icacheTheory;
+open x86_coretypesTheory x86_icacheTheory x86_LibContextTheory;
 
 
 (* decoder *)
@@ -18,9 +18,7 @@ fun eval_term_ss tm_name tm = conv_ss
 
 val bytes_LEMMA = SIMP_RULE std_ss [LENGTH] (Q.SPEC `[v1;v2;v3;v4;v5;v6;v7;v8]` bits2num_LESS)
 
-val n2w_SIGN_EXTEND = prove(
-  ``!n. n < 256 ==> (n2w (SIGN_EXTEND 8 32 n):word32 = sw2sw ((n2w n):word8))``,
-  SIMP_TAC (std_ss++SIZES_ss) [sw2sw_def,w2n_n2w]);
+val n2w_SIGN_EXTEND = x86_LibContextTheory.n2w_SIGN_EXTEND;
 
 fun raw_x86_decode s = let
   fun mk_bool_list n =

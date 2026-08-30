@@ -1,7 +1,7 @@
 structure x64_compilerLib :> x64_compilerLib =
 struct
 
-open HolKernel boolLib bossLib Parse;
+open HolKernel boolLib bossLib Parse x64_compilerLibContextTheory;
 open decompilerLib;
 open x64_codegenLib;
 open x64_codegen_x64Lib;
@@ -26,9 +26,7 @@ fun AUTO_ALPHA_CONV () = let
     else ALL_CONV tm
   in doit end
 
-val COMPILER_TAC_LEMMA = prove(
-  ``!a b:bool. (a /\ a /\ b <=> a /\ b) /\ (a \/ a \/ b <=> a \/ b)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss []);
+val COMPILER_TAC_LEMMA = x64_compilerLibContextTheory.COMPILER_TAC_LEMMA;
 
 val COMPILER_TAC =
     SIMP_TAC bool_ss [LET_DEF,word_div_def,word_mod_def,w2w_CLAUSES]
