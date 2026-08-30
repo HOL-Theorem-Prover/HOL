@@ -3623,4 +3623,142 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
       List.tabulate (n, eqnsFor)
     end
 
+
+(* ----------------------------------------------------------------------
+    Defining a function by the axiom.
+
+    This is `Prim_rec.new_recursive_definition` for an axiom whose
+    recursive calls arrive under a map: that one expects each recursive
+    occurrence to be the function applied to a variable, and refuses
+    anything else.  The clauses a caller writes here are the same
+    otherwise —
+
+        rsize RLeaf = 0 /\
+        rsize (RNode a l) = 1 + mylistSUM (mylistMAP rsize l)
+
+    — with the recursive call in whatever shape the axiom hands it over:
+    `f a` for a direct occurrence and `MAP f l` for one under a functor.
+    An axiom over a family takes clauses for each of its functions at
+    once.
+
+    What the caller writes has to be *that* shape.  A definition written
+    the way the old package's nested axioms take them — an auxiliary
+    function over the operator recursed under, with its own family of
+    clauses — is a different recursion, and this says so rather than
+    guessing: `Define` is the route for those, since it can look for a
+    well-founded relation.
+   ---------------------------------------------------------------------- *)
+
+fun defineRecursion {name, axiom, def} =
+    let
+      (* the axiom, as existence over the functions it defines *)
+      val (fvars, body0) = strip_forall (concl axiom)
+      val ax = if is_exists1 body0 then
+                 GENL fvars (EXISTENCE (SPECL fvars axiom))
+               else axiom
+      fun clauseOf tm =
+          let val (args, eq) = strip_forall tm
+              val (h, capp) = dest_comb (lhs eq)
+              val (cons, cargs) = strip_comb capp
+              val (f, fargs) = strip_comb (rhs eq)
+          in
+            {h = h, capp = capp, cons = cons, cargs = cargs,
+             f = f, fargs = fargs}
+          end
+      (* and the clauses the caller wrote, by the constructor they are
+         about *)
+      fun userClause tm =
+          let val (_, eq) = strip_forall tm
+              val (fn_, capp) = dest_comb (lhs eq)
+              val (cons, _) = strip_comb capp
+          in
+            (cons, (fn_, capp, rhs eq))
+          end
+      val uclauses = List.map userClause (strip_conj def)
+      (* the caller's quotation has its own names for the type
+         variables; the axiom is read at those *)
+      val tyS =
+          let val (_, body1) = strip_exists (#2 (strip_forall (concl ax)))
+              val cs = List.map clauseOf (strip_conj body1)
+              fun tryOne c =
+                  case List.find (fn (cons,_) => same_const cons (#cons c))
+                                 uclauses of
+                      NONE => NONE
+                    | SOME (_, (_, ucapp, _)) =>
+                        SOME (#2 (match_term (#capp c) ucapp))
+          in
+            case List.mapPartial tryOne cs of
+                [] => raise ERR "defineRecursion"
+                            "no clause matches any of the axiom's"
+              | th :: _ => th
+          end
+      val ax = INST_TYPE tyS ax
+      val (fvars, body1) = strip_forall (concl ax)
+      val (hvars, body) = strip_exists body1
+      val axclauses = List.map clauseOf (strip_conj body)
+      val fns = Lib.op_mk_set aconv (List.map (#1 o #2) uclauses)
+      val _ = length fns = length hvars orelse
+              raise ERR "defineRecursion"
+                    ("the axiom defines " ^ Int.toString (length hvars) ^
+                     " function(s) and these clauses define " ^
+                     Int.toString (length fns) ^
+                     ": a definition with a function of its own over the" ^
+                     " operator recursed under is a different recursion," ^
+                     " and Define is the route for it")
+      (* the target the axiom is instantiated at, for one constructor *)
+      fun targetOf (c : {h:term, capp:term, cons:term, cargs:term list,
+                         f:term, fargs:term list}) =
+          let
+            val (fn_, ucapp, urhs) =
+                case List.find (fn (cons,_) => same_const cons (#cons c))
+                               uclauses of
+                    SOME (_, x) => x
+                  | NONE => raise ERR "defineRecursion"
+                                  ("no clause for " ^
+                                   term_to_string (#cons c))
+            (* the caller's variables, in the axiom's places *)
+            val (tmS, tyS) = match_term (#capp c) ucapp
+            fun theirs tm = Term.subst tmS (Term.inst tyS tm)
+            (* the caller's name for the function this clause is about *)
+            val hj = case List.find (fn (v,_) => aconv v (#h c))
+                                    (ListPair.zipEq (hvars, fns)) of
+                         SOME (_, g) => g
+                       | NONE => fn_
+            fun atFn tm = Term.subst [#h c |-> hj] (theirs tm)
+            (* a recursive call arrives as whatever the axiom hands the
+               target: the function at an argument, or its map *)
+            val cargs' = List.map theirs (#cargs c)
+            fun freshen (t, (vs, away)) =
+                if is_var t andalso List.exists (aconv t) cargs' then
+                  (vs @ [t], away)
+                else
+                  let val v = numvariant away (mk_var ("r", type_of t))
+                  in (vs @ [v], v :: away) end
+            val results = List.map atFn (#fargs c)
+            val (vs, _) = List.foldl freshen ([], cargs' @ free_varsl results)
+                                     results
+            val body =
+                Term.subst (List.mapPartial
+                              (fn (t,v) => if aconv t v then NONE
+                                           else SOME (t |-> v))
+                              (ListPair.zipEq (results, vs)))
+                           urhs
+            val _ = List.all (fn f => not (free_in f body)) fns orelse
+                    raise ERR "defineRecursion"
+                          ("the clause for " ^ term_to_string (#cons c) ^
+                           " calls the function on something the axiom" ^
+                           " does not hand it: Define is the route for that")
+          in
+            (#f c, list_mk_abs (vs, body))
+          end
+      val targets = List.map targetOf axclauses
+      fun instOf f = case List.find (fn (g,_) => aconv g f) targets of
+                         SOME (_,t) => t
+                       | NONE => f
+      val solved = CONV_RULE (DEPTH_CONV BETA_CONV)
+                             (SPECL (List.map instOf fvars) ax)
+    in
+      new_specification (name, List.map (#1 o dest_var) fns, solved)
+    end
+
 end

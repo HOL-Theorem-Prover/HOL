@@ -391,6 +391,16 @@ sig
 
   val parseSpec : hol_type quotation -> spec
 
+  (* ----------------------------------------------------------------------
+      Defining a function by the axiom, which is
+      Prim_rec.new_recursive_definition for an axiom whose recursive
+      calls arrive under a map.  The clauses are written as the axiom
+      hands the calls over — `f a` for a direct occurrence, `MAP f l`
+      for one under a functor — and an axiom over a family takes the
+      clauses for all of its functions at once.
+     ---------------------------------------------------------------------- *)
+  val defineRecursion : {name : string, axiom : thm, def : term} -> thm
+
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
                       rewrites : thm list list} ->
                      TypeBasePure.tyinfo list

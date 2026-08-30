@@ -347,3 +347,91 @@ val _ =
       if List.all (null o hyp) [th1, th2, th3] then OK()
       else die "not proved"
     end
+
+(* ----------------------------------------------------------------------
+    The same definition, through the axiom rather than by hand.
+   ---------------------------------------------------------------------- *)
+
+val rsize2_def =
+    defineRecursion {
+      name = "rsize2_def",
+      axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+      def = “(rsize2 RLeaf = 0n) ∧
+             (rsize2 (RNode a l) = 1 + mylistSUM (mylistMAP rsize2 l))”}
+
+val _ = tprint "a nested definition, from its clauses"
+val _ =
+    if null (hyp rsize2_def) andalso
+       (* the conjuncts share no variable, so the annotation is what
+          ties their types together *)
+       same (concl rsize2_def)
+            “(rsize2 (RLeaf : 'p rose) = 0n) ∧
+             ∀(a:'p) l. rsize2 (RNode a l) =
+                        1 + mylistSUM (mylistMAP rsize2 l)”
+    then OK() else die (thm_to_string rsize2_def)
+
+(* the nested type's own entry: its induction principle is the
+   set-based one, since a nested recursion has no other *)
+(* the nested type's own entry: its induction principle is the
+   set-based one, since a nested recursion has no other, and TypeBase
+   reads the existence half of the axiom *)
+val rose_tyinfos =
+    typeBaseInfo {axiom = #existential_axiom rcs,
+                  induction = #set_induction rcs,
+                  case_defs = [rose_case], rewrites = [[]]}
+val _ = TypeBase.export rose_tyinfos
+
+(* ----------------------------------------------------------------------
+    What Define makes of the same type.
+
+    With the entry in place, a definition written the way the axiom
+    hands its recursive calls over — under the map — goes through
+    Define as it stands.  One written the way the old package's nested
+    axioms take them, with a function of its own over the operator
+    recursed under, does not yet: that is a well-founded recursion, and
+    the measure it wants is a size function, which the package does not
+    define yet.
+   ---------------------------------------------------------------------- *)
+
+val _ = tprint "Define takes a definition in the shape the axiom hands over"
+val _ =
+    let val th = TotalDefn.Define
+                   ‘rsize3 RLeaf = 0n ∧
+                    rsize3 (RNode a l) = 1 + mylistSUM (mylistMAP rsize3 l)’
+    in
+      if null (hyp th) andalso
+         can (find_term (can (match_term “mylistMAP rsize3”))) (concl th)
+      then OK() else die (thm_to_string th)
+    end
+
+(* The other way round — a function of its own over the operator
+   recursed under, which is how the old package's nested axioms take a
+   definition —
+
+       rsize4 RLeaf = 0 /\ rsize4 (RNode a l) = 1 + rsizel l /\
+       rsizel MyNil = 0 /\ rsizel (MyCons r rs) = rsize4 r + rsizel rs
+
+   is a well-founded recursion, and Define reports that it cannot find
+   the relation:
+
+       ?R. WF R /\ (!a l. R (INR l) (INL (RNode a l))) /\
+           (!rs r. R (INL r) (INR (MyCons r rs))) /\
+           !r rs. R (INR rs) (INR (MyCons r rs))
+
+   What it wants is a measure, and that is a size function, which the
+   package does not define yet.  It is not run here: the failure ends
+   the script rather than raising. *)
+
+val _ = tprint "defineRecursion says so rather than guessing"
+val _ =
+    (ignore (defineRecursion {
+        name = "rsize5_def",
+        axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+        def = “(rsize5 RLeaf = 0n) ∧
+               (rsize5 (RNode a l) = 1 + rsizel5 l) ∧
+               (rsizel5 MyNil = 0n) ∧
+               (rsizel5 (MyCons r rs) = rsize5 r + rsizel5 rs)”});
+     die "accepted")
+    handle HOL_ERR e =>
+           if String.isSubstring "Define is the route" (Feedback.message_of e)
+           then OK() else die (Feedback.message_of e)
