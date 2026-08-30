@@ -539,6 +539,123 @@ fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
 
 
 (* ----------------------------------------------------------------------
+    The datatype that does not recurse.
+
+    An enumeration, a record, any sum of products the type itself does
+    not occur in: the functor is constant in the recursive argument, and
+    μα. C is C.  The construction above does not apply — its cardinality
+    argument needs the recursive argument to be somewhere non-empty —
+    and does not need to: a type in bijection with the functor satisfies
+    the same three principles, by bnfInitialTheory's COPY_ theorems.
+
+    So this returns a fixpoint like defineFixpoint's, and everything
+    downstream — the constructors, the axiom, the case constants, the
+    TypeBase entry — is the same code.  The new type's own functoriality
+    is not defineFixpoint's business either: it is the functor's own,
+    conjugated by the bijection, which is what transportBNF does.
+   ---------------------------------------------------------------------- *)
+
+(* a type variable named 'c, or the first 'cᵢ that is free *)
+fun copyTyvar avoid =
+    let fun go v k =
+            if Lib.mem v avoid then
+              go (mk_vartype ("'c" ^ Int.toString k)) (k + 1)
+            else v
+    in go (mk_vartype "'c") 1 end
+
+type copy = {fixpoint : fixpoint, abs : term, rep : term,
+             absrep : thm, repabs : thm}
+
+fun defineCopy {tyname, ABS, REP} bnf : copy =
+    let
+      val ft = functorTy bnf
+      val _ = not (Lib.mem (recTy bnf) (Type.type_vars ft)) orelse
+              raise ERR "defineCopy"
+                    "the functor uses the recursive argument"
+      (* the new type, in bijection with the functor: the predicate is
+         trivially true, so its two facts are the bijection's *)
+      val x = mk_var ("x", ft)
+      val P = mk_abs (x, boolSyntax.T)
+      val arb = mk_arb ft
+      val ex = EXISTS (mk_exists (x, mk_comb (P, x)), arb)
+                      (EQT_ELIM (BETA_CONV (mk_comb (P, arb))))
+      val itype = newtypeTools.rich_new_type
+                    {tyname = tyname, exthm = ex, ABS = ABS, REP = REP}
+      val newty = #newty itype
+      val abst = #term_ABS_t itype
+      val rept = #term_REP_t itype
+      val absrep = GEN_ALL (#absrep_id itype)
+      val repabs =
+          let val th = #repabs_pseudo_id itype
+              val (r, eq) = dest_forall (concl th)
+              val triv = EQT_ELIM (BETA_CONV (#1 (dest_imp eq)))
+          in
+            GEN r (MP (SPEC r th) triv)
+          end
+      (* the same two facts as compositions, which is the form a
+         transport of the functor's structure across them takes *)
+      fun compEq (f, g, th) =
+          let val x = mk_var ("x", #1 (dom_rng (type_of g)))
+          in
+            EXT (GEN x (TRANS (TRANS (ISPECL [f,g,x] combinTheory.o_THM)
+                                     (SPEC x th))
+                              (SYM (ISPEC x combinTheory.I_THM))))
+          end
+      val cons_def =
+          new_definition (tyname ^ "_CONS_def",
+                          mk_eq (mk_var (tyname ^ "_CONS", ft --> newty),
+                                 abst))
+      val cons = lhs (concl cons_def)
+      val cty = copyTyvar (Type.type_vars ft)
+      (* the map does nothing: the function for the recursive argument
+         has nowhere to act, so what is left is the identity map *)
+      val mapfact =
+          let val h = mk_var ("h", newty --> cty)
+              val af = mk_var ("af", ft)
+              val beta = BETA_CONV (mk_comb (mapOp bnf (newty,cty), h))
+              val idth = PART_MATCH lhs (#mapID bnf) (rhs (concl beta))
+          in
+            GENL [h, af] (TRANS (AP_THM (TRANS beta idth) af)
+                                (ISPEC af combinTheory.I_THM))
+          end
+      (* and there are no sub-terms.  The set function is a composite
+         built over the argument's own, which is the empty one; reducing
+         it is the only way to see that. *)
+      val setfact =
+          let val af = mk_var ("af", ft)
+              val th = QCONV (simpLib.SIMP_CONV (BasicProvers.srw_ss())
+                                [combinTheory.S_DEF, combinTheory.o_DEF,
+                                 combinTheory.K_DEF,
+                                 pairTheory.setFST_thm, pairTheory.setSND_thm,
+                                 bnfPrelimsTheory.BIMG_K0,
+                                 bnfPrelimsTheory.BIMG_EQUAL])
+                             (mk_comb (setOp bnf newty, af))
+          in
+            if pred_setSyntax.is_empty (rhs (concl th)) then GEN af th
+            else raise ERR "defineCopy"
+                       ("the functor's sub-term set did not reduce to the " ^
+                        "empty set")
+          end
+      val facts = LIST_CONJ [absrep, repabs, mapfact]
+      fun copy th =
+          CONV_RULE (DEPTH_CONV BETA_CONV)
+                    (REWRITE_RULE [GSYM cons_def] (MATCH_MP th facts))
+    in
+      {fixpoint =
+         {newty = newty, cons = cons, cons_def = cons_def,
+          recursion = copy COPY_RECURSION,
+          prim_recursion = copy COPY_PRIM_REC,
+          set_induction =
+            CONV_RULE (DEPTH_CONV BETA_CONV)
+              (REWRITE_RULE [GSYM cons_def]
+                 (MATCH_MP COPY_IND (CONJ absrep setfact)))},
+       abs = abst, rep = rept,
+       absrep = compEq (abst, rept, absrep),
+       repabs = compEq (rept, abst, repabs)}
+    end
+
+
+(* ----------------------------------------------------------------------
     Splitting the single constructor along the functor's sum-of-products
     structure, and stating the datatype's axiom the way the rest of HOL
     expects it.
@@ -614,8 +731,11 @@ fun defineConstructors names bnf fix : constructors =
                 val tup = if null args then oneSyntax.one_tm
                           else pairSyntax.list_mk_pair args
                 val cvar = mk_var (nm, List.foldr (op -->) newty argtys)
+                (* a record's constructor is named with a dot in it, so
+                   the definition's binding name is not the constant's *)
+                val bnm = String.translate (fn #"." => "_" | c => str c) nm
                 val def = new_definition
-                            (nm ^ "_def",
+                            (bnm ^ "_def",
                              mk_eq (list_mk_comb (cvar, args),
                                     mk_comb (cons, mkInj newSummands i tup)))
                 val ctm = #1 (strip_comb (lhs (concl (SPEC_ALL def))))
@@ -3213,7 +3333,8 @@ type spec = {
   tynames : string list,
   params : hol_type list,
   functors : (hol_type * hol_type list) list,
-  constructors : string list list
+  constructors : string list list,
+  fields : string list option list
 }
 
 fun parseSpec q : spec =
@@ -3221,13 +3342,21 @@ fun parseSpec q : spec =
       val asts = ParseDatatype.hparse (Parse.type_grammar()) q
       val {tynames, params, functors} =
           bnfLib.specToFunctors (parse_bnf.parse2ftor asts)
+      (* a record is one constructor of its fields, named the way the
+         record apparatus looks it up *)
       fun namesOf (nm, form) =
           case form of
               ParseDatatype.Constructors cs => List.map #1 cs
-            | ParseDatatype.Record _ => [nm]
+            | ParseDatatype.Record _ =>
+                [TypeBasePure.mk_recordtype_constructor nm]
+      fun fieldsOf (_, form) =
+          case form of
+              ParseDatatype.Constructors _ => NONE
+            | ParseDatatype.Record flds => SOME (List.map #1 flds)
     in
       {tynames = tynames, params = params, functors = functors,
-       constructors = List.map namesOf asts}
+       constructors = List.map namesOf asts,
+       fields = List.map fieldsOf asts}
     end
 
 

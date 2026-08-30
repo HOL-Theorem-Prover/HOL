@@ -102,6 +102,24 @@ sig
   val defineFixpoint : {tyname : string, ABS : string, REP : string} ->
                        bnfLib.derived_bnfn -> fixpoint
 
+  (* the same, for a functor that does not use the recursive argument at
+     all — an enumeration, a record, any specification with no recursion.
+     Its fixed point is the functor itself, so the type is defined in
+     bijection with it and the three principles come from
+     bnfInitialTheory's COPY_ theorems.  Everything downstream is
+     defineFixpoint's code; the new type's functoriality, when it is
+     wanted, is transportBNF's.
+
+     The bijection comes back with it: it is what the new type's
+     functoriality is transported across, and what the constructors'
+     definitions unfold through. *)
+  type copy = {fixpoint : fixpoint, abs : term, rep : term,
+               absrep : thm,          (* |- ABS o REP = I *)
+               repabs : thm}          (* |- REP o ABS = I *)
+
+  val defineCopy : {tyname : string, ABS : string, REP : string} ->
+                   bnfLib.derived_bnfn -> copy
+
   (* ----------------------------------------------------------------------
       The datatype's own constructors, and its axiom in the shape the
       rest of HOL expects:
@@ -386,7 +404,8 @@ sig
     tynames : string list,
     params : hol_type list,
     functors : (hol_type * hol_type list) list,
-    constructors : string list list
+    constructors : string list list,
+    fields : string list option list   (* a record's, for its apparatus *)
   }
 
   val parseSpec : hol_type quotation -> spec
