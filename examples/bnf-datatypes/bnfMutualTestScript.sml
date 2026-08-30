@@ -651,18 +651,33 @@ val _ =
 
 val ceqns = collapsedEqns coll fam cbnfs ccs
 
-val _ = checkeqn "the collapsed family's maps, per constructor" (hd ceqns)
+val _ = checkeqn "the collapsed family's maps, per constructor"
+   (#map_eqns (hd ceqns))
    “(∀f a. ct1MAP f (CA a) = CA (f a)) ∧
     (∀f t u. ct1MAP f (CB t u) = CB (ct1MAP f t) (ct2MAP f u))”
 
 val _ = checkeqn "and the members' maps are mutually recursive"
-   (List.nth (ceqns, 1))
+   (#map_eqns (List.nth (ceqns, 1)))
    “(∀f z. ct2MAP f (CC z) = CC (ct3MAP f z)) ∧
     (∀f a t. ct2MAP f (CD a t) = CD (f a) (ct2MAP f t))”
 
+(* and the set functions, which say the same of the atoms: a member's
+   own, and those of every member it holds a value of *)
+val _ = checkeqn "the collapsed family's sets, per constructor"
+   (hd (#set_eqns (hd ceqns)))
+   “(∀a. ct1SET (CA a) = {a}) ∧
+    (∀t u. ct1SET (CB t u) = ct1SET t ∪ ct2SET u)”
+
+val _ = checkeqn "and they are mutually recursive too"
+   (hd (#set_eqns (List.nth (ceqns, 1))))
+   “(∀z. ct2SET (CC z) = ct3SET z) ∧
+    (∀a t. ct2SET (CD a t) = a INSERT ct2SET t)”
+
 val ctyinfos = typeBaseInfo {axiom = caxiom, induction = cinduction,
                              case_defs = ccases,
-                             rewrites = List.map (fn th => [th]) ceqns}
+                             rewrites = List.map (fn e => #map_eqns e ::
+                                                           #set_eqns e)
+                                                 ceqns}
 val _ = TypeBase.export ctyinfos
 
 val _ = tprint "the family's TypeBase entries"
@@ -724,6 +739,9 @@ val _ =
                            (∀y:'p ct2. ct2MAP I y = y) ∧
                            ∀z:'p ct3. ct3MAP I z = z’,
                           ho_match_mp_tac cinduction >> simp[])
+        (* the sets are there too, and the case constants with them *)
+        val th2 = Q.prove (‘ct1SET (CB (CA a) u) = {a} ∪ ct2SET u’, simp[])
     in
-      if null (hyp th) then OK() else die (thm_to_string th)
+      if List.all (null o hyp) [th, th2] then OK()
+      else die (thm_to_string th)
     end

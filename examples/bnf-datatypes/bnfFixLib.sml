@@ -3522,6 +3522,16 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
                                 (upto n))
       val unfoldRWs = List.concat (List.map #defs ccs) @ consP @ mapP @ setP @
                       repabsP @ memberEqns
+      (* the sets of a constructor's arguments come out grouped by where
+         the member's own set function found them; union is associative
+         and commutative, and that is the whole difference *)
+      val acRWs = unfoldRWs @ [bnfFixBNFTheory.EQUAL_SING,
+                               simpLib.AC pred_setTheory.UNION_ASSOC
+                                          pred_setTheory.UNION_COMM]
+      (* the database with the collapsed types in it, which is what says
+         what an argument's own set function is *)
+      val db = List.foldl (fn (r, d) => bnfBase.insert (#key r, #info r) d)
+                          (#db fam) cbnfs
       fun norm tm =
           rhs (concl (QCONV (simpLib.SIMP_CONV set_ss
                                (setRWs @ shapeRWs @ unfoldRWs))
@@ -3568,8 +3578,46 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
             fun mapEqn def =
                 GENL (fvars @ args def)
                      (REWRITE_RULE backs (normth (mk_comb (mapapp, capp def))))
+            (* what each of the constructor's arguments contributes to
+               the i-th set: whatever that argument's own type's set
+               function says, which is a composite the database can
+               derive — a member's own for a member, {a} for a
+               parameter, and nothing for a type the parameter does not
+               occur in *)
+            fun setOf ty i =
+                List.nth (#sets (bnfLib.deriveBNFn db (#params fam) ty), i)
+            fun setEqn i def =
+                let
+                  val as_ = args def
+                  val setj = lhs (concl (List.nth
+                                    (#set_defs (List.nth (cbnfs, j)), i)))
+                  val pieces = List.map (fn a => mk_comb (setOf (type_of a) i,
+                                                          a))
+                                        as_
+                  val rhs =
+                      case List.rev pieces of
+                          [] => pred_setSyntax.mk_empty
+                                  (List.nth (#params fam, i))
+                        | p::ps => List.foldl pred_setSyntax.mk_union p ps
+                  (* the composite's own set term is what says what an
+                     argument contributes; what it *says* is tidier *)
+                  val tidy = [bnfPrelimsTheory.BIMG_EQUAL,
+                              combinTheory.I_o_ID,
+                              bnfFixBNFTheory.EQUAL_SING,
+                              pred_setTheory.INSERT_UNION_EQ,
+                              pred_setTheory.UNION_EMPTY]
+                in
+                  (* aimed at the right-hand side: `(=) a = {a}` would
+                     otherwise rewrite the equation itself *)
+                  GENL as_
+                       (CONV_RULE (RAND_CONV (QCONV (PURE_REWRITE_CONV tidy)))
+                          (normEqWith acRWs (mk_comb (setj, capp def), rhs)))
+                end
           in
-            LIST_CONJ (List.map mapEqn defs)
+            {map_eqns = LIST_CONJ (List.map mapEqn defs),
+             set_eqns = List.tabulate
+                          (length (#set_defs (List.nth (cbnfs, j))),
+                           fn i => LIST_CONJ (List.map (setEqn i) defs))}
           end
     in
       List.tabulate (n, eqnsFor)
