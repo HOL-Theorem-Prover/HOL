@@ -47,6 +47,13 @@ type derived_bnf = {
    setᵢ ignores mapⱼ, and that mapᵢ and mapⱼ commute — are instances of
    these rather than extra obligations: put I in the other positions of
    mapIMAGE and of mapO. *)
+(* The type variables of a type that a functor over it can be live in:
+   those whose every occurrence is in a functorial position.  `'k |-> 'a`
+   gives ['a], since a finite map's map leaves the keys alone, and an
+   operator the database does not know makes all of its arguments'
+   variables passive. *)
+val liveTyvars : bnfBase.t -> hol_type -> hol_type list
+
 type derived_bnfn = {
   bnd : term,
   bndINFINITE : thm,

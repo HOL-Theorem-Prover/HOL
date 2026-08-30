@@ -161,3 +161,25 @@ val _ =
     in
       if null (hyp th) then OK() else die "not proved"
     end
+
+(* ----------------------------------------------------------------------
+    a type that recurses under a finite map, which is what fmaptreeTheory
+    builds by hand
+   ---------------------------------------------------------------------- *)
+
+val _ = bnfDatatype `ftree = FTNode 'a ('k |-> ftree)`
+
+val _ = tprint "a type recursing under a finite map"
+val _ =
+    let val ax = DB.fetch "-" "ftree_Axiom"
+        val ind = DB.fetch "-" "ftree_induction"
+        val th1 = Q.prove (‘FTNode i1 f1 = FTNode i2 f2 ⇔ i1 = i2 ∧ f1 = f2’,
+                           simp[])
+        val th2 = Q.prove (‘∀t : ('a,'k) ftree. ∃i fm. t = FTNode i fm’,
+                           Cases >> simp[])
+    in
+      if List.all (null o hyp) [th1, th2] then
+        (print ("\n  axiom: " ^ thm_to_string ax ^
+                "\n  induction: " ^ thm_to_string ind ^ "\n"); OK())
+      else die "not proved"
+    end

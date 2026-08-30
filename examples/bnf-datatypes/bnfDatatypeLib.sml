@@ -88,12 +88,26 @@ fun persist tyinfos =
 fun theTypesConstants tyname =
     {tyname = tyname, ABS = tyname ^ "_ABS", REP = tyname ^ "_REP"}
 
+(* Which of the specification's own variables the type can be a functor
+   in: `'k |-> ftree` is functorial in the tree and not in the key, and
+   a variable the specification uses in a position like that is an
+   argument of the new type all the same — carried along, passive. *)
+fun liveParams db (spec : spec) =
+    let
+      (* a member the variable does not occur in says nothing about it *)
+      fun ok p (fty, _) =
+          not (Lib.mem p (Type.type_vars fty)) orelse
+          Lib.mem p (bnfLib.liveTyvars db fty)
+    in
+      List.filter (fn p => List.all (ok p) (#functors spec)) (#params spec)
+    end
+
 fun oneType db (spec : spec) =
     let
       val tyname = hd (#tynames spec)
       val (fty, slots) = hd (#functors spec)
       val slot = hd slots
-      val params = #params spec
+      val params = liveParams db spec
       val nms = hd (#names spec)
       val cnames = hd (#constructors spec)
       val recursive = Lib.mem slot (Type.type_vars fty)
@@ -177,7 +191,7 @@ fun manyTypes db (spec : spec) =
     let
       val tynames = #tynames spec
       val n = length tynames
-      val params = #params spec
+      val params = liveParams db spec
       val fam = defineFamily {tynames = List.map (fn s => s ^ "_raw") tynames}
                              db params (#functors spec)
       val principle = familyPrinciple fam
