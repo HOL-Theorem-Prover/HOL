@@ -816,6 +816,38 @@ val _ = List.app pdtest [
 
 val _ = List.app (ignore o pdfail) [("h", "C = foo bool->bool")]
 
+(* the attributes a declaration may carry, which say what the datatype
+   package should call the constants it generates *)
+fun adparse s = hparse_annotated mintyg [QUOTE s]
+fun adtest (s, expected) =
+  let
+    val _ = tprint ("attrs: " ^ s)
+  in
+    timed adparse
+          (exncheck (fn r =>
+             if map #attrs r = expected then OK()
+             else die ("FAILED:\n  " ^
+                       String.concatWith "\n  "
+                         (map ParseDatatype_dtype.annotated_toString r))))
+          s
+  end
+val _ = List.app adtest [
+  ("ty = N | C 'a ty", [[]]),
+  ("ty[] = N | C 'a ty", [[]]),
+  ("ty[map=tyMAP] = N | C 'a ty", [[("map", ["tyMAP"])]]),
+  ("ty[map=tyMAP,set=LIST_TO_SET] = N | C 'a ty",
+   [[("map", ["tyMAP"]), ("set", ["LIST_TO_SET"])]]),
+  ("ty[set=fsts snds] = N | C 'a ty", [[("set", ["fsts", "snds"])]]),
+  ("ty [ map = tyMAP , nocompute ] = N | C 'a ty",
+   [[("map", ["tyMAP"]), ("nocompute", [])]]),
+  ("ty[map=tyMAP] = <| fld1 : bool |>", [[("map", ["tyMAP"])]]),
+  ("ty[map=tyMAP] = N | C 'a ty; ty2 = D bool",
+   [[("map", ["tyMAP"])], []])
+]
+
+(* and the plain entry points say so rather than dropping them *)
+val _ = List.app (ignore o pdfail) [("h", "ty[map=tyMAP] = N | C 'a ty")]
+
 
 (* string find-replace *)
 local

@@ -77,7 +77,7 @@ val _ = TypeBase.export
           (typeBaseInfo {axiom = #axiom ecs,
                          induction = valOf (#induction ecs),
                          case_defs = defineCases (#existential_axiom ecs),
-                         rewrites = [[]]})
+                         rewrites = [[]], names = [noNames]})
 
 val _ = tprint "an enumeration in TypeBase"
 val _ =
@@ -151,7 +151,7 @@ val rtyinfo =
     hd (typeBaseInfo {axiom = #axiom rcs,
                       induction = valOf (#induction rcs),
                       case_defs = defineCases (#existential_axiom rcs),
-                      rewrites = [[]]})
+                      rewrites = [[]], names = [noNames]})
 val _ = TypeBase.export
           [RecordType.prove_recordtype_thms
              (rtyinfo, valOf (hd (#fields rspec)))]
@@ -191,8 +191,9 @@ val _ =
    alone here — the recursive argument the construction wants is not one
    of the new type's arguments — and the transport needs nothing else. *)
 val pbnf' = deriveBNFn db [pty] “:'p # num”
-val ptr = transportBNF {abs = #abs pcopy, rep = #rep pcopy,
-                        absrep = #absrep pcopy, repabs = #repabs pcopy} pbnf'
+val ptr = transportBNF noNames {abs = #abs pcopy, rep = #rep pcopy,
+                                absrep = #absrep pcopy,
+                                repabs = #repabs pcopy} pbnf'
 
 val _ = tprint "a parameterised record is a functor"
 val _ =

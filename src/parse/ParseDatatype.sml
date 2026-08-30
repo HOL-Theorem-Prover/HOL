@@ -331,6 +331,61 @@ fun parse_form G phrase_p qb =
     | _ => Constructors (qb |> optscan (base_tokens.BT_Ident "|")
                             |> sepby1 "|" (phrase_p G))
 
+(* An optional block of attributes after the type's name:
+
+       list[map=MAP,set=LIST_TO_SET] = NIL | CONS 'a list
+
+   spelled the way a theorem's attributes are — comma-separated, each
+   with whitespace-separated arguments after an "=".  A name with
+   punctuation in it needs a space before the comma that ends it, since
+   the punctuation would otherwise clump with the comma. *)
+fun parse_attributes qb =
+  let
+    fun peek s = case pdtok_of qb of
+                     (adv, base_tokens.BT_Ident s', _) =>
+                       if s = s' then SOME adv else NONE
+                   | _ => NONE
+    fun args acc =
+        case pdtok_of qb of
+            (_, base_tokens.BT_Ident s, _) =>
+              if s = "," orelse s = "]" then List.rev acc
+              else args (ident qb :: acc)
+          | (_, t, locn) =>
+              raise ERRloc "parse_attributes" locn
+                    ("Wanted an attribute argument; got \"" ^
+                     base_tokens.toString t ^ "\"")
+    fun attribute () =
+        let val key = ident qb
+        in
+          case peek "=" of
+              SOME adv => (adv(); (key, args []))
+            | NONE => (key, [])
+        end
+    fun attributes acc =
+        let val a = attribute ()
+        in
+          case peek "," of
+              SOME adv => (adv(); attributes (a :: acc))
+            | NONE =>
+              case peek "]" of
+                  SOME adv => (adv(); List.rev (a :: acc))
+                | NONE =>
+                  let val (_, t, locn) = pdtok_of qb
+                  in
+                    raise ERRloc "parse_attributes" locn
+                          ("Wanted \",\" or \"]\"; got \"" ^
+                           base_tokens.toString t ^ "\"")
+                  end
+        end
+  in
+    case peek "[" of
+        NONE => []
+      | SOME adv =>
+        (adv(); case peek "]" of
+                    SOME adv' => (adv'(); [])
+                  | NONE => attributes [])
+  end
+
 fun extract_tynames q =
   let
     val qb = qbuf.new_buffer q
@@ -362,6 +417,7 @@ fun extract_tynames q =
           | _ =>
             let
               val tyname = ident qb
+              val _ = parse_attributes qb
               val () = scan "=" qb
             in
               recurse [] (tyname :: acc)
@@ -372,9 +428,10 @@ fun extract_tynames q =
 
 fun parse_g G phrase_p qb = let
   val tyname = ident qb
+  val attrs = parse_attributes qb
   val () = scan "=" qb
 in
-  (tyname, parse_form G phrase_p qb)
+  {name = tyname, attrs = attrs, form = parse_form G phrase_p qb}
 end
 
 fun hide_tynames q G0 =
@@ -386,7 +443,8 @@ fun core_parse G0 phrase_p q = let
   val G = hide_tynames q G0
   val qb = qbuf.new_buffer q
   val result = termsepby1 ";" base_tokens.BT_EOI (parse_g G phrase_p) qb
-  val _ = Listener.call_listener parse_listener result
+  val plain = map (fn {name,form,...} => (name,form)) result
+  val _ = Listener.call_listener parse_listener plain
 in
   case qbuf.current qb of
       (base_tokens.BT_EOI,_) => result
@@ -394,8 +452,20 @@ in
                         ("Parse failed looking at "^base_tokens.toString t)
 end
 
-fun parse G0 = core_parse G0 parse_phrase
-fun hparse G0 = core_parse G0 parse_hphrase
+(* the plain entry points take the declarations that say nothing about
+   themselves beyond their constructors.  A declaration whose attributes
+   would be dropped here is an error rather than a silence: the package
+   that reads them has its own entry point. *)
+fun unannotated ({name, attrs = [], form} : annotatedAST) = (name, form)
+  | unannotated {name, ...} =
+      raise ERR "parse"
+            ("Attributes on type " ^ name ^ " are not read here; the \
+             \datatype package's own entry point takes them")
+
+fun parse G0 q = map unannotated (core_parse G0 parse_phrase q)
+fun hparse G0 q = map unannotated (core_parse G0 parse_hphrase q)
+fun parse_annotated G0 = core_parse G0 parse_phrase
+fun hparse_annotated G0 = core_parse G0 parse_hphrase
 
 
 end

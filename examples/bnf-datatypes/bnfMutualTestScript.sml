@@ -597,10 +597,10 @@ val ccases = defineCases caxiom
 val cbnfs =
     List.tabulate
       (3, fn j =>
-            transportBNF {abs = List.nth (#abs coll, j),
-                          rep = List.nth (#rep coll, j),
-                          absrep = List.nth (#absrep coll, j),
-                          repabs = List.nth (#repabs coll, j)}
+            transportBNF noNames {abs = List.nth (#abs coll, j),
+                                  rep = List.nth (#rep coll, j),
+                                  absrep = List.nth (#absrep coll, j),
+                                  repabs = List.nth (#repabs coll, j)}
                          (deriveBNFn (#db fam) [b1]
                                      (List.nth (#types fam, j))))
 
@@ -677,7 +677,8 @@ val ctyinfos = typeBaseInfo {axiom = caxiom, induction = cinduction,
                              case_defs = ccases,
                              rewrites = List.map (fn e => #map_eqns e ::
                                                            #set_eqns e)
-                                                 ceqns}
+                                                 ceqns,
+                             names = List.map (fn _ => noNames) ceqns}
 val _ = TypeBase.export ctyinfos
 
 val _ = tprint "the family's TypeBase entries"

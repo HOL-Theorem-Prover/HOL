@@ -204,7 +204,7 @@ fun testty ((tyname, lives, ty, cnames), (db, seen)) =
       val bnf = deriveBNFn db lives ty
       val fix = defineFixpoint {tyname = tyname, ABS = tyname ^ "_ABS",
                                 REP = tyname ^ "_REP"} bnf
-      val res = fixpointBNF bnf fix
+      val res = fixpointBNF noNames bnf fix
       val _ = tprint (tyname ^ " = " ^ type_to_string ty ^ " as a functor")
       val _ = if lawsOK (#info res) then OK()
               else die "the derived laws are not the map's"
