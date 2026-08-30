@@ -10,6 +10,11 @@ that is hard to recognise.
 The check should start as a warning, so that the existing offenders can
 be worked through, and become an error once the list below is empty.
 
+*(As landed, the predicate is not `Thm.getCT ()`.  See Progress below:
+it reads the context the proof is being conducted in.  The proposal and
+the census that follow are written in terms of `getCT ()`, which is what
+they were run with.)*
+
 ## Why
 
 Library code that proves theorems at load time runs in whatever ambient
@@ -148,12 +153,28 @@ required there either.
 
 ## Progress
 
-Steps 1 and 3 landed: `TAC_PROOF` raises `HOL_ERR "TAC_PROOF" "no
-current theory when proving: ..."` when `Thm.getCT () = NONE`,
-controlled by the trace `"TAC_PROOF requires current theory"`
-(default 1, max 1).  Setting the trace to `0` downgrades the error
-back to the pre-existing warning; the warning text notes that the
-permissive mode is deprecated.
+Steps 1 and 3 landed: `TAC_PROOF_in` raises `HOL_ERR "TAC_PROOF" "no
+current theory when proving: ..."` when
+`Context.current_thy ctxt = NONE`, controlled by the trace
+`"TAC_PROOF requires current theory"` (default 1, max 1).
+
+**Not `Thm.getCT ()`, and the difference matters.**  `getCT` is
+`Context.current_thy (Context.snapshot())` --- the same question asked
+of the *ambient* context rather than of the one the proof is actually
+being conducted in.  Once tactics take a `Context.t` those can differ:
+a proof running on an LSP worker thread is checked against a captured
+context while the ambient cell holds whatever the main thread last put
+there, so `getCT` can answer for the wrong theory in either direction.
+The ambient spelling would also be self-defeating here, because
+`Context.snapshot()` reports under the `"ambient context inside proof"`
+trace --- the guard would become a permanent contributor to the census
+it exists to help empty.  Every ambient entry point (`prove`,
+`store_thm`, `Q.store_thm`, the `Theorem` block) passes
+`Context.snapshot()` explicitly, so for the load-time offenders the
+census was measuring, the two agree.
+
+Setting the trace to `0` downgrades the error back to the pre-existing
+warning; the warning text notes that the permissive mode is deprecated.
 
 The former "hol.state0 residents are exempt" carve-out is gone:
 `boolLib.sml`'s and `Prim_rec.sml`'s load-time proves now live in

@@ -6,7 +6,7 @@ open wordsLib stringLib listSyntax simpLib listTheory wordsTheory;
 open opmonTheory bit_listTheory combinTheory ConseqConv;
 
 open x64_Theory x64_seq_monadTheory x64_opsemTheory x64_astTheory;
-open x64_coretypesTheory x64_icacheTheory;
+open x64_coretypesTheory x64_icacheTheory x64_LibContextTheory;
 
 
 (* decoder *)
@@ -20,9 +20,7 @@ fun eval_term_ss tm_name tm = conv_ss
 
 val bytes_LEMMA = SIMP_RULE std_ss [LENGTH] (Q.SPEC `[v1;v2;v3;v4;v5;v6;v7;v8]` bits2num_LESS)
 
-val n2w_SIGN_EXTEND = prove(
-  ``!n. n < 256 ==> (n2w (SIGN_EXTEND 8 32 n):word32 = sw2sw ((n2w n):word8))``,
-  SIMP_TAC (std_ss++SIZES_ss) [sw2sw_def,w2n_n2w]);
+val n2w_SIGN_EXTEND = x64_LibContextTheory.n2w_SIGN_EXTEND;
 
 fun raw_x64_decode s = let
   fun mk_bool_list n =
@@ -140,7 +138,7 @@ val ss = rewrites [x64_exec_def, ZREAD_REG_def, ZREAD_EFLAG_def,
 
 val SCALE_SIMP = LIST_CONJ [EVAL ``w2n (0w:word2)``,EVAL ``w2n (1w:word2)``,
     EVAL ``w2n (2w:word2)``,EVAL ``w2n (3w:word2)``,
-    prove(``!w. 1w * w = w``,SIMP_TAC std_ss [wordsTheory.WORD_MULT_CLAUSES])]
+    x64_LibContextTheory.word_1_mult]
 
 fun x64_step s = let
   val th = x64_decode s
