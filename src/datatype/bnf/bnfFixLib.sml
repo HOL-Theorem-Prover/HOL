@@ -3409,11 +3409,25 @@ fun attrNames nargs tyname attrs : names =
       List.foldl (fn (a, acc) => one a acc) noNames attrs
     end
 
+(* n type variables named 'mᵢ that are not in use *)
+fun freshSlots n avoid =
+    let fun go i acc k =
+            if k = 0 then List.rev acc
+            else
+              let val v = mk_vartype ("'m" ^ Int.toString i)
+              in
+                if Lib.mem v avoid then go (i + 1) acc k
+                else go (i + 1) (v :: acc) (k - 1)
+              end
+    in
+      go 1 [] n
+    end
+
 fun parseSpec q : spec =
     let
       val asts = ParseDatatype.hparse_annotated (Parse.type_grammar()) q
       val plain = List.map (fn {name, form, ...} => (name, form)) asts
-      val {tynames, params, functors} =
+      val {tynames, params, functors, ...} =
           bnfLib.specToFunctors (parse_bnf.parse2ftor plain)
       (* a record is one constructor of its fields, named the way the
          record apparatus looks it up *)
