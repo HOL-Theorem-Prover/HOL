@@ -1,6 +1,6 @@
 Theory bnfFixpointFmap
 Ancestors
-  hol bnfMoreFunctors bnfPrelims finite_map list pred_set cardinal
+  hol bnfPrelims finite_map list pred_set cardinal
   ordinal ordinalBasic combin pair
 Libs
   HolKernel bnfBase bnfLib

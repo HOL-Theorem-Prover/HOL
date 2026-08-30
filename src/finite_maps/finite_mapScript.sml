@@ -31,7 +31,7 @@ Ancestors
   pred_set sum pair relation list[qualified] rich_list[qualified]
   option[qualified] sorting[qualified]
 Libs
-  IndDefLib numLib metisLib simpLib BasicProvers
+  IndDefLib numLib metisLib simpLib BasicProvers bnfBase
   pred_setLib[qualified] boolSimps[qualified]
 
 (*---------------------------------------------------------------------------*)
@@ -3972,3 +3972,81 @@ val _ = TypeBase.export [
        nchotomy = SOME fmap_CASES}
       )
   ]
+
+
+(* ----------------------------------------------------------------------
+    Finite maps as a bounded natural functor in their range, so that a
+    datatype specification can recurse through one: o_f is the map,
+    FRANGE the set function, fmap_rel the relator, and a finite map
+    holds no more values than there are numbers.
+   ---------------------------------------------------------------------- *)
+
+fun bnm s : KernelSig.kernelname = {Thy = "finite_map", Name = s}
+
+Theorem fmapMap_ID:
+  $o_f (I:'a1 -> 'a1) = (I : ('b1 |-> 'a1) -> ('b1 |-> 'a1))
+Proof
+  simp[FUN_EQ_THM, combinTheory.I_EQ_IDABS]
+QED
+
+Theorem fmapMap_O:
+  $o_f (f1:'c1 -> 'd1) o $o_f (g1:'a1 -> 'c1) =
+  ($o_f (f1 o g1) : ('b1 |-> 'a1) -> ('b1 |-> 'd1))
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem fmapMapIMAGE1:
+  !(f1:'a1 -> 'c1) (m:'b1 |-> 'a1). FRANGE (f1 o_f m) = IMAGE f1 (FRANGE m)
+Proof
+  simp[IMAGE_FRANGE]
+QED
+
+Theorem fmapMapCONG:
+  (!a1. a1 IN FRANGE (m : 'b1 |-> 'a1) ==> (f1:'a1 -> 'c1) a1 = g1 a1) ==>
+  f1 o_f m = g1 o_f m
+Proof
+  strip_tac >> irule o_f_cong >> simp[]
+QED
+
+Theorem fmap_bnd1:
+  !m : 'b1 |-> 'a1. FRANGE m <<= univ(:num)
+Proof
+  gen_tac >> ONCE_REWRITE_TAC[cardinalTheory.cardleq_lteq] >>
+  disj1_tac >> simp[GSYM cardinalTheory.FINITE_CARD_LT]
+QED
+
+Theorem fmap_wit1:
+  !a1:'a1. FRANGE (K FEMPTY a1 : 'b1 |-> 'a1) SUBSET {}
+Proof
+  simp[]
+QED
+
+Theorem fmap_inh1:
+  !v:'a1. v IN FRANGE ((FUPDATE FEMPTY o $, (ARB:'b1)) v)
+Proof
+  simp[FRANGE_FUPDATE]
+QED
+
+val _ = bnfBase.updateDB (
+  {Thy = "finite_map", Name = "fmap"},
+  bnfBase.bI {
+    canontype = “:'b1 |-> 'a1”,
+
+    map = “$o_f : ('a1 -> 'c1) -> ('b1 |-> 'a1) -> ('b1 |-> 'c1)”,
+    set = [“FRANGE : ('b1 |-> 'a1) -> 'a1 set”],
+    mapID = bnm "fmapMap_ID",
+    mapO = bnm "fmapMap_O",
+    mapIMAGE = [bnm "fmapMapIMAGE1"],
+    mapCONG = bnm "fmapMapCONG",
+
+    relator = “fmap_rel : ('a1 -> 'c1 -> bool) ->
+                          ('b1 |-> 'a1) -> ('b1 |-> 'c1) -> bool”,
+    bnd = “univ(:num)”,
+    bndthms = [bnm "fmap_bnd1"],
+
+    wits = [(“K FEMPTY : 'a1 -> ('b1 |-> 'a1)”, bnm "fmap_wit1")],
+    inhabits = [(“(FUPDATE FEMPTY o $, (ARB:'b1)) : 'a1 -> ('b1 |-> 'a1)”,
+                 bnm "fmap_inh1")]
+  }
+)

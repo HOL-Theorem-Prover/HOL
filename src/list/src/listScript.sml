@@ -20,7 +20,7 @@ Ancestors
   arithmetic pair pred_set relation combin basicSize[qualified]
 Libs
   HolKernel Parse boolLib BasicProvers Num_conv mesonLib simpLib
-  boolSimps pred_setLib TotalDefn metisLib quotientLib
+  boolSimps pred_setLib TotalDefn metisLib quotientLib bnfBase
   Datatype[qualified] OpenTheoryMap[qualified]
 
 val ERR = mk_HOL_ERR "listScript"
@@ -5919,3 +5919,79 @@ val _ =
  List.app TotalDefn.export_termsimp
    ["list.list_size_append", "list.list_size_reverse",
     "list.list_size_map", "list.list_size_snoc", "list.list_size_zip"];
+
+
+(* ----------------------------------------------------------------------
+    Lists as a bounded natural functor, so that a datatype specification
+    can recurse through one: MAP is the map, LIST_TO_SET the set
+    function, LIST_REL the relator, and a list holds no more atoms than
+    there are numbers.
+   ---------------------------------------------------------------------- *)
+
+fun bnm s : KernelSig.kernelname = {Thy = "list", Name = s}
+
+Theorem listMap_ID:
+  MAP (I:'a1 -> 'a1) = (I : 'a1 list -> 'a1 list)
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem listMap_O:
+  MAP (f1:'c1 -> 'd1) o MAP (g1:'a1 -> 'c1) = MAP (f1 o g1)
+Proof
+  simp[FUN_EQ_THM, MAP_MAP_o]
+QED
+
+Theorem listMapIMAGE1:
+  !(f1:'a1 -> 'c1) l. set (MAP f1 l) = IMAGE f1 (set l)
+Proof
+  simp[LIST_TO_SET_MAP]
+QED
+
+Theorem listMapCONG:
+  (!a1. a1 IN set (l:'a1 list) ==> (f1:'a1 -> 'c1) a1 = g1 a1) ==>
+  MAP f1 l = MAP g1 l
+Proof
+  strip_tac >> irule MAP_CONG >> simp[]
+QED
+
+Theorem list_bnd1:
+  !l : 'a1 list. set l <<= univ(:num)
+Proof
+  gen_tac >> ONCE_REWRITE_TAC[cardinalTheory.cardleq_lteq] >>
+  disj1_tac >> simp[GSYM cardinalTheory.FINITE_CARD_LT]
+QED
+
+Theorem list_wit1:
+  !a1:'a1. set (K [] a1 : 'a1 list) SUBSET {}
+Proof
+  simp[]
+QED
+
+Theorem list_inh1:
+  !v:'a1. v IN set (combin$C CONS [] v)
+Proof
+  simp[]
+QED
+
+val _ = bnfBase.updateDB (
+  {Thy = "list", Name = "list"},
+  bnfBase.bI {
+    canontype = “:'a1 list”,
+
+    map = “list$MAP : ('a1 -> 'c1) -> 'a1 list -> 'c1 list”,
+    set = [“list$LIST_TO_SET : 'a1 list -> 'a1 set”],
+    mapID = bnm "listMap_ID",
+    mapO = bnm "listMap_O",
+    mapIMAGE = [bnm "listMapIMAGE1"],
+    mapCONG = bnm "listMapCONG",
+
+    relator = “list$LIST_REL : ('a1 -> 'c1 -> bool) ->
+                               'a1 list -> 'c1 list -> bool”,
+    bnd = “univ(:num)”,
+    bndthms = [bnm "list_bnd1"],
+
+    wits = [(“K [] : 'a1 -> 'a1 list”, bnm "list_wit1")],
+    inhabits = [(“combin$C CONS [] : 'a1 -> 'a1 list”, bnm "list_inh1")]
+  }
+)

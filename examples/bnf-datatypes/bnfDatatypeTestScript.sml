@@ -1,6 +1,6 @@
 Theory bnfDatatypeTest
 Ancestors
-  bnfInitial bnfFixBNF bnfMoreFunctors pred_set cardinal
+  bnfInitial bnfFixBNF finite_map list pred_set cardinal
 Libs
   HolKernel Parse boolLib bossLib bnfBase bnfLib bnfFixLib bnfDatatypeLib
   testutils
