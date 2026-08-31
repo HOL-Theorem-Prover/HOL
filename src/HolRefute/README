@@ -20,10 +20,13 @@ evaluated (as opposed to left stuck) counts as "conclusions evaluated"
 generated`.  A found counterexample shows all three counts alongside
 its size via `format_stats`.  When a search instead ends
 `NoCounterexample` or `Unknown` with no witness, the same three counts
-are reported separately, on the `Private.say` trace channel rather than
-in the `Unknown` reason list: they are telemetry about the search, not
-themselves a reason it was inconclusive, and a witness's own
-`format_stats` line already covers the counterexample case.  A nonzero
+are reported separately, on the `Private.say` trace channel at level 2
+rather than in the `Unknown` reason list: they are telemetry about the
+search, not themselves a reason it was inconclusive, and a witness's own
+`format_stats` line already covers the counterexample case.  Level 2,
+not the default level 1, because a reader who only wants the verdict is
+not asking how the search spent itself, and one call prints one such
+line per backend.  A nonzero
 "assumptions satisfied" already shows a witness-less search tested real
 candidates against a real conclusion, so the numerator alone tells a
 real search from a vacuous one.  The denominator earns its keep when
@@ -42,9 +45,9 @@ an exhaustive run at size 3 -- the total is a cumulative count of a
 schedule's work, not a count of distinct candidates.  Compute and
 NativeSML count every candidate for real, incrementally, inside the
 search itself.  Cv leaves all three counters absent on every shape
-rather than fabricate a number, and a witness-less Cv report says
-"candidate counters unavailable on this substrate" instead of a
-denominator it cannot produce; see the comment beside `last_stats :=
+rather than fabricate a number, and a witness-less Cv report prints no
+counter line at all rather than announce a denominator it cannot
+produce; see the comment beside `last_stats :=
 []` on `run` in `Refute_EvalCv.sml`'s `compile_plans` for why, and
 `Refute_QC.sml`'s `strategy_run_body` (mirrored in
 `Refute_QC_Narrow.sml`) for where the telemetry is emitted.  The

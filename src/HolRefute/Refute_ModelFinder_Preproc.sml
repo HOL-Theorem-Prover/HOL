@@ -2401,7 +2401,7 @@ structure Refute_ModelFinder_Preproc = struct
          every case; the encoder then refuses the word or char operation by
          name, and reaches the typedef only at a hand-named [card num]. *)
       val all_axioms = nondefinitions @ definitions
-      val vetoes_binarization = MFH.term_mentions_binarization_veto
+      val vetoes_binarization = MFH.binarization_veto_test ()
       val binarize =
         case binary_ints of
             SOME false => false

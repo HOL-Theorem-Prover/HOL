@@ -82,7 +82,7 @@ fun ground_types context binarize terms =
           types (type_arguments ty)
       else if MFH.is_boolean_type ty orelse Util.member_type ty types then
         types
-      else if MFH.is_word_type ty orelse MFH.is_char_type ty then
+      else if MFH.is_exact_carrier_type ty then
         (* A word carrier is atomic: its index type is a width, not a carrier
            the search should size, and its element type is [bool].  [:char] is
            atomic for the same reason, its size being fixed at 256. *)

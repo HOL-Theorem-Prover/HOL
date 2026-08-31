@@ -428,26 +428,20 @@ structure Refute_Cert_Model = struct
             | NONE => NONE
         end
 
+      (* First success wins; each entry is skipped when its decision
+         procedure is disabled or inapplicable. *)
       fun decision_leaf depth formula =
-        let val goal = boolSyntax.mk_neg formula
+        let
+          val goal = boolSyntax.mk_neg formula
+          fun attempt (enabled, name, conv) =
+            if enabled then prove_by_conversion name depth conv goal
+            else NONE
         in
-          case if #enable_taut policy then
-                 prove_by_conversion "propositional leaf" depth
-                   tautLib.TAUT_CONV goal
-               else NONE of
-              SOME theorem => SOME theorem
-            | NONE =>
-                case if #enable_omega policy then
-                       prove_by_conversion "Presburger leaf" depth
-                         Omega.OMEGA_CONV goal
-                     else NONE of
-                    SOME theorem => SOME theorem
-                  | NONE =>
-                      if #enable_real_arith policy andalso
-                         mentions_real goal then
-                        prove_by_conversion "real linear arithmetic leaf"
-                          depth real_arith_conv goal
-                      else NONE
+          Lib.get_first attempt
+            [(#enable_taut policy, "propositional leaf", tautLib.TAUT_CONV),
+             (#enable_omega policy, "Presburger leaf", Omega.OMEGA_CONV),
+             (#enable_real_arith policy andalso mentions_real goal,
+              "real linear arithmetic leaf", real_arith_conv)]
         end
 
       val (variables, closure, body) = closure_of original

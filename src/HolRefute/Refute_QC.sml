@@ -382,9 +382,7 @@ structure Refute_QC = struct
 
       fun analyse relation =
         memoised
-          {find = fn () =>
-             Option.map #2 (List.find (fn (other, _) =>
-               SmartGen.same_constant relation other) (!analyses)),
+          {find = fn () => SmartGen.lookup_assoc relation (!analyses),
            store = fn answer => analyses := (relation, answer) :: !analyses}
           (fn () =>
              case clause_source relation of
@@ -502,10 +500,23 @@ structure Refute_QC = struct
          positive candidates.  The three routes below -- generic, fixed
          argument, function graph -- differ only in the relation key and
          in where their goal modes come from. *)
-      fun positive_for key goal_modes =
+      fun lift key make goal_modes =
         List.mapPartial (fn goal_mode as ({mode, ...} : SmartGen.goal_mode) =>
-          Option.map (fn program => (goal_mode, Positive program))
+          Option.map (fn program => (goal_mode, make goal_mode program))
             (SmartGen.enumerator_for key mode)) goal_modes
+
+      fun positive_for key goal_modes =
+        lift key (fn _ => Positive) goal_modes
+
+      (* Both routes report the same way: a compiled mode, or an analysis
+         that never triggered, keeps the analysis's own reason; otherwise
+         the inferred modes decide between "compiled nothing" and "inferred
+         nothing". *)
+      fun candidate_reason (compiled_none, inferred_none)
+            {modes, inferred, trigger, reason} =
+        if not (null modes) orelse not trigger then reason
+        else if not (null inferred) then SOME compiled_none
+        else SOME (Option.getOpt (reason, inferred_none))
 
       fun fixed_positive_candidates bound assumption =
         List.concat (map (fn (relation, position, value) =>
@@ -581,8 +592,7 @@ structure Refute_QC = struct
       fun analyse_graph constant =
         memoised
           {find = fn () =>
-             Option.map #2 (List.find (fn (other, _) =>
-               SmartGen.same_constant constant other) (!graph_analyses)),
+             SmartGen.lookup_assoc constant (!graph_analyses),
            store = fn answer =>
              graph_analyses := (constant, answer) :: !graph_analyses}
           (fn () =>
@@ -644,12 +654,11 @@ structure Refute_QC = struct
                   val modes = generic_modes @ fixed_modes @ graph_modes
                   val trigger = trigger orelse not (null fixed_modes)
                     orelse not (null graph_modes)
-                  val reason =
-                    if not (null modes) orelse not trigger then reason
-                    else if not (null inferred) then SOME
-                      "CPS enumerator compilation failed for inferred mode"
-                    else SOME (Option.getOpt (reason,
-                      "no executable first-order positive mode"))
+                  val reason = candidate_reason
+                    ("CPS enumerator compilation failed for inferred mode",
+                     "no executable first-order positive mode")
+                    {modes = modes, inferred = inferred, trigger = trigger,
+                     reason = reason}
               in
                 (modes, trigger, reason)
               end
@@ -672,20 +681,16 @@ structure Refute_QC = struct
                               (SmartGen.goal_modes_for_call bound call
                                 inference)
                     val modes =
-                      List.mapPartial (fn goal_mode as
-                          ({mode, ins, ...} : SmartGen.goal_mode) =>
-                        Option.map (fn program =>
-                            (goal_mode,
-                             Negative (Refute_EvalEnum.negation_condition
-                               program ins)))
-                          (SmartGen.enumerator_for
-                            (SmartGen.Predicate relation) mode)) inferred
-                    val reason =
-                      if not (null modes) orelse not trigger then reason
-                      else if not (null inferred) then SOME
-                        "complement compilation failed for inferred mode"
-                      else SOME (Option.getOpt (reason,
-                        "no executable negative mode"))
+                      lift (SmartGen.Predicate relation)
+                        (fn ({ins, ...} : SmartGen.goal_mode) => fn program =>
+                          Negative (Refute_EvalEnum.negation_condition
+                            program ins))
+                        inferred
+                    val reason = candidate_reason
+                      ("complement compilation failed for inferred mode",
+                       "no executable negative mode")
+                      {modes = modes, inferred = inferred, trigger = trigger,
+                       reason = reason}
                 in
                   (modes, trigger, reason)
                 end
@@ -1312,14 +1317,20 @@ structure Refute_QC = struct
             ("conclusion_evaluated", !conclusion_evaluated),
             ("candidates_generated", !candidates_generated)]
          else [])
+      (* [NONE] on an uninstrumented substrate, and the caller then prints
+         nothing at all.  The counts earn their place at the default trace
+         level because they separate a real search from a vacuous one; an
+         announcement that they are missing carries neither signal, so it
+         is noise to a reader who only wants the verdict. *)
       fun reason () =
         if !measured then
-          "candidates generated " ^ Int.toString (!candidates_generated) ^
-          ", assumptions satisfied " ^
-          Int.toString (!assumption_satisfied) ^
-          ", conclusions evaluated " ^
-          Int.toString (!conclusion_evaluated)
-        else "candidate counters unavailable on this substrate"
+          SOME ("candidates generated " ^
+            Int.toString (!candidates_generated) ^
+            ", assumptions satisfied " ^
+            Int.toString (!assumption_satisfied) ^
+            ", conclusions evaluated " ^
+            Int.toString (!conclusion_evaluated))
+        else NONE
     in
       {absorb = absorb, decorate = decorate, reason = reason}
     end
@@ -1972,7 +1983,10 @@ structure Refute_QC = struct
                  [Private.say] rather than the [Unknown] reason list, and
                  only when the outcome carries no witness: a found
                  counterexample already shows the counts via
-                 [format_stats]. *)
+                 [format_stats].  Trace level 2, not the default: a
+                 reader who only wants the verdict is not asking how the
+                 search spent itself, and one call can print several of
+                 these, one per backend. *)
               val counter_reason = #reason counters ()
             in
                   if not (null (!counterexamples)) then
@@ -1982,9 +1996,10 @@ structure Refute_QC = struct
                         SOME potential =>
                           Refute_Core.Counterexample [potential]
                       | NONE =>
-                          (Refute_Core.Private.say 1
-                             (strategy_name strategy ^ ": " ^
-                              counter_reason ^ "\n");
+                          (Option.app (fn text =>
+                             Refute_Core.Private.say 2
+                               (strategy_name strategy ^ ": " ^ text ^ "\n"))
+                             counter_reason;
                            if !complete then Refute_Core.NoCounterexample
                            else Refute_Core.Unknown
                              (generic_reason :: !gave_up @ frontier_reason))

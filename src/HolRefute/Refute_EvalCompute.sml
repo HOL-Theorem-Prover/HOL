@@ -579,15 +579,16 @@ structure Refute_EvalCompute = struct
           (wordsSyntax.mk_wordi (arbnum_of_intinf value, width), next)
         end
 
-  fun random_entry_with draw custom spec size state =
-    let
-      val floor = Refute_Gen.own_floor spec
-    in
-      random_value_with draw custom spec
-        {budget = Int.max (floor, bounded_size size),
-         hard_budget = bounded_size size,
-         size = bounded_size size} state
-    end
+  (* [hard] is the recursion fuel, [size] the structural budget; they part
+     company only below a function boundary, which decays them separately. *)
+  fun random_entry_hard_with draw custom spec hard size state =
+    random_value_with draw custom spec
+      {budget = Int.max (Refute_Gen.own_floor spec, bounded_size size),
+       hard_budget = bounded_size hard,
+       size = bounded_size size} state
+
+  and random_entry_with draw custom spec size state =
+    random_entry_hard_with draw custom spec size size state
 
   and random_args_with _ _ [] [] _ _ _ state = ([], state)
     | random_args_with draw custom (ty :: tys)
@@ -618,11 +619,7 @@ structure Refute_EvalCompute = struct
 
   and random_function_with draw custom dom rng_ty hard_budget size state =
     let
-      fun entry spec hard size current =
-        random_value_with draw custom spec
-          {budget = Int.max (Refute_Gen.own_floor spec, bounded_size size),
-           hard_budget = bounded_size hard,
-           size = bounded_size size} current
+      val entry = random_entry_hard_with draw custom
       (* Size and hard recursion fuel decay geometrically across every
          function boundary.  The structural budget may still rise to a
          result type's minimum inhabitation floor, but [hard_budget] never

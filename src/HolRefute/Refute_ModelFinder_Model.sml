@@ -416,8 +416,21 @@ fun unregister_term_postprocessor pattern =
 
 fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
   let
+    (* One entry per distinct type: [composed_postprocessor] runs a
+       [Type.match_type] per registry entry and a sort on the matches, while
+       a model term has orders of magnitude more nodes than distinct types.
+       [snapshot] is fixed here, so the answer depends only on the type. *)
+    val composed = ref (Redblackmap.mkDict Type.compare)
+    fun postprocessor_for ty =
+      case Redblackmap.peek (!composed, ty) of
+          SOME entry => entry
+        | NONE =>
+            let val entry = composed_postprocessor snapshot ty in
+              composed := Redblackmap.insert (!composed, ty, entry);
+              entry
+            end
     fun apply candidate =
-      case composed_postprocessor snapshot (Term.type_of candidate) of
+      case postprocessor_for (Term.type_of candidate) of
           SOME postprocessor => postprocessor candidate
         | NONE => candidate
     fun descend candidate =

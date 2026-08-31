@@ -2375,7 +2375,8 @@ val _ = require_msg (check_result smartgen_horn_source_order)
 fun sg_premise_shape premises =
   map (fn (SG.Prem _, _) => "M"
         | (SG.Sidecond _, _) => "S"
-        | (SG.Generator _, _) => "G") premises
+        | (SG.Generator _, _) => "G"
+        | (SG.GraphPrem _, _) => "P") premises
 
 fun smartgen_duplicate_horn_orders () =
   let
@@ -21004,20 +21005,19 @@ val listall_specialisation_twin_true =
    [Counterexample] -- [NoCounterexample] and [Unknown] are bare, so the
    verdict alone cannot tell a search that ran and found nothing wrong
    apart from one that timed out or was declined before generating
-   anything.  "candidates generated N, ..." is printed as a trace-level-1
+   anything.  "candidates generated N, ..." is printed as a trace-level-2
    diagnostic on every non-[Counterexample] verdict on a counter-measuring
    substrate (Refute_QC.sml's [counter_reason], right where
    [complete]/[NoCounterexample] is decided; an uninstrumented substrate
-   prints "candidate counters unavailable on this substrate" instead,
-   with no marker to read).  A missing marker is not proof of an
-   uninstrumented substrate either: the gate veto (Refute_QC.sml:1760-1762)
-   and [SelectionFailed] (:1764) both return [Unknown] before any
-   substrate has been run -- a substrate may already be selected, and a
-   test already compiled against it, by then -- so neither reaches
-   [counter_reason], and nor does a backend that times out with nothing
-   published, which returns [Unknown [name ^ " timed out"]]
-   (Refute_Core.sml:2092-2096) without ever calling [counter_reason]'s
-   [Private.say].
+   prints nothing at all, so there is no marker to read).  A missing
+   marker is not proof of an uninstrumented substrate either: the gate
+   veto (Refute_QC.sml:1760-1762) and [SelectionFailed] (:1764) both
+   return [Unknown] before any substrate has been run -- a substrate may
+   already be selected, and a test already compiled against it, by then
+   -- so neither reaches [counter_reason], and nor does a backend that
+   times out with nothing published, which returns
+   [Unknown [name ^ " timed out"]] (Refute_Core.sml:2092-2096) without
+   ever calling [counter_reason]'s [Private.say].
    [capture_refute_messages] reads it off the
    very call that produces the verdict --
    [qc_counters_distinguish_no_counterexample_
@@ -21065,7 +21065,7 @@ fun listall_specialisation_twin_no_spurious_cex () =
           (Refute.upd_search (Refute.Only [Refute.Exhaustive])
             (Refute.upd_size 3 default_config))))
     val goal = concl listall_specialisation_twin_true
-    val (result, messages) = capture_refute_messages 1 (fn () =>
+    val (result, messages) = capture_refute_messages 2 (fn () =>
       refute_problem config (qc_problem goal))
     val outcome_ok =
       case result of
@@ -22720,7 +22720,7 @@ fun graph_soundness_twin () =
     val plan_ok = List.exists
       (fn i => contains_graph_enum (compile_plan config (#goal i)))
       instances
-    val (result, messages) = capture_refute_messages 1 (fn () =>
+    val (result, messages) = capture_refute_messages 2 (fn () =>
       refute_problem config (qc_problem graph_sound_goal))
     val verdict_ok =
       case result of
@@ -23107,7 +23107,7 @@ fun finite_map_generator_true_free_fm_property_is_unrefuted () =
     val config = Refute.upd_search Refute.QuickcheckBackends
       (Refute.upd_size 2 default_config)
     val goal = ``!fm : bool |-> bool. CARD (FDOM fm) <= 2``
-    val (result, messages) = capture_refute_messages 1 (fn () =>
+    val (result, messages) = capture_refute_messages 2 (fn () =>
       refute config goal)
     val outcome_ok =
       case result of
@@ -28487,7 +28487,9 @@ fun same_conformance_counters (left, right) =
    "conclusions evaluated".  On a found counterexample they land in
    [#stats]; on a witness-less outcome ([NoCounterexample] or
    [Unknown]) they are telemetry, printed as a "backend: ..." line at
-   trace level 1 rather than folded into the [Unknown] reasons -- see
+   trace level 2 -- not the default, which carries the verdict alone --
+   rather than folded into the [Unknown] reasons; every pin below that
+   reads the line therefore captures at level 2.  See
    [qc_counters_distinguish_vacuous] below. *)
 fun qc_counters_compute_real () =
   let
@@ -28558,28 +28560,40 @@ val _ = require_msg (check_result qc_counters_cv_absent) (fn () =>
   "cv reported a candidate counter it cannot measure")
   (fn () => ()) ()
 
-(* Cv never measures the counters, so a witness-less Cv search must say
-   so instead of rendering a denominator it cannot produce. *)
-fun qc_counters_cv_unavailable_message () =
+(* Cv never measures the counters, so a witness-less Cv search prints no
+   counter line at all: a line announcing that the figures are missing
+   carries neither the count nor the vacuity signal, so it is noise to a
+   reader who only wants the verdict.  Both halves run the same goal at
+   the same size through the same backend, differing only in substrate,
+   so the assertion is anchored where the two worlds diverge -- a silent
+   Cv alone would also pass if the telemetry stopped working entirely. *)
+fun qc_counters_cv_prints_no_line () =
   let
-    val config =
-      upd_size 3 (upd_substrate Cv
-        (upd_backends (SOME ["exhaustive"]) default_config))
-    val (outcome, messages) = capture_refute_messages 1 (fn () =>
-      refute config ``!n : num. n < 3 ==> n < 100``)
+    fun messages_from substrate =
+      let
+        val config =
+          upd_size 3 (upd_substrate substrate
+            (upd_backends (SOME ["exhaustive"]) default_config))
+      in
+        capture_refute_messages 2 (fn () =>
+          refute config ``!n : num. n < 3 ==> n < 100``)
+      end
+    val (cv_outcome, cv_messages) = messages_from Cv
+    val (compute_outcome, compute_messages) = messages_from Compute
+    fun counted text = String.isSubstring "candidates generated " text
   in
-    case outcome of
-        Unknown _ =>
-          String.isSubstring
-            "candidate counters unavailable on this substrate" messages
-      | _ => (print ("\n  messages: " ^ messages ^ "\n"); false)
+    case (cv_outcome, compute_outcome) of
+        (Unknown _, Unknown _) =>
+          not (counted cv_messages) andalso counted compute_messages
+      | _ => (print ("\n  cv: " ^ cv_messages ^
+                     "\n  compute: " ^ compute_messages ^ "\n"); false)
   end
 
-val _ = tprint "Refute QC counters: cv reports counters unavailable"
+val _ = tprint "Refute QC counters: cv prints no counter line"
 val _ = require_msg
-  (check_result qc_counters_cv_unavailable_message) (fn () =>
-  "cv did not report the counters-unavailable message on a witness-less " ^
-  "search")
+  (check_result qc_counters_cv_prints_no_line) (fn () =>
+  "cv announced its missing counters, or compute stopped reporting real " ^
+  "ones, on a witness-less search")
   (fn () => ()) ()
 
 (* The deliverable: a vacuous run (every candidate failed the premise, so
@@ -28600,9 +28614,9 @@ fun qc_counters_distinguish_vacuous () =
     val config =
       upd_size 3 (upd_substrate Compute
         (upd_backends (SOME ["exhaustive"]) default_config))
-    val (vacuous, vacuous_messages) = capture_refute_messages 1 (fn () =>
+    val (vacuous, vacuous_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!n : num. n * n = 7 ==> n < 3``)
-    val (real, real_messages) = capture_refute_messages 1 (fn () =>
+    val (real, real_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!n : num. n < 3 ==> n < 100``)
   in
     case (vacuous, real) of
@@ -28636,9 +28650,9 @@ fun qc_counters_distinguish_no_counterexample_reports () =
     val config =
       upd_size 3 (upd_substrate Compute
         (upd_backends (SOME ["exhaustive"]) default_config))
-    val (never, never_messages) = capture_refute_messages 1 (fn () =>
+    val (never, never_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!b. (b /\ ~b) ==> b``)
-    val (always, always_messages) = capture_refute_messages 1 (fn () =>
+    val (always, always_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!b. (b \/ ~b) ==> (b \/ ~b)``)
   in
     case (never, always) of
@@ -28667,9 +28681,9 @@ fun narrowing_counters_distinguish_no_counterexample_reports () =
     val config =
       upd_size 3
         (Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config)
-    val (never, never_messages) = capture_refute_messages 1 (fn () =>
+    val (never, never_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!b. (b /\ ~b) ==> b``)
-    val (always, always_messages) = capture_refute_messages 1 (fn () =>
+    val (always, always_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!b. (b \/ ~b) ==> (b \/ ~b)``)
   in
     case (never, always) of
@@ -28869,9 +28883,9 @@ val _ = require_msg
    zero assumptions satisfied -- but [n * n = 7] really does generate
    candidates and reject them, while [n > 100]'s smart-generator
    inversion enumerates no candidates over 0..3 at all.  With no
-   witness, the user-visible surface is the [Private.say] line built
-   from [counter_reason], not [format_stats] (which only ever renders
-   on a witness) -- capture that line directly instead of building a
+   witness, the only surface is the trace-level-2 [Private.say] line
+   built from [counter_reason], not [format_stats] (which only ever
+   renders on a witness) -- capture that line directly instead of building a
    stats list by hand and formatting it off to the side.  9, not 4: a
    full [refute] search re-explores sizes 1..3 (2 + 3 + 4 candidates),
    unlike [raw_counters]'s single size-3 call above. *)
@@ -28880,9 +28894,9 @@ fun qc_counters_denominator_distinguishes_empty_enumeration () =
     val config =
       upd_size 3 (upd_substrate Compute
         (upd_backends (SOME ["exhaustive"]) default_config))
-    val (rejected, rejected_messages) = capture_refute_messages 1 (fn () =>
+    val (rejected, rejected_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!n : num. n * n = 7 ==> n < 3``)
-    val (empty, empty_messages) = capture_refute_messages 1 (fn () =>
+    val (empty, empty_messages) = capture_refute_messages 2 (fn () =>
       refute config ``!n : num. n > 100 ==> n < 3``)
   in
     case (rejected, empty) of

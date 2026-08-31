@@ -2143,7 +2143,7 @@ fun kodkod_formula_from_nut offsets
                             [candidate])
                  | atom => KK.Atom atom)
             else if ty = MFH.num_type orelse MFH.is_iterator_type ty orelse
-                    MFH.is_word_type ty orelse MFH.is_char_type ty then
+                    MFH.is_exact_carrier_type ty then
               (* Atom [j] of a word carrier denotes [n2w j], so a literal is
                  its own atom once reduced modulo the width; atom [j] of the
                  char carrier denotes [CHR j] the same way. *)
@@ -2989,12 +2989,17 @@ fun kodkod_formula_from_nut offsets
         else KK.Sub (KK.SetSum relation, KK.Num offset)
       end
 
-    and to_word_op ty representation arity operation =
+    (* The shared skeleton of every integer-register op: bind one register
+       per argument position plus one for the result, each read off its own
+       atom, then constrain them.  The arms differ only in how an atom is
+       read -- a numeric carrier's atom carries its own value, a bit-word's
+       does not -- and in the constraint. *)
+    and to_indexed_int_op read ty representation arity formula =
       let
         val (domains, range) = boolSyntax.strip_fun ty
         val types = domains @ [range]
         fun integer index =
-          numeric_int_expr (List.nth (types, index)) (KK.Var (1, index))
+          read (List.nth (types, index)) (KK.Var (1, index))
       in
         kk_comprehension
           (decls_for_atom_schema 0
@@ -3002,9 +3007,13 @@ fun kodkod_formula_from_nut offsets
           (KK.FormulaLet
             (map (fn index => KK.AssignIntReg (index, integer index))
                (Util.index_seq 0 (arity + 1)),
-             KK.IntEq (KK.IntReg arity,
-               operation (List.tabulate (arity, KK.IntReg)))))
+             formula))
       end
+
+    and to_word_op ty representation arity operation =
+      to_indexed_int_op numeric_int_expr ty representation arity
+        (KK.IntEq (KK.IntReg arity,
+           operation (List.tabulate (arity, KK.IntReg))))
 
     and to_word_unary_op ty representation operation =
       to_word_op ty representation 1
@@ -3024,27 +3033,11 @@ fun kodkod_formula_from_nut offsets
       end
 
     and to_bit_word_unary_op ty representation operation =
-      let
-        val (domains, range) = boolSyntax.strip_fun ty
-        val types = domains @ [range]
-        fun integer index = int_expr_from_atom kk
-          (List.nth (types, index)) (KK.Var (1, index))
-      in
-        kk_comprehension
-          (decls_for_atom_schema 0
-            (MFR.atom_schema_of_rep representation))
-          (KK.FormulaLet
-            (map (fn index => KK.AssignIntReg (index, integer index))
-               (Util.index_seq 0 2),
-             KK.IntEq (KK.IntReg 1, operation (KK.IntReg 0))))
-      end
+      to_indexed_int_op (int_expr_from_atom kk) ty representation 1
+        (KK.IntEq (KK.IntReg 1, operation (KK.IntReg 0)))
 
     and to_bit_word_binary_op ty representation guard operation =
       let
-        val (domains, range) = boolSyntax.strip_fun ty
-        val types = domains @ [range]
-        fun integer index = int_expr_from_atom kk
-          (List.nth (types, index)) (KK.Var (1, index))
         val formulas =
           (case guard of
                SOME formula =>
@@ -3056,13 +3049,8 @@ fun kodkod_formula_from_nut offsets
                     function (KK.IntReg 0) (KK.IntReg 1))]
              | NONE => [])
       in
-        kk_comprehension
-          (decls_for_atom_schema 0
-            (MFR.atom_schema_of_rep representation))
-          (KK.FormulaLet
-            (map (fn index => KK.AssignIntReg (index, integer index))
-               (Util.index_seq 0 3),
-             Util.fold1 kk_and formulas))
+        to_indexed_int_op (int_expr_from_atom kk) ty representation 2
+          (Util.fold1 kk_and formulas)
       end
 
     and to_apply (representation as MFR.Formula _) _ _ =

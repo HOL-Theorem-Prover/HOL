@@ -1045,12 +1045,10 @@ structure Refute_SmartGen = struct
      keyed by [relation_key] instead -- [Predicate f] and [Graph f] are
      different relations -- so it gets its own [same_relation] lookup. *)
   fun lookup_assoc relation entries =
-    Option.map #2 (List.find (fn (other, _) =>
-      same_constant relation other) entries)
+    Lib.op_assoc1 same_constant relation entries
 
   fun lookup_modes relation entries =
-    Option.map #2 (List.find (fn (other, _) =>
-      same_relation relation other) entries)
+    Lib.op_assoc1 same_relation relation entries
 
   fun premise_head premise =
     let val (head, _) = HolKernel.strip_comb premise

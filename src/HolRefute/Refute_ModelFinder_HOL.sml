@@ -581,6 +581,11 @@ structure Refute_ModelFinder_HOL = struct
         SOME {Thy = "string", Tyop = "char", Args = []} => true
       | _ => false
 
+  (* Word and char are the same kind of carrier: an atom's universe index is
+     its value, so both need sequential integer bounds and both are atomic
+     for the scope search. *)
+  fun is_exact_carrier_type ty = is_word_type ty orelse is_char_type ty
+
   (* [CHR] of a numeral below 256: the encoder folds it into the single
      carrier atom that denotes it, so no [num] carrier holding the code is
      needed.  Above 255 [CHR] is unspecified and stays an application. *)
@@ -673,8 +678,9 @@ structure Refute_ModelFinder_HOL = struct
      ({Thy = "string", Name = "char_gt"}, 2),
      ({Thy = "string", Name = "char_ge"}, 2)]
 
-  fun keyed_built_in_arity table key =
-    Option.map #2 (List.find (fn (other, _) => same_key key other) table)
+  fun key_lookup key table = Lib.op_assoc1 same_key key table
+
+  fun keyed_built_in_arity table key = key_lookup key table
 
   val generic_built_in_arity = keyed_built_in_arity built_in_consts
 
@@ -1152,9 +1158,6 @@ structure Refute_ModelFinder_HOL = struct
     end
     handle HOL_ERR _ => NONE
 
-  fun cache_lookup key entries =
-    Option.map #2 (List.find (fn (other, _) => same_key other key) entries)
-
   fun fixpoint_base_theorem_name Lfp = "lfp_fixedpoint"
     | fixpoint_base_theorem_name Gfp = "gfp_greatest_fixedpoint"
     | fixpoint_base_theorem_name NoFp =
@@ -1370,7 +1373,7 @@ structure Refute_ModelFinder_HOL = struct
           let val derived = derived_fixpoint_group context constant
           in fixpoint_cache := (key, derived) :: !fixpoint_cache; derived end
       in
-        case cache_lookup key (!fixpoint_cache) of
+        case key_lookup key (!fixpoint_cache) of
             SOME result => result
           | NONE =>
               if kind = NoFp then cache_derived ()
@@ -3521,26 +3524,26 @@ structure Refute_ModelFinder_HOL = struct
       fun bounded_cons theorem slot =
         if length slot >= absrep_pairs_bound then slot
         else slot @ [theorem]
-      fun note key law theorem table =
+      fun as_abs_rep (theorem, (abs_reps, rep_abses)) =
+        (bounded_cons theorem abs_reps, rep_abses)
+      fun as_rep_abs (theorem, (abs_reps, rep_abses)) =
+        (abs_reps, bounded_cons theorem rep_abses)
+      fun note key half theorem table =
         let
-          val (abs_reps, rep_abses) =
-            Option.getOpt (Redblackmap.peek (table, key), empty_slots ())
           val slots =
-            case law of
-                AbsRepLaw _ => (bounded_cons theorem abs_reps, rep_abses)
-              | RepAbsLaw _ => (abs_reps, bounded_cons theorem rep_abses)
+            Option.getOpt (Redblackmap.peek (table, key), empty_slots ())
         in
-          Redblackmap.insert (table, key, slots)
+          Redblackmap.insert (table, key, half (theorem, slots))
         end
       fun step ((_, theorem), table) =
         case classify_absrep_law theorem of
             NotABijectionLaw => table
-          | law as AbsRepLaw {abs, rep} => note (abs, rep) law theorem table
-          | law as RepAbsLaw {abs, rep} => note (abs, rep) law theorem table
+          | AbsRepLaw {abs, rep} => note (abs, rep) as_abs_rep theorem table
+          | RepAbsLaw {abs, rep} => note (abs, rep) as_rep_abs theorem table
       val table = List.foldl step
         (Redblackmap.mkDict key_compare) theorems
       fun combine (abs_reps, rep_abses) =
-        List.concat (map (fn a => map (fn r => (a, r)) rep_abses) abs_reps)
+        Lib.allpairs' Lib.pair abs_reps rep_abses
     in
       List.concat (map (combine o #2) (Redblackmap.listItems table))
     end
@@ -4165,12 +4168,7 @@ structure Refute_ModelFinder_HOL = struct
      a registered carrier may have no such constant -- would be dead code
      here. *)
   fun retype_fmap_constant thy name ty =
-    let
-      val generic = Term.prim_mk_const {Thy = thy, Name = name}
-      val theta = Type.match_type (Term.type_of generic) ty
-    in
-      Term.inst theta generic
-    end
+    Term.mk_thy_const {Thy = thy, Name = name, Ty = ty}
 
   (* fmap gets its own synthetic typedef, unconditionally -- unlike frac
      it needs no opt-in registration call, matching how fmap's QC
@@ -4384,13 +4382,28 @@ structure Refute_ModelFinder_HOL = struct
      One [term_mentions] walk decides all three binarization vetoes:
      asking them separately traverses the term three times over, and the
      leaf predicates are ordered cheapest first so the costly typedef
-     lookup runs only where the other two have already declined. *)
-  fun term_mentions_binarization_veto term =
-    term_mentions
-      (fn ty =>
-         is_word_type ty orelse is_char_type ty orelse
-         is_num_typedef_type ty)
-      term
+     lookup runs only where the other two have already declined.
+
+     One cache per decision: [type_has] runs the leaf test on every
+     subterm's type and on every type nested inside it, so the same handful
+     of types is re-tested across the whole axiom set. *)
+  fun binarization_veto_test () =
+    let
+      val cache = ref (Redblackmap.mkDict Type.compare)
+      fun leaf ty =
+        case Redblackmap.peek (!cache, ty) of
+            SOME answer => answer
+          | NONE =>
+              let
+                val answer =
+                  is_exact_carrier_type ty orelse is_num_typedef_type ty
+              in
+                cache := Redblackmap.insert (!cache, ty, answer);
+                answer
+              end
+    in
+      term_mentions leaf
+    end
 
   fun quotient_relation_for_type ty =
     case quotient_for_type ty of
@@ -6085,14 +6098,16 @@ structure Refute_ModelFinder_HOL = struct
   (* [?x. P x] for a choice predicate.  [s_betapply], not a bare
      [Term.mk_comb]: an un-beta-reduced redex leaves [DECIDE]'s fragment,
      silently disabling the escape. *)
-  fun choice_predicate_nonempty predicate =
+  fun choice_predicate_nonempty_avoiding avoid predicate =
     let
       val (domain_ty, _) = Type.dom_rng (Term.type_of predicate)
-      val witness = Term.variant (Term.all_vars predicate)
+      val witness = Term.variant (Term.all_vars predicate @ avoid)
         (Term.mk_var ("x", domain_ty))
     in
       boolSyntax.mk_exists (witness, s_betapply (predicate, witness))
     end
+
+  val choice_predicate_nonempty = choice_predicate_nonempty_avoiding []
 
   val choice_predicate_decide_budget = 120
   val choice_predicate_decide_attempt_cap = 32
@@ -6407,14 +6422,9 @@ structure Refute_ModelFinder_HOL = struct
                      val applied =
                        s_betapplys (choice, process_args depth rest)
                      val result_ty = Term.type_of applied
-                     val witness = Term.variant
-                       (Term.all_vars predicate' @ Term.all_vars applied)
-                       (Term.mk_var ("x", domain_ty))
-                     (* [s_betapply], not a bare [Term.mk_comb]: an
-                        un-beta-reduced redex leaves [DECIDE]'s fragment,
-                        silently disabling the escape. *)
-                     val nonempty = boolSyntax.mk_exists
-                       (witness, s_betapply (predicate', witness))
+                     val nonempty =
+                       choice_predicate_nonempty_avoiding
+                         (Term.all_vars applied) predicate'
                    in
                      (* Decided on [predicate], not [predicate'] (the
                         [do_term] image): the escape's soundness -- HOL

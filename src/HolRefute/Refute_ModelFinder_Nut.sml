@@ -1231,6 +1231,12 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
         "char operations are not encoded with binary integers"
     else ()
 
+  (* Both halves in one place: each is a no-op at the carrier it does not
+     name, so an operation added to the dispatch below cannot check one
+     carrier and silently skip the other. *)
+  fun check_carrier_budget scope product ty =
+    (check_word_budget scope product ty; check_char_budget scope ty)
+
   fun unknown_boolean ty representation =
     Cst (case representation of
              MFR.Formula Util.Pos => False
@@ -1424,7 +1430,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 else if List.exists (fn other => constant = other)
                     [Add, Subtract, Multiply, Divide, Gcd, Lcm] then
                   let
-                    val _ = check_word_budget scope
+                    val _ = check_carrier_budget scope
                       (constant = Multiply) ty
                     val number_ty = domain_type ty
                     val atom = MFR.Atom (MFS.spec_of_type scope number_ty)
@@ -1437,35 +1443,21 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     val range = if total then atom else MFR.Opt atom
                   in Cst (constant, ty,
                        MFR.Func (atom, MFR.Func (atom, range))) end
-                else if constant = NatToWord orelse constant = WordToNat then
+                else if List.exists (fn other => constant = other)
+                    [NatToWord, WordToNat, NatToChar, CharToNat] then
                   let
-                    val _ = check_word_budget scope false ty
+                    val _ = check_carrier_budget scope false ty
                     val (domain_card, domain_offset) =
                       MFS.spec_of_type scope (domain_type ty)
                     val (range_card, range_offset) =
                       MFS.spec_of_type scope (range_type ty)
-                    (* [n2w] wraps, so it is total whatever the carriers are;
-                       [w2n] needs a numeric carrier holding every word
-                       value. *)
+                    (* [n2w] wraps, so it is total whatever the carriers are.
+                       [w2n] needs a numeric carrier holding every word value;
+                       [CHR] is unspecified at or above 256 and [ORD] needs a
+                       [num] carrier holding every code, so those three are
+                       total exactly when the domain fits the range. *)
                     val total = constant = NatToWord orelse
                       domain_card <= range_card
-                    val range = MFR.Atom (range_card, range_offset)
-                  in
-                    Cst (constant, ty,
-                      MFR.Func (MFR.Atom (domain_card, domain_offset),
-                        if total then range else MFR.Opt range))
-                  end
-                else if constant = NatToChar orelse constant = CharToNat then
-                  let
-                    val _ = check_char_budget scope ty
-                    val (domain_card, domain_offset) =
-                      MFS.spec_of_type scope (domain_type ty)
-                    val (range_card, range_offset) =
-                      MFS.spec_of_type scope (range_type ty)
-                    (* [CHR] is unspecified at or above 256 and [ORD] needs a
-                       [num] carrier holding every code, so either direction is
-                       total exactly when the domain fits the range. *)
-                    val total = domain_card <= range_card
                     val range = MFR.Atom (range_card, range_offset)
                   in
                     Cst (constant, ty,
@@ -1475,7 +1467,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 else if List.exists (fn other => constant = other)
                     [WordAnd, WordOr, WordXor] then
                   let
-                    val _ = check_word_budget scope false ty
+                    val _ = check_carrier_budget scope false ty
                     val atom = MFR.Atom
                       (MFS.spec_of_type scope (domain_type ty))
                   in
@@ -1485,7 +1477,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 else if List.exists (fn other => constant = other)
                     [WordShl, WordShr, WordAsr] then
                   let
-                    val _ = check_word_budget scope (constant = WordShl) ty
+                    val _ = check_carrier_budget scope (constant = WordShl) ty
                     val word_atom = MFR.Atom
                       (MFS.spec_of_type scope (domain_type ty))
                     val count_atom = MFR.Atom
@@ -1551,8 +1543,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 end
             | Op2 (Less, ty, _, first, second) =>
                 let
-                  val _ = check_word_budget scope false (type_of first)
-                  val _ = check_char_budget scope (type_of first)
+                  val _ = check_carrier_budget scope false (type_of first)
                   val first' = sub first
                   val second' = sub second
                   val optional = List.exists

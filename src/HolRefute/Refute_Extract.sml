@@ -3089,7 +3089,7 @@ structure Refute_Extract = struct
                   (constructor_thunk constructor values)) final)
             end)
 
-      fun random_datatype constrs recursive min_size family =
+      fun random_datatype constrs recursive min_size fun_recursive =
         let
           fun sized_weight flags floors =
             if not (List.exists (fn flag => flag) flags) then "1" else
@@ -3103,17 +3103,16 @@ structure Refute_Extract = struct
                 else "(if budget > " ^ integer minimum ^
                   " then budget else 0)"
               end
-          fun weight ((_, args), flags, floors) =
+          fun weight (flags, floors, fun_rec) =
             let val sized = sized_weight flags floors in
-              if List.exists
-                   (Refute_Gen.recursive_under_function family) args
-              then "(if hard_budget = 0 then 0 else " ^ sized ^ ")"
+              if fun_rec then "(if hard_budget = 0 then 0 else " ^ sized ^ ")"
               else sized
             end
           val rows = ListPair.zip
             (ListPair.zip (constrs, recursive), min_size)
-          val weights = List.map (fn ((constr, flags), floors) =>
-            weight (constr, flags, floors)) rows
+          val weights = ListPair.mapEq
+            (fn (((_, flags), floors), fun_rec) =>
+              weight (flags, floors, fun_rec)) (rows, fun_recursive)
           val total = join " + " weights
           fun select _ [] =
                 "(raise Fail \"Refute generated constructor choice\")"
@@ -3210,8 +3209,8 @@ structure Refute_Extract = struct
             "in (List.nth (values, IntInf.toInt choice), next) end"
         | Refute_Gen.GenNum kind => random_num kind
         | Refute_Gen.GenDatatype
-            {constrs, recursive, min_size, family, ...} =>
-            random_datatype constrs recursive min_size family
+            {constrs, recursive, min_size, fun_recursive, ...} =>
+            random_datatype constrs recursive min_size fun_recursive
         | Refute_Gen.GenFun (domain, range) => random_function domain range
         | Refute_Gen.GenCustom _ => raise Fail "validated custom generator"
 

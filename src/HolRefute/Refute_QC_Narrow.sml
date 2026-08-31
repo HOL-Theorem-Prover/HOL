@@ -334,8 +334,9 @@ structure Refute_QC_Narrow = struct
         case !replay_potential of
             SOME potential => Refute_Core.Counterexample [potential]
           | NONE =>
-              (Refute_Core.Private.say 1
-                 ("narrowing: " ^ counter_reason ^ "\n");
+              (Option.app (fn text =>
+                 Refute_Core.Private.say 2 ("narrowing: " ^ text ^ "\n"))
+                 counter_reason;
                if Option.isSome (!totally_exhausted_depth) andalso
                   not (!failed) andalso null (!gave_up) then
                  Refute_Core.NoCounterexample

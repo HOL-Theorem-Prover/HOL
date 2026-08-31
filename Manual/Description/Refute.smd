@@ -135,7 +135,9 @@ suppress all messages and warnings.
 
 A search that ends `NoCounterexample` or `Unknown` -- no witness, so no
 `format_stats` line -- still reports its three QC counters, one line per
-backend that ran, on the `"Refute"` trace at level 1.  The following
+backend that ran, on the `"Refute"` trace at level 2.  They are a
+diagnostic rather than part of the verdict, so the default level 1 does
+not show them; raise the trace to ask for them.  The following
 transcript is `!n. n * n = 7 ==> n < 3` at size 3: no premise-inverting
 generator exists for multiplication, so every candidate is really
 generated and really rejected, on every backend that measures the
@@ -144,6 +146,9 @@ counters at all.
 ```{=latex}
 \begin{session}
 \begin{verbatim}
+- set_trace "Refute" 2;
+> val it = () : unit
+
 - the_config :=
     (default_config
        |> upd_sequential true
@@ -171,6 +176,9 @@ counters at all.
 ```
 
 ```{=mdbook}
+    - set_trace "Refute" 2;
+    > val it = () : unit
+
     - the_config :=
         (default_config
            |> upd_sequential true
@@ -246,8 +254,8 @@ a cumulative count of a schedule's work, not a count of distinct
 candidates.  `Compute` and `NativeSML` count every candidate for real;
 `Cv` runs its search as one compiled call with no room for incremental
 counting, so it always omits all three counts rather than fabricate
-them, reporting "candidate counters unavailable on this substrate"
-instead of a denominator it cannot produce.
+them, and a witness-less `Cv` search prints no candidate-count line at
+all rather than announce a denominator it cannot produce.
 `NoCounterexample` means that a selected search covered the whole relevant
 space: no counterexample is possible at any larger size.  The result is
 decisive and stops the concurrent backend pool.  A clean fixed-bound search
