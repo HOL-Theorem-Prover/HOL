@@ -255,7 +255,10 @@ fun do_dirstream opts dname ds sofar wlist =
           in
             if OS.FileSys.isLink fullp then recurse sofar dworklist
             else if OS.FileSys.isDir fullp then
-              if is_excluded_path opts fullp then recurse sofar dworklist
+              (* .hol is Holmake's own directory: what is under it is
+                 built, not written, and its style is nobody's to fix *)
+              if fname = ".hol" orelse is_excluded_path opts fullp then
+                recurse sofar dworklist
               else recurse sofar (fullp::dworklist)
             else
               let
