@@ -12,6 +12,8 @@ sig
     val prove_it :  Hol_pp.term ->   Parse.term ->  Parse.term -> Parse.term -> Parse.term -> Abbrev.thm * Abbrev.tactic
     val obtain_proofs : unit -> Abbrev.thm
     val GO_ON_TAC : unit -> Abbrev.tactic
+    val GO_ON_TAC_G : Abbrev.tactic
+    val GO_ON_N : int -> Abbrev.tactic
     val go_on : int -> proofManagerLib.proof
     val go_on_p : int -> proofManagerLib.proof
     val thm_prove : Hol_pp.term -> Abbrev.thm

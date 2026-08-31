@@ -88,10 +88,10 @@ fun prove_it a src_inv trg_inv uf uy =
        prove  a src_inv trg_inv  ([uf, uy, ``27w:word5``, ``_thm``])  ([(get_trans_thm uf), (get_reflex_thm uf), (get_unt_def uf), (get_sim_def uy), errorT_thm, (get_sim_reflex_thm uy)])
      end;
 
-fun obtain_proofs() =
-     case top_goals() of
-       [] => trivial_true
-     | (_, to_show)::_ =>
+(* The goal-directed core.  Kept separate from the proof manager so the
+   same work is available as an ordinary tactic: a proof written as
+   Theorem-Proof-QED never touches top_goals(). *)
+fun obtain_proofs_for to_show =
        let
          val (rcstu, simp) = dest_comb to_show
          val (rcst, unt) = dest_comb rcstu
@@ -103,11 +103,26 @@ fun obtain_proofs() =
          thm
        end handle HOL_ERR _ => trivial_true
 
+fun obtain_proofs() =
+     case top_goals() of
+       [] => trivial_true
+     | (_, to_show)::_ => obtain_proofs_for to_show
+
 fun GO_ON_TAC () =
     let val thm = obtain_proofs ()
     in
         ASSUME_TAC thm THEN FULL_SIMP_TAC (srw_ss()) []
     end;
+
+(* Tactic form of GO_ON_TAC: reads the goal it is handed instead of
+   whatever the proof manager happens to be holding. *)
+val GO_ON_TAC_G : tactic =
+    fn (g as (_, to_show)) => fn ctxt =>
+       (ASSUME_TAC (obtain_proofs_for to_show) THEN
+        FULL_SIMP_TAC (srw_ss()) []) g ctxt
+
+fun GO_ON_N 0 = ALL_TAC
+  | GO_ON_N n = GO_ON_TAC_G THEN GO_ON_N (n - 1)
 
 fun go_on cnt = case cnt of
                         0 => e(GO_ON_TAC())
