@@ -6365,7 +6365,8 @@ Proof
   qabbrev_tac `k = LENGTH (FILTER P l5)` >>
   `ls = l5 ++ y::l3` by simp[Abbr`l5`, Abbr`ls`] >>
   `k < LENGTH fs /\ (k = j + 1 <=> FILTER P l2 = [])` by
-    (`fs = FILTER P l5 ++ y::FILTER P l3` by rfs[FILTER_APPEND_DISTRIB, Abbr`fs`] >>
+    (`fs = FILTER P l5 ++ y::FILTER P l3` by
+       rfs[FILTER_APPEND_DISTRIB, Abbr`fs`, Abbr`l4`, Abbr`l5`] >>
   `LENGTH fs = k + SUC (LENGTH (FILTER P l3))` by fs[Abbr`k`] >>
   `FILTER P l5 = FILTER P l1 ++ x :: FILTER P l2` by rfs[FILTER_APPEND_DISTRIB, Abbr`l5`] >>
   `k = j + SUC (LENGTH (FILTER P l2))` by fs[Abbr`k`, Abbr`j`] >>

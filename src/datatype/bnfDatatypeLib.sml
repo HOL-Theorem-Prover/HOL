@@ -51,6 +51,49 @@ fun registerBNF {tyname} (key, bnfBase.bI info) =
     case constant's overload, and what the evaluator needs.
    ---------------------------------------------------------------------- *)
 
+(* the theorem that records what the declaration said, which is what
+   EmitML and the like read a datatype's shape off *)
+fun datatype_presentation (spec : spec) =
+    let
+      val thy = current_theory()
+      fun mkc n = prim_mk_const {Name = n, Thy = thy}
+      fun decl (tyname, cs, flds) =
+          case flds of
+              NONE =>
+              let val constrs = List.map (mkc o #1) cs
+                  val tyv = mk_var (tyname,
+                                    List.foldr (op -->) bool
+                                               (List.map type_of constrs))
+              in
+                list_mk_comb (tyv, constrs)
+              end
+            | SOME fields =>
+              let
+                fun pmc f = mkc (TypeBasePure.mk_recordtype_fieldsel
+                                   {tyname = tyname, fieldname = f})
+                val hdc = pmc (hd fields)
+                fun fieldvar n =
+                    let val c = pmc n in mk_var (n, #2 (dom_rng (type_of c))) end
+                val fvars = List.map fieldvar fields
+                val tyv = mk_var (tyname, #1 (dom_rng (type_of hdc)))
+                val recv = mk_var ("record",
+                                   List.foldr (op -->) bool
+                                     (type_of tyv :: List.map type_of fvars))
+              in
+                list_mk_comb (recv, tyv :: fvars)
+              end
+      val decls =
+          List.map (fn (nm, (cs, flds)) => decl (nm, cs, flds))
+                   (ListPair.zip (#tynames spec,
+                                  ListPair.zip (#constructors spec,
+                                                #fields spec)))
+      val nm = hd (#tynames spec)
+    in
+      ignore (save_thm ("datatype_" ^ nm,
+                        EQT_ELIM (ISPEC (list_mk_conj decls)
+                                        boolTheory.DATATYPE_TAG_THM)))
+    end
+
 fun persist tyinfos =
     let
       open TypeBasePure
@@ -185,6 +228,7 @@ fun oneType db (spec : spec) =
               [RecordType.prove_recordtype_thms (hd tyinfos, flds)]
     in
       List.app (fn th => ignore (save_thm (name_of_eqn th, th))) eqns
+    ; datatype_presentation spec
     ; persist tyinfos
     ; tyinfos
     end
@@ -264,6 +308,7 @@ fun manyTypes db (spec : spec) =
     in
       List.app (fn th => ignore (save_thm (name_of_eqn th, th)))
                (List.concat rewrites)
+    ; datatype_presentation spec
     ; persist tyinfos
     ; tyinfos
     end

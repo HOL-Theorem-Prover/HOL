@@ -3635,11 +3635,14 @@ fun defineSize {tyname, sizes = sizenames} axiom =
             val pieces =
                 List.filter (fn t => not (aconv t numSyntax.zero_tm))
                             (List.map pieceFor cargs)
+            (* summed the way the old package sums them, to the right:
+               `1 + (f a + size l)`, which is the term every development
+               that mentions a size has seen *)
             val body =
                 case pieces of
                     [] => numSyntax.zero_tm
-                  | _ => List.foldl (fn (p,acc) => numSyntax.mk_plus (acc, p))
-                                    (numSyntax.term_of_int 1) pieces
+                  | _ => Lib.end_itlist (curry numSyntax.mk_plus)
+                                        (numSyntax.term_of_int 1 :: pieces)
           in
             list_mk_forall (cargs,
                             mk_eq (mk_comb (sizeApp i, capp), body))
@@ -3659,8 +3662,22 @@ fun defineSize {tyname, sizes = sizenames} axiom =
                          consts of
               SOME c => c
             | NONE => raise ERR "defineSize" "the definition made no constant"
+      (* clause by clause, with the parameters quantified inside each,
+         which is the shape the old package's definitions have and the
+         shape a development that rewrites with a size has seen *)
+      val perClause =
+          let
+            val (fs, _) = strip_forall (concl def)
+            val specd = SPECL fs def
+            fun reshape c =
+                let val (vs, _) = strip_forall (concl c)
+                in GENL (fs @ vs) (SPECL vs c) end
+          in
+            LIST_CONJ (List.map reshape (CONJUNCTS specd))
+          end
     in
-      SOME {sizes = List.map constFor sizes, definition = def, unique = uq}
+      SOME {sizes = List.map constFor sizes, definition = perClause,
+            unique = uq}
     end
 
 
@@ -3812,14 +3829,15 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites, names} =
             | SOME (szs, def, _, orig) =>
               let val {convs, rewrs} = TypeBasePure.simpls_of tyi
               in
+                (* put_size adds the equation to the entry's
+                   simplification set itself; adding it here as well
+                   left the entry holding it twice *)
+                ignore (convs, rewrs);
                 TypeBasePure.put_size
                   (List.nth (szs, i),
                    if i = 0 then TypeBasePure.ORIG def
                    else TypeBasePure.COPY (orig, def))
-                  (* what add_std_simpls would have put there, had the
-                     size been known when the entry was made *)
-                  (TypeBasePure.put_simpls
-                     {convs = convs, rewrs = rewrs @ [def]} tyi)
+                  tyi
               end
       fun withRewrs (tyi, ths) =
           let val {convs, rewrs} = TypeBasePure.simpls_of tyi
