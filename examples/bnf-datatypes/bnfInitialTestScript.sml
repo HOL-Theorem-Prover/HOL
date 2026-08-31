@@ -144,7 +144,7 @@ QED
     shape, what the Datatype package produces for the same type.
    ---------------------------------------------------------------------- *)
 
-val btcs = defineConstructors [("Lf", 0), ("Nd", 3)]
+val btcs = defineConstructors noNames [("Lf", 0), ("Nd", 3)]
              (fbnf “:one + 'a # 'b1 # 'a”) btree
 
 fun checkthm nm th q =

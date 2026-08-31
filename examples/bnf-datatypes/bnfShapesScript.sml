@@ -56,7 +56,7 @@ val _ =
 val ecopy = defineCopy {tyname = "colour", ABS = "colour_ABS",
                         REP = "colour_REP"} ebnf
 val efix = #fixpoint ecopy
-val ecs = defineConstructors (hd (#constructors espec)) ebnf efix
+val ecs = defineConstructors noNames (hd (#constructors espec)) ebnf efix
 
 val _ = tprint "an enumeration's axiom"
 val _ =
@@ -114,7 +114,7 @@ val _ =
 val rbnf = deriveBNFn db [alpha] (#1 (hd (#functors rspec)))
 val rfix = #fixpoint (defineCopy {tyname = "point", ABS = "point_ABS",
                                   REP = "point_REP"} rbnf)
-val rcs = defineConstructors (hd (#constructors rspec)) rbnf rfix
+val rcs = defineConstructors noNames (hd (#constructors rspec)) rbnf rfix
 
 (* the constructor's name is not one the parser can read, so the axiom is
    compared against a term built rather than written *)
@@ -178,7 +178,7 @@ val pbnf = deriveBNFn db [alpha, pty] “:'p # num”
 val pcopy = defineCopy {tyname = "wrap", ABS = "wrap_ABS",
                         REP = "wrap_REP"} pbnf
 val pfix = #fixpoint pcopy
-val pcs = defineConstructors [("Wrap", 2)] pbnf pfix
+val pcs = defineConstructors noNames [("Wrap", 2)] pbnf pfix
 
 val _ = tprint "a parameterised record's axiom"
 val _ =

@@ -13,9 +13,60 @@ val ERR = mk_HOL_ERR "bnfFixLib"
    ---------------------------------------------------------------------- *)
 
 type names = {map : string option, sets : string option list,
-              relator : string option, size : string option}
+              relator : string option, size : string option,
+              written : (hol_type * hol_type) list}
 
-val noNames : names = {map = NONE, sets = [], relator = NONE, size = NONE}
+val noNames : names = {map = NONE, sets = [], relator = NONE, size = NONE,
+                       written = []}
+
+(* The construction works at variables of its own, and what reads a
+   datatype instantiates a constant's type variables by name — `mk_list`
+   puts the element type in for α.  So a constant is defined at the
+   variables the specification wrote, and instantiated back to the
+   construction's own for the work that follows: the two are the same
+   constant at two instances of its type. *)
+fun asSpecWrote (nms : names) =
+    List.map (fn (p, w) => p |-> w) (#written nms)
+fun asBuilt (nms : names) =
+    List.map (fn (p, w) => w |-> p) (#written nms)
+
+(* A map or a relator has a second instance of the type in it, whose
+   variables the specification did not write.  They are named the way a
+   datatype's map is conventionally written — `MAP : ('a -> 'b) -> 'a
+   list -> 'b list` — which is the first names its own arguments leave
+   free, in the order the arguments come. *)
+fun conventional avoid =
+    let fun go [] = Type.gen_tyvar ()
+          | go (c::cs) = let val v = mk_vartype c
+                         in if Lib.mem v avoid then go cs else v end
+    in
+      go ["'a", "'b", "'c", "'d", "'e", "'f", "'g", "'h"]
+    end
+fun renameTyvars (nms : names) tyvars =
+    let
+      val wrote = asSpecWrote nms
+      val known = List.map #redex wrote
+      val rest = List.filter (fn v => not (Lib.mem v known)) tyvars
+      val rest = Listsort.sort Type.compare rest
+      fun go ([], _) = []
+        | go (v::vs, avoid) =
+          let val n = conventional avoid
+          in (v |-> n) :: go (vs, n :: avoid) end
+    in
+      wrote @ go (rest, List.map #residue wrote @ known)
+    end
+fun renameRest nms th = renameTyvars nms (Term.type_vars_in_term (concl th))
+fun renameRestTm nms tm = renameTyvars nms (Term.type_vars_in_term tm)
+fun backwards theta = List.map (fn {redex, residue} => residue |-> redex) theta
+
+(* a definition made at the specification's own variables, and read back
+   at the construction's *)
+fun defineAsWritten nms (nm, tm) =
+    let val theta = renameRestTm nms tm
+    in
+      INST_TYPE (backwards theta)
+                (new_definition (nm, Term.inst theta tm))
+    end
 
 fun nameOr d NONE = d
   | nameOr _ (SOME s) = s
@@ -790,8 +841,9 @@ type constructors = {
   set_induction : thm, distinct : thm option list, one_one : thm option list
 }
 
-fun defineConstructors cspecs bnf fix : constructors =
-    let val newty = #newty fix
+fun defineConstructors (nms : names) cspecs bnf fix : constructors =
+    let val wrote = asSpecWrote nms and built = asBuilt nms
+        val newty = #newty fix
         val cons = #cons fix
         val prim = #prim_recursion fix
         val cty = #2 (dom_rng (#2 (dom_rng
@@ -825,10 +877,13 @@ fun defineConstructors cspecs bnf fix : constructors =
                 val tup = if null args then oneSyntax.one_tm
                           else pairSyntax.list_mk_pair args
                 val cvar = mk_var (nm, List.foldr (op -->) newty argtys)
-                val def = new_definition
-                            (defnName nm ^ "_def",
-                             mk_eq (list_mk_comb (cvar, args),
-                                    mk_comb (cons, mkInj newSummands i tup)))
+                val eqn = mk_eq (list_mk_comb (cvar, args),
+                                 mk_comb (cons, mkInj newSummands i tup))
+                (* defined at the specification's own variables, and
+                   read back at the construction's *)
+                val def = INST_TYPE built
+                            (new_definition (defnName nm ^ "_def",
+                                             Term.inst wrote eqn))
                 val ctm = #1 (strip_comb (lhs (concl (SPEC_ALL def))))
                 val recs = isRec facs
                 val nonrecargs = map #2 (filter (not o #1) (zip recs args))
@@ -1114,7 +1169,7 @@ fun transportBNF (nms : names) {abs, rep, absrep, repabs}
       val mapty = List.foldr (op -->) (newty --> atLargs tvs newty)
                              (List.map type_of fs)
       val map_def =
-          new_definition
+          defineAsWritten nms
             (mapname ^ "_def",
              mk_eq (list_mk_comb (mk_var (mapname, mapty), fs),
                     mk_o (absAt tvs, mk_o (#mkmap bnf fs, repAt largs))))
@@ -1146,7 +1201,7 @@ fun transportBNF (nms : names) {abs, rep, absrep, repabs}
           List.map (fn i =>
                        let val body = mk_o (List.nth (#sets bnf, i), rep)
                        in
-                         new_definition
+                         defineAsWritten nms
                            (setname i ^ "_def",
                             mk_eq (mk_var (setname i, type_of body), body))
                        end)
@@ -1349,7 +1404,8 @@ fun transportBNF (nms : names) {abs, rep, absrep, repabs}
                                    (List.map type_of Rs)
             val relname = nameOr (Tyop ^ "REL") (#relator nms)
           in
-            new_definition (relname ^ "_def",
+            defineAsWritten nms
+                           (relname ^ "_def",
                             mk_eq (mk_var (relname, relty),
                                    list_mk_abs (Rs @ [x,y], body)))
           end
@@ -1504,9 +1560,15 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
           end
       val mapname = nameOr (Tyop ^ "MAP") (#map nms)
       val map_thm =
-          new_specification
-            (mapname ^ "_def", [mapname],
-             CONV_RULE (skolemN n) (GENL fs (PURE_REWRITE_RULE [bridge] ex0)))
+          let val th = CONV_RULE (skolemN n)
+                                 (GENL fs (PURE_REWRITE_RULE [bridge] ex0))
+              val theta = renameRest nms th
+              val back = backwards theta
+          in
+            INST_TYPE back
+              (new_specification (mapname ^ "_def", [mapname],
+                                  INST_TYPE theta th))
+          end
       val MAPtm = repeat rator (lhs (#2 (strip_forall (concl map_thm))))
       (* the map constant carries both instances in its type, so applying
          it needs them supplied: the functions say what they are *)
@@ -1544,8 +1606,11 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
                        (Tyop ^ "SET" ^
                         (if n = 1 then "" else Int.toString (i + 1)))
           in
-            new_specification (nm ^ "_def", [nm],
-                               PURE_REWRITE_RULE [cross, down] ex)
+            INST_TYPE (asBuilt nms)
+              (new_specification
+                 (nm ^ "_def", [nm],
+                  INST_TYPE (asSpecWrote nms)
+                            (PURE_REWRITE_RULE [cross, down] ex)))
           end
       val set_thms = List.map defSet (upto n)
       fun setTm i = repeat rator (lhs (#2 (strip_forall
@@ -1766,7 +1831,8 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
                                    (List.map type_of Rs)
             val relname = nameOr (Tyop ^ "REL") (#relator nms)
           in
-            new_definition (relname ^ "_def",
+            defineAsWritten nms
+                           (relname ^ "_def",
                             mk_eq(mk_var(relname, relty),
                                   list_mk_abs(Rs @ [x,y], body)))
           end
@@ -4015,13 +4081,17 @@ fun attrNames nargs tyname attrs : names =
           in
             case key of
                 "map" => {map = single(), sets = #sets acc,
-                          relator = #relator acc, size = #size acc}
+                          relator = #relator acc, size = #size acc,
+                          written = #written acc}
               | "set" => {map = #map acc, sets = List.map SOME args,
-                          relator = #relator acc, size = #size acc}
+                          relator = #relator acc, size = #size acc,
+                          written = #written acc}
               | "rel" => {map = #map acc, sets = #sets acc,
-                          relator = single(), size = #size acc}
+                          relator = single(), size = #size acc,
+                          written = #written acc}
               | "size" => {map = #map acc, sets = #sets acc,
-                           relator = #relator acc, size = single()}
+                           relator = #relator acc, size = single(),
+                           written = #written acc}
               | _ => raise ERR "parseSpec"
                            (tyname ^ " carries an attribute " ^ key ^
                             ", and the ones read here are map, set, rel " ^
@@ -4067,7 +4137,12 @@ fun specOfASTs asts : spec =
        constructors = List.map namesOf plain,
        fields = List.map fieldsOf plain,
        names = List.map (fn {name, attrs, ...} =>
-                            attrNames (length params) name attrs)
+                            let val nms = attrNames (length params) name attrs
+                            in
+                              {map = #map nms, sets = #sets nms,
+                               relator = #relator nms, size = #size nms,
+                               written = origins}
+                            end)
                         asts,
        written = origins}
     end
@@ -4384,7 +4459,7 @@ fun collapseFamily {tynames} (fam : family) principle : collapsed =
     single type, at the types the family was put on.
    ---------------------------------------------------------------------- *)
 
-fun collapsedConstructors names (coll : collapsed) =
+fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
     let
       fun member (j, cons) =
           let
@@ -4406,11 +4481,14 @@ fun collapsedConstructors names (coll : collapsed) =
                   val tup = if null args then oneSyntax.one_tm
                             else pairSyntax.list_mk_pair args
                   val cvar = mk_var (nm, List.foldr (op -->) newty facs)
+                  val eqn = mk_eq (list_mk_comb (cvar, args),
+                                   mk_comb (cons, mkInj summands i tup))
                 in
-                  new_definition
-                    (defnName nm ^ "_def",
-                     mk_eq (list_mk_comb (cvar, args),
-                            mk_comb (cons, mkInj summands i tup)))
+                  (* at the specification's own variables, read back at
+                     the construction's *)
+                  INST_TYPE (asBuilt nms0)
+                    (new_definition (defnName nm ^ "_def",
+                                     Term.inst (asSpecWrote nms0) eqn))
                 end
             val defs = List.tabulate (length nms,
                                       fn i => mkOne (i, List.nth (nms, i)))

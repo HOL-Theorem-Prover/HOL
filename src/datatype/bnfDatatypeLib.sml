@@ -215,7 +215,7 @@ fun oneType db (spec : spec) =
                              NONE)
           else let val c = defineCopy (theTypesConstants tyname) bnf
                in (#fixpoint c, SOME c) end
-      val cs = defineConstructors cnames bnf fix
+      val cs = defineConstructors nms cnames bnf fix
       val wr = asWritten spec
       val axiom = wr (#existential_axiom cs)
       (* a nested recursion has no constructor-wise induction principle;
@@ -304,7 +304,8 @@ fun manyTypes db (spec : spec) =
                              db params (#functors spec)
       val principle = familyPrinciple fam
       val coll = collapseFamily {tynames = tynames} fam principle
-      val ccs = collapsedConstructors (#constructors spec) coll
+      val ccs = collapsedConstructors (hd (#names spec))
+                                      (#constructors spec) coll
       val cdefs = List.map #defs ccs
       val wr = asWritten spec
       val axiom = wr (familyAxiomOf cdefs (familyExistence (#principle coll)))

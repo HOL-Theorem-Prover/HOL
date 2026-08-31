@@ -23,7 +23,7 @@ val db = bnfBase.fullDB()
 val bnf = deriveBNFn db [alpha, “:'b1”] “:one + 'b1 # 'a”
 val fix = defineFixpoint {tyname = "mylist", ABS = "mylist_ABS",
                           REP = "mylist_REP"} bnf
-val cs = defineConstructors [("MyNil", 0), ("MyCons", 2)] bnf fix
+val cs = defineConstructors noNames [("MyNil", 0), ("MyCons", 2)] bnf fix
 
 Theorem mylist_axiom = #existential_axiom cs
 Theorem mylist_induction = valOf (#induction cs)
@@ -152,7 +152,7 @@ val _ =
        null (free_vars (concl (#recursion rose)))
     then OK() else die (thm_to_string (#recursion rose))
 
-val rcs = defineConstructors [("RLeaf", 0), ("RNode", 2)] nested rose
+val rcs = defineConstructors noNames [("RLeaf", 0), ("RNode", 2)] nested rose
 Theorem rose_axiom = #axiom rcs
 
 (* ----------------------------------------------------------------------
@@ -321,7 +321,7 @@ val ebnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params spec)
                       (#1 (hd (#functors spec)))
 val efix = defineFixpoint {tyname = "expr", ABS = "expr_ABS",
                            REP = "expr_REP"} ebnf
-val ecs = defineConstructors (hd (#constructors spec)) ebnf efix
+val ecs = defineConstructors noNames (hd (#constructors spec)) ebnf efix
 val eres = fixpointBNF noNames ebnf efix
 val eeqns = constructorEqns ecs eres
 
@@ -522,7 +522,7 @@ val nbnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params nspec)
                       (#1 (hd (#functors nspec)))
 val nfix = defineFixpoint {tyname = "stack", ABS = "stack_ABS",
                            REP = "stack_REP"} nbnf
-val ncs = defineConstructors (hd (#constructors nspec)) nbnf nfix
+val ncs = defineConstructors noNames (hd (#constructors nspec)) nbnf nfix
 val nres = fixpointBNF (hd (#names nspec)) nbnf nfix
 val neqns = constructorEqns ncs nres
 

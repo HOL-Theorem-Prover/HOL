@@ -20,7 +20,13 @@ sig
       the number of arguments names the first few and leaves the rest.
      ---------------------------------------------------------------------- *)
   type names = {map : string option, sets : string option list,
-                relator : string option, size : string option}
+                relator : string option, size : string option,
+                (* the specification's own type variables, against the
+                   ones the construction works with: what reads a
+                   datatype instantiates a constant's variables by name,
+                   so the constants are defined at the ones the
+                   specification wrote *)
+                written : (hol_type * hol_type) list}
 
   val noNames : names
 
@@ -168,7 +174,8 @@ sig
      a sum looks like two constructors and one whose arguments are
      products looks like more arguments *)
   val defineConstructors :
-      (string * int) list -> bnfLib.derived_bnfn -> fixpoint -> constructors
+      names -> (string * int) list -> bnfLib.derived_bnfn -> fixpoint ->
+      constructors
 
   (* ----------------------------------------------------------------------
       The new type as a functor.
@@ -401,7 +408,7 @@ sig
                      bnfLib.derived_bnfn -> copied_bnf
 
   val collapsedConstructors :
-      (string * int) list list -> collapsed ->
+      names -> (string * int) list list -> collapsed ->
       {constructors : term list, defs : thm list} list
 
   (* and its map and set functions one constructor at a time, which is

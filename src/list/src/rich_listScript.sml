@@ -8163,8 +8163,9 @@ Proof
   rw[sublist_of_nil] >>
   rpt strip_tac >>
   (Cases_on `h = h'` >> rw[EQ_IMP_THM]) >| [
-    `h::q = [] ++ [h] ++ q` by rw[] >>
-    metis_tac[sublist_cons],
+    (* x is empty and y is the tail: what is left is the assumption
+       with its head taken off, which sublist_cons says *)
+    Q.EXISTS_TAC `[]` >> Q.EXISTS_TAC `q` >> fs[GSYM sublist_cons],
     `h::t <= h::y` by rw[GSYM sublist_cons] >>
     `x ++ [h] ++ y = x ++ (h::y)` by rw[] >>
     metis_tac[sublist_append_include],

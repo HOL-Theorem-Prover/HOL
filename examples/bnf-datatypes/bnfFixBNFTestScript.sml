@@ -212,7 +212,7 @@ fun testty ((tyname, lives, ty, cnames), (db, seen)) =
       val _ = if lawsOK (#info res) then OK()
               else die "the derived laws are not the map's"
       (* the same map and set functions, read one constructor at a time *)
-      val cs = defineConstructors cnames bnf fix
+      val cs = defineConstructors noNames cnames bnf fix
       val eqns = constructorEqns cs res
       val _ = tprint (tyname ^ "'s equations per constructor")
       val _ = if List.all (eqnsOK (#constructors cs))
@@ -289,7 +289,7 @@ val _ =
       val d = deriveBNFn db [alpha,b1] “:one + ('b1, 'a) tpair”
       val fix = defineFixpoint {tyname = "prose", ABS = "prose_ABS",
                                 REP = "prose_REP"} d
-      val cs = defineConstructors [("PRLeaf", 0), ("PRNode", 1)] d fix
+      val cs = defineConstructors noNames [("PRLeaf", 0), ("PRNode", 1)] d fix
     in
       if same (concl (#axiom cs))
               “∀f0 f1. ∃!h. h PRLeaf = f0 ∧
