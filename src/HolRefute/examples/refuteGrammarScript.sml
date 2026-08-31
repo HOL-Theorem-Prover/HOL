@@ -112,3 +112,8 @@ Proof
   MODEL_REFUTE_TAC >>
   Cases >> simp []
 QED
+
+(* MODEL_REFUTE_TAC finds no counterexample to grammar completeness at small
+   scopes.  This diagnostic is not a proof: a full proof needs strong
+   induction on word length and a minimal-prefix decomposition, which would
+   dominate this counterexample-focused example. *)
