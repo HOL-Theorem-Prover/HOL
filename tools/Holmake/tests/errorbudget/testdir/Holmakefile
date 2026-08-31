@@ -1,0 +1,14 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+GEN = ./failgen.sh
+
+.PHONY: all t1 t2 t3 t4 t5 t6
+
+all: t1 t2 t3 t4 t5 t6
+
+t1 t2 t3 t4 t5 t6:
+	@$(GEN) $@
+
+EXTRA_CLEANS = output
