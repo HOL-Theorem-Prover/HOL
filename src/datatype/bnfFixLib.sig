@@ -433,10 +433,15 @@ sig
     functors : (hol_type * hol_type list) list,
     constructors : (string * int) list list,   (* name and arity *)
     fields : string list option list,  (* a record's, for its apparatus *)
-    names : names list                 (* what its attributes say *)
+    names : names list,                (* what its attributes say *)
+    written : (hol_type * hol_type) list  (* parameter, as written *)
   }
 
   val parseSpec : hol_type quotation -> spec
+
+  (* the same, for a caller that has parsed already — the older entry
+     point's syntax gives the same declarations *)
+  val specOfASTs : ParseDatatype.annotatedAST list -> spec
 
   (* ----------------------------------------------------------------------
       Defining a function by the axiom, which is

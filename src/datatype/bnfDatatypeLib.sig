@@ -25,6 +25,10 @@ sig
      ---------------------------------------------------------------------- *)
   val bnfDatatype : hol_type quotation -> unit
 
+  (* the same for a caller that has parsed already, which is what the
+     older entry point's syntax needs *)
+  val bnfDatatypeASTs : ParseDatatype.AST list -> unit
+
 
   (* the same, handing back the entries it made, for a caller that wants
      to look at them rather than trust them *)

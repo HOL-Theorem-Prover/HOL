@@ -102,7 +102,6 @@ val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
 (*---------------------------------------------------------------------------*)
 
 val list_Axiom = TypeBase.axiom_of “:'a list”;
-
 Theorem list_Axiom_old:
   !x f. ?!fn1:'a list -> 'b.
           (fn1 [] = x) /\ (!h t. fn1 (h::t) = f (fn1 t) h t)

@@ -772,18 +772,6 @@ fun astHol_datatype astl =
   HOL_MESG message
  end
 
-fun Hol_datatype q =
-    astHol_datatype (ParseDatatype.parse (type_grammar()) q)
-    handle e as HOL_ERR _ =>
-    render_exn (wrap_exn "Datatype" "Hol_datatype" e)
-
-(*---------------------------------------------------------------------------*)
-(* Does the specification recurse?  A specification whose constructors       *)
-(* mention none of the types being defined is a sum of products of types     *)
-(* that already exist, which this construction builds directly.  One that    *)
-(* does recurse is a fixed point, and the fixed point is what the BNF        *)
-(* package takes — and what leaves the new type in the functor database,     *)
-(* so that a later specification can recurse through it in turn.             *)
 (*---------------------------------------------------------------------------*)
 
 fun spec_recurses astl =
@@ -806,6 +794,26 @@ fun spec_recurses astl =
       List.exists (inForm o #2) astl
     end
 
+(* the same three-way choice as Datatype below: the older syntax says
+   the same things *)
+fun dispatch astl =
+    if is_enum_type_spec astl orelse not (spec_recurses astl) then
+      astHol_datatype astl
+    else bnfDatatypeLib.bnfDatatypeASTs astl
+
+fun Hol_datatype q =
+    dispatch (ParseDatatype.parse (type_grammar()) q)
+    handle e as HOL_ERR _ =>
+    render_exn (wrap_exn "Datatype" "Hol_datatype" e)
+
+(*---------------------------------------------------------------------------*)
+(* Does the specification recurse?  A specification whose constructors       *)
+(* mention none of the types being defined is a sum of products of types     *)
+(* that already exist, which this construction builds directly.  One that    *)
+(* does recurse is a fixed point, and the fixed point is what the BNF        *)
+(* package takes — and what leaves the new type in the functor database,     *)
+(* so that a later specification can recurse through it in turn.             *)
+
 (*---------------------------------------------------------------------------*)
 (* An enumeration is what EnumType builds, from a representation in the      *)
 (* numbers; a specification that does not recurse is a sum of products,      *)
@@ -817,13 +825,7 @@ fun spec_recurses astl =
 (*---------------------------------------------------------------------------*)
 
 fun Datatype q =
-    let
-      val astl = ParseDatatype.hparse (type_grammar()) q
-    in
-      if is_enum_type_spec astl orelse not (spec_recurses astl) then
-        astHol_datatype astl
-      else bnfDatatypeLib.bnfDatatype q
-    end
+    dispatch (ParseDatatype.hparse (type_grammar()) q)
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Datatype" e)
 

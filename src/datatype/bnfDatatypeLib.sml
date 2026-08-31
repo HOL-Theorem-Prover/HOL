@@ -102,6 +102,18 @@ fun liveParams db (spec : spec) =
       List.filter (fn p => List.all (ok p) (#functors spec)) (#params spec)
     end
 
+(* The construction numbers a specification's variables 'b1, 'b2 ...,
+   because those cannot collide with the type variables the stored laws
+   are instantiated at.  What is saved says what the specification said:
+   `:'a list`, not `:'b1 list`.  This is not cosmetic — ACCEPT_TAC and
+   everything else that matches a theorem against a goal matches type
+   variables by name. *)
+fun asWritten (spec : spec) =
+    let val theta = List.map (fn (p, w) => p |-> w) (#written spec)
+    in
+      if null theta then Lib.I else INST_TYPE theta
+    end
+
 fun oneType db (spec : spec) =
     let
       val tyname = hd (#tynames spec)
@@ -119,12 +131,17 @@ fun oneType db (spec : spec) =
           else let val c = defineCopy (theTypesConstants tyname) bnf
                in (#fixpoint c, SOME c) end
       val cs = defineConstructors cnames bnf fix
-      val axiom = #existential_axiom cs
+      val wr = asWritten spec
+      val axiom = wr (#existential_axiom cs)
       (* a nested recursion has no constructor-wise induction principle;
          the set-based one is what it keeps *)
-      val induction = case #induction cs of
-                          SOME th => th
-                        | NONE => #set_induction cs
+      (* the induction principle as the rest of HOL reads one: the
+         argument's quantifiers past the hypothesis, and the bound
+         variables named for their types *)
+      val induction = ind_types.munge_ind_thm
+                        (wr (case #induction cs of
+                                 SOME th => th
+                               | NONE => #set_induction cs))
       (* the new type as a functor of its own, so that a later
          specification can recurse through it *)
       (* a type with no arguments is not a functor: there is nothing for
@@ -139,7 +156,7 @@ fun oneType db (spec : spec) =
                   val e = constructorEqns cs res
               in
                 registerBNF {tyname = tyname} (#key res, #info res)
-              ; [#map_eqns e] @ #set_eqns e
+              ; List.map wr ([#map_eqns e] @ #set_eqns e)
               end
             | SOME c =>
               (* nothing recurses, so the functor is the type's own,
@@ -203,11 +220,13 @@ fun manyTypes db (spec : spec) =
       val coll = collapseFamily {tynames = tynames} fam principle
       val ccs = collapsedConstructors (#constructors spec) coll
       val cdefs = List.map #defs ccs
-      val axiom = familyAxiomOf cdefs (familyExistence (#principle coll))
+      val wr = asWritten spec
+      val axiom = wr (familyAxiomOf cdefs (familyExistence (#principle coll)))
       val induction =
-          familyInductionOf cdefs
-            (familySetInductionOf fam (#types coll, #cons coll)
-                                  (#principle coll))
+          ind_types.munge_ind_thm
+            (wr (familyInductionOf cdefs
+                   (familySetInductionOf fam (#types coll, #cons coll)
+                                         (#principle coll))))
       (* each member as a functor of its own: the copy of a composite
          already in the database, conjugated by the bijection *)
       val cbnfs =
@@ -227,7 +246,9 @@ fun manyTypes db (spec : spec) =
                        (ListPair.zip (tynames, cbnfs))
       val eqns = if null params then [] else collapsedEqns coll fam cbnfs ccs
       val rewrites = if null params then List.map (fn _ => []) tynames
-                     else List.map (fn e => #map_eqns e :: #set_eqns e) eqns
+                     else List.map (fn e => List.map wr
+                                              (#map_eqns e :: #set_eqns e))
+                                   eqns
       val tyinfos =
           typeBaseInfo {axiom = axiom, induction = induction,
                         case_defs = defineCases axiom,
@@ -247,13 +268,22 @@ fun manyTypes db (spec : spec) =
     ; tyinfos
     end
 
-fun bnfDatatypeInfo q =
-    let val spec = parseSpec q
-        val db = bnfBase.fullDB()
+fun ofSpec spec =
+    let val db = bnfBase.fullDB()
     in
       if length (#tynames spec) = 1 then oneType db spec else manyTypes db spec
     end
 
+fun bnfDatatypeInfo q = ofSpec (parseSpec q)
+
 fun bnfDatatype q = ignore (bnfDatatypeInfo q)
+
+(* what a caller that has parsed already hands over: the older entry
+   point's syntax gives the same declarations, without attributes *)
+fun bnfDatatypeASTs astl =
+    ignore (ofSpec (specOfASTs
+                      (List.map (fn (name, form) =>
+                                    {name = name, attrs = [], form = form})
+                                astl)))
 
 end

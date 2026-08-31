@@ -678,6 +678,23 @@ fun defineCopy {tyname, ABS, REP} bnf : copy =
     expects it.
    ---------------------------------------------------------------------- *)
 
+(* A constructor's name is not always a name a theorem can be saved
+   under: a record's has a dot in it and an infix constructor is
+   punctuation.  The constant keeps the name the specification gave it;
+   the definition is stored under one the theory will take. *)
+fun defnName nm =
+    let val mangled = String.translate
+                        (fn #"." => "_"
+                          | c => if Char.isAlphaNum c orelse c = #"_" orelse
+                                    c = #"'"
+                                 then str c
+                                 else "_" ^ Int.toString (Char.ord c) ^ "_")
+                        nm
+    in
+      if Lexis.ok_sml_identifier mangled then mangled
+      else "constructor" ^ mangled
+    end
+
 (* The constructors cannot be read off the functor's shape: a
    constructor whose argument is itself a sum — `V (v_rec + num)` — is
    the same shape as two constructors, and one whose arguments are
@@ -769,11 +786,8 @@ fun defineConstructors cspecs bnf fix : constructors =
                 val tup = if null args then oneSyntax.one_tm
                           else pairSyntax.list_mk_pair args
                 val cvar = mk_var (nm, List.foldr (op -->) newty argtys)
-                (* a record's constructor is named with a dot in it, so
-                   the definition's binding name is not the constant's *)
-                val bnm = String.translate (fn #"." => "_" | c => str c) nm
                 val def = new_definition
-                            (bnm ^ "_def",
+                            (defnName nm ^ "_def",
                              mk_eq (list_mk_comb (cvar, args),
                                     mk_comb (cons, mkInj newSummands i tup)))
                 val ctm = #1 (strip_comb (lhs (concl (SPEC_ALL def))))
@@ -864,12 +878,28 @@ fun defineConstructors cspecs bnf fix : constructors =
           | renameConj [c] = renameOne c
           | renameConj (c::cs) = LAND_CONV (renameOne c) THENC
                                  RAND_CONV (renameConj cs)
-        val axiom =
+        (* The answer type is a type variable of the construction's
+           choosing, and what reads the axiom expects the one a datatype
+           axiom conventionally has: the first of 'b, 'c, ... the type's
+           own arguments leave free.  ACCEPT_TAC and the like match up to
+           the names of type variables, so this is not cosmetic. *)
+        val answerTy =
+            let val avoid = Type.type_vars (functorAt bnf newty)
+                fun go [] = cty
+                  | go (c::rest) = let val v = mk_vartype c
+                                   in if Lib.mem v avoid then go rest else v end
+            in
+              go ["'b", "'c", "'d", "'e", "'f", "'g"]
+            end
+        val named = if answerTy = cty then Lib.I
+                    else INST_TYPE [cty |-> answerTy]
+        val axiom0 =
             CONV_RULE (STRIP_QUANT_CONV
                          (RAND_CONV (ABS_CONV (renameConj cs))))
               (GENL (map #fvar cs)
                     (CONV_RULE (RAND_CONV (ABS_CONV (REWR_CONV (GEN hv eqth))))
                                spec))
+        val axiom = named axiom0
         (* Prim_rec's derivations are older than the argument order
            TypeBase settled on: mk_fn abstracts the recursive results
            before the constructor's own arguments.  Permuting each f is
@@ -891,7 +921,7 @@ fun defineConstructors cspecs bnf fix : constructors =
             in
               GENL (map #1 ps)
                    (CONV_RULE (DEPTH_CONV BETA_CONV)
-                              (SPECL (map #2 ps) axiom))
+                              (SPECL (map #2 ps) axiom0))
             end
         (* Prim_rec's derivation counts recursive arguments by their
            type, so it cannot see a recursive result that arrived under
@@ -906,11 +936,17 @@ fun defineConstructors cspecs bnf fix : constructors =
             REWRITE_RULE (map (GSYM o #def) cs)
               (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
                  (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
+                                     bnfPrelimsTheory.BIMG_K0,
                                      combinTheory.I_o_ID] THENC
+                  (* one binder per constructor argument here too: an
+                     argument that is itself a sum would otherwise be
+                     split, and the clause would be about `P (V (INL x))`
+                     rather than about `P (V a)` *)
+                  expandCons (map (length o #args) cs) THENC
                   simpLib.SIMP_CONV (BasicProvers.srw_ss())
-                    [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
-                     oneTheory.FORALL_ONE, combinTheory.S_DEF,
+                    [combinTheory.S_DEF,
                      combinTheory.o_DEF, combinTheory.K_DEF,
+                     pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
                      pairTheory.setFST_thm, pairTheory.setSND_thm])))
                  (#set_induction fix))
         (* whether this is a nested recursion is known structurally: a
@@ -924,7 +960,9 @@ fun defineConstructors cspecs bnf fix : constructors =
                         else SOME (Prim_rec.prove_induction_thm legacy)
         (* the derivations of distinctness and injectivity want the plain
            existential, which is also the form TypeBase stores *)
-        val fvars = map #fvar cs
+        (* at the axiom's own answer type, which is not the one the
+           construction chose *)
+        val fvars = map (Term.inst [cty |-> answerTy] o #fvar) cs
         val existential = GENL fvars (EXISTENCE (SPECL fvars axiom))
     in
       {constructors = map #cons cs, defs = map #def cs, axiom = axiom,
@@ -2312,7 +2350,15 @@ fun defineFamily {tynames} db params specs : family =
                         case copy of
                             NONE => fixpointBNF noNames bnf fix
                           | SOME c =>
-                            let val slotsleft = List.take (vs, i) @ params
+                            (* the member is a functor in the slots and
+                               parameters its own functor uses, and in no
+                               others: a declared argument the functor
+                               never mentions is not one the copy can be
+                               conjugated in *)
+                            let val used = Type.type_vars fty
+                                val slotsleft =
+                                    List.filter (fn v => Lib.mem v used)
+                                                (List.take (vs, i) @ params)
                                 val fbnf = bnfLib.deriveBNFn db slotsleft fty
                             in
                               copyMemberBNF c
@@ -3809,7 +3855,8 @@ type spec = {
   functors : (hol_type * hol_type list) list,
   constructors : (string * int) list list,
   fields : string list option list,
-  names : names list
+  names : names list,
+  written : (hol_type * hol_type) list   (* parameter, as written *)
 }
 
 (* what a declaration's attributes say the generated constants are
@@ -3874,11 +3921,10 @@ fun freshSlots n avoid =
       go 1 [] n
     end
 
-fun parseSpec q : spec =
+fun specOfASTs asts : spec =
     let
-      val asts = ParseDatatype.hparse_annotated (Parse.type_grammar()) q
       val plain = List.map (fn {name, form, ...} => (name, form)) asts
-      val {tynames, params, functors, ...} =
+      val {tynames, params, functors, origins} =
           bnfLib.specToFunctors (parse_bnf.parse2ftor plain)
       (* a record is one constructor of its fields, named the way the
          record apparatus looks it up *)
@@ -3898,8 +3944,12 @@ fun parseSpec q : spec =
        fields = List.map fieldsOf plain,
        names = List.map (fn {name, attrs, ...} =>
                             attrNames (length params) name attrs)
-                        asts}
+                        asts,
+       written = origins}
     end
+
+fun parseSpec q =
+    specOfASTs (ParseDatatype.hparse_annotated (Parse.type_grammar()) q)
 
 
 (* and the same steps for a family as it comes out of the construction *)
@@ -4218,10 +4268,9 @@ fun collapsedConstructors names (coll : collapsed) =
                   val tup = if null args then oneSyntax.one_tm
                             else pairSyntax.list_mk_pair args
                   val cvar = mk_var (nm, List.foldr (op -->) newty facs)
-                  val bnm = String.translate (fn #"." => "_" | c => str c) nm
                 in
                   new_definition
-                    (bnm ^ "_def",
+                    (defnName nm ^ "_def",
                      mk_eq (list_mk_comb (cvar, args),
                             mk_comb (cons, mkInj summands i tup)))
                 end
