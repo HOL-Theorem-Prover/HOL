@@ -163,8 +163,12 @@ sig
     distinct : thm option list, one_one : thm option list
   }
 
+  (* each constructor's name and how many arguments it takes: the
+     functor's shape does not say, since a constructor whose argument is
+     a sum looks like two constructors and one whose arguments are
+     products looks like more arguments *)
   val defineConstructors :
-      string list -> bnfLib.derived_bnfn -> fixpoint -> constructors
+      (string * int) list -> bnfLib.derived_bnfn -> fixpoint -> constructors
 
   (* ----------------------------------------------------------------------
       The new type as a functor.
@@ -397,7 +401,7 @@ sig
                      bnfLib.derived_bnfn -> copied_bnf
 
   val collapsedConstructors :
-      string list list -> collapsed ->
+      (string * int) list list -> collapsed ->
       {constructors : term list, defs : thm list} list
 
   (* and its map and set functions one constructor at a time, which is
@@ -427,7 +431,7 @@ sig
     tynames : string list,
     params : hol_type list,
     functors : (hol_type * hol_type list) list,
-    constructors : string list list,
+    constructors : (string * int) list list,   (* name and arity *)
     fields : string list option list,  (* a record's, for its apparatus *)
     names : names list                 (* what its attributes say *)
   }

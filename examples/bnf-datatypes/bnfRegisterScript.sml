@@ -23,7 +23,7 @@ val db = bnfBase.fullDB()
 val bnf = deriveBNFn db [alpha, “:'b1”] “:one + 'b1 # 'a”
 val fix = defineFixpoint {tyname = "mylist", ABS = "mylist_ABS",
                           REP = "mylist_REP"} bnf
-val cs = defineConstructors ["MyNil", "MyCons"] bnf fix
+val cs = defineConstructors [("MyNil", 0), ("MyCons", 2)] bnf fix
 
 Theorem mylist_axiom = #existential_axiom cs
 Theorem mylist_induction = valOf (#induction cs)
@@ -152,7 +152,7 @@ val _ =
        null (free_vars (concl (#recursion rose)))
     then OK() else die (thm_to_string (#recursion rose))
 
-val rcs = defineConstructors ["RLeaf", "RNode"] nested rose
+val rcs = defineConstructors [("RLeaf", 0), ("RNode", 2)] nested rose
 Theorem rose_axiom = #axiom rcs
 
 (* ----------------------------------------------------------------------
@@ -311,7 +311,7 @@ val spec = parseSpec `expr = Var 'a | Lit num | Op expr num expr`
 val _ = tprint "a specification's functor"
 val _ =
     if #tynames spec = ["expr"] andalso
-       #constructors spec = [["Var", "Lit", "Op"]] andalso
+       #constructors spec = [[("Var",1), ("Lit",1), ("Op",3)]] andalso
        List.map #1 (#functors spec) = [“:'b1 + num + 'a # num # 'a”]
     then OK()
     else die (String.concatWith ", "

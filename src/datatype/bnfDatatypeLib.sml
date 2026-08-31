@@ -224,7 +224,7 @@ fun manyTypes db (spec : spec) =
                                        (List.nth (#types fam, j))))
       val _ = List.app (fn (nm, r : copied_bnf) =>
                            registerBNF {tyname = nm} (#key r, #info r))
-                       (ListPair.zipEq (tynames, cbnfs))
+                       (ListPair.zip (tynames, cbnfs))
       val eqns = if null params then [] else collapsedEqns coll fam cbnfs ccs
       val rewrites = if null params then List.map (fn _ => []) tynames
                      else List.map (fn e => #map_eqns e :: #set_eqns e) eqns

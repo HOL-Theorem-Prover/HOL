@@ -161,15 +161,18 @@ val b1 = mk_vartype "'b1"
 val b2 = mk_vartype "'b2"
 
 val examples = [
-  ("tlist", [alpha,b1], “:one + 'b1 # 'a”, ["TNil", "TCons"]),
-  ("tpair", [alpha,b1,b2], “:one + 'b1 # 'b2 # 'a”, ["PNil", "PCons"]),
-  ("ttree", [alpha,b1], “:'b1 + 'a # 'a”, ["TLeaf", "TNode"]),
+  ("tlist", [alpha,b1], “:one + 'b1 # 'a”, [("TNil",0), ("TCons",2)]),
+  ("tpair", [alpha,b1,b2], “:one + 'b1 # 'b2 # 'a”,
+   [("PNil",0), ("PCons",3)]),
+  ("ttree", [alpha,b1], “:'b1 + 'a # 'a”, [("TLeaf",1), ("TNode",2)]),
   (* an argument, and the recursion, under a registered functor: the map
      in the recursive argument alone is then not the identity on the
      parameter's position either *)
-  ("topt", [alpha,b1], “:one + 'b1 option # 'a option”, ["ONil", "OCons"]),
+  ("topt", [alpha,b1], “:one + 'b1 option # 'a option”,
+   [("ONil",0), ("OCons",2)]),
   (* recursion under two registered functors at once *)
-  ("tfm", [alpha,b1], “:(num |-> 'a) + num # ('b1 # 'a) list”, ["FM", "ND"])
+  ("tfm", [alpha,b1], “:(num |-> 'a) + num # ('b1 # 'a) list”,
+   [("FM",1), ("ND",2)])
 ]
 
 (* What is left of the composite when the constructor view has *not*
@@ -286,7 +289,7 @@ val _ =
       val d = deriveBNFn db [alpha,b1] “:one + ('b1, 'a) tpair”
       val fix = defineFixpoint {tyname = "prose", ABS = "prose_ABS",
                                 REP = "prose_REP"} d
-      val cs = defineConstructors ["PRLeaf", "PRNode"] d fix
+      val cs = defineConstructors [("PRLeaf", 0), ("PRNode", 1)] d fix
     in
       if same (concl (#axiom cs))
               “∀f0 f1. ∃!h. h PRLeaf = f0 ∧

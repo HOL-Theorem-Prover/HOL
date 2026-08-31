@@ -141,8 +141,8 @@ val _ =
     proof is written against
    ---------------------------------------------------------------------- *)
 
-val cs1 = defineConstructors ["A", "B"] (#bnf1 mt) (#fix1 mt)
-val cs2 = defineConstructors ["C", "D"] (#bnf2 mt) (#fix2 mt)
+val cs1 = defineConstructors [("A", 1), ("B", 2)] (#bnf1 mt) (#fix1 mt)
+val cs2 = defineConstructors [("C", 1), ("D", 2)] (#bnf2 mt) (#fix2 mt)
 
 Theorem mt_induction = mutualInduction (cs1, cs2) mt
 
@@ -334,7 +334,8 @@ val _ =
     family's types.
    ---------------------------------------------------------------------- *)
 
-val fnames = [["FA","FB"], ["FC","FD"], ["FE","FG"]]
+val fnames = [[("FA",1),("FB",2)], [("FC",1),("FD",2)],
+              [("FE",1),("FG",1)]]
 val fcss = List.tabulate
              (3, fn j => defineConstructors (List.nth (fnames, j))
                                             (List.nth (#bnfs fam, j))
@@ -579,7 +580,8 @@ val _ =
                   ∀af. k2 (ct3_CONS af) = t2 af (SUM_MAP k0 k2 af)) ⇒
                  h0 = k0 ∧ h1 = k1 ∧ h2 = k2”
     then OK() else die (thm_to_string (#principle coll))
-val ccs = collapsedConstructors [["CA","CB"],["CC","CD"],["CE","CG"]] coll
+val ccs = collapsedConstructors [[("CA",1),("CB",2)],[("CC",1),("CD",2)],
+                          [("CE",1),("CG",1)]] coll
 val cdefs = List.map #defs ccs
 val caxiom = familyAxiomOf cdefs (familyExistence (#principle coll))
 val csetind = familySetInductionOf fam (#types coll, #cons coll)
