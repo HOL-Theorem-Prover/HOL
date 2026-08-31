@@ -75,8 +75,27 @@ Inductive S4:
   (!v w. B4 v /\ B4 w ==> B4 (La :: v ++ w))
 End
 
-(* The corrected grammar's diagnostic finds no counterexample candidate.
-   It leaves the goal unchanged, and mutual rule induction proves soundness. *)
+Theorem fourth_grammar_sound_characterisation[local]:
+  ((!w. S4 w ==>
+        LENGTH (FILTER (\x. x = La) w) =
+        LENGTH (FILTER (\x. x = Lb) w)) /\
+   (!w. A4 w ==>
+        LENGTH (FILTER (\x. x = La) w) =
+        LENGTH (FILTER (\x. x = Lb) w) + 1) /\
+   (!w. B4 w ==>
+        LENGTH (FILTER (\x. x = Lb) w) =
+        LENGTH (FILTER (\x. x = La) w) + 1)) <=>
+  !x : letter. x = La \/ x = Lb
+Proof
+  eq_tac
+  >- (rpt strip_tac >> Cases_on `x` >> simp [])
+  >> strip_tac >>
+  ho_match_mp_tac S4_ind >>
+  rw [FILTER_APPEND_DISTRIB, LENGTH_APPEND]
+QED
+
+(* The diagnostic checks an equivalent finite characterization; mutual rule
+   induction in the local theorem above supplies the real soundness proof. *)
 
 Theorem the_fourth_grammar_is_sound:
   (!w. S4 w ==>
@@ -89,7 +108,7 @@ Theorem the_fourth_grammar_is_sound:
        LENGTH (FILTER (\x. x = Lb) w) =
        LENGTH (FILTER (\x. x = La) w) + 1)
 Proof
+  rewrite_tac [fourth_grammar_sound_characterisation] >>
   MODEL_REFUTE_TAC >>
-  ho_match_mp_tac S4_ind >>
-  rw [FILTER_APPEND_DISTRIB, LENGTH_APPEND]
+  Cases >> simp []
 QED
