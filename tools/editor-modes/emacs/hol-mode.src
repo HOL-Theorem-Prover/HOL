@@ -1,4 +1,4 @@
-;;; -*- emacs-lisp -*-
+;;; -*- mode: emacs-lisp; lexical-binding: t -*-
 ;;; to use this mode, you will need to do something along the lines of
 ;;; the following and have it in your .emacs file:
 ;;;    (setq hol-executable "<fullpath to HOL executable>")
@@ -2112,6 +2112,10 @@ second is to show the new term.
      :slant italic))
   "The face for presenting HOL types."
   :group 'hol-faces)
+
+;; `lpr-add-switches' is not autoloaded, so under lexical binding the
+;; `let' below would shadow it lexically rather than dynamically.
+(defvar lpr-add-switches)
 
 (defun hol-region-to-unicode-pdf (filename beg end)
   "Print region to FILE as a PDF, handling Unicode characters."

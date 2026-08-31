@@ -1,3 +1,5 @@
+;;; hol-lsp-tests.el --- ERT tests for hol-mode LSP -*- lexical-binding: t -*-
+
 ;;; run with something like
 ;;;  HOLDIR=<dir> emacs -batch -l ert -l hol-lsp-tests.el \
 ;;;                     -f ert-run-tests-batch-and-exit

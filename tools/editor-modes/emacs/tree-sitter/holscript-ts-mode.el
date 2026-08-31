@@ -1,3 +1,5 @@
+;;; holscript-ts-mode.el --- tree-sitter HOL script mode -*- lexical-binding: t -*-
+
 (require 'treesit)
 (require 'elec-pair)
 

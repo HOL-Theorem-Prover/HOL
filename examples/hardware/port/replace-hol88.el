@@ -1,3 +1,5 @@
+;;; replace-hol88.el --- Helpers for porting hol88 code -*- lexical-binding: t -*-
+
 (defun replace-hol88 ()
   "some simple string replacements that help with porting hol88 code"
   (interactive)

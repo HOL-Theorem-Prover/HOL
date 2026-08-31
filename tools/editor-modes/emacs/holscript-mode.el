@@ -1,3 +1,5 @@
+;;; holscript-mode.el --- Major mode for HOL scripts -*- lexical-binding: t -*-
+
 (provide 'holscript-mode)
 
 ;; font-locking and syntax
