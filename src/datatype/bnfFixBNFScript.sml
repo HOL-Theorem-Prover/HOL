@@ -252,6 +252,14 @@ Proof
   simp[PULL_EXISTS]
 QED
 
+(* and the same when the value is the argument itself: its set function
+   is equality, with no image over it to take apart *)
+Theorem EQ_ALL:
+  (∀b. b ∈ $= a ⇒ b) ⇔ a
+Proof
+  simp[IN_DEF]
+QED
+
 (* an equation the induction principle is read off: a clause of it says
    the hypothesis implies the conclusion, and what the recursion at the
    booleans says is that the two are the same disjunction *)

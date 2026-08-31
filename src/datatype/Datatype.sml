@@ -794,10 +794,35 @@ fun spec_recurses astl =
       List.exists (inForm o #2) astl
     end
 
+(* Does the specification say anything about a type variable?  A type
+   with a type variable in it is a candidate functor, and a later
+   specification may want to recurse through it — `fake_pair = FP of 'a
+   => 'b` and then `t = C of bool ** t ** t`.  Nothing registers a type
+   the old construction builds as a functor, so a specification that
+   mentions a type variable goes to the BNF package even when it does
+   not recurse: that is what leaves it in the functor database. *)
+fun spec_has_tyvars astl =
+    let
+      fun mentions pty =
+          case pty of
+              ParseDatatype.dVartype _ => true
+            | ParseDatatype.dAQ ty => not (null (Type.type_vars ty))
+            | ParseDatatype.dTyop {Args, ...} => List.exists mentions Args
+      fun inForm (ParseDatatype.Constructors cs) =
+            List.exists (List.exists mentions o #2) cs
+        | inForm (ParseDatatype.Record flds) =
+            List.exists (mentions o #2) flds
+    in
+      List.exists (inForm o #2) astl
+    end
+
 (* the same three-way choice as Datatype below: the older syntax says
    the same things *)
 fun dispatch astl =
-    if is_enum_type_spec astl orelse not (spec_recurses astl) then
+    if is_enum_type_spec astl orelse
+       not (spec_recurses astl orelse spec_has_tyvars astl) orelse
+       not (bnfDatatypeLib.expressible astl)
+    then
       astHol_datatype astl
     else bnfDatatypeLib.bnfDatatypeASTs astl
 

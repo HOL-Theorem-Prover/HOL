@@ -112,12 +112,19 @@ fun persist tyinfos =
             ignore (save_thm (name "_case_cong", case_cong_of tyi));
             ignore (save_thm (name "_case_eq", case_eq_of tyi))
           end
+      (* the same word the other constructions say, in the same form:
+         a session tells the reader what it has just defined *)
+      val tynames = List.map (Lib.quote o #2 o ty_name_of) tyinfos
+      val message = "Defined type" ^
+                    (if length tynames > 1 then "s" else "") ^ ": " ^
+                    String.concat (Lib.commafy tynames)
     in
       TypeBase.export tyinfos
     ; List.app saveThms tyinfos
     ; List.app (fn tyi => Parse.overload_on ("case", case_const_of tyi))
                tyinfos
     ; List.app computeLib.write_datatype_info tyinfos
+    ; Feedback.HOL_MESG message
     end
 
 (* ----------------------------------------------------------------------
@@ -141,8 +148,15 @@ fun liveParams db (spec : spec) =
       fun ok p (fty, _) =
           not (Lib.mem p (Type.type_vars fty)) orelse
           Lib.mem p (bnfLib.liveTyvars db fty)
+      (* and a variable no member mentions at all is not an argument of
+         these types: a declaration whose members fall into groups
+         leaves each group only the variables it wrote *)
+      fun used p =
+          List.exists (fn (fty, _) => Lib.mem p (Type.type_vars fty))
+                      (#functors spec)
     in
-      List.filter (fn p => List.all (ok p) (#functors spec)) (#params spec)
+      List.filter (fn p => used p andalso List.all (ok p) (#functors spec))
+                  (#params spec)
     end
 
 (* The construction numbers a specification's variables 'b1, 'b2 ...,
@@ -152,9 +166,37 @@ fun liveParams db (spec : spec) =
    everything else that matches a theorem against a goal matches type
    variables by name. *)
 fun asWritten (spec : spec) =
-    let val theta = List.map (fn (p, w) => p |-> w) (#written spec)
+    let
+      val theta = List.map (fn (p, w) => p |-> w) (#written spec)
+      val internal = List.map #1 (#written spec)
+      val written = List.map #2 (#written spec)
+      (* The construction chose its own answer type, avoiding the names
+         it was working with rather than the ones the specification
+         wrote: `('a,'b,'c) ty` gets an axiom over 'b, and renaming the
+         parameters back would then say 'b for two different things. *)
+      fun freshFor avoid =
+          let fun go [] = Type.gen_tyvar()
+                | go (c::cs) = let val v = mk_vartype c
+                               in if Lib.mem v avoid then go cs else v end
+          in
+            go ["'a", "'b", "'c", "'d", "'e", "'f", "'g", "'h"]
+          end
+      fun rename th =
+          let
+            val vs = Term.type_vars_in_term (concl th)
+            val clashing = List.filter
+                             (fn v => not (Lib.mem v internal) andalso
+                                      Lib.mem v written)
+                             vs
+            fun fresh (v, (acc, avoid)) =
+                let val n = freshFor avoid
+                in ((v |-> n) :: acc, n :: avoid) end
+            val (extra, _) = List.foldl fresh ([], written @ vs) clashing
+          in
+            INST_TYPE (theta @ extra) th
+          end
     in
-      if null theta then Lib.I else INST_TYPE theta
+      if null theta then Lib.I else rename
     end
 
 fun oneType db (spec : spec) =
@@ -313,15 +355,152 @@ fun manyTypes db (spec : spec) =
     ; tyinfos
     end
 
-fun ofSpec spec =
-    let val db = bnfBase.fullDB()
+(* ----------------------------------------------------------------------
+    The groups a declaration falls into.
+
+    A declaration's members need not refer to each other.  `a2 = A num ;
+    b = B 'a` says two independent things, and the older construction
+    defines two types of their own arities from it — not one family of
+    two.  The construction here takes a group of members that reach each
+    other; the groups themselves come in the order their references say,
+    each built over the types the ones before it defined.
+   ---------------------------------------------------------------------- *)
+fun groupsOf (spec : spec) =
+    let
+      fun upto k = List.tabulate (k, fn i => i)
+      val n = length (#tynames spec)
+      val functors = #functors spec
+      fun slotOf j = List.nth (#2 (List.nth (functors, 0)), j)
+      (* member j reaches member k when k's slot is in j's functor; its
+         own slot is alpha wherever it appears *)
+      fun reaches j k =
+          let val (fty, slots) = List.nth (functors, j)
+              val v = if j = k then Type.alpha else List.nth (slots, k)
+          in
+            Lib.mem v (Type.type_vars fty)
+          end
+      (* the members that reach each other, by closing the relation *)
+      fun closure j =
+          let fun go seen [] = seen
+                | go seen (k::ks) =
+                  if Lib.mem k seen then go seen ks
+                  else go (k :: seen)
+                          (List.filter (reaches k) (upto n) @ ks)
+          in
+            go [] [j]
+          end
+      val group =
+          List.tabulate
+            (n, fn j => List.filter (fn k => Lib.mem j (closure k))
+                                    (closure j))
+      (* the groups, each once, in an order where a member's own group
+         comes after the groups it reaches *)
+      fun add (j, gs) =
+          if List.exists (fn g => Lib.mem j g) gs then gs
+          else gs @ [List.nth (group, j)]
+      val gs = List.foldl add [] (upto n)
+      fun ready done g =
+          List.all (fn j => List.all (fn k => Lib.mem k g orelse
+                                              Lib.mem k done)
+                                     (List.filter (reaches j) (upto n)))
+                   g
+      fun order (done, gs) =
+          if null gs then []
+          else
+            case List.find (ready done) gs of
+                NONE => raise ERR "groupsOf"
+                              "the declaration's references do not settle"
+              | SOME g => g :: order (done @ g,
+                                      List.filter (fn h => h <> g) gs)
     in
-      if length (#tynames spec) = 1 then oneType db spec else manyTypes db spec
+      order ([], gs)
+    end
+
+(* A member's own entry names its own slot α, so the variable standing
+   for member k is read off the entry of any other member. *)
+fun slotOf (spec : spec) k =
+    let val j = if k = 0 then 1 else 0
+    in
+      if length (#functors spec) = 1 then
+        (* one member names nothing but itself *)
+        List.nth (#2 (hd (#functors spec)), k)
+      else List.nth (#2 (List.nth (#functors spec, j)), k)
+    end
+
+(* the members a group names, with the types the groups before it
+   defined put in for their slots *)
+fun subSpec (spec : spec) theta g : spec =
+    let
+      fun pick l = List.map (fn j => List.nth (l, j)) g
+      fun ftorOf j =
+          let val (fty, slots) = List.nth (#functors spec, j)
+              val slots' =
+                  List.map (fn k => List.nth (slots, k)) g
+          in
+            (Type.type_subst theta fty, slots')
+          end
+    in
+      {tynames = pick (#tynames spec), params = #params spec,
+       functors = List.map ftorOf g,
+       constructors = pick (#constructors spec),
+       fields = pick (#fields spec), names = pick (#names spec),
+       written = #written spec}
+    end
+
+fun ofSpec spec =
+    let
+      val groups = groupsOf spec
+      (* what a group has just defined, for the groups that name it *)
+      fun defined (g, tyinfos) =
+          ListPair.mapEq
+            (fn (j, tyi) => slotOf spec j |-> TypeBasePure.ty_of tyi)
+            (g, tyinfos)
+      fun go (theta, []) = []
+        | go (theta, g :: gs) =
+          let val db = bnfBase.fullDB()
+              val sub = subSpec spec theta g
+              val tyinfos = if length g = 1 then oneType db sub
+                            else manyTypes db sub
+          in
+            tyinfos @ go (theta @ defined (g, tyinfos), gs)
+          end
+    in
+      go ([], groups)
     end
 
 fun bnfDatatypeInfo q = ofSpec (parseSpec q)
 
 fun bnfDatatype q = ignore (bnfDatatypeInfo q)
+
+(* ----------------------------------------------------------------------
+    Can this construction express the specification at all?
+
+    A type the specification defines has to occur where a map can move
+    it: inside operators the functor database knows, in the arguments
+    they are functorial in.  `t = c of 'a => t itself` recurses through
+    an operator that holds no elements of its argument, so there is
+    nothing for the construction to take a fixed point of — the
+    specification is outside the BNF world rather than merely awkward,
+    and it is the older construction's to build.
+   ---------------------------------------------------------------------- *)
+fun expressible astl =
+    let
+      val spec = specOfASTs (List.map (fn (name, form) =>
+                                          {name = name, attrs = [],
+                                           form = form})
+                                      astl)
+      val db = bnfBase.fullDB()
+      fun ok (fty, slots) =
+          let val live = bnfLib.liveTyvars db fty
+              val occurs = List.filter
+                             (fn v => Lib.mem v (Type.type_vars fty)) slots
+          in
+            List.all (fn v => Lib.mem v live) occurs
+          end
+    in
+      List.all ok (#functors spec)
+    end
+    handle HOL_ERR _ => false
 
 (* what a caller that has parsed already hands over: the older entry
    point's syntax gives the same declarations, without attributes *)
