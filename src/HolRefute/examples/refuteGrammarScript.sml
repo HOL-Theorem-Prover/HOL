@@ -75,8 +75,8 @@ Inductive S4:
   (!v w. B4 v /\ B4 w ==> B4 (La :: v ++ w))
 End
 
-(* The corrected grammar yields no counterexample.  The diagnostic leaves
-   the goal unchanged, and mutual rule induction then proves soundness. *)
+(* The corrected grammar's diagnostic finds no counterexample candidate.
+   It leaves the goal unchanged, and mutual rule induction proves soundness. *)
 
 Theorem the_fourth_grammar_is_sound:
   (!w. S4 w ==>
