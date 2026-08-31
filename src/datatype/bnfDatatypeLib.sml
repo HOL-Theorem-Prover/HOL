@@ -389,10 +389,14 @@ fun groupsOf (spec : spec) =
           in
             go [] [j]
           end
+      (* a group keeps the order the declaration wrote its members in:
+         which member is built first, and which type variable stands for
+         which member, are read off that order *)
       val group =
           List.tabulate
-            (n, fn j => List.filter (fn k => Lib.mem j (closure k))
-                                    (closure j))
+            (n, fn j => List.filter (fn k => Lib.mem k (closure j) andalso
+                                             Lib.mem j (closure k))
+                                    (upto n))
       (* the groups, each once, in an order where a member's own group
          comes after the groups it reaches *)
       fun add (j, gs) =

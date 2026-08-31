@@ -2377,14 +2377,7 @@ fun defineFamily {tynames} db params specs : family =
                                  (List.filter (fn k => k > i) (upto n)) @
                         [List.nth (vs,i) |-> alpha]
             val fty = type_subst theta (List.nth (ftys, i))
-            (* the recursive argument comes first whether the functor
-               uses it or not — that is how the copy and the fixed point
-               tell each other apart — and after it only the slots the
-               functor mentions: one it does not would be an argument of
-               the new type that no map can move *)
-            val used = Type.type_vars fty
-            val lives = alpha :: List.filter (fn v => Lib.mem v used)
-                                             (List.take (vs, i)) @ params
+            val lives = alpha :: List.take (vs, i) @ params
             val bnf = bnfLib.deriveBNFn db lives fty
             val nm = List.nth (tynames, i)
             val names = {tyname = nm, ABS = nm ^ "_ABS", REP = nm ^ "_REP"}
