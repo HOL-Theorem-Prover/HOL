@@ -148,3 +148,8 @@ Theorem the_fixed_insert_preserves_the_level:
 Proof
   REFUTE_TAC >> cheat
 QED
+
+(* QUICKCHECK_TAC finds no counterexample to the claim that ains preserves
+   awf.  This diagnostic is not a proof: a full proof needs strengthened
+   level and shape invariants for the intermediate skew and split steps,
+   which would dominate this counterexample-focused example. *)
