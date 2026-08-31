@@ -777,16 +777,187 @@ fun Hol_datatype q =
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Hol_datatype" e)
 
-(* A specification this construction cannot build — one that recurses
-   under another type operator, say — goes to the BNF package, which
-   takes the fixed point of the functor the specification describes.  A
-   specification neither can build reports this one's failure, which is
-   the message developments know. *)
+(*---------------------------------------------------------------------------*)
+(* Does the specification recurse?  A specification whose constructors       *)
+(* mention none of the types being defined is a sum of products of types     *)
+(* that already exist, which this construction builds directly.  One that    *)
+(* does recurse is a fixed point, and the fixed point is what the BNF        *)
+(* package takes — and what leaves the new type in the functor database,     *)
+(* so that a later specification can recurse through it in turn.             *)
+(*---------------------------------------------------------------------------*)
+
+fun spec_recurses astl =
+    let
+      val tynames = map #1 astl
+      fun here NONE = true
+        | here (SOME thy) = thy = current_theory()
+      fun mentions pty =
+          case pty of
+              ParseDatatype.dVartype _ => false
+            | ParseDatatype.dAQ _ => false
+            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
+                (Lib.mem Tyop tynames andalso here Thy) orelse
+                List.exists mentions Args
+      fun inForm (ParseDatatype.Constructors cs) =
+            List.exists (List.exists mentions o #2) cs
+        | inForm (ParseDatatype.Record flds) =
+            List.exists (mentions o #2) flds
+    in
+      List.exists (inForm o #2) astl
+    end
+
+(*---------------------------------------------------------------------------*)
+(* What the BNF package does not build yet.  Two things, both known:         *)
+(*                                                                          *)
+(*  - A member of a family that the specification does not take through     *)
+(*    itself — `n1 = N1 n2 ; n2 = N2 num | N3 n1` — is a copy of its        *)
+(*    functor rather than a fixed point of it, and the family's principle   *)
+(*    and its constructor equations both read a member's fixpoint_bnf,      *)
+(*    which a copy does not have.                                          *)
+(*                                                                          *)
+(*  - A constructor argument that is itself a sum or a product —           *)
+(*    `V (v_rec + num)` — is indistinguishable, once the functor is built,  *)
+(*    from two constructors or from two arguments: the construction reads   *)
+(*    the constructors off the functor's shape, and the shape no longer     *)
+(*    says where they end.  The arities belong in what defineConstructors   *)
+(*    is told.                                                             *)
+(*                                                                          *)
+(* Such a specification goes the old way, and gets no functor entry.        *)
+(*---------------------------------------------------------------------------*)
+
+fun bnf_builds astl =
+    let
+      val tynames = map #1 astl
+      fun here NONE = true
+        | here (SOME thy) = thy = current_theory()
+      fun mentions nm pty =
+          case pty of
+              ParseDatatype.dVartype _ => false
+            | ParseDatatype.dAQ _ => false
+            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
+                (Tyop = nm andalso here Thy) orelse
+                List.exists (mentions nm) Args
+      fun plain pty =
+          case pty of
+              ParseDatatype.dTyop {Tyop, ...} =>
+                Tyop <> "sum" andalso Tyop <> "prod"
+            | _ => true
+      fun argsOf (ParseDatatype.Constructors cs) = List.concat (map #2 cs)
+        | argsOf (ParseDatatype.Record flds) = map #2 flds
+      fun selfrec (nm, ParseDatatype.Constructors cs) =
+            List.exists (List.exists (mentions nm) o #2) cs
+        | selfrec (nm, ParseDatatype.Record flds) =
+            List.exists (mentions nm o #2) flds
+      fun anymember pty = List.exists (fn nm => mentions nm pty) tynames
+      (* and the operators the specification recurses *through* have to
+         be functors the database knows: a type the old construction
+         built is not one, since nothing registers it *)
+      val db = bnfBase.fullDB()
+      fun isMember (Tyop, Thy) = Lib.mem Tyop tynames andalso here Thy
+      fun known Tyop Thy =
+          let
+            val thys = case Thy of
+                           SOME t => [t]
+                         | NONE => List.map #Thy (Type.decls Tyop)
+          in
+            List.exists
+              (fn t => isSome (bnfBase.pure_lookup db {Thy = t, Name = Tyop}))
+              thys
+          end
+      fun functorial pty =
+          case pty of
+              ParseDatatype.dVartype _ => true
+            | ParseDatatype.dAQ _ => true
+            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
+                isMember (Tyop, Thy) orelse
+                not (List.exists anymember Args) orelse
+                (known Tyop Thy andalso List.all functorial Args)
+    in
+      List.all selfrec astl andalso
+      List.all (List.all plain o argsOf o #2) astl andalso
+      List.all (List.all functorial o argsOf o #2) astl
+    end
+
+(*---------------------------------------------------------------------------*)
+(* What this construction builds: a recursion through type operators that    *)
+(* are themselves datatypes.  A recursion through anything else — a finite   *)
+(* map, say — it cannot express, and that is what the BNF package is for.    *)
+(*                                                                          *)
+(* This is the line the two packages are divided along *while* the entries   *)
+(* they make are still being compared.  The BNF package builds more than     *)
+(* the line gives it, and the intention is for it to take everything that    *)
+(* recurses; what stands in the way is parity rather than capability —       *)
+(* pattern_matches, for one, reads fields of a TypeBase entry that the two   *)
+(* fill in differently.                                                     *)
+(*---------------------------------------------------------------------------*)
+
+fun old_builds astl =
+    let
+      val tynames = map #1 astl
+      fun here NONE = true
+        | here (SOME thy) = thy = current_theory()
+      fun mentions nm pty =
+          case pty of
+              ParseDatatype.dVartype _ => false
+            | ParseDatatype.dAQ _ => false
+            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
+                (Tyop = nm andalso here Thy) orelse
+                List.exists (mentions nm) Args
+      fun anymember pty = List.exists (fn nm => mentions nm pty) tynames
+      val tb = TypeBase.theTypeBase()
+      fun datatypeOp Tyop Thy =
+          let
+            val thys = case Thy of
+                           SOME t => [t]
+                         | NONE => List.map #Thy (Type.decls Tyop)
+            (* a TypeBase entry is not enough: a finite map has one,
+               and it is not a datatype — it has no constructors for a
+               recursion to go through *)
+            fun isdty ti = not (null (TypeBasePure.constructors_of ti))
+                           handle HOL_ERR _ => false
+          in
+            List.exists
+              (fn t => case TypeBasePure.prim_get tb (t, Tyop) of
+                           NONE => false
+                         | SOME ti => isdty ti)
+              thys
+          end
+      fun ok pty =
+          case pty of
+              ParseDatatype.dVartype _ => true
+            | ParseDatatype.dAQ _ => true
+            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
+                (Lib.mem Tyop tynames andalso here Thy) orelse
+                not (List.exists anymember Args) orelse
+                (datatypeOp Tyop Thy andalso List.all ok Args)
+      fun argsOf (ParseDatatype.Constructors cs) = List.concat (map #2 cs)
+        | argsOf (ParseDatatype.Record flds) = map #2 flds
+    in
+      List.all (List.all ok o argsOf o #2) astl
+    end
+
+(*---------------------------------------------------------------------------*)
+(* An enumeration is what EnumType builds, from a representation in the      *)
+(* numbers; a specification that does not recurse is a sum of products, and  *)
+(* this construction builds it; a recursion this construction can express    *)
+(* goes its way while the two are being compared; and everything else is a   *)
+(* fixed point, which the BNF package takes — and which leaves the new type  *)
+(* in the functor database, so that a later specification can recurse        *)
+(* through it.  Records are orthogonal to all four: whichever built the      *)
+(* type, the record apparatus goes on top of it.                            *)
+(*---------------------------------------------------------------------------*)
+
 fun Datatype q =
-    astHol_datatype (ParseDatatype.hparse (type_grammar()) q)
+    let
+      val astl = ParseDatatype.hparse (type_grammar()) q
+    in
+      if is_enum_type_spec astl orelse not (spec_recurses astl) orelse
+         old_builds astl orelse not (bnf_builds astl)
+      then astHol_datatype astl
+      else bnfDatatypeLib.bnfDatatype q
+    end
     handle e as HOL_ERR _ =>
-    bnfDatatypeLib.bnfDatatype q
-    handle HOL_ERR _ => render_exn (wrap_exn "Datatype" "Datatype" e)
+    render_exn (wrap_exn "Datatype" "Datatype" e)
 
 val _ = Parse.temp_set_grammars ambient_grammars
 

@@ -1859,8 +1859,12 @@ fun defineFamily {tynames} db params specs : family =
             val lives = alpha :: List.take (vs, i) @ params
             val bnf = bnfLib.deriveBNFn db lives fty
             val nm = List.nth (tynames, i)
-            val fix = defineFixpoint {tyname = nm, ABS = nm ^ "_ABS",
-                                      REP = nm ^ "_REP"} bnf
+            val names = {tyname = nm, ABS = nm ^ "_ABS", REP = nm ^ "_REP"}
+            (* a member the specification does not take *this* member
+               through — `n1 = N1 n2 ; n2 = N2 num | N3 n1` — is not yet
+               built here; familyPrimRecursion and collapsedEqns read a
+               member's fixpoint_bnf, which a copy does not have *)
+            val fix = defineFixpoint names bnf
             val ty = #newty fix
             val args = #Args (dest_thy_type ty)
             (* a member with no arguments left is a datatype in its own

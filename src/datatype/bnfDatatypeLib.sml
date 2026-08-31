@@ -127,9 +127,14 @@ fun oneType db (spec : spec) =
                         | NONE => #set_induction cs
       (* the new type as a functor of its own, so that a later
          specification can recurse through it *)
+      (* a type with no arguments is not a functor: there is nothing for
+         a map to move, and nothing for a later specification to recurse
+         through it with *)
       val eqns =
           case copy of
               NONE =>
+              if null params then []
+              else
               let val res = fixpointBNF nms bnf fix
                   val e = constructorEqns cs res
               in
@@ -206,6 +211,8 @@ fun manyTypes db (spec : spec) =
       (* each member as a functor of its own: the copy of a composite
          already in the database, conjugated by the bijection *)
       val cbnfs =
+          if null params then []
+          else
           List.tabulate
             (n, fn j =>
                   transportBNF (List.nth (#names spec, j))
@@ -218,8 +225,9 @@ fun manyTypes db (spec : spec) =
       val _ = List.app (fn (nm, r : copied_bnf) =>
                            registerBNF {tyname = nm} (#key r, #info r))
                        (ListPair.zipEq (tynames, cbnfs))
-      val eqns = collapsedEqns coll fam cbnfs ccs
-      val rewrites = List.map (fn e => #map_eqns e :: #set_eqns e) eqns
+      val eqns = if null params then [] else collapsedEqns coll fam cbnfs ccs
+      val rewrites = if null params then List.map (fn _ => []) tynames
+                     else List.map (fn e => #map_eqns e :: #set_eqns e) eqns
       val tyinfos =
           typeBaseInfo {axiom = axiom, induction = induction,
                         case_defs = defineCases axiom,
