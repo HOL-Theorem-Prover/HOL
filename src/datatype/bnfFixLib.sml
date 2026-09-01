@@ -802,6 +802,26 @@ fun splitProd 0 ty = []
   | splitProd k ty =
       let val (l, r) = pairSyntax.dest_prod ty in l :: splitProd (k - 1) r end
 
+(* One binder per constructor argument, and no more: letting the
+   simplifier expand the quantifier would split an argument that is
+   itself a product into two, and the clause would then not be the shape
+   the rest of HOL reads a datatype's axiom in. *)
+fun expandArgs k =
+    if k = 0 then HO_REWR_CONV oneTheory.FORALL_ONE
+    else if k = 1 then ALL_CONV
+    else HO_REWR_CONV pairTheory.FORALL_PROD THENC
+         BINDER_CONV (expandArgs (k - 1))
+fun expandCons [k] = expandArgs k
+  | expandCons (k::ks) = HO_REWR_CONV sumTheory.FORALL_SUM THENC
+                         LAND_CONV (expandArgs k) THENC
+                         RAND_CONV (expandCons ks)
+  | expandCons [] = ALL_CONV
+
+(* how many arguments a constructor takes, which its own definition
+   says *)
+fun arityOfDef d =
+    length (#2 (strip_comb (lhs (#2 (strip_forall (concl d))))))
+
 fun factorsOf ty =
     if Type.compare (ty, oneSyntax.one_ty) = EQUAL then []
     else pairSyntax.strip_prod ty
@@ -935,16 +955,6 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
            simplifier expand the quantifier would split an argument that
            is itself a product into two, and the clause would then not
            be the shape the rest of HOL reads a datatype axiom in. *)
-        fun expandArgs k =
-            if k = 0 then HO_REWR_CONV oneTheory.FORALL_ONE
-            else if k = 1 then ALL_CONV
-            else HO_REWR_CONV pairTheory.FORALL_PROD THENC
-                 BINDER_CONV (expandArgs (k - 1))
-        fun expandCons [k] = expandArgs k
-          | expandCons (k::ks) = HO_REWR_CONV sumTheory.FORALL_SUM THENC
-                                 LAND_CONV (expandArgs k) THENC
-                                 RAND_CONV (expandCons ks)
-          | expandCons [] = ALL_CONV
         (* the clause the axiom is read in, on the right of the
            equation only: a single constructor leaves nothing to expand,
            and rewriting both sides of |- body = body would say |- T *)
@@ -3149,8 +3159,9 @@ fun familyAxiomOf (defs : thm list list) recursion =
             val vv = mk_var ("v", vty)
             fun branch i =
                 let
-                  val nfacs = factorsOf (List.nth (nSummands, i))
-                  val cfacs = factorsOf (List.nth (cSummands, i))
+                  val k = arityOfDef (List.nth (ds, i))
+                  val nfacs = splitProd k (List.nth (nSummands, i))
+                  val cfacs = splitProd k (List.nth (cSummands, i))
                   val recs = ListPair.mapEq (fn (a,b) => a <> b) (nfacs, cfacs)
                   val xv = mk_var ("x", List.nth (nSummands, i))
                   val args =
@@ -3186,13 +3197,19 @@ fun familyAxiomOf (defs : thm list list) recursion =
       (* expanding the quantifier over each functor's shape gives every
          constructor's equation at once, and the definitions fold the
          injections back into the constructors *)
-      val expand =
+      val reduce =
           QCONV (simpLib.SIMP_CONV boolSimps.bool_ss
-                   [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
-                    oneTheory.FORALL_ONE, sumTheory.SUM_MAP_def,
+                   [sumTheory.SUM_MAP_def,
                     sumTheory.sum_case_def, sumTheory.OUTL, sumTheory.OUTR,
                     pairTheory.PAIR_MAP, pairTheory.FST, pairTheory.SND,
                     combinTheory.I_THM])
+      fun expandFor ds = expandCons (List.map arityOfDef ds) THENC reduce
+      fun expand tm =
+          let fun go [ds] t = expandFor ds t
+                | go (ds :: rest) t = (LAND_CONV (expandFor ds) THENC
+                                       RAND_CONV (go rest)) t
+                | go [] t = REFL t
+          in go defs tm end
     in
       (* one clause per constructor, in one list: expanding a member's
          equation leaves its own clauses nested inside the family's, and
@@ -3382,12 +3399,21 @@ fun familySetInductionOf (fam : family) (types, conss) principle =
 
 fun familyInductionOf (defs : thm list list) induction =
     let
-      val expand =
+      (* one binder per constructor argument here too: the simplifier
+         would split an argument that is itself a product, and the
+         clause would be about `P (C (a,b))` rather than about `P (C a)` *)
+      val reduce =
           QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
                                     combinTheory.I_o_ID]) THENC
-          QCONV (simpLib.SIMP_CONV set_ss
-                   (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
-                              oneTheory.FORALL_ONE]))
+          QCONV (simpLib.SIMP_CONV set_ss setRWs)
+      fun expandFor ds = reduce THENC expandCons (List.map arityOfDef ds) THENC
+                         reduce
+      fun expand tm =
+          let fun go [ds] t = expandFor ds t
+                | go (ds :: rest) t = (LAND_CONV (expandFor ds) THENC
+                                       RAND_CONV (go rest)) t
+                | go [] t = REFL t
+          in go defs tm end
     in
       PURE_REWRITE_RULE [GSYM CONJ_ASSOC]
         (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (renameBlocks defs)))
@@ -3425,13 +3451,20 @@ fun defineCases ax0 =
       val (hvars, body) = strip_exists (#2 (strip_forall (concl ax)))
       (* one clause per constructor: what the function does to it, and
          what the target is handed *)
+      (* A clause quantifies what the axiom hands over, which is not
+         always the constructor's own arguments: a constructor taking a
+         product has the components quantified and the pair built —
+         `∀a p. h (C (a,p)) = f a p (h a) (h p)`.  So the two are kept
+         apart: `args` is what the clause binds, `cargs` what the
+         constructor is applied to. *)
       fun clauseOf tm =
           let val (args, eq) = strip_forall tm
               val (h, capp) = dest_comb (lhs eq)
               val (cons, cargs) = strip_comb capp
               val (f, fargs) = strip_comb (rhs eq)
           in
-            {h = h, cons = cons, cargs = cargs, f = f, fargs = fargs}
+            {h = h, cons = cons, args = args, cargs = cargs, f = f,
+             fargs = fargs}
           end
       val clauses = List.map clauseOf (strip_conj body)
       fun clausesOf h = List.filter (fn c => aconv (#h c) h) clauses
@@ -3457,13 +3490,13 @@ fun defineCases ax0 =
       fun targetOf (c, b) =
           let
             fun freshen (t, (vs, away)) =
-                if is_var t andalso List.exists (aconv t) (#cargs c) then
+                if is_var t andalso List.exists (aconv t) (#args c) then
                   (vs @ [t], away)
                 else
                   let val v = numvariant away (mk_var ("r", type_of t))
                   in (vs @ [v], v :: away) end
             val (vs, _) = List.foldl freshen
-                            ([], free_varsl (#cargs c @ #fargs c))
+                            ([], free_varsl (#args c @ #fargs c))
                             (#fargs c)
           in
             (#f c, list_mk_abs (vs, list_mk_comb (b, #cargs c)))
@@ -3503,8 +3536,8 @@ fun defineCases ax0 =
                 let val capp = list_mk_comb (#cons c, #cargs c)
                     val app = list_mk_comb (casetm, capp :: bs)
                 in
-                  GENL (#cargs c @ bs)
-                       (TRANS (LIST_BETA_CONV app) (SPECL (#cargs c) eq))
+                  GENL (#args c @ bs)
+                       (TRANS (LIST_BETA_CONV app) (SPECL (#args c) eq))
                 end
             val cs = clausesOf h
             fun aboutSel eq =
