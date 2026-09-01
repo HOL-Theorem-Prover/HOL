@@ -339,6 +339,18 @@ structure ToSML = struct
         "(DB_dtype.mkloc (", mlquote fname, ", ", Int.toString (i + 1), ", true))"
       ]
 
+  (* Several of the entry points this translator emits take the context
+     to elaborate in as their last argument -- `Q.store_thm_at',
+     `TotalDefn.located_qDefine', `IndDefLib.xHol_reln' and
+     `markerLib.resume'.  Omitting it does not fail here: the
+     declaration binds a function of the context instead of the theorem,
+     and the error surfaces at the first use of the name.
+
+     `snapshotArg' is for the entry points that always take one;
+     `ctxtArg' for those where only the located variant does, the
+     `filename = ""' spelling being the older context-free function. *)
+  val snapshotArg = " (Context.snapshot())"
+
   type doDecl_args = {
     aux: string -> unit,
     cat: substring list -> string,
@@ -393,6 +405,10 @@ structure ToSML = struct
         noSigDocs, doQuote, doDecls, magicBind, doQuoteConj,
         doThmAttrs, readAt, countlines}: doDecl_args) = let
     open Simple
+    (* See `snapshotArg': the located entry points take a context, the
+       context-free ones this falls back to when there is no filename
+       do not. *)
+    fun ctxtArg () = if !filename = "" then "" else snapshotArg
     fun doDecl d = case d of
         TheoryDecl {head = (p, head), elems, stop} => let
         val {name, attrs, ...} = destMLThmBinding (full head)
@@ -498,9 +514,10 @@ structure ToSML = struct
                ];
           app aux [" \"", ss name_attrs, "\" "]; doQuote quote;
           case termination of
-            NONE => aux " NONE;"
+            NONE => aux (" NONE" ^ ctxtArg () ^ ";")
           | SOME {decls = Decls {start = dstart, decls = decls, stop = dstop}, ...} =>
-            (aux " (SOME ("; doDecls dstart decls dstop; aux "));");
+            (aux " (SOME ("; doDecls dstart decls dstop;
+             aux ("))" ^ ctxtArg () ^ ";"));
           magicBind indThm
         end
       | DatatypeDecl {head = (_, _), quote, ...} => (
@@ -530,7 +547,7 @@ structure ToSML = struct
         in
           app aux ["val (", ss stem, "_rules,", ss stem, indSuffix, ",",
             ss stem, "_cases) = ", entryPoint, " \"", ss stem, "\" "];
-          doQuoteConj quote collect; aux ";";
+          doQuoteConj quote collect; aux (snapshotArg ^ ";");
           magicBind (cat [stem, full "_strongind"]);
           app (fn (i, tilde, name, name_attrs) => let
             val f = if tilde then fn s => app aux [ss stem, "_", s] else aux
@@ -571,7 +588,8 @@ structure ToSML = struct
              doProofMod ddargs (p,size tok) goalabs
                 (destAttrs (#2 (destNameAttrs (full tok))))
           | _ => aux goalabs;
-          doDecls dstart decls dstop; aux ") HOL__GOAL__foo));"
+          doDecls dstart decls dstop;
+          aux (") HOL__GOAL__foo))" ^ ctxtArg () ^ ";")
         end
       | ResumeDecl {head = (p, head), body, ...} => let
           val {thmname, attrs, ...} = parseTheoremPfx head
@@ -591,7 +609,8 @@ structure ToSML = struct
           aux "markerLib.resume{label_name="; aux (mlquote label^",");
           aux "suspension_name="; aux (mlquote (ss thmname) ^ "}(");
           doProofMod ddargs (p,size head) goalabs rest;
-          doDecls dstart decls dstop; aux ") HOL__GOAL__foo))"
+          doDecls dstart decls dstop;
+          aux (") HOL__GOAL__foo))" ^ snapshotArg)
         end
       | FinaliseThm (_, text) => let
           val {thmname,name_attrs,...} = parseTheoremPfx text
