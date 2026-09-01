@@ -429,6 +429,21 @@ failure, timeout, and interruption paths leave no Refute-created type,
 constant, theorem, or binding in the user's theory; if safe cleanup is
 unavailable, Cv reports that the goal is inapplicable instead.
 
+Cv also declines every goal reached from the goalstack.  `e` and
+`expandf` run the tactic inside a `Context.Data.modify` on the proof
+manager's slot, holding that slot's non-reentrant lock, and
+`cv_transLib` defines its recursive generators with `TotalDefn.tDefine`,
+whose termination proof re-enters the same slot and deadlocks there --
+with interrupts masked, so neither the search deadline nor Ctrl-C ends
+it.  Whether a goal reaches `tDefine` is not knowable before translating
+it, so the refusal is blanket: Cv probes the lock and reports "a
+goalstack tactic holds the proof manager" while it is held, and Auto
+falls through to Compute, which defines nothing.  A tactic outside the
+goalstack -- `prove`, `Theorem ... QED`, or a tactic applied to a goal by
+hand -- holds no lock and uses Cv as usual.  The underlying re-entrancy
+is an upstream defect in `proofManagerLib`/`Defn`, not a Refute one; any
+tactic that calls `tDefine` deadlocks under `e` with no Refute involved.
+
 Backend races stop when a backend proves `NoCounterexample`, or when a
 counterexample reaches the highest certainty that any selected backend
 declares reachable for the current configuration and instances.

@@ -423,6 +423,17 @@ inconclusive reason.  For a fixed `seed`, all three consume the same
 specified 64-bit random stream, so a seeded run reproduces the same
 candidates whichever substrate ran it.
 
+`Cv` additionally declines any goal reached from the goalstack.  `e` and
+`expandf` run the tactic while holding the proof manager's lock, and the
+`cv` translation defines its recursive generators with
+`TotalDefn.tDefine`, whose termination proof takes that same lock again
+and deadlocks -- with interrupts masked, so neither the search deadline
+nor an interrupt ends it.  `Cv` therefore reports "a goalstack tactic
+holds the proof manager", and `Auto` falls through to `Compute`, which
+defines nothing.  A tactic run outside the goalstack -- under `prove`,
+`Theorem ... QED`, or applied to a goal by hand -- holds no lock and uses
+`Cv` as usual.
+
 #### Narrowing
 
 Narrowing is a native backend rather than another choice in this

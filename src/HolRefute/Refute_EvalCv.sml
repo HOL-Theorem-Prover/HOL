@@ -15,6 +15,44 @@ structure Refute_EvalCv = struct
 
   exception Unsupported of string
 
+  (* [e] and [expandf] run the tactic inside a [Context.Data.modify] on the
+     proof manager's slot, holding that slot's non-reentrant lock for the
+     whole tactic.  [cv_transLib] defines its recursive cv functions with
+     [tDefine], whose termination proof runs through
+     [proofManagerLib.expand] -- the same slot -- and deadlocks there.  The
+     lock is taken with interrupts masked, so the search deadline cannot end
+     it and neither can Ctrl-C: the session is gone.  Refuse the substrate
+     instead, as for anything else cv cannot take, and let selection fall
+     through to compute.  The refusal is blanket: whether a goal reaches
+     [tDefine] is not knowable before translating it.
+
+     Only the lock answers the question.  An open goal is not the condition:
+     a tactic applied to a goalstack goal by hand holds no lock, and [prove]
+     and `Theorem ... QED` never take one.  So probe it -- an identity
+     rotation of the proof list, on a thread of its own.  With the lock free
+     that returns at once; with it held the thread stays blocked until the
+     tactic holding it returns, and then performs an update that changes
+     nothing. *)
+  val proof_manager_probe = Time.fromMilliseconds 50
+
+  fun proof_manager_busy () =
+    let
+      val finished = Synchronized.var "Refute cv proof manager" false
+      fun body () =
+        (Exn.capture (fn () => proofManagerLib.rotate_proofs 0) ();
+         Synchronized.change finished (fn _ => true))
+      val _ = Standard_Thread.fork
+        {name = "refute-proofman", stack_limit = NONE, interrupts = false}
+        body
+      val deadline = Time.now () + proof_manager_probe
+      fun wait () =
+        if Synchronized.value finished then false
+        else if Time.now () >= deadline then true
+        else (OS.Process.sleep (Time.fromMilliseconds 1); wait ())
+    in
+      wait ()
+    end
+
   fun fresh_prefix () =
     Refute_EvalEnum.fresh_prefix "refute_cv_"
 
@@ -1614,6 +1652,9 @@ structure Refute_EvalCv = struct
 
   fun compile_plans (config : Refute_Core.config) strategy plans =
     let
+      val _ = if proof_manager_busy () then
+          raise Unsupported "a goalstack tactic holds the proof manager"
+        else ()
       val programs = Refute_EvalEnum.prepare strategy plans
       val all_types = distinct_types
         (List.concat (List.map plan_generator_types plans) @

@@ -149,6 +149,14 @@ a hit remains `Genuine` but has `cert = NONE`.
 requires `smart_generators` (default `true`): with smart generators off,
 setting it has no effect.
 
+`substrate` selects, it does not promise: under `Auto` a substrate that
+declines the goal is skipped.  `Cv` declines every goal a tactic reaches
+from the goalstack (`e`, `expandf`), because its translation defines
+generators through the proof manager the goalstack tactic is already
+holding, so `Auto` uses `Compute` there; selecting `Cv` explicitly
+reports `Unknown` instead of switching substrate, as for any other
+inapplicability.
+
 By default QC substitutes one type for every type variable of a goal at
 once, so a goal with two type variables is tested with both at the same
 type.  `upd_instantiate` pins named type variables to fixed types

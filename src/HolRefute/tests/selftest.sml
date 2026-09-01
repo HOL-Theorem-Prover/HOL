@@ -26127,6 +26127,98 @@ val _ = require_msg
   "family registration")
   (fn () => ()) ()
 
+(* [e] and [expandf] hold the proof manager's slot lock for the whole
+   tactic, and [cv_transLib] defines its recursive generators with
+   [tDefine], whose termination proof re-enters that same slot: a Refute
+   tactic run from the goalstack deadlocked there, with interrupts masked,
+   so neither the search deadline nor Ctrl-C could end the session.  cv
+   probes the lock and declines while it is held.  The lock is the whole
+   condition -- an open goal is none of it, since a tactic applied to a
+   goalstack goal by hand takes no lock, nor does [prove]. *)
+fun goalstack_probe_reads_the_lock () =
+  let
+    fun quietly f = Lib.with_flag (proofManagerLib.chatting, false) f ()
+    val _ = quietly (fn () => proofManagerLib.set_goal ([], boolSyntax.T))
+    val with_open_goal = proof_manager_busy ()
+    val inside = ref false
+    fun probe_tac goal =
+      (inside := proof_manager_busy (); Tactical.ALL_TAC goal)
+    val _ = quietly (fn () => proofManagerLib.expand probe_tac)
+    val _ = quietly (fn () => proofManagerLib.drop_all ())
+  in
+    not with_open_goal andalso !inside andalso not (proof_manager_busy ())
+  end
+
+val _ = tprint "Refute cv goalstack probe reads the lock"
+val _ = require_msg (check_result goalstack_probe_reads_the_lock) (fn () =>
+  "the cv proof-manager probe misread the goalstack lock")
+  (fn () => ()) ()
+
+fun await test =
+  if test () then ()
+  else (OS.Process.sleep (Time.fromMilliseconds 2); await test)
+
+(* Hold the slot the way [e] does, but from a thread of its own and only
+   until [f] is done, so a regression fails this pin instead of wedging the
+   run: with the guard gone, cv blocks on the lock, [bound] expires, the
+   hold ends, and cv then decides the goal under a reason that says nothing
+   about the proof manager. *)
+fun holding_proof_manager bound f =
+  let
+    val holding = Synchronized.var "selftest proof manager held" false
+    val done = Synchronized.var "selftest proof manager done" false
+    val released = Synchronized.var "selftest proof manager released" false
+    val limit = Time.now () + bound
+    fun hold_tac goal =
+      (Synchronized.change holding (fn _ => true);
+       await (fn () =>
+         Synchronized.value done orelse Time.now () >= limit);
+       Tactical.ALL_TAC goal)
+    fun body () =
+      (Exn.capture (fn () =>
+         Lib.with_flag (proofManagerLib.chatting, false) (fn () =>
+           (proofManagerLib.set_goal ([], boolSyntax.T);
+            proofManagerLib.expand hold_tac;
+            proofManagerLib.drop_all ())) ()) ();
+       Synchronized.change released (fn _ => true))
+    val _ = Standard_Thread.fork
+      {name = "selftest-proofman", stack_limit = NONE, interrupts = false}
+      body
+    val _ = await (fn () => Synchronized.value holding)
+    val result = Exn.capture f ()
+    val _ = Synchronized.change done (fn _ => true)
+    val _ = await (fn () => Synchronized.value released)
+  in
+    Exn.release result
+  end
+
+(* The refusal is blanket: whether a goal reaches [tDefine] is not knowable
+   before translating it, so cv steps aside for every goalstack tactic --
+   including this num goal, which it decides on its own the moment the lock
+   is free.  Selection falls through to compute, which needs no
+   definitions. *)
+fun cv_declines_while_the_proof_manager_is_held () =
+  let
+    val config = upd_substrate Cv default_config
+    val goal = ``(n : num) < 5``
+    val free =
+      case run_with_strategy Exhaustive config goal of
+          Counterexample (cex :: _) => #substrate cex = "cv"
+        | _ => false
+    val held = holding_proof_manager (Time.fromReal 30.0)
+      (fn () => run_with_strategy Exhaustive config goal)
+  in
+    free andalso
+    reason_contains "cv: a goalstack tactic holds the proof manager" held
+  end
+
+val _ = tprint "Refute cv declines under a held proof manager"
+val _ = require_msg
+  (check_result cv_declines_while_the_proof_manager_is_held) (fn () =>
+  "the cv substrate translated under a held proof manager, or declined a " ^
+  "goal it decides with the lock free")
+  (fn () => ()) ()
+
 fun default_backend_race_includes_narrowing () =
   let
     fun weight name =
