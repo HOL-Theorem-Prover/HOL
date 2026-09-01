@@ -34,7 +34,12 @@ fun mkLineCounter str = let
    many utf-16 code units it encodes to -- two for anything outside the
    BMP, which is a surrogate pair.  A continuation byte or an invalid
    leading byte counts as one of each, so malformed input advances and
-   cannot loop. *)
+   cannot loop.
+
+   Deliberately not `UTF8.getChar', which is in the same directory and
+   decodes properly: it raises `BadUTF8' on malformed input, and this
+   runs on buffer text that is mid-edit, where a half-typed character
+   must not cost the whole answer. *)
 fun seqLen c = let val b = Char.ord c in
     if b < 0x80 then (1, 1)
     else if b < 0xC0 then (1, 1)
@@ -190,6 +195,12 @@ val goalStateAtPos :
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
 val thmLookup : (string -> string option) ref = ref (fn _ => NONE)
+type ide_symbol = {
+  name: string, theory: string, class: string,
+  file: string option, line: int, visible: bool }
+val ideSymbols :
+    ({query: string, prefixOnly: bool, limit: int} -> ide_symbol list) ref =
+  ref (fn _ => [])
 val resetForCompile : (unit -> unit) ref = ref (fn () => ())
 val notifyCompileStart : (int option -> unit) ref = ref (fn _ => ())
 

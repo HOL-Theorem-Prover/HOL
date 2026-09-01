@@ -140,6 +140,38 @@ val helpLookup: (string * (string -> bool) -> string list) ref
    version that calls DB.lookup + Parse.thm_to_string. *)
 val thmLookup: (string -> string option) ref
 
+(* A stored theorem as the IDE wants it: `workspace/symbol' and
+   completion both answer from HOL's own record of what exists, which
+   `server.ML' cannot reach for itself -- it is compiled into the heap
+   before HOL exists, so everything HOL-side arrives through a ref like
+   this one.
+
+   `visible' is the difference between a theorem this file could use
+   right now and one that merely exists.  True means the theory is
+   loaded -- it is in this script's ancestry, and `fooTheory.NAME'
+   resolves as an SML value.  False means it was read from a built
+   `Theory.dat' on disk: real, and locatable, but using it means adding
+   the theory to `Ancestors' first.  A client should say which it is
+   rather than offering the two as equals.
+
+   `line' is 1-based; 0 means the theorem's location was not recorded.
+   `file' is NONE for the same reason, and has already had its
+   pathvars expanded. *)
+type ide_symbol = {
+  name: string,
+  theory: string,        (* segment name, no "Theory" suffix *)
+  class: string,         (* "Thm" | "Def" | "Axm" *)
+  file: string option,
+  line: int,
+  visible: bool }
+
+(* `prefixOnly' asks for completion's filter (the name starts with the
+   query) rather than search's (the query occurs anywhere).  `limit'
+   caps the answer: the caller is on a keystroke path and the database
+   is large.  Default returns nothing. *)
+val ideSymbols:
+  ({query: string, prefixOnly: bool, limit: int} -> ide_symbol list) ref
+
 (* Called at the start of each LSP compile pass.  Intended to restore
    the HOL Context to a snapshot taken at LSP startup, so recompiles
    run against a clean state (no accumulated theorems / retired

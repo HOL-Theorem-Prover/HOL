@@ -78,6 +78,14 @@ sig
   val read_term : sharing_data_out -> string -> Term.term
   val read_string : sharing_data_out -> int -> string
 
+  (* A raw theory's locations are string-table indices, so a reader that
+     took `RawTheoryReader.load_raw_thydata' straight off disk cannot
+     turn one into a path without these.  `f' resolves an index against
+     that theory's own string table. *)
+  val translatepath : string list -> string
+  val translate_loc : (int -> string) -> RawTheory_dtype.raw_loc ->
+                      RawTheory_dtype.thm_src_location
+
 end
 
 (*
