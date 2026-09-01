@@ -33,6 +33,7 @@ fail.
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
 [`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.model_refute`](#Refute.model_refute),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
 [`Refute.config`](#Refute.config)
 
 The complete library guide is \ref{Description:the-holrefute-library}.

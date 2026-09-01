@@ -33,6 +33,7 @@ preprocessing, and ordinary timeout failures are normally represented by
 
 [`Refute.config`](#Refute.config),
 [`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.refute_with`](#Refute.refute_with),
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.quickcheck`](#Refute.quickcheck),
 [`Refute.model_refute`](#Refute.model_refute),

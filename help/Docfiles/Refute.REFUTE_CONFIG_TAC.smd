@@ -1,0 +1,45 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REFUTE_CONFIG_TAC`
+
+``` hol4
+Refute.REFUTE_CONFIG_TAC : config -> Abbrev.tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample under an exact configuration.
+
+`REFUTE_CONFIG_TAC cfg` calls `Refute.refute_goal cfg` on the supplied
+goal.  It uses exactly `cfg` and never consults `Refute.the_config`, so
+its behaviour does not depend on the session's interactive defaults.
+This is the preferred form for reproducible tools and regression tests,
+where the fixed `upd_size` and `upd_card` bounds are usually wanted as
+well; `Refute.REFUTE_TAC_WITH` is the convenience form that updates the
+interactive configuration for one call instead.
+
+``` hol4
+REFUTE_CONFIG_TAC
+  (default_config
+     |> upd_search (Only [Narrowing])
+     |> upd_size 7)
+```
+
+Like every Refute tactic, it prints its `Counterexample`,
+`NoCounterexample`, or `Unknown` report and then applies `ALL_TAC`,
+leaving the goal unchanged in every case.  It honours every field of
+`cfg`, including `quiet` and `expect`.
+
+### Failure
+
+A mismatch with a non-default `expect` field raises a HOL error.
+Interrupts are re-raised.  Ordinary Refute outcomes do not make the
+tactic fail.
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.config`](#Refute.config)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

@@ -1,0 +1,57 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REFUTE_TAC_WITH`
+
+``` hol4
+Refute.REFUTE_TAC_WITH : config_update list -> Abbrev.tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample under per-call configuration updates.
+
+`REFUTE_TAC_WITH updates` behaves as `Refute.REFUTE_TAC` except that it
+first applies `updates` to `!Refute.the_config`.  The elements are
+ordinary `config -> config` functions and are applied from left to
+right, so the last update of a field wins.  The interactive
+configuration is read when the tactic is applied, not when it is
+constructed, and is not itself modified; this is the way to change
+options for one call without mutating `the_config`.
+
+``` hol4
+REFUTE_TAC_WITH
+  [upd_search (Only [Narrowing]),
+   upd_size 7,
+   upd_timeout 5.0]
+```
+
+Like every Refute tactic, it prints its `Counterexample`,
+`NoCounterexample`, or `Unknown` report and then applies `ALL_TAC`,
+leaving the goal unchanged in every case.  It honours every field of the
+resulting configuration, including `quiet` and `expect`.
+
+`REFUTE_TAC` is `REFUTE_TAC_WITH []`, and the three specialized tactics
+are this tactic at a fixed backend selection: `QUICKCHECK_TAC` is
+`REFUTE_TAC_WITH [upd_search QuickcheckBackends]`, `NARROWING_TAC` is
+`REFUTE_TAC_WITH [upd_search (Only [Narrowing])]`, and
+`MODEL_REFUTE_TAC` is `REFUTE_TAC_WITH [upd_search (Only [ModelFinder])]`.
+
+Use `Refute.REFUTE_CONFIG_TAC` instead where the result must not depend
+on the session's interactive defaults at all.
+
+### Failure
+
+A mismatch with a configured non-default expectation raises a HOL error.
+An invalid update raises when the updater is built rather than when the
+tactic runs; `upd_search (Only [])` is rejected this way.  Interrupts
+are re-raised.  Ordinary Refute outcomes do not make the tactic fail.
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
+[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
+[`Refute.config`](#Refute.config)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

@@ -28,6 +28,8 @@ fail.
 ### See also
 
 [`Refute.config`](#Refute.config),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
 [`Refute.refute`](#Refute.refute),
 [`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
