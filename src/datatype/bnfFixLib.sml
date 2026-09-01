@@ -3448,7 +3448,8 @@ fun defineCases ax0 =
                     val v = numvariant away (mk_var (nm, ty))
                 in (bs @ [v], v :: away) end
           in
-            #1 (List.foldl mk ([], List.concat (List.map #cargs cs)) cs)
+            #1 (List.foldl mk ([], free_varsl (List.concat
+                                                 (List.map #cargs cs))) cs)
           end
       val branches = List.map branchesOf hvars
       (* the target that ignores the recursive calls' results: what is
@@ -3462,7 +3463,7 @@ fun defineCases ax0 =
                   let val v = numvariant away (mk_var ("r", type_of t))
                   in (vs @ [v], v :: away) end
             val (vs, _) = List.foldl freshen
-                            ([], #cargs c @ free_varsl (#fargs c))
+                            ([], free_varsl (#cargs c @ #fargs c))
                             (#fargs c)
           in
             (#f c, list_mk_abs (vs, list_mk_comb (b, #cargs c)))
@@ -3490,8 +3491,11 @@ fun defineCases ax0 =
             val sel = List.nth (sels, j)
             val (dty, rty) = dom_rng (type_of h)
             val tyname = #1 (dest_type dty)
-            val x = numvariant (bs @ List.concat (List.map #cargs clauses))
-                               (mk_var ("x", dty))
+            (* the arguments' own variables: a constructor whose
+               argument is a product has a pair there, not a variable *)
+            val x = numvariant
+                      (free_varsl (bs @ List.concat (List.map #cargs clauses)))
+                      (mk_var ("x", dty))
             val cname = Prim_rec.case_constant_name {type_name = tyname}
             val casetm = list_mk_abs (x :: bs, mk_comb (sel, x))
             val cvar = mk_var (cname, type_of casetm)
@@ -3634,8 +3638,8 @@ fun defineRecursion {name, axiom, def} =
                   let val v = numvariant away (mk_var ("r", type_of t))
                   in (vs @ [v], v :: away) end
             val results = List.map atFn (#fargs c)
-            val (vs, _) = List.foldl freshen ([], cargs' @ free_varsl results)
-                                     results
+            val (vs, _) = List.foldl freshen
+                            ([], free_varsl (cargs' @ results)) results
             val body =
                 Term.subst (List.mapPartial
                               (fn (t,v) => if aconv t v then NONE
