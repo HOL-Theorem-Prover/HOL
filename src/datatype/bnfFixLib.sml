@@ -2483,10 +2483,16 @@ fun defineFamily {tynames} db params specs : family =
                                others: a declared argument the functor
                                never mentions is not one the copy can be
                                conjugated in *)
+                            (* in the order the new type takes them: a
+                               type definition sorts its arguments, and
+                               the map has to say what the type says *)
                             let val used = Type.type_vars fty
                                 val slotsleft =
-                                    List.filter (fn v => Lib.mem v used)
-                                                (List.take (vs, i) @ params)
+                                    List.filter
+                                      (fn v => Lib.mem v used andalso
+                                               (isSome (slotIdx v) orelse
+                                                Lib.mem v params))
+                                      args
                                 val fbnf = bnfLib.deriveBNFn db slotsleft fty
                             in
                               copyMemberBNF c
