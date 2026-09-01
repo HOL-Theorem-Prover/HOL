@@ -111,6 +111,15 @@ In addition to the usual LSP commands, the server supports the following extensi
 * The `$/compileInterrupted` notification is sent when an asynchronous compile caused by a file open or modification event is interrupted.
     * `uri: URI` - the file being compiled
 
+* **Position encoding.**  The server's own offsets are bytes, so it asks
+  for `utf-8` when the client's `general.positionEncodings` offers it
+  (eglot offers `["utf-32", "utf-8", "utf-16"]`) and answers `utf-16`
+  otherwise, converting every `character` it reads or writes.  A client
+  that offers nothing gets `utf-16`, which is what the spec says its
+  silence means.  Declaring `utf-8` regardless is not a way of getting
+  it: `vscode-languageclient` advertises only `utf-16` and throws on any
+  other answer.
+
 * The `$/compileBlocked` notification is sent instead of compiling a file
   whose declared dependencies could not be loaded.  A file that names an
   ancestor or library it cannot get has nothing to be elaborated against,

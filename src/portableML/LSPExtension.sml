@@ -8,14 +8,62 @@ type posLC = int * int
 type rangeLC = posLC * posLC
 type range = int * int
 
-type lines = int vector
+(* Which unit a `character' on the wire counts in.  The server's own
+   offsets are bytes, so utf-8 is what it would rather speak, but the
+   client picks: LSP has the server choose from the client's
+   `general.positionEncodings', and one that cannot take utf-8 gets
+   utf-16 code units.  Set once, from the initialize request, before any
+   position crosses the wire; `false' is bytes. *)
+val utf16 = ref false
+fun setUTF16Positions b = utf16 := b
+fun utf16Positions () = !utf16
+
+(* Line starts, kept with the text they index: converting a byte offset
+   to a utf-16 column means counting the characters in between, so the
+   text has to be here rather than at each of the ~40 call sites. *)
+type lines = {starts: int vector, text: string}
 fun mkLineCounter str = let
   fun loop i ls =
     if i >= String.size str then Vector.fromList (List.rev ls)
     else
       let val c = String.sub (str, i)
       in loop (i+1) (if c = #"\n" then i+1::ls else ls) end
-  in loop 0 [] end
+  in {starts = loop 0 [], text = str} end
+
+(* How many bytes the UTF-8 sequence starting at `c' occupies, and how
+   many utf-16 code units it encodes to -- two for anything outside the
+   BMP, which is a surrogate pair.  A continuation byte or an invalid
+   leading byte counts as one of each, so malformed input advances and
+   cannot loop. *)
+fun seqLen c = let val b = Char.ord c in
+    if b < 0x80 then (1, 1)
+    else if b < 0xC0 then (1, 1)
+    else if b < 0xE0 then (2, 1)
+    else if b < 0xF0 then (3, 1)
+    else if b < 0xF8 then (4, 2)
+    else (1, 1)
+  end
+
+(* utf-16 code units in text[bol..stop). *)
+fun utf16Col (text, bol, stop) = let
+  val n = String.size text
+  fun go (i, acc) =
+    if i >= stop orelse i >= n then acc
+    else let val (bs, us) = seqLen (String.sub (text, i))
+         in go (i + bs, acc + us) end
+  in go (bol, 0) end
+
+(* Byte offset of the `col'-th utf-16 code unit after `bol'.  Stops at
+   the end of the line: a client counting in the wrong unit, or a
+   position past the last character, then lands at the line end rather
+   than somewhere in the next line. *)
+fun utf16Byte (text, bol, col) = let
+  val n = String.size text
+  fun go (i, seen) =
+    if seen >= col orelse i >= n orelse String.sub (text, i) = #"\n" then i
+    else let val (bs, us) = seqLen (String.sub (text, i))
+         in go (i + bs, seen + us) end
+  in go (bol, 0) end
 
 fun partitionPoint len pred = let
   fun loop start len =
@@ -30,12 +78,15 @@ fun partitionPoint len pred = let
       end
   in loop 0 len end
 
-fun getLineCol lines index = let
-  val line = partitionPoint (Vector.length lines) (fn i => Vector.sub (lines, i) <= index)
-  in (line, index - (if line = 0 then 0 else Vector.sub (lines, line - 1))) end
+fun getLineCol {starts, text} index = let
+  val line = partitionPoint (Vector.length starts)
+                            (fn i => Vector.sub (starts, i) <= index)
+  val bol = if line = 0 then 0 else Vector.sub (starts, line - 1)
+  in (line, if !utf16 then utf16Col (text, bol, index) else index - bol) end
 
-fun fromLineCol lines (line, col) =
-  if line = 0 then col else Vector.sub (lines, line - 1) + col
+fun fromLineCol {starts, text} (line, col) = let
+  val bol = if line = 0 then 0 else Vector.sub (starts, line - 1)
+  in if !utf16 then utf16Byte (text, bol, col) else bol + col end
 
 (* Binarymap (rather than Symtab/Table) here because LSPExtension is
    `use`d directly by tools-poly/poly/poly-init2.ML at bootstrap, before
@@ -115,7 +166,11 @@ type hover = {markdown: string, range: rangeLC option}
 
 type hover_context = {
   uri: string, lines: lines, plugins: plugin_data,
-  ppToString: PrettyImpl.pretty -> string }
+  ppToString: PrettyImpl.pretty -> string,
+  (* Column width to wrap a rendered goal state at: the width of the
+     pane the client is going to put it in, so its line breaking is the
+     one the reader sees. *)
+  width: int }
 
 type goal_state = {asms: string list, goal: string}
 type goal_state_response = {

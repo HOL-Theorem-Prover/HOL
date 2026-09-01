@@ -180,9 +180,16 @@ def _count_diag_events(client, uri):
                and m["params"]["diagnostics"])
 
 
-def _init(c, root=None, timeout=5):
+def _init(c, root=None, timeout=5, encodings=("utf-8",)):
+    """Handshake, advertising ENCODINGS as the position encodings this
+    client can take.  Defaults to utf-8 because every helper here
+    counts bytes (see `_line_col_at`), which is also what eglot
+    negotiates; pass ("utf-16",) to get the utf-16 columns a client
+    built on vscode-languageclient gets."""
+    caps = {} if encodings is None else {
+        "general": {"positionEncodings": list(encodings)}}
     c.send({"jsonrpc":"2.0","id":1,"method":"initialize",
-            "params":{"capabilities":{},"rootUri":f"file://{root or REPO}",
+            "params":{"capabilities":caps,"rootUri":f"file://{root or REPO}",
                       "processId":None}})
     def got_init_reply(cl):
         msgs, _ = cl.messages_since(0)
@@ -4501,6 +4508,172 @@ def test_deps_body_reference_does_not_block():
         c.close()
 
 
+# ------------------------------------------------------------------
+# Position encoding negotiated from the client's capabilities
+# ------------------------------------------------------------------
+# `xyzzy` sits after three ∀ (3 bytes each in UTF-8, one utf-16 code
+# unit each), so its byte column and its utf-16 column differ by 6.
+_ENC_LINE = 'val q = (* \u2200\u2200\u2200 *) xyzzy;'
+_ENC_SRC = "Theory posenc\n\nval xyzzy = 3;\n" + _ENC_LINE + "\n"
+_ENC_BYTE_COL = len(_ENC_LINE[:_ENC_LINE.index('xyzzy')].encode('utf8'))
+_ENC_UTF16_COL = len(_ENC_LINE[:_ENC_LINE.index('xyzzy')])
+
+
+def _strip_ansi(s):
+    """Drop the SGR escapes HOL's vt100 backend colours variables with,
+    so line lengths are the ones a reader sees."""
+    return re.sub(r"\x1B\[[0-9;]*m", "", s)
+
+
+def _hover_at(c, rid, uri, line, char):
+    c.send({"jsonrpc":"2.0","id":rid,"method":"textDocument/hover",
+            "params":{"textDocument":{"uri":uri},
+                      "position":{"line":line,"character":char}}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == rid: return m
+        return None
+    m = c.wait_until(got, 10)
+    return None if m is None else m.get("result")
+
+
+def _advertised_encoding(c):
+    msgs, _ = c.messages_since(0)
+    for m in msgs:
+        if m.get("id") == 1 and "result" in m:
+            return m["result"].get("capabilities", {}).get("positionEncoding")
+    return None
+
+
+def test_position_encoding_utf8_when_offered():
+    """A client that can take utf-8 gets it, and `character` is then a
+    byte offset -- what the server's own offsets already are."""
+    uri = "file:///tmp/posenc8.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp", encodings=("utf-32", "utf-8", "utf-16"))
+        assert_eq(_advertised_encoding(c), "utf-8", "server picked utf-8")
+        _did_open(c, uri, _ENC_SRC)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        hov = _hover_at(c, 701, uri, 3, _ENC_BYTE_COL)
+        assert_true(hov is not None and "xyzzy" in hov["contents"]["value"],
+                    f"byte column hovers the identifier ({hov})")
+        assert_true(_hover_at(c, 702, uri, 3, _ENC_UTF16_COL) is None,
+                    "the utf-16 column is not the identifier")
+    finally:
+        c.close()
+
+
+def test_position_encoding_utf16_when_utf8_not_offered():
+    """A client that cannot take utf-8 -- vscode-languageclient offers
+    only utf-16 -- gets utf-16, and `character` counts code units in
+    both directions."""
+    uri = "file:///tmp/posenc16.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp", encodings=("utf-16",))
+        assert_eq(_advertised_encoding(c), "utf-16", "server picked utf-16")
+        _did_open(c, uri, _ENC_SRC)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        hov = _hover_at(c, 711, uri, 3, _ENC_UTF16_COL)
+        assert_true(hov is not None and "xyzzy" in hov["contents"]["value"],
+                    f"utf-16 column hovers the identifier ({hov})")
+        # And the range it hands back counts the same units.
+        assert_eq(hov["range"]["start"]["character"], _ENC_UTF16_COL,
+                  "range start is a utf-16 column")
+        assert_true(_hover_at(c, 712, uri, 3, _ENC_BYTE_COL) is None,
+                    "the byte column is no longer the identifier")
+    finally:
+        c.close()
+
+
+def test_position_encoding_diagnostics_follow_the_choice():
+    """Ranges the server sends are in the negotiated unit too, so a
+    squiggle lands on the offending text rather than beside it."""
+    bad = 'val zz = (* \u2200\u2200\u2200 *) 3 + true;'
+    src = "Theory posencd\n\n" + bad + "\n"
+    byte_col = len(bad[:bad.index('3 + true')].encode('utf8'))
+    utf16_col = len(bad[:bad.index('3 + true')])
+    for encodings, expected in ((("utf-8",), byte_col),
+                                (("utf-16",), utf16_col)):
+        uri = f"file:///tmp/posencd_{encodings[0]}.sml"
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp", encodings=encodings)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        f"compileCompleted ({encodings[0]})")
+            cols = [d["range"]["start"]["character"] for d in _diag_count(c, uri)]
+            assert_true(expected in cols,
+                        f"{encodings[0]}: diagnostic at column {expected} "
+                        f"(got {cols})")
+        finally:
+            c.close()
+
+
+# ------------------------------------------------------------------
+# Goal-state render width
+# ------------------------------------------------------------------
+def test_goalState_honours_the_requested_width():
+    """The client renders the goal state in a pane whose width only it
+    knows, so it says how wide; a narrow request must wrap sooner than a
+    wide one."""
+    uri = "file:///tmp/goalwidth.sml"
+    src = ("Theory goalwidth\nAncestors arithmetic\n\n"
+           "Theorem wide:\n"
+           "  aaaaaaaa + bbbbbbbb + cccccccc + dddddddd + eeeeeeee +\n"
+           "  ffffffff + gggggggg = hhhhhhhh + iiiiiiii + jjjjjjjj +\n"
+           "  kkkkkkkk + llllllll + mmmmmmmm\n"
+           "Proof\n"
+           "  cheat\n"
+           "QED\n")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+
+        def pretty_at(rid, width):
+            params = {"textDocument": {"uri": uri},
+                      "position": {"line": 8, "character": 2}}
+            if width is not None: params["width"] = width
+            c.send({"jsonrpc":"2.0","id":rid,
+                    "method":"$/hol/goalState","params":params})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == rid: return m
+                return None
+            m = c.wait_until(got, 20)
+            assert_true(m is not None and m.get("result"),
+                        f"goalState replied for width={width}")
+            return _strip_ansi(m["result"]["pretty"])
+
+        narrow = pretty_at(720, 40)
+        wide = pretty_at(721, 200)
+        default = pretty_at(722, None)
+        longest = lambda s: max((len(l) for l in s.split("\n")), default=0)
+        assert_true(longest(narrow) <= 40,
+                    f"narrow render fits 40 columns (longest {longest(narrow)})")
+        assert_true(longest(wide) > 40,
+                    f"wide render uses the room (longest {longest(wide)})")
+        # 75 is the fallback; a single unbreakable token can still
+        # overrun it, so allow a little slack rather than pinning the
+        # pretty printer's exact behaviour.
+        assert_true(longest(default) <= 80,
+                    f"no width given falls back to about 75 "
+                    f"(longest {longest(default)})")
+        assert_true(longest(wide) > 75,
+                    f"width=200 uses more than the fallback "
+                    f"(longest {longest(wide)})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -4515,6 +4688,14 @@ TESTS = [
                                      test_deps_blocked_clears_on_header_edit),
     ("deps_body_reference_does_not_block",
                                      test_deps_body_reference_does_not_block),
+    ("position_encoding_utf8_when_offered",
+                                     test_position_encoding_utf8_when_offered),
+    ("position_encoding_utf16_when_utf8_not_offered",
+                            test_position_encoding_utf16_when_utf8_not_offered),
+    ("position_encoding_diagnostics_follow_the_choice",
+                          test_position_encoding_diagnostics_follow_the_choice),
+    ("goalState_honours_the_requested_width",
+                                test_goalState_honours_the_requested_width),
     ("integer_first_compile",        test_integer_first_compile),
     ("full_replace_resumes_from_the_common_prefix",
                                      test_full_replace_resumes_from_the_common_prefix),

@@ -32,13 +32,17 @@ local
     val () = markDone ()
   in if !timedOut then NONE else SOME r end
 
-  fun ppGoal (asms, g) = {
-    asms = List.map Parse.term_to_string asms,
-    goal = Parse.term_to_string g
-  }
-  fun ppState st =
+  (* Rendered at the width the client says its pane is, so the line
+     breaking the pretty printer chooses is the one the reader sees.
+     `Globals.linewidth' is what `term_to_string' consults, so the
+     structured per-goal strings need it set around them too. *)
+  fun ppGoal width (asms, g) = let
+    fun str t = Lib.with_flag (Globals.linewidth, width)
+                              Parse.term_to_string t
+    in {asms = List.map str asms, goal = str g} end
+  fun ppState width st =
     Lib.with_flag (Parse.current_backend, PPBackEnd.vt100_terminal)
-      (HOLPP.pp_to_string 75 goalFrag.pp_goalstate) st
+      (HOLPP.pp_to_string width goalFrag.pp_goalstate) st
     handle _ => ""
 
   val fragEndByte = TacticSteps.atomEndByte
@@ -108,7 +112,7 @@ local
 in
 
 val () = LSPExtension.goalStateAtPos :=
-  (fn ({plugins, ...}: LSPExtension.hover_context,
+  (fn ({plugins, width, ...}: LSPExtension.hover_context,
        {name, quote, quoteStart, tacText, tacStart, cursor, compileDone}
          : LSPExtension.theorem_context) => let
     val initialGoal = Lib.total Parse.Term [QUOTE quote]
@@ -138,8 +142,8 @@ val () = LSPExtension.goalStateAtPos :=
                   val reported = if silent then NONE else failedAt
                   in SOME
                   {theorem = name, step = step,
-                   goals = List.map ppGoal (goalFrag.top_goals state),
-                   pretty = ppState state,
+                   goals = List.map (ppGoal width) (goalFrag.top_goals state),
+                   pretty = ppState width state,
                    context = goalFrag.context_lines state,
                    status = if silent andalso not compileDone
                             then "pending" else "ok",
@@ -151,8 +155,10 @@ val () = LSPExtension.goalStateAtPos :=
        | (SOME tm, NONE) => let
            val startState = goalFrag.new_goal ([], tm)
            in SOME {theorem = name, step = 0,
-                    goals = [{asms = [], goal = Parse.term_to_string tm}],
-                    pretty = ppState startState,
+                    goals = [{asms = [],
+                               goal = Lib.with_flag (Globals.linewidth, width)
+                                        Parse.term_to_string tm}],
+                    pretty = ppState width startState,
                     context = goalFrag.context_lines startState,
                     status = "ok", error = NONE,
                     failedRange = NONE}

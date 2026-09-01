@@ -71,7 +71,9 @@ per-theorem cache so subsequent queries at nearby cursors reuse work.
   "method": "$/hol/goalState",
   "params": {
     "textDocument": {"uri": "file:///path/to/Script.sml"},
-    "position": {"line": <0-based>, "character": <0-based UTF-8 byte offset>}
+    "position": {"line": <0-based>, "character": <0-based, in the
+                 negotiated encoding>},
+    "width": <optional: column width to render `pretty` at; default 75>
   }
 }
 ```
@@ -98,6 +100,14 @@ when the theorem statement can't be parsed).  Otherwise:
   `THEN1` don't advance it).
 - `goals` — structured per-subgoal render for clients that want to
   format goals themselves.
+- `width` — the column width to break lines at, which only the client
+  knows: it is the width of the pane the answer is going into.  Both
+  `pretty` and the strings in `goals` respect it.  Omit it for the
+  75 columns HOL's own goalstack printing uses.  The shipped clients
+  measure: eglot from `window-body-width` of the *HOL Goals* window,
+  hol4-vscode from a hidden monospace ruler in the webview, re-asking
+  when the pane is resized.
+
 - `pretty` — the whole state rendered by HOL's `goalFrag.pp_goalstate`
   via the VT100 backend, so bound / free variables carry ANSI colour
   escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
@@ -160,11 +170,18 @@ when the theorem statement can't be parsed).  Otherwise:
   ANSI-to-HTML converter (e.g. `ansi_up` on npm) plus a small CSS
   palette in the webview.
 
-The server negotiates `positionEncoding: "utf-8"` (LSP 3.17) during
-`initialize`, so `position.character` is a byte offset within the
-line for both `textDocument/hover` and `$/hol/goalState`.  Clients
-that assume the LSP default of UTF-16 will send wrong offsets on
-lines containing multibyte characters.
+The server picks its position encoding (LSP 3.17) from the client's
+`general.positionEncodings` at `initialize`: `utf-8` when that is on
+offer, because the server's own offsets are bytes and nothing then has
+to be converted, and `utf-16` otherwise — including for a client that
+offers nothing, which is what the spec says its silence means.  Either
+way `position.character` counts in the encoding the `initialize` reply
+names, in both directions and for every request, so a client need only
+speak the units it already has.
+
+Note for a client built on `vscode-languageclient`: it advertises only
+`utf-16` and throws on any other answer, so it gets `utf-16` and must
+not translate positions itself.
 
 ## Emacs
 

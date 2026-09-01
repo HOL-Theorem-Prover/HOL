@@ -2828,13 +2828,26 @@ been built outside the editor and the header is already right."
                                       buffer-file-name))))
     (message "HOL: asked the server to compile this buffer again")))
 
+(defun hol-lsp--goals-width ()
+  "Column width to ask the server to render the goal state at.
+The width of the *HOL Goals* window if it is showing, else this
+window's -- the pane is about to be displayed beside or below it, so
+its own width is the better guess than the server's default.  A
+character of slack keeps a full-width line off the wrap column."
+  (let* ((buf (get-buffer "*HOL Goals*"))
+         (win (and buf (get-buffer-window buf t))))
+    (max 20 (1- (window-body-width (or win (selected-window)))))))
+
 (defun hol-lsp--goalstate-params ()
   "Build the `$/hol/goalState' params object for point."
   (list :textDocument
         (list :uri (hol-lsp--path-to-uri buffer-file-name))
         :position
         (list :line (1- (line-number-at-pos))
-              :character (hol-lsp--point-byte-in-line))))
+              :character (hol-lsp--point-byte-in-line))
+        ;; Only the client knows how wide the pane is, so the server
+        ;; cannot pick the line breaking without being told.
+        :width (hol-lsp--goals-width)))
 
 (defun hol-lsp--query (&optional cancel-on-input)
   "Send `$/hol/goalState' synchronously; return parsed result or nil

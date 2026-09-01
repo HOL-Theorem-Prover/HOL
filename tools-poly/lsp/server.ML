@@ -238,6 +238,10 @@ val ServerNotInitialized = ~32002
 (* val ServerCancelled = ~32802 *)
 (* val RequestFailed = ~32803 *)
 
+(* Column width a goal state is rendered at when the client does not
+   say.  75 is what HOL's own goalstack printing uses. *)
+val defaultGoalWidth = 75
+
 val ErrorSeverity = 1
 val WarnSeverity = 2
 (* val InfoSeverity = 3 *)
@@ -292,6 +296,14 @@ val range = tuple2 (field "start" position, field "end" position)
 val textDocumentPositionParams =
   map2 (fn (uri, pos) => {uri = uri, pos = pos})
     (field "textDocument" (field "uri" string), field "position" position)
+
+(* `$/hol/goalState': a position request plus the column width to
+   render the goal state at.  Absent means `defaultGoalWidth', so a
+   client that does not measure its pane gets what it always got. *)
+val goalStateParams =
+  map3 (fn (uri, pos, width) => {uri = uri, pos = pos, width = width})
+    (field "textDocument" (field "uri" string), field "position" position,
+     fieldD "width" int defaultGoalWidth)
 
 val cancelParams = field "id" req_id
 
@@ -458,7 +470,7 @@ fun stdioConnection (): connection = let
 
 exception ProtocolError
 
-fun initialize ({send, recv}:connection) capabilities = let
+fun initialize ({send, recv}:connection) capabilitiesFor = let
   fun init () =
     case recv () of
       Request {method = "initialize", id, params} => (id, params)
@@ -470,7 +482,8 @@ fun initialize ({send, recv}:connection) capabilities = let
     | _ => raise ProtocolError
   val (id, params) = init ()
   val _ = send (mkResponse id (Ok (fn print => (
-    print "{\"capabilities\":"; print capabilities; print "}"))))
+    print "{\"capabilities\":"; print (capabilitiesFor params);
+    print "}"))))
   val _ = case recv () of
     Notification {method = "initialized", ...} => ()
   | _ => raise ProtocolError
@@ -549,19 +562,45 @@ fun augmentLoadPathForUri uri = case uriToPath uri of
 fun start {diag, dbg} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
-  val _ (*clientCapabilities*) = initialize conn (concat [
-    "{\"textDocumentSync\":2", (* 2 = Incremental; applyEdit supports it *)
-    (* LSP 3.17 offset encoding.  Server-side buffers and fromLineCol
-       count bytes, so ask the client for UTF-8 positions.  Without this
-       eglot defaults to UTF-16 code units, and edits crossing multi-
-       byte characters (e.g. `⇒`, `∧`) land mid-codepoint and corrupt
-       the buffer — surfaces as a HOL "Lexical error" on the first byte
-       of the split character. *)
-    ",\"positionEncoding\":\"utf-8\"",
-    ",\"hoverProvider\":true",
-    ",\"definitionProvider\":true",
-    ",\"referencesProvider\":true",
-    "}"])
+  (* LSP 3.17 position encoding.  Server-side buffers and offsets count
+     bytes, so utf-8 is what this server would rather speak: it costs
+     nothing and an edit crossing a multi-byte character (`⇒`, `∧`)
+     cannot land mid-codepoint and corrupt the buffer -- which surfaces
+     as a HOL "Lexical error" on the first byte of the split character.
+
+     But the choice is the client's to offer and ours to make from what
+     it offers, and declaring utf-8 regardless is not a way of getting
+     it: vscode-languageclient hardcodes `["utf-16"]' and throws on any
+     other answer, so its users had the encoding stripped back out and
+     every position off by (bytes - code units) on any line with a
+     non-ASCII character before it.  Take utf-8 when offered -- eglot
+     offers `["utf-32" "utf-8" "utf-16"]' -- and otherwise convert, so
+     the client that cannot count bytes need not.
+
+     A client that offers nothing gets utf-16, which is what the spec
+     says its silence means. *)
+  val clientEncodings = fn params =>
+      JSONDecode.decode
+        (JSONDecode.fieldD "capabilities"
+           (JSONDecode.fieldD "general"
+              (JSONDecode.fieldD "positionEncodings"
+                 (JSONDecode.array JSONDecode.string) []) []) [])
+        params
+      handle _ => []
+  fun capabilitiesFor params = let
+    val utf8 = List.exists (fn e => e = "utf-8")
+                           (clientEncodings params)
+    val () = LSPExtension.setUTF16Positions (not utf8)
+    in concat [
+      "{\"textDocumentSync\":2", (* 2 = Incremental; applyEdit supports it *)
+      ",\"positionEncoding\":",
+      if utf8 then "\"utf-8\"" else "\"utf-16\"",
+      ",\"hoverProvider\":true",
+      ",\"definitionProvider\":true",
+      ",\"referencesProvider\":true",
+      "}"]
+    end
+  val _ (*clientCapabilities*) = initialize conn capabilitiesFor
   fun logMessage str =
     send (Notification {
       method = "window/logMessage",
@@ -1681,7 +1720,8 @@ fun start {diag, dbg} = let
       val mds = DArray.new (8, "")
       val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), textWidth) pp
       in concat (DArray.toList mds) end
-    val ctx = {uri = uri, lines = #lines text, plugins = plugins, ppToString = ppToString}
+    val ctx = {uri = uri, lines = #lines text, plugins = plugins,
+               ppToString = ppToString, width = textWidth}
     val out = !LSPExtension.hover (ctx, (startOffset, endOffset))
     fun locToRange {startPosition, endPosition, ...} = (
       getLineCol (#lines text) (FixedInt.toInt startPosition),
@@ -1833,7 +1873,7 @@ fun start {diag, dbg} = let
       val quote = String.substring (#text text, qs, qe - qs)
       in !LSPExtension.hoverQuotation
            ({uri = uri, lines = #lines text, plugins = plugins,
-             ppToString = ppToString},
+             ppToString = ppToString, width = textWidth},
             {quote = quote, quoteStart = qs, target = startOffset}) end
     fun f () = fromTree innermost
     val out =
@@ -1896,7 +1936,8 @@ fun start {diag, dbg} = let
      the Proof body directly from the current buffer text.
      Requiring `pos >= offset' would stall the auto-follow-cursor
      pane for the ~300 ms debounce after every keystroke. *)
-  fun goalStateAtPos uri ({lastTrees, depsBlocked, ...}:file_data) target =
+  fun goalStateAtPos uri ({lastTrees, depsBlocked, ...}:file_data)
+                     (target, width) =
     (* Nothing to walk against: the file was never compiled, so the
        theorem's context does not exist and the walker would compile
        each tactic against a namespace missing whatever the failed
@@ -1911,7 +1952,7 @@ fun start {diag, dbg} = let
       val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), textWidth) pp
       in concat (DArray.toList mds) end
     val ctx = {uri = uri, lines = #lines text, plugins = plugins,
-               ppToString = ppToString}
+               ppToString = ppToString, width = width}
     (* Largest declSnapshot with endByte < theoremStart.  Restoring
        this before invoking the walker means the walker's tactics
        (in particular `simp[]` via `srw_ss()`) see the same Context
@@ -2061,11 +2102,11 @@ fun start {diag, dbg} = let
     | Request {method = "$/eval", id, params} =>
       spawnJob id params evalParams (eval id)
     | Request {method = "$/hol/goalState", id, params} =>
-      spawnJob id params textDocumentPositionParams (fn {uri, pos} => let
+      spawnJob id params goalStateParams (fn {uri, pos, width} => let
         val (v_opt, resp) = case withFileInfo (fn fileInfo =>
               (fileInfo, Binarymap.peek (fileInfo, uri))) of
             NONE => (NONE, NONE)
-          | SOME v => (SOME v, goalStateAtPos uri v pos)
+          | SOME v => (SOME v, goalStateAtPos uri v (pos, width))
         (* Fold the walker's failure/success into per-file walker
            diagnostics keyed by theorem name so a user-fix removes
            the squiggle without waiting for the next compile.  Emit

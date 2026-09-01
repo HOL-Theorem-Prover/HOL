@@ -12,6 +12,12 @@ val mkLineCounter: string -> lines
 val getLineCol: lines -> int -> posLC
 val fromLineCol: lines -> posLC -> int
 
+(* Whether a `character' on the wire counts utf-16 code units rather
+   than bytes.  Chosen from the client's `general.positionEncodings' at
+   initialize; `getLineCol' / `fromLineCol' convert accordingly. *)
+val setUTF16Positions: bool -> unit
+val utf16Positions: unit -> bool
+
 type 'a tag
 type plugin_data
 val emptyPluginData: plugin_data
@@ -51,7 +57,11 @@ type hover = {markdown: string, range: rangeLC option}
 
 type hover_context = {
   uri: string, lines: lines, plugins: plugin_data,
-  ppToString: PrettyImpl.pretty -> string }
+  ppToString: PrettyImpl.pretty -> string,
+  (* Column width to wrap a rendered goal state at: the width of the
+     pane the client is going to put it in, so its line breaking is the
+     one the reader sees. *)
+  width: int }
 
 val hover: (hover_context * (int * int) -> hover list) ref
 

@@ -267,3 +267,17 @@ file's own directory -- not a VC root, and not the file itself."
 
 (ert-deftest hol-lsp-blocked-for-an-unvisited-file-is-quiet ()
   (should-not (hol-lsp--set-blocked "file:///no/such/file/Script.sml" "x")))
+
+(ert-deftest hol-lsp-goalstate-params-carry-a-width ()
+  "The server renders at the width we ask for, so the request has to
+carry one."
+  (with-temp-buffer
+    (setq buffer-file-name "/tmp/widthScript.sml")
+    (let ((params (hol-lsp--goalstate-params)))
+      (should (integerp (plist-get params :width)))
+      (should (>= (plist-get params :width) 20)))))
+
+(ert-deftest hol-lsp-goals-width-never-goes-below-the-floor ()
+  "A sliver of a window would otherwise ask for a width HOL cannot
+break at."
+  (should (>= (hol-lsp--goals-width) 20)))
