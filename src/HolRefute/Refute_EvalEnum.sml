@@ -531,6 +531,65 @@ structure Refute_EvalEnum = struct
   fun conjunction [] = raise Fail "Refute enum empty definition"
     | conjunction equations = boolSyntax.list_mk_conj equations
 
+  (* Never call [TotalDefn.Define] (or [multiDefine]) on synthesized
+     equations.  Both end in [Feedback.render_exn], which outside an
+     interactive session prints the error and exits the process rather than
+     raising: a definition that fails would kill the user's build outright,
+     past every handler that exists to report the substrate inapplicable and
+     fall through to the next one.
+
+     [TotalDefn.Define] also accepts exactly one clique, rejecting anything
+     more with "multiple definitions", so equations for independent
+     functions -- the generators for `guest`, `hkey`, `event`, `event list`
+     and so on, synthesized together from one root type -- have to be
+     defined a clique at a time.  [Defn.Hol_multi_defns] splits them into
+     dependency-ordered cliques, and [TotalDefn.primDefine] raises.
+
+     This is [TotalDefn.multidefine], which TotalDefn keeps private and
+     exports only through the [render_exn] wrapper, plus the two things
+     [Define] does around [primDefine] and [multidefine] does not:
+     [Theory.try_theory_extension], so a failed definition leaves no partial
+     constants of its own, and [DefnBase.delete_support], which retires the
+     auxiliary constants the termination machinery introduces.
+
+     [primDefine] returns the induction theorem instead of registering it,
+     and registering it is not optional here: [cv_transLib] proves a
+     translation by that induction, and without it falls back to emitting a
+     recursion precondition, which the callers below report as an
+     inapplicable substrate.  [register_induction] is [Define]'s own
+     registration, including its [Defn.def_n_ind] rule that the returned
+     induction theorem counts only when termination was actually proved. *)
+  fun register_induction (theorem, induction, termination) =
+    case (induction, termination) of
+        (SOME ind, SOME _) =>
+          DefnBase.register_indn (ind, DefnBase.constants_of_defn theorem)
+      | _ =>
+          Option.app DefnBase.register_indn
+            (Lib.total
+              (Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of})
+              theorem)
+
+  fun define_clique_of defn =
+    let
+      val before_consts = Term.thy_consts (Theory.current_theory ())
+      val (theorem, induction, termination) = TotalDefn.primDefine defn
+      val after_consts = Term.thy_consts (Theory.current_theory ())
+      val _ = DefnBase.delete_support defn after_consts before_consts
+      val _ = register_induction (theorem, induction, termination)
+    in
+      theorem
+    end
+
+  fun define_cliques quotation =
+    Theory.try_theory_extension
+      (fn q => List.map define_clique_of (Defn.Hol_multi_defns q))
+      quotation
+
+  fun define_clique quotation =
+    case define_cliques quotation of
+        [] => raise Fail "Refute enum definition produced no clique"
+      | theorems => LIST_CONJ theorems
+
   type hol_enumerator =
     {program : Refute_SmartGen.enumerator, function : term,
      input_types : hol_type list, output_types : hol_type list}
@@ -638,10 +697,14 @@ structure Refute_EvalEnum = struct
              boolSyntax.mk_eq
                (suc_lhs, append (map clause clauses))]
           end
-        val theorem = TotalDefn.Define
+        (* One clique at a time, in the dependency order
+           [define_cliques] returns them in: [after_define] translates,
+           and a translation may only follow those it calls. *)
+        val theorems = define_cliques
           [HOLPP.ANTIQUOTE
             (conjunction (List.concat (map equations skeletons)))]
-        val _ = after_define theorem
+        val _ = List.app after_define theorems
+        val theorem = LIST_CONJ theorems
         val _ = Option.app (fn hook => hook theorem)
           (!post_definition_failure_hook)
         fun defined variable = Term.prim_mk_const

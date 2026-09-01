@@ -703,6 +703,9 @@ structure Refute_EvalCv = struct
 
   val split_equations = boolSyntax.strip_conj
 
+  val define_cliques = Refute_EvalEnum.define_cliques
+  val define_clique = Refute_EvalEnum.define_clique
+
   fun instantiate_bundle prefix bundle =
     let
       fun fresh (index, data) =
@@ -772,7 +775,7 @@ structure Refute_EvalCv = struct
             {redex = old, residue = fresh} :: known
           val instantiated = List.map
             (Term.subst replacements) equations
-          val definition = TotalDefn.Define
+          val definition = define_clique
             [HOLPP.ANTIQUOTE (conjunction instantiated)]
           val _ = defined_helpers := (old, fresh) :: !defined_helpers
         in
@@ -788,12 +791,17 @@ structure Refute_EvalCv = struct
             (helper_substitutions old fresh))
           (bundle, fresh_data))
       fun main_subst tm = Term.subst main_substitutions tm
-      val exhaustive_def = TotalDefn.Define
+      (* A bundle holds one generator per type reachable from the root, and
+         those are independent functions unless their types are mutually
+         recursive, so the equations form several cliques.  Each list below
+         comes back in dependency order, and every translation walks it in
+         that order. *)
+      val exhaustive_defs = define_cliques
         [HOLPP.ANTIQUOTE
           (conjunction (List.concat (List.map
              (split_equations o main_subst o #exhaustive_equations)
              bundle)))]
-      val random_aux_def = TotalDefn.Define
+      val random_aux_defs = define_cliques
         [HOLPP.ANTIQUOTE
           (conjunction (List.concat (List.map
              (split_equations o subst o #random_aux_equations)
@@ -805,60 +813,51 @@ structure Refute_EvalCv = struct
            {redex = #random_var old, residue = #random_var fresh}])
           (bundle, fresh_data))
       fun wrapper_subst tm = Term.subst wrapper_substitutions tm
-      val random_def = TotalDefn.Define
+      val random_defs = define_cliques
         [HOLPP.ANTIQUOTE
           (conjunction (List.map
              (wrapper_subst o #random_equation) bundle))]
       val _ = List.app cv_transLib.cv_auto_trans helper_defs
-      val _ = cv_transLib.cv_trans exhaustive_def
-      val aux_variables = List.map #random_aux_var bundle
-      fun rhs_mentions aux equation =
-        List.exists (fn item =>
-          Term.free_in aux (#2 (boolSyntax.dest_eq item)))
-          (split_equations equation)
-      val needs_precondition = List.exists (fn data =>
-        List.exists (fn aux =>
-          rhs_mentions aux (#random_aux_equations data)) aux_variables)
-        bundle
-      val _ =
-        if not needs_precondition then
-          cv_transLib.cv_auto_trans random_aux_def
-        else
-          let
-            val first_aux = #random_aux_var (hd fresh_data)
-            val pre_name = #1 (Term.dest_var first_aux) ^ "_pre"
-            val pre_def =
-              cv_transLib.cv_auto_trans_pre pre_name random_aux_def
-            val pre_equations = CONJUNCTS pre_def
-
-            fun prove_total (pre_equation, totals) =
-              let
-                val (_, pre_body) =
-                  boolSyntax.strip_forall (Thm.concl pre_equation)
-                val (pre_lhs, _) = boolSyntax.dest_eq pre_body
-                val (pre_constant, _) = boolSyntax.strip_comb pre_lhs
-                val budget = Term.mk_var ("budget", numSyntax.num)
-                val size = Term.mk_var ("size", numSyntax.num)
-                val state = Term.mk_var ("state", numSyntax.num)
-                val pre_goal = boolSyntax.list_mk_forall
-                  ([budget, size, state],
-                   Term.list_mk_comb
-                     (pre_constant, [budget, size, state]))
-                (* cv_trans exposes the syntactic recursion guard as a
-                   precondition.  Budget induction proves it total. *)
-                val total = prove
-                  (pre_goal,
-                   Induct_on `budget` >>
-                   rw (List.map Once (pre_def :: totals)))
-                val _ = cv_memLib.cv_pre_add total
-              in
-                total :: totals
-              end
-            val _ = List.foldl prove_total [] (rev pre_equations)
-          in
-            ()
-          end
-      val _ = cv_transLib.cv_auto_trans random_def
+      val _ = List.app cv_transLib.cv_trans exhaustive_defs
+      (* Whether a definition needs a recursion-guard precondition is
+         cv_trans's decision, not one the equations can be read off for, and
+         it is taken per clique: predicting it once for the whole bundle
+         forces the guarded path onto cliques that translate outright.
+         [cv_auto_trans_opt_pre] translates and reports the guard it
+         actually emitted.  Proved totality theorems accumulate across
+         cliques, because a later clique's guard unfolds into the guards of
+         the cliques it calls. *)
+      fun prove_total pre_def (pre_equation, totals) =
+        let
+          val (_, pre_body) =
+            boolSyntax.strip_forall (Thm.concl pre_equation)
+          val (pre_lhs, _) = boolSyntax.dest_eq pre_body
+          val (pre_constant, _) = boolSyntax.strip_comb pre_lhs
+          val budget = Term.mk_var ("budget", numSyntax.num)
+          val size = Term.mk_var ("size", numSyntax.num)
+          val state = Term.mk_var ("state", numSyntax.num)
+          val pre_goal = boolSyntax.list_mk_forall
+            ([budget, size, state],
+             Term.list_mk_comb
+               (pre_constant, [budget, size, state]))
+          (* cv_trans exposes the syntactic recursion guard as a
+             precondition.  Budget induction proves it total. *)
+          val total = prove
+            (pre_goal,
+             Induct_on `budget` >>
+             rw (List.map Once (pre_def :: totals)))
+          val _ = cv_memLib.cv_pre_add total
+        in
+          total :: totals
+        end
+      fun translate_random_aux (definition, totals) =
+        case cv_transLib.cv_auto_trans_opt_pre definition of
+            NONE => totals
+          | SOME pre_def =>
+              List.foldl (prove_total pre_def) totals
+                (rev (CONJUNCTS pre_def))
+      val _ = List.foldl translate_random_aux [] random_aux_defs
+      val _ = List.app cv_transLib.cv_auto_trans random_defs
       fun result data =
         {ty = #ty data, exhaustive = defined (#exhaustive_var data),
          random = defined (#random_var data)}
@@ -1216,7 +1215,7 @@ structure Refute_EvalCv = struct
                    make_option_case answer recurse found return_found)
                 val cons_lhs = helper_call
                   (listSyntax.mk_cons (head, tail)) skip
-                val definition = TotalDefn.Define
+                val definition = define_clique
                   [HOLPP.ANTIQUOTE
                     (boolSyntax.mk_conj
                       (nil_eq,
@@ -1237,7 +1236,7 @@ structure Refute_EvalCv = struct
         (function_type
           ([numSyntax.num, numSyntax.num], result_ty))
       val body = build plan [] skip
-      val loop_definition = TotalDefn.Define
+      val loop_definition = define_clique
         [HOLPP.ANTIQUOTE
           (boolSyntax.mk_eq
             (Term.list_mk_comb (loop_var, [size, skip]), body))]
@@ -1351,7 +1350,7 @@ structure Refute_EvalCv = struct
 
       val loop_var = named_variable (prefix ^ "loop")
         (function_type ([numSyntax.num], list_result_ty))
-      val loop_definition = TotalDefn.Define
+      val loop_definition = define_clique
         [HOLPP.ANTIQUOTE (boolSyntax.mk_eq
           (Term.mk_comb (loop_var, size), build plan []))]
       val _ = if Refute_Core.Private.enabled 3 then
@@ -1457,7 +1456,7 @@ structure Refute_EvalCv = struct
       val suc_rhs = pairSyntax.mk_plet
         (pairSyntax.mk_pair (next_state, answer), build plan [] state,
          choose)
-      val loop_definition = TotalDefn.Define
+      val loop_definition = define_clique
         [HOLPP.ANTIQUOTE
           (boolSyntax.mk_conj
             (boolSyntax.mk_eq (zero_lhs, zero_rhs),

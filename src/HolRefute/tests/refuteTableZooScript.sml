@@ -1315,3 +1315,17 @@ End
 Definition zoo_graph_pair_formal_def:
   zoo_graph_pair_formal (p : num # num) (n : num) = n
 End
+
+(* Two independent generator cliques from one root type.  A substrate that
+   synthesizes a generator per type reachable from [zoo_cliq_outer] gets one
+   for the outer type and one for the inner, and the outer's calls the
+   inner's while nothing calls back -- so the equations do not form a single
+   mutually recursive group.  Regression fixture for
+   [cv_defines_independent_generator_cliques] in the selftest. *)
+Datatype:
+  zoo_cliq_inner = ZooCliqA | ZooCliqB
+End
+
+Datatype:
+  zoo_cliq_outer = ZooCliqOuter zoo_cliq_inner num
+End

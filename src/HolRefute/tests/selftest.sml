@@ -22376,6 +22376,34 @@ fun run_with_strategy strategy config goal =
         | _ => strategy_run strategy config instances)
   end
 
+(* A goal whose type reaches a second user datatype makes the cv substrate
+   synthesize two generators that are not mutually recursive, so their
+   equations form two definition cliques.  Handed to [TotalDefn.Define] as
+   one conjunction they were rejected as "multiple definitions", and Define
+   reports failure through [Feedback.render_exn], which outside an
+   interactive session exits the process rather than raising -- so the
+   inapplicability handlers below never saw it and the caller's whole build
+   died.  Cliques are defined one at a time now, and cv decides the goal. *)
+fun cv_defines_independent_generator_cliques () =
+  let
+    val config = upd_size 3 (upd_substrate Cv default_config)
+    val goal = ``!t : zoo_cliq_outer. t <> ZooCliqOuter ZooCliqA 0``
+    fun solved strategy =
+      case run_with_strategy strategy config goal of
+          Counterexample (cex :: _) =>
+            #substrate cex = "cv" andalso #certainty cex = Genuine
+        | _ => false
+  in
+    solved Exhaustive andalso solved (Random {seed = 1})
+  end
+
+val _ = tprint "Refute cv independent generator cliques"
+val _ = require_msg (check_result cv_defines_independent_generator_cliques)
+  (fn () =>
+  "the cv substrate failed to define generators for two independent " ^
+  "cliques, or did not decide the goal from them")
+  (fn () => ()) ()
+
 val pair_swap_bool_goal =
   ``(SND (SND p, FST p), FST (SND p, FST p)) =
     (p : bool # bool)``
