@@ -417,3 +417,22 @@ val _ = dotests "With IfNotTop{realonly=false}" (IfNotTop{realonly=false})
                 [foo1y, foo2n, foo3n]
 val _ = dotests "With Always" Always [foo1y, foo2y, foo3y]
 val _ = dotests "With OnlyIfNecessary" OnlyIfNecessary [foo1n, foo2n, foo3n]
+
+(* A repeat frame closes by replaying its body per goal and assembling
+   the validations itself.  It used to hand each goal's subgoal
+   theorems to the body's validation in reverse, so a body that splits
+   a goal proved the wrong thing -- here `p /\ q' for the goal
+   `q /\ p', which typechecks and so went unnoticed. *)
+val _ = tprint "close_repeat pairs subgoals with their own theorems"
+val _ =
+    let
+      val tm = “∀p q. p ∧ q ⇒ q ∧ p”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = goalFrag.open_repeat (goalFrag.new_goal ([], tm))
+      val st = goalFrag.close_repeat (ex STRIP_TAC st)
+      val th = goalFrag.finish (ex (FIRST_ASSUM ACCEPT_TAC) st)
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end

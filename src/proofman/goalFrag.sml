@@ -157,7 +157,16 @@ fun close_repeat (n, g) = let;
           | Running g' => let
             val (g1, v1) = asBase g'
             val (acc, v2) = repeat g1 (acc, fn x => ([], x))
-            fun v' (ths, thacc) = apfst (fn th1 => v1 th1 @ ths) (v2 thacc)
+            (* `repeat' prepends each goal's theorem to what it has
+               built, so `v2' hands back the subgoals' theorems in
+               reverse -- which is what the `rev' below the top-level
+               call undoes for the frame's own validation.  `v1' is the
+               body's validation for *this* goal and gets no such
+               treatment, so reverse here: pairing subgoal theorems
+               with the wrong subgoals proves the wrong thing, silently
+               where the statements happen to typecheck. *)
+            fun v' (ths, thacc) =
+                apfst (fn th1 => v1 (rev th1) @ ths) (v2 thacc)
             in repeat gs (acc, v' o v) end
       val (gs', v) = asBase gs
       val (gs', v') = repeat gs' ([], fn x => ([], x))
