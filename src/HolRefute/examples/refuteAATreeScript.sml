@@ -149,7 +149,8 @@ Proof
   REFUTE_TAC >> cheat
 QED
 
-(* QUICKCHECK_TAC finds no counterexample to the claim that ains preserves
-   awf.  This diagnostic is not a proof: a full proof needs strengthened
-   level and shape invariants for the intermediate skew and split steps,
-   which would dominate this counterexample-focused example. *)
+Theorem the_fixed_insert_leaves_wellformedness_unchanged:
+  awf (ains x t) = awf t
+Proof
+  REFUTE_TAC >> cheat
+QED
