@@ -41,12 +41,11 @@ End
 
 val v_induction = theorem "v_induction";
 
+(* the induction principle says of the values in a list what MEM says;
+   EVERY says the same *)
 val v_ind =
   v_induction
-  |> Q.SPECL[`P`,`EVERY P`]
-  |> SIMP_RULE (srw_ss()) []
-  |> UNDISCH |> CONJUNCT1 |> DISCH_ALL
-  |> GEN_ALL
+  |> SIMP_RULE (srw_ss()) [GSYM listTheory.EVERY_MEM]
   |> curry save_thm "v_ind";
 
 val v_size_def = definition"v_size_def"
