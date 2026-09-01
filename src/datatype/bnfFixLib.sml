@@ -3749,10 +3749,13 @@ fun defineRecursion {name, axiom, def} =
               val spec = SPECL (hvs @ List.map theOne fns) uq
               val (ant, _) = dest_imp (concl spec)
               val (mine, theirs) = dest_conj ant
+              (* the definition quantifies its parameters in each clause,
+                 so each clause is where they are supplied *)
+              val atParams =
+                  LIST_CONJ (List.map (SPECL params) (CONJUNCTS def))
             in
               SOME (GENL (params @ hvs)
-                         (DISCH mine (MP spec (CONJ (ASSUME mine)
-                                                    (SPECL params def)))))
+                         (DISCH mine (MP spec (CONJ (ASSUME mine) atParams))))
             end
     in
       {definition = def, unique = uniqueness}

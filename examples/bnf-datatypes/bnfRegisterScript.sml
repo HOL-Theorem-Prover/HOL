@@ -485,18 +485,20 @@ val _ =
     let val (mtm, mth) = TypeBase.size_of “:'a mylist”
         val (rtm, rth) = TypeBase.size_of “:'a rose”
     in
+      (* each clause quantifies the parameters itself, as a definition
+         of a datatype's function is written *)
       if same (concl mth)
-              “∀f. mylist_size f MyNil = 0 ∧
-                   ∀a l. mylist_size f (MyCons a l) =
-                         1 + f a + mylist_size f l”
+              “(∀f: 'a -> num. mylist_size f MyNil = 0) ∧
+               ∀(f: 'a -> num) a l.
+                 mylist_size f (MyCons a l) = 1 + (f a + mylist_size f l)”
          andalso
          (* the nested argument's size is its own type's, at the map the
             axiom hands over *)
          same (concl rth)
-              “∀f. rose_size f RLeaf = 0 ∧
-                   ∀a l. rose_size f (RNode a l) =
-                         1 + f a +
-                         mylist_size (λx. x) (mylistMAP (rose_size f) l)”
+              “(∀f: 'a -> num. rose_size f RLeaf = 0) ∧
+               ∀(f: 'a -> num) a l.
+                 rose_size f (RNode a l) =
+                 1 + (f a + mylist_size (λx. x) (mylistMAP (rose_size f) l))”
       then OK() else die (thm_to_string rth)
     end
 
@@ -517,9 +519,14 @@ val nspec =
 
 val _ = tprint "a specification's names"
 val _ =
-    if #names nspec = [{map = SOME "STMAP", sets = [SOME "stack_to_set"],
-                        relator = SOME "STACK_REL", size = SOME "stack_sz"}]
-    then OK() else die "not as expected"
+    case #names nspec of
+        [nms] =>
+        if #map nms = SOME "STMAP" andalso
+           #sets nms = [SOME "stack_to_set"] andalso
+           #relator nms = SOME "STACK_REL" andalso
+           #size nms = SOME "stack_sz"
+        then OK() else die "not as expected"
+      | _ => die "one declaration, one set of names"
 
 val nbnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params nspec)
                       (#1 (hd (#functors nspec)))
@@ -562,7 +569,8 @@ val _ =
     in
       if List.all (null o hyp) [th1, th2] andalso
          same (concl szth)
-              “∀f. stack_sz f Empty = 0 ∧
-                   ∀a s. stack_sz f (Push a s) = 1 + f a + stack_sz f s”
+              “(∀f: 'a -> num. stack_sz f Empty = 0) ∧
+               ∀(f: 'a -> num) a s.
+                 stack_sz f (Push a s) = 1 + (f a + stack_sz f s)”
       then OK() else die "not as expected"
     end
