@@ -32,9 +32,9 @@ Theorem pind[local]:
     ⇒
       ∀t. P t
 Proof
-  gen_tac >> strip_tac >>
-  Q_TAC suff_tac `(∀t. P t) ∧ (∀ts. EVERY P ts)` >- metis_tac [] >>
-  ho_match_mp_tac oldind >> srw_tac [][]
+  (* the package's principle says of a list's terms what EVERY says *)
+  gen_tac >> strip_tac >> ho_match_mp_tac oldind >>
+  full_simp_tac (srw_ss()) [listTheory.EVERY_MEM] >> metis_tac []
 QED
 
 Theorem fvl_thm:
