@@ -197,11 +197,11 @@ val mylistSUM_def = Prim_rec.new_recursive_definition {
   def = “(mylistSUM MyNil = 0n) ∧
          (mylistSUM (MyCons (n:num) l) = n + mylistSUM l)”}
 
+(* the axiom names its answer type itself *)
+val roseAnswer = type_of (hd (#1 (strip_forall (concl rose_axiom))))
+
 val rsize_def =
-    (* the axiom names its answer type itself; the value for the nullary
-       constructor is of that type *)
-    let val answer = type_of (hd (#1 (strip_forall (concl rose_axiom))))
-        val ax = INST_TYPE [answer |-> numSyntax.num] rose_axiom
+    let val ax = INST_TYPE [roseAnswer |-> numSyntax.num] rose_axiom
         val inst = SPECL [“0n”, “λ(a:'b1) (l:'b1 rose mylist) (r:num mylist).
                                     1 + mylistSUM r”] ax
     in
@@ -360,7 +360,7 @@ val _ =
 val {definition = rsize2_def, unique = rsize2_unique} =
     defineRecursion {
       name = "rsize2_def",
-      axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+      axiom = INST_TYPE [roseAnswer |-> numSyntax.num] rose_axiom,
       def = “(rsize2 RLeaf = 0n) ∧
              (rsize2 (RNode a l) = 1 + mylistSUM (mylistMAP rsize2 l))”}
 
@@ -437,7 +437,7 @@ val _ = tprint "defineRecursion says so rather than guessing"
 val _ =
     (ignore (defineRecursion {
         name = "rsize5_def",
-        axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+        axiom = INST_TYPE [roseAnswer |-> numSyntax.num] rose_axiom,
         def = “(rsize5 RLeaf = 0n) ∧
                (rsize5 (RNode a l) = 1 + rsizel5 l) ∧
                (rsizel5 MyNil = 0n) ∧
