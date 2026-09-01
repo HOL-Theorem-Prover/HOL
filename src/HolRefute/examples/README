@@ -130,24 +130,25 @@ refuteQueueScript.sml
 
 refuteAATreeScript.sml
     An AA tree models levels, well-formedness, rotations, and insertion.
-    The draft insertion omits skew and split, while a plausible level claim
-    is also false for the corrected insertion; QUICKCHECK_TAC and REFUTE_TAC
-    carry the refutations.  The case study adapts section 3.2 of Isabelle's
+    The draft insertion omits skew and split, and two plausible claims about
+    the corrected insertion -- one on levels, one on well-formedness -- are
+    false as well; QUICKCHECK_TAC and REFUTE_TAC carry the three
+    refutations.  The case study adapts section 3.2 of Isabelle's
     Nitpick manual, Manual_Nits.thy.
 
 refuteAVLScript.sml
     An AVL rotation model tracks ordering and cached heights.  Its draft
     double rotation swaps the grandchild subtrees, breaking order;
-    QUICKCHECK_TAC finds the representative counterexample and the same
-    tactic verifies the fixed rotation.  This adapts Isabelle's
+    NARROWING_TAC builds the offending subtree, and the fixed rotation is
+    proved by case analysis.  This adapts Isabelle's
     Quickcheck_Narrowing_Examples.thy.
 
 refuteHotelScript.sml
     A finite trace model covers hotel guests, key cards, room locks, and
     occupancy.  A stale-key behavior lets a guest enter without being the
-    owner, and QUICKCHECK_TAC refutes that safety claim; the executable
-    payoff lemmas are proved by NARROWING_TAC.  It adapts Isabelle's
-    Quickcheck_Examples/Hotel_Example.thy.
+    owner, and QUICKCHECK_TAC builds the trace that shows it; NARROWING_TAC
+    is the diagnostic on the payoff lemmas, which are proved by induction.
+    It adapts Isabelle's Quickcheck_Examples/Hotel_Example.thy.
 
 refuteSubstScript.sml
     A de Bruijn term model defines lifting and two versions of substitution.
@@ -167,9 +168,9 @@ refuteSecTypeScript.sml
     A loop-free IMP fragment models expressions, commands, evaluation, and
     low-observable states in the Volpano-Smith setting.  The draft checker
     forgets the guard's security context, so REFUTE_TAC exposes an implicit
-    flow; QUICKCHECK_TAC and ordinary lemmas establish soundness for the
-    fixed checker.  It adapts the security-type-system case study from the
-    Nitpick ITP-2010 and LPAR-2010 papers.
+    flow; QUICKCHECK_TAC then searches the corrected statement, which
+    ordinary lemmas prove.  It adapts the security-type-system case study
+    from the Nitpick ITP-2010 and LPAR-2010 papers.
 
 Read the numbered tutorial files first, then these case studies in the
 order listed above.  The tutorial files introduce the tactic families and

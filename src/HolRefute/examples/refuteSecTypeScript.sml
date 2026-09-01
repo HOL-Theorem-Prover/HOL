@@ -142,14 +142,15 @@ Proof
   fs [csec_def, cval_def] >> metis_tac []
 QED
 
-(* The diagnostic checks an equivalent finite characterization; command
-   induction in the local theorem above supplies the real soundness proof. *)
+(* QuickCheck runs on the soundness statement itself, so a bounded search
+   reports what it covered rather than a proof; the local characterization
+   above carries the command induction that proves it. *)
 
 Theorem the_fixed_checker_is_sound:
   !c ctx s t.
     csec ctx c /\ low_eq s t ==> low_eq (cval c s) (cval c t)
 Proof
-  rewrite_tac [fixed_checker_sound_characterisation] >>
   QUICKCHECK_TAC >>
+  rewrite_tac [fixed_checker_sound_characterisation] >>
   Cases >> simp []
 QED

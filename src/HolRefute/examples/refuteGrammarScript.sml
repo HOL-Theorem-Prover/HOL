@@ -94,8 +94,9 @@ Proof
   rw [FILTER_APPEND_DISTRIB, LENGTH_APPEND]
 QED
 
-(* The diagnostic checks an equivalent finite characterization; mutual rule
-   induction in the local theorem above supplies the real soundness proof. *)
+(* The model finder runs on the soundness statement itself, so a bounded
+   search reports what it covered rather than a proof; the local
+   characterization above carries the mutual rule induction that proves it. *)
 
 Theorem the_fourth_grammar_is_sound:
   (!w. S4 w ==>
@@ -108,12 +109,7 @@ Theorem the_fourth_grammar_is_sound:
        LENGTH (FILTER (\x. x = Lb) w) =
        LENGTH (FILTER (\x. x = La) w) + 1)
 Proof
-  rewrite_tac [fourth_grammar_sound_characterisation] >>
   MODEL_REFUTE_TAC >>
+  rewrite_tac [fourth_grammar_sound_characterisation] >>
   Cases >> simp []
 QED
-
-(* MODEL_REFUTE_TAC finds no counterexample to grammar completeness at small
-   scopes.  This diagnostic is not a proof: a full proof needs strong
-   induction on word length and a minimal-prefix decomposition, which would
-   dominate this counterexample-focused example. *)

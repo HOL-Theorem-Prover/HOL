@@ -99,15 +99,7 @@ End
    conjectures so that the counterexample remains visible in the build. *)
 
 Theorem the_guest_in_the_room_is_the_owner:
-  hotel
-      [CheckIn G1 R0 (K1,K2); Enter G0 R0 (K0,K1);
-       CheckIn G0 R0 (K0,K1)] /\
-  MEM G0 (isin
-      [CheckIn G1 R0 (K1,K2); Enter G0 R0 (K0,K1);
-       CheckIn G0 R0 (K0,K1)] R0) ==>
-  owns
-      [CheckIn G1 R0 (K1,K2); Enter G0 R0 (K0,K1);
-       CheckIn G0 R0 (K0,K1)] R0 = SOME G0
+  hotel s /\ MEM g (isin s r) ==> owns s r = SOME g
 Proof
   QUICKCHECK_TAC >> cheat
 QED

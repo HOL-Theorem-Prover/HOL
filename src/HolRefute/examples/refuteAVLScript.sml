@@ -68,24 +68,17 @@ End
 (* The diagnostic tactic is followed by cheat in deliberately false
    conjectures so that the counterexample remains visible in the build. *)
 
-(* The unrestricted Isabelle conjecture exhausts the adaptive search
-   budget here.  This representative double-rotation shape keeps its
-   order and height premises while exposing the swapped grandchild. *)
+(* The unrestricted Isabelle conjecture times out on every backend under
+   the adaptive defaults.  Pinning only the right subtree to a single node
+   leaves the left subtree entirely to the search, where narrowing builds
+   the double-rotation shape that exposes the swapped grandchild. *)
 
 Theorem rebalancing_preserves_the_order:
-  vord
-    (ANd n
-       (ANd ln AEmp (ANd lrn (ANd x AEmp AEmp xh) AEmp lrh) lh)
-       (ANd rn AEmp AEmp rh) h) /\
-  vheight
-    (ANd ln AEmp (ANd lrn (ANd x AEmp AEmp xh) AEmp lrh) lh) =
-    vheight (ANd rn AEmp AEmp rh) + 2 /\ 0 < lrh ==>
-  vord
-    (vlbal0 n
-       (ANd ln AEmp (ANd lrn (ANd x AEmp AEmp xh) AEmp lrh) lh)
-       (ANd rn AEmp AEmp rh))
+  vord (ANd n l (ANd rn AEmp AEmp rh) h) /\
+  vheight l = vheight (ANd rn AEmp AEmp rh) + 2 ==>
+  vord (vlbal0 n l (ANd rn AEmp AEmp rh))
 Proof
-  QUICKCHECK_TAC >> cheat
+  NARROWING_TAC >> cheat
 QED
 
 Theorem the_fixed_rebalancing_preserves_the_order:
