@@ -343,9 +343,9 @@ there rather than reporting every name the file takes from it: there
 is no environment to compile the rest against.  Build the missing
 ancestor with `Holmake`, then edit the header — any change to the
 `Ancestors` / `Libs` list, including a change and its undo — to make
-the server try again.  A client can also send the
-`$/hol/retryCompile` notification (`{"textDocument": {"uri": …}}`) to
-retry without touching the file.
+the server try again.  If the header is already right, Command
+Palette → **"HOL: Compile the active script again"** retries without
+touching the file.
 
 **Errors appear that `Holmake` does not report.**
 Make sure the folder you opened is the one containing your theory

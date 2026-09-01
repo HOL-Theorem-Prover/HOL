@@ -36,8 +36,9 @@ practical guide to trying it out; the protocol details live in
   dependency list changes.  Editing that list — `Ancestors` / `Libs`,
   or a leading top-level `open` — is what makes it try again; so does
   `$/hol/retryCompile`, for when the ancestor has been built outside
-  the editor and the header is already right (`M-h M-C` in the shipped
-  eglot client).
+  the editor and the header is already right — `M-h M-C` in the
+  shipped eglot client, "HOL: Compile the active script again" in
+  hol4-vscode.
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so
