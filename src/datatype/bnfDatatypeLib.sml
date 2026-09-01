@@ -199,6 +199,25 @@ fun asWritten (spec : spec) =
       if null theta then Lib.I else rename
     end
 
+(* The older construction quantifies a clause's arguments outside the
+   hypothesis, and `munge_ind_thm` pushes back in the ones the
+   hypothesis does not mention — one at a time, innermost first, which
+   turns their order around.  A clause built with them already inside
+   keeps the order the specification wrote, and a proof that names them
+   would then be reading a different argument, so they are put back
+   outside first and munged from there.  *)
+fun asOldQuantified th =
+    let
+      fun outward tm =
+          (Conv.RIGHT_IMP_FORALL_CONV THENC BINDER_CONV outward) tm
+          handle HOL_ERR _ => REFL tm
+      val pull = STRIP_QUANT_CONV outward
+    in
+      CONV_RULE (STRIP_QUANT_CONV
+                   (RATOR_CONV (RAND_CONV (EVERY_CONJ_CONV (QCONV pull)))))
+                th
+    end
+
 fun oneType db (spec : spec) =
     let
       val tyname = hd (#tynames spec)
@@ -223,10 +242,12 @@ fun oneType db (spec : spec) =
       (* the induction principle as the rest of HOL reads one: the
          argument's quantifiers past the hypothesis, and the bound
          variables named for their types *)
-      val induction = ind_types.munge_ind_thm
-                        (wr (case #induction cs of
-                                 SOME th => th
-                               | NONE => #set_induction cs))
+      val induction =
+          ind_types.munge_ind_thm
+            (asOldQuantified
+               (wr (case #induction cs of
+                        SOME th => th
+                      | NONE => #set_induction cs)))
       (* the new type as a functor of its own, so that a later
          specification can recurse through it *)
       (* a type with no arguments is not a functor: there is nothing for
@@ -311,9 +332,10 @@ fun manyTypes db (spec : spec) =
       val axiom = wr (familyAxiomOf cdefs (familyExistence (#principle coll)))
       val induction =
           ind_types.munge_ind_thm
-            (wr (familyInductionOf cdefs
-                   (familySetInductionOf fam (#types coll, #cons coll)
-                                         (#principle coll))))
+            (asOldQuantified
+               (wr (familyInductionOf cdefs
+                      (familySetInductionOf fam (#types coll, #cons coll)
+                                            (#principle coll)))))
       (* each member as a functor of its own: the copy of a composite
          already in the database, conjugated by the bijection *)
       val cbnfs =

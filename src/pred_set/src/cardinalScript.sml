@@ -752,7 +752,10 @@ Definition set_exp_def:
   set_exp A B = { f | (!b. b IN B ==> ?a. a IN A /\ (f b = a)) /\
                       !b. b NOTIN B ==> (f b = ARB) }
 End
-Overload "**" = “set_exp”
+(* local: the datatype package needs this theory, so what it exports
+   reaches every theory, and ** is the exponent of the numbers, the
+   words and the rationals too *)
+Overload "**"[local] = “set_exp”
 
 Theorem exp_c :
     !(s :'a set) (t :'b set).

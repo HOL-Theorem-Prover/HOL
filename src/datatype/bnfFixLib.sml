@@ -3663,7 +3663,19 @@ fun defineRecursion {name, axiom, def} =
       val closed = if null params then solved
                    else CONV_RULE (skolemAll (length hvars))
                                   (GENL params solved)
-      val def = new_specification (name, List.map (#1 o dest_var) fns, closed)
+      (* the parameters are quantified in each clause rather than over
+         the conjunction: that is the shape a definition of a datatype's
+         function is written in, and what reads one takes the
+         conjunction apart and expects an equation in each *)
+      val perClause =
+          let fun push tm =
+                  (FORALL_AND_CONV THENC BINOP_CONV (QCONV push)) tm
+                  handle HOL_ERR _ => REFL tm
+          in
+            CONV_RULE (STRIP_QUANT_CONV (QCONV push)) closed
+          end
+      val def = new_specification (name, List.map (#1 o dest_var) fns,
+                                   perClause)
       (* what the axiom's own uniqueness says of the function just
          defined: anything satisfying the same clauses is it *)
       val uniqueness =

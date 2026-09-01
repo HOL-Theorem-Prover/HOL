@@ -1,5 +1,5 @@
 Theory bnfPrelims[bare]
-Ancestors sum pair option pred_set cardinal quotient
+Ancestors sum pair option pred_set cardinal quotient basicSize
 Libs HolKernel Parse boolLib BasicProvers simpLib TotalDefn[qualified] QLib
      metisLib
 
@@ -803,3 +803,22 @@ Theorem LU_CONG_hyp:
 Proof
   simp[combinTheory.S_THM] >> rpt strip_tac >> first_x_assum irule >> simp[]
 QED
+
+(* ----------------------------------------------------------------------
+    What a size says about a mapped value.
+
+    A datatype recursing through an operator has its size read off the
+    value the recursion hands over, which is the argument with the size
+    already mapped across it: `1 + option_size (λx. x) (OPTION_MAP sz v)`.
+    Termination proofs take that apart with the operator's own size
+    clauses, which are about `option_size sz v`, so the two are brought
+    together here — `list_size_map` says the same of lists.
+   ---------------------------------------------------------------------- *)
+
+Theorem option_size_map:
+  option_size f (OPTION_MAP g x) = option_size (\a. f (g a)) x
+Proof
+  Cases_on ‘x’ >> simp[]
+QED
+
+val _ = TotalDefn.export_termsimp "bnfPrelims.option_size_map"
