@@ -3402,12 +3402,24 @@ fun familyInductionOf (defs : thm list list) induction =
       (* one binder per constructor argument here too: the simplifier
          would split an argument that is itself a product, and the
          clause would be about `P (C (a,b))` rather than about `P (C a)` *)
+      (* the set rewrites go first, and by themselves: what says that a
+         constructor holds nothing is about the set as the construction
+         wrote it, and the simplifier would have taken the membership
+         apart before it could fire *)
       val reduce =
-          QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
-                                    combinTheory.I_o_ID]) THENC
-          QCONV (simpLib.SIMP_CONV set_ss setRWs)
-      fun expandFor ds = reduce THENC expandCons (List.map arityOfDef ds) THENC
-                         reduce
+          QCONV (PURE_REWRITE_CONV setRWs) THENC
+          QCONV (simpLib.SIMP_CONV set_ss
+                   (setRWs @ [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
+                              sumTheory.OUTL, sumTheory.OUTR,
+                              pairTheory.PAIR_MAP, pairTheory.FST,
+                              pairTheory.SND, combinTheory.I_THM]))
+      (* only the pure rewrites before the quantifier is expanded: the
+         simplifier would take a membership apart while the set it is
+         about is still a union over a shape not yet opened, and what
+         says the union is empty could then no longer fire *)
+      fun expandFor ds =
+          QCONV (PURE_REWRITE_CONV setRWs) THENC
+          expandCons (List.map arityOfDef ds) THENC reduce
       fun expand tm =
           let fun go [ds] t = expandFor ds t
                 | go (ds :: rest) t = (LAND_CONV (expandFor ds) THENC
