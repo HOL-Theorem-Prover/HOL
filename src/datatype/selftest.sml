@@ -577,6 +577,32 @@ val _ = require_msg (check_result (aconv orig)) term_to_string
                     roundtrip orig
 end
 
+(* ----------------------------------------------------------------------
+    the principle the older construction produced, from the one this
+    package proves.  This theory has a list of its own, so the operator
+    tested here is the option; the list is exercised where one is
+    normally in scope.
+   ---------------------------------------------------------------------- *)
+
+val _ = Hol_datatype `zo = ZOA of num | ZOB of zo option`
+
+local
+  fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+  val optOp = {induction = TypeBase.induction_of “:'a option”,
+               sets = Drule.CONJUNCTS bnfPrelimsTheory.optSET_def}
+in
+val _ = tprint "the principle in the shape the older construction gave"
+val _ =
+    let val th = legacyInduction.mutual_induction [optOp]
+                                                  (TypeBase.induction_of “:zo”)
+    in
+      if same (concl th)
+           “∀P Q. (∀n. P (ZOA n)) ∧ (∀v. Q v ⇒ P (ZOB v)) ∧ Q NONE ∧
+                  (∀a. P a ⇒ Q (SOME a)) ⇒ (∀v. P v) ∧ ∀v. Q v”
+      then OK() else die "not the shape the older construction gave"
+    end
+end
+
 val _ = OK ()
 
 val _ = Process.exit Process.success;

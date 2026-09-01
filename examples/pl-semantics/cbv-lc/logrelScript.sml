@@ -326,7 +326,10 @@ Theorem val_rel_refl:
 Proof
   (* the proof is written against the principle with a predicate for
      the list as well, which is what this makes of the package's *)
-  ho_match_mp_tac (legacyInduction.mutual_induction v_induction) >>
+  ho_match_mp_tac
+    (legacyInduction.mutual_induction
+       [{induction = TypeBase.induction_of “:'a list”,
+         sets = CONJUNCTS listTheory.LIST_TO_SET}] v_induction) >>
   rw [val_rel_rw] >>
   `exp_rel e e` by metis_tac [exp_rel_refl] >>
   fs [exp_rel_def] >>
