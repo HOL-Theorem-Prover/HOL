@@ -146,4 +146,3 @@ examples/l3-machine-code/**/*-heap
 /.codex/
 /.pi/
 CLAUDE.local.md
-.agent-files
