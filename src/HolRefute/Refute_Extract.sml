@@ -4533,9 +4533,11 @@ structure Refute_Extract = struct
           integer leading_count ^ " example\n" ^
           "          val replay = Refute_Narrow.replay_of_example\n" ^
           "            (replay_rebuild depth) example\n" ^
-          "        in (SOME (candidate depth arguments (SOME replay) genuine),\n" ^
+          "        in (SOME (candidate depth arguments " ^
+          "(SOME replay) genuine),\n" ^
           "            tests, decided, false) end\n" ^
-          "    | Refute_Narrow.PnfExhausted {tests, decided, complete, ...} =>\n" ^
+          "    | Refute_Narrow.PnfExhausted " ^
+          "{tests, decided, complete, ...} =>\n" ^
           "        (NONE, tests, decided, complete)\n"
         else
           "val result = Refute_Narrow.refute_plain_avoiding genuine_only\n" ^
