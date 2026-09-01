@@ -52,10 +52,21 @@ local
                   Ty: Pretype.pretype, Locn: locn.locn}
     | HLBound of {Name: string, Ty: Pretype.pretype, Locn: locn.locn}
     | HLFree  of {Name: string, Ty: Pretype.pretype, Locn: locn.locn}
+    (* An overloaded name, which is not yet any one constant: the
+       candidates come from the overload info so the hover can name the
+       constant it resolves to, or say what the choice is between. *)
+    | HLOverload of {Name: string, Ty: Pretype.pretype,
+                     Ops: Term.term list, Locn: locn.locn}
+    (* An overload that resolved to a lambda rather than a constant --
+       `MEM x l' is `x IN set l'.  There is no constant to name, so the
+       name comes from the source and the type from the body. *)
+    | HLPattern of {Ptm: Preterm.preterm, Locn: locn.locn}
 
   fun leaf_locn (HLConst {Locn, ...}) = Locn
     | leaf_locn (HLBound {Locn, ...}) = Locn
     | leaf_locn (HLFree  {Locn, ...}) = Locn
+    | leaf_locn (HLOverload {Locn, ...}) = Locn
+    | leaf_locn (HLPattern {Locn, ...}) = Locn
 
   (* Byte-length of a Locn's file range (LocA start ↔ LocA end).
      Non-LocA Locns are treated as huge so they're never preferred. *)
@@ -135,9 +146,27 @@ local
           | _ => go bvs Body
         end
       | Constrained {Ptm, ...} => go bvs Ptm
-      | Pattern {Ptm, ...} => go bvs Ptm
+      | Pattern {Ptm, Locn} =>
+          (case go bvs Ptm of
+             SOME l => SOME l
+           | NONE =>
+             (* An overload whose expansion is a lambda has a body that
+                is entirely compiler-generated, so nothing in it carries
+                a source position and the search would fall out to the
+                enclosing operator: hovering `MEM` in `MEM x l /\ P`
+                answered with `/\`.  The `Pattern' node's own Locn is
+                the identifier as written. *)
+             if cov Locn then SOME (HLPattern {Ptm = Ptm, Locn = Locn})
+             else NONE)
       | Antiq _ => NONE
-      | Overloaded _ => NONE
+      (* Not NONE: returning nothing here leaves the name with no leaf,
+         and the Comb case above then reports the enclosing operator --
+         hovering `MEM` in `MEM x l /\ P` answered with `/\`. *)
+      | Overloaded {Name, Ty, Info, Locn} =>
+          if cov Locn
+          then SOME (HLOverload {Name = Name, Ty = Ty,
+                                 Ops = #actual_ops Info, Locn = Locn})
+          else NONE
     in go [] pt end
 
   fun render_type env pty =
@@ -145,7 +174,10 @@ local
     in Parse.type_to_string (Pretype.toType cleaned) end
     handle _ => "?"
 
-  fun format_leaf env leaf =
+  (* `nameOf' slices the identifier out of the source the caller
+     parsed; only the pattern leaf needs it, having no name of its
+     own. *)
+  fun format_leaf nameOf env leaf =
     let
       val (name, tystr, tail) = case leaf of
           HLConst {Name, Thy, Ty, ...} =>
@@ -154,6 +186,22 @@ local
             (Name, render_type env Ty, "*bound variable*")
         | HLFree  {Name, Ty, ...} =>
             (Name, render_type env Ty, "*free variable*")
+        | HLOverload {Name, Ty, Ops, ...} => let
+            fun describe tm = let
+              val {Name = n, Thy = thy, ...} = Term.dest_thy_const tm
+              in "`" ^ n ^ "` (theory `" ^ thy ^ "`)" end
+              handle _ => "`" ^ Parse.term_to_string tm ^ "`"
+            val tail = case Ops of
+                [] => "*overloaded*"
+              | [tm] => "Overloads " ^ describe tm
+              | ops => "Overloaded, one of: " ^
+                       String.concatWith ", " (map describe ops)
+            in (Name, render_type env Ty, tail) end
+        | HLPattern {Ptm, Locn} => let
+            val tystr = case Preterm.ptype_of Ptm env of
+                Some (_, ty) => render_type env ty
+              | Error _ => "?"
+            in (nameOf Locn, tystr, "*overloaded*") end
     in
       (* Parse.type_to_string already prefixes ``:`` (HOL type-
          annotation convention), so we don't add another one. *)
@@ -259,9 +307,20 @@ val () = LSPExtension.hoverQuotation :=
       | SOME (env, pt) =>
         case find_leaf pt target lines of
           NONE => []
-        | SOME leaf =>
-            [{markdown = format_leaf env leaf,
+        | SOME leaf => let
+            fun nameOf l = case l of
+                locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2)) => let
+                  val s = LSPExtension.fromLineCol lines (l1, c1) - regionStart
+                  val e = LSPExtension.fromLineCol lines (l2, c2) + 1
+                          - regionStart
+                  in if 0 <= s andalso s < e andalso e <= String.size region
+                     then String.substring (region, s, e - s) else "?"
+                  end
+              | _ => "?"
+          in
+            [{markdown = format_leaf nameOf env leaf,
               range = locn_range (leaf_locn leaf)}]
+          end
     end handle _ => [])
 
 end;

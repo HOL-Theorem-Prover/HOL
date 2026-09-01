@@ -4674,6 +4674,71 @@ def test_goalState_honours_the_requested_width():
         c.close()
 
 
+def test_goalState_completed_proof_with_rpt():
+    """A proof whose steps include `rpt' used to end on "No subgoals
+    but proof incomplete": TacticParse linearizes `rpt tac' as
+    open_repeat/body/close_repeat, and close_repeat mispaired the
+    subgoal theorems, so goalFrag could not finish a proof that was in
+    fact complete."""
+    uri = "file:///tmp/rptdoneScript.sml"
+    tac = ("  rpt gen_tac >> Induct_on \u2018l\u2019 >> simp[] >>\n"
+           "  rpt strip_tac >> simp[] >> res_tac >> simp[]")
+    src = ("Theory rptdone\nAncestors arithmetic list\n\n"
+           "Theorem foo:\n"
+           "  \u2200x l a. MEM a l \u21d2 a < 1 + (x + SUM l)\n"
+           "Proof\n" + tac + "\nQED\n")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 90),
+                    "compileCompleted")
+        last = tac.split("\n")[-1]
+        c.send({"jsonrpc":"2.0","id":760,"method":"$/hol/goalState",
+                "params":{"textDocument":{"uri":uri},
+                          "position":{"line":7,
+                                      "character":len(last.encode("utf8"))}}})
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 760: return m
+            return None
+        m = c.wait_until(got, 60)
+        assert_true(m is not None and m.get("result"), "goalState replied")
+        pretty = _strip_ansi(m["result"]["pretty"])
+        assert_contains(pretty, "Initial goal proved", "the proof reads as done")
+    finally:
+        c.close()
+
+
+def test_hover_on_an_overloaded_name():
+    """An overload that expands to a lambda -- `MEM x l' is
+    `x IN set l' -- has a compiler-generated body, so the leaf search
+    found nothing under the cursor and reported the enclosing operator
+    instead."""
+    uri = "file:///tmp/hovoverScript.sml"
+    line = '  val q = \u201cMEM x l /\\ LENGTH l = 0\u201d;'
+    src = "Theory hovover\nAncestors arithmetic list\n\n" + line + "\n"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        def hover_on(tok, rid):
+            col = len(line[:line.index(tok)].encode("utf8"))
+            r = _hover_at(c, rid, uri, 3, col)
+            return "" if not r else r["contents"]["value"]
+        mem = hover_on("MEM", 770)
+        assert_contains(mem, "MEM", "hover names the overloaded constant")
+        assert_true("/\\" not in mem,
+                    f"and not the enclosing operator ({mem[:60]!r})")
+        assert_contains(hover_on("LENGTH", 771), "LENGTH",
+                        "a plain constant still works")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -4696,6 +4761,9 @@ TESTS = [
                           test_position_encoding_diagnostics_follow_the_choice),
     ("goalState_honours_the_requested_width",
                                 test_goalState_honours_the_requested_width),
+    ("goalState_completed_proof_with_rpt",
+                                  test_goalState_completed_proof_with_rpt),
+    ("hover_on_an_overloaded_name",  test_hover_on_an_overloaded_name),
     ("integer_first_compile",        test_integer_first_compile),
     ("full_replace_resumes_from_the_common_prefix",
                                      test_full_replace_resumes_from_the_common_prefix),
