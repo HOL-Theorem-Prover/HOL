@@ -4,6 +4,10 @@ Ancestors
 Libs
   HolKernel bnfBase bnfLib
 
+(* cardinalTheory keeps the sets' own exponent to itself, since the
+   datatype package makes it everyone's ancestor *)
+Overload "**"[local] = “set_exp”
+
 (* ----------------------------------------------------------------------
     Construct the initial algebra of a functor whose BNF structure came
     out of bnfLib.deriveBNF, rather than by hand.  The functor here is

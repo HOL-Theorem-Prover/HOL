@@ -198,7 +198,10 @@ val mylistSUM_def = Prim_rec.new_recursive_definition {
          (mylistSUM (MyCons (n:num) l) = n + mylistSUM l)”}
 
 val rsize_def =
-    let val ax = INST_TYPE [alpha |-> numSyntax.num] rose_axiom
+    (* the axiom names its answer type itself; the value for the nullary
+       constructor is of that type *)
+    let val answer = type_of (hd (#1 (strip_forall (concl rose_axiom))))
+        val ax = INST_TYPE [answer |-> numSyntax.num] rose_axiom
         val inst = SPECL [“0n”, “λ(a:'b1) (l:'b1 rose mylist) (r:num mylist).
                                     1 + mylistSUM r”] ax
     in
