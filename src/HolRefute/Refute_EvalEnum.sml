@@ -824,23 +824,41 @@ structure Refute_EvalEnum = struct
         | SOME error => raise error
     end
 
+  (* Everything defined in the bracket is private scratch that the revert
+     retires again, so the definition storage messages, and the theorem-set
+     warnings the retirement itself provokes, say nothing about the goal.
+     Silenced with cv's own chatter, and kept from trace level 2, where the
+     bracket's definitions are what one is looking at. *)
+  val storage_trace = "Definition.storage_message"
+
+  fun bracket_chatter () = Refute_Core.Private.enabled 2
+
   type theory_bracket =
-    {baseline : snapshot, old_verbosity : cv_memLib.verbosity}
+    {baseline : snapshot, old_verbosity : cv_memLib.verbosity,
+     old_storage : int}
 
   fun open_theory_bracket () : theory_bracket =
     let
       val baseline = snapshot ()
       val old_verbosity = !cv_memLib.verbosity_level
+      val old_storage = Feedback.current_trace storage_trace
       val _ = cv_memLib.verbosity_level := cv_memLib.Silent
+      val _ = if bracket_chatter () then ()
+              else Feedback.set_trace storage_trace 0
     in
-      {baseline = baseline, old_verbosity = old_verbosity}
+      {baseline = baseline, old_verbosity = old_verbosity,
+       old_storage = old_storage}
     end
 
   fun close_theory_bracket
-        ({baseline, old_verbosity} : theory_bracket) =
+        ({baseline, old_verbosity, old_storage} : theory_bracket) =
     let
-      val result = Exn.capture revert baseline
+      val quiet_revert =
+        if bracket_chatter () then revert
+        else Lib.with_flag (Feedback.emit_WARNING, false) revert
+      val result = Exn.capture quiet_revert baseline
       val _ = cv_memLib.verbosity_level := old_verbosity
+      val _ = Feedback.set_trace storage_trace old_storage
     in
       case result of
           Exn.Res _ => ()

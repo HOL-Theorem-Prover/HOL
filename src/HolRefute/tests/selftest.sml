@@ -27264,6 +27264,32 @@ val _ = require_msg (check_result nested_theory_bracket_is_reentrant)
   (fn () => "a nested Refute theory bracket deadlocked or leaked")
   (fn () => ()) ()
 
+(* The bracket's definitions are private scratch that its revert retires
+   again, so their storage messages report nothing about the goal: a cv
+   compilation used to print sixty of them into the session.  The trace is
+   silenced for the bracket's extent and restored on the way out, and
+   Refute trace level 2 keeps it, where those definitions are the thing
+   being looked at. *)
+fun bracket_silences_definition_messages () =
+  let
+    val storage = "Definition.storage_message"
+    fun inside () = with_clean_theory (fn () => Feedback.current_trace storage)
+    val outer = Feedback.current_trace storage
+    val quiet = inside ()
+    val quiet_restored = Feedback.current_trace storage = outer
+    val loud = Feedback.trace ("Refute", 2) inside ()
+    val loud_restored = Feedback.current_trace storage = outer
+  in
+    quiet = 0 andalso loud = outer andalso outer <> 0 andalso
+    quiet_restored andalso loud_restored
+  end
+
+val _ = tprint "Refute theory bracket silences definition messages"
+val _ = require_msg (check_result bracket_silences_definition_messages)
+  (fn () => "the Refute theory bracket printed, or failed to restore, \
+            \the definition storage trace")
+  (fn () => ()) ()
+
 (* Planning promises an enumerator: the Enum node names a program that a
    substrate resolves in the session cache while compiling.  A theory
    hook retires that cache, and the evaluator's own bracket is full of
