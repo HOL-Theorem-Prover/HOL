@@ -4396,6 +4396,111 @@ def test_goalState_between_two_theorems():
         c.close()
 
 
+# ------------------------------------------------------------------
+# Unloadable ancestors: don't compile the file at all
+# ------------------------------------------------------------------
+_BLOCKED_SRC = ("Theory deps_blocked\n"
+                "Ancestors\n"
+                "  nosuchtheory\n"
+                "\n"
+                "val a = 3\n")
+
+
+def test_deps_blocked_missing_ancestor():
+    """A declared ancestor that cannot be loaded stops the file before
+    any of it is compiled: one diagnostic against the name in the
+    header, a `$/compileBlocked' notification, and no compile."""
+    uri = "file:///tmp/deps_blocked.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _BLOCKED_SRC)
+        m = c.wait_for_method("$/compileBlocked", 30)
+        assert_true(m is not None, "compileBlocked arrived")
+        assert_contains(m["params"]["message"], "nosuchtheoryTheory",
+                        "message names the module")
+        assert_true("nosuchtheoryTheory" in m["params"]["modules"],
+                    f"modules lists the dependency ({m['params']['modules']})")
+        assert_true(c.wait_for_method("$/compileCompleted", 3) is None,
+                    "no compileCompleted: the file was never compiled")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 1,
+                  f"one diagnostic ({[x['message'][:60] for x in d]})")
+        assert_contains(d[0]["message"], "cannot load nosuchtheoryTheory",
+                        "diagnostic text")
+        assert_eq(d[0]["range"]["start"]["line"], 2,
+                  "reported against the Ancestors entry")
+    finally:
+        c.close()
+
+
+def test_deps_blocked_skips_body_edit():
+    """While blocked, an edit that leaves the header alone gets no
+    compile: the block is re-announced and nothing else happens.
+    Goal-state answers null for the same reason -- there is no
+    environment to walk a tactic against."""
+    uri = "file:///tmp/deps_blocked_body.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _BLOCKED_SRC)
+        assert_true(c.wait_for_method("$/compileBlocked", 30),
+                    "first compileBlocked")
+        idx = c.total_msgs()
+        _did_change_full(c, uri, _BLOCKED_SRC.replace("val a = 3",
+                                                      "val a = 3\nval b = 4"),
+                         2)
+        assert_true(c.wait_for_method("$/compileBlocked", 30, idx),
+                    "block re-announced after the edit")
+        assert_true(c.wait_for_method("$/compileProgress", 3, idx) is None,
+                    "no compile ran")
+        assert_true(c.wait_for_method("$/compileCompleted", 1, idx) is None,
+                    "still no compileCompleted")
+        m = _send_goalstate(c, 900, uri, 4, 0)
+        assert_true(m is not None, "goalState answered")
+        assert_true(m.get("result") is None, "goalState is null while blocked")
+    finally:
+        c.close()
+
+
+def test_deps_blocked_clears_on_header_edit():
+    """Editing the ancestor list is how a retry is asked for: the same
+    file with a real ancestor compiles."""
+    uri = "file:///tmp/deps_blocked_fixed.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _BLOCKED_SRC)
+        assert_true(c.wait_for_method("$/compileBlocked", 30),
+                    "compileBlocked arrived")
+        idx = c.total_msgs()
+        _did_change_full(c, uri,
+                         _BLOCKED_SRC.replace("nosuchtheory", "arithmetic"), 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compiles once the header names a real ancestor")
+        assert_eq(len(_diag_count(c, uri, 2)), 0, "no diagnostics")
+    finally:
+        c.close()
+
+
+def test_deps_body_reference_does_not_block():
+    """holdep reports every module the text mentions, including basis
+    structures `load' cannot find; only the declared ancestors and
+    libraries block."""
+    uri = "file:///tmp/deps_body_ref.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, "Theory deps_body_ref\n\n"
+                          "val a = String.size (OS.Path.file \"x\")\n")
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted arrived")
+        assert_true(c.wait_for_method("$/compileBlocked", 1) is None,
+                    "a body reference does not block the file")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -4404,6 +4509,12 @@ TESTS = [
     ("small_recompile_blank_line",   test_small_recompile_blank_line),
     ("small_recompile_type_error",   test_small_recompile_type_error_inserted),
     ("small_recompile_bare_val",     test_small_recompile_bare_val),
+    ("deps_blocked_missing_ancestor", test_deps_blocked_missing_ancestor),
+    ("deps_blocked_skips_body_edit", test_deps_blocked_skips_body_edit),
+    ("deps_blocked_clears_on_header_edit",
+                                     test_deps_blocked_clears_on_header_edit),
+    ("deps_body_reference_does_not_block",
+                                     test_deps_body_reference_does_not_block),
     ("integer_first_compile",        test_integer_first_compile),
     ("full_replace_resumes_from_the_common_prefix",
                                      test_full_replace_resumes_from_the_common_prefix),

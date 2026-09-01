@@ -23,7 +23,21 @@ practical guide to trying it out; the protocol details live in
   `$/setConfig` (elabOn mode, holdep behaviour), `$/eval` (streamed
   arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
   below), `$/cancelRequest`, `$/compileProgress` /
-  `$/compileCompleted` / `$/compileInterrupted`.
+  `$/compileCompleted` / `$/compileInterrupted` /
+  `$/compileBlocked`, `$/hol/retryCompile`.
+- **Unloadable ancestors stop the file.**  A script that names an
+  ancestor or library the server cannot load — not built yet, or
+  raising on load — gets no compile at all: there is nothing to
+  elaborate it against, so every name it takes from that dependency
+  would draw its own diagnostic, at the price of the file's whole
+  elaboration.  The server publishes the load failures against the
+  header entries that asked for them, sends `$/compileBlocked`, and
+  answers `null` to `$/hol/goalState` until the file's declared
+  dependency list changes.  Editing that list — `Ancestors` / `Libs`,
+  or a leading top-level `open` — is what makes it try again; so does
+  `$/hol/retryCompile`, for when the ancestor has been built outside
+  the editor and the header is already right (`M-h M-C` in the shipped
+  eglot client).
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so

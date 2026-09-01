@@ -111,6 +111,32 @@ In addition to the usual LSP commands, the server supports the following extensi
 * The `$/compileInterrupted` notification is sent when an asynchronous compile caused by a file open or modification event is interrupted.
     * `uri: URI` - the file being compiled
 
+* The `$/compileBlocked` notification is sent instead of compiling a file
+  whose declared dependencies could not be loaded.  A file that names an
+  ancestor or library it cannot get has nothing to be elaborated against,
+  so the server compiles none of it, and answers `null` to
+  `$/hol/goalState` for it.  The failures themselves are published as
+  diagnostics, positioned on the names in the header that asked for them;
+  no `$/compileProgress` or `$/compileCompleted` follows.
+
+  The block is cleared by an edit that changes the file's declared
+  dependency list -- the `Ancestors` and `Libs` entries of its `Theory`
+  header, plus the identifiers of any leading top-level `open` -- or by
+  the `$/hol/retryCompile` notification below.  Nothing else lifts it:
+  no edit to the body can make a missing ancestor appear.  The
+  notification is re-sent on each later edit that leaves that list
+  alone, so a client need not remember the state.
+    * `uri: URI` - the file that is not being compiled
+    * `modules: [string]` - its declared dependencies, i.e. the list
+      whose change clears the block
+    * `message: string` - what went wrong, e.g.
+      `cannot load fooTheory: Cannot find file fooTheory.ui`
+
+* The `$/hol/retryCompile` notification asks the server to compile a file
+  it has blocked, without waiting for the header to change.  It is for the
+  case where the missing ancestor has been built outside the editor.
+    * `uri: URI` - the file to compile
+
 * > **TODO** unimplemented; this is an API proposal
 
   `$/getState` request to get the current goal view state:

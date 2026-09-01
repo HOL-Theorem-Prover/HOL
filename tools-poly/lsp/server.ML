@@ -120,6 +120,18 @@ fun encGoalStateResponse ({theorem, step, goals, pretty, context, status,
   print ",\"error\":"; encOrNull encString error print;
   print "}")
 
+(* Stream an in-memory buffer's declarations.  The parser pulls its
+   input through a callback and we have the whole text in hand, so give
+   it over in one chunk and nothing after that.  Errors are dropped: a
+   buffer being edited is mildly invalid most of the time. *)
+fun bufferDecs text = let
+  val consumed = ref false
+  fun read _ = if !consumed then "" else (consumed := true; text)
+  fun errSink _ _ _ = ()
+  val {parseDec, ...} =
+    HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
+  in parseDec end
+
 (* Given the buffer text and a cursor byte offset, return the enclosing
    `Theorem NAME[attrs]: … Proof … QED` block (also `Triviality`) as a
    `theorem_context`, or NONE if the cursor isn't inside one.  The
@@ -132,11 +144,7 @@ fun encGoalStateResponse ({theorem, step, goals, pretty, context, status,
    and comments are handled correctly.  parseDec streams decs one at a
    time; we bail on the first matching HOLTheoremDecl. *)
 fun findEnclosingTheorem compileDone text cursor = let
-  val consumed = ref false
-  fun read _ = if !consumed then "" else (consumed := true; text)
-  fun errSink _ _ _ = ()  (* buffer may be mid-edit and mildly invalid *)
-  val {parseDec, ...} =
-    HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
+  val parseDec = bufferDecs text
   fun loop () =
     case parseDec () of
       NONE => NONE
@@ -166,6 +174,42 @@ fun findEnclosingTheorem compileDone text cursor = let
         end
     | SOME _ => loop ()
   in loop () end
+
+(* The modules a script names as its dependencies: the theories and
+   libraries of its `Theory ... Ancestors ... Libs ...' header, plus the
+   identifiers of any top-level `open' preceding the first real
+   declaration (old-style scripts name their ancestors that way).  Each
+   comes with the byte range of the name as written, so a load failure
+   can be reported against the text that asked for it.  `Ancestors foo'
+   loads the module `fooTheory'; `Libs bar' loads `bar'.
+
+   `parseDec' streams, and we stop at the first declaration that is
+   neither the header nor an `open', so this reads no further than the
+   top of the file. *)
+fun headerModules text = let
+  val parseDec = bufferDecs text
+  fun named suffix ((p, nm): HOLSourceAST.ident) =
+      (nm ^ suffix, (p, p + size nm))
+  fun elems suffix es = map (fn {id, ...} => named suffix id) es
+  fun header (HOLSourceAST.HOLAncestors {elems = es, ...}) = elems "Theory" es
+    | header (HOLSourceAST.HOLLibs {elems = es, ...}) = elems "" es
+  fun loop acc =
+    case parseDec () of
+      NONE => rev acc
+    | SOME (HOLSourceAST.HOLTheory {elems, ...}) =>
+        loop (List.revAppend (List.concat (map header elems), acc))
+    | SOME (HOLSourceAST.DecOpen {elems, ...}) =>
+        loop (List.revAppend (map (named "") elems, acc))
+    | SOME (HOLSourceAST.HOLLinePragmaWith _) => loop acc
+    | SOME (HOLSourceAST.HOLFilePragmaWith _) => loop acc
+    | SOME _ => rev acc
+  in loop [] handle _ => [] end
+
+(* `Meta.load' reports a module it cannot find or read by raising
+   `Fail msg'; unwrap that, so a diagnostic reads as the message rather
+   than as an exception constructor wrapped round it. *)
+fun depExnMessage (Fail s) = s
+  | depExnMessage e = exnMessage e
 
 exception MalformedData
 
@@ -680,6 +724,10 @@ fun start {diag, dbg} = let
     {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
      plugins = plugins, declSnapshots = snap :: declSnapshots}
 
+  (* Why a file is not being compiled: the declared dependency list
+     whose change clears the block, and what went wrong. *)
+  type deps_blocked = {mods: string list, message: string}
+
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
                        thread: Thread.thread, cancelled: bool ref}
@@ -706,7 +754,12 @@ fun start {diag, dbg} = let
        these; a successful walker query for a theorem removes its
        entry so a user-fix removes the squiggle without waiting
        for the next compile. *)
-    walkerDiags: (string, report) Binarymap.dict ref}
+    walkerDiags: (string, report) Binarymap.dict ref,
+    (* Set when a compile was abandoned because the file's declared
+       dependencies -- the modules of `headerModules' -- could not be
+       loaded; it carries that module list.  See `startCompile' for what
+       lifts the block. *)
+    depsBlocked: deps_blocked option ref}
   local
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
@@ -723,7 +776,8 @@ fun start {diag, dbg} = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
         debounce = ref 0, minEditOffset = ref NONE,
-        walkerDiags = ref (Binarymap.mkDict String.compare)} end
+        walkerDiags = ref (Binarymap.mkDict String.compare),
+        depsBlocked = ref NONE} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
      checks at each Progress event and raises Thread.Interrupt.  We
@@ -1013,6 +1067,36 @@ fun start {diag, dbg} = let
                         | NONE => NONE))
       handle Empty => NONE
 
+  (* Tell the client the file is not being compiled, and why.  Sent
+     when the block is first recorded and again on each later edit that
+     leaves the declared dependencies unchanged, so a client can show
+     the state without having to remember it. *)
+  fun sendDepsBlocked uri ({mods, message}: deps_blocked) =
+      send (mkNotif "$/compileBlocked" (fn print => (
+        print "{\"uri\":"; encString uri print;
+        print ",\"modules\":"; encArray encString mods print;
+        print ",\"message\":"; encString message print;
+        print "}")))
+
+  (* Record the block, and announce it once where the user will see it
+     without opening the LSP log: the file simply going quiet is the
+     one thing worse than the cascade of squiggles this replaces. *)
+  fun markDepsBlocked uri ({depsBlocked, ...}:file_data) b = let
+    (* Only the first block says so out loud.  A user fixing the header
+       gets a compile attempt per edit, and most of those attempts fail
+       again while the name is half-typed; one warning per keystroke is
+       worse than the silence it is there to explain. *)
+    val fresh = not (isSome (!depsBlocked))
+    in
+      depsBlocked := SOME b;
+      sendDepsBlocked uri b;
+      if fresh then
+        warnUser ("HOL: not compiling " ^ OS.Path.file uri ^ ": "
+                  ^ #message b ^ " (edit the Ancestors / Libs header to "
+                  ^ "try again)")
+      else ()
+    end
+
   (* Emit publishDiagnostics for `uri` combining the last-completed
      compile's diagnostics and any walker-observed runtime squiggles. *)
   fun publishAllDiagnostics uri
@@ -1040,7 +1124,7 @@ fun start {diag, dbg} = let
   end
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
-                              walkerDiags}:file_data) = (
+                              walkerDiags, depsBlocked}:file_data) = (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
@@ -1048,6 +1132,37 @@ fun start {diag, dbg} = let
        new compile -- clear them so a fix removes squiggles even
        before the user visits the theorem to re-run the walker. *)
     walkerDiags := Binarymap.mkDict String.compare;
+    let
+    (* The dependencies the file declares, and where it names them.
+       A failure to load one of these is fatal to the whole file, so
+       it is tracked apart from the rest: `getHoldep' reports every
+       module the text mentions, including basis structures and ones
+       the file declares itself, and "Cannot find file" for those is
+       routine and harmless. *)
+    val declared = headerModules (#text (#text (!lastTrees)))
+    val declaredNames = map #1 declared
+    (* A file whose declared dependencies did not load gets no compile
+       at all until that list changes.  The check is the list itself
+       rather than a general "has the file changed": nothing the user
+       types in the body can make a missing ancestor appear, so
+       recompiling on it would redraw the same diagnostics at the cost
+       of a whole elaboration, and the goal-state walker and hover
+       would answer from an environment that cannot be right.  Editing
+       the header is the one edit that can change the answer -- and it
+       is also how a user retries after building the ancestor outside
+       the editor, since any change and its undo both land here.
+
+       The record survives an attempt that blocks again, which is what
+       tells the second block it is not the first, and so not worth
+       another warning; a compile that gets through clears it. *)
+    val stillBlocked = case !depsBlocked of
+        SOME (b as {mods, ...}) =>
+          if declaredNames = mods then SOME b else NONE
+      | NONE => NONE
+    in
+    case stillBlocked of
+      SOME b => sendDepsBlocked uri b
+    | NONE =>
     (* Nothing to do if the last parse ran to completion and nothing has
        marked a point needing re-elaboration.  An edit always arrives via
        `carryOverSnapshots`, which clears `done`, so the second condition
@@ -1168,22 +1283,38 @@ fun start {diag, dbg} = let
 
       val holdepMode = !holdepMode
       val mods = case holdepMode of HoldepNone => [] | _ => getHoldep (#text text)
-      val files = DArray.new (8, "")
+      (* Each planned file with the dependency that asked for it, so a
+         failure while executing the plan is reported against the
+         dependency that named the file rather than against the file. *)
+      val files = DArray.new (8, ("", ""))
       val errors = DArray.new (1, Bind)
+      (* The last byte the header claims, i.e. the end of the last name
+         it declares. *)
+      val headerEnd =
+          foldl (fn ((_, (_, e)), m) => Int.max (e, m)) 0 declared
+      val depFails = ref ([]: (string * (int * int) * exn) list)
+      fun noteFail m e = (
+        DArray.push (errors, e);
+        case List.find (fn (n, _) => n = m) declared of
+          NONE => ()
+        | SOME (_, pos) => depFails := (m, pos, e) :: !depFails)
       val _ = app (fn m =>
-        loadPlan (fn f => DArray.push (files, f)) m handle e => DArray.push (errors, e)) mods
+        loadPlan (fn f => DArray.push (files, (f, m))) m
+        handle e => noteFail m e) mods
+      fun useFiles () = DArray.app (fn (f, m) =>
+        qquse f handle e => noteFail m e) files
       val _ = if DArray.isEmpty files andalso DArray.isEmpty errors then () else (
         case holdepMode of
           HoldepList => send (mkNotif "$/holdep" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"version\":"; encInt (#version text) print;
-            print ",\"files\":"; encDArray encString files print;
+            print ",\"files\":"; encDArray (encString o #1) files print;
             if DArray.isEmpty errors then () else (
               print ",\"errors\":"; encDArray (encDiag o exnToReport 0) errors print;
               DArray.clear errors);
             print "}")))
         | _ => ();
-        DArray.app (fn f => qquse f handle e => DArray.push (errors, e)) files;
+        useFiles ();
         case holdepMode of
           HoldepList => send (mkNotif "$/holdepCompleted" (fn print => (
             print "{\"uri\":"; encString uri print;
@@ -1250,17 +1381,22 @@ fun start {diag, dbg} = let
          label-like text. *)
       val progressToken = Int.toString (!progressIdCounter)
         before progressIdCounter := !progressIdCounter + 1
-      val () = send (Request {
-        id = Id (allocRequestId ()),
-        method = "window/workDoneProgress/create",
-        params = fn print => (
-          print "{\"token\":"; encString progressToken print; print "}")})
-      val () = send (mkNotif "$/progress" (fn print => (
-        print "{\"token\":"; encString progressToken print;
-        print ",\"value\":{\"kind\":\"begin\",\"title\":\"HOL compile\",";
-        print "\"cancellable\":false,\"percentage\":0,\"message\":";
-        encString (OS.Path.file uri) print;
-        print "}}")))
+      (* Not sent until we know a compile is actually going to run: a
+         file whose dependencies did not load never starts one, and a
+         begin without work behind it just flickers the client's
+         progress area. *)
+      fun sendProgressBegin () = (
+        send (Request {
+          id = Id (allocRequestId ()),
+          method = "window/workDoneProgress/create",
+          params = fn print => (
+            print "{\"token\":"; encString progressToken print; print "}")});
+        send (mkNotif "$/progress" (fn print => (
+          print "{\"token\":"; encString progressToken print;
+          print ",\"value\":{\"kind\":\"begin\",\"title\":\"HOL compile\",";
+          print "\"cancellable\":false,\"percentage\":0,\"message\":";
+          encString (OS.Path.file uri) print;
+          print "}}"))))
       val lastReportedPct = ref 0
       fun sendProgressReport pos =
         if totalSize <= 0 then () else let
@@ -1365,7 +1501,41 @@ fun start {diag, dbg} = let
          Force a merge past end-of-file so those errors reach the
          client. *)
       fun flushDiags () = (updateDiags (size (#text text)); sendDiags ())
-      in (
+      (* Report the load failures themselves, against the header text
+         that names them, in place of the compile: everything the file
+         takes from a failed ancestor is absent, so elaborating would
+         report each use of each of those names and pay for the whole
+         file to do it. *)
+      fun blockOnDeps fails = let
+        val diags = #diags (!trees)
+        fun describe (m, e) = "cannot load " ^ m ^ ": " ^ depExnMessage e
+        fun blockedText (m, e) =
+            describe (m, e) ^
+            "\n\nnot compiling this file until its Ancestors / Libs change"
+        val () = app (fn (m, pos, e) => DArray.push (diags, Error {
+                       hard = true, pos = pos,
+                       msg = encString (blockedText (m, e))})) fails
+        val message = String.concatWith "; " (map (fn (m, _, e) =>
+                        describe (m, e)) fails)
+        in
+          (* Same fence as the completion path below: a `didChange'
+             during the load has already started a fresh compile that
+             owns `lastTrees', and blocking on the text it replaced
+             would stop that one from ever running. *)
+          if !cancelled then () else (
+            lastTrees := {text = text, parse = setParsePos 0 (!trees)};
+            publishAllDiagnostics uri v;
+            markDepsBlocked uri v {mods = declaredNames, message = message})
+        end
+      (* A module `load' could not find can still be there: anything
+         baked into the running heap is in the namespace without being
+         in `loadedMods', and the file's `open' will find it.  What
+         decides the file's fate is whether the structure is there, so
+         a load failure only counts when it isn't. *)
+      fun stillMissing (m, _, _) =
+          not (isSome (#lookupStruct LSPNameSpace.fileNS m))
+      fun runCompile () = (
+        sendProgressBegin ();
         compileForReport uri (#text text) resumeStart lastPos processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
@@ -1424,12 +1594,19 @@ fun start {diag, dbg} = let
                  handle _ => ()
                end);
           !LSPExtension.checkDeferred resumeStart;
+          (* The file compiled, so whatever it was blocked on is
+             resolved. *)
+          depsBlocked := NONE;
           flushDiags ();
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (
             print "{\"uri\":"; encString uri print; print "}")));
           lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)})
+                        parse = setParseDone (size (#text text)) (!trees)}))
+      in (
+        case List.filter stillMissing (rev (!depFails)) of
+          fails as (_::_) => blockOnDeps fails
+        | [] => runCompile ()
       ) handle Thread.Interrupt => (
         sendProgressEnd ();
         (* When the compile aborted because a single dec produced a
@@ -1442,7 +1619,19 @@ fun start {diag, dbg} = let
           send (mkNotif "$/compileCompleted" (fn print => (
             print "{\"uri\":"; encString uri print; print "}")));
           lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)})
+                        parse = setParseDone (size (#text text)) (!trees)};
+          (* Elaboration never got past the header: an ancestor that
+             loads but whose `open' fails is the case holdep cannot
+             see, so treat it exactly like a load failure and stop
+             compiling until the header changes.  `lastPos' is the end
+             of the last dec that completed, and the header dec runs
+             past the last name it declares, so it not having reached
+             `headerEnd' is precisely "the header did not compile". *)
+          if !lastPos <= headerEnd andalso not (null declaredNames) then
+            markDepsBlocked uri v
+              {mods = declaredNames,
+               message = "the theory header did not compile"}
+          else ())
         else send (mkNotif "$/compileInterrupted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}"))))
            | e => (
@@ -1457,7 +1646,8 @@ fun start {diag, dbg} = let
       ())
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread,
-                        cancelled = cancelled} end)
+                        cancelled = cancelled} end
+    end)
 
   (* Fire a compile after a debounce delay: rapid didChange bursts
      collapse to one compile. *)
@@ -1706,7 +1896,13 @@ fun start {diag, dbg} = let
      the Proof body directly from the current buffer text.
      Requiring `pos >= offset' would stall the auto-follow-cursor
      pane for the ~300 ms debounce after every keystroke. *)
-  fun goalStateAtPos uri ({lastTrees, ...}:file_data) target = let
+  fun goalStateAtPos uri ({lastTrees, depsBlocked, ...}:file_data) target =
+    (* Nothing to walk against: the file was never compiled, so the
+       theorem's context does not exist and the walker would compile
+       each tactic against a namespace missing whatever the failed
+       ancestor was to supply.  Answering NONE also stops an
+       auto-following goals pane from asking on every cursor move. *)
+    if isSome (!depsBlocked) then NONE else let
     val {parse, text} = !lastTrees
     val {plugins, declSnapshots, ...} = parse
     val offset = fromLineCol (#lines text) target
@@ -1921,6 +2117,16 @@ fun start {diag, dbg} = let
         (* Debounce so keystroke bursts don't kick off a compile per
            character; only the last edit in a 300 ms window fires. *)
         if !elabOnRef = ElabOnChange then scheduleCompile uri v else ())
+      in () end
+    (* Escape hatch for a block cleared outside the editor: the user
+       has built the missing ancestor and wants the file compiled
+       without having to touch its header. *)
+    | Notification {method = "$/hol/retryCompile", params} => let
+      val uri = JSONDecode.decode textDocumentId params
+      val _ = case withFileInfo (fn fileInfo =>
+                     (fileInfo, Binarymap.peek (fileInfo, uri))) of
+        NONE => ()
+      | SOME (v: file_data) => (#depsBlocked v := NONE; startCompile uri v)
       in () end
     | Notification {method = "textDocument/didClose", params} => let
       val uri = JSONDecode.decode textDocumentId params

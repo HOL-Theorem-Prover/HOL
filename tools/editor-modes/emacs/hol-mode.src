@@ -2174,6 +2174,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "\M-g" 'hol-lsp-show-goal-state)
+(define-key hol-map "\M-C" 'hol-lsp-retry-compile)
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
@@ -2775,6 +2776,58 @@ expose the private `eglot--path-to-uri'."
         (t (concat "file://" (url-hexify-string (expand-file-name path)
                                                 url-path-allowed-chars)))))
 
+(defun hol-lsp--uri-to-path (uri)
+  "Convert URI to a file name, working on Emacs 29 and 30 eglot.
+Public `eglot-uri-to-path' arrived in Emacs 30; older builds only
+expose the private `eglot--uri-to-path'."
+  (cond ((fboundp 'eglot-uri-to-path) (eglot-uri-to-path uri))
+        ((fboundp 'eglot--uri-to-path) (eglot--uri-to-path uri))
+        (t (url-unhex-string (string-remove-prefix "file://" uri)))))
+
+(defvar-local hol-lsp--blocked nil
+  "Why the server is not compiling this buffer, or nil if it is.
+The server stops compiling a file whose declared ancestors or
+libraries could not be loaded: with an ancestor missing there is
+nothing to elaborate the file against, so it waits for the header to
+change rather than covering the buffer in errors that all say the
+same thing.  See `hol-lsp-retry-compile'.")
+
+(defun hol-lsp--set-blocked (uri message)
+  "Set `hol-lsp--blocked' to MESSAGE in the buffer visiting URI."
+  (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
+         (buf (and path (find-buffer-visiting path))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf (setq hol-lsp--blocked message)))))
+
+(with-eval-after-load 'eglot
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/compileBlocked)) &key uri message
+             &allow-other-keys)
+    "Record that the server is not compiling URI, and why."
+    (hol-lsp--set-blocked uri message))
+
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/compileCompleted)) &key uri
+             &allow-other-keys)
+    "Note that URI compiled, which is to say it is no longer blocked."
+    (hol-lsp--set-blocked uri nil)))
+
+(defun hol-lsp-retry-compile ()
+  "Ask the server to compile this buffer again.
+It stops compiling a file whose declared ancestors or libraries
+could not be loaded, and starts again by itself when the Ancestors /
+Libs header changes.  This is for the other case: the ancestor has
+been built outside the editor and the header is already right."
+  (interactive)
+  (let ((server (hol-lsp--server)))
+    (unless server (user-error "No LSP server for this buffer"))
+    (setq hol-lsp--blocked nil)
+    (jsonrpc-notify server :$/hol/retryCompile
+                    (list :textDocument
+                          (list :uri (hol-lsp--path-to-uri
+                                      buffer-file-name))))
+    (message "HOL: asked the server to compile this buffer again")))
+
 (defun hol-lsp--goalstate-params ()
   "Build the `$/hol/goalState' params object for point."
   (list :textDocument
@@ -2947,8 +3000,13 @@ by default via `hol-map'."
   (unless (hol-lsp--server)
     (user-error "No LSP server for this buffer"))
   (let ((result (hol-lsp--query)))
-    (if result (hol-lsp--render-goals result)
-      (message "No goal state at point"))))
+    (cond (result (hol-lsp--render-goals result))
+          ;; A blocked buffer has no goal state anywhere in it, and
+          ;; saying only "no goal state at point" would send the user
+          ;; looking for the fault in their proof.
+          (hol-lsp--blocked
+           (message "HOL: not compiling this buffer: %s" hol-lsp--blocked))
+          (t (message "No goal state at point")))))
 
 (defcustom hol-lsp-goals-follow-cursor nil
   "If non-nil, the *HOL Goals* buffer auto-refreshes on cursor
@@ -2984,6 +3042,10 @@ called for the current buffer.  Bails out cheaply in non-HOL
 buffers via the `memq' / server check."
   (when (and hol-lsp-goals-follow-cursor
              (memq major-mode hol-lsp-server-modes)
+             ;; Nothing to follow in a buffer the server isn't
+             ;; compiling, and each tick would be a round trip for a
+             ;; null answer.
+             (not hol-lsp--blocked)
              (hol-lsp--server))
     (when hol-lsp--goals-timer (cancel-timer hol-lsp--goals-timer))
     (setq hol-lsp--goals-timer

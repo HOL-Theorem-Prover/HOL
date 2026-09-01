@@ -242,3 +242,28 @@ file's own directory -- not a VC root, and not the file itself."
     (let ((hol-lsp-goals-side-min-width nil))
       (should (memq 'display-buffer-below-selected
                     (car (hol-lsp--goals-display-action)))))))
+
+(ert-deftest hol-lsp-uri-round-trips-to-a-path ()
+  (let ((path (make-temp-file "hol-lsp-uri-")))
+    (unwind-protect
+        (should (equal (hol-lsp--uri-to-path (hol-lsp--path-to-uri path))
+                       path))
+      (delete-file path))))
+
+(ert-deftest hol-lsp-blocked-marks-the-buffer-visiting-the-uri ()
+  "`$/compileBlocked\' names a file; the flag belongs to its buffer."
+  (let* ((path (make-temp-file "hol-lsp-blocked-" nil "Script.sml"))
+         (buf (find-file-noselect path)))
+    (unwind-protect
+        (progn
+          (hol-lsp--set-blocked (hol-lsp--path-to-uri path)
+                                "cannot load fooTheory")
+          (should (equal (buffer-local-value 'hol-lsp--blocked buf)
+                         "cannot load fooTheory"))
+          (hol-lsp--set-blocked (hol-lsp--path-to-uri path) nil)
+          (should-not (buffer-local-value 'hol-lsp--blocked buf)))
+      (kill-buffer buf)
+      (delete-file path))))
+
+(ert-deftest hol-lsp-blocked-for-an-unvisited-file-is-quiet ()
+  (should-not (hol-lsp--set-blocked "file:///no/such/file/Script.sml" "x")))
