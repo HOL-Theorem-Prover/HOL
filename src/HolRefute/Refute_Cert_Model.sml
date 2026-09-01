@@ -125,52 +125,94 @@ structure Refute_Cert_Model = struct
      enable_omega = true,
      enable_real_arith = true}
 
-  fun policy_for_test
-        {fuel, cases, induction, synthesis, taut, omega, real_arith,
-         split_depth, branches, constructor_depth, constructor_width} :
-        policy =
-    {total_fuel = Int.max (0, fuel),
-     max_generated_candidates = replay_candidate_limit,
-     max_attempted_candidates = replay_candidate_limit,
-     max_completion_candidates = 16,
-     max_completion_vectors = replay_candidate_limit,
-     max_function_states = 256,
-     max_constructor_depth = Int.max (0, constructor_depth),
-     max_constructor_width = Int.max (0, constructor_width),
-     max_constructor_size = 12,
-     max_split_depth = Int.max (0, split_depth),
-     max_case_branches = Int.max (0, branches),
-     max_inductions = 2,
-     max_leaf_rounds = 2,
-     enable_whole_formula = false,
-     enable_cases = cases,
-     enable_induction = induction,
-     enable_synthesis = synthesis,
-     enable_taut = taut,
-     enable_omega = omega,
-     enable_real_arith = real_arith}
+  (* [default_policy] above is the sole [policy] literal; every other
+     policy is reached from it by [update_policy].  Spelling a second
+     literal lets it drift from the default on a field its caller never
+     meant to vary, which is invisible at the call site.  Int updates
+     clamp at zero, as [default_policy]'s own fuel does. *)
+  datatype policy_update =
+      PolicyTotalFuel of int
+    | PolicyMaxGeneratedCandidates of int
+    | PolicyMaxAttemptedCandidates of int
+    | PolicyMaxCompletionCandidates of int
+    | PolicyMaxCompletionVectors of int
+    | PolicyMaxFunctionStates of int
+    | PolicyMaxConstructorDepth of int
+    | PolicyMaxConstructorWidth of int
+    | PolicyMaxConstructorSize of int
+    | PolicyMaxSplitDepth of int
+    | PolicyMaxCaseBranches of int
+    | PolicyMaxInductions of int
+    | PolicyMaxLeafRounds of int
+    | PolicyWholeFormula of bool
+    | PolicyCases of bool
+    | PolicyInduction of bool
+    | PolicySynthesis of bool
+    | PolicyTaut of bool
+    | PolicyOmega of bool
+    | PolicyRealArith of bool
 
-  fun portfolio_policy_for_test {fuel, candidates, vectors} : policy =
-    {total_fuel = Int.max (0, fuel),
-     max_generated_candidates = replay_candidate_limit,
-     max_attempted_candidates = replay_candidate_limit,
-     max_completion_candidates = Int.max (0, candidates),
-     max_completion_vectors = Int.max (0, vectors),
-     max_function_states = 256,
-     max_constructor_depth = 2,
-     max_constructor_width = 32,
-     max_constructor_size = 12,
-     max_split_depth = 1,
-     max_case_branches = 32,
-     max_inductions = 2,
-     max_leaf_rounds = 2,
-     enable_whole_formula = true,
-     enable_cases = true,
-     enable_induction = true,
-     enable_synthesis = false,
-     enable_taut = true,
-     enable_omega = true,
-     enable_real_arith = true}
+  fun change_policy update (policy : policy) : policy =
+    let
+      fun clamp value = Int.max (0, value)
+    in
+      {total_fuel = (case update of PolicyTotalFuel value => clamp value
+                     | _ => #total_fuel policy),
+       max_generated_candidates =
+         (case update of PolicyMaxGeneratedCandidates value => clamp value
+          | _ => #max_generated_candidates policy),
+       max_attempted_candidates =
+         (case update of PolicyMaxAttemptedCandidates value => clamp value
+          | _ => #max_attempted_candidates policy),
+       max_completion_candidates =
+         (case update of PolicyMaxCompletionCandidates value => clamp value
+          | _ => #max_completion_candidates policy),
+       max_completion_vectors =
+         (case update of PolicyMaxCompletionVectors value => clamp value
+          | _ => #max_completion_vectors policy),
+       max_function_states =
+         (case update of PolicyMaxFunctionStates value => clamp value
+          | _ => #max_function_states policy),
+       max_constructor_depth =
+         (case update of PolicyMaxConstructorDepth value => clamp value
+          | _ => #max_constructor_depth policy),
+       max_constructor_width =
+         (case update of PolicyMaxConstructorWidth value => clamp value
+          | _ => #max_constructor_width policy),
+       max_constructor_size =
+         (case update of PolicyMaxConstructorSize value => clamp value
+          | _ => #max_constructor_size policy),
+       max_split_depth = (case update of PolicyMaxSplitDepth value =>
+                            clamp value
+                          | _ => #max_split_depth policy),
+       max_case_branches = (case update of PolicyMaxCaseBranches value =>
+                              clamp value
+                            | _ => #max_case_branches policy),
+       max_inductions = (case update of PolicyMaxInductions value =>
+                           clamp value
+                         | _ => #max_inductions policy),
+       max_leaf_rounds = (case update of PolicyMaxLeafRounds value =>
+                            clamp value
+                          | _ => #max_leaf_rounds policy),
+       enable_whole_formula = (case update of PolicyWholeFormula value => value
+                               | _ => #enable_whole_formula policy),
+       enable_cases = (case update of PolicyCases value => value
+                       | _ => #enable_cases policy),
+       enable_induction = (case update of PolicyInduction value => value
+                           | _ => #enable_induction policy),
+       enable_synthesis = (case update of PolicySynthesis value => value
+                           | _ => #enable_synthesis policy),
+       enable_taut = (case update of PolicyTaut value => value
+                      | _ => #enable_taut policy),
+       enable_omega = (case update of PolicyOmega value => value
+                       | _ => #enable_omega policy),
+       enable_real_arith = (case update of PolicyRealArith value => value
+                            | _ => #enable_real_arith policy)}
+    end
+
+  fun update_policy updates policy =
+    List.foldl (fn (update, current) => change_policy update current)
+      policy updates
 
   fun failure_kind_name NoProof = "no-proof"
     | failure_kind_name Unsupported = "unsupported"

@@ -1778,10 +1778,11 @@ structure Refute_Core = struct
     else
       let val {Thy, Tyop, Args} = Type.dest_thy_type ty
       in
-        if Thy = "refute" andalso Tyop = "funbox" then
+        if Thy = Names.refute_theory andalso Tyop = Names.funbox_tyop then
           Type.-->(unbox_display_type (List.nth (Args, 0)),
             unbox_display_type (List.nth (Args, 1)))
-        else if Thy = "refute" andalso Tyop = "pairbox" then
+        else if Thy = Names.refute_theory andalso
+                Tyop = Names.pairbox_tyop then
           pairSyntax.mk_prod
             (unbox_display_type (List.nth (Args, 0)),
              unbox_display_type (List.nth (Args, 1)))
@@ -1791,17 +1792,15 @@ structure Refute_Core = struct
       end
 
   fun is_boxed_type ty =
-    case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "refute", Tyop = "funbox", ...} => true
-      | SOME {Thy = "refute", Tyop = "pairbox", ...} => true
-      | _ => false
+    Names.is_refute_type Names.funbox_tyop ty orelse
+    Names.is_refute_type Names.pairbox_tyop ty
 
   fun iterator_scope_name ty =
     if Type.is_vartype ty then
       let
         val name = Type.dest_vartype ty
-        val lfp_prefix = "'refute$lfpit$"
-        val gfp_prefix = "'refute$gfpit$"
+        val lfp_prefix = "'" ^ Names.lfp_iterator_prefix
+        val gfp_prefix = "'" ^ Names.gfp_iterator_prefix
         fun after prefix = String.extract (name, size prefix, NONE)
       in
         if String.isPrefix lfp_prefix name then SOME (after lfp_prefix)
@@ -1815,12 +1814,11 @@ structure Refute_Core = struct
         SOME predicate =>
           "iter " ^ predicate ^ " = " ^ Int.toString (Int.max (0, card - 1))
       | NONE =>
-          (case Lib.total Type.dest_thy_type ty of
-               SOME {Thy = "refute", Tyop = "bisim_iterator", ...} =>
-                 "bisim_depth = " ^ Int.toString (card - 1)
-             | _ =>
-                 "card " ^ type_name (unbox_display_type ty) ^ " = " ^
-                 Int.toString card)
+          if Names.is_refute_type Names.bisim_iterator_tyop ty then
+            "bisim_depth = " ^ Int.toString (card - 1)
+          else
+            "card " ^ type_name (unbox_display_type ty) ^ " = " ^
+            Int.toString card
 
   fun format_scope NONE = ""
     | format_scope (SOME assignments) =

@@ -29,8 +29,23 @@ structure Refute_ModelFinder_Names = struct
   val cyclic_co_val_name = "ω"
   val cyclic_co_val_name_ascii = "w"
 
+  (* refuteTheory's carrier type operators.  The encoder builds these
+     types and the counterexample formatter recognises them again for
+     display, so the names cross a module boundary; one spelling is
+     enough.  The iterator carriers are type *variables*, named with
+     [lfp_iterator_prefix]/[gfp_iterator_prefix] above. *)
+  val refute_theory = "refute"
+  val funbox_tyop = "funbox"
+  val pairbox_tyop = "pairbox"
+  val bisim_iterator_tyop = "bisim_iterator"
+
   fun err function message =
     Feedback.mk_HOL_ERR "Refute_ModelFinder_Names" function message
+
+  fun is_refute_type tyop ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy, Tyop, ...} => Thy = refute_theory andalso Tyop = tyop
+      | NONE => false
 
   fun drop_prefix prefix string =
     String.extract (string, size prefix, NONE)

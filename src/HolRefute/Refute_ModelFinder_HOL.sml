@@ -341,7 +341,8 @@ structure Refute_ModelFinder_HOL = struct
   val signed_bit_type = Type.mk_thy_type
     {Thy = "refute", Tyop = "signed_bit", Args = []}
   val bisim_iterator_type = Type.mk_thy_type
-    {Thy = "refute", Tyop = "bisim_iterator", Args = []}
+    {Thy = Refute_ModelFinder_Names.refute_theory,
+     Tyop = Refute_ModelFinder_Names.bisim_iterator_tyop, Args = []}
 
   fun bisim_const ty = Term.mk_thy_const
     {Thy = "refute", Name = "bisim",
@@ -3556,14 +3557,12 @@ structure Refute_ModelFinder_HOL = struct
       | _ => false
 
   fun is_funbox_type ty =
-    case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "refute", Tyop = "funbox", ...} => true
-      | _ => false
+    Refute_ModelFinder_Names.is_refute_type
+      Refute_ModelFinder_Names.funbox_tyop ty
 
   fun is_pairbox_type ty =
-    case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "refute", Tyop = "pairbox", ...} => true
-      | _ => false
+    Refute_ModelFinder_Names.is_refute_type
+      Refute_ModelFinder_Names.pairbox_tyop ty
 
   fun is_lfp_iterator_type ty =
     Type.is_vartype ty andalso
@@ -3992,10 +3991,12 @@ structure Refute_ModelFinder_HOL = struct
   fun boxed_type_args ty = #Args (Type.dest_thy_type ty)
 
   fun mk_funbox_type (domain, range) = Type.mk_thy_type
-    {Thy = "refute", Tyop = "funbox", Args = [domain, range]}
+    {Thy = Refute_ModelFinder_Names.refute_theory,
+     Tyop = Refute_ModelFinder_Names.funbox_tyop, Args = [domain, range]}
 
   fun mk_pairbox_type (left, right) = Type.mk_thy_type
-    {Thy = "refute", Tyop = "pairbox", Args = [left, right]}
+    {Thy = Refute_ModelFinder_Names.refute_theory,
+     Tyop = Refute_ModelFinder_Names.pairbox_tyop, Args = [left, right]}
 
   fun unarize_unbox_etc_type ty =
     if ty = unsigned_bitword_type then num_type
@@ -4004,10 +4005,12 @@ structure Refute_ModelFinder_HOL = struct
     else
       let val {Thy, Tyop, Args} = Type.dest_thy_type ty
       in
-        if Thy = "refute" andalso Tyop = "funbox" then
+        if Thy = Refute_ModelFinder_Names.refute_theory andalso
+           Tyop = Refute_ModelFinder_Names.funbox_tyop then
           Type.-->(unarize_unbox_etc_type (List.nth (Args, 0)),
             unarize_unbox_etc_type (List.nth (Args, 1)))
-        else if Thy = "refute" andalso Tyop = "pairbox" then
+        else if Thy = Refute_ModelFinder_Names.refute_theory andalso
+                Tyop = Refute_ModelFinder_Names.pairbox_tyop then
           pairSyntax.mk_prod
             (unarize_unbox_etc_type (List.nth (Args, 0)),
              unarize_unbox_etc_type (List.nth (Args, 1)))
@@ -4022,10 +4025,12 @@ structure Refute_ModelFinder_HOL = struct
     else
       let val {Thy, Tyop, Args} = Type.dest_thy_type ty
       in
-        if Thy = "refute" andalso Tyop = "funbox" then
+        if Thy = Refute_ModelFinder_Names.refute_theory andalso
+           Tyop = Refute_ModelFinder_Names.funbox_tyop then
           Type.-->(uniterize_unarize_unbox_etc_type (List.nth (Args, 0)),
             uniterize_unarize_unbox_etc_type (List.nth (Args, 1)))
-        else if Thy = "refute" andalso Tyop = "pairbox" then
+        else if Thy = Refute_ModelFinder_Names.refute_theory andalso
+                Tyop = Refute_ModelFinder_Names.pairbox_tyop then
           pairSyntax.mk_prod
             (uniterize_unarize_unbox_etc_type (List.nth (Args, 0)),
              uniterize_unarize_unbox_etc_type (List.nth (Args, 1)))

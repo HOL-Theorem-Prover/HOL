@@ -11736,6 +11736,40 @@ val _ = require_msg (check_result mf_real_frac_replay_certifies) (fn () =>
   "real Frac counterexample did not certify via the derived literal hint")
   (fn () => ()) ()
 
+(* Test-local policy shapes over [Refute_Cert_Model.update_policy].  The
+   module keeps one [policy] literal ([default_policy]) plus a general
+   updater; the particular field combinations these pins want belong
+   here, not in the module.  Both shapes turn off a route the default
+   enables -- [PolicyWholeFormula false] because the leaf pins isolate a
+   single decision procedure, [PolicySynthesis false] because the
+   portfolio pins measure completion alone -- and that divergence is
+   visible here rather than buried inside a constructor. *)
+local structure CM = Refute_Cert_Model in
+  fun replay_leaf_policy
+        {fuel, cases, induction, synthesis, taut, omega, real_arith,
+         split_depth, branches, constructor_depth, constructor_width} =
+    CM.update_policy
+      [CM.PolicyWholeFormula false,
+       CM.PolicyCases cases,
+       CM.PolicyInduction induction,
+       CM.PolicySynthesis synthesis,
+       CM.PolicyTaut taut,
+       CM.PolicyOmega omega,
+       CM.PolicyRealArith real_arith,
+       CM.PolicyMaxSplitDepth split_depth,
+       CM.PolicyMaxCaseBranches branches,
+       CM.PolicyMaxConstructorDepth constructor_depth,
+       CM.PolicyMaxConstructorWidth constructor_width]
+      (CM.default_policy fuel)
+
+  fun replay_portfolio_policy {fuel, candidates, vectors} =
+    CM.update_policy
+      [CM.PolicySynthesis false,
+       CM.PolicyMaxCompletionCandidates candidates,
+       CM.PolicyMaxCompletionVectors vectors]
+      (CM.default_policy fuel)
+end
+
 (* Ablation: the SAME goal as [mf_real_frac_replay_certifies], rebuilt
    directly at the
    [Refute_Cert_Model] layer instead of through [MFM.certify]'s Frac-atom
@@ -11749,7 +11783,7 @@ fun mf_real_frac_leaf_is_load_bearing () =
   let
     val x = Term.mk_var ("x", ``:real``)
     val goal = ``^x <> 1 / 2 \/ ?y : real. y = y + 1``
-    fun policy real_arith = Refute_Cert_Model.policy_for_test
+    fun policy real_arith = replay_leaf_policy
       {fuel = 1000, cases = false, induction = false, synthesis = false,
        taut = true, omega = true, real_arith = real_arith,
        split_depth = 0, branches = 0,
@@ -31016,7 +31050,7 @@ val replay_predicate_env = [(replay_predicate, ``{31} : num set``)]
    can only come from a supplied witness.  [decisions] enables all three
    leaf decision procedures together. *)
 fun bare_replay_policy decisions =
-  Refute_Cert_Model.policy_for_test
+  replay_leaf_policy
     {fuel = 1000, cases = false, induction = false,
      synthesis = false, taut = decisions, omega = decisions,
      real_arith = decisions,
@@ -31127,7 +31161,7 @@ val _ = List.app (fn (label, check) => require_msg
 
 fun replay_policy cases induction synthesis split_depth branches
       constructor_depth constructor_width =
-  Refute_Cert_Model.policy_for_test
+  replay_leaf_policy
     {fuel = 4000, cases = cases, induction = induction,
      synthesis = synthesis, taut = true, omega = true, real_arith = true,
      split_depth = split_depth, branches = branches,
@@ -31254,7 +31288,7 @@ fun replay_completion_portfolio_policy () =
     val boolean = Term.mk_var ("completion_p", ``:bool``)
     val boolean_hole = MFN.mk_replay_hole 20 ``:bool``
     val boolean_goal = boolean
-    val policy = Refute_Cert_Model.portfolio_policy_for_test
+    val policy = replay_portfolio_policy
       {fuel = 10000, candidates = 8, vectors = 16}
     val (boolean_result, boolean_stats) =
       Refute_Cert_Model.certify_portfolio_detailed_rich
@@ -31272,14 +31306,14 @@ fun replay_completion_portfolio_policy () =
         {original = equality, env = [(x, x_hole), (y, y_hole)],
          hints = [],
          holes = [x_hole, y_hole], policy = policy, deadline = NONE}
-    val capped_policy = Refute_Cert_Model.portfolio_policy_for_test
+    val capped_policy = replay_portfolio_policy
       {fuel = 10000, candidates = 1, vectors = 1}
     val (capped_result, capped_stats) =
       Refute_Cert_Model.certify_portfolio_detailed_rich
         {original = boolean_goal, env = [(boolean, boolean_hole)],
          hints = [], holes = [boolean_hole],
          policy = capped_policy, deadline = NONE}
-    val zero_policy = Refute_Cert_Model.portfolio_policy_for_test
+    val zero_policy = replay_portfolio_policy
       {fuel = 0, candidates = 8, vectors = 16}
     val (zero_result, zero_stats) =
       Refute_Cert_Model.certify_portfolio_detailed_rich
@@ -31382,7 +31416,7 @@ fun replay_rejects_injected_oracle () =
 
 fun replay_resource_failures_are_classified () =
   let
-    val zero_policy = Refute_Cert_Model.policy_for_test
+    val zero_policy = replay_leaf_policy
       {fuel = 0, cases = true, induction = true,
        synthesis = true, taut = true, omega = true, real_arith = true,
        split_depth = 1, branches = 16,
@@ -31415,7 +31449,7 @@ fun real_arith_leaf_is_gated_by_real_subterm () =
   let
     fun run real_arith =
       let
-        val policy = Refute_Cert_Model.policy_for_test
+        val policy = replay_leaf_policy
           {fuel = 10, cases = false, induction = false, synthesis = false,
            taut = false, omega = false, real_arith = real_arith,
            split_depth = 0, branches = 0,
@@ -31454,7 +31488,7 @@ fun real_arith_leaf_is_gated_by_real_subterm () =
    [real_goal] is ever reached, making the gate untestable. *)
 fun induction_real_leaf_is_gated_by_real_subterm () =
   let
-    val policy = Refute_Cert_Model.policy_for_test
+    val policy = replay_leaf_policy
       {fuel = 4000, cases = false, induction = true, synthesis = false,
        taut = true, omega = true, real_arith = true,
        split_depth = 0, branches = 0,
