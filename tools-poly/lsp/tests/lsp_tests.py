@@ -2019,6 +2019,11 @@ def test_goalState_thenl_context_line():
         r = _send_goalstate(c, 811, uri, 8, 4)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
+        # Same tags as a list, so a client can pin them in a header
+        # instead of letting them scroll away with the goals.
+        assert_eq(list(result.get("context") or []),
+                  ["branch 2 of 3 of THENL"],
+                  f"context field ({result!r})")
         pretty = result.get("pretty", "")
         assert_true("[branch 2 of 3 of THENL]" in pretty,
                     f"expected [branch 2 of 3 of THENL] context, "
@@ -2686,7 +2691,11 @@ def test_goalState_walks_into_by_block():
 def test_goalState_walks_into_suffices_by_block():
     """`‘g’ suffices_by tac` compiles to
     `ThenLT(Group(ThenLT(Subgoal,[LReverse])), [LThen1 tac])` — the
-    walker steps into the tac RHS."""
+    walker steps into the tac RHS.
+
+    The `sg q`-then-`REVERSE_LT` pair is applied as the one primitive
+    it encodes, so the tactic gets the implication `q ==> w` that
+    HOL's own `Q_TAC SUFF_TAC` hands it."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -2710,15 +2719,19 @@ def test_goalState_walks_into_suffices_by_block():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
         # Cursor at line 6 char 43: right after `ALL_TAC `, inside the
-        # `suffices_by (…)` block.  Focus should be on the sufficient
-        # goal (`n = n + 0`) with the original `n + 0 = n` sitting
-        # below as the assumption-holder subgoal.
+        # `suffices_by (…)` block.  The tactic's goal is the
+        # implication, not the original goal with the sufficient
+        # statement assumed, and not the sufficient statement itself.
         r = _send_goalstate(c, 702, uri, 6, 43)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error")
         goals = result["goals"]
-        assert_true(len(goals) >= 1 and goals[0]["goal"] == "n = n + 0",
-                    f"walker focused sufficient goal ({result!r})")
+        assert_true(len(goals) >= 1
+                    and goals[0]["goal"] == "n = n + 0 ⇒ n + 0 = n",
+                    f"tactic gets the implication ({result!r})")
+        assert_eq(goals[0]["asms"], [],
+                  f"and not the statement as an assumption ({result!r})")
     finally:
         c.close()
 
@@ -2993,6 +3006,357 @@ def test_goalState_try_lt_absorbs_failure():
         goals = result["goals"]
         assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a",
                     f"goals left alone by the failing TRY_LT ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_before_thenl_shows_all_branches():
+    """A cursor that has not yet reached a THENL must see all the goals
+    the THENL is about to branch over, not one of its branches.
+
+    Two bugs used to conspire here (seen in integerScript's
+    INT_DIV_UNIQUE-region THENL, whose first branch is `ALL_TAC`):
+    `walkFrag` opened a bracket whenever `cursor < bracketEnd` without
+    checking the cursor had reached the bracket's *start*; and
+    `ALL_TAC` elaborates to `Then []`, contributing no atoms, so
+    `walkFrags` said Done at once and `walkSections` advanced a branch.
+    The reported state was branch 2, captioned "branch 2 of 4"."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_pre_thenl.sml"
+        #  6   gen_tac THEN CONJ_TAC        (23 chars, so col 23 = EOL)
+        #  7   THENL [ALL_TAC, simp[]]
+        #  8   THEN simp[]
+        src = ("Theory goalstate_pre_thenl\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac THEN CONJ_TAC\n"
+               "  THENL [ALL_TAC, simp[]]\n"
+               "  THEN simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # End of the line before the THENL, and the start of the THENL
+        # line: in both the combinator has yet to run.
+        for (line, ch, where) in [(6, 23, "end of the CONJ_TAC line"),
+                                  (7, 2, "start of the THENL line")]:
+            r = _send_goalstate(c, 730 + line, uri, line, ch)
+            result = r.get("result")
+            assert_true(result is not None, f"got a result ({r!r})")
+            assert_eq(result.get("error"), None, f"no error at {where}")
+            assert_eq(len(result["goals"]), 2,
+                      f"both branch goals visible at {where} ({result!r})")
+            assert_true("of THENL" not in (result.get("pretty") or ""),
+                        f"no branch context at {where} ({result!r})")
+        # Inside the block, the ALL_TAC branch is still locatable: it
+        # contributes an empty FGroup that carries its own span.
+        r = _send_goalstate(c, 739, uri, 7, 9)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(len(result["goals"]), 1, f"branch 1 focused ({result!r})")
+        assert_true("branch 1 of 2 of THENL" in (result.get("pretty") or ""),
+                    f"captioned as branch 1 ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_thenl_branch_proved_is_acknowledged():
+    """At the end of a THENL branch that closed its goal, say so —
+    matching what a `by (…)` block already reported.
+
+    `pp_goalstate`'s `peek` only tried `close_paren`, and closing a
+    TacsToLT frame with branches still to come is a length mismatch
+    (goalFrag.sml's `TACS_TO_LT`), so this rendered as the misleading
+    "No subgoals but proof incomplete".  It now falls back to
+    `next_tacs_to_lt`."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_proved.sml"
+        #  7   THENL [simp[], simp[]]
+        #             ^col 9      ^col 17; col 15 is just past branch 1
+        src = ("Theory goalstate_thenl_proved\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac THEN CONJ_TAC\n"
+               "  THENL [simp[], simp[]]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 740, uri, 7, 15)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error")
+        assert_eq(len(result["goals"]), 0,
+                  f"branch 1's goal is gone ({result!r})")
+        pretty = result.get("pretty") or ""
+        assert_true("Focused subgoal(s) solved" in pretty,
+                    f"the branch is acknowledged as proved ({pretty!r})")
+        assert_true("No subgoals but proof incomplete" not in pretty,
+                    f"not the misleading close_paren message ({pretty!r})")
+        assert_true("branch 1 of 2 of THENL" in pretty,
+                    f"names the branch just finished ({pretty!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_thenl_branch_left_open_shows_its_goal():
+    """A THENL branch may legitimately finish without closing its goal
+    — the work happens after the `]`.  At the end of such a branch the
+    user needs to see *that* branch's leftover goal, not the next
+    branch's, which is what the premature section advance showed."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_open.sml"
+        #  7   THENL [DISCH_TAC, ALL_TAC]
+        #             ^col 9  col 18 is just past DISCH_TAC
+        src = ("Theory goalstate_thenl_open\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac THEN CONJ_TAC\n"
+               "  THENL [DISCH_TAC, ALL_TAC]\n"
+               "  THEN simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 741, uri, 7, 18)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a"
+                    and goals[0]["asms"] == ["0 < a"],
+                    f"branch 1's own leftover goal, post-DISCH_TAC "
+                    f"({result!r})")
+        assert_true("branch 1 of 2 of THENL" in (result.get("pretty") or ""),
+                    f"captioned as branch 1, not branch 2 ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_suffices_by_gives_the_implication():
+    """`strip_tac` is the sharp discriminator for how `suffices_by` is
+    modelled: it can only work on the implication `q ==> w`, which is
+    what `Q_TAC SUFF_TAC` produces.  TacticParse encodes the operator
+    as `sg q` followed by `REVERSE_LT`, and applying those separately
+    yields `w` with `q` in the assumptions, against which `strip_tac`
+    fails — while the file itself compiles clean, since real HOL runs
+    the real thing.
+
+    Found via balanced_mapScript's `‘f k v = f (CHOICE …) v’
+    suffices_by rw []`, which reported "Combinator close failed" for
+    the rest of the tactic."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_suff_impl.sml"
+        #  6   gen_tac
+        #  7   \\ `a = a` suffices_by (strip_tac \\ simp[])
+        #  8   \\ simp[]
+        src = ("Theory goalstate_suff_impl\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a\n"
+               "Proof\n"
+               "  gen_tac\n"
+               "  \\\\ `a = a` suffices_by (strip_tac \\\\ simp[])\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        assert_eq(len(_diag_count(c, uri)), 0,
+                  "the proof itself is fine — HOL accepts strip_tac here")
+        inside = _send_goalstate(c, 742, uri, 7, 30).get("result")
+        assert_true(inside is not None, "goal state inside the tactic")
+        assert_eq(inside.get("error"), None, "no error inside")
+        assert_true(inside["goals"][0]["goal"] == "a = a ⇒ a + 0 = a",
+                    f"the tactic's goal is the implication ({inside!r})")
+        # strip_tac then closes it, so the block ends cleanly and the
+        # sufficient statement is what remains.
+        after = _send_goalstate(c, 743, uri, 8, 5).get("result")
+        assert_true(after is not None, "goal state after the block")
+        assert_eq(after.get("error"), None,
+                  f"strip_tac applied, so no close failure ({after!r})")
+        assert_true(after["goals"][0]["goal"] == "a = a",
+                    f"the sufficient statement remains ({after!r})")
+    finally:
+        c.close()
+
+
+_RESUME_SRC = ("Theory goalstate_resume\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ 0 + a = a\n"
+               "Proof\n"
+               "  rpt gen_tac\n"                        # nested: FBracket
+               "  THEN CONJ_TAC\n"
+               "  THENL [DISCH_TAC, ALL_TAC]\n"          # nested: FMBracket
+               "  THEN ASSUME_TAC TRUTH\n"
+               "  THEN ASSUME_TAC TRUTH\n"
+               "  THEN simp[]\n"
+               "QED\n")
+_RESUME_LINES = list(range(6, 12))
+
+
+def _resume_probe(c, uri, line, rid):
+    src_lines = _RESUME_SRC.split("\n")
+    r = _send_goalstate(c, rid, uri, line, len(src_lines[line]))
+    res = r.get("result") or {}
+    return (res.get("step"), res.get("error"),
+            [(g.get("goal"), tuple(g.get("asms") or []))
+             for g in (res.get("goals") or [])])
+
+
+def test_goalState_resume_matches_a_cold_walk():
+    """Resuming from a cached snapshot must give exactly what walking
+    from the start gives.
+
+    The walker skips the fragments a snapshot already accounts for
+    rather than re-applying them, which means not re-opening a
+    bracket the resume point sits inside, and not re-firing its close
+    or a THENL's mid.  Get any of that wrong and the state silently
+    differs from a cold walk — so compare against one, over a proof
+    whose every kind of nesting sits before the cursor.
+
+    Before this, the resume was a flat scan of the top-level
+    fragments that gave up at the first nested one, so a proof with
+    `rpt` or `>-` in it re-executed its whole prefix on every query.
+    """
+    uri = "file:///tmp/goalstate_resume.sml"
+    lines = _RESUME_SRC.split("\n")
+
+    # Reference: a fresh server per position, so nothing is cached.
+    cold = {}
+    for line in _RESUME_LINES:
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, _RESUME_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted (cold)")
+            cold[line] = _resume_probe(c, uri, line, 750 + line)
+        finally:
+            c.close()
+
+    # One server, scanned forward and then backward: every query
+    # after the first resumes, at a different index each time.
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _RESUME_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted (warm)")
+        order = _RESUME_LINES + list(reversed(_RESUME_LINES))
+        for i, line in enumerate(order):
+            got = _resume_probe(c, uri, line, 800 + i)
+            assert_eq(got, cold[line],
+                      f"line {line} ({lines[line].strip()!r}) matches a cold "
+                      f"walk on pass {'fwd' if i < len(_RESUME_LINES) else 'rev'}")
+    finally:
+        c.close()
+
+
+def test_goalState_skips_finished_then1_branches():
+    """`t >- tac` obliges tac to discharge the focused goal, so once
+    the cursor is past the branch its only effect is that one goal is
+    gone.  The walker takes that directly instead of running the
+    branch, which is what makes a cursor in a later branch cheap.
+
+    Pinned here by a branch that does NOT discharge its goal: the
+    walker no longer notices, and reports the following goal as if it
+    had.  That is deliberate — the branches are not re-checked once
+    passed — and it is the behaviour to revisit if the walker ever
+    becomes the thing that verifies a proof."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_skip_then1.sml"
+        #  6   conj_tac
+        #  7   >- (ASSUME_TAC TRUTH)      <- does not prove `0 = 0`
+        #  8   \\ simp[]
+        src = ("Theory goalstate_skip_then1\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >- (ASSUME_TAC TRUTH)\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 760, uri, 8, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"the passed branch is not re-checked ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "1 = 1",
+                    f"one goal consumed, the next on show ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_thenl_leftovers_survive_a_skipped_branch():
+    """A THENL branch need not discharge its goal — leftovers are
+    concatenated when the block closes, which `pp_goalstate` does via
+    `peek` whenever the focus ends up empty.  So a skipped branch
+    would lose goals that ought to show.
+
+    Branch 1 here leaves `a + 0 = a`; with the cursor past the block
+    the closed state is what shows, so that leftover has to be in it.
+    Skipping is therefore off once the cursor clears the last
+    branch."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_leftover.sml"
+        #  6   conj_tac
+        #  7   THENL [DISCH_TAC, simp[]]
+        #  8   THEN simp[]
+        src = ("Theory goalstate_thenl_leftover\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  gen_tac THEN conj_tac\n"
+               "  THENL [DISCH_TAC, simp[]]\n"
+               "  THEN simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Inside branch 2, the earlier branch may be skipped: what
+        # shows is branch 2's own goal, under its own caption.
+        mid = _send_goalstate(c, 761, uri, 7, 24).get("result")
+        assert_true(mid is not None, "goal state inside branch 2")
+        assert_eq(mid.get("error"), None, "no error inside branch 2")
+        assert_true("branch 2 of 2 of THENL" in (mid.get("pretty") or ""),
+                    f"captioned as branch 2 ({mid!r})")
+        # Past the last branch the block has closed, and the closed
+        # state concatenates every branch's leftovers -- so branch 1
+        # must have really run.
+        r = _send_goalstate(c, 762, uri, 7, 27)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error past the block")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a"
+                    and goals[0]["asms"] == ["0 < a"],
+                    f"branch 1's leftover survives the close ({result!r})")
     finally:
         c.close()
 
@@ -3336,6 +3700,20 @@ TESTS = [
                                      test_goalState_try_multi_step_branch),
     ("goalState_try_lt_absorbs_failure",
                                      test_goalState_try_lt_absorbs_failure),
+    ("goalState_before_thenl_shows_all_branches",
+                                     test_goalState_before_thenl_shows_all_branches),
+    ("goalState_thenl_branch_proved_is_acknowledged",
+                                     test_goalState_thenl_branch_proved_is_acknowledged),
+    ("goalState_thenl_branch_left_open_shows_its_goal",
+                                     test_goalState_thenl_branch_left_open_shows_its_goal),
+    ("goalState_suffices_by_gives_the_implication",
+                                     test_goalState_suffices_by_gives_the_implication),
+    ("goalState_resume_matches_a_cold_walk",
+                                     test_goalState_resume_matches_a_cold_walk),
+    ("goalState_skips_finished_then1_branches",
+                                     test_goalState_skips_finished_then1_branches),
+    ("goalState_thenl_leftovers_survive_a_skipped_branch",
+                                     test_goalState_thenl_leftovers_survive_a_skipped_branch),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",

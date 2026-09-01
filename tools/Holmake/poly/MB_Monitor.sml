@@ -14,6 +14,39 @@ fun nstr_subhandler f nm n s =
 val five_sec = Time.fromSeconds 5
 val W_EXITED = Posix.Process.W_EXITED
 
+(* Lines of a failed job's output kept for reporting; the whole tail is
+   what the -k inline notice prints. *)
+val retained_lines = 50
+
+(* Lines of log content the closing report may spend in total, however
+   many targets failed: one more than a job retains, so that a lone
+   failure still gets its whole tail, whose last line may be a partial
+   one the buffer holds over and above the lines it counts.  Below
+   `min_useful_extract' lines apiece there is no room for an error
+   message, and the report stops quoting logs altogether. *)
+val report_budget = retained_lines + 1
+val min_useful_extract = 10
+
+(* Divide `budget' lines of report space between failures wanting
+   `needs' lines apiece.  Everyone gets an equal share, except that a
+   failure with less to say than its share hands the difference back:
+   the smallest needs are settled first, so the budget is spent rather
+   than left on the floor. *)
+fun share_lines budget needs =
+    let
+      val count = length needs
+      val tagged = ListPair.zip (List.tabulate(count, fn i => i), needs)
+      val ordered = Listsort.sort (fn ((_,m),(_,n)) => Int.compare(m,n)) tagged
+      fun recurse _ _ [] = []
+        | recurse b k ((i,n) :: rest) =
+          let val share = Int.min(n, b div k)
+          in (i, share) :: recurse (b - share) (k - 1) rest
+          end
+    in
+      map #2 (Listsort.sort (fn ((i,_),(j,_)) => Int.compare(i,j))
+                            (recurse budget count ordered))
+    end
+
 fun Pstatus_to_string st =
   let
     open Posix.Process
@@ -177,7 +210,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
         ref (Binarymap.mkDict jobkey_compare : (jobkey,procinfo)Binarymap.dict)
     val failures :
         {tag:string, dir:string, status:string, log:string,
-         fulllines:string list, lastpartial:string} list ref
+         extract:string list} list ref
         = ref []
     val last_width_check = ref (Time.now())
     val width = ref (getWidth())
@@ -330,13 +363,27 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
             s1 ^ CharVector.tabulate(w - (sz1 + sz2), fn _ => #" ") ^ s2
           else s1 ^ " " ^ s2
         end
+    (* `lines' is what the job's tail buffer held, `shown' how much of
+       it this caller can afford; the tail is what matters, so a trim
+       takes from the front. *)
+    fun show_extract {lines, shown, log} =
+        let
+          val n = length lines
+          val kept = List.drop(lines, Int.max(0, n - shown))
+          val nkept = length kept
+        in
+          List.app (fn s => info (" " ^ dim s)) kept;
+          info (bold (if nkept = 0 orelse nkept = n then " Full log: " ^ log
+                      else " Last " ^ Int.toString nkept ^
+                           " lines of output. Full log: " ^ log))
+        end
     fun monitor msg =
       case msg of
           StartJob (jk as (_, {tag,...}), {dir, ignore_error}) =>
           let
             val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
-                  numlines = 50,
+                  numlines = retained_lines,
                   patterns = [cheat_string, oracle_string, used_cheat_string,
                               fastcheat_string, cachehit_string]
                 }
@@ -422,19 +469,18 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
                          lives outside the current build dir, and a
                          raw concat then raises OS.Path.Path. *)
                       val log = genLogFile{tag = tag, dir = dir}
+                      val extract =
+                          fulllines @
+                          (if lastpartial = "" then [] else [lastpartial])
                     in
                       tinfo (red, "FAIL<" ^ status_string ^ ">");
                       if keep_going then
-                        (List.app (fn s => info (" " ^ dim s)) fulllines;
-                         if lastpartial <> "" then
-                           info (" " ^ dim lastpartial)
-                         else ();
-                         info (bold (" Full log: " ^ log)))
+                        show_extract {lines = extract, (* i.e. no trim *)
+                                      shown = length extract, log = log}
                       else ();
                       failures := !failures @
                         [{tag = tag, dir = dir, status = status_string,
-                          log = log, fulllines = fulllines,
-                          lastpartial = lastpartial}]
+                          log = log, extract = extract}]
                     end;
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
@@ -457,6 +503,11 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
                     NONE))
           end
         | _ => NONE
+    (* The report concatenates extracts from every failed target's
+       log, so what each one gets has to shrink as the number of
+       failures grows.  Past the point where an even share could hold
+       an error message the report spends nothing at all, and just
+       names the targets and their logs. *)
     fun final_report () =
         case !failures of
             [] => ()
@@ -464,12 +515,15 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
             let
               val n = length fs
               val tgt = if n = 1 then "target" else "targets"
+              val budget = if n * min_useful_extract > report_budget then 0
+                           else report_budget
+              val shares = share_lines budget (map (length o #extract) fs)
             in
               info "";
               info (red ("*** Holmake aborted - " ^ Int.toString n ^
                          " " ^ tgt ^ " failed:"));
-              List.app
-                (fn {tag,dir,status,log,fulllines,lastpartial} =>
+              ListPair.appEq
+                (fn ({tag,dir,status,log,extract}, share) =>
                     let
                       (* the failure report has a line to itself, so
                          name the tree whether or not the build spans
@@ -479,12 +533,10 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
                     in
                       info (red "*** " ^ bold (delsml_sfx tag) ^ dirpfx ^
                             " (status " ^ status ^ ")");
-                      List.app (fn s => info (" " ^ dim s)) fulllines;
-                      if lastpartial <> "" then info (" " ^ dim lastpartial)
-                      else ();
-                      info (bold (" Full log: " ^ log))
+                      show_extract {lines = extract, shown = share,
+                                    log = log}
                     end)
-                fs
+                (fs, shares)
             end
   in
     (monitor,

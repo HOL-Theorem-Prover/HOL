@@ -1,3 +1,5 @@
+;;; holscript-tests.el --- ERT tests for holscript-mode -*- lexical-binding: t -*-
+
 ;;; run with something like
 ;;;  HOLDIR=<dir> emacs -batch -l ert -l holscript-tests.el -f ert-run-tests-batch-and-exit
 

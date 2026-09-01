@@ -72,6 +72,7 @@ when the theorem statement can't be parsed).  Otherwise:
   "step": <int>,
   "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
   "pretty": "<full REPL-style render>",
+  "context": ["<combinator tag>", ...],
   "error": <string or null>
 }
 ```
@@ -85,6 +86,15 @@ when the theorem statement can't be parsed).  Otherwise:
   via the VT100 backend, so bound / free variables carry ANSI colour
   escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
   escapes with `\x1B\[[0-9;]*m` or fall back to `goals`.
+- `context` — the combinator tags naming what is still open around
+  the focus, outermost first: `"branch 2 of 3 of THENL"`,
+  `"inside 2 nested >-"`.  `pretty` already prints these above the
+  goals, so a client rendering it verbatim can ignore the field; it
+  is sent separately so a client can pin them somewhere that doesn't
+  scroll, which matters because the goals are listed with the current
+  one last.  Matching the exact strings is also how a client can
+  strip the line back out of `pretty` — a goal may itself begin with
+  a `[`.
 - `error` — non-null when the walker gave up (e.g. wall-clock budget
   exceeded); `goals` / `pretty` are empty and clients should render
   the message in place of the state.  A mid-walk partial state is
@@ -96,12 +106,21 @@ when the theorem statement can't be parsed).  Otherwise:
 ### Client cookbook
 
 - **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` bound
-  to `M-h M-g`.  Set `hol-lsp-goals-follow-cursor` non-nil to make
+  to `M-h M-g`.  The *HOL Goals* window is scrolled to the buffer's
+  end, the current goal being last and the subgoal count printed
+  after them, with `theorem`, `step`, `context` and `error` in the
+  window's `header-line-format` so they stay visible.
+  Set `hol-lsp-goals-follow-cursor` non-nil to make
   `*HOL Goals*` auto-refresh on cursor movement (debounced via
   `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
   `ansi-color-apply-on-region` on the inserted `pretty` text so the
   bound / free variable colouring survives.
-- **VS Code (recipe, not shipped)** — `client.sendRequest("$/hol/goalState", params)`
+- **VS Code** — the `lsp-integration` branch of
+  [hol4-vscode](https://github.com/HOL-Theorem-Prover/hol4-vscode)
+  ships a client and a HOL Goals pane; see
+  [`vscode-setup.md`](vscode-setup.md) for a step-by-step install.
+  To drive `$/hol/goalState` yourself,
+  `client.sendRequest("$/hol/goalState", params)`
   returns the response object.  For the simplest path, strip the ANSI
   escapes (regex `\x1B\[[0-9;]*m`) and display `pretty` as plain text
   in a `WebviewPanel`, or ignore `pretty` entirely and render the

@@ -1,3 +1,5 @@
+;;; hol-unicode.el --- HOL Unicode key bindings -*- lexical-binding: t -*-
+
 (global-set-key (kbd "C-!") "∀")
 (global-set-key (kbd "C-?") "∃")
 (global-set-key (kbd "C-&") "∧")

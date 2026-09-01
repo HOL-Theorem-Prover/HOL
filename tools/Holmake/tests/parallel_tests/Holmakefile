@@ -73,6 +73,7 @@ DIRNAMES += cache_reflink \
             depchain_heap/dir2 \
             dirlock \
             dumpheap \
+            errorbudget \
             gh1979 \
             heap-size \
             hollogs \

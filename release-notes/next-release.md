@@ -87,6 +87,21 @@ New features
     prints a directory, where it previously printed the unabbreviated
     path.
 
+-   The closing `*** Holmake aborted` report (Poly/ML, `-j n` with
+    `n` greater than one) now spends a fixed budget of about fifty
+    lines of log content, however many targets failed.  A single
+    failure still gets the whole of the retained tail of its log, as
+    before; with `-k` and several failures the budget is divided
+    between them, and each says how much of its log it is showing
+    (`Last 16 lines of output. Full log: ...`).  Beyond five failures a
+    target's share would be under ten lines, too few to hold an error
+    message, so the report drops log content altogether and just names
+    the failed targets and where their full logs are.  Previously
+    every failure contributed its entire retained tail, so a
+    keep-going build with ten failures closed with five hundred lines
+    of report.  The per-failure notice `-k` prints inline as each
+    target fails is unchanged.
+
 -   `Holmake` (under Poly/ML) understands a new per-directory
     `Holmakefile` variable, `LOCAL_PARALLELISM_LIMIT = n`, which
     caps the total number of concurrent jobs the parallel

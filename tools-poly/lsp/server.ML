@@ -109,12 +109,13 @@ fun encGoalState ({asms, goal}: goal_state) print = (
   print ",\"goal\":"; encString goal print;
   print "}")
 
-fun encGoalStateResponse ({theorem, step, goals, pretty, error, failedRange}
-                          : goal_state_response) print = (
+fun encGoalStateResponse ({theorem, step, goals, pretty, context, error,
+                           failedRange} : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
   print ",\"goals\":"; encArray encGoalState goals print;
   print ",\"pretty\":"; encString pretty print;
+  print ",\"context\":"; encArray encString context print;
   print ",\"error\":"; encOrNull encString error print;
   print "}")
 

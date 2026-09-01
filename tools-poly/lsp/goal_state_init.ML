@@ -117,7 +117,7 @@ val () = LSPExtension.goalStateAtPos :=
                       frags = fs, cursor = tacCursor}) of
                 NONE => SOME
                   {theorem = name, step = step,
-                   goals = [], pretty = "",
+                   goals = [], pretty = "", context = [],
                    error = SOME ("walker timed out (>"
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
                    failedRange = NONE}
@@ -125,6 +125,7 @@ val () = LSPExtension.goalStateAtPos :=
                   {theorem = name, step = step,
                    goals = List.map ppGoal (goalFrag.top_goals state),
                    pretty = ppState state,
+                   context = goalFrag.context_lines state,
                    error = Option.map (failMsg tacText) failedAt,
                    failedRange =
                      Option.mapPartial (failRange tacStart) failedAt}
@@ -133,7 +134,9 @@ val () = LSPExtension.goalStateAtPos :=
            val startState = goalFrag.new_goal ([], tm)
            in SOME {theorem = name, step = 0,
                     goals = [{asms = [], goal = Parse.term_to_string tm}],
-                    pretty = ppState startState, error = NONE,
+                    pretty = ppState startState,
+                    context = goalFrag.context_lines startState,
+                    error = NONE,
                     failedRange = NONE}
            end
        | _ => NONE
