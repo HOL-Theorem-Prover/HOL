@@ -157,22 +157,37 @@ fun openClause c =
         | SOME (a, conc) => (vs, strip_conj a, conc)
     end
 
-fun assemble (ops : operator list) ind =
+(* what a principle says about the operators it recurses under: its
+   predicate and the type that is about, the clauses, the nested
+   hypotheses, and the operators in the order the clauses first mention
+   them — which is the order that names the predicates *)
+fun readPrinciple ind =
     let
       val (Pv, body) = dest_forall (concl ind)
       val (hypsTm, _) = dest_imp body
-      val ty = #1 (dom_rng (type_of Pv))
       val clauses = strip_conj hypsTm
       val nested = List.concat (List.map (nestedOf Pv) clauses)
       val _ = not (null nested) orelse
               raise ERR "mutual_induction"
                     "the principle recurses under no operator"
-      (* the operators, in the order the principle's clauses first
-         mention them, which is the order that names the predicates *)
       fun firstOccs [] = []
         | firstOccs (t :: ts) =
             t :: firstOccs (List.filter (not o equal t) ts)
-      val optys = firstOccs (List.map (type_of o #arg) nested)
+    in
+      {Pv = Pv, ty = #1 (dom_rng (type_of Pv)), clauses = clauses,
+       nested = nested,
+       optys = firstOccs (List.map (type_of o #arg) nested)}
+    end
+
+(* the set function the principle collects an operator's contents with *)
+fun setOfOperator nested opty =
+    case List.find (fn r => type_of (#arg r) = opty) nested of
+        SOME r => rator (#set r)
+      | NONE => raise ERR "mutual_induction" "no set function"
+
+fun assemble (ops : operator list) ind =
+    let
+      val {Pv, ty, clauses, nested, optys} = readPrinciple ind
       (* the caller's operator for a type: the one whose induction is
          about it *)
       fun opFor opty =
@@ -181,11 +196,7 @@ fun assemble (ops : operator list) ind =
             | NONE => raise ERR "mutual_induction"
                             ("no induction principle offered for " ^
                              type_to_string opty)
-      (* and its set function, which the principle itself says *)
-      fun setFor opty =
-          case List.find (fn r => type_of (#arg r) = opty) nested of
-              SOME r => rator (#set r)
-            | NONE => raise ERR "mutual_induction" "no set function"
+      fun setFor opty = setOfOperator nested opty
       val Qs = List.tabulate
                  (length optys,
                   fn i => mk_var ("Q" ^ Int.toString i,
@@ -239,6 +250,55 @@ fun assemble (ops : operator list) ind =
     end
 
 fun mutual_induction_goal ops ind = #goal (assemble ops ind)
+
+(* ----------------------------------------------------------------------
+    Finding the operators the principle recurses under.
+
+    A caller who has only the principle has enough: it names each
+    operator and the set function that collects the operator's contents,
+    the operator's own induction principle is in the TypeBase, and what
+    its set function says at each of its constructors is a simplification
+    away.
+   ---------------------------------------------------------------------- *)
+
+fun setEqnsOf setfn opty =
+    let
+      val cnv = simpLib.SIMP_CONV (BasicProvers.srw_ss()) []
+      fun atCons c =
+          let
+            val c = Term.inst (match_type (#2 (strip_fun (type_of c))) opty) c
+            val args = #1 (strip_fun (type_of c))
+            val vs = List.tabulate
+                       (length args,
+                        fn i => mk_var ("a" ^ Int.toString i,
+                                        List.nth (args, i)))
+            val tm = mk_comb (setfn, list_mk_comb (c, vs))
+          in
+            (* an operator whose set function does not simplify at its
+               own constructors is one the caller has to say something
+               about: left to itself the equation would come back
+               reflexive, and the principle built on it would be wrong *)
+            cnv tm
+            handle Conv.UNCHANGED =>
+                   raise ERR "operators_of"
+                         ("nothing simplifies " ^ term_to_string tm ^
+                          "; supply the operator instead")
+          end
+    in
+      List.map atCons (TypeBase.constructors_of opty)
+    end
+
+fun operators_of ind =
+    let val {nested, optys, ...} = readPrinciple ind
+    in
+      List.map (fn opty =>
+                   let val setfn = setOfOperator nested opty
+                   in
+                     {induction = TypeBase.induction_of opty,
+                      sets = setEqnsOf setfn opty}
+                   end)
+               optys
+    end
 
 (* the membership hypothesis a clause of the operator's induction ends
    with, and the induction hypotheses before it *)

@@ -35,6 +35,13 @@ sig
      ---------------------------------------------------------------------- *)
   type operator = {induction : thm, sets : thm list}
 
+  (* A caller who has only the principle need not know which operators
+     it means: the principle names them, their own induction principles
+     are in the TypeBase, and what their set functions say at their
+     constructors follows by simplification.  Supply the operators to
+     say something the TypeBase and the simplifier cannot. *)
+  val operators_of : thm -> operator list
+
   val mutual_induction : operator list -> thm -> thm
 
   (* what that will prove, for a caller who would rather see it first *)

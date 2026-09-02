@@ -401,7 +401,19 @@ fun define_from_to_aux ignore_tyvars ty =
   else let
   (* extract target structure from induction theorem *)
   val mutrec_count = length (find_mutrec_types ty)
-  val ind = TypeBase.induction_of ty
+  (* The naming below reads the family off the induction principle's
+     conjuncts, and a type recursing under an operator needs one
+     function per collection it recurses under: `d = D 'a (d list)`
+     wants an encoder for `d list` as well.  The older datatype
+     construction presented that as a mutually recursive auxiliary and
+     so gave a conjunct for it; the BNF package proves one principle per
+     type, and legacyInduction puts it back. *)
+  val ind =
+      let val ind = TypeBase.induction_of ty
+      in
+        legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
+        handle HOL_ERR _ => ind
+      end
   val inputs = ind |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCTS
                    |> map (fst o dest_forall o concl)
   val tyvars = dest_type (type_of (hd inputs)) |> snd

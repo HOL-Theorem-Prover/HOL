@@ -562,7 +562,10 @@ Proof
   simp[FUN_EQ_THM] >> Cases >> simp[]
 QED
 
-Definition optSET_def:
+(* what a registered operator's set function says at the operator's own
+   constructors is what a proof about the operator's contents needs, so
+   it simplifies: listTheory's LIST_TO_SET already does *)
+Definition optSET_def[simp]:
   optSET NONE = {} ∧
   optSET (SOME x) = {x}
 End
