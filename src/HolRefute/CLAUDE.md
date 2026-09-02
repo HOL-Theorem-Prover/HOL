@@ -72,6 +72,12 @@ repository.
 - Substrate selection: `Auto` falls through inapplicable substrates
   (NativeSML, then Cv, then Compute); an explicitly selected substrate
   never falls through — inapplicability reports `Unknown`.
+- Cv declines under `e`/`expandf` (proof-manager lock: `tDefine` deadlocks)
+  and pre-flights `Test`/`Guard` conditions before synthesizing generators,
+  so a refusal costs no generator work.  Not `SmartGuard` — the program
+  compiles that to an enumerator test, never a translation.  One wrapper per
+  plan (names clash across type instances), a tuple not a conjunction
+  (`F /\ P x` collapses); verdict cached per call token.
 - SETTLED: backend admission and execution are concurrent by default through
   a worker pool local to each Refute call, even when
   `Multithreading.max_threads () = 1`.  Refute never changes that

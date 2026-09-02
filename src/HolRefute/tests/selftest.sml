@@ -26219,6 +26219,76 @@ val _ = require_msg
   "goal it decides with the lock free")
   (fn () => ()) ()
 
+(* A goal cv cannot translate used to be discovered only once the compiled
+   program reached the goal's own functions, which is after the generator
+   bundles have been defined and translated: on a hotel-style goal that was
+   2.7s of generator work before a 0.9s refusal, paid once per backend, and
+   the compute substrate that does decide such a goal started with three
+   quarters of the deadline already gone.  The conditions are translated
+   first now, so a refusal costs no generator synthesis at all.  Hilbert
+   choice is the untranslatable function here; the datatype argument is
+   what would make a generator. *)
+val rx_binary_choice_def = TotalDefn.Define
+  `rx_binary_choice RGBLeaf = (@n : num. n < 1) /\
+   rx_binary_choice (RGBNode l r) = 1`
+
+val untranslatable_cv_goal = ``rx_binary_choice (t : rg_binary) = 0``
+
+fun generator_synthesis_count () =
+  let val {hits, misses} = Refute_EvalCv.synthesis_stats ()
+  in hits + misses end
+
+fun preflight_declines_before_generator_synthesis () =
+  let
+    val config = upd_substrate Cv default_config
+    val at_start = generator_synthesis_count ()
+    val outcome = run_with_strategy Exhaustive config untranslatable_cv_goal
+    val at_end = generator_synthesis_count ()
+  in
+    reason_contains "cv: cannot translate the goal's functions" outcome
+    andalso at_end = at_start
+  end
+
+val _ = tprint "Refute cv pre-flight declines before generator synthesis"
+val _ = require_msg
+  (check_result preflight_declines_before_generator_synthesis) (fn () =>
+  "the cv substrate synthesized generators for a goal whose own functions " ^
+  "it cannot translate, or refused it for another reason")
+  (fn () => ()) ()
+
+(* The verdict turns on the goal's constants, not on a plan, so the second
+   backend of a call must read the first one's refusal instead of repeating
+   it.  Both compilations have to run under one call token, which is what
+   keys the cache -- [run_with_strategy] would mint one token each. *)
+fun preflight_verdict_is_reused_within_a_call () =
+  let
+    val config = upd_substrate Cv default_config
+    val instances = qc_instances config untranslatable_cv_goal
+    fun counts () = Refute_EvalCv.preflight_stats ()
+    val at_start = counts ()
+    val _ = in_refute_call (fn () =>
+      (ignore (strategy_run Exhaustive config instances);
+       ignore (strategy_run (Random {seed = 1}) config instances)))
+    val within = counts ()
+    val _ = ignore (run_with_strategy Exhaustive config
+      untranslatable_cv_goal)
+    val across = counts ()
+  in
+    #misses within - #misses at_start = 1 andalso
+    #hits within - #hits at_start = 1 andalso
+    (* A later call is a different token: its verdict is established again,
+       never read off a call that has since been released. *)
+    #misses across - #misses within = 1 andalso
+    #hits across = #hits within
+  end
+
+val _ = tprint "Refute cv pre-flight verdict is reused within a call"
+val _ = require_msg
+  (check_result preflight_verdict_is_reused_within_a_call) (fn () =>
+  "the cv pre-flight verdict was recomputed for the second backend of a " ^
+  "call, or carried across two calls")
+  (fn () => ()) ()
+
 fun default_backend_race_includes_narrowing () =
   let
     fun weight name =
@@ -27380,6 +27450,35 @@ val _ = tprint "Refute theory bracket silences definition messages"
 val _ = require_msg (check_result bracket_silences_definition_messages)
   (fn () => "the Refute theory bracket printed, or failed to restore, \
             \the definition storage trace")
+  (fn () => ()) ()
+
+(* The storage trace is one of three channels the scratch work speaks
+   through.  Parsing the scratch equations announces every type variable it
+   invents, and cv reports a generated precondition and dumps the term it
+   gave up on through the INFO channel at its own [Silent] level, which
+   means "print regardless of the verbosity": setting
+   [cv_memLib.verbosity_level] to [Silent] silences the levels above it and
+   never those. *)
+fun bracket_silences_parser_and_cv_chatter () =
+  let
+    fun flags () = (!Globals.notify_on_tyvar_guess, !Feedback.emit_INFO)
+    fun inside () = with_clean_theory flags
+    val outer = flags ()
+    val (quiet_tyvar, quiet_info) = inside ()
+    val quiet_restored = flags () = outer
+    val (loud_tyvar, loud_info) = Feedback.trace ("Refute", 2) inside ()
+    val loud_restored = flags () = outer
+  in
+    outer = (true, true) andalso
+    not quiet_tyvar andalso not quiet_info andalso
+    loud_tyvar andalso loud_info andalso
+    quiet_restored andalso loud_restored
+  end
+
+val _ = tprint "Refute theory bracket silences parser and cv chatter"
+val _ = require_msg (check_result bracket_silences_parser_and_cv_chatter)
+  (fn () => "the Refute theory bracket printed, or failed to restore, \
+            \the type-variable notice or the INFO channel")
   (fn () => ()) ()
 
 (* Planning promises an enumerator: the Enum node names a program that a

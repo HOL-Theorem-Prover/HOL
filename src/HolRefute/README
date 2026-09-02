@@ -444,6 +444,30 @@ hand -- holds no lock and uses Cv as usual.  The underlying re-entrancy
 is an upstream defect in `proofManagerLib`/`Defn`, not a Refute one; any
 tactic that calls `tDefine` deadlocks under `e` with no Refute involved.
 
+A Cv compile pre-flights the goal before it synthesizes anything.  The
+plan's `Test` and `Guard` conditions are translated first, one scratch
+wrapper per plan, so cv's worklist reaches the goal's own functions
+there: a goal it must refuse costs that translation alone rather than
+that plus the generator bundles, which are the expensive half of a
+compile and pure waste on a refusal.  Only those two: a `SmartGuard`
+predicate becomes a null test on the relation's enumerator, so the
+compiled program never translates the relation, and an inductive
+relation has no definition cv could take.  The wrapper is a tuple, never
+a conjunction — a plan really does produce condition lists like `F /\ P
+x`, and cv translates those by collapsing them to `F` without looking at
+the constant the refusal turns on; and it is per plan, because two plans
+of one card reuse variable names across type instances.  Nothing is
+spent twice when Cv can take
+the goal: the `cv_rep` theorems the wrapper produces are the ones the
+program translation would have produced.  The verdict depends on the
+goal's constants rather than on a plan, so it is cached under the call
+token the smart gate already uses and released with the call's other run
+resources: one Refute call admits several backends, and the second must
+not pay a refusal the first established.  The refusal reports what cv
+reported, without naming a constant — cv abandons its worklist at the
+first constant it cannot take, so the ones behind it are untranslated
+only because they were never reached.
+
 Backend races stop when a backend proves `NoCounterexample`, or when a
 counterexample reaches the highest certainty that any selected backend
 declares reachable for the current configuration and instances.

@@ -828,30 +828,47 @@ structure Refute_EvalEnum = struct
      retires again, so the definition storage messages, and the theorem-set
      warnings the retirement itself provokes, say nothing about the goal.
      Silenced with cv's own chatter, and kept from trace level 2, where the
-     bracket's definitions are what one is looking at. *)
+     bracket's definitions are what one is looking at.
+
+     Three channels carry that chatter.  The storage trace prints one line
+     per scratch definition.  Parsing the scratch equations invents type
+     variable names, announced once per quotation while
+     [Globals.notify_on_tyvar_guess] is set and the session is interactive.
+     And cv reports a generated precondition, and dumps the term it gave up
+     on, through [Feedback.HOL_INFO] at its own [Silent] level, which means
+     "print whatever the verbosity" -- [cv_memLib.verbosity_level] silences
+     the levels above it and never those, so the INFO channel itself is what
+     has to go.  Refute's own reports and traces are messages, not INFO, and
+     are unaffected. *)
   val storage_trace = "Definition.storage_message"
 
   fun bracket_chatter () = Refute_Core.Private.enabled 2
 
   type theory_bracket =
     {baseline : snapshot, old_verbosity : cv_memLib.verbosity,
-     old_storage : int}
+     old_storage : int, old_tyvar_notice : bool, old_info : bool}
 
   fun open_theory_bracket () : theory_bracket =
     let
       val baseline = snapshot ()
       val old_verbosity = !cv_memLib.verbosity_level
       val old_storage = Feedback.current_trace storage_trace
+      val old_tyvar_notice = !Globals.notify_on_tyvar_guess
+      val old_info = !Feedback.emit_INFO
       val _ = cv_memLib.verbosity_level := cv_memLib.Silent
       val _ = if bracket_chatter () then ()
-              else Feedback.set_trace storage_trace 0
+              else (Feedback.set_trace storage_trace 0;
+                    Globals.notify_on_tyvar_guess := false;
+                    Feedback.emit_INFO := false)
     in
       {baseline = baseline, old_verbosity = old_verbosity,
-       old_storage = old_storage}
+       old_storage = old_storage, old_tyvar_notice = old_tyvar_notice,
+       old_info = old_info}
     end
 
   fun close_theory_bracket
-        ({baseline, old_verbosity, old_storage} : theory_bracket) =
+        ({baseline, old_verbosity, old_storage, old_tyvar_notice,
+          old_info} : theory_bracket) =
     let
       val quiet_revert =
         if bracket_chatter () then revert
@@ -859,6 +876,8 @@ structure Refute_EvalEnum = struct
       val result = Exn.capture quiet_revert baseline
       val _ = cv_memLib.verbosity_level := old_verbosity
       val _ = Feedback.set_trace storage_trace old_storage
+      val _ = Globals.notify_on_tyvar_guess := old_tyvar_notice
+      val _ = Feedback.emit_INFO := old_info
     in
       case result of
           Exn.Res _ => ()

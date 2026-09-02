@@ -1029,6 +1029,175 @@ structure Refute_EvalCv = struct
         (List.find is_partial constants)
     end
 
+  (* The goal's own functions are translated only when the compiled program
+     reaches them, which is after the generator bundles have been defined
+     and translated -- the expensive half of a cv compile, and pure waste on
+     a goal cv then has to refuse.  Translate the plan's conditions first,
+     as one scratch wrapper: cv's worklist pulls in the definitions of the
+     constants they mention, so a refusal costs that translation alone
+     instead of that plus generator synthesis.  Nothing is spent twice when
+     cv can take the goal -- the [cv_rep] theorems the wrapper produces are
+     the ones the program translation would have produced anyway.
+
+     Test and Guard conditions only.  A Bind value, a Split scrutinee and an
+     Enum row are user terms too, but the conditions carry the goal's
+     functions in practice, and a narrow probe cannot refuse a goal the
+     program would have compiled.  A SmartGuard predicate is exactly such a
+     term: the exhaustive compiler replaces it with a null test on the
+     relation's enumerator, so the program never translates the relation --
+     and an inductive relation has no definition cv could take. *)
+  fun plan_conditions plan =
+    let
+      fun collect current terms =
+        case current of
+            Refute_Eval.Test tm => tm :: terms
+          | Refute_Eval.Gen (_, next) => collect next terms
+          | Refute_Eval.Bind (_, _, fallback, next) =>
+              collect next
+                (case fallback of
+                    NONE => terms
+                  | SOME alternative => collect alternative terms)
+          | Refute_Eval.Split (_, branches) =>
+              List.foldl (fn ((_, _, next), result) =>
+                collect next result) terms branches
+          | Refute_Eval.Guard {condition, cont, ...} =>
+              collect cont (condition :: terms)
+          | Refute_Eval.SmartGuard {cont, ...} => collect cont terms
+          | Refute_Eval.Enum {cont, ...} => collect cont terms
+          | Refute_Eval.Prune => terms
+    in
+      collect plan []
+    end
+
+  fun same_terms left right =
+    length left = length right andalso
+    ListPair.allEq (fn (one, other) => Term.aconv one other) (left, right)
+
+  (* Keyed by the call token the smart gate already uses: one Refute call
+     admits several backends, each compiling its own plans on its own
+     worker, and this verdict turns on the goal's constants rather than on a
+     plan, so the second backend must not pay a refusal the first one has
+     already established.  Released with the call's other run resources. *)
+  val preflight_cache =
+    ref ([] : (unit ref * term list * string option) list)
+  val preflight_mutex = Mutex.mutex ()
+  val preflight_hits = ref 0
+  val preflight_misses = ref 0
+
+  fun preflight_stats () =
+    {hits = !preflight_hits, misses = !preflight_misses}
+
+  fun call_token () = Thread_Data.get Refute_Core.active_refute_context
+
+  fun preflight_lookup conditions =
+    let
+      val found =
+        case call_token () of
+            NONE => NONE
+          | SOME token =>
+              Multithreading.synchronized "Refute cv preflight cache"
+                preflight_mutex (fn () =>
+                  Option.map #3 (List.find
+                    (fn (old_token, old_conditions, _) =>
+                      Portable.pointer_eq (token, old_token) andalso
+                      same_terms old_conditions conditions)
+                    (!preflight_cache)))
+      val _ =
+        case found of
+            SOME _ => preflight_hits := !preflight_hits + 1
+          | NONE => preflight_misses := !preflight_misses + 1
+    in
+      found
+    end
+
+  fun preflight_remember conditions verdict =
+    case call_token () of
+        NONE => ()
+      | SOME token =>
+          Multithreading.synchronized "Refute cv preflight cache"
+            preflight_mutex (fn () =>
+              preflight_cache :=
+                (token, conditions, verdict) :: !preflight_cache)
+
+  fun clear_preflight_cache () =
+    case call_token () of
+        NONE => ()
+      | SOME token =>
+          Multithreading.synchronized "Refute cv preflight cache"
+            preflight_mutex (fn () =>
+              preflight_cache := List.filter
+                (fn (old_token, _, _) =>
+                  not (Portable.pointer_eq (token, old_token)))
+                (!preflight_cache))
+
+  fun preflight_translate conditions =
+    let
+      (* A tuple, never a conjunction: `F /\ hotel s` is a condition list a
+         plan really produces, and cv translates it by collapsing it to `F`
+         without ever looking at the constant the refusal turns on. *)
+      val body =
+        case conditions of
+            [tm] => tm
+          | _ => pairSyntax.list_mk_pair conditions
+      val parameters = Term.free_vars body
+      val function = Term.mk_var
+        (fresh_prefix () ^ "pre",
+         boolSyntax.list_mk_fun
+           (List.map Term.type_of parameters, Term.type_of body))
+      val equation = boolSyntax.mk_eq
+        (Term.list_mk_comb (function, parameters), body)
+      val definition = define_clique [HOLPP.ANTIQUOTE equation]
+    in
+      (* A precondition is cv's answer, not a refusal: the program
+         translation decides what to do with one. *)
+      ignore (cv_transLib.cv_auto_trans_opt_pre definition)
+    end
+
+  (* cv aborts its worklist at the first constant it cannot take, so the
+     ones behind that one are untranslated only because they were never
+     reached: naming any of them would be a guess.  Report what cv
+     reported. *)
+  fun preflight_reason error =
+    "cannot translate the goal's functions: " ^
+    (case Feedback.message_of error of
+         "" => "no cv translation"
+       | message => message)
+
+  fun preflight_conditions conditions =
+    case preflight_lookup conditions of
+        SOME (SOME reason) => raise Unsupported reason
+      | SOME NONE => ()
+      | NONE =>
+          (case Exn.capture preflight_translate conditions of
+               Exn.Res _ => preflight_remember conditions NONE
+             | Exn.Exn Interrupt => raise Interrupt
+             | Exn.Exn (Feedback.HOL_ERR error) =>
+                 let val reason = preflight_reason error
+                 in
+                   preflight_remember conditions (SOME reason);
+                   raise Unsupported reason
+                 end
+             | Exn.Exn error => raise error)
+
+  (* One wrapper per plan, never one over the whole card.  Two plans of a
+     card are separate instantiations of the goal and reuse variable names
+     across type instances; tupling them together asks the parser to give one
+     name two types, which fails as an antiquotation clash and would be
+     reported as a refusal. *)
+  fun preflight plans =
+    let
+      fun distinct [] seen = List.rev seen
+        | distinct (conditions :: rest) seen =
+            if List.exists (same_terms conditions) seen then
+              distinct rest seen
+            else
+              distinct rest (conditions :: seen)
+      val lists = distinct
+        (List.filter (not o null) (List.map plan_conditions plans)) []
+    in
+      List.app preflight_conditions lists
+    end
+
   fun env_type [] = Type.bool
     | env_type variables =
         pairSyntax.list_mk_prod (List.map Term.type_of variables)
@@ -1699,6 +1868,7 @@ structure Refute_EvalCv = struct
          Auto can still select the next substrate. *)
       val _ =
         (start ();
+         preflight plans;
          List.app (fn card => ignore (runner card))
            (Portable.upto 1 (length plans)))
         handle e => (close (); raise e)
@@ -1852,7 +2022,9 @@ structure Refute_EvalCv = struct
      preflight = NONE, compile = compile}
 
   fun register_substrate () =
-    Refute_Eval.register_substrate cv_substrate
+    (Refute_Eval.register_substrate cv_substrate;
+     Refute_Core.register_run_release "cv-preflight-cache"
+       clear_preflight_cache)
 
   val _ = register_substrate ()
 end
