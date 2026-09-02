@@ -25,6 +25,10 @@ practical guide to trying it out; the protocol details live in
   below), `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted` /
   `$/compileBlocked`, `$/hol/retryCompile`.
+- Server capabilities also cover `documentSymbolProvider`,
+  `workspaceSymbolProvider` and `completionProvider`, so an editor's
+  outline, symbol search and completion work with no client-side code
+  — see "Symbols, completion and their scope".
 - **Unloadable ancestors stop the file.**  A script that names an
   ancestor or library the server cannot load — not built yet, or
   raising on load — gets no compile at all: there is nothing to
@@ -252,6 +256,68 @@ Two consequences worth knowing:
   current project and adopts every same-mode buffer under it, which
   is exactly the arrangement that breaks.  Let `hol-lsp-enable`'s
   hook start the server.
+
+#### What one file's server can see of another
+
+Two files edited at once, in two servers, are completely isolated:
+neither server can read the other's buffer, and no unsaved edit in one
+can change any answer given for the other.  This holds whichever way
+the dependency runs -- a library that opens this script's theory, or a
+script that opens that library -- because a server has exactly three
+inputs and none of them is another editor buffer: its own client's
+text, the Holmake-built artifacts on disk, and `bin/hol.state`.
+
+Isolation is not freshness, and the difference bites:
+
+- **A server is pinned to the artifacts it first loaded.**  `Meta.load`
+  records a module as loaded and never re-reads it, and the server
+  keeps that record across recompiles on purpose -- re-reading a
+  theory is impossible once it is sealed.  So rebuilding a dependency
+  with `Holmake` does *not* update an already-running server.  Restart
+  it.
+- **The exception is a dependency that was missing.**  One that failed
+  to resolve is genuinely re-read, which is what `$/hol/retryCompile`
+  ("Compile the active script again", `M-h M-C`) is for.  A
+  *half-built* dependency -- `.uo` present, a file it names absent --
+  is the awkward case: nothing loaded but the module is marked, and
+  only a restart clears it.
+- **Stale locations look like cross-talk.**  Go-to-definition into a
+  theory, and hover on a theorem, report the path, line and statement
+  recorded in the *built* theory.  Edit that script in another window
+  and the numbers drift, though nothing was shared.
+- **`Holmakefile` `INCLUDES` are read once per directory per server.**
+  Add one and restart.
+
+Isolation is a property of the process boundary, not of the code: two
+files served by one process would share the whole of HOL's `Context`,
+the sealed-theory set and `Meta.loadedMods`.  The server therefore
+declines to compile a file it is not bound to, so the guarantee does
+not rest on the client starting one process per script.  A consequence
+worth stating: `.sig` files and library `.sml` files get no IDE
+features at all.
+
+#### Symbols, completion and their scope
+
+`textDocument/documentSymbol` is answered from the parser, not from
+the last compile, so the outline works on a file that does not compile
+-- including one the server has refused to compile because an ancestor
+is missing.
+
+`workspace/symbol` and `textDocument/completion` answer from HOL:
+theorems of the theories this server loaded, and beyond them any
+theory built in the project, read from its `Theory.dat` without being
+loaded.  The two are distinguished, because only the first is usable
+as it stands: a hit from the second is marked *not an ancestor*, and
+using it means adding the theory to `Ancestors` first.  Neither
+scans sources that have never been built; declarations of the buffers
+you have open are included, so something typed a minute ago is still
+findable.
+
+There is no `textDocument/references`.  It was advertised for a long
+time with no handler behind it; an honest implementation is not
+available, since Poly records references only within the compilation
+unit it is compiling and HOL keeps no index of which proofs cite a
+theorem.
 
 Then open a `*Script.sml` file.  Diagnostics appear as flymake
 underlines; `M-x eldoc` (or `eldoc-mode`) shows hover at point;
