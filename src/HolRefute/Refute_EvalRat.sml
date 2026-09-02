@@ -101,9 +101,21 @@ end = struct
       Thm.TRANS step2 decided
     end
 
+  (* The redex type is checked before any work: this conversion sits on
+     the polymorphic [[=]] key and is therefore offered every equality
+     computeLib meets, at every type (see [[rat_eq_tm]] below).  Reaching
+     [[RAT_CMP_STEP]] with, say, a datatype constructor on the left runs
+     [[ratLib.RAT_CALC_CONV]] on it, which fails only after parsing --
+     announcing an invented type variable per call, on the hot path of
+     every compute-substrate candidate. *)
   fun RAT_EQ_DECIDE_CONV tm =
-    RAT_CMP_STEP ratTheory.RAT_EQ (Term.rator (Term.rator tm))
-      (boolSyntax.dest_eq tm)
+    (let
+      val (l, r) = boolSyntax.dest_eq tm
+    in
+      if Refute_Util.same_type (Term.type_of l) rat_ty then
+        RAT_CMP_STEP ratTheory.RAT_EQ (Term.rator (Term.rator tm)) (l, r)
+      else Feedback.failwith "RAT_EQ_DECIDE_CONV"
+    end)
     handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_EQ_DECIDE_CONV"
          | Conv.UNCHANGED => Feedback.failwith "RAT_EQ_DECIDE_CONV"
 
@@ -148,10 +160,12 @@ end = struct
      never checks the redex's head constant against that key at all
      (unlike the [[Rewrite]] branch's [[match_term]] at :156): the conv
      below really is tried against equality redexes at any type that
-     reach it.  It is safe for two reasons: [[add_convs]] appends it
-     after whatever rules the key already has, so those win first, and
-     it raises [[HOL_ERR]] on a non-rat redex, which [[reduce_cst]]
-     catches and falls through on. *)
+     reach it.  [[add_convs]] appends it after the rules the key holds
+     when Refute loads, but not after those a later [[Datatype]] adds,
+     so it is genuinely reached first for every type defined in the
+     session from here on: its own type guard, not its position in the
+     chain, is what keeps it off them.  Rejecting there raises
+     [[HOL_ERR]], which [[reduce_cst]] catches and falls through on. *)
   val rat_eq_tm =
     Term.inst [{redex = Type.alpha, residue = rat_ty}] boolSyntax.equality
 

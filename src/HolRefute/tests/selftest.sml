@@ -37327,4 +37327,55 @@ val _ = require_msg (check_result graph_reorder_sound_both_orders) (fn () =>
   "depending on premise order")
   (fn () => ()) ()
 
+(* Refute's rat equality decision procedure is wired into the compset
+   under the polymorphic [=] key, which computeLib offers for equality
+   at every type.  A datatype defined after Refute loads -- an ordinary
+   interactive session stepping through a script -- has its distinctness
+   rules behind that conv, so the conv is what runs first, and without a
+   type guard it descends into ratLib.RAT_CALC_CONV, which fails only
+   after a parse.  Under a script header's restricted grammar ancestry
+   that parse guesses a type variable and says so, once per candidate
+   equality on the compute substrate. *)
+val _ = Datatype.Datatype `ratconv_probe = RCP0 | RCP1`
+
+fun rat_eq_conv_stays_off_other_types () =
+  let
+    val equation = ``RCP0 = RCP1``
+    val saved_grammars = Parse.current_grammars ()
+    val old_out = !Feedback.MESG_outstream
+    (* [bin/hol run selftest] is not interactive, and the parser announces
+       a guessed type variable only when it is: without this the counter
+       below can never move and the check passes vacuously. *)
+    val old_interactive = !Globals.interactive
+    val guesses = ref 0
+    fun restore () =
+      (Feedback.MESG_outstream := old_out;
+       Globals.interactive := old_interactive;
+       Parse.temp_set_grammars saved_grammars)
+    val () = Globals.interactive := true
+    val () = Parse.set_grammar_ancestry ["hol", "list"]
+    val () = Feedback.MESG_outstream := (fn message =>
+      ((if String.isSubstring "inventing" message then
+          guesses := !guesses + 1
+        else ());
+       old_out message))
+    val decided =
+      SOME (computeLib.CBV_CONV (computeLib.the_compset ()) equation)
+      handle Interrupt => (restore (); raise Interrupt)
+           | _ => NONE
+    val () = restore ()
+  in
+    !guesses = 0 andalso
+    (case decided of
+         SOME thm => Term.aconv (boolSyntax.rhs (Thm.concl thm)) boolSyntax.F
+       | NONE => false)
+  end
+
+val _ = tprint "Refute rat equality conv is silent on other types"
+val _ = require_msg (check_result rat_eq_conv_stays_off_other_types)
+  (fn () =>
+    "deciding a datatype disequality either failed or announced an " ^
+    "invented type variable, so the rat conv ran on a non-rat redex")
+  (fn () => ()) ()
+
 val _ = exit_count0 erc
