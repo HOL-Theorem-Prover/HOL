@@ -52,7 +52,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   fun insert equal value values =
     if member equal value values then values else value :: values
 
-  fun same_mtype (left, right) = left = right
   fun same_term (left, right) = Term.aconv left right
 
   fun lookup equal key pairs =
@@ -140,7 +139,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         (case lookup (Lib.uncurry Util.same_type) ty cache of
              SOME (MRec _) => MType (type_name ty, [])
            | SOME mtype =>
-               if member same_mtype mtype seen then
+               if member (op =) mtype seen then
                  MType (type_name ty, [])
                else
                  repair_mtype cache (mtype :: seen) mtype
@@ -167,7 +166,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
 
   fun union_mtypes new old =
     List.foldl (fn (mtype, result) =>
-      insert same_mtype mtype result) old new
+      insert (op =) mtype result) old new
 
   fun fresh_mfun_for_fun_type
         (mdata as {max_fresh, ...} : mdata) all_minus domain range =
@@ -684,8 +683,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
       render 0 mtype
     end
 
-  val ground_and_sole_base_constrs : string list = []
-
   fun prodM_factors (MPair (left, right)) =
         prodM_factors left @ prodM_factors right
     | prodM_factors mtype = [mtype]
@@ -698,10 +695,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   fun sel_mtype_from_constr_mtype name mtype =
     let
       val (arguments, data_mtype) = curried_strip_mtype mtype
-      val annotation =
-        if List.exists (fn item => item = MFN.original_name name)
-             ground_and_sole_base_constrs then Fls
-        else Gen
       val range =
         case MFN.sel_no_from_name name of
             ~1 => bool_M
@@ -711,7 +704,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                  raise MTYPE
                    ("Refute_ModelFinder_Mono.selector", [mtype], []))
     in
-      MFun (data_mtype, A annotation, range)
+      MFun (data_mtype, A Gen, range)
     end
 
   fun mtype_for_sel
@@ -1160,11 +1153,9 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
             SOME (identifier, _, mtype) => SOME (identifier, mtype)
           | NONE => NONE
 
-      fun variable_name term = #1 (Term.dest_var term)
-
       fun is_reserved term =
         Term.is_var term andalso
-        MFN.is_reserved_name (variable_name term)
+        MFN.is_reserved_name (MFN.variable_name term)
 
       fun const_like term
             (accum as (gamma as {frame, consts, ...} : mcontext,
@@ -1229,7 +1220,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                             {Thy = "relation", Name = "O"} term then
                     do_composition ty accum
                   else if is_reserved term andalso
-                          MFN.is_sel (variable_name term) then
+                          MFN.is_sel (MFN.variable_name term) then
                     (mtype_for_sel mdata term, accum)
                   else if MFH.is_constr term then
                     (mtype_for_constr mdata term, accum)
@@ -1499,14 +1490,12 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
             (gamma, constraints) =
         let
           val mtype = mtype_for (Term.type_of variable)
-          val annotation = V (fresh max_fresh)
-          val side_condition =
-            (sign = Minus) = existential
+          val fresh_variable = fresh max_fresh
+          val annotation = V fresh_variable
           val constraints =
-            if side_condition then
+            if (sign = Minus) = existential then
               add_mtype_is_complete
-                [(case annotation of V x => x | _ => 0,
-                  (Plus, if existential then Fls else Tru))]
+                [(fresh_variable, (Plus, if existential then Fls else Tru))]
                 mtype constraints
             else constraints
           val (gamma, constraints) =
@@ -1706,56 +1695,5 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                   (map string_for_mtype mtypes @
                    map Parse.type_to_string types))
 
-  fun mtype_has_rec MAlpha = false
-    | mtype_has_rec (MFun (left, _, right)) =
-        mtype_has_rec left orelse mtype_has_rec right
-    | mtype_has_rec (MPair (left, right)) =
-        mtype_has_rec left orelse mtype_has_rec right
-    | mtype_has_rec (MType (_, arguments)) =
-        List.exists mtype_has_rec arguments
-    | mtype_has_rec (MRec _) = true
-
-  structure Test = struct
-    datatype sign = datatype sign
-    datatype annotation = datatype annotation
-    datatype annotation_atom = datatype annotation_atom
-    datatype mtyp = datatype mtyp
-    datatype comp_op = datatype comp_op
-
-    type assign_literal = assign_literal
-    type comp = comp
-    type assign_clause = assign_clause
-    type constraint_set = constraint_set
-    type mdata = mdata
-
-    exception UNSOLVABLE = UNSOLVABLE
-
-    val empty_constraints = empty_constraints
-    val initial_mdata = initial_mdata
-    fun mtype_of_type data ty = fresh_mtype_for_type data false ty
-    val mtype_of_type_all_minus = fresh_mtype_for_type
-    val mtype_for_constr = mtype_for_constr
-    fun mtype_for_term data term =
-      let val (mtype, (_, constraints)) =
-        consider_term data term (initial_gamma, empty_constraints)
-      in (mtype, constraints) end
-    fun max_fresh ({max_fresh, ...} : mdata) = !max_fresh
-    fun caches_repaired
-          ({data_type_mcache, constr_mcache, ...} : mdata) =
-      List.all (not o mtype_has_rec o #2) (!data_type_mcache) andalso
-      List.all (not o mtype_has_rec o #2) (!constr_mcache)
-
-    val add_annotation_atom_comp = add_annotation_atom_comp
-    fun add_assign_clause clause (comps, clauses) =
-      (comps, add_assign_clause_opt (SOME clause) clauses)
-    val add_mtypes_equal = add_mtypes_equal
-    val add_is_sub_mtype = add_is_sub_mtype
-    val add_mtype_is_concrete = add_mtype_is_concrete
-    val add_mtype_is_complete = add_mtype_is_complete
-
-    val prop_for_assign = prop_for_assign
-    val prop_for_comp = prop_for_comp
-    val encode = encode
-    val solve = solve
-  end
 end
+

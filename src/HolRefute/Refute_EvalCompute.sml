@@ -203,8 +203,6 @@ structure Refute_EvalCompute = struct
 
   exception EnumInvalid = Refute_EvalEnum.Invalid
 
-  val prepare_enums = Refute_EvalEnum.prepare
-
   fun exhaustive_terms ty size =
     case Refute_Gen.enumerate ty of
         SOME values => values
@@ -269,10 +267,6 @@ structure Refute_EvalCompute = struct
         SOME program => program
       | NONE => raise EnumInvalid
           "smart plan: enumerator dependency is absent"
-
-  fun smart_guard_program programs predicate version =
-    Refute_EvalEnum.smart_guard_lookup
-      {relation = predicate, version = version} programs
 
   (* Filtering ignored candidates belongs here rather than in a driver:
      other substrates use different retry protocols. *)
@@ -363,7 +357,8 @@ structure Refute_EvalCompute = struct
                       if genuine_only then dropped ()
                       else visit env false cont))
           | SmartGuard {predicate, version, cont} =>
-              (case smart_guard_program programs predicate version of
+              (case Refute_EvalEnum.smart_guard_lookup
+                  {relation = predicate, version = version} programs of
                    SOME (program, ins) =>
                      let val inputs = List.map (eval_rhs env) ins
                      in
@@ -541,62 +536,60 @@ structure Refute_EvalCompute = struct
 
   fun bounded_size size = Int.max (0, size)
 
-  val arbnum_of_intinf = Arbnum.fromLargeInt
-  val arbint_of_intinf = Arbint.fromLargeInt
-
-  (* The normative random-consumption discipline, parameterized over the
-     draw primitive (and the custom-generator policy) so the cv candidate
-     dump can replay exactly the same stream through cv_eval. *)
-  fun random_number_with draw Refute_Gen.Num size state =
+  (* The normative random-consumption discipline: the cv and native
+     substrates must draw the identical stream for a seed. *)
+  fun random_number Refute_Gen.Num size state =
         let
           val radius = IntInf.fromInt (bounded_size size)
-          val bound = radius + 1
-          val (value, next) = draw bound state
+          val (value, next) = checked_rand_below (radius + 1) state
         in
-          (numSyntax.mk_numeral (arbnum_of_intinf value), next)
+          (numSyntax.mk_numeral (Arbnum.fromLargeInt value), next)
         end
-    | random_number_with draw Refute_Gen.Int size state =
+    | random_number Refute_Gen.Int size state =
         let
           val radius = IntInf.fromInt (bounded_size size)
-          val bound = 2 * radius + 1
-          val (value, next) = draw bound state
-          val signed = value - radius
+          val (value, next) = checked_rand_below (2 * radius + 1) state
         in
-          (intSyntax.term_of_int (arbint_of_intinf signed), next)
+          (intSyntax.term_of_int (Arbint.fromLargeInt (value - radius)),
+           next)
         end
-    | random_number_with draw Refute_Gen.Char _ state =
+    | random_number Refute_Gen.Char _ state =
         let
-          val (value, next) = draw 256 state
+          val (value, next) = checked_rand_below 256 state
         in
           (stringSyntax.mk_chr
-             (numSyntax.mk_numeral (arbnum_of_intinf value)), next)
+             (numSyntax.mk_numeral (Arbnum.fromLargeInt value)), next)
         end
-    | random_number_with draw (Refute_Gen.Word width) _ state =
+    | random_number (Refute_Gen.Word width) _ state =
         let
-          val bound = IntInf.pow (2, width)
-          val (value, next) = draw bound state
+          val (value, next) =
+            checked_rand_below (IntInf.pow (2, width)) state
         in
-          (wordsSyntax.mk_wordi (arbnum_of_intinf value, width), next)
+          (wordsSyntax.mk_wordi (Arbnum.fromLargeInt value, width), next)
         end
+
+  fun default_custom (SOME generate) size state = generate size state
+    | default_custom NONE _ _ =
+        raise Fail "Refute_QC.random_value: no random generator"
 
   (* [hard] is the recursion fuel, [size] the structural budget; they part
      company only below a function boundary, which decays them separately. *)
-  fun random_entry_hard_with draw custom spec hard size state =
-    random_value_with draw custom spec
+  fun random_entry_hard spec hard size state =
+    random_value spec
       {budget = Int.max (Refute_Gen.own_floor spec, bounded_size size),
        hard_budget = bounded_size hard,
        size = bounded_size size} state
 
-  and random_entry_with draw custom spec size state =
-    random_entry_hard_with draw custom spec size size state
+  and random_entry spec size state =
+    random_entry_hard spec size size state
 
-  and random_args_with _ _ [] [] _ _ _ state = ([], state)
-    | random_args_with draw custom (ty :: tys)
-        (is_recursive :: recursive) budget hard_budget size state =
+  and random_args [] [] _ _ _ state = ([], state)
+    | random_args (ty :: tys) (is_recursive :: recursive) budget
+        hard_budget size state =
         let
           val (value, next) =
             if is_recursive then
-              random_value_with draw custom (Refute_Gen.spec_of ty)
+              random_value (Refute_Gen.spec_of ty)
                 {budget = Int.max (0, budget - 1),
                  hard_budget = Int.max (0, hard_budget - 1),
                  size = size} state
@@ -604,22 +597,20 @@ structure Refute_EvalCompute = struct
               (* Preserve the current constructor budget through wrappers
                  such as option.  Resetting it to [size] here lets an
                  indirect recursive field evade the direct-recursion check. *)
-              random_value_with draw custom (Refute_Gen.spec_of ty)
+              random_value (Refute_Gen.spec_of ty)
                 {budget = Int.max (Refute_Gen.own_floor
                    (Refute_Gen.spec_of ty), budget),
                  hard_budget = hard_budget, size = size} state
           val (values, final) =
-            random_args_with draw custom tys recursive budget hard_budget
-              size next
+            random_args tys recursive budget hard_budget size next
         in
           (value :: values, final)
         end
-    | random_args_with _ _ _ _ _ _ _ _ =
+    | random_args _ _ _ _ _ _ =
         raise Fail "Refute_QC.random_args: malformed datatype"
 
-  and random_function_with draw custom dom rng_ty hard_budget size state =
+  and random_function dom rng_ty hard_budget size state =
     let
-      val entry = random_entry_hard_with draw custom
       (* Size and hard recursion fuel decay geometrically across every
          function boundary.  The structural budget may still rise to a
          result type's minimum inhabitation floor, but [hard_budget] never
@@ -638,13 +629,13 @@ structure Refute_EvalCompute = struct
       val decayed = size div 2
       val decayed_hard = hard_budget div 2
       val variable = Term.mk_var ("x", dom)
+      fun entry spec = random_entry_hard spec decayed_hard decayed
       val (default, after_default) =
-        entry (Refute_Gen.spec_of rng_ty) decayed_hard decayed state
+        entry (Refute_Gen.spec_of rng_ty) state
       fun draw_points 0 current = ([], current)
         | draw_points count current =
             let
-              val (point, next) =
-                entry (Refute_Gen.spec_of dom) decayed_hard decayed current
+              val (point, next) = entry (Refute_Gen.spec_of dom) current
               val (points, final) = draw_points (count - 1) next
             in
               (point :: points, final)
@@ -655,8 +646,7 @@ structure Refute_EvalCompute = struct
           | NONE => draw_points (bounded_size size) after_default
       fun add (point, (base, current)) =
         let
-          val (value, next) =
-            entry (Refute_Gen.spec_of rng_ty) decayed_hard decayed current
+          val (value, next) = entry (Refute_Gen.spec_of rng_ty) current
         in
           (Term.mk_comb (combinSyntax.mk_update (point, value), base), next)
         end
@@ -666,7 +656,7 @@ structure Refute_EvalCompute = struct
       (result, final)
     end
 
-  and random_value_with draw custom spec {budget, hard_budget, size} state =
+  and random_value spec {budget, hard_budget, size} state =
     case spec of
         Refute_Gen.GenEnum values =>
           if null values then
@@ -674,16 +664,16 @@ structure Refute_EvalCompute = struct
           else
             let
               val (choice, next) =
-                draw (IntInf.fromInt (length values)) state
+                checked_rand_below (IntInf.fromInt (length values)) state
             in
               (List.nth (values, IntInf.toInt choice), next)
             end
-      | Refute_Gen.GenNum kind => random_number_with draw kind size state
+      | Refute_Gen.GenNum kind => random_number kind size state
       | Refute_Gen.GenCustom (ty, {random, ...}) =>
-          let val (value, next) = custom random size state
+          let val (value, next) = default_custom random size state
           in (checked_custom_value ty value, next) end
       | Refute_Gen.GenFun (dom, rng_ty) =>
-          random_function_with draw custom dom rng_ty hard_budget size state
+          random_function dom rng_ty hard_budget size state
       | Refute_Gen.GenDatatype
           {constrs, recursive, min_size, fun_recursive, ...} =>
           let
@@ -692,10 +682,7 @@ structure Refute_EvalCompute = struct
               else if not (List.exists (fn flag => flag) flags) then 1
               else
                 let
-                  fun depth (true, floor) = Int.max (0, floor - 1)
-                    | depth (false, _) = 0
-                  val minimum = List.foldl Int.max 0
-                    (ListPair.mapEq depth (flags, floors))
+                  val minimum = Refute_EvalEnum.recursion_floor flags floors
                 in
                   if minimum = 0 then budget
                   else if budget > minimum then budget else 0
@@ -714,7 +701,7 @@ structure Refute_EvalCompute = struct
             val choices = entries constrs recursive min_size fun_recursive
             val total = List.foldl (fn ((_, _, value), sum) =>
               IntInf.fromInt value + sum) 0 choices
-            val (choice, after_choice) = draw total state
+            val (choice, after_choice) = checked_rand_below total state
             fun select _ [] =
                   raise Fail
                     "Refute_QC.random_value: no constructor"
@@ -725,25 +712,11 @@ structure Refute_EvalCompute = struct
                     else select (remaining - weight) rest
                   end
             val ((constructor, arg_types), flags) = select choice choices
-            val (arguments, final) = random_args_with draw custom
+            val (arguments, final) = random_args
               arg_types flags budget hard_budget size after_choice
           in
             (Term.list_mk_comb (constructor, arguments), final)
           end
-
-  fun default_custom (SOME generate) size state = generate size state
-    | default_custom NONE _ _ =
-        raise Fail "Refute_QC.random_value: no random generator"
-
-  fun random_entry spec =
-    random_entry_with checked_rand_below default_custom spec
-
-  fun random_value spec {budget, size} state =
-    random_value_with checked_rand_below default_custom spec
-      {budget = budget, hard_budget = budget, size = size} state
-
-  fun random_term ty size state =
-    random_entry (Refute_Gen.spec_of ty) size state
 
   fun stat name stats =
     Option.getOpt (Refute_Core.lookup_stat name stats, 0)
@@ -751,7 +724,8 @@ structure Refute_EvalCompute = struct
   fun random_gen state size visit _ env genuine variable next =
     let
       val (value, after_draw) =
-        random_term (Term.type_of variable) size (!state)
+        random_entry (Refute_Gen.spec_of (Term.type_of variable)) size
+          (!state)
       val _ = state := after_draw
     in
       visit ((variable, value) :: env) genuine next
@@ -810,36 +784,6 @@ structure Refute_EvalCompute = struct
        last_stats = last_stats}
     end
 
-  (* Compute-only scaffolding for the cross-substrate stream tests.  One
-     result records, in order, every Gen draw made by one plan attempt. *)
-  fun dump_random_candidates {plan, seed, size, count} =
-    let
-      val state = ref seed
-
-      fun one () =
-        let
-          val generated = ref []
-          fun gen visit _ env genuine variable next =
-            let
-              val (value, after_draw) =
-                random_term (Term.type_of variable) size (!state)
-              val _ = state := after_draw
-              val _ = generated := value :: !generated
-            in
-              visit ((variable, value) :: env) genuine next
-            end
-          val _ = traverse (fn _ => fn _ => []) [] gen false [] plan
-        in
-          rev (!generated)
-        end
-
-      fun loop 0 candidates = rev candidates
-        | loop remaining candidates =
-            loop (remaining - 1) (one () :: candidates)
-    in
-      loop (bounded_size count) []
-    end
-
   fun no_generator_reason ty why =
     "no generator for " ^ Parse.type_to_string ty ^ " \226\128\148 " ^ why
 
@@ -895,23 +839,7 @@ structure Refute_EvalCompute = struct
           handle Refute_Gen.NoGenerator (missing_ty, why) =>
             add (no_generator_reason missing_ty why)
 
-      fun validate_plan current =
-        case current of
-            Test _ => ()
-          | Gen (variable, next) =>
-              (validate_type (Term.type_of variable); validate_plan next)
-          | Bind (_, _, fallback, next) =>
-              ((case fallback of
-                  NONE => ()
-                | SOME alternative => validate_plan alternative);
-               validate_plan next)
-          | Split (_, branches) =>
-              List.app (fn (_, _, next) => validate_plan next) branches
-          | Guard {cont, ...} => validate_plan cont
-          | SmartGuard {cont, ...} => validate_plan cont
-          | Enum {cont, ...} => validate_plan cont
-          | Prune => ()
-      val _ = List.app validate_plan plans
+      val _ = List.app (List.app validate_type o plan_gen_types) plans
       val _ = List.app validate_type
         (Refute_EvalEnum.generator_types programs)
     in
@@ -925,7 +853,7 @@ structure Refute_EvalCompute = struct
            validation; only the loop built from the result differs. *)
         fun attempt build =
           (let
-             val programs = prepare_enums strategy plans
+             val programs = Refute_EvalEnum.prepare strategy plans
            in
              case validation_reasons strategy plans programs of
                  [] => Compiled (build programs)

@@ -78,11 +78,7 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
   val assemble_problem :
     assembly_params -> bool -> Refute_ModelFinder_Scope.scope ->
     rich_problem option
-  val assemble_problem_pair :
-    assembly_params -> Refute_ModelFinder_Scope.scope ->
-    rich_problem option * rich_problem option
 
-  val empty_need_values : data_type_spec list -> need_values
   val needed_values_for_data_type :
     nut list -> offset_table -> data_type_spec -> (nut * int) list option
   val declarative_axiom_for_plain_rel :
@@ -615,11 +611,10 @@ fun bound_for_sel_rel debug need_values data_types
                 val selector = MFN.sel_no_from_name nickname
                 val argument = List.nth (arguments, selector)
               in
-                case List.find (fn (other, _) => other = argument)
-                       (needed_values need_values range_ty) of
-                    SOME (_, argument_atom) =>
-                      SOME (TupleAtomSeq (1, argument_atom))
-                  | NONE => NONE
+                Option.map (fn (_, argument_atom) =>
+                    TupleAtomSeq (1, argument_atom))
+                  (List.find (fn (other, _) => other = argument)
+                    (needed_values need_values range_ty))
               end
           | _ => NONE
 
@@ -1362,9 +1357,6 @@ fun other_axioms_for_data_type _ _ _ _ _
           data_type
       end
 
-fun empty_need_values data_types =
-  map (fn (spec : data_type_spec) => (#typ spec, SOME [])) data_types
-
 fun needed_values_for_data_type [] _ _ = SOME []
   | needed_values_for_data_type need_us offsets
       ({typ, card, constrs, ...} : data_type_spec) =
@@ -1386,11 +1378,7 @@ fun needed_values_for_data_type [] _ _ = SOME []
               (MFNT.FreeRel (_, _, _, nickname) :: _, ty, _, arguments))
             state =
           let
-            val state = List.foldl (fn (argument, result) =>
-              case result of
-                  NONE => NONE
-                | SOME value => allocate argument (SOME value))
-              state arguments
+            val state = List.foldl (Lib.uncurry allocate) state arguments
           in
             case state of
                 NONE => NONE
@@ -1415,10 +1403,7 @@ fun needed_values_for_data_type [] _ _ = SOME []
 
       val initial = SOME (Util.index_seq 0 card, [])
     in
-      case List.foldl (fn (nut, state) =>
-             case state of
-                 NONE => NONE
-               | SOME value => allocate nut (SOME value)) initial need_us of
+      case List.foldl (Lib.uncurry allocate) initial need_us of
           NONE => NONE
         | SOME (_, fixed) => SOME (rev fixed)
     end
@@ -2579,62 +2564,12 @@ fun kodkod_formula_from_nut offsets
             else if MFNT.type_of first = MFH.int_type then
               kk_int_less (to_integer first) (to_integer second)
             else if MFH.is_bitword_type (MFNT.type_of first) then
-              let
-                val operand_rep = MFR.Opt
-                  (MFR.Atom (MFR.card_of_rep (MFNT.rep_of first),
-                    MFS.offset_of_type offsets (MFNT.type_of first)))
-                fun present (nut, relation) =
-                  if MFR.is_opt_rep (MFNT.rep_of nut) then
-                    SOME (kk_some relation)
-                  else NONE
-                fun guarded first_rel second_rel =
-                  let
-                    val guards = List.mapPartial present
-                      [(first, first_rel), (second, second_rel)]
-                    val guard = List.foldl
-                      (fn (formula, result) => kk_and result formula)
-                      KK.True guards
-                    val less = KK.LT
-                      (int_expr_from_atom kk (MFNT.type_of first) first_rel,
-                       int_expr_from_atom kk (MFNT.type_of second) second_rel)
-                  in
-                    kk_rel_if guard
-                      (atom_from_formula kk bool_offset less) KK.None
-                  end
-              in
-                double_rel_rel_let kk guarded
-                  (to_rep operand_rep first) (to_rep operand_rep second)
-              end
+              atom_less (int_expr_from_atom kk) first second
             else if MFH.is_word_type (MFNT.type_of first) orelse
                     MFH.is_char_type (MFNT.type_of first) then
               (* Word and char atoms are ordered by value, so the unsigned
                  order is the integer order of the operands' carriers. *)
-              let
-                val operand_rep = MFR.Opt
-                  (MFR.Atom (MFR.card_of_rep (MFNT.rep_of first),
-                    MFS.offset_of_type offsets (MFNT.type_of first)))
-                fun present (nut, relation) =
-                  if MFR.is_opt_rep (MFNT.rep_of nut) then
-                    SOME (kk_some relation)
-                  else NONE
-                fun guarded first_rel second_rel =
-                  let
-                    val guards = List.mapPartial present
-                      [(first, first_rel), (second, second_rel)]
-                    val guard = List.foldl
-                      (fn (formula, result) => kk_and result formula)
-                      KK.True guards
-                    val less = KK.LT
-                      (numeric_int_expr (MFNT.type_of first) first_rel,
-                       numeric_int_expr (MFNT.type_of second) second_rel)
-                  in
-                    kk_rel_if guard
-                      (atom_from_formula kk bool_offset less) KK.None
-                  end
-              in
-                double_rel_rel_let kk guarded
-                  (to_rep operand_rep first) (to_rep operand_rep second)
-              end
+              atom_less numeric_int_expr first second
             else
               raise MFNT.NUT
                 ("Refute_ModelFinder_Kodkod.to_r (Less)", [candidate])
@@ -2977,6 +2912,33 @@ fun kodkod_formula_from_nut offsets
               to_project result_rep selected_rep
                 (to_rep (MFR.Opt (MFR.Struct reps)) candidate) column
             end
+
+    (* Strict order of two atoms read as integers by [read], guarded on the
+       presence of whichever operand is optional. *)
+    and atom_less read first second =
+      let
+        val operand_rep = MFR.Opt
+          (MFR.Atom (MFR.card_of_rep (MFNT.rep_of first),
+            MFS.offset_of_type offsets (MFNT.type_of first)))
+        fun present (nut, relation) =
+          if MFR.is_opt_rep (MFNT.rep_of nut) then SOME (kk_some relation)
+          else NONE
+        fun guarded first_rel second_rel =
+          let
+            val guards = List.mapPartial present
+              [(first, first_rel), (second, second_rel)]
+            val guard = List.foldl
+              (fn (formula, result) => kk_and result formula) KK.True guards
+            val less = KK.LT
+              (read (MFNT.type_of first) first_rel,
+               read (MFNT.type_of second) second_rel)
+          in
+            kk_rel_if guard (atom_from_formula kk bool_offset less) KK.None
+          end
+      in
+        double_rel_rel_let kk guarded
+          (to_rep operand_rep first) (to_rep operand_rep second)
+      end
 
     (* A numeric carrier's atoms are its values: under the sequential integer
        bounds atom [j] carries the integer [j], so subtracting the carrier's
@@ -3356,9 +3318,6 @@ fun assemble_problem params unsound scope =
     assemble_problem_once params unsound (scope_with_offsets scope offsets)))
   handle Util.TOO_LARGE _ => NONE
        | Util.TOO_SMALL _ => NONE
-
-fun assemble_problem_pair params scope =
-  (assemble_problem params false scope, assemble_problem params true scope)
 
 (* Upstream to_set_bool_op and kk_vect_set_bool_op are intentionally
    omitted: no representation reachable in this port dispatches to them. *)

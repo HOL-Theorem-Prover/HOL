@@ -131,8 +131,6 @@ structure Refute_Gen = struct
            cardinality_cache := Redblackmap.mkDict Type.compare;
            enumerate_cache := Redblackmap.mkDict Type.compare))
 
-  fun dest_fun ty = Type.dom_rng ty
-
   fun word_kind ty =
     let
       val width = wordsSyntax.dest_word_type ty
@@ -157,7 +155,7 @@ structure Refute_Gen = struct
         else raise Fail "not a quotient theorem"
       val abs = List.nth (args, 1)
     in
-      SOME (#2 (dest_fun (Term.type_of abs)))
+      SOME (#2 (Type.dom_rng (Term.type_of abs)))
     end
     handle Feedback.HOL_ERR _ => NONE
          | Subscript => NONE
@@ -259,7 +257,7 @@ structure Refute_Gen = struct
         then beneath
         else if Type.is_vartype ty then false
         else
-          case Lib.total dest_fun ty of
+          case Lib.total Type.dom_rng ty of
             SOME (dom, rng) => visit true dom orelse visit true rng
           | NONE => List.exists (visit beneath) (#2 (Type.dest_type ty))
     in
@@ -410,16 +408,10 @@ structure Refute_Gen = struct
   fun family_for ty =
     synchronized_registry (fn () => family_for_in (!generator_families) ty)
 
-  fun lookup_family_canonical ty =
-    case family_for ty of
-        SOME {canonical, ...} => canonical
-      | NONE => NONE
-
-  (* Copy the registry once and close over that immutable list.  Model
-     display snapshots use this instead of [lookup_family_canonical], so a
+  (* Copy the registry once and close over that immutable list, so a
      family replacement cannot change canonicalization halfway through one
-     report and the display walk does not retake [registry_mutex] at every
-     term node. *)
+     model display report and the display walk does not retake
+     [registry_mutex] at every term node. *)
   fun snapshot_family_canonicals () =
     synchronized_registry (fn () =>
       let
@@ -605,7 +597,7 @@ structure Refute_Gen = struct
             case numeric_kind ty of
                 SOME kind => GenNum kind
               | NONE =>
-                  (case Lib.total dest_fun ty of
+                  (case Lib.total Type.dom_rng ty of
                        SOME (dom, rng) => GenFun (dom, rng)
                      | NONE => non_function_spec ())
           val _ = cache_spec generation ty spec
@@ -657,7 +649,7 @@ structure Refute_Gen = struct
           NONE => ()
         | SOME predicate =>
             let
-              val (dom, rng) = dest_fun (Term.type_of predicate)
+              val (dom, rng) = Type.dom_rng (Term.type_of predicate)
             in
               if not (same_type (dom, ty) andalso
                       same_type (rng, Type.bool)) then
@@ -854,11 +846,10 @@ structure Refute_Gen = struct
           fun one ((constructor, args), recursive_args) =
             if List.exists (fn flag => flag) recursive_args then NONE
             else
-              case term_products (List.map enumerate args) of
-                NONE => NONE
-              | SOME arguments =>
-                  SOME (List.map (fn terms =>
-                    Term.list_mk_comb (constructor, terms)) arguments)
+              Option.map
+                (List.map (fn terms =>
+                  Term.list_mk_comb (constructor, terms)))
+                (term_products (List.map enumerate args))
 
           fun rows ([], []) = SOME []
             | rows (constr :: constrs, flags :: rest) =

@@ -344,9 +344,7 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
       (state as (_, _, _, clauses, _)) =
     let
       fun propagate_unit (literal, context) =
-        List.foldl
-          (fn (clause, current) => propagate_clause clause current)
-          context
+        List.foldl (Lib.uncurry propagate_clause) context
           (Option.getOpt (table_lookup literal clauses, []))
     in
       case List.foldl propagate_unit ([], state) units of
@@ -403,8 +401,7 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
               new_literals
           val count' =
             length new_literals - length lower + count
-          val marks' = List.foldl (fn (item, result) => mark item result)
-            marks new_literals
+          val marks' = List.foldl (Lib.uncurry mark) marks new_literals
           val lower_literals' = lower @ lower_literals
           val proof_ids' =
             level0_proofs_of variables level0_literals @
@@ -475,10 +472,9 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
             val state'' =
               backjump jump
                 (level, trail, variables, clauses, proofs')
-            val state''' = learn learned_clause state''
-            val state'''' = push literal learned_clause state'''
           in
-            search [literal] state''''
+            search [literal]
+              (push literal learned_clause (learn learned_clause state''))
           end
 
   fun has_opposing_literals [] = false
@@ -518,15 +514,11 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
       val variables =
         List.foldl
           (fn (literals, table) =>
-             List.foldl
-               (fn (literal, result) => add_variable literal result)
-               table literals)
+             List.foldl (Lib.uncurry add_variable) table literals)
           (empty_table ()) literal_lists
       val state = (0, [], variables, empty_table (), proofs)
       val (units, state') =
-        List.foldl
-          (fn (clause, context) => add_clause clause context)
-          ([], state) clauses
+        List.foldl (Lib.uncurry add_clause) ([], state) clauses
     in
       search units state'
     end

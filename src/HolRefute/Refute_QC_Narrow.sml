@@ -168,10 +168,8 @@ structure Refute_QC_Narrow = struct
           Int.max (1, #max_counterexamples config)
       fun instance_for card = List.nth (instances, card - 1)
       fun state_for card = List.nth (states, card - 1)
-      fun entry_member entry = List.exists (fn other => other = entry)
-        (!complete_entries)
-      fun entry_incomplete entry = List.exists (fn other => other = entry)
-        (!incomplete_entries)
+      fun entry_member entry = Lib.mem entry (!complete_entries)
+      fun entry_incomplete entry = Lib.mem entry (!incomplete_entries)
       fun record_complete entry =
         if entry_member entry orelse entry_incomplete entry then ()
         else complete_entries := entry :: !complete_entries

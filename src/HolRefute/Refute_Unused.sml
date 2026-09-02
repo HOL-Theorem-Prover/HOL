@@ -13,9 +13,6 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
   type config = Refute_Core.config
   type thm = Thm.thm
 
-  type checked =
-    {result : string * int list list option, skipped : int}
-
   fun subset (left, right) = List.all (fn x => Lib.mem x right) left
 
   fun insert_index x indexes =

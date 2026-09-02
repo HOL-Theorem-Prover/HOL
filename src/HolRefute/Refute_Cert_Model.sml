@@ -16,7 +16,6 @@ structure Refute_Cert_Model = struct
 
   datatype failure_kind =
       NoProof
-    | Unsupported
     | MalformedInput
     | TrustRejected
     | FuelExhausted
@@ -29,15 +28,6 @@ structure Refute_Cert_Model = struct
      depth : int,
      detail : string}
 
-  datatype candidate_source =
-      OrdinaryBinding
-    | ReconstructedSkolem
-    | ReconstructedTypeValue
-    | GenericHint
-    | ActiveVariable
-    | FunctionApplication
-    | SynthesizedConstructor
-
   type dependency = Skolem.dependency
   type provenance = Skolem.info
   datatype replay_hint_source =
@@ -47,11 +37,6 @@ structure Refute_Cert_Model = struct
   type replay_hint =
     {term : term,
      source : replay_hint_source,
-     provenance : provenance option}
-
-  type candidate =
-    {term : term,
-     source : candidate_source,
      provenance : provenance option}
 
   type policy =
@@ -77,25 +62,15 @@ structure Refute_Cert_Model = struct
      enable_real_arith : bool}
 
   type diagnostics =
-    {nodes : int,
-     ordinary_bindings : int,
-     reconstructed_hints : int,
-     active_candidates : int,
-     applications : int,
-     constructor_terms : int,
-     generated_candidates : int,
+    {generated_candidates : int,
      function_states : int,
      attempted_candidates : int,
-     memo_hits : int,
      case_branches : int,
      induction_attempts : int,
-     leaf_attempts : int,
-     real_arith_attempts : int,
      schematic_attempts : int,
      completion_attempts : int,
      candidate_trace : (int * term * term) list,
      consumed_fuel : int,
-     elapsed : Time.time,
      failure : failure option}
 
   exception ReplayFailure of failure
@@ -125,97 +100,7 @@ structure Refute_Cert_Model = struct
      enable_omega = true,
      enable_real_arith = true}
 
-  (* [default_policy] above is the sole [policy] literal; every other
-     policy is reached from it by [update_policy].  Spelling a second
-     literal lets it drift from the default on a field its caller never
-     meant to vary, which is invisible at the call site.  Int updates
-     clamp at zero, as [default_policy]'s own fuel does. *)
-  datatype policy_update =
-      PolicyTotalFuel of int
-    | PolicyMaxGeneratedCandidates of int
-    | PolicyMaxAttemptedCandidates of int
-    | PolicyMaxCompletionCandidates of int
-    | PolicyMaxCompletionVectors of int
-    | PolicyMaxFunctionStates of int
-    | PolicyMaxConstructorDepth of int
-    | PolicyMaxConstructorWidth of int
-    | PolicyMaxConstructorSize of int
-    | PolicyMaxSplitDepth of int
-    | PolicyMaxCaseBranches of int
-    | PolicyMaxInductions of int
-    | PolicyMaxLeafRounds of int
-    | PolicyWholeFormula of bool
-    | PolicyCases of bool
-    | PolicyInduction of bool
-    | PolicySynthesis of bool
-    | PolicyTaut of bool
-    | PolicyOmega of bool
-    | PolicyRealArith of bool
-
-  fun change_policy update (policy : policy) : policy =
-    let
-      fun clamp value = Int.max (0, value)
-    in
-      {total_fuel = (case update of PolicyTotalFuel value => clamp value
-                     | _ => #total_fuel policy),
-       max_generated_candidates =
-         (case update of PolicyMaxGeneratedCandidates value => clamp value
-          | _ => #max_generated_candidates policy),
-       max_attempted_candidates =
-         (case update of PolicyMaxAttemptedCandidates value => clamp value
-          | _ => #max_attempted_candidates policy),
-       max_completion_candidates =
-         (case update of PolicyMaxCompletionCandidates value => clamp value
-          | _ => #max_completion_candidates policy),
-       max_completion_vectors =
-         (case update of PolicyMaxCompletionVectors value => clamp value
-          | _ => #max_completion_vectors policy),
-       max_function_states =
-         (case update of PolicyMaxFunctionStates value => clamp value
-          | _ => #max_function_states policy),
-       max_constructor_depth =
-         (case update of PolicyMaxConstructorDepth value => clamp value
-          | _ => #max_constructor_depth policy),
-       max_constructor_width =
-         (case update of PolicyMaxConstructorWidth value => clamp value
-          | _ => #max_constructor_width policy),
-       max_constructor_size =
-         (case update of PolicyMaxConstructorSize value => clamp value
-          | _ => #max_constructor_size policy),
-       max_split_depth = (case update of PolicyMaxSplitDepth value =>
-                            clamp value
-                          | _ => #max_split_depth policy),
-       max_case_branches = (case update of PolicyMaxCaseBranches value =>
-                              clamp value
-                            | _ => #max_case_branches policy),
-       max_inductions = (case update of PolicyMaxInductions value =>
-                           clamp value
-                         | _ => #max_inductions policy),
-       max_leaf_rounds = (case update of PolicyMaxLeafRounds value =>
-                            clamp value
-                          | _ => #max_leaf_rounds policy),
-       enable_whole_formula = (case update of PolicyWholeFormula value => value
-                               | _ => #enable_whole_formula policy),
-       enable_cases = (case update of PolicyCases value => value
-                       | _ => #enable_cases policy),
-       enable_induction = (case update of PolicyInduction value => value
-                           | _ => #enable_induction policy),
-       enable_synthesis = (case update of PolicySynthesis value => value
-                           | _ => #enable_synthesis policy),
-       enable_taut = (case update of PolicyTaut value => value
-                      | _ => #enable_taut policy),
-       enable_omega = (case update of PolicyOmega value => value
-                       | _ => #enable_omega policy),
-       enable_real_arith = (case update of PolicyRealArith value => value
-                            | _ => #enable_real_arith policy)}
-    end
-
-  fun update_policy updates policy =
-    List.foldl (fn (update, current) => change_policy update current)
-      policy updates
-
   fun failure_kind_name NoProof = "no-proof"
-    | failure_kind_name Unsupported = "unsupported"
     | failure_kind_name MalformedInput = "malformed-input"
     | failure_kind_name TrustRejected = "trust-rejected"
     | failure_kind_name FuelExhausted = "fuel-exhausted"
@@ -239,13 +124,14 @@ structure Refute_Cert_Model = struct
     Lib.can (HolKernel.find_term
       (fn tm => Util.same_type (Term.type_of tm) realSyntax.real_ty)) goal
 
+  fun resource_failure ({kind, ...} : failure) =
+    kind = DeadlineExhausted orelse kind = FuelExhausted
+
   fun theorem_acceptable expected theorem =
     null (Thm.hyp theorem) andalso trusted theorem andalso
     (case expected of
          NONE => true
        | SOME conclusion => Term.aconv (Thm.concl theorem) conclusion)
-
-  val audit_theorem_for_test = theorem_acceptable
 
   fun app_combinations_bounded limit emit choices =
     let
@@ -271,9 +157,6 @@ structure Refute_Cert_Model = struct
       if limit <= 0 then () else combinations choices [];
       !emitted
     end
-
-  fun combination_count_for_test limit choices =
-    app_combinations_bounded limit (fn _ => ()) choices
 
   fun candidate_size tm =
     let
@@ -340,20 +223,10 @@ structure Refute_Cert_Model = struct
   fun certify_detailed_rich {original, env, hints, policy, deadline} =
     let
       val hint_terms = map #term (hints : replay_hint list)
-      val start = Time.now ()
       val remaining = ref (#total_fuel policy)
-      val nodes = ref 0
-      val ordinary_bindings = ref 0
-      val reconstructed_hints = ref 0
-      val active_candidates = ref 0
-      val applications = ref 0
-      val constructor_terms = ref 0
       val attempted_candidates = ref 0
-      val memo_hits = ref 0
       val case_branches = ref 0
       val induction_attempts = ref 0
-      val leaf_attempts = ref 0
-      val real_arith_attempts = ref 0
       val generated_candidates = ref 0
       val function_states = ref 0
       val candidate_trace = ref ([] : (int * term * term) list)
@@ -415,9 +288,6 @@ structure Refute_Cert_Model = struct
             "theorem has hypotheses, an unacceptable tag, or a wrong endpoint"
         end
 
-      fun resource_failure ({kind, ...} : failure) =
-        kind = DeadlineExhausted orelse kind = FuelExhausted
-
       (* A speculative proof step reports its own failure as NONE, but a
          spent budget belongs to the whole replay and keeps propagating. *)
       fun optional attempt =
@@ -457,18 +327,14 @@ structure Refute_Cert_Model = struct
           end)
 
       fun direct_leaf depth formula =
-        let
-          val _ = leaf_attempts := !leaf_attempts + 1
-        in
-          case portfolio depth formula of
-              SOME theorem =>
-                if Term.aconv (rhs_of theorem) boolSyntax.F then
-                  SOME (require_theorem "leaf equality elimination" depth
-                    (SOME (boolSyntax.mk_neg formula))
-                    (Drule.EQF_ELIM theorem))
-                else NONE
-            | NONE => NONE
-        end
+        case portfolio depth formula of
+            SOME theorem =>
+              if Term.aconv (rhs_of theorem) boolSyntax.F then
+                SOME (require_theorem "leaf equality elimination" depth
+                  (SOME (boolSyntax.mk_neg formula))
+                  (Drule.EQF_ELIM theorem))
+              else NONE
+          | NONE => NONE
 
       (* First success wins; each entry is skipped when its decision
          procedure is disabled or inapplicable. *)
@@ -532,10 +398,8 @@ structure Refute_Cert_Model = struct
           val (normalized_equality, prenex_equality, pnf) =
             normalize_to_pnf normalization_step closure
 
-          fun quantified tm =
-            boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
           fun quantifier_free tm =
-            not (Lib.can (HolKernel.find_term quantified) tm)
+            not (Lib.can (HolKernel.find_term is_quantifier) tm)
           val matrix = #2 (Refute_Narrow.strip_quantifiers pnf)
           val _ =
             if quantifier_free matrix then ()
@@ -579,9 +443,7 @@ structure Refute_Cert_Model = struct
 
           fun abstract active tm = Term.list_mk_abs (active, tm)
           fun same_types (left, right) =
-            length left = length right andalso
-            ListPair.allEq (fn (a, b) => Util.same_type a b)
-              (left, right)
+            ListPair.allEq (fn (a, b) => Util.same_type a b) (left, right)
           fun depth_of rows variable =
             Option.getOpt (Lib.op_assoc1 Term.aconv variable rows, 0)
           fun state formula
@@ -648,43 +510,21 @@ structure Refute_Cert_Model = struct
                     resolved
                   end
 
-          fun bump_source OrdinaryBinding =
-                ordinary_bindings := !ordinary_bindings + 1
-            | bump_source ReconstructedSkolem =
-                reconstructed_hints := !reconstructed_hints + 1
-            | bump_source ReconstructedTypeValue =
-                reconstructed_hints := !reconstructed_hints + 1
-            | bump_source GenericHint =
-                reconstructed_hints := !reconstructed_hints + 1
-            | bump_source ActiveVariable =
-                active_candidates := !active_candidates + 1
-            | bump_source FunctionApplication =
-                applications := !applications + 1
-            | bump_source SynthesizedConstructor =
-                constructor_terms := !constructor_terms + 1
-
-          fun emit_candidate seen_terms attempt
-                (entry as {term, source, ...} : candidate) =
+          fun emit_candidate seen_terms attempt term =
             if HOLset.member (!seen_terms, term) then ()
             else if !generated_candidates >=
                     #max_generated_candidates policy then
               ()
             else
-              let
-                val _ = generated_candidates := !generated_candidates + 1
-                val _ = bump_source source
-                val _ = seen_terms := HOLset.add (!seen_terms, term)
-              in
-                attempt entry
-              end
+              (generated_candidates := !generated_candidates + 1;
+               seen_terms := HOLset.add (!seen_terms, term);
+               attempt term)
 
           fun generate_candidates depth target target_origin active
                 active_origins attempt =
             let
               val seen_terms = ref (HOLset.empty Term.compare)
-              fun emit entry = emit_candidate seen_terms attempt entry
-              fun emit_terms source terms = List.app (fn term => emit
-                {term = term, source = source, provenance = NONE}) terms
+              fun emit term = emit_candidate seen_terms attempt term
 
               val direct_bindings = List.filter (fn term =>
                 Util.same_type target (Term.type_of term)) binding_pool
@@ -698,10 +538,7 @@ structure Refute_Cert_Model = struct
               val direct_active = List.filter (fn term =>
                 Util.same_type target (Term.type_of term)) active
 
-              fun emit_hint candidate_source
-                    ({term, provenance, ...} : replay_hint) =
-                emit {term = term, source = candidate_source,
-                  provenance = provenance}
+              fun emit_hint ({term, ...} : replay_hint) = emit term
 
               fun application_walk current [] = ()
                 | application_walk current (variable :: rest) =
@@ -723,10 +560,7 @@ structure Refute_Cert_Model = struct
                                  val _ =
                                    if Util.same_type target
                                         (Term.type_of applied) then
-                                     emit
-                                       {term = applied,
-                                        source = FunctionApplication,
-                                        provenance = NONE}
+                                     emit applied
                                    else ()
                                in
                                  application_walk applied rest;
@@ -768,10 +602,7 @@ structure Refute_Cert_Model = struct
                                 SOME applied =>
                                   if Util.same_type target
                                        (Term.type_of applied) then
-                                    emit
-                                      {term = applied,
-                                       source = FunctionApplication,
-                                       provenance = SOME metadata}
+                                    emit applied
                                   else ()
                               | NONE => ()))
                 | provenance_application _ = ()
@@ -793,23 +624,23 @@ structure Refute_Cert_Model = struct
                     val new = List.filter (fn term =>
                       not (Util.aconv_member term known)) generated
                   in
-                    emit_terms SynthesizedConstructor new
+                    List.app emit new
                   end
             in
-              List.app (emit_hint ReconstructedSkolem)
+              List.app emit_hint
                 (List.filter (fn
                   ({provenance = SOME metadata, ...} : replay_hint) =>
                     #origin metadata = SOME target_origin
                   | _ => false) direct_skolems);
-              emit_terms OrdinaryBinding direct_bindings;
-              List.app (emit_hint ReconstructedSkolem) direct_skolems;
+              List.app emit direct_bindings;
+              List.app emit_hint direct_skolems;
               (* [DirectHint] (an explicitly-supplied targeted hint, e.g.
                  the real-Frac literal) before [TypeValue] (bulk type
                  enumeration): a targeted hint must not be starved by
                  [max_generated_candidates] behind same-typed filler. *)
-              List.app (emit_hint GenericHint) direct_generic;
-              List.app (emit_hint ReconstructedTypeValue) direct_types;
-              emit_terms ActiveVariable direct_active;
+              List.app emit_hint direct_generic;
+              List.app emit_hint direct_types;
+              List.app emit direct_active;
               List.app provenance_application hint_pool;
               List.app applications_of pool_base;
               synthesized ()
@@ -876,13 +707,10 @@ structure Refute_Cert_Model = struct
               fun real_goal (goal as (asl, w)) =
                 if #enable_real_arith policy andalso
                    List.exists mentions_real (w :: asl)
-                then
-                  (real_arith_attempts := !real_arith_attempts + 1;
-                   Tactical.TRY realLib.REAL_ASM_ARITH_TAC goal)
+                then Tactical.TRY realLib.REAL_ASM_ARITH_TAC goal
                 else Tactical.ALL_TAC goal
               fun account goal =
                 (charge "induction constructor obligation" depth;
-                 leaf_attempts := !leaf_attempts + 1;
                  Tactical.EVERY
                    [introductions, simplify_goal, assumptions,
                     simplify_goal, taut_goal, omega_goal, real_goal]
@@ -894,12 +722,10 @@ structure Refute_Cert_Model = struct
           fun prove_neg formula context depth =
             let
               val _ = charge "replay node" depth
-              val _ = nodes := !nodes + 1
               val current = state formula context
               val _ = if seen current then
-                  (memo_hits := !memo_hits + 1;
-                   no_proof "memoization" depth
-                     "state already failed with these strategy permissions")
+                  no_proof "memoization" depth
+                    "state already failed with these strategy permissions"
                 else ()
 
               fun ordinary () =
@@ -908,8 +734,7 @@ structure Refute_Cert_Model = struct
                     val (variable, body) = boolSyntax.dest_forall formula
                     val target = Term.type_of variable
 
-                    fun attempt
-                          ({term = witness, ...} : candidate) =
+                    fun attempt witness =
                       if !attempted_candidates >=
                            #max_attempted_candidates policy then ()
                       else
@@ -1158,25 +983,15 @@ structure Refute_Cert_Model = struct
         end
 
       fun snapshot issue : diagnostics =
-        {nodes = !nodes,
-         ordinary_bindings = !ordinary_bindings,
-         reconstructed_hints = !reconstructed_hints,
-         active_candidates = !active_candidates,
-         applications = !applications,
-         constructor_terms = !constructor_terms,
-         generated_candidates = !generated_candidates,
+        {generated_candidates = !generated_candidates,
          function_states = !function_states,
          attempted_candidates = !attempted_candidates,
-         memo_hits = !memo_hits,
          case_branches = !case_branches,
          induction_attempts = !induction_attempts,
-         leaf_attempts = !leaf_attempts,
-         real_arith_attempts = !real_arith_attempts,
          schematic_attempts = 0,
          completion_attempts = 0,
          candidate_trace = rev (!candidate_trace),
          consumed_fuel = #total_fuel policy - !remaining,
-         elapsed = Time.- (Time.now (), start),
          failure = issue}
 
       val reported_failure = ref (NONE : failure option)
@@ -1232,54 +1047,39 @@ structure Refute_Cert_Model = struct
 
   fun add_diagnostics (left : diagnostics) (right : diagnostics) issue
         schematic_attempts completion_attempts : diagnostics =
-    {nodes = #nodes left + #nodes right,
-     ordinary_bindings = #ordinary_bindings left +
-       #ordinary_bindings right,
-     reconstructed_hints = #reconstructed_hints left +
-       #reconstructed_hints right,
-     active_candidates = #active_candidates left + #active_candidates right,
-     applications = #applications left + #applications right,
-     constructor_terms = #constructor_terms left + #constructor_terms right,
-     generated_candidates = #generated_candidates left +
+    {generated_candidates = #generated_candidates left +
        #generated_candidates right,
      function_states = #function_states left + #function_states right,
      attempted_candidates = #attempted_candidates left +
        #attempted_candidates right,
-     memo_hits = #memo_hits left + #memo_hits right,
      case_branches = #case_branches left + #case_branches right,
      induction_attempts = #induction_attempts left +
        #induction_attempts right,
-     leaf_attempts = #leaf_attempts left + #leaf_attempts right,
-     real_arith_attempts = #real_arith_attempts left +
-       #real_arith_attempts right,
      schematic_attempts = schematic_attempts,
      completion_attempts = completion_attempts,
      candidate_trace = #candidate_trace left @ #candidate_trace right,
      consumed_fuel = #consumed_fuel left + #consumed_fuel right,
-     elapsed = Time.+ (#elapsed left, #elapsed right),
      failure = issue}
 
-  fun set_attempt_counts (stats : diagnostics) schematic completion issue =
-    {nodes = #nodes stats,
-     ordinary_bindings = #ordinary_bindings stats,
-     reconstructed_hints = #reconstructed_hints stats,
-     active_candidates = #active_candidates stats,
-     applications = #applications stats,
-     constructor_terms = #constructor_terms stats,
-     generated_candidates = #generated_candidates stats,
+  (* [stats] with its attempt counts and failure replaced and [overhead]
+     added to its fuel. *)
+  fun adjust_diagnostics (stats : diagnostics)
+        {schematic, completion, overhead, failure} : diagnostics =
+    {generated_candidates = #generated_candidates stats,
      function_states = #function_states stats,
      attempted_candidates = #attempted_candidates stats,
-     memo_hits = #memo_hits stats,
      case_branches = #case_branches stats,
      induction_attempts = #induction_attempts stats,
-     leaf_attempts = #leaf_attempts stats,
-     real_arith_attempts = #real_arith_attempts stats,
      schematic_attempts = schematic,
      completion_attempts = completion,
      candidate_trace = #candidate_trace stats,
-     consumed_fuel = #consumed_fuel stats,
-     elapsed = #elapsed stats,
-     failure = issue}
+     consumed_fuel = #consumed_fuel stats + overhead,
+     failure = failure}
+
+  fun set_attempt_counts stats schematic completion issue =
+    adjust_diagnostics stats
+      {schematic = schematic, completion = completion, overhead = 0,
+       failure = issue}
 
   (* Multiple completion attempts are budgeted by passing only the remaining
      fuel to each single-attempt replay.  The absolute deadline is unchanged,
@@ -1333,11 +1133,10 @@ structure Refute_Cert_Model = struct
       val schematic_stats = set_attempt_counts schematic_stats0 1 0
         (#failure schematic_stats0)
 
-      fun resource_failure stats =
+      fun resource_exhausted (stats : diagnostics) =
         case #failure stats of
-            SOME {kind = FuelExhausted, ...} => true
-          | SOME {kind = DeadlineExhausted, ...} => true
-          | _ => false
+            SOME issue => resource_failure issue
+          | NONE => false
 
       fun attempt_outcome Exact result = result
         | attempt_outcome Schematic DiscardedByWholeFormulaEval =
@@ -1392,7 +1191,6 @@ structure Refute_Cert_Model = struct
       val vectors = ref ([] : term list list)
       val vector_limit = #max_completion_vectors policy
       fun same_vector (left, right) =
-        length left = length right andalso
         ListPair.allEq (fn (first, second) => Term.aconv first second)
           (left, right)
       fun add_vector vector =
@@ -1409,16 +1207,15 @@ structure Refute_Cert_Model = struct
       val _ = ignore (app_combinations_bounded
         vector_limit add_vector choices)
 
-      fun substitute substitutions tm = Term.subst substitutions tm
       fun completed_inputs vector =
         let
-          val substitutions = ListPair.mapEq (fn (hole, value) =>
-            {redex = hole, residue = value}) (holes, vector)
+          val substitute = Term.subst (ListPair.mapEq (fn (hole, value) =>
+            {redex = hole, residue = value}) (holes, vector))
           val env = map (fn (left, right) =>
-            (left, substitute substitutions right)) env
+            (left, substitute right)) env
           val hints = map (fn
             ({term, source, provenance} : replay_hint) =>
-              {term = substitute substitutions term,
+              {term = substitute term,
                source = source, provenance = provenance}) hints
         in
           (env, hints)
@@ -1428,27 +1225,11 @@ structure Refute_Cert_Model = struct
         add_diagnostics accumulated next (#failure next) 1
           (!completion_attempts)
 
-      fun with_overhead (stats : diagnostics) : diagnostics =
-        {nodes = #nodes stats,
-         ordinary_bindings = #ordinary_bindings stats,
-         reconstructed_hints = #reconstructed_hints stats,
-         active_candidates = #active_candidates stats,
-         applications = #applications stats,
-         constructor_terms = #constructor_terms stats,
-         generated_candidates = #generated_candidates stats,
-         function_states = #function_states stats,
-         attempted_candidates = #attempted_candidates stats,
-         memo_hits = #memo_hits stats,
-         case_branches = #case_branches stats,
-         induction_attempts = #induction_attempts stats,
-         leaf_attempts = #leaf_attempts stats,
-         real_arith_attempts = #real_arith_attempts stats,
-         schematic_attempts = #schematic_attempts stats,
-         completion_attempts = #completion_attempts stats,
-         candidate_trace = #candidate_trace stats,
-         consumed_fuel = #consumed_fuel stats + !completion_overhead,
-         elapsed = #elapsed stats,
-         failure = #failure stats}
+      fun with_overhead (stats : diagnostics) =
+        adjust_diagnostics stats
+          {schematic = #schematic_attempts stats,
+           completion = #completion_attempts stats,
+           overhead = !completion_overhead, failure = #failure stats}
 
       fun search [] stats =
             (NoCertificate
@@ -1476,7 +1257,7 @@ structure Refute_Cert_Model = struct
                       (Certified theorem, with_overhead stats)
                   | DiscardedByWholeFormulaEval => search rest stats
                   | NoCertificate _ =>
-                      if resource_failure attempt_stats then
+                      if resource_exhausted attempt_stats then
                         (result, with_overhead stats)
                       else search rest stats
               end
@@ -1491,24 +1272,9 @@ structure Refute_Cert_Model = struct
             (attempt_outcome schematic_kind schematic_result,
              schematic_stats)
         | NoCertificate _ =>
-            if null holes orelse resource_failure schematic_stats0 then
+            if null holes orelse resource_exhausted schematic_stats0 then
               (schematic_result, schematic_stats)
             else
               search (!vectors) schematic_stats
     end
-
-  fun direct_hint term : replay_hint =
-    {term = term, source = DirectHint, provenance = NONE}
-
-  fun certify_detailed {original, env, hints, policy, deadline} =
-    certify_detailed_rich
-      {original = original, env = env, hints = map direct_hint hints,
-       policy = policy, deadline = deadline}
-
-  fun certify_with_policy arguments = #1 (certify_detailed arguments)
-
-  fun certify {original, env, hints, fuel, deadline} =
-    certify_with_policy
-      {original = original, env = env, hints = hints,
-       policy = default_policy fuel, deadline = deadline}
 end

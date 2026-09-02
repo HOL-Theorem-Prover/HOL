@@ -1,1255 +1,170 @@
-HolRefute provides counterexample generation for HOL4, with theorem
-certification enabled by default.  It has a Quickcheck (QC) backend for
-executable goals, native narrowing, and a Kodkod-based model-finder (MF)
-backend.  Exhaustive and random QC testing run over three interchangeable
-execution substrates:
+HolRefute: counterexample generation for HOL4
+=============================================
 
-* Compute interprets test plans with computeLib.  It is the compatibility
-  substrate and supports registered custom and abstract generators.
-* Cv compiles a fuel-bounded HOL test loop and executes it with
-  Thm.compute.  Goals outside its first-order fragment are inapplicable.
-* NativeSML extracts the executable fragment to SML and compiles the test
-  loop in process.  It is the preferred fast substrate on Poly/ML.
-
-QC's report carries three counters: every candidate a plan generates
-counts as "candidates generated"; every one of those that satisfied all
-of a plan's Guard/SmartGuard/Split/Bind premises counts as "assumptions
-satisfied"; and every one of those whose conclusion was actually
-evaluated (as opposed to left stuck) counts as "conclusions evaluated"
--- `conclusions evaluated <= assumptions satisfied <= candidates
-generated`.  A found counterexample shows all three counts alongside
-its size via `format_stats`.  When a search instead ends
-`NoCounterexample` or `Unknown` with no witness, the same three counts
-are reported separately, on the `Private.say` trace channel at level 2
-rather than in the `Unknown` reason list: they are telemetry about the
-search, not themselves a reason it was inconclusive, and a witness's own
-`format_stats` line already covers the counterexample case.  Level 2,
-not the default level 1, because a reader who only wants the verdict is
-not asking how the search spent itself, and one call prints one such
-line per backend.  A nonzero
-"assumptions satisfied" already shows a witness-less search tested real
-candidates against a real conclusion, so the numerator alone tells a
-real search from a vacuous one.  The denominator earns its keep when
-the numerator is zero on both sides: measured on this tree at size 3,
-Compute, exhaustive, `!n. n * n = 7 ==> n < 3` reports "candidates
-generated 9, assumptions satisfied 0" -- real candidates were generated
-and every one was rejected by the premise -- while `!n. n > 100 ==>
-n < 3` reports "candidates generated 0, assumptions satisfied 0",
-because the planner inverts `n > 100` into a smart generator whose
-enumeration is empty at every size, so nothing was generated at all.
-Only "candidates generated" tells those two zero-numerator runs apart.
-The totals accumulate over every entry of a search schedule, and larger
-entries re-explore the same domain from scratch (sizes 1..N), so a
-4-element domain can legitimately total 9 candidates generated across
-an exhaustive run at size 3 -- the total is a cumulative count of a
-schedule's work, not a count of distinct candidates.  Compute and
-NativeSML count every candidate for real, incrementally, inside the
-search itself.  Cv leaves all three counters absent on every shape
-rather than fabricate a number, and a witness-less Cv report prints no
-counter line at all rather than announce a denominator it cannot
-produce; see the comment beside `last_stats :=
-[]` on `run` in `Refute_EvalCv.sml`'s `compile_plans` for why, and
-`Refute_QC.sml`'s `strategy_run_body` (mirrored in
-`Refute_QC_Narrow.sml`) for where the telemetry is emitted.  The
-model finder emits none of the three counters; the denominator is a QC
-concept only.
-
-`:rat` has a built-in QC generator (`Refute_EvalRat`), registered
-unconditionally at Refute's load time.  Its candidates are a custom
-generator (`Refute_Gen.GenCustom`), so -- exactly like any other
-user-registered custom generator -- Cv and NativeSML report it
-inapplicable ("custom generator registered") and `Auto` falls through to
-Compute, the only substrate that can host it.  The same load also installs
-a computeLib fragment that decides `+ - * / ~ inv < <= > >= =` on closed
-`:rat` literals via proof-time conversions rather than compset rewriting
-(`ratLib.RAT_CALC_CONV`/`fracLib.FRAC_CALC_CONV` plus arithmetic
-side-condition discharge); an open `:rat` term is left stuck rather than
-unfolded into `rep_rat`/`rep_frac` form, and rat numerals are otherwise
-unaffected.  Because that fragment is added to the global compset, `EVAL`
-decides closed `:rat` literals afterwards too, not only Refute's own
-substrates.  A decided comparison yields `T` or `F`, but a decided
-arithmetic result is a raw `abs_rat (abs_frac (n, d))` value, not
-reduced to lowest terms; the `n // d` display is the QC generator's
-candidate shape, not an output normal form.  As with any finite QC
-sample over an infinite type, `:rat` QC never reports
-`NoCounterexample` for a goal quantified over `:rat` variables:
-exhaustive and random search both report `Unknown` instead, however
-large the size or count.  A closed `:rat` goal is not such a sample --
-reducing it to `T` is a proof -- and can decide to `NoCounterexample`.
-
-`:real` has a built-in QC generator too (`Refute_EvalReal`), registered
-the same way and with the same `GenCustom`/Compute-only consequences.
-Unlike `:rat`, real's arithmetic and comparisons
-(`+ - * / < <= > >= = abs pow`) were already decided on closed literals
-by realLib's own global-compset installation (`realSimps.sml`), loaded
-transitively -- except `n / &0` for a nonzero `n`, which realSimps'
-`elim_common_factor` conv leaves stuck rather than reducing.  The only
-gap that fragment otherwise left was `inv`, which `Refute_EvalReal`
-adds, declining (rather than reducing) on a zero argument to match
-`/`'s existing refusal on a zero divisor.  A decided value is
-`real_of_num n`/`real_neg (real_of_num n)` for an integer, or
-`real_div` of such a numerator over a positive `real_of_num`
-denominator -- the same shape realSimps' own literal rules already
-produce, so a QC candidate is displayed exactly as a user would write
-it.  A finite rational sample can never exhaust the uncountably many
-reals, so `:real` QC never reports `NoCounterexample` for a goal
-quantified over `:real` variables either; a closed `:real` goal can
-still decide to `NoCounterexample`, for the same reason as `:rat`
-above.
-
-QC's own genuine, certified counterexamples reach into negative and
-non-integral territory routinely: e.g. the ordered-field
-monotonicity trap `a <= b /\ c <= d ==> a * c <= b * d`, false at both
-`:rat` and `:real` once `a` and `c` may be negative, is refuted with a
-readable negative witness at both types.  Division by a zero literal
-and `rat_minv`/`inv` at zero are sound but incomplete: `:rat`'s and
-`:real`'s compset fragments both decline on these rather than
-mis-deciding them (matching `/`'s own zero-divisor refusal), so a
-*closed* goal built from them reports `Unknown`, not
-`NoCounterexample`.  The two types are not symmetric here, though.
-`inv (0 : real) = 0` is a genuine theorem (`REAL_INV_0`), so `:real`'s
-decline is an incompleteness -- a fact the compset fragment fails to
-use.  `:rat`'s `rat_minv` has no such fact to miss: `frac_minv`
-constructs `abs_frac (0, 0)` at zero, outside `frac`'s defining
-predicate `0 < SND f`, so `rat_minv 0` is genuinely unspecified and
-declining is the only correct behaviour, not a gap.  The model finder,
-unlike either compset fragment, does evaluate zero-divisor division
-inside its Frac encoding: it reports a `Genuine` `1 / 0 = 0` at both
-types.  At `:real` that settles the *false* closed goal `1 / 0 = 1`,
-because `1 / 0 = 0` is itself a real theorem (`REAL_INV_0` again, via
-`real_div`).  At `:rat` the same encoding move instead *picks* the
-value `0` for a division HOL leaves completely unspecified, on a goal
-that has no fact either way -- sound under the same trust model that
-lets Refute rely on Kodkodi's arithmetic exactly as Nitpick relies on
-Kodkod, and never stricter, but a choice rather than a deduction.
-
-`:'a |-> 'b` (finite maps) is a third built-in case, but registered
-through a different mechanism than `:rat`/`:real`'s single `GenCustom`
-instance: `Refute_Gen.register_generator_family {tyop, constructors,
-canonical}` (exposed as `Refute.register_generator_family`) declares a
-type operator's constructors (`FEMPTY`, `FUPDATE`) once, and the
-generator fires on demand at whatever concrete instance a goal needs,
-built as an ordinary `GenDatatype` over those constructors rather than a
-bespoke spec.  Because it is a `GenDatatype`, not a `GenCustom`, Cv and
-NativeSML are not refused outright by `has_registered_generator`; each
-independently declines it by name -- Cv's `check_in_fragment` checks
-`Refute_Gen.family_for` before attempting any cv translation, and
-NativeSML's `ensure_type` rejects it as soon as it finds fmap's
-`TypeBase` entry has no constructors -- falling through to Compute under
-`Auto` exactly as an ordinary inapplicable substrate would.  The
-registration always sets `exhaustive = false`: a finite map's key type
-is typically infinite, so no finite sample of update chains ever
-exhausts the space, and QC must never report `NoCounterexample` for a
-goal universally quantified over an `fmap`-typed variable -- only a
-*closed* fmap fact (no such variable) can decide that way, the same
-asymmetry `:rat`/`:real` already have.  `Refute_Gen.enumerate` never
-fires for fmap either: a family spec's `exhaustive = false` makes
-`datatype_cardinality` short-circuit to `NONE` before `FUPDATE`'s
-recursion is examined, and `enumerate` gates on that cardinality; the
-`Genuine` results an exhaustive-only search still finds come from a
-separate, always-incomplete generator private to the Compute substrate
-that never calls `enumerate`.  The Narrowing strategy is unreachable for
-fmap for the same underlying reason as NativeSML's decline above:
-extraction rejects every fmap-typed prefix variable by name before any
-narrowing shape is built, so fmap's `exhaustive` flag, unlike an
-ordinary recursive datatype's, is never narrowing-load-bearing.
-`FEMPTY`/`FUPDATE` are also registered with
-`Refute_Core.nonexecutable_constants`'s executability check
-(`Refute_Gen.is_family_constructor`), trusted the same way an ordinary
-datatype's `TypeBase.is_constructor` already is; without this, a goal
-mentioning `FUPDATE`/`FEMPTY` literally in its text -- as opposed to
-only through a generated variable -- would be rejected as "not
-executable" regardless of the registered generator, since `FUPDATE` is
-`[nocompute]`-tagged in `finite_mapScript.sml` and fmap's `TypeBase`
-entry has no constructors of its own.  `canonical`, when supplied, is a
-display-only `term_postprocessor`, keyed by instance type rather than by
-the pattern unification `Refute.register_term_postprocessor` (below)
-uses.  A generator family cannot register it that way directly --
-`Refute_Gen` has no dependency on any `Refute_ModelFinder_*` module --
-so `canonical` instead feeds a snapshot of the generator-family registry,
-through a callback hook
-`Refute_ModelFinder_Model.register_family_canonical_lookup` installs
-(`Refute.sml`, the same precedent as `Refute_Core`'s
-`register_backend`).  `Refute_ModelFinder_Model.postprocess_term` -- the
-one bottom-up walk, shared with the model finder's own display below --
-consults the pattern registry first and this hook second, both through
-the identical `safe_postprocess` contract: a callback that raises a
-non-interrupt exception or changes the term's type is ignored and the
-candidate at that point is kept; interrupts re-raise.
-`Refute_QC.record_candidate_with`'s `canonicalize_term` calls that walk,
-via a snapshot, at its single choke point for every reported binding;
-the rewrite never reaches testing or certification, both of which
-always see the untouched `env` this mechanism closes over, independent
-of when the rewrite runs relative to them.  fmap's is
-`canonical_fmap_chain`, which dedups an update chain like
-`FEMPTY |+ (1,2) |+ (1,3)` to the semantically identical
-`FEMPTY |+ (1,3)` *in place* -- a later `aconv` key shadows an earlier
-one, at the earlier one's position -- with no sort: sorting would need
-to compare keys as values, which `Term.compare` cannot decide, so two
-chains that denote the same map via non-`aconv` keys are not guaranteed
-to display identically.  `Refute_Gen.lookup_family_canonical ty` still
-exposes the raw per-family rewrite for a given instance type; `NONE`
-means no family registered a canonical form for that type (or none is
-registered at all).  A report captures the complete family map once, so a
-concurrent family replacement cannot mix canonicalizers within that report
-and the term walk does not retake the generator-registry lock at every node.
-
-An unconfigured call has one 10-second search budget covering preprocessing,
-backend admission, compilation, testing, model translation, and solver calls.
-All concurrent backends share its absolute deadline.  Mandatory cleanup still
-runs after the budget expires, so the observed return time can be slightly
-longer.  The default QC size and model-finder card rows use iterative
-deepening: 10 is their initial window, not a terminal bound.  `upd_size` and
-`upd_card` deliberately select fixed bounds; use `upd_iterative_size` and
-`upd_iterative_card` to select a different initial adaptive window.
-
-`NoCounterexample` is reserved for a search that covers the whole semantic
-space: no counterexample is possible at any larger size.  A clean fixed-bound
-search that does not cover every relevant type returns `Unknown`, with a
-reason such as `no counterexample within the tested scopes` and the searched
-frontier.  Exhaustive QC and narrowing can establish totality for finite
-generator spaces, and the model finder can do so for a constant preprocessed
-formula or exact finite scopes -- except when a generated problem's own
-encoding carries a value-position `unknown` (the `wfrec'` ersatz row, see
-"Known limitations and follow-ups" below), which vetoes the totality claim
-outright regardless of how many scopes exhaust.  `NoCounterexample` is
-decisive in a backend
-race and stops the other searches, just like a counterexample at the declared
-certainty ceiling.
-
-Kodkod with `upd_falsify false` reports the distinct `Model` and `NoModel`
-outcomes.  Backend selection never changes the meaning of `Counterexample`
-or `NoCounterexample`.  In a mixed run model search is auxiliary, so a
-decisive refutation result can preempt it.
-
-Set a substrate with `Refute.upd_substrate`.  The default, `Auto`, walks all
-registered substrates in priority order; the built-in order is NativeSML,
-Cv, then Compute.  Auto falls through when a substrate is inapplicable.  An
-explicitly selected inapplicable substrate reports `Unknown`; it never
-silently changes substrate.  Selection applies to both exhaustive and random
-QC backends.  A custom or replacement substrate can open a smart-generator
-gate only by compiling the smart plan itself, and Auto executes that exact
-selected compilation.  At Refute trace level 2 or higher, Auto reports
-selection and fallthrough reasons.  Every counterexample also records the
-selected substrate in its `substrate` field.
-
-Random testing uses one specified 64-bit generator and consumption order on
-all substrates.  `Refute.upd_seed (SOME n)` therefore reproduces the same
-candidate stream independently of substrate.  Runs without an explicit
-seed use a deterministic session stream which advances between runs.
-
-Smart generators are enabled by default.  A `Hol_reln` premise, or a
-Boolean function with exhaustive Horn-shaped equations, is mode-compiled to
-a positive CPS enumerator for exhaustive testing on all three substrates.  A
-*negated* such premise is instead mode-compiled to a complement `Guard`
-(one whose `smart` bit is set): the relation's Horn clauses are combined
-into a semantic complement predicate
-(`Refute_EvalEnum.negation_condition`) and used as a runtime guard, so a
-goal whose only obstacle was a negated relational premise no longer needs
-to fall back to opaque, unconstrained treatment of that relation.  This
-only fires for a mode every clause admits: fully-`Input`, no clause needs
-a `Generator` for a variable outside the head, and no clause calls
-another relation (a `Prem` premise).  That last condition excludes every
-recursive relation -- a self- or mutually-recursive relation's negated
-call still falls back to an opaque `Guard`; giving it a bounded
-complement with a downgraded verdict instead of wider admission is an
-open gap (see `Manual/Description/Refute.smd`).
-Unlike `Enum`, a complement needs no enumerator program and consumes no
-fuel: its condition is a closed conjunction of guards over already-bound
-inputs, decided with the same three-valued discipline as an ordinary
-`Guard`, so reaching one does not by itself make a plan incomplete -- a
-stuck evaluation there is still caught and reported at runtime, exactly
-as for an ordinary guard.  `upd_depth` sets the fixed per-plan fuel for
-`Enum` and `SmartGuard` (default 10); it does not add a schedule loop and
-has no effect on a complement.  Compute and cv define the same
-structurally recursive HOL list enumerators (cv then translates those
-definitions); native SML preserves the same clause and premise order.
-Because fuel bounds every `Enum`- or `SmartGuard`-bearing enumeration,
-their terminal exhaustion is always reported as incomplete; a complement
-carries no such penalty.  Ignored counterexamples are matched by
-structural environment equality, not by stream position.  Setting
-`upd_smart_generators false` restores generate-and-guard planning, and
-`upd_reorder_premises` controls mode-analysis reordering.
-
-`upd_allow_function_inversion` (default `false`, Isabelle Quickcheck
-parity) gates function inversion: synthesising Horn clauses for an
-ordinary function's graph -- `f a1 ... an = res`, at `f`'s maximal
-application -- from its own defining equations, and running the same
-mode inference over them (`Refute_SmartGen.infer_graph`).  Function
-inversion is itself a smart-generator route -- it compiles to an
-`Enum` -- so it also requires `smart_generators` (default `true`);
-`upd_smart_generators false` disables it too, keeping every
-random-backend plan `Enum`-free regardless of this flag.
-`flatten_rhs` accepts only a variable or a fully-applied TypeBase
-constructor over already-flattened subterms, plus a self-recursive
-call to `f` at its own maximal arity, which it replaces by a fresh
-variable and turns into a graph premise; anything else -- not only a
-conditional or an uncompiled match, but any arithmetic (`f n = n +
-1`), any non-zero numeral (`1` is `NUMERAL (BIT1 ZERO)`, and `NUMERAL`
-is not one of `num`'s constructors -- only `0` and `SUC` are), and a
-call to any *other* function, even one itself total and flattenable --
-refuses the whole function rather than approximating it, since an
-under-approximating graph used as a generator would be unsound.
-Synthesis also requires `f`'s equations to be stated at its maximal
-application (`arity + 1 = relation_arity` in
-`synthesize_graph_clauses`); a point-free definition is refused rather
-than assumed.  Mode inference over the resulting graph is capped at
-256 candidate modes (`max_mode_space`); a signature whose full mode
-space would exceed that returns no modes at all rather than
-materializing an exponential search.  A graph relation's modes are
-never entered in the negative-mode table: soundness there rests on an
-equation set's own exhaustiveness as a *definition*, which says
-nothing about any one mode's complement, so a negated graph premise
-always falls back to an opaque guard, never a complement.
-
-With the flag on, a goal premise recognising `f a1 ... an = res`
-drives this machinery: `Refute_QC` destructures the equation itself
-(either orientation), requires `f` a constant applied at exactly its
-own maximal arity -- a partial application has no equations to invert
-and is refused, not approximated -- and requires every one of the
-`n + 1` flattened positions to be either fully bound (every free
-variable already known) or a bare unbound variable.  A compound
-position still carrying an unbound variable, e.g. `z :: zs` in
-`xs ++ ys = z :: zs`, is neither an `Input` nor an `Output` the mode
-system can express, and refuses the whole premise.  A recognised
-premise mode-infers `f`'s graph (memoised per constant) and, on a
-match, compiles to the same `Enum` plan node an ordinary relational
-premise would, keyed by `Graph f` instead of `Predicate f`; it is
-additive next to every other route and competes on the same five-way
-score, ties going to the smart candidate.  With the flag off, no
-`Graph` key is ever built.
-
-An all-input premise -- every one of the `n + 1` positions already
-bound, e.g. `f a b = c` with `a`, `b`, `c` all known -- offers no
-inverting candidate: every position is Input, so no mode survives with
-a non-empty `outs` (an Output must be a bare variable not already
-bound), and the premise is decided by the ordinary route with no
-enumerator at all.  A premise whose function is not executable but
-whose graph clauses would invert, with every position already bound,
-is no longer reachable through inversion either way; both routes
-forfeit completeness for such a premise regardless, so this costs
-refutation reach, not certainty.
-
-Native narrowing is active by default as the `narrowing` backend.  It uses
-`size` as its initial refinement-depth window and supports prenex existential
-goals.  In fixed mode that window is the complete requested search; in
-iterative mode narrowing compiles later depths one at a time and releases each
-compiled window before advancing.
-`upd_finite_functions true` (the default) represents function inputs by
-finite `ffun` update chains, with `cfun` as the constant-only fallback for
-higher-order domains.  Counterexamples reconstruct `ffun` values as HOL
-`UPDATE` chains.  Setting the option to false restores the direct function-
-type inapplicability diagnostic.
-
-Execution substrates are untrusted accelerators.  When `certify=true` (the
-default), Refute_Cert re-evaluates an exhaustive or random QC candidate's
-instantiated proposition with computeLib.  A re-evaluation that proves the
-proposition true discards the candidate; one that proves it false attaches a
-theorem certifying its negation.  If direct re-evaluation is stuck, Refute may
-also normalize the closed proposition to PNF and replay an all-universal
-prefix using the candidate's exact generated bindings.  Mixed or existential
-PNF prefixes are not handled by this ordinary-QC fallback.  An inconclusive
-attempt leaves the substrate-derived verdict unchanged with `cert = NONE`.
-Native narrowing uses Refute_Cert_Narrow to replay its recorded case tree;
-ground and partial candidates fall back to Refute_Cert evaluation.  With
-`certify=false`, Refute
-skips QC certification, so an otherwise genuine hit has `cert = NONE` and is
-reported as uncertified.  Certification is monotone: enabling it cannot
-weaken the certainty obtained with it disabled, and can only discard a false
-positive or add a theorem.  Candidates already known to be stuck or
-incomplete during testing are not promoted by either mode.  `certainty`
-records the semantic strength of the result, while `cert` records whether
-Refute constructed a HOL theorem.  The two are independent axes: a result
-may be `Genuine` with `cert = NONE`.
-
-Model-finder certification replays reconstructed values in the HOL kernel.
-It first prefers values with matching Skolem provenance, then ordinary model
-bindings and reconstructed type values.  If those do not close the negated
-goal, replay may use bounded constructor synthesis, exhaustive one-layer
-datatype cases, regular single-property datatype induction, propositional
-tautology proving, Presburger arithmetic, and linear real arithmetic
-(`realLib.REAL_ARITH`, gated on the goal containing a `real`-typed
-subterm).  Lists, ordinary records and enums, and regular recursive
-datatypes such as `zoo_tree` are supported by these paths.  Every exported
-certificate has the exact negated closed goal, no hypotheses, and no
-untrusted oracle tag.
-
-Partially reconstructed model-finder values have a separate private replay
-view.  Its `?`, `_`, and `...` fragments are fresh schematic variables with
-per-reconstruction provenance; the public raw and formatted models retain the
-traditional marker notation and never expose the private names.  Schematic
-values are witness candidates, not assumptions or claims that a finite scope
-exhausts a HOL type.  Replay can therefore certify a function update whose
-unknown fallback is not inspected, while the displayed fallback remains `?`.
-
-If schematic replay is stuck, a deterministic bounded portfolio may replace
-the remaining holes by typed closed candidates.  All attempts share one fuel
-budget and absolute deadline.  A false completion can yield an audited
-certificate, but a true chosen completion only causes replay to try the next
-candidate: it never discards the Kodkod model.  Whole-formula truth discards a
-model only in the exact initial attempt, when the instantiated formula is
-hole-free.  Exhausted, capped, or failed completion search preserves both the
-model and its encoding-derived certainty.
-
-Replay is deterministic and fail-closed.  Fuel, candidate, constructor,
-case-branch, induction, leaf-normalization, and deadline limits can make an
-otherwise real model remain uncertified.  Mutual and nested recursion,
-codatatype induction or coinduction, and abstract typedef or quotient
-transport remain unsupported unless a dedicated trusted theorem-backed path
-is present.  An unsuccessful replay never weakens the model finder's
-encoding-derived certainty.  The `qc.certify` setting controls Quickcheck
-candidate certification; it does not disable this optional model-finder
-replay.
-
-SETTLED DECISION — do not revisit without the owner.  Refute trusts Kodkodi
-exactly as Isabelle/HOL's Nitpick trusts Kodkod, and must never be stricter.
-A model-finder verdict is decided by the *encoding*, not by whether a HOL
-theorem was built: `Refute_ModelFinder_Model.fallback_certainty` maps the
-translation's soundness and exactness flags onto `Genuine`, `QuasiGenuine`
-and `Potential`, mirroring Nitpick's genuine / quasi-genuine / potentially
-spurious.  A reconstructed model may therefore be `Genuine` with
-`cert = NONE`, exactly as a QC hit is under `certify=false`.  Requiring a
-certificate for a genuine model-finder result collapses the two axes, makes
-the model finder inconsistent with the QC path, and starves the
-`max_potential` budget so that found models are discarded and reported as
-`Unknown`.  A failed optional certification attempt likewise leaves the
-encoding-derived verdict unchanged.  The certificate-required rule was
-introduced on 2026-07-29 (3948a7bed), its
-consequences re-baselined into the tests (2db19131b), and both were reverted;
-tests expecting `Genuine` with `cert = NONE` from kodkod are correct as
-written.  The same rule reappeared as a budget (92c24de7e) and was removed
-too: `max_potential` bounds models that may be spurious because their
-*encoding* is unsound, so only the liberal problems spend it.  Every model
-of a sound problem is a real result — `Genuine` when the encoding is exact
-and `QuasiGenuine` when it is inexact — and is charged to `max_genuine`
-regardless of whether kernel certification succeeds.
-Refute uses no oracle tags.  Cv performs all per-call definitions and
-translations inside a full theory snapshot/revert bracket.  Success,
-failure, timeout, and interruption paths leave no Refute-created type,
-constant, theorem, or binding in the user's theory; if safe cleanup is
-unavailable, Cv reports that the goal is inapplicable instead.
-
-Cv also declines every goal reached from the goalstack.  `e` and
-`expandf` run the tactic inside a `Context.Data.modify` on the proof
-manager's slot, holding that slot's non-reentrant lock, and
-`cv_transLib` defines its recursive generators with `TotalDefn.tDefine`,
-whose termination proof re-enters the same slot and deadlocks there --
-with interrupts masked, so neither the search deadline nor Ctrl-C ends
-it.  Whether a goal reaches `tDefine` is not knowable before translating
-it, so the refusal is blanket: Cv probes the lock and reports "a
-goalstack tactic holds the proof manager" while it is held, and Auto
-falls through to Compute, which defines nothing.  A tactic outside the
-goalstack -- `prove`, `Theorem ... QED`, or a tactic applied to a goal by
-hand -- holds no lock and uses Cv as usual.  The underlying re-entrancy
-is an upstream defect in `proofManagerLib`/`Defn`, not a Refute one; any
-tactic that calls `tDefine` deadlocks under `e` with no Refute involved.
-
-A Cv compile pre-flights the goal before it synthesizes anything.  The
-plan's `Test` and `Guard` conditions are translated first, one scratch
-wrapper per plan, so cv's worklist reaches the goal's own functions
-there: a goal it must refuse costs that translation alone rather than
-that plus the generator bundles, which are the expensive half of a
-compile and pure waste on a refusal.  Only those two: a `SmartGuard`
-predicate becomes a null test on the relation's enumerator, so the
-compiled program never translates the relation, and an inductive
-relation has no definition cv could take.  The wrapper is a tuple, never
-a conjunction — a plan really does produce condition lists like `F /\ P
-x`, and cv translates those by collapsing them to `F` without looking at
-the constant the refusal turns on; and it is per plan, because two plans
-of one card reuse variable names across type instances.  Nothing is
-spent twice when Cv can take
-the goal: the `cv_rep` theorems the wrapper produces are the ones the
-program translation would have produced.  The verdict depends on the
-goal's constants rather than on a plan, so it is cached under the call
-token the smart gate already uses and released with the call's other run
-resources: one Refute call admits several backends, and the second must
-not pay a refusal the first established.  The refusal reports what cv
-reported, without naming a constant — cv abandons its worklist at the
-first constant it cannot take, so the ones behind it are untranslated
-only because they were never reached.
-
-Backend races stop when a backend proves `NoCounterexample`, or when a
-counterexample reaches the highest certainty that any selected backend
-declares reachable for the current configuration and instances.
-`Refute.register_backend` gives existing backends the safe, conservative
-ceiling `Genuine`.  A backend with a tighter bound can use
-`Refute.register_backend_with_ceiling`.  Its callback must return an upper
-bound: overestimating only forgoes an early stop, whereas underestimating can
-hide a stronger result and violates the backend contract.
-
-Backend admission and execution use a worker pool local to each Refute call.
-The default `upd_sequential false` therefore starts one worker per selected
-backend even in an ordinary session whose process-global thread count is one.
-Refute does not change that global count, so unrelated HOL tools keep their
-usual scheduling policy.  `upd_sequential true` is the complete serial
-opt-out.  Top-level backend workers do not reduce a backend's own internal
-parallelism; in particular, the model finder's `max_threads = 0` retains its
-automatic Kodkod/Kodkodi setting, so the default can oversubscribe a machine.
-
-The unused-assumption facade consists of `check_unused_assms`,
-`find_unused_assms`, and `print_unused_assms`.  Each takes a `config option`
-first.  `NONE` derives a QC-only configuration from the current configuration;
-`SOME cfg` supplies the base configuration and preserves its backend selection.
-Every individual probe forces a sequential, quiet, abort-potential,
-expectation-free profile.
+Quickcheck (exhaustive and random), native narrowing, and a Kodkod-based
+model finder, with kernel certification of the counterexamples they find.
+User documentation is `Manual/Description/Refute.smd`; this file is the
+developer orientation.  Contributor rules are in `CLAUDE.md`.
 
 User interface
 --------------
 
-`REFUTE_TAC` is the normal proof-development interface.  It runs every
-selected backend, prints the result, and returns the original goal unchanged:
+`REFUTE_TAC` runs every selected backend, prints the result and leaves the
+goal unchanged.  `QUICKCHECK_TAC`, `NARROWING_TAC` and `MODEL_REFUTE_TAC`
+narrow the selection to exhaustive/random/narrowing, narrowing only, and the
+model finder only.  `REFUTE_TAC_WITH [upd_...]` applies `config -> config`
+updaters, left to right, to `the_config` for one application;
+`REFUTE_CONFIG_TAC cfg` uses exactly `cfg`.  `refute_with` and
+`refute_goal_with` do the same outside the tactic layer; `apply_updates`
+and `current_config` build configurations from update lists.
 
-    Proof
-      REFUTE_TAC >>
-      (* prove the unchanged goal *)
-    QED
+Backend selection is `upd_search`: `AllBackends`, `QuickcheckBackends`, or
+`Only [Exhaustive | Random | Narrowing | ModelFinder | RegisteredBackend s]`.
 
-Three specialized tactics restrict only the search selection inherited from
-`the_config`:
+One call owns one absolute deadline (default 10 s) shared by preprocessing,
+admission, every backend and Kodkodi; cleanup may finish after it.  Backends
+run concurrently in a pool local to the call unless `upd_sequential true`.
+A race stops at `NoCounterexample` or at a counterexample reaching the
+highest certainty any selected backend declares reachable
+(`register_backend_with_ceiling`).
 
-* `QUICKCHECK_TAC` selects exhaustive, random, and narrowing search;
-* `NARROWING_TAC` selects only native symbolic narrowing; and
-* `MODEL_REFUTE_TAC` selects only the relational model finder.
+QC `size` and model-finder `card` deepen iteratively from an initial window
+of 10.  `upd_size` / `upd_card` pin fixed bounds; `upd_iterative_size` /
+`upd_iterative_card` restore adaptive mode.  Other controls (`depth`,
+`iterations`, `widths`, `bits`, `iter`, `tac_timeout`, ...) are fixed.
 
-Most proof scripts should use `REFUTE_TAC`.  The specialized names are useful
-when a particular counterexample shape or backend capability is wanted.
+Verdicts and trust
+------------------
 
-Advanced callers can change options for one tactic application without
-mutating `the_config`:
+* `NoCounterexample` claims the whole semantic space was covered: finite
+  generator spaces under exhaustive QC or narrowing, or a constant or exactly
+  finite-scoped model-finder problem.  Anything bounds-relative is `Unknown`
+  with a reason.  QC over `:rat`, `:real`, `fmap` or any infinite generator
+  never reports it for a quantified goal.
+* `certainty` (`Genuine` / `QuasiGenuine` / `Potential`) is the semantic
+  strength; `cert` says whether a HOL theorem was built.  They are
+  independent: `Genuine` with `cert = NONE` is valid and expected.
+* Substrates are untrusted accelerators.  With `certify = true` (default)
+  `Refute_Cert` replays a QC hit with computeLib: true discards it, false
+  attaches a theorem, stuck leaves the substrate verdict with `cert = NONE`.
+  Narrowing replays its case tree through `Refute_Cert_Narrow`.  Model-finder
+  values are replayed by `Refute_Cert_Model` (Skolem provenance, bindings,
+  bounded synthesis, one-layer cases, single-property induction, tautology,
+  Presburger, `REAL_ARITH`); replay is deterministic and fail-closed and
+  never weakens the encoding-derived certainty.
+* SETTLED, do not revisit without the owner: Refute trusts Kodkodi exactly
+  as Nitpick trusts Kodkod and is never stricter.  A model-finder verdict is
+  decided by the encoding (`Refute_ModelFinder_Model.fallback_certainty`),
+  never by whether a certificate was built.  `max_potential` bounds models of
+  the unsound liberal problem only; every model of a sound problem is
+  charged to `max_genuine`.  3948a7bed, 2db19131b and 92c24de7e required a
+  certificate and were reverted.
+* A polymorphic goal degrades a decisive answer to `Unknown` on every
+  engine.  Refuting an essential existential over an infinite type is out of
+  reach (as in Nitpick); the `real` ersatz is rational-valued.
+* No oracle tags.  No Refute-created type, constant, theorem or binding may
+  survive in the user's theory on any path; Cv brackets its definitions in
+  a theory snapshot/revert and reports inapplicable when that is unsafe.
 
-    REFUTE_TAC_WITH
-      [upd_search (Only [Narrowing]),
-       upd_size 7,
-       upd_timeout 5.0]
+Quickcheck
+----------
 
-The elements are ordinary `config -> config` updaters and are applied from
-left to right, so the last update of a field wins.  `REFUTE_TAC_WITH` reads
-`the_config` when the tactic is applied.  `REFUTE_CONFIG_TAC cfg` instead
-uses exactly `cfg`, which is preferable for reproducible tools and tests.
-Neither form silently changes `quiet` or `expect`.
+`Refute_QC` compiles a goal to test-plan IR (`Refute_Eval.plan`) which a
+registered substrate compiles and runs.  `Auto` tries NativeSML (in-process
+SML extraction, `Refute_Extract`), then Cv (`Thm.compute` on a translated
+fuel-bounded loop), then Compute (computeLib); an explicitly selected
+inapplicable substrate reports `Unknown`.  All substrates consume one 64-bit
+PRNG (`rand_next` in `refuteTheory`, mirrored in `Refute_Eval` and
+`refute_cvScript.sml`) in the same order, so `upd_seed (SOME n)` reproduces
+the candidate stream on any substrate; changes to generation order must land
+in all three and the theory together.
 
-`upd_size n` and `upd_card rows` pin reproducible hard bounds.  Their
-iterative counterparts store an initial window and restore adaptive search.
-An iterative card row must be a consecutive prefix `[1, ..., n]`; sparse and
-per-type candidate lists remain available in fixed mode.  The mode itself is
-the `size_mode` field of `qc_config` and the `card_mode` field of
-`mf_config`; `#size` and `#card` hold the bound or the initial window.
+Cv declines goals reached from the goalstack (`tDefine` deadlocks on the
+proof-manager lock under `e`) and pre-flights `Test`/`Guard` conditions
+before synthesising generators.  Custom generators (`:rat`, `:real`,
+`Refute_Gen.GenCustom`) run on Compute only; `fmap` is a generator family
+(`register_generator_family`) that Cv and NativeSML decline by name.
 
-Only the primary size coordinates deepen.  Smart-generator `depth`, random
-`iterations`, `finite_type_size`, word `widths`, constructor `max`, binary
-`bits`, fixpoint `iter`, `bisim_depth`, result quotas, and `tac_timeout`
-remain independent fixed controls.
+Smart generators (default on) mode-compile `Hol_reln` premises and
+exhaustive Horn-shaped Boolean functions into CPS enumerators (`Enum`), and
+a negated non-recursive relational premise into a complement `Guard`
+(`Refute_EvalEnum.negation_condition`).  `upd_allow_function_inversion`
+(default false, Isabelle parity) additionally inverts a function's graph
+from its own equations (`Refute_SmartGen.infer_graph`); `flatten_rhs`
+refuses anything but constructors, variables and self-calls rather than
+approximate.  `upd_depth` is the per-plan fuel; fuel-bounded exhaustion is
+always incomplete.
 
-A type variable in the index position of a word type is a *width* variable
-and is instantiated to an fcp numeral type (`:1`, `:2`, ...) rather than to an
-`rf` carrier, which no substrate can size.  `upd_widths` sets the row tried,
-default `[1, 2, 3, 4]`; entries must lie between 1 and 32.  Carrier and width
-roles are paired by clamped instance index, so instance `k` uses carrier
-`rf (min (k, finite_type_size))` and the `k`-th configured width, and enough
-instances are generated to try every configured width at least once.  This is
-unrelated to the model finder's `upd_bits`, which sizes *binary integers*.
+`upd_instantiate` pins type variables of QC and narrowing; word-width
+variables take fcp numerals from `upd_widths`.  `upd_use_subtype true`
+transports a typedef-typed variable to its guarded representation (never
+certifies).  `upd_finite_functions true` (default) represents function
+inputs as `ffun` update chains.
 
-By default this one carrier/width pair covers *every* type variable of a
-goal at once: a goal with two type variables is tested with both at the
-same type, and every report names the one cardinality that instance
-tested.  `upd_instantiate` pins named type variables to fixed types
-instead, leaving every variable no entry reaches on the shared
-carrier/width exactly as an empty list would.  A `NONE` key is the
-fallback for every *non-width* variable no `SOME` entry names, so a
-`NONE`-only assignment pins all of them and collapses the search to one
-instance -- unless the goal has a symbolic word width, since a width
-variable takes a pin only from its own `SOME` entry (`NONE` never
-reaches it, because carriers and width numerals are disjoint value
-spaces) and otherwise keeps varying over the configured widths.  A width
-variable must therefore be pinned to a concrete numeral type, not an
-ordinary carrier.  Naming a type variable the goal lacks, a width
-variable a non-numeral type, or a pin value that still carries type
-variables of its own, is a configuration error reported as `Unknown`.
-Because pinning only narrows which monomorphic proxies are tested, not
-what the polymorphic goal itself means, a completely covered but
-still-polymorphic goal degrades to `Unknown` exactly as it does without
-pins; `upd_instantiate` can turn `Unknown` into a `Genuine`
-counterexample but never into `NoCounterexample`.  `upd_instantiate`
-scopes to QC and narrowing; the model finder is unaffected and has its
-own per-type-variable updater, `upd_card [(SOME ty, [n])]`.
+Model finder
+------------
 
-A free variable at a typedef type `t` (`new_type_definition`, abstraction
-`abs`, representation type `rty`, characteristic predicate `P`) usually
-leaves QC with nothing to test: `t` has no generator and none of the
-built-in fallbacks apply.  `upd_use_subtype true` rewrites `!x : t. B x`
-to `!r : rty. P r ==> B (abs r)`, contracting every `rep (abs r)` redex
-the substitution creates back to `r`, and reports a hit's binding for
-`x` as `abs`-of-the-tested `r`, never `r` itself -- one rewrite of the
-goal serves every QC strategy and substrate, narrowing included: it
-compiles a PNF formula rather than plans, so it takes the rewritten
-goal open and closes the fresh representation variables into its own
-prefix itself.
-`TYPE_DEFINITION P rep` makes `abs` restricted to `{r | P r}` a bijection
-onto `t`, so the guard is the soundness condition, not an optimisation:
-dropping it lets a representation value outside `t`'s image manufacture
-a spurious refutation.  Whether a filtered representation search counts
-as exhausted follows the same completeness bookkeeping as any other QC
-search; transport adds no bespoke exhaustion rule in either direction.
-In practice that makes transport a counterexample-search aid rather
-than a verification route: the generator ranges over the whole
-representation type and does not know the characteristic predicate
-bounds it, so a true transported goal reports `Unknown` unless its body
-collapses to a ground truth under normalization.
-A genuine transported hit never certifies: replaying the original
-closure needs the untransported `x`, but a transported search's
-environment only ever binds the representation-typed `r`, so the
-report always carries `Genuine` certainty with no attached certificate
--- proving it by kernel replay would require evaluating the very
-`rep (abs r)` redex the contraction exists to avoid.
-Transport is a fallback of last resort: a registered generator or an
-`abstract_generator` registration for `t` wins, a TypeBase datatype for
-`t` wins, and only when none of those apply and `t` is itself a
-harvestable typedef (`Refute_ModelFinder_HOL.harvest_typedef`) with a
-real `TYPE_DEFINITION` theorem behind it
-(`Refute_ModelFinder_HOL.raw_typedef_data`) does the flag take effect.
-That last requirement excludes the model finder's synthetic frac and
-fmap typedef entries: `harvest_typedef`'s own `is_typedef`
-short-circuit admits them past its `incompatible` test, but they carry
-no `TYPE_DEFINITION` theorem, so nothing licenses the guard or the
-contraction -- and for frac the synthetic `abs` is not even a constant.
-It also does not reach inside another type: a free
-variable of type `t list` keeps today's `NoGenerator`/`Unknown`
-behaviour, since transporting it would require lifting the predicate
-and generator through the list structure, which this fallback does not
-do.  Default `false`, matching Isabelle's `use_subtype`; the model
-finder never sees the rewrite -- it already handles typedefs natively,
-through the same harvested registry.
-Checking whether `t` is a harvestable typedef calls `harvest_typedef`
-itself, so a `use_subtype`-enabled QC-only search that reaches this
-fallback permanently populates the model finder's global typedef
-registry as a side effect -- the same lazy harvest the model finder
-performs on its own, hence idempotent and settling no verdict
-differently than the model finder's own harvest would, but a QC-only
-call site now has that observable effect.
+A port of Nitpick: `Refute_ModelFinder_Preproc` (unfolding, specialisation,
+boxing), `_Mono` (monotonicity calculus), `_Scope` (scope enumeration),
+`_Rep` (representation choice), `_Nut`/`_Kodkod` (translation to FORL),
+`Refute_Forl`/`Refute_ForlSat` (Kodkodi process bridge and SAT selection),
+`_Model` (reconstruction and display), `_HOL` (definition harvesting,
+typedef/quotient/codatatype registries, ersatz table), `_Names`,
+`_Peephole`, `_Util`.  Principal options: `upd_card`, `upd_max`,
+`upd_specialize`, `upd_box`, `upd_binary_ints`, `upd_bits`,
+`upd_star_linear_preds`, `upd_iter` (default `[0,1,2,4,8,12,16,20,24,28]`),
+`upd_bisim_depth`, `upd_finitize`, `upd_whack`, `upd_need`,
+`upd_tac_timeout` (0.5 s; `0` skips), `upd_format`, `upd_max_potential`,
+`upd_max_genuine`, `upd_merge_type_vars`; `NONE` keys are row fallbacks.
 
-Backend selection is typed for the four built-ins:
+Native carriers: a word of concrete width `w` has exactly `2^w` atoms,
+`:char` 256; both are exact, never scope-searched, and turn smart
+binarization off (forcing it refuses by name).  Width-changing and
+bit-permuting word operations are refused by name.  A typedef over `:num`
+or `:int` also disables smart binarization.
 
-    datatype backend_choice =
-        Exhaustive
-      | Random
-      | Narrowing
-      | ModelFinder
-      | RegisteredBackend of string
+Registrations (`register_codatatype`, `register_quotient`,
+`register_typedef`, `register_term_postprocessor`, `register_frac_type_*`)
+are session-local ML state.  Typedef and quotient metadata is harvested
+lazily on first demand; `harvest_registrations ()` sweeps every ancestor
+theory once.  `refuteTheory` supplies ersatz definitions (`wf'`, `wfrec'`,
+`card'`, `sum'`, fmap rows, `safe_The`) for second-order or badly-unfolding
+constants; a value-position `unknown` in any harvested axiom vetoes
+`NoCounterexample` (`unknown_value`, `Refute_ModelFinder_Kodkod.sml`).
+Hilbert choice is guarded per occurrence as `if ?x. P x then @P else
+unknown` (`unfold_defs_in_term`), a deliberate deviation from Isabelle's
+unguarded `Eps_psimp`; a fired guard vetoes `NoCounterexample`.
 
-    datatype search =
-        AllBackends
-      | QuickcheckBackends
-      | Only of backend_choice list
+Kodkodi setup: Unix only, needs Java and `setsid`.  Set `HOL4_KODKODI` to an
+unpacked `kodkodi-1.5.7` component (from
+<https://isabelle.in.tum.de/components/>); Java comes from
+`HOL4_JAVA_EXECUTABLE`, `JAVA_HOME/bin/java`, then `PATH`;
+`HOL4_KODKODI_EXEC` overrides the whole launcher.  SAT4J is the default;
+JNI solvers are offered when their libraries exist under `jni/<platform>`,
+and Isabelle's `*_HOME` variables select external solvers.  No JVM is
+started at load or build time.
 
-`RegisteredBackend` is the escape hatch for an extension registered under a
-string name.
+Module layout
+-------------
 
-The same per-call update list works outside the tactic layer through
-`refute_with` and `refute_goal_with`.  `apply_updates updates cfg` constructs
-an exact configuration, while `current_config updates` applies them to the
-current interactive configuration.
+* `Refute.sig`/`Refute.sml`: public facade over `Refute_Core`.
+* `Refute_Core`: types, configuration, backend registry, orchestration.
+* `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
+* `Refute_Eval` (+ `.sig`): substrate seam and PRNG;
+  `Refute_EvalCompute`, `Refute_EvalCv`, `Refute_EvalSML`: substrates;
+  `Refute_EvalEnum`: shared enumerator compiler;
+  `Refute_EvalRat`, `Refute_EvalReal`: built-in generators and compsets.
+* `Refute_QC`, `Refute_QC_Narrow`, `Refute_Narrow`: planning, execution,
+  native narrowing.
+* `Refute_Cert`, `Refute_Cert_Narrow`, `Refute_Cert_Model`: certification.
+* `Refute_ModelFinder*`, `Refute_Forl*`, `Refute_PropSat`, `Refute_Skolem`:
+  the model finder.
+* `Refute_Unused`: unused-assumption probes.
+* `refuteScript.sml`, `refute_cvScript.sml`: support theories; `refute`
+  must stay cv-free.
+* `tests/`: selftest and fixture theories.  `theory_tests/`: theory-hygiene
+  checks.  `examples/`: executable usage examples (documentation, not
+  tests).
 
-Module layout:
-
-* Refute_Core: shared types, configuration, registry, and orchestration.
-* Refute_Gen: generator derivation and enumeration support.
-* Refute_EvalRat: the built-in :rat QC generator and computeLib fragment.
-* Refute_EvalReal: the built-in :real QC generator and its inv fragment.
-* Refute_Eval: the substrate seam, registry, and common random generator.
-* Refute_EvalCompute, Refute_EvalCv, and Refute_EvalSML: substrates.
-* Refute_Extract: in-memory HOL-to-SML extraction for NativeSML.
-* Refute_QC: QC test planning and random/exhaustive execution.
-* Refute_QC_Narrow: native narrowing compilation and scheduled execution.
-* Refute_Cert: EVAL-based counterexample certification.
-* Refute_Cert_Narrow: narrowing case-tree validation and proof replay.
-* Refute_Forl and Refute_ForlSat: the FORL/Kodkodi process bridge and SAT
-  solver configuration.
-* Refute_ModelFinder and Refute_ModelFinder_*: preprocessing, scope and
-  representation selection, Kodkod translation, and model reconstruction.
-* Refute_Unused: unused-assumption probes and theory sweeps.
-* Refute.sig and Refute.sml: the public API facade.
-
-The `examples/` directory holds executable theory scripts showing typical
-usage, from first steps to the model finder, the SML automation API, and
-which library types each half of Refute can serve; `examples/README` indexes
-them.  Run `Holmake examples` here to build them with the standard HOL heap
-and their declared `Ancestors` and `Libs`.  They are documentation rather
-than tests: extending Refute through the registries below is described here,
-not demonstrated there.
-
-The `tests/` directory holds the selftest and nothing else: `selftest.sml`
-and the fixture theories it loads (`refuteTableZoo`, `refuteUnused`,
-`refuteHarvestType`, `refuteHarvestAbs`).  `Holmake` here recurses into
-it; keeping the fixtures there keeps them out of the installed signature
-namespace.
-
-Model-finder surface
---------------------
-
-The model finder supports native polymorphic scopes, monotonicity and smart
-finitization, specialization and boxing, binary integers, machine words,
-(co)inductive predicates, codatatypes, quotients, typedefs, finite maps,
-value pinning, model formatting, and incremental multi-model search.  The
-principal options and their defaults are:
-
-| updater | default | meaning |
-| --- | --- | --- |
-| `upd_card` | adaptive 1--10 | carrier sizes; updater pins fixed |
-| `upd_max` | `[(NONE, [~1])]` | constructor carrier bound; `~1` unbounded |
-| `upd_specialize` | `true` | specialize static higher-order arguments |
-| `upd_box` | `[(NONE, NONE)]` | box functions and pairs when useful |
-| `upd_binary_ints` | `NONE` | select binary integers when useful |
-| `upd_bits` | `[1, ..., 10]` | candidate binary integer widths |
-| `upd_star_linear_preds` | `true` | use exact closure for linear predicates |
-| `upd_iter` | default depth row (below) | fixpoint unrolling depths |
-| `upd_bisim_depth` | `[9]` | codatatype bisimulation depth; `~1` disables it |
-| `upd_finitize` | `[(NONE, NONE)]` | finitization selected by monotonicity |
-| `upd_whack` | `[]` | constants whose definitions are ignored |
-| `upd_need` | `NONE` | values that must occur in the model |
-| `upd_tac_timeout` | `0.5` seconds | inner tactic budget; `0` skips |
-| `upd_format` | fallback `[1]` | group curried function arguments |
-| `upd_max_potential` | `1` | maximum potential models returned |
-| `upd_max_genuine` | `1` | maximum genuine models returned |
-| `upd_merge_type_vars` | `false` | fuse all MF type-variable scopes |
-
-The default `iter` row is `[0,1,2,4,8,12,16,20,24,28]`.  A `NONE` key in a
-row is its fallback.  For smart Boolean rows, a `NONE` value asks Refute to
-choose; `SOME true` and `SOME false` force the choice.  A `max` row is keyed
-by constructor rather than by type: it bounds how many values that
-constructor may contribute to its type's carrier.
-`tac_timeout` bounds the two inner proof attempts the model finder makes
-per problem: the monotonicity calculus, and the well-foundedness proof for
-an inductive predicate.  Either one exceeding it is not an error; the
-answer degrades to "not monotonic" or "not well-founded", which costs
-scopes or precision but never soundness.  A budget of `0` is decided
-rather than timed, so it skips both attempts outright instead of racing
-them against a deadline that has already passed.
-The `max_potential` and `max_genuine` limits are global budgets.  Requesting
-more than one model forces an incremental SAT solver when necessary, and a
-genuine result ends the potential-model search.  With
-`upd_merge_type_vars true`, the model finder type-instantiates every goal,
-evaluated-term, and needed-term type variable to the alphabetically first one
-before building its context.  This reduces independent scope blocks, at the
-cost of potentially losing models that require the variables to have
-different cardinalities.
-
-A word type of concrete width `w` is a native numeric carrier, not a
-datatype and not a typedef: it has exactly `2^w` atoms, atom `j` denoting
-`n2w j`, and models print in the surface literal form.  The carrier is exact
-and never searched, so a scope never sizes it; a width whose carrier would
-exceed 1024 atoms refuses by name.  Encoded directly are word literals,
-`n2w`, `w2n`, `+`, `-`, unary `-`, `*`, `~`, `&&`, `||`, `??`, `<<`, `>>`,
-`>>>`, and the unsigned and signed orders.  Width-changing operations
-(`w2w`, `sw2sw`, `word_extract`, `word_concat`) and the bit-permuting
-remainder (rotations, `word_reverse`, `word_log2`, ...) are not encoded and
-are refused by name, so an inconclusive report never passes for a proof.
-Word arithmetic runs in Kodkod's integers, which read an atom's value from
-its universe index; binary integers replace those bounds, so a problem
-mentioning a word turns smart binarization off, and forcing it with
-`upd_binary_ints (SOME true)` refuses the word instead.  A width left as a
-type variable has no carrier at all — such a goal is refuted through the
-monomorphic width instances described above.  A `cart` type that is not a
-word is not encoded.
-
-`:char` is the same kind of carrier: exactly 256 atoms, atom `j` denoting
-`CHR j`, exact and never searched, and models print as character literals.
-Encoded directly are character literals, `CHR`, `ORD`, and `char_lt`,
-`char_le`, `char_gt`, `char_ge`; everything else on characters unfolds
-through `ORD`, and `:string` stays an ordinary `:char list`.  Read instead as
-the typedef `{n | n < 256}` it is defined as, a character would cost a `:num`
-carrier of 256 values and put the numeral 256 in the axiom set, which alone
-switches binarization on; as a carrier it costs neither.  A character is read
-off the sequential integer bounds just as a word is, so it turns smart
-binarization off too, and `upd_binary_ints (SOME true)` refuses the character
-operation by name.  `ORD` and `CHR` are total only where the `:num` carrier
-holds the code, so a goal over a large code needs `card num` above it.
-
-A typedef over `:num` or `:int` also turns smart binarization off.  Binarized,
-its bound is a numeral needing a carrier atom of its own, and the scope search
-grows the carriers together: the scopes where the abstract type is large
-enough are exactly the ones where the numeral is missing, so all of them are
-unsatisfiable.  Forcing `upd_binary_ints (SOME true)` still binarizes, and
-reaches a model only at a `card num` named above the bound.
-
-Registrations are session-local ML state and create no theory content:
-
-* `Refute.register_codatatype {tyop, case_const, constructors, witness}`
-  validates the shape of `tyop`, `case_const` and `constructors`
-  (non-empty, distinct constructors, each declaring - at its own
-  declared type, not merely at whatever instance the caller applied it -
-  a `tyop`-headed result type; a case constant with a unique valid
-  scrutinee position, in any argument; the type applied to distinct type
-  variables) and registers.  When `tyop` is a type the datatype database
-  already knows as a free datatype, every registered constructor must
-  also be one of that type's database constructors, by key; this rejects
-  an impostor constant declared at the right type without needing a
-  witness.  For a type the database does not know (hand-rolled
-  codatatypes such as `zoo_stream`), this imposes nothing, and shape
-  validation alone cannot tell codata from an ordinary inductive
-  datatype: constructor and case types look the same either way, so
-  `witness = NONE` accepts the registration on trust, exactly as
-  Isabelle's own `register_codatatype` does.  The built-in registrations
-  below are themselves trusted this way too, but through a different
-  path - the lazy harvest that finds them calls the shape check directly
-  rather than `register_codatatype`, so no witness ever applies to them.
-  `witness = SOME thm` narrows what a caller can get away with further:
-  after stripping `thm`'s outer `!`s, its conclusion must be `?x. body`,
-  `body` an equation with one side `aconv` to `x` (either orientation)
-  and the other a constructor application `C a1 ... an`, where `C`'s key
-  matches a registered constructor and `x` is `aconv` to some argument
-  reached by walking `C`'s constructor spine - descending into an
-  argument only when its own head is again a registered constructor -
-  not merely free somewhere in it.  Every registered constructor's
-  *declared* result type is `tyop`-headed, so the key match makes `C`
-  literally that declared constant; `C` need not be fully applied, so
-  `x`'s own type need not be `tyop`-headed (e.g. an argument of function
-  type).  `x`'s type also need not be the generic instance, so
-  `|- ?xs : num llist. xs = llist$LCONS 0 xs` is as conclusive a witness
-  as a polymorphic one.  Mutual-cycle witnesses
-  (`?x y. x = C ... y ... /\ y = C ... x ...`) and HOL4's per-type
-  bisimulation theorems (`llist_bisimulation` and friends) are not of
-  this shape and are not accepted; a caller holding one passes
-  `witness = NONE`.  Together, the witness rules out generic shape
-  defeats and the database cross-check rules out impostor constants for
-  types the database knows; beyond that, the constructor list remains
-  the caller's assertion.  Lazy built-ins cover `llist`, `ltree`,
-  `itree`, `itreeTau`, `lbtree`, and `path` when their theories are
-  present.
-* `Refute.register_quotient {qty, rty, abs, rep, equiv_thm}`
-  registers the abstract and representation types and constants.  `equiv_thm`
-  must be hypothesis-free and either a `QUOTIENT equiv abs rep` theorem
-  mentioning the registered `abs` and `rep`, or a total equivalence
-  `!x y. R x y <=> (R x = R y)`.  Its shape selects the encoding: a
-  `QUOTIENT` theorem gets the sound partial encoding, whereas a total
-  equivalence drops its then redundant domain axiom.
-* `Refute.register_typedef {ty, abs, rep, absrep_thms}` registers an existing
-  HOL typedef.  `absrep_thms` is either `[conjunction]`, the exported
-  conjunction of the two bijection laws, or `[first, second]`, the two
-  halves `!a. abs (rep a) = a` and `!r. P r = (rep (abs r) = r)` supplied
-  separately in either order; either form must agree with the type's
-  `<tyop>_TY_DEF` theorem.
-* `Refute.register_term_postprocessor pattern f` installs a bottom-up,
-  display-only model-value transformation for every type matched by
-  `pattern`; `f` must preserve the term's type.  Re-registering the same
-  pattern replaces rather than duplicates it.  All matching transformations
-  compose: general patterns run before strictly more specific patterns, and
-  otherwise older registrations run before newer ones.  Thus a specific or
-  later incomparable transformation has final precedence, and this
-  registry's own composition runs before the family-canonical hook's (see
-  `canonical` above).  One registry snapshot is used for an entire model
-  or, on the QC side, for one `Refute_QC.record_candidate_with` report;
-  callback failures or type changes leave that display term unchanged,
-  and certification always uses untouched raw terms regardless of which
-  side reported the counterexample.  `Refute.lookup_term_postprocessor ty`
-  reports this composed transformation.  A function-type witness is
-  registered by default (`register_function_display`,
-  `Refute_ModelFinder_Model.sml`): it dedups a raw `UPDATE` chain,
-  dropping any point shadowed by a later, higher-priority one, whether
-  the chain terminates in the model finder's own reconstruction marker or
-  in a QC/native substrate's plain constant-bodied lambda.  Rational and
-  real Frac encoding are both registered by default after their
-  normalization-faithfulness corpora passed.  The
-  idempotent `Refute.register_frac_type_rat ()` and
-  `Refute.register_frac_type_real ()` restore or refresh their respective
-  encoding and built-in transformation: `rat`'s displays reconstructed
-  Frac atoms with `rat_cons`'s `//` syntax, while `real`'s prints them as
-  real literals -- `3 / 4`, `3` for a unit denominator or a zero
-  numerator, never `rat_cons`'s `//`.  Example 12 shows the registered
-  rational encoding in use on a `rat` goal; both registration calls are
-  exercised by `selftest.sml`.  This is the model finder's own Frac
-  display path, unrelated to the `:rat` QC generator (`Refute_EvalRat`,
-  described above): that generator builds `rat_cons`-or-bare-numeral
-  candidates directly, with no postprocessor involved.  Certification
-  (`certify=true`, the default) is attempted on a real Frac counterexample,
-  but not exactly as on any other: `frac$abs_frac` is `int # int -> frac`
-  (`src/rational/fracScript.sml`), so it retypes natively to neither
-  `real` nor `rat`, and replay sees an opaque reserved variable for both
-  alike.  For a qualifying `:real` binding, that variable's value is
-  dropped from the certification env rather than authorized, and the
-  atom's genuine real-literal value (recovered the same way the display
-  transformation reads it) is offered to replay separately as an
-  untrusted candidate hint, never as a trusted term; a linear
-  real-arithmetic leaf (`realLib.REAL_ARITH`) can then close goals
-  computeLib alone cannot.  A nonlinear instance still comes back
-  inconclusive (`cert = NONE`, `certainty` unchanged) -- valid and
-  expected under the trust model, not a blocker.  `rat` counterexamples
-  are unaffected: the candidate-hint mechanism is deliberately scoped to
-  `real`-typed atoms by a structural check (type, application shape, and
-  reserved-name check), so a `rat` binding's identically-shaped reserved
-  atom instead fails that scope check outright -- the certification env
-  is never built, `certification_copy` returns `NONE`, and `certify`
-  falls back to `Keep base`, exactly as before this mechanism existed.
-  Extending it to `rat` would need a rat-capable arithmetic leaf.  Not
-  implemented here; recorded instead as a follow-up beyond Isabelle2025-2
-  parity, since the mechanism it would extend -- kernel certification of
-  a counterexample -- has no Nitpick counterpart at all.  A successful
-  real-Frac replay reports `model = NONE`, and any `evals` row whose
-  evaluated term still has a free variable (e.g. the dropped binding's own
-  variable) is dropped rather than displayed half-evaluated -- only
-  kernel-established values are shown.
-
-Structural registration types use distinct type variables as parameters.
-Abs, rep, case, and constructor terms must be existing constants.  A later
-compatible registration for the same type operator replaces the session
-entry.
-
-Kodkodi support is Unix-only and requires a Java runtime plus the standard
-Unix `setsid` utility (used to isolate and clean up its process group).  Obtain
-`kodkodi-1.5.7.tar.gz` from the Isabelle components mirror at
-<https://isabelle.in.tum.de/components/> and unpack it locally.  Set
-`HOL4_KODKODI` to the resulting `kodkodi-1.5.7` component directory.  Its
-`jar/` directory must contain `antlr-runtime-3.1.1.jar`, `kodkod-1.5.jar`,
-`kodkodi-1.5.7.jar`, and `sat4j-2.3.jar`.
-
-HolRefute constructs the Kodkodi JVM command itself.  Java is selected from
-`HOL4_JAVA_EXECUTABLE`, then `JAVA_HOME/bin/java`, then `java` on `PATH`.
-As an escape hatch, `HOL4_KODKODI_EXEC` can instead name a complete
-standalone launcher command.  It takes precedence and is passed to the
-shell verbatim.  Configuration checks are lazy and never start a JVM while
-modules are loaded or built.  The launcher shipped in the component's
-`bin/` directory depends on Isabelle and is not the standalone override.
-
-`SAT4J` is the portable default.  JNI solvers are advertised only when their
-individual shared libraries are present under `jni/<platform>`: MiniSat,
-CryptoMiniSat, and Lingeling require `libminisat`, `libcryptominisat`, and
-`liblingeling`, respectively.  External solver settings retain Isabelle's
-environment variables, including `MINISAT_HOME`, `CRYPTOMINISAT_HOME`,
-`ZCHAFF_HOME`, `RSAT_HOME`, `RISS3G_HOME`, `BERKMIN_HOME`, and
-`BERKMINALLOY_HOME`; `BERKMIN_EXE` selects a nondefault BerkMin executable.
-
-The prepared development host uses
-`$HOME/.local/opt/Isabelle2025-2/contrib/kodkodi-1.5.7` and
-`$HOME/.local/bin/java`; other machines need a local Kodkodi 1.5.7 component
-and a Java runtime.  No network access is needed at run time.
-
-HolRefute is included in the normal tree build only on Poly/ML; non-Poly
-builds skip the directory.  Its level-2 selftests include the MF acceptance,
-differential and soundness suites, the narrowing acceptance table, and
-cross-substrate QC outcome conformance.
-
-The refute_simp, refute_psimp, and refute_unfold theorem sets are defined by
-the support theory and used by model-finder preprocessing.
-
-`Refute.upd_iter` selects model-finder unrolling depths.  A mutual fixpoint
-group shares one iterator row: members are checked in `_cases` theorem order,
-and the first member with an explicit row wins before the default row is used.
-Predicates introduced by `Hol_reln` and `Hol_coreln` are recognized through
-the IndDef registries and support direct well-founded equations or joint
-least/greatest-fixpoint unrolling.  A definition whose right-hand side is
-directly headed by `fixedPoint$lfp` or `fixedPoint$gfp` but is absent from
-those registries is recognized too (`fixpoint_definition_parts`,
-`derived_fixpoint_group` in `Refute_ModelFinder_HOL.sml`): its unrolling
-equation is derived from `fixedPointTheory.lfp_fixedpoint` or
-`gfp_greatest_fixedpoint` once `monotone` on the functional is discharged
-by `InductiveDefinition.MONO_TAC`, never by hand-building the unrolling
-equation.  The derived equation supersedes the definition's own
-presentation (`is_raw_equational_fun`), which would otherwise leave the
-encoder with `p = lfp F` and suppress the polarity-correct unrolling.
-A functional whose monotonicity cannot be discharged is not refused --
-unfolding `lfp_def`/`gfp_def` directly stays sound, merely more
-expensive -- it is only diagnosed, at `Refute` trace level 2.  Mutual
-hand-rolled fixpoints are out of scope: a tupled mutual definition is
-still recognized and sound as the single tupled predicate it syntactically
-is, but is not unrolled as a joint group the way `Hol_coreln` output is.
-
-Known limitations and follow-ups
---------------------------------
-
-Three limitations are inherited from the approach itself, not shortfalls
-still to close -- Isabelle's Nitpick carries the same three.
-
-Refuting `?x. P x` means showing that *no* `x` satisfies `P`, and no
-finite scope can show that over an infinite type.  In
-`Refute_Narrow.sml`'s `update_branch`, a universal branch aggregates with
-`conj` and keeps its result, but an existential branch that runs out of
-enumerated witnesses is passed through `incomplete_false`, which marks a
-`false` result as merely potential rather than conclusive.  A goal whose
-falsity turns on an essential existential over an infinite type therefore
-never earns a `Genuine` counterexample and never `NoCounterexample`.
-Under the default configuration it reports `Unknown` on every engine.  A
-model finder run at explicitly bounded scopes is the one case that
-reports a counterexample at all, and only a `Potential` one, reasoned
-`"model comes from the liberal, unsound-by-design problem"` -- refuting
-the goal correctly, but from the liberal problem, so uncertified.
-Note the asymmetry: an existential in the *witness* direction (finding
-one) is unaffected and is the ordinary case; what is out of reach is
-refuting one.
-
-The `real` ersatz is registered on the same Frac carrier as `rat`
-(below), and a Frac atom is a pair of integers, so every value the model
-finder can assign to a `real` variable is rational.  A proposition false
-only at an irrational point has no countermodel this encoding can
-express, so the search exhausts its scopes without finding one.  The
-encoding is exact for the values it can name; the limitation is which
-values that is, not an approximation of the ones it names.
-
-A goal that stays polymorphic degrades a would-be decisive answer to
-`Unknown`, by a different mechanism on each engine.  The model finder
-returns the reason `"polymorphic axioms prevent an authenticity
-guarantee"` (`Refute_ModelFinder.sml`): an axiom that stays polymorphic
-is not pinned to the scope being searched, so a model over that scope is
-not certified authentic.  Quickcheck's `preserve_polymorphic_bounds`
-(`Refute_Core.sml`) keeps a miss bounds-relative whenever
-`forms_are_polymorphic`, with the reason `"polymorphic search covered
-only configured monomorphic ..."`.  Both degrade a would-be decisive
-answer rather than report something stronger than was established --
-that is the sound behaviour, not a failure.  (The `upd_instantiate`
-discussion above already shows the quickcheck mechanism from the
-configuration side; this states the same fact as a limitation.)
-
-The model finder lazily harvests typedef and quotient metadata when an
-unregistered Abs/Rep occurrence is encountered.  Loading or exporting a theory
-only records its invalidated harvest entry; pending theories are indexed on
-first demand.  If validated harvesting fails, it returns `Unknown` rather than
-risk a spurious genuine result; an explicit registration can then supply the
-metadata.  Harvesting is deliberately demand-driven rather than an eager scan
-on every theory load.  Typedef harvesting accepts either the exported
-conjunction of the two bijection laws or the two halves saved separately,
-provided both live in the same theory; halves split across two theories are
-not paired.  `Refute.harvest_registrations ()` is an opt-in
-alternative: it sweeps every theory in `Theory.ancestry`, oldest first, once,
-attempting the same lazy typedef and quotient harvest for every type operator
-those theories declare, and returns only what that call newly registered.  A
-caller who would rather pay the scan upfront, once, than have it triggered
-piecemeal by whichever goals happen to mention a type first can call it; the
-demand-driven lazy harvest remains the default and is unaffected.
-
-The normalized Frac/ersatz encoding for `rat` is registered by default.
-The analogous `real` encoding on the same Frac carrier is also registered
-by default; it excludes `real_ge` and `real_gt` for symmetry with the
-`rat` encoding, which excludes `rat_geq`
-and `rat_gre`.  The exclusion is harmless because each is an ordinary,
-non-recursive `Definition` naming its `<`/`<=` dual: `is_equational_fun`
-keeps it un-inlined, and `equational_fun_axioms` hands the Definition to
-`add_axiom`, whose right-hand side reaches the ersatz table on the next
-unfolding pass.  Measured at matched scope and boundary values, this
-reaches an identical verdict either way: a goal phrased purely with
-`real_ge`/`real_gt` (or `rat_geq`/`rat_gre`) refutes at the same scope,
-with the same witness, as its definitional `<=`/`<` dual -- no
-refutation power is lost by leaving them out of the ersatz table.
-Relation inverse and composition (`inv` and `O`) already have native
-monotonicity rules, with dedicated verdict, scope, soundness, and
-certified argument-order coverage.  Relation identity (`Id`)
-is HOL4 notation for `(=)` rather than a constant of its own, so there is
-nothing to unfold: it is eta-expanded to a partial application of equality
-and encoded as a singleton set.  The `Iden` nut constant and its Kodkod
-translation exist but are never produced; emitting `iden` directly would be
-a performance refinement, not added power.  `relation$WF` is second-order
-and out of reach directly, so it goes through the same builtin-ersatz path
-as `CARD`: `WF` is swapped for `refuteTheory`'s `wf' R = (!x. ~TC R x x) /\
-(FINITE (\p. R (FST p) (SND p)) \/ unknown)`, exact on a genuinely finite or
-polymorphic domain but only `Potential` over an intrinsically infinite one
-such as `num`, where a bounded scope can never decide the `FINITE`
-disjunct.  `relation$WFREC` is likewise second-order, and unfolding it
-straight through `the_fun` (its own Hilbert-choice fixpoint,
-`relationScript.sml`) risks the same empty-extension danger as `min$@`
-below; it is swapped instead for `refuteTheory`'s `wfrec'`, whose body
-reads `wf_wfrec R Fn x` and is paired with a `wf_wfrec -> wf_wfrec'`
-ersatz row of its own.  Unfolding hands `add_axiom` the literal
-recursive equation `wf_wfrec' R Fn x = if WF R then
-Fn (RESTRICT (wf_wfrec' R Fn) R x) x else unknown` rather than an
-unrolling over an unconstrained function, and the knot survives the
-default specialized path too, where it is re-tied only on a later pass
-(`mf_wfrec_ersatz_ties_the_knot`, `selftest.sml`).  The `WF R` guard is
-itself swapped for `wf'`, so it decides exactly on a finite or
-polymorphic domain like any other `WF` occurrence, but its `unknown`
-else-branch is a syntactic part of every `wf_wfrec'` occurrence's
-harvested axiom regardless of how that check resolves, so any goal
-reaching this row costs the search `NoCounterexample` outright, not
-only over an infinite domain: an `unknown` at a value position is
-exactly as restrictive on the liberal side of a search as on the sound
-side, so an exhausted search can no longer be trusted to mean no
-counterexample exists (`unknown_value`,
-`Refute_ModelFinder_Kodkod.sml`).
-`pred_set$SUM_IMAGE` is defined by an `ITSET` fold, whose
-unfolding the encoder handles badly: measured against a 30s budget, it
-sizes scopes over `num itself -> num` and `(num -> bool) # num`,
-exhausts four of the six emitted scopes of `SUM_IMAGE (\e. e) {0;1;2} =
-3` where the ersatz encoding exhausts all six, and times out outright on
-a symbolic-set goal such as `SUM_IMAGE f {a} = f a`.  So it too takes an
-ersatz row, `refuteTheory`'s `sum' f s = if FINITE s then
-SUM (MAP f (@xs. set xs = s /\ ALL_DISTINCT xs)) else 0`:
-the same distinct-witness-list construction `card'` counts on, and it
-disagrees with `SUM_IMAGE` past `FINITE` the same way `card'` disagrees
-with `CARD`.  Both rows are liberal, not faithful: the `min$@` guard
-below (see "Hilbert choice") keeps a missing witness list from ever
-turning that disagreement into a spurious `Genuine` result -- see
-`card'_def`'s comment (`refuteScript.sml`) for the full argument.
-`pred_set$SUM_SET` (`= SUM_IMAGE I`) needs no row of its own: it is an
-ordinary defined constant, so the encoder constrains it by its harvested
-equation, and the equation's body reaches the `SUM_IMAGE` row.
-
-`:'a |-> 'b` (finite maps) also get a builtin-ersatz route rather than
-the genuine `fmap_TY_DEF` typedef: that typedef's own representation
-type is recursive and its well-foundedness proof does not run
-automatically, so unrolling it directly is the same dead end `WFREC`
-avoids above.  `refuteTheory`'s `is_fmap'`/`abs_fmap'` register fmap's
-own typedef instead, over representation type `'a -> 'b option` -- a
-plain function type the scope search already handles exactly.
-`is_fmap'` carries a `FINITE`-guarded `unknown` escape like `wf'` above,
-for the same syntactic reason.  Measured: dropping the `\/ unknown`
-disjunct from `is_fmap'_def` leaves the level-1 selftest at 939 OK/0
-failures, byte-identical to the pre-ablation baseline -- no pin,
-including one that reaches `Genuine` over an infinite key type
-(`finite_map_model_finder_reaches_genuine`, `selftest.sml`), is
-sensitive to the escape's presence.  Its necessity is therefore not
-established by anything in this suite; it is kept for the same reason
-`wf'` carries one, not because a test demonstrates a need for it (see
-`refuteScript.sml`'s Part 7 comment for the full account, including a
-more likely reason no tested goal exercises this disjunct: how
-`FLOOKUP`/`is_fmap'` are actually dispatched at a typedef instance,
-`Refute_ModelFinder_HOL.sml`'s `synthetic_fmap_typedef`).
-`FUPDATE`/`FEMPTY`/`FAPPLY`/`FDOM` each get their own ersatz row
-(`fupdate'`/`fempty'`/`fapply'`/`fdom'`) built on `FLOOKUP` and
-`combin$UPDATE`/`combin$K`; `FAPPLY` off its finite map's domain reads
-`unknown` rather than an arbitrary value.  At a non-`bool` range this
-lands `unknown` at a value position, so the problem-wide `unknown_value`
-totality veto (`Refute_ModelFinder_Kodkod.sml`) fires and costs
-`NoCounterexample` outright for *any* goal mentioning `FAPPLY` at that
-instance, whether or not its truth actually depends on the off-domain
-read.  At `bool` range `is_unknown`'s argument stays `Formula`-typed and
-the veto never sees a value-position occurrence to fire on; a genuinely
-true off-domain fact there is instead decided through the ordinary
-sound/liberal problem split (`Refute_ModelFinder.sml`), which leaves a
-falsely-total goal `Potential`/unconfirmed rather than certifying it,
-not through this veto.  `abs_fmap'` is Hilbert choice, so it
-is a genuine inverse of `FLOOKUP` only where a preimage exists;
-`synthetic_fmap_typedef` (`Refute_ModelFinder_HOL.sml`) supplies the two
-theorems saying exactly that as the typedef's inverse axioms, the
-structurally correct thing for a typedef registration to carry -- the
-same role a validated typedef's own bijection theorem fills -- even
-though at a finite key type the encoder's own identification of the
-abstract carrier with the represented subset of `'a -> 'b option`
-already makes `FLOOKUP` injective there without them; see
-`refuteScript.sml`'s Part 7 comment.  The witness-generated
-`FEMPTY |+ ...` display
-(`fmap_atom_to_chain`, `Refute_ModelFinder_Model.sml`) only fires when
-the underlying chain's base is literal `NONE` or the reconstruction's
-irrelevant-value marker; a chain bottoming out at the unknown-value
-marker, or containing a duplicate key, is shown as the raw `abs_fmap'`
-rep term instead of guessed at.
-
-Hilbert choice (`min$@`) is otherwise encoded as an uninterpreted function
-pinned only by `refuteTheory`'s `Eps_psimp`, which is vacuous once no
-in-scope value satisfies the predicate; reading an atom off that
-unconstrained relation would silently turn a sound problem into a
-countermodel of a true theorem (`x <> y ==> CARD {x; y} = 2` via `card'`'s
-witness list, and a goal naming `relation$the_fun` directly rather than
-through `WFREC`: the `wfrec'` row above intercepts only the `WFREC`
-symbol, and `the_fun` is a public constant of `relationTheory` in its
-own right that still unfolds straight into `@f. approx R M x f`).
-`unfold_defs_in_term`
-(`Refute_ModelFinder_HOL.sml`) inserts a guard at every syntactic
-occurrence -- goal and harvested axiom alike -- with a one-shot rewrite:
-`$@ P` becomes `if (?x. P x) then $@ P else unknown`, so an empty
-in-scope extension reports the value as unrepresented rather than
-arbitrary.  This is a `[deviation from upstream]`: Isabelle's `Eps_psimp`
-has the identical hole.  `refute$safe_The` (the definite-description
-counterpart also recognized by `is_descr`) is deliberately excluded from
-the guard: as a genuine description its empty extension already yields an
-empty relation, so it is sound as encoded.
-
-"Every syntactic occurrence is guarded" describes insertion, not the final
-encoded problem: a later pass, `destroy_existential_equalities`
-(`Refute_ModelFinder_Preproc.sml`), can collapse a guard's own `?x. x = e`
-condition to `T` and erase the `if` it introduced.  This stays sound for
-two independent reasons.  The bounds signal below is set at insertion
-time, so it survives the erasure regardless of what happens to the `if`.
-And the erased case is itself sound on the same negative-polarity grounds
-as the exact-domain escape below: `e` is either in scope, in which case
-the guard's condition would have been true anyway, or unrepresented, in
-which case `P`'s in-scope reads are `unknown` rather than false and
-`Eps_psimp` still constrains `$@ P`.
-
-Two escapes stand the guard down where the unguarded read is independently
-sound.  Provably-empty: when `~(?x. P x)` is a HOL theorem, HOL itself
-leaves `$@ P` unspecified, so any value is a correct reading; decided by a
-fixed, terminating decision procedure (`bossLib.DECIDE`), never a
-wall-clock-bounded search.  Cost is not a function of size: `DECIDE`
-expands a case-splitting arithmetic generator (subtraction, `PRE`, `DIV`,
-`MOD`, `MIN`, `MAX`, `EXP`, a numeral-typed `COND`, a non-numeral `*`)
-combinatorially, so the attempt is gated by a syntactic fragment check
-first -- any of those generators, or a quantifier, anywhere in the
-predicate keeps the guard without ever calling `DECIDE` -- then a size
-ceiling on what the fragment accepts, then a per-context cap on the
-number of distinct predicates `DECIDE` is ever called on in one Refute
-call; declining at any gate just keeps the guard.  Memoised per predicate
-(`Term.aconv`) since a harvested axiom's predicate can recur across many
-specialized occurrences.  Exact domain: when `P`'s domain type is `bool`,
-every model this module builds interprets `bool` with exactly its two HOL
-elements, never subject to card search or completeness approximation, so
-no in-scope extension can miss a HOL witness by omitting a domain
-element.  A domain element's own read of `P` can still come back
-`unknown` rather than false; the escape is sound there too, but not
-because an unknown read is discarded.  Asserted positively, `Eps_psimp`
-(`P x ==> ~P y ==> ($@ P = y) ==> ($@ P = x)`) puts `P x` at negative
-polarity, and the encoder resolves an unknown or unrepresented read at
-negative polarity to `True` rather than ignoring it
-(`unknown_formula`/`formula_from_opt_atom`,
-`Refute_ModelFinder_Kodkod.sml`), so an unknown read still fires the axiom
-and forces `$@ P` onto a genuine witness -- the escape is sound because
-unknown reads strengthen the axiom, not because they vacate it.  Per-type
-scope exactness for other types is not reachable at this point of the
-pipeline (`unfold_defs_in_term` runs during preprocessing, before any
-scope is chosen), so `bool` is the one case decided statically.  This also
-removes the cost of `bool$COND`'s own defining axiom, which the guard
-would otherwise reach every time it is harvested
-(`arity_of_built_in_const`, `Refute_ModelFinder_HOL.sml`).
-
-A fired guard means a scope may have truncated a real witness, so a clean
-search that finds no model may not conclude whole-space exhaustion from it:
-`choice_guard_inserted`, set whenever the guard is inserted anywhere in a
-problem, vetoes `NoCounterexample` in `total_scope_search`
-(`Refute_ModelFinder.sml`) the same way the scope-completeness check already
-does for a type that is never exact (`num`, `int`, words) -- the search
-instead reports a bounds-relative `Unknown`, and the adaptive scope search
-keeps growing rather than concluding.  This is a deliberate, static,
-per-problem approximation, not a recomputation per scope.
-
-One corpus shape is a deliberate divergence from upstream rather than a bug
-to match: `($@ (\j. j > SUC 2 /\ j <= 4)) = x ==> x = 4` and its `x <> 0`
-sibling are HOL theorems -- the predicate is a num singleton, so
-`SELECT_AX` forces `$@ P = 4` regardless of which value choice picks -- but
-Isabelle reports `Genuine` at a scope too small to contain 4, the same
-scope-arbitrary-read defect this guard exists to close.  HolRefute reports
-`Unknown` instead and does not reproduce the imported bug.
-
-Function inversion's `flatten_rhs` (above) flattens only a self-recursive
-call to `f` itself; a call to any *other* function -- even one itself
-total and flattenable -- refuses the whole function rather than
-approximating its graph, by its own comment's design ("a strictly more
-general capability that is deliberately not attempted here",
-`Refute_SmartGen.sml`).  This is a reach limitation of the
-smart-generator route, not a soundness or a lost-goal one: an
-under-approximating graph used as a generator would be unsound, so a
-refused function's premise instead falls back to ordinary `Gen`+`Guard`
-planning, or to the model finder -- refutation power is not lost, only
-the specialised enumerator.  Isabelle's own predicate compiler flattens
-calls to other functions; this port, described in its module header as
-flattening "in the Isabelle predicate-compiler sense", deliberately does
-not.
-
-Compute-hosted residual-inspection narrowing is a separate recorded
-follow-up, and unlike the item above it goes beyond Isabelle2025-2
-parity rather than falling short of it: Isabelle's narrowing needs GHC,
-while Refute's native host substrate is unconditionally present on the
-only platform Refute supports, so availability parity already holds
-without adding it.  Negative smart-generator modes already ship (see the
-complement `Guard` above).  Higher-order mode inference feeds a
-static-parameter specialisation pass: a predicate argument applied to a
-statically known closed value (a literal lambda, not a runtime-bound
-variable) is substituted through the relation's clauses before mode
-inference runs, so the substituted clauses are first order and the CPS
-compiler accepts them, turning what would be an inert `Fun`-moded guard
-into a compiled `Enum`.  A ground `var = closed_term` sidecond exposed by
-that substitution is discharged by direct substitution rather than a
-generate-then-filter search, so the reachable witness does not scale with
-the target value's magnitude.  A predicate argument that is still a
-runtime-bound variable at compile time is unaffected and keeps falling
-back to plain `Gen`+`Guard`, exactly as before: `compile_clause` still
-compiles no enumerator for a mode with an unresolved function-typed
-component, and the complement table stays strictly atomic-`Input`: its
-gate compares each mode component against `Input` via `eq_mode`, which
-recurses through `Pair` rather than requiring literal identity, so a
-mode with a `Fixed` component -- however it arose -- never satisfies
-that gate and never reaches the negative table.
+Only Poly/ML builds this directory.  `HOLSELFTESTLEVEL=2 Holmake` is the
+quality gate.

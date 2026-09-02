@@ -530,9 +530,8 @@ structure Refute_ModelFinder_HOL = struct
       | NONE => NONE
 
   fun word_dimension ty =
-    case Lib.total wordsSyntax.dest_word_type ty of
-        SOME index_ty => numeric_type_card index_ty
-      | NONE => NONE
+    Option.mapPartial numeric_type_card
+      (Lib.total wordsSyntax.dest_word_type ty)
 
   (* The same projection where the caller has already established that the
      type is a word one, so a miss is an internal error. *)
@@ -1468,10 +1467,6 @@ structure Refute_ModelFinder_HOL = struct
         SOME {members, ...} => length members > 1
       | NONE => false
 
-  type fixpoint_group_instance =
-    {kind : fixpoint_kind, stem : string, members : term list,
-     rules : term list, cases : term list}
-
   fun case_prop_head prop =
     let
       val (_, body) = boolSyntax.strip_forall prop
@@ -1642,22 +1637,35 @@ structure Refute_ModelFinder_HOL = struct
     | tuple_type [ty] = ty
     | tuple_type tys = pairSyntax.list_mk_prod tys
 
+  fun wf_relation_variable rules domain_ty =
+    Term.variant
+      (List.concat (map Term.all_vars rules))
+      (Term.mk_var ("R",
+        Type.-->(domain_ty, Type.-->(domain_ty, Type.bool))))
+
+  fun wf_constraints constraint triples =
+    List.concat (map (fn triple =>
+      map (constraint triple) (#main triple)) triples)
+
+  fun wf_proposition relation constraints =
+    boolSyntax.mk_exists (relation,
+      boolSyntax.mk_conj
+        (relationSyntax.mk_wf relation,
+         if null constraints then boolSyntax.T
+         else boolSyntax.list_mk_conj constraints))
+
   fun wf_problem constant rules =
     let
       val triples = List.mapPartial (intro_triple_for constant) rules
       val malformed = length triples <> length rules
-      val (_, argument_tys) =
+      val argument_tys =
         let val (domains, range) = boolSyntax.strip_fun
               (Term.type_of constant)
         in
-          if range = Type.bool then (range, domains)
+          if range = Type.bool then domains
           else raise err "wf_problem" "predicate does not return bool"
         end
-      val domain_ty = tuple_type argument_tys
-      val relation = Term.variant
-        (List.concat (map Term.all_vars rules))
-        (Term.mk_var ("R",
-          Type.-->(domain_ty, Type.-->(domain_ty, Type.bool))))
+      val relation = wf_relation_variable rules (tuple_type argument_tys)
       fun constraint
             ({variables, side, main, conclusion} : intro_triple) recursive =
         let
@@ -1670,13 +1678,8 @@ structure Refute_ModelFinder_HOL = struct
           boolSyntax.list_mk_forall
             (variables, boolSyntax.list_mk_imp (side, decrease))
         end
-      val constraints = List.concat (map (fn triple =>
-        map (constraint triple) (#main triple)) triples)
-      val proposition = boolSyntax.mk_exists (relation,
-        boolSyntax.mk_conj
-          (relationSyntax.mk_wf relation,
-           if null constraints then boolSyntax.T
-           else boolSyntax.list_mk_conj constraints))
+      val constraints = wf_constraints constraint triples
+      val proposition = wf_proposition relation constraints
       fun argument_pairs
             ({main, conclusion, ...} : intro_triple) =
         let val (_, conclusion_args) = HolKernel.strip_comb conclusion
@@ -1747,11 +1750,8 @@ structure Refute_ModelFinder_HOL = struct
         end
       val argument_tyss = map argument_tys members
       val tuple_tys = map tuple_type argument_tyss
-      val domain_ty = sumSyntax.list_mk_sum tuple_tys
-      val relation = Term.variant
-        (List.concat (map Term.all_vars rules))
-        (Term.mk_var ("R",
-          Type.-->(domain_ty, Type.-->(domain_ty, Type.bool))))
+      val relation =
+        wf_relation_variable rules (sumSyntax.list_mk_sum tuple_tys)
       fun constraint
             ({variables, side, main, conclusion} : intro_triple) recursive =
         let
@@ -1773,13 +1773,8 @@ structure Refute_ModelFinder_HOL = struct
           boolSyntax.list_mk_forall
             (variables, boolSyntax.list_mk_imp (side, decrease))
         end
-      val constraints = List.concat (map (fn triple =>
-        map (constraint triple) (#main triple)) triples)
-      val proposition = boolSyntax.mk_exists (relation,
-        boolSyntax.mk_conj
-          (relationSyntax.mk_wf relation,
-           if null constraints then boolSyntax.T
-           else boolSyntax.list_mk_conj constraints))
+      val constraints = wf_constraints constraint triples
+      val proposition = wf_proposition relation constraints
     in
       {malformed = malformed, proposition = proposition,
        argument_tyss = argument_tyss,
@@ -1980,6 +1975,17 @@ structure Refute_ModelFinder_HOL = struct
     handle Timeout.TIMEOUT _ => false
          | HOL_ERR _ => false
 
+  (* [candidates] is forced only on a cache miss. *)
+  fun cached_wf_result timeout proposition candidates =
+    case cached_wf_lookup timeout proposition of
+        SOME result => result
+      | NONE =>
+          let
+            val result = List.exists
+              (prove_wf_candidate timeout proposition) (candidates ())
+            val _ = cache_wf timeout proposition result
+          in result end
+
   fun uncached_is_well_founded_inductive_pred context constant =
     let
       val rules = intro_props_for_const context constant
@@ -1988,16 +1994,8 @@ structure Refute_ModelFinder_HOL = struct
     in
       if malformed orelse null rules then false
       else if not recursive then true
-      else
-        case cached_wf_lookup (#tac_timeout context) proposition of
-            SOME result => result
-          | NONE =>
-              let
-                val result = List.exists
-                  (prove_wf_candidate (#tac_timeout context) proposition)
-                  (wf_candidates argument_tys pairs)
-                val _ = cache_wf (#tac_timeout context) proposition result
-              in result end
+      else cached_wf_result (#tac_timeout context) proposition
+        (fn () => wf_candidates argument_tys pairs)
     end
     handle HOL_ERR _ => false
 
@@ -2008,16 +2006,8 @@ structure Refute_ModelFinder_HOL = struct
     in
       if malformed orelse null rules then false
       else if not recursive then true
-      else
-        case cached_wf_lookup (#tac_timeout context) proposition of
-            SOME result => result
-          | NONE =>
-              let
-                val result = List.exists
-                  (prove_wf_candidate (#tac_timeout context) proposition)
-                  (joint_wf_candidates argument_tyss)
-                val _ = cache_wf (#tac_timeout context) proposition result
-              in result end
+      else cached_wf_result (#tac_timeout context) proposition
+        (fn () => joint_wf_candidates argument_tyss)
     end
     handle HOL_ERR _ => false
 
@@ -2177,15 +2167,10 @@ structure Refute_ModelFinder_HOL = struct
     ref (KNametab.empty : harvest_miss)
   val typedef_harvest_misses =
     ref (KNametab.empty : harvest_miss)
-  val quotient_harvest_scan_count = ref 0
-  val typedef_harvest_scan_count = ref 0
-  val quotient_harvest_scan_theories = ref ([] : string list)
-  val typedef_harvest_scan_theories = ref ([] : string list)
 
   val harvest_session_index =
     ref (KNametab.empty : harvest_index_entry KNametab.table)
   val harvest_session_index_stale = ref false
-  val harvest_session_rebuild_count = ref 0
   val harvest_binding_index =
     ref (KNametab.empty : harvest_binding KNametab.table)
   val harvest_theory_bindings =
@@ -2196,21 +2181,15 @@ structure Refute_ModelFinder_HOL = struct
   val harvest_indexed_theories =
     ref (Symtab.empty : unit Symtab.table)
   val harvest_pending_theories = ref ([] : string list)
-  val harvest_index_theory_scan_theories = ref ([] : string list)
 
   val harvest_db_generation = ref 0
   val harvest_theory_generations =
     ref (Symtab.empty : int Symtab.table)
 
-  fun scan_harvest_theorems scan_log theory =
-    (* Constant specifications (including define_new_type_bijections) are
-       stored in HOL4's definition class, whereas quotient saves are ordinary
-       theorems.  DB.thms covers both persisted classes. *)
-    (scan_log := theory :: !scan_log;
-     DB.thms theory)
-
-  fun harvest_index_theory_scan_count () =
-    length (!harvest_index_theory_scan_theories)
+  (* Constant specifications (including define_new_type_bijections) are
+     stored in HOL4's definition class, whereas quotient saves are ordinary
+     theorems.  DB.thms covers both persisted classes. *)
+  val scan_harvest_theorems = DB.thms
 
   fun add_string value values =
     if List.exists (fn old => old = value) values then values
@@ -2303,12 +2282,10 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun rebuild_harvest_session_index () =
-    (harvest_session_rebuild_count :=
-       !harvest_session_rebuild_count + 1;
-     harvest_session_index := KNametab.fold
-       (fn (_, binding) => fn table =>
-         add_harvest_binding_to_index binding table)
-       (!harvest_binding_index) KNametab.empty)
+    harvest_session_index := KNametab.fold
+      (fn (_, binding) => fn table =>
+        add_harvest_binding_to_index binding table)
+      (!harvest_binding_index) KNametab.empty
 
   fun binding_operators
         ({theorem_operators, constant_operators, ...} : harvest_binding) =
@@ -2416,8 +2393,7 @@ structure Refute_ModelFinder_HOL = struct
 
   fun index_harvest_theory theory =
     let
-      val theorems =
-        scan_harvest_theorems harvest_index_theory_scan_theories theory
+      val theorems = scan_harvest_theorems theory
       val _ = remove_harvest_theory theory
       val _ = List.app (note_harvest_binding theory) theorems
     in
@@ -3076,15 +3052,11 @@ structure Refute_ModelFinder_HOL = struct
     handle HOL_ERR _ => NONE
 
   fun raw_typedef_data ty =
-    case raw_typedef_data_generic ty of
-        SOME {ty = pattern, rty, pred} =>
-          let val theta = Type.match_type pattern ty
-          in
-            SOME
-              {rty = Type.type_subst theta rty,
-               pred = Term.inst theta pred}
-          end
-      | NONE => NONE
+    Option.map (fn {ty = pattern, rty, pred} =>
+        let val theta = Type.match_type pattern ty in
+          {rty = Type.type_subst theta rty, pred = Term.inst theta pred}
+        end)
+      (raw_typedef_data_generic ty)
     handle HOL_ERR _ => NONE
 
   (* Shape of [!a. abs (rep a) = a]. *)
@@ -3693,12 +3665,6 @@ structure Refute_ModelFinder_HOL = struct
               val _ = iterator_table := (ty, info) :: !iterator_table
             in ty end
     end
-
-  fun const_for_iterator_type context ty =
-    case iterator_info_for_type context ty of
-        SOME {pred, ...} => pred
-      | NONE => raise err "const_for_iterator_type"
-          "unregistered iterator type"
 
   fun iterator_zero_for_type context ty =
     case iterator_info_for_type context ty of
@@ -4314,21 +4280,21 @@ structure Refute_ModelFinder_HOL = struct
      purely to classify a type operator, and do so on a schematic instance
      (verified: [:'a |-> 'b] reaches this point with both type variables
      still free), which the generic match accepts unchanged. *)
+  fun instantiate_typedef
+        ({ty = registered, rty, abs, rep, pred, inverse_axioms, univ}
+         : typedef_info) ty : typedef_info =
+    let val theta = Type.match_type registered ty in
+      {ty = ty, rty = Type.type_subst theta rty,
+       abs = Term.inst theta abs, rep = Term.inst theta rep,
+       pred = Term.inst theta pred,
+       inverse_axioms = map (Term.inst theta) inverse_axioms,
+       univ = univ}
+    end
+
   fun synthetic_fmap_typedef ty =
     case Lib.total Type.dest_thy_type ty of
         SOME {Thy = "finite_map", Tyop = "fmap", Args = [_, _]} =>
-          let
-            val {ty = generic, rty, abs, rep, pred, inverse_axioms, univ} =
-              generic_fmap_typedef
-            val theta = Type.match_type generic ty
-          in
-            SOME
-              {ty = ty, rty = Type.type_subst theta rty,
-               abs = Term.inst theta abs, rep = Term.inst theta rep,
-               pred = Term.inst theta pred,
-               inverse_axioms = map (Term.inst theta) inverse_axioms,
-               univ = univ}
-          end
+          SOME (instantiate_typedef generic_fmap_typedef ty)
       | _ => NONE
 
   fun typedef_for_type ty =
@@ -4343,17 +4309,7 @@ structure Refute_ModelFinder_HOL = struct
             (case synthetic_frac_typedef ty of
                  SOME t => SOME t
                | NONE => synthetic_fmap_typedef ty)
-        | SOME {ty = registered, rty, abs, rep, pred, inverse_axioms,
-                univ} =>
-            let val theta = Type.match_type registered ty
-            in
-              SOME
-                {ty = ty, rty = Type.type_subst theta rty,
-                 abs = Term.inst theta abs, rep = Term.inst theta rep,
-                 pred = Term.inst theta pred,
-                 inverse_axioms = map (Term.inst theta) inverse_axioms,
-                 univ = univ}
-            end
+        | SOME registered => SOME (instantiate_typedef registered ty)
     end handle HOL_ERR _ => NONE
 
   fun is_typedef ty = Option.isSome (typedef_for_type ty)
@@ -4441,9 +4397,7 @@ structure Refute_ModelFinder_HOL = struct
       fun scan [] = false
         | scan (theory :: rest) =
             List.exists (quotient_candidate operator o #2)
-              (quotient_harvest_scan_count :=
-                 !quotient_harvest_scan_count + 1;
-               scan_harvest_theorems quotient_harvest_scan_theories theory)
+              (scan_harvest_theorems theory)
             orelse scan rest
       fun fast () =
         case Lib.total (DB.fetch (#Thy operator))
@@ -4476,12 +4430,7 @@ structure Refute_ModelFinder_HOL = struct
       val fingerprint = harvest_fingerprint operator theories
       fun scan [] = false
         | scan (theory :: rest) =
-            let
-              val theorems =
-                (typedef_harvest_scan_count :=
-                   !typedef_harvest_scan_count + 1;
-                 scan_harvest_theorems typedef_harvest_scan_theories theory)
-            in
+            let val theorems = scan_harvest_theorems theory in
               List.exists (typedef_candidate operator o #2) theorems
               orelse
               List.exists (fn (first, second) =>
@@ -4752,70 +4701,51 @@ structure Refute_ModelFinder_HOL = struct
     (Term.aconv expected actual orelse Term.same_const expected actual)
     handle HOL_ERR _ => false
 
-  fun quotient_for_abs constant =
-    let val (_, qty) = Type.dom_rng (Term.type_of constant)
+  (* [side] picks the abstract type out of the morphism's (domain, range);
+     [morphism] projects the registered constant it must match. *)
+  fun registered_morphism lookup morphism side constant =
+    let val abstract = side (Type.dom_rng (Term.type_of constant))
     in
-      case quotient_for_type qty of
-          SOME (info as {abs, ...}) =>
-            if same_registered_constant abs constant then SOME info else NONE
+      case lookup abstract of
+          SOME info =>
+            if same_registered_constant (morphism info) constant
+            then SOME info else NONE
         | NONE => NONE
     end handle HOL_ERR _ => NONE
+
+  fun quotient_for_abs constant =
+    registered_morphism quotient_for_type #abs #2 constant
 
   fun quotient_for_rep constant =
-    let val (qty, _) = Type.dom_rng (Term.type_of constant)
-    in
-      case quotient_for_type qty of
-          SOME (info as {rep, ...}) =>
-            if same_registered_constant rep constant then SOME info else NONE
-        | NONE => NONE
-    end handle HOL_ERR _ => NONE
+    registered_morphism quotient_for_type #rep #1 constant
 
   fun typedef_for_rep constant =
-    let val (ty, _) = Type.dom_rng (Term.type_of constant)
+    registered_morphism typedef_for_type #rep #1 constant
+
+  fun quotient_class_for morphism side shape constant =
+    let
+      val qty = side (Type.dom_rng (Term.type_of constant))
+      val key = const_key constant
     in
-      case typedef_for_type ty of
-          SOME (info as {rep, ...}) =>
-            if same_registered_constant rep constant then SOME info else NONE
+      case quotient_for_type qty of
+          SOME (found as {rty, ...}) =>
+            let val morphism_key = const_key (morphism found)
+            in
+              if #Thy key = #Thy morphism_key andalso
+                 #Name key = #Name morphism_key ^ "_CLASS" andalso
+                 Term.type_of constant = shape qty rty
+              then SOME found else NONE
+            end
         | NONE => NONE
     end handle HOL_ERR _ => NONE
 
   fun quotient_class_abs_for constant =
-    let
-      val (_, qty) = Type.dom_rng (Term.type_of constant)
-      val info = quotient_for_type qty
-      val key = const_key constant
-    in
-      case info of
-          SOME (found as {abs, rty, ...}) =>
-            let val abs_key = const_key abs
-            in
-              if #Thy key = #Thy abs_key andalso
-                 #Name key = #Name abs_key ^ "_CLASS" andalso
-                 Term.type_of constant =
-                   Type.-->(Type.-->(rty, Type.bool), qty)
-              then SOME found else NONE
-            end
-        | NONE => NONE
-    end handle HOL_ERR _ => NONE
+    quotient_class_for #abs #2
+      (fn qty => fn rty => Type.-->(Type.-->(rty, Type.bool), qty)) constant
 
   fun quotient_class_rep_for constant =
-    let
-      val (qty, _) = Type.dom_rng (Term.type_of constant)
-      val info = quotient_for_type qty
-      val key = const_key constant
-    in
-      case info of
-          SOME (found as {rep, rty, ...}) =>
-            let val rep_key = const_key rep
-            in
-              if #Thy key = #Thy rep_key andalso
-                 #Name key = #Name rep_key ^ "_CLASS" andalso
-                 Term.type_of constant =
-                   Type.-->(qty, Type.-->(rty, Type.bool))
-              then SOME found else NONE
-            end
-        | NONE => NONE
-    end handle HOL_ERR _ => NONE
+    quotient_class_for #rep #1
+      (fn qty => fn rty => Type.-->(qty, Type.-->(rty, Type.bool))) constant
 
   fun is_rep_fun term = Option.isSome (typedef_for_rep term)
 
@@ -4824,13 +4754,15 @@ structure Refute_ModelFinder_HOL = struct
         SOME {abs, ...} => abs
       | NONE => raise err "mate_of_rep_fun" "unregistered Rep function"
 
+  fun is_classified_type ty =
+    is_interpreted_type ty orelse is_codatatype ty orelse
+    is_quot_type ty orelse is_typedef ty orelse is_raw_free_datatype ty
+
   fun unregistered_typedef_type constant =
     let
       val (domain, range) = Type.dom_rng (Term.type_of constant)
       fun candidate abstract representation =
-        if is_interpreted_type abstract orelse is_codatatype abstract orelse
-           is_quot_type abstract orelse is_typedef abstract orelse
-           is_raw_free_datatype abstract then NONE
+        if is_classified_type abstract then NONE
         else
           case raw_typedef_data abstract of
               SOME {rty, ...} =>
@@ -4852,13 +4784,8 @@ structure Refute_ModelFinder_HOL = struct
       fun types_beneath ty = ty :: List.concat (map types_beneath
         (type_parts ty))
       fun candidate ty =
-        if is_interpreted_type ty orelse is_codatatype ty orelse
-           is_quot_type ty orelse is_typedef ty orelse
-           is_raw_free_datatype ty then NONE
-        else
-          case raw_typedef_data ty of
-              SOME _ => SOME ty
-            | NONE => NONE
+        if is_classified_type ty then NONE
+        else Option.map (fn _ => ty) (raw_typedef_data ty)
       val subterms = List.concat
         (map (HolKernel.find_terms (K true)) terms)
       val types = List.concat (map (types_beneath o Term.type_of) subterms)
@@ -4943,9 +4870,6 @@ structure Refute_ModelFinder_HOL = struct
       (is_named_const {Thy = "min", Name = "@"} term orelse
        is_named_const {Thy = "refute", Name = "safe_The"} term)
     end
-
-  fun is_exists_unique term =
-    is_named_const {Thy = "bool", Name = "?!"} term
 
   fun relaxed_int_of_term term =
     case Lib.total intSyntax.dest_negated term of
@@ -5572,8 +5496,7 @@ structure Refute_ModelFinder_HOL = struct
       Term.mk_abs (value, body)
     end
 
-  fun quot_normal_for_type qty rty =
-    Refute_ModelFinder_Names.mk_quot_normal qty rty
+  val quot_normal_for_type = Refute_ModelFinder_Names.mk_quot_normal
 
   fun optimized_quot_type_axioms context qty =
     let
@@ -5626,11 +5549,6 @@ structure Refute_ModelFinder_HOL = struct
             [boolSyntax.mk_forall
               (abstract, beta_normalize (beta_apply (pred, represented)))]
           end
-
-  fun inverse_axioms_for_rep_fun rep =
-    case typedef_for_rep rep of
-        NONE => []
-      | SOME {inverse_axioms, ...} => inverse_axioms
 
   (* HOL4 states the second bijection law as the biconditional
      [!r. P r <=> rep (abs r) = r], but the encoding cannot carry it: for
@@ -5799,11 +5717,10 @@ structure Refute_ModelFinder_HOL = struct
       | _ => false
 
   fun cart_type_card ty =
-    case cart_type_parts ty of
-        SOME (element, index_ty) =>
-          Option.map (fn dimension => (element, dimension))
-            (numeric_type_card index_ty)
-      | NONE => NONE
+    Option.mapPartial (fn (element, index_ty) =>
+        Option.map (fn dimension => (element, dimension))
+          (numeric_type_card index_ty))
+      (cart_type_parts ty)
 
   fun card_of_type assigns ty =
     if is_boolean_type ty then 2
@@ -6494,34 +6411,6 @@ structure Refute_ModelFinder_HOL = struct
       {tables = tables, nondefs = nondefs,
        nondef_table = const_nondef_table nondefs}
     end
-
-  fun context_with_binary_ints
-        ({max_bisim_depth, boxes, wfs, user_axioms, debug, whacks,
-          destroy_constrs, specialize, star_linear_preds, total_consts,
-          needs, tac_timeout, evals, case_names, def_tables, nondef_table,
-          nondefs, simp_table, psimp_table, choice_spec_table, intro_table,
-          case_table, fixpoint_cache, iterator_table, ersatz_table,
-          whack_weakening, choice_guard_inserted, choice_empty_cache,
-          choice_predicate_attempts,
-          prefix_origins, skolems, special_funs, wf_cache, constr_cache, ...}
-         : mf_context) binary_ints : mf_context =
-    {max_bisim_depth = max_bisim_depth, boxes = boxes, wfs = wfs,
-     user_axioms = user_axioms, debug = debug, whacks = whacks,
-     binary_ints = binary_ints, destroy_constrs = destroy_constrs,
-     specialize = specialize, star_linear_preds = star_linear_preds,
-     total_consts = total_consts, needs = needs, tac_timeout = tac_timeout,
-     evals = evals, case_names = case_names, def_tables = def_tables,
-     nondef_table = nondef_table, nondefs = nondefs, simp_table = simp_table,
-     psimp_table = psimp_table, choice_spec_table = choice_spec_table,
-     intro_table = intro_table, case_table = case_table,
-     fixpoint_cache = fixpoint_cache, iterator_table = iterator_table,
-     ersatz_table = ersatz_table, whack_weakening = whack_weakening,
-     choice_guard_inserted = choice_guard_inserted,
-     choice_empty_cache = choice_empty_cache,
-     choice_predicate_attempts = choice_predicate_attempts,
-     prefix_origins = prefix_origins, skolems = skolems,
-     special_funs = special_funs, wf_cache = wf_cache,
-     constr_cache = constr_cache}
 
   fun make_context (mf : Refute_Core.mf_config) evals =
     let

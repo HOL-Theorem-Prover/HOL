@@ -74,9 +74,6 @@ structure Refute_EvalSML = struct
   val table_mutex = Mutex.mutex ()
   val compiler_mutex = Mutex.mutex ()
   val goal_compile_mutex = Mutex.mutex ()
-  (* Telemetry only, and deliberately process-wide: a reconstruction may be
-     forced on a thread other than the one that ran the test. *)
-  val reconstruction_forces = ref 0
 
   (* Do not block with interrupts masked: [Timeout.apply] cancels by raising
      an interrupt.  The successful nonblocking acquisition occurs while
@@ -100,15 +97,6 @@ structure Refute_EvalSML = struct
       Extracted of {source : string, entry : string, table : int}
     | ExtractionFailed of string list
 
-  type extractor =
-    extraction_mode -> Refute_Core.config -> Refute_Eval.strategy ->
-    Refute_Eval.qc_problem -> extraction_result
-
-  fun note_force () =
-    reconstruction_forces := !reconstruction_forces + 1
-
-  fun reset_reconstruction_forces () = reconstruction_forces := 0
-
   fun register_term_tables constructor_terms terms =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
@@ -124,8 +112,6 @@ structure Refute_EvalSML = struct
         in
           serial
         end) ()
-
-  fun term_table_count () = length (!term_tables)
 
   fun unregister_term_tables serial =
     let
@@ -191,25 +177,19 @@ structure Refute_EvalSML = struct
     with_term_tables serial (fn () =>
       Vector.sub (!(#raw_terms (native_state ())), index))
 
-  fun raw_term index =
-    (note_force (); Vector.sub (!(#raw_terms (native_state ())), index))
+  fun raw_term index = Vector.sub (!(#raw_terms (native_state ())), index)
 
   fun con_term index arguments =
-    (note_force ();
-     Term.list_mk_comb
-       (Vector.sub (!(#constructors (native_state ())), index), arguments))
+    Term.list_mk_comb
+      (Vector.sub (!(#constructors (native_state ())), index), arguments)
 
-  fun num_term value =
-    (note_force (); numSyntax.mk_numeral (Arbnum.fromLargeInt value))
+  fun num_term value = numSyntax.mk_numeral (Arbnum.fromLargeInt value)
 
-  fun int_term value =
-    (note_force (); intSyntax.term_of_int (Arbint.fromLargeInt value))
+  fun int_term value = intSyntax.term_of_int (Arbint.fromLargeInt value)
 
-  fun char_term character =
-    (note_force (); stringSyntax.fromMLchar character)
+  val char_term = stringSyntax.fromMLchar
 
-  fun string_term text =
-    (note_force (); stringSyntax.fromMLstring text)
+  val string_term = stringSyntax.fromMLstring
 
   fun is_char_list_type ty =
     Type.compare (ty, stringSyntax.string_ty) = EQUAL
@@ -230,8 +210,7 @@ structure Refute_EvalSML = struct
 
   (* Narrowing holes use the M3 model-display marker constructor. *)
   fun hole_term type_index =
-    (note_force ();
-     Names.irrelevant_marker (Term.type_of (raw_term type_index)))
+    Names.irrelevant_marker (Term.type_of (raw_term type_index))
 
   fun replay_variable type_index position =
     let
@@ -242,23 +221,20 @@ structure Refute_EvalSML = struct
     end
 
   fun word_term width value =
-    (note_force ();
-     wordsSyntax.mk_wordi (Arbnum.fromLargeInt value, width))
+    wordsSyntax.mk_wordi (Arbnum.fromLargeInt value, width)
 
   (* The abstraction is the constant function returning [default], so the
      binder is display only.  Vary it away from the free variables of the
      body: extraction cannot know them, and a name they already use would
      read as a capture. *)
   fun fun_term variable default updates =
-    (note_force ();
-     List.foldl (fn ((point, value), result) =>
-       Term.mk_comb (combinSyntax.mk_update (point, value), result))
-       (Term.mk_abs (Term.variant (Term.free_vars default) variable, default))
-       updates)
+    List.foldl (fn ((point, value), result) =>
+      Term.mk_comb (combinSyntax.mk_update (point, value), result))
+      (Term.mk_abs (Term.variant (Term.free_vars default) variable, default))
+      updates
 
   fun update_term point value base =
-    (note_force ();
-     Term.mk_comb (combinSyntax.mk_update (point, value), base))
+    Term.mk_comb (combinSyntax.mk_update (point, value), base)
 
   fun instantiate template environment =
     Term.subst (List.map (fn (index, thunk) =>
@@ -573,23 +549,11 @@ structure Refute_EvalSML = struct
                 "Refute_EvalSML.compile_problem: no value"
         end) ()
 
-  fun compile_with extract config strategy problem =
-    compile_problem extract config strategy problem
-
-  fun dump_native_random_candidates extract {plan, seed, size, count} =
-    case compile_with extract Refute_Core.default_config
-        (Refute_Eval.Random {seed = seed})
-        (Refute_Eval.Plans [Refute_Eval.dump_plan plan]) of
-        Refute_Eval.Inapplicable reasons =>
-          raise Fail (String.concatWith "; " reasons)
-      | Refute_Eval.Compiled test =>
-          Refute_Eval.dump_stream test {size = size, count = count}
-
   fun native_substrate {preflight, extract} : Refute_Eval.substrate =
     {name = "native", priority = 10,
      accepts = fn _ => true,
      preflight = SOME preflight,
-     compile = compile_with extract}
+     compile = compile_problem extract}
 
   fun register_substrate dependencies =
     Refute_Eval.register_substrate (native_substrate dependencies)

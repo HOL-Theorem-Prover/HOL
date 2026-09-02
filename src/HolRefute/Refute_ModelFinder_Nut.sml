@@ -383,12 +383,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   fun add_free_and_const_names nut (frees, constants) =
     fold_nut (fn item => fn (fs, cs) =>
       case item of
-          FreeName _ =>
-            (if List.exists (fn other => other = item) fs then fs
-             else item :: fs, cs)
-        | ConstName _ =>
-            (fs, if List.exists (fn other => other = item) cs then cs
-             else item :: cs)
+          FreeName _ => (Lib.insert item fs, cs)
+        | ConstName _ => (fs, Lib.insert item cs)
         | _ => (fs, cs)) nut (frees, constants)
 
   fun modify_name_rep (BoundName (index, ty, _, nickname)) representation =
@@ -413,8 +409,6 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   fun const_name constant =
     let val {Thy, Name, ...} = Term.dest_thy_const constant
     in Thy ^ "$" ^ Name end
-
-  fun name_of_variable variable = #1 (Term.dest_var variable)
 
   fun domain_type ty = #1 (Type.dom_rng ty)
   fun range_type ty = #2 (Type.dom_rng ty)
@@ -638,12 +632,13 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
         let
           val sub = aux Eq environment
           val sub' = aux ambient environment
-          fun sub_abs variable body =
+          fun bind variable body =
             let
               val (name, ty) = Term.dest_var variable
               val level = length environment
             in
-              aux ambient ((variable, level, name) :: environment) body
+              (BoundName (level, ty, MFR.Any, name),
+               aux ambient ((variable, level, name) :: environment) body)
             end
           fun bound_name variable =
             case List.find (fn (other, _, _) =>
@@ -653,15 +648,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     MFR.Any, name))
               | NONE => NONE
           fun do_quantifier operator variable body =
-            let
-              val (name, ty) = Term.dest_var variable
-              val level = length environment
-              val bound = BoundName (level, ty, MFR.Any, name)
-              val body_nut = aux ambient
-                ((variable, level, name) :: environment) body
-            in
-              Op2 (operator, Type.bool, MFR.Any, bound, body_nut)
-            end
+            let val (bound, body_nut) = bind variable body
+            in Op2 (operator, Type.bool, MFR.Any, bound, body_nut) end
           fun do_equals operator left right =
             let val operand_ty = Term.type_of left
             in
@@ -697,7 +685,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               if missing = 0 then
                 let
                   val selectors = map (fn selector =>
-                    ConstName (name_of_variable selector,
+                    ConstName (MFN.variable_name selector,
                       Term.type_of selector, MFR.Any))
                     (selector_names_for constructor)
                   val typed_arguments = ListPair.zip
@@ -833,13 +821,11 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                   case Lib.total Term.dest_abs function of
                       SOME (variable, body) =>
                         let
-                          val (name, ty) = Term.dest_var variable
-                          val level = length environment
+                          val value' = sub value
+                          val (bound, body_nut) = bind variable body
                         in
                           Op3 (Let, Term.type_of candidate, MFR.Any,
-                            BoundName (level, ty, MFR.Any, name), sub value,
-                            aux ambient
-                              ((variable, level, name) :: environment) body)
+                            bound, value', body_nut)
                         end
                     | NONE => sub
                         (Term.mk_comb (MFH.eta_expand function 1, value))
@@ -975,7 +961,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 Cst (Unknown, Term.type_of head, MFR.Any)
               else if (Term.is_const head orelse
                        (Term.is_var head andalso MFN.is_reserved_name
-                         (name_of_variable head))) andalso
+                         (MFN.variable_name head))) andalso
                       null arguments andalso
                       Option.isSome (arithmetic_cst head) then
                 cst (valOf (arithmetic_cst head)) head
@@ -1014,7 +1000,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 (case bound_name head of
                      SOME name => name
                    | NONE =>
-                       let val name = name_of_variable head
+                       let val name = MFN.variable_name head
                        in
                          if String.isPrefix MFN.reserved_prefix name then
                            ConstName (name, Term.type_of head, MFR.Any)
@@ -1024,14 +1010,12 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               else if Term.is_abs candidate then
                 let
                   val (variable, body) = Term.dest_abs candidate
-                  val (name, ty) = Term.dest_var variable
-                  val level = length environment
+                  val (bound, body_nut) = bind variable body
                 in
                   Op2 (Lambda, Term.type_of candidate, MFR.Any,
-                    BoundName (level, ty, MFR.Any, name),
-                    aux ambient
-                      ((variable, level, name) :: environment) body)
+                    bound, body_nut)
                 end
+
               else if not (null arguments) then
                 do_apply head arguments
               else
@@ -1115,11 +1099,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               (#hol_ctxt scope) (#binarize scope) constructor index)
         else selector_names_for constructor
     in
-      map (fn selector => ConstName (name_of_variable selector,
+      map (fn selector => ConstName (MFN.variable_name selector,
         Term.type_of selector, MFR.Any)) selectors
     end
-
-  fun final_result_type ty = #2 (boolSyntax.strip_fun ty)
 
   fun choose_rep_for_selector scope index selector (selectors, table) =
     let
@@ -1127,7 +1109,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       val special = index = ~1 orelse
         MFH.is_bitword_type (domain_type ty) orelse
         (MFH.is_fun_type (range_type ty) andalso
-         MFH.is_boolean_type (final_result_type (range_type ty)))
+         MFH.is_boolean_type (body_type (range_type ty)))
       val representation =
         if special then MFR.best_non_opt_set_rep_for_type scope ty
         else MFR.unopt_rep (MFR.best_opt_set_rep_for_type scope ty)
@@ -1427,7 +1409,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                   else
                     Cst (constant, ty,
                       MFR.best_opt_set_rep_for_type scope ty)
-                else if List.exists (fn other => constant = other)
+                else if Lib.mem constant
                     [Add, Subtract, Multiply, Divide, Gcd, Lcm] then
                   let
                     val _ = check_carrier_budget scope
@@ -1443,7 +1425,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     val range = if total then atom else MFR.Opt atom
                   in Cst (constant, ty,
                        MFR.Func (atom, MFR.Func (atom, range))) end
-                else if List.exists (fn other => constant = other)
+                else if Lib.mem constant
                     [NatToWord, WordToNat, NatToChar, CharToNat] then
                   let
                     val _ = check_carrier_budget scope false ty
@@ -1464,8 +1446,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       MFR.Func (MFR.Atom (domain_card, domain_offset),
                         if total then range else MFR.Opt range))
                   end
-                else if List.exists (fn other => constant = other)
-                    [WordAnd, WordOr, WordXor] then
+                else if Lib.mem constant [WordAnd, WordOr, WordXor] then
                   let
                     val _ = check_carrier_budget scope false ty
                     val atom = MFR.Atom
@@ -1474,8 +1455,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     Cst (constant, ty,
                       MFR.Func (atom, MFR.Func (atom, atom)))
                   end
-                else if List.exists (fn other => constant = other)
-                    [WordShl, WordShr, WordAsr] then
+                else if Lib.mem constant [WordShl, WordShr, WordAsr] then
                   let
                     val _ = check_carrier_budget scope (constant = WordShl) ty
                     val word_atom = MFR.Atom
@@ -1847,9 +1827,6 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     | shape_tuple _ _ nuts =
         raise NUT ("Refute_ModelFinder_Nut.shape_tuple", nuts)
 
-  fun repeat 0 _ state = state
-    | repeat count f state = repeat (count - 1) f (f state)
-
   fun rename_n_ary_var rename_free variable (variables, pool, table) =
     let
       val ty = type_of variable
@@ -1872,7 +1849,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             let val (index, next_pool) = fresh 1 current_pool
             in (index :: indices, next_pool) end
           val (reversed_indices, pool') =
-            repeat arity allocate ([], pool)
+            Lib.funpow arity allocate ([], pool)
+
           val indices = rev reversed_indices
           val renamed = ListPair.mapEq
             (fn (index, (atom, item_ty)) =>

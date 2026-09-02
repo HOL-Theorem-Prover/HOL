@@ -309,8 +309,6 @@ structure Refute_Narrow = struct
     handle Refute_Gen.NoGenerator (offending_ty, reason) =>
       shape_failure offending_ty reason
 
-  fun shape_of depth ty = shape_of_with (new_shape_memo ()) depth ty
-
   fun inapplicable_message ty reason =
     "narrowing is inapplicable for " ^ Parse.type_to_string ty ^
     ": " ^ reason
@@ -484,8 +482,6 @@ structure Refute_Narrow = struct
 
   fun position_of (V (position, _)) = position
     | position_of (C (position, _, _)) = position
-
-  fun first_index predicate values = Lib.total (Lib.index predicate) values
 
   (* The operation is intentionally partial, as upstream: it is called only
      while the root cache is Unevaluated. *)
@@ -695,10 +691,6 @@ structure Refute_Narrow = struct
   fun is_false (Eval {result = false, ...}) = true
     | is_false _ = false
 
-  fun is_genuine_false
-        (Eval {result = false, potential = false}) = true
-    | is_genuine_false _ = false
-
   fun is_prefix prefix position =
     length prefix <= length position andalso
     prefix = List.take (position, length prefix)
@@ -746,25 +738,8 @@ structure Refute_Narrow = struct
             Constructor
               (quantifier, result, position, shape, pending, branches))]
 
-  fun choose_one branches =
-    let
-      fun choose predicate =
-        Option.map (fn index => List.nth (branches, index))
-          (first_index (predicate o value_of o #2) branches)
-    in
-      case choose is_genuine_false of
-          SOME branch => [branch]
-        | NONE =>
-            (case choose is_false of
-                 SOME branch => [branch]
-               | NONE => raise InvalidPath)
-    end
-
   fun choose_all branches =
     List.filter (is_false o value_of o #2) branches
-
-  fun termlist_of prefix state =
-    hd (termlists_of choose_one prefix state)
 
   val alltermlist_of = termlists_of choose_all
 
@@ -775,25 +750,6 @@ structure Refute_Narrow = struct
   fun shape_of_tree (Variable (_, _, _, shape, _)) = shape
     | shape_of_tree (Constructor (_, _, _, shape, _, _)) = shape
     | shape_of_tree (Leaf _) = raise InvalidPath
-
-  fun example_of _ (Leaf _) = EmptyExample
-    | example_of index tree =
-        case quantifier_of tree of
-            Universal =>
-              (case termlist_of [index] ([], tree) of
-                   ([term], residual) =>
-                     UnivExample
-                       (shape_of_tree tree, term,
-                        example_of (index + 1) residual)
-                 | _ => raise InvalidPath)
-          | Existential =>
-              ExExample
-                (shape_of_tree tree,
-                 List.map (fn (terms, residual) =>
-                   case terms of
-                       [term] => (term, example_of (index + 1) residual)
-                     | _ => raise InvalidPath)
-                   (alltermlist_of [index] ([], tree)))
 
   fun replay_shape shape =
     let
@@ -884,7 +840,7 @@ structure Refute_Narrow = struct
     | visit_examples index tree visit =
         let
           (* One prefix position is requested, so each branch carries a
-             singleton term list, exactly as [example_of] assumes. *)
+             singleton term list. *)
           val terms = List.map (fn (terms, residual) =>
               case terms of
                   [term] => (term, residual)
@@ -906,8 +862,9 @@ structure Refute_Narrow = struct
                      its domain, so a domain the shape only approximates
                      leaves the example potential however genuine each
                      branch is.  [incomplete_false] states the same rule for
-                     the tree cache [refute_pnf] reads; an example carries
-                     its own genuineness and so must repeat it here. *)
+                     the tree cache [refute_pnf_avoiding] reads; an example
+                     carries its own genuineness and so must repeat it
+                     here. *)
                   val genuine =
                     shape_complete (shape_of_tree tree) andalso
                     List.all (fn (_, _, value) => value) ordered
@@ -923,21 +880,6 @@ structure Refute_Narrow = struct
               Universal => visit_all terms
             | Existential => visit_product terms []
         end
-
-  fun refute_pnf genuine_only depth evaluate initial_tree =
-    let
-      val (tree, tests, decided) =
-        refute evaluate genuine_only depth initial_tree
-    in
-      case value_of tree of
-          Eval {result = false, potential} =>
-            PnfCounterexample
-              {genuine = not potential, example = example_of 0 tree,
-               tree = tree, tests = tests, decided = decided}
-        | truth => PnfExhausted
-            {truth = truth, tree = tree, tests = tests, decided = decided,
-             complete = pnf_complete tree}
-    end
 
   fun refute_pnf_avoiding genuine_only depth evaluate accept initial_tree =
     let
@@ -1193,38 +1135,32 @@ structure Refute_Narrow = struct
     else
       case Lib.total Type.dom_rng original_ty of
           SOME (domain, range) =>
-            if is_function_type domain then
-              (case constructor_application "CConstant" value of
-                   SOME [constant] =>
-                     let
-                       val argument =
-                         Term.variant (Term.free_vars_lr constant)
-                           (Term.mk_var ("x", domain))
-                     in
-                       Term.mk_abs
-                         (argument,
-                          eval_finite_functions_as range constant)
-                     end
-                 | _ => malformed_value original_ty value)
-            else
-              (case constructor_application "FConstant" value of
-                   SOME [constant] =>
-                     let
-                       val argument =
-                         Term.variant (Term.free_vars_lr constant)
-                           (Term.mk_var ("x", domain))
-                     in
-                       Term.mk_abs
-                         (argument,
-                          eval_finite_functions_as range constant)
-                     end
-                 | _ =>
-                     (case constructor_application "FUpdate" value of
-                          SOME [point, result, rest] =>
-                            update_function point
-                              (eval_finite_functions_as range result)
-                              (eval_finite_functions_as original_ty rest)
-                        | _ => malformed_value original_ty value))
+            let
+              val higher_order = is_function_type domain
+              val constant_name =
+                if higher_order then "CConstant" else "FConstant"
+              fun constant_function constant =
+                let
+                  val argument =
+                    Term.variant (Term.free_vars_lr constant)
+                      (Term.mk_var ("x", domain))
+                in
+                  Term.mk_abs
+                    (argument, eval_finite_functions_as range constant)
+                end
+            in
+              case constructor_application constant_name value of
+                  SOME [constant] => constant_function constant
+                | _ =>
+                    if higher_order then malformed_value original_ty value
+                    else
+                      (case constructor_application "FUpdate" value of
+                           SOME [point, result, rest] =>
+                             update_function point
+                               (eval_finite_functions_as range result)
+                               (eval_finite_functions_as original_ty rest)
+                         | _ => malformed_value original_ty value)
+            end
         | NONE =>
             if is_product_type original_ty then
               if pairSyntax.is_pair value then

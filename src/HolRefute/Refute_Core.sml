@@ -755,15 +755,13 @@ structure Refute_Core = struct
   fun upd_need value = update_mf (MfNeed value)
   fun upd_merge_type_vars value = update_mf (MfMergeTypeVars value)
 
-  fun strip_outer_forall tm = boolSyntax.strip_forall tm
+  fun strip_outer_forall_body tm = #2 (boolSyntax.strip_forall tm)
 
-  fun strip_outer_forall_body tm = #2 (strip_outer_forall tm)
-
-  (* Three consumers: [Refute_Cert.eval_original] (Refute_Cert.sml:57)
-     uses this list directly; [Refute_Cert.normalize_to_pnf] (:210) and
-     [Refute_Core.normalize] (:898) reach it only via [normal_rewrites]
-     below.  Ablating any one consumer, or [normal_rewrites] alone, is
-     not decisive; only disabling entries here cuts all three. *)
+  (* Three consumers: [Refute_Cert.eval_original] uses this list
+     directly; [Refute_Cert.normalize_to_pnf] and [Refute_Core.normalize]
+     reach it only via [normal_rewrites] below.  Ablating any one
+     consumer, or [normal_rewrites] alone, is not decisive; only disabling
+     entries here cuts all three. *)
   val bounded_rewrites =
     [ refuteTheory.bounded_forall_less,
       refuteTheory.bounded_exists_less,
@@ -1304,9 +1302,6 @@ structure Refute_Core = struct
       {mono_instances = mono_instances, poly_original = poly_original}
     end
 
-  fun preprocess cfg problem =
-    #mono_instances (preprocess_forms cfg problem)
-
   fun instances_for_form MonoInstances
         ({mono_instances, ...} : preprocessed_forms) = mono_instances
     | instances_for_form PolyOriginal {poly_original, ...} = poly_original
@@ -1562,15 +1557,6 @@ structure Refute_Core = struct
        the conservative Genuine ceiling. *)
     register_backend_with_ceiling backend (fn _ => fn _ => Genuine)
 
-  fun registered_backends () =
-    synchronized_registry (fn () => map (#backend o #2) (!backend_registry))
-
-  fun lookup_backend name =
-    synchronized_registry (fn () =>
-      Option.map (#backend o #2)
-        (List.find (fn (registered, _) => registered = name)
-          (!backend_registry)))
-
   fun resolve_backend_registrations names =
     let
       val snapshot = synchronized_registry (fn () => !backend_registry)
@@ -1707,9 +1693,11 @@ structure Refute_Core = struct
           replacement result) (clean 0 []) replacements
     end
 
-  fun format_bindings bindings =
+  fun format_pairs show_value pairs =
     String.concatWith "\n" (map (fn (name, value) =>
-      "  " ^ format_term name ^ " = " ^ format_term value) bindings)
+      "  " ^ format_term name ^ " = " ^ show_value value) pairs)
+
+  val format_bindings = format_pairs format_term
 
   fun boolean_value_for_display term =
     if Term.type_of term <> Type.bool then NONE
@@ -1749,15 +1737,11 @@ structure Refute_Core = struct
           else NONE
       | NONE => NONE
 
-  fun format_kodkod_bindings bindings =
-    String.concatWith "\n" (map (fn (name, value) =>
-      "  " ^ format_term name ^ " = " ^
-      Option.getOpt (format_bool_function value, format_term value)) bindings)
+  val format_kodkod_bindings = format_pairs (fn value =>
+    Option.getOpt (format_bool_function value, format_term value))
 
-  fun format_evals evals =
-    String.concatWith "\n" (map (fn (term, value) =>
-      "  " ^ format_term term ^ " = " ^ format_term
-        (Option.getOpt (boolean_value_for_display value, value))) evals)
+  val format_evals = format_pairs (fn value =>
+    format_term (Option.getOpt (boolean_value_for_display value, value)))
 
   fun format_reasons title reasons =
     if null reasons then "" else
@@ -1942,19 +1926,19 @@ structure Refute_Core = struct
     (* Model search is auxiliary when it is selected alongside refutation.
        In particular, it must not preempt a QC counterexample or proof of
        whole-space exhaustion. *)
-    | decisive _ _ (Model _) = false
-    | decisive _ _ NoModel = false
     | decisive _ _ _ = false
 
-  fun best_counterexample_result jobs =
+  (* The highest-ranked witness list among the jobs' results of the shape
+     [select] accepts; a lighter backend wins ties. *)
+  fun best_result select make jobs =
     let
-      fun candidate (backend, result_ref) =
-        case !result_ref of
-            SOME (Counterexample cexs) =>
+      fun candidate (backend : backend, result_ref) =
+        case Option.mapPartial select (!result_ref) of
+            SOME cexs =>
               Option.map (fn certainty =>
                 (backend, cexs, certainty_rank certainty))
                 (best_certainty cexs)
-          | _ => NONE
+          | NONE => NONE
       fun better ((backend, _, rank), (best_backend, _, best_rank)) =
         rank > best_rank orelse
         (rank = best_rank andalso
@@ -1964,9 +1948,13 @@ structure Refute_Core = struct
             SOME (if better (candidate, best) then candidate else best)
     in
       case List.foldl choose NONE (List.mapPartial candidate jobs) of
-          SOME (_, cexs, _) => SOME (Counterexample cexs)
+          SOME (_, cexs, _) => SOME (make cexs)
         | NONE => NONE
     end
+
+  val best_counterexample_result =
+    best_result (fn Counterexample cexs => SOME cexs | _ => NONE)
+      Counterexample
 
   fun has_no_counterexample jobs =
     List.exists (fn (_, result_ref) =>
@@ -1974,27 +1962,8 @@ structure Refute_Core = struct
           SOME NoCounterexample => true
         | _ => false) jobs
 
-  fun best_model_result jobs =
-    let
-      fun candidate (backend, result_ref) =
-        case !result_ref of
-            SOME (Model models) =>
-              Option.map (fn certainty =>
-                (backend, models, certainty_rank certainty))
-                (best_certainty models)
-          | _ => NONE
-      fun better ((backend, _, rank), (best_backend, _, best_rank)) =
-        rank > best_rank orelse
-        (rank = best_rank andalso
-         #weight backend < #weight best_backend)
-      fun choose (candidate, NONE) = SOME candidate
-        | choose (candidate, SOME best) =
-            SOME (if better (candidate, best) then candidate else best)
-    in
-      case List.foldl choose NONE (List.mapPartial candidate jobs) of
-          SOME (_, models, _) => SOME (Model models)
-        | NONE => NONE
-    end
+  val best_model_result =
+    best_result (fn Model models => SOME models | _ => NONE) Model
 
   fun has_no_model jobs =
     List.exists (fn (_, result_ref) =>
@@ -2043,16 +2012,15 @@ structure Refute_Core = struct
               fun rank values =
                 Option.getOpt (Option.map certainty_rank
                   (best_certainty values), 0)
+              fun better old =
+                rank found > rank old orelse
+                (rank found = rank old andalso
+                 length found >= length old)
               val replace =
                 case (!published, make_result found) of
                     (SOME (Counterexample old), Counterexample _) =>
-                      rank found > rank old orelse
-                      (rank found = rank old andalso
-                       length found >= length old)
-                  | (SOME (Model old), Model _) =>
-                      rank found > rank old orelse
-                      (rank found = rank old andalso
-                       length found >= length old)
+                      better old
+                  | (SOME (Model old), Model _) => better old
                   | _ => true
             in
               if replace then published := SOME (make_result found)
@@ -2148,37 +2116,23 @@ structure Refute_Core = struct
       List.concat (map one jobs)
     end
 
+  fun add_reason (reason, reasons) =
+    if List.exists (fn old => old = reason) reasons then reasons
+    else reasons @ [reason]
+
+  fun add_reasons (more, reasons) = List.foldl add_reason reasons more
+
   fun instance_gate_reasons instances =
-    let
-      fun add_reason (reason, reasons) =
-        if List.exists (fn old => old = reason) reasons then reasons
-        else reasons @ [reason]
-      fun add_instance (instance : instance, reasons) =
-        case #qc_gate instance of
-            NONE => reasons
-          | SOME more => List.foldl add_reason reasons more
-    in
-      List.foldl add_instance [] instances
-    end
+    List.foldl (fn (instance : instance, reasons) =>
+      case #qc_gate instance of
+          NONE => reasons
+        | SOME more => add_reasons (more, reasons)) [] instances
 
   fun instance_is_executable (instance : instance) =
     not (Option.isSome (#qc_gate instance))
 
   fun instances_are_executable instances =
     List.all instance_is_executable instances
-
-  fun reachable_certainty cfg instances registrations =
-    let
-      fun higher (registration : backend_registration, best) =
-        let
-          val ceiling = #certainty_ceiling registration cfg instances
-        in
-          if certainty_rank ceiling > certainty_rank best then ceiling
-          else best
-        end
-    in
-      List.foldl higher (Potential ["no selected backend"]) registrations
-    end
 
   fun meets_requirement cfg executable (backend : backend) instances =
     case #requires backend of
@@ -2287,11 +2241,6 @@ structure Refute_Core = struct
             case admission of Eligible registration => SOME registration
                             | _ => NONE) admissions
           val configured = List.exists #2 admissions
-          fun add_reason (reason, reasons) =
-            if List.exists (fn old => old = reason) reasons then reasons
-            else reasons @ [reason]
-          fun add_reasons (more, reasons) =
-            List.foldl add_reason reasons more
           fun admission_reasons ((admission, _), reasons) =
             case admission of
                 Excluded registration =>

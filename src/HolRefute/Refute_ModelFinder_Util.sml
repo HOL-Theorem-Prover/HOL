@@ -9,7 +9,6 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   exception SAME of unit
 
   val curry3 : ('a * 'b * 'c -> 'd) -> 'a -> 'b -> 'c -> 'd
-  val pairf : ('a -> 'b) -> ('a -> 'c) -> 'a -> 'b * 'c
   val pair_from_fun : (bool -> 'a) -> 'a * 'a
   val fun_from_pair : 'a * 'a -> bool -> 'a
 
@@ -42,8 +41,7 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   val plural_s : int -> string
   val plural_s_for_list : 'a list -> string
   val serial_commas : string -> string list -> string list
-  val string_of_time : Time.time -> string
-  val nat_subscript : int -> string
+  val signed_string_of_int : int -> string
 
   val apply_within_budget : Time.time -> ('a -> 'b) -> 'a -> 'b
 
@@ -77,8 +75,6 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
     end
 
   fun curry3 f x y z = f (x, y, z)
-
-  fun pairf f g x = (f x, g x)
 
   fun pair_from_fun f = (f false, f true)
 
@@ -335,23 +331,6 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
         [first ^ ",", second ^ ",", conjunction, third]
     | serial_commas conjunction (value :: values) =
         (value ^ ",") :: serial_commas conjunction values
-
-  fun string_of_time time =
-    let
-      val microseconds = Time.toMicroseconds time
-      fun one_decimal divisor =
-        Real.toString
-          (Real.fromLargeInt (microseconds div divisor) / 10.0)
-    in
-      if microseconds < 1000 then one_decimal 100 ^ " ms"
-      else if microseconds < 1000000 then
-        LargeInt.toString (microseconds div 1000) ^ " ms"
-      else
-        one_decimal 100000 ^ " s"
-    end
-
-  (* HOL4 has no Isabelle print mode; model-finder names stay ASCII. *)
-  val nat_subscript = signed_string_of_int
 
   (* Timeout.apply raises only when the Event_Timer thread interrupts the
      body before it returns, so an already-spent budget is a race rather

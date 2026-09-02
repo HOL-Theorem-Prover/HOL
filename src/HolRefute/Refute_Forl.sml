@@ -1,13 +1,3 @@
-(* Kept outside the public signature so the regression suite can hold the
-   supervisor in its pre-child startup window and capture its diagnostics.
-   Production leaves both shell fragments empty. *)
-structure Refute_Forl_Test =
-struct
-  val supervisor_prefix = ref ""
-  val before_child = ref ""
-  val run_child = ref (NONE : (string -> int) option)
-end
-
 signature REFUTE_FORL = sig
   type n_ary_index = int * int
   type setting = string * string
@@ -149,10 +139,8 @@ signature REFUTE_FORL = sig
 
   val fold_tuple : 'a fold_tuple_funcs -> tuple -> 'a -> 'a
   val fold_tuple_set : 'a fold_tuple_funcs -> tuple_set -> 'a -> 'a
-  val fold_tuple_assign : 'a fold_tuple_funcs -> tuple_assign -> 'a -> 'a
   val fold_bound :
     'a fold_expr_funcs -> 'a fold_tuple_funcs -> bound -> 'a -> 'a
-  val fold_int_bound : 'a fold_tuple_funcs -> int_bound -> 'a -> 'a
 
   val max_arity : int -> int
   val arity_of_rel_expr : rel_expr -> int
@@ -508,21 +496,10 @@ structure Refute_Forl :> REFUTE_FORL = struct
       | TupleAtomSeq _ => #tuple_set_func funcs tuple_set initial
       | TupleSetReg _ => #tuple_set_func funcs tuple_set initial
 
-  fun fold_tuple_assign funcs assign initial =
-    case assign of
-        AssignTuple (index, tuple) =>
-          fold_tuple funcs tuple (fold_tuple funcs (TupleReg index) initial)
-      | AssignTupleSet (index, tuple_set) =>
-          fold_tuple_set funcs tuple_set
-            (fold_tuple_set funcs (TupleSetReg index) initial)
-
   fun fold_bound expr_funcs tuple_funcs (relations, tuple_sets) initial =
     fold_list (fold_tuple_set tuple_funcs) tuple_sets
       (fold_list (fn (index, _) => fold_rel_expr expr_funcs (Rel index))
         relations initial)
-
-  fun fold_int_bound funcs (_, tuple_sets) initial =
-    fold_list (fold_tuple_set funcs) tuple_sets initial
 
   fun max_arity univ_card =
     Real.floor
@@ -600,14 +577,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
     #int_bounds first = #int_bounds second andalso
     settings_equivalent (#settings first, #settings second)
 
-  fun signed_string_of_int value =
-    let val text = Int.toString value
-    in
-      if String.isPrefix "~" text then
-        "-" ^ String.extract (text, 1, NONE)
-      else
-        text
-    end
+  val signed_string_of_int = Refute_ModelFinder_Util.signed_string_of_int
 
   fun base_name index =
     if index < 0 then
@@ -1515,13 +1485,10 @@ structure Refute_Forl :> REFUTE_FORL = struct
            orphan its JVM or SAT child. *)
         val setsid = valOf (setsid_executable ())
         val sleep = valOf (sleep_executable ())
-        fun test_fragment fragment =
-          if fragment = "" then "" else fragment ^ "; "
         val supervised =
           (* The watchdog also bounds the supervisor's trap.  In particular,
              a stopped child can otherwise leave its [wait] (and hence the
              masked ML-side reap) blocked forever. *)
-          test_fragment (!Refute_Forl_Test.supervisor_prefix) ^
           "timer=" ^ shell_quote sleep ^ "; terminate() { " ^
           "trap '' TERM INT; " ^
           "kill -TERM -$child 2>/dev/null; " ^
@@ -1530,7 +1497,6 @@ structure Refute_Forl :> REFUTE_FORL = struct
           "wait \"$child\"; kill \"$watchdog\" 2>/dev/null; " ^
           "wait \"$watchdog\" 2>/dev/null; exit 130; }; " ^
           "cancelled=; trap 'cancelled=1' TERM INT; " ^
-          test_fragment (!Refute_Forl_Test.before_child) ^
           shell_quote setsid ^ " /bin/sh -c " ^ shell_quote command ^
           " & child=$!; trap 'terminate' TERM INT; " ^
           "if [ -n \"$cancelled\" ]; then terminate; fi; " ^
@@ -1553,13 +1519,6 @@ structure Refute_Forl :> REFUTE_FORL = struct
         restore_interrupts wait ()
           handle error => (terminate (); Exn.reraise error)
       end) ()
-
-  val _ =
-    Refute_Forl_Test.run_child :=
-      if Systeml.isUnix andalso Option.isSome (setsid_executable ()) andalso
-         Option.isSome (sleep_executable ())
-      then SOME run_child
-      else NONE
 
   (* The solver runs through a shell, so place a kernel-enforced output cap
      on its stdout and stderr before it starts.  This bounds both temporary

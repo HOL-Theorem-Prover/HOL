@@ -27,7 +27,6 @@ structure Refute_ModelFinder_Names = struct
   val replay_hole_prefix = reserved_prefix ^ "replay_hole" ^ name_sep
   val iter_var_prefix = "i"
   val cyclic_co_val_name = "ω"
-  val cyclic_co_val_name_ascii = "w"
 
   (* refuteTheory's carrier type operators.  The encoder builds these
      types and the counterexample formatter recognises them again for
@@ -260,7 +259,6 @@ structure Refute_ModelFinder_Names = struct
     is_replay_hole_name (#1 (Term.dest_var term))
 
   fun unknown_marker ty = Term.mk_var ("?", ty)
-  fun unrepresented_marker ty = Term.mk_var ("…", ty)
   fun unrepresented_marker_ascii ty = Term.mk_var ("...", ty)
 
   (* Display holes and irrelevant model fragments share this constructor.

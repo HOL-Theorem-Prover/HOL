@@ -149,11 +149,9 @@ structure Refute :> Refute = struct
         |> Refute_Core.upd_seed (SOME try_seed)
         |> Refute_Core.upd_expect Refute_Core.NoExpectation
         |> Refute_Core.upd_quiet true
-      fun run () = Refute_Core.refute_problem try_config
-        {goal = goal, assumptions = assumptions, evals = []}
-      val result = run ()
     in
-      case result of
+      case Refute_Core.refute_problem try_config
+             {goal = goal, assumptions = assumptions, evals = []} of
           outcome as Refute_Core.Counterexample (cex :: _) =>
             SOME (#backend cex, outcome)
         | _ => NONE
@@ -161,8 +159,6 @@ structure Refute :> Refute = struct
     handle Time => NONE
 
   fun qc_only config = upd_search QuickcheckBackends config
-
-  fun mf_only config = upd_search (Only [ModelFinder]) config
 
   (* The option distinguishes the QC-only convenience from an explicitly
      supplied configuration whose [backends = NONE] means the full registry. *)
@@ -183,11 +179,7 @@ structure Refute :> Refute = struct
   fun model_refute tm = refute_with [upd_search (Only [ModelFinder])] tm
 
   fun REFUTE_CONFIG_TAC config goal =
-    let
-      val _ = refute_goal config goal
-    in
-      Tactical.ALL_TAC goal
-    end
+    (refute_goal config goal; Tactical.ALL_TAC goal)
 
   fun REFUTE_TAC_WITH updates goal =
     REFUTE_CONFIG_TAC (current_config updates) goal
@@ -205,13 +197,8 @@ structure Refute :> Refute = struct
     REFUTE_TAC_WITH [upd_search (Only [ModelFinder])] goal
 
   val register_backend = Refute_Core.register_backend
-  fun register_backend_with_ceiling backend ceiling =
-    Refute_Core.register_backend_with_ceiling backend (fn config =>
-      fn instances =>
-        case ceiling config instances of
-            Genuine => Refute_Core.Genuine
-          | QuasiGenuine reasons => Refute_Core.QuasiGenuine reasons
-          | Potential reasons => Refute_Core.Potential reasons)
+  val register_backend_with_ceiling =
+    Refute_Core.register_backend_with_ceiling
   val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
   val register_generator_family = Refute_Gen.register_generator_family

@@ -398,10 +398,21 @@ structure Refute_EvalEnum = struct
       programs
     end
 
+  (* First occurrences, in order. *)
+  fun distinct_types tys =
+    rev (List.foldl (fn (ty, result) =>
+      if Util.member_type ty result then result else ty :: result) [] tys)
+
   fun generator_types programs =
-    List.foldl (fn (ty, result) =>
-      if Util.member_type ty result then result else result @ [ty])
-      [] (List.concat (map Refute_SmartGen.enumerator_gen_types programs))
+    distinct_types
+      (List.concat (map Refute_SmartGen.enumerator_gen_types programs))
+
+  (* The budget a constructor's recursive fields need below it: the
+     deepest field floor, less the constructor itself. *)
+  fun recursion_floor flags floors =
+    List.foldl Int.max 0
+      (ListPair.mapEq (fn (true, floor) => Int.max (0, floor - 1)
+                        | (false, _) => 0) (flags, floors))
 
   fun tuple_type [] = Type.bool
     | tuple_type tys = pairSyntax.list_mk_prod tys
@@ -1008,27 +1019,4 @@ structure Refute_EvalEnum = struct
                        raise Fail "Refute_EvalEnum.\
                          \start_held_bracket: no value")
               end) ()
-
-  fun with_clean_theory body =
-    Thread_Attributes.uninterruptible
-      (fn restore_attributes => fn () =>
-        let
-          val _ = enter_theory_bracket restore_attributes
-          (* As in [start_held_bracket]: one restore type per
-             [uninterruptible] call, so the body's value comes back
-             through a slot. *)
-          val slot = ref NONE
-          val result = Exn.capture
-            (restore_attributes (fn () => slot := SOME (body ()))) ()
-          val cleanup = leave_theory_bracket ()
-        in
-          case (result, !slot) of
-              (Exn.Exn error, _) => raise error
-            | (Exn.Res _, SOME value) =>
-                (Exn.release cleanup; value)
-            | (Exn.Res _, NONE) =>
-                (Exn.release cleanup;
-                 raise Fail
-                   "Refute_EvalEnum.with_clean_theory: no value")
-        end) ()
 end

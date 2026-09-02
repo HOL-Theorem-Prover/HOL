@@ -39,7 +39,6 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      origin : replay_hole_origin}
 
   type replay_sidecar = {holes : replay_hole list}
-  val empty_replay_sidecar : replay_sidecar
 
   type reconstruction =
     {bindings : (term * term) list,
@@ -55,13 +54,9 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   type term_postprocessor_snapshot
   val register_term_postprocessor :
     hol_type -> term_postprocessor -> unit
-  (* Removes an entry whose pattern is alpha-equivalent to [pattern];
-     a no-op if none is registered. *)
-  val unregister_term_postprocessor : hol_type -> unit
   val lookup_term_postprocessor :
     hol_type -> term_postprocessor option
   val snapshot_term_postprocessors : unit -> term_postprocessor_snapshot
-  val restore_term_postprocessors : term_postprocessor_snapshot -> unit
   val postprocess_term : term_postprocessor_snapshot -> term -> term
   (* [Refute_Gen] has no dependency on this structure, so a generator
      family's canonical display snapshot is threaded in as a callback
@@ -118,20 +113,6 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
      bounds : raw_bound list} -> reconstruction
 
-  val reconstruct_formatted :
-    {context : Refute_ModelFinder_HOL.mf_context,
-     formats : (term option * int list) list,
-     scope : scope,
-     atoms : (hol_type option * string list) list,
-     special_funs : Refute_ModelFinder_HOL.special_fun list,
-     real_frees : term list,
-     eval_terms : term list,
-     free_names : nut list,
-     sel_names : nut list,
-     nonsel_names : nut list,
-     rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
-     bounds : raw_bound list} -> reconstruction
-
   val reconstruct_both :
     {context : Refute_ModelFinder_HOL.mf_context,
      formats : (term option * int list) list,
@@ -157,23 +138,8 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
     term_postprocessor_snapshot -> reconstruction ->
     Refute_Core.counterexample -> Refute_Core.counterexample
   val assignment_operator : string -> string
-  val certification_env :
-    (term * term) list -> (term * term) list option
   val certification_env_with_holes :
     replay_sidecar -> (term * term) list -> (term * term) list option
-  val certification_hint_count_for_test :
-    (hol_type * term list * bool) list -> replay_hint list ->
-    (term * term) list -> int
-  val certification_copy_for_test :
-    (hol_type * int) list option ->
-    (hol_type * term list * bool) list -> term -> term list ->
-    (term * term) list -> replay_hint list -> replay_sidecar ->
-    {original : term,
-     eval_terms : term list,
-     env : (term * term) list,
-     hints : Refute_Cert_Model.replay_hint list,
-     holes : term list} option
-  val certifiable : bool -> (term * term) list -> bool
   val genuine_means_genuine :
     {got_all_mono_user_axioms : bool,
      no_poly_user_axioms : bool,
@@ -242,7 +208,6 @@ type replay_hole =
    origin : replay_hole_origin}
 
 type replay_sidecar = {holes : replay_hole list}
-val empty_replay_sidecar : replay_sidecar = {holes = []}
 
 type reconstruction =
   {bindings : (term * term) list,
@@ -263,14 +228,10 @@ type term_postprocessor_registry =
 
 (* A snapshot pairs the pattern registry with an immutable family lookup,
    so one model display sees one coherent view of both sources instead of a
-   stable registry mixed with a family lookup that can move mid-walk.
-   [family_source] is retained only so test-scoped restoration can restore
-   the installed snapshot provider rather than freeze the live hook to this
-   snapshot's family map. *)
+   stable registry mixed with a family lookup that can move mid-walk. *)
 type term_postprocessor_snapshot =
   {registry : term_postprocessor_registry,
-   family : hol_type -> term_postprocessor option,
-   family_source : unit -> hol_type -> term_postprocessor option}
+   family : hol_type -> term_postprocessor option}
 
 (* Model display extensions are process-local ML data.  The registry uses
    type patterns: every pattern that matches an actual type participates.
@@ -297,19 +258,8 @@ fun register_family_canonical_lookup f =
 
 fun snapshot_term_postprocessors () =
   with_term_postprocessor_lock (fn () =>
-    let val family_source = !family_canonical_lookup in
-      {registry = !term_postprocessors, family = family_source (),
-       family_source = family_source}
-    end)
-
-(* Restore the pattern registry and the provider that produced the saved
-   family map.  Installing the saved map itself would freeze future family
-   registrations after a test-scoped restore. *)
-fun restore_term_postprocessors
-      ({registry, family_source, ...} : term_postprocessor_snapshot) =
-  with_term_postprocessor_lock (fn () =>
-    (term_postprocessors := registry;
-     family_canonical_lookup := family_source))
+    {registry = !term_postprocessors,
+     family = (!family_canonical_lookup) ()})
 
 fun pattern_matches pattern actual =
   Lib.can (Type.match_type pattern) actual
@@ -402,17 +352,6 @@ fun register_term_postprocessor pattern postprocessor =
   with_term_postprocessor_lock (fn () =>
     term_postprocessors :=
       insert_postprocessor pattern postprocessor (!term_postprocessors))
-
-fun remove_postprocessor pattern
-      ({entries, next_serial} : term_postprocessor_registry) =
-  {entries = List.filter (fn {pattern = old, ...} =>
-     not (same_pattern old pattern)) entries,
-   next_serial = next_serial}
-
-fun unregister_term_postprocessor pattern =
-  with_term_postprocessor_lock (fn () =>
-    term_postprocessors :=
-      remove_postprocessor pattern (!term_postprocessors))
 
 fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
   let
@@ -650,8 +589,6 @@ fun set_replay_hole_origin ({replay_holes, ...} : context) variable origin =
   in
     replay_holes := {next = next, holes = map update holes}
   end
-
-fun member_tuple tuple = List.exists (fn other => other = tuple)
 
 fun chop count values =
   let
@@ -924,7 +861,7 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
                   (term_for_rep true seen domain_ty domain_rep [tuple]))
                 combinations
               val ranges = map (fn tuple =>
-                if member_tuple tuple tuples then boolSyntax.T
+                if Lib.mem tuple tuples then boolSyntax.T
                 else boolSyntax.F) combinations
             in
               make_fun_or_set context maybe_opt ty
@@ -1043,7 +980,7 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
         fun is_constructor ({const, ...} : MFS.constr_spec) =
           case name_for (discriminator const) of
               SOME name =>
-                member_tuple [real_atom] (tuples_for_name context name)
+                Lib.mem [real_atom] (tuples_for_name context name)
             | NONE => false
         val constructor_spec =
           case List.find is_constructor (#constrs spec) of
@@ -1994,8 +1931,6 @@ fun assignment_operator name =
   else if MFN.is_lbfp_name name then "≥"
   else "="
 
-fun eval_index name = MFN.eval_index name
-
 fun is_safe_the term =
   case Lib.total Term.dest_thy_const term of
       SOME {Thy = "refute", Name = "safe_The", ...} => true
@@ -2251,7 +2186,7 @@ fun reconstruct_with formatting
             (MFN.original_name nickname, display_value) :: display_skolems,
             display_consts))
         else
-          case eval_index nickname of
+          case MFN.eval_index nickname of
               SOME index =>
                 if index < length eval_terms then
                   let val eval_term = List.nth (eval_terms, index)
@@ -2395,8 +2330,6 @@ fun reconstruct_both
      free_names = free_names, sel_names = sel_names,
      nonsel_names = nonsel_names, rel_table = rel_table, bounds = bounds}
 
-fun reconstruct_formatted arguments = #displayed (reconstruct_both arguments)
-
 fun model_report ({skolems, consts, types, ...} : reconstruction) =
   {skolems = skolems, consts = consts, types = types}
 
@@ -2430,38 +2363,6 @@ fun display_counterexample postprocessors
      evals = map (displayed_value (#evals reconstructed)) (#evals cex),
      cert = #cert cex, scope = #scope cex,
      model = SOME (model_report reconstructed), stats = #stats cex}
-  end
-
-fun replace_irrelevant term =
-  if combinSyntax.is_K_1 term then
-    let
-      val body = combinSyntax.dest_K_1 term
-      val (domain_ty, _) = Type.dom_rng (Term.type_of term)
-    in
-      if MFN.is_irrelevant_marker body then
-        combinSyntax.mk_K_1 (boolSyntax.mk_arb (Term.type_of body), domain_ty)
-      else
-        combinSyntax.mk_K_1 (replace_irrelevant body, domain_ty)
-    end
-  else if Term.is_var term then
-    term
-  else if Term.is_abs term then
-    let val (variable, body) = Term.dest_abs term
-    in Term.mk_abs (variable, replace_irrelevant body) end
-  else if Term.is_comb term then
-    let val (function, argument) = Term.dest_comb term
-    in Term.mk_comb (replace_irrelevant function,
-                     replace_irrelevant argument) end
-  else
-    term
-
-fun certification_env bindings =
-  let
-    val copied = map (fn (variable, value) =>
-      (variable, replace_irrelevant value)) bindings
-  in
-    if List.all (null o Term.free_vars_lr o #2) copied then SOME copied
-    else NONE
   end
 
 fun valid_replay_sidecar ({holes} : replay_sidecar) =
@@ -2539,13 +2440,6 @@ fun certification_hint_inputs types replay_hints frac_hints =
       (List.concat (map #2 types))
   in
     (replay_hints, frac_hints, type_values)
-  end
-
-fun certification_hint_count_for_test types replay_hints bindings =
-  let val (replay_hints, frac_hints, type_values) =
-    certification_hint_inputs types replay_hints (frac_terms bindings)
-  in
-    length replay_hints + length frac_hints + length type_values
   end
 
 (* Certification is deliberately performed on a private, monomorphic copy.
@@ -2715,11 +2609,6 @@ fun certification_copy scope types original eval_terms bindings replay_hints
                     end
             end
   end
-
-val certification_copy_for_test = certification_copy
-
-fun certifiable executable bindings =
-  executable andalso Option.isSome (certification_env bindings)
 
 fun genuine_means_genuine
       {got_all_mono_user_axioms, no_poly_user_axioms, wfs,

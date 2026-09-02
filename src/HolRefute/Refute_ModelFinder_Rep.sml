@@ -43,15 +43,12 @@ signature REFUTE_MODEL_FINDER_REP = sig
   val best_opt_set_rep_for_type : scope -> hol_type -> rep
   val best_non_opt_set_rep_for_type : scope -> hol_type -> rep
   val best_set_rep_for_type : scope -> hol_type -> rep
-  val best_non_opt_symmetric_reps_for_fun_type :
-    scope -> hol_type -> rep * rep
   val atom_schema_of_rep : rep -> (int * int) list
   val atom_schema_of_reps : rep list -> (int * int) list
   val type_schema_of_rep : hol_type -> rep -> hol_type list
   val type_schema_of_reps :
     hol_type list -> rep list -> hol_type list
   val all_combinations_for_rep : rep -> int list list
-  val all_combinations_for_reps : rep list -> int list list
 end
 
 structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
@@ -434,18 +431,6 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
      else
        best_opt_set_rep_for_type) scope ty
 
-  fun best_non_opt_symmetric_reps_for_fun_type
-        (scope as {ofs, ...} : scope) ty =
-    case Lib.total Type.dom_rng ty of
-        SOME (domain_ty, range_ty) =>
-          (optable_rep ofs domain_ty
-             (best_one_rep_for_type scope domain_ty),
-           optable_rep ofs range_ty
-             (best_one_rep_for_type scope range_ty))
-      | NONE => raise Feedback.mk_HOL_ERR "Refute_ModelFinder_Rep"
-          "best_non_opt_symmetric_reps_for_fun_type"
-          "expected a function type"
-
   fun atom_schema_of_rep Any =
         raise REP ("Refute_ModelFinder_Rep.atom_schema_of_rep", [Any])
     | atom_schema_of_rep (Formula _) = []
@@ -498,7 +483,4 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
 
   val all_combinations_for_rep =
     Util.all_combinations o atom_schema_of_rep
-
-  val all_combinations_for_reps =
-    Util.all_combinations o atom_schema_of_reps
 end

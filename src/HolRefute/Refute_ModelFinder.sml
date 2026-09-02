@@ -69,17 +69,13 @@ fun unsound_delay deadline =
       max_unsound_delay_percent div 100))
   handle Interrupt => raise Interrupt | _ => 0
 
-fun type_arguments ty =
-  if Type.is_vartype ty then []
-  else #Args (Type.dest_thy_type ty)
-
 fun ground_types context binarize terms =
   let
     fun add ty types =
       if MFH.is_fun_type ty orelse MFH.is_pair_type ty orelse
          pred_setSyntax.is_set_type ty then
         List.foldl (fn (argument, result) => add argument result)
-          types (type_arguments ty)
+          types (MFS.type_arguments ty)
       else if MFH.is_boolean_type ty orelse Util.member_type ty types then
         types
       else if MFH.is_exact_carrier_type ty then
@@ -95,7 +91,7 @@ fun ground_types context binarize terms =
               (MFH.binarized_and_boxed_data_type_constrs
                  context binarize ty))
           val nested =
-            if null constructor_types then type_arguments ty
+            if null constructor_types then MFS.type_arguments ty
             else constructor_types
         in
           List.foldl (fn (argument, result) => add argument result)
@@ -201,8 +197,6 @@ fun finitizable_data_types context finitizes kind_of_monotonic
       shallow_finitizable ty) shallow
   end
 
-fun quote text = "\"" ^ text ^ "\""
-
 fun actual_solver incremental (mf : Refute_Core.mf_config) =
   let
     val requested = #sat_solver mf
@@ -213,16 +207,16 @@ fun actual_solver incremental (mf : Refute_Core.mf_config) =
       else if incremental andalso not (Lib.mem requested configured) then
         (Refute_Core.Private.say 1
            ("An incremental SAT solver is required: \"SAT4J\" will be " ^
-            "used instead of " ^ quote requested ^ "\n");
+            "used instead of " ^ Lib.quote requested ^ "\n");
          "SAT4J")
       else
         requested
     val _ = if requested <> "smart" then () else
       Refute_Core.Private.say 2
-        ("Using SAT solver " ^ quote solver ^ "\nThe following" ^
+        ("Using SAT solver " ^ Lib.quote solver ^ "\nThe following" ^
          (if incremental then " incremental " else " ") ^
          "solvers are configured: " ^
-         String.concatWith ", " (map quote configured) ^ "\n")
+         String.concatWith ", " (map Lib.quote configured) ^ "\n")
   in
     solver
   end
@@ -274,19 +268,12 @@ fun valid_instance (problem : KK.problem) assignments =
     (* A declared bound pairs each relation index with its printed name;
        an instance assignment carries the index alone. *)
     val expected = List.concat (map (map #1 o #1) (#bounds problem))
-    fun member relation = List.exists (fn other => other = relation)
-    fun distinct relations =
-      case relations of
-          [] => true
-        | relation :: rest => not (member relation rest) andalso
-          distinct rest
-    fun distinct_tuples [] = true
-      | distinct_tuples (tuple :: rest) =
-          not (List.exists (fn other => other = tuple) rest) andalso
-          distinct_tuples rest
+    fun distinct [] = true
+      | distinct (value :: rest) =
+          not (Lib.mem value rest) andalso distinct rest
     fun valid_assignment ((arity, relation), tuples) =
-      member (arity, relation) expected andalso
-      distinct_tuples tuples andalso
+      Lib.mem (arity, relation) expected andalso
+      distinct tuples andalso
       List.all (fn tuple =>
         length tuple = arity andalso
         List.all (fn atom => atom >= 0 andalso atom < #univ_card problem)
@@ -346,13 +333,7 @@ fun valid_instance (problem : KK.problem) assignments =
       | tuples_of _ = NONE
     (* Solver tuples and compact bound expansions can both be large.  Do not
        turn a valid-instance check into a quadratic scan of those lists. *)
-    fun compare_tuple ([], []) = EQUAL
-      | compare_tuple ([], _) = LESS
-      | compare_tuple (_, []) = GREATER
-      | compare_tuple (left :: lefts, right :: rights) =
-          (case Int.compare (left, right) of
-               EQUAL => compare_tuple (lefts, rights)
-             | order => order)
+    val compare_tuple = list_compare Int.compare
     fun sorted_set tuples =
       let
         fun drop_equal value (next :: rest) =
@@ -403,7 +384,7 @@ fun valid_instance (problem : KK.problem) assignments =
     val relations = map #1 assignments
   in
     length assignments = length expected andalso distinct relations andalso
-    List.all (fn relation => member relation relations) expected andalso
+    List.all (fn relation => Lib.mem relation relations) expected andalso
     List.all valid_assignment assignments andalso
     List.all valid_bound (#bounds problem)
   end
@@ -417,16 +398,7 @@ fun rich_problems_equivalent (left : rich_problem, right : rich_problem) =
 fun rich_member problem = List.exists (fn other =>
   rich_problems_equivalent (problem, other))
 
-val take_at_most = MFS.take_at_most
-
-fun distinct_ints values =
-  let
-    fun add (value, result) =
-      if List.exists (fn old => old = value) result then result
-      else value :: result
-  in
-    Listsort.sort Int.compare (List.foldl add [] values)
-  end
+fun distinct_ints values = Listsort.sort Int.compare (Lib.mk_set values)
 
 fun certainty_is_genuine Refute_Core.Genuine = true
   | certainty_is_genuine _ = false
@@ -519,8 +491,6 @@ fun harvest_guard terms =
           in (reason, true) end
         else
           (MFH.unregistered_typedef_reason terms, false)
-
-fun harvest_guard_reason terms = #1 (harvest_guard terms)
 
 exception RESTART_AFTER_HARVEST
 
@@ -772,7 +742,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       (false, original_max_potential, original_max_genuine, 0)
 
     fun add_error reason =
-      if List.exists (fn old => old = reason) (!error_reasons) then ()
+      if Lib.mem reason (!error_reasons) then ()
       else error_reasons := !error_reasons @ [reason]
 
     fun update_checked problems indices =
@@ -800,9 +770,11 @@ fun run_instance deadline started (config : Refute_Core.config)
       else
       let
         val extension = metadata problem
-        val arguments =
-          {scope = #scope extension,
-           atoms = #atoms mf,
+        val {raw = reconstructed, certification, displayed, replay_hints,
+             replay_sidecar, postprocessors} =
+          MFM.reconstruct_both
+          {context = context, formats = #format mf,
+           scope = #scope extension, atoms = #atoms mf,
            special_funs = !(#special_funs context),
            real_frees = real_frees,
            eval_terms = eval_terms,
@@ -811,19 +783,6 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val {raw = reconstructed, certification, displayed, replay_hints,
-             replay_sidecar, postprocessors} =
-          MFM.reconstruct_both
-          {context = context, formats = #format mf,
-           scope = #scope arguments, atoms = #atoms arguments,
-           special_funs = #special_funs arguments,
-           real_frees = #real_frees arguments,
-           eval_terms = #eval_terms arguments,
-           free_names = #free_names arguments,
-           sel_names = #sel_names arguments,
-           nonsel_names = #nonsel_names arguments,
-           rel_table = #rel_table arguments,
-           bounds = #bounds arguments}
         val sound = not (#unsound extension)
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
@@ -897,8 +856,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                 KK.Normal ([], unsat_indices, warning) =>
                   let
                     val all_reported_unsat = List.all
-                      (fn index => List.exists (fn reported =>
-                        reported = index) unsat_indices)
+                      (fn index => Lib.mem index unsat_indices)
                       (Portable.upto 0 (length problems - 1))
                   in
                     update_checked problems unsat_indices;
@@ -1026,7 +984,8 @@ fun run_instance deadline started (config : Refute_Core.config)
                            [reconstruct] already raises
                            [discarded_sound_model] on each of its own
                            rejection paths. *)
-                        val attempted = take_at_most max_genuine conservative
+                        val attempted =
+                          MFS.take_at_most max_genuine conservative
                         fun harvest kept [] = kept
                           | harvest kept ((index, bounds) :: models) =
                               let
@@ -1134,7 +1093,7 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     fun run_batch last scope_batch state =
       let
-        val (_, max_potential, max_genuine, donno) = state
+        val (found, max_potential, max_genuine, donno) = state
         val flags =
           (if max_genuine > 0 then [false] else []) @
           (if max_potential > 0 orelse max_genuine > 0 then [true] else [])
@@ -1144,7 +1103,6 @@ fun run_instance deadline started (config : Refute_Core.config)
         val _ = generated_problems := !generated_problems @ problems
         val _ = generated_scopes := !generated_scopes @ scope_batch
         val _ = if last then potential_only_warning () else ()
-        val (found, max_potential, max_genuine, _) = state
       in
         solve_any_problem
           (found, max_potential, max_genuine, donno) true problems
@@ -1355,8 +1313,7 @@ fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
     val (poly_nondefs, mono_nondefs) =
       List.partition MFH.is_poly_term nondefs
     val genuine_fallback_reachable =
-      List.all (fn (_, value) => value <> SOME true) (#wf mf) andalso
-      none_true (#finitize mf) andalso
+      none_true (#wf mf) andalso none_true (#finitize mf) andalso
       #total_consts mf <> SOME true andalso
       (#user_axioms mf = SOME true orelse null mono_nondefs) andalso
       null poly_nondefs
@@ -1383,9 +1340,9 @@ fun run_body config instances =
     val incremental =
       Int.max (initial_max_potential, initial_max_genuine) >= 2
     val solver = actual_solver incremental mf
-    val typedef_reason = harvest_guard_reason
+    val typedef_reason = #1 (harvest_guard
       (List.concat (map (fn (instance : Refute_Core.instance) =>
-        #original instance :: #evals instance) ordered))
+        #original instance :: #evals instance) ordered)))
 
     fun search [] cexs reasons all_none _ =
           if not (null cexs) then Refute_Core.Counterexample cexs
@@ -1442,9 +1399,7 @@ fun run config instances =
       case result of
           Refute_Core.Counterexample models => Refute_Core.Model models
         | Refute_Core.NoCounterexample => Refute_Core.NoModel
-        | Refute_Core.Model models => Refute_Core.Model models
-        | Refute_Core.NoModel => Refute_Core.NoModel
-        | Refute_Core.Unknown reasons => Refute_Core.Unknown reasons
+        | other => other
   end
 
 val kodkod_backend : Refute_Core.backend =

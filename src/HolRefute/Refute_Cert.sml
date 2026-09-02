@@ -98,8 +98,6 @@ structure Refute_Cert = struct
           Term.aconv rhs boolSyntax.F
         end
 
-      fun compose first second = Thm.TRANS first second
-
       val seen = ref ([] : term list)
       fun repeated candidate = Refute_Util.aconv_member candidate (!seen)
       fun one label conversion theorem =
@@ -107,7 +105,7 @@ structure Refute_Cert = struct
             NONE => theorem
           | SOME next =>
               if Term.aconv (rhs_of next) (rhs_of theorem) then theorem
-              else compose theorem next
+              else Thm.TRANS theorem next
       fun advance label conversion theorem =
         if decisive theorem then theorem
         else one label conversion theorem
@@ -137,6 +135,15 @@ structure Refute_Cert = struct
     in
       if acceptable theorem then SOME theorem else NONE
     end
+
+  (* The [step] policy of the direct QC replays: a failing conversion is
+     reported as [NONE]. *)
+  fun plain_step _ input conversion =
+    SOME (conversion input)
+    handle Interrupt => raise Interrupt | _ => NONE
+
+  fun is_quantifier tm =
+    boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
 
   fun evaluate_instance rounds step instance =
     case equality_portfolio rounds step instance of
@@ -306,10 +313,8 @@ structure Refute_Cert = struct
         if List.all (fn (Refute_Eval.Forall, _) => true | _ => false)
              prefix then ()
         else raise Fail "non-universal PNF prefix"
-      fun quantified tm =
-        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
       val _ =
-        if Lib.can (HolKernel.find_term quantified) matrix then
+        if Lib.can (HolKernel.find_term is_quantifier) matrix then
           raise Fail "quantifier remains outside the PNF prefix"
         else ()
 
@@ -326,11 +331,8 @@ structure Refute_Cert = struct
       val instance = instantiate bindings matrix
       val _ = if null (Term.free_vars_lr instance) then ()
         else raise Fail "PNF matrix remains open"
-      fun step _ input conversion =
-        SOME (conversion input)
-        handle Interrupt => raise Interrupt | _ => NONE
     in
-      case evaluate_instance default_leaf_rounds step instance of
+      case evaluate_instance default_leaf_rounds plain_step instance of
           InstanceFalse theorem =>
             let
               val negated_instance = Drule.EQF_ELIM theorem
@@ -350,11 +352,8 @@ structure Refute_Cert = struct
     let
       val (variables, closure, body) = closure_of original
       val instance = instantiate env body
-      fun step _ input conversion =
-        SOME (conversion input)
-        handle Interrupt => raise Interrupt | _ => NONE
     in
-      case evaluate_instance default_leaf_rounds step instance of
+      case evaluate_instance default_leaf_rounds plain_step instance of
           InstanceStuck _ =>
             certify_universal_pnf
               {closure = closure, evals = evals, env = env, cex = cex}
@@ -390,7 +389,6 @@ structure Refute_Cert = struct
       case certify
         {original = original, evals = evals, env = grounded, cex = cex} of
           result as Certified _ => result
-        | Uncertified _ => grounding_failure cex
         | Discarded => Discarded
         | _ => grounding_failure cex
     end

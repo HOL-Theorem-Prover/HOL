@@ -1,8 +1,8 @@
 structure Refute_ModelFinder_Scope = struct
   open Portable Feedback
-  infix |>
 
-  type hol_type = Type.hol_type
+  type hol_type
+ = Type.hol_type
   type term = Term.term
   type context = Refute_ModelFinder_HOL.mf_context
 
@@ -44,7 +44,6 @@ structure Refute_ModelFinder_Scope = struct
   type scope_desc =
     (hol_type * int) list * (term * int) list
 
-  val default_cards = List.tabulate (10, fn index => index + 1)
   val max_scopes = 5000
   val distinct_threshold = 1000
   val sync_threshold = 5
@@ -75,13 +74,10 @@ structure Refute_ModelFinder_Scope = struct
   fun data_type_spec (data_types : data_type_spec list) ty =
     List.find (fn spec => Util.same_type (#typ spec) ty) data_types
 
-  fun constructor_result_type constructor =
-    #2 (boolSyntax.strip_fun (Term.type_of constructor))
-
   fun same_constructor left right =
     MFH.constructor_name left = MFH.constructor_name right andalso
-    Util.same_type (constructor_result_type left)
-      (constructor_result_type right)
+    Util.same_type (MFH.constructor_result_type left)
+      (MFH.constructor_result_type right)
 
   fun constr_spec ([] : data_type_spec list) constructor =
       raise err "constr_spec" "constructor has no scope specification"
@@ -104,8 +100,7 @@ structure Refute_ModelFinder_Scope = struct
               is_complete_type data_types facto left andalso
               is_complete_type data_types facto right
             end
-          else if MFH.is_iterator_type ty orelse
-                  MFH.is_integer_type ty orelse MFH.is_bit_type ty orelse
+          else if is_asymmetric_non_data_type ty orelse
                   MFH.is_bitword_type ty then
             false
           else
@@ -339,42 +334,53 @@ structure Refute_ModelFinder_Scope = struct
           total + (value + linearity) * (value + linearity))
           0 (column :: columns)
 
-  fun all_combinations_ordered_smartly ranks =
-    Util.all_combinations ranks
-    |> map (fn combination =>
-         (combination_cost combination, combination))
-    |> Lib.sort (fn (left, _) => fn (right, _) => left <= right)
-    |> map #2
+  fun list_compare compare ([], []) = EQUAL
+    | list_compare compare (left :: lefts, right :: rights) =
+        (case compare (left, right) of
+             EQUAL => list_compare compare (lefts, rights)
+           | order => order)
+    | list_compare _ _ = raise Util.BAD
+        ("Refute_ModelFinder_Scope.list_compare", "unequal lengths")
+
+  val int_list_compare = list_compare Int.compare
+
+  (* A leftist heap of combinations, cheapest first. *)
+  datatype frontier_heap =
+      FrontierEmpty
+    | FrontierNode of int * int list * frontier_heap * frontier_heap
+
+  fun frontier_before left right =
+    combination_cost left < combination_cost right orelse
+    (combination_cost left = combination_cost right andalso
+     int_list_compare (left, right) = LESS)
+
+  fun frontier_rank FrontierEmpty = 0
+    | frontier_rank (FrontierNode (rank, _, _, _)) = rank
+
+  fun frontier_make value left right =
+    if frontier_rank left < frontier_rank right then
+      FrontierNode (frontier_rank left + 1, value, right, left)
+    else
+      FrontierNode (frontier_rank right + 1, value, left, right)
+
+  fun frontier_merge FrontierEmpty right = right
+    | frontier_merge left FrontierEmpty = left
+    | frontier_merge
+        (left as FrontierNode (_, left_value, left_left, left_right))
+        (right as FrontierNode (_, right_value, right_left, right_right)) =
+        if frontier_before left_value right_value then
+          frontier_make left_value left_left
+            (frontier_merge left_right right)
+        else
+          frontier_make right_value right_left
+            (frontier_merge left right_right)
+
+  fun frontier_insert value heap =
+    frontier_merge (FrontierNode (1, value, FrontierEmpty, FrontierEmpty))
+      heap
 
   fun all_combinations_ordered_smartly_at_most count ranks =
     let
-      datatype heap = Empty | Node of int * int list * heap * heap
-
-      fun lex_before [] [] = false
-        | lex_before (left :: lefts) (right :: rights) =
-            left < right orelse (left = right andalso lex_before lefts rights)
-        | lex_before _ _ = raise Util.BAD
-            ("Refute_ModelFinder_Scope.lex_before", "unequal lengths")
-      fun comes_before left right =
-        combination_cost left < combination_cost right orelse
-        (combination_cost left = combination_cost right andalso
-         lex_before left right)
-      fun rank Empty = 0
-        | rank (Node (rank, _, _, _)) = rank
-      fun make value left right =
-        if rank left < rank right then
-          Node (rank left + 1, value, right, left)
-        else
-          Node (rank right + 1, value, left, right)
-      fun merge Empty right = right
-        | merge left Empty = left
-        | merge (left as Node (_, left_value, left_left, left_right))
-            (right as Node (_, right_value, right_left, right_right)) =
-            if comes_before left_value right_value then
-              make left_value left_left (merge left_right right)
-            else
-              make right_value right_left (merge left right_right)
-      fun insert value heap = merge (Node (1, value, Empty, Empty)) heap
       fun is_synchronized combination =
         case combination of
             [] => true
@@ -417,11 +423,13 @@ structure Refute_ModelFinder_Scope = struct
             if is_synchronized base then synced else base :: synced
           end
       fun loop 0 _ result = rev result
-        | loop _ Empty result = rev result
-        | loop remaining (Node (_, combination, left, right)) result =
+        | loop _ FrontierEmpty result = rev result
+        | loop remaining (FrontierNode (_, combination, left, right))
+            result =
             let
-              val rest = merge left right
-              val next = List.foldl (fn (child, heap) => insert child heap)
+              val rest = frontier_merge left right
+              val next = List.foldl
+                (fn (child, heap) => frontier_insert child heap)
                 rest (children combination)
             in
               loop (remaining - 1) next (combination :: result)
@@ -430,64 +438,15 @@ structure Refute_ModelFinder_Scope = struct
       if List.exists (fn (rank, _) => rank <= 0) ranks then []
       else
         loop (Int.max (0, count))
-          (List.foldl (fn (combination, heap) => insert combination heap)
-            Empty initial) []
+          (List.foldl
+            (fn (combination, heap) => frontier_insert combination heap)
+            FrontierEmpty initial) []
     end
-
-  datatype frontier_heap =
-      FrontierEmpty
-    | FrontierNode of int * int list * frontier_heap * frontier_heap
 
   type combination_cursor =
     {ranks : int option list,
      heap : frontier_heap ref,
      visited : (int list, unit) Redblackmap.dict ref}
-
-  fun frontier_lex_before [] [] = false
-    | frontier_lex_before (left :: lefts) (right :: rights) =
-        left < right orelse
-        (left = right andalso frontier_lex_before lefts rights)
-    | frontier_lex_before _ _ = raise Util.BAD
-        ("Refute_ModelFinder_Scope.frontier_lex_before",
-         "unequal lengths")
-
-  fun int_list_compare ([], []) = EQUAL
-    | int_list_compare (left :: lefts, right :: rights) =
-        (case Int.compare (left, right) of
-             EQUAL => int_list_compare (lefts, rights)
-           | order => order)
-    | int_list_compare _ = raise Util.BAD
-        ("Refute_ModelFinder_Scope.int_list_compare", "unequal lengths")
-
-  fun frontier_before left right =
-    combination_cost left < combination_cost right orelse
-    (combination_cost left = combination_cost right andalso
-     frontier_lex_before left right)
-
-  fun frontier_rank FrontierEmpty = 0
-    | frontier_rank (FrontierNode (rank, _, _, _)) = rank
-
-  fun frontier_make value left right =
-    if frontier_rank left < frontier_rank right then
-      FrontierNode (frontier_rank left + 1, value, right, left)
-    else
-      FrontierNode (frontier_rank right + 1, value, left, right)
-
-  fun frontier_merge FrontierEmpty right = right
-    | frontier_merge left FrontierEmpty = left
-    | frontier_merge
-        (left as FrontierNode (_, left_value, left_left, left_right))
-        (right as FrontierNode (_, right_value, right_left, right_right)) =
-        if frontier_before left_value right_value then
-          frontier_make left_value left_left
-            (frontier_merge left_right right)
-        else
-          frontier_make right_value right_left
-            (frontier_merge left right_right)
-
-  fun frontier_insert value heap =
-    frontier_merge (FrontierNode (1, value, FrontierEmpty, FrontierEmpty))
-      heap
 
   fun coordinate_valid NONE _ = true
     | coordinate_valid (SOME rank) coordinate = coordinate < rank
@@ -503,8 +462,8 @@ structure Refute_ModelFinder_Scope = struct
         (Util.index_seq 0 sync_threshold)
       val baseline = map (fn _ => 0) ranks
       val seeds = Lib.mk_set
-        (if List.exists (fn candidate => candidate = baseline) synchronized
-         then synchronized else baseline :: synchronized)
+        (if Lib.mem baseline synchronized then synchronized
+         else baseline :: synchronized)
       val viable = not (List.exists (fn SOME rank => rank <= 0
                                       | NONE => false) ranks)
     in
@@ -569,10 +528,12 @@ structure Refute_ModelFinder_Scope = struct
         SOME (_, maximum) => maximum
       | NONE => ~1
 
-  fun constructor_domain_card maximum card_assigns constructor =
+  (* The product of the argument cardinalities, saturating at [maximum];
+     [default] stands in for an argument type without a bounded card. *)
+  fun domain_card_with default maximum card_assigns constructor =
     List.foldl (fn (argument_ty, total) =>
       let
-        val card = MFH.bounded_card_of_type maximum ~1
+        val card = MFH.bounded_card_of_type maximum default
           card_assigns argument_ty
       in
         if total = 0 orelse card = 0 then 0
@@ -580,6 +541,10 @@ structure Refute_ModelFinder_Scope = struct
                 total > maximum div card then maximum
         else total * card
       end) 1 (MFH.constructor_arg_types constructor)
+
+  fun constructor_domain_card maximum = domain_card_with ~1 maximum
+
+  fun domain_card maximum = domain_card_with maximum maximum
 
   fun is_surely_inconsistent_card_assign context binarize
         (card_assigns, max_assigns) (ty, card) =
@@ -708,18 +673,6 @@ structure Refute_ModelFinder_Scope = struct
     in
       allocate 0 [] (Redblackmap.mkDict Type.compare) assigns
     end
-
-  fun domain_card maximum card_assigns constructor =
-    List.foldl (fn (argument_ty, total) =>
-      let
-        val card = MFH.bounded_card_of_type maximum maximum
-          card_assigns argument_ty
-      in
-        if total = 0 orelse card = 0 then 0
-        else if total >= maximum orelse card >= maximum orelse
-                total > maximum div card then maximum
-        else total * card
-      end) 1 (MFH.constructor_arg_types constructor)
 
   fun add_constr_spec (card_assigns, max_assigns) acyclic card
         sum_dom_cards num_self_recs num_non_self_recs
@@ -895,28 +848,11 @@ structure Refute_ModelFinder_Scope = struct
     same_card_assigns (left_cards, right_cards) andalso
     same_max_assigns (left_maxes, right_maxes)
 
-  fun list_compare compare ([], []) = EQUAL
-    | list_compare compare (left :: lefts, right :: rights) =
-        (case compare (left, right) of
-             EQUAL => list_compare compare (lefts, rights)
-           | order => order)
-    | list_compare _ _ = raise Util.BAD
-        ("Refute_ModelFinder_Scope.list_compare", "unequal lengths")
-
-  fun card_assignment_compare ((left_ty, left), (right_ty, right)) =
-    case Type.compare (left_ty, right_ty) of
-        EQUAL => Int.compare (left, right)
-      | order => order
-
-  fun max_assignment_compare ((left_tm, left), (right_tm, right)) =
-    case Term.compare (left_tm, right_tm) of
-        EQUAL => Int.compare (left, right)
-      | order => order
-
   fun description_compare ((left_cards, left_maxes),
         (right_cards, right_maxes)) =
-    case list_compare card_assignment_compare (left_cards, right_cards) of
-        EQUAL => list_compare max_assignment_compare
+    case list_compare (pair_compare (Type.compare, Int.compare))
+           (left_cards, right_cards) of
+        EQUAL => list_compare (pair_compare (Term.compare, Int.compare))
           (left_maxes, right_maxes)
       | order => order
 
@@ -951,8 +887,7 @@ structure Refute_ModelFinder_Scope = struct
      deep_data_types : hol_type list,
      finitizable_data_types : hol_type list,
      emitted : (scope_desc, unit) Redblackmap.dict ref,
-     skipped : int ref,
-     emitted_count : int ref}
+     skipped : int ref}
 
   fun new_scope_cursor context binarize iterative cards_assigns maxes_assigns
         iters_assigns bitss bisim_depths mono_types nonmono_types
@@ -973,7 +908,7 @@ structure Refute_ModelFinder_Scope = struct
        deep_data_types = deep_data_types,
        finitizable_data_types = finitizable_data_types,
        emitted = ref (Redblackmap.mkDict description_compare),
-       skipped = ref 0, emitted_count = ref 0}
+       skipped = ref 0}
     end
 
   fun scope_cursor_batch_with_stop (cursor : scope_cursor) count stop =
@@ -1015,8 +950,6 @@ structure Refute_ModelFinder_Scope = struct
                               (#finitizable_data_types cursor) description
                             val _ = #emitted cursor := Redblackmap.insert
                               (!(#emitted cursor), description, ())
-                            val _ = #emitted_count cursor :=
-                              !(#emitted_count cursor) + 1
                           in
                             next (remaining - 1) (scope :: scopes)
                           end
@@ -1027,13 +960,6 @@ structure Refute_ModelFinder_Scope = struct
        stopped = stopped,
        skipped = !(#skipped cursor) - before_skipped}
     end
-
-  fun scope_cursor_batch cursor count =
-    scope_cursor_batch_with_stop cursor count (fn () => false)
-
-  fun scope_cursor_skipped (cursor : scope_cursor) = !(#skipped cursor)
-  fun scope_cursor_emitted (cursor : scope_cursor) =
-    !(#emitted_count cursor)
 
   fun all_scopes context binarize cards_assigns maxes_assigns
         iters_assigns bitss bisim_depths mono_types nonmono_types
@@ -1066,8 +992,7 @@ structure Refute_ModelFinder_Scope = struct
     end
 
   fun is_number_type ty =
-    MFH.is_iterator_type ty orelse MFH.is_integer_type ty orelse
-    MFH.is_bit_type ty orelse
+    is_asymmetric_non_data_type ty orelse
     Option.isSome (MFH.numeric_type_card ty) orelse
     Option.isSome (MFH.word_dimension ty) orelse
     MFH.is_char_type ty
@@ -1076,10 +1001,6 @@ structure Refute_ModelFinder_Scope = struct
     (MFH.is_data_type ty andalso not (MFH.is_quot_type ty) andalso
      (not (MFH.is_typedef ty) orelse MFH.is_univ_typedef ty)) orelse
     is_number_type ty
-
-  (* M3 has no monotonicity calculus.  Returning false is exactly
-     Isabelle's timeout path at nitpick.ML:363 and is always sound. *)
-  fun is_type_actually_monotonic _ = false
 
   fun mono_override monos ty =
     Util.triple_lookup (fn (actual, pattern) =>
@@ -1094,7 +1015,5 @@ structure Refute_ModelFinder_Scope = struct
   fun mono_partition_with actually_monotonic monos types =
     List.partition
       (is_type_monotonic_with actually_monotonic monos) types
-
-  fun mono_partition monos types =
-    mono_partition_with is_type_actually_monotonic monos types
 end
+

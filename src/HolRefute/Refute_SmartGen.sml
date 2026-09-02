@@ -235,8 +235,7 @@ structure Refute_SmartGen = struct
     boolSyntax.list_mk_forall (Term.free_vars_lr term, term)
 
   type clause =
-    {variables : term list, patterns : pattern list,
-     premises : term list, conclusion : term}
+    {patterns : pattern list, premises : term list, conclusion : term}
 
   fun recognize_clause constant arity raw =
     let
@@ -259,29 +258,22 @@ structure Refute_SmartGen = struct
               else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
                 "recognize_clause" "non-Horn equation"
     in
-      SOME {variables = variables, patterns = map #1 parsed,
-            premises = premises, conclusion = left}
+      SOME {patterns = map #1 parsed, premises = premises,
+            conclusion = left}
     end
     handle Feedback.HOL_ERR _ => NONE
          | Option.Option => NONE
 
-  type horn_clause =
-    {variables : term list, patterns : pattern list,
-     inference : inference_clause}
-
-  fun horn_clause_of constant
-        ({variables, patterns, premises, conclusion} : clause) =
+  fun inference_clause_of constant
+        ({premises, conclusion, ...} : clause) =
     let
       (* Capture [premises] first.  Once partitioned, this interleaving is not
          derivable, even when two clauses have identical split views. *)
       val ordered = premises
       val (main, side) = List.partition (mentions constant) ordered
-      val inference =
-        {side = side, main = main, head = conclusion,
-         ordered = ordered} : inference_clause
     in
-      {variables = variables, patterns = patterns,
-       inference = inference} : horn_clause
+      {side = side, main = main, head = conclusion,
+       ordered = ordered} : inference_clause
     end
 
   fun recognize_horn_sources constant equations =
@@ -291,34 +283,18 @@ structure Refute_SmartGen = struct
                      not (null equations)
               then ()
               else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
-                "recognize_horn_equations" "not a Boolean function"
+                "recognize_horn_sources" "not a Boolean function"
       val raw = List.mapPartial
         (recognize_clause constant (length domains)) equations
       val _ = if length raw = length equations andalso
                      exhaustive (map #patterns raw)
               then ()
               else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
-                "recognize_horn_equations" "malformed or incomplete clauses"
+                "recognize_horn_sources" "malformed or incomplete clauses"
     in
-      SOME (map (horn_clause_of constant) raw)
+      SOME (map (inference_clause_of constant) raw)
     end
     handle Feedback.HOL_ERR _ => NONE
-
-  fun intro_triple_of
-        ({variables, patterns = _,
-          inference = {side, main, head, ...}} : horn_clause) =
-    {variables = variables, side = side, main = main,
-     conclusion = head} : intro_triple
-
-  fun recognize_horn_clauses constant equations =
-    Option.map (map #inference)
-      (recognize_horn_sources constant equations)
-
-  (* Keep the established public intro-triple result, but do not retain any
-     side channel from it into inference. *)
-  fun recognize_horn_equations constant equations =
-    Option.map (map intro_triple_of)
-      (recognize_horn_sources constant equations)
 
   fun theorem_term theorem =
     let
@@ -345,25 +321,20 @@ structure Refute_SmartGen = struct
        | _ => NONE)
     handle Feedback.HOL_ERR _ => NONE
 
-  type cache_entry =
-    {constant : term, stamp : term option,
-     result : horn_clause list option}
+  type 'a cache_entry =
+    {constant : term, stamp : term option, result : 'a list option}
 
   (* Positive and negative results are session-local ML state.  The source
      stamp prevents a transient current-theory presentation from poisoning a
      later definition with the same name after snapshot/revert. *)
-  val intro_cache : cache_entry list ref = ref []
+  val intro_cache : inference_clause cache_entry list ref = ref []
 
   fun same_stamp NONE NONE = true
     | same_stamp (SOME left) (SOME right) = same_term left right
     | same_stamp _ _ = false
 
-  fun cache_result constant stamp result =
-    intro_cache := {constant = constant, stamp = stamp, result = result} ::
-      List.filter (fn {constant = other, ...} =>
-        not (same_constant constant other)) (!intro_cache)
-
-  fun cached_horn_sources_for constant =
+  fun cached_synthesis (cache : 'a cache_entry list ref) synthesize
+        constant =
     if not (Term.is_const constant) then NONE
     else
       let
@@ -371,7 +342,7 @@ structure Refute_SmartGen = struct
         val stamp = Option.map #1 source
         val cached = List.find (fn {constant = other, stamp = old, ...} =>
           same_constant constant other andalso same_stamp stamp old)
-          (!intro_cache)
+          (!cache)
       in
         case cached of
             SOME {result, ...} => result
@@ -379,23 +350,19 @@ structure Refute_SmartGen = struct
               let
                 val result =
                   case source of
-                      SOME (_, equations) =>
-                        recognize_horn_sources constant equations
+                      SOME (_, equations) => synthesize constant equations
                     | NONE => NONE
-                val _ = cache_result constant stamp result
+                val _ = cache :=
+                  {constant = constant, stamp = stamp, result = result} ::
+                  List.filter (fn {constant = other, ...} =>
+                    not (same_constant constant other)) (!cache)
               in
                 result
               end
       end
 
-  fun horn_intro_triples_for constant =
-    Option.map (map intro_triple_of) (cached_horn_sources_for constant)
-
   fun horn_inference_clauses_for constant =
-    Option.map (map #inference) (cached_horn_sources_for constant)
-
-  fun clear_intro_cache () = intro_cache := []
-  fun intro_cache_size () = length (!intro_cache)
+    cached_synthesis intro_cache recognize_horn_sources constant
 
   fun remove_term_once _ [] = NONE
     | remove_term_once term (candidate :: rest) =
@@ -635,55 +602,17 @@ structure Refute_SmartGen = struct
                    else NONE
                  end)
 
-  type graph_cache_entry =
-    {constant : term, stamp : term option,
-     result : graph_clause list option}
-
   (* Separate from [intro_cache]: a [Graph f] entry and a [Predicate f]
      entry for the same [f] therefore cannot collide, because they are
      never in the same table. *)
-  val graph_cache : graph_cache_entry list ref = ref []
-
-  fun cache_graph_result constant stamp result =
-    graph_cache := {constant = constant, stamp = stamp, result = result} ::
-      List.filter (fn {constant = other, ...} =>
-        not (same_constant constant other)) (!graph_cache)
-
-  fun clear_graph_cache () = graph_cache := []
-  fun graph_cache_size () = length (!graph_cache)
+  val graph_cache : graph_clause cache_entry list ref = ref []
 
   (* The sole construction site for clause synthesis outside the accessor
      pins.  The [allow_function_inversion] gate lives in [infer_graph]
      (below), which refuses before calling this, so with the flag off no
-     [Graph] key is built.  Formerly split into a cache lookup and a bare
-     wrapper under this same name that added no behaviour of its own;
-     collapsed into one function since nothing else in the module needed
-     the split, unlike [horn_intro_triples_for]/[horn_inference_clauses_for],
-     which each project [cached_horn_sources_for]'s cache differently. *)
+     [Graph] key is built. *)
   fun graph_clauses_for constant =
-    if not (Term.is_const constant) then NONE
-    else
-      let
-        val source = equation_source constant
-        val stamp = Option.map #1 source
-        val cached = List.find (fn {constant = other, stamp = old, ...} =>
-          same_constant constant other andalso same_stamp stamp old)
-          (!graph_cache)
-      in
-        case cached of
-            SOME {result, ...} => result
-          | NONE =>
-              let
-                val result =
-                  case source of
-                      SOME (_, equations) =>
-                        synthesize_graph_clauses constant equations
-                    | NONE => NONE
-                val _ = cache_graph_result constant stamp result
-              in
-                result
-              end
-      end
+    cached_synthesis graph_cache synthesize_graph_clauses constant
 
   datatype mode_derivation =
       Mode_App of mode_derivation * mode_derivation
@@ -1548,15 +1477,6 @@ structure Refute_SmartGen = struct
       if length clauses = length rules then SOME clauses else NONE
     end
 
-  fun infer_scc
-        {members, rules, triple_for, external, reorder_premises} =
-    case scc_clauses members rules triple_for of
-        NONE => NONE
-      | SOME clauses =>
-          SOME (infer_clauses
-            {members = members, clauses = clauses, external = external,
-             reorder_premises = reorder_premises})
-
   (* [f]'s graph is always exactly one self-recursive group, since
      [flatten_rhs] refuses any call to another function, so the fixpoint
      runs with a single member, no [external] table, and no cross-group
@@ -1868,9 +1788,6 @@ structure Refute_SmartGen = struct
           (ProgramVersion {generation, ...}) =
       generation = !source_generation
 
-    fun current_program_version version =
-      synchronized_cache (fn () => current_program_version_raw version)
-
     fun new_program_version fingerprint = ProgramVersion
       {generation = !source_generation, fingerprint = fingerprint}
 
@@ -2067,8 +1984,6 @@ structure Refute_SmartGen = struct
   val _ = Theory.register_hook
     ("Refute_SmartGen.enumerators", invalidate_enumerator_cache)
 
-  fun clear_enumerator_cache () = invalidate_enumerator_cache ()
-
   fun relation_modes_for relation
         ({relations, ...} : inference_result) =
     List.find (fn ({relation = other, ...} : relation_modes) =>
@@ -2158,8 +2073,8 @@ structure Refute_SmartGen = struct
      [smart_guard_lookup]; the consequence is not confined to that one
      candidate: [validate_plan] rejects the WHOLE plan on every substrate
      the moment one [SmartGuard] fails lookup, and Compute reaches that
-     same rejection through [prepare_enums], never falling back to its
-     own [eval_boolean] on the bare predicate.  A bound-variable or
+     same rejection through [Refute_EvalEnum.prepare], never falling back
+     to its own [eval_boolean] on the bare predicate.  A bound-variable or
      ground-term Output has a sharper cost: nothing there fails to
      compile, so an already-decided equation would plant an [Enum] where
      the ordinary route settles it exactly, a real loss of decisiveness

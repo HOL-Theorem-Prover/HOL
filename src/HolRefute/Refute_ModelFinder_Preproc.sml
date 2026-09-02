@@ -65,6 +65,18 @@ structure Refute_ModelFinder_Preproc = struct
   fun substitute variable replacement term =
     Term.subst [{redex = variable, residue = replacement}] term
 
+  (* Rebuilds [candidate] with [recurse] applied to its immediate
+     subterms; variables and constants are returned as they are. *)
+  fun map_subterms recurse candidate =
+    if Term.is_abs candidate then
+      let val (variable, body) = Term.dest_abs candidate
+      in Term.mk_abs (variable, recurse body) end
+    else if Term.is_comb candidate then
+      let val (function, argument) = Term.dest_comb candidate
+      in Term.mk_comb (recurse function, recurse argument) end
+    else
+      candidate
+
   fun close_form term =
     let
       (* Isabelle's close_form closes schematic Vars, never user Frees.
@@ -470,8 +482,6 @@ structure Refute_ModelFinder_Preproc = struct
     else
       term
 
-  fun is_pair_type ty = MFH.is_pair_type ty
-
   fun is_set_type ty =
     case Lib.total Type.dom_rng ty of
         SOME (_, range) => range = Type.bool
@@ -488,7 +498,7 @@ structure Refute_ModelFinder_Preproc = struct
       | [variable] =>
           let val ty = Term.type_of variable
           in MFH.is_fun_type ty orelse is_set_type ty orelse
-             is_pair_type ty
+             MFH.is_pair_type ty
           end
       | _ => true
 
@@ -507,7 +517,8 @@ structure Refute_ModelFinder_Preproc = struct
      a concrete FunBox/PairBox into a low-cardinality existential can omit
      the very wrapped value required by its selector equation. *)
   fun is_function_set_or_pair preserve_boxes ty =
-    MFH.is_fun_type ty orelse is_set_type ty orelse is_pair_type ty orelse
+    MFH.is_fun_type ty orelse is_set_type ty orelse
+    MFH.is_pair_type ty orelse
     preserve_boxes andalso
       (MFH.is_funbox_type ty orelse MFH.is_pairbox_type ty)
 
@@ -960,14 +971,8 @@ structure Refute_ModelFinder_Preproc = struct
         if boolSyntax.is_exists candidate then
           let val (variables, matrix) = boolSyntax.strip_exists candidate
           in process_cluster variables matrix end
-        else if Term.is_abs candidate then
-          let val (variable, body) = Term.dest_abs candidate
-          in Term.mk_abs (variable, recurse body) end
-        else if Term.is_comb candidate then
-          let val (function, argument) = Term.dest_comb candidate
-          in Term.mk_comb (recurse function, recurse argument) end
         else
-          candidate
+          map_subterms recurse candidate
     in
       recurse term
     end
@@ -1332,14 +1337,8 @@ structure Refute_ModelFinder_Preproc = struct
             build universal connective order
               (map (fn (component, vars, _) => (component, vars)) groups)
           end
-        else if Term.is_abs candidate then
-          let val (variable, body) = Term.dest_abs candidate
-          in Term.mk_abs (variable, recurse body) end
-        else if Term.is_comb candidate then
-          let val (function, argument) = Term.dest_comb candidate
-          in Term.mk_comb (recurse function, recurse argument) end
         else
-          candidate
+          map_subterms recurse candidate
     in
       recurse term
     end
@@ -1377,8 +1376,6 @@ structure Refute_ModelFinder_Preproc = struct
     in
       Listsort.sort Term.compare (List.foldl add [] variables)
     end
-
-  fun special_bounds terms = schematic_vars_in terms
 
   fun schematize_foralls avoids axiom =
     let
@@ -1622,7 +1619,7 @@ structure Refute_ModelFinder_Preproc = struct
                     selected_bounds
                   val fixed_args_in_axiom = map
                     (replace_bound selected_bounds standins) fixed_args
-                  val axiom_bounds = special_bounds fixed_args_in_axiom
+                  val axiom_bounds = schematic_vars_in fixed_args_in_axiom
                   fun actual_bound schematic =
                     case List.find (fn (standin, _) =>
                            Term.aconv schematic standin)
@@ -1716,8 +1713,8 @@ structure Refute_ModelFinder_Preproc = struct
         (first as (_, first_terms, first_special) : special_triple)
         (second as (_, second_terms, second_special) : special_triple) =
     let
-      val first_bounds = special_bounds first_terms
-      val second_bounds = special_bounds second_terms
+      val first_bounds = schematic_vars_in first_terms
+      val second_bounds = schematic_vars_in second_terms
       val (argument_types, _) = boolSyntax.strip_fun original_type
       val maximum = List.foldl Int.max (~1)
         (#1 first @ #1 second)
@@ -2077,16 +2074,14 @@ structure Refute_ModelFinder_Preproc = struct
         SOME {Thy, Name, ...} => Thy ^ MFN.name_sep ^ Name
       | NONE => #1 (Term.dest_var term)
 
-  fun same_uncurry_key left right = Term.aconv left right
-
   fun add_to_uncurry_table context term table =
     let
       fun update constant arity entries =
-        case List.find (same_uncurry_key constant o #1) entries of
+        case List.find (Term.aconv constant o #1) entries of
             NONE => (constant, arity) :: entries
           | SOME (_, old) =>
               (constant, Int.min (old, arity)) ::
-              List.filter (not o same_uncurry_key constant o #1) entries
+              List.filter (not o Term.aconv constant o #1) entries
       fun skippable candidate =
         MFH.is_built_in_const candidate orelse
         MFH.is_nonfree_constr candidate orelse
@@ -2111,7 +2106,7 @@ structure Refute_ModelFinder_Preproc = struct
   fun uncurry_term table term =
     let
       fun lookup candidate = Option.map #2
-        (List.find (same_uncurry_key candidate o #1) table)
+        (List.find (Term.aconv candidate o #1) table)
       fun recurse candidate arguments =
         if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate

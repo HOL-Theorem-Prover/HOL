@@ -718,12 +718,11 @@ structure Refute_QC = struct
           {missing = length (vars_of bound lhs), functional = true,
            generator = false, outputs = 1, recursive = false}
         else
-          case fully_applied_constructor rhs of
-              NONE => NONE
-            | SOME (_, arguments) => SOME
-                {missing = length (vars_of bound lhs), functional = true,
-                 generator = false, outputs = length arguments,
-                 recursive = false}
+          Option.map (fn (_, arguments) =>
+              {missing = length (vars_of bound lhs), functional = true,
+               generator = false, outputs = length arguments,
+               recursive = false})
+            (fully_applied_constructor rhs)
 
       fun equality_score bound assumption =
         case Lib.total boolSyntax.dest_eq assumption of
@@ -1046,9 +1045,6 @@ structure Refute_QC = struct
   fun elapsed_msec start =
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle Interrupt => raise Interrupt | _ => 0
-
-  fun pnf_replay_eligible case_tree genuine =
-    Option.isSome case_tree andalso genuine
 
   fun case_tree_incomplete Refute_Eval.CaseLeaf = false
     | case_tree_incomplete

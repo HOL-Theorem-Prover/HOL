@@ -15,10 +15,6 @@ structure Refute_Extract = struct
      cost and, more importantly, its candidate evaluation behavior. *)
   datatype extraction_mode = Strict | Lazy
 
-  type extraction =
-    { source : string,
-      entry : string }
-
   type registered_extraction =
     { source : string,
       entry : string,
@@ -38,10 +34,6 @@ structure Refute_Extract = struct
     | MLWord of int
     | MLDatatype of string
     | MLSusp of ml_ty
-
-  type type_compilation =
-    { source : string,
-      ml_type : string }
 
   val reserved =
     ["abstype", "and", "andalso", "as", "case", "datatype", "do",
@@ -250,9 +242,8 @@ structure Refute_Extract = struct
   fun context_mode ({mode, ...} : context) = mode
 
   fun lookup_type ({types, ...} : context) ty =
-    case List.find (fn (other, _, _) => Util.same_type other ty) (!types) of
-      SOME (_, mlty, equality) => SOME (mlty, equality)
-    | NONE => NONE
+    Option.map (fn (_, mlty, equality) => (mlty, equality))
+      (List.find (fn (other, _, _) => Util.same_type other ty) (!types))
 
   fun lookup_datatype ({datatypes, ...} : context) ty =
     List.find (fn info => Util.same_type (#hol_ty info) ty) (!datatypes)
@@ -501,13 +492,10 @@ structure Refute_Extract = struct
       val result = #2 (boolSyntax.strip_fun (Term.type_of constructor))
       val _ = ignore (ensure_type context result)
     in
-      case lookup_datatype context result of
-        NONE => NONE
-      | SOME {constructors, ...} =>
-          (case List.find (fn (other, _, _) =>
-                    Term.same_const other constructor) constructors of
-             SOME item => SOME item
-           | NONE => NONE)
+      Option.mapPartial (fn {constructors, ...} =>
+          List.find (fn (other, _, _) =>
+            Term.same_const other constructor) constructors)
+        (lookup_datatype context result)
     end
 
   fun enum_expression context ty =
@@ -1201,9 +1189,8 @@ structure Refute_Extract = struct
             else if Term.same_const fupd head then SOME (true, index)
             else NONE
         in
-          case Lib.get_first matching (Lib.enumerate 0 fields) of
-            SOME match => SOME (info, fields, match)
-          | NONE => NONE
+          Option.map (fn match => (info, fields, match))
+            (Lib.get_first matching (Lib.enumerate 0 fields))
         end
     in
       case Lib.get_first find_field (TypeBase.elts ()) of
@@ -2484,28 +2471,9 @@ structure Refute_Extract = struct
       (datatype_groups context)) ^ "\n" ^
     equality_declarations context ^ "\n"
 
-  fun compile_types_with mode types =
+  fun extract_term term =
     let
-      val context = new_context mode
-      val mltypes = List.map (ensure_type context) types
-      (* This utility describes representation types only.  Requesting
-         equality here can make a perfectly extractable function type fail:
-         structural function equality would need to enumerate its domain. *)
-      val source = source_prefix context
-      val ml_type =
-        case mltypes of
-          [mlty] => ml_ty_text mlty
-        | _ => ml_ty_text (MLTuple mltypes)
-    in
-      {source = source, ml_type = ml_type}
-    end
-
-  fun compile_types types = compile_types_with Strict types
-  fun compile_type ty = compile_types [ty]
-
-  fun extract_term_with mode term =
-    let
-      val context = new_context mode
+      val context = new_context Strict
       val _ = ignore (ensure_type context (Term.type_of term))
       val entry_expression = expression context term
       val _ = drain_definitions context
@@ -2516,8 +2484,68 @@ structure Refute_Extract = struct
       {source = source, entry = "entry ()"}
     end
 
-  fun extract_term term = extract_term_with Strict term
-  fun extract_lazy_term term = extract_term_with Lazy term
+  (* Term tables shared by plan and narrowing extraction: terms the
+     generated code reconstructs are numbered here and registered with
+     Refute_EvalSML before the source is compiled. *)
+  fun new_term_table () =
+    {list = ref ([] : term list), count = ref 0,
+     indexes = ref (Redblackmap.mkDict Term.compare)}
+
+  fun index_term {list, count, indexes} tm =
+    case Redblackmap.peek (!indexes, tm) of
+      SOME index => index
+    | NONE =>
+        let val index = !count
+            val _ = indexes := Redblackmap.insert (!indexes, tm, index)
+            val _ = list := tm :: !list
+            val _ = count := index + 1
+        in index end
+
+  fun term_list items = "[" ^ join ", " items ^ "]"
+
+  (* Runs [finish] and releases [table_id] again if it fails. *)
+  fun finish_or_unregister table_id finish =
+    finish ()
+    handle error =>
+      let
+        val cleanup = Exn.capture
+          Refute_EvalSML.unregister_term_tables table_id
+      in
+        case (error, cleanup) of
+            (Interrupt, _) => raise Interrupt
+          | (_, Exn.Exn Interrupt) => raise Interrupt
+          | _ => Exn.reraise error
+      end
+
+  (* The generated dispatch wrapper; [size_name] is the generated binder
+     for the size or depth argument. *)
+  fun install_source size_name =
+    "fun protected_dispatch card genuine_only " ^ size_name ^
+    " draws state =\n" ^
+    "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
+    "    let val answer = dispatch card genuine_only " ^ size_name ^
+    " draws state\n" ^
+    "        val hit = Option.map\n" ^
+    "          (fn (environment, grounding, case_tree, genuine) =>\n" ^
+    "          (List.map (fn (index, rebuild) =>\n" ^
+    "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
+    "               refute_table_id rebuild)) environment,\n" ^
+    "           Option.map (List.map (fn (index, rebuild) =>\n" ^
+    "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
+    "               refute_table_id rebuild))) grounding,\n" ^
+    "           case_tree, genuine))\n" ^
+    "          (#hit answer)\n" ^
+    "    in {hit = hit, complete = #complete answer,\n" ^
+    "        table = refute_table_id, state = #state answer,\n" ^
+    "        tests = #tests answer,\n" ^
+    "        match_failures = #match_failures answer,\n" ^
+    "        assumption_satisfied = #assumption_satisfied answer,\n" ^
+    "        conclusion_evaluated = #conclusion_evaluated answer,\n" ^
+    "        candidates_generated = " ^
+      "#candidates_generated answer}\n" ^
+    "    end)\n" ^
+    "fun install () =\n" ^
+    "  Refute_EvalSML.install_dispatch protected_dispatch\n"
 
   fun extract_tests_with mode
         (config : Refute_Core.config) strategy plans : registered_extraction =
@@ -2528,12 +2556,8 @@ structure Refute_Extract = struct
          emission for this compile call. *)
       val enum_cache = Refute_SmartGen.enumerator_snapshot ()
       val context = new_context mode
-      val constructor_terms =
-        {list = ref ([] : term list), count = ref 0,
-         indexes = ref (Redblackmap.mkDict Term.compare)}
-      val raw_terms =
-        {list = ref ([] : term list), count = ref 0,
-         indexes = ref (Redblackmap.mkDict Term.compare)}
+      val constructor_terms = new_term_table ()
+      val raw_terms = new_term_table ()
       val next_bound = ref 0
       val original_variables = ref ([] : (term * term) list)
 
@@ -2745,27 +2769,11 @@ structure Refute_Extract = struct
         end
       val enum_programs = map rename_program enum_programs
 
-      fun index_term {list, count, indexes} tm =
-        case Redblackmap.peek (!indexes, tm) of
-          SOME index => index
-        | NONE =>
-            let val index = !count
-                val _ = indexes := Redblackmap.insert (!indexes, tm, index)
-                val _ = list := tm :: !list
-                val _ = count := index + 1
-            in index end
-
       fun constructor_index tm = index_term constructor_terms tm
       fun raw_index tm = index_term raw_terms tm
-      fun intinf value =
-        "(valOf (IntInf.fromString " ^ quote (IntInf.toString value) ^ ") " ^
-        ": IntInf.int)"
       fun pair value thunk = parens (value ^ ", " ^ thunk)
       fun thunk body = "(fn () => " ^ body ^ ")"
-      fun term_list items = "[" ^ join ", " items ^ "]"
       fun maximum values = List.foldl Int.max 0 values
-
-      fun custom_type ty = Refute_Gen.has_registered_generator ty
 
       val validated = ref ([] : hol_type list)
 
@@ -2775,7 +2783,7 @@ structure Refute_Extract = struct
           let
             val _ = validated := ty :: !validated
             val _ =
-              if custom_type ty then
+              if Refute_Gen.has_registered_generator ty then
                 reject ("custom generator registered for " ^ type_name root)
               else ()
           in
@@ -3321,6 +3329,29 @@ structure Refute_Extract = struct
         "   NONE => " ^ failure ^ "\n" ^
         " | SOME refute_value => "
 
+      (* One Test emitter serves both plan compilers; [tail] closes the
+         emitted sequence. *)
+      fun compile_test tm environment genuine tail =
+        let
+          val hit = "refute_hit (" ^ environment_source environment ^
+            ", NONE, NONE, " ^ genuine ^ ")"
+          val stuck = recovery "genuine_only"
+            ("refute_hit (" ^ environment_source environment ^
+              ", NONE, NONE, false)")
+          val assume = "if " ^ genuine ^ " then " ^
+            "assumption_satisfied := !assumption_satisfied + 1 else ()"
+          val conclude = "if " ^ genuine ^ " then " ^
+            "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
+        in
+          parens ("tests := !tests + 1; " ^ bump_counter ^
+            assume ^ "; " ^
+            "if !tests mod 4096 = 0 then " ^
+            "Refute_EvalSML.check_deadline () else (); " ^
+            safe_value (evaluated_expression tm) stuck ^
+            parens (conclude ^ "; " ^
+              "if refute_value then RefuteContinue else " ^ hit) ^ tail)
+        end
+
       (* One Split emitter serves both plan compilers.  An unlisted
          constructor means that the premise which introduced the split is
          false; a stuck scrutinee, however, makes enumeration incomplete. *)
@@ -3711,26 +3742,7 @@ structure Refute_Extract = struct
       fun compile_exhaustive_plan current environment genuine_only =
         case current of
           Prune => "RefuteContinue"
-        | Test tm =>
-            let
-              val hit = "refute_hit (" ^ environment_source environment ^
-                ", NONE, NONE, " ^ genuine_only ^ ")"
-              val stuck = recovery "genuine_only"
-                ("refute_hit (" ^ environment_source environment ^
-                  ", NONE, NONE, false)")
-              val assume = "if " ^ genuine_only ^ " then " ^
-                "assumption_satisfied := !assumption_satisfied + 1 else ()"
-              val conclude = "if " ^ genuine_only ^ " then " ^
-                "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
-            in
-              parens ("tests := !tests + 1; " ^ bump_counter ^
-                assume ^ "; " ^
-                "if !tests mod 4096 = 0 then " ^
-                "Refute_EvalSML.check_deadline () else (); " ^
-                safe_value (evaluated_expression tm) stuck ^
-                parens (conclude ^ "; " ^
-                  "if refute_value then RefuteContinue else " ^ hit) ^ ")")
-            end
+        | Test tm => compile_test tm environment genuine_only ")"
         | Guard {condition, cont, ...} =>
             (* A stuck condition, complement or not, must fall to
                [stuck] rather than be read as [false]. *)
@@ -3826,26 +3838,7 @@ structure Refute_Extract = struct
           case current of
             Prune => parens ("RefuteContinue, " ^ state)
           | Test tm =>
-              let
-                val hit = "refute_hit (" ^ environment_source environment ^
-                  ", NONE, NONE, " ^ genuine ^ ")"
-                val stuck = recovery "genuine_only"
-                  ("refute_hit (" ^ environment_source environment ^
-                    ", NONE, NONE, false)")
-                val assume = "if " ^ genuine ^ " then " ^
-                  "assumption_satisfied := !assumption_satisfied + 1 else ()"
-                val conclude = "if " ^ genuine ^ " then " ^
-                  "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
-              in
-                parens ("tests := !tests + 1; " ^ bump_counter ^
-                  assume ^ "; " ^
-                  "if !tests mod 4096 = 0 then " ^
-                  "Refute_EvalSML.check_deadline () else (); " ^
-                  safe_value (evaluated_expression tm) stuck ^
-                  parens (conclude ^ "; " ^
-                    "if refute_value then RefuteContinue else " ^ hit) ^
-                  ", " ^ state ^ ")")
-              end
+              compile_test tm environment genuine (", " ^ state ^ ")")
           | Guard {condition, smart, cont} =>
               (* [Refute_QC.strategy_run_body] forces smart_generators
                  false for every random strategy, and the exhaustive gate
@@ -4002,31 +3995,7 @@ structure Refute_Extract = struct
             "fun dispatch card genuine_only size draws state =\n" ^
             "  Vector.sub (test_cards, card - 1)\n" ^
             "    genuine_only size draws state\n" ^
-            "fun protected_dispatch card genuine_only size draws state =\n" ^
-            "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
-            "    let val answer = dispatch card genuine_only size " ^
-            "draws state\n" ^
-            "        val hit = Option.map\n" ^
-            "          (fn (environment, grounding, case_tree, genuine) =>\n" ^
-            "          (List.map (fn (index, rebuild) =>\n" ^
-            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-            "               refute_table_id rebuild)) environment,\n" ^
-            "           Option.map (List.map (fn (index, rebuild) =>\n" ^
-            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-            "               refute_table_id rebuild))) grounding,\n" ^
-            "           case_tree, genuine))\n" ^
-            "          (#hit answer)\n" ^
-            "    in {hit = hit, complete = #complete answer,\n" ^
-            "        table = refute_table_id, state = #state answer,\n" ^
-            "        tests = #tests answer,\n" ^
-            "        match_failures = #match_failures answer,\n" ^
-            "        assumption_satisfied = #assumption_satisfied answer,\n" ^
-            "        conclusion_evaluated = #conclusion_evaluated answer,\n" ^
-            "        candidates_generated = " ^
-              "#candidates_generated answer}\n" ^
-            "    end)\n" ^
-            "fun install () =\n" ^
-            "  Refute_EvalSML.install_dispatch protected_dispatch\n"
+            install_source "size"
           val _ = drain_definitions context
           val source = source_prefix context ^
             definition_declarations context ^ "\n" ^
@@ -4037,31 +4006,7 @@ structure Refute_Extract = struct
           {source = source, entry = "install ()", table = table_id}
         end
     in
-      finish ()
-      handle error =>
-        let
-          val cleanup_result = Exn.capture
-            Refute_EvalSML.unregister_term_tables table_id
-        in
-          case (error, cleanup_result) of
-              (Interrupt, _) => raise Interrupt
-            | (_, Exn.Exn Interrupt) => raise Interrupt
-            | _ => Exn.reraise error
-        end
-    end
-
-  (* Adds an idempotent owner close over extract_tests_with Strict, so a
-     caller can release the vectors retained by generated code. *)
-  fun extract_tests config strategy plans =
-    let
-      val {source, entry, table} =
-        extract_tests_with Strict config strategy plans
-      val closed = ref false
-      fun close () =
-        if !closed then ()
-        else (closed := true; Refute_EvalSML.unregister_term_tables table)
-    in
-      {source = source, entry = entry, table = table, close = close}
+      finish_or_unregister table_id finish
     end
 
   (* Compile the first-order bridge between generic narrowing terms and the
@@ -4074,28 +4019,11 @@ structure Refute_Extract = struct
         if first >= 0 andalso last >= first then ()
         else reject "invalid narrowing depth window"
       val context = new_context Lazy
-      val constructor_terms =
-        {list = ref ([] : term list), count = ref 0,
-         indexes = ref (Redblackmap.mkDict Term.compare)}
-      val raw_terms =
-        {list = ref ([] : term list), count = ref 0,
-         indexes = ref (Redblackmap.mkDict Term.compare)}
+      val constructor_terms = new_term_table ()
+      val raw_terms = new_term_table ()
 
-      fun index_term {list, count, indexes} tm =
-        case Redblackmap.peek (!indexes, tm) of
-            SOME index => index
-          | NONE =>
-              let
-                val index = !count
-                val _ = indexes := Redblackmap.insert (!indexes, tm, index)
-                val _ = list := tm :: !list
-                val _ = count := index + 1
-              in
-                index
-              end
       fun constructor_index tm = index_term constructor_terms tm
       fun raw_index tm = index_term raw_terms tm
-      fun term_list values = "[" ^ join ", " values ^ "]"
 
       (* Finitization belongs to the narrowing instance, after prenexing but
          before extraction.  Keep the original binders as environment keys;
@@ -4160,8 +4088,6 @@ structure Refute_Extract = struct
         map (checked_shape (first + index)) types)
 
       fun type_index ty = Lib.index (Util.same_type ty) types
-      fun shapes_of ty = map (fn row =>
-        List.nth (row, type_index ty)) shape_rows
       fun argument_types ty id =
         case Refute_Gen.spec_of ty of
             Refute_Gen.GenDatatype {constrs, ...} =>
@@ -4602,31 +4528,7 @@ structure Refute_Extract = struct
             "      conclusion_evaluated = decided,\n" ^
             "      candidates_generated = tests}\n" ^
             "  end\n" ^
-            "fun protected_dispatch card genuine_only depth draws state =\n" ^
-            "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
-            "    let val answer = dispatch card genuine_only depth " ^
-            "draws state\n" ^
-            "        val hit = Option.map\n" ^
-            "          (fn (environment, grounding, case_tree, genuine) =>\n" ^
-            "          (List.map (fn (index, rebuild) =>\n" ^
-            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-            "               refute_table_id rebuild)) environment,\n" ^
-            "           Option.map (List.map (fn (index, rebuild) =>\n" ^
-            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-            "               refute_table_id rebuild))) grounding,\n" ^
-            "           case_tree, genuine))\n" ^
-            "          (#hit answer)\n" ^
-            "    in {hit = hit, complete = #complete answer,\n" ^
-            "        table = refute_table_id, state = #state answer,\n" ^
-            "        tests = #tests answer,\n" ^
-            "        match_failures = #match_failures answer,\n" ^
-            "        assumption_satisfied = #assumption_satisfied answer,\n" ^
-            "        conclusion_evaluated = #conclusion_evaluated answer,\n" ^
-            "        candidates_generated = " ^
-              "#candidates_generated answer}\n" ^
-            "    end)\n" ^
-            "fun install () =\n" ^
-            "  Refute_EvalSML.install_dispatch protected_dispatch\n"
+            install_source "depth"
           val source = source_prefix context ^
             definition_declarations context ^ "\n" ^ shape_declaration ^
             conversions ^ reconstructions ^ evaluate ^ runtime
@@ -4634,17 +4536,7 @@ structure Refute_Extract = struct
           {source = source, entry = "install ()", table = table_id}
         end
     in
-      finish ()
-      handle error =>
-        let
-          val cleanup = Exn.capture
-            Refute_EvalSML.unregister_term_tables table_id
-        in
-          case (error, cleanup) of
-              (Interrupt, _) => raise Interrupt
-            | (_, Exn.Exn Interrupt) => raise Interrupt
-            | _ => Exn.reraise error
-        end
+      finish_or_unregister table_id finish
     end
 
   val active_narrowing_window :

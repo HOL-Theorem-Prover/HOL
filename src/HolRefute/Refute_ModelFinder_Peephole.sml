@@ -145,7 +145,6 @@ fun atom_for_int (k, j0) n =
   else if n < 0 then n + k + j0
   else n + j0
 
-(* M4-only bits-mode helper reservation. *)
 fun is_twos_complement_representable bits n =
   let val max = reasonable_power 2 bits in n >= ~max andalso n < max end
 
@@ -294,9 +293,8 @@ type kodkod_constrs =
    always the case if Kodkod's skolemization is disabled. *)
 fun kodkod_constrs optim nat_card int_card main_j0 =
   let
-    fun curry2 f x y = f (x, y)
-
     val from_bool = atom_for_bool main_j0
+
     fun from_nat n = Atom (n + main_j0)
     fun to_nat j = j - main_j0
     val to_int = int_for_atom (int_card, main_j0)
@@ -651,20 +649,20 @@ fun kodkod_constrs optim nat_card int_card main_j0 =
        kk_project_seq = s_project_seq, kk_not3 = s_not3,
        kk_nat_less = s_nat_less, kk_int_less = s_int_less}
     else
-      {kk_all = curry2 All, kk_exist = curry2 Exist,
-       kk_formula_let = curry2 FormulaLet,
+      {kk_all = Lib.curry All, kk_exist = Lib.curry Exist,
+       kk_formula_let = Lib.curry FormulaLet,
        kk_formula_if = curry3 FormulaIf,
-       kk_or = curry2 Or, kk_not = Not, kk_iff = curry2 Iff,
-       kk_implies = curry2 Implies, kk_and = curry2 And,
-       kk_subset = curry2 Subset, kk_rel_eq = curry2 RelEq,
+       kk_or = Lib.curry Or, kk_not = Not, kk_iff = Lib.curry Iff,
+       kk_implies = Lib.curry Implies, kk_and = Lib.curry And,
+       kk_subset = Lib.curry Subset, kk_rel_eq = Lib.curry RelEq,
        kk_no = No, kk_lone = Lone, kk_one = One, kk_some = Some,
-       kk_rel_let = curry2 RelLet, kk_rel_if = curry3 RelIf,
-       kk_union = curry2 Union, kk_difference = curry2 Difference,
-       kk_override = curry2 Override, kk_intersect = curry2 Intersect,
-       kk_product = curry2 Product, kk_join = curry2 Join,
+       kk_rel_let = Lib.curry RelLet, kk_rel_if = curry3 RelIf,
+       kk_union = Lib.curry Union, kk_difference = Lib.curry Difference,
+       kk_override = Lib.curry Override, kk_intersect = Lib.curry Intersect,
+       kk_product = Lib.curry Product, kk_join = Lib.curry Join,
        kk_closure = Closure, kk_reflexive_closure = ReflexiveClosure,
-       kk_comprehension = curry2 Comprehension,
-       kk_project = curry2 Project,
+       kk_comprehension = Lib.curry Comprehension,
+       kk_project = Lib.curry Project,
        kk_project_seq = d_project_seq, kk_not3 = d_not3,
        kk_nat_less = d_nat_less, kk_int_less = d_int_less}
   end

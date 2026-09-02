@@ -151,9 +151,7 @@ structure Refute_Eval :> Refute_Eval = struct
       | Gen (variable, next) =>
           Term.type_of variable :: plan_gen_types next
       | Bind (_, _, fallback, next) =>
-          (case fallback of
-               NONE => []
-             | SOME alternative => plan_gen_types alternative) @
+          Option.getOpt (Option.map plan_gen_types fallback, []) @
           plan_gen_types next
       | Split (_, branches) =>
           List.concat (List.map (plan_gen_types o #3) branches)
@@ -210,13 +208,10 @@ structure Refute_Eval :> Refute_Eval = struct
       fun same_constructor
             ({id = id1, fields = fields1},
              {id = id2, fields = fields2}) =
-        id1 = id2 andalso
-        Lib.list_eq (fn first => fn second =>
-          same_shape (first, second)) fields1 fields2
+        id1 = id2 andalso Lib.list_eq (Lib.curry same_shape) fields1 fields2
     in
       depth1 = depth2 andalso complete1 = complete2 andalso
-      Lib.list_eq (fn first => fn second =>
-        same_constructor (first, second)) constructors1 constructors2
+      Lib.list_eq (Lib.curry same_constructor) constructors1 constructors2
     end
 
   fun same_pattern (CaseVariable, CaseVariable) = true
@@ -224,8 +219,7 @@ structure Refute_Eval :> Refute_Eval = struct
         (CaseConstructor (id1, arguments1),
          CaseConstructor (id2, arguments2)) =
         id1 = id2 andalso
-        Lib.list_eq (fn first => fn second =>
-          same_pattern (first, second)) arguments1 arguments2
+        Lib.list_eq (Lib.curry same_pattern) arguments1 arguments2
     | same_pattern _ = false
 
   fun same_tree (CaseLeaf, CaseLeaf) = true
@@ -247,20 +241,13 @@ structure Refute_Eval :> Refute_Eval = struct
             Term.aconv term1 term2 andalso same_tree (subtree1, subtree2)
         in
           same_shape (shape1, shape2) andalso
-          Lib.list_eq (fn first => fn second =>
-            same_branch (first, second)) branches1 branches2
+          Lib.list_eq (Lib.curry same_branch) branches1 branches2
         end
     | same_tree _ = false
 
-  fun same_case_tree NONE NONE = true
-    | same_case_tree (SOME first) (SOME second) =
-        same_tree (first, second)
-    | same_case_tree _ _ = false
+  val same_case_tree = Lib.option_eq (Lib.curry same_tree)
 
-  fun same_optional_env NONE NONE = true
-    | same_optional_env (SOME first) (SOME second) =
-        same_env first second
-    | same_optional_env _ _ = false
+  val same_optional_env = Lib.option_eq same_env
 
   (* [run_depth] is part of candidate identity on purpose: narrowing carries
      its ignore list forward to the next scheduled depth, and the same
