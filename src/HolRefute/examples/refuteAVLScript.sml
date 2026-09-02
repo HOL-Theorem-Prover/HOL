@@ -68,11 +68,6 @@ End
 (* The diagnostic tactic is followed by cheat in deliberately false
    conjectures so that the counterexample remains visible in the build. *)
 
-(* The unrestricted Isabelle conjecture times out on every backend under
-   the adaptive defaults.  Pinning only the right subtree to a single node
-   leaves the left subtree entirely to the search, where narrowing builds
-   the double-rotation shape that exposes the swapped grandchild. *)
-
 Theorem rebalancing_preserves_the_order:
   vord (ANd n l (ANd rn AEmp AEmp rh) h) /\
   vheight l = vheight (ANd rn AEmp AEmp rh) + 2 ==>
