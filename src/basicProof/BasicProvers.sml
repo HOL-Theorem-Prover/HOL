@@ -1324,13 +1324,13 @@ val srw_tac = SRW_TAC
 fun export_rewrites slist =
     let val ds = map ThmSetData.mk_add slist
     in
-      List.app record_delta ds;
-      update_global_value (rev_itlist apply_to_global ds)
+      update_global_value (rev_itlist apply_to_global ds);
+      List.app record_delta ds
     end
 
 fun delsimps names =
-    (List.app (record_delta o ThmSetData.REMOVE) names;
-     temp_delsimps names)
+    (temp_delsimps names;
+     List.app (record_delta o ThmSetData.REMOVE) names)
 
 (* assume that there aren't any removes for things added in this theory;
    it's not rational to do that; one should add it locally only, or not

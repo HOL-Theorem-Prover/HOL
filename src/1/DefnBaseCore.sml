@@ -120,12 +120,12 @@ fun register_defn {tag, thmname} =
       val add = ThmSetData.mk_add thmname
       val p = case add of ThmSetData.ADD p => p | _ => raise Fail "Impossible"
     in
+      #update_global_value userdefs_db (register_defn_p tag p);
       if tag <> "user" then
         HOL_WARNING "DefnBase" "register_defn"
                     "Non-'user' definitions are only stored transiently"
       else
-        #record_delta userdefs_db add;
-      #update_global_value userdefs_db (register_defn_p tag p)
+        #record_delta userdefs_db add
     end
 
 

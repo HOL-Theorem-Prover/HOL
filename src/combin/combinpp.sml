@@ -355,8 +355,8 @@ fun new_form r =
       val d = ADD (DD r)
     in
       addlform left right;
-      record_delta d;
       update_global_value (apply_delta d);
+      record_delta d;
       add_user_printer("combinpp.general_printer", updt);
       case lookup_term_name of
           NONE => ()

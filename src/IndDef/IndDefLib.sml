@@ -107,8 +107,8 @@ fun add_rule_induction th =
 fun export_rule_induction s =
     let val d = ThmSetData.mk_add s
     in
-      rule_ind_record_delta d;
-      rule_ind_apply_global_update (apply_delta d)
+      rule_ind_apply_global_update (apply_delta d);
+      rule_ind_record_delta d
     end
 
 fun thy_rule_inductions thyname = let
