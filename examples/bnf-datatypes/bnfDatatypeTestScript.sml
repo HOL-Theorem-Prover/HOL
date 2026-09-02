@@ -184,3 +184,31 @@ val _ =
                 "\n  induction: " ^ thm_to_string ind ^ "\n"); OK())
       else die "not proved"
     end
+
+(* ----------------------------------------------------------------------
+    a family that nests pairs of its members two collections deep
+   ---------------------------------------------------------------------- *)
+
+val _ = bnfDatatype `n1 = N1 (num list) (((n1 # n2) list) list)
+                        | N2 ((n1 + n2) list) ;
+                     n2 = M1 | M2 (n3 option) ;
+                     n3 = P1 | P2 n1 'p 'q`
+
+val _ = tprint "a family nesting pairs of members two deep"
+val _ =
+    if List.all exists
+       ["n1SET1_thm", "n1SET2_thm", "n2SET1_thm", "n2SET2_thm",
+        "n3SET1_thm", "n3SET2_thm", "n1MAP_thm"]
+    then OK() else die "not all saved"
+
+val _ = tprint "and what its set functions reach"
+val _ =
+    let val th1 = Q.prove (‘p ∈ n3SET1 (P2 t p q) ∧ q ∈ n3SET2 (P2 t p q)’,
+                           simp[])
+        val th2 = Q.prove (‘x ∈ n1SET1 t ⇒ x ∈ n3SET1 (P2 t p q)’, simp[])
+        (* nothing reaches through an empty collection, which is the
+           doubly nested argument saying so *)
+        val th3 = Q.prove (‘n1SET1 (N1 l []) = ∅’, simp[])
+    in
+      if List.all (null o hyp) [th1, th2, th3] then OK() else die "not proved"
+    end

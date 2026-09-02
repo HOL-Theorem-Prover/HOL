@@ -1913,7 +1913,8 @@ val setRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
               combinTheory.I_o_ID, combinTheory.S_DEF, combinTheory.o_DEF,
               combinTheory.K_DEF, pairTheory.setFST_thm,
               pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
-              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
+              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY,
+              BIGUNION_IMAGE_EQUAL]
 
 (* eta reduction is part of unfolding a set term: the lifted union leaves
    a component's set function applied to a bound variable *)
@@ -4575,7 +4576,8 @@ fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
 
 
 (* ----------------------------------------------------------------------
-    The collapsed family's map, one constructor at a time.
+    The collapsed family's map and set functions, one constructor at a
+    time.
 
     A collapsed member's map is defined through the bijection, so what it
     does at a constructor is what the member's own map does at the
@@ -4585,11 +4587,10 @@ fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
     normalised the same way, with the representation's own naturality to
     put a member's map back together.
 
-    The set functions are not here yet: their two sides normalise to
-    different shapes, because the one that goes through the map pushes
-    the representation inside the sets and the other does not.  Closing
-    that wants the components' naturality in the set normaliser, which
-    is the same polish the pair's set equations are waiting for.
+    A set function is not folded back but stated: what an argument
+    contributes is what that argument's own type's set function says, and
+    the two sides then differ only in where the representation's map
+    sits, which the components' naturality moves.
    ---------------------------------------------------------------------- *)
 
 fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
@@ -4634,12 +4635,31 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
                                 (upto n))
       val unfoldRWs = List.concat (List.map #defs ccs) @ consP @ mapP @ setP @
                       repabsP @ memberEqns
+      (* naturality, setᵢ (map f⃗ x) = IMAGE fᵢ (setᵢ x), for every
+         component the specification's own functors are built from:
+         those are the ones whose maps a constructor applies, since a
+         member stands at a slot variable there and the equations that
+         unfold its own map are left to do that.  Fusing the image
+         naturality leaves into the union it sits under then puts the
+         maps at a collection's elements, which is where the argument's
+         own type says they are. *)
+      val comps =
+          case #functors fam of
+              [] => raise ERR "collapsedEqns" "a family with no functors"
+            | F :: Fs => List.foldl (fn (G,A) =>
+                                        HOLset.union (A, #components G))
+                                    (#components F) Fs
+      val natRWs = List.concat (List.map (fn bnfBase.bI i => #mapIMAGE i)
+                                         (HOLset.listItems comps))
+      val fuseRWs = [REWRITE_RULE [combinTheory.o_DEF]
+                                  pred_setTheory.IMAGE_IMAGE]
       (* the sets of a constructor's arguments come out grouped by where
          the member's own set function found them; union is associative
-         and commutative, and that is the whole difference *)
-      val acRWs = unfoldRWs @ [bnfFixBNFTheory.EQUAL_SING,
-                               simpLib.AC pred_setTheory.UNION_ASSOC
-                                          pred_setTheory.UNION_COMM]
+         and commutative, and that is the whole remaining difference *)
+      val acRWs = unfoldRWs @ natRWs @ fuseRWs @
+                  [bnfFixBNFTheory.EQUAL_SING,
+                   simpLib.AC pred_setTheory.UNION_ASSOC
+                              pred_setTheory.UNION_COMM]
       (* the database with the collapsed types in it, which is what says
          what an argument's own set function is *)
       val db = List.foldl (fn (r, d) => bnfBase.insert (#key r, #info r) d)
