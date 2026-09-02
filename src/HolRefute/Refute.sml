@@ -18,8 +18,6 @@ structure Refute :> Refute = struct
   type config = Refute_Core.config
   type instance = Refute_Core.instance
   type backend = Refute_Core.backend
-  type certainty_ceiling = config -> instance list -> certainty
-  type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
   type term_postprocessor = term -> term
@@ -197,15 +195,10 @@ structure Refute :> Refute = struct
     REFUTE_TAC_WITH [upd_search (Only [ModelFinder])] goal
 
   val register_backend = Refute_Core.register_backend
-  val register_backend_with_ceiling =
-    Refute_Core.register_backend_with_ceiling
-  val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
   val register_generator_family = Refute_Gen.register_generator_family
   val register_term_postprocessor =
     Refute_ModelFinder_Model.register_term_postprocessor
-  val lookup_term_postprocessor =
-    Refute_ModelFinder_Model.lookup_term_postprocessor
   fun register_codatatype registration =
     Refute_ModelFinder_HOL.with_registration_lock (fn () =>
       Refute_ModelFinder_HOL.register_codatatype registration)
@@ -213,14 +206,6 @@ structure Refute :> Refute = struct
   val register_typedef = Refute_ModelFinder_HOL.register_typedef
   val harvest_registrations = Refute_ModelFinder_HOL.harvest_registrations
   val register_frac_type = Refute_ModelFinder_HOL.register_frac_type
-  val register_frac_type_rat =
-    Refute_ModelFinder_Model.register_frac_type_rat
-  val register_frac_type_real =
-    Refute_ModelFinder_Model.register_frac_type_real
-  val register_function_display =
-    Refute_ModelFinder_Model.register_function_display
-  val register_fmap_display =
-    Refute_ModelFinder_Model.register_fmap_display
   fun register_ersatz registration =
     Refute_ModelFinder_HOL.with_registration_lock (fn () =>
       Refute_ModelFinder_HOL.register_ersatz registration)

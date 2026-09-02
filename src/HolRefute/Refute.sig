@@ -26,8 +26,6 @@ signature Refute = sig
   type config = Refute_Core.config
   type instance = Refute_Core.instance
   type backend = Refute_Core.backend
-  type certainty_ceiling = config -> instance list -> certainty
-  type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
   type term_postprocessor = term -> term
@@ -75,11 +73,6 @@ signature Refute = sig
   val MODEL_REFUTE_TAC  : Abbrev.tactic
 
   val register_backend : backend -> unit
-  (* The callback must upper-bound the certainty returned by the backend's
-     [run] function for the same configuration and instances. *)
-  val register_backend_with_ceiling :
-    backend -> certainty_ceiling -> unit
-  val register_substrate : substrate -> unit
   val register_generator : hol_type -> custom_gen -> unit
   (* Registers a QC generator for every concrete instance of a type
      operator, built from constructor constants whose declared result type
@@ -97,8 +90,6 @@ signature Refute = sig
      canonical : term_postprocessor option} -> unit
   val register_term_postprocessor :
     hol_type -> term_postprocessor -> unit
-  val lookup_term_postprocessor :
-    hol_type -> term_postprocessor option
   (* [witness = SOME thm] rules out generic shape defeats: [thm] must be
      [?x. x = C ... x ...] for a registered constructor [C], showing some
      value is cyclic.  For a type the datatype database already knows,
@@ -132,26 +123,6 @@ signature Refute = sig
      ersatz :
        {original : {Thy : string, Name : string},
         replacement : {Thy : string, Name : string}} list} -> unit
-  (* Installed by default; this idempotent entry point restores or refreshes
-     the built-in rational registration after session-level customization. *)
-  val register_frac_type_rat : unit -> unit
-  (* Installed by default, like [register_frac_type_rat]: gives the model
-     finder a [real] encoding on the same Frac carrier.  This idempotent
-     entry point restores or refreshes the built-in registration after
-     session-level customization. *)
-  val register_frac_type_real : unit -> unit
-  (* Installed by default: deduplicates a raw function witness's
-     update chain at every function type.  A [register_term_postprocessor]
-     registration at exactly [:'a -> 'b] replaces this built-in, since
-     registration matches on the pattern; this idempotent entry point
-     restores or refreshes it afterward, exactly like
-     [register_frac_type_rat]. *)
-  val register_function_display : unit -> unit
-  (* Installed by default, on the same "replaced by an exact-pattern
-     registration, restorable afterward" terms as
-     [register_function_display]: unwraps a model finder's finite-map
-     representation into FUPDATE notation at every [:'a |-> 'b]. *)
-  val register_fmap_display : unit -> unit
   val register_ersatz :
     {original : {Thy : string, Name : string},
      replacement : {Thy : string, Name : string}} -> unit

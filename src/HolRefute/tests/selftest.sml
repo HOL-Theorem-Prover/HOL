@@ -6,6 +6,14 @@ open testutils
 open refuteTheory refuteTableZooTheory refuteUnusedTheory
 open Refute
 
+(* Two registry entry points are deliberately not in the [Refute]
+   signature, having no user outside these tests: the certainty ceiling a
+   backend races under, and the composed display callback a registration
+   installs.  Both stay observable here through their own modules. *)
+val register_backend_with_ceiling = Refute_Core.register_backend_with_ceiling
+val lookup_term_postprocessor =
+  Refute_ModelFinder_Model.lookup_term_postprocessor
+
 local
   open sortingTheory realTheory ratTheory lbtreeTheory pathTheory
        llistTheory finite_mapTheory finite_setTheory refuteHarvestTypeTheory
@@ -2462,10 +2470,6 @@ val _ = test "typedef and quotient registrations are validated" (fn () =>
 
 val _ = test "frac registrations" (fn () =>
   Option.isSome (lookup_term_postprocessor ``:real``) andalso
-  accepted (fn () => (register_frac_type_rat (); register_frac_type_rat ()))
-  andalso
-  accepted (fn () => (register_frac_type_real (); register_frac_type_real ()))
-  andalso
   rejected (fn () => register_frac_type
     {tyop = {Thy = "rat", Tyop = "rat"},
      ersatz = [{original = {Thy = "rat", Name = "rat_add"},

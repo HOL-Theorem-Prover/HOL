@@ -394,9 +394,9 @@ backends.  A result stops the race only when its certainty reaches the
 best ceiling declared by every eligible backend.  Thus a quick potential
 counterexample does not hide a genuine result that another selected
 backend can still produce.  A backend registered through
-`register_backend` conservatively declares the ceiling `Genuine`; a
-backend with a tighter ceiling can use
-`register_backend_with_ceiling`.
+`register_backend` conservatively declares the ceiling `Genuine`; the
+built-in narrowing and model-finder backends declare tighter ceilings of
+their own.
 
 One call owns one absolute search deadline of `timeout` seconds.
 Preprocessing, backend admission, compilation, testing, and solver calls
@@ -1112,15 +1112,8 @@ replaces the old one.
   and need not identify every pair of terms that denote the same value.
   Registration fails if `tyop` already has `TypeBase` datatype
   constructors, the same precedence `register_codatatype` enforces.
-* `register_substrate {name, priority, accepts, preflight, compile}`
-  extends or replaces the executable substrate ladder.  A substrate must
-  compile the common plan and preserve candidate order and cleanup;
-  returning `Inapplicable` allows `Auto` to continue.
-* `register_backend backend` adds or replaces a weighted backend.
-  `register_backend_with_ceiling backend ceiling` additionally declares
-  a configuration- and instance-sensitive certainty ceiling.  The
-  callback must overestimate: an underestimate can stop a race before a
-  stronger result and violates the contract.
+* `register_backend backend` adds or replaces a weighted backend, under
+  the conservative certainty ceiling `Genuine`.
 * `register_codatatype {tyop, case_const, constructors, witness}` validates
   the shape of `tyop`, `case_const` and `constructors` (non-empty, distinct
   constructors, each declaring - at its own declared type, not merely at
@@ -1172,28 +1165,21 @@ replaces the old one.
   encoding, whereas a total equivalence drops its then redundant domain
   axiom.
 * `register_frac_type {tyop, ersatz}` supplies a fraction representation
-  and replacements.  `register_frac_type_rat ()` and
-  `register_frac_type_real ()` idempotently restore the built-in
-  rational and `real` registrations, respectively; both are installed by
-  default on the same Frac carrier.  `register_ersatz` adds an
-  individual original-to-replacement constant mapping.
+  and replacements.  The built-in rational and `real` registrations are
+  installed by default on the same Frac carrier.  `register_ersatz` adds
+  an individual original-to-replacement constant mapping.
 * `register_term_postprocessor pattern f` installs a bottom-up,
   display-only model transformation.  Matching transformations compose
   from general to specific, then with any `canonical` callback a
   generator family registered (`register_generator_family` above);
   failures or type changes leave the raw term unchanged.  Certification
-  always uses raw terms.  `lookup_term_postprocessor ty` returns the
-  composed callback.  This is the one walk both the model finder's own
+  always uses raw terms.  This is the one walk both the model finder's own
   display and a QC-strategy counterexample's reported binding go
-  through.  Two patterns are installed by default, each with its own
-  idempotent restore/refresh entry point mirroring the Frac pair above:
-  `register_function_display` dedups a function-type witness's update
-  chain at `:'a -> 'b`, and `register_fmap_display` unwraps the model
-  finder's finite-map representation into FUPDATE notation at
-  `:'a |-> 'b`.  Registering at exactly one of those patterns replaces
-  the built-in, since registration matches on the pattern; unlike the
-  Frac pair, this has no automatic re-installation, so the matching
-  entry point is the way back.
+  through.  Two patterns are installed by default: function-update-chain
+  deduplication at `:'a -> 'b`, and finite-map representations unwrapped
+  into FUPDATE notation at `:'a |-> 'b`.  Registering at exactly one of
+  those patterns replaces the built-in for the rest of the session,
+  since registration matches on the pattern.
 
 The theorem sets used by MF preprocessing can be extended in a theory
 script with `export_refute_simp`, `export_refute_psimp`, and

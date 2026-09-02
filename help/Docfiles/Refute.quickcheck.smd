@@ -29,7 +29,6 @@ use [`Refute.model_refute`](#Refute.model_refute) for that.
 [`Refute.config`](#Refute.config),
 [`Refute.refute`](#Refute.refute),
 [`Refute.model_refute`](#Refute.model_refute),
-[`Refute.register_generator`](#Refute.register_generator),
-[`Refute.register_substrate`](#Refute.register_substrate)
+[`Refute.register_generator`](#Refute.register_generator)
 
 The complete library guide is \ref{Description:the-holrefute-library}.

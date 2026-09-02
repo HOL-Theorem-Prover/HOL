@@ -49,16 +49,14 @@ requests either `MonoInstances` or `PolyOriginal` instances.
 
 `register_backend backend` assigns the conservative certainty ceiling
 `Genuine`.  This is safe for every backend but may make a race wait after
-a weaker result.  Backends that can declare a tighter ceiling should use
-`register_backend_with_ceiling`.
+a weaker result; the built-in narrowing and model-finder backends declare
+tighter ceilings of their own.
 
 The callback's exceptions and ordinary timeouts are converted to
 `Unknown`; interrupts are re-raised.
 
 ### See also
 
-[`register_backend_with_ceiling`](#Refute.register_backend_with_ceiling),
-[`Refute.register_substrate`](#Refute.register_substrate),
 [`Refute.config`](#Refute.config),
 [`Refute.refute`](#Refute.refute)
 

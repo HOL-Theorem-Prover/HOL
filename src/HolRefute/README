@@ -25,8 +25,7 @@ One call owns one absolute deadline (default 10 s) shared by preprocessing,
 admission, every backend and Kodkodi; cleanup may finish after it.  Backends
 run concurrently in a pool local to the call unless `upd_sequential true`.
 A race stops at `NoCounterexample` or at a counterexample reaching the
-highest certainty any selected backend declares reachable
-(`register_backend_with_ceiling`).
+highest certainty any selected backend declares reachable.
 
 QC `size` and model-finder `card` deepen iteratively from an initial window
 of 10.  `upd_size` / `upd_card` pin fixed bounds; `upd_iterative_size` /

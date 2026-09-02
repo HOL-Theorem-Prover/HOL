@@ -2,7 +2,7 @@ Theory refuteRegistrationClean
 Ancestors
   refuteTableZoo
 Libs
-  Refute
+  Refute Refute_ModelFinder_Model
 
 val _ = Refute.register_typedef
   {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
@@ -12,12 +12,12 @@ val _ = Refute.register_typedef
    content.  Its display half is present without an explicit
    registration, for both [rat] and [real]. *)
 val _ =
-  case Refute.lookup_term_postprocessor ``:rat`` of
+  case Refute_ModelFinder_Model.lookup_term_postprocessor ``:rat`` of
       SOME _ => ()
     | NONE => raise Fail "default rational Frac registration is missing";
 
 val _ =
-  case Refute.lookup_term_postprocessor ``:real`` of
+  case Refute_ModelFinder_Model.lookup_term_postprocessor ``:real`` of
       SOME _ => ()
     | NONE => raise Fail "default real Frac registration is missing";
 

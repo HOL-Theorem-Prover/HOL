@@ -32,21 +32,16 @@ This is the one walk both a model finder display and a QC-strategy
 counterexample's reported binding go through; a generator family's
 `canonical` form is a second registration source composing into the same
 walk, not a second walk.  Two patterns are installed by default:
-function-update-chain deduplication at `:'a -> 'b`
-(`Refute.register_function_display`) and finite-map notation at
-`:'a |-> 'b` (`Refute.register_fmap_display`).  Registering at exactly
-one of those patterns replaces the built-in; call the matching entry
-point again afterward to restore or refresh it.
+function-update-chain deduplication at `:'a -> 'b` and finite-map
+notation at `:'a |-> 'b`.  Registering at exactly one of those patterns
+replaces the built-in for the rest of the session.
 
 Registrations are session-local and synchronized with the other model
-registries.  `Refute.lookup_term_postprocessor ty` returns the currently
-composed callback for `ty`, if any.
+registries.
 
 ### See also
 
 [`Refute.register_frac_type`](#Refute.register_frac_type),
-[`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
-[`Refute.register_frac_type_real`](#Refute.register_frac_type_real),
 [`Refute.register_generator_family`](#Refute.register_generator_family),
 [`Refute.model_refute`](#Refute.model_refute)
 

@@ -27,7 +27,10 @@ repository.
   cross-substrate conformance and the acceptance tables only run there.
 - The selftest exercises only the `Refute` signature: user-visible outcomes,
   messages and registrations.  Mechanism-level checks (internal modules,
-  counters, serializer goldens) do not belong there.
+  counters, serializer goldens) do not belong there.  Sole exception, the
+  two aliases at its head: `Refute_Core.register_backend_with_ceiling` and
+  `Refute_ModelFinder_Model.lookup_term_postprocessor` are registry entry
+  points kept out of the signature for want of a user, still observed here.
 - The root CLAUDE.md's `--seq=tools/sequences/upto-parallel` pass does not
   reach this directory and adds no signal: it stops before
   `src/parallel_builds`, which is what pulls in HolRefute (POLY-only
