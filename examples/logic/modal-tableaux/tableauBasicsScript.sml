@@ -190,10 +190,10 @@ Theorem tmodel_ind:
   ∀P. (∀vs ts. (∀t. MEM t ts ⇒ P t) ⇒ P (Nd vs ts)) ⇒
       (∀t. P t)
 Proof
-  rpt strip_tac >>
-  completeInduct_on ‘tmodel_size t’ >> Cases >>
-  rw[] >> fs[PULL_FORALL] >> last_x_assum irule >> rpt strip_tac >>
-  first_x_assum irule >> drule MEM_tmodel_size >> simp[]
+  (* the datatype package proves this shape itself, and quantifies a
+     constructor's other arguments inside the implication *)
+  gen_tac >> strip_tac >>
+  ho_match_mp_tac (TypeBase.induction_of “:tmodel”) >> simp[]
 QED
 
 val _ = TypeBase.update_induction tmodel_ind
@@ -206,8 +206,9 @@ End
 Theorem tree_rel_size_bounds:
   tree_rel t1 t2 ⇒ tmodel_size t2 ≤ tmodel_size t1
 Proof
+  (* the size of a mapped list is stated eta-expanded *)
   simp[tree_rel_def, PULL_EXISTS] >> rw[] >>
-  drule MEM_tmodel_size >> simp[]
+  drule MEM_tmodel_size >> simp[ETA_THM]
 QED
 
 Definition subtree_def:
