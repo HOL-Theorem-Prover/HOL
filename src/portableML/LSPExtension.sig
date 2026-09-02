@@ -134,11 +134,24 @@ val fixupTheoremLink:
 val helpLookup: (string * (string -> bool) -> string list) ref
 
 (* Given an SML identifier name (possibly dotted, e.g.
-   "arithmeticTheory.ADD_COMM" or bare "plus_comm"), return a
-   pretty-printed theorem statement if the name resolves to a theorem
-   in the current DB.  Default no-op; the LSP runtime init installs a
-   version that calls DB.lookup + Parse.thm_to_string. *)
-val thmLookup: (string -> string option) ref
+   "arithmeticTheory.ADD_COMM" or bare "plus_comm"), return the
+   theorem's statement if the name resolves to a theorem in the current
+   DB.  Default no-op; the LSP runtime init installs a version that
+   calls DB + Parse.pp_thm.
+
+   A pretty *tree* rather than a string, so the caller lays it out:
+   only the client knows how wide its hover box is, and a statement
+   broken to some other width breaks in the wrong places.
+   `PrettyImpl.pretty' is `HOLPP.pretty', so an installer hands back
+   exactly what HOL's own printers produce.
+
+   This is the fallback for a name that is *not* a value in scope --
+   in practice a dotted reference, which Poly/ML's flat value tables
+   cannot resolve.  A theorem the file has in scope is printed from its
+   own value by the pretty printer that `lsp/pretty_printers_init.ML'
+   installs, which is better: it also covers `[local]' theorems, and
+   values that merely contain theorems. *)
+val thmLookup: (string -> PrettyImpl.pretty option) ref
 
 (* A stored theorem as the IDE wants it: `workspace/symbol' and
    completion both answer from HOL's own record of what exists, which

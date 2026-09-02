@@ -194,7 +194,8 @@ val goalStateAtPos :
   ref (fn _ => NONE)
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
-val thmLookup : (string -> string option) ref = ref (fn _ => NONE)
+val thmLookup : (string -> PrettyImpl.pretty option) ref =
+  ref (fn _ => NONE)
 type ide_symbol = {
   name: string, theory: string, class: string,
   file: string option, line: int, visible: bool }

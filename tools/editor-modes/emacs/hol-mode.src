@@ -2748,6 +2748,7 @@ buffer its own LSP project, hence its own server process."
     (dolist (mode hol-lsp-server-modes)
       (add-to-list 'eglot-server-programs
                    `(,mode . hol-lsp--server-program))))
+  (add-hook 'eglot-managed-mode-hook #'hol-lsp--on-managed)
   (dolist (mode hol-lsp-server-modes)
     (add-hook (intern (concat (symbol-name mode) "-hook"))
               #'hol-lsp--setup-buffer)))
@@ -2827,6 +2828,45 @@ been built outside the editor and the header is already right."
                           (list :uri (hol-lsp--path-to-uri
                                       buffer-file-name))))
     (message "HOL: asked the server to compile this buffer again")))
+
+(defcustom hol-lsp-hover-width nil
+  "Column width to ask the server to render hover text at.
+nil leaves the server's own default, which is what eglot's echo-area
+display has always been rendered at.  Set a number if your frame is
+narrow enough that theorem statements wrap, or if you read hovers in a
+narrow `eldoc-doc-buffer' rather than the echo area.  The symbol
+`frame' asks for the frame's width, which suits the echo area."
+  :type '(choice (const :tag "Server default" nil)
+                 (const :tag "Frame width" frame)
+                 (integer :tag "Columns"))
+  :group 'hol)
+
+(defun hol-lsp--hover-width ()
+  "Resolve `hol-lsp-hover-width' to a column count, or nil."
+  (cond ((null hol-lsp-hover-width) nil)
+        ((eq hol-lsp-hover-width 'frame) (max 20 (1- (frame-width))))
+        ((integerp hol-lsp-hover-width) (max 20 hol-lsp-hover-width))))
+
+(defun hol-lsp--send-config ()
+  "Tell this buffer's server the settings it cannot work out itself.
+Only the hover width so far, and only when the user has asked for one;
+the server's own default stands otherwise, which is why a stock
+configuration sends nothing at all."
+  (let ((width (hol-lsp--hover-width))
+        (server (hol-lsp--server)))
+    (when (and width server)
+      (ignore-errors
+        (jsonrpc-async-request server :$/setConfig
+                               (list :hoverWidth width)
+                               :success-fn #'ignore
+                               :error-fn #'ignore)))))
+
+(defun hol-lsp--on-managed ()
+  "Send our configuration once eglot has taken over a HOL buffer.
+`eglot-managed-mode-hook' runs in the managed buffer, on the way in
+and on the way out; `hol-lsp--server' returning nil covers the exit."
+  (when (memq major-mode hol-lsp-server-modes)
+    (hol-lsp--send-config)))
 
 (defun hol-lsp--goals-width ()
   "Column width to ask the server to render the goal state at.

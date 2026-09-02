@@ -642,11 +642,23 @@ in
         Meta.load "Future";
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/deferred_proofs.ML"));
+        (* Pretty printers for thm/term/hol_type, so hover can print a
+           value of one of those types instead of `?'.  Installed
+           before the DB fallback below, which is the weaker path: it
+           can only find a theorem by name. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/pretty_printers_init.ML"));
         (* Wire LSPExtension.thmLookup to DB + Parse so the hover
            handler can render a theorem's statement when the cursor
-           lands on an SML identifier of type thm.  Handles bare names
-           and dotted references like arithmeticTheory.ADD_COMM (with
-           the -Theory suffix stripped for DB.fetch). *)
+           lands on a *dotted* identifier of type thm, which Poly/ML's
+           flat value tables cannot resolve.  A theorem the file has in
+           scope is printed from its value by the pretty printer above.
+           Handles bare names too, and dotted references like
+           arithmeticTheory.ADD_COMM (with the -Theory suffix stripped
+           for DB.fetch).  Hands back a pretty tree, which the server
+           lays out at the client's hover width; `raw_terminal' because
+           the session's backend emits ANSI escapes that would be
+           garbage in markdown. *)
         evalString
           "LSPExtension.thmLookup := (fn id => \
           \  let \
@@ -675,7 +687,10 @@ in
           \          (case matchExact name of \
           \             th :: _ => SOME th | [] => NONE) \
           \        end \
-          \  in Option.map Parse.thm_to_string thm_opt end \
+          \    fun render th = \
+          \      Lib.with_flag (Parse.current_backend, \
+          \                     PPBackEnd.raw_terminal) Parse.pp_thm th \
+          \  in Option.map render thm_opt end \
           \  handle _ => NONE)";
         (* HOL-side hover for cursors inside quotations: parses the
            captured quote to a resolved Preterm and walks it. *)

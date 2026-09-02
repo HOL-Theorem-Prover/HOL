@@ -20,7 +20,8 @@ practical guide to trying it out; the protocol details live in
   detecting tactic errors.
 - Server capabilities advertised: `textDocumentSync`, `hoverProvider`,
   `definitionProvider`, `referencesProvider`.  Plus LSP extensions:
-  `$/setConfig` (elabOn mode, holdep behaviour), `$/eval` (streamed
+  `$/setConfig` (elabOn mode, holdep behaviour, hover width),
+  `$/eval` (streamed
   arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
   below), `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted` /
@@ -59,6 +60,67 @@ advertising `textDocumentSync`, `hoverProvider`,
 `definitionProvider`, `referencesProvider`; a
 `window/logMessage "started"` notification; the `shutdown` response
 (`{"id":2,"result":null}`); and a clean exit 0.
+
+## Hover
+
+Hover on an SML identifier gives its type and, when the identifier
+names something the file namespace can resolve, its **value** --
+rendered by HOL's own pretty printers, so a theorem shows its
+statement:
+
+```
+val loc: Thm.thm = |- 1 + 1 = 2
+val n: int = 42
+val pair: int * Thm.thm = (42, |- 1 + 1 = 2)
+```
+
+Three things make that work, and each of them limits it:
+
+- `lsp/pretty_printers_init.ML` installs Poly/ML pretty printers for
+  `thm`, `term` and `hol_type` in the LSP session.  Without them
+  `PolyML.NameSpace.Values.print` renders a theorem as `?`, which is
+  why theorems used to be looked up in DB *by name* -- a path that
+  cannot reach a `[local]` theorem, nor a value that merely contains
+  one.  DB is still the fallback for a name that is not in scope at
+  all.
+- The compile thread's file-namespace layer is thread-local, and a
+  hover is answered on its own thread, so the hover installs the
+  captured layer (`nsLayer`) first.  Without that step the only values
+  it can see are the ones the LSP boot session left in
+  `globalNameSpace`, and that session `open`s nothing on purpose.
+- A value is printed only for an identifier whose declaration is
+  external (Poly/ML gives it id 0) or is one of the buffer's top-level
+  declarations, matched by comparing `PTdeclaredAt` against the
+  outline's `selSpan`s.  A function parameter or a `let`-bound name is
+  in no namespace, and a same-named top-level binding is a different
+  thing entirely, so those get their type only.
+
+Dotted names (`numSyntax.plus_tm`) are walked a component at a time
+through `PolyML.NameSpace.Structures.contents`, because Poly/ML's
+value tables are flat.
+
+Contents go out as markdown in a fenced code block.  Unfenced, a
+client treats single newlines as spaces and reflows the statement in a
+proportional font, which throws away every break the pretty printer
+just chose.
+
+### Width
+
+Hover text is laid out at 100 columns until a client says otherwise:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"$/setConfig",
+ "params":{"hoverWidth":72}}
+```
+
+It has to come from the client -- only the client knows how wide its
+hover box is, and a statement broken to some other width breaks in the
+wrong places.  Widths outside 20-500 are ignored and logged.  In VS
+Code this is the `hol4-mode.lsp.hoverWidth` setting, defaulting to 72,
+because the extension API does not expose a hover box's width; under
+eglot, hovers land in the frame-wide echo area, so
+`hol-lsp-hover-width` is nil (leave it at 100) unless you set a number
+or the symbol `frame`.
 
 ## Goal-state at cursor (`$/hol/goalState`)
 

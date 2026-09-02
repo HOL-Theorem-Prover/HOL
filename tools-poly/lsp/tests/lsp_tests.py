@@ -4957,6 +4957,145 @@ def test_capabilities_match_what_is_implemented():
         c.close()
 
 
+def test_hover_shows_the_value_of_a_local_binding():
+    """A hover used to give only the type for anything the file itself
+    bound: every buffer-level binding lives in the compile thread's
+    file layer, which is thread-local, and a hover answers on its own
+    thread.  So `val n = 42' hovered as "val n: int" and nothing
+    else."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_local_value.sml"
+        src = ("Theory hover_local_value\n"
+               "Ancestors arithmetic\n\n"
+               "val n = 42\n"
+               "val greeting = \"hi\"\n"
+               "val xs = [1,2,3]\n"
+               "val m = n + 1\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # `n' as used on the last line, so the hover is a *reference*
+        # to a binding an earlier declaration made.
+        r = _hover_at(c, 60, uri, 6, src.split("\n")[6].index("n +"))
+        md = r["contents"]["value"]
+        assert_true("val n" in md, f"names the value ({md!r})")
+        assert_true("int" in md, f"gives the type ({md!r})")
+        assert_true("42" in md, f"and the value ({md!r})")
+        r = _hover_at(c, 61, uri, 4, 4)
+        md = r["contents"]["value"]
+        assert_true("hi" in md, f"string value shown ({md!r})")
+        r = _hover_at(c, 62, uri, 5, 4)
+        md = r["contents"]["value"]
+        assert_true("1" in md and "2" in md,
+                    f"list value shown ({md!r})")
+    finally:
+        c.close()
+
+
+def test_hover_shows_a_local_theorem_statement():
+    """A `[local]' theorem is never in DB, so the name-lookup path
+    could not reach it; it now prints from its own value, via the
+    Poly/ML pretty printer that pretty_printers_init.ML installs."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_local_thm.sml"
+        src = ("Theory hover_local_thm\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem helper[local]:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  ALL_TAC\n"
+               "QED\n\n"
+               "val alias = helper\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _hover_at(c, 63, uri, 9, src.split("\n")[9].index("helper"))
+        md = r["contents"]["value"]
+        assert_true("thm" in md, f"gives the type ({md!r})")
+        assert_true("n + 0 = n" in md,
+                    f"and the statement of the local theorem ({md!r})")
+    finally:
+        c.close()
+
+
+def test_hover_width_comes_from_the_client():
+    """Hover text was rendered at a fixed 100 columns, which is far
+    wider than a VS Code hover box, so statements broke in the wrong
+    places.  `$/setConfig' sets the width, and the next hover uses
+    it."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_width.sml"
+        # A statement long enough that 40 columns must break it and
+        # 100 need not.
+        src = ("Theory hover_width\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem wide[local]:\n"
+               "  !a b c d:num. a + b + c + d = d + c + b + a\n"
+               "Proof\n"
+               "  ALL_TAC\n"
+               "QED\n\n"
+               "val alias = wide\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        col = src.split("\n")[9].index("wide")
+
+        def widest(rid):
+            md = _hover_at(c, rid, uri, 9, col)["contents"]["value"]
+            body = [l for l in md.split("\n") if not l.startswith("`")]
+            return max(len(l) for l in body), md
+
+        wide_at_100, md100 = widest(64)
+        r = _request(c, 65, "$/setConfig", {"hoverWidth": 40})
+        assert_true(r is not None and "error" not in r,
+                    f"setConfig accepted ({r})")
+        wide_at_40, md40 = widest(66)
+        assert_true(wide_at_40 <= 40,
+                    f"40-column hover stays inside 40 "
+                    f"({wide_at_40}, {md40!r})")
+        assert_true(wide_at_40 < wide_at_100,
+                    f"and is narrower than the default "
+                    f"({wide_at_40} vs {wide_at_100})")
+        # A nonsense width is ignored rather than rendering one
+        # character per line.
+        r = _request(c, 67, "$/setConfig", {"hoverWidth": 1})
+        assert_true(r is not None and "error" not in r, "silly width ok")
+        still, md = widest(68)
+        assert_true(still > 1, f"width 1 was ignored ({still}, {md!r})")
+    finally:
+        c.close()
+
+
+def test_hover_markdown_is_fenced():
+    """Hover contents go out as markdown, where a single newline is
+    not a line break: unfenced, a client reflows the statement and
+    every break the pretty printer chose is lost."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_fence.sml"
+        src = ("Theory hover_fence\n"
+               "Ancestors arithmetic\n\n"
+               "val n = 42\n"
+               "val m = n + 1\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _hover_at(c, 69, uri, 4, src.split("\n")[4].index("n +"))
+        md = r["contents"]["value"]
+        assert_true(r["contents"]["kind"] == "markdown", "sent as markdown")
+        assert_true(md.startswith("```") and md.rstrip().endswith("```"),
+                    f"fenced as a code block ({md!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5153,6 +5292,13 @@ TESTS = [
                                      test_goalState_cache_invalidates_on_upstream_change),
     ("goalState_cache_preserved_when_edit_is_downstream",
                                      test_goalState_cache_preserved_when_edit_is_downstream),
+    ("hover_shows_the_value_of_a_local_binding",
+     test_hover_shows_the_value_of_a_local_binding),
+    ("hover_shows_a_local_theorem_statement",
+     test_hover_shows_a_local_theorem_statement),
+    ("hover_width_comes_from_the_client",
+     test_hover_width_comes_from_the_client),
+    ("hover_markdown_is_fenced",      test_hover_markdown_is_fenced),
 ]
 
 

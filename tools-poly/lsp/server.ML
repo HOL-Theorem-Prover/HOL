@@ -978,7 +978,15 @@ fun start {diag, dbg} = let
           if !warnedOnce then () else (warnedOnce := true; warnUser msg)
         end
 
-  val textWidth = 100 (* configure? *)
+  (* Column width hover text is rendered at until the client says
+     otherwise via `$/setConfig'.  It has to come from the client: a
+     hover is markdown in a box whose width only the client knows, and
+     rendering a theorem at a width the box does not have is what makes
+     it break in the wrong places.  Emacs shows hovers in the echo area,
+     which is frame-wide, so 100 has always looked right there; VS
+     Code's hover box is far narrower. *)
+  val textWidth = 100
+  val hoverWidth = ref textWidth
   val printDepth = 100
 
   val jobs = let
@@ -2058,21 +2066,72 @@ fun start {diag, dbg} = let
     | NONE => NONE
     in case state of NONE => getIfValid (!lastTrees) | state => state end
 
+  (* The buffer's outline, parsed at most once per text version: the
+     outline is asked for on every edit, and `workspace/symbol' asks
+     every open buffer on every keystroke of the search box. *)
+  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = !lastTrees
+    fun parse () = let val syms = bufferSymbols text
+                   in symbols := SOME (version, syms); syms end
+    in
+      case !symbols of
+        SOME (v, syms) => if v = version then syms else parse ()
+      | NONE => parse ()
+    end
+
   fun hover uri v (startTarget, endTarget) = let
     val ({plugins, builtTrees, ...}, text, endOffset) =
       case getState v endTarget of NONE => raise Empty | SOME s => s
+    (* Once per hover, so a `$/setConfig' landing mid-hover cannot lay
+       out half of one answer at each width. *)
+    val width = !hoverWidth
+    (* Every binding the buffer makes -- and everything it `open'ed --
+       lives in the compile thread's file layer, which is thread-local.
+       A hover runs on its own `spawnJob' thread, which starts with an
+       empty layer, so without this it can only see what the LSP boot
+       session left in `globalNameSpace' -- and that session opens
+       nothing on purpose.  Hence no value for anything the user wrote,
+       nor for `DECIDE_TAC' and friends.  Install the captured layer,
+       exactly as `completionsAt' does. *)
+    val () = case !(#nsLayer v) of SOME restore => restore () | NONE => ()
+    (* The names this buffer declares at top level, from the outline's
+       own (cached) parse -- see `isNamespaceName' below. *)
+    val topLevelSyms = symbolsOf v
     val startOffset = fromLineCol (#lines text) startTarget
     fun ppToString pp = let
       val mds = DArray.new (8, "")
-      val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), textWidth) pp
+      val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), width) pp
       in concat (DArray.toList mds) end
     val ctx = {uri = uri, lines = #lines text, plugins = plugins,
-               ppToString = ppToString, width = textWidth}
+               ppToString = ppToString, width = width}
     val out = !LSPExtension.hover (ctx, (startOffset, endOffset))
     fun locToRange {startPosition, endPosition, ...} = (
       getLineCol (#lines text) (FixedInt.toInt startPosition),
       getLineCol (#lines text) (FixedInt.toInt endPosition))
-    fun typeHover (loc, pp) = {range = SOME (locToRange loc), markdown = ppToString pp}
+    (* Hover contents travel as markdown, where a single newline is not
+       a line break and the font is proportional -- so unfenced, every
+       break the pretty printer just chose is thrown away and the text
+       is reflowed.  Fence it.  The fence is one backtick longer than
+       the longest run in the content, so a term or string containing
+       backticks cannot close the block early. *)
+    fun fenced str = let
+      fun longest (i, best, cur) =
+          if i >= size str then Int.max (best, cur)
+          else if String.sub (str, i) = #"`"
+          then longest (i + 1, best, cur + 1)
+          else longest (i + 1, Int.max (best, cur), 0)
+      val n = Int.max (3, longest (0, 0, 0) + 1)
+      val fence = CharVector.tabulate (n, fn _ => #"`")
+      (* The pretty printer leaves a trailing newline, which inside a
+         fence is a blank line the reader can see. *)
+      fun rtrim s = let
+        fun k i = if i > 0 andalso
+                     Char.contains "\n\r \t" (String.sub (s, i-1))
+                  then k (i-1) else i
+        in String.substring (s, 0, k (size s)) end
+      in fence ^ "\n" ^ rtrim str ^ "\n" ^ fence end
+    fun typeHover (loc, pp) =
+      {range = SOME (locToRange loc), markdown = fenced (ppToString pp)}
     fun process loc props = let
       fun fromProps [] out = out
         | fromProps (HOL_IDE.PType ty :: props) (isId, _) = fromProps props (isId, SOME ty)
@@ -2108,28 +2167,63 @@ fun start {diag, dbg} = let
           handle _ => []
         val range = SOME (getLineCol (#lines text) startPos, getLineCol (#lines text) endPos)
         val help = map (fn d => {range = range, markdown = d}) help
-        val isGlobalId = i = 0 orelse let
+        (* Does this identifier name something the file namespace can
+           resolve *to this same binding*?
+
+           `i = 0' is everything declared outside the file: those are
+           in the layer (or in `globalNameSpace' behind it) under the
+           name written here.  Anything else was declared in the file,
+           and only its top-level declarations are entered into the
+           layer -- a function parameter or a `let'-bound name never
+           is, and a same-named top-level binding is a different thing
+           entirely, so looking one up would print a value belonging to
+           something else.
+
+           `PDeclaredAt' points at the declared name as written, and so
+           does an outline symbol's `selSpan', so equal spans mean this
+           identifier was declared by that top-level declaration.  The
+           outline is already parsed and cached per buffer version, so
+           this costs a list scan.
+
+           Poly/ML's own answer to the question -- `PReferences' on the
+           declaring node, reached by navigating to `PDeclaredAt' --
+           does not survive the trip: the node the built trees return
+           for that span carries no such property. *)
+        val isNamespaceName = i = 0 orelse let
           fun look [] = NONE
             | look (HOL_IDE.PDeclaredAt loc :: _) = SOME loc
             | look (_ :: props) = look props
-          fun lookRefs [] = false
-            | lookRefs (HOL_IDE.PReferences exp :: _) = exp
-            | lookRefs (_ :: props) = lookRefs props
           in
             case look props of
               NONE => false
-            | SOME {startPosition, endPosition, ...} =>
-              case HOL_IDE.builtNavigateTo' builtTrees
-                  {startOffset = FixedInt.fromInt startPosition, endOffset = FixedInt.fromInt endPosition} of
-                NONE => false
-              | SOME (HOL_IDE.Built (_, declProps, _), _) => lookRefs declProps
+            | SOME {startPosition, endPosition, ...} => let
+                val span = (FixedInt.toInt startPosition,
+                            FixedInt.toInt endPosition)
+                in List.exists (fn Sym {selSpan, ...} => selSpan = span)
+                               topLevelSyms
+                end
           end
         (* Lookup via the LSP file layer, not `globalNameSpace`, so
            hovers on a deleted `val foo = …` return NONE instead of
            the retained Poly/ML binding.  The layer falls through to
            `globalNameSpace` for bindings from the LSP-boot session
            (bossLib etc.). *)
-        val value = if isGlobalId then #lookupVal LSPNameSpace.fileNS id else NONE
+        (* Poly/ML's value tables are flat, so a dotted name has to be
+           walked: every component but the last names a structure, and
+           the last is looked up in that structure's own namespace.
+           Without this `numSyntax.plus_tm' has no value to print, and
+           only theorems had any fallback at all (DB, by name). *)
+        fun lookupDotted ns [] = NONE
+          | lookupDotted ns [nm] = #lookupVal ns nm
+          | lookupDotted ns (c :: cs) =
+            (case #lookupStruct ns c of
+               NONE => NONE
+             | SOME st =>
+               lookupDotted (PolyML.NameSpace.Structures.contents st) cs)
+        val value =
+          if isNamespaceName
+          then lookupDotted LSPNameSpace.fileNS (splitOn #"." id)
+          else NONE
         in (SOME id, value, help) end
       open PolyML
       val ty = Option.map (fn ty =>
@@ -2140,38 +2234,34 @@ fun start {diag, dbg} = let
           case NameSpace.Values.print (value, printDepth) of
             PrettyString "" => NONE
           | otherwise => SOME otherwise
-      (* Values of type `thm` are opaque to PolyML.NameSpace.Values;
-         the SML-side hover would show only "val name: thm = ?".
-         When DB has a theorem by this name, replace the standard
-         value-print with the theorem statement (rendered by
-         Parse.thm_to_string on the LSP-init hook). *)
-      val thmMd = case id of
-          NONE => NONE
-        | SOME id => (!LSPExtension.thmLookup id handle _ => NONE)
-      val out = case (id, ty, value, thmMd) of
-          (_, NONE, NONE, _) => []
+      (* A name with no value in scope may still be a theorem DB knows
+         about -- in practice a dotted reference, which Poly/ML's flat
+         value tables cannot resolve.  Ask DB for those, and take its
+         answer as the value.
+
+         A real value wins over a same-named DB entry, because it is
+         what the identifier actually denotes: a file that rebinds
+         `ADD_COMM' should hover as its own theorem, not arithmetic's.
+         In-scope theorems -- `[local]' ones included -- print from
+         their values now that `pretty_printers_init.ML' gives Poly/ML
+         a printer for `thm'; before that they showed only a type,
+         which is what this DB lookup was standing in for. *)
+      val value =
+        case (value, id) of
+            (SOME _, _) => value
+          | (NONE, NONE) => NONE
+          | (NONE, SOME id) => (!LSPExtension.thmLookup id handle _ => NONE)
+      val out = case (id, ty, value) of
+          (_, NONE, NONE) => []
         (* Type without an identifier is the walked-up enclosing
            expression's type (`Conv.conv`, `Thm.thm -> Thm.thm`, …).
            Never informative — the user's cursor missed a specific
            name and we've fallen up.  Return nothing. *)
-        | (NONE, SOME _, NONE, _) => []
-        | (SOME id, SOME ty, _, SOME md) => let
-          (* Theorem: "val id: thm\n\n<statement>" as one markdown block.
-             ppToString may leave a trailing newline; strip it before
-             appending the separator so we get exactly one blank line. *)
-          fun rtrim s = let
-            val n = size s
-            fun k i = if i > 0 andalso Char.contains "\n\r " (String.sub (s, i-1))
-                      then k (i-1) else i
-            in String.substring (s, 0, k n) end
-          in [{range = SOME (locToRange loc),
-               markdown = "val " ^ id ^ ": " ^ rtrim (ppToString ty)
-                          ^ "\n\n" ^ md}]
-          end
-        | (SOME id, SOME ty, NONE, NONE) =>
+        | (NONE, SOME _, NONE) => []
+        | (SOME id, SOME ty, NONE) =>
           [typeHover (loc, PrettyBlock(0, true, [],
             [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
-        | (id, ty, SOME value, NONE) =>
+        | (id, ty, SOME value) =>
           [typeHover (loc, PrettyBlock(2, true, [], [
             PrettyBlock(0, false, [],
               (case ty of
@@ -2181,7 +2271,6 @@ fun start {diag, dbg} = let
                   PrettyBreak(1, 2), ty])
               @ [PrettyBreak(1, 2), PrettyString "="]),
              PrettyBreak(1, 0), value]))]
-        | _ => []
       in thyHov @ help @ out end
     fun crossesNewline (s, e) = let
       val txt = #text text
@@ -2219,7 +2308,7 @@ fun start {diag, dbg} = let
       val quote = String.substring (#text text, qs, qe - qs)
       in !LSPExtension.hoverQuotation
            ({uri = uri, lines = #lines text, plugins = plugins,
-             ppToString = ppToString, width = textWidth},
+             ppToString = ppToString, width = width},
             {quote = quote, quoteStart = qs, target = startOffset}) end
     fun f () = fromTree innermost
     val out =
@@ -2337,19 +2426,6 @@ fun start {diag, dbg} = let
              val () = restoreLater ()
          in r end
     end handle Empty => NONE
-
-  (* The buffer's outline, parsed at most once per text version: the
-     outline is asked for on every edit, and `workspace/symbol' asks
-     every open buffer on every keystroke of the search box. *)
-  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
-    val {text = {text, version, ...}, ...} = !lastTrees
-    fun parse () = let val syms = bufferSymbols text
-                   in symbols := SOME (version, syms); syms end
-    in
-      case !symbols of
-        SOME (v, syms) => if v = version then syms else parse ()
-      | NONE => parse ()
-    end
 
   (* `workspace/symbol'.  Answers from what HOL knows exists -- see
      `LSPExtension.ideSymbols' -- unioned with the declarations of the
@@ -2659,6 +2735,13 @@ fun start {diag, dbg} = let
       case JSONDecode.decode (JSONDecode.fieldO "elabOn" elabOn) params of
         NONE => ()
       | SOME v => elabOnRef := v;
+      (* Ignore a nonsense width rather than rendering everything one
+         character per line. *)
+      case JSONDecode.decode
+             (JSONDecode.fieldO "hoverWidth" JSONDecode.int) params of
+        NONE => ()
+      | SOME w => if w >= 20 andalso w <= 500 then hoverWidth := w
+                  else logMessage ("ignoring hoverWidth " ^ Int.toString w);
       send (mkResponse id (Ok encNull)))
       handle JSONDecode.JSONError _ =>
         send (mkResponse id (mkErr InvalidParams "json decode failed")))
