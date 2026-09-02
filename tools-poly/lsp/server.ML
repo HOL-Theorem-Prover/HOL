@@ -1115,6 +1115,14 @@ fun start {diag, dbg} = let
        entry so a user-fix removes the squiggle without waiting
        for the next compile. *)
     walkerDiags: (string, report) Binarymap.dict ref,
+    (* Squiggles for the proofs the pool has an opinion about, keyed by
+       theorem name.  Deliberately *not* cleared by a fresh compile,
+       unlike `walkerDiags': the pool owns these entries' lifetime and
+       announces every change, including the `Cheated' it sends when it
+       drops one.  A compile that re-enqueues an unchanged proof reuses
+       its entry rather than re-announcing it, so clearing here would
+       lose a squiggle with nothing left to restore it. *)
+    proofDiags: (string, report) Binarymap.dict ref,
     (* Set when a compile was abandoned because the file's declared
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
@@ -1156,6 +1164,7 @@ fun start {diag, dbg} = let
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
         debounce = ref 0, minEditOffset = ref NONE,
         walkerDiags = ref (Binarymap.mkDict String.compare),
+        proofDiags = ref (Binarymap.mkDict String.compare),
         depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
         nsGen = ref 0, nsNames = ref NONE} end
 
@@ -1477,17 +1486,85 @@ fun start {diag, dbg} = let
       else ()
     end
 
+  (* The buffer's outline, parsed at most once per text version: the
+     outline is asked for on every edit, and `workspace/symbol' asks
+     every open buffer on every keystroke of the search box. *)
+  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = !lastTrees
+    fun parse () = let val syms = bufferSymbols text
+                   in symbols := SOME (version, syms); syms end
+    in
+      case !symbols of
+        SOME (v, syms) => if v = version then syms else parse ()
+      | NONE => parse ()
+    end
+
+  (* The range to squiggle for a proof: the theorem's own name, via
+     the outline symbol whose span covers the declaration's start byte.
+     Falls back to that byte itself -- the `Theorem' keyword, visible
+     if less pointed -- when no symbol covers it, which is a proof
+     inside a declaration whose name the outline did not recognise. *)
+  fun proofRange v limit offset = let
+    fun containing [] = NONE
+      | containing (Sym {span = (s, e), selSpan, ...} :: rest) =
+        if s <= offset andalso offset < e then SOME selSpan
+        else containing rest
+    val (s, e) = case containing (symbolsOf v) of
+                     SOME sp => sp
+                   | NONE => (offset, offset + 1)
+    (* Byte offsets: `encDiag' turns them into line/column against
+       whatever text is current when the diagnostic goes out.  Clamped
+       because the offset was recorded against the text the proof was
+       elaborated from, which an edit may have shortened since. *)
+    fun clamp i = Int.max (0, Int.min (i, limit))
+    in (clamp s, clamp e) end
+
+  (* What a verdict means for the file, as a diagnostic.
+     `Failed' is an error: the real build would have raised out of
+     `store_thm_at', so nothing below it is trustworthy.  The other two
+     are warnings about our *model* of the file rather than about the
+     file -- the proof itself went through -- so they say what is
+     actually wrong.  The remaining states are not diagnostics: they
+     say the pool has no complaint, or none yet. *)
+  (* `exn_to_string' comes with a leading newline and wraps, which in
+     a diagnostic reads as a blank first line.  One line is what a
+     gutter tooltip and a `flymake' echo want. *)
+  fun oneLine str = let
+    val fields = String.fields Char.isSpace str
+    in String.concatWith " " (List.filter (fn f => f <> "") fields) end
+
+  fun proofDiagOf status =
+    case status of
+        LSPExtension.Failed msg =>
+        SOME (true, "proof failed: " ^ oneLine msg)
+      | LSPExtension.Suspended names =>
+        SOME (false,
+              "proof suspends subgoals (" ^ names ^
+              "), so a real build stashes this theorem instead of \
+              \saving it; the declarations below were elaborated as \
+              \though it had been saved")
+      | LSPExtension.Diverged detail =>
+        SOME (false,
+              "proof produced " ^ detail ^
+              ", so what elaboration stood in for this theorem was \
+              \not what the proof gives")
+      | _ => NONE
+
   (* Emit publishDiagnostics for `uri` combining the last-completed
      compile's diagnostics and any walker-observed runtime squiggles. *)
   fun publishAllDiagnostics uri
-                            ({lastTrees, walkerDiags, ...}:file_data) = let
+                            ({lastTrees, walkerDiags, proofDiags,
+                              ...}:file_data) = let
     val {text, parse} = !lastTrees
     val {lines, version, ...} = text
     val compileDiags = #diags parse
     val wd = !walkerDiags
-    val total = DArray.size compileDiags + Binarymap.numItems wd
+    val pd = !proofDiags
+    val total = DArray.size compileDiags + Binarymap.numItems wd +
+                Binarymap.numItems pd
     val snapshot = DArray.clone (compileDiags, total)
     val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) wd
+    val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) pd
     val snapshot = dedupReports snapshot
     fun encDiag (Error {hard, pos, msg}) print = (
         print "{\"range\":"; encRangeLC lines pos print;
@@ -1503,9 +1580,49 @@ fun start {diag, dbg} = let
       print "}")))
   end
 
+  (* Fold one proof-state transition into this file's diagnostics and
+     re-publish if that changed anything.  Runs on the worker that
+     settled the proof, so it must not raise; the caller wraps it. *)
+  fun updateProofDiag uri (v as {proofDiags, lastTrees, compile,
+                                 ...}: file_data)
+                      {site, offset, status} = let
+    val {text = {text, ...}, ...} = !lastTrees
+    (* Publishing from here while a compile is running would undo that
+       compile's own publishDiagnostics: it sends its in-progress list,
+       this one sends the frozen `lastTrees' prefix -- and during a
+       compile `lastTrees' is still the *previous* text's, because it is
+       assigned last.  A verdict landing in that window would drop the
+       diagnostics the compile had just reported.  So while the compile
+       is alive, leave it to `sendDiags', which merges these entries
+       too, and to the catch-up publish once `lastTrees' is current. *)
+    fun compiling () =
+      case !compile of
+          NONE => false
+        | SOME {thread, cancelled, ...} =>
+          Thread.isActive thread andalso not (!cancelled)
+    fun republish () = if compiling () then () else publishAllDiagnostics uri v
+    val pd = !proofDiags
+    val prev = Binarymap.peek (pd, site)
+    val next = case proofDiagOf status of
+        NONE => NONE
+      | SOME (hard, msg) =>
+        SOME (Error {hard = hard,
+                     pos = proofRange v (size text) offset,
+                     msg = encString msg})
+    in
+      case (prev, next) of
+        (NONE, NONE) => ()
+      | (SOME _, NONE) => (proofDiags := #1 (Binarymap.remove (pd, site));
+                           republish ())
+        (* Re-published even when the entry looks the same: the text it
+           points into may have moved under it. *)
+      | (_, SOME d) => (proofDiags := Binarymap.insert (pd, site, d);
+                        republish ())
+    end
+
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
-                              walkerDiags, depsBlocked, nsLayer, nsGen,
-                              ...}:file_data) =
+                              walkerDiags, proofDiags, depsBlocked,
+                              nsLayer, nsGen, ...}:file_data) =
     (* Every route to a compile comes through here -- didOpen,
        didChange's debounce, didSave, `$/hol/retryCompile', and the
        proof pool's retract -- so this is the one place the binding has
@@ -1746,13 +1863,16 @@ fun start {diag, dbg} = let
       fun sendDiags () = let
         val n = DArray.size oldDiags
         val wd = !walkerDiags
-        val ws = Binarymap.numItems wd
+        val pd = !proofDiags
+        val ws = Binarymap.numItems wd + Binarymap.numItems pd
         val total = n + ws
         in if total = !lastSentSize then () else (
           lastSentSize := total;
           let val snapshot = DArray.clone (oldDiags, total)
               val _ = Binarymap.app
                         (fn (_, r) => DArray.push (snapshot, r)) wd
+              val _ = Binarymap.app
+                        (fn (_, r) => DArray.push (snapshot, r)) pd
               val snapshot = dedupReports snapshot
           in
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
@@ -1980,6 +2100,12 @@ fun start {diag, dbg} = let
                  (* Runs on the worker that settled the proof, so it must
                     not raise. *)
                  sendProofStates uri (#lines text) [st];
+                 (* The three verdicts that need attention also become
+                    diagnostics, so a failed replay is visible in the
+                    editor rather than only to a client that speaks
+                    `$/proofStates'.  Anything else clears this proof's
+                    entry, the `Cheated' of a dropped proof included. *)
+                 (updateProofDiag uri v st handle _ => ());
                  (case status of
                       LSPExtension.Suspended _ => retract ()
                     | LSPExtension.Diverged _ => retract ()
@@ -1995,7 +2121,13 @@ fun start {diag, dbg} = let
           send (mkNotif "$/compileCompleted" (fn print => (
             print "{\"uri\":"; encString uri print; print "}")));
           lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)}))
+                        parse = setParseDone (size (#text text)) (!trees)};
+          (* A verdict that settled while this pass was finishing did
+             not publish -- see `updateProofDiag' -- and `lastTrees' is
+             only now current.  Catch up, so a lone proof's diagnostic
+             does not wait for the next event. *)
+          if Binarymap.numItems (!proofDiags) > 0
+          then publishAllDiagnostics uri v else ()))
       in (
         case List.filter stillMissing (rev (!depFails)) of
           fails as (_::_) => blockOnDeps fails
@@ -2065,19 +2197,6 @@ fun start {diag, dbg} = let
       SOME {parse, text, ...} => getIfValid {parse = !parse, text = text}
     | NONE => NONE
     in case state of NONE => getIfValid (!lastTrees) | state => state end
-
-  (* The buffer's outline, parsed at most once per text version: the
-     outline is asked for on every edit, and `workspace/symbol' asks
-     every open buffer on every keystroke of the search box. *)
-  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
-    val {text = {text, version, ...}, ...} = !lastTrees
-    fun parse () = let val syms = bufferSymbols text
-                   in symbols := SOME (version, syms); syms end
-    in
-      case !symbols of
-        SOME (v, syms) => if v = version then syms else parse ()
-      | NONE => parse ()
-    end
 
   fun hover uri v (startTarget, endTarget) = let
     val ({plugins, builtTrees, ...}, text, endOffset) =

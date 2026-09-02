@@ -122,6 +122,42 @@ eglot, hovers land in the frame-wide echo area, so
 `hol-lsp-hover-width` is nil (leave it at 100) unless you set a number
 or the symbol `frame`.
 
+## Proof checking (`--lsp-check-proofs`)
+
+Elaboration does not run tactics: `holide.ML` swaps in a prover that
+mints an oracle-tagged theorem, which is what makes compilation fast.
+Started with `--lsp-check-proofs`, the server instead *queues* each
+proof and a worker pool (`lsp/deferred_proofs.ML`, on HOL's `Future`)
+replays them, one cancellable group per proof.  Off by default, so an
+LSP session costs elaboration only unless asked otherwise.
+
+Three of the pool's verdicts are diagnostics, keyed by theorem name
+and squiggled on the theorem's own name:
+
+| verdict | severity | means |
+|---|---|---|
+| `Failed` | error | the replay did not go through.  A real build would have raised out of `store_thm_at`, so nothing below it is trustworthy. |
+| `Suspended` | warning | the proof is *correct*; our model of the file was wrong.  A real build stashes such a theorem instead of saving it, so the declarations below were elaborated as though it had been saved.  Names the subgoals. |
+| `Diverged` | warning | the proof went through but produced extra hypotheses, so what elaboration stood in for was not what the proof gives. |
+
+The other states are not diagnostics: `Proved` and `Cheated` are not
+complaints, and `Checking` is not one yet.
+
+These entries are **not** cleared by a fresh compile, unlike the
+walker's.  The pool owns their lifetime and announces every change,
+the `Cheated` of a dropped proof included, so clearing them on a
+compile that reuses its entries would lose a squiggle with nothing
+left to restore it.  A proof that gets fixed therefore clears in two
+steps: the edit drops the entry (`cheated`), and the re-elaborated
+proof settles as `proved`.
+
+Every change is also announced on `$/proofStates` as a transition --
+`checking`, then a verdict, `cheated` when an entry is dropped -- for
+a client that wants to render progress per declaration.  There is
+deliberately no full-state message: the state would have to be
+sampled and only then sent, so a worker settling in between would have
+its newer verdict overwritten by the older sample.
+
 ## Goal-state at cursor (`$/hol/goalState`)
 
 Custom LSP request that returns the goal-state for a cursor position

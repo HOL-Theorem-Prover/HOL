@@ -2035,9 +2035,15 @@ def test_suspension_re_elaborates_with_the_real_theorem():
             _did_open(c, uri, src)
             assert_true(c.wait_for_method("$/compileCompleted", 60),
                         "first compileCompleted")
-            # First pass cheats everything, so the file looks clean.
-            assert_eq(len(_diag_count(c, uri)), 0,
-                      f"cheating pass sees no problem "
+            # First pass cheats everything, so the file has no errors
+            # in it yet.  Warnings are a different matter: the pool's
+            # `suspended' verdict is itself a warning, and it can land
+            # before this line runs -- it is what provokes the
+            # re-elaboration this test is about.
+            errs = [dg for dg in _diag_count(c, uri)
+                    if dg.get("severity") == 1]
+            assert_eq(len(errs), 0,
+                      f"cheating pass reports no error "
                       f"({_diag_count(c, uri)!r})")
 
             def cited_error(cl):
@@ -5096,6 +5102,156 @@ def test_hover_markdown_is_fenced():
         c.close()
 
 
+def test_failed_proof_becomes_a_diagnostic():
+    """The pool's verdict used to reach only a client that speaks
+    `$/proofStates', so a failed replay was invisible in an editor.
+    A failure is an error diagnostic on the theorem's name -- the real
+    build would have raised out of `store_thm_at'."""
+    d = tempfile.mkdtemp(prefix="lsp_pdiag_")
+    try:
+        src = ("Theory pdiagfail\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem fine:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n"
+               "\n"
+               "Theorem wrong:\n"
+               "  1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/pdiagfailScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def failed(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "proof failed" in x.get("message", "")]
+                return ds or None
+
+            ds = c.wait_until(failed, 60)
+            assert_true(ds is not None,
+                        f"a diagnostic for the failed proof "
+                        f"({_proof_states(c, uri)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+            assert_eq(len(ds), 1, f"exactly one ({ds!r})")
+            assert_eq(ds[0]["severity"], 1, "reported as an error")
+            # On `wrong', not on `fine' and not on the whole file.
+            line = ds[0]["range"]["start"]["line"]
+            assert_eq(line, 9,
+                      f"on the failing theorem's own line ({ds[0]!r})")
+            got = src.split("\n")[line]
+            assert_true("wrong" in got, f"which is {got!r}")
+            assert_true(all("fine" not in x.get("message", "") for x in ds),
+                        "the good proof gets no diagnostic")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_suspending_proof_becomes_a_warning():
+    """A suspension is not the file's fault -- the proof went through.
+    What is wrong is our model of it, so it warns rather than errors,
+    and says what the cost is."""
+    d = tempfile.mkdtemp(prefix="lsp_pdiagsusp_")
+    try:
+        src = (_SUSP_PREAMBLE % "pdiagsusp" +
+               "Theorem willsplit:\n"
+               "  p /\\ (p ==> q) ==> p /\\ q\n"
+               "Proof\n"
+               "  strip_tac >> conj_tac\n"
+               "  >- suspend \"p\"\n"
+               "  >- suspend \"q\"\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/pdiagsuspScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def warned(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "suspends subgoals" in x.get("message", "")]
+                return ds or None
+
+            ds = c.wait_until(warned, 90)
+            assert_true(ds is not None,
+                        f"a diagnostic for the suspension "
+                        f"({_proof_states(c, uri)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+            assert_eq(ds[0]["severity"], 2, "a warning, not an error")
+            msg = ds[0]["message"]
+            assert_true("p" in msg and "q" in msg,
+                        f"naming the suspended subgoals ({msg!r})")
+            assert_true("stashes" in msg,
+                        f"and saying what it costs ({msg!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_proof_diagnostic_clears_when_the_proof_is_fixed():
+    """The squiggle has to go when the proof does.  Editing the tactic
+    drops the pool's entry -- announced as `cheated' -- and the
+    re-elaborated proof then settles as `proved', so nothing is left
+    behind."""
+    d = tempfile.mkdtemp(prefix="lsp_pdiagfix_")
+    try:
+        bad = ("Theory pdiagfix\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem thing:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  FAIL_TAC \"nope\"\n"
+               "QED\n")
+        good = bad.replace('FAIL_TAC \"nope\"', "DECIDE_TAC")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/pdiagfixScript.sml"
+            _did_open(c, uri, bad)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def failed(cl):
+                return [x for x in _diag_count(cl, uri)
+                        if "proof failed" in x.get("message", "")] or None
+
+            assert_true(c.wait_until(failed, 60) is not None,
+                        f"the failure is reported first "
+                        f"({_diag_count(c, uri)!r})")
+            _did_change_full(c, uri, good, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=c.total_msgs()) or True,
+                        "recompiled")
+
+            def cleared(cl):
+                ds = _diag_count(cl, uri)
+                return ds is not None and not [
+                    x for x in ds if "proof failed" in x.get("message", "")]
+
+            assert_true(c.wait_until(cleared, 60),
+                        f"and cleared once the proof is fixed "
+                        f"({_diag_count(c, uri)!r}, "
+                        f"{_proof_states(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5299,6 +5455,12 @@ TESTS = [
     ("hover_width_comes_from_the_client",
      test_hover_width_comes_from_the_client),
     ("hover_markdown_is_fenced",      test_hover_markdown_is_fenced),
+    ("failed_proof_becomes_a_diagnostic",
+     test_failed_proof_becomes_a_diagnostic),
+    ("suspending_proof_becomes_a_warning",
+     test_suspending_proof_becomes_a_warning),
+    ("proof_diagnostic_clears_when_the_proof_is_fixed",
+     test_proof_diagnostic_clears_when_the_proof_is_fixed),
 ]
 
 
