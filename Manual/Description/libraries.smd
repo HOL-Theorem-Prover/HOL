@@ -1359,6 +1359,13 @@ a valid SML identifier containing only alpha-numeric characters
 permitted).  In the first form, `ident1` must be a simple
 (unqualified) alphanumeric identifier (e.g., `foo`, `bar'`,
 `Foo_bar`, but not `M.bar`, nor `++`).
+
+The quoted material is passed to the identifier verbatim: unlike
+the material of a `Definition` or `Theorem`, it may begin a line
+with an SML keyword such as `fun`, or with a keyword such as
+`Theorem` or `QED`.  The only exception is `End` itself, which
+closes the quotation wherever it occurs in column 1, so material
+needing a column-1 `End` cannot be written with this syntax.
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|)}
 
 ### Backwards compatibility of syntax
