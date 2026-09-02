@@ -11,22 +11,23 @@ repository.
 - `HOLSELFTESTLEVEL=2 Holmake` also runs the selftest (output tees to
   `tests/holrefute-selftest.log`) and `theory_tests/`.
 - After building, `tests/selftest.exe` reruns the selftest directly, from
-  inside `tests/` — golden files resolve relative to the cwd.
-  `HOLSELFTESTLEVEL=2 ./selftest.exe` there enables the level-2 suites
-  (cross-substrate conformance, Cv cleanliness, corpus).
-  `tests/selftest.sml` is one program with `diemode := Remember` — there is
-  no finer per-test selection.
-- `tests/` holds everything test-only: `selftest.sml`, its golden files
-  under `tests/goldens/`, and the fixture theories the selftest loads
-  (`refuteTableZoo`, `refuteUnused`, `refuteHarvestType`,
-  `refuteHarvestAbs`).  It is a child directory with `INCLUDES = ..` and
-  `--no_prereqs`, driven by a recursive `Holmake -C`, because a parent may
-  not INCLUDE its own subdirectory.  Fixture theories stay out of the
-  global sigobj namespace by living here.
+  inside `tests/`.  `HOLSELFTESTLEVEL=2 ./selftest.exe` there enables the
+  level-2 suites (cross-substrate conformance, narrowing table, corpus,
+  model-finder acceptance tables).  `tests/selftest.sml` is one program
+  with `diemode := Remember` — there is no finer per-test selection.
+- `tests/` holds everything test-only: `selftest.sml` and the fixture
+  theories it loads (`refuteTableZoo`, `refuteUnused`,
+  `refuteHarvestType`, `refuteHarvestAbs`).  It is a child directory
+  with `INCLUDES = ..` and `--no_prereqs`, driven by a recursive
+  `Holmake -C`, because a parent may not INCLUDE its own subdirectory.
+  Fixture theories stay out of the global sigobj namespace by living
+  here.
 - Interactive session: start `bin/hol`, then run `load "Refute"`.
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` here.  Level 2 is not optional —
-  cross-substrate conformance, candidate-stream equality, and Cv cleanliness
-  only run there.
+  cross-substrate conformance and the acceptance tables only run there.
+- The selftest exercises only the `Refute` signature: user-visible outcomes,
+  messages and registrations.  Mechanism-level checks (internal modules,
+  counters, serializer goldens) do not belong there.
 - The root CLAUDE.md's `--seq=tools/sequences/upto-parallel` pass does not
   reach this directory and adds no signal: it stops before
   `src/parallel_builds`, which is what pulls in HolRefute (POLY-only
@@ -96,9 +97,10 @@ repository.
 - Determinism: one 64-bit PRNG (`rand_next`/`rand_out`/`rand_below`,
   defined in refuteTheory, mirrored in SML in `Refute_Eval`,
   cv-translated in `refute_cvScript.sml`).  All substrates must yield the
-  identical candidate stream for a given seed; level-2 selftests enforce
-  this.  Any change to generation or consumption order must land in all
-  three substrates and the theory in lockstep.
+  identical candidate stream for a given seed; the level-2 conformance
+  matrix compares seeded random outcomes across substrates.  Any change
+  to generation or consumption order must land in all three substrates
+  and the theory in lockstep.
 - Theory hygiene: Cv performs its per-call definitions and translations
   inside a full theory snapshot/revert bracket.  No Refute-created type,
   constant, theorem, or binding may survive in the user's theory on any

@@ -677,11 +677,11 @@ and their declared `Ancestors` and `Libs`.  They are documentation rather
 than tests: extending Refute through the registries below is described here,
 not demonstrated there.
 
-The `tests/` directory holds the selftest and nothing else: `selftest.sml`,
-its golden files under `tests/goldens/`, and the fixture theories the
-selftest loads (`refuteTableZoo`, `refuteUnused`, `refuteHarvestType`,
-`refuteHarvestAbs`).  `Holmake` here recurses into it; keeping the fixtures
-there keeps them out of the installed signature namespace.
+The `tests/` directory holds the selftest and nothing else: `selftest.sml`
+and the fixture theories it loads (`refuteTableZoo`, `refuteUnused`,
+`refuteHarvestType`, `refuteHarvestAbs`).  `Holmake` here recurses into
+it; keeping the fixtures there keeps them out of the installed signature
+namespace.
 
 Model-finder surface
 --------------------
@@ -924,8 +924,8 @@ and a Java runtime.  No network access is needed at run time.
 
 HolRefute is included in the normal tree build only on Poly/ML; non-Poly
 builds skip the directory.  Its level-2 selftests include the MF acceptance,
-differential, soundness, and theory-hygiene suites, plus cross-substrate QC
-outcome and candidate-stream conformance and Cv export-cleanliness checks.
+differential and soundness suites, the narrowing acceptance table, and
+cross-substrate QC outcome conformance.
 
 The refute_simp, refute_psimp, and refute_unfold theorem sets are defined by
 the support theory and used by model-finder preprocessing.
