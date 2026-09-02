@@ -29,6 +29,13 @@ in
 end
 fun top_proof() = Manager.current_proof(proofs());
 
+(* Tactics run outside the slot lock: Context.Data.modify's callback may
+   not re-enter its own slot, and tactics do (TotalDefn hands a failed
+   termination goal to the proof manager through Defn.tgoal).  The proofs
+   are read, the tactic applied, and the result written back; what the
+   tactic itself did to the proofs survives only if the tactic fails. *)
+fun tac_upd_proofs f = put_proofs (f (proofs ()))
+
 
 fun new_goalstack g tm f =
    (upd_proofs (Manager.add (Manager.new_goalstack g tm f));
@@ -99,37 +106,37 @@ fun drop_all () =
 
 fun expandf tac =
    (say "OK..\n";
-    upd_proofs (Manager.hd_opr (Manager.expandf tac));
+    tac_upd_proofs (Manager.hd_opr (Manager.expandf tac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand tac =
    (say "OK..\n";
-    upd_proofs (Manager.hd_opr (Manager.expand tac));
+    tac_upd_proofs (Manager.hd_opr (Manager.expand tac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand_listf ltac =
    (say "OK..\n";
-    upd_proofs (Manager.hd_opr (Manager.expand_listf ltac));
+    tac_upd_proofs (Manager.hd_opr (Manager.expand_listf ltac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand_list ltac =
    (say "OK..\n";
-    upd_proofs (Manager.hd_opr (Manager.expand_list ltac));
+    tac_upd_proofs (Manager.hd_opr (Manager.expand_list ltac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand_frag ftac =
    (say "OK..\n";
-    upd_proofs (Manager.hd_opr (Manager.expand_frag ftac));
+    tac_upd_proofs (Manager.hd_opr (Manager.expand_frag ftac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expandv (s,tac) =
    (say "OK..\n";
-    upd_proofs (Manager.hd_opr (Manager.expandv (s,tac)));
+    tac_upd_proofs (Manager.hd_opr (Manager.expandv (s,tac)));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
