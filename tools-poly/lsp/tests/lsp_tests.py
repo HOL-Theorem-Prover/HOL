@@ -4739,6 +4739,224 @@ def test_hover_on_an_overloaded_name():
         c.close()
 
 
+# ------------------------------------------------------------------
+# IDE providers: documentSymbol, workspace/symbol, completion
+# ------------------------------------------------------------------
+def _request(c, rid, method, params, timeout=20):
+    """Send a request and wait for its reply.  `_hover_at` and
+    `_send_goalstate` are both specialisations of this."""
+    c.send({"jsonrpc": "2.0", "id": rid, "method": method, "params": params})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == rid: return m
+        return None
+    return c.wait_until(got, timeout)
+
+
+def _init_hierarchical(c, root):
+    """Handshake advertising hierarchicalDocumentSymbolSupport, which is
+    what gets the nested DocumentSymbol form (and so `detail`) rather
+    than flat SymbolInformation."""
+    c.send({"jsonrpc":"2.0","id":1,"method":"initialize","params":{
+        "capabilities": {
+            "general": {"positionEncodings": ["utf-8"]},
+            "textDocument": {"documentSymbol":
+                             {"hierarchicalDocumentSymbolSupport": True}}},
+        "rootUri": f"file://{root}", "processId": None}})
+    def got(cl):
+        with cl.msgs_lock:
+            return any(m.get("id") == 1 for m in cl.msgs)
+    if not c.wait_until(got, 10):
+        raise RuntimeError("initialize timed out")
+    c.send({"jsonrpc":"2.0","method":"initialized","params":{}})
+
+
+_SYM_SRC = ("Theory idesym\nAncestors arithmetic\n\n"
+            "Definition dbl_def:\n  dbl n = 2 * n\nEnd\n\n"
+            "Theorem dbl_thm[simp]:\n  dbl 1 = 2\nProof\n  simp[dbl_def]\nQED\n\n"
+            "val my_local_helper = 3\nfun myfun x = x + 1\n"
+            "Datatype: tree = Lf | Nd tree num tree End\n")
+
+
+def test_documentSymbol_lists_the_declarations():
+    """The outline covers HOL declarations and SML ones alike, and the
+    Datatype's type name is scraped from its quotation -- the parser
+    hands that block to bossLib.Datatype unread, so there is no
+    identifier in the tree to take."""
+    uri = "file:///tmp/idesymScript.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _SYM_SRC)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        r = _request(c, 801, "textDocument/documentSymbol",
+                     {"textDocument": {"uri": uri}})
+        names = [s["name"] for s in r["result"]]
+        for want in ("idesym", "dbl_def", "dbl_thm", "my_local_helper",
+                     "myfun", "tree"):
+            assert_true(want in names, f"{want} in the outline ({names})")
+    finally:
+        c.close()
+
+
+def test_documentSymbol_while_blocked_on_unloadable_ancestor():
+    """The outline is parse-driven, not compile-driven, so it still
+    answers for a file the server has refused to compile -- which is
+    when a reader most wants it."""
+    src = ("Theory blk\nAncestors nosuchtheory\n\n"
+           "Theorem still_listed:\n  0 < 1\nProof\n  simp[]\nQED\n")
+    uri = "file:///tmp/blkScript.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileBlocked", 30), "blocked")
+        assert_true(c.wait_for_method("$/compileCompleted", 3) is None,
+                    "and never compiled")
+        r = _request(c, 802, "textDocument/documentSymbol",
+                     {"textDocument": {"uri": uri}})
+        names = [s["name"] for s in r["result"]]
+        assert_true("still_listed" in names,
+                    f"the theorem is still listed ({names})")
+    finally:
+        c.close()
+
+
+def test_documentSymbol_hierarchical_carries_detail_and_children():
+    """A client that takes the nested form gets the keyword and any
+    attributes as `detail`, and a datatype's constructors as children.
+    LSP's SymbolTag has only Deprecated, so [simp] cannot be
+    structural."""
+    src = ("Theory hier\nAncestors arithmetic\n\n"
+           "Theorem thm_a[simp,local]:\n  0 < 1\nProof\n  simp[]\nQED\n"
+           "datatype colour = Red | Green\n")
+    uri = "file:///tmp/hierScript.sml"
+    c = Client("/tmp")
+    try:
+        _init_hierarchical(c, "/tmp")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        r = _request(c, 803, "textDocument/documentSymbol",
+                     {"textDocument": {"uri": uri}})
+        byname = {s["name"]: s for s in r["result"]}
+        assert_true("thm_a" in byname, f"thm_a present ({list(byname)})")
+        detail = byname["thm_a"].get("detail", "")
+        assert_contains(detail, "simp", "attributes appear in detail")
+        assert_contains(detail, "local", "both attributes appear")
+        kids = [k["name"] for k in byname.get("colour", {}).get("children", [])]
+        assert_true("Red" in kids and "Green" in kids,
+                    f"datatype constructors are children ({kids})")
+    finally:
+        c.close()
+
+
+def test_workspace_symbol_finds_an_ancestor_theorem():
+    """Answered from what HOL knows exists, with the theory as the
+    container and a real path to the script that stored it."""
+    uri = "file:///tmp/idesymScript.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _SYM_SRC)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        r = _request(c, 804, "workspace/symbol", {"query": "ADD_COMM"})
+        hits = [h for h in r["result"] if h["name"] == "ADD_COMM"]
+        assert_true(hits, f"ADD_COMM found ({r['result'][:3]})")
+        assert_contains(hits[0]["containerName"], "arithmeticTheory",
+                        "container names the theory")
+        assert_contains(hits[0]["location"]["uri"], "arithmeticScript.sml",
+                        "and it points at the script")
+    finally:
+        c.close()
+
+
+def test_workspace_symbol_short_query_is_empty():
+    """The underlying search matches substrings, so one character asks
+    for most of the database."""
+    uri = "file:///tmp/idesymScript.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _SYM_SRC)
+        c.wait_for_method("$/compileCompleted", 60)
+        r = _request(c, 805, "workspace/symbol", {"query": "A"})
+        assert_eq(r["result"], [], "a one-character query answers nothing")
+    finally:
+        c.close()
+
+
+def test_completion_offers_file_local_bindings():
+    """This is the test that fails if the namespace layer is not
+    installed on the request thread: the layer is thread-local, so
+    without it completion sees the globals and none of this file's own
+    names."""
+    uri = "file:///tmp/idesymScript.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _SYM_SRC)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        line = _SYM_SRC.split("\n").index("val my_local_helper = 3")
+        r = _request(c, 806, "textDocument/completion",
+                     {"textDocument": {"uri": uri},
+                      "position": {"line": line, "character": 8}})
+        labels = [i["label"] for i in r["result"]["items"]]
+        assert_true("my_local_helper" in labels,
+                    f"the file's own val is offered ({labels[:8]})")
+    finally:
+        c.close()
+
+
+def test_completion_empty_prefix_is_empty():
+    """With nothing typed the answer would be the whole namespace; the
+    client re-asks once there is a character."""
+    uri = "file:///tmp/idesymScript.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _SYM_SRC)
+        c.wait_for_method("$/compileCompleted", 60)
+        r = _request(c, 807, "textDocument/completion",
+                     {"textDocument": {"uri": uri},
+                      "position": {"line": 2, "character": 0}})
+        assert_eq(r["result"]["items"], [], "no items for an empty prefix")
+        assert_true(r["result"]["isIncomplete"], "and marked incomplete")
+    finally:
+        c.close()
+
+
+def test_capabilities_match_what_is_implemented():
+    """referencesProvider was advertised for a long time with no
+    handler, so a client that believed it got "unknown method"."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        caps = None
+        msgs, _ = c.messages_since(0)
+        for m in msgs:
+            if m.get("id") == 1 and "result" in m:
+                caps = m["result"]["capabilities"]
+        assert_true(caps is not None, "initialize replied")
+        for want in ("documentSymbolProvider", "workspaceSymbolProvider",
+                     "completionProvider"):
+            assert_true(want in caps, f"{want} advertised")
+        assert_true("referencesProvider" not in caps,
+                    "referencesProvider is not advertised")
+        r = _request(c, 808, "textDocument/references",
+                     {"textDocument": {"uri": "file:///tmp/x.sml"},
+                      "position": {"line": 0, "character": 0},
+                      "context": {"includeDeclaration": True}}, timeout=5)
+        assert_true(r is not None and "error" in r,
+                    "and asking for them is an error, not a silent []")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -4764,6 +4982,21 @@ TESTS = [
     ("goalState_completed_proof_with_rpt",
                                   test_goalState_completed_proof_with_rpt),
     ("hover_on_an_overloaded_name",  test_hover_on_an_overloaded_name),
+    ("documentSymbol_lists_the_declarations",
+                                 test_documentSymbol_lists_the_declarations),
+    ("documentSymbol_while_blocked",
+                     test_documentSymbol_while_blocked_on_unloadable_ancestor),
+    ("documentSymbol_hierarchical",
+                 test_documentSymbol_hierarchical_carries_detail_and_children),
+    ("workspace_symbol_finds_an_ancestor_theorem",
+                              test_workspace_symbol_finds_an_ancestor_theorem),
+    ("workspace_symbol_short_query_is_empty",
+                                   test_workspace_symbol_short_query_is_empty),
+    ("completion_offers_file_local_bindings",
+                                   test_completion_offers_file_local_bindings),
+    ("completion_empty_prefix_is_empty", test_completion_empty_prefix_is_empty),
+    ("capabilities_match_what_is_implemented",
+                                  test_capabilities_match_what_is_implemented),
     ("integer_first_compile",        test_integer_first_compile),
     ("full_replace_resumes_from_the_common_prefix",
                                      test_full_replace_resumes_from_the_common_prefix),

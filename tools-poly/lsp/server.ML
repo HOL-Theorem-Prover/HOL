@@ -175,6 +175,244 @@ fun findEnclosingTheorem compileDone text cursor = let
     | SOME _ => loop ()
   in loop () end
 
+(* SML identifier characters, for the two places that scan raw text:
+   the `Datatype:' name scrape and completion's prefix.  Not
+   `HOLSourceParser''s own `isIdRest', which it does not export. *)
+fun isIdentChar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+
+(* The declarations of a buffer, for `textDocument/documentSymbol'.
+
+   Driven by the parser rather than by the last compile's `builtTrees':
+   an outline is wanted most exactly when the file does not compile --
+   its ancestors are missing, or it is halfway through an edit -- and
+   `bufferDecs' needs neither a compile nor any HOL state.  It is also
+   the only source that covers the whole file rather than the part the
+   compile frontier has reached.
+
+   `span' is the whole declaration and `selSpan' the name as written;
+   LSP wants both, the second to highlight when you pick the symbol. *)
+datatype symbol = Sym of {
+  name: string,
+  detail: string option,
+  kind: int,
+  span: int * int,
+  selSpan: int * int,
+  children: symbol list }
+
+(* LSP SymbolKind, the few we use. *)
+val symModule = 2 and symMethod = 6 and symConstructor = 9
+val symEnum = 10 and symInterface = 11 and symFunction = 12
+val symVariable = 13 and symConstant = 14 and symStruct = 23
+val symOperator = 25
+
+(* A file with more declarations than this is pathological; the cap
+   keeps a runaway parse off the request thread. *)
+val maxSymbols = 2000
+
+fun bufferSymbols text = let
+  val parseDec = bufferDecs text
+  val count = ref 0
+  fun bump () = (count := !count + 1; !count <= maxSymbols)
+  open HOLSourceAST
+  fun mkSym {name = (p, nm), detail, kind, span, children} =
+      if nm = "" then NONE   (* parse repair invents empty idents *)
+      else SOME (Sym {name = nm, detail = detail, kind = kind,
+                      span = span, selSpan = (p, p + size nm),
+                      children = children})
+  (* `[simp]', `[local]' and friends.  LSP's SymbolTag has only
+     Deprecated, so an attribute cannot be structural; it goes in the
+     detail line where a client will show it beside the name. *)
+  fun attrsText render (attrs: 'a attrs) =
+      case attrs of
+        NONE => ""
+      | SOME {attrs = {args, ...}, ...} =>
+        (case List.mapPartial render args of
+           [] => ""
+         | ss => " [" ^ String.concatWith ", " ss ^ "]")
+  fun kvalText ({key = (_, k), bind} : kvals) =
+      SOME (case bind of
+              NONE => k
+            | SOME {vals, ...} =>
+              k ^ " = " ^ String.concatWith "," (map #2 vals))
+  fun identText ((_, s) : ident) = SOME s
+  fun kw base attrs = SOME (base ^ attrsText kvalText attrs)
+  fun kwI base attrs = SOME (base ^ attrsText identText attrs)
+  (* Names bound by a `val' pattern.  Constructor positions are not
+     bindings: `val SOME x = e' binds x, and `val h::t = e' binds h and
+     t, so the head of an application and an infix operator are both
+     skipped. *)
+  fun patNames e acc = case e of
+      Ident {id, ...} => id :: acc
+    | Parens {exp, ...} => patNames exp acc
+    | Typed {exp, ...} => patNames exp acc
+    | Tuple {elems = {args, ...}, ...} => foldl (fn (a, c) => patNames a c) acc args
+    | List {elems = {args, ...}, ...} => foldl (fn (a, c) => patNames a c) acc args
+    | App (_, arg) => patNames arg acc
+    | Infix {left, right, ...} => patNames left (patNames right acc)
+    | Layered {id, pat, ...} => id :: patNames pat acc
+    | _ => acc
+  (* `fun f x y = ...': the name is the head of the clause's pattern. *)
+  fun funName e = case e of
+      Ident {id, ...} => SOME id
+    | App (f, _) => funName f
+    | Parens {exp, ...} => funName exp
+    | Infix {id, ...} => SOME id
+    | _ => NONE
+  (* `Datatype:' carries no parsed identifier -- the names live in the
+     quotation, which the expander hands to bossLib.Datatype unread.
+     A QuoteLiteral is (file offset, raw slice), so scan the text for
+     the identifier before each top-level `=' and keep its offset. *)
+  fun quoteTypeNames qs = let
+    fun literals [] acc = rev acc
+      | literals (QuoteLiteral (i, s) :: r) acc = literals r ((i, s) :: acc)
+      | literals (_ :: r) acc = literals r acc
+    (* One declaration: its name is the leading identifier, and it
+       counts only if this piece goes on to define something. *)
+    fun nameOf (base, piece) = let
+      val ss = Substring.full piece
+      val trimmed = Substring.dropl Char.isSpace ss
+      val lead = Substring.size ss - Substring.size trimmed
+      val (nm, rest) = Substring.splitl isIdentChar trimmed
+      in
+        if Substring.isEmpty nm orelse not (Substring.isSubstring "=" rest)
+        then NONE
+        else SOME (base + lead, Substring.string nm)
+      end
+    fun namesIn (base, s) = let
+      (* `String.fields' loses the offsets, so carry one along: each
+         piece starts after the previous piece and its `;'. *)
+      fun step (piece, (off, acc)) =
+          (off + size piece + 1, nameOf (off, piece) :: acc)
+      val pieces = String.fields (fn c => c = #";") s
+      val (_, acc) = List.foldl step (base, []) pieces
+      in List.mapPartial (fn x => x) (rev acc) end
+    in List.concat (map namesIn (literals qs [])) end
+  (* Labelled conjuncts of a Definition or Inductive appear in the
+     source, so they can be children with honest spans; the generated
+     names (foo_ind, foo_rules) cannot. *)
+  fun labelNames qs =
+      List.mapPartial
+        (fn DefinitionLabel {label = SOME (HOLLabel {id, ...}), ...} => SOME id
+          | _ => NONE) qs
+  fun symsOf dec =
+      if not (bump ()) then []
+      else let
+        val span = decSpan dec
+        (* One symbol from an id, for the many shapes that differ only
+           in what to call them. *)
+        fun simple detail kind id =
+            mklist {name = id, detail = SOME detail, kind = kind,
+                    span = span, children = []}
+        (* The `x and y and z' shapes.  Takes idents rather than the
+           binding records: those differ per declaration kind, and SML
+           has no row polymorphism, so each caller selects its own. *)
+        fun simpleIds detail kind ids =
+            List.mapPartial
+              (fn id => mkSym {name = id, detail = SOME detail, kind = kind,
+                               span = span, children = []})
+              ids
+        fun thmSym triv attrs id children =
+            mklist {name = id,
+                    detail = kw (if triv then "Triviality" else "Theorem")
+                                attrs,
+                    kind = symConstant, span = span, children = children}
+      in case dec of
+        HOLTheory {id, ...} => simple "Theory" symModule id
+      | HOLTheoremDecl {triv, id, attrs, quote, ...} =>
+          thmSym triv attrs id (childrenOf quote)
+      | HOLSimpleThm {triv, id, attrs, ...} => thmSym triv attrs id []
+      | HOLDefinition {id, attrs, quote, ...} =>
+          mklist {name = id, detail = kw "Definition" attrs,
+                  kind = symFunction, span = span,
+                  children = childrenOf quote}
+      | HOLInductiveDecl {co, id, quote, ...} =>
+          mklist {name = id,
+                  detail = SOME (if co then "CoInductive" else "Inductive"),
+                  kind = symFunction, span = span,
+                  children = childrenOf quote}
+      | HOLDatatype {quote, ...} =>
+          List.mapPartial
+            (fn (p, nm) => mkSym {name = (p, nm), detail = SOME "Datatype",
+                                  kind = symEnum, span = span, children = []})
+            (quoteTypeNames quote)
+      | HOLQuoteDecl {id, ...} => simple "Quote" symVariable id
+      | HOLType {overload, id, attrs, ...} => let
+          val nm = case id of UnquotedId i => i | QuotedId (p, s) => (p, s)
+          in mklist {name = nm,
+                     detail = kwI (if overload then "Overload" else "Type") attrs,
+                     kind = if overload then symOperator else symStruct,
+                     span = span, children = []}
+          end
+      | HOLResume {id, ...} => simple "Resume" symConstant id
+      | HOLFinalise {id, ...} => simple "Finalise" symConstant id
+      | DecVal {elems = {args, ...}, ...} =>
+          List.concat (map (fn {pat, ...} =>
+              List.mapPartial
+                (fn id => mkSym {name = id, detail = SOME "val",
+                                 kind = symVariable, span = span,
+                                 children = []})
+                (rev (patNames pat []))) args)
+      | DecFun {fvalbind = {args, ...}, ...} =>
+          List.mapPartial
+            (fn [] => NONE
+              | ({pat, ...} :: _) =>
+                (case funName pat of
+                   NONE => NONE
+                 | SOME id => mkSym {name = id, detail = SOME "fun",
+                                     kind = symFunction, span = span,
+                                     children = []}))
+            args
+      | DecType {tybind = {args, ...}, ...} =>
+          List.mapPartial
+            (fn {tycon, ...} => mkSym {name = tycon, detail = SOME "type",
+                                       kind = symStruct, span = span,
+                                       children = []})
+            args
+      | DecDatatype {datbind = {args, ...}, ...} =>
+          List.mapPartial
+            (fn {tycon, rhs, ...} =>
+                mkSym {name = tycon, detail = SOME "datatype", kind = symEnum,
+                       span = span,
+                       children = case rhs of
+                           DatvalElems cs =>
+                             List.mapPartial
+                               (fn {id, ...} =>
+                                   mkSym {name = id, detail = NONE,
+                                          kind = symConstructor,
+                                          span = idSpan id, children = []})
+                               cs
+                         | _ => []})
+            args
+      | DecException {elems = {args, ...}, ...} => let
+          fun exnId (ExnNew {id, ...}) = id
+            | exnId (ExnReplicate {id, ...}) = id
+          in List.concat (map (simple "exception" symConstructor o exnId) args)
+          end
+      | DecStructure {elems = {args, ...}, ...} =>
+          simpleIds "structure" symModule (map #id args)
+      | DecSignature {elems = {args, ...}, ...} =>
+          simpleIds "signature" symInterface (map #id args)
+      | DecFunctor {elems = {args, ...}, ...} =>
+          simpleIds "functor" symModule (map #id args)
+      (* `local ... in ... end' is scoping, not structure: its
+         declarations belong beside their neighbours. *)
+      | DecLocal {dec1, dec2, ...} =>
+          List.concat (map symsOf dec1) @ List.concat (map symsOf dec2)
+      | DecExpansion {orig, ...} => symsOf orig
+      | _ => [] end
+  and mklist r = case mkSym r of NONE => [] | SOME s => [s]
+  and childrenOf quote =
+      List.mapPartial
+        (fn id => mkSym {name = id, detail = NONE, kind = symMethod,
+                         span = idSpan id, children = []})
+        (labelNames quote)
+  fun loop acc =
+      if !count > maxSymbols then rev acc
+      else case parseDec () of
+             NONE => rev acc
+           | SOME dec => loop (List.revAppend (symsOf dec, acc))
+  in loop [] handle _ => [] end
+
 (* The modules a script names as its dependencies: the theories and
    libraries of its `Theory ... Ancestors ... Libs ...' header, plus the
    identifiers of any top-level `open' preceding the first real
@@ -304,6 +542,8 @@ val goalStateParams =
   map3 (fn (uri, pos, width) => {uri = uri, pos = pos, width = width})
     (field "textDocument" (field "uri" string), field "position" position,
      fieldD "width" int defaultGoalWidth)
+
+val workspaceSymbolParams = field "query" string
 
 val cancelParams = field "id" req_id
 
@@ -495,6 +735,45 @@ fun locToRange ({startPosition,endPosition,...}:PolyML.location) =
   (FixedInt.toInt startPosition, FixedInt.toInt endPosition)
 (* fun encLocLC lines = encRangeLC lines o locToRange *)
 
+(* DocumentSymbol: hierarchical, with `children' and `detail' omitted
+   when empty so the wire form stays the shape clients expect. *)
+fun encDocumentSymbol lines (Sym {name, detail, kind, span, selSpan,
+                                  children}) print = (
+    print "{\"name\":"; encString name print;
+    (case detail of
+       NONE => ()
+     | SOME d => (print ",\"detail\":"; encString d print));
+    print ",\"kind\":"; encInt kind print;
+    print ",\"range\":"; encRangeLC lines span print;
+    print ",\"selectionRange\":"; encRangeLC lines selSpan print;
+    (case children of
+       [] => ()
+     | cs => (print ",\"children\":";
+              encArray (encDocumentSymbol lines) cs print));
+    print "}")
+
+(* SymbolInformation: the flat form, for a client that does not
+   advertise hierarchical support, and the only form `workspace/symbol'
+   has. *)
+fun encSymbolInformation uri lines container (Sym {name, kind, span, ...})
+                         print = (
+    print "{\"name\":"; encString name print;
+    print ",\"kind\":"; encInt kind print;
+    (case container of
+       NONE => ()
+     | SOME c => (print ",\"containerName\":"; encString c print));
+    print ",\"location\":{\"uri\":"; encString uri print;
+    print ",\"range\":"; encRangeLC lines span print;
+    print "}}")
+
+(* Flatten for the same reason: `containerName' is how the flat form
+   says what a child belonged to. *)
+fun flatSymbols syms = let
+  fun go parent (sym as Sym {name, children, ...}) acc =
+      List.foldl (fn (c, a) => go (SOME name) c a)
+                 ((parent, sym) :: acc) children
+  in rev (List.foldl (fn (s, a) => go NONE s a) [] syms) end
+
 fun encPretty textWidth pp print = let
   fun print' s = encStringContents s print
   in print "\""; PolyML.prettyPrint (print', textWidth) pp; print "\"" end
@@ -587,17 +866,38 @@ fun start {diag, dbg} = let
                  (JSONDecode.array JSONDecode.string) []) []) [])
         params
       handle _ => []
+  (* Whether the client takes the nested DocumentSymbol form.  The spec
+     says a silent client gets the flat one. *)
+  val hierarchicalSymbols = ref false
   fun capabilitiesFor params = let
     val utf8 = List.exists (fn e => e = "utf-8")
                            (clientEncodings params)
     val () = LSPExtension.setUTF16Positions (not utf8)
+    val () = hierarchicalSymbols :=
+      (JSONDecode.decode
+         (JSONDecode.fieldD "capabilities"
+            (JSONDecode.fieldD "textDocument"
+               (JSONDecode.fieldD "documentSymbol"
+                  (JSONDecode.fieldD "hierarchicalDocumentSymbolSupport"
+                     JSONDecode.bool false) false) false) false)
+         params
+       handle _ => false)
     in concat [
       "{\"textDocumentSync\":2", (* 2 = Incremental; applyEdit supports it *)
       ",\"positionEncoding\":",
       if utf8 then "\"utf-8\"" else "\"utf-16\"",
       ",\"hoverProvider\":true",
       ",\"definitionProvider\":true",
-      ",\"referencesProvider\":true",
+      ",\"documentSymbolProvider\":true",
+      ",\"workspaceSymbolProvider\":true",
+      ",\"completionProvider\":{\"triggerCharacters\":[\".\"]}",
+      (* No `referencesProvider'.  It was advertised for a long time
+         with no handler behind it, so a client that believed it got
+         "unknown method".  An honest implementation is not available
+         either: Poly records references only within the compilation
+         unit it is compiling, and HOL has no index of which proofs
+         cite a theorem -- `DB.revlookup' says where a theorem was
+         stored, not who cites it. *)
       "}"]
     end
   val _ (*clientCapabilities*) = initialize conn capabilitiesFor
@@ -646,6 +946,19 @@ fun start {diag, dbg} = let
   val boundUri : string option ref = ref NONE
   val warnedOnce = ref false
   fun isScriptUri uri = String.isSuffix "Script.sml" uri
+  (* Whether this file may run a compile.  Everything HOL-side --
+     the Context, the sealed-theory set, `Meta.loadedMods' -- is
+     process-global, so a second file's compile does not merely answer
+     for itself: it rewinds and re-establishes the very state the bound
+     file's goals and hovers are read from.  Refusing keeps the
+     isolation guarantee a property of the code and not only of the
+     client's willingness to start one process per script.
+
+     The test is the binding, not `isScriptUri': a file that never
+     claimed the binding is welcome, and much of the test suite opens
+     a second such file and expects it to compile. *)
+  fun mayCompile uri =
+    case !boundUri of NONE => true | SOME first => first = uri
   fun checkSingleFile uri =
     if not (isScriptUri uri) then ()
     else case !boundUri of
@@ -798,7 +1111,26 @@ fun start {diag, dbg} = let
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
        lifts the block. *)
-    depsBlocked: deps_blocked option ref}
+    depsBlocked: deps_blocked option ref,
+    (* The outline for this buffer, with the text version it was parsed
+       from.  documentSymbol is asked on every edit and
+       `workspace/symbol' re-asks for every open buffer on every
+       keystroke of the search box, so parsing per request would repeat
+       work the text has not invalidated. *)
+    symbols: (int * symbol list) option ref,
+    (* The compile thread's LSP namespace layer, as of the last
+       declaration it finished.  The layer is thread-local
+       (lsp_namespace.ML), so a request thread answering completion sees
+       globals only until it installs this.  Captured even when the
+       compile has errors: a file that does not compile is exactly when
+       its own names are worth offering. *)
+    nsLayer: (unit -> unit) option ref,
+    (* Names in scope, with the `nsLayer' generation they came from.
+       `#allVal' and friends walk the whole global namespace and filter
+       it, which is far too much to redo per keystroke; the layer only
+       changes when a declaration finishes compiling. *)
+    nsGen: int ref,
+    nsNames: (int * (string * int) list) option ref}
   local
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
@@ -816,7 +1148,8 @@ fun start {diag, dbg} = let
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
         debounce = ref 0, minEditOffset = ref NONE,
         walkerDiags = ref (Binarymap.mkDict String.compare),
-        depsBlocked = ref NONE} end
+        depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
+        nsGen = ref 0, nsNames = ref NONE} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
      checks at each Progress event and raises Thread.Interrupt.  We
@@ -1163,7 +1496,16 @@ fun start {diag, dbg} = let
   end
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
-                              walkerDiags, depsBlocked}:file_data) = (
+                              walkerDiags, depsBlocked, nsLayer, nsGen,
+                              ...}:file_data) =
+    (* Every route to a compile comes through here -- didOpen,
+       didChange's debounce, didSave, `$/hol/retryCompile', and the
+       proof pool's retract -- so this is the one place the binding has
+       to be checked. *)
+    if not (mayCompile uri) then
+      logMessage ("not compiling " ^ uri ^
+                  ": this server is bound to another script")
+    else (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
@@ -1520,6 +1862,10 @@ fun start {diag, dbg} = let
       fun captureSnap endByte = let
         val {builtTrees, plugins, diags, ...} = !trees
         val n = DArray.size diags
+        (* Unconditional, unlike the resume snapshot below: completion
+           wants the file's names even when it has errors. *)
+        val () = (nsLayer := SOME (LSPNameSpace.snapshotLayer ());
+                  nsGen := !nsGen + 1)
         in if n > 0 then ()
            else let
              val snap = {
@@ -1992,6 +2338,199 @@ fun start {diag, dbg} = let
          in r end
     end handle Empty => NONE
 
+  (* The buffer's outline, parsed at most once per text version: the
+     outline is asked for on every edit, and `workspace/symbol' asks
+     every open buffer on every keystroke of the search box. *)
+  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = !lastTrees
+    fun parse () = let val syms = bufferSymbols text
+                   in symbols := SOME (version, syms); syms end
+    in
+      case !symbols of
+        SOME (v, syms) => if v = version then syms else parse ()
+      | NONE => parse ()
+    end
+
+  (* `workspace/symbol'.  Answers from what HOL knows exists -- see
+     `LSPExtension.ideSymbols' -- unioned with the declarations of the
+     buffers this process has open, so a theorem written a minute ago in
+     a file that does not compile is still findable.
+
+     A very short query is refused: the underlying search matches
+     substrings, so one or two characters asks for most of the
+     database. *)
+  val maxWorkspaceSymbols = 200
+  fun workspaceSymbols query =
+    if size query < 2 then []
+    else let
+      val q = CharVector.map Char.toLower query
+      val hits = !LSPExtension.ideSymbols
+                   {query = query, prefixOnly = false,
+                    limit = maxWorkspaceSymbols}
+      (* A recorded path that no longer exists would give the user a
+         dead link, which is worse than one missing entry. *)
+      fun accessible f = OS.FileSys.access (f, []) handle _ => false
+      fun located ({file, line, name, theory, class, visible}
+                     : LSPExtension.ide_symbol) =
+          case file of
+            NONE => NONE
+          | SOME f =>
+            if not (accessible f) then NONE
+            else SOME {name = name,
+                       container = theory ^ "Theory" ^
+                                   (if visible then ""
+                                    else " (not an ancestor)"),
+                       kind = if class = "Def" then symFunction
+                              else symConstant,
+                       uri = "file://" ^ f,
+                       line = Int.max (0, line - 1)}
+      val fromHol = List.mapPartial located hits
+      (* The open buffers, by their own text rather than by anything
+         built. *)
+      val open_ = withFileInfo (fn fi => (fi, Binarymap.listItems fi))
+      fun ofBuffer (uri, v) = let
+        val {text = {lines, ...}, ...} = !(#lastTrees (v: file_data))
+        fun keep (Sym {name, span, ...}) =
+            if String.isSubstring q (CharVector.map Char.toLower name)
+            then SOME {name = name, container = "this file",
+                       kind = symConstant, uri = uri,
+                       line = #1 (LSPExtension.getLineCol lines (#1 span))}
+            else NONE
+        in List.mapPartial keep (symbolsOf v) end
+        handle _ => []
+      val fromBuffers = List.concat (map ofBuffer open_)
+      (* A buffer hit points at editable text, so it wins over the
+         built record of the same name. *)
+      fun step (h, (acc, seen)) =
+          if Binaryset.member (seen, #name h) then (acc, seen)
+          else (h :: acc, Binaryset.add (seen, #name h))
+      val all = rev (#1 (List.foldl step ([], Binaryset.empty String.compare)
+                                    (fromBuffers @ fromHol)))
+      in List.take (all, maxWorkspaceSymbols) handle Subscript => all end
+
+  fun encWorkspaceSymbol {name, container, kind, uri, line} print = (
+      print "{\"name\":"; encString name print;
+      print ",\"kind\":"; encInt kind print;
+      print ",\"containerName\":"; encString container print;
+      print ",\"location\":{\"uri\":"; encString uri print;
+      print ",\"range\":{\"start\":{\"line\":"; encInt line print;
+      print ",\"character\":0},\"end\":{\"line\":"; encInt line print;
+      print ",\"character\":0}}}}")
+
+  (* `textDocument/completion'.  Two sources: the SML names in scope for
+     this file, and the theorem names HOL knows.
+
+     The namespace layer is thread-local (lsp_namespace.ML), so a
+     request thread sees globals only until the compile thread's layer
+     is installed on it -- which is what `nsLayer' carries.  Installing
+     just the layer is deliberate: restoring a whole compile snapshot
+     here, as the goal-state handler does, would rewind the Context out
+     from under a compile that is very likely running, and completion
+     fires on every keystroke. *)
+  val maxCompletions = 200
+  fun identPrefixAt text offset = let
+    val n = size text
+    fun back i = if i > 0 andalso isIdentChar (String.sub (text, i - 1))
+                 then back (i - 1) else i
+    val st = back (Int.min (offset, n))
+    val prefix = String.substring (text, st, Int.min (offset, n) - st)
+    val qual =
+      if st > 0 andalso String.sub (text, st - 1) = #"." then let
+        val qs = back (st - 1)
+        in SOME (String.substring (text, qs, st - 1 - qs)) end
+      else NONE
+    in {prefix = prefix, qual = qual} end
+
+  (* Every name in scope for the file, with its CompletionItemKind,
+     computed once per `nsLayer' generation.  `#allVal' and friends
+     merge the file layer with the whole global namespace and filter
+     the shadowed globals out, which is thousands of entries -- far too
+     much to redo on each keystroke, and it only changes when a
+     declaration finishes compiling. *)
+  fun scopeNames ({nsGen, nsNames, ...}: file_data) = let
+    val gen = !nsGen
+    fun collect () = let
+      val ns = LSPNameSpace.fileNS
+      fun tagged kind names = map (fn (nm, _) => (nm, kind)) names
+      val all = tagged 6 (#allVal ns ()) @
+                tagged 9 (#allStruct ns ()) @
+                tagged 22 (#allType ns ())
+      in nsNames := SOME (gen, all); all end
+    in
+      case !nsNames of
+        SOME (g, names) => if g = gen then names else collect ()
+      | NONE => collect ()
+    end
+
+  fun completionsAt uri (v as {lastTrees, nsLayer, ...}: file_data) pos = let
+    val {text = {text, lines, ...}, ...} = !lastTrees
+    val offset = fromLineCol lines pos
+    val {prefix, qual} = identPrefixAt text offset
+    in
+      (* Nothing typed yet: the answer would be the whole namespace, and
+         the client re-asks as soon as there is a character. *)
+      if prefix = "" andalso qual = NONE then {items = [], incomplete = true}
+      else let
+        val () = case !nsLayer of SOME restore => restore () | NONE => ()
+        val items = ref ([]: {label: string, kind: int,
+                              detail: string option} list)
+        val count = ref 0
+        fun add it = if !count >= maxCompletions then ()
+                     else (items := it :: !items; count := !count + 1)
+        fun addNames kind names =
+            app (fn (nm, _) => if String.isPrefix prefix nm
+                               then add {label = nm, kind = kind,
+                                         detail = NONE}
+                               else ()) names
+        val ns = LSPNameSpace.fileNS
+        val () = case qual of
+            NONE =>
+            app (fn (nm, kind) =>
+                    if String.isPrefix prefix nm
+                    then add {label = nm, kind = kind, detail = NONE}
+                    else ())
+                (scopeNames v)
+          | SOME q =>
+            (case #lookupStruct ns q of
+               NONE => ()
+             | SOME st => let
+                 val sub = PolyML.NameSpace.Structures.contents st
+                 in addNames 6 (#allVal sub ());
+                    addNames 22 (#allType sub ())
+                 end handle _ => ())
+        (* Theorem names.  A qualified `fooTheory.' asks that theory. *)
+        val dbq = case qual of
+            SOME q => if String.isSuffix "Theory" q
+                      then String.substring (q, 0, size q - 6) ^ "$" ^ prefix
+                      else prefix
+          | NONE => prefix
+        val () =
+          if prefix = "" then ()
+          else app (fn ({name, theory, class, visible, ...}
+                          : LSPExtension.ide_symbol) =>
+                       add {label = name, kind = 21,
+                            detail = SOME (theory ^ "Theory" ^
+                                           (if visible then ""
+                                            else " (not an ancestor)"))})
+                   (!LSPExtension.ideSymbols
+                      {query = dbq, prefixOnly = true, limit = 100})
+        in {items = rev (!items), incomplete = !count >= maxCompletions}
+        end
+    end handle _ => {items = [], incomplete = true}
+
+  fun encCompletionItem {label, kind, detail} print = (
+      print "{\"label\":"; encString label print;
+      print ",\"kind\":"; encInt kind print;
+      (case detail of
+         NONE => ()
+       | SOME d => (print ",\"detail\":"; encString d print));
+      print "}")
+
+  fun encCompletionList {items, incomplete} print = (
+      print "{\"isIncomplete\":"; print (if incomplete then "true" else "false");
+      print ",\"items\":"; encArray encCompletionItem items print;
+      print "}")
+
   fun eval id {uri, code, incr, holdep} = let
     val lines = mkLineCounter code
 
@@ -2092,6 +2631,30 @@ fun start {diag, dbg} = let
           NONE => []
         | SOME v => gotoDefinition uri v pos
         in Ok (encArray (encLocationLink uri) ls) end)
+    | Request {method = "textDocument/documentSymbol", id, params} =>
+      spawnJob id params textDocumentId (fn uri =>
+        case withFileInfo (fn fileInfo =>
+               (fileInfo, Binarymap.peek (fileInfo, uri))) of
+          NONE => Ok (fn print => print "[]")
+        | SOME v => let
+            val {text = {lines, ...}, ...} = !(#lastTrees (v: file_data))
+            val syms = symbolsOf v
+          in
+            Ok (if !hierarchicalSymbols
+                then encArray (encDocumentSymbol lines) syms
+                else encArray
+                       (fn (c, sym) => encSymbolInformation uri lines c sym)
+                       (flatSymbols syms))
+          end)
+    | Request {method = "workspace/symbol", id, params} =>
+      spawnJob id params workspaceSymbolParams (fn query =>
+        Ok (encArray encWorkspaceSymbol (workspaceSymbols query)))
+    | Request {method = "textDocument/completion", id, params} =>
+      spawnJob id params textDocumentPositionParams (fn {uri, pos} =>
+        case withFileInfo (fn fileInfo =>
+               (fileInfo, Binarymap.peek (fileInfo, uri))) of
+          NONE => Ok (encCompletionList {items = [], incomplete = true})
+        | SOME v => Ok (encCompletionList (completionsAt uri v pos)))
     | Request {method = "$/setConfig", id, params} => ((
       case JSONDecode.decode (JSONDecode.fieldO "elabOn" elabOn) params of
         NONE => ()

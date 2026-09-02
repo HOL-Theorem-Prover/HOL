@@ -695,6 +695,22 @@ in
         (* Goal-state at cursor inside a Proof-QED body. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/goal_state_init.ML"));
+        (* Stored-theorem names for workspace/symbol and completion,
+           from DB and from built Theory.dat files. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/db_symbols_init.ML"));
+        (* Hover shows no entry documentation: `LSPExtension.helpLookup'
+           is installed by `Help.sml', which only the REPL prelude
+           loads, so in LSP mode the hook has never had an
+           implementation.  Loading it here does not work as it stands
+           -- `Help.sml' relies on the names the prelude's
+           `open HolKernel Parse boolLib' puts in scope (`$', `last',
+           ...), and this branch opens nothing on purpose, since the
+           server's namespace is what user files compile against.  The
+           fix belongs in `Help.sml': qualify what it uses.  Until then
+           `helpLookup' answers the empty list, as it always has.  Note
+           the documentation itself is built from help/Docfiles/*.smd,
+           so it is a product either way. *)
         (* --lsp-check-proofs: replay what the cheating pass deferred,
            rather than discarding it.  Off by default, so an LSP session
            costs elaboration only unless asked otherwise.  The pool is
