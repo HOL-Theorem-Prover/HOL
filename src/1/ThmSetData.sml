@@ -281,8 +281,8 @@ fun export_with_ancestry
           if null args then
             let val d = rADD(lift name)
             in
-              (* apply first: a delta the set type rejects must not be
-                 recorded, or every descendant theory fails to load *)
+              (* apply first: a delta rejected by apply_to_global must not
+                 reach the segment, where it would raise on every load *)
               #update_global_value fullresult (raw_apply_global d);
               #record_delta fullresult d
             end

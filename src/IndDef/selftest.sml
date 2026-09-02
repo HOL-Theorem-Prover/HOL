@@ -98,7 +98,7 @@ local
   val ok_nm = "wellformed_rule_induction"
   val ok_th = DISCH T (GEN “x:num” (DISCH “even x” (ASSUME “even x”)))
   val _ = save_thm(ok_nm, ok_th)
-  fun count () = length (thy_rule_inductions "scratch")
+  fun count () = length (thy_rule_inductions (current_theory ()))
   fun rejected f = (f (); false) handle HOL_ERR _ => true
   fun check msg f =
       let
