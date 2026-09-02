@@ -842,8 +842,8 @@ val adresult = AncestryData.fullmake {
 fun temp_add_atomic_term nmt =
     upd_ruledb (apply_to_ruledb (ADD nmt))
 fun add_atomic_term nmt =
-      (#record_delta adresult (ADD nmt);
-       temp_add_atomic_term nmt)
+      (temp_add_atomic_term nmt;
+       #record_delta adresult (ADD nmt))
 val atomic_terms = #get_global_value adresult
 
 

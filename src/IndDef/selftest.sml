@@ -87,6 +87,33 @@ val _ = tprint "Can still look at rule_induction data"
 val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
+(* a theorem the rule_induction set type rejects (its clause hypothesis is
+   headed by a variable) must leave no delta in the theory segment *)
+local
+  val nm = "malformed_rule_induction"
+  val th = GEN “P:num -> bool”
+               (DISCH T (GEN “x:num” (DISCH “(P:num -> bool) x” TRUTH)))
+  val _ = save_thm(nm, th)
+  fun count () = length (thy_rule_inductions "scratch")
+  fun rejected f = (f (); false) handle HOL_ERR _ => true
+  fun check msg f =
+      let
+        val _ = tprint msg
+        val n0 = count ()
+      in
+        if not (rejected f) then die "malformed theorem accepted"
+        else if count () <> n0 then die "rejected delta was recorded"
+        else OK()
+      end
+in
+val _ = check "Rejected stored [rule_induction] attribute is not persisted"
+              (fn () => ThmAttribute.store_at_attribute
+                          {name = nm, attrname = "rule_induction", args = [],
+                           thm = th})
+val _ = check "Rejected export_rule_induction is not persisted"
+              (fn () => export_rule_induction nm)
+end
+
 val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln "tr")),
                     printresult = (fn (th,_,_) => thm_to_string th),
                     printarg = K "With Unicode should fail",
