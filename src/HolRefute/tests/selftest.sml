@@ -16251,29 +16251,180 @@ val shared_deadline_backend : backend =
 
 val _ = register_backend shared_deadline_backend
 
-fun all_phases_share_one_deadline () =
+(* Three observations arrive in reverse order: execution, then the two
+   admission phases.  Admission shares the call's own deadline; execution
+   is measured against a budget belonging to the backend, so that a
+   backend running to its deadline cannot spend another's. *)
+fun deadline_observations sequential =
   let
     val _ = shared_deadlines := []
     val _ = shared_deadline_enabled := true
     val config = default_config
       |> Refute.upd_search
         (Refute.Only [Refute.RegisteredBackend "refute-shared-deadline"])
-      |> upd_sequential true
+      |> upd_sequential sequential
       |> upd_quiet true
     val result = refute config ``q (!n : num. n = 0)``
     val _ = shared_deadline_enabled := false
   in
-    (case result of Unknown _ => true | _ => false) andalso
-    (case !shared_deadlines of
-         first :: rest => length rest = 2 andalso
-           List.all (fn deadline =>
-             Time.compare (deadline, first) = EQUAL) rest
-       | _ => false)
+    case (result, !shared_deadlines) of
+        (Unknown _, [execution, requires, configured]) =>
+          SOME {execution = execution, requires = requires,
+                configured = configured}
+      | _ => NONE
   end
 
-val _ = require_msg (check_result all_phases_share_one_deadline) (fn () =>
-  "admission and execution created different search deadlines")
+fun admission_phases_share_one_deadline () =
+  case deadline_observations true of
+      SOME {requires, configured, ...} =>
+        Time.compare (requires, configured) = EQUAL
+    | NONE => false
+
+val _ = require_msg
+  (check_result admission_phases_share_one_deadline) (fn () =>
+  "the admission phases created different search deadlines")
   (fn () => ()) ()
+
+(* Backends that run at once each get a whole [timeout], so a backend's
+   deadline outlives the call's, which started earlier. *)
+fun parallel_execution_gets_a_whole_budget () =
+  case deadline_observations false of
+      SOME {execution, configured, ...} =>
+        Time.compare (execution, configured) = GREATER
+    | NONE => false
+
+val _ = require_msg
+  (check_result parallel_execution_gets_a_whole_budget) (fn () =>
+  "a backend running in parallel did not get a budget of its own")
+  (fn () => ()) ()
+
+(* Backends that run in turn split what is left of the call's budget, so
+   the only backend selected inherits all of it. *)
+fun sequential_execution_inherits_the_remaining_budget () =
+  case deadline_observations true of
+      SOME {execution, configured, ...} =>
+        Real.abs (Time.toReal execution - Time.toReal configured) < 0.5
+    | NONE => false
+
+val _ = require_msg
+  (check_result sequential_execution_inherits_the_remaining_budget)
+  (fn () =>
+  "the only sequential backend did not inherit the remaining budget")
+  (fn () => ()) ()
+
+val budget_probe_enabled = ref false
+
+val budget_hog_backend : backend =
+  {name = "refute-budget-hog", weight = ~76,
+   configured = fn () => !budget_probe_enabled,
+   requires = AnyGoal,
+   input = MonoInstances,
+   run = fn config => fn _ =>
+     let
+       fun spin () =
+         if search_expired config then ()
+         else (OS.Process.sleep (Time.fromReal 0.02); spin ())
+     in
+       spin (); Unknown ["budget hog spent its own budget"]
+     end}
+
+val budget_victim_backend : backend =
+  {name = "refute-budget-victim", weight = ~75,
+   configured = fn () => !budget_probe_enabled,
+   requires = AnyGoal,
+   input = MonoInstances,
+   run = fn _ => fn _ =>
+     let
+       val cex : counterexample =
+         {backend = "refute-budget-victim", substrate = "stub",
+          certainty = Genuine, bindings = [], evals = [], cert = NONE,
+          scope = NONE, model = NONE, stats = []}
+     in
+       OS.Process.sleep (Time.fromReal 0.3);
+       Counterexample [cex]
+     end}
+
+val _ = register_backend budget_hog_backend
+val _ = register_backend budget_victim_backend
+
+(* Selected together and run in turn, the first backend deepens until its
+   deadline.  One budget shared between them leaves the second nothing, so
+   a goal the second refutes on its own would go unrefuted here -- the
+   property that makes [REFUTE_TAC] subsume [NARROWING_TAC] and its
+   siblings. *)
+fun a_backend_does_not_spend_the_next_one_s_budget () =
+  let
+    val config = default_config
+      |> Refute.upd_search
+        (Refute.Only [Refute.RegisteredBackend "refute-budget-hog",
+                      Refute.RegisteredBackend "refute-budget-victim"])
+      |> upd_sequential true
+      |> upd_timeout 2.0
+      |> upd_quiet true
+    val _ = budget_probe_enabled := true
+    fun run () = refute config ``q (!n : num. n = 0)``
+    val result =
+      Portable.finally (fn () => budget_probe_enabled := false) run ()
+  in
+    case result of
+        Counterexample ({backend = "refute-budget-victim", ...} :: _) => true
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result a_backend_does_not_spend_the_next_one_s_budget) (fn () =>
+  "a backend that ran to its deadline left the next one nothing: the " ^
+  "second backend's counterexample never arrived") (fn () => ()) ()
+
+(* Two threads have to sit inside native scopes at once, each seeing its
+   own term tables.  Process-global tables or hooks need a lock spanning
+   the whole scope, which serializes the QC backends and lets one of them
+   spend the entire search.  Under such a lock the barrier cannot
+   complete, and the timed wait fails this rather than hanging. *)
+fun native_scopes_are_concurrent () =
+  let
+    val cons = #1 (boolSyntax.strip_comb ``#"a" :: (s : string)``)
+    val left_term = ``0n``
+    val right_term = ``1n``
+    val left = register_term_tables [cons] [left_term]
+    val right = register_term_tables [cons] [right_term]
+    val lock = Mutex.mutex ()
+    val ready = ConditionVar.conditionVar ()
+    val arrived = ref 0
+    val limit = Time.+ (Time.now (), Time.fromReal 30.0)
+    fun barrier () =
+      Multithreading.synchronized "Refute native scope barrier" lock
+        (fn () =>
+          let
+            fun wait () =
+              if !arrived >= 2 then true
+              else if ConditionVar.waitUntil (ready, lock, limit) then
+                wait ()
+              else !arrived >= 2
+            val _ = arrived := !arrived + 1
+            val _ =
+              if !arrived >= 2 then ConditionVar.broadcast ready else ()
+          in
+            wait ()
+          end)
+    fun body (serial, expected) =
+      with_term_tables serial (fn () =>
+        barrier () andalso Term.aconv (raw_term 0) expected)
+    fun run () =
+      ParList.map_with_workers 2 body
+        [(left, left_term), (right, right_term)]
+    val results =
+      Portable.finally
+        (fn () => (unregister_term_tables left;
+                   unregister_term_tables right))
+        run ()
+  in
+    results = [true, true]
+  end
+
+val _ = require_msg (check_result native_scopes_are_concurrent) (fn () =>
+  "two threads could not hold native scopes at once, or one saw the " ^
+  "other's term table") (fn () => ()) ()
 
 fun admission_errors_are_registry_ordered_and_released () =
   let

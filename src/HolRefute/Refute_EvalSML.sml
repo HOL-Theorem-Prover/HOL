@@ -32,18 +32,50 @@ structure Refute_EvalSML = struct
   type generated_dispatch =
     int -> bool -> int -> int -> IntInf.int -> generated_answer
 
-  val installed_dispatch : generated_dispatch option ref = ref NONE
-  val deadline : Time.time option ref = ref NONE
-  val ignored_filter : (generated_hit -> bool) ref = ref (fn _ => false)
-  val constructors : term vector ref = ref (Vector.fromList [])
-  val raw_terms : term vector ref = ref (Vector.fromList [])
+  (* Generated code reaches its deadline, ignored-hit filter and term
+     tables through the accessors below.  That state is dynamically scoped,
+     and holding it per thread rather than per process is what lets several
+     backends run compiled tests at once: a lock spanning a whole test
+     window would serialize them and let one consume the entire budget. *)
+  type native_state =
+    { installed : generated_dispatch option ref,
+      deadline : Time.time option ref,
+      ignored : (generated_hit -> bool) ref,
+      constructors : term vector ref,
+      raw_terms : term vector ref }
+
+  val native_var : native_state Thread_Data.var = Thread_Data.var ()
+
+  fun new_native_state () : native_state =
+    { installed = ref NONE,
+      deadline = ref NONE,
+      ignored = ref (fn _ => false),
+      constructors = ref (Vector.fromList []),
+      raw_terms = ref (Vector.fromList []) }
+
+  (* [Thread_Data.setmp] cannot serve here: generated code assigns into the
+     slot it finds, so each thread keeps its own cells and saves and
+     restores their contents in the scoping combinators below. *)
+  fun native_state () =
+    case Thread_Data.get native_var of
+        SOME state => state
+      | NONE =>
+          let val state = new_native_state ()
+          in Thread_Data.put native_var (SOME state); state end
+
+  (* Generated code installs its dispatch into the compiling thread's own
+     slot, which [compile_install] reads back under the compiler lock. *)
+  fun install_dispatch dispatch =
+    #installed (native_state ()) := SOME dispatch
+
   val table_serial = ref 0
   val term_tables = ref
     ([] : (int * term vector * term vector) list)
   val table_mutex = Mutex.mutex ()
-  val native_mutex = Mutex.mutex ()
   val compiler_mutex = Mutex.mutex ()
   val goal_compile_mutex = Mutex.mutex ()
+  (* Telemetry only, and deliberately process-wide: a reconstruction may be
+     forced on a thread other than the one that ran the test. *)
   val reconstruction_forces = ref 0
 
   (* Do not block with interrupts masked: [Timeout.apply] cancels by raising
@@ -107,58 +139,60 @@ structure Refute_EvalSML = struct
            remove () before Mutex.unlock table_mutex)) ()
     end
 
-  (* [restore] is fixed at unit by the interruptible lock acquisition, so
-     the action's value leaves the masked region through a slot. *)
-  fun with_term_tables serial action =
+  (* The registry lookup is the only shared step; the tables themselves go
+     into the calling thread's own cells, so the action runs unlocked. *)
+  fun lookup_term_tables serial =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
           val _ = lock_interruptibly restore table_mutex
-          val slot = ref NONE
-          val result = Exn.capture (fn () =>
-            let
-              val (_, constructor_table, term_table) =
-                valOf (List.find (fn (index, _, _) => index = serial)
-                  (!term_tables))
-              val old_constructors = !constructors
-              val old_terms = !raw_terms
-              val action_result = Exn.capture (restore (fn () =>
-                (constructors := constructor_table;
-                 raw_terms := term_table;
-                 slot := SOME (action ())))) ()
-              val _ = constructors := old_constructors
-              val _ = raw_terms := old_terms
-            in
-              Exn.release action_result
-            end) ()
+          val found = Exn.capture (fn () =>
+            List.find (fn (index, _, _) => index = serial) (!term_tables)) ()
           val _ = Mutex.unlock table_mutex
-          val _ = Exn.release result
         in
-          case !slot of
-              SOME value => value
-            | NONE => raise Fail
-                "Refute_EvalSML.with_term_tables: no value"
+          Exn.release found
         end) ()
+
+  fun with_term_tables serial action =
+    let
+      val {constructors, raw_terms, ...} = native_state ()
+      val (_, constructor_table, term_table) =
+        valOf (lookup_term_tables serial)
+      val old_constructors = !constructors
+      val old_terms = !raw_terms
+      val _ = constructors := constructor_table
+      val _ = raw_terms := term_table
+      val result = Exn.capture action ()
+      val _ = constructors := old_constructors
+      val _ = raw_terms := old_terms
+    in
+      Exn.release result
+    end
 
   fun wrap_reconstruction serial rebuild () =
     with_term_tables serial rebuild
 
   fun check_deadline () =
-    case !deadline of
+    case !(#deadline (native_state ())) of
         NONE => ()
       | SOME limit =>
           if Time.compare (Time.now (), limit) = LESS then ()
           else raise Deadline
 
+  (* Generated code tests every candidate hit against this filter. *)
+  fun ignored_hit_now found = !(#ignored (native_state ())) found
+
   fun table_term serial index =
-    with_term_tables serial (fn () => Vector.sub (!raw_terms, index))
+    with_term_tables serial (fn () =>
+      Vector.sub (!(#raw_terms (native_state ())), index))
 
   fun raw_term index =
-    (note_force (); Vector.sub (!raw_terms, index))
+    (note_force (); Vector.sub (!(#raw_terms (native_state ())), index))
 
   fun con_term index arguments =
     (note_force ();
-     Term.list_mk_comb (Vector.sub (!constructors, index), arguments))
+     Term.list_mk_comb
+       (Vector.sub (!(#constructors (native_state ())), index), arguments))
 
   fun num_term value =
     (note_force (); numSyntax.mk_numeral (Arbnum.fromLargeInt value))
@@ -239,7 +273,8 @@ structure Refute_EvalSML = struct
      not a literal falls back to the ordinary destructuring. *)
   fun constructor_argument constructor_index argument_index value =
     let
-      val expected = Vector.sub (!constructors, constructor_index)
+      val expected =
+        Vector.sub (!(#constructors (native_state ())), constructor_index)
       val expected_name =
         let val {Thy, Name, ...} = Term.dest_thy_const expected
         in (Thy, Name) end
@@ -333,8 +368,9 @@ structure Refute_EvalSML = struct
       (fn restore => fn () =>
         let
           val _ = lock_interruptibly restore compiler_mutex
-          val old_dispatch = !installed_dispatch
-          val _ = installed_dispatch := NONE
+          val installed = #installed (native_state ())
+          val old_dispatch = !installed
+          val _ = installed := NONE
           (* The lock acquisition above fixes [restore] at unit, so the
              compiler's diagnosis comes back through a slot. *)
           val slot = ref NONE
@@ -343,7 +379,7 @@ structure Refute_EvalSML = struct
           val answer =
             case (result, !slot) of
                 (Exn.Res _, SOME NONE) =>
-                  (case !installed_dispatch of
+                  (case !installed of
                        SOME dispatch => Installed dispatch
                      | NONE => CompileError
                          ["generated code did not install its dispatch"])
@@ -351,14 +387,14 @@ structure Refute_EvalSML = struct
               | (Exn.Res _, NONE) =>
                   CompileError ["compilation reported no diagnosis"]
               | (Exn.Exn Interrupt, _) =>
-                  (installed_dispatch := old_dispatch;
+                  (installed := old_dispatch;
                    Mutex.unlock compiler_mutex;
                    raise Interrupt)
               | (Exn.Exn error, _) => CompileError [exception_text error]
           val _ =
             (case answer of
                  Installed _ => ()
-               | CompileError _ => installed_dispatch := old_dispatch)
+               | CompileError _ => installed := old_dispatch)
           val _ = Mutex.unlock compiler_mutex
         in
           answer
@@ -378,30 +414,21 @@ structure Refute_EvalSML = struct
       Refute_Eval.ignored_candidate candidate ignored
     end
 
+  (* No lock: the hooks live in the calling thread's own state, so a test
+     window no longer excludes the other backends for its whole duration. *)
   fun with_native_hooks limit run_depth ignored action =
-    Thread_Attributes.uninterruptible
-      (fn restore => fn () =>
-        let
-          val _ = lock_interruptibly restore native_mutex
-          val old_deadline = !deadline
-          val old_filter = !ignored_filter
-          val _ = deadline := SOME limit
-          val _ = ignored_filter := ignored_hit run_depth ignored
-          (* One restore type per [uninterruptible] call: the action's answer
-             travels through a slot, as in [with_term_tables]. *)
-          val slot = ref NONE
-          val result = Exn.capture
-            (restore (fn () => slot := SOME (action ()))) ()
-          val _ = deadline := old_deadline
-          val _ = ignored_filter := old_filter
-          val _ = Mutex.unlock native_mutex
-          val _ = Exn.release result
-        in
-          case !slot of
-              SOME value => value
-            | NONE => raise Fail
-                "Refute_EvalSML.with_native_hooks: no value"
-        end) ()
+    let
+      val {deadline, ignored = filter, ...} = native_state ()
+      val old_deadline = !deadline
+      val old_filter = !filter
+      val _ = deadline := SOME limit
+      val _ = filter := ignored_hit run_depth ignored
+      val result = Exn.capture action ()
+      val _ = deadline := old_deadline
+      val _ = filter := old_filter
+    in
+      Exn.release result
+    end
 
   fun positive_time time = Time.compare (time, Time.zeroTime) = GREATER
 

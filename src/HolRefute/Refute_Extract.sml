@@ -2872,7 +2872,7 @@ structure Refute_Extract = struct
         "  | RefuteGuardSuccess\n" ^
         "  | RefuteHit of Refute_EvalSML.generated_hit\n" ^
         "fun refute_hit found =\n" ^
-        "  if (!Refute_EvalSML.ignored_filter) found then\n" ^
+        "  if Refute_EvalSML.ignored_hit_now found then\n" ^
         "    RefuteContinue\n" ^
         "  else RefuteHit found\n" ^
         "fun refute_each [] continuation = RefuteContinue\n" ^
@@ -4012,7 +4012,7 @@ structure Refute_Extract = struct
               "#candidates_generated answer}\n" ^
             "    end)\n" ^
             "fun install () =\n" ^
-            "  Refute_EvalSML.installed_dispatch := SOME protected_dispatch\n"
+            "  Refute_EvalSML.install_dispatch protected_dispatch\n"
           val _ = drain_definitions context
           val source = source_prefix context ^
             definition_declarations context ^ "\n" ^
@@ -4521,7 +4521,7 @@ structure Refute_Extract = struct
           integer leading_count ^ " example\n" ^
           "      val replay = Refute_Narrow.replay_of_example\n" ^
           "        (replay_rebuild depth) example\n" ^
-          "    in not ((!Refute_EvalSML.ignored_filter)\n" ^
+          "    in not (Refute_EvalSML.ignored_hit_now\n" ^
           "      (candidate depth arguments (SOME replay) genuine)) end)\n" ^
           "  initial\n" ^
           "val (hit, tests, decided, complete) =\n" ^
@@ -4566,11 +4566,11 @@ structure Refute_Extract = struct
             ground_environment_source ^ ", case_tree, genuine)\n" ^
             "fun accept_hit depth genuine_only arguments genuine =\n" ^
             "  (not genuine_only orelse Refute_Narrow.all_ground arguments)\n" ^
-            "  andalso not ((!Refute_EvalSML.ignored_filter)\n" ^
+            "  andalso not (Refute_EvalSML.ignored_hit_now\n" ^
             "    (candidate depth arguments NONE genuine))\n" ^
             "fun make_hit depth arguments case_tree genuine =\n" ^
             "  let val found = candidate depth arguments case_tree genuine\n" ^
-            "  in if (!Refute_EvalSML.ignored_filter) found then NONE\n" ^
+            "  in if Refute_EvalSML.ignored_hit_now found then NONE\n" ^
             "     else SOME found\n  end\n" ^
             "fun dispatch card genuine_only depth draws state =\n" ^
             "  if card <> 1 then raise Subscript else\n" ^
@@ -4611,8 +4611,8 @@ structure Refute_Extract = struct
             "        candidates_generated = " ^
               "#candidates_generated answer}\n" ^
             "    end)\n" ^
-            "fun install () = Refute_EvalSML.installed_dispatch :=\n" ^
-            "  SOME protected_dispatch\n"
+            "fun install () =\n" ^
+            "  Refute_EvalSML.install_dispatch protected_dispatch\n"
           val source = source_prefix context ^
             definition_declarations context ^ "\n" ^ shape_declaration ^
             conversions ^ reconstructions ^ evaluate ^ runtime

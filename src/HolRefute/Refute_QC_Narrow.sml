@@ -341,8 +341,13 @@ structure Refute_QC_Narrow = struct
                   not (!failed) andalso null (!gave_up) then
                  Refute_Core.NoCounterexample
                else
+                 (* A run that never finished a depth has not exhausted
+                    anything; saying so would read as a completed search
+                    that found nothing. *)
                  Refute_Core.Unknown
-                   ("narrowing search exhausted" ::
+                   ((if Option.isSome (!frontier) then
+                       "narrowing search exhausted"
+                     else "narrowing reached no depth") ::
                     !gave_up @ frontier_reason))
     end
 
