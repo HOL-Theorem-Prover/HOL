@@ -2081,20 +2081,16 @@ structure Refute_Core = struct
     | AdmissionTimeout of string
     | AdmissionError of string * exn
 
-  (* Every backend gets a budget of its own rather than a share of one
-     nobody owns.  A backend that deepens until its deadline would
-     otherwise consume the whole search and leave the others nothing, so a
-     goal refuted under [Only [X]] could go unrefuted under a wider
-     selection.  Backends that run at once each get the whole [timeout];
-     backends that run in turn split what is left of it, so a sequential
-     call stays inside [timeout] and still starves no one. *)
+  (* Concurrent backends share the call's absolute deadline: because they
+     run at once, each can use all of the remaining time without extending
+     the call.  Backends that run in turn split what remains, so one backend
+     cannot consume the whole search before the others start. *)
   datatype backend_budget =
-      WholeBudget
+      SharedBudget of search_context
     | SplitBudget of {context : search_context, unstarted : int ref}
 
-  fun budget_context (cfg : config) WholeBudget =
-        make_search_context (#timeout cfg)
-    | budget_context _ (SplitBudget {context, unstarted}) =
+  fun budget_context (SharedBudget context) = context
+    | budget_context (SplitBudget {context, unstarted}) =
         let
           (* A backend that exhausts or declines early leaves its unspent
              time to the backends behind it. *)
@@ -2108,7 +2104,7 @@ structure Refute_Core = struct
   fun run_backend context budget (cfg : config) ceiling forms
         (backend, result_ref) =
     let
-      val search_context = budget_context cfg budget
+      val search_context = budget_context budget
     in
     Thread_Data.setmp active_refute_context context (fn () =>
     Thread_Data.setmp active_search_context (SOME search_context) (fn () =>
@@ -2351,11 +2347,11 @@ structure Refute_Core = struct
                         if has_no_model jobs then NoModel
                         else
                           let
-                            (* The outer context bounds preprocessing and
-                               admission only; each backend reports its own
-                               deadline. *)
                             val reasons = excluded_reasons @
-                              unknown_results jobs
+                              unknown_results jobs @
+                              (if #expired search_context () then
+                                 ["search timed out"]
+                               else [])
                           in
                             if null reasons then
                               Unknown
@@ -2376,7 +2372,7 @@ structure Refute_Core = struct
                 else
                   ParList.get_some_with_workers (length jobs)
                     (run_backend (Thread_Data.get active_refute_context)
-                      WholeBudget cfg ceiling forms) jobs
+                      (SharedBudget search_context) cfg ceiling forms) jobs
             in
               case winner of
                   SOME result => result

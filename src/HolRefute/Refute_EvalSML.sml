@@ -158,15 +158,20 @@ structure Refute_EvalSML = struct
       val {constructors, raw_terms, ...} = native_state ()
       val (_, constructor_table, term_table) =
         valOf (lookup_term_tables serial)
-      val old_constructors = !constructors
-      val old_terms = !raw_terms
-      val _ = constructors := constructor_table
-      val _ = raw_terms := term_table
-      val result = Exn.capture action ()
-      val _ = constructors := old_constructors
-      val _ = raw_terms := old_terms
     in
-      Exn.release result
+      Thread_Attributes.uninterruptible
+        (fn restore => fn () =>
+          let
+            val old_constructors = !constructors
+            val old_terms = !raw_terms
+            val _ = constructors := constructor_table
+            val _ = raw_terms := term_table
+            val result = Exn.capture (restore action) ()
+            val _ = constructors := old_constructors
+            val _ = raw_terms := old_terms
+          in
+            Exn.release result
+          end) ()
     end
 
   fun wrap_reconstruction serial rebuild () =
@@ -419,15 +424,20 @@ structure Refute_EvalSML = struct
   fun with_native_hooks limit run_depth ignored action =
     let
       val {deadline, ignored = filter, ...} = native_state ()
-      val old_deadline = !deadline
-      val old_filter = !filter
-      val _ = deadline := SOME limit
-      val _ = filter := ignored_hit run_depth ignored
-      val result = Exn.capture action ()
-      val _ = deadline := old_deadline
-      val _ = filter := old_filter
     in
-      Exn.release result
+      Thread_Attributes.uninterruptible
+        (fn restore => fn () =>
+          let
+            val old_deadline = !deadline
+            val old_filter = !filter
+            val _ = deadline := SOME limit
+            val _ = filter := ignored_hit run_depth ignored
+            val result = Exn.capture (restore action) ()
+            val _ = deadline := old_deadline
+            val _ = filter := old_filter
+          in
+            Exn.release result
+          end) ()
     end
 
   fun positive_time time = Time.compare (time, Time.zeroTime) = GREATER
@@ -441,9 +451,6 @@ structure Refute_EvalSML = struct
 
   fun compile_locked extract (config : Refute_Core.config) strategy problem =
     let
-      val search_context = Refute_Core.search_context_for config
-      val started = #started search_context
-      val limit = #deadline search_context
       val mode =
         case strategy of
             Refute_Eval.Narrowing => LazyExtraction
@@ -486,6 +493,8 @@ structure Refute_EvalSML = struct
 
               fun run input =
                 let
+                  val limit = #deadline
+                    (Refute_Core.search_context_for config)
                   fun invoke () = dispatch (#card input)
                     (#genuine_only input) (#size input) (#draws input)
                     (!state)

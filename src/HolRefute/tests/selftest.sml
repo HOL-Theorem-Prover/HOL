@@ -16252,9 +16252,7 @@ val shared_deadline_backend : backend =
 val _ = register_backend shared_deadline_backend
 
 (* Three observations arrive in reverse order: execution, then the two
-   admission phases.  Admission shares the call's own deadline; execution
-   is measured against a budget belonging to the backend, so that a
-   backend running to its deadline cannot spend another's. *)
+   admission phases. *)
 fun deadline_observations sequential =
   let
     val _ = shared_deadlines := []
@@ -16285,17 +16283,16 @@ val _ = require_msg
   "the admission phases created different search deadlines")
   (fn () => ()) ()
 
-(* Backends that run at once each get a whole [timeout], so a backend's
-   deadline outlives the call's, which started earlier. *)
-fun parallel_execution_gets_a_whole_budget () =
+(* Backends that run at once share the call's absolute deadline. *)
+fun parallel_execution_keeps_the_call_deadline () =
   case deadline_observations false of
       SOME {execution, configured, ...} =>
-        Time.compare (execution, configured) = GREATER
+        Time.compare (execution, configured) = EQUAL
     | NONE => false
 
 val _ = require_msg
-  (check_result parallel_execution_gets_a_whole_budget) (fn () =>
-  "a backend running in parallel did not get a budget of its own")
+  (check_result parallel_execution_keeps_the_call_deadline) (fn () =>
+  "a backend running in parallel extended the call deadline")
   (fn () => ()) ()
 
 (* Backends that run in turn split what is left of the call's budget, so
@@ -16312,69 +16309,93 @@ val _ = require_msg
   "the only sequential backend did not inherit the remaining budget")
   (fn () => ()) ()
 
-val budget_probe_enabled = ref false
+val split_budget_probe_enabled = ref false
+val split_budget_deadlines = ref ([] : Time.time list)
 
-val budget_hog_backend : backend =
-  {name = "refute-budget-hog", weight = ~76,
-   configured = fn () => !budget_probe_enabled,
-   requires = AnyGoal,
-   input = MonoInstances,
-   run = fn config => fn _ =>
-     let
-       fun spin () =
-         if search_expired config then ()
-         else (OS.Process.sleep (Time.fromReal 0.02); spin ())
-     in
-       spin (); Unknown ["budget hog spent its own budget"]
-     end}
+fun record_split_budget () =
+  case Thread_Data.get active_search_context of
+      SOME context =>
+        split_budget_deadlines :=
+          #deadline context :: !split_budget_deadlines
+    | NONE => raise Fail "missing split backend search context"
 
-val budget_victim_backend : backend =
-  {name = "refute-budget-victim", weight = ~75,
-   configured = fn () => !budget_probe_enabled,
-   requires = AnyGoal,
-   input = MonoInstances,
+fun split_budget_backend name weight : backend =
+  {name = name, weight = weight,
+   configured = fn () => !split_budget_probe_enabled,
+   requires = AnyGoal, input = MonoInstances,
    run = fn _ => fn _ =>
-     let
-       val cex : counterexample =
-         {backend = "refute-budget-victim", substrate = "stub",
-          certainty = Genuine, bindings = [], evals = [], cert = NONE,
-          scope = NONE, model = NONE, stats = []}
-     in
-       OS.Process.sleep (Time.fromReal 0.3);
-       Counterexample [cex]
-     end}
+     (record_split_budget (); Unknown ["budget captured"])}
 
-val _ = register_backend budget_hog_backend
-val _ = register_backend budget_victim_backend
+val _ = register_backend
+  (split_budget_backend "refute-split-budget-first" ~76)
+val _ = register_backend
+  (split_budget_backend "refute-split-budget-second" ~75)
 
-(* Selected together and run in turn, the first backend deepens until its
-   deadline.  One budget shared between them leaves the second nothing, so
-   a goal the second refutes on its own would go unrefuted here -- the
-   property that makes [REFUTE_TAC] subsume [NARROWING_TAC] and its
-   siblings. *)
-fun a_backend_does_not_spend_the_next_one_s_budget () =
+(* Sequential allocation is observed directly, without asking a timer
+   thread to win a race.  The first backend receives half of the remaining
+   call budget; after it returns immediately, the last receives all that is
+   left, so its absolute deadline is later. *)
+fun sequential_backends_receive_separate_shares () =
   let
+    val _ = split_budget_deadlines := []
     val config = default_config
       |> Refute.upd_search
-        (Refute.Only [Refute.RegisteredBackend "refute-budget-hog",
-                      Refute.RegisteredBackend "refute-budget-victim"])
+        (Refute.Only
+          [Refute.RegisteredBackend "refute-split-budget-first",
+           Refute.RegisteredBackend "refute-split-budget-second"])
       |> upd_sequential true
-      |> upd_timeout 2.0
       |> upd_quiet true
-    val _ = budget_probe_enabled := true
+    val _ = split_budget_probe_enabled := true
     fun run () = refute config ``q (!n : num. n = 0)``
     val result =
-      Portable.finally (fn () => budget_probe_enabled := false) run ()
+      Portable.finally
+        (fn () => split_budget_probe_enabled := false) run ()
   in
-    case result of
-        Counterexample ({backend = "refute-budget-victim", ...} :: _) => true
-      | _ => false
+    (case result of Unknown _ => true | _ => false) andalso
+    (case !split_budget_deadlines of
+         [second, first] => Time.compare (second, first) = GREATER
+       | _ => false)
   end
 
 val _ = require_msg
-  (check_result a_backend_does_not_spend_the_next_one_s_budget) (fn () =>
-  "a backend that ran to its deadline left the next one nothing: the " ^
-  "second backend's counterexample never arrived") (fn () => ()) ()
+  (check_result sequential_backends_receive_separate_shares) (fn () =>
+  "sequential backends did not receive separate shares of the call budget")
+  (fn () => ()) ()
+
+(* Smart-gate admission can compile and cache a native test under the call
+   context.  The cached closure must use the backend context installed when
+   it runs, not retain the admission deadline.  A zero admission budget
+   makes that distinction deterministic without waiting for either
+   deadline. *)
+fun native_compilation_does_not_capture_its_deadline () =
+  let
+    val admission_context = make_search_context 0.0
+    fun compile () =
+      Refute_EvalSML.compile_with Refute_Extract.extract_problem
+        default_config Exhaustive (Plans [Test boolSyntax.T])
+  in
+    case Thread_Data.setmp active_search_context (SOME admission_context)
+        compile () of
+        Inapplicable _ => false
+      | Compiled test =>
+          Portable.finally (#close test) (fn () =>
+            let
+              val execution_context = make_search_context 10.0
+              fun run () = #run test
+                {genuine_only = false, card = 1, size = 1, draws = 0,
+                 ignored = []}
+            in
+              case Thread_Data.setmp active_search_context
+                  (SOME execution_context) run () of
+                  Exhausted {complete = true} => true
+                | _ => false
+            end) ()
+  end
+
+val _ = require_msg
+  (check_result native_compilation_does_not_capture_its_deadline) (fn () =>
+  "a native test compiled during admission retained admission's deadline")
+  (fn () => ()) ()
 
 (* Two threads have to sit inside native scopes at once, each seeing its
    own term tables.  Process-global tables or hooks need a lock spanning
