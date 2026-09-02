@@ -1,9 +1,9 @@
 Theory bnfDatatypeTest
 Ancestors
-  bnfInitial bnfFixBNF finite_map list pred_set cardinal
+  bnfInitial bnfFixBNF bnfPrelims finite_map list pred_set cardinal
 Libs
   HolKernel Parse boolLib bossLib bnfBase bnfLib bnfFixLib bnfDatatypeLib
-  testutils
+  legacyInduction testutils
 
 (* ----------------------------------------------------------------------
     The package as a user meets it: one call per declaration, and
@@ -211,4 +211,32 @@ val _ =
         val th3 = Q.prove (‘n1SET1 (N1 l []) = ∅’, simp[])
     in
       if List.all (null o hyp) [th1, th2, th3] then OK() else die "not proved"
+    end
+
+(* ----------------------------------------------------------------------
+    and the older construction's principle for a type that recurses
+    under two operators, which is where their order is visible
+   ---------------------------------------------------------------------- *)
+
+val _ = bnfDatatype `zv = VA (zv option) | VB (zv list) | VC (zv option) num`
+
+val _ = tprint "an operator per predicate, in the order first mentioned"
+val _ =
+    let val ops = [{induction = TypeBase.induction_of “:'a list”,
+                    sets = CONJUNCTS listTheory.LIST_TO_SET},
+                   {induction = TypeBase.induction_of “:'a option”,
+                    sets = CONJUNCTS bnfPrelimsTheory.optSET_def}]
+        val th = legacyInduction.mutual_induction
+                   ops (TypeBase.induction_of “:zv”)
+    in
+      (* the option comes first in the specification, so it is Q0, even
+         though the list's clauses are what a caller lists first *)
+      if same (concl th)
+           “∀P Q0 Q1.
+              (∀v. Q0 v ⇒ P (VA v)) ∧ (∀l. Q1 l ⇒ P (VB l)) ∧
+              (∀v. Q0 v ⇒ ∀n. P (VC v n)) ∧ Q0 NONE ∧
+              (∀a. P a ⇒ Q0 (SOME a)) ∧ Q1 [] ∧
+              (∀t h. P h ∧ Q1 t ⇒ Q1 (h::t)) ⇒
+              (∀v. P v) ∧ (∀l. Q0 l) ∧ ∀l. Q1 l”
+      then OK() else die "not the order the specification mentions them"
     end

@@ -27,6 +27,11 @@ sig
         setL [] = ∅        setL (h::t) = {h} ∪ setL t
 
       in whatever form the operator's theory writes them.
+
+      There is one predicate per operator recursed under, and they come
+      in the order the principle's clauses first mention them — which
+      fixes both their names and the order of the conclusion's
+      conjuncts, since a caller matches against those.
      ---------------------------------------------------------------------- *)
   type operator = {induction : thm, sets : thm list}
 

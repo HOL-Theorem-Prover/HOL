@@ -167,7 +167,12 @@ fun assemble (ops : operator list) ind =
       val _ = not (null nested) orelse
               raise ERR "mutual_induction"
                     "the principle recurses under no operator"
-      val optys = Lib.mk_set (List.map (type_of o #arg) nested)
+      (* the operators, in the order the principle's clauses first
+         mention them, which is the order that names the predicates *)
+      fun firstOccs [] = []
+        | firstOccs (t :: ts) =
+            t :: firstOccs (List.filter (not o equal t) ts)
+      val optys = firstOccs (List.map (type_of o #arg) nested)
       (* the caller's operator for a type: the one whose induction is
          about it *)
       fun opFor opty =
