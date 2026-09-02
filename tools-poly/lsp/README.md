@@ -30,12 +30,19 @@ practical guide to trying it out; the protocol details live in
   `workspaceSymbolProvider` and `completionProvider`, so an editor's
   outline, symbol search and completion work with no client-side code
   — see "Symbols, completion and their scope".
-- **Unloadable ancestors stop the file.**  A script that names an
-  ancestor or library the server cannot load — not built yet, or
-  raising on load — gets no compile at all: there is nothing to
-  elaborate it against, so every name it takes from that dependency
-  would draw its own diagnostic, at the price of the file's whole
-  elaboration.  The server publishes the load failures against the
+- **Unavailable ancestors stop the file.**  A script that names an
+  ancestor or library the server cannot get — not built yet, raising
+  on load, or stale against a HOL that has moved on — gets no compile
+  at all: there is nothing to elaborate it against, so every name it
+  takes from that dependency would draw its own diagnostic, at the
+  price of the file's whole elaboration.  The test is whether the
+  structure the header opens is actually in the namespace, not whether
+  a load function raised: a module can load and bind a structure of
+  some other name, and `loadPlan` skips anything already marked in
+  `Meta.loadedMods`, so a retry after a failed *use* raises nothing at
+  all.  Anything already in the running heap is in the namespace
+  without ever being in `loadedMods`, so it passes.
+  The server publishes the load failures against the
   header entries that asked for them, sends `$/compileBlocked`, and
   answers `null` to `$/hol/goalState` until the file's declared
   dependency list changes.  Editing that list — `Ancestors` / `Libs`,

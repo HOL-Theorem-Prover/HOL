@@ -2040,13 +2040,47 @@ fun start {diag, dbg} = let
             publishAllDiagnostics uri v;
             markDepsBlocked uri v {mods = declaredNames, message = message})
         end
-      (* A module `load' could not find can still be there: anything
-         baked into the running heap is in the namespace without being
-         in `loadedMods', and the file's `open' will find it.  What
-         decides the file's fate is whether the structure is there, so
-         a load failure only counts when it isn't. *)
-      fun stillMissing (m, _, _) =
-          not (isSome (#lookupStruct LSPNameSpace.fileNS m))
+      (* Which of the modules the header declares are not available?
+         That question, and not "did some load function raise", is what
+         decides the file's fate: every name here is `open'ed by the
+         header's expansion, so one with no structure behind it means
+         the file cannot compile, and every use of everything it was
+         supposed to bring in would be reported instead.
+
+         Asking the namespace rather than collecting exceptions covers
+         the cases an exception never reaches us:
+
+           - `loadPlan' skips a module already in `Meta.loadedMods',
+             and a module whose *use* failed is left marked there --
+             the plan is built and used in two separate steps here --
+             so a retry after a failed load plans nothing, raises
+             nothing, and would otherwise look fine;
+           - a module can load and still not bind the structure the
+             header opens.
+
+         A module baked into the running heap is in the namespace
+         without ever being in `loadedMods', so it passes, which is the
+         property the old exception filter was there to preserve.
+
+         The recorded exception supplies the message when there is one,
+         since "Cannot find file X.ui" or the TheoryReader complaint
+         from a stale object is the useful thing to say. *)
+      fun missingDeps () = let
+        val failed = rev (!depFails)
+        fun failure m = List.find (fn (n, _, _) => n = m) failed
+        fun why m =
+          if List.exists (fn n => n = m) mods
+          then Fail "the load produced no structure of that name"
+          else Fail "nothing to load, and no structure of that name"
+        in
+          List.mapPartial
+            (fn (m, pos) =>
+                if isSome (#lookupStruct LSPNameSpace.fileNS m) then NONE
+                else case failure m of
+                       SOME f => SOME f
+                     | NONE => SOME (m, pos, why m))
+            declared
+        end
       fun runCompile () = (
         sendProgressBegin ();
         compileForReport uri (#text text) resumeStart lastPos processBuiltTree captureSnap process;
@@ -2129,7 +2163,7 @@ fun start {diag, dbg} = let
           if Binarymap.numItems (!proofDiags) > 0
           then publishAllDiagnostics uri v else ()))
       in (
-        case List.filter stillMissing (rev (!depFails)) of
+        case missingDeps () of
           fails as (_::_) => blockOnDeps fails
         | [] => runCompile ()
       ) handle Thread.Interrupt => (

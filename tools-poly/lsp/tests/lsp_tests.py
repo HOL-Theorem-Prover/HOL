@@ -5252,6 +5252,159 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_stale_ancestor_keeps_blocking_on_retry():
+    """A stale ancestor -- objects present, but built against a HOL
+    that has moved on -- blocks, and goes on blocking when the user
+    asks for a retry.
+
+    This is the shape reported from the field: `quse` of the ancestor
+    raises inside TheoryReader after a `link_parents` complaint, which
+    is nothing like the "Cannot find file" of an ancestor that was
+    never built.  `$/hol/retryCompile` clears the block and genuinely
+    re-attempts, so the retry has to reach the same verdict rather
+    than compiling a file whose `open` cannot work."""
+    root = tempfile.mkdtemp(prefix="lsp_stale_anc_")
+    try:
+        with open(os.path.join(root, "pthyScript.sml"), "w") as f:
+            f.write("Theory pthy\n\n"
+                    "Theorem p_fact:\n"
+                    "  2 + 2 = 4\n"
+                    "Proof\n"
+                    "  DECIDE_TAC\n"
+                    "QED\n")
+        with open(os.path.join(root, "childScript.sml"), "w") as f:
+            f.write("Theory child\n"
+                    "Ancestors pthy\n\n"
+                    "Theorem c_fact:\n"
+                    "  2 + 2 = 4\n"
+                    "Proof\n"
+                    "  ACCEPT_TAC p_fact\n"
+                    "QED\n")
+        r = subprocess.run([f"{REPO}/bin/Holmake"], cwd=root,
+                           capture_output=True, text=True)
+        assert_true(r.returncode == 0,
+                    f"fixture built ({r.stderr[-400:]!r})")
+        # Rebuild the parent alone with different content, leaving the
+        # child's objects behind: the child now names a parent hash
+        # that is no longer in the theory graph, which is what a stale
+        # ancestor is.
+        with open(os.path.join(root, "pthyScript.sml"), "w") as f:
+            f.write("Theory pthy\n\n"
+                    "Theorem p_fact:\n"
+                    "  2 + 2 = 4\n"
+                    "Proof\n"
+                    "  DECIDE_TAC\n"
+                    "QED\n\n"
+                    "Theorem p_extra:\n"
+                    "  3 + 3 = 6\n"
+                    "Proof\n"
+                    "  DECIDE_TAC\n"
+                    "QED\n")
+        # Delete the parent's objects rather than relying on mtimes:
+        # rewriting the script within the same second as the first
+        # build leaves Holmake thinking it is up to date.
+        objs = os.path.join(root, ".hol", "objs")
+        for f in os.listdir(objs):
+            if f.startswith("pthyTheory."):
+                os.remove(os.path.join(objs, f))
+        r = subprocess.run([f"{REPO}/bin/Holmake", "pthyTheory.uo"],
+                           cwd=root, capture_output=True, text=True)
+        assert_true(r.returncode == 0,
+                    f"parent rebuilt ({r.stderr[-400:]!r})")
+        # Self-check the fixture: if the rebuild silently did nothing,
+        # the ancestor is not stale and the test below proves nothing.
+        with open(os.path.join(objs, "pthyTheory.sml")) as f:
+            assert_true("p_extra" in f.read(),
+                        "the parent really was rebuilt")
+
+        src = ("Theory user\n"
+               "Ancestors child\n\n"
+               "Theorem uses_it:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  ACCEPT_TAC c_fact\n"
+               "QED\n")
+        uri = f"file://{root}/userScript.sml"
+        c = Client(root)
+        try:
+            _init(c, root, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileBlocked", 60),
+                        "the first attempt blocks")
+            assert_true(not c.wait_for_method("$/compileCompleted", 5),
+                        "and does not compile")
+            # Retry: this is the attempt with no exception behind it.
+            since = c.total_msgs()
+            c.send({"jsonrpc": "2.0", "method": "$/hol/retryCompile",
+                    "params": {"textDocument": {"uri": uri}}})
+            assert_true(c.wait_for_method("$/compileBlocked", 60,
+                                          since=since),
+                        "the retry blocks too")
+            assert_true(not c.wait_for_method("$/compileCompleted", 10,
+                                              since=since),
+                        "and still does not compile")
+            msgs = [dg.get("message", "") for dg in _diag_count(c, uri)]
+            assert_true(any("childTheory" in m for m in msgs),
+                        f"naming the ancestor that is not there ({msgs!r})")
+            assert_true(all("has not been declared" not in m
+                            for m in msgs),
+                        f"and not reporting uses of what it supplies "
+                        f"({msgs!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def test_dependency_that_binds_no_structure_blocks():
+    """Blocking must not depend on a load *raising*.
+
+    A module can load without complaint and still not bind the
+    structure the header opens -- here `Misnamed.sml` defines
+    `NotMisnamed` -- and `loadPlan` also skips anything already in
+    `Meta.loadedMods`, so a retry after a failed use plans nothing and
+    raises nothing.  Neither case produces an exception to collect, and
+    the file was compiled anyway: every use of everything the
+    dependency was to supply came back as an error.  What decides it is
+    whether the structure is there."""
+    root = tempfile.mkdtemp(prefix="lsp_nostruct_")
+    try:
+        with open(os.path.join(root, "Misnamed.sml"), "w") as f:
+            f.write("structure NotMisnamed = struct val marker = 1 end;\n")
+        r = subprocess.run([f"{REPO}/bin/Holmake", "Misnamed.uo"],
+                           cwd=root, capture_output=True, text=True)
+        assert_true(r.returncode == 0,
+                    f"fixture built ({r.stderr[-300:]!r})")
+        src = ("Theory user\n"
+               "Ancestors arithmetic\n"
+               "Libs Misnamed\n\n"
+               "Theorem uses_it:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  simp[]\n"
+               "QED\n")
+        uri = f"file://{root}/userScript.sml"
+        c = Client(root)
+        try:
+            _init(c, root, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileBlocked", 60),
+                        "blocks on a dependency that binds no structure")
+            assert_true(not c.wait_for_method("$/compileCompleted", 5),
+                        "and does not compile")
+            msgs = [dg.get("message", "") for dg in _diag_count(c, uri)]
+            assert_true(any("Misnamed" in m and "no structure" in m
+                            for m in msgs),
+                        f"saying what is wrong with it ({msgs!r})")
+            # The diagnostic is on the `Libs' entry that named it.
+            line = _diag_count(c, uri)[0]["range"]["start"]["line"]
+            assert_eq(line, 2, "on the header entry that named it")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5461,6 +5614,10 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("stale_ancestor_keeps_blocking_on_retry",
+     test_stale_ancestor_keeps_blocking_on_retry),
+    ("dependency_that_binds_no_structure_blocks",
+     test_dependency_that_binds_no_structure_blocks),
 ]
 
 

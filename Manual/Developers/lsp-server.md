@@ -142,10 +142,15 @@ In addition to the usual LSP commands, the server supports the following extensi
   other answer.
 
 * The `$/compileBlocked` notification is sent instead of compiling a file
-  whose declared dependencies could not be loaded.  A file that names an
+  whose declared dependencies are not available.  A file that names an
   ancestor or library it cannot get has nothing to be elaborated against,
   so the server compiles none of it, and answers `null` to
-  `$/hol/goalState` for it.  The failures themselves are published as
+  `$/hol/goalState` for it.  Availability is decided by looking the
+  declared structure up in the namespace, so it covers a dependency that
+  loads without binding the name the header opens, and a retry that
+  plans nothing because the module is still marked in
+  `Meta.loadedMods` -- neither of which raises anything to catch.
+  The failures themselves are published as
   diagnostics, positioned on the names in the header that asked for them;
   no `$/compileProgress` or `$/compileCompleted` follows.
 
