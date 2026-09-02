@@ -287,7 +287,9 @@ fun CBVn_CONV n rws t =
 
 (*---------------------------------------------------------------------------
  * Adding an arbitrary conv. The conversion result is wrapped with from_term
- * at invocation time in reduce_cst, using the current compset.
+ * at invocation time in reduce_cst, using the current compset. A conv that
+ * fails, raises UNCHANGED or returns a reflexive theorem makes no progress
+ * and reduce_cst moves on to the constant's remaining rules.
  *---------------------------------------------------------------------------*)
 
 fun add_conv (cst,arity,conv) rws = add_extern (cst,arity,conv) rws;

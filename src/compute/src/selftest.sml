@@ -193,3 +193,41 @@ in
   OK()
 end
 handle HOL_ERR e => die ("set_skip after copy failed: " ^ message_of e)
+
+(* Registered conversions: a conversion that makes no progress must fall
+   through to the constant's remaining rules rather than be retried on
+   its own (reflexive) result, or escape CBV_CONV (UNCHANGED). *)
+local
+  val conj = boolSyntax.conjunction
+  fun capped calls conv t =
+      (calls := !calls + 1;
+       if !calls > 10 then raise Fail "CBV_CONV loops on the result"
+       else conv t)
+  fun compset_with conv thms =
+      computeLib.new_compset []
+        |> computeLib.add_conv (conj, 2, conv)
+        |> computeLib.add_thms thms
+  fun check name conv thms tm expected ncalls =
+      let
+        val _ = tprint name
+        val calls = ref 0
+        val cs = compset_with (capped calls conv) thms
+        val th = computeLib.CBV_CONV cs tm
+                 handle Fail m => (die m; raise Fail m)
+      in
+        if aconv (rhs (concl th)) expected andalso !calls = ncalls then OK()
+        else die ("got " ^ thm_to_string th ^ " after " ^
+                  Int.toString (!calls) ^ " calls")
+      end
+in
+val _ = check "Checking a reflexive add_conv result is not retried"
+              REFL [] “T /\ p” “T /\ p” 1
+val _ = check "Checking a reflexive add_conv result falls through to rewrites"
+              REFL [boolTheory.AND_CLAUSES] “T /\ p” “p:bool” 1
+val _ = check "Checking an add_conv raising UNCHANGED falls through to rewrites"
+              (fn _ => raise Conv.UNCHANGED) [boolTheory.AND_CLAUSES]
+              “T /\ p” “p:bool” 1
+val _ = check "Checking a progressing add_conv result is used"
+              (Rewrite.REWRITE_CONV [boolTheory.AND_CLAUSES]) []
+              “T /\ p” “p:bool” 1
+end
