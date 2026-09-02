@@ -1588,3 +1588,22 @@ in
     die "retired constant still reachable from the term parser"
   else OK()
 end
+
+(* A bound must be found whatever else the theorem assumes; a variable
+   hypothesis used to make the search raise, so the theorem was treated
+   as unbounded and its BOUNDED hypothesis reached the rewrite results. *)
+val _ =
+  let
+    val th = ASSUME (mk_var("p", bool))
+    fun check (name, th) =
+        (tprint ("DEST_BOUNDED: " ^ name);
+         require_msg
+           (check_result
+              (fn (th', n) => n = 2 andalso
+                              HOLset.equal(hypset th', hypset th) andalso
+                              concl th' ~~ concl th))
+           (fn (th', n) => thm_to_string th' ^ " @ " ^ Int.toString n)
+           BoundedRewrites.DEST_BOUNDED (BoundedRewrites.Ntimes th 2))
+  in
+    check ("variable hypothesis", th)
+  end
