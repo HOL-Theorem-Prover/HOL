@@ -1312,6 +1312,15 @@ structure Refute_Extract = struct
       | ("bool", "~") => SOME (call "not" 1 arguments)
       | ("bool", "/\\") => SOME (binary "andalso" arguments)
       | ("bool", "\\/") => SOME (binary "orelse" arguments)
+      (* [IN_DEF] makes membership plain application.  The intrinsic is
+         load-bearing, not an optimization: [DefnBase.lookup_userdef]
+         answers for [bool$IN] with [GSPECIFICATION], whose [GSPEC f]
+         argument is not a constructor pattern, so routing [IN] through
+         [ensure_definition] rejects every goal mentioning [MEM]. *)
+      | ("bool", "IN") => SOME (with_arity arguments 2 (fn values =>
+          case values of [element, set] =>
+            parens (parens set ^ " " ^ parens element)
+          | _ => raise Fail "membership"))
       | ("min", "==>") => SOME (with_arity arguments 2 (fn values =>
           case values of [left, right] =>
             parens ("not " ^ parens left ^ " orelse " ^ right)
@@ -1754,6 +1763,11 @@ structure Refute_Extract = struct
             left ^ " andalso " ^ right))
         | ("bool", "\\/") => SOME (binary (fn (left, right) =>
             left ^ " orelse " ^ right))
+        (* See the strict table: membership is application. *)
+        | ("bool", "IN") => SOME
+            (lazy_with_arity context arguments 2 (fn values =>
+              case values of [element, set] => apply set element
+              | _ => raise Fail "lazy membership"))
         | ("min", "==>") => SOME (binary (fn (left, right) =>
             "not " ^ parens left ^ " orelse " ^ right))
         | ("min", "=") =>

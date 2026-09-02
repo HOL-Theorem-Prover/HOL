@@ -17647,6 +17647,50 @@ val _ = require_msg (check_result lazy_deadline_during_force_cleans_up)
   (fn () => "a deadline during lazy forcing leaked native hook state")
   (fn () => ()) ()
 
+(* [MEM x l] is an overload for [x IN LIST_TO_SET l], and
+   [DefnBase.lookup_userdef] answers for [bool$IN] with [GSPECIFICATION],
+   whose [GSPEC f] argument is not a constructor pattern.  Without the
+   [("bool", "IN")] intrinsic, extraction routes membership through
+   [ensure_definition] and rejects it, taking every [MEM] goal with it.
+   These pins measure the intrinsic in both modes; the end-to-end
+   consequence is pinned by the narrowing row below. *)
+fun membership_extracts_as_application () =
+  compile_extracted ``MEM (2 : num) [1; 2; 3]`` andalso
+  not (compile_extracted ``MEM (4 : num) [1; 2; 3]``)
+
+fun lazy_membership_extracts_as_application () =
+  compile_lazy_extracted ``MEM (2 : num) [1; 2; 3]``
+    (fn (_, entry, _) => "Susp.force (" ^ entry ^ ")")
+
+val _ = require_msg
+  (check_result membership_extracts_as_application) (fn () =>
+  "strict extraction did not compile MEM as application") (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_membership_extracts_as_application) (fn () =>
+  "lazy extraction did not compile MEM as application") (fn () => ()) ()
+
+(* The whole point of the intrinsic: before it, [MEM] anywhere in a goal
+   made narrowing bail out before depth 1 with "non-constructor pattern:
+   GSPEC f", so no list conjecture stated with [MEM] was reachable. *)
+fun narrowing_refutes_a_membership_goal () =
+  let
+    val goal = ``!l : num list. MEM 0 l``
+    val config =
+      Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config
+  in
+    case Refute.refute config goal of
+        Counterexample ({certainty = Genuine, ...} :: _) => true
+      | _ => false
+  end
+
+val _ = tprint "Refute narrowing reaches a membership goal"
+val _ = require_msg
+  (check_result narrowing_refutes_a_membership_goal) (fn () =>
+  "Only [Narrowing] did not refute a MEM goal with a Genuine " ^
+  "counterexample; an Unknown naming a non-constructor GSPEC pattern " ^
+  "means the bool$IN intrinsic in Refute_Extract is gone")
+  (fn () => ()) ()
+
 fun unmapped_is_not_extractable () =
   ((ignore (Refute_Extract.extract_term ``rx_unmapped 0 = 0``); false)
    handle Refute_Extract.NotExtractable reasons =>
@@ -22636,44 +22680,54 @@ fun selected_substrate expected result =
 
 (* [nub]'s equations mention MEM, which is an overload for [IN], and
    pred_set stores GSPECIFICATION — an equation whose left-hand-side head
-   is [IN] — as that constant's user definition.  Extraction therefore has
-   to match the pattern [GSPEC f], and neither extraction mode supports set
-   comprehensions.  Both must refuse, and in the same words: definition
-   clauses always compile through the observation matcher, but exhaustive
-   and random extraction run it in strict mode, so a refusal blaming lazy
-   mode misdescribes them.  The refusal is the substrate's inapplicability
-   channel, so Auto has to fall through to a substrate that can. *)
+   is [IN] — as that constant's user definition.  Extraction used to take
+   that for [IN]'s definition and refuse its [GSPEC f] pattern, which cost
+   it every goal mentioning MEM; the [("bool", "IN")] intrinsic compiles
+   membership as the application [IN_DEF] says it is, so a definition whose
+   equations use MEM extracts.  Both strict strategies are measured:
+   definition clauses always compile through the observation matcher, and
+   exhaustive and random extraction run it in strict mode.
+
+   A genuine set comprehension is still not executable, but it is now
+   refused in preprocessing, before extraction sees it — so the pattern
+   refusal this row used to assert is unreachable, not merely unexercised.
+   Auto fall-through keeps its own rows ([rat_auto_falls_through_to_compute]
+   and its real counterpart); no substrate handles a comprehension, so this
+   goal cannot measure it. *)
 val gspec_pattern_goal = ``nub (xs : num list ++ ys) = nub xs ++ nub ys``
 
-fun native_gspec_pattern_is_inapplicable () =
+fun native_mem_definition_extracts () =
   let
     val config = upd_size 4 (upd_substrate NativeSML default_config)
-    fun refused strategy =
+    fun refuted strategy =
       case run_with_strategy strategy config gspec_pattern_goal of
-          Unknown reasons =>
-            List.exists (fn reason =>
-              reason = "non-constructor pattern: GSPEC f") reasons
+          Counterexample (cex :: _) =>
+            #substrate cex = "native" andalso #certainty cex = Genuine
         | _ => false
   in
-    refused Exhaustive andalso refused (Random {seed = 1})
+    refuted Exhaustive andalso refuted (Random {seed = 1})
   end
 
-fun auto_falls_through_gspec_pattern () =
+fun set_comprehension_is_not_executable () =
   let
     val config = upd_size 4 (upd_substrate Auto default_config)
+    val goal = ``!x : num. x IN {y | y < 3}``
   in
-    case run_with_strategy Exhaustive config gspec_pattern_goal of
-        Counterexample (cex :: _) =>
-          #substrate cex <> "native" andalso #certainty cex = Genuine
+    case run_with_strategy Exhaustive config goal of
+        Unknown reasons =>
+          List.exists (fn reason =>
+            String.isSubstring "not executable" reason andalso
+            String.isSubstring "GSPEC" reason) reasons
       | _ => false
   end
 
-val _ = tprint "Refute native set-comprehension refusal"
+val _ = tprint "Refute native extraction reaches MEM in a definition"
 val _ = require_msg (check_result (fn () =>
-  native_gspec_pattern_is_inapplicable () andalso
-  auto_falls_through_gspec_pattern ())) (fn () =>
-  "the native substrate misreported a set-comprehension pattern, or Auto " ^
-  "failed to fall through to a substrate that handles it")
+  native_mem_definition_extracts () andalso
+  set_comprehension_is_not_executable ())) (fn () =>
+  "native extraction did not refute a goal whose definitions use MEM " ^
+  "with a Genuine counterexample, or a set comprehension stopped being " ^
+  "reported as not executable")
   (fn () => ()) ()
 
 (* A function *variable* whose domain has no enumeration is generated, not
@@ -29681,10 +29735,13 @@ val conformance_full_cases : conformance_case list =
     tm = ``ALL_DISTINCT (xs : num list ++ ys) <=>
            ALL_DISTINCT xs /\ ALL_DISTINCT ys``,
     inapplicable = []},
+   (* [nub]'s equations use MEM.  Native used to refuse them outright
+      (see "Refute native extraction reaches MEM in a definition"), so this
+      row carried a NativeSML inapplicability; with the [("bool", "IN")]
+      intrinsic all three substrates agree here, counters included. *)
    {name = "nub append", cfg = conform_cex_config,
     tm = ``nub (xs : num list ++ ys) = nub xs ++ nub ys``,
-    inapplicable =
-      [(NativeSML, "non-constructor pattern: GSPEC f")]},
+    inapplicable = []},
    {name = "integer equality", cfg = conform_cex_config,
     tm = ``~((x : int) = x)``, inapplicable = []},
    {name = "sorted insert", cfg = conform_cex_config,

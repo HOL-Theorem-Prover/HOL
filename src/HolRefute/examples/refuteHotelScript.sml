@@ -12,7 +12,7 @@ Datatype:
 End
 
 Datatype:
-  hkey = K0 | K1 | K2
+  hkey = K0 | K1 | K2 | K3
 End
 
 Datatype:
@@ -25,8 +25,9 @@ Datatype:
         | Exit guest room
 End
 
-(* Two guests, three keys, and one room keep the trace search dense while
-   retaining the initial key and two freshly issued keys used by the attack. *)
+(* Two guests and one room keep the trace search dense.  Four keys is the
+   smallest key type that admits the safety attack below: that attack needs
+   three check-ins, and every check-in issues a key not issued before. *)
 
 Definition owns_def:
   owns [] r = NONE /\
@@ -104,11 +105,48 @@ Proof
   QUICKCHECK_TAC >> cheat
 QED
 
-(* The stronger feels-safe conjecture has the same stale-key attack.  After
-   the owner checks in and follows a safe-looking entry sequence, an intruder
-   can enter with a stale card, so occupancy no longer implies ownership.
-   Its executable search is omitted because the adaptive defaults do not
-   produce a genuine counterexample. *)
+(* A room feels safe to its owner when the owner checked in, entered while
+   the room was empty, and nobody checked in afterwards.  [feels_safe] is
+   the executable form of that specification: it quantifies over the ways
+   the trace splits around the owner's check-in and entry.  [splits xs]
+   lists every pair whose append is [xs]. *)
+
+Definition splits_def:
+  splits ([] : event list) = [([],[])] /\
+  splits (x::xs) = ([],x::xs) :: MAP (\p. (x::FST p, SND p)) (splits xs)
+End
+
+Definition no_checkin_def:
+  no_checkin s r <=>
+    EVERY (\e. case e of CheckIn g r' c => r' <> r | _ => T) s
+End
+
+Definition feels_safe_def:
+  feels_safe s r =
+    EXISTS (\p.
+      case SND p of
+        Enter g' r' c :: v =>
+          r' = r /\
+          EXISTS (\q.
+            case SND q of
+              CheckIn g r'' c' :: s1 =>
+                r'' = r /\ g = g' /\
+                no_checkin (FST p ++ FST q) r /\
+                isin (FST q ++ [CheckIn g r c'] ++ s1) r = []
+            | _ => F) (splits v)
+      | _ => F) (splits s)
+End
+
+(* Feeling safe is not enough.  The entry that makes the room look safe
+   need not use the card that check-in issued, so the owner can walk in on
+   a stale card, leaving the lock recoded to a key an intruder still
+   holds. *)
+
+Theorem a_room_that_feels_safe_is_safe:
+  hotel s /\ feels_safe s r /\ MEM g (isin s r) ==> owns s r = SOME g
+Proof
+  NARROWING_TAC >> cheat
+QED
 
 Theorem current_keys_are_issued:
   hotel s ==> MEM (currk s r) (issued s)

@@ -146,9 +146,11 @@ refuteAVLScript.sml
 refuteHotelScript.sml
     A finite trace model covers hotel guests, key cards, room locks, and
     occupancy.  A stale-key behavior lets a guest enter without being the
-    owner, and QUICKCHECK_TAC builds the trace that shows it; NARROWING_TAC
-    is the diagnostic on the payoff lemmas, which are proved by induction.
-    It adapts Isabelle's Quickcheck_Examples/Hotel_Example.thy.
+    owner, and QUICKCHECK_TAC builds the trace that shows it.  NARROWING_TAC
+    then refutes the stronger claim that a room its owner may consider safe
+    is occupied only by that owner, and is the diagnostic on the payoff
+    lemmas, which are proved by induction.  It adapts Isabelle's
+    Quickcheck_Examples/Hotel_Example.thy.
 
 refuteSubstScript.sml
     A de Bruijn term model defines lifting and two versions of substitution.
