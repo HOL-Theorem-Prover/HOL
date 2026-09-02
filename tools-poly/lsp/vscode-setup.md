@@ -53,11 +53,10 @@ directory that has `bin/hol` inside it.
 The HOL4 VS Code extension lives in its own repository, separate from
 HOL itself.
 
-**Important:** the LSP support is on a branch called
-`lsp-integration`, *not* on the default `main` branch, and it is not
-in the version published on the VS Code Marketplace.  So installing
-"HOL4 mode" from the Marketplace, or cloning and stopping there, will
-not give you the goals pane.  You must switch to that branch.
+**Important:** the LSP support is on `main`, but it is not in the
+version published on the VS Code Marketplace.  So installing "HOL4
+mode" from the Marketplace will not give you the goals pane; build
+from source as described here.
 
 Open a terminal, go somewhere sensible to keep the code (your home
 directory is fine), and run:
@@ -65,18 +64,17 @@ directory is fine), and run:
 ```
 git clone https://github.com/HOL-Theorem-Prover/hol4-vscode.git
 cd hol4-vscode
-git switch lsp-integration
 ```
 
-To confirm you are on the right branch:
+To confirm you have the right code:
 
 ```
 ls src/lspClient.ts
 ```
 
-If that prints `src/lspClient.ts`, you have the right code.  If it
-says "No such file", the `git switch` did not take effect — re-run it
-and read any error message.
+If that prints `src/lspClient.ts`, you are set.  If it says "No such
+file", your clone predates the LSP client — run `git pull` and look
+again.
 
 ## Step 2 — Build the extension
 
@@ -105,8 +103,8 @@ ls out/extension.js
 
 This extension is not on the Marketplace, so you cannot install it the
 usual way.  There are two routes.  Do the first one now; it needs
-nothing further and is the better choice while you are tracking a
-branch that changes.
+nothing further and is the better choice while the extension is still
+changing.
 
 **Do not** simply copy or symlink the folder into
 `~/.vscode/extensions`.  Older guides tell you to, and it silently
@@ -263,7 +261,7 @@ Two things worth knowing:
 
 ## Step 8 — Keeping it up to date
 
-The extension is on a development branch, so it changes.  To update:
+The extension is still under development, so it changes.  To update:
 
 ```
 cd ~/hol4-vscode

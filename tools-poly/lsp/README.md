@@ -161,9 +161,9 @@ when the theorem statement can't be parsed).  Otherwise:
   `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
   `ansi-color-apply-on-region` on the inserted `pretty` text so the
   bound / free variable colouring survives.
-- **VS Code** — the `lsp-integration` branch of
+- **VS Code** —
   [hol4-vscode](https://github.com/HOL-Theorem-Prover/hol4-vscode)
-  ships a client and a HOL Goals pane; see
+  ships a client and a HOL Goals pane on `main`; see
   [`vscode-setup.md`](vscode-setup.md) for a step-by-step install.
   To drive `$/hol/goalState` yourself,
   `client.sendRequest("$/hol/goalState", params)`
