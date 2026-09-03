@@ -927,6 +927,13 @@ val setElimRWs =
         the equation it finds *)
      GSYM boolTheory.LEFT_EXISTS_AND_THM,
      GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+     (* and the same on the other side: a constructor holding several
+        values of one type has one hypothesis about all of them, whose
+        set is a union, so the membership is a disjunction.  Splitting
+        it says one thing per argument, which is what a proof about that
+        constructor is written against — and for a value's own slot
+        unwinding then leaves the value itself. *)
+     boolTheory.DISJ_IMP_THM, boolTheory.FORALL_AND_THM,
      (* set notation *)
      pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
      pred_setTheory.IN_UNION, pred_setTheory.IN_BIGUNION,
