@@ -861,6 +861,106 @@ type constructors = {
   set_induction : thm, distinct : thm option list, one_one : thm option list
 }
 
+(* taking a sum of products apart *)
+val shapeRWs = [sumTheory.SUM_MAP_def, pairTheory.PAIR_MAP,
+                combinTheory.I_THM, oneTheory.one]
+
+(* A law about set terms is stated point-free, and stops firing as soon
+   as a term has been unfolded and applied — which is what happens to
+   one side of an equation between a constructor's set and what its
+   arguments say.  These are the same laws about an application.  One
+   argument is supplied, not as many as the types allow: a set is itself
+   a function, so stripping to a fixed point would leave a statement
+   about membership, which matches no set term at all. *)
+fun appliedForms th =
+    let
+      fun one th =
+          let
+            val th = SPEC_ALL th
+            val (l, _) = dest_eq (concl th)
+            val (d, _) = dom_rng (type_of l)
+            val x = variant (free_vars (concl th)) (mk_var ("x", d))
+            val cnv = QCONV (PURE_REWRITE_CONV [combinTheory.o_THM,
+                                                combinTheory.I_THM,
+                                                combinTheory.K_THM] THENC
+                             QCONV (DEPTH_CONV BETA_CONV))
+          in
+            [GEN_ALL (CONV_RULE (BINOP_CONV cnv) (AP_THM th x))]
+          end handle HOL_ERR _ => []
+    in
+      List.concat (List.map one (CONJUNCTS (SPEC_ALL th)))
+    end
+
+(* and the same for a set function, which is built out of BIMG and a
+   lifted union, and whose leaves are the components' set functions —
+   stated as predicates, so set notation has to be put back *)
+val pointFreeRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
+                    combinTheory.I_o_ID]
+(* a law whose applied form has collapsed to reflexivity says nothing
+   and matches everything: I_o_ID applied is `f x = f x` *)
+val setRWs = pointFreeRWs @
+             rules (List.concat (List.map appliedForms pointFreeRWs)) @
+             [combinTheory.S_DEF, combinTheory.o_DEF,
+              combinTheory.K_DEF, pairTheory.setFST_thm,
+              pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
+              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
+
+(* ----------------------------------------------------------------------
+    One simpset for reducing a set term.
+
+    srw_ss() is not it.  What a constructor holds nothing of has to
+    collapse before a membership in it is taken apart, and srw_ss() will
+    take the membership apart first; it also carries every rewrite every
+    loaded theory has exported, so what the driver proves depends on what
+    happens to be in scope.  This lists what a set term is made of and
+    nothing else.
+
+    Eta reduction is part of unfolding a set term: the lifted union
+    leaves a component's set function applied to a bound variable.
+    Unwinding, with the existentials pulled out of the conjunctions that
+    hide them, is what disposes of an argument the recursion does not
+    reach.
+   ---------------------------------------------------------------------- *)
+
+val setElimRWs =
+    [(* the existentials a membership leaves, where unwinding can use
+        the equation it finds *)
+     GSYM boolTheory.LEFT_EXISTS_AND_THM,
+     GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+     (* set notation *)
+     pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
+     pred_setTheory.IN_UNION, pred_setTheory.IN_BIGUNION,
+     pred_setTheory.IN_IMAGE, pred_setTheory.IN_SING,
+     pred_setTheory.IMAGE_EMPTY, pred_setTheory.IMAGE_INSERT,
+     pred_setTheory.IMAGE_SING, pred_setTheory.IMAGE_I,
+     pred_setTheory.IMAGE_UNION, pred_setTheory.BIGUNION_EMPTY,
+     pred_setTheory.BIGUNION_INSERT, pred_setTheory.BIGUNION_UNION,
+     pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
+     (* and the leaves themselves: the components' own set functions,
+        at the components' own constructors.  sumTheory's SUM_MAP_SET is
+        deliberately absent: it is about the same term as the database's
+        own naturality for the sum, and says it in predicate form, so
+        having both makes which one fires an accident of rule order. *)
+     sumTheory.setL_def, sumTheory.setR_def, bnfPrelimsTheory.optSET_def,
+     pairTheory.FST, pairTheory.SND,
+     combinTheory.I_THM, combinTheory.K_THM, combinTheory.o_THM]
+
+(* The list is built by this package, so src/list comes after this file
+   and listTheory cannot be named in it.  Its few set rewrites are
+   looked up when a set term is actually reduced, which is always in a
+   theory that has the list — and a declaration made before there is one
+   simply does not need them. *)
+fun lateRWs () =
+    List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
+                    [("list", "MEM"), ("list", "IN_LIST_TO_SET"),
+                     ("list", "LIST_TO_SET"), ("list", "MAP")]
+
+fun set_ss () =
+    simpLib.&& (simpLib.++ (simpLib.++ (boolSimps.bool_ss, boolSimps.ETA_ss),
+                            boolSimps.UNWIND_ss),
+                setElimRWs @ lateRWs ())
+
+
 fun defineConstructors (nms : names) cspecs bnf fix : constructors =
     let val wrote = asSpecWrote nms and built = asBuilt nms
         val newty = #newty fix
@@ -1046,25 +1146,18 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
         val set_induction =
             REWRITE_RULE (map (GSYM o #def) cs)
               (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
-                 (QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
-                                            bnfPrelimsTheory.BIMG_K0,
-                                            combinTheory.I_o_ID]) THENC
+                 (QCONV (PURE_REWRITE_CONV setRWs) THENC
                   (* one binder per constructor argument here too: an
                      argument that is itself a sum would otherwise be
                      split, and the clause would be about `P (V (INL x))`
                      rather than about `P (V a)` *)
                   expandCons (map (length o #args) cs) THENC
-                  (* not FORALL_ONE: a constructor with an argument of
+                  (* the set simpset says nothing about one, which is
+                     what is wanted: a constructor with an argument of
                      type one has that argument, and a clause about
                      `P (C ())` is not the shape a datatype's induction
                      principle is read in *)
-                  QCONV (simpLib.SIMP_CONV
-                    (simpLib.-* (BasicProvers.srw_ss(),
-                                 ["one.FORALL_ONE", "one.one"]))
-                    [combinTheory.S_DEF,
-                     combinTheory.o_DEF, combinTheory.K_DEF,
-                     pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
-                     pairTheory.setFST_thm, pairTheory.setSND_thm]))))
+                  QCONV (simpLib.SIMP_CONV (set_ss()) setRWs))))
                  (#set_induction fix))
         (* whether this is a nested recursion is known structurally: a
            nested factor's mapped type is not the answer type.  Deciding
@@ -1902,123 +1995,6 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
     each constructor says what to instantiate at.
    ---------------------------------------------------------------------- *)
 
-(* taking a sum of products apart *)
-val shapeRWs = [sumTheory.SUM_MAP_def, pairTheory.PAIR_MAP,
-                combinTheory.I_THM, oneTheory.one]
-
-(* A law about set terms is stated point-free, and stops firing as soon
-   as a term has been unfolded and applied — which is what happens to
-   one side of an equation between a constructor's set and what its
-   arguments say.  These are the same laws about an application.  One
-   argument is supplied, not as many as the types allow: a set is itself
-   a function, so stripping to a fixed point would leave a statement
-   about membership, which matches no set term at all. *)
-fun appliedForms th =
-    let
-      fun one th =
-          let
-            val th = SPEC_ALL th
-            val (l, _) = dest_eq (concl th)
-            val (d, _) = dom_rng (type_of l)
-            val x = variant (free_vars (concl th)) (mk_var ("x", d))
-            val cnv = QCONV (PURE_REWRITE_CONV [combinTheory.o_THM,
-                                                combinTheory.I_THM,
-                                                combinTheory.K_THM] THENC
-                             QCONV (DEPTH_CONV BETA_CONV))
-          in
-            [GEN_ALL (CONV_RULE (BINOP_CONV cnv) (AP_THM th x))]
-          end handle HOL_ERR _ => []
-    in
-      List.concat (List.map one (CONJUNCTS (SPEC_ALL th)))
-    end
-
-(* and the same for a set function, which is built out of BIMG and a
-   lifted union, and whose leaves are the components' set functions —
-   stated as predicates, so set notation has to be put back *)
-val pointFreeRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
-                    combinTheory.I_o_ID]
-(* a law whose applied form has collapsed to reflexivity says nothing
-   and matches everything: I_o_ID applied is `f x = f x` *)
-val setRWs = pointFreeRWs @
-             rules (List.concat (List.map appliedForms pointFreeRWs)) @
-             [combinTheory.S_DEF, combinTheory.o_DEF,
-              combinTheory.K_DEF, pairTheory.setFST_thm,
-              pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
-              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
-
-(* ----------------------------------------------------------------------
-    One simpset for reducing a set term.
-
-    srw_ss() is not it.  What a constructor holds nothing of has to
-    collapse before a membership in it is taken apart, and srw_ss() will
-    take the membership apart first; it also carries every rewrite every
-    loaded theory has exported, so what the driver proves depends on what
-    happens to be in scope.  This lists what a set term is made of and
-    nothing else.
-
-    Eta reduction is part of unfolding a set term: the lifted union
-    leaves a component's set function applied to a bound variable.
-    Unwinding, with the existentials pulled out of the conjunctions that
-    hide them, is what disposes of an argument the recursion does not
-    reach.
-   ---------------------------------------------------------------------- *)
-
-val setElimRWs =
-    [(* the existentials a membership leaves, where unwinding can use
-        the equation it finds *)
-     GSYM boolTheory.LEFT_EXISTS_AND_THM,
-     GSYM boolTheory.RIGHT_EXISTS_AND_THM,
-     (* set notation *)
-     pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
-     pred_setTheory.IN_UNION, pred_setTheory.IN_BIGUNION,
-     pred_setTheory.IN_IMAGE, pred_setTheory.IN_SING,
-     pred_setTheory.IMAGE_EMPTY, pred_setTheory.IMAGE_INSERT,
-     pred_setTheory.IMAGE_SING, pred_setTheory.IMAGE_I,
-     pred_setTheory.IMAGE_UNION, pred_setTheory.BIGUNION_EMPTY,
-     pred_setTheory.BIGUNION_INSERT, pred_setTheory.BIGUNION_UNION,
-     pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
-     (* and the leaves themselves: the components' own set functions,
-        at the components' own constructors.  sumTheory's SUM_MAP_SET is
-        deliberately absent: it is about the same term as the database's
-        own naturality for the sum, and says it in predicate form, so
-        having both makes which one fires an accident of rule order. *)
-     sumTheory.setL_def, sumTheory.setR_def, bnfPrelimsTheory.optSET_def,
-     pairTheory.FST, pairTheory.SND,
-     combinTheory.I_THM, combinTheory.K_THM, combinTheory.o_THM]
-
-(* The list is built by this package, so src/list comes after this file
-   and listTheory cannot be named in it.  Its few set rewrites are
-   looked up when a set term is actually reduced, which is always in a
-   theory that has the list — and a declaration made before there is one
-   simply does not need them. *)
-fun lateRWs () =
-    List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
-                    [("list", "MEM"), ("list", "IN_LIST_TO_SET"),
-                     ("list", "LIST_TO_SET"), ("list", "MAP")]
-
-fun set_ss () =
-    simpLib.&& (simpLib.++ (simpLib.++ (boolSimps.bool_ss, boolSimps.ETA_ss),
-                            boolSimps.UNWIND_ss),
-                setElimRWs @ lateRWs ())
-
-(* what an argument the recursion does not reach says about a sub-term,
-   which is nothing.  Taking the membership apart leaves the emptiness
-   buried under an existential — `∃f. y ∈ f ∧ ∃s. f = ∅ ∧ s ∈ set x` —
-   so the existentials are pulled out of the conjunctions, which is what
-   lets unwinding use `f = ∅` and leaves `y ∈ ∅`.  Only those two laws:
-   putting the hypothesis into disjunctive normal form would do it too,
-   and would grow exponentially where a functor's shape alternates
-   conjunction and disjunction — and it would hoist the principle's own
-   conclusion out of the implication along the way. *)
-val emptyHyp =
-    QCONV (simpLib.SIMP_CONV
-             (simpLib.++ (boolSimps.bool_ss, boolSimps.UNWIND_ss))
-             [GSYM boolTheory.LEFT_EXISTS_AND_THM,
-              GSYM boolTheory.RIGHT_EXISTS_AND_THM,
-              pred_setTheory.IN_BIGUNION, pred_setTheory.IN_IMAGE,
-              pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
-              pred_setTheory.IN_UNION])
-
 fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
     let
       val defs = #defs cs
@@ -2441,8 +2417,7 @@ fun mutualInduction (cs1 : constructors, cs2 : constructors)
                                     combinTheory.I_o_ID]) THENC
           QCONV (simpLib.SIMP_CONV (set_ss())
                    (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
-                              oneTheory.FORALL_ONE])) THENC
-          emptyHyp
+                              oneTheory.FORALL_ONE]))
       (* expanding the quantifier names each constructor's arguments after
          the projections it went through; rename them to the constructor's
          own, as its definition has them *)
@@ -2637,7 +2612,6 @@ fun defineFamily {tynames} db params specs : family =
        functors = functors, maps = maps, raw = List.map #2 ks, slots = vs,
        params = params, db = db}
     end
-
 
 
 (* the witnesses of a nest of existentials, and what they satisfy *)
@@ -3519,8 +3493,7 @@ fun familyInductionOf (defs : thm list list) induction =
                    (setRWs @ [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
                               sumTheory.OUTL, sumTheory.OUTR,
                               pairTheory.PAIR_MAP, pairTheory.FST,
-                              pairTheory.SND, combinTheory.I_THM])) THENC
-          emptyHyp
+                              pairTheory.SND, combinTheory.I_THM]))
       (* only the pure rewrites before the quantifier is expanded: the
          simplifier would take a membership apart while the set it is
          about is still a union over a shape not yet opened, and what
@@ -4622,7 +4595,6 @@ fun collapseFamily {tynames} (fam : family) principle : collapsed =
        repabs = repabss, cons = conss, cons_defs = cons_defs,
        principle = GENL newts (CONJ existence uniqueness)}
     end
-
 
 
 (* ----------------------------------------------------------------------
