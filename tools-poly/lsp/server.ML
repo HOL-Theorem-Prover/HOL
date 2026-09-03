@@ -2911,6 +2911,41 @@ fun start {diag, dbg, warnings} = let
                  ignored. *)
               logMessage ("hoverWidth = " ^ Int.toString w))
         else logMessage ("ignoring hoverWidth " ^ Int.toString w);
+      (* Proof checking, switchable without a restart -- the CLI flag
+         `--lsp-check-proofs' only sets the initial value.  Turning it
+         on recompiles, because the proofs of a pass that has already
+         run were cheated and never enqueued, so nothing would happen
+         until the next edit.  Turning it off stops the workers and
+         drops their diagnostics, which would otherwise sit there
+         describing proofs no longer being checked. *)
+      case JSONDecode.decode
+             (JSONDecode.fieldO "checkProofs" JSONDecode.bool) params of
+        NONE => ()
+      | SOME b =>
+        if b = !LSPExtension.deferProofs then ()
+        else let
+          (* Listed under the lock, acted on outside it: `startCompile'
+             takes the same lock. *)
+          val files = withFileInfo (fn fileInfo =>
+                        (fileInfo, Binarymap.listItems fileInfo))
+        in
+          LSPExtension.deferProofs := b;
+          logMessage ("checkProofs = " ^ Bool.toString b);
+          if b then
+            (* From byte 0: the pass that already ran completed, so
+               `startCompile' would otherwise find nothing to do and
+               the proofs it cheated would never be enqueued. *)
+            List.app (fn (uri, v: file_data) =>
+                         (bumpMinEdit (#minEditOffset v) 0;
+                          startCompile uri v))
+                     files
+          else (
+            (!LSPExtension.cancelAllProofs () handle _ => ());
+            List.app (fn (uri, v: file_data) =>
+                         (#proofDiags v := Binarymap.mkDict String.compare;
+                          publishAllDiagnostics uri v))
+                     files)
+        end;
       send (mkResponse id (Ok encNull)))
       handle JSONDecode.JSONError _ =>
         send (mkResponse id (mkErr InvalidParams "json decode failed")))

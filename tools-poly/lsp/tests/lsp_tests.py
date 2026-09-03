@@ -5607,6 +5607,60 @@ def test_quotation_hover_positions_under_utf16():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_check_proofs_switchable_without_a_restart():
+    """The pool was reachable only through `--lsp-check-proofs' at
+    launch, which no client passed, so nothing ever ran the proofs.
+    `$/setConfig' switches it instead, on a server started without the
+    flag: turning it on recompiles (the pass that already ran cheated
+    its proofs and enqueued nothing), and turning it off stops the
+    workers and drops their diagnostics."""
+    d = tempfile.mkdtemp(prefix="lsp_cpsw_")
+    try:
+        src = ("Theory cpsw\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem wrong:\n"
+               "  1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        uri = f"file://{d}/cpswScript.sml"
+        # No args: exactly how a client launches it.
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def failures(cl):
+                return [x for x in _diag_count(cl, uri)
+                        if "proof failed" in x.get("message", "")]
+
+            assert_true(not failures(c),
+                        f"nothing checked while it is off "
+                        f"({_diag_count(c, uri)!r})")
+            r = _request(c, 980, "$/setConfig", {"checkProofs": True})
+            assert_true(r is not None and "error" not in r,
+                        f"setConfig accepted ({r})")
+            got = c.wait_until(lambda cl: failures(cl) or None, 90)
+            assert_true(got is not None,
+                        f"the failing proof is reported once on "
+                        f"({_proof_states(c, uri)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+            assert_eq(got[0]["severity"], 1, "as an error")
+            r = _request(c, 981, "$/setConfig", {"checkProofs": False})
+            assert_true(r is not None and "error" not in r, "and off again")
+            gone = c.wait_until(
+                lambda cl: True if not failures(cl) else None, 60)
+            assert_true(gone,
+                        f"which drops the diagnostics "
+                        f"({_diag_count(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5828,6 +5882,8 @@ TESTS = [
      test_overload_hover_sees_through_the_alias_chain),
     ("quotation_hover_positions_under_utf16",
      test_quotation_hover_positions_under_utf16),
+    ("check_proofs_switchable_without_a_restart",
+     test_check_proofs_switchable_without_a_restart),
 ]
 
 

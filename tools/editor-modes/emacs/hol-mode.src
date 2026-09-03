@@ -2847,19 +2847,46 @@ narrow `eldoc-doc-buffer' rather than the echo area.  The symbol
         ((eq hol-lsp-hover-width 'frame) (max 20 (1- (frame-width))))
         ((integerp hol-lsp-hover-width) (max 20 hol-lsp-hover-width))))
 
+(defcustom hol-lsp-check-proofs t
+  "Whether the server should check the proofs in a script buffer.
+Elaboration does not run tactics -- that is what makes it fast -- so a
+proof is taken on trust unless a worker pool replays it.  With this
+on, a proof that does not go through is reported as an error on the
+theorem's name, and one that suspends or diverges as a warning.
+
+It costs what the proofs cost: the pool runs them for real, on one
+worker per processor (capped at eight).  Set to nil on a machine you
+would rather keep for yourself; `hol-lsp-toggle-check-proofs' flips it
+for the current server without a restart."
+  :type 'boolean
+  :group 'hol)
+
 (defun hol-lsp--send-config ()
   "Tell this buffer's server the settings it cannot work out itself.
-Only the hover width so far, and only when the user has asked for one;
-the server's own default stands otherwise, which is why a stock
-configuration sends nothing at all."
+Sent on every connection: the hover width when the user has chosen
+one, and whether to check proofs, which the server otherwise leaves
+off."
   (let ((width (hol-lsp--hover-width))
-        (server (hol-lsp--server)))
-    (when (and width server)
+        (server (hol-lsp--server))
+        (params (list :checkProofs (if hol-lsp-check-proofs t :json-false))))
+    (when width
+      (setq params (append params (list :hoverWidth width))))
+    (when server
       (ignore-errors
-        (jsonrpc-async-request server :$/setConfig
-                               (list :hoverWidth width)
+        (jsonrpc-async-request server :$/setConfig params
                                :success-fn #'ignore
                                :error-fn #'ignore)))))
+
+(defun hol-lsp-toggle-check-proofs ()
+  "Turn proof checking on or off for this buffer's server.
+Takes effect at once: the server recompiles when switched on, since
+the proofs of a pass that already ran were taken on trust, and drops
+the pool's diagnostics when switched off."
+  (interactive)
+  (setq hol-lsp-check-proofs (not hol-lsp-check-proofs))
+  (hol-lsp--send-config)
+  (message "HOL: proof checking %s"
+           (if hol-lsp-check-proofs "on" "off")))
 
 (defun hol-lsp--on-managed ()
   "Send our configuration once eglot has taken over a HOL buffer.

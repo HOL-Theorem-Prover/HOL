@@ -762,9 +762,12 @@ in
            costs elaboration only unless asked otherwise.  The pool is
            given workers explicitly: Multithreading defaults to one, and
            0 asks for one per processor, capped at 8. *)
+        (* Workers are configured whether or not checking is on at
+           startup: `$/setConfig' can switch it on mid-session, and the
+           pool then needs somewhere to run. *)
+        evalString "DeferredProofs.setWorkerCount 0";
         if #check_proofs options then
-          (evalString "DeferredProofs.setWorkerCount 0";
-           evalString "LSPExtension.deferProofs := true")
+          evalString "LSPExtension.deferProofs := true"
         else ();
         case #multithread options of
             NONE => ()

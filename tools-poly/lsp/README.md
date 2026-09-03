@@ -181,14 +181,33 @@ served by that tree's server, silently.  The first line of the eglot
 log says which one; `cat .hol/make-deps/lastmaker` says the same
 thing without starting anything.
 
-## Proof checking (`--lsp-check-proofs`)
+## Proof checking
 
 Elaboration does not run tactics: `holide.ML` swaps in a prover that
 mints an oracle-tagged theorem, which is what makes compilation fast.
-Started with `--lsp-check-proofs`, the server instead *queues* each
-proof and a worker pool (`lsp/deferred_proofs.ML`, on HOL's `Future`)
-replays them, one cancellable group per proof.  Off by default, so an
-LSP session costs elaboration only unless asked otherwise.
+With checking on, the server instead *queues* each proof and a worker
+pool (`lsp/deferred_proofs.ML`, on HOL's `Future`) replays them, one
+cancellable group per proof, one worker per processor capped at eight.
+
+The server starts with it off and both shipped clients switch it on:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"$/setConfig",
+ "params":{"checkProofs":true}}
+```
+
+It takes effect without a restart.  Switching it **on** re-elaborates
+every open script from byte 0 -- the pass that already ran cheated its
+proofs and enqueued nothing, so without that nothing would happen
+until the next edit.  Switching it **off** cancels the running proofs
+and drops the pool's diagnostics, which would otherwise sit there
+describing proofs no longer being checked.  `--lsp-check-proofs` still
+works and only sets the initial value, which is what the tests use.
+
+In VS Code it is `hol4-mode.lsp.checkProofs`; under eglot it is
+`hol-lsp-check-proofs`, with `hol-lsp-toggle-check-proofs` to flip it
+for the running server.  Turn it off on a machine you would rather
+keep for yourself: the pool runs the proofs for real.
 
 Three of the pool's verdicts are diagnostics, keyed by theorem name
 and squiggled on the theorem's own name:

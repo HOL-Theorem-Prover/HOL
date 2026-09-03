@@ -141,6 +141,15 @@ In addition to the usual LSP commands, the server supports the following extensi
   it: `vscode-languageclient` advertises only `utf-16` and throws on any
   other answer.
 
+* `$/setConfig` carries the settings a client knows and the server
+  cannot work out: `elabOn` (when to compile), `hoverWidth` (columns to
+  render hover text at, since only the client knows how wide its hover
+  box is), and `checkProofs` (whether to replay proofs rather than take
+  them on trust).  `checkProofs` takes effect immediately: switching it
+  on re-elaborates every open script from byte 0, because the pass that
+  already ran cheated its proofs and enqueued nothing; switching it off
+  cancels the pool and clears its diagnostics.
+
 * On startup the server loads the heap named by the working directory's
   `Holmakefile` (`HOLHEAP`), else `bin/hol.state`.  If that heap cannot
   be loaded -- missing, or exported from a different executable, which
