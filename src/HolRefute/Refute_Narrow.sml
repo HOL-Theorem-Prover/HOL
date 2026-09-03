@@ -1123,9 +1123,6 @@ structure Refute_Narrow = struct
     end
     handle Feedback.HOL_ERR _ => NONE
 
-  fun update_function point value base =
-    Term.mk_comb (combinSyntax.mk_update (point, value), base)
-
   fun malformed_value expected value =
     raise Feedback.mk_HOL_ERR "Refute_Narrow"
       "eval_finite_functions_as"
@@ -1167,7 +1164,7 @@ structure Refute_Narrow = struct
                     else
                       (case constructor_application "FUpdate" value of
                            SOME [point, result, rest] =>
-                             update_function point
+                             Util.update_term point
                                (eval_finite_functions_as range result)
                                (eval_finite_functions_as original_ty rest)
                          | _ => malformed_value original_ty value)

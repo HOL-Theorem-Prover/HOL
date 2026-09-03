@@ -44,7 +44,7 @@ Refute_QC_Narrow.uo: Refute_QC.uo Refute_Narrow.uo
 Refute_EvalEnum.uo: Refute_Util.uo
 Refute_EvalCompute.uo: Refute_Util.uo Refute_EvalEnum.uo
 Refute_EvalCv.uo: Refute_Util.uo Refute_EvalEnum.uo
-Refute_EvalSML.uo: Refute_ModelFinder_Names.uo
+Refute_EvalSML.uo: Refute_ModelFinder_Names.uo Refute_Util.uo
 Refute_Extract.uo: Refute_Util.uo Refute_EvalEnum.uo
 
 # Keep the foundational modules ahead of the FORL stack.  Refute_Forl

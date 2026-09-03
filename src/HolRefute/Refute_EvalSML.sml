@@ -229,12 +229,13 @@ structure Refute_EvalSML = struct
      read as a capture. *)
   fun fun_term variable default updates =
     List.foldl (fn ((point, value), result) =>
-      Term.mk_comb (combinSyntax.mk_update (point, value), result))
+      Refute_Util.update_term point value result)
       (Term.mk_abs (Term.variant (Term.free_vars default) variable, default))
       updates
 
-  fun update_term point value base =
-    Term.mk_comb (combinSyntax.mk_update (point, value), base)
+  (* Generated extraction code reaches the shared builder under this name;
+     [Refute_Extract] emits the call. *)
+  val update_term = Refute_Util.update_term
 
   fun instantiate template environment =
     Term.subst (List.map (fn (index, thunk) =>

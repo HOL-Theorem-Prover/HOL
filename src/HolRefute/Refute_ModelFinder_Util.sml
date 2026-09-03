@@ -53,6 +53,7 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
     Type.hol_type -> Type.hol_type list -> Type.hol_type list
   val aconv_member : Term.term -> Term.term list -> bool
   val distinct_terms : Term.term list -> Term.term list
+  val update_term : Term.term -> Term.term -> Term.term -> Term.term
 end
 
 structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
@@ -357,6 +358,7 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
   val add_type = Refute_Util.add_type
   val aconv_member = Refute_Util.aconv_member
   val distinct_terms = Refute_Util.distinct_terms
+  val update_term = Refute_Util.update_term
 
   (* Prefix ownership belongs to Refute_ModelFinder_Names. *)
   (* Upstream Pretty/PIDE, parsing, type, tactic, hash, and spy helpers drop. *)

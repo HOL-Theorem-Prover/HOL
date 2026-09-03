@@ -2,10 +2,10 @@
  * Foundational type/term helpers shared across the whole Refute stack.
  *
  * This module deliberately depends only on the HOL kernel (Type, Term,
- * List), so it can be loaded by both the substrate layer (compiled for
- * refuteTableZooTheory) and the model-finder layer.  Layer-specific
- * utilities live in Refute_ModelFinder_Util,
- * which re-exports these for the model-finder modules' convenience.
+ * List) and combinSyntax, so it can be loaded by both the substrate layer
+ * (compiled for refuteTableZooTheory) and the model-finder layer.
+ * Layer-specific utilities live in Refute_ModelFinder_Util, which
+ * re-exports these for the model-finder modules' convenience.
  *)
 
 signature REFUTE_UTIL = sig
@@ -18,6 +18,7 @@ signature REFUTE_UTIL = sig
   val beta_normalize : Term.term -> Term.term
   val distinct_terms : Term.term list -> Term.term list
   val union_terms : Term.term list -> Term.term list -> Term.term list
+  val update_term : Term.term -> Term.term -> Term.term -> Term.term
 end
 
 structure Refute_Util :> REFUTE_UTIL = struct
@@ -68,4 +69,10 @@ structure Refute_Util :> REFUTE_UTIL = struct
     List.rev (List.foldl (fn (term, result) =>
       if aconv_member term result then result else term :: result)
       (List.rev left) right)
+
+  (* Function update [base(|point -> value|)].  Reconstruction in all three
+     layers -- the SML substrate's generated code, narrowing's value
+     rebuilder, and the model finder's renderer -- builds one. *)
+  fun update_term point value base =
+    Term.mk_comb (combinSyntax.mk_update (point, value), base)
 end

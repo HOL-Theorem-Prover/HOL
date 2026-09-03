@@ -697,9 +697,6 @@ fun sort_terms pairs =
     map #3 (Listsort.sort compare (tag 0 pairs))
   end
 
-fun make_update (point, value) base =
-  Term.mk_comb (combinSyntax.mk_update (point, value), base)
-
 fun make_fun (context as {scope, ...} : context) actual_domain_ty
       display_domain_ty display_range_ty pairs =
   let
@@ -717,7 +714,8 @@ fun make_fun (context as {scope, ...} : context) actual_domain_ty
         set_replay_hole_origin context value UnknownFunctionPoint
       else ()) pairs
   in
-    List.foldl (fn (pair, result) => make_update pair result)
+    List.foldl (fn ((point, value), result) =>
+      Util.update_term point value result)
       base (sort_terms pairs)
   end
 
@@ -1532,7 +1530,8 @@ fun dest_display_fun term =
           raise err "dest_display_fun" "not a reconstructed function"
 
 fun make_display_fun domain_ty marker pairs =
-  List.foldl (fn (pair, base) => make_update pair base)
+  List.foldl (fn ((point, value), base) =>
+    Util.update_term point value base)
     (combinSyntax.mk_K_1 (marker, domain_ty)) pairs
 
 (* fmap's synthetic rep is [key -> range option]
@@ -2027,7 +2026,8 @@ fun render_replay_holes holes term =
             (case Lib.total combinSyntax.dest_update_comb candidate of
                  SOME ((point, value), base) =>
                    if direct_unknown value then render base
-                   else make_update (render point, render value) (render base)
+                   else Util.update_term (render point) (render value)
+                          (render base)
                | NONE =>
                    if Term.is_abs candidate then
                      let val (variable, body) = Term.dest_abs candidate
