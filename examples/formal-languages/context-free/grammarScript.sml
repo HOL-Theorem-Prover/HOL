@@ -185,16 +185,9 @@ Theorem derives_paste_horizontally:
 Proof metis_tac [RTC_CASES_RTC_TWICE, derives_common_suffix, derives_common_prefix]
 QED
 
-(* the package's principle, without the empty contribution of the label,
-   and with the label quantified inside as the older construction had it *)
-Theorem ptree_ind:
-  ∀P. (∀p. P (Lf p)) ∧
-      (∀l. (∀pt. MEM pt l ⇒ P pt) ⇒ ∀p. P (Nd p l)) ⇒
-      ∀p. P p
-Proof
-  gen_tac >> strip_tac >>
-  ho_match_mp_tac (TypeBase.induction_of ``:('a,'b,'l)parsetree``) >> simp[]
-QED
+(* the package's principle says what each sub-tree satisfies already *)
+Theorem ptree_ind =
+  TypeBase.induction_of ``:('a,'b,'l)parsetree``
 
 Theorem valid_ptree_derive:
   ∀pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)
