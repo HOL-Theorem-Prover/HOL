@@ -590,9 +590,10 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     fun report_mono_failure kind ty detail =
       if !MFMono.trace then
-        Feedback.HOL_MESG
-          ("Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
-           (if detail = "" then "" else ": " ^ detail))
+        Refute_Core.Private.emit (fn () =>
+          Feedback.HOL_MESG
+            ("Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
+             (if detail = "" then "" else ": " ^ detail)))
       else ()
 
     fun is_type_actually_monotonic ty =

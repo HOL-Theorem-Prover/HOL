@@ -1338,8 +1338,24 @@ structure Refute_Core = struct
 
     fun enabled level = !trace >= level
 
+    (* Backends trace from their own workers, so two of them can be inside
+       [HOL_MESG] at once.  [Feedback.MESG_outstream] is a plain callback
+       and a consumer accumulating into a ref -- which is what the hook
+       invites -- silently loses one of two concurrent updates.  Refute
+       owns the worker pool, so it owns delivering one whole message at a
+       time.  Every emission reachable from a backend goes through [emit];
+       [warn] is its [HOL_WARNING] counterpart. *)
+    val message_mutex = Mutex.mutex ()
+
+    fun emit send =
+      Multithreading.synchronized "Refute message output" message_mutex send
+
     fun say level message =
-      if enabled level then Feedback.HOL_MESG message else ()
+      if enabled level then emit (fn () => Feedback.HOL_MESG message)
+      else ()
+
+    fun warn origin function message =
+      emit (fn () => Feedback.HOL_WARNING origin function message)
 
     fun expectation_to_string NoExpectation = "NoExpectation"
       | expectation_to_string ExpectNone = "ExpectNone"

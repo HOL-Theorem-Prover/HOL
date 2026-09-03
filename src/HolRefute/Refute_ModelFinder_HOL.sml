@@ -244,7 +244,7 @@ structure Refute_ModelFinder_HOL = struct
          boolSyntax.list_mk_imp (premises, equation)))
     end
     handle HOL_ERR _ =>
-      (Feedback.HOL_WARNING "Refute_ModelFinder_HOL"
+      (Refute_Core.Private.warn "Refute_ModelFinder_HOL"
          "equationalize_term" ("ignoring " ^ label ^ " non-equation");
        NONE)
 

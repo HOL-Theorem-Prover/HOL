@@ -2669,9 +2669,10 @@ fun certify {executable, original, eval_terms,
                 val suffix = if length candidates <= 16 then ""
                   else ", ..."
               in
-                HOL_MESG ("Refute model replay candidates: " ^
-                  String.concatWith ", " (map (fn (_, candidate, _) =>
-                    Parse.term_to_string candidate) shown) ^ suffix)
+                Refute_Core.Private.emit (fn () =>
+                  HOL_MESG ("Refute model replay candidates: " ^
+                    String.concatWith ", " (map (fn (_, candidate, _) =>
+                      Parse.term_to_string candidate) shown) ^ suffix))
               end
             fun trace_attempts () =
               let
@@ -2690,12 +2691,13 @@ fun certify {executable, original, eval_terms,
                    ("set-unrepresented", UnrepresentedSetElement),
                    ("function-default", FunctionDefault)]
               in
-                HOL_MESG ("Refute model replay attempts: schematic=" ^
-                  Int.toString (#schematic_attempts replay_diagnostics) ^
-                  ", completions=" ^
-                  Int.toString (#completion_attempts replay_diagnostics) ^
-                  ", holes={" ^
-                  String.concatWith ", " (map row origins) ^ "}")
+                Refute_Core.Private.emit (fn () =>
+                  HOL_MESG ("Refute model replay attempts: schematic=" ^
+                    Int.toString (#schematic_attempts replay_diagnostics) ^
+                    ", completions=" ^
+                    Int.toString (#completion_attempts replay_diagnostics) ^
+                    ", holes={" ^
+                    String.concatWith ", " (map row origins) ^ "}"))
               end
             val _ = if current_trace "Refute" >= 2 then trace_attempts ()
               else ()
@@ -2760,7 +2762,8 @@ fun certify {executable, original, eval_terms,
              | Refute_Cert_Model.NoCertificate reason =>
                  let
                    val _ = if current_trace "Refute" >= 2 then
-                       (HOL_MESG ("Refute model replay: " ^ reason);
+                       (Refute_Core.Private.emit (fn () =>
+                          HOL_MESG ("Refute model replay: " ^ reason));
                         trace_candidates ())
                      else ()
                  in
