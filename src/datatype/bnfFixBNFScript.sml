@@ -237,17 +237,6 @@ Proof
   once_rewrite_tac[EXTENSION] >> simp[PULL_EXISTS]
 QED
 
-(* and bnfPrelimsTheory's BIMG_EQUAL, which stops firing once a set term
-   has been unfolded and applied.  Deriving it from that one does not
-   work: a set is itself a function, so FUN_EQ_THM strips twice and
-   leaves a statement about membership. *)
-Theorem BIGUNION_IMAGE_EQUAL:
-  BIGUNION (IMAGE $= X) = X
-Proof
-  once_rewrite_tac[EXTENSION] >>
-  simp[PULL_EXISTS, bnfPrelimsTheory.IN_equal]
-QED
-
 Theorem BIGUNION_IMAGE_BIGUNION:
   BIGUNION (IMAGE h (BIGUNION (IMAGE g X))) =
   BIGUNION (IMAGE (λx. BIGUNION (IMAGE h (g x))) X)

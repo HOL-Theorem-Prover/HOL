@@ -1906,15 +1906,45 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
 val shapeRWs = [sumTheory.SUM_MAP_def, pairTheory.PAIR_MAP,
                 combinTheory.I_THM, oneTheory.one]
 
+(* A law about set terms is stated point-free, and stops firing as soon
+   as a term has been unfolded and applied — which is what happens to
+   one side of an equation between a constructor's set and what its
+   arguments say.  These are the same laws about an application.  One
+   argument is supplied, not as many as the types allow: a set is itself
+   a function, so stripping to a fixed point would leave a statement
+   about membership, which matches no set term at all. *)
+fun appliedForms th =
+    let
+      fun one th =
+          let
+            val th = SPEC_ALL th
+            val (l, _) = dest_eq (concl th)
+            val (d, _) = dom_rng (type_of l)
+            val x = variant (free_vars (concl th)) (mk_var ("x", d))
+            val cnv = QCONV (PURE_REWRITE_CONV [combinTheory.o_THM,
+                                                combinTheory.I_THM,
+                                                combinTheory.K_THM] THENC
+                             QCONV (DEPTH_CONV BETA_CONV))
+          in
+            [GEN_ALL (CONV_RULE (BINOP_CONV cnv) (AP_THM th x))]
+          end handle HOL_ERR _ => []
+    in
+      List.concat (List.map one (CONJUNCTS (SPEC_ALL th)))
+    end
+
 (* and the same for a set function, which is built out of BIMG and a
    lifted union, and whose leaves are the components' set functions —
    stated as predicates, so set notation has to be put back *)
-val setRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
-              combinTheory.I_o_ID, combinTheory.S_DEF, combinTheory.o_DEF,
+val pointFreeRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
+                    combinTheory.I_o_ID]
+(* a law whose applied form has collapsed to reflexivity says nothing
+   and matches everything: I_o_ID applied is `f x = f x` *)
+val setRWs = pointFreeRWs @
+             rules (List.concat (List.map appliedForms pointFreeRWs)) @
+             [combinTheory.S_DEF, combinTheory.o_DEF,
               combinTheory.K_DEF, pairTheory.setFST_thm,
               pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
-              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY,
-              BIGUNION_IMAGE_EQUAL]
+              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
 
 (* eta reduction is part of unfolding a set term: the lifted union leaves
    a component's set function applied to a bound variable *)
