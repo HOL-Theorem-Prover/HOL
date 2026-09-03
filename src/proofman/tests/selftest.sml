@@ -453,6 +453,33 @@ val _ =
       else die ("proved " ^ term_to_string (concl th))
     end
 
+val _ = tprint "select_lt keeps several selected goals in order"
+val _ =
+    let
+      (* Two goals selected, one stashed, and the selected ones are
+         told apart by their conclusions -- so a validation that pairs
+         them the wrong way round produces the wrong theorem instead of
+         quietly working, which is what one selected goal cannot
+         show. *)
+      val tm = “p ∧ q ∧ r ⇒ (p ∧ p) ∧ (q ∧ q) ∧ r”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = ex (REPEAT STRIP_TAC) (goalFrag.new_goal ([], tm))
+      val st = goalFrag.open_select_lt st
+      (* Succeeds on the two conjunctive goals, fails on `r'. *)
+      val st = ex CONJ_TAC st
+      val st = goalFrag.next_select_lt st
+      val st = goalFrag.open_paren st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+      val st = goalFrag.close_paren st
+      val st = goalFrag.close_paren st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+      val th = goalFrag.finish st
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end
+
 val _ = tprint "close_repeat pairs subgoals with their own theorems"
 val _ =
     let

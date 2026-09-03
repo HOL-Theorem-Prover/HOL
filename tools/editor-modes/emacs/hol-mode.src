@@ -2824,13 +2824,35 @@ client accumulates.  nil until the first notification arrives.")
             (let ((name (plist-get st :name))
                   (status (plist-get st :status)))
               (when name
-                ;; `cheated' means the pool is no longer working on it
-                ;; -- an edit dropped the entry -- so forget it rather
-                ;; than counting it as an outcome.
-                (if (equal status "cheated")
-                    (remhash name tbl)
-                  (puthash name status tbl))))))
+                ;; `cheated' is kept, not forgotten.  It means the pool
+                ;; has dropped the entry -- an edit reached that proof
+                ;; -- and the compile that follows re-enqueues it, so
+                ;; forgetting it made the tally *shrink*: 62 checked
+                ;; became 61 checked, which reads as finished rather
+                ;; than as one outstanding.  Counted as outstanding, it
+                ;; shows as 61/62 until the worker settles it.
+                (puthash name status tbl)))))
         (force-mode-line-update)))))
+
+(defun hol-lsp--prune-stale-proofs (uri)
+  "Drop proofs still `cheated' in the buffer visiting URI.
+Called when a compile completes.  The pool announces `checking' for
+everything a pass enqueues *before* that pass finishes, so a proof
+still marked `cheated' by then was not re-enqueued -- its theorem was
+deleted, or its tactic does not compile, in which case the compile
+error is the report.  Keeping it would leave the tally short of a
+proof that is never coming back."
+  (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
+         (buf (and path (find-buffer-visiting path))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (when hol-lsp--proof-states
+          (let (stale)
+            (maphash (lambda (k v)
+                       (when (equal v "cheated") (push k stale)))
+                     hol-lsp--proof-states)
+            (dolist (k stale) (remhash k hol-lsp--proof-states))
+            (when stale (force-mode-line-update))))))))
 
 (defun hol-lsp-proof-summary ()
   "A one-line tally of what the pool is doing in this buffer.
@@ -2845,7 +2867,8 @@ from 30 to 12 reads as what it is."
       ""
     (let ((checking 0) (proved 0) (bad 0))
       (maphash (lambda (_k v)
-                 (cond ((equal v "checking") (setq checking (1+ checking)))
+                 (cond ((member v '("checking" "cheated"))
+                        (setq checking (1+ checking)))
                        ((equal v "proved") (setq proved (1+ proved)))
                        (t (setq bad (1+ bad)))))
                hol-lsp--proof-states)
@@ -2874,7 +2897,8 @@ from 30 to 12 reads as what it is."
     (_server (_method (eql $/compileCompleted)) &key uri
              &allow-other-keys)
     "Note that URI compiled, which is to say it is no longer blocked."
-    (hol-lsp--set-blocked uri nil)))
+    (hol-lsp--set-blocked uri nil)
+    (hol-lsp--prune-stale-proofs uri)))
 
 (add-to-list 'mode-line-misc-info
              '(:eval (hol-lsp-proof-summary)) t)

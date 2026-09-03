@@ -301,27 +301,53 @@ the tally, not the per-proof marks."
     (puthash "c" "failed" hol-lsp--proof-states)
     (should (equal (hol-lsp-proof-summary) " HOL[2/3 1!]"))))
 
-(ert-deftest hol-lsp-proof-states-accumulate-and-cheated-drops ()
+(ert-deftest hol-lsp-proof-states-accumulate-and-cheated-is-outstanding ()
   "`$/proofStates' is a transition stream, so the client accumulates.
-A `cheated' state means the pool has dropped the entry -- an edit
-reached that proof -- and it stops being an outcome rather than
-counting as one."
+
+A `cheated' state means the pool has dropped that entry -- an edit
+reached the proof -- and the compile that follows re-enqueues it.
+Forgetting it made the tally shrink, so 62 checked became 61 checked,
+which reads as finished rather than as one outstanding.  It counts as
+outstanding instead."
   (let ((file (make-temp-file "holproofs" nil "Script.sml")))
     (unwind-protect
         (let ((buf (find-file-noselect file)))
           (with-current-buffer buf
             (hol-lsp--note-proof-states
              (hol-lsp--path-to-uri file)
-             (list (list :name "t1" :status "checking")
-                   (list :name "t2" :status "checking")))
-            (should (equal (hol-lsp-proof-summary) " HOL[0/2]"))
-            (hol-lsp--note-proof-states
-             (hol-lsp--path-to-uri file)
-             (list (list :name "t1" :status "proved")))
-            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+             (list (list :name "t1" :status "proved")
+                   (list :name "t2" :status "proved")))
+            (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
             (hol-lsp--note-proof-states
              (hol-lsp--path-to-uri file)
              (list (list :name "t2" :status "cheated")))
+            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+            (hol-lsp--note-proof-states
+             (hol-lsp--path-to-uri file)
+             (list (list :name "t2" :status "checking")))
+            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+            (hol-lsp--note-proof-states
+             (hol-lsp--path-to-uri file)
+             (list (list :name "t2" :status "proved")))
+            (should (equal (hol-lsp-proof-summary) " HOL[2 ok]")))
+          (kill-buffer buf))
+      (delete-file file))))
+
+(ert-deftest hol-lsp-stale-proofs-are-pruned-when-a-compile-finishes ()
+  "A pass announces `checking' for everything it enqueues before it
+finishes, so a proof still `cheated' at `$/compileCompleted' is not
+coming back -- its theorem was deleted, or its tactic does not
+compile.  Keeping it would leave the tally permanently short."
+  (let ((file (make-temp-file "holproofs" nil "Script.sml")))
+    (unwind-protect
+        (let ((buf (find-file-noselect file)))
+          (with-current-buffer buf
+            (hol-lsp--note-proof-states
+             (hol-lsp--path-to-uri file)
+             (list (list :name "t1" :status "proved")
+                   (list :name "gone" :status "cheated")))
+            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+            (hol-lsp--prune-stale-proofs (hol-lsp--path-to-uri file))
             (should (equal (hol-lsp-proof-summary) " HOL[1 ok]")))
           (kill-buffer buf))
       (delete-file file))))
