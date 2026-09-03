@@ -38,14 +38,24 @@ local
   fun locn_covers lines target locn =
     case locn of
       locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2)) =>
-        let val s = LSPExtension.fromLineCol lines (l1, c1)
-            val e = LSPExtension.fromLineCol lines (l2, c2)
+        let val s = LSPExtension.fromLineColBytes lines (l1, c1)
+            val e = LSPExtension.fromLineColBytes lines (l2, c2)
         in s <= target andalso target <= e end
     | _ => false
 
-  fun locn_range (locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2))) =
-      SOME ((l1, c1), (l2, c2 + 1))
-    | locn_range _ = NONE
+  (* The one place HOL's positions become the client's.  `locn'
+     columns count bytes; the range on the wire counts whatever was
+     negotiated, so convert through byte offsets rather than handing
+     the columns over as they are.  Under utf-8 the two agree, which is
+     why passing them straight through worked for eglot and skewed
+     every hover on a line with a non-ASCII character in VS Code. *)
+  fun locn_range lines (locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2))) =
+      let
+        val s = LSPExtension.fromLineColBytes lines (l1, c1)
+        val e = LSPExtension.fromLineColBytes lines (l2, c2) + 1
+      in SOME (LSPExtension.getLineCol lines s,
+               LSPExtension.getLineCol lines e) end
+    | locn_range _ _ = NONE
 
   datatype hover_leaf =
       HLConst of {Name: string, Thy: string,
@@ -71,8 +81,8 @@ local
   (* Byte-length of a Locn's file range (LocA start ↔ LocA end).
      Non-LocA Locns are treated as huge so they're never preferred. *)
   fun locn_size lines (locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2))) =
-        LSPExtension.fromLineCol lines (l2, c2) -
-        LSPExtension.fromLineCol lines (l1, c1)
+        LSPExtension.fromLineColBytes lines (l2, c2) -
+        LSPExtension.fromLineColBytes lines (l1, c1)
     | locn_size _ _ = 100000000
 
   (* Prefer the leaf with the smaller Locn — i.e., the more specific
@@ -360,7 +370,10 @@ val () = LSPExtension.hoverQuotation :=
          labels and get parsed whole. *)
       val (regionOffset, region) = findRegion body (target - bodyStart)
       val regionStart = bodyStart + regionOffset
-      val (startLine, startCol) = LSPExtension.getLineCol lines regionStart
+      (* A `(*#loc*)' column is read by HOL's parser, which counts
+         bytes; `getLineCol' would give the client's units. *)
+      val (startLine, startCol) =
+          LSPExtension.getLineColBytes lines regionStart
       val pragma =
         "(*#loc " ^ Int.toString (startLine + 1) ^ " " ^
         Int.toString (startCol + 1) ^ "*)"
@@ -374,8 +387,9 @@ val () = LSPExtension.hoverQuotation :=
         | SOME leaf => let
             fun nameOf l = case l of
                 locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2)) => let
-                  val s = LSPExtension.fromLineCol lines (l1, c1) - regionStart
-                  val e = LSPExtension.fromLineCol lines (l2, c2) + 1
+                  val s = LSPExtension.fromLineColBytes lines (l1, c1)
+                          - regionStart
+                  val e = LSPExtension.fromLineColBytes lines (l2, c2) + 1
                           - regionStart
                   in if 0 <= s andalso s < e andalso e <= String.size region
                      then String.substring (region, s, e - s) else "?"
@@ -383,7 +397,7 @@ val () = LSPExtension.hoverQuotation :=
               | _ => "?"
           in
             [{markdown = format_leaf nameOf env leaf,
-              range = locn_range (leaf_locn leaf)}]
+              range = locn_range lines (leaf_locn leaf)}]
           end
     end handle _ => [])
 

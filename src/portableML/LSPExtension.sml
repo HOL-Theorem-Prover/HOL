@@ -83,15 +83,25 @@ fun partitionPoint len pred = let
       end
   in loop 0 len end
 
+fun lineOf starts index =
+  partitionPoint (Vector.length starts)
+                 (fn i => Vector.sub (starts, i) <= index)
+fun bolOf starts line = if line = 0 then 0 else Vector.sub (starts, line - 1)
+
 fun getLineCol {starts, text} index = let
-  val line = partitionPoint (Vector.length starts)
-                            (fn i => Vector.sub (starts, i) <= index)
-  val bol = if line = 0 then 0 else Vector.sub (starts, line - 1)
+  val line = lineOf starts index
+  val bol = bolOf starts line
   in (line, if !utf16 then utf16Col (text, bol, index) else index - bol) end
 
 fun fromLineCol {starts, text} (line, col) = let
-  val bol = if line = 0 then 0 else Vector.sub (starts, line - 1)
+  val bol = bolOf starts line
   in if !utf16 then utf16Byte (text, bol, col) else bol + col end
+
+fun getLineColBytes {starts, text} index = let
+  val line = lineOf starts index
+  in (line, index - bolOf starts line) end
+
+fun fromLineColBytes {starts, text} (line, col) = bolOf starts line + col
 
 (* Binarymap (rather than Symtab/Table) here because LSPExtension is
    `use`d directly by tools-poly/poly/poly-init2.ML at bootstrap, before

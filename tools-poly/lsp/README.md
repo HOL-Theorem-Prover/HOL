@@ -111,6 +111,23 @@ client treats single newlines as spaces and reflows the statement in a
 proportional font, which throws away every break the pretty printer
 just chose.
 
+### Positions
+
+A hover's range, like every position on the wire, counts whatever
+`positionEncoding` was negotiated: bytes for a client that offers
+`utf-8` (eglot), utf-16 code units otherwise (anything built on
+`vscode-languageclient`, which offers nothing else).
+
+HOL's own positions -- `locn.LocA` columns, and the column a
+`(*#loc*)` pragma hands to its parser -- count **bytes**, always.  Code
+that works in them therefore has to stay in bytes
+(`LSPExtension.getLineColBytes` / `fromLineColBytes`) and convert once,
+where a range leaves for the client.  Mixing the two is invisible under
+utf-8, where a byte offset and a column agree, and skews every position
+after the first non-ASCII character on the line under utf-16 -- which
+is how it survived: the test suite advertised utf-8 throughout, as
+eglot does.
+
 ### Width
 
 Hover text is laid out at 100 columns until a client says otherwise:

@@ -5545,6 +5545,68 @@ def test_overload_hover_sees_through_the_alias_chain():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_quotation_hover_positions_under_utf16():
+    """Every test here advertises utf-8, which is what eglot
+    negotiates and where a byte offset and a column agree -- so nothing
+    exercised the utf-16 columns a vscode-languageclient client gets,
+    and the quotation hover was wrong for every line containing a
+    non-ASCII character.
+
+    HOL's `locn' columns count bytes.  Feeding them to the client, or
+    feeding the client's columns to HOL's parser, skews everything
+    after the first `\u2200'."""
+    d = tempfile.mkdtemp(prefix="lsp_u16_")
+    try:
+        # `SUC' sits well past three non-ASCII characters, so a byte
+        # count and a utf-16 count disagree by six by the time we
+        # reach it.
+        src = ("Theory u16h\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  \u2200m n. m + n \u2265 n \u21d2 SUC m > n\n"
+               "Proof\n"
+               "  simp[]\n"
+               "QED\n")
+        uri = f"file://{d}/u16hScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30, encodings=("utf-16",))
+            msgs, _ = c.messages_since(0)
+            enc = [m["result"]["capabilities"].get("positionEncoding")
+                   for m in msgs if m.get("id") == 1 and "result" in m]
+            assert_eq(enc[0], "utf-16", "negotiated utf-16")
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            lines = src.split("\n")
+            ln = next(i for i, l in enumerate(lines) if "SUC" in l)
+            line = lines[ln]
+
+            def u16col(chars):
+                return len(line[:chars].encode("utf-16-le")) // 2
+
+            # The identifier after the non-ASCII run resolves to
+            # itself, not to whatever sits at that byte offset.
+            r = _hover_at(c, 970, uri, ln, u16col(line.index("SUC")))
+            md = r["contents"]["value"] if r else ""
+            assert_true("SUC" in md, f"hovering SUC gives SUC ({md!r})")
+            # A one-unit character gets a one-unit range: as bytes it
+            # would be three, and the client would grey out three
+            # characters.
+            fa = line.index("\u2200")
+            r = _hover_at(c, 971, uri, ln, u16col(fa))
+            rng = r["range"] if r else None
+            assert_true(rng is not None, "hovering the quantifier")
+            width = rng["end"]["character"] - rng["start"]["character"]
+            assert_eq(rng["start"]["character"], u16col(fa),
+                      f"range starts at the character ({rng!r})")
+            assert_eq(width, 1, f"and is one utf-16 unit wide ({rng!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5764,6 +5826,8 @@ TESTS = [
      test_overload_hover_names_the_expansion),
     ("overload_hover_sees_through_the_alias_chain",
      test_overload_hover_sees_through_the_alias_chain),
+    ("quotation_hover_positions_under_utf16",
+     test_quotation_hover_positions_under_utf16),
 ]
 
 

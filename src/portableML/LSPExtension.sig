@@ -12,6 +12,16 @@ val mkLineCounter: string -> lines
 val getLineCol: lines -> int -> posLC
 val fromLineCol: lines -> posLC -> int
 
+(* The same, in bytes, whatever the client negotiated.  HOL's own
+   positions -- `locn.LocA' columns, and the column a `(*#loc*)' pragma
+   carries -- count bytes, so code that works in them has to convert in
+   bytes and convert to the client's units once, at the boundary.
+   Mixing the two silently works under utf-8, where they agree, and
+   skews every position in a line containing a non-ASCII character
+   under utf-16. *)
+val getLineColBytes: lines -> int -> posLC
+val fromLineColBytes: lines -> posLC -> int
+
 (* Whether a `character' on the wire counts utf-16 code units rather
    than bytes.  Chosen from the client's `general.positionEncodings' at
    initialize; `getLineCol' / `fromLineCol' convert accordingly. *)
