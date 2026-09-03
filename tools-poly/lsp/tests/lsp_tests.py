@@ -5661,6 +5661,64 @@ def test_check_proofs_switchable_without_a_restart():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_check_proofs_enabled_during_a_compile():
+    """A client sends its configuration right after the handshake, so
+    `checkProofs' arrives while the first compile is still running.
+
+    Restarting that compile to pick the setting up tears a pass down
+    mid-theory and comes back to a state that is not a legitimate
+    resume point: with a shallow ancestry that surfaced as
+    `Fail "No merge for grammars!"', and with a deep one as re-`quse'
+    of an already-sealed ancestor, after which every ancestor behind it
+    fails "not in ancestry" for the rest of the session.
+
+    Nothing needs restarting: the prover hook reads `deferProofs' per
+    proof, so a compile in flight queues everything it has yet to
+    reach.  The ancestor here must be one that is NOT resident in
+    `hol.state', or nothing is loaded and the test cannot fail."""
+    d = tempfile.mkdtemp(prefix="lsp_cpdur_")
+    try:
+        src = ("Theory cpdur\n"
+               "Ancestors sorting\n\n"
+               "Theorem t1:\n  1 = 1\nProof\n  REFL_TAC\nQED\n\n"
+               "Theorem t2:\n  2 = 2\nProof\n  REFL_TAC\nQED\n\n"
+               "val s = sortingTheory.SORTED_DEF\n")
+        uri = f"file://{d}/cpdurScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            # No wait: this is what a client actually does.
+            r = _request(c, 992, "$/setConfig", {"checkProofs": True})
+            assert_true(r is not None and "error" not in r,
+                        f"setConfig accepted ({r})")
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "the compile still completes")
+
+            def settled(cl):
+                st = _proof_states(cl, uri)
+                return st if all(st.get(n, ("", ))[0] == "proved"
+                                 for n in ("t1", "t2")) else None
+
+            st = c.wait_until(settled, 90)
+            assert_true(st is not None,
+                        f"and the proofs are checked "
+                        f"({_proof_states(c, uri)!r})")
+            msgs = [x.get("message", "") for x in _diag_count(c, uri)]
+            for bad in ("No merge for grammars", "sealed",
+                        "not in ancestry"):
+                assert_true(all(bad not in m for m in msgs),
+                            f"no {bad!r} diagnostic ({msgs!r})")
+            err = c.stderr_text()
+            assert_true("is sealed" not in err,
+                        f"and nothing re-read a sealed theory "
+                        f"({err[-400:]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5884,6 +5942,8 @@ TESTS = [
      test_quotation_hover_positions_under_utf16),
     ("check_proofs_switchable_without_a_restart",
      test_check_proofs_switchable_without_a_restart),
+    ("check_proofs_enabled_during_a_compile",
+     test_check_proofs_enabled_during_a_compile),
 ]
 
 

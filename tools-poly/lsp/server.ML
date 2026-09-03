@@ -2932,13 +2932,49 @@ fun start {diag, dbg, warnings} = let
           LSPExtension.deferProofs := b;
           logMessage ("checkProofs = " ^ Bool.toString b);
           if b then
-            (* From byte 0: the pass that already ran completed, so
-               `startCompile' would otherwise find nothing to do and
-               the proofs it cheated would never be enqueued. *)
-            List.app (fn (uri, v: file_data) =>
-                         (bumpMinEdit (#minEditOffset v) 0;
-                          startCompile uri v))
-                     files
+            (* The proofs of a pass that already ran were cheated and
+               never enqueued, so switching on has to re-elaborate --
+               but only a file that is not being compiled right now, and
+               only from the end of its header.
+
+               A compile in flight already sees the new setting: the
+               prover hook reads `deferProofs' per proof, so everything
+               it has yet to reach is queued.  Restarting it instead
+               tears down a pass mid-theory, and the state it comes back
+               to is not a legitimate resume point: with a shallow
+               ancestry that surfaces as `No merge for grammars!', and
+               with a deep one as re-`quse' of an already-sealed
+               ancestor and every ancestor behind it failing "not in
+               ancestry" for the rest of the session.
+
+               From the header's snapshot rather than byte 0 for the
+               same reason `startCompile' does it that way: byte 0 has
+               no snapshot to resume from, and the boot state would
+               rewind `Meta.loadedMods' and re-read those sealed
+               theories. *)
+            List.app
+              (fn (uri, v as {compile, lastTrees, minEditOffset,
+                              ...}: file_data) =>
+                  let
+                    val running =
+                        case !compile of
+                            NONE => false
+                          | SOME {thread, cancelled, ...} =>
+                            Thread.isActive thread andalso not (!cancelled)
+                    (* `declSnapshots' is newest-first, so the last one
+                       is the header's. *)
+                    val headerEnd =
+                        case rev (#declSnapshots (#parse (!lastTrees))) of
+                            [] => NONE
+                          | snap :: _ => SOME (#endByte snap)
+                  in
+                    case (running, headerEnd) of
+                        (true, _) => ()
+                      | (_, NONE) => ()
+                      | (_, SOME off) => (bumpMinEdit minEditOffset off;
+                                          startCompile uri v)
+                  end)
+              files
           else (
             (!LSPExtension.cancelAllProofs () handle _ => ());
             List.app (fn (uri, v: file_data) =>
