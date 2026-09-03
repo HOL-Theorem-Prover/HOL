@@ -1946,9 +1946,60 @@ val setRWs = pointFreeRWs @
               pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
               pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
 
-(* eta reduction is part of unfolding a set term: the lifted union leaves
-   a component's set function applied to a bound variable *)
-val set_ss = simpLib.++ (BasicProvers.srw_ss(), boolSimps.ETA_ss)
+(* ----------------------------------------------------------------------
+    One simpset for reducing a set term.
+
+    srw_ss() is not it.  What a constructor holds nothing of has to
+    collapse before a membership in it is taken apart, and srw_ss() will
+    take the membership apart first; it also carries every rewrite every
+    loaded theory has exported, so what the driver proves depends on what
+    happens to be in scope.  This lists what a set term is made of and
+    nothing else.
+
+    Eta reduction is part of unfolding a set term: the lifted union
+    leaves a component's set function applied to a bound variable.
+    Unwinding, with the existentials pulled out of the conjunctions that
+    hide them, is what disposes of an argument the recursion does not
+    reach.
+   ---------------------------------------------------------------------- *)
+
+val setElimRWs =
+    [(* the existentials a membership leaves, where unwinding can use
+        the equation it finds *)
+     GSYM boolTheory.LEFT_EXISTS_AND_THM,
+     GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+     (* set notation *)
+     pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
+     pred_setTheory.IN_UNION, pred_setTheory.IN_BIGUNION,
+     pred_setTheory.IN_IMAGE, pred_setTheory.IN_SING,
+     pred_setTheory.IMAGE_EMPTY, pred_setTheory.IMAGE_INSERT,
+     pred_setTheory.IMAGE_SING, pred_setTheory.IMAGE_I,
+     pred_setTheory.IMAGE_UNION, pred_setTheory.BIGUNION_EMPTY,
+     pred_setTheory.BIGUNION_INSERT, pred_setTheory.BIGUNION_UNION,
+     pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
+     (* and the leaves themselves: the components' own set functions,
+        at the components' own constructors.  sumTheory's SUM_MAP_SET is
+        deliberately absent: it is about the same term as the database's
+        own naturality for the sum, and says it in predicate form, so
+        having both makes which one fires an accident of rule order. *)
+     sumTheory.setL_def, sumTheory.setR_def, bnfPrelimsTheory.optSET_def,
+     pairTheory.FST, pairTheory.SND,
+     combinTheory.I_THM, combinTheory.K_THM, combinTheory.o_THM]
+
+(* The list is built by this package, so src/list comes after this file
+   and listTheory cannot be named in it.  Its few set rewrites are
+   looked up when a set term is actually reduced, which is always in a
+   theory that has the list — and a declaration made before there is one
+   simply does not need them. *)
+fun lateRWs () =
+    List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
+                    [("list", "MEM"), ("list", "IN_LIST_TO_SET"),
+                     ("list", "LIST_TO_SET"), ("list", "MAP")]
+
+fun set_ss () =
+    simpLib.&& (simpLib.++ (simpLib.++ (boolSimps.bool_ss, boolSimps.ETA_ss),
+                            boolSimps.UNWIND_ss),
+                setElimRWs @ lateRWs ())
 
 (* what an argument the recursion does not reach says about a sub-term,
    which is nothing.  Taking the membership apart leaves the emptiness
@@ -1989,7 +2040,7 @@ fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
                     (SPECL (fvars @ [injOf def]) (#map_thm res)))
       fun setEqn i def =
           REWRITE_RULE folds
-            (unfold set_ss setRWs
+            (unfold (set_ss()) setRWs
                     (SPEC (injOf def) (List.nth (#set_thms res, i))))
     in
       {map_eqns = LIST_CONJ (List.map mapEqn defs),
@@ -2083,7 +2134,7 @@ type mutual = {
    sees that without running a tactic. *)
 val normRWs = setRWs @ [BIGUNION_IMAGE_UNION, BIGUNION_IMAGE_BIGUNION]
 fun normEqWith rws (t1,t2) =
-    let val cnv = QCONV (simpLib.SIMP_CONV set_ss (normRWs @ rws))
+    let val cnv = QCONV (simpLib.SIMP_CONV (set_ss()) (normRWs @ rws))
         val (e1,e2) = (cnv t1, cnv t2)
     in
       if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
@@ -2093,7 +2144,7 @@ fun normEqWith rws (t1,t2) =
     end
 
 fun normEq (t1,t2) =
-    let val cnv = QCONV (simpLib.SIMP_CONV set_ss normRWs)
+    let val cnv = QCONV (simpLib.SIMP_CONV (set_ss()) normRWs)
         val (e1,e2) = (cnv t1, cnv t2)
     in
       if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
@@ -2388,7 +2439,7 @@ fun mutualInduction (cs1 : constructors, cs2 : constructors)
       val expand =
           QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
                                     combinTheory.I_o_ID]) THENC
-          QCONV (simpLib.SIMP_CONV set_ss
+          QCONV (simpLib.SIMP_CONV (set_ss())
                    (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
                               oneTheory.FORALL_ONE])) THENC
           emptyHyp
@@ -3464,7 +3515,7 @@ fun familyInductionOf (defs : thm list list) induction =
          apart before it could fire *)
       val reduce =
           QCONV (PURE_REWRITE_CONV setRWs) THENC
-          QCONV (simpLib.SIMP_CONV set_ss
+          QCONV (simpLib.SIMP_CONV (set_ss())
                    (setRWs @ [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
                               sumTheory.OUTL, sumTheory.OUTR,
                               pairTheory.PAIR_MAP, pairTheory.FST,
@@ -4715,11 +4766,12 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
       val db = List.foldl (fn (r, d) => bnfBase.insert (#key r, #info r) d)
                           (#db fam) cbnfs
       fun norm tm =
-          rhs (concl (QCONV (simpLib.SIMP_CONV set_ss
+          rhs (concl (QCONV (simpLib.SIMP_CONV (set_ss())
                                (setRWs @ shapeRWs @ unfoldRWs))
                             tm))
       fun normth tm =
-          QCONV (simpLib.SIMP_CONV set_ss (setRWs @ shapeRWs @ unfoldRWs)) tm
+          QCONV (simpLib.SIMP_CONV (set_ss())
+                   (setRWs @ shapeRWs @ unfoldRWs)) tm
       (* what the representation does to a mapped value: this is what
          puts a member's own map back together underneath a
          constructor, and it cannot be in the unfolding — the map's
