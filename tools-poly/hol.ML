@@ -450,15 +450,46 @@ fun main() = let
               (BUILDHEAP, NONE, _) => die "buildheap subcommand requires -o option"
             | (_, NONE, SOME _) => die "Can't have exe without an output"
             | _ => ()
-  (* Load base state if specified *)
+  (* Load base state if specified.
+
+     A heap a Holmakefile asks for can be missing or built by a
+     different executable, and for the LSP dying on that is invisible:
+     the server exits before answering `initialize', so the client can
+     only say the server died, and every channel we have for explaining
+     ourselves -- diagnostics, `$/compileBlocked', the status line -- is
+     unreachable.  So for `lsp' fall back to the default state and carry
+     a warning to show once the handshake is done.  Whatever the named
+     heap was providing then turns up as an unavailable ancestor, which
+     is a diagnostic the user can act on.
+
+     Every other subcommand still dies: they have a terminal to
+     complain to, and a build that quietly used a different heap from
+     the one it was told to use would be worse than a failure. *)
+  val startup_warnings : string list ref = ref []
   val _ =
       case base_state of
           NONE => (diag "Not loading a base state"; heapname := NONE)
-        | SOME f => (diag ("About to load base-state "^f);
-                     heapname := SOME f;
-                     PolyML.SaveState.loadState f
-                     handle e => die ("Couldn't load HOL base-state "^f^": "^
-                                      General.exnMessage e))
+        | SOME f => let
+            fun load g = (heapname := SOME g; PolyML.SaveState.loadState g)
+            val fallback = mkAbs Systeml.DEFAULT_STATE
+            fun fatal g e = die ("Couldn't load HOL base-state "^g^": "^
+                                 General.exnMessage e)
+          in
+            diag ("About to load base-state "^f);
+            load f
+            handle e =>
+              if subcmd = LSP andalso f <> fallback then
+                (startup_warnings :=
+                   ["cannot load the heap this directory asks for ("^f^"): "^
+                    General.exnMessage e^
+                    " -- falling back to "^fallback^
+                    ", so anything that heap supplied will be reported as \
+                    \an unavailable ancestor.  Rebuild it with `Holmake' \
+                    \in that directory."];
+                 diag ("falling back to "^fallback);
+                 load fallback handle e2 => fatal fallback e2)
+              else fatal f e
+          end
   (* AFTER loadState — the saved state restores refs to their save-
      time values and would otherwise wipe any earlier extension.
      Owns Meta.loadPath extension so prelude.ML doesn't have to,
@@ -744,7 +775,8 @@ in
                 NONE => []
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
-        LSPServer.start {diag = diag, dbg = debug}
+        LSPServer.start {diag = diag, dbg = debug,
+                         warnings = !startup_warnings}
       end
     | REPL =>
       let in

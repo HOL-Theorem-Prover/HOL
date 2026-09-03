@@ -1,6 +1,12 @@
 signature LSPServer =
 sig
-  val start : {diag: string -> unit, dbg: bool} -> unit
+  (* `warnings' are things that went wrong before the server could
+     speak -- a heap the directory asked for that would not load, say.
+     They are shown to the user once the handshake is done, because a
+     process that exits before answering `initialize' can only be
+     reported as "died". *)
+  val start : {diag: string -> unit, dbg: bool,
+               warnings: string list} -> unit
 end;
 
 (* load "JSONDecode"; *)
@@ -838,7 +844,7 @@ fun augmentLoadPathForUri uri = case uriToPath uri of
     NONE => ()
   | SOME path => walkIncludesFrom (OS.Path.dir path)
 
-fun start {diag, dbg} = let
+fun start {diag, dbg, warnings} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
   (* LSP 3.17 position encoding.  Server-side buffers and offsets count
@@ -916,6 +922,9 @@ fun start {diag, dbg} = let
   val _ = diag "started"
   val _ = logMessage "started"
   val _ = markServerStarted ()
+  (* Held until after the handshake: `window/showMessage' before the
+     client is initialized has nowhere to go. *)
+  val _ = List.app (fn w => (logMessage w; warnUser w)) warnings
 
   (* A server process is bound to the first file it opens.  A second
      file cannot be served correctly: its ancestors have to be in the

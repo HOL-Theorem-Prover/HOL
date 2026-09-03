@@ -1328,10 +1328,14 @@ def _wait_for_exit(p, timeout=10):
 def test_heap_autodetect_from_holmakefile():
     """A HOLHEAP path in the cwd's Holmakefile is picked up by the LSP
     server's heap auto-detect (hol.ML get_heap_name).  Verified by
-    pointing HOLHEAP at a non-existent file: the server dies during
-    base-state load with a stderr message containing that path.
-    Without the auto-detect widening for LSP mode (task #9), the
-    server would silently load the default hol.state instead."""
+    pointing HOLHEAP at a non-existent file and looking for that path
+    in the warning the server sends about it.  Without the auto-detect
+    widening for LSP mode, the server would load the default hol.state
+    and have nothing to say.
+
+    The server used to *exit* here, which is what this test used to
+    check.  It falls back instead: see
+    `unloadable_heap_falls_back_with_a_warning' for why."""
     d = tempfile.mkdtemp(prefix="lsp_heap_")
     bogus = f"{d}/no_such_heap_deadbeef"
     try:
@@ -1339,13 +1343,24 @@ def test_heap_autodetect_from_holmakefile():
             f.write(f"HOLHEAP = {bogus}\n")
         c = Client(d, args=[])
         try:
-            assert_true(_wait_for_exit(c.p, 15),
-                        f"server exited on bogus heap "
-                        f"(stderr tail: {c.stderr_text()[-400:]!r})")
-            assert_contains(c.stderr_text(), bogus,
-                            "stderr mentions the bogus HOLHEAP path")
-            assert_contains(c.stderr_text(), "Couldn't load HOL base-state",
-                            "stderr mentions the base-state load failure")
+            _init(c, d, timeout=60)
+
+            def warned(cl):
+                msgs, _ = cl.messages_since(0)
+                ws = [m["params"]["message"] for m in msgs
+                      if m.get("method") == "window/showMessage"]
+                return ws if any(bogus in w for w in ws) else None
+
+            # The warning is sent just after the handshake, so it can
+            # still be in flight when `_init' returns.
+            warns = c.wait_until(warned, 30)
+            seen = [m for m in c.messages_since(0)[0]
+                    if m.get("method") == "window/showMessage"]
+            assert_true(warns,
+                        f"the warning names the Holmakefile's HOLHEAP "
+                        f"({seen!r})")
+            assert_true(any("falling back" in w for w in warns),
+                        f"and says what it did instead ({warns!r})")
         finally:
             c.close()
     finally:
@@ -5405,6 +5420,48 @@ def test_dependency_that_binds_no_structure_blocks():
         shutil.rmtree(root, ignore_errors=True)
 
 
+def test_unloadable_heap_falls_back_with_a_warning():
+    """A Holmakefile can name a heap that is missing, or that a later
+    `polyc` invalidated.  Dying on that is invisible: the server exits
+    before answering `initialize', so a client can only report that it
+    died, and every channel for explaining ourselves -- diagnostics,
+    `$/compileBlocked', the status line -- is unreachable.  Fall back to
+    the default state and say so, once the handshake makes saying
+    anything possible."""
+    d = tempfile.mkdtemp(prefix="lsp_noheap_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write("HOLHEAP = no-such-heap\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            uri = f"file://{d}/hScript.sml"
+            src = ("Theory h\n"
+                   "Ancestors arithmetic\n\n"
+                   "Theorem t:\n"
+                   "  1 + 1 = 2\n"
+                   "Proof\n"
+                   "  simp[]\n"
+                   "QED\n")
+            _did_open(c, uri, src)
+            # The server is alive and working, which is the point.
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "the server came up and compiled the file")
+            msgs, _ = c.messages_since(0)
+            warns = [m["params"]["message"] for m in msgs
+                     if m.get("method") == "window/showMessage"]
+            hits = [w for w in warns if "no-such-heap" in w]
+            assert_true(hits,
+                        f"and warned about the heap it could not load "
+                        f"({warns!r})")
+            assert_true("Holmake" in hits[0],
+                        f"saying how to fix it ({hits[0]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5618,6 +5675,8 @@ TESTS = [
      test_stale_ancestor_keeps_blocking_on_retry),
     ("dependency_that_binds_no_structure_blocks",
      test_dependency_that_binds_no_structure_blocks),
+    ("unloadable_heap_falls_back_with_a_warning",
+     test_unloadable_heap_falls_back_with_a_warning),
 ]
 
 

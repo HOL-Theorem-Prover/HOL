@@ -141,6 +141,16 @@ In addition to the usual LSP commands, the server supports the following extensi
   it: `vscode-languageclient` advertises only `utf-16` and throws on any
   other answer.
 
+* On startup the server loads the heap named by the working directory's
+  `Holmakefile` (`HOLHEAP`), else `bin/hol.state`.  If that heap cannot
+  be loaded -- missing, or exported from a different executable, which
+  every `polyc` produces -- the `lsp` subcommand falls back to
+  `bin/hol.state` and reports it with `window/showMessage` after the
+  handshake, rather than exiting: a process that dies before answering
+  `initialize` can only be reported as "died", and none of the server's
+  own channels are available to say why.  `LSPServer.start` takes those
+  messages as its `warnings` argument.  Other subcommands still die.
+
 * The `$/compileBlocked` notification is sent instead of compiling a file
   whose declared dependencies are not available.  A file that names an
   ancestor or library it cannot get has nothing to be elaborated against,

@@ -129,6 +129,37 @@ eglot, hovers land in the frame-wide echo area, so
 `hol-lsp-hover-width` is nil (leave it at 100) unless you set a number
 or the symbol `frame`.
 
+## The heap a directory asks for
+
+`bin/hol lsp` picks its heap the way the REPL does: the `HOLHEAP` of
+the `Holmakefile` in the server's working directory, else
+`bin/hol.state`.  That is usually how a project gets libraries the
+core build sequence does not provide — `words`, `real`,
+`binary_ieee` and friends — so the heap matters as much as the
+binary.
+
+If that heap **cannot be loaded** — deleted, or built by a `bin/hol`
+that has since been rebuilt, which every `polyc` does — the server
+falls back to `bin/hol.state` and sends one `window/showMessage`
+naming the heap, the reason, and the fix (`Holmake` in that
+directory).  Whatever the heap was supplying then shows up as an
+unavailable ancestor, with the usual `cannot load …` diagnostics.
+
+It did not always do this: it exited instead, which a client can only
+report as "Server died", with no diagnostics, no `$/compileBlocked`,
+and nothing in the UI naming the heap.  Every other subcommand still
+dies on an unloadable heap — they have a terminal to complain to, and
+a build that quietly used a different heap would be worse than a
+failure.
+
+Note that **which `bin/hol` serves a buffer is a client decision**, and
+the eglot client resolves it per directory from
+`.hol/make-deps/lastmaker` — the Holmake that last built that
+directory — not from `$HOLDIR`.  A directory built by another tree is
+served by that tree's server, silently.  The first line of the eglot
+log says which one; `cat .hol/make-deps/lastmaker` says the same
+thing without starting anything.
+
 ## Proof checking (`--lsp-check-proofs`)
 
 Elaboration does not run tactics: `holide.ML` swaps in a prover that
