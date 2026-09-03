@@ -7,8 +7,6 @@
  *)
 
 structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
-  open Feedback
-
   structure MFH = Refute_ModelFinder_HOL
   structure MFN = Refute_ModelFinder_Names
   structure Util = Refute_ModelFinder_Util
@@ -37,18 +35,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
 
   exception UNSOLVABLE of unit
   exception MTYPE of string * mtyp list * Type.hol_type list
-
-  val trace = ref false
-
-  (* Monotonicity runs on a backend worker, so its output goes through
-     [Refute_Core.Private.emit] like every other emission reachable from
-     one.  The message is built before the lock is taken. *)
-  fun trace_msg thunk =
-    if !trace then
-      let val message = thunk () in
-        Refute_Core.Private.emit (fn () => Feedback.HOL_MESG message)
-      end
-    else ()
 
   fun fresh counter =
     let val result = !counter + 1
@@ -531,11 +517,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         SOME result => result
       | NONE => raise Fail "Refute_ModelFinder_Mono: bad annotation"
 
-  fun annotation_from_bools bits =
-    case List.find (fn (_, other) => other = bits) bool_table of
-        SOME (annotation, _) => annotation
-      | NONE => raise Fail "Refute_ModelFinder_Mono: bad bit pair"
-
   fun prop_for_bool true = PS.True
     | prop_for_bool false = PS.False
 
@@ -604,51 +585,18 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   fun encode (comps, clauses) =
     PS.all (map prop_for_comp comps @ map prop_for_assign_clause clauses)
 
-  fun association_defined key pairs =
-    List.exists (fn (other, _) => key = other) pairs
-
-  fun extract_assigns max_var assigns forced =
-    let
-      fun add variable result =
-        if association_defined variable forced then result
-        else
-          case (assigns (fst_var variable),
-                assigns (snd_var variable)) of
-              (NONE, NONE) => result
-            | (first, second) =>
-                (variable,
-                 annotation_from_bools
-                   (Option.getOpt (first, false),
-                    Option.getOpt (second, false))) :: result
-      fun loop variable result =
-        if variable > max_var then result
-        else loop (variable + 1) (add variable result)
-    in
-      loop 1 forced
-    end
-
-  fun solve tac_timeout max_var (constraints as (_, clauses)) =
-    let
-      val forced = List.mapPartial
-        (fn [(variable, (Plus, annotation))] =>
-              SOME (variable, annotation)
-          | _ => NONE) clauses
-      val prop = encode constraints
-      fun finish assignments =
-        SOME (extract_assigns max_var assignments forced)
-    in
-      if PS.eval (fn _ => false) prop then
-        finish (fn _ => SOME false)
-      else if PS.eval (fn _ => true) prop then
-        finish (fn _ => SOME true)
-      else
-        (* Deviation from upstream: with cdclite as the sole in-process
-           solver, the 0.02 s probe followed by the same solver is skipped.
-           We make one call under the remaining tac_timeout budget. *)
-        (case Util.apply_within_budget tac_timeout PS.solve prop of
-             PS.SATISFIABLE assignments => finish assignments
-           | PS.UNSATISFIABLE => NONE)
-        handle Timeout.TIMEOUT _ => NONE
+  (* Only satisfiability is wanted: nothing reads back which annotation
+     each variable took. *)
+  fun solve tac_timeout constraints =
+    let val prop = encode constraints in
+      PS.eval (fn _ => false) prop orelse PS.eval (fn _ => true) prop orelse
+      (* Deviation from upstream: with cdclite as the sole in-process
+         solver, the 0.02 s probe followed by the same solver is skipped.
+         We make one call under the remaining tac_timeout budget. *)
+      (case Util.apply_within_budget tac_timeout PS.solve prop of
+           PS.SATISFIABLE _ => true
+         | PS.UNSATISFIABLE => false)
+      handle Timeout.TIMEOUT _ => false
     end
 
   fun negate_sign Plus = Minus
@@ -727,26 +675,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
       sel_mtype_from_constr_mtype name
         (mtype_for_constr mdata constructor)
     end
-
-  fun resolve_atom assignments (V variable) =
-        (case List.find (fn (other, _) => other = variable) assignments of
-             SOME (_, annotation) => A annotation
-           | NONE => V variable)
-    | resolve_atom _ atom = atom
-
-  fun resolve_mtype assignments candidate =
-    case candidate of
-        MAlpha => MAlpha
-      | MFun (domain, atom, range) =>
-          MFun (resolve_mtype assignments domain,
-            resolve_atom assignments atom,
-            resolve_mtype assignments range)
-      | MPair (left, right) =>
-          MPair (resolve_mtype assignments left,
-            resolve_mtype assignments right)
-      | MType (name, arguments) =>
-          MType (name, map (resolve_mtype assignments) arguments)
-      | MRec ty => MRec ty
 
   type mcontext =
     {bounds : (int * Term.term * mtyp) list,
@@ -1269,8 +1197,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
             (accum as (gamma as {bounds, frame, frees, ...} : mcontext,
                        constraints)) =
         let
-          val _ = trace_msg (fn () => "Mono term: " ^
-            Parse.term_to_string term)
           val bound_mtype = lookup_bound term bounds
           val symmetric_equality =
             if boolSyntax.is_eq term then
@@ -1660,20 +1586,10 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         do_formula term accum
       end
 
-  fun print_mcontext assignments
-        ({frees, consts, ...} : mcontext) =
-    trace_msg (fn () => String.concatWith "\n"
-      (map (fn (term, mtype) => Parse.term_to_string term ^ " : " ^
-        string_for_mtype (resolve_mtype assignments mtype))
-        (rev frees @ rev consts)))
-
   fun formulas_monotonic context binarize alpha_ty
         (nondefinitions, definitions) =
     let
-      val _ = trace_msg (fn () => "Monotonicity analysis for " ^
-        Parse.type_to_string alpha_ty)
-      val mdata as {max_fresh, ...} =
-        initial_mdata context binarize alpha_ty
+      val mdata = initial_mdata context binarize alpha_ty
       val initial = (initial_gamma, empty_constraints)
       val after_nondefinitions =
         case nondefinitions of
@@ -1682,14 +1598,12 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
               List.foldl (fn (term, current) =>
                 consider_nondefinitional_axiom mdata term current)
                 (consider_general_formula mdata Plus first initial) rest
-      val (gamma, constraints) = List.foldl
+      val (_, constraints) = List.foldl
         (fn (term, current) =>
           consider_definitional_axiom mdata term current)
         after_nondefinitions definitions
     in
-      case solve (#tac_timeout context) (!max_fresh) constraints of
-          SOME assignments => (print_mcontext assignments gamma; true)
-        | NONE => false
+      solve (#tac_timeout context) constraints
     end
     handle UNSOLVABLE () => false
          | MTYPE (location, mtypes, types) =>

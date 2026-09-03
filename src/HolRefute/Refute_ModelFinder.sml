@@ -589,9 +589,9 @@ fun run_instance deadline started (config : Refute_Core.config)
       else ()
 
     fun report_mono_failure kind ty detail =
-      MFMono.trace_msg (fn () =>
-        "Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
-        (if detail = "" then "" else ": " ^ detail))
+      Refute_Core.Private.say 2
+        ("Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
+         (if detail = "" then "" else ": " ^ detail) ^ "\n")
 
     fun is_type_actually_monotonic ty =
       case List.find (fn (cached_ty, _) => Util.same_type ty cached_ty)
