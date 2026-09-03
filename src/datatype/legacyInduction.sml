@@ -329,8 +329,21 @@ fun mutual_induction ops ind =
           case List.find (fn (t, _) => t = opty) opParts of
               SOME (_, ps) => ps
             | NONE => raise ERR "mutual_induction" "no clauses"
+      (* A clause's hypotheses are discharged together, as the one
+         conjunction the clause states.  DISCH takes away a hypothesis
+         the theorem has, and the theorem has them one at a time, so the
+         conjunction has to answer for each before it can be discharged
+         — with a single hypothesis the conjunction *is* it and the
+         difference does not show. *)
       fun close vs hyps th =
-          GENL vs (case hyps of [] => th | _ => DISCH (list_mk_conj hyps) th)
+          GENL vs (case hyps of
+                       [] => th
+                     | _ =>
+                       let val c = list_mk_conj hyps
+                       in
+                         DISCH c (List.foldl (fn (p, t) => PROVE_HYP p t) th
+                                             (CONJUNCTS (ASSUME c)))
+                       end)
       (* ------------------------------------------------------------
           what the operator's predicate says of a value, from what the
           type's says of its contents
