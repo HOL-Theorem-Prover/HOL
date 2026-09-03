@@ -9,13 +9,11 @@ Refute.REFUTE_TAC_WITH : config_update list -> Abbrev.tactic
 
 Searches for a counterexample under per-call configuration updates.
 
-`REFUTE_TAC_WITH updates` behaves as `Refute.REFUTE_TAC` except that it
-first applies `updates` to `!Refute.the_config`.  The elements are
-ordinary `config -> config` functions and are applied from left to
-right, so the last update of a field wins.  The interactive
-configuration is read when the tactic is applied, not when it is
-constructed, and is not itself modified; this is the way to change
-options for one call without mutating `the_config`.
+`REFUTE_TAC_WITH updates` is `REFUTE_CONFIG_TAC (current_config updates)`
+with the configuration computed when the tactic is applied: the
+`config -> config` updates are applied to `!Refute.the_config` from left
+to right, so the last update of a field wins, and `the_config` itself is
+not modified.  This is the way to change options for one call.
 
 ``` hol4
 REFUTE_TAC_WITH
@@ -24,26 +22,22 @@ REFUTE_TAC_WITH
    upd_timeout 5.0]
 ```
 
-Like every Refute tactic, it prints its `Counterexample`,
-`NoCounterexample`, or `Unknown` report and then applies `ALL_TAC`,
-leaving the goal unchanged in every case.  It honours every field of the
-resulting configuration, including `quiet` and `expect`.
+Like every Refute tactic it prints its `Counterexample`,
+`NoCounterexample`, or `Unknown` report and then behaves as `ALL_TAC`,
+never closing or altering the goal.  Every field of the resulting
+configuration is honoured, including `quiet` and `expect`.
 
-`REFUTE_TAC` is `REFUTE_TAC_WITH []`, and the three specialized tactics
-are this tactic at a fixed backend selection: `QUICKCHECK_TAC` is
-`REFUTE_TAC_WITH [upd_search QuickcheckBackends]`, `NARROWING_TAC` is
-`REFUTE_TAC_WITH [upd_search (Only [Narrowing])]`, and
-`MODEL_REFUTE_TAC` is `REFUTE_TAC_WITH [upd_search (Only [ModelFinder])]`.
-
-Use `Refute.REFUTE_CONFIG_TAC` instead where the result must not depend
-on the session's interactive defaults at all.
+`REFUTE_TAC` is `REFUTE_TAC_WITH []`; `QUICKCHECK_TAC`, `NARROWING_TAC`,
+and `MODEL_REFUTE_TAC` are `REFUTE_TAC_WITH [upd_search s]` for `s` equal
+to `QuickcheckBackends`, `Only [Narrowing]`, and `Only [ModelFinder]`
+respectively.  Use `Refute.REFUTE_CONFIG_TAC` where the result must not
+depend on the session's interactive defaults at all.
 
 ### Failure
 
-A mismatch with a configured non-default expectation raises a HOL error.
-An invalid update raises when the updater is built rather than when the
-tactic runs; `upd_search (Only [])` is rejected this way.  Interrupts
-are re-raised.  Ordinary Refute outcomes do not make the tactic fail.
+Fails only when a non-default `expect` field is not met.  An invalid
+update raises when the updater is built, not when the tactic runs;
+`upd_search (Only [])` is rejected this way.  Interrupts are re-raised.
 
 ### See also
 

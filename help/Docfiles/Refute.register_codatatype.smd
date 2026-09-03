@@ -13,58 +13,45 @@ Refute.register_codatatype :
 
 Registers an existing codatatype with the model finder.
 
-`tyop` names the codatatype operator, `constructors` gives its distinct
-constructor constants in cases-theorem order, and `case_const` is its
-case constant with a unique valid scrutinee position (in any argument,
-not necessarily the first).  Refute validates and normalizes polymorphic
-constructor types, infers that scrutinee position, and checks each
-remaining argument against the corresponding constructor branch.
-Type-operator parameters must be distinct type variables.
+`tyop` names the type operator, whose parameters must be distinct type
+variables.  `constructors` lists its distinct constructor constants in
+cases-theorem order; each must have a `tyop`-headed result type at its
+own declared type, not merely at the instance supplied (so `combin$I`,
+whose declared result is a type variable, is rejected).  `case_const`
+is the case constant; its scrutinee position is inferred and must be
+unique, in any argument, and the remaining arguments are checked against
+the constructor branches.
 
-Every constructor must declare - at its own declared type, not merely at
-whatever instance the caller applied it - a `tyop`-headed result type;
-the shape check rejects a constant such as `combin$I`, whose declared
-result type is a bare type variable and would otherwise match any
-`tyop` at a suitable instance.  When `tyop` is a type the datatype
-database already knows as a free datatype, every registered constructor
-must also be one of that type's database constructors, by key; this
-rejects an impostor constant declared at the right type without needing
-a witness.  For a type the database does not know, this imposes
-nothing, and constructor/case shape alone cannot separate an inductive
-datatype from a codatatype, so `witness = NONE` registers on trust: a
-wrong registration removes the type's acyclicity constraints and can
-produce a wrong model.  The built-in registrations below are trusted
-this same way too, but through a different path: their lazy harvest
-calls the shape check directly rather than `register_codatatype`, so no
-witness ever applies to them.  `witness = SOME thm` narrows what a
-caller can get away with further: after stripping `thm`'s outer `!`s,
-its conclusion must be `?x. body`, `body` an equation with one side
-`aconv` to `x` (either orientation) and the other a constructor
-application `C a1 ... an`, where `C`'s key matches a registered
-constructor and `x` is `aconv` to some argument reached by walking `C`'s
-constructor spine - descending into an argument only when its own head
-is again a registered constructor - not merely free somewhere in it.
-Every registered constructor's *declared* result type is `tyop`-headed,
-so `C`'s key match makes it literally that declared constant; `C` need
-not be fully applied, so `x`'s own type need not be `tyop`-headed, and
-`x`'s type need not be the generic instance either.  HOL4's per-type
-bisimulation theorems and mutual-cycle witnesses are not of this shape
-and are not accepted; a caller holding one passes `witness = NONE`.
-Together, the witness rules out generic shape defeats and the database
-cross-check rules out impostor constants for types the database knows;
-beyond that, the constructor list remains the caller's assertion.
+Shape alone cannot separate a codatatype from an inductive datatype, so
+the constructor list is otherwise the caller's assertion, checked two
+ways.  When the datatype database already knows `tyop` as a free
+datatype, every constructor must be one of its database constructors by
+key, which rejects an impostor constant declared at the right type.
+`witness = SOME thm` rules out generic shape defeats: after stripping
+outer `!`s, `thm`'s conclusion must be `?x. body`, `body` an equation
+in either orientation between `x` and a constructor application
+`C a1 ... an`, where `C`'s key matches a registered constructor and `x`
+is `aconv` to an argument reached by walking the constructor spine,
+descending only through arguments whose head is again a registered
+constructor.  `C` need not be fully applied, so `x`'s type need not be
+`tyop`-headed or the generic instance.  HOL4's per-type bisimulation
+theorems and mutual-cycle witnesses are not of this shape; a caller
+holding one passes `witness = NONE`, which registers on trust.  A wrong
+registration removes the type's acyclicity constraints and can produce
+a wrong model.
 
 Registrations are session-local.  Built-in lazy registrations cover
 `llist`, `ltree`, `itree`, `itreeTau`, `lbtree`, and `path` when their
-theories are available.
+theories are loaded; they go through the same shape check directly, so
+no witness applies to them.
 
 ### Failure
 
 Fails for an empty or duplicate constructor list, nonconstant terms,
-wrong constructor results or case branches, ambiguous or absent
+wrong constructor results or case branches, an ambiguous or absent
 scrutinee position, interpreted or function types, malformed type
-parameters, a witness that does not have the accepted shape, or an
-incompatible quotient, typedef, or fraction classification.
+parameters, a witness of the wrong shape, or an incompatible quotient,
+typedef, or fraction classification.
 
 ### See also
 

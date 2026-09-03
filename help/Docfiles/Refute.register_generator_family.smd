@@ -9,39 +9,34 @@ Refute.register_generator_family :
 
 ------------------------------------------------------------------------
 
-Registers a Quickcheck generator for every concrete instance of a type
-operator, built from constructor constants whose declared result type
-is `tyop` applied to distinct type variables (e.g. `FEMPTY`/`FUPDATE`
-for `:'a |-> 'b`).
+Registers a Quickcheck generator for every instance of a type operator.
 
-Unlike `Refute.register_generator`, nothing is stored per instance:
-`tyop` is matched on demand, so the registration fires for a concrete
-type never previously seen, and the generator, cardinality, and
-enumeration caches are invalidated for every instance already cached.
-The resulting generator always has `exhaustive = false`, so QC never
-reports `NoCounterexample` for a goal universally quantified over a
-variable at one of these types; only a closed fact free of such a
-variable can be decided that way.
+The generator is built from constructor constants whose declared result
+type is `tyop` applied to distinct type variables (e.g. `FEMPTY` and
+`FUPDATE` for `:'a |-> 'b`).  Unlike `Refute.register_generator`,
+nothing is stored per instance: `tyop` is matched on demand, so the
+registration fires for a concrete type never seen before, and the
+generator, cardinality, and enumeration caches of every instance already
+cached are invalidated.  The generator is never exhaustive, so QC cannot
+report `NoCounterexample` for a goal quantified over such a type; only a
+closed fact free of such a variable can be decided that way.
 
-`canonical`, if present, is a display-only `term_postprocessor` fed as a
-second registration source into the same walk
+`canonical`, if present, is a display-only postprocessor for reported
+bindings at that type, applied after testing and certification have run
+on the raw term.  It is a second source feeding the one walk
 `Refute.register_term_postprocessor` drives, composing with every
-pattern-registered postprocessor rather than running as a second, separate
-walk.  It applies to a reported candidate binding at that type, after
-testing and certification have already run against the raw term.  It is
-expected to remove structure that a later part of the same candidate has
-overwritten (e.g. collapsing `FEMPTY |+ (1,2) |+ (1,3)` to
-`FEMPTY |+ (1,3)`); it need not identify every pair of terms that denote
-the same value, since that is in general undecidable from syntax alone.
+pattern-registered postprocessor.  It should remove structure a later
+part of the same candidate overwrote (collapsing `FEMPTY |+ (1,2) |+
+(1,3)` to `FEMPTY |+ (1,3)`); it need not identify every pair of terms
+denoting the same value.
 
 ### Failure
 
-Raises `Fail` if `constructors` is empty, if any constructor is not a
-constant, if any constructor's result type is not `tyop` applied to
-distinct type variables, or if `tyop` already has `TypeBase` datatype
-constructors of its own (registering a family for such a type would
-silently disable finite exhaustion for what may be a genuinely finite
-type).
+Raises `Fail` if `constructors` is empty, a constructor is not a
+constant or its result type is not `tyop` applied to distinct type
+variables, or `tyop` already has `TypeBase` datatype constructors (a
+family there would silently disable finite exhaustion for a possibly
+finite type).
 
 ### See also
 

@@ -13,31 +13,30 @@ Refute.register_typedef :
 
 Registers an existing type definition with the model finder.
 
-`ty` is the abstract type.  `abs` and `rep` must be existing constants
-with mutually opposite abstract and representation types.  `absrep_thms`
-is either a singleton list holding the standard, hypothesis-free
-conjunction of the Abs/Rep bijection properties exported for the type, or
-a two-element list holding its two conjuncts as separate theorems, in
-either order: `!a. abs (rep a) = a` and `!r. P r = (rep (abs r) = r)`.
-Refute recovers its representation predicate and verifies that predicate
-against the type's `<tyop>_TY_DEF` theorem; a two-theorem `absrep_thms`
-is combined into the same conjunction first, so the two forms register
-identically.
+`ty` is the abstract type, whose operator parameters must be distinct
+type variables; the representation type may not introduce further type
+variables.  `abs` and `rep` must be existing constants with mutually
+opposite abstract and representation types.  `absrep_thms` is either
+the standard hypothesis-free conjunction of the Abs/Rep bijection
+properties as a singleton list, or its two conjuncts
+`!a. abs (rep a) = a` and `!r. P r = (rep (abs r) = r)` as separate
+theorems in either order; the two forms register identically.  Refute
+recovers the representation predicate and verifies it against the
+type's `<tyop>_TY_DEF` theorem.
 
-Type-operator parameters must be distinct type variables and the
-representation type may not introduce extra type variables.
-Registrations are session-local; a valid later registration replaces the
-same typedef type operator.  The model finder also lazily harvests
-standard typedef metadata when possible.
+Registrations are session-local; a valid later registration replaces
+the same typedef operator.  The model finder also harvests standard
+typedef metadata lazily.
 
 ### Failure
 
-Fails for malformed type parameters, missing or mismatched type-definition
-metadata, nonconstant or ill-typed Abs/Rep terms, theorem hypotheses or
-an unsupported theorem shape, an `absrep_thms` list that is neither one
-nor two theorems long, two theorems that are the same bijection half, two
-theorems naming different Abs/Rep constants, or an incompatible datatype,
-codatatype, quotient, or fraction classification.
+Fails for malformed type parameters, missing or mismatched
+type-definition metadata, nonconstant or ill-typed Abs/Rep terms,
+theorem hypotheses or an unsupported theorem shape, an `absrep_thms`
+list that is not one or two theorems long, two theorems that are the
+same bijection half or name different Abs/Rep constants, or an
+incompatible datatype, codatatype, quotient, or fraction
+classification.
 
 ### See also
 

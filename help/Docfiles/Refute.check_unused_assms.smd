@@ -5,7 +5,6 @@ Refute.check_unused_assms :
   config option -> string * thm -> string * int list list option
 ```
 
-Checks a named theorem for unused assumptions.  `NONE` derives a QC-only
-configuration from `Refute.the_config`; `SOME` supplies the base
-configuration.
-See [`Refute.find_unused_assms`](#Refute.find_unused_assms).
+Checks one named theorem for unused assumptions, under the
+configuration derivation and result convention of
+[`Refute.find_unused_assms`](#Refute.find_unused_assms).

@@ -9,31 +9,27 @@ Refute.MODEL_REFUTE_TAC : Abbrev.tactic
 
 Runs the finite model finder on the current tactic goal.
 
-`MODEL_REFUTE_TAC` uses `!Refute.the_config` after selecting only the
-`kodkod` backend.  It prints the resulting `Counterexample`,
-`NoCounterexample`, or `Unknown` report — `Model` or `NoModel` when
-`falsify` is false — and then applies `ALL_TAC`, leaving the goal
-unchanged in every case.
-
-This is a diagnostic tactic, not a proof tactic: it never closes the goal
-and a counterexample is not represented as tactic failure.  The tactic
-honours every remaining configuration field, including `quiet` and
-`expect`.  If Kodkodi is not configured, the search is `Unknown` and the
-goal is still left unchanged.
+`MODEL_REFUTE_TAC` is `REFUTE_TAC_WITH [upd_search (Only [ModelFinder])]`:
+it runs only the `kodkod` backend, with every other field of
+`!Refute.the_config` as read when the tactic is applied.  It prints the
+resulting `Counterexample`, `NoCounterexample`, or `Unknown` report
+(`Model` or `NoModel` when `falsify` is false) and then behaves as
+`ALL_TAC`, never closing or altering the goal; a counterexample is not a
+tactic failure.  `quiet` and `expect` are honoured.  Without a
+configured Kodkodi the search is `Unknown`.
 
 ### Failure
 
-A mismatch with a configured non-default expectation raises a HOL error.
-Interrupts are re-raised.  Ordinary Refute outcomes do not make the tactic
-fail.
+Fails only when a non-default `expect` field is not met.  Interrupts
+are re-raised.
 
 ### See also
 
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
 [`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
-[`Refute.model_refute`](#Refute.model_refute),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.model_refute`](#Refute.model_refute),
 [`Refute.config`](#Refute.config)
 
 The complete library guide is \ref{Description:the-holrefute-library}.

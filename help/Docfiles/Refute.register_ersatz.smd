@@ -11,20 +11,17 @@ Refute.register_ersatz :
 
 Adds or replaces one model-finder constant substitution.
 
-When preprocessing encounters the named `original` constant, Refute
-instantiates the named `replacement` constant to the original occurrence's
-type and uses it in the relational encoding.  A later session-local row
-with the same original theory/name key replaces the old ordinary row and
-also shadows a built-in ordinary row.
+When model-finder preprocessing meets the `original` constant, it
+instantiates `replacement` to the occurrence's type and encodes that
+instead.  A later row with the same original key replaces an earlier
+session-local row and shadows a built-in one.  An active fraction
+registration takes precedence: a colliding row is retained but takes
+effect only once that registration is replaced or removed.
 
-An active fraction registration has higher precedence than ordinary
-ersatz rows.  Thus a colliding `register_ersatz` row is retained but does
-not take effect until the fraction registration is replaced or removed.
-The operation creates no HOL constant or theorem.
-
-Registration does not eagerly resolve either name or check type
-compatibility.  An absent constant or a replacement that cannot be
-retyped is reported when model-finder preprocessing uses the row.
+Neither name is resolved, and no types are checked, at registration
+time; an absent constant or a replacement that cannot be retyped is
+reported when preprocessing uses the row.  No HOL constant or theorem is
+created.
 
 ### See also
 

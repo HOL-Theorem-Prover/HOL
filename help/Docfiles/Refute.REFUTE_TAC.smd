@@ -9,33 +9,29 @@ Refute.REFUTE_TAC : Abbrev.tactic
 
 Searches for a counterexample to the current tactic goal.
 
-`REFUTE_TAC` calls `Refute.refute_goal !Refute.the_config` on the supplied
-goal, using every backend selected by the current configuration.  It prints
-the resulting `Counterexample`, `NoCounterexample`, or `Unknown` report and
-then applies `ALL_TAC`, leaving the goal unchanged in every case.  Thus this
-is a diagnostic tactic, not a proof tactic: it never closes the goal and a
-counterexample is not represented as tactic failure.
-
-The tactic reads `the_config` when it is applied and honours every field,
-including `quiet` and `expect`.
+`REFUTE_TAC` is `REFUTE_TAC_WITH []`: it runs `Refute.refute_goal` with
+`!Refute.the_config`, read when the tactic is applied, so every backend
+the current configuration selects takes part.  It prints the resulting
+`Counterexample`, `NoCounterexample`, or `Unknown` report and then
+behaves as `ALL_TAC`.  It is a diagnostic, not a proof tactic: the goal
+is never closed or altered, and a counterexample is not a tactic
+failure.  Every configuration field is honoured, including `quiet` and
+`expect`.
 
 ### Failure
 
-A mismatch with a configured non-default expectation raises a HOL error.
-Interrupts are re-raised.  Ordinary Refute outcomes do not make the tactic
-fail.
+Fails only when a non-default `expect` field is not met.  Interrupts
+are re-raised.
 
 ### See also
 
 [`Refute.config`](#Refute.config),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
 [`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
-[`Refute.refute`](#Refute.refute),
-[`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
 [`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
-[`Refute.quickcheck`](#Refute.quickcheck),
-[`Refute.model_refute`](#Refute.model_refute)
+[`Refute.refute`](#Refute.refute),
+[`Refute.refute_goal`](#Refute.refute_goal)
 
 The complete library guide is \ref{Description:the-holrefute-library}.

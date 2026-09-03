@@ -9,8 +9,6 @@ Refute.register_backend : backend -> unit
 
 Adds or replaces a Refute search backend.
 
-The public backend type has the following record shape:
-
 ``` hol4
 type backend =
   {name : string,
@@ -21,7 +19,8 @@ type backend =
    run : config -> instance list -> outcome}
 ```
 
-The `run` result uses these public record shapes:
+`run` returns `Counterexample` of a list of the records below,
+`NoCounterexample`, or `Unknown` of diagnostic strings:
 
 ``` hol4
 type model_report =
@@ -36,24 +35,21 @@ type counterexample =
    model : model_report option, stats : (string * int) list}
 ```
 
-`outcome` is `Counterexample` of a list of these records,
-`NoCounterexample`, or `Unknown` of diagnostic strings.
-
-Registrations are session-local.  A later backend with the same `name`
+Registrations are session-local; a later backend with the same `name`
 replaces the old one.  Eligible backends are ordered by increasing
-`weight`, then name.  `configured` is queried when selecting a search;
-`requires` is `AnyGoal`, `ExecutableGoal`, or
-`ExecutableGoalUnless predicate`.  The last accepts an executable goal or,
-when `predicate cfg instances` is true, a non-executable one.  `input`
-requests either `MonoInstances` or `PolyOriginal` instances.
+`weight`, then name.  `configured` is queried when a search is
+selected.  `requires` is `AnyGoal`, `ExecutableGoal`, or
+`ExecutableGoalUnless predicate`, the last accepting a non-executable
+goal when `predicate cfg instances` holds.  `input` requests
+`MonoInstances` or `PolyOriginal` instances.
 
-`register_backend backend` assigns the conservative certainty ceiling
-`Genuine`.  This is safe for every backend but may make a race wait after
-a weaker result; the built-in narrowing and model-finder backends declare
-tighter ceilings of their own.
+The backend gets the conservative certainty ceiling `Genuine`.  This is
+safe for any backend, but a race then waits for it after a weaker
+result from another backend; the built-in narrowing and model-finder
+backends declare tighter ceilings.
 
-The callback's exceptions and ordinary timeouts are converted to
-`Unknown`; interrupts are re-raised.
+Exceptions and ordinary timeouts in `run` become `Unknown`; interrupts
+are re-raised.
 
 ### See also
 

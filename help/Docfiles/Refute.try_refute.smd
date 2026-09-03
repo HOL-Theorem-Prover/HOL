@@ -10,21 +10,19 @@ Refute.try_refute :
 
 Quietly probes a goal for use by other automation.
 
-`Refute.try_refute cfg goal` preserves `cfg`'s backend selection but
-forces sequential execution, random seed 42, `NoExpectation`, and quiet
-mode.  As for every Refute call, `cfg.timeout` is one whole-call deadline
-covering preprocessing and every backend run.
+`Refute.try_refute cfg goal` keeps `cfg`'s backend selection but forces
+sequential execution, random seed 42, `NoExpectation`, and quiet mode,
+so no Refute traces, messages, or warnings are printed.  `cfg.timeout`
+is the one whole-call deadline, as for every Refute call.
 
-The result is `SOME (backend, outcome)` exactly when the search returns a
-nonempty `Counterexample`; `backend` is the name recorded by the first
-returned counterexample.  A miss, `Unknown`, or expiry of the whole-call
-deadline returns `NONE`.  The forced quiet profile suppresses normal
-Refute traces, messages, and warnings.
+The result is `SOME (backend, outcome)` exactly when the search returns
+a nonempty `Counterexample`, with `backend` the name recorded by its
+first counterexample.  A miss, `Unknown`, or expiry of the deadline
+returns `NONE`.
 
 ### Failure
 
-Backend and timeout failures are converted to `NONE`.  Interrupts are
-re-raised.
+Backend and timeout failures become `NONE`.  Interrupts are re-raised.
 
 ### See also
 

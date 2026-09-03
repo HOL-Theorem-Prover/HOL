@@ -9,25 +9,25 @@ Refute.refute : config -> term -> outcome
 
 Searches for a finite counterexample to a term.
 
-An application `Refute.refute cfg tm` preprocesses `tm`, implicitly
-universally closes its free variables, runs the eligible backends selected
-by `cfg`, prints the formatted result unless `cfg.quiet` is true, checks
-`cfg.expect`, and returns the structured `outcome`.
+`Refute.refute cfg tm` preprocesses `tm`, universally closes its free
+variables, runs the eligible backends `cfg` selects, prints the
+formatted result unless `cfg.quiet` is true, checks `cfg.expect`, and
+returns the structured `outcome`.
 
-A `Counterexample` can contain `Genuine`, `QuasiGenuine`, or `Potential`
-results.  A `Genuine` result with `cert = SOME thm` proves that `tm` is
-false; one with `cert = NONE` (certification disabled, or its replay
-inconclusive) is evidence without a theorem.  `NoCounterexample` only
-records exhaustion of a selected finite search, and `Unknown` carries
-reasons for inapplicability, timeout, or incomplete search; neither is a
-proof.  With the default `certify = true`, Quickcheck and
-narrowing hits normally carry a HOL theorem in their `cert` field.
+A `Counterexample` carries `Genuine`, `QuasiGenuine`, or `Potential`
+results.  A `Genuine` result with `cert = SOME thm` proves `tm` false;
+with `cert = NONE` (certification disabled, or its replay inconclusive)
+it is evidence without a theorem.  With the default `certify = true`,
+Quickcheck and narrowing hits normally carry a theorem.
+`NoCounterexample` records that a selected search covered its whole
+space; `Unknown` carries reasons for inapplicability, timeout, or
+incomplete search.  Neither is a HOL proof.
 
 ### Failure
 
-A mismatch with a non-default expectation raises a HOL error.  Backend,
-preprocessing, and ordinary timeout failures are normally represented by
-`Unknown`; interrupts are re-raised.
+Fails only when a non-default `expect` field is not met.  Backend,
+preprocessing, and ordinary timeout failures are returned as `Unknown`;
+interrupts are re-raised.
 
 ### See also
 

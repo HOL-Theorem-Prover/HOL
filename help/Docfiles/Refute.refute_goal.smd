@@ -9,24 +9,22 @@ Refute.refute_goal : config -> goal -> outcome
 
 Searches for a counterexample to a tactic goal.
 
-A goal is a pair `(assumptions, conclusion)`.  An application
 `Refute.refute_goal cfg (asms, tm)` searches for values that make every
-term in `asms` true and `tm` false.  Free variables are implicitly
-universally closed.  If `cfg.no_assms` is true, the supplied assumptions
-are ignored.
-
-The call has the same reporting, expectation, timeout, racing, and
-structured-result semantics as `Refute.refute`.
+term in `asms` true and `tm` false, with free variables universally
+closed.  If `cfg.no_assms` is true the assumptions are ignored.
+Reporting, expectations, timeout, racing, and the structured result are
+as for `Refute.refute`.
 
 ### Failure
 
-A mismatch with a non-default expectation raises a HOL error.  Backend
-failures are normally returned as `Unknown`; interrupts are re-raised.
+Fails only when a non-default `expect` field is not met.  Backend
+failures are returned as `Unknown`; interrupts are re-raised.
 
 ### See also
 
 [`Refute.config`](#Refute.config),
 [`Refute.refute`](#Refute.refute),
+[`Refute.refute_goal_with`](#Refute.refute_goal_with),
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.try_refute`](#Refute.try_refute)
 

@@ -9,25 +9,22 @@ Refute.quickcheck : term -> outcome
 
 Runs Refute's Quickcheck backends.
 
-`Refute.quickcheck tm` calls `Refute.refute` using `!Refute.the_config`
-after forcing backend selection to the Quickcheck backend family,
-`SOME ["exhaustive", "random", "narrowing"]`.  Every other field of the
-current configuration is preserved, including substrate, size,
-iterations, seed, smart-generator options, certification, quiet mode, and
-expectations.
+`Refute.quickcheck tm` is `refute_with [upd_search QuickcheckBackends] tm`:
+the `exhaustive`, `random`, and `narrowing` backends run with every
+other field of `!Refute.the_config`, including substrate, size,
+iterations, seed, certification, quiet mode, and expectations.
 
-The exhaustive and random backends require an executable goal and use the
-`Auto`, `NativeSML`, `Cv`, or `Compute` substrate selected by the
-configuration.  Narrowing accepts any goal, so it may be the only
-applicable backend on a goal the executable ones decline; a returned
-counterexample then records `"narrowing"` as its backend.  The
-`kodkod` model finder is not selected by this convenience entry point —
-use [`Refute.model_refute`](#Refute.model_refute) for that.
+The exhaustive and random backends need an executable goal and use the
+substrate the configuration selects.  Narrowing accepts any goal, so it
+may be the only backend that applies; a counterexample it finds records
+`"narrowing"` as its backend.  The `kodkod` model finder is not
+selected; use [`Refute.model_refute`](#Refute.model_refute) for that.
 
 ### See also
 
 [`Refute.config`](#Refute.config),
 [`Refute.refute`](#Refute.refute),
+[`Refute.refute_with`](#Refute.refute_with),
 [`Refute.model_refute`](#Refute.model_refute),
 [`Refute.register_generator`](#Refute.register_generator)
 

@@ -14,30 +14,24 @@ Registers a display-only model-term transformation.
 type term_postprocessor = term -> term
 ```
 
-The first argument is a HOL type pattern.  Every pattern matching a
-model term's actual type participates.  General patterns run before
-strictly more specific ones; otherwise older registrations run first.
-Re-registering an alpha-equivalent pattern replaces its callback without
-changing that position.
+The first argument is a type pattern.  Every pattern matching a model
+term's type participates: more general patterns run before strictly
+more specific ones, and otherwise older registrations run first.
+Re-registering an alpha-equivalent pattern replaces its callback in
+place.
 
-Refute snapshots the registry, together with any `canonical` callback a
-`register_generator_family` registration supplied, and applies the
-composed transformations bottom-up.  If a callback raises a
-non-interrupt exception or changes the term's type, its result is ignored
-and composition continues from that callback's input candidate.  Interrupts are
-re-raised.  Postprocessing never changes the raw model value, the
-verdict's certainty, or its certificate.
+Refute snapshots the registry, together with any `canonical` callback
+from `register_generator_family`, and applies the composition bottom-up
+to reported terms.  A callback that raises a non-interrupt exception or
+changes the term's type is ignored and composition continues from its
+input.  Postprocessing never changes the raw model value, the
+certainty, or the certificate.  This is the one walk both a model
+finder display and a QC counterexample's reported binding go through.
 
-This is the one walk both a model finder display and a QC-strategy
-counterexample's reported binding go through; a generator family's
-`canonical` form is a second registration source composing into the same
-walk, not a second walk.  Two patterns are installed by default:
-function-update-chain deduplication at `:'a -> 'b` and finite-map
-notation at `:'a |-> 'b`.  Registering at exactly one of those patterns
-replaces the built-in for the rest of the session.
-
-Registrations are session-local and synchronized with the other model
-registries.
+Two patterns are installed by default: function-update-chain
+deduplication at `:'a -> 'b` and finite-map notation at `:'a |-> 'b`.
+Registering at exactly one of those patterns replaces the built-in for
+the rest of the session.  Registrations are session-local.
 
 ### See also
 

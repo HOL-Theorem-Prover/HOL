@@ -10,49 +10,40 @@ Refute.find_unused_assms :
 
 Searches a theory for theorem assumptions that may be unnecessary.
 
-`Refute.find_unused_assms cfgopt thy` checks the theorems returned by
-`DB.thms thy`, sorted by theorem name.  `NONE` derives a QC-only
-configuration from `!Refute.the_config`, selecting the Quickcheck backends
-`exhaustive`, `random`, and `narrowing`; `SOME cfg` preserves the supplied
-backend selection, including the meaning of `backends = NONE` as the full
-registry.  Every probe nevertheless forces sequential, quiet,
-abort-potential, expectation-free operation, and theorem probes are
-serial.
+`Refute.find_unused_assms cfgopt thy` checks the theorems of `DB.thms
+thy` in name order.  `NONE` takes `!Refute.the_config` restricted to the
+Quickcheck backends `exhaustive`, `random`, and `narrowing`; `SOME cfg`
+keeps `cfg`'s backend selection, `backends = NONE` still meaning the
+full registry.  Every probe additionally forces sequential, quiet,
+abort-potential, expectation-free operation, and theorems are probed
+one at a time.
 
-Only a counterexample is decisive, and the default bounds deepen
-adaptively, so a probe that misses normally runs until its whole-call
-`timeout` expires.  Sweeping a large theory is therefore paced by
-`timeout`; supply `SOME cfg` with a smaller `timeout`, and fixed bounds
-where reproducibility matters, to speed it up.
-
-For each theorem, outer universal quantifiers are stripped and the
-left-to-right implication premises are indexed from zero.  Conjunctive
-antecedents are not split.  Refute first tests single premises, grows
-combinations only from individually droppable premises, and returns the
-maximal simultaneously droppable sets.  `Unknown` and timeout probes are
-conservatively treated as not droppable.
+For each theorem the outer universal quantifiers are stripped and the
+implication premises are indexed from zero, left to right; a
+conjunctive antecedent is one premise.  Single premises are tested
+first, combinations grow only from individually droppable premises, and
+the maximal simultaneously droppable sets are returned.  An `Unknown` or
+timed-out probe counts as not droppable.
 
 Each result is `(name, NONE)` when the theorem has no implication
-premises, `(name, SOME [])` when no premise was shown droppable, or
-`(name, SOME sets)` for the maximal zero-based index sets.
+premises, `(name, SOME [])` when no premise was shown droppable, and
+`(name, SOME sets)` otherwise.
 
-The related public operations have these signatures:
+Only a counterexample is decisive and the default bounds deepen until
+the deadline, so a probe that misses runs for the whole `timeout`.
+Sweeping a large theory is paced by that; supply `SOME cfg` with a
+smaller `timeout`, and fixed bounds where reproducibility matters.
 
-``` hol4
-Refute.check_unused_assms :
-  config option -> string * thm -> string * int list list option
-Refute.print_unused_assms :
-  config option -> string option -> unit
-```
-
-`check_unused_assms` performs the same analysis on one named theorem.
-`print_unused_assms` checks the named theory, or the current theory for
-`NONE`, and prints one-based indexes plus an inconclusive-probe count.
+`check_unused_assms cfgopt (name, thm)` performs the same analysis on
+one theorem.  `print_unused_assms cfgopt thyopt` checks the named
+theory, or the current theory for `NONE`, and prints one-based indexes
+plus the number of inconclusive probes.
 
 ### See also
 
+[`Refute.check_unused_assms`](#Refute.check_unused_assms),
+[`Refute.print_unused_assms`](#Refute.print_unused_assms),
 [`Refute.config`](#Refute.config),
-[`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.try_refute`](#Refute.try_refute),
 [`DB.thms`](#DB.thms)
 

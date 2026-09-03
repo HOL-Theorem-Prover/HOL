@@ -13,22 +13,22 @@ Refute.register_frac_type :
 
 Registers a nullary fraction-like type and its model-finder replacements.
 
-`tyop` names an existing nullary HOL type.  Each `ersatz` row names an
-existing original constant and the existing constant used in its place by
-model-finder preprocessing.  Original keys in the list must be distinct.
-Active fraction mappings have precedence over ordinary ersatz mappings.
+`tyop` names an existing nullary type.  Each `ersatz` row names an
+existing constant and the existing constant model-finder preprocessing
+uses in its place; original keys must be distinct, and these rows take
+precedence over `register_ersatz` rows.
 
-The operation validates the complete registration before changing
-session state, then atomically replaces any fraction registration for the
-same type operator.  It also removes any quotient or typedef registry row
-for that operator, because the explicit fraction classification supersedes
-it.  It does not create a HOL type, constant, or theorem.
+The whole registration is validated before any session state changes;
+it then replaces any fraction registration for the same operator and
+removes any quotient or typedef row for it, which the fraction
+classification supersedes.  No HOL type, constant, or theorem is
+created.
 
 ### Failure
 
 Fails if the type does not exist or is not nullary, an ersatz constant
-does not exist, original keys repeat, or the operator is an interpreted,
-free datatype, or codatatype classification.
+does not exist, original keys repeat, or the operator is classified as
+interpreted, a free datatype, or a codatatype.
 
 ### See also
 

@@ -4,4 +4,6 @@
 Refute.refute_top : unit -> outcome
 ```
 
-Refutes the current interactive goal using the current Refute configuration.
+Searches for a counterexample to the goalstack's current goal:
+`refute_top ()` is `refute_goal (!the_config) (top_goal ())`.
+See [`Refute.refute_goal`](#Refute.refute_goal).
