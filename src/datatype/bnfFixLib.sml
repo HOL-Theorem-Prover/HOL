@@ -1950,6 +1950,24 @@ val setRWs = pointFreeRWs @
    a component's set function applied to a bound variable *)
 val set_ss = simpLib.++ (BasicProvers.srw_ss(), boolSimps.ETA_ss)
 
+(* what an argument the recursion does not reach says about a sub-term,
+   which is nothing.  Taking the membership apart leaves the emptiness
+   buried under an existential — `∃f. y ∈ f ∧ ∃s. f = ∅ ∧ s ∈ set x` —
+   so the existentials are pulled out of the conjunctions, which is what
+   lets unwinding use `f = ∅` and leaves `y ∈ ∅`.  Only those two laws:
+   putting the hypothesis into disjunctive normal form would do it too,
+   and would grow exponentially where a functor's shape alternates
+   conjunction and disjunction — and it would hoist the principle's own
+   conclusion out of the implication along the way. *)
+val emptyHyp =
+    QCONV (simpLib.SIMP_CONV
+             (simpLib.++ (boolSimps.bool_ss, boolSimps.UNWIND_ss))
+             [GSYM boolTheory.LEFT_EXISTS_AND_THM,
+              GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+              pred_setTheory.IN_BIGUNION, pred_setTheory.IN_IMAGE,
+              pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
+              pred_setTheory.IN_UNION])
+
 fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
     let
       val defs = #defs cs
@@ -2372,7 +2390,8 @@ fun mutualInduction (cs1 : constructors, cs2 : constructors)
                                     combinTheory.I_o_ID]) THENC
           QCONV (simpLib.SIMP_CONV set_ss
                    (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
-                              oneTheory.FORALL_ONE]))
+                              oneTheory.FORALL_ONE])) THENC
+          emptyHyp
       (* expanding the quantifier names each constructor's arguments after
          the projections it went through; rename them to the constructor's
          own, as its definition has them *)
@@ -3449,7 +3468,8 @@ fun familyInductionOf (defs : thm list list) induction =
                    (setRWs @ [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
                               sumTheory.OUTL, sumTheory.OUTR,
                               pairTheory.PAIR_MAP, pairTheory.FST,
-                              pairTheory.SND, combinTheory.I_THM]))
+                              pairTheory.SND, combinTheory.I_THM])) THENC
+          emptyHyp
       (* only the pure rewrites before the quantifier is expanded: the
          simplifier would take a membership apart while the set it is
          about is still a union over a shape not yet opened, and what
