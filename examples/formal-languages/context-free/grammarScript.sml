@@ -185,10 +185,11 @@ Theorem derives_paste_horizontally:
 Proof metis_tac [RTC_CASES_RTC_TWICE, derives_common_suffix, derives_common_prefix]
 QED
 
-(* the package's principle already says what each sub-tree satisfies;
-   this is it with the pair's empty contribution taken out *)
+(* the package's principle, without the empty contribution of the label,
+   and with the label quantified inside as the older construction had it *)
 Theorem ptree_ind:
-  ∀P. (∀p. P (Lf p)) ∧ (∀p l. (∀pt. MEM pt l ⇒ P pt) ⇒ P (Nd p l)) ⇒
+  ∀P. (∀p. P (Lf p)) ∧
+      (∀l. (∀pt. MEM pt l ⇒ P pt) ⇒ ∀p. P (Nd p l)) ⇒
       ∀p. P p
 Proof
   gen_tac >> strip_tac >>
