@@ -3979,6 +3979,23 @@ fun defineSize {tyname, sizes = sizenames} axiom =
                          consts of
               SOME c => c
             | NONE => raise ERR "defineSize" "the definition made no constant"
+      (* A size of a nested argument arrives as a map, because that is
+         what the axiom hands over: `list_size (λx. x) (MAP h l)`.  A
+         measure over the operator recursed under is written as the fold
+         `list_size h l`, and that is also what the equation should say
+         — the operator's own size-of-map law turns the one into the
+         other, leaving `λx. h x`, which contracts.  Aimed at the
+         right-hand side and carrying only those laws: the sum is
+         associated the way the old package associates it, and a
+         simpset would reassociate it. *)
+      fun sizeMapRWs () =
+          List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
+                          [("list", "list_size_map")]
+      val tidy =
+          STRIP_QUANT_CONV
+            (RAND_CONV (QCONV (PURE_REWRITE_CONV (sizeMapRWs())) THENC
+                        QCONV (DEPTH_CONV BETA_CONV) THENC
+                        QCONV (DEPTH_CONV ETA_CONV)))
       (* clause by clause, with the parameters quantified inside each,
          which is the shape the old package's definitions have and the
          shape a development that rewrites with a size has seen *)
@@ -3988,7 +4005,7 @@ fun defineSize {tyname, sizes = sizenames} axiom =
             val specd = SPECL fs def
             fun reshape c =
                 let val (vs, _) = strip_forall (concl c)
-                in GENL (fs @ vs) (SPECL vs c) end
+                in CONV_RULE tidy (GENL (fs @ vs) (SPECL vs c)) end
           in
             LIST_CONJ (List.map reshape (CONJUNCTS specd))
           end
