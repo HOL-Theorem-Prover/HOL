@@ -37,6 +37,28 @@ sig
   val dest_ReqD : thm -> thm option
   val mk_require_tac : (thm list -> tactic) -> (thm list -> tactic)
 
+  (* The theorem-list directive vocabulary: theorems that control the
+     tactic or simpset they are passed to instead of being used as facts.
+     Every consumer of a theorem list must classify through
+     dest_directive, dropping or rejecting a directive it cannot honour
+     rather than using it as a rewrite.  Hypothesis-carried wrappers
+     (Req0, ReqD, bounds) are reported before the payload's own head. *)
+  datatype directive =
+      DAC of thm * thm
+    | DCong of thm
+    | DExcl of string
+    | DExclSF of string
+    | DFRAG of string
+    | DReq0 of thm
+    | DReqD of thm
+    | DBounded of thm * int
+    | DNoAsms
+    | DIgnAsm of string
+    | DAbbr of string
+    | DLabel of string
+  val dest_directive : thm -> directive option
+  val is_directive   : thm -> bool
+
   val ABB                 : term -> term -> tactic
   val ABB'                : {redex : term, residue : term} -> tactic
   val ABBREV_TAC          : term -> tactic

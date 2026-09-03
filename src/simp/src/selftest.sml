@@ -487,4 +487,30 @@ in
   ]
 end
 
+(* The simpset layer must never use a directive as a rewrite: requirement
+   directives are refused (their marker$ hypothesis would otherwise reach
+   the result), tactic-only ones are dropped. *)
+val _ =
+  let
+    val q = mk_var("q", bool)
+    val th = ASSUME q
+    fun refuses (name, d) =
+        (tprint ("SIMP_CONV refuses " ^ name);
+         shouldfail {testfn = fn l => SIMP_CONV bool_ss l q,
+                     printresult = thm_to_string,
+                     printarg = fn _ => name,
+                     checkexn = check_HOL_ERRexn
+                                  (fn (_, f, _) => f = "process_tags")}
+                    [d])
+    fun drops (name, d, t) =
+        (tprint ("SIMP_CONV drops " ^ name);
+         require_msg (check_result (fn th => rhs (concl th) ~~ t))
+                     thm_to_string (QCONV (SIMP_CONV bool_ss [d])) t)
+  in
+    List.app refuses [("Req0", Req0 th), ("ReqD", ReqD th)];
+    List.app drops [("NoAsms", markerLib.NoAsms, concl markerLib.NoAsms),
+                    ("IgnAsm", markerLib.IgnAsm ‘x = _’,
+                     concl (markerLib.IgnAsm ‘x = _’))]
+  end
+
 val _ = exit_count0 failcount
