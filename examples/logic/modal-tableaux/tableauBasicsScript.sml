@@ -206,9 +206,8 @@ End
 Theorem tree_rel_size_bounds:
   tree_rel t1 t2 ⇒ tmodel_size t2 ≤ tmodel_size t1
 Proof
-  (* the size of a mapped list is stated eta-expanded *)
   simp[tree_rel_def, PULL_EXISTS] >> rw[] >>
-  drule MEM_tmodel_size >> simp[ETA_THM]
+  drule MEM_tmodel_size >> simp[]
 QED
 
 Definition subtree_def:
