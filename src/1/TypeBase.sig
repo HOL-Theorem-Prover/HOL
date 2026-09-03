@@ -64,6 +64,8 @@ sig
    val CaseEq             : string -> thm
    val CaseEqs            : string list -> thm
    val AllCaseEqs         : unit -> thm
+   val add_CaseEqs        : thm list -> unit
+   val add_CasePreds      : thm list -> unit
 
    val CasePred           : string -> thm
    val CasePreds          : string list -> thm

@@ -220,6 +220,8 @@ fun tyi_from_name s =
 
 val CaseEq = TypeBasePure.case_eq_of o tyi_from_name
 val CaseEqs = Drule.LIST_CONJ o map CaseEq
+val additional_CaseEqs = ref ([]:thm list)
+fun add_CaseEqs thms = ignore (additional_CaseEqs := thms @ (!additional_CaseEqs))
 fun AllCaseEqs() =
   let
     fun foldthis(ty, tyi, acc) =
@@ -228,7 +230,7 @@ fun AllCaseEqs() =
         | SOME th => if aconv (concl acc) boolSyntax.T then th
                      else CONJ th acc
   in
-    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
+    CONJ (TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())) (Drule.LIST_CONJ (!additional_CaseEqs))
   end
 
 fun type_info_of ty = {case_def = case_def_of ty, nchotomy = nchotomy_of ty}
@@ -253,6 +255,9 @@ fun CasePred' tyinfo =
 val CasePred = CasePred' o tyi_from_name
 
 val CasePreds = Drule.LIST_CONJ o map CasePred
+val additional_CasePreds = ref ([]:thm list)
+fun add_CasePreds thms = ignore (additional_CasePreds := thms @ (!additional_CasePreds))
+
 fun AllCasePreds() =
   let
     fun foldthis(ty, tyi, acc) =
@@ -261,7 +266,7 @@ fun AllCasePreds() =
         | SOME th => if aconv (concl acc) boolSyntax.T then th
                      else CONJ th acc
   in
-    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
+    CONJ (TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())) (Drule.LIST_CONJ (!additional_CasePreds))
   end
 
 (* ---------------------------------------------------------------------- *
