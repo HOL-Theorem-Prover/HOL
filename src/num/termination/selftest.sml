@@ -201,3 +201,52 @@ in
                          valOf $ DB.lookup{Thy="-", Name = "bar"}))
               ()
 end
+
+(* ----------------------------------------------------------------------
+    Definitions made from inside a goalstack tactic.  Defn.tprove proves
+    termination directly, not through the proof manager, and expand lets
+    TotalDefn hand a failed termination goal to the proof manager.  The
+    deadlock itself is guarded by src/proofman/interactive_tests.
+   ---------------------------------------------------------------------- *)
+
+val _ = proofManagerLib.chatting := false
+val user_goal : goal = ([], mk_var ("user_goal", Type.bool))
+fun top_is (g : goal) =
+    aconv (snd (proofManagerLib.top_goal ())) (snd g) handle _ => false
+val _ = proofManagerLib.drop_all ()
+val _ = proofManagerLib.set_goal user_goal
+
+val _ = tprint "tprove leaves the goalstack alone (no termination conditions)"
+val nonrec_defn = Defn.Hol_defn "nonrec_in_tac" ‘nonrec_in_tac (n:num) = n + 1’
+val _ = (quietly Defn.tprove (nonrec_defn, ALL_TAC); die "tprove succeeded")
+        handle HOL_ERR _ => ()
+val _ = if top_is user_goal then OK () else die "user goal lost"
+
+val _ = tprint "tprove leaves the goalstack alone (tactic fails)"
+val rec_defn =
+    Defn.Hol_defn "rec_in_tac"
+      ‘rec_in_tac (n:num) = if n = 0 then 0 else rec_in_tac (n - 1)’
+val _ = (quietly Defn.tprove (rec_defn, NO_TAC); die "tprove succeeded")
+        handle HOL_ERR _ => ()
+val _ = if top_is user_goal then OK () else die "user goal lost"
+
+val _ = tprint "tDefine inside a goalstack tactic"
+fun tdefine_tac (g : goal) =
+    (tDefine "tdef_in_tac"
+       ‘tdef_in_tac (n:num) = if n = 0 then 0 else tdef_in_tac (n - 1)’
+       (WF_REL_TAC ‘$<’ THEN numLib.DECIDE_TAC);
+     ALL_TAC g)
+val _ = proofManagerLib.e tdefine_tac
+val _ = if top_is user_goal then () else die "user goal lost"
+val _ = require (check_result (K true)) (DB.fetch "-") "tdef_in_tac_def"
+
+val _ = tprint "Define's failed termination goal reaches the goalstack"
+fun bad_define_tac (g : goal) =
+    (Define ‘bad_in_tac (n:num) = bad_in_tac (n + 1)’; ALL_TAC g)
+val _ = (in_repl_mode (quietly proofManagerLib.e) bad_define_tac;
+         die "e succeeded")
+        handle HOL_ERR _ => ()
+val _ = if is_exists (snd (proofManagerLib.top_goal ())) andalso
+           (proofManagerLib.drop (); top_is user_goal)
+        then OK () else die "wrong proof state"
+val _ = proofManagerLib.drop_all ()
