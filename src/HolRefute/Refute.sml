@@ -58,6 +58,10 @@ structure Refute :> Refute = struct
      independent of the model-finder Frac registration above. *)
   val () = Refute_EvalRat.register ()
   val () = Refute_EvalReal.register ()
+  (* Equality decision for ground finite maps: without it computeLib only
+     decides [fm = fm'] for identical chains, and the Compute substrate
+     can never confirm a candidate whose conclusion is such an equality. *)
+  val () = Refute_EvalFmap.register ()
   (* Finite maps: FEMPTY/FUPDATE fit the same constructor-registration
      shape as an abstract type, generalized to fire for every concrete
      instance of the fmap type operator.  Unlike :rat/:real, this yields an

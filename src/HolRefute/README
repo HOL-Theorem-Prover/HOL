@@ -83,6 +83,8 @@ proof-manager lock under `e`) and pre-flights `Test`/`Guard` conditions
 before synthesising generators.  Custom generators (`:rat`, `:real`,
 `Refute_Gen.GenCustom`) run on Compute only; `fmap` is a generator family
 (`register_generator_family`) that Cv and NativeSML decline by name.
+Compute decides `=` between ground `FEMPTY`-rooted update chains through
+`Refute_EvalFmap` (the stock compset only reduces the identical pair).
 
 Smart generators (default on) mode-compile `Hol_reln` premises and
 exhaustive Horn-shaped Boolean functions into CPS enumerators (`Enum`), and
@@ -152,7 +154,8 @@ Module layout
 * `Refute_Eval` (+ `.sig`): substrate seam and PRNG;
   `Refute_EvalCompute`, `Refute_EvalCv`, `Refute_EvalSML`: substrates;
   `Refute_EvalEnum`: shared enumerator compiler;
-  `Refute_EvalRat`, `Refute_EvalReal`: built-in generators and compsets.
+  `Refute_EvalRat`, `Refute_EvalReal`: built-in generators and compsets;
+  `Refute_EvalFmap`: compset decision of ground finite-map equality.
 * `Refute_QC`, `Refute_QC_Narrow`, `Refute_Narrow`: planning, execution,
   native narrowing.
 * `Refute_Cert`, `Refute_Cert_Narrow`, `Refute_Cert_Model`: certification.

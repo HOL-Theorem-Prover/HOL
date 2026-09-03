@@ -1288,6 +1288,18 @@ val _ = test "true finite-map properties are not refuted" (fn () =>
   genuine (refute (qc |> upd_size 2) ``!fm : bool |-> bool.
                                          CARD (FDOM fm) <= 1``))
 
+val _ = test "finite-map equality is decided during testing" (fn () =>
+  let
+    val compute = random |> upd_substrate Compute
+  in
+    refute compute ``FLOOKUP (fm : bool |-> bool) T =
+                     FLOOKUP (fm' : bool |-> bool) T ==> fm = fm'``
+    |> genuine_certified andalso
+    not_refuted (refute (compute |> upd_abort_potential true)
+                   ``(fm : bool |-> bool) |+ (F,F) |+ (T,T) =
+                     fm |+ (T,T) |+ (F,F)``)
+  end)
+
 val _ = test "finite-map search is never exhausted" (fn () =>
   refute (exhaustive |> upd_substrate Compute |> upd_size 2)
          ``FDOM ((fm : num |-> num) |+ (k, v)) = k INSERT FDOM fm``
