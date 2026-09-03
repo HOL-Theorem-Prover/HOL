@@ -4110,14 +4110,24 @@ structure Refute_Extract = struct
           List.concat (map one alternatives)
         end
       fun exact_entries_of ty =
-        List.rev (List.foldl (fn (entry as ((depth, id), _), result) =>
-          if List.exists (fn ((other_depth, other_id), _) =>
-               depth = other_depth andalso id = other_id) result then result
-          else entry :: result) []
-          (List.concat (map (fn row =>
-            List.concat (ListPair.mapEq (fn (row_ty, shape) =>
-              exact_entries_in ty row_ty shape) (types, row)))
-            shape_rows)))
+        List.concat (map (fn row =>
+          List.concat (ListPair.mapEq (fn (row_ty, shape) =>
+            exact_entries_in ty row_ty shape) (types, row)))
+          shape_rows)
+
+      (* [Refute_Gen.narrowing_terms] indexes a numeric kind's values by
+         position and [flat_shape] makes that position the alternative id,
+         so an id denotes the same value at every depth -- the invariant
+         [primitive_value] already relies on for the conversion side.  A
+         [GenEnum] type is flat for the same reason.  Only a custom
+         enumerator may hand back a different list per depth, so only it
+         needs the depth in the key.  Keying the rest on the id alone is
+         what keeps a [char] window of eleven depths at 256 reconstruction
+         arms instead of 2816. *)
+      fun exact_key_has_depth ty =
+        case Refute_Gen.spec_of ty of
+            Refute_Gen.GenCustom _ => true
+          | _ => false
       fun conv_name ty = "narrow_conv_" ^ integer (type_index ty)
       fun recon_name ty = "narrow_recon_" ^ integer (type_index ty)
       fun replay_recon_name ty =
@@ -4147,14 +4157,27 @@ structure Refute_Extract = struct
 
       fun exact_case render ty =
         let
-          fun branch ((depth, id), value) =
-            "(" ^ integer depth ^ ", " ^ integer id ^ ") => " ^
-            render value
-          val branches = map branch (exact_entries_of ty)
+          val keyed_by_depth = exact_key_has_depth ty
+          fun pattern (depth, id) =
+            if keyed_by_depth then
+              "(" ^ integer depth ^ ", " ^ integer id ^ ")"
+            else integer id
+          val branches =
+            List.rev (List.foldl (fn ((key, value), result) =>
+              let val text = pattern key in
+                if List.exists (fn (seen, _) => seen = text) result then
+                  result
+                else (text, value) :: result
+              end) [] (exact_entries_of ty))
         in
           if null branches then "raise Match"
-          else "(case (depth, constructor) of\n       " ^
-            join "\n     | " branches ^ "\n     | _ => raise Match)"
+          else
+            "(case " ^
+            (if keyed_by_depth then "(depth, constructor)"
+             else "constructor") ^ " of\n       " ^
+            join "\n     | " (map (fn (text, value) =>
+              text ^ " => " ^ render value) branches) ^
+            "\n     | _ => raise Match)"
         end
 
       fun conversion_case ty =
@@ -4276,6 +4299,23 @@ structure Refute_Extract = struct
               term_list
                 (map (shape_name (row_depth - 1)) argument_types) ^ "}"
             end
+          (* A flat shape is one nullary alternative per enumerated value,
+             so spelling the list out costs a line per value at every
+             depth in the window -- 256 of them per depth for [char].
+             Tabulating the identical list keeps the generated program
+             proportional to the window rather than to the carrier. *)
+          fun flat_alternatives () =
+            let
+              val ids = map #id alternatives
+            in
+              if not (null alternatives) andalso
+                 List.all (null o #arguments) alternatives andalso
+                 ids = List.tabulate (length ids, fn index => index)
+              then
+                SOME ("List.tabulate (" ^ integer (length ids) ^
+                  ", fn id => {id = id, exact = NONE, arguments = []})")
+              else NONE
+            end
         in
           "Refute_Narrow.Narrowing_sum_of_products " ^
           "{depth = " ^ integer depth ^
@@ -4283,7 +4323,10 @@ structure Refute_Extract = struct
           ", syntactic_complete = " ^
           Bool.toString syntactic_complete ^
           ", alternatives = " ^
-          term_list (map alternative_source alternatives) ^ "}"
+          (case flat_alternatives () of
+               SOME compact => compact
+             | NONE => term_list (map alternative_source alternatives)) ^
+          "}"
         end
 
       fun shape_binding depth (ty, shape) =
