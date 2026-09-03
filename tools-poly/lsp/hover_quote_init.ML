@@ -174,6 +174,54 @@ local
     in Parse.type_to_string (Pretype.toType cleaned) end
     handle _ => "?"
 
+  (* Print `tm' with the overloads that alias *this* pattern removed.
+
+     Printing an expansion with the ambient grammar re-applies the very
+     overload being explained: `MEM' expands to a lambda whose body the
+     printer folds straight back into `MEM x l', so the hover reads
+     `Overloads λx l. MEM x l' and says nothing.  Removing just the
+     hovered name is not enough either -- `IS_EL' maps to the same
+     pattern and takes over, so the hover explains one alias with
+     another.
+
+     So remove every symbol whose overload maps to this term, and
+     nothing else.  Clearing the map outright would work for `MEM' but
+     is too blunt: an overload to a *different* pattern is what makes
+     integer addition print as `+', and an expansion that mentions it
+     should not start talking about `int_add'.
+
+     Matching is up to type instantiation, because the pattern in the
+     map is polymorphic (`α -> α list -> bool') while the occurrence
+     being hovered may be at a specific type.
+
+     `clear_overloads'-free and pure: `mfupdate_overload_info' and
+     `remove_overloaded_form' hand back new grammar values, so unlike
+     the mutate-capture-restore in `src/TeX/mungeTools.sml' this never
+     disturbs the global grammar, which a compile on another thread may
+     be parsing with.  The backend is forced raw because a hover's text
+     is markdown, where an ANSI escape is just noise. *)
+  fun expansion_string tm = let
+    val g0 = Parse.term_grammar ()
+    fun aliases_this op_tm =
+        Term.aconv op_tm tm orelse
+        (Term.match_term op_tm tm; true) handle _ => false
+    val aliases =
+        List.mapPartial
+          (fn (s, {actual_ops, ...}: Overload.overloaded_op_info) =>
+              if List.exists aliases_this actual_ops then SOME s else NONE)
+          (Overload.oinfo_ops (term_grammar.overload_info g0))
+    val g =
+        List.foldl
+          (fn (s, g) =>
+              #1 (term_grammar.mfupdate_overload_info
+                    (Overload.remove_overloaded_form s) g))
+          g0 aliases
+    in
+      Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+        (fn () =>
+           Parse.term_to_string_by_grammar (Parse.type_grammar (), g) tm) ()
+    end handle _ => Parse.term_to_string tm
+
   (* `nameOf' slices the identifier out of the source the caller
      parsed; only the pattern leaf needs it, having no name of its
      own. *)
@@ -201,7 +249,23 @@ local
             val tystr = case Preterm.ptype_of Ptm env of
                 Some (_, ty) => render_type env ty
               | Error _ => "?"
-            in (nameOf Locn, tystr, "*overloaded*") end
+            (* This syntax resolved to a *term* rather than to any one
+               constant -- `MEM x l' is `x IN set l' -- so there is no
+               theory and name to report.  The preterm we are holding
+               is that expansion, overloading resolution having already
+               run, so show it: "overloaded" on its own says only that
+               we gave up.  `to_term' fails on a preterm that still
+               contains `Overloaded', and on leaf types the kernel will
+               not take, hence the fallback. *)
+            val expansion =
+                SOME (Preterm.smash (Preterm.to_term Ptm) env)
+                handle _ => NONE
+            val tail =
+                case expansion of
+                    NONE => "*overloaded*"
+                  | SOME tm =>
+                    "Overloads `" ^ expansion_string tm ^ "`"
+            in (nameOf Locn, tystr, tail) end
     in
       (* Parse.type_to_string already prefixes ``:`` (HOL type-
          annotation convention), so we don't add another one. *)

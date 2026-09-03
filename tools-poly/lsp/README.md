@@ -122,9 +122,13 @@ Hover text is laid out at 100 columns until a client says otherwise:
 
 It has to come from the client -- only the client knows how wide its
 hover box is, and a statement broken to some other width breaks in the
-wrong places.  Widths outside 20-500 are ignored and logged.  In VS
-Code this is the `hol4-mode.lsp.hoverWidth` setting, defaulting to 72,
-because the extension API does not expose a hover box's width; under
+wrong places.  Widths outside 20-500 are ignored and logged.  The accepted width is echoed to
+`window/logMessage` as `hoverWidth = N`, so a client can confirm it
+arrived -- a client that never sends one leaves hovers at 100, which
+looks the same as the width being ignored.  In VS Code this is the
+`hol4-mode.lsp.hoverWidth` setting, defaulting to 50, because the
+extension API does not expose a hover box's width and erring narrow
+only costs line breaks whereas erring wide makes the box scroll; under
 eglot, hovers land in the frame-wide echo area, so
 `hol-lsp-hover-width` is nil (leave it at 100) unless you set a number
 or the symbol `frame`.

@@ -2902,8 +2902,15 @@ fun start {diag, dbg, warnings} = let
       case JSONDecode.decode
              (JSONDecode.fieldO "hoverWidth" JSONDecode.int) params of
         NONE => ()
-      | SOME w => if w >= 20 andalso w <= 500 then hoverWidth := w
-                  else logMessage ("ignoring hoverWidth " ^ Int.toString w);
+      | SOME w =>
+        if w >= 20 andalso w <= 500
+        then (hoverWidth := w;
+              (* Logged so a client can confirm the width arrived: a
+                 client that never sends one leaves hovers rendered at
+                 the default, which looks like the width being
+                 ignored. *)
+              logMessage ("hoverWidth = " ^ Int.toString w))
+        else logMessage ("ignoring hoverWidth " ^ Int.toString w);
       send (mkResponse id (Ok encNull)))
       handle JSONDecode.JSONError _ =>
         send (mkResponse id (mkErr InvalidParams "json decode failed")))

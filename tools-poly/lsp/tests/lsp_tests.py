@@ -5462,6 +5462,89 @@ def test_unloadable_heap_falls_back_with_a_warning():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_overload_hover_names_the_expansion():
+    """An overloaded name that resolves to a *term* rather than to one
+    constant used to hover as a bare "overloaded", which says only that
+    we gave up.  The `Pattern' preterm we are holding is the expansion,
+    overloading resolution having already run, so show it.
+
+    It has to be printed with the overload map cleared, or the printer
+    folds the expansion straight back into the name being explained
+    (`MEM' as `λx l. MEM x l'), and removing only that one name
+    surfaces the next alias in the chain (`IS_EL')."""
+    d = tempfile.mkdtemp(prefix="lsp_ovl_")
+    try:
+        src = ("Theory ovlexp\n"
+               "Ancestors arithmetic\n\n"
+               "Overload twice = \u201c\\x:num. x + x\u201d\n\n"
+               "Theorem t:\n"
+               "  twice 2 = 4\n"
+               "Proof\n"
+               "  simp[]\n"
+               "QED\n")
+        uri = f"file://{d}/ovlexpScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            lines = src.split("\n")
+            ln = next(i for i, l in enumerate(lines) if "twice 2" in l)
+            ch = lines[ln].index("twice")
+            r = _hover_at(c, 950, uri, ln, ch)
+            assert_true(r is not None, "hover on the overloaded name")
+            md = r["contents"]["value"]
+            assert_true("Overloads" in md,
+                        f"says what it overloads to ({md!r})")
+            assert_true("x + x" in md,
+                        f"and shows the expansion ({md!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_overload_hover_sees_through_the_alias_chain():
+    """`MEM' and `IS_EL' overload to the *same* pattern, so removing
+    only the name that was hovered lets the other take over and the
+    hover explains one alias with another.  Every symbol aliasing this
+    pattern goes, and nothing else: aliases of other patterns are what
+    make `set' and integer `+' print as themselves."""
+    d = tempfile.mkdtemp(prefix="lsp_ovlchain_")
+    try:
+        src = ("Theory ovlchain\n"
+               "Ancestors list arithmetic\n\n"
+               "Theorem t:\n"
+               "  !x l. MEM x l ==> l <> []\n"
+               "Proof\n"
+               "  Cases_on `l` >> simp[]\n"
+               "QED\n")
+        uri = f"file://{d}/ovlchainScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            lines = src.split("\n")
+            ln = next(i for i, l in enumerate(lines) if "MEM x l" in l)
+            r = _hover_at(c, 951, uri, ln, lines[ln].index("MEM"))
+            md = r["contents"]["value"] if r else ""
+            assert_true("set l" in md or "LIST_TO_SET" in md,
+                        f"reaches the underlying term ({md!r})")
+            assert_true("∈" in md or " IN " in md,
+                        f"as set membership ({md!r})")
+            assert_true("MEM" not in md.split("Overloads")[-1],
+                        f"and does not explain MEM with MEM ({md!r})")
+            assert_true("IS_EL" not in md,
+                        f"nor stop at IS_EL ({md!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5677,6 +5760,10 @@ TESTS = [
      test_dependency_that_binds_no_structure_blocks),
     ("unloadable_heap_falls_back_with_a_warning",
      test_unloadable_heap_falls_back_with_a_warning),
+    ("overload_hover_names_the_expansion",
+     test_overload_hover_names_the_expansion),
+    ("overload_hover_sees_through_the_alias_chain",
+     test_overload_hover_sees_through_the_alias_chain),
 ]
 
 
