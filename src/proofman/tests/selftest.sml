@@ -423,6 +423,36 @@ val _ = dotests "With OnlyIfNecessary" OnlyIfNecessary [foo1n, foo2n, foo3n]
    theorems to the body's validation in reverse, so a body that splits
    a goal proved the wrong thing -- here `p /\ q' for the goal
    `q /\ p', which typechecks and so went unnoticed. *)
+val _ = tprint "select_lt gives the selected goals their own theorems"
+val _ =
+    let
+      (* `>>~-' selects the goals a pattern matches, leaves the rest
+         stashed, and runs its tactic on the selection.  The selected
+         and stashed counts differ here -- one is taken, two are left
+         -- which is what the bug needed: the focus was handed the
+         *stashed* goals' validation, so `finish' fed it the wrong
+         number of theorems and `Lib.split_after' raised.  Only
+         `finish' runs validations, so the goals looked right the whole
+         way and a completed proof reported "No subgoals but proof
+         incomplete". *)
+      val tm = “p ∧ q ∧ r ⇒ p ∧ q ∧ r”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = ex (REPEAT STRIP_TAC) (goalFrag.new_goal ([], tm))
+      val st = goalFrag.open_select_lt st
+      (* Succeeds on the `p' goal and fails on the other two, which is
+         how the selection is made. *)
+      val st = ex (ACCEPT_TAC (ASSUME “p:bool”)) st
+      val st = goalFrag.next_select_lt st
+      val st = goalFrag.close_paren (goalFrag.open_paren st)
+      val st = goalFrag.close_paren st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+      val th = goalFrag.finish st
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end
+
 val _ = tprint "close_repeat pairs subgoals with their own theorems"
 val _ =
     let

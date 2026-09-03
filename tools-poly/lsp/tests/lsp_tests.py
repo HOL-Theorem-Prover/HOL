@@ -5719,6 +5719,59 @@ def test_check_proofs_enabled_during_a_compile():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_goalState_select_then_completes():
+    """`>>~-' selects the goals a pattern matches and runs its tactic
+    on them, leaving the rest stashed.  With a different number
+    selected than stashed, the focus used to be handed the stashed
+    goals' validation, so the proof's own validation was fed the wrong
+    number of theorems -- and a finished proof reported "No subgoals
+    but proof incomplete (try close_paren)" at the last step, which is
+    what a user sees when the cursor is at the end of the proof."""
+    d = tempfile.mkdtemp(prefix="lsp_selthen_")
+    try:
+        src = ("Theory selthen\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (2 + 2 = 4) /\\ (3 + 3 = 6) /\\ (4 + 4 = 8)\n"
+               "Proof\n"
+               "  rpt conj_tac >>~-\n"
+               "  ([`2 + 2`], simp[]) >~\n"
+               "  [`3 + 3 = 6`]\n"
+               "  >- simp[] >>\n"
+               "  simp[]\n"
+               "QED\n")
+        uri = f"file://{d}/selthenScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            lines = src.split("\n")
+            # Walk the whole proof, as a cursor moving down it does.
+            last = None
+            rid = 700
+            for ln in range(6, len(lines)):
+                if not lines[ln].strip() or "QED" in lines[ln]:
+                    continue
+                rid += 1
+                m = _send_goalstate(c, rid, uri, ln, len(lines[ln]))
+                res = (m or {}).get("result")
+                if res is not None:
+                    last = res
+            assert_true(last is not None, "the last step answered")
+            pretty = last.get("pretty") or ""
+            assert_true("proof incomplete" not in pretty,
+                        f"the finished proof is not called incomplete "
+                        f"({pretty!r})")
+            assert_true("Initial goal proved" in pretty,
+                        f"it is reported as proved ({pretty!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -5944,6 +5997,8 @@ TESTS = [
      test_check_proofs_switchable_without_a_restart),
     ("check_proofs_enabled_during_a_compile",
      test_check_proofs_enabled_during_a_compile),
+    ("goalState_select_then_completes",
+     test_goalState_select_then_completes),
 ]
 
 

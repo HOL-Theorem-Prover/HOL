@@ -218,7 +218,16 @@ fun next_select_lt (n, g) = let
       fun v' n ths = let
         val (ths1, ths2) = Lib.split_after n ths
         in v ([], v1 (rev ths1), v2 (rev ths2)) end
-      in Stashed (Base (gs1, v2), NthGoal ([], gs2, v' (length gs1))) end
+      (* The focus carries `I', not `v1' or `v2': `v'` below applies
+         both, `v1' to the theorems of the selected goals and `v2' to
+         the stashed ones, so anything applied here would be applied
+         twice.  It used to carry `v2', which is built for the
+         *stashed* goals -- so with a different number selected than
+         stashed it was handed the wrong count and `Lib.split_after'
+         said "index too big".  Only `finish' runs validations, so the
+         goals looked right the whole way and a completed proof
+         reported "No subgoals but proof incomplete". *)
+      in Stashed (Base (gs1, I), NthGoal ([], gs2, v' (length gs1))) end
     | go (Try (Running gs, _) :: rest) success failed v =
       go rest (asBase gs :: success) failed (v o (fn (a,b,c) => (hd b::a,tl b,c)))
     | go (Try (Failed _, ([g], v')) :: rest) success failed v =
