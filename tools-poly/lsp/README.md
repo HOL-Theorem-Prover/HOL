@@ -230,8 +230,21 @@ steps: the edit drops the entry (`cheated`), and the re-elaborated
 proof settles as `proved`.
 
 Every change is also announced on `$/proofStates` as a transition --
-`checking`, then a verdict, `cheated` when an entry is dropped -- for
-a client that wants to render progress per declaration.  There is
+`checking`, then a verdict, `cheated` when an entry is dropped.
+
+Both shipped clients consume it as a **tally**, shown in the mode line
+(`HOL[12/37]`, `HOL[37 ok]`, `HOL[35/37 2!]`) and in the VS Code
+status bar (`HOL LSP — proofs 12/37`).  A count rather than a bar,
+because the states regress: a proof that suspends makes the server
+re-elaborate and drops the entries below it, so a bar would run
+backwards while a count falling from 30 to 12 reads as what it is.
+And a tally rather than per-declaration marks first, because the
+proofs settle in whatever order the workers finish -- what a per-proof
+mark cannot answer is "is it done?".
+
+The tally is also the only sign of a file whose proofs all pass: no
+diagnostics, nothing in the gutter, so without it a session that
+checked 61 proofs looks identical to one that checked none.  There is
 deliberately no full-state message: the state would have to be
 sampled and only then sent, so a worker settling in between would have
 its newer verdict overwritten by the older sample.

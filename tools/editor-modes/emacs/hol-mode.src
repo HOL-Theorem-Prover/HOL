@@ -2800,7 +2800,70 @@ same thing.  See `hol-lsp-retry-compile'.")
     (when (buffer-live-p buf)
       (with-current-buffer buf (setq hol-lsp--blocked message)))))
 
+(defvar-local hol-lsp--proof-states nil
+  "What the proof-checking pool is doing in this buffer.
+A hash table from theorem name to status string -- \"checking\",
+\"proved\", \"failed\", \"suspended\", \"diverged\" or \"cheated\".
+Built from the `$/proofStates' transition stream: the server
+announces each change as it happens and never sends a snapshot, so a
+client accumulates.  nil until the first notification arrives.")
+
+(defun hol-lsp--proof-states-table ()
+  "This buffer's proof-state table, creating it if needed."
+  (or hol-lsp--proof-states
+      (setq hol-lsp--proof-states (make-hash-table :test #'equal))))
+
+(defun hol-lsp--note-proof-states (uri states)
+  "Fold the STATES announced for URI into that buffer's table."
+  (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
+         (buf (and path (find-buffer-visiting path))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (let ((tbl (hol-lsp--proof-states-table)))
+          (dolist (st (append states nil))
+            (let ((name (plist-get st :name))
+                  (status (plist-get st :status)))
+              (when name
+                ;; `cheated' means the pool is no longer working on it
+                ;; -- an edit dropped the entry -- so forget it rather
+                ;; than counting it as an outcome.
+                (if (equal status "cheated")
+                    (remhash name tbl)
+                  (puthash name status tbl))))))
+        (force-mode-line-update)))))
+
+(defun hol-lsp-proof-summary ()
+  "A one-line tally of what the pool is doing in this buffer.
+Empty when there is nothing to say, so the mode line stays quiet in a
+buffer whose proofs are not being checked.
+
+A counter rather than a progress bar: the states regress.  A proof
+that suspends makes the server re-elaborate, which drops the entries
+below it, so a bar would run backwards -- while a count that drops
+from 30 to 12 reads as what it is."
+  (if (null hol-lsp--proof-states)
+      ""
+    (let ((checking 0) (proved 0) (bad 0))
+      (maphash (lambda (_k v)
+                 (cond ((equal v "checking") (setq checking (1+ checking)))
+                       ((equal v "proved") (setq proved (1+ proved)))
+                       (t (setq bad (1+ bad)))))
+               hol-lsp--proof-states)
+      (let ((total (+ checking proved bad)))
+        (cond ((zerop total) "")
+              ((> checking 0)
+               (format " HOL[%d/%d%s]" proved total
+                       (if (> bad 0) (format " %d!" bad) "")))
+              ((> bad 0) (format " HOL[%d/%d %d!]" proved total bad))
+              (t (format " HOL[%d ok]" proved)))))))
+
 (with-eval-after-load 'eglot
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/proofStates)) &key uri states
+             &allow-other-keys)
+    "Accumulate what the proof pool reports for URI."
+    (hol-lsp--note-proof-states uri states))
+
   (cl-defmethod eglot-handle-notification
     (_server (_method (eql $/compileBlocked)) &key uri message
              &allow-other-keys)
@@ -2812,6 +2875,9 @@ same thing.  See `hol-lsp-retry-compile'.")
              &allow-other-keys)
     "Note that URI compiled, which is to say it is no longer blocked."
     (hol-lsp--set-blocked uri nil)))
+
+(add-to-list 'mode-line-misc-info
+             '(:eval (hol-lsp-proof-summary)) t)
 
 (defun hol-lsp-retry-compile ()
   "Ask the server to compile this buffer again.

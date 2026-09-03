@@ -281,3 +281,47 @@ carry one."
   "A sliver of a window would otherwise ask for a width HOL cannot
 break at."
   (should (>= (hol-lsp--goals-width) 20)))
+
+(ert-deftest hol-lsp-proof-summary-is-quiet-when-there-is-nothing ()
+  "A session with checking off must not put anything in the mode line."
+  (with-temp-buffer
+    (should (equal (hol-lsp-proof-summary) ""))))
+
+(ert-deftest hol-lsp-proof-summary-counts-the-pool ()
+  "The counter is the ordering-independent signal: proofs settle in
+whatever order the workers finish, so what answers \"is it done?\" is
+the tally, not the per-proof marks."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (puthash "a" "proved" hol-lsp--proof-states)
+    (puthash "b" "checking" hol-lsp--proof-states)
+    (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+    (puthash "b" "proved" hol-lsp--proof-states)
+    (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
+    (puthash "c" "failed" hol-lsp--proof-states)
+    (should (equal (hol-lsp-proof-summary) " HOL[2/3 1!]"))))
+
+(ert-deftest hol-lsp-proof-states-accumulate-and-cheated-drops ()
+  "`$/proofStates' is a transition stream, so the client accumulates.
+A `cheated' state means the pool has dropped the entry -- an edit
+reached that proof -- and it stops being an outcome rather than
+counting as one."
+  (let ((file (make-temp-file "holproofs" nil "Script.sml")))
+    (unwind-protect
+        (let ((buf (find-file-noselect file)))
+          (with-current-buffer buf
+            (hol-lsp--note-proof-states
+             (hol-lsp--path-to-uri file)
+             (list (list :name "t1" :status "checking")
+                   (list :name "t2" :status "checking")))
+            (should (equal (hol-lsp-proof-summary) " HOL[0/2]"))
+            (hol-lsp--note-proof-states
+             (hol-lsp--path-to-uri file)
+             (list (list :name "t1" :status "proved")))
+            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+            (hol-lsp--note-proof-states
+             (hol-lsp--path-to-uri file)
+             (list (list :name "t2" :status "cheated")))
+            (should (equal (hol-lsp-proof-summary) " HOL[1 ok]")))
+          (kill-buffer buf))
+      (delete-file file))))
