@@ -367,9 +367,10 @@ equal certainty; in the default racing mode (`sequential = false`) they
 do not say which backend finishes first.  A result stops the race only
 when its certainty reaches the best ceiling declared by any eligible
 backend, so a quick potential counterexample does not hide a genuine
-result another backend can still produce.  A backend registered through
-`register_backend` declares the conservative ceiling `Genuine`; the
-built-in narrowing and model-finder backends declare tighter ceilings.
+result another backend can still produce.  Each backend declares its own
+ceiling in its `certainty_ceiling` field; a backend with no tighter,
+configuration-sensitive bound declares the conservative `Genuine`, as
+the built-in quickcheck backends do.
 
 One call owns one absolute deadline of `timeout` seconds.
 Preprocessing, backend admission, compilation, testing, and solver
@@ -1011,7 +1012,7 @@ the exact validation rules.
   of the candidate overwrote.  Registration fails if `tyop` already has
   `TypeBase` datatype constructors.
 * `register_backend backend` adds or replaces a weighted backend, under
-  the conservative certainty ceiling `Genuine`.
+  the certainty ceiling its `certainty_ceiling` field declares.
 * `register_codatatype {tyop, case_const, constructors, witness}`
   validates the constructor and case shapes and registers.  Shape alone
   cannot tell codata from an inductive datatype, so for a type the

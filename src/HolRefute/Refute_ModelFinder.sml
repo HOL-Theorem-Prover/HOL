@@ -589,12 +589,9 @@ fun run_instance deadline started (config : Refute_Core.config)
       else ()
 
     fun report_mono_failure kind ty detail =
-      if !MFMono.trace then
-        Refute_Core.Private.emit (fn () =>
-          Feedback.HOL_MESG
-            ("Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
-             (if detail = "" then "" else ": " ^ detail)))
-      else ()
+      MFMono.trace_msg (fn () =>
+        "Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
+        (if detail = "" then "" else ": " ^ detail))
 
     fun is_type_actually_monotonic ty =
       case List.find (fn (cached_ty, _) => Util.same_type ty cached_ty)
@@ -691,14 +688,16 @@ fun run_instance deadline started (config : Refute_Core.config)
               val _ = pending_batches := Util.chunk_list batch_size scopes
               val _ = source_done := done
               val _ =
-                case rev scopes of
-                    [] => ()
-                  | (scope : MFS.scope) :: _ =>
-                      Refute_Core.Private.say 2
-                        ("Refute model scope frontier: " ^
-                         String.concatWith ", " (map (fn (ty, card) =>
-                           Parse.type_to_string ty ^ " = " ^
-                           Int.toString card) (#card_assigns scope)) ^ "\n")
+                if not (Refute_Core.Private.enabled 2) orelse
+                   null scopes then ()
+                else
+                  let val scope : MFS.scope = List.last scopes in
+                    Refute_Core.Private.say 2
+                      ("Refute model scope frontier: " ^
+                       String.concatWith ", " (map (fn (ty, card) =>
+                         Parse.type_to_string ty ^ " = " ^
+                         Int.toString card) (#card_assigns scope)) ^ "\n")
+                  end
               val _ = if stopped then check_deadline deadline else ()
             in
               ()
@@ -743,8 +742,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       (false, original_max_potential, original_max_genuine, 0)
 
     fun add_error reason =
-      if Lib.mem reason (!error_reasons) then ()
-      else error_reasons := !error_reasons @ [reason]
+      error_reasons := Refute_Core.add_reason (reason, !error_reasons)
 
     fun update_checked problems indices =
       List.app (fn index =>
@@ -1408,11 +1406,11 @@ val kodkod_backend : Refute_Core.backend =
    configured = Refute_Forl.is_configured,
    requires = Refute_Core.AnyGoal,
    input = Refute_Core.PolyOriginal,
+   certainty_ceiling = kodkod_certainty_ceiling,
    run = run}
 
 fun register_backends () =
-  Refute_Core.register_backend_with_ceiling kodkod_backend
-    kodkod_certainty_ceiling
+  Refute_Core.register_backend kodkod_backend
 
 val _ = register_backends ()
 

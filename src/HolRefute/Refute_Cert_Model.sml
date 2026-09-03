@@ -52,14 +52,7 @@ structure Refute_Cert_Model = struct
      max_split_depth : int,
      max_case_branches : int,
      max_inductions : int,
-     max_leaf_rounds : int,
-     enable_whole_formula : bool,
-     enable_cases : bool,
-     enable_induction : bool,
-     enable_synthesis : bool,
-     enable_taut : bool,
-     enable_omega : bool,
-     enable_real_arith : bool}
+     max_leaf_rounds : int}
 
   type diagnostics =
     {generated_candidates : int,
@@ -91,14 +84,7 @@ structure Refute_Cert_Model = struct
      max_split_depth = 1,
      max_case_branches = 32,
      max_inductions = 2,
-     max_leaf_rounds = 2,
-     enable_whole_formula = true,
-     enable_cases = true,
-     enable_induction = true,
-     enable_synthesis = true,
-     enable_taut = true,
-     enable_omega = true,
-     enable_real_arith = true}
+     max_leaf_rounds = 2}
 
   fun failure_kind_name NoProof = "no-proof"
     | failure_kind_name MalformedInput = "malformed-input"
@@ -346,9 +332,9 @@ structure Refute_Cert_Model = struct
             else NONE
         in
           Lib.get_first attempt
-            [(#enable_taut policy, "propositional leaf", tautLib.TAUT_CONV),
-             (#enable_omega policy, "Presburger leaf", Omega.OMEGA_CONV),
-             (#enable_real_arith policy andalso mentions_real goal,
+            [(true, "propositional leaf", tautLib.TAUT_CONV),
+             (true, "Presburger leaf", Omega.OMEGA_CONV),
+             (mentions_real goal,
               "real linear arithmetic leaf", real_arith_conv)]
         end
 
@@ -430,9 +416,7 @@ structure Refute_Cert_Model = struct
           type failed_state =
             {formula : term,
              active_types : Type.hol_type list,
-             split_depths : int list,
-             cases_allowed : bool,
-             induction_allowed : bool}
+             split_depths : int list}
 
           (* Keyed on the abstracted formula alone: Term.compare is the
              alpha-equivalence order that same_state's own aconv test uses,
@@ -451,15 +435,11 @@ structure Refute_Cert_Model = struct
                 : failed_state =
             {formula = abstract active formula,
              active_types = map Term.type_of active,
-             split_depths = map (depth_of split_depths) active,
-             cases_allowed = #enable_cases policy,
-             induction_allowed = #enable_induction policy}
+             split_depths = map (depth_of split_depths) active}
           fun same_state (left : failed_state) (right : failed_state) =
             Term.aconv (#formula left) (#formula right) andalso
             same_types (#active_types left, #active_types right) andalso
-            #split_depths left = #split_depths right andalso
-            #cases_allowed left = #cases_allowed right andalso
-            #induction_allowed left = #induction_allowed right
+            #split_depths left = #split_depths right
           fun bucket current =
             Option.getOpt
               (Redblackmap.peek (!failed, #formula current), [])
@@ -608,8 +588,6 @@ structure Refute_Cert_Model = struct
                 | provenance_application _ = ()
 
               fun synthesized () =
-                if not (#enable_synthesis policy) then ()
-                else
                   let
                     val known = pool_base @ active
                     val generated = synth_values_bounded
@@ -692,21 +670,14 @@ structure Refute_Cert_Model = struct
               val assumptions = Tactical.REPEAT Tactic.DISCH_TAC
               val simplify_goal =
                 simpLib.ASM_SIMP_TAC (BasicProvers.srw_ss ()) []
-              val taut_goal =
-                if #enable_taut policy then
-                  Tactical.TRY tautLib.ASM_TAUT_TAC
-                else Tactical.ALL_TAC
-              val omega_goal =
-                if #enable_omega policy then
-                  Tactical.TRY Omega.OMEGA_TAC
-                else Tactical.ALL_TAC
+              val taut_goal = Tactical.TRY tautLib.ASM_TAUT_TAC
+              val omega_goal = Tactical.TRY Omega.OMEGA_TAC
               (* Unlike [decision_leaf]'s single-formula gate,
                  [REAL_ASM_ARITH_TAC] consumes assumptions too, so the
                  gate must see the whole goal - every assumption plus the
                  conclusion - not the conclusion alone. *)
               fun real_goal (goal as (asl, w)) =
-                if #enable_real_arith policy andalso
-                   List.exists mentions_real (w :: asl)
+                if List.exists mentions_real (w :: asl)
                 then Tactical.TRY realLib.REAL_ASM_ARITH_TAC goal
                 else Tactical.ALL_TAC goal
               fun account goal =
@@ -948,18 +919,13 @@ structure Refute_Cert_Model = struct
                 (ordinary ()
                  handle ReplayFailure issue =>
                    if not (is_no_proof issue) then raise ReplayFailure issue
-                   else if #enable_cases policy then
+                   else
                      (try_cases (List.filter eligible_split
                         (#active context))
                       handle ReplayFailure case_issue =>
                         if not (is_no_proof case_issue) then
                           raise ReplayFailure case_issue
-                        else if #enable_induction policy then
-                          try_inductions (#active context)
-                        else raise ReplayFailure issue)
-                   else if #enable_induction policy then
-                     try_inductions (#active context)
-                   else raise ReplayFailure issue)
+                        else try_inductions (#active context)))
             in
               strategies ()
               handle ReplayFailure issue =>
@@ -996,8 +962,7 @@ structure Refute_Cert_Model = struct
 
       val reported_failure = ref (NONE : failure option)
       val outcome =
-        ((case if #enable_whole_formula policy then whole_formula ()
-               else NONE of
+        ((case whole_formula () of
               SOME answer => answer
             | NONE => replay_pnf ())
          handle Interrupt => raise Interrupt
@@ -1036,14 +1001,7 @@ structure Refute_Cert_Model = struct
      max_split_depth = #max_split_depth policy,
      max_case_branches = Int.max (0, #max_case_branches policy - cases),
      max_inductions = Int.max (0, #max_inductions policy - inductions),
-     max_leaf_rounds = #max_leaf_rounds policy,
-     enable_whole_formula = #enable_whole_formula policy,
-     enable_cases = #enable_cases policy,
-     enable_induction = #enable_induction policy,
-     enable_synthesis = #enable_synthesis policy,
-     enable_taut = #enable_taut policy,
-     enable_omega = #enable_omega policy,
-     enable_real_arith = #enable_real_arith policy}
+     max_leaf_rounds = #max_leaf_rounds policy}
 
   fun add_diagnostics (left : diagnostics) (right : diagnostics) issue
         schematic_attempts completion_attempts : diagnostics =

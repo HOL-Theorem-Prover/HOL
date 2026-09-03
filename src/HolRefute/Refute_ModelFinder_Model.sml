@@ -2669,19 +2669,13 @@ fun certify {executable, original, eval_terms,
                 val suffix = if length candidates <= 16 then ""
                   else ", ..."
               in
-                Refute_Core.Private.emit (fn () =>
-                  HOL_MESG ("Refute model replay candidates: " ^
-                    String.concatWith ", " (map (fn (_, candidate, _) =>
-                      Parse.term_to_string candidate) shown) ^ suffix))
+                Refute_Core.Private.say 2
+                  ("Refute model replay candidates: " ^
+                   String.concatWith ", " (map (fn (_, candidate, _) =>
+                     Parse.term_to_string candidate) shown) ^ suffix)
               end
             fun trace_attempts () =
               let
-                val sidecar_holes = #holes replay_sidecar
-                fun count origin = length (List.filter (fn
-                  ({origin = actual, ...} : replay_hole) =>
-                    actual = origin) sidecar_holes)
-                fun row (label, origin) =
-                  label ^ "=" ^ Int.toString (count origin)
                 val origins =
                   [("any", AnyRepresentation),
                    ("optional", OptionalAbsent),
@@ -2690,16 +2684,27 @@ fun certify {executable, original, eval_terms,
                    ("set-membership", PartialSetMembership),
                    ("set-unrepresented", UnrepresentedSetElement),
                    ("function-default", FunctionDefault)]
+                (* One pass over the holes for all seven origins: the list
+                   is walked once and each hole bumps its own tally. *)
+                val tallies = map (fn (label, origin) =>
+                  (label, origin, ref 0)) origins
+                val _ = List.app (fn ({origin, ...} : replay_hole) =>
+                  case List.find (fn (_, candidate, _) =>
+                         candidate = origin) tallies of
+                      SOME (_, _, total) => total := !total + 1
+                    | NONE => ()) (#holes replay_sidecar)
+                fun row (label, _, total) =
+                  label ^ "=" ^ Int.toString (!total)
               in
-                Refute_Core.Private.emit (fn () =>
-                  HOL_MESG ("Refute model replay attempts: schematic=" ^
-                    Int.toString (#schematic_attempts replay_diagnostics) ^
-                    ", completions=" ^
-                    Int.toString (#completion_attempts replay_diagnostics) ^
-                    ", holes={" ^
-                    String.concatWith ", " (map row origins) ^ "}"))
+                Refute_Core.Private.say 2
+                  ("Refute model replay attempts: schematic=" ^
+                   Int.toString (#schematic_attempts replay_diagnostics) ^
+                   ", completions=" ^
+                   Int.toString (#completion_attempts replay_diagnostics) ^
+                   ", holes={" ^
+                   String.concatWith ", " (map row tallies) ^ "}")
               end
-            val _ = if current_trace "Refute" >= 2 then trace_attempts ()
+            val _ = if Refute_Core.Private.enabled 2 then trace_attempts ()
               else ()
           in
           (case replay of
@@ -2761,9 +2766,9 @@ fun certify {executable, original, eval_terms,
                    end
              | Refute_Cert_Model.NoCertificate reason =>
                  let
-                   val _ = if current_trace "Refute" >= 2 then
-                       (Refute_Core.Private.emit (fn () =>
-                          HOL_MESG ("Refute model replay: " ^ reason));
+                   val _ = if Refute_Core.Private.enabled 2 then
+                       (Refute_Core.Private.say 2
+                          ("Refute model replay: " ^ reason);
                         trace_candidates ())
                      else ()
                  in

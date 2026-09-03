@@ -1640,10 +1640,8 @@ structure Refute_Forl :> REFUTE_FORL = struct
                 if solver_message <> "" then solver_message
                 else parse_message
               val _ =
-                if errors <> "" andalso
-                   (Feedback.current_trace "Refute"
-                      handle Feedback.HOL_ERR _ => 0) >= 2
-                then Feedback.HOL_WARNING "Refute_Forl"
+                if errors <> "" andalso Refute_Core.Private.enabled 2
+                then Refute_Core.Private.warn "Refute_Forl"
                   "solve_any_problem" errors
                 else ()
             in

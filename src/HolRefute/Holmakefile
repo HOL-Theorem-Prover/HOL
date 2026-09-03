@@ -47,8 +47,11 @@ Refute_EvalCv.uo: Refute_Util.uo Refute_EvalEnum.uo
 Refute_EvalSML.uo: Refute_ModelFinder_Names.uo
 Refute_Extract.uo: Refute_Util.uo Refute_EvalEnum.uo
 
-# Keep the independent foundational modules ahead of the FORL stack.
-Refute_Forl.uo: Refute_ModelFinder_Util.uo Refute_PropSat.uo
+# Keep the foundational modules ahead of the FORL stack.  Refute_Forl
+# reports its kodkodi errors through Refute_Core.Private, so that the
+# warning a backend worker emits is serialized like every other one.
+Refute_Forl.uo: Refute_ModelFinder_Util.uo Refute_PropSat.uo \
+                Refute_Core.uo
 Refute_ForlSat.uo: Refute_Forl.uo
 
 # Keep Mono between HOL and Scope, matching the calculus dependency order.

@@ -16,6 +16,7 @@ type backend =
    configured : unit -> bool,
    requires : requirement,
    input : goal_form,
+   certainty_ceiling : config -> instance list -> certainty,
    run : config -> instance list -> outcome}
 ```
 
@@ -43,10 +44,14 @@ selected.  `requires` is `AnyGoal`, `ExecutableGoal`, or
 goal when `predicate cfg instances` holds.  `input` requests
 `MonoInstances` or `PolyOriginal` instances.
 
-The backend gets the conservative certainty ceiling `Genuine`.  This is
-safe for any backend, but a race then waits for it after a weaker
-result from another backend; the built-in narrowing and model-finder
-backends declare tighter ceilings.
+`certainty_ceiling` must overestimate the best certainty `run` can
+return for the same configuration and instances: a race stops once a
+result reaches the best ceiling any eligible backend declares, so an
+overestimate only misses an early stop, while an underestimate can
+suppress a stronger result from another backend.  A backend with no
+tighter, configuration-sensitive bound declares `fn _ => fn _ =>
+Genuine`, which is safe for any backend but makes a race wait for it
+after a weaker result elsewhere.
 
 Exceptions and ordinary timeouts in `run` become `Unknown`; interrupts
 are re-raised.

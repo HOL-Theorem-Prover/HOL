@@ -352,20 +352,20 @@ structure Refute_QC_Narrow = struct
   fun run config instances =
     Refute_Core.with_search_context config (run_body config) instances
 
+  fun certainty_ceiling
+        (_ : Refute_Core.config) (_ : Refute_Core.instance list) =
+    Refute_Core.Genuine
+
   val backend : Refute_Core.backend =
     {name = "narrowing",
      weight = 40,
      configured = fn () => true,
      requires = Refute_Core.AnyGoal,
      input = Refute_Core.MonoInstances,
+     certainty_ceiling = certainty_ceiling,
      run = run}
 
-  fun certainty_ceiling
-        (_ : Refute_Core.config) (_ : Refute_Core.instance list) =
-    Refute_Core.Genuine
-
-  fun register_backend () =
-    Refute_Core.register_backend_with_ceiling backend certainty_ceiling
+  fun register_backend () = Refute_Core.register_backend backend
 
   val _ = register_backend ()
 end

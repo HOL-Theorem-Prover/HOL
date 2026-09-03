@@ -1332,8 +1332,7 @@ structure Refute_QC = struct
     end
 
   fun add_reason reason reasons =
-    if List.exists (fn old => old = reason) (!reasons) then ()
-    else reasons := !reasons @ [reason]
+    reasons := Refute_Core.add_reason (reason, !reasons)
 
   datatype selected_compile =
       Selected of string * compiled_test
@@ -1463,14 +1462,13 @@ structure Refute_QC = struct
      than merely relabel it: a correct cv cleanup routinely costs 50-260ms,
      so anything near that is a knife edge, whereas the only cost of a large
      bound is how long a substrate that has already broken its contract can
-     stall one close.  A ref so that tests can shorten it. *)
-  val cleanup_timeout = ref (Time.fromSeconds 10)
+     stall one close. *)
+  val cleanup_timeout = Time.fromSeconds 10
 
   exception CleanupAbandoned of string
 
   fun bounded_close close =
     let
-      val bound = !cleanup_timeout
       val outcome = Synchronized.var "Refute substrate cleanup"
         (NONE : unit Exn.result option)
       fun body () =
@@ -1478,7 +1476,7 @@ structure Refute_QC = struct
         in Synchronized.change outcome (fn _ => SOME result) end
       val _ = Standard_Thread.fork
         {name = "refute-cleanup", stack_limit = NONE, interrupts = false} body
-      val deadline = Time.now () + bound
+      val deadline = Time.now () + cleanup_timeout
       fun attempt () =
         Synchronized.timed_access outcome (fn _ => SOME deadline)
           (Option.map (fn result => (result, SOME result)))
@@ -1507,7 +1505,7 @@ structure Refute_QC = struct
         | Exn.Res NONE =>
             Exn.Exn (CleanupAbandoned
               ("substrate cleanup did not return within " ^
-               Time.toString bound ^ "s and was abandoned"))
+               Time.toString cleanup_timeout ^ "s and was abandoned"))
     end
 
   fun close_selection (SelectionFailed _) = ()
@@ -2025,6 +2023,7 @@ structure Refute_QC = struct
          by compiling every gated quantifier through an Enum substrate. *)
       requires = Refute_Core.ExecutableGoalUnless smart_gate_override,
       input = Refute_Core.MonoInstances,
+      certainty_ceiling = fn _ => fn _ => Refute_Core.Genuine,
       run = strategy_run Exhaustive }
 
   val random_backend : Refute_Core.backend =
@@ -2033,6 +2032,7 @@ structure Refute_QC = struct
       configured = fn () => true,
       requires = Refute_Core.ExecutableGoal,
       input = Refute_Core.MonoInstances,
+      certainty_ceiling = fn _ => fn _ => Refute_Core.Genuine,
       run = fn config =>
         strategy_run (Random {seed = strategy_seed config}) config }
 

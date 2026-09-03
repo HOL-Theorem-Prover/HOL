@@ -180,22 +180,21 @@ structure Refute_Core = struct
     | ExecutableGoalUnless of config -> instance list -> bool
   datatype goal_form = MonoInstances | PolyOriginal
 
+  (* A ceiling must overestimate the best certainty [run] can return for
+     the same configuration and instances.  Overestimates only miss an
+     early stop; underestimates can suppress a stronger backend result.
+     A backend with no tighter, configuration-sensitive bound declares
+     the conservative [fn _ => fn _ => Genuine]. *)
+  type certainty_ceiling = config -> instance list -> certainty
+
   type backend =
     { name : string,
       weight : int,
       configured : unit -> bool,
       requires : requirement,
       input : goal_form,
+      certainty_ceiling : certainty_ceiling,
       run : config -> instance list -> outcome }
-
-  (* A ceiling must overestimate the best certainty [run] can return for
-     the same configuration and instances.  Overestimates only miss an
-     early stop; underestimates can suppress a stronger backend result. *)
-  type certainty_ceiling = config -> instance list -> certainty
-
-  type backend_registration =
-    { backend : backend,
-      certainty_ceiling : certainty_ceiling }
 
   val default_qc_config : qc_config =
     { size = 10,
@@ -1506,7 +1505,7 @@ structure Refute_Core = struct
             "\n" ]
     end
 
-  val backend_registry : (string * backend_registration) list ref = ref []
+  val backend_registry : (string * backend) list ref = ref []
   val registry_mutex = Mutex.mutex ()
 
   fun synchronized_registry f =
@@ -1544,43 +1543,34 @@ structure Refute_Core = struct
   fun release_run_resources () =
     release_actions (synchronized_registry (fn () => !run_releases))
 
-  fun backend_before (left : string * backend_registration)
-      (right : string * backend_registration) =
-    #weight (#backend (#2 left)) < #weight (#backend (#2 right)) orelse
-    (#weight (#backend (#2 left)) = #weight (#backend (#2 right)) andalso
-     #1 left < #1 right)
+  fun backend_before (left : string * backend) (right : string * backend) =
+    #weight (#2 left) < #weight (#2 right) orelse
+    (#weight (#2 left) = #weight (#2 right) andalso #1 left < #1 right)
 
   fun insert_backend entry [] = [entry]
     | insert_backend entry (other :: rest) =
         if backend_before entry other then entry :: other :: rest
         else other :: insert_backend entry rest
 
-  fun register_backend_with_ceiling backend certainty_ceiling =
+  fun register_backend (backend : backend) =
     synchronized_registry (fn () =>
       let
         val without_old =
           List.filter (fn (name, _) => name <> #name backend)
             (!backend_registry)
-        val registration =
-          {backend = backend, certainty_ceiling = certainty_ceiling}
-        val entry = (#name backend, registration)
       in
-        backend_registry := insert_backend entry without_old
+        backend_registry :=
+          insert_backend (#name backend, backend) without_old
       end)
-
-  fun register_backend backend =
-    (* Backends that declare no tighter, configuration-sensitive bound get
-       the conservative Genuine ceiling. *)
-    register_backend_with_ceiling backend (fn _ => fn _ => Genuine)
 
   fun resolve_backend_registrations names =
     let
       val snapshot = synchronized_registry (fn () => !backend_registry)
-      fun requested (registration : backend_registration) =
+      fun requested (registration : backend) =
         case names of
             NONE => true
           | SOME wanted => List.exists
-              (fn name => name = #name (#backend registration)) wanted
+              (fn name => name = #name registration) wanted
       fun registered name =
         List.exists (fn (registered, _) => registered = name) snapshot
       val registrations = map #2
@@ -2060,8 +2050,8 @@ structure Refute_Core = struct
   fun search_expired cfg = #expired (search_context_for cfg) ()
 
   datatype admission =
-      Eligible of backend_registration
-    | Excluded of backend_registration
+      Eligible of backend
+    | Excluded of backend
     | AdmissionTimeout of string
     | AdmissionError of string * exn
 
@@ -2132,9 +2122,10 @@ structure Refute_Core = struct
       List.concat (map one jobs)
     end
 
+  (* Append-if-absent, order preserved: the shared spelling for every
+     Refute reason list, whether held plainly or behind a ref. *)
   fun add_reason (reason, reasons) =
-    if List.exists (fn old => old = reason) reasons then reasons
-    else reasons @ [reason]
+    if Lib.mem reason reasons then reasons else reasons @ [reason]
 
   fun add_reasons (more, reasons) = List.foldl add_reason reasons more
 
@@ -2157,23 +2148,23 @@ structure Refute_Core = struct
       | ExecutableGoalUnless predicate =>
           executable orelse predicate cfg instances
 
-  fun admit_backend context search_context (cfg : config) forms registration =
+  fun admit_backend context search_context (cfg : config) forms
+        (backend : backend) =
     Thread_Data.setmp active_refute_context context (fn () =>
     Thread_Data.setmp active_search_context (SOME search_context) (fn () =>
       let
-        val backend = #backend registration
         val name = #name backend
         fun attempt () =
           if not (#configured backend ()) then
-            (Excluded registration, false)
+            (Excluded backend, false)
           else
             let
               val instances = instances_for_form (#input backend) forms
             in
               if meets_requirement cfg
                    (instances_are_executable instances) backend instances
-              then (Eligible registration, true)
-              else (Excluded registration, true)
+              then (Eligible backend, true)
+              else (Excluded backend, true)
             end
       in
         Timeout.apply (#remaining search_context ()) attempt ()
@@ -2239,7 +2230,7 @@ structure Refute_Core = struct
           val forms = Timeout.apply (#remaining search_context ())
             (preprocess_forms cfg) problem
           fun registration_instances registration =
-            instances_for_form (#input (#backend registration)) forms
+            instances_for_form (#input registration) forms
           val context = Thread_Data.get active_refute_context
           fun admit registration =
             admit_backend context search_context cfg forms registration
@@ -2289,7 +2280,7 @@ structure Refute_Core = struct
           else if null selected then Unknown excluded_reasons
           else
             let
-              fun higher (registration : backend_registration, best) =
+              fun higher (registration : backend, best) =
                 let
                   val candidate = #certainty_ceiling registration cfg
                     (registration_instances registration)
@@ -2301,8 +2292,7 @@ structure Refute_Core = struct
               val ceiling = List.foldl higher
                 (Potential ["no selected backend"]) selected
               val jobs = map (fn registration =>
-                (#backend registration, ref NONE : outcome option ref))
-                selected
+                (registration, ref NONE : outcome option ref)) selected
               fun noncounterexample_result () =
                 if has_no_counterexample jobs then NoCounterexample
                 else

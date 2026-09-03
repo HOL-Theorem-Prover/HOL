@@ -40,8 +40,15 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
 
   val trace = ref false
 
+  (* Monotonicity runs on a backend worker, so its output goes through
+     [Refute_Core.Private.emit] like every other emission reachable from
+     one.  The message is built before the lock is taken. *)
   fun trace_msg thunk =
-    if !trace then Feedback.HOL_MESG (thunk ()) else ()
+    if !trace then
+      let val message = thunk () in
+        Refute_Core.Private.emit (fn () => Feedback.HOL_MESG message)
+      end
+    else ()
 
   fun fresh counter =
     let val result = !counter + 1

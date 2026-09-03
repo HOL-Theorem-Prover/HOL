@@ -329,9 +329,7 @@ structure Refute_SmartGen = struct
      later definition with the same name after snapshot/revert. *)
   val intro_cache : inference_clause cache_entry list ref = ref []
 
-  fun same_stamp NONE NONE = true
-    | same_stamp (SOME left) (SOME right) = same_term left right
-    | same_stamp _ _ = false
+  val same_stamp = Lib.option_eq same_term
 
   fun cached_synthesis (cache : 'a cache_entry list ref) synthesize
         constant =
@@ -661,10 +659,6 @@ structure Refute_SmartGen = struct
          functional : mode list}
     | Uncompiled
 
-  datatype degradation =
-      HigherOrderParameters of term
-    | CrossGroupReference of term
-
   (* Which of a relation's modes have a decidable complement.  Only the
      mode is recorded: a complement is compiled from the positive clauses
      in [relations] under the same mode, so those remain the single source
@@ -678,8 +672,7 @@ structure Refute_SmartGen = struct
 
   type inference_result =
     {relations : relation_modes list,
-     negative : relation_negative_modes list,
-     degradation : degradation list}
+     negative : relation_negative_modes list}
 
   type premise_score =
     {missing : int,
@@ -1376,44 +1369,21 @@ structure Refute_SmartGen = struct
         {members, clauses, external, reorder_premises} : inference_result =
     let
       (* [seed_modes] builds a member's whole mode space -- up to
-         [max_mode_space] mode lists -- so it is computed once per member
-         and read by both [higher_order] and [start] below. *)
-      val seeded = map (fn relation => (relation, seed_modes relation)) members
-      val higher_order = List.mapPartial
-        (fn (relation, modes) => if null modes then SOME relation else NONE)
-        seeded
-      fun cross_reference term =
-        case premise_head term of
-            SOME head =>
-              (case lookup_assoc head external of
-                   SOME Uncompiled => SOME head
-                 | _ => NONE)
-          | NONE => NONE
-      (* Only a Horn clause can name a relation outside the group: a
-         graph clause's calls are self-calls by construction. *)
-      val cross = List.mapPartial cross_reference
-        (List.concat (map (fn ({body, ...} : keyed_clause) =>
-          case body of HornClause {ordered, ...} => ordered
-                     | GraphClause _ => []) clauses))
-      fun distinct_relations relations =
-        List.foldl (fn (relation, result) =>
-          if List.exists (same_constant relation) result then result
-          else result @ [relation]) [] relations
-      val degradation =
-        map (HigherOrderParameters o relation_term) higher_order @
-        map CrossGroupReference (distinct_relations cross)
-      val start = map (fn (relation, modes) =>
-        (relation, map (fn mode => (mode, [], false)) modes)) seeded
+         [max_mode_space] mode lists -- so it is computed once per
+         member, here. *)
+      val start = map (fn relation =>
+        (relation, map (fn mode => (mode, [], false))
+          (seed_modes relation))) members
       fun iteration table = map (fn (relation, modes) =>
         (relation, check_relation reorder_premises members external
           clauses table relation modes)) table
       fun fixpoint table =
         let val next = iteration table
         in if same_mode_table table next then next else fixpoint next end
-      (* A member whose seed is [[]] -- [higher_order], a genuinely
-         unsupported function parameter, or a mode space over
-         [max_mode_space] -- stays [[]] through the fixpoint, since
-         [check_relation] trivially returns [] for it every iteration. *)
+      (* A member whose seed is [[]] -- a genuinely unsupported function
+         parameter, or a mode space over [max_mode_space] -- stays [[]]
+         through the fixpoint, since [check_relation] trivially returns
+         [] for it every iteration. *)
       val stable = fixpoint start
       fun materialize (relation, modes) : relation_modes =
         {relation = relation, modes = modes}
@@ -1425,8 +1395,7 @@ structure Refute_SmartGen = struct
            modes}
     in
       {relations = map materialize stable,
-       negative = map materialize_negative stable,
-       degradation = degradation}
+       negative = map materialize_negative stable}
     end
 
   (* A Horn clause is tagged with the constant its conclusion applies.

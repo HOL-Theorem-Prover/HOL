@@ -6,11 +6,10 @@ open testutils
 open refuteTheory refuteTableZooTheory refuteUnusedTheory
 open Refute
 
-(* Two registry entry points are deliberately not in the [Refute]
-   signature, having no user outside these tests: the certainty ceiling a
-   backend races under, and the composed display callback a registration
-   installs.  Both stay observable here through their own modules. *)
-val register_backend_with_ceiling = Refute_Core.register_backend_with_ceiling
+(* One registry entry point is deliberately not in the [Refute]
+   signature, having no user outside these tests: the composed display
+   callback a registration installs.  It stays observable here through
+   its own module. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -225,7 +224,15 @@ fun stub_cex backend certainty : counterexample =
 
 fun stub name weight enabled run : backend =
   {name = name, weight = weight, configured = fn () => !enabled,
-   requires = AnyGoal, input = MonoInstances, run = run}
+   requires = AnyGoal, input = MonoInstances,
+   certainty_ceiling = fn _ => fn _ => Genuine, run = run}
+
+(* The ceiling a backend races under is a field, so a stub overrides just
+   that one and keeps the rest. *)
+fun with_ceiling ceiling (b : backend) : backend =
+  {name = #name b, weight = #weight b, configured = #configured b,
+   requires = #requires b, input = #input b,
+   certainty_ceiling = ceiling, run = #run b}
 
 fun with_enabled flags body =
   (app (fn f => f := true) flags;
@@ -510,11 +517,13 @@ val _ = test "backend input form selects instances or the original"
         {name = "selftest-input-mono", weight = ~94,
          configured = fn () => !enabled, requires = AnyGoal,
          input = MonoInstances,
+         certainty_ceiling = fn _ => fn _ => Genuine,
          run = fn _ => fn insts => (mono_seen := insts; Unknown [])}
       val _ = register_backend
         {name = "selftest-input-poly", weight = ~93,
          configured = fn () => !enabled, requires = AnyGoal,
          input = PolyOriginal,
+         certainty_ceiling = fn _ => fn _ => Genuine,
          run = fn _ => fn insts => (poly_seen := insts; Unknown [])}
       val cfg = default_config |> quiet |> upd_sequential true
         |> upd_finite_type_size 3
@@ -581,7 +590,8 @@ val _ = test "admission is bounded by the timeout" (fn () =>
        configured = fn () => !enabled,
        requires = ExecutableGoalUnless (fn _ => fn _ =>
          (OS.Process.sleep (Time.fromReal 1.0); true)),
-       input = MonoInstances, run = fn _ => fn _ => Unknown ["ran"]}
+       input = MonoInstances, certainty_ceiling = fn _ => fn _ => Genuine,
+       run = fn _ => fn _ => Unknown ["ran"]}
   in
     with_enabled [enabled] (fn () =>
       refute (default_config |> quiet |> upd_timeout 0.05
@@ -599,7 +609,8 @@ val _ = test "admission errors are reported in registry order" (fn () =>
        configured = fn () => !enabled,
        requires = ExecutableGoalUnless (fn _ => fn _ =>
          (OS.Process.sleep (Time.fromReal delay); raise Fail (name ^ " boom"))),
-       input = MonoInstances, run = fn _ => fn _ => Unknown ["ran"]}
+       input = MonoInstances, certainty_ceiling = fn _ => fn _ => Genuine,
+       run = fn _ => fn _ => Unknown ["ran"]}
     val _ = failing "selftest-admission-alpha" 0.3
     val _ = failing "selftest-admission-beta" 0.0
   in
@@ -698,19 +709,19 @@ local
       (genuine_may_start := true; Counterexample [stub_cex name certainty]))
   val _ = register_backend
     (cex_backend "selftest-race-potential" 50 (Potential ["stub"]))
-  val _ = register_backend_with_ceiling
-    (cex_backend "selftest-race-quasi" 50 (QuasiGenuine ["stub"]))
-    (fn _ => fn _ => QuasiGenuine ["stub ceiling"])
-  val _ = register_backend_with_ceiling
+  val quasi_ceiling = fn _ => fn _ => QuasiGenuine ["stub ceiling"]
+  val _ = register_backend (with_ceiling quasi_ceiling
+    (cex_backend "selftest-race-quasi" 50 (QuasiGenuine ["stub"])))
+  val _ = register_backend (with_ceiling quasi_ceiling
     (stub "selftest-race-slow-quasi" 55 enabled (fn _ => fn _ =>
       (slow_quasi_started := true;
        Counterexample [stub_cex "selftest-race-slow-quasi"
-                                (QuasiGenuine ["stub"])])))
-    (fn _ => fn _ => QuasiGenuine ["stub ceiling"])
+                                (QuasiGenuine ["stub"])]))))
   val _ = register_backend
     {name = "selftest-race-genuine", weight = 20,
      configured = fn () => !enabled, requires = ExecutableGoal,
      input = MonoInstances,
+     certainty_ceiling = fn _ => fn _ => Genuine,
      run = fn _ => fn _ =>
        let
          fun wait () = if !genuine_may_start then ()

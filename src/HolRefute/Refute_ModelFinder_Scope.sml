@@ -1,8 +1,7 @@
 structure Refute_ModelFinder_Scope = struct
   open Portable Feedback
 
-  type hol_type
- = Type.hol_type
+  type hol_type = Type.hol_type
   type term = Term.term
   type context = Refute_ModelFinder_HOL.mf_context
 
@@ -334,15 +333,18 @@ structure Refute_ModelFinder_Scope = struct
           total + (value + linearity) * (value + linearity))
           0 (column :: columns)
 
-  fun list_compare compare ([], []) = EQUAL
-    | list_compare compare (left :: lefts, right :: rights) =
+  (* Deliberately not [Portable.list_compare], which is total: a ragged
+     pair here means two scopes disagree on their coordinates, which is an
+     internal invariant violation rather than an ordering question. *)
+  fun strict_list_compare compare ([], []) = EQUAL
+    | strict_list_compare compare (left :: lefts, right :: rights) =
         (case compare (left, right) of
-             EQUAL => list_compare compare (lefts, rights)
+             EQUAL => strict_list_compare compare (lefts, rights)
            | order => order)
-    | list_compare _ _ = raise Util.BAD
-        ("Refute_ModelFinder_Scope.list_compare", "unequal lengths")
+    | strict_list_compare _ _ = raise Util.BAD
+        ("Refute_ModelFinder_Scope.strict_list_compare", "unequal lengths")
 
-  val int_list_compare = list_compare Int.compare
+  val int_list_compare = strict_list_compare Int.compare
 
   (* A leftist heap of combinations, cheapest first. *)
   datatype frontier_heap =
@@ -350,9 +352,14 @@ structure Refute_ModelFinder_Scope = struct
     | FrontierNode of int * int list * frontier_heap * frontier_heap
 
   fun frontier_before left right =
-    combination_cost left < combination_cost right orelse
-    (combination_cost left = combination_cost right andalso
-     int_list_compare (left, right) = LESS)
+    let
+      val left_cost = combination_cost left
+      val right_cost = combination_cost right
+    in
+      left_cost < right_cost orelse
+      (left_cost = right_cost andalso
+       int_list_compare (left, right) = LESS)
+    end
 
   fun frontier_rank FrontierEmpty = 0
     | frontier_rank (FrontierNode (rank, _, _, _)) = rank
@@ -850,10 +857,11 @@ structure Refute_ModelFinder_Scope = struct
 
   fun description_compare ((left_cards, left_maxes),
         (right_cards, right_maxes)) =
-    case list_compare (pair_compare (Type.compare, Int.compare))
+    case strict_list_compare (pair_compare (Type.compare, Int.compare))
            (left_cards, right_cards) of
-        EQUAL => list_compare (pair_compare (Term.compare, Int.compare))
-          (left_maxes, right_maxes)
+        EQUAL =>
+          strict_list_compare (pair_compare (Term.compare, Int.compare))
+            (left_maxes, right_maxes)
       | order => order
 
   fun distinct_descriptions values =

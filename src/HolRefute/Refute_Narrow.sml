@@ -7,10 +7,17 @@ structure Refute_Narrow = struct
      values live only in meta-level shapes; narrowing terms carry local IDs.
      Per-compile reconstruction selects the corresponding frozen shape, so
      no process-global custom-term table retains HOL terms. *)
+  (* [depth_stable] is the producer's claim that an alternative id
+     denotes the same value at every depth, so a consumer keying on the
+     id alone loses nothing.  It holds when the values are laid out by
+     position from a prefix-stable list ([GenEnum], and [GenNum] because
+     [Refute_Gen.narrowing_terms] tabulates on the index); a custom
+     enumerator may return a different list per depth, so it claims
+     nothing.  A new shape arm must state its own answer. *)
   datatype narrowing_type =
     Narrowing_sum_of_products of
       {depth : int, complete : bool, syntactic_complete : bool,
-       alternatives : narrowing_alternative list}
+       depth_stable : bool, alternatives : narrowing_alternative list}
   withtype narrowing_alternative =
     {id : int, exact : Term.term option, arguments : narrowing_type list}
 
@@ -194,10 +201,10 @@ structure Refute_Narrow = struct
       complete shape term
     end
 
-  fun flat_shape depth complete values =
+  fun flat_shape depth complete depth_stable values =
     Narrowing_sum_of_products
       {depth = depth, complete = complete,
-       syntactic_complete = complete,
+       syntactic_complete = complete, depth_stable = depth_stable,
        alternatives = indexed_map exact_alternative values}
 
   fun shape_failure ty reason = raise ShapeFailure (ty, reason)
@@ -235,13 +242,13 @@ structure Refute_Narrow = struct
 
       and compute_shape depth ty =
         case Refute_Gen.spec_of ty of
-            Refute_Gen.GenEnum values => flat_shape depth true values
+            Refute_Gen.GenEnum values => flat_shape depth true true values
           | Refute_Gen.GenNum kind =>
               (* Numeric enumerations are finite at some depths, but their
                  CHR/n2w values are not TypeBase constructors.  Marking them
                  complete would promise an existential replay proof which
                  Cert_Narrow cannot construct. *)
-              flat_shape depth false
+              flat_shape depth false true
                 (Refute_Gen.narrowing_terms kind depth)
           | Refute_Gen.GenDatatype {constrs, exhaustive, ...} =>
               let
@@ -282,6 +289,9 @@ structure Refute_Narrow = struct
                 Narrowing_sum_of_products
                   {depth = depth, complete = complete,
                    syntactic_complete = syntactic_complete,
+                   (* Constructor ids come from the TypeBase constructor
+                      list, which does not vary with depth. *)
+                   depth_stable = true,
                    alternatives = alternatives}
               end
           | Refute_Gen.GenFun _ =>
@@ -297,8 +307,9 @@ structure Refute_Narrow = struct
                   else shape_failure ty
                     "custom exhaustive enumeration returned a mistyped value"
               in
-                (* A custom callback has no completeness contract. *)
-                flat_shape depth false values
+                (* A custom callback has neither a completeness contract
+                   nor a stable value order across depths. *)
+                flat_shape depth false false values
               end
           | Refute_Gen.GenCustom _ =>
               shape_failure ty

@@ -4088,19 +4088,30 @@ structure Refute_Extract = struct
         map (checked_shape (first + index)) types)
 
       fun type_index ty = Lib.index (Util.same_type ty) types
+      (* [Refute_Gen.spec_of] takes four registry locks per call, and the
+         extraction asks for the spec of the same closed [types] list once
+         per alternative of every shape node -- tens of thousands of times
+         for a [char] carrier.  Resolve each once. *)
+      val type_specs = map (fn ty => (ty, Refute_Gen.spec_of ty)) types
+      fun spec_of ty =
+        case List.find (fn (other, _) => Util.same_type ty other)
+               type_specs of
+            SOME (_, spec) => spec
+          | NONE => Refute_Gen.spec_of ty
       fun argument_types ty id =
-        case Refute_Gen.spec_of ty of
+        case spec_of ty of
             Refute_Gen.GenDatatype {constrs, ...} =>
               #2 (List.nth (constrs, id))
           | _ => []
       fun exact_entries_in target_ty ty
             (shape as Refute_Narrow.Narrowing_sum_of_products
-              {depth, alternatives, ...}) =
+              {depth, depth_stable, alternatives, ...}) =
         let
           fun one alternative =
             (if Util.same_type target_ty ty then
                case #exact alternative of
-                   SOME value => [((depth, #id alternative), value)]
+                   SOME value =>
+                     [((depth, #id alternative), depth_stable, value)]
                  | NONE => []
              else []) @
             List.concat (ListPair.mapEq (fn (arg_ty, argument) =>
@@ -4109,25 +4120,32 @@ structure Refute_Extract = struct
         in
           List.concat (map one alternatives)
         end
-      fun exact_entries_of ty =
+      fun exact_entries_in_rows ty =
         List.concat (map (fn row =>
           List.concat (ListPair.mapEq (fn (row_ty, shape) =>
             exact_entries_in ty row_ty shape) (types, row)))
           shape_rows)
+      (* Each type's entries are walked by the conversion, reconstruction
+         and replay renderers alike, so gather them once per type. *)
+      val exact_entries_memo :
+        (hol_type * ((int * int) * bool * term) list) list ref = ref []
+      fun exact_entries_of ty =
+        case List.find (fn (other, _) => Util.same_type ty other)
+               (!exact_entries_memo) of
+            SOME (_, entries) => entries
+          | NONE =>
+              let val entries = exact_entries_in_rows ty in
+                exact_entries_memo := (ty, entries) :: !exact_entries_memo;
+                entries
+              end
 
-      (* [Refute_Gen.narrowing_terms] indexes a numeric kind's values by
-         position and [flat_shape] makes that position the alternative id,
-         so an id denotes the same value at every depth -- the invariant
-         [primitive_value] already relies on for the conversion side.  A
-         [GenEnum] type is flat for the same reason.  Only a custom
-         enumerator may hand back a different list per depth, so only it
-         needs the depth in the key.  Keying the rest on the id alone is
-         what keeps a [char] window of eleven depths at 256 reconstruction
-         arms instead of 2816. *)
+      (* The shape says whether an id denotes the same value at every
+         depth; only a shape that disclaims it needs the depth in the
+         key.  Keying the rest on the id alone is what keeps a [char]
+         window of eleven depths at 256 reconstruction arms rather than
+         2816.  A type with no exact entries at all keys on the id. *)
       fun exact_key_has_depth ty =
-        case Refute_Gen.spec_of ty of
-            Refute_Gen.GenCustom _ => true
-          | _ => false
+        List.exists (fn (_, stable, _) => not stable) (exact_entries_of ty)
       fun conv_name ty = "narrow_conv_" ^ integer (type_index ty)
       fun recon_name ty = "narrow_recon_" ^ integer (type_index ty)
       fun replay_recon_name ty =
@@ -4158,30 +4176,39 @@ structure Refute_Extract = struct
       fun exact_case render ty =
         let
           val keyed_by_depth = exact_key_has_depth ty
+          (* Collapsing the depth here is what the key rests on: outside a
+             custom enumerator an id denotes the same value at every
+             depth, so all depths share one arm. *)
+          fun key_of (depth, id) = if keyed_by_depth then (depth, id)
+            else (0, id)
           fun pattern (depth, id) =
             if keyed_by_depth then
               "(" ^ integer depth ^ ", " ^ integer id ^ ")"
             else integer id
-          val branches =
-            List.rev (List.foldl (fn ((key, value), result) =>
-              let val text = pattern key in
-                if List.exists (fn (seen, _) => seen = text) result then
-                  result
-                else (text, value) :: result
-              end) [] (exact_entries_of ty))
+          val (_, reversed) =
+            List.foldl (fn ((key, _, value), (seen, result)) =>
+              let val projected = key_of key in
+                if Redblackset.member (seen, projected) then (seen, result)
+                else (Redblackset.add (seen, projected),
+                      (key, value) :: result)
+              end)
+              (Redblackset.empty
+                 (Portable.pair_compare (Int.compare, Int.compare)), [])
+              (exact_entries_of ty)
+          val branches = List.rev reversed
         in
           if null branches then "raise Match"
           else
             "(case " ^
             (if keyed_by_depth then "(depth, constructor)"
              else "constructor") ^ " of\n       " ^
-            join "\n     | " (map (fn (text, value) =>
-              text ^ " => " ^ render value) branches) ^
+            join "\n     | " (map (fn (key, value) =>
+              pattern key ^ " => " ^ render value) branches) ^
             "\n     | _ => raise Match)"
         end
 
       fun conversion_case ty =
-        case Refute_Gen.spec_of ty of
+        case spec_of ty of
             Refute_Gen.GenEnum values =>
               "List.nth (" ^ term_list (map (expression context) values) ^
               ", constructor)"
@@ -4215,7 +4242,7 @@ structure Refute_Extract = struct
             exact_case (fn value =>
               "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
         in
-          case Refute_Gen.spec_of ty of
+          case spec_of ty of
             Refute_Gen.GenEnum _ => exact ()
           | Refute_Gen.GenNum _ => exact ()
           | Refute_Gen.GenDatatype {constrs, ...} =>
@@ -4275,7 +4302,8 @@ structure Refute_Extract = struct
 
       fun shape_source row_depth ty
             (Refute_Narrow.Narrowing_sum_of_products
-              {depth, complete, syntactic_complete, alternatives}) =
+              {depth, complete, syntactic_complete, depth_stable,
+               alternatives}) =
         let
           val _ =
             if depth = row_depth then ()
@@ -4303,7 +4331,10 @@ structure Refute_Extract = struct
              so spelling the list out costs a line per value at every
              depth in the window -- 256 of them per depth for [char].
              Tabulating the identical list keeps the generated program
-             proportional to the window rather than to the carrier. *)
+             proportional to the window rather than to the carrier.  The
+             ids must be checked, not inferred from [depth_stable]: a
+             datatype drops its non-nullary constructors at depth 0, so
+             an all-nullary row can still carry a gap. *)
           fun flat_alternatives () =
             let
               val ids = map #id alternatives
@@ -4322,6 +4353,7 @@ structure Refute_Extract = struct
           ", complete = " ^ Bool.toString complete ^
           ", syntactic_complete = " ^
           Bool.toString syntactic_complete ^
+          ", depth_stable = " ^ Bool.toString depth_stable ^
           ", alternatives = " ^
           (case flat_alternatives () of
                SOME compact => compact

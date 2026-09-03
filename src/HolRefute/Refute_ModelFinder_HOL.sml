@@ -1638,8 +1638,7 @@ structure Refute_ModelFinder_HOL = struct
     | tuple_type tys = pairSyntax.list_mk_prod tys
 
   fun wf_relation_variable rules domain_ty =
-    Term.variant
-      (List.concat (map Term.all_vars rules))
+    Term.variant (Term.all_varsl rules)
       (Term.mk_var ("R",
         Type.-->(domain_ty, Type.-->(domain_ty, Type.bool))))
 
@@ -2109,15 +2108,17 @@ structure Refute_ModelFinder_HOL = struct
     in check constants end
 
   fun print_wf_cache ({wf_cache, ...} : mf_context) =
-    List.app (fn (constant, (gfp, proved)) =>
-      Refute_Core.Private.say 2
-        ("The " ^ (if gfp then "coinductive" else "inductive") ^
-         " predicate \"" ^ Parse.term_to_string constant ^ "\" " ^
-         (if proved then
-            "was proved well-founded; Refute can compute it efficiently\n"
-          else
-            "could not be proved well-founded; Refute might need to " ^
-            "unroll it\n"))) (rev (!wf_cache))
+    if not (Refute_Core.Private.enabled 2) then ()
+    else
+      List.app (fn (constant, (gfp, proved)) =>
+        Refute_Core.Private.say 2
+          ("The " ^ (if gfp then "coinductive" else "inductive") ^
+           " predicate \"" ^ Parse.term_to_string constant ^ "\" " ^
+           (if proved then
+              "was proved well-founded; Refute can compute it efficiently\n"
+            else
+              "could not be proved well-founded; Refute might need to " ^
+              "unroll it\n"))) (rev (!wf_cache))
 
   fun is_equational_fun_surely_complete context constant =
     case equational_fun_axioms context constant of
