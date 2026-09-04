@@ -523,8 +523,70 @@ fun define_from_to_aux ignore_tyvars ty =
     in if null ignore_tyvars andalso not (null unused) then
          raise UnusedTypeVars (map (fst o dest_fun_type o type_of) unused)
        else () end
-  val from_def =
+  (* A type recursing under an operator is encoded by one function per
+     collection it recurses under, and those call each other.  The
+     older datatype construction presented the whole nest as a mutually
+     recursive family, so its recursion axiom matched these equations
+     and no termination argument was wanted.  The BNF construction's
+     axiom is about the type alone, so the same equations are a
+     well-founded recursion, and this is the measure that settles it:
+     each function's own argument, under its type's own size. *)
+  fun size_for ty =
+      let
+        val zero = mk_abs (mk_var ("v", ty), numSyntax.zero_tm)
+      in
+        if is_vartype ty then zero
+        else
+          let
+            val (_, args) = dest_type ty
+            val sz = #1 (TypeBase.size_of ty)
+          in
+            if null args then sz
+            else list_mk_icomb (sz, map size_for args)
+          end
+          handle HOL_ERR _ => zero
+      end
+  fun size_thms_for ty =
+      let
+        val ths =
+            if is_vartype ty then []
+            else
+              (#2 (TypeBase.size_of ty) ::
+               List.concat (map size_thms_for (#2 (dest_type ty))))
+              handle HOL_ERR _ => []
+      in ths end
+  val from_tys = map (fn f => #1 (dom_rng (type_of f))) from_names
+  fun from_args ty =
+      pairSyntax.list_mk_pair (tyvar_encoders @ [mk_var ("v", ty)])
+  fun from_branch ty =
+      pairSyntax.mk_pabs (from_args ty,
+                          mk_comb (size_for ty, mk_var ("v", ty)))
+  fun from_input_ty [ty] = type_of (from_args ty)
+    | from_input_ty (ty :: tys) =
+        mk_sum_type (type_of (from_args ty)) (from_input_ty tys)
+    | from_input_ty [] = fail()
+  fun from_cases [ty] = from_branch ty
+    | from_cases (tys as ty :: rest) =
+        let val x = mk_var ("x", from_input_ty tys)
+        in mk_abs (x, mk_sum_case x (from_branch ty) (from_cases rest)) end
+    | from_cases [] = fail()
+  val from_measure_tm =
+      ISPEC (from_cases from_tys) prim_recTheory.WF_measure |> concl |> rand
+  val from_size_thms =
+      List.concat (map size_thms_for from_tys) |> op_mk_set (fn t1 => fn t2 =>
+          aconv (concl t1) (concl t2))
+  val from_def_name = (from_names |> hd |> repeat rator |> dest_var |> fst)
+  fun make_from_def () =
       Feedback.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
+      handle HOL_ERR _ => fallback_from_def ()
+           | Match => fallback_from_def ()
+  and fallback_from_def () =
+      #1 (Defn.tprove
+            (Hol_defn from_def_name [ANTIQUOTE tm],
+             WF_REL_TAC [ANTIQUOTE from_measure_tm]
+             \\ rpt strip_tac
+             \\ simp_tac (srw_ss()) from_size_thms))
+  val from_def = make_from_def ()
   (* define decoding from cv type, i.e. "to function" *)
   val to_names = names |>
     map (fn (fname,ty) =>
