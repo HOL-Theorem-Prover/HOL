@@ -792,6 +792,10 @@ fun defnName nm =
       else "constructor" ^ mangled
     end
 
+(* a constructor's defining equation is not a fact about the new type;
+   it evaporates on export *)
+fun defnBinding nm = Theory.temp_binding (defnName nm ^ "_def")
+
 (* The constructors cannot be read off the functor's shape: a
    constructor whose argument is itself a sum — `V (v_rec + num)` — is
    the same shape as two constructors, and one whose arguments are
@@ -1016,7 +1020,7 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
                 (* defined at the specification's own variables, and
                    read back at the construction's *)
                 val def = INST_TYPE built
-                            (new_definition (Theory.temp_binding (defnName nm ^ "_def"),
+                            (new_definition (defnBinding nm,
                                              Term.inst wrote eqn))
                 val ctm = #1 (strip_comb (lhs (concl (SPEC_ALL def))))
                 val recs = isRec facs
@@ -4675,7 +4679,7 @@ fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
                   (* at the specification's own variables, read back at
                      the construction's *)
                   INST_TYPE (asBuilt nms0)
-                    (new_definition (Theory.temp_binding (defnName nm ^ "_def"),
+                    (new_definition (defnBinding nm,
                                      Term.inst (asSpecWrote nms0) eqn))
                 end
             val defs = List.tabulate (length nms,
