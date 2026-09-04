@@ -3995,8 +3995,17 @@ fun defineSize {tyname, sizes = sizenames} axiom =
          right-hand side and carrying only those laws: the sum is
          associated the way the old package associates it, and a
          simpset would reassociate it. *)
+      (* The tidying below has to normalise, so the laws are chosen to
+         leave no map behind and to overlap only where they agree.  A
+         pair the axiom hands over arrives written out at its
+         components, `(f (FST p), g (SND p))`, which is what ## is
+         defined to be, so putting the ## back is what lets the pair's
+         own size-of-map law fire; each law then strictly reduces the
+         number of maps under a size function, and I and the redexes go
+         last. *)
       fun sizeMapRWs () =
-          bnfPrelimsTheory.pair_size_map :: combinTheory.I_THM ::
+          [GSYM pairTheory.PAIR_MAP, bnfPrelimsTheory.pair_size_map,
+           bnfPrelimsTheory.option_size_map, combinTheory.I_THM] @
           List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
                           [("list", "list_size_map"), ("list", "MAP_ID"),
                            ("list", "MAP_ID_I")]
