@@ -287,6 +287,74 @@ are 3a, `EVAL_TAC` and `ASM_REWRITE_TAC` are 3b, `Induct_on`/`Cases_on`
 (TypeBase) and `Q.EXISTS_TAC` (parsing in a tactic body) are 3c.
 
 
+### Which slot, and who reads it
+
+The per-tactic table above says *which tactics* offend.  This is the
+other cut: *which slot* each read was after, which is what says how much
+work each fix is worth.  `Context.snapshot` cannot name the slot --- it
+is only known one call later --- so it leaves a mark and the next
+`Data.get` names itself; at trace 2 every read is followed by a
+`... the ambient read above was of slot "…"` line.
+
+Taken over `examples/lambda/basics` (six theories, rebuilt in a scratch
+directory with the trace at 2):
+
+| slot                             | reads |     % |
+|----------------------------------|-------|-------|
+| `ancestry.tactic_ignores.global` |  9164 | 77.0% |
+| `postkernel.DB`                  |  1582 | 13.3% |
+| `parse.term_grammar`             |   554 |  4.7% |
+| `Rewrite.implicit`               |   366 |  3.1% |
+| `parse.derived.term`             |   194 |  1.6% |
+| `ancestry.simp.global`           |    25 |  0.2% |
+| `ancestry.tfl_WF.global`         |     5 |  0.0% |
+| `parse.derived.type`             |     4 |  0.0% |
+
+The readers, in the same order: `Tactic.ignorable` (via
+`RULE_ASSUM_TAC`); `DB.revlookup`, from `simpLib.tyi_to_ssdata` naming a
+datatype's simpls and from `markerSyntax.MK_USING` for `… using th`;
+`Parse`'s ambient grammar, which is `GEN_TAC`'s `gen_variant` and any
+quotation in a tactic body; `Rewrite.implicit_rewrites`; the grammar
+again; `srw_ss`; TFL's termination prover; the grammar again.
+
+Two theories show the split cleanly.  `basic_swap` has no `using`
+anywhere, so its 376 `postkernel.DB` reads are all the simpset path,
+and `generic_terms` --- 6280 of the 9164 `tactic_ignores` reads --- is
+the one that leans hardest on `RULE_ASSUM_TAC`.
+
+Two things this changes about the plan.
+
+**One function accounts for three quarters of it.**  `Tactic.ignorable`
+asks `get_ignores()` whether an assumption is one to leave alone, and
+`RULE_ASSUM_TAC` asks that per assumption, per call.  `AncestryData`
+already hands out `get_global_value_of : Context.t -> 'value`, so the
+read itself is a one-line change; `RULE_ASSUM_TAC` then has to build its
+`rule'` inside the tactic's own `ctxt` scope rather than closing over it
+(the `fn g => fn ctxt => … g ctxt` shape --- do not eta-reduce).
+
+**But it is not only a plumbing change.**  `unignoring` /
+`unignoringc` --- used by `markerLib.unignoring_hide`, which is how
+`hide` survives `RULE_ASSUM_TAC` --- override the ignores set with
+`AncestryData.with_temp_value`, which sets the *global* ref for the
+duration (it is built on `Portable.genwith_flag`).  A context-based
+`ignorable` would not see that override, so `unignoring` has to put its
+temporary value into the context instead, and it is a general
+combinator (`('a -> 'b) -> ('a -> 'b)`) with no context to put it in.
+That is a real decision about whether `unignoring` is dynamically
+scoped, not a mechanical edit, and `src/marker/selftest.sml` pins the
+current behaviour.
+
+The rest map onto the phases already written: `postkernel.DB` is 3a
+(the simpset naming its datatype simpls) plus `using`; the three
+`parse.*` slots are `GEN_TAC` and 3c; `Rewrite.implicit` is 3b.
+
+The companion trace, "ambient signature inside proof", is silent by
+default and stayed that way here: the same six theories make 124 198 of
+those, all `mk_type`/`mk_const` resolving a name against the live
+signature, which is the recorded gap `live` exists to serve rather than
+anything to fix.
+
+
 ## Hand-off notes (guest VM)
 
 This plan is written to be executed by a fresh session with no
