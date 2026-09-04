@@ -162,10 +162,13 @@ fun reduce_cst rws (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
            NONE => false
          | SOME f => f Head
        val (spec_thm, new_rhs, cl, ants) = inst_rw (rule_inst, monitoring_p)
+       (* `thml` lists the antecedent proofs in the order of `ants`, which is
+          the order the implications are nested in, so each `MP` discharges
+          the current leading antecedent of the accumulator. *)
        fun mk_thm thml =
          TRANS th
                (List.foldl (fn (ant_eq_t, thm) =>
-                              MP spec_thm (EQT_ELIM ant_eq_t))
+                              MP thm (EQT_ELIM ant_eq_t))
                            spec_thm
                            thml)
      in
