@@ -160,17 +160,53 @@ val _ = if keyed_set_error
     andalso coinduction_count () = coinductions_before_failure then OK ()
   else die "malformed coinduction export changed persistent data"
 
-(* Only the diagnostic is checked here: ThmSetData's stored-attribute path
-   records the delta before applying it, so a rejected theorem does change
-   persistent data.  That is a ThmSetData issue, not a KeyedThmSet one. *)
-val _ = tprint "Malformed stored [coinduction] attribute is diagnosed"
+val _ = tprint "Malformed stored [coinduction] attribute is not persisted"
 val _ = if keyed_set_error
     {origin = "apply_delta", settype = "coinduction",
      expected = ["conclusion headed by a constant"]}
     (fn () => ThmAttribute.store_at_attribute
        {name = malformed_coinduction_name, attrname = "coinduction",
-        args = [], thm = malformed_coinduction}) then OK ()
-  else die "malformed stored coinduction attribute was accepted"
+        args = [], thm = malformed_coinduction})
+    andalso coinduction_count () = coinductions_before_failure then OK ()
+  else die "malformed stored coinduction attribute changed persistent data"
+
+(* a theorem the rule_induction set type rejects (its clause hypothesis is
+   headed by a variable) must leave no delta in the theory segment; an
+   accepted one must, which also shows the delta count below is live *)
+local
+  val nm = "malformed_rule_induction"
+  val th = GEN “P:num -> bool”
+               (DISCH T (GEN “x:num” (DISCH “(P:num -> bool) x” TRUTH)))
+  val _ = save_thm(nm, th)
+  val ok_nm = "wellformed_rule_induction"
+  val ok_th = DISCH T (GEN “x:num” (DISCH “even x” (ASSUME “even x”)))
+  val _ = save_thm(ok_nm, ok_th)
+  fun count () = length (thy_rule_inductions (current_theory ()))
+  fun rejected f = (f (); false) handle HOL_ERR _ => true
+  fun check msg f =
+      let
+        val _ = tprint msg
+        val n0 = count ()
+      in
+        if not (rejected f) then die "malformed theorem accepted"
+        else if count () <> n0 then die "rejected delta was recorded"
+        else OK()
+      end
+in
+val _ = (tprint "Accepted export_rule_induction is persisted";
+         let val n0 = count ()
+         in
+           export_rule_induction ok_nm;
+           if count () = n0 + 1 then OK()
+           else die "accepted delta was not recorded"
+         end)
+val _ = check "Rejected stored [rule_induction] attribute is not persisted"
+              (fn () => ThmAttribute.store_at_attribute
+                          {name = nm, attrname = "rule_induction", args = [],
+                           thm = th})
+val _ = check "Rejected export_rule_induction is not persisted"
+              (fn () => export_rule_induction nm)
+end
 
 val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln "tr")),
                     printresult = (fn (th,_,_) => thm_to_string th),

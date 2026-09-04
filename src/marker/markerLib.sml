@@ -1026,8 +1026,8 @@ val {record_delta = record_suspension_delta_raw,
 
 (* Wrapper that both persists the delta and updates the in-memory global *)
 fun record_suspension_delta d =
-    (record_suspension_delta_raw d;
-     update_susp_global (apply_susp_delta d))
+    (update_susp_global (apply_susp_delta d);
+     record_suspension_delta_raw d)
 
 (* --- suspension.resumptions store --- *)
 
@@ -1103,8 +1103,8 @@ val {record_delta = record_resumption_delta_raw,
 
 (* Wrapper that both persists the delta and updates the in-memory global *)
 fun record_resumption_delta d =
-    (record_resumption_delta_raw d;
-     update_res_global (apply_res_delta d))
+    (update_res_global (apply_res_delta d);
+     record_resumption_delta_raw d)
 
 (* Public lookup helpers. *)
 

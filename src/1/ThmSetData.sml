@@ -281,8 +281,10 @@ fun export_with_ancestry
           if null args then
             let val d = rADD(lift name)
             in
-              #record_delta fullresult d;
-              #update_global_value fullresult (raw_apply_global d)
+              (* apply first: a delta rejected by apply_to_global must not
+                 reach the segment, where it would raise on every load *)
+              #update_global_value fullresult (raw_apply_global d);
+              #record_delta fullresult d
             end
           else raise ERR "store_attrfun"
                      ("Arguments not allowed for attribute " ^ attrname)
