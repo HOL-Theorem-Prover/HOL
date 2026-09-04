@@ -825,3 +825,12 @@ Proof
 QED
 
 val _ = TotalDefn.export_termsimp "bnfPrelims.option_size_map"
+
+(* and the same of a pair, whose map is written with ## *)
+Theorem pair_size_map:
+  pair_size f g ((h ## k) p) = pair_size (\a. f (h a)) (\b. g (k b)) p
+Proof
+  Cases_on ‘p’ >> simp[]
+QED
+
+val _ = TotalDefn.export_termsimp "bnfPrelims.pair_size_map"

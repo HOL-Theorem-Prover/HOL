@@ -3996,8 +3996,10 @@ fun defineSize {tyname, sizes = sizenames} axiom =
          associated the way the old package associates it, and a
          simpset would reassociate it. *)
       fun sizeMapRWs () =
+          bnfPrelimsTheory.pair_size_map :: combinTheory.I_THM ::
           List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
-                          [("list", "list_size_map")]
+                          [("list", "list_size_map"), ("list", "MAP_ID"),
+                           ("list", "MAP_ID_I")]
       val tidy =
           STRIP_QUANT_CONV
             (RAND_CONV (QCONV (PURE_REWRITE_CONV (sizeMapRWs())) THENC
