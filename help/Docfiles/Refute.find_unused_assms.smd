@@ -13,10 +13,9 @@ Searches a theory for theorem assumptions that may be unnecessary.
 `Refute.find_unused_assms cfgopt thy` checks the theorems of `DB.thms
 thy` in name order.  `NONE` takes `!Refute.the_config` restricted to the
 Quickcheck backends `exhaustive`, `random`, and `narrowing`; `SOME cfg`
-keeps `cfg`'s backend selection, `backends = NONE` still meaning the
-full registry.  Every probe additionally forces sequential, quiet,
-abort-potential, expectation-free operation, and theorems are probed
-one at a time.
+keeps `cfg`'s backend selection, `AllBackends` included.  Every probe
+additionally forces sequential, quiet, abort-potential,
+expectation-free operation, and theorems are probed one at a time.
 
 For each theorem the outer universal quantifiers are stripped and the
 implication premises are indexed from zero, left to right; a
@@ -30,9 +29,9 @@ premises, `(name, SOME [])` when no premise was shown droppable, and
 `(name, SOME sets)` otherwise.
 
 Only a counterexample is decisive and the default bounds deepen until
-the deadline, so a probe that misses runs for the whole `timeout`.
-Sweeping a large theory is paced by that; supply `SOME cfg` with a
-smaller `timeout`, and fixed bounds where reproducibility matters.
+the deadline, so a probe that misses runs for the whole `timeout`,
+which paces a sweep of a large theory; supply `SOME cfg` with a smaller
+`timeout`, and fixed bounds where reproducibility matters.
 
 `check_unused_assms cfgopt (name, thm)` performs the same analysis on
 one theorem.  `print_unused_assms cfgopt thyopt` checks the named

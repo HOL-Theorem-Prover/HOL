@@ -24,8 +24,8 @@ type, and callbacks should respect the requested size and the
 deterministic random-state protocol.
 
 Registrations are session-local.  Registering the same type again
-replaces the callbacks and invalidates the generator, cardinality, and
-enumeration caches.
+replaces the callbacks, drops any abstract generator for the type, and
+clears the generator, cardinality, and enumeration caches.
 
 ### Failure
 

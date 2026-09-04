@@ -13,7 +13,7 @@ Searches for a counterexample under per-call configuration updates.
 with the configuration computed when the tactic is applied: the
 `config -> config` updates are applied to `!Refute.the_config` from left
 to right, so the last update of a field wins, and `the_config` itself is
-not modified.  This is the way to change options for one call.
+not modified.  This is the way to change options for one call:
 
 ``` hol4
 REFUTE_TAC_WITH
@@ -24,7 +24,7 @@ REFUTE_TAC_WITH
 
 Like every Refute tactic it prints its `Counterexample`,
 `NoCounterexample`, or `Unknown` report and then behaves as `ALL_TAC`,
-never closing or altering the goal.  Every field of the resulting
+never closing or altering the goal; every field of the resulting
 configuration is honoured, including `quiet` and `expect`.
 
 `REFUTE_TAC` is `REFUTE_TAC_WITH []`; `QUICKCHECK_TAC`, `NARROWING_TAC`,

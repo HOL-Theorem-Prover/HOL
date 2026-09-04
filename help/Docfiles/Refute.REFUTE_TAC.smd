@@ -13,10 +13,9 @@ Searches for a counterexample to the current tactic goal.
 `!Refute.the_config`, read when the tactic is applied, so every backend
 the current configuration selects takes part.  It prints the resulting
 `Counterexample`, `NoCounterexample`, or `Unknown` report and then
-behaves as `ALL_TAC`.  It is a diagnostic, not a proof tactic: the goal
-is never closed or altered, and a counterexample is not a tactic
-failure.  Every configuration field is honoured, including `quiet` and
-`expect`.
+behaves as `ALL_TAC`: the goal is never closed or altered, and a
+counterexample is not a tactic failure.  Every configuration field is
+honoured, including `quiet` and `expect`.
 
 ### Failure
 

@@ -17,8 +17,8 @@ iterations, seed, certification, quiet mode, and expectations.
 The exhaustive and random backends need an executable goal and use the
 substrate the configuration selects.  Narrowing accepts any goal, so it
 may be the only backend that applies; a counterexample it finds records
-`"narrowing"` as its backend.  The `kodkod` model finder is not
-selected; use [`Refute.model_refute`](#Refute.model_refute) for that.
+`"narrowing"` as its backend.  [`Refute.model_refute`](#Refute.model_refute)
+selects the `kodkod` model finder instead.
 
 ### See also
 

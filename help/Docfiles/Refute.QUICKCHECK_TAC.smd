@@ -12,10 +12,10 @@ Quickchecks the current tactic goal for a counterexample.
 `QUICKCHECK_TAC` is `REFUTE_TAC_WITH [upd_search QuickcheckBackends]`:
 it runs only the `exhaustive`, `random`, and `narrowing` backends, with
 every other field of `!Refute.the_config` as read when the tactic is
-applied.  It prints the resulting `Counterexample`, `NoCounterexample`,
-or `Unknown` report and then behaves as `ALL_TAC`, never closing or
-altering the goal; a counterexample is not a tactic failure.  `quiet`
-and `expect` are honoured.
+applied, `quiet` and `expect` included.  It prints the resulting
+`Counterexample`, `NoCounterexample`, or `Unknown` report and then
+behaves as `ALL_TAC`, never closing or altering the goal; a
+counterexample is not a tactic failure.
 
 ### Failure
 

@@ -24,8 +24,9 @@ and maps the old configuration to the new one, so updaters compose with
 read by `quickcheck`, `model_refute`, and the tactics when they are
 applied; `show_config ()` prints its complete value.  `apply_updates
 updates cfg` applies a list of updaters to `cfg` from left to right, and
-`current_config updates` does the same to `!the_config`; `REFUTE_TAC_WITH`,
-`refute_with`, and `refute_goal_with` are built from them.
+`current_config updates` does the same to `!the_config`;
+`REFUTE_TAC_WITH`, `refute_with`, and `refute_goal_with` are built from
+them.
 
 ``` hol4
 val cfg = Refute.default_config
@@ -71,15 +72,17 @@ Refute.upd_mf : mf_config -> config -> config
 
 `timeout` is one absolute deadline for the whole call: preprocessing,
 backend admission, compilation, testing, and solver calls all consume
-the same remainder.  `backends` is set through `upd_search`, which takes
-`AllBackends`, `QuickcheckBackends`, or `Only choices`; `Only []` is
-rejected.  The expectations are `NoExpectation`, `ExpectNone`,
-`ExpectUnknown`, `ExpectCex`, `ExpectModel`, `ExpectNoModel`,
-`ExpectGenuine`, `ExpectQuasiGenuine`, and `ExpectPotential`; a mismatch
-raises a HOL error.  A word type variable takes its instances from
-`widths`, independently of the QC and MF sub-records.  `upd_qc` and
-`upd_mf` replace a whole sub-record; the individual updaters are less
-brittle.
+the same remainder.  Racing backends each see the whole remainder;
+sequential backends split it, an early finisher leaving its unspent
+share to those behind it.  `backends` is set through `upd_search`,
+which takes `AllBackends`, `QuickcheckBackends`, or `Only choices`;
+`Only []` is rejected.  The expectations are `NoExpectation`,
+`ExpectNone`, `ExpectUnknown`, `ExpectCex`, `ExpectModel`,
+`ExpectNoModel`, `ExpectGenuine`, `ExpectQuasiGenuine`, and
+`ExpectPotential`; a mismatch raises a HOL error.  A word type variable
+takes its instances from `widths`, independently of the QC and MF
+sub-records.  `upd_qc` and `upd_mf` replace a whole sub-record; the
+individual updaters are less brittle.
 
 ### Quickcheck and narrowing fields
 
@@ -122,7 +125,7 @@ Refute.upd_allow_function_inversion : bool -> config -> config
 | `finite_functions` | `true` | Finitize narrowing function inputs. |
 | `certify` | `true` | Independently certify QC and narrowing hits. |
 | `smart_quantifier` | `true` | Compile premises into plans. |
-| `smart_generators` | `true` | Enable Horn `Enum` plans. |
+| `smart_generators` | `true` | Enable Horn `Enum` plans under exhaustive testing. |
 | `optimise_equality` | `true` | Bind suitable equality premises. |
 | `reorder_premises` | `true` | Reorder premises during smart mode inference. |
 | `use_subtype` | `false` | Test a generator-less typedef by transporting to its representation type. |
@@ -140,10 +143,9 @@ a hit stays `Genuine` with `cert = NONE`.  `allow_function_inversion`
 is itself a smart-generator route, so it has no effect when
 `smart_generators` is false.
 
-`substrate` selects, it does not promise: under `Auto` a substrate that
-declines the goal is skipped, whereas an explicitly selected substrate
-that declines reports `Unknown`.  `Auto` tries `NativeSML` then
-`Compute`.
+`Auto` tries `NativeSML` then `Compute`, skipping a substrate that
+declines the goal; an explicitly selected substrate that declines
+reports `Unknown`.
 
 By default QC substitutes one type for every type variable of a goal at
 once.  `upd_instantiate` pins named type variables instead: a `SOME ty`
@@ -154,13 +156,14 @@ variable no entry reaches keeps taking the shared carrier or width, as
 with `[]`.  A width variable (a word's index) takes a pin only from its
 own `SOME` entry, and that pin must be a word-width type (`:1`, `:2`,
 ...), since carriers and widths are disjoint value spaces; otherwise it
-keeps varying over `widths`.  Naming a type variable the goal lacks, a
-width variable with a non-width type, or a pin value with type variables
-of its own is a configuration error reported as `Unknown`.  Pinning
-changes only which monomorphic proxies QC tests: a still-polymorphic
-goal whose pinned instances are fully covered still reports `Unknown`,
-never `NoCounterexample`.  The model finder is unaffected; its
-equivalent is `upd_card [(SOME ty, [n])]`.
+keeps varying over `widths`.  Naming a type variable the goal lacks, or
+a width variable with a non-width type, is reported as `Unknown`; a key
+that is not a type variable, or a pin value with type variables of its
+own, is rejected by the updater.  Pinning changes only which
+monomorphic proxies QC tests: a still-polymorphic goal whose pinned
+instances are fully covered still reports `Unknown`, never
+`NoCounterexample`.  The model finder is unaffected; its equivalent is
+`upd_card [(SOME ty, [n])]`.
 
 A free variable at a typedef type `t` (abstraction `abs`,
 representation type `rty`, characteristic predicate `P`) usually leaves
@@ -181,10 +184,10 @@ harvestable typedef with a real `TYPE_DEFINITION` theorem, which
 excludes the model finder's synthetic frac and fmap typedef entries.  It
 does not reach inside another type: a free variable of type `t list` is
 untouched.  Deciding whether `t` is harvestable runs the model finder's
-lazy harvest, so a QC-only call can populate the model finder's typedef
-registry; the harvest is idempotent.  The model finder never sees the
-rewrite, as it handles typedefs natively.  The default matches
-Isabelle's `use_subtype`.
+idempotent lazy harvest, so a QC-only call can populate the model
+finder's typedef registry.  The model finder never sees the rewrite, as
+it handles typedefs natively.  The default matches Isabelle's
+`use_subtype`.
 
 ### Model-finder fields
 
@@ -273,12 +276,13 @@ Refute.upd_merge_type_vars : bool -> config -> config
 | `finitize` | fallback `NONE` | Choose or force finitization. |
 | `whack` | `[]` | Definitions preprocessing should ignore. |
 | `need` | `NONE` | Terms whose values must occur in a model. |
-| `merge_type_vars` | `false` | Merge MF type-variable scopes. |
+| `merge_type_vars` | `false` | Merge MF type-variable scopes into the alphabetically first variable. |
 
 `card_mode` is likewise iterative by default: the fallback row is an
 initial window that grows until the deadline.  `upd_card` pins fixed
 rows and `upd_iterative_card` restores scanning; an iterative row must
-be a consecutive prefix `[1, ..., n]`.
+be a consecutive prefix `[1, ..., n]`, and `card` must keep a `NONE`
+fallback row.
 
 In row-valued fields a `NONE` key is the fallback and a `SOME` key an
 override; Boolean row values use `NONE` for automatic choice and
@@ -295,12 +299,14 @@ different cardinalities for the merged variables.
 Updaters validate the resulting record.  `widths` must be nonempty with
 every entry between 1 and 32, and `bits` nonempty with every entry
 between 1 and 31.  `default_type` must be nonempty; it supplies every
-instance when `finite_types` is false.  Every `iter` row must be nonempty and nonnegative
-with a representable successor; a `bisim_depth` row must not mix `~1`
-with nonnegative depths, which likewise need a representable successor.
-Non-fallback keys of `max`, `wf`, and `iter` must be constants or
-variables, and of `instantiate` type variables.  `max_genuine` must be
-positive and `max_potential` nonnegative.
+instance when `finite_types` is false.  Every `iter` row must be
+nonempty and nonnegative with a representable successor; a
+`bisim_depth` row must not mix `~1` with nonnegative depths, which
+likewise need a representable successor.  Non-fallback keys of `max`,
+`wf`, and `iter` must be constants or variables, and of `instantiate`
+type variables.  `max_genuine` and `batch_size` must be positive;
+`max_potential`, the symmetry-breaking strengths, `max_threads`, and
+`tac_timeout` nonnegative.
 
 ### See also
 

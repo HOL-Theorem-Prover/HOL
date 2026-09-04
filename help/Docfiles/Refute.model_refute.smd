@@ -26,7 +26,7 @@ non-exhaustive pattern set with `ARB`, so a function defined by
 `f (x::xs) = x` leaves `f []` unconstrained here, and a goal whose truth
 depends on that completed value -- `f [] = ARB`, or an equation between
 two functions omitting the same pattern -- can be reported as a genuine
-counterexample.  Isabelle's Nitpick has the same limitation.
+counterexample, as in Isabelle's Nitpick.
 
 ### See also
 

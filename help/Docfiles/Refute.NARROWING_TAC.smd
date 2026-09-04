@@ -11,11 +11,11 @@ Runs native symbolic narrowing on the current tactic goal.
 
 `NARROWING_TAC` is `REFUTE_TAC_WITH [upd_search (Only [Narrowing])]`:
 it runs only the `narrowing` backend, with every other field of
-`!Refute.the_config` as read when the tactic is applied.  It prints the
-resulting `Counterexample`, `NoCounterexample`, or `Unknown` report and
-then behaves as `ALL_TAC`, never closing or altering the goal; a
-counterexample is not a tactic failure.  `quiet` and `expect` are
-honoured.  Narrowing accepts goals the executable backends decline,
+`!Refute.the_config` as read when the tactic is applied, `quiet` and
+`expect` included.  It prints the resulting `Counterexample`,
+`NoCounterexample`, or `Unknown` report and then behaves as `ALL_TAC`,
+never closing or altering the goal; a counterexample is not a tactic
+failure.  Narrowing accepts goals the executable backends decline,
 including prenex existentials when `allow_existentials` is true.
 
 ### Failure

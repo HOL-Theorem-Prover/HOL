@@ -45,8 +45,8 @@ goal when `predicate cfg instances` holds.  `input` requests
 `MonoInstances` or `PolyOriginal` instances.
 
 `certainty_ceiling` must overestimate the best certainty `run` can
-return for the same configuration and instances: a race stops once a
-result reaches the best ceiling any eligible backend declares, so an
+return for the same configuration and instances: a search stops once a
+result reaches the best ceiling any selected backend declares, so an
 overestimate only misses an early stop, while an underestimate can
 suppress a stronger result from another backend.  A backend with no
 tighter, configuration-sensitive bound declares `fn _ => fn _ =>
@@ -56,7 +56,7 @@ after a weaker result elsewhere.
 Exceptions and ordinary timeouts in `run` become `Unknown`; interrupts
 are re-raised.
 
-`run` must not call `Refute.refute`, or any other entry point that
+`run` must not call `Refute.refute` or any other entry point that
 starts a search.  A call made from inside a running one is refused, and
 the refusal becomes that backend's `Unknown` reason: the nested search
 would define into the enclosing call's open theory bracket and then wait

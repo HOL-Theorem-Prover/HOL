@@ -20,8 +20,8 @@ with `cert = NONE` (certification disabled, or its replay inconclusive)
 it is evidence without a theorem.  With the default `certify = true`,
 Quickcheck and narrowing hits normally carry a theorem.
 `NoCounterexample` records that a selected search covered its whole
-space; `Unknown` carries reasons for inapplicability, timeout, or
-incomplete search.  Neither is a HOL proof.
+space, and `Unknown` carries reasons for inapplicability, timeout, or
+incomplete search; neither is a HOL proof.
 
 ### Failure
 

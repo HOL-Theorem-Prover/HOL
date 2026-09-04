@@ -28,10 +28,11 @@ input.  Postprocessing never changes the raw model value, the
 certainty, or the certificate.  This is the one walk both a model
 finder display and a QC counterexample's reported binding go through.
 
-Two patterns are installed by default: function-update-chain
-deduplication at `:'a -> 'b` and finite-map notation at `:'a |-> 'b`.
-Registering at exactly one of those patterns replaces the built-in for
-the rest of the session.  Registrations are session-local.
+Four patterns are installed by default: function-update-chain
+deduplication at `:'a -> 'b`, finite-map notation at `:'a |-> 'b`, and
+the fraction-atom renderers at `:rat` and `:real`.  Registering at
+exactly one of those patterns replaces the built-in for the rest of the
+session.  Registrations are session-local.
 
 ### See also
 

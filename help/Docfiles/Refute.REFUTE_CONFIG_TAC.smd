@@ -11,10 +11,9 @@ Searches for a counterexample under an exact configuration.
 
 `REFUTE_CONFIG_TAC cfg` runs `Refute.refute_goal cfg` on the goal.  It
 never consults `Refute.the_config`, so its behaviour is independent of
-the session's interactive defaults; this is the form for reproducible
-tools and regression tests, usually together with the fixed `upd_size`
-and `upd_card` bounds.  `Refute.REFUTE_TAC_WITH` is the convenience form
-that adjusts the interactive configuration for one call instead.
+the session's interactive defaults: this is the form for reproducible
+tools and regression tests, usually with the fixed `upd_size` and
+`upd_card` bounds:
 
 ``` hol4
 REFUTE_CONFIG_TAC
@@ -23,9 +22,10 @@ REFUTE_CONFIG_TAC
      |> upd_size 7)
 ```
 
-Like every Refute tactic it prints its `Counterexample`,
+`Refute.REFUTE_TAC_WITH` instead adjusts the interactive configuration
+for one call.  Like every Refute tactic it prints its `Counterexample`,
 `NoCounterexample`, or `Unknown` report and then behaves as `ALL_TAC`,
-never closing or altering the goal.  Every field of `cfg` is honoured,
+never closing or altering the goal; every field of `cfg` is honoured,
 including `quiet` and `expect`.
 
 ### Failure
