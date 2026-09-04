@@ -340,8 +340,31 @@ fun pp_goalstate gs = let
               add_newline >> add_newline >>
               pp_goalstate rest)
         | NONE =>
-          add_string "No subgoals but proof incomplete (try close_paren)." >>
-          add_newline))
+          (* Two very different states reach here, and telling a user
+             the wrong one is worse than saying nothing.
+
+             If something is still open, the proof really is unfinished
+             and `close_paren' is the advice.  If nothing is open --
+             `close_paren' raising `Bind' is exactly "no frame at this
+             depth" -- then every step ran and every frame closed, and
+             what failed was rebuilding the theorem from the subgoals'
+             validations.  That is ours to fix, not the user's, and
+             must not be reported as their proof being incomplete. *)
+          let
+            val nothing_open =
+                (close_paren gs; false) handle Bind => true | _ => false
+          in
+            if nothing_open then
+              add_string "All subgoals are closed, but the theorem \
+                         \could not be rebuilt from them: a \
+                         \validation rejected the subgoals' \
+                         \theorems.  This is a limitation of \
+                         \stepping through the proof, not a report \
+                         \about the proof itself." >> add_newline
+            else
+              add_string "No subgoals but proof incomplete (try \
+                         \close_paren)." >> add_newline
+          end))
     | goals => let
       val (ellipsis_action, goals_to_print) =
         if length goals > show_nsubgoals then let

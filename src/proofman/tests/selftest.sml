@@ -480,6 +480,32 @@ val _ =
       else die ("proved " ^ term_to_string (concl th))
     end
 
+val _ = tprint "select_lt reassembles an interleaved selection"
+val _ =
+    let
+      (* The selected goals are the 1st and 3rd, so the selection is
+         interleaved with what it leaves behind -- which is what a
+         pattern like `VAR v' does to the goals of an induction.  A
+         contiguous selection cannot tell a validation that reassembles
+         in the wrong order from one that does not. *)
+      val tm = “p ∧ q ∧ r ∧ s ⇒ (p ∧ p) ∧ q ∧ (r ∧ r) ∧ s”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = ex (REPEAT STRIP_TAC) (goalFrag.new_goal ([], tm))
+      val st = goalFrag.open_select_lt st
+      val st = ex CONJ_TAC st
+      val st = goalFrag.next_select_lt st
+      val st = goalFrag.open_paren st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+      val st = goalFrag.close_paren st
+      val st = goalFrag.close_paren st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+      val th = goalFrag.finish st
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end
+
 val _ = tprint "close_repeat pairs subgoals with their own theorems"
 val _ =
     let
