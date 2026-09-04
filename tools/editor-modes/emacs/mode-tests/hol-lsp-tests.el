@@ -293,12 +293,12 @@ whatever order the workers finish, so what answers \"is it done?\" is
 the tally, not the per-proof marks."
   (with-temp-buffer
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
-    (puthash "a" "proved" hol-lsp--proof-states)
-    (puthash "b" "checking" hol-lsp--proof-states)
+    (puthash "a" (cons "proved" 3) hol-lsp--proof-states)
+    (puthash "b" (cons "checking" 9) hol-lsp--proof-states)
     (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
-    (puthash "b" "proved" hol-lsp--proof-states)
+    (puthash "b" (cons "proved" 9) hol-lsp--proof-states)
     (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
-    (puthash "c" "failed" hol-lsp--proof-states)
+    (puthash "c" (cons "failed" 15) hol-lsp--proof-states)
     (should (equal (hol-lsp-proof-summary) " HOL[2/3 1!]"))))
 
 (ert-deftest hol-lsp-proof-states-accumulate-and-cheated-is-outstanding ()
@@ -351,3 +351,35 @@ compile.  Keeping it would leave the tally permanently short."
             (should (equal (hol-lsp-proof-summary) " HOL[1 ok]")))
           (kill-buffer buf))
       (delete-file file))))
+
+(ert-deftest hol-lsp-outstanding-proofs-are-named-and-ordered ()
+  "A count is only actionable if the user can reach the proof it is
+short of, so the outstanding ones are listed in file order, with the
+settled ones left out."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (puthash "late" (cons "checking" 40) hol-lsp--proof-states)
+    (puthash "done" (cons "proved" 10) hol-lsp--proof-states)
+    (puthash "early" (cons "failed" 5) hol-lsp--proof-states)
+    (let ((out (hol-lsp--outstanding-proofs)))
+      (should (equal (mapcar #'car out) '("early" "late")))
+      (should (equal (nth 1 (car out)) "failed")))
+    (should (string-match-p "early (failed)" (hol-lsp--proof-help-echo)))))
+
+(ert-deftest hol-lsp-goto-outstanding-proof-walks-them ()
+  "Repeating the command cycles through the outstanding proofs rather
+than sticking on the first."
+  (with-temp-buffer
+    (insert (mapconcat (lambda (i) (format "line %d" i))
+                       (number-sequence 0 20) "\n"))
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (puthash "a" (cons "checking" 4) hol-lsp--proof-states)
+    (puthash "b" (cons "suspended" 12) hol-lsp--proof-states)
+    (goto-char (point-min))
+    (hol-lsp-goto-outstanding-proof)
+    (should (equal (line-number-at-pos) 5))
+    (hol-lsp-goto-outstanding-proof)
+    (should (equal (line-number-at-pos) 13))
+    ;; and back round to the first
+    (hol-lsp-goto-outstanding-proof)
+    (should (equal (line-number-at-pos) 5))))

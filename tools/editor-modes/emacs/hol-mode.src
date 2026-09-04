@@ -2821,8 +2821,10 @@ client accumulates.  nil until the first notification arrives.")
       (with-current-buffer buf
         (let ((tbl (hol-lsp--proof-states-table)))
           (dolist (st (append states nil))
-            (let ((name (plist-get st :name))
-                  (status (plist-get st :status)))
+            (let* ((name (plist-get st :name))
+                   (status (plist-get st :status))
+                   (pos (plist-get st :pos))
+                   (line (and pos (plist-get pos :line))))
               (when name
                 ;; `cheated' is kept, not forgotten.  It means the pool
                 ;; has dropped the entry -- an edit reached that proof
@@ -2831,7 +2833,10 @@ client accumulates.  nil until the first notification arrives.")
                 ;; became 61 checked, which reads as finished rather
                 ;; than as one outstanding.  Counted as outstanding, it
                 ;; shows as 61/62 until the worker settles it.
-                (puthash name status tbl)))))
+                ;; The line is what makes 61/62 actionable: it is how
+                ;; `hol-lsp-goto-outstanding-proof' finds the one the
+                ;; count is short of.
+                (puthash name (cons status line) tbl)))))
         (force-mode-line-update)))))
 
 (defun hol-lsp--prune-stale-proofs (uri)
@@ -2849,10 +2854,52 @@ proof that is never coming back."
         (when hol-lsp--proof-states
           (let (stale)
             (maphash (lambda (k v)
-                       (when (equal v "cheated") (push k stale)))
+                       (when (equal (car-safe v) "cheated") (push k stale)))
                      hol-lsp--proof-states)
             (dolist (k stale) (remhash k hol-lsp--proof-states))
             (when stale (force-mode-line-update))))))))
+
+(defun hol-lsp--outstanding-proofs ()
+  "Proofs this buffer's pool has not settled, as (NAME STATUS LINE).
+Sorted by position, so walking them goes down the file.  `checking'
+and `cheated' are outstanding -- one has a worker on it, the other is
+waiting for the compile to re-enqueue it -- and the three bad verdicts
+are listed too, since those are what a user most wants to reach.
+`proved' is not listed: it is the state that needs nothing."
+  (let (out)
+    (when hol-lsp--proof-states
+      (maphash (lambda (name v)
+                 (let ((status (car-safe v)) (line (cdr-safe v)))
+                   (unless (equal status "proved")
+                     (push (list name status (or line 0)) out))))
+               hol-lsp--proof-states))
+    (sort out (lambda (a b) (< (nth 2 a) (nth 2 b))))))
+
+(defun hol-lsp-goto-outstanding-proof ()
+  "Move to the next proof the pool has not settled, and say which.
+The tally says how many are outstanding; this is how to reach them.
+Cycles from point, so repeating it walks them."
+  (interactive)
+  (let ((out (hol-lsp--outstanding-proofs)))
+    (if (null out)
+        (message "HOL: no outstanding proofs")
+      (let* ((here (line-number-at-pos))
+             (next (or (seq-find (lambda (e) (> (1+ (nth 2 e)) here)) out)
+                       (car out))))
+        (goto-char (point-min))
+        (forward-line (nth 2 next))
+        (message "HOL: %s is %s (%d outstanding)"
+                 (nth 0 next) (nth 1 next) (length out))))))
+
+(defun hol-lsp--proof-help-echo ()
+  "Name the outstanding proofs, for the mode line's tooltip."
+  (let ((out (hol-lsp--outstanding-proofs)))
+    (if (null out)
+        "HOL: every proof checked"
+      (concat "HOL proofs outstanding: "
+              (mapconcat (lambda (e) (format "%s (%s)" (nth 0 e) (nth 1 e)))
+                         out ", ")
+              "  --  M-x hol-lsp-goto-outstanding-proof"))))
 
 (defun hol-lsp-proof-summary ()
   "A one-line tally of what the pool is doing in this buffer.
@@ -2867,10 +2914,11 @@ from 30 to 12 reads as what it is."
       ""
     (let ((checking 0) (proved 0) (bad 0))
       (maphash (lambda (_k v)
-                 (cond ((member v '("checking" "cheated"))
-                        (setq checking (1+ checking)))
-                       ((equal v "proved") (setq proved (1+ proved)))
-                       (t (setq bad (1+ bad)))))
+                 (let ((status (car-safe v)))
+                   (cond ((member status '("checking" "cheated"))
+                          (setq checking (1+ checking)))
+                         ((equal status "proved") (setq proved (1+ proved)))
+                         (t (setq bad (1+ bad))))))
                hol-lsp--proof-states)
       (let ((total (+ checking proved bad)))
         (cond ((zerop total) "")
@@ -2879,6 +2927,13 @@ from 30 to 12 reads as what it is."
                        (if (> bad 0) (format " %d!" bad) "")))
               ((> bad 0) (format " HOL[%d/%d %d!]" proved total bad))
               (t (format " HOL[%d ok]" proved)))))))
+
+(defun hol-lsp-proof-mode-line ()
+  "`hol-lsp-proof-summary' with the outstanding proofs in a tooltip."
+  (let ((text (hol-lsp-proof-summary)))
+    (if (string= text "")
+        ""
+      (propertize text 'help-echo (hol-lsp--proof-help-echo)))))
 
 (with-eval-after-load 'eglot
   (cl-defmethod eglot-handle-notification
@@ -2901,7 +2956,7 @@ from 30 to 12 reads as what it is."
     (hol-lsp--prune-stale-proofs uri)))
 
 (add-to-list 'mode-line-misc-info
-             '(:eval (hol-lsp-proof-summary)) t)
+             '(:eval (hol-lsp-proof-mode-line)) t)
 
 (defun hol-lsp-retry-compile ()
   "Ask the server to compile this buffer again.
