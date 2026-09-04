@@ -676,7 +676,7 @@ val _ = checkeqn "and they are mutually recursive too"
     (∀a t. ct2SET (CD a t) = a INSERT ct2SET t)”
 
 val ctyinfos = typeBaseInfo {axiom = caxiom, induction = cinduction,
-                             case_defs = ccases,
+                             case_defs = ccases, mapIDs = [],
                              rewrites = List.map (fn e => #map_eqns e ::
                                                            #set_eqns e)
                                                  ceqns,
