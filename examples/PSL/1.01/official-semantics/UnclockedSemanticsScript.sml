@@ -130,8 +130,7 @@ Definition OLD_UF_SEM_def:
              OLD_UF_SEM (CAT(SEL w (0,j-1),w')) f)
 Termination
   (* every call is about a sub-formula of the one in hand *)
-  WF_REL_TAC `measure (\(w,f). fl_size (K 0) f)` >>
-  rw [SyntaxTheory.bexp_MAP_ID]
+  WF_REL_TAC `measure (\(w,f). fl_size (K 0) f)` >> rw []
 End
 
 (******************************************************************************
@@ -186,8 +185,7 @@ Definition UF_SEM_def:
              UF_SEM (CAT(SEL w (0,j-1),w')) f)
 Termination
   (* every call is about a sub-formula of the one in hand *)
-  WF_REL_TAC `measure (\(w,f). fl_size (K 0) f)` >>
-  rw [SyntaxTheory.bexp_MAP_ID]
+  WF_REL_TAC `measure (\(w,f). fl_size (K 0) f)` >> rw []
 End
 
 (******************************************************************************
