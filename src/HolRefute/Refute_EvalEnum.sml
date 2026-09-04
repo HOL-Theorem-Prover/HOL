@@ -882,70 +882,47 @@ structure Refute_EvalEnum = struct
         | Exn.Exn error => raise CleanupFailed error
     end
 
-  (* A compiled test holds its bracket from the first definition it makes
-     until [close], so lifetimes can overlap on one thread: a substrate that
-     opens its bracket while compiling leaves a second test compiled before
-     that close opening its own bracket inside the first, and with a plain
-     mutex that second open waits for a lock the caller itself holds and
-     never returns.  Entry is therefore re-entrant for the holding thread:
-     nested brackets share the outer baseline and only the outermost close
-     reverts, so the theory is clean again exactly when no bracket is open.
-     Other threads still wait, because HOL's theory state tolerates only one
-     mutator at a time. *)
-  val bracket_owner = ref (NONE : Thread.thread option)
-  val bracket_depth = ref 0
+  (* At most one bracket is open at a time.  A compiled test holds its own
+     from the first definition it makes until [close], and [Refute_Core]
+     refuses a Refute call made from inside a running one, so no thread can
+     reach a second open while holding the first.  A second test's open
+     therefore waits on [theory_lock], as another thread's would. *)
   val bracket_open = ref (NONE : snapshot option)
-
-  fun holds_theory_bracket () =
-    case !bracket_owner of
-        NONE => false
-      | SOME owner => Thread.equal (owner, Thread.self ())
 
   (* Both of these must be called with interrupts masked, so that a lock
      is never acquired or released without its bookkeeping. *)
   fun enter_theory_bracket restore_attributes =
-    if holds_theory_bracket () then
-      bracket_depth := !bracket_depth + 1
-    else
-      let
-        val _ = lock_interruptibly restore_attributes
-        (* Everything defined from here until the revert has finished is
-           the evaluator's own, so it must not retire the enumerator
-           programs the plan being compiled refers to. *)
-        val _ = Refute_SmartGen.enter_private_theory ()
-      in
-        case Exn.capture snapshot () of
-            Exn.Exn error =>
-              (Refute_SmartGen.leave_private_theory ();
-               unlock_theory (); raise error)
-          | Exn.Res baseline =>
-              (bracket_open := SOME baseline;
-               bracket_owner := SOME (Thread.self ());
-               bracket_depth := 1)
-      end
+    let
+      val _ = lock_interruptibly restore_attributes
+      (* Everything defined from here until the revert has finished is
+         the evaluator's own, so it must not retire the enumerator
+         programs the plan being compiled refers to. *)
+      val _ = Refute_SmartGen.enter_private_theory ()
+    in
+      case Exn.capture snapshot () of
+          Exn.Exn error =>
+            (Refute_SmartGen.leave_private_theory ();
+             unlock_theory (); raise error)
+        | Exn.Res baseline => bracket_open := SOME baseline
+    end
 
-  (* Returns the outermost close's cleanup outcome for the caller to
-     release once it has decided which exception wins. *)
+  (* Returns the close's cleanup outcome for the caller to release once it
+     has decided which exception wins. *)
   fun leave_theory_bracket () =
-    if !bracket_depth > 1 then
-      (bracket_depth := !bracket_depth - 1; Exn.Res ())
-    else
-      let
-        val baseline = !bracket_open
-        val _ = bracket_open := NONE
-        val _ = bracket_depth := 0
-        val _ = bracket_owner := NONE
-        val cleanup =
-          case baseline of
-              NONE => Exn.Res ()
-            | SOME baseline => Exn.capture close_theory_bracket baseline
-        (* After the revert, not before: the deletions it performs are
-           themselves theory deltas of the evaluator's own making. *)
-        val _ = Refute_SmartGen.leave_private_theory ()
-        val _ = unlock_theory ()
-      in
-        cleanup
-      end
+    let
+      val baseline = !bracket_open
+      val _ = bracket_open := NONE
+      val cleanup =
+        case baseline of
+            NONE => Exn.Res ()
+          | SOME baseline => Exn.capture close_theory_bracket baseline
+      (* After the revert, not before: the deletions it performs are
+         themselves theory deltas of the evaluator's own making. *)
+      val _ = Refute_SmartGen.leave_private_theory ()
+      val _ = unlock_theory ()
+    in
+      cleanup
+    end
 
   datatype 'a held_state =
       HeldIdle

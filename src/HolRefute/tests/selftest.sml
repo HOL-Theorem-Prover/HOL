@@ -674,7 +674,11 @@ val _ = test "admission errors are reported in registry order" (fn () =>
       | _ => false
   end)
 
-val _ = test "a backend may call refute re-entrantly" (fn () =>
+(* A backend calling back into Refute would compile a second substrate test
+   inside the enclosing call's open theory bracket, then wait on a theory
+   lock its own caller holds.  Refused, and the refusal reaches the caller
+   as the backend's reason rather than as a hang. *)
+val _ = test "a backend may not call refute re-entrantly" (fn () =>
   let
     val enabled = ref false
     val nested_runs = ref 0
@@ -689,11 +693,13 @@ val _ = test "a backend may call refute re-entrantly" (fn () =>
   in
     with_enabled [enabled] (fn () =>
       with_global_thread_count 1 (fn () =>
-        (refute (default_config |> quiet |> upd_sequential false
-                   |> upd_timeout 10.0
-                   |> only [RegisteredBackend "selftest-outer",
-                            RegisteredBackend "selftest-nested"]) ``T``
-         |> is_unknown) andalso !nested_runs = 2))
+        unknown_with "called from a backend of a running Refute call"
+          (refute (default_config |> quiet |> upd_sequential false
+                     |> upd_timeout 10.0
+                     |> only [RegisteredBackend "selftest-outer",
+                              RegisteredBackend "selftest-nested"]) ``T``)
+        (* Only the top-level selection of it, never the refused call. *)
+        andalso !nested_runs = 1))
   end)
 
 val _ = test "interrupting the caller unwinds the backends" (fn () =>

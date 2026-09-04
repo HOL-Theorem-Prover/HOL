@@ -132,8 +132,8 @@ structure Refute_Eval :> Refute_Eval = struct
   val session_seed_mutex = Mutex.mutex ()
 
   (* Reserving an implicit seed advances the session stream exactly once.
-     Refute invocations may be reentrant, so the ordinary output mutex is
-     not sufficient protection for this mutable stream. *)
+     Backend workers reserve concurrently within one call, which the output
+     mutex does not cover, so this stream needs a mutex of its own. *)
   fun take_session_seed () =
     Multithreading.synchronized "Refute random seed" session_seed_mutex
       (fn () =>

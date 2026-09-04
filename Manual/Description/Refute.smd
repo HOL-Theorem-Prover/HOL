@@ -999,7 +999,9 @@ the exact validation rules.
   of the candidate overwrote.  Registration fails if `tyop` already has
   `TypeBase` datatype constructors.
 * `register_backend backend` adds or replaces a weighted backend, under
-  the certainty ceiling its `certainty_ceiling` field declares.
+  the certainty ceiling its `certainty_ceiling` field declares.  Its
+  `run` may not start a nested search: a Refute call made from inside a
+  running one is refused, and becomes that backend's `Unknown` reason.
 * `register_codatatype {tyop, case_const, constructors, witness}`
   validates the constructor and case shapes and registers.  Shape alone
   cannot tell codata from an inductive datatype, so for a type the

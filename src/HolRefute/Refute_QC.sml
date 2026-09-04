@@ -1343,9 +1343,9 @@ structure Refute_QC = struct
       Selected of string * compiled_test
     | SelectionFailed of string list
 
-  (* A smart-gate compilation owns backend resources.  Calls can re-enter
-     Refute, so cache it by the dynamically propagated call token rather
-     than in one process-global slot. *)
+  (* A smart-gate compilation owns backend resources, so key the cache by
+     the call token [Refute_Core] propagates: the run-release hook then
+     closes exactly this call's selection, and none outlives its call. *)
   val smart_gate_cache =
     ref ([] : (unit ref * plan list * selected_compile) list)
   val smart_gate_mutex = Mutex.mutex ()

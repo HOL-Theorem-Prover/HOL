@@ -2369,16 +2369,20 @@ structure Refute_Core = struct
             (Feedback.quiet_messages
               (Feedback.quiet_warnings
                 (refute_problem_unquiet cfg))) problem
-      (* Output settings in Feedback are process-global.  A callback may
-         re-enter Refute from a backend worker, but it must inherit the
-         enclosing output scope rather than racing to change those settings. *)
+      (* Output settings in Feedback are process-global, so one call owns
+         the output scope for its whole duration. *)
       fun in_context () =
         Thread_Data.setmp active_refute_context (SOME (ref ())) run ()
     in
       case Thread_Data.get active_refute_context of
-          (* The surrounding call already owns the global output scope, but
-             a reentrant request must still apply its own [quiet] setting. *)
-          SOME _ => run ()
+          (* The context token reaches backend workers, so this catches a
+             backend calling back into Refute.  Such a call would compile a
+             second substrate test inside the enclosing call's open theory
+             bracket and then wait on a theory lock its own caller holds.
+             Refused here, where the caller still has a stack to report on. *)
+          SOME _ =>
+            raise Feedback.mk_HOL_ERR "Refute" "refute"
+              "Refute was called from a backend of a running Refute call"
         | NONE =>
             Multithreading.synchronized "Refute quiet output" quiet_mutex
               in_context

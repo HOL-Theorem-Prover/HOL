@@ -56,6 +56,12 @@ after a weaker result elsewhere.
 Exceptions and ordinary timeouts in `run` become `Unknown`; interrupts
 are re-raised.
 
+`run` must not call `Refute.refute`, or any other entry point that
+starts a search.  A call made from inside a running one is refused, and
+the refusal becomes that backend's `Unknown` reason: the nested search
+would define into the enclosing call's open theory bracket and then wait
+on a theory lock its own caller holds.
+
 ### See also
 
 [`Refute.config`](#Refute.config),
