@@ -1,11 +1,11 @@
 (*
  * Propositional formulas and the cdclite SAT solver.
  *
- * This is a HOL4 adaptation of Isabelle's prop_logic.ML and the cdclite
- * portion of sat_solver.ML, originally written by Tjark Weber
- * (Copyright 2004-2009).  The upstream code is distributed under the
- * BSD 3-Clause license.  HOL4 adaptation copyright 2026 The HOL4
- * contributors.
+ * This is a HOL4 adaptation of Isabelle's prop_logic.ML (Tjark Weber,
+ * Copyright 2004-2009) and of the cdclite solver in sat_solver.ML, added
+ * in Isabelle2014 to a file whose header credits Tjark Weber, Copyright
+ * 2004-2009.  The upstream code is distributed under the BSD 3-Clause
+ * license.  HOL4 adaptation copyright 2026 The HOL4 contributors.
  *)
 
 structure Refute_PropSat :> REFUTE_PROP_SAT = struct

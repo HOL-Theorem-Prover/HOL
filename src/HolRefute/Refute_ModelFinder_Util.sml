@@ -354,5 +354,7 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
   val update_term = Refute_Util.update_term
 
   (* Prefix ownership belongs to Refute_ModelFinder_Names. *)
-  (* Upstream Pretty/PIDE, parsing, type, tactic, hash, and spy helpers drop. *)
+  (* Upstream Pretty/PIDE, parsing, type, tactic, hash, and spy helpers
+     drop, along with pairf, is_substring_of and string_of_time;
+     n_fold_cartesian_product survives unexported as [product]. *)
 end

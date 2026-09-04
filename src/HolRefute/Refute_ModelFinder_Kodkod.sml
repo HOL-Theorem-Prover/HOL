@@ -5,7 +5,9 @@
 Kodkod translation, bounds, and datatype axioms for the HOL4 Refute model
 finder.
 
-This is a port of Isabelle Nitpick's nitpick_kodkod.ML.
+This is a port of Isabelle Nitpick's nitpick_kodkod.ML, together with the
+Kodkod problem assembly (problem_for_scope and its settings) from nitpick.ML,
+and the HOL4-only word and char operations.
 *)
 
 signature REFUTE_MODEL_FINDER_KODKOD = sig
@@ -967,9 +969,11 @@ fun gt ({kk_subset, kk_join, kk_closure, ...} : kodkod_constrs)
     (kk_join right (kk_closure
       (Rel (MFP.suc_rel_for_atom_seq sequence))))
 
-(* [deviation from upstream] Always tabulate the datatype successor order.
-   This makes the cycle-breaking bounds and symmetry-breaking order
-   identical and avoids the upstream incompatible-orders spurious model. *)
+(* [deviation from upstream] Always tabulate the datatype successor order,
+   rather than upstream's is_asymmetric_non_data_type-or-self_rec test.
+   Tabulating unconditionally keeps the cycle-breaking bounds and the
+   symmetry-breaking order in step by construction, the invariant
+   upstream's predicate exists to maintain. *)
 fun should_tabulate_suc_for_type _ _ = true
 
 fun lex_order_rel_expr
@@ -1880,9 +1884,10 @@ fun kodkod_formula_from_nut offsets
                      (Util.flip_polarity polarity) first)
                | MFNT.Op1 (MFNT.Finite, _, _, first) =>
                    if MFR.is_opt_rep (MFNT.rep_of first) then
-                     (* [deviation from upstream] FINITE on an optional
-                        set is the three-valued unknown Boolean, never an
-                        affirmative fact in a sound problem. *)
+                     (* FINITE on an optional set is the three-valued
+                        unknown Boolean, never an affirmative fact in a
+                        sound problem: upstream's arm with the opt test
+                        hoisted out of the polarity case. *)
                      unknown_formula polarity candidate
                    else
                      (case polarity of
@@ -2401,8 +2406,8 @@ fun kodkod_formula_from_nut offsets
         | MFNT.Op1 (MFNT.Not, _, representation, first) =>
             kk_not3 (to_rep representation first)
         | MFNT.Op1 (MFNT.Finite, _, MFR.Opt (MFR.Atom _), _) =>
-            (* [deviation from upstream] the relational form of unknown
-               FINITE is the empty optional Boolean atom. *)
+            (* The relational form of unknown FINITE is the empty
+               optional Boolean atom. *)
             KK.None
         | MFNT.Op1 (MFNT.Converse, _, representation, first) =>
             let
@@ -3308,6 +3313,7 @@ fun assemble_problem params unsound scope =
        | Util.TOO_SMALL _ => NONE
 
 (* Upstream to_set_bool_op and kk_vect_set_bool_op are intentionally
-   omitted: no representation reachable in this port dispatches to them. *)
+   omitted: no representation reachable in this port dispatches to them,
+   and upstream has no call site for to_set_bool_op either. *)
 
 end

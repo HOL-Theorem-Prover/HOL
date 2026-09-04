@@ -2349,14 +2349,16 @@ structure Refute_ModelFinder_Preproc = struct
                  else
                    (* Upstream boxes a Free unconditionally and consults its
                       definition's left-hand side only for a schematic Var
-                      (nitpick_preproc.ML, [do_term]).  HOL4 has no schematic
-                      variables -- what plays that role here is a generated
-                      constant, handled just above -- so every variable left
-                      is a Free.  Making [def] unbox one silently splits it
-                      from its boxed twin in the negated goal, which
+                      (nitpick_preproc.ML, [do_term]).  HOL4 has no kernel
+                      Var: upstream's Frees and its schematic Vars -- the
+                      congruence and bound stand-in variables of
+                      [is_schematic_var], which reach here inside congruence
+                      and specialized axioms -- are both plain variables, so
+                      this branch stands in for upstream's Free and Var
+                      cases.  Making [def] unbox one silently splits it from
+                      its boxed twin in the negated goal, which
                       specialization puts in the same problem, and leaves the
-                      definition constraining nothing
-                      (mf_box_specialize_free_var_soundness, selftest.sml). *)
+                      definition constraining nothing. *)
                    let val (name, ty) = Term.dest_var candidate
                    in
                      Term.mk_var (name, MFH.box_type context MFH.InExpr ty)

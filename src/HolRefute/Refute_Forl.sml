@@ -1451,17 +1451,20 @@ structure Refute_Forl :> REFUTE_FORL = struct
   fun path_for directory stem suffix =
     OS.Path.concat (directory, stem ^ "." ^ suffix)
 
-  (* Kodkodi writes an external SAT solver's CNF file itself, at the path
-     baked into the problem's [solver] setting.  That path is fixed when the
-     problem is assembled, before the solve that uses it has a private
-     directory, and the launcher keeps the caller's working directory, so it
-     goes directly under the temporary root instead of the cwd. *)
+  (* Kodkodi is told where to put an external SAT solver's CNF file by the
+     path baked into the problem's [solver] setting.  That path is fixed
+     when the problem is assembled, before the solve that uses it has a
+     private directory, and the launcher keeps the caller's working
+     directory, so it goes directly under the temporary root instead of the
+     cwd.  Kodkod's External solver writes it there; kodkodi-1.5.7's
+     ExternalV2 ignores the path and creates and removes its own temporary
+     file instead. *)
   fun scratch_file_path suffix =
     path_for (temp_root ()) (unique_name ()) suffix
 
   (* The CNF path is quoted inside the comma-separated [solver] setting;
      recognise it by the scratch name rather than by the solver's argument
-     layout.  Kodkodi never deletes it, so a solve must. *)
+     layout.  An External solver never deletes it, so a solve must. *)
   fun scratch_files ({settings, ...} : problem) =
     let
       val prefix = OS.Path.concat (temp_root (), scratch_prefix ())

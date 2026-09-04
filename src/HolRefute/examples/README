@@ -117,7 +117,8 @@ Case studies
 ------------
 
 These examples adapt case studies from Isabelle's Nitpick manual and its
-Nitpick_Examples and Quickcheck_Examples suites.  They use deliberately
+Nitpick_Examples and Quickcheck_Examples suites, or follow their style
+where no upstream counterpart exists.  They use deliberately
 small carriers or executable fragments so that the counterexample search
 stays readable while exposing a realistic modeling or implementation error.
 
@@ -133,8 +134,8 @@ refuteAATreeScript.sml
     The draft insertion omits skew and split, and two plausible claims about
     the corrected insertion -- one on levels, one on well-formedness -- are
     false as well; QUICKCHECK_TAC and REFUTE_TAC carry the three
-    refutations.  The case study adapts section 3.2 of Isabelle's
-    Nitpick manual, Manual_Nits.thy.
+    refutations.  The case study adapts the AA trees example of
+    Isabelle's Nitpick manual (section 4.2; Manual_Nits.thy, 3.2).
 
 refuteAVLScript.sml
     An AVL rotation model tracks ordering and cached heights.  Its draft
@@ -156,15 +157,15 @@ refuteSubstScript.sml
     A de Bruijn term model defines lifting and two versions of substitution.
     The draft uses the wrong cutoff under a binder, and NARROWING_TAC finds
     a closed term it changes; REFUTE_TAC checks the corrected substitution
-    before its general proof.  The example adapts section 2.10 of Isabelle's
-    Nitpick manual, Manual_Nits.thy.
+    before its general proof.  The example adapts the boxing example of
+    Isabelle's Nitpick manual (section 3.10; Manual_Nits.thy, 2.10).
 
 refuteGrammarScript.sml
     Four mutually inductive grammars model successive repairs to a grammar
     for balanced words.  MODEL_REFUTE_TAC exposes the three production bugs,
     while a mutual-induction proof establishes soundness for the corrected
-    grammar.  This adapts section 3.1 of Isabelle's Nitpick manual,
-    Manual_Nits.thy.
+    grammar.  This adapts the grammar example of Isabelle's Nitpick
+    manual (section 4.1; Manual_Nits.thy, 3.1).
 
 refuteSecTypeScript.sml
     A loop-free IMP fragment models expressions, commands, evaluation, and

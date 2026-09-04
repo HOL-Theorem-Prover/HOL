@@ -241,7 +241,13 @@ structure Refute_QC = struct
      graph_analyses = ref []}
 
   (*
-     Plan compilation, ported from exhaustive_generators.ML:260--315.
+     Plan compilation.  The non-smart core is ported from
+     exhaustive_generators.ML:245--315 (mk_test_term); the pseudo-code
+     below is that core, with [select_premise] taking the head premise and
+     no smart candidate available.  With [smart_generators] and
+     [reorder_premises] on (both default), [select_premise] instead takes
+     the lowest-scoring premise, and the chosen action may be [Smart], an
+     [Enum] node.
 
      compile concl bound [] = gen_all (frees concl \\ bound) (Test concl)
      compile concl bound (a :: rest) =
@@ -250,7 +256,7 @@ structure Refute_QC = struct
        else default
 
      try_eq (lhs, x), x a free not in frees(lhs) U bound:
-       gen_all (frees a \\ {x})
+       gen_all ((frees a \\ bound) \\ {x})
          (Bind (x, lhs, fallback, compile concl (frees a U bound) rest))
      try_eq (lhs, C a1 ... an), C a fully-applied TypeBase constructor:
        gen_all (frees lhs \\ bound)

@@ -881,11 +881,12 @@ fun run_instance deadline started (config : Refute_Core.config)
                   in
                     if null conservative then
                       let
-                        (* A certification promotion is the phase boundary
-                           from [m4-driver section 7 Q6]: do not reconstruct
-                           a later liberal model (which could be merely
-                           Potential), and consume exactly one genuine slot
-                           before dropping the remaining unsound problems. *)
+                        (* A certification promotion is a phase boundary
+                           this port adds: do not reconstruct a later
+                           liberal model (which could be merely Potential),
+                           and consume exactly one genuine slot before
+                           dropping the remaining unsound problems.
+                           Upstream never promotes a liberal model. *)
                         fun reconstruct_until_genuine _ 0 _ = (false, 0)
                           | reconstruct_until_genuine _ _ [] = (false, 0)
                           | reconstruct_until_genuine potential remaining
@@ -974,9 +975,13 @@ fun run_instance deadline started (config : Refute_Core.config)
                            potential when kernel certification got stuck),
                            so it is always reported, never discarded for
                            want of potential budget.  Only a genuine model
-                           spends a [max_genuine] slot, exactly as upstream
-                           counts [num_genuine], so the search for one
-                           carries on past the weaker models it reported.
+                           spends a [max_genuine] slot, so the search for
+                           one carries on past the weaker models it
+                           reported.  This diverges from upstream, whose
+                           sound branch charges a slot to every sound model
+                           it prints, quasi-genuine ones included; its
+                           [num_genuine] belongs to the unsound branch,
+                           where it is identically 0.
                            [reconstruct] already raises
                            [discarded_sound_model] on each of its own
                            rejection paths. *)
@@ -1007,9 +1012,11 @@ fun run_instance deadline started (config : Refute_Core.config)
                         val _ = latest_state :=
                           (found, max_potential, max_genuine, donno)
                       in
-                        (* Upstream harvests sound models for at most two
-                           rounds per incremental batch.  Keep the M3 1/1
-                           path unchanged, where [first_time] was ignored. *)
+                        (* Upstream caps sound-model harvesting at two
+                           rounds per batch unconditionally (its
+                           [not first_time] cut-off).  Here the cap applies
+                           only in the incremental case; the 1/1 path
+                           ignores [first_time]. *)
                         if (max_genuine <= 0 andalso max_potential <= 0) orelse
                            (incremental andalso not first_time andalso
                             max_potential <= 0) then

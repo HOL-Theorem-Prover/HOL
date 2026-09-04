@@ -5,8 +5,11 @@
 Underlying terms ("nuts") for the HOL4 Refute model finder.
 
 This is a port of Isabelle Nitpick's nitpick_nut.ML.  HOL4 sets are
-functions, and HOL4 binders use named variables rather than de Bruijn terms,
-but the intermediate language and the representation pass are unchanged.
+functions, and HOL4 binders use named variables rather than de Bruijn terms.
+The [nut] datatype and the op1/op2/op3 enumerations are unchanged; [cst]
+gains the word and char operations, and the representation pass gains their
+cases and the carrier-budget checks, alongside the divergences marked in the
+code.
 *)
 
 signature REFUTE_MODEL_FINDER_NUT = sig
@@ -899,7 +902,10 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               else if (is_named {Thy = "arithmetic", Name = "<="} head orelse
                        is_named {Thy = "integer", Name = "int_le"} head)
                       andalso length arguments = 2 then
-                (* FIXME: Ported bug-for-bug from Nitpick. *)
+                (* As in Nitpick, whose own comment here is "FIXME: find
+                   out if this case is necessary".  Both tools admit <=
+                   only at linearly ordered carriers, where ~(y < x) is
+                   x <= y. *)
                 Op1 (Not, Type.bool, MFR.Any,
                   Op2 (Less, Type.bool, MFR.Any,
                     sub (List.nth (arguments, 1)), sub (hd arguments)))
@@ -1076,6 +1082,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
        NameTable.update (constant, representation) table)
     end
 
+  (* Upstream's pseudo_frees parameter is absent: nitpick.ML hardwires it
+     to [], so both of its consumers, choose_rep_for_free_var and the
+     model printer, always see the empty list. *)
   fun choose_reps_for_free_vars scope variables table =
     List.foldl (fn (variable, result) =>
       choose_rep_for_free_var scope variable result)
@@ -1473,6 +1482,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       MFS.spec_of_type scope (domain_type ty)
                     val (range_card, range_offset) =
                       MFS.spec_of_type scope (range_type ty)
+                    (* The largest nat atom is [domain_card - 1]; Nitpick
+                       asks for [domain_card + 1] and so refuses two
+                       total instances per scope. *)
                     val total =
                       not (MFH.is_bitword_type (domain_type ty)) andalso
                       (if constant = NatToInt then

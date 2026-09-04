@@ -1,9 +1,13 @@
 (*
  * Monotonicity inference for the model-finder backend.
  *
- * This is the HOL4 port of Isabelle Nitpick's complete M3 monotonicity
- * calculus: mtypes, constraints, frames, term/formula traversal, and SAT
- * solving.
+ * This is the HOL4 port of Isabelle Nitpick's monotonicity calculus
+ * (nitpick_mono.ML): mtypes, constraints, frames, term/formula traversal,
+ * and SAT solving.  The constant rules follow upstream except where HOL4's
+ * representation differs: Id and set products have no nut builtin and stay
+ * unfolded, upstream's Pure meta-connective cases and bounteous_consts have
+ * no HOL4 analogue, and is_harmless_axiom is narrowed to closed arithmetic
+ * infrastructure.  Upstream's tracing facility is not ported.
  *)
 
 structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
@@ -444,8 +448,10 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                   end
               | Minus =>
                   (* The A-atom Minus case in upstream under-constrains G
-                     and N.  Paper Def. 6.3 and the V case require Plus
-                     domain constraints here; see [m4-mono §11.3]. *)
+                     and N.  Blanchette and Krauss, Def. 6.3, and upstream's
+                     own V case require Plus domain constraints here; Plus
+                     subsumes upstream's Minus, so this only adds
+                     constraints. *)
                   if annotation = Gen orelse annotation = New then
                     do_notin_mtype_fv Plus unless domain constraints
                   else
@@ -1607,9 +1613,11 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     end
     handle UNSOLVABLE () => false
          | MTYPE (location, mtypes, types) =>
-             (* Deviation from upstream: an internal mtype mismatch must not
-                abort Refute.  The driver catches BAD, reports at trace
-                level, and conservatively classifies the type nonmonotonic. *)
+             (* Raised exactly as upstream does.  Unlike Isabelle, where
+                the command layer turns BAD into a hard error, Refute's
+                driver catches it, reports at trace level, and conservatively
+                classifies the type nonmonotonic: an internal mtype mismatch
+                must not abort Refute. *)
              raise Util.BAD
                (location,
                 String.concatWith ", "

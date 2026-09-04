@@ -105,7 +105,8 @@ incomplete.
 variables take fcp numerals from `upd_widths`.  `upd_use_subtype true`
 transports a typedef-typed variable to its guarded representation (never
 certifies).  `upd_finite_functions true` (default) gives narrowing
-function inputs as `ffun` update chains.
+function inputs as `ffun` update chains, or `cfun` constants for a
+function-typed domain.
 
 Model finder
 ------------
@@ -149,18 +150,21 @@ once.  `refuteTheory` supplies ersatz definitions (`wf'`, `wfrec'`,
 constants; a value-position `unknown` in any harvested axiom vetoes
 `NoCounterexample` (`unknown_value`, `Refute_ModelFinder_Kodkod.sml`).
 Hilbert choice is guarded per occurrence as `if ?x. P x then @P else
-unknown` (`unfold_defs_in_term`), a deliberate deviation from Isabelle's
-unguarded `Eps_psimp`; an inserted guard vetoes `NoCounterexample`.
+unknown` (`unfold_defs_in_term`), a deliberate deviation from Isabelle,
+which leaves each `Eps` occurrence unguarded and constrains it only
+through the witness-conditional `Eps_psimp`; an inserted guard vetoes
+`NoCounterexample`.
 
 Kodkodi setup: Unix only, needs Java, `setsid` and `/bin/sleep`.  Set
 `HOL4_KODKODI` to an unpacked `kodkodi-1.5.7` component (from
 <https://isabelle.in.tum.de/components/>); Java comes from
 `HOL4_JAVA_EXECUTABLE`, `JAVA_HOME/bin/java`, then `PATH`;
 `HOL4_KODKODI_EXEC` overrides the whole launcher.  `sat_solver = "smart"`
-prefers a configured native or external solver and falls back to SAT4J;
-JNI solvers are offered when their libraries exist under `jni/<platform>`,
-and Isabelle's `*_HOME` variables select external solvers.  No JVM is
-started at load or build time.
+prefers a configured native or external solver and falls back to SAT4J
+(Nitpick's smart never picks a JNI solver by itself: it tries external
+solvers, then SAT4J); JNI solvers are offered when their libraries exist
+under `jni/<platform>`, and Isabelle's `*_HOME` variables select external
+solvers.  No JVM is started at load or build time.
 
 Module layout
 -------------

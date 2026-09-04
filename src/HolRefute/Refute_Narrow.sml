@@ -14,6 +14,12 @@ structure Refute_Narrow = struct
      [Refute_Gen.narrowing_terms] tabulates on the index); a custom
      enumerator may return a different list per depth, so it claims
      nothing.  A new shape arm must state its own answer. *)
+  (* [narrowing_term] is Quickcheck_Narrowing.thy's datatype verbatim.
+     [narrowing_type] keeps upstream's constructor name only: upstream
+     carries a bare narrowing_type list list with positional constructor
+     tags, while a shape here also records depth, the two completeness
+     flags and depth_stable, and tags each alternative with a depth-stable
+     TypeBase [id] plus an optional exact value. *)
   datatype narrowing_type =
     Narrowing_sum_of_products of
       {depth : int, complete : bool, syntactic_complete : bool,
@@ -121,8 +127,10 @@ structure Refute_Narrow = struct
         SOME alternative => alternative
       | NONE => raise InvalidPath
 
-  (* This is Narrowing_Engine.new.  A child position is obtained by
-     appending its product coordinate, not by allocating a fresh name. *)
+  (* Narrowing_Engine.new, except for the constructor tag: a child position
+     is obtained by appending its product coordinate, not by allocating a
+     fresh name, but the tag is the alternative's own depth-stable [id]
+     rather than upstream's position in the surviving product list. *)
   fun new position shape =
     List.map (fn alternative =>
       Narrowing_constructor
@@ -160,11 +168,12 @@ structure Refute_Narrow = struct
     | refineList _ [] = raise InvalidPosition []
 
   (* Grounding needs only the lexicographically first completion.  Upstream
-     enumerates all of them (Narrowing_Engine.hs:27-29) and takes the head,
-     which is free under Haskell's laziness and catastrophic under Poly/ML's
-     strictness -- even char # char # char builds 256^3 terms first.  So the
-     complete enumeration is not part of the engine at all; it lives in
-     selftest.sml as the reference this function is checked against. *)
+     never grounds at all: it reports the partial narrowing terms and
+     renders an unrefined variable as Free "_" (narrowing_generators.ML).
+     Its Narrowing_Engine.hs [total] would enumerate every completion,
+     which is free under Haskell's laziness and catastrophic under
+     Poly/ML's strictness -- even char # char # char builds 256^3 terms
+     first -- but nothing in the shipped engine calls it. *)
   fun first_completion shape term =
     let
       fun complete current_shape
@@ -919,9 +928,11 @@ structure Refute_Narrow = struct
              complete = pnf_complete tree}
     end
 
-  (* HOL4's pull theorems are the reversed all_simps/ex_simps family used by
-     Isabelle's narrowing pass.  Ho_Rewrite handles binder renaming while the
-     NOT rules expose quantifiers under negation. *)
+  (* Twelve of these are the reversed all_simps/ex_simps family used by
+     Isabelle's narrowing pass (narrowing_generators.ML's [rewrs]); the
+     remaining four match the un-reversed rules it adds alongside them:
+     iff_conv_conj_imp, Ex1_def, and the NOT rules that expose quantifiers
+     under negation.  Ho_Rewrite handles binder renaming. *)
   val prenex_rewrites =
     [ boolTheory.EQ_IMP_THM,
       boolTheory.EXISTS_UNIQUE_DEF,
@@ -1038,10 +1049,12 @@ structure Refute_Narrow = struct
       {Thy = "refute", Name = "eval_cfun",
        Ty = Type.-->(cfun_type range, Type.-->(domain, range))}
 
-  (* Port of narrowing_generators.ML:finitize_functions.  The returned
-     prefix carries only first-order datatype descriptions; [body] observes
-     each description through eval_ffun/eval_cfun.  Products are mapped
-     componentwise, as in upstream's map_prod branch. *)
+  (* Port of narrowing_generators.ML:finitize_functions.  Function types
+     directly under the prefix, and under products, become ffun/cfun
+     descriptions that [body] observes through eval_ffun/eval_cfun;
+     products are mapped componentwise, as in upstream's map_prod branch.
+     As upstream, a function type nested under any other type constructor
+     is left alone; [shape_of] then refuses it at GenFun. *)
   fun finitize_functions (prefix, body) =
     let
       fun transform ty =

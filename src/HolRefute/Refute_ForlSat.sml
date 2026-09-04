@@ -91,9 +91,11 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
       let
         fun make_arguments () =
           let
-            (* Kodkodi writes this file and never deletes it; an absolute
-               scratch path keeps it out of the caller's directory, which
-               the launcher does not change. *)
+            (* Kodkodi is given this path for the solver's CNF file: the
+               External solvers write it there and never delete it, so a
+               solve must, while ExternalV2 ignores it and cleans up after
+               itself.  An absolute scratch path keeps it out of the
+               caller's directory, which the launcher does not change. *)
             val input = Refute_Forl.scratch_file_path "cnf"
           in
             [if null markers then "External" else "ExternalV2",
@@ -138,9 +140,12 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
       if incremental then configured
       else
         (* Prefer a configured native or external solver to the always
-           available Java fallbacks.  This keeps MiniSat_JNI first on the
-           prepared host while incremental smart selection still starts
-           with SAT4J. *)
+           available Java fallbacks, unlike Nitpick's smart selection,
+           which takes the first configured entry in table order and so
+           never picks a JNI solver by itself.  This puts the first
+           available JNI solver (Lingeling on the x86_64 components,
+           MiniSat where that is the only library shipped) ahead of SAT4J,
+           while incremental smart selection still starts with SAT4J. *)
         List.filter (not o java_solver) configured @
         List.filter java_solver configured
     end

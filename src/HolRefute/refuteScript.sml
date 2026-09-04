@@ -96,7 +96,10 @@ Definition wf'_def:
     (!x. ~TC R x x) /\ (FINITE (\p. R (FST p) (SND p)) \/ unknown)
 End
 
-(* Port of Nitpick.thy's wf_wfrec'/wfrec': well-founded recursion made
+(* Port of Nitpick.thy's wf_wfrec'/wfrec', each with a [WF R] guard the
+   upstream definitions lack (upstream's wf_wfrec' is the unconditional
+   equation, and its wfrec' falls through to wfrec's own relational
+   definition rather than to unknown): well-founded recursion made
    encodable by tying a literal recursive equation instead of unfolding
    HOL4's Hilbert-choice [the_fun] (relationScript.sml).  wf_wfrec is
    uninterpreted -- it exists only so the [refute$wf_wfrec ->
@@ -105,9 +108,8 @@ End
    giving the model finder the genuine recursive equation
    [wf_wfrec' R Fn x =
     if wf' R then Fn (RESTRICT (wf_wfrec' R Fn) R x) x else unknown]
-   rather than an unrolling over an unconstrained function -- see
-   mf_wfrec_ersatz_ties_the_knot (selftest.sml) for the harvested-axiom
-   pin.  wf_wfrec' is a plain [Definition], so [is_equational_fun]
+   rather than an unrolling over an unconstrained function.
+   wf_wfrec' is a plain [Definition], so [is_equational_fun]
    (Refute_ModelFinder_HOL.sml) keeps it un-inlined, and the equation
    above is what unfolding hands on to add_axiom -- the same route
    SUM_SET's own equation takes (sum'_def's comment above).
@@ -125,8 +127,7 @@ End
    a [the_fun] witness there that nothing characterizes.  A goal reaching
    this through WFREC is covered a second time, by the [unknown_value]
    veto on totality (Refute_ModelFinder_Kodkod.sml); wf_wfrec' has no
-   wfrec' wrapper of its own, so only the guard covers it
-   (mf_wfrec_ersatz_stays_satisfiable_off_wf, selftest.sml). *)
+   wfrec' wrapper of its own, so only the guard covers it. *)
 val _ = new_constant ("wf_wfrec",
   ``:('a -> 'a -> bool) -> (('a -> 'b) -> 'a -> 'b) -> 'a -> 'b``)
 
@@ -140,8 +141,7 @@ End
    [relation$WFREC -> refute$wfrec'] ersatz row (Refute_ModelFinder_HOL.
    sml) makes any goal that syntactically mentions WFREC route here
    instead of the_fun/[$@].  A function stays on its own clean STDEQNS
-   equations, untouched by this row
-   (mf_wf_ersatz_does_not_weaken_definitions, selftest.sml), only while
+   equations, untouched by this row, only while
    DefnBase carries a live [userdef] presentation for it; that is
    [TotalDefn.Define]'s default, but a [notuserdef] definition, or one
    built by hand outside TotalDefn, registers none, and
@@ -155,7 +155,10 @@ End
    an arbitrary guess at [the_fun]'s unconstrained choice.  wf_wfrec'
    carries the same guard for the same reason, so a goal naming
    refute$wf_wfrec directly is constrained no more strongly than HOL
-   constrains WFREC. *)
+   constrains WFREC.  Upstream's wfrec' instead falls through to
+   THE y. wfrec_rel R (\f x. F (cut f R x) x) x y, wfrec's definitional
+   body; HOL4 reaches WFREC's value only through the_fun, so there is no
+   relational characterization to fall through to. *)
 Definition wfrec'_def:
   wfrec' (R : 'a -> 'a -> bool) (Fn : ('a -> 'b) -> 'a -> 'b) x =
     if WF R then wf_wfrec' R Fn x else unknown
@@ -599,7 +602,8 @@ Proof
   metis_tac [lt_add1]
 QED
 
-(* Part 5: narrowing represents function variables by finite update chains.
+(* Part 5: narrowing represents a function variable by a finite update
+   chain, or by a constant when its domain is itself a function type.
    The distinct constructor prefixes replace Isabelle's type-scoped
    Constant names.  These static datatypes are also available to TypeBase
    before any goal is processed. *)
@@ -709,12 +713,10 @@ Theorem eval_cfun_compute[compute] = eval_cfun_def
    Measured, no fmap-fact pin tried so far is actually load-bearing on
    the inverse axioms: emptying [inverse_axioms] in
    [synthetic_fmap_typedef] and rebuilding turns the level-1 selftest
-   from 939 OK/0 failures to 938 OK/1 failure, and the one failure is
-   [mf_fmap_typedef_has_onto_inverse_axiom] (selftest.sml), which probes
-   the axiom-emission machinery directly, not a fmap fact.  Both
-   [finite_map_flookup_is_injective_by_construction] and
-   [finite_map_fempty_ersatz_is_sound]'s FDOM FEMPTY = {} still pass:
-   [FLOOKUP] is dispatched structurally as the typedef's rep
+   from 939 OK/0 failures to 938 OK/1 failure, and the one failure was a
+   since-removed mechanism pin on the axiom emission itself, not a fmap
+   fact.  Both FLOOKUP injectivity and the ersatz FDOM FEMPTY = {}
+   still hold: [FLOOKUP] is dispatched structurally as the typedef's rep
    (constructor/selector encoding, [Refute_ModelFinder_HOL.sml]) and
    [abs_fmap'] unfolds to its own Hilbert-choice body (an ordinary
    [Definition], unlike a genuine typedef's kernel-introduced Abs), so

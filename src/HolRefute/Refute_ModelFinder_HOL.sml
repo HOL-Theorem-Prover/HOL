@@ -2721,8 +2721,9 @@ structure Refute_ModelFinder_HOL = struct
       handle HOL_ERR _ => NONE
 
   (* Vis continuations in both interaction-tree theories have function type.
-     As in Isabelle, SUB therefore compares their finite continuation graphs
-     by equality rather than recursively by bisimulation. *)
+     As in Isabelle's nth_sub_bisim, [comparison] in
+     [codatatype_bisim_axioms] therefore compares their finite continuation
+     graphs by equality rather than recursively by bisimulation. *)
   val builtin_codatatypes =
     [{Thy = "llist", Tyop = "llist", case_name = "llist_CASE",
       constructor_names = ["LNIL", "LCONS"]},
@@ -4196,8 +4197,7 @@ structure Refute_ModelFinder_HOL = struct
      returns 3 axioms -- abs_fmap'_FLOOKUP's own [dest_eq] fails the
      [bool] guard check and falls back to itself unguarded, while
      FLOOKUP_abs_fmap' fires the guarded path and contributes both the
-     guarded equation and the onto axiom; see
-     mf_fmap_typedef_has_onto_inverse_axiom, selftest.sml).
+     guarded equation and the onto axiom).
 
      [guarded_inverse_axiom] then emits its guard as the literal term
      [FINITE {x | f x <> NONE}], not as [pred] ([is_fmap'], the
@@ -4216,16 +4216,14 @@ structure Refute_ModelFinder_HOL = struct
      whether any one goal needs it -- measured, though, no fmap-fact pin
      tried so far actually needs it: emptying [inverse_axioms] and
      rebuilding turns the level-1 selftest from 939 OK/0 failures to 938
-     OK/1 failure, and the one failure is
-     [mf_fmap_typedef_has_onto_inverse_axiom] (selftest.sml), which
-     probes [optimized_inverse_axioms_for_rep_fun]'s output directly.
-     [finite_map_flookup_is_injective_by_construction] still passes
-     ([abs_fmap'_FLOOKUP] alone already forces FLOOKUP injectivity on the
-     abstract carrier unconditionally, independent of
+     OK/1 failure, and the one failure was a since-removed pin that
+     probed [optimized_inverse_axioms_for_rep_fun]'s output directly.
+     FLOOKUP injectivity still holds ([abs_fmap'_FLOOKUP] alone already
+     forces it on the abstract carrier unconditionally, independent of
      [FLOOKUP_abs_fmap']), and so, contrary to what an earlier version of
-     this comment claimed without having measured it, does
-     [finite_map_fempty_ersatz_is_sound]'s FDOM FEMPTY = {}: [FLOOKUP] is
-     itself a registered typedef rep function, so occurrences of it are
+     this comment claimed without having measured it, does the ersatz
+     FDOM FEMPTY = {}: [FLOOKUP] is itself a registered typedef rep
+     function, so occurrences of it are
      rewritten structurally to a constructor-selector pattern on [abs]
      (typedef_for_rep's dispatch in unfold_defs_in_term's do_const, this
      file) rather than left as an opaque relation depending on a
@@ -4240,7 +4238,7 @@ structure Refute_ModelFinder_HOL = struct
      encoding does not by itself bound the abstract carrier to exactly
      [pred]'s extension at a proper-subset scope -- but no goal tried
      here has been found where omitting them changes a verdict.  See
-     refuteScript.sml's Part 7 comment for the same point stated where
+     refuteScript.sml's Part 6 comment for the same point stated where
      the theorems are proved.
 
      Built once at the generic instance [:'a |-> 'b]; every fmap type is a
@@ -4654,14 +4652,16 @@ structure Refute_ModelFinder_HOL = struct
     else
       reserved_constructor term
 
-  (* Isabelle reads a pattern leaf as a de Bruijn Bound.  HOL4 names its
-     binders, so each layer supplies its own leaf test, and the two tests
-     deliberately differ: preprocessing admits only the schematic families
-     (value, bound-standin and congruence vars), monotonicity admits every
-     reserved name, a strict superset.  Monotonicity therefore calls
-     strictly more axioms definitional -- a bare Skolem constant such as
-     "refute$sk0@1$x" is a pattern leaf there and not in preprocessing.
-     The divergence is unresolved; it is preserved here, not decided. *)
+  (* Isabelle reads a pattern leaf as a de Bruijn Bound or a schematic Var,
+     and shares that one test between preprocessing and monotonicity.  HOL4
+     names its binders, so each layer supplies its own leaf test here, and
+     the two deliberately differ: preprocessing admits only the schematic
+     families (value, bound-standin and congruence vars), monotonicity
+     admits every reserved name, a strict superset.  Monotonicity therefore
+     calls strictly more axioms definitional -- a bare Skolem constant such
+     as "refute$sk0@1$x" is a pattern leaf there and not in preprocessing.
+     This split has no upstream counterpart; it is unresolved and left as it
+     stands, not decided. *)
   fun is_constructor_pattern_gen is_leaf bound term =
     if is_leaf bound term then
       true
@@ -4925,18 +4925,14 @@ structure Refute_ModelFinder_HOL = struct
       replacement = {Thy = "refute", Name = "wf'"}},
      (* pred_set$SUM_SET (= SUM_IMAGE I) gets no row of its own: it is an
         ordinary defined constant, so the encoder constrains it by its
-        harvested equation, whose body reaches this row instead
-        (mf_builtins_numerals_sets_and_ersatz and
-        mf_sum_ersatz_literal_witness_regression, selftest.sml). *)
+        harvested equation, whose body reaches this row instead. *)
      {original = {Thy = "pred_set", Name = "SUM_IMAGE"},
       replacement = {Thy = "refute", Name = "sum'"}},
      (* wf_wfrec is a public constant of this theory, so a user goal may
         name it directly, not just occur inside wf_wfrec'_def's own body
         (refuteScript.sml).  Either way this row rewrites the occurrence
         to wf_wfrec', whose guarded equation constrains it no more
-        strongly than HOL constrains WFREC -- see
-        mf_wfrec_ersatz_ties_the_knot (selftest.sml) for the
-        unfolding-body case. *)
+        strongly than HOL constrains WFREC. *)
      {original = {Thy = "refute", Name = "wf_wfrec"},
       replacement = {Thy = "refute", Name = "wf_wfrec'"}},
      (* A goal that syntactically mentions relation$WFREC now routes to
@@ -4951,12 +4947,12 @@ structure Refute_ModelFinder_HOL = struct
       replacement = {Thy = "refute", Name = "wfrec'"}},
      (* FUPDATE/FEMPTY/FAPPLY/FDOM are [nocompute] and built directly
         from fmap_ABS/fmap_REP, which have no unfolding equation (see
-        refuteScript.sml's Part 7 comment); these rows redirect them to
+        refuteScript.sml's Part 6 comment); these rows redirect them to
         the ersatz bodies built on FLOOKUP, registered as fmap's
         synthetic rep (synthetic_fmap_typedef above) rather than reached
         by a row of its own.  FCARD, FRANGE and SUBMAP reach these four,
         or the CARD row, by ordinary unfolding (checked, not just
-        asserted -- see refuteScript.sml's Part 7 comment); further
+        asserted -- see refuteScript.sml's Part 6 comment); further
         finite_map constants are expected to do the same but have not
         all been checked. *)
      {original = {Thy = "finite_map", Name = "FUPDATE"},
@@ -5113,7 +5109,12 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   (* These smart application forms are observable in preprocessor goldens
-     and match Nitpick's s_betapply before ordinary beta reduction. *)
+     and match Nitpick's s_betapply -- the reflexive-equation, if T / if F
+     and Let-push cases -- before ordinary beta reduction.  Nitpick's
+     remaining case, s_let sharing of a duplicated argument under an
+     abstraction, is not reproduced here; that threshold is applied only in
+     Refute_ModelFinder_Preproc, as upstream does at its other s_let call
+     site. *)
   fun s_betapply (function, argument) =
     let
       val application = Term.mk_comb (function, argument)

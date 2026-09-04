@@ -833,7 +833,8 @@ entries; it does not reach inside another type, so a variable of type
 idempotent lazy harvest, so a QC-only call can populate the model
 finder's typedef registry.  The model finder never sees the rewrite,
 since it handles typedefs natively.  The default matches Isabelle's
-`use_subtype`.
+`use_subtype`; the transform is the dual of Isabelle's, which rewrites
+a representation-typed variable into `Rep` of an abstract-typed one.
 
 #### Model-finder fields
 
@@ -1073,19 +1074,28 @@ leaves the goal unchanged.
 
 The default `sat_solver = "smart"` prefers a configured native or
 external solver and otherwise takes SAT4J, which the component always
-provides; only incremental solving, forced by a request for several
-models, starts with SAT4J.  JNI MiniSat, CryptoMiniSat, and Lingeling
-are offered only when their shared libraries are found in the
-component's platform `jni` directory.  External solvers are found
-through Kodkodi's `MINISAT_HOME`, `CRYPTOMINISAT_HOME`, `ZCHAFF_HOME`,
-`RSAT_HOME`, `RISS3G_HOME`, `BERKMIN_HOME`, and `BERKMINALLOY_HOME`
-variables.
+provides (Nitpick's own smart order never selects a JNI solver: it
+tries the external solvers, then SAT4J); only incremental solving,
+forced by a request for several models, starts with SAT4J.  JNI
+MiniSat, CryptoMiniSat, and Lingeling are offered only when their
+shared libraries are found in the component's `jni/x86_64-linux`,
+`jni/arm64-linux`, or `jni/x86_64-darwin` directory; kodkodi-1.5.7
+ships no `arm64-darwin` libraries, so no JNI solver is available on
+Apple Silicon.  External solvers are located through the variables
+Isabelle's Nitpick uses, `MINISAT_HOME`, `CRYPTOMINISAT_HOME`,
+`ZCHAFF_HOME`, `RSAT_HOME`, `RISS3G_HOME`, `BERKMIN_HOME`, and
+`BERKMINALLOY_HOME`; Refute resolves them and passes the executable's
+absolute path to Kodkodi.
 
 ### Limitations and interpretation
 
 Counterexample search is bounded and incomplete.  The first four
-limitations below are inherent in the approach, and shared with
-Isabelle's Nitpick, rather than shortfalls still to close.
+limitations below are inherent in the approach rather than shortfalls
+still to close; the first, second and fourth are shared with Isabelle's
+Nitpick, while the third is a policy Nitpick does not share: it leaves
+a polymorphic goal's type variables uninstantiated, varies their
+cardinalities like any other type, and reports "none" when its scopes
+are exhausted.
 
 * Refuting `?x. P x` means showing that *no* `x` satisfies `P`, which
   no finite search can do over an infinite type.  A goal whose falsity
@@ -1115,12 +1125,13 @@ Isabelle's Nitpick, rather than shortfalls still to close.
   make a substrate inapplicable.  A datatype recursive beneath a
   function type (an interaction tree's `Vis`, say) cannot be
   exhaustively enumerated, so exhaustive QC and narrowing refuse it.
-  Native and compute random QC can still test it by drawing a random
-  function value on demand, as Isabelle's `random_fun_lift` does; a
-  value pinned by an equation the search cannot evaluate is pruned
-  rather than generated.  The random function generator samples its
-  points eagerly, so its cost grows with the number of function values
-  it must produce, whereas Isabelle's is lazy.
+  Native and compute random QC can still test it by drawing a whole
+  random function value for the slot, as Isabelle's `random_fun_lift`
+  does; a value pinned by an equation the search cannot evaluate is
+  pruned rather than generated.  The random function generator samples
+  its points eagerly, so its cost grows with the number of function
+  values it must produce, whereas Isabelle's `random_fun_aux` closure
+  draws each point only when applied to a new argument.
 * Smart generators support positive first-order modes, and negated
   first-order modes whose relation can be classified (a complement
   `Guard`).  Classification excludes every recursive relation, whose
@@ -1227,8 +1238,8 @@ inconclusive report is only guidance for changing bounds, generators,
 backends, or the conjecture.
 
 Worked, executable examples of all four tactics, from first steps
-through case studies adapted from Isabelle's Nitpick and Quickcheck
-example suites, live in `src/HolRefute/examples`, indexed by the
-`README` there.
+through case studies adapted from, or modelled on, Isabelle's Nitpick
+and Quickcheck example suites and the Nitpick papers, live in
+`src/HolRefute/examples`, indexed by the `README` there.
 
 \index{HolRefute|)}

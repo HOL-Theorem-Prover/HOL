@@ -4,7 +4,12 @@
 
 Peephole optimizer for the HOL4 Refute model finder.
 
-    Ported faithfully from Isabelle Nitpick's nitpick_peephole.ML.
+Ported from Isabelle Nitpick's nitpick_peephole.ML, with three divergences:
+s_all/s_exist test for an empty declaration before folding a constant body
+(upstream folds first, so an empty-domain "all" of False is False);
+rel_expr_intersects also checks the lower bound of an AtomSeq; and s_join's
+two Univ clauses are not ported.  default_bit_width and bit_width_for are
+HOL4 additions; upstream computes the bit width in nitpick.ML.
 *)
 
 signature REFUTE_MODEL_FINDER_PEEPHOLE =

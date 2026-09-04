@@ -81,11 +81,11 @@ structure Refute_Core = struct
       reorder_premises : bool,
       (* Function inversion: synthesise Horn clauses for a function's
          graph from its defining equations and run mode inference over
-         them, so a premise recognising [f a b = z] could drive an
-         inverting generator.  Off by default, matching Isabelle
-         Quickcheck's own function-inversion flag: an under-approximating
-         graph used as a generator is unsound, and no goal-premise
-         recogniser consumes this yet. *)
+         them, so a premise recognising [f a b = z] drives an inverting
+         generator ([Refute_QC]'s [graph_recognise] and
+         [graph_positive_candidates]).  Off by default, matching Isabelle
+         Quickcheck's [quickcheck_allow_function_inversion] flag: an
+         under-approximating graph used as a generator is unsound. *)
       allow_function_inversion : bool,
       (* Per-type-variable pins for QC's monomorphizing substitution.  A
          [SOME tyvar] key pins that variable; [NONE] is the fallback for
@@ -100,7 +100,10 @@ structure Refute_Core = struct
       (* Rep->abs transport for a variable at a typedef type with no
          generator: see [Refute_QC]'s [transport_instance], installed
          through [register_mono_instance_transform] below.  Off by
-         default, matching Isabelle's [use_subtype]. *)
+         default, matching the default of Isabelle's [use_subtype] flag;
+         the transform itself is the dual of Isabelle's, which rewrites a
+         representation-typed variable constrained by a registered subtype
+         predicate into [Rep] of an abstract-typed one. *)
       use_subtype : bool }
 
   type mf_config =
