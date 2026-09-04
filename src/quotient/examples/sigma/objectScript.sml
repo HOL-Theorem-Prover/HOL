@@ -139,6 +139,20 @@ Definition HEIGHT1_def:
     (HEIGHT_entry1 (l, m)        = SUC (HEIGHT_method1 m))
      /\
     (HEIGHT_method1 (SIGMA1 x a) = SUC (HEIGHT_obj1 a))
+Termination
+  (* the recursion goes through the list and the pair the object holds,
+     so the measure has to say what each of the four levels weighs *)
+  WF_REL_TAC ‘measure (λx. case x of
+                             INL a => obj1_size a
+                           | INR (INL d) =>
+                               list_size
+                                 (pair_size (list_size char_size)
+                                            method1_size) d
+                           | INR (INR (INL e)) =>
+                               pair_size (list_size char_size)
+                                         method1_size e
+                           | INR (INR (INR m)) => method1_size m)’ >>
+  rw[] >> simp[]
 End
 
 
