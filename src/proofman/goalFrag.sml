@@ -215,9 +215,18 @@ fun next_select_lt (n, g) = let
   fun go [] success (failed: (goal list * list_validation) list) v = let
       val (gs1, v1) = concatMapV I (rev success, I)
       val (gs2, v2) = concatMapV I (rev failed, I)
+      (* `v' consumes its lists head-first from the last selected goal
+         backwards, so the theorems must be reversed -- but *outside*
+         `v1', which pairs theorems with goals by position.  Reversing
+         first hands each theorem to another goal's validation.  With
+         one theorem per selected goal and identity validations the
+         two orders coincide, so this only shows once a selected
+         goal's tactic does real work: `gvs' on two goals matching the
+         same pattern proved the wrong thing, and the mismatch
+         surfaced as a failure inside `Thm.CHOOSE'. *)
       fun v' n ths = let
         val (ths1, ths2) = Lib.split_after n ths
-        in v ([], v1 (rev ths1), v2 (rev ths2)) end
+        in v ([], rev (v1 ths1), rev (v2 ths2)) end
       (* The focus carries `I', not `v1' or `v2': `v'` below applies
          both, `v1' to the theorems of the selected goals and `v2' to
          the stashed ones, so anything applied here would be applied

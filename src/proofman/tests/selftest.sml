@@ -454,6 +454,33 @@ val _ =
     end
 
 val _ = tprint "select_lt keeps several selected goals in order"
+(* The goals below are built directly rather than by stripping a term:
+   `REPEAT STRIP_TAC' splits the conclusion as well as the antecedent,
+   which leaves only atoms, and a selection made by `CONJ_TAC' then
+   selects nothing at all.  A vacuous selection exercises none of the
+   reassembly these three tests are about. *)
+val select_asms = [“p:bool”, “q:bool”, “r:bool”, “s:bool”]
+fun select_goals ws = map (fn w => (select_asms, w)) ws
+fun select_check gs ths =
+    if ListPair.allEq (fn ((_, w), th) => aconv (concl th) w) (gs, ths)
+    then OK()
+    else die ("proved " ^
+              String.concatWith ", " (map (term_to_string o concl) ths))
+(* Select with `tac', solve every resulting subgoal from the
+   assumptions, and hand back the theorems for the original goals. *)
+fun select_run tac gs =
+    let
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = goalFrag.open_select_lt (goalFrag.new_goal_list gs)
+      val st = goalFrag.next_select_lt (ex tac st)
+      val st = goalFrag.open_paren st
+      val st = goalFrag.close_paren (ex (FIRST_ASSUM ACCEPT_TAC) st)
+      val st = goalFrag.close_paren st
+    in
+      goalFrag.finish_list (ex (FIRST_ASSUM ACCEPT_TAC) st)
+    end
+
 val _ =
     let
       (* Two goals selected, one stashed, and the selected ones are
@@ -461,24 +488,8 @@ val _ =
          them the wrong way round produces the wrong theorem instead of
          quietly working, which is what one selected goal cannot
          show. *)
-      val tm = “p ∧ q ∧ r ⇒ (p ∧ p) ∧ (q ∧ q) ∧ r”
-      val ctxt = Context.snapshot()
-      fun ex tac st = goalFrag.expand tac ctxt st
-      val st = ex (REPEAT STRIP_TAC) (goalFrag.new_goal ([], tm))
-      val st = goalFrag.open_select_lt st
-      (* Succeeds on the two conjunctive goals, fails on `r'. *)
-      val st = ex CONJ_TAC st
-      val st = goalFrag.next_select_lt st
-      val st = goalFrag.open_paren st
-      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
-      val st = goalFrag.close_paren st
-      val st = goalFrag.close_paren st
-      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
-      val th = goalFrag.finish st
-    in
-      if aconv (concl th) tm then OK()
-      else die ("proved " ^ term_to_string (concl th))
-    end
+      val gs = select_goals [“p ∧ q”, “r ∧ s”, “q:bool”]
+    in select_check gs (select_run CONJ_TAC gs) end
 
 val _ = tprint "select_lt reassembles an interleaved selection"
 val _ =
@@ -488,23 +499,18 @@ val _ =
          pattern like `VAR v' does to the goals of an induction.  A
          contiguous selection cannot tell a validation that reassembles
          in the wrong order from one that does not. *)
-      val tm = “p ∧ q ∧ r ∧ s ⇒ (p ∧ p) ∧ q ∧ (r ∧ r) ∧ s”
-      val ctxt = Context.snapshot()
-      fun ex tac st = goalFrag.expand tac ctxt st
-      val st = ex (REPEAT STRIP_TAC) (goalFrag.new_goal ([], tm))
-      val st = goalFrag.open_select_lt st
-      val st = ex CONJ_TAC st
-      val st = goalFrag.next_select_lt st
-      val st = goalFrag.open_paren st
-      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
-      val st = goalFrag.close_paren st
-      val st = goalFrag.close_paren st
-      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
-      val th = goalFrag.finish st
-    in
-      if aconv (concl th) tm then OK()
-      else die ("proved " ^ term_to_string (concl th))
-    end
+      val gs = select_goals [“p ∧ q”, “r:bool”, “s ∧ p”]
+    in select_check gs (select_run CONJ_TAC gs) end
+
+val _ = tprint "select_lt runs each selected goal's own validation"
+val _ =
+    let
+      (* The selected goals split into *different numbers* of subgoals
+         (two and three), so the validations cannot be swapped without
+         also mis-splitting the theorem list.  Selections whose goals
+         split alike can survive being paired the wrong way round. *)
+      val gs = select_goals [“p ∧ q”, “r ∧ s ∧ p”, “q:bool”]
+    in select_check gs (select_run (CONJ_TAC THEN TRY CONJ_TAC) gs) end
 
 val _ = tprint "close_repeat pairs subgoals with their own theorems"
 val _ =
