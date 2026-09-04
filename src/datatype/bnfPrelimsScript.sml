@@ -826,6 +826,16 @@ QED
 
 val _ = TotalDefn.export_termsimp "bnfPrelims.option_size_map"
 
+(* and of a sum, whose size counts the tag *)
+Theorem sum_size_map:
+  full_sum_size f g (SUM_MAP h k s) =
+  full_sum_size (\a. f (h a)) (\b. g (k b)) s
+Proof
+  Cases_on ‘s’ >> simp[basicSizeTheory.full_sum_size_thm]
+QED
+
+val _ = TotalDefn.export_termsimp "bnfPrelims.sum_size_map"
+
 (* and the same of a pair, whose map is written with ## *)
 Theorem pair_size_map:
   pair_size f g ((h ## k) p) = pair_size (\a. f (h a)) (\b. g (k b)) p

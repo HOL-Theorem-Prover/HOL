@@ -4016,7 +4016,8 @@ fun defineSize {tyname, sizes = sizenames, mapIDs} axiom =
          last. *)
       fun sizeMapRWs () =
           [GSYM pairTheory.PAIR_MAP, bnfPrelimsTheory.pair_size_map,
-           bnfPrelimsTheory.option_size_map, combinTheory.I_THM] @
+           bnfPrelimsTheory.option_size_map, bnfPrelimsTheory.sum_size_map,
+           combinTheory.I_THM] @
           mapIDs @
           List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
                           [("list", "list_size_map"), ("list", "MAP_ID"),
