@@ -3873,7 +3873,7 @@ fun defineRecursion {name, axiom, def} =
     gets no size at all, and TypeBase is content without one.
    ---------------------------------------------------------------------- *)
 
-fun defineSize {tyname, sizes = sizenames} axiom =
+fun defineSize {tyname, sizes = sizenames, mapIDs} axiom =
     let
       val (fvars0, body0) = strip_forall (concl axiom)
       val axE = if is_exists1 body0 then
@@ -4006,6 +4006,7 @@ fun defineSize {tyname, sizes = sizenames} axiom =
       fun sizeMapRWs () =
           [GSYM pairTheory.PAIR_MAP, bnfPrelimsTheory.pair_size_map,
            bnfPrelimsTheory.option_size_map, combinTheory.I_THM] @
+          mapIDs @
           List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
                           [("list", "list_size_map"), ("list", "MAP_ID"),
                            ("list", "MAP_ID_I")]
@@ -4122,7 +4123,7 @@ fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
     the order the case definitions come.
    ---------------------------------------------------------------------- *)
 
-fun typeBaseInfo {axiom, induction, case_defs, rewrites, names} =
+fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
     let
       (* TypeBase reads the existence half; the size's own lemma wants
          the uniqueness, so an axiom that carries it is welcome here *)
@@ -4144,7 +4145,8 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites, names} =
               [] => NONE
             | ti :: _ =>
               case defineSize {tyname = #2 (TypeBasePure.ty_name_of ti),
-                               sizes = List.map #size names}
+                               sizes = List.map #size names,
+                               mapIDs = mapIDs}
                               axiom of
                   NONE => NONE
                 | SOME {sizes, definition, unique} =>

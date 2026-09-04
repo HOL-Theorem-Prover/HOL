@@ -3,6 +3,12 @@ struct
 
 open HolKernel boolLib bnfFixLib
 
+(* what each component the type is built from says its own map at the
+   identity is: a size equation states a nested argument as the map the
+   axiom hands over, and this is what takes the identity one away *)
+fun mapIDsOf comps =
+    List.map (fn bnfBase.bI i => #mapID i) (HOLset.listItems comps)
+
 val ERR = mk_HOL_ERR "bnfDatatypeLib"
 
 (* ----------------------------------------------------------------------
@@ -281,7 +287,8 @@ fun oneType db (spec : spec) =
       val tyinfos =
           typeBaseInfo {axiom = axiom, induction = induction,
                         case_defs = defineCases axiom,
-                        rewrites = [eqns], names = #names spec}
+                        rewrites = [eqns], names = #names spec,
+                        mapIDs = mapIDsOf (#components bnf)}
       (* a record's accessors, update functions and literal syntax are
          the existing apparatus's, over the entry just made *)
       val tyinfos =
@@ -361,7 +368,11 @@ fun manyTypes db (spec : spec) =
       val tyinfos =
           typeBaseInfo {axiom = axiom, induction = induction,
                         case_defs = defineCases axiom,
-                        rewrites = rewrites, names = #names spec}
+                        rewrites = rewrites, names = #names spec,
+                        mapIDs =
+                          List.concat
+                            (List.map (mapIDsOf o #components)
+                                      (#functors fam))}
       (* a member written as a record gets the record apparatus, as a
          type of its own would *)
       val tyinfos =

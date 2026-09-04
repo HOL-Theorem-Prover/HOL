@@ -464,7 +464,8 @@ sig
   (* the size function, out of what the axiom says: what a constructor
      is worth is one plus what each argument's own type's size says of
      it.  NONE when some argument has no size — a function space, say *)
-  val defineSize : {tyname : string, sizes : string option list} -> thm ->
+  val defineSize : {tyname : string, sizes : string option list,
+                    mapIDs : thm list} -> thm ->
                    {sizes : term list, definition : thm,
                     unique : thm option} option
 
@@ -474,7 +475,8 @@ sig
                       sizes : term list} -> thm
 
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
-                      rewrites : thm list list, names : names list} ->
+                      rewrites : thm list list, names : names list,
+                      mapIDs : thm list} ->
                      TypeBasePure.tyinfo list
 
 end
