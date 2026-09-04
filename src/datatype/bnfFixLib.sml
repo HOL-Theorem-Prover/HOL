@@ -771,7 +771,14 @@ fun defineCopy {tyname, ABS, REP} bnf : copy =
 (* A constructor's name is not always a name a theorem can be saved
    under: a record's has a dot in it and an infix constructor is
    punctuation.  The constant keeps the name the specification gave it;
-   the definition is stored under one the theory will take. *)
+   the definition is stored under one the theory will take.
+
+   And stored only for as long as the construction needs it.  What a
+   constructor is, in terms of the sum of products underneath, is this
+   package's business and not a fact the theory should carry: a
+   development that happens to name a constructor after something it
+   already has a definition for would find that definition shadowed.
+   A temporary binding evaporates when the theory is exported. *)
 fun defnName nm =
     let val mangled = String.translate
                         (fn #"." => "_"
@@ -1009,7 +1016,7 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
                 (* defined at the specification's own variables, and
                    read back at the construction's *)
                 val def = INST_TYPE built
-                            (new_definition (defnName nm ^ "_def",
+                            (new_definition (Theory.temp_binding (defnName nm ^ "_def"),
                                              Term.inst wrote eqn))
                 val ctm = #1 (strip_comb (lhs (concl (SPEC_ALL def))))
                 val recs = isRec facs
@@ -4668,7 +4675,7 @@ fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
                   (* at the specification's own variables, read back at
                      the construction's *)
                   INST_TYPE (asBuilt nms0)
-                    (new_definition (defnName nm ^ "_def",
+                    (new_definition (Theory.temp_binding (defnName nm ^ "_def"),
                                      Term.inst (asSpecWrote nms0) eqn))
                 end
             val defs = List.tabulate (length nms,
