@@ -237,6 +237,7 @@ in
   fun dropNoCheatSite s = sites := List.filter (fn s' => s' <> s) (!sites)
 end
 val currentProofOffset = ref 0
+val currentProofOrd = ref 1
 local
   (* enqueued in reverse; Phase A is single-threaded, so a plain ref is
      enough here.  The drain takes the whole queue in one step. *)
@@ -253,7 +254,6 @@ val proofStates : (unit -> proof_state list) ref = ref (fn () => [])
 val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
 val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
 val cancelAllProofs : (unit -> unit) ref = ref (fn () => ())
-val setProofFocus : (int option -> unit) ref = ref (fn _ => ())
 val proofStateChanged : (proof_state -> unit) ref = ref (fn _ => ())
 
 end

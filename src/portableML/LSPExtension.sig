@@ -361,6 +361,15 @@ val clearDeferred: unit -> unit
    and the pool can decide whether an edit invalidates it.  A plain ref
    is enough: elaboration is single-threaded. *)
 val currentProofOffset: int ref
+(* Which occurrence of its name the declaration being compiled is,
+   counted from the start of the file.  A name can occur twice --
+   `Theorem foo' and a later `Theorem foo[allow_rebind]' -- and the pool
+   identifies a proof by name, the only identity an edit above it does
+   not move.  Set alongside `currentProofOffset' from the buffer, which
+   is the only authority on how many times a name occurs: counting
+   occurrences from pool state instead invented a second `Real_thm' for
+   a file that has one. *)
+val currentProofOrd: int ref
 
 
 (* Hooks installed by the LSP runtime (tools-poly/lsp/deferred_proofs.ML);
@@ -384,11 +393,6 @@ val cancelProofsAtOrAfter: (int -> unit) ref
    proofs already running on them are still the right ones. *)
 val cancelProofAt: (int -> unit) ref
 val cancelAllProofs: (unit -> unit) ref
-(* The declaration the user is working on, by byte offset, or NONE.
-   Its proof is held back rather than checked, since the goal-state
-   walker is already replaying that tactic on every keystroke; it is
-   checked at raised priority once the user moves on. *)
-val setProofFocus: (int option -> unit) ref
 (* Called by the pool when one proof's outcome is decided, so the
    caller can report it without polling.  Just the state that changed:
    a caller reporting all of them on every settled proof is quadratic in

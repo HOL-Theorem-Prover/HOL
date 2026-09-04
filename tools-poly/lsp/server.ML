@@ -1299,8 +1299,35 @@ fun start {diag, dbg, warnings} = let
     (* A deferred proof belongs to the declaration being compiled when it
        is enqueued, so record that declaration's start as each one
        begins.  Elaboration is single-threaded, so a plain ref is
-       enough. *)
-    fun onDecStarted off = LSPExtension.currentProofOffset := off
+       enough.
+
+       Also which occurrence of its name that declaration is.  The pool
+       identifies a proof by name -- the only identity an edit above it
+       does not move -- so a repeated name, `Theorem foo' and a later
+       `Theorem foo[allow_rebind]', needs the number to go with it.
+       Counted here because the buffer is the only authority on how
+       many times a name occurs: counting from the pool's own entries
+       invented a second `Real_thm' for a file that has one, the
+       entries being a mixture of live and moved-since offsets. *)
+    val decOrds = let
+      fun go [] _ acc = acc
+        | go (Sym {name, span = (start, _), ...} :: rest) seen acc =
+          let val n = 1 + length (List.filter (fn x => x = name) seen)
+          in go rest (name :: seen) ((start, n) :: acc) end
+      in go (bufferSymbols code) [] [] handle _ => [] end
+    (* The innermost declaration starting at or before `off'.  The
+       compile driver's notion of where a declaration begins and the
+       outline's agree, but a fallback of "first occurrence" keeps a
+       disagreement from renaming a proof rather than merely failing to
+       number it. *)
+    fun ordAt off =
+      List.foldl (fn ((start, n), best) =>
+                     if start <= off andalso start >= #1 best
+                     then (start, n) else best)
+                 (~1, 1) decOrds
+    fun onDecStarted off = (
+      LSPExtension.currentProofOffset := off;
+      LSPExtension.currentProofOrd := #2 (ordAt off))
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -1392,19 +1419,6 @@ fun start {diag, dbg, warnings} = let
      not distinguish those on the wire, having no list of declarations
      past the compile frontier; a client can tell them apart from its own
      parse and the last `$/compileProgress`. *)
-  (* The bare name of a proof announced by the pool.  The pool
-     qualifies a repeated name with its occurrence number -- `foo' and
-     `foo#2' for a rebound theorem -- and the no-cheat set the prover
-     consults is keyed by the name `prove_named' gave the proof, which
-     has no such suffix.  A declared name cannot contain `#', so
-     dropping a trailing `#<digits>' recovers it. *)
-  fun bareProofName site =
-      case String.tokens (fn c => c = #"#") site of
-          [nm, n] => if List.all Char.isDigit (String.explode n) andalso
-                        n <> ""
-                     then nm else site
-        | _ => site
-
   fun sendProofStates uri lines states = let
     fun statusName st =
         case st of
@@ -2148,7 +2162,7 @@ fun start {diag, dbg, warnings} = let
                     arrives, and if that somehow fails to hold the name is
                     already in the set and we stop anyway. *)
                  fun retract () =
-                     if LSPExtension.addNoCheatSite (bareProofName site) then
+                     if LSPExtension.addNoCheatSite site then
                        (bumpMinEdit minEditOffset offset;
                         scheduleCompile uri v)
                      else ()
@@ -2577,22 +2591,19 @@ fun start {diag, dbg, warnings} = let
                NONE => SOME s
              | SOME b => if #endByte s > #endByte b then SOME s else best)
       NONE declSnapshots
-    (* The user is looking at goal state here, so they are working on
-       this proof: hold it back from the pool, because the walker below
-       is about to replay that very tactic and a worker doing it too is
-       duplicated effort.  Moving to a different proof, or out of one
-       altogether, releases the previous one at raised priority --
-       setFocus handles the transition.
-
-       Note this depends on the client asking for goal state; if it
-       stops asking (the pane is closed, say) the last-focused proof
-       stays held rather than being checked.  A timer would fix that;
-       it is not worth the machinery yet. *)
+    (* Asking for goal state used to hold the proof under the cursor back
+       from the pool, on the grounds that the walker below is about to
+       replay that very tactic and a worker doing it too is duplicated
+       effort.  It also meant the proof the user was working on was the
+       one proof never checked: a held proof reads as taken on trust, so
+       the tally sat at 60/61 for as long as the cursor stayed there,
+       and the release depended on the client going on to ask about
+       somewhere else.  One duplicated replay, in a bounded pool that
+       can cancel it, is the cheaper of the two. *)
     in case findEnclosingTheorem (#done parse) (#text text) offset of
-         NONE => (!LSPExtension.setProofFocus NONE; NONE)
-       | SOME (decStart, thm as {quoteStart, ...}) =>
-         let val () = !LSPExtension.setProofFocus (SOME decStart)
-             val restoreLater = !LSPExtension.captureCompileSnap ()
+         NONE => NONE
+       | SOME (_, thm as {quoteStart, ...}) =>
+         let val restoreLater = !LSPExtension.captureCompileSnap ()
              val () = case snapBefore quoteStart of
                NONE => ()
              | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)

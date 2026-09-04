@@ -5276,6 +5276,127 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_the_proof_under_the_cursor_is_checked():
+    """Asking for goal state used to hold that proof back from the pool
+    -- the walker replays the same tactic, so a worker doing it too is
+    duplicated effort.  The cost was that the proof the user is working
+    on was the one proof never checked: a held proof reads as taken on
+    trust, so the tally sat at 60/61 for as long as the cursor stayed
+    in it, and the release depended on the client going on to ask about
+    somewhere else.  Editing a tactic and leaving the cursor there is
+    the ordinary way to work, so that is the ordinary case."""
+    d = tempfile.mkdtemp(prefix="lsp_cursorproof_")
+    try:
+        src = ("Theory cursorproof\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem one:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/cursorproofScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def proved(cl):
+                return (_proof_states(cl, uri).get("one", ("",))[0]
+                        == "proved") or None
+
+            assert_true(c.wait_until(proved, 60) is not None,
+                        f"proved first ({_proof_states(c, uri)!r})")
+            # The cursor is in the tactic and the pane asks about it,
+            # then a space is added to that same line.
+            tac = src.index("  DECIDE_TAC")
+            line = src[:tac].count("\n")
+            _send_goalstate(c, 750, uri, line, len("  DECIDE_TAC"))
+            mark = c.total_msgs()
+            eol = tac + len("  DECIDE_TAC")
+            _did_change_incr(c, uri, src, eol, eol, " ", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=mark) is not None,
+                        "recompiled")
+            # The pane refreshes, as it does after every change, and
+            # the cursor has not moved.
+            _send_goalstate(c, 751, uri, line, len("  DECIDE_TAC "))
+            assert_true(c.wait_until(proved, 60) is not None,
+                        f"and checked again with the cursor still in it "
+                        f"({_proof_states(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_name_that_occurs_once_never_gets_an_ordinal():
+    """The occurrence number comes from the buffer, so it cannot exceed
+    the number of times the name is actually there.  Derived from the
+    pool's own entries instead it could: those are a mixture of live
+    and moved-since offsets, and a file with one `Real_thm` started
+    reporting a failure against `Real_thm#2`."""
+    d = tempfile.mkdtemp(prefix="lsp_ordonce_")
+    try:
+        src = ("Theory ordonce\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem one:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n"
+               "\n"
+               "Theorem two:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/ordonceScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                st = _proof_states(cl, uri)
+                return st if len(st) == 2 and all(
+                    v[0] == "proved" for v in st.values()) else None
+
+            assert_true(c.wait_until(settled, 60) is not None,
+                        f"both proved ({_proof_states(c, uri)!r})")
+            # Edit the first tactic repeatedly with the cursor parked in
+            # it, so the pool keeps dropping and re-enqueueing the proof
+            # while the declarations below it move.
+            tac = src.index("  DECIDE_TAC")
+            line = src[:tac].count("\n")
+            text = src
+            for i in range(4):
+                mark = c.total_msgs()
+                at = text.index("  DECIDE_TAC") + len("  DECIDE_TAC") + i
+                _send_goalstate(c, 760 + i, uri, line,
+                                len("  DECIDE_TAC") + i)
+                _did_change_incr(c, uri, text, at, at, " ", 2 + i)
+                text = text[:at] + " " + text[at:]
+                assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                              since=mark) is not None,
+                            f"recompiled after edit {i}")
+            assert_true(c.wait_until(settled, 60) is not None,
+                        f"still two proofs, both proved "
+                        f"({_proof_states(c, uri)!r})")
+            named = sorted(_proof_states(c, uri))
+            assert_eq(named, ["one", "two"],
+                      "no occurrence number was invented")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_a_rebound_name_gets_its_own_entry():
     """A name can occur twice -- `Theorem foo' and a later
     `Theorem foo[allow_rebind]'.  The pool identifies a proof by its
@@ -6216,6 +6337,10 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("the_proof_under_the_cursor_is_checked",
+     test_the_proof_under_the_cursor_is_checked),
+    ("a_name_that_occurs_once_never_gets_an_ordinal",
+     test_a_name_that_occurs_once_never_gets_an_ordinal),
     ("a_rebound_name_gets_its_own_entry",
      test_a_rebound_name_gets_its_own_entry),
     ("an_edit_above_a_proof_keeps_one_entry",
