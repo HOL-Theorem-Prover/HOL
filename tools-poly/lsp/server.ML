@@ -1392,7 +1392,35 @@ fun start {diag, dbg, warnings} = let
      not distinguish those on the wire, having no list of declarations
      past the compile frontier; a client can tell them apart from its own
      parse and the last `$/compileProgress`. *)
-  fun sendProofStates uri lines states = let
+  (* The buffer's outline, parsed at most once per text version: the
+     outline is asked for on every edit, and `workspace/symbol' asks
+     every open buffer on every keystroke of the search box. *)
+  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = !lastTrees
+    fun parse () = let val syms = bufferSymbols text
+                   in symbols := SOME (version, syms); syms end
+    in
+      case !symbols of
+        SOME (v, syms) => if v = version then syms else parse ()
+      | NONE => parse ()
+    end
+
+  (* The name a proof is announced under.  A proof that has no name of
+     its own -- a `Definition''s termination obligation, say -- arrives
+     with an empty site, and a client can only report it as "unnamed",
+     which is no use for finding it.  The outline knows what
+     declaration covers that byte, so use its name: the obligation of
+     `constapply_def' is reported as `constapply_def'. *)
+  fun proofName v offset site =
+    if site <> "" then site
+    else
+      let
+        fun covering [] = site
+          | covering (Sym {name, span = (s, e), ...} :: rest) =
+            if s <= offset andalso offset < e then name else covering rest
+      in covering (symbolsOf v) handle _ => site end
+
+  fun sendProofStates v uri lines states = let
     fun statusName st =
         case st of
             LSPExtension.Unseen => "unseen"
@@ -1410,7 +1438,7 @@ fun start {diag, dbg, warnings} = let
           | _ => NONE
     fun encState ({site, offset, status} : LSPExtension.proof_state) print = (
         print "{\"pos\":"; encPosLC lines offset print;
-        print ",\"name\":"; encString site print;
+        print ",\"name\":"; encString (proofName v offset site) print;
         print ",\"status\":"; encString (statusName status) print;
         (case detailOf status of
              NONE => ()
@@ -1493,19 +1521,6 @@ fun start {diag, dbg, warnings} = let
                   ^ #message b ^ " (edit the Ancestors / Libs header to "
                   ^ "try again)")
       else ()
-    end
-
-  (* The buffer's outline, parsed at most once per text version: the
-     outline is asked for on every edit, and `workspace/symbol' asks
-     every open buffer on every keystroke of the search box. *)
-  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
-    val {text = {text, version, ...}, ...} = !lastTrees
-    fun parse () = let val syms = bufferSymbols text
-                   in symbols := SOME (version, syms); syms end
-    in
-      case !symbols of
-        SOME (v, syms) => if v = version then syms else parse ()
-      | NONE => parse ()
     end
 
   (* The range to squiggle for a proof: the theorem's own name, via
@@ -2142,7 +2157,7 @@ fun start {diag, dbg, warnings} = let
                in
                  (* Runs on the worker that settled the proof, so it must
                     not raise. *)
-                 sendProofStates uri (#lines text) [st];
+                 sendProofStates v uri (#lines text) [st];
                  (* The three verdicts that need attention also become
                     diagnostics, so a failed replay is visible in the
                     editor rather than only to a client that speaks
