@@ -1170,7 +1170,7 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun push_quantifiers_inward term =
     let
-      fun gather universal variables candidate =
+      fun gather_rev universal variables candidate =
         if (universal andalso boolSyntax.is_forall candidate) orelse
            (not universal andalso boolSyntax.is_exists candidate) then
           let
@@ -1193,11 +1193,16 @@ structure Refute_ModelFinder_Preproc = struct
                   if duplicate then substitute raw_variable variable raw_body
                   else raw_body
               in
-                gather universal (variables @ [variable]) body
+                gather_rev universal (variable :: variables) body
               end
           end
         else
           (variables, candidate)
+      (* Accumulating innermost-first costs no append per binder; the
+         cluster is read outermost-first, so reverse once at the end. *)
+      fun gather universal candidate =
+        let val (variables, matrix) = gather_rev universal [] candidate
+        in (rev variables, matrix) end
       fun merge_groups variable_cost variable groups =
         let
           val (yes, no) = List.partition
@@ -1305,7 +1310,7 @@ structure Refute_ModelFinder_Preproc = struct
            boolSyntax.is_exists candidate then
           let
             val universal = boolSyntax.is_forall candidate
-            val (variables, matrix) = gather universal [] candidate
+            val (variables, matrix) = gather universal candidate
             (* Match Nitpick: the current cluster treats its matrix as
                opaque.  Structural recursion resumes outside the cluster. *)
             val connective = Option.getOpt
@@ -1317,17 +1322,16 @@ structure Refute_ModelFinder_Preproc = struct
             val groups = map (fn component =>
               (component, used component,
                IntInf.fromInt (Term.term_size component))) components
-            val source_cost_types = rev (map Term.type_of variables)
+            (* Precomputed: the permutation search asks n! * n times.
+               Nitpick keeps this table innermost-first but indexes it by
+               the outermost-first bound number, charging each binder its
+               mirror's cardinality; that mis-orders a cluster whose types
+               differ in size, so index it directly instead. *)
+            val variable_cards =
+              map (MFH.typical_card_of_type o Term.type_of) variables
             fun variable_cost variable =
-              let
-                val index = Lib.index
-                  (fn other => Term.aconv variable other) variables
-              in
-                (* Upstream stores binder types innermost-first but indexes
-                   their costs by the outermost-first bound number. *)
-                MFH.typical_card_of_type
-                  (List.nth (source_cost_types, index))
-              end
+              List.nth (variable_cards,
+                Lib.index (fn other => Term.aconv variable other) variables)
             val order =
               if length variables <= quantifier_cluster_threshold then
                 best_order variable_cost variables groups
