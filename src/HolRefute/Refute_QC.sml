@@ -8,8 +8,10 @@ structure Refute_QC = struct
 
   val union_terms = Refute_Util.union_terms
 
-  fun subtract_terms left right =
-    List.filter (fn tm => not (member tm right)) left
+  (* Also read by Refute_QC_Narrow for its per-entry statistics. *)
+  val elapsed_msec = Refute_Util.elapsed_msec
+
+  val subtract_terms = Portable.op_set_diff Term.aconv
 
   (* A [Bind] fallback needs a generator that can actually run: plan
      construction has no [strategy] in scope (it is strategy-agnostic by
@@ -1042,10 +1044,6 @@ structure Refute_QC = struct
         SOME (entry, AdaptiveSchedule ([],
           insert_entry (card, size + 1) frontier))
 
-  fun elapsed_msec start =
-    LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
-    handle Interrupt => raise Interrupt | _ => 0
-
   fun case_tree_incomplete Refute_Eval.CaseLeaf = false
     | case_tree_incomplete
         (Refute_Eval.CaseUniversal
@@ -1274,7 +1272,6 @@ structure Refute_QC = struct
     end
 
   fun substrate_name Refute_Core.Compute = SOME "compute"
-    | substrate_name Refute_Core.Cv = SOME "cv"
     | substrate_name Refute_Core.NativeSML = SOME "native"
     | substrate_name Refute_Core.Auto = NONE
 
@@ -1330,6 +1327,14 @@ structure Refute_QC = struct
     in
       {absorb = absorb, decorate = decorate, reason = reason}
     end
+
+  (* The stats row a candidate is reported with: this call's substrate
+     counters decorated with the run totals, then the schedule
+     coordinates.  Shared with [Refute_QC_Narrow]. *)
+  fun stats_for_entry decorate discarded last_stats size card msec =
+    decorate (!last_stats) @
+    (if !discarded = 0 then [] else [("discarded", !discarded)]) @
+    [("size", size), ("card", card), ("msec", msec)]
 
   fun add_reason reason reasons =
     reasons := Refute_Core.add_reason (reason, !reasons)
@@ -1420,10 +1425,10 @@ structure Refute_QC = struct
      thread and a deadline of its own.  Two properties have to hold at once.
 
      A cleanup that runs to completion wins, however long it takes.  Cleanup
-     is work that may not be torn in half — Cv reverts its theory snapshot
-     inside [Thread_Attributes.uninterruptible], because a half-reverted
-     snapshot would strand Refute definitions in the user's theory, which is
-     exactly the invariant cleanup exists to keep — and theory hygiene is the
+     is work that may not be torn in half — the theory revert runs inside
+     [Thread_Attributes.uninterruptible], because a half-reverted snapshot
+     would strand Refute definitions in the user's theory, which is exactly
+     the invariant cleanup exists to keep — and theory hygiene is the
      stronger of the two invariants here.  Preemption was never on offer
      anyway: [Timeout.apply] cancels by interrupting the calling thread, and
      Poly/ML defers a masked thread's directed interrupt until the mask
@@ -1459,10 +1464,10 @@ structure Refute_QC = struct
      calls wait interruptibly instead of deadlocking.
 
      The bound is generous because it now really does abandon work rather
-     than merely relabel it: a correct cv cleanup routinely costs 50-260ms,
-     so anything near that is a knife edge, whereas the only cost of a large
-     bound is how long a substrate that has already broken its contract can
-     stall one close. *)
+     than merely relabel it: a correct cleanup routinely costs tens to
+     hundreds of milliseconds, so anything near that is a knife edge,
+     whereas the only cost of a large bound is how long a substrate that has
+     already broken its contract can stall one close. *)
   val cleanup_timeout = Time.fromSeconds 10
 
   exception CleanupAbandoned of string
@@ -1557,6 +1562,7 @@ structure Refute_QC = struct
       Candidates of {explicit : bool, substrates : substrate list}
     | CandidatesUnavailable of string list
 
+  (* [Auto] walks the chain in priority order. *)
   fun ordered_substrate_candidates (config : Refute_Core.config) =
     case #substrate (#qc config) of
         Refute_Core.Auto =>
@@ -1808,11 +1814,8 @@ structure Refute_QC = struct
               val frontier = ref (NONE : (int * int) option)
               val counters = new_counter_totals ()
               fun instance_for card = List.nth (instances, card - 1)
-              fun stats_for size card msec =
-                #decorate counters (!(#last_stats compiled)) @
-                (if !discarded = 0 then []
-                 else [("discarded", !discarded)]) @
-                [("size", size), ("card", card), ("msec", msec)]
+              val stats_for = stats_for_entry (#decorate counters)
+                discarded (#last_stats compiled)
               fun one (card, size) draws genuine_only ignored retry_budget =
                 let
                   val start = Time.now ()
@@ -1932,15 +1935,20 @@ structure Refute_QC = struct
                 in
                   frontier := SOME entry
                 end
+              (* Only running out of schedule entries leaves the search
+                 exhaustive.  Every early stop -- an expired deadline
+                 above all, which a long plan compilation can reach
+                 before the first entry runs -- leaves entries unrun, so
+                 [complete] must not survive one. *)
               fun search current =
-                if length (!counterexamples) >=
-                     Int.max (1, #max_counterexamples config) orelse
-                   Refute_Core.search_expired config then ()
-                else
-                  case schedule_next current of
-                      NONE => ()
-                    | SOME (entry, rest) =>
-                        (run_entry entry; search rest)
+                case schedule_next current of
+                    NONE => ()
+                  | SOME (entry, rest) =>
+                      if length (!counterexamples) >=
+                           Int.max (1, #max_counterexamples config) orelse
+                         Refute_Core.search_expired config
+                      then complete := false
+                      else (run_entry entry; search rest)
               val _ = search cursor
               (* The frontier names the diagonally largest completed
                  schedule entry.  Type-variable cardinality only reaches
@@ -2043,7 +2051,6 @@ structure Refute_QC = struct
        {preflight = Refute_Extract.native_preflight,
         extract = Refute_Extract.extract_problem};
      Refute_EvalCompute.register_substrate ();
-     Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;
      Refute_Core.register_backend random_backend;
      Refute_Core.register_run_release "qc-smart-gate-cache"

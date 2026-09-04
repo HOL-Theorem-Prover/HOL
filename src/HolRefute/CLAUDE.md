@@ -25,18 +25,21 @@ repository.
 - Interactive session: start `bin/hol`, then run `load "Refute"`.
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` here.  Level 2 is not optional —
   cross-substrate conformance and the acceptance tables only run there.
-- The selftest exercises only the `Refute` signature: user-visible outcomes,
-  messages and registrations.  Mechanism-level checks (internal modules,
-  counters, serializer goldens) do not belong there.  Sole exception, the
-  alias at its head: `Refute_ModelFinder_Model.lookup_term_postprocessor`
-  is a registry entry point kept out of the signature for want of a user,
-  still observed here.
+- The selftest exercises only the `Refute` signature and the shipped
+  theories' ancestry: user-visible outcomes, messages, registrations, and
+  what a descendant theory inherits.  Mechanism-level checks (internal
+  modules, counters, serializer goldens) do not belong there.  Two
+  exceptions, both flagged in the file's header:
+  `Refute_ModelFinder_Model.lookup_term_postprocessor`, a registry entry
+  point kept out of the signature for want of a user; and
+  `Refute_QC.strategy_run`, because an expired deadline's verdict has no
+  public route that is not decided by the same budget it tests.
 - The root CLAUDE.md's `--seq=tools/sequences/upto-parallel` pass does not
   reach this directory and adds no signal: it stops before
   `src/parallel_builds`, which is what pulls in HolRefute (POLY-only
   `INCLUDES` in `src/parallel_builds/core/Holmakefile`, sequence
   `more-theories`).  It builds neither HolRefute nor its deps (real, sort,
-  n-bit, cv_compute).  Nothing else INCLUDEs HolRefute, so a change confined
+  n-bit).  Nothing else INCLUDEs HolRefute, so a change confined
   here cannot break upstream; a tree-level check needs `bin/build -F`.
 
 ## Architecture
@@ -74,14 +77,8 @@ repository.
   *encoding* is unsound, so only liberal problems spend it; every model of a
   sound problem is charged to `max_genuine`.
 - Substrate selection: `Auto` falls through inapplicable substrates
-  (NativeSML, then Cv, then Compute); an explicitly selected substrate
-  never falls through — inapplicability reports `Unknown`.
-- Cv declines under `e`/`expandf` (proof-manager lock: `tDefine` deadlocks)
-  and pre-flights `Test`/`Guard` conditions before synthesizing generators,
-  so a refusal costs no generator work.  Not `SmartGuard` — the program
-  compiles that to an enumerator test, never a translation.  One wrapper per
-  plan (names clash across type instances), a tuple not a conjunction
-  (`F /\ P x` collapses); verdict cached per call token.
+  (NativeSML, then Compute); an explicitly selected substrate never falls
+  through — inapplicability reports `Unknown`.
 - SETTLED: backend admission and execution are concurrent by default through
   a worker pool local to each Refute call, even when
   `Multithreading.max_threads () = 1`.  Refute never changes that
@@ -97,23 +94,22 @@ repository.
   `upd_iterative_size` and `upd_iterative_card` restore adaptive mode.  Do not
   turn the 5000-scope materialization batch into a total search limit, and do
   not report adaptive timeout as finite exhaustion.
-- Determinism: one 64-bit PRNG (`rand_next`/`rand_out`/`rand_below`,
-  defined in refuteTheory, mirrored in SML in `Refute_Eval`,
-  cv-translated in `refute_cvScript.sml`).  All substrates must yield the
-  identical candidate stream for a given seed; the level-2 conformance
-  matrix compares seeded random outcomes across substrates.  Any change
-  to generation or consumption order must land in all three substrates
-  and the theory in lockstep.
-- Theory hygiene: Cv performs its per-call definitions and translations
-  inside a full theory snapshot/revert bracket.  No Refute-created type,
-  constant, theorem, or binding may survive in the user's theory on any
-  path (success, failure, timeout, interrupt); if safe cleanup is
-  unavailable, report inapplicable instead.  `theory_tests/refuteCvClean*`
-  check this.
-- Ancestry split: refuteTheory (parents: real, words, rat, finite_map) must
-  stay cv-free; refute_cvTheory (parents: refute, cv_std) holds the cv
-  translations.  Their separate `Ancestors` declarations enforce the split,
-  and the selftest asserts the exact parent sets.
+- Determinism: one 64-bit PRNG (`rand_next`/`rand_out`/`rand_below`),
+  defined once in `Refute_Eval`; extracted native code calls back into it.
+  Both substrates must yield the identical candidate stream for a given
+  seed; the level-2 conformance matrix compares seeded random outcomes
+  across substrates.  Only generation and consumption *order* can now
+  diverge, and a change to either must land in both substrates.
+- Theory hygiene: the per-call definitions Compute makes through
+  `Refute_EvalEnum` sit inside a full theory snapshot/revert bracket.  No
+  Refute-created type, constant, theorem, or binding may survive in the
+  user's theory on any path (success, failure, timeout, interrupt); if safe
+  cleanup is unavailable, report inapplicable instead.
+  `theory_tests/refuteMfClean*` and `refuteRegistrationClean*` check this.
+- Ancestry: refuteTheory's parents are real, words, rat, finite_map and
+  listRange (the declared `sorting` folds into `finite_map`); its
+  `Ancestors` declaration is exact and the selftest asserts the parent
+  set.
 
 ## Testing Guidelines
 
@@ -131,9 +127,10 @@ repository.
 - Gate by cost on `selftest_level` (reads HOLSELFTESTLEVEL, default 1):
   cheap and targeted ungated; expensive or matrix-shaped behind
   `if selftest_level >= 2`.
-- `theory_tests/` only for checks needing a fresh user theory (Cv residue):
-  `*Script.sml` descendant theories raising `Fail`, not testutils.  Runs
-  under `Holmake` at level >= 2 only, never from `selftest.exe`.
+- `theory_tests/` only for checks needing a fresh user theory (Refute
+  residue): `*Script.sml` descendant theories raising `Fail`, not
+  testutils.  Runs under `Holmake` at level >= 2 only, never from
+  `selftest.exe`.
 - Don't validate by piping `.sml` into `bin/hol`; the harness only sees
   `tests/selftest.sml`.
 - `examples/` are executable descendant theories showing *typical*

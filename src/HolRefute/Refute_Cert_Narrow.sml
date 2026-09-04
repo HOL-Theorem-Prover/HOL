@@ -228,7 +228,46 @@ structure Refute_Cert_Narrow = struct
           case candidates of [theorem] => SOME theorem | _ => NONE
         end
 
-      fun close_from index refutations (goal as (_, conclusion)) =
+      (* A refutation's conclusion and the leaf differ only where the
+         quantified variable was instantiated, so the first position at
+         which the refutation demands a constructor and the leaf still
+         holds a variable is the variable the cover pattern names.  A
+         constructor clash means the refutation belongs to another
+         branch and names no split. *)
+      fun cover_variable pattern tm =
+        if Term.aconv pattern tm then NONE
+        else if Term.is_var tm then
+          (if Term.is_var pattern then NONE else SOME tm)
+        else if Term.is_comb pattern andalso Term.is_comb tm then
+          let
+            val (pattern_rator, pattern_rand) = Term.dest_comb pattern
+            val (rator, rand) = Term.dest_comb tm
+          in
+            case cover_variable pattern_rator rator of
+                SOME found => SOME found
+              | NONE => cover_variable pattern_rand rand
+          end
+        else if Term.is_abs pattern andalso Term.is_abs tm then
+          cover_variable (Term.body pattern) (Term.body tm)
+        else NONE
+
+      (* Each split turns a variable into a constructor at a position
+         some cover pattern names, and a position is split at most once,
+         so the cover's constructor nodes bound the splits along any
+         replay path.  An exhausted budget fails the replay instead of
+         recursing on an unexpected shape. *)
+      fun cover_budget branches =
+        let
+          fun nodes Refute_Eval.CaseVariable = 0
+            | nodes (Refute_Eval.CaseConstructor (_, arguments)) =
+                List.foldl (fn (argument, total) => nodes argument + total)
+                  1 arguments
+        in
+          List.foldl (fn ((pattern, _, _), total) =>
+            nodes pattern + total) 0 branches
+        end
+
+      fun close_from index refutations budget (goal as (_, conclusion)) =
         let
           fun accept theorem =
             SOME (Tactic.MATCH_ACCEPT_TAC theorem goal)
@@ -251,21 +290,28 @@ structure Refute_Cert_Narrow = struct
             SOME solved => solved
           | NONE =>
               let
-                val variables = Term.free_vars_lr conclusion
                 fun splittable variable =
+                  Term.free_in variable conclusion andalso
                   Option.isSome (TypeBase.fetch (Term.type_of variable))
+                fun named theorem =
+                  case cover_variable (Thm.concl theorem) conclusion of
+                      SOME found =>
+                        if splittable found then SOME found else NONE
+                    | NONE => NONE
                 val variable =
-                  case List.find splittable variables of
+                  case Lib.get_first named refutations of
                       SOME found => found
                     | NONE => raise Fail
                         "case split did not reach a replay leaf"
+                val _ = if budget > 0 then () else raise Fail
+                  "case split exceeded the cover's split budget"
                 val nchotomy = TypeBase.nchotomy_of
                   (Term.type_of variable)
               in
                 Tactical.THEN
                   (Tactic.STRUCT_CASES_TAC
                      (Drule.ISPEC variable nchotomy),
-                   close_from index refutations) goal
+                   close_from index refutations (budget - 1)) goal
               end
         end
 
@@ -317,7 +363,8 @@ structure Refute_Cert_Narrow = struct
               val exhaustive = Tactical.prove
                 (all_negated,
                  Tactical.THEN
-                   (Tactic.GEN_TAC, close_from index refutations))
+                   (Tactic.GEN_TAC,
+                    close_from index refutations (cover_budget branches)))
             in
               refute_exists "existential" variable body exhaustive
             end

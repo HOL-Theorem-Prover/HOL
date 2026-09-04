@@ -51,9 +51,6 @@ type rich_problem = MFK.rich_problem
 
 val max_unsound_delay_ms = 200
 val max_unsound_delay_percent = 2
-fun elapsed_msec start =
-  LargeInt.toInt (Time.toMilliseconds (Time.now () - start))
-  handle Interrupt => raise Interrupt | _ => 0
 
 fun remaining deadline =
   if Time.now () >= deadline then Time.zeroTime
@@ -1166,7 +1163,7 @@ fun run_instance deadline started (config : Refute_Core.config)
           all_types) (!generated_scopes)
 
     fun stats donno =
-      [("msec", elapsed_msec started),
+      [("msec", Refute_Util.elapsed_msec started),
        ("card", #card instance),
        ("scopes", !scopes_emitted),
        ("scopes_skipped", !skipped),

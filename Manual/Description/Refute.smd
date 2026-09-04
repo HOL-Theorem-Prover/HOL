@@ -277,9 +277,7 @@ tested real candidates against the conclusion.  When it is zero,
 above generated 9 candidates and rejected every one, whereas
 `!n. n > 100 ==> n < 3` reports 0 generated, because the planner
 inverts `n > 100` into a smart generator that is empty at every size.
-`Compute` and `NativeSML` count every candidate; `Cv` runs its search
-as one compiled call and omits all three counts rather than fabricate
-them.
+`NativeSML` and `Compute` both count every candidate.
 
 Refute reports on the `"Refute"` trace at level 1.  Higher levels show
 backend and substrate selection, schedules, and compiled plans; level 0
@@ -380,30 +378,19 @@ slightly after it.
 #### Execution substrates
 
 Exhaustive and random testing compile a common test-plan language onto
-one of three substrates:
+one of two substrates:
 
 * `NativeSML` extracts and compiles the executable fragment in process.
   It is the preferred fast substrate on Poly/ML.
-* `Cv` compiles a fuel-bounded HOL test loop and evaluates its
-  `cv_compute` translation.  It accepts a smaller, first-order fragment.
 * `Compute` interprets plans with `computeLib`.  It is the compatibility
   substrate and supports registered custom and abstract generators.
 
-The default `Auto` tries them in that order, falling through only when
-a substrate declares itself inapplicable.  An explicitly selected
-substrate never silently changes; its inapplicability becomes an
-inconclusive reason.  For a fixed `seed`, all three consume the same
+The default `Auto` tries `NativeSML` then `Compute`, falling through
+only when a substrate declares itself inapplicable.  An explicitly
+selected substrate never silently changes; its inapplicability becomes
+an inconclusive reason.  For a fixed `seed`, both consume the same
 64-bit random stream, so a seeded run reproduces the same candidates on
-any substrate.
-
-`Cv` also declines any goal reached from the goalstack.  `e` and
-`expandf` run the tactic while holding the proof manager's lock, and
-the `cv` translation defines its generators with `TotalDefn.tDefine`,
-whose termination proof takes that lock again and deadlocks with
-interrupts masked.  `Cv` therefore reports "a goalstack tactic holds
-the proof manager" and `Auto` falls through to `Compute`, which defines
-nothing.  Outside the goalstack (`prove`, `Theorem ... QED`, a tactic
-applied to a goal by hand) `Cv` is used as usual.
+either substrate.
 
 #### Narrowing
 
@@ -532,9 +519,9 @@ route: a `register_generator_family` registration built from `FEMPTY`
 and `FUPDATE` fires on demand at whatever instance a goal needs, and is
 never exhaustive, the flag being fixed for the operator rather than
 computed per instance, so even `:bool |-> bool` cannot be exhausted.
-The generator lives only on `Compute`; `NativeSML` and `Cv` decline it
-by name and fall through under `Auto`, since fmap's `TypeBase` entry
-has no constructors to build a native or cv representation from.  A
+The generator lives only on `Compute`; `NativeSML` declines it by name,
+so `Auto` falls through to `Compute`, since fmap's `TypeBase` entry has
+no constructors to build a native representation from.  A
 closed fmap fact can be decided, but a goal quantified over an fmap
 variable never earns `NoCounterexample` this way.  The model finder
 reaches finite maps through its own typedef encoding and can decide a
@@ -798,7 +785,7 @@ fields summarised here.  The common fields are:
 | `upd_finite_type_size` | `3` | Number of such finite cardinalities considered. |
 | `upd_default_type` | `[``:num``]` | Type instances used when `finite_types` is false. |
 | `upd_instantiate` | `[]` | Per-type-variable pins, overriding `finite_types`/`default_type`. |
-| `upd_substrate` | `Auto` | `Auto`, `NativeSML`, `Cv`, or `Compute` for executable QC. |
+| `upd_substrate` | `Auto` | `Auto`, `NativeSML`, or `Compute` for executable QC. |
 | `upd_allow_existentials` | `true` | Permit PNF narrowing of prenex existentials. |
 | `upd_finite_functions` | `true` | Finitize narrowing function inputs as update chains or constants. |
 | `upd_certify` | `true` | Independently certify QC and narrowing hits. |
@@ -888,7 +875,7 @@ forces the choice.
 | `upd_show_skolems` | `true` | Include Skolem values. |
 | `upd_show_consts` | `false` | Include reconstructed constant tables. |
 | `upd_debug` | `false` | Enable MF debug mode and single-problem batches. |
-| `upd_overlord` | `false` | Keep solver files with stable names in the current directory. |
+| `upd_overlord` | `false` | Keep the solver's scratch files instead of deleting them. |
 | `upd_max_threads` | `0` | Kodkodi thread cap; zero leaves it unspecified. |
 | `upd_tac_timeout` | `0.5` | Seconds for inner monotonicity and well-foundedness tactics. |
 | `upd_specialize` | `true` | Specialize a constant at its equation-invariant arguments. |
@@ -1048,6 +1035,10 @@ the exact validation rules.
 The theorem sets MF preprocessing uses can be extended in a theory
 script with `export_refute_simp`, `export_refute_psimp`, and
 `export_refute_unfold`, each taking the name of an existing theorem.
+Every conjunct must have a constant head in its conclusion --
+`c t1 ... tn = u`, `c t1 ... tn`, or `~(c t1 ... tn)` -- because the
+clause is filed and looked up under that constant; a clause with no
+constant head is dropped with a warning.
 
 Structural registrations require distinct type variables as parameters
 and existing constants for constructors, case operators, Abs, and Rep.
@@ -1093,7 +1084,7 @@ variables (`MINISAT_HOME`, `CRYPTOMINISAT_HOME`, `ZCHAFF_HOME`,
 
 ### Limitations and interpretation
 
-Counterexample search is bounded and incomplete.  The first three
+Counterexample search is bounded and incomplete.  The first four
 limitations below are inherent in the approach, and shared with
 Isabelle's Nitpick, rather than shortfalls still to close.
 
@@ -1113,14 +1104,18 @@ Isabelle's Nitpick, rather than shortfalls still to close.
   engines, even when its tested instances are all covered: neither
   reports `NoCounterexample` for a claim verified only at chosen
   monomorphic proxies.
+* Only the equations a user wrote are harvested for a function.  HOL4
+  completes a non-exhaustive pattern set with `ARB`, but that completion
+  stays in the raw definition rather than the presentation the model
+  finder reads, so the omitted case is a free value: a goal true only
+  because of the completion can get a spurious counterexample.
 * Random exhaustion, smart-generator fuel exhaustion, and narrowing at a
   finite depth produce an inconclusive report, not a proof.
 * Ordinary QC needs executable terms and generators.  Unrestricted
   quantifiers over infinite types, choice, and unsupported constants can
   make a substrate inapplicable.  A datatype recursive beneath a
   function type (an interaction tree's `Vis`, say) cannot be
-  exhaustively enumerated, so exhaustive QC and narrowing refuse it, and
-  Cv is inapplicable to nested recursive datatype generators in general.
+  exhaustively enumerated, so exhaustive QC and narrowing refuse it.
   Native and compute random QC can still test it by drawing a random
   function value on demand, as Isabelle's `random_fun_lift` does; a
   value pinned by an equation the search cannot evaluate is pruned

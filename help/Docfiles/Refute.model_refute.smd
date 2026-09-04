@@ -21,6 +21,13 @@ soundness and exactness of its encoding, not by whether a HOL
 certificate was built, so a result may be `Genuine` with `cert = NONE`;
 `cert = SOME thm` additionally records a certifying theorem.
 
+Only the clauses a user wrote reach the model finder.  HOL4 completes a
+non-exhaustive pattern set with `ARB`, so a function defined by
+`f (x::xs) = x` leaves `f []` unconstrained here, and a goal whose truth
+depends on that completed value -- `f [] = ARB`, or an equation between
+two functions omitting the same pattern -- can be reported as a genuine
+counterexample.  Isabelle's Nitpick has the same limitation.
+
 ### See also
 
 [`Refute.config`](#Refute.config),

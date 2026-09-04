@@ -1236,17 +1236,12 @@ fun user_friendly_const special_funs name ty =
 
 fun positive_format format = List.filter (fn count => count > 0) format
 
-fun last_and_front values =
-  case rev values of
-      last :: rest => (rev rest, last)
-    | [] => raise err "last_and_front" "empty format"
-
 fun intersect_formats _ [] = []
   | intersect_formats [] _ = []
   | intersect_formats left right =
       let
-        val (left_front, left_last) = last_and_front left
-        val (right_front, right_last) = last_and_front right
+        val (left_front, left_last) = Portable.front_last left
+        val (right_front, right_last) = Portable.front_last right
         val next_left = left_front @
           (if left_last > right_last then [left_last - right_last] else [])
         val next_right = right_front @

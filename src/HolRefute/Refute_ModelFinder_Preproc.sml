@@ -1439,34 +1439,50 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun static_args_in_term context original term =
     let
-      val (formal_variables, _) = boolSyntax.strip_forall term
+      val (formal_variables, matrix) = boolSyntax.strip_forall term
       fun is_formal variable = Util.aconv_member variable formal_variables
-      fun calls candidate arguments result =
+      (* [Term.dest_abs] frees a binder under its own name, so one shadowing
+         a formal is aconv to it where Isabelle would see a Bound.  Keep the
+         binders in scope with each call and never call an argument they
+         reach static: dropping it would fix the binder's value to the one
+         the call site passes. *)
+      fun calls bound candidate arguments result =
         if Term.is_abs candidate then
-          calls (#2 (Term.dest_abs candidate)) [] result
+          let val (variable, body) = Term.dest_abs candidate
+          in calls (variable :: bound) body [] result end
         else if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
-              val after_argument = calls argument [] result
-          in calls function (argument :: arguments) after_argument end
+              val after_argument = calls bound argument [] result
+          in calls bound function (argument :: arguments) after_argument end
         else if same_function candidate original orelse
                 is_ersatz_call context original candidate then
-          arguments :: result
+          (bound, arguments) :: result
         else
           result
-      val call_lists = calls term [] []
+      val call_sites = calls [] matrix [] []
+      fun applied index =
+        List.all (fn (_, arguments) => index < length arguments) call_sites
       fun terms_at index =
-        if List.all (fn arguments => index < length arguments) call_lists then
-          map (fn arguments => List.nth (arguments, index)) call_lists
+        if applied index then
+          map (fn (_, arguments) => List.nth (arguments, index)) call_sites
         else
           []
-      val maximum = List.foldl Int.max 0 (map length call_lists)
+      fun locally_bound_at index =
+        applied index andalso
+        List.exists (fn (bound, arguments) =>
+          List.exists (fn variable =>
+            Term.free_in variable (List.nth (arguments, index))) bound)
+          call_sites
+      val maximum = List.foldl Int.max 0
+        (map (fn (_, arguments) => length arguments) call_sites)
       val sets = List.tabulate (maximum, fn index =>
         Util.distinct_terms (terms_at index))
       fun first_equal singleton =
         Lib.index (fn terms =>
           length terms = 1 andalso Term.aconv (hd terms) singleton) sets
       fun classify (index, [singleton]) =
-            if Term.is_var singleton andalso is_formal singleton then
+            if locally_bound_at index then NONE
+            else if Term.is_var singleton andalso is_formal singleton then
               if first_equal singleton = index then SOME (index, NONE)
               else NONE
             else if Term.is_const singleton orelse
@@ -1477,7 +1493,7 @@ structure Refute_ModelFinder_Preproc = struct
               NONE
         | classify _ = NONE
     in
-      if null call_lists then []
+      if null call_sites then []
       else List.mapPartial classify
         (ListPair.zip (Util.index_seq 0 (length sets), sets))
     end

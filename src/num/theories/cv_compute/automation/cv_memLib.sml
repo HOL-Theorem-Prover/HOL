@@ -57,7 +57,7 @@ val indent_print_thm = indent_print_aux thm_to_string;
    Reused function
  *--------------------------------------------------------------------------*)
 
-fun register_ThmSetData_list tag_name uptodate update_fun = let
+fun register_ThmSetData_list tag_name update_fun = let
   fun update_fun_append th ths = update_fun th @ ths
   fun apply_delta (ThmSetData.ADD(_, th)) xs = update_fun_append th xs
     | apply_delta _                       xs = xs;
@@ -70,13 +70,7 @@ fun register_ThmSetData_list tag_name uptodate update_fun = let
                      initial_value = [],
                      apply_delta = apply_delta}
       };
-  (* A full revert (delete_const/delete_binding/scrub) leaves stale ADD
-     deltas in the live global list, which export_with_ancestry never
-     prunes.  Dropping them via prune makes them unmatchable, so a later
-     translation over the same datatype cleanly re-derives fresh ones.
-     Pruning is the reverter's job; lookups stay O(1). *)
-  fun prune () = updater (List.filter uptodate)
-  in (the_list, fn th => updater (update_fun_append th), prune) end;
+  in (the_list, fn th => updater (update_fun_append th)) end;
 
 (*--------------------------------------------------------------------------*
    Reformulate in terms of cv_rep (for use by cv_repLib and cv_transLib)
@@ -125,46 +119,26 @@ fun prepare th = let
  *--------------------------------------------------------------------------*)
 
 fun insert_cv_rep th = prepare th;
-val (cv_rep_thms, _, cv_rep_prune) =
-    register_ThmSetData_list "cv_rep" (Theory.uptodate_thm o snd)
-                             insert_cv_rep;
+val (cv_rep_thms, _) = register_ThmSetData_list "cv_rep" insert_cv_rep;
 
 fun insert_cv_pre th = (
   cv_print Verbose "\ncv_pre:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_pre_thms, cv_pre_add, cv_pre_prune) =
-    register_ThmSetData_list "cv_pre" Theory.uptodate_thm insert_cv_pre;
+val (cv_pre_thms, cv_pre_add) = register_ThmSetData_list "cv_pre" insert_cv_pre;
 
 fun insert_cv_inline th = (
   cv_print Verbose "\ncv_inline:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_inline_thms, cv_inline_add, cv_inline_prune) =
-    register_ThmSetData_list "cv_inline" Theory.uptodate_thm
-                             insert_cv_inline;
+val (cv_inline_thms, cv_inline_add) =
+    register_ThmSetData_list "cv_inline" insert_cv_inline;
 
 fun insert_cv_from_to th = (
   cv_print Verbose "\ncv_from_to:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_from_to_thms, cv_from_to_add, cv_from_to_prune) =
-    register_ThmSetData_list "cv_from_to" Theory.uptodate_thm
-                             insert_cv_from_to;
-
-(* For callers that delete constants/types from the current theory:
-   drop the theorem-set entries the deletion made stale.  Gated on the
-   kernel's retire epoch, as in ThmSetData and AncestryData: an entry
-   goes out of date only when a constant or type operator it mentions
-   is retired, and every retirement stamps the epoch from a monotone
-   process-global counter, so an unchanged epoch means no entry can
-   have gone stale since the last sweep. *)
-val last_prune_epoch : int list ref = ref []
-fun prune_stale_entries () =
-  let val cur = [Type.type_epoch (), Term.term_epoch ()] in
-    if !last_prune_epoch = cur then ()
-    else (cv_rep_prune (); cv_pre_prune (); cv_inline_prune ();
-          cv_from_to_prune (); last_prune_epoch := cur)
-  end;
+val (cv_from_to_thms, cv_from_to_add) =
+    register_ThmSetData_list "cv_from_to" insert_cv_from_to;
 
 end

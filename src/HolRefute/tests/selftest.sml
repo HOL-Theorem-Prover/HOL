@@ -6,10 +6,16 @@ open testutils
 open refuteTheory refuteTableZooTheory refuteUnusedTheory
 open Refute
 
-(* One registry entry point is deliberately not in the [Refute]
-   signature, having no user outside these tests: the composed display
-   callback a registration installs.  It stays observable here through
-   its own module. *)
+(* Three deliberate reaches outside the [Refute] signature.  One is a
+   registry entry point with no user outside these tests: the composed
+   display callback a registration installs, aliased here.  The second is
+   [Refute_QC.strategy_run], called by "an expired deadline never claims
+   NoCounterexample" because every public route to that verdict is decided
+   by the same budget it is testing.  The third is [Refute_EvalEnum]'s
+   theory bracket, called by "a theory bracket leaves the global message
+   flags alone": the defect it pins is a process-global flag held flipped
+   while a sibling backend of the same call runs, and the only public
+   observer would be a second backend racing the first. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -239,6 +245,28 @@ fun with_enabled flags body =
    Portable.finally (fn () => app (fn f => f := false) flags) body ())
 
 (* ------------------------------------------------------------------- *)
+(* Theories                                                            *)
+(* ------------------------------------------------------------------- *)
+
+val _ = section "theory ancestry"
+
+val same_string_set : string list -> string list -> bool = Lib.set_eq
+
+(* Ancestry is user-visible: a descendant theory inherits it.  [sorting] is
+   declared but is not a computed parent -- [finite_map] already ancestors
+   it, so HOL4's minimal-parent computation folds it in there.  [listRange]
+   is one because the offset-interval rewrites are stated over
+   [listRangeLHI]/[listRangeINC]. *)
+fun refute_ancestry_is_exact () =
+  same_string_set (Theory.parents "refute")
+    ["real", "words", "rat", "finite_map", "listRange"]
+
+val _ = tprint "refuteTheory has exactly its declared parents"
+val _ = require_msg (check_result refute_ancestry_is_exact) (fn () =>
+  "refute parents: " ^ String.concatWith ", " (Theory.parents "refute"))
+  (fn () => ()) ()
+
+(* ------------------------------------------------------------------- *)
 (* Facade and tactics                                                  *)
 (* ------------------------------------------------------------------- *)
 
@@ -316,6 +344,13 @@ val _ = test "current_config applies updates left to right" (fn () =>
 val _ = raises_holerr "empty backend selection is rejected"
   (fn () => upd_search (Only []) default_config)
   (SOME "Refute", SOME "upd_search", NONE)
+
+(* A zero-instance configuration was admitted and then reported as a bare
+   Unknown ["search space not exhausted"], never saying nothing was searched. *)
+val _ = raises_holerr "an empty default_type is rejected"
+  (fn () => default_config |> upd_finite_types false |> upd_default_type [])
+  (SOME "Refute_Core", SOME "validate_qc_config",
+   SOME "default_type: must be nonempty")
 
 val _ = test "unknown reasons carry the backend name" (fn () =>
   let
@@ -491,7 +526,9 @@ val _ = test "malformed updates are rejected with a message" (fn () =>
       (fn () => upd_bisim_depth [] default_config,
        "bisim_depth: values must be -1 or have a representable successor"),
       (fn () => upd_bisim_depth [~2] default_config,
-       "bisim_depth: values must be -1 or have a representable successor")]
+       "bisim_depth: values must be -1 or have a representable successor"),
+      (fn () => upd_default_type [] default_config,
+       "default_type: must be nonempty")]
     fun raises f = (ignore (f ()); false) handle Feedback.HOL_ERR _ => true
   in
     List.all rejected rows andalso
@@ -545,18 +582,27 @@ val _ = test "backends run concurrently unless sequential" (fn () =>
     val enabled = ref false
     val mutex = Mutex.mutex ()
     val cond = ConditionVar.conditionVar ()
+    val parties = ref 2
+    val window = ref 1.0
     val inside = ref 0
     val peak = ref 0
     val arrived = ref 0
+    val released = ref false
+    (* Arrival of the [parties]th backend releases the barrier.  Concurrently
+       that is all three, so the pin is decided by the meeting itself and
+       [window] only keeps a lost meeting from wedging the run.  Sequentially
+       a second arrival is already the regression, so there [window] is the
+       waiting-for-nobody span whose expiry is the pass. *)
     fun barrier () =
       let
         val _ = Mutex.lock mutex
         val _ = inside := !inside + 1
         val _ = arrived := !arrived + 1
         val _ = if !inside > !peak then peak := !inside else ()
-        val deadline = Time.+ (Time.now (), Time.fromReal 1.0)
+        val _ = if !inside >= !parties then released := true else ()
+        val deadline = Time.+ (Time.now (), Time.fromReal (!window))
         fun wait () =
-          if !arrived mod 3 = 0 orelse Time.>= (Time.now (), deadline) then ()
+          if !released orelse Time.>= (Time.now (), deadline) then ()
           else (ignore (ConditionVar.waitUntil (cond, mutex, deadline));
                 wait ())
       in
@@ -570,7 +616,9 @@ val _ = test "backends run concurrently unless sequential" (fn () =>
     val _ = app (fn n => register_backend (stub n ~90 enabled
                   (fn _ => fn _ => (barrier (); Unknown [])))) names
     fun run sequential =
-      (inside := 0; peak := 0; arrived := 0;
+      (inside := 0; peak := 0; arrived := 0; released := false;
+       parties := (if sequential then 2 else length names);
+       window := (if sequential then 1.0 else 10.0);
        ignore (refute (default_config |> quiet
                          |> only (map RegisteredBackend names)
                          |> upd_sequential sequential |> upd_timeout 10.0)
@@ -1003,6 +1051,31 @@ val _ = test "the whole space of a finite type is covered" (fn () =>
     == NoCounterexample andalso
   is_unknown (refute exhaustive ``!n : num. n <= n``))
 
+(* A deadline already gone before the first schedule entry must not leave
+   the run claiming NoCounterexample: nothing was tested.  Driven through
+   the backend body rather than [refute], because every public route arms
+   [Timeout.apply] from the same budget the search reads, so an expired run
+   reports "timed out" either way and the pin would be blind. *)
+val _ = test "an expired deadline never claims NoCounterexample" (fn () =>
+  let
+    val enabled = ref false
+    val seen = ref ([] : instance list)
+    val _ = register_backend (stub "selftest-expired" ~92 enabled
+      (fn _ => fn instances => (seen := instances; Unknown [])))
+    val cfg = exhaustive |> only [RegisteredBackend "selftest-expired"]
+    val _ = with_enabled [enabled]
+      (fn () => ignore (refute cfg ``(b : bool) \/ ~b``))
+    (* The smart-gate cache is keyed by the call token, so the backend body
+       needs one even with no call around it. *)
+    fun run_exhaustive config =
+      Thread_Data.setmp Refute_Core.active_refute_context (SOME (ref ()))
+        (Refute_QC.strategy_run Refute_Eval.Exhaustive config) (!seen)
+  in
+    not (null (!seen)) andalso
+    run_exhaustive exhaustive == NoCounterexample andalso
+    run_exhaustive (exhaustive |> upd_timeout 0.0) =/= NoCounterexample
+  end)
+
 val _ = test "literals of every kind are witnesses" (fn () =>
   List.all (fn goal => genuine (refute exhaustive goal))
     [``!n : num. n <> 2``, ``!c : char. c <> #"a"``,
@@ -1072,8 +1145,8 @@ val _ = test "a seed draws the same values on every substrate" (fn () =>
                                      |> upd_seed (SOME ~1) |> upd_substrate s)
                                   ``(x : num) = x + 1``)
   in
-    case (run Compute, run Cv, run NativeSML) of
-        (SOME a, SOME b, SOME c) => same_bindings a b andalso same_bindings b c
+    case (run Compute, run NativeSML) of
+        (SOME a, SOME b) => same_bindings a b
       | _ => false
   end)
 
@@ -1133,6 +1206,18 @@ val _ = test "existential replay is certified" (fn () =>
     |> single_cex_where (fn c => is_genuine c andalso uncertified c) andalso
   unknown_with "allow_existentials"
     (refute (nar |> upd_size 2 |> upd_allow_existentials false) exists_goal))
+
+(* A universal witness keeps its unrefined positions as free variables, so
+   the existential leaf below one holds [num]-typed holes.  The case split
+   must follow the cover, not the leaf's first splittable free variable:
+   the holes are recursive, and splitting them never terminates. *)
+val hole_exists_goal =
+  ``NULL (xs : num list) \/ ?x : rg_enum. rx_enum_code x = 3``
+
+val _ = test "a witness hole does not divert the existential case split"
+  (fn () =>
+    refute (nar |> upd_size 2) hole_exists_goal
+      |> single_cex_where (certifies hole_exists_goal))
 
 val _ = test "mixed and incomplete prefixes are certified" (fn () =>
   let
@@ -1244,9 +1329,7 @@ val _ = test "narrowing declines by name what it cannot enumerate" (fn () =>
   unknown_with "no TypeBase information for :rat"
     (refute narrowing ``(x : rat) = rat_of_num 1``) andalso
   unknown_with "no TypeBase information for :real"
-    (refute narrowing ``(x : real) = real_of_num 1``) andalso
-  unknown_with "substrate does not accept this problem"
-    (refute (narrowing |> upd_substrate Cv) ``?b : bool. b /\ ~b``))
+    (refute narrowing ``(x : real) = real_of_num 1``))
 
 (* ------------------------------------------------------------------- *)
 (* Finite maps and finite sets                                         *)
@@ -1426,7 +1509,7 @@ val _ = test "a negated inductive premise is complemented" (fn () =>
       refute (exhaustive |> upd_substrate s |> upd_certify false |> upd_size 2
                 |> upd_depth 1) goal
       |> cex_where (fn c => #substrate c = name andalso is_genuine c))
-      [(NativeSML, "native"), (Cv, "cv"), (Compute, "compute")] andalso
+      [(NativeSML, "native"), (Compute, "compute")] andalso
     unknown_with "not executable"
       (refute (exhaustive |> upd_sequential true |> upd_smart_generators false)
               ``~zoo_sg_bool_duplicate (x : bool) (y, z) ==> (y, z) <> (x, x)``)
@@ -1500,6 +1583,23 @@ val _ = test "native handles MEM, option maps and compound updates" (fn () =>
   both_strategies (native |> upd_size 3)
     ``((SOME 1 =+ T) (upd_f : num option -> bool)) NONE`` native_genuine)
 
+(* A specification is keyed by its left-hand side's head constant and hides
+   that constant's own definition: [zoo_hidden_pick_spec] shadows
+   [zoo_hidden_def] the way [pred_set]'s [GSPECIFICATION] shadows
+   [bool$IN_DEF].  The presented specification is refused for its shape, and
+   extraction recovers the real equations from the constant's home theory.
+   [zoo_opaque] is the other side: a specification introduces it and it has
+   no definition anywhere, so it never becomes executable at all.  That
+   refusal is the executability gate's, not extraction's -- it is reached
+   before a substrate is chosen -- and all this pins of it is that it names
+   the constant rather than failing anonymously. *)
+val _ = test "native recovers a definition hidden by a specification"
+  (fn () =>
+    both_strategies (native |> upd_size 3) ``!n : num. zoo_hidden n``
+      native_genuine andalso
+    unknown_with "zoo_opaque"
+      (refute (native |> upd_size 3) ``!n : num. zoo_opaque n``))
+
 val _ = test "native char-list primitives" (fn () =>
   List.all (fn goal =>
     refute (native |> upd_smart_generators false |> upd_iterations 100
@@ -1528,22 +1628,43 @@ val _ = test "substrates agree on small goals" (fn () =>
     val goals = [reverse_goal, arith, ``(x : refute$rf3) = rf3_1``]
   in
     List.all (fn goal => List.all (fn strategy =>
-      agree Compute NativeSML strategy goal andalso
-      agree Compute Cv strategy goal) strategies) goals
+      agree Compute NativeSML strategy goal) strategies) goals
   end)
 
-val _ = test "cv leaves the theory untouched" (fn () =>
+(* word64 random draws are two draws of the 64-bit PRNG, one per half, and
+   both substrates must consume them in the same order.  Almost every draw
+   refutes this goal, so the witness is the draw itself and comparing
+   witnesses really compares streams. *)
+val _ = test "word64 random draws agree across substrates" (fn () =>
+  let
+    val goal = ``!w : word64. w = 0w``
+    val cfg = random |> upd_seed (SOME 7) |> upd_iterations 10
+      |> upd_sequential true
+    fun draw s = first_cex (refute (cfg |> upd_substrate s) goal)
+  in
+    case (draw NativeSML, draw Compute) of
+        (SOME a, SOME b) =>
+          is_genuine a andalso is_genuine b andalso same_bindings a b
+      | _ => false
+  end)
+
+(* Compute defines its enumerator programs inside the theory bracket, so
+   the smart-generator goal is what actually drives the revert. *)
+val _ = test "compute leaves the theory untouched" (fn () =>
   let
     val baseline = footprint ()
-    val cfg = default_config |> quiet |> upd_substrate Cv |> upd_iterations 100
-      |> upd_size 3 |> upd_sequential true
+    val cfg = default_config |> quiet |> upd_substrate Compute
+      |> upd_iterations 100 |> upd_size 2 |> upd_sequential true
   in
     ignore (refute (cfg |> only [Exhaustive]) reverse_goal);
     ignore (refute (cfg |> only [Random] |> upd_seed (SOME 1)) reverse_goal);
-    ignore (refute (cfg |> only [Exhaustive]) ``HD (xs : num list) = HD xs``);
+    ignore (refute (cfg |> only [Exhaustive] |> upd_depth 1)
+              ``~zoo_sg_duplicate (n : num) (p : num # num) ==> p = (n, n)``);
     footprint () = baseline
   end)
 
+(* Auto's chain is native then compute, and the trace test below pins the
+   walk itself. *)
 val _ = test "Auto picks a substrate per goal" (fn () =>
   let
     val cfg = default_config |> quiet |> upd_size 3 |> upd_iterations 30
@@ -1556,7 +1677,7 @@ val _ = test "Auto picks a substrate per goal" (fn () =>
     andalso
     picks "compute" ``(r : rg_record) = s`` ex andalso
     picks "compute" ``(r : rg_record) = s`` rnd andalso
-    picks "cv" ``(w : word64) = 0w`` rnd andalso
+    picks "native" ``(w : word64) = 0w`` rnd andalso
     picks "compute" ``(f : rg_enum -> bool) RGRed`` ex andalso
     picks "compute" ``(f : rg_enum -> bool) RGRed`` rnd
   end)
@@ -1569,26 +1690,63 @@ val _ = test "an explicit substrate declines by name" (fn () =>
                                      |> strategy) goal)
     val ex = only [Exhaustive]
     fun rnd c = c |> only [Random] |> upd_seed (SOME 1)
-    val cv = exhaustive |> upd_substrate Cv
+    val native = exhaustive |> upd_substrate NativeSML
   in
     declines NativeSML "custom generator registered" ex andalso
     declines NativeSML "custom generator registered" rnd andalso
-    declines Cv "abstract generator registered" ex andalso
-    declines Cv "abstract generator registered" rnd andalso
-    unknown_with "cv: :rg_record - abstract generator registered"
-      (refute cv goal) andalso
-    unknown_with "cv: :rg_custom_matrix - custom generator registered"
-      (refute cv ``(x : rg_custom_matrix) = RGCustomA``) andalso
-    (let val outcome = refute cv flookup_goal in
-       unknown_with "generator family registered" outcome andalso
+    unknown_with "custom generator registered for :rg_custom_matrix"
+      (refute native ``(x : rg_custom_matrix) = RGCustomA``) andalso
+    (* A registered family must be declined by name, not by dying inside
+       the generator derivation. *)
+    (let val outcome = refute native flookup_goal in
+       is_unknown outcome andalso
        not (unknown_with "HOL_ERR" outcome) andalso
        not (unknown_with "axiom_of" outcome)
-     end) andalso
-    unknown_with "cv: cannot translate the goal's functions"
-      (refute cv ``rx_binary_choice (t : rg_binary) = 0``) andalso
-    unknown_with "cv: precondition for HD"
-      (refute (cv |> upd_sequential true) ``HD (xs : num list) = 0``)
+     end)
   end)
+
+(* The three message flags are process-global, and a compiled test's
+   bracket outlives admission: a sibling backend of the same call runs on
+   another worker while it is held.  So the quiet window is each piece of
+   theory work, not the bracket's lifetime -- and it must be given back on
+   the raising path too. *)
+val _ = test "a theory bracket leaves the global message flags alone"
+  (fn () =>
+    let
+      val saved_info = !Feedback.emit_INFO
+      val saved_tyvar = !Globals.notify_on_tyvar_guess
+      fun restore () =
+        (Feedback.emit_INFO := saved_info;
+         Globals.notify_on_tyvar_guess := saved_tyvar)
+    in
+      (* Compare against a baseline this test sets, never the ambient one.
+         Every Refute call above has already used a quiet window, so a
+         window that fails to give a flag back leaves it false here -- and
+         a test that read the flag as its own baseline would then compare
+         false against false and pass on the strength of the leak. *)
+      Portable.finally restore (fn () =>
+        let
+          val _ = Feedback.emit_INFO := true
+          val _ = Globals.notify_on_tyvar_guess := true
+          val held = Refute_EvalEnum.held_bracket (fn () => ())
+          val _ = Refute_EvalEnum.start_held_bracket held (fn () => ())
+          val held_info = !Feedback.emit_INFO
+          val held_tyvar = !Globals.notify_on_tyvar_guess
+          val _ = Refute_EvalEnum.close_held_bracket held
+          val quiet =
+            Refute_EvalEnum.quiet_theory_work (fn () => !Feedback.emit_INFO)
+          val after_info = !Feedback.emit_INFO
+          val after_tyvar = !Globals.notify_on_tyvar_guess
+          val restored_after_raise =
+            (Refute_EvalEnum.quiet_theory_work
+               (fn () => raise Fail "quiet_theory_work"); false)
+            handle Fail _ => !Feedback.emit_INFO
+        in
+          held_info andalso held_tyvar andalso
+          after_info andalso after_tyvar andalso
+          not quiet andalso restored_after_raise
+        end) ()
+    end)
 
 val _ = test "trace 2 reports selection and the race" (fn () =>
   let
@@ -1600,7 +1758,6 @@ val _ = test "trace 2 reports selection and the race" (fn () =>
   in
     List.all (fn needle => String.isSubstring needle selection)
       ["native is inapplicable: custom generator registered",
-       "cv is inapplicable: cv: :rg_record - abstract generator",
        "selected compute"] andalso
     outcome == NoCounterexample andalso
     List.all (fn needle => String.isSubstring needle race)
@@ -1751,7 +1908,6 @@ val _ = test "word widths are instantiated from the widths row" (fn () =>
          SOME thm => null (Term.type_vars_in_term (Thm.concl thm))
        | NONE => false)) andalso
   Lib.mem (witness_width (refute (qc |> upd_finite_types false
-                                    |> upd_default_type []
                                     |> upd_widths [2, 5, 7])
                                  word_goal)) [SOME 2, SOME 5, SOME 7] andalso
   unknown_with proxies_reason
@@ -2028,6 +2184,69 @@ val _ = mf_test "kodkod refutes and certifies a numeric goal" (fn () =>
   refute mf_num2 ``(x : num) = 0`` |> cex_where (fn c =>
     kodkod_genuine c andalso #substrate c = "kodkod" andalso
     Option.isSome (#cert c)))
+
+(* [zoo_simp_neg]'s negated [refute_simp] clause restates it, replacing the
+   DefnBase equations, so [zoo_simp_neg 0] is unconstrained and models of
+   this true goal are found and then discarded.  Keyed on [bool$~] instead
+   the restatement goes unrecognised, the definition survives, and the goal
+   reduces to [0 = 0] -- [NoCounterexample], which is what this pin
+   excludes.  One card keeps the search under a second, so the answer here
+   is never a timeout. *)
+val _ = mf_test "a negated refute_simp clause keys on its head constant"
+  (fn () => unknown_with "discarded"
+              (refute (mf |> upd_card [(NONE, [2])]) ``zoo_simp_neg 0``))
+
+(* Kodkodi writes an external SAT solver's CNF file itself and never
+   deletes it, so nothing may be left where the user started HOL. *)
+val external_sat_solvers =
+  [("MiniSat", "MINISAT_HOME", "minisat"),
+   ("CryptoMiniSat", "CRYPTOMINISAT_HOME", "cryptominisat"),
+   ("zChaff", "ZCHAFF_HOME", "zchaff"),
+   ("RSat", "RSAT_HOME", "rsat"),
+   ("Riss3g", "RISS3G_HOME", "riss3g")]
+
+fun external_sat_ready (_, home, executable) =
+  case OS.Process.getEnv home of
+      NONE => false
+    | SOME directory =>
+        (OS.FileSys.access (OS.Path.concat (directory, executable),
+           [OS.FileSys.A_READ, OS.FileSys.A_EXEC])
+         handle OS.SysErr _ => false)
+
+fun cnf_files_here () =
+  let
+    val stream = OS.FileSys.openDir (OS.FileSys.getDir ())
+    fun collect names =
+      case OS.FileSys.readDir stream of
+          NONE => names
+        | SOME name =>
+            collect (if String.isSuffix ".cnf" name then name :: names
+                     else names)
+  in
+    Portable.finally (fn () => OS.FileSys.closeDir stream)
+      (fn () => collect []) ()
+  end
+
+val cnf_hygiene = "an external SAT solver leaves no CNF file in the cwd"
+
+val _ =
+  case List.find external_sat_ready external_sat_solvers of
+      NONE => skip cnf_hygiene "no external SAT solver configured"
+    | SOME (solver, _, _) =>
+        if not kodkodi_configured then
+          skip cnf_hygiene "kodkodi not configured"
+        else
+          test cnf_hygiene (fn () =>
+            let
+              val existing = cnf_files_here ()
+              val result =
+                refute (mf_num2 |> upd_sat_solver solver) ``(x : num) = 0``
+            in
+              (* The verdict pins that Kodkodi really ran: a skipped or
+                 failed search would pass the file check vacuously. *)
+              cex_where kodkod_genuine result andalso
+              Portable.set_diff (cnf_files_here ()) existing = []
+            end)
 
 val _ = mf_test "whack keeps a certified counterexample" (fn () =>
   refute (mf_num2 |> upd_whack [``I : 'a -> 'a``])
@@ -2346,6 +2565,18 @@ val _ = mf_test "rat facts are bounds-relative without a decision" (fn () =>
                           |> upd_card [(NONE, [1, 2, 3])])
                        ``rat$rat_add x y = rat$rat_add y (x : rat$rat)``))
 
+(* [zoo_shadow]'s restatement calls itself under a lambda binding its own
+   formal name.  Reading that argument as static drops it from the call
+   under the lambda, leaving [sp1 <=> sp1] and a free specialized constant
+   that falsifies this true goal, so models of it are found where there
+   should be none.  The goal quantifies nothing and the type is infinite, so
+   a clean search is bounds-relative, never [NoCounterexample]; what the
+   defect changes is that models exist at all.  Fixed cards keep this under
+   a tenth of a second -- the adaptive default never finishes. *)
+val _ = mf_test "a shadowed binder is not a static argument" (fn () =>
+  bounds_clean (refute (mf |> upd_card [(NONE, [1, 2, 3])])
+                       ``zoo_shadow 3``))
+
 (* ------------------------------------------------------------------- *)
 (* Registration APIs                                                   *)
 (* ------------------------------------------------------------------- *)
@@ -2610,11 +2841,8 @@ fun conformance_row (goal, expect, inapplicable, adjust) =
           | NONE =>
               agrees compute (refute (cfg |> upd_substrate substrate) goal)
     in
-      expectation_holds expect compute andalso conforms Cv andalso
-      conforms NativeSML
+      expectation_holds expect compute andalso conforms NativeSML
     end) strategies
-
-val cv_fun = "cv: :rf2 -> bool - function type in data position"
 
 val conformance_rows = [
   (``(!n : num. n < 3 ==> n * n < 4) <=> T``, ExpectGenuine, [], I),
@@ -2629,43 +2857,36 @@ val conformance_rows = [
   (``~((x : int) = x)``, ExpectGenuine, [], I),
   (``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``, ExpectGenuine, [], I),
   (``(m : num -> num option) k = SOME (v : num) ==> m k = NONE``,
-   ExpectGenuine,
-   [(Cv, "cv: :num -> num option - function type in data position")], I),
+   ExpectGenuine, [], I),
   (``(xs : 'a list) = ys``, ExpectGenuine, [], I),
   (``(x : 'a) = y``, ExpectGenuine, [], I),
   (``(x : 'a) = y``, ExpectGenuine, [], upd_finite_types false),
   (``(f : refute$rf2 -> refute$rf2) rf2_1 = rf2_1 /\ f rf2_2 = rf2_2 ==> F``,
-   ExpectGenuine, [(Cv, "cv: :rf2 -> rf2 - function type in data position")],
-   I),
+   ExpectGenuine, [], I),
   (``(b : bool)``, ExpectGenuine, [], I),
   (``w2n ((a : word8) + b) = w2n a + w2n b``, ExpectGenuine, [], I),
+  (``!w : word64. w = 0w``, ExpectGenuine, [], I),
   (``!n : num. n <> 2``, ExpectGenuine, [], I),
   (``!c : char. c <> #"a"``, ExpectGenuine, [], I),
   (``!s : string. s <> "x"``, ExpectGenuine, [], I),
   (``MAP SUC (xs : num list) = xs``, ExpectGenuine, [], I),
   (``FILTER ($= 0) (xs : num list) = xs``, ExpectGenuine, [], I),
   (``MAP (f : refute$rf2 -> bool) [rf2_1; rf2_2] = [T; T]``, ExpectGenuine,
-   [(Cv, cv_fun)], I),
+   [], I),
   (``FILTER (p : refute$rf2 -> bool) [rf2_1; rf2_2] = []``, ExpectGenuine,
-   [(Cv, cv_fun)], I),
+   [], I),
   (``word_xor (a : word8) b = a``, ExpectGenuine, [], I),
   (``(r : rg_stream_record) = s``, ExpectGenuine, [], I),
-  (``rx_rose (t : rg_rose) = 0``, ExpectGenuine,
-   [(Cv, "cv: :rg_rose - nested recursive datatype generator")], I),
-  (``HD (xs : num list) = 0``, ExpectGenuine, [(Cv, "cv: precondition for HD")],
-   I),
+  (``rx_rose (t : rg_rose) = 0``, ExpectGenuine, [], I),
+  (``HD (xs : num list) = 0``, ExpectGenuine, [], I),
   (``(r : rg_record) = s``, ExpectGenuine,
-   [(Cv, "cv: :rg_record - abstract generator registered"),
-    (NativeSML, "custom generator registered for :rg_record")], I),
+   [(NativeSML, "custom generator registered for :rg_record")], I),
   (``(x : rg_custom_matrix) = RGCustomA``, ExpectGenuine,
-   [(Cv, "cv: :rg_custom_matrix - custom generator registered"),
-    (NativeSML, "custom generator registered for :rg_custom_matrix")], I),
+   [(NativeSML, "custom generator registered for :rg_custom_matrix")], I),
   (``(x : rat) = y``, ExpectGenuine,
-   [(Cv, "cv: :rat - custom generator registered"),
-    (NativeSML, "custom generator registered for :rat")], I),
+   [(NativeSML, "custom generator registered for :rat")], I),
   (``(x : real) = y``, ExpectGenuine,
-   [(Cv, "cv: :real - custom generator registered"),
-    (NativeSML, "custom generator registered for :real")], I),
+   [(NativeSML, "custom generator registered for :real")], I),
   (``(!n : num. n <= n)``, ExpectUnknown, [], I),
   (``T``, ExpectNone, [], I),
   (``REVERSE (REVERSE [T; F; T]) = [T; F; T]``, ExpectNone, [], I),
@@ -2681,7 +2902,7 @@ val _ = level2 "substrates conform on smart-generator goals" (fn () =>
       refute (cfg |> upd_certify false |> upd_substrate substrate) goal
     fun all_agree cfg goal check =
       let
-        val outcomes = List.map (run cfg goal) [Compute, Cv, NativeSML]
+        val outcomes = List.map (run cfg goal) [Compute, NativeSML]
       in
         List.all (fn outcome => outcome |> cex_where (fn c =>
                     is_genuine c andalso uncertified c andalso check c))
@@ -2697,12 +2918,12 @@ val _ = level2 "substrates conform on smart-generator goals" (fn () =>
       (fn _ => true)
   end)
 
-val _ = level2 "cv and compute agree on datatype goals" (fn () =>
+val _ = level2 "native and compute agree on datatype goals" (fn () =>
   List.all (fn goal =>
     List.all (fn (search, cfg) =>
       let val cfg = cfg |> upd_search search in
         agrees (refute (cfg |> upd_substrate Compute) goal)
-               (refute (cfg |> upd_substrate Cv) goal)
+               (refute (cfg |> upd_substrate NativeSML) goal)
       end) strategies)
     [``REVERSE (xs : num list) = xs``, ``(x : refute$rf3) = rf3_1``,
      ``(t : rg_tree) = RGTip n ==> F``])

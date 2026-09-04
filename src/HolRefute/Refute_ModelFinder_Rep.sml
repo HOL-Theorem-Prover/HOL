@@ -80,7 +80,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
     let val string = string_for_rep representation
     in
       if String.isPrefix "[" string orelse
-         not (Util.is_substring_of " " string) then
+         not (String.isSubstring " " string) then
         string
       else
         "(" ^ string ^ ")"

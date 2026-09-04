@@ -1,8 +1,8 @@
 open HolKernel Parse boolLib bossLib
 
-(* Shared HOL synthesis for depth-bounded SmartGen enumerators.  Both the
-   compute and cv substrates define these equations; only their evaluator of
-   the resulting constants differs. *)
+(* HOL synthesis for depth-bounded SmartGen enumerators: the equations are
+   defined as ordinary constants, which the compute substrate then
+   evaluates. *)
 structure Refute_EvalEnum = struct
   type term = Term.term
   type hol_type = Type.hol_type
@@ -12,8 +12,8 @@ structure Refute_EvalEnum = struct
   exception CleanupFailed of exn
 
   (* Private deterministic fault-injection seam.  Tests arm it only while
-     checking cleanup after the definition (and cv translation) has landed;
-     production leaves it at NONE. *)
+     checking cleanup after the definition has landed; production leaves it
+     at NONE. *)
   val post_definition_failure_hook =
     ref (NONE : (Thm.thm -> unit) option)
 
@@ -61,7 +61,7 @@ structure Refute_EvalEnum = struct
 
   (* Dependency closure of an enumerator program.  The native extractor
      resolves programs from its own snapshot and gates smart Guards
-     differently from the compute/cv path, so the lookups are parameters;
+     differently from the compute path, so the lookups are parameters;
      [reject] raises, and its result is only wrapped to keep one type.
 
      [dependency]'s production caller ([prepare]'s [lookup]) resolves a
@@ -539,6 +539,50 @@ structure Refute_EvalEnum = struct
         | _ => boolSyntax.mk_neg (boolSyntax.list_mk_disj (map holds clauses))
     end
 
+  (* Everything the evaluator defines is private scratch that its revert
+     retires again, so the definition storage messages, and the theorem-set
+     warnings the retirement itself provokes, say nothing about the goal.
+     Silenced by default, and kept from trace level 2, where those
+     definitions are what one is looking at.
+
+     Three channels carry that chatter.  The storage trace prints one line
+     per scratch definition.  Parsing the scratch equations invents type
+     variable names, announced once per quotation while
+     [Globals.notify_on_tyvar_guess] is set and the session is interactive.
+     And [Feedback.HOL_INFO] is where HOL's pretty-printers land
+     ([Portable.pprint_outstream]), a channel no trace level gates, so it
+     is switched off wholesale.  Refute's own reports and traces are
+     messages, not INFO, and are unaffected.
+
+     All three flags are process-global, and a compiled test holds its
+     theory bracket while the other backends of the same call run on
+     sibling workers of the pool, so the quiet window is each piece of
+     theory work and not the bracket's lifetime: nothing else may inherit
+     this verbosity.  A substrate that defines on its own wraps that work
+     in this too. *)
+  val storage_trace = "Definition.storage_message"
+
+  fun bracket_chatter () = Refute_Core.Private.enabled 2
+
+  fun quiet_theory_work work =
+    Thread_Attributes.uninterruptible
+      (fn restore_attributes => fn () =>
+        let
+          val old_storage = Feedback.current_trace storage_trace
+          val old_tyvar_notice = !Globals.notify_on_tyvar_guess
+          val old_info = !Feedback.emit_INFO
+          val _ = if bracket_chatter () then ()
+                  else (Feedback.set_trace storage_trace 0;
+                        Globals.notify_on_tyvar_guess := false;
+                        Feedback.emit_INFO := false)
+          val result = Exn.capture (restore_attributes work) ()
+          val _ = Feedback.set_trace storage_trace old_storage
+          val _ = Globals.notify_on_tyvar_guess := old_tyvar_notice
+          val _ = Feedback.emit_INFO := old_info
+        in
+          Exn.release result
+        end) ()
+
   fun conjunction [] = raise Fail "Refute enum empty definition"
     | conjunction equations = boolSyntax.list_mk_conj equations
 
@@ -564,12 +608,11 @@ structure Refute_EvalEnum = struct
      auxiliary constants the termination machinery introduces.
 
      [primDefine] returns the induction theorem instead of registering it,
-     and registering it is not optional here: [cv_transLib] proves a
-     translation by that induction, and without it falls back to emitting a
-     recursion precondition, which the callers below report as an
-     inapplicable substrate.  [register_induction] is [Define]'s own
-     registration, including its [Defn.def_n_ind] rule that the returned
-     induction theorem counts only when termination was actually proved. *)
+     so a clique defined here would otherwise reach the next one without the
+     induction [Define] would have left behind.  [register_induction] is
+     [Define]'s own registration, including its [Defn.def_n_ind] rule that
+     the returned induction theorem counts only when termination was
+     actually proved. *)
   fun register_induction (theorem, induction, termination) =
     case (induction, termination) of
         (SOME ind, SOME _) =>
@@ -592,9 +635,10 @@ structure Refute_EvalEnum = struct
     end
 
   fun define_cliques quotation =
-    Theory.try_theory_extension
-      (fn q => List.map define_clique_of (Defn.Hol_multi_defns q))
-      quotation
+    quiet_theory_work (fn () =>
+      Theory.try_theory_extension
+        (fn q => List.map define_clique_of (Defn.Hol_multi_defns q))
+        quotation)
 
   fun define_clique quotation =
     case define_cliques quotation of
@@ -714,7 +758,7 @@ structure Refute_EvalEnum = struct
         val theorems = define_cliques
           [HOLPP.ANTIQUOTE
             (conjunction (List.concat (map equations skeletons)))]
-        val _ = List.app after_define theorems
+        val _ = quiet_theory_work (fn () => List.app after_define theorems)
         val theorem = LIST_CONJ theorems
         val _ = Option.app (fn hook => hook theorem)
           (!post_definition_failure_hook)
@@ -741,8 +785,8 @@ structure Refute_EvalEnum = struct
     Term.list_mk_comb (function,
       generator_values @ inputs @ [numSyntax.term_of_int fuel])
 
-  (* Shared process-global theory bracket.  Compute definitions and cv
-     translations must serialize against one another.
+  (* Shared process-global theory bracket: HOL's theory state tolerates one
+     mutator at a time, so every substrate's definitions serialize on it.
 
      An ownerless binary lock rather than a [Mutex.mutex]: the bracket is
      released by whichever thread runs the substrate's [close], and
@@ -757,23 +801,12 @@ structure Refute_EvalEnum = struct
 
   fun unlock_theory () = Synchronized.change theory_lock (fn _ => false)
 
-  (* Lock acquisition itself must admit timeout interrupts.  Once the lock
-     is taken, interrupts remain masked until the caller has installed its
-     cleanup state, so no lock can be leaked in that small transition. *)
   fun lock_interruptibly restore =
-    let
-      fun acquire () =
-        if try_lock_theory () then ()
-        else
-          (restore (fn () => OS.Process.sleep (Time.fromReal 0.01)) ();
-           acquire ())
-    in
-      acquire ()
-    end
+    Util.acquire_interruptibly restore try_lock_theory
 
-  (* Prefix allocation is independent of the theory bracket: cv allocates
-     local names while holding [theory_lock], whereas compute allocates its
-     definition prefix before the first run. *)
+  (* Prefix allocation is independent of the theory bracket: compute
+     allocates its definition prefix before the first run, ahead of taking
+     [theory_lock]. *)
   val name_mutex = Mutex.mutex ()
   val name_serial = ref 0
 
@@ -828,67 +861,21 @@ structure Refute_EvalEnum = struct
       val _ = delete Theory.delete_type
         (additions (#types after) (#types baseline))
       val _ = attempt Theory.scrub
-      val _ = attempt cv_memLib.prune_stale_entries
     in
       case !first_error of
           NONE => ()
         | SOME error => raise error
     end
 
-  (* Everything defined in the bracket is private scratch that the revert
-     retires again, so the definition storage messages, and the theorem-set
-     warnings the retirement itself provokes, say nothing about the goal.
-     Silenced with cv's own chatter, and kept from trace level 2, where the
-     bracket's definitions are what one is looking at.
-
-     Three channels carry that chatter.  The storage trace prints one line
-     per scratch definition.  Parsing the scratch equations invents type
-     variable names, announced once per quotation while
-     [Globals.notify_on_tyvar_guess] is set and the session is interactive.
-     And cv reports a generated precondition, and dumps the term it gave up
-     on, through [Feedback.HOL_INFO] at its own [Silent] level, which means
-     "print whatever the verbosity" -- [cv_memLib.verbosity_level] silences
-     the levels above it and never those, so the INFO channel itself is what
-     has to go.  Refute's own reports and traces are messages, not INFO, and
-     are unaffected. *)
-  val storage_trace = "Definition.storage_message"
-
-  fun bracket_chatter () = Refute_Core.Private.enabled 2
-
-  type theory_bracket =
-    {baseline : snapshot, old_verbosity : cv_memLib.verbosity,
-     old_storage : int, old_tyvar_notice : bool, old_info : bool}
-
-  fun open_theory_bracket () : theory_bracket =
-    let
-      val baseline = snapshot ()
-      val old_verbosity = !cv_memLib.verbosity_level
-      val old_storage = Feedback.current_trace storage_trace
-      val old_tyvar_notice = !Globals.notify_on_tyvar_guess
-      val old_info = !Feedback.emit_INFO
-      val _ = cv_memLib.verbosity_level := cv_memLib.Silent
-      val _ = if bracket_chatter () then ()
-              else (Feedback.set_trace storage_trace 0;
-                    Globals.notify_on_tyvar_guess := false;
-                    Feedback.emit_INFO := false)
-    in
-      {baseline = baseline, old_verbosity = old_verbosity,
-       old_storage = old_storage, old_tyvar_notice = old_tyvar_notice,
-       old_info = old_info}
-    end
-
-  fun close_theory_bracket
-        ({baseline, old_verbosity, old_storage, old_tyvar_notice,
-          old_info} : theory_bracket) =
+  (* The retirement provokes theorem-set warnings of its own, and they are
+     as private as the definitions that draw them. *)
+  fun close_theory_bracket baseline =
     let
       val quiet_revert =
         if bracket_chatter () then revert
         else Lib.with_flag (Feedback.emit_WARNING, false) revert
-      val result = Exn.capture quiet_revert baseline
-      val _ = cv_memLib.verbosity_level := old_verbosity
-      val _ = Feedback.set_trace storage_trace old_storage
-      val _ = Globals.notify_on_tyvar_guess := old_tyvar_notice
-      val _ = Feedback.emit_INFO := old_info
+      val result =
+        quiet_theory_work (fn () => Exn.capture quiet_revert baseline)
     in
       case result of
           Exn.Res _ => ()
@@ -896,20 +883,18 @@ structure Refute_EvalEnum = struct
     end
 
   (* A compiled test holds its bracket from the first definition it makes
-     until [close], and lifetimes legitimately overlap: the cv substrate
-     opens its bracket while compiling (translation failures must surface
-     as inapplicability, not as an evaluation result), so a compute test
-     compiled from the same goal opens its own bracket, on the same
-     thread, before the cv test is closed.  With a plain mutex that
-     second open waits for a lock the caller itself holds and never
-     returns.  Entry is therefore re-entrant for the holding thread:
-     nested brackets share the outer baseline and only the outermost
-     close reverts, so the theory is clean again exactly when no bracket
-     is open.  Other threads still wait, because HOL's theory state
-     tolerates only one mutator at a time. *)
+     until [close], so lifetimes can overlap on one thread: a substrate that
+     opens its bracket while compiling leaves a second test compiled before
+     that close opening its own bracket inside the first, and with a plain
+     mutex that second open waits for a lock the caller itself holds and
+     never returns.  Entry is therefore re-entrant for the holding thread:
+     nested brackets share the outer baseline and only the outermost close
+     reverts, so the theory is clean again exactly when no bracket is open.
+     Other threads still wait, because HOL's theory state tolerates only one
+     mutator at a time. *)
   val bracket_owner = ref (NONE : Thread.thread option)
   val bracket_depth = ref 0
-  val bracket_open = ref (NONE : theory_bracket option)
+  val bracket_open = ref (NONE : snapshot option)
 
   fun holds_theory_bracket () =
     case !bracket_owner of
@@ -929,12 +914,12 @@ structure Refute_EvalEnum = struct
            programs the plan being compiled refers to. *)
         val _ = Refute_SmartGen.enter_private_theory ()
       in
-        case Exn.capture open_theory_bracket () of
+        case Exn.capture snapshot () of
             Exn.Exn error =>
               (Refute_SmartGen.leave_private_theory ();
                unlock_theory (); raise error)
-          | Exn.Res bracket =>
-              (bracket_open := SOME bracket;
+          | Exn.Res baseline =>
+              (bracket_open := SOME baseline;
                bracket_owner := SOME (Thread.self ());
                bracket_depth := 1)
       end
@@ -946,14 +931,14 @@ structure Refute_EvalEnum = struct
       (bracket_depth := !bracket_depth - 1; Exn.Res ())
     else
       let
-        val bracket = !bracket_open
+        val baseline = !bracket_open
         val _ = bracket_open := NONE
         val _ = bracket_depth := 0
         val _ = bracket_owner := NONE
         val cleanup =
-          case bracket of
+          case baseline of
               NONE => Exn.Res ()
-            | SOME bracket => Exn.capture close_theory_bracket bracket
+            | SOME baseline => Exn.capture close_theory_bracket baseline
         (* After the revert, not before: the deletions it performs are
            themselves theory deltas of the evaluator's own making. *)
         val _ = Refute_SmartGen.leave_private_theory ()

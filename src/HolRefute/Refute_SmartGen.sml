@@ -1492,7 +1492,7 @@ structure Refute_SmartGen = struct
      itself a forall/exists/select, and recursing into the [Abs]'s own
      body finds none either), and even where a check would degrade the
      compile safely, a clean substrate-neutral definition is what every
-     substrate -- Cv's translator in particular -- should see. *)
+     substrate should see. *)
   val beta_norm = Refute_Util.beta_normalize
 
   (* [Fixed]'s well-formedness guard, shared by the construction site
@@ -1924,8 +1924,8 @@ structure Refute_SmartGen = struct
       List.mapPartial (fn CpsGenerate variable =>
         SOME (Term.type_of variable) | _ => NONE) premises) clauses)
 
-  (* The evaluator brackets its own definitions and cv translations in a
-     theory snapshot/revert.  Those deltas say nothing about the relations
+  (* The evaluator brackets its own definitions in a theory
+     snapshot/revert.  Those deltas say nothing about the relations
      enumerators were inferred from: every constant the bracket adds is
      private and freshly named, and the revert restores the baseline
      exactly.  Retiring the cache on them loses programs a plan has

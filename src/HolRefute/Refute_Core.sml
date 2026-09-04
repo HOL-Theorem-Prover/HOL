@@ -58,7 +58,7 @@ structure Refute_Core = struct
     | ExpectQuasiGenuine
     | ExpectPotential
 
-  datatype substrate_choice = Auto | Compute | Cv | NativeSML
+  datatype substrate_choice = Auto | Compute | NativeSML
 
   datatype bound_mode = FixedBound | IterativeDeepening
 
@@ -319,7 +319,7 @@ structure Refute_Core = struct
   fun map_mf f (cfg : config) = change_config (ConfigMf (f (#mf cfg))) cfg
 
   fun time_is_representable value =
-    (ignore (Time.fromReal value); true) handle Time => false
+    (ignore (Time.fromReal value); true) handle Time.Time => false
 
   fun upd_timeout value =
     if Real.isFinite value andalso value >= 0.0 andalso
@@ -433,6 +433,14 @@ structure Refute_Core = struct
         if #finite_type_size qc < 1 orelse #finite_type_size qc > 6 then
           raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
             "finite_type_size: must lie between 1 and 6"
+        else ()
+      (* An empty list would leave a goal with an unpinned carrier type
+         variable with no instance at all, and the search would report a
+         bare "search space not exhausted". *)
+      val _ =
+        if null (#default_type qc) then
+          raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
+            "default_type: must be nonempty"
         else ()
       val _ = List.app (fn (NONE, _) => ()
                  | (SOME key, _) =>
@@ -1255,17 +1263,15 @@ structure Refute_Core = struct
       val instance_count =
         if null unpinned_tyvars then 1
         else if null unpinned_carrier_vars then length widths
-        else if null types then 0
         else if null unpinned_width_vars then length types
         else Int.max (length types, length widths)
       fun monomorphic_instance card =
         let
-          (* Thunked, not [val]: [types] can be empty ([upd_default_type]
-             has no lower-bound check), and a fully pinned goal now needs
-             zero carrier lookups where the old code always needed one, so
-             an eager [List.nth] would raise [Subscript] on that goal. Safe
-             because [carrier]/[width] are only forced for an unpinned
-             tyvar, and a fully pinned goal has none. *)
+          (* Thunked, not [val]: a fully pinned goal needs no carrier or
+             width lookup at all, and both are forced only for an unpinned
+             type variable.  [types] and [widths] are nonempty
+             ([validate_qc_config], [upd_widths]), so neither [List.nth]
+             can raise. *)
           fun carrier () = List.nth (types, Int.min (card, length types) - 1)
           fun width () = fcpSyntax.mk_int_numeric_type
             (List.nth (widths, Int.min (card, length widths) - 1))
@@ -1369,7 +1375,6 @@ structure Refute_Core = struct
 
     fun substrate_to_string Auto = "Auto"
       | substrate_to_string Compute = "Compute"
-      | substrate_to_string Cv = "Cv"
       | substrate_to_string NativeSML = "NativeSML"
 
     fun bound_mode_to_string FixedBound = "FixedBound"

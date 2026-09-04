@@ -173,6 +173,9 @@ signature REFUTE_FORL = sig
   val uname : string -> string
   val platform_name : unit -> string
   val jni_dir : unit -> string
+  (* An absolute scratch path with the given suffix, under the temporary
+     root and cleaned up by the solve that uses it. *)
+  val scratch_file_path : string -> string
 
   val is_configured : unit -> bool
   val solve_any_problem :
@@ -1404,8 +1407,12 @@ structure Refute_Forl :> REFUTE_FORL = struct
 
   val temp_counter = Portable.make_counter {init = 0, inc = 1}
 
-  fun pid_string () =
-    SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
+  (* One naming scheme for every scratch file and directory here and in
+     Refute_ForlSat.  The prefix is also what [scratch_files] below
+     recognises a path of ours by. *)
+  fun scratch_prefix () = "kodkodi" ^ Portable.unique_tmp_suffix () ^ "_"
+
+  fun unique_name () = scratch_prefix () ^ Int.toString (temp_counter ())
 
   fun temp_root () =
     let val candidate = getenv "TMPDIR"
@@ -1430,9 +1437,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
       fun create 0 = raise Fail "unable to create a private Kodkodi directory"
         | create attempts =
             let
-              val name = "kodkodi" ^ pid_string () ^ "_" ^
-                Int.toString (temp_counter ())
-              val path = OS.Path.concat (root, name)
+              val path = OS.Path.concat (root, unique_name ())
             in
               (Posix.FileSys.mkdir (path, private_directory_mode); path)
               handle error as OS.SysErr _ =>
@@ -1445,6 +1450,28 @@ structure Refute_Forl :> REFUTE_FORL = struct
 
   fun path_for directory stem suffix =
     OS.Path.concat (directory, stem ^ "." ^ suffix)
+
+  (* Kodkodi writes an external SAT solver's CNF file itself, at the path
+     baked into the problem's [solver] setting.  That path is fixed when the
+     problem is assembled, before the solve that uses it has a private
+     directory, and the launcher keeps the caller's working directory, so it
+     goes directly under the temporary root instead of the cwd. *)
+  fun scratch_file_path suffix =
+    path_for (temp_root ()) (unique_name ()) suffix
+
+  (* The CNF path is quoted inside the comma-separated [solver] setting;
+     recognise it by the scratch name rather than by the solver's argument
+     layout.  Kodkodi never deletes it, so a solve must. *)
+  fun scratch_files ({settings, ...} : problem) =
+    let
+      val prefix = OS.Path.concat (temp_root (), scratch_prefix ())
+      fun fields (_, value) =
+        String.tokens
+          (fn character => character = #"," orelse character = #"\"") value
+    in
+      List.filter (String.isPrefix prefix)
+        (List.concat (List.map fields settings))
+    end
 
   fun write_problems path problems =
     let
@@ -1589,7 +1616,11 @@ structure Refute_Forl :> REFUTE_FORL = struct
           val input_path = path_for directory stem "kki"
           val output_path = path_for directory stem "out"
           val error_path = path_for directory stem "err"
-          val paths = [input_path, output_path, error_path]
+          val paths =
+            [input_path, output_path, error_path] @
+            List.concat
+              (List.map (fn (_, problem) => scratch_files problem)
+                indexed_problems)
           fun remove_files () =
             if overlord then ()
             else
@@ -1606,8 +1637,9 @@ structure Refute_Forl :> REFUTE_FORL = struct
                    ["-max-threads", Int.toString max_threads]
                  else [])
               (* Keep the caller's working directory for a shell-command
-                 override such as [./kodkodi].  The private paths below are
-                 already absolute, so changing directory is unnecessary. *)
+                 override such as [./kodkodi].  Every path Kodkodi touches
+                 is absolute -- the ones below, and the CNF file it writes
+                 for an external solver -- so nothing lands in the cwd. *)
               val command =
                 "ulimit -f " ^ Int.toString max_captured_output_blocks ^
                 "; exec " ^ launcher_command () ^ " " ^

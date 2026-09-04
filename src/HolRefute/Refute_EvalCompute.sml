@@ -3,19 +3,23 @@ structure Refute_EvalCompute = struct
   open Refute_Cert Refute_Eval
   structure Util = Refute_Util
 
-  fun eval_rhs env tm =
-    SOME (rhs_of (eval (instantiate env tm)))
-    handle Interrupt => raise Interrupt | _ => NONE
+  (* computeLib never signals an irreducible redex by raising: CBV_CONV
+     returns [|- tm = tm'] with tm' left unreduced, and [reduce_cst]
+     absorbs a compset conversion's own HOL_ERR rejection itself
+     (src/compute/src/equations.sml:185).  So nothing is caught here:
+     every exception escaping evaluation is an evaluator defect and must
+     reach the GaveUp handlers in [run] rather than be filed as a stuck
+     candidate.  Stuckness is read off the shape of tm' instead. *)
+  fun eval_rhs env tm = rhs_of (eval (instantiate env tm))
 
   datatype boolean_value = IsTrue | IsFalse | IsStuck
 
   fun eval_boolean env tm =
-    case eval_rhs env tm of
-        SOME value =>
-          if Term.aconv value boolSyntax.T then IsTrue
-          else if Term.aconv value boolSyntax.F then IsFalse
-          else IsStuck
-      | NONE => IsStuck
+    let val value = eval_rhs env tm in
+      if Term.aconv value boolSyntax.T then IsTrue
+      else if Term.aconv value boolSyntax.F then IsFalse
+      else IsStuck
+    end
 
   fun bounded_power_of_two width limit =
     let
@@ -245,11 +249,8 @@ structure Refute_EvalCompute = struct
                   else NONE
               | _ =>
                   let val bound = additions @ environment in
-                    case eval_rhs bound pattern of
-                        SOME expected =>
-                          if Term.aconv expected value
-                          then SOME additions else NONE
-                      | NONE => NONE
+                    if Term.aconv (eval_rhs bound pattern) value
+                    then SOME additions else NONE
                   end
       and match_many additions [] [] = SOME additions
         | match_many additions (pattern :: rest) (value :: values) =
@@ -279,19 +280,16 @@ structure Refute_EvalCompute = struct
          decision, exactly once, on whichever branch ends it without
          recursing further: a Test visit, a Guard rejection (false, or
          given up on stuck), a SmartGuard rejection (compiled-relation
-         empty result, ungrounded inputs, or -- on the eval_boolean
-         fallback -- false or given up on stuck, mirroring Guard), an
-         Enum branch whose inputs were not yet ground or that could not
-         match a generated value, a Bind whose value computation got
-         stuck (fallback-less or given up on stuck), or a Split that
-         could not classify its scrutinee, found no matching branch, or
-         could not even evaluate its scrutinee.  A branch that recurses
+         empty result, or -- on the eval_boolean fallback -- false or
+         given up on stuck, mirroring Guard), an Enum branch that could
+         not match a generated value, or a Split that could not classify
+         its scrutinee or found no matching branch.  A branch that recurses
          (visits [next]/[cont]) never increments here itself -- the
          recursive visit's own terminal branch does, so nothing is
          double-counted.  [Prune] is excluded: the planner already knows
          that branch can never fire, so nothing was generated to count.
          [assumption_satisfied] counts only Test visits with [genuine]
-         true -- no earlier Guard/SmartGuard/Bind/Split step was stuck --
+         true -- no earlier Guard or SmartGuard step was stuck --
          since a Test can be reached with an undecided premise on the
          genuine-only-false recovery path.  [conclusion_evaluated] further
          excludes IsStuck results, keeping conclusions <= assumptions
@@ -366,14 +364,10 @@ structure Refute_EvalCompute = struct
                           mentions Enum or SmartGuard. *)
                        (* A smart Guard binds no outputs, so it is an
                           existence test: the continuation runs once, as on
-                          the cv and native substrates. *)
-                       if List.all Option.isSome inputs then
-                         if null (enum_values program
-                                    (List.map valOf inputs)) then
-                           dropped ()
-                         else visit env genuine cont
-                       else
+                          the native substrate. *)
+                       if null (enum_values program inputs) then
                          dropped ()
+                       else visit env genuine cont
                      end
                  | NONE =>
                      (case eval_boolean env predicate of
@@ -385,56 +379,35 @@ structure Refute_EvalCompute = struct
                              else visit env false cont)))
           | Enum {rel, mode, ins, outs, cont, ...} =>
               let
-                val inputs = List.map (eval_rhs env) ins
+                val program = enum_program_for programs rel mode
               in
-                if List.all Option.isSome inputs then
-                  let
-                    val program = enum_program_for programs rel mode
-                  in
-                    each (enum_values program (List.map valOf inputs))
-                      (fn values =>
-                        case match_enum_terms env outs values of
-                            SOME extended => visit extended genuine cont
-                          | NONE => dropped ())
-                  end
-                else
-                  dropped ()
+                each (enum_values program (List.map (eval_rhs env) ins))
+                  (fn values =>
+                    case match_enum_terms env outs values of
+                        SOME extended => visit extended genuine cont
+                      | NONE => dropped ())
               end
-          | Bind (variable, tm, fallback, next) =>
-              (case eval_rhs env tm of
-                   SOME value =>
-                     visit ((variable, value) :: env) genuine next
-                 | NONE =>
-                     (complete := false;
-                      case fallback of
-                          NONE => dropped ()
-                        | SOME alternative =>
-                            if genuine_only then
-                              dropped ()
-                            else visit env false alternative))
+          (* [fallback] is the native substrate's recovery from a raised
+             Stuck; computeLib has no such signal (see [eval_rhs]), so the
+             value always binds. *)
+          | Bind (variable, tm, _, next) =>
+              visit ((variable, eval_rhs env tm) :: env) genuine next
           | Split (tm, branches) =>
-              (case eval_rhs env tm of
-                   SOME value =>
-                     (case fully_applied_constructor value of
-                          NONE =>
-                            (complete := false;
-                             match_failures := !match_failures + 1;
-                             dropped ())
-                        | SOME (constructor, args) =>
-                            (case List.find (fn (expected, variables, _) =>
-                              Term.same_const expected constructor andalso
-                              length variables = length args) branches of
-                                 (* A partial split is the false constructor
-                                    premise, not an evaluator failure. *)
-                                 NONE => dropped ()
-                               | SOME (_, variables, next) =>
-                                   visit
-                                     (ListPair.zip (variables, args) @ env)
-                                     genuine next))
-                 | NONE =>
+              (case fully_applied_constructor (eval_rhs env tm) of
+                   NONE =>
                      (complete := false;
                       match_failures := !match_failures + 1;
-                      dropped ()))
+                      dropped ())
+                 | SOME (constructor, args) =>
+                     (case List.find (fn (expected, variables, _) =>
+                       Term.same_const expected constructor andalso
+                       length variables = length args) branches of
+                          (* A partial split is the false constructor
+                             premise, not an evaluator failure. *)
+                          NONE => dropped ()
+                        | SOME (_, variables, next) =>
+                            visit (ListPair.zip (variables, args) @ env)
+                              genuine next))
           | Gen (variable, next) =>
               gen visit complete env genuine variable next
       val result = visit [] true plan
@@ -486,16 +459,13 @@ structure Refute_EvalCompute = struct
             (#enumerators data) (#relation program) (#mode program)
           val application = Refute_EvalEnum.application enumerator
             generators inputs (Int.max (0, #depth (#qc config)))
-          val value =
-            case eval_rhs [] application of
-                SOME found => found
-              | NONE => raise Fail "compute Enum evaluation was stuck"
-          val packed = #1 (listSyntax.dest_list value)
+          (* An enumerator application that did not reduce to a list
+             leaves [dest_list] to raise, which [run] turns into GaveUp:
+             a stuck enumerator is an evaluator failure, not a candidate
+             the search may quietly skip. *)
+          val packed = #1 (listSyntax.dest_list (eval_rhs [] application))
         in
-          map (fn output => map (fn component =>
-            case eval_rhs [] component of
-                SOME value => value
-              | NONE => component)
+          map (fn output => map (eval_rhs [])
             (Refute_EvalEnum.unpack_terms
               (#output_types enumerator) output)) packed
         end
@@ -536,8 +506,8 @@ structure Refute_EvalCompute = struct
 
   fun bounded_size size = Int.max (0, size)
 
-  (* The normative random-consumption discipline: the cv and native
-     substrates must draw the identical stream for a seed. *)
+  (* The normative random-consumption discipline: this and the native
+     substrate must draw the identical stream for a seed. *)
   fun random_number Refute_Gen.Num size state =
         let
           val radius = IntInf.fromInt (bounded_size size)
@@ -559,6 +529,17 @@ structure Refute_EvalCompute = struct
         in
           (stringSyntax.mk_chr
              (numSyntax.mk_numeral (Arbnum.fromLargeInt value)), next)
+        end
+    (* [rand_below] emits 32 bits, so :word64 takes two draws, high half
+       first; the seeded stream has to agree draw for draw across
+       substrates. *)
+    | random_number (Refute_Gen.Word 64) _ state =
+        let
+          val (hi, after_hi) = checked_rand_below rand_below_limit state
+          val (lo, next) = checked_rand_below rand_below_limit after_hi
+        in
+          (wordsSyntax.mk_wordi
+             (Arbnum.fromLargeInt (hi * rand_below_limit + lo), 64), next)
         end
     | random_number (Refute_Gen.Word width) _ state =
         let
@@ -769,7 +750,9 @@ structure Refute_EvalCompute = struct
           val result =
             (attempt (bounded_size draws)
              handle Refute_Gen.NoGenerator (_, reason) => GaveUp reason
-                  | Fail reason => GaveUp reason)
+                  | Fail reason => GaveUp reason
+                  | Feedback.HOL_ERR error =>
+                      GaveUp (Feedback.message_of error))
           val _ = last_stats := [
             ("tests", !tests),
             ("match_failures", !match_failures),
@@ -809,9 +792,11 @@ structure Refute_EvalCompute = struct
                   ground_strategy strategy
                     {exhaustive = fn () => (),
                      random = fn _ =>
-                       if width <= 32 then ()
+                       if width <= 32 orelse width = 64 then ()
                        else add (no_generator_reason ty
-                         "word width exceeds rand_below's 32-bit bound")}
+                         ("word width is neither at most 32 nor exactly " ^
+                          "64, the widths rand_below's 32-bit output " ^
+                          "fills"))}
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)

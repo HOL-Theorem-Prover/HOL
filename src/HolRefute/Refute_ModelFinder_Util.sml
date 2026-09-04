@@ -24,10 +24,10 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   val filter_out_indices : int list -> 'a list -> 'a list
   val fold1 : ('a -> 'a -> 'a) -> 'a list -> 'a
   val replicate_list : int -> 'a list -> 'a list
-  val all_distinct_unordered_pairs_of :
-    ''a list -> (''a * ''a) list
+  val all_distinct_unordered_pairs_of : 'a list -> ('a * 'a) list
   val nth_combination : (int * int) list -> int -> int list
   val all_combinations : (int * int) list -> int list list
+  val remove_nth : int -> 'a list -> 'a list
   val all_permutations : 'a list -> 'a list list
   val chunk_list : int -> 'a list -> 'a list list
   val chunk_list_unevenly : int list -> 'a list -> 'a list list
@@ -37,7 +37,6 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   val triple_lookup :
     (''a * ''a -> bool) -> (''a option * 'b) list -> ''a -> 'b option
 
-  val is_substring_of : string -> string -> bool
   val plural_s : int -> string
   val plural_s_for_list : 'a list -> string
   val serial_commas : string -> string list -> string list
@@ -246,25 +245,23 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
       product (List.map (fn (card, offset) => index_seq offset card) cards)
   end
 
-  local
-    fun remove_nth index values =
-      let
-        fun remove _ [] = raise Subscript
-          | remove 0 (_ :: rest) = rest
-          | remove remaining (value :: rest) =
-              value :: remove (remaining - 1) rest
-      in
-        if index < 0 then raise Subscript else remove index values
-      end
-  in
-    fun all_permutations [] = [[]]
-      | all_permutations values =
-          List.concat (List.map (fn index =>
-            List.map (fn permutation =>
-              List.nth (values, index) :: permutation)
-              (all_permutations (remove_nth index values)))
-            (index_seq 0 (length values)))
-  end
+  fun remove_nth index values =
+    let
+      fun remove _ [] = raise Subscript
+        | remove 0 (_ :: rest) = rest
+        | remove remaining (value :: rest) =
+            value :: remove (remaining - 1) rest
+    in
+      if index < 0 then raise Subscript else remove index values
+    end
+
+  fun all_permutations [] = [[]]
+    | all_permutations values =
+        List.concat (List.map (fn index =>
+          List.map (fn permutation =>
+            List.nth (values, index) :: permutation)
+            (all_permutations (remove_nth index values)))
+          (index_seq 0 (length values)))
 
   local
     fun chop count values =
@@ -315,10 +312,6 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
         case AList.lookup (op =) pairs (SOME key) of
           SOME value => SOME value
         | NONE => double_lookup equal pairs key
-
-  fun is_substring_of needle stack =
-    not (Substring.isEmpty
-      (#2 (Substring.position needle (Substring.full stack))))
 
   fun plural_s count = if count = 1 then "" else "s"
 

@@ -278,60 +278,6 @@ structure Refute_Eval :> Refute_Eval = struct
       else NONE
     end
 
-  (* Selftest-only stream hook.  Replacing tests by failure exposes each
-     generated environment without changing the generator or its state. *)
-  fun dump_plan current =
-    case current of
-        Test _ => Test boolSyntax.F
-      | Gen (variable, next) => Gen (variable, dump_plan next)
-      | Bind (variable, tm, fallback, next) =>
-          Bind (variable, tm, Option.map dump_plan fallback, dump_plan next)
-      | Split (tm, branches) =>
-          Split (tm, List.map (fn (constructor, variables, next) =>
-            (constructor, variables, dump_plan next)) branches)
-      | Guard {condition, smart, cont} =>
-          Guard {condition = condition, smart = smart,
-                 cont = dump_plan cont}
-      | SmartGuard {predicate, version, cont} =>
-          SmartGuard {predicate = predicate, version = version,
-                      cont = dump_plan cont}
-      | Enum {rel, mode, version, ins, outs, cont} =>
-          Enum {rel = rel, mode = mode, version = version,
-                ins = ins, outs = outs, cont = dump_plan cont}
-      | Prune => Test boolSyntax.F
-
-  fun dump_stream (test : compiled_test) {size, count} =
-    let
-      fun loop 0 candidates = rev candidates
-        | loop remaining candidates =
-            (case #run test
-              {genuine_only = true, card = 1, size = size,
-               draws = 1, ignored = []} of
-                 CexFound {env, ...} =>
-                   loop (remaining - 1)
-                     (rev (List.map #2 env) :: candidates)
-               | Exhausted _ =>
-                   raise Fail "Refute candidate dump exhausted"
-               | GaveUp reason => raise Fail reason)
-      val result = Exn.capture (fn () => loop (Int.max (0, count)) []) ()
-      val close_result = Exn.capture (#close test) ()
-      (* As in the QC drivers: a close failure is surfaced on a successful
-         dump, but it never replaces the dump's own failure, which is the
-         diagnostic the caller came for; it is reported alongside instead.
-         A cleanup Interrupt still wins, as in [Refute_Extract]. *)
-      fun report cleanup =
-        Refute_Core.Private.say 1
-          ("Refute candidate dump cleanup failed: " ^
-           General.exnMessage cleanup ^ "\n")
-    in
-      case (result, close_result) of
-          (Exn.Res _, _) => (Exn.release close_result; Exn.release result)
-        | (_, Exn.Exn Interrupt) => raise Interrupt
-        | (Exn.Exn error, Exn.Exn cleanup) =>
-            (report cleanup; Exn.reraise error)
-        | (Exn.Exn error, Exn.Res _) => Exn.reraise error
-    end
-
   val substrate_registry : substrate list ref = ref []
   val substrate_mutex = Mutex.mutex ()
 

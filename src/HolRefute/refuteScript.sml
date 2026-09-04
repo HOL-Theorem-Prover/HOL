@@ -20,38 +20,7 @@ val _ = ThmSetData.export_list {settype = "refute_simp", initial = []}
 val _ = ThmSetData.export_list {settype = "refute_psimp", initial = []}
 val _ = ThmSetData.export_list {settype = "refute_unfold", initial = []}
 
-(* Part 2: the substrate-independent pseudo-random stream.  rand_below's
-   caller must ensure n <= 2^32.  Multiply-shift has a bias of at most
-   2^-32 per draw, which is immaterial for counterexample generation. *)
-Definition rand_next_def:
-  rand_next s =
-    (6364136223846793005 * s + 1442695040888963407) MOD
-      18446744073709551616
-End
-
-Definition rand_out_def:
-  rand_out s = s DIV 4294967296
-End
-
-Definition rand_below_def:
-  rand_below n s =
-    let s' = rand_next s
-    in ((rand_out s' * n) DIV 4294967296, s')
-End
-
-(* Strict, left-to-right candidate search.  The counter skips previously
-   reported hits without materializing the remaining result stream. *)
-Definition first_hit_def:
-  first_hit f [] (n : num) = (n, NONE) /\
-  first_hit f (x :: xs) n =
-    case f x of
-      [] => first_hit f xs n
-    | y :: _ =>
-        if n = 0 then (n, SOME y)
-        else first_hit f xs (n - 1)
-End
-
-(* Part 3: static model-finder support.  These constants intentionally have
+(* Part 2: static model-finder support.  These constants intentionally have
    no defining equations: the nut translation gives them their model-finder
    meaning.  In particular, asserting is_unknown unknown would add logical
    content that the source Nitpick theory does not have. *)
@@ -264,7 +233,7 @@ Proof
   Cases_on `n` >> Cases_on `xs` >> simp []
 QED
 
-(* Part 4: ordinary datatypes used by the boxing and binary-integer
+(* Part 3: ordinary datatypes used by the boxing and binary-integer
    preprocessors.  Keeping these declarations static makes their TypeBase
    information available to the generic datatype pipeline without adding
    runtime theory content. *)
@@ -295,7 +264,7 @@ Datatype:
   bitword = Bitword ('a -> bool)
 End
 
-(* Part 5: alternative fractions for the model finder.
+(* Part 4: alternative fractions for the model finder.
 
    Normalization faithfulness.  The raw HOL4 frac carrier only requires a
    positive denominator, but Frac selects the positive, coprime pairs.  Every
@@ -461,7 +430,7 @@ Proof
   simp [of_frac_def, frac_def]
 QED
 
-(* Part 5 continued: executable forms for bounded quantifiers.  Refute's
+(* Part 4 continued: executable forms for bounded quantifiers.  Refute's
    preprocessing rewrites to these list combinators before checking for
    unexpanded binders. *)
 Theorem bounded_forall_less:
@@ -514,7 +483,7 @@ Proof
   simp [listTheory.EXISTS_MEM]
 QED
 
-(* Part 5 continued: offset intervals.  [[lo <= n /\ n < hi]] compiles to
+(* Part 4 continued: offset intervals.  [[lo <= n /\ n < hi]] compiles to
    [[listRangeLHI]] ([[lo ..< hi]]), and [[lo <= n /\ n <= hi]] to
    [[listRangeINC]] ([[lo .. hi]]) -- its natural fit, so a non-strict
    upper bound never needs a manufactured offset.  A strict bound folds
@@ -630,7 +599,7 @@ Proof
   metis_tac [lt_add1]
 QED
 
-(* Part 6: narrowing represents function variables by finite update chains.
+(* Part 5: narrowing represents function variables by finite update chains.
    The distinct constructor prefixes replace Isabelle's type-scoped
    Constant names.  These static datatypes are also available to TypeBase
    before any goal is processed. *)
@@ -656,7 +625,7 @@ End
 
 Theorem eval_cfun_compute[compute] = eval_cfun_def
 
-(* Part 7: fmap's ersatz encoding for the model finder.
+(* Part 6: fmap's ersatz encoding for the model finder.
 
    fmap (finite_mapScript.sml) is [new_type_definition] over
    representation type 'a -> 'b + one, restricted by the inductively

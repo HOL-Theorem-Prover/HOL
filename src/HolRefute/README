@@ -62,29 +62,29 @@ Verdicts and trust
   engine.  Refuting an essential existential over an infinite type is out of
   reach (as in Nitpick); the `real` ersatz is rational-valued.
 * No oracle tags.  No Refute-created type, constant, theorem or binding may
-  survive in the user's theory on any path; Cv brackets its definitions in
-  a theory snapshot/revert and reports inapplicable when that is unsafe.
+  survive in the user's theory on any path; the definitions Compute makes
+  through `Refute_EvalEnum` are bracketed in a theory snapshot/revert, and
+  the substrate reports inapplicable when that is unsafe.
 
 Quickcheck
 ----------
 
 `Refute_QC` compiles a goal to test-plan IR (`Refute_Eval.plan`) which a
 registered substrate compiles and runs.  `Auto` tries NativeSML (in-process
-SML extraction, `Refute_Extract`), then Cv (`Thm.compute` on a translated
-fuel-bounded loop), then Compute (computeLib); an explicitly selected
-inapplicable substrate reports `Unknown`.  All substrates consume one 64-bit
-PRNG (`rand_next` in `refuteTheory`, mirrored in `Refute_Eval` and
-`refute_cvScript.sml`) in the same order, so `upd_seed (SOME n)` reproduces
-the candidate stream on any substrate; changes to generation order must land
-in all three and the theory together.
+SML extraction, `Refute_Extract`), then Compute (computeLib); an explicitly
+selected inapplicable substrate reports `Unknown`.  Both substrates consume
+one 64-bit PRNG (`rand_next` in `Refute_Eval`; the extracted native code
+calls back into it rather than reimplementing it)
+in the same order, so `upd_seed (SOME n)` reproduces the candidate stream on
+either substrate; changes to generation order must land in both and in the
+theory together.
 
-Cv declines goals reached from the goalstack (`tDefine` deadlocks on the
-proof-manager lock under `e`) and pre-flights `Test`/`Guard` conditions
-before synthesising generators.  Custom generators (`:rat`, `:real`,
-`Refute_Gen.GenCustom`) run on Compute only; `fmap` is a generator family
-(`register_generator_family`) that Cv and NativeSML decline by name.
-Compute decides `=` between ground `FEMPTY`-rooted update chains through
-`Refute_EvalFmap` (the stock compset only reduces the identical pair).
+Custom generators (`:rat`, `:real`, `Refute_Gen.GenCustom`) run on Compute
+only; `fmap` is a generator family (`register_generator_family`) that
+NativeSML declines by name.  Compute decides `=` between ground
+`FEMPTY`-rooted update chains through `Refute_EvalFmap` (the stock compset
+only reduces the identical pair).  Both substrates take every word width
+exhaustively, and width `<= 32` or exactly 64 for random draws.
 
 Smart generators (default on) mode-compile `Hol_reln` premises and
 exhaustive Horn-shaped Boolean functions into CPS enumerators (`Enum`), and
@@ -124,6 +124,15 @@ binarization off (forcing it refuses by name).  Width-changing and
 bit-permuting word operations are refused by name.  A typedef over `:num`
 or `:int` also disables smart binarization.
 
+Only the equations a user wrote are harvested for a function: HOL4
+completes a non-exhaustive pattern set with `ARB`, but that completion
+stays in the raw definition, which `raw_standard_props` skips for a
+constant that has a DefnBase presentation.  A goal whose truth depends
+on the completed value can therefore get a spurious counterexample, as
+in Nitpick.  A `refute_simp`/`refute_psimp` clause is keyed on the head
+constant under its conclusion, looking through a negation; one with no
+constant head is dropped with a warning rather than aborting harvesting.
+
 Registrations (`register_codatatype`, `register_quotient`,
 `register_typedef`, `register_term_postprocessor`, `register_frac_type_*`)
 are session-local ML state.  Typedef and quotient metadata is harvested
@@ -152,7 +161,7 @@ Module layout
 * `Refute_Core`: types, configuration, backend registry, orchestration.
 * `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
 * `Refute_Eval` (+ `.sig`): substrate seam and PRNG;
-  `Refute_EvalCompute`, `Refute_EvalCv`, `Refute_EvalSML`: substrates;
+  `Refute_EvalCompute`, `Refute_EvalSML`: substrates;
   `Refute_EvalEnum`: shared enumerator compiler;
   `Refute_EvalRat`, `Refute_EvalReal`: built-in generators and compsets;
   `Refute_EvalFmap`: compset decision of ground finite-map equality.
@@ -162,8 +171,7 @@ Module layout
 * `Refute_ModelFinder*`, `Refute_Forl*`, `Refute_PropSat`, `Refute_Skolem`:
   the model finder.
 * `Refute_Unused`: unused-assumption probes.
-* `refuteScript.sml`, `refute_cvScript.sml`: support theories; `refute`
-  must stay cv-free.
+* `refuteScript.sml`: support theory (ersatz definitions).
 * `tests/`: selftest and fixture theories.  `theory_tests/`: theory-hygiene
   checks.  `examples/`: executable usage examples (documentation, not
   tests).

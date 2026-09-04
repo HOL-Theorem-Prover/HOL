@@ -206,16 +206,51 @@ structure Refute_Cert_Model = struct
       rev (!values)
     end
 
-  fun certify_detailed_rich {original, env, hints, policy, deadline} =
+  (* Every replay attempt of one portfolio run charges the same counters,
+     so each is compared against its [policy] ceiling directly and no
+     attempt can respend what an earlier one spent. *)
+  type budget =
+    {remaining : int ref,
+     generated_candidates : int ref,
+     function_states : int ref,
+     attempted_candidates : int ref,
+     case_branches : int ref,
+     induction_attempts : int ref,
+     schematic_attempts : int ref,
+     completion_attempts : int ref,
+     candidate_trace : (int * term * term) list ref}
+
+  fun new_budget (policy : policy) : budget =
+    {remaining = ref (#total_fuel policy),
+     generated_candidates = ref 0,
+     function_states = ref 0,
+     attempted_candidates = ref 0,
+     case_branches = ref 0,
+     induction_attempts = ref 0,
+     schematic_attempts = ref 0,
+     completion_attempts = ref 0,
+     candidate_trace = ref []}
+
+  fun budget_diagnostics (policy : policy) (budget : budget) issue
+        : diagnostics =
+    {generated_candidates = ! (#generated_candidates budget),
+     function_states = ! (#function_states budget),
+     attempted_candidates = ! (#attempted_candidates budget),
+     case_branches = ! (#case_branches budget),
+     induction_attempts = ! (#induction_attempts budget),
+     schematic_attempts = ! (#schematic_attempts budget),
+     completion_attempts = ! (#completion_attempts budget),
+     candidate_trace = rev (! (#candidate_trace budget)),
+     consumed_fuel = #total_fuel policy - ! (#remaining budget),
+     failure = issue}
+
+  fun certify_detailed_rich
+        {original, env, hints, policy, budget, deadline} =
     let
       val hint_terms = map #term (hints : replay_hint list)
-      val remaining = ref (#total_fuel policy)
-      val attempted_candidates = ref 0
-      val case_branches = ref 0
-      val induction_attempts = ref 0
-      val generated_candidates = ref 0
-      val function_states = ref 0
-      val candidate_trace = ref ([] : (int * term * term) list)
+      val {remaining, generated_candidates, function_states,
+           attempted_candidates, case_branches, induction_attempts,
+           candidate_trace, ...} = budget : budget
 
       fun failure kind stage depth detail =
         ReplayFailure
@@ -948,18 +983,6 @@ structure Refute_Cert_Model = struct
           Certified certificate
         end
 
-      fun snapshot issue : diagnostics =
-        {generated_candidates = !generated_candidates,
-         function_states = !function_states,
-         attempted_candidates = !attempted_candidates,
-         case_branches = !case_branches,
-         induction_attempts = !induction_attempts,
-         schematic_attempts = 0,
-         completion_attempts = 0,
-         candidate_trace = rev (!candidate_trace),
-         consumed_fuel = #total_fuel policy - !remaining,
-         failure = issue}
-
       val reported_failure = ref (NONE : failure option)
       val outcome =
         ((case whole_formula () of
@@ -980,106 +1003,28 @@ structure Refute_Cert_Model = struct
                     NoCertificate (render_failure issue)
                   end)
     in
-      (outcome, snapshot (!reported_failure))
+      (outcome, budget_diagnostics policy budget (!reported_failure))
     end
 
-  fun policy_with_resources (policy : policy)
-        {fuel, generated, attempted, function_states, cases, inductions}
-        : policy =
-    {total_fuel = Int.max (0, fuel),
-     max_generated_candidates = Int.max (0,
-       #max_generated_candidates policy - generated),
-     max_attempted_candidates = Int.max (0,
-       #max_attempted_candidates policy - attempted),
-     max_completion_candidates = #max_completion_candidates policy,
-     max_completion_vectors = #max_completion_vectors policy,
-     max_function_states = Int.max (0,
-       #max_function_states policy - function_states),
-     max_constructor_depth = #max_constructor_depth policy,
-     max_constructor_width = #max_constructor_width policy,
-     max_constructor_size = #max_constructor_size policy,
-     max_split_depth = #max_split_depth policy,
-     max_case_branches = Int.max (0, #max_case_branches policy - cases),
-     max_inductions = Int.max (0, #max_inductions policy - inductions),
-     max_leaf_rounds = #max_leaf_rounds policy}
-
-  fun add_diagnostics (left : diagnostics) (right : diagnostics) issue
-        schematic_attempts completion_attempts : diagnostics =
-    {generated_candidates = #generated_candidates left +
-       #generated_candidates right,
-     function_states = #function_states left + #function_states right,
-     attempted_candidates = #attempted_candidates left +
-       #attempted_candidates right,
-     case_branches = #case_branches left + #case_branches right,
-     induction_attempts = #induction_attempts left +
-       #induction_attempts right,
-     schematic_attempts = schematic_attempts,
-     completion_attempts = completion_attempts,
-     candidate_trace = #candidate_trace left @ #candidate_trace right,
-     consumed_fuel = #consumed_fuel left + #consumed_fuel right,
-     failure = issue}
-
-  (* [stats] with its attempt counts and failure replaced and [overhead]
-     added to its fuel. *)
-  fun adjust_diagnostics (stats : diagnostics)
-        {schematic, completion, overhead, failure} : diagnostics =
-    {generated_candidates = #generated_candidates stats,
-     function_states = #function_states stats,
-     attempted_candidates = #attempted_candidates stats,
-     case_branches = #case_branches stats,
-     induction_attempts = #induction_attempts stats,
-     schematic_attempts = schematic,
-     completion_attempts = completion,
-     candidate_trace = #candidate_trace stats,
-     consumed_fuel = #consumed_fuel stats + overhead,
-     failure = failure}
-
-  fun set_attempt_counts stats schematic completion issue =
-    adjust_diagnostics stats
-      {schematic = schematic, completion = completion, overhead = 0,
-       failure = issue}
-
-  (* Multiple completion attempts are budgeted by passing only the remaining
-     fuel to each single-attempt replay.  The absolute deadline is unchanged,
-     so neither resource can reset between candidates. *)
+  (* Every completion attempt shares the run's [budget] and the absolute
+     deadline, so neither resource can reset between candidates.  Each
+     attempt's diagnostics are therefore the run's totals to that point,
+     including the fuel the portfolio itself spends below. *)
   fun certify_portfolio_detailed_rich
         {original, env, hints, holes, policy, deadline} =
     let
-      val remaining = ref (#total_fuel policy)
-      val completion_attempts = ref 0
-      val completion_overhead = ref 0
-      val used_generated = ref 0
-      val used_attempted = ref 0
-      val used_function_states = ref 0
-      val used_cases = ref 0
-      val used_inductions = ref 0
+      val budget = new_budget policy
+      val remaining = #remaining budget
+      val completion_attempts = #completion_attempts budget
 
       fun run env hints =
-        let
-          val answer = certify_detailed_rich
-            {original = original, env = env, hints = hints,
-             policy = policy_with_resources policy
-               {fuel = !remaining, generated = !used_generated,
-                attempted = !used_attempted,
-                function_states = !used_function_states,
-                cases = !used_cases, inductions = !used_inductions},
-             deadline = deadline}
-          val _ = remaining := Int.max (0,
-            !remaining - #consumed_fuel (#2 answer))
-          val _ = used_generated := !used_generated +
-            #generated_candidates (#2 answer)
-          val _ = used_attempted := !used_attempted +
-            #attempted_candidates (#2 answer)
-          val _ = used_function_states := !used_function_states +
-            #function_states (#2 answer)
-          val _ = used_cases := !used_cases + #case_branches (#2 answer)
-          val _ = used_inductions := !used_inductions +
-            #induction_attempts (#2 answer)
-        in
-          answer
-        end
+        certify_detailed_rich
+          {original = original, env = env, hints = hints,
+           policy = policy, budget = budget, deadline = deadline}
 
-      val (schematic_result, schematic_stats0) = run env hints
+      (* The schematic attempt is made once, ahead of any completion. *)
+      val _ = #schematic_attempts budget := 1
+      val (schematic_result, schematic_stats) = run env hints
       (* [null holes] below means "every env value is closed", not just "no
          hole was declared" - callers (e.g. [certification_env_with_holes])
          must drop, never authorize, a binding with a stray free variable
@@ -1088,8 +1033,6 @@ structure Refute_Cert_Model = struct
         case schematic_result of
             DiscardedByWholeFormulaEval => Exact
           | _ => if null holes then Exact else Schematic
-      val schematic_stats = set_attempt_counts schematic_stats0 1 0
-        (#failure schematic_stats0)
 
       fun resource_exhausted (stats : diagnostics) =
         case #failure stats of
@@ -1124,7 +1067,6 @@ structure Refute_Cert_Model = struct
             else if !remaining <= 0 then ()
             else
               (remaining := !remaining - 1;
-               completion_overhead := !completion_overhead + 1;
                values := !values @ [tm])
           val generated = synth_values_bounded
             {target = ty, pool = closed_pool, active = [],
@@ -1179,45 +1121,34 @@ structure Refute_Cert_Model = struct
           (env, hints)
         end
 
-      fun combine accumulated next =
-        add_diagnostics accumulated next (#failure next) 1
-          (!completion_attempts)
-
-      fun with_overhead (stats : diagnostics) =
-        adjust_diagnostics stats
-          {schematic = #schematic_attempts stats,
-           completion = #completion_attempts stats,
-           overhead = !completion_overhead, failure = #failure stats}
-
-      fun search [] stats =
+      (* Diagnostics always come from the shared budget, so [search] need
+         only carry the failure the last attempt reported. *)
+      fun search [] issue =
             (NoCertificate
                "model replay exhausted bounded hole completions",
-             with_overhead (set_attempt_counts stats 1
-               (!completion_attempts) (#failure stats)))
-        | search (vector :: rest) stats =
+             budget_diagnostics policy budget issue)
+        | search (vector :: rest) issue =
             if !remaining <= 0 then
               (NoCertificate "model replay fuel exhausted",
-               with_overhead stats)
+               budget_diagnostics policy budget issue)
             else
               let
                 val _ = remaining := !remaining - 1
-                val _ = completion_overhead := !completion_overhead + 1
                 val _ = completion_attempts := !completion_attempts + 1
                 val (completed_env, completed_hints) =
                   completed_inputs vector
                 val (raw_result, attempt_stats) =
                   run completed_env completed_hints
                 val result = attempt_outcome ChosenCompletion raw_result
-                val stats = combine stats attempt_stats
               in
                 case result of
-                    Certified theorem =>
-                      (Certified theorem, with_overhead stats)
-                  | DiscardedByWholeFormulaEval => search rest stats
+                    Certified theorem => (Certified theorem, attempt_stats)
+                  | DiscardedByWholeFormulaEval =>
+                      search rest (#failure attempt_stats)
                   | NoCertificate _ =>
                       if resource_exhausted attempt_stats then
-                        (result, with_overhead stats)
-                      else search rest stats
+                        (result, attempt_stats)
+                      else search rest (#failure attempt_stats)
               end
     in
       case schematic_result of
@@ -1230,9 +1161,9 @@ structure Refute_Cert_Model = struct
             (attempt_outcome schematic_kind schematic_result,
              schematic_stats)
         | NoCertificate _ =>
-            if null holes orelse resource_exhausted schematic_stats0 then
+            if null holes orelse resource_exhausted schematic_stats then
               (schematic_result, schematic_stats)
             else
-              search (!vectors) schematic_stats
+              search (!vectors) (#failure schematic_stats)
     end
 end

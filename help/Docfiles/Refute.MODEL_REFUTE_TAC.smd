@@ -18,6 +18,12 @@ resulting `Counterexample`, `NoCounterexample`, or `Unknown` report
 tactic failure.  `quiet` and `expect` are honoured.  Without a
 configured Kodkodi the search is `Unknown`.
 
+Only the clauses a user wrote reach the model finder.  HOL4 completes a
+non-exhaustive pattern set with `ARB`, so a function defined by
+`f (x::xs) = x` leaves `f []` unconstrained here, and a goal whose truth
+depends on that completed value can be reported as a genuine
+counterexample.  Isabelle's Nitpick has the same limitation.
+
 ### Failure
 
 Fails only when a non-default `expect` field is not met.  Interrupts

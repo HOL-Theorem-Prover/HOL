@@ -1,9 +1,11 @@
 (*
- * Foundational type/term helpers shared across the whole Refute stack.
+ * Foundational type/term, timing and lock helpers shared across the whole
+ * Refute stack.
  *
  * This module deliberately depends only on the HOL kernel (Type, Term,
- * List) and combinSyntax, so it can be loaded by both the substrate layer
- * (compiled for refuteTableZooTheory) and the model-finder layer.
+ * List), combinSyntax and the Basis, so it can be loaded by both the
+ * substrate layer (compiled for refuteTableZooTheory) and the model-finder
+ * layer.
  * Layer-specific utilities live in Refute_ModelFinder_Util, which
  * re-exports these for the model-finder modules' convenience.
  *)
@@ -19,6 +21,9 @@ signature REFUTE_UTIL = sig
   val distinct_terms : Term.term list -> Term.term list
   val union_terms : Term.term list -> Term.term list -> Term.term list
   val update_term : Term.term -> Term.term -> Term.term -> Term.term
+  val acquire_interruptibly :
+    ((unit -> unit) -> unit -> unit) -> (unit -> bool) -> unit
+  val elapsed_msec : Time.time -> int
 end
 
 structure Refute_Util :> REFUTE_UTIL = struct
@@ -75,4 +80,29 @@ structure Refute_Util :> REFUTE_UTIL = struct
      rebuilder, and the model finder's renderer -- builds one. *)
   fun update_term point value base =
     Term.mk_comb (combinSyntax.mk_update (point, value), base)
+
+  (* Spin-acquire a lock without blocking with interrupts masked:
+     [Timeout.apply] cancels by raising an interrupt, which a masked block
+     would never see.  Callers hold the mask of an enclosing
+     [Thread_Attributes.uninterruptible] and pass its [restore]; only the
+     waiting is unmasked, so the successful acquisition still happens
+     masked and the caller installs its cleanup state before any interrupt
+     can arrive. *)
+  fun acquire_interruptibly restore try_lock =
+    let
+      fun acquire () =
+        if try_lock () then ()
+        else
+          (restore (fn () => OS.Process.sleep (Time.fromReal 0.01)) ();
+           acquire ())
+    in
+      acquire ()
+    end
+
+  (* Milliseconds since [start], for the statistics both the model finder
+     and QC report.  A clock or overflow failure reports 0 rather than
+     aborting the search it is only instrumenting. *)
+  fun elapsed_msec start =
+    LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
+    handle Interrupt => raise Interrupt | _ => 0
 end

@@ -37,11 +37,15 @@ end = struct
 
   fun eval tm = computeLib.CBV_CONV (computeLib.the_compset ()) tm
 
-  (* [|- (a = b) = F] from computeLib, or NONE. *)
+  (* [|- (a = b) = F] from computeLib, or NONE when it does not decide.
+     computeLib leaves an irreducible redex unreduced rather than
+     raising, and absorbs a compset conversion's own HOL_ERR rejection
+     itself, so nothing is caught here: an exception escaping is an
+     evaluator defect and belongs on the caller's GaveUp path. *)
   fun decide_false eq =
     let val thm = eval eq
     in if Term.aconv (rhs (concl thm)) boolSyntax.F then SOME thm else NONE
-    end handle Interrupt => raise Interrupt | _ => NONE
+    end
 
   (* [|- A = B] to [|- A |+ p = B |+ p]. *)
   fun fupdate_cong p thm =

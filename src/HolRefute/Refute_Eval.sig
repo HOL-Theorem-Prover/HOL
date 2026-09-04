@@ -109,6 +109,7 @@ signature Refute_Eval = sig
       Compiled of compiled_test
     | Inapplicable of string list
 
+  (* [priority] orders the [Auto] fall-through chain. *)
   type substrate =
     { name : string,
       priority : int,
@@ -142,10 +143,6 @@ signature Refute_Eval = sig
   val same_case_tree : case_tree option -> case_tree option -> bool
   val ignored_candidate : candidate -> candidate list -> bool
   val fully_applied_constructor : term -> (term * term list) option
-
-  val dump_plan : plan -> plan
-  val dump_stream : compiled_test -> {size : int, count : int} ->
-    term list list
 
   val register_substrate : substrate -> unit
   val get_substrates : unit -> substrate list

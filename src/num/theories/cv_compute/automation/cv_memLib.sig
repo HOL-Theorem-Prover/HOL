@@ -23,6 +23,4 @@ sig
   val cv_inline_add   : thm -> unit
   val cv_from_to_add  : thm -> unit
 
-  val prune_stale_entries : unit -> unit
-
 end

@@ -1316,16 +1316,66 @@ Definition zoo_graph_pair_formal_def:
   zoo_graph_pair_formal (p : num # num) (n : num) = n
 End
 
-(* Two independent generator cliques from one root type.  A substrate that
-   synthesizes a generator per type reachable from [zoo_cliq_outer] gets one
-   for the outer type and one for the inner, and the outer's calls the
-   inner's while nothing calls back -- so the equations do not form a single
-   mutually recursive group.  Regression fixture for
-   [cv_defines_independent_generator_cliques] in the selftest. *)
-Datatype:
-  zoo_cliq_inner = ZooCliqA | ZooCliqB
+(* A restated equation whose recursive call sits under a lambda that binds
+   the equation's own formal name.  [Term.dest_abs] frees that binder under
+   its own name, so a static-argument analysis that ignores binders reads
+   the two recorded arguments as one and drops the argument from the call
+   under the lambda, collapsing the axiom to [sp1 <=> sp1].  Regression
+   fixture for [a shadowed binder is not a static argument]. *)
+Definition zoo_shadow_def:
+  zoo_shadow (n : num) = T
 End
 
-Datatype:
-  zoo_cliq_outer = ZooCliqOuter zoo_cliq_inner num
+Theorem zoo_shadow_restated[refute_simp]:
+  !n. zoo_shadow n = if n = 0 then T else EVERY (\n. zoo_shadow n /\ n = 0) [0]
+Proof
+  simp [zoo_shadow_def]
+QED
+
+(* A [refute_simp] restatement replaces the DefnBase equations for its head
+   constant, so this one leaves [zoo_simp_neg 0] unconstrained and the model
+   finder finds models of a true goal, which it then discards.  The clause is
+   negated on purpose: keying it needs the head under the negation, and a
+   conclusion read as [~c = T] keys on [bool$~] instead, which no lookup for
+   [zoo_simp_neg] reaches.  The restatement is then not recognised, the
+   definition survives, and [zoo_simp_neg 0] reduces to [0 = 0]. *)
+Definition zoo_simp_neg_def:
+  zoo_simp_neg (n : num) = (n = 0)
 End
+
+Theorem zoo_simp_neg_step[refute_simp]:
+  !n. ~zoo_simp_neg (SUC n)
+Proof
+  simp [zoo_simp_neg_def]
+QED
+
+(* [DefnBase] keys an equation by its left-hand side's head constant, so
+   [zoo_hidden_pick]'s specification is registered against [zoo_hidden] and
+   hides [zoo_hidden_def] -- the shape [pred_set]'s [GSPECIFICATION] gives
+   [bool$IN].  Declaration order decides the winner, so the specification
+   must come second. *)
+Definition zoo_hidden_def:
+  zoo_hidden (n : num) = (n = 0)
+End
+
+Theorem zoo_hidden_pick_exists[local]:
+  ?g. !n : num. zoo_hidden (g n) = zoo_hidden n
+Proof
+  qexists_tac `I` >> simp []
+QED
+
+val zoo_hidden_pick_spec =
+  new_specification
+    ("zoo_hidden_pick_spec", ["zoo_hidden_pick"], zoo_hidden_pick_exists);
+
+(* The control: nothing to recover, because [zoo_opaque] has no definition
+   of its own.  The refusal must still name the constant. *)
+Theorem zoo_opaque_exists[local]:
+  ?p s. !n : num. p (s n : num) = (n = 0)
+Proof
+  qexists_tac `\n. n = 0` >> qexists_tac `I` >> simp []
+QED
+
+val zoo_opaque_spec =
+  new_specification
+    ("zoo_opaque_spec", ["zoo_opaque", "zoo_seed"], zoo_opaque_exists);

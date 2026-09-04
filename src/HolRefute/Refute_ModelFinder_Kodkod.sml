@@ -128,25 +128,17 @@ val kodkod_sym_break = 15
 val sharing_level = 3
 val flatten = false
 
-fun signed_int value =
-  if value < 0 then "-" ^ Int.toString (~value) else Int.toString value
-
 fun kodkod_settings delay =
   [("symmetry_breaking", Int.toString kodkod_sym_break),
    ("sharing", Int.toString sharing_level),
    ("flatten", Bool.toString flatten),
-   ("delay", signed_int delay)]
-
-fun quote text = "\"" ^ text ^ "\""
+   ("delay", Util.signed_string_of_int delay)]
 
 fun kodkod_problem_settings solver bits word_width delay =
   [("solver", String.concatWith ", " (map quote solver)),
    ("bit_width", Int.toString (MFP.bit_width_for bits word_width))] @
   kodkod_settings delay
 
-fun member equal value = List.exists (fn other => equal (value, other))
-fun filter_out predicate = List.filter (not o predicate)
-fun map_filter f = List.mapPartial f
 fun maps f values = List.concat (map f values)
 fun pull equal value values =
   value :: filter_out (fn other => equal (value, other)) values
@@ -275,7 +267,7 @@ fun built_in_rels_in_formulas formulas =
           if relation < 0 andalso
              index <> MFP.unsigned_bit_word_sel_rel andalso
              index <> MFP.signed_bit_word_sel_rel andalso
-             not (member (op =) index result) then
+             not (mem index result) then
             index :: result
           else
             result
@@ -310,7 +302,7 @@ fun tabulate_func1 debug universe_card (card, offset) f =
           [atom + offset, result + offset])
       end
   in
-    map_filter tuple (Util.index_seq 0 card)
+    List.mapPartial tuple (Util.index_seq 0 card)
   end
 
 fun tabulate_op2 debug universe_card (card, offset) result_offset f =
@@ -327,7 +319,7 @@ fun tabulate_op2 debug universe_card (card, offset) result_offset f =
           [left + offset, right + offset, result + result_offset])
       end
   in
-    map_filter tuple (Util.index_seq 0 (card * card))
+    List.mapPartial tuple (Util.index_seq 0 (card * card))
   end
 
 fun tabulate_op2_2 debug universe_card (card, offset) result_offset f =
@@ -345,7 +337,7 @@ fun tabulate_op2_2 debug universe_card (card, offset) result_offset f =
            result1 + result_offset, result2 + result_offset])
       end
   in
-    map_filter tuple (Util.index_seq 0 (card * card))
+    List.mapPartial tuple (Util.index_seq 0 (card * card))
   end
 
 fun tabulate_nat_op2 debug universe_card (card, offset) f =
@@ -490,7 +482,7 @@ fun bounds_and_axioms_for_built_in_rels_in_formulas debug universe_card
   in
     (map (bound_for_built_in_rel debug universe_card nat_card int_card
        main_j0) relations,
-     map_filter axiom_for_built_in_rel relations)
+     List.mapPartial axiom_for_built_in_rel relations)
   end
 
 fun bound_comment debug nickname ty representation =
@@ -860,7 +852,7 @@ fun nfa_transitions_for_sel
     val indexed = ListPair.zip
       (Util.index_seq 1 (arity - 1), tl type_schema)
   in
-    map_filter (fn (index, target_ty) =>
+    List.mapPartial (fn (index, target_ty) =>
       if List.all (fn (spec : data_type_spec) =>
            not (Util.same_type target_ty (#typ spec))) data_types then
         NONE
@@ -944,7 +936,7 @@ fun strongly_connected_sub_nfas nfa =
   end
 
 fun nfas_for_data_types kk relation_table data_types =
-  map_filter (nfa_entry_for_data_type kk relation_table data_types)
+  List.mapPartial (nfa_entry_for_data_type kk relation_table data_types)
     data_types
   |> strongly_connected_sub_nfas
 
@@ -1165,10 +1157,7 @@ fun sym_break_axioms_for_data_type context kk relation_table nfas
       data_types ({constrs, ...} : data_type_spec) =
   let
     val ordered = sort_by compare_constr_specs constrs
-    fun all_pairs [] = []
-      | all_pairs (first :: rest) =
-          map (fn second => (first, second)) rest @ all_pairs rest
-    val pairs = all_pairs ordered
+    val pairs = Util.all_distinct_unordered_pairs_of ordered
     val entries =
       map (fn spec => (EQUAL, (spec, spec))) ordered @
       map (fn pair => (LESS, pair)) pairs @
@@ -1189,10 +1178,6 @@ fun is_higher_order_type ty =
 fun first_order_constructor (spec : MFS.constr_spec) =
   List.all (not o is_higher_order_type)
     (MFH.constructor_arg_types (#const spec))
-
-fun take count values =
-  if count <= 0 orelse null values then []
-  else hd values :: take (count - 1) (tl values)
 
 fun is_data_type_in_needed_value ty
       (MFNT.Construct (_, other_ty, _, arguments)) =
@@ -1215,7 +1200,8 @@ fun sym_break_axioms_for_data_types context need_us limit kk relation_table
              not (List.exists (is_data_type_in_needed_value typ) need_us))
       val selected =
         if length candidates <= limit then candidates
-        else take limit (rev (sort_by compare_data_types candidates))
+        else MFS.take_at_most limit
+               (rev (sort_by compare_data_types candidates))
       val nfas = nfas_for_data_types kk relation_table data_types
     in
       maps (sym_break_axioms_for_data_type context kk relation_table
@@ -1762,6 +1748,8 @@ and rel_expr_from_rel_expr kk new_rep old_rep relation =
 and rel_expr_to_func kk domain range =
   rel_expr_from_rel_expr kk (MFR.Func (domain, range))
 
+(* Deliberately shadows Portable.the_single: the located message reaches
+   the user through the backend's Unknown reason, List.Empty would not. *)
 fun the_single [value] = value
   | the_single _ = raise Util.ARG
       ("Refute_ModelFinder_Kodkod.the_single", "not a singleton")
@@ -2850,7 +2838,7 @@ fun kodkod_formula_from_nut offsets
         val plain_guards = guards
           |> List.filter (MFR.is_Opt o MFNT.rep_of)
           |> map to_r
-          |> List.filter (fn guard => not (member (op =) guard unpacked))
+          |> List.filter (fn guard => not (mem guard unpacked))
         val function_guards = List.filter (fn guard =>
           MFR.is_Func (MFNT.rep_of guard) andalso
           MFR.is_opt_rep (MFNT.rep_of guard)) guards
@@ -3112,7 +3100,7 @@ fun needed_value_axioms_for_data_type _ _ _ (_, NONE) = [KK.False]
       (case data_type_spec data_types ty of
            SOME spec =>
              if is_data_type_nat_like spec then []
-             else map_filter (atom_equation_for_nut offsets kk) fixed
+             else List.mapPartial (atom_equation_for_nut offsets kk) fixed
          | NONE => [])
 
 fun declarative_axioms_for_data_types context binarize need_us need_values

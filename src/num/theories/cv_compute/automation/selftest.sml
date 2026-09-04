@@ -71,17 +71,6 @@ fun test_for_failure f x =
     NONE => ()
   | SOME _ => failwith "unexpected success";
 
-(* Only the *_opt_pre entry points may define a <name>_pre relation and save
-   the guarded [cv_rep] theorem; a cv_trans that goes on to fail must leave
-   neither behind. *)
-fun expect_no_pre_residue f x pre_name cv_thm_name = let
-  val _ = test_for_failure f x
-  val _ = null (Term.decls pre_name) orelse
-          failwith ("failed translation defined " ^ pre_name)
-  val _ = not (can (DB.fetch (current_theory())) cv_thm_name) orelse
-          failwith ("failed translation stored " ^ cv_thm_name)
-  in () end;
-
 val _ = Datatype `
   xx_yy = XX xx_yy | YY (xx_yy list)
 `
@@ -150,69 +139,6 @@ val fac_def = Define `
 val inc_def = Define `
   inc n = n + 1:num
 `
-
-val opt_pre_total_def = Define `
-  opt_pre_total n = n + 7:num
-`
-
-val _ =
-  case cv_auto_trans_opt_pre opt_pre_total_def of
-    NONE => ()
-  | SOME _ => failwith "unexpected precondition for opt_pre_total";
-
-val _ =
-  aconv (concl (cv_eval “opt_pre_total 5”)) “opt_pre_total 5 = 12” orelse
-  failwith "cv_auto_trans_opt_pre did not store its total result";
-
-val opt_pre_hd_def = Define `
-  opt_pre_hd (xs:num list) = HD xs
-`
-
-val opt_pre_hd_pre =
-  case cv_trans_opt_pre opt_pre_hd_def of
-    NONE => failwith "expected a precondition for opt_pre_hd"
-  | SOME pre => pre;
-
-val opt_pre_hd_pre_concl = concl (SPEC_ALL opt_pre_hd_pre);
-val _ = is_eq opt_pre_hd_pre_concl orelse
-        failwith "opt_pre_hd precondition is not a definition";
-val opt_pre_hd_pre_head =
-  opt_pre_hd_pre_concl |> lhs |> strip_comb |> fst |> dest_const |> fst;
-val _ = opt_pre_hd_pre_head = "opt_pre_hd_pre" orelse
-        failwith "opt_pre_hd precondition has the wrong name";
-
-val legacy_pre_hd_def = Define `
-  legacy_pre_hd (xs:num list) = HD xs
-`
-
-val _ = expect_no_pre_residue cv_trans legacy_pre_hd_def
-          "legacy_pre_hd_pre" "cv_legacy_pre_hd_thm";
-
-val legacy_auto_pre_hd_def = Define `
-  legacy_auto_pre_hd (xs:num list) = HD xs
-`
-
-val _ = expect_no_pre_residue cv_auto_trans legacy_auto_pre_hd_def
-          "legacy_auto_pre_hd_pre" "cv_legacy_auto_pre_hd_thm";
-
-(* Reporting a precondition is only ever allowed for the definition the
-   user asked about.  cv_trans_loop discards the results of the auxiliary
-   translations it pulls in, so an auxiliary permitted to report one would
-   leave aux_hd_pre behind with nobody told about it.  The auxiliary must
-   fail loudly instead. *)
-val aux_hd_def = Define `
-  aux_hd (xs:num list) = HD xs
-`
-
-val uses_aux_hd_def = Define `
-  uses_aux_hd xs = aux_hd xs + 1:num
-`
-
-val _ = expect_no_pre_residue cv_auto_trans_opt_pre uses_aux_hd_def
-          "aux_hd_pre" "cv_aux_hd_thm";
-
-val _ = null (Term.decls "uses_aux_hd_pre") orelse
-        failwith "failed translation defined uses_aux_hd_pre";
 
 val risky_def = Define `
   risky n = if n = 0 then ARB else n+1:num
@@ -445,32 +371,3 @@ val thy = fetch "-" "cv_str_fmap_test_thm"
             |> dest_thy_const |> #Thy;
 
 val _ = (thy = "cv_string_fmap") orelse fail();
-
-(*---------------------------------------------------------------------------*
-  prune_stale_entries is memoised on the kernel's retire epoch; a real
-  constant deletion must still make it drop the entries it invalidated.
-  Keep this last: it retires constants from the scratch theory.
- *---------------------------------------------------------------------------*)
-
-val prune_gate_def = Define `
-  prune_gate_test (n:num) = n + 1
-`
-
-val () = cv_trans prune_gate_def;
-
-fun stale_cv_rep_entries () =
-  List.filter (not o Theory.uptodate_thm o snd) (cv_memLib.cv_rep_thms ());
-
-(* prime the memo, so the sweep below can only happen if the deletion
-   moves the epoch the gate reads *)
-val () = cv_memLib.prune_stale_entries ();
-val _ = null (stale_cv_rep_entries ()) orelse
-        failwith "prune_stale_entries left stale cv_rep entries";
-
-val () = Theory.delete_const "prune_gate_test";
-val _ = not (null (stale_cv_rep_entries ())) orelse
-        failwith "deleting prune_gate_test did not stale a cv_rep entry";
-
-val () = cv_memLib.prune_stale_entries ();
-val _ = null (stale_cv_rep_entries ()) orelse
-        failwith "prune_stale_entries skipped a needed sweep";

@@ -5,9 +5,7 @@
 # Sref -> Overlay dependency breaks the next kernel bootstrap in src/bool.
 INCLUDES = ../n-bit ../sort \
            ../real ../coalgebras ../finite_maps \
-           ../pred_set/src/more_theories \
-           $(HOLDIR)/src/num/theories/cv_compute \
-           $(HOLDIR)/src/num/theories/cv_compute/automation
+           ../pred_set/src/more_theories
 
 all: $(DEFAULT_TARGETS) build-tests
 .PHONY: all
@@ -43,7 +41,6 @@ Refute_QC.uo: Refute_Cert_Narrow.uo Refute_ModelFinder_HOL.uo \
 Refute_QC_Narrow.uo: Refute_QC.uo Refute_Narrow.uo
 Refute_EvalEnum.uo: Refute_Util.uo
 Refute_EvalCompute.uo: Refute_Util.uo Refute_EvalEnum.uo
-Refute_EvalCv.uo: Refute_Util.uo Refute_EvalEnum.uo
 Refute_EvalSML.uo: Refute_ModelFinder_Names.uo Refute_Util.uo
 Refute_Extract.uo: Refute_Util.uo Refute_EvalEnum.uo
 

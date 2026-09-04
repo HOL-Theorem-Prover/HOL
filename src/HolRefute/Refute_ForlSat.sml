@@ -73,8 +73,6 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
     Refute_Forl.readable_file
       (OS.Path.concat (Refute_Forl.jni_dir (), stem ^ library_suffix ()))
 
-  val external_counter = Portable.make_counter {init = 0, inc = 1}
-
   fun external_executable (home, executable) =
     OS.Path.concat
       (getenv home,
@@ -93,9 +91,10 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
       let
         fun make_arguments () =
           let
-            val input =
-              name ^ Portable.unique_tmp_suffix () ^ "_" ^
-              Int.toString (external_counter ()) ^ ".cnf"
+            (* Kodkodi writes this file and never deletes it; an absolute
+               scratch path keeps it out of the caller's directory, which
+               the launcher does not change. *)
+            val input = Refute_Forl.scratch_file_path "cnf"
           in
             [if null markers then "External" else "ExternalV2",
              external_executable (home, executable), input] @
@@ -154,10 +153,8 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
         [] => "SAT4J"
       | entry :: _ => #1 entry
 
-  fun quote text = "\"" ^ text ^ "\""
-
   fun solver_names entries =
-    String.concatWith ", " (List.map (quote o #1) entries)
+    String.concatWith ", " (List.map (Portable.quote o #1) entries)
 
   fun fail function message =
     raise Feedback.mk_HOL_ERR "Refute_ForlSat" function message
@@ -169,11 +166,11 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
       | NONE =>
           if List.exists (fn (candidate, _) => candidate = name) static_list
           then fail "sat_solver_spec"
-            ("The SAT solver " ^ quote name ^
+            ("The SAT solver " ^ Portable.quote name ^
              " is not configured. The following solvers are configured:\n" ^
              solver_names (dynamic_list timeout false))
           else fail "sat_solver_spec"
-            ("Unknown SAT solver " ^ quote name ^
+            ("Unknown SAT solver " ^ Portable.quote name ^
              "\nThe following solvers are supported:\n" ^
              solver_names static_list)
 end

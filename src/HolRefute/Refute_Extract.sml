@@ -938,27 +938,116 @@ structure Refute_Extract = struct
           end
     end
 
-  fun definition_theorem context constant =
-    case DefnBase.lookup_userdef constant of
-      SOME {const, thm = DefnBase.STDEQNS theorem, ...} =>
+  (* The pattern language of an emitted definition clause is whatever
+     [lazy_match_pattern_with] can observe: variables, the literal forms it
+     tests by equality, and saturated constructor spines. *)
+  fun is_pattern tm =
+    Term.is_var tm orelse Literal.is_numeral tm orelse
+    intSyntax.is_int_literal tm orelse Literal.is_char_lit tm orelse
+    Literal.is_string_lit tm orelse oneSyntax.is_one tm orelse
+    Term.aconv tm boolSyntax.T orelse Term.aconv tm boolSyntax.F orelse
+    wordsSyntax.is_word_literal tm orelse
+    let val (head, arguments) = boolSyntax.strip_comb tm
+    in
+      Term.is_const head andalso TypeBase.is_constructor head andalso
+      List.all is_pattern arguments
+    end
+
+  (* Why [theorem] cannot be emitted as the definition of [constant], or
+     [NONE] when it can.  Deciding it here names the constant, which the
+     clause compiler cannot: it sees one pattern and no owner. *)
+  fun shape_refusal constant theorem =
+    (case Lib.get_first (fn (arguments, _) =>
+             List.find (not o is_pattern) arguments)
+           (definition_equations constant theorem) of
+       SOME argument =>
+         SOME ("definition of " ^ kname_text (kname constant) ^
+               " matches the non-pattern argument " ^
+               Parse.term_to_string argument)
+     | NONE => NONE)
+    handle Interrupt => raise Interrupt
+         | NotExtractable reasons => SOME (join "; " reasons)
+
+  (* [DefnBase] keys a definition by the head constant of its left-hand
+     side, so a descendant theory can shadow one: [pred_set] registers
+     [GSPECIFICATION] against [bool$IN], hiding [IN_DEF].  A constant is
+     created by the theory that defines it, so that theory's own definitions
+     still carry its equations, and no foreign shadow is in scope there.
+     Recovery is best effort: a recursive constant leaves only its curried
+     witness in that class, and extraction refuses further down. *)
+  fun theorem_for_theory constant =
+    let
+      val (thy, _) = kname constant
+      val entries =
+        if thy = Theory.current_theory () then Theory.current_definitions ()
+        else DB.definitions thy
+      fun instantiate theorem =
         let
-          val theta = Type.match_type (Term.type_of const)
+          val (head, _) = boolSyntax.strip_comb
+            (boolSyntax.lhs (hd (equations_of theorem)))
+          val theta = Type.match_type (Term.type_of head)
             (Term.type_of constant)
         in
           Thm.INST_TYPE theta theorem
         end
-    | SOME {thm = DefnBase.OTHER _, ...} =>
-        reject ("non-equational definition for " ^
-                kname_text (kname constant))
-    | NONE =>
-        (case theorem_for_typebase constant of
-           SOME theorem => theorem
-         | NONE =>
-             (case theorem_for_compset context constant of
-                SOME theorem => theorem
-              | NONE =>
-                  reject ("no extractable equations for constant " ^
-                          kname_text (kname constant))))
+      fun usable (_, theorem) =
+        if not (Theory.uptodate_thm theorem) then NONE
+        else
+          case Lib.total instantiate theorem of
+            NONE => NONE
+          | SOME instance =>
+              if Option.isSome (shape_refusal constant instance) then NONE
+              else SOME instance
+    in
+      (* Last wins, as it does when [DefnBase] folds the same list. *)
+      case List.mapPartial usable entries of
+        [] => NONE
+      | candidates => SOME (List.last candidates)
+    end
+
+  fun definition_theorem context constant =
+    let
+      fun without_userdef () =
+        case theorem_for_typebase constant of
+          SOME theorem => theorem
+        | NONE =>
+            (case theorem_for_compset context constant of
+               SOME theorem => theorem
+             | NONE =>
+                 reject ("no extractable equations for constant " ^
+                         kname_text (kname constant)))
+      fun usable_without_userdef () =
+        case Lib.total without_userdef () of
+          SOME theorem =>
+            if Option.isSome (shape_refusal constant theorem) then NONE
+            else SOME theorem
+        | NONE => NONE
+    in
+      case DefnBase.lookup_userdef constant of
+        SOME {const, thm = DefnBase.STDEQNS theorem, ...} =>
+          let
+            val theta = Type.match_type (Term.type_of const)
+              (Term.type_of constant)
+            val presented = Thm.INST_TYPE theta theorem
+          in
+            case shape_refusal constant presented of
+              NONE => presented
+            | SOME reason =>
+                (* A presentation that is a rewrite about the constant rather
+                   than its definition must not also consume the routes that
+                   answer for an unregistered one. *)
+                (case theorem_for_theory constant of
+                   SOME recovered => recovered
+                 | NONE =>
+                     (case usable_without_userdef () of
+                        SOME theorem => theorem
+                      | NONE => reject reason))
+          end
+      | SOME {thm = DefnBase.OTHER _, ...} =>
+          reject ("non-equational definition for " ^
+                  kname_text (kname constant))
+      | NONE => without_userdef ()
+    end
 
   fun mutual_constants constant =
     case (DefnBase.lookup_userdef constant,
@@ -1299,11 +1388,11 @@ structure Refute_Extract = struct
       | ("bool", "~") => SOME (call "not" 1 arguments)
       | ("bool", "/\\") => SOME (binary "andalso" arguments)
       | ("bool", "\\/") => SOME (binary "orelse" arguments)
-      (* [IN_DEF] makes membership plain application.  The intrinsic is
-         load-bearing, not an optimization: [DefnBase.lookup_userdef]
-         answers for [bool$IN] with [GSPECIFICATION], whose [GSPEC f]
-         argument is not a constructor pattern, so routing [IN] through
-         [ensure_definition] rejects every goal mentioning [MEM]. *)
+      (* [IN_DEF] makes membership plain application.  Keep the intrinsic:
+         [DefnBase.lookup_userdef] answers for [bool$IN] with
+         [GSPECIFICATION], a rewrite about [GSPEC] rather than [IN]'s
+         defining equation, so the definition route reaches [IN_DEF] only
+         through [definition_theorem]'s own-theory recovery. *)
       | ("bool", "IN") => SOME (with_arity arguments 2 (fn values =>
           case values of [element, set] =>
             parens (parens set ^ " " ^ parens element)
@@ -2808,9 +2897,10 @@ structure Refute_Extract = struct
             | Refute_Gen.GenNum (Refute_Gen.Word width) =>
                 (case strategy of
                    Random _ =>
-                     if width <= 32 then ()
-                     else reject ("word width exceeds rand_below's " ^
-                       "32-bit bound for " ^ type_name root)
+                     if width <= 32 orelse width = 64 then ()
+                     else reject ("word width is neither at most 32 nor " ^
+                       "exactly 64, the widths rand_below's 32-bit " ^
+                       "output fills, for " ^ type_name root)
                  | Exhaustive => ()
                  | Narrowing => ())
             | _ => ()
@@ -3066,6 +3156,14 @@ structure Refute_Extract = struct
             "    val value = Char.chr (IntInf.toInt draw)\n" ^
             "in (" ^ pair "value"
               (thunk "Refute_EvalSML.char_term value") ^ ", next) end"
+        (* [rand_below] emits 32 bits, so :word64 takes two draws, high
+           half first; the seeded stream has to agree draw for draw. *)
+        | Refute_Gen.Word 64 =>
+            "let val (hi, after_hi) = refute_rand_below 4294967296 state\n" ^
+            "    val (lo, next) = refute_rand_below 4294967296 after_hi\n" ^
+            "    val draw = hi * 4294967296 + lo\n" ^
+            "in (" ^ pair "draw"
+              (thunk "Refute_EvalSML.word_term 64 draw") ^ ", next) end"
         | Refute_Gen.Word width =>
             "let val (draw, next) = refute_rand_below " ^
             "(IntInf.pow (2, " ^ integer width ^ ")) state\n" ^

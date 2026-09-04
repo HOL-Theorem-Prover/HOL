@@ -199,11 +199,8 @@ structure Refute_QC_Narrow = struct
                      QC.add_reason reason gave_up) reasons)
               | QC.Selected (substrate, compiled) =>
                   let
-                    fun stats_for size card msec =
-                      #decorate counters (!(#last_stats compiled)) @
-                      (if !discarded = 0 then []
-                       else [("discarded", !discarded)]) @
-                      [("size", size), ("card", card), ("msec", msec)]
+                    val stats_for = QC.stats_for_entry
+                      (#decorate counters) discarded (#last_stats compiled)
                     fun one (card, size) genuine_only ignored budget =
                       let
                         val start = Time.now ()

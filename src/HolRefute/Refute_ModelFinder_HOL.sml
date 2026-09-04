@@ -226,15 +226,30 @@ structure Refute_ModelFinder_HOL = struct
               (Term.mk_comb (right, variable))
           end
 
+  (* [deviation from upstream] A non-equational conclusion becomes
+     [conclusion = T], which keys a negated one on a built-in that no
+     lookup reaches -- upstream Nitpick loses such a [nitpick_psimp]
+     clause the same way.  State it as [body = F] instead whenever that
+     exposes a real head constant to key on.  [strip_imp_only] is what
+     leaves the negation here to be seen: [strip_imp] reads [~c] as
+     [c ==> F] and buries the head among the premises. *)
+  fun positive_equation conclusion =
+    case Lib.total boolSyntax.dest_neg conclusion of
+        SOME body =>
+          if Term.is_const (term_under_def body) then
+            boolSyntax.mk_eq (body, boolSyntax.F)
+          else boolSyntax.mk_eq (conclusion, boolSyntax.T)
+      | NONE => boolSyntax.mk_eq (conclusion, boolSyntax.T)
+
   fun equationalize_term label term =
     let
       val (variables, body) = boolSyntax.strip_forall term
-      val (premises, conclusion) = boolSyntax.strip_imp body
+      val (premises, conclusion) = boolSyntax.strip_imp_only body
       val equation =
         case Lib.total boolSyntax.dest_eq conclusion of
             SOME (left, right) =>
               extensional_equal (variables @ premises) left right
-          | NONE => boolSyntax.mk_eq (conclusion, boolSyntax.T)
+          | NONE => positive_equation conclusion
       val new_variables = List.filter (fn variable =>
         not (List.exists (Term.aconv variable) variables))
         (Term.free_vars_lr equation)
@@ -1025,9 +1040,19 @@ structure Refute_ModelFinder_HOL = struct
   fun raw_theorem_set_props set =
     rev (#getDB set ()) |> List.concat o map clauses_of
 
+  (* def_table_for raises on a clause with no constant under the
+     definition, and that aborts harvesting for the whole call.  A user
+     set must not be able to do that: name the clause and drop it. *)
+  fun keyable_props label props =
+    List.filter (fn prop =>
+      Lib.can pair_for_prop prop orelse
+      (Refute_Core.Private.warn "Refute_ModelFinder_HOL" "make_tables"
+         ("ignoring unkeyable " ^ label ^ " clause"); false)) props
+
   fun theorem_set_props set label =
     raw_theorem_set_props set
     |> List.mapPartial (equationalize_term label)
+    |> keyable_props label
 
   fun user_simp_props presentations =
     standard_user_props presentations
@@ -1040,7 +1065,8 @@ structure Refute_ModelFinder_HOL = struct
         raw_standard_props presentations
       val unfold_props = clauses_of (DB.fetch "bool"
         "EXISTS_UNIQUE_DEF") @
-        raw_theorem_set_props Refute_Core.refute_unfold
+        keyable_props "refute_unfold"
+          (raw_theorem_set_props Refute_Core.refute_unfold)
       val refute_simp_props =
         theorem_set_props Refute_Core.refute_simp "refute_simp"
       val refute_simp_keys = map (#1 o pair_for_prop) refute_simp_props
@@ -2485,9 +2511,6 @@ structure Refute_ModelFinder_HOL = struct
     is_word_type ty orelse
     (interpreted_type_operator (type_operator_of ty) handle HOL_ERR _ => false)
 
-  fun remove_nth index values =
-    List.take (values, index) @ List.drop (values, index + 1)
-
   fun fresh_type_var_name index =
     if index < 26 then
       "'" ^ String.str (Char.chr (Char.ord #"a" + index))
@@ -2652,7 +2675,7 @@ structure Refute_ModelFinder_HOL = struct
           val normalized = rename (surviving instance) instance
           val (domains, case_result) = boolSyntax.strip_fun
             (Term.type_of normalized)
-          val branch_tys = remove_nth index domains
+          val branch_tys = Util.remove_nth index domains
           fun valid_branch (constructor, branch_ty) =
             branch_ty = boolSyntax.list_mk_fun
               (#1 (boolSyntax.strip_fun (Term.type_of constructor)),
@@ -2679,18 +2702,23 @@ structure Refute_ModelFinder_HOL = struct
        scrutinee_index)
     end
 
+  (* A theory of the right name need not be the theory this row
+     describes -- the constants can be missing or reshaped.  Answering
+     NONE leaves that one type unrecognized; letting the HOL_ERR out
+     would reach Refute_Core's backend handler and turn the whole
+     model-finder run into Unknown. *)
   fun builtin_codatatype_info
         ({Thy, Tyop, case_name, constructor_names} :
          {Thy : string, Tyop : string, case_name : string,
           constructor_names : string list}) =
-    if theory_is_available Thy then
+    if not (theory_is_available Thy) then NONE
+    else
       SOME (#1 (validate_codatatype_shape
         {tyop = {Thy = Thy, Tyop = Tyop},
          case_const = primitive_constant {Thy = Thy, Name = case_name},
          constructors = map (fn Name =>
            primitive_constant {Thy = Thy, Name = Name}) constructor_names}))
-    else
-      NONE
+      handle HOL_ERR _ => NONE
 
   (* Vis continuations in both interaction-tree theories have function type.
      As in Isabelle, SUB therefore compares their finite continuation graphs
@@ -4981,13 +5009,23 @@ structure Refute_ModelFinder_HOL = struct
           else SOME (const_key case_const, (length constructors, 0))
         end handle HOL_ERR _ => NONE
       val raw = List.mapPartial entry (TypeBase.elts ())
-      fun registered_entry (info as {case_const, constructors, ...}) =
+      (* Revalidation, not a formality: a registration that passed at
+         [register_codatatype] can fail here once its constructors are
+         deleted or the type gains a datatype entry.  Drop that one type
+         rather than aborting the whole model-finder run. *)
+      fun registered_entry (info as {tyop, case_const, constructors}) =
         let val (_, scrutinee_index) = validate_codatatype_shape info
         in
-          (const_key case_const, (length constructors, scrutinee_index))
+          SOME (const_key case_const,
+                (length constructors, scrutinee_index))
         end
+        handle HOL_ERR _ =>
+          (Refute_Core.Private.warn "Refute_ModelFinder_HOL" "case_names"
+             ("ignoring codatatype " ^ #Thy tyop ^ "$" ^ #Tyop tyop ^
+              ": registration no longer validates");
+           NONE)
     in
-      raw @ map registered_entry registered
+      raw @ List.mapPartial registered_entry registered
     end
 
   fun constructor_name constructor =
@@ -6146,7 +6184,7 @@ structure Refute_ModelFinder_HOL = struct
                           val scrutinee = do_term depth
                             (List.nth (case_arguments, scrutinee_index))
                           val functions =
-                            remove_nth scrutinee_index case_arguments
+                            Util.remove_nth scrutinee_index case_arguments
                           val rest = List.drop (arguments, needed)
                           val data_ty = Term.type_of scrutinee
                           val full = Term.list_mk_comb

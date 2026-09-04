@@ -1,24 +1,10 @@
 structure Refute :> Refute = struct
-  type term = Term.term
-  type thm = Thm.thm
-  type hol_type = Type.hol_type
-  type goal = term list * term
+  (* [open], not one alias per name: the facade re-exports the whole of
+     Refute_Core's configuration surface, so a new option costs an edit
+     in Refute_Core and one in Refute.sig, and none here. *)
+  open Refute_Core
 
-  datatype certainty = datatype Refute_Core.certainty
-  type counterexample = Refute_Core.counterexample
-  type model_report = Refute_Core.model_report
-  datatype outcome = datatype Refute_Core.outcome
-  datatype expectation = datatype Refute_Core.expectation
-  datatype substrate_choice = datatype Refute_Core.substrate_choice
-  datatype bound_mode = datatype Refute_Core.bound_mode
-  datatype requirement = datatype Refute_Core.requirement
-  datatype goal_form = datatype Refute_Core.goal_form
-  type qc_config = Refute_Core.qc_config
-  type mf_config = Refute_Core.mf_config
-  type config = Refute_Core.config
-  type instance = Refute_Core.instance
-  type certainty_ceiling = Refute_Core.certainty_ceiling
-  type backend = Refute_Core.backend
+  type goal = term list * term
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
   type term_postprocessor = term -> term
@@ -35,6 +21,8 @@ structure Refute :> Refute = struct
     | QuickcheckBackends
     | Only of backend_choice list
 
+  (* Deliberately shadows [Refute_Core.config_update], the internal
+     update descriptor: the user-facing update is a function. *)
   type config_update = config -> config
 
   (* Register the built-in backends through this public entry point.
@@ -67,7 +55,8 @@ structure Refute :> Refute = struct
      instance of the fmap type operator.  Unlike :rat/:real, this yields an
      ordinary GenDatatype (exhaustive = false, since the key type is
      generally infinite); only Compute can produce fmap candidates today
-     (Refute_EvalCv and NativeSML decline, see Refute_EvalCv.sml).
+     (NativeSML rejects every registered generator, see Refute_Extract's
+     [validate_type]).
      FEMPTY |+ (1,2) |+ (1,3) and FEMPTY |+ (1,3) denote the same map, so
      an FUPDATE chain has no unique syntactic form.  [canonical_fmap_chain]
      removes an update iff a later update in the same chain has an [aconv]
@@ -107,14 +96,13 @@ structure Refute :> Refute = struct
   val () = Refute_ModelFinder_Model.register_family_canonical_lookup
     Refute_Gen.snapshot_family_canonicals
 
-  val refute = Refute_Core.refute
-  fun refute_def tm = refute (!Refute_Core.the_config) tm
+  fun refute_def tm = refute (!the_config) tm
 
   fun apply_updates updates config =
     List.foldl (fn (update, current) => update current) config updates
 
   fun current_config updates =
-    apply_updates updates (!Refute_Core.the_config)
+    apply_updates updates (!the_config)
 
   fun backend_name Exhaustive = "exhaustive"
     | backend_name Random = "random"
@@ -122,25 +110,25 @@ structure Refute :> Refute = struct
     | backend_name ModelFinder = "kodkod"
     | backend_name (RegisteredBackend name) = name
 
-  fun upd_search AllBackends = Refute_Core.upd_backends NONE
-    | upd_search QuickcheckBackends = Refute_Core.upd_backends
+  fun upd_search AllBackends = upd_backends NONE
+    | upd_search QuickcheckBackends = upd_backends
         (SOME (Refute_QC.qc_backend_names ()))
     | upd_search (Only []) =
         raise Feedback.mk_HOL_ERR "Refute" "upd_search"
           "Only requires at least one backend"
     | upd_search (Only choices) =
-        Refute_Core.upd_backends (SOME (map backend_name choices))
+        upd_backends (SOME (map backend_name choices))
 
   fun refute_with updates tm = refute (current_config updates) tm
 
   fun refute_goal cfg (assumptions, goal) =
-    Refute_Core.refute_problem cfg
+    refute_problem cfg
       {goal = goal, assumptions = assumptions, evals = []}
 
   fun refute_goal_with updates goal =
     refute_goal (current_config updates) goal
 
-  fun refute_top () = refute_goal (!Refute_Core.the_config)
+  fun refute_top () = refute_goal (!the_config)
     (proofManagerLib.top_goal ())
 
   val try_seed = 42
@@ -148,24 +136,24 @@ structure Refute :> Refute = struct
   fun try_refute cfg (assumptions, goal) =
     let
       val try_config = cfg
-        |> Refute_Core.upd_sequential true
-        |> Refute_Core.upd_seed (SOME try_seed)
-        |> Refute_Core.upd_expect Refute_Core.NoExpectation
-        |> Refute_Core.upd_quiet true
+        |> upd_sequential true
+        |> upd_seed (SOME try_seed)
+        |> upd_expect NoExpectation
+        |> upd_quiet true
     in
-      case Refute_Core.refute_problem try_config
+      case refute_problem try_config
              {goal = goal, assumptions = assumptions, evals = []} of
-          outcome as Refute_Core.Counterexample (cex :: _) =>
+          outcome as Counterexample (cex :: _) =>
             SOME (#backend cex, outcome)
         | _ => NONE
     end
-    handle Time => NONE
+    handle Time.Time => NONE
 
   fun qc_only config = upd_search QuickcheckBackends config
 
   (* The option distinguishes the QC-only convenience from an explicitly
      supplied configuration whose [backends = NONE] means the full registry. *)
-  fun unused_config NONE = qc_only (!Refute_Core.the_config)
+  fun unused_config NONE = qc_only (!the_config)
     | unused_config (SOME config) = config
 
   fun check_unused_assms config named_theorem =
@@ -199,7 +187,6 @@ structure Refute :> Refute = struct
   fun MODEL_REFUTE_TAC goal =
     REFUTE_TAC_WITH [upd_search (Only [ModelFinder])] goal
 
-  val register_backend = Refute_Core.register_backend
   val register_generator = Refute_Gen.register_generator
   val register_generator_family = Refute_Gen.register_generator_family
   val register_term_postprocessor =
@@ -216,82 +203,7 @@ structure Refute :> Refute = struct
       Refute_ModelFinder_HOL.register_ersatz registration)
   val abstract_generator = Refute_Gen.abstract_generator
 
-  val export_refute_simp = #export Refute_Core.refute_simp
-  val export_refute_psimp = #export Refute_Core.refute_psimp
-  val export_refute_unfold = #export Refute_Core.refute_unfold
-
-  val default_qc_config = Refute_Core.default_qc_config
-  val default_mf_config = Refute_Core.default_mf_config
-  val default_config = Refute_Core.default_config
-  val the_config = Refute_Core.the_config
-  val show_config = Refute_Core.show_config
-  val upd_timeout = Refute_Core.upd_timeout
-  val upd_sequential = Refute_Core.upd_sequential
-  val upd_genuine_only = Refute_Core.upd_genuine_only
-  val upd_abort_potential = Refute_Core.upd_abort_potential
-  val upd_quiet = Refute_Core.upd_quiet
-  val upd_no_assms = Refute_Core.upd_no_assms
-  val upd_evals = Refute_Core.upd_evals
-  val upd_expect = Refute_Core.upd_expect
-  val upd_max_counterexamples = Refute_Core.upd_max_counterexamples
-  val upd_tag = Refute_Core.upd_tag
-  val upd_qc = Refute_Core.upd_qc
-  val upd_size = Refute_Core.upd_size
-  val upd_iterative_size = Refute_Core.upd_iterative_size
-  val upd_iterations = Refute_Core.upd_iterations
-  val upd_depth = Refute_Core.upd_depth
-  val upd_finite_types = Refute_Core.upd_finite_types
-  val upd_finite_type_size = Refute_Core.upd_finite_type_size
-  val upd_widths = Refute_Core.upd_widths
-  val upd_default_type = Refute_Core.upd_default_type
-  val upd_instantiate = Refute_Core.upd_instantiate
-  val upd_use_subtype = Refute_Core.upd_use_subtype
-  val upd_substrate = Refute_Core.upd_substrate
-  val upd_seed = Refute_Core.upd_seed
-  val upd_allow_existentials = Refute_Core.upd_allow_existentials
-  val upd_finite_functions = Refute_Core.upd_finite_functions
-  val upd_certify = Refute_Core.upd_certify
-  val upd_smart_quantifier = Refute_Core.upd_smart_quantifier
-  val upd_smart_generators = Refute_Core.upd_smart_generators
-  val upd_optimise_equality = Refute_Core.upd_optimise_equality
-  val upd_reorder_premises = Refute_Core.upd_reorder_premises
-  val upd_allow_function_inversion =
-    Refute_Core.upd_allow_function_inversion
-  val upd_mf = Refute_Core.upd_mf
-  val upd_card = Refute_Core.upd_card
-  val upd_iterative_card = Refute_Core.upd_iterative_card
-  val upd_max = Refute_Core.upd_max
-  val upd_mono = Refute_Core.upd_mono
-  val upd_wf = Refute_Core.upd_wf
-  val upd_sat_solver = Refute_Core.upd_sat_solver
-  val upd_batch_size = Refute_Core.upd_batch_size
-  val upd_falsify = Refute_Core.upd_falsify
-  val upd_user_axioms = Refute_Core.upd_user_axioms
-  val upd_destroy_constrs = Refute_Core.upd_destroy_constrs
-  val upd_total_consts = Refute_Core.upd_total_consts
-  val upd_peephole_optim = Refute_Core.upd_peephole_optim
-  val upd_datatype_sym_break = Refute_Core.upd_datatype_sym_break
-  val upd_kodkod_sym_break = Refute_Core.upd_kodkod_sym_break
-  val upd_max_potential = Refute_Core.upd_max_potential
-  val upd_max_genuine = Refute_Core.upd_max_genuine
-  val upd_atoms = Refute_Core.upd_atoms
-  val upd_format = Refute_Core.upd_format
-  val upd_show_types = Refute_Core.upd_show_types
-  val upd_show_skolems = Refute_Core.upd_show_skolems
-  val upd_show_consts = Refute_Core.upd_show_consts
-  val upd_debug = Refute_Core.upd_debug
-  val upd_overlord = Refute_Core.upd_overlord
-  val upd_max_threads = Refute_Core.upd_max_threads
-  val upd_tac_timeout = Refute_Core.upd_tac_timeout
-  val upd_specialize = Refute_Core.upd_specialize
-  val upd_box = Refute_Core.upd_box
-  val upd_binary_ints = Refute_Core.upd_binary_ints
-  val upd_bits = Refute_Core.upd_bits
-  val upd_star_linear_preds = Refute_Core.upd_star_linear_preds
-  val upd_iter = Refute_Core.upd_iter
-  val upd_bisim_depth = Refute_Core.upd_bisim_depth
-  val upd_finitize = Refute_Core.upd_finitize
-  val upd_whack = Refute_Core.upd_whack
-  val upd_need = Refute_Core.upd_need
-  val upd_merge_type_vars = Refute_Core.upd_merge_type_vars
+  val export_refute_simp = #export refute_simp
+  val export_refute_psimp = #export refute_psimp
+  val export_refute_unfold = #export refute_unfold
 end

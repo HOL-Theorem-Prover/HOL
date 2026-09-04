@@ -75,19 +75,8 @@ structure Refute_EvalSML = struct
   val compiler_mutex = Mutex.mutex ()
   val goal_compile_mutex = Mutex.mutex ()
 
-  (* Do not block with interrupts masked: [Timeout.apply] cancels by raising
-     an interrupt.  The successful nonblocking acquisition occurs while
-     masked, which still makes installing cleanup state atomic. *)
   fun lock_interruptibly restore lock =
-    let
-      fun acquire () =
-        if Mutex.trylock lock then ()
-        else
-          (restore (fn () => OS.Process.sleep (Time.fromReal 0.01)) ();
-           acquire ())
-    in
-      acquire ()
-    end
+    Refute_Util.acquire_interruptibly restore (fn () => Mutex.trylock lock)
 
   datatype install_result =
       Installed of generated_dispatch

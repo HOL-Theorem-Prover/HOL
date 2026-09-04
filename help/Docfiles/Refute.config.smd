@@ -116,7 +116,7 @@ Refute.upd_allow_function_inversion : bool -> config -> config
 | `finite_type_size` | `3` | Number of finite cardinalities to consider. |
 | `default_type` | `[``:num``]` | Instances if `finite_types` is false. |
 | `instantiate` | `[]` | Per-type-variable pins overriding `finite_types`/`default_type`. |
-| `substrate` | `Auto` | `Auto`, `NativeSML`, `Cv`, or `Compute`. |
+| `substrate` | `Auto` | `Auto`, `NativeSML`, or `Compute`. |
 | `seed` | `NONE` | Seed; `NONE` advances the session stream. |
 | `allow_existentials` | `true` | Permit PNF existential narrowing. |
 | `finite_functions` | `true` | Finitize narrowing function inputs. |
@@ -142,10 +142,8 @@ is itself a smart-generator route, so it has no effect when
 
 `substrate` selects, it does not promise: under `Auto` a substrate that
 declines the goal is skipped, whereas an explicitly selected substrate
-that declines reports `Unknown`.  `Cv` declines every goal a tactic
-reaches from the goalstack (`e`, `expandf`), because its translation
-defines generators through the proof manager the goalstack tactic
-already holds; `Auto` uses `Compute` there.
+that declines reports `Unknown`.  `Auto` tries `NativeSML` then
+`Compute`.
 
 By default QC substitutes one type for every type variable of a goal at
 once.  `upd_instantiate` pins named type variables instead: a `SOME ty`
@@ -262,7 +260,7 @@ Refute.upd_merge_type_vars : bool -> config -> config
 | `show_skolems` | `true` | Include Skolem values. |
 | `show_consts` | `false` | Include reconstructed constant tables. |
 | `debug` | `false` | Enable MF debug mode and one-problem batches. |
-| `overlord` | `false` | Keep solver files under stable local names. |
+| `overlord` | `false` | Keep the solver's scratch files instead of deleting them. |
 | `max_threads` | `0` | Kodkodi thread cap; zero leaves it unspecified. |
 | `tac_timeout` | `0.5` | Seconds for inner MF tactics. |
 | `specialize` | `true` | Specialize static higher-order arguments. |
@@ -296,7 +294,8 @@ different cardinalities for the merged variables.
 
 Updaters validate the resulting record.  `widths` must be nonempty with
 every entry between 1 and 32, and `bits` nonempty with every entry
-between 1 and 31.  Every `iter` row must be nonempty and nonnegative
+between 1 and 31.  `default_type` must be nonempty; it supplies every
+instance when `finite_types` is false.  Every `iter` row must be nonempty and nonnegative
 with a representable successor; a `bisim_depth` row must not mix `~1`
 with nonnegative depths, which likewise need a representable successor.
 Non-fallback keys of `max`, `wf`, and `iter` must be constants or
