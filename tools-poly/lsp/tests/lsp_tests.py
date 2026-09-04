@@ -2088,11 +2088,17 @@ def test_tactic_edit_spares_later_proofs():
     moves the offsets.
 
     The observable is what the pool announces after the edit: `early`
-    is dropped and re-checked, while `later` is never mentioned at all
-    -- nothing cancelled it and nothing re-forked it, so it keeps the
-    verdict it already had.  Cancelling from the resume point, as an
-    edit to a statement or a definition still does, would announce
-    `later` as cheated too."""
+    is dropped and re-checked, while `later` is neither -- nothing
+    cancelled it and nothing re-forked it, so it keeps the verdict it
+    already had.  Cancelling from the resume point, as an edit to a
+    statement or a definition still does, would announce `later` as
+    cheated too.
+
+    `later` is announced once more all the same, with the verdict it
+    already had, because the edit moved it: a reused entry is the one
+    case where nothing else would tell the client the declaration is
+    somewhere else now.  See
+    `a_reused_proof_reports_where_it_moved_to`."""
     d = tempfile.mkdtemp(prefix="lsp_ident_")
     try:
         src = ("Theory identsp\n"
@@ -2146,11 +2152,14 @@ def test_tactic_edit_spares_later_proofs():
                         f"the edited proof was abandoned ({moves!r})")
             assert_true(("early", "checking") in moves,
                         f"the edited proof was re-checked ({moves!r})")
-            # The one below it is not touched: had `check` failed to
+            # The one below it keeps its worker: had `check` failed to
             # recognise the re-enqueued proof as the one already being
             # checked, its entry would have been dropped and a fresh one
-            # forked, so `later` would appear here.
-            assert_eq([m for m in moves if m[0] == "later"], [],
+            # forked, which is what these two would say.  A repeat of
+            # the verdict it already had is the position refresh and is
+            # expected.
+            assert_eq([m for m in moves
+                       if m[0] == "later" and m[1] != "proved"], [],
                       f"the proof below the edit was left alone "
                       f"({moves!r})")
             assert_eq(_proof_states(c, uri).get("later", (None,))[0],
@@ -5267,6 +5276,232 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_rebound_name_gets_its_own_entry():
+    """A name can occur twice -- `Theorem foo' and a later
+    `Theorem foo[allow_rebind]'.  The pool identifies a proof by its
+    name, because that is the only identity an edit above it does not
+    move, so a repeated name needs the occurrence number to go with
+    it: `foo' and `foo#2'.  Without it the two share one entry and a
+    tally of the file's proofs is short by one."""
+    d = tempfile.mkdtemp(prefix="lsp_rebind_")
+    try:
+        src = ("Theory rebind\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem foo:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n"
+               "\n"
+               "Theorem foo[allow_rebind]:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/rebindScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def both(cl):
+                st = _proof_states(cl, uri)
+                return st if len(st) >= 2 and all(
+                    v[0] != "checking" for v in st.values()) else None
+
+            st = c.wait_until(both, 60)
+            assert_true(st is not None,
+                        f"two entries, not one ({_proof_states(c, uri)!r})")
+            assert_eq(sorted(st), ["foo", "foo#2"], "the two occurrences")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_an_edit_above_a_proof_keeps_one_entry():
+    """An edit above every proof re-elaborates the file, so each proof
+    is dropped and forked again somewhere else.  It must come back
+    under the identity it had -- name and occurrence number -- and at
+    the line it moved to: those are what a client keys its tally on and
+    what it navigates by, and a proof that comes back as a stranger is
+    counted twice.  (That the client keys by name rather than by
+    position is `hol-lsp-a-proof-that-moves-keeps-one-entry'.)"""
+    d = tempfile.mkdtemp(prefix="lsp_moved_")
+    try:
+        src = ("Theory moved\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem one:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n"
+               "\n"
+               "Theorem two:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/movedScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                st = _proof_states(cl, uri)
+                return st if len(st) == 2 and all(
+                    v[0] == "proved" for v in st.values()) else None
+
+            assert_true(c.wait_until(settled, 60) is not None,
+                        f"both proved first ({_proof_states(c, uri)!r})")
+            mark = c.total_msgs()
+            # A comment line inserted at the top: both declarations
+            # move down, so both are re-announced somewhere else.
+            _did_change_incr(c, uri, src, 0, 0, "(* a line *)\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=mark) is not None,
+                        "recompiled")
+            assert_true(c.wait_until(settled, 60) is not None,
+                        f"and still two entries, not four "
+                        f"({_proof_states(c, uri)!r})")
+            # The reported line moved with the declaration, so a client
+            # can still find the proof it is short of.
+            lines = {}
+            for m in c.messages_since(mark)[0]:
+                if m.get("method") == "$/proofStates" \
+                   and m["params"]["uri"] == uri:
+                    for x in m["params"]["states"]:
+                        lines[x["name"]] = x["pos"]["line"]
+            assert_eq(lines.get("two"), 10, "`two' announced at its new line")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_reused_proof_reports_where_it_moved_to():
+    """An edit confined to a tactic invalidates only that proof, so the
+    ones below are re-enqueued and matched to the entries already
+    checking them rather than dropped and forked again -- which is the
+    point, or an edit anywhere above would throw away every proof below
+    it.  A matched entry announces nothing of its own, so if the edit
+    changed the line count nothing would tell the client the
+    declaration is somewhere else now, and `goto outstanding proof'
+    would go to the wrong line."""
+    d = tempfile.mkdtemp(prefix="lsp_reusedmove_")
+    try:
+        src = ("Theory reusedmove\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem one:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n"
+               "\n"
+               "Theorem two:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/reusedmoveScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                st = _proof_states(cl, uri)
+                return st if len(st) == 2 and all(
+                    v[0] == "proved" for v in st.values()) else None
+
+            assert_true(c.wait_until(settled, 60) is not None,
+                        f"both proved first ({_proof_states(c, uri)!r})")
+            mark = c.total_msgs()
+            # A line added inside `one''s tactic: `two' moves down one,
+            # but only `one''s proof is invalidated.
+            at = src.index("  DECIDE_TAC\n")
+            _did_change_incr(c, uri, src, at, at, "  simp[] >>\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=mark) is not None,
+                        "recompiled")
+
+            def moved(cl):
+                for m in cl.messages_since(mark)[0]:
+                    if m.get("method") != "$/proofStates": continue
+                    if m["params"]["uri"] != uri: continue
+                    for x in m["params"]["states"]:
+                        if x["name"] == "two" and x["pos"]["line"] == 10:
+                            return x
+                return None
+
+            assert_true(c.wait_until(moved, 60) is not None,
+                        "`two' is re-announced at the line it moved to")
+            assert_true(c.wait_until(settled, 60) is not None,
+                        f"and there are still two entries "
+                        f"({_proof_states(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_definitions_internal_proofs_are_not_tracked():
+    """The definition principle justifies itself with tactic proofs --
+    pattern coverage, automatic termination -- and those appear nowhere
+    in the script.  Deferring them had the pool reporting 65 proofs for
+    a file with 61 theorems, under names invented from the enclosing
+    declaration, and since they have no name of their own the pool
+    could never match them across passes: each recompile dropped and
+    re-forked them, which is what made the tally climb to 68."""
+    d = tempfile.mkdtemp(prefix="lsp_internal_")
+    try:
+        src = ("Theory internal\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Definition f_def:\n"
+               "  f 0 = 1 /\\\n"
+               "  f (SUC 0) = 2 /\\\n"
+               "  f _ = 3\n"
+               "End\n"
+               "\n"
+               "Theorem f_thm:\n"
+               "  f 0 = 1\n"
+               "Proof\n"
+               "  simp[f_def]\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/internalScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                st = _proof_states(cl, uri)
+                return st if st and all(v[0] != "checking"
+                                        for v in st.values()) else None
+
+            st = c.wait_until(settled, 60)
+            assert_true(st is not None, "a proof settled")
+            assert_eq(sorted(st), ["f_thm"],
+                      "the theorem, and nothing the definition did")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_stale_ancestor_keeps_blocking_on_retry():
     """A stale ancestor -- objects present, but built against a HOL
     that has moved on -- blocks, and goes on blocking when the user
@@ -5981,6 +6216,14 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("a_rebound_name_gets_its_own_entry",
+     test_a_rebound_name_gets_its_own_entry),
+    ("an_edit_above_a_proof_keeps_one_entry",
+     test_an_edit_above_a_proof_keeps_one_entry),
+    ("a_reused_proof_reports_where_it_moved_to",
+     test_a_reused_proof_reports_where_it_moved_to),
+    ("a_definitions_internal_proofs_are_not_tracked",
+     test_a_definitions_internal_proofs_are_not_tracked),
     ("stale_ancestor_keeps_blocking_on_retry",
      test_stale_ancestor_keeps_blocking_on_retry),
     ("dependency_that_binds_no_structure_blocks",

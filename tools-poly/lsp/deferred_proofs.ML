@@ -31,7 +31,7 @@ structure DeferredProofs :> sig
      A proof already being checked is not started again.  Re-elaborating
      a declaration re-enqueues its proofs whether or not anything about
      it changed, so without this an edit anywhere above would throw away
-     work in progress everywhere below.  See `reusable`. *)
+     work in progress everywhere below.  See `sameProof`. *)
   val check : int -> unit
   (* Only ever reports Checking, Proved or Failed.  A proof the pool is
      not working on is absent, which the caller renders as Cheated. *)
@@ -140,7 +140,29 @@ fun proveForReal ctxt (g, tac) =
       th
     end
 
-fun prover ctxt (g, tac) =
+(* A proof with no name is not one the user wrote.  The definition
+   principle justifies itself with tactic proofs -- pattern coverage,
+   automatic termination -- and those appear nowhere in the script: a
+   file of 61 theorems was reporting 65 proofs, the extra four being
+   obligations of four `Definition's that have no `Termination' clause
+   and no proof to look at.  Naming them after their declaration only
+   made them look like proofs the reader had written.
+
+   They are also the entries the pool could never reuse across passes,
+   having no name to match on (see `sameProof'), so each recompile
+   dropped them and forked them again, announcing a `Cheated' at the
+   offset the declaration used to start at.  A client accumulating the
+   stream gained a phantom entry per anonymous proof per recompile,
+   which is what made the tally climb -- 65 became 68 -- when
+   whitespace was added to a tactic.
+
+   So run them here, during elaboration, as a build would.  They are
+   part of the declaration succeeding rather than proofs in their own
+   right: one that fails belongs in that declaration's error, not in a
+   tally of the user's proofs. *)
+fun prover ctxt (g, tac) = let
+  val site = boolLib.current_thm_name ctxt
+in
     if isReplaying () then
       (* Reached from inside a replay: this call needs a real theorem.
          Returning an oracle here would let the outer proof succeed on a
@@ -148,22 +170,24 @@ fun prover ctxt (g, tac) =
          pass/fail verdict reported for the outer proof would be wrong.
          TAC_PROOF_in is the unhooked entry, so this does not recurse. *)
       Tactical.TAC_PROOF_in ctxt (g, tac)
-    else if LSPExtension.isNoCheatSite (boolLib.current_thm_name ctxt) then
+    else if LSPExtension.isNoCheatSite site then
       proveForReal ctxt (g, tac)
     else if !LSPExtension.deferProofs andalso
             not (!LSPExtension.cheatSubstituted) then
-      (* The name comes from the context this proof was given.
-         currentProofOffset is still ambient -- elaboration is one
-         thread, and it is set immediately before the proof -- and a
-         replaying worker must not consult it, which is why it is read
-         now and carried in the item. *)
-      (LSPExtension.enqueueDeferred
-         {site = boolLib.current_thm_name ctxt,
-          offset = !LSPExtension.currentProofOffset,
-          run = fn () => replay ctxt g tac};
-       Thm.mk_oracle_thm "lsp_deferred" g)
+      if site = "" then Tactical.TAC_PROOF_in ctxt (g, tac)
+      else
+        (* currentProofOffset is still ambient -- elaboration is one
+           thread, and it is set immediately before the proof -- and a
+           replaying worker must not consult it, which is why it is
+           read now and carried in the item. *)
+        (LSPExtension.enqueueDeferred
+           {site = site,
+            offset = !LSPExtension.currentProofOffset,
+            run = fn () => replay ctxt g tac};
+         Thm.mk_oracle_thm "lsp_deferred" g)
     else
       Thm.mk_oracle_thm "lsp_compile_skip" g
+end
 
 fun install () = Tactical.set_prover prover
 
@@ -198,6 +222,15 @@ fun install () = Tactical.set_prover prover
    reporting, and each holds an immutable value, so the worst a racing
    reader sees is the previous one -- and another announcement follows. *)
 type entry = {site : string,
+              (* Which occurrence of `site' this is, counted from the
+                 start of the file.  A name can occur twice -- `Theorem
+                 foo' and a later `Theorem foo[allow_rebind]' -- and the
+                 name alone then cannot say which proof a verdict
+                 belongs to.  The offset cannot either: an edit above a
+                 proof moves it, so the same proof would be reported
+                 under two identities and counted twice.  The occurrence
+                 number moves with nothing. *)
+              ord : int,
               offset : int,
               item : LSPExtension.deferred option ref,
               group : Future.group,
@@ -211,7 +244,7 @@ val entries : entry list Sref.t = Sref.new []
 (* Elaborated and queued, but deliberately not being checked: the
    declaration the user is working on.  Invisible to `statuses`, so it
    reads as Cheated, which is what it is. *)
-val held : LSPExtension.deferred list Sref.t = Sref.new []
+val held : (int * LSPExtension.deferred) list Sref.t = Sref.new []
 val focus : int option Sref.t = Sref.new NONE
 
 fun setWorkerCount n = Multithreading.max_threads_update n
@@ -230,8 +263,17 @@ fun setWorkerCount n = Multithreading.max_threads_update n
    this afterwards. *)
 fun announce st = !LSPExtension.proofStateChanged st
 
+(* How a proof is named on the wire.  The first occurrence of a name is
+   just the name, so an ordinal shows up only in the file that needs one
+   -- `foo' and `foo#2' for a rebound theorem.  A declared name cannot
+   contain `#', so the server can recover the bare name when it needs to
+   talk back to the prover about one (`bareProofName'). *)
+fun qualify site ord =
+    if ord <= 1 then site else site ^ "#" ^ Int.toString ord
+
 fun announceEntry status (e : entry) =
-    announce {site = #site e, offset = #offset e, status = status}
+    announce {site = qualify (#site e) (#ord e), offset = #offset e,
+              status = status}
 
 fun dropped e = announceEntry LSPExtension.Cheated e
 
@@ -241,10 +283,11 @@ fun dropped e = announceEntry LSPExtension.Cheated e
    everything else. *)
 val resumed_pri = 100
 
-fun forkAt pri (item as {site, offset, run} : LSPExtension.deferred) =
+fun forkAt pri (ord, item as {site, offset, run} : LSPExtension.deferred) =
     let
+      val name = qualify site ord
       val group = Future.new_group NONE
-      val params = {name = "lsp_proof:" ^ site, group = SOME group,
+      val params = {name = "lsp_proof:" ^ name, group = SOME group,
                     deps = [], pri = pri, interrupts = true}
       val result = ref NONE
       val itemR = ref (SOME item)
@@ -259,14 +302,14 @@ fun forkAt pri (item as {site, offset, run} : LSPExtension.deferred) =
             result := SOME r;
             itemR := NONE;
             !LSPExtension.proofStateChanged
-              {site = site, offset = offset, status = r};
+              {site = name, offset = offset, status = r};
             r
           end
     in
-      announce {site = site, offset = offset,
+      announce {site = name, offset = offset,
                 status = LSPExtension.Checking};
       case Future.forks params [announcing] of
-          [f] => SOME {site = site, offset = offset, item = itemR,
+          [f] => SOME {site = site, ord = ord, offset = offset, item = itemR,
                        group = group, result = result, future = f}
         | _ => NONE
     end
@@ -281,81 +324,16 @@ fun itemSite ({site, ...} : LSPExtension.deferred) = site
 
    Reuse needs an identity that survives re-elaboration, and the offset
    is not one: an insertion moves every declaration below it.  The name
-   is, now that `prove_named` gives one to every route into the prover
-   that has one to give.
+   is, now that `prove_named' gives one to every route into the prover
+   that has one to give -- paired with the occurrence number, so a
+   rebound name still names one proof each.
 
-   Two cases where the name will not do, and in both the answer is to
-   decline the reuse rather than guess -- forking afresh is merely the
-   work we would have done anyway, whereas a wrong match would attach a
-   verdict to the wrong proof:
-
-     - an anonymous proof (a raw `Tactical.prove` in user SML, which does
-       not go through `prove_named`) has no name at all, and every such
-       proof would collide;
-     - a name can occur twice, e.g. `Theorem foo` and a later
-       `Theorem foo[allow_rebind]`.  Numbering the occurrences would
-       work, but only if counted from the start of the file, and a
-       resumed pass does not know how many preceded its resume point.
-
-   So: reuse iff the name is non-empty and unambiguous on both sides. *)
-fun reusable itemNames liveNames nm =
-    let
-      fun count xs = List.length (List.filter (fn n => n = nm) xs)
-    in
-      nm <> "" andalso count itemNames = 1 andalso count liveNames = 1
-    end
-
-fun check resumeFrom =
-    let
-      (* takeDeferred empties the queue, so a second call cannot fork
-         the same proof twice *)
-      val items = LSPExtension.takeDeferred ()
-      val itemNames = List.map itemSite items
-      (* Decide under the lock, so a concurrent cancellation cannot be
-         lost, and fork afterwards -- forking while holding it would
-         serialise the pool behind this. *)
-      val (fresh, doomed) =
-          Sref.gen_update entries
-            (fn live =>
-                let
-                  val liveNames = List.map siteOf live
-                  fun reuse nm = reusable itemNames liveNames nm
-                  val (reused, fresh) =
-                      List.partition (reuse o itemSite) items
-                  fun reusedOffset e =
-                      case List.find (fn it => itemSite it = siteOf e)
-                                     reused of
-                          SOME {offset, ...} => SOME offset
-                        | NONE => NONE
-                  (* An entry survives if this pass re-enqueued its proof
-                     -- with its offset refreshed, since the edit may
-                     have moved the declaration -- or if it sits above
-                     what was re-elaborated and so was never in
-                     question.  Anything else the pass has orphaned. *)
-                  fun classify (e : entry) =
-                      case reusedOffset e of
-                          SOME off =>
-                            SOME {site = #site e, offset = off,
-                                  item = #item e, group = #group e,
-                                  result = #result e, future = #future e}
-                        | NONE =>
-                          if offsetOf e < resumeFrom then SOME e else NONE
-                  val keep = List.mapPartial classify live
-                  val doomed =
-                      List.filter (fn e => not (isSome (classify e))) live
-                in
-                  (keep, (fresh, doomed))
-                end)
-      val () = List.app (fn {group, ...} => Future.cancel_group group) doomed
-      val () = List.app dropped doomed
-      val (focused, rest) =
-          List.partition (fn ({offset, ...} : LSPExtension.deferred) =>
-                             isFocused offset) fresh
-      val new = List.mapPartial (forkAt 0) rest
-    in
-      Sref.update held (fn hs => hs @ focused);
-      Sref.update entries (fn es => es @ new)
-    end
+   The occurrence number is counted from the start of the file, which a
+   resumed pass can do without re-reading what it skipped: the entries
+   above its resume point survive the pass untouched, so their numbers
+   are already assigned and this pass's items carry on from there. *)
+fun sameProof (n, it : LSPExtension.deferred) (e : entry) =
+    itemSite it = siteOf e andalso n = #ord e
 
 fun statusOf ({future, result, ...} : entry) =
     case !result of
@@ -372,9 +350,92 @@ fun statusOf ({future, result, ...} : entry) =
         if Exn.is_interrupt e then LSPExtension.Cheated
         else LSPExtension.Failed (Feedback.exn_to_string e)
 
+fun check resumeFrom =
+    let
+      (* takeDeferred empties the queue, so a second call cannot fork
+         the same proof twice *)
+      val items = LSPExtension.takeDeferred ()
+      (* Decide under the lock, so a concurrent cancellation cannot be
+         lost, and fork afterwards -- forking while holding it would
+         serialise the pool behind this. *)
+      val (fresh, doomed, moved) =
+          Sref.gen_update entries
+            (fn live =>
+                let
+                  (* Entries above the resume point are not in question
+                     this pass, so their occurrence numbers stand and
+                     this pass's items are numbered after them. *)
+                  fun baseOf nm =
+                      List.length
+                        (List.filter
+                           (fn e => siteOf e = nm andalso
+                                    offsetOf e < resumeFrom) live)
+                  (* `takeDeferred' hands the items back in the order
+                     elaboration enqueued them, which is file order. *)
+                  fun number _ [] = []
+                    | number seen (it :: rest) =
+                      let
+                        val nm = itemSite it
+                        val n = 1 + baseOf nm +
+                                List.length (List.filter (fn s => s = nm) seen)
+                      in (n, it) :: number (nm :: seen) rest end
+                  val numbered = number [] items
+                  val (reused, fresh) =
+                      List.partition
+                        (fn ni => List.exists (sameProof ni) live) numbered
+                  fun reusedOffset e =
+                      case List.find (fn ni => sameProof ni e) reused of
+                          SOME (_, {offset, ...}) => SOME offset
+                        | NONE => NONE
+                  (* An entry survives if this pass re-enqueued its proof
+                     -- with its offset refreshed, since the edit may
+                     have moved the declaration -- or if it sits above
+                     what was re-elaborated and so was never in
+                     question.  Anything else the pass has orphaned. *)
+                  fun classify (e : entry) =
+                      case reusedOffset e of
+                          SOME off =>
+                            SOME {site = #site e, ord = #ord e, offset = off,
+                                  item = #item e, group = #group e,
+                                  result = #result e, future = #future e}
+                        | NONE =>
+                          if offsetOf e < resumeFrom then SOME e else NONE
+                  val classified = List.map (fn e => (e, classify e)) live
+                  val keep = List.mapPartial #2 classified
+                  val doomed =
+                      List.mapPartial (fn (e, NONE) => SOME e | _ => NONE)
+                                      classified
+                  (* A reused entry whose declaration the edit moved.
+                     Its offset is how a client finds the proof, and
+                     nothing else will tell it the declaration is
+                     somewhere else now: a reused entry is not dropped
+                     and not forked, so it announces nothing of its
+                     own. *)
+                  val moved =
+                      List.mapPartial
+                        (fn (e, SOME e') =>
+                            if offsetOf e' = offsetOf e then NONE
+                            else SOME e'
+                          | _ => NONE) classified
+                in
+                  (keep, (fresh, doomed, moved))
+                end)
+      val () = List.app (fn {group, ...} => Future.cancel_group group) doomed
+      val () = List.app dropped doomed
+      val () = List.app (fn e => announceEntry (statusOf e) e) moved
+      val (focused, rest) =
+          List.partition (fn (_, {offset, ...} : LSPExtension.deferred) =>
+                             isFocused offset) fresh
+      val new = List.mapPartial (forkAt 0) rest
+    in
+      Sref.update held (fn hs => hs @ focused);
+      Sref.update entries (fn es => es @ new)
+    end
+
 fun statuses () =
-    List.map (fn (e as {site, offset, ...} : entry) =>
-                 {site = site, offset = offset, status = statusOf e})
+    List.map (fn (e as {site, ord, offset, ...} : entry) =>
+                 {site = qualify site ord, offset = offset,
+                  status = statusOf e})
              (Sref.value entries)
 
 (* One shape for both entry points: take the doomed entries out under the
@@ -397,7 +458,7 @@ fun cancelIf doomed_at =
       (* a held proof the edit reached is stale too, and re-elaboration
          will queue it again *)
       Sref.update held
-        (List.filter (fn ({offset, ...} : LSPExtension.deferred) =>
+        (List.filter (fn (_, {offset, ...} : LSPExtension.deferred) =>
                          not (doomed_at offset)))
     end
 
@@ -434,11 +495,14 @@ fun setFocus off =
           Sref.gen_update held
             (fn hs =>
                 let
-                  val hs = hs @ List.mapPartial (fn {item, ...} => !item)
-                                                nowFocused
+                  val hs =
+                      hs @ List.mapPartial
+                             (fn {item, ord, ...} =>
+                                 Option.map (fn it => (ord, it)) (!item))
+                             nowFocused
                   val (r, stay) =
                       List.partition
-                        (fn ({offset, ...} : LSPExtension.deferred) =>
+                        (fn (_, {offset, ...} : LSPExtension.deferred) =>
                             not (nowFocusedAt offset)) hs
                 in (stay, r) end)
       val resumed = List.mapPartial (forkAt resumed_pri) release

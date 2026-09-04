@@ -2802,7 +2802,8 @@ same thing.  See `hol-lsp-retry-compile'.")
 
 (defvar-local hol-lsp--proof-states nil
   "What the proof-checking pool is doing in this buffer.
-A hash table from theorem name to status string -- \"checking\",
+A hash table from theorem name to (STATUS LINE NAME) -- status is
+one of \"checking\",
 \"proved\", \"failed\", \"suspended\", \"diverged\" or \"cheated\".
 Built from the `$/proofStates' transition stream: the server
 announces each change as it happens and never sends a snapshot, so a
@@ -2813,36 +2814,43 @@ client accumulates.  nil until the first notification arrives.")
   (or hol-lsp--proof-states
       (setq hol-lsp--proof-states (make-hash-table :test #'equal))))
 
+(defun hol-lsp--merge-proof-states (tbl states)
+  "Fold the announced STATES into TBL, keyed by theorem name.
+Keyed by name alone.  The name is the only identity that survives
+re-elaboration: an edit anywhere above a proof moves it, so the same
+proof is announced at one position and then another, and keying by
+position counted it twice -- adding a line at the top of a
+61-theorem file gave 122 entries.  The exception is a rebound name,
+two `Theorem foo', which share one entry and so one slot in the
+tally; nothing distinguishes them that an edit does not also move.
+
+`cheated' is kept, not forgotten.  It means the pool has dropped the
+entry -- an edit reached that proof -- and the compile that follows
+re-enqueues it, so forgetting it made the tally *shrink*: 62 checked
+became 61 checked, which reads as finished rather than as one
+outstanding.  Counted as outstanding, it shows as 61/62 until the
+worker settles it.
+
+The line is what makes 61/62 actionable: it is how
+`hol-lsp-goto-outstanding-proof' finds the one the count is short
+of.  It is data, not identity, and is refreshed by every
+announcement -- the server re-announces a proof an edit moved for
+that reason."
+  (dolist (st (append states nil))
+    (let* ((name (plist-get st :name))
+           (status (plist-get st :status))
+           (pos (plist-get st :pos))
+           (line (and pos (plist-get pos :line))))
+      (when (and name (not (equal name "")))
+        (puthash name (list status (or line 0) name) tbl)))))
+
 (defun hol-lsp--note-proof-states (uri states)
   "Fold the STATES announced for URI into that buffer's table."
   (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
          (buf (and path (find-buffer-visiting path))))
     (when (buffer-live-p buf)
       (with-current-buffer buf
-        (let ((tbl (hol-lsp--proof-states-table)))
-          (dolist (st (append states nil))
-            (let* ((name (plist-get st :name))
-                   (status (plist-get st :status))
-                   (pos (plist-get st :pos))
-                   (line (and pos (plist-get pos :line))))
-              (when name
-                ;; `cheated' is kept, not forgotten.  It means the pool
-                ;; has dropped the entry -- an edit reached that proof
-                ;; -- and the compile that follows re-enqueues it, so
-                ;; forgetting it made the tally *shrink*: 62 checked
-                ;; became 61 checked, which reads as finished rather
-                ;; than as one outstanding.  Counted as outstanding, it
-                ;; shows as 61/62 until the worker settles it.
-                ;; The line is what makes 61/62 actionable: it is how
-                ;; `hol-lsp-goto-outstanding-proof' finds the one the
-                ;; count is short of.
-                ;; Keyed by name *and* line.  A proof with no name of
-                ;; its own -- a Definition's termination obligation --
-                ;; is announced as "", so keying by name alone
-                ;; collapsed every one of them into a single entry:
-                ;; that is how a file of 61 theorems grew a 62nd.
-                (puthash (format "%s@%s" name (or line 0))
-                         (list status (or line 0) name) tbl)))))
+        (hol-lsp--merge-proof-states (hol-lsp--proof-states-table) states)
         (force-mode-line-update)))))
 
 (defun hol-lsp--prune-stale-proofs (uri)
@@ -2877,7 +2885,7 @@ are listed too, since those are what a user most wants to reach.
       (maphash (lambda (_k v)
                  (let ((status (nth 0 v)) (line (nth 1 v)) (name (nth 2 v)))
                    (unless (equal status "proved")
-                     (push (list (if (equal name "") "(unnamed proof)" name)
+                     (push (list name
                                  (if (equal status "cheated")
                                      "not checked" status)
                                  (or line 0))

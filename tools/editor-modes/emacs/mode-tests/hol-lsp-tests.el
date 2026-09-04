@@ -288,9 +288,12 @@ break at."
     (should (equal (hol-lsp-proof-summary) ""))))
 
 (defun hol-lsp-tests--put (name status line)
-  "Record NAME at LINE with STATUS, the way a notification would."
-  (puthash (format "%s@%s" name line) (list status line name)
-           hol-lsp--proof-states))
+  "Record NAME at LINE with STATUS, the way a notification would.
+Goes through the production merge, so the keying is under test rather
+than restated here."
+  (hol-lsp--merge-proof-states
+   hol-lsp--proof-states
+   (list (list :name name :status status :pos (list :line line)))))
 
 (ert-deftest hol-lsp-proof-summary-counts-the-pool ()
   "The counter is the ordering-independent signal: proofs settle in
@@ -306,18 +309,37 @@ the tally, not the per-proof marks."
     (hol-lsp-tests--put "c" "failed" 15)
     (should (equal (hol-lsp-proof-summary) " HOL[2/3 1!]"))))
 
-(ert-deftest hol-lsp-unnamed-proofs-do-not-collapse ()
-  "A proof with no name of its own -- a Definition's termination
-obligation -- is announced as the empty string.  Keyed by name alone
-they all became one entry, which is how a file of 61 theorems showed a
-62nd and lost track of the rest."
+(ert-deftest hol-lsp-a-proof-that-moves-keeps-one-entry ()
+  "An edit above a proof moves it, so the pool announces the same
+proof at one line and then another.  Keyed by position that counted it
+twice: adding a line at the top of a 61-theorem file gave 122 entries,
+and the tally climbed with every edit.  The later line wins, so
+`hol-lsp-goto-outstanding-proof' goes to where the proof now is."
   (with-temp-buffer
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
-    (hol-lsp-tests--put "" "proved" 10)
-    (hol-lsp-tests--put "" "proved" 40)
-    (hol-lsp-tests--put "" "checking" 70)
-    (should (equal (hol-lsp-proof-summary) " HOL[2/3]"))
-    (should (string-match-p "(unnamed proof)" (hol-lsp--proof-help-echo)))))
+    (hol-lsp-tests--put "a" "proved" 3)
+    (hol-lsp-tests--put "b" "proved" 9)
+    (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
+    ;; A line inserted at the top: both are dropped and re-announced
+    ;; one line down.
+    (hol-lsp-tests--put "a" "cheated" 4)
+    (hol-lsp-tests--put "b" "cheated" 10)
+    (should (equal (hol-lsp-proof-summary) " HOL[0/2 2?]"))
+    (hol-lsp-tests--put "a" "proved" 4)
+    (hol-lsp-tests--put "b" "checking" 10)
+    (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+    (should (equal (hol-lsp--outstanding-proofs)
+                   '(("b" "checking" 10))))))
+
+(ert-deftest hol-lsp-an-unnamed-proof-is-not-tracked ()
+  "The definition principle justifies itself with tactic proofs that
+appear nowhere in the script.  Those arrive with no name, and counting
+them reported 65 proofs for a file with 61 theorems."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (hol-lsp-tests--put "real" "proved" 3)
+    (hol-lsp-tests--put "" "proved" 20)
+    (should (equal (hol-lsp-proof-summary) " HOL[1 ok]"))))
 
 (ert-deftest hol-lsp-unchecked-proofs-are-reported-not-hidden ()
   "A `cheated' proof is one the pool is not working on.  Counting it
