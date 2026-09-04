@@ -2836,25 +2836,31 @@ client accumulates.  nil until the first notification arrives.")
                 ;; The line is what makes 61/62 actionable: it is how
                 ;; `hol-lsp-goto-outstanding-proof' finds the one the
                 ;; count is short of.
-                (puthash name (cons status line) tbl)))))
+                ;; Keyed by name *and* line.  A proof with no name of
+                ;; its own -- a Definition's termination obligation --
+                ;; is announced as "", so keying by name alone
+                ;; collapsed every one of them into a single entry:
+                ;; that is how a file of 61 theorems grew a 62nd.
+                (puthash (format "%s@%s" name (or line 0))
+                         (list status (or line 0) name) tbl)))))
         (force-mode-line-update)))))
 
 (defun hol-lsp--prune-stale-proofs (uri)
-  "Drop proofs still `cheated' in the buffer visiting URI.
-Called when a compile completes.  The pool announces `checking' for
-everything a pass enqueues *before* that pass finishes, so a proof
-still marked `cheated' by then was not re-enqueued -- its theorem was
-deleted, or its tactic does not compile, in which case the compile
-error is the report.  Keeping it would leave the tally short of a
-proof that is never coming back."
+  "Drop entries for proofs no longer in the buffer visiting URI.
+A proof still `cheated' when a compile finishes was not re-enqueued by
+that pass -- which happens both when its theorem has been deleted and
+when the server did not get round to it.  Those look identical from
+here, and dropping them silently is the worse mistake: it counts an
+unchecked proof as though it had been checked.  So only entries past
+the end of the buffer go."
   (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
          (buf (and path (find-buffer-visiting path))))
     (when (buffer-live-p buf)
       (with-current-buffer buf
         (when hol-lsp--proof-states
-          (let (stale)
+          (let ((last (line-number-at-pos (point-max))) stale)
             (maphash (lambda (k v)
-                       (when (equal (car-safe v) "cheated") (push k stale)))
+                       (when (>= (or (nth 1 v) 0) last) (push k stale)))
                      hol-lsp--proof-states)
             (dolist (k stale) (remhash k hol-lsp--proof-states))
             (when stale (force-mode-line-update))))))))
@@ -2868,10 +2874,14 @@ are listed too, since those are what a user most wants to reach.
 `proved' is not listed: it is the state that needs nothing."
   (let (out)
     (when hol-lsp--proof-states
-      (maphash (lambda (name v)
-                 (let ((status (car-safe v)) (line (cdr-safe v)))
+      (maphash (lambda (_k v)
+                 (let ((status (nth 0 v)) (line (nth 1 v)) (name (nth 2 v)))
                    (unless (equal status "proved")
-                     (push (list name status (or line 0)) out))))
+                     (push (list (if (equal name "") "(unnamed proof)" name)
+                                 (if (equal status "cheated")
+                                     "not checked" status)
+                                 (or line 0))
+                           out))))
                hol-lsp--proof-states))
     (sort out (lambda (a b) (< (nth 2 a) (nth 2 b))))))
 
@@ -2912,20 +2922,27 @@ below it, so a bar would run backwards -- while a count that drops
 from 30 to 12 reads as what it is."
   (if (null hol-lsp--proof-states)
       ""
-    (let ((checking 0) (proved 0) (bad 0))
+    (let ((checking 0) (unchecked 0) (proved 0) (bad 0))
       (maphash (lambda (_k v)
-                 (let ((status (car-safe v)))
-                   (cond ((member status '("checking" "cheated"))
+                 (let ((status (nth 0 v)))
+                   (cond ((equal status "checking")
                           (setq checking (1+ checking)))
+                         ;; Not being worked on: usually an edit
+                         ;; reached it and the next pass takes it up,
+                         ;; but it stays this way if the pass never
+                         ;; does.  Either way it is not checked.
+                         ((equal status "cheated")
+                          (setq unchecked (1+ unchecked)))
                          ((equal status "proved") (setq proved (1+ proved)))
                          (t (setq bad (1+ bad))))))
                hol-lsp--proof-states)
-      (let ((total (+ checking proved bad)))
+      (let* ((total (+ checking unchecked proved bad))
+             (marks (concat (if (> bad 0) (format " %d!" bad) "")
+                            (if (> unchecked 0)
+                                (format " %d?" unchecked) ""))))
         (cond ((zerop total) "")
-              ((> checking 0)
-               (format " HOL[%d/%d%s]" proved total
-                       (if (> bad 0) (format " %d!" bad) "")))
-              ((> bad 0) (format " HOL[%d/%d %d!]" proved total bad))
+              ((or (> checking 0) (> unchecked 0) (> bad 0))
+               (format " HOL[%d/%d%s]" proved total marks))
               (t (format " HOL[%d ok]" proved)))))))
 
 (defun hol-lsp-proof-mode-line ()

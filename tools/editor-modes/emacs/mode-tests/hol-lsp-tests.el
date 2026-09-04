@@ -287,70 +287,49 @@ break at."
   (with-temp-buffer
     (should (equal (hol-lsp-proof-summary) ""))))
 
+(defun hol-lsp-tests--put (name status line)
+  "Record NAME at LINE with STATUS, the way a notification would."
+  (puthash (format "%s@%s" name line) (list status line name)
+           hol-lsp--proof-states))
+
 (ert-deftest hol-lsp-proof-summary-counts-the-pool ()
   "The counter is the ordering-independent signal: proofs settle in
 whatever order the workers finish, so what answers \"is it done?\" is
 the tally, not the per-proof marks."
   (with-temp-buffer
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
-    (puthash "a" (cons "proved" 3) hol-lsp--proof-states)
-    (puthash "b" (cons "checking" 9) hol-lsp--proof-states)
+    (hol-lsp-tests--put "a" "proved" 3)
+    (hol-lsp-tests--put "b" "checking" 9)
     (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
-    (puthash "b" (cons "proved" 9) hol-lsp--proof-states)
+    (hol-lsp-tests--put "b" "proved" 9)
     (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
-    (puthash "c" (cons "failed" 15) hol-lsp--proof-states)
+    (hol-lsp-tests--put "c" "failed" 15)
     (should (equal (hol-lsp-proof-summary) " HOL[2/3 1!]"))))
 
-(ert-deftest hol-lsp-proof-states-accumulate-and-cheated-is-outstanding ()
-  "`$/proofStates' is a transition stream, so the client accumulates.
+(ert-deftest hol-lsp-unnamed-proofs-do-not-collapse ()
+  "A proof with no name of its own -- a Definition's termination
+obligation -- is announced as the empty string.  Keyed by name alone
+they all became one entry, which is how a file of 61 theorems showed a
+62nd and lost track of the rest."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (hol-lsp-tests--put "" "proved" 10)
+    (hol-lsp-tests--put "" "proved" 40)
+    (hol-lsp-tests--put "" "checking" 70)
+    (should (equal (hol-lsp-proof-summary) " HOL[2/3]"))
+    (should (string-match-p "(unnamed proof)" (hol-lsp--proof-help-echo)))))
 
-A `cheated' state means the pool has dropped that entry -- an edit
-reached the proof -- and the compile that follows re-enqueues it.
-Forgetting it made the tally shrink, so 62 checked became 61 checked,
-which reads as finished rather than as one outstanding.  It counts as
-outstanding instead."
-  (let ((file (make-temp-file "holproofs" nil "Script.sml")))
-    (unwind-protect
-        (let ((buf (find-file-noselect file)))
-          (with-current-buffer buf
-            (hol-lsp--note-proof-states
-             (hol-lsp--path-to-uri file)
-             (list (list :name "t1" :status "proved")
-                   (list :name "t2" :status "proved")))
-            (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
-            (hol-lsp--note-proof-states
-             (hol-lsp--path-to-uri file)
-             (list (list :name "t2" :status "cheated")))
-            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
-            (hol-lsp--note-proof-states
-             (hol-lsp--path-to-uri file)
-             (list (list :name "t2" :status "checking")))
-            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
-            (hol-lsp--note-proof-states
-             (hol-lsp--path-to-uri file)
-             (list (list :name "t2" :status "proved")))
-            (should (equal (hol-lsp-proof-summary) " HOL[2 ok]")))
-          (kill-buffer buf))
-      (delete-file file))))
-
-(ert-deftest hol-lsp-stale-proofs-are-pruned-when-a-compile-finishes ()
-  "A pass announces `checking' for everything it enqueues before it
-finishes, so a proof still `cheated' at `$/compileCompleted' is not
-coming back -- its theorem was deleted, or its tactic does not
-compile.  Keeping it would leave the tally permanently short."
-  (let ((file (make-temp-file "holproofs" nil "Script.sml")))
-    (unwind-protect
-        (let ((buf (find-file-noselect file)))
-          (with-current-buffer buf
-            (hol-lsp--note-proof-states
-             (hol-lsp--path-to-uri file)
-             (list (list :name "t1" :status "proved")
-                   (list :name "gone" :status "cheated")))
-            (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
-            (hol-lsp--prune-stale-proofs (hol-lsp--path-to-uri file))
-            (should (equal (hol-lsp-proof-summary) " HOL[1 ok]")))
-          (kill-buffer buf))
-      (delete-file file))))
+(ert-deftest hol-lsp-unchecked-proofs-are-reported-not-hidden ()
+  "A `cheated' proof is one the pool is not working on.  Counting it
+as checked -- or dropping it -- said 61 proofs checked while one of
+them was not being checked at all."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (hol-lsp-tests--put "ok" "proved" 3)
+    (hol-lsp-tests--put "edited" "cheated" 20)
+    (should (equal (hol-lsp-proof-summary) " HOL[1/2 1?]"))
+    (should (string-match-p "edited (not checked)"
+                            (hol-lsp--proof-help-echo)))))
 
 (ert-deftest hol-lsp-outstanding-proofs-are-named-and-ordered ()
   "A count is only actionable if the user can reach the proof it is
@@ -358,9 +337,9 @@ short of, so the outstanding ones are listed in file order, with the
 settled ones left out."
   (with-temp-buffer
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
-    (puthash "late" (cons "checking" 40) hol-lsp--proof-states)
-    (puthash "done" (cons "proved" 10) hol-lsp--proof-states)
-    (puthash "early" (cons "failed" 5) hol-lsp--proof-states)
+    (hol-lsp-tests--put "late" "checking" 40)
+    (hol-lsp-tests--put "done" "proved" 10)
+    (hol-lsp-tests--put "early" "failed" 5)
     (let ((out (hol-lsp--outstanding-proofs)))
       (should (equal (mapcar #'car out) '("early" "late")))
       (should (equal (nth 1 (car out)) "failed")))
@@ -373,13 +352,32 @@ than sticking on the first."
     (insert (mapconcat (lambda (i) (format "line %d" i))
                        (number-sequence 0 20) "\n"))
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
-    (puthash "a" (cons "checking" 4) hol-lsp--proof-states)
-    (puthash "b" (cons "suspended" 12) hol-lsp--proof-states)
+    (hol-lsp-tests--put "a" "checking" 4)
+    (hol-lsp-tests--put "b" "suspended" 12)
     (goto-char (point-min))
     (hol-lsp-goto-outstanding-proof)
     (should (equal (line-number-at-pos) 5))
     (hol-lsp-goto-outstanding-proof)
     (should (equal (line-number-at-pos) 13))
-    ;; and back round to the first
     (hol-lsp-goto-outstanding-proof)
     (should (equal (line-number-at-pos) 5))))
+
+(ert-deftest hol-lsp-only-proofs-past-the-end-are-pruned ()
+  "A proof the pass did not re-enqueue and a proof whose theorem was
+deleted look identical from here, and dropping both silently counted
+an unchecked proof as checked.  Only what has left the buffer goes."
+  (let ((file (make-temp-file "holproofs" nil "Script.sml")))
+    (unwind-protect
+        (let ((buf (find-file-noselect file)))
+          (with-current-buffer buf
+            (insert "one\ntwo\nthree\n")
+            (save-buffer)
+            (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+            (hol-lsp-tests--put "here" "cheated" 1)
+            (hol-lsp-tests--put "deleted" "cheated" 900)
+            (should (equal (hol-lsp-proof-summary) " HOL[0/2 2?]"))
+            (hol-lsp--prune-stale-proofs (hol-lsp--path-to-uri file))
+            ;; the one still in the buffer stays, and stays visible
+            (should (equal (hol-lsp-proof-summary) " HOL[0/1 1?]")))
+          (kill-buffer buf))
+      (delete-file file))))
