@@ -128,6 +128,10 @@ Definition OLD_UF_SEM_def:
         ?w'. OLD_UF_SEM (RESTN w j) (F_BOOL b)
              /\
              OLD_UF_SEM (CAT(SEL w (0,j-1),w')) f)
+Termination
+  (* every call is about a sub-formula of the one in hand *)
+  WF_REL_TAC `measure (\(w,f). fl_size (K 0) f)` >>
+  rw [SyntaxTheory.bexp_MAP_ID]
 End
 
 (******************************************************************************
@@ -180,6 +184,10 @@ Definition UF_SEM_def:
         ?w'. UF_SEM (RESTN w j) (F_BOOL b)
              /\
              UF_SEM (CAT(SEL w (0,j-1),w')) f)
+Termination
+  (* every call is about a sub-formula of the one in hand *)
+  WF_REL_TAC `measure (\(w,f). fl_size (K 0) f)` >>
+  rw [SyntaxTheory.bexp_MAP_ID]
 End
 
 (******************************************************************************
