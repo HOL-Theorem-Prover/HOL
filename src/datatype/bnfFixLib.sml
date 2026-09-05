@@ -1266,6 +1266,10 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
         val set_induction =
             CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
                (QCONV (PURE_REWRITE_CONV setRWs) THENC
+                (* once, for every clause: unfolding the combinators
+                   leaves the shape's whole set term a nest of redexes,
+                   and each clause would otherwise reduce it again *)
+                QCONV (REDEPTH_CONV BETA_CONV) THENC
                 (* one binder per constructor argument here too: an
                    argument that is itself a sum would otherwise be
                    split, and the clause would be about `P (V (INL x))`
