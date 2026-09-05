@@ -63,7 +63,11 @@ val initialize:
        already compiled and preserved via a snapshot restored before
        this call.  The parser still walks every dec so its stateful
        infix-scope tracking stays consistent. *)
-    startByte: int
+    startByte: int,
+    (* Stop once a declaration ending at or after this byte has been
+       compiled, rather than running to the end of the text.  For a
+       compile that only needs one declaration re-run. *)
+    stopAfter: int option
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -78,6 +82,10 @@ val at: PolyML.parseTree list -> int list -> subtree
 
 val build: PolyML.parseTree -> built
 val buildList: PolyML.parseTree option -> built list
+(* Move a built tree `delta` bytes down the file, for a compile that
+   reuses a declaration's elaboration without re-running it while an
+   edit above has moved the text. *)
+val shiftBuilt: int -> built -> built
 
 type built_subtree = (built * built list) option
 type built_trees = built list
@@ -667,7 +675,8 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, builtTree, onDecStarted, onDecCompleted, startByte
+  runtimeExn, builtTree, onDecStarted, onDecCompleted, startByte,
+  stopAfter
 } = let
   datatype chunk
     = Chunk of string
@@ -933,9 +942,28 @@ fun initialize {
         emitBuilt ();
         ptRef := [];
         onDecCompleted stopByte;
-        loop ())
+        case stopAfter of
+            SOME b => if stopByte >= b then () else loop ()
+          | NONE => loop ())
     end)
   in loop () end;
+
+(* `PDeclaredAt` with an empty file names a location in this same text
+   and moves with it; one naming another file does not.  Its line
+   numbers are read only in the latter case (see `fromPolyLoc` in the
+   server), so they are left alone. *)
+fun shiftBuilt 0 = (fn t => t)
+  | shiftBuilt delta = let
+      val d = FixedInt.fromInt delta
+      fun prop (PDeclaredAt {file = "", startLine, endLine,
+                             startPosition, endPosition}) =
+          PDeclaredAt {file = "", startLine = startLine, endLine = endLine,
+                       startPosition = startPosition + delta,
+                       endPosition = endPosition + delta}
+        | prop p = p
+      fun go (Built ((s, e), props, kids)) =
+          Built ((s + d, e + d), List.map prop props, List.map go kids)
+    in go end;
 
 fun navigateTo NONE _ = NONE
   | navigateTo (tree as (SOME ({ startPosition, endPosition, ... }, _)))

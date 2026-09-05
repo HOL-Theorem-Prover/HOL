@@ -1294,8 +1294,8 @@ fun start {diag, dbg, warnings} = let
       handle _ => []
     end
 
-  fun compileForReport uri code startByte lastPos builtTree onDecCompleted
-                       report = let
+  fun compileForReport uri code startByte stopAfter lastPos builtTree
+                       onDecCompleted report = let
     (* A deferred proof belongs to the declaration being compiled when it
        is enqueued, so record that declaration's start as each one
        begins.  Elaboration is single-threaded, so a plain ref is
@@ -1346,7 +1346,8 @@ fun start {diag, dbg, warnings} = let
       builtTree = builtTree,
       onDecStarted = onDecStarted,
       onDecCompleted = onDecCompleted,
-      startByte = startByte }
+      startByte = startByte,
+      stopAfter = stopAfter }
     in lastPos := size code end
 
   (* Materialise an `encode` (`(string -> unit) -> unit`) into a plain
@@ -2119,7 +2120,8 @@ fun start {diag, dbg, warnings} = let
         end
       fun runCompile () = (
         sendProgressBegin ();
-        compileForReport uri (#text text) resumeStart lastPos processBuiltTree captureSnap process;
+        compileForReport uri (#text text) resumeStart NONE lastPos
+                         processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
            we might land here on a stale thread whose applyEdit has
@@ -2834,7 +2836,8 @@ fun start {diag, dbg, warnings} = let
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
-    val compile = compileForReport uri code 0 (ref 0) (fn _ => ()) (fn _ => ())
+    val compile = compileForReport uri code 0 NONE (ref 0) (fn _ => ())
+                                   (fn _ => ())
     in
       case incr of
         IncrNone => let
