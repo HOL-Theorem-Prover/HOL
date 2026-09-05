@@ -26,12 +26,18 @@ type level = {arg : term, set : term}
    chain of levels it walks, outermost first — so the first level is
    about the clause's own argument, and the last collects values of the
    type the principle is about. *)
-fun chainOf Pv tm =
+fun chainAt Ps tm =
     let
       val (z, body) = dest_forall tm
       val (ante, conc) = dest_imp body
-      val _ = aconv conc (mk_comb (Pv, z)) orelse
-              raise ERR "chainOf" "not a hypothesis about the bound variable"
+      (* a predicate of the wrong type is not the one this hypothesis
+         is about, and asking costs an application that does not
+         typecheck *)
+      fun says P = aconv conc (mk_comb (P, z)) handle HOL_ERR _ => false
+      val P = case List.find says Ps of
+                  SOME P => P
+                | NONE => raise ERR "chainOf"
+                                "not a hypothesis about the bound variable"
       val (evs, conjs) = strip_exists ante
       val mems = List.map pred_setSyntax.dest_in (strip_conj conjs)
       fun setOf e =
@@ -57,8 +63,12 @@ fun chainOf Pv tm =
       val _ = length levels = length mems orelse
               raise ERR "chainOf" "a hypothesis the walk does not cover"
     in
-      SOME {z = z, levels = levels}
+      SOME {P = P, z = z, levels = levels, hyp = tm}
     end handle HOL_ERR _ => NONE
+
+fun chainOf Pv tm =
+    Option.map (fn {z, levels, ...} => {z = z, levels = levels})
+               (chainAt [Pv] tm)
 
 (* the outermost level alone, which is all a caller wanting the
    argument the clause states needs *)
@@ -84,12 +94,18 @@ fun openAll tm =
                          in (vs, strip_conj a @ hs, cc) end
         | NONE => ([], [], tm)
 
+(* A clause states its hypotheses as one conjunction, and a theorem has
+   them one at a time: `DISCH` takes away the conjunction, which the
+   theorem does not have, so each conjunct answers for itself first. *)
+fun dischargeConj a th =
+    DISCH a (List.foldl (fn (p, t) => PROVE_HYP p t) th (CONJUNCTS (ASSUME a)))
+
 fun closeAs tm th =
     if is_forall tm then
       let val (v, b) = dest_forall tm in GEN v (closeAs b th) end
     else
       case Lib.total dest_imp tm of
-          SOME (a, c) => DISCH a (closeAs c th)
+          SOME (a, c) => dischargeConj a (closeAs c th)
         | NONE => th
 
 fun hypsOf c =
@@ -231,12 +247,13 @@ fun openClause c =
    predicate and the type that is about, the clauses, the nested
    hypotheses, and the operators in the order the clauses first mention
    them — which is the order that names the predicates *)
-fun chainsOf Pv c = List.mapPartial (chainOf Pv) (hypsOf c)
+fun chainsOf Ps c = List.mapPartial (chainAt Ps) (hypsOf c)
 
 (* A level with the values its set collects: the next level's argument,
-   or — where the chain ends — the type the principle is about. *)
-fun levelsOf ty {z = _, levels} =
+   or — where the chain ends — the type the chain is about. *)
+fun levelsOf {P = _, z, levels, hyp = _} =
     let
+      val ty = type_of z
       fun go [] = []
         | go [{arg, set}] = [{arg = arg, set = set, elemty = ty}]
         | go ({arg, set} :: (rest as {arg = a, ...} :: _)) =
@@ -245,59 +262,54 @@ fun levelsOf ty {z = _, levels} =
       go levels
     end
 
+(* A declaration whose members reach each other gets a predicate
+   apiece, and a clause's hypothesis may be about any of them. *)
 fun readPrinciple ind =
     let
-      val (Pv, body) = dest_forall (concl ind)
-      val ty = #1 (dom_rng (type_of Pv))
-      (* a principle with a predicate per member says several things at
-         once, and which of them a clause's hypothesis is about is not
-         something this can see *)
-      val _ = not (is_forall body) orelse
-              raise ERR "mutual_induction"
-                    "a principle with more than one predicate"
+      val (Ps, body) = strip_forall (concl ind)
+      val tys = List.map (#1 o dom_rng o type_of) Ps
       val (hypsTm, _) = dest_imp body
       val clauses = strip_conj hypsTm
-      val chains = List.concat (List.map (chainsOf Pv) clauses)
-      val nested = List.concat (List.map (nestedOf Pv) clauses)
+      val chains = List.concat (List.map (chainsOf Ps) clauses)
       val _ = not (null chains) orelse
               raise ERR "mutual_induction"
                     "the principle recurses under no operator"
-      val levels = List.concat (List.map (levelsOf ty) chains)
+      val levels = List.concat (List.map levelsOf chains)
       fun firstOccs [] = []
         | firstOccs (t :: ts) =
             t :: firstOccs (List.filter (not o equal t) ts)
     in
-      {Pv = Pv, ty = ty, clauses = clauses,
-       chains = chains, nested = nested, levels = levels,
+      {Ps = Ps, tys = tys, clauses = clauses,
+       chains = chains, levels = levels,
        optys = firstOccs (List.map (type_of o #arg) levels)}
     end
 
 (* the set function the principle collects a level's contents with, and
    the type of what it collects *)
-fun levelOfType levels opty =
-    case List.filter (fn r => type_of (#arg r) = opty) levels of
-        [] => raise ERR "mutual_induction" "no set function"
-      | r :: rs =>
-        let
-          val setfn = rator (#set r)
-          (* two chains reaching the same type by different set
-             functions are two operators sharing a name; saying which
-             one a clause meant is beyond what the principle records *)
-          val _ = List.all (fn r' => aconv (rator (#set r')) setfn andalso
-                                     #elemty r' = #elemty r)
-                           rs orelse
-                  raise ERR "mutual_induction"
-                        ("two ways of reaching " ^ type_to_string opty)
-        in
-          {setfn = setfn, elemty = #elemty r}
-        end
-
-fun setOfOperator levels opty = #setfn (levelOfType levels opty)
+(* A level may be reached more than one way: a list of pairs of two
+   members carries one member in the first component and the other in
+   the second, and `setFST` and `setSND` collect them.  Each way has a
+   set function and a type of what it collects, and the level's own
+   predicate answers for all of them at once. *)
+fun waysOfType levels opty =
+    let
+      val here = List.filter (fn r => type_of (#arg r) = opty) levels
+      val _ = not (null here) orelse
+              raise ERR "mutual_induction"
+                    ("nothing reaches " ^ type_to_string opty)
+      fun add (r, acc) =
+          let val w = {setfn = rator (#set r), elemty = #elemty r}
+          in
+            if List.exists (fn w' => aconv (#setfn w') (#setfn w)) acc then acc
+            else acc @ [w]
+          end
+    in
+      List.foldl add [] here
+    end
 
 fun assemble (ops : operator list) ind =
     let
-      val {Pv, ty, clauses, chains, nested, levels, optys} =
-          readPrinciple ind
+      val {Ps, tys, clauses, chains, levels, optys} = readPrinciple ind
       (* the caller's operator for a type: the one whose induction is
          about it *)
       (* Two levels may recurse under the same operator, and then two
@@ -319,7 +331,7 @@ fun assemble (ops : operator list) ind =
                 | NONE => raise ERR "mutual_induction"
                                 ("no induction principle offered for " ^
                                  type_to_string opty)
-      fun setFor opty = setOfOperator levels opty
+      fun waysFor opty = waysOfType levels opty
       val Qs = List.tabulate
                  (length optys,
                   fn i => mk_var ("Q" ^ Int.toString i,
@@ -332,22 +344,32 @@ fun assemble (ops : operator list) ind =
          principle's own where the type is, and the operator's at every
          level a chain walks through *)
       fun predOf t =
-          if t = ty then SOME Pv
-          else if List.exists (fn t' => t' = t) optys then SOME (Qfor t)
-          else NONE
-      (* what a clause says once the operator has a predicate of its own *)
+          case List.find (fn (t', _) => t' = t) (ListPair.zip (tys, Ps)) of
+              SOME (_, P) => SOME P
+            | NONE =>
+              if List.exists (fn t' => t' = t) optys then SOME (Qfor t)
+              else NONE
+      (* what a clause says once the operator has a predicate of its
+         own.  Where a declaration's members reach each other, a clause
+         says one thing per member about the same argument, and the
+         operator's predicate answers for all of them at once — so the
+         swapped hypotheses are taken without repetition. *)
       fun swap h =
-          case nestedHyp Pv h of
+          case chainAt Ps h of
               NONE => h
-            | SOME {arg, ...} => mk_comb (Qfor (type_of arg), arg)
+            | SOME {levels, ...} =>
+              let val a = #arg (hd levels)
+              in mk_comb (Qfor (type_of a), a) end
       fun newClause c =
           let val (vs, hyps, conc) = openClause c
           in
             case hyps of
                 [] => c
-              | _ => list_mk_forall (vs, mk_imp (list_mk_conj
-                                                   (List.map swap hyps),
-                                                 conc))
+              | _ =>
+                list_mk_forall
+                  (vs, mk_imp (list_mk_conj
+                                 (op_mk_set aconv (List.map swap hyps)),
+                               conc))
           end
       val newClauses = List.map newClause clauses
       (* the operator's own clauses, with the type's predicate where the
@@ -363,22 +385,19 @@ fun assemble (ops : operator list) ind =
           end
       val opClauses = List.concat (List.map opClausesFor optys)
       val hypterm = list_mk_conj (newClauses @ opClauses)
-      val x = mk_var ("x", ty)
+      fun everything nm p =
+          let val v = mk_var (nm, #1 (dom_rng (type_of p)))
+          in mk_forall (v, mk_comb (p, v)) end
       val conclusion =
-          list_mk_conj
-            (mk_forall (x, mk_comb (Pv, x)) ::
-             List.map (fn q =>
-                          let val v = mk_var ("l", #1 (dom_rng (type_of q)))
-                          in mk_forall (v, mk_comb (q, v)) end)
-                      Qs)
-      val goal = list_mk_forall (Pv :: Qs, mk_imp (hypterm, conclusion))
+          list_mk_conj (List.map (everything "x") Ps @
+                        List.map (everything "l") Qs)
+      val goal = list_mk_forall (Ps @ Qs, mk_imp (hypterm, conclusion))
     in
-      {goal = goal, Pv = Pv, Qs = Qs, ty = ty, optys = optys,
+      {goal = goal, Ps = Ps, Qs = Qs, tys = tys, optys = optys,
        clauses = clauses, newClauses = newClauses, hypterm = hypterm,
-       opFor = opFor, setFor = setFor, Qfor = Qfor,
-       opClausesFor = opClausesFor, nested = nested,
-       chains = chains, levels = levels, predOf = predOf,
-       elemFor = fn opty => #elemty (levelOfType levels opty)}
+       opFor = opFor, waysFor = waysFor, Qfor = Qfor,
+       opClausesFor = opClausesFor,
+       chains = chains, levels = levels, predOf = predOf}
     end
 
 fun mutual_induction_goal ops ind = #goal (assemble ops ind)
@@ -441,28 +460,17 @@ fun operators_of ind =
     let val {levels, optys, ...} = readPrinciple ind
     in
       List.map (fn opty =>
-                   let val setfn = setOfOperator levels opty
-                   in
-                     {induction = TypeBase.induction_of opty,
-                      sets = setEqnsOf setfn opty}
-                   end)
+                   {induction = TypeBase.induction_of opty,
+                    sets = List.concat
+                             (List.map (fn w => setEqnsOf (#setfn w) opty)
+                                       (waysOfType levels opty))})
                optys
     end
-
-(* the membership hypothesis a clause of the operator's induction ends
-   with, and the induction hypotheses before it *)
-fun splitBridge Pv tm =
-    case Lib.total dest_imp tm of
-        NONE => raise ERR "mutual_induction" "a clause with no membership"
-      | SOME (a, c) =>
-        if isSome (nestedHyp Pv a) then ([], a, c)
-        else let val (ihs, m, cc) = splitBridge Pv c
-             in (strip_conj a @ ihs, m, cc) end
 
 fun mutual_induction ops ind =
     let
       val info = assemble ops ind
-      val Pv = #Pv info and ty = #ty info
+      val Ps = #Ps info and tys = #tys info
       val A = ASSUME (#hypterm info)
       val parts = CONJUNCTS A
       val newParts = List.take (parts, length (#newClauses info))
@@ -487,30 +495,35 @@ fun mutual_induction ops ind =
       fun close vs hyps th =
           GENL vs (case hyps of
                        [] => th
-                     | _ =>
-                       let val c = list_mk_conj hyps
-                       in
-                         DISCH c (List.foldl (fn (p, t) => PROVE_HYP p t) th
-                                             (CONJUNCTS (ASSUME c)))
-                       end)
+                     | _ => dischargeConj (list_mk_conj hyps) th)
       (* ------------------------------------------------------------
           what the operator's predicate says of a value, from what the
           type's says of its contents
          ------------------------------------------------------------ *)
       fun bridgeFor opty =
           let
-            val Sf = #setFor info opty and Q = #Qfor info opty
+            val Q = #Qfor info opty
             (* what this level collects is the next level's values, and
-               the predicate to say of them is that level's own *)
-            val elemty = #elemFor info opty
-            val EP = case #predOf info elemty of
-                         SOME P => P
-                       | NONE => raise ERR "mutual_induction"
-                                   ("no predicate for " ^
-                                    type_to_string elemty)
-            val l = mk_var ("l", opty) and z = mk_var ("z", elemty)
-            fun memOf t = mk_forall (z, mk_imp (inThm z (mk_comb (Sf, t)),
-                                                mk_comb (EP, z)))
+               the predicate to say of them is that level's own — once
+               per way the level is reached *)
+            val ways = #waysFor info opty
+            fun predAt w =
+                case #predOf info (#elemty w) of
+                    SOME P => P
+                  | NONE => raise ERR "mutual_induction"
+                              ("no predicate for " ^
+                               type_to_string (#elemty w))
+            val l = mk_var ("l", opty)
+            fun memOfWay t i =
+                let
+                  val w = List.nth (ways, i)
+                  val z = mk_var ("z" ^ Int.toString i, #elemty w)
+                in
+                  mk_forall (z, mk_imp (inThm z (mk_comb (#setfn w, t)),
+                                        mk_comb (predAt w, z)))
+                end
+            fun memOf t =
+                list_mk_conj (List.tabulate (length ways, memOfWay t))
             val Q0 = mk_abs (l, mk_imp (memOf l, mk_comb (Q, l)))
             val inst = CONV_RULE (DEPTH_CONV BETA_CONV)
                                  (SPEC Q0 (atType opty
@@ -530,27 +543,40 @@ fun mutual_induction ops ind =
             fun prove (g, ass) =
                 let
                   val (vs, hs, conc) = openAll g
-                  val (ihs, memTm) =
-                      (List.filter (fn h => not (isSome (nestedHyp EP h))) hs,
-                       case List.filter (isSome o nestedHyp EP) hs of
-                           m :: _ => m
-                         | [] => raise ERR "mutual_induction"
-                                       "a clause with no membership")
+                  (* which way a membership hypothesis is about, if it
+                     is one *)
+                  fun wayOf h =
+                      let
+                        val (_, body) = dest_forall h
+                        val (ante, _) = dest_imp body
+                        val (_, S) = pred_setSyntax.dest_in ante
+                      in
+                        List.find (fn w => aconv (#setfn w) (rator S)) ways
+                      end handle HOL_ERR _ => NONE
+                  val (memTms, ihs) = List.partition (isSome o wayOf) hs
+                  val _ = not (null memTms) orelse
+                          raise ERR "mutual_induction"
+                                "a clause with no membership"
                   val cTerm = rand conc
-                  val eq =
-                      case List.mapPartial
-                             (fn e => Lib.total (PART_MATCH lhs e)
-                                                (mk_comb (Sf, cTerm)))
-                             setEqs of
-                          e :: _ => e
-                        | [] => raise ERR "mutual_induction"
-                                      ("no set equation for " ^
-                                       term_to_string (mk_comb (Sf, cTerm)))
-                  val memAss =
-                      CONV_RULE (STRIP_QUANT_CONV
-                                   (LAND_CONV (RAND_CONV (K eq))))
-                                (ASSUME memTm)
-                  val facts = contents memAss
+                  fun factsOf memTm =
+                      let
+                        val Sf = #setfn (valOf (wayOf memTm))
+                        val eq =
+                            case List.mapPartial
+                                   (fn e => Lib.total (PART_MATCH lhs e)
+                                                      (mk_comb (Sf, cTerm)))
+                                   setEqs of
+                                e :: _ => e
+                              | [] => raise ERR "mutual_induction"
+                                       ("no set equation for " ^
+                                        term_to_string (mk_comb (Sf, cTerm)))
+                      in
+                        contents (CONV_RULE
+                                    (STRIP_QUANT_CONV
+                                       (LAND_CONV (RAND_CONV (K eq))))
+                                    (ASSUME memTm))
+                      end
+                  val facts = List.concat (List.map factsOf memTms)
                   fun factFor t =
                       case List.find (fn th => aconv (concl th) t) facts of
                           SOME th => th
@@ -559,10 +585,14 @@ fun mutual_induction ops ind =
                                          term_to_string t)
                   (* an induction hypothesis wants what the set says of
                      its own argument *)
+                  fun conjOf tm =
+                      case Lib.total dest_conj tm of
+                          SOME (a, b) => CONJ (conjOf a) (conjOf b)
+                        | NONE => factFor tm
                   val gots =
                       List.map (fn ih =>
                                    let val (m, _) = dest_imp ih
-                                   in MP (ASSUME ih) (factFor m) end)
+                                   in MP (ASSUME ih) (conjOf m) end)
                                ihs
                   val (avs, ahyps, _) = openClause (concl ass)
                   val theta = ListPair.map (fn (a, v) => a |-> v) (avs, vs)
@@ -604,51 +634,128 @@ fun mutual_induction ops ind =
                predicate of everything the level collects — so the
                walk goes down to the values the chain is about, and
                the bridges come back up. *)
+            (* the clause's hypotheses that walk the same argument:
+               where a declaration's members reach each other, one
+               hypothesis per member walks it, and the innermost
+               bridge wants what all of them say *)
+            fun sameArg h1 h2 =
+                case (chainAt Ps h1, chainAt Ps h2) of
+                    (SOME c1, SOME c2) =>
+                    aconv (#arg (hd (#levels c1))) (#arg (hd (#levels c2)))
+                  | _ => false
+            fun groupFor h = List.filter (sameArg h) hyps
             fun supply h =
-                case chainOf Pv h of
+                case chainAt Ps h of
                     NONE => ASSUME h
-                  | SOME {z, levels} =>
+                  | SOME base =>
                     let
-                      val (ante, _) = dest_imp (#2 (dest_forall h))
-                      val (evs, conjs) = strip_exists ante
-                      fun down [] = raise ERR "mutual_induction"
-                                          "a hypothesis with no level"
-                        | down (lvl :: rest) =
+                      val group = List.map (valOf o chainAt Ps) (groupFor h)
+                      val lvls = #levels base
+                      val depth = length lvls
+                      val _ = List.all (fn c => length (#levels c) = depth)
+                                       group orelse
+                              raise ERR "mutual_induction"
+                                    "one argument walked to two depths"
+                      (* The walk introduces a value per level.  A
+                         chain names those after the principle's own
+                         bound variables, which the clause may have
+                         used for an argument of its own, so the walk
+                         takes names the clause has not. *)
+                      val walked =
                           let
-                            val v = #arg lvl
-                            val bridge = SPEC v (bridgeOf (type_of v))
+                            fun go i acc =
+                                if i >= depth then List.rev acc
+                                else
+                                  let
+                                    (* the clause's own names are
+                                       bound in it, so the walk must
+                                       avoid those too *)
+                                    val v = variant (all_vars c @ acc)
+                                                    (#arg (List.nth (lvls, i)))
+                                  in go (i + 1) (v :: acc) end
+                          in go 1 [] end
+                      fun argAt 0 = #arg (hd lvls)
+                        | argAt i = List.nth (walked, i - 1)
+                      fun theta c =
+                          List.tabulate
+                            (depth - 1,
+                             fn i => #arg (List.nth (#levels c, i + 1)) |->
+                                     argAt (i + 1))
+                      (* what one member's hypothesis says of the values
+                         the innermost set collects *)
+                      fun saysOf c =
+                          let
+                            val h = #hyp c
+                            val sub = theta c
+                            val (ante, _) = dest_imp (#2 (dest_forall h))
+                            val (evs, conjs) = strip_exists ante
+                            val z = #z c
+                            val inner = Term.subst sub
+                                          (#set (List.last (#levels c)))
+                            val ex = existsIntro
+                                       ante (List.map (Term.subst sub) evs)
+                                       (assumeConj (Term.subst sub conjs))
+                            val pz = MP (SPEC z (ASSUME h)) ex
                           in
-                            case rest of
-                                [] =>
-                                let
-                                  val memtm = inThm z (#set lvl)
-                                  val ex = existsIntro ante evs
-                                                       (assumeConj conjs)
-                                  val pz = MP (SPEC z (ASSUME h)) ex
-                                in
-                                  MP bridge (GEN z (DISCH memtm pz))
-                                end
-                              | nxt :: _ =>
-                                let
-                                  val x = #arg nxt
-                                  val memtm = inThm x (#set lvl)
-                                in
-                                  MP bridge (GEN x (DISCH memtm (down rest)))
-                                end
+                            GEN z (DISCH (inThm z inner) pz)
+                          end
+                      (* in the order the level's bridge states them *)
+                      fun inWayOrder v =
+                          let
+                            val ways = #waysFor info (type_of v)
+                            fun forWay w =
+                                case List.find
+                                       (fn c =>
+                                           aconv (rator (Term.subst (theta c)
+                                                    (#set (List.last
+                                                             (#levels c)))))
+                                                 (#setfn w))
+                                       group of
+                                    SOME c => saysOf c
+                                  | NONE => raise ERR "mutual_induction"
+                                              "a way no hypothesis walks"
+                          in
+                            LIST_CONJ (List.map forWay ways)
+                          end
+                      fun down i v =
+                          let val bridge = SPEC v (bridgeOf (type_of v))
+                          in
+                            if i = depth - 1 then MP bridge (inWayOrder v)
+                            else
+                              let
+                                val lvl = List.nth (lvls, i)
+                                val x = argAt (i + 1)
+                                val setfn = rator (#set lvl)
+                                val memtm = inThm x (mk_comb (setfn, v))
+                              in
+                                MP bridge (GEN x (DISCH memtm
+                                                        (down (i + 1) x)))
+                              end
                           end
                     in
-                      down levels
+                      down 0 (argAt 0)
                     end
+            fun distinct [] = []
+              | distinct (th :: ths) =
+                  th :: distinct (List.filter
+                                    (fn t => not (aconv (concl t) (concl th)))
+                                    ths)
             val res = case hyps of
                           [] => SPECL vs newPart
                         | _ => MP (SPECL vs newPart)
-                                  (LIST_CONJ (List.map supply hyps))
+                                  (LIST_CONJ (distinct (List.map supply hyps)))
           in
             close vs hyps res
           end
-      val allX = MP (SPEC Pv ind)
-                    (LIST_CONJ (ListPair.map clauseFor
-                                             (#clauses info, newParts)))
+      (* everything of the members', which is one theorem per member *)
+      val allXs = CONJUNCTS
+                    (MP (SPECL Ps ind)
+                        (LIST_CONJ (ListPair.map clauseFor
+                                                 (#clauses info, newParts))))
+      fun allXof t =
+          case List.find (fn (t', _) => t' = t) (ListPair.zip (tys, allXs)) of
+              SOME (_, th) => th
+            | NONE => raise ERR "mutual_induction" "no proof for a member"
       (* and everything of the operators', now that the type is settled *)
       (* An outer level's clause says something of the values it
          collects, which is the next level in.  So the levels settle
@@ -660,7 +767,8 @@ fun mutual_induction ops ind =
                             (atType opty (#induction (#opFor info opty)))
             val goals = strip_conj (#1 (dest_imp (concl inst)))
             fun settled v =
-                if type_of v = ty then SOME (SPEC v allX)
+                if List.exists (fn t => t = type_of v) tys then
+                  SOME (SPEC v (allXof (type_of v)))
                 else
                   case List.find (fn (t, _) => t = type_of v) done of
                       SOME (_, th) => SOME (SPEC v th)
@@ -687,9 +795,9 @@ fun mutual_induction ops ind =
               SOME (_, th) => th
             | NONE => raise ERR "mutual_induction" "no proof for a level"
     in
-      GENL (Pv :: #Qs info)
+      GENL (Ps @ #Qs info)
            (DISCH (#hypterm info)
-                  (LIST_CONJ (allX :: List.map allQof (#optys info))))
+                  (LIST_CONJ (allXs @ List.map allQof (#optys info))))
     end
 
 end
