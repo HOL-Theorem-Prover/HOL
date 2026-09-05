@@ -3,7 +3,7 @@ Ancestors
   combin list arithmetic num prim_rec pair pred_set more_list
   more_set variable
 Libs
-  pairLib dep_rewrite Mutual tactics
+  pairLib dep_rewrite Mutual tactics legacyInduction
 
 (* --------------------------------------------------------------------- *)
 (* Embedding objects as a foundational layer, according to               *)
@@ -43,6 +43,16 @@ val method1_one_one = theorem "method1_11";
 val method1_cases = theorem "method1_nchotomy";
 val method1_case_cong = theorem "method1_case_cong";
 
+
+(* These proofs are written against the principle with a predicate for
+   each of the types a method dictionary is built over, which is what
+   the older construction saved under this name.  Everything that
+   inducts over an object wants it, here and in the theories built on
+   this one. *)
+Theorem obj1_induction[allow_rebind] =
+  let val ind = TypeBase.induction_of “:obj1”
+  in legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
+  end
 
 val object1_induct = theorem "obj1_induction";
 val object1_Axiom = theorem "obj1_Axiom";
@@ -190,6 +200,20 @@ Definition FV_object1_def:
     (FV_entry1 (l, m)         = FV_method1 m)
      /\
     (FV_method1 (SIGMA1 y b)  = FV_obj1 b DIFF {y})
+Termination
+  (* as for the height, the measure says what each of the four levels
+     the recursion goes through weighs *)
+  WF_REL_TAC ‘measure (λx. case x of
+                             INL a => obj1_size a
+                           | INR (INL d) =>
+                               list_size
+                                 (pair_size (list_size char_size)
+                                            method1_size) d
+                           | INR (INR (INL e)) =>
+                               pair_size (list_size char_size)
+                                         method1_size e
+                           | INR (INR (INR m)) => method1_size m)’ >>
+  rw[] >> simp[]
 End
 
 
@@ -592,6 +616,19 @@ Definition NSUB_object1_def:
     ($NSUB1e (l, m) s           = (l, ($NSUB1m m s)))
      /\
     ($NSUB1m (SIGMA1 x a) s     = SIGMA1 x ($NSUB1o a s))
+Termination
+  (* the substitution rides along, so the measure weighs the object *)
+  WF_REL_TAC ‘measure (λx. case x of
+                             INL (a,s) => obj1_size a
+                           | INR (INL (d,s)) =>
+                               list_size
+                                 (pair_size (list_size char_size)
+                                            method1_size) d
+                           | INR (INR (INL (e,s))) =>
+                               pair_size (list_size char_size)
+                                         method1_size e
+                           | INR (INR (INR (m,s))) => method1_size m)’ >>
+  rw[] >> simp[]
 End
 
 val _ = map (fn s => add_infix(s,250,LEFT))
@@ -630,6 +667,19 @@ Definition SUB_object1_def:
     ($SUB1m (SIGMA1 y b) s     =
           let y' = variant y (FV_subst1 s (FV_obj1 b DIFF {y}))  in
           SIGMA1 y' ($SUB1o b (CONS (y, OVAR1 y') s)))
+Termination
+  (* the substitution rides along, so the measure weighs the object *)
+  WF_REL_TAC ‘measure (λx. case x of
+                             INL (a,s) => obj1_size a
+                           | INR (INL (d,s)) =>
+                               list_size
+                                 (pair_size (list_size char_size)
+                                            method1_size) d
+                           | INR (INR (INL (e,s))) =>
+                               pair_size (list_size char_size)
+                                         method1_size e
+                           | INR (INR (INR (m,s))) => method1_size m)’ >>
+  rw[] >> simp[]
 End
 
 
