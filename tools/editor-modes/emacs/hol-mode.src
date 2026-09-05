@@ -2919,10 +2919,21 @@ Cycles from point, so repeating it walks them."
                          out ", ")
               "  --  M-x hol-lsp-goto-outstanding-proof"))))
 
+(defcustom hol-lsp-mode-line-prefix
+  (if (char-displayable-p ?\u22a2) "\u22a2" "HOL")
+  "String introducing the proof tally in the mode line."
+  :type 'string
+  :group 'hol)
+
 (defun hol-lsp-proof-summary ()
-  "A one-line tally of what the pool is doing in this buffer.
-Empty when there is nothing to say, so the mode line stays quiet in a
-buffer whose proofs are not being checked.
+  "A tally of what the pool is doing in this buffer, or \"\" when it
+is doing nothing that needs saying.
+
+Silent once every proof is checked.  That is the steady state, and a
+mode line already carrying flymake, VC, the line number and the rest
+has no room for eleven characters saying nothing is wrong -- so the
+tally appearing at all is the signal, and what it says is what is
+left.
 
 A counter rather than a progress bar: the states regress.  A proof
 that suspends makes the server re-elaborate, which drops the entries
@@ -2944,14 +2955,14 @@ from 30 to 12 reads as what it is."
                          ((equal status "proved") (setq proved (1+ proved)))
                          (t (setq bad (1+ bad))))))
                hol-lsp--proof-states)
-      (let* ((total (+ checking unchecked proved bad))
-             (marks (concat (if (> bad 0) (format " %d!" bad) "")
-                            (if (> unchecked 0)
-                                (format " %d?" unchecked) ""))))
+      (let ((total (+ checking unchecked proved bad)))
         (cond ((zerop total) "")
-              ((or (> checking 0) (> unchecked 0) (> bad 0))
-               (format " HOL[%d/%d%s]" proved total marks))
-              (t (format " HOL[%d ok]" proved)))))))
+              ;; Everything checked and nothing wrong: say nothing.
+              ((and (zerop checking) (zerop unchecked) (zerop bad)) "")
+              ;; `proved/total' already says how many are outstanding,
+              ;; so only a bad verdict earns a mark of its own.
+              (t (format "%s%d/%d%s " hol-lsp-mode-line-prefix proved total
+                         (if (> bad 0) (format "!%d" bad) ""))))))))
 
 (defun hol-lsp-proof-mode-line ()
   "`hol-lsp-proof-summary' with the outstanding proofs in a tooltip."
@@ -2980,8 +2991,6 @@ from 30 to 12 reads as what it is."
     (hol-lsp--set-blocked uri nil)
     (hol-lsp--prune-stale-proofs uri)))
 
-(add-to-list 'mode-line-misc-info
-             '(:eval (hol-lsp-proof-mode-line)) t)
 
 (defun hol-lsp-retry-compile ()
   "Ask the server to compile this buffer again.
@@ -3058,12 +3067,37 @@ the pool's diagnostics when switched off."
   (message "HOL: proof checking %s"
            (if hol-lsp-check-proofs "on" "off")))
 
+(defvar-local hol-lsp--mode-line-installed nil
+  "Whether this buffer's mode line carries the proof tally.")
+
+(defun hol-lsp--install-mode-line ()
+  "Put the proof tally at the front of this buffer's mode line.
+It used to be appended to `mode-line-misc-info', which is at the far
+end of the mode line: in a buffer already carrying flymake, VC and a
+line number it was the first thing truncated away, which is to say
+never visible.  `mode-line-front-space' is the documented place for
+something that must not be pushed off, and setting it buffer-locally
+leaves every other buffer alone."
+  (unless hol-lsp--mode-line-installed
+    (setq hol-lsp--mode-line-installed t)
+    (setq-local mode-line-front-space
+                (list mode-line-front-space
+                      '(:eval (hol-lsp-proof-mode-line))))))
+
+(defun hol-lsp--remove-mode-line ()
+  "Undo `hol-lsp--install-mode-line' in this buffer."
+  (when hol-lsp--mode-line-installed
+    (setq hol-lsp--mode-line-installed nil)
+    (kill-local-variable 'mode-line-front-space)))
+
 (defun hol-lsp--on-managed ()
   "Send our configuration once eglot has taken over a HOL buffer.
 `eglot-managed-mode-hook' runs in the managed buffer, on the way in
 and on the way out; `hol-lsp--server' returning nil covers the exit."
   (when (memq major-mode hol-lsp-server-modes)
-    (hol-lsp--send-config)))
+    (if (hol-lsp--server)
+        (progn (hol-lsp--install-mode-line) (hol-lsp--send-config))
+      (hol-lsp--remove-mode-line))))
 
 (defun hol-lsp--goals-width ()
   "Column width to ask the server to render the goal state at.

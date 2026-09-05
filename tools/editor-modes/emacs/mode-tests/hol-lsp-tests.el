@@ -303,11 +303,11 @@ the tally, not the per-proof marks."
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
     (hol-lsp-tests--put "a" "proved" 3)
     (hol-lsp-tests--put "b" "checking" 9)
-    (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+    (should (equal (hol-lsp-proof-summary) "\u22a21/2 "))
     (hol-lsp-tests--put "b" "proved" 9)
-    (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
+    (should (equal (hol-lsp-proof-summary) ""))
     (hol-lsp-tests--put "c" "failed" 15)
-    (should (equal (hol-lsp-proof-summary) " HOL[2/3 1!]"))))
+    (should (equal (hol-lsp-proof-summary) "\u22a22/3!1 "))))
 
 (ert-deftest hol-lsp-a-proof-that-moves-keeps-one-entry ()
   "An edit above a proof moves it, so the pool announces the same
@@ -319,15 +319,15 @@ and the tally climbed with every edit.  The later line wins, so
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
     (hol-lsp-tests--put "a" "proved" 3)
     (hol-lsp-tests--put "b" "proved" 9)
-    (should (equal (hol-lsp-proof-summary) " HOL[2 ok]"))
+    (should (equal (hol-lsp-proof-summary) ""))
     ;; A line inserted at the top: both are dropped and re-announced
     ;; one line down.
     (hol-lsp-tests--put "a" "cheated" 4)
     (hol-lsp-tests--put "b" "cheated" 10)
-    (should (equal (hol-lsp-proof-summary) " HOL[0/2 2?]"))
+    (should (equal (hol-lsp-proof-summary) "\u22a20/2 "))
     (hol-lsp-tests--put "a" "proved" 4)
     (hol-lsp-tests--put "b" "checking" 10)
-    (should (equal (hol-lsp-proof-summary) " HOL[1/2]"))
+    (should (equal (hol-lsp-proof-summary) "\u22a21/2 "))
     (should (equal (hol-lsp--outstanding-proofs)
                    '(("b" "checking" 10))))))
 
@@ -339,7 +339,7 @@ them reported 65 proofs for a file with 61 theorems."
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
     (hol-lsp-tests--put "real" "proved" 3)
     (hol-lsp-tests--put "" "proved" 20)
-    (should (equal (hol-lsp-proof-summary) " HOL[1 ok]"))))
+    (should (equal (hol-lsp-proof-summary) ""))))
 
 (ert-deftest hol-lsp-unchecked-proofs-are-reported-not-hidden ()
   "A `cheated' proof is one the pool is not working on.  Counting it
@@ -349,7 +349,7 @@ them was not being checked at all."
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
     (hol-lsp-tests--put "ok" "proved" 3)
     (hol-lsp-tests--put "edited" "cheated" 20)
-    (should (equal (hol-lsp-proof-summary) " HOL[1/2 1?]"))
+    (should (equal (hol-lsp-proof-summary) "\u22a21/2 "))
     (should (string-match-p "edited (not checked)"
                             (hol-lsp--proof-help-echo)))))
 
@@ -397,9 +397,9 @@ an unchecked proof as checked.  Only what has left the buffer goes."
             (setq hol-lsp--proof-states (make-hash-table :test #'equal))
             (hol-lsp-tests--put "here" "cheated" 1)
             (hol-lsp-tests--put "deleted" "cheated" 900)
-            (should (equal (hol-lsp-proof-summary) " HOL[0/2 2?]"))
+            (should (equal (hol-lsp-proof-summary) "\u22a20/2 "))
             (hol-lsp--prune-stale-proofs (hol-lsp--path-to-uri file))
             ;; the one still in the buffer stays, and stays visible
-            (should (equal (hol-lsp-proof-summary) " HOL[0/1 1?]")))
+            (should (equal (hol-lsp-proof-summary) "\u22a20/1 ")))
           (kill-buffer buf))
       (delete-file file))))
