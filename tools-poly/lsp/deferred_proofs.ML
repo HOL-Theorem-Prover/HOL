@@ -32,7 +32,7 @@ structure DeferredProofs :> sig
      a declaration re-enqueues its proofs whether or not anything about
      it changed, so without this an edit anywhere above would throw away
      work in progress everywhere below.  See `sameProof`. *)
-  val check : int -> unit
+  val check : LSPExtension.check_scope -> unit
   (* Only ever reports Checking, Proved or Failed.  A proof the pool is
      not working on is absent, which the caller renders as Cheated. *)
   val statuses : unit -> LSPExtension.proof_state list
@@ -322,7 +322,7 @@ fun statusOf ({future, result, ...} : entry) =
         if Exn.is_interrupt e then LSPExtension.Cheated
         else LSPExtension.Failed (Feedback.exn_to_string e)
 
-fun check resumeFrom =
+fun check {resumeFrom, keptFrom, bytes} =
     let
       (* takeDeferred empties the queue, so a second call cannot fork
          the same proof twice *)
@@ -346,14 +346,27 @@ fun check resumeFrom =
                      have moved the declaration -- or if it sits above
                      what was re-elaborated and so was never in
                      question.  Anything else the pass has orphaned. *)
+                  fun moveTo off (e : entry) =
+                      {site = #site e, offset = off, item = #item e,
+                       group = #group e, result = #result e,
+                       future = #future e}
+                  (* A pass that stopped early did not re-enqueue what
+                     it never reached, but those are still the right
+                     proofs: keep them, moved to where the edit has put
+                     them.  Orphaning them instead dropped every proof
+                     below an edited tactic. *)
+                  fun keptBelow (e : entry) =
+                      case keptFrom of
+                          SOME b => if offsetOf e >= b
+                                    then SOME (moveTo (offsetOf e + bytes) e)
+                                    else NONE
+                        | NONE => NONE
                   fun classify (e : entry) =
                       case reusedOffset e of
-                          SOME off =>
-                            SOME {site = #site e, offset = off,
-                                  item = #item e, group = #group e,
-                                  result = #result e, future = #future e}
+                          SOME off => SOME (moveTo off e)
                         | NONE =>
-                          if offsetOf e < resumeFrom then SOME e else NONE
+                          if offsetOf e < resumeFrom then SOME e
+                          else keptBelow e
                   val classified = List.map (fn e => (e, classify e)) live
                   val keep = List.mapPartial #2 classified
                   val doomed =

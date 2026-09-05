@@ -395,16 +395,23 @@ val currentProofOrd: int ref
 (* Hooks installed by the LSP runtime (tools-poly/lsp/deferred_proofs.ML);
    defaults are inert so a non-LSP session behaves as before.
 
-   - checkDeferred: hand the queued proofs to the worker pool, given
-     the byte the pass re-elaborated from.  A proof already being
-     checked is not started again: see the pool's `reusable`.
+   - checkDeferred: hand the queued proofs to the worker pool.
+     `resumeFrom` is the byte the pass re-elaborated from; a proof
+     already being checked is not started again, see the pool's
+     `sameProof`.  `keptFrom` is for a pass that stopped early: it did
+     not re-enqueue the proofs at or after that byte, but they are
+     still the right proofs -- so rather than orphaning them the pool
+     keeps them, moved `bytes` down the file.  `NONE` means the pass
+     ran to the end and anything it did not re-enqueue is gone. *)
+type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
+(*
    - proofStates: current status of everything the pool knows about.
    - cancelProofsAtOrAfter n: give up on any proof whose declaration
      starts at or after byte n.  An edit invalidates the proofs below
      it in the file and leaves the ones above alone, so this is what a
      compile pass calls with its minimum edit offset.
    - cancelAllProofs: give up on all of them. *)
-val checkDeferred: (int -> unit) ref
+val checkDeferred: (check_scope -> unit) ref
 val proofStates: (unit -> proof_state list) ref
 val cancelProofsAtOrAfter: (int -> unit) ref
 (* Give up on just this declaration's proofs, for an edit inside a

@@ -5276,6 +5276,108 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_reused_tail_answers_as_a_full_compile_would():
+    """An edit confined to a tactic lets the compile stop after that
+    declaration and keep what the last pass recorded about the rest of
+    the file, moved to where it now sits.  The whole risk in that is a
+    kind of record nobody remembered to move, which shows up as answers
+    quietly off by the edit's width rather than as a failure.
+
+    So: reach one text two ways -- compiled from scratch, and reached
+    by editing a tactic -- and require every answer *below* the edit to
+    be identical.  Hover in a term quotation goes through the plugin
+    data (preterms, left where they were, searched in their own frame);
+    hover on a tactic identifier and goto-definition go through the
+    built trees; goal state goes through the declaration snapshots.
+    Between them they cover everything the fast path carries."""
+    src = ("Theory difftail\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem edited:\n"
+           "  1 + 1 = 2\n"
+           "Proof\n"
+           "  DECIDE_TAC\n"
+           "QED\n\n"
+           "Theorem below:\n"
+           "  SUC n + 1 = SUC (n + 1)\n"
+           "Proof\n"
+           "  rw[]\n"
+           "QED\n\n"
+           "Theorem last:\n"
+           "  2 + 2 = 4\n"
+           "Proof\n"
+           "  DECIDE_TAC\n"
+           "QED\n")
+    # The edit adds a line, so everything below it moves down one.
+    edited = src.replace("  DECIDE_TAC\nQED\n\nTheorem below",
+                         "  DECIDE_TAC\n  >> ALL_TAC\nQED\n\nTheorem below", 1)
+    uri = "file:///tmp/difftail_probe.sml"
+    rid = [900]
+
+    def ask(c, method, line, char):
+        rid[0] += 1
+        c.send({"jsonrpc": "2.0", "id": rid[0], "method": method,
+                "params": {"textDocument": {"uri": uri},
+                           "position": {"line": line, "character": char}}})
+
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == rid[0]: return m
+            return None
+        return (c.wait_until(got, 10) or {}).get("result")
+
+    def answers(c):
+        """every query is at a line below the edited declaration"""
+        out = {"hover_quotation": ask(c, "textDocument/hover", 11, 3),
+               "hover_tactic": ask(c, "textDocument/hover", 13, 3),
+               "goto": ask(c, "textDocument/definition", 11, 3),
+               "hover_last_dec": ask(c, "textDocument/hover", 17, 3)}
+        rid[0] += 1
+        r = _send_goalstate(c, rid[0], uri, 13, 4)
+        out["goal_state"] = ((r or {}).get("result") or {}).get("pretty")
+        return out
+
+    def from_scratch():
+        c = Client("/tmp", args=["--dbg"])
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, edited, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 90),
+                        "compiled from scratch")
+            return answers(c)
+        finally:
+            c.close()
+
+    def by_editing():
+        c = Client("/tmp", args=["--dbg"])
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 90),
+                        "compiled first")
+            mark = c.total_msgs()
+            at = src.index("  DECIDE_TAC") + len("  DECIDE_TAC")
+            _did_change_incr(c, uri, src, at, at, "\n  >> ALL_TAC", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 90,
+                                          since=mark) is not None,
+                        "recompiled")
+            scopes = [m["params"] for m in c.messages_since(mark)[0]
+                      if m.get("method") == "$/compileScope"]
+            # Without this the comparison passes for the wrong reason:
+            # a full re-elaboration trivially agrees with itself.
+            assert_true(scopes and scopes[0].get("reuseTail") is True,
+                        f"the tail was reused ({scopes!r})")
+            return answers(c)
+        finally:
+            c.close()
+
+    full, fast = from_scratch(), by_editing()
+    for k in sorted(full):
+        assert_eq(json.dumps(fast[k], sort_keys=True),
+                  json.dumps(full[k], sort_keys=True),
+                  f"{k} below the edit matches a full compile")
+
+
 def test_an_edit_confined_to_a_tactic_is_recognised():
     """A compile runs from its resume point to the end of the file, so
     editing a tactic near the top of a long one re-elaborates almost
@@ -6411,6 +6513,8 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("a_reused_tail_answers_as_a_full_compile_would",
+     test_a_reused_tail_answers_as_a_full_compile_would),
     ("an_edit_confined_to_a_tactic_is_recognised",
      test_an_edit_confined_to_a_tactic_is_recognised),
     ("the_proof_under_the_cursor_is_checked",

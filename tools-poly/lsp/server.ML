@@ -1139,6 +1139,14 @@ fun start {diag, dbg, warnings} = let
        change is confined to a single proof body.  `minEditOffset`
        cannot answer that: it is only the first differing byte. *)
     compiledText: string ref,
+    (* How far the last compile's per-declaration snapshots reach, or
+       `~1` when they cannot be reused.  `captureSnap` stops capturing
+       once the compile has produced a diagnostic, so a pass that ended
+       clean has one for every declaration and a pass that did not may
+       be missing them from the first error onwards -- and reusing a
+       tail whose snapshots stop early would silently lose everything
+       past that point. *)
+    reusableTo: int ref,
     (* Set when a compile was abandoned because the file's declared
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
@@ -1181,7 +1189,7 @@ fun start {diag, dbg, warnings} = let
         debounce = ref 0, minEditOffset = ref NONE,
         walkerDiags = ref (Binarymap.mkDict String.compare),
         proofDiags = ref (Binarymap.mkDict String.compare),
-        compiledText = ref "",
+        compiledText = ref "", reusableTo = ref ~1,
         depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
         nsGen = ref 0, nsNames = ref NONE} end
 
@@ -1677,7 +1685,8 @@ fun start {diag, dbg, warnings} = let
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
                               walkerDiags, proofDiags, depsBlocked,
-                              compiledText, nsLayer, nsGen, ...}:file_data) =
+                              compiledText, reusableTo,
+                              nsLayer, nsGen, ...}:file_data) =
     (* Every route to a compile comes through here -- didOpen,
        didChange's debounce, didSave, `$/hol/retryCompile', and the
        proof pool's retract -- so this is the one place the binding has
@@ -1846,26 +1855,53 @@ fun start {diag, dbg, warnings} = let
           val pre = commonPrefixLen (prev, cur)
           val suf = commonSuffixLen (prev, cur, pre)
           val lastChanged = Int.max (pre, size cur - suf - 1)
+          fun newlines (str, i, stop) = let
+            fun go (i, n) =
+              if i >= stop then n
+              else go (i + 1, if String.sub (str, i) = #"\n" then n + 1 else n)
+            in go (i, 0) end
           in
             case (proofBodyAt cur (SOME pre),
                   proofBodyAt cur (SOME lastChanged)) of
                 (SOME a, SOME b) =>
                   if a = b
-                  then SOME {decStart = a, delta = size cur - size prev}
+                  then SOME {decStart = a,
+                             delta = size cur - size prev,
+                             lines = newlines (cur, pre, size cur - suf)
+                                     - newlines (prev, pre, size prev - suf)}
                   else NONE
               | _ => NONE
           end
       end
+    (* Take the fast path only when all of: the change is confined to one
+       proof body; the last pass's snapshots cover the whole file; and
+       there is a snapshot to resume from at or before the edited
+       declaration.  `prev`, the newest snapshot, is the state that pass
+       ended in -- still the right state, the edited declaration having
+       produced the same value it did before.  Anything else, and the
+       whole file is re-elaborated as before. *)
+    val reuseTail =
+      case (tacticOnlyEdit, resumeSnap, lastSnaps) of
+          (SOME {decStart, delta, lines}, SOME rs, prev :: _) =>
+            if !reusableTo >= 0 andalso #endByte rs <= decStart
+            then SOME {decStart = decStart, delta = delta, lines = lines,
+                       prev = prev}
+            else NONE
+        | _ => NONE
+    val stopAfter = Option.map (fn {decStart, ...} => decStart + 1) reuseTail
     val _ = if dbg then
               send (mkNotif "$/compileScope" (fn print => (
                 print "{\"uri\":"; encString uri print;
                 print ",\"tacticOnly\":";
                 print (case tacticOnlyEdit of NONE => "false" | _ => "true");
+                print ",\"reuseTail\":";
+                print (case reuseTail of NONE => "false" | _ => "true");
                 (case tacticOnlyEdit of
                      NONE => ()
-                   | SOME {decStart, delta} => (
+                   | SOME {decStart, delta, lines} => (
                        print ",\"decStart\":"; encInt decStart print;
-                       print ",\"delta\":"; encInt delta print));
+                       print ",\"delta\":"; encInt delta print;
+                       print ",\"lines\":"; encInt lines print));
                 print "}")))
             else ()
     val _ = minEditOffset := NONE
@@ -2023,6 +2059,10 @@ fun start {diag, dbg, warnings} = let
           print ",\"value\":{\"kind\":\"end\"}}")))
 
       val ls = ref (beforeCompile ())
+      (* Where the last declaration this pass compiled ended.  With
+         `stopAfter` that is the edited declaration, and it is how the
+         reused tail is found in the previous pass's records. *)
+      val lastDecEnd = ref ~1
       val lastPos = ref resumeStart
       (* Abort a doomed dec: if the file's `Libs` / `Ancestors`
          `open`s fail (e.g., a dependency of an external HOL project
@@ -2088,6 +2128,7 @@ fun start {diag, dbg, warnings} = let
          frozen contents.  Conservative: no snapshots until the
          current compile has produced ZERO errors so far. *)
       fun captureSnap endByte = let
+        val () = lastDecEnd := endByte
         val {builtTrees, plugins, diags, ...} = !trees
         val n = DArray.size diags
         (* Unconditional, unlike the resume snapshot below: completion
@@ -2183,7 +2224,7 @@ fun start {diag, dbg, warnings} = let
         end
       fun runCompile () = (
         sendProgressBegin ();
-        compileForReport uri (#text text) resumeStart NONE lastPos
+        compileForReport uri (#text text) resumeStart stopAfter lastPos
                          processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
@@ -2247,7 +2288,12 @@ fun start {diag, dbg, warnings} = let
                     | _ => ())
                  handle _ => ()
                end);
-          !LSPExtension.checkDeferred resumeStart;
+          !LSPExtension.checkDeferred
+            (case reuseTail of
+                 NONE => {resumeFrom = resumeStart, keptFrom = NONE, bytes = 0}
+               | SOME {delta, ...} =>
+                 {resumeFrom = resumeStart,
+                  keptFrom = SOME (!lastDecEnd - delta), bytes = delta});
           (* The file compiled, so whatever it was blocked on is
              resolved. *)
           depsBlocked := NONE;
@@ -2255,9 +2301,55 @@ fun start {diag, dbg, warnings} = let
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (
             print "{\"uri\":"; encString uri print; print "}")));
+          (* This pass stopped after the edited declaration, so put the
+             rest of the file back: what the previous pass recorded
+             about it is still true, only moved.  The trees and the
+             snapshots move by the edit's width; each plugin is asked
+             to carry its own records forward, since the server cannot
+             read them.  Finally the process is put back into the state
+             that pass ended in, which is what keeps goal-state and
+             hover answering for declarations below the edit. *)
+          (case reuseTail of
+               NONE => ()
+             | SOME {delta, lines, prev, ...} => let
+                 val oldDecEnd = !lastDecEnd - delta
+                 val reuse = {fromByte = oldDecEnd, bytes = delta,
+                              lines = lines}
+                 fun spanStart (HOL_IDE.Built ((a, _), _, _)) =
+                     FixedInt.toInt a
+                 (* cumulative and newest-first, so the declarations
+                    after the edited one are a prefix *)
+                 fun tailOf [] = []
+                   | tailOf (t :: ts) =
+                     if spanStart t >= oldDecEnd
+                     then HOL_IDE.shiftBuilt delta t :: tailOf ts
+                     else []
+                 val fresh = !trees
+                 fun carry (s : declSnapshot) : declSnapshot = {
+                   endByte = #endByte s + delta,
+                   builtTrees = tailOf (#builtTrees s) @ #builtTrees fresh,
+                   diags = #diags s,
+                   plugins = LSPExtension.reusePluginData
+                               reuse (#plugins s) (#plugins fresh),
+                   compileSnap = #compileSnap s}
+                 val carried =
+                     List.map carry
+                       (List.filter (fn s => #endByte s >= oldDecEnd) lastSnaps)
+               in
+                 trees := {
+                   done = #done fresh, pos = #pos fresh,
+                   builtTrees = tailOf (#builtTrees prev) @ #builtTrees fresh,
+                   diags = #diags fresh,
+                   plugins = LSPExtension.reusePluginData
+                               reuse (#plugins prev) (#plugins fresh),
+                   declSnapshots = carried @ #declSnapshots fresh};
+                 !LSPExtension.restoreCompileSnap (#compileSnap prev)
+               end);
           lastTrees := {text = text,
                         parse = setParseDone (size (#text text)) (!trees)};
           compiledText := #text text;
+          reusableTo := (if DArray.size (#diags (!trees)) = 0
+                         then size (#text text) else ~1);
           (* A verdict that settled while this pass was finishing did
              not publish -- see `updateProofDiag' -- and `lastTrees' is
              only now current.  Catch up, so a lone proof's diagnostic
@@ -2282,6 +2374,9 @@ fun start {diag, dbg, warnings} = let
           lastTrees := {text = text,
                         parse = setParseDone (size (#text text)) (!trees)};
           compiledText := #text text;
+          (* Whatever this pass captured, it stopped at the header, so
+             there is no tail to carry forward from it. *)
+          reusableTo := ~1;
           (* Elaboration never got past the header: an ancestor that
              loads but whose `open' fails is the case holdep cannot
              see, so treat it exactly like a load failure and stop

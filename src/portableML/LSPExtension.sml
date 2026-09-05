@@ -264,7 +264,8 @@ in
   fun takeDeferred () = let val items = List.rev (!q) in q := []; items end
 end
 
-val checkDeferred : (int -> unit) ref = ref (fn _ => ())
+type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
+val checkDeferred : (check_scope -> unit) ref = ref (fn _ => ())
 val proofStates : (unit -> proof_state list) ref = ref (fn () => [])
 val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
 val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
