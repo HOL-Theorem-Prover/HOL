@@ -1,0 +1,326 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `config`
+
+``` hol4
+Refute.type config
+
+Refute.default_qc_config : qc_config
+Refute.default_mf_config : mf_config
+Refute.default_config : config
+Refute.the_config : config ref
+Refute.show_config : unit -> unit
+Refute.apply_updates : config_update list -> config -> config
+Refute.current_config : config_update list -> config
+```
+
+------------------------------------------------------------------------
+
+Configures Refute searches.
+
+A `config` is an immutable record.  Each updater takes a new field value
+and maps the old configuration to the new one, so updaters compose with
+`|>`.  `default_config` contains `default_qc_config` and
+`default_mf_config`.  `the_config` is the mutable interactive default
+read by `quickcheck`, `model_refute`, and the tactics when they are
+applied; `show_config ()` prints its complete value.  `apply_updates
+updates cfg` applies a list of updaters to `cfg` from left to right, and
+`current_config updates` does the same to `!the_config`;
+`REFUTE_TAC_WITH`, `refute_with`, and `refute_goal_with` are built from
+them.
+
+``` hol4
+val cfg = Refute.default_config
+  |> Refute.upd_timeout 5.0
+  |> Refute.upd_search
+       (Refute.Only [Refute.Exhaustive, Refute.Narrowing])
+  |> Refute.upd_size 7
+```
+
+### Common fields
+
+``` hol4
+Refute.upd_timeout : real -> config -> config
+Refute.upd_search : search -> config -> config
+Refute.upd_sequential : bool -> config -> config
+Refute.upd_genuine_only : bool -> config -> config
+Refute.upd_abort_potential : bool -> config -> config
+Refute.upd_quiet : bool -> config -> config
+Refute.upd_no_assms : bool -> config -> config
+Refute.upd_evals : term list -> config -> config
+Refute.upd_expect : expectation -> config -> config
+Refute.upd_max_counterexamples : int -> config -> config
+Refute.upd_tag : string -> config -> config
+Refute.upd_widths : int list -> config -> config
+Refute.upd_qc : qc_config -> config -> config
+Refute.upd_mf : mf_config -> config -> config
+```
+
+| Field | Default | Meaning |
+|---|---:|---|
+| `timeout` | `10.0` | Seconds in the whole-call search deadline. |
+| `backends` | `NONE` | All backends, or exactly the names in `SOME`. |
+| `sequential` | `false` | Run backends by weight instead of racing them. |
+| `genuine_only` | `false` | Request only genuine hits. |
+| `abort_potential` | `false` | Stop at the first hit of any certainty. |
+| `quiet` | `false` | Suppress traces, messages, and warnings. |
+| `no_assms` | `false` | Ignore assumptions passed to `refute_goal`. |
+| `evals` | `[]` | Reconstruct and display these additional terms. |
+| `expect` | `NoExpectation` | Check a regression expectation after the run. |
+| `max_counterexamples` | `1` | Maximum number of QC hits requested. |
+| `tag` | `""` | Append text to the formatted outcome. |
+| `widths` | `[1,2,3,4]` | Widths tried for a word type variable. |
+
+`timeout` is one absolute deadline for the whole call: preprocessing,
+backend admission, compilation, testing, and solver calls all consume
+the same remainder.  Racing backends each see the whole remainder;
+sequential backends split it, an early finisher leaving its unspent
+share to those behind it.  `backends` is set through `upd_search`,
+which takes `AllBackends`, `QuickcheckBackends`, or `Only choices`;
+`Only []` is rejected.  The expectations are `NoExpectation`,
+`ExpectNone`, `ExpectUnknown`, `ExpectCex`, `ExpectModel`,
+`ExpectNoModel`, `ExpectGenuine`, `ExpectQuasiGenuine`, and
+`ExpectPotential`; a mismatch raises a HOL error.  A word type variable
+takes its instances from `widths`, independently of the QC and MF
+sub-records.  `upd_qc` and `upd_mf` replace a whole sub-record; the
+individual updaters are less brittle.
+
+### Quickcheck and narrowing fields
+
+``` hol4
+Refute.upd_size : int -> config -> config
+Refute.upd_iterative_size : int -> config -> config
+Refute.upd_iterations : int -> config -> config
+Refute.upd_depth : int -> config -> config
+Refute.upd_finite_types : bool -> config -> config
+Refute.upd_finite_type_size : int -> config -> config
+Refute.upd_default_type : hol_type list -> config -> config
+Refute.upd_instantiate :
+  (hol_type option * hol_type) list -> config -> config
+Refute.upd_substrate : substrate_choice -> config -> config
+Refute.upd_seed : int option -> config -> config
+Refute.upd_allow_existentials : bool -> config -> config
+Refute.upd_finite_functions : bool -> config -> config
+Refute.upd_certify : bool -> config -> config
+Refute.upd_smart_quantifier : bool -> config -> config
+Refute.upd_smart_generators : bool -> config -> config
+Refute.upd_optimise_equality : bool -> config -> config
+Refute.upd_reorder_premises : bool -> config -> config
+Refute.upd_use_subtype : bool -> config -> config
+Refute.upd_allow_function_inversion : bool -> config -> config
+```
+
+| Field | Default | Meaning |
+|---|---:|---|
+| `size` | `10` | Maximum generated size and narrowing refinement depth. |
+| `size_mode` | iterative | `upd_size` pins a fixed bound instead. |
+| `iterations` | `100` | Number of random draws. |
+| `depth` | `10` | Fuel supplied to each smart enumerator. |
+| `finite_types` | `true` | Add small finite type instances. |
+| `finite_type_size` | `3` | Number of finite cardinalities to consider. |
+| `default_type` | `[``:num``]` | Instances if `finite_types` is false. |
+| `instantiate` | `[]` | Per-type-variable pins overriding `finite_types`/`default_type`. |
+| `substrate` | `Auto` | `Auto`, `NativeSML`, or `Compute`. |
+| `seed` | `NONE` | Seed; `NONE` advances the session stream. |
+| `allow_existentials` | `true` | Permit PNF existential narrowing. |
+| `finite_functions` | `true` | Finitize narrowing function inputs. |
+| `certify` | `true` | Independently certify QC and narrowing hits. |
+| `smart_quantifier` | `true` | Compile premises into plans. |
+| `smart_generators` | `true` | Enable Horn `Enum` plans under exhaustive testing. |
+| `optimise_equality` | `true` | Bind suitable equality premises. |
+| `reorder_premises` | `true` | Reorder premises during smart mode inference. |
+| `use_subtype` | `false` | Test a generator-less typedef by transporting to its representation type. |
+| `allow_function_inversion` | `false` | Invert an `f ... = res` premise via its graph clauses. |
+
+The default `size_mode` is iterative deepening: `10` is an initial
+window and testing deepens until the deadline.  `upd_size` pins a fixed,
+reproducible bound; `upd_iterative_size` sets a different initial window
+and restores deepening.  `depth` is the fuel given to each smart
+enumerator, not a second search from zero to `depth`; narrowing does not
+read it.  `allow_existentials` selects the PNF narrowing engine, and
+`finite_functions` chooses update-chain or constant-function inputs
+there.  `certify = false` skips QC evaluation and replay certification;
+a hit stays `Genuine` with `cert = NONE`.  `allow_function_inversion`
+is itself a smart-generator route, so it has no effect when
+`smart_generators` is false.
+
+`Auto` tries `NativeSML` then `Compute`, skipping a substrate that
+declines the goal; an explicitly selected substrate that declines
+reports `Unknown`.
+
+By default QC substitutes one type for every type variable of a goal at
+once.  `upd_instantiate` pins named type variables instead: a `SOME ty`
+key pins that variable, and a `NONE` key is the fallback for every
+non-width variable no `SOME` entry names, so a `NONE`-only row, like a
+fully-`SOME` assignment, collapses the search to a single instance.  A
+variable no entry reaches keeps taking the shared carrier or width, as
+with `[]`.  A width variable (a word's index) takes a pin only from its
+own `SOME` entry, and that pin must be a word-width type (`:1`, `:2`,
+...), since carriers and widths are disjoint value spaces; otherwise it
+keeps varying over `widths`.  Naming a type variable the goal lacks, or
+a width variable with a non-width type, is reported as `Unknown`; a key
+that is not a type variable, or a pin value with type variables of its
+own, is rejected by the updater.  Pinning changes only which
+monomorphic proxies QC tests: a still-polymorphic goal whose pinned
+instances are fully covered still reports `Unknown`, never
+`NoCounterexample`.  The model finder is unaffected; its equivalent is
+`upd_card [(SOME ty, [n])]`.
+
+A free variable at a typedef type `t` (abstraction `abs`,
+representation type `rty`, characteristic predicate `P`) usually leaves
+QC with nothing to test.  `upd_use_subtype true` rewrites `!x : t. B x`
+to `!r : rty. P r ==> B (abs r)`, contracting every `rep (abs r)` redex
+back to `r`, and reports a hit's binding for `x` as `abs r`.  The guard
+is the soundness condition: `abs` is a bijection only from `{r | P r}`,
+and dropping it would let a representation value outside `t`'s image
+manufacture a spurious refutation.  Exhaustion follows the ordinary QC
+bookkeeping, but the generator ranges over all of `rty` without knowing
+`P`, so a true transported goal reports `Unknown` unless its body
+normalizes to a ground truth: transport aids counterexample search, not
+verification.  A transported hit is `Genuine` but never certified, since
+replaying the original closure would need the untransported `x`.
+Transport is a last resort: a registered or abstract generator for `t`
+wins, a `TypeBase` datatype wins, and the flag applies only to a
+harvestable typedef with a real `TYPE_DEFINITION` theorem, which
+excludes the model finder's synthetic frac and fmap typedef entries.  It
+does not reach inside another type: a free variable of type `t list` is
+untouched.  Deciding whether `t` is harvestable runs the model finder's
+idempotent lazy harvest, so a QC-only call can populate the model
+finder's typedef registry.  The model finder never sees the rewrite, as
+it handles typedefs natively.  The default matches Isabelle's
+`use_subtype`.
+
+### Model-finder fields
+
+``` hol4
+Refute.upd_card :
+  (hol_type option * int list) list -> config -> config
+Refute.upd_iterative_card :
+  (hol_type option * int list) list -> config -> config
+Refute.upd_max : (term option * int list) list -> config -> config
+Refute.upd_mono :
+  (hol_type option * bool option) list -> config -> config
+Refute.upd_wf :
+  (term option * bool option) list -> config -> config
+Refute.upd_sat_solver : string -> config -> config
+Refute.upd_batch_size : int -> config -> config
+Refute.upd_falsify : bool -> config -> config
+Refute.upd_user_axioms : bool option -> config -> config
+Refute.upd_destroy_constrs : bool -> config -> config
+Refute.upd_total_consts : bool option -> config -> config
+Refute.upd_peephole_optim : bool -> config -> config
+Refute.upd_datatype_sym_break : int -> config -> config
+Refute.upd_kodkod_sym_break : int -> config -> config
+Refute.upd_max_potential : int -> config -> config
+Refute.upd_max_genuine : int -> config -> config
+Refute.upd_atoms :
+  (hol_type option * string list) list -> config -> config
+Refute.upd_format :
+  (term option * int list) list -> config -> config
+Refute.upd_show_types : bool -> config -> config
+Refute.upd_show_skolems : bool -> config -> config
+Refute.upd_show_consts : bool -> config -> config
+Refute.upd_debug : bool -> config -> config
+Refute.upd_overlord : bool -> config -> config
+Refute.upd_max_threads : int -> config -> config
+Refute.upd_tac_timeout : real -> config -> config
+Refute.upd_specialize : bool -> config -> config
+Refute.upd_box :
+  (hol_type option * bool option) list -> config -> config
+Refute.upd_binary_ints : bool option -> config -> config
+Refute.upd_bits : int list -> config -> config
+Refute.upd_star_linear_preds : bool -> config -> config
+Refute.upd_iter :
+  (term option * int list) list -> config -> config
+Refute.upd_bisim_depth : int list -> config -> config
+Refute.upd_finitize :
+  (hol_type option * bool option) list -> config -> config
+Refute.upd_whack : term list -> config -> config
+Refute.upd_need : term list option -> config -> config
+Refute.upd_merge_type_vars : bool -> config -> config
+```
+
+| Field | Default | Meaning |
+|---|---:|---|
+| `card` | fallback `[1,...,10]` | Finite cardinalities by type. |
+| `card_mode` | iterative | `upd_card` pins fixed rows instead. |
+| `max` | fallback `[~1]` | Constructor multiplicities; `~1` is automatic. |
+| `mono` | fallback `NONE` | Automatic or forced monotonicity by type. |
+| `wf` | fallback `NONE` | Automatic or forced well-foundedness by constant. |
+| `sat_solver` | `"smart"` | Kodkodi SAT solver selection. |
+| `batch_size` | `50` | Scope problems submitted per solver batch. |
+| `falsify` | `true` | Falsify; false searches for a model. |
+| `user_axioms` | `NONE` | Automatic or forced inclusion of user axioms. |
+| `destroy_constrs` | `true` | Simplify constructor applications. |
+| `total_consts` | `NONE` | Automatic or forced total encoding of constants. |
+| `peephole_optim` | `true` | Enable relational peephole optimization. |
+| `datatype_sym_break` | `5` | Datatype symmetry-breaking strength. |
+| `kodkod_sym_break` | `15` | Kodkod symmetry-breaking limit. |
+| `max_potential` | `1` | Global budget for potential models. |
+| `max_genuine` | `1` | Global budget for genuine models. |
+| `atoms` | fallback `[]` | Preferred printed atom names by type. |
+| `format` | fallback `[1]` | Tuple curried arguments for display. |
+| `show_types` | `false` | Include interpreted type universes. |
+| `show_skolems` | `true` | Include Skolem values. |
+| `show_consts` | `false` | Include reconstructed constant tables. |
+| `debug` | `false` | Enable MF debug mode and one-problem batches. |
+| `overlord` | `false` | Keep the solver's scratch files instead of deleting them. |
+| `max_threads` | `0` | Kodkodi thread cap; zero leaves it unspecified. |
+| `tac_timeout` | `0.5` | Seconds for inner MF tactics. |
+| `specialize` | `true` | Specialize static higher-order arguments. |
+| `box` | fallback `NONE` | Choose or force boxing. |
+| `binary_ints` | `NONE` | Automatically or forcibly use binary integers. |
+| `bits` | `[1,...,10]` | Candidate binary word widths. |
+| `star_linear_preds` | `true` | Exact linear-predicate closure. |
+| `iter` | fallback depth row | Fixpoint-unrolling depths. |
+| `bisim_depth` | `[9]` | Codatatype depths; `~1` disables bisimulation. |
+| `finitize` | fallback `NONE` | Choose or force finitization. |
+| `whack` | `[]` | Definitions preprocessing should ignore. |
+| `need` | `NONE` | Terms whose values must occur in a model. |
+| `merge_type_vars` | `false` | Merge MF type-variable scopes into the alphabetically first variable. |
+
+`card_mode` is likewise iterative by default: the fallback row is an
+initial window that grows until the deadline.  `upd_card` pins fixed
+rows and `upd_iterative_card` restores scanning; an iterative row must
+be a consecutive prefix `[1, ..., n]`, and `card` must keep a `NONE`
+fallback row.
+
+In row-valued fields a `NONE` key is the fallback and a `SOME` key an
+override; Boolean row values use `NONE` for automatic choice and
+`SOME b` to force it.  A `format` row groups consecutive curried
+arguments into tuples for display: `[2]` tuples the final two arguments
+and leaves earlier ones curried, and several integers describe
+consecutive groups from left to right within the grouped suffix; the
+fallback `[1]` changes nothing.  The default `iter` row is
+`[0,1,2,4,8,12,16,20,24,28]`; a mutual fixpoint group shares one row,
+the first explicit row in cases-theorem order deciding it.
+`merge_type_vars` shrinks the scope product but can lose models needing
+different cardinalities for the merged variables.
+
+Updaters validate the resulting record.  `widths` must be nonempty with
+every entry between 1 and 32, and `bits` nonempty with every entry
+between 1 and 31.  `default_type` must be nonempty; it supplies every
+instance when `finite_types` is false.  Every `iter` row must be
+nonempty and nonnegative with a representable successor; a
+`bisim_depth` row must not mix `~1` with nonnegative depths, which
+likewise need a representable successor.  Non-fallback keys of `max`,
+`wf`, and `iter` must be constants or variables, and of `instantiate`
+type variables.  `max_genuine` and `batch_size` must be positive;
+`max_potential`, the symmetry-breaking strengths, `max_threads`, and
+`tac_timeout` nonnegative.
+
+### See also
+
+[`Refute.refute`](#Refute.refute),
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
+[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.model_refute`](#Refute.model_refute),
+[`Refute.try_refute`](#Refute.try_refute),
+[`Refute.find_unused_assms`](#Refute.find_unused_assms)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

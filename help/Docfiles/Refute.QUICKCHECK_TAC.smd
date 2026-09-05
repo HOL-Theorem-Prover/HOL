@@ -1,0 +1,34 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `QUICKCHECK_TAC`
+
+``` hol4
+Refute.QUICKCHECK_TAC : Abbrev.tactic
+```
+
+------------------------------------------------------------------------
+
+Quickchecks the current tactic goal for a counterexample.
+
+`QUICKCHECK_TAC` is `REFUTE_TAC_WITH [upd_search QuickcheckBackends]`:
+it runs only the `exhaustive`, `random`, and `narrowing` backends, with
+every other field of `!Refute.the_config` as read when the tactic is
+applied, `quiet` and `expect` included.  It prints the resulting
+`Counterexample`, `NoCounterexample`, or `Unknown` report and then
+behaves as `ALL_TAC`, never closing or altering the goal; a
+counterexample is not a tactic failure.
+
+### Failure
+
+Fails only when a non-default `expect` field is not met.  Interrupts
+are re-raised.
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.config`](#Refute.config)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

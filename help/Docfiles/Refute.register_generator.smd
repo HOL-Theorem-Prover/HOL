@@ -1,0 +1,43 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_generator`
+
+``` hol4
+Refute.register_generator : hol_type -> custom_gen -> unit
+```
+
+------------------------------------------------------------------------
+
+Adds or replaces a Quickcheck generator for a HOL type.
+
+``` hol4
+type rng = IntInf.int
+type custom_gen =
+  {enumerate : (int -> term list) option,
+   random : (int -> rng -> term * rng) option}
+```
+
+`enumerate size` returns the terms for exhaustive testing at `size`;
+`random size rng` returns one term and the successor random state.  At
+least one callback must be `SOME`; a backend needing the absent one is
+inapplicable for that type.  Returned terms must have the registered
+type, and callbacks should respect the requested size and the
+deterministic random-state protocol.
+
+Registrations are session-local.  Registering the same type again
+replaces the callbacks, drops any abstract generator for the type, and
+clears the generator, cardinality, and enumeration caches.
+
+### Failure
+
+Raises `Fail` if both callbacks are `NONE`.  Ill-typed callback results
+are rejected when a backend consumes them.
+
+### See also
+
+[`Refute.register_generator_family`](#Refute.register_generator_family),
+[`Refute.abstract_generator`](#Refute.abstract_generator),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.config`](#Refute.config)
+
+Abstract generators and built-in generation are described in
+\ref{Description:the-holrefute-library}.

@@ -1,0 +1,70 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_backend`
+
+``` hol4
+Refute.register_backend : backend -> unit
+```
+
+------------------------------------------------------------------------
+
+Adds or replaces a Refute search backend.
+
+``` hol4
+type backend =
+  {name : string,
+   weight : int,
+   configured : unit -> bool,
+   requires : requirement,
+   input : goal_form,
+   certainty_ceiling : config -> instance list -> certainty,
+   run : config -> instance list -> outcome}
+```
+
+`run` returns `Counterexample` of a list of the records below,
+`NoCounterexample`, or `Unknown` of diagnostic strings:
+
+``` hol4
+type model_report =
+  {skolems : (string * term) list,
+   consts : (term * string * term) list,
+   types : (hol_type * term list * bool) list}
+
+type counterexample =
+  {backend : string, substrate : string, certainty : certainty,
+   bindings : (term * term) list, evals : (term * term) list,
+   cert : thm option, scope : (hol_type * int) list option,
+   model : model_report option, stats : (string * int) list}
+```
+
+Registrations are session-local; a later backend with the same `name`
+replaces the old one.  Eligible backends are ordered by increasing
+`weight`, then name.  `configured` is queried when a search is
+selected.  `requires` is `AnyGoal`, `ExecutableGoal`, or
+`ExecutableGoalUnless predicate`, the last accepting a non-executable
+goal when `predicate cfg instances` holds.  `input` requests
+`MonoInstances` or `PolyOriginal` instances.
+
+`certainty_ceiling` must overestimate the best certainty `run` can
+return for the same configuration and instances: a search stops once a
+result reaches the best ceiling any selected backend declares, so an
+overestimate only misses an early stop, while an underestimate can
+suppress a stronger result from another backend.  A backend with no
+tighter, configuration-sensitive bound declares `fn _ => fn _ =>
+Genuine`, which is safe for any backend but makes a race wait for it
+after a weaker result elsewhere.
+
+Exceptions and ordinary timeouts in `run` become `Unknown`; interrupts
+are re-raised.
+
+`run` must not call `Refute.refute` or any other entry point that
+starts a search.  A call made from inside a running one is refused, and
+the refusal becomes that backend's `Unknown` reason: the nested search
+would define into the enclosing call's open theory bracket and then wait
+on a theory lock its own caller holds.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute)
+
+The extension model is described in \ref{Description:the-holrefute-library}.

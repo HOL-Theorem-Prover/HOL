@@ -2,6 +2,7 @@ drules.tex
 HolSat.tex
 HolQbf.tex
 HolSmt.tex
+Refute.tex
 QuantHeuristics.tex
 enumfset.tex
 libraries.tex
@@ -26,6 +27,7 @@ PatternMatchesLib.md
 HolSat.md
 HolQbf.md
 HolSmt.md
+Refute.md
 QuantHeuristics.md
 enumfset.md
 modern-syntax.tex

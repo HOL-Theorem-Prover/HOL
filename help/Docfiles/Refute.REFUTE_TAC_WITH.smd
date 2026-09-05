@@ -1,0 +1,51 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REFUTE_TAC_WITH`
+
+``` hol4
+Refute.REFUTE_TAC_WITH : config_update list -> Abbrev.tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample under per-call configuration updates.
+
+`REFUTE_TAC_WITH updates` is `REFUTE_CONFIG_TAC (current_config updates)`
+with the configuration computed when the tactic is applied: the
+`config -> config` updates are applied to `!Refute.the_config` from left
+to right, so the last update of a field wins, and `the_config` itself is
+not modified.  This is the way to change options for one call:
+
+``` hol4
+REFUTE_TAC_WITH
+  [upd_search (Only [Narrowing]),
+   upd_size 7,
+   upd_timeout 5.0]
+```
+
+Like every Refute tactic it prints its `Counterexample`,
+`NoCounterexample`, or `Unknown` report and then behaves as `ALL_TAC`,
+never closing or altering the goal; every field of the resulting
+configuration is honoured, including `quiet` and `expect`.
+
+`REFUTE_TAC` is `REFUTE_TAC_WITH []`; `QUICKCHECK_TAC`, `NARROWING_TAC`,
+and `MODEL_REFUTE_TAC` are `REFUTE_TAC_WITH [upd_search s]` for `s` equal
+to `QuickcheckBackends`, `Only [Narrowing]`, and `Only [ModelFinder]`
+respectively.  Use `Refute.REFUTE_CONFIG_TAC` where the result must not
+depend on the session's interactive defaults at all.
+
+### Failure
+
+Fails only when a non-default `expect` field is not met.  An invalid
+update raises when the updater is built, not when the tactic runs;
+`upd_search (Only [])` is rejected this way.  Interrupts are re-raised.
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
+[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
+[`Refute.config`](#Refute.config)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

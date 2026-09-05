@@ -24,7 +24,7 @@ endif
 INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
 
 ifdef POLY
-INCLUDES += ../../floating-point/native
+INCLUDES += ../../floating-point/native ../../HolRefute
 endif
 
 ifdef HOLSELFTESTLEVEL

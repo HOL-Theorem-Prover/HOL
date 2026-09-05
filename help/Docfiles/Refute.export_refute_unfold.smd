@@ -1,0 +1,14 @@
+## `export_refute_unfold`
+
+``` hol4
+Refute.export_refute_unfold : string -> unit
+```
+
+Exports the named theorem to the persistent Refute unfolding set,
+whose clauses the model finder unfolds during preprocessing.
+
+Every conjunct must have a constant head `c` in its conclusion
+(`c t1 ... tn = u`, `c t1 ... tn`, or `~(c t1 ... tn)`): the model
+finder looks the clause up by that head.  A clause with no constant
+head is dropped with a warning when the model finder builds its tables,
+not at export.

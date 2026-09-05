@@ -1,0 +1,10 @@
+## `check_unused_assms`
+
+``` hol4
+Refute.check_unused_assms :
+  config option -> string * thm -> string * int list list option
+```
+
+Checks one named theorem for unused assumptions, under the
+configuration derivation and result convention of
+[`Refute.find_unused_assms`](#Refute.find_unused_assms).

@@ -1,0 +1,47 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_quotient`
+
+``` hol4
+Refute.register_quotient :
+  {qty : hol_type,
+   rty : hol_type,
+   abs : term,
+   rep : term,
+   equiv_thm : thm} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers an existing quotient type with the model finder.
+
+`qty` is the quotient type and `rty` its representation type; `abs` and
+`rep` must be existing constants of types `rty -> qty` and `qty -> rty`.
+`equiv_thm` must be hypothesis-free and either a bare
+`QUOTIENT equiv abs rep` theorem or a total equivalence
+`!x y. R x y <=> (R x = R y)`.  Only the `QUOTIENT` shape names the
+Abs/Rep constants, so only it is cross-checked against `abs` and `rep`.
+The shape selects the encoding: a `QUOTIENT` bridge uses the sound
+partial encoding, and a total equivalence drops that encoding's then
+redundant domain axiom.
+
+Registrations are session-local; a valid later registration replaces
+the same quotient operator.  The model finder also harvests standard
+quotient metadata lazily; explicit registration serves a nonstandard
+database location or shape.
+
+### Failure
+
+Fails for malformed parameter types, nonconstant or ill-typed Abs/Rep
+terms, free or ill-typed equivalence relations, an unsupported theorem
+shape, theorem hypotheses, a theorem naming different constants, or an
+incompatible datatype, codatatype, typedef, or fraction classification.
+
+### See also
+
+[`Refute.register_typedef`](#Refute.register_typedef),
+[`Refute.register_codatatype`](#Refute.register_codatatype),
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.harvest_registrations`](#Refute.harvest_registrations),
+[`Refute.model_refute`](#Refute.model_refute)
+
+Quotient encoding is described in \ref{Description:the-holrefute-library}.

@@ -1,0 +1,17 @@
+## `abstract_generator`
+
+``` hol4
+Refute.abstract_generator :
+  {ty : hol_type, constructors : term list, pred : term option} -> unit
+```
+
+Registers a Quickcheck generator for `ty` that builds values from the
+given constructor terms.  `pred`, if present, is a closed predicate of
+type `ty -> bool` that generated values must satisfy.  The generator
+is never exhaustive: it can find counterexamples but never establishes
+`NoCounterexample`.
+
+### See also
+
+[`Refute.register_generator`](#Refute.register_generator),
+[`Refute.register_generator_family`](#Refute.register_generator_family)

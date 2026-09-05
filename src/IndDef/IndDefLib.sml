@@ -58,64 +58,18 @@ end;
     Store all rule inductions
    ---------------------------------------------------------------------- *)
 
-type rule_induction_map = thm list KNametab.table
+type rule_induction_map = KeyedThmSet.keyed_thm_map
 
-fun listdict_add (d, k, e) =
-    case KNametab.lookup d k of
-      NONE => KNametab.update (k,[e]) d
-    | SOME l => KNametab.update (k,e::l) d
+(* In an induction theorem the relation heads the clause hypothesis:
+   the clauses look like  !x. R x ==> P x *)
+val rule_induction_set = KeyedThmSet.new
+  {settype = "rule_induction", key_part = KeyedThmSet.Hypothesis}
 
-fun ind_thm_to_consts thm = let
-  open boolSyntax
-  val c = concl thm
-  val (_, bod) = strip_forall c
-  val (_, con) = dest_imp bod
-  val cons = strip_conj con
-  fun to_kname {Name,Thy,...} = {Name = Name, Thy = Thy}
-in
-  map (fn t => t |> strip_forall |> #2 |> dest_imp |> #1 |> strip_comb |> #1
-                 |> dest_thy_const |> to_kname)
-      cons
-end
-
-fun add_rule_induction0 th tmap = let
-  val ts = ind_thm_to_consts th
-in
-  List.foldl (fn (t,d) => listdict_add(d,t,th)) tmap ts
-end
-
-fun apply_delta (ThmSetData.ADD(_, th)) tmap = add_rule_induction0 th tmap
-  | apply_delta _ tmap = tmap
-
-(* making it exportable *)
-val {update_global_value = rule_ind_apply_global_update,
-     record_delta = rule_ind_record_delta,
-     get_deltas = rule_ind_get_deltas,
-     get_global_value = rule_induction_map,
-     DB = rule_induction_map_by_theory,...} =
-    ThmSetData.export_with_ancestry {
-      settype = "rule_induction",
-      delta_ops = {apply_to_global = apply_delta,
-                   uptodate_delta = K true,
-                   thy_finaliser = NONE,
-                   initial_value = KNametab.empty,
-                   apply_delta = apply_delta}
-    }
-
-fun add_rule_induction th =
-    rule_ind_apply_global_update (add_rule_induction0 th)
-fun export_rule_induction s =
-    let val d = ThmSetData.mk_add s
-    in
-      rule_ind_apply_global_update (apply_delta d);
-      rule_ind_record_delta d
-    end
-
-fun thy_rule_inductions thyname = let
-  open ThmSetData
-in
-  rule_ind_get_deltas {thyname = thyname} |> added_thms
-end
+val add_rule_induction = KeyedThmSet.add rule_induction_set
+val export_rule_induction = KeyedThmSet.export_thm rule_induction_set
+val thy_rule_inductions = KeyedThmSet.thy_thms rule_induction_set
+val rule_induction_map = KeyedThmSet.get_map rule_induction_set
+val rule_induction_map_by_theory = KeyedThmSet.map_by_theory rule_induction_set
 
 (* ----------------------------------------------------------------------
     the built-in monoset, that users can update as they prove new

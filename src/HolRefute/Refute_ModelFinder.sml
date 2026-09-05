@@ -1,0 +1,1421 @@
+(*  Title:      HolRefute/Refute_ModelFinder.sml
+    Author:     Jasmin Blanchette, TU Muenchen
+    Copyright   2008, 2009, 2010
+
+Driver for the HOL4 Refute model finder.  The control flow is a port of
+Nitpick's pick_them_nits_in_term. *)
+
+signature REFUTE_MODEL_FINDER = sig
+  val prepare_instance_input :
+    Refute_Core.instance -> Term.term * Term.term list
+  val merge_type_vars_in_terms : Term.term list -> Term.term list
+  val merge_type_vars_in_context_input :
+    Refute_Core.mf_config -> Term.term -> Term.term list ->
+    Refute_Core.mf_config * Term.term * Term.term list
+  val scope_limit_hint : string
+  val finitizable_data_types :
+    Refute_ModelFinder_HOL.mf_context ->
+    (Type.hol_type option * bool option) list ->
+    (Type.hol_type -> bool) -> Type.hol_type list ->
+    Type.hol_type list -> Type.hol_type list
+  val authenticity_reasons :
+    Refute_Core.mf_config -> bool -> bool -> bool -> string list
+  val abandoned_mono_verdict : (string * string -> unit) -> exn -> bool
+  val liberal_budget_after_models :
+    {max_potential : int, max_genuine : int, delivered : int,
+     kept : int, promoted : bool, incremental : bool} -> int * int
+  val kodkod_backend : Refute_Core.backend
+  val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
+  val register_backends : unit -> unit
+end
+
+structure Refute_ModelFinder :> REFUTE_MODEL_FINDER = struct
+
+open Portable Feedback
+infix |>
+
+structure KK = Refute_Forl
+structure MFH = Refute_ModelFinder_HOL
+structure MFK = Refute_ModelFinder_Kodkod
+structure MFM = Refute_ModelFinder_Model
+structure MFMono = Refute_ModelFinder_Mono
+structure MFN = Refute_ModelFinder_Names
+structure MFNT = Refute_ModelFinder_Nut
+structure MFP = Refute_ModelFinder_Preproc
+structure MFS = Refute_ModelFinder_Scope
+structure Util = Refute_ModelFinder_Util
+
+type term = Term.term
+type hol_type = Type.hol_type
+type rich_problem = MFK.rich_problem
+
+val max_unsound_delay_ms = 200
+val max_unsound_delay_percent = 2
+
+fun remaining deadline =
+  if Time.now () >= deadline then Time.zeroTime
+  else deadline - Time.now ()
+
+fun check_deadline deadline =
+  if Time.now () >= deadline then raise Timeout.TIMEOUT Time.zeroTime
+  else ()
+
+fun unsound_delay deadline =
+  Int.max (0, Int.min (max_unsound_delay_ms,
+    LargeInt.toInt (Time.toMilliseconds (remaining deadline)) *
+      max_unsound_delay_percent div 100))
+  handle Interrupt => raise Interrupt | _ => 0
+
+fun ground_types context binarize terms =
+  let
+    fun add ty types =
+      if MFH.is_fun_type ty orelse MFH.is_pair_type ty orelse
+         pred_setSyntax.is_set_type ty then
+        List.foldl (fn (argument, result) => add argument result)
+          types (MFS.type_arguments ty)
+      else if MFH.is_boolean_type ty orelse Util.member_type ty types then
+        types
+      else if MFH.is_exact_carrier_type ty then
+        (* A word carrier is atomic: its index type is a width, not a carrier
+           the search should size, and its element type is [bool].  [:char] is
+           atomic for the same reason, its size being fixed at 256. *)
+        Util.add_type ty types
+      else
+        let
+          val types = Util.add_type ty types
+          val constructor_types = List.concat
+            (map MFH.constructor_arg_types
+              (MFH.binarized_and_boxed_data_type_constrs
+                 context binarize ty))
+          val nested =
+            if null constructor_types then MFS.type_arguments ty
+            else constructor_types
+        in
+          List.foldl (fn (argument, result) => add argument result)
+            types nested
+        end
+    fun add_term term types = add (Term.type_of term) types
+    (* A word or char literal is folded into the carrier atom that denotes it,
+       so its [n2w] or [CHR] head must not pull the [num] carrier into the
+       problem: [num] is unbounded, and the scope search would then grow it
+       forever for a goal that never mentions a number. *)
+    fun subterms term =
+      if MFH.is_word_literal term orelse MFH.is_char_literal term then [term]
+      else
+        term ::
+        (case Lib.total Term.dest_comb term of
+             SOME (rator, rand) => subterms rator @ subterms rand
+           | NONE =>
+               case Lib.total Term.dest_abs term of
+                   SOME (variable, body) => variable :: subterms body
+                 | NONE => [])
+    fun add_all_subterms term types =
+      List.foldl (fn (subterm, result) => add_term subterm result)
+        types (subterms term)
+  in
+    Listsort.sort Type.compare
+      (List.foldl (fn (term, result) => add_all_subterms term result)
+        [] terms)
+  end
+
+fun free_variables terms =
+  Util.distinct_terms (List.concat (map Term.free_vars_lr terms))
+
+fun none_true assignments =
+  List.all (fn (_, value) => value <> SOME true) assignments
+
+fun authenticity_reasons (mf : Refute_Core.mf_config)
+      got_all_mono_user_axioms no_poly_user_axioms codatatypes_ok =
+  if not no_poly_user_axioms then
+    ["polymorphic axioms prevent an authenticity guarantee"]
+  else
+    let
+      val options =
+        (if got_all_mono_user_axioms then []
+         else ["\"user_axioms\" set to \"true\""]) @
+        (if none_true (#wf mf) then []
+         else ["\"wf\" set to \"smart\" or \"false\""]) @
+        (if none_true (#finitize mf) then []
+         else ["\"finitize\" set to \"smart\" or \"false\""]) @
+        (if #total_consts mf = SOME true then
+           ["\"total_consts\" set to \"smart\" or \"false\""]
+         else []) @
+        (if codatatypes_ok then []
+         else ["\"bisim_depth\" set to a nonnegative value"])
+    in
+      MFM.try_again_reasons options
+    end
+
+fun exact_totality all_types (scope : MFS.scope) =
+  List.all (MFS.is_exact_type (#data_types scope) true) all_types
+
+fun type_name ty = Parse.type_to_string ty
+
+fun scope_comment (scope : MFS.scope) =
+  String.concatWith ", " (map (fn (ty, card) =>
+    if MFH.is_bisim_iterator_type ty then
+      "bisim_depth = " ^ Int.toString (card - 1)
+    else
+      "card " ^ type_name ty ^ " = " ^ Int.toString card)
+    (#card_assigns scope))
+
+fun deep_data_types all_types sel_names =
+  let
+    fun selector_domain name =
+      Option.map #1 (Lib.total Type.dom_rng (MFNT.type_of name))
+    fun selected ty = List.exists (fn name =>
+      case selector_domain name of
+          SOME domain => Util.same_type ty domain
+        | NONE => false) sel_names
+  in
+    List.filter (fn ty =>
+      Util.same_type ty ``:unit`` orelse Util.same_type ty MFH.num_type orelse
+      MFH.is_bitword_type ty orelse
+      Option.isSome (MFH.word_dimension ty) orelse
+      (MFH.is_data_type ty andalso selected ty)) all_types
+  end
+
+fun finitizable_data_types context finitizes kind_of_monotonic
+      all_types deep_types =
+  let
+    val data_types = List.filter MFH.is_data_type all_types
+    val (deep, shallow) = List.partition (fn ty =>
+      Util.member_type ty deep_types) data_types
+    fun infinite ty = not (MFH.is_finite_type context ty)
+    fun forced ty =
+      MFS.mono_override finitizes ty = SOME (SOME true)
+    fun shallow_finitizable ty =
+      case MFS.mono_override finitizes ty of
+          SOME (SOME value) => value
+        | _ => kind_of_monotonic ty
+  in
+    List.filter (fn ty => infinite ty andalso forced ty) deep @
+    List.filter (fn ty => infinite ty andalso
+      shallow_finitizable ty) shallow
+  end
+
+fun actual_solver incremental (mf : Refute_Core.mf_config) =
+  let
+    val requested = #sat_solver mf
+    val configured = Refute_ForlSat.configured_sat_solvers incremental
+    val solver =
+      if requested = "smart" then
+        Refute_ForlSat.smart_sat_solver_name incremental
+      else if incremental andalso not (Lib.mem requested configured) then
+        (Refute_Core.Private.say 1
+           ("An incremental SAT solver is required: \"SAT4J\" will be " ^
+            "used instead of " ^ Lib.quote requested ^ "\n");
+         "SAT4J")
+      else
+        requested
+    val _ = if requested <> "smart" then () else
+      Refute_Core.Private.say 2
+        ("Using SAT solver " ^ Lib.quote solver ^ "\nThe following" ^
+         (if incremental then " incremental " else " ") ^
+         "solvers are configured: " ^
+         String.concatWith ", " (map Lib.quote configured) ^ "\n")
+  in
+    solver
+  end
+
+fun solver_arguments deadline solver =
+  #2 (Refute_ForlSat.sat_solver_spec (remaining deadline) solver)
+
+fun problem_for_scope deadline (mf : Refute_Core.mf_config)
+      all_types solver free_names nonsel_names nondef_us def_us need_us
+      unsound scope =
+  let
+    val effective_total_consts =
+      Option.getOpt (#total_consts mf, exact_totality all_types scope)
+    val params : MFK.assembly_params =
+      {debug = #debug mf,
+       peephole_optim = #peephole_optim mf,
+       total_consts = effective_total_consts,
+       datatype_sym_break = #datatype_sym_break mf,
+       kodkod_sym_break = #kodkod_sym_break mf,
+       comment = scope_comment scope,
+       solver = solver_arguments deadline solver,
+       unsound_delay = unsound_delay deadline,
+       free_names = free_names,
+       nonsel_names = nonsel_names,
+       nondef_us = nondef_us,
+       def_us = def_us,
+       need_us = need_us}
+  in
+    MFK.assemble_problem params unsound scope
+  end
+
+fun metadata (_, metadata : MFK.problem_metadata) = metadata
+
+fun liberal_budget_after_models
+      {max_potential, max_genuine, delivered, kept, promoted,
+       incremental} =
+  if promoted then (0, max_genuine - 1)
+  else
+    (max_potential - (if incremental then delivered else kept),
+     max_genuine)
+
+fun raw_problem (problem, _ : MFK.problem_metadata) = problem
+
+(* Kodkodi's textual instance format is syntactic only.  Check the instance
+   against the emitted bound schema before reconstruction: absent relations
+   otherwise decode as empty relations. *)
+fun valid_instance (problem : KK.problem) assignments =
+  let
+    (* A declared bound pairs each relation index with its printed name;
+       an instance assignment carries the index alone. *)
+    val expected = List.concat (map (map #1 o #1) (#bounds problem))
+    fun distinct [] = true
+      | distinct (value :: rest) =
+          not (Lib.mem value rest) andalso distinct rest
+    fun valid_assignment ((arity, relation), tuples) =
+      Lib.mem (arity, relation) expected andalso
+      distinct tuples andalso
+      List.all (fn tuple =>
+        length tuple = arity andalso
+        List.all (fn atom => atom >= 0 andalso atom < #univ_card problem)
+          tuple) tuples
+    fun tuple_atoms (KK.Tuple atoms) = SOME atoms
+      | tuple_atoms (KK.TupleIndex (arity, index)) =
+          let
+            fun decode 0 0 atoms = SOME atoms
+              | decode 0 _ _ = NONE
+              | decode count number atoms =
+                  decode (count - 1) (number div #univ_card problem)
+                    ((number mod #univ_card problem) :: atoms)
+          in
+            if arity < 0 orelse index < 0 orelse #univ_card problem <= 0
+            then NONE
+            else decode arity index []
+          end
+      | tuple_atoms _ = NONE
+    fun tuple_in (KK.TupleSet tuples) tuple =
+          List.exists (fn candidate =>
+            case tuple_atoms candidate of
+                SOME atoms => atoms = tuple
+              | NONE => false) tuples
+      | tuple_in (KK.TupleAtomSeq (count, first)) tuple =
+          (case tuple of
+               [atom] => count >= 0 andalso atom >= first andalso
+                 atom < first + count
+             | _ => false)
+      | tuple_in (KK.TupleUnion (left, right)) tuple =
+          tuple_in left tuple orelse tuple_in right tuple
+      | tuple_in (KK.TupleProduct (left, right)) tuple =
+          List.exists (fn split =>
+            tuple_in left (List.take (tuple, split)) andalso
+            tuple_in right (List.drop (tuple, split)))
+            (Portable.upto 0 (length tuple))
+      | tuple_in _ _ = false
+    fun tuples_of (KK.TupleSet tuples) =
+          Option.map (fn _ => List.mapPartial tuple_atoms tuples)
+            (List.foldl (fn (tuple, result) =>
+              case (tuple_atoms tuple, result) of
+                  (SOME _, SOME ()) => SOME ()
+                | _ => NONE) (SOME ()) tuples)
+      | tuples_of (KK.TupleAtomSeq (count, first)) =
+          if count < 0 then NONE
+          else SOME (map (fn atom => [atom])
+            (Portable.upto first (first + count - 1)))
+      | tuples_of (KK.TupleUnion (left, right)) =
+          (case (tuples_of left, tuples_of right) of
+               (SOME left, SOME right) => SOME (left @ right)
+             | _ => NONE)
+      | tuples_of (KK.TupleProduct (left, right)) =
+          (case (tuples_of left, tuples_of right) of
+               (SOME left, SOME right) => SOME
+                 (List.concat (map (fn xs => map (fn ys => xs @ ys) right)
+                   left))
+             | _ => NONE)
+      | tuples_of _ = NONE
+    (* Solver tuples and compact bound expansions can both be large.  Do not
+       turn a valid-instance check into a quadratic scan of those lists. *)
+    val compare_tuple = list_compare Int.compare
+    fun sorted_set tuples =
+      let
+        fun drop_equal value (next :: rest) =
+              if compare_tuple (value, next) = EQUAL then
+                drop_equal value rest
+              else
+                next :: rest
+          | drop_equal _ [] = []
+        fun distinct [] = []
+          | distinct (value :: rest) = value :: distinct (drop_equal value rest)
+      in
+        distinct (Listsort.sort compare_tuple tuples)
+      end
+    fun subset left right =
+      let
+        fun loop [] _ = true
+          | loop _ [] = false
+          | loop (one :: ones) (other :: others) =
+              (case compare_tuple (one, other) of
+                   LESS => false
+                 | EQUAL => loop ones others
+                 | GREATER => loop (one :: ones) others)
+      in
+        loop (sorted_set left) (sorted_set right)
+      end
+    fun assignment relation =
+      Option.map #2 (List.find (fn (other, _) => other = relation)
+        assignments)
+    fun valid_bound (relations, sets) =
+      let
+        fun valid_relation relation =
+          case (assignment relation, sets) of
+              (SOME actual, [exact]) =>
+                (case tuples_of exact of
+                     SOME tuples =>
+                       subset actual tuples andalso subset tuples actual
+                   | NONE => false)
+            | (SOME actual, [lower, upper]) =>
+                (case tuples_of lower of
+                     SOME tuples =>
+                       subset tuples actual andalso
+                       List.all (tuple_in upper) actual
+                   | NONE => false)
+            | _ => false
+      in
+        List.all valid_relation (map #1 relations)
+      end
+    val relations = map #1 assignments
+  in
+    length assignments = length expected andalso distinct relations andalso
+    List.all (fn relation => Lib.mem relation relations) expected andalso
+    List.all valid_assignment assignments andalso
+    List.all valid_bound (#bounds problem)
+  end
+
+fun rich_problems_equivalent (left : rich_problem, right : rich_problem) =
+  #unsound (metadata left) = #unsound (metadata right) andalso
+  MFS.scopes_equivalent
+    (#scope (metadata left), #scope (metadata right)) andalso
+  KK.problems_equivalent (raw_problem left, raw_problem right)
+
+fun rich_member problem = List.exists (fn other =>
+  rich_problems_equivalent (problem, other))
+
+fun distinct_ints values = Listsort.sort Int.compare (Lib.mk_set values)
+
+fun certainty_is_genuine Refute_Core.Genuine = true
+  | certainty_is_genuine _ = false
+
+fun certainty_is_potential (Refute_Core.Potential _) = true
+  | certainty_is_potential _ = false
+
+fun replace_stats stats (cex : Refute_Core.counterexample) =
+  {backend = #backend cex, substrate = #substrate cex,
+   certainty = #certainty cex, bindings = #bindings cex,
+   evals = #evals cex, cert = #cert cex, scope = #scope cex,
+   model = #model cex, stats = stats}
+
+(* HOL4 has no type classes or sorts, so all goal type variables occupy
+   Isabelle's single default-sort equivalence class.  Keeping the
+   alphabetically first variable is therefore the sortless specialization
+   of Nitpick's [merged_type_var_table_for_terms]. *)
+fun merge_type_vars_in_terms terms =
+  let
+    val tyvars = Listsort.sort (fn (left, right) =>
+      String.compare (Type.dest_vartype left, Type.dest_vartype right))
+      (Lib.U (map Term.type_vars_in_term terms))
+  in
+    case tyvars of
+        [] => terms
+      | canonical :: rest =>
+          let
+            val theta = map (fn tyvar =>
+              {redex = tyvar, residue = canonical}) rest
+          in
+            map (Term.inst theta) terms
+          end
+  end
+
+fun merge_type_vars_in_context_input
+      (mf : Refute_Core.mf_config) original evals =
+  if not (#merge_type_vars mf) then (mf, original, evals)
+  else
+    let
+      val needs = #need mf
+      val need_terms = Option.getOpt (needs, [])
+      val merged = merge_type_vars_in_terms
+        (original :: (evals @ need_terms))
+      val merged_tail = tl merged
+      val merged_evals = List.take (merged_tail, length evals)
+      val merged_need_terms = List.drop (merged_tail, length evals)
+      val merged_needs = Option.map (fn _ => merged_need_terms) needs
+      val context_mf = Refute_Core.change_mf
+        (Refute_Core.MfNeed merged_needs) mf
+    in
+      (context_mf, hd merged, merged_evals)
+    end
+
+fun prepare_instance_input (instance : Refute_Core.instance) =
+  let
+    val input_original = #original instance
+    val (original, renaming, type_renaming) =
+      MFN.rename_colliding_goal_vars
+        (MFN.reserved_frees input_original) input_original
+    val _ = MFN.assert_user_goal original
+    val renaming_subst = map (fn (old, fresh) =>
+      {redex = old, residue = fresh}) renaming
+    fun rename term = term
+      |> Term.subst renaming_subst
+      |> Term.inst type_renaming
+    fun rename_eval term =
+      let
+        val prepared = rename term
+        (* Eval expressions introduce generated [refute$evalN] names too.
+           Sanitize their own reserved frees before placeholders are made. *)
+        val (renamed, _, _) = MFN.rename_colliding_goal_vars
+          (MFN.reserved_frees prepared) prepared
+      in
+        renamed
+      end
+  in
+    (original, map rename_eval (#evals instance))
+  end
+
+(* A quotient package type also has a kernel typedef theorem, so the raw
+   morphism guard discovers both classes.  Prefer the quotient theorem; only
+   if that validated harvest misses do we try the typedef bijections shape.
+   Iterate because one problem may mention several previously unseen types. *)
+fun harvest_guard terms =
+  case MFH.first_unregistered_typedef terms of
+      NONE => (NONE, false)
+    | SOME ty =>
+        if MFH.harvest_quotient ty orelse MFH.harvest_typedef ty then
+          let val (reason, _) = harvest_guard terms
+          in (reason, true) end
+        else
+          (MFH.unregistered_typedef_reason terms, false)
+
+exception RESTART_AFTER_HARVEST
+
+val scope_limit_hint =
+  "scope limit reached; consider using \"mono\" or \"merge_type_vars\" " ^
+  "to prevent this"
+
+(* A monotonicity analysis is abandoned two ways: it runs out of its tactic
+   budget, or the calculus hits an internal mtype mismatch and reports BAD.
+   Both must read as "not monotonic".  The verdict only ever removes work --
+   a monotonic type lets the scope search collapse cardinalities -- so
+   answering true on no evidence would let Refute skip a scope that can hold
+   a counterexample and report None unsoundly, whereas answering false costs
+   nothing but scopes.  Whether a deadline is reached is a wall-clock
+   question and untestable without a race; that abandonment degrades to
+   false is not, so the polarity lives here, in one named place a test can
+   call, rather than inline in a handler nothing can reach.  Anything else
+   is re-raised: only these two are abandonment. *)
+fun abandoned_mono_verdict report exn =
+  case exn of
+      Timeout.TIMEOUT _ => (report ("timeout", ""); false)
+    | Util.BAD (location, detail) => (report (location, detail); false)
+    | _ => raise exn
+
+fun run_instance deadline started (config : Refute_Core.config)
+      incremental solver (initial_max_potential, initial_max_genuine)
+      (instance : Refute_Core.instance) =
+  let
+    val _ = check_deadline deadline
+    val mf = #mf config
+    val sound_finitizes = none_true (#finitize mf)
+    val (prepared_original, prepared_evals) =
+      prepare_instance_input instance
+    val (context_mf, original, eval_terms) =
+      merge_type_vars_in_context_input mf prepared_original prepared_evals
+    val negated =
+      if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
+      else original
+    val (_, closure, _) = Refute_Cert.closure_of original
+    fun normalization_step conversion tm =
+      conversion tm handle Conv.UNCHANGED => Thm.REFL tm
+    val (_, _, pnf) =
+      Refute_Cert.normalize_to_pnf normalization_step closure
+    val prefix_origins = Refute_Skolem.mark_source_ambiguities original
+      (Refute_Skolem.prefix_binders pnf)
+    val context = MFH.make_context context_mf eval_terms
+    val _ = #prefix_origins context := prefix_origins
+    val fixpoint_refusal = MFH.first_fixpoint_refusal context original
+    val _ = if Option.isSome fixpoint_refusal then
+        MFH.print_wf_cache context else ()
+    val _ = case fixpoint_refusal of
+        SOME reason => raise Util.NOT_SUPPORTED reason
+      | NONE => ()
+    val (nondef_ts, def_ts, need_ts, got_all_mono_user_axioms,
+         no_poly_user_axioms, binarize) =
+      MFP.preprocess_formulas context [] negated
+    val _ = check_deadline deadline
+    (* A typedef morphism can enter through an unfolded wrapper even when it
+       was absent from the surface goal.  Scan the complete preprocessed
+       problem as well as the early surface-goal guard in [run]. *)
+    val _ =
+      case harvest_guard (nondef_ts @ def_ts) of
+          (SOME reason, _) => raise Util.NOT_SUPPORTED reason
+        | (NONE, true) =>
+            (* The first preprocessing pass did not know the harvested
+               registration and therefore did not insert its axioms or
+               morphism rewrites.  Restart with a fresh context before any
+               scope or solver work; the positive registry cache makes the
+               second pass constant-time at this guard. *)
+            raise RESTART_AFTER_HARVEST
+        | (NONE, false) => ()
+    val _ = MFH.refresh_iterator_arg_types context (nondef_ts @ def_ts)
+    val _ = MFH.print_wf_cache context
+    val nondef_us = map (MFNT.nut_from_term context MFNT.Eq) nondef_ts
+    val def_us = map (MFNT.nut_from_term context MFNT.DefEq) def_ts
+    val need_us = map (MFNT.nut_from_term context MFNT.Eq) need_ts
+    val (free_names, const_names) =
+      List.foldl (fn (nut, names) =>
+        MFNT.add_free_and_const_names nut names)
+        ([], []) (nondef_us @ def_us @ need_us)
+    val (sel_names, nonsel_names) = List.partition
+      (MFN.is_sel o MFNT.nickname_of) const_names
+    val all_types = ground_types context binarize
+      (nondef_ts @ def_ts @ need_ts)
+    val unique_scope = #card_mode mf = Refute_Core.FixedBound andalso
+      List.all (fn (_, values) => length values = 1) (#card mf)
+    val calculus_mono_cache = ref ([] : (hol_type * bool) list)
+    val _ =
+      if #binary_ints mf = SOME true andalso not binarize andalso
+         List.exists (fn ty => ty = MFH.num_type orelse ty = MFH.int_type)
+           all_types then
+        Refute_Core.Private.say 2
+          ("The option \"binary_ints\" will be ignored because of the " ^
+           "presence of rationals, reals, \"Suc\", \"gcd\", or \"lcm\" " ^
+           "in the problem.\n")
+      else ()
+
+    fun report_mono_failure kind ty detail =
+      Refute_Core.Private.say 2
+        ("Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
+         (if detail = "" then "" else ": " ^ detail) ^ "\n")
+
+    fun is_type_actually_monotonic ty =
+      case List.find (fn (cached_ty, _) => Util.same_type ty cached_ty)
+             (!calculus_mono_cache) of
+          SOME (_, result) => result
+        | NONE =>
+            let
+              val _ = check_deadline deadline
+              val result =
+                (Util.apply_within_budget (#tac_timeout context)
+                   (MFMono.formulas_monotonic context binarize ty)
+                   (nondef_ts, def_ts)
+                 handle exn =>
+                   abandoned_mono_verdict
+                     (fn (kind, detail) =>
+                        report_mono_failure kind ty detail) exn)
+              val _ = check_deadline deadline
+              val _ = calculus_mono_cache :=
+                (ty, result) :: !calculus_mono_cache
+            in
+              result
+            end
+
+    (* Unlike the scope shortcut, kind-of monotonicity deliberately lets a
+       user false row block the calculus but does not let a true row force
+       it.  Finitization plumbing is this helper's first caller. *)
+    fun is_type_kind_of_monotonic ty =
+      case MFS.mono_override (#mono mf) ty of
+          SOME (SOME false) => false
+        | _ => is_type_actually_monotonic ty
+
+    val (mono_types, nonmono_types) =
+      if unique_scope then (all_types, [])
+      else MFS.mono_partition_with is_type_actually_monotonic
+        (#mono mf) all_types
+    val forced_mono_types = List.filter (fn ty =>
+      MFS.mono_override (#mono mf) ty = SOME (SOME true)) mono_types
+    val inferred_mono_types = rev (List.mapPartial
+      (fn (ty, true) => SOME ty | _ => NONE) (!calculus_mono_cache))
+
+    fun report_monotonic wording types =
+      if null types then ()
+      else
+        Refute_Core.Private.say 2
+          ("The following type" ^ Util.plural_s_for_list types ^ " " ^
+           wording ^ ": " ^
+           String.concatWith ", " (map type_name types) ^
+           ". Refute might be able to skip some scopes.\n")
+
+    val _ = report_monotonic
+      (if length forced_mono_types = 1 then "is considered monotonic"
+       else "are considered monotonic") forced_mono_types
+    val _ = report_monotonic "passed the monotonicity test"
+      inferred_mono_types
+    val deep_types = deep_data_types all_types sel_names
+    val finitizable_types = finitizable_data_types context (#finitize mf)
+      is_type_kind_of_monotonic all_types deep_types
+    val _ = if null finitizable_types then () else
+      Refute_Core.Private.say 2
+        ("The following type" ^ Util.plural_s_for_list finitizable_types ^
+         " can use a more precise finite encoding: " ^
+         String.concatWith ", " (map type_name finitizable_types) ^ "\n")
+    val adaptive = #card_mode mf = Refute_Core.IterativeDeepening
+    val (fixed_skipped, fixed_scopes) =
+      if adaptive then (0, [])
+      else MFS.all_scopes context binarize
+        (#card mf) (#max mf) (#iter mf) (#bits mf) (#bisim_depth mf)
+        mono_types nonmono_types deep_types finitizable_types
+    val adaptive_cursor =
+      if adaptive then
+        SOME (MFS.new_scope_cursor context binarize true
+          (#card mf) (#max mf) (#iter mf) (#bits mf) (#bisim_depth mf)
+          mono_types nonmono_types deep_types finitizable_types)
+      else NONE
+    val batch_size =
+      if #debug mf then 1 else Int.max (1, #batch_size mf)
+    val pending_batches = ref (Util.chunk_list batch_size fixed_scopes)
+    val source_done = ref (not adaptive)
+    val fully_exhausted = ref false
+    val skipped = ref fixed_skipped
+    val scopes_emitted = ref (length fixed_scopes)
+    val batch_count = ref 0
+
+    fun refill_batches () =
+      case adaptive_cursor of
+          NONE => ()
+        | SOME cursor =>
+            let
+              val {scopes, done, stopped, skipped = newly_skipped} =
+                MFS.scope_cursor_batch_with_stop cursor MFS.max_scopes
+                  (fn () => Refute_Core.search_expired config)
+              val _ = skipped := !skipped + newly_skipped
+              val _ = scopes_emitted := !scopes_emitted + length scopes
+              val _ = pending_batches := Util.chunk_list batch_size scopes
+              val _ = source_done := done
+              val _ =
+                if not (Refute_Core.Private.enabled 2) orelse
+                   null scopes then ()
+                else
+                  let val scope : MFS.scope = List.last scopes in
+                    Refute_Core.Private.say 2
+                      ("Refute model scope frontier: " ^
+                       String.concatWith ", " (map (fn (ty, card) =>
+                         Parse.type_to_string ty ^ " = " ^
+                         Int.toString card) (#card_assigns scope)) ^ "\n")
+                  end
+              val _ = if stopped then check_deadline deadline else ()
+            in
+              ()
+            end
+
+    fun next_scope_batch () =
+      case !pending_batches of
+          batch :: rest =>
+            (pending_batches := rest;
+             SOME (batch, !source_done andalso null rest))
+        | [] =>
+            if !source_done then (fully_exhausted := true; NONE)
+            else (check_deadline deadline; refill_batches ();
+                  next_scope_batch ())
+    val real_frees = free_variables [original]
+    val executable = not (Option.isSome (#qc_gate instance)) andalso
+      #falsify mf andalso
+      not (List.exists (fn ty =>
+        MFH.is_codatatype ty orelse MFH.is_quot_type ty orelse
+        MFH.is_typedef ty) all_types)
+    val genuine_formula = MFM.genuine_means_genuine
+      {got_all_mono_user_axioms = got_all_mono_user_axioms,
+       no_poly_user_axioms = no_poly_user_axioms,
+       wfs = map (fn (_, value) => value = SOME true) (#wf mf),
+       sound_finitizes = sound_finitizes,
+       total_consts = #total_consts mf}
+    val generated_problems = ref ([] : rich_problem list)
+    val generated_scopes = ref ([] : MFS.scope list)
+    val checked_problems = ref ([] : rich_problem list)
+    val counterexamples = ref ([] : Refute_Core.counterexample list)
+    val kodkod_calls = ref 0
+    val met_potential = ref 0
+    val last_donno = ref 0
+    (* Set when a sound problem was satisfiable but its model did not
+       survive reconstruction.  Such a scope is neither refuted nor
+       exhausted, so the search may not end in NoCounterexample. *)
+    val discarded_sound_model = ref false
+    val error_reasons = ref ([] : string list)
+    val original_max_potential = Int.max (0, initial_max_potential)
+    val original_max_genuine = Int.max (0, initial_max_genuine)
+    val latest_state = ref
+      (false, original_max_potential, original_max_genuine, 0)
+
+    fun add_error reason =
+      error_reasons := Refute_Core.add_reason (reason, !error_reasons)
+
+    fun update_checked problems indices =
+      List.app (fn index =>
+        if index >= 0 andalso index < length problems then
+          let val problem = List.nth (problems, index)
+          in
+            if rich_member problem (!checked_problems) then ()
+            else checked_problems := problem :: !checked_problems
+          end
+        else ()) indices
+
+    fun make_base (problem : rich_problem) : Refute_Core.counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE,
+       scope = SOME (#card_assigns (#scope (metadata problem))),
+       model = NONE, stats = []}
+
+    fun reconstruct problem bounds =
+      if not (valid_instance (raw_problem problem) bounds) then
+        (discarded_sound_model := true;
+         add_error "Kodkodi returned a malformed model instance";
+         NONE)
+      else
+      let
+        val extension = metadata problem
+        val {raw = reconstructed, certification, displayed, replay_hints,
+             replay_sidecar, postprocessors} =
+          MFM.reconstruct_both
+          {context = context, formats = #format mf,
+           scope = #scope extension, atoms = #atoms mf,
+           special_funs = !(#special_funs context),
+           real_frees = real_frees,
+           eval_terms = eval_terms,
+           free_names = #free_names extension,
+           sel_names = #sel_names extension,
+           nonsel_names = #nonsel_names extension,
+           rel_table = #rel_table extension,
+           bounds = bounds}
+        val sound = not (#unsound extension)
+        val scope_has_codatatype =
+          List.exists #co (#data_types (#scope extension))
+        val weakened = !(#whack_weakening context)
+        val reasons = if sound then
+            authenticity_reasons mf got_all_mono_user_axioms
+              no_poly_user_axioms (#codatatypes_ok reconstructed) @
+            (if weakened then
+               ["formula was semantically weakened by whack"]
+             else [])
+          else ["model comes from the liberal, unsound-by-design problem"]
+        fun discard () = if sound then discarded_sound_model := true else ()
+      in
+        case MFM.certify
+          {executable = executable andalso not scope_has_codatatype,
+           original = original,
+           eval_terms = eval_terms,
+           reconstruction = reconstructed,
+           certification = certification,
+           replay_sidecar = replay_sidecar,
+           replay_hints = replay_hints,
+           cex = make_base problem,
+           sound = sound,
+           genuine_means_genuine = genuine_formula andalso not weakened,
+           reasons = reasons,
+           deadline = SOME deadline} of
+            MFM.Drop => (discard (); NONE)
+          | MFM.Keep semantic_cex =>
+              let val cex =
+                MFM.display_counterexample postprocessors displayed
+                  semantic_cex
+              in
+                if #genuine_only config andalso
+                   certainty_is_potential (#certainty cex)
+                then (discard (); NONE)
+                else SOME cex
+              end
+      end
+
+    fun keep_counterexample cex =
+      (counterexamples := cex :: !counterexamples;
+       (if #falsify mf then Refute_Core.publish_counterexamples
+        else Refute_Core.publish_models) (rev (!counterexamples));
+       if certainty_is_potential (#certainty cex) then
+         met_potential := !met_potential + 1
+       else ())
+
+    fun solve_any_problem state first_time problems =
+      let
+        val (found_really_genuine, raw_max_potential,
+             raw_max_genuine, donno) = state
+        val _ = last_donno := donno
+        val max_potential = Int.max (0, raw_max_potential)
+        val max_genuine = Int.max (0, raw_max_genuine)
+        val _ = latest_state :=
+          (found_really_genuine, max_potential, max_genuine, donno)
+        val max_solutions = max_potential + max_genuine
+          |> (fn count => if incremental then count else Int.min (1, count))
+      in
+        if max_solutions <= 0 then
+          (found_really_genuine, 0, 0, donno)
+        else if null problems then
+          (found_really_genuine, max_potential, max_genuine, donno)
+        else
+          let
+            val _ = check_deadline deadline
+            val _ = kodkod_calls := !kodkod_calls + 1
+          in
+            case KK.solve_any_problem (#debug mf) (#overlord mf) deadline
+                (#max_threads mf) max_solutions (map raw_problem problems) of
+                KK.Normal ([], unsat_indices, warning) =>
+                  let
+                    val all_reported_unsat = List.all
+                      (fn index => Lib.mem index unsat_indices)
+                      (Portable.upto 0 (length problems - 1))
+                  in
+                    update_checked problems unsat_indices;
+                    if warning = "" then () else
+                      Refute_Core.Private.say 1
+                        ("Kodkod warning: " ^ warning ^ "\n");
+                    if all_reported_unsat then
+                      (found_really_genuine, max_potential,
+                       max_genuine, donno)
+                    else
+                      (add_error "Kodkodi returned an incomplete result";
+                       (found_really_genuine, max_potential,
+                        max_genuine, donno + 1))
+                  end
+              | KK.Normal (sat_models, unsat_indices, warning) =>
+                  let
+                    val _ = if warning = "" then () else
+                      Refute_Core.Private.say 1
+                        ("Kodkod warning: " ^ warning ^ "\n")
+                    val (liberal, conservative) = List.partition
+                      (fn (index, _) =>
+                        #unsound (metadata (List.nth (problems, index))))
+                      sat_models
+                    val _ = update_checked problems
+                      (unsat_indices @ map #1 liberal)
+                  in
+                    if null conservative then
+                      let
+                        (* A certification promotion is a phase boundary
+                           this port adds: do not reconstruct a later
+                           liberal model (which could be merely Potential),
+                           and consume exactly one genuine slot before
+                           dropping the remaining unsound problems.
+                           Upstream never promotes a liberal model. *)
+                        fun reconstruct_until_genuine _ 0 _ = (false, 0)
+                          | reconstruct_until_genuine _ _ [] = (false, 0)
+                          | reconstruct_until_genuine potential remaining
+                              ((index, bounds) :: models) =
+                              (case reconstruct
+                                  (List.nth (problems, index)) bounds of
+                                   SOME cex =>
+                                     if certainty_is_genuine (#certainty cex)
+                                     then (keep_counterexample cex; (true, 1))
+                                     else
+                                       let
+                                         val keep = potential > 0
+                                         val (promoted, kept) =
+                                           reconstruct_until_genuine
+                                             (if keep then potential - 1
+                                              else potential)
+                                             (remaining - 1) models
+                                         val _ = if keep then
+                                           keep_counterexample cex else ()
+                                       in
+                                         (promoted, kept + (if keep then 1
+                                                           else 0))
+                                       end
+                                 | NONE =>
+                                     reconstruct_until_genuine potential
+                                       (remaining - 1) models)
+                        (* A liberal problem can nevertheless reconstruct to
+                           a genuine counterexample.  Scan enough results for
+                           both quotas, but retain potential results only up
+                           to their own quota. *)
+                        val (promoted, kept) = reconstruct_until_genuine
+                          max_potential (max_potential + max_genuine) liberal
+                        val found = found_really_genuine orelse promoted
+                        val (max_potential, max_genuine) =
+                          liberal_budget_after_models
+                            {max_potential = max_potential,
+                             max_genuine = max_genuine,
+                             delivered = kept,
+                             kept = kept, promoted = promoted,
+                             incremental = incremental}
+                        val _ = latest_state :=
+                          (found, max_potential, max_genuine, donno)
+                      in
+                        if max_genuine <= 0 andalso max_potential <= 0 then
+                          (found, 0, 0, donno)
+                        else
+                          let
+                            val co_indices = List.mapPartial (fn index =>
+                              let val sound_index = index - 1
+                              in
+                                if sound_index >= 0 andalso
+                                   index < length problems andalso
+                                   #unsound
+                                     (metadata
+                                       (List.nth (problems, index))) andalso
+                                   MFS.scopes_equivalent
+                                     (#scope (metadata (List.nth
+                                        (problems, sound_index))),
+                                      #scope (metadata (List.nth
+                                        (problems, index))))
+                                then SOME sound_index else NONE
+                              end) unsat_indices
+                            val bye = distinct_ints
+                              (map #1 sat_models @ unsat_indices @ co_indices)
+                            val remaining_problems =
+                              Util.filter_out_indices bye problems
+                              |> (fn values =>
+                                if max_potential <= 0 then
+                                  List.filter
+                                    (not o #unsound o metadata) values
+                                else values)
+                          in
+                            solve_any_problem
+                              (found, max_potential, max_genuine, donno)
+                              false remaining_problems
+                          end
+                      end
+                    else
+                      let
+                        (* [max_potential] bounds models that may be
+                           spurious because the encoding behind them is
+                           unsound; only the liberal problems handled above
+                           spend it.  A sound problem's model is a real
+                           result whatever certainty reconstruction lands
+                           on (quasi-genuine for an inexact encoding,
+                           potential when kernel certification got stuck),
+                           so it is always reported, never discarded for
+                           want of potential budget.  Only a genuine model
+                           spends a [max_genuine] slot, so the search for
+                           one carries on past the weaker models it
+                           reported.  This diverges from upstream, whose
+                           sound branch charges a slot to every sound model
+                           it prints, quasi-genuine ones included; its
+                           [num_genuine] belongs to the unsound branch,
+                           where it is identically 0.
+                           [reconstruct] already raises
+                           [discarded_sound_model] on each of its own
+                           rejection paths. *)
+                        val attempted =
+                          MFS.take_at_most max_genuine conservative
+                        fun harvest kept [] = kept
+                          | harvest kept ((index, bounds) :: models) =
+                              let
+                                val _ = check_deadline deadline
+                              in
+                                case reconstruct
+                                  (List.nth (problems, index)) bounds of
+                                     NONE => harvest kept models
+                                   | SOME cex =>
+                                       (keep_counterexample cex;
+                                        harvest (cex :: kept) models)
+                              end
+                        val results = harvest [] attempted
+                        val genuine_results = List.filter
+                          (certainty_is_genuine o #certainty) results
+                        val max_genuine = max_genuine - length genuine_results
+                        val found = found_really_genuine orelse
+                          not (null genuine_results)
+                        (* A sound model that only reconstructs as quasi does
+                           not establish a theorem, so it cannot suppress the
+                           later potential/unsound search. *)
+                        val max_potential = if found then 0 else max_potential
+                        val _ = latest_state :=
+                          (found, max_potential, max_genuine, donno)
+                      in
+                        (* Upstream caps sound-model harvesting at two
+                           rounds per batch unconditionally (its
+                           [not first_time] cut-off).  Here the cap applies
+                           only in the incremental case; the 1/1 path
+                           ignores [first_time]. *)
+                        if (max_genuine <= 0 andalso max_potential <= 0) orelse
+                           (incremental andalso not first_time andalso
+                            max_potential <= 0) then
+                          (found, max_potential, max_genuine, donno)
+                        else
+                          let
+                            val bye = distinct_ints
+                              (map #1 sat_models @ unsat_indices)
+                            val remaining_problems =
+                              Util.filter_out_indices bye problems
+                              |> (fn values =>
+                                if max_potential <= 0 then
+                                  List.filter (not o #unsound o metadata)
+                                    values
+                                else values)
+                          in
+                            solve_any_problem
+                              (found, max_potential, max_genuine, donno)
+                              false remaining_problems
+                          end
+                      end
+                  end
+              | KK.TimedOut unsat_indices =>
+                  (update_checked problems unsat_indices;
+                   raise Timeout.TIMEOUT Time.zeroTime)
+              | KK.Error (message, unsat_indices) =>
+                  (update_checked problems unsat_indices;
+                   add_error ("Kodkod error: " ^ message);
+                   last_donno := donno + 1;
+                   (found_really_genuine, max_potential,
+                    max_genuine, donno + 1))
+          end
+      end
+
+    fun add_problem flags scope (problems, donno) =
+      let
+        fun add unsound (kept, unknown) =
+          let
+              val _ = check_deadline deadline
+          in
+            case problem_for_scope deadline mf all_types solver
+                free_names nonsel_names nondef_us def_us need_us
+                unsound scope of
+                NONE => (kept, unknown + 1)
+              | SOME problem =>
+                  if rich_member problem (!generated_problems) then
+                    (kept, unknown)
+                  else
+                    (case rev kept of
+                         previous :: _ =>
+                           if KK.problems_equivalent
+                                (raw_problem previous, raw_problem problem)
+                           then (kept, unknown)
+                           else (kept @ [problem], unknown)
+                       | [] => ([problem], unknown))
+          end
+      in
+        List.foldl (fn (flag, result) => add flag result)
+          (problems, donno) flags
+      end
+
+    fun potential_only_warning () =
+      let
+        val (unsound, sound) = List.partition
+          (#unsound o metadata) (!generated_problems)
+      in
+        if not (null sound) andalso
+           List.all (KK.is_problem_trivially_false o raw_problem) sound andalso
+           List.exists
+             (not o KK.is_problem_trivially_false o raw_problem) unsound
+        then
+          Refute_Core.Private.say 1
+            ("Refute warning: preprocessing left only potentially spurious " ^
+             "model-finder problems for the given scopes\n")
+        else ()
+      end
+
+    fun run_batch last scope_batch state =
+      let
+        val (found, max_potential, max_genuine, donno) = state
+        val flags =
+          (if max_genuine > 0 then [false] else []) @
+          (if max_potential > 0 orelse max_genuine > 0 then [true] else [])
+        val (problems, donno) = List.foldl (fn (scope, result) =>
+          add_problem flags scope result) ([], donno) scope_batch
+        val _ = last_donno := donno
+        val _ = generated_problems := !generated_problems @ problems
+        val _ = generated_scopes := !generated_scopes @ scope_batch
+        val _ = if last then potential_only_warning () else ()
+      in
+        solve_any_problem
+          (found, max_potential, max_genuine, donno) true problems
+      end
+
+    fun run_batches state =
+      case next_scope_batch () of
+          NONE => state
+        | SOME (batch, last) =>
+            let
+              val _ = batch_count := !batch_count + 1
+              val next as (_, _, max_genuine, _) =
+                run_batch last batch state
+              val _ = if last then fully_exhausted := true else ()
+            in
+              if (max_genuine > 0 orelse #2 next > 0) andalso not last then
+                run_batches next
+              else next
+            end
+
+    fun problem_count problems scope = length (List.filter (fn problem =>
+      MFS.scopes_equivalent (#scope (metadata problem), scope)) problems)
+
+    fun scope_checked scope =
+      let
+        val generated = problem_count (!generated_problems) scope
+        val checked = problem_count (!checked_problems) scope
+      in
+        generated > 0 andalso generated = checked
+      end
+
+    fun scopes_checked () =
+      length (List.filter scope_checked (!generated_scopes))
+
+    (* A clean finite scope frontier proves totality only when it covers the
+       actual types, not merely every scope the user requested.  A type
+       variable ranges over arbitrarily large finite types.  For ground
+       types, the scope metadata records both semantic completeness and
+       concreteness; forced, unsound finitization is deliberately excluded.
+       Empty [all_types] is the constant-formula case and is vacuously
+       covered once its (empty) frontier has been checked.  A guarded
+       [min$@] occurrence (Refute_ModelFinder_HOL.sml,
+       [choice_guard_inserted]) additionally vetoes totality: its [unknown]
+       branch reads as "no HOL witness" only when the scope actually
+       checked happened to be exact for that occurrence's domain type, which
+       this static, problem-wide flag cannot tell apart from a scope that
+       merely truncated one -- so no scope may certify exhaustion while it
+       is set.  A [refute$unknown] that reached a value position vetoes it
+       for a sharper reason ([unknown_value], Refute_ModelFinder_Kodkod.sml):
+       there the unsound problem is no weaker than the sound one, so the two
+       go UNSAT together and exhaustion would answer NoCounterexample to a
+       proposition and its negation alike. *)
+    fun total_scope_search () =
+      !fully_exhausted andalso
+      not (!(#choice_guard_inserted context)) andalso
+      not (List.exists (#unknown_value o metadata) (!generated_problems))
+        andalso
+      not (List.exists Type.is_vartype all_types) andalso
+      List.exists (fn scope =>
+        scope_checked scope andalso
+        List.all (MFS.is_exact_type (#data_types scope) sound_finitizes)
+          all_types) (!generated_scopes)
+
+    fun stats donno =
+      [("msec", Refute_Util.elapsed_msec started),
+       ("card", #card instance),
+       ("scopes", !scopes_emitted),
+       ("scopes_skipped", !skipped),
+       ("scopes_checked", scopes_checked ()),
+       ("problems", length (!generated_problems)),
+       ("batches", !batch_count),
+       ("kodkod_calls", !kodkod_calls),
+       ("donno", donno),
+       ("met_potential", !met_potential)]
+
+    fun finalize donno outcome =
+      let val final_stats = stats donno
+      in
+        case outcome of
+            Refute_Core.Counterexample cexs =>
+              Refute_Core.Counterexample (map
+                (replace_stats final_stats) cexs)
+          | other => other
+      end
+
+    fun accounting_reason action =
+      action ^ " after checking " ^ Int.toString (scopes_checked ()) ^
+      " of " ^ Int.toString (!scopes_emitted) ^ " emitted scopes"
+
+    fun frontier_reason () =
+      case rev (!generated_scopes) of
+          [] => []
+        | (scope : MFS.scope) :: _ =>
+            ["searched up to size: " ^
+             String.concatWith ", "
+               (map Refute_Core.format_scope_assignment
+                 (#card_assigns scope))]
+
+    fun skipped_reason () =
+      if !skipped = 0 then []
+      else
+        [Int.toString (!skipped) ^
+         " invalid or duplicate scope candidates skipped"]
+
+    fun finish state =
+      let
+        val (_, max_potential, max_genuine, donno) = state
+        val cexs = rev (!counterexamples)
+        val has_genuine = List.exists
+          (certainty_is_genuine o #certainty) cexs
+        val outcome =
+          (* An inconclusive later scope cannot retract a model already
+             certified by HOL.  Potential results retain upstream's
+             inconclusive-result precedence while the genuine budget is open. *)
+          if donno > 0 andalso max_genuine > 0 andalso not has_genuine then
+            Refute_Core.Unknown
+              (accounting_reason "model search was inconclusive" ::
+               !error_reasons)
+          (* Whacking replaces a term by [refute$unknown], which the
+             translation treats exactly like an unrepresentable value: at
+             positive polarity it becomes False and at negative polarity
+             True, and the liberal sibling of each problem flips that
+             choice.  An UNSAT weakened formula therefore still says
+             something about the original one, so this guard is
+             conservative rather than necessary; it is kept only for the
+             explicitly requested [whack] optimization, never for the
+             faithful ersatz substitutions that are on by default.  A model
+             that was found still carries the weakening in its own reasons,
+             and a HOL-certified one is independent of how the search
+             reached it, so neither may be retracted here. *)
+          else if !(#whack_weakening context) andalso null cexs then
+            Refute_Core.Unknown
+              (accounting_reason
+                 "formula was semantically weakened by whack" ::
+               !error_reasons)
+          (* An untouched budget means the search delivered nothing, except
+             when a sound problem yielded a model too weak to spend a
+             genuine slot.  Such a model is still a result and must be
+             reported rather than read as an exhausted search. *)
+          else if null cexs andalso max_genuine = original_max_genuine andalso
+                  max_potential = original_max_potential then
+            if not (!fully_exhausted) then
+              Refute_Core.Unknown
+                [accounting_reason "adaptive scope search not exhausted"]
+            else if not adaptive andalso !skipped > 0 then
+              Refute_Core.Unknown
+                [accounting_reason scope_limit_hint]
+            else if !discarded_sound_model then
+              Refute_Core.Unknown
+                (accounting_reason
+                   "every model found was discarded" :: !error_reasons)
+            else if total_scope_search () then
+              Refute_Core.NoCounterexample
+            else
+              Refute_Core.Unknown
+                (accounting_reason
+                   "no counterexample within the tested scopes" ::
+                 frontier_reason ())
+          else if null cexs then
+            Refute_Core.Unknown
+              (accounting_reason "no usable model was reconstructed" ::
+               !error_reasons)
+          else
+            Refute_Core.Counterexample cexs
+      in
+        finalize donno outcome
+      end
+
+    val initial =
+      (false, original_max_potential, original_max_genuine, 0)
+    fun remaining (_, max_potential, max_genuine, _) =
+      (Int.max (0, max_potential), Int.max (0, max_genuine))
+  in
+    let val final_state = run_batches initial
+    in
+      (finish final_state, remaining final_state)
+    end
+    handle Timeout.TIMEOUT _ =>
+      let
+        val cexs = rev (!counterexamples)
+        val outcome =
+          if not (null cexs) then Refute_Core.Counterexample cexs
+          else
+            Refute_Core.Unknown
+              (accounting_reason "kodkod timed out" ::
+               frontier_reason () @ skipped_reason ())
+      in
+        (finalize (!last_donno) outcome, remaining (!latest_state))
+      end
+  end
+  handle RESTART_AFTER_HARVEST =>
+    run_instance deadline started config incremental solver
+      (initial_max_potential, initial_max_genuine) instance
+
+fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
+  let
+    val mf = #mf config
+    val certification_reachable =
+      #falsify mf andalso
+      List.exists Refute_Core.instance_is_executable instances
+    (* MFM.genuine_means_genuine also demands the two user-axiom conjuncts,
+       and both are functions of the theory ancestry alone, so the ceiling
+       can test them here rather than overestimating past them.  An
+       overestimate only costs an early stop, but here it costs every one:
+       a ceiling of Genuine that the fallback path can never reach leaves
+       Refute_Core.decisive permanently false. *)
+    val nondefs = MFH.all_nondefs_of ()
+    val (poly_nondefs, mono_nondefs) =
+      List.partition MFH.is_poly_term nondefs
+    val genuine_fallback_reachable =
+      none_true (#wf mf) andalso none_true (#finitize mf) andalso
+      #total_consts mf <> SOME true andalso
+      (#user_axioms mf = SOME true orelse null mono_nondefs) andalso
+      null poly_nondefs
+  in
+    if certification_reachable orelse genuine_fallback_reachable then
+      Refute_Core.Genuine
+    else
+      Refute_Core.QuasiGenuine
+        ["model-finder configuration precludes Genuine results"]
+  end
+
+fun run_body config instances =
+  let
+    val search_context = Refute_Core.search_context_for config
+    val started = #started search_context
+    val deadline = #deadline search_context
+    val ordered = Listsort.sort (fn (left, right) =>
+      Int.compare (#card left, #card right)) instances
+    val mf = #mf config
+    val initial_max_potential =
+      if #genuine_only config then 0
+      else Int.max (0, #max_potential mf)
+    val initial_max_genuine = Int.max (0, #max_genuine mf)
+    val incremental =
+      Int.max (initial_max_potential, initial_max_genuine) >= 2
+    val solver = actual_solver incremental mf
+    val typedef_reason = #1 (harvest_guard
+      (List.concat (map (fn (instance : Refute_Core.instance) =>
+        #original instance :: #evals instance) ordered)))
+
+    fun search [] cexs reasons all_none _ =
+          if not (null cexs) then Refute_Core.Counterexample cexs
+          else if all_none then Refute_Core.NoCounterexample
+          else Refute_Core.Unknown
+            (if null reasons then ["model search was inconclusive"]
+             else reasons)
+      | search (instance :: rest) cexs reasons all_none budget =
+          if Time.now () >= deadline then
+            if null cexs then Refute_Core.Unknown ["kodkod timed out"]
+            else Refute_Core.Counterexample cexs
+          else
+            let
+              val (result, next_budget) =
+                run_instance deadline started config incremental solver
+                  budget instance
+                handle Util.NOT_SUPPORTED reason =>
+                  (Refute_Core.Unknown [reason], budget)
+              val (max_potential, max_genuine) = next_budget
+            in
+              case result of
+                  Refute_Core.Counterexample more =>
+                    let val combined = cexs @ more
+                    in
+                      if (max_genuine <= 0 andalso max_potential <= 0) orelse
+                         #abort_potential config then
+                        Refute_Core.Counterexample combined
+                      else
+                        search rest combined reasons false next_budget
+                    end
+                | Refute_Core.NoCounterexample =>
+                    search rest cexs reasons all_none next_budget
+                | Refute_Core.Model _ =>
+                    raise Fail "internal model result before classification"
+                | Refute_Core.NoModel =>
+                    raise Fail "internal no-model result before classification"
+                | Refute_Core.Unknown more =>
+                    search rest cexs (reasons @ more) false next_budget
+            end
+  in
+    case typedef_reason of
+        SOME reason => Refute_Core.Unknown [reason]
+      | NONE => search ordered [] [] (not (null ordered))
+          (initial_max_potential, initial_max_genuine)
+  end
+
+fun run config instances =
+  let
+    val result =
+      Refute_Core.with_search_context config (run_body config) instances
+  in
+    if #falsify (#mf config) then result
+    else
+      case result of
+          Refute_Core.Counterexample models => Refute_Core.Model models
+        | Refute_Core.NoCounterexample => Refute_Core.NoModel
+        | other => other
+  end
+
+val kodkod_backend : Refute_Core.backend =
+  {name = "kodkod", weight = 50,
+   configured = Refute_Forl.is_configured,
+   requires = Refute_Core.AnyGoal,
+   input = Refute_Core.PolyOriginal,
+   certainty_ceiling = kodkod_certainty_ceiling,
+   run = run}
+
+fun register_backends () =
+  Refute_Core.register_backend kodkod_backend
+
+val _ = register_backends ()
+
+end
