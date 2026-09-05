@@ -795,7 +795,12 @@ fun lastIndexOf c s = let
 in
 
 val _ = LSPExtension.fixupTheoremLink := (fn {uri, text, start, stop} => let
-  val id = String.substring (text, start, stop - start)
+  val written = String.substring (text, start, stop - start)
+  (* A qualified reference -- `finite_mapTheory.FRANGE_DEF' -- spans the
+     whole dotted name, and the DB knows the theorem by its own name.
+     Without this the lookup fails and the jump lands in the generated
+     signature rather than in the script the theorem is proved in. *)
+  val id = String.extract (written, lastIndexOf #"." written + 1, NONE)
   val basename = String.extract (uri, lastIndexOf #"/" uri + 1, NONE)
   val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
   in

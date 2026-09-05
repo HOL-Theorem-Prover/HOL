@@ -5276,6 +5276,66 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_theorem_jumps_to_the_script_it_is_proved_in():
+    """Goto-definition on a theorem should reach the script it is
+    proved in, not the generated signature that re-exports it -- the DB
+    records the script path and line for most theorems, and
+    `fixupTheoremLink` redirects there.
+
+    It was handed the whole of a *qualified* reference,
+    `arithmeticTheory.ADD_COMM`, so `DB.lookup` found nothing under
+    that name and the jump fell back to `arithmeticTheory.sig`.  The
+    unqualified form worked, which is what hid it.
+
+    And every target outside the file was a bare path where a URI was
+    called for; only same-file jumps carried a scheme."""
+    d = tempfile.mkdtemp(prefix="lsp_jumpq_")
+    try:
+        src = ("Theory jumpq\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem qualified:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  metis_tac[arithmeticTheory.ADD_COMM]\n"
+               "QED\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/jumpqScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            # on ADD_COMM, past the `arithmeticTheory.` qualifier
+            line = 6
+            col = len("  metis_tac[arithmeticTheory.") + 2
+            c.send({"jsonrpc": "2.0", "id": 771,
+                    "method": "textDocument/definition",
+                    "params": {"textDocument": {"uri": uri},
+                               "position": {"line": line, "character": col}}})
+
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == 771: return m
+                return None
+
+            reply = c.wait_until(got, 20)
+            assert_true(reply is not None, "definition reply arrived")
+            res = reply.get("result")
+            assert_true(res, f"a definition was found ({reply!r})")
+            target = res[0]["targetUri"]
+            assert_true(target.startswith("file://"),
+                        f"the target is a URI ({target!r})")
+            assert_true(target.endswith("arithmeticScript.sml"),
+                        f"and it is the script, not the signature "
+                        f"({target!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_a_reused_tail_answers_as_a_full_compile_would():
     """An edit confined to a tactic lets the compile stop after that
     declaration and keep what the last pass recorded about the rest of
@@ -6513,6 +6573,8 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("a_theorem_jumps_to_the_script_it_is_proved_in",
+     test_a_theorem_jumps_to_the_script_it_is_proved_in),
     ("a_reused_tail_answers_as_a_full_compile_would",
      test_a_reused_tail_answers_as_a_full_compile_would),
     ("an_edit_confined_to_a_tactic_is_recognised",

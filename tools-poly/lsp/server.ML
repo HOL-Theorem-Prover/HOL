@@ -836,6 +836,13 @@ fun uriToPath uri =
   if String.isPrefix "file://" uri
   then SOME (String.extract (uri, 7, NONE)) else NONE
 
+(* The other direction, for a location that came out of HOL rather than
+   off the wire: `PDeclaredAt` and the DB both name a file by its path,
+   and a client handed one of those as a `targetUri` has been handed
+   something that is not a URI. *)
+fun pathToUri path =
+  if String.isPrefix "file://" path then path else "file://" ^ path
+
 (* `hol.ML` at boot preloads project_dirs / external_includes from
    cwd's `holproject.toml`; this handler catches files whose
    Holmakefile chain isn't reached that way -- HOL4 dev under a
@@ -2679,7 +2686,8 @@ fun start {diag, dbg, warnings} = let
   fun gotoDefinition uri v target = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
-      in {origin = origin, uri = SOME file, range = range, selRange = range} end
+      in {origin = origin, uri = SOME (pathToUri file),
+          range = range, selRange = range} end
     val ({plugins, builtTrees, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, fromFileLine = fromFileLine}
