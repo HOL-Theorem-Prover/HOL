@@ -472,12 +472,56 @@ fun witnessThm bnf ty =
       EXISTS (mk_exists (x, subst [w |-> x] (concl th)), w) th
     end
 
-fun initialAlgebra bnf =
+(* ----------------------------------------------------------------------
+    A type standing for the one the bound is stated at.
+
+    `minsetBound` states its bound at a type that writes the functor out
+    over the ordinals, so that type is as big as the declaration has
+    constructors -- and the initial algebra is built in a function space
+    over it, which is bigger again by the same factor.  Every law the
+    construction proves then carries those types at every leaf, and the
+    matching and instantiation that handle them walk the types out.
+
+    So a type is defined to stand for the carrier, the bound is carried
+    onto it, and everything below is about the small type.  It is only
+    the ambient the algebra is built in: nothing the declaration leaves
+    behind is about it, and `bnfDatatypeLib` deletes it once the type it
+    was for exists.
+   ---------------------------------------------------------------------- *)
+
+fun standInFor nm carrier bound =
+    let
+      (* the carrier is a set, so the empty one witnesses the type *)
+      val (dom, _) = dom_rng carrier
+      val w = mk_abs (mk_var ("z", dom), boolSyntax.F)
+      val pred = mk_abs (mk_var ("y", carrier), boolSyntax.T)
+      val holds = EQ_MP (SYM (BETA_CONV (mk_comb (pred, w)))) TRUTH
+      val x = mk_var ("x", carrier)
+      val ex = EXISTS (mk_exists (x, mk_comb (pred, x)), w) holds
+      val bij =
+          REWRITE_RULE []
+            (CONV_RULE (DEPTH_CONV BETA_CONV)
+               (define_new_type_bijections
+                  {name = Theory.temp_binding (nm ^ "_bij"),
+                   ABS = nm ^ "_ABS", REP = nm ^ "_REP",
+                   tyax = new_type_definition (nm, ex)}))
+      val newty = type_of (#1 (dest_forall (concl (CONJUNCT1 bij))))
+      val across = MATCH_MP cardleq_ACROSS_BIJ bij
+      val (sv, body) = dest_forall (concl bound)
+      val minset = rand (rator body)
+    in
+      {carrier = newty,
+       thm = GEN sv (MP (SPEC minset across) (SPEC sv bound))}
+    end
+
+fun initialAlgebra {tyname} bnf =
     let (* the type variable initiality is stated at, so that INST_TYPE
            gives it at any carrier.  The functor's own argument will do:
            it is not free in anything the construction has built yet. *)
         val target = recTy bnf
-        val {carrier, thm = bound} = minsetBound bnf target
+        val big = minsetBound bnf target
+        val {carrier, thm = bound} =
+            standInFor (tyname ^ "_carrier") (#carrier big) (#thm big)
         (* the product's index type, and the product's carrier *)
         val idxty = pairSyntax.mk_prod (carrier --> bool,
                                         functorAt bnf carrier --> carrier)
@@ -561,7 +605,7 @@ type fixpoint = {newty : hol_type, cons : term, cons_def : thm,
                  recursion : thm, prim_recursion : thm, set_induction : thm}
 
 fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
-    let val ia = initialAlgebra bnf
+    let val ia = initialAlgebra {tyname = tyname} bnf
         val prodty = #prodty ia
         val itype = newtypeTools.rich_new_type
                       {tyname = tyname, exthm = #inhabited ia,

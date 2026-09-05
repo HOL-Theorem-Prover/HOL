@@ -1014,6 +1014,25 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
+    A bound stated at one type is a bound at any type in bijection with
+    it.
+
+    The construction states its bound at the type the minimal sets live
+    in, and that type writes the functor out over the ordinals -- so
+    every leaf of every law about it carries a type hundreds of times
+    its own size.  This is what lets the bound be carried onto a type
+    defined to stand for it, which the laws are then about instead.
+   ---------------------------------------------------------------------- *)
+
+Theorem cardleq_ACROSS_BIJ:
+  (∀a. (abs:'x -> 'y) (rep a) = a) ∧ (∀r. rep (abs r) = r) ⇒
+  ∀s. s ≼ univ(:'x) ⇒ s ≼ univ(:'y)
+Proof
+  strip_tac >> rw[cardleq_def] >> qexists ‘abs o f’ >>
+  gs[INJ_DEF] >> metis_tac[]
+QED
+
+(* ----------------------------------------------------------------------
     Initiality: the homomorphism out of the initial algebra into any
     other algebra exists and, once pinned down off the carrier, is
     unique.

@@ -113,7 +113,11 @@ sig
     isALG : thm
   }
 
-  val initialAlgebra : bnfLib.derived_bnfn -> initial_algebra
+  (* The carrier the bound is stated at writes the functor out over the
+     ordinals; a type is defined to stand for it, named after the type
+     being declared, and the caller deletes it once that type exists. *)
+  val initialAlgebra : {tyname : string} -> bnfLib.derived_bnfn ->
+                       initial_algebra
 
   (* ----------------------------------------------------------------------
       The datatype itself.  Defines a type in bijection with the initial

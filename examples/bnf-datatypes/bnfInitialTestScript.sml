@@ -20,7 +20,11 @@ fun fbnf ty = deriveBNFn (bnfBase.fullDB()) [alpha] ty
 fun check nm ty =
     let val _ = tprint ("initial algebra for " ^ type_to_string ty)
         val bnf = fbnf ty
-        val ia = initialAlgebra bnf
+        (* the construction defines a type to stand for the carrier, and
+           names it after the type being declared *)
+        fun ok c = if Char.isAlphaNum c then str c else "_"
+        val ia = initialAlgebra
+                   {tyname = "iatest_" ^ String.translate ok nm} bnf
         val bij = #bij ia ()
         val ths = [bij, #init ia, #inhabited ia, #induction ia]
         fun ground th = null (free_vars (concl th)) andalso null (hyp th)
@@ -45,7 +49,7 @@ val _ = check "nested" “:one + 'b1 # ('a option)”
 val _ = let val _ = tprint "no base case is rejected"
             val bnf = fbnf “:'b1 # ('b2 -> 'a)”
         in
-          (ignore (initialAlgebra bnf); die "accepted")
+          (ignore (initialAlgebra {tyname = "nobase"} bnf); die "accepted")
           handle HOL_ERR _ => OK()
         end
 
