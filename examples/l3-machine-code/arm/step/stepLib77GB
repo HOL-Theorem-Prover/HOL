@@ -1,0 +1,20 @@
+
+---------------------------------------------------------------------
+     HOL4 [Trindemossen 2 (stdknl, built Mon Aug 31 22:00:02 2026)]
+
+     For introductory HOL help, type: help "hol";
+     To exit type <Control>-D
+---------------------------------------------------------------------
+** Load path (see loadPath variable) now contains 73 entries
+** after consulting Holmakefiles and any holproject.toml
+
+[In non-standard heap: /repo/.claude/worktrees/bnf-datatypes/examples/l3-machine-code/arm/step/arm-heap]
+> val num = “:[0;36mnum[0m”: hol_type
+val it = (): unit
+val it = (): unit
+val it = (): unit
+val it = (): unit
+<<HOL message: inventing new type variable names: 'a>>
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+<<HOL message: inventing new type variable names: 'a>>
+<<HOL message: inventing new type variable names: 'a, 'b>>

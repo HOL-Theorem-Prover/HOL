@@ -1,0 +1,19 @@
+after mp+rw: 9 goals
+  1: substP (compileVal (var n) ⧺ c') k (compileVal t) =
+compileVal (substVal (var n) k t) �
+  2: substP (compileVal (thunk s) ⧺ c') k (compileVal t) =
+compileVal (substVal (thunk s) k t
+  3: substP (compileComp (force s) ⧺ c') k (compileVal t) =
+compileComp (substComp (force s) 
+  4: substP (compileComp (lam s) ⧺ c') k (compileVal t) =
+compileComp (substComp (lam s) k t)
+  5: substP (compileComp (app s s') ⧺ c') k (compileVal t) =
+compileComp (substComp (app s s'
+  6: substP (compileComp (ret s) ⧺ c') k (compileVal t) =
+compileComp (substComp (ret s) k t)
+  7: substP (compileComp (seq s s') ⧺ c') k (compileVal t) =
+compileComp (substComp (seq s s'
+  8: substP (compileComp (letin s s') ⧺ c') k (compileVal t) =
+compileComp (substComp (letin 
+  9: substP (compileComp (pseq s s' s'') ⧺ c') k (compileVal t) =
+compileComp (substComp (pse

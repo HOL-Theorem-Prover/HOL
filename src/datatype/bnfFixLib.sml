@@ -962,7 +962,47 @@ val setRWs = pointFreeRWs @
              [combinTheory.S_DEF, combinTheory.o_DEF,
               combinTheory.K_DEF, pairTheory.setFST_thm,
               pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
-              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
+              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY,
+              (* the pair's applied set laws have a sum counterpart.
+                 Whichever way a shape's argument is injected, the
+                 summands it is not in contribute nothing, and saying so
+                 discards them before anything walks over them *)
+              sumTheory.setL_def, sumTheory.setR_def,
+              (* and what a discarded summand leaves behind: nothing
+                 collected over nothing, however deep what is being
+                 collected *)
+              pred_setTheory.UNION_EMPTY, pred_setTheory.IMAGE_EMPTY,
+              pred_setTheory.BIGUNION_EMPTY]
+
+(* ----------------------------------------------------------------------
+    Rules enough to discard a shape's dead summands.
+
+    Every clause of the set induction principle carries the shape's
+    whole set term, which grows with the constructors however few of
+    them the one constructor the clause is about reaches.  The clause's
+    injection says which summand survives and the sum's set laws
+    discard the rest, but the descent gets past an injection only with
+    the unit law, which setRWs leaves to the simpset it is handed to.
+    Adding it here reduces a clause to what its own constructor holds
+    before anything general walks over it.
+   ---------------------------------------------------------------------- *)
+
+val pruneRWs = setRWs @ [pred_setTheory.IMAGE_INSERT,
+                         pred_setTheory.BIGUNION_INSERT]
+
+(* the traversal has to be the outside-in one: a simpset would reduce a
+   dead summand in full before finding out that it is dead *)
+fun outsideIn rws tm =
+    TOP_DEPTH_CONV
+      (BETA_CONV ORELSEC
+       Rewrite.GEN_REWRITE_CONV I Rewrite.empty_rewrites rws) tm
+
+val pruneConv = outsideIn pruneRWs
+
+(* what takes an injection apart, for the same reason *)
+val caseRWs = [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
+               sumTheory.OUTL, sumTheory.OUTR, pairTheory.PAIR_MAP,
+               pairTheory.FST, pairTheory.SND, combinTheory.I_THM]
 
 (* ----------------------------------------------------------------------
     One simpset for reducing a set term.
@@ -1129,12 +1169,8 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
               (RAND_CONV (QCONV (REWRITE_CONV (map (GSYM o #def) cs))))
               (QCONV
                  (expandCons (map (length o #args) cs) THENC
-                  QCONV (simpLib.SIMP_CONV boolSimps.bool_ss
-                           [sumTheory.SUM_MAP_def,
-                            sumTheory.sum_case_def, sumTheory.OUTL,
-                            sumTheory.OUTR, pairTheory.PAIR_MAP,
-                            pairTheory.FST, pairTheory.SND,
-                            combinTheory.I_THM]))
+                  QCONV (outsideIn caseRWs) THENC
+                  QCONV (simpLib.SIMP_CONV boolSimps.bool_ss caseRWs))
                  body)
         (* expanding the quantifier names the constructors' arguments
            after the product projections it went through; rename them to
@@ -1209,22 +1245,37 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
         (* the set-based induction, split along the constructors: the
            hypothesis becomes "for every sub-term in the set", which is
            the form a nested recursion keeps *)
+        (* the statement gets a conjunct per constructor, and only a
+           constructor's own definition folds back into its own clause.
+           Simplifying the whole conjunction and then rewriting it with
+           every definition pays for the constructors twice over, before
+           the size of what is rewritten is counted; walking the
+           conjunction hands each clause just its own *)
+        fun perClause cnv =
+            let fun go [] = ALL_CONV
+                  | go [c] = cnv c
+                  | go (c :: rest) =
+                      LAND_CONV (cnv c) THENC RAND_CONV (go rest)
+            in go cs
+            end
         val set_induction =
-            REWRITE_RULE (map (GSYM o #def) cs)
-              (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
-                 (QCONV (PURE_REWRITE_CONV setRWs) THENC
-                  (* one binder per constructor argument here too: an
-                     argument that is itself a sum would otherwise be
-                     split, and the clause would be about `P (V (INL x))`
-                     rather than about `P (V a)` *)
-                  expandCons (map (length o #args) cs) THENC
-                  (* the set simpset says nothing about one, which is
-                     what is wanted: a constructor with an argument of
-                     type one has that argument, and a clause about
-                     `P (C ())` is not the shape a datatype's induction
-                     principle is read in *)
-                  QCONV (simpLib.SIMP_CONV (set_ss()) setRWs))))
-                 (#set_induction fix))
+            CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
+               (QCONV (PURE_REWRITE_CONV setRWs) THENC
+                (* one binder per constructor argument here too: an
+                   argument that is itself a sum would otherwise be
+                   split, and the clause would be about `P (V (INL x))`
+                   rather than about `P (V a)` *)
+                expandCons (map (length o #args) cs) THENC
+                (* the set simpset says nothing about one, which is
+                   what is wanted: a constructor with an argument of
+                   type one has that argument, and a clause about
+                   `P (C ())` is not the shape a datatype's induction
+                   principle is read in *)
+                perClause (fn c =>
+                  QCONV pruneConv THENC
+                  QCONV (simpLib.SIMP_CONV (set_ss()) setRWs) THENC
+                  QCONV (PURE_REWRITE_CONV [GSYM (#def c)])))))
+               (#set_induction fix)
         (* whether this is a nested recursion is known structurally: a
            nested factor's mapped type is not the answer type.  Deciding
            it by catching an exception out of Prim_rec would swallow
