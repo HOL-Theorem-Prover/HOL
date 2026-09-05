@@ -137,6 +137,58 @@ val _ = print "vt100 terminal\n";
 val _ = print "==============\n\n";
 val _ = test_terminal false (PPBackEnd.vt100_terminal);
 
+(* `lsp_terminal` says in data what the others say in colour, for a
+   consumer that wants to act on it rather than look at it.  Two things
+   have to hold: the annotations come back intact, and the text does
+   too -- the markers carrying them are added at zero width, so the
+   layout must be the one `raw_terminal` would have produced. *)
+local
+  (* the printing functions belong to the backend, so the value has to
+     be built with the one it is going to be rendered by *)
+  fun build (terminal : t) = let
+    val {add_string, add_xstring, ublock, ...} = terminal
+    fun ann (s, a) = add_xstring {s = s, ann = SOME a, sz = NONE}
+  in
+    ublock PP.INCONSISTENT 0 (
+      add_string "a " >>
+      ann ("x", FV (Type.bool, fn () => "x :bool")) >>
+      add_string " " >>
+      ann ("/\\", Const {Name = "/\\", Thy = "bool",
+                         Ty = (Type.bool, fn () => "bool -> bool")}) >>
+      add_string " b")
+  end
+  fun render t = Lib.with_flag (Parse.current_backend, t)
+                   (HOLPP.pp_to_string 70 (fn () => Parse.mlower (build t))) ()
+in
+val _ = tprint "lsp_terminal segments carry the annotations"
+val _ =
+    let
+      val segs = PPBackEnd.lsp_segments (render PPBackEnd.lsp_terminal)
+      fun find k = List.find (fn {kind, ...} => kind = k) segs
+    in
+      case (find "fv", find "const") of
+          (SOME fv, SOME co) =>
+            if #text fv = "x" andalso #ty fv = "x :bool" andalso
+               #text co = "/\\" andalso #name co = "bool$/\\" andalso
+               #ty co = "bool -> bool"
+            then OK()
+            else die ("got " ^ #ty fv ^ " / " ^ #name co ^ " : " ^ #ty co)
+        | _ => die "no annotated segments"
+    end
+
+val _ = tprint "lsp_terminal leaves the text alone"
+val _ =
+    let
+      val segs = PPBackEnd.lsp_segments (render PPBackEnd.lsp_terminal)
+      val rejoined = String.concat (List.map #text segs)
+      val plain = render PPBackEnd.raw_terminal
+    in
+      if rejoined = plain then OK()
+      else die ("rejoined " ^ String.toString rejoined ^
+                " but raw gives " ^ String.toString plain)
+    end
+end
+
 
 
 (* ----------------------------------------------------------------------
