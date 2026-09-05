@@ -119,26 +119,36 @@ fun setPluginData (map, (name, inj, _), SOME v) =
   | setPluginData (map, (name, _, _), NONE) =
     #1 (Binarymap.remove (map, name)) handle NotFound => map
 
+type reuse = {fromByte: int, bytes: int, lines: int}
+
 type 'a plugin = {
   name: string,
   init: 'a tag -> unit,
   beforeCompile: unit -> unit,
-  afterCompile: range * 'a option -> 'a option }
+  afterCompile: range * 'a option -> 'a option,
+  reuseFrom: reuse -> 'a option -> 'a option -> 'a option }
 
 type uplugin = {
   name: string,
   init: unit -> unit,
   beforeCompile: unit -> unit,
-  afterCompile: range * plugin_data -> plugin_data }
+  afterCompile: range * plugin_data -> plugin_data,
+  reuseFrom: reuse -> plugin_data -> plugin_data -> plugin_data }
 
 val plugins = ref []
 
-fun inject (proj, inj) {name, init, beforeCompile, afterCompile} = {
-  name = name, init = fn () => init (name, proj, inj),
-  beforeCompile = beforeCompile,
-  afterCompile = fn (r, map) =>
-    setPluginData (map, (name, proj, inj),
-      afterCompile (r, getPluginData (map, (name, proj, inj)))) }
+fun inject (proj, inj)
+           {name, init, beforeCompile, afterCompile, reuseFrom} = let
+  val tag = (name, proj, inj)
+  in {
+    name = name, init = fn () => init tag,
+    beforeCompile = beforeCompile,
+    afterCompile = fn (r, map) =>
+      setPluginData (map, tag, afterCompile (r, getPluginData (map, tag))),
+    reuseFrom = fn r => fn old => fn new =>
+      setPluginData (new, tag,
+        reuseFrom r (getPluginData (old, tag)) (getPluginData (new, tag))) }
+  end
 
 exception DuplicatePlugin
 fun registerPlugin quiet (p as {name, init, ...}) = let
@@ -159,13 +169,18 @@ fun registerInit quiet name init = let
     if quiet then List.filter (fn p' => #name p' <> name) ps
     else raise DuplicatePlugin
   else ps
-  val p = {name = name, init = init, beforeCompile = fn () => (), afterCompile = #2}
+  val p = {name = name, init = init, beforeCompile = fn () => (),
+           afterCompile = #2, reuseFrom = fn _ => fn _ => fn x => x}
   val _ = plugins := p :: ps
   in if serverRunning () then init () else () end
 
 fun markServerStarted () = (running := true; app (fn {init, ...} => init ()) (!plugins))
 
 fun getPlugins () = !plugins
+
+fun reusePluginData r old new =
+    List.foldl (fn ({reuseFrom, ...}: uplugin, m) => reuseFrom r old m)
+               new (!plugins)
 
 type location_link = {
   origin: rangeLC option,

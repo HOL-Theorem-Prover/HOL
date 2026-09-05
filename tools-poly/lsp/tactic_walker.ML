@@ -326,7 +326,13 @@ val cacheTag : cacheData LSPExtension.tag =
                 SOME r => r
               | NONE => ref (Binarymap.mkDict String.compare)
       val () = latestCacheRef := SOME r
-    in SOME r end
+    in SOME r end,
+    (* Nothing to carry forward: `notifyCompileStart` above already
+       drops every entry whose theorem starts at or after the edit, so
+       by the time a compile finishes there is nothing left below it to
+       reuse.  The cache is a speed-up over text the walker can always
+       re-derive, so losing the tail costs a re-walk, not an answer. *)
+    reuseFrom = fn _ => fn _ => fn x => x
   }
 
 val () = let val prev = !LSPExtension.notifyCompileStart in

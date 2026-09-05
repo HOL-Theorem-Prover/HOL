@@ -34,22 +34,42 @@ val emptyPluginData: plugin_data
 val getPluginData: plugin_data * 'a tag -> 'a option
 val setPluginData: plugin_data * 'a tag * 'a option -> plugin_data
 
+(* Carry a previous compile's records forward, for a compile that
+   re-ran only the declaration an edit was confined to.  Everything the
+   previous pass recorded at or after `fromByte` -- in that pass's
+   coordinates -- is still true of the file, but has moved `bytes`
+   bytes and `lines` lines down it.
+
+   An edit inside a `Proof ... QED` body cannot move anything below it
+   sideways, only down, which is why a line count is enough for
+   anything held as row/column. *)
+type reuse = {fromByte: int, bytes: int, lines: int}
+
 type 'a plugin = {
   name: string,
   init: 'a tag -> unit,
   beforeCompile: unit -> unit,
-  afterCompile: range * 'a option -> 'a option }
+  afterCompile: range * 'a option -> 'a option,
+  (* `reuseFrom r old new` adds the reusable part of `old` to `new`.
+     A plugin holding nothing positional can return `new`, but it must
+     say so: getting this wrong shows up as answers quietly off by an
+     edit's width, which is why it is a field rather than an optional
+     hook. *)
+  reuseFrom: reuse -> 'a option -> 'a option -> 'a option }
 
 type uplugin = {
   name: string,
   init: unit -> unit,
   beforeCompile: unit -> unit,
-  afterCompile: range * plugin_data -> plugin_data }
+  afterCompile: range * plugin_data -> plugin_data,
+  reuseFrom: reuse -> plugin_data -> plugin_data -> plugin_data }
 
 exception DuplicatePlugin
 val registerPlugin: bool -> 'a plugin -> 'a tag
 val getPlugins: unit -> uplugin list
 val registerInit: bool -> string -> (unit -> unit) -> unit
+(* Every registered plugin's `reuseFrom`, applied in turn. *)
+val reusePluginData: reuse -> plugin_data -> plugin_data -> plugin_data
 
 type location_link = {
   origin: rangeLC option,
