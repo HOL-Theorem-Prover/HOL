@@ -323,7 +323,10 @@ val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 /\
   exp_sizes_alt [] = 0 /\
   exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
- ALL_TAC
+ (WF_REL_TAC ‘measure $ λx. case x of
+                              INL e => c_exp_size e
+                            | INR es => list_size c_exp_size es’
+  \\ simp [])
 
 val pre =
   cv_auto_trans_pre_rec "" exp_size_alt_def

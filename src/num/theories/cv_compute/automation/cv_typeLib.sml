@@ -576,17 +576,22 @@ fun define_from_to_aux ignore_tyvars ty =
       List.concat (map size_thms_for from_tys) |> op_mk_set (fn t1 => fn t2 =>
           aconv (concl t1) (concl t2))
   val from_def_name = (from_names |> hd |> repeat rator |> dest_var |> fst)
-  fun make_from_def () =
-      Feedback.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
-      handle HOL_ERR _ => fallback_from_def ()
-           | Match => fallback_from_def ()
-  and fallback_from_def () =
-      #1 (Defn.tprove
-            (Hol_defn from_def_name [ANTIQUOTE tm],
-             WF_REL_TAC [ANTIQUOTE from_measure_tm]
-             \\ rpt strip_tac
-             \\ simp_tac (srw_ss()) from_size_thms))
-  val from_def = make_from_def ()
+  (* `Define` cannot be asked to try and then be caught: where it
+     cannot find a termination argument it leaves a goal in the proof
+     manager and, in a batch session, takes the process down with it.
+     So the definition is built first and asked whether it wants one. *)
+  val from_defn =
+      Feedback.trace ("Theory.allow_rebinds", 1)
+                     (Hol_defn from_def_name) [ANTIQUOTE tm]
+  val from_def =
+      if null (Defn.tcs_of from_defn) then
+        Feedback.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
+      else
+        #1 (Defn.tprove
+              (from_defn,
+               WF_REL_TAC [ANTIQUOTE from_measure_tm]
+               \\ rpt strip_tac
+               \\ simp_tac (srw_ss()) from_size_thms))
   (* define decoding from cv type, i.e. "to function" *)
   val to_names = names |>
     map (fn (fname,ty) =>
