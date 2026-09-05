@@ -797,6 +797,17 @@ fun lastIndexOf c s = let
     if c = String.sub (s, i') then i' else go i'
   in go (String.size s) end
 
+(* A file name with its extension removed, or the whole of it when
+   there is none.  `lastIndexOf` answers ~1 for absent, and
+   `String.extract (s, 0, SOME ~1)` raises `Subscript`: Poly names the
+   compile unit it is being fed "", so hovering an identifier declared
+   in a script that has not been built yet -- a new file, before its
+   first save -- asked for the stem of "" and killed the request. *)
+fun fileStem name =
+  case lastIndexOf #"." name of
+      ~1 => name
+    | i => String.extract (name, 0, SOME i)
+
 fun splitOn c s = let
   fun loop i j out =
     if i = 0 then String.substring (s, i, j - i) :: out
@@ -1023,7 +1034,11 @@ fun start {diag, dbg, warnings} = let
   fun spawnJob id params decode f = spawnJobCore id (fn () => let
     val result = f (JSONDecode.decode decode params) handle
       JSONErrors.JSONError _ => mkErr InvalidParams "json decode failed"
-    | e => mkErr InternalError (exnMessage e)
+    | e => mkErr InternalError (exnMessage e ^
+             (case PolyML.Exception.exceptionLocation e of
+                  NONE => " <no location>"
+                | SOME {file, startLine, ...} =>
+                  " at " ^ file ^ ":" ^ FixedInt.toString startLine))
     val _ = send (mkResponse id result)
     val _ = jobs (fn js => let
       fun go (_, []) = js
@@ -2512,8 +2527,9 @@ fun start {diag, dbg, warnings} = let
             fun validate str = let
               fun look [] = false
                 | look (HOL_IDE.PStructureAt file :: props) = let
-                  val basename = String.extract (file, lastIndexOf #"/" file + 1, NONE)
-                  val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
+                  val basename =
+                      String.extract (file, lastIndexOf #"/" file + 1, NONE)
+                  val stem = fileStem basename
                   in str = stem orelse look props end
                 | look (_ :: props) = look props
               in look props end
@@ -2630,11 +2646,20 @@ fun start {diag, dbg, warnings} = let
               @ [PrettyBreak(1, 2), PrettyString "="]),
              PrettyBreak(1, 0), value]))]
       in thyHov @ help @ out end
+    (* Bounded by the text as well as by the span: a built tree is a
+       record of the last compile, and the buffer has moved on.  A
+       declaration the user has not finished -- no `QED`, no closing
+       bracket -- expands to a node whose span runs past the end of
+       what is there, and walking to it read off the end of the string.
+       That killed the request with `Subscript`, and since the text
+       stays malformed while they are still typing it, it killed the
+       next one too: the file looked like it had hung. *)
     fun crossesNewline (s, e) = let
       val txt = #text text
-      fun loop i = i < e andalso
+      val stop = Int.min (e, size txt)
+      fun loop i = i < stop andalso
                    (String.sub (txt, i) = #"\n" orelse loop (i + 1))
-      in loop s end
+      in loop (Int.max (0, s)) end
     (* Suppress hover on any Built node whose span crosses a newline —
        these are enclosing expressions (e.g. a whole `Proof … QED`
        tactic body typing as `tactic`) whose SML type is uninformative.

@@ -5276,6 +5276,60 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_hover_on_a_half_typed_declaration_does_not_die():
+    """A built tree records the last compile; the buffer has moved on.
+    A declaration the user has not finished -- no `Proof`, no `QED`, a
+    bracket closed with the wrong one -- expands to a node whose span
+    runs past the end of what is actually there, and the check for
+    whether a node crosses a newline walked to that span, reading off
+    the end of the string.
+
+    The request died with `Subscript`, and because the text stays
+    malformed while they are still typing it, so did the next one, and
+    the one after: from the outside the file had hung.  Reported from
+    the field against a brand-new script, where nothing is built yet
+    and every hover takes this path."""
+    good = ("Theory trunc\n"
+            "Ancestors arithmetic\n"
+            "\n"
+            "Definition f_def:\n"
+            "  f n = n + 1\n"
+            "End\n")
+    tail = "Theorem g_thm[simp}]"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/truncScript.sml"
+        _did_open(c, uri, good, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compiled the good text first")
+        mark = c.total_msgs()
+        at = len(good.encode("utf-8"))
+        _did_change_incr(c, uri, good, at, at, tail, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                      since=mark) is not None,
+                    "recompiled with the half-typed declaration")
+        text = good + tail
+        line = len(text.split("\n")) - 1
+        char = len(text.split("\n")[-1]) - 1     # the final `]`
+        c.send({"jsonrpc": "2.0", "id": 881, "method": "textDocument/hover",
+                "params": {"textDocument": {"uri": uri},
+                           "position": {"line": line, "character": char}}})
+
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 881: return m
+            return None
+
+        reply = c.wait_until(got, 20)
+        assert_true(reply is not None, "hover replied at all")
+        assert_true("error" not in reply,
+                    f"and did not fail ({reply.get('error')!r})")
+    finally:
+        c.close()
+
+
 def test_a_theorem_jumps_to_the_script_it_is_proved_in():
     """Goto-definition on a theorem should reach the script it is
     proved in, not the generated signature that re-exports it -- the DB
@@ -6573,6 +6627,8 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("hover_on_a_half_typed_declaration_does_not_die",
+     test_hover_on_a_half_typed_declaration_does_not_die),
     ("a_theorem_jumps_to_the_script_it_is_proved_in",
      test_a_theorem_jumps_to_the_script_it_is_proved_in),
     ("a_reused_tail_answers_as_a_full_compile_would",

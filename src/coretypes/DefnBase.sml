@@ -802,7 +802,11 @@ val _ = LSPExtension.fixupTheoremLink := (fn {uri, text, start, stop} => let
      signature rather than in the script the theorem is proved in. *)
   val id = String.extract (written, lastIndexOf #"." written + 1, NONE)
   val basename = String.extract (uri, lastIndexOf #"/" uri + 1, NONE)
-  val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
+  (* no extension is possible -- Poly names the unit it is compiling ""
+     -- and `SOME ~1` would raise `Subscript` *)
+  val stem = case lastIndexOf #"." basename of
+                 ~1 => basename
+               | i => String.extract (basename, 0, SOME i)
   in
     if 6 <= size stem andalso
        String.extract (stem, size stem - 6, NONE) = "Theory"
