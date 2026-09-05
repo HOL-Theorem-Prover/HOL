@@ -5276,6 +5276,80 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_an_edit_confined_to_a_tactic_is_recognised():
+    """A compile runs from its resume point to the end of the file, so
+    editing a tactic near the top of a long one re-elaborates almost
+    all of it.  Nothing below a tactic can tell: a compile stands a
+    proof in as an oracle over its goal, so a theorem's value depends
+    on its statement alone.  Recognising that case is what will let the
+    compile stop after the edited declaration.
+
+    Bracketed against the text the last compile elaborated, from both
+    ends, so it holds however many `didChange`s delivered the edit --
+    `minEditOffset` alone cannot say, being only the first differing
+    byte."""
+    d = tempfile.mkdtemp(prefix="lsp_scope_")
+    try:
+        src = ("Theory scope\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem one:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n"
+               "\n"
+               "Theorem two:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/scopeScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def scope_after(mark):
+                for m in c.messages_since(mark)[0]:
+                    if m.get("method") == "$/compileScope":
+                        return m["params"]
+                return None
+
+            def edit(old, new, version):
+                mark = c.total_msgs()
+                at = len(src[:src.index(old)].encode("utf-8"))
+                _did_change_incr(c, uri, src, at,
+                                 at + len(old.encode("utf-8")), new, version)
+                assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                              since=mark) is not None,
+                            "recompiled")
+                return scope_after(mark)
+
+            # Inside the first proof's tactic.
+            sc = edit("  DECIDE_TAC\nQED\n\nTheorem two",
+                      "  DECIDE_TAC \nQED\n\nTheorem two", 2)
+            assert_true(sc is not None, "a scope was reported")
+            assert_eq(sc.get("tacticOnly"), True,
+                      f"a tactic edit is confined ({sc!r})")
+            assert_eq(sc.get("delta"), 1, f"and its delta is one byte ({sc!r})")
+            decStart = sc.get("decStart")
+            assert_eq(decStart, len(src[:src.index("Theorem one")]
+                                    .encode("utf-8")),
+                      "reported against the declaration it is inside")
+
+            # A statement is not a tactic: everything below it can tell.
+            sc = edit("  2 + 2 = 4", "  2 + 2 = 4 ", 3)
+            assert_eq(sc.get("tacticOnly"), False,
+                      f"a statement edit is not confined ({sc!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_the_proof_under_the_cursor_is_checked():
     """Asking for goal state used to hold that proof back from the pool
     -- the walker replays the same tactic, so a worker doing it too is
@@ -6337,6 +6411,8 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("an_edit_confined_to_a_tactic_is_recognised",
+     test_an_edit_confined_to_a_tactic_is_recognised),
     ("the_proof_under_the_cursor_is_checked",
      test_the_proof_under_the_cursor_is_checked),
     ("a_name_that_occurs_once_never_gets_an_ordinal",

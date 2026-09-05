@@ -1132,6 +1132,13 @@ fun start {diag, dbg, warnings} = let
        its entry rather than re-announcing it, so clearing here would
        lose a squiggle with nothing left to restore it. *)
     proofDiags: (string, report) Binarymap.dict ref,
+    (* The text the last compile elaborated, or "" before there has
+       been one.  Comparing it with the buffer says exactly which
+       bytes have changed since -- one region, however many
+       `didChange`s delivered it -- which is what decides whether the
+       change is confined to a single proof body.  `minEditOffset`
+       cannot answer that: it is only the first differing byte. *)
+    compiledText: string ref,
     (* Set when a compile was abandoned because the file's declared
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
@@ -1174,6 +1181,7 @@ fun start {diag, dbg, warnings} = let
         debounce = ref 0, minEditOffset = ref NONE,
         walkerDiags = ref (Binarymap.mkDict String.compare),
         proofDiags = ref (Binarymap.mkDict String.compare),
+        compiledText = ref "",
         depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
         nsGen = ref 0, nsNames = ref NONE} end
 
@@ -1203,6 +1211,16 @@ fun start {diag, dbg, warnings} = let
       case !minEditOffset of
         NONE => minEditOffset := SOME off
       | SOME m => if off < m then minEditOffset := SOME off else ()
+
+  (* Length of the longest common suffix of `a` and `b` that does not
+     reach back past `stop` in either.  With `commonPrefixLen` this
+     brackets the changed region from both ends. *)
+  fun commonSuffixLen (a, b, stop) = let
+    val (na, nb) = (size a, size b)
+    fun go i = if i >= na - stop orelse i >= nb - stop then i
+               else if String.sub (a, na - i - 1) = String.sub (b, nb - i - 1)
+               then go (i + 1) else i
+    in go 0 end
 
   fun commonPrefixLen (a, b) = let
     val n = Int.min (size a, size b)
@@ -1659,7 +1677,7 @@ fun start {diag, dbg, warnings} = let
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
                               walkerDiags, proofDiags, depsBlocked,
-                              nsLayer, nsGen, ...}:file_data) =
+                              compiledText, nsLayer, nsGen, ...}:file_data) =
     (* Every route to a compile comes through here -- didOpen,
        didChange's debounce, didSave, `$/hol/retryCompile', and the
        proof pool's retract -- so this is the one place the binding has
@@ -1805,6 +1823,51 @@ fun start {diag, dbg, warnings} = let
           val emptyDiags = DArray.new (0, Completed)
         in (fn () => !LSPExtension.restoreCompileSnap (#compileSnap snap),
             trees, endByte, emptyDiags) end
+    (* Is every byte that changed since the last compile inside one
+       declaration's `Proof ... QED` body?
+
+       If so, nothing below that declaration can tell: a compile
+       stands a proof in as an oracle over its goal, so a theorem's
+       value depends on its statement alone, and the statement has not
+       moved.  The tail's elaboration from the last pass is therefore
+       still good, and only its byte offsets have changed -- which is
+       what lets a compile stop after the edited declaration instead of
+       running to the end of the file.
+
+       Bracketed from both ends against the text the last compile
+       elaborated, so it does not matter how many `didChange`s
+       delivered the edit or what each one claimed to touch. *)
+    val tacticOnlyEdit = let
+      val prev = !compiledText
+      val cur = #text text
+      in
+        if prev = "" orelse prev = cur then NONE
+        else let
+          val pre = commonPrefixLen (prev, cur)
+          val suf = commonSuffixLen (prev, cur, pre)
+          val lastChanged = Int.max (pre, size cur - suf - 1)
+          in
+            case (proofBodyAt cur (SOME pre),
+                  proofBodyAt cur (SOME lastChanged)) of
+                (SOME a, SOME b) =>
+                  if a = b
+                  then SOME {decStart = a, delta = size cur - size prev}
+                  else NONE
+              | _ => NONE
+          end
+      end
+    val _ = if dbg then
+              send (mkNotif "$/compileScope" (fn print => (
+                print "{\"uri\":"; encString uri print;
+                print ",\"tacticOnly\":";
+                print (case tacticOnlyEdit of NONE => "false" | _ => "true");
+                (case tacticOnlyEdit of
+                     NONE => ()
+                   | SOME {decStart, delta} => (
+                       print ",\"decStart\":"; encInt decStart print;
+                       print ",\"delta\":"; encInt delta print));
+                print "}")))
+            else ()
     val _ = minEditOffset := NONE
     val _ = if dbg andalso resumeStart > 0 then
               send (mkNotif "$/compileResumedAt" (fn print => (
@@ -2194,6 +2257,7 @@ fun start {diag, dbg, warnings} = let
             print "{\"uri\":"; encString uri print; print "}")));
           lastTrees := {text = text,
                         parse = setParseDone (size (#text text)) (!trees)};
+          compiledText := #text text;
           (* A verdict that settled while this pass was finishing did
              not publish -- see `updateProofDiag' -- and `lastTrees' is
              only now current.  Catch up, so a lone proof's diagnostic
@@ -2217,6 +2281,7 @@ fun start {diag, dbg, warnings} = let
             print "{\"uri\":"; encString uri print; print "}")));
           lastTrees := {text = text,
                         parse = setParseDone (size (#text text)) (!trees)};
+          compiledText := #text text;
           (* Elaboration never got past the header: an ancestor that
              loads but whose `open' fails is the case holdep cannot
              see, so treat it exactly like a load failure and stop
