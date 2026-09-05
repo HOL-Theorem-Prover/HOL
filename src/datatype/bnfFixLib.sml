@@ -453,7 +453,10 @@ fun minsetBound bnf ty =
 type initial_algebra = {
   carrier : hol_type, prodty : hol_type, target : hol_type,
   alg : term, cons : term,
-  bij : thm, init : thm, inhabited : thm, induction : thm,
+  (* asked for, not made: nothing downstream reads it, and matching it
+     out of LAMBEK costs more than everything else the declaration
+     does *)
+  bij : unit -> thm, init : thm, inhabited : thm, induction : thm,
   isALG : thm
 }
 
@@ -509,7 +512,8 @@ fun initialAlgebra bnf =
             PART_MATCH I IALG_ALG
               (list_mk_icomb (ALG_tm, [st prodty,
                                        pairSyntax.mk_pair (alg,cons)]))
-        val lambek =
+        (* asked for, not made: see the signature *)
+        fun lambek () =
             MATCH_MP LAMBEK
               (LIST_CONJ [MapCongThm bnf (prodty,prodty),
                           MapIdThm bnf prodty,

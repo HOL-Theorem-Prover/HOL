@@ -21,9 +21,10 @@ fun check nm ty =
     let val _ = tprint ("initial algebra for " ^ type_to_string ty)
         val bnf = fbnf ty
         val ia = initialAlgebra bnf
-        val ths = [#bij ia, #init ia, #inhabited ia, #induction ia]
+        val bij = #bij ia ()
+        val ths = [bij, #init ia, #inhabited ia, #induction ia]
         fun ground th = null (free_vars (concl th)) andalso null (hyp th)
-        val bijc = concl (#bij ia)
+        val bijc = concl bij
     in
       if not (List.all ground ths) then die "not ground"
       else if not (same_const (rator (rator (rator bijc)))
