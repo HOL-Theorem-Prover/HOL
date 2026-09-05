@@ -1,0 +1,12 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+.PHONY: all t1
+
+all: t1
+
+t1:
+	../oos.sh 5 oos
+
+EXTRA_CLEANS = .oos.count

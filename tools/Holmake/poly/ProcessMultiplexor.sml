@@ -13,9 +13,11 @@ struct
   type exit_status = Posix.Process.exit_status
 
   type command = {executable: string, nm_args : string list, env : string list}
+  type job_result = {marker : string option, retrying : bool}
+  val job_done = {marker = NONE, retrying = false}
   type 'a job = {tag : string, command : command, dir : string,
                  try_cache : unit -> bool,
-                 update : 'a * bool * Time.time -> 'a * string option,
+                 update : 'a * bool * Time.time -> 'a * job_result,
                  ignore_error : bool}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
@@ -27,7 +29,7 @@ struct
     tag : string,
     dir : string,
     command : command,
-    update : 'a * bool * Time.time -> 'a * string option,
+    update : 'a * bool * Time.time -> 'a * job_result,
     starttime : Time.time,
     lastevent : Time.time,
     out : TextIO.instream,
@@ -42,7 +44,7 @@ struct
   datatype monitor_message =
            Output of jobkey * Time.time * strmtype * string
          | NothingSeen of jobkey * {delay: Time.time, total_elapsed : Time.time}
-         | Terminated of jobkey * exit_status * Time.time * string option
+         | Terminated of jobkey * exit_status * Time.time * job_result
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
          | StartJob of jobkey * {dir:string, ignore_error:bool}
@@ -247,7 +249,7 @@ struct
     let
       open Posix.Process
       val j :int job = {tag = s, command = simple_shell s,
-                        update = K (0, NONE),
+                        update = K (0, job_done),
                         try_cache = K false, dir = ".",
                         ignore_error = false}
       val wj = start_job j
@@ -398,9 +400,9 @@ struct
               end
           val cs = drain OUT (#out wj) cs
           val cs = drain ERR (#err wj) cs
-          val (newstate, marker) =
+          val (newstate, jres) =
               #update wj (#current_state wl, status = W_EXITED, elapsed_t)
-          val msg = Terminated (wjkey wj, status, elapsed_t, marker)
+          val msg = Terminated (wjkey wj, status, elapsed_t, jres)
           val cs' = monitor msg cs
           val _ = TextIO.closeIn (#out wj)
           val _ = TextIO.closeIn (#err wj)
@@ -505,7 +507,7 @@ struct
             | SOME (t, (c, _)) =>
               let
                 fun upd(clist, b, _) =
-                    (fupdAlist t (fn (c,_) => (c,Done b)) clist, NONE)
+                    (fupdAlist t (fn (c,_) => (c,Done b)) clist, job_done)
               in
                 NewJob ({tag = t, command = simple_shell c, update = upd,
                          try_cache = K false, dir = ".",
