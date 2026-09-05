@@ -322,27 +322,43 @@ anywhere, so its 376 `postkernel.DB` reads are all the simpset path,
 and `generic_terms` --- 6280 of the 9164 `tactic_ignores` reads --- is
 the one that leans hardest on `RULE_ASSUM_TAC`.
 
-Two things this changes about the plan.
+**One function accounted for three quarters of it**, and it is now
+done.  `Tactic.ignorable` asked `get_ignores()` whether an assumption
+is one to leave alone, and `RULE_ASSUM_TAC` asks that per assumption,
+per call.  It now asks `get_ignores_of ctxt`, and `RULE_ASSUM_TAC`
+builds its `rule'` inside the tactic's own `ctxt` scope rather than
+closing over it (`fn g => fn ctxt => … g ctxt`; do not eta-reduce).
 
-**One function accounts for three quarters of it.**  `Tactic.ignorable`
-asks `get_ignores()` whether an assumption is one to leave alone, and
-`RULE_ASSUM_TAC` asks that per assumption, per call.  `AncestryData`
-already hands out `get_global_value_of : Context.t -> 'value`, so the
-read itself is a one-line change; `RULE_ASSUM_TAC` then has to build its
-`rule'` inside the tactic's own `ctxt` scope rather than closing over it
-(the `fn g => fn ctxt => … g ctxt` shape --- do not eta-reduce).
+The interesting half was `unignoring` / `unignoringc`, used by
+`markerLib.unignoring_hide`, which is how `hide` survives
+`RULE_ASSUM_TAC`.  They took the ignore off the *global* ref for the
+duration of a call, via `AncestryData.with_temp_value` (built on
+`Portable.genwith_flag`).  That cannot work once `ignorable` reads the
+context, and in fact it could not work anyway: `tac g` only builds the
+closure the context is later applied to, so the window closes before
+the tactic runs.  It read as working only because `ignorable` was
+consulted while the *goal* was applied, which is inside the window ---
+the same coincidence as every other instance of this bug class, and
+`src/marker/selftest.sml` was pinning it.
 
-**But it is not only a plumbing change.**  `unignoring` /
-`unignoringc` --- used by `markerLib.unignoring_hide`, which is how
-`hide` survives `RULE_ASSUM_TAC` --- override the ignores set with
-`AncestryData.with_temp_value`, which sets the *global* ref for the
-duration (it is built on `Portable.genwith_flag`).  A context-based
-`ignorable` would not see that override, so `unignoring` has to put its
-temporary value into the context instead, and it is a general
-combinator (`('a -> 'b) -> ('a -> 'b)`) with no context to put it in.
-That is a real decision about whether `unignoring` is dynamically
-scoped, not a mechanical edit, and `src/marker/selftest.sml` pins the
-current behaviour.
+So `unignoring` now hands the tactic an adjusted context
+(`update_global_value_of`), and takes a `tactic` rather than any
+`('a -> 'b)`: the set lives in the context, so the only thing that can
+be run with it adjusted is something the context is handed to.
+
+With that landed the same six theories make **2730** ambient context
+reads, down from 11 894, and `ancestry.tactic_ignores.global` does not
+appear at all.  Every other slot is unchanged, which is the check that
+nothing else moved:
+
+| slot                 | before | after |
+|----------------------|--------|-------|
+| `tactic_ignores`     |   9164 |     0 |
+| `postkernel.DB`      |   1582 |  1582 |
+| `parse.term_grammar` |    554 |   554 |
+| `Rewrite.implicit`   |    366 |   366 |
+| `parse.derived.term` |    194 |   194 |
+| rest                 |     34 |    34 |
 
 The rest map onto the phases already written: `postkernel.DB` is 3a
 (the simpset naming its datatype simpls) plus `using`; the three

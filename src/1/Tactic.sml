@@ -404,7 +404,9 @@ fun SUBST1_TAC rthm : tactic = SUBST_TAC [rthm]
 
 val ignore_fullresult as
     {record_delta = export_ignore, get_global_value = get_ignores,
-     update_global_value = upd_ignores, ...} =
+     get_global_value_of = get_ignores_of,
+     update_global_value = upd_ignores,
+     update_global_value_of = upd_ignores_of, ...} =
     let open ThyDataSexp AncestryData KernelSig
         fun ignore_delta (kn : KernelSig.kernelname) kset = HOLset.add(kset, kn)
         val ignore_adata_info =
@@ -421,19 +423,34 @@ val ignore_fullresult as
                }
     end
 
-fun ignorable th =
+(* Which constants a rule mapped over the assumptions should leave
+   alone, asked of the context the tactic was given rather than of the
+   ambient one.  `RULE_ASSUM_TAC` asks per assumption, which made this
+   the single heaviest ambient read in the system: three quarters of
+   them, across the theories measured in
+   `developers/discussion/context-passing-tactics.md`. *)
+fun ignorable ctxt th =
     let val (f, _) = strip_comb (concl th)
         val {Thy,Name,...} = dest_thy_const f
     in
-      HOLset.member(get_ignores(), {Thy=Thy,Name=Name})
+      HOLset.member(get_ignores_of ctxt, {Thy=Thy,Name=Name})
     end handle HOL_ERR _ => false
 
-fun unignoring kname f x =
-    let val ks0 = get_ignores()
-        val ks = HOLset.delete(ks0, kname) handle HOLset.NotFound => ks0
-    in
-      AncestryData.with_temp_value ignore_fullresult ks f x
-    end
+(* Run `tac` with `kname` taken off the ignore set.
+
+   The set travels in the context, so this hands the tactic an adjusted
+   one rather than assigning to a global for the duration.  A temporary
+   assignment cannot work here: `tac g` only builds the closure that
+   the context is later applied to, so the window closes before the
+   tactic runs.  It read as working only because `ignorable` used to be
+   consulted while the goal was applied, which is inside that window --
+   the sort of coincidence this whole migration exists to remove. *)
+fun unignoring kname (tac : tactic) : tactic =
+    fn g => fn ctxt =>
+       tac g (upd_ignores_of
+                (fn ks => HOLset.delete (ks, kname)
+                          handle HOLset.NotFound => ks)
+                ctxt)
 
 fun unignoringc t =
     let val {Name, Thy, ...} = dest_thy_const t
@@ -445,13 +462,19 @@ fun unignoringc t =
  * Map an inference rule over the assumptions, replacing them.               *
  *---------------------------------------------------------------------------*)
 
+(* `rule'` is built inside the context's scope, not around the tactic:
+   `POP_ASSUM_LIST (...) g` is a closure awaiting the context, so a
+   `rule'` closed over out here would consult whatever was ambient
+   instead of what `unignoring` put in the context. *)
 fun RULE_ASSUM_TAC rule : tactic =
-    let
-      fun rule' th = if ignorable th then th else rule th
-    in
-      POP_ASSUM_LIST
-        (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule') asl []))
-    end
+    fn g => fn ctxt =>
+      let
+        fun rule' th = if ignorable ctxt th then th else rule th
+      in
+        POP_ASSUM_LIST
+          (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule') asl []))
+          g ctxt
+      end
 val rule_assum_tac = RULE_ASSUM_TAC
 
 fun RULE_L_ASSUM_TAC rule : tactic =

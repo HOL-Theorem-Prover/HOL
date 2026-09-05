@@ -579,7 +579,7 @@ fun dest_hide t =
 
 val is_hide = can dest_hide
 
-fun unignoring_hide f x = unignoringc hidec f x
+fun unignoring_hide tac = unignoringc hidec tac
 
 fun unhide_tac s =
     let fun do1 th =
