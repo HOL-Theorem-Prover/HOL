@@ -633,12 +633,17 @@ fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
                             mk_eq (mk_var (tyname ^ "_CONS",
                                            fnty --> newty), consbody))
         val cons = lhs (concl cons_def)
+        (* the four the induction principle asks for as well *)
+        val mapComp_pnp = MapCompThm bnf (prodty,newty,prodty)
+        val mapId_p = MapIdThm bnf prodty
+        val mapCong_pp = MapCongThm bnf (prodty,prodty)
+        val natural_pn = NaturalThm bnf (prodty,newty)
         val laws =
-            LIST_CONJ [MapCompThm bnf (prodty,newty,prodty),
-                       MapIdThm bnf prodty,
-                       MapCongThm bnf (prodty,prodty),
+            LIST_CONJ [mapComp_pnp,
+                       mapId_p,
+                       mapCong_pp,
                        NaturalThm bnf (newty,prodty),
-                       NaturalThm bnf (prodty,newty),
+                       natural_pn,
                        MapCompThm bnf (newty,prodty,#target ia),
                        MapCompThm bnf (prodty,newty,#target ia),
                        MapCongThm bnf (prodty,#target ia),
@@ -670,10 +675,10 @@ fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
             CONV_RULE (DEPTH_CONV BETA_CONV)
               (REWRITE_RULE [GSYM cons_def]
                  (MATCH_MP NEWTYPE_IND
-                    (LIST_CONJ [MapCompThm bnf (prodty,newty,prodty),
-                                MapIdThm bnf prodty,
-                                MapCongThm bnf (prodty,prodty),
-                                NaturalThm bnf (prodty,newty),
+                    (LIST_CONJ [mapComp_pnp,
+                                mapId_p,
+                                mapCong_pp,
+                                natural_pn,
                                 #absrep_id itype,
                                 REWRITE_RULE [IALG_def] repabs_IN,
                                 REWRITE_RULE [IALG_def] termP_IN])))
