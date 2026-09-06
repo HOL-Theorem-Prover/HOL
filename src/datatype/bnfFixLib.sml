@@ -875,11 +875,29 @@ fun expandArgs k =
     else if k = 1 then ALL_CONV
     else HO_REWR_CONV pairTheory.FORALL_PROD THENC
          BINDER_CONV (expandArgs (k - 1))
-fun expandCons [k] = expandArgs k
-  | expandCons (k::ks) = HO_REWR_CONV sumTheory.FORALL_SUM THENC
-                         LAND_CONV (expandArgs k) THENC
-                         RAND_CONV (expandCons ks)
-  | expandCons [] = ALL_CONV
+(* The same expansion, reducing what is left of the shape as each
+   summand comes off.  Every clause carries the shape's whole term, so
+   reducing them one by one costs the constructors twice over; pushing
+   the injection through the remainder first makes the next step's term
+   smaller, and each summand is discarded once rather than once per
+   clause that follows it. *)
+fun expandConsWith red items =
+    let fun go [(k, f)] = expandArgs k THENC f
+          | go ((k, f) :: rest) =
+              HO_REWR_CONV sumTheory.FORALL_SUM THENC
+              LAND_CONV (expandArgs k THENC f) THENC
+              RAND_CONV (red THENC go rest)
+          | go [] = ALL_CONV
+    in go items
+    end
+
+fun expandConsRed red ks = expandConsWith red (map (fn k => (k, red)) ks)
+
+(* the plain expansion, with nothing done to the shape between the
+   summands.  A reduction that runs on a summand still to be opened is
+   not always sound for what the caller is building -- see the family's
+   own expansion below. *)
+fun expandCons ks = expandConsRed ALL_CONV ks
 
 (* how many arguments a constructor takes, which its own definition
    says *)
@@ -1173,8 +1191,8 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
             CONV_RULE
               (RAND_CONV (QCONV (REWRITE_CONV (map (GSYM o #def) cs))))
               (QCONV
-                 (expandCons (map (length o #args) cs) THENC
-                  QCONV (outsideIn caseRWs) THENC
+                 (expandConsRed (QCONV (outsideIn caseRWs))
+                                (map (length o #args) cs) THENC
                   QCONV (simpLib.SIMP_CONV boolSimps.bool_ss caseRWs))
                  body)
         (* expanding the quantifier names the constructors' arguments
@@ -1250,19 +1268,20 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
         (* the set-based induction, split along the constructors: the
            hypothesis becomes "for every sub-term in the set", which is
            the form a nested recursion keeps *)
-        (* the statement gets a conjunct per constructor, and only a
-           constructor's own definition folds back into its own clause.
-           Simplifying the whole conjunction and then rewriting it with
-           every definition pays for the constructors twice over, before
-           the size of what is rewritten is counted; walking the
-           conjunction hands each clause just its own *)
-        fun perClause cnv =
-            let fun go [] = ALL_CONV
-                  | go [c] = cnv c
-                  | go (c :: rest) =
-                      LAND_CONV (cnv c) THENC RAND_CONV (go rest)
-            in go cs
-            end
+        (* only a constructor's own definition folds back into its own
+           clause, so each clause is handed just its own *)
+        val clauses =
+            map (fn c =>
+                    (length (#args c),
+                     QCONV pruneConv THENC
+                     (* the set simpset says nothing about one, which
+                        is what is wanted: a constructor with an
+                        argument of type one has that argument, and a
+                        clause about `P (C ())` is not the shape a
+                        datatype's induction principle is read in *)
+                     QCONV (simpLib.SIMP_CONV (set_ss()) setRWs) THENC
+                     QCONV (PURE_REWRITE_CONV [GSYM (#def c)])))
+                cs
         val set_induction =
             CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
                (QCONV (PURE_REWRITE_CONV setRWs) THENC
@@ -1274,16 +1293,7 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
                    argument that is itself a sum would otherwise be
                    split, and the clause would be about `P (V (INL x))`
                    rather than about `P (V a)` *)
-                expandCons (map (length o #args) cs) THENC
-                (* the set simpset says nothing about one, which is
-                   what is wanted: a constructor with an argument of
-                   type one has that argument, and a clause about
-                   `P (C ())` is not the shape a datatype's induction
-                   principle is read in *)
-                perClause (fn c =>
-                  QCONV pruneConv THENC
-                  QCONV (simpLib.SIMP_CONV (set_ss()) setRWs) THENC
-                  QCONV (PURE_REWRITE_CONV [GSYM (#def c)])))))
+                expandConsWith (QCONV pruneConv) clauses)))
                (#set_induction fix)
         (* whether this is a nested recursion is known structurally: a
            nested factor's mapped type is not the answer type.  Deciding
