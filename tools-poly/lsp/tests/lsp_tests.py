@@ -5316,9 +5316,11 @@ def test_search_finds_theorems_by_name_theory_and_pattern():
 
             def search(selectors, limit=50):
                 rid[0] += 1
+                params = ({"query": selectors, "limit": limit}
+                          if isinstance(selectors, str)
+                          else {"selectors": selectors, "limit": limit})
                 c.send({"jsonrpc": "2.0", "id": rid[0],
-                        "method": "$/hol/search",
-                        "params": {"selectors": selectors, "limit": limit}})
+                        "method": "$/hol/search", "params": params})
 
                 def got(cl):
                     with cl.msgs_lock:
@@ -5365,6 +5367,21 @@ def test_search_finds_theorems_by_name_theory_and_pattern():
             assert_eq(search(["@@@ ###"]), [],
                       "nonsense answers nothing rather than failing")
             assert_eq(search([]), [], "and so does nothing at all")
+
+            # A client with one input box rather than a prompt per
+            # selector sends the lot as `query'.  The split has to leave
+            # a pattern whole: cut on spaces it would ask five
+            # questions about `x', `+', `y', `=' and nothing would
+            # match.
+            assert_eq(names(search("'arithmetic' \"ASSOC\"")),
+                      names(narrowed),
+                      "one box asks what the selectors did")
+            assert_eq(names(search("x + y = y + x")), names(byPattern),
+                      "and leaves a term pattern in one piece")
+            mixed = search("'arithmetic' x + y = y + x")
+            assert_true(mixed and all(h["theory"] == "arithmetic"
+                                      for h in mixed),
+                        f"quoted and bare together narrow ({mixed!r})")
         finally:
             c.close()
     finally:

@@ -578,10 +578,43 @@ val workspaceSymbolParams = field "query" string
 (* Each selector as the user typed it, quoting and all -- reading that
    is `dbSearch's job, so that the same thing typed into two clients
    asks the same question.  A default limit because the database is
-   large and a bare `'arithmetic'` is a plausible thing to ask. *)
-val searchParams = map2 (fn (sels, limit) =>
-    {selectors = sels, limit = limit})
-  (field "selectors" (array string), fieldD "limit" int 100)
+   large and a bare `'arithmetic'` is a plausible thing to ask.
+
+   A client with one input box rather than a prompt per selector sends
+   `query' instead, and the split happens here so that one box means
+   the same thing wherever it is: a quoted run is one selector, and
+   everything left over, taken together, is one term pattern.  That is
+   the only split that does not cut `x + y = y + x' into five -- a
+   theory or a name has no spaces in it and a pattern usually does. *)
+fun splitQuery q = let
+  val n = String.size q
+  fun trim s = let
+    val cs = Substring.dropr Char.isSpace (Substring.dropl Char.isSpace
+                                             (Substring.full s))
+    in Substring.string cs end
+  fun flush (bare, acc) =
+    case trim (String.concat (List.rev bare)) of
+        "" => acc
+      | p => p :: acc
+  (* `bare' collects the unquoted text; `acc' the quoted selectors,
+     both reversed until the end. *)
+  fun scan (i, bare, acc) =
+    if i >= n then List.rev (flush (bare, acc))
+    else let val c = String.sub (q, i) in
+      if c = #"'" orelse c = #"\"" then
+        case CharVector.findi (fn (j, c') => j > i andalso c' = c) q of
+            NONE => scan (i + 1, str c :: bare, acc)
+          | SOME (j, _) =>
+            scan (j + 1, bare, String.substring (q, i, j - i + 1) :: acc)
+      else scan (i + 1, str c :: bare, acc)
+    end
+  in scan (0, [], []) end
+
+val searchParams = map3 (fn (sels, query, limit) =>
+    {selectors = sels @ (case query of NONE => [] | SOME q => splitQuery q),
+     limit = limit})
+  (fieldD "selectors" (array string) [], fieldO "query" string,
+   fieldD "limit" int 100)
 
 val cancelParams = field "id" req_id
 
