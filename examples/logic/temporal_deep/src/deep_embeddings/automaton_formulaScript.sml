@@ -35,17 +35,10 @@ Datatype :
         | ACCEPT_G     acceptance_condition
 End
 
-Theorem acceptance_condition_induct = Q.GEN `P`
-   (MATCH_MP
-     (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
-     (SIMP_RULE
-       std_ss
-       [pairTheory.FORALL_PROD,
-        PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
-        PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
-       (Q.SPECL
-         [`P`,`\(f1,f2). P f1 /\ P f2`]
-         (TypeBase.induction_of ``:'a acceptance_condition``))));
+Theorem acceptance_condition_induct = SIMP_RULE (srw_ss())
+     [pairTheory.FORALL_PROD, pairTheory.setFST_thm,
+      pairTheory.setSND_thm]
+     (TypeBase.induction_of ``:'a acceptance_condition``);
 
 Definition ACCEPT_COND_USED_VARS_def:
    (ACCEPT_COND_USED_VARS (ACCEPT_PROP p) = P_USED_VARS p) /\
@@ -68,16 +61,10 @@ Datatype : (* see [1, p.8] *)
         | A_TRUE
 End
 
-Theorem automaton_formula_induct = Q.GEN `P0`
-   (MATCH_MP
-     (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
-     (SIMP_RULE std_ss
-       [pairTheory.FORALL_PROD,
-        PROVE[]``(!x y. P0 x ==> Q(x,y)) = !x. P0 x ==> !y. Q(x,y)``,
-        PROVE[]``(!x y. P0 y ==> Q(x,y)) = !y. P0 y ==> !x. Q(x,y)``]
-       (Q.SPECL
-         [`P0`,`\(A, f). P0 f`,`\(f1,f2). P0 f1 /\ P0 f2`]
-         (TypeBase.induction_of ``:'a automaton_formula``))));
+Theorem automaton_formula_induct = SIMP_RULE (srw_ss())
+     [pairTheory.FORALL_PROD, pairTheory.setFST_thm,
+      pairTheory.setSND_thm]
+     (TypeBase.induction_of ``:'a automaton_formula``);
 
 Definition A_USED_INPUT_VARS_def:
    (A_USED_INPUT_VARS (ACCEPT_COND p) = ACCEPT_COND_USED_VARS p) /\

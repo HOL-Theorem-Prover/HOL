@@ -281,7 +281,8 @@ val part_heap_ref_mem_SPLIT = prove(
   \\ `!i. b < i ==> (ref_mem m b i = ref_aux (ref_addr b) (m b) * ref_mem m (b + n + 1) i)` by
    (REPEAT STRIP_TAC \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [ref_mem_def]))
     \\ `MAX 1 (n + 1) = n + 1` by (SIMP_TAC std_ss [MAX_DEF] \\ DECIDE_TAC)
-    \\ ASM_SIMP_TAC std_ss [getLENGTH_def,DECIDE ``i<=b=~(b<i:num)``,ADD_ASSOC])
+    \\ ASM_SIMP_TAC std_ss [getLENGTH_def,
+          DECIDE ``i <= b = ~(b < i:num)``,ADD_ASSOC])
   \\ IMP_RES_TAC part_heap_LESS_EQ \\ `b < j /\ b < e` by DECIDE_TAC
   \\ METIS_TAC [STAR_ASSOC]);
 
