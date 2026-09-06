@@ -20,6 +20,13 @@ structure TacticWalker :> sig
   val holder : Abbrev.tactic option ref
   val listHolder : Abbrev.list_tactic option ref
 
+  (* The extent of a fragment in the tactic text, for a caller that has
+     to point at whatever failed.  A bracket's own span is often absent
+     -- `>- tac' records the tactic, not the combinator -- so this falls
+     back to the fragment's contents, exactly as the walk does when it
+     decides whether the cursor has passed one. *)
+  val fragSpan : TacticParse.tac_frag -> (int * int) option
+
   val walkTo : {
     plugins: LSPExtension.plugin_data,
     theoremName: string,
@@ -286,6 +293,11 @@ and bracketEndByte te lastInner = case topSpan te of
       SOME e => SOME e
     | NONE => lastInner ())
 
+fun fragSpan frag =
+  case (fragStart frag, fragEnd frag) of
+      (SOME s, SOME e) => SOME (s, e)
+    | _ => NONE
+
 (* Steps a fragment list contributes to `stepIdx', mirroring exactly
    what the walk counts.  Skipping a branch must advance the index by
    what walking it would have, or snapshots recorded by one query
@@ -480,7 +492,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
               if #stepIdx r < resumeIdx then Done r
               else (case applyClose cc (#state r) of
                       NONE => Failed {state = #state r, snaps = #snaps r,
-                                      stepIdx = #stepIdx r, at = FFClose cc,
+                                      stepIdx = #stepIdx r, at = frag,
                                        why = ApplyFailed}
                     | SOME state'' =>
                         Done {state = state'', snaps = #snaps r,
@@ -592,7 +604,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
               if #stepIdx r < resumeIdx then Done r
               else (case applyClose cc (#state r) of
                       NONE => Failed {state = #state r, snaps = #snaps r,
-                                      stepIdx = #stepIdx r, at = FFClose cc,
+                                      stepIdx = #stepIdx r, at = frag,
                                        why = ApplyFailed}
                     | SOME state'' =>
                         Done {state = state'', snaps = #snaps r,

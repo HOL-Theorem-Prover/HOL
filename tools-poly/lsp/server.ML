@@ -115,7 +115,11 @@ fun encGoalState ({asms, goal}: goal_state) print = (
   print ",\"goal\":"; encString goal print;
   print "}")
 
-fun encGoalStateResponse ({theorem, step, goals, pretty, context, status,
+(* `encRng` rather than a range encoder of its own: the byte offsets
+   the walker reports mean nothing without the line table of the text
+   they were measured against, and that is not in scope this early. *)
+fun encGoalStateResponse encRng
+                         ({theorem, step, goals, pretty, context, status,
                            error, failedRange} : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
@@ -124,6 +128,9 @@ fun encGoalStateResponse ({theorem, step, goals, pretty, context, status,
   print ",\"context\":"; encArray encString context print;
   print ",\"status\":"; encString status print;
   print ",\"error\":"; encOrNull encString error print;
+  (* Where the walk stopped, so a client can point at it rather than
+     make the reader find it from the message. *)
+  print ",\"failedRange\":"; encOrNull encRng failedRange print;
   print "}")
 
 (* Stream an in-memory buffer's declarations.  The parser pulls its
@@ -149,6 +156,23 @@ fun bufferDecs text = let
    the compile uses — so keyword matching, attribute brackets, strings
    and comments are handled correctly.  parseDec streams decs one at a
    time; we bail on the first matching HOLTheoremDecl. *)
+(* The byte just past the tactic of the theorem declared at `decStart`.
+   The walker needs a cursor to walk to, and the end of the tactic is
+   the whole proof -- which is what to walk when the question is where
+   a proof that failed stopped working. *)
+fun theoremTacEnd text decStart = let
+  val parseDec = bufferDecs text
+  fun loop () =
+    case parseDec () of
+        NONE => NONE
+      | SOME (dec as HOLSourceAST.HOLTheoremDecl {tac, ...}) =>
+        if #1 (HOLSourceAST.decSpan dec) = decStart
+        then SOME (#2 (HOLSourceAST.expSpan tac))
+        else loop ()
+      | SOME _ => loop ()
+  in loop () end
+  handle _ => NONE
+
 fun findEnclosingTheorem compileDone text cursor = let
   val parseDec = bufferDecs text
   fun loop () =
@@ -1160,6 +1184,14 @@ fun start {diag, dbg, warnings} = let
        `didChange`s delivered it -- which is what decides whether the
        change is confined to a single proof body.  `minEditOffset`
        cannot answer that: it is only the first differing byte. *)
+    (* Failed proofs whose failing step has not been found yet, as
+       (declaration offset, message).  Walking one restores a compile
+       snapshot, which is process-global, so it cannot be done while
+       the pool is still replaying other proofs -- doing it on a thread
+       of its own corrupted them, and a dozen sound proofs would report
+       failures that varied from run to run.  Held here until the pool
+       is idle. *)
+    pendingFailures: (string * int * string) list ref,
     compiledText: string ref,
     (* How far the last compile's per-declaration snapshots reach, or
        `~1` when they cannot be reused.  `captureSnap` stops capturing
@@ -1211,6 +1243,7 @@ fun start {diag, dbg, warnings} = let
         debounce = ref 0, minEditOffset = ref NONE,
         walkerDiags = ref (Binarymap.mkDict String.compare),
         proofDiags = ref (Binarymap.mkDict String.compare),
+        pendingFailures = ref [],
         compiledText = ref "", reusableTo = ref ~1,
         depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
         nsGen = ref 0, nsNames = ref NONE} end
@@ -1664,6 +1697,17 @@ fun start {diag, dbg, warnings} = let
       print ",\"diagnostics\":"; encDArray encDiag snapshot print;
       print "}")))
   end
+
+  (* Filled in once `goalStateAtPos` exists, which is below the compile
+     that installs the hook calling this.  Given a failed proof's
+     declaration offset and the pool's message, it finds the step the
+     proof stops at and records the message there. *)
+  val localiseFailure :
+      (string -> file_data -> {site: string, offset: int, msg: string}
+       -> unit) ref =
+    ref (fn _ => fn _ => fn _ => ())
+  val drainFailures : (string -> file_data -> unit) ref =
+    ref (fn _ => fn _ => ())
 
   (* Fold one proof-state transition into this file's diagnostics and
      re-publish if that changed anything.  Runs on the worker that
@@ -2307,7 +2351,20 @@ fun start {diag, dbg, warnings} = let
                  (case status of
                       LSPExtension.Suspended _ => retract ()
                     | LSPExtension.Diverged _ => retract ()
-                    | _ => ())
+                      (* The pool says what went wrong; it has no idea
+                         where.  Walk the proof to find the step it
+                         stops at, on a thread of its own: this runs on
+                         the worker that settled the proof, and walking
+                         restores a compile snapshot, which is not the
+                         business of a thread that is proving. *)
+                    | LSPExtension.Failed m =>
+                        #pendingFailures v :=
+                          (site, offset, "proof failed: " ^ oneLine m)
+                          :: !(#pendingFailures v)
+                    | _ => ());
+                 (* Every verdict, not just a failure: what this is
+                    waiting for is the last proof to settle. *)
+                 (!drainFailures uri v handle _ => ())
                  handle _ => ()
                end);
           !LSPExtension.checkDeferred
@@ -2377,7 +2434,11 @@ fun start {diag, dbg, warnings} = let
              only now current.  Catch up, so a lone proof's diagnostic
              does not wait for the next event. *)
           if Binarymap.numItems (!proofDiags) > 0
-          then publishAllDiagnostics uri v else ()))
+          then publishAllDiagnostics uri v else ();
+          (* A verdict that arrived while this pass was running left its
+             failure queued, the compile being the thing it had to wait
+             for. *)
+          (!drainFailures uri v handle _ => ())))
       in (
         case missingDeps () of
           fails as (_::_) => blockOnDeps fails
@@ -2807,6 +2868,88 @@ fun start {diag, dbg, warnings} = let
              val () = restoreLater ()
          in r end
     end handle Empty => NONE
+
+  (* Walk a failed proof to the end of its tactic and record the pool's
+     message where the walk stopped, rather than against the theorem's
+     name where the pool's own verdict lands.  The walker's message
+     says only that a tactic failed to apply; the pool's says what it
+     raised, and this puts that where it happened.
+
+     Nothing to do when the walk cannot say -- a proof that merely
+     leaves goals unproved has no failing tactic, and a leaf whose SML
+     did not compile is already reported against that very text by the
+     compile.  `updateProofDiag`'s entry then stands, on the
+     declaration, which is all anyone knows. *)
+  (* Locate every failure that has been waiting, once nothing in the
+     pool is still running.  One thread at a time, and only while the
+     pool is idle: the walk restores a compile snapshot, which every
+     replaying worker would see.
+
+     Idleness is sampled, so a compile starting right afterwards can
+     still overlap -- the same window a goal-state request driven by
+     the cursor has always had.  What this avoids is the certainty of
+     overlapping, a verdict arriving precisely when its neighbours are
+     still being proved. *)
+  val draining = ref false
+  val () = drainFailures :=
+    (fn uri => fn (v as {pendingFailures, compile, ...}: file_data) => let
+        (* Nothing else may be using the compile state: not a worker
+           still replaying a proof, and not the compile itself, which
+           is elaborating and enqueueing them.  Missing the second was
+           enough on its own -- a dozen sound proofs reported failures
+           that varied from run to run. *)
+        fun compiling () =
+          case !compile of
+              NONE => false
+            | SOME {thread, cancelled, ...} =>
+              Thread.isActive thread andalso not (!cancelled)
+        fun proving () =
+          List.exists (fn {status = LSPExtension.Checking, ...} => true
+                        | _ => false)
+                      (!LSPExtension.proofStates ())
+     in
+        if null (!pendingFailures) orelse !draining
+           orelse compiling () orelse proving ()
+        then ()
+        else let
+          val todo = !pendingFailures
+          val () = pendingFailures := []
+          val () = draining := true
+        in
+          (Thread.fork
+             (fn () => (List.app (fn (site, offset, msg) =>
+                                     !localiseFailure uri v
+                                       {site = site, offset = offset,
+                                        msg = msg})
+                                 (List.rev todo)
+                        handle _ => ();
+                        draining := false),
+              []); ())
+        end
+     end)
+
+  val () = localiseFailure :=
+    (fn uri => fn (v as {lastTrees, proofDiags, ...}: file_data) =>
+     fn {site, offset, msg} => let
+       val {text = {text, lines, ...}, ...} = !lastTrees
+     in
+       case theoremTacEnd text offset of
+           NONE => ()
+         | SOME tacEnd =>
+           (case goalStateAtPos uri v (getLineCol lines tacEnd, !hoverWidth) of
+                SOME {failedRange = SOME pos, ...} =>
+                  (* Replaces the entry `updateProofDiag' made under the
+                     same key, rather than adding a second one beside
+                     it: this is that verdict, better placed.  Keeping
+                     it here also means it is dropped when proof
+                     checking is switched off, and cleared when the
+                     proof comes good, by the machinery that already
+                     does both. *)
+                  (proofDiags := Binarymap.insert (!proofDiags, site,
+                     Error {hard = true, pos = pos, msg = encString msg});
+                   publishAllDiagnostics uri v)
+              | _ => ())
+     end handle _ => ())
 
   (* `workspace/symbol'.  Answers from what HOL knows exists -- see
      `LSPExtension.ideSymbols' -- unioned with the declarations of the
@@ -3238,7 +3381,10 @@ fun start {diag, dbg, warnings} = let
                 | SOME r => #walkerDiags v := Binarymap.insert (wd, theorem, r)
             in if changed then publishAllDiagnostics uri v else () end
           | _ => ()
-        in Ok (encOrNull encGoalStateResponse resp) end)
+        val lines = case v_opt of
+                        NONE => mkLineCounter ""
+                      | SOME v => #lines (#text (!(#lastTrees v)))
+        in Ok (encOrNull (encGoalStateResponse (encRangeLC lines)) resp) end)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
     | Notification {method = "$/cancelRequest", params} => let

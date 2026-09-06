@@ -5280,6 +5280,90 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_failed_proof_is_reported_at_the_step_that_fails():
+    """The pool says what a proof raised; it has no idea where.  Its
+    verdict was reported against the theorem's *name*, so a long proof
+    said only that something in it went wrong.
+
+    The walker does know: it stops at the step that will not apply.  So
+    the proof is walked once its verdict comes in, and the pool's
+    message -- which says what was raised, where the walker's says only
+    that something did not apply -- is recorded there instead."""
+    d = tempfile.mkdtemp(prefix="lsp_failloc_")
+    try:
+        src = ("Theory failloc\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem boom:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  FAIL_TAC \"nope\"\n"
+               "QED\n")
+        tactic_line = 6          # the FAIL_TAC, 0-based
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/faillocScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def located(cl):
+                ds = [x for x in (_diag_count(cl, uri) or [])
+                      if "proof failed" in x.get("message", "")]
+                return ds or None
+
+            ds = c.wait_until(located, 60)
+            assert_true(ds is not None, "the failure is reported at all")
+            line = ds[0]["range"]["start"]["line"]
+            assert_eq(line, tactic_line,
+                      f"reported against the tactic, not the theorem's "
+                      f"name on line 4 ({ds!r})")
+            assert_true("FAIL_TAC" in ds[0]["message"],
+                        f"and says what was raised ({ds[0]['message']!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_goalState_reports_where_a_failure_is():
+    """`failedRange` was computed and then dropped on the floor:
+    `encGoalStateResponse` destructured it and never printed it, so no
+    client could point at the step even though the server knew.  A
+    combinator had no span of its own either, so a `>-` whose branch
+    proved nothing reported no position at all."""
+    src = ("Theory failrange\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem t:\n"
+           "  (0 = 0) /\\ (1 = 1)\n"
+           "Proof\n"
+           "  conj_tac\n"
+           "  >- (ASSUME_TAC TRUTH)\n"
+           "  \\\\ simp[]\n"
+           "QED\n")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/failrange_probe.sml"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 762, uri, 8, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_true(result.get("error") is not None,
+                    f"the branch that proves nothing is reported "
+                    f"({result!r})")
+        rng = result.get("failedRange")
+        assert_true(rng is not None,
+                    f"and says where it is ({result!r})")
+        assert_eq(rng["start"]["line"], 7,
+                  f"which is the `>-` branch's own line ({rng!r})")
+    finally:
+        c.close()
+
+
 def test_hover_on_a_half_typed_declaration_does_not_die():
     """A built tree records the last compile; the buffer has moved on.
     A declaration the user has not finished -- no `Proof`, no `QED`, a
@@ -6631,6 +6715,10 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("a_failed_proof_is_reported_at_the_step_that_fails",
+     test_a_failed_proof_is_reported_at_the_step_that_fails),
+    ("goalState_reports_where_a_failure_is",
+     test_goalState_reports_where_a_failure_is),
     ("hover_on_a_half_typed_declaration_does_not_die",
      test_hover_on_a_half_typed_declaration_does_not_die),
     ("a_theorem_jumps_to_the_script_it_is_proved_in",

@@ -92,6 +92,11 @@ local
     | FFMid _   => "Combinator branch-advance failed"
     | FFClose _ => "Combinator close failed"
     | FGroup _  => "Group failed"
+      (* A bracket reported as a whole is one whose close would not go
+         through -- `>-' is the one that says something: its branch was
+         obliged to prove the goal and did not. *)
+    | FBracket (FOpenThen1, _, _, _) =>
+        "`>-` branch did not prove its goal"
     | FBracket _  => "Bracket failed"
     | FMBracket _ => "Bracket failed"
 
@@ -104,11 +109,14 @@ local
   fun sourceFailure (_, TacticWalker.CompileFailed) = true
     | sourceFailure _ = false
 
-  fun failRange tacStart frag = case frag of
-      FAtom te =>
-        Option.map (fn (s, e) => (tacStart + s, tacStart + e))
-                   (TacticSteps.atomSpan te)
-    | _ => NONE
+  (* Where in the file to point at what failed.  `fragSpan' answers for
+     a bracket as well as a leaf, falling back to the contents when the
+     combinator has no span of its own -- which is what a `>- tac' whose
+     branch proved nothing needs, the alternative being the theorem's
+     name a long way above it. *)
+  fun failRange tacStart frag =
+    Option.map (fn (s, e) => (tacStart + s, tacStart + e))
+               (TacticWalker.fragSpan frag)
 in
 
 val () = LSPExtension.goalStateAtPos :=
