@@ -188,8 +188,14 @@ fun findEnclosingTheorem compileDone text cursor = let
         let val upperBound = case qed_ of SOME q => q | NONE => stop in
         if proof_ <= cursor andalso cursor <= upperBound
         then let val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
-                 val (decStart, _) = HOLSourceAST.decSpan dec
-        in SOME (decStart,
+                 (* The declaration's own span, not the tactic's: a
+                    tactic that does not parse has a span stopping
+                    wherever the parser gave up, and callers asking
+                    "where does this declaration end" would then place
+                    the rest of it -- and any diagnostic in it -- in the
+                    declaration below. *)
+                 val decSpan = HOLSourceAST.decSpan dec
+        in SOME (decSpan,
                  {name = name,
                   quote = String.substring (text, colon + 1,
                                             Int.max (0, proof_ - colon - 1)),
@@ -1234,14 +1240,19 @@ fun start {diag, dbg, warnings} = let
        is idle. *)
     pendingFailures: (string * int * string) list ref,
     compiledText: string ref,
-    (* How far the last compile's per-declaration snapshots reach, or
-       `~1` when they cannot be reused.  `captureSnap` stops capturing
-       once the compile has produced a diagnostic, so a pass that ended
-       clean has one for every declaration and a pass that did not may
-       be missing them from the first error onwards -- and reusing a
-       tail whose snapshots stop early would silently lose everything
-       past that point. *)
-    reusableTo: int ref,
+    (* The offset from which the last compile reported nothing: one
+       past its last diagnostic, or `0` if it reported none.  `~1` when
+       the pass did not run to the end of the file and so left no
+       usable record at all.
+
+       It bounds what a later pass may splice in unexamined.  Reusing
+       the tail keeps everything the last pass recorded below the
+       edited declaration -- but takes the diagnostics wholly from the
+       new pass, which stops at that declaration.  So the tail may be
+       reused only from a point this says the last pass was silent
+       about; below one of its diagnostics, the squiggle would vanish
+       while the error was still in the file. *)
+    reusableFrom: int ref,
     (* Set when a compile was abandoned because the file's declared
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
@@ -1285,7 +1296,7 @@ fun start {diag, dbg, warnings} = let
         walkerDiags = ref (Binarymap.mkDict String.compare),
         proofDiags = ref (Binarymap.mkDict String.compare),
         pendingFailures = ref [],
-        compiledText = ref "", reusableTo = ref ~1,
+        compiledText = ref "", reusableFrom = ref ~1,
         depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
         nsGen = ref 0, nsNames = ref NONE} end
 
@@ -1607,13 +1618,14 @@ fun start {diag, dbg, warnings} = let
      the same walk the goal-state handler does.  Its `compileDone`
      argument only reaches the `theorem_context` it builds, which we
      discard, so anything will do here. *)
-  fun proofBodyAt text off =
+  fun proofBodySpan text off =
       (case off of
            NONE => NONE
          | SOME b => (case findEnclosingTheorem false text b of
-                          SOME (decStart, _) => SOME decStart
+                          SOME (span, _) => SOME span
                         | NONE => NONE))
       handle Empty => NONE
+  fun proofBodyAt text off = Option.map #1 (proofBodySpan text off)
 
   (* Tell the client the file is not being compiled, and why.  Sent
      when the block is first recorded and again on each later edit that
@@ -1792,7 +1804,7 @@ fun start {diag, dbg, warnings} = let
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
                               walkerDiags, proofDiags, depsBlocked,
-                              compiledText, reusableTo,
+                              compiledText, reusableFrom,
                               nsLayer, nsGen, ...}:file_data) =
     (* Every route to a compile comes through here -- didOpen,
        didChange's debounce, didSave, `$/hol/retryCompile', and the
@@ -1968,11 +1980,12 @@ fun start {diag, dbg, warnings} = let
               else go (i + 1, if String.sub (str, i) = #"\n" then n + 1 else n)
             in go (i, 0) end
           in
-            case (proofBodyAt cur (SOME pre),
-                  proofBodyAt cur (SOME lastChanged)) of
-                (SOME a, SOME b) =>
+            case (proofBodySpan cur (SOME pre),
+                  proofBodySpan cur (SOME lastChanged)) of
+                (SOME (a, aEnd), SOME (b, _)) =>
                   if a = b
                   then SOME {decStart = a,
+                             decEnd = aEnd,
                              delta = size cur - size prev,
                              lines = newlines (cur, pre, size cur - suf)
                                      - newlines (prev, pre, size prev - suf)}
@@ -1980,20 +1993,39 @@ fun start {diag, dbg, warnings} = let
               | _ => NONE
           end
       end
-    (* Take the fast path only when all of: the change is confined to one
-       proof body; the last pass's snapshots cover the whole file; and
-       there is a snapshot to resume from at or before the edited
-       declaration.  `prev`, the newest snapshot, is the state that pass
-       ended in -- still the right state, the edited declaration having
-       produced the same value it did before.  Anything else, and the
-       whole file is re-elaborated as before. *)
+    (* Take the fast path only when all of: the change is confined to
+       one proof body; the last pass left a usable record; there is a
+       snapshot to resume from at or before the edited declaration; the
+       last pass reported nothing below that declaration, which is what
+       the splice would drop (see `reusableFrom`); and the state that
+       pass ended in is from at or below the edited declaration.
+       `prev`, the newest snapshot, is that state -- still the right
+       state, the edited declaration having produced the same value it
+       did before.  A declaration that drew a diagnostic captures no
+       snapshot, which is what the last of those guards against: were
+       the newest snapshot from *above* the edit, restoring it would
+       undo the declaration just compiled.
+
+       Note what is deliberately *not* disqualifying: a diagnostic
+       inside the edited declaration itself.  A tactic name in
+       mid-type does not compile -- `alL_tac` on the way to `all_tac`
+       -- and this pass re-elaborates that declaration anyway, so it
+       reports the state of it afresh.  Requiring the whole file to be
+       diagnostic-free made most keystrokes in a proof re-elaborate
+       every declaration below it.
+
+       Anything else, and the whole file is re-elaborated as before. *)
     val reuseTail =
       case (tacticOnlyEdit, resumeSnap, lastSnaps) of
-          (SOME {decStart, delta, lines}, SOME rs, prev :: _) =>
-            if !reusableTo >= 0 andalso #endByte rs <= decStart
-            then SOME {decStart = decStart, delta = delta, lines = lines,
-                       prev = prev}
-            else NONE
+          (SOME {decStart, decEnd, delta, lines}, SOME rs, prev :: _) =>
+            let val oldDecEnd = decEnd - delta in
+              if !reusableFrom >= 0 andalso oldDecEnd >= !reusableFrom
+                 andalso #endByte rs <= decStart
+                 andalso #endByte prev >= oldDecEnd
+              then SOME {decStart = decStart, delta = delta, lines = lines,
+                         prev = prev}
+              else NONE
+            end
         | _ => NONE
     val stopAfter = Option.map (fn {decStart, ...} => decStart + 1) reuseTail
     val _ = if dbg then
@@ -2005,10 +2037,13 @@ fun start {diag, dbg, warnings} = let
                 print (case reuseTail of NONE => "false" | _ => "true");
                 (case tacticOnlyEdit of
                      NONE => ()
-                   | SOME {decStart, delta, lines} => (
+                   | SOME {decStart, decEnd, delta, lines} => (
                        print ",\"decStart\":"; encInt decStart print;
+                       print ",\"decEndOld\":"; encInt (decEnd - delta) print;
                        print ",\"delta\":"; encInt delta print;
-                       print ",\"lines\":"; encInt lines print));
+                       print ",\"lines\":"; encInt lines print;
+                       print ",\"reusableFrom\":";
+                       encInt (!reusableFrom) print));
                 print "}")))
             else ()
     val _ = minEditOffset := NONE
@@ -2020,6 +2055,10 @@ fun start {diag, dbg, warnings} = let
                 print "}")))
             else ()
     val trees = ref initialTrees
+    (* How many diagnostics stood when the previous declaration was
+       captured, so `captureSnap` can tell which are the current
+       declaration's own.  Starts at whatever the resume seeded. *)
+    val diagsAtLastSnap = ref (DArray.size (#diags initialTrees))
     val cancelled = ref false
 
     fun compileThread () = ((let
@@ -2222,18 +2261,38 @@ fun start {diag, dbg, warnings} = let
          endByte.  Cloning `diags` at capture time keeps the resume
          seed independent of subsequent `updateDiags` mutations.
 
-         Skip if the cumulative `trees.diags' is non-empty at capture
-         time.  A partial-parse error early in the compile (e.g. a
-         `Theory foo` still being typed, whose expansion raises
-         `HOL_ERR "proposed theory name '' is not an identifier"' from
-         the trailing `Theory.new_theory ""') puts the file into a
-         "not yet valid" state whose subsequent decs' byte extents
-         will change once the user completes their edit.  Capturing
-         snapshots for the file's remaining decs would carry the
-         stale error forward across every subsequent didChange, since
-         resume-from-snapshot seeds `trees.diags' with the snapshot's
-         frozen contents.  Conservative: no snapshots until the
-         current compile has produced ZERO errors so far. *)
+         The seed is this declaration's diagnostic prefix, so a
+         declaration below one that drew an error is still worth
+         capturing: resuming from it reports the error above it rather
+         than losing it.  Which matters most while a tactic is being
+         typed -- `alL_tac` does not compile, and if that suppressed
+         every snapshot below it, the keystroke fixing the typo would
+         have nothing to resume from and no tail to keep, and so would
+         re-elaborate the whole file.
+
+         What is skipped is a declaration that added diagnostics of its
+         *own*.  A `Theory foo` or an `Ancestors` line still being typed
+         raises out of its own expansion, and its byte extent will move
+         again once the user finishes the word; snapshotting it would
+         freeze both the error and the extent, and a later resume from
+         it would carry them forward however the user completed the
+         declaration.  Falling back to the previous good snapshot
+         re-parses it from scratch instead.
+
+         Its own, and not the pass's: a declaration that compiles
+         cleanly is worth capturing whatever happened further up.  That
+         is what lets the keystroke fixing a mistyped tactic resume
+         from just above it and keep the tail below it, instead of
+         re-elaborating the file because something, somewhere, did not
+         compile.
+
+         And it must also sit strictly past everything reported so far,
+         which is not implied.  A `Theory` declaration expands to
+         several SML decs sharing one source position -- `new_theory`
+         and then an inert `set_grammar_ancestry` -- so when the first
+         fails the second adds nothing of its own and would be captured
+         at the very byte the error is at.  A resume there skips text
+         the user is still typing and inherits the error for good. *)
       fun captureSnap endByte = let
         val () = lastDecEnd := endByte
         val {builtTrees, plugins, diags, ...} = !trees
@@ -2242,12 +2301,19 @@ fun start {diag, dbg, warnings} = let
            wants the file's names even when it has errors. *)
         val () = (nsLayer := SOME (LSPNameSpace.snapshotLayer ());
                   nsGen := !nsGen + 1)
-        in if n > 0 then ()
+        val ownDiags = n > !diagsAtLastSnap
+        val () = diagsAtLastSnap := n
+        val settledPast =
+            DArray.foldl (fn (Error {pos = (_, e), ...}, acc) =>
+                             acc andalso endByte > e
+                           | (_, _) => false)
+                         true diags
+        in if ownDiags orelse not settledPast then ()
            else let
              val snap = {
                endByte = endByte,
                builtTrees = builtTrees,
-               diags = DArray.new (0, Completed),
+               diags = DArray.clone (diags, n),
                plugins = plugins,
                compileSnap = !LSPExtension.captureCompileSnap ()}
              in trees := addDeclSnapshot snap (!trees)
@@ -2445,10 +2511,16 @@ fun start {diag, dbg, warnings} = let
                      then HOL_IDE.shiftBuilt delta t :: tailOf ts
                      else []
                  val fresh = !trees
+                 (* Frozen, and from this pass: a snapshot below the
+                    edit is preceded by exactly the diagnostics this
+                    pass reported, there being none between the edited
+                    declaration and it. *)
+                 val freshDiags = DArray.clone (#diags fresh,
+                                                DArray.size (#diags fresh))
                  fun carry (s : declSnapshot) : declSnapshot = {
                    endByte = #endByte s + delta,
                    builtTrees = tailOf (#builtTrees s) @ #builtTrees fresh,
-                   diags = #diags s,
+                   diags = freshDiags,
                    plugins = LSPExtension.reusePluginData
                                reuse (#plugins s) (#plugins fresh),
                    compileSnap = #compileSnap s}
@@ -2468,8 +2540,14 @@ fun start {diag, dbg, warnings} = let
           lastTrees := {text = text,
                         parse = setParseDone (size (#text text)) (!trees)};
           compiledText := #text text;
-          reusableTo := (if DArray.size (#diags (!trees)) = 0
-                         then size (#text text) else ~1);
+          (* One past the last diagnostic this pass reported, or 0 if
+             it reported none; a report that could not be placed bounds
+             everything, since we cannot say what it describes. *)
+          reusableFrom :=
+            DArray.foldl (fn (Error {pos = (s, _), ...}, acc) =>
+                             Int.max (s + 1, acc)
+                           | (_, _) => size (#text text) + 1)
+                         0 (#diags (!trees));
           (* A verdict that settled while this pass was finishing did
              not publish -- see `updateProofDiag' -- and `lastTrees' is
              only now current.  Catch up, so a lone proof's diagnostic
@@ -2500,7 +2578,7 @@ fun start {diag, dbg, warnings} = let
           compiledText := #text text;
           (* Whatever this pass captured, it stopped at the header, so
              there is no tail to carry forward from it. *)
-          reusableTo := ~1;
+          reusableFrom := ~1;
           (* Elaboration never got past the header: an ancestor that
              loads but whose `open' fails is the case holdep cannot
              see, so treat it exactly like a load failure and stop

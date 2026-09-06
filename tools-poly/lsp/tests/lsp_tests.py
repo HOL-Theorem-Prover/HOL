@@ -6614,6 +6614,199 @@ def test_goalState_select_then_completes():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def _scope_of(c, mark):
+    """the $/compileScope the server reported for the pass since `mark`"""
+    return [m["params"] for m in c.messages_since(mark)[0]
+            if m.get("method") == "$/compileScope"]
+
+
+_TYPO_SRC = ("Theory typotail\n"
+             "Ancestors arithmetic\n\n"
+             "Theorem first:\n"
+             "  1 + 1 = 2\n"
+             "Proof\n"
+             "  DECIDE_TAC\n"
+             "QED\n\n"
+             "Theorem second:\n"
+             "  SUC n + 1 = SUC (n + 1)\n"
+             "Proof\n"
+             "  rw[]\n"
+             "QED\n\n"
+             "Theorem third:\n"
+             "  2 + 2 = 4\n"
+             "Proof\n"
+             "  DECIDE_TAC\n"
+             "QED\n")
+
+
+def test_a_typo_in_a_tactic_leaves_the_next_edit_on_the_fast_path():
+    """Half of typing a tactic name does not compile.  `alL_tac` is a
+    keystroke on the way to `all_tac`, and the diagnostic saying it is
+    undeclared is inside the very declaration being edited -- so the
+    keystroke that fixes it re-elaborates that declaration anyway, and
+    nothing below it needs re-elaborating.
+
+    Before, any diagnostic anywhere in the file disabled tail reuse for
+    the next edit, which made the whole file re-elaborate every time a
+    tactic name passed through a state that did not compile: in a real
+    session, most other keystrokes."""
+    uri = "file:///tmp/typotail_probe.sml"
+    c = Client("/tmp", args=["--dbg"])
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _TYPO_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 90),
+                    "compiled first")
+
+        # a tactic name in mid-type
+        at = _TYPO_SRC.index("  rw[]")
+        mark = c.total_msgs()
+        _did_change_incr(c, uri, _TYPO_SRC, at, at + len("  rw[]"),
+                         "  rW[]", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 90, since=mark),
+                    "recompiled with the typo")
+        typed = _TYPO_SRC.replace("  rw[]", "  rW[]", 1)
+        assert_true(_diag_count(c, uri),
+                    "the typo was reported")
+
+        # and now the keystroke that fixes it
+        mark = c.total_msgs()
+        _did_change_incr(c, uri, typed, at, at + len("  rW[]"), "  rw[]", 3)
+        assert_true(c.wait_for_method("$/compileCompleted", 90, since=mark),
+                    "recompiled with the fix")
+        sc = _scope_of(c, mark)
+        assert_true(sc and sc[0].get("reuseTail") is True,
+                    f"the tail was reused despite the previous typo ({sc!r})")
+        assert_eq(_diag_count(c, uri), [], "and the typo's diagnostic went")
+    finally:
+        c.close()
+
+
+def test_a_diagnostic_below_the_edit_is_not_dropped_by_a_reused_tail():
+    """The other side of the same coin.  A reused tail keeps what the
+    last pass recorded below the edited declaration -- except its
+    diagnostics, which come wholly from this pass, which stopped at the
+    edited declaration.  So a diagnostic further down would vanish from
+    the client while the error was still in the file.
+
+    Editing above one is therefore not eligible for the fast path, and
+    the squiggle has to survive the edit."""
+    uri = "file:///tmp/belowtail_probe.sml"
+    c = Client("/tmp", args=["--dbg"])
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _TYPO_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 90),
+                    "compiled first")
+
+        # break the LAST declaration
+        at = _TYPO_SRC.rindex("  DECIDE_TAC")
+        mark = c.total_msgs()
+        _did_change_incr(c, uri, _TYPO_SRC, at, at + len("  DECIDE_TAC"),
+                         "  DECIDE_TAQ", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 90, since=mark),
+                    "recompiled with the last proof broken")
+        broken = (_TYPO_SRC[:at] + "  DECIDE_TAQ"
+                  + _TYPO_SRC[at + len("  DECIDE_TAC"):])
+        assert_true(_diag_count(c, uri), "the broken tactic was reported")
+
+        # now edit a tactic ABOVE it
+        at2 = broken.index("  rw[]")
+        mark = c.total_msgs()
+        _did_change_incr(c, uri, broken, at2, at2 + len("  rw[]"),
+                         "  rw[] >> ALL_TAC", 3)
+        assert_true(c.wait_for_method("$/compileCompleted", 90, since=mark),
+                    "recompiled after the edit above")
+        sc = _scope_of(c, mark)
+        assert_true(sc and sc[0].get("tacticOnly") is True,
+                    f"the edit was still recognised as tactic-only ({sc!r})")
+        assert_true(sc and sc[0].get("reuseTail") is False,
+                    f"but the tail was NOT reused ({sc!r})")
+        assert_true(_diag_count(c, uri),
+                    "and the diagnostic below the edit survived it")
+    finally:
+        c.close()
+
+
+def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
+    """Typing is not one edit but dozens, most of which do not compile
+    and most of which are interrupted by the next keystroke.  Each pass
+    re-forks the proofs it re-elaborates and keeps the rest where the
+    edit put them, so a proof can be announced as being checked by a
+    pass that is then abandoned.
+
+    The invariant that matters to a user is the one they read off the
+    modeline: once the typing stops, every proof in the file has a
+    verdict, and the count is the number of proofs in the file.  A
+    proof left mid-flight is invisible except as a tally that is short
+    by one and never catches up."""
+    n = 6
+    src = ["Theory verdicts\n", "Ancestors arithmetic\n\n"]
+    for i in range(n):
+        src.append(f"Theorem thm{i}:\n  {i} + 1 = 1 + {i}\n"
+                   f"Proof\n  simp[]\nQED\n\n")
+    src = "".join(src)
+    uri = "file:///tmp/verdicts_probe.sml"
+    at = src.index("  simp[]", src.index("Theorem thm2:"))
+
+    def tally(c):
+        st = {}
+        with c.msgs_lock:
+            for m in c.msgs:
+                if m.get("method") == "$/proofStates":
+                    for p in m["params"]["states"]:
+                        st[p.get("name")] = p.get("status")
+        return st
+
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _request(c, 985, "$/setConfig", {"checkProofs": True})
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 120),
+                    "compiled")
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            st = tally(c)
+            if len(st) == n and all(v == "proved" for v in st.values()):
+                break
+            time.sleep(1)
+        assert_eq(sorted(tally(c).values()), ["proved"] * n,
+                  f"every proof was checked to begin with ({tally(c)!r})")
+
+        # type over the tactic a character at a time, twice: once
+        # through a name that does not compile, once through one that
+        # compiles but does not prove.
+        cur, ver = src, 1
+        for old, new in [("  simp[]", "  alL_tac"), ("  alL_tac", "  simp[]"),
+                         ("  simp[]", "  all_tac"), ("  all_tac", "  simp[]")]:
+            ver += 1
+            _did_change_incr(c, uri, cur, at, at + len(old), "", ver)
+            cur = cur[:at] + cur[at + len(old):]
+            built = ""
+            for ch in new:
+                ver += 1
+                time.sleep(0.1)
+                _did_change_incr(c, uri, cur, at + len(built),
+                                 at + len(built), ch, ver)
+                cur = cur[:at + len(built)] + ch + cur[at + len(built):]
+                built += ch
+            time.sleep(3)
+
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            st = tally(c)
+            if len(st) == n and all(v == "proved" for v in st.values()):
+                break
+            time.sleep(2)
+        st = tally(c)
+        assert_eq(len(st), n, f"the file still has {n} proofs ({st!r})")
+        assert_eq(sorted(v for v in st.values() if v != "proved"), [],
+                  f"and every one of them settled ({st!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -6867,6 +7060,12 @@ TESTS = [
      test_check_proofs_enabled_during_a_compile),
     ("goalState_select_then_completes",
      test_goalState_select_then_completes),
+    ("a_typo_in_a_tactic_leaves_the_next_edit_on_the_fast_path",
+     test_a_typo_in_a_tactic_leaves_the_next_edit_on_the_fast_path),
+    ("a_diagnostic_below_the_edit_is_not_dropped_by_a_reused_tail",
+     test_a_diagnostic_below_the_edit_is_not_dropped_by_a_reused_tail),
+    ("typing_a_tactic_leaves_every_proof_with_a_verdict",
+     test_typing_a_tactic_leaves_every_proof_with_a_verdict),
 ]
 
 
