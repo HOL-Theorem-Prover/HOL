@@ -3995,17 +3995,19 @@ def test_goalState_resume_matches_a_cold_walk():
         c.close()
 
 
-def test_goalState_skips_finished_then1_branches():
-    """`t >- tac` obliges tac to discharge the focused goal, so once
-    the cursor is past the branch its only effect is that one goal is
-    gone.  The walker takes that directly instead of running the
-    branch, which is what makes a cursor in a later branch cheap.
+def test_goalState_reports_a_then1_branch_that_does_not_close():
+    """`t >- tac` obliges tac to discharge the focused goal.  The
+    walker used to take that on trust once the cursor was past the
+    branch -- discharging the goal with `cheat` rather than running the
+    branch, which made a cursor in a later branch cheap.
 
-    Pinned here by a branch that does NOT discharge its goal: the
-    walker no longer notices, and reports the following goal as if it
-    had.  That is deliberate — the branches are not re-checked once
-    passed — and it is the behaviour to revisit if the walker ever
-    becomes the thing that verifies a proof."""
+    It is only true while the proof works.  Replacing a branch's tactic
+    with `all_tac` left the walker showing the goal *after* the branch,
+    as though it had been proved, and any failure inside a branch was
+    invisible because its tactics never ran -- which is exactly when
+    someone is looking at the goal state.  So the branch is run, and a
+    close that cannot discharge the goal is reported where it happens,
+    with the undischarged goal still on show."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -4028,11 +4030,13 @@ def test_goalState_skips_finished_then1_branches():
         r = _send_goalstate(c, 760, uri, 8, 5)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
-        assert_eq(result.get("error"), None,
-                  f"the passed branch is not re-checked ({result!r})")
+        assert_true(result.get("error") is not None,
+                    f"the branch that proves nothing is reported "
+                    f"({result!r})")
         goals = result["goals"]
-        assert_true(len(goals) == 1 and goals[0]["goal"] == "1 = 1",
-                    f"one goal consumed, the next on show ({result!r})")
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "0 = 0",
+                    f"and the goal it failed to discharge is the one on "
+                    f"show ({result!r})")
     finally:
         c.close()
 
@@ -6596,8 +6600,8 @@ TESTS = [
                                      test_goalState_suffices_by_gives_the_implication),
     ("goalState_resume_matches_a_cold_walk",
                                      test_goalState_resume_matches_a_cold_walk),
-    ("goalState_skips_finished_then1_branches",
-                                     test_goalState_skips_finished_then1_branches),
+    ("goalState_reports_a_then1_branch_that_does_not_close",
+     test_goalState_reports_a_then1_branch_that_does_not_close),
     ("goalState_source_that_wont_compile_is_not_a_tactic_failure",
                                      test_goalState_source_that_wont_compile_is_not_a_tactic_failure),
     ("goalState_thenl_leftovers_survive_a_skipped_branch",

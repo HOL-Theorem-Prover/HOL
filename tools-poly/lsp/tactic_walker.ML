@@ -223,9 +223,6 @@ fun applyClose c state = case c of
 
 val atomEndByte = TacticSteps.atomEndByte
 
-fun isThen1 FOpenThen1 = true
-  | isThen1 _ = false
-
 (* A missing start is not evidence of anything, so treat it as "the
    cursor is not before this". *)
 fun startsAfter cursor start = case start of
@@ -496,20 +493,21 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                   Done r => Halted {state = #state r, snaps = #snaps r,
                                     stepIdx = #stepIdx r}
                 | out => out)
-            else if isThen1 ok andalso not replaying then
-              (* Cursor past a finished `>-' branch: it had to prove
-                 the focused goal, so skip its tactics and take the
-                 one thing that outlives it. *)
-              opened (fn state' =>
-                case cheatBranch state' of
-                  Rejected why => Failed {state = state', snaps = snaps,
-                                          stepIdx = stepIdx, at = frag,
-                                          why = why}
-                | Applied state'' =>
-                    closed {state = state'', snaps = snaps,
-                            stepIdx = stepIdx + countSteps inner})
             else
-              (* Cursor past the whole bracket: open + walk + close. *)
+              (* Cursor past the whole bracket: open + walk + close.
+                 A `>-' branch used to be skipped here and its goal
+                 discharged with `cheat', on the grounds that a branch
+                 obliged to prove its goal did prove it.  That holds
+                 only while the proof works: with `>- all_tac' the
+                 walker showed the goal *after* the branch as though it
+                 had succeeded, and a failure inside a branch was
+                 invisible because its tactics never ran -- which is
+                 exactly when someone is reading the goal state.
+                 Running it costs nothing measurable, the snapshot
+                 cache having already absorbed it (0.051s against
+                 0.055s on `ssub_cong', whose branch is a `metis_tac'),
+                 and it is what makes the close report where the proof
+                 actually stops. *)
               opened (fn state' =>
                 case walkFrags env state' snaps stepIdx inner of
                   Done r => closed r
