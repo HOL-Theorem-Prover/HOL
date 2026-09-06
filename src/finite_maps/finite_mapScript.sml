@@ -34,6 +34,12 @@ Libs
   IndDefLib numLib metisLib simpLib BasicProvers bnfBase
   pred_setLib[qualified] boolSimps[qualified]
 
+(* the bound is a cardinality, and cardinalityCoreTheory makes no
+   grammar of its own; this is kept to itself so that a theory
+   declaring a datatype does not inherit the notation *)
+Overload "<<="[local] = “cardleq”
+
+
 (*---------------------------------------------------------------------------*)
 (* Special notation. fmap application is set at the same level as function   *)
 (* application, meaning that                                                 *)
@@ -4012,8 +4018,8 @@ QED
 Theorem fmap_bnd1:
   !m : 'b1 |-> 'a1. FRANGE m <<= univ(:num)
 Proof
-  gen_tac >> ONCE_REWRITE_TAC[cardinalTheory.cardleq_lteq] >>
-  disj1_tac >> simp[GSYM cardinalTheory.FINITE_CARD_LT]
+  gen_tac >> ONCE_REWRITE_TAC[cardinalityCoreTheory.cardleq_lteq] >>
+  disj1_tac >> simp[GSYM cardinalityCoreTheory.FINITE_CARD_LT]
 QED
 
 Theorem fmap_wit1:

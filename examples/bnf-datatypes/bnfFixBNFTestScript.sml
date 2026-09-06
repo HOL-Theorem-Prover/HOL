@@ -31,7 +31,8 @@ fun mk_IMAGE f =
               f)
     end
 fun mk_cardleq (l,r) =
-    list_mk_icomb (prim_mk_const{Thy = "cardinal", Name = "cardleq"}, [l,r])
+    list_mk_icomb (prim_mk_const{Thy = "cardinalityCore",
+                                 Name = "cardleq"}, [l,r])
 
 (* the laws the database stores, as they must read for the map and set
    constants it stores alongside them *)

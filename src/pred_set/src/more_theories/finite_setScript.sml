@@ -1,8 +1,14 @@
 Theory finite_set
 Ancestors
-  arithmetic list lifting transfer cardinal
+  arithmetic list lifting transfer cardinalityCore
 Libs
   quotient transferLib bnfBase
+
+(* the bound is a cardinality, and cardinalityCoreTheory makes no
+   grammar of its own; this is kept to itself so that a theory
+   declaring a datatype does not inherit the notation *)
+Overload "<<="[local] = “cardleq”
+
 
 Theorem psEXTENSION[local] = pred_setTheory.EXTENSION
 
@@ -1313,8 +1319,8 @@ QED
 Theorem fset_bnd1:
   !s : 'a1 fset. toSet s <<= univ(:num)
 Proof
-  gen_tac >> ONCE_REWRITE_TAC[cardinalTheory.cardleq_lteq] >>
-  disj1_tac >> simp[GSYM cardinalTheory.FINITE_CARD_LT]
+  gen_tac >> ONCE_REWRITE_TAC[cardinalityCoreTheory.cardleq_lteq] >>
+  disj1_tac >> simp[GSYM cardinalityCoreTheory.FINITE_CARD_LT]
 QED
 
 Theorem fset_wit1:

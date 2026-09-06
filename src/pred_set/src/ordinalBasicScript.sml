@@ -1,10 +1,31 @@
 Theory ordinalBasic[bare]
 
 Ancestors
-  wellorder pred_set set_relation pair option cardinal
+  wellorder pred_set set_relation pair option cardinalityCore
 Libs
   HolKernel Parse boolLib boolSimps simpLib BasicProvers QLib metisLib
   TotalDefn pred_setLib pureSimps TypeBase tautLib[qualified]
+
+(* cardinalityCoreTheory makes no grammar of its own -- it is every
+   theory's ancestor through the datatype package, and the ASCII
+   forms are tokens wherever they reach.  What this theory writes
+   it sets up for itself. *)
+Overload "<<="[local] = “cardleq”
+Overload cardlt[local] = “λs1 s2. ¬cardleq s2 s1”
+val _ = temp_set_fixity "<</=" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+Overload "<</="[local] = “cardlt”
+val _ = temp_set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+Overload "=~"[local] = “cardeq”
+Overload cardlt[local] = “λs1 s2. ¬cardleq s2 s1”
+val _ = temp_set_fixity "<</=" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+Overload "<</="[local] = “cardlt”
+val _ = temp_set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+Overload "=~"[local] = “cardeq”
+
 
 fun bossify stac ths = stac (srw_ss() ++ numSimps.ARITH_ss) ths
 val simp = bossify asm_simp_tac

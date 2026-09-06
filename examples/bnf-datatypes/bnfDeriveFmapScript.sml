@@ -40,7 +40,8 @@ fun mk_IMAGE f =
               f)
     end
 fun mk_cardleq (l,r) =
-    list_mk_icomb (prim_mk_const{Thy = "cardinal", Name = "cardleq"}, [l,r])
+    list_mk_icomb (prim_mk_const{Thy = "cardinalityCore",
+                                 Name = "cardleq"}, [l,r])
 
 fun lawsOK (d : bnfLib.derived_bnf) =
     let

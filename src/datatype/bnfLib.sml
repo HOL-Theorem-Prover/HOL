@@ -244,7 +244,7 @@ fun mk_IMAGE f =
               f)
     end
 
-val cardleq_tm = prim_mk_const{Thy = "cardinal", Name = "cardleq"}
+val cardleq_tm = prim_mk_const{Thy = "cardinalityCore", Name = "cardleq"}
 fun mk_cardleq (l,r) = list_mk_icomb (cardleq_tm, [l,r])
 fun dest_cardleq t =
     let val (f,r) = dest_comb t
@@ -483,7 +483,8 @@ fun univ_le tys ty =
     case tys of
         [] => raise ERR "univ_le" "bound type not among the component bounds"
       | [t] => if t = ty then
-                 ISPEC (pred_setSyntax.mk_univ ty) cardinalTheory.cardleq_REFL
+                 ISPEC (pred_setSyntax.mk_univ ty)
+                       cardinalityCoreTheory.cardleq_REFL
                else raise ERR "univ_le"
                           "bound type not among the component bounds"
       | t::rest =>
@@ -492,7 +493,7 @@ fun univ_le tys ty =
           if t = ty then
             INST_TYPE [alpha |-> t, beta |-> restty] UNIV_CARD_LE_ADDR
           else
-            MATCH_MP cardinalTheory.cardleq_TRANS
+            MATCH_MP cardinalityCoreTheory.cardleq_TRANS
                      (CONJ (univ_le rest ty)
                            (INST_TYPE [alpha |-> t, beta |-> restty]
                                       UNIV_CARD_LE_ADDL))
@@ -514,12 +515,14 @@ fun planBndThm lives i (B, Bne, Binf, bndtys) plan =
                 let
                   val subth = planBndThm lives i (B,Bne,Binf,bndtys) sub
                   val bnd_le_B =
-                      MATCH_MP cardinalTheory.cardleq_TRANS
-                               (CONJ (ISPEC bnd cardinalTheory.CARD_LE_UNIV)
+                      MATCH_MP cardinalityCoreTheory.cardleq_TRANS
+                               (CONJ (ISPEC bnd
+                                        cardinalityCoreTheory.CARD_LE_UNIV)
                                      (univ_le bndtys
                                               (#1 (dom_rng (type_of bnd)))))
                   val y = mk_var("y", #1 (dom_rng (type_of set)))
-                  val setth = GEN y (MATCH_MP cardinalTheory.cardleq_TRANS
+                  val setth = GEN y (MATCH_MP
+                                       cardinalityCoreTheory.cardleq_TRANS
                                               (CONJ (SPEC y bndthm) bnd_le_B))
                 in
                   MATCH_MP BIMGo_CARDLE (LIST_CONJ [Binf, subth, setth])

@@ -1,9 +1,31 @@
 Theory bnfInitial[bare]
 Ancestors
-  pred_set cardinal ordinalBasic combin pair
+  pred_set cardinalityCore ordinalBasic combin pair
 Libs
   HolKernel Parse boolLib BasicProvers simpLib boolSimps metisLib numLib
   pred_setLib pairLib QLib TotalDefn[qualified]
+
+(* cardinalityCoreTheory makes no grammar of its own -- it is every
+   theory's ancestor through the datatype package, and the ASCII
+   forms are tokens wherever they reach.  What this theory writes
+   it sets up for itself. *)
+Overload "<<="[local] = “cardleq”
+Overload cardlt[local] = “λs1 s2. ¬cardleq s2 s1”
+val _ = temp_set_fixity "<</=" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+Overload "<</="[local] = “cardlt”
+val _ = temp_set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+Overload "=~"[local] = “cardeq”
+Overload "𝟚"[local] = “{T;F}”
+Overload cardlt[local] = “λs1 s2. ¬cardleq s2 s1”
+val _ = temp_set_fixity "<</=" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+Overload "<</="[local] = “cardlt”
+val _ = temp_set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+Overload "=~"[local] = “cardeq”
+
 
 (* ----------------------------------------------------------------------
     bossLib is not built yet — the package has to be, so that Datatype

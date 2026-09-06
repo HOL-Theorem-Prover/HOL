@@ -23,6 +23,12 @@ Libs
   boolSimps pred_setLib TotalDefn metisLib quotientLib bnfBase
   Datatype[qualified] OpenTheoryMap[qualified]
 
+(* the bound is a cardinality, and cardinalityCoreTheory makes no
+   grammar of its own; this is kept to itself so that a theory
+   declaring a datatype does not inherit the notation *)
+Overload "<<="[local] = “cardleq”
+
+
 val ERR = mk_HOL_ERR "listScript"
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
@@ -5957,8 +5963,8 @@ QED
 Theorem list_bnd1:
   !l : 'a1 list. set l <<= univ(:num)
 Proof
-  gen_tac >> ONCE_REWRITE_TAC[cardinalTheory.cardleq_lteq] >>
-  disj1_tac >> simp[GSYM cardinalTheory.FINITE_CARD_LT]
+  gen_tac >> ONCE_REWRITE_TAC[cardinalityCoreTheory.cardleq_lteq] >>
+  disj1_tac >> simp[GSYM cardinalityCoreTheory.FINITE_CARD_LT]
 QED
 
 Theorem list_wit1:
