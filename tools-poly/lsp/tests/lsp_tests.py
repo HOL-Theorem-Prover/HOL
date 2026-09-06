@@ -5133,8 +5133,14 @@ def test_hover_markdown_is_fenced():
 def test_failed_proof_becomes_a_diagnostic():
     """The pool's verdict used to reach only a client that speaks
     `$/proofStates', so a failed replay was invisible in an editor.
-    A failure is an error diagnostic on the theorem's name -- the real
-    build would have raised out of `store_thm_at'."""
+    A failure is an error diagnostic -- the real build would have raised
+    out of `store_thm_at'.
+
+    It arrives against the theorem's name, which is all the pool knows,
+    and settles onto the step that failed once the proof has been walked
+    for it.  The walk waits for the pool and the compile to be done
+    with, so the test waits for the settled answer rather than the
+    first one."""
     d = tempfile.mkdtemp(prefix="lsp_pdiag_")
     try:
         src = ("Theory pdiagfail\n"
@@ -5159,24 +5165,23 @@ def test_failed_proof_becomes_a_diagnostic():
             assert_true(c.wait_for_method("$/compileCompleted", 60),
                         "compileCompleted")
 
-            def failed(cl):
+            # 12 is `DECIDE_TAC', the step it stops at; 9 is
+            # `Theorem wrong:', where it lands before the walk.
+            def located(cl):
                 ds = [x for x in _diag_count(cl, uri)
                       if "proof failed" in x.get("message", "")]
-                return ds or None
+                return (ds if ds and ds[0]["range"]["start"]["line"] == 12
+                        else None)
 
-            ds = c.wait_until(failed, 60)
+            ds = c.wait_until(located, 60)
             assert_true(ds is not None,
-                        f"a diagnostic for the failed proof "
-                        f"({_proof_states(c, uri)!r}, "
+                        f"a diagnostic for the failed proof, on the step "
+                        f"it fails at ({_proof_states(c, uri)!r}, "
                         f"{_diag_count(c, uri)!r})")
             assert_eq(len(ds), 1, f"exactly one ({ds!r})")
             assert_eq(ds[0]["severity"], 1, "reported as an error")
-            # On `wrong', not on `fine' and not on the whole file.
-            line = ds[0]["range"]["start"]["line"]
-            assert_eq(line, 9,
-                      f"on the failing theorem's own line ({ds[0]!r})")
-            got = src.split("\n")[line]
-            assert_true("wrong" in got, f"which is {got!r}")
+            got = src.split("\n")[ds[0]["range"]["start"]["line"]]
+            assert_true("DECIDE_TAC" in got, f"which is {got!r}")
             assert_true(all("fine" not in x.get("message", "") for x in ds),
                         "the good proof gets no diagnostic")
         finally:
@@ -5274,6 +5279,92 @@ def test_proof_diagnostic_clears_when_the_proof_is_fixed():
                         f"and cleared once the proof is fixed "
                         f"({_diag_count(c, uri)!r}, "
                         f"{_proof_states(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_search_finds_theorems_by_name_theory_and_pattern():
+    """What `M-h M` asks: a selector is a theory in single quotes, a
+    name fragment in double quotes, or a term pattern.  Several narrow
+    rather than widen.
+
+    The quoting is read by the server, not by each client, so that the
+    same thing typed into emacs and into VS Code asks the same
+    question; a term pattern in particular has to be parsed where the
+    file's ancestry is loaded, or the user's own notation does not mean
+    what they meant by it."""
+    d = tempfile.mkdtemp(prefix="lsp_search_")
+    try:
+        src = ("Theory searching\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem t:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/searchingScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            rid = [1600]
+
+            def search(selectors, limit=50):
+                rid[0] += 1
+                c.send({"jsonrpc": "2.0", "id": rid[0],
+                        "method": "$/hol/search",
+                        "params": {"selectors": selectors, "limit": limit}})
+
+                def got(cl):
+                    with cl.msgs_lock:
+                        for m in cl.msgs:
+                            if m.get("id") == rid[0]: return m
+                    return None
+                r = c.wait_until(got, 30)
+                assert_true(r is not None and "error" not in r,
+                            f"search {selectors!r} answered ({r!r})")
+                return r["result"]
+
+            def names(res): return sorted(h["name"] for h in res)
+
+            # a term pattern: free variables are wildcards, so this is
+            # commutativity of + however it was written
+            byPattern = search(["x + y = y + x"])
+            assert_true("ADD_COMM" in names(byPattern),
+                        f"the pattern finds ADD_COMM ({names(byPattern)!r})")
+
+            # a name fragment, narrowed by a theory
+            narrowed = search(['"ASSOC"', "'arithmetic'"])
+            assert_true(narrowed, "name and theory together find something")
+            assert_true(all(h["theory"] == "arithmetic" for h in narrowed),
+                        f"and only in that theory ({narrowed!r})")
+            assert_true("ADD_ASSOC" in names(narrowed),
+                        f"ADD_ASSOC among them ({names(narrowed)!r})")
+
+            # narrowing, not widening: adding a theory cannot add hits
+            wide = search(['"ASSOC"'])
+            assert_true(len(narrowed) <= len(wide),
+                        f"a second selector narrows ({len(narrowed)} vs "
+                        f"{len(wide)})")
+
+            # what a hit carries: enough to show it and to go to it
+            hit = [h for h in narrowed if h["name"] == "ADD_ASSOC"][0]
+            assert_true("⊢" in hit["statement"],
+                        f"the statement is there ({hit!r})")
+            assert_eq(hit["class"], "Thm", f"and its class ({hit!r})")
+            assert_true(hit.get("uri", "").endswith("arithmeticScript.sml"),
+                        f"and where it was proved ({hit!r})")
+            assert_true(hit["line"] > 0, f"with a line ({hit!r})")
+
+            # a pattern that does not parse is a question, not a fault
+            assert_eq(search(["@@@ ###"]), [],
+                      "nonsense answers nothing rather than failing")
+            assert_eq(search([]), [], "and so does nothing at all")
         finally:
             c.close()
     finally:
@@ -6715,6 +6806,8 @@ TESTS = [
      test_suspending_proof_becomes_a_warning),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
+    ("search_finds_theorems_by_name_theory_and_pattern",
+     test_search_finds_theorems_by_name_theory_and_pattern),
     ("a_failed_proof_is_reported_at_the_step_that_fails",
      test_a_failed_proof_is_reported_at_the_step_that_fails),
     ("goalState_reports_where_a_failure_is",

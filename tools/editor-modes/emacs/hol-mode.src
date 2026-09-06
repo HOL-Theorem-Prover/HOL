@@ -2175,6 +2175,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "\M-g" 'hol-lsp-show-goal-state)
 (define-key hol-map "\M-C" 'hol-lsp-retry-compile)
+(define-key hol-map "\M-m" 'hol-lsp-search)
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
@@ -3139,6 +3140,93 @@ so a slow server never freezes emacs on a keystroke."
                            (hol-lsp--goalstate-params)
                            :cancel-on-input cancel-on-input)
         (error nil)))))
+
+(defcustom hol-lsp-search-limit 100
+  "How many theorems `hol-lsp-search' asks the server for at once."
+  :type 'integer
+  :group 'hol)
+
+(define-derived-mode hol-lsp-search-mode special-mode "HOL Search"
+  "Major mode for the *HOL Search* buffer.
+RET on a theorem goes to where it was proved.")
+
+(defun hol-lsp-search-goto ()
+  "Visit the theorem at point where it was proved."
+  (interactive)
+  (let ((uri (get-text-property (point) 'hol-lsp-uri))
+        (line (get-text-property (point) 'hol-lsp-line)))
+    (cond
+     ((null uri) (message "HOL: no source location recorded for this one"))
+     (t (find-file-other-window (hol-lsp--uri-to-path uri))
+        (goto-char (point-min))
+        (forward-line (max 0 (1- (or line 1))))))))
+
+(define-key hol-lsp-search-mode-map (kbd "RET") 'hol-lsp-search-goto)
+
+(defun hol-lsp--search-render (hits selectors)
+  "Lay HITS out in the *HOL Search* buffer, SELECTORS being the question.
+Each theorem carries its own location as text properties, so RET on any
+line of it goes to the script it was proved in."
+  (let ((buf (get-buffer-create "*HOL Search*")))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (hol-lsp-search-mode)
+        (insert (format "%d theorem%s for %s\n\n"
+                        (length hits) (if (= 1 (length hits)) "" "s")
+                        (mapconcat #'identity selectors " ")))
+        (dolist (h hits)
+          (let ((start (point))
+                (name (plist-get h :name))
+                (theory (plist-get h :theory))
+                (class (plist-get h :class))
+                (stmt (plist-get h :statement))
+                (uri (plist-get h :uri))
+                (line (plist-get h :line)))
+            (insert (propertize (format "%s$%s" theory name) 'face 'bold)
+                    (format "  [%s]\n" class)
+                    (or stmt "") "\n\n")
+            (when uri
+              (put-text-property start (point) 'hol-lsp-uri uri)
+              (put-text-property start (point) 'hol-lsp-line line))))
+        (goto-char (point-min))))
+    buf))
+
+(defun hol-lsp--search-read-selectors ()
+  "Read selectors until an empty one, as `hol-db-select' does.
+A selector is a theory name in single quotes, a fragment of a theorem's
+name in double quotes, or anything else, which is a term pattern.  The
+server reads that quoting, so it means the same here as in any other
+client."
+  (let ((sels nil) next)
+    (while (and (setq next (read-string
+                            (format "Selector %d ('thy'; \"name\"; term \
+pattern), empty to search: " (1+ (length sels)))))
+                (not (string-equal next "")))
+      (push next sels))
+    (nreverse sels)))
+
+(defun hol-lsp-search ()
+  "Ask the theorem database what matches, and show what it says.
+The LSP counterpart of `hol-db-select' (\[hol-db-select]): several
+selectors narrow rather than widen, so a name fragment and a theory
+together ask for that theory's theorems whose names match."
+  (interactive)
+  (let ((server (hol-lsp--server)))
+    (if (null server)
+        (message "HOL: no LSP server for this buffer")
+      (let ((sels (hol-lsp--search-read-selectors)))
+        (if (null sels)
+            (message "HOL: nothing to search for")
+          (let ((hits (append
+                       (jsonrpc-request server :$/hol/search
+                                        (list :selectors (vconcat sels)
+                                              :limit hol-lsp-search-limit))
+                       nil)))
+            (if (null hits)
+                (message "HOL: nothing matches %s"
+                         (mapconcat #'identity sels " "))
+              (display-buffer (hol-lsp--search-render hits sels)))))))))
 
 (define-derived-mode hol-lsp-goals-mode special-mode "HOL Goals"
   "Major mode for the *HOL Goals* buffer populated by the HOL LSP.

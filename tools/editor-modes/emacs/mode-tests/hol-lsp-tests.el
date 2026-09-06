@@ -243,6 +243,35 @@ file's own directory -- not a VC root, and not the file itself."
       (should (memq 'display-buffer-below-selected
                     (car (hol-lsp--goals-display-action)))))))
 
+(ert-deftest hol-lsp-search-render-carries-each-theorem-to-its-source ()
+  "A search result is only half useful if you cannot get to the proof.
+Every line of a theorem's entry carries its location, so RET anywhere in
+it goes to the script -- not just on the name."
+  (let* ((hits (list (list :name "ADD_COMM" :theory "arithmetic"
+                           :class "Thm"
+                           :statement "\u22a2 !m n. m + n = n + m"
+                           :uri "file:///tmp/arithmeticScript.sml"
+                           :line 310)
+                     (list :name "NOWHERE" :theory "local" :class "Def"
+                           :statement "\u22a2 T" :line 0)))
+         (buf (hol-lsp--search-render hits '("\"COMM\"" "'arithmetic'"))))
+    (unwind-protect
+        (with-current-buffer buf
+          (goto-char (point-min))
+          (should (looking-at "2 theorems for \"COMM\" 'arithmetic'"))
+          ;; the statement is shown, not just the name
+          (should (search-forward "m + n = n + m" nil t))
+          ;; and that line knows where the theorem lives
+          (should (equal (get-text-property (point) 'hol-lsp-uri)
+                         "file:///tmp/arithmeticScript.sml"))
+          (should (equal (get-text-property (point) 'hol-lsp-line) 310))
+          ;; a theorem with no recorded location carries none, rather
+          ;; than carrying its predecessor's
+          (goto-char (point-min))
+          (should (search-forward "NOWHERE" nil t))
+          (should (null (get-text-property (point) 'hol-lsp-uri))))
+      (kill-buffer buf))))
+
 (ert-deftest hol-lsp-uri-round-trips-to-a-path ()
   (let ((path (make-temp-file "hol-lsp-uri-")))
     (unwind-protect

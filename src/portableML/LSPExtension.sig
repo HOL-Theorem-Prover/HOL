@@ -215,6 +215,32 @@ type ide_symbol = {
 val ideSymbols:
   ({query: string, prefixOnly: bool, limit: int} -> ide_symbol list) ref
 
+(* Asking the theorem database a question, the way `M-h M' does: a
+   selector is a theory name in single quotes, a theorem-name fragment
+   in double quotes, or anything else, which is a term pattern.  Several
+   of them narrow: `"ASSOC"' and `'arithmetic'' together ask for the
+   theorems of `arithmetic' whose names mention ASSOC.
+
+   The selectors arrive as the user wrote them.  Reading the quoting is
+   the server's job rather than each client's, so that the same thing
+   typed into emacs and into VS Code asks the same question; deciding
+   how the answers *look* is the client's.
+
+   `statement' is a pretty tree rather than a string so the caller can
+   lay it out at whatever width it is going to show it in, as
+   `thmLookup' does.  `line' is 1-based and 0 when unrecorded, and
+   `file' has had its pathvars expanded, both as for `ide_symbol'. *)
+type search_result = {
+  name: string,
+  theory: string,
+  class: string,                (* "Thm" | "Def" | "Axm" *)
+  statement: PrettyImpl.pretty,
+  file: string option,
+  line: int }
+
+val dbSearch:
+  ({selectors: string list, limit: int} -> search_result list) ref
+
 (* Called at the start of each LSP compile pass.  Intended to restore
    the HOL Context to a snapshot taken at LSP startup, so recompiles
    run against a clean state (no accumulated theorems / retired

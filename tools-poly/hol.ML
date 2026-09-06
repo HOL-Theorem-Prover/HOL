@@ -745,6 +745,10 @@ in
            from DB and from built Theory.dat files. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/db_symbols_init.ML"));
+        (* Searching the theorem database by name, theory and term
+           pattern -- what `M-h M' asks for. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/db_search_init.ML"));
         (* Hover shows no entry documentation: `LSPExtension.helpLookup'
            is installed by `Help.sml', which only the REPL prelude
            loads, so in LSP mode the hook has never had an

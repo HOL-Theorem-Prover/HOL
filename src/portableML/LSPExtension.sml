@@ -227,6 +227,17 @@ type ide_symbol = {
 val ideSymbols :
     ({query: string, prefixOnly: bool, limit: int} -> ide_symbol list) ref =
   ref (fn _ => [])
+type search_result = {
+  name: string,
+  theory: string,
+  class: string,
+  statement: PrettyImpl.pretty,
+  file: string option,
+  line: int }
+val dbSearch :
+    ({selectors: string list, limit: int} -> search_result list) ref =
+  ref (fn _ => [])
+
 val resetForCompile : (unit -> unit) ref = ref (fn () => ())
 val notifyCompileStart : (int option -> unit) ref = ref (fn _ => ())
 

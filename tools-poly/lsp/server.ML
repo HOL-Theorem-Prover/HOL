@@ -575,6 +575,14 @@ val goalStateParams =
 
 val workspaceSymbolParams = field "query" string
 
+(* Each selector as the user typed it, quoting and all -- reading that
+   is `dbSearch's job, so that the same thing typed into two clients
+   asks the same question.  A default limit because the database is
+   large and a bare `'arithmetic'` is a plausible thing to ask. *)
+val searchParams = map2 (fn (sels, limit) =>
+    {selectors = sels, limit = limit})
+  (field "selectors" (array string), fieldD "limit" int 100)
+
 val cancelParams = field "id" req_id
 
 val evalParams = map4 (fn (uri, code, incr, holdep) =>
@@ -3008,6 +3016,21 @@ fun start {diag, dbg, warnings} = let
                                     (fromBuffers @ fromHol)))
       in List.take (all, maxWorkspaceSymbols) handle Subscript => all end
 
+  (* One theorem the search found.  `statement` is laid out here, at the
+     width the client asked for, because the client wanted a string and
+     the printer wanted to break the lines. *)
+  fun encSearchResult width ({name, theory, class, statement, file, line}
+                             : LSPExtension.search_result) print = (
+      print "{\"name\":"; encString name print;
+      print ",\"theory\":"; encString theory print;
+      print ",\"class\":"; encString class print;
+      print ",\"statement\":"; encPretty width statement print;
+      (case file of
+         NONE => ()
+       | SOME f => (print ",\"uri\":"; encString (pathToUri f) print));
+      print ",\"line\":"; encInt line print;
+      print "}")
+
   fun encWorkspaceSymbol {name, container, kind, uri, line} print = (
       print "{\"name\":"; encString name print;
       print ",\"kind\":"; encInt kind print;
@@ -3247,6 +3270,11 @@ fun start {diag, dbg, warnings} = let
                        (fn (c, sym) => encSymbolInformation uri lines c sym)
                        (flatSymbols syms))
           end)
+    | Request {method = "$/hol/search", id, params} =>
+      spawnJob id params searchParams (fn {selectors, limit} =>
+        Ok (encArray (encSearchResult (!hoverWidth))
+                     (!LSPExtension.dbSearch {selectors = selectors,
+                                              limit = limit})))
     | Request {method = "workspace/symbol", id, params} =>
       spawnJob id params workspaceSymbolParams (fn query =>
         Ok (encArray encWorkspaceSymbol (workspaceSymbols query)))
