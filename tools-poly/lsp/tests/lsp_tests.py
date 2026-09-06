@@ -6934,6 +6934,114 @@ def test_a_tail_reused_after_a_typo_matches_a_full_compile():
               "a tail reused after a typo says what a full compile says")
 
 
+def test_initialize_says_which_hol_this_is():
+    """Two people comparing an eglot log need to know it came from the
+    same HOL.  The reply to `initialize` carries `serverInfo`, which
+    eglot prints in full, and it names two commits rather than one:
+    `server.ML` is baked into `bin/hol` by polyc, while the walker and
+    the goal-state driver are read from `Systeml.HOLDIR` at startup, so
+    a binary can be older than the code it runs."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        with c.msgs_lock:
+            reply = next((m for m in c.msgs if m.get("id") == 1), None)
+        info = ((reply or {}).get("result") or {}).get("serverInfo")
+        assert_true(info, f"initialize carried serverInfo ({reply!r})")
+        assert_eq(info.get("name"), "HOL4", "the server names itself")
+        for k in ("version", "builtFrom", "sources", "holdir"):
+            assert_true(isinstance(info.get(k), str) and info[k],
+                        f"serverInfo.{k} is a non-empty string ({info!r})")
+        # In this tree HOLDIR is a git checkout, so a real stamp is
+        # expected -- without this the test passes on "unknown".
+        assert_true(info["builtFrom"] != "unknown",
+                    f"the binary carries a commit ({info!r})")
+        assert_true(info["sources"] != "unknown",
+                    f"and so do the sources it runs ({info!r})")
+    finally:
+        c.close()
+
+
+def test_a_burst_of_edits_leaves_diagnostics_matching_the_text():
+    """`stopCompile` only sets a flag, and a pass notices it at a
+    declaration boundary.  A pass that has finished elaborating never
+    looks again, so it used to run its whole completion tail --
+    publishing diagnostics, splicing, committing `lastTrees` -- for
+    text the user had already replaced.  Being last to publish, its
+    stale squiggles were the ones that stuck, and they stayed stuck
+    because the next pass started from the base it had committed.
+
+    Type fast enough that an edit lands inside that tail, then let it
+    settle and require the diagnostics to say what a compile of the
+    final text says."""
+    n = 12
+    src = ["Theory burst\n", "Ancestors arithmetic\n\n"]
+    for i in range(n):
+        src.append(f"Theorem thm{i}:\n  {i} + 1 = 1 + {i}\n"
+                   f"Proof\n  simp[]\nQED\n\n")
+    src.append("Theorem target:\n  1 + 1 = 2 /\\ 2 + 2 = 4\nProof\n"
+               "  CONJ_TAC\n  >- metis_tac[] >> DECIDE_TAC\n"
+               "  >- DECIDE_TAC\nQED\n")
+    src = "".join(src)
+    old = "metis_tac[] >>"
+    final = src.replace(old, "all_tac >>", 1)
+    uri = "file:///tmp/burst_probe.sml"
+
+    def settled(c, seconds):
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            time.sleep(2)
+        return sorted((d["range"]["start"]["line"] + 1,
+                       d.get("message", "").split("\n")[0][:40])
+                      for d in _diag_count(c, uri))
+
+    def from_scratch():
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            _request(c, 981, "$/setConfig", {"checkProofs": True})
+            _did_open(c, uri, final, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 180),
+                        "compiled the final text")
+            return settled(c, 25)
+        finally:
+            c.close()
+
+    def by_typing():
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            _request(c, 982, "$/setConfig", {"checkProofs": True})
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 180),
+                        "compiled to begin with")
+            time.sleep(6)
+            at = src.index(old)
+            cur, ver = src, 1
+            ver += 1
+            _did_change_incr(c, uri, cur, at, at + len(old), "", ver)
+            cur = cur[:at] + cur[at + len(old):]
+            time.sleep(0.15)
+            off = 0
+            for chunk in ["a", "ll", "_tac", " ", ">>"]:
+                ver += 1
+                _did_change_incr(c, uri, cur, at + off, at + off, chunk, ver)
+                cur = cur[:at + off] + chunk + cur[at + off:]
+                off += len(chunk)
+                time.sleep(0.15)
+            assert_eq(cur, final, "the burst produced the final text")
+            return settled(c, 30)
+        finally:
+            c.close()
+
+    want = from_scratch()
+    # Positive control: the final text really does report something, so
+    # an empty-vs-empty comparison cannot pass for the wrong reason.
+    assert_true(want, f"the final text reports a failed proof ({want!r})")
+    got = by_typing()
+    assert_eq(got, want, "diagnostics after a burst match the text")
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -7197,6 +7305,10 @@ TESTS = [
      test_a_failed_proof_is_located_without_being_asked),
     ("a_tail_reused_after_a_typo_matches_a_full_compile",
      test_a_tail_reused_after_a_typo_matches_a_full_compile),
+    ("initialize_says_which_hol_this_is",
+     test_initialize_says_which_hol_this_is),
+    ("a_burst_of_edits_leaves_diagnostics_matching_the_text",
+     test_a_burst_of_edits_leaves_diagnostics_matching_the_text),
 ]
 
 

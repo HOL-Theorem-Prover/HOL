@@ -787,6 +787,57 @@ fun stdioConnection (): connection = let
 
 exception ProtocolError
 
+(* Which HOL this server actually is.  Two answers, and they can
+   differ, which is the whole reason for saying both: `server.ML` is
+   baked into `bin/hol` by polyc, but the walker, the goal-state driver
+   and the rest are `QUse.use`d from `Systeml.HOLDIR` when the server
+   starts.  A binary can therefore be older than the code it runs, and
+   quoting one hash would be worse than quoting none.
+
+   `builtFrom` is a `val`, so Poly evaluates it while polyc is
+   compiling this file and freezes the answer into the executable.
+   `sourcesNow` is a `fun`, so it runs at startup and describes the
+   tree the run-time sources are being read from. *)
+local
+  fun gitOut args = let
+    val tmp = OS.FileSys.tmpName ()
+    val cmd = "git -C \"" ^ Systeml.HOLDIR ^ "\" " ^ args
+              ^ " > \"" ^ tmp ^ "\" 2>/dev/null"
+    val ok = OS.Process.isSuccess (OS.Process.system cmd)
+    val out = if not ok then ""
+              else (let val is = TextIO.openIn tmp
+                        val s = TextIO.inputAll is
+                    in TextIO.closeIn is; s end handle _ => "")
+    val () = (OS.FileSys.remove tmp handle _ => ())
+  in
+    Substring.string (Substring.dropr Char.isSpace (Substring.full out))
+  end handle _ => ""
+in
+  (* "abc1234" or "abc1234-dirty"; "" when this is not a git checkout,
+     which is the release-tarball case and not an error. *)
+  fun gitStamp () =
+    case gitOut "rev-parse --short HEAD" of
+        "" => ""
+      | sha => if gitOut "status --porcelain --untracked-files=no" = ""
+               then sha else sha ^ "-dirty"
+end
+val builtFrom = gitStamp ()
+fun sourcesNow () = gitStamp ()
+
+fun encBuildInfo print = let
+  val now = sourcesNow ()
+  fun str s = encString (if s = "" then "unknown" else s) print
+in
+  print "{\"name\":\"HOL4\",\"version\":"; str builtFrom;
+  (* Non-standard, and ignored by clients that do not know it -- but
+     `eglot-events-buffer` prints the whole reply, which is the point:
+     a log can then say which HOL produced it. *)
+  print ",\"builtFrom\":"; str builtFrom;
+  print ",\"sources\":"; str now;
+  print ",\"holdir\":"; encString Systeml.HOLDIR print;
+  print "}"
+end
+
 fun initialize ({send, recv}:connection) capabilitiesFor = let
   fun init () =
     case recv () of
@@ -800,6 +851,7 @@ fun initialize ({send, recv}:connection) capabilitiesFor = let
   val (id, params) = init ()
   val _ = send (mkResponse id (Ok (fn print => (
     print "{\"capabilities\":"; print (capabilitiesFor params);
+    print ",\"serverInfo\":"; encBuildInfo print;
     print "}"))))
   val _ = case recv () of
     Notification {method = "initialized", ...} => ()
@@ -2488,6 +2540,22 @@ fun start {diag, dbg, warnings} = let
                | SOME {delta, ...} =>
                  {resumeFrom = resumeStart,
                   keptFrom = SOME (!lastDecEnd - delta), bytes = delta});
+          (* Checked again, and not for tidiness.  Handing the pool
+             its work above is not instantaneous, so a `didChange` can
+             land inside this tail -- and then the text this pass
+             compiled is no longer the buffer.  Publishing anyway puts
+             diagnostics for text the user has already changed on top
+             of whatever the pass that replaced us published: the
+             superseded pass publishes last, so its stale squiggles are
+             the ones that stick, and they stay stuck because the
+             `lastTrees` commit below hands the next pass a base it had
+             already moved past.  Leave all of it to the pass that now
+             owns the buffer. *)
+          if !cancelled then (
+            sendProgressEnd ();
+            send (mkNotif "$/compileInterrupted" (fn print => (
+              print "{\"uri\":"; encString uri print; print "}"))))
+          else (
           (* The file compiled, so whatever it was blocked on is
              resolved. *)
           depsBlocked := NONE;
@@ -2572,7 +2640,7 @@ fun start {diag, dbg, warnings} = let
              localised it in the end was the user happening to ask for
              a goal state. *)
           elaborating := false;
-          (!drainFailures uri v handle _ => ())))
+          (!drainFailures uri v handle _ => ()))))
       in (
         case missingDeps () of
           fails as (_::_) => blockOnDeps fails
