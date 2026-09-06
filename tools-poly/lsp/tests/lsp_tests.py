@@ -6807,6 +6807,133 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
         c.close()
 
 
+def test_a_failed_proof_is_located_without_being_asked():
+    """When a proof fails, the pool says what went wrong and the walker
+    says where.  The walk has to wait for the compile and the rest of
+    the pool to stop using the compile state, so it is queued and
+    retried -- and the retry at the end of the compile used to ask
+    whether a compile was running from inside the compile itself,
+    which answers yes for as long as that call takes.  The failure then
+    sat queued with nothing left to trigger it, and what located it in
+    the end was the user happening to request a goal state.
+
+    So: break a proof, ask for nothing, and require the located
+    diagnostic to arrive by itself."""
+    src = ("Theory located\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem two_things:\n"
+           "  1 + 1 = 2 /\\ 2 + 2 = 4\n"
+           "Proof\n"
+           "  CONJ_TAC >- all_tac >- DECIDE_TAC\n"
+           "QED\n")
+    uri = "file:///tmp/located_probe.sml"
+    tac_line = 6                      # 0-based, the CONJ_TAC line
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _request(c, 986, "$/setConfig", {"checkProofs": True})
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 120),
+                    "compiled")
+
+        # No hover, no goalState, no further edits: just wait.
+        located, head, deadline = None, None, time.time() + 90
+        while time.time() < deadline:
+            ds = _diag_count(c, uri)
+            located = [d for d in ds
+                       if d["range"]["start"]["line"] == tac_line]
+            head = [d for d in ds
+                    if d["range"]["start"]["line"] != tac_line]
+            if located:
+                break
+            time.sleep(1)
+
+        # Positive control: the failure was noticed at all.
+        assert_true(located or head,
+                    "the failed proof was reported somewhere")
+        assert_true(located,
+                    f"the failure was located on the failing step "
+                    f"without being asked (got {_diag_count(c, uri)!r})")
+    finally:
+        c.close()
+
+
+def test_a_tail_reused_after_a_typo_matches_a_full_compile():
+    """Reusing the tail puts back the process state the *previous* pass
+    ended in.  When that pass failed on the declaration being edited,
+    that state never contained the declaration -- so anything below it
+    that uses the declaration is being carried forward from a pass in
+    which the name was not bound.
+
+    Reach one text two ways, clean and via a typo that had time to
+    settle into a full pass of its own, and require the same answer.
+    The text has a declaration below the edited one that uses it, which
+    is the case that would show the difference."""
+    head = ("Theory typotail2\n"
+            "Ancestors arithmetic\n\n"
+            "Theorem two_things:\n"
+            "  1 + 1 = 2\n"
+            "Proof\n"
+            "  %s\n"
+            "QED\n\n"
+            "Theorem uses_it:\n"
+            "  1 + 1 = 2 /\\ 2 + 2 = 4\n"
+            "Proof\n"
+            "  CONJ_TAC >- ACCEPT_TAC two_things >- DECIDE_TAC\n"
+            "QED\n")
+    good = head % "DECIDE_TAC"
+    uri = "file:///tmp/typotail2_probe.sml"
+
+    def diags_of(c):
+        return sorted((d["range"]["start"]["line"], d.get("message", "")[:50])
+                      for d in _diag_count(c, uri))
+
+    def from_scratch():
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, good, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "compiled from scratch")
+            return diags_of(c)
+        finally:
+            c.close()
+
+    def via_typo():
+        c = Client("/tmp", args=["--dbg"])
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, good, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "compiled first")
+            cur, ver = good, 1
+            reused = []
+            for old, new in [("  DECIDE_TAC\nQED", "  DECIDE_TAQ\nQED"),
+                             ("  DECIDE_TAQ\nQED", "  DECIDE_TAC\nQED")]:
+                ver += 1
+                at = cur.index(old)
+                mark = c.total_msgs()
+                _did_change_incr(c, uri, cur, at, at + len(old), new, ver)
+                assert_true(c.wait_for_method("$/compileCompleted", 120,
+                                              since=mark),
+                            f"recompiled after {new.strip()!r}")
+                cur = cur[:at] + new + cur[at + len(old):]
+                reused += [m["params"].get("reuseTail")
+                           for m in c.messages_since(mark)[0]
+                           if m.get("method") == "$/compileScope"]
+            # Without this the comparison could pass for the wrong
+            # reason: a full re-elaboration trivially agrees.
+            assert_true(reused and reused[-1] is True,
+                        f"the repair reused the tail ({reused!r})")
+            return diags_of(c)
+        finally:
+            c.close()
+
+    clean, typo = from_scratch(), via_typo()
+    assert_eq(typo, clean,
+              "a tail reused after a typo says what a full compile says")
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -7066,6 +7193,10 @@ TESTS = [
      test_a_diagnostic_below_the_edit_is_not_dropped_by_a_reused_tail),
     ("typing_a_tactic_leaves_every_proof_with_a_verdict",
      test_typing_a_tactic_leaves_every_proof_with_a_verdict),
+    ("a_failed_proof_is_located_without_being_asked",
+     test_a_failed_proof_is_located_without_being_asked),
+    ("a_tail_reused_after_a_typo_matches_a_full_compile",
+     test_a_tail_reused_after_a_typo_matches_a_full_compile),
 ]
 
 

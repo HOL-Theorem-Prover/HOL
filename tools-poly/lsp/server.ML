@@ -1192,7 +1192,14 @@ fun start {diag, dbg, warnings} = let
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
-                       thread: Thread.thread, cancelled: bool ref}
+                       thread: Thread.thread, cancelled: bool ref,
+                       (* Whether the pass is still using the compile
+                          state.  Distinct from the thread being alive:
+                          the pass clears this before its last act,
+                          which is to look for work that had to wait
+                          for it -- work it cannot see itself doing if
+                          it asks whether its own thread is running. *)
+                       elaborating: bool ref}
   type file_data = {
     compile: compile_data option ref,
     lastTrees: {parse: parse_data, text: text_data} ref,
@@ -2060,6 +2067,7 @@ fun start {diag, dbg, warnings} = let
        declaration's own.  Starts at whatever the resume seeded. *)
     val diagsAtLastSnap = ref (DArray.size (#diags initialTrees))
     val cancelled = ref false
+    val elaborating = ref true
 
     fun compileThread () = ((let
       val () = restoreSnap ()
@@ -2554,9 +2562,16 @@ fun start {diag, dbg, warnings} = let
              does not wait for the next event. *)
           if Binarymap.numItems (!proofDiags) > 0
           then publishAllDiagnostics uri v else ();
-          (* A verdict that arrived while this pass was running left its
-             failure queued, the compile being the thing it had to wait
-             for. *)
+          (* A verdict that arrived while this pass was running left
+             its failure queued, the compile being the thing it had to
+             wait for.  Which is now over: elaboration has finished and
+             the tail has been put back, so say so before draining --
+             otherwise this call asks whether a compile is running from
+             inside the compile, answers itself yes, and the failure
+             stays queued with nothing left to trigger it.  What
+             localised it in the end was the user happening to ask for
+             a goal state. *)
+          elaborating := false;
           (!drainFailures uri v handle _ => ())))
       in (
         case missingDeps () of
@@ -2605,7 +2620,7 @@ fun start {diag, dbg, warnings} = let
       ())
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread,
-                        cancelled = cancelled} end
+                        cancelled = cancelled, elaborating = elaborating} end
     end)
 
   (* Fire a compile after a debounce delay: rapid didChange bursts
@@ -3020,8 +3035,9 @@ fun start {diag, dbg, warnings} = let
         fun compiling () =
           case !compile of
               NONE => false
-            | SOME {thread, cancelled, ...} =>
-              Thread.isActive thread andalso not (!cancelled)
+            | SOME {thread, cancelled, elaborating, ...} =>
+              !elaborating andalso Thread.isActive thread
+              andalso not (!cancelled)
         fun proving () =
           List.exists (fn {status = LSPExtension.Checking, ...} => true
                         | _ => false)
@@ -3042,7 +3058,13 @@ fun start {diag, dbg, warnings} = let
                                         msg = msg})
                                  (List.rev todo)
                         handle _ => ();
-                        draining := false),
+                        draining := false;
+                        (* A failure that settled while this walk was
+                           running was refused for that reason alone,
+                           and the thing it was waiting for is over.
+                           Returns at once when there is nothing
+                           queued. *)
+                        (!drainFailures uri v handle _ => ())),
               []); ())
         end
      end)
