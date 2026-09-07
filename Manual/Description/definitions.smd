@@ -698,6 +698,14 @@ type in order to generate the final name of the theorem.
     $\mathit{field}_i\mathtt{\_fupd}\;g\;(\mathit{field}_j\mathtt{\_fupd}\;f\;r)$
     is generated.  This theorem is installed in the `TypeBase`.
 
+`_fupdselfid`
+:   A theorem that states, for each field $i$,
+    $\mathit{field}_i\mathtt{\_fupd}\;(K\;(\mathit{field}_i\;r))\;r = r$
+    (equivalently, $r \mathtt{\ with\ } \mathit{field}_i := \mathit{field}_i(r) = r$),
+    conjoined over all fields.  This theorem is installed in the
+    `TypeBase`, so it flows into `srw_ss()` (and the tactics `simp`,
+    `gs` and `rw`) as an automatic rewrite.
+
 #### Big records
 
 The size of certain theorems proved in the record type package

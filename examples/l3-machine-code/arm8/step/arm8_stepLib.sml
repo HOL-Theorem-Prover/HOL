@@ -77,13 +77,7 @@ val DATATYPE_RULE = Conv.CONV_RULE DATATYPE_CONV
 val FULL_DATATYPE_RULE = utilsLib.FULL_CONV_RULE DATATYPE_CONV
 val HYP_DATATYPE_RULE = utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV
 
-val COND_UPDATE = Q.prove(
-   `!b a x y c m n f.
-      (if b then (a =+ x) ((c =+ m) f) else (a =+ y) ((c =+ n) f)) =
-      (a =+ if b then x else y) ((c =+ if b then m else n) f)`,
-   Cases
-   THEN REWRITE_TAC [combinTheory.APPLY_UPDATE_ID]
-   )
+val COND_UPDATE = arm8_stepTheory.COND_UPDATE
 
 val COND_UPDATE_CONV =
    REWRITE_CONV
@@ -283,10 +277,7 @@ val TestBitAndBranch_rwt =
 
 (* ---------------------------- *)
 
-val lem = Q.prove(
-   `!a:'a word b c. (if b then a else a + c) = a + (if b then 0w else c)`,
-   lrw []
-   )
+val lem = arm8_stepTheory.cond_add_lemma
 
 val sp_rule =
    utilsLib.ALL_HYP_CONV_RULE

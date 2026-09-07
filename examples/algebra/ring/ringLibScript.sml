@@ -1955,4 +1955,11 @@ Theorem RING_RING_HORN_pth1 = TAUT ‘~p \/ ~q <=> ~(p /\ q)’;
 Theorem RING_RING_HORN_pth2 = TAUT ‘p \/ ~q <=> q ==> p’;
 Theorem RING_RING_CORE_pth = TAUT ‘p ==> q <=> (p \/ q <=> q)’
 
+Theorem ring_zero_one_via_of_int:
+  ring_0 r :'a = ring_of_int r (&0) /\
+  ring_1 r :'a = ring_of_int r (&1)
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0, RING_OF_NUM_1]
+QED
+
 val _ = html_theory "ringLib";

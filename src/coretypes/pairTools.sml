@@ -1,7 +1,8 @@
 structure pairTools :> pairTools =
 struct
 
-open HolKernel Parse boolLib pairSyntax pairTheory PairRules;
+open HolKernel Parse boolLib pairSyntax pairTheory PairRules
+     pairToolsContextTheory;
 
 val PERR = mk_HOL_ERR "pairTools";
 
@@ -362,14 +363,6 @@ val is_universal   = same_const boolSyntax.universal
 val is_existential = same_const boolSyntax.existential;
 
 local
-  val ELIM_PEXISTS2 = prove (
-    “(?p:('a#'b). P (FST p) (SND p) p) = ?p1 p2. P p1 p2 (p1,p2)”,
-    CONV_TAC (LHS_CONV (HO_REWR_CONV EXISTS_PROD)) THEN REWRITE_TAC[FST, SND])
-  val ELIM_PFORALL2 = prove (
-    “(!p:('a#'b). P (FST p) (SND p) p) = !p1 p2. P p1 p2 (p1,p2)”,
-    CONV_TAC (LHS_CONV (HO_REWR_CONV FORALL_PROD)) THEN
-    REWRITE_TAC[FST, SND]);
-
   val ELIM_PEXISTS_CONV = HO_REWR_CONV ELIM_PEXISTS2;
   val ELIM_PFORALL_CONV = HO_REWR_CONV ELIM_PFORALL2;
 
@@ -419,21 +412,6 @@ end;
 
 
 local
-  val PFORALL_THM2 = prove (
-    ``!P:'a->'b->bool. (!x. $! (P x)) = $! (UNCURRY P)``,
-    GEN_TAC THEN
-    Q.SUBGOAL_THEN `P = (\x y. P x y)`
-       (fn thm => ONCE_ASM_REWRITE_TAC [thm])
-    THEN1 (REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC[]) THEN
-    BETA_TAC THEN REWRITE_TAC [PFORALL_THM]);
-
-  val PEXISTS_THM2 = prove (
-    ``!P:'a->'b->bool. (?x. $? (P x)) = $? (UNCURRY P)``,
-    GEN_TAC THEN
-    Q.SUBGOAL_THEN `P = (\x y. P x y)`
-       (fn thm => ONCE_ASM_REWRITE_TAC [thm])
-    THEN1 (REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC[]) THEN
-    BETA_TAC THEN REWRITE_TAC [PEXISTS_THM]);
 in
   fun PEXISTS_INTRO_CONV tm =
       (((TRY_CONV ELIM_TUPLED_QUANT_CONV) THENC

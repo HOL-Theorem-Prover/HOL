@@ -121,13 +121,7 @@ val state_id =
 val CP0_id =
    utilsLib.mk_state_id_thm mipsTheory.CP0_component_equality [["Status"]]
 
-val mips_frame =
-   stateLib.update_frame_state_thm mips_proj_def
-     (List.map (fn s => "CP0." ^ s)
-         ["Count", "Cause", "EPC", "Debug", "ErrCtl", "LLAddr",
-          "Status.ERL", "Status.EXL", "Status.CU1"] @
-      ["PC", "BranchDelay", "BranchTo", "exceptionSignalled", "LLbit",
-       "hi", "lo", "gpr", "fcsr.FCC", "MEM", "FGR"])
+val mips_frame = mips_progTheory.mips_frame
 
 (* -- *)
 

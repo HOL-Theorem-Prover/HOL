@@ -298,6 +298,20 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)
   val fupdfn_terms =
       map (fn (s, v) => (s, mk_const (dest_var v))) fupd_terms
+  (* The fupdate constants in fupdfn_terms are type-changing: each
+     carries the field's original tyvars *and* fresh ones from
+     tysigma so callers may swap a field's type.  Some downstream
+     theorems (fupdselfid, the literal/FORALL/EXISTS block) want the
+     equation to live entirely at the record's declared type
+     variables; specialise each fupdate with the reverse of its
+     substitution so the result is a non-type-changing fupdate at the
+     record's original tyvars (#906). *)
+  val fupdfn_terms_nontc =
+      map (fn (s, upd) =>
+              let val rev_s = map (fn {redex,residue} =>
+                                     {redex = residue, residue = redex}) s
+              in inst rev_s upd end)
+          fupdfn_terms
   val _ = DIAG "generated functional updates"
 
 
@@ -495,6 +509,33 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       save_thm(thmname, GENL [var1, var2] thm0)
   end
 
+  (* Prove that updating a field with its own value is the identity.
+     One conjunct per field:
+        !r. fld_i_fupd (K r.fld_i) r = r
+     Written in record syntax:  !r. (r with fld_i := r.fld_i) = r.
+     Users of `mk_state_id_thm` (l3-machine-code) currently reprove
+     these as their libraries load; save them here instead so they
+     land at record-Script build time and can be picked up as [simp]
+     rewrites via the tyinfo simpls entry. *)
+  val fupdselfid_thm = let
+    fun mk_thm (acc, fupd) = let
+      val acc_var = mk_comb (acc, var)
+      val fld_ty = type_of acc_var
+      val k_fn = combinSyntax.mk_K_1 (acc_var, fld_ty)
+      val goal = mk_eq (list_mk_comb (fupd, [k_fn, var]), var)
+      val tactic =
+          FAST_CASES_ON_TAC var THEN
+          PURE_REWRITE_TAC [accessor_thm, fupdfn_thm, combinTheory.K_THM] THEN
+          REFL_TAC
+    in
+      GEN_ALL (prove (goal, tactic))
+    end
+    val thms = ListPair.map mk_thm (accfn_terms, fupdfn_terms_nontc)
+  in
+    save_thm(typename^"_fupdselfid", LIST_CONJ thms)
+  end
+  val _ = DIAG "Generated fupdselfid theorem"
+
   (* prove
 
      1.  that a complete chain of updates over any value is
@@ -524,24 +565,6 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   local
     fun rng_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #2
     fun dom_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #1
-    (* The fupdate constants in fupdfn_terms are type-changing: each
-       carries the field's original tyvars *and* fresh ones from
-       tysigma so callers may swap a field's type.  For the FORALL /
-       EXISTS / literal_equality / literal_nchotomy / literal_11
-       theorems below we don't need that capability — we want the
-       resulting iff/equation to live entirely at the record's
-       declared type variables.  Specialise each fupdate with the
-       reverse of its substitution so the result is a non-type-changing
-       fupdate at the record's original tyvars (#906). *)
-    val fupdfn_terms' =
-        map (fn (s, upd) =>
-                let
-                  val rev_s = map (fn {redex,residue} =>
-                                       {redex = residue, residue = redex}) s
-                in
-                  inst rev_s upd
-                end)
-            fupdfn_terms
     val value_vars =
         List.foldr
           (fn (updt, sofar) =>
@@ -549,7 +572,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
               in
                 mk_var_avds(app_letter ty, ty, var::sofar)::sofar
               end)
-          [var] fupdfn_terms' |> (fn l => List.take(l, length fields))
+          [var] fupdfn_terms_nontc |> (fn l => List.take(l, length fields))
     fun augvar n v = let
       val (nm, ty) = dest_var v
     in
@@ -564,11 +587,11 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     in
       mk_comb(mk_comb(upd, mk_comb(K, v)), acc)
     end
-    val lhs = ListPair.foldr foldthis var (fupdfn_terms', value_vars)
-    val rhs = ListPair.foldr foldthis arb (fupdfn_terms', value_vars)
+    val lhs = ListPair.foldr foldthis var (fupdfn_terms_nontc, value_vars)
+    val rhs = ListPair.foldr foldthis arb (fupdfn_terms_nontc, value_vars)
 
-    val lit1 = ListPair.foldr foldthis arb (fupdfn_terms', vvars1)
-    val lit2 = ListPair.foldr foldthis arb (fupdfn_terms', vvars2)
+    val lit1 = ListPair.foldr foldthis arb (fupdfn_terms_nontc, vvars1)
+    val lit2 = ListPair.foldr foldthis arb (fupdfn_terms_nontc, vvars2)
 
     val literal_equality =
         GENL (var::value_vars)
@@ -630,7 +653,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   (* add to the TypeBase's simpls entry for the record type *)
   val new_simpls = let
-    val new_simpls0 = [accessor_thm, accfupd_thm,
+    val new_simpls0 = [accessor_thm, accfupd_thm, fupdselfid_thm,
                        literal_equality, literal_11, fupdfupd_thm,
                        fupdfupds_comp_thm]
   in

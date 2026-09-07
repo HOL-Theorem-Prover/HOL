@@ -79,90 +79,38 @@ val suc_thms =
    SUC_0];
 
 val addition_thms =
-  map (fn g => prove (g, DECIDE_TAC))
-  [``!n : num. 0 + n = n``,
-   ``!n : num. n + 0 = n``,
-   ``!m n : num. (m + n = 0) = (m = 0) /\ (n = 0)``,
-   ``!m n : num. (m + n = 1) = ((m = 1) /\ (n = 0)) \/ ((m = 0) /\ (n = 1))``,
-   ``!n a b : num. (n + a = n + b) = (a = b)``,
-   ``!n a b : num. (a + n = b + n) = (a = b)``,
-   ``!n a b : num. (n + a = b + n) = (a = b)``,
-   ``!n a b : num. (a + n = n + b) = (a = b)``,
-   ``!n a b : num. (n + a <= n + b) = (a <= b)``,
-   ``!n a b : num. (a + n <= b + n) = (a <= b)``,
-   ``!n a b : num. (n + a <= b + n) = (a <= b)``,
-   ``!n a b : num. (a + n <= n + b) = (a <= b)``,
-   ``!n a b : num. (n + a < n + b) = (a < b)``,
-   ``!n a b : num. (a + n < b + n) = (a < b)``,
-   ``!n a b : num. (n + a < b + n) = (a < b)``,
-   ``!n a b : num. (a + n < n + b) = (a < b)``];
+  [NUM_ADD_LZERO, NUM_ADD_RZERO, NUM_ADD_EQ_0, NUM_ADD_EQ_1,
+   NUM_ADD_LCANCEL, NUM_ADD_RCANCEL, NUM_ADD_LR_CANCEL, NUM_ADD_RL_CANCEL,
+   NUM_ADD_LCANCEL_LE, NUM_ADD_RCANCEL_LE, NUM_ADD_LR_CANCEL_LE,
+   NUM_ADD_RL_CANCEL_LE,
+   NUM_ADD_LCANCEL_LT, NUM_ADD_RCANCEL_LT, NUM_ADD_LR_CANCEL_LT,
+   NUM_ADD_RL_CANCEL_LT];
 
 val subtraction_thms =
-  map
-  (prove o
-   add_snd (RW_TAC arith_ss [SUB_MONO_EQ, SUB_EQUAL_0]))
-  [``!n : num. n - 0 = n``,
-   ``!n : num. n - n = 0``,
-   ``!n : num. 0 - n = 0``,
-   ``!m n : num. (m - n = 0) = m <= n``,
-   ``!m n : num. SUC m - SUC n = m - n``,
-   ``!m n : num. n <= m ==> (n + (m - n) = m)``,
-   ``!m n : num. n <= m ==> ((m - n) + n = m)``];
+  [NUM_SUB_RZERO, NUM_SUB_SELF, NUM_SUB_LZERO,
+   NUM_SUB_EQ_0, NUM_SUB_SUC,
+   NUM_LE_ADD_SUB, NUM_LE_SUB_ADD];
 
 val order_thms =
-  map (prove o add_snd DECIDE_TAC)
-  [``0 : num < 1``,
-   ``!n : num. 0 < SUC n``,
-   ``!n : num. ~(n < 0)``,
-   ``!n : num. ~(n < n)``,
-   ``!n : num. n < SUC n``,
-   ``!n : num. ~(SUC n < n)``,
-   ``!m n : num. SUC m < SUC n = m < n``,
-   ``0 : num <= 1``,
-   ``!n : num. 0 <= n``,
-   ``!n : num. (n <= 0) = (n = 0)``,
-   ``!n : num. n <= n``,
-   ``!n : num. n <= SUC n``,
-   ``!n : num. ~(SUC n <= n)``,
-   ``!m n : num. SUC m <= SUC n = m <= n``,
-   ``!m n : num. m < n ==> m <= n``];
+  [NUM_LT_0_1, NUM_LT_0_SUC, NUM_NOT_LT_0, NUM_NOT_LT_SELF,
+   NUM_LT_SUC, NUM_NOT_SUC_LT, NUM_LT_SUC_SUC,
+   NUM_LE_0_1, NUM_LE_0, NUM_LE_0_EQ, NUM_LE_SELF, NUM_LE_SUC,
+   NUM_NOT_SUC_LE, NUM_LE_SUC_SUC, NUM_LT_IMP_LE];
 
 val multiplication_thms =
-  map (fn g => prove
-       (g, Cases ++ RW_TAC arith_ss [] ++
-        PROVE_TAC [MULT_CLAUSES, MULT_MONO_EQ, MULT_COMM,
-                   MULT_LESS_EQ_SUC, LESS_MULT_MONO, MULT_EQ_0,
-                   MULT_EQ_1, LESS_0_MULT2]))
-  [``!n : num. 1 * n = n``,
-   ``!n : num. n * 1 = n``,
-   ``!n : num. 0 * n = 0``,
-   ``!n : num. n * 0 = 0``,
-   ``!m n : num. (m * n = 0) = (m = 0) \/ (n = 0)``,
-   ``!m n : num. (m * n = 1) = (m = 1) /\ (n = 1)``,
-   ``!m n : num. 0 < m * n = 0 < m /\ 0 < n``,
-   ``!n a b : num. 0 < n ==> ((n * a = n * b) = (a = b))``,
-   ``!n a b : num. 0 < n ==> ((a * n = b * n) = (a = b))``,
-   ``!n a b : num. 0 < n ==> ((n * a = b * n) = (a = b))``,
-   ``!n a b : num. 0 < n ==> ((a * n = n * b) = (a = b))``,
-   ``!n a b : num. 0 < n ==> ((n * a <= n * b) = (a <= b))``,
-   ``!n a b : num. 0 < n ==> ((a * n <= b * n) = (a <= b))``,
-   ``!n a b : num. 0 < n ==> ((n * a <= b * n) = (a <= b))``,
-   ``!n a b : num. 0 < n ==> ((a * n <= n * b) = (a <= b))``,
-   ``!n a b : num. 0 < n ==> ((n * a < n * b) = (a < b))``,
-   ``!n a b : num. 0 < n ==> ((a * n < b * n) = (a < b))``,
-   ``!n a b : num. 0 < n ==> ((n * a < b * n) = (a < b))``,
-   ``!n a b : num. 0 < n ==> ((a * n < n * b) = (a < b))``];
+  [NUM_MUL_L1, NUM_MUL_R1, NUM_MUL_L0, NUM_MUL_R0,
+   NUM_MUL_EQ_0, NUM_MUL_EQ_1, NUM_LT_0_MUL,
+   NUM_MUL_LCANCEL, NUM_MUL_RCANCEL, NUM_MUL_LR_CANCEL, NUM_MUL_RL_CANCEL,
+   NUM_MUL_LCANCEL_LE, NUM_MUL_RCANCEL_LE, NUM_MUL_LR_CANCEL_LE,
+   NUM_MUL_RL_CANCEL_LE,
+   NUM_MUL_LCANCEL_LT, NUM_MUL_RCANCEL_LT, NUM_MUL_LR_CANCEL_LT,
+   NUM_MUL_RL_CANCEL_LT];
 
 val min_thms =
   [MIN_0L, MIN_0R, MIN_REFL, LEQ_MINL, LEQ_MINR, LESS_MINL, LESS_MINR];
 
 val exp_thms =
-  map (fn g => prove
-       (g, Cases ++ RW_TAC arith_ss [EXP, EXP_1]))
-  [``!n : num. n EXP 0 = 1``,
-   ``!n : num. n EXP 1 = n``,
-   ``!n : num. 0 < n ==> (0 EXP n = 0)``,
-   ``!n : num. 1 EXP n = 1``];
+  [NUM_EXP_R0, NUM_EXP_R1, NUM_EXP_L0, NUM_EXP_L1];
 
 val div_mod_thms =
   [DIV_1, MOD_1, LESS_DIV_EQ_ZERO, ZERO_DIV, X_MOD_X, MOD_MOD,

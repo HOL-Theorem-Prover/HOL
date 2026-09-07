@@ -6,7 +6,7 @@
 structure EnumType :> EnumType =
 struct
 
-open HolKernel boolLib Parse numLib;
+open HolKernel boolLib Parse numLib EnumTypeContextTheory;
 
 type tyinfo = TypeBasePure.tyinfo;
 
@@ -49,10 +49,7 @@ fun num_values REP_ABS defs =
        !a. (a = c1) \/ (a = c2) \/ ... (a = cn)
    ---------------------------------------------------------------------- *)
 
-(* first need a simple lemma: *)
-val n_less_cases = prove(
-  Term`!m n. n < m = ~(m = 0) /\ (let x = m - 1 in n < x \/ (n = x))`,
-  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN CONV_TAC numLib.ARITH_CONV);
+(* n_less_cases from EnumTypeContextTheory *)
 
 fun onestep thm = let
   (* thm of form x < n, where n is a non-zero numeral *)

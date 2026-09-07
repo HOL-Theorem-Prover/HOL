@@ -3,6 +3,8 @@ open HolKernel Parse boolTheory boolLib
 open testutils
 val _ = set_trace "Unicode" 0
 
+val _ = new_theory "scratch"
+
 val goal_compare = pair_compare(list_compare Term.compare, Term.compare)
 val goals_compare = list_compare goal_compare
 fun goals_eq gs1 gs2 = goals_compare (gs1, gs2) = EQUAL

@@ -121,14 +121,17 @@ in
 end
 
 local
-   val tac =
-      SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF, pred_setTheory.UNION_DEF]
-   val IN_DEFN = Q.prove(`(c = b) ==> a IN b ==> a IN c`, tac)
-   val SUBSET_DEFN = Q.prove(`(c = b) ==> a SUBSET b ==> a SUBSET c`, tac)
-   val IN_LEFT_DEFN = Q.prove(`(c = b UNION d) ==> a IN b ==> a IN c`, tac)
+   fun forward q =
+      Drule.EQT_ELIM
+        (simpLib.SIMP_CONV (srw_ss())
+           [pred_setTheory.SUBSET_DEF, pred_setTheory.UNION_DEF]
+           (Parse.Term q))
+   val IN_DEFN = forward `(c = b) ==> a IN b ==> a IN c`
+   val SUBSET_DEFN = forward `(c = b) ==> a SUBSET b ==> a SUBSET c`
+   val IN_LEFT_DEFN = forward `(c = b UNION d) ==> a IN b ==> a IN c`
    val IN_RIGHT_DEFN =
-      Q.prove(`(c = b UNION d) ==> a SUBSET d ==> a SUBSET c`, tac)
-   val SUBSET_REST = Q.prove(`a SUBSET b ==> a SUBSET (b UNION d)`, tac)
+      forward `(c = b UNION d) ==> a SUBSET d ==> a SUBSET c`
+   val SUBSET_REST = forward `a SUBSET b ==> a SUBSET (b UNION d)`
    val SUBSET_UNION2 = Thm.CONJUNCT2 pred_setTheory.SUBSET_UNION
    fun subset_conv rwts =
       Conv.LAND_CONV

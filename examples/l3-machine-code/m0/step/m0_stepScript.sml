@@ -1046,5 +1046,93 @@ Proof
    \\ simp [bitstringTheory.testbit_el]
 QED
 
+(* Moved here from m0_stepLib.sml.  mask_sp is a word-bitblast lemma
+   the two register-file rewrites depend on. *)
+
+Theorem mask_sp:
+  !d :word32. d && 0xFFFFFFFCw = ((31 >< 2) d : word30) @@ (0w : word2)
+Proof
+  blastLib.BBLAST_TAC
+QED
+
+Theorem R_name_rwt:
+  !n s. n <> 15w ==> (R n s = s.REG (R_name s.CONTROL.SPSEL n))
+Proof
+  gen_tac \\ wordsLib.Cases_on_word_value `n`
+  \\ simp [write'R_def, R_def, R_name_def, LookUpSP_def, num2RName_thm,
+           mask_sp]
+QED
+
+Theorem write'R_name_rwt:
+  !n d s. n <> 15w ==>
+    (write'R (d, n) s =
+     s with REG :=
+       (R_name s.CONTROL.SPSEL n =+
+          if n = 13w then d && 0xFFFFFFFCw else d) s.REG)
+Proof
+  gen_tac \\ gen_tac \\ wordsLib.Cases_on_word_value `n`
+  \\ simp [write'R_def, R_def, R_name_def, LookUpSP_def, num2RName_thm,
+           mask_sp]
+QED
+
+Theorem SND_Shift_C_rwt:
+  !value typ amount carry_in s.
+    SND (Shift_C (value, typ, amount, carry_in) s) = s
+Proof
+  gen_tac \\ Cases
+  \\ lrw [m0Theory.Shift_C_def, m0Theory.LSL_C_def, m0Theory.LSR_C_def,
+          m0Theory.ASR_C_def, m0Theory.ROR_C_def, m0Theory.RRX_C_def]
+QED
+
+Theorem not_word_bit_13_word9:
+  !registers:word9. ~word_bit (w2n (13w: word4)) registers
+Proof
+  simp [wordsTheory.word_bit_def]
+QED
+
+Theorem cond_lsb_lemma:
+  !i n r x1 x2 x3 x4.
+    i < 8 ==>
+    (word_bit (w2n n) r ==> (n2w (LowestSetBit (r: word8)) = n: word4)) ==>
+    ((if word_bit i r then
+        (x1, if (n2w i = n) /\ (i <> LowestSetBit r) then x2 else x3)
+      else
+        x4) =
+     (if word_bit i r then (x1, x3) else x4))
+Proof
+  lrw [m0Theory.LowestSetBit_def, wordsTheory.word_reverse_thm,
+       CountLeadingZeroBits8]
+  \\ lrfs []
+  \\ lfs []
+QED
+
+Theorem numeral_bit12_eq0:
+  (NUMERAL (BIT1 x) <> 0) /\ (NUMERAL (BIT2 x) <> 0)
+Proof
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.BIT1,
+               arithmeticTheory.BIT2]
+  \\ DECIDE_TAC
+QED
+
+Theorem cond_v2w_eq_lemma:
+  (!p b1 b2 b3 b4 b5 b6.
+     ((if p then v2w [b1; b2; b3] else v2w [b4; b5; b6]) = 7w : word3) =
+     (if p then b1 /\ b2 /\ b3 else b4 /\ b5 /\ b6)) /\
+  (!p b1 b2 b3 b4.
+     ((if p then v2w [b1; b2] else v2w [b3; b4]) = 0w : word2) =
+     (if p then ~b1 /\ ~b2 else ~b3 /\ ~b4))
+Proof
+  lrw []
+  \\ CONV_TAC (Conv.LHS_CONV bitstringLib.v2w_eq_CONV)
+  \\ decide_tac
+QED
+
+Theorem ROR_cond_rewrite:
+  !n (x :'a word) s.
+    (if n = 0 then (x, s) else (x #>> n, s)) = (x #>> n, s)
+Proof
+  rw [wordsTheory.SHIFT_ZERO]
+QED
+
 (* ------------------------------------------------------------------------ *)
 

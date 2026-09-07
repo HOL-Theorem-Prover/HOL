@@ -19,7 +19,20 @@ fun congfrag ths = SSFRAG {dprocs = [], ac = [], rewrs = [],
 fun add_congs ths =
     user_frag := merge_ss [!user_frag, congfrag ths]
 
-val permeq_sym' = prove(``x == y <=> y == x``, METIS_TAC [permeq_sym])
+(* Derive x == y <=> y == x forward from permeq_sym (|- x == y ==> y == x)
+   so we don't fire a load-time Tactical.prove.  Read the two variables
+   off the antecedent so this doesn't care how many outer foralls
+   permeq_sym happens to carry. *)
+val permeq_sym' =
+    let val body = snd (strip_forall (concl permeq_sym))
+        val (lhs, _) = dest_imp body
+        val (x, y) = case strip_comb lhs of
+                         (_, [a, b]) => (a, b)
+                       | _ => raise Fail "ntermLib.permeq_sym': permeq_sym has unexpected shape"
+        val gen = GEN_ALL permeq_sym
+        val fwd = SPECL [x, y] gen
+        val bwd = SPECL [y, x] gen
+    in IMP_ANTISYM_RULE fwd bwd end
 
 fun permify ss =
     simpLib.add_relsimp {
