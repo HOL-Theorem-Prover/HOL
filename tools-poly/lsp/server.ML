@@ -1276,6 +1276,18 @@ fun start {diag, dbg, warnings} = let
        these; a successful walker query for a theorem removes its
        entry so a user-fix removes the squiggle without waiting
        for the next compile. *)
+    (* Held across taking a diagnostic snapshot and sending it, by both
+       publishers.  Each of them reads the compile's list and the two
+       maps, dedups, encodes and sends; without this two threads can
+       interleave so that the *older* snapshot is the one that lands
+       last, and the client keeps it.  A squiggle that is genuinely
+       there then goes missing, and nothing re-publishes on a timer, so
+       if it was the pass's last verdict it never appears at all.
+
+       Nothing but a publisher takes it, so blocking on the client here
+       delays only other publishes -- which would have blocked on the
+       same channel regardless. *)
+    publishLock: unit Sref.t,
     walkerDiags: (string, report) Binarymap.dict Sref.t,
     (* Squiggles for the proofs the pool has an opinion about, keyed by
        theorem name.  Deliberately *not* cleared by a fresh compile,
@@ -1353,6 +1365,7 @@ fun start {diag, dbg, warnings} = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
         debounce = ref 0, minEditOffset = Sref.new NONE,
+        publishLock = Sref.new (),
         walkerDiags = Sref.new (Binarymap.mkDict String.compare),
         proofDiags = Sref.new (Binarymap.mkDict String.compare),
         pendingFailures = Sref.new [],
@@ -1813,7 +1826,8 @@ fun start {diag, dbg, warnings} = let
      compile's diagnostics and any walker-observed runtime squiggles. *)
   fun publishAllDiagnostics uri
                             ({lastTrees, walkerDiags, proofDiags,
-                              ...}:file_data) = let
+                              publishLock, ...}:file_data) =
+    Sref.update publishLock (fn held => let
     val {text, parse} = !lastTrees
     val {lines, version, ...} = text
     val compileDiags = #diags parse
@@ -1836,8 +1850,9 @@ fun start {diag, dbg, warnings} = let
       print "{\"uri\":"; encString uri print;
       print ",\"version\":"; encInt version print;
       print ",\"diagnostics\":"; encDArray encDiag snapshot print;
-      print "}")))
-  end
+      print "}")));
+    held
+  end)
 
   (* Filled in once `goalStateAtPos` exists, which is below the compile
      that installs the hook calling this.  Given a failed proof's
@@ -1894,6 +1909,7 @@ fun start {diag, dbg, warnings} = let
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
                               walkerDiags, proofDiags, depsBlocked,
+                              publishLock,
                               compiledText, reusableFrom,
                               nsLayer, nsGen, ...}:file_data) =
     (* Every route to a compile comes through here -- didOpen,
@@ -2254,7 +2270,7 @@ fun start {diag, dbg, warnings} = let
          races updateDiags on the next Progress event: DArray.replace
          mid-encode makes encDArray raise Subscript, which kills the
          writer and jams every subsequent send. *)
-      fun sendDiags () = let
+      fun sendDiags () = Sref.update publishLock (fn held => let
         val n = DArray.size oldDiags
         val wd = Sref.value walkerDiags
         val pd = Sref.value proofDiags
@@ -2273,8 +2289,9 @@ fun start {diag, dbg, warnings} = let
             print "{\"uri\":"; encString uri print;
             print ",\"version\":"; encInt (#version text) print;
             print ",\"diagnostics\":"; encDArray encDiag snapshot print;
-            print "}"))) end)
-        end
+            print "}"))) end);
+          held
+        end)
 
       (* Standard LSP window/workDoneProgress: gives eglot a
          mode-line spinner + percentage while the compile runs. *)
