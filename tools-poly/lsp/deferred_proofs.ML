@@ -22,7 +22,6 @@ structure DeferredProofs :> sig
      hook after something else has replaced it *)
   val install : unit -> unit
   (* true while this thread is replaying a deferred proof *)
-  val isReplaying : unit -> bool
 
   (* Hand the queued proofs to the pool, given the byte the pass that
      produced them re-elaborated from.  Returns at once: the proofs run
@@ -35,7 +34,7 @@ structure DeferredProofs :> sig
   val check : LSPExtension.check_scope -> unit
   (* Only ever reports Checking, Proved or Failed.  A proof the pool is
      not working on is absent, which the caller renders as Cheated. *)
-  val statuses : unit -> LSPExtension.proof_state list
+  val anyChecking : unit -> bool
   (* Give up on every proof whose declaration starts at or after this
      byte; proofs above it are untouched.  Called with the point a
      compile is about to resume from, since everything from there on is
@@ -90,11 +89,8 @@ fun proofName ctxt =
    theorem a different value from the one every later declaration was
    elaborated against. *)
 fun extraHyps (asl, _) th =
-    let
-      val goalAsms = HOLset.addList (Term.empty_tmset, asl)
-    in
-      List.filter (fn h => not (HOLset.member (goalAsms, h))) (Thm.hyp th)
-    end
+    HOLset.difference (Thm.hypset th,
+                       HOLset.addList (Term.empty_tmset, asl))
 
 (* What a proved theorem says about the placeholder elaboration stood in
    for.  A suspension is the expected reason for extra hypotheses and
@@ -102,16 +98,16 @@ fun extraHyps (asl, _) th =
    proof is fine and the elaboration below it is not.  Anything else is a
    bare divergence. *)
 fun verdict g th =
-    case extraHyps g th of
-        [] => LSPExtension.Proved
-      | extra =>
-        if boolLib.has_suspended_subgoals th then
-          LSPExtension.Suspended
-            (String.concatWith ", " (boolLib.get_suspended_names th))
-        else
-          LSPExtension.Diverged
-            (Int.toString (length extra) ^ " extra hypothes" ^
-             (if length extra = 1 then "is" else "es"))
+    let val extra = HOLset.numItems (extraHyps g th) in
+      if extra = 0 then LSPExtension.Proved
+      else if boolLib.has_suspended_subgoals th then
+        LSPExtension.Suspended
+          (String.concatWith ", " (boolLib.get_suspended_names th))
+      else
+        LSPExtension.Diverged
+          (Int.toString extra ^ " extra hypothes" ^
+           (if extra = 1 then "is" else "es"))
+    end
 
 fun replay ctxt g tac =
     verdict g (asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac)))
@@ -212,12 +208,11 @@ fun install () = Tactical.set_prover prover
    ------------------------------------------------------------------ *)
 
 (* `site` and `offset` live here rather than being read back out of the
-   item, because the item does not outlive the proof.  Its closure pins a
-   Context snapshot, and a settled proof is never forked again, so the
-   worker clears `item` on the way out and only the reporting fields
-   remain.  While a proof is unsettled the item is kept, so a proof taken
-   off a worker -- because the user has started editing it -- can be
-   forked again without re-elaborating it.
+   item, because the item does not outlive the proof: its closure pins a
+   Context snapshot, and an entry that held one would keep that snapshot
+   for as long as the file stays open.  Nothing re-forks a taken-off
+   proof -- the next pass re-elaborates and re-enqueues it -- so the
+   entry keeps only what reporting needs.
 
    `result` is what the replay decided, recorded by the worker itself.
    Future.peek is not enough: the announcement has to happen from inside
@@ -229,7 +224,6 @@ fun install () = Tactical.set_prover prover
    reader sees is the previous one -- and another announcement follows. *)
 type entry = {site : string,
               offset : int,
-              item : LSPExtension.deferred option ref,
               group : Future.group,
               result : LSPExtension.proof_status option ref,
               future : LSPExtension.proof_status Future.future}
@@ -242,7 +236,7 @@ fun setWorkerCount n = Multithreading.max_threads_update n
 
 (* Every change to what the pool is doing is announced by the thread that
    causes it, and nothing samples the whole set.  Sampling cannot be made
-   correct: `statuses ()` is read, and only then sent, so a worker that
+   correct: the set is read, and only then sent, so a worker that
    settles in between has its newer verdict overwritten by the older
    sample.  Announcing transitions has no such window, and per proof the
    order is guaranteed -- `Checking` is sent before the task is forked,
@@ -267,32 +261,28 @@ fun discard (doomed : entry list) =
     (List.app (fn {group, ...} => Future.cancel_group group) doomed;
      List.app dropped doomed)
 
-fun forkAt (item as {site, offset, run} : LSPExtension.deferred) =
+fun forkAt ({site, offset, run} : LSPExtension.deferred) =
     let
       val group = Future.new_group NONE
       val params = {name = "lsp_proof:" ^ site, group = SOME group,
                     deps = [], pri = 0, interrupts = true}
       val result = ref NONE
-      val itemR = ref (SOME item)
       (* Announce the new state on the worker that settled it, so the
-         caller need not poll.  Record it and drop the item first, for
-         the reasons given at `entry`.  An interrupt is not announced:
-         whoever cancelled already knows, and the entry is gone. *)
+         caller need not poll, recording it first for the reasons given
+         at `entry`.  An interrupt is not announced: whoever cancelled
+         already knows, and the entry is gone. *)
       fun announcing () =
           let
             val r = run ()
           in
             result := SOME r;
-            itemR := NONE;
-            !LSPExtension.proofStateChanged
-              {site = site, offset = offset, status = r};
+            announce {site = site, offset = offset, status = r};
             r
           end
     in
       announce {site = site, offset = offset,
                 status = LSPExtension.Checking};
-      {site = site, offset = offset, item = itemR, group = group,
-       result = result,
+      {site = site, offset = offset, group = group, result = result,
        future = Portable.singleton (Future.forks params) announcing}
     end
 
@@ -372,9 +362,8 @@ fun check {resumeFrom, keptFrom, bytes} =
                      what was re-elaborated and so was never in
                      question.  Anything else the pass has orphaned. *)
                   fun moveTo off (e : entry) =
-                      {site = #site e, offset = off, item = #item e,
-                       group = #group e, result = #result e,
-                       future = #future e}
+                      {site = #site e, offset = off, group = #group e,
+                       result = #result e, future = #future e}
                   (* A pass that stopped early did not re-enqueue what
                      it never reached, but those are still the right
                      proofs: keep them, moved to where the edit has put
@@ -413,10 +402,12 @@ fun check {resumeFrom, keptFrom, bytes} =
       val () = List.app (fn e => announceEntry (statusOf e) e) moved
     in () end
 
-fun statuses () =
-    List.map (fn (e as {site, offset, ...} : entry) =>
-                 {site = site, offset = offset, status = statusOf e})
-             (Sref.value entries)
+(* Short-circuits on the first unsettled proof and allocates nothing:
+   this is asked once per verdict, so a file's worth of failures used to
+   pay a traversal -- and a record per entry -- apiece. *)
+fun anyChecking () =
+    List.exists (fn e => statusOf e = LSPExtension.Checking)
+                (Sref.value entries)
 
 (* One shape for both entry points: take the doomed entries out under the
    lock and cancel them.  `gen_update` rather than a read followed by a
@@ -438,7 +429,7 @@ end;
 
 val () = DeferredProofs.install ();
 val () = LSPExtension.checkDeferred := DeferredProofs.check;
-val () = LSPExtension.proofStates := DeferredProofs.statuses;
+val () = LSPExtension.poolBusy := DeferredProofs.anyChecking;
 val () = LSPExtension.cancelProofsAtOrAfter := DeferredProofs.cancelAtOrAfter;
 val () = LSPExtension.cancelProofAt := DeferredProofs.cancelAt;
 val () = LSPExtension.cancelAllProofs := DeferredProofs.cancelAll;

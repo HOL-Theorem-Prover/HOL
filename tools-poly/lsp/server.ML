@@ -1373,6 +1373,15 @@ fun start {diag, dbg, warnings} = let
      didChanges.  The `cancelled` flag doubles as a "no longer
      current" marker: the compile thread checks it before writing
      lastTrees so a stale finish can't clobber the new state. *)
+  (* Alive and not superseded.  Three places asked this and two spelled
+     it out; the third also wants `elaborating`, which is a different
+     question and is asked separately where it matters. *)
+  fun compileRunning r =
+      case !r of
+          NONE => false
+        | SOME {thread, cancelled, ...} =>
+          Thread.isActive thread andalso not (!cancelled)
+
   fun stopCompile r = case !r of
     NONE => ()
   | SOME {cancelled, ...} => (r := NONE; cancelled := true)
@@ -1505,26 +1514,46 @@ fun start {diag, dbg, warnings} = let
        Counted here because the buffer is the only authority on how
        many times a name occurs: counting from the pool's own entries
        invented a second `Real_thm' for a file that has one, the
-       entries being a mixture of live and moved-since offsets. *)
+       entries being a mixture of live and moved-since offsets.
+
+       Skipped entirely unless proofs are being deferred: the number is
+       the pool's alone, and `bufferSymbols` parses the whole file,
+       which on a resumed compile re-elaborating one declaration is the
+       dominant cost of the pass. *)
     val decOrds = let
       fun go [] _ acc = acc
         | go (Sym {name, span = (start, _), ...} :: rest) seen acc =
-          let val n = 1 + length (List.filter (fn x => x = name) seen)
-          in go rest (name :: seen) ((start, n) :: acc) end
-      in go (bufferSymbols code) [] [] handle _ => [] end
+          let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
+          in go rest (Binarymap.insert (seen, name, n))
+                (Binarymap.insert (acc, start, n))
+          end
+      in
+        if not (!LSPExtension.deferProofs) then Binarymap.mkDict Int.compare
+        else go (bufferSymbols code) (Binarymap.mkDict String.compare)
+                (Binarymap.mkDict Int.compare)
+             handle _ => Binarymap.mkDict Int.compare
+      end
     (* The innermost declaration starting at or before `off'.  The
        compile driver's notion of where a declaration begins and the
        outline's agree, but a fallback of "first occurrence" keeps a
        disagreement from renaming a proof rather than merely failing to
        number it. *)
     fun ordAt off =
-      List.foldl (fn ((start, n), best) =>
-                     if start <= off andalso start >= #1 best
-                     then (start, n) else best)
-                 (~1, 1) decOrds
+      case Binarymap.peek (decOrds, off) of
+          SOME n => n
+        | NONE =>
+          (* The compile driver's notion of where a declaration begins
+             and the outline's normally agree, so the exact hit above is
+             the usual answer; this is the fallback for a disagreement,
+             and it prefers the nearest declaration at or before `off`. *)
+          #2 (Binarymap.foldl
+                (fn (start, n, best as (bs, _)) =>
+                    if start <= off andalso start >= bs then (start, n)
+                    else best)
+                (~1, 1) decOrds)
     fun onDecStarted off = (
       LSPExtension.currentProofOffset := off;
-      LSPExtension.currentProofOrd := #2 (ordAt off))
+      LSPExtension.currentProofOrd := ordAt off)
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -1765,9 +1794,8 @@ fun start {diag, dbg, warnings} = let
   (* `exn_to_string' comes with a leading newline and wraps, which in
      a diagnostic reads as a blank first line.  One line is what a
      gutter tooltip and a `flymake' echo want. *)
-  fun oneLine str = let
-    val fields = String.fields Char.isSpace str
-    in String.concatWith " " (List.filter (fn f => f <> "") fields) end
+  fun oneLine str =
+      String.concatWith " " (String.tokens Char.isSpace str)
 
   fun proofDiagOf status =
     case status of
@@ -1842,12 +1870,8 @@ fun start {diag, dbg, warnings} = let
        diagnostics the compile had just reported.  So while the compile
        is alive, leave it to `sendDiags', which merges these entries
        too, and to the catch-up publish once `lastTrees' is current. *)
-    fun compiling () =
-      case !compile of
-          NONE => false
-        | SOME {thread, cancelled, ...} =>
-          Thread.isActive thread andalso not (!cancelled)
-    fun republish () = if compiling () then () else publishAllDiagnostics uri v
+    fun republish () =
+        if compileRunning compile then () else publishAllDiagnostics uri v
     val next = case proofDiagOf status of
         NONE => NONE
       | SOME (hard, msg) =>
@@ -3138,16 +3162,14 @@ fun start {diag, dbg, warnings} = let
            is elaborating and enqueueing them.  Missing the second was
            enough on its own -- a dozen sound proofs reported failures
            that varied from run to run. *)
+        (* Still *using* the compile state, which is not the same as the
+           thread being alive -- see `elaborating`. *)
         fun compiling () =
-          case !compile of
-              NONE => false
-            | SOME {thread, cancelled, elaborating, ...} =>
-              !elaborating andalso Thread.isActive thread
-              andalso not (!cancelled)
-        fun proving () =
-          List.exists (fn {status = LSPExtension.Checking, ...} => true
-                        | _ => false)
-                      (!LSPExtension.proofStates ())
+          compileRunning compile andalso
+          (case !compile of
+               NONE => false
+             | SOME {elaborating, ...} => !elaborating)
+        fun proving () = !LSPExtension.poolBusy ()
      in
         if null (Sref.value pendingFailures)
            orelse compiling () orelse proving ()
@@ -3590,11 +3612,7 @@ fun start {diag, dbg, warnings} = let
               (fn (uri, v as {compile, lastTrees, minEditOffset,
                               ...}: file_data) =>
                   let
-                    val running =
-                        case !compile of
-                            NONE => false
-                          | SOME {thread, cancelled, ...} =>
-                            Thread.isActive thread andalso not (!cancelled)
+                    val running = compileRunning compile
                     (* `declSnapshots' is newest-first, so the last one
                        is the header's. *)
                     val headerEnd =

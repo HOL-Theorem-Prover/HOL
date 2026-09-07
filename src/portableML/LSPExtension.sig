@@ -397,9 +397,6 @@ val enqueueDeferred: deferred -> unit
 (* Empties the queue and hands back what was in it: the worker pool
    runs the items itself. *)
 val takeDeferred: unit -> deferred list
-(* Diagnostics, for driving the queue by hand from a REPL or a test. *)
-val pendingDeferred: unit -> int
-val clearDeferred: unit -> unit
 
 (* The byte offset of the declaration currently being elaborated, set by
    the compile driver before each one.  The prover hook reads it when
@@ -431,14 +428,18 @@ val currentProofOrd: int ref
      ran to the end and anything it did not re-enqueue is gone. *)
 type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
 (*
-   - proofStates: current status of everything the pool knows about.
+   - poolBusy: whether any proof is still being checked.  A predicate
+     rather than the list it used to be: the only caller asks a yes/no,
+     and building a record per entry -- with a `Future.peek` apiece --
+     to answer it ran once per settled proof, so a file's worth of
+     proofs cost a traversal each.
    - cancelProofsAtOrAfter n: give up on any proof whose declaration
      starts at or after byte n.  An edit invalidates the proofs below
      it in the file and leaves the ones above alone, so this is what a
      compile pass calls with its minimum edit offset.
    - cancelAllProofs: give up on all of them. *)
 val checkDeferred: (check_scope -> unit) ref
-val proofStates: (unit -> proof_state list) ref
+val poolBusy: (unit -> bool) ref
 val cancelProofsAtOrAfter: (int -> unit) ref
 (* Give up on just this declaration's proofs, for an edit inside a
    `Proof ... QED` body: a tactic contributes nothing to the elaboration
