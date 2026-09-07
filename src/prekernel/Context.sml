@@ -127,11 +127,15 @@ struct
        releasing one are concurrent; the read is a plain deref. *)
     val override : t option ThreadLocal.t = ThreadLocal.new ()
     val overrides : int Sref.t = Sref.new 0
+    (* `ThreadLocal.get` is doubly optional here -- NONE for a thread
+       that has never held a pin, `SOME NONE` for one that has released
+       it -- and only the join of the two is interesting. *)
+    fun pinned () = Option.join (ThreadLocal.get override)
     fun ambient () =
         if Sref.value overrides = 0 then Sref.value ctx
-        else case ThreadLocal.get override of
-                 SOME (SOME c) => c
-               | _ => Sref.value ctx
+        else case pinned () of
+                 SOME c => c
+               | NONE => Sref.value ctx
     fun thyname () =
         case #current_thy (Sref.value ctx) of
             NONE => "<no current theory>"
@@ -180,21 +184,39 @@ struct
         (if !sig_action > 0 andalso get () > 0 then report_sig () else ();
          ambient ())
 
-    (* Run `f x` with `c` answering this thread's ambient reads.  The
-       previous setting is put back, on the exception path too, so a
-       nested proof restores its parent's.  Writes are deliberately not
-       redirected: `Data.write` and `Data.modify` go to the live cell,
-       which is what a write means. *)
+    (* Run `f x` with `c` answering this thread's ambient reads.
+
+       The slot and the counter move together, inside the `Sref`
+       update: `Multithreading.synchronized` runs its body under
+       `Thread_Attributes.uninterruptible`, and that is the only reason
+       this is safe on a thread that can be interrupted asynchronously.
+       A pool worker is exactly such a thread -- `Future.cancel_group`
+       interrupts it wherever it happens to be, on every keystroke --
+       and as two bare statements the pair could be left half-applied:
+       a slot still holding a dead pass's context with the counter back
+       at zero, which the next read would then answer from.
+
+       Exiting *clears* the slot rather than putting back what was
+       there, because nothing nests: `prover` sends a nested proof down
+       the `isReplaying` branch, which does not pin.  Restoring a
+       previous value would make a leaked pin survive every later
+       proof on that worker, which is the one failure worth designing
+       out -- an ancient context is indistinguishable from a current
+       one, and answers just as confidently.
+
+       Writes are deliberately not redirected: `Data.write` and
+       `Data.modify` go to the live cell, which is what a write means.
+       See the warning on `restore`. *)
     fun with_context c f x =
         let
-          val prev = ThreadLocal.get override
-          val () = ThreadLocal.set (override, SOME c)
-          val () = Sref.update overrides (fn n => n + 1)
-          fun restore () =
-              (Sref.update overrides (fn n => n - 1);
-               ThreadLocal.set (override, getOpt (prev, NONE)))
+          fun install () =
+              Sref.update overrides
+                (fn n => (ThreadLocal.set (override, SOME c); n + 1))
+          fun uninstall () =
+              Sref.update overrides
+                (fn n => (ThreadLocal.set (override, NONE); n - 1))
         in
-          (f x handle e => (restore (); raise e)) before restore ()
+          install (); Portable.finally uninstall f x
         end
     (* consumed by Data.get, which is the only thing that can name the
        slot an ambient read was after *)

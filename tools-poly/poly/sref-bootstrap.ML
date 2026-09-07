@@ -18,12 +18,14 @@
    Exn}, Thread_Data -> {Exn, Thread_Attributes}, Exn -> nothing -- and
    each file carries its own signature.
 
-   The `Thread` rebinding is what `ConcIsaLib` does for the Holmake
-   build, and only `Multithreading` is written against it: `Exn`,
-   `Thread_Attributes` and `Thread_Data` all want the outer `Thread`,
-   which is why the rebinding brackets one file rather than the group.
-   It is undone afterwards, because `lsp/server.ML` opens `Thread` and
-   expects the structure Poly/ML provides.
+   `ConcIsaLib` is the rebinding `Multithreading` is written against,
+   and the same four files in the same order are how
+   `src/portableML/rawtheory/mktool.ML` bootstraps them.  Only
+   `Multithreading` wants it: `Exn`, `Thread_Attributes` and
+   `Thread_Data` all want the outer `Thread`, which is why it brackets
+   one file rather than the group.  It is undone afterwards, because
+   `lsp/server.ML` opens `Thread` and expects the structure Poly/ML
+   provides -- `ConcIsaLib` does not put it back.
 
    As with LSPExtension, what is loaded here is baked into `bin/hol` and
    is a *different* structure from the heap's copy, so values of these
@@ -37,10 +39,8 @@ val _ = use "../src/portableML/poly/Exn.sml";
 val _ = use "../src/portableML/poly/Thread_Attributes.sml";
 val _ = use "../src/portableML/poly/Thread_Data.sml";
 
-structure Mutex = Thread.Mutex;
-structure ConditionVar = Thread.ConditionVar;
 structure PolyThread = Thread;
-structure Thread = Thread.Thread;
+val _ = use "../src/portableML/poly/ConcIsaLib.sml";
 
 val _ = use "../src/portableML/poly/Multithreading.sml";
 

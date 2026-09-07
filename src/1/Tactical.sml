@@ -61,7 +61,17 @@ in
        case ThreadLocal.get unsolved_list of NONE => [] | SOME l => l
    (* Context.in_proof marks the dynamic extent of a parameterised proof:
       anything reached from here that reads the ambient context had this
-      one in scope and dropped it. *)
+      one in scope and dropped it.
+
+      Marks, rather than pins.  `Context.with_context` would make those
+      reads answer from `ctxt` and the census would fall silent, which
+      is the opposite of what the census is for -- and two further
+      reasons it does not belong here: a proof that writes context state
+      would stop seeing its own write, since writes still go to the live
+      cell; and a pin held for every proof in a batch build would cost
+      `mk_const` the fast path `with_context` documents.  The LSP's
+      proof pool pins, because there the cell really is being rewound
+      underneath a running proof. *)
    fun TAC_PROOF_in ctxt (g, tac) =
       (check_current_thy ctxt g;
        case Context.in_proof (fn () => tac g ctxt) () of

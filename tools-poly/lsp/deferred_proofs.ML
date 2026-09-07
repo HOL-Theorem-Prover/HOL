@@ -21,7 +21,6 @@ structure DeferredProofs :> sig
   (* installed at load time; exposed for tests and for restoring the
      hook after something else has replaced it *)
   val install : unit -> unit
-  (* true while this thread is replaying a deferred proof *)
 
   (* Hand the queued proofs to the pool, given the byte the pass that
      produced them re-elaborated from.  Returns at once: the proofs run
@@ -30,10 +29,12 @@ structure DeferredProofs :> sig
      A proof already being checked is not started again.  Re-elaborating
      a declaration re-enqueues its proofs whether or not anything about
      it changed, so without this an edit anywhere above would throw away
-     work in progress everywhere below.  See `sameProof`. *)
+     work in progress everywhere below.  See `itemSite`. *)
   val check : LSPExtension.check_scope -> unit
-  (* Only ever reports Checking, Proved or Failed.  A proof the pool is
-     not working on is absent, which the caller renders as Cheated. *)
+  (* Whether any proof the pool holds is still being checked.  Read
+     without taking the pool's lock, which is what lets it be called
+     from inside one -- `check`'s `Checking` announcement reaches the
+     server hook, which asks this. *)
   val anyChecking : unit -> bool
   (* Give up on every proof whose declaration starts at or after this
      byte; proofs above it are untouched.  Called with the point a
@@ -165,7 +166,7 @@ fun proveForReal ctxt site (g, tac) =
    made them look like proofs the reader had written.
 
    They are also the entries the pool could never reuse across passes,
-   having no name to match on (see `sameProof'), so each recompile
+   having no name to match on (see `itemSite'), so each recompile
    dropped them and forked them again, announcing a `Cheated' at the
    offset the declaration used to start at.  A client accumulating the
    stream gained a phantom entry per anonymous proof per recompile,
@@ -216,9 +217,10 @@ fun install () = Tactical.set_prover prover
    That is what makes a proof cancellable mid-tactic, which matters
    because a proof can run far longer than the edit that invalidated it.
 
-   One group per proof, so each can be cancelled on its own.  We keep
-   the future to read its outcome and the offset to decide whether an
-   edit reaches it.
+   One group per proof, so each can be cancelled on its own.  The group
+   need not be kept: `Future.cancel` recovers it from the future, which
+   `forks` enqueued under it.  We keep the future to read its outcome
+   and the offset to decide whether an edit reaches it.
    ------------------------------------------------------------------ *)
 
 (* `site` and `offset` live here rather than being read back out of the
@@ -238,7 +240,6 @@ fun install () = Tactical.set_prover prover
    reader sees is the previous one -- and another announcement follows. *)
 type entry = {site : string,
               offset : int,
-              group : Future.group,
               result : LSPExtension.proof_status option ref,
               future : LSPExtension.proof_status Future.future}
 
@@ -272,7 +273,7 @@ fun dropped e = announceEntry LSPExtension.Cheated e
    cancelled first would leave a window in which the entry is live but
    its future is already dead. *)
 fun discard (doomed : entry list) =
-    (List.app (fn {group, ...} => Future.cancel_group group) doomed;
+    (List.app (Future.cancel o #future) doomed;
      List.app dropped doomed)
 
 fun forkAt ({site, offset, run} : LSPExtension.deferred) =
@@ -294,9 +295,7 @@ fun forkAt ({site, offset, run} : LSPExtension.deferred) =
             r
           end
     in
-      announce {site = site, offset = offset,
-                status = LSPExtension.Checking};
-      {site = site, offset = offset, group = group, result = result,
+      {site = site, offset = offset, result = result,
        future = Portable.singleton (Future.forks params) announcing}
     end
 
@@ -315,9 +314,6 @@ fun itemSite ({site, ...} : LSPExtension.deferred) = site
    resumed pass can do without re-reading what it skipped: the entries
    above its resume point survive the pass untouched, so their numbers
    are already assigned and this pass's items carry on from there. *)
-fun sameProof (it : LSPExtension.deferred) (e : entry) =
-    itemSite it = siteOf e
-
 fun statusOf ({future, result, ...} : entry) =
     case !result of
         SOME st => st
@@ -335,14 +331,15 @@ fun statusOf ({future, result, ...} : entry) =
 
 fun check {resumeFrom, keptFrom, bytes} =
     let
-      (* takeDeferred empties the queue, so a second call cannot fork
-         the same proof twice.  It is called only from a compile
-         thread, and `enqueueDeferred` only from elaboration on one --
-         a worker takes `prover`'s replaying branch and never enqueues
-         -- which is what makes a plain ref enough for the queue. *)
+      (* takeDeferred empties the queue in one step, so a second call
+         cannot fork the same proof twice.  A worker never adds to it --
+         it takes `prover`'s replaying branch -- but the server's
+         goal-state and walk threads run tactics too, and they are not
+         replaying, so the queue is synchronised rather than relying on
+         a single writer. *)
       val items = LSPExtension.takeDeferred ()
       (* Built before the lock is taken, since it touches nothing
-         shared: `sameProof` compares sites and nothing else, so a
+         shared: an item and an entry match on site and nothing else, so a
          dictionary answers in one lookup what a scan of every item, per
          entry, used to answer.  On a 61-theorem script that was some
          7,400 string comparisons inside the critical section. *)
@@ -350,14 +347,37 @@ fun check {resumeFrom, keptFrom, bytes} =
           List.foldl (fn (it, m) => Binarymap.insert (m, itemSite it,
                                                       #offset it))
                      (Binarymap.mkDict String.compare) items
+      (* Read without the lock: `entries` only grows by this function,
+         which runs on one compile thread at a time, and a canceller
+         removing an entry meanwhile can only make us announce a
+         `Checking` that is then immediately dropped as `Cheated`. *)
+      val liveNow =
+          List.foldl (fn (e, st) => Binaryset.add (st, siteOf e))
+                     (Binaryset.empty String.compare) (Sref.value entries)
+      fun isLive it = Binaryset.member (liveNow, itemSite it)
+      (* Announced before the lock, deliberately.  An announcement goes
+         down a one-slot channel and blocks until the writer thread has
+         written the previous one to stdout, so doing this per proof
+         inside the critical section would hold the pool's lock for as
+         long as the *client* takes to read -- and the thread that wants
+         it next is the one reading LSP input, which is how a slow
+         editor turns into a server that has stopped listening.
+
+         Announcing early is sound: a cancellation arriving in the gap
+         announces `Cheated` after this `Checking`, which is the order
+         the drop path produces anyway. *)
+      val () = List.app (fn it => announce {site = itemSite it,
+                                            offset = #offset it,
+                                            status = LSPExtension.Checking})
+                        (List.filter (fn it => not (isLive it)) items)
       (* One critical section, covering the forking too.  Publishing the
          new entries in a second one left them invisible to a canceller
          for as long as forking took: an edit arriving in that window
          could not stop the proofs of the text it had just replaced, so
          they ran on, filled the pool, and announced verdicts against a
          buffer the user had already changed.  Forking here is only an
-         enqueue -- `Future.forks` does not run the proof -- and the
-         `Checking` it announces reaches no code that takes this lock. *)
+         enqueue -- `Future.forks` does not run the proof, and takes no
+         lock of ours. *)
       val (doomed, moved) =
           Sref.gen_update entries
             (fn live =>
@@ -370,13 +390,14 @@ fun check {resumeFrom, keptFrom, bytes} =
                         (fn it => not (Binaryset.member (liveSites,
                                                          itemSite it)))
                         items
+
                   (* An entry survives if this pass re-enqueued its proof
                      -- with its offset refreshed, since the edit may
                      have moved the declaration -- or if it sits above
                      what was re-elaborated and so was never in
                      question.  Anything else the pass has orphaned. *)
                   fun moveTo off (e : entry) =
-                      {site = #site e, offset = off, group = #group e,
+                      {site = #site e, offset = off,
                        result = #result e, future = #future e}
                   (* A pass that stopped early did not re-enqueue what
                      it never reached, but those are still the right
@@ -416,9 +437,12 @@ fun check {resumeFrom, keptFrom, bytes} =
       val () = List.app (fn e => announceEntry (statusOf e) e) moved
     in () end
 
-(* Short-circuits on the first unsettled proof and allocates nothing:
-   this is asked once per verdict, so a file's worth of failures used to
-   pay a traversal -- and a record per entry -- apiece. *)
+(* Short-circuits on the first unsettled proof: this is asked once per
+   verdict, so a file's worth of failures used to pay a traversal -- and
+   a record per entry -- apiece.  `Sref.value` takes no lock, and that
+   is load-bearing rather than incidental: this is reachable from inside
+   the `entries` critical section, and a locking read would deadlock on
+   a non-reentrant mutex. *)
 fun anyChecking () =
     List.exists (fn e => statusOf e = LSPExtension.Checking)
                 (Sref.value entries)

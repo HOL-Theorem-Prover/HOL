@@ -1206,7 +1206,7 @@ fun start {diag, dbg, warnings} = let
     plugins: plugin_data,
     (* Newest-first list of per-dec snapshots taken by the current /
        last-completed compile.  Consulted by `startCompile` to resume
-       from the largest snapshot with `endByte <= minEditOffset`
+       from the largest snapshot with `endByte <= the edit mark`
        instead of restarting from byte 0. *)
     declSnapshots: declSnapshot list}
   fun emptyParseData n: parse_data = {
@@ -1261,13 +1261,14 @@ fun start {diag, dbg, warnings} = let
        wakes up.  Rapid-fire edits fork many threads but only the
        last (whose epoch survives to wake time) actually compiles. *)
     debounce: int ref,
-    (* Rolling minimum edit offset across `applyEdit` batches since
-       the last successful compile.  `startCompile` picks the largest
-       snapshot in `lastTrees.parse.declSnapshots` with `endByte <=
-       !minEditOffset` (falling back to a full boot-restore if none).
-       `NONE` means no edit info is available (fresh file, or a
-       previous compile completed and cleared it) — treated as 0
-       (full restart). *)
+    (* Rolling minimum edit offset across `applyEdit` batches, and
+       across a pool worker's retractions, since the last compile took
+       it.  `startCompile` takes it -- one atomic step, since two
+       threads lower it and one consumes it -- and picks the largest
+       snapshot in `lastTrees.parse.declSnapshots` with `endByte <=`
+       it, falling back to a full boot-restore if there is none.
+       `NONE` means no edit info is available (a fresh file, or a
+       previous compile took it) — treated as 0, a full restart. *)
     minEditOffset: int option Sref.t,
     (* Runtime-diagnostic squiggles the walker has observed since
        the last compile: keyed by theorem name, value is the
@@ -1275,7 +1276,7 @@ fun start {diag, dbg, warnings} = let
        these; a successful walker query for a theorem removes its
        entry so a user-fix removes the squiggle without waiting
        for the next compile. *)
-    walkerDiags: (string, report) Binarymap.dict ref,
+    walkerDiags: (string, report) Binarymap.dict Sref.t,
     (* Squiggles for the proofs the pool has an opinion about, keyed by
        theorem name.  Deliberately *not* cleared by a fresh compile,
        unlike `walkerDiags': the pool owns these entries' lifetime and
@@ -1352,7 +1353,7 @@ fun start {diag, dbg, warnings} = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
         debounce = ref 0, minEditOffset = Sref.new NONE,
-        walkerDiags = ref (Binarymap.mkDict String.compare),
+        walkerDiags = Sref.new (Binarymap.mkDict String.compare),
         proofDiags = Sref.new (Binarymap.mkDict String.compare),
         pendingFailures = Sref.new [],
         compiledText = ref "", reusableFrom = ref ~1,
@@ -1533,24 +1534,18 @@ fun start {diag, dbg, warnings} = let
                 (Binarymap.mkDict Int.compare)
              handle _ => Binarymap.mkDict Int.compare
       end
-    (* The innermost declaration starting at or before `off'.  The
-       compile driver's notion of where a declaration begins and the
-       outline's agree, but a fallback of "first occurrence" keeps a
-       disagreement from renaming a proof rather than merely failing to
-       number it. *)
+    (* The compile driver's notion of where a declaration begins and
+       the outline's normally agree, so the exact hit is the usual
+       answer.  The fold is the fallback for a disagreement: it visits
+       in increasing key order, so the last declaration at or before
+       `off` wins, and a file with none gives the first occurrence. *)
     fun ordAt off =
       case Binarymap.peek (decOrds, off) of
           SOME n => n
         | NONE =>
-          (* The compile driver's notion of where a declaration begins
-             and the outline's normally agree, so the exact hit above is
-             the usual answer; this is the fallback for a disagreement,
-             and it prefers the nearest declaration at or before `off`. *)
-          #2 (Binarymap.foldl
-                (fn (start, n, best as (bs, _)) =>
-                    if start <= off andalso start >= bs then (start, n)
-                    else best)
-                (~1, 1) decOrds)
+          Binarymap.foldl (fn (start, n, best) =>
+                              if start <= off then n else best)
+                          1 decOrds
     fun onDecStarted off = (
       LSPExtension.currentProofOffset := off;
       LSPExtension.currentProofOrd := ordAt off)
@@ -1822,7 +1817,7 @@ fun start {diag, dbg, warnings} = let
     val {text, parse} = !lastTrees
     val {lines, version, ...} = text
     val compileDiags = #diags parse
-    val wd = !walkerDiags
+    val wd = Sref.value walkerDiags
     val pd = Sref.value proofDiags
     val total = DArray.size compileDiags + Binarymap.numItems wd +
                 Binarymap.numItems pd
@@ -1872,12 +1867,12 @@ fun start {diag, dbg, warnings} = let
        too, and to the catch-up publish once `lastTrees' is current. *)
     fun republish () =
         if compileRunning compile then () else publishAllDiagnostics uri v
-    val next = case proofDiagOf status of
-        NONE => NONE
-      | SOME (hard, msg) =>
-        SOME (Error {hard = hard,
-                     pos = proofRange v (size text) offset,
-                     msg = encString msg})
+    val next =
+        Option.map (fn (hard, msg) =>
+                       Error {hard = hard,
+                              pos = proofRange v (size text) offset,
+                              msg = encString msg})
+                   (proofDiagOf status)
     (* One critical section.  Pool workers settle concurrently and every
        one of them lands here, so reading the map, deciding, and writing
        it back as three steps let one worker's entry overwrite another's
@@ -1915,7 +1910,7 @@ fun start {diag, dbg, warnings} = let
     (* Runtime squiggles from the walker are always stale w.r.t. the
        new compile -- clear them so a fix removes squiggles even
        before the user visits the theorem to re-run the walker. *)
-    walkerDiags := Binarymap.mkDict String.compare;
+    Sref.update walkerDiags (fn _ => Binarymap.mkDict String.compare);
     let
     (* The dependencies the file declares, and where it names them.
        A failure to load one of these is fatal to the whole file, so
@@ -1957,7 +1952,19 @@ fun start {diag, dbg, warnings} = let
        build would not have saved.  Taken here, a worker's mark lands
        after this pass has read its own and so survives for the next. *)
     val editOff = Sref.gen_update minEditOffset (fn m => (NONE, m))
+    (* Taking it means owning it: nothing below re-lowers the mark, and
+       between here and the fork there are sends, a cancellation sweep
+       and a snapshot search, any of which can raise into the callers'
+       `handle _ => ()`.  Losing it there is permanent rather than
+       self-healing -- a retraction's `addNoCheatSite` has already
+       returned true and will not fire for that site again -- so the
+       mark goes back if this pass does not get as far as compiling. *)
+    fun putBack () =
+        case editOff of
+            NONE => ()
+          | SOME off => bumpMinEdit minEditOffset off
     in
+    (
     (* Nothing to do if the last parse ran to completion and nothing has
        marked a point needing re-elaboration.  An edit always arrives via
        `carryOverSnapshots`, which clears `done`, so the second condition
@@ -1972,7 +1979,7 @@ fun start {diag, dbg, warnings} = let
     val {text as {lines, ...}, parse = lastParse} = !lastTrees
     val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
     (* Resume decision: pick the largest snapshot with `endByte <=
-       !minEditOffset`.  If none, recompile the whole file. *)
+       the edit mark.  If none, recompile the whole file. *)
     val resumeSnap =
       case editOff of
         NONE => NONE
@@ -2249,7 +2256,7 @@ fun start {diag, dbg, warnings} = let
          writer and jams every subsequent send. *)
       fun sendDiags () = let
         val n = DArray.size oldDiags
-        val wd = !walkerDiags
+        val wd = Sref.value walkerDiags
         val pd = Sref.value proofDiags
         val ws = Binarymap.numItems wd + Binarymap.numItems pd
         val total = n + ws
@@ -2741,6 +2748,7 @@ fun start {diag, dbg, warnings} = let
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread,
                         cancelled = cancelled, elaborating = elaborating} end
+    ) handle e => (putBack (); raise e)
     end
     end)
 
@@ -3162,13 +3170,16 @@ fun start {diag, dbg, warnings} = let
            is elaborating and enqueueing them.  Missing the second was
            enough on its own -- a dozen sound proofs reported failures
            that varied from run to run. *)
-        (* Still *using* the compile state, which is not the same as the
-           thread being alive -- see `elaborating`. *)
+        (* Not `compileRunning`: that asks whether a pass is alive, and
+           this asks whether one is still *using* the compile state,
+           which it stops doing before its thread exits -- see
+           `elaborating`. *)
         fun compiling () =
-          compileRunning compile andalso
-          (case !compile of
-               NONE => false
-             | SOME {elaborating, ...} => !elaborating)
+          case !compile of
+              NONE => false
+            | SOME {thread, cancelled, elaborating, ...} =>
+              !elaborating andalso Thread.isActive thread
+              andalso not (!cancelled)
         fun proving () = !LSPExtension.poolBusy ()
      in
         if null (Sref.value pendingFailures)
@@ -3178,7 +3189,14 @@ fun start {diag, dbg, warnings} = let
         else let
           val todo = Sref.gen_update pendingFailures (fn ps => ([], ps))
         in
-          if null todo then releaseDrain () else
+          (* Released here on any failure between the claim and the
+             fork.  This runs on a pool worker, which `Future`
+             interrupts asynchronously when its group is cancelled --
+             on every keystroke -- and the callers' `handle _ => ()`
+             would otherwise swallow that with the claim still held.
+             Nothing else releases it, so no failed proof would ever be
+             localised again for the life of the process. *)
+          (if null todo then releaseDrain () else
           (Thread.fork
              (fn () => (List.app (fn (site, offset, msg) =>
                                      !localiseFailure uri v
@@ -3193,7 +3211,8 @@ fun start {diag, dbg, warnings} = let
                            Returns at once when there is nothing
                            queued. *)
                         (!drainFailures uri v handle _ => ())),
-              []); ())
+              []); ()))
+          handle e => (releaseDrain (); raise e)
         end
      end)
 
@@ -3652,23 +3671,27 @@ fun start {diag, dbg, warnings} = let
            publishDiagnostics whenever the walker's slot changes. *)
         val () = case (v_opt, resp) of
             (SOME (v: file_data), SOME {theorem, failedRange, error, ...}) => let
-              val wd = !(#walkerDiags v)
-              val prev = Binarymap.peek (wd, theorem)
               val next = case (failedRange, error) of
                   (SOME (s, e), SOME msg) => SOME (Error {
                     hard = true, pos = (s, e), msg = encString msg })
                 | _ => NONE
-              val changed = case (prev, next) of
-                  (NONE, NONE) => false
-                | (SOME _, NONE) => true
-                | (NONE, SOME _) => true
-                | _ => true  (* re-emit even if same theorem — text may differ *)
-              val () = case next of
-                  NONE => #walkerDiags v := Binarymap.foldl
-                    (fn (k, r, m) => if k = theorem then m
-                                     else Binarymap.insert (m, k, r))
-                    (Binarymap.mkDict String.compare) wd
-                | SOME r => #walkerDiags v := Binarymap.insert (wd, theorem, r)
+              (* Decide and write in one step.  A request thread is
+                 forked per `$/hol/goalState`, so two can be here at
+                 once, and `startCompile` clears this map from a third:
+                 read-decide-write as three steps loses one thread's
+                 entry, or writes a stale map back over the clear and
+                 leaves a squiggle no recompile removes. *)
+              val changed =
+                  Sref.gen_update (#walkerDiags v)
+                    (fn wd =>
+                        case (Binarymap.peek (wd, theorem), next) of
+                            (NONE, NONE) => (wd, false)
+                          | (_, NONE) =>
+                            (#1 (Binarymap.remove (wd, theorem)), true)
+                            (* re-emitted even for the same theorem:
+                               the text it points into may have moved *)
+                          | (_, SOME r) =>
+                            (Binarymap.insert (wd, theorem, r), true))
             in if changed then publishAllDiagnostics uri v else () end
           | _ => ()
         val lines = case v_opt of

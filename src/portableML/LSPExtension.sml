@@ -275,12 +275,20 @@ end
 val currentProofOffset = ref 0
 val currentProofOrd = ref 1
 local
-  (* enqueued in reverse; Phase A is single-threaded, so a plain ref is
-     enough here.  The drain takes the whole queue in one step. *)
-  val q : deferred list ref = ref []
+  (* Enqueued in reverse; the drain takes the whole queue in one step.
+
+     An `Sref` rather than a plain ref: the deferring branch of the
+     prover hook is reached from elaboration, and while that is one
+     thread at a time, a superseded pass can still be draining this
+     queue as its replacement fills it -- and any thread that runs a
+     tactic reaches the hook, including the ones the server forks per
+     goal-state request.  A dropped enqueue is a proof that is never
+     checked and never reported, which is indistinguishable from one
+     that passed. *)
+  val q : deferred list Sref.t = Sref.new []
 in
-  fun enqueueDeferred d = q := d :: !q
-  fun takeDeferred () = let val items = List.rev (!q) in q := []; items end
+  fun enqueueDeferred d = Sref.update q (fn ds => d :: ds)
+  fun takeDeferred () = List.rev (Sref.gen_update q (fn ds => ([], ds)))
 end
 
 type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
