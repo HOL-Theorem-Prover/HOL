@@ -109,8 +109,22 @@ fun verdict g th =
            (if extra = 1 then "is" else "es"))
     end
 
+(* `Context.with_context` for the whole replay, not just
+   `TAC_PROOF_in`'s parameter.  The parameter covers a tactic that uses
+   the context it was handed; this covers the rest, and the rest is not
+   sloppiness -- `mk_const` and `mk_type` resolve names against the live
+   signature by design, so a replaying proof reads the live cell every
+   time it builds a term from a name.  That cell belongs to whichever
+   compile is in progress, and a pass resuming part-way down the file
+   rewinds it: the worker then cannot find a constant its own file
+   defines and reports a sound proof as failed, differently on each
+   keystroke.  Pinned here, the rewind is invisible to it. *)
 fun replay ctxt g tac =
-    verdict g (asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac)))
+    Context.with_context ctxt
+      (fn () =>
+          verdict g (asReplay (fn () =>
+                                  Tactical.TAC_PROOF_in ctxt (g, tac))))
+      ()
     handle e =>
            if Exn.is_interrupt e then Exn.reraise e
            else LSPExtension.Failed (Feedback.exn_to_string e)

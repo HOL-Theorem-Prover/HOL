@@ -60,6 +60,16 @@ sig
      census.  Turn it up to find which proofs construct terms by name. *)
   val live : unit -> t
 
+  (* Answer this thread's ambient reads from `c` for the duration of
+     `f x`, rather than from the live cell.  What a replaying proof runs
+     under: the cell belongs to whatever compile is in progress, and a
+     `restore` on that thread would otherwise change the signature a
+     proof is halfway through resolving names against -- reported as a
+     failure of a proof that is in fact fine.
+
+     Reads only.  A write still goes to the live cell. *)
+  val with_context : t -> ('a -> 'b) -> 'a -> 'b
+
   (* Whole-context mutators.  Both take the RW-lock's read side so
      `restore` won't interleave.  `f` runs under the internal Sref
      mutex, so nested `update` / `gen_update` inside `f` deadlocks;

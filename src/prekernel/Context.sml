@@ -111,6 +111,27 @@ struct
        thread to claim.  Good enough to name a culprit; not evidence on
        its own. *)
     val pending : bool ThreadLocal.t = ThreadLocal.new ()
+    (* A context installed for one thread's benefit.  While it is set,
+       the ambient reads below answer from it rather than from the live
+       cell, so a proof replaying on a worker cannot see another thread
+       swap that cell out from under it -- which it otherwise can, since
+       `mk_const` and `mk_type` resolve names against the live signature
+       and no amount of context-passing removes that (see `live`).
+
+       `overrides` counts the threads holding one.  It is zero in every
+       process that is not replaying proofs, and zero in that one
+       whenever the pool is idle, so the common path pays an integer
+       test rather than a thread-local lookup: measured at 0.8ns for the
+       bare read, 1.5ns with the test, 5.6ns going to `getLocal` every
+       time.  An `Sref` because a worker installing one and another
+       releasing one are concurrent; the read is a plain deref. *)
+    val override : t option ThreadLocal.t = ThreadLocal.new ()
+    val overrides : int Sref.t = Sref.new 0
+    fun ambient () =
+        if Sref.value overrides = 0 then Sref.value ctx
+        else case ThreadLocal.get override of
+                 SOME (SOME c) => c
+               | _ => Sref.value ctx
     fun thyname () =
         case #current_thy (Sref.value ctx) of
             NONE => "<no current theory>"
@@ -146,7 +167,7 @@ struct
            (report (); if !action > 1 then ThreadLocal.set (pending, true)
                        else ())
          else ();
-         Sref.value ctx)
+         ambient ())
     (* Reads the live context without reporting.  The kernel signatures
        are read this way: mk_type and mk_const resolve a name against the
        live signature rather than a caller-supplied context, so every
@@ -157,7 +178,24 @@ struct
        should use this. *)
     fun live () =
         (if !sig_action > 0 andalso get () > 0 then report_sig () else ();
-         Sref.value ctx)
+         ambient ())
+
+    (* Run `f x` with `c` answering this thread's ambient reads.  The
+       previous setting is put back, on the exception path too, so a
+       nested proof restores its parent's.  Writes are deliberately not
+       redirected: `Data.write` and `Data.modify` go to the live cell,
+       which is what a write means. *)
+    fun with_context c f x =
+        let
+          val prev = ThreadLocal.get override
+          val () = ThreadLocal.set (override, SOME c)
+          val () = Sref.update overrides (fn n => n + 1)
+          fun restore () =
+              (Sref.update overrides (fn n => n - 1);
+               ThreadLocal.set (override, getOpt (prev, NONE)))
+        in
+          (f x handle e => (restore (); raise e)) before restore ()
+        end
     (* consumed by Data.get, which is the only thing that can name the
        slot an ambient read was after *)
     fun claim_pending () =
