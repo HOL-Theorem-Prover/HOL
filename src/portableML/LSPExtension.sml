@@ -255,12 +255,22 @@ val deferProofs = ref false
 val cheatSubstituted = ref false
 
 local
-  val sites = ref ([] : string list)
+  (* An `Sref`, because the answer `addNoCheatSite` gives is what stops
+     the retract-and-re-elaborate cycle: a worker is told whether it is
+     the first to report this site, and acts only if it is.  Two workers
+     each told "yes" for one site is a duplicated recompile, and in the
+     bad case a loop -- so the test and the add have to be one step,
+     which a plain `ref` cannot give.  See the termination argument at
+     `retract` in lsp/server.ML. *)
+  val sites : string list Sref.t = Sref.new []
+  fun member s ss = List.exists (fn s' => s' = s) ss
 in
-  fun isNoCheatSite s = List.exists (fn s' => s' = s) (!sites)
+  fun isNoCheatSite s = member s (Sref.value sites)
   fun addNoCheatSite s =
-      if isNoCheatSite s then false else (sites := s :: !sites; true)
-  fun dropNoCheatSite s = sites := List.filter (fn s' => s' <> s) (!sites)
+      Sref.gen_update sites
+        (fn ss => if member s ss then (ss, false) else (s :: ss, true))
+  fun dropNoCheatSite s =
+      Sref.update sites (List.filter (fn s' => s' <> s))
 end
 val currentProofOffset = ref 0
 val currentProofOrd = ref 1

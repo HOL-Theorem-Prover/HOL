@@ -259,6 +259,14 @@ fun announceEntry status (e : entry) =
 
 fun dropped e = announceEntry LSPExtension.Cheated e
 
+(* Cancel after removing from `entries`: an interrupted worker needs its
+   group cancelled whether or not we still track it, and a caller that
+   cancelled first would leave a window in which the entry is live but
+   its future is already dead. *)
+fun discard (doomed : entry list) =
+    (List.app (fn {group, ...} => Future.cancel_group group) doomed;
+     List.app dropped doomed)
+
 fun forkAt (item as {site, offset, run} : LSPExtension.deferred) =
     let
       val group = Future.new_group NONE
@@ -283,10 +291,9 @@ fun forkAt (item as {site, offset, run} : LSPExtension.deferred) =
     in
       announce {site = site, offset = offset,
                 status = LSPExtension.Checking};
-      case Future.forks params [announcing] of
-          [f] => SOME {site = site, offset = offset, item = itemR,
-                       group = group, result = result, future = f}
-        | _ => NONE
+      {site = site, offset = offset, item = itemR, group = group,
+       result = result,
+       future = Portable.singleton (Future.forks params) announcing}
     end
 
 fun siteOf ({site, ...} : entry) = site
@@ -325,22 +332,40 @@ fun statusOf ({future, result, ...} : entry) =
 fun check {resumeFrom, keptFrom, bytes} =
     let
       (* takeDeferred empties the queue, so a second call cannot fork
-         the same proof twice *)
+         the same proof twice.  It is called only from a compile
+         thread, and `enqueueDeferred` only from elaboration on one --
+         a worker takes `prover`'s replaying branch and never enqueues
+         -- which is what makes a plain ref enough for the queue. *)
       val items = LSPExtension.takeDeferred ()
-      (* Decide under the lock, so a concurrent cancellation cannot be
-         lost, and fork afterwards -- forking while holding it would
-         serialise the pool behind this. *)
-      val (fresh, doomed, moved) =
+      (* Built before the lock is taken, since it touches nothing
+         shared: `sameProof` compares sites and nothing else, so a
+         dictionary answers in one lookup what a scan of every item, per
+         entry, used to answer.  On a 61-theorem script that was some
+         7,400 string comparisons inside the critical section. *)
+      val itemOffset =
+          List.foldl (fn (it, m) => Binarymap.insert (m, itemSite it,
+                                                      #offset it))
+                     (Binarymap.mkDict String.compare) items
+      (* One critical section, covering the forking too.  Publishing the
+         new entries in a second one left them invisible to a canceller
+         for as long as forking took: an edit arriving in that window
+         could not stop the proofs of the text it had just replaced, so
+         they ran on, filled the pool, and announced verdicts against a
+         buffer the user had already changed.  Forking here is only an
+         enqueue -- `Future.forks` does not run the proof -- and the
+         `Checking` it announces reaches no code that takes this lock. *)
+      val (doomed, moved) =
           Sref.gen_update entries
             (fn live =>
                 let
-                  val (reused, fresh) =
-                      List.partition
-                        (fn it => List.exists (sameProof it) live) items
-                  fun reusedOffset e =
-                      case List.find (fn it => sameProof it e) reused of
-                          SOME {offset, ...} => SOME offset
-                        | NONE => NONE
+                  val liveSites =
+                      List.foldl (fn (e, st) => Binaryset.add (st, siteOf e))
+                                 (Binaryset.empty String.compare) live
+                  val fresh =
+                      List.filter
+                        (fn it => not (Binaryset.member (liveSites,
+                                                         itemSite it)))
+                        items
                   (* An entry survives if this pass re-enqueued its proof
                      -- with its offset refreshed, since the edit may
                      have moved the declaration -- or if it sits above
@@ -362,38 +387,31 @@ fun check {resumeFrom, keptFrom, bytes} =
                                     else NONE
                         | NONE => NONE
                   fun classify (e : entry) =
-                      case reusedOffset e of
+                      case Binarymap.peek (itemOffset, siteOf e) of
                           SOME off => SOME (moveTo off e)
                         | NONE =>
                           if offsetOf e < resumeFrom then SOME e
                           else keptBelow e
-                  val classified = List.map (fn e => (e, classify e)) live
-                  val keep = List.mapPartial #2 classified
-                  val doomed =
-                      List.mapPartial (fn (e, NONE) => SOME e | _ => NONE)
-                                      classified
-                  (* A reused entry whose declaration the edit moved.
-                     Its offset is how a client finds the proof, and
-                     nothing else will tell it the declaration is
-                     somewhere else now: a reused entry is not dropped
-                     and not forked, so it announces nothing of its
-                     own. *)
-                  val moved =
-                      List.mapPartial
-                        (fn (e, SOME e') =>
-                            if offsetOf e' = offsetOf e then NONE
-                            else SOME e'
-                          | _ => NONE) classified
+                  (* One pass, three answers.  `moved` is a reused entry
+                     whose declaration the edit shifted: its offset is
+                     how a client finds the proof, and nothing else will
+                     say it has shifted, a reused entry being neither
+                     dropped nor forked. *)
+                  fun step (e, (keep, doomed, moved)) =
+                      case classify e of
+                          NONE => (keep, e :: doomed, moved)
+                        | SOME e' =>
+                          (e' :: keep, doomed,
+                           if offsetOf e' = offsetOf e then moved
+                           else e' :: moved)
+                  val (keep, doomed, moved) =
+                      List.foldr step ([], [], []) live
                 in
-                  (keep, (fresh, doomed, moved))
+                  (keep @ List.map forkAt fresh, (doomed, moved))
                 end)
-      val () = List.app (fn {group, ...} => Future.cancel_group group) doomed
-      val () = List.app dropped doomed
+      val () = discard doomed
       val () = List.app (fn e => announceEntry (statusOf e) e) moved
-      val new = List.mapPartial forkAt fresh
-    in
-      Sref.update entries (fn es => es @ new)
-    end
+    in () end
 
 fun statuses () =
     List.map (fn (e as {site, offset, ...} : entry) =>
@@ -410,12 +428,7 @@ fun cancelIf doomed_at =
           Sref.gen_update entries
             (fn es => let val (d, k) = List.partition (doomed_at o offsetOf) es
                       in (k, d) end)
-    in
-      (* cancel after removing: an interrupted worker needs its group
-         cancelled whether or not we still track it *)
-      List.app (fn {group, ...} => Future.cancel_group group) doomed;
-      List.app dropped doomed
-    end
+    in discard doomed end
 
 fun cancelAtOrAfter off = cancelIf (fn off' => off' >= off)
 fun cancelAt off = cancelIf (fn off' => off' = off)

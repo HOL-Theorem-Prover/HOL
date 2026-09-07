@@ -1268,7 +1268,7 @@ fun start {diag, dbg, warnings} = let
        `NONE` means no edit info is available (fresh file, or a
        previous compile completed and cleared it) — treated as 0
        (full restart). *)
-    minEditOffset: int option ref,
+    minEditOffset: int option Sref.t,
     (* Runtime-diagnostic squiggles the walker has observed since
        the last compile: keyed by theorem name, value is the
        Error report for the failed leaf.  Fresh compiles clear
@@ -1283,7 +1283,7 @@ fun start {diag, dbg, warnings} = let
        drops one.  A compile that re-enqueues an unchanged proof reuses
        its entry rather than re-announcing it, so clearing here would
        lose a squiggle with nothing left to restore it. *)
-    proofDiags: (string, report) Binarymap.dict ref,
+    proofDiags: (string, report) Binarymap.dict Sref.t,
     (* The text the last compile elaborated, or "" before there has
        been one.  Comparing it with the buffer says exactly which
        bytes have changed since -- one region, however many
@@ -1297,7 +1297,7 @@ fun start {diag, dbg, warnings} = let
        of its own corrupted them, and a dozen sound proofs would report
        failures that varied from run to run.  Held here until the pool
        is idle. *)
-    pendingFailures: (string * int * string) list ref,
+    pendingFailures: (string * int * string) list Sref.t,
     compiledText: string ref,
     (* The offset from which the last compile reported nothing: one
        past its last diagnostic, or `0` if it reported none.  `~1` when
@@ -1351,10 +1351,10 @@ fun start {diag, dbg, warnings} = let
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
-        debounce = ref 0, minEditOffset = ref NONE,
+        debounce = ref 0, minEditOffset = Sref.new NONE,
         walkerDiags = ref (Binarymap.mkDict String.compare),
-        proofDiags = ref (Binarymap.mkDict String.compare),
-        pendingFailures = ref [],
+        proofDiags = Sref.new (Binarymap.mkDict String.compare),
+        pendingFailures = Sref.new [],
         compiledText = ref "", reusableFrom = ref ~1,
         depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
         nsGen = ref 0, nsNames = ref NONE} end
@@ -1381,10 +1381,15 @@ fun start {diag, dbg, warnings} = let
      consults this to decide whether to resume from a snapshot.  An edit
      is not the only thing that can move it: so can discovering that a
      declaration's proof suspends. *)
+  (* Lower the mark, atomically: the reader thread lowers it for each
+     edit, and a pool worker lowers it when a proof retracts, so a
+     read-then-write would let one silently discard the other's -- and
+     losing the reader's means resuming *below* an edit the user has
+     made, with nothing to correct it until they type again. *)
   fun bumpMinEdit minEditOffset off =
-      case !minEditOffset of
-        NONE => minEditOffset := SOME off
-      | SOME m => if off < m then minEditOffset := SOME off else ()
+      Sref.update minEditOffset
+        (fn NONE => SOME off
+          | SOME m => SOME (Int.min (m, off)))
 
   (* Length of the longest common suffix of `a` and `b` that does not
      reach back past `stop` in either.  With `commonPrefixLen` this
@@ -1599,11 +1604,12 @@ fun start {diag, dbg, warnings} = let
      the proofs it reaches, and those are announced as `cheated` under
      their old positions before any new ones are announced.
 
-     A position rather than a range: the pool identifies a proof by the
-     byte its declaration starts at, which is all it needs for
-     cancellation, and a client wanting to decorate the whole
-     Theorem-QED block can find the end itself.  Ranges can be added if
-     a client would rather not.
+     A position rather than a range: a client wanting to decorate the
+     whole Theorem-QED block can find the end itself, and ranges can be
+     added if one would rather not.  The position is where the proof
+     *is*, not what the pool calls it -- identity is the name and the
+     occurrence number (`site`), the only handle an edit above a proof
+     does not move.
 
      A declaration *absent* from the list is one the pool is not working
      on.  Per the state model in LSPExtension: if the compile has reached
@@ -1789,7 +1795,7 @@ fun start {diag, dbg, warnings} = let
     val {lines, version, ...} = text
     val compileDiags = #diags parse
     val wd = !walkerDiags
-    val pd = !proofDiags
+    val pd = Sref.value proofDiags
     val total = DArray.size compileDiags + Binarymap.numItems wd +
                 Binarymap.numItems pd
     val snapshot = DArray.clone (compileDiags, total)
@@ -1842,23 +1848,29 @@ fun start {diag, dbg, warnings} = let
         | SOME {thread, cancelled, ...} =>
           Thread.isActive thread andalso not (!cancelled)
     fun republish () = if compiling () then () else publishAllDiagnostics uri v
-    val pd = !proofDiags
-    val prev = Binarymap.peek (pd, site)
     val next = case proofDiagOf status of
         NONE => NONE
       | SOME (hard, msg) =>
         SOME (Error {hard = hard,
                      pos = proofRange v (size text) offset,
                      msg = encString msg})
+    (* One critical section.  Pool workers settle concurrently and every
+       one of them lands here, so reading the map, deciding, and writing
+       it back as three steps let one worker's entry overwrite another's
+       -- and let the `checkProofs: false` handler's clear be undone by
+       a worker that had already read the map.  Reports whether anything
+       moved, since the publish must not happen under the lock. *)
+    val changed =
+        Sref.gen_update proofDiags
+          (fn pd =>
+              case (Binarymap.peek (pd, site), next) of
+                  (NONE, NONE) => (pd, false)
+                | (SOME _, NONE) => (#1 (Binarymap.remove (pd, site)), true)
+                (* Re-published even when the entry looks the same: the
+                   text it points into may have moved under it. *)
+                | (_, SOME d) => (Binarymap.insert (pd, site, d), true))
     in
-      case (prev, next) of
-        (NONE, NONE) => ()
-      | (SOME _, NONE) => (proofDiags := #1 (Binarymap.remove (pd, site));
-                           republish ())
-        (* Re-published even when the entry looks the same: the text it
-           points into may have moved under it. *)
-      | (_, SOME d) => (proofDiags := Binarymap.insert (pd, site, d);
-                        republish ())
+      if changed then republish () else ()
     end
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
@@ -1911,13 +1923,24 @@ fun start {diag, dbg, warnings} = let
     case stillBlocked of
       SOME b => sendDepsBlocked uri b
     | NONE =>
+    let
+    (* Take the mark rather than reading it and clearing it at the end:
+       a pool worker lowers it when a proof retracts, and between the
+       read that chose the resume point and the clear that followed,
+       such a retraction was simply dropped -- so the suspending proof
+       never caused the re-elaboration it exists to ask for, and every
+       declaration below stayed elaborated against a theorem a real
+       build would not have saved.  Taken here, a worker's mark lands
+       after this pass has read its own and so survives for the next. *)
+    val editOff = Sref.gen_update minEditOffset (fn m => (NONE, m))
+    in
     (* Nothing to do if the last parse ran to completion and nothing has
        marked a point needing re-elaboration.  An edit always arrives via
        `carryOverSnapshots`, which clears `done`, so the second condition
        is what lets a *non*-edit ask for a recompile of unchanged text --
        which is how discovering that a proof suspends gets acted on. *)
-    if #done (#parse (!lastTrees)) andalso not (isSome (!minEditOffset)) then
-      (!LSPExtension.notifyCompileStart (!minEditOffset);
+    if #done (#parse (!lastTrees)) andalso not (isSome editOff) then
+      (!LSPExtension.notifyCompileStart editOff;
        invalidateProofs {resumeStart = NONE, inProofBody = NONE};
        !LSPExtension.resetForCompile (); ())
     else let
@@ -1927,12 +1950,12 @@ fun start {diag, dbg, warnings} = let
     (* Resume decision: pick the largest snapshot with `endByte <=
        !minEditOffset`.  If none, recompile the whole file. *)
     val resumeSnap =
-      case !minEditOffset of
+      case editOff of
         NONE => NONE
-      | SOME editOff =>
+      | SOME at =>
         (* `declSnapshots` is newest-first, so the first match walking
-           the list is the largest `endByte <= editOff`. *)
-        List.find (fn (s:declSnapshot) => #endByte s <= editOff) lastSnaps
+           the list is the largest `endByte <= at`. *)
+        List.find (fn (s:declSnapshot) => #endByte s <= at) lastSnaps
     (* Recompiling the whole file starts from the state the file's
        first dec -- its header -- left behind, not from the boot state.
        The boot state is not a legitimate starting point once a compile
@@ -1980,21 +2003,20 @@ fun start {diag, dbg, warnings} = let
     val (restoreSnap, initialTrees, resumeStart, oldDiags) =
       case resumeSnap of
         NONE => (
-          !LSPExtension.notifyCompileStart (!minEditOffset);
+          !LSPExtension.notifyCompileStart editOff;
           invalidateProofs {resumeStart = NONE,
                             inProofBody = proofBodyAt (#text text)
-                                                      (!minEditOffset)};
+                                                      editOff};
           ((case baseSnap of
               NONE => (!LSPExtension.resetForCompile (); (fn () => ()))
             | SOME s =>
               (fn () => !LSPExtension.restoreCompileSnap (#compileSnap s))),
            emptyParseData 8, 0, oldDiags))
       | SOME snap => let
-          val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
+          val _ = !LSPExtension.notifyCompileStart editOff
           val _ = invalidateProofs
                     {resumeStart = SOME (#endByte snap),
-                     inProofBody = proofBodyAt (#text text)
-                                               (!minEditOffset)}
+                     inProofBody = proofBodyAt (#text text) editOff}
           val {endByte, builtTrees, diags = snapDiags, plugins,
                ...} = snap
           (* Seed `diags` with the frozen snapshot; leave `oldDiags`
@@ -2105,7 +2127,6 @@ fun start {diag, dbg, warnings} = let
                        encInt (!reusableFrom) print));
                 print "}")))
             else ()
-    val _ = minEditOffset := NONE
     val _ = if dbg andalso resumeStart > 0 then
               send (mkNotif "$/compileResumedAt" (fn print => (
                 print "{\"uri\":"; encString uri print;
@@ -2205,7 +2226,7 @@ fun start {diag, dbg, warnings} = let
       fun sendDiags () = let
         val n = DArray.size oldDiags
         val wd = !walkerDiags
-        val pd = !proofDiags
+        val pd = Sref.value proofDiags
         val ws = Binarymap.numItems wd + Binarymap.numItems pd
         val total = n + ws
         in if total = !lastSentSize then () else (
@@ -2525,15 +2546,22 @@ fun start {diag, dbg, warnings} = let
                          restores a compile snapshot, which is not the
                          business of a thread that is proving. *)
                     | LSPExtension.Failed m =>
-                        #pendingFailures v :=
-                          (site, offset, "proof failed: " ^ oneLine m)
-                          :: !(#pendingFailures v)
+                        Sref.update (#pendingFailures v)
+                          (fn ps =>
+                              (site, offset, "proof failed: " ^ oneLine m)
+                              :: ps)
                     | _ => ());
                  (* Every verdict, not just a failure: what this is
                     waiting for is the last proof to settle. *)
-                 (!drainFailures uri v handle _ => ())
-                 handle _ => ()
-               end);
+                 !drainFailures uri v
+               end
+               (* Guarding the whole body, not just the last call:
+                  `handle` binds tighter than `;`, so the guard that
+                  used to sit on the drain covered the drain twice and
+                  `sendProofStates` and `retract` not at all -- and this
+                  runs on a pool worker, where an escaping exception is
+                  nobody's to catch. *)
+               handle _ => ());
           !LSPExtension.checkDeferred
             (case reuseTail of
                  NONE => {resumeFrom = resumeStart, keptFrom = NONE, bytes = 0}
@@ -2628,7 +2656,7 @@ fun start {diag, dbg, warnings} = let
              not publish -- see `updateProofDiag' -- and `lastTrees' is
              only now current.  Catch up, so a lone proof's diagnostic
              does not wait for the next event. *)
-          if Binarymap.numItems (!proofDiags) > 0
+          if Binarymap.numItems (Sref.value proofDiags) > 0
           then publishAllDiagnostics uri v else ();
           (* A verdict that arrived while this pass was running left
              its failure queued, the compile being the thing it had to
@@ -2689,6 +2717,7 @@ fun start {diag, dbg, warnings} = let
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread,
                         cancelled = cancelled, elaborating = elaborating} end
+    end
     end)
 
   (* Fire a compile after a debounce delay: rapid didChange bursts
@@ -3092,7 +3121,16 @@ fun start {diag, dbg, warnings} = let
      the cursor has always had.  What this avoids is the certainty of
      overlapping, a verdict arriving precisely when its neighbours are
      still being proved. *)
-  val draining = ref false
+  (* Process-global, not per file: what it guards is a walk that
+     restores the process's compile state, so two files draining at
+     once is the same corruption as two walks on one file. *)
+  val draining : bool Sref.t = Sref.new false
+  (* Claim it, or find it already claimed -- in one step.  Read then
+     set, two workers settling together both saw `false` and both
+     forked a walk; and the gap was not a couple of instructions but a
+     `compiling ()` call and a full traversal of the pool. *)
+  fun claimDrain () = Sref.gen_update draining (fn d => (true, not d))
+  fun releaseDrain () = Sref.update draining (fn _ => false)
   val () = drainFailures :=
     (fn uri => fn (v as {pendingFailures, compile, ...}: file_data) => let
         (* Nothing else may be using the compile state: not a worker
@@ -3111,14 +3149,14 @@ fun start {diag, dbg, warnings} = let
                         | _ => false)
                       (!LSPExtension.proofStates ())
      in
-        if null (!pendingFailures) orelse !draining
+        if null (Sref.value pendingFailures)
            orelse compiling () orelse proving ()
         then ()
+        else if not (claimDrain ()) then ()
         else let
-          val todo = !pendingFailures
-          val () = pendingFailures := []
-          val () = draining := true
+          val todo = Sref.gen_update pendingFailures (fn ps => ([], ps))
         in
+          if null todo then releaseDrain () else
           (Thread.fork
              (fn () => (List.app (fn (site, offset, msg) =>
                                      !localiseFailure uri v
@@ -3126,7 +3164,7 @@ fun start {diag, dbg, warnings} = let
                                         msg = msg})
                                  (List.rev todo)
                         handle _ => ();
-                        draining := false;
+                        releaseDrain ();
                         (* A failure that settled while this walk was
                            running was refused for that reason alone,
                            and the thing it was waiting for is over.
@@ -3154,8 +3192,12 @@ fun start {diag, dbg, warnings} = let
                      checking is switched off, and cleared when the
                      proof comes good, by the machinery that already
                      does both. *)
-                  (proofDiags := Binarymap.insert (!proofDiags, site,
-                     Error {hard = true, pos = pos, msg = encString msg});
+                  (Sref.update proofDiags
+                     (fn pd =>
+                         Binarymap.insert
+                           (pd, site,
+                            Error {hard = true, pos = pos,
+                                   msg = encString msg}));
                    publishAllDiagnostics uri v)
               | _ => ())
      end handle _ => ())
@@ -3570,7 +3612,8 @@ fun start {diag, dbg, warnings} = let
           else (
             (!LSPExtension.cancelAllProofs () handle _ => ());
             List.app (fn (uri, v: file_data) =>
-                         (#proofDiags v := Binarymap.mkDict String.compare;
+                         (Sref.update (#proofDiags v)
+                            (fn _ => Binarymap.mkDict String.compare);
                           publishAllDiagnostics uri v))
                      files)
         end;
