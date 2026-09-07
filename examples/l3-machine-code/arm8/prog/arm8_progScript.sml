@@ -54,6 +54,21 @@ val (arm8_REGISTERS_def, arm8_REGISTERS_INSERT) =
 val (arm8_MEMORY_def, arm8_MEMORY_INSERT) =
    stateLib.define_map_component ("arm8_MEMORY", "mem", arm8_MEM_def)
 
+(* Frame theorems moved here from arm8_progLib so that stateLib's
+   Tactical.prove-based helpers run inside a Script (with a current
+   theory) instead of at library load time.  arm8_progLib pulls these
+   back via arm8_progTheory. *)
+val arm8_proj_def = DB.definition "arm8_proj_def"
+
+Theorem arm8_frame =
+   stateLib.update_frame_state_thm arm8_proj_def
+      ["PSTATE.N", "PSTATE.Z", "PSTATE.C", "PSTATE.V", "SP_EL0", "PC",
+       "REG", "MEM"]
+
+Theorem arm8_frame_hidden =
+   stateLib.update_hidden_frame_state_thm arm8_proj_def
+      [``s with branch_hint := x``]
+
 Definition arm8_WORD_def:
    arm8_WORD a (i: word32) =
    arm8_MEM a ((7 >< 0) i) *

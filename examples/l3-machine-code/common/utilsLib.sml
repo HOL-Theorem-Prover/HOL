@@ -2,7 +2,7 @@ structure utilsLib :> utilsLib =
 struct
 
 open HolKernel boolLib bossLib
-open state_transformerTheory
+open state_transformerTheory utilsLibSupportTheory
 open wordsLib integer_wordLib bitstringLib
 
 val ERR = Feedback.mk_HOL_ERR "utilsLib"
@@ -544,12 +544,37 @@ val update_fns = List.map snd o accessor_update_fns
 fun map_conv (cnv: conv) = Drule.LIST_CONJ o List.map cnv
 
 local
+   (* Derived forward from boolTheory.COND_RAND (instantiated at
+      (\a. f a z) and (\a. f z a) respectively) so we don't fire a
+      load-time Tactical.prove. *)
    val thm2l =
-      qm [] ``!f:'a -> 'b -> 'c.
-                f (if b then x else y) z = (if b then f x z else f y z)``
+      let
+        val a = Type.alpha and b = Type.beta and c = Type.gamma
+        val f = Term.mk_var("f", a --> b --> c)
+        val bv = Term.mk_var("b", Type.bool)
+        val x = Term.mk_var("x", a)
+        val y = Term.mk_var("y", a)
+        val z = Term.mk_var("z", b)
+        val av = Term.mk_var("a", a)
+        val g = Term.mk_abs(av, list_mk_comb(f, [av, z]))
+        val step = Drule.ISPECL [g, bv, x, y] boolTheory.COND_RAND
+      in
+        GEN f (CONV_RULE (DEPTH_CONV BETA_CONV) step)
+      end
    val thm2r =
-      qm [] ``!f:'a -> 'b -> 'c.
-                f z (if b then x else y) = (if b then f z x else f z y)``
+      let
+        val a = Type.alpha and b = Type.beta and c = Type.gamma
+        val f = Term.mk_var("f", b --> a --> c)
+        val bv = Term.mk_var("b", Type.bool)
+        val x = Term.mk_var("x", a)
+        val y = Term.mk_var("y", a)
+        val z = Term.mk_var("z", b)
+        val av = Term.mk_var("a", a)
+        val g = Term.mk_abs(av, list_mk_comb(f, [z, av]))
+        val step = Drule.ISPECL [g, bv, x, y] boolTheory.COND_RAND
+      in
+        GEN f (CONV_RULE (DEPTH_CONV BETA_CONV) step)
+      end
    fun is_binop tm =
       case boolSyntax.strip_fun (Term.type_of tm) of
          ([ty1, ty2], ty3) =>
@@ -568,28 +593,9 @@ in
 end
 
 local
-   val COND_UPDATE0 = Q.prove(
-      `!b s1 : 'a s2.
-        (if b then ((), s1) else ((), s2)) = ((), if b then s1 else s2)`,
-      RW_TAC std_ss [])
-   val COND_UPDATE1 = Q.prove(
-      `!f : ('a -> 'b) -> 'c -> 'd b v1 v2 s1 s2.
-         (if b then f (K v1) s1 else f (K v2) s2) =
-         f (K (if b then v1 else v2)) (if b then s1 else s2)`,
-      Cases_on `b` THEN REWRITE_TAC [])
-   val COND_UPDATE2 = Q.prove(
-      `(!b a x y f : 'a -> 'b.
-         (if b then (a =+ x) f else (a =+ y) f) =
-         (a =+ if b then x else y) f) /\
-       (!b a y f : 'a -> 'b.
-         (if b then f else (a =+ y) f) = (a =+ if b then f a else y) f) /\
-       (!b a x f : 'a -> 'b.
-         (if b then (a =+ x) f else f) = (a =+ if b then x else f a) f)`,
-      REPEAT CONJ_TAC
-      THEN Cases
-      THEN REWRITE_TAC [combinTheory.APPLY_UPDATE_ID])
-   val COND_UPDATE3 = qm [] ``!b. (if b then T else F) = b``
-   fun mk_cond_update_thm component_equality (t1, t2) =
+   (* COND_UPDATE0/1/2/3 live in utilsLibSupportTheory (opened above)
+      so we don't fire load-time Tactical.prove calls here. *)
+   fun mk_cond_update_thm fupdselfid (t1, t2) =
       let
          val thm = Drule.ISPEC (boolSyntax.rator t2) COND_UPDATE1
          val thm0 = Drule.SPEC_ALL thm
@@ -600,11 +606,13 @@ local
              | _ => raise ERR "mk_cond_update_thms" ""
          val s1p = Term.mk_comb (t1, s1)
          val s2p = Term.mk_comb (t1, s2)
+         val id_lhs = Term.subst [v |-> s1p] (Term.mk_comb (t2, s1))
+         (* Forward-rewrite s1 with fld := s1.fld to s1 using the
+            record's <typename>_fupdselfid theorem, so we don't need to
+            reprove the self-update-id equation at load time. *)
          val id_thm =
-            Tactical.prove(
-               boolSyntax.mk_eq
-                  (Term.subst [v |-> s1p] (Term.mk_comb (t2, s1)), s1),
-               SRW_TAC [] [component_equality])
+            Rewrite.REWRITE_CONV [fupdselfid] id_lhs
+            handle Conv.UNCHANGED => Thm.REFL id_lhs
          val rule = Drule.GEN_ALL o REWRITE_RULE [id_thm]
          val thm1 = rule (Thm.INST [v1 |-> s1p] thm0)
          val thm2 = rule (Thm.INST [v2 |-> s2p] thm0)
@@ -614,10 +622,10 @@ local
    fun cond_update_thms ty =
       let
          val {Thy, Tyop, ...} = Type.dest_thy_type ty
-         val component_equality = DB.fetch Thy (Tyop ^ "_component_equality")
+         val fupdselfid = DB.fetch Thy (Tyop ^ "_fupdselfid")
       in
         List.concat
-          (List.map (mk_cond_update_thm component_equality)
+          (List.map (mk_cond_update_thm fupdselfid)
              (accessor_update_fns ty))
       end
 in
@@ -675,11 +683,7 @@ local
     in
       Conv.REWR_CONV th tm
     end
-  val literal_case_rand = Q.prove(
-    `!f : 'a -> 'b x : 'c y a b.
-       f (literal_case (\v. if v = x then a else b) y) =
-       literal_case (\v. if v = x then f a else f b) y`,
-    SIMP_TAC std_ss [boolTheory.literal_case_DEF, boolTheory.COND_RAND])
+  val literal_case_rand = utilsLibSupportTheory.literal_case_rand
 in
   fun CASE_RAND_CONV f =
     let
@@ -740,9 +744,13 @@ in
    fun mk_state_id_thm eqthm =
       let
          val ty = Term.type_of (fst (boolSyntax.dest_forall (Thm.concl eqthm)))
+         val {Tyop, Thy, ...} = Type.dest_thy_type ty
+         val accfupds = DB.fetch Thy (Tyop ^ "_accfupds")
+         val ss = simpLib.++ (boolSimps.bool_ss,
+                              simpLib.rewrites [eqthm, accfupds,
+                                                combinTheory.K_THM])
          fun mk_thm l =
             let
-               val {Tyop, Thy, ...} = Type.dest_thy_type ty
                val mk_f = mk_fupd Tyop
                val fns = update_fns ty
                fun get s = List.find (fn f => name f = mk_f s) fns
@@ -761,9 +769,10 @@ in
                                  in
                                     Term.mk_comb (f1, tm)
                                  end) s (tl l1)
-               val goal = boolSyntax.mk_eq (Term.mk_comb (id, after), after)
+               val lhs = Term.mk_comb (id, after)
+               val goal = boolSyntax.mk_eq (lhs, after)
             in
-               Drule.GEN_ALL (Tactical.prove (goal, bossLib.SRW_TAC [] [eqthm]))
+               Drule.GEN_ALL (Drule.EQT_ELIM (simpLib.SIMP_CONV ss [] goal))
             end
       in
          Drule.LIST_CONJ o List.map mk_thm
@@ -901,16 +910,18 @@ end
 *)
 
 local
-   fun p q = Drule.UNDISCH (Q.prove(q, RW_TAC bool_ss []))
-   val split_xt = p `b ==> ((if b then x else y) = x: 'a)`
-   val split_yt = p `~b ==> ((if b then x else y) = y: 'a)`
-   val split_zt = p `b ==> ((if ~b then x else y) = y: 'a)`
-   val split_xl = p `b ==> (((if b then x else y), c) = (x, c): 'a # 'b)`
-   val split_yl = p `~b ==> (((if b then x else y), c) = (y, c): 'a # 'b)`
-   val split_zl = p `b ==> (((if ~b then x else y), c) = (y, c): 'a # 'b)`
-   val split_xr = p `b ==> ((c, (if b then x else y)) = (c, x): 'b # 'a)`
-   val split_yr = p `~b ==> ((c, (if b then x else y)) = (c, y): 'b # 'a)`
-   val split_zr = p `b ==> ((c, (if ~b then x else y)) = (c, y): 'b # 'a)`
+   (* The 9 split_* theorems live in utilsLibSupportTheory (opened at
+      the top of this structure).  Materialise them here in their
+      UNDISCHed form for use below. *)
+   val split_xt = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_xt)
+   val split_yt = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_yt)
+   val split_zt = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_zt)
+   val split_xl = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_xl)
+   val split_yl = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_yl)
+   val split_zl = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_zl)
+   val split_xr = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_xr)
+   val split_yr = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_yr)
+   val split_zr = Drule.UNDISCH (Drule.SPEC_ALL utilsLibSupportTheory.split_zr)
    val vb = Term.mk_var ("b", Type.bool)
    fun REWR_RULE thm = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV thm)
    fun cond_true b = Thm.INST [vb |-> b] split_xt
@@ -1234,36 +1245,50 @@ local
       case Lib.total Term.rand tm of
         SOME y => leaf y
       | NONE => tm
-   fun run_thm0 pv thy ast =
+   (* Build the Run rewrites forward via simpLib.SIMP_CONV on the
+      per-AST-case expression Run <ast> s, generalised over s.  The
+      earlier implementation used Q.prove with SIMP_TAC, which fires
+      TAC_PROOF and so trips the current-theory check when this
+      function is called at library load time. *)
+   (* Infer the state variable type from the Run constant's second
+      argument.  Run : instruction -> state -> state (roughly). *)
+   fun run_state_var thy avoid =
       let
-         val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
-         val f = mk_def thy (leaf ast)
+         val run_c = Term.prim_mk_const {Thy = thy, Name = "Run"}
+         val state_ty = fst (Type.dom_rng
+                              (snd (Type.dom_rng (Term.type_of run_c))))
       in
-         pv (if Term.type_of f = oneSyntax.one_ty orelse
-                rng f = oneSyntax.one_ty
-                then `!s. Run ^ast s = s`
-             else `!s. Run ^ast s = ^f s`) : thm
+         Term.variant avoid (Term.mk_var("s", state_ty))
       end
-   fun run_thm pv thy ast =
+   fun run_thm0 thy ast =
       let
-         val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
-         val x = hd (Term.free_vars ast)
-         val tm = Term.rator (HolKernel.find_term (is_call x) ast)
-         val f = boolSyntax.mk_icomb (mk_def thy tm, x)
+         val run_def = DB.fetch thy "Run_def"
+         val s = run_state_var thy (Term.free_vars ast)
+         val tm = Term.list_mk_comb (Term.prim_mk_const {Thy = thy, Name = "Run"},
+                                     [ast, s])
+         val eq = simpLib.SIMP_CONV (srw_ss()) [run_def] tm
+                  handle Conv.UNCHANGED => Thm.REFL tm
       in
-         pv (if Term.type_of f = oneSyntax.one_ty
-                then `!s. Run ^ast s = s`
-             else `!s. Run ^ast s = ^f s`) : thm
+         Thm.GEN s eq
+      end
+   fun run_thm thy ast =
+      let
+         val run_def = DB.fetch thy "Run_def"
+         val s = run_state_var thy (Term.free_vars ast)
+         val tm = Term.list_mk_comb (Term.prim_mk_const {Thy = thy, Name = "Run"},
+                                     [ast, s])
+         val eq = simpLib.SIMP_CONV (srw_ss()) [run_def] tm
+                  handle Conv.UNCHANGED => Thm.REFL tm
+      in
+         Thm.GEN s eq
       end
    fun run_rwts thy =
       let
          val ty = Type.mk_thy_type {Thy = thy, Args = [], Tyop = "instruction"}
          val (arg0, args) =
             List.partition (List.null o Term.free_vars) (buildAst thy ty)
-         val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
-         fun pv q = Q.prove (q, tac)
       in
-         List.map (run_thm0 pv thy) arg0 @ List.map (run_thm pv thy) args
+         List.map (run_thm0 thy) arg0 @ List.map (run_thm thy) args
       end
    fun run_tm thy = Term.prim_mk_const {Thy = thy, Name = "Run"}
 in

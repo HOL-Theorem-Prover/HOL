@@ -242,6 +242,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val jobs = #jobs (#core optv)
   val time_limit = #time_limit optv
   val maxheap = #maxheap optv
+  val retry_oos = #retry_oos optv
   val cache_dir = #cache_dir (#core optv)
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
@@ -597,6 +598,13 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in Systeml.system_ps (pfx ^ s)
     end
 
+  (* The single-job builder runs each command with its output going
+     straight to the terminal; there is no per-job log to look for
+     Poly/ML's out-of-store message in. *)
+  val _ = if jobs = 1 andalso retry_oos > 0 then
+            warn "--retry-oos has no effect with -j1; ignoring it"
+          else ()
+
   val build_graph =
       if jobs = 1 then
         (fn g =>
@@ -620,6 +628,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                       (fn s => diag "multibuild" (fn _ => s)),
                                     time_limit = time_limit,
                                     maxheap = maxheap,
+                                    retry_oos = retry_oos,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs,
                                     outs = outs } g |> interpret_graph)

@@ -157,6 +157,22 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
+(* Frame theorems moved here from riscv_progLib so that stateLib's
+   Tactical.prove-based helpers run inside a Script (with a current
+   theory) instead of at library load time.  riscv_progLib pulls
+   these back via riscv_progTheory. *)
+Theorem riscv_frame =
+   Thm.CONJ c_gpr_frame
+     (stateLib.update_frame_state_thm riscv_proj_def
+        ["c_NextFetch", "c_PC", "MEM8", "c_Skip"])
+
+Theorem riscv_frame_hidden =
+   stateLib.update_hidden_frame_state_thm riscv_proj_def
+     [``(s: riscv_state) with c_update := x``,
+      ``(s: riscv_state) with log := x``]
+
+(* ------------------------------------------------------------------------ *)
+
 val riscv_opcode_bytes = Theory.save_thm("riscv_opcode_bytes",
    blastLib.BBLAST_PROVE
     ``(d @@ ((c @@ ((b @@ a) : word16)) : word24) = r: word32) =

@@ -23,7 +23,9 @@ quietdec := false;
 *)
 
 
-val IMP_REFL = prove (``!x. x ==> x``, SIMP_TAC std_ss []);
+(* |- !x. x ==> x, derived forward via SIMP_CONV + EQT_ELIM so we
+   don't fire a load-time Tactical.prove. *)
+val IMP_REFL = EQT_ELIM (simpLib.SIMP_CONV std_ss [] ``!x. x ==> x``);
 
 fun extract_preorder_trans (Travrules.PREORDER(_,TRANS,_)) = TRANS;
 fun extract_preorder_refl (Travrules.PREORDER(_,_,REFL)) = REFL;

@@ -7,17 +7,8 @@
 structure InductiveDefinition :> InductiveDefinition =
 struct
 
-open HolKernel boolLib liteLib refuteLib AC Ho_Rewrite;
-
-(* Fix the grammar used by this file *)
-structure Parse =
-struct
-  open Parse
-  val SOME bool_grammars = grammarDB {thyname="bool"}
-  val (Type,Term) = Parse.parse_from_grammars bool_grammars
-  fun == q x = Type q
-end
-open Parse
+open HolKernel boolLib liteLib refuteLib AC Ho_Rewrite
+     InductiveDefinitionContextTheory;
 
 (*---------------------------------------------------------------------------
     Variants. We re-define the kernel "variant" function here because
@@ -457,28 +448,6 @@ type monoset = (string * thm) list;
  * MONO_EXISTS = |- (!x. P x ==> Q x) ==> ((?x. P x) ==> (?x. Q x))
  *---------------------------------------------------------------------------*)
 
-
-val MONO_EXISTS = prove (
-  ``(!x:'a. P x ==> Q x) ==> ($? P ==> $? Q)``,
-  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_EXISTS) THEN
-  CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
-
-val MONO_FORALL = prove (
-  ``(!x:'a. P x ==> Q x) ==> ($! P ==> $! Q)``,
-  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_ALL) THEN
-  CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
-
-val MONO_RESFORALL = prove(
-  ``(!x:'a. P' x ==> P x) /\ (!x. Q x ==> Q' x) ==>
-    (RES_FORALL P Q ==> RES_FORALL P' Q')``,
-  REWRITE_TAC [RES_FORALL_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
-  REPEAT (FIRST_X_ASSUM MATCH_MP_TAC) THEN ASM_REWRITE_TAC [])
-
-val MONO_RESEXISTS = prove(
-  ``(!x:'a. P x ==> P' x) /\ (!x. Q x ==> Q' x) ==>
-    (RES_EXISTS P Q ==> RES_EXISTS P' Q')``,
-  REWRITE_TAC [RES_EXISTS_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
-  EXISTS_TAC ``x:'a`` THEN RES_TAC THEN ASM_REWRITE_TAC [])
 
 val MONO_COND = let open Rewrite boolTheory in
   ONCE_REWRITE_RULE[AND_IMP_INTRO]MONO_COND

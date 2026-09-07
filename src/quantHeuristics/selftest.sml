@@ -1,6 +1,11 @@
 open HolKernel Parse boolTheory boolLib pairTheory
 open quantHeuristicsLib simpLib boolSimps
 
+(* Open a scratch theory so the runtime Tactical.prove calls inside
+   quantHeuristicsLib's tactics (SPLIT_PAIR_GEN etc.) don't trip the
+   CT-none check. *)
+val _ = new_theory "quantHeuristics_scratch"
+
 local open quantHeuristicsLibAbbrev in end (* check it compiles *)
 
 (* For manual

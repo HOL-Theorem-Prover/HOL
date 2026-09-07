@@ -117,6 +117,22 @@ New features
     effect under Moscow ML (whose `Holmake` is always
     sequential) or under Poly/ML `Holmake -j 1`.
 
+-   `Holmake` (under Poly/ML) takes a new option `--retry-oos=n`,
+    which allows each target up to `n` further attempts when its
+    build fails with the Poly/ML runtime reporting that it has run
+    out of store.  That message means the runtime could not grow
+    the ML heap; because the shortage is a property of the machine
+    at that moment rather than of the target, running the same
+    build again will often succeed.  A failure that does not carry
+    the message is never retried, and the default of zero leaves
+    the previous behaviour unchanged.  An attempt that is going to
+    be retried is reported as `RETRY` rather than as a failure, and
+    the number of re-runs performed is reported when the build
+    finishes.  Recognising the message means reading the log
+    `Holmake` keeps for each job, so the option has no effect under
+    `Holmake -j 1`, which writes a command's output straight to the
+    terminal.
+
 -   `Holmake` recognises a project-root marker file
     `holproject.toml`: dropping one at the top of a multi-directory
     development tells `Holmake` that every `Holmakefile`-bearing

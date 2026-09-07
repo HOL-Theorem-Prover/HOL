@@ -225,7 +225,7 @@ val fcp_tyinfo =
    TypeBasePure.gen_datatype_info
       {ax = fcp_Axiom, ind = fcp_ind, case_defs = [fcp_case_def]}
 
-val _ = TypeBase.write fcp_tyinfo
+val _ = TypeBase.export fcp_tyinfo
 
 Theorem CART_EQ:
     !(x:'a ** 'b) y. (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))

@@ -28,11 +28,11 @@ val rhsc = utilsLib.rhsc
 val st = ``s: mips_state``
 fun mapl x = utilsLib.augment x [[]]
 
-val cond_thms = prove(
-   “(!b c. (if b then T else c) = b \/ c) /\
-    (!b c. (if b then F else c) = ~b /\ c)”,
-   rw []
-   )
+(* These are conjuncts 1 and 3 of coreboolSupportTheory.COND_BOOL_CLAUSES;
+   derive forward so we don't fire a load-time Tactical.prove. *)
+val cond_thms =
+   let val cs = Drule.CONJUNCTS coreboolSupportTheory.COND_BOOL_CLAUSES
+   in CONJ (List.nth (cs, 0)) (List.nth (cs, 2)) end
 
 local
    val state_fns = utilsLib.accessor_fns ``:mips_state``

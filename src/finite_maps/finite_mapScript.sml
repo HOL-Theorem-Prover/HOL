@@ -1088,6 +1088,15 @@ Proof
 QED
 (* don't export this because of the if, though this is pretty paranoid *)
 
+Theorem FLOOKUP_UPDATE_SAME:  FLOOKUP (fm |+ (a:'a, b)) a = SOME b
+Proof REWRITE_TAC [FLOOKUP_UPDATE]
+QED
+
+Theorem FLOOKUP_UPDATE_DIFF:
+  a <> x ==> (FLOOKUP (fm |+ (a, b)) x = FLOOKUP fm x)
+Proof SIMP_TAC std_ss [FLOOKUP_UPDATE]
+QED
+
 Theorem FLOOKUP_SUBMAP:
     f SUBMAP g /\ (FLOOKUP f k = SOME v) ==> (FLOOKUP g k = SOME v)
 Proof

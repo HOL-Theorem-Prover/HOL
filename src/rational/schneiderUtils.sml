@@ -1,7 +1,7 @@
 structure schneiderUtils :> schneiderUtils =
 struct
 
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib schneiderUtilsContextTheory;
 
 structure Parse =
 struct
@@ -115,9 +115,7 @@ fun LEFT_NO_FORALL_TAC i t =
 (* ************************************************************ *)
 
 local
-val lem = TAC_PROOF(([],“!a b. a\/b <=> ~b==>a”),
-                REPEAT GEN_TAC THEN BOOL_CASES_TAC (“a:bool”)
-                THEN REWRITE_TAC[])
+val lem = LEFT_DISJ_TAC_lem
 in
 fun LEFT_DISJ_TAC (asm,g) =
     let
@@ -127,9 +125,7 @@ fun LEFT_DISJ_TAC (asm,g) =
 end
 
 local
-val lem = TAC_PROOF(([],“!a b. a\/b <=> ~a==>b”),
-                REPEAT GEN_TAC THEN BOOL_CASES_TAC (“a:bool”)
-                THEN REWRITE_TAC[])
+val lem = RIGHT_DISJ_TAC_lem
 in
 fun RIGHT_DISJ_TAC (asm,g) =
     let val (a,b) = dest_disj g
@@ -158,9 +154,7 @@ val RIGHT_CONJ_TAC = CONJ_ASM2_TAC
 (* ************************************************************ *)
 
 local
-  val absorb_lem = prove(“!a b. a\/b <=> a \/(~a/\b)”,
-                        REPEAT GEN_TAC THEN BOOL_CASES_TAC (“a:bool”)
-                        THEN REWRITE_TAC[])
+  val absorb_lem = LEFT_ABSORB_DISJ
 in
 fun LEFT_LEMMA_DISJ_CASES_TAC th =
     let val (a,b) = dest_disj (concl th)
@@ -170,9 +164,7 @@ fun LEFT_LEMMA_DISJ_CASES_TAC th =
 end
 
 local
-  val absorb_lem = prove(“!a b. a\/b <=> (a/\~b) \/ b”,
-                        REPEAT GEN_TAC THEN BOOL_CASES_TAC (“b:bool”)
-                        THEN REWRITE_TAC[])
+  val absorb_lem = RIGHT_ABSORB_DISJ
 in
 fun RIGHT_LEMMA_DISJ_CASES_TAC th =
     let val (a,b) = dest_disj (concl th)
@@ -205,12 +197,7 @@ fun MY_MP_TAC t = SUBGOAL_THEN t MP_TAC
 (* ************************************************************ *)
 
 local
-  val lemma = prove(“!P.(!b.P b) <=> (P T) /\ (P F)”,
-                        GEN_TAC THEN EQ_TAC THENL[
-                                DISCH_TAC,
-                                STRIP_TAC THEN
-                                GEN_TAC THEN BOOL_CASES_TAC (“b:bool”)]
-                        THEN ASM_REWRITE_TAC[])
+  val lemma = boolTheory.FORALL_BOOL
 in
 fun BOOL_VAR_ELIM_CONV v Pv =
         BETA_RULE (SPEC (mk_abs(v,Pv)) lemma)

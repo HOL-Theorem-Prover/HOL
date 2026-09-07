@@ -20,6 +20,8 @@ open realSimps
 
 open Sub_and_cond Normalizer Grobner;
 
+open RealFieldContextTheory;
+
 (* Fix the grammar used by this file *)
 local
 val x = mk_var("x", numSyntax.num)
@@ -90,17 +92,8 @@ val DECIMAL = markerTheory.unint_def;
 (* |- !x. x / 1 = x *)
 val REAL_DIV_1 = REAL_OVER1;
 
-val REAL_INT_RAT_CONV = let
-  val pth = prove
-   (“(&x = &x / (&1 :real)) /\
-     (~(&x) = ~(&x) / &1) /\
-     (DECIMAL x y = &x / &y) /\
-     (~DECIMAL x y = ~(&x) / &y)”,
-    REWRITE_TAC[REAL_DIV_1, DECIMAL] THEN
-    REWRITE_TAC[real_div, REAL_MUL_LNEG])
-  in
-    GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth]
-  end;
+val REAL_INT_RAT_CONV =
+  GEN_REWRITE_CONV TRY_CONV empty_rewrites [REAL_INT_RAT_pth];
 
 (* ------------------------------------------------------------------------- *)
 (* Relational operations.                                                    *)
@@ -110,10 +103,8 @@ val REAL_INT_RAT_CONV = let
 val IMP_IMP = AND_IMP_INTRO;
 
 val REAL_RAT_LE_CONV = let
-  val pth = prove
-   (“&0 < y1 ==> &0 < y2 ==> (x1 / y1 <= x2 / y2 <=> x1 * y2 <= x2 * y1)”,
-    REWRITE_TAC[IMP_IMP, RAT_LEMMA4])
-  and x1 = “x1:real” and x2 = “x2:real”
+  val pth = REAL_RAT_LE_pth
+  val x1 = “x1:real” and x2 = “x2:real”
   and y1 = “y1:real” and y2 = “y2:real”
   and dest_le = dest_binop realSyntax.leq_tm
   and dest_div = dest_binop realSyntax.div_tm;
@@ -133,12 +124,8 @@ in
 end;
 
 val REAL_RAT_LT_CONV = let
-  val pth = prove
-   (“&0 < y1 ==> &0 < y2 ==> (x1 / y1 < x2 / y2 <=> x1 * y2 < x2 * y1)”,
-    REWRITE_TAC[IMP_IMP] THEN
-    GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM REAL_NOT_LE] THEN
-    SIMP_TAC bool_ss [TAUT ‘(~a <=> ~b) <=> (a <=> b)’, RAT_LEMMA4])
-  and x1 = “x1:real” and x2 = “x2:real”
+  val pth = REAL_RAT_LT_pth
+  val x1 = “x1:real” and x2 = “x2:real”
   and y1 = “y1:real” and y2 = “y2:real”
   and dest_lt = dest_binop realSyntax.less_tm
   and dest_div = dest_binop realSyntax.div_tm;
@@ -166,10 +153,8 @@ val REAL_RAT_GT_CONV =
     REAL_RAT_LT_CONV;
 
 val REAL_RAT_EQ_CONV = let
-  val pth = prove
-   (“&0 < y1 ==> &0 < y2 ==> ((x1 / y1 = x2 / y2) <=> (x1 * y2 = x2 * y1))”,
-    REWRITE_TAC[IMP_IMP, RAT_LEMMA5])
-  and x1 = “x1:real” and x2 = “x2:real”
+  val pth = REAL_RAT_EQ_pth
+  val x1 = “x1:real” and x2 = “x2:real”
   and y1 = “y1:real” and y2 = “y2:real”
   and dest_eq = dest_binop realSyntax.real_eq_tm
   and dest_div = dest_binop realSyntax.div_tm;
@@ -204,15 +189,8 @@ val REAL_RAT_SGN_CONV =
 
 local open Arbint in
 val REAL_RAT_NEG_CONV = let
-  val pth = prove
-   (“(~(&0) = &0) /\
-     (~(~(&n)) = &n) /\
-     (~(&m / &n) = ~(&m) / &n) /\
-     (~(~(&m) / &n) = &m / &n) /\
-     (~(DECIMAL m n) = ~(&m) / &n)”,
-    REWRITE_TAC[real_div, REAL_INV_NEG, REAL_MUL_LNEG, REAL_NEG_NEG,
-     REAL_NEG_0, DECIMAL])
-  and ptm = realSyntax.negate_tm;
+  val pth = REAL_RAT_NEG_pth
+  val ptm = realSyntax.negate_tm;
   val conv1 = GEN_REWRITE_CONV I empty_rewrites [pth]
 in
   (* NOTE: "GEN_REWRITE_CONV I" throws HOL_ERR instead of UNCHANGED! *)
@@ -228,45 +206,12 @@ in
 end;
 end (* local *)
 
-val REAL_RAT_ABS_CONV = let
-  val pth = prove
-   (“(abs(&n) = &n) /\
-     (abs(~(&n)) = &n) /\
-     (abs(&m / &n) = &m / &n) /\
-     (abs(~(&m) / &n) = &m / &n) /\
-     (abs(DECIMAL m n) = &m / &n) /\
-     (abs(~(DECIMAL m n)) = &m / &n)”,
-    REWRITE_TAC[DECIMAL, REAL_ABS_DIV, REAL_ABS_NEG, REAL_ABS_NUM])
-in
-   GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth]
-end;
+val REAL_RAT_ABS_CONV =
+  GEN_REWRITE_CONV TRY_CONV empty_rewrites [REAL_RAT_ABS_pth];
 
-val REAL_RAT_INV_CONV = let
-  val pth1 = prove
-   (“(inv(&0) = &0) /\
-     (inv(&1) = &1) /\
-     (inv(~&1) = ~(&1)) /\
-     (inv(&1 / &n) = &n) /\
-     (inv(~&1 / &n) = ~&n)”,
-    REWRITE_TAC[REAL_INV_0, REAL_INV_1, REAL_INV_NEG,
-                REAL_INV_DIV, REAL_DIV_1] THEN
-    REWRITE_TAC[real_div, REAL_INV_NEG, REAL_MUL_RNEG, REAL_INV_1,
-                REAL_MUL_RID])
-  and pth2 = prove
-   (“(inv(&n) = &1 / &n) /\
-     (inv(~(&n)) = ~(&1) / &n) /\
-     (inv(&m / &n) = &n / &m) /\
-     (inv(~(&m) / &n) = ~(&n) / &m) /\
-     (inv(DECIMAL m n) = &n / &m) /\
-     (inv(~(DECIMAL m n)) = ~(&n) / &m)”,
-    REWRITE_TAC[DECIMAL, REAL_INV_DIV] THEN
-    REWRITE_TAC[REAL_INV_NEG, real_div, REAL_MUL_RNEG,
-     REAL_MUL_LID, REAL_MUL_LNEG, REAL_INV_MUL, REAL_INV_INV] THEN
-    REWRITE_TAC [Once REAL_MUL_COMM])
-in
-   GEN_REWRITE_CONV I empty_rewrites [pth1] ORELSEC
-   GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth2]
-end;
+val REAL_RAT_INV_CONV =
+  GEN_REWRITE_CONV I empty_rewrites [REAL_RAT_INV_pth1] ORELSEC
+  GEN_REWRITE_CONV TRY_CONV empty_rewrites [REAL_RAT_INV_pth2];
 
 (* ------------------------------------------------------------------------- *)
 (* Addition.                                                                 *)
@@ -274,21 +219,8 @@ end;
 
 local open Arbint in
 val REAL_RAT_ADD_CONV = let
-  val pth = prove
-   (“(&0 :real) < y1 ==> &0 < y2 ==> &0 < y3 ==>
-     ((x1 * y2 + x2 * y1) * y3 = x3 * (y1 * y2))
-     ==> (x1 / y1 + x2 / y2 = x3 / y3)”,
-    REPEAT DISCH_TAC THEN
-    MP_TAC RAT_LEMMA2 THEN
-    ASM_REWRITE_TAC[] THEN
-    DISCH_THEN SUBST1_TAC THEN
-    ONCE_REWRITE_TAC [GSYM REAL_MUL_ASSOC] THEN
-    REWRITE_TAC[GSYM REAL_INV_MUL, GSYM real_div] THEN
-    Q.SUBGOAL_THEN ‘&0 < y1 * y2 /\ &0 < y3’ MP_TAC THENL
-    [ ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_MUL THEN
-      ASM_REWRITE_TAC[],
-      DISCH_THEN(fn th => ASM_REWRITE_TAC[MATCH_MP RAT_LEMMA5 th]) ])
-  and dest_divop = dest_binop realSyntax.div_tm
+  val pth = REAL_RAT_ADD_pth
+  val dest_divop = dest_binop realSyntax.div_tm
   and dest_addop = dest_binop realSyntax.plus_tm
   and x1 = “x1:real” and x2 = “x2:real” and x3 = “x3:real”
   and y1 = “y1:real” and y2 = “y2:real” and y3 = “y3:real”;
@@ -326,12 +258,9 @@ end (* local *)
 (* Subtraction.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_RAT_SUB_CONV = let
-  val pth = prove (“x - y = x + ~y”, REWRITE_TAC[real_sub])
-in
-   GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth] THENC
-   RAND_CONV REAL_RAT_NEG_CONV THENC REAL_RAT_ADD_CONV
-end;
+val REAL_RAT_SUB_CONV =
+  GEN_REWRITE_CONV TRY_CONV empty_rewrites [REAL_RAT_SUB_pth] THENC
+  RAND_CONV REAL_RAT_NEG_CONV THENC REAL_RAT_ADD_CONV;
 
 (* ------------------------------------------------------------------------- *)
 (* Multiplication.                                                           *)
@@ -339,18 +268,9 @@ end;
 
 local open Arbint simpLib in
 val REAL_RAT_MUL_CONV = let
-  val pth_nocancel = prove
-   (“(x1 / y1) * (x2 / y2) = (x1 * x2) / (y1 * y2 :real)”,
-    SIMP_TAC bool_ss [real_div, REAL_INV_MUL',
-                      AC REAL_MUL_ASSOC REAL_MUL_COMM])
-  and pth_cancel = prove
-   (“~(d1 = (&0 :real)) /\ ~(d2 = &0) /\
-     (d1 * u1 = x1) /\ (d2 * u2 = x2) /\
-     (d2 * v1 = y1) /\ (d1 * v2 = y2)
-     ==> ((x1 / y1) * (x2 / y2) = (u1 * u2) / (v1 * v2))”,
-    rpt strip_tac >>
-    RW_TAC (bool_ss ++ RMULCANON_ss) [real_div, REAL_INV_MUL', nonzerop_def])
-  and x1 = “x1:real” and x2 = “x2:real”
+  val pth_nocancel = REAL_RAT_MUL_pth_nocancel
+  val pth_cancel = REAL_RAT_MUL_pth_cancel
+  val x1 = “x1:real” and x2 = “x2:real”
   and y1 = “y1:real” and y2 = “y2:real”
   and u1 = “u1:real” and u2 = “u2:real”
   and v1 = “v1:real” and v2 = “v2:real”
@@ -402,27 +322,19 @@ end (* local *)
 (* Division.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_RAT_DIV_CONV = let
-  val pth = prove (“x / y = x * inv(y)”, REWRITE_TAC[real_div])
-in
-   GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth] THENC
-   RAND_CONV REAL_RAT_INV_CONV THENC REAL_RAT_MUL_CONV
-end;
+val REAL_RAT_DIV_CONV =
+  GEN_REWRITE_CONV TRY_CONV empty_rewrites [REAL_RAT_DIV_pth] THENC
+  RAND_CONV REAL_RAT_INV_CONV THENC REAL_RAT_MUL_CONV;
 
 (* ------------------------------------------------------------------------- *)
 (* Powers.                                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_RAT_POW_CONV = let
-  val pth = prove
-   (“(x / y) pow n = (x pow n) / (y pow n)”,
-    REWRITE_TAC[REAL_POW_DIV])
-in
+val REAL_RAT_POW_CONV =
   REAL_INT_POW_CONV ORELSEC
   (LAND_CONV REAL_INT_RAT_CONV THENC
-   GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth] THENC
-   BINOP_CONV REAL_INT_POW_CONV)
-end;
+   GEN_REWRITE_CONV TRY_CONV empty_rewrites [REAL_RAT_POW_pth] THENC
+   BINOP_CONV REAL_INT_POW_CONV);
 
 (* ------------------------------------------------------------------------- *)
 (* Max and min.                                                              *)
@@ -543,18 +455,7 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 val (REAL_RING,real_ideal_cofactors) = let
-  val REAL_INTEGRAL = prove
-   (“(!(x :real). &0 * x = &0) /\
-     (!(x :real) y z. (x + y = x + z) <=> (y = z)) /\
-     (!(w :real) x y z. (w * y + x * z = w * z + x * y) <=> (w = x) \/ (y = z))”,
-    ONCE_REWRITE_TAC[GSYM REAL_SUB_0] THEN
-    REWRITE_TAC[GSYM REAL_ENTIRE] THEN REAL_ARITH_TAC)
-  and REAL_RABINOWITSCH = prove
-   (“!x y:real. ~(x = y) <=> ?z. (x - y) * z = &1”,
-    REWRITE_TAC[EQ_IMP_THM] >> rpt strip_tac >>
-    FULL_SIMP_TAC std_ss [EQ_IMP_THM, REAL_SUB_REFL, REAL_MUL_LZERO, REAL_10] >>
-    irule_at Any REAL_MUL_RINV >> ASM_REWRITE_TAC [REAL_SUB_0])
-  and init = GEN_REWRITE_CONV ONCE_DEPTH_CONV empty_rewrites [DECIMAL];
+  val init = GEN_REWRITE_CONV ONCE_DEPTH_CONV empty_rewrites [DECIMAL];
   val (pure,ideal) =
     RING_AND_IDEAL_CONV
         (rat_of_term, term_of_rat, REAL_RAT_EQ_CONV,
@@ -628,10 +529,7 @@ val REAL_FIELD = let
                (SOME{Thy = "real", Name = "REAL_POW_ADD"}, REAL_POW_ADD)],
       congs = [], filter = NONE, ac = [], dprocs = []};
 
-  val pth = prove(
-       “x pow n <> 0 <=> x <> 0 \/ &n = 0r \/ x pow n <> 0”,
-       SIMP_TAC bool_ss [REAL_POW_EQ_0, DE_MORGAN_THM,EQ_IMP_THM,DISJ_IMP_THM,
-                         REAL_OF_NUM_EQ]);
+  val pth = REAL_FIELD_pth;
 
   val easy_nz_conv = QCONV
      (LAND_CONV (GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth]) THENC

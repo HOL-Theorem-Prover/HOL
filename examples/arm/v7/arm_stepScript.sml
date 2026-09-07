@@ -4350,4 +4350,20 @@ Proof
     \\ FULL_SIMP_TAC (srw_ss()) []
 QED
 
+Theorem memory_read_key_id:
+  (((state:arm_seq_monad$arm_state).memory p = x) ==>
+     ((if p = a then x else state.memory a) = state.memory a)) /\
+  ((state.memory (p + n) = x) ==>
+     ((if p = a then x else state.memory (a + n)) = state.memory (a + n)))
+Proof
+  METIS_TAC [wordsTheory.WORD_EQ_ADD_RCANCEL]
+QED
+
+Theorem word_modify_bit0_T_split:
+  word_modify (\i. COND (i = 0) T) (w:word32) =
+  (((31 >< 1) w):31 word) @@ (1w:bool[unit])
+Proof
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []
+QED
+
 (* ------------------------------------------------------------------------- *)

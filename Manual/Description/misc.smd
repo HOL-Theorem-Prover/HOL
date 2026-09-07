@@ -1092,6 +1092,27 @@ thinks it needs to.  This option is implemented by having
 `Holmake` wipe all of its dependency cache (as per the
 `cleanDeps` option above) before proceeding with the build.
 
+**`--retry-oos=<n>`** Allow each target up to *n* further attempts
+if its build fails with Poly/ML reporting that it has run out of
+store.  The Poly/ML runtime writes that message when it cannot
+grow the ML heap; the shortage is a property of the machine at
+that moment rather than of the target, so building the same target
+again will often succeed.  Every target gets its own allowance of
+*n* extra attempts, and a failure that does not carry the message
+is never retried.  The default is zero, under which a target that
+fails stays failed.  An attempt that is going to be retried is
+reported as `RETRY` rather than as a failure, and the number of
+re-runs performed is reported when the build finishes.
+
+Recognising the message means reading the log `Holmake` keeps for
+each job, so the option has an effect only when jobs are run in
+parallel (`-j<n>` for *n* greater than one, which is the default).
+Under `-j1` a command's output goes straight to the terminal,
+there is no log to consult, and the option is ignored with a
+warning.  It is a Poly/ML-only option: Moscow ML's `Holmake`
+rejects it, so a `CLINE_OPTIONS` line in a `Holmakefile` that uses
+it needs to be guarded with `ifdef POLY`.
+
 `Holmake` should never exit with error messages such as “Uncaught
 exception”.  Such behaviour is a bug, please report it!
 

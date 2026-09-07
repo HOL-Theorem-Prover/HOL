@@ -12,10 +12,20 @@ open Parse
 open brackabsTheory reductionEval
 
 
-val eqn_elim = prove(
-  ``(!Y. (X:term == Y) = (Z == Y)) ==> X == Z``,
-  STRIP_TAC THEN POP_ASSUM (Q.SPEC_THEN `Z` MP_TAC) THEN
-  REWRITE_TAC [chap2Theory.lameq_refl]);
+(* eqn_elim : |- (!Y. X == Y = Z == Y) ==> X == Z, derived forward
+   from chap2Theory.lameq_refl so we don't fire a load-time
+   Tactical.prove. *)
+val eqn_elim =
+  let val Xv = ``X:term``
+      val Zv = ``Z:term``
+      val Yv = ``Y:term``
+      val eqbody = ``(X:term == Y) = (Z == Y)``
+      val hyp = mk_forall(Yv, eqbody)
+      val h = ASSUME hyp
+      val step = SPEC Zv h                                (* [h] |- (X == Z) = (Z == Z) *)
+      val refl = SPEC Zv chap2Theory.lameq_refl           (* |- Z == Z *)
+      val xz = EQ_MP (SYM step) refl                      (* [h] |- X == Z *)
+  in DISCH hyp xz end
 fun brackabs_equiv ths def = let
   val lameq_t = ``chap2$==``
   val th = if is_eq (concl def) then let

@@ -599,31 +599,42 @@ val PRENEX_CONV =
    that is, the 2^n possibilities for n boolean variables.
    Performance is exponential, so beware *)
 
+local
+  val cache : (int * Thm.thm) list Uref.t = Uref.new []
+in
 fun generate_nway_casesplit n = let
   val _ = n >= 1 orelse raise Fail "generate_nway_casesplit: n < 1"
-  fun genty n = if n = 1 then bool --> bool
-                else bool --> (genty (n - 1))
-  val P_ty = genty n
-  val P_t = mk_var("P", P_ty)
-  fun gen_cases (m, vs, t) =
-    if m < n then let
-        val v = mk_var("v"^Int.toString m, bool)
-        val vT = (m + 1, v::vs, mk_comb(t, T))
-        val vF = (m + 1, (mk_neg v)::vs, mk_comb(t, F))
-      in
-        mk_disj(gen_cases vT, gen_cases vF)
-      end
-    else
-      mk_conj(t, list_mk_conj vs)
-  val RHS = gen_cases (0, [], P_t)
-  fun gen_vars n acc =
-    if n < 0 then acc
-    else gen_vars (n - 1) (mk_var("v"^Int.toString n, bool)::acc)
-  val vars = gen_vars (n - 1) []
-  val th = prove(mk_eq(list_mk_comb(P_t, vars), RHS),
-    MAP_EVERY BOOL_CASES_TAC vars THEN REWRITE_TAC [])
 in
-  GEN P_t (GENL vars th)
+  case List.find (fn (k, _) => k = n) (Uref.! cache) of
+      SOME (_, th) => th
+    | NONE => let
+        fun genty n = if n = 1 then bool --> bool
+                      else bool --> (genty (n - 1))
+        val P_ty = genty n
+        val P_t = mk_var("P", P_ty)
+        fun gen_cases (m, vs, t) =
+          if m < n then let
+              val v = mk_var("v"^Int.toString m, bool)
+              val vT = (m + 1, v::vs, mk_comb(t, T))
+              val vF = (m + 1, (mk_neg v)::vs, mk_comb(t, F))
+            in
+              mk_disj(gen_cases vT, gen_cases vF)
+            end
+          else
+            mk_conj(t, list_mk_conj vs)
+        val RHS = gen_cases (0, [], P_t)
+        fun gen_vars n acc =
+          if n < 0 then acc
+          else gen_vars (n - 1) (mk_var("v"^Int.toString n, bool)::acc)
+        val vars = gen_vars (n - 1) []
+        val th = prove(mk_eq(list_mk_comb(P_t, vars), RHS),
+          MAP_EVERY BOOL_CASES_TAC vars THEN REWRITE_TAC [])
+        val genth = GEN P_t (GENL vars th)
+        val _ = cache := (n, genth) :: (Uref.! cache)
+      in
+        genth
+      end
+end
 end
 
 fun UNBETA_LIST tlist =

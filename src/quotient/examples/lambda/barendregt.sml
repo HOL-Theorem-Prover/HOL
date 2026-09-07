@@ -194,25 +194,10 @@ fun sort_matches matchesl =
 
 
 
-val EVERY_LENGTH_LEMMA = TAC_PROOF(([],
-    “!os (a:'a) as.
-         (LENGTH os = LENGTH (CONS a as)) ==>
-         (?(o':'b) os'. (LENGTH os' = LENGTH as) /\ (os = CONS o' os'))”),
-    LIST_INDUCT_TAC
-    THEN REWRITE_TAC[LENGTH,arithmeticTheory.SUC_NOT]
-    THEN REWRITE_TAC[prim_recTheory.INV_SUC_EQ,CONS_11]
-    THEN REPEAT GEN_TAC THEN STRIP_TAC
-    THEN EXISTS_TAC “h:'b”
-    THEN EXISTS_TAC “os:'b list”
-    THEN ASM_REWRITE_TAC[]
-   );
-
-val NIL_LENGTH_LEMMA = TAC_PROOF(([],
-    “!os:'b list.
-         (LENGTH os = LENGTH ([]:'a list)) ==>
-         (os = [])”),
-    REWRITE_TAC[LENGTH,LENGTH_NIL]
-   );
+(* EVERY_LENGTH_LEMMA and NIL_LENGTH_LEMMA live in more_listTheory,
+   which liftTheory (opened above) inherits from. *)
+val EVERY_LENGTH_LEMMA = more_listTheory.EVERY_LENGTH_LEMMA
+val NIL_LENGTH_LEMMA = more_listTheory.NIL_LENGTH_LEMMA
 
 fun REPEAT_N 0 tac = ALL_TAC
   | REPEAT_N n tac = (tac THEN REPEAT_N (n-1) tac);

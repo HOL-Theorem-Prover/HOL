@@ -420,6 +420,69 @@ Proof
   PROVE_TAC []
 QED
 
+Theorem conjn_rwt:
+    !f1 f2 x. eval_form f1 x /\ eval_form f2 x <=>
+              eval_form (Conjn f1 f2) x
+Proof REWRITE_TAC [eval_form_def, Aset_def, Bset_def]
+QED
+
+Theorem disjn_rwt:
+    !f1 f2 x. eval_form f1 x \/ eval_form f2 x <=>
+              eval_form (Disjn f1 f2) x
+Proof REWRITE_TAC [eval_form_def, Aset_def, Bset_def]
+QED
+
+Theorem negn_rwt:
+    !f x. ~eval_form f x = eval_form (Negn f) x
+Proof REWRITE_TAC [eval_form_def, Aset_def, Bset_def]
+QED
+
+Theorem unrelated_rwt:
+    !b x. b = eval_form (UnrelatedBool b) x
+Proof REWRITE_TAC [eval_form_def, Aset_def, Bset_def]
+QED
+
+Theorem var_right_rwt:
+    !i x. (i < x <=> eval_form (LTx i) x) /\
+          (i int_divides x <=> eval_form (xDivided i 0) x)
+Proof REWRITE_TAC [eval_form_def, INT_ADD_RID]
+QED
+
+Theorem var_nright_rwt:
+    !i1 i2 x. ((x = i1) = eval_form (xEQ i1) x) /\
+              (x < i1 <=> eval_form (xLT i1) x) /\
+              (i1 int_divides x + i2 <=> eval_form (xDivided i1 i2) x)
+Proof REWRITE_TAC [eval_form_def, Aset_def, Bset_def]
+QED
+
+Theorem eval_form_neginf:
+    (eval_form (neginf (Conjn f1 f2)) x <=> eval_form (neginf f1) x /\
+                                            eval_form (neginf f2) x) /\
+    (eval_form (neginf (Disjn f1 f2)) x <=> eval_form (neginf f1) x \/
+                                            eval_form (neginf f2) x) /\
+    (eval_form (neginf (Negn f)) x = ~eval_form (neginf f) x) /\
+    (eval_form (neginf (UnrelatedBool b)) x = b) /\
+    (eval_form (neginf (xLT i)) x = T) /\
+    (eval_form (neginf (LTx i)) x = F) /\
+    (eval_form (neginf (xEQ i)) x = F) /\
+    (eval_form (neginf (xDivided i1 i2)) x <=> i1 int_divides x + i2)
+Proof REWRITE_TAC [eval_form_def, neginf_def]
+QED
+
+Theorem eval_form_posinf:
+    (eval_form (posinf (Conjn f1 f2)) x <=> eval_form (posinf f1) x /\
+                                            eval_form (posinf f2) x) /\
+    (eval_form (posinf (Disjn f1 f2)) x <=> eval_form (posinf f1) x \/
+                                            eval_form (posinf f2) x) /\
+    (eval_form (posinf (Negn f)) x = ~eval_form (posinf f) x) /\
+    (eval_form (posinf (UnrelatedBool b)) x = b) /\
+    (eval_form (posinf (xLT i)) x = F) /\
+    (eval_form (posinf (LTx i)) x = T) /\
+    (eval_form (posinf (xEQ i)) x = F) /\
+    (eval_form (posinf (xDivided i1 i2)) x <=> i1 int_divides x + i2)
+Proof REWRITE_TAC [eval_form_def, posinf_def]
+QED
+
 Theorem in_aset:
     ((?a. a IN Aset pos (Conjn f1 f2) /\ P a) =
           (?a. a IN Aset pos f1 /\ P a) \/ (?a. a IN Aset pos f2 /\ P a)) /\

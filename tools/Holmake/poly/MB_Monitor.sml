@@ -437,7 +437,8 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
               (fn pinfo =>
                   check_time (delay, jkey, (fn () => after_check pinfo)))
           end
-        | Terminated(jk as (_, td as {tag,dir}), st, _, marker) =>
+        | Terminated(jk as (_, td as {tag,dir}), st, _,
+                     {marker, retrying}) =>
           stdhandle jk
             (fn {os = strm,tb,status=stat,start_time,ignore_error} =>
                 let
@@ -451,7 +452,18 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
                   val utstr = compact_time 6 true "(" ")" this_childs_time
                   val tinfo = taginfo td (coldir dir) utstr marker
                 in
-                  if st = W_EXITED orelse ignore_error then
+                  if st <> W_EXITED andalso not ignore_error andalso
+                     retrying
+                  then
+                    (* The scheduler has put this target back for another
+                       attempt, so this exit is not a failure of the build:
+                       say so on the line, and keep it out of `failures'
+                       (and hence out of the closing report).  The log file
+                       written for this attempt is left in place -- the
+                       next attempt gets its own, under the same name, so
+                       only the last attempt's output survives. *)
+                    tinfo (boldyellow, "RETRY")
+                  else if st = W_EXITED orelse ignore_error then
                     if seen cheat_string orelse seen used_cheat_string then
                       tinfo (boldyellow, "CHEATED")
                     else if seen fastcheat_string then

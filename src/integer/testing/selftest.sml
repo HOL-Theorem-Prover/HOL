@@ -1,6 +1,8 @@
 open HolKernel Parse;
 open testutils simpLib boolSimps
 
+val _ = new_theory "scratch"
+
 val erc = ref 0
 val _ = diemode := Remember erc
 val _ = Portable.catch_SIGINT()
