@@ -1178,6 +1178,13 @@ fun start {diag, dbg, warnings} = let
   fun allocRequestId () =
       !nextRequestId before nextRequestId := !nextRequestId + 1
   val progressIdCounter = ref 0
+  (* Exclusive use of the process's compile state -- the Context, the
+     loaded-module set and the file's namespace layer that
+     `captureCompileSnap` bundles.  Whoever restores a snapshot holds
+     this: a goal-state request (one thread per request) and the walk a
+     failed proof is localised by.  Process-global because the state
+     is. *)
+  val compileState : unit Sref.t = Sref.new ()
 
   datatype report =
     Error of {hard: bool, pos: range, msg: encode}
@@ -3139,14 +3146,30 @@ fun start {diag, dbg, warnings} = let
     in case findEnclosingTheorem (#done parse) (#text text) offset of
          NONE => NONE
        | SOME (_, thm as {quoteStart, ...}) =>
-         let val restoreLater = !LSPExtension.captureCompileSnap ()
-             val () = case snapBefore quoteStart of
-               NONE => ()
-             | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
-             val r = !LSPExtension.goalStateAtPos (ctx, thm)
-                     handle e => (restoreLater (); raise e)
-             val () = restoreLater ()
-         in r end
+         (* One at a time.  Everything between the capture and the
+            restore below runs against the process's single compile
+            state, and a second walker in that window sees a Context
+            rewound for somebody else's theorem -- reported as a proof
+            failing on a constant it cannot find, which is the failure
+            this whole area exists to stop.  Two goal-state requests
+            can genuinely overlap: the server forks a thread per
+            request, and the drain's walk comes through here too, so
+            `draining` alone did not cover it.
+
+            Serialising costs a queued request the length of the one
+            ahead of it.  A walk is measured in tens of milliseconds;
+            replaying a long tactic is slower, but the alternative was
+            a wrong answer. *)
+         Sref.gen_update compileState (fn held =>
+           (held,
+            let val restoreLater = !LSPExtension.captureCompileSnap ()
+                val () = case snapBefore quoteStart of
+                  NONE => ()
+                | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+                val r = !LSPExtension.goalStateAtPos (ctx, thm)
+                        handle e => (restoreLater (); raise e)
+                val () = restoreLater ()
+            in r end))
     end handle Empty => NONE
 
   (* Walk a failed proof to the end of its tactic and record the pool's
