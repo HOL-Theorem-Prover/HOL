@@ -452,6 +452,11 @@ val cancelAllProofs: (unit -> unit) ref
    a caller reporting all of them on every settled proof is quadratic in
    the number of proofs in the file.  It runs on the worker thread that
    finished the proof, so it must be cheap and must not raise. *)
-val proofStateChanged: (proof_state -> unit) ref
+(* A batch, not one state: a pass announces `Checking` for every proof
+   it forks and a new position for every one an edit moved, and each
+   announcement is a separate handoff to the writer thread -- a message
+   apiece for a file's worth of proofs, where the wire has always
+   carried a list.  Individual verdicts arrive as singletons. *)
+val proofStateChanged: (proof_state list -> unit) ref
 
 end;

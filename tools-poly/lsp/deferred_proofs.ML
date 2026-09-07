@@ -261,12 +261,16 @@ fun setWorkerCount n = Multithreading.max_threads_update n
    from the pool means: the proof is taken on trust again.  A worker
    interrupted by the cancellation stays silent, so it cannot contradict
    this afterwards. *)
-fun announce st = !LSPExtension.proofStateChanged st
+fun announceAll sts =
+    if null sts then () else !LSPExtension.proofStateChanged sts
+fun announce st = announceAll [st]
 
-fun announceEntry status (e : entry) =
-    announce {site = #site e, offset = #offset e, status = status}
-
-fun dropped e = announceEntry LSPExtension.Cheated e
+(* Entries as the wire wants them, for a batch whose status the caller
+   decides: every dropped entry is `Cheated`.  `statusNow`, below, is
+   the version that asks each entry. *)
+fun statusAs status (es : entry list) =
+    List.map (fn e => {site = #site e, offset = #offset e,
+                       status = status}) es
 
 (* Cancel after removing from `entries`: an interrupted worker needs its
    group cancelled whether or not we still track it, and a caller that
@@ -274,7 +278,7 @@ fun dropped e = announceEntry LSPExtension.Cheated e
    its future is already dead. *)
 fun discard (doomed : entry list) =
     (List.app (Future.cancel o #future) doomed;
-     List.app dropped doomed)
+     announceAll (statusAs LSPExtension.Cheated doomed))
 
 fun forkAt ({site, offset, run} : LSPExtension.deferred) =
     let
@@ -329,6 +333,11 @@ fun statusOf ({future, result, ...} : entry) =
         if Exn.is_interrupt e then LSPExtension.Cheated
         else LSPExtension.Failed (Feedback.exn_to_string e)
 
+(* The same, for a batch where each entry reports its own status. *)
+fun statusNow (es : entry list) =
+    List.map (fn e => {site = #site e, offset = #offset e,
+                       status = statusOf e}) es
+
 fun check {resumeFrom, keptFrom, bytes} =
     let
       (* takeDeferred empties the queue in one step, so a second call
@@ -366,10 +375,11 @@ fun check {resumeFrom, keptFrom, bytes} =
          Announcing early is sound: a cancellation arriving in the gap
          announces `Cheated` after this `Checking`, which is the order
          the drop path produces anyway. *)
-      val () = List.app (fn it => announce {site = itemSite it,
-                                            offset = #offset it,
-                                            status = LSPExtension.Checking})
-                        (List.filter (fn it => not (isLive it)) items)
+      val () = announceAll
+                 (List.map (fn it => {site = itemSite it,
+                                      offset = #offset it,
+                                      status = LSPExtension.Checking})
+                           (List.filter (fn it => not (isLive it)) items))
       (* One critical section, covering the forking too.  Publishing the
          new entries in a second one left them invisible to a canceller
          for as long as forking took: an edit arriving in that window
@@ -434,7 +444,7 @@ fun check {resumeFrom, keptFrom, bytes} =
                   (keep @ List.map forkAt fresh, (doomed, moved))
                 end)
       val () = discard doomed
-      val () = List.app (fn e => announceEntry (statusOf e) e) moved
+      val () = announceAll (statusNow moved)
     in () end
 
 (* Short-circuits on the first unsettled proof: this is asked once per

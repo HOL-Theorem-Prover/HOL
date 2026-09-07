@@ -2552,7 +2552,7 @@ fun start {diag, dbg, warnings} = let
              mutex-guarded handoff to the sender thread, so being called
              from a worker is safe. *)
           LSPExtension.proofStateChanged :=
-            (fn (st as {site, offset, status}) =>
+            (fn sts =>
                let
                  (* The proof did not produce the theorem elaboration
                     stood in for, so the declarations below it were built
@@ -2576,36 +2576,46 @@ fun start {diag, dbg, warnings} = let
                     proof instead of enqueueing it, so no second report
                     arrives, and if that somehow fails to hold the name is
                     already in the set and we stop anyway. *)
-                 fun retract () =
+                 fun retract (site, offset) =
                      if LSPExtension.addNoCheatSite site then
                        (bumpMinEdit minEditOffset offset;
                         scheduleCompile uri v)
                      else ()
+                 fun one {site, offset, status} = (
+                   (* The three verdicts that need attention also become
+                      diagnostics, so a failed replay is visible in the
+                      editor rather than only to a client that speaks
+                      `$/proofStates'.  Anything else clears this
+                      proof's entry, the `Cheated' of a dropped proof
+                      included. *)
+                   (updateProofDiag uri v {site = site, offset = offset,
+                                           status = status}
+                    handle _ => ());
+                   case status of
+                       LSPExtension.Suspended _ => retract (site, offset)
+                     | LSPExtension.Diverged _ => retract (site, offset)
+                       (* The pool says what went wrong; it has no idea
+                          where.  Walk the proof to find the step it
+                          stops at, on a thread of its own: this runs on
+                          the worker that settled the proof, and walking
+                          restores a compile snapshot, which is not the
+                          business of a thread that is proving. *)
+                     | LSPExtension.Failed m =>
+                       Sref.update (#pendingFailures v)
+                         (fn ps =>
+                             (site, offset, "proof failed: " ^ oneLine m)
+                             :: ps)
+                     | _ => ())
                in
                  (* Runs on the worker that settled the proof, so it must
-                    not raise. *)
-                 sendProofStates uri (#lines text) [st];
-                 (* The three verdicts that need attention also become
-                    diagnostics, so a failed replay is visible in the
-                    editor rather than only to a client that speaks
-                    `$/proofStates'.  Anything else clears this proof's
-                    entry, the `Cheated' of a dropped proof included. *)
-                 (updateProofDiag uri v st handle _ => ());
-                 (case status of
-                      LSPExtension.Suspended _ => retract ()
-                    | LSPExtension.Diverged _ => retract ()
-                      (* The pool says what went wrong; it has no idea
-                         where.  Walk the proof to find the step it
-                         stops at, on a thread of its own: this runs on
-                         the worker that settled the proof, and walking
-                         restores a compile snapshot, which is not the
-                         business of a thread that is proving. *)
-                    | LSPExtension.Failed m =>
-                        Sref.update (#pendingFailures v)
-                          (fn ps =>
-                              (site, offset, "proof failed: " ^ oneLine m)
-                              :: ps)
-                    | _ => ());
+                    not raise.  One message for the batch, and one drain
+                    for it: a pass announces a `Checking` per proof it
+                    forks and a new position per proof an edit moved, and
+                    a handoff to the writer thread apiece was a message
+                    -- and a drain attempt -- for every proof in the
+                    file. *)
+                 sendProofStates uri (#lines text) sts;
+                 List.app one sts;
                  (* Every verdict, not just a failure: what this is
                     waiting for is the last proof to settle. *)
                  !drainFailures uri v

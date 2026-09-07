@@ -297,6 +297,6 @@ val poolBusy : (unit -> bool) ref = ref (fn () => false)
 val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
 val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
 val cancelAllProofs : (unit -> unit) ref = ref (fn () => ())
-val proofStateChanged : (proof_state -> unit) ref = ref (fn _ => ())
+val proofStateChanged : (proof_state list -> unit) ref = ref (fn _ => ())
 
 end
