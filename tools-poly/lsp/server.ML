@@ -695,32 +695,50 @@ fun channel () = let
   val x = (ConditionVar.conditionVar (), Mutex.mutex (), ref Empty)
   in (x, x) end
 
-fun send (cvar, mutex, r) v = let
-  fun loop () =
-    case !r of
-      Disconn (SOME e) => PolyML.Exception.reraise e
-    | Disconn NONE => raise Disconnected
-    | Empty => (r := Full v; Mutex.unlock mutex; ConditionVar.broadcast cvar)
-    | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
-  in Mutex.lock mutex; loop () end
+(* All three take the lock through `Multithreading.synchronized`, which
+   unlocks on the way out however the body leaves -- returning, raising,
+   or being interrupted.  Hand-rolled, each of these leaked the mutex on
+   its two `Disconn` arms, and that is not a tidiness point: the main
+   loop's `recv` raises `Disconnected` when the client goes, so it left
+   the mutex held and the next `recv` deadlocked on a mutex its own
+   thread owned, which is exactly how a closed editor window left a
+   `bin/hol` sitting on a heap for ever.  The same leak on `send`'s
+   `Full` arm silences the server permanently when a `$/cancelRequest`
+   interrupts a job thread that is waiting to write.
 
-fun closeSender (cvar, mutex, r) e = let
-  fun loop () =
-    case !r of
-      Disconn (SOME e) => PolyML.Exception.reraise e
-    | Disconn NONE => raise Disconnected
-    | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
-    | _ => (r := Disconn e; Mutex.unlock mutex; ConditionVar.broadcast cvar)
-  in Mutex.lock mutex; loop () end
+   The broadcast now happens inside the lock, which is the ordinary
+   shape; a woken waiter may block for the few instructions until
+   `synchronized` unlocks.  The choice of broadcast over signal is
+   unaffected -- see the note above. *)
+fun send (cvar, mutex, r) v =
+  Multithreading.synchronized "Channel.send" mutex (fn () => let
+    fun loop () =
+      case !r of
+        Disconn (SOME e) => PolyML.Exception.reraise e
+      | Disconn NONE => raise Disconnected
+      | Empty => (r := Full v; ConditionVar.broadcast cvar)
+      | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
+    in loop () end)
 
-fun recv (cvar, mutex, r) = let
-  fun loop () =
-    case !r of
-      Disconn (SOME e) => PolyML.Exception.reraise e
-    | Disconn NONE => raise Disconnected
-    | Full v => (r := Empty; Mutex.unlock mutex; ConditionVar.broadcast cvar; v)
-    | Empty => (ConditionVar.wait (cvar, mutex); loop ())
-  in Mutex.lock mutex; loop () end
+fun closeSender (cvar, mutex, r) e =
+  Multithreading.synchronized "Channel.closeSender" mutex (fn () => let
+    fun loop () =
+      case !r of
+        Disconn (SOME e) => PolyML.Exception.reraise e
+      | Disconn NONE => raise Disconnected
+      | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
+      | _ => (r := Disconn e; ConditionVar.broadcast cvar)
+    in loop () end)
+
+fun recv (cvar, mutex, r) =
+  Multithreading.synchronized "Channel.recv" mutex (fn () => let
+    fun loop () =
+      case !r of
+        Disconn (SOME e) => PolyML.Exception.reraise e
+      | Disconn NONE => raise Disconnected
+      | Full v => (r := Empty; ConditionVar.broadcast cvar; v)
+      | Empty => (ConditionVar.wait (cvar, mutex); loop ())
+    in loop () end)
 
 end
 
@@ -1047,7 +1065,14 @@ fun start {diag, dbg, warnings} = let
          stored, not who cites it. *)
       "}"]
     end
-  val _ (*clientCapabilities*) = initialize conn capabilitiesFor
+  (* A client that dies *during* the handshake gets the same end as one
+     that dies later.  Raising here escaped `start` altogether and was
+     reported by hol.ML as an uncaught exception with a failure exit
+     code; swallowed, the loop below finds the closed channel on its
+     first receive and exits normally.  The result is discarded either
+     way. *)
+  val _ (*clientCapabilities*) =
+      initialize conn capabilitiesFor handle Channel.Disconnected => JSON.NULL
   fun logMessage str =
     send (Notification {
       method = "window/logMessage",
@@ -1142,12 +1167,12 @@ fun start {diag, dbg, warnings} = let
   val jobs = let
     val mutex = Mutex.mutex ()
     val jobs = ref []
-    fun modify f = let
-      val _ = Mutex.lock mutex
-      val j = !jobs
-      val _ = jobs := f j
-      val _ = Mutex.unlock mutex
-      in j end
+    (* Synchronized rather than raw lock/unlock: a `$/cancelRequest`
+       interrupts job threads, and an interrupt landing between the two
+       left this mutex held and every later `spawnJob` waiting on it. *)
+    fun modify f =
+      Multithreading.synchronized "server.jobs" mutex
+        (fn () => let val j = !jobs in jobs := f j; j end)
     in modify end
 
   fun spawnJobCore id job = let
@@ -1360,12 +1385,10 @@ fun start {diag, dbg, warnings} = let
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
   in
-    fun withFileInfo f = (Mutex.lock mutex; let
-      val (v, r) = f (!fileInfo)
-      val _ = fileInfo := v
-      val _ = Mutex.unlock mutex
-      in r end
-      handle e => (Mutex.unlock mutex; PolyML.Exception.reraise e))
+    fun withFileInfo f =
+      Multithreading.synchronized "server.fileInfo" mutex
+        (fn () => let val (v, r) = f (!fileInfo)
+                  in fileInfo := v; r end)
   end
 
   fun newFile text version = let
@@ -3564,14 +3587,40 @@ fun start {diag, dbg, warnings} = let
         Ok encNull)
     end
 
+  (* Where an exception came from decides whether it is fatal, and
+     enumerating exception names is the wrong way to ask.  The reader
+     thread latches its outcome into the channel -- EOF as
+     `Channel.Disconnected`, a frame it could not parse as
+     `MalformedData` -- and `recv` then raises that same thing for ever.
+     So a failure of `recv` is the end of the session, while a failure to
+     *handle* a message is not, and the two must not share a handler: the
+     old catch-all swallowed the first kind and re-entered the loop,
+     which is how a client closing its window left an idle `bin/hol`
+     holding a whole heap until the machine ran out of them.
+
+     This also catches `Thread.Interrupt`, which is safe here: the main
+     thread is never an interrupt target.  Job threads are (see
+     `$/cancelRequest`) and the compile thread is cancelled
+     cooperatively through its `cancelled` flag. *)
+  datatype input = Msg of JSON.value message | Closed of exn
+  fun nextMsg () = Msg (recv ()) handle e => Closed e
+
   fun recvExit () =
-    case recv () of
-      Notification {method = "exit", ...} => ()
-    | _ => (diag "ignoring message after shutdown"; recvExit ())
+    case nextMsg () of
+      (* The client asked to shut down and then died without saying
+         `exit` -- which is what a client does when its own two-second
+         timeout beats us. *)
+      Closed _ => ()
+    | Msg (Notification {method = "exit", ...}) => ()
+    | Msg _ => (diag "ignoring message after shutdown"; recvExit ())
 
   exception Shutdown
-  fun main () = (
-    (case recv () of
+  fun main () =
+    case nextMsg () of
+      (* `diag`, not `logMessage`: there is no client left to tell. *)
+      Closed e => diag ("input closed (" ^ exnMessage e ^ "); exiting")
+    | Msg msg => (
+    (case msg of
       Request {method = "shutdown", id, ...} => (
         diag "received shutdown request";
         send (mkResponse id (Ok encNull));
@@ -3800,12 +3849,19 @@ fun start {diag, dbg, warnings} = let
         | SOME v => startCompile uri v
         in () end
     | Response _ => diag "response to unknown request"
+      (* Without `shutdown` in front of it this is out of order, but the
+         client is telling us to go and the alternative is to become an
+         orphan out of pedantry. *)
+    | Notification {method = "exit", ...} => raise Shutdown
     | Notification {method, ...} => diag ("unknown method: " ^ method))
     handle
       e as Shutdown => PolyML.Exception.reraise e
     | e => logMessage ("ignored exception " ^ exnMessage e);
     main ())
   in
+    (* `Channel.Disconnected` can now only reach here from a *send*, the
+       writer channel never being closed.  Kept because it costs
+       nothing. *)
     main () handle
       Shutdown => ()
     | Channel.Disconnected => diag "early abort"

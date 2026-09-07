@@ -783,7 +783,17 @@ in
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
         LSPServer.start {diag = diag, dbg = debug,
-                         warnings = !startup_warnings}
+                         warnings = !startup_warnings};
+        (* Explicit, as in the RUN branch.  Returning would do it -- the
+           `PolyML.export` wrapper exits for us -- but when the session
+           ends there can still be a compile thread inside the
+           elaborator, forked with interrupts deferred and cancelled
+           only cooperatively, and a debounce thread able to start
+           another.  `success`, because a client going away is the
+           normal end of a session and editors report a non-zero server
+           exit as a fault. *)
+        diag "LSP session ended";
+        OS.Process.exit OS.Process.success
       end
     | REPL =>
       let in

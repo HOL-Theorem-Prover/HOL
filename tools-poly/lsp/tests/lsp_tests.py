@@ -30,6 +30,14 @@ LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 # ------------------------------------------------------------------
 # LSP client — minimal, efficient, no O(N^2) buffer slicing.
 # ------------------------------------------------------------------
+# Teardown failures, collected by `Client.close` and reported by `main`.
+# A server that has to be killed is a leak; raising from the `finally`
+# that finds it would hide the test's own result, so it is recorded
+# against the test that was running.
+CLOSE_FAILURES = []
+CURRENT_TEST = "<none>"
+
+
 class Client:
     def __init__(self, cwd, args=None):
         self.p = subprocess.Popen(
@@ -136,16 +144,47 @@ class Client:
     def stderr_text(self):
         return bytes(self.errs).decode(errors='replace')
 
-    def close(self):
+    def close(self, expect_exit=True):
+        """Shut the server down and, unless told otherwise, hold it to
+        actually exiting.
+
+        Every test's `finally` comes through here, so this is the only
+        place that can check the thing an orphaned server violates.
+        Failures are collected rather than raised: raising from a
+        `finally` would mask whatever the test was really asserting.
+        Reported by `main`, which folds them into the exit status."""
         try:
             self.send({"jsonrpc":"2.0","id":999,"method":"shutdown","params":None})
-            time.sleep(0.1)
+            # Wait for the reply rather than sleeping a fixed 100ms: the
+            # sleep is a race, and a strict exit assertion would turn it
+            # into a flake.
+            self.wait_until(
+                lambda cl: any(m.get("id") == 999
+                               for m in cl.messages_since(0)[0]), 5)
             self.send({"jsonrpc":"2.0","method":"exit","params":None})
-            self.p.wait(timeout=3)
-        except Exception:
-            try: self.p.kill()
-            except: pass
-        self._stop = True
+            if expect_exit and not _wait_for_exit(self.p, 5):
+                CLOSE_FAILURES.append(
+                    (CURRENT_TEST, "server did not exit after shutdown+exit",
+                     self.stderr_text()[-2000:]))
+            elif expect_exit and self.p.returncode not in (0, None):
+                CLOSE_FAILURES.append(
+                    (CURRENT_TEST,
+                     f"server exited with code {self.p.returncode}",
+                     self.stderr_text()[-2000:]))
+        except Exception as e:
+            if expect_exit:
+                CLOSE_FAILURES.append(
+                    (CURRENT_TEST, f"teardown raised {type(e).__name__}: {e}",
+                     self.stderr_text()[-2000:]))
+        finally:
+            try:
+                if self.p.poll() is None:
+                    self.p.kill()
+                    self.p.wait(timeout=5)
+            except Exception:
+                pass
+            # Last, so the stderr reader is still running above.
+            self._stop = True
 
 
 # ------------------------------------------------------------------
@@ -7042,6 +7081,123 @@ def test_a_burst_of_edits_leaves_diagnostics_matching_the_text():
     assert_eq(got, want, "diagnostics after a burst match the text")
 
 
+# ------------------------------------------------------------------
+# The server has to die when its client does.  Each server holds a whole
+# HOL heap and the clients start one per script buffer, so a server that
+# outlives its client is a leak the user cannot see: it sits idle, with
+# no error anywhere.  Every case below asserts the exit CODE, not just
+# that the process went away -- a negative code is death by signal and 1
+# is `hol.ML`'s `die` path, and both would be exits for the wrong reason.
+# ------------------------------------------------------------------
+
+def _spawn_and_handshake():
+    c = Client("/tmp")
+    _init(c, "/tmp")
+    return c
+
+
+def test_abrupt_disconnect_exits():
+    """The client vanishes without shutdown/exit -- a closed window, a
+    killed editor, an extension host torn down before its timers run.
+    The reader thread sees EOF and latches the disconnect into the
+    channel; the server has to notice and go."""
+    c = _spawn_and_handshake()
+    try:
+        c.p.stdin.close()
+        assert_true(_wait_for_exit(c.p, 20),
+                    "server exited after its client closed stdin\n" +
+                    c.stderr_text()[-2000:])
+        assert_eq(c.p.returncode, 0, "exit code after abrupt disconnect")
+    finally:
+        c.close(expect_exit=False)
+
+
+def test_abrupt_disconnect_during_compile_exits():
+    """The same, with elaboration in flight.  The compile thread is
+    forked `InterruptDefer` and is cancelled only cooperatively, and the
+    300ms debounce can start another one after the client has gone, so
+    this is the case where something is still running at the moment the
+    server should be exiting."""
+    c = _spawn_and_handshake()
+    try:
+        uri = "file:///tmp/lsp_disconnect_compile.sml"
+        src = ("Theory disconnectprobe\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n  1 + 1 = 2\nProof\n  DECIDE_TAC\nQED\n")
+        _did_open(c, uri, src, 1)
+        _did_change_full(c, uri, src.replace("DECIDE_TAC", "simp[]"), 2)
+        c.p.stdin.close()          # inside the debounce window
+        assert_true(_wait_for_exit(c.p, 90),
+                    "server exited with a compile in flight\n" +
+                    c.stderr_text()[-2000:])
+        assert_eq(c.p.returncode, 0, "exit code with a compile in flight")
+    finally:
+        c.close(expect_exit=False)
+
+
+def test_shutdown_without_exit_exits():
+    """VS Code's `stop()` gives the server two seconds and then drops the
+    pipe, so `shutdown` can arrive with no `exit` behind it.  That path
+    raises out of `recvExit` before the shutdown can complete."""
+    c = _spawn_and_handshake()
+    try:
+        c.send({"jsonrpc": "2.0", "id": 999, "method": "shutdown",
+                "params": None})
+        assert_true(c.wait_until(lambda cl: any(m.get("id") == 999 for m in
+                                                cl.messages_since(0)[0]), 20),
+                    "shutdown was answered")
+        c.p.stdin.close()          # and no `exit`
+        assert_true(_wait_for_exit(c.p, 20),
+                    "server exited after shutdown with no exit\n" +
+                    c.stderr_text()[-2000:])
+        assert_eq(c.p.returncode, 0, "exit code after shutdown-only")
+    finally:
+        c.close(expect_exit=False)
+
+
+def test_bare_exit_notification_exits():
+    """An `exit` with no preceding `shutdown`.  The spec says go."""
+    c = _spawn_and_handshake()
+    try:
+        c.send({"jsonrpc": "2.0", "method": "exit", "params": None})
+        assert_true(_wait_for_exit(c.p, 20),
+                    "server honoured a bare exit\n" + c.stderr_text()[-2000:])
+    finally:
+        c.close(expect_exit=False)
+
+
+def test_malformed_frame_does_not_wedge():
+    """A frame the reader cannot parse latches *that* exception into the
+    channel, so every later receive re-raises it.  Ignoring it and
+    carrying on is not carrying on -- it is a wedge or a spin."""
+    c = _spawn_and_handshake()
+    try:
+        c.p.stdin.write(b"Content-Length: notanumber\r\n\r\n")
+        c.p.stdin.flush()
+        assert_true(_wait_for_exit(c.p, 20),
+                    "server exited on a malformed frame\n" +
+                    c.stderr_text()[-2000:])
+    finally:
+        c.close(expect_exit=False)
+
+
+def test_disconnect_before_handshake_exits_cleanly():
+    """EOF before `initialize` completes takes a different route out --
+    past `start`'s bindings and into hol.ML's top-level handler.  It
+    should still be a clean exit rather than a reported crash."""
+    c = Client("/tmp")
+    try:
+        c.p.stdin.close()
+        assert_true(_wait_for_exit(c.p, 60),
+                    "server exited on pre-handshake EOF\n" +
+                    c.stderr_text()[-2000:])
+        assert_eq(c.p.returncode, 0,
+                  "pre-handshake EOF is not a crash\n" +
+                  c.stderr_text()[-2000:])
+    finally:
+        c.close(expect_exit=False)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -7307,16 +7463,26 @@ TESTS = [
      test_a_tail_reused_after_a_typo_matches_a_full_compile),
     ("initialize_says_which_hol_this_is",
      test_initialize_says_which_hol_this_is),
+    ("abrupt_disconnect_exits", test_abrupt_disconnect_exits),
+    ("abrupt_disconnect_during_compile_exits",
+     test_abrupt_disconnect_during_compile_exits),
+    ("shutdown_without_exit_exits", test_shutdown_without_exit_exits),
+    ("bare_exit_notification_exits", test_bare_exit_notification_exits),
+    ("malformed_frame_does_not_wedge", test_malformed_frame_does_not_wedge),
+    ("disconnect_before_handshake_exits_cleanly",
+     test_disconnect_before_handshake_exits_cleanly),
     ("a_burst_of_edits_leaves_diagnostics_matching_the_text",
      test_a_burst_of_edits_leaves_diagnostics_matching_the_text),
 ]
 
 
 def main():
+    global CURRENT_TEST
     wanted = set(sys.argv[1:])
     passed = failed = 0
     for name, fn in TESTS:
         if wanted and name not in wanted: continue
+        CURRENT_TEST = name
         t0 = time.time()
         try:
             fn()
@@ -7331,6 +7497,13 @@ def main():
             dt = time.time() - t0
             print(f"  ERROR {name}  ({dt:.1f}s): {type(e).__name__}: {e}")
             failed += 1
+    if CLOSE_FAILURES:
+        print(f"\n{len(CLOSE_FAILURES)} session(s) did not shut down cleanly:")
+        for name, why, err in CLOSE_FAILURES:
+            print(f"  LEAK  {name}: {why}")
+            if err.strip():
+                print("        stderr tail: " + err.strip()[-500:])
+        failed += len(CLOSE_FAILURES)
     print(f"\n{passed} passed, {failed} failed")
     sys.exit(0 if failed == 0 else 1)
 
