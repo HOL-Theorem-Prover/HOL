@@ -824,7 +824,10 @@ Datatype:
     Appeal string formula ((logic_appeal list # (SExp option)) option)
 End
 
-val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
+(* the theory's own equation states a map under a list_size, which does
+   not compare with the fold the rest of this file reasons with; the
+   TypeBase states the fold *)
+val logic_appeal_size_def = #2 (TypeBase.size_of ``:logic_appeal``)
 
 val _ = computeLib.add_funs [logic_appeal_size_def];
 
@@ -1824,12 +1827,17 @@ Theorem logic_flag_proofp_thm[local]:
                                 (list2sexp (MAP f2sexp thms)) atbl) ==>
       EVERY (MilawaTrue ctxt o CONCL) al
 Proof
-  STRIP_TAC \\ completeInduct_on `logic_appeal3_size al` \\ NTAC 3 STRIP_TAC
+  STRIP_TAC \\ completeInduct_on `list_size logic_appeal_size al`
+  \\ NTAC 3 STRIP_TAC
   \\ FS [PULL_FORALL_IMP] \\ Cases_on `al` \\ FS [EVERY_DEF]
   \\ ONCE_REWRITE_TAC [logic_flag_proofp_def]
   \\ FS [] \\ FULL_SIMP_TAC (srw_ss()) [] \\ FS [MAP] \\ SRW_TAC [] [] \\ FS []
-  \\ `logic_appeal3_size t < logic_appeal3_size (h::t)` by (EVAL_TAC \\ DECIDE_TAC)
-  \\ FS [] \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
+  (* the size of a list of appeals is a fold now, so the step down to
+     the tail is stated in the form the induction hypothesis asks for *)
+  \\ `list_size logic_appeal_size t <
+      1 + (logic_appeal_size h + list_size logic_appeal_size t)` by DECIDE_TAC
+  \\ FS []
+  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
   \\ ONCE_REWRITE_TAC [logic_flag_proofp_def] \\ FS [a2sexp_HYPS]
   \\ SRW_TAC [] [] \\ FS []
   \\ MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] logic_appeal_step_okp_thm)
@@ -1837,7 +1845,9 @@ Proof
   \\ Q.PAT_X_ASSUM `!xx.bbb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss []
   \\ Cases_on `h` \\ Cases_on `o'` \\ FULL_SIMP_TAC std_ss [HYPS_def,EVERY_DEF]
-  THEN1 (EVAL_TAC \\ DECIDE_TAC)
+  (* whichever of the two the numeric one is: the case split no longer
+     puts it first *)
+  \\ TRY (EVAL_TAC \\ DECIDE_TAC)
   \\ Cases_on `x` \\ FULL_SIMP_TAC std_ss [HYPS_def,EVERY_DEF,appeal_syntax_ok_def]
   \\ FS [EVERY_MEM] \\ EVAL_TAC \\ DECIDE_TAC
 QED
@@ -2883,6 +2893,22 @@ Proof
   \\ FS [EVERY_DEF,MAP,logic_variablep_EQ_var_ok]
   \\ REPEAT STRIP_TAC \\ Cases_on `var_ok h` \\ FS []
 QED
+
+(* The recursion through the list is structural, so TFL leaves no
+   t2sexp_ind; the type's own principle says the same thing, and the
+   proofs below name its arguments, so it is stated with their names. *)
+val t2sexp_ind =
+    let
+      fun ren ns = Conv.RENAME_VARS_CONV ns
+      val c3 = ren ["vs"] THENC QUANT_CONV (RAND_CONV (ren ["fc"]))
+      val c4 = ren ["b", "ys"] THENC
+               QUANT_CONV (QUANT_CONV (RAND_CONV (ren ["xs"])))
+    in
+      CONV_RULE
+        (QUANT_CONV (LAND_CONV
+           (RAND_CONV (RAND_CONV (LAND_CONV c3 THENC RAND_CONV c4)))))
+        (TypeBase.induction_of ``:logic_term``)
+    end
 
 Theorem term_syntax_ok_lemma[local]:
   !t. term_syntax_ok t ==>
