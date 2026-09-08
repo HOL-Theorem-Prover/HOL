@@ -4,6 +4,14 @@ struct
 open HolKernel boolLib liteLib simpLib pureSimps
      Ho_Rewrite tautLib Parse boolSimpsContextTheory;
 
+structure Parse = struct
+  open Parse
+  (* markerTheory is explicitly referenced/included in simpLib; so the
+     valOf below should never fail *)
+  val (Type,Term) = parse_from_grammars(valOf $ grammarDB {thyname="marker"})
+end
+open Parse
+
 infix THENQC
 
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
