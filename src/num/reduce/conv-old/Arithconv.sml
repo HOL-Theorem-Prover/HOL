@@ -234,11 +234,8 @@ val pv = mk_var {Name= "p", Ty=num}
 val qv = mk_var {Name= "q", Ty=num}
 val rv = mk_var {Name= "r", Ty=num};
 
-local val divt =
-    prove((“(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x DIV y = q)”),
-          REPEAT DISCH_TAC THEN
-          MATCH_MP_TAC (arithmeticTheory.DIV_UNIQUE) THEN
-          EXISTS_TAC (“r:num”) THEN ASM_REWRITE_TAC[])
+local
+  val divt = ArithconvContextTheory.divt
 in
 fun DIV_CONV tm =
   let open Arbnum
@@ -266,11 +263,8 @@ end;
 (* MOD_CONV "[x] MOD [y]" = |- [x] MOD [y] = [x mod y]                   *)
 (*-----------------------------------------------------------------------*)
 
-local val modt =
-    prove(“(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x MOD y = r)”,
-          REPEAT DISCH_TAC THEN
-          MATCH_MP_TAC arithmeticTheory.MOD_UNIQUE THEN
-          EXISTS_TAC “q:num” THEN ASM_REWRITE_TAC[])
+local
+  val modt = ArithconvContextTheory.modt
 in
 fun MOD_CONV tm =
  let open Arbnum
