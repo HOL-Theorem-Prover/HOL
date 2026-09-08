@@ -7,6 +7,11 @@ structure normalForms :> normalForms =
 struct
 
 open HolKernel Parse boolLib simpLib Canon normalFormsContextTheory;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars(valOf $ grammarDB {thyname="combin"})
+end
+open Parse
 
 (* ------------------------------------------------------------------------- *)
 (* Tracing.                                                                  *)
