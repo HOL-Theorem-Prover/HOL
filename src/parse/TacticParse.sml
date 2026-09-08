@@ -49,6 +49,8 @@ datatype 'a tac_expr
   = Then of 'a tac_expr list
   | ThenLT of 'a tac_expr * 'a tac_expr list
   | Subgoal of 'a
+  | By of 'a * 'a tac_expr
+  | SufficesBy of 'a * 'a tac_expr
   | First of 'a tac_expr list
   | Try of 'a tac_expr
   | Repeat of 'a tac_expr
@@ -86,6 +88,8 @@ datatype 'a tac_expr
 fun isTac (Then _) = true
   | isTac (ThenLT _) = true
   | isTac (Subgoal _) = true
+  | isTac (By _) = true
+  | isTac (SufficesBy _) = true
   | isTac (First _) = true
   | isTac (Try _) = true
   | isTac (Repeat _) = true
@@ -196,12 +200,9 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
             group true (tr rhs') $ Then (simplifys rhs' [First []]))]
       | _ => Opaque (trPrec e))
     | SOME (lhs, "by", rhs) =>
-        ThenLT (Subgoal (tr lhs), [LThen1 (grouped true simplify rhs)])
-    | SOME (lhs, "suffices_by", rhs) => let
-        val p = tr lhs
-        in ThenLT (
-          group false p (ThenLT (Subgoal p, [LReverse])),
-          [LThen1 (grouped true simplify rhs)]) end
+        By (tr lhs, grouped true simplify rhs)
+    | SOME (lhs, "suffices_by", rhs) =>
+        SufficesBy (tr lhs, grouped true simplify rhs)
     (* Application forms *)
     | _ => case matchApp e of
       SOME ("subgoal", [rhs]) => group true (tr e) (Subgoal (tr rhs))
@@ -310,6 +311,8 @@ fun mapTacExpr {start, stop, repair} = let
     | go (Then ls) = Then (map go ls)
     | go (ThenLT (e, ls)) = ThenLT (go e, map go ls)
     | go (Subgoal t) = Subgoal (tr false t)
+    | go (By (q, e)) = By (tr false q, go e)
+    | go (SufficesBy (q, e)) = SufficesBy (tr false q, go e)
     | go (First ls) = First (map go ls)
     | go (Try e) = Try (go e)
     | go (Repeat e) = Repeat (go e)
@@ -369,6 +372,9 @@ local
       | go (ThenLT (e, ls)) = mkInfixl ">>>" (map go (e::ls))
       | go (LThen1 e) = TApp ("THEN1_LT", [go e])
       | go (Subgoal t) = TApp ("sg", [TAtom (sub t)])
+      | go (By (q, e)) = TInfix (TAtom (sub q), "by", go e)
+      | go (SufficesBy (q, e)) =
+          TInfix (TAtom (sub q), "suffices_by", go e)
       | go (First []) = TAtom "NO_TAC"
       | go (First ls) = mkInfixl "ORELSE" (map go ls)
       | go (Try e) = TApp ("TRY", [go e])
@@ -579,6 +585,10 @@ fun linearize isAtom e = let
     | MapFirst _     => (false, FAtom e :: acc')
     | Rename _       => (false, FAtom e :: acc')
     | Subgoal _      => (false, FAtom e :: acc')
+    (* These primitives are semantically more than Subgoal followed by
+       THEN1.  Keep them whole until goalFrag has matching open operations. *)
+    | By _           => (false, FAtom e :: acc')
+    | SufficesBy _   => (false, FAtom e :: acc')
     | LSelectGoal _  => (false, FAtom e :: acc')
     | LSelectGoals _ => (false, FAtom e :: acc')
     | Opaque _       => (false, FAtom e :: acc')
