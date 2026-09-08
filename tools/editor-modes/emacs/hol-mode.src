@@ -2175,10 +2175,14 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "\M-g" 'hol-lsp-show-goal-state)
 (define-key hol-map "\M-C" 'hol-lsp-retry-compile)
-(define-key hol-map "\M-m" 'hol-lsp-search)
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
+;; `M-M', not `M-m': `holmake' had that key first, and binding both to
+;; it left this one unreachable rather than merely awkward.  Shifted
+;; meta is already the convention for a second claim on a letter here
+;; -- compare `\M-C' and `\M-P'.
+(define-key hol-map "\M-M" 'hol-lsp-search)
 (define-key hol-map "2"    'hol-vertical)
 (define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "4"    'hol-display)
@@ -3150,23 +3154,49 @@ so a slow server never freezes emacs on a keystroke."
   "Major mode for the *HOL Search* buffer.
 RET on a theorem goes to where it was proved.")
 
-(defun hol-lsp-search-goto ()
-  "Visit the theorem at point where it was proved."
+(defun hol-lsp-search-goto (&optional pos)
+  "Visit the theorem at POS, or at point, where it was proved.
+POS is what the mouse passes, clicking being able to land somewhere
+without moving point."
   (interactive)
-  (let ((uri (get-text-property (point) 'hol-lsp-uri))
-        (line (get-text-property (point) 'hol-lsp-line)))
+  (let* ((at (or pos (point)))
+         (uri (get-text-property at 'hol-lsp-uri))
+         (line (get-text-property at 'hol-lsp-line)))
     (cond
      ((null uri) (message "HOL: no source location recorded for this one"))
      (t (find-file-other-window (hol-lsp--uri-to-path uri))
         (goto-char (point-min))
         (forward-line (max 0 (1- (or line 1))))))))
 
+(defun hol-lsp-search-mouse-goto (event)
+  "Visit the theorem clicked on by EVENT."
+  (interactive "e")
+  (let ((posn (event-start event)))
+    (select-window (posn-window posn))
+    (hol-lsp-search-goto (posn-point posn))))
+
 (define-key hol-lsp-search-mode-map (kbd "RET") 'hol-lsp-search-goto)
+;; The whole entry is clickable, not only the location: a mouse aimed
+;; at the theorem's name should do the obvious thing too.
+(define-key hol-lsp-search-mode-map [mouse-2] 'hol-lsp-search-mouse-goto)
+(define-key hol-lsp-search-mode-map [follow-link] 'mouse-face)
+
+(defun hol-lsp--search-location (uri line)
+  "How to show URI and LINE: the script's own name, and the line.
+The full path is what `hol-lsp-search-goto\=' needs and not what a
+reader does -- one per result, the paths would push the theorems off
+the side.  `finite_mapScript.sml:1234\=' says which file and where, and
+the path is a `help-echo\=' away."
+  (when uri
+    (let ((path (hol-lsp--uri-to-path uri)))
+      (concat (file-name-nondirectory path)
+              (if line (format ":%d" line) "")))))
 
 (defun hol-lsp--search-render (hits selectors)
   "Lay HITS out in the *HOL Search* buffer, SELECTORS being the question.
-Each theorem carries its own location as text properties, so RET on any
-line of it goes to the script it was proved in."
+Each entry shows where the theorem was proved, and carries that
+location as text properties, so RET anywhere in it -- or mouse-2 --
+goes to the script."
   (let ((buf (get-buffer-create "*HOL Search*")))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
@@ -3184,8 +3214,20 @@ line of it goes to the script it was proved in."
                 (uri (plist-get h :uri))
                 (line (plist-get h :line)))
             (insert (propertize (format "%s$%s" theory name) 'face 'bold)
-                    (format "  [%s]\n" class)
-                    (or stmt "") "\n\n")
+                    (format "  [%s]" class))
+            ;; Where it was proved, said out loud.  The server has
+            ;; always sent this and the pane kept it to itself, on a
+            ;; text property only RET could see.
+            (let ((loc (hol-lsp--search-location uri line)))
+              (when loc
+                (insert "  "
+                        (propertize
+                         loc
+                         'face 'link
+                         'mouse-face 'highlight
+                         'help-echo (format "mouse-2: visit %s"
+                                            (hol-lsp--uri-to-path uri))))))
+            (insert "\n" (or stmt "") "\n\n")
             (when uri
               (put-text-property start (point) 'hol-lsp-uri uri)
               (put-text-property start (point) 'hol-lsp-line line))))

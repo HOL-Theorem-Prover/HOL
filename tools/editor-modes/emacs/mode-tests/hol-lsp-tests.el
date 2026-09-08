@@ -497,3 +497,65 @@ the wrong text."
     (hol-lsp--apply-segments
      1 '((:text "abcdef" :kind "const" :name "my$c" :ty "num")) 0)
     (should-not (get-text-property 1 'hol-lsp-doc))))
+
+;;; ---------------------------------------------------------------
+;;; Search results: their locations, and getting to them
+;;; ---------------------------------------------------------------
+
+(ert-deftest hol-lsp-search-does-not-shadow-holmake ()
+  "`holmake' keeps `M-h M-m'; the search has its own key.
+Both were bound to `M-m', and the later binding won, so the search
+was unreachable from the keymap -- which no test noticed because
+nothing asserted what a key resolved to."
+  (should (eq (lookup-key hol-map "\M-m") 'holmake))
+  (should (eq (lookup-key hol-map "\M-M") 'hol-lsp-search)))
+
+(ert-deftest hol-lsp-search-location-is-legible ()
+  "A location says which script and which line, not the whole path."
+  (should (equal (hol-lsp--search-location
+                  "file:///hol/src/finite_map/finite_mapScript.sml" 1234)
+                 "finite_mapScript.sml:1234"))
+  ;; A theorem whose location HOL does not record shows nothing rather
+  ;; than a bare colon.
+  (should-not (hol-lsp--search-location nil 12))
+  (should (equal (hol-lsp--search-location "file:///a/bScript.sml" nil)
+                 "bScript.sml")))
+
+(ert-deftest hol-lsp-search-render-shows-and-carries-locations ()
+  "Each entry shows where it was proved, and RET there gets to it.
+The location used to travel as an invisible text property, so the
+results looked as though HOL had not recorded one."
+  (let ((buf (hol-lsp--search-render
+              (list '(:name "DOMSUB_NOT_IN_DOM" :theory "finite_map"
+                      :class "Thm" :statement "|- k NOTIN FDOM fm ==> fm \\\\ k = fm"
+                      :uri "file:///hol/src/finite_map/finite_mapScript.sml"
+                      :line 1234)
+                    ;; and one HOL has no location for
+                    '(:name "mystery" :theory "scratch" :class "Thm"
+                      :statement "|- T"))
+              '("k NOTIN FDOM fm"))))
+    (unwind-protect
+        (with-current-buffer buf
+          (should (string-match-p "finite_mapScript\\.sml:1234" (buffer-string)))
+          ;; the located one is reachable from anywhere in its entry
+          (goto-char (point-min))
+          (search-forward "DOMSUB_NOT_IN_DOM")
+          (should (equal (get-text-property (point) 'hol-lsp-uri)
+                         "file:///hol/src/finite_map/finite_mapScript.sml"))
+          (should (equal (get-text-property (point) 'hol-lsp-line) 1234))
+          ;; and the location itself invites a click
+          (goto-char (point-min))
+          (search-forward "finite_mapScript.sml:1234")
+          (should (get-text-property (1- (point)) 'mouse-face))
+          ;; the unlocated one claims nothing
+          (goto-char (point-min))
+          (search-forward "mystery")
+          (should-not (get-text-property (point) 'hol-lsp-uri)))
+      (kill-buffer buf))))
+
+(ert-deftest hol-lsp-search-mouse-is-bound ()
+  "mouse-2 visits a result, and follow-link makes it behave as a link."
+  (should (eq (lookup-key hol-lsp-search-mode-map [mouse-2])
+              'hol-lsp-search-mouse-goto))
+  (should (eq (lookup-key hol-lsp-search-mode-map (kbd "RET"))
+              'hol-lsp-search-goto)))
