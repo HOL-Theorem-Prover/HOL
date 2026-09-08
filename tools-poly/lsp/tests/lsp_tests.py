@@ -7198,6 +7198,62 @@ def test_disconnect_before_handshake_exits_cleanly():
         c.close(expect_exit=False)
 
 
+def test_goal_state_segments_rebuild_pretty_with_annotations():
+    """The goals pane shows text a client cannot ask about: it is not in
+    any file, so hover has nothing to hover over.  `segments` carries
+    what the pretty-printer knew -- what each symbol is, a constant's
+    theory-qualified name, its type -- as consecutive pieces.
+
+    Two things have to hold, and the first is what makes the second
+    usable: the pieces must rebuild `pretty` exactly, or a client
+    applying them would annotate the wrong characters.  `lsp_terminal`
+    emits its markers at zero width and delegates layout to
+    `raw_terminal`, so the two renders agree -- but that is a property
+    of the printers, asserted here against a real goal state rather
+    than trusted."""
+    src = ("Theory segments\n"
+           "Ancestors list arithmetic\n\n"
+           "Theorem seg_thm:\n"
+           "  !l:'a list. LENGTH (REVERSE l) = LENGTH l\n"
+           "Proof\n"
+           "  Induct >> simp[]\n"
+           "QED\n")
+    uri = "file:///tmp/segments_probe.sml"
+    ansi = re.compile("\x1b\\[[0-9;]*m")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 120), "compiled")
+        r = _send_goalstate(c, 760, uri, 6, 9)
+        res = (r or {}).get("result")
+        assert_true(res, f"a goal state came back ({r!r})")
+        segs = res.get("segments")
+        assert_true(segs, f"the state carries segments ({res.keys()!r})")
+
+        rejoined = "".join(sg.get("text", "") for sg in segs)
+        assert_eq(rejoined, ansi.sub("", res.get("pretty", "")),
+                  "segments rebuild pretty exactly")
+
+        consts = {sg.get("name"): sg for sg in segs
+                  if sg.get("kind") == "const"}
+        assert_true("list$LENGTH" in consts,
+                    f"a constant is named by theory ({sorted(consts)!r})")
+        assert_contains(consts["list$LENGTH"].get("ty", ""), "list",
+                        "and carries its type")
+        kinds = {sg.get("kind") for sg in segs if sg.get("kind")}
+        assert_true("fv" in kinds or "bv" in kinds,
+                    f"variables are distinguished from constants ({kinds!r})")
+        # Unannotated runs carry no empty keys: the state is mostly
+        # ordinary text and repeating three empty strings per piece
+        # would dominate the payload.
+        plain = [sg for sg in segs if not sg.get("kind")]
+        assert_true(plain and all("ty" not in sg for sg in plain),
+                    "plain text carries no annotation keys")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -7463,6 +7519,8 @@ TESTS = [
      test_a_tail_reused_after_a_typo_matches_a_full_compile),
     ("initialize_says_which_hol_this_is",
      test_initialize_says_which_hol_this_is),
+    ("goal_state_segments_rebuild_pretty_with_annotations",
+     test_goal_state_segments_rebuild_pretty_with_annotations),
     ("abrupt_disconnect_exits", test_abrupt_disconnect_exits),
     ("abrupt_disconnect_during_compile_exits",
      test_abrupt_disconnect_during_compile_exits),

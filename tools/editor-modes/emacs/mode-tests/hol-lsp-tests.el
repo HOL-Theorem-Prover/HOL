@@ -432,3 +432,68 @@ an unchecked proof as checked.  Only what has left the buffer goes."
             (should (equal (hol-lsp-proof-summary) "\u22a20/1 ")))
           (kill-buffer buf))
       (delete-file file))))
+
+;;; ---------------------------------------------------------------
+;;; Goals-pane annotations
+;;;
+;;; The pane shows text that is in no file, so hover has nothing to
+;;; hover over.  The server sends `segments' beside `pretty', and these
+;;; check the two things that make them usable: what each says, and
+;;; that they land on the right characters.
+;;; ---------------------------------------------------------------
+
+(ert-deftest hol-lsp-segment-doc ()
+  "A constant is named by theory and typed; a variable just typed."
+  (should (equal (hol-lsp--segment-doc
+                  '(:text "MAP" :kind "const" :name "listTheory$MAP"
+                    :ty "('a -> 'b) -> 'a list -> 'b list"))
+                 "listTheory$MAP : ('a -> 'b) -> 'a list -> 'b list"))
+  (should (equal (hol-lsp--segment-doc
+                  '(:text "l" :kind "fv" :ty "l :'a list"))
+                 "l :'a list"))
+  (should (equal (hol-lsp--segment-doc
+                  '(:text "h" :kind "bv" :ty "h :'a"))
+                 "bound h :'a"))
+  ;; plain text says nothing, and must not be annotated
+  (should-not (hol-lsp--segment-doc '(:text " = "))))
+
+(ert-deftest hol-lsp-apply-segments-positions ()
+  "Annotations land on their own characters and nowhere else."
+  (with-temp-buffer
+    ;; The segments spell "f x = y"; the buffer holds it from point 1.
+    (insert "f x = y")
+    (hol-lsp--apply-segments
+     1 '((:text "f" :kind "const" :name "my$f" :ty "num -> num")
+         (:text " ")
+         (:text "x" :kind "fv" :ty "x :num")
+         (:text " = y"))
+     0)
+    (should (equal (get-text-property 1 'hol-lsp-doc) "my$f : num -> num"))
+    (should-not (get-text-property 2 'hol-lsp-doc))     ; the space
+    (should (equal (get-text-property 3 'hol-lsp-doc) "x :num"))
+    (should-not (get-text-property 4 'hol-lsp-doc))
+    ;; the mouse gets the same string
+    (should (equal (get-text-property 3 'help-echo) "x :num"))))
+
+(ert-deftest hol-lsp-apply-segments-skips-stripped-prefix ()
+  "SKIP accounts for the context line the buffer does not show.
+The tags are rendered into the header instead, so the segment stream
+is longer than the buffer by exactly that prefix -- getting this wrong
+would shift every annotation."
+  (with-temp-buffer
+    (insert "x = y")                    ; buffer lacks the "[tag]\n" prefix
+    (hol-lsp--apply-segments
+     1 '((:text "[tag]\n")              ; 6 chars, stripped
+         (:text "x" :kind "fv" :ty "x :num")
+         (:text " = y"))
+     6)
+    (should (equal (get-text-property 1 'hol-lsp-doc) "x :num"))))
+
+(ert-deftest hol-lsp-apply-segments-tolerates-disagreement ()
+  "Segments running past the buffer annotate nothing rather than
+the wrong text."
+  (with-temp-buffer
+    (insert "ab")
+    (hol-lsp--apply-segments
+     1 '((:text "abcdef" :kind "const" :name "my$c" :ty "num")) 0)
+    (should-not (get-text-property 1 'hol-lsp-doc))))

@@ -112,6 +112,10 @@ val hoverQuotation:
    and returns the goal-state to render.  Returns NONE if the cursor
    isn't inside a proof body or the quote can't be parsed. *)
 type goal_state = {asms: string list, goal: string}
+(* Structurally the same record as `PPBackEnd.pp_segment`, and so the
+   same type -- declared again here because this file is `use`d at
+   bootstrap, long before `src/parse` exists. *)
+type pp_segment = {text: string, kind: string, name: string, ty: string}
 type goal_state_response = {
   theorem: string, step: int, goals: goal_state list,
   (* Rendered form of the whole state — HOL's own `pp_goalstate`
@@ -144,7 +148,25 @@ type goal_state_response = {
      runtime diagnostic (LSP squiggle).  NONE when there is no
      failure or the failure has no natural byte range (e.g. a
      structural marker, or a timeout). *)
-  failedRange: (int * int) option}
+  failedRange: (int * int) option,
+  (* `pretty` again, but taken apart: consecutive pieces whose texts
+     concatenate to exactly what `pretty` prints once its colour
+     escapes are removed.  Each piece carries what the pretty-printer
+     knew and colour could only hint at -- whether a symbol is a
+     constant, a free or bound variable, a type operator; a constant's
+     theory-qualified name; and its type.  A client applies it as a
+     tooltip, or reads it out for whatever the cursor is on.
+
+     Text rather than offsets into `pretty` deliberately: the client
+     rebuilds the string from these, so there is no third convention
+     for what an offset counts (bytes here, utf-16 on the wire) to get
+     wrong.  Empty when the state could not be rendered.
+
+     `kind` is one of "const", "fv", "bv", "tyvar", "tyop", "tysyn",
+     or "" for text that carries no annotation.  `name` is set for a
+     constant ("listTheory$MAP") and a type operator; `ty` for the
+     three term kinds. *)
+  segments: pp_segment list}
 type theorem_context = {
   name: string,           (* theorem name, e.g. "foo" *)
   quote: string,          (* raw text of the theorem statement *)

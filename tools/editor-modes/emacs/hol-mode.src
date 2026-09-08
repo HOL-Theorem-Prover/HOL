@@ -3230,7 +3230,14 @@ together ask for that theory's theorems whose names match."
 
 (define-derived-mode hol-lsp-goals-mode special-mode "HOL Goals"
   "Major mode for the *HOL Goals* buffer populated by the HOL LSP.
-Inherits `special-mode' keys — `q' buries the window.")
+Inherits `special-mode' keys — `q' buries the window.
+
+Point over a constant or a variable and the echo area says what it
+is: a constant's theory-qualified name and type, a variable's type.
+The mouse gets the same text as a tooltip.  Both come from the
+`segments' the server sends beside `pretty'."
+  (add-hook 'eldoc-documentation-functions #'hol-lsp--goals-eldoc nil t)
+  (eldoc-mode 1))
 
 (defun hol-lsp--context-line (ctx)
   "The server's combinator tags CTX as one bracketed line, or nil.
@@ -3308,6 +3315,60 @@ attempt to edit the script file."
 (defvar-local hol-lsp--last-render nil
   "The (HEADER . BODY) last put in this buffer, or nil.")
 
+(defun hol-lsp--segment-doc (sg)
+  "What to say about segment SG, or nil if it says nothing.
+A constant is worth naming by theory as well as typing --
+`listTheory$MAP\=' is the identity question the goals pane cannot
+otherwise answer, since the text is in no file and so nothing to
+hover over.  A variable\='s `ty\=' is already HOL\='s own `name :type\=',
+so it needs no second copy of the name."
+  (let ((kind (plist-get sg :kind))
+        (name (plist-get sg :name))
+        (ty (plist-get sg :ty)))
+    (cond ((null kind) nil)
+          ((and name ty) (format "%s : %s" name ty))
+          (name name)
+          ((and ty (equal kind "bv")) (concat "bound " ty))
+          (ty ty)
+          (t nil))))
+
+(defun hol-lsp--apply-segments (start segs skip)
+  "Annotate the goals buffer from START using SEGS.
+
+SEGS covers the whole of the server\='s `pretty\=', but the buffer holds
+it with the context line removed, so the first SKIP characters of the
+segment stream are not in the buffer at all.  Positions are therefore
+arithmetic rather than a search: the segments concatenate to exactly
+what is in the buffer once `ansi-color-apply-on-region\=' has taken the
+escapes out, which is a property the server\='s own tests hold it to.
+
+Only annotated segments get properties -- most of a goal state is
+punctuation and whitespace.  `help-echo\=' serves the mouse and
+`hol-lsp-doc\=' the eldoc function, from the same string."
+  (let ((seen 0)
+        (limit (point-max)))
+    (dolist (sg (append segs nil))
+      (let* ((text (or (plist-get sg :text) ""))
+             (len (length text))
+             (doc (hol-lsp--segment-doc sg)))
+        (when (and doc (>= seen skip))
+          (let* ((from (+ start (- seen skip)))
+                 (to (+ from len)))
+            ;; A segment past the end would mean the two renders
+            ;; disagreed; annotate nothing rather than the wrong text.
+            (when (<= to limit)
+              (put-text-property from to 'help-echo doc)
+              (put-text-property from to 'hol-lsp-doc doc))))
+        (setq seen (+ seen len))))))
+
+(defun hol-lsp--goals-eldoc (callback &rest _ignored)
+  "Describe the symbol at point in the goals buffer, for eldoc.
+Reads the property `hol-lsp--apply-segments\=' left behind, so it costs
+a text-property lookup and no round trip to the server."
+  (let ((doc (get-text-property (point) 'hol-lsp-doc)))
+    (when doc (funcall callback doc))
+    doc))
+
 (defun hol-lsp--render-goals (result)
   "Render RESULT into *HOL Goals* and display it below the selected
 window.  Preserves ANSI colour escapes from the server's `pretty'
@@ -3330,6 +3391,14 @@ header."
            (err (plist-get result :error))
            (body (and pretty (not (string-empty-p pretty))
                       (hol-lsp--strip-context pretty ctx)))
+           (segs (plist-get result :segments))
+           ;; `strip-context' only ever removes a prefix, so what the
+           ;; buffer is missing from the front of the segment stream is
+           ;; the difference in length once colour is out of the way.
+           (skip (if (and segs body)
+                     (- (length (ansi-color-filter-apply pretty))
+                        (length (ansi-color-filter-apply body)))
+                   0))
            (same (equal (cons header body) hol-lsp--last-render)))
      (if same
          ;; Nothing has changed, so leave the window where the user
@@ -3344,7 +3413,10 @@ header."
         ;; backend — ANSI escapes classify bound / free vars.
         (let ((start (point)))
           (insert body)
-          (ansi-color-apply-on-region start (point))))
+          (ansi-color-apply-on-region start (point))
+          ;; After the escapes are gone the buffer text is exactly the
+          ;; segments' text, which is what makes the offsets line up.
+          (when segs (hol-lsp--apply-segments start segs skip))))
        (t
         (dolist (g (append (plist-get result :goals) nil))
           (dolist (a (append (plist-get g :asms) nil))

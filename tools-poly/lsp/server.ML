@@ -118,9 +118,20 @@ fun encGoalState ({asms, goal}: goal_state) print = (
 (* `encRng` rather than a range encoder of its own: the byte offsets
    the walker reports mean nothing without the line table of the text
    they were measured against, and that is not in scope this early. *)
+fun encSegment ({text, kind, name, ty}: LSPExtension.pp_segment) print = (
+  print "{\"text\":"; encString text print;
+  (* Only what this piece actually knows: a run of ordinary text is
+     three empty strings otherwise, and the state is mostly ordinary
+     text. *)
+  if kind = "" then () else (print ",\"kind\":"; encString kind print);
+  if name = "" then () else (print ",\"name\":"; encString name print);
+  if ty = "" then () else (print ",\"ty\":"; encString ty print);
+  print "}")
+
 fun encGoalStateResponse encRng
                          ({theorem, step, goals, pretty, context, status,
-                           error, failedRange} : goal_state_response) print = (
+                           error, failedRange, segments}
+                            : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
   print ",\"goals\":"; encArray encGoalState goals print;
@@ -131,6 +142,7 @@ fun encGoalStateResponse encRng
   (* Where the walk stopped, so a client can point at it rather than
      make the reader find it from the message. *)
   print ",\"failedRange\":"; encOrNull encRng failedRange print;
+  print ",\"segments\":"; encArray encSegment segments print;
   print "}")
 
 (* Stream an in-memory buffer's declarations.  The parser pulls its

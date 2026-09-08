@@ -45,6 +45,24 @@ local
       (HOLPP.pp_to_string width goalFrag.pp_goalstate) st
     handle _ => ""
 
+  (* The same state, rendered again through the back end that says in
+     data what `vt100_terminal` says in colour, then taken apart.  Two
+     passes rather than one because `pretty` is what most clients
+     render and it should not change: a client that wants the
+     annotations rebuilds the text from these instead.
+
+     The two agree on where the lines break.  `lsp_terminal` emits its
+     delimiters with `add_stringsz (_, 0)` and delegates every layout
+     operation to `raw_terminal`, so the annotations are invisible to
+     the pretty-printer's width arithmetic -- which the selftest holds
+     it to, since a disagreement would silently hand clients segments
+     that do not match the text beside them. *)
+  fun ppSegments width st =
+    PPBackEnd.lsp_segments
+      (Lib.with_flag (Parse.current_backend, PPBackEnd.lsp_terminal)
+         (HOLPP.pp_to_string width goalFrag.pp_goalstate) st)
+    handle _ => []
+
   val fragEndByte = TacticSteps.atomEndByte
 
   fun stepIndex (frags, cursor) = let
@@ -142,7 +160,7 @@ val () = LSPExtension.goalStateAtPos :=
                    goals = [], pretty = "", context = [], status = "ok",
                    error = SOME ("walker timed out (>"
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
-                   failedRange = NONE}
+                   failedRange = NONE, segments = []}
               | SOME {state, failedAt} => let
                   val silent = case failedAt of
                       SOME f => sourceFailure f
@@ -157,7 +175,8 @@ val () = LSPExtension.goalStateAtPos :=
                             then "pending" else "ok",
                    error = Option.map (failMsg tacText o #1) reported,
                    failedRange =
-                     Option.mapPartial (failRange tacStart o #1) reported}
+                     Option.mapPartial (failRange tacStart o #1) reported,
+                   segments = ppSegments width state}
                   end
            end
        | (SOME tm, NONE) => let
@@ -169,7 +188,8 @@ val () = LSPExtension.goalStateAtPos :=
                     pretty = ppState width startState,
                     context = goalFrag.context_lines startState,
                     status = "ok", error = NONE,
-                    failedRange = NONE}
+                    failedRange = NONE,
+                    segments = ppSegments width startState}
            end
        | _ => NONE
     end)

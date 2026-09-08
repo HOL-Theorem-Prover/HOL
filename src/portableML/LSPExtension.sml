@@ -203,10 +203,12 @@ type hover_context = {
   width: int }
 
 type goal_state = {asms: string list, goal: string}
+type pp_segment = {text: string, kind: string, name: string, ty: string}
 type goal_state_response = {
   theorem: string, step: int, goals: goal_state list, pretty: string,
   context: string list, status: string,
-  error: string option, failedRange: (int * int) option}
+  error: string option, failedRange: (int * int) option,
+  segments: pp_segment list}
 type theorem_context = {
   name: string, quote: string, quoteStart: int,
   tacText: string, tacStart: int, cursor: int, compileDone: bool}
