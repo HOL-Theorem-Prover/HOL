@@ -985,4 +985,95 @@ in
   val _ = List.app (with_flag(Feedback.emit_WARNING, false) test) dbsptests
 end
 
+(* ProofStepPlan tests.  These construct TacticParse trees directly: parser
+   surface-syntax tests belong to TacticParse, while these check the shared
+   lowering and path/signature layer independently. *)
+val _ = let
+  open TacticParse ProofStepPlan
+  fun assert msg true = OK ()
+    | assert msg false = die msg
+  val a = Opaque (10, "a")
+  val b = Opaque (10, "b")
+  val c = Opaque (10, "c")
+  val plan = fromTactic (Then [a, First [b, c]])
+  val _ = tprint "ProofStepPlan lowers structured THEN suffix under Each"
+  val _ = assert "unexpected structured THEN plan"
+    (case plan of
+       [Leaf {kind = TacticLeaf, ...},
+        Each [Choice [[Leaf {kind = TacticLeaf, ...}],
+                      [Leaf {kind = TacticLeaf, ...}]]]] => true
+     | _ => false)
+  val _ = tprint "ProofStepPlan lowers THENL representation to Cases"
+  val cases = fromTactic
+    (ThenLT (a, [LNullOk (LTacsToLT (List ("list", [b, c])))]))
+  val _ = assert "unexpected THENL plan"
+    (case cases of
+       [Leaf _, Cases [[Leaf _], [Leaf _]]] => true
+     | _ => false)
+  val _ = tprint "ProofStepPlan path lookup follows dynamic structural paths"
+  val _ = assert "path did not locate alternative leaf"
+    (case stepAtPath plan
+       [PathStep 1, PathEach 0, PathStep 0, PathAlternative 2, PathStep 0] of
+       SOME (Leaf _) => true
+     | _ => false)
+  fun leafText _ _ = "opaque"
+  fun annotationText _ = "selector"
+  val projections = {leaf = leafText, annotation = annotationText}
+  val plan2 = fromTactic
+    (Then [Opaque (10, "moved-a"),
+           First [Opaque (10, "moved-b"), Opaque (10, "moved-c")]])
+  val _ = tprint "ProofStepPlan canonical form is controlled by projections"
+  val _ = assert "canonical plan unexpectedly depends on annotations"
+    (canonicalPlan projections plan = canonicalPlan projections plan2)
+  val _ = tprint "ProofStepPlan canonical prefix includes preceding structure"
+  val path =
+    [PathStep 1, PathEach 0, PathStep 0, PathAlternative 2, PathStep 0]
+  val _ = assert "canonical prefix unavailable"
+    (Option.isSome (canonicalPrefix projections plan path))
+  fun parseTactic source = let
+    val fed = ref false
+    fun read _ = if !fed then "" else (fed := true; source)
+    fun ignoreParseError _ _ _ = ()
+    val result = HOLSourceParser.parseSML
+      "<ProofStepPlan selftest>" read ignoreParseError
+      HOLSourceParser.initialScope
+    in
+      case #parseDec result () of
+        SOME (HOLSourceAST.DecExp expression) => parseTacticBlock expression
+      | _ => raise Fail "expected tactic expression"
+    end
+  val _ = tprint "TacticParse preserves by rather than elaborating it as sg"
+  val parsedBy = parseTactic "q by tac"
+  val _ = assert "by parsed as ordinary subgoal/THEN1 structure"
+    (case parsedBy of By ((0, 1), _) => true | _ => false)
+  val _ = tprint "TacticParse preserves suffices_by as a primitive"
+  val parsedSuffices = parseTactic "q suffices_by tac"
+  val _ = assert "suffices_by parsed as ordinary subgoal structure"
+    (case parsedSuffices of SufficesBy ((0, 1), _) => true | _ => false)
+  val _ = tprint "TacticParse prints preserved by syntax"
+  val _ = assert "by did not print as by"
+    (case printTacAsSML "q by tac" parsedBy of
+       SOME text => String.isSubstring "by" text
+     | NONE => false)
+  val _ = tprint "ProofStepPlan preserves by semantics structurally"
+  val byPlan = fromTactic (By ("assertion", b))
+  val _ = assert "by was lowered through ordinary Subgoal"
+    (case byPlan of
+       [Leaf {kind = TacticLeaf, tactic = By ("assertion", Then [] )},
+        Select {selector = SelectFirst, mode = SelectSolve,
+                body = [Leaf {kind = TacticLeaf, ...}]}] => true
+     | _ => false)
+  val _ = tprint "ProofStepPlan preserves suffices_by semantics structurally"
+  val sufficesPlan = fromTactic (SufficesBy ("assertion", b))
+  val _ = assert "suffices_by was lowered through ordinary Subgoal"
+    (case sufficesPlan of
+       [Leaf {kind = TacticLeaf,
+              tactic = SufficesBy ("assertion", Then [])},
+        Select {selector = SelectFirst, mode = SelectSolve,
+                body = [Leaf {kind = TacticLeaf, ...}]}] => true
+     | _ => false)
+in
+  ()
+end
+
 val _ = exit_count0 failcount
