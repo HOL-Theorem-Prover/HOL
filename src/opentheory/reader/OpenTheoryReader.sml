@@ -69,17 +69,11 @@ in
   else raise ERR "define_const_in_thy" ("wrong theory: "^ct^" (wanted "^Thy^" for "^Name^")")
 end
 
+(* imp_def, and_def, exists_def from OpenTheoryReaderContextTheory *)
 local
-  open boolLib BasicProvers metisLib
+  open boolLib OpenTheoryReaderContextTheory
   fun ins (th,n) = Net.insert (concl th,th) n
-  val imp_def = METIS_PROVE[]``$==> = (\p q. p /\ q <=> p)``;
-  val and_def = prove(``$/\ = (\p q. (\f:bool->bool->bool. f p q) = (\f. f T T))``,
-    SRW_TAC [][FUN_EQ_THM,EQ_IMP_THM]);
-  val exists_def = prove(``$? = (\P. !q. (!x. P x ==> q) ==> q)``,
-    SRW_TAC [][FUN_EQ_THM] THEN
-    SUBST_TAC [GSYM (ISPEC ``P:'a->bool`` ETA_THM)] THEN
-    METIS_TAC [])
-  val imp1 = METIS_PROVE[]``!t. t ==> t``
+  val imp1 = let val t = mk_var("t",Type.bool) in GEN t (DISCH t (ASSUME t)) end
   val split = (map GEN_ALL) o CONJUNCTS o SPEC_ALL
 in
   val base_thms = foldl ins Net.empty ((CONJUNCTS NOT_CLAUSES)@(split EQ_CLAUSES)@(split IMP_CLAUSES)@(split AND_CLAUSES)@[imp_def,and_def,exists_def,imp1])
