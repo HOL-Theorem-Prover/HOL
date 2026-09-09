@@ -52,6 +52,7 @@ datatype 'a tac_expr
   | By of 'a * 'a tac_expr
   | SufficesBy of 'a * 'a tac_expr
   | First of 'a tac_expr list
+  | FirstProve of 'a tac_expr list
   | Try of 'a tac_expr
   | Repeat of 'a tac_expr
   | MapEvery of 'a * 'a tac_expr list
@@ -91,6 +92,7 @@ fun isTac (Then _) = true
   | isTac (By _) = true
   | isTac (SufficesBy _) = true
   | isTac (First _) = true
+  | isTac (FirstProve _) = true
   | isTac (Try _) = true
   | isTac (Repeat _) = true
   | isTac (MapEvery _) = true
@@ -218,6 +220,9 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
     | SOME ("FIRST", [le]) => (case listElems le of
         SOME args => First (foldr (uncurry simplifyFirst) [] args)
       | NONE => Opaque (trPrec e))
+    | SOME ("FIRST_PROVE", [le]) => (case listElems le of
+        SOME args => group true (tr e) (FirstProve (map simplify args))
+      | NONE => Opaque (trPrec e))
     | SOME ("MAP_EVERY", [f, le]) => (case listElems le of
         SOME args => MapEvery (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
@@ -314,6 +319,7 @@ fun mapTacExpr {start, stop, repair} = let
     | go (By (q, e)) = By (tr false q, go e)
     | go (SufficesBy (q, e)) = SufficesBy (tr false q, go e)
     | go (First ls) = First (map go ls)
+    | go (FirstProve ls) = FirstProve (map go ls)
     | go (Try e) = Try (go e)
     | go (Repeat e) = Repeat (go e)
     | go (Rename p) = Rename (tr false p)
@@ -377,6 +383,7 @@ local
           TInfix (TAtom (sub q), "suffices_by", go e)
       | go (First []) = TAtom "NO_TAC"
       | go (First ls) = mkInfixl "ORELSE" (map go ls)
+      | go (FirstProve ls) = TApp ("FIRST_PROVE", [TList (map go ls)])
       | go (Try e) = TApp ("TRY", [go e])
       | go (Repeat e) = TApp ("rpt", [go e])
       | go (Rename p) = TApp ("RENAME_TAC", [TAtom (sub p)])
@@ -544,6 +551,10 @@ fun linearize isAtom e = let
     | ThenLT (e, ls) => asTac (goList ls o go e) acc
     | First [] => (true, FAtom (First []) :: acc')
     | First (e::ls) =>
+      asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
+        map (fn e => snd (go e (one, []))) (e::ls))) acc
+    | FirstProve [] => (true, FAtom (FirstProve []) :: acc')
+    | FirstProve (e::ls) =>
       asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls))) acc
     | Try e' => asTac (tryish FClose e') acc
