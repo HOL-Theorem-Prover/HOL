@@ -28,7 +28,9 @@ sig
      not safely checkpoint inside them without also modelling their goal-list
      traversal, backtracking, and goal order.
      Thus the TacticParse encoding of REVERSE t as t THEN_LT REVERSE_LT is
-     kept as one source-level tactic leaf. *)
+     kept as one source-level tactic leaf.  In contrast, literal MAP_EVERY and
+     MAP_FIRST argument lists are expanded into their explicit applications:
+     a sequence for MAP_EVERY and a tactic Choice for MAP_FIRST. *)
   val fromTactic : 'a TacticParse.tac_expr -> 'a plan
 
   datatype path_component =

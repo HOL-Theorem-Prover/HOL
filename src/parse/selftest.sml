@@ -1008,6 +1008,19 @@ val _ = let
     (case fromTactic (Group (true, "first", First [b, c])) of
        [Choice {source = SOME "first", ...}] => true
      | _ => false)
+  val _ = tprint "ProofStepPlan expands mapped tactic applications"
+  val mappedArguments = [OOpaque (10, "x"), OOpaque (10, "y")]
+  val _ = assert "MAP_EVERY was not lowered as a tactic sequence"
+    (case fromTactic (MapEvery ("f", mappedArguments)) of
+       [Leaf {tactic = MapEvery ("f", [_]), ...},
+        Leaf {tactic = MapEvery ("f", [_]), ...}] => true
+     | _ => false)
+  val _ = assert "MAP_FIRST was not lowered as a choice"
+    (case fromTactic
+       (Group (true, "map-first", MapFirst ("f", mappedArguments))) of
+       [Choice {source = SOME "map-first",
+                alternatives = [[Leaf _], [Leaf _]]}] => true
+     | _ => false)
   val _ = tprint "ProofStepPlan keeps tactic-level reverse atomic"
   val reverse = Group (true, "reverse", ThenLT (a, [LReverse]))
   val _ = assert "reverse exposed a spanless list-tactic leaf"
@@ -1065,6 +1078,10 @@ val _ = let
         SOME (HOLSourceAST.DecExp expression) => parseTacticBlock expression
       | _ => raise Fail "expected tactic expression"
     end
+  val _ = assert "lowercase map_every parsed as opaque"
+    (case parseTactic "map_every f [x]" of
+       Group (_, _, MapEvery (_, [_])) => true
+     | _ => false)
   val _ = tprint "TacticParse preserves FIRST_PROVE"
   val parsedFirstProve = parseTactic "FIRST_PROVE [a, b]"
   val _ = assert "FIRST_PROVE parsed as an opaque tactic"
