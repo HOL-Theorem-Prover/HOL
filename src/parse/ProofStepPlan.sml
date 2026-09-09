@@ -48,6 +48,7 @@ fun needsEach tactic =
     | SufficesBy _ => true
     | First _ => true
     | FirstProve _ => true
+    | MapFirst (_, _ :: _) => true
     | TacticParse.Try _ => true
     | _ => false
 
@@ -79,6 +80,16 @@ and planTactic tactic =
     | FirstProve alternatives =>
         [Choice {source = sourceAnnotation tactic,
                  alternatives = map planTactic alternatives}]
+    | MapEvery (_, []) => [tacticLeaf tactic]
+    | MapEvery (function, arguments) =>
+        map (fn argument => tacticLeaf (MapEvery (function, [argument]))) arguments
+    | MapFirst (_, []) => [tacticLeaf tactic]
+    | MapFirst (function, arguments) =>
+        [Choice {source = sourceAnnotation tactic,
+                 alternatives =
+                   map (fn argument =>
+                          [tacticLeaf (MapEvery (function, [argument]))])
+                       arguments}]
     | TacticParse.Try body => [Try (planTactic body)]
     (* REPEAT recursively traverses every generated goal.  Until a plan
        executor records that traversal, splitting its body is unsound for
