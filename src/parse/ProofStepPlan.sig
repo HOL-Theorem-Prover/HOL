@@ -16,7 +16,7 @@ sig
     | Select of {selector : 'a selector, mode : select_mode,
                  body : 'a step list}
     | Cases of 'a step list list
-    | Choice of 'a step list list
+    | Choice of {source : 'a option, alternatives : 'a step list list}
     | Repeat of 'a step list
     | Try of 'a step list
 

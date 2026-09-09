@@ -1000,8 +1000,13 @@ val _ = let
   val _ = assert "unexpected structured THEN plan"
     (case plan of
        [Leaf {kind = TacticLeaf, ...},
-        Each [Choice [[Leaf {kind = TacticLeaf, ...}],
-                      [Leaf {kind = TacticLeaf, ...}]]]] => true
+        Each [Choice {source = NONE,
+                      alternatives = [[Leaf {kind = TacticLeaf, ...}],
+                                      [Leaf {kind = TacticLeaf, ...}]]}] => true
+     | _ => false)
+  val _ = assert "choice lost its source annotation"
+    (case fromTactic (Group (true, "first", First [b, c])) of
+       [Choice {source = SOME "first", ...}] => true
      | _ => false)
   val _ = tprint "ProofStepPlan keeps tactic-level reverse atomic"
   val reverse = Group (true, "reverse", ThenLT (a, [LReverse]))
