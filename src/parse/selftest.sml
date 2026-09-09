@@ -1032,6 +1032,14 @@ val _ = let
     (case fromTactic (Then [b, reverse]) of
        [Leaf _, Leaf {tactic = Group (true, "reverse", _), ...}] => true
      | _ => false)
+  val _ = tprint "ProofStepPlan omits the >>~- failure sentinel"
+  val _ = assert ">>~- exposed its internal First [] sentinel"
+    (case fromTactic
+       (ThenLT (a,
+          [LSelectThen (Rename "pattern", Then [b, First []])])) of
+       [Leaf _, Select {selector = SelectMatchingAll "pattern",
+                        mode = SelectSolve, body = [Leaf _]}] => true
+     | _ => false)
   val _ = tprint "ProofStepPlan keeps list-tactic alternatives atomic"
   val _ = assert "list-tactic alternative was exposed as Choice"
     (case fromTactic (ThenLT (a, [LFirst [LOpaque (10, "x"),
