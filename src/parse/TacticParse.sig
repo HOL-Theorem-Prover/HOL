@@ -8,6 +8,7 @@ datatype 'a tac_expr
   | By of 'a * 'a tac_expr
   | SufficesBy of 'a * 'a tac_expr
   | First of 'a tac_expr list
+  | FirstProve of 'a tac_expr list
   | Try of 'a tac_expr
   | Repeat of 'a tac_expr
   | MapEvery of 'a * 'a tac_expr list
@@ -117,7 +118,8 @@ end
     a source span (int * int), threaded uniformly and re-decorated via
     mapTacExpr.  Its constructors fall into three groups:
 
-      - Tactic forms: Then, ThenLT, Subgoal, By, SufficesBy, First, Try,
+      - Tactic forms: Then, ThenLT, Subgoal, By, SufficesBy, First,
+        FirstProve, Try,
         Repeat, MapEvery, MapFirst, Rename, Opaque.  These denote ordinary
         tactics (functions on a single goal).  Then is an n-ary
         flattening of THEN; ThenLT bridges into a list_tactic

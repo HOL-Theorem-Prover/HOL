@@ -47,6 +47,7 @@ fun needsEach tactic =
     | By _ => true
     | SufficesBy _ => true
     | First _ => true
+    | FirstProve _ => true
     | TacticParse.Try _ => true
     | _ => false
 
@@ -73,6 +74,9 @@ and planTactic tactic =
          Select {selector = SelectFirst, mode = SelectSolve,
                  body = planTactic body}]
     | First alternatives =>
+        [Choice {source = sourceAnnotation tactic,
+                 alternatives = map planTactic alternatives}]
+    | FirstProve alternatives =>
         [Choice {source = sourceAnnotation tactic,
                  alternatives = map planTactic alternatives}]
     | TacticParse.Try body => [Try (planTactic body)]

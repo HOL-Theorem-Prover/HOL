@@ -1065,6 +1065,20 @@ val _ = let
         SOME (HOLSourceAST.DecExp expression) => parseTacticBlock expression
       | _ => raise Fail "expected tactic expression"
     end
+  val _ = tprint "TacticParse preserves FIRST_PROVE"
+  val parsedFirstProve = parseTactic "FIRST_PROVE [a, b]"
+  val _ = assert "FIRST_PROVE parsed as an opaque tactic"
+    (case parsedFirstProve of
+       Group (_, _, FirstProve [Opaque _, Opaque _]) => true
+     | _ => false)
+  val _ = assert "FIRST_PROVE did not print as FIRST_PROVE"
+    (case printTacAsSML "FIRST_PROVE [a, b]" parsedFirstProve of
+       SOME text => String.isSubstring "FIRST_PROVE" text
+     | NONE => false)
+  val _ = assert "FIRST_PROVE was not lowered as a choice"
+    (case fromTactic parsedFirstProve of
+       [Choice {source = SOME _, alternatives = [[Leaf _], [Leaf _]]}] => true
+     | _ => false)
   val _ = tprint "TacticParse preserves by rather than elaborating it as sg"
   val parsedBy = parseTactic "q by tac"
   val _ = assert "by parsed as ordinary subgoal/THEN1 structure"
