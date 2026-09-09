@@ -412,6 +412,16 @@ val if_T = hd (amatch ``if T then t1 else t2``);
 val if_F = hd (amatch ``if F then t1 else t2``);
 
 (* |- !t1 t2. ?fn. fn T = t1 /\ fn F = t2 *)
+(* The proofs below index into 'goals' positionally, so a change in the
+   article's assumption set shifts every index after the change.  Check the
+   count up front: otherwise the mismatch surfaces as a pile of tactic
+   failures in unrelated proofs, tens of minutes into an otknl build. *)
+val _ = if List.length goals <> 97 then
+          raise ERR "-"
+            ("assumptions changed: expected 97, found " ^
+             Int.toString (List.length goals))
+        else ();
+
 Theorem th1: ^(el 1 goals |> concl)
 Proof
   rpt gen_tac
@@ -1701,10 +1711,6 @@ val th89 = store_thm
   MATCH_ACCEPT_TAC ex_unique_thm);
  *)
 
-(* Now raise an error if the above th98 is not the last one *)
-val _ = if List.length goals <> 97 then
-            (raise ERR "-" "assumptions changed")
-        else ();
 
 (* Other theorems (from boolTheory, used by other OT packages)
 
