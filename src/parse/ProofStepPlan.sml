@@ -38,6 +38,7 @@ fun stripGroup (Group (_, _, tactic)) = stripGroup tactic
 fun needsEach tactic =
   case stripGroup tactic of
       Then tactics => List.exists needsEach tactics
+    | ThenLT (_, [LReverse]) => false
     | ThenLT _ => true
     | By _ => true
     | SufficesBy _ => true
