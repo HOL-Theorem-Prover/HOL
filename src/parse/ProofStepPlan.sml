@@ -53,6 +53,10 @@ and planTactic tactic =
       Then [] => [tacticLeaf tactic]
     | Then (first :: rest) =>
         planTactic first @ List.concat (map suffix rest)
+    (* Although TacticParse expands source-level REVERSE t to
+       t THEN_LT REVERSE_LT, goal reordering is deliberately an atomic plan
+       step.  Retaining tactic also retains its enclosing Group annotation. *)
+    | ThenLT (_, [LReverse]) => [tacticLeaf tactic]
     | ThenLT (first, rest) =>
         planTactic first @ List.concat (map planListTactic rest)
     | By (quotation, body) =>

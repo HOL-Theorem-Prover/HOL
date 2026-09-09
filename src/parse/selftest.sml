@@ -1003,6 +1003,12 @@ val _ = let
         Each [Choice [[Leaf {kind = TacticLeaf, ...}],
                       [Leaf {kind = TacticLeaf, ...}]]]] => true
      | _ => false)
+  val _ = tprint "ProofStepPlan keeps tactic-level reverse atomic"
+  val _ = assert "reverse exposed a spanless list-tactic leaf"
+    (case fromTactic (Group (true, "reverse", ThenLT (a, [LReverse]))) of
+       [Leaf {kind = TacticLeaf,
+              tactic = Group (true, "reverse", _)}] => true
+     | _ => false)
   val _ = tprint "ProofStepPlan lowers THENL representation to Cases"
   val cases = fromTactic
     (ThenLT (a, [LNullOk (LTacsToLT (List ("list", [b, c])))]))
