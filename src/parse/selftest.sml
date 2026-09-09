@@ -1082,6 +1082,10 @@ val _ = let
     (case parseTactic "map_every f [x]" of
        Group (_, _, MapEvery (_, [_])) => true
      | _ => false)
+  val _ = assert "MAP_FIRST lost its enclosing source annotation"
+    (case fromTactic (parseTactic "MAP_FIRST f [x]") of
+       [Choice {source = SOME _, alternatives = [[Leaf _]]}] => true
+     | _ => false)
   val _ = tprint "TacticParse preserves FIRST_PROVE"
   val parsedFirstProve = parseTactic "FIRST_PROVE [a, b]"
   val _ = assert "FIRST_PROVE parsed as an opaque tactic"

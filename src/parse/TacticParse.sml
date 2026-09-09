@@ -230,7 +230,8 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
         SOME args => MapEvery (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
     | SOME ("MAP_FIRST", [f, le]) => (case listElems le of
-        SOME args => MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args)
+        SOME args => group true (tr e)
+          (MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args))
       | NONE => Opaque (trPrec e))
     | SOME ("RENAME_TAC", [pat]) => group true (tr e) (Rename (tr pat))
     (* QLib.rename = Q.RENAME_TAC; same argument, a quotation list. *)
