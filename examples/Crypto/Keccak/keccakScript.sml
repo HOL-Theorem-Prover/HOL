@@ -109,14 +109,64 @@ Proof
   rw[SBIT_def, ODD_EXP_IFF]
 QED
 
-(*
-Theorem word_to_bytes_from_bin_list:
-  word_to_bytes (word_from_bin_list ls :'a word) F =
-  MAP word_from_bin_list (chunks 8 (PAD_RIGHT 0 (dimindex(:'a)) ls))
+Theorem word64_to_bytes_from_bools:
+  LENGTH bs = 64 ⇒
+  word_to_bytes
+    (word_from_bin_list (MAP bool_to_bit bs) : word64) F =
+  MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+      (chunks 8 bs)
 Proof
-  cheat
+  rw[LIST_EQ_REWRITE]
+  >- (Cases_on `bs` >- gvs[]
+      >> DEP_REWRITE_TAC[LENGTH_chunks]
+      >> gvs[NULL_EQ, divides_def, bool_to_bit_def])
+  >> `LENGTH (chunks 8 bs) = 8` by
+       (Cases_on `bs` >- gvs[]
+        >> DEP_REWRITE_TAC[LENGTH_chunks]
+        >> gvs[NULL_EQ, divides_def, bool_to_bit_def])
+  >> `bs ≠ []` by (Cases_on `bs` >> gvs[])
+  >> rw[word_to_bytes_def]
+  >> DEP_REWRITE_TAC[EL_word_to_bytes_aux, EL_MAP, EL_chunks, get_byte_n2w_le]
+  >> `l2n 2 (MAP bool_to_bit bs) < 2 ** 64` by
+       (qspecl_then [`MAP bool_to_bit bs`, `2`] mp_tac l2n_lt
+        >> simp[])
+  >> gvs[word_from_bin_list_def, l2w_def, GSYM WORD_EQ, word_bit_n2w,
+         LESS_MOD, NULL_EQ]
+  >> rw[BIT_def, BITS_THM]
+  >> `256 ** x = 2 ** (8 * x)` by
+       (Induct_on `x` >> simp[EXP, MULT_SUC, EXP_ADD])
+  >> simp[DIV_DIV_DIV_MULT, GSYM EXP_ADD]
+  >> DEP_REWRITE_TAC[l2n_DIGIT]
+  >> simp[EVERY_MAP, EVERY_MEM, FORALL_BOOL, bool_to_bit_def, EL_MAP,
+          LENGTH_TAKE, LENGTH_DROP, EL_TAKE, EL_DROP]
 QED
-*)
+
+Theorem chunks_8_64_256:
+  LENGTH bs = 256 ⇒
+  FLAT (MAP (chunks 8) (chunks 64 bs)) = chunks 8 bs
+Proof
+  strip_tac
+  >> `LENGTH (chunks 64 bs) = 4` by
+       (Cases_on `bs` >- gvs[]
+        >> DEP_REWRITE_TAC[LENGTH_chunks]
+        >> gvs[NULL_EQ, divides_def, bool_to_bit_def])
+  >> `EVERY ($= 64 o LENGTH) (chunks 64 bs)` by
+       (irule divides_EVERY_LENGTH_chunks
+        >> Cases_on `bs` >> gvs[divides_def])
+  >> `FLAT (chunks 64 bs) = bs` by simp[]
+  >> qpat_x_assum `LENGTH (chunks 64 bs) = 4` mp_tac
+  >> simp[LENGTH_EQ_NUM_compute, PULL_EXISTS]
+  >> rpt strip_tac
+  >> gvs[]
+  >> `bs = h ++ h' ++ h'' ++ h'³'` by
+       (qpat_assum `chunks 64 bs = [h; h'; h''; h'³']`
+          (fn th => mp_tac (AP_TERM ``FLAT`` th))
+        >> simp[])
+  >> gvs[]
+  >> DEP_REWRITE_TAC[chunks_append_divides]
+  >> map_every Cases_on [`h`, `h'`, `h''`, `h'³'`]
+  >> gvs[NULL_EQ, divides_def]
+QED
 
 Datatype:
   state_array =
@@ -3639,7 +3689,9 @@ Definition Keccak_256_bytes_def:
     MAP (PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
-(*
+(* This closes the end-to-end correspondence between the executable word64
+   implementation and the byte-oriented wrapper around the bit-level Keccak
+   specification. *)
 Theorem Keccak_256_w64_thm:
   Keccak_256_w64 = Keccak_256_bytes
 Proof
@@ -3676,9 +3728,48 @@ Proof
           MAP bool_to_bit` by rw[Abbr`f`, FUN_EQ_THM]
   \\ simp[Abbr`f`, GSYM MAP_MAP_o, Abbr`ls`]
   \\ simp[MAP_TAKE, GSYM chunks_MAP]
-  \\ cheat
+  \\ rewrite_tac[GSYM MAP_TAKE]
+  \\ rewrite_tac[chunks_MAP]
+  \\ pure_rewrite_tac[MAP_MAP_o, o_DEF]
+  \\ rewrite_tac[GSYM MAP_TAKE]
+  \\ pure_rewrite_tac[MAP_MAP_o, o_DEF]
+  \\ `TAKE 4 (chunks 64 bs) = chunks 64 (TAKE 256 bs)` by
+       (sym_tac \\ DEP_REWRITE_TAC[chunks_TAKE] \\ simp[divides_def])
+  \\ `TAKE 32 (chunks 8 bs) = chunks 8 (TAKE 256 bs)` by
+       (sym_tac \\ DEP_REWRITE_TAC[chunks_TAKE] \\ simp[divides_def])
+  \\ gvs[]
+  \\ `LENGTH (TAKE 256 bs) = 256` by simp[]
+  \\ `EVERY ($= 64 o LENGTH) (chunks 64 (TAKE 256 bs))` by
+       (irule divides_EVERY_LENGTH_chunks
+        \\ conj_tac >- (Cases_on `bs` \\ gvs[])
+        \\ simp[divides_def])
+  \\ qpat_x_assum `EVERY _ _` mp_tac
+  \\ simp[EVERY_MEM]
+  \\ strip_tac
+  \\ qpat_x_assum `(λx. word_to_bytes _ F) = _`
+       (fn th => once_rewrite_tac[GSYM th])
+  \\ `MAP (λx. word_to_bytes
+                    (word_from_bin_list (MAP bool_to_bit x) : word64) F)
+          (chunks 64 (TAKE 256 bs)) =
+       MAP (λx. MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+                       (chunks 8 x))
+          (chunks 64 (TAKE 256 bs))` by
+       (irule MAP_CONG \\ simp[]
+        \\ rpt strip_tac
+        \\ irule word64_to_bytes_from_bools
+        \\ first_x_assum irule
+        \\ first_assum ACCEPT_TAC)
+  \\ gvs[]
+  \\ `FLAT
+        (MAP (λx. MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+                        (chunks 8 x))
+          (chunks 64 (TAKE 256 bs))) =
+      MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+        (FLAT (MAP (chunks 8) (chunks 64 (TAKE 256 bs))))` by
+       (rewrite_tac[MAP_FLAT]
+        \\ simp[MAP_MAP_o, o_DEF])
+  \\ gvs[chunks_8_64_256]
 QED
-*)
 
 (* TODO: move/replace *)
 Definition hex_to_rev_bytes_def:
