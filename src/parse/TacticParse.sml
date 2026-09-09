@@ -226,6 +226,9 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
     | SOME ("MAP_EVERY", [f, le]) => (case listElems le of
         SOME args => MapEvery (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
+    | SOME ("map_every", [f, le]) => (case listElems le of
+        SOME args => MapEvery (tr f, map (fn e => OOpaque (trPrec e)) args)
+      | NONE => Opaque (trPrec e))
     | SOME ("MAP_FIRST", [f, le]) => (case listElems le of
         SOME args => MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
