@@ -218,7 +218,8 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
         SOME args => Then (foldr (uncurry simplifys) [] args)
       | NONE => Opaque (trPrec e))
     | SOME ("FIRST", [le]) => (case listElems le of
-        SOME args => First (foldr (uncurry simplifyFirst) [] args)
+        SOME args => group true (tr e)
+          (First (foldr (uncurry simplifyFirst) [] args))
       | NONE => Opaque (trPrec e))
     | SOME ("FIRST_PROVE", [le]) => (case listElems le of
         SOME args => group true (tr e) (FirstProve (map simplify args))
