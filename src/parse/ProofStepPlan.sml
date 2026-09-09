@@ -36,6 +36,17 @@ fun sourceAnnotation (Group (_, source, _)) = SOME source
   | sourceAnnotation (RepairGroup (source, _, _, _)) = SOME source
   | sourceAnnotation _ = NONE
 
+(* TacticParse appends First [] to the body of >>~- as an internal failure
+   sentinel.  Selection already records solve mode explicitly, so it is not
+   an executable child step of the source-level body. *)
+fun selectBody tactic =
+  case stripGroup tactic of
+      Then tactics =>
+        (case rev tactics of
+             First [] :: rest => Then (rev rest)
+           | _ => tactic)
+    | _ => tactic
+
 (* A structured right-hand side of THEN has to run once for each goal made by
    its left-hand side.  Atomic tactics retain the usual THEN behaviour when an
    executor applies them to all focused goals, so they need no Each node. *)
@@ -121,7 +132,8 @@ and planListTactic tactic =
         (case stripGroup selector of
              Rename annotation =>
                [Select {selector = SelectMatchingAll annotation,
-                        mode = SelectSolve, body = planTactic body}]
+                        mode = SelectSolve,
+                        body = planTactic (selectBody body)}]
            | _ => [listLeaf tactic])
     (* List-level try/repeat and goal-list reordering are kept atomic for the
        same reason as tactic-level REPEAT. *)
