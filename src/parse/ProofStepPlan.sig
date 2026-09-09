@@ -23,9 +23,10 @@ sig
   type 'a plan = 'a step list
 
   (* The standard plan is deliberately conservative about execution
-     granularity.  In particular, tactic- and list-tactic-level repeats and
-     goal reordering are leaves: an executor may not safely checkpoint inside
-     them without also modelling their per-goal traversal and goal order.
+     granularity.  In particular, tactic- and list-tactic-level repeats,
+     list-tactic alternatives, and goal reordering are leaves: an executor may
+     not safely checkpoint inside them without also modelling their goal-list
+     traversal, backtracking, and goal order.
      Thus the TacticParse encoding of REVERSE t as t THEN_LT REVERSE_LT is
      kept as one source-level tactic leaf. *)
   val fromTactic : 'a TacticParse.tac_expr -> 'a plan

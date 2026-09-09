@@ -1014,6 +1014,13 @@ val _ = let
     (case fromTactic (Then [b, reverse]) of
        [Leaf _, Leaf {tactic = Group (true, "reverse", _), ...}] => true
      | _ => false)
+  val _ = tprint "ProofStepPlan keeps list-tactic alternatives atomic"
+  val _ = assert "list-tactic alternative was exposed as Choice"
+    (case fromTactic (ThenLT (a, [LFirst [LOpaque (10, "x"),
+                                         LOpaque (10, "y")]])) of
+       [Leaf {kind = TacticLeaf, ...},
+        Leaf {kind = ListTacticLeaf, ...}] => true
+     | _ => false)
   val _ = tprint "ProofStepPlan lowers THENL representation to Cases"
   val cases = fromTactic
     (ThenLT (a, [LNullOk (LTacsToLT (List ("list", [b, c])))]))

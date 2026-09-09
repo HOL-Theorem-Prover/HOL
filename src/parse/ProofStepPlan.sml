@@ -88,8 +88,9 @@ and planListTactic tactic =
         (case stripGroup inner of
              LTacsToLT (List (_, cases)) => Cases (map planTactic cases) :: nil
            | _ => [listLeaf tactic])
-    | LFirst alternatives =>
-        [Choice (map planListTactic alternatives)]
+    (* List-tactic alternatives backtrack over a whole goal list.  Keep that
+       traversal atomic; Choice models tactic alternatives on one goal. *)
+    | LFirst _ => [listLeaf tactic]
     | LSelectGoal annotation =>
         [Select {selector = SelectMatchingFirst annotation,
                  mode = SelectKeep, body = []}]
