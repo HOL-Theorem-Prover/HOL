@@ -78,3 +78,4 @@ deltype Data_Pair_prod
 delconst Data_Pair_comma
 delconst Data_Pair_fst
 delconst Data_Pair_snd
+delconst HOL4_marker_Abbrev
