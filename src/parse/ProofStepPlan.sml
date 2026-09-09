@@ -18,7 +18,7 @@ datatype 'a step =
   | Select of {selector : 'a selector, mode : select_mode,
                body : 'a step list}
   | Cases of 'a step list list
-  | Choice of 'a step list list
+  | Choice of {source : 'a option, alternatives : 'a step list list}
   | Repeat of 'a step list
   | Try of 'a step list
 
@@ -31,6 +31,10 @@ fun listLeaf tactic = leaf ListTacticLeaf tactic
 fun stripGroup (Group (_, _, tactic)) = stripGroup tactic
   | stripGroup (RepairGroup (_, _, tactic, _)) = stripGroup tactic
   | stripGroup tactic = tactic
+
+fun sourceAnnotation (Group (_, source, _)) = SOME source
+  | sourceAnnotation (RepairGroup (source, _, _, _)) = SOME source
+  | sourceAnnotation _ = NONE
 
 (* A structured right-hand side of THEN has to run once for each goal made by
    its left-hand side.  Atomic tactics retain the usual THEN behaviour when an
@@ -69,7 +73,8 @@ and planTactic tactic =
          Select {selector = SelectFirst, mode = SelectSolve,
                  body = planTactic body}]
     | First alternatives =>
-        [Choice (map planTactic alternatives)]
+        [Choice {source = sourceAnnotation tactic,
+                 alternatives = map planTactic alternatives}]
     | TacticParse.Try body => [Try (planTactic body)]
     (* REPEAT recursively traverses every generated goal.  Until a plan
        executor records that traversal, splitting its body is unsound for
@@ -138,7 +143,7 @@ fun stepAtPath plan target =
                    SOME body => inPlan body more
                  | NONE => NONE)
             else NONE
-        | (Choice alternatives, PathAlternative n :: more) =>
+        | (Choice {alternatives, ...}, PathAlternative n :: more) =>
             if n > 0 then
               (case nth (n - 1) alternatives of
                    SOME body => inPlan body more
@@ -179,7 +184,7 @@ fun canonicalPlan projections plan =
           node "cases"
             [Int.toString (length cases),
              node "case-bodies" (map planText cases)]
-      | stepText (Choice alternatives) =
+      | stepText (Choice {alternatives, ...}) =
           node "choice"
             [Int.toString (length alternatives),
              node "alternative-bodies" (map planText alternatives)]
@@ -247,7 +252,7 @@ fun canonicalPrefix projections plan target =
                            node "completed-cases" (map fullPlan prior), child])
                        (planPrefix body rest)
                  | NONE => NONE)
-        | (Choice alternatives, PathAlternative n :: rest) =>
+        | (Choice {alternatives, ...}, PathAlternative n :: rest) =>
             if n <= 0 then NONE
             else
               (case splitNth (n - 1) alternatives of
