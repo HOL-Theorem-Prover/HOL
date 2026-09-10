@@ -9,7 +9,6 @@ struct
 open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
      BoundedRewrites TexTokenMap term_tactic
-     coreboolSupportTheory
 
 local open TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
@@ -19,9 +18,9 @@ val ERR = Feedback.mk_HOL_ERR "boolLib"
 
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with COND_BOOL_CLAUSES from
-      coreboolSupportTheory.  IF_THEN_T_IMP, EXISTS_UNIQUE_ALT,
-      UNIQUE_SKOLEM_ALT and UNIQUE_SKOLEM_THM likewise live there;
-      boolLib's historical load-time proofs of these are gone.
+      boolTheory.  IF_THEN_T_IMP, EXISTS_UNIQUE_ALT, UNIQUE_SKOLEM_ALT
+      and UNIQUE_SKOLEM_THM are proved there too; boolLib's historical
+      load-time proofs of these are gone.
  ---------------------------------------------------------------------------*)
 
 val _ = Ho_Rewrite.add_implicit_rewrites [COND_BOOL_CLAUSES]

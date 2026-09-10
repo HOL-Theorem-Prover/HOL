@@ -26,8 +26,7 @@ structure Prim_rec :> Prim_rec =
 struct
 
 open HolKernel Parse boolTheory boolSyntax
-     Drule Tactical Tactic Conv Thm_cont Rewrite Abbrev
-     coreboolSupportTheory;
+     Drule Tactical Tactic Conv Thm_cont Rewrite Abbrev;
 
 val ERR = mk_HOL_ERR "Prim_rec";
 
@@ -1665,10 +1664,19 @@ fun nBETA_CONV dpth n =
   else
     RATORn_CONV (dpth - 1) BETA_CONV THENC nBETA_CONV (dpth - 1) (n - 1)
 
-(* notT_and, notnotT_and, T_and, T_eqF, notnotT, notT are all imported
-   from coreboolSupportTheory (opened at the top of this structure),
-   which proves them once at Script time rather than reproving them
-   each time Prim_rec loads. *)
+(* notT_and, notnotT_and, T_and, T_eqF, notnotT and notT are the rewrites
+   simp_conjs and prove_ineq below work with.  Each is a rearrangement of
+   one of the bool clauses, so derive them forward rather than prove them
+   afresh every time Prim_rec loads. *)
+val notT = el 2 (CONJUNCTS NOT_CLAUSES)                 (* |- ~T = F *)
+val notnotT = SPEC T (CONJUNCT1 NOT_CLAUSES)            (* |- ~~T = T *)
+val and_clauses = CONJUNCTS (SPEC_ALL AND_CLAUSES)
+val T_and = GEN_ALL (el 1 and_clauses)                  (* |- !t. T /\ t = t *)
+val notT_and = GEN_ALL (SUBS [SYM notT] (el 3 and_clauses))
+val notnotT_and = GEN_ALL (SUBS [SYM notnotT] (el 1 and_clauses))
+val T_eqF =                                             (* |- (T = ~T) = F *)
+  TRANS (AP_TERM (rator (mk_eq(T,T))) notT)
+        (TRANS (el 4 (CONJUNCTS (SPEC T EQ_CLAUSES))) notT)
 
 (* A special purpose conv to move along a conjunction of T's, ~T's and ~~T's,
    simplifying it to a single atom as quickly as possible.

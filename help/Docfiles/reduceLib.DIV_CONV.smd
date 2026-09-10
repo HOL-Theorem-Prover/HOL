@@ -31,7 +31,7 @@ where `m` and `n` are numerals, or if `n` denotes zero.
 ``` hol4
 >>__ load "Arithconv";
 
->> Arithconv.DIV_CONV ``0 DIV 0``;
+>>+ Arithconv.DIV_CONV ``0 DIV 0``;
 
 >>+ Arithconv.DIV_CONV ``x DIV 12``;
 

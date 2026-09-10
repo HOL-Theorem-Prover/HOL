@@ -27,7 +27,7 @@ intreal {
 iterate {
   import: realax
   import: real
-  article: "iterate.ot.art"
+  article: "../pred_set/src/iterate.ot.art"
 }
 real-sigma {
   import: realax

@@ -131,6 +131,17 @@ fun amatch tm = Net.itnet (itpred (DB.matches tm)) base_thms [];
 val _ = new_constant("hol-base-assums-1.0",alpha);
 val _ = new_constant("hol-base-unsat-1.0",alpha);
 
+(* hol4-assums.art is extracted with --skip-definitions, so definitions arrive
+   as assumptions, and reading the article needs every constant they mention to
+   exist.  marker's Abbrev is the one such constant that neither the OT base
+   package nor the article itself brings into this theory, so declare it here
+   under the name const_name's catch-all clause looks for.  Nothing proves
+   anything about it -- see where goal 40 would be, below -- and
+   prove_base_assums.otd keeps this definition out of the logged article. *)
+val HOL4_marker_Abbrev_def =
+  new_definition("HOL4_marker_Abbrev_def",
+                 ``HOL4_marker_Abbrev = \(x:bool). x``);
+
 local
   fun find_tyop {name={Tyop,...},...} =
     let
@@ -171,203 +182,153 @@ val goals = sort thm_lt goals_unsorted;
 
 (* NOTE: contents of goals (List.length goals = 97)
 val goals =
- 1 [|- !t1 t2. ?fn. fn T = t1 /\ fn F = t2,
- 2  |- !t1 t2. (if T then t1 else t2) = t1 /\ (if F then t1 else t2) = t2,
- 3  |- !a0 a1 a0' a1'.
-         Data_List_cons a0 a1 = Data_List_cons a0' a1' <=>
-         a0 = a0' /\ a1 = a1',
- 4  |- !h t.
-         Data_List_last (Data_List_cons h t) =
-         if t = Data_List_nil then h else Data_List_last t,
- 5  |- !x. (@y. x = y) = x,
- 6  |- !x. x = x <=> T,
- 7  |- !x f. ?!fn1.
-         fn1 Data_List_nil = x /\
-         !h t. fn1 (Data_List_cons h t) = f (fn1 t) h t,
- 8  |- !a1 a0. Data_List_nil <> Data_List_cons a0 a1,
- 9  |- !m n. Number_Natural_suc m = Number_Natural_suc n ==> m = n,
- 10 |- !n. Number_Natural_less Number_Natural_zero n ==>
-           !k. k =
-               Number_Natural_plus
-                 (Number_Natural_times (Number_Natural_div k n) n)
-                 (Number_Natural_mod k n) /\
-               Number_Natural_less (Number_Natural_mod k n) n,
- 11 |- !P Q x x' y y'.
-         (P <=> Q) /\ (Q ==> x = x') /\ (~Q ==> y = y') ==>
-         (if P then x else y) = if Q then x' else y',
- 12 |- !x x' y y'.
-         (x <=> x') /\ (x' ==> (y <=> y')) ==> (x ==> y <=> x' ==> y'),
- 13 |- !P P' Q Q'.
-         (Q ==> (P <=> P')) /\ (P' ==> (Q <=> Q')) ==> (P /\ Q <=> P' /\ Q'),
- 14 |- !t1 t2 t3. t1 /\ t2 /\ t3 <=> (t1 /\ t2) /\ t3,
- 15 |- !A B C. (B \/ C) /\ A <=> B /\ A \/ C /\ A,
- 16 |- !A B C. A \/ B \/ C <=> (A \/ B) \/ C,
- 17 |- !A B C. B /\ C \/ A <=> (B \/ A) /\ (C \/ A),
- 18 |- !A B. (~(A /\ B) <=> ~A \/ ~B) /\ (~(A \/ B) <=> ~A /\ ~B),
- 19 |- !t1 t2. (t1 <=> t2) <=> (t1 ==> t2) /\ (t2 ==> t1),
- 20 |- !A B. (A <=> B \/ A) <=> B ==> A,
- 21 |- !A B. A \/ B <=> ~A ==> B,
- 22 |- !t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 <=> t2),
- 23 |- !t. (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\
-           (t /\ F <=> F) /\ (t /\ t <=> t),
- 24 |- !t. ((T <=> t) <=> t) /\ ((t <=> T) <=> t) /\ ((F <=> t) <=> ~t) /\
-           ((t <=> F) <=> ~t),
- 25 |- !t. (T ==> t <=> t) /\ (t ==> T <=> T) /\ (F ==> t <=> T) /\
-           (t ==> t <=> T) /\ (t ==> F <=> ~t),
- 26 |- !t. (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\
-           (t \/ F <=> t) /\ (t \/ t <=> t),
- 27 |- !t. t ==> F <=> (t <=> F),
- 28 |- !t. F ==> t,
- 29 |- !t. ~t ==> t ==> F,
- 30 |- !t. (t ==> F) ==> ~t,
- 31 |- !f b x y. f (if b then x else y) = if b then f x else f y,
- 32 |- !f g M N. M = N /\ (!x. x = N ==> f x = g x) ==> LET f M = LET g N,
- 33 |- !f g. f = g <=> !x. f x = g x,
- 34 |- !f g. ?!h.
-         Function_o h Data_Sum_left = f /\ Function_o h Data_Sum_right = g,
- 35 |- !P t. (!x. x = t ==> P x) ==> $? P,
- 36 |- !P Q.
-         (Q ==> (!x. P x) <=> !x. Q ==> P x) /\
-         ((!x. P x) /\ Q <=> !x. P x /\ Q) /\
-         (Q /\ (!x. P x) <=> !x. Q /\ P x),
- 37 |- !P Q.
-         ((?x. P x) ==> Q <=> !x. P x ==> Q) /\
-         ((?x. P x) /\ Q <=> ?x. P x /\ Q) /\
-         (Q /\ (?x. P x) <=> ?x. Q /\ P x),
- 38 |- !P f. RES_EXISTS P f <=> ?x. x IN P /\ f x,
- 39 |- !P f.
-         RES_EXISTS_UNIQUE P f <=>
-         (?x::P. f x) /\ !x y::P. f x /\ f y ==> x = y,
- 40 |- !P f. RES_FORALL P f <=> !x. x IN P ==> f x,
- 41 |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P),
- 42 |- !f. (!x y z. f x (f y z) = f (f x y) z) ==>
-           (!x y. f x y = f y x) ==>
-           !x y z. f x (f y z) = f y (f x z),
- 43 |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
-           !l. P l,
- 44 |- ~(t /\ ~t),
- 45 |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\
-       !y y'. Data_Sum_right y = Data_Sum_right y' <=> y = y',
- 46 |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\
-       (Data_Option_isNone Data_Option_none <=> T),
- 47 |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\
-       (Data_Option_isSome Data_Option_none <=> F),
- 48 |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\
-       !y. Data_Sum_isLeft (Data_Sum_right y) <=> F,
- 49 |- (!x. Data_Sum_isRight (Data_Sum_right x) <=> T) /\
-       !y. Data_Sum_isRight (Data_Sum_left y) <=> F,
- 50 |- (!l. Data_List_append Data_List_nil l = l) /\
-       !h l1 l2.
-         Data_List_append (Data_List_cons h l1) l2 =
-         Data_List_cons h (Data_List_append l1 l2),
- 51 |- (!n. Number_Natural_plus Number_Natural_zero n = n) /\
-       !m n.
-         Number_Natural_plus (Number_Natural_suc m) n =
-         Number_Natural_suc (Number_Natural_plus m n),
- 52 |- (!m. Number_Natural_power m Number_Natural_zero =
-            Number_Natural_bit1 Number_Natural_zero) /\
-       !m n.
-         Number_Natural_power m (Number_Natural_suc n) =
-         Number_Natural_times m (Number_Natural_power m n),
- 53 |- (!n. Number_Natural_times Number_Natural_zero n = Number_Natural_zero) /\
-       !m n.
-         Number_Natural_times (Number_Natural_suc m) n =
-         Number_Natural_plus (Number_Natural_times m n) n,
- 54 |- (!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T),
- 55 |- (!f x. Data_Option_map f (Data_Option_some x) = Data_Option_some (f x)) /\
-       !f. Data_Option_map f Data_Option_none = Data_Option_none,
- 56 |- (!f. Data_List_map f Data_List_nil = Data_List_nil) /\
-       !f h t.
-         Data_List_map f (Data_List_cons h t) =
-         Data_List_cons (f h) (Data_List_map f t),
- 57 |- (!p m x. x IN p ==> RES_ABSTRACT p m x = m x) /\
-       !p m1 m2.
-         (!x. x IN p ==> m1 x = m2 x) ==>
-         RES_ABSTRACT p m1 = RES_ABSTRACT p m2,
- 58 |- (!P. Data_List_filter P Data_List_nil = Data_List_nil) /\
-       !P h t.
-         Data_List_filter P (Data_List_cons h t) =
-         if P h then Data_List_cons h (Data_List_filter P t)
-         else Data_List_filter P t,
- 59 |- (!P. Data_List_all P Data_List_nil <=> T) /\
-       !P h t.
-         Data_List_all P (Data_List_cons h t) <=> P h /\ Data_List_all P t,
- 60 |- (!P. Data_List_any P Data_List_nil <=> F) /\
-       !P h t.
-         Data_List_any P (Data_List_cons h t) <=> P h \/ Data_List_any P t,
- 61 |- Data_List_concat Data_List_nil = Data_List_nil /\
-       !h t.
-         Data_List_concat (Data_List_cons h t) =
-         Data_List_append h (Data_List_concat t),
- 62 |- Data_List_reverse Data_List_nil = Data_List_nil /\
-       !h t.
-         Data_List_reverse (Data_List_cons h t) =
-         Data_List_append (Data_List_reverse t)
-           (Data_List_cons h Data_List_nil),
- 63 |- Data_List_unzip Data_List_nil =
-       Data_Pair_comma Data_List_nil Data_List_nil /\
-       !x l.
-         Data_List_unzip (Data_List_cons x l) =
-         Data_Pair_comma
-           (Data_List_cons (Data_Pair_fst x)
-              (Data_Pair_fst (Data_List_unzip l)))
-           (Data_List_cons (Data_Pair_snd x)
-              (Data_Pair_snd (Data_List_unzip l))),
- 64 |- Data_List_length Data_List_nil = Number_Natural_zero /\
-       !h t.
-         Data_List_length (Data_List_cons h t) =
-         Number_Natural_suc (Data_List_length t),
- 65 |- Number_Natural_factorial Number_Natural_zero =
-       Number_Natural_bit1 Number_Natural_zero /\
-       !n. Number_Natural_factorial (Number_Natural_suc n) =
-           Number_Natural_times (Number_Natural_suc n)
-             (Number_Natural_factorial n),
- 66 |- (Data_List_null Data_List_nil <=> T) /\
-       !h t. Data_List_null (Data_List_cons h t) <=> F,
- 67 |- (Number_Natural_even Number_Natural_zero <=> T) /\
-       !n. Number_Natural_even (Number_Natural_suc n) <=>
-           ~Number_Natural_even n,
- 68 |- (Number_Natural_odd Number_Natural_zero <=> F) /\
-       !n. Number_Natural_odd (Number_Natural_suc n) <=>
-           ~Number_Natural_odd n,
- 69 |- Data_Unit_unit = @x. T,
- 70 |- Number_Natural_zero = Number_Natural_zero,
- 71 |- (?!x. F) <=> F,
- 72 |- Data_Pair_comma x y = Data_Pair_comma a b <=> x = a /\ y = b,
- 73 |- Data_Sum_left x = Data_Sum_left y <=> x = y,
- 74 |- Data_Sum_right x = Data_Sum_right y <=> x = y,
- 75 |- y ==> x <=> ~x ==> ~y
- 76 |- Function_id = Function_Combinator_s Function_const Function_const,
- 77 |- Relation_empty = (\x y. F),
- 78 |- Relation_universe = (\x y. T),
- 79 |- Number_Natural_bit1 =
-       (\n.
-            Number_Natural_plus n
-              (Number_Natural_plus n (Number_Natural_suc Number_Natural_zero))),
- 80 |- Number_Natural_max = (\m n. if Number_Natural_less m n then n else m),
- 81 |- Number_Natural_min = (\m n. if Number_Natural_less m n then m else n),
- 82 |- Number_Natural_greater = (\m n. Number_Natural_less n m),
- 83 |- Number_Natural_greatereq = (\m n. Number_Natural_greater m n \/ m = n),
- 84 |- Number_Natural_less =
-       (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n),
- 85 |- Number_Natural_lesseq = (\m n. Number_Natural_less m n \/ m = n),
- 86 |- Relation_irreflexive = (\R. !x. ~R x x),
- 87 |- Relation_reflexive = (\R. !x. R x x),
- 88 |- Relation_transitive = (\R. !x y z. R x y /\ R y z ==> R x z),
- 89 |- Relation_wellFounded =
-       (\R. !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b),
- 90 |- Relation_transitiveClosure =
-       (\R a b.
-            !P. (!x y. R x y ==> P x y) /\ (!x y z. P x y /\ P y z ==> P x z) ==>
-                P a b),
- 91 |- Relation_subrelation = (\R1 R2. !x y. R1 x y ==> R2 x y),
- 92 |- Relation_intersect = (\R1 R2 x y. R1 x y /\ R2 x y),
- 93 |- Relation_union = (\R1 R2 x y. R1 x y \/ R2 x y),
- 94 |- Function_o = (\f g x. f (g x)),
- 95 |- (!x. P x ==> Q x) ==> (?x. P x) ==> ?x. Q x,
- 96 |- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w,
- 97 |- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w
- ]: thm list
+ 1   |- !t1 t2. ?fn. fn T = t1 /\ fn F = t2,
+ 2   |- !t1 t2. (if T then t1 else t2) = t1 /\ (if F then t1 else t2) = t2,
+ 3   |- !a0 a1 a0' a1'. Data_List_cons a0 a1 = Data_List_cons a0' a1' <=> a0 = a0' /\ a1 = a1',
+ 4   |- !h t. Data_List_last (Data_List_cons h t) = if t = Data_List_nil then h else Data_List_last t,
+ 5   |- !x. (@y. x = y) = x,
+ 6   |- !x. x = x <=> T,
+ 7   |- !x. (\y. x) = Function_const x,
+ 8   |- !x f. ?!fn1. fn1 Data_List_nil = x /\ !h t. fn1 (Data_List_cons h t) = f (fn1 t) h t,
+ 9   |- !a1 a0. Data_List_nil <> Data_List_cons a0 a1,
+ 10  |- !m n. Number_Natural_suc m = Number_Natural_suc n ==> m = n,
+ 11  |- !n. Number_Natural_less Number_Natural_zero n ==> !k. k = Number_Natural_plus (Number_Natural_times (Number_Natural_div k n) n) (Number_Natural_mod k n) /\ Number_Natural_less (Number_Natural_mod k n) n,
+ 12  |- !P Q x x' y y'. (P <=> Q) /\ (Q ==> x = x') /\ (~Q ==> y = y') ==> (if P then x else y) = if Q then x' else y',
+ 13  |- !x x' y y'. (x <=> x') /\ (x' ==> (y <=> y')) ==> (x ==> y <=> x' ==> y'),
+ 14  |- !P P' Q Q'. (Q ==> (P <=> P')) /\ (P' ==> (Q <=> Q')) ==> (P /\ Q <=> P' /\ Q'),
+ 15  |- !c a b. ~(if c then a else b) <=> (~c \/ ~a) /\ (c \/ ~b),
+ 16  |- !t1 t2 t3. t1 /\ t2 /\ t3 <=> (t1 /\ t2) /\ t3,
+ 17  |- !A B C. (B \/ C) /\ A <=> B /\ A \/ C /\ A,
+ 18  |- !A B C. A \/ B \/ C <=> (A \/ B) \/ C,
+ 19  |- !A B C. B /\ C \/ A <=> (B \/ A) /\ (C \/ A),
+ 20  |- !a b c. (a ==> (b <=> c)) /\ b ==> ~a \/ c,
+ 21  |- !a b b'. (~a ==> (b <=> b')) ==> (a \/ b <=> a \/ b'),
+ 22  |- !a b b'. (~a ==> (b <=> b')) ==> ~a ==> (a \/ b <=> b'),
+ 23  |- !A B. (~(A /\ B) <=> ~A \/ ~B) /\ (~(A \/ B) <=> ~A /\ ~B),
+ 24  |- !x y. (x <=/=> y) <=> (x \/ y) /\ (~x \/ ~y),
+ 25  |- !a b. (a <=/=> b) <=> (a <=> ~b),
+ 26  |- !t1 t2. (t1 <=> t2) <=> (t1 ==> t2) /\ (t2 ==> t1),
+ 27  |- !x y. (x <=> y) <=> (x \/ ~y) /\ (~x \/ y),
+ 28  |- !t1 t2. (t1 <=> t2) <=> t1 /\ t2 \/ ~t1 /\ ~t2,
+ 29  |- !A B. (A <=> B \/ A) <=> B ==> A,
+ 30  |- !x y. x ==> y <=> y \/ ~x,
+ 31  |- !A B. A ==> B <=> ~A \/ B,
+ 32  |- !A B. A \/ B <=> ~A ==> B,
+ 33  |- !a b. (a ==> b) /\ (~a ==> b) ==> b,
+ 34  |- !t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 <=> t2),
+ 35  |- !a b. a \/ b ==> ~a ==> b,
+ 36  |- !t. (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\ (t /\ F <=> F) /\ (t /\ t <=> t),
+ 37  |- !t. ((T <=> t) <=> t) /\ ((t <=> T) <=> t) /\ ((F <=> t) <=> ~t) /\ ((t <=> F) <=> ~t),
+ 38  |- !t. (T ==> t <=> t) /\ (t ==> T <=> T) /\ (F ==> t <=> T) /\ (t ==> t <=> T) /\ (t ==> F <=> ~t),
+ 39  |- !t. (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\ (t \/ F <=> t) /\ (t \/ t <=> t),
+ 40  |- !x. Abbrev x <=> x,
+ 41  |- !t. t ==> F <=> (t <=> F),
+ 42  |- !t. F ==> t,
+ 43  |- !t. ~t ==> t ==> F,
+ 44  |- !a. a /\ ~a ==> F,
+ 45  |- !t. (t ==> F) ==> ~t,
+ 46  |- !x. (~x ==> F) ==> x,
+ 47  |- !f x. f x = Function_id f x,
+ 48  |- !f b x y. f (if b then x else y) = if b then f x else f y,
+ 49  |- !f g M N. M = N /\ (!x. x = N ==> f x = g x) ==> LET f M = LET g N,
+ 50  |- !f g. f = g <=> !x. f x = g x,
+ 51  |- !s t. s = (\x. t x) <=> !x. s x = t x,
+ 52  |- !f g. ?!h. Function_o h Data_Sum_left = f /\ Function_o h Data_Sum_right = g,
+ 53  |- !P t. (!x. x = t ==> P x) ==> $? P,
+ 54  |- !P Q. (Q ==> (!x. P x) <=> !x. Q ==> P x) /\ ((!x. P x) /\ Q <=> !x. P x /\ Q) /\ (Q /\ (!x. P x) <=> !x. Q /\ P x),
+ 55  |- !P Q. ((?x. P x) ==> Q <=> !x. P x ==> Q) /\ ((?x. P x) /\ Q <=> ?x. P x /\ Q) /\ (Q /\ (?x. P x) <=> ?x. Q /\ P x),
+ 56  |- !P f. RES_EXISTS P f <=> ?x. x IN P /\ f x,
+ 57  |- !P f. RES_EXISTS_UNIQUE P f <=> (?x::P. f x) /\ !x y::P. f x /\ f y ==> x = y,
+ 58  |- !P f. RES_FORALL P f <=> !x. x IN P ==> f x,
+ 59  |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P),
+ 60  |- !p. $?! p <=> (?x. p x) /\ !x y. p x /\ p y ==> x = y,
+ 61  |- !p. ~$?! p <=> (!x. ~p x) \/ ?x y. p x /\ p y /\ x <> y,
+ 62  |- !f. (!x y z. f x (f y z) = f (f x y) z) ==> (!x y. f x y = f y x) ==> !x y z. f x (f y z) = f y (f x z),
+ 63  |- !x y. (\v. x v y) = Function_flip x y,
+ 64  |- !x y. (\v. x v (y v)) = Function_Combinator_s x y,
+ 65  |- !x y. (\v. x (y v)) = Function_o x y,
+ 66  |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==> !l. P l,
+ 67  |- !P p. P p <=> (p ==> P T) /\ (~p ==> P F),
+ 68  |- ~(t /\ ~t),
+ 69  |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\ !y y'. Data_Sum_right y = Data_Sum_right y' <=> y = y',
+ 70  |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\ (Data_Option_isNone Data_Option_none <=> T),
+ 71  |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\ (Data_Option_isSome Data_Option_none <=> F),
+ 72  |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\ !y. Data_Sum_isLeft (Data_Sum_right y) <=> F,
+ 73  |- (!x. Data_Sum_isRight (Data_Sum_right x) <=> T) /\ !y. Data_Sum_isRight (Data_Sum_left y) <=> F,
+ 74  |- (!l. Data_List_append Data_List_nil l = l) /\ !h l1 l2. Data_List_append (Data_List_cons h l1) l2 = Data_List_cons h (Data_List_append l1 l2),
+ 75  |- (!n. Number_Natural_plus Number_Natural_zero n = n) /\ !m n. Number_Natural_plus (Number_Natural_suc m) n = Number_Natural_suc (Number_Natural_plus m n),
+ 76  |- (!m. Number_Natural_power m Number_Natural_zero = Number_Natural_bit1 Number_Natural_zero) /\ !m n. Number_Natural_power m (Number_Natural_suc n) = Number_Natural_times m (Number_Natural_power m n),
+ 77  |- (!n. Number_Natural_times Number_Natural_zero n = Number_Natural_zero) /\ !m n. Number_Natural_times (Number_Natural_suc m) n = Number_Natural_plus (Number_Natural_times m n) n,
+ 78  |- (!b e. (if b then T else e) <=> b \/ e) /\ (!b t. (if b then t else T) <=> b ==> t) /\ (!b e. (if b then F else e) <=> ~b /\ e) /\ !b t. (if b then t else F) <=> b /\ t,
+ 79  |- (!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T),
+ 80  |- (!f x. Data_Option_map f (Data_Option_some x) = Data_Option_some (f x)) /\ !f. Data_Option_map f Data_Option_none = Data_Option_none,
+ 81  |- (!f. Data_List_map f Data_List_nil = Data_List_nil) /\ !f h t. Data_List_map f (Data_List_cons h t) = Data_List_cons (f h) (Data_List_map f t),
+ 82  |- (!p m x. x IN p ==> RES_ABSTRACT p m x = m x) /\ !p m1 m2. (!x. x IN p ==> m1 x = m2 x) ==> RES_ABSTRACT p m1 = RES_ABSTRACT p m2,
+ 83  |- (!P. Data_List_filter P Data_List_nil = Data_List_nil) /\ !P h t. Data_List_filter P (Data_List_cons h t) = if P h then Data_List_cons h (Data_List_filter P t) else Data_List_filter P t,
+ 84  |- (!P. Data_List_all P Data_List_nil <=> T) /\ !P h t. Data_List_all P (Data_List_cons h t) <=> P h /\ Data_List_all P t,
+ 85  |- (!P. Data_List_any P Data_List_nil <=> F) /\ !P h t. Data_List_any P (Data_List_cons h t) <=> P h \/ Data_List_any P t,
+ 86  |- x = x /\ (x <> y \/ x <> z \/ y = z),
+ 87  |- Data_List_concat Data_List_nil = Data_List_nil /\ !h t. Data_List_concat (Data_List_cons h t) = Data_List_append h (Data_List_concat t),
+ 88  |- Data_List_reverse Data_List_nil = Data_List_nil /\ !h t. Data_List_reverse (Data_List_cons h t) = Data_List_append (Data_List_reverse t) (Data_List_cons h Data_List_nil),
+ 89  |- Data_List_unzip Data_List_nil = Data_Pair_comma Data_List_nil Data_List_nil /\ !x l. Data_List_unzip (Data_List_cons x l) = Data_Pair_comma (Data_List_cons (Data_Pair_fst x) (Data_Pair_fst (Data_List_unzip l))) (Data_List_cons (Data_Pair_snd x) (Data_Pair_snd (Data_List_unzip l))),
+ 90  |- Data_List_length Data_List_nil = Number_Natural_zero /\ !h t. Data_List_length (Data_List_cons h t) = Number_Natural_suc (Data_List_length t),
+ 91  |- Number_Natural_factorial Number_Natural_zero = Number_Natural_bit1 Number_Natural_zero /\ !n. Number_Natural_factorial (Number_Natural_suc n) = Number_Natural_times (Number_Natural_suc n) (Number_Natural_factorial n),
+ 92  |- (Data_List_null Data_List_nil <=> T) /\ !h t. Data_List_null (Data_List_cons h t) <=> F,
+ 93  |- (Number_Natural_even Number_Natural_zero <=> T) /\ !n. Number_Natural_even (Number_Natural_suc n) <=> ~Number_Natural_even n,
+ 94  |- (Number_Natural_odd Number_Natural_zero <=> F) /\ !n. Number_Natural_odd (Number_Natural_suc n) <=> ~Number_Natural_odd n,
+ 95  |- LET f (Function_id x) = f x,
+ 96  |- Data_Unit_unit = @x. T,
+ 97  |- Number_Natural_zero = Number_Natural_zero,
+ 98  |- p <=> ~p ==> F,
+ 99  |- (?!x. F) <=> F,
+ 100 |- ~(?!x. P x) <=> (!x. ~P x) \/ ?x x'. P x /\ P x' /\ x <> x',
+ 101 |- ~~p <=> p,
+ 102 |- ~(p /\ q) <=> ~p \/ ~q,
+ 103 |- (p <=/=> q) <=> (p \/ q) /\ (~p \/ ~q),
+ 104 |- (p <=/=> q) <=> p /\ ~q \/ ~p /\ q,
+ 105 |- ~(p ==> q) <=> p /\ ~q,
+ 106 |- ~(p \/ q) <=> ~p /\ ~q,
+ 107 |- a /\ (b \/ c) <=> a /\ b \/ a /\ c,
+ 108 |- (a /\ b) /\ c <=> b /\ a /\ c,
+ 109 |- (a \/ b) /\ c <=> a /\ c \/ b /\ c,
+ 110 |- Data_Pair_comma x y = Data_Pair_comma a b <=> x = a /\ y = b,
+ 111 |- Data_Sum_left x = Data_Sum_left y <=> x = y,
+ 112 |- Data_Sum_right x = Data_Sum_right y <=> x = y,
+ 113 |- (p <=> q) <=> (p \/ ~q) /\ (~p \/ q),
+ 114 |- (p <=> q) <=> p /\ q \/ ~p /\ ~q,
+ 115 |- a ==> b <=> ~a \/ b,
+ 116 |- p ==> q <=> ~p \/ q,
+ 117 |- y ==> x <=> ~x ==> ~y,
+ 118 |- ~p ==> p <=> p,
+ 119 |- a \/ b <=> ~b ==> a,
+ 120 |- a \/ b /\ c <=> (a \/ b) /\ (a \/ c),
+ 121 |- a /\ b \/ c <=> (a \/ c) /\ (b \/ c),
+ 122 |- (a \/ b) \/ c <=> b \/ a \/ c,
+ 123 |- Function_id = Function_Combinator_s Function_const Function_const,
+ 124 |- (\a. a) = Function_id,
+ 125 |- Relation_empty = (\x y. F),
+ 126 |- Relation_universe = (\x y. T),
+ 127 |- Number_Natural_bit1 = (\n. Number_Natural_plus n (Number_Natural_plus n (Number_Natural_suc Number_Natural_zero))),
+ 128 |- Number_Natural_max = (\m n. if Number_Natural_less m n then n else m),
+ 129 |- Number_Natural_min = (\m n. if Number_Natural_less m n then m else n),
+ 130 |- Number_Natural_greater = (\m n. Number_Natural_less n m),
+ 131 |- Number_Natural_greatereq = (\m n. Number_Natural_greater m n \/ m = n),
+ 132 |- Number_Natural_less = (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n),
+ 133 |- Number_Natural_lesseq = (\m n. Number_Natural_less m n \/ m = n),
+ 134 |- Relation_irreflexive = (\R. !x. ~R x x),
+ 135 |- Relation_reflexive = (\R. !x. R x x),
+ 136 |- Relation_transitive = (\R. !x y z. R x y /\ R y z ==> R x z),
+ 137 |- Relation_wellFounded = (\R. !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b),
+ 138 |- Relation_transitiveClosure = (\R a b. !P. (!x y. R x y ==> P x y) /\ (!x y z. P x y /\ P y z ==> P x z) ==> P a b),
+ 139 |- Relation_subrelation = (\R1 R2. !x y. R1 x y ==> R2 x y),
+ 140 |- Relation_intersect = (\R1 R2 x y. R1 x y /\ R2 x y),
+ 141 |- Relation_union = (\R1 R2 x y. R1 x y \/ R2 x y),
+ 142 |- Function_o = (\f g x. f (g x)),
+ 143 |- (!x. P x ==> Q x) ==> $? P ==> $? Q,
+ 144 |- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w,
+ 145 |- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w,
+ 146 |- v = v' ==> LET f v = LET f (Function_id v'),
+ 147 |- (a <=> b) ==> b \/ ~a
  *)
 
 val bool_cases = hd(amatch``(x = T) \/ _``);
@@ -412,6 +373,16 @@ val if_T = hd (amatch ``if T then t1 else t2``);
 val if_F = hd (amatch ``if F then t1 else t2``);
 
 (* |- !t1 t2. ?fn. fn T = t1 /\ fn F = t2 *)
+(* The proofs below index into 'goals' positionally, so a change in the
+   article's assumption set shifts every index after the change.  Check the
+   count up front: otherwise the mismatch surfaces as a pile of tactic
+   failures in unrelated proofs, tens of minutes into an otknl build. *)
+val _ = if List.length goals <> 147 then
+          raise ERR "-"
+            ("assumptions changed: expected 147, found " ^
+             Int.toString (List.length goals))
+        else ();
+
 Theorem th1: ^(el 1 goals |> concl)
 Proof
   rpt gen_tac
@@ -477,7 +448,7 @@ val fun_eq_thm = hd(amatch``(!x. f x = g x) <=> (f = g)``);
         fn1 Data_List_nil = x /\
         !h t. fn1 (Data_List_cons h t) = f (fn1 t) h t
  *)
-Theorem th7: ^(el 7 goals |> concl)
+Theorem th7: ^(el 8 goals |> concl)
 Proof
   rpt gen_tac
   \\ CONV_TAC(HO_REWR_CONV ex_unique_thm)
@@ -501,14 +472,14 @@ QED
 val cons_neq_nil = hd(amatch``Data_List_cons _ _ <> Data_List_nil``);
 
 (* |- !a1 a0. Data_List_nil <> Data_List_cons a0 a1 *)
-Theorem th8: ^(el 8 goals |> concl)
+Theorem th8: ^(el 9 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM cons_neq_nil)
 QED
 
 val suc_11 = hd(amatch``Number_Natural_suc _ = Number_Natural_suc _``);
 
 (* |- !m n. Number_Natural_suc m = Number_Natural_suc n ==> m = n *)
-Theorem th9: ^(el 9 goals |> concl)
+Theorem th9: ^(el 10 goals |> concl)
 Proof
   rpt gen_tac \\ MATCH_ACCEPT_TAC (#1 (EQ_IMP_RULE (SPEC_ALL suc_11)))
 QED
@@ -525,7 +496,7 @@ val less_mod = hd(amatch``Number_Natural_less (Number_Natural_mod _ _)``);
                 (Number_Natural_mod k n) /\
               Number_Natural_less (Number_Natural_mod k n) n
  *)
-Theorem th10: ^(el 10 goals |> concl)
+Theorem th10: ^(el 11 goals |> concl)
 Proof
   PURE_REWRITE_TAC[less_zero]
   \\ gen_tac
@@ -544,7 +515,7 @@ val if_F = hd(amatch``(if F then _ else _) = _``);
           (P <=> Q) /\ (Q ==> x = x') /\ (~Q ==> y = y') ==>
           (if P then x else y) = if Q then x' else y'
  *)
-Theorem th11: ^(el 11 goals |> concl)
+Theorem th11: ^(el 12 goals |> concl)
 Proof
   rpt gen_tac
   \\ rpt strip_tac
@@ -558,7 +529,7 @@ QED
 (* |- !x x' y y'.
           (x <=> x') /\ (x' ==> (y <=> y')) ==> (x ==> y <=> x' ==> y')
  *)
-Theorem th12: ^(el 12 goals |> concl)
+Theorem th12: ^(el 13 goals |> concl)
 Proof
   rpt strip_tac
   \\ last_x_assum SUBST_ALL_TAC
@@ -578,7 +549,7 @@ val and_i = hd(amatch``t /\ t``);
 (* |- !P P' Q Q'.
           (Q ==> (P <=> P')) /\ (P' ==> (Q <=> Q')) ==> (P /\ Q <=> P' /\ Q')
  *)
-Theorem th13: ^(el 13 goals |> concl)
+Theorem th13: ^(el 14 goals |> concl)
 Proof
   rpt strip_tac
   \\ Q.ISPEC_THEN`Q`FULL_STRUCT_CASES_TAC bool_cases
@@ -594,35 +565,35 @@ QED
 val and_assoc = hd (amatch``(a /\ b) /\ c``);
 
 (* |- !t1 t2 t3. t1 /\ t2 /\ t3 <=> (t1 /\ t2) /\ t3 *)
-Theorem th14: ^(el 14 goals |> concl)
+Theorem th14: ^(el 16 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM and_assoc)
 QED
 
 val or_distrib_and = hd (amatch``(b \/ c) /\ a <=> _``);
 
 (* |- !A B C. (B \/ C) /\ A <=> B /\ A \/ C /\ A *)
-Theorem th15: ^(el 15 goals |> concl)
+Theorem th15: ^(el 17 goals |> concl)
 Proof MATCH_ACCEPT_TAC or_distrib_and
 QED
 
 val or_assoc = hd (amatch``(a \/ b) \/ c``);
 
 (* |- !A B C. A \/ B \/ C <=> (A \/ B) \/ C *)
-Theorem th16: ^(el 16 goals |> concl)
+Theorem th16: ^(el 18 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM or_assoc)
 QED
 
 val demorgan = hd (amatch``(b \/ a) /\ (c \/ a)``);
 
 (* |- !A B C. B /\ C \/ A <=> (B \/ A) /\ (C \/ A) *)
-Theorem th17: ^(el 17 goals |> concl)
+Theorem th17: ^(el 19 goals |> concl)
 Proof MATCH_ACCEPT_TAC demorgan
 QED
 
 val not_or = hd(amatch``~(_ \/ _)``);
 
 (* |- !A B. (~(A /\ B) <=> ~A \/ ~B) /\ (~(A \/ B) <=> ~A /\ ~B) *)
-Theorem th18: ^(el 18 goals |> concl)
+Theorem th18: ^(el 23 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[not_and,not_or]
@@ -630,7 +601,7 @@ Proof
 QED
 
 (* |- !t1 t2. (t1 <=> t2) <=> (t1 ==> t2) /\ (t2 ==> t1) *)
-Theorem th19: ^(el 19 goals |> concl)
+Theorem th19: ^(el 26 goals |> concl)
 Proof
   rpt gen_tac
   \\ Q.ISPEC_THEN`t1`FULL_STRUCT_CASES_TAC bool_cases
@@ -641,7 +612,7 @@ QED
 val eq_imp_thm = th19;
 
 (* |- !A B. (A <=> B \/ A) <=> B ==> A *)
-Theorem th20: ^(el 20 goals |> concl)
+Theorem th20: ^(el 29 goals |> concl)
 Proof
   rpt gen_tac
   \\ Q.ISPEC_THEN`A`FULL_STRUCT_CASES_TAC bool_cases
@@ -674,11 +645,11 @@ Theorem th21 = ((* this forward proof comes from boolScript.sml *)
     |> GENL [``A:bool``,``B:bool``]
   end)
 
-val _ = if concl th21 ~~ concl (el 21 goals) then ()
+val _ = if concl th21 ~~ concl (el 32 goals) then ()
         else raise ERR "th21" "assumptions changed";
 
 (* |- !t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 <=> t2) *)
-Theorem th22: ^(el 22 goals |> concl)
+Theorem th22: ^(el 34 goals |> concl)
 Proof
   rpt strip_tac
   \\ Q.ISPEC_THEN ‘t1’ mp_tac bool_cases
@@ -700,7 +671,7 @@ val imp_antisym_ax = th22;
 (* |- !t. (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\
           (t /\ F <=> F) /\ (t /\ t <=> t)
  *)
-Theorem th23: ^(el 23 goals |> concl)
+Theorem th23: ^(el 36 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_and
@@ -715,7 +686,7 @@ val AND_CLAUSES = th23;
 (* |- !t. ((T <=> t) <=> t) /\ ((t <=> T) <=> t) /\ ((F <=> t) <=> ~t) /\
           ((t <=> F) <=> ~t)   (EQ_CLAUSES)
  *)
-Theorem th24: ^(el 24 goals |> concl)
+Theorem th24: ^(el 37 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_iff
@@ -729,7 +700,7 @@ val EQ_CLAUSES = th24;
 (* |- !t. (T ==> t <=> t) /\ (t ==> T <=> T) /\ (F ==> t <=> T) /\
           (t ==> t <=> T) /\ (t ==> F <=> ~t)
  *)
-Theorem th25: ^(el 25 goals |> concl)
+Theorem th25: ^(el 38 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_imp
@@ -744,7 +715,7 @@ val IMP_CLAUSES = th25;
 (* |- !t. (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\
           (t \/ F <=> t) /\ (t \/ t <=> t)
  *)
-Theorem th26: ^(el 26 goals |> concl)
+Theorem th26: ^(el 39 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_or
@@ -757,26 +728,26 @@ QED
 val OR_CLAUSES = th26;
 
 (* |- !t. t ==> F <=> (t <=> F) *)
-Theorem th27: ^(el 27 goals |> concl)
+Theorem th27: ^(el 41 goals |> concl)
 Proof
   PURE_REWRITE_TAC[imp_F, iff_F]
   \\ gen_tac \\ REFL_TAC
 QED
 
 (* |- !t. F ==> t *)
-Theorem th28: ^(el 28 goals |> concl)
+Theorem th28: ^(el 42 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC(EQT_ELIM(SPEC_ALL F_imp))
 QED
 
 (* |- !t. ~t ==> t ==> F (boolTheory.F_IMP) *)
-Theorem th29: ^(el 29 goals |> concl)
+Theorem th29: ^(el 43 goals |> concl)
 Proof
   imp_F |> SPEC_ALL |> EQ_IMP_RULE |> #2 |> MATCH_ACCEPT_TAC
 QED
 
 (* |- !t. (t ==> F) ==> ~t *)
-Theorem th30: ^(el 30 goals |> concl)
+Theorem th30: ^(el 45 goals |> concl)
 Proof
   imp_F |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> MATCH_ACCEPT_TAC
 QED
@@ -784,12 +755,12 @@ QED
 val app_if = hd (amatch ``f (if b then x else y) = if b then f x else f y``);
 
 (* |- !f b x y. f (if b then x else y) = if b then f x else f y *)
-Theorem th31: ^(el 31 goals |> concl)
+Theorem th31: ^(el 48 goals |> concl)
 Proof MATCH_ACCEPT_TAC app_if
 QED
 
 (* |- !f g M N. M = N /\ (!x. x = N ==> f x = g x) ==> LET f M = LET g N *)
-Theorem th32: ^(el 32 goals |> concl)
+Theorem th32: ^(el 49 goals |> concl)
 Proof
   rpt strip_tac
   \\ VAR_EQ_TAC
@@ -802,7 +773,7 @@ QED
 val ext = hd(amatch``(!x. f x = g x) <=> _``);
 
 (* |- !f g. f = g <=> !x. f x = g x *)
-Theorem th33: ^(el 33 goals |> concl)
+Theorem th33: ^(el 50 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM ext)
 QED
 
@@ -815,7 +786,7 @@ val sum_case_thms = amatch``Data_Sum_case_left_right f g (_ _) = _``;
 (* |- !f g. ?!h. Function_o h Data_Sum_left = f /\
                  Function_o h Data_Sum_right = g
  *)
-Theorem th34: ^(el 34 goals |> concl)
+Theorem th34: ^(el 52 goals |> concl)
 Proof
   rpt gen_tac
   \\ CONV_TAC(HO_REWR_CONV ex_unique_thm)
@@ -841,7 +812,7 @@ val ex_def = hd(amatch``$? = _``);
 val select_ax = hd(amatch ``p t ==> p ($@ p)``);
 
 (* |- !P t. (!x. x = t ==> P x) ==> $? P *)
-Theorem th35: ^(el 35 goals |> concl)
+Theorem th35: ^(el 53 goals |> concl)
 Proof
   PURE_REWRITE_TAC[forall_eq,ex_def]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -858,7 +829,7 @@ val imp_all = hd(amatch``(_ ==> (!x. _)) <=> _``);
           ((!x. P x) /\ Q <=> !x. P x /\ Q) /\
           (Q /\ (!x. P x) <=> !x. Q /\ P x)
  *)
-Theorem th36: ^(el 36 goals |> concl)
+Theorem th36: ^(el 54 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[and_all,all_and,all_imp,imp_all]
@@ -874,7 +845,7 @@ val ex_imp = hd(amatch``((?x. _) ==> _) <=> _``);
           ((?x. P x) /\ Q <=> ?x. P x /\ Q) /\
           (Q /\ (?x. P x) <=> ?y. Q /\ P y)
  *)
-Theorem th37: ^(el 37 goals |> concl)
+Theorem th37: ^(el 55 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[and_ex,ex_and,ex_imp]
@@ -890,7 +861,7 @@ th40: |- !P f. RES_FORALL P f <=> !x. x IN P ==> f x
 val eta_ax = hd(amatch``!f. (\x. f x) = f``);
 
 (* |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P) *)
-Theorem th41: ^(el 41 goals |> concl)
+Theorem th41: ^(el 59 goals |> concl)
 Proof
   PURE_REWRITE_TAC[ex_def]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -907,7 +878,7 @@ val eq_trans = hd(amatch``(x = y) /\ (y = z) ==> _``);
           (!x y. f x y = f y x) ==>
           !x y z. f x (f y z) = f y (f x z)
  *)
-Theorem th42: ^(el 42 goals |> concl)
+Theorem th42: ^(el 62 goals |> concl)
 Proof
   rpt strip_tac
   \\ first_assum(qspecl_then[`x`,`y`,`z`] SUBST_ALL_TAC)
@@ -923,7 +894,7 @@ val list_ind = hd(amatch``_ ==> !(l:'a Data_List_list). P l``);
 (* |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
           !l. P l
  *)
-Theorem th43: ^(el 43 goals |> concl)
+Theorem th43: ^(el 66 goals |> concl)
 Proof
   rpt strip_tac
   \\ match_mp_tac list_ind
@@ -933,7 +904,7 @@ Proof
 QED
 
 (* |- ~(t /\ ~t) *)
-Theorem th44: ^(el 44 goals |> concl)
+Theorem th44: ^(el 68 goals |> concl)
 Proof
   PURE_REWRITE_TAC[not_and,not_not]
   \\ Q.SPEC_THEN`t`FULL_STRUCT_CASES_TAC bool_cases
@@ -946,7 +917,7 @@ val right_11 = hd(amatch``Data_Sum_right _ = Data_Sum_right _``);
 (* |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\
       !y y'. Data_Sum_right y = Data_Sum_right y' <=> y = y'
  *)
-Theorem th45: ^(el 45 goals |> concl)
+Theorem th45: ^(el 69 goals |> concl)
 Proof
     conj_tac
  >| [ MATCH_ACCEPT_TAC left_11,
@@ -959,7 +930,7 @@ val isNone_none = hd(amatch``Data_Option_isNone (Data_Option_none)``);
 (* |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\
       (Data_Option_isNone Data_Option_none <=> T)
  *)
-Theorem th46: ^(el 46 goals |> concl)
+Theorem th46: ^(el 70 goals |> concl)
 Proof
     conj_tac
  >| [ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL isNone_some)),
@@ -972,7 +943,7 @@ val isSome_none = hd(amatch``Data_Option_isSome (Data_Option_none)``);
 (* |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\
       (Data_Option_isSome Data_Option_none <=> F)
  *)
-Theorem th47: ^(el 47 goals |> concl)
+Theorem th47: ^(el 71 goals |> concl)
 Proof
     conj_tac
  >| [ MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL isSome_some)),
@@ -985,7 +956,7 @@ val isLeft_left = hd(amatch``Data_Sum_isLeft (Data_Sum_left _)``);
 (* |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\
       !y. Data_Sum_isLeft (Data_Sum_right y) <=> F
  *)
-Theorem th48: ^(el 48 goals |> concl)
+Theorem th48: ^(el 72 goals |> concl)
 Proof
     conj_tac
  >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isLeft_left,
@@ -998,7 +969,7 @@ val isRight_left = hd(amatch``Data_Sum_isRight (Data_Sum_left _)``);
 (* |- (!x. Data_Sum_isRight (Data_Sum_right x)) /\
       !y. ~Data_Sum_isRight (Data_Sum_left y)
  *)
-Theorem th49: ^(el 49 goals |> concl)
+Theorem th49: ^(el 73 goals |> concl)
 Proof
     conj_tac
  >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isRight_right,
@@ -1015,7 +986,7 @@ val append_cons =
           Data_List_append (Data_List_cons h l1) l2 =
           Data_List_cons h (Data_List_append l1 l2)
  *)
-Theorem th50: ^(el 50 goals |> concl)
+Theorem th50: ^(el 74 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC append_nil
   \\ MATCH_ACCEPT_TAC append_cons
@@ -1029,7 +1000,7 @@ val plus_comm = hd(amatch``Number_Natural_plus x y = Number_Natural_plus y x``);
       !m n. Number_Natural_plus (Number_Natural_suc m) n =
             Number_Natural_suc (Number_Natural_plus m n)
  *)
-Theorem th51: ^(el 51 goals |> concl)
+Theorem th51: ^(el 75 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_zero)
   \\ MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_suc)
@@ -1043,7 +1014,7 @@ val power_suc = hd(amatch``Number_Natural_power _ (Number_Natural_suc _)``);
       !m n. Number_Natural_power m (Number_Natural_suc n) =
             Number_Natural_times m (Number_Natural_power m n)
  *)
-Theorem th52: ^(el 52 goals |> concl)
+Theorem th52: ^(el 76 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC power_zero
   \\ MATCH_ACCEPT_TAC power_suc
@@ -1059,7 +1030,7 @@ val times_zero_comm = PURE_ONCE_REWRITE_RULE [times_comm] times_zero;
           Number_Natural_times (Number_Natural_suc m) n =
           Number_Natural_plus (Number_Natural_times m n) n
  *)
-Theorem th53: ^(el 53 goals |> concl)
+Theorem th53: ^(el 77 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC times_zero_comm
   \\ MATCH_ACCEPT_TAC
@@ -1067,7 +1038,7 @@ Proof
 QED
 
 (* |- (!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T) *)
-Theorem th54: ^(el 54 goals |> concl)
+Theorem th54: ^(el 79 goals |> concl)
 Proof
   PURE_REWRITE_TAC[not_not,iff_F,iff_T,truth,not_F,and_T]
   \\ gen_tac \\ REFL_TAC
@@ -1081,7 +1052,7 @@ val map_some = hd(amatch``Data_Option_map _ (Data_Option_some _) = _``)
 (* |- (!f x. Data_Option_map f (Data_Option_some x) = Data_Option_some (f x)) /\
       !f. Data_Option_map f Data_Option_none = Data_Option_none
  *)
-Theorem th55: ^(el 55 goals |> concl)
+Theorem th55: ^(el 80 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC map_some
   \\ MATCH_ACCEPT_TAC map_none
@@ -1095,7 +1066,7 @@ val map_cons = hd(amatch``Data_List_map _ (Data_List_cons _ _)``);
           Data_List_map f (Data_List_cons h t) =
           Data_List_cons (f h) (Data_List_map f t)
  *)
-Theorem th56: ^(el 56 goals |> concl)
+Theorem th56: ^(el 81 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC map_nil
   \\ MATCH_ACCEPT_TAC map_cons
@@ -1116,7 +1087,7 @@ val filter_cons = hd(amatch``Data_List_filter _ (Data_List_cons _ _)``);
           if P h then Data_List_cons h (Data_List_filter P t)
           else Data_List_filter P t
  *)
-Theorem th58: ^(el 58 goals |> concl)
+Theorem th58: ^(el 83 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC filter_nil
   \\ MATCH_ACCEPT_TAC filter_cons
@@ -1129,7 +1100,7 @@ val all_cons = hd(amatch``Data_List_all _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_all P (Data_List_cons h t) <=> P h /\ Data_List_all P t
  *)
-Theorem th59: ^(el 59 goals |> concl)
+Theorem th59: ^(el 84 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL all_nil))
   \\ MATCH_ACCEPT_TAC all_cons
@@ -1142,7 +1113,7 @@ val any_cons = hd(amatch``Data_List_any _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_any P (Data_List_cons h t) <=> P h \/ Data_List_any P t
  *)
-Theorem th60: ^(el 60 goals |> concl)
+Theorem th60: ^(el 85 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL any_nil))
   \\ MATCH_ACCEPT_TAC any_cons
@@ -1153,7 +1124,7 @@ val concat_cons = hd(amatch``Data_List_concat (Data_List_cons _ _)``);
 (*
 (* |- (T <> F) /\ (F <> T) *)
 val th61 = store_thm
-  ("th61",  el 61 goals |> concl,
+  ("th61",  el 87 goals |> concl,
   PURE_REWRITE_TAC[iff_F,not_not,iff_T,not_F,and_T]);
 
 val BOOL_EQ_DISTINCT = th61;
@@ -1163,7 +1134,7 @@ val BOOL_EQ_DISTINCT = th61;
           Data_List_concat (Data_List_cons h t) =
           Data_List_append h (Data_List_concat t)
  *)
-Theorem th61: ^(el 61 goals |> concl)
+Theorem th61: ^(el 87 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC concat_nil
   \\ MATCH_ACCEPT_TAC concat_cons
@@ -1178,7 +1149,7 @@ val reverse_cons = hd(amatch``Data_List_reverse (Data_List_cons _ _)``);
           Data_List_append (Data_List_reverse t)
             (Data_List_cons h Data_List_nil)
  *)
-Theorem th62: ^(el 62 goals |> concl)
+Theorem th62: ^(el 88 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC reverse_nil
   \\ MATCH_ACCEPT_TAC reverse_cons
@@ -1198,7 +1169,7 @@ val unzip_cons = hd(amatch``Data_List_unzip (Data_List_cons _ _)``);
             (Data_List_cons (Data_Pair_snd x)
                (Data_Pair_snd (Data_List_unzip l)))
  *)
-Theorem th63: ^(el 63 goals |> concl)
+Theorem th63: ^(el 89 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC unzip_nil
   \\ PURE_REWRITE_TAC[unzip_cons]
@@ -1215,7 +1186,7 @@ val length_cons = hd(amatch``Data_List_length (Data_List_cons _ _)``);
           Data_List_length (Data_List_cons h t) =
           Number_Natural_suc (Data_List_length t)
  *)
-Theorem th64: ^(el 64 goals |> concl)
+Theorem th64: ^(el 90 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC length_nil
   \\ MATCH_ACCEPT_TAC length_cons
@@ -1231,7 +1202,7 @@ val fact_suc = hd(amatch``Number_Natural_factorial (Number_Natural_suc _)``);
           Number_Natural_times (Number_Natural_suc n)
             (Number_Natural_factorial n)
  *)
-Theorem th65: ^(el 65 goals |> concl)
+Theorem th65: ^(el 91 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC fact_zero
   \\ MATCH_ACCEPT_TAC fact_suc
@@ -1243,7 +1214,7 @@ val null_cons = hd(amatch``Data_List_null (Data_List_cons _ _)``);
 (* |- (Data_List_null Data_List_nil <=> T) /\
       !h t. Data_List_null (Data_List_cons h t) <=> F
  *)
-Theorem th66: ^(el 66 goals |> concl)
+Theorem th66: ^(el 92 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO null_nil)
   \\ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL null_cons))
@@ -1255,7 +1226,7 @@ val even_cons = hd(amatch``Number_Natural_even (Number_Natural_suc _)``);
 (* |- (Number_Natural_even Number_Natural_zero <=> T) /\
       !n. Number_Natural_even (Number_Natural_suc n) <=> ~Number_Natural_even n
  *)
-Theorem th67: ^(el 67 goals |> concl)
+Theorem th67: ^(el 93 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO even_nil)
   \\ MATCH_ACCEPT_TAC even_cons
@@ -1267,7 +1238,7 @@ val odd_cons = hd(amatch``Number_Natural_odd (Number_Natural_suc _)``);
 (* |- (Number_Natural_odd Number_Natural_zero <=> F) /\
       !n. Number_Natural_odd (Number_Natural_suc n) <=> ~Number_Natural_odd n
  *)
-Theorem th68: ^(el 68 goals |> concl)
+Theorem th68: ^(el 94 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO odd_nil)
   \\ MATCH_ACCEPT_TAC odd_cons
@@ -1276,13 +1247,13 @@ QED
 val one_thm = hd(amatch``_ = Data_Unit_unit``);
 
 (* |- Data_Unit_unit = @x. T *)
-Theorem th69: ^(el 69 goals |> concl)
+Theorem th69: ^(el 96 goals |> concl)
 Proof
   PURE_ONCE_REWRITE_TAC[one_thm] \\ REFL_TAC
 QED
 
 (* |- Number_Natural_zero = Number_Natural_zero *)
-Theorem th70: ^(el 70 goals |> concl)
+Theorem th70: ^(el 97 goals |> concl)
 Proof
   REFL_TAC
 QED
@@ -1290,7 +1261,7 @@ QED
 val exists_simp = hd(amatch “(?x. t) <=> t”);
 
 (* |- (?!x. F) <=> F *)
-Theorem th71: ^(el 71 goals |> concl)
+Theorem th71: ^(el 99 goals |> concl)
 Proof
   PURE_REWRITE_TAC [BETA_RULE (SPEC “\x:'a. F” ex_unique_thm)] \\
   PURE_REWRITE_TAC [SPEC “F” exists_simp, F_and] \\
@@ -1300,19 +1271,19 @@ QED
 val comma_11 = hd(amatch``Data_Pair_comma _ _ = Data_Pair_comma _ _``);
 
 (* |- Data_Pair_comma x y = Data_Pair_comma a b <=> x = a /\ y = b *)
-Theorem th72: ^(el 72 goals |> concl)
+Theorem th72: ^(el 110 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC comma_11
 QED
 
 (* |- Data_Sum_left x = Data_Sum_left y <=> x = y *)
-Theorem th73: ^(el 73 goals |> concl)
+Theorem th73: ^(el 111 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC left_11
 QED
 
 (* |- Data_Sum_right x = Data_Sum_right y <=> x = y *)
-Theorem th74: ^(el 74 goals |> concl)
+Theorem th74: ^(el 112 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC right_11
 QED
@@ -1321,7 +1292,7 @@ val mono_not_eq = hd (amatch “~t1 ==> ~t2 <=> t2 ==> t1”);
 val eq_sym_eq = hd (amatch “x = y <=> y = x”);
 
 (* |- y ==> x <=> ~x ==> ~y *)
-Theorem th75: ^(el 75 goals |> concl)
+Theorem th75: ^(el 117 goals |> concl)
 Proof
     PURE_ONCE_REWRITE_TAC [eq_sym_eq]
  >> MATCH_ACCEPT_TAC mono_not_eq
@@ -1332,7 +1303,7 @@ val MONO_NOT_EQ = th75;
 val skk = hd(amatch``Function_Combinator_s _ _ = Function_id``);
 
 (* |- Function_id = Function_Combinator_s Function_const Function_const *)
-Theorem th76: ^(el 76 goals |> concl)
+Theorem th76: ^(el 123 goals |> concl)
 Proof
   PURE_REWRITE_TAC[skk] \\ REFL_TAC
 QED
@@ -1340,7 +1311,7 @@ QED
 val empty_thm = hd(amatch``Relation_empty _ _``);
 
 (* |- Relation_empty = (\x y. F) *)
-Theorem th77: ^(el 77 goals |> concl)
+Theorem th77: ^(el 125 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,EQF_INTRO (SPEC_ALL empty_thm)]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1350,7 +1321,7 @@ QED
 val universe_thm = hd(amatch``Relation_universe _ _``);
 
 (* |- Relation_universe = (\x y. T) *)
-Theorem th78: ^(el 78 goals |> concl)
+Theorem th78: ^(el 126 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,EQT_INTRO(SPEC_ALL universe_thm)]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1373,7 +1344,7 @@ val num_less_ind = hd(amatch``(!x. _ ==> _) ==> !n. P (n:Number_Natural_natural)
            Number_Natural_plus n
              (Number_Natural_plus n (Number_Natural_suc Number_Natural_zero)))
  *)
-Theorem th79: ^(el 79 goals |> concl)
+Theorem th79: ^(el 127 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,bit1_thm,plus_suc]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1394,7 +1365,7 @@ val if_id   = hd(amatch``if _ then x else x``);
 val less_or_eq   = hd(amatch``Number_Natural_lesseq _ _ <=> (Number_Natural_less _ _) \/ _``);
 
 (* |- Number_Natural_max = (\m n. if Number_Natural_less m n then n else m) *)
-Theorem th80: ^(el 80 goals |> concl)
+Theorem th80: ^(el 128 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,max_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1411,7 +1382,7 @@ QED
 val min_thm = hd(amatch``Number_Natural_min _ _ = COND _ _ _``);
 
 (* |- Number_Natural_min = (\m n. if Number_Natural_less m n then m else n) *)
-Theorem th81: ^(el 81 goals |> concl)
+Theorem th81: ^(el 129 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,min_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1428,7 +1399,7 @@ QED
 val greater_thm   = hd(amatch``Number_Natural_greater _ _ = _``);
 
 (* |- Number_Natural_greater = (\m n. Number_Natural_less n m) *)
-Theorem th82: ^(el 82 goals |> concl)
+Theorem th82: ^(el 130 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,greater_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1438,7 +1409,7 @@ QED
 val greatereq_thm = hd(amatch``Number_Natural_greatereq _ _``);
 
 (* |- Number_Natural_greatereq = (\m n. Number_Natural_greater m n \/ m = n) *)
-Theorem th83: ^(el 83 goals |> concl)
+Theorem th83: ^(el 131 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,greatereq_thm,less_or_eq,greater_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1469,7 +1440,7 @@ QED
 (* |- Number_Natural_less =
       (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n)
  *)
-Theorem th84: ^(el 84 goals |> concl)
+Theorem th84: ^(el 132 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ qx_genl_tac[`a`,`b`]
@@ -1530,7 +1501,7 @@ Proof
 QED
 
 (* |- Number_Natural_lesseq = (\m n. Number_Natural_less m n \/ m = n) *)
-Theorem th85: ^(el 85 goals |> concl)
+Theorem th85: ^(el 133 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1540,7 +1511,7 @@ QED
 val irreflexive_thm = hd(amatch``Relation_irreflexive _ = _``);
 
 (* |- Relation_irreflexive = (\R. !x. ~R x x) *)
-Theorem th86: ^(el 86 goals |> concl)
+Theorem th86: ^(el 134 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm, irreflexive_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1551,7 +1522,7 @@ QED
 val reflexive_thm = hd(amatch``Relation_reflexive _ = _``);
 
 (* |- Relation_reflexive = (\R. !x. R x x) *)
-Theorem th87: ^(el 87 goals |> concl)
+Theorem th87: ^(el 135 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm, reflexive_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1561,7 +1532,7 @@ QED
 val transitive_thm = hd(amatch``Relation_transitive s <=> _``);
 
 (* |- Relation_transitive = (\R. !x y z. R x y /\ R y z ==> R x z) *)
-Theorem th88: ^(el 88 goals |> concl)
+Theorem th88: ^(el 136 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,transitive_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1573,7 +1544,7 @@ val wellFounded_thm = hd(amatch``Relation_wellFounded r <=> !p. (?x. _) ==> _``)
 (* |- Relation_wellFounded =
       (\R. !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b)
  *)
-Theorem th89: ^(el 89 goals |> concl)
+Theorem th89: ^(el 137 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ PURE_REWRITE_TAC[wellFounded_thm]
@@ -1591,7 +1562,7 @@ val subrelation_thm  = hd(amatch``Relation_subrelation x s <=> !x y. _``);
            !P. (!x y. R x y ==> P x y) /\ (!x y z. P x y /\ P y z ==> P x z) ==>
                P a b)
  *)
-Theorem th90: ^(el 90 goals |> concl)
+Theorem th90: ^(el 138 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ PURE_REWRITE_TAC[tc_def,bigIntersect_thm,mem_fromPred]
@@ -1606,7 +1577,7 @@ Proof
 QED
 
 (* |- Relation_subrelation = (\R1 R2. !x y. R1 x y ==> R2 x y) *)
-Theorem th91: ^(el 91 goals |> concl)
+Theorem th91: ^(el 139 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,subrelation_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1621,7 +1592,7 @@ val mem_union = hd(amatch``Set_member _ (Set_union _ _) <=> _``);
 val mem_toSet = hd(amatch``Set_member _ (Relation_toSet _)``);
 
 (* |- Relation_intersect = (\R1 R2 x y. R1 x y /\ R2 x y) *)
-Theorem th92: ^(el 92 goals |> concl)
+Theorem th92: ^(el 140 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,intersect_thm,fromSet_thm,mem_inter,mem_toSet]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1629,7 +1600,7 @@ Proof
 QED
 
 (* |- Relation_union = (\R1 R2 x y. R1 x y \/ R2 x y) *)
-Theorem th93: ^(el 93 goals |> concl)
+Theorem th93: ^(el 141 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,union_thm,fromSet_thm,mem_union,mem_toSet]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1639,7 +1610,7 @@ QED
 val o_thm = hd(amatch``(Function_o _ _) _ = _``);
 
 (* |- Function_o = (\f g x. f (g x)) *)
-Theorem th94: ^(el 94 goals |> concl)
+Theorem th94: ^(el 142 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,o_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1647,13 +1618,18 @@ Proof
 QED
 
 (* |- (!x. P x ==> Q x) ==> (?x. P x) ==> ?x'. Q x' *)
-Theorem th95: ^(el 95 goals |> concl)
+(* The article no longer assumes (!x. P x ==> Q x) ==> (?x. P x) ==> ?x. Q x;
+   goal 143 is the eta-contracted form it assumes instead (thx143 below).
+   Retained, commented out, in the style of th94'/th89 above.
+
+Theorem th95: ^(el ?? goals |> concl)
 Proof
   rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
   \\ qexists_tac`x`
   \\ first_assum ACCEPT_TAC
 QED
+ *)
 
 (* |- (!x. P x ==> Q x) ==> (!x. P x) ==> !x. Q x
 val th94' = store_thm
@@ -1664,7 +1640,7 @@ val th94' = store_thm
  *)
 
 (* |- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w *)
-Theorem th96: ^(el 96 goals |> concl)
+Theorem th96: ^(el 144 goals |> concl)
 Proof
    rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
@@ -1673,7 +1649,7 @@ Proof
 QED
 
 (* |- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w *)
-Theorem th97: ^(el 97 goals |> concl)
+Theorem th97: ^(el 145 goals |> concl)
 Proof
   rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
@@ -1701,10 +1677,342 @@ val th89 = store_thm
   MATCH_ACCEPT_TAC ex_unique_thm);
  *)
 
-(* Now raise an error if the above th98 is not the last one *)
-val _ = if List.length goals <> 97 then
-            (raise ERR "-" "assumptions changed")
-        else ();
+
+(* ------------------------------------------------------------------------
+   Assumptions the article gained after the 97-goal era.
+
+   Named thx<n> after their position in 'goals': the historical th<n> names
+   above are kept attached to the statements their proofs were written for,
+   so those numbers no longer track position.  The regenerated listing at the
+   head of this file is the authority on what sits at each index.
+   ------------------------------------------------------------------------ *)
+
+val const_thm = hd(amatch``Function_const _ _ = _``);
+val id_thm    = hd(amatch``Function_id _ = _``);
+val flip_thm  = hd(amatch``Function_flip _ _ _ = _``);
+val s_thm     = hd(amatch``Function_Combinator_s _ _ _ = _``);
+
+(* The combinator assumptions all reduce to the base package's defining
+   equation for the constant, modulo eta/beta. *)
+(* The article assumes the eta-contracted form '$? P'; HOL4 states existentials
+   as '?x. P x', i.e. '$? (\\x. P x)'.  The two are eta- but not alpha-equal. *)
+val eta_exists = prove(``$? (P:'a->bool) <=> ?x. P x``,
+  CONV_TAC (RAND_CONV (RAND_CONV ETA_CONV)) THEN REFL_TAC);
+
+val combinator_tac =
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,const_thm,id_thm,flip_thm,s_thm,o_thm]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC;
+
+(* |- !x. (\y. x) = Function_const x *)
+Theorem thx7: ^(el 7 goals |> concl)
+Proof
+  combinator_tac
+QED
+
+(* |- !c a b. ~(if c then a else b) <=> (~c \/ ~a) /\ (c \/ ~b) *)
+Theorem thx15: ^(el 15 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !a b c. (a ==> (b <=> c)) /\ b ==> ~a \/ c *)
+Theorem thx20: ^(el 20 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !a b b'. (~a ==> (b <=> b')) ==> (a \/ b <=> a \/ b') *)
+Theorem thx21: ^(el 21 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !a b b'. (~a ==> (b <=> b')) ==> ~a ==> (a \/ b <=> b') *)
+Theorem thx22: ^(el 22 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !x y. (x <=/=> y) <=> (x \/ y) /\ (~x \/ ~y) *)
+Theorem thx24: ^(el 24 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !a b. (a <=/=> b) <=> (a <=> ~b) *)
+Theorem thx25: ^(el 25 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !x y. (x <=> y) <=> (x \/ ~y) /\ (~x \/ y) *)
+Theorem thx27: ^(el 27 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !t1 t2. (t1 <=> t2) <=> t1 /\ t2 \/ ~t1 /\ ~t2 *)
+Theorem thx28: ^(el 28 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !x y. x ==> y <=> y \/ ~x *)
+Theorem thx30: ^(el 30 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !A B. A ==> B <=> ~A \/ B *)
+Theorem thx31: ^(el 31 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !a b. (a ==> b) /\ (~a ==> b) ==> b *)
+Theorem thx33: ^(el 33 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !a b. a \/ b ==> ~a ==> b *)
+Theorem thx35: ^(el 35 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* Goal 40 is Abbrev's definition, surfaced as an assumption because
+   hol4-assums.art is extracted with --skip-definitions.  It needs no
+   HOL4-side proof: hol4-base-unint.art defines HOL4.marker.Abbrev itself, so
+   the composition discharges it.  Proving it here would be worse than
+   useless -- prove_base_assums sits upstream of hol4-base-unint, so a
+   reference to that constant from here cannot be identified with the
+   definition downstream, and opentheory rejects hol4-base.art with
+   "different constants named HOL4.marker.Abbrev". *)
+
+(* |- !a. a /\ ~a ==> F *)
+Theorem thx44: ^(el 44 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !x. (~x ==> F) ==> x *)
+Theorem thx46: ^(el 46 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- !f x. f x = Function_id f x *)
+Theorem thx47: ^(el 47 goals |> concl)
+Proof
+  combinator_tac
+QED
+
+(* |- !s t. s = (\x. t x) <=> !x. s x = t x *)
+Theorem thx51: ^(el 51 goals |> concl)
+Proof
+  metis_tac[]
+QED
+
+(* |- !p. $?! p <=> (?x. p x) /\ !x y. p x /\ p y ==> x = y *)
+Theorem thx60: ^(el 60 goals |> concl)
+Proof
+  metis_tac[]
+QED
+
+(* |- !p. ~$?! p <=> (!x. ~p x) \/ ?x y. p x /\ p y /\ x <> y *)
+Theorem thx61: ^(el 61 goals |> concl)
+Proof
+  metis_tac[]
+QED
+
+(* |- !x y. (\v. x v y) = Function_flip x y *)
+Theorem thx63: ^(el 63 goals |> concl)
+Proof
+  combinator_tac
+QED
+
+(* |- !x y. (\v. x v (y v)) = Function_Combinator_s x y *)
+Theorem thx64: ^(el 64 goals |> concl)
+Proof
+  combinator_tac
+QED
+
+(* |- !x y. (\v. x (y v)) = Function_o x y *)
+Theorem thx65: ^(el 65 goals |> concl)
+Proof
+  combinator_tac
+QED
+
+(* |- !P p. P p <=> (p ==> P T) /\ (~p ==> P F) *)
+Theorem thx67: ^(el 67 goals |> concl)
+Proof
+  rpt gen_tac \\ BOOL_CASES_TAC ``p:bool`` \\ REWRITE_TAC[]
+QED
+
+(* |- (!b e. (if b then T else e) <=> b \/ e) /\ (!b t. (if b then t else T) <=> b ==> t) /\ (!b e. (if b then F else e) <=> ~b /\ e) /\ !b t. (if b then t else F) <=> b /\ t *)
+Theorem thx78: ^(el 78 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- x = x /\ (x <> y \/ x <> z \/ y = z) *)
+Theorem thx86: ^(el 86 goals |> concl)
+Proof
+  metis_tac[]
+QED
+
+(* |- LET f (Function_id x) = f x *)
+Theorem thx95: ^(el 95 goals |> concl)
+Proof
+  PURE_REWRITE_TAC[id_thm,boolTheory.LET_THM] \\ REFL_TAC
+QED
+
+(* |- p <=> ~p ==> F *)
+Theorem thx98: ^(el 98 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- ~(?!x. P x) <=> (!x. ~P x) \/ ?x x'. P x /\ P x' /\ x <> x' *)
+Theorem thx100: ^(el 100 goals |> concl)
+Proof
+  metis_tac[]
+QED
+
+(* |- ~~p <=> p *)
+Theorem thx101: ^(el 101 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- ~(p /\ q) <=> ~p \/ ~q *)
+Theorem thx102: ^(el 102 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (p <=/=> q) <=> (p \/ q) /\ (~p \/ ~q) *)
+Theorem thx103: ^(el 103 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (p <=/=> q) <=> p /\ ~q \/ ~p /\ q *)
+Theorem thx104: ^(el 104 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- ~(p ==> q) <=> p /\ ~q *)
+Theorem thx105: ^(el 105 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- ~(p \/ q) <=> ~p /\ ~q *)
+Theorem thx106: ^(el 106 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- a /\ (b \/ c) <=> a /\ b \/ a /\ c *)
+Theorem thx107: ^(el 107 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (a /\ b) /\ c <=> b /\ a /\ c *)
+Theorem thx108: ^(el 108 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (a \/ b) /\ c <=> a /\ c \/ b /\ c *)
+Theorem thx109: ^(el 109 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (p <=> q) <=> (p \/ ~q) /\ (~p \/ q) *)
+Theorem thx113: ^(el 113 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (p <=> q) <=> p /\ q \/ ~p /\ ~q *)
+Theorem thx114: ^(el 114 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- a ==> b <=> ~a \/ b *)
+Theorem thx115: ^(el 115 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- p ==> q <=> ~p \/ q *)
+Theorem thx116: ^(el 116 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- ~p ==> p <=> p *)
+Theorem thx118: ^(el 118 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- a \/ b <=> ~b ==> a *)
+Theorem thx119: ^(el 119 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- a \/ b /\ c <=> (a \/ b) /\ (a \/ c) *)
+Theorem thx120: ^(el 120 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- a /\ b \/ c <=> (a \/ c) /\ (b \/ c) *)
+Theorem thx121: ^(el 121 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (a \/ b) \/ c <=> b \/ a \/ c *)
+Theorem thx122: ^(el 122 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
+(* |- (\a. a) = Function_id *)
+Theorem thx124: ^(el 124 goals |> concl)
+Proof
+  combinator_tac
+QED
+
+(* |- (!x. P x ==> Q x) ==> $? P ==> $? Q *)
+Theorem thx143: ^(el 143 goals |> concl)
+Proof
+  PURE_ONCE_REWRITE_TAC[eta_exists] \\ metis_tac[]
+QED
+
+(* |- v = v' ==> LET f v = LET f (Function_id v') *)
+Theorem thx146: ^(el 146 goals |> concl)
+Proof
+  strip_tac \\ PURE_REWRITE_TAC[id_thm] \\ ASM_REWRITE_TAC[]
+QED
+
+(* |- (a <=> b) ==> b \/ ~a *)
+Theorem thx147: ^(el 147 goals |> concl)
+Proof
+  DECIDE_TAC
+QED
+
 
 (* Other theorems (from boolTheory, used by other OT packages)
 
