@@ -648,7 +648,9 @@ val (log_term, log_thm, log_clear,
       val _ = log_command "pop"
       val _ = app (fn _ => log_command "hdTl") nvars
       val _ = log_command "pop"
-      val _ = app (ignore o save_dict o OConst o #1) (rev nvars)
+      val _ = app (fn nv => (ignore (save_dict (OConst (#1 nv)));
+                             log_command "pop"))
+                  (rev nvars)
       val _ = log_num k
       val _ = log_command "ref"
       in () end
