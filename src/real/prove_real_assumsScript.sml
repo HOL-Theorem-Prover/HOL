@@ -72,6 +72,23 @@ val _ = new_constant("empty", “:'a set”);
 val _ = new_constant("member", “:'a -> 'a set -> bool”);
 val _ = new_constant("sup", “:real set -> real”);
 
+(* "fake" type and constants for the integer assumptions that leak into the
+   real package (intreal relates the two).  These are only needed so that the
+   assumptions article can be read; nothing here reasons about them.  They are
+   declared locally rather than taken from integerTheory because loading that
+   theory would overload 0, +, - and < onto the integers and thereby re-type
+   every quotation below.
+ *)
+val _ = new_type ("int", 0);
+val _ = new_constant("int_of_num", “:num -> int”);
+val _ = new_constant("Num", “:int -> num”);
+val _ = new_constant("int_neg", “:int -> int”);
+val _ = new_constant("int_add", “:int -> int -> int”);
+val _ = new_constant("int_mul", “:int -> int -> int”);
+val _ = new_constant("int_div", “:int -> int -> int”);
+val _ = new_constant("int_le", “:int -> int -> bool”);
+val _ = new_constant("int_lt", “:int -> int -> bool”);
+
 (* According to hol4-real.thy, this fake constant "inv" without definition is
    actually OT's Number.Real.inv, which has already a definition.
  *)
@@ -162,7 +179,16 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["Number","Natural"],"zero") = {Thy="num",Name="0"}
   | const_name (["Number","Natural"],"suc") = {Thy="num",Name="SUC"}
   | const_name (["Number","Natural"],"bit1") = {Thy="arithmetic",Name="BIT1"}
-  | const_name (["HOL4","arithmetic"],"BIT2") = {Thy="arithmetic",Name="BIT2"}
+  | const_name (["Number","Natural"],"<") = {Thy="prim_rec",Name="<"}
+(* arithmetic, marker and numeral sit outside hol-real's own composition
+   (they arrive through its "requires:" packages), so their constants can be
+   mapped straight onto the real HOL4 ones without colliding with anything
+   hol4-real-unsat.art defines.  The integer names go to the fake constants
+   declared above. *)
+  | const_name (["HOL4","arithmetic"],n) = {Thy="arithmetic",Name=n}
+  | const_name (["HOL4","integer"],n) = {Thy=Thy,Name=n}
+  | const_name (["HOL4","marker"],n) = {Thy="marker",Name=n}
+  | const_name (["HOL4","numeral"],n) = {Thy="numeral",Name=n}
   | const_name (["HOL4","realax"],"real_0") = {Thy=Thy,Name="real_0"}
   | const_name (["HOL4","realax"],"real_1") = {Thy=Thy,Name="real_1"}
   | const_name (["HOL4","realax"],"inv") = {Thy=Thy,Name="inv0"}
@@ -177,6 +203,7 @@ fun tyop_name ([],"bool") = {Thy="min",Tyop="bool"}
   | tyop_name (["Number","Real"],"real") = {Thy="realax",Tyop="real"}
   | tyop_name (["Number","Natural"],"natural") = {Thy="num",Tyop="num"}
   | tyop_name (["Set"],"set") = {Thy=Thy,Tyop="set"}
+  | tyop_name (["HOL4","integer"],"int") = {Thy=Thy,Tyop="int"}
   | tyop_name (ns,n) = {Thy=Thy,Tyop=String.concatWith "_"(ns@[n])};
 
 local
@@ -281,8 +308,18 @@ val REAL_MUL_LINV = hd(amatch(
 val real_div0 = hd(amatch(
    “!x y. ~(y = 0r) ==> (prove_real_assums$/ x y = x * prove_real_assums$inv y)”));
 
+val expected_assums = 107;
+
+val _ = if List.length goals = expected_assums then ()
+        else raise ERR ""
+          ("unexpected number of assumptions: expected " ^
+           Int.toString expected_assums ^ ", found " ^
+           Int.toString(List.length goals) ^
+           "; every proof below binds to a position in this list, so they \
+           \must all be checked against the new set\n");
+
 (* |- !x y z. x < y /\ y < z ==> x < z *)
-Theorem th1: ^(el 1 goals |> concl)
+Theorem th1: ^(el 6 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt]
@@ -297,7 +334,7 @@ QED
 val REAL_LT_TRANS = th1;
 
 (* |- !x y z. y < z ==> x + y < x + z *)
-Theorem th2: ^(el 2 goals |> concl)
+Theorem th2: ^(el 7 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt]
@@ -330,7 +367,7 @@ Proof
 QED
 
 (* |- !x y. real_0 < x /\ real_0 < y ==> real_0 < x * y *)
-Theorem th3: ^(el 3 goals |> concl)
+Theorem th3: ^(el 19 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt,REAL_0]
@@ -343,23 +380,20 @@ Proof
 QED
 
 (* |- !x y. x = y \/ x < y \/ y < x *)
-Theorem th4: ^(el 4 goals |> concl)
+Theorem th4: ^(el 16 goals |> concl)
 Proof
   metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM]
 QED
 
 (* |- !x y. real_div x y = x * inv0 y *)
-Theorem th5: ^(el 5 goals |> concl)
+Theorem th5: ^(el 24 goals |> concl)
 Proof
   SIMP_TAC bool_ss [FUN_EQ_THM,real_div_def,inv0_def]
   \\ metis_tac[real_div0,REAL_MUL_LZERO,REAL_MUL_SYM]
 QED
 
-(* |- !x y. x <= y <=> ~(y < x) *)
-Theorem th6: ^(el 6 goals |> concl)
-Proof
-    metis_tac[real_lt]
-QED
+(* The old goal 6, |- !x y. x <= y <=> ~(y < x), is no longer in the
+   assumption set; the eta-contracted form is goal 87 (th17 below). *)
 
 val otax = hd(amatch
   ``!p. (?(x:real). p x) /\ (?m. !x. p x ==> x <= m) ==>
@@ -374,7 +408,7 @@ QED
 (* |- !P. (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
           ?s. !y. (?x. P x /\ y < x) <=> y < s
  *)
-Theorem th7: ^(el 7 goals |> concl)
+Theorem th7: ^(el 44 goals |> concl)
 Proof
   rpt strip_tac
   \\ qspec_then`P`mp_tac otax
@@ -388,31 +422,31 @@ Proof
 QED
 
 (* |- !x. x <> real_0 ==> inv0 x * x = real_1 *)
-Theorem th8: ^(el 8 goals |> concl)
+Theorem th8: ^(el 42 goals |> concl)
 Proof
   metis_tac[REAL_MUL_LINV,REAL_0,REAL_1,inv0_def]
 QED
 
 (* |- !x. -x + x = real_0 *)
-Theorem th9: ^(el 9 goals |> concl)
+Theorem th9: ^(el 38 goals |> concl)
 Proof
   metis_tac[REAL_ADD_LINV,REAL_0]
 QED
 
 (* |- !x. real_0 + x = x *)
-Theorem th10: ^(el 10 goals |> concl)
+Theorem th10: ^(el 39 goals |> concl)
 Proof
   metis_tac[REAL_ADD_LID,REAL_0]
 QED
 
 (* |- !x. real_1 * x = x *)
-Theorem th11: ^(el 11 goals |> concl)
+Theorem th11: ^(el 40 goals |> concl)
 Proof
   metis_tac[REAL_MUL_LID,REAL_1]
 QED
 
 (* |- !x. ~(x < x) *)
-Theorem th12: ^(el 12 goals |> concl)
+Theorem th12: ^(el 27 goals |> concl)
 Proof
   simp_tac bool_ss [real_lt,REAL_LE_REFL]
 QED
@@ -426,7 +460,7 @@ val pow0   = hd(amatch “x pow 0 = 1”);
 val powsuc = hd(amatch “x pow SUC n = x * x pow n”);
 
 (* |- (!x. x pow 0 = 1) /\ !x n. x pow SUC n = x * x pow n *)
-Theorem th13: ^(el 13 goals |> concl)
+Theorem th13: ^(el 49 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC(CONJ pow0 powsuc)
 QED
@@ -435,7 +469,7 @@ QED
 val REAL_OF_NUM_ADD = hd(amatch(concl realaxTheory.REAL_OF_NUM_ADD));
 
 (* |- 0 = real_0 /\ !n. &SUC n = &n + real_1 *)
-Theorem th14: ^(el 14 goals |> concl)
+Theorem th14: ^(el 70 goals |> concl)
 Proof
   REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_ADD,arithmeticTheory.ADD1]
 QED
@@ -447,38 +481,38 @@ val real_abs = hd(amatch(concl realaxTheory.real_abs));
 val real_sub = hd(amatch(concl realaxTheory.real_sub));
 
 (* |- abs = (\x. if 0 <= x then x else -x) *)
-Theorem th15: ^(el 15 goals |> concl)
+Theorem th15: ^(el 85 goals |> concl)
 Proof
   SIMP_TAC bool_ss [FUN_EQ_THM,real_abs]
 QED
 
 (* |- $- = (\x y. x + -y) *)
-Theorem th16: ^(el 16 goals |> concl)
+Theorem th16: ^(el 86 goals |> concl)
 Proof
   SIMP_TAC bool_ss [FUN_EQ_THM,real_sub]
 QED
 
 (* |- $<= = (\x y. ~(y < x)) *)
-Theorem th17: ^(el 17 goals |> concl)
+Theorem th17: ^(el 87 goals |> concl)
 Proof
   SIMP_TAC bool_ss [FUN_EQ_THM]
   \\ metis_tac[real_lt]
 QED
 
 (* |- real_1 = 1 *)
-Theorem th18: ^(el 18 goals |> concl)
+Theorem th18: ^(el 88 goals |> concl)
 Proof
   ACCEPT_TAC REAL_1
 QED
 
 (* |- inv0 real_0 = real_0 *)
-Theorem th19: ^(el 19 goals |> concl)
+Theorem th19: ^(el 105 goals |> concl)
 Proof
   metis_tac[inv0_def,REAL_0]
 QED
 
 (* |- real_0 = 0 *)
-Theorem th20: ^(el 20 goals |> concl)
+Theorem th20: ^(el 106 goals |> concl)
 Proof
   ACCEPT_TAC REAL_0
 QED
@@ -487,13 +521,10 @@ QED
 val REAL_OF_NUM_EQ = hd(amatch(concl realaxTheory.REAL_OF_NUM_EQ));
 
 (* |- real_1 <> real_0 *)
-Theorem th21: ^(el 21 goals |> concl)
+Theorem th21: ^(el 107 goals |> concl)
 Proof
   PURE_REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_EQ,
     arithmeticTheory.ONE,prim_recTheory.SUC_ID]
   \\ strip_tac
 QED
 
-val _ = if List.length goals = 21 then ()
-        else raise ERR "" ("unexpected number of assumptions: " ^
-                           Int.toString(List.length goals) ^ "\n");
