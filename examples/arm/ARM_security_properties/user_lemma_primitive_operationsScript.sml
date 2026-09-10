@@ -645,79 +645,96 @@ QED
 (* ========= read_reg ============*)
 
 
-val _ = g `preserve_relation_mmu (LookUpRName <|proc:=0|> (t,M)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = go_on 1;
-val LookUpRName_thm =  save_thm("LookUpRName_thm", top_thm());
+Theorem LookUpRName_thm:
+  preserve_relation_mmu (LookUpRName <|proc:=0|> (t,M)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  GO_ON_N 1
+QED
 
 
 
-g `(~ access_violation s) ==> (((LookUpRName <|proc := 0|> (nw,16w)) s) = ValueState reg s') ==> (reg IN  {RName_0usr; RName_1usr; RName_2usr; RName_3usr; RName_4usr; RName_5usr; RName_6usr; RName_7usr; RName_8usr; RName_9usr; RName_10usr; RName_11usr; RName_12usr; RName_SPusr; RName_LRusr; RName_PC})`;
-e(EVAL_TAC);
-e(RW_TAC (srw_ss()) [] THEN METIS_TAC []);
-val lookup_read__reg_help_lem1 = top_thm();
+Theorem lookup_read__reg_help_lem1:
+  (~ access_violation s) ==> (((LookUpRName <|proc := 0|> (nw,16w)) s) = ValueState reg s') ==> (reg IN  {RName_0usr; RName_1usr; RName_2usr; RName_3usr; RName_4usr; RName_5usr; RName_6usr; RName_7usr; RName_8usr; RName_9usr; RName_10usr; RName_11usr; RName_12usr; RName_SPusr; RName_LRusr; RName_PC})
+Proof
+  EVAL_TAC >>
+  RW_TAC (srw_ss()) [] THEN METIS_TAC []
+QED
 
 
-g `(nw <> 15w) ==> (access_violation s) ==> ((((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. read__reg <|proc := 0|> rname)) s) = ValueState ARB s)) `;
-e(EVAL_TAC);
-e(RW_TAC (srw_ss())  []);
-e(IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``));
-val lookup_read__reg_help_lem2 = top_thm();
+Theorem lookup_read__reg_help_lem2:
+  (nw <> 15w) ==> (access_violation s) ==> ((((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. read__reg <|proc := 0|> rname)) s) = ValueState ARB s))
+Proof
+  EVAL_TAC >>
+  RW_TAC (srw_ss())  [] >>
+  IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``)
+QED
 
 
-g `(nw = 15w) ==> (access_violation s) ==>  (((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. read__reg <|proc := 0|> rname)) s) = Error "LookUpRName: n = 15w") `;
-e(EVAL_TAC);
-e(RW_TAC (srw_ss())  []);
-val lookup_read__reg_help_lem3 = top_thm();
+Theorem lookup_read__reg_help_lem3:
+  (nw = 15w) ==> (access_violation s) ==>  (((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. read__reg <|proc := 0|> rname)) s) = Error "LookUpRName: n = 15w")
+Proof
+  EVAL_TAC >>
+  RW_TAC (srw_ss())  []
+QED
 
 
-g ` preserve_relation_mmu (LookUpRName <|proc := 0|> (nw,16w) >>=  (λrname. read__reg <|proc := 0|> rname)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-e(RW_TAC (srw_ss()) [preserve_relation_mmu_def, empty_unt_def, empty_sim_def]);
-e(`access_violation s1 = access_violation s2` by METIS_TAC [similar_def]);
-e(Cases_on `access_violation s1`);
-(* access violation from beginning *)
-e(`access_violation s2` by FULL_SIMP_TAC (srw_ss()) []);
-e(Cases_on `nw = 15w`);
-(* nw = 15 *)
-e(IMP_RES_TAC lookup_read__reg_help_lem3);
-e(RW_TAC (srw_ss()) []);
-(* nw <> 15 *)
-e(IMP_RES_TAC lookup_read__reg_help_lem2);
-e(RW_TAC (srw_ss()) [untouched_refl]);
-(* no access violation from beginning *)
-e(`~ access_violation s2` by FULL_SIMP_TAC (srw_ss()) []);
-e(ASSUME_TAC (SPECL [``nw:word4``,``16w:word5``] (GEN_ALL LookUpRName_thm)));
-e(FULL_SIMP_TAC (srw_ss()) [preserve_relation_mmu_def, empty_sim_def, empty_unt_def]);
-e(SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``]));
-e(UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []);
-(* received same value in Lookup *)
-e(`access_violation s1' = access_violation s2'` by METIS_TAC [similar_def]);
-e(FULL_SIMP_TAC (srw_ss()) [seqT_def, read__reg_def, constT_def, readT_def]);
-e(RW_TAC (srw_ss()) []);
-e(ASSUME_TAC  (SPECL [``s1':arm_state``, ``s1:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1)));
-e(FULL_SIMP_TAC (srw_ss()) [similar_def, equal_user_register_def]);
-e(SPEC_ASSUM_TAC (``!(reg:RName). X``, [``a:RName``]));
-e(UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []);
-(* Error in Lookup *)
-e(RW_TAC (srw_ss()) [seqT_def]);
-val lookup_read__reg_thm = top_thm();
+Theorem lookup_read__reg_thm[local]:
+  preserve_relation_mmu (LookUpRName <|proc := 0|> (nw,16w) >>=  (λrname. read__reg <|proc := 0|> rname)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  RW_TAC (srw_ss()) [preserve_relation_mmu_def, empty_unt_def, empty_sim_def] >>
+  `access_violation s1 = access_violation s2` by METIS_TAC [similar_def] >>
+  Cases_on `access_violation s1`
+  >- ((* access violation from beginning *)
+      `access_violation s2` by FULL_SIMP_TAC (srw_ss()) [] >>
+      Cases_on `nw = 15w`
+      >- ((* nw = 15 *)
+          IMP_RES_TAC lookup_read__reg_help_lem3 >>
+          RW_TAC (srw_ss()) [])
+      >> ((* nw <> 15 *)
+          IMP_RES_TAC lookup_read__reg_help_lem2 >>
+          RW_TAC (srw_ss()) [untouched_refl]))
+  >> ((* no access violation from beginning *)
+      `~ access_violation s2` by FULL_SIMP_TAC (srw_ss()) [] >>
+      ASSUME_TAC (SPECL [``nw:word4``,``16w:word5``] (GEN_ALL LookUpRName_thm)) >>
+      FULL_SIMP_TAC (srw_ss()) [preserve_relation_mmu_def, empty_sim_def, empty_unt_def] >>
+      SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``]) >>
+      (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [])
+      >- ((* received same value in Lookup *)
+          `access_violation s1' = access_violation s2'` by METIS_TAC [similar_def] >>
+          FULL_SIMP_TAC (srw_ss()) [seqT_def, read__reg_def, constT_def, readT_def] >>
+          RW_TAC (srw_ss()) [] >>
+          ASSUME_TAC  (SPECL [``s1':arm_state``, ``s1:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1)) >>
+          FULL_SIMP_TAC (srw_ss()) [similar_def, equal_user_register_def] >>
+          SPEC_ASSUM_TAC (``!(reg:RName). X``, [``a:RName``]) >>
+          (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []))
+      >> ((* Error in Lookup *)
+          RW_TAC (srw_ss()) [seqT_def]))
+QED
 add_to_simplist lookup_read__reg_thm;
 
 
-g `preserve_relation_mmu (read_reg_mode <|proc:=0|> (nw, 16w)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-go_on 1;
-val read_reg_mode_thm =  save_thm ("read_reg_mode_thm", (MATCH_MP extras_lem2 (top_thm())));
+Theorem read_reg_mode_thm_raw[local]:
+  preserve_relation_mmu (read_reg_mode <|proc:=0|> (nw, 16w)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  GO_ON_N 1
+QED
+val read_reg_mode_thm = save_thm("read_reg_mode_thm", (MATCH_MP extras_lem2 (read_reg_mode_thm_raw)));
 
 
-g `preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. read_reg_mode <|proc:=0|> (n,16w))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-go_on 1;
-val read_cpsr_read_reg_mode_16_thm = save_thm("read_cpsr_read_reg_mode_16_thm", top_thm());
+Theorem read_cpsr_read_reg_mode_16_thm:
+  preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. read_reg_mode <|proc:=0|> (n,16w))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  GO_ON_N 1
+QED
 
 
-g `preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. read_reg_mode <|proc:=0|> (n,cpsr.M))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-e(ASSUME_TAC (SPECL [``(\c. read_reg_mode <|proc:=0|> (n, c.M))``, ``assert_mode 16w``] (INST_TYPE [alpha |-> Type `:word32`] cpsr_simp_rel_lem)));
-e(ASSUME_TAC read_cpsr_read_reg_mode_16_thm);
-e(FULL_SIMP_TAC (srw_ss()) []);
-val read_cpsr_read_reg_mode_thm = top_thm();
+Theorem read_cpsr_read_reg_mode_thm:
+  preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. read_reg_mode <|proc:=0|> (n,cpsr.M))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  ASSUME_TAC (SPECL [``(\c. read_reg_mode <|proc:=0|> (n, c.M))``, ``assert_mode 16w``] (INST_TYPE [alpha |-> Type `:word32`] cpsr_simp_rel_lem)) >>
+  ASSUME_TAC read_cpsr_read_reg_mode_16_thm >>
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 add_to_simplist read_cpsr_read_reg_mode_thm;
 
 
@@ -731,93 +748,107 @@ val read_reg_thm = save_thm("read_reg_thm", MATCH_MP extras_lem2 read_reg_empty_
 (* ========= write_reg ============*)
 
 
-g `(nw <> 15w) ==> (access_violation s) ==> ((((LookUpRName <|proc := 0|> (nw,16w)  >>=  ( \ rname. write__reg <|proc := 0|> rname value)) s) = (ValueState () s))) `;
-e(EVAL_TAC);
-e(RW_TAC (srw_ss())  []
-   THEN `!(x:unit). x = ()` by (Cases_on `x` THEN EVAL_TAC)
-   THEN SPEC_ASSUM_TAC (``!x. X``, [``ARB:unit``])
-   THEN FULL_SIMP_TAC (srw_ss()) []);
-e(IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``));
-val lookup_write__reg_help_lem2 = top_thm();
+Theorem lookup_write__reg_help_lem2:
+  (nw <> 15w) ==> (access_violation s) ==> ((((LookUpRName <|proc := 0|> (nw,16w)  >>=  ( \ rname. write__reg <|proc := 0|> rname value)) s) = (ValueState () s)))
+Proof
+  EVAL_TAC >>
+  RW_TAC (srw_ss())  []
+     THEN `!(x:unit). x = ()` by (Cases_on `x` THEN EVAL_TAC)
+     THEN SPEC_ASSUM_TAC (``!x. X``, [``ARB:unit``])
+     THEN FULL_SIMP_TAC (srw_ss()) [] >>
+  IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``)
+QED
 
 
-g `(nw = 15w) ==> (access_violation s) ==>  (((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. write__reg <|proc := 0|> rname value)) s) = Error "LookUpRName: n = 15w") `;
-e(EVAL_TAC);
-e(RW_TAC (srw_ss())  []);
-val lookup_write__reg_help_lem3 = top_thm();
+Theorem lookup_write__reg_help_lem3:
+  (nw = 15w) ==> (access_violation s) ==>  (((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. write__reg <|proc := 0|> rname value)) s) = Error "LookUpRName: n = 15w")
+Proof
+  EVAL_TAC >>
+  RW_TAC (srw_ss())  []
+QED
 
 
-g ` preserve_relation_mmu (LookUpRName <|proc := 0|> (nw,16w) >>=  (λrname. write__reg <|proc := 0|> rname value)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-e(RW_TAC (srw_ss()) [preserve_relation_mmu_def, empty_unt_def, empty_sim_def]);
-e(`access_violation s1 = access_violation s2` by METIS_TAC [similar_def]);
-e(Cases_on `access_violation s1`);
-(* access violation from beginning *)
-e(`access_violation s2` by FULL_SIMP_TAC (srw_ss()) []);
-e(Cases_on `nw = 15w`);
-(* nw = 15 *)
-e(IMP_RES_TAC lookup_write__reg_help_lem3);
-e(RW_TAC (srw_ss()) []);
-(* nw <> 15 *)
-e(IMP_RES_TAC lookup_write__reg_help_lem2);
-e(RW_TAC (srw_ss()) [untouched_refl]);
-(* no access violation from beginning *)
-e(`~ access_violation s2` by FULL_SIMP_TAC (srw_ss()) []);
-e(ASSUME_TAC (SPECL [``nw:word4``,``16w:word5``] (GEN_ALL LookUpRName_thm)));
-e(FULL_SIMP_TAC (srw_ss()) [preserve_relation_mmu_def, empty_sim_def, empty_unt_def]);
-e(SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``]));
-e(UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []);
-(* received same value in Lookup *)
-e(DISJ1_TAC);
-e(`access_violation s1' = access_violation s2'` by METIS_TAC [similar_def]);
-e(Cases_on `access_violation s2'` THEN FULL_SIMP_TAC (srw_ss()) [seqT_def, write__reg_def, constT_def, writeT_def]);
-e(RW_TAC (srw_ss()) []);
-(*** untouched 1 *)
-e(IMP_RES_TAC  (SPECL [``s1':arm_state``, ``s1:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1))
-               THEN FULL_SIMP_TAC (srw_ss()) [assert_mode_def, untouched_def, LET_DEF]
-               THEN RW_TAC (srw_ss()) []
-               THEN REPEAT (UNDISCH_MATCH_TAC ``(reg:RName) <> rn_u``)
-               THEN EVAL_TAC
-               THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []);
-(*** untouched 2 *)
-e (IMP_RES_TAC  (SPECL [``s2':arm_state``, ``s2:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1))
-               THEN FULL_SIMP_TAC (srw_ss()) [assert_mode_def, untouched_def, LET_DEF]
-               THEN RW_TAC (srw_ss()) []
-               THEN REPEAT (UNDISCH_MATCH_TAC ``(reg:RName) <> rn_u``)
-               THEN EVAL_TAC
-               THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []);
-(*** mode 1 *)
-e(FULL_SIMP_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def]);
-(*** mode w *)
-e(FULL_SIMP_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def]);
-(*** similar *)
-e(UNDISCH_TAC ``similar g s1' s2'``);
-e(EVAL_TAC);
-e((REPEAT (STRIP_TAC)) THEN FULL_SIMP_TAC (srw_ss()) []);
-e(IMP_RES_TAC untouched_mmu_setup_lem);
-e(ASSUME_TAC (SPECL [``s1':arm_state``, ``s1' with registers updated_by ((0,a) =+ value)``, ``g:word32``] trivially_untouched_av_lem));
-e(ASSUME_TAC (SPECL [``s2':arm_state``, ``s2' with registers updated_by ((0,a) =+ value)``, ``g:word32``] trivially_untouched_av_lem));
-e(FULL_SIMP_TAC (srw_ss()) []);
-(* Error in Lookup *)
-e(RW_TAC (srw_ss()) [seqT_def]);
-val lookup_write__reg_thm = top_thm();
+Theorem lookup_write__reg_thm[local]:
+  preserve_relation_mmu (LookUpRName <|proc := 0|> (nw,16w) >>=  (λrname. write__reg <|proc := 0|> rname value)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  RW_TAC (srw_ss()) [preserve_relation_mmu_def, empty_unt_def, empty_sim_def] >>
+  `access_violation s1 = access_violation s2` by METIS_TAC [similar_def] >>
+  Cases_on `access_violation s1`
+  >- ((* access violation from beginning *)
+      `access_violation s2` by FULL_SIMP_TAC (srw_ss()) [] >>
+      Cases_on `nw = 15w`
+      >- ((* nw = 15 *)
+          IMP_RES_TAC lookup_write__reg_help_lem3 >>
+          RW_TAC (srw_ss()) [])
+      >> ((* nw <> 15 *)
+          IMP_RES_TAC lookup_write__reg_help_lem2 >>
+          RW_TAC (srw_ss()) [untouched_refl]))
+  >> ((* no access violation from beginning *)
+      `~ access_violation s2` by FULL_SIMP_TAC (srw_ss()) [] >>
+      ASSUME_TAC (SPECL [``nw:word4``,``16w:word5``] (GEN_ALL LookUpRName_thm)) >>
+      FULL_SIMP_TAC (srw_ss()) [preserve_relation_mmu_def, empty_sim_def, empty_unt_def] >>
+      SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``]) >>
+      (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [])
+      >- ((* received same value in Lookup *)
+          DISJ1_TAC >>
+          `access_violation s1' = access_violation s2'` by METIS_TAC [similar_def] >>
+          (Cases_on `access_violation s2'` THEN FULL_SIMP_TAC (srw_ss()) [seqT_def, write__reg_def, constT_def, writeT_def]) >>
+          RW_TAC (srw_ss()) []
+          >- ((*** untouched 1 *)
+              IMP_RES_TAC  (SPECL [``s1':arm_state``, ``s1:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1))
+                             THEN FULL_SIMP_TAC (srw_ss()) [assert_mode_def, untouched_def, LET_DEF]
+                             THEN RW_TAC (srw_ss()) []
+                             THEN REPEAT (UNDISCH_MATCH_TAC ``(reg:RName) <> rn_u``)
+                             THEN EVAL_TAC
+                             THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [])
+          >- ((*** untouched 2 *)
+              IMP_RES_TAC  (SPECL [``s2':arm_state``, ``s2:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1))
+                             THEN FULL_SIMP_TAC (srw_ss()) [assert_mode_def, untouched_def, LET_DEF]
+                             THEN RW_TAC (srw_ss()) []
+                             THEN REPEAT (UNDISCH_MATCH_TAC ``(reg:RName) <> rn_u``)
+                             THEN EVAL_TAC
+                             THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [])
+          >- ((*** mode 1 *)
+              FULL_SIMP_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def])
+          >- ((*** mode w *)
+              FULL_SIMP_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def])
+          >> ((*** similar *)
+              UNDISCH_TAC ``similar g s1' s2'`` >>
+              EVAL_TAC >>
+              (REPEAT (STRIP_TAC)) THEN FULL_SIMP_TAC (srw_ss()) [] >>
+              IMP_RES_TAC untouched_mmu_setup_lem >>
+              ASSUME_TAC (SPECL [``s1':arm_state``, ``s1' with registers updated_by ((0,a) =+ value)``, ``g:word32``] trivially_untouched_av_lem) >>
+              ASSUME_TAC (SPECL [``s2':arm_state``, ``s2' with registers updated_by ((0,a) =+ value)``, ``g:word32``] trivially_untouched_av_lem) >>
+              FULL_SIMP_TAC (srw_ss()) []))
+      >> ((* Error in Lookup *)
+          RW_TAC (srw_ss()) [seqT_def]))
+QED
 add_to_simplist lookup_write__reg_thm;
 
 
-g `preserve_relation_mmu (write_reg_mode <|proc:=0|> (nw, 16w) value) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-go_on 1;
-val write_reg_mode_thm =  save_thm ("write_reg_mode_thm", (MATCH_MP extras_lem2 (top_thm())));
+Theorem write_reg_mode_thm_raw[local]:
+  preserve_relation_mmu (write_reg_mode <|proc:=0|> (nw, 16w) value) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  GO_ON_N 1
+QED
+val write_reg_mode_thm = save_thm("write_reg_mode_thm", (MATCH_MP extras_lem2 (write_reg_mode_thm_raw)));
 
 
-g `preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. write_reg_mode <|proc:=0|> (n,16w) value)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-go_on 1;
-val read_cpsr_read_reg_mode_16_thm = save_thm("read_cpsr_write_reg_mode_16_thm", top_thm());
+Theorem read_cpsr_write_reg_mode_16_thm:
+  preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. write_reg_mode <|proc:=0|> (n,16w) value)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  GO_ON_N 1
+QED
+val read_cpsr_read_reg_mode_16_thm = read_cpsr_write_reg_mode_16_thm;
 
 
-g `preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. write_reg_mode <|proc:=0|> (n,cpsr.M) value)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-e(ASSUME_TAC (SPECL [``(\c. write_reg_mode <|proc:=0|> (n, c.M) value)``, ``assert_mode 16w``] (INST_TYPE [alpha |-> Type `:unit`] cpsr_simp_rel_lem)));
-e(ASSUME_TAC read_cpsr_read_reg_mode_16_thm);
-e(FULL_SIMP_TAC (srw_ss()) []);
-val read_cpsr_write_reg_mode_thm = top_thm();
+Theorem read_cpsr_write_reg_mode_thm:
+  preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (λcpsr. write_reg_mode <|proc:=0|> (n,cpsr.M) value)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  ASSUME_TAC (SPECL [``(\c. write_reg_mode <|proc:=0|> (n, c.M) value)``, ``assert_mode 16w``] (INST_TYPE [alpha |-> Type `:unit`] cpsr_simp_rel_lem)) >>
+  ASSUME_TAC read_cpsr_read_reg_mode_16_thm >>
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 add_to_simplist read_cpsr_write_reg_mode_thm;
 
 
@@ -837,11 +868,14 @@ Proof
     RW_TAC (srw_ss()) [arch_version_def, constT_def, seqT_def]
 QED
 
-g `preserve_relation_mmu (arch_version <|proc:=0|>)
-              (assert_mode 16w) (assert_mode  16w) strict_unt empty_sim`;
-e(RW_TAC (srw_ss()) [arch_version_alternative_def]);
-go_on 1;
-val arch_version_thm = save_thm("arch_version_thm", (MATCH_MP extras_lem4 (SPEC_ALL (top_thm()))));
+Theorem arch_version_thm_raw[local]:
+  preserve_relation_mmu (arch_version <|proc:=0|>)
+                (assert_mode 16w) (assert_mode  16w) strict_unt empty_sim
+Proof
+  RW_TAC (srw_ss()) [arch_version_alternative_def] >>
+  GO_ON_N 1
+QED
+val arch_version_thm = save_thm("arch_version_thm", (MATCH_MP extras_lem4 (SPEC_ALL (arch_version_thm_raw))));
 
 
 (* ===================================================================== *)
@@ -849,40 +883,52 @@ val arch_version_thm = save_thm("arch_version_thm", (MATCH_MP extras_lem4 (SPEC_
 (* address mode *)
 
 
-g `preserve_relation_mmu (thumb_expand_imm_c (imm12,c_in)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-e(RW_TAC (srw_ss()) [thumb_expand_imm_c_def, LET_DEF]
-    THEN Cases_on `(9 >< 8) (imm12:word12) = (0w:word2)` THEN Cases_on `(9 >< 8) imm12 = (1w:word2)` THEN Cases_on `(9 >< 8) imm12 = (2w:word2)` THEN Cases_on `(9 >< 8) imm12 = (3w:word2)`
-    THEN ASSUME_TAC (blastLib.BBLAST_PROVE ``((((9 >< 8) (imm12:word12)) <> (0w:word2)) /\ (((9 >< 8) imm12) <> (1w:word2)) /\ (((9 >< 8) imm12) <> (2w:word2)) /\ (((9 >< 8) imm12) <> (3w:word2))) ==> F``)
-    THEN UNDISCH_ALL_TAC
-    THEN RW_TAC (srw_ss()) []);
-go_on 11;
-val thumb_expand_imm_c_thm = save_thm("thumb_expand_imm_c_thm", (MATCH_MP extras_lem2 (SPEC_ALL (top_thm()))));
+Theorem thumb_expand_imm_c_thm_raw[local]:
+  preserve_relation_mmu (thumb_expand_imm_c (imm12,c_in)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  RW_TAC (srw_ss()) [thumb_expand_imm_c_def, LET_DEF]
+      THEN Cases_on `(9 >< 8) (imm12:word12) = (0w:word2)` THEN Cases_on `(9 >< 8) imm12 = (1w:word2)` THEN Cases_on `(9 >< 8) imm12 = (2w:word2)` THEN Cases_on `(9 >< 8) imm12 = (3w:word2)`
+      THEN ASSUME_TAC (blastLib.BBLAST_PROVE ``((((9 >< 8) (imm12:word12)) <> (0w:word2)) /\ (((9 >< 8) imm12) <> (1w:word2)) /\ (((9 >< 8) imm12) <> (2w:word2)) /\ (((9 >< 8) imm12) <> (3w:word2))) ==> F``)
+      THEN UNDISCH_ALL_TAC
+      THEN RW_TAC (srw_ss()) [] >>
+  GO_ON_N 11
+QED
+val thumb_expand_imm_c_thm = save_thm("thumb_expand_imm_c_thm", (MATCH_MP extras_lem2 (SPEC_ALL (thumb_expand_imm_c_thm_raw))));
 
 
 
-val _ = g `preserve_relation_mmu (address_mode1 <|proc:=0|> enc mode1) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(Cases_on `mode1` THEN RW_TAC (srw_ss()) [address_mode1_def, LET_DEF]);
-val _ = go_on 1;
-val _ = e(PairedLambda.GEN_BETA_TAC);
-val _ = go_on 1;
-val _ = go_on 1;
-val address_mode1_thm = save_thm("address_mode1_thm", (MATCH_MP extras_lem2 (SPEC_ALL (top_thm()))));
+Theorem address_mode1_thm_raw[local]:
+  preserve_relation_mmu (address_mode1 <|proc:=0|> enc mode1) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  Cases_on `mode1` THEN RW_TAC (srw_ss()) [address_mode1_def, LET_DEF] >>
+  GO_ON_N 1 >>
+  PairedLambda.GEN_BETA_TAC >>
+  GO_ON_N 1 >>
+  GO_ON_N 1
+QED
+val address_mode1_thm = save_thm("address_mode1_thm", (MATCH_MP extras_lem2 (SPEC_ALL (address_mode1_thm_raw))));
 
 
-val _ = g `preserve_relation_mmu (address_mode2 <|proc:=0|> indx addr rn mode2) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(Cases_on `mode2` THEN RW_TAC (srw_ss()) [address_mode2_def, LET_DEF]);
-val _ = go_on 4;
-val _ = e(PairedLambda.GEN_BETA_TAC);
-val _ = go_on 1;
-val address_mode2_thm = save_thm("address_mode2_thm", (MATCH_MP extras_lem2 (SPEC_ALL (top_thm()))));
+Theorem address_mode2_thm_raw[local]:
+  preserve_relation_mmu (address_mode2 <|proc:=0|> indx addr rn mode2) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  Cases_on `mode2` THEN RW_TAC (srw_ss()) [address_mode2_def, LET_DEF] >>
+  GO_ON_N 4 >>
+  PairedLambda.GEN_BETA_TAC >>
+  GO_ON_N 1
+QED
+val address_mode2_thm = save_thm("address_mode2_thm", (MATCH_MP extras_lem2 (SPEC_ALL (address_mode2_thm_raw))));
 
 
-val _ = g `preserve_relation_mmu (address_mode3 <|proc:=0|> indx addr rn mode3) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(Cases_on `mode3` THEN RW_TAC (srw_ss()) [address_mode3_def, LET_DEF]);
-val _ = go_on 4;
-val _ = e(PairedLambda.GEN_BETA_TAC);
-val _ = go_on 1;
-val address_mode3_thm = save_thm("address_mode3_thm", (MATCH_MP extras_lem2 (SPEC_ALL (top_thm()))));
+Theorem address_mode3_thm_raw[local]:
+  preserve_relation_mmu (address_mode3 <|proc:=0|> indx addr rn mode3) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  Cases_on `mode3` THEN RW_TAC (srw_ss()) [address_mode3_def, LET_DEF] >>
+  GO_ON_N 4 >>
+  PairedLambda.GEN_BETA_TAC >>
+  GO_ON_N 1
+QED
+val address_mode3_thm = save_thm("address_mode3_thm", (MATCH_MP extras_lem2 (SPEC_ALL (address_mode3_thm_raw))));
 
 
 
@@ -909,10 +955,13 @@ Proof
 QED
 val _ = add_to_simplist read_memA_with_priv_loop_thm;
 
-val _ = g `preserve_relation_mmu (read_memU_with_priv <|proc:=0|> (address:word32, size:num, privileged:bool)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(FULL_SIMP_TAC (srw_ss()) [read_memU_with_priv_def, LET_DEF]);
-val _ = go_on 1;
-val read_memU_with_priv_thm = save_thm ("read_memU_with_priv_thm", (MATCH_MP extras_lem2 (SPEC_ALL (top_thm()))));
+Theorem read_memU_with_priv_thm_raw[local]:
+  preserve_relation_mmu (read_memU_with_priv <|proc:=0|> (address:word32, size:num, privileged:bool)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  FULL_SIMP_TAC (srw_ss()) [read_memU_with_priv_def, LET_DEF] >>
+  GO_ON_N 1
+QED
+val read_memU_with_priv_thm = save_thm("read_memU_with_priv_thm", (MATCH_MP extras_lem2 (SPEC_ALL (read_memU_with_priv_thm_raw))));
 
 
 val write_memA_with_priv_empty_thm = prove_and_save (``write_memA_with_priv <|proc:=0|> (addr, size, p) vl``, "write_memA_with_priv_empty_thm");
@@ -932,42 +981,47 @@ val write_memU_with_priv_empty_thm = prove_and_save (``write_memU_with_priv <|pr
 val write_memU_with_priv_thm = save_thm ("write_memU_with_priv_thm", (MATCH_MP extras_lem2 (SPEC_ALL (write_memU_with_priv_empty_thm))));
 
 
-val _ = g `preserve_relation_mmu (set_exclusive_monitors <|proc:=0|> (addr, n)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(FULL_SIMP_TAC (srw_ss()) [set_exclusive_monitors_def, LET_DEF]);
-val _ = go_on 1;
-val set_exclusive_monitors_thm = save_thm("set_exclusive_monitors_thm", (MATCH_MP extras_lem2 (SPEC_ALL (top_thm()))));
+Theorem set_exclusive_monitors_thm_raw[local]:
+  preserve_relation_mmu (set_exclusive_monitors <|proc:=0|> (addr, n)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  FULL_SIMP_TAC (srw_ss()) [set_exclusive_monitors_def, LET_DEF] >>
+  GO_ON_N 1
+QED
+val set_exclusive_monitors_thm = save_thm("set_exclusive_monitors_thm", (MATCH_MP extras_lem2 (SPEC_ALL (set_exclusive_monitors_thm_raw))));
 
 
-val _ = g `preserve_relation_mmu
-  ((λ(passed,state').
-      write_monitor <|proc := 0|> (monitor with state := state') >>=
-      (λu. return passed))
-     ((λ(local_passed,x').
-         (λ(passed,x).
-            (if passed then
-               (λy. (λ(u,x). (T,x)) (monitor.ClearExclusiveLocal 0 y))
-             else
-               (λy. (F,y))) x)
-           ((if memaddrdesc.memattrs.shareable then
-               (λy.
-                  (λ(global_passed,x). (local_passed ∧ global_passed,x))
-                    (monitor.IsExclusiveGlobal
-                       (memaddrdesc.paddress,<|proc := 0|>,n) y))
-             else
-               (λy. (local_passed,y))) x'))
-        (monitor.IsExclusiveLocal (memaddrdesc.paddress,<|proc := 0|>,n)
-           monitor.state))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim `;
-val _ = e(Cases_on `(monitor.IsExclusiveLocal (memaddrdesc.paddress,<|proc := 0|>,n)
-           monitor.state)`
-   THEN RW_TAC (srw_ss()) []
-   THEN Cases_on `(monitor.IsExclusiveGlobal
-              (memaddrdesc.paddress,<|proc := 0|>,n) r)`
-   THEN RW_TAC (srw_ss()) []
-   THEN Cases_on ` (monitor.ClearExclusiveLocal 0 r')`
-   THEN Cases_on ` (monitor.ClearExclusiveLocal 0 r)`
-   THEN RW_TAC (srw_ss()) []);
-val _ = go_on 4;
-val exclusive_monitors_pass_help_thm = save_thm("exclusive_monitors_pass_help_thm", top_thm());
+Theorem exclusive_monitors_pass_help_thm:
+  preserve_relation_mmu
+    ((λ(passed,state').
+        write_monitor <|proc := 0|> (monitor with state := state') >>=
+        (λu. return passed))
+       ((λ(local_passed,x').
+           (λ(passed,x).
+              (if passed then
+                 (λy. (λ(u,x). (T,x)) (monitor.ClearExclusiveLocal 0 y))
+               else
+                 (λy. (F,y))) x)
+             ((if memaddrdesc.memattrs.shareable then
+                 (λy.
+                    (λ(global_passed,x). (local_passed ∧ global_passed,x))
+                      (monitor.IsExclusiveGlobal
+                         (memaddrdesc.paddress,<|proc := 0|>,n) y))
+               else
+                 (λy. (local_passed,y))) x'))
+          (monitor.IsExclusiveLocal (memaddrdesc.paddress,<|proc := 0|>,n)
+             monitor.state))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  Cases_on `(monitor.IsExclusiveLocal (memaddrdesc.paddress,<|proc := 0|>,n)
+             monitor.state)`
+     THEN RW_TAC (srw_ss()) []
+     THEN Cases_on `(monitor.IsExclusiveGlobal
+                (memaddrdesc.paddress,<|proc := 0|>,n) r)`
+     THEN RW_TAC (srw_ss()) []
+     THEN Cases_on ` (monitor.ClearExclusiveLocal 0 r')`
+     THEN Cases_on ` (monitor.ClearExclusiveLocal 0 r)`
+     THEN RW_TAC (srw_ss()) [] >>
+  GO_ON_N 4
+QED
 val _ = add_to_simplist exclusive_monitors_pass_help_thm;
 
 
@@ -1104,31 +1158,35 @@ val _ = add_to_simplist  write_cpsr_all_components_thm;
 
 (* write e *)
 
-val _ = g `!e. preserve_relation_mmu (write_e <|proc:=0|> e) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(STRIP_TAC);
-val _ = e(ASSUME_TAC (SPECL [``(write_e <|proc := 0|> e):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
-val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
-val _ = e(RW_TAC (srw_ss()) [write_e_def]);
-val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with E := e)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
-val _ = e(FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val write_e_empty_thm = save_thm("write_e_empty_thm", top_thm());
+Theorem write_e_empty_thm:
+  !e. preserve_relation_mmu (write_e <|proc:=0|> e) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  STRIP_TAC >>
+  ASSUME_TAC (SPECL [``(write_e <|proc := 0|> e):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)) >>
+  NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []) >>
+  PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC >>
+  RW_TAC (srw_ss()) [write_e_def] >>
+  ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with E := e)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val write_e_thm = save_thm("write_e_thm", MATCH_MP extras_lem2 (SPEC_ALL write_e_empty_thm));
 
 
 (* write ge *)
 
-val _ = g `!e. preserve_relation_mmu (write_ge <|proc:=0|> ge) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(STRIP_TAC);
-val _ = e(ASSUME_TAC (SPECL [``(write_ge <|proc := 0|> ge):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
-val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
-val _ = e(RW_TAC (srw_ss()) [write_ge_def]);
-val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with GE := ge)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
-val _ = e(FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val write_ge_empty_thm = save_thm("write_ge_empty_thm", top_thm());
+Theorem write_ge_empty_thm:
+  !e. preserve_relation_mmu (write_ge <|proc:=0|> ge) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  STRIP_TAC >>
+  ASSUME_TAC (SPECL [``(write_ge <|proc := 0|> ge):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)) >>
+  NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []) >>
+  PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC >>
+  RW_TAC (srw_ss()) [write_ge_def] >>
+  ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with GE := ge)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val write_ge_thm = save_thm("write_ge_thm", MATCH_MP extras_lem2 (SPEC_ALL write_ge_empty_thm));
 
 
@@ -1136,51 +1194,58 @@ val write_ge_thm = save_thm("write_ge_thm", MATCH_MP extras_lem2 (SPEC_ALL write
 (* write is et state*)
 
 
-val _ = g `!e. preserve_relation_mmu (write_isetstate <|proc:=0|> isetstate) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(STRIP_TAC);
-val _ = e(ASSUME_TAC (SPECL [``(write_isetstate <|proc := 0|> isetstate):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
-val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
-val _ = e(RW_TAC (srw_ss()) [write_isetstate_def]);
-val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with <|J := (isetstate:word2) ' 1; T := isetstate ' 0 |>)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
-val _ = e(FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val write_isetstate_empty_thm = save_thm("write_isetstate_empty_thm", top_thm());
+Theorem write_isetstate_empty_thm:
+  !e. preserve_relation_mmu (write_isetstate <|proc:=0|> isetstate) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  STRIP_TAC >>
+  ASSUME_TAC (SPECL [``(write_isetstate <|proc := 0|> isetstate):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)) >>
+  NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []) >>
+  PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC >>
+  RW_TAC (srw_ss()) [write_isetstate_def] >>
+  ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with <|J := (isetstate:word2) ' 1; T := isetstate ' 0 |>)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val write_isetstate_thm = save_thm("write_isetstate_thm", MATCH_MP extras_lem2 (SPEC_ALL write_isetstate_empty_thm));
 
 
 
 (* write flags *)
 
-val _ = g `!e. preserve_relation_mmu (write_flags<|proc:=0|> (n,z,c,v)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(STRIP_TAC);
-val _ = e(ASSUME_TAC (SPECL [``(write_flags <|proc := 0|> (n,z,c,v)):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
-val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
-val _ = e(RW_TAC (srw_ss()) [write_flags_def]);
-val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with <|N := n; Z := z; C := c; V := v|>)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
-val _ = e(FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val write_flags_empty_thm = save_thm("write_flags_empty_thm", top_thm());
+Theorem write_flags_empty_thm:
+  !e. preserve_relation_mmu (write_flags<|proc:=0|> (n,z,c,v)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  STRIP_TAC >>
+  ASSUME_TAC (SPECL [``(write_flags <|proc := 0|> (n,z,c,v)):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)) >>
+  NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []) >>
+  PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC >>
+  RW_TAC (srw_ss()) [write_flags_def] >>
+  ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with <|N := n; Z := z; C := c; V := v|>)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val write_flags_thm = save_thm("write_flags_thm", MATCH_MP extras_lem2 (SPEC_ALL write_flags_empty_thm));
 
 
 
 
 (* IT advance *)
-val _ = g `preserve_relation_mmu (read_cpsr <|proc:=0|> >>=
-            (λcpsr.
-               if (cpsr.IT = 0w) ∨ cpsr.T then
-                 write_cpsr <|proc:=0|> (cpsr with IT := ITAdvance cpsr.IT)
-               else
-                 errorT "IT_advance: unpredictable")) (assert_mode 16w) (assert_mode 16w) (empty_unt) (fix_flags xI xF empty_sim)`;
-val _ = e(ASSUME_TAC (SPECL [``(λcpsr. if (cpsr.IT = 0w) ∨ cpsr.T then
-                 write_cpsr <|proc:=0|> (cpsr with IT := ITAdvance cpsr.IT)
-               else
-                 errorT "IT_advance: unpredictable"):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
-val _ = e(FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val it_advance_help_thm = MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GEN_ALL (top_thm()));
+Theorem it_advance_help_thm_raw[local]:
+  preserve_relation_mmu (read_cpsr <|proc:=0|> >>=
+              (λcpsr.
+                 if (cpsr.IT = 0w) ∨ cpsr.T then
+                   write_cpsr <|proc:=0|> (cpsr with IT := ITAdvance cpsr.IT)
+                 else
+                   errorT "IT_advance: unpredictable")) (assert_mode 16w) (assert_mode 16w) (empty_unt) (fix_flags xI xF empty_sim)
+Proof
+  ASSUME_TAC (SPECL [``(λcpsr. if (cpsr.IT = 0w) ∨ cpsr.T then
+                   write_cpsr <|proc:=0|> (cpsr with IT := ITAdvance cpsr.IT)
+                 else
+                   errorT "IT_advance: unpredictable"):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
+val it_advance_help_thm = MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GEN_ALL (it_advance_help_thm_raw));
 val _ = add_to_simplist it_advance_help_thm;
 val IT_advance_empty_thm = prove_and_save(``IT_advance <|proc:=0|>``, "IT_advance_empty_thm");
 val IT_advance_thm = save_thm("IT_advance_thm", MATCH_MP extras_lem2 (SPEC_ALL IT_advance_empty_thm));
@@ -1188,67 +1253,73 @@ val IT_advance_thm = save_thm("IT_advance_thm", MATCH_MP extras_lem2 (SPEC_ALL I
 
 (* set q  *)
 
-val _ = g `!e. preserve_relation_mmu (set_q <|proc:=0|>) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(STRIP_TAC);
-val _ = e(ASSUME_TAC (SPECL [``(set_q <|proc := 0|> ):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
-val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
-val _ = e(RW_TAC (srw_ss()) [set_q_def]);
-val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with Q := T)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
-val _ = e(FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val set_q_empty_thm = save_thm("set_q_empty_thm", top_thm());
+Theorem set_q_empty_thm:
+  !e. preserve_relation_mmu (set_q <|proc:=0|>) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  STRIP_TAC >>
+  ASSUME_TAC (SPECL [``(set_q <|proc := 0|> ):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)) >>
+  NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []) >>
+  PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC >>
+  RW_TAC (srw_ss()) [set_q_def] >>
+  ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with Q := T)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val set_q_thm = save_thm("set_q_thm", MATCH_MP extras_lem2 (SPEC_ALL set_q_empty_thm));
 
 
 (* read spsr *)
 
 
-val _ = g `preserve_relation_mmu (read_spsr <|proc:=0|>) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(ASSUME_TAC (SPECL [``(read_spsr <|proc := 0|> ):(ARMpsr M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> Type `:ARMpsr`] fix_flags_lem)));
-val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
-val _ = e(RW_TAC (srw_ss()) [read_spsr_def]);
-val _ = e(ASSUME_TAC (SPECL [``(λcpsr.
-      bad_mode <|proc := 0|> cpsr.M >>=
-      (λbad_mode.
-         if bad_mode then
-           errorT "read_spsr: unpredictable"
-         else
-           case cpsr.M of
-             17w => read__psr <|proc := 0|> SPSR_fiq
-           | 18w => read__psr <|proc := 0|> SPSR_irq
-           | 19w => read__psr <|proc := 0|> SPSR_svc
-           | 22w => read__psr <|proc := 0|> SPSR_mon
-           | 23w => read__psr <|proc := 0|> SPSR_abt
-           | 27w => read__psr <|proc := 0|> SPSR_und
-           | _ => errorT "read_spsr: unpredictable")):(ARMpsr -> ARMpsr M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> Type `:ARMpsr`] cpsr_simp_rel_ext_lem)));
-val _ = e(FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val read_spsr_empty_thm = save_thm("read_spsr_empty_thm", top_thm());
+Theorem read_spsr_empty_thm:
+  preserve_relation_mmu (read_spsr <|proc:=0|>) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  ASSUME_TAC (SPECL [``(read_spsr <|proc := 0|> ):(ARMpsr M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> Type `:ARMpsr`] fix_flags_lem)) >>
+  NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []) >>
+  PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC >>
+  RW_TAC (srw_ss()) [read_spsr_def] >>
+  ASSUME_TAC (SPECL [``(λcpsr.
+        bad_mode <|proc := 0|> cpsr.M >>=
+        (λbad_mode.
+           if bad_mode then
+             errorT "read_spsr: unpredictable"
+           else
+             case cpsr.M of
+               17w => read__psr <|proc := 0|> SPSR_fiq
+             | 18w => read__psr <|proc := 0|> SPSR_irq
+             | 19w => read__psr <|proc := 0|> SPSR_svc
+             | 22w => read__psr <|proc := 0|> SPSR_mon
+             | 23w => read__psr <|proc := 0|> SPSR_abt
+             | 27w => read__psr <|proc := 0|> SPSR_und
+             | _ => errorT "read_spsr: unpredictable")):(ARMpsr -> ARMpsr M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> Type `:ARMpsr`] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val read_spsr_thm = save_thm("read_spsr_thm", MATCH_MP extras_lem2 (SPEC_ALL read_spsr_empty_thm));
 
 
 (* if-then *)
-val _ = g ` preserve_relation_mmu
-        (read_cpsr <|proc :=0|> >>=
-         (\cpsr.
-          (increment_pc <|proc :=0|> Encoding_Thumb |||
-           write_cpsr <|proc :=0|> (cpsr with IT := (something))) >>= (λ(u1,u2). return ()))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim `;
-val _ = e(ASSUME_TAC (SPECL [``(read_cpsr <|proc :=0|> >>=
-         (\cpsr.
-          (increment_pc <|proc :=0|> Encoding_Thumb |||
-          write_cpsr <|proc :=0|> (cpsr with IT := (something))) >>= (λ(u1,u2). return ()))):(unit M)``, ``(assert_mode 16w: arm_state -> bool)``,  ``(assert_mode 16w: arm_state -> bool)``, ``empty_unt``, ``empty_sim``](INST_TYPE [alpha |-> type_of (``()``)] fix_flags_lem)));
-val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
-val _ = e(RW_TAC (srw_ss()) []);
-val _ = e(ASSUME_TAC (SPECL [``(\cpsr. (increment_pc <|proc := 0|> Encoding_Thumb
-         ||| write_cpsr <|proc := 0|> (cpsr with IT := something)) >>=
-            (λ(u1,u2). return ())):(ARMpsr -> unit M)``, ``(assert_mode 16w: arm_state -> bool)``, ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``](INST_TYPE [alpha |-> type_of (``()``)] cpsr_simp_rel_ext_lem)));
-val _ = e (FULL_SIMP_TAC (srw_ss()) [parT_def]);
-val _ = go_on 1;
-val if_then_instr_help_lem1 = save_thm(
-    "if_then_instr_help_lem1", MATCH_MP extras_lem2 (top_thm()));
+Theorem if_then_instr_help_lem1_raw[local]:
+  preserve_relation_mmu
+          (read_cpsr <|proc :=0|> >>=
+           (\cpsr.
+            (increment_pc <|proc :=0|> Encoding_Thumb |||
+             write_cpsr <|proc :=0|> (cpsr with IT := (something))) >>= (λ(u1,u2). return ()))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  ASSUME_TAC (SPECL [``(read_cpsr <|proc :=0|> >>=
+           (\cpsr.
+            (increment_pc <|proc :=0|> Encoding_Thumb |||
+            write_cpsr <|proc :=0|> (cpsr with IT := (something))) >>= (λ(u1,u2). return ()))):(unit M)``, ``(assert_mode 16w: arm_state -> bool)``,  ``(assert_mode 16w: arm_state -> bool)``, ``empty_unt``, ``empty_sim``](INST_TYPE [alpha |-> type_of (``()``)] fix_flags_lem)) >>
+  NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []) >>
+  PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC >>
+  RW_TAC (srw_ss()) [] >>
+  ASSUME_TAC (SPECL [``(\cpsr. (increment_pc <|proc := 0|> Encoding_Thumb
+           ||| write_cpsr <|proc := 0|> (cpsr with IT := something)) >>=
+              (λ(u1,u2). return ())):(ARMpsr -> unit M)``, ``(assert_mode 16w: arm_state -> bool)``, ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``](INST_TYPE [alpha |-> type_of (``()``)] cpsr_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [parT_def] >>
+  GO_ON_N 1
+QED
+val if_then_instr_help_lem1 = save_thm("if_then_instr_help_lem1", MATCH_MP extras_lem2 (if_then_instr_help_lem1_raw));
 
 
 Theorem if_then_instr_help_lem2:
@@ -1270,28 +1341,30 @@ val if_then_instr_comb_thm = prove_and_save_p (``if_then_instr <|proc:=0|> (If_T
 
 (* check array *)
 
-val _ = g` preserve_relation_mmu ((read_reg <|proc:=0|> 15w ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m |||
-        read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>=
-         (\(pc,rn,rm,cpsr,teehbr).
-          if rn <=+ rm then
-            ((write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
-              write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
-             ( \ (u1:unit,u2:unit).
-               branch_write_pc <|proc:=0|> (teehbr + 0xFFFFFFF8w)))
-          else
-            increment_pc <|proc:=0|> Encoding_ThumbEE))(assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)`;
-val _ = e(ASSUME_TAC (SPECL [``15w:word4``, ``n:word4``, ``m:word4``, ``(\(pc,rn,rm,cpsr,teehbr).
-          if rn <=+ rm then
-            ((write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
-              write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
-             ( \ (u1:unit,u2:unit).
-               branch_write_pc <|proc:=0|> (teehbr + 0xFFFFFFF8w)))
-          else
-            increment_pc <|proc:=0|> Encoding_ThumbEE):(word32 # word32 # word32 # ARMpsr # word32 -> unit M)``, ``(assert_mode 16w: arm_state -> bool)`` ](INST_TYPE [alpha |-> type_of (``()``)] cpsr_quintuple_simp_rel_ext_lem)));
-val _ = e (FULL_SIMP_TAC (srw_ss()) [parT_def]);
-val _ = go_on 1;
-val check_array_instr_help_lem1 = save_thm(
-    "check_array_instr_help_lem1", (MATCH_MP extras_lem2 (MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GENL [``xI:bool``, ``xF:bool``] (top_thm())))));
+Theorem check_array_instr_help_lem1_raw[local]:
+  preserve_relation_mmu ((read_reg <|proc:=0|> 15w ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m |||
+          read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>=
+           (\(pc,rn,rm,cpsr,teehbr).
+            if rn <=+ rm then
+              ((write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
+                write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
+               ( \ (u1:unit,u2:unit).
+                 branch_write_pc <|proc:=0|> (teehbr + 0xFFFFFFF8w)))
+            else
+              increment_pc <|proc:=0|> Encoding_ThumbEE))(assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)
+Proof
+  ASSUME_TAC (SPECL [``15w:word4``, ``n:word4``, ``m:word4``, ``(\(pc,rn,rm,cpsr,teehbr).
+            if rn <=+ rm then
+              ((write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
+                write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
+               ( \ (u1:unit,u2:unit).
+                 branch_write_pc <|proc:=0|> (teehbr + 0xFFFFFFF8w)))
+            else
+              increment_pc <|proc:=0|> Encoding_ThumbEE):(word32 # word32 # word32 # ARMpsr # word32 -> unit M)``, ``(assert_mode 16w: arm_state -> bool)`` ](INST_TYPE [alpha |-> type_of (``()``)] cpsr_quintuple_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [parT_def] >>
+  GO_ON_N 1
+QED
+val check_array_instr_help_lem1 = save_thm("check_array_instr_help_lem1", (MATCH_MP extras_lem2 (MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GENL [``xI:bool``, ``xF:bool``] (check_array_instr_help_lem1_raw)))));
 
 
 Theorem check_array_instr_help_lem2:
@@ -1316,20 +1389,23 @@ val check_array_instr_comb_thm = prove_and_save_p (``check_array_instr <|proc:=0
 
 (* null check if thumbee *)
 
-val _ = g `preserve_relation_mmu((read_reg <|proc:=0|> 15w ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>=
-            (\(pc,cpsr,teehbr).
-               (write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
-                write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
-               (\(u1:unit, u2:unit).
-                 branch_write_pc <|proc:=0|> (teehbr  + 0xFFFFFFFCw))))(assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)`;
-val _ = e(ASSUME_TAC (SPECL [`` (\(pc,cpsr,teehbr).
-               (write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
-                write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
-               (\(u1:unit, u2:unit).
-                 branch_write_pc <|proc:=0|> (teehbr  + 0xFFFFFFFCw))):(word32 # ARMpsr # word32 -> unit M)``, ``(assert_mode 16w: arm_state -> bool)``] (INST_TYPE [alpha |-> type_of (``()``)] cpsr_triple_simp_rel_ext_lem)));
-val _ = e (FULL_SIMP_TAC (srw_ss()) [parT_def]);
-val _ = go_on 1;
-val null_check_if_thumbee_help_lem = (MATCH_MP extras_lem2 (MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GENL [``xI:bool``, ``xF:bool``] (top_thm()))));
+Theorem null_check_if_thumbee_help_lem_raw[local]:
+  preserve_relation_mmu((read_reg <|proc:=0|> 15w ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>=
+              (\(pc,cpsr,teehbr).
+                 (write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
+                  write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
+                 (\(u1:unit, u2:unit).
+                   branch_write_pc <|proc:=0|> (teehbr  + 0xFFFFFFFCw))))(assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)
+Proof
+  ASSUME_TAC (SPECL [`` (\(pc,cpsr,teehbr).
+                 (write_reg <|proc:=0|> 14w ((0 :+ T) pc) |||
+                  write_cpsr <|proc:=0|> (cpsr with IT := 0w)) >>=
+                 (\(u1:unit, u2:unit).
+                   branch_write_pc <|proc:=0|> (teehbr  + 0xFFFFFFFCw))):(word32 # ARMpsr # word32 -> unit M)``, ``(assert_mode 16w: arm_state -> bool)``] (INST_TYPE [alpha |-> type_of (``()``)] cpsr_triple_simp_rel_ext_lem)) >>
+  FULL_SIMP_TAC (srw_ss()) [parT_def] >>
+  GO_ON_N 1
+QED
+val null_check_if_thumbee_help_lem = (MATCH_MP extras_lem2 (MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GENL [``xI:bool``, ``xF:bool``] (null_check_if_thumbee_help_lem_raw))));
 val _ = add_to_simplist null_check_if_thumbee_help_lem;
 
 
@@ -2035,68 +2111,76 @@ Proof
 QED
 
 
-val _ = g `preserve_relation_mmu
-  (write_cpsr <|proc := 0|> (^cpsr_write_by_instr_components_complete)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)`;
-val _ = e (Q.ABBREV_TAC `cpsr2 = ^cpsr_write_by_instr_components_without_IFM`);
-val _ = e(`^cpsr_write_by_instr_components_complete = (cpsr2) with <|I:= xI; F:= xF; M := 16w|>` by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-          FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val write_cpsr_by_instruction_all_components_thm = save_thm(
-   "write_cpsr_by_instruction_all_components_thm", top_thm());
+Theorem write_cpsr_by_instruction_all_components_thm:
+  preserve_relation_mmu
+    (write_cpsr <|proc := 0|> (^cpsr_write_by_instr_components_complete)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)
+Proof
+  Q.ABBREV_TAC `cpsr2 = ^cpsr_write_by_instr_components_without_IFM` >>
+  `^cpsr_write_by_instr_components_complete = (cpsr2) with <|I:= xI; F:= xF; M := 16w|>` by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+            FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val _ = add_to_simplist (write_cpsr_by_instruction_all_components_thm);
 
 
-val _ = g `(preserve_relation_mmu ((read_sctlr <|proc := 0|> ||| read_scr <|proc := 0|>
-             ||| read_cpsr <|proc := 0|>) >>=
-          (λ (sctlr,scr,cpsr).
-             write_cpsr <|proc := 0|>
-               (cpsr with
-                <|N := if bytemask ' 3 then value ' 31 else cpsr.N;
-                  Z := if bytemask ' 3 then value ' 30 else cpsr.Z;
-                  C := if bytemask ' 3 then value ' 29 else cpsr.C;
-                  V := if bytemask ' 3 then value ' 28 else cpsr.V;
-                  Q := if bytemask ' 3 then value ' 27 else cpsr.Q;
-                  IT :=
-                    if affect_execstate then
-                      if bytemask ' 3 then
-                        if bytemask ' 1 then
-                          (((15 >< 10) value):word6) @@ (((26 >< 25) value):word2)
+Theorem write_cpsr_by_instruction_help_lem:
+  (preserve_relation_mmu ((read_sctlr <|proc := 0|> ||| read_scr <|proc := 0|>
+               ||| read_cpsr <|proc := 0|>) >>=
+            (λ (sctlr,scr,cpsr).
+               write_cpsr <|proc := 0|>
+                 (cpsr with
+                  <|N := if bytemask ' 3 then value ' 31 else cpsr.N;
+                    Z := if bytemask ' 3 then value ' 30 else cpsr.Z;
+                    C := if bytemask ' 3 then value ' 29 else cpsr.C;
+                    V := if bytemask ' 3 then value ' 28 else cpsr.V;
+                    Q := if bytemask ' 3 then value ' 27 else cpsr.Q;
+                    IT :=
+                      if affect_execstate then
+                        if bytemask ' 3 then
+                          if bytemask ' 1 then
+                            (((15 >< 10) value):word6) @@ (((26 >< 25) value):word2)
+                          else
+                            (((7 >< 2) cpsr.IT):word6) @@ (((26 >< 25) value):word2)
+                        else if bytemask ' 1 then
+                           (((15 >< 10) value):word6) @@ (((1 >< 0) cpsr.IT):word2)
                         else
-                          (((7 >< 2) cpsr.IT):word6) @@ (((26 >< 25) value):word2)
-                      else if bytemask ' 1 then
-                         (((15 >< 10) value):word6) @@ (((1 >< 0) cpsr.IT):word2)
+                          cpsr.IT
                       else
-                        cpsr.IT
-                    else
-                      cpsr.IT;
-                  J :=  if bytemask ' 3 ∧ affect_execstate then value ' 24 else cpsr.J;
-                  GE := if bytemask ' 2 then (19 >< 16) value else cpsr.GE;
-                  E := if bytemask ' 1 then value ' 9 else cpsr.E;
-                  A := cpsr.A; I := cpsr.I; F := cpsr.F;
-                  T :=  if bytemask ' 0 ∧ affect_execstate then value ' 5 else cpsr.T;
-                  M := cpsr.M|>))) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim))`;
-val _ = e(ASSUME_TAC (SPECL [cpsr_write_by_instr_part2, ``(assert_mode 16w: arm_state -> bool)``] (INST_TYPE [alpha |-> type_of (``()``)] cpsr_triple_simp_rel_ext_lem2)));
-val _ = e (FULL_SIMP_TAC (srw_ss()) []);
-val _ = go_on 1;
-val write_cpsr_by_instruction_help_lem = save_thm(
-   "write_cpsr_by_instruction_help_lem", top_thm());
+                        cpsr.IT;
+                    J :=  if bytemask ' 3 ∧ affect_execstate then value ' 24 else cpsr.J;
+                    GE := if bytemask ' 2 then (19 >< 16) value else cpsr.GE;
+                    E := if bytemask ' 1 then value ' 9 else cpsr.E;
+                    A := cpsr.A; I := cpsr.I; F := cpsr.F;
+                    T :=  if bytemask ' 0 ∧ affect_execstate then value ' 5 else cpsr.T;
+                    M := cpsr.M|>))) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim))
+Proof
+  ASSUME_TAC (SPECL [cpsr_write_by_instr_part2, ``(assert_mode 16w: arm_state -> bool)``] (INST_TYPE [alpha |-> type_of (``()``)] cpsr_triple_simp_rel_ext_lem2)) >>
+  FULL_SIMP_TAC (srw_ss()) [] >>
+  GO_ON_N 1
+QED
 val _ = add_to_simplist write_cpsr_by_instruction_help_lem;
 
 
-val _ = g `(preserve_relation_mmu (cpsr_write_by_instr <|proc:=0|> (value,bytemask,affect_execstate)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim))`;
-val _ = e (FULL_SIMP_TAC (srw_ss()) [cpsr_write_by_instr_simp_rel_lem, cpsr_write_by_instr_unpriv_def]);
-val _ = go_on 1;
-val cpsr_write_by_instr_thm = save_thm("cpsr_write_by_instr_thm", (MATCH_MP extras_lem2 (MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GENL [``xI:bool``, ``xF:bool``] (top_thm())))));
+Theorem cpsr_write_by_instr_thm_raw[local]:
+  (preserve_relation_mmu (cpsr_write_by_instr <|proc:=0|> (value,bytemask,affect_execstate)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim))
+Proof[exclude_simps = ARMpsr_fupdselfid]
+  FULL_SIMP_TAC (srw_ss()) [cpsr_write_by_instr_simp_rel_lem, cpsr_write_by_instr_unpriv_def] >>
+  GO_ON_N 1
+QED
+val cpsr_write_by_instr_thm = save_thm("cpsr_write_by_instr_thm", (MATCH_MP extras_lem2 (MATCH_MP ((CONJUNCT2 (SPEC_ALL fix_flags_lem))) (GENL [``xI:bool``, ``xF:bool``] (cpsr_write_by_instr_thm_raw)))));
 
 
 
 (* spsr_write_by_instr *)
 
 
-val _ = g `preserve_relation_mmu (spsr_write_by_instr <|proc:=0|> (vl, bm)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
-val _ = e(FULL_SIMP_TAC (srw_ss()) [user_simp_par_or_and_rel_lem, spsr_write_by_instr_def]);
-val _ = go_on 1;
-val spsr_write_by_instr_thm = save_thm ("spsr_write_by_instr_thm", (MATCH_MP extras_lem2 (top_thm())));
+Theorem spsr_write_by_instr_thm_raw[local]:
+  preserve_relation_mmu (spsr_write_by_instr <|proc:=0|> (vl, bm)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim
+Proof
+  FULL_SIMP_TAC (srw_ss()) [user_simp_par_or_and_rel_lem, spsr_write_by_instr_def] >>
+  GO_ON_N 1
+QED
+val spsr_write_by_instr_thm = save_thm("spsr_write_by_instr_thm", (MATCH_MP extras_lem2 (spsr_write_by_instr_thm_raw)));
 
 
 
