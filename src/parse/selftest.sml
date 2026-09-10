@@ -1086,9 +1086,9 @@ val _ = let
         SOME (HOLSourceAST.DecExp expression) => parseTacticBlock expression
       | _ => raise Fail "expected tactic expression"
     end
-  val _ = assert "lowercase map_every parsed as opaque"
+  val _ = assert "lowercase map_every was not recognized"
     (case parseTactic "map_every f [x]" of
-       Group (_, _, MapEvery (_, [_])) => true
+       MapEvery (_, [_]) => true
      | _ => false)
   val _ = assert "FIRST lost its enclosing source annotation"
     (case fromTactic (parseTactic "FIRST [a, b]") of
