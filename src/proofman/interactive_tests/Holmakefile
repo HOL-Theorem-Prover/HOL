@@ -1,9 +1,9 @@
 CLINE_OPTIONS = --poly_not_hol
 
-gh2023-selftest.log: selftest.exe gh2023.ML
+interactive-selftest.log: selftest.exe gh2023.ML reentrancy.ML
 	$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = gh2023-selftest.log selftest.exe
+EXTRA_CLEANS = interactive-selftest.log selftest.exe

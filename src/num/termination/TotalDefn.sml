@@ -813,8 +813,7 @@ fun located_tDefine loc stem q tac =
              (def, NONE)
           end
         else
-        let val (def,ind) =
-              with_flag (proofManagerLib.chatting,false) Defn.tprove0(defn,tac)
+        let val (def,ind) = Defn.tprove0 (defn,tac)
            val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
         in
             delete_support defn (thy_consts (current_theory())) snap1
