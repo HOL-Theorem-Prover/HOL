@@ -1002,7 +1002,7 @@ val _ = let
        [Leaf {kind = TacticLeaf, ...},
         Each [Choice {source = NONE,
                       alternatives = [[Leaf {kind = TacticLeaf, ...}],
-                                      [Leaf {kind = TacticLeaf, ...}]]}] => true
+                                      [Leaf {kind = TacticLeaf, ...}]]}]] => true
      | _ => false)
   val _ = assert "choice lost its source annotation"
     (case fromTactic (Group (true, "first", First [b, c])) of
