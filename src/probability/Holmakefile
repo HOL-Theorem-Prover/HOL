@@ -18,7 +18,10 @@ ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 # is possible on a computer with 64GB memory.  -- Chun Tian, Apr 7, 2022
 all: hol4-extreal.art hol4-probability.art
 
-hol4-extreal-unint.art: hol4-extreal-unint.thy $(ARTFILES)
+# extreal_base's script lives in src/real, so its article is built there
+UPSTREAM_ARTS = ../real/extreal_base.ot.art
+
+hol4-extreal-unint.art: hol4-extreal-unint.thy $(ARTFILES) $(UPSTREAM_ARTS)
 	opentheory info --article -o $@ $<
 
 hol4-extreal.art: hol4-extreal.thy hol4-extreal-unint.art ../opentheory/hol4.int

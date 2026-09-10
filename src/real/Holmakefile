@@ -61,7 +61,10 @@ install: hol4-real.thy hol4-real.art
 
 extreal_base.art: extreal_base.otd
 
-all: hol4-real.art
+# extreal_base is built here but belongs to the hol-extreal package over in
+# src/probability, whose hol4-extreal-unint.thy reads it as
+# "../real/extreal_base.ot.art"
+all: hol4-real.art extreal_base.ot.art
 endif
 
 ifdef HOLSELFTESTLEVEL
