@@ -235,7 +235,7 @@ local
     val _ = assum_rw := (RW [GSYM rw] th)
     in th end
   fun fupdate x y f i = if x = i then y else f i;
-  val lemma = prove(``(x = (y:bool)) ==> (x ==> y)``,SIMP_TAC std_ss [])
+  val lemma = lisp_extractLibContextTheory.eq_imp_imp
 in
   fun set_lookup_thm th = (lookup_thm := th)
   fun get_lookup_thm () = !lookup_thm
@@ -564,10 +564,7 @@ fun pure_extract_mutual_rec names term_tac = let
 
 local
   val R_ev_format = ``b ==> R_ev x (x1,x2,x3,x4)``
-  val R_ev_EXAPND_LEMMA = prove(
-    ``(b ==> R_ev x y) ==>
-      (b ==> R_ev x (FST y,FST (SND y),FST (SND (SND y)),SND (SND (SND y))))``,
-    SIMP_TAC std_ss []);
+  val R_ev_EXAPND_LEMMA = lisp_extractLibContextTheory.R_ev_EXAPND_LEMMA;
 in
   fun R_ev_EXPAND th =
     if can (match_term R_ev_format) (concl th) then th else
@@ -668,7 +665,7 @@ fun G_ev (Const c) = SPEC c R_ev_Const
 (* extraction of impure functions *)
 
 val let_intro_rule = let
-  val let_lemma = prove(``!f x. f x = LET (f:'a->'b) x``,SIMP_TAC std_ss [LET_DEF])
+  val let_lemma = lisp_extractLibContextTheory.let_lemma
   fun let_intro_conv_aux tm = let
     val (x,y) = dest_comb tm
     val (vs,a) = pairSyntax.dest_pabs x
@@ -677,9 +674,7 @@ val let_intro_rule = let
   in CONV_RULE (DEPTH_CONV let_intro_conv_aux) end;
 
 val expand_pair_eq_rule = let
-  val pair_eq_lemma = prove(
-    ``!p x y. ((x,y) = p) = (((x:'a) = FST p) /\ ((y:'b) = SND p))``,
-    Cases_on `p` \\ SIMP_TAC std_ss [])
+  val pair_eq_lemma = lisp_extractLibContextTheory.pair_eq_lemma
   fun let_intro_conv_aux tm = let
     val (xy,p) = dest_eq tm
     val (x,y) = dest_pair xy
