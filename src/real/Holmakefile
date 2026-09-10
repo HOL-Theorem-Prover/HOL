@@ -24,18 +24,29 @@ EXTRA_CLEANS = selftest.exe selftest_sos.exe real-selftest.log sos-selftest.log
 
 ifeq ($(KERNELID),otknl)
 BARE_THYS = realax real intreal real_sigma metric nets
+LOCAL_ARTS = $(patsubst %,%.ot.art,$(BARE_THYS))
+# iterate now lives in src/pred_set/src
+UPSTREAM_ARTS = ../pred_set/src/iterate.ot.art
 
 base-theorems.art:
 	opentheory info --theorems -o $@ real-1.61
 	touch $(HOLOBJDIR)/base-theorems.ui $(HOLOBJDIR)/base-theorems.uo
 
-hol4-real-unint.art: hol4-real-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
+hol4-real-unint.art: hol4-real-unint.thy $(LOCAL_ARTS) $(UPSTREAM_ARTS)
 	opentheory info --article -o $@ $<
 
 hol4-real-unsat.art: hol4-real-unsat.thy hol4-real-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
 
-hol4-real-assums.art: hol4-real-assums.thy hol4-real-unsat.art
+# hol4-real-assums.thy composes the packages the real theories sit on top of,
+# so those must be built first; string and n-bit share this build band.
+INCLUDES += ../n-bit ../string
+ASSUM_ARTS = ../boss/hol4-base.art ../string/hol4-string.art \
+             ../n-bit/hol4-words.art ../integer/hol4-integer.art \
+             ../res_quan/src/hol4-res-quan.art \
+             ../pred_set/src/more_theories/hol4-set.art
+
+hol4-real-assums.art: hol4-real-assums.thy hol4-real-unsat.art $(ASSUM_ARTS)
 	opentheory info --skip-definitions --assumptions -o $@ $<
 	touch $(HOLOBJDIR)/hol4-real-assums.ui
 	touch $(HOLOBJDIR)/hol4-real-assums.uo

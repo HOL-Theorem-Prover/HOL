@@ -7,7 +7,6 @@ main {
   import: integer
   import: integer-word
   import: omega
-  import: integer-ring
   import: int-bitwise
   import: int-arith
   import: deep-syntax
@@ -23,10 +22,6 @@ integer-word {
 omega {
   import: integer
   article: "Omega.ot.art"
-}
-integer-ring {
-  import: integer
-  article: "integerRing.ot.art"
 }
 int-bitwise {
   import: integer
