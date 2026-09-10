@@ -4,6 +4,58 @@ val _ = new_theory "scratch"
 
 val _ = set_trace "Unicode" 0
 
+(* Every directive constructor must be recognised with the identity and
+   payload its consumer needs, and nothing else may be. *)
+val _ =
+  let
+    val th = ASSUME “p:bool”
+    fun same th' =
+        HOLset.equal(hypset th, hypset th') andalso concl th ~~ concl th'
+    fun check (name, mk, ok) =
+        (tprint ("dest_directive: " ^ name);
+         case dest_directive (mk ()) of
+             NONE => die "not recognised"
+           | SOME d => if ok d then OK ()
+                       else die "wrong identity or payload")
+    fun rejects (name, mk) =
+        (tprint ("dest_directive: " ^ name ^ " is not a directive");
+         if isSome (dest_directive (mk ())) then die "recognised"
+         else OK ())
+  in
+    List.app check [
+      ("AC", fn () => AC th TRUTH,
+       fn DAC (a, b) => same a andalso concl b ~~ T | _ => false),
+      ("Cong", fn () => Cong th, fn DCong a => same a | _ => false),
+      ("Excl", fn () => Excl "nm", fn DExcl "nm" => true | _ => false),
+      ("ExclSF", fn () => ExclSF "nm", fn DExclSF "nm" => true | _ => false),
+      ("FRAG", fn () => FRAG "nm", fn DFRAG "nm" => true | _ => false),
+      ("Req0", fn () => mk_Req0 th, fn DReq0 a => same a | _ => false),
+      ("ReqD", fn () => mk_ReqD th, fn DReqD a => same a | _ => false),
+      ("Once", fn () => BoundedRewrites.Once th,
+       fn DBounded (a, 1) => same a | _ => false),
+      ("Ntimes 3", fn () => BoundedRewrites.Ntimes th 3,
+       fn DBounded (a, 3) => same a | _ => false),
+      ("NoAsms", fn () => NoAsms, fn DNoAsms => true | _ => false),
+      ("IgnAsm", fn () => IgnAsm ‘x = _’,
+       fn DIgnAsm s => String.isSuffix "x = _" s | _ => false),
+      ("Abbr", fn () => Abbr`v`, fn DAbbr "v" => true | _ => false),
+      ("L", fn () => L "lab", fn DLabel "lab" => true | _ => false),
+      ("Req0 wraps Cong", fn () => mk_Req0 (Cong th),
+       fn DReq0 a => (case dest_directive a of
+                          SOME (DCong b) => same b
+                        | _ => false)
+        | _ => false)
+    ];
+    List.app rejects [
+      ("TRUTH", fn () => TRUTH),
+      ("assumption", fn () => th),
+      ("reflexive equation", fn () => REFL “x:'a”),
+      ("equation", fn () => ASSUME “x:'a = y”),
+      ("implication from a marker", fn () => ASSUME “marker$Req0 ==> p”)
+    ]
+  end
+
+
 fun testtac tac = #1 o VALID tac
 val goal_print = HOLPP.pp_to_string 75 goalStack.pp_goal
 

@@ -645,30 +645,74 @@ val _ = Parse.temp_add_user_printer("markerLib.IgnAsm",
                                     mk_comb(IgnAsm_t, mk_var("x", alpha)),
                                     print_ignasm)
 
-val abbrev_vartype = mk_vartype "'abbrev"
+(*---------------------------------------------------------------------------*)
+(* The theorem-list directive vocabulary.  Hypothesis-carried wrappers are  *)
+(* reported first: they enclose whatever the conclusion says, and a         *)
+(* consumer strips them before looking at the payload.                      *)
+(*---------------------------------------------------------------------------*)
+
+datatype directive =
+    DAC of thm * thm
+  | DCong of thm
+  | DExcl of string
+  | DExclSF of string
+  | DFRAG of string
+  | DReq0 of thm
+  | DReqD of thm
+  | DBounded of thm * int
+  | DNoAsms
+  | DIgnAsm of string
+  | DAbbr of string
+  | DLabel of string
+
+fun has_marker_head marker th =
+    same_const marker (#1 (strip_comb (concl th)))
+    handle HOL_ERR _ => false
+
+fun dest_directive th =
+    let
+      fun wrapper () =
+          case dest_Req0 th of
+              SOME p => SOME (DReq0 p)
+            | NONE =>
+              case dest_ReqD th of
+                  SOME p => SOME (DReqD p)
+                | NONE => Option.map DBounded
+                                     (total BoundedRewrites.DEST_BOUNDED th)
+      fun head () =
+          if has_marker_head AC_tm th then SOME (DAC (unAC th))
+          else if has_marker_head Cong_tm th then SOME (DCong (unCong th))
+          else if aconv (concl th) NoAsms_t then SOME DNoAsms
+          else if has_marker_head IgnAsm_t th then
+            SOME (DIgnAsm (#1 (dest_var (rand (concl th)))))
+          else if is_abbr th then SOME (DAbbr (dest_abbr th))
+          else NONE
+      val named = [(destExcl, DExcl), (destExclSF, DExclSF),
+                   (destFRAG, DFRAG), (total dest_label_ref, DLabel)]
+    in
+      case wrapper () of
+          SOME d => SOME d
+        | NONE =>
+          case head () of
+              SOME d => SOME d
+            | NONE => get_first (fn (dest, mk) => Option.map mk (dest th))
+                                named
+    end
+
+val is_directive = Option.isSome o dest_directive
+
 datatype tacoptions = TO_NoAsms | TO_IgnAsm of string |
                       TO_Abbr of string | TO_Label of string |
                       TO_thm of thm
 datatype aslP = AP_NoAsms | AP_Ign of string
 
 fun dest_tacmarked th =
-    let val c = concl th
-        val (f, args) = strip_comb c
-    in
-      (* asm control *)
-      if same_const c NoAsms_t then TO_NoAsms
-      else if same_const f IgnAsm_t then TO_IgnAsm (#1 (dest_var (hd args)))
-      else if same_const equality f then
-        let val arg1 = hd args
-            val arg1ty = type_of (hd args)
-        in
-          if arg1ty = abbrev_vartype then
-            TO_Abbr (#1 (dest_var arg1))
-          else
-            TO_Label (dest_label_ref th)
-        end
-      else TO_thm th
-    end handle HOL_ERR _ => TO_thm th
+    case dest_directive th of
+        SOME DNoAsms => TO_NoAsms
+      | SOME (DIgnAsm s) => TO_IgnAsm s
+      | SOME (DAbbr s) => TO_Abbr s
+      | SOME (DLabel s) => TO_Label s
+      | _ => TO_thm th
 
 fun optcons NONE l = l
   | optcons (SOME x) xs = x::xs
