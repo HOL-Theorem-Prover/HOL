@@ -138,9 +138,10 @@ The static list of files was produced with
   3. Flip the warning to an error.
 
 The src/1 residents (`boolLib.sml`, `Prim_rec.sml`) that used to prove
-theorems at load time now import them from `coreboolSupportTheory`
-(script at `src/1/coreboolSupportScript.sml`), so they no longer
-depend on a "hol.state0 residents are exempt" special case.
+theorems at load time no longer do, so they no longer depend on a
+"hol.state0 residents are exempt" special case.  `boolLib.sml`'s five
+lemmas are theorems of `boolTheory`; `Prim_rec.sml`'s six trivial
+rewrites are derived forward from the bool clauses.
 `Prim_rec.prove_case_rand_thm` --- which `TypeBase.sml`'s
 `bool_info` value depends on transitively --- is now a forward
 derivation rather than a `Tactical.prove` call, so no ambient CT is
@@ -155,12 +156,24 @@ controlled by the trace `"TAC_PROOF requires current theory"`
 back to the pre-existing warning; the warning text notes that the
 permissive mode is deprecated.
 
-The former "hol.state0 residents are exempt" carve-out is gone:
-`boolLib.sml`'s and `Prim_rec.sml`'s load-time proves now live in
-`src/1/coreboolSupportScript.sml`, imported by both consumers via
-`open coreboolSupportTheory`.  `Prim_rec.prove_case_rand_thm` was
-converted from a tactic proof to a forward derivation so that
-`TypeBase.sml`'s `bool_info` value no longer trips the check either.
+The former "hol.state0 residents are exempt" carve-out is gone.
+`boolLib.sml`'s load-time proves --- `COND_BOOL_CLAUSES`,
+`IF_THEN_T_IMP`, `EXISTS_UNIQUE_ALT`, `UNIQUE_SKOLEM_ALT` and
+`UNIQUE_SKOLEM_THM` --- are theorems of `boolTheory`, proved forward
+alongside their neighbours in `src/bool/boolScript.sml`.
+`Prim_rec.sml`'s six trivial `T`/`~T`/`~~T` rewrites are derived
+forward from `AND_CLAUSES`, `NOT_CLAUSES` and `EQ_CLAUSES`.
+`Prim_rec.prove_case_rand_thm` was converted from a tactic proof to a
+forward derivation so that `TypeBase.sml`'s `bool_info` value no
+longer trips the check either.
+
+A theory in `src/1` was the first home for these (a
+`coreboolSupportScript.sml`), but anything `boolLib` opens ends up in
+every prebuilt heap, and a theory that is already in the heap cannot
+be re-elaborated: `new_theory` rejects it, which broke TacticToe's
+recorder.  `bool` itself is exempt from that (TacticToe's ancestry
+identities already skip `min` and `bool`), so `boolScript.sml` is the
+one place these can live.
 
 Step 2 in progress.  Companion `fooContextScript.sml` files exist for:
 

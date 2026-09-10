@@ -28,10 +28,10 @@ val rhsc = utilsLib.rhsc
 val st = ``s: mips_state``
 fun mapl x = utilsLib.augment x [[]]
 
-(* These are conjuncts 1 and 3 of coreboolSupportTheory.COND_BOOL_CLAUSES;
+(* These are conjuncts 1 and 3 of boolTheory.COND_BOOL_CLAUSES;
    derive forward so we don't fire a load-time Tactical.prove. *)
 val cond_thms =
-   let val cs = Drule.CONJUNCTS coreboolSupportTheory.COND_BOOL_CLAUSES
+   let val cs = Drule.CONJUNCTS boolTheory.COND_BOOL_CLAUSES
    in CONJ (List.nth (cs, 0)) (List.nth (cs, 2)) end
 
 local

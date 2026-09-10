@@ -94,14 +94,13 @@ val BOOL_ss = SSFRAG
      "EXISTS_SIMP",  "COND_ID", "EXISTS_REFL", "EXISTS_UNIQUE_REFL",
      "EXCLUDED_MIDDLE", "bool_case_thm", "NOT_AND",
      "SELECT_REFL", "SELECT_REFL_2", "RES_FORALL_TRUE",
-     "RES_EXISTS_FALSE", "EXISTS_UNIQUE_FALSE"
+     "RES_EXISTS_FALSE", "EXISTS_UNIQUE_FALSE", "COND_BOOL_CLAUSES"
    ] @ map (fn (s,th) => (SOME {Thy = "", Name = s}, th)) [
      ("EXISTS_REFL'", GSYM EXISTS_REFL),
      ("EXISTS_UNIQUE_REFL'", GSYM EXISTS_UNIQUE_REFL),
      ("EXCLUDED_MIDDLE'", ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE),
      ("NOT_AND'",         ONCE_REWRITE_RULE [CONJ_COMM] NOT_AND),
      ("literal_I_thm", literal_I_thm),
-     ("COND_BOOL_CLAUSES", COND_BOOL_CLAUSES),
      ("lift_disj_eq", lift_disj_eq),
      ("lift_imp_disj", lift_imp_disj)
    ],
