@@ -1,0 +1,192 @@
+HolRefute: counterexample generation for HOL4
+=============================================
+
+Quickcheck (exhaustive and random), native narrowing, and a Kodkod-based
+model finder, with kernel certification of the counterexamples they find
+where replay succeeds.  User documentation is
+`Manual/Description/Refute.smd`; this file is the developer orientation.
+Contributor rules are in `CLAUDE.md`.
+
+User interface
+--------------
+
+`REFUTE_TAC` runs every selected backend, prints the result and leaves the
+goal unchanged.  `QUICKCHECK_TAC`, `NARROWING_TAC` and `MODEL_REFUTE_TAC`
+narrow the selection to exhaustive/random/narrowing, narrowing only, and the
+model finder only.  `REFUTE_TAC_WITH [upd_...]` applies `config -> config`
+updaters, left to right, to `the_config` for one application;
+`REFUTE_CONFIG_TAC cfg` uses exactly `cfg`.  `refute_with` and
+`refute_goal_with` are the same outside the tactic layer; `apply_updates`
+and `current_config` build configurations from update lists.
+
+Backend selection is `upd_search`: `AllBackends`, `QuickcheckBackends`, or
+`Only [Exhaustive | Random | Narrowing | ModelFinder | RegisteredBackend s]`.
+
+One call owns one absolute deadline (default 10 s) consumed by
+preprocessing, admission, every backend and Kodkodi; cleanup may finish
+after it.  Backends run concurrently in a pool local to the call, each
+seeing the whole remainder, unless `upd_sequential true`, which runs them
+by weight and splits the remainder among those not yet started.  Either
+way the search stops at `NoCounterexample` or at a counterexample reaching
+the highest certainty any selected backend declares reachable.
+
+QC `size` and model-finder `card` deepen iteratively from an initial window
+of 10.  `upd_size` / `upd_card` pin fixed bounds; `upd_iterative_size` /
+`upd_iterative_card` restore adaptive mode.  Other controls (`depth`,
+`iterations`, `widths`, `bits`, `iter`, `tac_timeout`, ...) are fixed.
+
+Verdicts and trust
+------------------
+
+* `NoCounterexample` claims the whole semantic space was covered: finite
+  generator spaces under exhaustive QC or narrowing, or a constant or exactly
+  finite-scoped model-finder problem.  Anything bounds-relative is `Unknown`
+  with a reason.  QC over `:rat`, `:real`, `fmap` or any infinite generator
+  never reports it for a quantified goal.
+* `certainty` (`Genuine` / `QuasiGenuine` / `Potential`) is the semantic
+  strength; `cert` says whether a HOL theorem was built.  They are
+  independent: `Genuine` with `cert = NONE` is valid and expected.
+* Substrates are untrusted accelerators.  With `certify = true` (default)
+  `Refute_Cert` replays a QC hit with computeLib: true discards it, false
+  attaches a theorem, stuck leaves the substrate verdict with `cert = NONE`.
+  Narrowing replays its case tree through `Refute_Cert_Narrow`.  Model-finder
+  values are replayed by `Refute_Cert_Model` (Skolem provenance, bindings,
+  bounded synthesis, one-layer cases, single-property induction, tautology,
+  Presburger, `REAL_ARITH`); replay is deterministic and fail-closed and
+  never weakens the encoding-derived certainty.
+* SETTLED, do not revisit without the owner: Refute trusts Kodkodi exactly
+  as Nitpick trusts Kodkod and is never stricter.  A model-finder verdict is
+  decided by the encoding (`Refute_ModelFinder_Model.fallback_certainty`),
+  never by whether a certificate was built.  `max_potential` bounds models of
+  the unsound liberal problem only; every model of a sound problem is
+  charged to `max_genuine`.  3948a7bed, 2db19131b and 92c24de7e required a
+  certificate and were reverted.
+* A polymorphic goal never earns `NoCounterexample` on any engine; a
+  counterexample found at a monomorphic proxy stands.  Refuting an
+  essential existential over an infinite type is out of reach (as in
+  Nitpick); the `real` ersatz is rational-valued.
+* No oracle tags.  No Refute-created type, constant, theorem or binding may
+  survive in the user's theory on any path: the definitions Compute makes
+  through `Refute_EvalEnum` are bracketed in a theory snapshot/revert that
+  runs on success, failure, timeout and interruption.
+
+Quickcheck
+----------
+
+`Refute_QC` compiles a goal to test-plan IR (`Refute_Eval.plan`) which a
+registered substrate compiles and runs.  `Auto` tries NativeSML (in-process
+SML extraction, `Refute_Extract`), then Compute (computeLib); an explicitly
+selected inapplicable substrate reports `Unknown`.  Both substrates consume
+one 64-bit PRNG (`rand_next` in `Refute_Eval`; the extracted native code
+calls back into it rather than reimplementing it) in the same order, so
+`upd_seed (SOME n)` reproduces the candidate stream on either substrate;
+changes to generation order must land in both and in the theory together.
+
+Custom generators (`:rat`, `:real`, `Refute_Gen.GenCustom`) run on Compute
+only; `fmap` is a generator family (`register_generator_family`) that
+NativeSML declines by name.  Compute decides `=` between ground
+`FEMPTY`-rooted update chains through `Refute_EvalFmap` (the stock compset
+only reduces the identical pair).  Both substrates take every word width
+exhaustively, and width `<= 32` or exactly 64 for random draws.
+
+Smart generators (default on) serve exhaustive testing only; random
+testing keeps generate-and-guard plans.  They mode-compile `Hol_reln`
+premises and Horn-shaped Boolean function equations into CPS enumerators
+(`Enum`), and a negated non-recursive relational premise into a complement
+`Guard` (`Refute_EvalEnum.negation_condition`).
+`upd_allow_function_inversion` (default false, Isabelle parity)
+additionally inverts a function's graph from its own equations
+(`Refute_SmartGen.infer_graph`); `flatten_rhs` refuses anything but
+constructors, variables and self-calls rather than approximate.
+`upd_depth` is the per-`Enum` fuel; fuel-bounded exhaustion is always
+incomplete.
+
+`upd_instantiate` pins type variables of QC and narrowing; word-width
+variables take fcp numerals from `upd_widths`.  `upd_use_subtype true`
+transports a typedef-typed variable to its guarded representation (never
+certifies).  `upd_finite_functions true` (default) gives narrowing
+function inputs as `ffun` update chains, or `cfun` constants for a
+function-typed domain.
+
+Model finder
+------------
+
+A port of Nitpick: `Refute_ModelFinder_Preproc` (binarization,
+constructor destruction, specialisation, boxing), `_Mono` (monotonicity
+calculus), `_Scope` (scope enumeration),
+`_Rep` (representation choice), `_Nut`/`_Kodkod` (translation to FORL),
+`Refute_Forl`/`Refute_ForlSat` (Kodkodi process bridge and SAT selection),
+`_Model` (reconstruction and display), `_HOL` (definition harvesting and
+unfolding, typedef/quotient/codatatype registries, ersatz table), `_Names`,
+`_Peephole`, `_Util`.  Principal options: `upd_card`, `upd_max`,
+`upd_specialize`, `upd_box`, `upd_binary_ints`, `upd_bits`,
+`upd_star_linear_preds`, `upd_iter` (default `[0,1,2,4,8,12,16,20,24,28]`),
+`upd_bisim_depth`, `upd_finitize`, `upd_whack`, `upd_need`,
+`upd_tac_timeout` (0.5 s; `0` skips), `upd_format`, `upd_max_potential`,
+`upd_max_genuine`, `upd_merge_type_vars`; `NONE` keys are row fallbacks.
+
+Native carriers: a word of concrete width `w` has exactly `2^w` atoms
+(refused above 1024), `:char` 256; both are exact, never scope-searched,
+and turn smart binarization off (forcing it refuses by name).  Every word
+constant outside the encoded tier is refused by name.  A typedef over
+`:num` or `:int` also disables smart binarization.
+
+Only the equations a user wrote are harvested for a function: HOL4
+completes a non-exhaustive pattern set with `ARB`, but that completion
+stays in the raw definition, which `raw_standard_props` skips for a
+constant that has a DefnBase presentation.  A goal whose truth depends
+on the completed value can therefore get a spurious counterexample, as
+in Nitpick.  A `refute_simp`/`refute_psimp`/`refute_unfold` clause is
+keyed on the head constant under its conclusion, looking through a
+negation; one with no constant head is dropped with a warning when the
+tables are built rather than aborting harvesting.
+
+The `register_*` entry points and `abstract_generator` are session-local
+ML state; the `export_refute_*` sets persist with the theory.  Typedef and
+quotient metadata is harvested lazily on first demand;
+`harvest_registrations ()` sweeps the ancestry and the current theory
+once.  `refuteTheory` supplies ersatz definitions (`wf'`, `wfrec'`,
+`card'`, `sum'`, fmap rows, `safe_The`) for second-order or badly-unfolding
+constants; a value-position `unknown` in any harvested axiom vetoes
+`NoCounterexample` (`unknown_value`, `Refute_ModelFinder_Kodkod.sml`).
+Hilbert choice is guarded per occurrence as `if ?x. P x then @P else
+unknown` (`unfold_defs_in_term`), a deliberate deviation from Isabelle,
+which leaves each `Eps` occurrence unguarded and constrains it only
+through the witness-conditional `Eps_psimp`; an inserted guard vetoes
+`NoCounterexample`.
+
+Kodkodi setup: Unix only, needs Java, `setsid` and `/bin/sleep`.  Set
+`HOL4_KODKODI` to an unpacked `kodkodi-1.5.7` component (from
+<https://isabelle.in.tum.de/components/>); Java comes from
+`HOL4_JAVA_EXECUTABLE`, `JAVA_HOME/bin/java`, then `PATH`;
+`HOL4_KODKODI_EXEC` overrides the whole launcher.  `sat_solver = "smart"`
+prefers a configured native or external solver and falls back to SAT4J
+(Nitpick's smart never picks a JNI solver by itself: it tries external
+solvers, then SAT4J); JNI solvers are offered when their libraries exist
+under `jni/<platform>`, and Isabelle's `*_HOME` variables select external
+solvers.  No JVM is started at load or build time.
+
+Module layout
+-------------
+
+* `Refute.sig`/`Refute.sml`: public facade over `Refute_Core`.
+* `Refute_Core`: types, configuration, backend registry, orchestration.
+* `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
+* `Refute_Eval` (+ `.sig`): substrate seam and PRNG;
+  `Refute_EvalCompute`, `Refute_EvalSML`: substrates;
+  `Refute_EvalEnum`: shared enumerator compiler;
+  `Refute_EvalRat`, `Refute_EvalReal`: built-in generators and compsets;
+  `Refute_EvalFmap`: compset decision of ground finite-map equality.
+* `Refute_QC`, `Refute_QC_Narrow`, `Refute_Narrow`: planning, execution,
+  native narrowing.
+* `Refute_Cert`, `Refute_Cert_Narrow`, `Refute_Cert_Model`: certification.
+* `Refute_ModelFinder*`, `Refute_Forl*`, `Refute_PropSat`, `Refute_Skolem`:
+  the model finder.
+* `Refute_Unused`: unused-assumption probes.
+* `refuteScript.sml`: support theory (ersatz definitions).
+* `tests/`: selftest and fixture theories.  `theory_tests/`: theory-hygiene
+  checks.  `examples/`: executable usage examples (documentation, not
+  tests).
+
+Only Poly/ML builds this directory.  `HOLSELFTESTLEVEL=2 Holmake` is the
+quality gate.

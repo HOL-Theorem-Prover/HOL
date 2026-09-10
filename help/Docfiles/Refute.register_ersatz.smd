@@ -1,0 +1,33 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_ersatz`
+
+``` hol4
+Refute.register_ersatz :
+  {original : {Thy : string, Name : string},
+   replacement : {Thy : string, Name : string}} -> unit
+```
+
+------------------------------------------------------------------------
+
+Adds or replaces one model-finder constant substitution.
+
+When model-finder preprocessing meets the `original` constant, it
+instantiates `replacement` to the occurrence's type and encodes that
+instead.  A later row with the same original key replaces an earlier
+session-local row and shadows a built-in one.  An active fraction
+registration takes precedence: a colliding row is retained but takes
+effect only once that registration is replaced or removed.
+
+Neither name is resolved, and no types are checked, at registration
+time; an absent constant or a replacement that cannot be retyped is
+reported when preprocessing uses the row.  No HOL constant or theorem is
+created.
+
+### See also
+
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
+[`Refute.model_refute`](#Refute.model_refute)
+
+Model-finder preprocessing is described in
+\ref{Description:the-holrefute-library}.

@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `model_refute`
+
+``` hol4
+Refute.model_refute : term -> outcome
+```
+
+------------------------------------------------------------------------
+
+Runs Refute's finite model finder.
+
+`Refute.model_refute tm` is `refute_with [upd_search (Only [ModelFinder])]
+tm`: only the `kodkod` backend runs, with every other field of
+`!Refute.the_config`, including scopes, solver and encoding options,
+output controls, quiet mode, and expectations.
+
+The `kodkod` backend is configured only when the external Kodkodi
+component is available; otherwise the result is `Unknown` with a
+no-configured-backend reason.  A model's certainty is decided by the
+soundness and exactness of its encoding, not by whether a HOL
+certificate was built, so a result may be `Genuine` with `cert = NONE`;
+`cert = SOME thm` additionally records a certifying theorem.
+
+Only the clauses a user wrote reach the model finder.  HOL4 completes a
+non-exhaustive pattern set with `ARB`, so a function defined by
+`f (x::xs) = x` leaves `f []` unconstrained here, and a goal whose truth
+depends on that completed value -- `f [] = ARB`, or an equation between
+two functions omitting the same pattern -- can be reported as a genuine
+counterexample, as in Isabelle's Nitpick.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute),
+[`Refute.refute_with`](#Refute.refute_with),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.register_codatatype`](#Refute.register_codatatype),
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.register_typedef`](#Refute.register_typedef)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

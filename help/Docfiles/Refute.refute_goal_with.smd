@@ -1,0 +1,11 @@
+## `refute_goal_with`
+
+``` hol4
+Refute.refute_goal_with : config_update list -> goal -> outcome
+```
+
+The goal form of `refute_with`: `refute_goal_with updates goal`
+abbreviates `refute_goal (current_config updates) goal`, applying the
+updates to `!the_config` from left to right.
+See [`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.config`](#Refute.config).

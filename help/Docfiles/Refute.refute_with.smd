@@ -1,0 +1,12 @@
+## `refute_with`
+
+``` hol4
+Refute.refute_with : config_update list -> term -> outcome
+```
+
+Searches for a counterexample to a term under per-call configuration
+updates: `refute_with updates tm` abbreviates
+`refute (current_config updates) tm`, where `current_config` applies the
+updates to `!the_config` from left to right.  The goal form is
+`refute_goal_with`.
+See [`Refute.refute`](#Refute.refute), [`Refute.config`](#Refute.config).

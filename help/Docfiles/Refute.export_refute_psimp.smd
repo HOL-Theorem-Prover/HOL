@@ -1,0 +1,14 @@
+## `export_refute_psimp`
+
+``` hol4
+Refute.export_refute_psimp : string -> unit
+```
+
+Exports the named theorem to the persistent Refute partial-specification
+set, which the model finder uses for a constant that has no
+`refute_simp` entry.
+
+Every conjunct's conclusion must be `c t1 ... tn = u`, `c t1 ... tn`,
+or `~(c t1 ... tn)`, with a constant head `c`: the model finder looks
+the clause up by that head.  A clause with no constant head is dropped
+with a warning when the model finder builds its tables, not at export.

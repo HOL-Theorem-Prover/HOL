@@ -1,0 +1,47 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_generator_family`
+
+``` hol4
+Refute.register_generator_family :
+  {tyop : {Thy : string, Tyop : string}, constructors : term list,
+   canonical : term_postprocessor option} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a Quickcheck generator for every instance of a type operator.
+
+The generator is built from constructor constants whose declared result
+type is `tyop` applied to distinct type variables (e.g. `FEMPTY` and
+`FUPDATE` for `:'a |-> 'b`).  Unlike `Refute.register_generator`,
+nothing is stored per instance: `tyop` is matched on demand, so the
+registration fires for a concrete type never seen before; registering
+clears the generator, cardinality, and enumeration caches.  The
+generator is never exhaustive, so QC cannot report `NoCounterexample`
+for a goal quantified over such a type; only a closed fact free of such
+a variable can be decided that way.
+
+`canonical`, if present, is a display-only postprocessor for reported
+bindings at that type, applied after testing and certification have run
+on the raw term.  It runs in the one walk
+`Refute.register_term_postprocessor` drives, after every
+pattern-registered postprocessor.  It should remove structure a later
+part of the same candidate overwrote (collapsing `FEMPTY |+ (1,2) |+
+(1,3)` to `FEMPTY |+ (1,3)`); it need not identify every pair of terms
+denoting the same value.
+
+### Failure
+
+Raises `Fail` if `constructors` is empty, a constructor is not a
+constant or its result type is not `tyop` applied to distinct type
+variables, or `tyop` already has `TypeBase` datatype constructors (a
+family there would silently disable finite exhaustion for a possibly
+finite type).
+
+### See also
+
+[`Refute.register_generator`](#Refute.register_generator),
+[`Refute.abstract_generator`](#Refute.abstract_generator),
+[`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor)
+
+Model reconstruction is described in \ref{Description:the-holrefute-library}.

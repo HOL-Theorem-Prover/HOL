@@ -1,0 +1,49 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_typedef`
+
+``` hol4
+Refute.register_typedef :
+  {ty : hol_type,
+   abs : term,
+   rep : term,
+   absrep_thms : thm list} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers an existing type definition with the model finder.
+
+`ty` is the abstract type, whose operator parameters must be distinct
+type variables; the representation type may not introduce further type
+variables.  `abs` and `rep` must be existing constants with mutually
+opposite abstract and representation types.  `absrep_thms` is either
+the standard hypothesis-free conjunction of the Abs/Rep bijection
+properties as a singleton list, or its two conjuncts
+`!a. abs (rep a) = a` and `!r. P r = (rep (abs r) = r)` as separate
+theorems in either order; the two forms register identically.  Refute
+recovers the representation predicate and verifies it against the
+type's `<tyop>_TY_DEF` theorem.
+
+Registrations are session-local; a valid later registration replaces
+the same typedef operator.  The model finder also harvests standard
+typedef metadata lazily.
+
+### Failure
+
+Fails for malformed type parameters, missing or mismatched
+type-definition metadata, nonconstant or ill-typed Abs/Rep terms,
+theorem hypotheses or an unsupported theorem shape, an `absrep_thms`
+list that is not one or two theorems long, two theorems that are the
+same bijection half or name different Abs/Rep constants, or an
+incompatible datatype, codatatype, quotient, or fraction
+classification.
+
+### See also
+
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.register_codatatype`](#Refute.register_codatatype),
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.harvest_registrations`](#Refute.harvest_registrations),
+[`Refute.model_refute`](#Refute.model_refute)
+
+Typedef encoding is described in \ref{Description:the-holrefute-library}.
