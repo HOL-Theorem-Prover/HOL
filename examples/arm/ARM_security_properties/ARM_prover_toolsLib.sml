@@ -117,9 +117,9 @@ fun GO_ON_TAC () =
 (* Tactic form of GO_ON_TAC: reads the goal it is handed instead of
    whatever the proof manager happens to be holding. *)
 val GO_ON_TAC_G : tactic =
-    fn (g as (_, to_show)) =>
+    fn (g as (_, to_show)) => fn ctxt =>
        (ASSUME_TAC (obtain_proofs_for to_show) THEN
-        FULL_SIMP_TAC (srw_ss()) []) g
+        FULL_SIMP_TAC (srw_ss()) []) g ctxt
 
 fun GO_ON_N 0 = ALL_TAC
   | GO_ON_N n = GO_ON_TAC_G THEN GO_ON_N (n - 1)

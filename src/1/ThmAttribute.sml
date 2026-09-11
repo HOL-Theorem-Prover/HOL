@@ -36,14 +36,15 @@ struct
           {name = "ThmAttribute.reserved_words", empty = ["induction"],
            pp = fn _ => "<ThmAttribute.reserved_words>"}
   in
-    fun funstore () =
-        Context.Data.get funstore_slot (Context.snapshot())
+    fun funstore_of ctxt = Context.Data.get funstore_slot ctxt
+    fun funstore () = funstore_of (Context.snapshot())
     val upd_funstore = Context.Data.modify funstore_slot
-    fun abbrevs () =
-        Context.Data.get abbrevs_slot (Context.snapshot())
+    fun abbrevs_of ctxt = Context.Data.get abbrevs_slot ctxt
+    fun abbrevs () = abbrevs_of (Context.snapshot())
     val upd_abbrevs = Context.Data.modify abbrevs_slot
-    fun reserved_words () =
-        Context.Data.get reserved_words_slot (Context.snapshot())
+    fun reserved_words_of ctxt =
+        Context.Data.get reserved_words_slot ctxt
+    fun reserved_words () = reserved_words_of (Context.snapshot())
     val upd_reserved_words = Context.Data.modify reserved_words_slot
   end
   type abbrevinfo = {abbrev:string, expansion:(string * string list) list}

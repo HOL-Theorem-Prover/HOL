@@ -57,7 +57,7 @@ fun OC_REPEATC (c: conv) (t :term) :thm =
 (* Convert a conversion for the application of the laws for OBS_CONGR to a
    tactic. *)
 fun OC_LHS_CONV_TAC (c :conv) :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if (opt ~~ ``OBS_CONGR``) then
@@ -75,7 +75,7 @@ fun OC_LHS_CONV_TAC (c :conv) :tactic =
   end;
 
 fun OC_RHS_CONV_TAC (c :conv) :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if (opt ~~ ``OBS_CONGR``) then

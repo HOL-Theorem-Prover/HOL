@@ -31,7 +31,7 @@ val term_rel = ty_antiq ( ==`:'a term -> 'a term -> bool`== );
 
 val RC_INDUCT_TAC =
  let val rc_thm = RC_INDUCT
-     fun tac (asl,w) =
+     fun tac (asl,w) ctxt =
       let open Rsyntax
           val {Bvar=u,Body} = dest_forall w
           val {Bvar=v,Body} = dest_forall Body
@@ -48,7 +48,7 @@ val RC_INDUCT_TAC =
           val _ = assert (aconv v) v'
           val P = list_mk_abs([u,v], conseq)
           val rc_thm' = BETA_RULE(ISPEC P (ISPEC R rc_thm))
-      in MATCH_MP_TAC rc_thm' (asl,w)
+      in MATCH_MP_TAC rc_thm' (asl,w) ctxt
       end
       handle _ => raise mk_HOL_ERR "<top-level>" "RC_INDUCT_TAC"
         "Unanticipated term structure"
@@ -69,7 +69,7 @@ val RC_INDUCT_TAC =
 
 val TC_INDUCT_TAC =
  let val tc_thm = TC_INDUCT
-     fun tac (asl,w) =
+     fun tac (asl,w) ctxt =
       let open Rsyntax
           val {Bvar=u,Body} = dest_forall w
           val {Bvar=v,Body} = dest_forall Body
@@ -86,7 +86,7 @@ val TC_INDUCT_TAC =
           val _ = assert (aconv v) v'
           val P = list_mk_abs([u,v], conseq)
           val tc_thm' = BETA_RULE(ISPEC P (ISPEC R tc_thm))
-      in MATCH_MP_TAC tc_thm' (asl,w)
+      in MATCH_MP_TAC tc_thm' (asl,w) ctxt
       end
       handle _ => raise mk_HOL_ERR "<top-level>" "TC_INDUCT_TAC"
                      "Unanticipated term structure"

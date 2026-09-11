@@ -42,21 +42,21 @@ local
     | SOME (tya, tyd) => split_tacs v tya tyd
   end g
 in
-  fun PairCases (g as (hyps, w)) = let
+  fun PairCases (g as (hyps, w)) ctxt = let
     val fvs = free_varsl (w::hyps)
     val (v, _) = dest_forall w
     (* From gen_tac: *)
-    val v' = gen_variant Parse.is_constname "" fvs v
+    val v' = gen_variant (Parse.get_is_constname ctxt) "" fvs v
   in
     X_GEN_TAC v' THEN PairCases_common v' fvs
-  end g
+  end g ctxt
 
-  fun PairCases_on q (g as (hyps, w)) = let
+  fun PairCases_on q (g as (hyps, w)) ctxt = let
     val fvs = free_varsl (w::hyps)
-    val v = parse_in_context fvs q
+    val v = Parse.parse_in_context_in ctxt fvs q
   in
     if is_var v then
-      PairCases_common v fvs g
+      PairCases_common v fvs g ctxt
     else
       raise PERR "PairCases_on" "Not a variable"
   end
@@ -125,7 +125,7 @@ fun PGEN a vstr th =
           then Thm.INST [vstr |-> a] th
           else PROVE_HYP (PAIR_EX a vstr) (VSTRUCT_ABS (mk_eq(a,vstr)) th))
 
-fun PGEN_TAC vars (asl:Term.term list,tm) =
+fun PGEN_TAC vars (asl:Term.term list,tm) (_ : Context.t) =
  let val (v,_) = dest_forall tm
      val tm'   = beta_conv(mk_comb(rand tm,vars))
  in
@@ -165,7 +165,7 @@ local fun trav tm A =
 in
 fun TUPLE v thm = GEN v (SPECL (trav v []) thm)
 
-fun TUPLE_TAC vtuple:tactic = fn (asl,w) =>
+fun TUPLE_TAC vtuple:tactic = fn (asl,w) => fn _ (* ctxt *) =>
    let val (Bvar,Body) = dest_forall w
        val w1 = subst [Bvar |-> vtuple] Body
        val w2 = list_mk_forall(strip_pair vtuple,w1)
@@ -269,7 +269,7 @@ in
  *---------------------------------------------------------------------------*)
 
 val LET_INTRO_TAC :tactic =
-fn  (asl,w) =>
+fn  (asl,w) => fn _ (* ctxt *) =>
   let val (func,arg) = dest_let w
       val func' = unpabs func
       val (vstr,body) = dest_pabs func

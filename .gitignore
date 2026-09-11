@@ -10,6 +10,7 @@
 *.ui
 *.o
 .hol
+.hol-vscode
 *.tr
 *.tr.gz
 .holobjs

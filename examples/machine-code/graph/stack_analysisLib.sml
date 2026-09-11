@@ -171,6 +171,7 @@ fun find_stack_accesses_for all_summaries sec_name = let
       val test = list_mk_forall(vs,test)
       fun can_prove_by_cases goal =
         ([],goal) |> (REPEAT Cases THEN REWRITE_TAC [])
+                  |> (fn f => f (Context.snapshot()))
                   |> (fn (x,_) => length x = 0)
       in not (can_prove_by_cases test) end
   fun is_sp_add_or_sub a =

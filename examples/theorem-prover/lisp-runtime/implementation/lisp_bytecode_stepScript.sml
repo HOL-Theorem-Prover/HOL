@@ -601,10 +601,11 @@ val SPEC_DERIVE = prove(
   ``SPEC m p c q /\ SEP_IMP p1 p /\ SEP_IMP q q1 ==> SPEC m p1 c q1``,
   METIS_TAC [SPEC_STRENGTHEN,SPEC_WEAKEN]);
 
-fun INST_EXISTS_TAC (hyps,goal) = let
+fun INST_EXISTS_TAC (hyps,goal) c = let
   val (v,tm) = dest_exists goal
   val w = mk_var(implode (filter (fn x => x <> #"'") (explode (fst (dest_var v)))), type_of v)
-  in EXISTS_TAC w (hyps,goal) end handle HOL_ERR _ => NO_TAC (hyps,goal)
+  in EXISTS_TAC w (hyps,goal) c end
+  handle HOL_ERR _ => NO_TAC (hyps,goal) c
 
 val SEP_IMP_LEMMA = prove(
   ``SEP_IMP (p1 * m) q1 /\ SEP_IMP (p2 * m) q2 ==>

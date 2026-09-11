@@ -9,7 +9,7 @@ structure HolSmtLib :> HolSmtLib = struct
 
   val op THEN = Tactical.THEN
 
-  fun GENERIC_SMT_TAC solver goal =
+  fun GENERIC_SMT_TAC solver goal (_ : Context.t) =
   let
     val ERR = Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
   in

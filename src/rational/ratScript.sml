@@ -825,7 +825,7 @@ end;
  *  calculates the value of t1:rat
  *--------------------------------------------------------------------------*)
 
-fun RAT_CALCTERM_TAC (t1:term) (asm_list,goal) =
+fun RAT_CALCTERM_TAC (t1:term) (asm_list,goal) ctxt =
         let
                 val calc_thm = RAT_CALC_CONV t1;
                 val (calc_asms, calc_concl) = dest_thm calc_thm;
@@ -833,7 +833,7 @@ fun RAT_CALCTERM_TAC (t1:term) (asm_list,goal) =
                 (
                         MAP_EVERY ASSUME_TAC (map (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [FRAC_DNMPOS,INT_MUL_POS_SIGN,INT_NOTPOS0_NEG,INT_NOT0_MUL,INT_GT0_IMP_NOT0,INT_ABS_NOT0POS])) calc_asms) THEN
                         SUBST_TAC[calc_thm]
-                ) (asm_list,goal)
+                ) (asm_list,goal) ctxt
         end
 handle HOL_ERR _ => raise ERR "RAT_CALCTERM_TAC" "";
 
@@ -845,7 +845,7 @@ handle HOL_ERR _ => raise ERR "RAT_CALCTERM_TAC" "";
  *  assumptions that were needed for the simplification are added to the goal
  *--------------------------------------------------------------------------*)
 
-fun RAT_CALC_TAC (asm_list,goal) =
+fun RAT_CALC_TAC (asm_list,goal) (_ : Context.t) =
         let
                         (* extract terms of type ``:rat`` *)
                 val rat_terms = extract_rat goal;

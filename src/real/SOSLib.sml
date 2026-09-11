@@ -2036,7 +2036,7 @@ fun prove_nonneg tm =
 
 (* Tactic: prove |- &0 <= p or p >= &0 by SOS decomposition *)
 val PURE_SOS_TAC : tactic =
-  fn (asl, w) =>
+  fn (asl, w) => fn _ (* ctxt *) =>
     let
       (* w should be of the form &0 <= p or p >= &0 *)
       val (goal_lhs, goal_rhs) =
@@ -2473,7 +2473,7 @@ local
          end)
     end
 in
-  fun REAL_SOS_DIRECT_TAC (asl, gl) =
+  fun REAL_SOS_DIRECT_TAC (asl, gl) (_ : Context.t) =
     let
       val neg_gl_th = ASSUME (mk_neg gl)
       val all_ths = neg_gl_th :: map ASSUME asl

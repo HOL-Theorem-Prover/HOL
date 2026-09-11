@@ -288,7 +288,7 @@ val sexp_lex_parse_BAR = prove(
   \\ FULL_SIMP_TAC (srw_ss()) []);
 
 fun auto_prove (goal,tac) = let
-  val (rest,validation) = tac ([], goal)
+  val (rest,validation) = tac ([], goal) (Context.snapshot())
   in if length rest = 0 then validation []
      else failwith("auto_prove failed") end
 

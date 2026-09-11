@@ -92,13 +92,47 @@ val suspended_theorem_recorder : (string * thm -> unit) ref =
    goal ready for interactive exploration. *)
 val dump_setup_hook : (goal -> unit) ref = ref (fn _ => ())
 
-(* Name of the theorem currently being proved.  store_thm_at sets this
-   immediately before invoking Tactical.prove so that holmakebuild's
-   basic_prover (which only receives a goal, not a name) can construct
-   a sensible dump-file name on the --noqof failure path.  Cleared again
-   after the prove call so that user code invoking Tactical.prove
-   directly doesn't inherit a stale name. *)
-val current_thm_name : string ref = ref ""
+(* Name of the theorem being proved, for whatever downstream of the
+   prover needs to say *which* proof it is looking at: the
+   dump-on-failure path names its heap file with it, and the LSP's
+   deferred-proof pool labels its entries with it.
+
+   It travels in the context rather than beside it.  Every reader is a
+   prover installed through `Tactical.set_prover`, whose type is
+   `Context.t -> goal * tactic -> thm`, so each already holds the
+   context the name arrives in; and `prove_named` below is the one place
+   that puts it there.  A cell would have to be set before the proof and
+   cleared after -- with the clearing existing only so that a later
+   unrelated `Tactical.prove` does not inherit a stale name, a hazard a
+   value simply does not have.  A proof given no name has none in its
+   context.
+
+   It was a `string ref`, then thread-local once the LSP's worker pool
+   made two proofs concurrent.  That removed the cross-thread clobbering
+   without asking whether the cell should exist. *)
+val thm_name_slot : string Context.Data.slot =
+    Context.Data.new {name = "boolLib.thm_name", empty = "", pp = Lib.I}
+
+fun current_thm_name ctxt = Context.Data.get thm_name_slot ctxt
+
+(* A named proof attempt.  The name is how anything downstream of the
+   prover says *which* proof it is looking at: the dump-on-failure path
+   names its heap file with it, and the LSP's deferred-proof pool labels
+   its entries with it.  There are several routes into the prover that
+   have a name to offer besides `store_thm_at` -- a `Resume` body, a
+   termination obligation -- and each of them used to arrive anonymously,
+   so the pool reported them with an empty label.
+
+   Failure handling deliberately stays with the caller.  `store_thm_at`
+   dies loudly and dumps a heap; a termination obligation may be one of
+   several candidates being tried in turn, where a dump per failed
+   candidate would be wrong.
+
+   A proof nested inside another sees the inner name, and the outer
+   context is unchanged, so nothing has to be put back. *)
+fun prove_named ctxt {name, goal, tac} =
+    Tactical.prove_goal_in (Context.Data.put thm_name_slot name ctxt)
+                           (goal, tac)
 
 (* Counter used by dump_failure_state when no theorem name is in
    scope (e.g. raw Tactical.prove invocations outside store_thm_at):
@@ -251,11 +285,10 @@ local
   fun tac_failure s1 s2 =
       String.concat ["Failed to prove theorem ", Lib.quote s1, ":\n", s2]
 in
-fun store_thm_at loc (n0,t,tac) =
+fun store_thm_at loc (n0,t,tac) ctxt =
   let val attrblock = ThmAttribute.extract_attributes n0
       val name = #thmname attrblock
-      val _ = current_thm_name := name
-      val th = Tactical.prove(t,tac)
+      val th = prove_named ctxt {name = name, goal = ([], t), tac = tac}
                handle HOL_ERR herr =>
                if !Globals.dumpheap_on_failure andalso
                   not (!Globals.interactive)
@@ -273,7 +306,6 @@ fun store_thm_at loc (n0,t,tac) =
                      val err = HOL_ERR (set_message err_mesg herr)
                  in render_exn
                       (wrap_exn "boolLib" "store_thm_at" err) end
-      val _ = current_thm_name := ""
   in
     save_thm_attrs loc (attrblock,th)
     handle e => render_exn
@@ -281,7 +313,7 @@ fun store_thm_at loc (n0,t,tac) =
   end
 end
 
-val store_thm = store_thm_at DB.Unknown
+fun store_thm arg = store_thm_at DB.Unknown arg (Context.snapshot())
 
 fun save_thm_at loc (n0,th) =
   save_thm_attrs loc (ThmAttribute.extract_attributes n0,th)

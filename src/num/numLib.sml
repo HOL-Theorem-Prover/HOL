@@ -162,18 +162,18 @@ end;
 (*   [A] t[0]  ,  [A,t[n]] t[SUC x]                                      *)
 (* --------------------------------------------------------------------- *)
 
-fun INDUCT_TAC g =
-  INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g
+fun INDUCT_TAC g ctxt =
+  INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g ctxt
   handle HOL_ERR _ => raise ERR "INDUCT_TAC" "";
 
 
-fun completeInduct_on qtm g =
+fun completeInduct_on qtm g ctxt =
  let open BasicProvers
      val st = find_subterm qtm g
      val ind_tac = Prim_rec.INDUCT_THEN
                      arithmeticTheory.COMPLETE_INDUCTION ASSUME_TAC
  in
-    primInduct st ind_tac g
+    primInduct st ind_tac g ctxt
  end
  handle e => raise wrap_exn "numLib" "completeInduct_on" e
 

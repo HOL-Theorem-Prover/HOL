@@ -904,7 +904,7 @@ QED
 val Call_init_tac = rw [] \\ rpt (pop_assum mp_tac) \\ Cases_on ‘tail'’
 val [Call_tail,Call_not_tail] =
   ([],get_goal "eval _ (Call _ _)")
-  |> Call_init_tac |> fst |> map snd
+  |> Call_init_tac |> (fn f => f (Context.snapshot())) |> fst |> map snd
 
 Definition write_regs_def:
   write_regs [] rs = rs ∧

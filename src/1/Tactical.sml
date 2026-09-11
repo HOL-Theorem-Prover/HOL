@@ -31,8 +31,8 @@ val notheory_action = ref 1
 val _ = Feedback.register_trace
           ("TAC_PROOF requires current theory", notheory_action, 1)
 
-fun check_current_theory (_, t) =
-    case Thm.getCT() of
+fun check_current_thy ctxt (_, t) =
+    case Context.current_thy ctxt of
         SOME _ => ()
       | NONE =>
           let
@@ -48,26 +48,51 @@ fun check_current_theory (_, t) =
           end
 
 local
-   val unsolved_list = ref ([]: goal list)
+   (* Per-thread: TAC_PROOF writes this on every proof, so two proofs
+      running concurrently would otherwise report each other's unsolved
+      subgoals.  DefnBase's checkLog is the model.  On a thread that has
+      never proved anything, `get` is NONE, which reads as "no unsolved
+      goals recorded" -- the same answer the shared cell gave before its
+      first write. *)
+   val unsolved_list : goal list ThreadLocal.t = ThreadLocal.new ()
+   fun set_unsolved l = ThreadLocal.set (unsolved_list, l)
 in
-   fun unsolved () = !unsolved_list
-   fun TAC_PROOF (g, tac) =
-      (check_current_theory g;
-       case tac g of
+   fun unsolved () =
+       case ThreadLocal.get unsolved_list of NONE => [] | SOME l => l
+   (* Context.in_proof marks the dynamic extent of a parameterised proof:
+      anything reached from here that reads the ambient context had this
+      one in scope and dropped it.
+
+      Marks, rather than pins.  `Context.with_context` would make those
+      reads answer from `ctxt` and the census would fall silent, which
+      is the opposite of what the census is for -- and two further
+      reasons it does not belong here: a proof that writes context state
+      would stop seeing its own write, since writes still go to the live
+      cell; and a pin held for every proof in a batch build would cost
+      `mk_const` the fast path `with_context` documents.  The LSP's
+      proof pool pins, because there the cell really is being rewound
+      underneath a running proof. *)
+   fun TAC_PROOF_in ctxt (g, tac) =
+      (check_current_thy ctxt g;
+       case Context.in_proof (fn () => tac g ctxt) () of
          ([], p) =>
              (let
-                 val thm = p []
+                 val thm = Context.in_proof p []
                  val c = concl thm
-                 val () = unsolved_list := []
+                 val () = set_unsolved []
               in
                  if identical c (snd g) then thm
                  else EQ_MP (ALPHA c (snd g)) thm
               end
               handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
-       | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals"))
+       | (l, _) => (set_unsolved l;
+                    raise ERR "TAC_PROOF" "unsolved goals"))
 end
 
-fun default_prover (t, tac) = TAC_PROOF(([], t), tac)
+fun TAC_PROOF gtac = TAC_PROOF_in (Context.snapshot()) gtac
+
+fun default_prover_in ctxt (t, tac) = TAC_PROOF_in ctxt (([], t), tac)
+fun default_prover ttac = default_prover_in (Context.snapshot()) ttac
 
 local
   fun goal_to_string (asms, t) =
@@ -76,8 +101,8 @@ local
         | _ => "([" ^ CharVector.tabulate(length asms, fn _ => #".") ^ "], " ^
                Parse.term_to_string t ^ ")"
    val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
-   fun provide_feedback f (g, tac: tactic) =
-      f (g, tac)
+   fun provide_feedback f ctxt (g, tac: tactic) =
+      f ctxt (g, tac)
       handle e as HOL_ERR herr =>
         let val m = message_of herr
             val f = top_function_of herr
@@ -95,19 +120,25 @@ local
            raise e
         end
    val internal_prover =
-      ref (provide_feedback TAC_PROOF: goal * tactic -> Thm.thm)
+      ref (provide_feedback TAC_PROOF_in
+           : Context.t -> goal * tactic -> Thm.thm)
 in
    fun set_prover f = internal_prover := provide_feedback f
-   fun restore_prover () = set_prover TAC_PROOF
-   fun prove (t, tac) = !internal_prover (([], t), tac)
-   fun prove_goal (g, tac) = !internal_prover (g, tac)
+   fun restore_prover () = set_prover TAC_PROOF_in
+   fun prove_in ctxt (t, tac) = !internal_prover ctxt (([], t), tac)
+   fun prove_goal_in ctxt (g, tac) = !internal_prover ctxt (g, tac)
 end
 
-fun store_thm (name, tm, tac) =
-   Theory.save_thm (name, prove (tm, tac))
+fun prove ttac = prove_in (Context.snapshot()) ttac
+fun prove_goal gtac = prove_goal_in (Context.snapshot()) gtac
+
+fun store_thm_in ctxt (name, tm, tac) =
+   Theory.save_thm (name, prove_in ctxt (tm, tac))
    handle e =>
      (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
+
+fun store_thm ntac = store_thm_in (Context.snapshot()) ntac
 
 (*---------------------------------------------------------------------------
  * tac1 THEN_LT ltac2:
@@ -115,10 +146,10 @@ fun store_thm (name, tm, tac) =
  * tac1 may be a tactic or a list_tactic
  *---------------------------------------------------------------------------*)
 fun op THEN_LT (tac1, ltac2 : list_tactic) =
-   fn g =>
+   fn g => fn ctxt =>
       let
-         val (gl1, vf1) = tac1 g
-         val (gl2, vf2) = ltac2 gl1 ;
+         val (gl1, vf1) = tac1 g ctxt
+         val (gl2, vf2) = ltac2 gl1 ctxt
       in
          (gl2, vf1 o vf2)
       end
@@ -139,10 +170,10 @@ val _ = op THEN_LT : list_tactic * list_tactic -> list_tactic ;
  * A list_tactic which applies a given tactic to all goals
  *---------------------------------------------------------------------------*)
 
-fun ALLGOALS tac2 gl =
+fun ALLGOALS tac2 gl ctxt =
          case itlist
                 (fn goal => fn (G, V, lengths) =>
-                  case tac2 goal of
+                  case tac2 goal ctxt of
                      ([], vfun) => let
                                       val th = vfun []
                                    in
@@ -183,13 +214,19 @@ val _ = op THEN : list_tactic * tactic -> list_tactic ;
  * Converts a list of tactics to a single list_tactic
  *---------------------------------------------------------------------------*)
 
+(* See Tactical.sig.  `fn () => tac g ctxt' must not shrink to `tac g':
+   that is the whole point -- the flag has to still be set when the
+   tactic runs, not merely when its closure is built. *)
+fun trace_tac (nm, i) (tac: tactic) : tactic =
+    fn g => fn ctxt => Feedback.trace (nm, i) (fn () => tac g ctxt) ()
+
 fun TACS_TO_LT (tacl: tactic list) : list_tactic =
-   fn gl =>
+   fn gl => fn ctxt =>
       let
          val (G, V, lengths) =
             itlist2
                (fn goal => fn tac => fn (G, V, lengths) =>
-                 case tac goal of
+                 case tac goal ctxt of
                     ([], vfun) => let
                                      val th = vfun []
                                   in
@@ -209,8 +246,10 @@ fun TACS_TO_LT (tacl: tactic list) : list_tactic =
  *                  when applied to an empty goal list
  *---------------------------------------------------------------------------*)
 
-fun NULL_OK_LT ltac [] = ([], Lib.I)
-  | NULL_OK_LT ltac gl = ltac gl ;
+fun NULL_OK_LT ltac [] ctxt = ([], Lib.I)
+  | NULL_OK_LT ltac gl ctxt = ltac gl ctxt
+
+val NULL_OK_LT : list_tactic -> list_tactic = NULL_OK_LT
 
 (*---------------------------------------------------------------------------
  * fun (tac1:tactic) THENL (tac2l: tactic list) : tactic = fn g =>
@@ -230,8 +269,9 @@ val op >| = op THENL
 val _ = op THENL : tactic * tactic list -> tactic ;
 val _ = op THENL : list_tactic * tactic list -> list_tactic ;
 
-fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g
-fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
+fun (tac1 ORELSE tac2) g ctxt = tac1 g ctxt handle HOL_ERR _ => tac2 g ctxt
+fun (ltac1 ORELSE_LT ltac2) gl ctxt =
+    ltac1 gl ctxt handle HOL_ERR _ => ltac2 gl ctxt
 
 (*---------------------------------------------------------------------------
  * tac1 THEN1 tac2: A tactical like THEN that applies tac2 only to the
@@ -239,14 +279,14 @@ fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
  *---------------------------------------------------------------------------*)
 
 fun op THEN1 (tac1, tac2) =
-   fn g =>
+   fn g => fn ctxt =>
       let
-         val (gl, jf) = tac1 g
+         val (gl, jf) = tac1 g ctxt
          val (h_g, t_gl) =
             case gl of
                [] => raise ERR "THEN1" "goal completely solved by first tactic"
              | h :: t => (h, t)
-         val (h_gl, h_jf) = tac2 h_g
+         val (h_gl, h_jf) = tac2 h_g ctxt
          val _ =
             if null h_gl then ()
             else raise ERR "THEN1" "first subgoal not solved by second tactic"
@@ -277,14 +317,14 @@ fun (f ?? x) = f x
  * NTH_GOAL tac n: A list_tactic that applies tac to the nth goal
    (counting goals from 1)
  *---------------------------------------------------------------------------*)
-fun NTH_GOAL tac n gl1 =
+fun NTH_GOAL tac n gl1 ctxt =
   let
     val (gl_before, ggl_after) = Lib.split_after (n-1) gl1
       handle _ => raise ERR "NTH_GOAL" "no nth subgoal in list" ;
     val (g, gl_after) = valOf (List.getItem ggl_after)
       handle _ => raise ERR "NTH_GOAL" "no nth subgoal in list" ;
-    val (gl2, vf2) = tac g ;
-    val gl_result = gl_before @ gl2 @ gl_after ;
+    val (gl2, vf2) = tac g ctxt
+    val gl_result = gl_before @ gl2 @ gl_after
     fun vf thl =
       let val (th_before, th_rest) = Lib.split_after (n-1) thl ;
         val (th2, th_after) = Lib.split_after (length gl2) th_rest ;
@@ -299,23 +339,23 @@ fun HEADGOAL tac gl1 = NTH_GOAL tac 1 gl1 ;
  * SPLIT_LT n (ltaca, ltacb) : A list_tactic that applies ltaca to the
    first n goals, and ltacb to the rest
  *---------------------------------------------------------------------------*)
-fun SPLIT_LT n (ltaca, ltacb) gl =
-  let val fixn = if n >= 0 then n else length gl + n ;
-    val (gla, glb) = Lib.split_after fixn gl ;
-    val (glra, vfa) = ltaca gla ;
-    val (glrb, vfb) = ltacb glb ;
+fun SPLIT_LT n (ltaca, ltacb) gl ctxt =
+  let val fixn = if n >= 0 then n else length gl + n
+    val (gla, glb) = Lib.split_after fixn gl
+    val (glra, vfa) = ltaca gla ctxt
+    val (glrb, vfb) = ltacb glb ctxt
     fun vf ths =
-      let val (thsa, thsb) = Lib.split_after (length glra) ths ;
-      in vfa thsa @ vfb thsb end ;
-  in (glra @ glrb, vf) end ;
+      let val (thsa, thsb) = Lib.split_after (length glra) ths
+      in vfa thsa @ vfb thsb end
+  in (glra @ glrb, vf) end
 
 (*---------------------------------------------------------------------------
  * ROTATE_LT n :
  * A list_tactic that moves the first n goals to the end of the goal list
  * first n goals
  *---------------------------------------------------------------------------*)
-fun ROTATE_LT n [] = ([], Lib.I)
-  | ROTATE_LT n gl =
+fun ROTATE_LT n [] ctxt = ([], Lib.I)
+  | ROTATE_LT n gl ctxt =
     let val lgl = length gl ;
       val fixn = Int.mod (n, lgl) ;
       val (gla, glb) = Lib.split_after fixn gl ;
@@ -333,9 +373,9 @@ fun ROTATE_LT n [] = ([], Lib.I)
  *                  if it is the second conjunct that yields.
  *---------------------------------------------------------------------------*)
 
-fun REVERSE tac g =
+fun REVERSE tac g ctxt =
    let
-      val (gl, jf) = tac g
+      val (gl, jf) = tac g ctxt
    in
       (rev gl, jf o rev)
    end
@@ -345,7 +385,7 @@ val reverse = REVERSE
  * REVERSE_LT: A list_tactic that reverses a list of subgoals
  *---------------------------------------------------------------------------*)
 
-fun REVERSE_LT gl = (rev gl, rev) ;
+fun REVERSE_LT gl ctxt = (rev gl, rev) ;
 
 (* for testing, redefine REVERSE
 fun REVERSE tac = tac THEN_LT REVERSE_LT ;
@@ -358,8 +398,8 @@ fun REVERSE tac = tac THEN_LT REVERSE_LT ;
  *      TAC  THEN  FAIL_TAC "TAC did not solve the goal"
  *---------------------------------------------------------------------------*)
 
-fun FAIL_TAC tok (g: goal) = raise ERR "FAIL_TAC" tok
-fun FAIL_LT tok (gl: goal list) = raise ERR "FAIL_LT" tok
+fun FAIL_TAC tok (g: goal) ctxt = raise ERR "FAIL_TAC" tok
+fun FAIL_LT tok (gl: goal list) ctxt = raise ERR "FAIL_LT" tok
 
 (*---------------------------------------------------------------------------
  * Tactic that succeeds on no goals;  identity for ORELSE.
@@ -378,8 +418,8 @@ fun tac1 THEN1 tac2 = tac1 THEN_LT REVERSE_LT THEN_LT
  * Tactic that succeeds on all goals;  identity for THEN
  *---------------------------------------------------------------------------*)
 
-val ALL_TAC: tactic = fn (g: goal) => ([g], hd)
-val ALL_LT: list_tactic = fn (gl: goal list) => (gl, Lib.I)
+val ALL_TAC: tactic = fn (g: goal) => fn _ (* ctxt *) => ([g], hd)
+val ALL_LT: list_tactic = fn (gl: goal list) => fn _ => (gl, Lib.I)
 val all_tac = ALL_TAC
 
 fun TRY tac = tac ORELSE ALL_TAC
@@ -399,16 +439,17 @@ val rpt = REPEAT
  * Add extra subgoals, which may be needed to make a tactic valid;
  * similar to VALIDATE, but you can control the order of the extra goals
  *---------------------------------------------------------------------------*)
-fun ADD_SGS_TAC (tms : term list) (tac : tactic) (g as (asl, w) : goal) =
-  let val (glist, prf) = tac g ;
-    val extra_goals = map (fn tm => (asl, tm)) tms ;
-    val nextra = length extra_goals ;
+fun ADD_SGS_TAC (tms : term list) (tac : tactic) (g as (asl, w) : goal) ctxt =
+  let val (glist, prf) = tac g ctxt
+    val extra_goals = map (fn tm => (asl, tm)) tms
+    val nextra = length extra_goals
     (* new validation: apply the theorems proving the additional goals to
       eliminate the extra hyps in the theorem proved by the given validation *)
     fun eprf ethlist =
       let val (extra_thms, thlist) = split_after nextra ethlist ;
-      in itlist PROVE_HYP extra_thms (prf thlist) end ;
-  in (extra_goals @ glist, eprf) end ;
+      in itlist PROVE_HYP extra_thms (prf thlist) end
+  in (extra_goals @ glist, eprf)
+  end
 
 (*---------------------------------------------------------------------------
  * Tacticals to make any tactic or list_tactic valid.
@@ -457,9 +498,9 @@ local
        end
 in
    fun VALID (tac: tactic) : tactic =
-      fn g: goal =>
+      fn g: goal => fn ctxt =>
          let
-            val (result as (glist, prf)) = tac g
+            val (result as (glist, prf)) = tac g ctxt
          in
            case bad_prf (prf (map masquerade glist)) g of
                NONE => result
@@ -467,9 +508,9 @@ in
          end
 
    fun VALID_LT (ltac: list_tactic) : list_tactic =
-      fn gl: goal list =>
+      fn gl: goal list => fn ctxt =>
          let
-            val (result as (glist, prf)) = ltac gl
+            val (result as (glist, prf)) = ltac gl ctxt
             val wrongnum_msg = "Invalid list-tactic: wrong number of results\
                                \ from justification"
             fun check ths gls =
@@ -518,20 +559,21 @@ local val validity_tag = "ValidityCheck"
         List.map (fn eg => (asl, eg)) (extra_goals flag th g)
 in
 (* GEN_VALIDATE : bool -> tactic -> tactic *)
-fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =
-  let val (glist, prf) = tac g ;
+fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) ctxt =
+  let val (glist, prf) = tac g ctxt
     (* pretend new goals are theorems, and apply validation to them *)
-    val thprf = (prf (map masquerade glist)) ;
+    val thprf = (prf (map masquerade glist))
     val _ = if achieves_concl thprf g then ()
-      else raise ERR "GEN_VALIDATE" "Invalid tactic - wrong conclusion" ;
-    val extra_goals = extra_goals_tbp flag thprf g ;
-    val nextra = length extra_goals ;
+      else raise ERR "GEN_VALIDATE" "Invalid tactic - wrong conclusion"
+    val extra_goals = extra_goals_tbp flag thprf g
+    val nextra = length extra_goals
     (* new validation: apply the theorems proving the additional goals to
       eliminate the extra hyps in the theorem proved by the given validation *)
     fun eprf ethlist =
-      let val (extra_thms, thlist) = split_after nextra ethlist ;
-      in itlist PROVE_HYP extra_thms (prf thlist) end ;
-  in (extra_goals @ glist, eprf) end ;
+      let val (extra_thms, thlist) = split_after nextra ethlist
+      in itlist PROVE_HYP extra_thms (prf thlist) end
+  in (extra_goals @ glist, eprf)
+  end
 
 (* split_lists : int list -> 'a list -> 'a list list * 'a list *)
 fun split_lists (n :: ns) ths =
@@ -541,21 +583,22 @@ fun split_lists (n :: ns) ths =
   | split_lists [] ths = ([], ths) ;
 
 (* GEN_VALIDATE_LT : bool -> list_tactic -> list_tactic *)
-fun GEN_VALIDATE_LT (flag : bool) (ltac : list_tactic) (gl : goal list) =
-  let val (glist, prf) = ltac gl ;
+fun GEN_VALIDATE_LT (flag : bool) (ltac : list_tactic) (gl : goal list) ctxt =
+  let val (glist, prf) = ltac gl ctxt
     (* pretend new goals are theorems, and apply validation to them *)
-    val thsprf = (prf (map masquerade glist)) ;
+    val thsprf = (prf (map masquerade glist))
     val _ = if Lib.all2 achieves_concl thsprf gl then ()
       else raise ERR "GEN_VALIDATE_LT"
-          "Invalid list-tactic - some wrong conclusion" ;
-    val extra_goal_lists = Lib.map2 (extra_goals_tbp flag) thsprf gl ;
-    val nextras = map length extra_goal_lists ;
+          "Invalid list-tactic - some wrong conclusion"
+    val extra_goal_lists = Lib.map2 (extra_goals_tbp flag) thsprf gl
+    val nextras = map length extra_goal_lists
     (* new validation: apply the theorems proving the additional goals to
       eliminate the extra hyps in the theorems proved by the given validation *)
     fun eprf ethlist =
-      let val (extra_thm_lists, thlist) = split_lists nextras ethlist ;
-      in Lib.map2 (itlist PROVE_HYP) extra_thm_lists (prf thlist) end ;
-  in (List.concat extra_goal_lists @ glist, eprf) end ;
+      let val (extra_thm_lists, thlist) = split_lists nextras ethlist
+      in Lib.map2 (itlist PROVE_HYP) extra_thm_lists (prf thlist) end
+  in (List.concat extra_goal_lists @ glist, eprf)
+  end
 
 
 val VALIDATE = GEN_VALIDATE true ;
@@ -571,8 +614,8 @@ val VALIDATE_LT = GEN_VALIDATE_LT true ;
    ---------------------------------------------------------------------- *)
 fun sing f [x] = f x
   | sing f _ = raise ERR "sing" "Bind Error"
-fun CONJ_VALIDATE tac (g as (asl,_)) =
-    let val tacresult as (sgs, vfn) = tac g
+fun CONJ_VALIDATE (tac:tactic) (g as (asl,_)) ctxt =
+    let val tacresult as (sgs, vfn) = tac g ctxt
         val thprf = vfn (map masquerade sgs)
         val _ = if achieves_concl thprf g then ()
                 else raise ERR "CONJ_VALIDATE"
@@ -672,8 +715,9 @@ fun EVERY_LT ltacl = List.foldr (op THEN_LT) ALL_LT ltacl
  *    FIRST [TAC1;...;TACn] =  TAC1  ORELSE  ...  ORELSE  TACn
  *---------------------------------------------------------------------------*)
 
-fun FIRST [] g = NO_TAC g
-  | FIRST (tac :: rst) g = tac g handle HOL_ERR _ => FIRST rst g
+fun FIRST [] g ctxt = NO_TAC g ctxt
+  | FIRST (tac :: rst) g ctxt =
+      tac g ctxt handle HOL_ERR _ => FIRST rst g ctxt
 
 fun MAP_EVERY tacf lst = EVERY (map tacf lst)
 val map_every = MAP_EVERY
@@ -690,12 +734,12 @@ fun MAP_FIRST tacf lst = FIRST (map tacf lst)
     which catches errors in t as well as g.
    ---------------------------------------------------------------------- *)
 
-fun IF gt tt et goal =
-      case Lib.total gt goal of
-          NONE => et goal
+fun IF (gt:tactic) (tt:tactic) (et:tactic) goal ctxt =
+      case Lib.total (gt goal) ctxt of
+          NONE => et goal ctxt
         | SOME (sgs, vf) =>
           let
-            val (gll,vfl) = unzip (map tt sgs)
+            val (gll,vfl) = unzip (map (fn g => tt g ctxt) sgs)
           in
             (List.concat gll, vf o mapshape (map length gll) vfl)
           end
@@ -709,13 +753,13 @@ fun IF gt tt et goal =
     with the remaining original goals.
    ---------------------------------------------------------------------- *)
 
-fun FIRST_LT tac gs =
+fun FIRST_LT (tac:tactic) gs ctxt =
     let
       fun recurse pfx gs =
           case gs of
               [] => raise ERR "FIRST_LT" "No goal on which tactic succeeds"
             | g::rest =>
-              case Lib.total tac g of
+              case Lib.total (tac g) ctxt of
                   NONE => recurse (g::pfx) rest
                 | SOME (sgs, vf) =>
                   let
@@ -753,12 +797,12 @@ fun FIRST_LT tac gs =
     Like SELECT_LT_THEN, but does not apply a second tactic.
    ---------------------------------------------------------------------- *)
 
-fun SELECT_LT_THEN select_tac cont_tac goals =
+fun SELECT_LT_THEN select_tac cont_tac goals ctxt =
   let fun recurse failed goals =
     case goals of
       [] => ([], List.rev failed, fn v => v)
     | g::gs =>
-      (case Lib.total select_tac g of
+      (case Lib.total (select_tac g) ctxt of
         NONE => recurse (g::failed) gs
       | SOME (sgoals, valid) =>
           let val (success, failed', vld) = recurse [] gs
@@ -772,7 +816,7 @@ fun SELECT_LT_THEN select_tac cont_tac goals =
             (sgoals @ success, List.revAppend(failed, failed'), validation)
           end)
       val (selected, failed, select_validation) = recurse [] goals
-      val (successful, cont_validation) = ALLGOALS cont_tac selected
+      val (successful, cont_validation) = ALLGOALS cont_tac selected ctxt
         handle e => raise ERR "SELECT_LT_THEN"
                               "Could not apply second tactic"
       fun validation thms =
@@ -810,14 +854,15 @@ val shut_parser_up =
    trace ("show_typecheck_errors", 0)
 
 local
-  fun find ttac name goal [] = raise ERR name  ""
-    | find ttac name goal (a :: L) =
-      ttac (ASSUME a) goal handle HOL_ERR _ => find ttac name goal L
+  fun find ttac name goal ctxt [] = raise ERR name  ""
+    | find ttac name goal ctxt (a :: L) =
+      ttac (ASSUME a) goal ctxt
+      handle HOL_ERR _ => find ttac name goal ctxt L
 in
-  fun FIRST_ASSUM ttac (A, g) =
-        shut_parser_up (find ttac "FIRST_ASSUM" (A, g)) A
-  fun LAST_ASSUM ttac (A, g) =
-        shut_parser_up (find ttac "LAST_ASSUM" (A, g)) (List.rev A)
+  fun FIRST_ASSUM ttac (A, g) ctxt =
+        shut_parser_up (find ttac "FIRST_ASSUM" (A, g) ctxt) A
+  fun LAST_ASSUM ttac (A, g) ctxt =
+        shut_parser_up (find ttac "LAST_ASSUM" (A, g) ctxt) (List.rev A)
   val first_assum = FIRST_ASSUM
   val last_assum = LAST_ASSUM
 end
@@ -899,7 +944,7 @@ fun sing f [x] = f x
   | sing f _ = raise ERR "sing" "Bind Error"
 
 fun CONV_TAC (conv: conv) : tactic =
-   fn (asl, w) =>
+   fn (asl, w) => fn ctxt =>
       let
          val th = conv w
          val (_, rhs) = dest_eq (concl th)
@@ -910,7 +955,7 @@ fun CONV_TAC (conv: conv) : tactic =
       handle UNCHANGED =>
         if aconv w T (* special case, can happen! *)
           then ([], empty boolTheory.TRUTH)
-        else ALL_TAC (asl, w)
+        else ALL_TAC (asl, w) ctxt
 
 (*---------------------------------------------------------------------------
  * Call a thm-tactic on the "assumption" obtained by negating the goal, i.e.,
@@ -919,10 +964,10 @@ fun CONV_TAC (conv: conv) : tactic =
  *---------------------------------------------------------------------------*)
 
 local
-  fun DISCH_THEN ttac (asl,w) =
+  fun DISCH_THEN ttac (asl,w) ctxt =
    let
       val (ant, conseq) = dest_imp w
-      val (gl, prf) = ttac (ASSUME ant) (asl, conseq)
+      val (gl, prf) = ttac (ASSUME ant) (asl, conseq) ctxt
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
@@ -961,9 +1006,9 @@ end
  * new subgoal wa.
  *---------------------------------------------------------------------------*)
 
-fun SUBGOAL_THEN wa ttac (asl, w) =
+fun SUBGOAL_THEN wa ttac (asl, w) ctxt =
    let
-      val (gl, p) = ttac (ASSUME wa) (asl, w)
+      val (gl, p) = ttac (ASSUME wa) (asl, w) ctxt
    in
       ((asl, wa) :: gl,
        (fn (tha :: thl) => PROVE_HYP tha (p thl) | _ => raise Match))
@@ -983,13 +1028,14 @@ fun USE_SG_VAL nu np thl =
   in apnth (PROVE_HYP thu) (np - 1) thl end ;
 
 (* USE_SG_THEN : thm_tactic -> int -> int -> list_tactic *)
-fun USE_SG_THEN ttac nu np gl =
+fun USE_SG_THEN ttac nu np gl ctxt =
   let
-    val (_, wu) = List.nth (gl, nu - 1) ;
-    val ltac = NTH_GOAL (ttac (ASSUME wu)) np ;
-    val (glr, v) = ltac gl ;
-    val vp = USE_SG_VAL nu np ;
-  in (glr, vp o v) end ;
+    val (_, wu) = List.nth (gl, nu - 1)
+    val ltac = NTH_GOAL (ttac (ASSUME wu)) np
+    val (glr, v) = ltac gl ctxt
+    val vp = USE_SG_VAL nu np
+  in (glr, vp o v)
+  end
 
 (* USE_SG_TAC : int -> int -> list_tactic
 val USE_SG_TAC = USE_SG_THEN ASSUME_TAC ;
@@ -1003,17 +1049,17 @@ fun goaleq ((asms1,g1),(asms2,g2)) =
   ListPair.allEq (fn (t1,t2) => aconv t1 t2) (asms1,asms2) andalso
   aconv g1 g2
 
-fun CHANGED_TAC tac g =
+fun CHANGED_TAC (tac:tactic) g ctxt =
   let
-    val (gl, p) = tac g
+    val (gl, p) = tac g ctxt
    in
      if ListPair.allEq goaleq (gl, [g]) then raise ERR "CHANGED_TAC" "no change"
      else (gl, p)
   end
 
-fun check_delta exn P tac g =
+fun check_delta exn P (tac:tactic) g ctxt =
     let
-      val result as (gl,p) = tac g
+      val result as (gl,p) = tac g ctxt
     in
       if P (g, gl) then result else raise exn
     end
@@ -1024,13 +1070,6 @@ fun count_decreases m ((_,w), gl) =
     in
       List.all (fn (_,w') => m w' < c0) gl
     end
-
-fun parse_with_goal t (asms, g) =
-   let
-      val ctxt = free_varsl (g :: asms)
-   in
-      Parse.parse_in_context ctxt t
-   end
 
 (*---------------------------------------------------------------------------
  * A tactical that parses in the context of a goal, a la the Q library. It is
@@ -1052,61 +1091,64 @@ fun parse_with_goal t (asms, g) =
 (* Parse in setting where failure is expected                                *)
 (*---------------------------------------------------------------------------*)
 
-fun elicit_parse_failure ctxt q tyopt =
+fun elicit_parse_failure ctxt fvs q tyopt =
     let open Parse
         fun smashErrm m =
           case m Pretype.Env.empty
            of errormonad.Error e => raise Preterm.mkExn e
             | errormonad.Some _ => raise
               ERR "elicit_parse_failure" "unexpected successful parse"
+        val tmg = get_term_grammar ctxt
+        val tyg = get_type_grammar ctxt
     in
       errormonad.bind
-       (TermParse.ctxt_absyn_to_preterm (term_grammar()) ctxt (Absyn q),
-        TermParse.ctxt_preterm_to_term Parse.stdprinters tyopt ctxt)
+       (TermParse.ctxt_absyn_to_preterm tmg fvs (TermParse.absyn tmg tyg q),
+        TermParse.ctxt_preterm_to_term Parse.stdprinters tyopt fvs)
       |> smashErrm
     end
     handle e => raise wrap_exn "Tactical" "elicit_parse_failure" e
 
-fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) =
+fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) ctxt =
   let open Parse
       val ttac = with_traces traces tac
       val dest_seq = with_traces traces seq.cases
-      val ctxt = free_varsl (w::asl)
+      val fvs = free_varsl (w::asl)
       val ab =
         case tyopt of
-            NONE => Absyn
+            NONE => Absyn_in ctxt
           | SOME ty =>
-            fn q => Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
-      val terms_of = TermParse.prim_ctxt_termS ab (term_grammar()) ctxt
+            fn q => Absyn.TYPED(locn.Loc_None, Absyn_in ctxt q,
+                                Pretype.fromType ty)
+      val terms_of = TermParse.prim_ctxt_termS ab (get_term_grammar ctxt) fvs
       val tactic_failures = ref [] : exn list ref
       fun failure() =
         case !tactic_failures
          of [] => (* no parses to even try the tactic on *)
-            elicit_parse_failure ctxt q tyopt
+              elicit_parse_failure ctxt fvs q tyopt
           | [e] => (* one quotation parsed, but tactic failed *)
-            raise wrap_exn "Tactical" "Q_TAC0" e
+              raise wrap_exn "Tactical" "Q_TAC0" e
           | fails => (* multiple parses, tactic fails on all *)
-            raise ERR "Q_TAC0"
-              (String.concat
-                 [Int.toString (length fails),
-                  " parses for quotation, but tactic failed on all of them"])
+              raise ERR "Q_TAC0"
+                (String.concat
+                   [Int.toString (length fails),
+                    " parses for quotation, but tactic failed on all of them"])
       fun search seq =
         case dest_seq seq
          of NONE => failure()
           | SOME(tm,seq') =>
-            ttac tm g handle e =>
+            ttac tm g ctxt handle e =>
               (tactic_failures := e :: !tactic_failures;
                search seq')
   in
     search (terms_of q)
   end
 
-fun Q_TAC tac q g =
-    Q_TAC0 {traces = []} NONE tac q g
+fun Q_TAC tac q g ctxt =
+    Q_TAC0 {traces = []} NONE tac q g ctxt
     handle e => raise wrap_exn "Tactical" "Q_TAC" e
 
-fun QTY_TAC ty tac q g =
-    Q_TAC0 {traces = []} (SOME ty) tac q g
+fun QTY_TAC ty tac q g ctxt =
+    Q_TAC0 {traces = []} (SOME ty) tac q g ctxt
     handle e => raise wrap_exn "Tactical" "QTY_TAC" e
 
 end (* Tactical *)

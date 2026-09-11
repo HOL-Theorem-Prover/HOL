@@ -79,9 +79,12 @@ with
  fun dest_rewrites(RW{thms, ...}) = thms
  fun net_of(RW{net,...})          = net
  val empty_rewrites = RW{thms = [], net= Net.empty}
- val implicit = ref empty_rewrites;
- fun implicit_rewrites() = !implicit
- fun set_implicit_rewrites rws = (implicit := rws);
+ val implicit_slot : rewrites Context.Data.slot =
+     Context.Data.new {name = "Rewrite.implicit", empty = empty_rewrites,
+                       pp = fn _ => "<Rewrite.implicit>"}
+ fun implicit_rewrites_of ctxt = Context.Data.get implicit_slot ctxt
+ fun implicit_rewrites() = implicit_rewrites_of (Context.snapshot())
+ val set_implicit_rewrites = Context.Data.write implicit_slot
 
 fun add_rewrites (RW{thms,net}) thl =
  let val rewrites = itlist (append o local_mk_rewrites) thl []
@@ -184,10 +187,14 @@ val PURE_REWRITE_TAC = GEN_REWRITE_TAC Conv.TOP_DEPTH_CONV empty_rewrites
 and
 PURE_ONCE_REWRITE_TAC = GEN_REWRITE_TAC Conv.ONCE_DEPTH_CONV empty_rewrites;
 
-fun REWRITE_TAC thl = GEN_REWRITE_TAC Conv.TOP_DEPTH_CONV (implicit_rewrites())
-                                      thl
-and ONCE_REWRITE_TAC thl =
-    GEN_REWRITE_TAC Conv.ONCE_DEPTH_CONV (implicit_rewrites()) thl;
+(* The ASM_ and FILTER_ variants below build these from inside an
+   ASSUM_LIST callback, which runs once the goal is supplied -- inside
+   the proof.  Reading the implicit set from the context rather than the
+   ambient state is what makes that whole family clean. *)
+fun REWRITE_TAC thl g c =
+    GEN_REWRITE_TAC Conv.TOP_DEPTH_CONV (implicit_rewrites_of c) thl g c
+and ONCE_REWRITE_TAC thl g c =
+    GEN_REWRITE_TAC Conv.ONCE_DEPTH_CONV (implicit_rewrites_of c) thl g c;
 
 val rewrite_tac = REWRITE_TAC and once_rewrite_tac = ONCE_REWRITE_TAC
 val pure_rewrite_tac = PURE_REWRITE_TAC and pure_once_rewrite_tac = PURE_ONCE_REWRITE_TAC

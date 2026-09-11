@@ -116,7 +116,8 @@ fun match_single fvs ((asl,w):goal)
 
 val tr1 = Substring.string o Substring.trimr 1 o Substring.full
 
-fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) : goal list * validation =
+fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) ctxt
+    : goal list * validation =
   let
     fun try_tactic ((thms,tms):data) : (unit -> (goal list * validation) stream) =
       let
@@ -130,7 +131,7 @@ fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) : goal list *
             #1 (norm_subst ((tmS,empty_tmset),(tyS,[])))
             |> List.map (fn {redex,residue} => (tr1(#1(dest_var redex)),residue))
         val tac = mtac (lookup_assum,Lib.C assoc s)
-        val r = tac g
+        val r = tac g ctxt
       in
         (fn()=>Stream (r,empty_stream))
       end

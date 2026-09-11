@@ -334,7 +334,7 @@ fun test_goal (tac:tactic) (name, g) =
     let
       val _ = tprint name
     in
-      require (check_result null) (#1 o tac) g
+      require (check_result null) (#1 o runtac tac) g
     end
 
 fun perform_tests conv tactic =

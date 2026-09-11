@@ -99,8 +99,9 @@ local
 in
   fun register_update_fn f =
       Context.Data.modify update_fns_slot (fn fs => fs @ [f])
-  fun apply_update_fns tyi =
-      list_compose (Context.Data.get update_fns_slot (Context.snapshot())) tyi
+  fun apply_update_fns_of ctxt tyi =
+      list_compose (Context.Data.get update_fns_slot ctxt) tyi
+  fun apply_update_fns tyi = apply_update_fns_of (Context.snapshot()) tyi
 end;
 
 fun apply_delta tyi tyb = TypeBasePure.insert tyb (tweak_tyi tyi)
@@ -110,6 +111,7 @@ val initial_tydb = TypeBasePure.empty
                      |> rev_itlist apply_delta [bool_info, itself_info]
 
 val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
+                   get_global_value_of = theTypeBase_of,
                    record_delta, get_deltas = thy_updates,
                    merge = merge_typebases, update_global_value, ...} =
     let open TypeBasePure
@@ -131,7 +133,9 @@ fun export tyis = (write tyis; List.app record_delta tyis)
 
 (* various ways to access the global value *)
 fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
-fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
+fun fetch_of ctxt ty = TypeBasePure.fetch (theTypeBase_of ctxt) ty
+fun fetch ty = fetch_of (Context.snapshot()) ty
+fun elts_of ctxt = listItems (theTypeBase_of ctxt)
 val elts = listItems o theTypeBase;
 
 fun print_sp_type ty =
@@ -294,8 +298,10 @@ fun is_constructor x = TypeBasePure.is_constructor (theTypeBase()) x;
 (*---------------------------------------------------------------------------*)
 
 fun mk_case x   = TypeBasePure.mk_case (theTypeBase()) x
-fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
-fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
+fun dest_case_of c x = TypeBasePure.dest_case (theTypeBase_of c) x
+fun dest_case x = dest_case_of (Context.snapshot()) x
+fun is_case_of c x = TypeBasePure.is_case (theTypeBase_of c) x
+fun is_case x   = is_case_of (Context.snapshot()) x;
 fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 
 fun mk_pattern_fn css =

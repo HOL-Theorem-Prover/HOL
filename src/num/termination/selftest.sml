@@ -197,7 +197,8 @@ val _ = let
 in
   require_msg (check_result (equal expected o #2))
               (DB_dtype.thminfo_toString o #2)
-              (fn () => (TotalDefn.located_qDefine loc "bar" `bar=1` NONE;
+              (fn () => (TotalDefn.located_qDefine loc "bar" `bar=1` NONE
+                                                   (Context.snapshot());
                          valOf $ DB.lookup{Thy="-", Name = "bar"}))
               ()
 end

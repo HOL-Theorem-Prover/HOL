@@ -635,9 +635,23 @@ datatype preterm_or_pretype = PTM of Preterm.preterm list * Preterm.preterm
 fun leLC (l,c) (l',c') = l <= l' andalso (l <> l' orelse c <= c')
 fun fixup a NONE = a
   | fixup a (SOME b) = if #1 a = #1 b then a else b
+(* `dl` is how many lines this declaration has moved since the pass
+   that recorded it: an edit confined to a `Proof ... QED` body above it
+   moves it down the file without moving it sideways, so its columns
+   still hold.  Rather than reposition the recorded preterms -- whose
+   own `locn`s are read again on the way down, so it would mean
+   rebuilding them -- the search runs in the frame they were recorded
+   in, and only the answer is brought forward.  It costs two additions
+   per hover instead of a tree rebuild per edit. *)
+fun backLines dl (l, c) = (l - dl, c)
+fun fwdLines dl (l, c) = (l + dl, c)
+
 fun navigateTo lines startTarget endTarget = let
-  val startTargetLC = LSPExtension.getLineCol lines startTarget
-  val endTargetLC = LSPExtension.getLineCol lines endTarget
+  val startTargetLC0 = LSPExtension.getLineCol lines startTarget
+  val endTargetLC0 = LSPExtension.getLineCol lines endTarget
+  fun inFrame dl = let
+  val startTargetLC = backLines dl startTargetLC0
+  val endTargetLC = backLines dl endTargetLC0
   fun navigateToTy ty fail =
     case get_locn locn.Loc_Unknown of (* FIXME Pretype.locn ty *)
       SOME (start, stop) =>
@@ -677,10 +691,17 @@ fun navigateTo lines startTarget endTarget = let
       if leLC start startTargetLC andalso leLC endTargetLC stop then
         SOME (navigateToCore (start, stop) [] ptm, env)
       else navigateToL ds
+  in navigateToL end
   fun navigateToLL [] = NONE
-    | navigateToLL (((start, stop), l) :: ds) =
+    | navigateToLL (((start, stop), dl, l) :: ds) =
       if start <= startTarget andalso endTarget <= stop then
-        navigateToL l
+        (* the answer comes back in the recorded frame; bring it
+           forward, along with `dl` so a caller reading positions out of
+           the preterms themselves can do the same *)
+        (case inFrame dl l of
+           NONE => NONE
+         | SOME (((s, e), x), env) =>
+           SOME (((fwdLines dl s, fwdLines dl e), x), dl, env))
       else navigateToLL ds
   in navigateToLL end
 
@@ -696,7 +717,7 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
     NONE => raise Empty
   | SOME ds => ds
   val out = case navigateTo lines target target ds of
-    SOME ((loc, PTY ty), env) => let
+    SOME ((loc, PTY ty), _, env) => let
     val ty = case Pretype.toTypeM ty env of
                  errormonad.Some (_, ty) => ty
                | _ => raise Empty
@@ -704,7 +725,7 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
     (* TODO *)
     val _ = (loc, Thy, Tyop)
     in raise Empty end
-  | SOME ((loc, PTM (bvs, tm)), env) => let
+  | SOME ((loc, PTM (bvs, tm)), dl, env) => let
     val tm = case Preterm.typecheck NONE tm env of
       errormonad.Some (_, tm) => tm | _ => raise Empty
     val (hd, _) = strip_comb tm
@@ -713,9 +734,14 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
         case Preterm.typecheck NONE bv env of
           errormonad.Some (_, tm) =>
           if term_eq tm hd then
+            (* read out of the preterm, so in the frame it was recorded
+               in -- brought forward like the navigator's own answer *)
             case get_locn (Preterm.locn bv) of
-              SOME tgt =>
+              SOME (s, e) => let
+                val tgt = (fwdLines dl s, fwdLines dl e)
+              in
                 [{uri = NONE, origin = SOME loc, range = tgt, selRange = tgt}]
+              end
             | _ => []
           else findVar bvs
         | _ => findVar bvs
@@ -743,7 +769,7 @@ fun hover tag ({lines, plugins, ppToString, ...}, (start, stop)) = let
     NONE => raise Empty
   | SOME ds => ds
   val (range, tm, env) = case navigateTo lines start stop ds of
-    SOME ((range, PTM (_, tm)), env) => (range, tm, env)
+    SOME ((range, PTM (_, tm)), _, env) => (range, tm, env)
   | _ => raise Empty
   val (range, tm) = case Preterm.typecheck NONE tm env of
     errormonad.Some (_, tm) => (range, tm)
@@ -769,9 +795,18 @@ fun lastIndexOf c s = let
 in
 
 val _ = LSPExtension.fixupTheoremLink := (fn {uri, text, start, stop} => let
-  val id = String.substring (text, start, stop - start)
+  val written = String.substring (text, start, stop - start)
+  (* A qualified reference -- `finite_mapTheory.FRANGE_DEF' -- spans the
+     whole dotted name, and the DB knows the theorem by its own name.
+     Without this the lookup fails and the jump lands in the generated
+     signature rather than in the script the theorem is proved in. *)
+  val id = String.extract (written, lastIndexOf #"." written + 1, NONE)
   val basename = String.extract (uri, lastIndexOf #"/" uri + 1, NONE)
-  val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
+  (* no extension is possible -- Poly names the unit it is compiling ""
+     -- and `SOME ~1` would raise `Subscript` *)
+  val stem = case lastIndexOf #"." basename of
+                 ~1 => basename
+               | i => String.extract (basename, 0, SOME i)
   in
     if 6 <= size stem andalso
        String.extract (stem, size stem - 6, NONE) = "Theory"
@@ -798,8 +833,24 @@ val _ = LSPExtension.registerPlugin true {
     case ThreadLocal.get checkLog of
       SOME (l as _::_) => let
       val x = case x of SOME x => x | NONE => []
-      in SOME ((r, l) :: x) end
-    | _ => x }
+      in SOME ((r, 0, l) :: x) end
+    | _ => x,
+  (* A declaration this pass did not re-run keeps everything recorded
+     about it; only where it sits has changed.  Its byte range is a
+     pair of integers and moves now; its preterms are left where they
+     were and the search moves to meet them (see `navigateTo`). *)
+  reuseFrom = fn {fromByte, bytes, lines} => fn old => fn new => let
+    val old = case old of SOME l => l | NONE => []
+    val new = case new of SOME l => l | NONE => []
+    val carried =
+      List.foldr
+        (fn ((r as (start, stop), dl, l), acc) =>
+            if start >= fromByte
+            then ((start + bytes, stop + bytes), dl + lines, l) :: acc
+            else acc)
+        [] old
+    (* newest-first, and the carried declarations are the later ones *)
+    in case carried @ new of [] => NONE | l => SOME l end }
 end
 
 end

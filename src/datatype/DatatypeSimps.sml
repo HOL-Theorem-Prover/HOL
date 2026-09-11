@@ -331,7 +331,10 @@ end
 
 fun lift_cases_ss tyL = lift_cases_typeinfos_ss (tyinfos_of_tys tyL)
 
-fun lift_cases_stateful_ss () = lift_cases_typeinfos_ss (TypeBase.elts ())
+fun lift_cases_stateful_ss_of ctxt =
+    lift_cases_typeinfos_ss (TypeBase.elts_of ctxt)
+fun lift_cases_stateful_ss () =
+    lift_cases_stateful_ss_of (Context.snapshot())
 
 
 (******************************************************************************)
@@ -372,7 +375,10 @@ end
 
 fun unlift_cases_ss tyL = unlift_cases_typeinfos_ss (tyinfos_of_tys tyL)
 
-fun unlift_cases_stateful_ss () = unlift_cases_typeinfos_ss (TypeBase.elts ())
+fun unlift_cases_stateful_ss_of ctxt =
+    unlift_cases_typeinfos_ss (TypeBase.elts_of ctxt)
+fun unlift_cases_stateful_ss () =
+    unlift_cases_stateful_ss_of (Context.snapshot())
 
 
 (******************************************************************************)
@@ -384,7 +390,10 @@ fun type_rewrites_typeinfos_ss til =
 
 fun type_rewrites_ss tyL = type_rewrites_typeinfos_ss (tyinfos_of_tys tyL)
 
-fun type_rewrites_stateful_ss () = type_rewrites_typeinfos_ss (TypeBase.elts ())
+fun type_rewrites_stateful_ss_of ctxt =
+    type_rewrites_typeinfos_ss (TypeBase.elts_of ctxt)
+fun type_rewrites_stateful_ss () =
+    type_rewrites_stateful_ss_of (Context.snapshot())
 
 fun congs thms = SSFRAG
     {name  = NONE,
@@ -401,7 +410,10 @@ fun case_cong_typeinfos_ss til =
 
 fun case_cong_ss tyL = case_cong_typeinfos_ss (tyinfos_of_tys tyL)
 
-fun case_cong_stateful_ss () = case_cong_typeinfos_ss (TypeBase.elts ())
+fun case_cong_stateful_ss_of ctxt =
+    case_cong_typeinfos_ss (TypeBase.elts_of ctxt)
+fun case_cong_stateful_ss () =
+    case_cong_stateful_ss_of (Context.snapshot())
 
 
 
@@ -411,7 +423,10 @@ fun expand_type_quants_typeinfos_ss til =
 
 fun expand_type_quants_ss tyL = expand_type_quants_typeinfos_ss (tyinfos_of_tys tyL)
 
-fun expand_type_quants_stateful_ss () = expand_type_quants_typeinfos_ss (TypeBase.elts ())
+fun expand_type_quants_stateful_ss_of ctxt =
+    expand_type_quants_typeinfos_ss (TypeBase.elts_of ctxt)
+fun expand_type_quants_stateful_ss () =
+    expand_type_quants_stateful_ss_of (Context.snapshot())
 
 
 (******************************************************************************)

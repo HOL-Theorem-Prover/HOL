@@ -24,10 +24,7 @@ sig
   val list_mk_pair : Term.term list -> Term.term
   val skip_proofs : bool ref
   val auto_conv_prove : string -> Term.term -> (Term.term -> Thm.thm) -> Thm.thm
-  val auto_prove :
-     string ->
-     Term.term * ('a list * Term.term -> 'b list * ('c list -> Thm.thm)) ->
-     Thm.thm
+  val auto_prove : string -> Term.term * Abbrev.tactic -> Thm.thm
   val clean_name : string -> string
   val dest_sum_type : Type.hol_type -> Type.hol_type * Type.hol_type
   val is_inl : Term.term -> bool

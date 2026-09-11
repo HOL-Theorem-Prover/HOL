@@ -1665,31 +1665,31 @@ fun PGEN p th =
 
 fun PGENL xl th = itlist PGEN xl th;;
 
-fun P_PGEN_TAC p :tactic = fn (a,t) =>
+fun P_PGEN_TAC p :tactic = fn (a,t) => fn ctxt =>
     let val (x,b) = with_exn dest_pforall t
             (ERR "P_PGEN_TAC" "Goal not universally quantified")
     in
         if (is_var x) andalso (is_var p) then
-            X_GEN_TAC p (a,t)
+            X_GEN_TAC p (a,t) ctxt
         else if (is_pair x) andalso (is_pair p) then
             let val (p1,p2) = dest_pair p
             in
                 ((CONV_TAC CURRY_FORALL_CONV) THEN
                 (P_PGEN_TAC p1) THEN
-                (P_PGEN_TAC p2)) (a,t)
+                (P_PGEN_TAC p2)) (a,t) ctxt
             end
         else if (is_var p) andalso (is_pair x) then
             let val x' = genvar (type_of p)
             in
                 ((CONV_TAC (GEN_PALPHA_CONV x')) THEN
-                 (X_GEN_TAC p)) (a,t)
+                 (X_GEN_TAC p)) (a,t) ctxt
             end
         else (*(is_pair p) & (is_var x)*)
             let val (fst,snd) = dest_pair p
                 val x' = mk_pair(genvar(type_of fst),genvar(type_of snd))
             in
                 ((CONV_TAC (GEN_PALPHA_CONV x')) THEN
-                (P_PGEN_TAC p)) (a,t)
+                (P_PGEN_TAC p)) (a,t) ctxt
             end
     end
 handle HOL_ERR _ => failwith "P_PGEN_TAC" ;
@@ -1851,12 +1851,12 @@ fun P_PCHOOSE_THEN v ttac pth :tactic =
     let val (p,b) = dest_pexists (concl pth)
         handle HOL_ERR _ => failwith "P_PCHOOSE_THEN"
     in
-        fn (asl,w) =>
+        fn (asl,w) => fn ctxt =>
         let val th = itlist ADD_ASSUM (hyp pth)
                             (ASSUME
                              (rhs(concl(PBETA_CONV
                                  (mk_comb(mk_pabs(p,b),v))))))
-            val (gl,prf) = ttac th (asl,w)
+            val (gl,prf) = ttac th (asl,w) ctxt
         in
             (gl, (PCHOOSE (v, pth)) o prf)
         end
@@ -1866,7 +1866,7 @@ fun PCHOOSE_THEN ttac pth :tactic =
     let val (p,b) = dest_pexists (concl pth)
         handle HOL_ERR _ => failwith "CHOOSE_THEN"
     in
-        fn (asl,w) =>
+        fn (asl,w) => fn ctxt =>
         let val q = pvariant ((thm_frees pth) @ (free_varsl (w::asl))) p
             val th =
                 itlist
@@ -1876,7 +1876,7 @@ fun PCHOOSE_THEN ttac pth :tactic =
                       (rhs (concl
                        (PairedLambda.PAIRED_BETA_CONV
                            (mk_comb(mk_pabs(p,b),q))))))
-            val (gl,prf) = ttac th (asl,w)
+            val (gl,prf) = ttac th (asl,w) ctxt
         in
             (gl, (PCHOOSE (q, pth)) o prf)
         end
@@ -1893,7 +1893,7 @@ val PCHOOSE_TAC = PCHOOSE_THEN ASSUME_TAC ;
 (*    A ?- t[u]                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-fun PEXISTS_TAC v (a,t) = let
+fun PEXISTS_TAC v (a,t) (_ : Context.t) = let
   val (p,b) = dest_pexists t
   fun just ths =
       case ths of
@@ -2404,7 +2404,7 @@ val PMATCH_MP_TAC : thm_tactic =
             val eps = filter (fn p => not (occs_in p con)) tps
             val th2 = uncurry DISCH (itlist efn eps (ant,th1))
         in
-            fn (A,g) => let
+            fn (A,g) => fn _ (* ctxt *) => let
                  val (gps,gl) = strip_pforall g
                  val ins = match_term con gl
                      handle HOL_ERR _ =>

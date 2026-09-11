@@ -50,7 +50,8 @@ in
   (tm, map locn_of_absyn clauses)
 end
 
-fun term_of q = term_of_absyn (Parse.Absyn q)
+fun term_of_in ctxt q = term_of_absyn (Parse.Absyn_in ctxt q)
+fun term_of q = term_of_in (Context.snapshot()) q
 
 end;
 
@@ -92,6 +93,7 @@ val {update_global_value = rule_ind_apply_global_update,
      record_delta = rule_ind_record_delta,
      get_deltas = rule_ind_get_deltas,
      get_global_value = rule_induction_map,
+     get_global_value_of = rule_induction_map_of,
      DB = rule_induction_map_by_theory,...} =
     ThmSetData.export_with_ancestry {
       settype = "rule_induction",
@@ -490,12 +492,15 @@ fun isolate_to_front numSchematics Rt (G as (_, gt)) =
    ---------------------------------------------------------------------- *)
 
 (* turn off verbiage because Raise will redisplay any exceptions *)
-val parse =
-    term_of |> trace ("syntax_error", 0)
-            |> trace ("show_typecheck_errors", 0)
+fun parse_in ctxt =
+    term_of_in ctxt |> trace ("syntax_error", 0)
+                    |> trace ("show_typecheck_errors", 0)
+fun parse q = parse_in (Context.snapshot()) q
 
-fun xHol_reln name q =
-    Hol_mono_reln name (!the_monoset) (parse q)
+(* the relation's quote is parsed against the supplied context; the
+   monotonicity and rule-induction proofs below still read ambient state *)
+fun xHol_reln name q ctxt =
+    Hol_mono_reln name (!the_monoset) (parse_in ctxt q)
     handle e =>
     render_exn (wrap_exn "IndDefLib" "xHol_reln" e)
 

@@ -21,8 +21,10 @@ sig
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
   val Hol_coreln   : term quotation -> thm * thm * thm
-  val xHol_reln    : string -> term quotation -> thm * thm * thm
-  val xHol_coreln  : string -> term quotation -> thm * thm * thm
+  val xHol_reln    : string -> term quotation -> Context.t ->
+                     thm * thm * thm
+  val xHol_coreln  : string -> term quotation -> Context.t ->
+                     thm * thm * thm
   val export_mono  : string -> unit
 
   (* Derived rule for specifying new constants.
@@ -83,7 +85,9 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
+  val srw_ss_of       : Context.t -> simpset
   val boss_ss         : unit -> simpset (* srw_ss() + LET_ss + ARITH_ss *)
+  val boss_ss_of      : Context.t -> simpset
 
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag

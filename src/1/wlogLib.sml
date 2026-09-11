@@ -124,14 +124,14 @@ fun wlog_rule vars p hyp t =
     (final_thm, wlog_hyp)
   end
 
-fun wlog_then q vars_q (ttac :thm_tactic) (g as (asm, c)) =
+fun wlog_then q vars_q (ttac :thm_tactic) (g as (asm, c)) ctxt =
   let
     open Parse
     val mem = curry HOLset.member
     val lconst = FVL asm empty_tmset
-    val context = HOLset.listItems (FVL [c] lconst)
-    val p = typed_parse_in_context bool context q
-    val extra_vars = map (parse_in_context context) vars_q
+    val fvl = HOLset.listItems (FVL [c] lconst)
+    val p = typed_parse_in_context bool fvl q
+    val extra_vars = map (parse_in_context fvl) vars_q
     val extra_var_set = HOLset.addList (empty_varset, extra_vars)
     val efv = filter (fn t => not (mem lconst t orelse mem extra_var_set t))
                      (* The conjunction is just an arbitrary way to put p and
@@ -156,7 +156,7 @@ fun wlog_then q vars_q (ttac :thm_tactic) (g as (asm, c)) =
         end
     val not_p = mk_neg p
     val sg1 = (not_p::wlog_hyp::asm, c)
-    val (ttac_sg, ttac_verify) = ttac (ASSUME p) (asm, c)
+    val (ttac_sg, ttac_verify) = ttac (ASSUME p) (asm, c) ctxt
     fun verify (thm1::thm_l) =
       let
         val ttac_thm = ttac_verify thm_l

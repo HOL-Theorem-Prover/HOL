@@ -111,7 +111,8 @@ local val db_slot : dbmap Context.Data.slot =
           Context.Data.new {name = "postkernel.DB",
                             empty = empty_dbmap,
                             pp = fn _ => "<DB>"}
-      fun lemmas() = Context.Data.get db_slot (Context.snapshot())
+      fun lemmas_of ctxt = Context.Data.get db_slot ctxt
+      fun lemmas() = lemmas_of (Context.snapshot())
       val put_db = Context.Data.write db_slot
       val upd_db = Context.Data.modify db_slot
       fun functional_bindl_names thy blist namemap =

@@ -13,7 +13,9 @@ val imp_clauses = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS
 val Timp = el 1 imp_clauses
 val impF = last imp_clauses
 
-fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
+(* the position search abandons a candidate whose continuation raises,
+   so the continuation has to run rather than merely be built *)
+fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) ctxt =
   let
     val ith = MP_CANON (GEN_ALL ith0)
     val rth_eqT = EQT_INTRO rth
@@ -31,7 +33,7 @@ fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
                   TRY_CONV (REWR_CONV Timp)))
               th0
       in
-        ttac th g
+        ttac th g ctxt
       end handle HOL_ERR _ => k()
     fun conj f t = t |> dest_imp |> #1 |> strip_conj |> f
     val max = ith |> concl |> strip_forall |> #2 |> conj length

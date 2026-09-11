@@ -327,7 +327,7 @@ fun make_ind_thm allow_pre hd_const defs pre_def_tms =
       \\ match_mp_tac other_ind \\ rpt strip_tac
       \\ last_x_assum irule \\ rpt strip_tac
       \\ gvs [])
-    val pre_ind = (tac ([], ind_tm) |> snd) []
+    val pre_ind = (tac ([], ind_tm) (Context.snapshot()) |> snd) []
     handle HOL_ERR _ => let
         val _ = cv_print Silent "\nERROR: failed to prove precondition.\n"
         val _ = indent_print_term Silent "\n" "\n\n" ind_tm

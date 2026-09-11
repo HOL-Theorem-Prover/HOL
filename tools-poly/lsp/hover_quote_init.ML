@@ -38,30 +38,51 @@ local
   fun locn_covers lines target locn =
     case locn of
       locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2)) =>
-        let val s = LSPExtension.fromLineCol lines (l1, c1)
-            val e = LSPExtension.fromLineCol lines (l2, c2)
+        let val s = LSPExtension.fromLineColBytes lines (l1, c1)
+            val e = LSPExtension.fromLineColBytes lines (l2, c2)
         in s <= target andalso target <= e end
     | _ => false
 
-  fun locn_range (locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2))) =
-      SOME ((l1, c1), (l2, c2 + 1))
-    | locn_range _ = NONE
+  (* The one place HOL's positions become the client's.  `locn'
+     columns count bytes; the range on the wire counts whatever was
+     negotiated, so convert through byte offsets rather than handing
+     the columns over as they are.  Under utf-8 the two agree, which is
+     why passing them straight through worked for eglot and skewed
+     every hover on a line with a non-ASCII character in VS Code. *)
+  fun locn_range lines (locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2))) =
+      let
+        val s = LSPExtension.fromLineColBytes lines (l1, c1)
+        val e = LSPExtension.fromLineColBytes lines (l2, c2) + 1
+      in SOME (LSPExtension.getLineCol lines s,
+               LSPExtension.getLineCol lines e) end
+    | locn_range _ _ = NONE
 
   datatype hover_leaf =
       HLConst of {Name: string, Thy: string,
                   Ty: Pretype.pretype, Locn: locn.locn}
     | HLBound of {Name: string, Ty: Pretype.pretype, Locn: locn.locn}
     | HLFree  of {Name: string, Ty: Pretype.pretype, Locn: locn.locn}
+    (* An overloaded name, which is not yet any one constant: the
+       candidates come from the overload info so the hover can name the
+       constant it resolves to, or say what the choice is between. *)
+    | HLOverload of {Name: string, Ty: Pretype.pretype,
+                     Ops: Term.term list, Locn: locn.locn}
+    (* An overload that resolved to a lambda rather than a constant --
+       `MEM x l' is `x IN set l'.  There is no constant to name, so the
+       name comes from the source and the type from the body. *)
+    | HLPattern of {Ptm: Preterm.preterm, Locn: locn.locn}
 
   fun leaf_locn (HLConst {Locn, ...}) = Locn
     | leaf_locn (HLBound {Locn, ...}) = Locn
     | leaf_locn (HLFree  {Locn, ...}) = Locn
+    | leaf_locn (HLOverload {Locn, ...}) = Locn
+    | leaf_locn (HLPattern {Locn, ...}) = Locn
 
   (* Byte-length of a Locn's file range (LocA start ↔ LocA end).
      Non-LocA Locns are treated as huge so they're never preferred. *)
   fun locn_size lines (locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2))) =
-        LSPExtension.fromLineCol lines (l2, c2) -
-        LSPExtension.fromLineCol lines (l1, c1)
+        LSPExtension.fromLineColBytes lines (l2, c2) -
+        LSPExtension.fromLineColBytes lines (l1, c1)
     | locn_size _ _ = 100000000
 
   (* Prefer the leaf with the smaller Locn — i.e., the more specific
@@ -135,9 +156,27 @@ local
           | _ => go bvs Body
         end
       | Constrained {Ptm, ...} => go bvs Ptm
-      | Pattern {Ptm, ...} => go bvs Ptm
+      | Pattern {Ptm, Locn} =>
+          (case go bvs Ptm of
+             SOME l => SOME l
+           | NONE =>
+             (* An overload whose expansion is a lambda has a body that
+                is entirely compiler-generated, so nothing in it carries
+                a source position and the search would fall out to the
+                enclosing operator: hovering `MEM` in `MEM x l /\ P`
+                answered with `/\`.  The `Pattern' node's own Locn is
+                the identifier as written. *)
+             if cov Locn then SOME (HLPattern {Ptm = Ptm, Locn = Locn})
+             else NONE)
       | Antiq _ => NONE
-      | Overloaded _ => NONE
+      (* Not NONE: returning nothing here leaves the name with no leaf,
+         and the Comb case above then reports the enclosing operator --
+         hovering `MEM` in `MEM x l /\ P` answered with `/\`. *)
+      | Overloaded {Name, Ty, Info, Locn} =>
+          if cov Locn
+          then SOME (HLOverload {Name = Name, Ty = Ty,
+                                 Ops = #actual_ops Info, Locn = Locn})
+          else NONE
     in go [] pt end
 
   fun render_type env pty =
@@ -145,7 +184,58 @@ local
     in Parse.type_to_string (Pretype.toType cleaned) end
     handle _ => "?"
 
-  fun format_leaf env leaf =
+  (* Print `tm' with the overloads that alias *this* pattern removed.
+
+     Printing an expansion with the ambient grammar re-applies the very
+     overload being explained: `MEM' expands to a lambda whose body the
+     printer folds straight back into `MEM x l', so the hover reads
+     `Overloads λx l. MEM x l' and says nothing.  Removing just the
+     hovered name is not enough either -- `IS_EL' maps to the same
+     pattern and takes over, so the hover explains one alias with
+     another.
+
+     So remove every symbol whose overload maps to this term, and
+     nothing else.  Clearing the map outright would work for `MEM' but
+     is too blunt: an overload to a *different* pattern is what makes
+     integer addition print as `+', and an expansion that mentions it
+     should not start talking about `int_add'.
+
+     Matching is up to type instantiation, because the pattern in the
+     map is polymorphic (`α -> α list -> bool') while the occurrence
+     being hovered may be at a specific type.
+
+     `clear_overloads'-free and pure: `mfupdate_overload_info' and
+     `remove_overloaded_form' hand back new grammar values, so unlike
+     the mutate-capture-restore in `src/TeX/mungeTools.sml' this never
+     disturbs the global grammar, which a compile on another thread may
+     be parsing with.  The backend is forced raw because a hover's text
+     is markdown, where an ANSI escape is just noise. *)
+  fun expansion_string tm = let
+    val g0 = Parse.term_grammar ()
+    fun aliases_this op_tm =
+        Term.aconv op_tm tm orelse
+        (Term.match_term op_tm tm; true) handle _ => false
+    val aliases =
+        List.mapPartial
+          (fn (s, {actual_ops, ...}: Overload.overloaded_op_info) =>
+              if List.exists aliases_this actual_ops then SOME s else NONE)
+          (Overload.oinfo_ops (term_grammar.overload_info g0))
+    val g =
+        List.foldl
+          (fn (s, g) =>
+              #1 (term_grammar.mfupdate_overload_info
+                    (Overload.remove_overloaded_form s) g))
+          g0 aliases
+    in
+      Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+        (fn () =>
+           Parse.term_to_string_by_grammar (Parse.type_grammar (), g) tm) ()
+    end handle _ => Parse.term_to_string tm
+
+  (* `nameOf' slices the identifier out of the source the caller
+     parsed; only the pattern leaf needs it, having no name of its
+     own. *)
+  fun format_leaf nameOf env leaf =
     let
       val (name, tystr, tail) = case leaf of
           HLConst {Name, Thy, Ty, ...} =>
@@ -154,6 +244,38 @@ local
             (Name, render_type env Ty, "*bound variable*")
         | HLFree  {Name, Ty, ...} =>
             (Name, render_type env Ty, "*free variable*")
+        | HLOverload {Name, Ty, Ops, ...} => let
+            fun describe tm = let
+              val {Name = n, Thy = thy, ...} = Term.dest_thy_const tm
+              in "`" ^ n ^ "` (theory `" ^ thy ^ "`)" end
+              handle _ => "`" ^ Parse.term_to_string tm ^ "`"
+            val tail = case Ops of
+                [] => "*overloaded*"
+              | [tm] => "Overloads " ^ describe tm
+              | ops => "Overloaded, one of: " ^
+                       String.concatWith ", " (map describe ops)
+            in (Name, render_type env Ty, tail) end
+        | HLPattern {Ptm, Locn} => let
+            val tystr = case Preterm.ptype_of Ptm env of
+                Some (_, ty) => render_type env ty
+              | Error _ => "?"
+            (* This syntax resolved to a *term* rather than to any one
+               constant -- `MEM x l' is `x IN set l' -- so there is no
+               theory and name to report.  The preterm we are holding
+               is that expansion, overloading resolution having already
+               run, so show it: "overloaded" on its own says only that
+               we gave up.  `to_term' fails on a preterm that still
+               contains `Overloaded', and on leaf types the kernel will
+               not take, hence the fallback. *)
+            val expansion =
+                SOME (Preterm.smash (Preterm.to_term Ptm) env)
+                handle _ => NONE
+            val tail =
+                case expansion of
+                    NONE => "*overloaded*"
+                  | SOME tm =>
+                    "Overloads `" ^ expansion_string tm ^ "`"
+            in (nameOf Locn, tystr, tail) end
     in
       (* Parse.type_to_string already prefixes ``:`` (HOL type-
          annotation convention), so we don't add another one. *)
@@ -248,7 +370,10 @@ val () = LSPExtension.hoverQuotation :=
          labels and get parsed whole. *)
       val (regionOffset, region) = findRegion body (target - bodyStart)
       val regionStart = bodyStart + regionOffset
-      val (startLine, startCol) = LSPExtension.getLineCol lines regionStart
+      (* A `(*#loc*)' column is read by HOL's parser, which counts
+         bytes; `getLineCol' would give the client's units. *)
+      val (startLine, startCol) =
+          LSPExtension.getLineColBytes lines regionStart
       val pragma =
         "(*#loc " ^ Int.toString (startLine + 1) ^ " " ^
         Int.toString (startCol + 1) ^ "*)"
@@ -259,9 +384,21 @@ val () = LSPExtension.hoverQuotation :=
       | SOME (env, pt) =>
         case find_leaf pt target lines of
           NONE => []
-        | SOME leaf =>
-            [{markdown = format_leaf env leaf,
-              range = locn_range (leaf_locn leaf)}]
+        | SOME leaf => let
+            fun nameOf l = case l of
+                locn.Loc (locn.LocA (l1, c1), locn.LocA (l2, c2)) => let
+                  val s = LSPExtension.fromLineColBytes lines (l1, c1)
+                          - regionStart
+                  val e = LSPExtension.fromLineColBytes lines (l2, c2) + 1
+                          - regionStart
+                  in if 0 <= s andalso s < e andalso e <= String.size region
+                     then String.substring (region, s, e - s) else "?"
+                  end
+              | _ => "?"
+          in
+            [{markdown = format_leaf nameOf env leaf,
+              range = locn_range lines (leaf_locn leaf)}]
+          end
     end handle _ => [])
 
 end;

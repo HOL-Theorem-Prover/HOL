@@ -70,7 +70,162 @@ struct
 
   val ctx_rwlock : RWLock.t = RWLock.new "Context.ctx"
 
-  fun snapshot () = Sref.value ctx
+  (* A proof is a function of the context it is given.  Code reached
+     while one is running that reads the ambient context instead had a
+     context in scope and dropped it, so `snapshot` reports when called
+     inside the dynamic extent that `TAC_PROOF` marks.  Reads at
+     declaration level are the ambient wrappers doing their job and are
+     not reported.
+
+     The extent is per-thread: a worker proving on its own thread must
+     not see another's.  `ThreadLocal.get` is NONE on a fresh thread,
+     which reads as depth zero --- right for a thread that is not
+     proving, and harmless for one that is, since its own TAC_PROOF
+     sets the depth before any tactic runs. *)
+  local
+    val depth : int ThreadLocal.t = ThreadLocal.new ()
+    fun get () = case ThreadLocal.get depth of NONE => 0 | SOME n => n
+    fun set n = ThreadLocal.set (depth, n)
+    (* 0 silent, 1 one report per theory, 2 every read, 3 error.  Level 1
+       is the default: the reports are a style ratchet, and one marker per
+       theory log says which theories still offend without the volume ---
+       there are 611k reads to report across a core build, which costs
+       about a tenth of the build's heaviest theory and buries its log. *)
+    val action = ref 1
+    val _ = Feedback.register_trace ("ambient context inside proof", action, 3)
+    (* The same levels for the kernel-signature reads that `live` serves,
+       reported separately and silent by default.  They are a different
+       population with a different fix -- see `live` -- and mixing them
+       into the tactic-state census would swamp it. *)
+    val sig_action = ref 0
+    val _ = Feedback.register_trace
+              ("ambient signature inside proof", sig_action, 3)
+    val reported : string list ref = ref []
+    val sig_reported : string list ref = ref []
+    (* An ambient read reports from `snapshot`, which cannot say *what*
+       was read -- the slot is only known one call later, when the
+       ambient accessor does its `Data.get`.  So `snapshot` leaves a mark
+       and the next `Data.get` names itself.  It is per-thread, and
+       cleared by whoever consumes it, so at worst a read that never
+       reaches a slot leaves a stale mark for the next one on the same
+       thread to claim.  Good enough to name a culprit; not evidence on
+       its own. *)
+    val pending : bool ThreadLocal.t = ThreadLocal.new ()
+    (* A context installed for one thread's benefit.  While it is set,
+       the ambient reads below answer from it rather than from the live
+       cell, so a proof replaying on a worker cannot see another thread
+       swap that cell out from under it -- which it otherwise can, since
+       `mk_const` and `mk_type` resolve names against the live signature
+       and no amount of context-passing removes that (see `live`).
+
+       `overrides` counts the threads holding one.  It is zero in every
+       process that is not replaying proofs, and zero in that one
+       whenever the pool is idle, so the common path pays an integer
+       test rather than a thread-local lookup: measured at 0.8ns for the
+       bare read, 1.5ns with the test, 5.6ns going to `getLocal` every
+       time.  An `Sref` because a worker installing one and another
+       releasing one are concurrent; the read is a plain deref. *)
+    val override : t option ThreadLocal.t = ThreadLocal.new ()
+    val overrides : int Sref.t = Sref.new 0
+    (* `ThreadLocal.get` is doubly optional here -- NONE for a thread
+       that has never held a pin, `SOME NONE` for one that has released
+       it -- and only the join of the two is interesting. *)
+    fun pinned () = Option.join (ThreadLocal.get override)
+    fun ambient () =
+        if Sref.value overrides = 0 then Sref.value ctx
+        else case pinned () of
+                 SOME c => c
+               | NONE => Sref.value ctx
+    fun thyname () =
+        case #current_thy (Sref.value ctx) of
+            NONE => "<no current theory>"
+          | SOME s => s
+    fun report0 (what, fname, lvl, seen) =
+        let val thy = thyname ()
+            (* built only where it is used: at level 1 the common case is
+               a theory already reported, and this fires per read *)
+            fun msg () = what ^ " read while a proof was running (in " ^
+                         thy ^ ")"
+            fun warn () = Feedback.HOL_WARNING "Context" fname (msg ())
+        in
+          case lvl of
+              1 => if Lib.mem thy (!seen) then ()
+                   else (seen := thy :: !seen; warn ())
+            | 2 => warn ()
+            | _ => raise ERR fname (msg ())
+        end
+    fun report () =
+        report0 ("ambient context", "snapshot", !action, reported)
+    fun report_sig () =
+        report0 ("ambient signature", "live", !sig_action, sig_reported)
+  in
+    fun in_proof f x =
+        let val n = get ()
+            val () = set (n + 1)
+            val r = f x handle e => (set n; raise e)
+        in
+          set n; r
+        end
+    fun snapshot () =
+        (if !action > 0 andalso get () > 0 then
+           (report (); if !action > 1 then ThreadLocal.set (pending, true)
+                       else ())
+         else ();
+         ambient ())
+    (* Reads the live context without reporting.  The kernel signatures
+       are read this way: mk_type and mk_const resolve a name against the
+       live signature rather than a caller-supplied context, so every
+       name-based term or type construction inside a proof would report,
+       and Phase 3 cannot plumb that away -- it is a separate, recorded
+       gap.  Reporting it would leave the census permanently non-zero and
+       hide the tactic-level reads it exists to find.  Nothing else
+       should use this. *)
+    fun live () =
+        (if !sig_action > 0 andalso get () > 0 then report_sig () else ();
+         ambient ())
+
+    (* Run `f x` with `c` answering this thread's ambient reads.
+
+       The slot and the counter move together, inside the `Sref`
+       update: `Multithreading.synchronized` runs its body under
+       `Thread_Attributes.uninterruptible`, and that is the only reason
+       this is safe on a thread that can be interrupted asynchronously.
+       A pool worker is exactly such a thread -- `Future.cancel_group`
+       interrupts it wherever it happens to be, on every keystroke --
+       and as two bare statements the pair could be left half-applied:
+       a slot still holding a dead pass's context with the counter back
+       at zero, which the next read would then answer from.
+
+       Exiting *clears* the slot rather than putting back what was
+       there, because nothing nests: `prover` sends a nested proof down
+       the `isReplaying` branch, which does not pin.  Restoring a
+       previous value would make a leaked pin survive every later
+       proof on that worker, which is the one failure worth designing
+       out -- an ancient context is indistinguishable from a current
+       one, and answers just as confidently.
+
+       Writes are deliberately not redirected: `Data.write` and
+       `Data.modify` go to the live cell, which is what a write means.
+       See the warning on `restore`. *)
+    fun with_context c f x =
+        let
+          fun install () =
+              Sref.update overrides
+                (fn n => (ThreadLocal.set (override, SOME c); n + 1))
+          fun uninstall () =
+              Sref.update overrides
+                (fn n => (ThreadLocal.set (override, NONE); n - 1))
+        in
+          install (); Portable.finally uninstall f x
+        end
+    (* consumed by Data.get, which is the only thing that can name the
+       slot an ambient read was after *)
+    fun claim_pending () =
+        case ThreadLocal.get pending of
+            SOME true => (ThreadLocal.set (pending, false); true)
+          | _ => false
+  end
+
   fun restore  c  =
       RWLock.write_locked ctx_rwlock (fn () => Sref.update ctx (fn _ => c))
 
@@ -114,9 +269,14 @@ struct
         end
 
     fun get (slot : 'a slot) (c : t) =
-        case Symtab.lookup (session_data c) (#name slot) of
-            NONE   => #empty slot
-          | SOME u => valOf (#unwrap slot u)
+        (if claim_pending () then
+           Feedback.HOL_WARNING "Context" "snapshot"
+             ("  ... the ambient read above was of slot \"" ^
+              #name slot ^ "\"")
+         else ();
+         case Symtab.lookup (session_data c) (#name slot) of
+             NONE   => #empty slot
+           | SOME u => valOf (#unwrap slot u))
 
     fun put (slot : 'a slot) v c =
         map_session_data (Symtab.update (#name slot, #wrap slot v)) c
@@ -133,13 +293,6 @@ struct
           Lock.synchronized (#lock slot) (fn () =>
             let val new = f (get slot (Sref.value ctx))
             in Sref.update ctx (put slot new) end))
-
-    fun register spec =
-        let val slot = new spec
-        in {get = fn () => get slot (Sref.value ctx),
-            write = write slot,
-            modify = modify slot}
-        end
 
     fun with_slot_value slot v f x =
         let val old = get slot (Sref.value ctx)

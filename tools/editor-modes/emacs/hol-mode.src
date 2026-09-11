@@ -2178,9 +2178,15 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "\M-g" 'hol-lsp-show-goal-state)
+(define-key hol-map "\M-C" 'hol-lsp-retry-compile)
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
+;; `M-M', not `M-m': `holmake' had that key first, and binding both to
+;; it left this one unreachable rather than merely awkward.  Shifted
+;; meta is already the convention for a second claim on a letter here
+;; -- compare `\M-C' and `\M-P'.
+(define-key hol-map "\M-M" 'hol-lsp-search)
 (define-key hol-map "2"    'hol-vertical)
 (define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "4"    'hol-display)
@@ -2622,6 +2628,15 @@ the surrounding text (as done by ‘hol-do-goal’ and
 ;; directory (they do NOT govern sub-directories), so the LSP project
 ;; root is the buffer's own directory — no upward walk.
 ;;
+;; One server per buffer.  A server process is bound to the first
+;; script it compiles, and cannot be re-aimed at another: loading a
+;; theory seals it (`Theory.load_complete'), and a second file's
+;; ancestors can then neither be re-read nor withdrawn, so the second
+;; file gets a broken environment — wrong goals, dead hovers.  eglot
+;; keys its server table on the project object, so giving each buffer
+;; its own project object gives each buffer its own process.  Each one
+;; holds a HOL heap, hence `hol-lsp-autoshutdown' below.
+;;
 ;; Users opt in by calling `hol-lsp-enable' (e.g. from init.el):
 ;;
 ;;     (with-eval-after-load 'hol-mode (hol-lsp-enable))
@@ -2643,12 +2658,6 @@ route to; delegates to `hol--find-alternate-executable'.")
   "Memo: (absolute-dir . bin/hol) → HOLHEAP that `bin/hol
 heapname' resolves to in that dir.  Two different `bin/hol' for
 the same dir must not collide, hence the pair key.")
-
-(defvar hol-lsp--project-roots (make-hash-table :test 'equal)
-  "Memo: (bin/hol . HOLHEAP) → the first buffer directory that
-resolved to that pair; reused as the LSP server's cwd for
-subsequent buffers sharing the pair.  A distinct HOL install or
-distinct HOLHEAP gets a distinct eglot server.")
 
 (defun hol-lsp--hol-for-dir (dir)
   "Return the absolute `bin/hol' path serving LSP for DIR."
@@ -2681,12 +2690,15 @@ lookup)."
   :group 'hol :type 'boolean)
 
 (defun hol-lsp--project-try (dir)
-  "Group HOL buffers into LSP projects keyed by (bin/hol, HOLHEAP).
-Two files whose lastmaker + Holmakefile resolve to the same pair
-share one eglot server; two files that need different HOLHEAPs
-(typical inside HOL itself and CakeML, where kernel-adjacent dirs
-pin `hol.state0' and downstream dirs use the full `hol.state') or
-that come from different HOL installs get separate servers."
+  "Give each HOL script buffer its own LSP project, and so its own
+server process.  The project object carries the buffer's file name,
+which is what makes it distinct: eglot keys `eglot--servers-by-project'
+on the project with `equal', so two buffers never share a server.
+
+Keying on the file rather than on (bin/hol, HOLHEAP) also subsumes
+what that clustering was for — the server's cwd is the file's own
+directory, so `get_heap_name' reads that directory's Holmakefile and
+each process boots the heap its own file needs."
   (let ((match (and buffer-file-name
                     (memq major-mode hol-lsp-server-modes))))
     (when hol-lsp-project-debug
@@ -2694,36 +2706,46 @@ that come from different HOL installs get separate servers."
        "hol-lsp--project-try: dir=%s buffer=%s mode=%s file=%s match=%s"
        dir (buffer-name) major-mode buffer-file-name (and match t)))
     (when match
-      (let* ((hol (hol-lsp--hol-for-dir dir))
-             (heap (hol-lsp--heap-for-dir dir))
-             (key (cons hol heap)))
-        (unless (gethash key hol-lsp--project-roots)
-          (puthash key dir hol-lsp--project-roots))
+      (let ((file (expand-file-name buffer-file-name)))
         (when hol-lsp-project-debug
-          (message "hol-lsp--project-try: hol=%s heap=%s root=%s"
-                   hol heap (gethash key hol-lsp--project-roots)))
-        (cons 'hol-lsp-project key)))))
+          (message "hol-lsp--project-try: hol=%s heap=%s file=%s"
+                   (hol-lsp--hol-for-dir dir)
+                   (hol-lsp--heap-for-dir dir) file))
+        (cons 'hol-lsp-project file)))))
 
 (with-eval-after-load 'project
   (cl-defmethod project-root ((p (head hol-lsp-project)))
-    (or (gethash (cdr p) hol-lsp--project-roots)
-        default-directory)))
+    (file-name-directory (cdr p)))
+  ;; Without this every server in a directory reports the same name,
+  ;; and the mode line cannot tell ten of them apart.
+  (cl-defmethod project-name ((p (head hol-lsp-project)))
+    (file-name-nondirectory (cdr p))))
 
 (defun hol-lsp--server-program (&rest _args)
   "eglot-server-programs entry: return `(bin/hol lsp)' for the
 current buffer, honouring `.hol/make-deps/lastmaker'."
   (list (hol-lsp--hol-for-dir default-directory) "lsp"))
 
+(defcustom hol-lsp-autoshutdown t
+  "When non-nil, killing a HOL script buffer shuts its LSP server down.
+Each buffer gets its own server, and each server holds a HOL heap, so
+servers that outlive their buffers cost hundreds of megabytes apiece.
+Set buffer-locally over `eglot-autoshutdown', so servers for other
+languages keep whatever policy you chose for them."
+  :group 'hol
+  :type 'boolean)
+
 (defun hol-lsp--setup-buffer ()
   "Configure the current buffer to use the HOL LSP server via eglot."
   (setq-local project-find-functions
               (cons #'hol-lsp--project-try project-find-functions))
+  (setq-local eglot-autoshutdown hol-lsp-autoshutdown)
   (when (fboundp 'eglot-ensure) (eglot-ensure)))
 
 (defun hol-lsp-enable ()
   "Enable eglot-based HOL LSP for buffers in `hol-lsp-server-modes'.
-Registers `bin/hol lsp' as the server command and treats each
-buffer's HOLHEAP-clustered directory as its LSP project."
+Registers `bin/hol lsp' as the server command and gives each script
+buffer its own LSP project, hence its own server process."
   (interactive)
   ;; `hol-lsp--setup-buffer' references `project-find-functions',
   ;; which the built-in `project' package defines; without loading
@@ -2735,6 +2757,7 @@ buffer's HOLHEAP-clustered directory as its LSP project."
     (dolist (mode hol-lsp-server-modes)
       (add-to-list 'eglot-server-programs
                    `(,mode . hol-lsp--server-program))))
+  (add-hook 'eglot-managed-mode-hook #'hol-lsp--on-managed)
   (dolist (mode hol-lsp-server-modes)
     (add-hook (intern (concat (symbol-name mode) "-hook"))
               #'hol-lsp--setup-buffer)))
@@ -2763,13 +2786,348 @@ expose the private `eglot--path-to-uri'."
         (t (concat "file://" (url-hexify-string (expand-file-name path)
                                                 url-path-allowed-chars)))))
 
+(defun hol-lsp--uri-to-path (uri)
+  "Convert URI to a file name, working on Emacs 29 and 30 eglot.
+Public `eglot-uri-to-path' arrived in Emacs 30; older builds only
+expose the private `eglot--uri-to-path'."
+  (cond ((fboundp 'eglot-uri-to-path) (eglot-uri-to-path uri))
+        ((fboundp 'eglot--uri-to-path) (eglot--uri-to-path uri))
+        (t (url-unhex-string (string-remove-prefix "file://" uri)))))
+
+(defvar-local hol-lsp--blocked nil
+  "Why the server is not compiling this buffer, or nil if it is.
+The server stops compiling a file whose declared ancestors or
+libraries could not be loaded: with an ancestor missing there is
+nothing to elaborate the file against, so it waits for the header to
+change rather than covering the buffer in errors that all say the
+same thing.  See `hol-lsp-retry-compile'.")
+
+(defun hol-lsp--set-blocked (uri message)
+  "Set `hol-lsp--blocked' to MESSAGE in the buffer visiting URI."
+  (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
+         (buf (and path (find-buffer-visiting path))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf (setq hol-lsp--blocked message)))))
+
+(defvar-local hol-lsp--proof-states nil
+  "What the proof-checking pool is doing in this buffer.
+A hash table from theorem name to (STATUS LINE NAME) -- status is
+one of \"checking\",
+\"proved\", \"failed\", \"suspended\", \"diverged\" or \"cheated\".
+Built from the `$/proofStates' transition stream: the server
+announces each change as it happens and never sends a snapshot, so a
+client accumulates.  nil until the first notification arrives.")
+
+(defun hol-lsp--proof-states-table ()
+  "This buffer's proof-state table, creating it if needed."
+  (or hol-lsp--proof-states
+      (setq hol-lsp--proof-states (make-hash-table :test #'equal))))
+
+(defun hol-lsp--merge-proof-states (tbl states)
+  "Fold the announced STATES into TBL, keyed by theorem name.
+Keyed by name alone.  The name is the only identity that survives
+re-elaboration: an edit anywhere above a proof moves it, so the same
+proof is announced at one position and then another, and keying by
+position counted it twice -- adding a line at the top of a
+61-theorem file gave 122 entries.  The exception is a rebound name,
+two `Theorem foo', which share one entry and so one slot in the
+tally; nothing distinguishes them that an edit does not also move.
+
+`cheated' is kept, not forgotten.  It means the pool has dropped the
+entry -- an edit reached that proof -- and the compile that follows
+re-enqueues it, so forgetting it made the tally *shrink*: 62 checked
+became 61 checked, which reads as finished rather than as one
+outstanding.  Counted as outstanding, it shows as 61/62 until the
+worker settles it.
+
+The line is what makes 61/62 actionable: it is how
+`hol-lsp-goto-outstanding-proof' finds the one the count is short
+of.  It is data, not identity, and is refreshed by every
+announcement -- the server re-announces a proof an edit moved for
+that reason."
+  (dolist (st (append states nil))
+    (let* ((name (plist-get st :name))
+           (status (plist-get st :status))
+           (pos (plist-get st :pos))
+           (line (and pos (plist-get pos :line))))
+      (when (and name (not (equal name "")))
+        (puthash name (list status (or line 0) name) tbl)))))
+
+(defun hol-lsp--note-proof-states (uri states)
+  "Fold the STATES announced for URI into that buffer's table."
+  (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
+         (buf (and path (find-buffer-visiting path))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (hol-lsp--merge-proof-states (hol-lsp--proof-states-table) states)
+        (force-mode-line-update)))))
+
+(defun hol-lsp--prune-stale-proofs (uri)
+  "Drop entries for proofs no longer in the buffer visiting URI.
+A proof still `cheated' when a compile finishes was not re-enqueued by
+that pass -- which happens both when its theorem has been deleted and
+when the server did not get round to it.  Those look identical from
+here, and dropping them silently is the worse mistake: it counts an
+unchecked proof as though it had been checked.  So only entries past
+the end of the buffer go."
+  (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
+         (buf (and path (find-buffer-visiting path))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (when hol-lsp--proof-states
+          (let ((last (line-number-at-pos (point-max))) stale)
+            (maphash (lambda (k v)
+                       (when (>= (or (nth 1 v) 0) last) (push k stale)))
+                     hol-lsp--proof-states)
+            (dolist (k stale) (remhash k hol-lsp--proof-states))
+            (when stale (force-mode-line-update))))))))
+
+(defun hol-lsp--outstanding-proofs ()
+  "Proofs this buffer's pool has not settled, as (NAME STATUS LINE).
+Sorted by position, so walking them goes down the file.  `checking'
+and `cheated' are outstanding -- one has a worker on it, the other is
+waiting for the compile to re-enqueue it -- and the three bad verdicts
+are listed too, since those are what a user most wants to reach.
+`proved' is not listed: it is the state that needs nothing."
+  (let (out)
+    (when hol-lsp--proof-states
+      (maphash (lambda (_k v)
+                 (let ((status (nth 0 v)) (line (nth 1 v)) (name (nth 2 v)))
+                   (unless (equal status "proved")
+                     (push (list name
+                                 (if (equal status "cheated")
+                                     "not checked" status)
+                                 (or line 0))
+                           out))))
+               hol-lsp--proof-states))
+    (sort out (lambda (a b) (< (nth 2 a) (nth 2 b))))))
+
+(defun hol-lsp-goto-outstanding-proof ()
+  "Move to the next proof the pool has not settled, and say which.
+The tally says how many are outstanding; this is how to reach them.
+Cycles from point, so repeating it walks them."
+  (interactive)
+  (let ((out (hol-lsp--outstanding-proofs)))
+    (if (null out)
+        (message "HOL: no outstanding proofs")
+      (let* ((here (line-number-at-pos))
+             (next (or (seq-find (lambda (e) (> (1+ (nth 2 e)) here)) out)
+                       (car out))))
+        (goto-char (point-min))
+        (forward-line (nth 2 next))
+        (message "HOL: %s is %s (%d outstanding)"
+                 (nth 0 next) (nth 1 next) (length out))))))
+
+(defun hol-lsp--proof-help-echo ()
+  "Name the outstanding proofs, for the mode line's tooltip."
+  (let ((out (hol-lsp--outstanding-proofs)))
+    (if (null out)
+        "HOL: every proof checked"
+      (concat "HOL proofs outstanding: "
+              (mapconcat (lambda (e) (format "%s (%s)" (nth 0 e) (nth 1 e)))
+                         out ", ")
+              "  --  M-x hol-lsp-goto-outstanding-proof"))))
+
+(defcustom hol-lsp-mode-line-prefix
+  (if (char-displayable-p ?\u22a2) "\u22a2" "HOL")
+  "String introducing the proof tally in the mode line."
+  :type 'string
+  :group 'hol)
+
+(defun hol-lsp-proof-summary ()
+  "A tally of what the pool is doing in this buffer, or \"\" when it
+is doing nothing that needs saying.
+
+Silent once every proof is checked.  That is the steady state, and a
+mode line already carrying flymake, VC, the line number and the rest
+has no room for eleven characters saying nothing is wrong -- so the
+tally appearing at all is the signal, and what it says is what is
+left.
+
+A counter rather than a progress bar: the states regress.  A proof
+that suspends makes the server re-elaborate, which drops the entries
+below it, so a bar would run backwards -- while a count that drops
+from 30 to 12 reads as what it is."
+  (if (null hol-lsp--proof-states)
+      ""
+    (let ((checking 0) (unchecked 0) (proved 0) (bad 0))
+      (maphash (lambda (_k v)
+                 (let ((status (nth 0 v)))
+                   (cond ((equal status "checking")
+                          (setq checking (1+ checking)))
+                         ;; Not being worked on: usually an edit
+                         ;; reached it and the next pass takes it up,
+                         ;; but it stays this way if the pass never
+                         ;; does.  Either way it is not checked.
+                         ((equal status "cheated")
+                          (setq unchecked (1+ unchecked)))
+                         ((equal status "proved") (setq proved (1+ proved)))
+                         (t (setq bad (1+ bad))))))
+               hol-lsp--proof-states)
+      (let ((total (+ checking unchecked proved bad)))
+        (cond ((zerop total) "")
+              ;; Everything checked and nothing wrong: say nothing.
+              ((and (zerop checking) (zerop unchecked) (zerop bad)) "")
+              ;; `proved/total' already says how many are outstanding,
+              ;; so only a bad verdict earns a mark of its own.
+              (t (format "%s%d/%d%s " hol-lsp-mode-line-prefix proved total
+                         (if (> bad 0) (format "!%d" bad) ""))))))))
+
+(defun hol-lsp-proof-mode-line ()
+  "`hol-lsp-proof-summary' with the outstanding proofs in a tooltip."
+  (let ((text (hol-lsp-proof-summary)))
+    (if (string= text "")
+        ""
+      (propertize text 'help-echo (hol-lsp--proof-help-echo)))))
+
+(with-eval-after-load 'eglot
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/proofStates)) &key uri states
+             &allow-other-keys)
+    "Accumulate what the proof pool reports for URI."
+    (hol-lsp--note-proof-states uri states))
+
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/compileBlocked)) &key uri message
+             &allow-other-keys)
+    "Record that the server is not compiling URI, and why."
+    (hol-lsp--set-blocked uri message))
+
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/compileCompleted)) &key uri
+             &allow-other-keys)
+    "Note that URI compiled, which is to say it is no longer blocked."
+    (hol-lsp--set-blocked uri nil)
+    (hol-lsp--prune-stale-proofs uri)))
+
+
+(defun hol-lsp-retry-compile ()
+  "Ask the server to compile this buffer again.
+It stops compiling a file whose declared ancestors or libraries
+could not be loaded, and starts again by itself when the Ancestors /
+Libs header changes.  This is for the other case: the ancestor has
+been built outside the editor and the header is already right."
+  (interactive)
+  (let ((server (hol-lsp--server)))
+    (unless server (user-error "No LSP server for this buffer"))
+    (setq hol-lsp--blocked nil)
+    (jsonrpc-notify server :$/hol/retryCompile
+                    (list :textDocument
+                          (list :uri (hol-lsp--path-to-uri
+                                      buffer-file-name))))
+    (message "HOL: asked the server to compile this buffer again")))
+
+(defcustom hol-lsp-hover-width nil
+  "Column width to ask the server to render hover text at.
+nil leaves the server's own default, which is what eglot's echo-area
+display has always been rendered at.  Set a number if your frame is
+narrow enough that theorem statements wrap, or if you read hovers in a
+narrow `eldoc-doc-buffer' rather than the echo area.  The symbol
+`frame' asks for the frame's width, which suits the echo area."
+  :type '(choice (const :tag "Server default" nil)
+                 (const :tag "Frame width" frame)
+                 (integer :tag "Columns"))
+  :group 'hol)
+
+(defun hol-lsp--hover-width ()
+  "Resolve `hol-lsp-hover-width' to a column count, or nil."
+  (cond ((null hol-lsp-hover-width) nil)
+        ((eq hol-lsp-hover-width 'frame) (max 20 (1- (frame-width))))
+        ((integerp hol-lsp-hover-width) (max 20 hol-lsp-hover-width))))
+
+(defcustom hol-lsp-check-proofs t
+  "Whether the server should check the proofs in a script buffer.
+Elaboration does not run tactics -- that is what makes it fast -- so a
+proof is taken on trust unless a worker pool replays it.  With this
+on, a proof that does not go through is reported as an error on the
+theorem's name, and one that suspends or diverges as a warning.
+
+It costs what the proofs cost: the pool runs them for real, on one
+worker per processor (capped at eight).  Set to nil on a machine you
+would rather keep for yourself; `hol-lsp-toggle-check-proofs' flips it
+for the current server without a restart."
+  :type 'boolean
+  :group 'hol)
+
+(defun hol-lsp--send-config ()
+  "Tell this buffer's server the settings it cannot work out itself.
+Sent on every connection: the hover width when the user has chosen
+one, and whether to check proofs, which the server otherwise leaves
+off."
+  (let ((width (hol-lsp--hover-width))
+        (server (hol-lsp--server))
+        (params (list :checkProofs (if hol-lsp-check-proofs t :json-false))))
+    (when width
+      (setq params (append params (list :hoverWidth width))))
+    (when server
+      (ignore-errors
+        (jsonrpc-async-request server :$/setConfig params
+                               :success-fn #'ignore
+                               :error-fn #'ignore)))))
+
+(defun hol-lsp-toggle-check-proofs ()
+  "Turn proof checking on or off for this buffer's server.
+Takes effect at once: the server recompiles when switched on, since
+the proofs of a pass that already ran were taken on trust, and drops
+the pool's diagnostics when switched off."
+  (interactive)
+  (setq hol-lsp-check-proofs (not hol-lsp-check-proofs))
+  (hol-lsp--send-config)
+  (message "HOL: proof checking %s"
+           (if hol-lsp-check-proofs "on" "off")))
+
+(defvar-local hol-lsp--mode-line-installed nil
+  "Whether this buffer's mode line carries the proof tally.")
+
+(defun hol-lsp--install-mode-line ()
+  "Put the proof tally at the front of this buffer's mode line.
+It used to be appended to `mode-line-misc-info', which is at the far
+end of the mode line: in a buffer already carrying flymake, VC and a
+line number it was the first thing truncated away, which is to say
+never visible.  `mode-line-front-space' is the documented place for
+something that must not be pushed off, and setting it buffer-locally
+leaves every other buffer alone."
+  (unless hol-lsp--mode-line-installed
+    (setq hol-lsp--mode-line-installed t)
+    (setq-local mode-line-front-space
+                (list mode-line-front-space
+                      '(:eval (hol-lsp-proof-mode-line))))))
+
+(defun hol-lsp--remove-mode-line ()
+  "Undo `hol-lsp--install-mode-line' in this buffer."
+  (when hol-lsp--mode-line-installed
+    (setq hol-lsp--mode-line-installed nil)
+    (kill-local-variable 'mode-line-front-space)))
+
+(defun hol-lsp--on-managed ()
+  "Send our configuration once eglot has taken over a HOL buffer.
+`eglot-managed-mode-hook' runs in the managed buffer, on the way in
+and on the way out; `hol-lsp--server' returning nil covers the exit."
+  (when (memq major-mode hol-lsp-server-modes)
+    (if (hol-lsp--server)
+        (progn (hol-lsp--install-mode-line) (hol-lsp--send-config))
+      (hol-lsp--remove-mode-line))))
+
+(defun hol-lsp--goals-width ()
+  "Column width to ask the server to render the goal state at.
+The width of the *HOL Goals* window if it is showing, else this
+window's -- the pane is about to be displayed beside or below it, so
+its own width is the better guess than the server's default.  A
+character of slack keeps a full-width line off the wrap column."
+  (let* ((buf (get-buffer "*HOL Goals*"))
+         (win (and buf (get-buffer-window buf t))))
+    (max 20 (1- (window-body-width (or win (selected-window)))))))
+
 (defun hol-lsp--goalstate-params ()
   "Build the `$/hol/goalState' params object for point."
   (list :textDocument
         (list :uri (hol-lsp--path-to-uri buffer-file-name))
         :position
         (list :line (1- (line-number-at-pos))
-              :character (hol-lsp--point-byte-in-line))))
+              :character (hol-lsp--point-byte-in-line))
+        ;; Only the client knows how wide the pane is, so the server
+        ;; cannot pick the line breaking without being told.
+        :width (hol-lsp--goals-width)))
 
 (defun hol-lsp--query (&optional cancel-on-input)
   "Send `$/hol/goalState' synchronously; return parsed result or nil
@@ -2791,9 +3149,141 @@ so a slow server never freezes emacs on a keystroke."
                            :cancel-on-input cancel-on-input)
         (error nil)))))
 
+(defcustom hol-lsp-search-limit 100
+  "How many theorems `hol-lsp-search' asks the server for at once."
+  :type 'integer
+  :group 'hol)
+
+(define-derived-mode hol-lsp-search-mode special-mode "HOL Search"
+  "Major mode for the *HOL Search* buffer.
+RET on a theorem goes to where it was proved.")
+
+(defun hol-lsp-search-goto (&optional pos)
+  "Visit the theorem at POS, or at point, where it was proved.
+POS is what the mouse passes, clicking being able to land somewhere
+without moving point."
+  (interactive)
+  (let* ((at (or pos (point)))
+         (uri (get-text-property at 'hol-lsp-uri))
+         (line (get-text-property at 'hol-lsp-line)))
+    (cond
+     ((null uri) (message "HOL: no source location recorded for this one"))
+     (t (find-file-other-window (hol-lsp--uri-to-path uri))
+        (goto-char (point-min))
+        (forward-line (max 0 (1- (or line 1))))))))
+
+(defun hol-lsp-search-mouse-goto (event)
+  "Visit the theorem clicked on by EVENT."
+  (interactive "e")
+  (let ((posn (event-start event)))
+    (select-window (posn-window posn))
+    (hol-lsp-search-goto (posn-point posn))))
+
+(define-key hol-lsp-search-mode-map (kbd "RET") 'hol-lsp-search-goto)
+;; The whole entry is clickable, not only the location: a mouse aimed
+;; at the theorem's name should do the obvious thing too.
+(define-key hol-lsp-search-mode-map [mouse-2] 'hol-lsp-search-mouse-goto)
+(define-key hol-lsp-search-mode-map [follow-link] 'mouse-face)
+
+(defun hol-lsp--search-location (uri line)
+  "How to show URI and LINE: the script's own name, and the line.
+The full path is what `hol-lsp-search-goto\=' needs and not what a
+reader does -- one per result, the paths would push the theorems off
+the side.  `finite_mapScript.sml:1234\=' says which file and where, and
+the path is a `help-echo\=' away."
+  (when uri
+    (let ((path (hol-lsp--uri-to-path uri)))
+      (concat (file-name-nondirectory path)
+              (if line (format ":%d" line) "")))))
+
+(defun hol-lsp--search-render (hits selectors)
+  "Lay HITS out in the *HOL Search* buffer, SELECTORS being the question.
+Each entry shows where the theorem was proved, and carries that
+location as text properties, so RET anywhere in it -- or mouse-2 --
+goes to the script."
+  (let ((buf (get-buffer-create "*HOL Search*")))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (hol-lsp-search-mode)
+        (insert (format "%d theorem%s for %s\n\n"
+                        (length hits) (if (= 1 (length hits)) "" "s")
+                        (mapconcat #'identity selectors " ")))
+        (dolist (h hits)
+          (let ((start (point))
+                (name (plist-get h :name))
+                (theory (plist-get h :theory))
+                (class (plist-get h :class))
+                (stmt (plist-get h :statement))
+                (uri (plist-get h :uri))
+                (line (plist-get h :line)))
+            (insert (propertize (format "%s$%s" theory name) 'face 'bold)
+                    (format "  [%s]" class))
+            ;; Where it was proved, said out loud.  The server has
+            ;; always sent this and the pane kept it to itself, on a
+            ;; text property only RET could see.
+            (let ((loc (hol-lsp--search-location uri line)))
+              (when loc
+                (insert "  "
+                        (propertize
+                         loc
+                         'face 'link
+                         'mouse-face 'highlight
+                         'help-echo (format "mouse-2: visit %s"
+                                            (hol-lsp--uri-to-path uri))))))
+            (insert "\n" (or stmt "") "\n\n")
+            (when uri
+              (put-text-property start (point) 'hol-lsp-uri uri)
+              (put-text-property start (point) 'hol-lsp-line line))))
+        (goto-char (point-min))))
+    buf))
+
+(defun hol-lsp--search-read-selectors ()
+  "Read selectors until an empty one, as `hol-db-select' does.
+A selector is a theory name in single quotes, a fragment of a theorem's
+name in double quotes, or anything else, which is a term pattern.  The
+server reads that quoting, so it means the same here as in any other
+client."
+  (let ((sels nil) next)
+    (while (and (setq next (read-string
+                            (format "Selector %d ('thy'; \"name\"; term \
+pattern), empty to search: " (1+ (length sels)))))
+                (not (string-equal next "")))
+      (push next sels))
+    (nreverse sels)))
+
+(defun hol-lsp-search ()
+  "Ask the theorem database what matches, and show what it says.
+The LSP counterpart of `hol-db-select' (\[hol-db-select]): several
+selectors narrow rather than widen, so a name fragment and a theory
+together ask for that theory's theorems whose names match."
+  (interactive)
+  (let ((server (hol-lsp--server)))
+    (if (null server)
+        (message "HOL: no LSP server for this buffer")
+      (let ((sels (hol-lsp--search-read-selectors)))
+        (if (null sels)
+            (message "HOL: nothing to search for")
+          (let ((hits (append
+                       (jsonrpc-request server :$/hol/search
+                                        (list :selectors (vconcat sels)
+                                              :limit hol-lsp-search-limit))
+                       nil)))
+            (if (null hits)
+                (message "HOL: nothing matches %s"
+                         (mapconcat #'identity sels " "))
+              (display-buffer (hol-lsp--search-render hits sels)))))))))
+
 (define-derived-mode hol-lsp-goals-mode special-mode "HOL Goals"
   "Major mode for the *HOL Goals* buffer populated by the HOL LSP.
-Inherits `special-mode' keys — `q' buries the window.")
+Inherits `special-mode' keys — `q' buries the window.
+
+Point over a constant or a variable and the echo area says what it
+is: a constant's theory-qualified name and type, a variable's type.
+The mouse gets the same text as a tooltip.  Both come from the
+`segments' the server sends beside `pretty'."
+  (add-hook 'eldoc-documentation-functions #'hol-lsp--goals-eldoc nil t)
+  (eldoc-mode 1))
 
 (defun hol-lsp--context-line (ctx)
   "The server's combinator tags CTX as one bracketed line, or nil.
@@ -2803,17 +3293,32 @@ in Lisp, so convert before testing it."
     (when tags
       (mapconcat (lambda (c) (concat "[" c "]")) tags " "))))
 
+(defun hol-lsp--solved-p (result)
+  "Whether RESULT says the focused subgoal(s) have been proved.
+No goals and no error is exactly that: the server sends the goals
+of the current focus, and `pretty\=' then shows what remains once
+the pending close fires.  A timeout also has no goals, but carries
+an error."
+  (and (plist-member result :goals)      ; absent /= empty
+       (null (append (plist-get result :goals) nil))
+       (not (plist-get result :error))))
+
 (defun hol-lsp--goals-header (result)
-  "Header-line text for RESULT: theorem, step, combinator tags, error.
+  "Header-line text for RESULT: theorem, step, combinator tags,
+whether the focus is proved, and any error.
 This is what stays put while the goals scroll, so everything that
-says *which* state is on show belongs here.  `%' is doubled because
-a header-line string is read for mode-line constructs."
+says *which* state is on show belongs here -- including the fact
+that a branch is finished, which `pretty\=' announces on its first
+line, where scrolling to the end would carry it out of sight.  `%\='
+is doubled because a header-line string is read for mode-line
+constructs."
   (let* ((ctx (hol-lsp--context-line (plist-get result :context)))
          (err (plist-get result :error))
          (text (concat (format "%s — step %d"
                                (plist-get result :theorem)
                                (plist-get result :step))
                        (and ctx (concat "  " ctx))
+                       (and (hol-lsp--solved-p result) "  ✓ solved")
                        (and err (concat "  ⚠ " err)))))
     (replace-regexp-in-string "%" "%%" text)))
 
@@ -2830,6 +3335,86 @@ stripped, the goal block\='s own indentation being load-bearing."
                  pretty)))
     (replace-regexp-in-string "\\`\n+" "" body)))
 
+(defcustom hol-lsp-goals-side-min-width 160
+  "Put *HOL Goals* beside the script window rather than below it when
+that window is at least this many columns wide.  HOL renders a goal
+at 75 columns, so splitting a window narrower than about twice that
+leaves both halves wrapping.  nil always splits below."
+  :group 'hol :type '(choice integer (const :tag "always below" nil)))
+
+(defun hol-lsp--goals-display-action ()
+  "Where to put *HOL Goals*, given the script window's width.
+inhibit-switch-frame: when the goals buffer has been moved to a
+separate frame (via the user's `display-buffer-alist' or by hand),
+`display-buffer-reuse-window' finds it there and would otherwise
+raise and focus that frame on every auto-follow tick, defeating the
+attempt to edit the script file."
+  (if (and hol-lsp-goals-side-min-width
+           (>= (window-body-width (selected-window))
+               hol-lsp-goals-side-min-width))
+      '((display-buffer-reuse-window display-buffer-in-direction)
+        (direction . right) (window-width . 0.5)
+        (inhibit-switch-frame . t))
+    '((display-buffer-reuse-window display-buffer-below-selected)
+      (inhibit-switch-frame . t))))
+
+(defvar-local hol-lsp--last-render nil
+  "The (HEADER . BODY) last put in this buffer, or nil.")
+
+(defun hol-lsp--segment-doc (sg)
+  "What to say about segment SG, or nil if it says nothing.
+A constant is worth naming by theory as well as typing --
+`listTheory$MAP\=' is the identity question the goals pane cannot
+otherwise answer, since the text is in no file and so nothing to
+hover over.  A variable\='s `ty\=' is already HOL\='s own `name :type\=',
+so it needs no second copy of the name."
+  (let ((kind (plist-get sg :kind))
+        (name (plist-get sg :name))
+        (ty (plist-get sg :ty)))
+    (cond ((null kind) nil)
+          ((and name ty) (format "%s : %s" name ty))
+          (name name)
+          ((and ty (equal kind "bv")) (concat "bound " ty))
+          (ty ty)
+          (t nil))))
+
+(defun hol-lsp--apply-segments (start segs skip)
+  "Annotate the goals buffer from START using SEGS.
+
+SEGS covers the whole of the server\='s `pretty\=', but the buffer holds
+it with the context line removed, so the first SKIP characters of the
+segment stream are not in the buffer at all.  Positions are therefore
+arithmetic rather than a search: the segments concatenate to exactly
+what is in the buffer once `ansi-color-apply-on-region\=' has taken the
+escapes out, which is a property the server\='s own tests hold it to.
+
+Only annotated segments get properties -- most of a goal state is
+punctuation and whitespace.  `help-echo\=' serves the mouse and
+`hol-lsp-doc\=' the eldoc function, from the same string."
+  (let ((seen 0)
+        (limit (point-max)))
+    (dolist (sg (append segs nil))
+      (let* ((text (or (plist-get sg :text) ""))
+             (len (length text))
+             (doc (hol-lsp--segment-doc sg)))
+        (when (and doc (>= seen skip))
+          (let* ((from (+ start (- seen skip)))
+                 (to (+ from len)))
+            ;; A segment past the end would mean the two renders
+            ;; disagreed; annotate nothing rather than the wrong text.
+            (when (<= to limit)
+              (put-text-property from to 'help-echo doc)
+              (put-text-property from to 'hol-lsp-doc doc))))
+        (setq seen (+ seen len))))))
+
+(defun hol-lsp--goals-eldoc (callback &rest _ignored)
+  "Describe the symbol at point in the goals buffer, for eldoc.
+Reads the property `hol-lsp--apply-segments\=' left behind, so it costs
+a text-property lookup and no round trip to the server."
+  (let ((doc (get-text-property (point) 'hol-lsp-doc)))
+    (when doc (funcall callback doc))
+    doc))
+
 (defun hol-lsp--render-goals (result)
   "Render RESULT into *HOL Goals* and display it below the selected
 window.  Preserves ANSI colour escapes from the server's `pretty'
@@ -2843,44 +3428,58 @@ and anything put at the top would scroll out of sight.  An error is
 echoed via `message' as well, a long one being truncated in the
 header."
   (require 'ansi-color)
-  (with-current-buffer (get-buffer-create "*HOL Goals*")
-    (let ((inhibit-read-only t)
-          (ctx (plist-get result :context))
-          (pretty (plist-get result :pretty))
-          (err (plist-get result :error)))
+  (let ((action (hol-lsp--goals-display-action))
+        (header (hol-lsp--goals-header result)))
+   (with-current-buffer (get-buffer-create "*HOL Goals*")
+    (let* ((inhibit-read-only t)
+           (ctx (plist-get result :context))
+           (pretty (plist-get result :pretty))
+           (err (plist-get result :error))
+           (body (and pretty (not (string-empty-p pretty))
+                      (hol-lsp--strip-context pretty ctx)))
+           (segs (plist-get result :segments))
+           ;; `strip-context' only ever removes a prefix, so what the
+           ;; buffer is missing from the front of the segment stream is
+           ;; the difference in length once colour is out of the way.
+           (skip (if (and segs body)
+                     (- (length (ansi-color-filter-apply pretty))
+                        (length (ansi-color-filter-apply body)))
+                   0))
+           (same (equal (cons header body) hol-lsp--last-render)))
+     (if same
+         ;; Nothing has changed, so leave the window where the user
+         ;; left it: an auto-follow tick shouldn't undo their
+         ;; scrolling just because the cursor moved within a tactic.
+         (display-buffer (current-buffer) action)
       (erase-buffer)
       (when err (message "HOL goal-state: %s" err))
       (cond
-       ((and pretty (not (string-empty-p pretty)))
+       (body
         ;; Server rendered via goalFrag.pp_goalstate with the VT100
         ;; backend — ANSI escapes classify bound / free vars.
         (let ((start (point)))
-          (insert (hol-lsp--strip-context pretty ctx))
-          (ansi-color-apply-on-region start (point))))
+          (insert body)
+          (ansi-color-apply-on-region start (point))
+          ;; After the escapes are gone the buffer text is exactly the
+          ;; segments' text, which is what makes the offsets line up.
+          (when segs (hol-lsp--apply-segments start segs skip))))
        (t
         (dolist (g (append (plist-get result :goals) nil))
           (dolist (a (append (plist-get g :asms) nil))
             (insert (format "  %s\n" a)))
           (insert (format "⊢ %s\n\n" (plist-get g :goal))))))
       ;; `hol-lsp-goals-mode' runs `kill-all-local-variables', so the
-      ;; header line has to be set after it rather than before.
+      ;; header line and the render record have to be set after it.
       (hol-lsp-goals-mode)
-      (setq-local header-line-format (hol-lsp--goals-header result))
-      (goto-char (point-max)))
-    ;; inhibit-switch-frame: when the goals buffer has been moved to
-    ;; a separate frame (via user's `display-buffer-alist' or by hand),
-    ;; `display-buffer-reuse-window' finds it there and would otherwise
-    ;; raise+focus that frame on every auto-follow tick, defeating the
-    ;; user's attempt to edit the script file.
-    (let ((win (display-buffer (current-buffer)
-                               '((display-buffer-reuse-window
-                                  display-buffer-below-selected)
-                                 (inhibit-switch-frame . t)))))
-      (when (window-live-p win)
-        (set-window-point win (point-max))
-        ;; Last line at the window bottom, so a state longer than the
-        ;; window shows its end rather than its start.
-        (with-selected-window win (recenter -1))))))
+      (setq-local header-line-format header)
+      (setq-local hol-lsp--last-render (cons header body))
+      (goto-char (point-max))
+      (let ((win (display-buffer (current-buffer) action)))
+        (when (window-live-p win)
+          (set-window-point win (point-max))
+          ;; Last line at the window bottom, so a state longer than
+          ;; the window shows its end rather than its start.
+          (with-selected-window win (recenter -1)))))))))
 
 (defun hol-lsp-show-goal-state ()
   "Ask the HOL LSP server for the goal-state at point.
@@ -2891,8 +3490,13 @@ by default via `hol-map'."
   (unless (hol-lsp--server)
     (user-error "No LSP server for this buffer"))
   (let ((result (hol-lsp--query)))
-    (if result (hol-lsp--render-goals result)
-      (message "No goal state at point"))))
+    (cond (result (hol-lsp--render-goals result))
+          ;; A blocked buffer has no goal state anywhere in it, and
+          ;; saying only "no goal state at point" would send the user
+          ;; looking for the fault in their proof.
+          (hol-lsp--blocked
+           (message "HOL: not compiling this buffer: %s" hol-lsp--blocked))
+          (t (message "No goal state at point")))))
 
 (defcustom hol-lsp-goals-follow-cursor nil
   "If non-nil, the *HOL Goals* buffer auto-refreshes on cursor
@@ -2928,6 +3532,10 @@ called for the current buffer.  Bails out cheaply in non-HOL
 buffers via the `memq' / server check."
   (when (and hol-lsp-goals-follow-cursor
              (memq major-mode hol-lsp-server-modes)
+             ;; Nothing to follow in a buffer the server isn't
+             ;; compiling, and each tick would be a round trip for a
+             ;; null answer.
+             (not hol-lsp--blocked)
              (hol-lsp--server))
     (when hol-lsp--goals-timer (cancel-timer hol-lsp--goals-timer))
     (setq hol-lsp--goals-timer

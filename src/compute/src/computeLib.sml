@@ -324,7 +324,8 @@ local
          empty = copy bool_compset,
          pp = fn _ => "<compset>"}
 in
-  fun the_compset () = Context.Data.get compset_slot (Context.snapshot())
+  fun the_compset_of ctxt = Context.Data.get compset_slot ctxt
+  fun the_compset () = the_compset_of (Context.snapshot())
   val put_compset = Context.Data.write compset_slot
   val upd_compset = Context.Data.modify compset_slot
 end
@@ -340,7 +341,9 @@ fun del_funs thms = upd_compset (scrub_thms thms)
 fun EVAL_CONV t = CBV_CONV (the_compset()) t;
 fun EVALn_CONV n t = CBVn_CONV n (the_compset()) t
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
-val EVAL_TAC  = Tactic.CONV_TAC EVAL_CONV;
+(* CBV_CONV takes its compset explicitly, so the tactic reads the one in
+   the context it is run in rather than the ambient one *)
+fun EVAL_TAC g ctxt = Tactic.CONV_TAC (CBV_CONV (the_compset_of ctxt)) g ctxt
 
 infix Orelse;
 fun (p Orelse q) x = p x orelse q x;
@@ -352,7 +355,11 @@ fun OR [] = K false
 fun RESTR_EVAL_CONV clist =
   Lib.with_flag (stoppers,SOME (OR clist)) EVAL_CONV;
 
-val RESTR_EVAL_TAC  = Tactic.CONV_TAC o RESTR_EVAL_CONV;
+fun RESTR_EVAL_TAC clist g ctxt =
+    Tactic.CONV_TAC
+      (Lib.with_flag (stoppers, SOME (OR clist))
+                     (CBV_CONV (the_compset_of ctxt)))
+      g ctxt
 val RESTR_EVAL_RULE = Conv.CONV_RULE o RESTR_EVAL_CONV;
 
 (*---------------------------------------------------------------------------

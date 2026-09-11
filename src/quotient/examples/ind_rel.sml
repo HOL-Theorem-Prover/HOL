@@ -48,7 +48,7 @@ fun QCONV c tm = c tm handle _ => REFL tm;
 local
     val bool = (==`:bool`==)
 in
-    fun SUPPOSE_TAC new_claim current_goal =
+    fun SUPPOSE_TAC new_claim current_goal (_ : Context.t) =
         if type_of new_claim = bool
         then
           ([(new_claim::(fst current_goal),snd current_goal),
@@ -69,20 +69,21 @@ end
   adding them to the assumptions.
 *)
 
-fun ADD_STRIP_ASSUMS_THEN {new_assumptions = [], tactic} (asms,goal) =
-      tactic (asms,goal)
+fun ADD_STRIP_ASSUMS_THEN {new_assumptions = [], tactic} (asms,goal)
+                          ctxt =
+      tactic (asms,goal) ctxt
   | ADD_STRIP_ASSUMS_THEN {new_assumptions = (claim::rest), tactic}
-                          (asms,goal) =
+                          (asms,goal) ctxt =
       if exists (aconv claim) asms
           then ADD_STRIP_ASSUMS_THEN
                 {new_assumptions = rest,
                  tactic = tactic}
-                (asms,goal)
+                (asms,goal) ctxt
       else (SUPPOSE_TAC claim THENL
             [((POP_ASSUM STRIP_ASSUME_TAC) THEN
               (ADD_STRIP_ASSUMS_THEN {new_assumptions=rest,tactic=tactic})),
              ALL_TAC])
-           (asms,goal)
+           (asms,goal) ctxt
 
 (*
    use_thm : {theorem:thm, thm_tactic:(thm -> tactic)} -> tactic
@@ -107,7 +108,7 @@ from utilsLib.MP_IMP_TAC:
       [A] t2
 *)
 
-fun MP_IMP_TAC imp_thm (thisgoal as (asms,goal)) =
+fun MP_IMP_TAC imp_thm (thisgoal as (asms,goal)) ctxt =
     if is_imp (concl imp_thm) then
       if aconv (snd (dest_imp (concl imp_thm))) goal
       then
@@ -115,13 +116,13 @@ fun MP_IMP_TAC imp_thm (thisgoal as (asms,goal)) =
           {theorem = imp_thm,
            thm_tactic =
            fn imp_thm =>
-              fn (asms,goal) =>
+              fn (asms,goal) => fn _ (* ctxt *) =>
                  ([(asms,fst(dest_imp(concl imp_thm)))],
                   fn [thm] => MP imp_thm thm
                   | _ => raise mk_HOL_ERR
                                "define_inductive_relations" "MP_IMP_TAC"
                                "invalid application")}
-          thisgoal
+          thisgoal ctxt
       else raise mk_HOL_ERR "define_inductive_relations" "MP_IMP_TAC"
                  "theorem doesn't imply goal"
     else raise mk_HOL_ERR "define_inductive_relations" "MP_IMP_TAC"

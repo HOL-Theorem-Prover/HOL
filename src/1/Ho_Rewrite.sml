@@ -68,7 +68,8 @@ local
          empty = empty_rewrites,
          pp = fn _ => "<Ho_Rewrite.implicit>"}
 in
-  fun implicit () = Context.Data.get implicit_slot (Context.snapshot())
+  fun implicit_of ctxt = Context.Data.get implicit_slot ctxt
+  fun implicit () = implicit_of (Context.snapshot())
   val set_implicit = Context.Data.write implicit_slot
   val upd_implicit = Context.Data.modify implicit_slot
 end
@@ -142,8 +143,12 @@ fun ONCE_ASM_REWRITE_RULE L th = ONCE_REWRITE_RULE((map ASSUME(hyp th))@ L) th
 fun GEN_REWRITE_TAC f rws = CONV_TAC o GEN_REWRITE_CONV' f rws
 val PURE_REWRITE_TAC = GEN_REWRITE_TAC TOP_DEPTH_CONV empty_rewrites
 val PURE_ONCE_REWRITE_TAC = GEN_REWRITE_TAC ONCE_DEPTH_CONV empty_rewrites
-fun REWRITE_TAC thl = GEN_REWRITE_TAC TOP_DEPTH_CONV (implicit()) thl
-fun ONCE_REWRITE_TAC thl = GEN_REWRITE_TAC ONCE_DEPTH_CONV (implicit()) thl
+(* see the note in Rewrite.sml: the ASM_ and FILTER_ variants build
+   these inside an ASSUM_LIST callback, hence inside the proof *)
+fun REWRITE_TAC thl g c =
+    GEN_REWRITE_TAC TOP_DEPTH_CONV (implicit_of c) thl g c
+fun ONCE_REWRITE_TAC thl g c =
+    GEN_REWRITE_TAC ONCE_DEPTH_CONV (implicit_of c) thl g c
 fun PURE_ASM_REWRITE_TAC L = ASSUM_LIST (fn l => PURE_REWRITE_TAC (l @ L))
 fun ASM_REWRITE_TAC thl = ASSUM_LIST (fn asl => REWRITE_TAC (asl @ thl))
 fun PURE_ONCE_ASM_REWRITE_TAC L = ASSUM_LIST(fn l=>PURE_ONCE_REWRITE_TAC(l@L))

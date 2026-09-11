@@ -125,7 +125,7 @@ val _ = check "Rejected export_rule_induction is not persisted"
               (fn () => export_rule_induction nm)
 end
 
-val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln "tr")),
+val _ = shouldfail {testfn = quietly (in_repl_mode (runtac (xHol_reln "tr"))),
                     printresult = (fn (th,_,_) => thm_to_string th),
                     printarg = K "With Unicode should fail",
                     checkexn = is_struct_HOL_ERR "IndDefLib"}
@@ -141,7 +141,7 @@ val _ = if (in_repl_mode Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
         then OK()
         else die "FAILED"
 
-val _ = shouldfail { testfn = quietly (in_repl_mode (xHol_reln "tr")),
+val _ = shouldfail { testfn = quietly (in_repl_mode (runtac (xHol_reln "tr"))),
                      printresult = (fn (th,_,_) => thm_to_string th),
                      printarg = K "Double implication should fail",
                      checkexn = (fn(HOL_ERR herr) =>
@@ -156,7 +156,7 @@ val _ = diemode := Remember failcount
 local
   fun itf n pat t =
       let
-        val (sgs, _) = VALID (isolate_to_front n pat) ([], t)
+        val (sgs, _) = runtac (VALID (isolate_to_front n pat)) ([], t)
       in
         case sgs of
             [([], t')] => t'

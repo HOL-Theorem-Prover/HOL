@@ -20,7 +20,7 @@ fun Cases_on_v2w t =
 
 (* ------------------------------------------------------------------------- *)
 
-fun qm l = Feedback.trace ("metis", 0) (metisLib.METIS_TAC l)
+fun qm l = Tactical.trace_tac ("metis", 0) (metisLib.METIS_TAC l)
 
 fun new_def s x = Definition.new_definition (s ^ "_def", boolSyntax.mk_eq x)
 

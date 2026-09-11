@@ -36,7 +36,7 @@ type ('a,'b) gtm =
       perkey : string -> 'b -> 'a}
 
 local
-val bpwsu = "BasicProvers.with_simpset_updates "
+val bpwsu = "BasicProvers.with_simpset_updates_tac "
 in
 fun gen_mktm (r as {values,combine,null,perkey}) attrs =
     case attrs of

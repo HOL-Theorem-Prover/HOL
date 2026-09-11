@@ -322,8 +322,9 @@ local
          empty = default_heuristic_fun,
          pp = fn _ => "<pmatch_heuristic>"}
 in
-  fun pmatch_heuristic () =
-      Context.Data.get pmatch_heuristic_slot (Context.snapshot())
+  fun pmatch_heuristic_of ctxt =
+      Context.Data.get pmatch_heuristic_slot ctxt
+  fun pmatch_heuristic () = pmatch_heuristic_of (Context.snapshot())
   val set_pmatch_heuristic = Context.Data.write pmatch_heuristic_slot
   fun with_pmatch_heuristic v f x =
       Context.Data.with_slot_value pmatch_heuristic_slot v f x

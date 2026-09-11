@@ -62,7 +62,9 @@ fun get_induction_for_def def = let
   val goal1 = ind |> concl |> dest_imp |> snd
   val goal2 = list_mk_conj (map (fst o snd) res)
   val goal = mk_imp(goal1,goal2)
-  val lemma = snd ((REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ([],goal)) []
+  val lemma =
+      snd ((REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [])
+             ([],goal) (Context.snapshot())) []
   val ind = MP lemma (ind |> UNDISCH_ALL) |> DISCH_ALL |> GENL (map fst res)
   in ind end handle HOL_ERR _ =>
   failwith "unable to construct induction theorem from TypeBase info"
@@ -527,7 +529,7 @@ fun to_deep def = let
       val goal = concl t |> rand
       val tac = match_mp_tac t \\ rw [] \\ once_rewrite_tac [side_def]
                 \\ fs [name_def] \\ CCONTR_TAC \\ fs [] \\ fs [] \\ fs [name_def]
-      val lemma = snd (tac ([],goal)) []
+      val lemma = snd (tac ([],goal) (Context.snapshot())) []
       in lemma end handle HOL_ERR _ => side_def
   val side_is_true =
     aconv (side_def |> SPEC_ALL |> concl |> rand) T handle HOL_ERR _ => false

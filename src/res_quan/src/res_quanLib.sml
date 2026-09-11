@@ -382,13 +382,14 @@ and RESQ_RES_THEN (ttac:thm_tactic) (asl,g) =
     end
 end;
 
-fun RESQ_IMP_RES_TAC th g =
-    RESQ_IMP_RES_THEN (REPEAT_GTCL RESQ_IMP_RES_THEN STRIP_ASSUME_TAC) th g
-    handle _ => ALL_TAC g;
+fun RESQ_IMP_RES_TAC th g ctxt =
+    RESQ_IMP_RES_THEN (REPEAT_GTCL RESQ_IMP_RES_THEN STRIP_ASSUME_TAC)
+                      th g ctxt
+    handle _ => ALL_TAC g ctxt;
 
-fun RESQ_RES_TAC g =
-    RESQ_RES_THEN (REPEAT_GTCL RESQ_IMP_RES_THEN STRIP_ASSUME_TAC) g
-    handle _ => ALL_TAC g;
+fun RESQ_RES_TAC g ctxt =
+    RESQ_RES_THEN (REPEAT_GTCL RESQ_IMP_RES_THEN STRIP_ASSUME_TAC) g ctxt
+    handle _ => ALL_TAC g ctxt;
 
 (* --------------------------------------------------------------------- *)
 (* RESQ_REWRITE1_TAC : thm_tactic                                        *)

@@ -105,14 +105,14 @@ val _ = shouldfail {
       checkexn = is_struct_HOL_ERR "metisTools",
       printarg = K "Check correct failure on outdated const in thms",
       printresult = goalpr,
-      testfn = fn ths => METIS_TAC ths ([], “p ==> q”)
+      testfn = fn ths => runtac (METIS_TAC ths) ([], “p ==> q”)
     } [ASSUME c]
 
 val _ = shouldfail {
       checkexn = is_struct_HOL_ERR "metisTools",
       printarg = K "Check correct failure on outdated const in goal",
       printresult = goalpr,
-      testfn = METIS_TAC []
+      testfn = runtac (METIS_TAC [])
     } ([], mk_imp(c, mk_var("p", bool)))
 
 val _ = Process.exit Process.success;

@@ -334,7 +334,9 @@ fun get_induction_for_def def = let
   val goal1 = ind |> concl |> dest_imp |> snd
   val goal2 = list_mk_conj (map (fst o snd) res)
   val goal = mk_imp(goal1,goal2)
-  val lemma = snd ((REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ([],goal)) []
+  val lemma =
+      snd ((REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [])
+             ([],goal) (Context.snapshot())) []
   val ind = MP lemma (ind |> UNDISCH_ALL) |> DISCH_ALL |> GENL (map fst res)
   in ind end handle HOL_ERR _ =>
   failwith "unable to construct induction theorem from TypeBase info"

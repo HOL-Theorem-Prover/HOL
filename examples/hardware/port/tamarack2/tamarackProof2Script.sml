@@ -60,7 +60,8 @@ fun FILTER_IMP_RES_THEN f ttac =
           (fn thm => if f (concl thm) then (ttac thm) else ALL_TAC);
 fun FILTER_IMP_RES_TAC f = FILTER_IMP_RES_THEN f ASSUME_TAC;
 
-val MATCH_GOAL_TAC : thm_tactic = fn impthm => fn (asl,tm):goal =>
+val MATCH_GOAL_TAC : thm_tactic =
+    fn impthm => fn (asl,tm):goal => fn _ (* ctxt *) =>
         let
         val match = ((PART_MATCH (snd o dest_imp)) impthm) tm
         in

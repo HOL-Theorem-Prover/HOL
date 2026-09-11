@@ -20,10 +20,37 @@ practical guide to trying it out; the protocol details live in
   detecting tactic errors.
 - Server capabilities advertised: `textDocumentSync`, `hoverProvider`,
   `definitionProvider`, `referencesProvider`.  Plus LSP extensions:
-  `$/setConfig` (elabOn mode, holdep behaviour), `$/eval` (streamed
+  `$/setConfig` (elabOn mode, holdep behaviour, hover width),
+  `$/eval` (streamed
   arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
   below), `$/cancelRequest`, `$/compileProgress` /
-  `$/compileCompleted` / `$/compileInterrupted`.
+  `$/compileCompleted` / `$/compileInterrupted` /
+  `$/compileBlocked`, `$/hol/retryCompile`.
+- Server capabilities also cover `documentSymbolProvider`,
+  `workspaceSymbolProvider` and `completionProvider`, so an editor's
+  outline, symbol search and completion work with no client-side code
+  — see "Symbols, completion and their scope".
+- **Unavailable ancestors stop the file.**  A script that names an
+  ancestor or library the server cannot get — not built yet, raising
+  on load, or stale against a HOL that has moved on — gets no compile
+  at all: there is nothing to elaborate it against, so every name it
+  takes from that dependency would draw its own diagnostic, at the
+  price of the file's whole elaboration.  The test is whether the
+  structure the header opens is actually in the namespace, not whether
+  a load function raised: a module can load and bind a structure of
+  some other name, and `loadPlan` skips anything already marked in
+  `Meta.loadedMods`, so a retry after a failed *use* raises nothing at
+  all.  Anything already in the running heap is in the namespace
+  without ever being in `loadedMods`, so it passes.
+  The server publishes the load failures against the
+  header entries that asked for them, sends `$/compileBlocked`, and
+  answers `null` to `$/hol/goalState` until the file's declared
+  dependency list changes.  Editing that list — `Ancestors` / `Libs`,
+  or a leading top-level `open` — is what makes it try again; so does
+  `$/hol/retryCompile`, for when the ancestor has been built outside
+  the editor and the header is already right — `M-h M-C` in the
+  shipped eglot client, "HOL: Compile the active script again" in
+  hol4-vscode.
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so
@@ -41,6 +68,187 @@ advertising `textDocumentSync`, `hoverProvider`,
 `window/logMessage "started"` notification; the `shutdown` response
 (`{"id":2,"result":null}`); and a clean exit 0.
 
+## Hover
+
+Hover on an SML identifier gives its type and, when the identifier
+names something the file namespace can resolve, its **value** --
+rendered by HOL's own pretty printers, so a theorem shows its
+statement:
+
+```
+val loc: Thm.thm = |- 1 + 1 = 2
+val n: int = 42
+val pair: int * Thm.thm = (42, |- 1 + 1 = 2)
+```
+
+Three things make that work, and each of them limits it:
+
+- `lsp/pretty_printers_init.ML` installs Poly/ML pretty printers for
+  `thm`, `term` and `hol_type` in the LSP session.  Without them
+  `PolyML.NameSpace.Values.print` renders a theorem as `?`, which is
+  why theorems used to be looked up in DB *by name* -- a path that
+  cannot reach a `[local]` theorem, nor a value that merely contains
+  one.  DB is still the fallback for a name that is not in scope at
+  all.
+- The compile thread's file-namespace layer is thread-local, and a
+  hover is answered on its own thread, so the hover installs the
+  captured layer (`nsLayer`) first.  Without that step the only values
+  it can see are the ones the LSP boot session left in
+  `globalNameSpace`, and that session `open`s nothing on purpose.
+- A value is printed only for an identifier whose declaration is
+  external (Poly/ML gives it id 0) or is one of the buffer's top-level
+  declarations, matched by comparing `PTdeclaredAt` against the
+  outline's `selSpan`s.  A function parameter or a `let`-bound name is
+  in no namespace, and a same-named top-level binding is a different
+  thing entirely, so those get their type only.
+
+Dotted names (`numSyntax.plus_tm`) are walked a component at a time
+through `PolyML.NameSpace.Structures.contents`, because Poly/ML's
+value tables are flat.
+
+Contents go out as markdown in a fenced code block.  Unfenced, a
+client treats single newlines as spaces and reflows the statement in a
+proportional font, which throws away every break the pretty printer
+just chose.
+
+### Positions
+
+A hover's range, like every position on the wire, counts whatever
+`positionEncoding` was negotiated: bytes for a client that offers
+`utf-8` (eglot), utf-16 code units otherwise (anything built on
+`vscode-languageclient`, which offers nothing else).
+
+HOL's own positions -- `locn.LocA` columns, and the column a
+`(*#loc*)` pragma hands to its parser -- count **bytes**, always.  Code
+that works in them therefore has to stay in bytes
+(`LSPExtension.getLineColBytes` / `fromLineColBytes`) and convert once,
+where a range leaves for the client.  Mixing the two is invisible under
+utf-8, where a byte offset and a column agree, and skews every position
+after the first non-ASCII character on the line under utf-16 -- which
+is how it survived: the test suite advertised utf-8 throughout, as
+eglot does.
+
+### Width
+
+Hover text is laid out at 100 columns until a client says otherwise:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"$/setConfig",
+ "params":{"hoverWidth":72}}
+```
+
+It has to come from the client -- only the client knows how wide its
+hover box is, and a statement broken to some other width breaks in the
+wrong places.  Widths outside 20-500 are ignored and logged.  The accepted width is echoed to
+`window/logMessage` as `hoverWidth = N`, so a client can confirm it
+arrived -- a client that never sends one leaves hovers at 100, which
+looks the same as the width being ignored.  In VS Code this is the
+`hol4-mode.lsp.hoverWidth` setting, defaulting to 50, because the
+extension API does not expose a hover box's width and erring narrow
+only costs line breaks whereas erring wide makes the box scroll; under
+eglot, hovers land in the frame-wide echo area, so
+`hol-lsp-hover-width` is nil (leave it at 100) unless you set a number
+or the symbol `frame`.
+
+## The heap a directory asks for
+
+`bin/hol lsp` picks its heap the way the REPL does: the `HOLHEAP` of
+the `Holmakefile` in the server's working directory, else
+`bin/hol.state`.  That is usually how a project gets libraries the
+core build sequence does not provide — `words`, `real`,
+`binary_ieee` and friends — so the heap matters as much as the
+binary.
+
+If that heap **cannot be loaded** — deleted, or built by a `bin/hol`
+that has since been rebuilt, which every `polyc` does — the server
+falls back to `bin/hol.state` and sends one `window/showMessage`
+naming the heap, the reason, and the fix (`Holmake` in that
+directory).  Whatever the heap was supplying then shows up as an
+unavailable ancestor, with the usual `cannot load …` diagnostics.
+
+It did not always do this: it exited instead, which a client can only
+report as "Server died", with no diagnostics, no `$/compileBlocked`,
+and nothing in the UI naming the heap.  Every other subcommand still
+dies on an unloadable heap — they have a terminal to complain to, and
+a build that quietly used a different heap would be worse than a
+failure.
+
+Note that **which `bin/hol` serves a buffer is a client decision**, and
+the eglot client resolves it per directory from
+`.hol/make-deps/lastmaker` — the Holmake that last built that
+directory — not from `$HOLDIR`.  A directory built by another tree is
+served by that tree's server, silently.  The first line of the eglot
+log says which one; `cat .hol/make-deps/lastmaker` says the same
+thing without starting anything.
+
+## Proof checking
+
+Elaboration does not run tactics: `holide.ML` swaps in a prover that
+mints an oracle-tagged theorem, which is what makes compilation fast.
+With checking on, the server instead *queues* each proof and a worker
+pool (`lsp/deferred_proofs.ML`, on HOL's `Future`) replays them, one
+cancellable group per proof, one worker per processor capped at eight.
+
+The server starts with it off and both shipped clients switch it on:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"$/setConfig",
+ "params":{"checkProofs":true}}
+```
+
+It takes effect without a restart.  Switching it **on** re-elaborates
+every open script from byte 0 -- the pass that already ran cheated its
+proofs and enqueued nothing, so without that nothing would happen
+until the next edit.  Switching it **off** cancels the running proofs
+and drops the pool's diagnostics, which would otherwise sit there
+describing proofs no longer being checked.  `--lsp-check-proofs` still
+works and only sets the initial value, which is what the tests use.
+
+In VS Code it is `hol4-mode.lsp.checkProofs`; under eglot it is
+`hol-lsp-check-proofs`, with `hol-lsp-toggle-check-proofs` to flip it
+for the running server.  Turn it off on a machine you would rather
+keep for yourself: the pool runs the proofs for real.
+
+Three of the pool's verdicts are diagnostics, keyed by theorem name
+and squiggled on the theorem's own name:
+
+| verdict | severity | means |
+|---|---|---|
+| `Failed` | error | the replay did not go through.  A real build would have raised out of `store_thm_at`, so nothing below it is trustworthy. |
+| `Suspended` | warning | the proof is *correct*; our model of the file was wrong.  A real build stashes such a theorem instead of saving it, so the declarations below were elaborated as though it had been saved.  Names the subgoals. |
+| `Diverged` | warning | the proof went through but produced extra hypotheses, so what elaboration stood in for was not what the proof gives. |
+
+The other states are not diagnostics: `Proved` and `Cheated` are not
+complaints, and `Checking` is not one yet.
+
+These entries are **not** cleared by a fresh compile, unlike the
+walker's.  The pool owns their lifetime and announces every change,
+the `Cheated` of a dropped proof included, so clearing them on a
+compile that reuses its entries would lose a squiggle with nothing
+left to restore it.  A proof that gets fixed therefore clears in two
+steps: the edit drops the entry (`cheated`), and the re-elaborated
+proof settles as `proved`.
+
+Every change is also announced on `$/proofStates` as a transition --
+`checking`, then a verdict, `cheated` when an entry is dropped.
+
+Both shipped clients consume it as a **tally**, shown in the mode line
+(`HOL[12/37]`, `HOL[37 ok]`, `HOL[35/37 2!]`) and in the VS Code
+status bar (`HOL LSP — proofs 12/37`).  A count rather than a bar,
+because the states regress: a proof that suspends makes the server
+re-elaborate and drops the entries below it, so a bar would run
+backwards while a count falling from 30 to 12 reads as what it is.
+And a tally rather than per-declaration marks first, because the
+proofs settle in whatever order the workers finish -- what a per-proof
+mark cannot answer is "is it done?".
+
+The tally is also the only sign of a file whose proofs all pass: no
+diagnostics, nothing in the gutter, so without it a session that
+checked 61 proofs looks identical to one that checked none.  There is
+deliberately no full-state message: the state would have to be
+sampled and only then sent, so a worker settling in between would have
+its newer verdict overwritten by the older sample.
+
 ## Goal-state at cursor (`$/hol/goalState`)
 
 Custom LSP request that returns the goal-state for a cursor position
@@ -56,7 +264,9 @@ per-theorem cache so subsequent queries at nearby cursors reuse work.
   "method": "$/hol/goalState",
   "params": {
     "textDocument": {"uri": "file:///path/to/Script.sml"},
-    "position": {"line": <0-based>, "character": <0-based UTF-8 byte offset>}
+    "position": {"line": <0-based>, "character": <0-based, in the
+                 negotiated encoding>},
+    "width": <optional: column width to render `pretty` at; default 75>
   }
 }
 ```
@@ -73,6 +283,7 @@ when the theorem statement can't be parsed).  Otherwise:
   "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
   "pretty": "<full REPL-style render>",
   "context": ["<combinator tag>", ...],
+  "status": "ok" | "pending",
   "error": <string or null>
 }
 ```
@@ -82,6 +293,14 @@ when the theorem statement can't be parsed).  Otherwise:
   `THEN1` don't advance it).
 - `goals` — structured per-subgoal render for clients that want to
   format goals themselves.
+- `width` — the column width to break lines at, which only the client
+  knows: it is the width of the pane the answer is going into.  Both
+  `pretty` and the strings in `goals` respect it.  Omit it for the
+  75 columns HOL's own goalstack printing uses.  The shipped clients
+  measure: eglot from `window-body-width` of the *HOL Goals* window,
+  hol4-vscode from a hidden monospace ruler in the webview, re-asking
+  when the pane is resized.
+
 - `pretty` — the whole state rendered by HOL's `goalFrag.pp_goalstate`
   via the VT100 backend, so bound / free variables carry ANSI colour
   escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
@@ -95,6 +314,16 @@ when the theorem statement can't be parsed).  Otherwise:
   one last.  Matching the exact strings is also how a client can
   strip the line back out of `pretty` — a goal may itself begin with
   a `[`.
+- `status` — `"pending"` when the answer is provisional because the
+  file's own compile hasn't finished.  The walker compiles each
+  tactic against the file's namespace, so until the file's `open`s
+  have run the tactic names aren't there and nothing can be applied;
+  goal-state requests are answered during a compile on purpose (see
+  `goalStateAtPos`), so a client should show what it gets but not
+  treat it as settled.  A tactic whose source doesn't compile never
+  produces an `error` either way: the file's compile reports the real
+  message against that very text, and the walker would only duplicate
+  and misdescribe it.
 - `error` — non-null when the walker gave up (e.g. wall-clock budget
   exceeded); `goals` / `pretty` are empty and clients should render
   the message in place of the state.  A mid-walk partial state is
@@ -109,15 +338,21 @@ when the theorem statement can't be parsed).  Otherwise:
   to `M-h M-g`.  The *HOL Goals* window is scrolled to the buffer's
   end, the current goal being last and the subgoal count printed
   after them, with `theorem`, `step`, `context` and `error` in the
-  window's `header-line-format` so they stay visible.
+  window's `header-line-format` so they stay visible.  An empty
+  `goals` with no `error` means the focused subgoal(s) are proved —
+  what `pretty` announces on its first line, which scrolling to the
+  end would carry out of sight — so the header shows that too.
+  The pane goes beside the script window when that window is at
+  least `hol-lsp-goals-side-min-width` columns (default 160, so both
+  halves clear HOL's 75-column render), and below it otherwise.
   Set `hol-lsp-goals-follow-cursor` non-nil to make
   `*HOL Goals*` auto-refresh on cursor movement (debounced via
   `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
   `ansi-color-apply-on-region` on the inserted `pretty` text so the
   bound / free variable colouring survives.
-- **VS Code** — the `lsp-integration` branch of
+- **VS Code** —
   [hol4-vscode](https://github.com/HOL-Theorem-Prover/hol4-vscode)
-  ships a client and a HOL Goals pane; see
+  ships a client and a HOL Goals pane on `main`; see
   [`vscode-setup.md`](vscode-setup.md) for a step-by-step install.
   To drive `$/hol/goalState` yourself,
   `client.sendRequest("$/hol/goalState", params)`
@@ -128,11 +363,18 @@ when the theorem statement can't be parsed).  Otherwise:
   ANSI-to-HTML converter (e.g. `ansi_up` on npm) plus a small CSS
   palette in the webview.
 
-The server negotiates `positionEncoding: "utf-8"` (LSP 3.17) during
-`initialize`, so `position.character` is a byte offset within the
-line for both `textDocument/hover` and `$/hol/goalState`.  Clients
-that assume the LSP default of UTF-16 will send wrong offsets on
-lines containing multibyte characters.
+The server picks its position encoding (LSP 3.17) from the client's
+`general.positionEncodings` at `initialize`: `utf-8` when that is on
+offer, because the server's own offsets are bytes and nothing then has
+to be converted, and `utf-16` otherwise — including for a client that
+offers nothing, which is what the spec says its silence means.  Either
+way `position.character` counts in the encoding the `initialize` reply
+names, in both directions and for every request, so a client need only
+speak the units it already has.
+
+Note for a client built on `vscode-languageclient`: it advertises only
+`utf-16` and throws on any other answer, so it gets `utf-16` and must
+not translate positions itself.
 
 ## Emacs
 
@@ -152,8 +394,8 @@ Eglot documentation: `M-x info` → `(eglot)`.  Minimal `init.el`:
 (require 'hol-mode)
 
 ;; Registers the server for both holscript-mode and its tree-sitter
-;; variant holscript-ts-mode, installs the HOLHEAP-clustered project
-;; function, and auto-starts eglot from each mode hook.
+;; variant holscript-ts-mode, gives each buffer its own LSP project,
+;; and auto-starts eglot from each mode hook.
 (hol-lsp-enable)
 
 ;; Optional: *HOL Goals* follows point.
@@ -178,6 +420,93 @@ add an `eglot-server-programs` entry, call `eglot-ensure`, or send
 - `elabOn` already defaults to `Change`, so setting it to `1`
   changes nothing; see Troubleshooting for the case where you want
   `2`.
+
+#### One server per buffer
+
+`hol-lsp-enable` gives every script buffer its own LSP project, so
+every buffer gets its own server process.  This is not a tuning
+choice; a server cannot be re-aimed at a second file.  A file's
+ancestors have to be present in the theory graph, only loading puts
+them there, and loading a theory seals it (`Theory.load_complete`) —
+so an ancestor already loaded for the first file can neither be
+re-read for the second nor withdrawn.  Serve two files from one
+process and the second one's goals and hovers are quietly wrong.
+The server says so via `window/showMessage` if a client opens a
+second file anyway.
+
+Two consequences worth knowing:
+
+- **Each server holds a HOL heap.**  Ten open script buffers means
+  ten `bin/hol lsp` processes.  `hol-lsp-autoshutdown` (default `t`)
+  therefore shuts a buffer's server down when the buffer is killed,
+  set buffer-locally over `eglot-autoshutdown` so other languages
+  keep your own policy.
+- **`M-x eglot` is not equivalent.**  It connects one server for the
+  current project and adopts every same-mode buffer under it, which
+  is exactly the arrangement that breaks.  Let `hol-lsp-enable`'s
+  hook start the server.
+
+#### What one file's server can see of another
+
+Two files edited at once, in two servers, are completely isolated:
+neither server can read the other's buffer, and no unsaved edit in one
+can change any answer given for the other.  This holds whichever way
+the dependency runs -- a library that opens this script's theory, or a
+script that opens that library -- because a server has exactly three
+inputs and none of them is another editor buffer: its own client's
+text, the Holmake-built artifacts on disk, and `bin/hol.state`.
+
+Isolation is not freshness, and the difference bites:
+
+- **A server is pinned to the artifacts it first loaded.**  `Meta.load`
+  records a module as loaded and never re-reads it, and the server
+  keeps that record across recompiles on purpose -- re-reading a
+  theory is impossible once it is sealed.  So rebuilding a dependency
+  with `Holmake` does *not* update an already-running server.  Restart
+  it.
+- **The exception is a dependency that was missing.**  One that failed
+  to resolve is genuinely re-read, which is what `$/hol/retryCompile`
+  ("Compile the active script again", `M-h M-C`) is for.  A
+  *half-built* dependency -- `.uo` present, a file it names absent --
+  is the awkward case: nothing loaded but the module is marked, and
+  only a restart clears it.
+- **Stale locations look like cross-talk.**  Go-to-definition into a
+  theory, and hover on a theorem, report the path, line and statement
+  recorded in the *built* theory.  Edit that script in another window
+  and the numbers drift, though nothing was shared.
+- **`Holmakefile` `INCLUDES` are read once per directory per server.**
+  Add one and restart.
+
+Isolation is a property of the process boundary, not of the code: two
+files served by one process would share the whole of HOL's `Context`,
+the sealed-theory set and `Meta.loadedMods`.  The server therefore
+declines to compile a file it is not bound to, so the guarantee does
+not rest on the client starting one process per script.  A consequence
+worth stating: `.sig` files and library `.sml` files get no IDE
+features at all.
+
+#### Symbols, completion and their scope
+
+`textDocument/documentSymbol` is answered from the parser, not from
+the last compile, so the outline works on a file that does not compile
+-- including one the server has refused to compile because an ancestor
+is missing.
+
+`workspace/symbol` and `textDocument/completion` answer from HOL:
+theorems of the theories this server loaded, and beyond them any
+theory built in the project, read from its `Theory.dat` without being
+loaded.  The two are distinguished, because only the first is usable
+as it stands: a hit from the second is marked *not an ancestor*, and
+using it means adding the theory to `Ancestors` first.  Neither
+scans sources that have never been built; declarations of the buffers
+you have open are included, so something typed a minute ago is still
+findable.
+
+There is no `textDocument/references`.  It was advertised for a long
+time with no handler behind it; an honest implementation is not
+available, since Poly records references only within the compilation
+unit it is compiling and HOL keeps no index of which proofs cite a
+theorem.
 
 Then open a `*Script.sml` file.  Diagnostics appear as flymake
 underlines; `M-x eldoc` (or `eldoc-mode`) shows hover at point;
@@ -218,10 +547,19 @@ Lsp-mode documentation:
 (add-hook 'holscript-ts-mode-hook #'lsp)
 ```
 
+This recipe shares one server across every script under a workspace
+root, which is the arrangement described in **One server per buffer**
+above: the second file you open gets wrong goals and dead hovers, and
+the server will warn you about it.  Only the eglot setup arranges a
+server per buffer today.  With lsp-mode, open one file per session, or
+give each file its own workspace root.
+
 ## Vim / Neovim
 
 The repo's `tools/editor-modes/vim/` mode is a REPL-oriented setup
-without LSP client integration.  Two known-good LSP clients:
+without LSP client integration.  Two known-good LSP clients.  Both
+attach one server per `rootPatterns`/root match, so the caveat in
+**One server per buffer** applies to them as it does to lsp-mode.
 
 ### With coc.nvim
 

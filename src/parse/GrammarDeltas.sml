@@ -264,6 +264,8 @@ val skid_decode = pair_decode (string_decode, kname_decode)
 fun user_delta_encode ud =
     case ud of
       ADD_ABSYN_POSTP {codename} => tag_encode "AAPP" String codename
+    | ADD_USER_STATE {codename,delta} =>
+        tag_encode "AUS" (pair_encode(String, fn s => s)) (codename,delta)
     | ADD_NUMFORM (c,s) =>
         tag_encode "AN" (pair_encode(Char,option_encode String)) (c,s)
     | ADD_STRLIT {tmnm,ldelim} =>
@@ -293,6 +295,8 @@ fun user_delta_encode ud =
 
 val user_delta_decode =
   (tag_decode "AAPP" string_decode >> (fn s => ADD_ABSYN_POSTP{codename = s}))||
+  (tag_decode "AUS" (pair_decode(string_decode, SOME)) >>
+              (fn (c,d) => ADD_USER_STATE{codename = c, delta = d})) ||
   (tag_decode "AN" (pair_decode(char_decode, option_decode string_decode)) >>
               ADD_NUMFORM) ||
   (tag_decode "AS" (pair_decode(string_decode,string_decode)) >>

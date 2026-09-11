@@ -15,12 +15,15 @@ signature Parse = sig
 
   type grammarDB_info = type_grammar.grammar * term_grammar.grammar
   val grammarDB : {thyname:string} -> grammarDB_info option
+  val get_grammarDB :
+      Context.t -> {thyname:string} -> grammarDB_info option
   val set_grammar_ancestry : string list -> unit
   val grammar_ancestry : {thyname:string} -> string list
 
   (* Parsing Types *)
 
   val type_grammar : unit -> type_grammar.grammar
+  val get_type_grammar : Context.t -> type_grammar.grammar
   val Type         : hol_type frag list -> hol_type
   val ==           : hol_type frag list -> 'a -> hol_type
 
@@ -56,6 +59,16 @@ signature Parse = sig
       (string * term_grammar.absyn_postprocessor) -> unit
   val temp_remove_absyn_postprocessor :
       string -> term_grammar.absyn_postprocessor option
+  (* Update the state a registered parser/printer function keeps in the
+     grammar, by recording a delta the registrant knows how to decode
+     and apply (see term_grammar.userSyntaxFns.register_stateDelta).
+     Going through the grammar means the derived parser is rebuilt, so
+     the new value takes effect at once; and being an ordinary grammar
+     delta, it is replayed when a theory that recorded it is loaded. *)
+  val add_user_state_delta :
+      {codename : string, delta : ThyDataSexp.t} -> unit
+  val temp_add_user_state_delta :
+      {codename : string, delta : ThyDataSexp.t} -> unit
   val temp_add_preterm_processor :
       string * int -> term_grammar.preterm_processor -> unit
   val temp_remove_preterm_processor :
@@ -67,9 +80,19 @@ signature Parse = sig
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term
   val typedTerm        : term frag list -> hol_type -> term
+  (* parse against a supplied context rather than the ambient one *)
+  val Absyn_in         : Context.t -> term frag list -> Absyn.absyn
+  val Term_in          : Context.t -> term frag list -> term
+  val Type_in          : Context.t -> hol_type frag list -> hol_type
+  val typedTerm_in     : Context.t -> term frag list -> hol_type -> term
   val ty_antiq         : hol_type -> term
   val parse_in_context : term list -> term frag list -> term
   val typed_parse_in_context : hol_type -> term list -> term frag list -> term
+  (* the `term list` is the free-variable context the quotation is read
+     against; the Context.t is the prover state it is parsed in *)
+  val parse_in_context_in : Context.t -> term list -> term frag list -> term
+  val typed_parse_in_context_in : Context.t -> hol_type -> term list ->
+                                  term frag list -> term
   val parse_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
@@ -83,15 +106,10 @@ signature Parse = sig
   val print_without_macros : term -> unit
 
   val term_grammar : unit -> term_grammar.grammar
+  val get_term_grammar : Context.t -> term_grammar.grammar
 
   val print_term_grammar : unit -> unit
 
-  (* Force the next parse/print call to rebuild its cached closures
-     from the current grammars.  Needed after out-of-band grammar
-     restore (e.g. `Context.restore`): the slot-backed grammars are
-     restored, but the closure caches don't rebuild until a grammar-
-     mutating call flips the internal changed-flags. *)
-  val invalidate_caches : unit -> unit
 
   (* the following functions modify the grammar, and do so in such a
      way that the exported theory will have the same grammar  *)
@@ -238,6 +256,7 @@ signature Parse = sig
   val known_constants     : unit -> string list
   val set_known_constants : string list -> unit
   val is_constname : string -> bool
+  val get_is_constname : Context.t -> string -> bool
 
   val LEFT       : associativity
   val RIGHT      : associativity

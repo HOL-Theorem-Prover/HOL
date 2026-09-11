@@ -54,7 +54,7 @@ val _ =
 
 val _ = tprint "Q.MATCH_ABBREV_TAC with underscores"
 val goal = ([] : term list, ``(n + 10) * y <= 42315 /\ !x y:'a. x < f y``)
-val (sgs, _) = Q.MATCH_ABBREV_TAC `a * _ <= b /\ _` goal
+val (sgs, _) = runtac (Q.MATCH_ABBREV_TAC `a * _ <= b /\ _`) goal
 val expectedg = ``(a:num) * y <= b /\ !x y:'a. x < f y``
 val exab1 = ``Abbrev((a:num) = n + 10)``
 val exab2 = ``Abbrev((b:num) = 42315)``
@@ -69,7 +69,7 @@ val _ = case sgs of
 
 val _ = tprint "qhdtm_x_assum (1)"
 val goal = ([``x = 3``, ``FACT n = 10``], ``n + x = 7``)
-val (sgs, _) = qhdtm_x_assum `FACT` mp_tac goal
+val (sgs, _) = runtac (qhdtm_x_assum `FACT` mp_tac) goal
 val expectedg = ``(FACT n = 10) ==> (n + x = 7)``
 val expecteda = ``x = 3``
 val _ = case sgs of
@@ -101,7 +101,7 @@ val (g1:goal) = ([boolSyntax.mk_conj(P,Q)], boolSyntax.mk_neg(P))
 
 val res1 =
     test_assert (goals_eq [([Q,P],boolSyntax.mk_neg(P))] o #1)
-                (match1_tac test1 g1)
+                (runtac (match1_tac test1) g1)
 
 val test2 =
   [
@@ -110,12 +110,13 @@ val test2 =
     ,([],(K ALL_TAC):mg_tactic)
   ]
 
-val res1' = test_assert (goals_eq [g1] o #1) (first_match_tac test2 g1)
+val res1' = test_assert (goals_eq [g1] o #1)
+                        (runtac (first_match_tac test2) g1)
 
 val g2 = ([``x:bool = if P then x' else x''``, ``x:bool``],``yi = if x then x'' else (ARB:bool)``)
 
 val res2 = test_assert (equal 2 o length o #1)
-  (first_match_tac test2 g2)
+  (runtac (first_match_tac test2) g2)
 
 val (test3:matcher list * mg_tactic) =
   ([ mg.a "h1" `f_ _ = _`,
@@ -133,7 +134,7 @@ val g3 = (
   ``(!(a:num) g (b:num) z1 z2. (f a = z1) ==> (g b = z2) ==> z1 + z2 < 7n) ==> 3 + 4 < 7n``)
 
 val res3 = test_assert (List.null o #1)
-  (match_tac test3 g3)
+  (runtac (match_tac test3) g3)
 
 val (test4:matcher list * mg_tactic) =
   ([ mg.a "h1" `f_ _ = _`,
@@ -151,7 +152,7 @@ val g4 = (
   ``(!(a:num) g (b:num) z1 z2. (f a = z1) ==> (g b = z2) ==> z1 + z2 < 10n) ==> 3 + 4 < 10n``)
 
 val res4 = test_assert (aconv ``3 + 4 < 10n ==> 3 + 4 < 10n`` o #2 o hd o #1)
-  (match_tac test4 g4)
+  (runtac (match_tac test4) g4)
 
 in end
 
@@ -296,7 +297,7 @@ val goalpp =
       HOLPP.block HOLPP.CONSISTENT 0 o
       HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
     )
-fun testtac tac = #1 o VALID tac
+fun testtac tac = #1 o runtac (VALID tac)
 
 val _ = let
   val _ = tprint "tmCases_on (.doc file example)"
@@ -374,7 +375,7 @@ val _ = require_msg
 fun test_tac_Case nm ok_case_arg tq tac = let
   val t = Parse.typed_parse_in_context bool [] tq
   val _ = tprint (nm^" on `"^term_to_string t^"`")
-  val (goals, _) = tac ([], t)
+  val (goals, _) = runtac tac ([], t)
   fun ok_case t = ok_case_arg (markerSyntax.dest_Case t)
     handle HOL_ERR _ => false
   fun has_ok_Case (asms, _) = Lib.exists ok_case asms
@@ -446,13 +447,13 @@ val _ = convtest ("stored simp_conv still fine on h::t = []", SIMP_CONV ss [],
 val _ = tprint "Tactic simp[] on set comprehension"
 val _ = require_msg (check_result (aconv “y < 10” o #2 o hd o #1))
                     (term_to_string o #2 o hd o #1)
-                    (simp[]) ([], “y IN {x | x < 10}”)
+                    (runtac (simp[])) ([], “y IN {x | x < 10}”)
 
 val _ = tprint "CONG_TAC on a set comprehension with numeral"
 val expected = [([]: term list, “c * d = 10n”)]
 val _ = require_msg (check_result (goals_eq expected o #1))
                     (goals_toString o #1)
-                    (CONG_TAC NONE)
+                    (runtac (CONG_TAC NONE))
                     ([], “{n | n < c * d} = {x | x < 10}”);
 
 val _ = hide "f"
@@ -462,7 +463,7 @@ val expected = [([“MEM (x:'a) l2”], “f (x:'a) + 1 = g x”),
 val _ = require_msg
           (check_result (goals_eq expected o #1))
           (goals_toString o #1)
-          (CONG_TAC NONE)
+          (runtac (CONG_TAC NONE))
           ([], “MAP (λa. f a + 1) (l1:'a list) = MAP g (l2:'a list)”);
 
 val _ = tprint "CONG_TAC (SOME 0) = ALL_TAC"
@@ -470,14 +471,14 @@ val gt = “x < 10n”
 val _ = require_msg
           (check_result (goals_eq [([], gt)] o #1))
           (goals_toString o #1)
-          (CONG_TAC (SOME 0))
+          (runtac (CONG_TAC (SOME 0)))
           ([], gt)
 
 val _ = shouldfail {
       checkexn = is_struct_HOL_ERR "bossLib",
       printarg = K "CONG_TAC NONE failure 1",
       printresult = goals_toString o #1,
-      testfn = CONG_TAC NONE
+      testfn = runtac (CONG_TAC NONE)
     } ([], “x < 10n”);
 
 fun goalhc t (sgs, vf) =
@@ -494,21 +495,21 @@ val _ = tprint "simp[] ?- “p ∧ T”"
 val _ = require_msg
           (check_result (goalhc “p:bool”))
           prgl
-          (fn g => simp [] g)
+          (runtac (simp []))
           ([], “p ∧ T”)
 
 val _ = tprint "above w/simpset_updates removing"
 val _ = require_msg
           (check_result (goalhc “p /\ T”)) prgl
-          (BasicProvers.with_simpset_updates
-             (simpLib.remove_simps ["AND_CLAUSES"])
-             (fn g => simp[] g))
+          (runtac (BasicProvers.with_simpset_updates_tac
+                     (simpLib.remove_simps ["AND_CLAUSES"])
+                     (simp[])))
           ([], “p ∧ T”)
 
 val _ = tprint "Back to original"
 val _ = require_msg
           (check_result (goalhc “p:bool”)) prgl
-          (fn g => simp[] g)
+          (runtac (simp[]))
           ([], “p ∧ T”)
 
 (*

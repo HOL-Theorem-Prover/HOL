@@ -12,28 +12,64 @@ val mkLineCounter: string -> lines
 val getLineCol: lines -> int -> posLC
 val fromLineCol: lines -> posLC -> int
 
+(* The same, in bytes, whatever the client negotiated.  HOL's own
+   positions -- `locn.LocA' columns, and the column a `(*#loc*)' pragma
+   carries -- count bytes, so code that works in them has to convert in
+   bytes and convert to the client's units once, at the boundary.
+   Mixing the two silently works under utf-8, where they agree, and
+   skews every position in a line containing a non-ASCII character
+   under utf-16. *)
+val getLineColBytes: lines -> int -> posLC
+val fromLineColBytes: lines -> posLC -> int
+
+(* Whether a `character' on the wire counts utf-16 code units rather
+   than bytes.  Chosen from the client's `general.positionEncodings' at
+   initialize; `getLineCol' / `fromLineCol' convert accordingly. *)
+val setUTF16Positions: bool -> unit
+val utf16Positions: unit -> bool
+
 type 'a tag
 type plugin_data
 val emptyPluginData: plugin_data
 val getPluginData: plugin_data * 'a tag -> 'a option
 val setPluginData: plugin_data * 'a tag * 'a option -> plugin_data
 
+(* Carry a previous compile's records forward, for a compile that
+   re-ran only the declaration an edit was confined to.  Everything the
+   previous pass recorded at or after `fromByte` -- in that pass's
+   coordinates -- is still true of the file, but has moved `bytes`
+   bytes and `lines` lines down it.
+
+   An edit inside a `Proof ... QED` body cannot move anything below it
+   sideways, only down, which is why a line count is enough for
+   anything held as row/column. *)
+type reuse = {fromByte: int, bytes: int, lines: int}
+
 type 'a plugin = {
   name: string,
   init: 'a tag -> unit,
   beforeCompile: unit -> unit,
-  afterCompile: range * 'a option -> 'a option }
+  afterCompile: range * 'a option -> 'a option,
+  (* `reuseFrom r old new` adds the reusable part of `old` to `new`.
+     A plugin holding nothing positional can return `new`, but it must
+     say so: getting this wrong shows up as answers quietly off by an
+     edit's width, which is why it is a field rather than an optional
+     hook. *)
+  reuseFrom: reuse -> 'a option -> 'a option -> 'a option }
 
 type uplugin = {
   name: string,
   init: unit -> unit,
   beforeCompile: unit -> unit,
-  afterCompile: range * plugin_data -> plugin_data }
+  afterCompile: range * plugin_data -> plugin_data,
+  reuseFrom: reuse -> plugin_data -> plugin_data -> plugin_data }
 
 exception DuplicatePlugin
 val registerPlugin: bool -> 'a plugin -> 'a tag
 val getPlugins: unit -> uplugin list
 val registerInit: bool -> string -> (unit -> unit) -> unit
+(* Every registered plugin's `reuseFrom`, applied in turn. *)
+val reusePluginData: reuse -> plugin_data -> plugin_data -> plugin_data
 
 type location_link = {
   origin: rangeLC option,
@@ -51,7 +87,11 @@ type hover = {markdown: string, range: rangeLC option}
 
 type hover_context = {
   uri: string, lines: lines, plugins: plugin_data,
-  ppToString: PrettyImpl.pretty -> string }
+  ppToString: PrettyImpl.pretty -> string,
+  (* Column width to wrap a rendered goal state at: the width of the
+     pane the client is going to put it in, so its line breaking is the
+     one the reader sees. *)
+  width: int }
 
 val hover: (hover_context * (int * int) -> hover list) ref
 
@@ -72,6 +112,10 @@ val hoverQuotation:
    and returns the goal-state to render.  Returns NONE if the cursor
    isn't inside a proof body or the quote can't be parsed. *)
 type goal_state = {asms: string list, goal: string}
+(* Structurally the same record as `PPBackEnd.pp_segment`, and so the
+   same type -- declared again here because this file is `use`d at
+   bootstrap, long before `src/parse` exists. *)
+type pp_segment = {text: string, kind: string, name: string, ty: string}
 type goal_state_response = {
   theorem: string, step: int, goals: goal_state list,
   (* Rendered form of the whole state — HOL's own `pp_goalstate`
@@ -87,6 +131,12 @@ type goal_state_response = {
      scroll.  `pretty` still carries them, so a client that renders
      it verbatim needs no change. *)
   context: string list,
+  (* "ok", or "pending" when the answer is provisional because the
+     file's own compile hasn't finished: the walker compiles each
+     tactic against the file's namespace, and until the file's
+     `open's have run the names simply aren't there yet.  A client
+     should show the state but not treat it as settled. *)
+  status: string,
   (* SOME msg when the walker gave up (e.g. wall-clock budget
      exceeded) or halted at a failed tactic.  On timeout `goals`
      and `pretty` are empty; on a failed tactic they hold the
@@ -98,14 +148,33 @@ type goal_state_response = {
      runtime diagnostic (LSP squiggle).  NONE when there is no
      failure or the failure has no natural byte range (e.g. a
      structural marker, or a timeout). *)
-  failedRange: (int * int) option}
+  failedRange: (int * int) option,
+  (* `pretty` again, but taken apart: consecutive pieces whose texts
+     concatenate to exactly what `pretty` prints once its colour
+     escapes are removed.  Each piece carries what the pretty-printer
+     knew and colour could only hint at -- whether a symbol is a
+     constant, a free or bound variable, a type operator; a constant's
+     theory-qualified name; and its type.  A client applies it as a
+     tooltip, or reads it out for whatever the cursor is on.
+
+     Text rather than offsets into `pretty` deliberately: the client
+     rebuilds the string from these, so there is no third convention
+     for what an offset counts (bytes here, utf-16 on the wire) to get
+     wrong.  Empty when the state could not be rendered.
+
+     `kind` is one of "const", "fv", "bv", "tyvar", "tyop", "tysyn",
+     or "" for text that carries no annotation.  `name` is set for a
+     constant ("listTheory$MAP") and a type operator; `ty` for the
+     three term kinds. *)
+  segments: pp_segment list}
 type theorem_context = {
   name: string,           (* theorem name, e.g. "foo" *)
   quote: string,          (* raw text of the theorem statement *)
   quoteStart: int,        (* file byte offset of the quote's start *)
   tacText: string,        (* raw text between `Proof` and `QED` *)
   tacStart: int,          (* file byte offset of `tacText` start *)
-  cursor: int             (* cursor byte offset (file coords) *)
+  cursor: int,            (* cursor byte offset (file coords) *)
+  compileDone: bool       (* has the file's own compile finished? *)
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref
@@ -117,11 +186,82 @@ val fixupTheoremLink:
 val helpLookup: (string * (string -> bool) -> string list) ref
 
 (* Given an SML identifier name (possibly dotted, e.g.
-   "arithmeticTheory.ADD_COMM" or bare "plus_comm"), return a
-   pretty-printed theorem statement if the name resolves to a theorem
-   in the current DB.  Default no-op; the LSP runtime init installs a
-   version that calls DB.lookup + Parse.thm_to_string. *)
-val thmLookup: (string -> string option) ref
+   "arithmeticTheory.ADD_COMM" or bare "plus_comm"), return the
+   theorem's statement if the name resolves to a theorem in the current
+   DB.  Default no-op; the LSP runtime init installs a version that
+   calls DB + Parse.pp_thm.
+
+   A pretty *tree* rather than a string, so the caller lays it out:
+   only the client knows how wide its hover box is, and a statement
+   broken to some other width breaks in the wrong places.
+   `PrettyImpl.pretty' is `HOLPP.pretty', so an installer hands back
+   exactly what HOL's own printers produce.
+
+   This is the fallback for a name that is *not* a value in scope --
+   in practice a dotted reference, which Poly/ML's flat value tables
+   cannot resolve.  A theorem the file has in scope is printed from its
+   own value by the pretty printer that `lsp/pretty_printers_init.ML'
+   installs, which is better: it also covers `[local]' theorems, and
+   values that merely contain theorems. *)
+val thmLookup: (string -> PrettyImpl.pretty option) ref
+
+(* A stored theorem as the IDE wants it: `workspace/symbol' and
+   completion both answer from HOL's own record of what exists, which
+   `server.ML' cannot reach for itself -- it is compiled into the heap
+   before HOL exists, so everything HOL-side arrives through a ref like
+   this one.
+
+   `visible' is the difference between a theorem this file could use
+   right now and one that merely exists.  True means the theory is
+   loaded -- it is in this script's ancestry, and `fooTheory.NAME'
+   resolves as an SML value.  False means it was read from a built
+   `Theory.dat' on disk: real, and locatable, but using it means adding
+   the theory to `Ancestors' first.  A client should say which it is
+   rather than offering the two as equals.
+
+   `line' is 1-based; 0 means the theorem's location was not recorded.
+   `file' is NONE for the same reason, and has already had its
+   pathvars expanded. *)
+type ide_symbol = {
+  name: string,
+  theory: string,        (* segment name, no "Theory" suffix *)
+  class: string,         (* "Thm" | "Def" | "Axm" *)
+  file: string option,
+  line: int,
+  visible: bool }
+
+(* `prefixOnly' asks for completion's filter (the name starts with the
+   query) rather than search's (the query occurs anywhere).  `limit'
+   caps the answer: the caller is on a keystroke path and the database
+   is large.  Default returns nothing. *)
+val ideSymbols:
+  ({query: string, prefixOnly: bool, limit: int} -> ide_symbol list) ref
+
+(* Asking the theorem database a question, the way `M-h M' does: a
+   selector is a theory name in single quotes, a theorem-name fragment
+   in double quotes, or anything else, which is a term pattern.  Several
+   of them narrow: `"ASSOC"' and `'arithmetic'' together ask for the
+   theorems of `arithmetic' whose names mention ASSOC.
+
+   The selectors arrive as the user wrote them.  Reading the quoting is
+   the server's job rather than each client's, so that the same thing
+   typed into emacs and into VS Code asks the same question; deciding
+   how the answers *look* is the client's.
+
+   `statement' is a pretty tree rather than a string so the caller can
+   lay it out at whatever width it is going to show it in, as
+   `thmLookup' does.  `line' is 1-based and 0 when unrecorded, and
+   `file' has had its pathvars expanded, both as for `ide_symbol'. *)
+type search_result = {
+  name: string,
+  theory: string,
+  class: string,                (* "Thm" | "Def" | "Axm" *)
+  statement: PrettyImpl.pretty,
+  file: string option,
+  line: int }
+
+val dbSearch:
+  ({selectors: string list, limit: int} -> search_result list) ref
 
 (* Called at the start of each LSP compile pass.  Intended to restore
    the HOL Context to a snapshot taken at LSP startup, so recompiles
@@ -142,8 +282,10 @@ val notifyCompileStart: (int option -> unit) ref
    mid-file recompile resume: the HOL Context, the Poly/ML loaded-
    modules set, and the LSP file-namespace layer (see
    `lsp/lsp_namespace.ML`).  `captureCompileSnap ()` runs at a dec
-   boundary and returns a thunk that restores each channel and forces
-   `Parse.invalidate_caches` when applied.  `restoreCompileSnap` is
+   boundary and returns a thunk that restores each channel when
+   applied; the parsers and printers derived from the grammars travel
+   in the Context, so nothing else needs resetting.
+   `restoreCompileSnap` is
    a small indirection so callers can apply it uniformly.  Defaults
    are no-ops; installed by the LSP runtime init in tools-poly/hol.ML.
    Concrete type is exposed (rather than opaque) because the runtime
@@ -152,5 +294,191 @@ val notifyCompileStart: (int option -> unit) ref
 type compileSnap = unit -> unit
 val captureCompileSnap: (unit -> compileSnap) ref
 val restoreCompileSnap: (compileSnap -> unit) ref
+
+(* ----------------------------------------------------------------------
+   Deferred proofs — Phase A of the LSP's proof replay.
+
+   Instead of running a tactic during elaboration, the prover hook
+   enqueues a self-contained item and returns an oracle-tagged theorem,
+   so elaboration stays fast and something else runs the proofs later.
+
+   An item's `run` is opaque — it reports a `proof_status` and nothing
+   about the theorem — because this structure sits below the kernel and
+   cannot name `Context.t`, `goal` or `tactic`.  The hook closes over all
+   three, so
+   an item is independent of every other: the context is an immutable
+   value and the tactic is already elaborated.  In particular a worker
+   replaying one of these does *not* need the LSP namespace layer; that
+   is only for compiling tactic *text*, which Phase A has already done.
+
+   `deferProofs` is off by default, in which case the hook behaves
+   exactly as it does today and skips the proof outright.
+   ---------------------------------------------------------------------- *)
+(* `run` replays the proof and reports what it established: `Proved`,
+   `Failed` or `Diverged` (see proof_status below -- it cannot return the
+   other two, which are statements about declarations the pool was never
+   given). *)
+(* ----------------------------------------------------------------------
+   Status of a proof, for reporting back to the user.
+
+   Two of these the pool cannot produce, because they say something
+   about declarations the pool has never been given:
+
+     Unseen   the text has not been elaborated at all, so we do not even
+              know that its statement and tactic type-check.  This is
+              everything past the compile frontier.
+     Cheated  elaborated -- statement and tactic both type-check, in HOL
+              and in SML respectively -- but no pool entry exists, so the
+              theorem is being taken on trust.  This covers "never
+              submitted" and "we stopped checking it" alike: from the
+              user's point of view those are the same thing.  A cancelled
+              proof therefore reverts to Cheated by having its entry
+              dropped, which is right, because an edit above it means its
+              recorded position is about to be stale.
+
+   The remaining three are the pool's own:
+
+     Checking  a worker is on it
+     Proved    the replay went through
+     Failed    the replay ran and the proof did not go through.  Really a
+               diagnostic rather than a resting state, carried here so
+               status and diagnostic can be reported together.
+     Suspended the replay went through and suspended subgoals, naming
+               them.  The proof is *correct*; what is wrong is our model
+               of the file, since the cheating pass stood in a theorem
+               with no suspendlabel hypotheses.
+     Diverged  the replay went through but produced extra hypotheses for
+               some other reason.  Everything elaborated below this
+               declaration is suspect.
+
+   Suspended and Failed want opposite treatment downstream, which is why
+   they are separate states rather than one "did not match" bucket.
+
+   A failed proof means the real build would have raised out of
+   `store_thm_at`, so strictly nothing below it should be trusted -- but
+   it is a proof the user is about to fix, and re-elaborating below it
+   would bury them in errors they did not ask about.  Report and leave
+   the file alone.
+
+   A suspension is the other way round: the user's file is right and we
+   are wrong.  In a real build the theorem is *stashed* rather than
+   saved, so it is absent from the DB, a downstream citation of it is a
+   hard error from `save_thm_attrs`, and `Resume` bodies get their real
+   subgoal statements instead of the `|- T` the cheating pass hands out.
+   That difference is exactly what the user needs to see, so it is worth
+   re-elaborating for -- which means running that proof rather than
+   cheating it, since its result is not predictable from its statement.
+
+   So a caller assembling a display walks its own list of declarations
+   and consults the pool: an entry gives one of the last five, and
+   absence means Unseen or Cheated according to whether elaboration has
+   reached that declaration.
+   ---------------------------------------------------------------------- *)
+datatype proof_status =
+         Unseen | Cheated | Checking | Proved
+       | Failed of string | Suspended of string | Diverged of string
+type proof_state = {site: string, offset: int, status: proof_status}
+
+type deferred = {site: string, offset: int, run: unit -> proof_status}
+val deferProofs: bool ref
+(* Set by the compile driver while it retries a declaration whose tactic
+   would not compile, with the proof body replaced by `cheat`.  Such a
+   proof must not be enqueued: replaying `cheat` would report `Proved`
+   for a theorem whose proof the user cannot even compile.  The
+   declaration ends up with no pool entry at all, which is right -- the
+   compile error in the tactic is the report. *)
+val cheatSubstituted: bool ref
+
+(* Proofs the checker has found are not safely cheatable, because their
+   result is not predictable from their statement: so far, the ones that
+   suspend subgoals.  The prover hook runs these for real during
+   elaboration instead of standing in an oracle theorem, so the
+   declarations below them are elaborated against the theorem a real
+   build would produce -- stashed rather than saved, with its
+   suspendlabel hypotheses.
+
+   Keyed by proof *name*, not offset: the set outlives edits, and an edit
+   moves offsets while leaving names alone.
+
+   Nothing clears it wholesale.  Clearing on a full re-elaboration was
+   tried and is wrong: the declaration that suspends is often early
+   enough that re-elaborating from it forces a full restart, which would
+   then discard the very fact that prompted the restart and cheat the
+   proof again.  Instead an entry is dropped by *evidence* --- when the
+   proof is run and turns out not to suspend after all (`dropNoCheatSite`
+   from the prover hook), which is also what stops a proof the user has
+   since fixed from being run for real forever.
+
+   `addNoCheatSite` reports whether the name was new, which is what makes
+   the discover-then-re-elaborate loop terminate: re-elaboration must
+   only be triggered for a name that was not already in the set. *)
+val addNoCheatSite: string -> bool
+val dropNoCheatSite: string -> unit
+val isNoCheatSite: string -> bool
+val enqueueDeferred: deferred -> unit
+(* Empties the queue and hands back what was in it: the worker pool
+   runs the items itself. *)
+val takeDeferred: unit -> deferred list
+
+(* The byte offset of the declaration currently being elaborated, set by
+   the compile driver before each one.  The prover hook reads it when
+   enqueueing, so a deferred proof knows where in the file it came from
+   and the pool can decide whether an edit invalidates it.  A plain ref
+   is enough: elaboration is single-threaded. *)
+val currentProofOffset: int ref
+(* Which occurrence of its name the declaration being compiled is,
+   counted from the start of the file.  A name can occur twice --
+   `Theorem foo' and a later `Theorem foo[allow_rebind]' -- and the pool
+   identifies a proof by name, the only identity an edit above it does
+   not move.  Set alongside `currentProofOffset' from the buffer, which
+   is the only authority on how many times a name occurs: counting
+   occurrences from pool state instead invented a second `Real_thm' for
+   a file that has one. *)
+val currentProofOrd: int ref
+
+
+(* Hooks installed by the LSP runtime (tools-poly/lsp/deferred_proofs.ML);
+   defaults are inert so a non-LSP session behaves as before.
+
+   - checkDeferred: hand the queued proofs to the worker pool.
+     `resumeFrom` is the byte the pass re-elaborated from; a proof
+     already being checked is not started again, see the pool's
+     `sameProof`.  `keptFrom` is for a pass that stopped early: it did
+     not re-enqueue the proofs at or after that byte, but they are
+     still the right proofs -- so rather than orphaning them the pool
+     keeps them, moved `bytes` down the file.  `NONE` means the pass
+     ran to the end and anything it did not re-enqueue is gone. *)
+type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
+(*
+   - poolBusy: whether any proof is still being checked.  A predicate
+     rather than the list it used to be: the only caller asks a yes/no,
+     and building a record per entry -- with a `Future.peek` apiece --
+     to answer it ran once per settled proof, so a file's worth of
+     proofs cost a traversal each.
+   - cancelProofsAtOrAfter n: give up on any proof whose declaration
+     starts at or after byte n.  An edit invalidates the proofs below
+     it in the file and leaves the ones above alone, so this is what a
+     compile pass calls with its minimum edit offset.
+   - cancelAllProofs: give up on all of them. *)
+val checkDeferred: (check_scope -> unit) ref
+val poolBusy: (unit -> bool) ref
+val cancelProofsAtOrAfter: (int -> unit) ref
+(* Give up on just this declaration's proofs, for an edit inside a
+   `Proof ... QED` body: a tactic contributes nothing to the elaboration
+   context, so every later declaration's obligation is unchanged and the
+   proofs already running on them are still the right ones. *)
+val cancelProofAt: (int -> unit) ref
+val cancelAllProofs: (unit -> unit) ref
+(* Called by the pool when one proof's outcome is decided, so the
+   caller can report it without polling.  Just the state that changed:
+   a caller reporting all of them on every settled proof is quadratic in
+   the number of proofs in the file.  It runs on the worker thread that
+   finished the proof, so it must be cheap and must not raise. *)
+(* A batch, not one state: a pass announces `Checking` for every proof
+   it forks and a new position for every one an edit moved, and each
+   announcement is a separate handoff to the writer thread -- a message
+   apiece for a file's worth of proofs, where the wire has always
+   carried a list.  Individual verdicts arrive as singletons. *)
+val proofStateChanged: (proof_state list -> unit) ref
 
 end;

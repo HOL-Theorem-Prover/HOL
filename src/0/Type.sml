@@ -26,7 +26,7 @@ val WARN = HOL_WARNING "Type";
               Create the signature for HOL types
  ---------------------------------------------------------------------------*)
 
-fun typesig() = Context.typesig (Context.snapshot())
+fun typesig() = Context.typesig (Context.live())
 fun upd_typesig f = Context.update (Context.map_typesig f)
 fun genupd_typesig f =
     Context.gen_update (fn c =>

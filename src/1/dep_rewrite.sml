@@ -344,7 +344,7 @@ fun repeat_apply (f:'a->'b) step stop x =
 
 in
 
-fun APPLY_IMP_THEN ttac th (asl,gl) =
+fun APPLY_IMP_THEN ttac th (asl,gl) ctxt =
     let val _ = if !show_rewrites then
                    (print_string "Trying ";
                     print_theorem th)
@@ -381,8 +381,8 @@ ONCE_DEPTH_matches (DEP_FIND_matches th) gl
                         print_string "\n")
                    else (); (**)
         val (gl1,p1) = ( (*REPEAT GEN_TAC THEN*)
-                          MATCH_MP_TAC matched) (asl,subgoal)
-        val (gl2,p2) = ttac (Thm.ASSUME subgoal) (asl,gl);
+                          MATCH_MP_TAC matched) (asl,subgoal) ctxt
+        val (gl2,p2) = ttac (Thm.ASSUME subgoal) (asl,gl) ctxt;
     in
      case gl1
        of [(asl1,g1)] =>
@@ -407,8 +407,8 @@ end;
 
 (* TAC_DEP turns a tactic into a dependent rewriting function. *)
 
-fun TAC_DEP tac = fn (asl,gl) =>
-    let val (gl0,p0) = tac (asl,gl)
+fun TAC_DEP tac = fn (asl,gl) => fn ctxt =>
+    let val (gl0,p0) = tac (asl,gl) ctxt
     in (asl,[],[],gl0,p0)
     end
     handle _ => failwith "TAC_DEP";
@@ -417,9 +417,9 @@ fun TAC_DEP tac = fn (asl,gl) =>
 
 (* DEP_TAC turns a dependent rewriting function into a tactic. *)
 
-fun DEP_TAC dep :tactic = fn g0 =>
+fun DEP_TAC dep :tactic = fn g0 => fn ctxt =>
     let val (asl1,gls,(pls:validation list),(gl2:goal list),(p2:validation))
-            = dep g0 in
+            = dep g0 ctxt in
     ( (* if debug then
         (print_string "DEP_TAC:\nburdens = [";
          map (fn tm => (print_newline(); print_term tm; print_string ",")) gls;
@@ -442,7 +442,7 @@ fun DEP_TAC dep :tactic = fn g0 =>
                                 print_theorem th;
                                 print_newline())
                             else (); *)
-                            TAC_PROOF
+                            TAC_PROOF_in ctxt
                               (([], gl),
                                   REPEAT CONJ_TAC
                                   THEN FIRST(map ACCEPT_TAC (CONJUNCTS th)))
@@ -484,14 +484,14 @@ fun choplist a b =
 
 infix THEN1_DEP;
 
-fun ctac1 THEN1_DEP ctac2 = fn g =>
-    let val (asl1,gs1,ps1,gl1,p1) = ctac1 g
+fun ctac1 THEN1_DEP ctac2 = fn g => fn ctxt =>
+    let val (asl1,gs1,ps1,gl1,p1) = ctac1 g ctxt
     in
     case gl1
     of [] =>
          (asl1,gs1,ps1,gl1,p1)
      | (g1::gl1') =>
-         let val (asl2,gs2,ps2,gl2,p2) = ctac2 g1
+         let val (asl2,gs2,ps2,gl2,p2) = ctac2 g1 ctxt
          in
          (op_intersect aconv asl1 asl2, gs1@gs2, ps1@ps2, gl2@gl1',
           (fn ths => let val (ths1,ths2) = choplist gl2 ths in
@@ -502,14 +502,14 @@ fun ctac1 THEN1_DEP ctac2 = fn g =>
     handle HOL_ERR _ => failwith "THEN1_DEP";
 
 
-val ALL_DEP = fn (asl,gl) =>
+val ALL_DEP = fn (asl,gl) => fn _ (* ctxt *) =>
     (asl,[],[],[(asl,gl)],hd);
 
 
 infix ORELSE_DEP;
 
-fun ctac1 ORELSE_DEP ctac2 = fn g =>
-    ctac1 g handle HOL_ERR _ => ctac2 g;
+fun ctac1 ORELSE_DEP ctac2 = fn g => fn ctxt =>
+    ctac1 g ctxt handle HOL_ERR _ => ctac2 g ctxt;
 
 
 fun FIRST_DEP cl =
@@ -531,8 +531,8 @@ fun REPEAT_DEP ctac g =
     ((ctac THEN1_DEP REPEAT_DEP ctac) ORELSE_DEP ALL_DEP) g;
 
 
-fun CHANGED_DEP ctac g =
-    let val (asl,gls,pls,gl,p) = ctac g in
+fun CHANGED_DEP ctac g ctxt =
+    let val (asl,gls,pls,gl,p) = ctac g ctxt in
     if goals_eq gl [g] then failwith "CHANGED_DEP"
     else (asl,gls,pls,gl,p)
     end;

@@ -42,7 +42,8 @@ instantiation, and so the variable `z` in the original is renamed to
 
 ``` hol4
    > Q.MATCH_ASMSUB_RENAME_TAC `x < n`
-       ([``P(y < m):bool``, ``Q(x < z) : bool``], ``x + z < 10``);
+       ([``P(y < m):bool``, ``Q(x < z) : bool``], ``x + z < 10``)
+       (Context.snapshot());
    val it = ([([``P (y < m)``, ``Q (x < n)``], ``x + n < 10``)],
              fn): goal list * validation
 ```

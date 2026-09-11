@@ -179,7 +179,7 @@ val _ = let
                          aconv a ``xx = (aa:bool,bb:bool)``
         | _ => false
 in
-  require (check_result check) split_pair_case_tac g
+  require (check_result check) (runtac split_pair_case_tac) g
 end;
 
 val _ = tprint "split_pair_case_tac (case in assumptions)"
@@ -193,7 +193,8 @@ val _ = let
                               aconv a2 a
         | _ => false
 in
-  require (check_result check) split_pair_case_tac ([a], ``pp /\ qq``)
+  require (check_result check) (runtac split_pair_case_tac)
+          ([a], ``pp /\ qq``)
 end
 
 val _ = Feedback.emit_MESG := false

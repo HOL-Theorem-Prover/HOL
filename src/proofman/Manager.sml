@@ -120,21 +120,24 @@ fun expand tac (PF(GOALSTACK s, tm)) =
   | expand tac (PF(GOALTREE t, tm)) =
       PF (GOALTREE (apply (goalTree.expand("",#tacm tm tac)) t), tm)
   | expand tac (PF(GOALFRAG t, tm)) =
-      PF (GOALFRAG (apply (goalFrag.expand(#tacm tm tac)) t), tm)
+      PF (GOALFRAG (apply (goalFrag.expand (#tacm tm tac)
+                                           (Context.snapshot())) t), tm)
 
 fun expand_listf ltac (PF(GOALSTACK s, tm)) =
     PF (GOALSTACK (apply (goalStack.expand_listf (#ltacm tm ltac)) s), tm)
   | expand_listf _ (PF (GOALTREE _, _)) =
     raise ERR "expand_listf" "not implemented for goal trees"
   | expand_listf ltac (PF(GOALFRAG s, tm)) =
-    PF (GOALFRAG (apply (goalFrag.expand_listf (#ltacm tm ltac)) s), tm)
+    PF (GOALFRAG (apply (goalFrag.expand_listf (#ltacm tm ltac)
+                                              (Context.snapshot())) s), tm)
 
 fun expand_list ltac (PF(GOALSTACK s, tm)) =
     PF (GOALSTACK (apply (goalStack.expand_list (#ltacm tm ltac)) s), tm)
   | expand_list _ (PF (GOALTREE _, _)) =
     raise ERR "expand_list" "not implemented for goal trees"
   | expand_list ltac (PF(GOALFRAG s, tm)) =
-    PF (GOALFRAG (apply (goalFrag.expand_list (#ltacm tm ltac)) s), tm)
+    PF (GOALFRAG (apply (goalFrag.expand_list (#ltacm tm ltac)
+                                             (Context.snapshot())) s), tm)
 
 fun expand_frag (f:goalFrag.frag_tactic) (PF(GOALFRAG t, tm)) =
     PF (GOALFRAG (apply f t), tm)

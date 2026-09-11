@@ -157,7 +157,11 @@ sig
 
   val export_ignore : KernelSig.kernelname -> unit
   val get_ignores : unit -> KernelSig.kernelname HOLset.set
-  val unignoringc : term -> ('a -> 'b) -> ('a -> 'b)
-  val unignoring : KernelSig.kernelname -> ('a -> 'b) -> ('a -> 'b)
+  val get_ignores_of : Context.t -> KernelSig.kernelname HOLset.set
+  (* Both take a tactic rather than any function: the ignore set lives
+     in the context, so the only thing that can be run with it adjusted
+     is something the context is handed to. *)
+  val unignoringc : term -> tactic -> tactic
+  val unignoring : KernelSig.kernelname -> tactic -> tactic
 
 end
