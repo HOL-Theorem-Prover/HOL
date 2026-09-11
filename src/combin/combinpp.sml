@@ -388,11 +388,11 @@ fun new_form r =
       val d = ADD (DD r)
     in
       addlform left right;
-      record_delta d;
       add_user_printer("combinpp.general_printer", updt);
-      case lookup_term_name of
-          NONE => ()
-        | SOME (pat, nm) => add_user_printer("combinpp.seln_printer", pat)
+      (case lookup_term_name of
+           NONE => ()
+         | SOME (pat, nm) => add_user_printer("combinpp.seln_printer", pat));
+      record_delta d
     end
 
 fun remove_paren_syntax lparen_name = (
