@@ -55,11 +55,17 @@ sig
 
   val CASE_TAC          : tactic
   val CaseEq            : string -> thm
+  val CaseEq_of         : Context.t -> string -> thm
   val CaseEqs           : string list -> thm
+  val CaseEqs_of        : Context.t -> string list -> thm
   val AllCaseEqs        : unit -> thm
+  val AllCaseEqs_of     : Context.t -> thm
   val CasePred          : string -> thm
+  val CasePred_of       : Context.t -> string -> thm
   val CasePreds         : string list -> thm
+  val CasePreds_of      : Context.t -> string list -> thm
   val AllCasePreds      : unit -> thm
+  val AllCasePreds_of   : Context.t -> thm
 
   (* Proof automation *)
 

@@ -49,6 +49,13 @@ fun expandRecord f pat {left, elems = {args, seps, stop = stop1}, right, stop} =
 fun mkSnapshot p =
     App (mkIdent (p, "Context.snapshot"), Unit {left = p, right = p})
 
+(* `fn () => e', with every synthetic field at p *)
+fun mkThunk p e =
+    Fn {fn_ = p,
+        elems = [{bar = NONE, pat = Unit {left = p, right = p},
+                  arrow = NONE, exp = e}],
+        stop = p}
+
 fun mkLocPragma line col s =
   concat [" (*#loc ", Int.toString (line + 1), " ", Int.toString (col + 1), "*)", s]
 
@@ -195,6 +202,13 @@ fun expandDec {parseError, quietOpen, fileline} = let
    file; a file with no Theory header gets no shim. *)
 val srwShimOK = ref false
 
+(* Whether a TypeBase rebind can be compiled in this file.  The shim
+   names TypeBase qualified, so it needs no open -- only the structure,
+   which src/1 defines.  Everything with a Script builds after src/1
+   except src/bool, so the theory name is the whole test.  Set by the
+   Theory declaration, as srwShimOK is. *)
+val caseEqShimOK = ref false
+
 (* wrapTac, plus a rebinding of srw_ss to the simpset carried by the
    context the tactic is run against:
 
@@ -282,10 +296,7 @@ fun ctxtLocal {anchor, stop, kvs, body} = let
     else let
       val ss = App (mkIdent (stop, "BasicProvers.srw_ss_of"),
                     mkIdent (stop, ctxtName))
-      val thunk = Fn {fn_ = stop,
-        elems = [{bar = NONE, pat = Unit {left = stop, right = stop},
-                  arrow = NONE, exp = ss}],
-        stop = stop}
+      val thunk = mkThunk stop ss
       val strexp = StrStruct {struct_ = stop,
         strdec = [DecOpen {open_ = stop, elems = [bp]},
                   valPat stop (mkIdent (stop, "srw_ss")) thunk],
@@ -295,7 +306,28 @@ fun ctxtLocal {anchor, stop, kvs, body} = let
                               bind = SOME {eq = stop, strexp = strexp}}],
                      seps = [], stop = stop}},
           shadow ("srw_ss", mkIdent (stop, "BasicProvers.srw_ss"))] end
-  in DecLocal {local_ = anchor, dec1 = bind :: parseRebind @ rebind,
+  (* The case-theorem family reads the TypeBase, so a proof naming
+     AllCaseEqs() gets the types its context knows rather than whatever
+     the ambient TypeBase has grown since.  AllCaseEqs and AllCasePreds
+     stay thunks so the theorem is built per run, not per declaration;
+     the other four are partial applications that do no work until the
+     proof names a type.  Only the bare names are rebound: a qualified
+     TypeBase.AllCaseEqs() still reads the ambient TypeBase, and a
+     structure rebind to cover it costs more per declaration than all
+     six of these vals together.  No script writes one. *)
+  val caseRebind =
+    if not (!caseEqShimOK) then []
+    else let
+      fun ofCtxt nm = inCtxt ("TypeBase." ^ nm ^ "_of")
+      fun thunked nm = shadow (nm, mkThunk stop (ofCtxt nm))
+      fun applied nm = shadow (nm, ofCtxt nm)
+      in
+        [thunked "AllCaseEqs", thunked "AllCasePreds",
+         applied "CaseEq", applied "CaseEqs",
+         applied "CasePred", applied "CasePreds"]
+      end
+  in DecLocal {local_ = anchor,
+               dec1 = bind :: parseRebind @ rebind @ caseRebind,
                in_ = SOME stop,
                dec2 = [body], end_ = SOME stop, stop = stop} end
 
@@ -311,10 +343,7 @@ fun srwWrapTac (p, tac) =
        `endOffset < endPosition' test can never select it, and the tac,
        which keeps its real span, is found instead. *)
     val ss = App (mkIdent (p, "BasicProvers.srw_ss_of"), mkIdent (p, "c"))
-    val thunk = Fn {fn_ = p,
-      elems = [{bar = NONE, pat = Unit {left = p, right = p},
-                arrow = NONE, exp = ss}],
-      stop = p}
+    val thunk = mkThunk p ss
     val body = LetInEnd {let_ = p,
       dec = [valPat p (mkIdent (p, "srw_ss")) thunk], in_ = SOME p,
       exps = {args = [tac], seps = [], stop = stop},
@@ -620,6 +649,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         in f "HOL_Interactive.end_open" acc end
     else process elems (lhs, acc)
     val _ = srwShimOK := (not (!bare) orelse !libBasicProvers)
+    val _ = caseEqShimOK := (#2 id <> "bool")
     val acc = valWild theory_ (App (mkIdent (theory_, "Theory.new_theory"), mkString id)) :: acc
     val acc = if !bare then acc else
       valWild theory_ (App (mkIdent (theory_, "Parse.set_grammar_ancestry"),

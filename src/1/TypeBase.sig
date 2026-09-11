@@ -75,6 +75,17 @@ sig
    val CasePreds          : string list -> thm
    val AllCasePreds       : unit -> thm
 
+   (* Context-taking siblings of the six above: the case theorems come
+      from the TypeBase `ctxt' carries, and the type names resolve
+      against its type grammar.  Each ambient form above is its sibling
+      applied to a snapshot. *)
+   val CaseEq_of          : Context.t -> string -> thm
+   val CaseEqs_of         : Context.t -> string list -> thm
+   val AllCaseEqs_of      : Context.t -> thm
+   val CasePred_of        : Context.t -> string -> thm
+   val CasePreds_of       : Context.t -> string list -> thm
+   val AllCasePreds_of    : Context.t -> thm
+
    (* f (case x of ...) <=> (case x of ..) *)
    val case_rand_of       : hol_type -> thm
    (* f (case x of ...) <=> disjunction of possibilities *)

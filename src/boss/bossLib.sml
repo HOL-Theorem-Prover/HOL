@@ -159,11 +159,17 @@ val PairCases_on      = pairLib.PairCases_on;
 val pairarg_tac       = pairLib.pairarg_tac
 val split_pair_case_tac = pairLib.split_pair_case_tac
 val CaseEq            = TypeBase.CaseEq
+val CaseEq_of         = TypeBase.CaseEq_of
 val CaseEqs           = TypeBase.CaseEqs
+val CaseEqs_of        = TypeBase.CaseEqs_of
 val AllCaseEqs        = TypeBase.AllCaseEqs
+val AllCaseEqs_of     = TypeBase.AllCaseEqs_of
 val CasePred          = TypeBase.CasePred
+val CasePred_of       = TypeBase.CasePred_of
 val CasePreds         = TypeBase.CasePreds
+val CasePreds_of      = TypeBase.CasePreds_of
 val AllCasePreds      = TypeBase.AllCasePreds
+val AllCasePreds_of   = TypeBase.AllCasePreds_of
 
 fun dischallbut hs th =
     let fun foldthis (t, th) = if HOLset.member(hs, t) then th
