@@ -78,7 +78,7 @@ fun simpsetUpd _ [] = NONE
   fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}
   in SOME (foldl mktm (mktm1 kv) kvs) end
 
-fun proofKvals (SOME {attrs = {args, ...}, ...}) = args
+fun proofKvals (SOME {attrs = {args, ...}, ...} : kvals attrs) = args
   | proofKvals _ = []
 
 fun doProofKvals _ [] tac = tac
