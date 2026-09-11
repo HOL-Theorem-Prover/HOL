@@ -814,8 +814,11 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val quote = expandQuote theorem_ tacAnchor quote
     val tac = wrapTac (tacAnchor, expandExp false tac)
     (* the Proof attributes are applied to the context in the enclosing
-       local, not wrapped round the tactic *)
+       local, AND wrapped round the tactic: the context reaches readers
+       that look there, but a separately-compiled library calling
+       srw_ss() reads the ambient simpset, which only the window covers *)
     val kvs = case proof_ of SOME {attrs, ...} => proofKvals attrs | NONE => []
+    val tac = doProofKvals tacAnchor kvs tac
     val e = mkLocString' (theorem_, "Q.store_thm_at") fileline
     (* Give the synthetic tuple a real stop so the resulting Built
        parent covers its children.  mkTuple's default (stop = anchor
