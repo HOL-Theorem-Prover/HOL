@@ -2964,8 +2964,7 @@ fun start {diag, dbg, warnings} = let
             case look props of
               NONE => false
             | SOME {startPosition, endPosition, ...} => let
-                val span = (FixedInt.toInt startPosition,
-                            FixedInt.toInt endPosition)
+                val span = (startPosition, endPosition)
                 in List.exists (fn Sym {selSpan, ...} => selSpan = span)
                                topLevelSyms
                 end
