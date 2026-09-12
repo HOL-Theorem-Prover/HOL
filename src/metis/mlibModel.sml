@@ -29,8 +29,6 @@ fun chat s = (trace s; true)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val gen = Random.newgenseed 1.0;
-
 type fp = string * int list;
 
 val fp_compare = lex_order String.compare (lex_list_order Int.compare);
@@ -226,7 +224,7 @@ fun lookupv (s : valuation) v =
   case Binarymap.peek (s,v) of SOME n => n
   | NONE => raise Bug "mlibModel.lookupv";
 
-fun randomv n =
+fun randomv gen n =
   let fun f (v,s) = insertv (v |-> Random.range (0,n) gen) s
   in foldl f emptyv
   end;
@@ -294,6 +292,7 @@ fun cached_random_pred cache id p_args = cached cache (random_pred id) p_args;
 datatype model = MODEL of
   {parm : parameters,
    id : int,
+   gen : Random.generator,
    cachef : (fp,int) Binarymap.dict Uref.t,
    cachep : (fp,bool) Binarymap.dict Uref.t,
    overf : (fp,int) Binarymap.dict,
@@ -301,38 +300,54 @@ datatype model = MODEL of
    fixf : (string * int list) -> int option,
    fixp : (string * int list) -> bool option};
 
+(* The seed fixes both halves of the model: `id` is hashed into the
+   symbol interpretation by `randomize`, and the generator supplies the
+   valuations `check` samples and the perturbations `perturb` tries.  A
+   model is therefore a function of its parameters and its seed, with
+   nothing carried over from whatever the process did before.
+
+   The seed is brought into 1..SEED_BOUND here so that no caller has to
+   know that zero is a fixed point of the Lehmer recurrence `Random`
+   uses: a model seeded with it would draw zero forever, mapping every
+   variable to element 0 and taking the first perturbation every
+   time. *)
 local
-  val new_id = Portable.make_counter{inc=1,init=0}
+  val SEED_BOUND = 16777213
 in
-  fun new (parm : parameters) =
-    let
-      val {size = n, fix = r} = parm
-      val {func = fixf, pred = fixp} = r n
-      val () = assert (1 <= n) (Bug "mlibModel.new: nonpositive size")
-      val id = new_id ()
-      val cachef = Uref.new (Binarymap.mkDict fp_compare)
-      val cachep = Uref.new (Binarymap.mkDict fp_compare)
-      val overf = Binarymap.mkDict fp_compare
-      val overp = Binarymap.mkDict fp_compare
-    in
-      MODEL
-      {parm = parm, id = id, cachef = cachef, cachep = cachep,
-       overf = overf, overp = overp, fixf = fixf, fixp = fixp}
-    end;
+fun new (parm : parameters) seed =
+  let
+    val {size = n, fix = r} = parm
+    val {func = fixf, pred = fixp} = r n
+    val () = assert (1 <= n) (Bug "mlibModel.new: nonpositive size")
+    val id = 1 + seed mod SEED_BOUND
+    val gen = Random.newgenseed (Real.fromInt id)
+    val cachef = Uref.new (Binarymap.mkDict fp_compare)
+    val cachep = Uref.new (Binarymap.mkDict fp_compare)
+    val overf = Binarymap.mkDict fp_compare
+    val overp = Binarymap.mkDict fp_compare
+  in
+    MODEL
+    {parm = parm, id = id, gen = gen, cachef = cachef, cachep = cachep,
+     overf = overf, overp = overp, fixf = fixf, fixp = fixp}
+  end
 end;
 
 fun msize (MODEL {parm = {size = N, ...}, ...}) = N;
 
+fun mgen (MODEL {gen, ...}) = gen;
+
 fun update_overf overf m =
-  let val MODEL {parm, id, cachef, cachep, overp, fixf, fixp, ...} = m
-  in MODEL {parm = parm, id = id, cachef = cachef, cachep = cachep,
-            overf = overf, overp = overp, fixf = fixf, fixp = fixp}
+  let val MODEL {parm, id, gen, cachef, cachep, overp, fixf, fixp, ...} = m
+  in MODEL {parm = parm, id = id, gen = gen, cachef = cachef,
+            cachep = cachep, overf = overf, overp = overp, fixf = fixf,
+            fixp = fixp}
   end;
 
 fun update_overp overp m =
-  let val MODEL {parm, id, cachef, cachep, overf, fixf, fixp, ...} = m
-  in MODEL {parm = parm, id = id, cachef = cachef, cachep = cachep,
-            overf = overf, overp = overp, fixf = fixf, fixp = fixp}
+  let val MODEL {parm, id, gen, cachef, cachep, overf, fixf, fixp, ...} = m
+  in MODEL {parm = parm, id = id, gen = gen, cachef = cachef,
+            cachep = cachep, overf = overf, overp = overp, fixf = fixf,
+            fixp = fixp}
   end;
 
 fun pp_model (MODEL {parm = {size = N, ...}, id, ...}) =
@@ -398,7 +413,7 @@ fun evaluate_formula m fm = eval_formula m emptyv fm;
 
 fun check1 fvs m fm =
   let
-    val v = randomv (msize m) fvs
+    val v = randomv (mgen m) (msize m) fvs
     val _ = chatting 3 andalso
             chat ("check: valuation=" ^ valuation_to_string v ^ ".\n")
   in
@@ -460,7 +475,8 @@ val emptyp : perturbation Binaryset.set = Binaryset.empty comparep;
 
 val sizep = Binaryset.numItems;
 
-fun randomp s = List.nth (Binaryset.listItems s, Random.range (0, sizep s) gen);
+fun randomp gen s =
+  List.nth (Binaryset.listItems s, Random.range (0, sizep s) gen);
 
 fun addp x s = Binaryset.add (s,x);
 
@@ -565,7 +581,7 @@ fun perturb m v fm =
     fun f perts =
       if sizep perts = 0 then NONE else
         let
-          val pert = randomp perts
+          val pert = randomp (mgen m) perts
           val m' = override m pert
           val good = eval_formula m' v fm
           val _ = chatting 2 andalso
@@ -581,7 +597,7 @@ fun perturb m v fm =
 local
   fun integrate (vs,fm,n,i,p) m =
     let
-      val v = randomv (msize m) vs
+      val v = randomv (mgen m) (msize m) vs
       val _ = chatting 3 andalso
               chat ("integrate: valuation=" ^ valuation_to_string v ^ ".\n")
     in

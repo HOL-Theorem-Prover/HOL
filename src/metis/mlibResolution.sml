@@ -109,13 +109,8 @@ fun units (RES {set,...}) = mlibClauseset.units set;
 fun new_units units (res as RES {set,...}) =
   update_set (mlibClauseset.new_units units set) res;
 
-fun mk_axioms thms hyps =
-  let
-    val thms = map thm_to_formula thms
-    and hyps = map thm_to_formula hyps
-  in
-    if null thms then hyps else thms @ map Not hyps
-  end;
+fun mk_axioms thm_fms hyp_fms =
+  if null thm_fms then hyp_fms else thm_fms @ map Not hyp_fms;
 
 fun mk_thms_hyps (clause_parm : mlibClause.parameters) thms hyps =
   let
@@ -131,14 +126,23 @@ fun mk_thms_hyps (clause_parm : mlibClause.parameters) thms hyps =
 fun new (parm : parameters, units, thms, hyps) =
   let
     val {clause_parm,sos_parm,set_parm,...} = parm
-    val axioms = mk_axioms thms hyps
+    val hyp_fms = map thm_to_formula hyps
+    val axioms = mk_axioms (map thm_to_formula thms) hyp_fms
+    (* Seed the models from the set of support rather than from a
+       counter that runs for the life of the process, so that which
+       models a problem gets follows from the problem.  Under
+       metis_tac's solver this side of the split is the negated
+       conjecture and the goal's own assumptions; a solver that applies
+       an sos filter partitions it differently, which is equally
+       deterministic and equally usable as a seed. *)
+    val seed = mlibSupport.problem_seed hyp_fms
     val (thms,hyps) = mk_thms_hyps clause_parm thms hyps
     val set = mlibClauseset.empty (clause_parm,set_parm)
     val set = mlibClauseset.new_units units set
     val (thms,set) = mlibClauseset.factor thms set
     val set = foldl (fn (c,s) => mlibClauseset.add c s) set thms
     val (hyps,set) = mlibClauseset.factor hyps set
-    val sos = mlibSupport.new sos_parm axioms hyps
+    val sos = mlibSupport.new sos_parm seed axioms hyps
   in
     RES {set = set, sos = sos}
   end;
