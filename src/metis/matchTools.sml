@@ -60,15 +60,8 @@ fun inst_ty (_, tyS) tm = inst tyS tm;
 
 fun pinst (tmS, tyS) tm = subst tmS (inst tyS tm);
 
-local
-  fun fake_asm_op r th =
-    let val h = rev (hyp th)
-    in (funpow (length h) UNDISCH o r o C (foldl (uncurry DISCH)) h) th
-    end
-in
-  val INST_TY = fake_asm_op o INST_TYPE;
-  val PINST   = fake_asm_op o INST_TY_TERM;
-end;
+val INST_TY = INST_TYPE;
+val PINST   = INST_TY_TERM;
 
 fun type_refine_subst [] tyS' : (hol_type, hol_type) subst = tyS'
   | type_refine_subst tyS [] = tyS
