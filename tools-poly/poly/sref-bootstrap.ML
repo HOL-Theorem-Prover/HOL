@@ -1,9 +1,10 @@
 (* Sref, and the interrupt-safe locking it is built on, made available
    at bootstrap.
 
-   Why here: `LSPExtension` and `lsp/server.ML` are `use`d by
-   poly-init2.ML and so are compiled into `bin/hol` by polyc, before any
-   of src/portableML's Holmake-built modules exist.  Both hold state that
+   Why here: `lsp/LSPExtension.sml` is `use`d by poly-init2.ML and
+   `lsp/server.ML` by hol.ML, so both are compiled into `bin/hol` by
+   polyc, before any of src/portableML's Holmake-built modules exist.
+   Both hold state that
    a pool worker and the compile thread reach at the same time, and a
    plain `ref` is the wrong thing to hold it in.
 

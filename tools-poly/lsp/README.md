@@ -68,6 +68,27 @@ advertising `textDocumentSync`, `hoverProvider`,
 `window/logMessage "started"` notification; the `shutdown` response
 (`{"id":2,"result":null}`); and a clean exit 0.
 
+## Source layout
+
+The extension is deliberately **not** a Holmake directory — there is no
+`Holmakefile` here, and nothing under `src/` names `LSPExtension`.  That
+is what lets the Moscow ML build ignore the LSP entirely.  The file
+suffix says when a file is compiled, and the two are not
+interchangeable:
+
+  - `.sig` / `.sml` — `use`d by `tools-poly/poly/poly-init2.ML` and so
+    compiled into `bin/hol` by polyc.  Only `LSPExtension.{sig,sml}` is
+    in this class.  Editing one means re-running polyc; no build step
+    notices otherwise.
+  - `.ML` — `QUse.use`d at LSP startup from `tools-poly/hol.ML`, either
+    at polyc time (`lsp_namespace.ML`, `holide.ML`, `server.ML`) or when
+    the server starts (the `*_init.ML` files).  The latter need no
+    rebuild at all: restart the server and the new source loads.
+
+Because none of it is dependency-tracked, a rename in `DefnBase`,
+`Preterm` or `DB` will not be caught by a build — `tests/lsp_tests.py`
+is what covers it.
+
 ## Hover
 
 Hover on an SML identifier gives its type and, when the identifier

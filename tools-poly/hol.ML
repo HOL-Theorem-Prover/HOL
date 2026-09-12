@@ -723,8 +723,12 @@ in
           \                     PPBackEnd.raw_terminal) Parse.pp_thm th \
           \  in Option.map render thm_opt end \
           \  handle _ => NONE)";
+        (* Go-to-definition, and the default hover. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/defnbase_init.ML"));
         (* HOL-side hover for cursors inside quotations: parses the
-           captured quote to a resolved Preterm and walks it. *)
+           captured quote to a resolved Preterm and walks it.  Reached
+           only when the default hover returns nothing. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/hover_quote_init.ML"));
         (* Tactic-step compiler used by later slices to walk a Proof
