@@ -92,6 +92,29 @@ val _ = if lhs (concl th) ~~ t1 andalso rhs (concl th) ~~ lhand (lhs (concl th))
 val _ = assert_reduces_to “f1 y” “result1”;
 val _ = assert_reduces_to “f2 z” “result3”;
 
+(* A rule with several antecedents: each proof must be discharged from the
+   theorem left by the previous discharge, not from the original rule.  The
+   first clause is abandoned after its first antecedent has been proved. *)
+val _ = new_constant("result4", “:ind”)
+
+val P3_def = new_definition(
+  "P3",
+  “P3 (x :ind) = T”)
+
+val f3_def = new_specification(
+  "f3_def",
+  ["f3"],
+  prove(
+    “∃f3. ∀x :ind. (P2 x ⇒ P1 x ⇒ f3 x = result2) ∧
+                   (P2 x ⇒ P3 x ⇒ P2 x ⇒ f3 x = result4)”,
+    EXISTS_TAC “λx :ind. result4” >>
+    REWRITE_TAC [P1_def, P2_def, P3_def]))
+
+val _ = computeLib.add_funs([P3_def, f3_def])
+
+val _ = tprint "Checking rewrites with several antecedents"
+val _ = assert_reduces_to “f3 z” “result4”;
+
 (* Tests for seal and copy functions *)
 
 val _ = tprint "Checking seal prevents adding rules for existing constants"
