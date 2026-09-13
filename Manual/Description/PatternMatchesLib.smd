@@ -92,10 +92,13 @@ proof methods.  In particular information about datatype
 constructors is automatically used from `TypeBase` and
 `constrFamiliesLib` (see Section \ref{subsec:pmatch/constrFamily}).
 If used *via* `PMATCH_SIMP_ss`, a callback to the simplifier
-is used.  The conversion `PMATCH_CLEANUP_CONV_GEN` is a
+is used.  The default proof method also draws on the stateful
+simpset, which it reads each time it runs; a pattern match may
+range over datatypes declared long after `patternMatchesLib` was
+loaded.  The conversion `PMATCH_CLEANUP_CONV_GEN` is a
 generalised version of the partial evaluation conversion that
-allows manually providing additional simpset fragments to the
-used proof method.
+takes the simpset to prove preconditions against, together with
+additional simpset fragments, in place of that default.
 
 In the following example, the first row is removed, because it
 does not match.  The second line is kept, since depending on the

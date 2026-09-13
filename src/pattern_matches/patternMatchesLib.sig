@@ -34,20 +34,18 @@ sig
      XXX_CONV_GEN : simpset -> ssfrag list -> conv
 
      proves preconditions against the given simpset, plus the given list
-     of ssfrags.  The simpset is explicit because these conversions are
-     *captured* -- stored in an ssfrag or a compset and run much later --
-     so reaching for the stateful one inside would read it in whatever
-     context the simplifier happened to be running in.  The XXX_CONV
-     forms above pass srw_ss() for you.
+     of ssfrags, instead of the default set.  The XXX_CONV forms above
+     pass srw_ss(), read as they are called.
 
      XXX_ss : ssfrag
 
      uses the default set + the simplifier using it as a callback to prove
-     preconditions.
+     preconditions.  The default set is read as the fragment fires, so it
+     covers datatypes declared since this library was loaded.
 
      XXX_ss_GEN : simpset -> ssfrag list -> ssfrag
 
-     uses additionally the given simpset and list of ssfrags.
+     uses the given simpset and list of ssfrags instead.
   *)
 
 
