@@ -1122,8 +1122,33 @@ val bool_ss = boolSimps.bool_ss;
  ---------------------------------------------------------------------------*)
 
 datatype srw_update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
-type srw_state = simpset * bool * srw_update list
-  (* simpset, initialised-flag, update list (most recent first) *)
+
+(* A derived value is a function of the simpset, so it lives in the same
+   value as the simpset it is derived from rather than in a slot of its
+   own.  A separate slot would work if this module owned every write to
+   the parent, as Parse.sml's grammars do; this one is owned by
+   AncestryData and written on parent_onload, set_parents and
+   with_temp_value, paths we have no way to intercept.  Keeping the
+   derived values in the value itself needs no interception: the type is
+   the one we hand to export_with_ancestry, so every function that builds
+   one is ours, and all of them go through `mkstate`.
+
+   The entries are suspensions, but over the sset of the very state that
+   holds them, which is already fixed by the time mkstate runs -- so
+   unlike a suspension in a slot of its own there is no window in which
+   one can come to disagree with its simpset.  Forcing eagerly would make
+   every [simp] delta of every ancestor pay for a derivation nobody has
+   asked for, which measured at about 40% of theory-load time.
+
+   The table is complete for the derivers registered when the state was
+   built.  An uninitialised state has none, and neither has a value
+   cached before a later registration; readers of those derive from
+   `srw_ss_of` themselves, which is the same answer, just not shared. *)
+type srw_state = {sset : simpset, initp : bool, upds : srw_update list,
+                  derived : UniversalType.t Susp.susp Symtab.table}
+
+val derivers : (string * (simpset -> UniversalType.t)) list Sref.t =
+    Sref.new []
 
 val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
                               ++ boolSimps.NORMEQ_ss
@@ -1133,23 +1158,40 @@ val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
 
 fun ssf1 nth = simpLib.empty_ssfrag |> simpLib.add_named_rwt nth
 
-val state0 : srw_state = (initial_simpset, false, [])
-fun apply_delta d ((sset,initp,upds):srw_state) : srw_state =
+fun mkstate (sset, initp, upds) : srw_state =
+    {sset = sset, initp = initp, upds = upds,
+     derived =
+       if initp then
+         List.foldl
+           (fn ((nm,f),t) => Symtab.update (nm, Susp.delay (fn () => f sset)) t)
+           Symtab.empty (Sref.value derivers)
+       else Symtab.empty}
+
+val state0 : srw_state = mkstate (initial_simpset, false, [])
+fun apply_delta d ({sset,...} : srw_state) : srw_state =
     case d of
         ThmSetData.ADD nth =>
-        (sset ++ ssf1 nth, true, [])
-      | ThmSetData.REMOVE s => (sset -* [s], true, [])
+        mkstate (sset ++ ssf1 nth, true, [])
+      | ThmSetData.REMOVE s => mkstate (sset -* [s], true, [])
 
 fun apply_srw_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
   | apply_srw_update (REMOVE_RWT n, ss) = ss -* [n]
 
-fun init_state_of ctxt (st as (sset,initp,upds)) =
+(* `derivers` grows as libraries load, and AncestryData caches a value
+   per theory, so a value built before a registration has no entry for
+   it.  Rebuilding the table on the ancestry paths restores the sharing;
+   it is an optimisation, not a correctness measure -- a missing entry
+   only costs the reader its own derivation. *)
+fun renorm ({sset,initp,upds,...}:srw_state) = mkstate (sset, initp, upds)
+
+fun init_state_of ctxt (st as {sset,initp,upds,...} : srw_state) =
     if initp then st
     else
       let fun init() =
-              (List.foldl apply_srw_update sset (List.rev upds)
-                          |> rev_itlist add_simpls (tyinfol_of ctxt),
-               true, [])
+              mkstate
+                (List.foldl apply_srw_update sset (List.rev upds)
+                            |> rev_itlist add_simpls (tyinfol_of ctxt),
+                 true, [])
       in
         HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done") init ()
       end
@@ -1168,36 +1210,7 @@ fun opt_partition f g ls =
       recurse [] [] ls
     end
 
-(* A derived value is a function of the simpset, so it lives in a slot
-   as an unforced suspension over the srw_state it was derived from.
-   Reading one is Susp.force: pure in its context, computed at most
-   once, and never stale, because the state it closes over is the state
-   installed alongside it.  The registry holds one installer per derived
-   value; it is module-static — it grows only when a derived value is
-   created — and doesn't travel with Context snapshots.
-
-   Each installer comes in two forms because the simpset is adjusted
-   from two kinds of place.  `put` is for a pure context transform, and
-   composes with the adjustment into one Context.update.  `write` is for
-   the paths reached from inside AncestryData's own callbacks, which
-   already hold the global slot's lock: those take the read side only,
-   whereas a nested Context.update could deadlock against a concurrent
-   restore.  Both are handed the new state rather than reading it back,
-   so neither depends on when it runs relative to the adjustment.
-
-   The suspension also closes over the context to initialise the state
-   against, since that reaches the TypeBase.  `put` has one; `write`
-   runs during theory load, outside any proof, so it snapshots there
-   rather than leaving an ambient read to happen when the value is
-   forced -- which could be arbitrarily later, inside a proof. *)
-val derived_installers =
-    Sref.new ([] : {put : srw_state -> Context.t -> Context.t,
-                    write : srw_state -> unit} list)
-fun install_derived st c =
-    List.foldl (fn (i,c) => #put i st c) c (Sref.value derived_installers)
-fun notify st = List.app (fn i => #write i st) (Sref.value derived_installers)
-
-fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
+fun apply_to_global d (st as {sset,initp,upds,...}:srw_state) : srw_state =
     if not initp then
       case d of
           ThmSetData.ADD nth =>
@@ -1209,13 +1222,12 @@ fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
                     ADD_SSFRAG (add_named_rwt nth ssf) :: rest
                   | _ => ADD_SSFRAG (ssf1 nth) :: upds
           in
-            (sset, initp, upds')
+            mkstate (sset, initp, upds')
           end
-        | ThmSetData.REMOVE s => (sset, initp, REMOVE_RWT s :: upds)
-    else
-      let val st' = apply_delta d st in st' before notify st' end
+        | ThmSetData.REMOVE s => mkstate (sset, initp, REMOVE_RWT s :: upds)
+    else apply_delta d st
 
-fun finaliser {thyname} deltas (sset,initp,upds) =
+fun finaliser {thyname} deltas ({sset,initp,upds,...} : srw_state) =
     let
       fun toNamedAdd (ThmSetData.ADD p) = SOME p | toNamedAdd _ = NONE
       fun toRM (ThmSetData.REMOVE s) = SOME s | toRM _ = NONE
@@ -1227,9 +1239,8 @@ fun finaliser {thyname} deltas (sset,initp,upds) =
       val new_upds = ADD_SSFRAG ssfrag :: map REMOVE_RWT rms
     in
       if initp then
-        let val st' = (List.foldl apply_srw_update sset new_upds, true, [])
-        in st' before notify st' end
-      else (sset, false, List.revAppend(new_upds, upds))
+        mkstate (List.foldl apply_srw_update sset new_upds, true, [])
+      else mkstate (sset, false, List.revAppend(new_upds, upds))
     end
 
 val adresult as {DB,get_global_value,get_global_value_of,record_delta,
@@ -1243,33 +1254,32 @@ val adresult as {DB,get_global_value,get_global_value_of,record_delta,
       },
       settype = "simp"
     };
-fun updnote_global_value f =
-    (update_global_value f; notify (get_global_value()))
 val get_deltas = #get_deltas adresult
 fun merge_simpsets ps =
-    case Option.map (#1 o quiet_messages init_state) (#merge adresult ps) of
+    case Option.map (#sset o quiet_messages init_state) (#merge adresult ps) of
         NONE => simpLib.empty_ss
       | SOME sset => sset
 
-fun augment_srw_ss0 ssdl ((sset, initp, upds):srw_state):srw_state =
-    if initp then (foldl (fn (ssd,ss) => ss ++ ssd) sset ssdl, true, [])
+fun augment_srw_ss0 ssdl ({sset, initp, upds, ...}:srw_state):srw_state =
+    if initp then
+      mkstate (foldl (fn (ssd,ss) => ss ++ ssd) sset ssdl, true, [])
     else
-      (sset, false, List.revAppend(map ADD_SSFRAG ssdl, upds))
+      mkstate (sset, false, List.revAppend(map ADD_SSFRAG ssdl, upds))
 
-val augment_srw_ss = updnote_global_value o augment_srw_ss0
+val augment_srw_ss = update_global_value o augment_srw_ss0
 
 fun diminish_srw_ss0 names st0 =
-    let val st' as (sset, _, _) = init_state st0
+    let val {sset, ...} = init_state st0
     in
-      (simpLib.remove_ssfrags names sset, true, [])
+      mkstate (simpLib.remove_ssfrags names sset, true, [])
     end
-val diminish_srw_ss = updnote_global_value o diminish_srw_ss0
+val diminish_srw_ss = update_global_value o diminish_srw_ss0
 
-fun temp_delsimps0 names (sset, initp, upds) =
-    if initp then (sset -* names, true, [])
+fun temp_delsimps0 names ({sset, initp, upds, ...}:srw_state) =
+    if initp then mkstate (sset -* names, true, [])
     else
-      (sset, false, List.revAppend (map REMOVE_RWT names, upds))
-val temp_delsimps = updnote_global_value o temp_delsimps0;
+      mkstate (sset, false, List.revAppend (map REMOVE_RWT names, upds))
+val temp_delsimps = update_global_value o temp_delsimps0;
 
 fun tyi_update tyi sset = sset ++ simpLib.tyi_to_ssdata tyi
 fun update_fn tyi =
@@ -1280,36 +1290,26 @@ fun augment_with_typebase tyb =
 val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 
 (* init_state is pure, so the context-taking read need not write one; it
-   redoes the fold per call on a state nobody has initialised yet, which
-   is what the derived values' suspensions are for.
-
-   The ambient read keeps the write, and installs with it: initialising
-   the state without reinstalling would leave every derived value
-   suspended over the uninitialised one, so each would repeat the fold
-   -- and reach tyinfol() -- when forced. *)
-fun srw_ss_of ctxt = #1 (init_state_of ctxt (get_global_value_of ctxt))
+   redoes the fold per call on a state nobody has initialised yet.  The
+   ambient read keeps the write, so that the fold is done once. *)
+fun srw_ss_of ctxt = #sset (init_state_of ctxt (get_global_value_of ctxt))
 fun srw_ss () =
     case get_global_value() of
-        (ss, true, _) => ss
-      | _ => (updnote_global_value init_state; #1 (get_global_value()))
+        {sset, initp = true, ...} => sset
+      | _ => (update_global_value init_state; #sset (get_global_value()))
 
-fun with_simpset_updates f g x = (
-  (* tell clients that their derived values are stale because we're about
-     to update the base *)
-  notify (get_global_value());
+(* The window saves and restores the whole value, and a value carries
+   the values derived from it, so both ends of the bracket are coherent
+   without telling anyone about them. *)
+fun with_simpset_updates f g x =
   let val ss' = f (srw_ss()) handle Conv.UNCHANGED => srw_ss()
-  in AncestryData.with_temp_value adresult (ss', true, []) g x end
-  (* clients may believe they're up-to-date but we've just flipped the
-     base value back, so we need to notify again *)
-  before notify (get_global_value())
-)
+  in AncestryData.with_temp_value adresult (mkstate (ss', true, [])) g x end
 
 fun map_simpset f ctxt =
     let val ss = srw_ss_of ctxt
         val ss' = f ss handle Conv.UNCHANGED => ss
-        val st' = (ss', true, [])
     in
-      install_derived st' (update_global_value_of (K st') ctxt)
+      update_global_value_of (K (mkstate (ss', true, []))) ctxt
     end
 
 (* Adjusting the simpset for a tactic is primarily a context transform:
@@ -1343,9 +1343,9 @@ in
       Context.Data.get update_log_slot (Context.snapshot())
   val upd_update_log = Context.Data.modify update_log_slot
 end
-fun ap13 f (x,y,z) = (f x, y, z)
+fun ap_sset f ({sset,initp,upds,...}:srw_state) = mkstate (f sset, initp, upds)
 fun logged_update {thyname} f =
-    (updnote_global_value (ap13 f);
+    (update_global_value (ap_sset f);
      upd_update_log (Symtab.cons_list (thyname,f)))
 
 fun logged_addfrags thy fgs =
@@ -1370,7 +1370,7 @@ fun apply_logged_updates {theories} simpset =
     end
 
 fun do_logged_updates thys =
-    updnote_global_value (ap13 (apply_logged_updates thys) o init_state)
+    update_global_value (ap_sset (apply_logged_updates thys) o init_state)
 
 fun option_fold f NONE x = x
   | option_fold f (SOME a) x = f a x
@@ -1414,24 +1414,26 @@ fun mkfrag_from thy setdeltas =
     end
 fun thy_ssfrag s = get_deltas {thyname=s} |> mkfrag_from s
 
-fun thy_simpset s = Option.map (#1 o init_state) (DB {thyname=s})
+fun thy_simpset s = Option.map (#sset o init_state) (DB {thyname=s})
 
 fun temp_set_simpset_ancestry sl =
     case #merge adresult sl of
         NONE => HOL_WARNING "BasicProvers" "temp_set_simpset_ancestry"
                             "Merge of parental values produces no value; \
                             \nothing done"
-      | SOME v => updnote_global_value (K v)
+      | SOME v => update_global_value (K (renorm v))
 
 fun set_simpset_ancestry sl =
     case #set_parents adresult sl of
         NONE => HOL_WARNING "BasicProvers" "set_simpset_ancestry"
                             "Merge of parental values produces no value; \
                             \nothing done"
-      | SOME _ => notify (get_global_value())
+      | SOME _ => update_global_value renorm
 
-fun temp_setsimpset ss = updnote_global_value (K (ss, true, []))
-val simpset_state = get_global_value
+fun temp_setsimpset ss = update_global_value (K (mkstate (ss, true, [])))
+fun simpset_state () =
+    let val {sset,initp,upds,...} = get_global_value()
+    in (sset,initp,upds) end
 fun recreate_sset_at_parentage ps =
     ps |> merge_simpsets
        |> option_fold augment_with_typebase (TypeBase.merge_typebases ps)
@@ -1439,36 +1441,32 @@ fun recreate_sset_at_parentage ps =
        |> temp_setsimpset
 
 
+(* Registering reads the state from the live cell and writes it back
+   there, so the context it initialises against is the ambient one too.
+   Taking it as a parameter would only offer a way to fold the ambient
+   state over somebody else's TypeBase. *)
 fun make_simpset_derived_value name (deriver : simpset -> 'a -> 'a) init =
     let
       fun derive ss = deriver ss init
-      fun suspend ctxt st =
-          SOME (Susp.delay (fn () => derive (#1 (init_state_of ctxt st))))
-      val vslot : 'a Susp.susp option Context.Data.slot =
-          Context.Data.new
-            {name = name ^ ".value",
-             empty = NONE,
-             pp = fn _ => "<" ^ name ^ ".value>"}
-      val () = Sref.update derived_installers
-                 (cons {put = fn st => fn c =>
-                                 Context.Data.put vslot (suspend c st) c,
-                        write = fn st =>
-                                   Context.Data.write vslot
-                                     (suspend (Context.snapshot()) st)})
-      val () = Context.Data.write vslot
-                 (suspend (Context.snapshot()) (get_global_value()))
-      (* NONE is a context older than this slot -- one snapshotted before
-         the derived value existed.  Deriving from its own simpset is
-         still the right answer; it just isn't memoised, which matters
-         only during the boot that creates the slot in the first place. *)
+      val (wrap, unwrap) = UniversalType.embed ()
+      val () = if List.exists (fn (n,_) => n = name) (Sref.value derivers)
+               then raise ERR "make_simpset_derived_value"
+                              ("A derived value named " ^ name ^
+                               " already exists")
+               else ()
+      val () = Sref.update derivers (cons (name, wrap o derive))
+      (* init_state_of leaves an already-initialised state alone, so the
+         renorm is what puts this deriver into the state that is current;
+         without it every read would fall through to deriving afresh. *)
+      val () = update_global_value (renorm o init_state)
       fun get_of ctxt =
-          case Context.Data.get vslot ctxt of
-              SOME s => Susp.force s
+          case Option.mapPartial (unwrap o Susp.force)
+                 (Symtab.lookup (#derived (get_global_value_of ctxt)) name)
+           of SOME v => v
             | NONE => derive (srw_ss_of ctxt)
       fun get () = get_of (Context.snapshot())
-      fun set v = Context.Data.write vslot (SOME (Susp.delay (fn () => v)))
     in
-      {get = get, get_of = get_of, set = set}
+      {get = get, get_of = get_of}
     end
 
 fun mk_tacmod s =

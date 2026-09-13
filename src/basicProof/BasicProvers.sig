@@ -64,9 +64,11 @@ sig
       ('a -> Context.t -> 'b)
   val mk_tacmod : string -> Manager.tacmodifier
 
+  (* A value derived from the stateful simpset.  It is stored with the
+     simpset it derives from, so it moves whenever that does. *)
   val make_simpset_derived_value :
       string -> (simpset -> 'a -> 'a) -> 'a ->
-      {get : unit -> 'a, get_of : Context.t -> 'a, set : 'a -> unit}
+      {get : unit -> 'a, get_of : Context.t -> 'a}
 
   (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic
