@@ -17,6 +17,7 @@ Ancestors
 Libs
   fracLib ratLib
 
+val _ = ParseExtras.temp_loose_equality();
 (*****************************************************************************)
 (* A complex rational x+yi is a pair of rational numbers.                    *)
 (* The type ``:complex_rational`` is a datatype isomorphic to                *)
