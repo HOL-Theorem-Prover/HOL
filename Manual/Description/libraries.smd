@@ -1925,7 +1925,9 @@ variables in the test.  For example, the following definition is
 provably equal to `FACT`,
 
 ```repl
+>>__ Feedback.emit_WARNING := false; (* for ambient context read *)
 >> Define `fact n = if n=0 then 1 else n * fact (n-1)`;
+>>__ Feedback.emit_WARNING := true;
 ```
 
 But the two definitions evaluate completely differently.

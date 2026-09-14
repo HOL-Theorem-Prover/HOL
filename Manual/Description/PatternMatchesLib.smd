@@ -411,13 +411,13 @@ with something like `DEPTH_CONV`.
 \index{PMATCH_LIFT_BOOL_CONV@\ml{PMATCH\_LIFT\_BOOL\_CONV}}
 
 ```repl
->> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true) ``
-  P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q``
+>> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)
+    “P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q”
 ```
 
 ```repl
->> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false) ``
-  P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q``
+>> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false) 
+    “P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q”
 ```
 
 ### Translating \pmatch{} and decision tree case expressions
@@ -610,9 +610,10 @@ constructor family for lists.
 First, we need to define a case-split function for `[]` and `SNOC`.
 
 ```repl
->>_ val list_REVCASE_def = Define `
+>>_ Definition list_REVCASE_def:
       list_REVCASE l c_nil c_snoc =
-        (if l = [] then c_nil else (c_snoc (LAST l) (BUTLAST l)))`
+        (if l = [] then c_nil else (c_snoc (LAST l) (BUTLAST l)))
+    End
 >>__ val case_const_tm =
       ``list_REVCASE:'a list -> 'b -> ('a -> 'a list -> 'b) -> 'b``
 ```
@@ -801,9 +802,10 @@ technique with manual reasoning (as in the figure).
 
 ```{=latex}
 \begin{figure}[phtb]
-\begin{session}
-\begin{alltt}
->>_ val t = ``pmatch x of _ when EVEN x => 0 | _ when ODD x => 1 | _ => 2``
+```
+
+```repl
+>> val t = ``pmatch x of _ when EVEN x => 0 | _ when ODD x => 1 | _ => 2``
 >>+ PMATCH_REMOVE_REDUNDANT_CONV t
 
 >> val info = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH t
@@ -814,31 +816,19 @@ technique with manual reasoning (as in the figure).
 >>- val info' = IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT info 2 bossLib.cheat
 
 >> val thm = IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM info'
-\end{alltt}
-\end{session}
+```
+
+```{=latex}
 \caption{Manual reasoning about redundant rows}
 \label{fig:pmatch/manual-red}
 \end{figure}
 ```
 
+
 ```{=mdbook}
 **Figure \ref{fig:pmatch/manual-red}.** Manual reasoning about
 redundant rows.
 
-```
-
->>_ val t = ``pmatch x of _ when EVEN x => 0 | _ when ODD x => 1 | _ => 2``
->>+ PMATCH_REMOVE_REDUNDANT_CONV t
-
->> val info = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH t
-
->> IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal info 2
-
-```repl
-> val info' = IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT info 2 ...
->>- val info' = IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT info 2 bossLib.cheat
-
->> val thm = IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM info'
 ```
 
 ### Pattern Match Completion
