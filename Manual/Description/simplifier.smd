@@ -645,34 +645,34 @@ fragments are described in more detail in the REFERENCE.
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lp{0.7\textwidth}}
-`ARITH_ss` &
+\ml{ARITH\_ss} &
 Embodies decision
 procedure for universal Presburger arithmetic over $\mathbb{N}$.
-(Defined in `numSimps`; used in high-level simplification tactics.)
+(Defined in \ml{numSimps}; used in high-level simplification tactics.)
 \\
-`BOOL_ss` &
+\ml{BOOL\_ss} &
 Standard rewrites for the boolean operators
 (conjunction, negation \emph{etc.}), and conversion for performing
-$\beta$-reduction.  (Defined in `boolSimps`; part of `bool_ss`.)
+$\beta$-reduction.  (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
 \\
-`CONG_ss` & Congruence rules for implication and conditional
-expressions. (Defined in `boolSimps`; part of `bool_ss`.)
+\ml{CONG\_ss} & Congruence rules for implication and conditional
+expressions. (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
 \\
-`CONJ_ss` &
+\ml{CONJ\_ss} &
 Lets conjuncts be used as assumptions when rewriting other conjuncts.
 If simplifying $c_1\land c_2$, $c_2$ is assumed while $c_1$ is simplified to $c_1'$.
 Then $c_1'$ is assumed while $c_2$ is simplified.
-(Defined in `boolSimps`.)
+(Defined in \ml{boolSimps}.)
 \\
-`DNF_ss` &
+\ml{DNF\_ss} &
 Normalises to disjunctive normal form; quantifiers moved for elimination over equalities.
-(Defined in `boolSimps`.)\\
-`ETA_ss` &
+(Defined in \ml{boolSimps}.)\\
+\ml{ETA\_ss} &
 Eliminates eta-redexes, \emph{i.e.}, terms of form $(\lambda x. M x)$ with $x$ not free in $M$.
-(Defined in `boolSimps`.)\\
+(Defined in \ml{boolSimps}.)\\
 \end{tabular}
 \end{center}
-\caption{Some of HOL’s standard *simpset* fragments}
+\caption{Some of HOL’s standard \emph{simpset} fragments}
 \label{table:ssfrags}
 \end{table}
 ```
