@@ -25,7 +25,9 @@ list-tactic also never fails.
 ### Example
 
 ``` hol4
->> SELECT_LT CONJ_TAC [([], “r ∧ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∧ q”)]
+>> SELECT_LT CONJ_TAC 
+     [([], “r ∧ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∧ q”)]
+     (Context.snapshot())
 ```
 
 ### See also

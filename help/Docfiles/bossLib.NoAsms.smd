@@ -23,9 +23,10 @@ Never fails.
 ### Example
 
 ``` hol4
->> simp[] ([“x = T”], “p ∧ x”);
+>> val c = Context.snapshot();
+>> simp[] ([“x = T”], “p ∧ x”) c;
 
->> simp[NoAsms] ([“x = T”], “p ∧ x”);
+>> simp[NoAsms] ([“x = T”], “p ∧ x”) c;
 ```
 
 ### See also

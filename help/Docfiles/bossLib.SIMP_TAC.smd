@@ -44,13 +44,12 @@ assumptions of a goal to the rewrites and then performs simplification.
 seeming goals:
 
 ``` hol4
-   - val (_, p) = SIMP_TAC arith_ss []
-                 ([], Term`P x /\ (x = y + 3) ==> P x /\ y < x`);
+   >> val c = Context.snapshot()
+   >> val (_, p) = 
+        SIMP_TAC arith_ss []
+                 ([], “P x /\ (x = y + 3) ==> P x /\ y < x”) c;
 
-   > val p = fn : thm list -> thm
-
-   - p [];
-   > val it = |- P x /\ (x = y + 3) ==> P x /\ y < x : thm
+   >> p [];
 ```
 
 `SIMP_TAC` is similar to `REWRITE_TAC` if used with just the `bool_ss`

@@ -32,13 +32,14 @@ the goal, so that this pattern does not match the assumption about
 variable `y`:
 
 ``` hol4
->> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
+>> val c = Context.snapshot()
+>> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”) c;
 
->> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
+>> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”) c;
 
->> simp[IgnAsm‘F (* sa *)’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
+>> simp[IgnAsm‘F (* sa *)’] ([“x = F”, “y = T”], “p ∧ x ∧ y”) c;
 
->> simp[IgnAsm‘_ = _’] ([“x = F”, “y = T”, “p:bool”], “p ∧ x ∧ y”);
+>> simp[IgnAsm‘_ = _’] ([“x = F”, “y = T”, “p:bool”], “p ∧ x ∧ y”) c;
 ```
 
 ### See also
