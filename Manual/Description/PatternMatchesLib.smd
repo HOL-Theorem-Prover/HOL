@@ -4,9 +4,9 @@
 \index{case expressions|(}
 
 HOL supports two different types of case expressions: decision
-tree based and \pmatch{} case expressions.  These are presented in
+tree based and `pmatch` case expressions.  These are presented in
 Section \ref{CaseExp}.  In subsection
-\ref{sec:pmatch-case-expressions}, the basic usage of \pmatch{}
+\ref{sec:pmatch-case-expressions}, the basic usage of `pmatch`
 case expressions is discussed.  Some concepts presented there
 briefly are discussed here in detail.  Moreover, advanced features
 are discussed here.
@@ -16,11 +16,11 @@ are discussed here.
 \label{subsec:pmatch/simp}
 
 \index{PMATCH_SIMP_CONV@\ml{PMATCH\_SIMP\_CONV}}
-The most important tool to deal with \pmatch{} case expressions
+The most important tool to deal with `pmatch` case expressions
 is the conversion `PMATCH_SIMP_CONV` or the corresponding
 `PMATCH_SIMP_ss`, which is part of `bossLib.std_ss`.  It
 combines the following methods of simplifying and (partially)
-evaluating \pmatch{} case expressions.  A subset of these methods
+evaluating `pmatch` case expressions.  A subset of these methods
 that skips normalisations and potentially expensive searches for
 redundant and subsumed rows is available as
 `PMATCH_FAST_SIMP_CONV`.
@@ -45,7 +45,7 @@ coincide.
      PMATCH_ROW (\ (x,z). SOME (x,z)) (\_. T) (\ (a,y). 8)]``
 ```
 
-Similarly, many \pmatch{} tools rely on each pattern of a case
+Similarly, many `pmatch` tools rely on each pattern of a case
 expression having the same number of columns.  This normal form
 is enforced by `PMATCH_EXPAND_COLS_CONV`.
 
@@ -69,7 +69,7 @@ though.
   | (x, y, z) when z => x``
 ```
 
-A combination of these conversions for normalising \pmatch{} case
+A combination of these conversions for normalising `pmatch` case
 expressions is available as `PMATCH_NORMALISE_CONV`.
 \index{PMATCH_NORMALISE_CONV@\ml{PMATCH\_NORMALISE\_CONV}}
 
@@ -78,7 +78,7 @@ expressions is available as `PMATCH_NORMALISE_CONV`.
 \label{subsubsec:pmatch-cleanup}
 
 The function `PMATCH_CLEANUP_CONV` checks each row of a
-\pmatch{} case expression and determines whether it matches the
+`pmatch` case expression and determines whether it matches the
 tested expression.  There are three possible outcomes of such a
 check: a proof that the row matches, a proof that the row does
 not match or that it could not be decided whether the row matches.
@@ -134,7 +134,7 @@ evaluated.
 
 Before, we saw how rows can be removed.
 `PMATCH_SIMP_COLS_CONV` allows removing a column of a
-\pmatch{} case expression.  If for all rows a certain column
+`pmatch` case expression.  If for all rows a certain column
 matches the input value for this column, the column can be
 removed.  This situation usually arises after removing certain
 rows from a case expression via partial evaluation.
@@ -197,7 +197,7 @@ considered as well.  The function
 `PMATCH_REMOVE_FAST_SUBSUMED_CONV` removes subsumed rows
 that can be detected quickly.
 
-If no row matches, a \pmatch{} case expression evaluates to `ARB`.
+If no row matches, a `pmatch` case expression evaluates to `ARB`.
 Therefore, a row with right-hand-side of `ARB` is considered to
 be subsumed if no further row matches.  This is not always what
 users expect or want.  For example, the user might not want to
@@ -234,7 +234,7 @@ The `PMATCH_SIMP_CONV` conversion keeps such rows.
 The conversion `PMATCH_CLEANUP_CONV` (see
 Section \ref{subsubsec:pmatch-cleanup}) is added to the internal
 database of `computeLib`.  This allows the efficient evaluation
-of ground terms that contain \pmatch{} case expressions.
+of ground terms that contain `pmatch` case expressions.
 
 ```repl
 >> EVAL ``pmatch (SOME 3, SOME 4) of
@@ -252,13 +252,13 @@ of ground terms that contain \pmatch{} case expressions.
 
 \label{subsec:pmatch/remove-feat}
 
-\pmatch{} case expressions support features that are not usually
+`pmatch` case expressions support features that are not usually
 supported by programming languages.  One can use the same pattern
 variable multiple times in a pattern and use variables not bound
 by a pattern.  Moreover, there is support for guards.
 
 Sometimes, it is desirable to remove such features from a
-\pmatch{} case expression.  A typical example is that they need
+`pmatch` case expression.  A typical example is that they need
 to be removed before code-extraction.
 \index{pattern matches!code extraction}
 
@@ -352,10 +352,10 @@ functions for lists.
 >>- val MYZIP2_def = MYZIP2_def
 ```
 
-We can use \pmatch{} case expressions to fight these issues.
-There is, however, no special support for \pmatch{} case
+We can use `pmatch` case expressions to fight these issues.
+There is, however, no special support for `pmatch` case
 expressions built into `Define`.  Instead, one needs to define
-a function with a \pmatch{} case expression on the right-hand-side.
+a function with a `pmatch` case expression on the right-hand-side.
 Using the rule `PMATCH_TO_TOP_RULE` then produces the
 desired (conditional) equations.
 \index{Define@\ml{Define}}
@@ -401,7 +401,7 @@ current row.
 
 The lifting functionality is also available via
 `PMATCH_LIFT_BOOL_ss` and `PMATCH_LIFT_BOOL_CONV`,
-which lift a \pmatch{} case expression to the next highest
+which lift a `pmatch` case expression to the next highest
 boolean level and expands it there.  Since trying to prove
 exhaustiveness (see Section \ref{subsec:pmatch/exhaust}) might be
 slow, there is flag for turning it on and off explicitly.
@@ -420,10 +420,10 @@ with something like `DEPTH_CONV`.
     “P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q”
 ```
 
-### Translating \pmatch{} and decision tree case expressions
+### Translating `pmatch` and decision tree case expressions
 
 As discussed in Section \ref{CaseExp}, there are benefits to both
-\pmatch{} and decision tree based case expressions.  Therefore,
+`pmatch` and decision tree based case expressions.  Therefore,
 there are tools for translating between both representations.
 
 The function `pmatch2case` uses the pattern compilation
@@ -434,7 +434,7 @@ repeatedly performs case splits and evaluates is sufficient for
 proving equivalence.  This leads to `PMATCH_ELIM_CONV`.
 \index{PMATCH_ELIM_CONV@\ml{PMATCH\_ELIM\_CONV}}
 
-Only \pmatch{} case expressions that fall into the subset
+Only `pmatch` case expressions that fall into the subset
 supported by decision tree ones can be translated.  This means
 that no guards can be used and that all patterns need to be
 constructor patterns.
@@ -446,7 +446,7 @@ constructor patterns.
 
 An approach similar to the one implemented in HOL's pretty
 printer allows the translation of decision tree case expressions
-to equivalent \pmatch{} expressions.  The underlying function is
+to equivalent `pmatch` expressions.  The underlying function is
 `case2pmatch do_opt`, where the `do_opt` flag determines
 whether certain non-trivial optimisations are attempted.  The
 corresponding conversions are named `PMATCH_INTRO_CONV` and
@@ -466,7 +466,7 @@ corresponding conversions are named `PMATCH_INTRO_CONV` and
 ### Pattern Compilation
 
 \index{pattern compilation|(}
-The `pmatch2case` function allows \pmatch{} case expressions
+The `pmatch2case` function allows `pmatch` case expressions
 to be compiled into decision tree case expressions.  It is fast
 and the result is usually pretty good.  However, it relies on
 the pattern compilation implementation of HOL's parser.  This
@@ -476,7 +476,7 @@ we get an equivalent decision tree case expression (without proof)
 or it fails and one has nothing.  It is not easily possible to
 get partial results or use the information obtained during
 pattern compilation to prove exhaustiveness or find a set of
-missing patterns.  With simplification of \pmatch{} case
+missing patterns.  With simplification of `pmatch` case
 expressions (see Section \ref{subsec:pmatch/simp}) in place, it
 is straightforward to implement pattern compilation.  One
 performs a case-split on one variable occurring in the input of
@@ -839,7 +839,7 @@ compute a set of missing patterns.  The conversion
 \index{PMATCH_COMPLETE_CONV@\ml{PMATCH\_COMPLETE\_CONV}}
 and simpset fragment `PMATCH_COMPLETE_ss` use this implicitly
 computed information to extend case expressions with `ARB` rows
-and thereby produce exhaustive \pmatch{} case expressions.  A
+and thereby produce exhaustive `pmatch` case expressions.  A
 flag determines whether these newly introduced rows should use
 guards.
 
@@ -898,7 +898,7 @@ theorem.  Missing cases are automatically added.
 
 ### Code Extraction
 
-There is support for \pmatch{} case expressions in `EmitML`.
+There is support for `pmatch` case expressions in `EmitML`.
 However, not all case expressions are supported.  Supported case
 expressions may only contain constructor patterns and each pattern
 variable needs to be used exactly once.  Moreover, when extracting

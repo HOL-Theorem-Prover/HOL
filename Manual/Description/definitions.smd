@@ -18,7 +18,6 @@
 \providecommand{\rewruse}{This theorem is installed in the \texttt{TypeBase}.}
 \providecommand{\field}[1]{\mbox{\it field}_{#1}}
 \providecommand{\update}{\mbox{\tt\_fupd}}
-\providecommand{\pmatch}{\textsc{Pmatch}}
 ```
 
 <!-- PolyML setup boilerplate; see system.smd for the full version. -->
