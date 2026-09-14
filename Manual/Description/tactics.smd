@@ -452,14 +452,11 @@ where $t'$ is obtained from $t$ as described.
 adds the assumptions of the goal to the list of theorems used for rewriting.
 Also written `ASM_REWRITE_TAC`.
 
-2. \index{PURE_ASM_REWRITE_TAC@\ml{PURE\_ASM\_REWRITE\_TAC}}
-`PURE_ASM_REWRITE_TAC` is like `asm_rewrite_tac`, but it doesn't use any built-in rewrites.
+2. \index{PURE_ASM_REWRITE_TAC@\ml{PURE\_ASM\_REWRITE\_TAC}}`PURE_ASM_REWRITE_TAC` is like `asm_rewrite_tac`, but it doesn't use any built-in rewrites.
 
-3. \index{PURE_REWRITE_TAC@\ml{PURE\_REWRITE\_TAC}}
-`PURE_REWRITE_TAC` uses neither the assumptions nor the built-in rewrites.
+3. \index{PURE_REWRITE_TAC@\ml{PURE\_REWRITE\_TAC}}`PURE_REWRITE_TAC` uses neither the assumptions nor the built-in rewrites.
 
-4. \index{FILTER_ASM_REWRITE_TAC@\ml{FILTER\_ASM\_REWRITE\_TAC}}
-`FILTER_ASM_REWRITE_TAC `$p$` [`$\mathit{th}_1$`,`$\dots$`,`$\mathit{th}_n$`]` simplifies the goal by rewriting it with the explicitly given theorems $\mathit{th}_1$, $\dots$, $\mathit{th}_n$, together with those assumptions of the goal which satisfy the predicate $p$ and also the standard rewrites.
+4. \index{FILTER_ASM_REWRITE_TAC@\ml{FILTER\_ASM\_REWRITE\_TAC}}`FILTER_ASM_REWRITE_TAC `$p$` [`$\mathit{th}_1$`,`$\dots$`,`$\mathit{th}_n$`]` simplifies the goal by rewriting it with the explicitly given theorems $\mathit{th}_1$, $\dots$, $\mathit{th}_n$, together with those assumptions of the goal which satisfy the predicate $p$ and also the standard rewrites.
 
 See also the more powerful simplification tactics described in the simplifier chapter.
 
