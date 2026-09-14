@@ -123,24 +123,12 @@ Conceptually, the following abbreviations are made in HOL:
    validation = thm list -> thm
 ```
 
-A tactic takes a goal and then a *context*: the prover state the proof
-is to run against --- the kernel signatures, the parser's grammars, the
-stateful simpset, the `TypeBase`, and so on.  A `Context.t` is an
-immutable value, so a tactic reads the state it was handed rather than
-whatever happens to be current when it runs, and two proofs against two
-contexts cannot disturb one another.
+A tactic takes a goal and then a *context*: the prover state the proof is to run against---the kernel signatures, the parser's grammars, the stateful simpset, the `TypeBase`, and so on.
+A `Context.t` is an immutable value, so a tactic reads the state it was handed rather than whatever happens to be current when it runs.
+This makes choreograping proofs running parallel much more straightforward.
 
-Because the goal is supplied first, `tac g` does not run the tactic: it
-yields a function awaiting the context.  This matters when writing
-tactics, since anything that wraps `tac g` alone --- a handler, a
-`Lib.total`, a search over candidates, an effect window such as
-`trace` --- closes before the tactic has done any work.  Supply both:
-`tac g ctxt`, or `Lib.C tac ctxt` where a plain `goal -> ...` function
-is wanted.
-
-Interactively, `Context.snapshot()` reads the current state, so
-`tac g (Context.snapshot())` is the direct-application form; the
-goalstack and `prove` supply a context for you.
+Interactively, `Context.snapshot()` reads the current state, so one can write `tac g (Context.snapshot())` to get a tactic-result. 
+More usually, the goal-stack implementation or some other environment will provide both the goal and the context, so one can just work with tactics and their combinators.
 
 It does not follow, of course, from the type `tactic` that a particular tactic is well-behaved.
 For example, suppose that $T\ g$ ` = ([`$g_1$`,`$\dots$`,`$g_n$`],`$v$`)`, and that the subgoals $g_1$, $\dots$, $g_n$ have been solved.
@@ -238,12 +226,15 @@ The more sophisticated simplification functions (*e.g.*, `simp`) often do a very
 \index{rewriting!main tactic for|)}
 
 A simple example from list theory illustrates the use of tactics.
-A conjunctive goal is declared, and `conj_tac` applied to it:
+A conjunctive goal is declared, and `conj_tac` applied to it:[^use-of-contexts]
+
+[^use-of-contexts]: In the rest of this chapter we reuse the `Context.t` value with name `ctxt`.
 
 ```repl
+>> val ctxt = Context.snapshot()
 >> val gl0 = ([]:term list,``(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])``);
 
->> val (gl1,p1) = conj_tac gl0;
+>> val (gl1,p1) = conj_tac gl0 ctxt;
 ```
 
 The subgoals are each rewritten, using the definitions of `HD` and `TL`:
@@ -255,9 +246,9 @@ The subgoals are each rewritten, using the definitions of `HD` and `TL`:
 
 >> TL;
 
->> val (gl1_1,p1_1) = rewrite_tac[HD,TL](hd gl1);
+>> val (gl1_1,p1_1) = rewrite_tac[HD,TL](hd gl1) ctxt;
 
->> val (gl1_2,p1_2) = rewrite_tac[HD,TL](hd(tl gl1));
+>> val (gl1_2,p1_2) = rewrite_tac[HD,TL](hd(tl gl1)) ctxt;
 ```
 
 Both of the two subgoals are now solved, so the decomposition is complete and the proof can be built up in stages.
@@ -293,7 +284,7 @@ A simple example of a tactic written in ML
 is afforded by `conj_tac`, whose definition in HOL is as follows:
 \index{conj_tac@\ml{conj\_tac}!ML implementation of@ML implementation of}
 ```
-   fun conj_tac (asl,w) =
+   fun conj_tac (asl,w) ctxt =
      let val (l,r) = dest_conj w
      in
          ([(asl,l), (asl,r)], (fn [th1, th2] => CONJ th1 th2))
@@ -321,7 +312,7 @@ Complex and powerful tactics can be constructed in this way; and new tacticals c
 The example from earlier is continued, to illustrate the use of the tactical `>>`:
 
 ```repl
->> val (gl2,p2) = (conj_tac >> rewrite_tac [HD, TL]) gl0;
+>> val (gl2,p2) = (conj_tac >> rewrite_tac [HD, TL]) gl0 ctxt;
 
 >> p2 [];
 ```
@@ -950,7 +941,8 @@ The second `thm_tactic` parameter is then passed the first assumption that match
 
 Thus:
 ```
-   qpat_assum pat f ([t1, ..., tp, ..., tn], t) = f (ASSUME tp) ([t1, ..., tn], t)
+   qpat_assum pat f ([t1, ..., tp, ..., tn], t) = 
+     f (ASSUME tp) ([t1, ..., tn], t)
 ```
 where $t_p$ is the first assumption that matches the pattern `pat`.
 
@@ -1020,7 +1012,7 @@ This avoids the repeated popping and pushing of the stack solution, and likewise
 Both give a shorter expression than the direct method, which is:
 ```repl
    DISCH_TAC
-    >> DISJ_CASES_TAC(ASSUME ``(n = 0) \/ (n = 1)``)
+    >>> DISJ_CASES_TAC(ASSUME ``(n = 0) \/ (n = 1)``)
     >| [SUBST1_TAC(ASSUME ``n = 0``);
         SUBST1_TAC(ASSUME ``n = 1``)]
 ```
@@ -1031,15 +1023,15 @@ All of the following work
 on the goal $(n=0) \Rightarrow (n \times n = n)$:
 ```repl
    DISCH_TAC
-    >> SUBST1_TAC(ASSUME ``n = 0``)
-    >> simp[]
+    >>> SUBST1_TAC(ASSUME ``n = 0``)
+    >>> simp[]
 
    DISCH_TAC
-    >> pop_assum SUBST1_TAC
-    >> simp[]
+    >>> pop_assum SUBST1_TAC
+    >>> simp[]
 
    disch_then SUBST1_TAC
-    >> simp[]
+    >>> simp[]
 ```
 
 Furthermore, all induce the same sequence of inferences leading to the desired theorem; internally, no inference steps are saved by the economies in the ML text or the subgoal tree.
@@ -1112,13 +1104,15 @@ When applied, this tactic immediately ends work on this subgoal as if it had bee
 Interactively, the goal stack will move on to any remaining subgoals in the proof.
 Theorems that have been “proved” with the help of this tactic are not stored/saved to the current segment (as they are incomplete), and instead a message is emitted indicating as much:
 
-    >> Theorem to_suspend:
-          p /\ q ==> q /\ p
-       Proof
-           strip_tac >> conj_tac
-           >- suspend "rtp_q"
-           >- simp[]
-       QED
+```repl
+>> Theorem to_suspend:
+      p /\ q ==> q /\ p
+   Proof
+       strip_tac >> conj_tac
+       >- suspend "rtp_q"
+       >- simp[]
+   QED
+```
 
 Here the user has decided to suspend the subgoal that has assumptions `p` and `q` (these are produced through the `strip_tac` application) and conclusion `q` (the first goal produced by `conj_tac`).
 A theorem is bound to the provided name in the SML namespace, but is not yet saved for export (it is incomplete).
@@ -1130,18 +1124,22 @@ attributes.)
 
 Thus:
 
-    >>__ show_assums := true
-    >> Resume to_suspend[rtp_q,smlname=qsubgoal]:
-         first_assum ACCEPT_TAC
-       QED
+```repl
+>>__ show_assums := true
+>> Resume to_suspend[rtp_q,smlname=qsubgoal]:
+     first_assum ACCEPT_TAC
+   QED
+```
 
 The optional `smlname` attribute allows for inspection of the theorem corresponding to the sub-goal.
 \index{special syntactic forms for scripts!Finalise@\ml{Finalise}}
 To finish their work on the whole theorem, the user must now “finalise” it.
 This step checks that the theorem has indeed had all of its subgoals proved and saves it, possibly alongside the usual collection of attributes:
 
-    >> Finalise to_suspend[simp]
-    >>__ show_assums := false;
+```repl
+>> Finalise to_suspend[simp]
+>>__ show_assums := false;
+```
 
 If the subgoals associated with a name have not all been proved, the `Finalise` step will fail.
 Also, if a theorem has not been finalised by the end of the containing script-file, the theory-saving process will fail with an exception.
