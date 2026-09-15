@@ -198,7 +198,7 @@ fun STtoString (G:grammar) x =
   | EndBinding => #endbinding (specials G) ^ " (end binding)"
   | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
-fun mk_prec_matrix G = let
+fun mk_prec_matrix0 G = let
   exception BadTokList
   type dict = mx_order STBSTab.table Uref.t
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
@@ -593,6 +593,26 @@ in
   table
 end
 
+type grammar_key = (int option * grammar_rule) list * special_info
+fun keyeq ((r1,s1):grammar_key) ((r2,s2):grammar_key) =
+    Portable.pointer_eq (r1,r2) andalso Portable.pointer_eq (s1,s2)
+
+fun memo1 f =
+  let
+    val cache = Uref.new NONE
+  in
+    fn G =>
+      let
+        val key = (term_grammar.rules G, term_grammar.specials G)
+        fun build () = let val v = f G in Uref.:= (cache, SOME (key,v)); v end
+      in
+        case Uref.!cache of
+          SOME (k,v) => if keyeq k key then v else build ()
+        | NONE => build ()
+      end
+  end
+
+val mk_prec_matrix = memo1 mk_prec_matrix0
 
 fun mwhile B C =
   B >-  (fn b => if b then C >> mwhile B C else ok)
