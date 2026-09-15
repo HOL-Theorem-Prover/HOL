@@ -1037,4 +1037,39 @@ in
   val _ = List.app (with_flag(Feedback.emit_WARNING, false) test) dbsptests
 end
 
+(* ----------------------------------------------------------------------
+    mk_prec_matrix is memoised, so a cached matrix must not swallow the
+    error that the "ambiguous grammar warning" trace asks for at level 2.
+   ---------------------------------------------------------------------- *)
+
+local
+  open term_grammar term_grammar_dtype
+  fun ambrule nm prec =
+    {term_name = nm, fixity = Infix(LEFT, prec),
+     pp_elements = [mTOK "@@"], paren_style = OnlyIfNecessary,
+     block_style = (AroundEachPhrase, (HOLPP.CONSISTENT, 0))}
+  (* one token as an infix at two levels gives ((@@,true),@@) both
+     PM_GREATER Ifx and PM_LESS Ifx, which is what insert_bail reports *)
+  val ambig_g = add_rule (ambrule "AMB2" 400) (add_rule (ambrule "AMB1" 500) g0)
+in
+val _ = tprint "mk_prec_matrix memo: ambigrm=2 still raises"
+val _ =
+    let
+      val oldi = !Globals.interactive
+      (* non-interactive, so the first build leaves complained_already
+         alone: the raise below is gated on it, and a clean build in
+         between would evict the entry the memo must still be holding *)
+      val () = Globals.interactive := false
+      val () = Feedback.set_trace "ambiguous grammar warning" 1
+      val () = ignore (parse_term.mk_prec_matrix ambig_g)
+      val () = Feedback.set_trace "ambiguous grammar warning" 2
+      val raised = (ignore (parse_term.mk_prec_matrix ambig_g); false)
+                   handle Feedback.HOL_ERR _ => true
+    in
+      Globals.interactive := oldi;
+      Feedback.set_trace "ambiguous grammar warning" 1;
+      if raised then OK() else die "\nno exception raised"
+    end;
+end (* local *)
+
 val _ = exit_count0 failcount

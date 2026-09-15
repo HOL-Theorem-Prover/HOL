@@ -593,8 +593,9 @@ in
   table
 end
 
-type grammar_key = (int option * grammar_rule) list * special_info
-fun keyeq ((r1,s1):grammar_key) ((r2,s2):grammar_key) =
+type grammar_key = (int option * grammar_rule) list * special_info * int
+fun keyeq ((r1,s1,a1):grammar_key) ((r2,s2,a2):grammar_key) =
+    a1 = a2 andalso
     Portable.pointer_eq (r1,r2) andalso Portable.pointer_eq (s1,s2)
 
 fun memo1 f =
@@ -603,7 +604,7 @@ fun memo1 f =
   in
     fn G =>
       let
-        val key = (term_grammar.rules G, term_grammar.specials G)
+        val key = (term_grammar.rules G, term_grammar.specials G, !ambigrm)
         fun build () = let val v = f G in Uref.:= (cache, SOME (key,v)); v end
       in
         case Uref.!cache of
