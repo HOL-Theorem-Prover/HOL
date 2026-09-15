@@ -1142,6 +1142,16 @@ val _ = let
     (case parseTactic "map_every f [x]" of
        MapEvery (_, [_]) => true
      | _ => false)
+  val groupedSequence = parseTactic "a >> (b >- c >> d)"
+  val _ = tprint "TacticParse retains parenthesized tactic sequence boundaries"
+  val _ = assert "parenthesized tactic sequence was flattened"
+    (case groupedSequence of
+       Then [Opaque _, Group (_, _, Then [_, Opaque _])] => true
+     | _ => false)
+  val _ = assert "grouped tactic sequence escaped its Each step"
+    (case fromTactic groupedSequence of
+       [Leaf _, Each [Leaf _, Select _, Leaf _]] => true
+     | _ => false)
   val _ = assert "FIRST lost its enclosing source annotation"
     (case fromTactic (parseTactic "FIRST [a, b]") of
        [Choice {source = SOME _, alternatives = [[Leaf _], [Leaf _]]}] => true
