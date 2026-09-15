@@ -36,6 +36,12 @@ fun sourceAnnotation (Group (_, source, _)) = SOME source
   | sourceAnnotation (RepairGroup (source, _, _, _)) = SOME source
   | sourceAnnotation _ = NONE
 
+fun isGroupedLThen (Group (_, _, tactic)) =
+      (case stripGroup tactic of LThen _ => true | _ => false)
+  | isGroupedLThen (RepairGroup (_, _, tactic, _)) =
+      (case stripGroup tactic of LThen _ => true | _ => false)
+  | isGroupedLThen _ = false
+
 (* TacticParse appends First [] to the body of >>~- as an internal failure
    sentinel.  Selection already records solve mode explicitly, so it is not
    an executable child step of the source-level body. *)
@@ -108,7 +114,13 @@ and planTactic tactic =
     | TacticParse.Repeat _ => [tacticLeaf tactic]
     | _ => [tacticLeaf tactic]
 and planListTactic tactic =
-  case stripGroup tactic of
+  if isGroupedLThen tactic then
+    (* A source-level list tactic followed by tactic suffixes operates on a
+       whole goal list and carries one combined validation.  Its Group marks
+       the complete source operation; do not expose the suffixes as
+       independently resumable tactic steps. *)
+    [listLeaf tactic]
+  else case stripGroup tactic of
       LThenLT tactics => List.concat (map planListTactic tactics)
     | LThen (first, rest) =>
         planListTactic first @ List.concat (map suffix rest)
