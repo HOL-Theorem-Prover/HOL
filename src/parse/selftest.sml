@@ -1152,6 +1152,13 @@ val _ = let
     (case fromTactic groupedSequence of
        [Leaf _, Each [Leaf _, Select _, Leaf _]] => true
      | _ => false)
+  val groupedListSequence = parseTactic "a >>> (b >> c)"
+  val _ = tprint "ProofStepPlan keeps grouped list-tactic composition atomic"
+  val _ = assert "grouped list-tactic composition was split"
+    (case fromTactic groupedListSequence of
+       [Leaf {kind = TacticLeaf, ...},
+        Leaf {kind = ListTacticLeaf, tactic = Group (_, _, LThen _)}] => true
+     | _ => false)
   val _ = assert "FIRST lost its enclosing source annotation"
     (case fromTactic (parseTactic "FIRST [a, b]") of
        [Choice {source = SOME _, alternatives = [[Leaf _], [Leaf _]]}] => true
