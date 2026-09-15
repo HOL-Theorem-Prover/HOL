@@ -153,7 +153,11 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
     | _ => NONE
 
   fun simplifys e acc = case stripParens e of
-      SOME e' => simplifys e' acc
+      (* Parentheses delimit one operand of the surrounding tactic sequence.
+         Retain that boundary rather than flattening the enclosed sequence into
+         this accumulator: consumers such as ProofStepPlan need to know that
+         the whole operand is applied at this point. *)
+      SOME _ => grouped true simplify e :: acc
     | NONE => case matchInfix e of
       SOME (lhs, ">>", rhs) => simplifys lhs (simplifys rhs acc)
     | SOME (lhs, "++", rhs) => simplifys lhs (simplifys rhs acc)
