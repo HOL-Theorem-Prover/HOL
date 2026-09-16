@@ -1,8 +1,7 @@
-(* A tactic run by expand may itself drive the proof manager: TotalDefn
-   hands a failed termination goal to it, and Defn.tprove used to prove
-   through it.  expand must not hold the proofs slot's lock while the
-   tactic runs.  A regression wedges the session with interrupts masked,
-   so a watchdog thread turns it into a failure instead. *)
+(* A tactic run by expand may itself drive the proof manager.  expand must
+   not hold the proofs slot's lock while the tactic runs.  A regression
+   wedges the session with interrupts masked, so a watchdog thread turns
+   it into a failure instead. *)
 
 val _ = List.app load ["testutils", "Standard_Thread", "Synchronized"];
 
@@ -30,7 +29,7 @@ val private_goal : goal = ([], mk_var ("private_goal", bool));
 fun no_proofs () = (p (); false) handle HOL_ERR _ => true;
 fun top_is (g : goal) = aconv (snd (top_goal ())) (snd g) handle _ => false;
 
-(* the proof-manager traffic Defn.tprove used to generate *)
+(* A tactic that itself drives the proof manager. *)
 fun nested_proof_tac (g : goal) =
     let val _ = set_goal T_goal
         val _ = e (ACCEPT_TAC TRUTH)
