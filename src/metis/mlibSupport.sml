@@ -124,6 +124,89 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
+(* Seeding the models from the problem                                       *)
+(*                                                                           *)
+(* The models are a search heuristic, so their seed only has to be a         *)
+(* function of the problem: the same problem must give the same models       *)
+(* every time it is attempted.  A fold over its structure does that in       *)
+(* one linear pass.                                                          *)
+(*                                                                           *)
+(* Two kinds of name reach here from counters that run for the life of       *)
+(* the process, and neither may decide the seed: mlibThm.FRESH_VARS          *)
+(* renames variables to _N, and HOL's CNF names skolem constants             *)
+(* %%genvar%%N.  Both are a stem and a number, so symbol names are hashed    *)
+(* with any trailing digits dropped, and variables by the order in which     *)
+(* they are first met.                                                      *)
+(*                                                                          *)
+(* Dropping names altogether would be simpler and is wrong: goals that       *)
+(* differ only in their constants would then hash alike, so a theory full    *)
+(* of similar goals would put every one of them to the same model, and       *)
+(* one unlucky model would cost the whole file.  Keeping the stems keeps     *)
+(* that apart.                                                              *)
+(*                                                                          *)
+(* Even so, seeding does not make a call bit-for-bit repeatable: a           *)
+(* model's interpretation is md5 of the full symbol names                    *)
+(* (mlibModel.randomize), which still carry the counter.  That residual      *)
+(* belongs upstream, in the naming, not here.                                *)
+(*                                                                           *)
+(* Not formula_to_string: that goes through the pretty-printer, which        *)
+(* reads the global !infixes and !LINE_LENGTH, and the point here is to      *)
+(* have nothing outside the problem decide what the models are.              *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  (* stays under 2^24, so every intermediate fits a 31-bit Int *)
+  val MODULUS = 16777213
+
+  fun mix (h,n) = (h * 37 + n) mod MODULUS
+
+  fun tag ((h,ns),n) = (mix (h,n), ns)
+
+  (* the name with any trailing digits dropped *)
+  fun sym ((h,ns),s) =
+      let
+        fun stem 0 = 0
+          | stem i =
+            if Char.isDigit (String.sub (s, i - 1)) then stem (i - 1) else i
+        val n = stem (String.size s)
+        fun go (i,acc) =
+            if n <= i then acc
+            else go (i + 1, mix (acc, Char.ord (String.sub (s,i))))
+      in
+        (go (0,h), ns)
+      end
+
+  (* the position at which this name was first met *)
+  fun name ((h,ns),s) =
+      let
+        fun index (i, []) = (i, ns @ [s])
+          | index (i, t :: ts) = if s = t then (i, ns) else index (i + 1, ts)
+        val (i,ns) = index (0, ns)
+      in
+        (mix (h,i), ns)
+      end
+
+  (* terms and formulas share one tag space: 1-2 here, 3-12 below *)
+  fun hash_tm (Var v, st) = name (tag (st,1), v)
+    | hash_tm (Fn (f,args), st) =
+      foldl hash_tm (tag (sym (tag (st,2), f), length args)) args
+
+  fun hash_fm (True, st) = tag (st,3)
+    | hash_fm (False, st) = tag (st,4)
+    | hash_fm (Atom t, st) = hash_tm (t, tag (st,5))
+    | hash_fm (Not p, st) = hash_fm (p, tag (st,6))
+    | hash_fm (And (p,q), st) = hash_fm (q, hash_fm (p, tag (st,7)))
+    | hash_fm (Or (p,q), st) = hash_fm (q, hash_fm (p, tag (st,8)))
+    | hash_fm (Imp (p,q), st) = hash_fm (q, hash_fm (p, tag (st,9)))
+    | hash_fm (Iff (p,q), st) = hash_fm (q, hash_fm (p, tag (st,10)))
+    | hash_fm (Forall (v,p), st) = hash_fm (p, name (tag (st,11), v))
+    | hash_fm (Exists (v,p), st) = hash_fm (p, name (tag (st,12), v))
+in
+  fun problem_seed fms = fst (foldl hash_fm (0,[]) fms)
+  fun slot_seed seed i = mix (seed,i)
+end;
+
+(* ------------------------------------------------------------------------- *)
 (* Calculate average satisfiability in the models                            *)
 (* ------------------------------------------------------------------------- *)
 
@@ -216,13 +299,21 @@ fun update_models m sos =
 val empty_heap : (real * (real * clause)) heap =
   H.empty (fn ((m,_),(n,_)) => Real.compare (m,n));
 
+(* Built per call rather than once per process: `checkn` samples with
+   the model's generator, so a pair shared between calls would answer
+   according to how many formulas the calls before had put through it.
+   Their seeds are fixed rather than taken from the problem, because
+   this predicate asks whether a formula holds in an arbitrary model --
+   a probe drawn from the problem would lean towards the problem it is
+   filtering. *)
 local
   val TEST_MODEL_SIZES = [10,11];
-  fun test_model n = M.new {size = n, fix = M.pure_fix};
-  val test_models = map test_model TEST_MODEL_SIZES;
+  fun test_model n = M.new (M.update_size (K n) M.defaults) n;
 in
-  fun is_prob_taut n fm = List.all (fn m => M.checkn m fm n = n) test_models;
+  fun new_test_models () = map test_model TEST_MODEL_SIZES
 end;
+
+fun is_prob_taut tms n fm = List.all (fn m => M.checkn m fm n = n) tms;
 
 local
   fun pert_models [] _ _ mods = []
@@ -234,11 +325,17 @@ local
   fun chatmods wmods =
     chat ("{" ^ join "," (map (percent_to_string o fst) wmods) ^ "}");
 in
-  fun new_models _ _ _ [] = []
-    | new_models fms p n mps =
+  fun new_models _ _ _ _ [] = []
+    | new_models seed fms p n mps =
     let
-      val mods = map M.new mps
-      val fms = List.filter (not o is_prob_taut n) fms
+      (* one stream per slot, so two models of a problem do not sample
+         in lockstep *)
+      val _ = chatting 2 andalso
+              chat ("seed: " ^ int_to_string seed ^ "\n")
+      val mods = map (fn (i,mp) => M.new mp (slot_seed seed i))
+                     (enumerate 0 mps)
+      val tms = new_test_models ()
+      val fms = List.filter (not o is_prob_taut tms n) fms
       val wmods = pert_models fms p n mods
       val _ = chatting 2 andalso chatmods wmods
     in
@@ -246,10 +343,10 @@ in
     end;
 end;
 
-fun empty parm fms =
+fun empty parm seed fms =
   let
     val {model_perts,model_checks,model_parms,...} = parm
-    val models = new_models fms model_perts model_checks model_parms
+    val models = new_models seed fms model_perts model_checks model_parms
   in
     SOS {parm = parm, clauses = empty_heap, distance = I.empty (),
          models = models}
@@ -286,7 +383,7 @@ fun add (dist,cls) sos =
   in foldl (add1 dist) sos cls
   end;
 
-fun new parm fms cls = foldl (add1 0.0) (empty parm fms) cls;
+fun new parm seed fms cls = foldl (add1 0.0) (empty parm seed fms) cls;
 
 (* ------------------------------------------------------------------------- *)
 (* Removing the lightest clause                                              *)

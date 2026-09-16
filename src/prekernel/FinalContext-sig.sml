@@ -39,7 +39,63 @@ sig
          a thread holding the read side would block waiting for itself
          to release. *)
   val snapshot : unit -> t
+  (* Note that this does not reach a thread inside `with_context`:
+     that thread's ambient reads answer from its pin, so a `restore`
+     is invisible to it until the pin is released.  Deliberate -- it is
+     what makes a replayed proof immune to a compile rewinding the cell
+     under it -- but it means capture/restore-bracketed code inside a
+     pin keeps working on the write side and quietly stops working on
+     the read side. *)
   val restore  : t -> unit
+
+  (* Runs `f x` as a parameterised proof: while it is running, an
+     ambient `snapshot` on this thread is reported under the trace
+     "ambient context inside proof" (0 silent, 1 one report per
+     theory, 2 every read, 3 error).
+     `TAC_PROOF` is the only sanctioned caller. *)
+  val in_proof : ('a -> 'b) -> 'a -> 'b
+
+  (* The live context, for the kernel signatures alone: `mk_type` and
+     `mk_const` resolve a name against the live signature rather than a
+     supplied context, so name-based construction inside a proof is an
+     ambient read that no amount of tactic plumbing removes.  Do not use
+     it for anything else.
+
+     It reports under its own trace, "ambient signature inside proof",
+     with the same levels but silent by default: a different population
+     with a different fix, which would otherwise swamp the tactic-state
+     census.  Turn it up to find which proofs construct terms by name. *)
+  val live : unit -> t
+
+  (* Answer this thread's ambient reads from `c` for the duration of
+     `f x`, rather than from the live cell.  What a replaying proof runs
+     under: the cell belongs to whatever compile is in progress, and a
+     `restore` on that thread would otherwise change the signature a
+     proof is halfway through resolving names against -- reported as a
+     failure of a proof that is in fact fine.
+
+     Reads only.  A write still goes to the live cell, so a
+     set-read-restore bracket over context state (`Data.with_slot_value`)
+     does not do what it says inside a pin: the value it installs is
+     visible to every *other* thread and not to the code it was
+     installed for.  Don't pin around one.
+
+     Two standing assumptions, both load-bearing and neither enforced:
+
+       - Pins do not nest.  Exiting clears the slot rather than
+         restoring what was there, so a nested `with_context` would
+         drop its parent's pin on the way out.
+
+       - At most one subsystem installs pins, and only while proofs
+         replay.  `ambient` reads a counter first and only consults the
+         thread it is on when that counter is non-zero, which is what
+         keeps the cost of this off `mk_const`: 0.8ns for the plain
+         read, 1.5ns with the counter, 5.6ns going to the thread every
+         time.  A second pinning client -- or pinning moved somewhere
+         that holds one for the length of a batch build -- leaves the
+         counter permanently non-zero and every thread paying the
+         third figure, with nothing failing to say so. *)
+  val with_context : t -> ('a -> 'b) -> 'a -> 'b
 
   (* Whole-context mutators.  Both take the RW-lock's read side so
      `restore` won't interleave.  `f` runs under the internal Sref
@@ -79,13 +135,6 @@ sig
        recursion deadlocks; different-slot cross-callbacks are fine). *)
     val write  : 'a slot -> 'a -> unit
     val modify : 'a slot -> ('a -> 'a) -> unit
-
-    (* Convenience one-liner for the common `local val slot = new {...}
-       in fun x () = get slot (snapshot()); val put_x = write slot;
-       val upd_x = modify slot end` boilerplate. *)
-    val register :
-        {name : string, empty : 'a, pp : 'a -> string} ->
-        {get : unit -> 'a, write : 'a -> unit, modify : ('a -> 'a) -> unit}
 
     (* Lib.with_flag-style save-set-restore on a slot: writes `v`, runs
        `f x`, restores the previous value (also on exception). *)

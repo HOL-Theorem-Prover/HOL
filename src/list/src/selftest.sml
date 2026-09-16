@@ -218,7 +218,7 @@ val _ = let
   val bitind_goal = “0 < n”
   val bitind_expected = [([], “0 < ZERO”), ([“0 < n”], “0 < BIT1 n”),
                          ([“0 < n”], “0 < BIT2 n”)]
-  fun TAC t g = fst (VALID t g)
+  fun TAC t g = fst (runtac (VALID t) g)
 in
   tprint "Cases_on ‘m’ using bit_cases";
   require_msg (check_result (

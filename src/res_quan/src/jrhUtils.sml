@@ -53,7 +53,7 @@ val GEN_PAIR_TAC =
 (* MK_COMB_TAC - reduces ?- f x = g y to ?- f = g and ?- x = y               *)
 (*---------------------------------------------------------------------------*)
 
-fun MK_COMB_TAC (asl,w) =
+fun MK_COMB_TAC (asl,w) (_ : Context.t) =
   let val (l,r) = dest_eq w
       val (l1,l2) = dest_comb l
       val (r1,r2) = dest_comb r in
@@ -78,7 +78,7 @@ fun SYM_CANON_CONV sym f =
 (* IMP_SUBST_TAC - Implicational substitution for deepest matchable term     *)
 (*---------------------------------------------------------------------------*)
 
-fun IMP_SUBST_TAC th (asl,w) =
+fun IMP_SUBST_TAC th (asl,w) (_ : Context.t) =
   case (sort free_in
            (find_terms (can (PART_MATCH (lhs o snd o dest_imp) th)) w))
    of [] => raise ERR "IMP_SUBST_TAC" ""
@@ -119,7 +119,7 @@ val EXT_CONV = SYM o uncurry X_FUN_EQ_CONV o
 (*         s[x] = t[x]                                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun ABS_TAC (asl,w) =
+fun ABS_TAC (asl,w) (_ : Context.t) =
   let val (l,r) = dest_eq w
       val (v1,b1) = dest_abs l
       val (v2,b2) = dest_abs r

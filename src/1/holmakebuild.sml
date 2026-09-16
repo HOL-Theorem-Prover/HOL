@@ -6,8 +6,8 @@ local
 
    val holmake_tag = "tactic_failed"
 
-   fun basic_prover (g, tac: Abbrev.tactic) =
-     Tactical.TAC_PROOF (g, tac)
+   fun basic_prover ctxt (g, tac: Abbrev.tactic) =
+     Tactical.TAC_PROOF_in ctxt (g, tac)
      handle (e as HOL_ERR _) =>
         (HOL_MESG
            ("*** Proof of \n  " ^ Parse.term_to_string (#2 g) ^
@@ -17,7 +17,8 @@ local
               not (!Globals.interactive)
            then
              let val file =
-                   boolLib.dump_failure_state (!boolLib.current_thm_name, g)
+                   boolLib.dump_failure_state
+                     (boolLib.current_thm_name ctxt, g)
              in
                HOL_MESG ("Heap saved to " ^ file ^
                          "; resume with: bin/hol --holstate=" ^ file)

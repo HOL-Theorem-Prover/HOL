@@ -54,6 +54,18 @@ End
 Definition mips_BE_def:   mips_BE = mips_CONFIG (T, F, 0w, T)
 End
 
+(* Frame theorem moved here from mips_progLib so that stateLib's
+   Tactical.prove-based helper runs inside a Script (with a current
+   theory) instead of at library load time.  mips_progLib pulls this
+   back via mips_progTheory. *)
+Theorem mips_frame =
+   stateLib.update_frame_state_thm (DB.definition "mips_proj_def")
+     (List.map (fn s => "CP0." ^ s)
+         ["Count", "Cause", "EPC", "Debug", "ErrCtl", "LLAddr",
+          "Status.ERL", "Status.EXL", "Status.CU1"] @
+      ["PC", "BranchDelay", "BranchTo", "exceptionSignalled", "LLbit",
+       "hi", "lo", "gpr", "fcsr.FCC", "MEM", "FGR"])
+
 Definition MIPS_PC_def:
    MIPS_PC pc = mips_BranchDelay NONE * mips_PC pc * cond (aligned 2 pc)
 End

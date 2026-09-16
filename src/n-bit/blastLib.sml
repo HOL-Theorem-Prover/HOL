@@ -202,45 +202,33 @@ fun INST_b3 t thm =
              ``n:num``, ``b1:bool``, ``b2:bool``] o
    PURE_REWRITE_RULE [thm] o Thm.INST [``b3:bool`` |-> t] o Drule.SPEC_ALL
 
-val BCARRY_mp = prove(
-   “!x y c i n b1 b2 b3.
-      (i = SUC n) /\ (x n = b1) /\ (y n = b2) /\ (BCARRY n x y c = b3) ==>
-      (BCARRY i x y c = bcarry b1 b2 b3)”,
-   SRW_TAC [] [BCARRY_def])
-
-val BCARRY_mp = REWRITE_RULE [bcarry_def] BCARRY_mp
+val BCARRY_mp = REWRITE_RULE [bcarry_def] blastTheory.BCARRY_mp
 
 val BCARRY_mp_carry =
-   INST_b3 boolSyntax.T (DECIDE ``x /\ y \/ (x \/ y) /\ T = x \/ y``) BCARRY_mp
+   INST_b3 boolSyntax.T blastTheory.BCARRY_T_simp BCARRY_mp
 
 val BCARRY_mp_not_carry =
-   INST_b3 boolSyntax.F (DECIDE ``x /\ y \/ (x \/ y) /\ F = x /\ y``) BCARRY_mp
+   INST_b3 boolSyntax.F blastTheory.BCARRY_F_simp BCARRY_mp
 
 fun INST_b3 t thm =
    Thm.GENL [``x:num->bool``,``y:num->bool``, ``c:bool``, ``i:num``,
              ``b1:bool``, ``b2:bool``] o
    PURE_REWRITE_RULE [thm] o Thm.INST [``b3:bool`` |-> t] o Drule.SPEC_ALL
 
-val BSUM_mp = prove(
-   “!x y c i b1 b2 b3.
-      (x i = b1) /\ (y i = b2) /\ (BCARRY i x y c = b3) ==>
-      (BSUM i x y c = bsum b1 b2 b3)”,
-   SRW_TAC [] [BSUM_def])
-
-val BSUM_mp = REWRITE_RULE [bsum_def] BSUM_mp
+val BSUM_mp = REWRITE_RULE [bsum_def] blastTheory.BSUM_mp
 
 val BSUM_mp_carry =
-   INST_b3 boolSyntax.T (DECIDE ``((x = ~y) = ~T) = (x:bool = y)``) BSUM_mp
+   INST_b3 boolSyntax.T blastTheory.BSUM_T_simp BSUM_mp
 
 val BSUM_mp_not_carry =
-   INST_b3 boolSyntax.F (DECIDE ``((x = ~y) = ~F) = (x:bool = ~y)``) BSUM_mp
+   INST_b3 boolSyntax.F blastTheory.BSUM_F_simp BSUM_mp
 
 val rhs_rewrite =
    Conv.RIGHT_CONV_RULE
      (Rewrite.REWRITE_CONV
        [satTheory.AND_INV, Drule.EQF_INTRO boolTheory.NOT_AND,
-        DECIDE ``!b:bool. (b = ~b) = F``,
-        DECIDE ``!b:bool. (~b = b) = F``])
+        blastTheory.b_neq_neg_b,
+        blastTheory.neg_b_neq_b])
 
 (* --------------------------------------------------------------------
    mk_summation : returns theorems of the form  ``BSUM i x y c = exp``
@@ -456,14 +444,10 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val FCP_EQ_EVERY = prove(
-      “!a b:'a word.
-         (a = b) = EVERY (\i. a ' i = b ' i) (GENLIST I (dimindex (:'a)))”,
-      SRW_TAC [fcpLib.FCP_ss] [listTheory.EVERY_GENLIST])
-
    val FCP_EQ_EVERY =
       REWRITE_RULE [GSYM rich_listTheory.COUNT_LIST_GENLIST,
-                    rich_listTheory.COUNT_LIST_compute] FCP_EQ_EVERY
+                    rich_listTheory.COUNT_LIST_compute]
+        blastTheory.FCP_EQ_EVERY
 
    val FCP_EQ_CONV = Conv.REWR_CONV FCP_EQ_EVERY THENC EVAL_CONV
 
@@ -615,16 +599,8 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-  val word_bits_thm1 = prove(
-     “!l h n w:'a word.
-         l + n < dimindex(:'a) /\ l + n <= h ==>
-         ((h -- l) w ' n = w ' (n + l))”,
-     SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_bits_def])
-
-  val word_bits_thm2 = prove(
-     “!l h n w:'a word.
-        n < dimindex(:'a) /\ h < l + n ==> ((h -- l) w ' n = F)”,
-     SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_bits_def])
+  val word_bits_thm1 = blastTheory.word_bits_thm1
+  val word_bits_thm2 = blastTheory.word_bits_thm2
 
   val word_bits_thm3 = word_bits_thm1 |> SPEC “0n” |> SIMP_RULE std_ss []
   val word_bits_thm4 = word_bits_thm1 |> SPECL [“l:num”,“dimindex(:'a) - 1”]
@@ -633,7 +609,7 @@ local
   val word_bits_thm5 = word_bits_thm2 |> SPEC “0n” |> SIMP_RULE std_ss []
   val word_bits_thm6 = word_bits_thm2 |> SPECL [“l:num”,“dimindex(:'a) - 1”]
                        |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss)
-                            [DECIDE ``a < b + (c + 1) = a <= b + c : num``]
+                            [blastTheory.lt_add_1_le]
                        |> GEN_ALL
 
   fun mk_word_eq_lit_thms ty =
@@ -782,33 +758,14 @@ end
 
 local
    val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
-   val index_cond =
-      ``(if b then x:'a word else y) ' i = if b then x ' i else y ' i``
-      |> simpLib.SIMP_PROVE std_ss [COND_RAND, COND_RATOR] |> GEN_ALL
-   val xor_thm = tautLib.TAUT_PROVE ``~(a = b) = (a = ~b:bool)``
-   val word_xor = REWRITE_RULE [xor_thm] word_xor_def
-   val reduce_xor = REWRITE_RULE [xor_thm] reduce_xor_def
-
-   val word_L_thm = prove(
-      “INT_MINw :'a word = FCP i. i = dimindex (:'a) - 1”,
-      SRW_TAC [fcpLib.FCP_ss] [word_L])
-
-   val minus1_thm = prove(
-      “-1w : 'a word = $FCP (K T)”,
-      SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T])
-
-   val w2w_thm = prove(
-      “!w: 'a word. w2w w : 'b word = FCP i. i < dimindex (:'a) /\ w ' i”,
-      SRW_TAC [fcpLib.FCP_ss] [w2w])
-
-   val sw2sw_thm = prove(
-      “!w: 'a word.
-         sw2sw w :'b word =
-         FCP i. if i < dimindex (:'a) \/ dimindex (:'b) < dimindex (:'a) then
-                  w ' i
-                else
-                  w ' (dimindex (:'a) - 1)”,
-      SRW_TAC [fcpLib.FCP_ss] [sw2sw, word_msb_def])
+   val index_cond   = blastTheory.index_cond
+   val xor_thm      = blastTheory.xor_thm
+   val word_xor     = REWRITE_RULE [xor_thm] word_xor_def
+   val reduce_xor   = REWRITE_RULE [xor_thm] reduce_xor_def
+   val word_L_thm   = blastTheory.word_L_thm
+   val minus1_thm   = blastTheory.minus1_thm
+   val w2w_thm      = blastTheory.w2w_thm
+   val sw2sw_thm    = blastTheory.sw2sw_thm
 
    fun WORD_NEG_CONV tm =
       let
@@ -886,7 +843,7 @@ fun non_prop_terms tm =
    end
 
 local
-   val lem = numLib.DECIDE ``!b. if b then T else T``
+   val lem = blastTheory.if_b_T_T
 in
    fun PROP_PROVE conv tm =
       let
@@ -1060,11 +1017,7 @@ in
 end
 
 local
-  val FCP_NEQ = trace ("metis",0) prove(
-    “!i a b:'a word.
-       i < dimindex (:'a) /\ ((a ' i = b ' i) = F) ==> ((a = b) = F)”,
-    SRW_TAC [fcpLib.FCP_ss] []
-    THEN METIS_TAC [])
+  val FCP_NEQ = blastTheory.FCP_NEQ
 
   val dummy_thm = SPEC_ALL combinTheory.I_THM
 

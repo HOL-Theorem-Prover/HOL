@@ -23,26 +23,17 @@ end
 
 local
   open relation_extraTheory
-  fun rprove q =
-    Feedback.trace ("notify type variable guesses",0)
-       (Feedback.trace ("metis", 0) Q.prove)
-          (q, xsimp [delift, restr_rel] \\ metis_tac []) |> GEN_ALL
-  val thms = List.map rprove
-    [`r2 RSUBSET r3 ==> (r1 RUNION r2) RSUBSET (r1 RUNION r3)`,
-     `r1 RSUBSET r3 ==> (r1 RUNION r2) RSUBSET (r3 RUNION r2)`,
-     `r2 RSUBSET r3 ==> (r1 RINTER r2) RSUBSET (r1 RINTER r3)`,
-     `r1 RSUBSET r3 ==> (r1 RINTER r2) RSUBSET (r3 RINTER r2)`,
-     `r2 RSUBSET r3 ==> (r1 ⨾ r2) RSUBSET (r1 ⨾ r3)`,
-     `r1 RSUBSET r3 ==> (r1 ⨾ r2) RSUBSET (r3 ⨾ r2)`,
-     `r1 RSUBSET r3 ==> (r1 RMINUS r2) RSUBSET (r3 RMINUS r2)`,
-     `r1 RSUBSET r2 ==> (delift eqv r1) RSUBSET (delift eqv r2)`,
-     `r1 RSUBSET r2 ==> (restr_rel cond r1) RSUBSET (restr_rel cond r2)`]
+  val thms = [relationTheory.RUNION_MONOTONE_R,
+              relationTheory.RUNION_MONOTONE_L,
+              relationTheory.RINTER_MONOTONE_R,
+              relationTheory.RINTER_MONOTONE_L,
+              seq_MONOTONE_R, seq_MONOTONE_L,
+              RMINUS_MONOTONE_L, delift_MONOTONE, restr_rel_MONOTONE]
+              |> List.map GEN_ALL
 in
-  val full_rsubset_trans = rprove
-     `!r3 r4 r1 r2.
-         r1 RSUBSET r3 /\ r4 RSUBSET r2 /\ r3 RSUBSET r4 ==> r1 RSUBSET r2`
+  val full_rsubset_trans = GEN_ALL relation_extraTheory.full_rsubset_trans
   val acyclic_mon' = ONCE_REWRITE_RULE [boolTheory.CONJ_COMM] acyclic_mon
-  val rsubset_refl = rprove `r RSUBSET r`
+  val rsubset_refl = GEN_ALL relation_extraTheory.rsubset_refl
   val rsubset_tac =
     FIRST (List.map match_mp_tac (thms @ [inclusion_t_t, inclusion_rt_rt]))
 end

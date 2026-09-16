@@ -15,7 +15,7 @@ open Parse
 
 open pairTheory pred_setTheory
      res_quanTheory hurdUtils ho_proverTools res_quanTools subtypeTools
-     subtypeTheory;
+     subtypeTheory extra_boolTheory;
 
 nonfix THEN THENL ORELSE;
 
@@ -51,48 +51,59 @@ val res_forall_rule =
 
 val beta_rewr = pattern_rewr (``(\x. (y : 'a -> 'b) x) z``, K (K BETA_CONV));
 val neg_t_rewr =
-  pattern_rewr (``~T``, K (K (REWR_CONV (ho_PROVE [] ``~T = F``))));
+  pattern_rewr
+    (``~T``, K (K (REWR_CONV (List.nth (CONJUNCTS NOT_CLAUSES, 1)))));
 val neg_f_rewr =
-  pattern_rewr (``~F``, K (K (REWR_CONV (ho_PROVE [] ``~F = T``))));
+  pattern_rewr
+    (``~F``, K (K (REWR_CONV (List.nth (CONJUNCTS NOT_CLAUSES, 2)))));
 
 val basic_bool_rewrs =
-  map (prove o add_snd (ho_PROVE_TAC []))
-  [``!a:bool. ~~a = a``,
-   ``!a. (a = T) = a``,
-   ``!a. (a = F) = ~a``,
-   ``!a. (T = a) = a``,
-   ``!a. (F = a) = ~a``,
-   ``!a : bool. (a = ~a) = F``,
-   ``!a : bool. (~a = a) = F``,
-   ``!a. F /\ a = F``,
-   ``!a. a /\ F = F``,
-   ``!a. T /\ a = a``,
-   ``!a. a /\ T = a``,
-   ``!a. a /\ a = a``,
-   ``!a. ~a /\ a = F``,
-   ``!a. a /\ ~a = F``,
-   ``!a. T \/ a = T``,
-   ``!a. a \/ T = T``,
-   ``!a. F \/ a = a``,
-   ``!a. a \/ F = a``,
-   ``!a. a \/ a = a``,
-   ``!a. ~a \/ a = T``,
-   ``!a. a \/ ~a = T``,
-   ``!a b. ~(a \/ b) = ~a /\ ~b``,
-   ``!a. a ==> a = T``,
-   ``!a. a ==> T = T``,
-   ``!a. a ==> F = ~a``,
-   ``!a. T ==> a = a``,
-   ``!a. F ==> a = T``,
-   ``!a b. ~(a ==> b) = a /\ ~b``,
-   ``!a : 'a. (a = a) = T``,
-   ``!a b : bool. (~a = ~b) = (a = b)``,
-   ``!(a : 'a) b. (if T then a else b) = a``,
-   ``!(a : 'a) b. (if F then a else b) = b``,
-   ``!p. ~(!x. p x) = ?x. ~p x``,
-   ``!p. ~(?x. p x) = !x. ~p x``,
-   ``!p. (!(x : 'a). p) = p``,
-   ``!p. (?(x : 'a). p) = p``];
+  let
+    val and_c = map GEN_ALL (CONJUNCTS (SPEC_ALL AND_CLAUSES))
+    val or_c  = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+    val imp_c = map GEN_ALL (CONJUNCTS (SPEC_ALL IMP_CLAUSES))
+    val cond_c = map GEN_ALL (CONJUNCTS (SPEC_ALL COND_CLAUSES))
+    val eq_c  = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES))
+    val not_c = CONJUNCTS NOT_CLAUSES
+    val dm    = map GEN_ALL (CONJUNCTS (SPEC_ALL DE_MORGAN_THM))
+  in
+    [List.nth (not_c, 0),                (* ~~a = a *)
+     List.nth (eq_c, 1),                 (* (a = T) = a *)
+     List.nth (eq_c, 3),                 (* (a = F) = ~a *)
+     List.nth (eq_c, 0),                 (* (T = a) = a *)
+     List.nth (eq_c, 2),                 (* (F = a) = ~a *)
+     EQ_NEG_SELF_F,                      (* (a = ~a) = F *)
+     NEG_EQ_SELF_F,                      (* (~a = a) = F *)
+     List.nth (and_c, 2),                (* F /\ a = F *)
+     List.nth (and_c, 3),                (* a /\ F = F *)
+     List.nth (and_c, 0),                (* T /\ a = a *)
+     List.nth (and_c, 1),                (* a /\ T = a *)
+     List.nth (and_c, 4),                (* a /\ a = a *)
+     NAND_SELF_F,                        (* ~a /\ a = F *)
+     AND_NEG_SELF_F,                     (* a /\ ~a = F *)
+     List.nth (or_c, 0),                 (* T \/ a = T *)
+     List.nth (or_c, 1),                 (* a \/ T = T *)
+     List.nth (or_c, 2),                 (* F \/ a = a *)
+     List.nth (or_c, 3),                 (* a \/ F = a *)
+     List.nth (or_c, 4),                 (* a \/ a = a *)
+     NEG_OR_SELF_T,                      (* ~a \/ a = T *)
+     OR_NEG_SELF_T,                      (* a \/ ~a = T *)
+     List.nth (dm, 1),                   (* ~(a \/ b) = ~a /\ ~b *)
+     List.nth (imp_c, 3),                (* a ==> a = T *)
+     List.nth (imp_c, 1),                (* a ==> T = T *)
+     List.nth (imp_c, 4),                (* a ==> F = ~a *)
+     List.nth (imp_c, 0),                (* T ==> a = a *)
+     List.nth (imp_c, 2),                (* F ==> a = T *)
+     boolTheory.NOT_IMP,                 (* ~(a ==> b) = a /\ ~b *)
+     REFL_CLAUSE,                        (* (a = a) = T *)
+     NEG_EQ_EQ,                          (* (~a = ~b) = (a = b) *)
+     List.nth (cond_c, 0),               (* (if T then a else b) = a *)
+     List.nth (cond_c, 1),               (* (if F then a else b) = b *)
+     NOT_FORALL_THM,
+     NOT_EXISTS_THM,
+     FORALL_TRIVIAL,
+     EXISTS_TRIVIAL]
+  end;
 
 (* The precontext *)
 

@@ -1673,6 +1673,35 @@ SIMP_TAC std_ss [EXTENSION, DRESTRICT_DEF, IN_INTER, IN_COMPL, IN_UNION] THEN
 PROVE_TAC[]
 QED
 
+Theorem sub_add_simp:
+  !(x:num) (c1:num) c2. (x + c1) - (x + c2) = c1 - c2
+Proof
+  DECIDE_TAC
+QED
 
+Theorem BAG_IN_TRIVIAL_THM:
+  !e:'a b. BAG_IN e (BAG_INSERT e b)
+Proof
+  REWRITE_TAC [bagTheory.BAG_IN_BAG_INSERT]
+QED
+
+Theorem BAG_EVERY_INSERT_IMP:
+  !P b e. BAG_EVERY P b ==>
+          (P (e:'a) ==> BAG_EVERY P (BAG_INSERT e b))
+Proof
+  SIMP_TAC std_ss [bagTheory.BAG_EVERY_THM]
+QED
+
+Theorem case_split_thm:
+  !c B. (B = ((c ==> B) /\ (~c ==> B)))
+Proof
+  Cases_on `c` THEN REWRITE_TAC[]
+QED
+
+Theorem IMP_CLAUSES_XT:
+  !t. (t ==> T) = T
+Proof
+  REWRITE_TAC[]
+QED
 
 

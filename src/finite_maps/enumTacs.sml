@@ -55,8 +55,8 @@ in REWR_CONV REVERSE_REV THENC rev_conv end;
 (* EQ_LESS_CONV converts cpn = LESS to one of T, F *)
 
 val LESS_T = SPEC ``LESS`` (INST_TYPE [alpha |-> ``:cpn``] REFL_CLAUSE);
-val GREATER_F = prove (``(GREATER = LESS) = F``,REWRITE_TAC [all_cpn_distinct]);
-val EQUAL_F = prove (``(EQUAL = LESS) = F``,REWRITE_TAC [all_cpn_distinct]);
+val GREATER_F = enumeralTheory.GREATER_F
+val EQUAL_F   = enumeralTheory.EQUAL_F
 
 val EQ_LESS_CONV = REWR_CONV LESS_T ORELSEC REWR_CONV GREATER_F ORELSEC
                    REWR_CONV EQUAL_F ORELSEC
@@ -65,14 +65,9 @@ val EQ_LESS_CONV = REWR_CONV LESS_T ORELSEC REWR_CONV GREATER_F ORELSEC
 (* A replacement for cpn_REWR_CONV when instead of case <cpn> of LESS => ...
    we have  if <cpn> = LESS then ... else ... .*)
 
-val EQ_LESS_REWR = prove (``!v0 v1:'a. (if LESS = LESS then v0 else v1) = v0``,
-RW_TAC bool_ss []);
-
-val EQ_GREATER_REWR = prove (``!v0 v1:'a.
-(if GREATER = LESS then v0 else v1) = v1``, RW_TAC bool_ss []);
-
-val EQ_EQUAL_REWR = prove (``!v0 v1:'a.
-(if EQUAL = LESS then v0 else v1) = v1``, RW_TAC bool_ss []);
+val EQ_LESS_REWR    = enumeralTheory.EQ_LESS_REWR
+val EQ_GREATER_REWR = enumeralTheory.EQ_GREATER_REWR
+val EQ_EQUAL_REWR   = enumeralTheory.EQ_EQUAL_REWR
 
 val COND_EQ_LESS_CONV = REWR_CONV EQ_LESS_REWR ORELSEC REWR_CONV EQ_GREATER_REWR
                    ORELSEC REWR_CONV EQ_EQUAL_REWR ORELSEC
@@ -240,12 +235,8 @@ REWR_CONV (ISPEC cmp ENUMERAL_set) THENC
 RAND_CONV (RAND_CONV (incr_ssort_CONV keyconv)) THENC
 RAND_CONV list_to_bt_CONV;
 
-val LIST_TO_SET_NIL = prove (
-``{} = set ([]:'a list)``, REWRITE_TAC [LIST_TO_SET_THM]);
-
-val LIST_TO_SET_CONS = prove (
-``!a:'a l s. (s = set l) ==> (a INSERT s = set (a :: l))``,
-REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [LIST_TO_SET_THM]);
+val LIST_TO_SET_NIL  = enumeralTheory.LIST_TO_SET_NIL
+val LIST_TO_SET_CONS = enumeralTheory.LIST_TO_SET_CONS
 
 (* DISPLAY_TO_set_CONV { ... } proves { ... } = set [ ... ] *)
 
@@ -377,9 +368,7 @@ in olc end;
    Improved to check OL_bt first, and if this comes out T, as it always
    should, to use bt_to_list_CONV in place of bt_to_ol_lb/ub_CONV. *)
 
-val [aTT, aTF, aFT, aFF] = CONJUNCTS (prove (
-``(T/\T <=> T) /\ (T/\F <=> F) /\ (F/\T <=> F) /\ (F/\F <=> F)``,
-REWRITE_TAC [AND_CLAUSES]));
+val [aTT, aTF, aFT, aFF] = CONJUNCTS enumeralTheory.AND_CONV_conj;
 
 val AND_CONV = REWR_CONV aTT ORELSEC REWR_CONV aTF ORELSEC
                REWR_CONV aFT ORELSEC REWR_CONV aFF;

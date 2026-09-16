@@ -32,7 +32,7 @@ local
      shouldfail can express "this proof attempt should not solve". *)
   exception NotSolved
   fun must_solve tac g =
-      case tac g of
+      case runtac tac g of
           ([], _) => ()
         | _      => raise NotSolved
   fun solved (Exn.Res (sgs, _)) = List.null sgs
@@ -51,7 +51,7 @@ val _ = tprint "simp[SF ARITH_ss] overrides exclude_frags = ARITH"
 val _ = require_msg
           solved
           (fn _ => "(failed to solve despite SF override)")
-          (under_excl (bossLib.simp [simpLib.SF numSimps.ARITH_ss]))
+          (runtac (under_excl (bossLib.simp [simpLib.SF numSimps.ARITH_ss])))
           arith_goal
 
 val _ = let open simpLib in
@@ -59,8 +59,9 @@ val _ = let open simpLib in
     printarg = fn _ => "naked ++ ARITH_ss inside body is blocked by exclusion",
     testfn = must_solve
                (under_excl
-                  (fn g => SIMP_TAC
-                             (BasicProvers.srw_ss() ++ numSimps.ARITH_ss) [] g)),
+                  (fn g => fn c =>
+                      SIMP_TAC
+                        (BasicProvers.srw_ss() ++ numSimps.ARITH_ss) [] g c)),
     printresult = printresult_solved,
     checkexn = fn _ => true
   } arith_goal

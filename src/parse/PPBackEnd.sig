@@ -30,5 +30,22 @@ sig
   val html_terminal         : t
   val html_escape    : string -> string
 
+  (* For a consumer that wants what the printer knew as data rather
+     than as colour.  `lsp_terminal` wraps each annotated symbol in
+     delimiters carrying its kind, the theory-qualified name of a
+     constant, and its type; they are added at zero width, so the
+     layout is the one the reader would have seen without them.
+     `lsp_segments` takes the result apart again into consecutive
+     pieces of text, each with what was known about it -- `kind` is ""
+     for the punctuation and spacing between symbols.
+
+     Segments rather than offsets into a string: a caller that has to
+     say *where* a symbol is must first agree with its reader on
+     whether that is counted in bytes, characters or UTF-16 units, and
+     HOL prints plenty that is not ASCII. *)
+  type pp_segment = {text: string, kind: string, name: string, ty: string}
+  val lsp_terminal          : t
+  val lsp_segments          : string -> pp_segment list
+
 
 end

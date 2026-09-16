@@ -91,7 +91,7 @@ sig
   val dest_hide : term -> string * term
   val install_hidepp : unit -> unit (* it starts installed *)
   val remove_hidepp : unit -> unit
-  val unignoring_hide : ('a -> 'b) -> ('a -> 'b)
+  val unignoring_hide : tactic -> tactic
 
   val MK_HIDE : string -> thm -> thm
   val UNHIDE : thm -> thm
@@ -109,7 +109,8 @@ sig
 
   val suspend : string -> tactic
   val prim_resume : (thm * string * tactic) -> {updated_main: thm, subresult:thm}
-  val resume : {suspension_name:string, label_name:string} -> tactic -> thm
+  val resume : {suspension_name:string, label_name:string} -> tactic ->
+               Context.t -> thm
   val prim_set_suspended_goal :
       Manager.tacmodifier -> {suspension_name:string, label_name:string} ->
       proofManagerLib.proofs

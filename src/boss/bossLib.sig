@@ -21,8 +21,10 @@ sig
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
   val Hol_coreln   : term quotation -> thm * thm * thm
-  val xHol_reln    : string -> term quotation -> thm * thm * thm
-  val xHol_coreln  : string -> term quotation -> thm * thm * thm
+  val xHol_reln    : string -> term quotation -> Context.t ->
+                     thm * thm * thm
+  val xHol_coreln  : string -> term quotation -> Context.t ->
+                     thm * thm * thm
   val export_mono  : string -> unit
 
   (* Derived rule for specifying new constants.
@@ -53,11 +55,17 @@ sig
 
   val CASE_TAC          : tactic
   val CaseEq            : string -> thm
+  val CaseEq_of         : Context.t -> string -> thm
   val CaseEqs           : string list -> thm
+  val CaseEqs_of        : Context.t -> string list -> thm
   val AllCaseEqs        : unit -> thm
+  val AllCaseEqs_of     : Context.t -> thm
   val CasePred          : string -> thm
+  val CasePred_of       : Context.t -> string -> thm
   val CasePreds         : string list -> thm
+  val CasePreds_of      : Context.t -> string list -> thm
   val AllCasePreds      : unit -> thm
+  val AllCasePreds_of   : Context.t -> thm
 
   (* Proof automation *)
 
@@ -83,7 +91,9 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
+  val srw_ss_of       : Context.t -> simpset
   val boss_ss         : unit -> simpset (* srw_ss() + LET_ss + ARITH_ss *)
+  val boss_ss_of      : Context.t -> simpset
 
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag

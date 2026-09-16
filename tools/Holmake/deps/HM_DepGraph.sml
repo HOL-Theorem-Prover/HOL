@@ -194,12 +194,46 @@ fun updnode_tgtstatus (n, st) (g : 'a t) : 'a t =
     | SOME nI => bump_built_count (nI, st)
                    (fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g)
 
+(* `command_map' indexes the node records by the (dir, command) they
+   carry, so replacing a record has to move the node when that key
+   changes.  A foreign target enters the graph as a NoCmd placeholder
+   and acquires its real command when its own directory is scanned; left
+   under the old key it becomes invisible to `find_nodes_by_command',
+   which is how both `assign_statuses' and the build decide the products
+   of one script run as a group. *)
+fun reindex_command (n, old_nI : 'a nodeInfo, new_nI : 'a nodeInfo) cmap =
+    let
+      val oldkey = (#dir old_nI, #command old_nI)
+      val newkey = (#dir new_nI, #command new_nI)
+    in
+      if pair_compare (hmdir.compare, command_compare) (oldkey, newkey) = EQUAL
+      then cmap
+      else
+        let
+          val cmap =
+              case Map.peek (cmap, oldkey) of
+                  NONE => cmap
+                | SOME ns =>
+                  Map.insert (cmap, oldkey, List.filter (fn m => m <> n) ns)
+        in
+          extend_map_list cmap newkey n
+        end
+    end
+
 fun updnode_fully (n, nInfo) (g : 'a t) : 'a t =
     case peeknode g n of
         NONE => raise NoSuchNode
       | SOME old_nI =>
-        bump_built_count (old_nI, #status nInfo)
-          (fupd_nodes (fn m => Map.insert(m, n, nInfo)) g)
+        let
+          val g = {nodes = #nodes g, target_map = #target_map g,
+                   command_map =
+                     reindex_command (n, old_nI, nInfo) (#command_map g),
+                   file_hashes = #file_hashes g,
+                   theories_built = #theories_built g}
+        in
+          bump_built_count (old_nI, #status nInfo)
+            (fupd_nodes (fn m => Map.insert(m, n, nInfo)) g)
+        end
 
 fun add_dependency n (dn, dt) (g : 'a t) : 'a t =
     case peeknode g n of
@@ -545,8 +579,18 @@ fun assign_statuses decide (g0 : 'a t) =
           in
             case #command nI of
                 BuiltInCmd (BIC_BuildScript _, _) =>
-                  List.filter (undecidedp g)
-                              (find_nodes_by_command g (#dir nI, #command nI))
+                let
+                  val ns = List.filter (undecidedp g)
+                             (find_nodes_by_command g (#dir nI, #command nI))
+                in
+                  (* `n' is undecided and indexed under its own command, so
+                     it is in `ns'.  Should some future index slip leave it
+                     out, decide it alone rather than against the empty
+                     group: an under-grouped decision is merely
+                     conservative, whereas an empty one decides nothing and
+                     leaves the node unrunnable. *)
+                  if List.exists (fn m => m = n) ns then ns else n :: ns
+                end
               | _ => [n]
           end
       (* The dependencies of a group that lie outside it.  One inside

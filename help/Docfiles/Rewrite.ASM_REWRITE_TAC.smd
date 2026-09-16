@@ -36,7 +36,7 @@ obvious equational form, is illustrated below:
    - let val asm = [Term `P x`]
          val goal = Term `P x = Q x`
      in
-     ASM_REWRITE_TAC[] (asm, goal)
+     ASM_REWRITE_TAC[] (asm, goal) (Context.snapshot())
      end;
 
    val it = ([([`P x`], `Q x`)], fn) : tactic_result
@@ -44,7 +44,7 @@ obvious equational form, is illustrated below:
    - let val asm = [Term `~P x`]
          val goal = Term `P x = Q x`
      in
-     ASM_REWRITE_TAC[] (asm, goal)
+     ASM_REWRITE_TAC[] (asm, goal) (Context.snapshot())
      end;
 
    val it = ([([`~P x`], `~Q x`)], fn) : tactic_result

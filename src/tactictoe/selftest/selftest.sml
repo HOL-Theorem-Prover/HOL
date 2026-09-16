@@ -31,7 +31,7 @@ fun proves msg tm =
 
 fun ttt_closes msg tm =
   (tprint msg;
-   let val (gl,_) = ttt ([],tm) in
+   let val (gl,_) = ttt ([],tm) (Context.snapshot()) in
      if null gl then OK ()
      else die ("FAILED: " ^ Int.toString (length gl) ^
                " subgoals remain")
@@ -255,7 +255,8 @@ val _ = check "TacticToe recording API type-checks"
 exception RecorderTacticFailure
 val _ = check "recording preserves source tactic exceptions"
   (((record_tactic
-       ((fn _ => raise RecorderTacticFailure), "selftest") ([], ``T``);
+       ((fn _ => raise RecorderTacticFailure), "selftest") ([], ``T``)
+       (Context.snapshot());
      false)
     handle RecorderTacticFailure => true
          | _ => false))

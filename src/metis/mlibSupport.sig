@@ -31,8 +31,13 @@ val update_model_parms   : mlibModel.parameters list parmupdate
 type sos
 type distance
 
+(* A seed for the models, derived from the structure of the formulas it
+   is given -- see the comment on the implementation for what is and is
+   not hashed.  Any int is a usable seed. *)
+val problem_seed : formula list -> int
+
 (* Basic operations *)
-val new     : parameters -> formula list -> clause list -> sos
+val new     : parameters -> int -> formula list -> clause list -> sos
 val size    : sos -> int
 val to_list : sos -> clause list
 val pp_sos  : sos pp

@@ -26,13 +26,14 @@ fail.
 ### Example
 
 ``` hol4
->> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “(p1 ∧ p2) ∧ (q1 ∧ q2)”);
+>> val c = Context.snapshot()
+>> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “(p1 ∧ p2) ∧ (q1 ∧ q2)”) c;
 
->> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ⇒ q”);
+>> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ⇒ q”) c;
 
->>+ IF CONJ_TAC CONJ_TAC DISCH_TAC ([], ``(p1 ∧ p2) ∧ q``);
+>>+ IF CONJ_TAC CONJ_TAC DISCH_TAC ([], ``(p1 ∧ p2) ∧ q``) c;
 
->>+ IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ∨ q”);
+>>+ IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ∨ q”) c;
 ```
 
 ### Comments

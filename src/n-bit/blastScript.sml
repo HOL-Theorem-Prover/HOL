@@ -697,4 +697,116 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
+(* Lemmas blastLib formerly proved as it loaded.                             *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem BCARRY_mp:
+  !x y c i n b1 b2 b3.
+    (i = SUC n) /\ (x n = b1) /\ (y n = b2) /\ (BCARRY n x y c = b3) ==>
+    (BCARRY i x y c = bcarry b1 b2 b3)
+Proof SRW_TAC [] [BCARRY_def]
+QED
+
+Theorem BSUM_mp:
+  !x y c i b1 b2 b3.
+    (x i = b1) /\ (y i = b2) /\ (BCARRY i x y c = b3) ==>
+    (BSUM i x y c = bsum b1 b2 b3)
+Proof SRW_TAC [] [BSUM_def]
+QED
+
+Theorem FCP_EQ_EVERY:
+  !a b:'a word.
+    (a = b) <=> EVERY (\i. a ' i = b ' i) (GENLIST I (dimindex (:'a)))
+Proof SRW_TAC [fcpLib.FCP_ss] [listTheory.EVERY_GENLIST]
+QED
+
+Theorem FCP_NEQ:
+  !i a b:'a word.
+    i < dimindex (:'a) /\ ((a ' i = b ' i) = F) ==> ((a = b) = F)
+Proof SRW_TAC [fcpLib.FCP_ss] [] THEN METIS_TAC []
+QED
+
+Theorem word_bits_thm1:
+  !l h n w:'a word.
+    l + n < dimindex(:'a) /\ l + n <= h ==>
+    ((h -- l) w ' n = w ' (n + l))
+Proof SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_bits_def]
+QED
+
+Theorem word_bits_thm2:
+  !l h n w:'a word.
+    n < dimindex(:'a) /\ h < l + n ==> ((h -- l) w ' n = F)
+Proof SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_bits_def]
+QED
+
+Theorem index_cond:
+  !b (x:'a word) y i. (if b then x else y) ' i = if b then x ' i else y ' i
+Proof SIMP_TAC std_ss [boolTheory.COND_RAND, boolTheory.COND_RATOR]
+QED
+
+Theorem xor_thm:  ~(a = b) <=> (a = ~b:bool)
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem word_L_thm:
+  INT_MINw :'a word = FCP i. i = dimindex (:'a) - 1
+Proof SRW_TAC [fcpLib.FCP_ss] [word_L]
+QED
+
+Theorem minus1_thm:
+  -1w : 'a word = $FCP (K T)
+Proof SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T]
+QED
+
+Theorem w2w_thm:
+  !w: 'a word. w2w w : 'b word = FCP i. i < dimindex (:'a) /\ w ' i
+Proof SRW_TAC [fcpLib.FCP_ss] [w2w]
+QED
+
+Theorem sw2sw_thm:
+  !w: 'a word.
+    sw2sw w :'b word =
+    FCP i. if i < dimindex (:'a) \/ dimindex (:'b) < dimindex (:'a) then
+             w ' i
+           else
+             w ' (dimindex (:'a) - 1)
+Proof SRW_TAC [fcpLib.FCP_ss] [sw2sw, word_msb_def]
+QED
+
+(* Small boolean/arithmetic tautologies blastLib formerly derived via DECIDE
+   at load time. *)
+
+Theorem BCARRY_T_simp:  x /\ y \/ (x \/ y) /\ T <=> x \/ y
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem BCARRY_F_simp:  x /\ y \/ (x \/ y) /\ F <=> x /\ y
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem BSUM_T_simp:  ((x = ~y) = ~T) <=> (x:bool = y)
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem BSUM_F_simp:  ((x = ~y) = ~F) <=> (x:bool = ~y)
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem b_neq_neg_b:  !b:bool. (b = ~b) <=> F
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem neg_b_neq_b:  !b:bool. (~b = b) <=> F
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem lt_add_1_le:  a < b + (c + 1) <=> a <= b + c : num
+Proof numLib.ARITH_TAC
+QED
+
+Theorem if_b_T_T:  !b. (if b then T else T) <=> T
+Proof GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []
+QED
+
+(* ------------------------------------------------------------------------- *)
 

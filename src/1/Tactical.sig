@@ -2,6 +2,13 @@ signature Tactical =
 sig
   include Abbrev
 
+  (* The `_in` forms take the context to prove against explicitly; the
+     historical spellings read the ambient context and are defined in
+     terms of them. *)
+  val TAC_PROOF_in   : Context.t -> goal * tactic -> thm
+  val prove_in       : Context.t -> term * tactic -> thm
+  val prove_goal_in  : Context.t -> goal * tactic -> thm
+  val store_thm_in   : Context.t -> string * term * tactic -> thm
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm
   val prove_goal     : goal * tactic -> thm
@@ -56,6 +63,13 @@ sig
   val REPEAT         : tactic -> tactic
   val rpt            : tactic -> tactic
   val REPEAT_LT      : list_tactic -> list_tactic
+  (* Feedback.trace round a tactic sets the flag only while `tac g'
+     builds its closure: a tactic does its work when that closure is
+     applied to the context, by which time the flag has been restored.
+     This spans the context application too.  Rules and conversions are
+     fully applied and so need no such thing. *)
+  val trace_tac      : string * int -> tactic -> tactic
+
   val VALID          : tactic -> tactic
   val VALID_LT       : list_tactic -> list_tactic
   val VALIDATE       : tactic -> tactic
@@ -111,8 +125,9 @@ sig
   val Q_TAC          : (term -> tactic) -> term quotation -> tactic
   val QTY_TAC        : hol_type -> (term -> tactic) -> term quotation -> tactic
 
+  val default_prover_in : Context.t -> term * tactic -> thm
   val default_prover : term * tactic -> thm
-  val set_prover     : (goal * tactic -> thm) -> unit
+  val set_prover     : (Context.t -> goal * tactic -> thm) -> unit
   val restore_prover : unit -> unit
 
 end

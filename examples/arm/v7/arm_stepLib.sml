@@ -894,11 +894,7 @@ fun prove_comp_thm the_state P H G X = Q.prove(
           WORD_EQ_ADD_LCANCEL_0, align_aligned, align_aligned3]);
 
 local
-  val lem1 = trace ("metis",0) (METIS_PROVE [WORD_EQ_ADD_RCANCEL])
-    ``(((state:arm_seq_monad$arm_state).memory p = x) ==>
-         ((if p = a then x else state.memory a) = state.memory a)) /\
-      ((state.memory (p + n) = x) ==>
-         ((if p = a then x else state.memory (a + n)) = state.memory (a + n)))``
+  val lem1 = arm_stepTheory.memory_read_key_id
 
   val lem2 = (CONJ signed_sat_def unsigned_sat_def)
                 |> SIMP_RULE std_ss [FUN_EQ_THM] |> GSYM
@@ -917,9 +913,7 @@ local
   val lem11 = simpLib.SIMP_PROVE std_ss [COND_RAND]
                  ``(if b then align (x:word32,m) else align (x,n)) =
                    align (x,if b then m else n)``
-  val lem12 = Q.prove(`word_modify (\i. COND (i = 0) T) (w:word32) =
-                       (((31 >< 1) w):31 word) @@ (1w:bool[unit])`,
-                    SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
+  val lem12 = arm_stepTheory.word_modify_bit0_T_split
 
   val align_rws = [lem1, lem7, aligned_thm, aligned_n2w, align_n2w,
      aligned_bitwise_thm, aligned_pc_thm, optionTheory.option_CLAUSES,

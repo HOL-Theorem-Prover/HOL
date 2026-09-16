@@ -199,6 +199,32 @@ val _ =
    else raise ERR "bar_defn" "bad TC extraction"
 end
 
+
+(* `tprove_no_defn` takes the (eqns, ind) pair directly rather than a
+   `defn`, and had no caller anywhere in the tree -- so nothing noticed
+   when its termination-obligation construction changed.  Cover it: on
+   the same input, it should agree with `tprove0`, which builds its
+   obligation from the `defn`.  Neither call stores anything. *)
+val _ =
+ let
+   val nd_defn = Hol_defn "countdown"
+                          `countdown n = if n = 0 then 0n
+                                         else countdown (n - 1)`
+   val eqns = LIST_CONJ (Defn.eqns_of nd_defn)
+   val ind = Option.valOf (Defn.ind_of nd_defn)
+   val tac = WF_REL_TAC `measure I` THEN DECIDE_TAC
+   val (def1, ind1) = Defn.tprove_no_defn ((eqns, ind), tac)
+   val (def2, ind2) = Defn.tprove0 (nd_defn, tac)
+ in
+   if not (null (Thm.hyp def1)) then
+     raise ERR "tprove_no_defn" "termination conditions not discharged"
+   else if not (aconv (concl def1) (concl def2)) then
+     raise ERR "tprove_no_defn" "eqns disagree with tprove0"
+   else if not (aconv (concl ind1) (concl ind2)) then
+     raise ERR "tprove_no_defn" "induction thm disagrees with tprove0"
+   else ()
+ end
+
 (*
 Definition bar_def:
   bar x s i =

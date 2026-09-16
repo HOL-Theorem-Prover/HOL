@@ -109,14 +109,64 @@ Proof
   rw[SBIT_def, ODD_EXP_IFF]
 QED
 
-(*
-Theorem word_to_bytes_from_bin_list:
-  word_to_bytes (word_from_bin_list ls :'a word) F =
-  MAP word_from_bin_list (chunks 8 (PAD_RIGHT 0 (dimindex(:'a)) ls))
+Theorem word64_to_bytes_from_bools:
+  LENGTH bs = 64 ⇒
+  word_to_bytes
+    (word_from_bin_list (MAP bool_to_bit bs) : word64) F =
+  MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+      (chunks 8 bs)
 Proof
-  cheat
+  rw[LIST_EQ_REWRITE]
+  >- (Cases_on `bs` >- gvs[]
+      >> DEP_REWRITE_TAC[LENGTH_chunks]
+      >> gvs[NULL_EQ, divides_def, bool_to_bit_def])
+  >> `LENGTH (chunks 8 bs) = 8` by
+       (Cases_on `bs` >- gvs[]
+        >> DEP_REWRITE_TAC[LENGTH_chunks]
+        >> gvs[NULL_EQ, divides_def, bool_to_bit_def])
+  >> `bs ≠ []` by (Cases_on `bs` >> gvs[])
+  >> rw[word_to_bytes_def]
+  >> DEP_REWRITE_TAC[EL_word_to_bytes_aux, EL_MAP, EL_chunks, get_byte_n2w_le]
+  >> `l2n 2 (MAP bool_to_bit bs) < 2 ** 64` by
+       (qspecl_then [`MAP bool_to_bit bs`, `2`] mp_tac l2n_lt
+        >> simp[])
+  >> gvs[word_from_bin_list_def, l2w_def, GSYM WORD_EQ, word_bit_n2w,
+         LESS_MOD, NULL_EQ]
+  >> rw[BIT_def, BITS_THM]
+  >> `256 ** x = 2 ** (8 * x)` by
+       (Induct_on `x` >> simp[EXP, MULT_SUC, EXP_ADD])
+  >> simp[DIV_DIV_DIV_MULT, GSYM EXP_ADD]
+  >> DEP_REWRITE_TAC[l2n_DIGIT]
+  >> simp[EVERY_MAP, EVERY_MEM, FORALL_BOOL, bool_to_bit_def, EL_MAP,
+          LENGTH_TAKE, LENGTH_DROP, EL_TAKE, EL_DROP]
 QED
-*)
+
+Theorem chunks_8_64_256:
+  LENGTH bs = 256 ⇒
+  FLAT (MAP (chunks 8) (chunks 64 bs)) = chunks 8 bs
+Proof
+  strip_tac
+  >> `LENGTH (chunks 64 bs) = 4` by
+       (Cases_on `bs` >- gvs[]
+        >> DEP_REWRITE_TAC[LENGTH_chunks]
+        >> gvs[NULL_EQ, divides_def, bool_to_bit_def])
+  >> `EVERY ($= 64 o LENGTH) (chunks 64 bs)` by
+       (irule divides_EVERY_LENGTH_chunks
+        >> Cases_on `bs` >> gvs[divides_def])
+  >> `FLAT (chunks 64 bs) = bs` by simp[]
+  >> qpat_x_assum `LENGTH (chunks 64 bs) = 4` mp_tac
+  >> simp[LENGTH_EQ_NUM_compute, PULL_EXISTS]
+  >> rpt strip_tac
+  >> gvs[]
+  >> `bs = h ++ h' ++ h'' ++ h'³'` by
+       (qpat_assum `chunks 64 bs = [h; h'; h''; h'³']`
+          (fn th => mp_tac (AP_TERM ``FLAT`` th))
+        >> simp[])
+  >> gvs[]
+  >> DEP_REWRITE_TAC[chunks_append_divides]
+  >> map_every Cases_on [`h`, `h'`, `h''`, `h'³'`]
+  >> gvs[NULL_EQ, divides_def]
+QED
 
 Datatype:
   state_array =
@@ -1963,6 +2013,83 @@ Termination
   \\ rw[LENGTH_DROP]
 End
 
+(* A single-pass implementation of the same padding and rate-block splitting.
+   The current partial block is stored in reverse order.  Each recursive call
+   on nonempty input consumes one byte, avoiding repeated LENGTH, TAKE, and
+   DROP traversals of the unconsumed suffix. *)
+Definition pad10s1_136_w64_linear_aux_def:
+  pad10s1_136_w64_linear_aux
+      (zs:word64 list) ([]:word8 list) rev_block (remaining:num) acc =
+    (let block = REVERSE rev_block;
+         n = 136 - LENGTH block;
+         pad = if n = 1 then [0x81w] else
+                 0x01w::(REPLICATE (n - 2) 0w)++[0x80w];
+         w64s = MAP concat_word_list (chunks 8 (block ++ pad))
+     in REVERSE ((w64s ++ zs) :: acc)) ∧
+  pad10s1_136_w64_linear_aux zs (b::bs) rev_block (remaining:num) acc =
+    if remaining = 1 then
+      let block = REVERSE (b::rev_block);
+          w64s = MAP concat_word_list (chunks 8 block)
+      in pad10s1_136_w64_linear_aux zs bs [] 136 ((w64s ++ zs) :: acc)
+    else if remaining = 0 then
+      pad10s1_136_w64_linear_aux zs bs [b] 135 acc
+    else
+      pad10s1_136_w64_linear_aux zs bs (b::rev_block) (remaining - 1) acc
+End
+
+Definition pad10s1_136_w64_linear_def:
+  pad10s1_136_w64_linear (zs:word64 list) (bs:word8 list)
+      (acc:word64 list list) =
+    pad10s1_136_w64_linear_aux zs bs [] 136 acc
+End
+
+Theorem TAKE_DROP_136_reverse_cons_assoc[local]:
+  LENGTH rev = 135 ==>
+  TAKE 136 (REVERSE rev ++ [b; b'] ++ bs) = REVERSE (b::rev) /\
+  DROP 136 (REVERSE rev ++ [b; b'] ++ bs) = b'::bs
+Proof
+  simp[TAKE_APPEND, DROP_APPEND]
+QED
+
+Theorem pad10s1_136_w64_linear_aux_thm[local]:
+  ∀zs bytes rev_block remaining acc.
+    remaining ≠ 0 ∧ LENGTH rev_block + remaining = 136 ⇒
+    pad10s1_136_w64_linear_aux zs bytes rev_block remaining acc =
+    pad10s1_136_w64 zs (REVERSE rev_block ++ bytes) acc
+Proof
+  rpt gen_tac
+  \\ qid_spec_tac `acc`
+  \\ qid_spec_tac `remaining`
+  \\ qid_spec_tac `rev_block`
+  \\ Induct_on `bytes`
+  >- (rw[pad10s1_136_w64_linear_aux_def, Once pad10s1_136_w64_def]
+      \\ gvs[])
+  \\ rpt strip_tac
+  \\ Cases_on `remaining = 1`
+  >- (gvs[]
+      \\ `LENGTH rev_block = 135` by decide_tac
+      \\ Cases_on `bytes`
+      >- (rw[Once pad10s1_136_w64_linear_aux_def]
+          \\ rw[Once pad10s1_136_w64_def]
+          \\ rw[Once pad10s1_136_w64_def]
+          \\ simp[APPEND_ASSOC]
+          \\ EVAL_TAC)
+      \\ rw[pad10s1_136_w64_linear_aux_def]
+      \\ CONV_TAC (RHS_CONV (REWR_CONV pad10s1_136_w64_def))
+      \\ drule TAKE_DROP_136_reverse_cons_assoc
+      \\ disch_then (qspecl_then [`t`, `h'`, `h`] strip_assume_tac)
+      \\ simp[])
+  \\ gvs[pad10s1_136_w64_linear_aux_def, APPEND_ASSOC]
+QED
+
+Theorem pad10s1_136_w64_linear_thm:
+  ∀zs bytes acc.
+    pad10s1_136_w64_linear zs bytes acc =
+    pad10s1_136_w64 zs bytes acc
+Proof
+  simp[pad10s1_136_w64_linear_def, pad10s1_136_w64_linear_aux_thm]
+QED
+
 Theorem TAKE_FLAT_bytes[local]:
   ∀n (ls:word8 list). 8 * (n + 1) ≤ LENGTH ls ==>
   FLAT (MAP (PAD_RIGHT 0 8 o word_to_bin_list) (TAKE 8 (DROP (8 * n) ls))) =
@@ -3639,7 +3766,9 @@ Definition Keccak_256_bytes_def:
     MAP (PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
-(*
+(* This closes the end-to-end correspondence between the executable word64
+   implementation and the byte-oriented wrapper around the bit-level Keccak
+   specification. *)
 Theorem Keccak_256_w64_thm:
   Keccak_256_w64 = Keccak_256_bytes
 Proof
@@ -3676,9 +3805,48 @@ Proof
           MAP bool_to_bit` by rw[Abbr`f`, FUN_EQ_THM]
   \\ simp[Abbr`f`, GSYM MAP_MAP_o, Abbr`ls`]
   \\ simp[MAP_TAKE, GSYM chunks_MAP]
-  \\ cheat
+  \\ rewrite_tac[GSYM MAP_TAKE]
+  \\ rewrite_tac[chunks_MAP]
+  \\ pure_rewrite_tac[MAP_MAP_o, o_DEF]
+  \\ rewrite_tac[GSYM MAP_TAKE]
+  \\ pure_rewrite_tac[MAP_MAP_o, o_DEF]
+  \\ `TAKE 4 (chunks 64 bs) = chunks 64 (TAKE 256 bs)` by
+       (sym_tac \\ DEP_REWRITE_TAC[chunks_TAKE] \\ simp[divides_def])
+  \\ `TAKE 32 (chunks 8 bs) = chunks 8 (TAKE 256 bs)` by
+       (sym_tac \\ DEP_REWRITE_TAC[chunks_TAKE] \\ simp[divides_def])
+  \\ gvs[]
+  \\ `LENGTH (TAKE 256 bs) = 256` by simp[]
+  \\ `EVERY ($= 64 o LENGTH) (chunks 64 (TAKE 256 bs))` by
+       (irule divides_EVERY_LENGTH_chunks
+        \\ conj_tac >- (Cases_on `bs` \\ gvs[])
+        \\ simp[divides_def])
+  \\ qpat_x_assum `EVERY _ _` mp_tac
+  \\ simp[EVERY_MEM]
+  \\ strip_tac
+  \\ qpat_x_assum `(λx. word_to_bytes _ F) = _`
+       (fn th => once_rewrite_tac[GSYM th])
+  \\ `MAP (λx. word_to_bytes
+                    (word_from_bin_list (MAP bool_to_bit x) : word64) F)
+          (chunks 64 (TAKE 256 bs)) =
+       MAP (λx. MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+                       (chunks 8 x))
+          (chunks 64 (TAKE 256 bs))` by
+       (irule MAP_CONG \\ simp[]
+        \\ rpt strip_tac
+        \\ irule word64_to_bytes_from_bools
+        \\ first_x_assum irule
+        \\ first_assum ACCEPT_TAC)
+  \\ gvs[]
+  \\ `FLAT
+        (MAP (λx. MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+                        (chunks 8 x))
+          (chunks 64 (TAKE 256 bs))) =
+      MAP (λcs. word_from_bin_list (MAP bool_to_bit cs) : word8)
+        (FLAT (MAP (chunks 8) (chunks 64 (TAKE 256 bs))))` by
+       (rewrite_tac[MAP_FLAT]
+        \\ simp[MAP_MAP_o, o_DEF])
+  \\ gvs[chunks_8_64_256]
 QED
-*)
 
 (* TODO: move/replace *)
 Definition hex_to_rev_bytes_def:
@@ -3706,6 +3874,10 @@ Proof
   \\ rw[Once pad_pre_def]
   \\ gs[chunks_tr_thm]
 QED
+
+val () = cv_auto_trans
+  (REWRITE_RULE [GSYM chunks_tr_thm] pad10s1_136_w64_linear_aux_def);
+val () = cv_auto_trans pad10s1_136_w64_linear_def;
 
 Theorem theta_d_w64_inlined:
   theta_d_w64 s = let
@@ -3889,27 +4061,51 @@ Proof
   \\ simp[]
 QED
 
+Theorem state_bools_w64_LENGTH[local]:
+  state_bools_w64 bs ws ==> LENGTH ws = 25
+Proof
+  rw[state_bools_w64_def]
+  >> `¬NULL bs` by (Cases_on `bs` >> gvs[])
+  >> DEP_REWRITE_TAC[LENGTH_chunks]
+  >> simp[bool_to_bit_def, divides_def]
+QED
+
+Theorem EVERY2_state_bools_w64_LENGTH[local]:
+  EVERY2 state_bools_w64 bs ws ==>
+  EVERY (((=) 25) o LENGTH) ws
+Proof
+  qid_spec_tac `ws` >> Induct_on `bs` >> Cases_on `ws` >>
+  simp[] >> metis_tac[state_bools_w64_LENGTH]
+QED
+
+Theorem Keccak_256_w64_linear_exec:
+  Keccak_256_w64 bs =
+  FLAT $
+  MAP (flip word_to_bytes F) $
+  TAKE 4 $
+  absorb_w64 $
+  pad10s1_136_w64_linear eight_zeros_w64 bs []
+Proof
+  rw[Keccak_256_w64_def, pad10s1_136_w64_linear_thm]
+QED
+
 val Keccak_256_w64_pre_def = cv_auto_trans_pre "Keccak_256_w64_pre" $
-  (Keccak_256_w64_def |> SIMP_RULE std_ss [C_DEF, absorb_w64_rec_thm]);
+  (Keccak_256_w64_linear_exec |>
+   SIMP_RULE std_ss [C_DEF, absorb_w64_rec_thm]);
 
 Theorem Keccak_256_w64_pre[cv_pre]:
   Keccak_256_w64_pre bytes
 Proof
   rw[Keccak_256_w64_pre_def]
-  \\ irule absorb_w64_rec_pre
-  \\ conj_tac >- rw[]
-  \\ mp_tac pad10s1_136_w64_sponge_init
-  \\ rw[eight_zeros_w64_def]
-  \\ rw[EVERY_MEM, MEM_EL]
-  \\ gs[LIST_REL_EL_EQN]
-  \\ qmatch_goalsub_abbrev_tac`pad10s1_136_w64 r8`
-  \\ `r8 = REPLICATE 8 0w` by simp[Abbr`r8`, REPLICATE_GENLIST]
-  \\ gs[]
-  \\ first_x_assum drule
-  \\ rw[state_bools_w64_def]
-  \\ DEP_REWRITE_TAC[LENGTH_chunks]
-  \\ gs[NULL_LENGTH, divides_def, bool_to_bit_def]
-  \\ strip_tac \\ fs[]
+  >> irule absorb_w64_rec_pre
+  >> conj_tac >- simp[]
+  >> `eight_zeros_w64 = REPLICATE 8 0w`
+       by rw[eight_zeros_w64_def, REPLICATE_GENLIST]
+  >> pop_assum SUBST_ALL_TAC
+  >> rewrite_tac[pad10s1_136_w64_linear_thm]
+  >> irule EVERY2_state_bools_w64_LENGTH
+  >> mp_tac pad10s1_136_w64_sponge_init
+  >> simp[] >> metis_tac[]
 QED
 
 Theorem Keccak_256_w64_NIL:

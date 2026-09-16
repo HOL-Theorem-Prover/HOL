@@ -1257,3 +1257,73 @@ val _ = computeLib.add_persistent_funs
    "PTREE_OF_NUMSET_EMPTY"];
 
 (* ------------------------------------------------------------------------- *)
+(* Helpers patriciaLib formerly proved as it loaded.                         *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem BRANCHING_BIT_numeral:
+  (BRANCHING_BIT 0 0 = 0) /\
+  (!x. BRANCHING_BIT 0 (NUMERAL (BIT1 x)) = 0) /\
+  (!x. BRANCHING_BIT (NUMERAL (BIT1 x)) 0 = 0) /\
+  (!x. BRANCHING_BIT 0 (NUMERAL (BIT2 x)) =
+       SUC (BRANCHING_BIT 0 (NUMERAL (SUC x)))) /\
+  (!x. BRANCHING_BIT (NUMERAL (BIT2 x)) 0 =
+       SUC (BRANCHING_BIT (NUMERAL (SUC x)) 0)) /\
+  (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT1 y)) =
+         if x = y then 0 else SUC (BRANCHING_BIT (NUMERAL x) (NUMERAL y))) /\
+  (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT2 y)) =
+         if x = y then 0
+         else SUC (BRANCHING_BIT (NUMERAL (SUC x)) (NUMERAL (SUC y)))) /\
+  (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT2 y)) = 0) /\
+  (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT1 y)) = 0)
+Proof
+  REPEAT STRIP_TAC
+  THEN CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [BRANCHING_BIT_def]))
+  THEN SIMP_TAC std_ss
+       [numeralTheory.numeral_distrib, numeralTheory.numeral_eq,
+        numeralTheory.numeral_evenodd, numeralTheory.numeral_div2]
+QED
+
+Theorem PTREE_OF_NUMSET_RWT:
+  (!x t s y.
+     IS_PTREE t /\ FINITE s /\ (PTREE_OF_NUMSET t s = y) ==>
+     (PTREE_OF_NUMSET t (x INSERT s) = x INSERT_PTREE y)) /\
+  (!s1 s2 t y.
+     IS_PTREE t /\ FINITE s1 /\ FINITE s2 /\
+     (PTREE_OF_NUMSET t s1 = y) /\
+     (PTREE_OF_NUMSET y s2 = z) ==>
+     (PTREE_OF_NUMSET t (s1 UNION s2) = z))
+Proof SRW_TAC [] [PTREE_OF_NUMSET_UNION, PTREE_OF_NUMSET_INSERT]
+QED
+
+Theorem DEPTH_ADD_THM:
+  (c1 = t) /\ (patricia$ADD t (k,d) = c2) ==> (patricia$ADD c1 (k,d) = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_REMOVE_THM:
+  (c1 = t) /\ (patricia$REMOVE t k = c2) ==> (patricia$REMOVE c1 k = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_INSERT_PTREE_THM:
+  (c1 = t) /\ (patricia$INSERT_PTREE k t = c2) ==>
+              (patricia$INSERT_PTREE k c1 = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_PEEK_THM:
+  (c1 = t) /\ (patricia$PEEK t k = c2) ==> (patricia$PEEK c1 k = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_ARI_CONG:
+  !f. (c1 = t) /\ (f k t = c2) ==> (f k c1 = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_CONG:
+  !f. (c1 = t) /\ (f t = c2) ==> (f c1 = c2)
+Proof SRW_TAC [] []
+QED
+
+(* ------------------------------------------------------------------------- *)

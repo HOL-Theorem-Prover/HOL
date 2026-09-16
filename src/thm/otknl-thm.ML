@@ -353,7 +353,9 @@ fun dest_exists tm =
  end
 end;
 
-fun dest_thm(t as THM(_,asl,w,_)) = (hyplist t,w) (* Compatible with old code. *)
+(* Compatible with old code. *)
+fun dest_thm(t as THM(_,asl,w,_)) = (hyplist t,w)
+
 fun sdest_thm(THM(_,asl,w,_)) = (asl,w)
 (* internal only. When TraceMode is NoTrace, the supplied proof variant is
    discarded and the thm's proof ref is initialized to deleted_prf instead.
@@ -421,7 +423,9 @@ fun ASSUME tm =
 val mk_eq_nocheck = Term.prim_mk_eq;
 
 fun refl_nocheck ty tm =
-  make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm,REFL_prf tm);
+  make_thm Count.Refl (
+    empty_tag, empty_hyp, mk_eq_nocheck ty tm tm, REFL_prf tm
+  );
 
 fun REFL tm = refl_nocheck (type_of tm) tm;
 
@@ -433,9 +437,12 @@ fun REFL tm = refl_nocheck (type_of tm) tm;
  *---------------------------------------------------------------------------*)
 
 fun BETA_CONV tm =
-   make_thm Count.Beta
-      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (beta_conv tm),BETA_CONV_prf tm)
-   handle HOL_ERR _ => ERR "BETA_CONV" "not a beta-redex"
+   make_thm Count.Beta (
+     empty_tag,
+     empty_hyp,
+     mk_eq_nocheck (type_of tm) tm (beta_conv tm),
+     BETA_CONV_prf tm
+   ) handle HOL_ERR _ => ERR "BETA_CONV" "not a beta-redex"
 
 
 (*---------------------------------------------------------------------------
@@ -461,9 +468,14 @@ fun SUBST replacements template (th as THM(O,asl,c,_)) =
                      else tuple)
                 replacements ([],[],asl,O)
  in
-   if aconv (subst ltheta template) c
-    then make_thm Count.Subst (oracles,hyps,subst rtheta template,SUBST_prf(replacements,template,th))
-      else th
+   if aconv (subst ltheta template) c then
+     make_thm Count.Subst (
+       oracles,
+       hyps,
+       subst rtheta template,
+       SUBST_prf(replacements,template,th)
+     )
+   else th
  end;
 
 (*---------------------------------------------------------------------------*
@@ -495,14 +507,19 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c,_)) =
  let open HOLset
      val vset = addList(Term.empty_varset,vlist)
      val hset = hyp_frees th
- in if isEmpty (intersection(vset,hset))
-    then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c
-                                  (thm_err "GEN_ABS" "not an equality")
-             val lhs' = list_mk_binder opt (vlist,lhs)
-             val rhs' = list_mk_binder opt (vlist,rhs)
-         in make_thm Count.GenAbs
-               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs',GEN_ABS_prf(opt,vlist,th))
-         end
+ in if isEmpty (intersection(vset,hset)) then
+      let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c
+                                      (thm_err "GEN_ABS" "not an equality")
+          val lhs' = list_mk_binder opt (vlist,lhs)
+          val rhs' = list_mk_binder opt (vlist,rhs)
+      in
+        make_thm Count.GenAbs (
+          ocl,
+          asl,
+          mk_eq_nocheck (Term.type_of lhs') lhs' rhs',
+          GEN_ABS_prf(opt,vlist,th)
+        )
+      end
     else ERR "GEN_ABS" "variable(s) free in the assumptions"
  end
 
@@ -515,7 +532,12 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c,_)) =
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (th as THM(ocl,asl,c,_)) =
-     make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c,INST_TYPE_prf(theta,th))
+     make_thm Count.InstType (
+       ocl,
+       hypset_map (inst theta) asl,
+       inst theta c,
+       INST_TYPE_prf(theta,th)
+     )
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -547,7 +569,8 @@ fun MP (th1 as THM(o1,asl1,c1,_)) (th2 as THM(o2,asl2,c2,_)) =
  let val (ant,conseq) = dest_imp c1
  in Assert (aconv ant c2) "MP"
       "antecedent of first thm not alpha-convertible to concl. of second";
-    make_thm Count.Mp (Tag.merge o1 o2, union_hyp asl1 asl2, conseq, MP_prf(th1,th2))
+    make_thm Count.Mp
+             (Tag.merge o1 o2, union_hyp asl1 asl2, conseq, MP_prf(th1,th2))
  end;
 
 
@@ -626,7 +649,8 @@ fun TRANS th1 th2 =
        val hyps = union_hyp (hypset th1) (hypset th2)
        val ocls = Tag.merge (tag th1) (tag th2)
    in
-     make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2, TRANS_prf(th1,th2))
+     make_thm Count.Trans
+              (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2, TRANS_prf(th1,th2))
    end
    handle HOL_ERR _ => ERR "TRANS" "";
 
@@ -648,10 +672,12 @@ fun MK_COMB (funth,argth) =
    let val (f,g,ty) = Term.dest_eq_ty (concl funth)
        val (x,y,_)  = Term.dest_eq_ty (concl argth)
    in
-     make_thm Count.MkComb
-         (Tag.merge (tag funth) (tag argth),
-          union_hyp (hypset funth) (hypset argth),
-          mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)), MK_COMB_prf(funth,argth))
+     make_thm Count.MkComb (
+       Tag.merge (tag funth) (tag argth),
+       union_hyp (hypset funth) (hypset argth),
+       mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)),
+       MK_COMB_prf(funth,argth)
+     )
    end
    handle HOL_ERR _ => ERR "MK_COMB" "";
 
@@ -675,9 +701,12 @@ fun MK_COMB (funth,argth) =
 
 fun AP_TERM f th =
  let val (lhs,rhs,_) = Term.dest_eq_ty (concl th)
- in make_thm Count.ApTerm
-       (tag th, hypset th,
-        mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)), AP_TERM_prf(f,th))
+ in
+   make_thm Count.ApTerm (
+     tag th, hypset th,
+     mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)),
+     AP_TERM_prf(f,th)
+   )
  end
  handle HOL_ERR _ => ERR "AP_TERM" "";
 
@@ -702,9 +731,13 @@ fun AP_TERM f th =
 
 fun AP_THM th tm =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
- in make_thm Count.ApThm
-       (tag th, hypset th,
-        mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)), AP_THM_prf(th,tm))
+ in
+   make_thm Count.ApThm (
+     tag th,
+     hypset th,
+     mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)),
+     AP_THM_prf(th,tm)
+   )
  end
  handle HOL_ERR _ => ERR "AP_THM" "";
 
@@ -727,8 +760,12 @@ fun EQ_MP th1 th2 =
    let val (lhs,rhs,_) = Term.dest_eq_ty (concl th1)
        val _ = Assert (aconv lhs (concl th2)) "" ""
    in
-    make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
-                         union_hyp (hypset th1) (hypset th2), rhs, EQ_MP_prf(th1,th2))
+    make_thm Count.EqMp (
+      Tag.merge (tag th1) (tag th2),
+      union_hyp (hypset th1) (hypset th2),
+      rhs,
+      EQ_MP_prf(th1,th2)
+    )
    end handle HOL_ERR _ => ERR "EQ_MP" "";
 
 (*---------------------------------------------------------------------------
@@ -749,9 +786,12 @@ fun EQ_IMP_RULE th =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
      and A = hypset th
      and O = tag th
- in if ty = Type.bool
-    then (make_thm Count.EqImpRule(O,A, Term.prim_mk_imp lhs rhs, EQ_IMP_RULE1_prf th),
-          make_thm Count.EqImpRule(O,A, Term.prim_mk_imp rhs lhs, EQ_IMP_RULE2_prf th))
+ in if ty = Type.bool then
+      (make_thm Count.EqImpRule
+                (O, A, Term.prim_mk_imp lhs rhs, EQ_IMP_RULE1_prf th),
+       make_thm Count.EqImpRule
+                (O, A, Term.prim_mk_imp rhs lhs, EQ_IMP_RULE2_prf th)
+      )
     else ERR "" ""
  end
  handle HOL_ERR _ => ERR "EQ_IMP_RULE" "";
@@ -896,7 +936,8 @@ end
 
 local
   val mesg1 = "First argument not of form `?x. P`"
-  val mesg2 = "(2nd argument)/(bound var) in body of 1st argument is not theorem's conclusion"
+  val mesg2 = "(2nd argument)/(bound var) in body of 1st argument \
+              \is not theorem's conclusion"
   val err = thm_err "EXISTS" mesg1
 in
 fun EXISTS (w,t) th =
@@ -1008,7 +1049,8 @@ fun conj1 tm =
 
 
 fun CONJUNCT1 th =
-  make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th), CONJUNCT1_prf th)
+  make_thm Count.Conjunct1
+           (tag th, hypset th, conj1 (concl th), CONJUNCT1_prf th)
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -1035,7 +1077,8 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th), CONJUNCT2_prf th)
+    make_thm Count.Conjunct2
+             (tag th, hypset th, conj2 (concl th), CONJUNCT2_prf th)
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -1149,9 +1192,13 @@ fun NOT_INTRO th =
 fun NOT_ELIM th =
   let val nc = force_const neg_const "NOT_ELIM"
       val (Rator,Rand) = with_exn dest_comb (concl th) (thm_err "NOT_ELIM" "")
-  in if same_const Rator nc
-     then make_thm Count.NotElim
-             (tag th, hypset th, Term.prim_mk_imp Rand (get_F ()), NOT_ELIM_prf th)
+  in if same_const Rator nc then
+       make_thm Count.NotElim (
+         tag th,
+         hypset th,
+         Term.prim_mk_imp Rand (get_F ()),
+         NOT_ELIM_prf th
+       )
      else ERR "NOT_ELIM" ""
   end;
 
@@ -1194,7 +1241,8 @@ fun INST [] th = th
           val substf = subst theta
         in
           make_thm Count.Inst
-            (tag th, hypset_map substf (hypset th), substf (concl th), INST_prf(theta,th))
+            (tag th, hypset_map substf (hypset th), substf (concl th),
+             INST_prf(theta,th))
           handle HOL_ERR _ => ERR "INST" ""
         end
       else
@@ -1218,7 +1266,8 @@ fun INST [] th = th
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
    in make_thm Count.Beta
-        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs), Beta_prf th)
+        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs),
+         Beta_prf th)
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
@@ -1260,8 +1309,13 @@ fun Mk_comb thm =
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
              val _ = Assert (aconv lhs2 Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
-         in make_thm Count.MkComb
-           (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), Mk_comb_prf (thm,th1',th2'))
+         in
+           make_thm Count.MkComb (
+             ocls,
+             hyps,
+             mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)),
+             Mk_comb_prf (thm,th1',th2')
+           )
          end
          handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
@@ -1296,8 +1350,13 @@ fun Mk_abs thm =
              val _ = Assert (aconv lhs1 Body) "" ""
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
-         in make_thm Count.Abs
-           (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)), Mk_abs_prf (thm,Bvar,th1'))
+         in
+           make_thm Count.Abs (
+             ocls,
+             hyps,
+             mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)),
+             Mk_abs_prf (thm,Bvar,th1')
+           )
          end
          handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
@@ -1315,7 +1374,8 @@ fun Specialize t th =
    in
      Assert (same_const Rator fc) "" "";
      make_thm Count.Spec
-        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)), Specialize_prf(t,th))
+        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)),
+         Specialize_prf(t,th))
    end
    handle HOL_ERR _ => ERR "Specialize" "";
 
@@ -1458,7 +1518,11 @@ fun prim_type_definition (Tyop, thm) = let
   val TYDEF     = inst[alpha |-> dom, Type.mk_vartype "'b" |-> newty]
                       (force_const tydef_const "prim_type_definition")
 in
-  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf(tyvars,thm,newty))
+  mk_defn_thm(
+    tag thm,
+    mk_exists(rep, list_mk_comb(TYDEF,[P,rep])),
+    Def_tyop_prf(tyvars,thm,newty)
+  )
 end
 
 (* subsumed by gen_prim_specification
@@ -1605,7 +1669,13 @@ fun mark label (th as THM(t,h,c,_)) =
 fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let
   val a1' = disch (c2,a1)
   val a2' = disch (c1,a2)
-in make_thm Count.Axiom (Tag.merge o1 o2, union_hyp a1' a2', mk_eq_nocheck bool c1 c2, deductAntisym_prf(th1,th2)) end
+in make_thm Count.Axiom (
+    Tag.merge o1 o2,
+    union_hyp a1' a2',
+    mk_eq_nocheck bool c1 c2,
+    deductAntisym_prf(th1,th2)
+  )
+end
 
 (* ----------------------------------------------------------------------
     Computing with first-order lisp-style values
@@ -1652,7 +1722,12 @@ in
               val tm' = tc1 tm
               val eqn = safe_mk_eq tm tm'
             in
-              make_thm Count.Compute (tag1, empty_hyp, eqn, compute_prf (args, tm))
+              make_thm Count.Compute (
+                tag1,
+                empty_hyp,
+                eqn,
+                compute_prf (args, tm)
+              )
             end
         end
     end;

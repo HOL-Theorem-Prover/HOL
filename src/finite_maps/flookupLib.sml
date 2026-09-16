@@ -82,15 +82,8 @@ in
 end
 
 local
-   val flookup_id = Q.prove(
-      `FLOOKUP (fm |+ (a:'a, b)) a = SOME b`,
-      REWRITE_TAC [finite_mapTheory.FLOOKUP_UPDATE]
-      )
-   val flookup_rest = Q.prove(
-      `a <> x ==> (FLOOKUP (fm |+ (a, b)) x = FLOOKUP fm x)`,
-      SIMP_TAC std_ss [finite_mapTheory.FLOOKUP_UPDATE]
-      )
-      |> UNDISCH_ALL
+   val flookup_id = finite_mapTheory.FLOOKUP_UPDATE_SAME
+   val flookup_rest = UNDISCH_ALL finite_mapTheory.FLOOKUP_UPDATE_DIFF
    val updates = List.rev o List.map (fst o pairSyntax.dest_pair) o snd o
                  finite_mapSyntax.strip_fupdate
    val err = ERR "extend_flookup_thms" "not an extension"

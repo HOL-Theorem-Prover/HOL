@@ -81,7 +81,9 @@ DIRNAMES += cache_reflink \
             issue1903 \
             json-strings \
             local_parallelism_limit \
+            placeholder_regroup \
             projfile_module \
+            retry_oos \
             scan_order_staleness \
 	    target_times
 endif

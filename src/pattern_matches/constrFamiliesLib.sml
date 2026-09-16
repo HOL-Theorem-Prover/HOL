@@ -815,9 +815,7 @@ fun pmatch_compile_db_clear_type ty =
 (* complilation funs                               *)
 (***************************************************)
 
-val COND_CONG_APPLY = prove (``(if (x:'a) = c then (ff x):'b else ff x) =
-  (if x = c then ff c else ff x)``,
-ASM_CASES_TAC ``x:'a = c`` THEN ASM_REWRITE_TAC[])
+val COND_CONG_APPLY = patternMatchesTheory.COND_CONG_APPLY
 
 
 fun literals_compile_fun (col:(term list * term) list) = let

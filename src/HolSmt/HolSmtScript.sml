@@ -571,3 +571,12 @@ Ancestors[qualified]
   val _ = s ("p007", S ``FINITE univ(:30)``)
   val _ = s ("p008", S ``FINITE univ(:31)``)
   val _ = s ("p009", S ``dimindex (:8) <= dimindex (:32)``)
+
+  val _ = s ("TO_WORD_EXTRACT", boolLib.TAC_PROOF (([],
+        “(!w : 'a word.
+            dimindex(:'b) < dimindex(:'a) ==>
+            (w2w w : 'b word = (dimindex(:'b) - 1 >< 0) w)) /\
+         (!w : 'a word.
+            dimindex(:'b) < dimindex(:'a) ==>
+            (sw2sw w : 'b word = (dimindex(:'b) - 1 >< 0) w))”),
+        BasicProvers.SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []))

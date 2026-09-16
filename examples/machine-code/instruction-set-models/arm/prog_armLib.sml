@@ -5,7 +5,7 @@ open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory pred_setTheory combinTheory;
 open set_sepTheory prog_armTheory helperLib wordsTheory progTheory finite_mapTheory;
 
-open armLib;
+open armLib prog_armLibContextTheory;
 
 structure Parse = struct
   open Parse
@@ -149,9 +149,7 @@ fun remove_primes th = let
   val i = foo (free_varsl (concl th :: hyp th)) [] []
   in INST i th end
 
-val SING_SUBSET = prove(
-  ``!x:'a y. {x} SUBSET y = x IN y``,
-  REWRITE_TAC [INSERT_SUBSET,EMPTY_SUBSET]);
+val SING_SUBSET = prog_armLibContextTheory.SING_SUBSET;
 
 fun introduce_aBYTE_MEMORY th = if
   not (can (find_term (can (match_term ``aM1``))) (concl th))
@@ -496,13 +494,9 @@ fun arm_prove_one_spec s th = let
     \\ ASM_SIMP_TAC std_ss [word_arith_lemma1,BYTES_TO_WORD_LEMMA])
   in RW [STAR_ASSOC,CONTAINER_def] result end;
 
-val cond_STAR_cond = prove(
-  ``!x y. cond (x /\ y) = cond x * (cond y):'a set -> bool``,
-  SIMP_TAC (std_ss) [SEP_CLAUSES]);
+val cond_STAR_cond = prog_armLibContextTheory.cond_STAR_cond;
 
-val precond_INTRO = prove(
-  ``!x. cond (Abbrev x) = precond x:'a set -> bool``,
-  SIMP_TAC (std_ss) [SEP_CLAUSES,precond_def,markerTheory.Abbrev_def]);
+val precond_INTRO = prog_armLibContextTheory.precond_INTRO;
 
 val minus_one = EVAL ``-1w:word32``
 val minus_one_mult =
@@ -511,18 +505,10 @@ val minus_one_mult =
 val minus_one_mult = CONJ (RW1 [WORD_ADD_COMM] minus_one_mult) minus_one_mult
 val minus_one_mult = CONJ (RW1 [WORD_MULT_COMM] minus_one_mult) minus_one_mult
 
-val ARM_WRITE_STATUS_T_IGNORE_UPDATE = prove(
-  ``(~ARM_READ_STATUS psrT s ==> (ARM_WRITE_STATUS psrT F s = s)) /\
-    (ARM_WRITE_STATUS psrT b (ARM_WRITE_REG r w s) =
-     ARM_WRITE_REG r w (ARM_WRITE_STATUS psrT b s))``,
-  EVAL_TAC \\ SRW_TAC [] [FUN_EQ_THM,APPLY_UPDATE_THM,
-    arm_seq_monadTheory.arm_state_component_equality,
-    arm_coretypesTheory.ARMpsr_component_equality] \\ SRW_TAC [] []
-  \\ ASM_SIMP_TAC std_ss []);
+val ARM_WRITE_STATUS_T_IGNORE_UPDATE =
+    prog_armLibContextTheory.ARM_WRITE_STATUS_T_IGNORE_UPDATE;
 
-val aligned_bx_lemma = prove(
-  ``!w:word32. aligned (w,4) ==> aligned_bx w /\ ~(w ' 0)``,
-  SIMP_TAC std_ss [aligned4_thm,ALIGNED_BITS,arm_stepTheory.aligned_bx_thm]);
+val aligned_bx_lemma = prog_armLibContextTheory.aligned_bx_lemma;
 
 fun remove_aligned_bx th = let
   val tm = cdr (find_term (can (match_term ``aligned_bx (w:word32)``)) (concl th))

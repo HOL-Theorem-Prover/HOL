@@ -145,16 +145,8 @@ val state_id =
        ["MEM8", "c_PC", "c_Skip"]
       ]
 
-val riscv_frame =
-   Thm.CONJ riscv_progTheory.c_gpr_frame
-     (stateLib.update_frame_state_thm riscv_proj_def
-        (["c_NextFetch", "c_PC", "MEM8", "c_Skip"]))
-
-val ricv_frame_hidden =
-  stateLib.update_hidden_frame_state_thm riscv_proj_def
-    [``^st with c_update := x``,
-     ``^st with log := x``
-    ]
+val riscv_frame = riscv_progTheory.riscv_frame
+val ricv_frame_hidden = riscv_progTheory.riscv_frame_hidden
 
 (* -- *)
 

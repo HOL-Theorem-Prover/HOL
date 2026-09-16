@@ -155,7 +155,7 @@ fun array_bound_DECIDE context t =
    end
 *)
 
-val sub_add_simp = prove (Term `(((x:num) + (c1:num)) - (x + c2)) = (c1 - c2)`, DECIDE_TAC)
+val sub_add_simp = generalHelpersTheory.sub_add_simp
 
 val arith_simp_ss =
    std_ss ++ simpLib.merge_ss [
@@ -173,7 +173,7 @@ fun array_bound_DECIDE___HOL context t =
 
 fun array_bound_DECIDE___YICES context t =
 let
-   val (_, vali) = YICES_TAC (map concl context, t)
+   val (_, vali) = YICES_TAC (map concl context, t) (Context.snapshot())
    val xthm0 = vali [];
    val xthm1 = foldl (fn (h, thm) => PROVE_HYP h thm) xthm0 context
 in
@@ -275,8 +275,7 @@ local
    in
        if no_turn orelse turn then SOME (n, turn) else NONE
    end;
-   val BAG_IN_TRIVIAL_THM = prove (Term `!e:'a b. BAG_IN e (BAG_INSERT e b)`,
-       REWRITE_TAC [bagTheory.BAG_IN_BAG_INSERT])
+   val BAG_IN_TRIVIAL_THM = generalHelpersTheory.BAG_IN_TRIVIAL_THM
 
    val var_res_implies_unequal___trivial_unequal_1 =
        var_res_implies_unequal___trivial_unequal
@@ -2994,7 +2993,8 @@ let
    val _ = proofManagerLib.set_goal ([], p)
    val _ = Lib.with_flag (proofManagerLib.chatting, false)
                          proofManagerLib.expand
-                         (fn _ => ([([],a)], fn thmL => (MP thm_imp (hd thmL))))
+                         (fn _ => fn _ =>
+                            ([([],a)], fn thmL => (MP thm_imp (hd thmL))))
    val _ = proofManagerLib.forget_history ()
 in
    proofManagerLib.status ()

@@ -23,7 +23,8 @@ local
          empty = Manager.initial_proofs(),
          pp = fn _ => "<proofs>"}
 in
-  fun proofs () = Context.Data.get proofs_slot (Context.snapshot())
+  fun proofs_of ctxt = Context.Data.get proofs_slot ctxt
+  fun proofs () = proofs_of (Context.snapshot())
   val put_proofs = Context.Data.write proofs_slot
   val upd_proofs = Context.Data.modify proofs_slot
 end

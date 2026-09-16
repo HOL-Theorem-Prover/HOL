@@ -22,7 +22,7 @@ Never fails.
 ### Example
 
 ``` hol4
->> EQ_MP_TAC (CONJ TRUTH TRUTH) ([], “p ∧ q”);
+>> EQ_MP_TAC (CONJ TRUTH TRUTH) ([], “p ∧ q”) (Context.snapshot());
 ```
 
 ### Comments

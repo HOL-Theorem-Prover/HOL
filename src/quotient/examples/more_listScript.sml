@@ -140,6 +140,23 @@ Definition DL[nocompute]:
   (DL (CONS (y:'a) l) = (~(y IN SL l) /\ DL l))
 End
 
+(* Two generic length lemmas used by the quotient-examples barendregt
+   library.  Landed here so those libraries don't fire load-time
+   TAC_PROOF calls. *)
+
+Theorem EVERY_LENGTH_LEMMA:
+  !os (a:'a) as.
+    LENGTH os = LENGTH (a::as) ==>
+    ?(o':'b) os'. LENGTH os' = LENGTH as /\ os = o'::os'
+Proof
+  Cases_on `os` \\ rw []
+QED
+
+Theorem NIL_LENGTH_LEMMA:
+  !os:'b list. LENGTH os = LENGTH ([]:'a list) ==> os = []
+Proof
+  REWRITE_TAC [LENGTH, LENGTH_NIL]
+QED
 
 
 val _ = print_theory_to_file "-" "more_list.lst";

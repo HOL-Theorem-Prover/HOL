@@ -6328,6 +6328,13 @@ SIMP_TAC std_ss [FUN_EQ_THM, asl_comment_location2_def,
  asl_comment_location_def]
 QED
 
+Theorem asl_comment_location_APPEND_NIL_CONS:
+  (asl_comment_location c []) ++ h::hs =
+  (asl_comment_location c (h:'a))::hs
+Proof
+  REWRITE_TAC[asl_comment_location_def, APPEND]
+QED
+
 Definition asl_comment_assert_def:
 asl_comment_assert (qP:'e -> 'd set) = asl_prog_skip:('a,'b','c,'d) asl_program
 End

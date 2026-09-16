@@ -31,7 +31,7 @@ part of a script's execution, this registration is unlikely to persist.
 ``` hol4
 >> SIMP_CONV bool_ss [SF ETA_ss] “P (λx. f x) ∧ Q”;
 
->> simp[SF ETA_ss] ([], “P (λx. f x) ∧ Q”);
+>> simp[SF ETA_ss] ([], “P (λx. f x) ∧ Q”) (Context.snapshot());
 ```
 
 ### See also

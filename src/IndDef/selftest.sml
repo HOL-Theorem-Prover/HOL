@@ -87,7 +87,45 @@ val _ = tprint "Can still look at rule_induction data"
 val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
-val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln "tr")),
+(* a theorem the rule_induction set type rejects (its clause hypothesis is
+   headed by a variable) must leave no delta in the theory segment; an
+   accepted one must, which also shows the delta count below is live *)
+local
+  val nm = "malformed_rule_induction"
+  val th = GEN “P:num -> bool”
+               (DISCH T (GEN “x:num” (DISCH “(P:num -> bool) x” TRUTH)))
+  val _ = save_thm(nm, th)
+  val ok_nm = "wellformed_rule_induction"
+  val ok_th = DISCH T (GEN “x:num” (DISCH “even x” (ASSUME “even x”)))
+  val _ = save_thm(ok_nm, ok_th)
+  fun count () = length (thy_rule_inductions (current_theory ()))
+  fun rejected f = (f (); false) handle HOL_ERR _ => true
+  fun check msg f =
+      let
+        val _ = tprint msg
+        val n0 = count ()
+      in
+        if not (rejected f) then die "malformed theorem accepted"
+        else if count () <> n0 then die "rejected delta was recorded"
+        else OK()
+      end
+in
+val _ = (tprint "Accepted export_rule_induction is persisted";
+         let val n0 = count ()
+         in
+           export_rule_induction ok_nm;
+           if count () = n0 + 1 then OK()
+           else die "accepted delta was not recorded"
+         end)
+val _ = check "Rejected stored [rule_induction] attribute is not persisted"
+              (fn () => ThmAttribute.store_at_attribute
+                          {name = nm, attrname = "rule_induction", args = [],
+                           thm = th})
+val _ = check "Rejected export_rule_induction is not persisted"
+              (fn () => export_rule_induction nm)
+end
+
+val _ = shouldfail {testfn = quietly (in_repl_mode (runtac (xHol_reln "tr"))),
                     printresult = (fn (th,_,_) => thm_to_string th),
                     printarg = K "With Unicode should fail",
                     checkexn = is_struct_HOL_ERR "IndDefLib"}
@@ -103,7 +141,7 @@ val _ = if (in_repl_mode Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
         then OK()
         else die "FAILED"
 
-val _ = shouldfail { testfn = quietly (in_repl_mode (xHol_reln "tr")),
+val _ = shouldfail { testfn = quietly (in_repl_mode (runtac (xHol_reln "tr"))),
                      printresult = (fn (th,_,_) => thm_to_string th),
                      printarg = K "Double implication should fail",
                      checkexn = (fn(HOL_ERR herr) =>
@@ -118,7 +156,7 @@ val _ = diemode := Remember failcount
 local
   fun itf n pat t =
       let
-        val (sgs, _) = VALID (isolate_to_front n pat) ([], t)
+        val (sgs, _) = runtac (VALID (isolate_to_front n pat)) ([], t)
       in
         case sgs of
             [([], t')] => t'

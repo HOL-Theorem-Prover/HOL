@@ -1025,11 +1025,7 @@ fun lift_type_bijections iths cty =
 val T_tm = boolSyntax.T
 
 val DE_EXISTENTIALIZE_RULE = let
-  val pth = prove(
-    ``$? P ==> (c:'a = $@ P) ==> P c``,
-    CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX)))) THEN
-    DISCH_TAC THEN DISCH_THEN SUBST1_TAC THEN
-    MATCH_MP_TAC SELECT_AX THEN POP_ASSUM ACCEPT_TAC)
+  val pth = ind_typeTheory.DE_EXISTENTIALIZE_PTH
   val USE_PTH = MATCH_MP pth
   fun DE_EXISTENTIALIZE_RULE th =
     if not (is_exists(concl th)) then ([],th)

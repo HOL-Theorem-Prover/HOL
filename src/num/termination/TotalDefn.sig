@@ -45,7 +45,7 @@ sig
    val multiDefine : term quotation -> thm list
    val qDefine     : string -> term quotation -> tactic option -> thm
    val located_qDefine : DB.thm_src_location -> string -> term quotation ->
-                         tactic option -> thm
+                         tactic option -> Context.t -> thm
    datatype phase
         = PARSE of term quotation
         | BUILD of term

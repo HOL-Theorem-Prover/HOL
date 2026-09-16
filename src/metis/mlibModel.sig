@@ -34,7 +34,10 @@ val update_fix  : (fix -> fix) -> parameters -> parameters
 type model
 
 (* Basic operations *)
-val new  : parameters -> model
+(* The second argument seeds the model: it fixes both the symbol
+   interpretation and the valuations the model samples, so a model is a
+   function of what it is given and of nothing else.  Any int will do. *)
+val new  : parameters -> int -> model
 val size : model -> int
 
 (* Evaluate ground terms and sentences *)

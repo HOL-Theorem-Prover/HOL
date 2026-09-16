@@ -1,7 +1,8 @@
 structure pairTools :> pairTools =
 struct
 
-open HolKernel Parse boolLib pairSyntax pairTheory PairRules;
+open HolKernel Parse boolLib pairSyntax pairTheory PairRules
+     pairToolsContextTheory;
 
 val PERR = mk_HOL_ERR "pairTools";
 
@@ -41,21 +42,21 @@ local
     | SOME (tya, tyd) => split_tacs v tya tyd
   end g
 in
-  fun PairCases (g as (hyps, w)) = let
+  fun PairCases (g as (hyps, w)) ctxt = let
     val fvs = free_varsl (w::hyps)
     val (v, _) = dest_forall w
     (* From gen_tac: *)
-    val v' = gen_variant Parse.is_constname "" fvs v
+    val v' = gen_variant (Parse.get_is_constname ctxt) "" fvs v
   in
     X_GEN_TAC v' THEN PairCases_common v' fvs
-  end g
+  end g ctxt
 
-  fun PairCases_on q (g as (hyps, w)) = let
+  fun PairCases_on q (g as (hyps, w)) ctxt = let
     val fvs = free_varsl (w::hyps)
-    val v = parse_in_context fvs q
+    val v = Parse.parse_in_context_in ctxt fvs q
   in
     if is_var v then
-      PairCases_common v fvs g
+      PairCases_common v fvs g ctxt
     else
       raise PERR "PairCases_on" "Not a variable"
   end
@@ -124,7 +125,7 @@ fun PGEN a vstr th =
           then Thm.INST [vstr |-> a] th
           else PROVE_HYP (PAIR_EX a vstr) (VSTRUCT_ABS (mk_eq(a,vstr)) th))
 
-fun PGEN_TAC vars (asl:Term.term list,tm) =
+fun PGEN_TAC vars (asl:Term.term list,tm) (_ : Context.t) =
  let val (v,_) = dest_forall tm
      val tm'   = beta_conv(mk_comb(rand tm,vars))
  in
@@ -164,7 +165,7 @@ local fun trav tm A =
 in
 fun TUPLE v thm = GEN v (SPECL (trav v []) thm)
 
-fun TUPLE_TAC vtuple:tactic = fn (asl,w) =>
+fun TUPLE_TAC vtuple:tactic = fn (asl,w) => fn _ (* ctxt *) =>
    let val (Bvar,Body) = dest_forall w
        val w1 = subst [Bvar |-> vtuple] Body
        val w2 = list_mk_forall(strip_pair vtuple,w1)
@@ -268,7 +269,7 @@ in
  *---------------------------------------------------------------------------*)
 
 val LET_INTRO_TAC :tactic =
-fn  (asl,w) =>
+fn  (asl,w) => fn _ (* ctxt *) =>
   let val (func,arg) = dest_let w
       val func' = unpabs func
       val (vstr,body) = dest_pabs func
@@ -362,14 +363,6 @@ val is_universal   = same_const boolSyntax.universal
 val is_existential = same_const boolSyntax.existential;
 
 local
-  val ELIM_PEXISTS2 = prove (
-    “(?p:('a#'b). P (FST p) (SND p) p) = ?p1 p2. P p1 p2 (p1,p2)”,
-    CONV_TAC (LHS_CONV (HO_REWR_CONV EXISTS_PROD)) THEN REWRITE_TAC[FST, SND])
-  val ELIM_PFORALL2 = prove (
-    “(!p:('a#'b). P (FST p) (SND p) p) = !p1 p2. P p1 p2 (p1,p2)”,
-    CONV_TAC (LHS_CONV (HO_REWR_CONV FORALL_PROD)) THEN
-    REWRITE_TAC[FST, SND]);
-
   val ELIM_PEXISTS_CONV = HO_REWR_CONV ELIM_PEXISTS2;
   val ELIM_PFORALL_CONV = HO_REWR_CONV ELIM_PFORALL2;
 
@@ -419,21 +412,6 @@ end;
 
 
 local
-  val PFORALL_THM2 = prove (
-    ``!P:'a->'b->bool. (!x. $! (P x)) = $! (UNCURRY P)``,
-    GEN_TAC THEN
-    Q.SUBGOAL_THEN `P = (\x y. P x y)`
-       (fn thm => ONCE_ASM_REWRITE_TAC [thm])
-    THEN1 (REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC[]) THEN
-    BETA_TAC THEN REWRITE_TAC [PFORALL_THM]);
-
-  val PEXISTS_THM2 = prove (
-    ``!P:'a->'b->bool. (?x. $? (P x)) = $? (UNCURRY P)``,
-    GEN_TAC THEN
-    Q.SUBGOAL_THEN `P = (\x y. P x y)`
-       (fn thm => ONCE_ASM_REWRITE_TAC [thm])
-    THEN1 (REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC[]) THEN
-    BETA_TAC THEN REWRITE_TAC [PEXISTS_THM]);
 in
   fun PEXISTS_INTRO_CONV tm =
       (((TRY_CONV ELIM_TUPLED_QUANT_CONV) THENC

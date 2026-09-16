@@ -22,6 +22,9 @@ val WARN = Feedback.HOL_WARNING "arm_stepLib"
 
 val () = show_assums := true
 
+(* Load-time proves that used to fire Tactical.prove here now live in
+   arm_stepLibSupportTheory (see arm_stepLibSupportScript.sml). *)
+
 (* ========================================================================= *)
 
 val mk_byte = bitstringSyntax.mk_vec 8
@@ -89,7 +92,7 @@ val FULL_DATATYPE_RULE = utilsLib.FULL_CONV_RULE DATATYPE_CONV
 
 val COND_UPDATE_CONV =
    REWRITE_CONV
-     (utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
+     (utilsLibSupportTheory.COND_UPDATE3 ::
       utilsLib.mk_cond_update_thms
          (List.map arm_configLib.mk_arm_type ["arm_state", "FP", "PSR"]))
 
@@ -140,9 +143,7 @@ val setEvConv = utilsLib.setStepConv
 
 (* ========================================================================= *)
 
-val ArchVersion_CPSR_rwt = Q.prove(
-   `!s c. ArchVersion () (s with CPSR := c) = ArchVersion () s`,
-   lrw [ArchVersion_def]) |> DATATYPE_RULE
+val ArchVersion_CPSR_rwt = arm_stepLibSupportTheory.ArchVersion_CPSR_rwt
 
 val () = setEvConv utilsLib.WGROUND_CONV
 
@@ -159,78 +160,9 @@ val PC_rwt =
    EV [PC_def, R_def, CurrentInstrSet_rwt, not_cond] [] []
       ``PC`` |> hd
 
-local
-   val RBankSelect_rwt =
-     EV [RBankSelect_def, BadMode] [] []
-       ``RBankSelect (mode,usr,fiq,irq,svc,abt,und,mon,hyp)`` |> hd
-
-   val RfiqBankSelect_rwt =
-     EV [RfiqBankSelect_def, RBankSelect_rwt] [] []
-       ``RfiqBankSelect (mode,usr,fiq)`` |> hd
-
-   val LookUpRName_rwt =
-     EV [LookUpRName_def, mustbe15, RfiqBankSelect_rwt, RBankSelect_rwt] [] []
-       ``LookUpRName (n,mode)`` |> hd
-
-   val thms = [merge_cond, cond_rand_thms, isnot15, IsSecure_def,
-               CurrentInstrSet_rwt, NotMon, HaveSecurityExt_def, Rmode_def,
-               write'Rmode_def, LookUpRName_rwt, arm_stepTheory.aligned_23]
-
-   val Rmode_rwt =
-      EV thms [[``Extension_Security NOTIN ^st.Extensions``]] []
-        ``Rmode (n, m)`` |> hd
-
-   val write'Rmode_rwt =
-      EV thms
-         [[``Extension_Security NOTIN ^st.Extensions``, ``n <> 15w: word4``,
-           ``~((n = 13w: word4) /\ ~aligned 2 (v: word32) /\ ^st.CPSR.T)``]]
-         []
-        ``write'Rmode (v, n, m)``
-        |> hd
-        |> utilsLib.ALL_HYP_CONV_RULE
-              (REWRITE_CONV [boolTheory.DE_MORGAN_THM,
-                             GSYM boolTheory.DISJ_ASSOC])
-
-   val in_ext = GSYM (Q.ISPEC `^st.Extensions` pred_setTheory.SPECIFICATION)
-in
-   val R_rwt = Q.prove(
-      `GoodMode (^st.CPSR.M) ==>
-       ~^st.Extensions Extension_Security ==>
-       ~^st.CPSR.J ==>
-       (R n ^st = (if n = 15w then
-                     ^st.REG RName_PC + if ^st.CPSR.T then 4w else 8w
-                   else ^st.REG (R_mode (^st.CPSR.M) n), ^st))`,
-      lrw [R_def, R_mode_def, CurrentInstrSet_rwt, in_ext, DISCH_ALL Rmode_rwt]
-      \\ rfs [GoodMode_def]
-      \\ blastLib.FULL_BBLAST_TAC
-      )
-      |> funpow 3 Drule.UNDISCH
-
-   val write'R_rwt = Q.prove(
-      `GoodMode (^st.CPSR.M) ==>
-       ~^st.Extensions Extension_Security==>
-       ~^st.CPSR.J ==>
-       n <> 15w ==>
-       ((n <> 13w) \/ aligned 2 v \/ ~^st.CPSR.T) ==>
-       (write'R (v, n) ^st =
-        ^st with REG := (R_mode (^st.CPSR.M) n =+ v) ^st.REG)`,
-      rewrite_tac [in_ext]
-      \\ ntac 4 strip_tac
-      \\ DISCH_THEN
-           (fn th => IMP_RES_TAC (MATCH_MP (DISCH_ALL write'Rmode_rwt) th))
-      \\ simp [write'R_def]
-      \\ pop_assum kall_tac
-      \\ lrw [R_mode_def, CurrentInstrSet_rwt]
-      \\ fs [GoodMode_def]
-      \\ blastLib.FULL_BBLAST_TAC
-      )
-      |> funpow 5 Drule.UNDISCH
-
-   val R15_rwt = Q.prove(
-      `~^st.CPSR.J ==>
-       (R 15w ^st = (^st.REG RName_PC + if ^st.CPSR.T then 4w else 8w, ^st))`,
-      lrw [R_def, CurrentInstrSet_rwt] \\ fs []) |> Drule.UNDISCH
-end
+val R_rwt = arm_stepLibSupportTheory.R_rwt
+val write'R_rwt = arm_stepLibSupportTheory.write'R_rwt
+val R15_rwt = arm_stepLibSupportTheory.R15_rwt
 
 (* ---------------------------- *)
 
@@ -241,7 +173,7 @@ val BranchTo_rwt =
      ``BranchTo imm32`` |> hd
 
 local
-   val rwt = Q.prove (`!b. ((if b then 16 else 32) = 16n) = b`, rw [])
+   val rwt = arm_stepLibSupportTheory.IncPC_16_rwt
 in
    val IncPC_rwt =
      EV [IncPC_def, BranchTo_rwt, ThisInstrLength_def, rwt] [] []
@@ -265,11 +197,7 @@ in
 end
 
 local
-   val rwt =
-      utilsLib.qm []
-      ``(c ==> b) ==>
-        ((if b then x:'a else if ~c then y else z) = (if b then x else y))``
-      |> Drule.UNDISCH
+   val rwt = Drule.UNDISCH arm_stepLibSupportTheory.BXWritePC_qm_lem
 in
    val BXWritePC_rwt =
       EV ([rwt, BXWritePC_def, BranchTo_rwt, CurrentInstrSet_rwt] @
@@ -280,12 +208,7 @@ end
 val align_aligned = UNDISCH_ALL (SPEC_ALL alignmentTheory.align_aligned)
 
 local
-   val rwt = Q.prove(
-     `(^st.Architecture = ARMv4) \/ (^st.Architecture = ARMv4T) ==>
-      (^st.Architecture <> ARMv4 /\ ^st.Architecture <> ARMv4T /\
-       ^st.Architecture <> ARMv5T /\ ^st.Architecture <> ARMv5TE \/
-       aligned 2 (imm32: word32) = aligned 2 imm32)`,
-     lrw [] \\ lfs []) |> Drule.UNDISCH
+   val rwt = Drule.UNDISCH arm_stepLibSupportTheory.LoadWritePC_arch45_split
 
    val LoadWritePC_rwt1 =
      EV [LoadWritePC_def, BXWritePC_rwt, CurrentInstrSet_rwt, ArchVersion_rwts]
@@ -583,14 +506,10 @@ val Shift_C_rwt =
       |> hd
       |> SIMP_RULE std_ss []
 
-val SND_Shift_C_rwt = Q.prove(
-   `!s. SND (Shift_C (value,typ,amount,carry_in) s) = s`,
-   Cases_on `typ` \\ lrw [Shift_C_rwt]) |> Drule.GEN_ALL
+val SND_Shift_C_rwt = arm_stepLibSupportTheory.SND_Shift_C_rwt
 
 local
-   val rwt =
-      utilsLib.qm [wordsTheory.SHIFT_ZERO]
-        ``(if n = 0 then (x: 'a word,s) else (x #>> n, ^st)) = (x #>> n, s)``
+   val rwt = arm_stepLibSupportTheory.ROR_qm_lem
 in
    val ROR_rwt =
       EV [ROR_def, ROR_C_def] [] []
@@ -605,12 +524,7 @@ val () = setEvConv (Conv.DEPTH_CONV
              ORELSEC bitstringLib.FIX_CONV
              ORELSEC wordsLib.SIZES_CONV))
 
-val arm_imm_lem = Q.prove(
-   `((if n = 0 then ((w, c1), s) else ((w #>> n, c2), s)) =
-     ((w #>> n, if n = 0 then c1 else c2), s)) /\
-    (2 * w2n (v2w [a; b; c; d] : word4) = w2n (v2w [a; b; c; d; F] : word5))`,
-   rw [] \\ wordsLib.n2w_INTRO_TAC 5 \\ blastLib.BBLAST_TAC
-   )
+val arm_imm_lem = arm_stepLibSupportTheory.arm_imm_lem
 
 val ARMExpandImm_C_rwt =
    EV [ARMExpandImm_C_def, Shift_C_rwt, arm_imm_lem] [] []
@@ -629,10 +543,7 @@ val ThumbExpandImm_C_rwt =
 val () = setEvConv utilsLib.WGROUND_CONV
 
 local
-   val rwt = Q.prove(
-      `(if b then (((x, y), s): (word32 # bool) # arm_state) else ((m, n), s)) =
-       ((if b then x else m, if b then y else n), s)`,
-      rw [])
+   val rwt = arm_stepLibSupportTheory.ExpandImm_C_pair_split
 in
    val ExpandImm_C_rwt =
       EV [ExpandImm_C_def, ARMExpandImm_C_rwt, rwt]
@@ -752,26 +663,9 @@ local
    val LDM_lem = simp_for_body dfn'LoadMultiple_def
    val LDM_thm = unfold_for_loop dfn'LoadMultiple_def
 
-   val cond_write'R_13_rwt = Q.prove(
-      `~^st.CPSR.J ==> GoodMode (^st.CPSR.M) ==>
-       ~^st.Extensions Extension_Security ==>
-       (p ==> (aligned 2 w \/ ~^st.CPSR.T)) ==>
-       ((if p then
-            ((), a, write'R (w, 13w) s)
-         else
-            ((), s2)) =
-        (if p then
-            ((), a, s with REG := (R_mode ^st.CPSR.M 13w =+ w) ^st.REG)
-         else
-            ((), s2)))`,
-      lrw [] \\ lrw [DISCH_ALL write'R_rwt])
-      |> Drule.UNDISCH_ALL
+   val cond_write'R_13_rwt = arm_stepLibSupportTheory.cond_write'R_13_rwt
 
-   val rearrange = Q.prove(
-      `!p a b n s.
-         (if p then write'R (a, n) s else write'R (b, n) s) =
-         write'R (if p then a else b, n) s`,
-      lrw [])
+   val rearrange = arm_stepLibSupportTheory.cond_write_R_rearrange
 
    fun FOR_BETA_CONV i tm =
       let
@@ -904,22 +798,7 @@ local
    val STM_lem = simp_for_body dfn'StoreMultiple_def
    val STM_thm = unfold_for_loop dfn'StoreMultiple_def
 
-   val cond_lsb = Q.prove(
-      `i < 16 ==>
-       (wb /\ word_bit (w2n n) r ==>
-        (n2w (LowestSetBit (r: word16)) = n: word4)) ==>
-       ((if word_bit i r then
-           ((), x1,
-            if (n2w i = n) /\ wb /\ (i <> LowestSetBit r) then x2 else x3)
-         else
-           ((), x4)) =
-        (if word_bit i r then ((), x1, x3) else ((), x4)))`,
-      lrw [armTheory.LowestSetBit_def, wordsTheory.word_reverse_thm,
-           CountLeadingZeroBits16]
-      \\ lrfs []
-      \\ lfs []
-      )
-      |> Drule.UNDISCH_ALL
+   val cond_lsb = arm_stepLibSupportTheory.cond_lsb
 
    fun FOR_BETA_CONV i tm =
       let
@@ -970,13 +849,7 @@ local
         (a + 4w * (-1w + 1w) = a) /\
         (a + 4w * -1w = a - 4w)``
 
-   val rearrange = Q.prove(
-      `(if p then
-          s with <|MEM := a; REG := b|>
-        else
-          s with <|MEM := c; REG := d|>) =
-       s with <|MEM := if p then a else c; REG := if p then b else d|>`,
-      rw [])
+   val rearrange = arm_stepLibSupportTheory.StoreMultiple_rearrange
 in
    val StoreMultiple_rwt =
       EV ([STMDA, STMDB, STMIA, STMIB, STM_UPTO_def, IncPC_rwt,
@@ -1066,11 +939,7 @@ in
 end
 
 local
-   val eq0_rwts = Q.prove(
-      `(NUMERAL (BIT1 x) <> 0) /\ (NUMERAL (BIT2 x) <> 0)`,
-      REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.BIT1,
-                   arithmeticTheory.BIT2]
-      \\ DECIDE_TAC)
+   val eq0_rwts = arm_stepLibSupportTheory.eq0_bits_rwts
    val count15 = rhsc count_list_15
    val STM1 = REWRITE_RULE [wordsTheory.word_mul_n2w] STM1_def
    val LDM1_tm = Term.prim_mk_const {Thy = "arm_step", Name = "LDM1"}
@@ -1262,14 +1131,7 @@ Count.apply FOLDL_STM1_CONV tm
 (* Fetch *)
 
 local
-   val lem = Q.prove (
-      `(!p. ((if p then v2w [b1; b2; b3] else v2w [b4; b5; b6]) = 7w : word3) =
-             (if p then b1 /\ b2 /\ b3 else b4 /\ b5 /\ b6)) /\
-       (!p. ((if p then v2w [b1; b2] else v2w [b3; b4]) = 0w : word2) =
-             (if p then ~b1 /\ ~b2 else ~b3 /\ ~b4))`,
-      rw_tac std_ss []
-      \\ CONV_TAC (Conv.LHS_CONV bitstringLib.v2w_eq_CONV)
-      \\ decide_tac)
+   val lem = arm_stepLibSupportTheory.v2w_word_eq_lem
 
    val CONC_RULE =
      SIMP_RULE (srw_ss()++boolSimps.LET_ss)
@@ -1605,9 +1467,7 @@ local
       Thm.INST
          (List.tabulate (4, fn i => bitstringSyntax.mk_bit (i + 28) |-> f i))
 
-   val cond_case =
-      utilsLib.qm []
-         ``!z b x y. (z = if b then x:'a else y) ==> (~b ==> (z = y))``
+   val cond_case = arm_stepLibSupportTheory.DecodeVFP_cond_case
 in
    val DecodeVFP =
       DecodeVFP_def
@@ -1643,12 +1503,7 @@ end
 
 local
    val rand_uncurry = utilsLib.mk_cond_rand_thms [``UNCURRY f : 'a # 'b -> 'c``]
-   val ConditionPassed_enc = Q.prove(
-      `!s c.
-         ConditionPassed ()
-           (s with <|CurrentCondition := c; Encoding := Encoding_ARM |>) =
-         ConditionPassed () (s with CurrentCondition := c)`,
-      lrw [ConditionPassed_rwt]) |> DATATYPE_RULE
+   val ConditionPassed_enc = arm_stepLibSupportTheory.ConditionPassed_enc
    val v = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 28 0))
    val dual_rwt =
       blastLib.BBLAST_PROVE
@@ -3496,16 +3351,7 @@ val Swap_rwts =
 
 (* Floating-point *)
 
-val fpscr_thm = Q.prove(
-  `FPSCR a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16
-         a17 a18 a19 a20 a21 =
-   ^st.FP.FPSCR with
-   <|AHP := a0; C := a1; DN := a2; DZC := a3; DZE := a4;
-     FZ := a5; IDC := a6; IDE := a7; IOC := a8; IOE := a9;
-     IXC := a10; IXE := a11; N := a12; OFC := a13; OFE := a14;
-     QC := a15; RMode := a16; UFC := a17; UFE := a18; V := a19; Z := a20;
-     fpscr'rst := a21|>`,
-   simp [FPSCR_component_equality])
+val fpscr_thm = arm_stepLibSupportTheory.fpscr_thm
 
 val mov_two_singles =
   List.map (blastLib.BBLAST_PROVE o Term)
@@ -3791,42 +3637,8 @@ fun COND_UPDATE2_CONV l =
 val PSR_CONV = utilsLib.BIT_FIELD_INSERT_CONV "arm" "PSR"
 val PSR_TAC = utilsLib.REC_REG_BIT_FIELD_INSERT_TAC "arm" "PSR"
 
-val PSR_FIELDS = Q.prove(
-   `(!p v.
-       rec'PSR (bit_field_insert 31 27 (v: word5) (reg'PSR p)) =
-       p with <|N := v ' 4; Z := v ' 3; C := v ' 2; V := v ' 1; Q := v ' 0|>) /\
-    (!p v.
-       rec'PSR (bit_field_insert 26 24 (v: word3) (reg'PSR p)) =
-       p with <|IT := bit_field_insert 1 0 ((2 >< 1) v: word2) p.IT;
-                J := v ' 0|>) /\
-    (!p v.
-       rec'PSR (bit_field_insert 19 16 (v: word4) (reg'PSR p)) =
-       p with <|GE := v|>) /\
-    (!p v.
-       rec'PSR (bit_field_insert 15 10 (v: word6) (reg'PSR p)) =
-       p with <|IT := bit_field_insert 7 2 v p.IT|>) /\
-    (!p v.
-       rec'PSR (bit_field_insert 4 0 (v: word5) (reg'PSR p)) =
-       p with <|M := bit_field_insert 4 0 v p.M|>)`,
-   REPEAT CONJ_TAC \\ PSR_TAC `p`)
-
-val PSR_FLAGS = Q.prove(
-   `(!b p v.
-       rec'PSR (bit_field_insert 9 9 (v2w [b]: word1) (reg'PSR p)) =
-       p with <|E := b|>) /\
-    (!b p v.
-       rec'PSR (bit_field_insert 8 8 (v2w [b]: word1) (reg'PSR p)) =
-       p with <|A := b|>) /\
-    (!b p v.
-       rec'PSR (bit_field_insert 7 7 (v2w [b]: word1) (reg'PSR p)) =
-       p with <|I := b|>) /\
-    (!b p v.
-       rec'PSR (bit_field_insert 6 6 (v2w [b]: word1) (reg'PSR p)) =
-       p with <|F := b|>) /\
-    (!b p v.
-       rec'PSR (bit_field_insert 5 5 (v2w [b]: word1) (reg'PSR p)) =
-       p with <|T := b|>)`,
-   REPEAT CONJ_TAC \\ Cases \\ PSR_TAC `p`)
+val PSR_FIELDS = arm_stepLibSupportTheory.PSR_FIELDS
+val PSR_FLAGS = arm_stepLibSupportTheory.PSR_FLAGS
 
 val IT_extract =
    utilsLib.map_conv utilsLib.EXTRACT_CONV
@@ -3834,21 +3646,8 @@ val IT_extract =
        ``w2w ((15 >< 10) (w: word32) : word6) : word8``,
        ``w2w ((26 >< 25) (w: word32) : word2) : word8``]
 
-val IT_concat = Q.prove(
-   `(!v: word6 w: word8.
-       bit_field_insert 7 2 v w = w2w v << 2 || (w && 0b11w)) /\
-    (!v: word2 w: word8.
-       bit_field_insert 1 0 v w = w2w v || (w && 0b11111100w)) /\
-    (!v1: word6 v2: word2 w: word8.
-      bit_field_insert 7 2 v1 (bit_field_insert 1 0 v2 w) = v1 @@ v2)`,
-   REPEAT strip_tac
-   \\ rewrite_tac [wordsTheory.bit_field_insert_def]
-   \\ blastLib.BBLAST_TAC)
-
-val insert_mode = Q.prove(
-   `!w: word32.
-       bit_field_insert 4 0 ((4 >< 0) w : word5) (v: word5) = (4 >< 0) w`,
-   blastLib.BBLAST_TAC)
+val IT_concat = arm_stepLibSupportTheory.IT_concat
+val insert_mode = arm_stepLibSupportTheory.insert_mode
 
 val CPSRWriteByInstr =
    CPSRWriteByInstr_def
@@ -4005,53 +3804,12 @@ val ReturnFromException_le_rwts =
                              ASSUME ``^st.CPSR.M <> 16w``]))
    |> addThms
 
-val CPSR_lem = Q.prove(
-  `GoodMode m ==> m <> 16w ==> m <> 31w ==>
-   ((if m = 17w then (a, s)
-     else if m = 18w then (b, s)
-     else if m = 19w then (c, s)
-     else if m = 22w then (d, s)
-     else if m = 23w then (e, s)
-     else if m = 26w then (f, s)
-     else if m = 27w then (g, s)
-     else h) =
-    (if m = 17w then a
-     else if m = 18w then b
-     else if m = 19w then c
-     else if m = 22w then d
-     else if m = 23w then e
-     else if m = 26w then f
-     else g, s))`,
-  rw [GoodMode_def]
-  ) |> UNDISCH_ALL
-
-val CPSR_it = Q.prove(
-  `((if m = 17w : word5 then (7 >< 2) a.IT : word6
-     else if m = 18w then (7 >< 2) b.IT
-     else if m = 19w then (7 >< 2) c.IT
-     else if m = 22w then (7 >< 2) d.IT
-     else if m = 23w then (7 >< 2) e.IT
-     else if m = 26w then (7 >< 2) f.IT
-     else (7 >< 2) g.IT) @@
-    (if m = 17w then (1 >< 0) a.IT : word2
-     else if m = 18w then (1 >< 0) b.IT
-     else if m = 19w then (1 >< 0) c.IT
-     else if m = 22w then (1 >< 0) d.IT
-     else if m = 23w then (1 >< 0) e.IT
-     else if m = 26w then (1 >< 0) f.IT
-     else (1 >< 0) g.IT)) =
-    (if m = 17w then a
-     else if m = 18w then b
-     else if m = 19w then c
-     else if m = 22w then d
-     else if m = 23w then e
-     else if m = 26w then f
-     else g).IT`,
-  rw [] \\ fs [] \\ blastLib.BBLAST_TAC)
+val CPSR_lem = UNDISCH_ALL arm_stepLibSupportTheory.CPSR_lem
+val CPSR_it = arm_stepLibSupportTheory.CPSR_it
 
 val SPSR_rwt = EV [SPSR_def, BadMode, CPSR_lem] [] [] ``SPSR`` |> hd
 
-val reg'PSR = utilsLib.mk_reg_thm "arm" "PSR"
+val reg'PSR = arm_stepLibSupportTheory.reg_PSR
 
 local
   val l =
@@ -4072,21 +3830,8 @@ in
   val bit0_word1 = blastLib.BBLAST_CONV ``(v2w [b] : word1) ' 0``
 end
 
-val concat_bit_lo = Q.prove(
-  `n < dimindex(:'b) /\ n <  dimindex(:'c) /\
-   FINITE (univ(:'a)) /\ FINITE (univ(:'b)) ==>
-   ((((a : 'a word) @@ (b : 'b word)) : 'c word) ' n = b ' n)`,
-  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fcpTheory.index_sum]
-  )
-
-val concat_bit_hi = Q.prove(
-  `dimindex(:'b) <= n /\ n <  dimindex(:'c) /\
-   n < dimindex(:'a) + dimindex (:'b) /\
-   FINITE (univ(:'a)) /\ FINITE (univ(:'b)) ==>
-   ((((a : 'a word) @@ (b : 'b word)) : 'c word) ' n =
-    a ' (n - dimindex(:'b)))`,
-  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fcpTheory.index_sum]
-  )
+val concat_bit_lo = arm_stepLibSupportTheory.concat_bit_lo
+val concat_bit_hi = arm_stepLibSupportTheory.concat_bit_hi
 
 val SUBS_PC_rwt =
    EV [dfn'ArithLogicImmediate_def, utilsLib.SET_RULE DataProcessingPC_def,

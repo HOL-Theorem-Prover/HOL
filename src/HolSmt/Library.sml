@@ -423,14 +423,7 @@ struct
 
   (* A tactic that simplifies certain word expressions. *)
 
-  val TO_WORD_EXTRACT = boolLib.TAC_PROOF(([],
-        “(!w : 'a word.
-            dimindex(:'b) < dimindex(:'a) ==>
-            (w2w w : 'b word = (dimindex(:'b) - 1 >< 0) w)) /\
-         (!w : 'a word.
-            dimindex(:'b) < dimindex(:'a) ==>
-            (sw2sw w : 'b word = (dimindex(:'b) - 1 >< 0) w))”),
-        BasicProvers.SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
+  val TO_WORD_EXTRACT = HolSmtTheory.TO_WORD_EXTRACT
 
   val WORD_BIT_EXTRACT = simpLib.SIMP_PROVE
         (simpLib.++(bossLib.std_ss, wordsLib.WORD_BIT_EQ_ss))
@@ -528,14 +521,14 @@ struct
       handle Feedback.HOL_ERR _ =>
       SOSLib.NUM_SOS_RULE tm
 
-  fun NLA_TAC (goal as (_, term)) =
+  fun NLA_TAC (goal as (_, term)) ctxt =
     if term_contains_real_ty term then
-      NLArith.NLA_TAC goal
+      NLArith.NLA_TAC goal ctxt
       handle Feedback.HOL_ERR _ =>
-      SOSLib.REAL_SOS_TAC goal
+      SOSLib.REAL_SOS_TAC goal ctxt
     else
-      SOSLib.INT_SOS_TAC goal
+      SOSLib.INT_SOS_TAC goal ctxt
       handle Feedback.HOL_ERR _ =>
-      SOSLib.NUM_SOS_RULE_TAC goal
+      SOSLib.NUM_SOS_RULE_TAC goal ctxt
 
 end

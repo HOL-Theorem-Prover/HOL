@@ -8,7 +8,7 @@ struct
 
    val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC FINITE_INDUCT;
 
-   val EXISTS_EQ_STRIP_TAC :tactic = fn (asl,t) =>
+   val EXISTS_EQ_STRIP_TAC :tactic = fn (asl,t) => fn _ =>
 
       let val (lhs,rhs) = dest_eq t
          val (lvar,LBody) = dest_exists lhs
@@ -23,7 +23,7 @@ struct
       handle HOL_ERR _ => raise ERR "EXISTS_EQ_STRIP_TAC" "";
 
 
-   val FORALL_EQ_STRIP_TAC :tactic = fn (asl,t) =>
+   val FORALL_EQ_STRIP_TAC :tactic = fn (asl,t) => fn _ =>
 
       let val (lhs,rhs) = dest_eq t
          val (lvar,LBody) = dest_forall lhs
@@ -76,28 +76,28 @@ struct
                                      else findMatch (a::l1, l2, c)
 
 
-   val DISJ_EQ_STRIP_TAC :tactic = fn (asl,t) =>
+   val DISJ_EQ_STRIP_TAC :tactic = fn (asl,t) => fn ctxt =>
       let val (lhs,rhs) = dest_eq t
          val l1 = strip_disj lhs
          val l2 = strip_disj rhs
          val m = findMatch (l1, l2, l2)
       in
-         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t)
+         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t) ctxt
       end
       handle HOL_ERR _ => raise ERR "OR_EQ_STRIP_TAC" "";
 
 
-   val CONJ_EQ_STRIP_TAC :tactic = fn (asl,t) =>
+   val CONJ_EQ_STRIP_TAC :tactic = fn (asl,t) => fn ctxt =>
       let val (lhs,rhs) = dest_eq t
          val l1 = strip_conj lhs
          val l2 = strip_conj rhs
          val m = findMatch (l1, l2, l2)
       in
-         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t)
+         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t) ctxt
       end
       handle HOL_ERR _ => raise ERR "CONJ_EQ_STRIP_TAC" "";
 
-   val C_IMP_EQ_STRIP_TAC :tactic = fn (asl,t) =>
+   val C_IMP_EQ_STRIP_TAC :tactic = fn (asl,t) => fn ctxt =>
       let val (lhs,rhs) = dest_eq t
           val (la, lc) = dest_imp lhs;
           val (ra, rc) = dest_imp rhs;
@@ -105,11 +105,11 @@ struct
           val l2 = strip_disj rc
           val m = findMatch (l1, l2, l2)
       in
-         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t)
+         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t) ctxt
       end
       handle HOL_ERR _ => raise ERR "IMP_EQ_STRIP_TAC" "";
 
-   val A_IMP_EQ_STRIP_TAC :tactic = fn (asl,t) =>
+   val A_IMP_EQ_STRIP_TAC :tactic = fn (asl,t) => fn ctxt =>
       let val (lhs,rhs) = dest_eq t
           val (la, lc) = dest_imp lhs;
           val (ra, rc) = dest_imp rhs;
@@ -117,7 +117,7 @@ struct
           val l2 = strip_conj ra
           val m = findMatch (l1, l2, l2)
       in
-         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t)
+         (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t) ctxt
       end
       handle HOL_ERR _ => raise ERR "IMP_EQ_STRIP_TAC" "";
 
@@ -154,7 +154,12 @@ struct
    fun Q_SPECL_NO_ASSUM n [] = ALL_TAC
      | Q_SPECL_NO_ASSUM n (h::l) = (Q_SPEC_NO_ASSUM n h THEN Q_SPECL_NO_ASSUM 0 l);
 
-   val IMP_TO_EQ_TAC = MATCH_MP_TAC (prove (``(a = b) ==> (a ==> b)``, SIMP_TAC std_ss []));
+   (* |- (a = b) ==> (a ==> b), derived forward via SIMP_CONV +
+      EQT_ELIM so we don't fire a load-time Tactical.prove. *)
+   val IMP_TO_EQ_TAC =
+     MATCH_MP_TAC
+       (EQT_ELIM (simpLib.SIMP_CONV std_ss []
+                    ``(a = b) ==> (a ==> b)``));
 
    fun store_simp_thm(name,term,tac) = save_thm(name,
             SIMP_RULE std_ss [] (prove(term, tac)));
@@ -174,7 +179,8 @@ struct
 
 
 
-  fun PROVE_CONDITION_TAC thm (asl, t) =
+  (* the trailing _ is the context a tactic is now handed *)
+  fun PROVE_CONDITION_TAC thm (asl, t) _ =
     let
       val (p, c) = dest_imp (concl thm);
       fun mp_thm thms =

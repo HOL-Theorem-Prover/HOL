@@ -3577,3 +3577,24 @@ val _ = TypeBase.export [
           size = NONE,
           encode=NONE})
     ]
+
+(* Small helpers formerly proved by bagSimpleLib at load time. *)
+
+Theorem BAG_EVERY_BAG_IN_THM:
+  !b:'a -> num. BAG_EVERY (\e. BAG_IN e b) b
+Proof REWRITE_TAC [BAG_EVERY] THEN BETA_TAC THEN REWRITE_TAC []
+QED
+
+Theorem SUB_BAG_EMPTY_T:  !b:'a -> num. SUB_BAG EMPTY_BAG b <=> T
+Proof REWRITE_TAC [SUB_BAG_EMPTY]
+QED
+
+Theorem SUB_BAG_REFL_T:  !b:'a -> num. SUB_BAG b b <=> T
+Proof REWRITE_TAC [SUB_BAG_REFL]
+QED
+
+Theorem bag_card_neq_thm:
+  !(b1:'a -> num) b2. BAG_CARD b1 <> BAG_CARD b2 ==> ((b1 = b2) <=> F)
+Proof
+  REPEAT GEN_TAC THEN Cases_on `b1 = b2` THEN ASM_REWRITE_TAC []
+QED

@@ -113,10 +113,7 @@ local
       let val ptm = “ring_of_int (r :'a Ring)” in
         fn n => mk_comb(ptm,mk_intconst n)
       end;
-  val cth = prove
-   (“ring_0 r :'a = ring_of_int r (&0) /\
-     ring_1 r :'a = ring_of_int r (&1)”,
-    REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0, RING_OF_NUM_1]);
+  val cth = ringLibTheory.ring_zero_one_via_of_int;
   val decorule =
     GEN_REWRITE_CONV ONCE_DEPTH_CONV [cth, GSYM RING_OF_INT_OF_NUM];
   val (basic_rule,idealconv) =

@@ -689,7 +689,7 @@ val PERM_SIMPLE_ss = simpLib.SSFRAG
      congs = [], ac = []
      }
 
-fun NORMALISE_ASM_PERM_TAC (asm, t) =
+fun NORMALISE_ASM_PERM_TAC (asm, t) (_ : Context.t) =
 let
    val (asm_perm, asm_rest) = partition is_PERM asm;
    val asm_perm_thmL = perm_simplify_thmL (map ASSUME asm_perm)

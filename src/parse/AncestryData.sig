@@ -5,15 +5,21 @@ sig
     apply_delta : 'delta -> 'value -> 'value
   }
 
+  (* the `_of` fields read the supplied context; the others read the
+     ambient one and are defined in terms of them *)
   type ('delta,'value) fullresult =
        { merge : string list -> 'value option,
          DB : {thyname : string} -> 'value option,
+         DB_of : Context.t -> {thyname : string} -> 'value option,
          get_deltas : {thyname : string} -> 'delta list,
          record_delta : 'delta -> unit,
          parents : {thyname : string} -> string list,
          set_parents : string list -> 'value option,
          get_global_value : unit -> 'value,
-         update_global_value : ('value -> 'value) -> unit }
+         get_global_value_of : Context.t -> 'value,
+         update_global_value : ('value -> 'value) -> unit,
+         update_global_value_of : ('value -> 'value) -> Context.t ->
+                                  Context.t }
 
   (* doesn't lock, or in any way exclude others from seeing the adjusted
      value while this code is executing *)
@@ -26,6 +32,7 @@ sig
                delta_side_effects : 'delta -> unit } ->
              { merge : string list -> 'value option,
                DB : {thyname : string} -> 'value option,
+               DB_of : Context.t -> {thyname : string} -> 'value option,
                parents : {thyname : string} -> string list,
                set_parents : string list -> 'value option
              }
@@ -117,6 +124,12 @@ end
             "global" value -- the one visible to user code via the
             getDB / temp_setDB style API exposed by clients like
             ThmSetData.
+          - get_global_value_of /
+            update_global_value_of    : the same value read from, and
+            written into, a supplied context.  A tactic that adjusts
+            the global value for the proof beneath it uses these:
+            they compose into a single context transform instead of
+            bracketing a mutation around a window.
 
     Two constructor functions:
 

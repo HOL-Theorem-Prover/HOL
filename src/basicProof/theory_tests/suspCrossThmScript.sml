@@ -26,7 +26,7 @@ QED
 val _ = shouldfail {
   testfn = (fn () =>
               resume {suspension_name = "th1", label_name = "l1"}
-                     (MATCH_ACCEPT_TAC th2)),
+                     (MATCH_ACCEPT_TAC th2) (Context.snapshot())),
   printarg = (fn _ =>
               "resume th1[l1] with MATCH_ACCEPT_TAC th2 (th2 suspended)"),
   printresult = (fn _ => "<unexpected success>"),
