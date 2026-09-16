@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `MODEL_REFUTE_TAC`
+
+``` hol4
+Refute.MODEL_REFUTE_TAC : Abbrev.tactic
+```
+
+------------------------------------------------------------------------
+
+Runs the finite model finder on the current tactic goal.
+
+`MODEL_REFUTE_TAC` is `REFUTE_TAC_WITH [upd_search (Only [ModelFinder])]`:
+it runs only the `kodkod` backend, with every other field of
+`!Refute.the_config` as read when the tactic is applied, `quiet` and
+`expect` included.  It prints the resulting `Counterexample`,
+`NoCounterexample`, or `Unknown` report (`Model` or `NoModel` when
+`falsify` is false) and then behaves as `ALL_TAC`, never closing or
+altering the goal; a counterexample is not a tactic failure.  Without
+a configured Kodkodi the search is `Unknown`.
+
+Only the clauses a user wrote reach the model finder.  HOL4 completes a
+non-exhaustive pattern set with `ARB`, so a function defined by
+`f (x::xs) = x` leaves `f []` unconstrained here, and a goal whose truth
+depends on that completed value can be reported as a genuine
+counterexample, as in Isabelle's Nitpick.
+
+### Failure
+
+Fails only when a non-default `expect` field is not met.  Interrupts
+are re-raised.
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.model_refute`](#Refute.model_refute),
+[`Refute.config`](#Refute.config)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

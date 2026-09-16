@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `refute`
+
+``` hol4
+Refute.refute : config -> term -> outcome
+```
+
+------------------------------------------------------------------------
+
+Searches for a finite counterexample to a term.
+
+`Refute.refute cfg tm` preprocesses `tm`, universally closes its free
+variables, runs the eligible backends `cfg` selects, prints the
+formatted result unless `cfg.quiet` is true, checks `cfg.expect`, and
+returns the structured `outcome`.
+
+A `Counterexample` carries `Genuine`, `QuasiGenuine`, or `Potential`
+results.  A `Genuine` result with `cert = SOME thm` proves `tm` false;
+with `cert = NONE` (certification disabled, or its replay inconclusive)
+it is evidence without a theorem.  With the default `certify = true`,
+Quickcheck and narrowing hits normally carry a theorem.
+`NoCounterexample` records that a selected search covered its whole
+space, and `Unknown` carries reasons for inapplicability, timeout, or
+incomplete search; neither is a HOL proof.
+
+### Failure
+
+Fails only when a non-default `expect` field is not met.  Backend,
+preprocessing, and ordinary timeout failures are returned as `Unknown`;
+interrupts are re-raised.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.refute_with`](#Refute.refute_with),
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.model_refute`](#Refute.model_refute),
+[`Refute.try_refute`](#Refute.try_refute)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

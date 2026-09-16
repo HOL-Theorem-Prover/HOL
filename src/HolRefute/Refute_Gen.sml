@@ -1,0 +1,901 @@
+structure Refute_Gen = struct
+  type term = Term.term
+  type hol_type = Type.hol_type
+  structure Util = Refute_Util
+
+  val enum_cap = 256
+
+  datatype numkind = Num | Int | Char | Word of int
+
+  type rng = IntInf.int
+
+  type custom_gen =
+    { enumerate : (int -> term list) option,
+      random : (int -> rng -> term * rng) option }
+
+  datatype genspec =
+      GenDatatype of
+        { constrs : (term * hol_type list) list,
+          exhaustive : bool,
+          recursive : bool list list,
+          min_size : int list list,
+          (* One entry per constructor: is any argument type recursive
+             under a function type?  Constant for a spec, so precomputed
+             here rather than re-traversed per generated value. *)
+          fun_recursive : bool list,
+          family : hol_type list }
+    | GenEnum of term list
+    | GenNum of numkind
+    | GenFun of hol_type * hol_type
+    | GenCustom of hol_type * custom_gen
+
+  exception NoGenerator of hol_type * string
+
+  val spec_cache : (hol_type, genspec) Redblackmap.dict ref =
+    ref (Redblackmap.mkDict Type.compare)
+
+  val cardinality_cache : (hol_type, int option) Redblackmap.dict ref =
+    ref (Redblackmap.mkDict Type.compare)
+
+  val enumerate_cache : (hol_type, term list option) Redblackmap.dict ref =
+    ref (Redblackmap.mkDict Type.compare)
+
+  val user_generators : (hol_type * custom_gen) list ref = ref []
+  val abstract_specs : (hol_type * genspec) list ref = ref []
+  val abstract_predicates : (hol_type * term) list ref = ref []
+
+  (* A family fires on demand, at every concrete instance of a type
+     operator, unlike [abstract_specs] which is keyed by one exact type.
+     [canonical], if present, picks one term to represent every value a
+     generated candidate of this type can denote -- e.g. collapsing an
+     FUPDATE chain to the unique map it denotes -- for display only; it
+     never affects the raw generated candidate used for testing or
+     certification. *)
+  type generator_family =
+    { thy : string, tyop : string, constructors : term list,
+      canonical : (term -> term) option }
+  val generator_families : generator_family list ref = ref []
+  val registry_mutex = Mutex.mutex ()
+  val registry_generation = ref 0
+
+  fun synchronized_registry f =
+    Multithreading.synchronized "Refute_Gen.registry" registry_mutex f
+
+  fun current_generation () =
+    synchronized_registry (fn () => !registry_generation)
+
+  fun same_type (ty1, ty2) = Util.same_type ty1 ty2
+
+  fun lookup_type entries ty =
+    Option.map #2
+      (List.find (fn (entry_ty, _) => same_type (entry_ty, ty)) entries)
+
+  fun remove_type ty entries =
+    List.filter (fn (entry_ty, _) => not (same_type (entry_ty, ty))) entries
+
+  fun cached_spec ty =
+    synchronized_registry (fn () => Redblackmap.peek (!spec_cache, ty))
+
+  fun cache_spec generation ty spec =
+    synchronized_registry (fn () =>
+      if !registry_generation = generation then
+        spec_cache := Redblackmap.insert (!spec_cache, ty, spec)
+      else ())
+
+  fun cache_cardinality generation ty result =
+    synchronized_registry (fn () =>
+      if !registry_generation = generation then
+        cardinality_cache :=
+          Redblackmap.insert (!cardinality_cache, ty, result)
+      else ())
+
+  fun cache_enumeration generation ty result =
+    synchronized_registry (fn () =>
+      if !registry_generation = generation then
+        enumerate_cache := Redblackmap.insert (!enumerate_cache, ty, result)
+      else ())
+
+  fun invalidate_cache _ =
+    synchronized_registry (fn () =>
+      (registry_generation := !registry_generation + 1;
+       spec_cache := Redblackmap.mkDict Type.compare;
+       cardinality_cache := Redblackmap.mkDict Type.compare;
+       enumerate_cache := Redblackmap.mkDict Type.compare))
+
+  val _ = Theory.register_hook
+    ("Refute_Gen.spec_of", invalidate_cache)
+
+  fun generator_of ty =
+    synchronized_registry (fn () => lookup_type (!user_generators) ty)
+
+  fun predicate_of ty =
+    synchronized_registry (fn () => lookup_type (!abstract_predicates) ty)
+
+  fun has_registered_generator ty =
+    synchronized_registry (fn () =>
+      Option.isSome (lookup_type (!user_generators) ty) orelse
+      Option.isSome (lookup_type (!abstract_specs) ty))
+
+  fun register_generator ty generator =
+    case (#enumerate generator, #random generator) of
+      (NONE, NONE) =>
+        raise Fail "Refute_Gen.register_generator: empty generator"
+    | _ =>
+        synchronized_registry (fn () =>
+          (user_generators :=
+             (ty, generator) :: remove_type ty (!user_generators);
+           abstract_specs := remove_type ty (!abstract_specs);
+           abstract_predicates := remove_type ty (!abstract_predicates);
+           registry_generation := !registry_generation + 1;
+           spec_cache := Redblackmap.mkDict Type.compare;
+           cardinality_cache := Redblackmap.mkDict Type.compare;
+           enumerate_cache := Redblackmap.mkDict Type.compare))
+
+  fun word_kind ty =
+    let
+      val width = wordsSyntax.dest_word_type ty
+    in
+      SOME (Word (Arbnum.toInt (fcpLib.index_to_num width)))
+    end
+    handle Feedback.HOL_ERR _ => NONE
+
+  fun numeric_kind ty =
+    if same_type (ty, numSyntax.num) then SOME Num
+    else if same_type (ty, intSyntax.int_ty) then SOME Int
+    else if same_type (ty, stringSyntax.char_ty) then SOME Char
+    else word_kind ty
+
+  fun quotient_result_type th =
+    let
+      val (_, body) = boolSyntax.strip_forall (Thm.concl th)
+      val (head, args) = boolSyntax.strip_comb body
+      val {Thy, Name, ...} = Term.dest_thy_const head
+      val _ =
+        if Thy = "quotient" andalso Name = "QUOTIENT" then ()
+        else raise Fail "not a quotient theorem"
+      val abs = List.nth (args, 1)
+    in
+      SOME (#2 (Type.dom_rng (Term.type_of abs)))
+    end
+    handle Feedback.HOL_ERR _ => NONE
+         | Subscript => NONE
+         | Fail _ => NONE
+
+  (* [[current_data]] only sees deltas added to the literally still-open
+     theory segment; a "quotient"-tagged theorem from any already-loaded
+     ancestor (the ordinary case) needs the per-theory query too.  Raises
+     if the "quotient" settype has no exporter yet -- a state that
+     [[load "quotient"]] can end at any point in a session. *)
+  fun quotient_types_in thy =
+    List.mapPartial quotient_result_type
+      (ThmSetData.added_thms
+        (ThmSetData.theory_data {settype = "quotient", thy = thy}))
+
+  val quotient_cache : (string list * hol_type list) option ref = ref NONE
+
+  (* Only the sealed ancestors are cached: the open segment still accepts
+     new quotient definitions, and a scan that raised found no exporter --
+     caching either would pin an answer that is about to change. *)
+  fun quotient_types () =
+    let
+      val ancestors = Theory.ancestry "-"
+      val cached =
+        case !quotient_cache of
+            SOME (key, tys) => if key = ancestors then SOME tys else NONE
+          | NONE => NONE
+      val inherited =
+        case cached of
+            SOME tys => tys
+          | NONE =>
+              let
+                val tys = List.concat (map quotient_types_in ancestors)
+              in
+                quotient_cache := SOME (ancestors, tys); tys
+              end
+    in
+      quotient_types_in (Theory.current_theory ()) @ inherited
+    end
+    handle Feedback.HOL_ERR _ => []
+
+  (* [[spec_of]] below consults [[generator_of]] before this check, so a
+     type with a registered generator never reaches it. *)
+  fun is_quotient_type ty =
+    List.exists (fn quotient_ty => same_type (quotient_ty, ty))
+      (quotient_types ())
+
+  fun constructor_data ty info =
+    let
+      fun one constr =
+        let
+          val constr = TypeBasePure.cinst ty constr
+          val (args, _) = boolSyntax.strip_fun (Term.type_of constr)
+        in
+          (constr, args)
+        end
+    in
+      List.map one (TypeBasePure.constructors_of info)
+    end
+
+  (* Not every TypeBase entry has an induction principle -- the finite-map
+     and finite-set entries do not -- and [induction_of0] raises rather than
+     returning on those.  Key such an entry by its own name, as the [ORIG]
+     case already does, instead of letting the exception escape into a
+     reason string.  [same_family] below is total for the same reason. *)
+  fun induction_key info =
+    case Lib.total TypeBasePure.induction_of0 info of
+      SOME (TypeBasePure.COPY (key, _)) => key
+    | _ => TypeBasePure.ty_name_of info
+
+  fun same_family key info =
+    case Lib.total TypeBasePure.induction_of0 info of
+      NONE => false
+    | SOME (TypeBasePure.COPY (other, _)) => other = key
+    | SOME (TypeBasePure.ORIG _) => TypeBasePure.ty_name_of info = key
+
+  fun family_of ty info =
+    let
+      val key = induction_key info
+      val theta = Type.match_type (TypeBasePure.ty_of info) ty
+      fun instantiate family_info =
+        Type.type_subst theta (TypeBasePure.ty_of family_info)
+    in
+      List.map instantiate (List.filter (same_family key) (TypeBase.elts ()))
+    end
+
+  fun type_mentions family ty =
+    if List.exists (fn family_ty => same_type (family_ty, ty)) family then
+      true
+    else if Type.is_vartype ty then
+      false
+    else
+      List.exists (type_mentions family) (#2 (Type.dest_type ty))
+
+  fun recursive_under_function family ty =
+    let
+      fun visit beneath ty =
+        if List.exists (fn family_ty => same_type (family_ty, ty)) family
+        then beneath
+        else if Type.is_vartype ty then false
+        else
+          case Lib.total Type.dom_rng ty of
+            SOME (dom, rng) => visit true dom orelse visit true rng
+          | NONE => List.exists (visit beneath) (#2 (Type.dest_type ty))
+    in
+      visit false ty
+    end
+
+  fun result_type tm = #2 (boolSyntax.strip_fun (Term.type_of tm))
+
+  (* Shared by [abstract_generator] (one exact type, validated eagerly) and
+     the on-demand family dispatch in [spec_of] (a type operator, validated
+     per encountered instance).  [bad] supplies the failure shape: [Fail]
+     for the former, [NoGenerator] for the latter. *)
+  fun instantiate_family_constructor ty bad constructor =
+    let
+      val _ = if Term.is_const constructor then ()
+              else bad "constructors must be constants"
+      val result_ty = result_type constructor
+      val (_, result_args) = Type.dest_type result_ty
+      val _ = if List.all Type.is_vartype result_args then ()
+              else bad ("constructor result must have type-variable " ^
+                        "arguments")
+      val theta = Type.match_type result_ty ty
+      val constructor = Term.inst theta constructor
+      val (args, actual_ty) =
+        boolSyntax.strip_fun (Term.type_of constructor)
+      val _ = if same_type (actual_ty, ty) then ()
+              else bad "constructor has a mismatching result type"
+      val _ =
+        if List.exists (recursive_under_function [ty]) args then
+          bad "constructor is recursive under a function type"
+        else
+          ()
+    in
+      (constructor, args)
+    end
+
+  fun family_datatype_spec ty bad constructors =
+    let
+      val _ =
+        if List.null constructors then bad "constructors must be nonempty"
+        else ()
+      val constrs =
+        List.map (instantiate_family_constructor ty bad) constructors
+      val recursive = List.map (fn (_, args) =>
+        List.map (type_mentions [ty]) args) constrs
+      val min_size = List.map (fn row =>
+        List.map (fn is_recursive => if is_recursive then 1 else 0) row)
+          recursive
+      (* Always all-false here: [instantiate_family_constructor] rejects a
+         constructor recursive under a function type. *)
+      val fun_recursive = List.map (fn (_, args) =>
+        List.exists (recursive_under_function [ty]) args) constrs
+    in
+      GenDatatype
+        { constrs = constrs,
+          exhaustive = false,
+          recursive = recursive,
+          min_size = min_size,
+          fun_recursive = fun_recursive,
+          family = [ty] }
+    end
+
+  fun check_family_constructor (thy, tyop) constructor =
+    let
+      fun bad message =
+        raise Fail ("Refute_Gen.register_generator_family: " ^ message)
+      val _ = if Term.is_const constructor then ()
+              else bad "constructors must be constants"
+      val result_ty = result_type constructor
+    in
+      case Lib.total Type.dest_thy_type result_ty of
+          SOME {Thy, Tyop, Args} =>
+            if Thy = thy andalso Tyop = tyop andalso
+               List.all Type.is_vartype Args then
+              if Util.all_distinct_types Args then ()
+              else bad "constructor result type arguments must be distinct"
+            else
+              bad ("constructor result must be " ^ thy ^ "$" ^ tyop ^
+                   " applied to type variables")
+        | NONE =>
+            bad ("constructor result must be " ^ thy ^ "$" ^ tyop ^
+                 " applied to type variables")
+    end
+
+  (* [non_function_spec] consults a registered family before [TypeBase],
+     so registering one for a type operator [TypeBase] already treats as a
+     datatype would silently shadow its spec -- and, since a family spec is
+     always [exhaustive = false], silently disable finite exhaustion for a
+     type that may in fact be finite.  Reject that the way
+     [register_codatatype] cross-checks the database in the analogous
+     situation, rather than let it happen unremarked. *)
+  fun family_typebase_constructors (thy, tyop) constructors =
+    case constructors of
+        [] => []
+      | first :: _ =>
+          (let
+            val {Args, ...} = Type.dest_thy_type (result_type first)
+            val generic = Type.mk_thy_type
+              {Thy = thy, Tyop = tyop,
+               Args = List.tabulate (List.length Args,
+                 fn index => Type.mk_vartype ("'family" ^ Int.toString index))}
+          in
+            case TypeBase.fetch generic of
+                SOME info => TypeBasePure.constructors_of info
+              | NONE => []
+          end
+          handle Feedback.HOL_ERR _ => [])
+
+  (* Registers a constructor family for every concrete instance of a type
+     operator, e.g. FEMPTY/FUPDATE for [:'a |-> 'b].  Session-local, like
+     [abstract_generator]; unlike it, nothing is stored per instance, so
+     [spec_of] builds and caches each encountered instance on demand. *)
+  fun register_generator_family {tyop = {Thy = thy, Tyop = tyop},
+        constructors, canonical} =
+    let
+      fun bad message =
+        raise Fail ("Refute_Gen.register_generator_family: " ^ message)
+      val _ =
+        if List.null constructors then bad "constructors must be nonempty"
+        else ()
+      val _ = List.app (check_family_constructor (thy, tyop)) constructors
+      val _ =
+        if List.null (family_typebase_constructors (thy, tyop) constructors)
+        then ()
+        else bad (thy ^ "$" ^ tyop ^
+             " already has TypeBase datatype constructors")
+    in
+      synchronized_registry (fn () =>
+        (generator_families :=
+           { thy = thy, tyop = tyop, constructors = constructors,
+             canonical = canonical } ::
+           List.filter
+             (fn fam => not (#thy fam = thy andalso #tyop fam = tyop))
+             (!generator_families);
+         registry_generation := !registry_generation + 1;
+         spec_cache := Redblackmap.mkDict Type.compare;
+         cardinality_cache := Redblackmap.mkDict Type.compare;
+         enumerate_cache := Redblackmap.mkDict Type.compare))
+    end
+
+  fun family_for_in families ty =
+    case Lib.total Type.dest_thy_type ty of
+        NONE => NONE
+      | SOME {Thy, Tyop, ...} =>
+          List.find (fn fam => #thy fam = Thy andalso #tyop fam = Tyop)
+            families
+
+  fun family_for ty =
+    synchronized_registry (fn () => family_for_in (!generator_families) ty)
+
+  (* Copy the registry once and close over that immutable list, so a
+     family replacement cannot change canonicalization halfway through one
+     model display report and the display walk does not retake
+     [registry_mutex] at every term node. *)
+  fun snapshot_family_canonicals () =
+    synchronized_registry (fn () =>
+      let
+        val families = !generator_families
+      in
+        fn ty =>
+          case family_for_in families ty of
+              SOME {canonical, ...} => canonical
+            | NONE => NONE
+      end)
+
+  (* A registered family's constructors (e.g. FEMPTY/FUPDATE) are as
+     [nocompute]/constructor-like as an ordinary datatype's, so
+     [Refute_Core.nonexecutable_constants] trusts them the same way it
+     trusts [TypeBase.is_constructor]. *)
+  fun is_family_constructor constant =
+    Term.is_const constant andalso
+    synchronized_registry (fn () =>
+      List.exists (fn fam =>
+        List.exists (fn c => Term.same_const c constant) (#constructors fam))
+        (!generator_families))
+
+  fun own_floor (GenDatatype {min_size, ...}) =
+        List.foldl Int.min 1073741823
+          (List.map (fn row => List.foldl Int.max 0 row) min_size)
+    | own_floor _ = 0
+
+  fun no_generator ty =
+    NoGenerator (ty, "no TypeBase information; register a generator")
+
+  fun spec_of ty =
+    let val generation = current_generation ()
+    in
+    case generator_of ty of
+      SOME generator => GenCustom (ty, generator)
+    | NONE =>
+        (case synchronized_registry (fn () =>
+            lookup_type (!abstract_specs) ty) of
+       SOME spec => spec
+     | NONE =>
+    (case cached_spec ty of
+      SOME spec => spec
+    | NONE =>
+        let
+          fun floor_of family floors arg_ty =
+            if Type.is_vartype arg_ty then 0
+            else
+              case List.find (fn (family_ty, _) =>
+                same_type (family_ty, arg_ty)) floors of
+                SOME (_, floor) => floor
+              | NONE => own_floor (spec_of arg_ty)
+
+          fun family_floors family =
+            let
+              fun floor_for floors family_ty =
+                case TypeBase.fetch family_ty of
+                  NONE => 0
+                | SOME family_info =>
+                    let
+                      val constrs = constructor_data family_ty family_info
+                      fun ctor_floor (_, args) =
+                        if List.null args then 0
+                        else
+                          List.foldl Int.max 0
+                            (List.map (fn arg_ty =>
+                              if type_mentions family arg_ty then
+                                (case List.find (fn (family_ty, _) =>
+                                  same_type (family_ty, arg_ty)) floors of
+                                   SOME (_, floor) => floor + 1
+                                 | NONE => 1)
+                              else
+                                floor_of family floors arg_ty) args)
+                    in
+                      List.foldl Int.min 1073741823
+                        (List.map ctor_floor constrs)
+                    end
+
+              fun improve floors =
+                List.map (fn family_ty =>
+                  (family_ty, floor_for floors family_ty)) family
+
+              fun equal_floors ([], []) = true
+                | equal_floors ((ty1, floor1) :: rest1,
+                    (ty2, floor2) :: rest2) =
+                    same_type (ty1, ty2) andalso floor1 = floor2 andalso
+                    equal_floors (rest1, rest2)
+                | equal_floors _ = false
+
+              fun iterate 0 floors =
+                let
+                  val next = improve floors
+                in
+                  if equal_floors (floors, next) then next
+                  else
+                    raise NoGenerator
+                      (ty,
+                       "datatype has no finite value; register a generator")
+                end
+                | iterate remaining floors =
+                let
+                  val next = improve floors
+                in
+                  if equal_floors (floors, next) then next
+                  else iterate (remaining - 1) next
+                end
+            in
+              iterate (List.length family)
+                (List.map (fn family_ty => (family_ty, 0)) family)
+            end
+
+          fun datatype_spec info =
+            let
+              (* A TypeBase entry need not describe a datatype: [:'a fset]'s
+                 entry, for one, lists no constructors, so there is nothing
+                 to build values from.  (The finite-map entry is the same
+                 way, but [non_function_spec] below routes it to a
+                 registered family before this is ever reached.)  Refuse in
+                 the same words as the other missing-generator cases rather
+                 than returning an empty enumeration, which would make the
+                 type look uninhabited and the search look exhausted. *)
+              val constrs = constructor_data ty info
+              val _ =
+                if List.null constrs then
+                  raise NoGenerator
+                    (ty, "no constructors in TypeBase; register a generator")
+                else ()
+              val family = family_of ty info
+              val floors = family_floors family
+              val recursive = List.map (fn (_, args) =>
+                List.map (type_mentions family) args) constrs
+              (* A constructor recursive under a function type (e.g. an
+                 interaction tree's [Vis]) is left to build here: exhaustive
+                 enumeration of it is genuinely impossible, but the random
+                 strategy can still lift a random function generator.  The
+                 refusal for the exhaustive case belongs to the
+                 strategy-aware consumer -- [Refute_Extract.validate_type]
+                 and [Refute_EvalCompute.validation_reasons] -- not here:
+                 [spec_of] is strategy-agnostic and shared by every backend
+                 through one cache. *)
+              val min_size = List.map (fn (_, args) =>
+                List.map (fn arg_ty =>
+                  if type_mentions family arg_ty then
+                    (case List.find (fn (family_ty, _) =>
+                      same_type (family_ty, arg_ty)) floors of
+                       SOME (_, floor) => floor + 1
+                     | NONE => 1)
+                  else
+                    floor_of family floors arg_ty) args) constrs
+              val fun_recursive = List.map (fn (_, args) =>
+                List.exists (recursive_under_function family) args) constrs
+            in
+              if List.all (fn (_, args) => List.null args) constrs then
+                GenEnum (List.map #1 constrs)
+              else
+                GenDatatype
+                  { constrs = constrs,
+                    exhaustive = true,
+                    recursive = recursive,
+                    min_size = min_size,
+                    fun_recursive = fun_recursive,
+                    family = family }
+            end
+
+          fun no_typebase_spec () =
+            case TypeBase.fetch ty of
+                SOME info => datatype_spec info
+              | NONE =>
+                  if is_quotient_type ty then
+                    raise NoGenerator
+                      (ty, "quotient type; register a generator")
+                  else
+                    raise no_generator ty
+
+          fun non_function_spec () =
+            case family_for ty of
+                SOME {constructors, ...} =>
+                  family_datatype_spec ty
+                    (fn message => raise NoGenerator (ty, message))
+                    constructors
+              | NONE => no_typebase_spec ()
+
+          val spec =
+            case numeric_kind ty of
+                SOME kind => GenNum kind
+              | NONE =>
+                  (case Lib.total Type.dom_rng ty of
+                       SOME (dom, rng) => GenFun (dom, rng)
+                     | NONE => non_function_spec ())
+          val _ = cache_spec generation ty spec
+        in
+          spec
+        end))
+    end
+
+  (* Transitive form of the spec's own [fun_recursive]: a container
+     (e.g. [:itree list]) is not itself recursive under a function type,
+     but its element type may be, and that element's generator can never
+     run either.  Walks constructor argument types outward through
+     [spec_of], answering [true] as soon as any reachable datatype is
+     recursive under a function type in its own family.  A cycle (e.g.
+     mutually recursive datatypes) terminates via the seen-set, exactly as
+     [Refute_Extract.validate_type] terminates its own transitive walk.
+     Deliberately does not descend through [GenFun]: [spec_of] on a
+     function type never inspects its domain or range (a function-typed
+     constructor argument gets [own_floor = 0] with no recursion into
+     either side), so a type such as [:num -> itree] was already usable
+     by the random strategy before this helper existed, and descending
+     into it here would strip that pre-existing fallback rather than
+     restore anything.  Does not itself catch [NoGenerator]: a deep
+     failure propagates to the caller exactly as an un-transitive lookup
+     would, and [genspec_available] already converts it to [false]. *)
+  fun type_recursive_under_function ty =
+    let
+      val seen = ref ([] : hol_type list)
+      fun visit ty =
+        if Util.member_type ty (!seen) then false
+        else
+          (seen := ty :: !seen;
+           case spec_of ty of
+               GenDatatype {constrs, fun_recursive, ...} =>
+                 List.exists (fn flag => flag) fun_recursive orelse
+                 List.exists (fn (_, args) => List.exists visit args) constrs
+             | _ => false)
+    in
+      visit ty
+    end
+
+  fun abstract_generator {ty, constructors, pred} =
+    let
+      fun bad message =
+        raise Fail ("Refute_Gen.abstract_generator: " ^ message)
+      val spec = family_datatype_spec ty bad constructors
+      val _ =
+        case pred of
+          NONE => ()
+        | SOME predicate =>
+            let
+              val (dom, rng) = Type.dom_rng (Term.type_of predicate)
+            in
+              if not (same_type (dom, ty) andalso
+                      same_type (rng, Type.bool)) then
+                bad "predicate must have type ty -> bool"
+              else if not (null (Term.free_vars_lr predicate)) then
+                bad "predicate must be closed"
+              else ()
+            end
+      val _ = synchronized_registry (fn () =>
+        (user_generators := remove_type ty (!user_generators);
+         abstract_specs := (ty, spec) :: remove_type ty (!abstract_specs);
+         (case pred of
+              NONE =>
+                abstract_predicates :=
+                  remove_type ty (!abstract_predicates)
+            | SOME predicate =>
+                abstract_predicates :=
+                  (ty, predicate) ::
+                    remove_type ty (!abstract_predicates));
+         registry_generation := !registry_generation + 1;
+         spec_cache := Redblackmap.mkDict Type.compare;
+         cardinality_cache := Redblackmap.mkDict Type.compare;
+         enumerate_cache := Redblackmap.mkDict Type.compare))
+    in
+      ()
+    end
+
+  fun cap_product values =
+    let
+      fun multiply value total =
+        if value < 0 orelse total < 0 orelse
+           value > enum_cap div Int.max (1, total) then
+          NONE
+        else
+          SOME (total * value)
+
+      fun loop [] total = SOME total
+        | loop (NONE :: _) _ = NONE
+        | loop (SOME value :: rest) total =
+            (case multiply value total of
+               NONE => NONE
+             | SOME next => loop rest next)
+    in
+      loop values 1
+    end
+
+  fun cap_sum values =
+    let
+      fun loop [] total = SOME total
+        | loop (NONE :: _) _ = NONE
+        | loop (SOME value :: rest) total =
+            if value < 0 orelse value > enum_cap - total then NONE
+            else loop rest (total + value)
+    in
+      loop values 0
+    end
+
+  fun cap_power base exponent =
+    let
+      fun loop 0 total = SOME total
+        | loop remaining total =
+            if base < 0 orelse total > enum_cap div base then NONE
+            else loop (remaining - 1) (base * total)
+    in
+      if exponent < 0 orelse base < 0 then NONE
+      else if base = 0 then SOME (if exponent = 0 then 1 else 0)
+      else loop exponent 1
+    end
+
+  fun int_power base exponent =
+    let
+      fun loop 0 total = total
+        | loop remaining total = loop (remaining - 1) (base * total)
+    in
+      loop exponent 1
+    end
+
+  (* Narrowing treats primitive values as flat, nullary alternatives.
+     Integers follow Quickcheck_Narrowing.around_zero exactly; the other
+     kinds retain the established exhaustive bounds.  Keeping this table in
+     Refute_Gen makes shape indices and later value reconstruction agree. *)
+  fun narrowing_terms kind depth =
+    let
+      val depth = Int.max (0, depth)
+
+      fun around_zero index =
+        if index = 0 then 0
+        else if index mod 2 = 1 then (index + 1) div 2
+        else ~(index div 2)
+
+      fun word_bound width =
+        let
+          fun grow 0 power = power - 1
+            | grow remaining power =
+                if power > depth div 2 then depth
+                else grow (remaining - 1) (2 * power)
+        in
+          if width <= 0 then 0 else grow width 1
+        end
+    in
+      case kind of
+          Num =>
+            List.tabulate (depth + 1, numSyntax.term_of_int)
+        | Int =>
+            List.tabulate (2 * depth + 1, fn index =>
+              intSyntax.term_of_int (Arbint.fromInt (around_zero index)))
+        | Char =>
+            List.tabulate (enum_cap, fn index =>
+              stringSyntax.mk_chr (numSyntax.term_of_int index))
+        | Word width =>
+            List.tabulate (word_bound width + 1, fn index =>
+              wordsSyntax.mk_wordii (index, width))
+    end
+
+  fun cardinality ty =
+    let val generation = current_generation ()
+    in
+    case synchronized_registry (fn () =>
+        Redblackmap.peek (!cardinality_cache, ty)) of
+        SOME cached => cached
+      | NONE =>
+    let
+      fun datatype_cardinality (constrs, recursive) =
+        let
+          fun one ((_, args), recursive_args) =
+            if List.exists (fn flag => flag) recursive_args then NONE
+            else cap_product (List.map cardinality args)
+
+          fun rows ([], []) = []
+            | rows (constr :: constrs, flags :: rest) =
+                one (constr, flags) :: rows (constrs, rest)
+            | rows _ = [NONE]
+        in
+          cap_sum (rows (constrs, recursive))
+        end
+
+      fun from_spec (GenEnum values) =
+            if length values <= enum_cap then SOME (length values) else NONE
+        | from_spec (GenNum Num) = NONE
+        | from_spec (GenNum Int) = NONE
+        | from_spec (GenNum Char) = SOME enum_cap
+        | from_spec (GenNum (Word width)) = cap_power 2 width
+        | from_spec (GenFun (dom, rng)) =
+            (case (cardinality dom, cardinality rng) of
+               (SOME dom_card, SOME rng_card) => cap_power rng_card dom_card
+             | _ => NONE)
+        | from_spec (GenDatatype {constrs, exhaustive, recursive, ...}) =
+            if exhaustive then datatype_cardinality (constrs, recursive)
+            else NONE
+        | from_spec (GenCustom _) = NONE
+    in
+      let
+        val result = from_spec (spec_of ty) handle NoGenerator _ => NONE
+      in
+        cache_cardinality generation ty result;
+        result
+      end
+    end
+    end
+
+  fun choices 0 _ = [[]]
+    | choices count values =
+        List.concat (List.map (fn value =>
+          List.map (fn rest => value :: rest) (choices (count - 1) values))
+          values)
+
+  fun term_products [] = SOME [[]]
+    | term_products (NONE :: _) = NONE
+    | term_products (SOME values :: rest) =
+        (case term_products rest of
+           NONE => NONE
+         | SOME tails =>
+             SOME (List.concat (List.map (fn value =>
+               List.map (fn tail => value :: tail) tails) values)))
+
+  fun enumerate ty =
+    let val generation = current_generation ()
+    in
+    case synchronized_registry (fn () =>
+        Redblackmap.peek (!enumerate_cache, ty)) of
+        SOME cached => cached
+      | NONE =>
+    let
+      fun word_terms width =
+        List.tabulate (int_power 2 width, fn value =>
+          wordsSyntax.mk_wordii (value, width))
+
+      fun char_terms () =
+        List.tabulate (enum_cap, fn value =>
+          stringSyntax.mk_chr (numSyntax.term_of_int value))
+
+      fun datatype_terms (constrs, recursive) =
+        let
+          fun one ((constructor, args), recursive_args) =
+            if List.exists (fn flag => flag) recursive_args then NONE
+            else
+              Option.map
+                (List.map (fn terms =>
+                  Term.list_mk_comb (constructor, terms)))
+                (term_products (List.map enumerate args))
+
+          fun rows ([], []) = SOME []
+            | rows (constr :: constrs, flags :: rest) =
+                (case (one (constr, flags), rows (constrs, rest)) of
+                   (SOME values, SOME more) => SOME (values @ more)
+                 | _ => NONE)
+            | rows _ = NONE
+        in
+          rows (constrs, recursive)
+        end
+
+      fun function_terms (dom, rng) =
+        case (enumerate dom, enumerate rng) of
+          (SOME domain, SOME range) =>
+            let
+              val variable = Term.mk_var ("x", dom)
+              val base = Term.mk_abs (variable, hd range)
+              fun make_graph values =
+                List.foldl (fn ((argument, value), graph) =>
+                  Term.mk_comb (combinSyntax.mk_update (argument, value),
+                    graph)) base (ListPair.zip (domain, values))
+            in
+              SOME (List.map make_graph (choices (length domain) range))
+            end
+        | _ => NONE
+
+      fun from_spec (GenEnum values) = SOME values
+        | from_spec (GenNum Num) = NONE
+        | from_spec (GenNum Int) = NONE
+        | from_spec (GenNum Char) = SOME (char_terms ())
+        | from_spec (GenNum (Word width)) = SOME (word_terms width)
+        | from_spec (GenFun types) = function_terms types
+        | from_spec (GenDatatype {constrs, recursive, ...}) =
+            datatype_terms (constrs, recursive)
+        | from_spec (GenCustom _) = NONE
+    in
+      let
+        val result =
+          (case cardinality ty of
+             NONE => NONE
+           | SOME _ => from_spec (spec_of ty))
+          handle NoGenerator _ => NONE
+      in
+        cache_enumeration generation ty result;
+        result
+      end
+    end
+    end
+end
