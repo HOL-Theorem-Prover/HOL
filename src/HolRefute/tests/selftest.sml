@@ -302,7 +302,7 @@ fun same_goal ((asl1, c1), (asl2, c2)) =
   Term.aconv c1 c2 andalso ListPair.allEq (Lib.uncurry Term.aconv) (asl1, asl2)
 
 fun tactic_keeps tac g =
-  case tac g of ([g'], _) => same_goal (g, g') | _ => false
+  case runtac tac g of ([g'], _) => same_goal (g, g') | _ => false
 
 val _ = test "REFUTE_TAC leaves a refutable goal unchanged" (fn () =>
   tactic_keeps REFUTE_TAC ([``0 < (x : num)``], arith))
@@ -321,14 +321,15 @@ val _ = test "REFUTE_TAC reads the_config at application time" (fn () =>
   let
     val raised = ref false
     fun body () =
-      (ignore (REFUTE_TAC ([], arith)); false)
+      (ignore (runtac REFUTE_TAC ([], arith)); false)
       handle Feedback.HOL_ERR e => Feedback.top_function_of e = "expect"
   in
     Lib.with_flag (the_config, exhaustive |> upd_expect ExpectNone) body ()
   end)
 
 val _ = raises_holerr "REFUTE_CONFIG_TAC honours the given expectation"
-  (fn () => REFUTE_CONFIG_TAC (exhaustive |> upd_expect ExpectUnknown)
+  (fn () => runtac
+              (REFUTE_CONFIG_TAC (exhaustive |> upd_expect ExpectUnknown))
               ([``T``], ``F``))
   (SOME "Refute", SOME "expect", NONE)
 
@@ -384,7 +385,7 @@ val _ = test "preset tactics never run a registered backend" (fn () =>
     val runs = ref 0
     val _ = register_backend (stub "selftest-probe" ~100 enabled
       (fn _ => fn _ => (runs := !runs + 1; Unknown [])))
-    fun count tac = (runs := 0; ignore (tac ([], ``T``)); !runs)
+    fun count tac = (runs := 0; ignore (runtac tac ([], ``T``)); !runs)
   in
     with_enabled [enabled] (fn () =>
       count QUICKCHECK_TAC = 0 andalso count NARROWING_TAC = 0 andalso

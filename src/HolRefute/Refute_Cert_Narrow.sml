@@ -267,10 +267,10 @@ structure Refute_Cert_Narrow = struct
             nodes pattern + total) 0 branches
         end
 
-      fun close_from index refutations budget (goal as (_, conclusion)) =
+      fun close_from index refutations budget (goal as (_, conclusion)) ctxt =
         let
           fun accept theorem =
-            SOME (Tactic.MATCH_ACCEPT_TAC theorem goal)
+            SOME (Tactic.MATCH_ACCEPT_TAC theorem goal ctxt)
             handle Feedback.HOL_ERR _ => NONE
           fun scan () = Lib.get_first accept refutations
           (* [validate_cover] has proved the patterns disjoint and
@@ -311,7 +311,7 @@ structure Refute_Cert_Narrow = struct
                 Tactical.THEN
                   (Tactic.STRUCT_CASES_TAC
                      (Drule.ISPEC variable nchotomy),
-                   close_from index refutations (budget - 1)) goal
+                   close_from index refutations (budget - 1)) goal ctxt
               end
         end
 
