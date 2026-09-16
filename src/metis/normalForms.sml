@@ -973,7 +973,7 @@ val (WEAK_DNF_CONV,STRONG_DNF_CONV) = let
       DEPTH_BINOP_CONV disjunction CONJ_CANON_CONV THENC DISJ_CANON_CONV;
 
   fun weakdnf tm =
-      if is_forall tm andalso is_exists tm then
+      if is_forall tm orelse is_exists tm then
           BINDER_CONV weakdnf tm
       else if is_disj tm then
           BINOP_CONV weakdnf tm
@@ -986,7 +986,7 @@ val (WEAK_DNF_CONV,STRONG_DNF_CONV) = let
       else REFL tm
 
   and substrongdnf tm =
-      if is_forall tm andalso is_exists tm then
+      if is_forall tm orelse is_exists tm then
           BINDER_CONV strongdnf tm
       else if is_disj tm then
           BINOP_CONV substrongdnf tm
@@ -1039,7 +1039,7 @@ val (WEAK_CNF_CONV,STRONG_CNF_CONV) = let
       DEPTH_BINOP_CONV conjunction DISJ_CANON_CONV THENC CONJ_CANON_CONV;
 
   fun weakcnf tm =
-    if is_forall tm andalso is_exists tm then
+    if is_forall tm orelse is_exists tm then
         BINDER_CONV weakcnf tm
     else if is_conj tm then
         BINOP_CONV weakcnf tm
@@ -1052,7 +1052,7 @@ val (WEAK_CNF_CONV,STRONG_CNF_CONV) = let
     else REFL tm
 
   and substrongcnf tm =
-    if is_forall tm andalso is_exists tm then
+    if is_forall tm orelse is_exists tm then
         BINDER_CONV strongcnf tm
     else if is_conj tm then
         BINOP_CONV substrongcnf tm
@@ -1369,18 +1369,19 @@ val REMOVE_ABBR_TAC =
 (*                                                                           *)
 (* Example:  f (if x then y else z)  =  (if x then f y else f z)             *)
 (* ------------------------------------------------------------------------- *)
-
+local
+val cond_rator_conv = REWR_CONV boolTheory.COND_RAND
+in
 fun cond_lift_rand_CONV tm =
   let
     val (Rator,Rand) = Term.dest_comb tm
     val (f,_) = strip_comb Rator
-    val proceed =
-      let val {Name,Thy,...} = Term.dest_thy_const f
-      in not (Name="COND" andalso Thy="bool")
-      end handle HOL_ERR _ => true
   in
-    (if proceed then REWR_CONV boolTheory.COND_RAND else NO_CONV) tm
-  end;
+    (if not (same_const boolSyntax.conditional f)
+    then cond_rator_conv
+    else NO_CONV) tm
+  end
+end
 
 val cond_lift_SS =
   simpLib.SSFRAG
@@ -1523,6 +1524,8 @@ local
   val condify_bool = REWR_CONV (GSYM COND_BOOL);
 
   val let_conv = REWR_CONV LET_THM;
+  val cond_rator_conv = REWR_CONV COND_RATOR;
+  val cond_rand_conv = REWR_CONV COND_RAND;
 
   fun is_a_bool tm =
     type_of tm = bool andalso not (aconv tm T) andalso not (aconv tm F);
@@ -1531,8 +1534,8 @@ local
     TRY_CONV
     (REPEATC let_conv
      THENC COMB_CONV lift_bool
-     THENC (REWR_CONV COND_RATOR
-            ORELSEC REWR_CONV COND_RAND
+     THENC (cond_rator_conv
+            ORELSEC cond_rand_conv
             ORELSEC ALL_CONV)) tm
   and lift_bool tm =
     (chatting 3 andalso chat ("lift_bool: tm = " ^ term_to_string tm ^ "\n");
