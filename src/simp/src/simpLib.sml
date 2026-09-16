@@ -134,7 +134,8 @@ local
          empty = Symtab.empty,
          pp = fn _ => "<simpLib.ssfragDB>"}
 in
-  fun ssfragDB () = Context.Data.get ssfragDB_slot (Context.snapshot())
+  fun ssfragDB_of ctxt = Context.Data.get ssfragDB_slot ctxt
+  fun ssfragDB () = ssfragDB_of (Context.snapshot())
   val upd_ssfragDB = Context.Data.modify ssfragDB_slot
 end
 fun register_frag ssf =
@@ -920,10 +921,10 @@ type simptac_config =
 
 (* back/front assume_tac; backp is true if the new assumption should go at the
    back of the list *)
-fun BF_ASSUME_TAC backp th (g as (asl,w)) =
+fun BF_ASSUME_TAC backp th (g as (asl,w)) ctxt =
     if backp then ([(asl @ [concl th], w)],
                    fn resths => PROVE_HYP th (hd resths))
-    else ASSUME_TAC th g
+    else ASSUME_TAC th g ctxt
 
 (* contr/accept/assume *)
 fun caa_tac0 backp (c : simptac_config) th =
@@ -1006,12 +1007,7 @@ fun global_simp_tac cfg ss0 =
 
 
 
-fun track f x =
- let val _ = (used_rewrites := [])
-     val res = Lib.with_flag(track_rewrites,true) f x
- in used_rewrites := rev (!used_rewrites)
-  ; res
- end;
+val track = with_tracking
 
 (* ----------------------------------------------------------------------
     creating per-type ssdata values

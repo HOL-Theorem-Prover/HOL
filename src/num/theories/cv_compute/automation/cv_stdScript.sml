@@ -164,12 +164,14 @@ val res = cv_trans list_mem_def;
 val lemma = cv_rep_for [] “list_mem x xs” |> DISCH_ALL
 
 Theorem cv_rep_MEM[cv_rep]:
+  cv_rep p1 c1 (f_a:'a->cv) x /\
+  cv_rep p2 c2 (from_list f_a) xs /\
   from_to f_a t_a ==>
-  cv_rep T (cv_list_mem (f_a x) (from_list f_a xs)) b2c (MEM (x:'a) xs)
+  cv_rep (p1 /\ p2) (cv_list_mem c1 c2) b2c (MEM x xs)
 Proof
-  qsuff_tac ‘MEM x xs = list_mem x xs’
-  >- (simp [] \\ mp_tac lemma \\ fs [])
-  \\ Induct_on ‘xs’ \\ gvs [list_mem_def] \\ metis_tac []
+  have ‘MEM x xs = list_mem x xs’
+  >- (Induct_on ‘xs’ \\ gvs [list_mem_def] \\ metis_tac [])
+  \\ rw [] \\ mp_tac lemma  \\ gvs [cv_rep_def]
 QED
 
 Theorem conj_eq_if[local]:

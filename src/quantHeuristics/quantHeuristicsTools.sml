@@ -395,7 +395,7 @@ in
 
 
 
-   fun VARIANT_TAC fvL (asm, t) =
+   fun VARIANT_TAC fvL (asm, t) (_ : Context.t) =
    let
        val fvL0 = append fvL (flatten (map free_vars (t::asm)));
 

@@ -32,14 +32,36 @@ local
     val () = markDone ()
   in if !timedOut then NONE else SOME r end
 
-  fun ppGoal (asms, g) = {
-    asms = List.map Parse.term_to_string asms,
-    goal = Parse.term_to_string g
-  }
-  fun ppState st =
+  (* Rendered at the width the client says its pane is, so the line
+     breaking the pretty printer chooses is the one the reader sees.
+     `Globals.linewidth' is what `term_to_string' consults, so the
+     structured per-goal strings need it set around them too. *)
+  fun ppGoal width (asms, g) = let
+    fun str t = Lib.with_flag (Globals.linewidth, width)
+                              Parse.term_to_string t
+    in {asms = List.map str asms, goal = str g} end
+  fun ppState width st =
     Lib.with_flag (Parse.current_backend, PPBackEnd.vt100_terminal)
-      (HOLPP.pp_to_string 75 goalFrag.pp_goalstate) st
+      (HOLPP.pp_to_string width goalFrag.pp_goalstate) st
     handle _ => ""
+
+  (* The same state, rendered again through the back end that says in
+     data what `vt100_terminal` says in colour, then taken apart.  Two
+     passes rather than one because `pretty` is what most clients
+     render and it should not change: a client that wants the
+     annotations rebuilds the text from these instead.
+
+     The two agree on where the lines break.  `lsp_terminal` emits its
+     delimiters with `add_stringsz (_, 0)` and delegates every layout
+     operation to `raw_terminal`, so the annotations are invisible to
+     the pretty-printer's width arithmetic -- which the selftest holds
+     it to, since a disagreement would silently hand clients segments
+     that do not match the text beside them. *)
+  fun ppSegments width st =
+    PPBackEnd.lsp_segments
+      (Lib.with_flag (Parse.current_backend, PPBackEnd.lsp_terminal)
+         (HOLPP.pp_to_string width goalFrag.pp_goalstate) st)
+    handle _ => []
 
   val fragEndByte = TacticSteps.atomEndByte
 
@@ -64,14 +86,15 @@ local
         "Subgoal `" ^ String.substring
                         (tacText, #1 span, #2 span - #1 span)
         ^ "` by … failed to prove"
+      (* The span covers the bracketed list already. *)
     | FAtom (LSelectGoal span) =>
-        "Selector `>~ ["
+        "Selector `>~ "
         ^ String.substring (tacText, #1 span, #2 span - #1 span)
-        ^ "]` found no matching subgoal"
+        ^ "` found no matching subgoal"
     | FAtom (LSelectGoals span) =>
-        "Selector `>>~ ["
+        "Selector `>>~ "
         ^ String.substring (tacText, #1 span, #2 span - #1 span)
-        ^ "]` found no matching subgoal"
+        ^ "` found no matching subgoal"
     | FAtom LReverse =>
         "`suffices_by` reversal failed"
     | FAtom te => (case topSpan te of
@@ -87,19 +110,36 @@ local
     | FFMid _   => "Combinator branch-advance failed"
     | FFClose _ => "Combinator close failed"
     | FGroup _  => "Group failed"
+      (* A bracket reported as a whole is one whose close would not go
+         through -- `>-' is the one that says something: its branch was
+         obliged to prove the goal and did not. *)
+    | FBracket (FOpenThen1, _, _, _) =>
+        "`>-` branch did not prove its goal"
     | FBracket _  => "Bracket failed"
     | FMBracket _ => "Bracket failed"
 
-  fun failRange tacStart frag = case frag of
-      FAtom te =>
-        Option.map (fn (s, e) => (tacStart + s, tacStart + e))
-                   (TacticSteps.atomSpan te)
-    | _ => NONE
+  (* A leaf whose SML source didn't compile says nothing about the
+     proof.  Either the file's compile hasn't run the `open's yet, in
+     which case the answer is provisional; or it has, and the compile
+     already published the real message against that very text -- so
+     repeating it as "failed to apply" would both duplicate it and
+     misdescribe it. *)
+  fun sourceFailure (_, TacticWalker.CompileFailed) = true
+    | sourceFailure _ = false
+
+  (* Where in the file to point at what failed.  `fragSpan' answers for
+     a bracket as well as a leaf, falling back to the contents when the
+     combinator has no span of its own -- which is what a `>- tac' whose
+     branch proved nothing needs, the alternative being the theorem's
+     name a long way above it. *)
+  fun failRange tacStart frag =
+    Option.map (fn (s, e) => (tacStart + s, tacStart + e))
+               (TacticWalker.fragSpan frag)
 in
 
 val () = LSPExtension.goalStateAtPos :=
-  (fn ({plugins, ...}: LSPExtension.hover_context,
-       {name, quote, quoteStart, tacText, tacStart, cursor}
+  (fn ({plugins, width, ...}: LSPExtension.hover_context,
+       {name, quote, quoteStart, tacText, tacStart, cursor, compileDone}
          : LSPExtension.theorem_context) => let
     val initialGoal = Lib.total Parse.Term [QUOTE quote]
     val frags = TacticSteps.fragsOfTacText
@@ -117,27 +157,39 @@ val () = LSPExtension.goalStateAtPos :=
                       frags = fs, cursor = tacCursor}) of
                 NONE => SOME
                   {theorem = name, step = step,
-                   goals = [], pretty = "", context = [],
+                   goals = [], pretty = "", context = [], status = "ok",
                    error = SOME ("walker timed out (>"
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
-                   failedRange = NONE}
-              | SOME {state, failedAt} => SOME
+                   failedRange = NONE, segments = []}
+              | SOME {state, failedAt} => let
+                  val silent = case failedAt of
+                      SOME f => sourceFailure f
+                    | NONE => false
+                  val reported = if silent then NONE else failedAt
+                  in SOME
                   {theorem = name, step = step,
-                   goals = List.map ppGoal (goalFrag.top_goals state),
-                   pretty = ppState state,
+                   goals = List.map (ppGoal width) (goalFrag.top_goals state),
+                   pretty = ppState width state,
                    context = goalFrag.context_lines state,
-                   error = Option.map (failMsg tacText) failedAt,
+                   status = if silent andalso not compileDone
+                            then "pending" else "ok",
+                   error = Option.map (failMsg tacText o #1) reported,
                    failedRange =
-                     Option.mapPartial (failRange tacStart) failedAt}
+                     Option.mapPartial (failRange tacStart o #1) reported,
+                   segments = ppSegments width state}
+                  end
            end
        | (SOME tm, NONE) => let
            val startState = goalFrag.new_goal ([], tm)
            in SOME {theorem = name, step = 0,
-                    goals = [{asms = [], goal = Parse.term_to_string tm}],
-                    pretty = ppState startState,
+                    goals = [{asms = [],
+                               goal = Lib.with_flag (Globals.linewidth, width)
+                                        Parse.term_to_string tm}],
+                    pretty = ppState width startState,
                     context = goalFrag.context_lines startState,
-                    error = NONE,
-                    failedRange = NONE}
+                    status = "ok", error = NONE,
+                    failedRange = NONE,
+                    segments = ppSegments width startState}
            end
        | _ => NONE
     end)

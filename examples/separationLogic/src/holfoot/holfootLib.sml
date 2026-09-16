@@ -173,7 +173,7 @@ fun array_bound_DECIDE___HOL context t =
 
 fun array_bound_DECIDE___YICES context t =
 let
-   val (_, vali) = YICES_TAC (map concl context, t)
+   val (_, vali) = YICES_TAC (map concl context, t) (Context.snapshot())
    val xthm0 = vali [];
    val xthm1 = foldl (fn (h, thm) => PROVE_HYP h thm) xthm0 context
 in
@@ -2993,7 +2993,8 @@ let
    val _ = proofManagerLib.set_goal ([], p)
    val _ = Lib.with_flag (proofManagerLib.chatting, false)
                          proofManagerLib.expand
-                         (fn _ => ([([],a)], fn thmL => (MP thm_imp (hd thmL))))
+                         (fn _ => fn _ =>
+                            ([([],a)], fn thmL => (MP thm_imp (hd thmL))))
    val _ = proofManagerLib.forget_history ()
 in
    proofManagerLib.status ()

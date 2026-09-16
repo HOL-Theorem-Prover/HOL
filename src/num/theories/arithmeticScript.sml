@@ -1339,8 +1339,8 @@ Proof
     REWRITE_TAC [SUB] THEN REPEAT GEN_TAC THEN
     ASM_CASES_TAC (“n < m”) THEN
     ASM_REWRITE_TAC [NOT_LESS_0,LESS_THM] THEN
-    let fun tac th g = SUBST1_TAC th g
-                       handle _ => ASSUME_TAC th g
+    let fun tac th g c = SUBST1_TAC th g c
+                         handle _ => ASSUME_TAC th g c
     in
     DISCH_THEN (STRIP_THM_THEN tac)
     end THENL
@@ -1560,8 +1560,8 @@ Theorem ZERO_LESS_EXP:
 Proof
    REPEAT STRIP_TAC THEN
    let val th = SPEC (“(SUC n) EXP m”) LESS_0_CASES
-       fun tac th g = ASSUME_TAC (SYM th) g
-                      handle _ => ACCEPT_TAC th g
+       fun tac th g c = ASSUME_TAC (SYM th) g c
+                        handle _ => ACCEPT_TAC th g c
    in
    STRIP_THM_THEN tac th THEN
    IMP_RES_TAC NOT_EXP_0

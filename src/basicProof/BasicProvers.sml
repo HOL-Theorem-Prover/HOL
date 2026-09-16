@@ -142,12 +142,13 @@ fun prim_find_subterm FVs tm (asl,w) =
           else Alien tm
       end
 
-fun find_subterm qtm (g as (asl,w)) =
+fun find_subterm_in c qtm (g as (asl,w)) =
   let val FVs = free_varsl (w::asl)
-      val tm = Parse.parse_in_context FVs qtm
+      val tm = Parse.parse_in_context_in c FVs qtm
   in
     prim_find_subterm FVs tm g
   end;
+fun find_subterm qtm g = find_subterm_in (Context.snapshot()) qtm g
 
 (*---------------------------------------------------------------------------*)
 (* Support for pairs copied from coretypes/pairSyntax to be self-contained.  *)
@@ -290,11 +291,11 @@ fun set_names names ty thm0 =
  handle e => raise wrap_exn "BasicProvers" "primCases_on (set_names)" e
 ;
 
-fun primCases_on names st (g as (_,w)) =
+fun primCases_on names st (g as (_,w)) c =
     let
       val ty = type_of (dest_tmkind st)
       fun gen() =
-          case TypeBase.fetch ty of
+          case TypeBase.fetch_of c ty of
               SOME facts => [TypeBasePure.nchotomy_of facts]
             | NONE => let val {Thy,Tyop,...} = dest_thy_type ty
                       in
@@ -318,26 +319,26 @@ fun primCases_on names st (g as (_,w)) =
                               else TERM_INTRO_TAC (ISPEC M thm')
           end
     in
-      markerLib.maybe_using gen ttac g
+      markerLib.maybe_using gen ttac g c
     end
 
-fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
+fun Cases_on qtm g c = primCases_on [] (find_subterm_in c qtm g) g c
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
 
-fun tmCases_on tm names (g as (asl,w)) =
+fun tmCases_on tm names (g as (asl,w)) c =
     let
       val fvs = FVL (w::asl) empty_tmset |> HOLset.listItems
     in
-      primCases_on names (prim_find_subterm fvs tm g) g
+      primCases_on names (prim_find_subterm fvs tm g) g c
     end handle e => raise wrap_exn "BasicProvers" "tmCases_on" e;
 
-fun namedCases_on qtm names g =
-  primCases_on names (find_subterm qtm g) g
+fun namedCases_on qtm names g c =
+  primCases_on names (find_subterm_in c qtm g) g c
   handle e => raise wrap_exn "BasicProvers" "namedCases_on" e;
 
-fun Cases (g as (_,w)) =
+fun Cases (g as (_,w)) c =
   let val (Bvar,_) = with_exn dest_forall w (ERR "Cases" "not a forall")
-  in primCases_on [] (Bound([Bvar],Bvar)) g
+  in primCases_on [] (Bound([Bvar],Bvar)) g c
   end
   handle e => raise wrap_exn "BasicProvers" "Cases" e;
 
@@ -400,11 +401,11 @@ fun primInduct st ind_tac (g as (asl,c)) =
 (* TypeBase.theTypeBase).                                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun induct_on_type st ty g =
+fun induct_on_type st ty g c =
     let
       val is_mutind_thm = is_conj o snd o strip_imp o snd o
                           strip_forall o concl
-      val facts_opt = TypeBase.fetch ty
+      val facts_opt = TypeBase.fetch_of c ty
       fun gen() =
           case facts_opt of
               SOME facts =>
@@ -432,7 +433,7 @@ fun induct_on_type st ty g =
                      primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
                      (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
     in
-      maybe_using gen ttac g
+      maybe_using gen ttac g c
     end
 
 fun checkind th =
@@ -449,8 +450,8 @@ fun checkind th =
       else NO_TAC
     end
 
-fun Induct_on qtm g =
- let val st = find_subterm qtm g
+fun Induct_on qtm g ctxt =
+ let val st = find_subterm_in ctxt qtm g
      val tm = dest_tmkind st
      val ty = type_of (dest_tmkind st)
      val (_, rngty) = strip_fun ty
@@ -470,7 +471,7 @@ fun Induct_on qtm g =
           SOME {Thy,Name,...} =>
           let
             fun indths() =
-                Option.getOpt (KNametab.lookup (rule_induction_map())
+                Option.getOpt (KNametab.lookup (rule_induction_map_of ctxt)
                                                {Thy=Thy,Name=Name},
                                [])
             fun numSchematics th =
@@ -487,11 +488,11 @@ fun Induct_on qtm g =
                 HO_MATCH_MP_TAC th
           in
             markerLib.maybe_using indths tryind ORELSE induct_on_type st ty
-          end g
-        | NONE => induct_on_type st ty g
+          end g ctxt
+        | NONE => induct_on_type st ty g ctxt
    end
   else
-    induct_on_type st ty g
+    induct_on_type st ty g ctxt
  end
  handle e => raise wrap_exn "BasicProvers" "Induct_on" e;
 
@@ -504,10 +505,10 @@ fun grab_var M =
   if is_conj M then fst(dest_forall(fst(dest_conj M)))
   else raise ERR "Induct" "expected a forall or a conjunction of foralls";
 
-fun Induct (g as (_,w)) =
+fun Induct (g as (_,w)) c =
  let val v = grab_var w
      val (_,ty) = dest_var (grab_var w)
- in induct_on_type (Bound([v],v)) ty g
+ in induct_on_type (Bound([v],v)) ty g c
  end
  handle e => raise wrap_exn "BasicProvers" "Induct" e
 
@@ -543,13 +544,13 @@ fun chop_at n frontacc l =
 
 infix gTHEN1 (* "gentle" THEN1 : doesn't fail if the tactic for the
                 head goal doesn't completely solve the subgoal. *)
-fun ((tac1:tactic) gTHEN1 (tac2:tactic)) (asl:term list,w:term) = let
-  val (subgoals, vf) = tac1 (asl,w)
+fun ((tac1:tactic) gTHEN1 (tac2:tactic)) (asl:term list,w:term) ctxt = let
+  val (subgoals, vf) = tac1 (asl,w) ctxt
 in
   case subgoals of
     [] => ([], vf)
   | (h::hs) => let
-      val (sgoals2, vf2) = tac2 h
+      val (sgoals2, vf2) = tac2 h ctxt
     in
       (sgoals2 @ hs,
        (fn thmlist => let
@@ -584,7 +585,7 @@ fun qlinenum q =
       locn.Loc(locn.LocA(line, _), _) => SOME (line+1)
     | _ => NONE
 
-fun by0 k (q, tac) (g as (asl,w)) = let
+fun by0 k (q, tac) (g as (asl,w)) ctxt = let
   val a = trace ("syntax_error", 0) Parse.Absyn q
   open errormonad
   val (goal_pt, finisher) =
@@ -610,7 +611,7 @@ fun by0 k (q, tac) (g as (asl,w)) = let
         SOME l => " on line "^Int.toString l
       | NONE => ": "^term_to_string tm
 in
-  (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g
+  (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g ctxt
    handle HOL_ERR _ =>
    raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
 end
@@ -618,8 +619,8 @@ end
 val op by = by0 NO_TAC
 val byA = by0 ALL_TAC
 
-fun (q suffices_by tac) g =
-  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g
+fun (q suffices_by tac) g ctxt =
+  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g ctxt
   handle e as HOL_ERR herr =>
          if top_function_of herr = "Q_TAC" then raise e
          else
@@ -635,10 +636,10 @@ val sg = subgoal
 
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
-  (fn (g as (asl:term list, w:term)) => let
+  (fn (g as (asl:term list, w:term)) => fn ctxt => let
     val tm = Parse.parse_in_context (free_varsl (w::asl)) q
   in
-    (SUBGOAL_THEN tm ttac gTHEN1 tac) g
+    (SUBGOAL_THEN tm ttac gTHEN1 tac) g ctxt
   end)
 
 (*===========================================================================*)
@@ -669,9 +670,9 @@ fun first_subterm f tm = f (case_find_subterm (can f) tm);
 (* Otherwise raise an exception.                                             *)
 (*---------------------------------------------------------------------------*)
 
-fun scrutinized_and_free_in tm =
+fun scrutinized_and_free_in c tm =
  let fun free_case t =
-        let val (_, examined, _) = TypeBase.dest_case t
+        let val (_, examined, _) = TypeBase.dest_case_of c t
         in if free_in examined tm
               then examined else raise ERR "free_case" ""
         end
@@ -679,18 +680,18 @@ fun scrutinized_and_free_in tm =
     free_case
  end;
 
-fun PURE_TOP_CASE_TAC (g as (_, tm)) =
- let val t = first_term (scrutinized_and_free_in tm) tm
- in Cases_on `^t` end g;
+fun PURE_TOP_CASE_TAC (g as (_, tm)) c =
+ let val t = first_term (scrutinized_and_free_in c tm) tm
+ in Cases_on `^t` end g c;
 
-fun PURE_CASE_TAC (g as (_, tm)) =
- let val t = first_subterm (scrutinized_and_free_in tm) tm
- in Cases_on `^t` end g;
+fun PURE_CASE_TAC (g as (_, tm)) c =
+ let val t = first_subterm (scrutinized_and_free_in c tm) tm
+ in Cases_on `^t` end g c;
 
-fun PURE_FULL_CASE_TAC (g as (asl,w)) =
+fun PURE_FULL_CASE_TAC (g as (asl,w)) c =
  let val tm = list_mk_conj(w::asl)
-     val t = first_subterm (scrutinized_and_free_in tm) tm
- in Cases_on `^t` end g;
+     val t = first_subterm (scrutinized_and_free_in c tm) tm
+ in Cases_on `^t` end g c;
 
 local
 
@@ -865,9 +866,9 @@ fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 fun LIFT_SIMP ss = STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []
 
 local
-  fun DTHEN ttac = fn (asl,w) =>
+  fun DTHEN ttac = fn (asl,w) => fn ctxt =>
    let val (ant,conseq) = dest_imp_only w
-       val (gl,prf) = ttac (ASSUME ant) (asl,conseq)
+       val (gl,prf) = ttac (ASSUME ant) (asl,conseq) ctxt
    in (gl, Thm.DISCH ant o prf)
    end
 in
@@ -974,16 +975,17 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 
  ---------------------------------------------------------------------------*)
 
-fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
+fun tyinfol_of ctxt = TypeBasePure.listItems (TypeBase.theTypeBase_of ctxt)
+fun tyinfol() = tyinfol_of (Context.snapshot())
 
-fun mkCSET () =
+fun mkCSET_of ctxt =
  let val CSET = (HOLset.empty
                   (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
                           (pair_compare(String.compare,String.compare))))
      fun add_const (c,CSET) = HOLset.add(CSET, dest_thy_const c)
      fun add_tyinfo (tyinfo,CSET) =
        List.foldl add_const CSET (TypeBasePure.constructors_of tyinfo)
-     val CSET = List.foldl add_tyinfo CSET (tyinfol())
+     val CSET = List.foldl add_tyinfo CSET (tyinfol_of ctxt)
      fun inCSET t = HOLset.member(CSET, dest_thy_const t)
      fun constructed tm =
       let val (lhs,rhs) = dest_eq tm
@@ -1002,8 +1004,8 @@ fun mkCSET () =
 val leave_lets_var = mk_var("__leave_lets_alone__", bool)
 val LEAVE_LETS = ASSUME leave_lets_var
 
-fun PRIM_STP_TAC ss finisher =
- let val has_constr_eqn = mkCSET ()
+fun PRIM_STP_TAC ss finisher g ctxt =
+ (let val has_constr_eqn = mkCSET_of ctxt
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
      (* we don't have access to any theorem list that might have been passed
         to RW_TAC or SRW_TAC at this point, but we can look for the effect of
@@ -1040,7 +1042,7 @@ fun PRIM_STP_TAC ss finisher =
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
                ORELSE LET_ELIM_TAC))
      THEN TRY finisher
-  end
+  end) g ctxt
 
 (*---------------------------------------------------------------------------
     PRIM_NORM_TAC: preliminary attempt at keeping the goal in a
@@ -1056,8 +1058,8 @@ fun PRIM_STP_TAC ss finisher =
     case expressions in the goal, but that hasn't been implemented yet.
  ---------------------------------------------------------------------------*)
 
-fun splittable w =
- Lib.can (find_term (fn tm => (is_cond tm orelse TypeBase.is_case tm)
+fun splittable c w =
+ Lib.can (find_term (fn tm => (is_cond tm orelse TypeBase.is_case_of c tm)
                               andalso free_in tm w)) w;
 
 fun LIFT_SPLIT_SIMP ss simp th =
@@ -1066,8 +1068,8 @@ fun LIFT_SPLIT_SIMP ss simp th =
 
 fun SPLIT_SIMP simp = TRY (IF_CASES_TAC ORELSE CASE_TAC) THEN simp ;
 
-fun PRIM_NORM_TAC ss =
- let val has_constr_eqn = mkCSET()
+fun PRIM_NORM_TAC ss g ctxt =
+ (let val has_constr_eqn = mkCSET_of ctxt
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
@@ -1080,10 +1082,11 @@ fun PRIM_NORM_TAC ss =
                ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
-               ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
-               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable
+               ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP)
+                                (splittable ctxt)
+               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) (splittable ctxt)
                ORELSE LET_ELIM_TAC))
-  end
+  end) g ctxt
 
 
 (*---------------------------------------------------------------------------
@@ -1092,8 +1095,8 @@ fun PRIM_NORM_TAC ss =
     PRIM_STP tac instead.
  ---------------------------------------------------------------------------*)
 
-fun STP_TAC ss finisher
-  = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
+fun STP_TAC ss finisher g ctxt =
+    PRIM_STP_TAC (rev_itlist add_simpls (tyinfol_of ctxt) ss) finisher g ctxt
 
 fun RW_TAC ss thl g = markerLib.ABBRS_THEN
                           (markerLib.mk_require_tac
@@ -1102,11 +1105,13 @@ fun RW_TAC ss thl g = markerLib.ABBRS_THEN
                           g
 val rw_tac = RW_TAC
 
-fun NORM_TAC ss thl g =
+fun NORM_TAC ss thl g ctxt =
     markerLib.ABBRS_THEN
-      (fn thl => PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl)))
+      (fn thl =>
+          PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol_of ctxt) (ss && thl)))
       thl
       g
+      ctxt
 
 val bool_ss = boolSimps.bool_ss;
 
@@ -1117,8 +1122,33 @@ val bool_ss = boolSimps.bool_ss;
  ---------------------------------------------------------------------------*)
 
 datatype srw_update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
-type srw_state = simpset * bool * srw_update list
-  (* simpset, initialised-flag, update list (most recent first) *)
+
+(* A derived value is a function of the simpset, so it lives in the same
+   value as the simpset it is derived from rather than in a slot of its
+   own.  A separate slot would work if this module owned every write to
+   the parent, as Parse.sml's grammars do; this one is owned by
+   AncestryData and written on parent_onload, set_parents and
+   with_temp_value, paths we have no way to intercept.  Keeping the
+   derived values in the value itself needs no interception: the type is
+   the one we hand to export_with_ancestry, so every function that builds
+   one is ours, and all of them go through `mkstate`.
+
+   The entries are suspensions, but over the sset of the very state that
+   holds them, which is already fixed by the time mkstate runs -- so
+   unlike a suspension in a slot of its own there is no window in which
+   one can come to disagree with its simpset.  Forcing eagerly would make
+   every [simp] delta of every ancestor pay for a derivation nobody has
+   asked for, which measured at about 40% of theory-load time.
+
+   The table is complete for the derivers registered when the state was
+   built.  An uninitialised state has none, and neither has a value
+   cached before a later registration; readers of those derive from
+   `srw_ss_of` themselves, which is the same answer, just not shared. *)
+type srw_state = {sset : simpset, initp : bool, upds : srw_update list,
+                  derived : UniversalType.t Susp.susp Symtab.table}
+
+val derivers : (string * (simpset -> UniversalType.t)) list Sref.t =
+    Sref.new []
 
 val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
                               ++ boolSimps.NORMEQ_ss
@@ -1128,26 +1158,44 @@ val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
 
 fun ssf1 nth = simpLib.empty_ssfrag |> simpLib.add_named_rwt nth
 
-val state0 : srw_state = (initial_simpset, false, [])
-fun apply_delta d ((sset,initp,upds):srw_state) : srw_state =
+fun mkstate (sset, initp, upds) : srw_state =
+    {sset = sset, initp = initp, upds = upds,
+     derived =
+       if initp then
+         List.foldl
+           (fn ((nm,f),t) => Symtab.update (nm, Susp.delay (fn () => f sset)) t)
+           Symtab.empty (Sref.value derivers)
+       else Symtab.empty}
+
+val state0 : srw_state = mkstate (initial_simpset, false, [])
+fun apply_delta d ({sset,...} : srw_state) : srw_state =
     case d of
         ThmSetData.ADD nth =>
-        (sset ++ ssf1 nth, true, [])
-      | ThmSetData.REMOVE s => (sset -* [s], true, [])
+        mkstate (sset ++ ssf1 nth, true, [])
+      | ThmSetData.REMOVE s => mkstate (sset -* [s], true, [])
 
 fun apply_srw_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
   | apply_srw_update (REMOVE_RWT n, ss) = ss -* [n]
 
-fun init_state (st as (sset,initp,upds)) =
+(* `derivers` grows as libraries load, and AncestryData caches a value
+   per theory, so a value built before a registration has no entry for
+   it.  Rebuilding the table on the ancestry paths restores the sharing;
+   it is an optimisation, not a correctness measure -- a missing entry
+   only costs the reader its own derivation. *)
+fun renorm ({sset,initp,upds,...}:srw_state) = mkstate (sset, initp, upds)
+
+fun init_state_of ctxt (st as {sset,initp,upds,...} : srw_state) =
     if initp then st
     else
       let fun init() =
-              (List.foldl apply_srw_update sset (List.rev upds)
-                          |> rev_itlist add_simpls (tyinfol()),
-               true, [])
+              mkstate
+                (List.foldl apply_srw_update sset (List.rev upds)
+                            |> rev_itlist add_simpls (tyinfol_of ctxt),
+                 true, [])
       in
         HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done") init ()
       end
+fun init_state st = init_state_of (Context.snapshot()) st
 fun opt_partition f g ls =
     let
       fun recurse As Bs ls =
@@ -1162,16 +1210,7 @@ fun opt_partition f g ls =
       recurse [] [] ls
     end
 
-(* stale-ness is important for derived values. Derived values will get
-   re-calculated if their flag is true when the value is requested.
-   The registry holds one invalidator closure per derived value; each
-   closure flips its own Context slot to `true`.  The registry itself
-   is module-static — grows only at module init when derived values
-   register — and doesn't need to travel with Context snapshots. *)
-val stale_flags = Sref.new ([] : (unit -> unit) list)
-fun notify () = List.app (fn f => f ()) (Sref.value stale_flags)
-
-fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
+fun apply_to_global d (st as {sset,initp,upds,...}:srw_state) : srw_state =
     if not initp then
       case d of
           ThmSetData.ADD nth =>
@@ -1183,13 +1222,12 @@ fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
                     ADD_SSFRAG (add_named_rwt nth ssf) :: rest
                   | _ => ADD_SSFRAG (ssf1 nth) :: upds
           in
-            (sset, initp, upds')
+            mkstate (sset, initp, upds')
           end
-        | ThmSetData.REMOVE s => (sset, initp, REMOVE_RWT s :: upds)
-    else
-      apply_delta d st before notify()
+        | ThmSetData.REMOVE s => mkstate (sset, initp, REMOVE_RWT s :: upds)
+    else apply_delta d st
 
-fun finaliser {thyname} deltas (sset,initp,upds) =
+fun finaliser {thyname} deltas ({sset,initp,upds,...} : srw_state) =
     let
       fun toNamedAdd (ThmSetData.ADD p) = SOME p | toNamedAdd _ = NONE
       fun toRM (ThmSetData.REMOVE s) = SOME s | toRM _ = NONE
@@ -1201,11 +1239,12 @@ fun finaliser {thyname} deltas (sset,initp,upds) =
       val new_upds = ADD_SSFRAG ssfrag :: map REMOVE_RWT rms
     in
       if initp then
-        (List.foldl apply_srw_update sset new_upds, true, []) before notify()
-      else (sset, false, List.revAppend(new_upds, upds))
+        mkstate (List.foldl apply_srw_update sset new_upds, true, [])
+      else mkstate (sset, false, List.revAppend(new_upds, upds))
     end
 
-val adresult as {DB,get_global_value,record_delta,update_global_value,...} =
+val adresult as {DB,get_global_value,get_global_value_of,record_delta,
+                 update_global_value,update_global_value_of,...} =
     ThmSetData.export_with_ancestry {
       delta_ops = {
         apply_delta = apply_delta,
@@ -1215,32 +1254,32 @@ val adresult as {DB,get_global_value,record_delta,update_global_value,...} =
       },
       settype = "simp"
     };
-fun updnote_global_value f = (update_global_value f; notify())
 val get_deltas = #get_deltas adresult
 fun merge_simpsets ps =
-    case Option.map (#1 o quiet_messages init_state) (#merge adresult ps) of
+    case Option.map (#sset o quiet_messages init_state) (#merge adresult ps) of
         NONE => simpLib.empty_ss
       | SOME sset => sset
 
-fun augment_srw_ss0 ssdl ((sset, initp, upds):srw_state):srw_state =
-    if initp then (foldl (fn (ssd,ss) => ss ++ ssd) sset ssdl, true, [])
+fun augment_srw_ss0 ssdl ({sset, initp, upds, ...}:srw_state):srw_state =
+    if initp then
+      mkstate (foldl (fn (ssd,ss) => ss ++ ssd) sset ssdl, true, [])
     else
-      (sset, false, List.revAppend(map ADD_SSFRAG ssdl, upds))
+      mkstate (sset, false, List.revAppend(map ADD_SSFRAG ssdl, upds))
 
-val augment_srw_ss = updnote_global_value o augment_srw_ss0
+val augment_srw_ss = update_global_value o augment_srw_ss0
 
 fun diminish_srw_ss0 names st0 =
-    let val st' as (sset, _, _) = init_state st0
+    let val {sset, ...} = init_state st0
     in
-      (simpLib.remove_ssfrags names sset, true, [])
+      mkstate (simpLib.remove_ssfrags names sset, true, [])
     end
-val diminish_srw_ss = updnote_global_value o diminish_srw_ss0
+val diminish_srw_ss = update_global_value o diminish_srw_ss0
 
-fun temp_delsimps0 names (sset, initp, upds) =
-    if initp then (sset -* names, true, [])
+fun temp_delsimps0 names ({sset, initp, upds, ...}:srw_state) =
+    if initp then mkstate (sset -* names, true, [])
     else
-      (sset, false, List.revAppend (map REMOVE_RWT names, upds))
-val temp_delsimps = updnote_global_value o temp_delsimps0;
+      mkstate (sset, false, List.revAppend (map REMOVE_RWT names, upds))
+val temp_delsimps = update_global_value o temp_delsimps0;
 
 fun tyi_update tyi sset = sset ++ simpLib.tyi_to_ssdata tyi
 fun update_fn tyi =
@@ -1250,20 +1289,47 @@ fun augment_with_typebase tyb =
 
 val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 
+(* init_state is pure, so the context-taking read need not write one; it
+   redoes the fold per call on a state nobody has initialised yet.  The
+   ambient read keeps the write, so that the fold is done once. *)
+fun srw_ss_of ctxt = #sset (init_state_of ctxt (get_global_value_of ctxt))
 fun srw_ss () =
-    (update_global_value init_state;
-     #1 (get_global_value()))
+    case get_global_value() of
+        {sset, initp = true, ...} => sset
+      | _ => (update_global_value init_state; #sset (get_global_value()))
 
-fun with_simpset_updates f g x = (
-  (* tell clients that their derived values are stale because we're about
-     to update the base *)
-  notify();
+(* The window saves and restores the whole value, and a value carries
+   the values derived from it, so both ends of the bracket are coherent
+   without telling anyone about them. *)
+fun with_simpset_updates f g x =
   let val ss' = f (srw_ss()) handle Conv.UNCHANGED => srw_ss()
-  in AncestryData.with_temp_value adresult (ss', true, []) g x end
-  (* clients may believe they're up-to-date but we've just flipped the
-     base value back, so we need to notify again *)
-  before notify()
-)
+  in AncestryData.with_temp_value adresult (mkstate (ss', true, [])) g x end
+
+fun map_simpset f ctxt =
+    let val ss = srw_ss_of ctxt
+        val ss' = f ss handle Conv.UNCHANGED => ss
+    in
+      update_global_value_of (K (mkstate (ss', true, []))) ctxt
+    end
+
+(* Adjusting the simpset for a tactic is primarily a context transform:
+   everything the proof reaches through its context sees the adjustment,
+   with no window to close at the wrong moment.
+
+   The ambient window stays for now on top of it, because a tactic that
+   names srw_ss() itself still reads the ambient simpset, and dropping
+   the window would silently stop honouring the attribute for those.
+   They are what the census is for; when it has retired them the window
+   goes and the attribute stops being a global clobber. *)
+fun with_simpset_updates_tac f tac g ctxt =
+    (* `fn c => tac g c` must NOT be eta-reduced to `tac g`.  The
+       expander hands us `fn g => <tactic expression> g`, so applying the
+       goal is what evaluates the tactic expression -- and a tactic
+       naming srw_ss() reads it right there.  As an argument to
+       with_simpset_updates that happens before the window opens; under
+       the lambda it happens inside.  src/boss/theory_tests/exclSimps
+       tests exactly this. *)
+    with_simpset_updates f (fn c => tac g c) (map_simpset f ctxt)
 
 local
   val update_log_slot :
@@ -1277,9 +1343,9 @@ in
       Context.Data.get update_log_slot (Context.snapshot())
   val upd_update_log = Context.Data.modify update_log_slot
 end
-fun ap13 f (x,y,z) = (f x, y, z)
+fun ap_sset f ({sset,initp,upds,...}:srw_state) = mkstate (f sset, initp, upds)
 fun logged_update {thyname} f =
-    (updnote_global_value (ap13 f);
+    (update_global_value (ap_sset f);
      upd_update_log (Symtab.cons_list (thyname,f)))
 
 fun logged_addfrags thy fgs =
@@ -1304,7 +1370,7 @@ fun apply_logged_updates {theories} simpset =
     end
 
 fun do_logged_updates thys =
-    updnote_global_value (ap13 (apply_logged_updates thys) o init_state)
+    update_global_value (ap_sset (apply_logged_updates thys) o init_state)
 
 fun option_fold f NONE x = x
   | option_fold f (SOME a) x = f a x
@@ -1317,8 +1383,8 @@ fun PRIM_SRW_TAC ss0 ssdl thl g =
         (markerLib.mk_require_tac (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC))
         thl
     end g;
-fun SRW_TAC ssdl thms g =
-    PRIM_SRW_TAC (srw_ss()) ssdl thms g (* don't eta-reduce *)
+fun SRW_TAC ssdl thms g ctxt =
+    PRIM_SRW_TAC (srw_ss_of ctxt) ssdl thms g ctxt
 val srw_tac = SRW_TAC
 
 fun export_rewrites slist =
@@ -1348,24 +1414,26 @@ fun mkfrag_from thy setdeltas =
     end
 fun thy_ssfrag s = get_deltas {thyname=s} |> mkfrag_from s
 
-fun thy_simpset s = Option.map (#1 o init_state) (DB {thyname=s})
+fun thy_simpset s = Option.map (#sset o init_state) (DB {thyname=s})
 
 fun temp_set_simpset_ancestry sl =
     case #merge adresult sl of
         NONE => HOL_WARNING "BasicProvers" "temp_set_simpset_ancestry"
                             "Merge of parental values produces no value; \
                             \nothing done"
-      | SOME v => updnote_global_value (K v)
+      | SOME v => update_global_value (K (renorm v))
 
 fun set_simpset_ancestry sl =
     case #set_parents adresult sl of
         NONE => HOL_WARNING "BasicProvers" "set_simpset_ancestry"
                             "Merge of parental values produces no value; \
                             \nothing done"
-      | SOME _ => notify()
+      | SOME _ => update_global_value renorm
 
-fun temp_setsimpset ss = updnote_global_value (K (ss, true, []))
-val simpset_state = get_global_value
+fun temp_setsimpset ss = update_global_value (K (mkstate (ss, true, [])))
+fun simpset_state () =
+    let val {sset,initp,upds,...} = get_global_value()
+    in (sset,initp,upds) end
 fun recreate_sset_at_parentage ps =
     ps |> merge_simpsets
        |> option_fold augment_with_typebase (TypeBase.merge_typebases ps)
@@ -1373,32 +1441,32 @@ fun recreate_sset_at_parentage ps =
        |> temp_setsimpset
 
 
+(* Registering reads the state from the live cell and writes it back
+   there, so the context it initialises against is the ambient one too.
+   Taking it as a parameter would only offer a way to fold the ambient
+   state over somebody else's TypeBase. *)
 fun make_simpset_derived_value name (deriver : simpset -> 'a -> 'a) init =
     let
-      val _ = update_global_value init_state
-      val vslot : 'a Context.Data.slot =
-          Context.Data.new
-            {name = name ^ ".value",
-             empty = deriver (srw_ss()) init,
-             pp = fn _ => "<" ^ name ^ ".value>"}
-      val staleslot : bool Context.Data.slot =
-          Context.Data.new
-            {name = name ^ ".stale",
-             empty = false,
-             pp = Bool.toString}
-      val () = Sref.update stale_flags
-                           (cons (fn () => Context.Data.write staleslot true))
-      fun get () =
-          (if Context.Data.get staleslot (Context.snapshot()) then
-             (Context.Data.modify vslot (deriver (srw_ss()));
-              Context.Data.write staleslot false)
-           else ();
-           Context.Data.get vslot (Context.snapshot()))
-      fun set v =
-          (Context.Data.write vslot v;
-           Context.Data.write staleslot false)
+      fun derive ss = deriver ss init
+      val (wrap, unwrap) = UniversalType.embed ()
+      val () = if List.exists (fn (n,_) => n = name) (Sref.value derivers)
+               then raise ERR "make_simpset_derived_value"
+                              ("A derived value named " ^ name ^
+                               " already exists")
+               else ()
+      val () = Sref.update derivers (cons (name, wrap o derive))
+      (* init_state_of leaves an already-initialised state alone, so the
+         renorm is what puts this deriver into the state that is current;
+         without it every read would fall through to deriving afresh. *)
+      val () = update_global_value (renorm o init_state)
+      fun get_of ctxt =
+          case Option.mapPartial (unwrap o Susp.force)
+                 (Symtab.lookup (#derived (get_global_value_of ctxt)) name)
+           of SOME v => v
+            | NONE => derive (srw_ss_of ctxt)
+      fun get () = get_of (Context.snapshot())
     in
-      {get=get, set=set}
+      {get = get, get_of = get_of}
     end
 
 fun mk_tacmod s =
@@ -1418,7 +1486,8 @@ fun mk_tacmod s =
                      perkey = (fn k => fn vs => key_to_f k vs) }
                    alist
     in
-      {tacm = with_simpset_updates f, ltacm = with_simpset_updates f}
+      {tacm = with_simpset_updates_tac f,
+       ltacm = with_simpset_updates_tac f}
     end
 
 end

@@ -45,9 +45,9 @@ fun REPEAT_TCL ttcl ttac th =
 (* TFM 91.01.20.                                                         *)
 (* --------------------------------------------------------------------- *)
 
-fun REPEAT_GTCL (ttcl: thm_tactical) ttac th (A,g) =
-   ttcl (REPEAT_GTCL ttcl ttac) th (A,g)
-   handle HOL_ERR _ => ttac th (A,g)
+fun REPEAT_GTCL (ttcl: thm_tactical) ttac th (A,g) ctxt =
+   ttcl (REPEAT_GTCL ttcl ttac) th (A,g) ctxt
+   handle HOL_ERR _ => ttac th (A,g) ctxt
 
 val ALL_THEN: thm_tactical = I
 val NO_THEN: thm_tactical = fn ttac => fn th => raise ERR "NO_THEN" ""
@@ -139,11 +139,11 @@ fun DISJ_CASES_THEN2 ttac1 ttac2 =
    let
       val (disj1, disj2) = dest_disj (Thm.concl disth)
    in
-      fn g as (asl, w) =>
+      fn g as (asl, w) => fn ctxt =>
          let
-            val (gl1, prf1) = ttac1 (foo disth disj1) g
+            val (gl1, prf1) = ttac1 (foo disth disj1) g ctxt
 (*               ttac1 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj1)) g *)
-            and (gl2, prf2) = ttac2 (foo disth disj2) g
+            and (gl2, prf2) = ttac2 (foo disth disj2) g ctxt
 (*              ttac2 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj2)) g *)
             val len_gl1 = length gl1 (* Avoid capture of gl1 in closure *)
          in
@@ -187,10 +187,10 @@ val DISJ_CASES_THENL: thm_tactic list -> thm_tactic =
  * Added: TFM 88.03.31  (bug fix)
  *---------------------------------------------------------------------------*)
 
-fun DISCH_THEN ttac (asl,w) =
+fun DISCH_THEN ttac (asl,w) ctxt =
    let
       val (ant, conseq) = dest_imp w
-      val (gl, prf) = ttac (ASSUME ant) (asl, conseq)
+      val (gl, prf) = ttac (ASSUME ant) (asl, conseq) ctxt
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
@@ -229,11 +229,11 @@ fun X_CHOOSE_THEN y (ttac: thm_tactic) : thm_tactic =
       let
          val (Bvar,Body) = dest_exists (Thm.concl xth)
       in
-         fn (asl,w) =>
+         fn (asl,w) => fn ctxt =>
             let
                val th = foo xth (subst[Bvar |-> y] Body)
               (* itlist ADD_ASSUM (hyp xth) (ASSUME (subst[Bvar |-> y] Body)) *)
-               val (gl,prf) = ttac th (asl,w)
+               val (gl,prf) = ttac th (asl,w) ctxt
             in
                (gl, (CHOOSE (y,xth)) o prf)
             end
@@ -256,9 +256,9 @@ fun X_CHOOSE_THENL ys (ttac: thm_tactic) : thm_tactic =
          val (tm,vf) = dest_list ys (Thm.concl xth) (PROVE_HYP xth)
          val th = foo xth (tm)
          (* itlist ADD_ASSUM (hyp xth) (ASSUME (subst[Bvar |-> y] Body)) *)
-      in fn (asl,w) =>
+      in fn (asl,w) => fn ctxt =>
             let
-               val (gl,prf) = ttac th (asl,w)
+               val (gl,prf) = ttac th (asl,w) ctxt
             in
                (gl, vf o prf)
             end
@@ -276,20 +276,21 @@ val CHOOSE_THEN: thm_tactical =
          val (hyp,conc) = dest_thm xth
          val (Bvar,_) = dest_exists conc
       in
-         fn (asl,w) =>
+         fn (asl,w) => fn ctxt =>
          let
-            val y = gen_variant Parse.is_constname ""
+            val y = gen_variant (Parse.get_is_constname ctxt) ""
                                 (free_varsl ((conc::hyp)@(w::asl)))
                                 Bvar
          in
-            X_CHOOSE_THEN y ttac xth (asl,w)
+            X_CHOOSE_THEN y ttac xth (asl,w) ctxt
          end
       end
       handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
 
 (* same as REPEAT_TCL CHOOSE_THEN but faster *)
 local
-   fun varyAcc v (V, l) = let val v' = gen_variant Parse.is_constname "" V v in (v'::V, v'::l) end
+   fun varyAcc isc v (V, l) =
+       let val v' = gen_variant isc "" V v in (v'::V, v'::l) end
    (* There are actual cases where strip_exists differ from this function *)
    fun strip_exists1 tm =
    let fun strip A tm =
@@ -325,10 +326,13 @@ val CHOOSE_ALL_THEN: thm_tactical =
          val vec = Array.vector arr
 
       in
-         fn (g as (asl,w)) =>
+         fn (g as (asl,w)) => fn ctxt =>
          let
             val fvs = (free_varsl ((conc::hyp)@(w::asl)))
-            val vars = List.rev (snd (rev_itlist varyAcc vars (fvs,[])))
+            val vars =
+                List.rev (snd (rev_itlist
+                                 (varyAcc (Parse.get_is_constname ctxt))
+                                 vars (fvs,[])))
             fun merge i dups vars = if i < Vector.length vec
                                     then if Vector.sub (vec,i)
                                          then (hd dups :: merge (i + 1) (tl dups) vars)
@@ -336,7 +340,7 @@ val CHOOSE_ALL_THEN: thm_tactical =
                                     else []
             val vars = merge 0 dups vars
          in
-            X_CHOOSE_THENL vars ttac xth g
+            X_CHOOSE_THENL vars ttac xth g ctxt
          end
          handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
       end

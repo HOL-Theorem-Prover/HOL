@@ -21,13 +21,13 @@ val _ = use "../tools/parsing/HOLSourcePrinter.sig";
 val _ = use "../tools/parsing/HOLSourcePrinter.sml";
 val _ = use "../tools/parsing/HOLSource.sig";
 val _ = use "../tools/parsing/HOLSource.sml";
-val _ = use "../tools/parsing/HolParserOld.sig";
-val _ = use "../tools/parsing/HolParserOld.sml";
+val _ = use "poly/sref-bootstrap.ML";
+
 val _ = use "../src/portableML/UniversalType.sig";
 val _ = use "../src/portableML/UniversalType.sml";
 val _ = use "../src/portableML/poly/PrettyImpl.sml";
-val _ = use "../src/portableML/LSPExtension.sig";
-val _ = use "../src/portableML/LSPExtension.sml";
+val _ = use "lsp/LSPExtension.sig";
+val _ = use "lsp/LSPExtension.sml";
 val _ = use "poly/quse.sig";
 val _ = use "poly/quse.sml";
 

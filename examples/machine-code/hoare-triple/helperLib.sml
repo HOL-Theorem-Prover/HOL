@@ -76,7 +76,7 @@ val to_lower = String.map Char.toLower
 
 fun auto_prove proof_name (goal,tac) =
    let
-      val (rest,validation) = tac ([], goal)
+      val (rest,validation) = tac ([], goal) (Context.snapshot())
    in
       if length rest = 0
          then validation []

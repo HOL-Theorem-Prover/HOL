@@ -84,26 +84,26 @@ fun RAT_ADDSUB_TAC t1 t2 = SUBST1_TAC (SUBS [SPEC t2 (GSYM RAT_ADD_RINV)] (SPEC 
  *  RAT_EQ_LMUL_TAC : tactic
  *--------------------------------------------------------------------------*)
 
-fun RAT_EQ_LMUL_TAC term1 (asm_list,goal) =
+fun RAT_EQ_LMUL_TAC term1 (asm_list,goal) ctxt =
 let
         val (eq_lhs,eq_rhs) = dest_eq goal;
 in
         SUBST_TAC[GSYM (UNDISCH_ALL (SPECL [eq_lhs,eq_rhs,term1] RAT_EQ_LMUL))]
 end
-        (asm_list,goal)
+        (asm_list,goal) ctxt
 handle HOL_ERR _ => raise ERR "RAT_EQ_RMUL_TAC" "";
 
 (*--------------------------------------------------------------------------
  *  RAT_EQ_RMUL_TAC : tactic
  *--------------------------------------------------------------------------*)
 
-fun RAT_EQ_RMUL_TAC term1 (asm_list,goal) =
+fun RAT_EQ_RMUL_TAC term1 (asm_list,goal) ctxt =
 let
         val (eq_lhs,eq_rhs) = dest_eq goal;
 in
         SUBST_TAC[GSYM (UNDISCH_ALL (SPECL [eq_lhs,eq_rhs,term1] RAT_EQ_RMUL))]
 end
-        (asm_list,goal)
+        (asm_list,goal) ctxt
 handle HOL_ERR _ => raise ERR "RAT_EQ_RMUL_TAC" "";
 
 (*==========================================================================
@@ -241,7 +241,7 @@ fun RAT_STRICT_CALC_TAC (asm_list,goal) =
  *  assumptions that were needed for the simplification are added to the goal
  *--------------------------------------------------------------------------*)
 
-fun RAT_CALC_TAC (asm_list,goal) =
+fun RAT_CALC_TAC (asm_list,goal) (_ : Context.t) =
         let
                         (* extract terms of type ``:rat`` *)
                 val rat_terms = extract_rat goal;

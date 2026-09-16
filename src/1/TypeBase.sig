@@ -12,14 +12,17 @@ sig
    (* Imperative database of datatype facts and associated operations. *)
 
    val theTypeBase        : unit -> typeBase
+   val theTypeBase_of     : Context.t -> typeBase
    val thy_typebase       : {thyname : string} -> typeBase option
    val thy_updates        : {thyname : string} -> tyinfo list
    val merge_typebases    : string list -> typeBase option
    val write              : tyinfo list -> unit
    val export             : tyinfo list -> unit (* includes write action *)
    val fetch              : hol_type -> tyinfo option
+   val fetch_of           : Context.t -> hol_type -> tyinfo option
    val read               : {Thy :string, Tyop: string} -> tyinfo option
    val elts               : unit -> tyinfo list
+   val elts_of            : Context.t -> tyinfo list
    val register_update_fn : (tyinfo -> tyinfo) -> unit
 
    val axiom_of           : hol_type -> thm
@@ -50,7 +53,10 @@ sig
 
    val mk_case            : term * (term * term) list -> term
    val dest_case          : term -> term * term * (term * term) list
+   val dest_case_of       : Context.t -> term ->
+                            term * term * (term * term) list
    val is_case            : term -> bool
+   val is_case_of         : Context.t -> term -> bool
    val strip_case         : term -> term * (term * term) list
    val mk_pattern_fn      : (term * term) list -> term
 
@@ -68,6 +74,17 @@ sig
    val CasePred           : string -> thm
    val CasePreds          : string list -> thm
    val AllCasePreds       : unit -> thm
+
+   (* Context-taking siblings of the six above: the case theorems come
+      from the TypeBase `ctxt' carries, and the type names resolve
+      against its type grammar.  Each ambient form above is its sibling
+      applied to a snapshot. *)
+   val CaseEq_of          : Context.t -> string -> thm
+   val CaseEqs_of         : Context.t -> string list -> thm
+   val AllCaseEqs_of      : Context.t -> thm
+   val CasePred_of        : Context.t -> string -> thm
+   val CasePreds_of       : Context.t -> string list -> thm
+   val AllCasePreds_of    : Context.t -> thm
 
    (* f (case x of ...) <=> (case x of ..) *)
    val case_rand_of       : hol_type -> thm

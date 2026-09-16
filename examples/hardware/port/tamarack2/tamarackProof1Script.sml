@@ -48,7 +48,8 @@ val LESS_MOD_THM = DB.fetch "arithmetic" "LESS_MOD";
 val LESS_LESS_MONO = DECIDE ``!m n p q. (m < p) /\ (n < q) ==> ((m + n) < (p + q))``;
 val MOD_LESS_THM = DB.fetch "arithmetic" "MOD_LESS";
 
-val MATCH_GOAL_TAC : thm_tactic = fn impthm => fn (asl,tm):goal =>
+val MATCH_GOAL_TAC : thm_tactic =
+    fn impthm => fn (asl,tm):goal => fn _ (* ctxt *) =>
         let
         val match = ((PART_MATCH (snd o dest_imp)) impthm) tm
         in

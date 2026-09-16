@@ -10,6 +10,7 @@ sig
   val net_of                : rewrites -> conv Net.net
 
   val implicit_rewrites     : unit -> rewrites
+  val implicit_rewrites_of  : Context.t -> rewrites
   val set_implicit_rewrites : rewrites -> unit
   val add_implicit_rewrites : thm list -> unit
 

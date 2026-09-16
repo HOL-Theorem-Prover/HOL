@@ -52,7 +52,7 @@ fun S_REPEATC (c :conv) (t :term) :thm =
 
 (* Convert a conversion for the application of the laws for STRONG_EQUIV to a tactic. *)
 fun S_LHS_CONV_TAC (c :conv) :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
     if opt ~~ ``STRONG_EQUIV`` then
@@ -72,7 +72,7 @@ fun S_LHS_CONV_TAC (c :conv) :tactic =
   end;
 
 fun S_RHS_CONV_TAC (c :conv) :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if (opt ~~ ``STRONG_EQUIV``) then
@@ -184,7 +184,7 @@ end;
 (* Define the tactic S_LHS_SUBST1_TAC: thm_tactic which substitutes a theorem
    in the left-hand side of a strong equivalence. *)
 fun S_LHS_SUBST1_TAC thm :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if (opt ~~ ``STRONG_EQUIV``) then

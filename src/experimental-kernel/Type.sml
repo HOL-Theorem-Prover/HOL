@@ -11,7 +11,7 @@ type hol_type = Type_dtype.hol_type
 val WARN = HOL_WARNING "Type"
 val ERR = mk_HOL_ERR "Type"
 
-fun typesig () = Context.typesig (Context.snapshot())
+fun typesig () = Context.typesig (Context.live())
 fun upd_typesig f = Context.update (Context.map_typesig f)
 fun genupd_typesig f =
     Context.gen_update (fn c =>

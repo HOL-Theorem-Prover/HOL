@@ -691,13 +691,6 @@ in
     | new_ints k = generator() :: new_ints (k - 1)
 end;
 
-local
-  val gen = Random.newgenseed 1.0;
-in
-  fun uniform () = Random.random gen;
-  fun coin_flip () = Random.range (0,2) gen = 0;
-end;
-
 fun with_flag (r,update) f x =
   let
     val old = !r

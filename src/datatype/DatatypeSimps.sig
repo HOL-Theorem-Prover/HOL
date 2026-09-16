@@ -84,27 +84,32 @@ val mk_case_abs_thm_tyinfo   : tyinfo -> thm
 (* Lifting case distinctions as high as possible *)
 val lift_cases_ss : hol_type list -> ssfrag
 val lift_cases_stateful_ss : unit -> ssfrag
+val lift_cases_stateful_ss_of : Context.t -> ssfrag
 val lift_cases_typeinfos_ss : tyinfo list -> ssfrag
 
 (* Reverse Lifting case distinctions as high as possible *)
 val unlift_cases_ss : hol_type list -> ssfrag
 val unlift_cases_stateful_ss : unit -> ssfrag
+val unlift_cases_stateful_ss_of : Context.t -> ssfrag
 val unlift_cases_typeinfos_ss : tyinfo list -> ssfrag
 
 (* simple rewrites for types *)
 val type_rewrites_ss : hol_type list -> ssfrag
 val type_rewrites_stateful_ss : unit -> ssfrag
+val type_rewrites_stateful_ss_of : Context.t -> ssfrag
 val type_rewrites_typeinfos_ss : tyinfo list -> ssfrag
 
 (* type rewrites + congruence theorems *)
 val case_cong_ss : hol_type list -> ssfrag
 val case_cong_stateful_ss : unit -> ssfrag
+val case_cong_stateful_ss_of : Context.t -> ssfrag
 val case_cong_typeinfos_ss : tyinfo list -> ssfrag
 
 (* quantifier case splits *)
 val expand_type_quants_typeinfos_ss : tyinfo list -> ssfrag
 val expand_type_quants_ss : hol_type list -> ssfrag
 val expand_type_quants_stateful_ss : unit -> ssfrag
+val expand_type_quants_stateful_ss_of : Context.t -> ssfrag
 
 
 (*---------------------------------------------------------------------------*)

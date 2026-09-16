@@ -4,7 +4,7 @@ val _ = new_theory "scratch"
 
 val _ = set_trace "Unicode" 0
 
-fun testtac tac = #1 o VALID tac
+fun testtac tac = #1 o runtac (VALID tac)
 val goal_print = HOLPP.pp_to_string 75 goalStack.pp_goal
 
 val goals_print =

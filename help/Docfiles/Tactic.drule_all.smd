@@ -47,7 +47,8 @@ Then:
 
 ``` hol4
    > drule_all arithmeticTheory.LESS_LESS_EQ_TRANS
-      ([“x < w”, “1 < x”, “z <= y”, “x <= z”, “y < z”], “P:bool”);
+      ([“x < w”, “1 < x”, “z <= y”, “x <= z”, “y < z”], “P:bool”)
+      (Context.snapshot());
    val it =
       ([([“x < w”, “1 < x”, “z <= y”, “x <= z”, “y < z”],
          “1 < z ==> P”)], fn): goal list * validation

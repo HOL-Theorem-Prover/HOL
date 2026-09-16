@@ -38,7 +38,8 @@ We can use this result to make progress with the following goal in
 conjunction with `pure_ss` in a way that no form of `REWRITE_TAC` could:
 
 ``` hol4
-   - ASM_SIMP_TAC pure_ss [ADD_EQ_SUB] ([“x <= y”], “z + x = y”);
+   - ASM_SIMP_TAC pure_ss [ADD_EQ_SUB] ([“x <= y”], “z + x = y”)
+       (Context.snapshot());
    > val it = ([([`x <= y`], `z = y - x`)], fn) : tactic_result
 ```
 
@@ -48,7 +49,8 @@ implications means that using `pure_ss` will not be able to discharge
 the side condition in the goal below:
 
 ``` hol4
-   - SIMP_TAC pure_ss [ADD_EQ_SUB] ([], “x <= y ==> (z + x = y)”);
+   - SIMP_TAC pure_ss [ADD_EQ_SUB] ([], “x <= y ==> (z + x = y)”)
+       (Context.snapshot());
    > val it = ([([], `x <= y ==> (z + x = y)`)], fn) : tactic_result
 ```
 
@@ -56,7 +58,8 @@ As `bool_ss` has the relevant congruence included, it does make progress
 in the same situation:
 
 ``` hol4
-   - SIMP_TAC bool_ss [ADD_EQ_SUB] ([], “x <= y ==> (z + x = y)”);
+   - SIMP_TAC bool_ss [ADD_EQ_SUB] ([], “x <= y ==> (z + x = y)”)
+       (Context.snapshot());
    > val it = ([([], `x <= y ==> (z = y - x)`)], fn) : tactic_result
 ```
 

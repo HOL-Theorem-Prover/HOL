@@ -1,7 +1,7 @@
 structure x64_codegenLib :> x64_codegenLib =
 struct
 
-open HolKernel boolLib bossLib Parse decompilerLib;
+open HolKernel boolLib bossLib Parse decompilerLib x64_compilerLibContextTheory;
 open x64_codegen_inputLib helperLib;
 
 open x64_codegen_x64Lib;
@@ -295,11 +295,7 @@ fun print_asm code = let
   val str = code2string code false
   in print ("\n" ^ str ^ "\n") end
 
-val EXPAND_IF = prove(
-  ``!b c s1 (s2:'a).
-      ((if b \/ c then s1 else s2) = if b then s1 else if c then s1 else s2) /\
-      ((if b /\ c then s1 else s2) = if b then if c then s1 else s2 else s2)``,
-  Cases THEN Cases THEN SIMP_TAC std_ss []);
+val EXPAND_IF = x64_compilerLibContextTheory.EXPAND_IF;
 
 fun generate_code model_name print_assembly tm = let
   val (assign2assembly, guard2assembly) = generator_tools

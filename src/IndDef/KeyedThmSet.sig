@@ -30,6 +30,7 @@ sig
   val export_thm    : keyed_thm_set -> string -> unit
   val thy_thms      : keyed_thm_set -> string -> thm list
   val get_map       : keyed_thm_set -> unit -> keyed_thm_map
+  val get_map_of    : keyed_thm_set -> Context.t -> keyed_thm_map
   val map_by_theory : keyed_thm_set -> {thyname : string} ->
                       keyed_thm_map option
 
@@ -53,6 +54,9 @@ end
 
    [get_map sset ()] returns the whole set as a map from constants to
    the theorems filed under them.
+
+   [get_map_of sset ctxt] returns the whole set stored in ctxt as a map
+   from constants to the theorems filed under them.
 
    [map_by_theory sset {thyname}] returns the map as it stands after
    loading thyname and its ancestors.

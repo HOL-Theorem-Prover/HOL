@@ -64,7 +64,8 @@ reduced.
 The following involves a handling of abstractions:
 
 ``` hol4
-   > CONG_TAC NONE ([], “(∀x. f (z:'a) < x) ⇔ (∀y. c < y)”);
+   > CONG_TAC NONE ([], “(∀x. f (z:'a) < x) ⇔ (∀y. c < y)”)
+       (Context.snapshot());
    val it = ([([], “f z = c”)], fn): goal list * validation
 ```
 
@@ -72,7 +73,8 @@ Slightly altering the goal, and keeping the depth as `NONE` turns
 something true into something unprovable:
 
 ``` hol4
-   > CONG_TAC NONE ([], “(∀x. f (z:'a) < x) ⇔ (∀y. y < 6)”);
+   > CONG_TAC NONE ([], “(∀x. f (z:'a) < x) ⇔ (∀y. y < 6)”)
+       (Context.snapshot());
    val it = ([([], “f z = x”), ([], “x = 6”)], fn): goal list * validation
 ```
 
@@ -82,8 +84,9 @@ Finally, user-congruences can give richer contexts when proving
 functions equal:
 
 ``` hol4
-   > CONG_TAC NONE 
-       ([], “MAP (λa. f a + 1) (l1:'a list) = MAP g (l2:'a list)”);
+   > CONG_TAC NONE
+       ([], “MAP (λa. f a + 1) (l1:'a list) = MAP g (l2:'a list)”)
+       (Context.snapshot());
    val it = ([([“MEM x l2”], “f x + 1 = g x”), ([], “l1 = l2”)], fn):
       goal list * validation
 ```

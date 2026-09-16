@@ -44,7 +44,7 @@ sig
   val QUANTIFY_CONDITIONS : controlled_thm -> controlled_thm list
   val stack_limit : int ref
 
-  val used_rewrites : thm list ref
-  val track_rewrites : bool ref
+  (* run something, and report which rewrites fired while it ran *)
+  val with_tracking : ('a -> 'b) -> 'a -> 'b * thm list
 
 end

@@ -180,7 +180,10 @@ fun gen_resolve_then mpos th1 th2 kont =
         | Concl => try con (fn _ => raise fail)
     end
 
-fun resolve_then mpos ttac th1 th2 g =
-    gen_resolve_then mpos th1 th2 (fn th => ttac th g)
+(* gen_resolve_then abandons a candidate position whose continuation
+   raises, so the continuation has to run --- not merely be built --- for
+   the search to backtrack. *)
+fun resolve_then mpos ttac th1 th2 g ctxt =
+    gen_resolve_then mpos th1 th2 (fn th => ttac th g ctxt)
 
 end (* struct *)

@@ -24,8 +24,8 @@ fun take  ts = MAP_EVERY Q.EXISTS_TAC ts;       (* from HOL mizar mode *)
 
 fun PRINT_TAC s = goalStack.note_tac ("** " ^ s) (* from cardinalTheory *)
 
-fun COUNT_TAC tac g =                           (* from Konrad Slind *)
-   let val res as (sg, _) = tac g
+fun COUNT_TAC tac g ctxt =                       (* from Konrad Slind *)
+   let val res as (sg, _) = tac g ctxt
        val _ = print ("subgoals: " ^ Int.toString (List.length sg) ^ "\n")
    in res end;
 

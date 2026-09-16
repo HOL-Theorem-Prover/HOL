@@ -47,6 +47,12 @@ val initialize:
     error: error -> unit,
     runtimeExn: exn -> unit,
     builtTree: built -> unit,
+    (* Called before each outer dec is compiled, with the byte offset
+       its original-source span starts at.  A deferred proof records
+       this as the declaration it belongs to, which is the identity the
+       pool cancels and reports against: an edit is attributed to the
+       declaration containing it, not to a raw offset. *)
+    onDecStarted: int -> unit,
     (* Called after each outer dec finishes compilation, with the byte
        offset just past the dec's original-source span (from
        `HOLSourceAST.decSpan`).  Used by the LSP to take mid-file
@@ -57,7 +63,11 @@ val initialize:
        already compiled and preserved via a snapshot restored before
        this call.  The parser still walks every dec so its stateful
        infix-scope tracking stays consistent. *)
-    startByte: int
+    startByte: int,
+    (* Stop once a declaration ending at or after this byte has been
+       compiled, rather than running to the end of the text.  For a
+       compile that only needs one declaration re-run. *)
+    stopAfter: int option
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -72,6 +82,10 @@ val at: PolyML.parseTree list -> int list -> subtree
 
 val build: PolyML.parseTree -> built
 val buildList: PolyML.parseTree option -> built list
+(* Move a built tree `delta` bytes down the file, for a compile that
+   reuses a declaration's elaboration without re-running it while an
+   edit above has moved the text. *)
+val shiftBuilt: int -> built -> built
 
 type built_subtree = (built * built list) option
 type built_trees = built list
@@ -100,12 +114,12 @@ fun prelude () = let
      These symbols are only available after the HOL kernel is loaded,
      so prelude() must not be called until then. *)
   val s = String.concat [
-    "let fun f (t, _) = mk_oracle_thm \"fast_proof\" t\n",
-    "    fun f2 g = (\n",
+    "let fun f _ (t, _) = mk_oracle_thm \"fast_proof\" t\n",
+    "    fun f2 ctxt g = (\n",
     "      if current_theory () = \"scratch\"\n",
     "      then HOL_WARNING \"HOL_IDE\" \"prove\" \"calling prove before new_theory\"\n",
     "      else Tactical.set_prover f;\n",
-    "      f g)\n",
+    "      f ctxt g)\n",
     "in Tactical.set_prover f2 end"]
   val i = ref 0
   fun read () = (SOME (String.sub (s, !i)) before i := !i + 1) handle Subscript => NONE
@@ -661,7 +675,8 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, builtTree, onDecCompleted, startByte
+  runtimeExn, builtTree, onDecStarted, onDecCompleted, startByte,
+  stopAfter
 } = let
   datatype chunk
     = Chunk of string
@@ -684,6 +699,15 @@ fun initialize {
     str = push o Chunk,
     startSpan = fn i => (!lastPush := true; lastPush := ref false; push (PushSpan (i, !lastPush))),
     stopSpan = fn _ => (lastPush := ref false; push (PopSpan (!lastPush))) }
+  (* Whether the declaration in hand produced a hard compile error, and
+     whether to keep quiet.  The first drives the cheat retry below; the
+     second silences the retry itself, whose job is to bind the theorem,
+     not to offer a second opinion on a tactic already reported on. *)
+  val hardError = ref false
+  val muffled = ref false
+  fun error' (e as {hard, ...} : error) =
+      if !muffled then ()
+      else (if hard then hardError := true else (); error e)
   val decsRef = ref []
   val ptRef = ref []
   fun fetchDec () =
@@ -749,7 +773,7 @@ fun initialize {
   val parameters = (if !compile then [] else noCompile) @ [
     CPOutStream compilerOut,
     CPPrintStream toplevelOut,
-    CPErrorMessageProc error,
+    CPErrorMessageProc error',
     CPCompilerResultFun (fn (pt, code) => (ptFn pt; codeFn code)),
     CPLineNo getTokIdx,
     CPLineOffset getOffset,
@@ -826,6 +850,67 @@ fun initialize {
          else ());
         finish ())
     end
+  (* A complete `Theorem foo: ... Proof tac QED` expands to a *single*
+     `val foo = ...`, so a tactic that will not compile takes the
+     theorem's binding down with it and every consumer below fails too.
+     Someone iterating on a proof leaves the tactic in that state
+     routinely, and the statement is usually still fine.
+
+     So: retry the declaration with the proof body replaced by `cheat`.
+     The statement binds, the rest of the file carries on consuming it,
+     and the errors already reported against the tactic stand as the
+     diagnostic.  `cheat` only has to *compile* -- under the LSP the
+     tactic is never run -- and the substituted proof is deliberately
+     kept out of the checking pool, since replaying `cheat` would report
+     `Proved` for a proof that does not compile.
+
+     `ExpExpansion` rather than a bare `Ident` so the built tree keeps
+     the original tactic's span: hover over the statement still works,
+     and nothing claims the first thirteen bytes of the user's tactic
+     are an identifier.
+
+     An in-progress block (`qed_ = NONE`) needs none of this: it already
+     expands to a separate binding plus a standalone tac. *)
+  fun cheatDec (HOLSourceAST.DecExpansion {orig = HOLSourceAST.HOLTheoremDecl
+                    {triv, theorem_, id, attrs, colon, quote,
+                     proof_ = SOME p, tac, qed_ = SOME q, stop}, ...}) =
+      SOME (HOLSourceAST.HOLTheoremDecl
+              {triv = triv, theorem_ = theorem_, id = id, attrs = attrs,
+               colon = colon, quote = quote, proof_ = SOME p,
+               tac = HOLSourceAST.ExpExpansion
+                       {orig = tac,
+                        result = HOLSourceAST.Ident
+                                   {op_ = NONE,
+                                    id = (#1 (HOLSourceAST.expSpan tac),
+                                          "bossLib.cheat")}},
+               qed_ = SOME q, stop = stop})
+    | cheatDec _ = NONE
+
+  fun recompileAsCheat dec =
+      let
+        val expanded = expandDec dec
+        fun restore () = (muffled := false;
+                          LSPExtension.cheatSubstituted := false)
+      in
+        DArray.clear queue;
+        HOLSourcePrinter.printDecs parseError'
+          (rev (HOLSourceExpand.mkSemi [expanded])) pr';
+        decsRef := [expanded];
+        ptRef := [];
+        idx := 0; spans := []; curToken := toState ();
+        muffled := true;
+        LSPExtension.cheatSubstituted := true;
+        (finish () handle e => (restore (); raise e));
+        restore ()
+      end
+
+  fun retryAsCheat () =
+      case !decsRef of
+        [d] => (case cheatDec d of
+                  NONE => ()
+                | SOME dec => recompileAsCheat dec)
+      | _ => ()
+
   fun emitBuilt () = let
     val decs = !decsRef
     val pts = rev (!ptRef)
@@ -836,10 +921,10 @@ fun initialize {
   fun loop () = (
     DArray.clear queue;
     if fetchDec () then () else let
-      val stopByte =
+      val (decStart, stopByte) =
         case !decsRef of
-          [] => 0
-        | dec :: _ => #2 (HOLSourceAST.decSpan dec)
+          [] => (0, 0)
+        | dec :: _ => HOLSourceAST.decSpan dec
     in
       if stopByte <= startByte then
         (* Skip compilation for pre-`startByte` decs — a resume
@@ -850,13 +935,35 @@ fun initialize {
         (ptRef := []; loop ())
       else (
         idx := 0; spans := []; curToken := toState ();
+        onDecStarted decStart;
+        hardError := false;
         finish ();
+        if !hardError then retryAsCheat () else ();
         emitBuilt ();
         ptRef := [];
         onDecCompleted stopByte;
-        loop ())
+        case stopAfter of
+            SOME b => if stopByte >= b then () else loop ()
+          | NONE => loop ())
     end)
   in loop () end;
+
+(* `PDeclaredAt` with an empty file names a location in this same text
+   and moves with it; one naming another file does not.  Its line
+   numbers are read only in the latter case (see `fromPolyLoc` in the
+   server), so they are left alone. *)
+fun shiftBuilt 0 = (fn t => t)
+  | shiftBuilt delta = let
+      val d = FixedInt.fromInt delta
+      fun prop (PDeclaredAt {file = "", startLine, endLine,
+                             startPosition, endPosition}) =
+          PDeclaredAt {file = "", startLine = startLine, endLine = endLine,
+                       startPosition = startPosition + delta,
+                       endPosition = endPosition + delta}
+        | prop p = p
+      fun go (Built ((s, e), props, kids)) =
+          Built ((s + d, e + d), List.map prop props, List.map go kids)
+    in go end;
 
 fun navigateTo NONE _ = NONE
   | navigateTo (tree as (SOME ({ startPosition, endPosition, ... }, _)))

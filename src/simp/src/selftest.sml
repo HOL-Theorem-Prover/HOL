@@ -60,7 +60,7 @@ val _ =
     infloop_protect
       "Abbreviations + ASM_SIMP_TAC"
       test4P
-      (VALID (ASM_SIMP_TAC bool_ss [markerSyntax.Abbr`y`]))
+      (runtac (VALID (ASM_SIMP_TAC bool_ss [markerSyntax.Abbr`y`])))
       ([``Abbrev (y:'b = f (x : 'a))``, ``P (y:'b) : bool``],
        ``Q (y:'b) : bool``)
 
@@ -76,9 +76,9 @@ val test5P =
                          in
                            aconv (concl th) goal5 andalso null (hyp th)
                          end)
-        (fn g => (EQ_TAC THEN STRIP_TAC THEN
-                  SIMP_TAC bool_ss [Once EQ_SYM_EQ] THEN
-                  POP_ASSUM ACCEPT_TAC) g)
+        (runtac (EQ_TAC THEN STRIP_TAC THEN
+                 SIMP_TAC bool_ss [Once EQ_SYM_EQ] THEN
+                 POP_ASSUM ACCEPT_TAC))
         ([], goal5)
 
 (* test that being a bounded rewrite overrides detection of loops in
@@ -192,7 +192,7 @@ end
 val _ = let
   val asm = ``Abbrev(f = (\x. x /\ y))``
   val g = ([asm], ``p /\ y``)
-  val doit = ASM_SIMP_TAC bool_ss []
+  val doit = runtac (ASM_SIMP_TAC bool_ss [])
   fun geq (asl1, g1) (asl2, g2) =
       aconv g1 g2 andalso
       case (asl1, asl2) of
@@ -390,7 +390,8 @@ val _ = let
                                        | _ => false)
 
       in
-        require_msg testresult printgoals (VALID (ASM_SIMP_TAC pure_ss thl))
+        require_msg testresult printgoals
+                    (runtac (VALID (ASM_SIMP_TAC pure_ss thl)))
                     (asms,i)
       end
   val oneone = Q.prove(‘ONE_ONE f ==> !x y. (f x = f y) <=> (x = y)’,
@@ -431,7 +432,7 @@ val _ = let
         | _ => false
   fun test (msg, tac, ing, outgs) =
       (tprint msg;
-       require_msg (testresult outgs) printgoals tac ing)
+       require_msg (testresult outgs) printgoals (runtac tac) ing)
   val T_t = “?x:'a. p”
   fun gs c = global_simp_tac c
   val fs = full_simp_tac

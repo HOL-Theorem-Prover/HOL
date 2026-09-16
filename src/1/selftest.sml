@@ -311,7 +311,7 @@ val int_ty = let val () = new_type ("int", 0)
                mk_thy_type{Thy = thy, Tyop = "int", Args = []}
              end
 val _ =
-    case Lib.total (VALID (HO_MATCH_MP_TAC th)) ([], goal) of
+    case Lib.total (runtac (VALID (HO_MATCH_MP_TAC th))) ([], goal) of
       SOME ([([],subgoal)],_) => if aconv subgoal expected then OK()
                                  else die ""
     | _ => die ""
@@ -633,7 +633,7 @@ end handle InternalDie s => die s
 val _ = let
   val _ = tprint "REWRITE with T (if this appears to hang it has failed)"
   val t = mk_disj(mk_var("p", bool),T)
-  val (sgs,vfn) = REWRITE_TAC [TRUTH] ([], t)
+  val (sgs,vfn) = runtac (REWRITE_TAC [TRUTH]) ([], t)
 in
   if null sgs andalso aconv (concl (vfn [])) t then OK()
   else die ""
@@ -688,7 +688,8 @@ end
 
 val _ = tprint "Testing (foo THENL [...]) when foo solves"
 val _ = require (check_result (fn _ => true))
-                (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``)
+                (runtac (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]))
+                ([], ``T``)
 
 val _ = tprint "Testing save_thm rejecting names"
 val badnames = ["::", "nil", "true", "false", "ref", "="]
@@ -705,10 +706,10 @@ val _ = let
   val uth = UNDISCH_ALL th ;
 
   val g = ([], ``p ==> q``) : goal ;
-  val ([g'], _) = STRIP_TAC g ;
-  val ([], _) = (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) g' ;
-  val ([_], _) = (VALIDATE (FIRST (map ACCEPT_TAC [uth', uth]))) g' ;
-  val true = (VALID (FIRST (map ACCEPT_TAC [uth', uth])) g' ; false)
+  val ([g'], _) = runtac STRIP_TAC g ;
+  val ([], _) = runtac (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) g' ;
+  val ([_], _) = runtac (VALIDATE (FIRST (map ACCEPT_TAC [uth', uth]))) g' ;
+  val true = (runtac (VALID (FIRST (map ACCEPT_TAC [uth', uth]))) g' ; false)
     handle HOL_ERR _ => true ;
 in OK()
 end handle _ => die ""
@@ -721,13 +722,13 @@ val _ = let
   val _ = tprint "Testing VALIDATE (2)"
   val g = ([], ``(p ==> q) ==> r``) : goal
   val tac = STRIP_TAC THEN VALIDATE (POP_ASSUM (ASSUME_TAC o UNDISCH))
-  val (ngs, vf) = VALID tac g
+  val (ngs, vf) = runtac (VALID tac) g
 
   val tac1 = (VALIDATE (ASSUME_TAC (ASSUME ``x /\ y``)))
   val tac2 = (SUBGOAL_THEN ``x /\ y`` ASSUME_TAC )
 
-  val (ngs1, _) = VALID tac1 g
-  val (ngs2, _) = VALID tac2 g
+  val (ngs1, _) = runtac (VALID tac1) g
+  val (ngs2, _) = runtac (VALID tac2) g
 in
   if ListPair.allEq goal_equal (ngs1, ngs2) then OK()
   else die "final equality"
@@ -792,7 +793,7 @@ val _ = let
     ``!x u. ^P u x ==> !y. ^Q w x y ==> ^R x (^f y)``)
   val g = ([] : term list, ``^R a (^f b) : bool``)
   val exsg1 = ``?u. ^P u a`` and exsg2 = ``?w. ^Q w a b``
-  val (sgs, vf) = irule th g
+  val (sgs, vf) = runtac (irule th) g
   val verdict =
       case sgs of
           [([], sg)] => let val (sg1,sg2) = dest_conj sg
@@ -808,7 +809,7 @@ val _ = let
   val _ = tprint "irule 2 (shared existential)"
   val g = ([]: term list, ``a:'a = b``)
   val expected = ``?y:'a. (a = y) /\ (y = b)``
-  val (sgs, vf) = irule EQ_TRANS g
+  val (sgs, vf) = runtac (irule EQ_TRANS) g
 in
   case sgs of
       [([], sg)] => if aconv sg expected then OK() else die ""
@@ -820,7 +821,7 @@ val _ = let
   val P = nc("P", ``:'a -> bool``)
   val Q = nc("Q", ``:'a -> bool``)
   val g = ([``!x. ^P x ==> ^Q x``], ``^Q (b:'a)``)
-  val (sgs, vf) = POP_ASSUM irule g
+  val (sgs, vf) = runtac (POP_ASSUM irule) g
   val rth = vf (map mk_thm sgs)
   val _ = aconv (concl rth) (#2 g) andalso length (hyp rth) = 1 andalso
           aconv (hd (hyp rth)) (hd (#1 g)) orelse
@@ -836,7 +837,7 @@ val _ = let
   val _ = tprint "irule 4 (thm from goal, extra vars)"
   val g = ([``!x:'a y:'a. PP x y ==> QQ y (f y:'a)``],
            ``(QQ:'a -> 'a -> bool) a (f a)``)
-  val (sgs, vf) = POP_ASSUM irule g
+  val (sgs, vf) = runtac (POP_ASSUM irule) g
   val rth = vf (map mk_thm sgs)
 in
   case sgs of
@@ -865,7 +866,7 @@ val _ = let
   val tm = ``P x /\ U u ==> T' w ==> S' u w /\ V v ==> IMAGE f s x``
   val thm = mk_thm ([], tm)
   val g = ``IMAGE a b c``
-  val (sgs, vf) = irule thm ([], g)
+  val (sgs, vf) = runtac (irule thm) ([], g)
   val r_thm = vf (map mk_thm sgs)
 in
   if aconv (concl r_thm) g then OK() else die ""
@@ -877,7 +878,7 @@ val _ = let
                P x /\ U u ==> T' w ==> S' u w /\ V v ==> IMAGE f s x``
   val thm = ASSUME tm
   val g = ``IMAGE (a:'a -> 'b) b c``
-  val (sgs, vf) = irule thm ([], g)
+  val (sgs, vf) = runtac (irule thm) ([], g)
   val r_thm = vf (map mk_thm sgs)
 in
   if aconv (concl r_thm) g then OK() else die ""
@@ -920,7 +921,7 @@ val _ = let
 in
   require_msg (checktactic (fn _ => true) (fn th => concl th ~~ g))
               print_tacresult
-              (irule thm)
+              (runtac (irule thm))
               ([], g)
 end
 
@@ -948,7 +949,7 @@ val _ = let
   val _ = tprint "mp_then + goal_assum 1"
   val asl = [``P (x:'a):bool``, ``R (ARB:'b) (y:'a):bool``]
   val g = (asl, ``?x:'a y:'b. Q x (f y : 'c) /\ R y x``)
-  val (res, _) = goal_assum (first_assum o mp_then Any mp_tac) g
+  val (res, _) = runtac (goal_assum (first_assum o mp_then Any mp_tac)) g
   val expected = ``Q (y:'a) (f (ARB:'b) : 'c) : bool``
 in
   case res of
@@ -970,7 +971,7 @@ val _ = let
   val _ = tprint "drule 1"
   val asl = [``P (c:ind):bool``, ``!x:ind. P x ==> ?y:'a. Q x y``]
   val g = (asl, ``?a:ind (b:'a). Q a b``)
-  val (res, _) = first_assum drule g
+  val (res, _) = runtac (first_assum drule) g
   val expectedg = ``(?y:'a. Q (c:ind) y) ==> ?a b. Q a b``
 in
   case res of
@@ -994,7 +995,7 @@ val _ = let
   val th = mk_thm([], ``!x l:'a list. (<) x (LENGTH l) ==> (<) x some_n``)
   val asl = [``(<) v (LENGTH (m:ind list))``]
   val g = (asl, ``?a:ind (b:'a). Q a b``)
-  val (res, _) = drule th g
+  val (res, _) = runtac (drule th) g
   val expectedg = ``(<) v some_n ==> ?a:ind b:'a. Q a b``
 in
   case res of
@@ -1013,7 +1014,7 @@ val _ = let
   val _ = tprint "drule 3"
   val asl = [``~p ==> q``, ``~p``]
   val g = (asl, ``r:bool``)
-  val (res, _) = pop_assum drule g
+  val (res, _) = runtac (pop_assum drule) g
   val expectedg = ``q ==> r``
 in
   case res of
@@ -1033,7 +1034,8 @@ val _ = let
   val _ = tprint "mp_then (concl) 1"
   val asl = [``p ==> q``, ``~q``]
   val g = (asl, ``r:bool``)
-  val (res, _) = pop_assum (first_assum o mp_then Concl mp_tac) g
+  val (res, _) =
+      runtac (pop_assum (first_assum o mp_then Concl mp_tac)) g
   val expectedg = ``(p ==> F) ==> r``
 in
   case res of
@@ -1053,7 +1055,9 @@ val _ = let
   val _ = tprint "mp_then (concl) 2"
   val asl = [``p ==> ~q``, ``q:bool``]
   val g = (asl, ``r:bool``)
-  val eres = Exn.capture (#1 o pop_assum (first_assum o mp_then Concl mp_tac)) g
+  val eres =
+      Exn.capture
+        (#1 o runtac (pop_assum (first_assum o mp_then Concl mp_tac))) g
   val expectedg = ``(p ==> F) ==> r``
 in
   case eres of
@@ -1075,7 +1079,8 @@ val _ = let
   val _ = tprint "mp_then (pat) 1"
   val asl = [``P (x:'a) /\ ~p /\ r ==> ~q``, ``~p:bool``, ``r:bool``]
   val g = (asl, ``r:bool``)
-  val (res, _) = pop_assum (first_assum o mp_then (Pat `$~`) mp_tac) g
+  val (res, _) =
+      runtac (pop_assum (first_assum o mp_then (Pat `$~`) mp_tac)) g
   val expectedg = ``(P(x:'a) /\ r ==> ~q) ==> r``
 in
   case res of
@@ -1097,7 +1102,9 @@ val _ = let
   val asl = [``!x. P (x:'a) /\ ~p /\ r ==> ~q``, ``P(c:'a):bool``, ``r:bool``]
   val g = (asl, ``r:bool``)
   val (res, _) =
-      pop_assum (first_assum o mp_then (Pat `P (x:'a) : bool`) mp_tac) g
+      runtac
+        (pop_assum (first_assum o mp_then (Pat `P (x:'a) : bool`) mp_tac))
+        g
   val expectedg = ``(~p /\ r ==> ~q) ==> r``
 in
   case res of
@@ -1124,7 +1131,7 @@ val _ = let
              ``foo (a:ti) (x:'a -> bool):bool``, ``bar (x:'a -> bool):bool``]
   val g = (List.rev asl, ``gg (a:ti):bool``)
   val (res, _) =
-      first_x_assum (first_assum o mp_then (Pat `EVERY`) mp_tac) g
+      runtac (first_x_assum (first_assum o mp_then (Pat `EVERY`) mp_tac)) g
   val expectedg = ``(!x':ti. foo x' (x:'a -> bool) ==> gg x') ==> gg a``
   val expectedasl = [``bar (x:'a -> bool):bool``,
                      ``foo (a:ti) (x:'a -> bool):bool``,
@@ -1154,7 +1161,7 @@ val _ = let
   val g = boolSyntax.F
   val tac = first_x_assum (first_x_assum o mp_then (Pat ‘gh567’) assume_tac)
 in
-  case verdict tac (fn _ => ()) (asl,g) of
+  case verdict (runtac tac) (fn _ => ()) (asl,g) of
       FAIL ((), e) => die ("Got exception: " ^ General.exnMessage e)
     | PASS (sgs, _) =>
       if list_eq (pair_eq (list_eq aconv) aconv) sgs [([F], F)] then
@@ -1169,7 +1176,7 @@ val _ = let
              ``P (c:ind):bool``, ``R (d:ind):bool``,
              ``P (d:ind):bool``]
   val g = (asl, ``?a:ind (b:'a). Q a b``)
-  val (res, _) = first_assum drule_all g
+  val (res, _) = runtac (first_assum drule_all) g
   val expectedg = ``(?y:'a. Q (d:ind) y) ==> ?a b. Q a b``
 in
   case res of
@@ -1195,7 +1202,7 @@ in
   require_pretty_msg
     (check_result (fn r => ListPair.allEq goal_equal ([expected], r)))
     pp_goals
-    (#1 o VALID (first_x_assum drule_all))
+    (#1 o runtac (VALID (first_x_assum drule_all)))
     g
 end
 
@@ -1210,7 +1217,7 @@ in
   require_pretty_msg
     (check_result (fn r => ListPair.allEq goal_equal ([expected], r)))
     pp_goals
-    (#1 o VALID (first_x_assum drule_all))
+    (#1 o runtac (VALID (first_x_assum drule_all)))
     g
 end
 
@@ -1219,7 +1226,7 @@ val _ = let
   val imp = ``!x:ind. P x /\ R x ==> ?y:'a. Q x y``
   val asl = [imp, ``P (c:ind):bool``, ``R (d:ind):bool``, ``P (d:ind):bool``]
   val g = (asl, ``?a:ind (b:'a). Q a b``)
-  val (res, _) = first_assum dxrule_all g
+  val (res, _) = runtac (first_assum dxrule_all) g
   val expectedg = ``(?y:'a. Q (d:ind) y) ==> ?a b. Q a b``
   val expected_asl = [imp, ``P (c:ind):bool``]
 in
@@ -1314,8 +1321,9 @@ val _ = app condprinter_test condprinter_tests
 
 val _ = let
   open Exn
-  fun badtac (asl,g) = ([], fn [] => ASSUME ``p:bool`` | _ => raise Fail "")
-  val vtac = VALID badtac
+  fun badtac (asl,g) (_ : Context.t) =
+      ([], fn [] => ASSUME ``p:bool`` | _ => raise Fail "")
+  val vtac = runtac (VALID badtac)
   fun checkmsg P f (os, ofn, m) = os = "Tactical" andalso ofn = f andalso P m
   fun checkv P = checkmsg P "VALID"
   fun checkvl P = checkmsg P "VALID_LT"
@@ -1420,7 +1428,7 @@ in
   require_msg
     (check_result (goals_eq expected o fst))
     (goals_toString o fst)
-    (VALID ABS_TAC)
+    (runtac (VALID ABS_TAC))
     ([], t)
 end;
 
@@ -1433,7 +1441,7 @@ in
   require_msg
     (check_result (goals_eq expected o fst))
     (goals_toString o fst)
-    (EQ_MP_TAC th)
+    (runtac (EQ_MP_TAC th))
     ([], t)
 end;
 
@@ -1446,7 +1454,7 @@ in
   require_msg
     (check_result (goals_eq expected o fst))
     (goals_toString o fst)
-    (VALID (EQ_MP_TAC th))
+    (runtac (VALID (EQ_MP_TAC th)))
     ([], t)
 end;
 
@@ -1504,7 +1512,8 @@ val _ = let
       List.all (List.all (fn v => HOLset.member(orig_fvs, v)) o fvs_of)
                subgoals
   val ok =
-      let val (subgoals, _) = DEP_ONCE_REWRITE_TAC [rule] ([], goal_tm)
+      let val (subgoals, _) =
+              runtac (DEP_ONCE_REWRITE_TAC [rule]) ([], goal_tm)
       in no_new_fvs subgoals end
       handle HOL_ERR _ => true
 in

@@ -56,7 +56,7 @@ fun OE_REPEATC (c :conv) (t :term) :thm =
    tactic applying the laws for WEAK_EQUIV (i.e. c is a conversion for strong
    equivalence). *)
 fun OE_LHS_CONV_TAC (c :conv) :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if opt ~~ ``WEAK_EQUIV`` then
@@ -74,7 +74,7 @@ fun OE_LHS_CONV_TAC (c :conv) :tactic =
   end;
 
 fun OE_RHS_CONV_TAC (c :conv) :tactic =
-  fn (asl,w) => let
+  fn (asl,w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if (opt ~~ ``WEAK_EQUIV``) then

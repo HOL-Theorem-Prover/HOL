@@ -521,14 +521,14 @@ struct
       handle Feedback.HOL_ERR _ =>
       SOSLib.NUM_SOS_RULE tm
 
-  fun NLA_TAC (goal as (_, term)) =
+  fun NLA_TAC (goal as (_, term)) ctxt =
     if term_contains_real_ty term then
-      NLArith.NLA_TAC goal
+      NLArith.NLA_TAC goal ctxt
       handle Feedback.HOL_ERR _ =>
-      SOSLib.REAL_SOS_TAC goal
+      SOSLib.REAL_SOS_TAC goal ctxt
     else
-      SOSLib.INT_SOS_TAC goal
+      SOSLib.INT_SOS_TAC goal ctxt
       handle Feedback.HOL_ERR _ =>
-      SOSLib.NUM_SOS_RULE_TAC goal
+      SOSLib.NUM_SOS_RULE_TAC goal ctxt
 
 end

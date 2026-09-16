@@ -12,6 +12,7 @@ datatype keyed_thm_set = KeyedThmSet of
    export_thm : string -> unit,
    thy_thms : string -> thm list,
    get_map : unit -> keyed_thm_map,
+   get_map_of : Context.t -> keyed_thm_map,
    map_by_theory : {thyname : string} -> keyed_thm_map option}
 
 fun listdict_add (d, k, e) =
@@ -61,7 +62,7 @@ fun new {settype, key_part} =
           add0 origin theorem dict
       | apply_delta0 _ _ dict = dict
     val {update_global_value, record_delta, get_deltas, get_global_value,
-         DB, ...} =
+         get_global_value_of, DB, ...} =
       ThmSetData.export_with_ancestry {
         settype = settype,
         delta_ops = {apply_to_global = apply_delta0 "apply_delta",
@@ -83,13 +84,15 @@ fun new {settype, key_part} =
   in
     KeyedThmSet
       {add = add, export_thm = export_thm, thy_thms = thy_thms,
-       get_map = get_global_value, map_by_theory = DB}
+       get_map = get_global_value, get_map_of = get_global_value_of,
+       map_by_theory = DB}
   end
 
 fun add (KeyedThmSet {add, ...}) = add
 fun export_thm (KeyedThmSet {export_thm, ...}) = export_thm
 fun thy_thms (KeyedThmSet {thy_thms, ...}) = thy_thms
 fun get_map (KeyedThmSet {get_map, ...}) = get_map
+fun get_map_of (KeyedThmSet {get_map_of, ...}) = get_map_of
 fun map_by_theory (KeyedThmSet {map_by_theory, ...}) = map_by_theory
 
 end (* struct *)

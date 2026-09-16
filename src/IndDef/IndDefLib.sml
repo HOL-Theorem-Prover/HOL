@@ -50,7 +50,8 @@ in
   (tm, map locn_of_absyn clauses)
 end
 
-fun term_of q = term_of_absyn (Parse.Absyn q)
+fun term_of_in ctxt q = term_of_absyn (Parse.Absyn_in ctxt q)
+fun term_of q = term_of_in (Context.snapshot()) q
 
 end;
 
@@ -69,6 +70,7 @@ val add_rule_induction = KeyedThmSet.add rule_induction_set
 val export_rule_induction = KeyedThmSet.export_thm rule_induction_set
 val thy_rule_inductions = KeyedThmSet.thy_thms rule_induction_set
 val rule_induction_map = KeyedThmSet.get_map rule_induction_set
+val rule_induction_map_of = KeyedThmSet.get_map_of rule_induction_set
 val rule_induction_map_by_theory = KeyedThmSet.map_by_theory rule_induction_set
 
 (* ----------------------------------------------------------------------
@@ -444,12 +446,15 @@ fun isolate_to_front numSchematics Rt (G as (_, gt)) =
    ---------------------------------------------------------------------- *)
 
 (* turn off verbiage because Raise will redisplay any exceptions *)
-val parse =
-    term_of |> trace ("syntax_error", 0)
-            |> trace ("show_typecheck_errors", 0)
+fun parse_in ctxt =
+    term_of_in ctxt |> trace ("syntax_error", 0)
+                    |> trace ("show_typecheck_errors", 0)
+fun parse q = parse_in (Context.snapshot()) q
 
-fun xHol_reln name q =
-    Hol_mono_reln name (!the_monoset) (parse q)
+(* the relation's quote is parsed against the supplied context; the
+   monotonicity and rule-induction proofs below still read ambient state *)
+fun xHol_reln name q ctxt =
+    Hol_mono_reln name (!the_monoset) (parse_in ctxt q)
     handle e =>
     render_exn (wrap_exn "IndDefLib" "xHol_reln" e)
 

@@ -350,6 +350,85 @@ end;
 
 
 (* -------------------------------- *)
+(*      LSP terminal                *)
+(* -------------------------------- *)
+
+(* Delimiters for `lsp_terminal`, and the only thing `lsp_segments`
+   looks for.  ASCII control characters, which HOL's printers do not
+   otherwise emit: a constant whose *name* contained one would confuse
+   the reader below and nothing else would notice. *)
+val lspOpen = #"\001" and lspSep = #"\002" and lspClose = #"\003"
+
+type pp_segment = {text: string, kind: string, name: string, ty: string}
+
+val lsp_terminal = let
+  open smpp
+  val name = "lsp_terminal"
+  fun tystr (_, f) = f ()
+  fun wrap (kind, nm, ty) (s, sz) =
+      add_stringsz (String.concat [str lspOpen, kind, str lspSep, nm,
+                                   str lspSep, ty, str lspSep], 0) >>
+      add_stringsz (s, sz) >>
+      add_stringsz (str lspClose, 0)
+  fun add_xstring {s, sz, ann} =
+      if not (!backend_use_annotations) orelse not (isSome ann) then
+        add_ssz (s, sz)
+      else let
+        val sz = case sz of NONE => UTF8.size s | SOME sz => sz
+      in
+        case valOf ann of
+            FV (_, tyf) => wrap ("fv", "", tyf ()) (s, sz)
+          | BV (_, tyf) => wrap ("bv", "", tyf ()) (s, sz)
+          | Const {Thy, Name, Ty} =>
+              wrap ("const", Thy ^ "$" ^ Name, tystr Ty) (s, sz)
+          | SymConst {Thy, Name, Ty} =>
+              wrap ("const", Thy ^ "$" ^ Name, tystr Ty) (s, sz)
+          | TyV => wrap ("tyvar", "", "") (s, sz)
+          | TyOp f => wrap ("tyop", f (), "") (s, sz)
+          | TySyn f => wrap ("tysyn", f (), "") (s, sz)
+          | _ => add_stringsz (s, sz)
+      end
+in
+  {extras = {name           = name,
+             tm_grammar_upd = (fn g => g),
+             ty_grammar_upd = (fn g => g)},
+   add_break      = #add_break   raw_terminal,
+   add_newline    = #add_newline raw_terminal,
+   ublock         = #ublock raw_terminal,
+   add_string     = #add_string  raw_terminal,
+   add_xstring    = add_xstring,
+   (* styles say in colour what the segments say in words *)
+   ustyle         = (fn _ => fn p => p)}
+end;
+
+fun lsp_segments str = let
+  val n = String.size str
+  fun plain (i, from, acc) =
+      if i >= n then List.rev (if i > from then mk (from, i, "", "", "") :: acc
+                               else acc)
+      else if String.sub (str, i) = lspOpen then
+        marked (i + 1,
+                if i > from then mk (from, i, "", "", "") :: acc else acc)
+      else plain (i + 1, from, acc)
+  and mk (from, stop, k, nm, ty) =
+      {text = String.substring (str, from, stop - from),
+       kind = k, name = nm, ty = ty}
+  and field i = let
+        fun go j = if j >= n orelse String.sub (str, j) = lspSep then j
+                   else go (j + 1)
+        val j = go i
+      in (String.substring (str, i, j - i), j + 1) end
+  and marked (i, acc) = let
+        val (k, i) = field i
+        val (nm, i) = field i
+        val (ty, i) = field i
+        fun go j = if j >= n orelse String.sub (str, j) = lspClose then j
+                   else go (j + 1)
+        val j = go i
+      in plain (j + 1, j + 1, mk (i, j, k, nm, ty) :: acc) end
+in plain (0, 0, []) end
+
+(* -------------------------------- *)
 (* html terminal                    *)
 (* -------------------------------- *)
 

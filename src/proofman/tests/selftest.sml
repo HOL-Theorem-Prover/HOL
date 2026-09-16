@@ -263,7 +263,7 @@ val _ = let
   fun Cases t = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX)
 in
   require_msg (check_result (list_eq goal_eq expected)) goalprint
-              (fst o REPEAT (fv_term Cases)) goal
+              (fst o runtac (REPEAT (fv_term Cases))) goal
 end
 
 val _ = let
@@ -329,7 +329,7 @@ val _ = let
   fun Cases t g = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX) g
 in
   require_msg (check_result (list_eq goal_eq expected)) goalprint
-              (fst o first_fv_term Cases) goal
+              (fst o runtac (first_fv_term Cases)) goal
 end
 
 val _ = let
@@ -339,7 +339,7 @@ val _ = let
   val G = ([] : term list, “T /\ p <=> p”)
   val tac = VALID (goal_assum (resolve_then Any mp_tac ith))
 in
-  require_msg (check_result null) goalprint (fst o tac) G
+  require_msg (check_result null) goalprint (fst o runtac tac) G
 end
 
 val _ = let
@@ -350,7 +350,7 @@ in
   shouldfail {checkexn = is_struct_HOL_ERR "Tactic",
               printarg = K "resolve_then fails with HOL_ERR",
               printresult = goalprint,
-              testfn = #1 o VALID tac} ([a], “p \/ q”)
+              testfn = #1 o runtac (VALID tac)} ([a], “p \/ q”)
 end
 
 val _ = let
@@ -363,7 +363,7 @@ val _ = let
   fun verdict [(asl',sg)] = tml_eq asl' asl andalso sg ~~ “(u:'b = v) ==> p”
     | verdict _ = false
 in
-  require_msg (check_result verdict) goalprint (fst o tac) G
+  require_msg (check_result verdict) goalprint (fst o runtac tac) G
 end
 
 val _ = let
@@ -376,14 +376,15 @@ val _ = let
     | verdict _ = false
 in
   require_msg (check_result verdict) goalprint
-              (fst o POP_LAST_ASSUM (REWRITE_TAC o single)) (asl,g)
+              (fst o runtac (POP_LAST_ASSUM (REWRITE_TAC o single)))
+              (asl,g)
 end
 
 val _ = let
   open boolLib
 in
   shouldfail {checkexn = is_struct_HOL_ERR "Tactical",
-              testfn = fst o POP_LAST_ASSUM (REWRITE_TAC o single),
+              testfn = fst o runtac (POP_LAST_ASSUM (REWRITE_TAC o single)),
               printresult = goalprint,
               printarg = fn _ => "POP_LAST_ASSUM fails (no assums)"}
              ([], “(P:'a -> bool) x”)
@@ -416,3 +417,111 @@ val _ = dotests "With IfNotTop{realonly=false}" (IfNotTop{realonly=false})
                 [foo1y, foo2n, foo3n]
 val _ = dotests "With Always" Always [foo1y, foo2y, foo3y]
 val _ = dotests "With OnlyIfNecessary" OnlyIfNecessary [foo1n, foo2n, foo3n]
+
+(* A repeat frame closes by replaying its body per goal and assembling
+   the validations itself.  It used to hand each goal's subgoal
+   theorems to the body's validation in reverse, so a body that splits
+   a goal proved the wrong thing -- here `p /\ q' for the goal
+   `q /\ p', which typechecks and so went unnoticed. *)
+val _ = tprint "select_lt gives the selected goals their own theorems"
+val _ =
+    let
+      (* `>>~-' selects the goals a pattern matches, leaves the rest
+         stashed, and runs its tactic on the selection.  The selected
+         and stashed counts differ here -- one is taken, two are left
+         -- which is what the bug needed: the focus was handed the
+         *stashed* goals' validation, so `finish' fed it the wrong
+         number of theorems and `Lib.split_after' raised.  Only
+         `finish' runs validations, so the goals looked right the whole
+         way and a completed proof reported "No subgoals but proof
+         incomplete". *)
+      val tm = “p ∧ q ∧ r ⇒ p ∧ q ∧ r”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = ex (REPEAT STRIP_TAC) (goalFrag.new_goal ([], tm))
+      val st = goalFrag.open_select_lt st
+      (* Succeeds on the `p' goal and fails on the other two, which is
+         how the selection is made. *)
+      val st = ex (ACCEPT_TAC (ASSUME “p:bool”)) st
+      val st = goalFrag.next_select_lt st
+      val st = goalFrag.close_paren (goalFrag.open_paren st)
+      val st = goalFrag.close_paren st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+      val th = goalFrag.finish st
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end
+
+val _ = tprint "select_lt keeps several selected goals in order"
+(* The goals below are built directly rather than by stripping a term:
+   `REPEAT STRIP_TAC' splits the conclusion as well as the antecedent,
+   which leaves only atoms, and a selection made by `CONJ_TAC' then
+   selects nothing at all.  A vacuous selection exercises none of the
+   reassembly these three tests are about. *)
+val select_asms = [“p:bool”, “q:bool”, “r:bool”, “s:bool”]
+fun select_goals ws = map (fn w => (select_asms, w)) ws
+fun select_check gs ths =
+    if ListPair.allEq (fn ((_, w), th) => aconv (concl th) w) (gs, ths)
+    then OK()
+    else die ("proved " ^
+              String.concatWith ", " (map (term_to_string o concl) ths))
+(* Select with `tac', solve every resulting subgoal from the
+   assumptions, and hand back the theorems for the original goals. *)
+fun select_run tac gs =
+    let
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = goalFrag.open_select_lt (goalFrag.new_goal_list gs)
+      val st = goalFrag.next_select_lt (ex tac st)
+      val st = goalFrag.open_paren st
+      val st = goalFrag.close_paren (ex (FIRST_ASSUM ACCEPT_TAC) st)
+      val st = goalFrag.close_paren st
+    in
+      goalFrag.finish_list (ex (FIRST_ASSUM ACCEPT_TAC) st)
+    end
+
+val _ =
+    let
+      (* Two goals selected, one stashed, and the selected ones are
+         told apart by their conclusions -- so a validation that pairs
+         them the wrong way round produces the wrong theorem instead of
+         quietly working, which is what one selected goal cannot
+         show. *)
+      val gs = select_goals [“p ∧ q”, “r ∧ s”, “q:bool”]
+    in select_check gs (select_run CONJ_TAC gs) end
+
+val _ = tprint "select_lt reassembles an interleaved selection"
+val _ =
+    let
+      (* The selected goals are the 1st and 3rd, so the selection is
+         interleaved with what it leaves behind -- which is what a
+         pattern like `VAR v' does to the goals of an induction.  A
+         contiguous selection cannot tell a validation that reassembles
+         in the wrong order from one that does not. *)
+      val gs = select_goals [“p ∧ q”, “r:bool”, “s ∧ p”]
+    in select_check gs (select_run CONJ_TAC gs) end
+
+val _ = tprint "select_lt runs each selected goal's own validation"
+val _ =
+    let
+      (* The selected goals split into *different numbers* of subgoals
+         (two and three), so the validations cannot be swapped without
+         also mis-splitting the theorem list.  Selections whose goals
+         split alike can survive being paired the wrong way round. *)
+      val gs = select_goals [“p ∧ q”, “r ∧ s ∧ p”, “q:bool”]
+    in select_check gs (select_run (CONJ_TAC THEN TRY CONJ_TAC) gs) end
+
+val _ = tprint "close_repeat pairs subgoals with their own theorems"
+val _ =
+    let
+      val tm = “∀p q. p ∧ q ⇒ q ∧ p”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = goalFrag.open_repeat (goalFrag.new_goal ([], tm))
+      val st = goalFrag.close_repeat (ex STRIP_TAC st)
+      val th = goalFrag.finish (ex (FIRST_ASSUM ACCEPT_TAC) st)
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end

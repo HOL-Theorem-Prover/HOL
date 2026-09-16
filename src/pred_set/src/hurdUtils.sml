@@ -445,8 +445,6 @@ type goal = term list * term
 type conv = term -> thm
 type rule = thm -> thm
 type validation = thm list -> thm
-type tactic = goal -> goal list * validation
-type thm_tactic = thm -> tactic
 type vars = term list * hol_type list
 type vterm = vars * term
 type vthm = vars * thm
@@ -918,7 +916,7 @@ val DISCH_CONJUNCTS_TAC = REPEAT DISCH_CONJ_TAC >> DISCH_TAC
 (* Tacticals.                                                            *)
 (* --------------------------------------------------------------------- *)
 
-fun PURE_CONV_TAC conv :tactic = fn (asms,g) =>
+fun PURE_CONV_TAC conv :tactic = fn (asms,g) => fn _ (* ctxt *) =>
    let
      val eq_th = QCONV conv g
    in
@@ -1010,7 +1008,7 @@ fun forward_just ths th0 =
     th2
   end
 
-fun FORWARD_TAC f (asms, g:term) =
+fun FORWARD_TAC f (asms, g:term) (_ : Context.t) =
   let
     val ths = f (map ASSUME asms)
   in
