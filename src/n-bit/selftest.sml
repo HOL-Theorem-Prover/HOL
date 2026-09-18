@@ -689,4 +689,9 @@ val _ = List.app convtest [
     ]
 
 
+val _ = convtest
+  ("words_compset ALL_DISTINCT singleton",
+   computeLib.CBV_CONV wordsLib.words_compset,
+   “ALL_DISTINCT [NONE : num option]”, “T”)
+
 val _ = OS.Process.exit OS.Process.success
