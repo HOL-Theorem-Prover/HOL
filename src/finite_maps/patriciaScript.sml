@@ -1244,8 +1244,7 @@ Proof
 QED
 
 val _ = computeLib.add_persistent_funs
-  ["list.LIST_TO_SET_THM",
-   "pred_set.EMPTY_DELETE",
+  ["pred_set.EMPTY_DELETE",
    "pred_set.DELETE_INSERT",
    "DELETE_UNION",
    "pred_set.FINITE_EMPTY",
