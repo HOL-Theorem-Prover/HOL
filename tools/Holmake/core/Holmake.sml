@@ -2449,12 +2449,16 @@ fun print_dispatch_order depgraph =
       val times = target_times.load
                     { root = HMProject.find_root
                                { start = OS.FileSys.getDir() } }
+      fun target_path (nI : 'a HM_DepGraph.nodeInfo) =
+          OS.Path.concat (hmdir.toAbsPath (#dir nI),
+                          Holmake_tools.fromFile
+                            (hm_target.filepart (#target nI)))
       fun cost_of (nI : 'a HM_DepGraph.nodeInfo) =
           case #command nI of
               HM_DepGraph.BuiltInCmd
                 (HM_DepGraph.BIC_BuildScript fp, _) =>
-                target_times.theory_cost times fp
-            | _ => 0.0
+                target_times.cost times fp
+            | _ => target_times.cost times (target_path nI)
       val cp_weight = HM_DepGraph.compute_cp_weights cost_of depgraph
       fun loop g =
           case HM_DepGraph.find_best_runnable_pred

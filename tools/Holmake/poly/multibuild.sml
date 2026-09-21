@@ -301,18 +301,46 @@ fun graphbuild optinfo g =
 
     val tgtcomplete = tgtcompletion_cb dirmap
 
+    val project_root = HMProject.find_root { start = OS.FileSys.getDir() }
+
     (* Missing target-times file → cost_of returns 0.0 everywhere →
        every cp_weight is 0.0 → find_best_runnable_pred ties on
        node_id and behaves identically to the pre-HLFET picker. *)
-    val times = target_times.load
-                  { root = HMProject.find_root
-                             { start = OS.FileSys.getDir() } }
+    val times = target_times.load { root = project_root }
+    fun target_path (nI : GraphExtra.t nodeInfo) =
+        OS.Path.concat (hmdir.toAbsPath (#dir nI),
+                        fromFile (hm_target.filepart (#target nI)))
     fun cost_of (nI : GraphExtra.t nodeInfo) =
         case #command nI of
             BuiltInCmd (BIC_BuildScript fp, _) =>
-              target_times.theory_cost times fp
-          | _ => 0.0
+              target_times.cost times fp
+            (* Keyed by the target rather than by a script.  Without
+               this every selftest weighs nothing and HLFET runs it
+               last however long it takes, which for a directory whose
+               one target is a ten-minute test means the build ends
+               watching it alone. *)
+          | _ => target_times.cost times (target_path nI)
     val cp_weight = HM_DepGraph.compute_cp_weights cost_of g
+
+    (* What this run timed, merged once at the end.  A theory's cost is
+       written to the per-run log by `Theory.sml'; nothing writes
+       anyone else's, so Holmake records what it timed itself.  Child
+       CPU seconds, which is what `Theory.sml' measures too -- a target
+       that only waits therefore still reads as cheap, but a selftest
+       that works reads as what it costs instead of as nothing. *)
+    val timed : (string * real) list ref = ref []
+    fun note_time nI ok t =
+        case #command nI of
+            BuiltInCmd (BIC_BuildScript _, _) => ()  (* Theory.sml's *)
+          | _ =>
+            if not ok orelse t = Time.zeroTime then ()
+            else timed := (Holmake_tools.rel_to_holdir (target_path nI),
+                           Time.toReal t) :: !timed
+    fun record_times () =
+        case project_root of
+            NONE => ()
+          | SOME r =>
+            target_times.merge_entries {root = r, entries = !timed}
 
     fun really_needed nI = #status nI = Pending{needed=true}
     fun b2n true = 1 | b2n false = 0
@@ -429,6 +457,7 @@ fun graphbuild optinfo g =
                                     val g' = updall (g, status)
                                     val ok' = status = Succeeded orelse
                                               keep_going
+                                    val _ = note_time nI ok t
                                     val _ =
                                         tgtcomplete(#dir nI, neededi, thycount,
                                                     ok, t)
@@ -543,6 +572,7 @@ fun graphbuild optinfo g =
                                         else updall RealFail g
                                     val marker = HM_Progress.note_completion
                                                      g' ok2 (#command nI)
+                                    val _ = note_time nI ok2 t
                                     val _ = tgtcomplete(#dir nI, ndi, thyc,
                                                         ok2, t)
                                   in
@@ -632,7 +662,7 @@ fun graphbuild optinfo g =
   in
     do_work(worklist, monitor)
     before (drain_dirreports(); release_all_locks(); oos_report();
-            final_report())
+            final_report(); record_times())
   end
 
 end
