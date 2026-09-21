@@ -519,6 +519,8 @@ end (* local *)
 datatype tac_frag_open
   = FOpen
   | FOpenThen1
+  | FOpenBy of int * int
+  | FOpenSufficesBy of int * int
   | FOpenFirst
   | FOpenRepeat
   | FOpenTacsToLT
@@ -622,10 +624,10 @@ fun linearize isAtom e = let
     | MapFirst _     => (false, FAtom e :: acc')
     | Rename _       => (false, FAtom e :: acc')
     | Subgoal _      => (false, FAtom e :: acc')
-    (* These primitives are semantically more than Subgoal followed by
-       THEN1.  Keep them whole until goalFrag has matching open operations. *)
-    | By _           => (false, FAtom e :: acc')
-    | SufficesBy _   => (false, FAtom e :: acc')
+    | By (q, body) =>
+      asTac (bracket (fn _ => go body (true, [])) (FOpenBy q)) acc
+    | SufficesBy (q, body) =>
+      asTac (bracket (fn _ => go body (true, [])) (FOpenSufficesBy q)) acc
     | LSelectGoal _  => (false, FAtom e :: acc')
     | LSelectGoals _ => (false, FAtom e :: acc')
     | Opaque _       => (false, FAtom e :: acc')
@@ -657,6 +659,8 @@ val unlinearize = let
       if isTac e then mkLThen lhs l (e::acc) else mkLThenL l [e, LThen (lhs, rev acc)]
   fun mkOpen FOpen acc = mkThen acc []
     | mkOpen FOpenThen1 acc = LHeadGoal (mkThen acc [])
+    | mkOpen (FOpenBy q) acc = By (q, mkThen acc [])
+    | mkOpen (FOpenSufficesBy q) acc = SufficesBy (q, mkThen acc [])
     | mkOpen FOpenFirst acc = Try (mkThen acc [])
     | mkOpen FOpenRepeat acc = Repeat (mkThen acc [])
     | mkOpen FOpenTacsToLT acc = LHeadGoal (mkThen acc [])
@@ -705,6 +709,8 @@ fun sliceTacticBlock start stop sliceClose sp e = let
         (case start of
           FOpen => separateE sp ls I acc
         | FOpenThen1 => separateE sp ls (cons (FAtom (First []))) acc
+        | FOpenBy _ => separateE sp ls (cons (FAtom (First []))) acc
+        | FOpenSufficesBy _ => separateE sp ls (cons (FAtom (First []))) acc
         | FOpenNullOk => join sp ls I acc
         | FOpenNthGoal _ => join sp ls I acc
         | FOpenLastGoal => join sp ls I acc

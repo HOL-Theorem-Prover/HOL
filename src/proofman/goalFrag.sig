@@ -30,6 +30,7 @@ val open_select_lt  : frag_tactic
 val open_split_lt   : int -> frag_tactic
 val open_tacs_to_lt : frag_tactic
 val open_then1      : frag_tactic
+val open_then1_with : tactic -> Context.t -> frag_tactic
 val open_first_lt   : frag_tactic
 val next_select_lt  : frag_tactic
 val next_first      : frag_tactic

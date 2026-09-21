@@ -619,8 +619,8 @@ end
 val op by = by0 NO_TAC
 val byA = by0 ALL_TAC
 
-fun (q suffices_by tac) g ctxt =
-  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g ctxt
+fun suffices_by0 k (q, tac) g ctxt =
+  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN k)) g ctxt
   handle e as HOL_ERR herr =>
          if top_function_of herr = "Q_TAC" then raise e
          else
@@ -630,6 +630,9 @@ fun (q suffices_by tac) g ctxt =
                                 \line "^Int.toString l)
              | NONE => raise ERR "suffices_by"
                              "suffices_by's tactic failed to prove goal"
+
+fun (q suffices_by tac) = suffices_by0 NO_TAC (q, tac)
+val suffices_byA = suffices_by0 ALL_TAC
 
 fun subgoal q = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC
 val sg = subgoal

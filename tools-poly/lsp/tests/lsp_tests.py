@@ -2473,6 +2473,53 @@ def test_goalState_inside_proof():
         c.close()
 
 
+def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
+    """A `by' block is structurally step-able without desugaring it to
+    ordinary `sg'.  In particular, the second block's `_ = ...' quotation
+    must be resolved from the labelled equality installed by the first."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_by.sml"
+        src = ("Theory goalstate_by\n"
+               "Ancestors hol arithmetic\n\n"
+               "Theorem by_steps:\n"
+               "  f (x * 1 + y * 2) = z\n"
+               "Proof\n"
+               "  `x * 1 + y * 2 = y * 2 + x`\n"
+               "    by (CONV_TAC $ LAND_CONV $ LAND_CONV $ SCONV [] >>\n"
+               "        CONV_TAC $ LAND_CONV $ REWR_CONV ADD_COMM >>\n"
+               "        REFL_TAC) >>\n"
+               "  `_ = y + x + y` by simp[] >> cheat\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        # Inside the first body, the focus is its quoted equality rather
+        # than the theorem's outer `f ... = z' goal.
+        r1 = _send_goalstate(c, 1021, uri, 7, 9)
+        g1 = r1.get("result")
+        assert_true(g1 is not None and g1.get("goals"),
+                    f"first by body has a goal ({r1!r})")
+        t1 = g1["goals"][0].get("goal", "")
+        assert_true("y * 2" in t1 and "f (" not in t1,
+                    f"first by body focuses its quoted equality ({t1!r})")
+
+        # Entering the second body exercises by0's special wildcard path.
+        # The displayed goal must contain the concrete left side recovered
+        # from the top equality assumption, never the source `_'.
+        r2 = _send_goalstate(c, 1022, uri, 10, 25)
+        g2 = r2.get("result")
+        assert_true(g2 is not None and g2.get("goals"),
+                    f"wildcard by body has a goal ({r2!r})")
+        t2 = g2["goals"][0].get("goal", "")
+        assert_true("y * 2" in t2 and "y + x + y" in t2 and "_" not in t2,
+                    f"wildcard quotation was resolved ({t2!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_outside_proof():
     """Slice B: cursor outside any `Proof … QED` block returns null."""
     c = Client("/tmp")
@@ -7563,6 +7610,8 @@ TESTS = [
     ("statement_edit_still_clears_later_proofs",
                                      test_statement_edit_still_clears_later_proofs),
     ("goalState_inside_proof",       test_goalState_inside_proof),
+    ("goalState_steps_inside_by_and_resolves_wildcard_equality",
+                    test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
                                      test_goalState_between_two_theorems),

@@ -58,6 +58,8 @@ val printTacAsSML: string -> (int * int) tac_expr -> string option
 datatype tac_frag_open
   = FOpen
   | FOpenThen1
+  | FOpenBy of int * int
+  | FOpenSufficesBy of int * int
   | FOpenFirst
   | FOpenRepeat
   | FOpenTacsToLT
@@ -213,8 +215,9 @@ end
     expression is decomposed into:
 
       - FFOpen / FFMid / FFClose markers naming the combinator they
-        open, advance, or close (FOpen / FOpenThen1 / FOpenFirst /
-        FOpenRepeat / FOpenTacsToLT / FOpenNullOk / FOpenNthGoal /
+        open, advance, or close (FOpen / FOpenThen1 / FOpenBy /
+        FOpenSufficesBy / FOpenFirst / FOpenRepeat / FOpenTacsToLT /
+        FOpenNullOk / FOpenNthGoal /
         FOpenLastGoal / FOpenHeadGoal / FOpenSplit / FOpenSelect /
         FOpenFirstLT, with FNext_* and FClose_* counterparts).
       - FAtom : an entire tac_expr held as an indivisible unit.
