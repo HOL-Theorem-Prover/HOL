@@ -230,6 +230,17 @@ fun applyClose c state = case c of
 
 val atomEndByte = TacticSteps.atomEndByte
 
+(* The first non-space at or after `from'.  A wrapper with no closing
+   delimiter of its own ends where its last tactic ends, so there is no
+   position that means "the branch has run but has not closed" -- the
+   run of whitespace up to the next token is that position, which is
+   what a parenthesised branch gets for free from its `)'. *)
+fun nextTokenFrom text from = let
+  val n = size text
+  fun go i = if i < n andalso Char.isSpace (String.sub (text, i))
+             then go (i + 1) else i
+  in go (if from < 0 then 0 else from) end
+
 (* A missing start is not evidence of anything, so treat it as "the
    cursor is not before this". *)
 fun startsAfter cursor start = case start of
@@ -286,12 +297,18 @@ and bracketStartByte te firstInner = case topSpan te of
     | NONE => firstInner ())
 
 (* `lastInner' is a thunk because it is only wanted for a wrapper
-   whose own span is missing, as `LThen1's and `Try's are. *)
-and bracketEndByte te lastInner = case topSpan te of
-    SOME (_, e) => SOME e
+   whose own span is missing, as `LThen1's and `Try's are.  The flag
+   says which happened: a wrapper with no span of its own ends where
+   its body ends, so "the cursor is past the wrapper" and "the body
+   has just run" are the same position, and `walkFrag' has to tell
+   them apart -- see `deferring'. *)
+and bracketEndByteB te lastInner = case topSpan te of
+    SOME (_, e) => SOME (e, false)
   | NONE => (case atomEndByte te of
-      SOME e => SOME e
-    | NONE => lastInner ())
+      SOME e => SOME (e, false)
+    | NONE => Option.map (fn e => (e, true)) (lastInner ()))
+and bracketEndByte te lastInner =
+  Option.map #1 (bracketEndByteB te lastInner)
 
 fun fragSpan frag =
   case (fragStart frag, fragEnd frag) of
@@ -470,8 +487,8 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
   | FBracket (FOpenNullOk, inner, _, _) =>
       walkFrags env state snaps stepIdx inner
   | FBracket (ok, inner, cc, te) =>
-      (case bracketEndByte te (fn () => lastFragEnd inner) of
-        SOME be =>
+      (case bracketEndByteB te (fn () => lastFragEnd inner) of
+        SOME (be, borrowed) =>
           (* Cursor before the combinator: it hasn't run yet, so show
              the goals it is about to act on rather than opening it. *)
           if not replaying andalso
@@ -497,6 +514,28 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                     | SOME state'' =>
                         Done {state = state'', snaps = #snaps r,
                               stepIdx = #stepIdx r})
+            (* Between the branch's end and the next token, the branch
+               has run and nothing else has: report it as finished but
+               not closed, so a solved focus says so.
+
+               `>-' carries no span either way -- for `>- (t)' the
+               parens' extent comes from the body, not the wrapper --
+               so this covers both forms, and the boundary is the next
+               token in both.  `borrowed' excludes only wrappers that do
+               have a span of their own, whose end byte is their own
+               business.
+
+               Deferring is conditional on the close *succeeding*: a
+               `>- tac' that proved nothing must still report where the
+               proof stops, which is what closing it says. *)
+            val deferring =
+              borrowed andalso cursor >= be
+              andalso cursor < nextTokenFrom tacText be
+            fun heldOrClosed r =
+              if deferring andalso isSome (applyClose cc (#state r))
+              then Halted {state = #state r, snaps = #snaps r,
+                           stepIdx = #stepIdx r}
+              else closed r
           in
             if cursor < be then
               (* Open, walk inner as far as cursor lets us; don't close. *)
@@ -522,7 +561,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                  actually stops. *)
               opened (fn state' =>
                 case walkFrags env state' snaps stepIdx inner of
-                  Done r => closed r
+                  Done r => heldOrClosed r
                 | out => out)
           end
       | NONE => (* no end position: bail as opaque *)

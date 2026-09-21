@@ -86,8 +86,179 @@ interchangeable:
     rebuild at all: restart the server and the new source loads.
 
 Because none of it is dependency-tracked, a rename in `DefnBase`,
-`Preterm` or `DB` will not be caught by a build — `tests/lsp_tests.py`
-is what covers it.
+`Preterm` or `DB` would not be caught by a build.  `tests/` is what
+buys that back.
+
+## Testing
+
+`tools-poly/lsp/tests` is not in the build sequence.  It is an
+`INCLUDES` of `src/parallel_builds/core`, which is where
+`HOLSELFTESTLEVEL` is consulted, so `bin/build -t` runs it and a plain
+build does not.  That file's `CLINE_OPTIONS = -r` is what builds each
+directory's top target, so naming the directory is enough.
+
+There rather than in the sequence because the suite is one job that
+spends nearly all of its time waiting on a server rather than on the
+CPU.  As a sequence entry that is minutes of a single core with the
+rest of the build stopped; among the theory builds it is close to
+free.  Each log still fails the build if it fails, and the Moscow ML
+build never looks at any of it.
+
+The directories themselves check nothing: reached through INCLUDES
+they are scanned into that Holmake's graph, and `Holmake` run in one
+of them by hand means run the tests.
+
+  - `lsp-init-selftest.log` — loads the nine files a server `QUse`s at
+    startup.  Loading them *is* the test: it is what notices the rename
+    above.
+  - `tacticparse-selftest.log` — `TacticParse` unit tests.  Driven by
+    `bin/hol` because the module is compiled into the executable by
+    `poly-init2.ML` and a `selftest.exe`, which links sigobj, cannot
+    see it.
+  - `lsp-protocol-selftest.log` — the 148 scenarios in `lsp_tests.py`
+    that need nothing beyond that heap, driving `bin/hol lsp` as a
+    scripted LSP client.
+
+Nine more tests open files needing `src/integer` or `src/sort`, which
+`base-hol` never builds.  Each group has a directory of its own, in
+`tools/sequences/more-theories` **after `src/parallel_builds/core`** —
+the directory that does build those two:
+
+  - `tests/integer` → `lsp-integer-selftest.log` (7 tests)
+  - `tests/sorting` → `lsp-sorting-selftest.log` (2 tests)
+
+Their Holmakefiles `INCLUDES` the source directory, which is how the
+tests find it rather than what pays for it, and depend on the single
+theory each group uses.  Sequencing is doing real work here: beside
+the rest of the suite in `base-hol`, that same INCLUDES would have
+pulled `src/integer` and `src/res_quan` into the core build, which
+stops at `bossLib` and had never built either.  Both sit beside the
+parent directory in `parallel_builds`' INCLUDES (see above), after the
+point at which `src/integer` and `src/sort` have been built.
+
+A test is filed under a group by the `@requires("integer")` decorator,
+which is also what checks the prerequisite, so the group and the check
+cannot drift apart.
+
+Run the suite by hand with
+
+    python3 tools-poly/lsp/tests/lsp_tests.py [test_name ...]
+    python3 tools-poly/lsp/tests/lsp_tests.py --requires integer
+
+It tests the tree it lives in; `HOL_LSP_TEST_REPO` overrides that.
+
+Three things are worth knowing before reading a green run as full
+coverage:
+
+  - **Python is not a HOL build dependency.**  A tree without `python3`
+    logs that the suite was not run and the build carries on.
+  - **A missing prerequisite is a `SKIP`,** counted and named, never a
+    pass — and `--requires <tag>` that selects nothing exits 2, since
+    that means the wiring is broken rather than the tests are fine.
+  - **Holmake keeps objects under `.hol/objs/`** and presents them as
+    if they sat in the directory.  A prerequisite check that looks only
+    at the plain path reports every built directory as unbuilt, which
+    shows up as a whole group quietly skipping.
+
+`sortingTheory` is built by `src/sort`'s own Holmake run and stays
+there: `bin/build` uploads to `sigobj` per *sequence* directory, and a
+directory reached through INCLUDES is not one, so nothing copies it.
+The two tests there write a Holmakefile naming `src/sort` into their
+scratch directory, which is both what a real user's directory looks
+like and the lookup the server already performs.  (`bin/hol lsp` has no
+`-I`-style flag for this.)
+
+## Vocabulary
+
+Several words in this file and in `server.ML` are used in a narrower
+sense than their English one, and two of them name the same machinery
+doing different jobs.
+
+### Threads
+
+**Compile thread**, also **a pass** — `compileThread` in `server.ML`,
+forked per compile by `startCompile`.  One per file, superseded on the
+next edit.
+
+**Pool worker** — the proof-checking pool described under *Proof
+checking* below, on HOL's `Future`.  `poolBusy` asks whether any are
+running.
+
+**Request thread** — one is forked per LSP request, which is why two
+`$/hol/goalState` requests can genuinely be in flight at once.
+
+### Phases of a compile
+
+**Preload** — before the file itself is compiled, what it depends on
+has to be there: `getHoldep` works out which modules it needs,
+`loadPlan` walks the `.uo` graph for the files that implies, and
+`useFiles` `quse`s them.  `link_parents` runs here, so this is where a
+missing ancestor surfaces.
+
+**Elaboration** — compiling the declarations with the fast-oracle prover
+in place.  No tactic is run; see *Proof checking*.
+
+**Replay** — the pool afterwards running, for real, the proofs
+elaboration minted oracles for.
+
+### Operations
+
+**Walk** — the walker (`tactic_walker.ML`) stepping a proof's tactics to
+reach a goal state.  The same machinery serves two callers, so the bare
+word is ambiguous:
+
+  - a **goal-state walk** answers `$/hol/goalState` for the cursor's
+    theorem, which is what the goals pane asks on every cursor move;
+  - the **drain's walk** locates *where* a failed proof fails.
+
+**Drain** — `drainFailures`.  The pool reports a failure against the
+theorem's name; the drain walks each failed proof to find the step it
+stops at and moves the message there.  Failures wait in
+`pendingFailures` until it is safe to walk, because a walk restores
+process-global state.  So "the drain's walk" is the drain doing a walk,
+not a third thing.
+
+### State
+
+**Compile state** — what `captureCompileSnap` bundles: the `Context`,
+`Meta.loadedMods`, and the file's namespace layer.  Process-global,
+which is what the `compileState` lock is for.
+
+**Context** — HOL's own (`src/prekernel/Context.sml`): the term and type
+signatures, the current theory, and the session-data slots.  **The
+theory graph is one of those slots** (`Theory.sml`, `structure Graph`),
+so restoring a Context takes the graph back with it — every theory
+loaded since the snapshot leaves the graph.  Anything that restores has
+to know this.
+
+**Snapshot**, **restore**, **rewind** — a walk captures the current
+state, restores an *earlier* snapshot to get the context its theorem was
+proved in, walks, then restores what it captured.  "Rewind" is that
+middle step.
+
+**declSnapshot** — the per-declaration snapshot kept so a later compile
+can resume mid-file, and so a walk can find the context as of a given
+theorem.
+
+### Three questions that sound alike
+
+| predicate | asks |
+|---|---|
+| `compileRunning` | is a pass alive and not superseded? |
+| `usingCompileState` | is a pass still *using* the compile state?  It stops before the thread exits — see `elaborating`. |
+| `poolBusy` | are workers still replaying proofs? |
+
+The middle one is the precondition for rewinding: both the drain and the
+goal-state walk ask it before touching a snapshot.  A rewind that skips
+it empties the theory graph under a running preload, and the pass's next
+`link_parents` reports a parent that should already be in the graph.
+
+**`depsBlocked`** — what is known about a file's declared dependencies:
+`DepsUnchecked` (no compile has resolved them yet), `DepsLoaded`, or
+`DepsBlocked`.  Three states rather than two because "nobody has looked"
+and "they are loaded" are different answers, and only the second admits
+a walk.  "Blocked" is the user-facing sense: `$/compileBlocked`, and the
+file going quiet until its header changes.
 
 ## Hover
 
@@ -302,8 +473,9 @@ when the theorem statement can't be parsed).  Otherwise:
   "theorem": "<theorem name>",
   "step": <int>,
   "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
-  "pretty": "<full REPL-style render>",
+  "pretty": "<the goals, REPL-style>",
   "context": ["<combinator tag>", ...],
+  "note": <string or null>,
   "status": "ok" | "pending",
   "error": <string or null>
 }
@@ -322,29 +494,54 @@ when the theorem statement can't be parsed).  Otherwise:
   hol4-vscode from a hidden monospace ruler in the webview, re-asking
   when the pane is resized.
 
-- `pretty` — the whole state rendered by HOL's `goalFrag.pp_goalstate`
+The state arrives in three independent pieces, and a client showing
+all three shows what the REPL shows.  They are separate because only
+the last of them is worth scrolling: the goals are listed with the
+current one last, so a pane long enough to scroll is scrolled to its
+end, and anything in the same flow above them goes out of sight.
+
+- `pretty` — **the goals**, rendered by HOL's `goalFrag.pp_goals_only`
   via the VT100 backend, so bound / free variables carry ANSI colour
   escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
-  escapes with `\x1B\[[0-9;]*m` or fall back to `goals`.
+  escapes with `\x1B\[[0-9;]*m` or fall back to `goals`.  What
+  `pp_goalstate` prints *above* the goals is not in here; it is the
+  two fields below.
+- `segments` — the same text again with **what each symbol is**: see
+  below.
 - `context` — the combinator tags naming what is still open around
   the focus, outermost first: `"branch 2 of 3 of THENL"`,
-  `"inside 2 nested >-"`.  `pretty` already prints these above the
-  goals, so a client rendering it verbatim can ignore the field; it
-  is sent separately so a client can pin them somewhere that doesn't
-  scroll, which matters because the goals are listed with the current
-  one last.  Matching the exact strings is also how a client can
-  strip the line back out of `pretty` — a goal may itself begin with
-  a `[`.
-- `status` — `"pending"` when the answer is provisional because the
-  file's own compile hasn't finished.  The walker compiles each
-  tactic against the file's namespace, so until the file's `open`s
-  have run the tactic names aren't there and nothing can be applied;
-  goal-state requests are answered during a compile on purpose (see
-  `goalStateAtPos`), so a client should show what it gets but not
-  treat it as settled.  A tactic whose source doesn't compile never
-  produces an `error` either way: the file's compile reports the real
-  message against that very text, and the walker would only duplicate
-  and misdescribe it.
+  `"inside 2 nested >-"`.  Render them as `[tag] [tag]` to match the
+  REPL.
+- `note` — the line HOL puts above the goals when the focused
+  subgoals have just been proved and stepping out is what makes the
+  next ones visible: `"Focused subgoal(s) solved; remaining after
+  close:"`.  `null` when there is nothing to say.
+
+  Servers before this field sent `context` *and* repeated it at the
+  top of `pretty`; a client that strips the tag line from `pretty`
+  keeps working against both, since the prefix is simply no longer
+  there to find.
+- `status` — `"pending"` means "ask again when the compile is done",
+  and arrives two ways.
+
+  The answer may be *provisional*: the walker compiles each tactic
+  against the file's namespace, so until the file's `open`s have run
+  the tactic names aren't there and nothing can be applied.  Such a
+  reply carries goals, and a client should show what it gets but not
+  treat it as settled.
+
+  Or there may be *no* answer yet, in which case `status` arrives on
+  its own with no other field set.  A walk restores process-global
+  state, so it is refused outright while the ancestors are still
+  loading or a compile owns that state (see `stateNotReady`) — a
+  rewind there empties the theory graph under the running pass.
+  Answering `null` instead would say "no goal state at this position",
+  which reads as a fault in the proof rather than a server that is not
+  ready.
+
+  A tactic whose source doesn't compile never produces an `error`
+  either way: the file's compile reports the real message against that
+  very text, and the walker would only duplicate and misdescribe it.
 - `error` — non-null when the walker gave up (e.g. wall-clock budget
   exceeded); `goals` / `pretty` are empty and clients should render
   the message in place of the state.  A mid-walk partial state is

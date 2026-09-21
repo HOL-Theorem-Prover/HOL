@@ -1,7 +1,24 @@
 structure TacticParse :> TacticParse =
 struct
 
-open Lib
+(* The seven combinators this file wants from `Lib', defined here
+   instead of opening it.  `Lib' belongs to the kernel, and nothing else
+   here does: the rest is `HOLSourceAST', `HOLSourceParser', `Binarymap'
+   and the basis.  Staying off the kernel is what lets this module be
+   compiled into `bin/hol' and Holmake alongside the source parser it
+   reads, rather than loaded from sigobj at every LSP server start. *)
+fun I x = x
+fun K x _ = x
+fun fst (x, _) = x
+fun snd (_, y) = y
+fun uncurry f (x, y) = f x y
+fun funpow n f x = if n <= 0 then x else funpow (n - 1) f (f x)
+(* `infixr 1', as `Overlay.sml' declares it -- `open Lib' never brought
+   the fixity, the overlay did, and a different precedence here would
+   quietly reassociate every use below. *)
+infixr 1 $
+fun f $ x = f x
+
 open HOLSourceAST
 
 fun identName (Ident {id = (_, s), ...}) = SOME s

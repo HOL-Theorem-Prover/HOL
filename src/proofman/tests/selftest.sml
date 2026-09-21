@@ -525,3 +525,59 @@ val _ =
       if aconv (concl th) tm then OK()
       else die ("proved " ^ term_to_string (concl th))
     end
+
+(* The three things the goal state is made of are also asked for one at
+   a time: a client that pins the first two above a scrolling view of
+   the third would otherwise show them twice.  See `focus_note' and
+   `pp_goals_only'. *)
+val _ = tprint "focus_note says what closing the frame will show"
+val _ =
+    let
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      (* Two subgoals, the first taken into a `>-' frame and then
+         proved: the focus is empty but the frame has not closed, which
+         is the state that has something to say above the goals. *)
+      val st = ex STRIP_TAC (goalFrag.new_goal ([], “p ⇒ p ∧ p”))
+      val st = ex CONJ_TAC st
+      val st = goalFrag.open_then1 st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+    in
+      case (goalFrag.top_goals st, goalFrag.focus_note st) of
+        ([], SOME s) =>
+          if s = "Focused subgoal(s) solved; remaining after close:"
+          then OK() else die ("said " ^ s)
+      | ([], NONE) => die "said nothing"
+      | (_, _) => die "the focus was not solved"
+    end
+
+val _ = tprint "and a goal with goals in it has nothing to add"
+val _ =
+    let
+      val st = goalFrag.new_goal ([], “p ⇒ p”)
+    in
+      if isSome (goalFrag.focus_note st) then die "spoke up" else OK()
+    end
+
+val _ = tprint "pp_goals_only leaves out what is asked for separately"
+val _ =
+    let
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = ex STRIP_TAC (goalFrag.new_goal ([], “p ⇒ p ∧ p”))
+      val st = ex CONJ_TAC st
+      val st = goalFrag.open_then1 st
+      val st = ex (FIRST_ASSUM ACCEPT_TAC) st
+      fun render pp = PP.pp_to_string 70 pp st
+      val full = render goalFrag.pp_goalstate
+      val bare = render goalFrag.pp_goals_only
+      fun has s t = String.isSubstring s t
+    in
+      (* The tags and the note are in one and not the other; the goal
+         itself is in both, or the bare printer has dropped too much. *)
+      if has "inside >-" full andalso has "Focused subgoal(s)" full
+         andalso not (has "inside >-" bare)
+         andalso not (has "Focused subgoal(s)" bare)
+         andalso has "0." bare
+      then OK() else die ("\nfull:\n" ^ full ^ "bare:\n" ^ bare)
+    end

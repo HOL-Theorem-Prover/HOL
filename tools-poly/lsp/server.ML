@@ -129,14 +129,15 @@ fun encSegment ({text, kind, name, ty}: LSPExtension.pp_segment) print = (
   print "}")
 
 fun encGoalStateResponse encRng
-                         ({theorem, step, goals, pretty, context, status,
-                           error, failedRange, segments}
+                         ({theorem, step, goals, pretty, context, note,
+                           status, error, failedRange, segments}
                             : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
   print ",\"goals\":"; encArray encGoalState goals print;
   print ",\"pretty\":"; encString pretty print;
   print ",\"context\":"; encArray encString context print;
+  print ",\"note\":"; encOrNull encString note print;
   print ",\"status\":"; encString status print;
   print ",\"error\":"; encOrNull encString error print;
   (* Where the walk stopped, so a client can point at it rather than
@@ -1286,6 +1287,18 @@ fun start {diag, dbg, warnings} = let
      whose change clears the block, and what went wrong. *)
   type deps_blocked = {mods: string list, message: string}
 
+  (* What is known about a file's declared dependencies.  Three states,
+     not two: "nobody has looked yet" is not the same answer as "they
+     are there", and a consumer that cannot tell them apart reads the
+     window between `didOpen' and the first compile's verdict as though
+     the ancestors were already loaded.  `goalStateAtPos' is the
+     consumer that matters -- walking a proof in that window rewinds a
+     Context the preload is still building. *)
+  datatype deps_state =
+      DepsUnchecked
+    | DepsLoaded
+    | DepsBlocked of deps_blocked
+
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
                        thread: Thread.thread, cancelled: bool ref,
@@ -1373,7 +1386,7 @@ fun start {diag, dbg, warnings} = let
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
        lifts the block. *)
-    depsBlocked: deps_blocked option ref,
+    depsBlocked: deps_state ref,
     (* The outline for this buffer, with the text version it was parsed
        from.  documentSymbol is asked on every edit and
        `workspace/symbol' re-asks for every open buffer on every
@@ -1412,8 +1425,8 @@ fun start {diag, dbg, warnings} = let
         proofDiags = Sref.new (Binarymap.mkDict String.compare),
         pendingFailures = Sref.new [],
         compiledText = ref "", reusableFrom = ref ~1,
-        depsBlocked = ref NONE, symbols = ref NONE, nsLayer = ref NONE,
-        nsGen = ref 0, nsNames = ref NONE} end
+        depsBlocked = ref DepsUnchecked, symbols = ref NONE,
+        nsLayer = ref NONE, nsGen = ref 0, nsNames = ref NONE} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
      checks at each Progress event and raises Thread.Interrupt.  We
@@ -1437,6 +1450,23 @@ fun start {diag, dbg, warnings} = let
           NONE => false
         | SOME {thread, cancelled, ...} =>
           Thread.isActive thread andalso not (!cancelled)
+
+  (* Is a pass still *using* the process's compile state?  Not
+     `compileRunning': that asks whether a pass is alive, and this asks
+     whether one is still using the state, which it stops doing before
+     its thread exits -- see `elaborating'.
+
+     Anything that rewinds the Context has to ask this first.  The
+     theory graph is a slot in the Context (`Theory.Graph'), so a
+     restore takes back every theory the pass has loaded since the
+     snapshot, and the pass's next `link_parents' reports a parent that
+     "should already be in the theory graph (but isn't)". *)
+  fun usingCompileState r =
+      case !r of
+          NONE => false
+        | SOME {thread, cancelled, elaborating, ...} =>
+          !elaborating andalso Thread.isActive thread
+          andalso not (!cancelled)
 
   fun stopCompile r = case !r of
     NONE => ()
@@ -1790,9 +1820,9 @@ fun start {diag, dbg, warnings} = let
        gets a compile attempt per edit, and most of those attempts fail
        again while the name is half-typed; one warning per keystroke is
        worse than the silence it is there to explain. *)
-    val fresh = not (isSome (!depsBlocked))
+    val fresh = case !depsBlocked of DepsBlocked _ => false | _ => true
     in
-      depsBlocked := SOME b;
+      depsBlocked := DepsBlocked b;
       sendDepsBlocked uri b;
       if fresh then
         warnUser ("HOL: not compiling " ^ OS.Path.file uri ^ ": "
@@ -1939,6 +1969,18 @@ fun start {diag, dbg, warnings} = let
     val changed =
         Sref.gen_update proofDiags
           (fn pd =>
+              (* Nothing goes in once proof checking is off: a worker
+                 that settled just before the `checkProofs: false'
+                 handler cleared the map is past the cancellation, and
+                 its entry would stand with nothing left to remove it.
+                 Making the atomic step atomic is not enough on its own
+                 -- that stops a stale *map* going back, not a fresh
+                 entry. *)
+              if not (!LSPExtension.deferProofs) then
+                (case Binarymap.peek (pd, site) of
+                     NONE => (pd, false)
+                   | SOME _ => (#1 (Binarymap.remove (pd, site)), true))
+              else
               case (Binarymap.peek (pd, site), next) of
                   (NONE, NONE) => (pd, false)
                 | (SOME _, NONE) => (#1 (Binarymap.remove (pd, site)), true)
@@ -1993,9 +2035,9 @@ fun start {diag, dbg, warnings} = let
        tells the second block it is not the first, and so not worth
        another warning; a compile that gets through clears it. *)
     val stillBlocked = case !depsBlocked of
-        SOME (b as {mods, ...}) =>
+        DepsBlocked (b as {mods, ...}) =>
           if declaredNames = mods then SOME b else NONE
-      | NONE => NONE
+      | _ => NONE
     in
     case stillBlocked of
       SOME b => sendDepsBlocked uri b
@@ -2685,8 +2727,10 @@ fun start {diag, dbg, warnings} = let
               print "{\"uri\":"; encString uri print; print "}"))))
           else (
           (* The file compiled, so whatever it was blocked on is
-             resolved. *)
-          depsBlocked := NONE;
+             resolved -- and, either way, the ancestors are now known to
+             be in the graph, which is what `DepsLoaded' says and
+             `DepsUnchecked' did not. *)
+          depsBlocked := DepsLoaded;
           flushDiags ();
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (
@@ -3142,19 +3186,41 @@ fun start {diag, dbg, warnings} = let
     handle Empty => []
 
   (* Unlike `getState', goalStateAtPos doesn't gate on the compile
-     having reached the cursor -- the walker uses `declSnapshots'
+     having reached the *cursor* -- the walker uses `declSnapshots'
      (which survive `carryOverSnapshots') for Context and parses
      the Proof body directly from the current buffer text.
      Requiring `pos >= offset' would stall the auto-follow-cursor
-     pane for the ~300 ms debounce after every keystroke. *)
-  fun goalStateAtPos uri ({lastTrees, depsBlocked, ...}:file_data)
+     pane for the ~300 ms debounce after every keystroke.  It does
+     gate on a compile being in flight at all; see `stateNotReady'. *)
+  (* Refused for a reason that will pass on its own: the ancestors are
+     not resolved yet, or a compile owns the state.  Distinct from there
+     being no theorem at the position, which is an answer, and from
+     `DepsBlocked', which will not change until the header does.  The
+     caller needs the difference to say "pending" rather than "no goal
+     state here", which reads as a fault in the proof. *)
+  fun stateNotReady ({depsBlocked, compile, ...}:file_data) =
+      (case !depsBlocked of DepsUnchecked => true | _ => false)
+      orelse usingCompileState compile
+
+  fun goalStateAtPos uri (v as {lastTrees, depsBlocked, ...}:file_data)
                      (target, width) =
-    (* Nothing to walk against: the file was never compiled, so the
-       theorem's context does not exist and the walker would compile
-       each tactic against a namespace missing whatever the failed
-       ancestor was to supply.  Answering NONE also stops an
-       auto-following goals pane from asking on every cursor move. *)
-    if isSome (!depsBlocked) then NONE else let
+    (* Nothing to walk against unless the ancestors are known to be
+       loaded.  `DepsBlocked' is the case that used to be checked here:
+       the walker would compile each tactic against a namespace missing
+       whatever the failed ancestor was to supply.  `DepsUnchecked' is
+       the same answer for a stronger reason -- the preload is running
+       right now, and the walk below rewinds the very Context it is
+       building.  Answering NONE also stops an auto-following goals
+       pane from asking on every cursor move.
+
+       The compile that a `didOpen' starts and the goals pane that the
+       same `didOpen' opens are concurrent, so this is the ordinary
+       case, not a corner: without it the pane's first request lands
+       mid-preload and takes the ancestors back out of the theory
+       graph. *)
+    if stateNotReady v then NONE
+    else if (case !depsBlocked of DepsLoaded => false | _ => true)
+    then NONE else let
     val {parse, text} = !lastTrees
     val {plugins, declSnapshots, ...} = parse
     val offset = fromLineCol (#lines text) target
@@ -3254,16 +3320,9 @@ fun start {diag, dbg, warnings} = let
            is elaborating and enqueueing them.  Missing the second was
            enough on its own -- a dozen sound proofs reported failures
            that varied from run to run. *)
-        (* Not `compileRunning`: that asks whether a pass is alive, and
-           this asks whether one is still *using* the compile state,
-           which it stops doing before its thread exits -- see
-           `elaborating`. *)
-        fun compiling () =
-          case !compile of
-              NONE => false
-            | SOME {thread, cancelled, elaborating, ...} =>
-              !elaborating andalso Thread.isActive thread
-              andalso not (!cancelled)
+        (* See `usingCompileState': not `compileRunning', which asks a
+           different question. *)
+        fun compiling () = usingCompileState compile
         fun proving () = !LSPExtension.poolBusy ()
      in
         if null (Sref.value pendingFailures)
@@ -3312,18 +3371,30 @@ fun start {diag, dbg, warnings} = let
                 SOME {failedRange = SOME pos, ...} =>
                   (* Replaces the entry `updateProofDiag' made under the
                      same key, rather than adding a second one beside
-                     it: this is that verdict, better placed.  Keeping
-                     it here also means it is dropped when proof
-                     checking is switched off, and cleared when the
-                     proof comes good, by the machinery that already
-                     does both. *)
-                  (Sref.update proofDiags
-                     (fn pd =>
-                         Binarymap.insert
-                           (pd, site,
-                            Error {hard = true, pos = pos,
-                                   msg = encString msg}));
-                   publishAllDiagnostics uri v)
+                     it: this is that verdict, better placed.  Cleared
+                     when the proof comes good by the machinery that
+                     already does that.
+
+                     Not written at all once proof checking is off.
+                     This runs on a thread of its own and takes as long
+                     as the proof is long, so the `checkProofs: false'
+                     handler can cancel the pool, clear the map and
+                     publish while the walk is still going: this thread
+                     is already past the cancellation, and the insert
+                     would put the entry back with nothing left to take
+                     it away again.  Checked inside the update, since
+                     checking it outside is the same race one step
+                     further out. *)
+                  (if Sref.gen_update proofDiags
+                        (fn pd =>
+                            if !LSPExtension.deferProofs then
+                              (Binarymap.insert
+                                 (pd, site,
+                                  Error {hard = true, pos = pos,
+                                         msg = encString msg}), true)
+                            else (pd, false))
+                   then publishAllDiagnostics uri v
+                   else ())
               | _ => ())
      end handle _ => ())
 
@@ -3807,7 +3878,19 @@ fun start {diag, dbg, warnings} = let
         val lines = case v_opt of
                         NONE => mkLineCounter ""
                       | SOME v => #lines (#text (!(#lastTrees v)))
-        in Ok (encOrNull (encGoalStateResponse (encRangeLC lines)) resp) end)
+        (* `null' says "no goal state at this position", which sends a
+           reader looking for the fault in their proof.  When the walk
+           was refused only because the state is not ready yet, say so
+           in the one word the clients already act on: `pending' is what
+           a silent failure mid-compile reports, and both mean the same
+           thing to a reader -- wait for the compile.  No goals with it,
+           there being none to give. *)
+        val notReady = case (resp, v_opt) of
+                           (NONE, SOME v) => stateNotReady v
+                         | _ => false
+        in Ok (if notReady then (fn print => print "{\"status\":\"pending\"}")
+               else encOrNull (encGoalStateResponse (encRangeLC lines)) resp)
+        end)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
     | Notification {method = "$/cancelRequest", params} => let
@@ -3842,7 +3925,8 @@ fun start {diag, dbg, warnings} = let
       val _ = case withFileInfo (fn fileInfo =>
                      (fileInfo, Binarymap.peek (fileInfo, uri))) of
         NONE => ()
-      | SOME (v: file_data) => (#depsBlocked v := NONE; startCompile uri v)
+      | SOME (v: file_data) => (#depsBlocked v := DepsUnchecked;
+                               startCompile uri v)
       in () end
     | Notification {method = "textDocument/didClose", params} => let
       val uri = JSONDecode.decode textDocumentId params

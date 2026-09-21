@@ -14,7 +14,18 @@ BOOLLIB = $(dprot $(SIGOBJ)/boolLib.uo)
 PRIMREC = $(dprot $(SIGOBJ)/Prim_rec.uo)
 TERMPP = $(dprot $(SIGOBJ)/term_pp.uo)
 
+# `Future' is here for `hol lsp', which used to `Meta.load' it at every
+# server start: it is in sigobj but was in no heap, so it was read and
+# linked again every time, costing 0.14s.  In a heap it costs nothing,
+# `load' skipping whatever is already in `loadedMods'.
+#
+# This heap rather than boss's: the concurrent library is built long
+# before here, every later heap is `-b' this one, and a `--bare'
+# session -- which is how the LSP is developed -- gets it too.
+# (`TacticParse' was the other half of that load; it is compiled into
+# `bin/hol' itself now, so it needs no heap at all.)
 DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
+       $(dprot $(SIGOBJ)/Future.uo) \
        proofManagerLib.uo History.uo \
        goalStack.uo goalTree.uo Manager.uo \
        $(dprot $(SIGOBJ)/UnicodeChars.uo) \
@@ -43,7 +54,7 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
 UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
          $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
-	 $(protect $(SIGOBJ)/ThmSetData)
+	 $(protect $(SIGOBJ)/ThmSetData) $(protect $(SIGOBJ)/Future)
 
 EXTRA_CLEANS = $(ZEROSTATE) $(MINSTATE)
 
