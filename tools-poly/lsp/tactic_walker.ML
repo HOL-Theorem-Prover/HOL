@@ -202,9 +202,23 @@ fun applyAtom tacText te state = case atomSrc tacText te of
          | _ => r
       end
 
-fun applyOpen ok state = case ok of
+fun openThen1With src state =
+  case compileTactic src of
+    NONE => NONE
+  | SOME tac => Portable.total
+                  (goalFrag.open_then1_with tac (Context.snapshot())) state
+
+fun applyOpen tacText ok state = case ok of
     FOpen           => Portable.total goalFrag.open_paren      state
   | FOpenThen1      => Portable.total goalFrag.open_then1      state
+  | FOpenBy q       =>
+      openThen1With
+        ("BasicProvers.byA (" ^ textAt tacText q ^ ", Tactical.ALL_TAC)")
+        state
+  | FOpenSufficesBy q =>
+      openThen1With
+        ("BasicProvers.suffices_byA (" ^ textAt tacText q ^
+         ", Tactical.ALL_TAC)") state
   | FOpenFirst      => Portable.total goalFrag.open_first      state
   | FOpenRepeat     => Portable.total goalFrag.open_repeat     state
   | FOpenTacsToLT   => Portable.total goalFrag.open_tacs_to_lt state
@@ -272,10 +286,10 @@ and lastSectionEnd sections =
 and fragStart frag = case frag of
     FAtom te => Option.map #1 (TacticSteps.atomSpan te)
   | FGroup ((s, _), _) => SOME s
-  | FBracket (_, inner, _, te) =>
-      bracketStartByte te (fn () => firstFragStart inner)
-  | FMBracket (_, _, _, sections, te) =>
-      bracketStartByte te (fn () => firstSectionStart sections)
+  | FBracket (ok, inner, _, te) =>
+      bracketStartByte ok te (fn () => firstFragStart inner)
+  | FMBracket (ok, _, _, sections, te) =>
+      bracketStartByte ok te (fn () => firstSectionStart sections)
   | FFOpen _ | FFMid _ | FFClose _ => NONE
 
 and firstFragStart frags = case frags of
@@ -290,11 +304,15 @@ and firstSectionStart sections = case sections of
          NONE => firstSectionStart rest
        | some => some)
 
-and bracketStartByte te firstInner = case topSpan te of
-    SOME (s, _) => SOME s
-  | NONE => (case TacticSteps.atomSpan te of
+and bracketStartByte ok te firstInner =
+  case ok of
+    FOpenBy (s, _) => SOME s
+  | FOpenSufficesBy (s, _) => SOME s
+  | _ => (case topSpan te of
       SOME (s, _) => SOME s
-    | NONE => firstInner ())
+    | NONE => (case TacticSteps.atomSpan te of
+        SOME (s, _) => SOME s
+      | NONE => firstInner ()))
 
 (* `lastInner' is a thunk because it is only wanted for a wrapper
    whose own span is missing, as `LThen1's and `Try's are.  The flag
@@ -462,7 +480,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                Done {state = state', snaps = snaps, stepIdx = stepIdx}))
   | FFOpen ok =>
       if replaying then keep stepIdx
-      else (case applyOpen ok state of
+      else (case applyOpen tacText ok state of
          NONE => Failed {state = state, snaps = snaps,
                          stepIdx = stepIdx, at = frag, why = ApplyFailed}
        | SOME state' =>
@@ -492,13 +510,13 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
           (* Cursor before the combinator: it hasn't run yet, so show
              the goals it is about to act on rather than opening it. *)
           if not replaying andalso
-             startsAfter cursor (bracketStartByte te
+             startsAfter cursor (bracketStartByte ok te
                                    (fn () => firstFragStart inner)) then
             Halted {state = state, snaps = snaps, stepIdx = stepIdx}
           else let
             fun opened k =
               if replaying then k state
-              else (case applyOpen ok state of
+              else (case applyOpen tacText ok state of
                       NONE => Failed {state = state, snaps = snaps,
                                       stepIdx = stepIdx, at = FFOpen ok,
                                        why = ApplyFailed}
@@ -634,7 +652,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                    | out => out)
             fun opened k =
               if replaying then k state
-              else (case applyOpen ok state of
+              else (case applyOpen tacText ok state of
                       NONE => Failed {state = state, snaps = snaps,
                                       stepIdx = stepIdx, at = FFOpen ok,
                                        why = ApplyFailed}
@@ -651,7 +669,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
           in
             if not replaying andalso
                startsAfter cursor
-                 (bracketStartByte te
+                 (bracketStartByte ok te
                     (fn () => firstSectionStart sections))
             then
               Halted {state = state, snaps = snaps, stepIdx = stepIdx}

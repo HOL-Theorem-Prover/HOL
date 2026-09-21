@@ -131,6 +131,8 @@ fun open_then1 (n, g) = (n+1, apply (fn
     ([], _) => raise ERR "THEN1" "goal completely solved by first tactic"
   | (g::gs, v) => Stashed (Base ([g], I), Then1 (gs, v))) g)
 
+fun open_then1_with tac ctxt = open_then1 o expandf tac ctxt
+
 fun open_first (n, g) = (n+1, apply (fn gs => Try (Running (Base gs), gs)) g)
 
 fun next_first (n, g) = let
