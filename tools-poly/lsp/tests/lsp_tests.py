@@ -6507,6 +6507,39 @@ def test_unloadable_heap_falls_back_with_a_warning():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_hol_state0_directory_serves():
+    """Every directory up to `src/boss' names `bin/hol.state0' as its
+    heap, so that is what a server there compiles its own startup files
+    against -- and one of them named a structure only the full heap has.
+    The server died compiling it, before answering `initialize', so
+    `src/num/theories' could not be opened at all and the client could
+    say only that the process had exited.
+
+    A heap the startup files do not fit is therefore not a thing the
+    full-heap tests can see; this is the same scenario from outside."""
+    d = tempfile.mkdtemp(prefix="lsp_state0_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            # A startup warning arrives just after the handshake, so
+            # give one time to show up before concluding there is none.
+            c.wait_for_method("window/showMessage", 5)
+            msgs, _ = c.messages_since(0)
+            warns = [m["params"]["message"] for m in msgs
+                     if m.get("method") == "window/showMessage"]
+            bad = [w for w in warns if "did not load" in w]
+            assert_true(not bad,
+                        f"every startup file compiled against the heap "
+                        f"({bad!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_overload_hover_names_the_expansion():
     """An overloaded name that resolves to a *term* rather than to one
     constant used to hover as a bare "overloaded", which says only that
@@ -7748,6 +7781,8 @@ TESTS = [
      test_dependency_that_binds_no_structure_blocks),
     ("unloadable_heap_falls_back_with_a_warning",
      test_unloadable_heap_falls_back_with_a_warning),
+    ("a_hol_state0_directory_serves",
+     test_a_hol_state0_directory_serves),
     ("overload_hover_names_the_expansion",
      test_overload_hover_names_the_expansion),
     ("overload_hover_sees_through_the_alias_chain",

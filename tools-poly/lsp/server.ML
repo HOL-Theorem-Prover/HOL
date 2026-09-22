@@ -1,5 +1,12 @@
 signature LSPServer =
 sig
+  (* Take stdout for the JSON-RPC frames and send everything else to
+     stderr.  `start' does this itself; call it first if anything runs
+     before the server does -- `tools-poly/hol.ML' compiles the
+     startup files there, and their diagnostics would otherwise go on
+     the wire. *)
+  val claimStdout : unit -> TextIO.StreamIO.outstream
+
   (* `warnings' are things that went wrong before the server could
      speak -- a heap the directory asked for that would not load, say.
      They are shown to the user once the handshake is done, because a
@@ -756,6 +763,31 @@ fun recv (cvar, mutex, r) =
 end
 
 type connection = {recv: unit -> JSON.value message, send: encode message -> unit}
+
+(* Hijack the real stdOut for our JSON-RPC frames, and re-point
+   TextIO.stdOut at TextIO.stdErr so anything that writes via
+   TextIO.stdOut -- `print' at top level in a HOL script, a compiler
+   error message, a HOL_MESG -- cannot corrupt the wire.
+
+   Separate from `stdioConnection' because it has to happen first.
+   `tools-poly/hol.ML' compiles the server's startup files before it
+   calls `start', and a diagnostic from one of those went to stdout,
+   where the framing ate it: the user got "server exited" and no
+   reason.  Claiming the wire before anything else runs puts every
+   such message on stderr, whoever writes it.  Idempotent, so a caller
+   that does not claim it still gets the wire from here. *)
+val wireOut : TextIO.StreamIO.outstream option ref = ref NONE
+fun claimStdout () =
+  case !wireOut of
+      SOME out => out
+    | NONE => let val out = TextIO.getOutstream TextIO.stdOut
+              in
+                TextIO.setOutstream (TextIO.stdOut,
+                                     TextIO.getOutstream TextIO.stdErr);
+                wireOut := SOME out;
+                out
+              end
+
 fun stdioConnection (): connection = let
   val recv = let
     val (send, recv) = Channel.channel ()
@@ -786,13 +818,7 @@ fun stdioConnection (): connection = let
     val _ = Thread.fork (readerThread, [])
     in fn () => Channel.recv recv end
 
-  (* Hijack the real stdOut for our JSON-RPC frames, and re-point
-     TextIO.stdOut at TextIO.stdErr so USER code that writes via
-     TextIO.stdOut (e.g. `val _ = print "..."` at top level in a HOL
-     script) doesn't corrupt the wire. *)
-  val lspOut = TextIO.getOutstream TextIO.stdOut
-  val () = TextIO.setOutstream (TextIO.stdOut,
-                                TextIO.getOutstream TextIO.stdErr)
+  val lspOut = claimStdout ()
   val send = let
     val (send, recv) = Channel.channel ()
     fun writerThread () = let
