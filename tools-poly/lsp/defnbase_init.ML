@@ -10,8 +10,13 @@
    the file when the LSP starts; the plugin's `init' then runs at
    `markServerStarted', before the first compile.
 
-   Nothing needs `Meta.load' first: every structure named below is
-   already in the heap.
+   Nothing needs `Meta.load' first: every structure named below is in
+   `hol.state0', which is the least a server ever starts on -- a
+   directory whose Holmakefile asks for that heap, `src/num/theories'
+   among them, gets one.  `DefnBaseCore' rather than `DefnBase' for
+   that reason: the store of user definitions is `DefnBaseCore's, and
+   `DefnBase' (`src/coretypes') only re-exports the lookup, from a
+   heap no early directory has.
    ---------------------------------------------------------------------- *)
 
 local
@@ -142,7 +147,7 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
       if is_var hd then
         findVar bvs
       else if is_const hd then
-        case DefnBase.lookup_userdef hd of
+        case DefnBaseCore.lookup_userdef hd of
           SOME {thmname, ...} =>
           (case DB.lookup thmname of
             SOME (_, {loc = DB.Located {scriptpath, linenum, ...}, ...}) =>

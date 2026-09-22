@@ -111,6 +111,8 @@ of them by hand means run the tests.
   - `lsp-init-selftest.log` — loads the nine files a server `QUse`s at
     startup.  Loading them *is* the test: it is what notices the rename
     above.
+  - `lsp-init-bare-selftest.log` — the same nine, on `bin/hol.state0`;
+    see *The heap a directory asks for* below for what that pins.
   - `tacticparse-selftest.log` — `TacticParse` unit tests.  Driven by
     `bin/hol` because the module is compiled into the executable by
     `poly-init2.ML` and a `selftest.exe`, which links sigobj, cannot
@@ -364,6 +366,24 @@ and nothing in the UI naming the heap.  Every other subcommand still
 dies on an unloadable heap — they have a terminal to complain to, and
 a build that quietly used a different heap would be worse than a
 failure.
+
+The heap that loads also decides what the startup files can name.
+Every directory up to `src/boss` asks for `bin/hol.state0`, which has
+`boolLib`, `proofManagerLib` and `DB` but nothing from `src/coretypes`
+onwards — a `DefnBase` reference in `defnbase_init.ML` compiled
+wherever the full heap was in play, and killed the server everywhere
+else.  Two runs are enough to hold the files to it because every heap
+a `Holmakefile` names is built on `hol.state0`, so compiling against
+that floor implies the rest; `tests/lsp-init-bare-selftest.log` is the
+run that does it.
+
+A startup step that fails anyway — one of those files, or one of the
+`evalString` hooks in `tools-poly/hol.ML` — costs its own feature and
+not the session, and becomes a `window/showMessage` naming it, sent
+once the handshake is done.  What the step wrote goes to stderr:
+`LSPServer.claimStdout` takes the wire before any of them run, so
+stdout belongs to the framing from the first line of the process and
+a diagnostic cannot land on it.
 
 Note that **which `bin/hol` serves a buffer is a client decision**, and
 the eglot client resolves it per directory from
