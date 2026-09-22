@@ -3313,12 +3313,23 @@ line, where scrolling to the end would carry it out of sight.  `%\='
 is doubled because a header-line string is read for mode-line
 constructs."
   (let* ((ctx (hol-lsp--context-line (plist-get result :context)))
+         (note (plist-get result :note))
          (err (plist-get result :error))
          (text (concat (format "%s — step %d"
                                (plist-get result :theorem)
                                (plist-get result :step))
                        (and ctx (concat "  " ctx))
-                       (and (hol-lsp--solved-p result) "  ✓ solved")
+                       ;; The server's own words for it when they come
+                       ;; -- they say which step makes the next goals
+                       ;; visible, "remaining after close" or "next
+                       ;; branch", which `solved-p\=' cannot know.  Its
+                       ;; trailing colon introduced the goals, which are
+                       ;; not up here.  Older servers send no `note\=',
+                       ;; and no goals with no error is the same fact
+                       ;; inferred.
+                       (cond (note (concat "  " (string-remove-suffix
+                                                 ":" note)))
+                             ((hol-lsp--solved-p result) "  ✓ solved"))
                        (and err (concat "  ⚠ " err)))))
     (replace-regexp-in-string "%" "%%" text)))
 
@@ -3407,13 +3418,18 @@ punctuation and whitespace.  `help-echo\=' serves the mouse and
               (put-text-property from to 'hol-lsp-doc doc))))
         (setq seen (+ seen len))))))
 
-(defun hol-lsp--goals-eldoc (callback &rest _ignored)
+(defun hol-lsp--goals-eldoc (&optional _callback &rest _ignored)
   "Describe the symbol at point in the goals buffer, for eldoc.
 Reads the property `hol-lsp--apply-segments\=' left behind, so it costs
-a text-property lookup and no round trip to the server."
-  (let ((doc (get-text-property (point) 'hol-lsp-doc)))
-    (when doc (funcall callback doc))
-    doc))
+a text-property lookup and no round trip to the server.
+
+Returns the string rather than calling eldoc\='s callback.  The two are
+alternatives: `eldoc-documentation-functions\=' takes the return value
+when it is a string, and otherwise waits for the callback.  Doing both
+collects the answer twice, and the echo area shows the symbol twice
+over.  The `help-echo\=' tooltip is a separate path and was never
+doubled."
+  (get-text-property (point) 'hol-lsp-doc))
 
 (defun hol-lsp--render-goals (result)
   "Render RESULT into *HOL Goals* and display it below the selected

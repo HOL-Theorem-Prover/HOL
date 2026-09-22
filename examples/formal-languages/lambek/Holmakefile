@@ -1,3 +1,4 @@
+include $(HOLDIR)/src/TeX/mungedeps.hmf
 INCLUDES = $(dprot $(HOLDIR)/src/integer) $(HOLDIR)/src/TeX
 
 EXTRA_CLEANS = heap munge.exe selftest.exe
@@ -15,10 +16,10 @@ endif
 
 all: $(DEFAULT_TARGETS) munge.exe
 
-MUNGE_DEPS = LambekTheory CutFreeTheory ExampleTheory
+MUNGE_THY_DEPS = LambekTheory CutFreeTheory ExampleTheory
 
-munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS)) $(HOLDIR)/bin/mkmunge.exe
-	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
+munge.exe: $(patsubst %,%.uo,$(MUNGE_THY_DEPS)) $(MUNGE_DEPS)
+	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_THY_DEPS)
 
 ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))

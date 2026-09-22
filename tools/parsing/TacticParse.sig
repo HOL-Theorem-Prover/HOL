@@ -5,7 +5,10 @@ datatype 'a tac_expr
   = Then of 'a tac_expr list
   | ThenLT of 'a tac_expr * 'a tac_expr list
   | Subgoal of 'a
+  | By of 'a * 'a tac_expr
+  | SufficesBy of 'a * 'a tac_expr
   | First of 'a tac_expr list
+  | FirstProve of 'a tac_expr list
   | Try of 'a tac_expr
   | Repeat of 'a tac_expr
   | MapEvery of 'a * 'a tac_expr list
@@ -55,6 +58,8 @@ val printTacAsSML: string -> (int * int) tac_expr -> string option
 datatype tac_frag_open
   = FOpen
   | FOpenThen1
+  | FOpenBy of int * int
+  | FOpenSufficesBy of int * int
   | FOpenFirst
   | FOpenRepeat
   | FOpenTacsToLT
@@ -115,8 +120,9 @@ end
     a source span (int * int), threaded uniformly and re-decorated via
     mapTacExpr.  Its constructors fall into three groups:
 
-      - Tactic forms: Then, ThenLT, Subgoal, First, Try, Repeat,
-        MapEvery, MapFirst, Rename, Opaque.  These denote ordinary
+      - Tactic forms: Then, ThenLT, Subgoal, By, SufficesBy, First,
+        FirstProve, Try,
+        Repeat, MapEvery, MapFirst, Rename, Opaque.  These denote ordinary
         tactics (functions on a single goal).  Then is an n-ary
         flattening of THEN; ThenLT bridges into a list_tactic
         continuation.  Opaque carries a precedence and a span when no
@@ -160,11 +166,13 @@ end
                           ALL_LT.
       - simplifyLT      : list_tactic entry point.
 
-    Surface sugars are recognised at parse time and elaborated to the
-    underlying combinator tree: e.g. `t1 by t2` becomes
-    ThenLT (Subgoal _, [LThen1 t2]); `suffices_by` additionally inserts
-    an LReverse; `>~ pat` becomes LSelectGoal; `>>~- (pat, t)` becomes
-    LSelectThen (Rename _, ...).  Unclosed parens turn into RepairGroup
+    Surface sugars are recognised at parse time.  Sugars whose structure is
+    faithfully expressed by the combinator tree are elaborated: e.g. `>~ pat`
+    becomes LSelectGoal and `>>~- (pat, t)` becomes
+    LSelectThen (Rename _, ...).  `by` and `suffices_by` have explicit nodes:
+    they are not equivalent to Subgoal followed by LThen1 (in particular,
+    `by` has special wildcard equality-chain semantics).  Unclosed parens turn
+    into RepairGroup
     nodes carrying the missing terminator; empty tactic positions turn
     into RepairEmpty "ALL_TAC" (or "ALL_LT" in list_tactic position).
 
@@ -207,8 +215,9 @@ end
     expression is decomposed into:
 
       - FFOpen / FFMid / FFClose markers naming the combinator they
-        open, advance, or close (FOpen / FOpenThen1 / FOpenFirst /
-        FOpenRepeat / FOpenTacsToLT / FOpenNullOk / FOpenNthGoal /
+        open, advance, or close (FOpen / FOpenThen1 / FOpenBy /
+        FOpenSufficesBy / FOpenFirst / FOpenRepeat / FOpenTacsToLT /
+        FOpenNullOk / FOpenNthGoal /
         FOpenLastGoal / FOpenHeadGoal / FOpenSplit / FOpenSelect /
         FOpenFirstLT, with FNext_* and FClose_* counterparts).
       - FAtom : an entire tac_expr held as an indivisible unit.

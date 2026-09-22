@@ -1,0 +1,40 @@
+# The `src/integer' group of the LSP protocol suite: tests that open a
+# real theory file and expect a clean compile in a bounded time.
+#
+# This directory is sequenced after `src/parallel_builds/core', which
+# is what builds `src/integer'; the INCLUDES below is how the tests
+# find it, not what pays for it.  That ordering is the point of the
+# separate directory -- beside the rest of the suite in `base-hol',
+# this INCLUDES would have dragged `src/integer' and `src/res_quan'
+# into the core build, which stops at `bossLib' and had never built
+# either.
+INCLUDES = $(HOLDIR)/src/integer
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+# No `HOLSELFTESTLEVEL' check: this directory is reached through
+# `src/parallel_builds/core's INCLUDES, which consults it, and is
+# scanned into that Holmake's graph rather than run by the build
+# sequence.  Holmake here at all means run the tests, which is also
+# what someone typing `Holmake' in this directory wants.
+ifdef POLY
+all: lsp-integer-selftest.log
+
+SUITE = $(HOLDIR)/tools-poly/lsp/tests/lsp_tests.py
+
+# `--requires integer' selects exactly the tests tagged for this
+# directory, so the group and the prerequisite cannot drift apart.
+INTEGER_CMD = if command -v python3 > /dev/null 2>&1 ; \
+              then python3 -u $(protect $(SUITE)) --requires integer 2>&1 ; \
+              else echo "python3 not found: LSP integer tests NOT run" ; \
+              fi
+
+lsp-integer-selftest.log: $(dprot $(SUITE)) \
+                         $(dprot $(HOLDIR)/bin/hol) \
+                         $(dprot $(HOLDIR)/bin/hol.state) \
+                         $(dprot $(HOLDIR)/src/integer/integerTheory.uo)
+	$(tee $(INTEGER_CMD), $@)
+
+EXTRA_CLEANS = lsp-integer-selftest.log
+endif

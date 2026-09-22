@@ -30,6 +30,7 @@ val open_select_lt  : frag_tactic
 val open_split_lt   : int -> frag_tactic
 val open_tacs_to_lt : frag_tactic
 val open_then1      : frag_tactic
+val open_then1_with : tactic -> Context.t -> frag_tactic
 val open_first_lt   : frag_tactic
 val next_select_lt  : frag_tactic
 val next_first      : frag_tactic
@@ -46,7 +47,21 @@ val close_first_lt  : frag_tactic
    client can pin them somewhere that does not scroll away. *)
 val context_lines   : goalstate -> string list
 
+(* The line `pp_goalstate' puts above the goals when the focused
+   subgoals have just been proved and stepping out is what makes the
+   next ones visible: "Focused subgoal(s) solved; remaining after
+   close:".  NONE when there is nothing to say.  Exposed for the same
+   reason as `context_lines': it is about the goals rather than part
+   of them, and a client wants to pin it where it does not scroll
+   away. *)
+val focus_note      : goalstate -> string option
+
 val pp_goalstate    : goalstate Parse.pprinter
+
+(* `pp_goalstate' with neither of the above: just the goals.  For a
+   client that has asked for them separately and would otherwise show
+   them twice. *)
+val pp_goals_only   : goalstate Parse.pprinter
 
 end
 

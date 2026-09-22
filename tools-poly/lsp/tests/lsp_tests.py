@@ -6,12 +6,19 @@ notifications/state.  Designed to be self-contained: no editor
 dependency, easy CI'ability, fast (target: <5 min total).
 
 Run:  python3 tools-poly/lsp/tests/lsp_tests.py [test_name ...]
+      python3 .../lsp_tests.py --requires none      (no prerequisites)
+      python3 .../lsp_tests.py --requires integer   (needs src/integer)
 Exit code: 0 if all passed, 1 if any failed.
 """
 import subprocess, threading, time, json, os, sys, re, tempfile, shutil
 
+# The tree under test.  Default: the one this script lives in, four
+# levels up from <HOLDIR>/tools-poly/lsp/tests/lsp_tests.py -- so a
+# build running the suite tests the tree it is building, and a hand run
+# needs no argument.
+_HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.environ.get("HOL_LSP_TEST_REPO",
-    "/repo/.claude/worktrees/lsp-project")
+                      os.path.normpath(os.path.join(_HERE, "..", "..", "..")))
 HOL_BIN = f"{REPO}/bin/hol"
 DEFAULT_HEAP = f"{REPO}/bin/hol.state"
 HOL_STATE0 = f"{REPO}/bin/hol.state0"
@@ -34,12 +41,20 @@ LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 # A server that has to be killed is a leak; raising from the `finally`
 # that finds it would hide the test's own result, so it is recorded
 # against the test that was running.
+# How long a server may take to acknowledge shutdown and exit.  This
+# is not a latency assertion -- it is how long to wait before calling a
+# server orphaned.  A server that has run proofs has a pool to wind
+# down and a Poly/ML runtime to tear down, and 5s here failed a build
+# on a machine where the rest of the suite kept pace.
+EXIT_GRACE = int(os.environ.get("HOL_LSP_EXIT_GRACE", "30"))
+
 CLOSE_FAILURES = []
 CURRENT_TEST = "<none>"
 
 
 class Client:
     def __init__(self, cwd, args=None):
+        self.spawn_started = time.time()
         self.p = subprocess.Popen(
             [HOL_BIN, "lsp", *(args if args is not None else LSP_ARGS)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -50,6 +65,7 @@ class Client:
         self.msgs_lock = threading.Lock()
         self.errs = bytearray()
         self._stop = False
+        self.spawn_done = time.time()
         threading.Thread(target=self._reader, daemon=True).start()
         threading.Thread(target=self._ereader, daemon=True).start()
 
@@ -160,9 +176,9 @@ class Client:
             # into a flake.
             self.wait_until(
                 lambda cl: any(m.get("id") == 999
-                               for m in cl.messages_since(0)[0]), 5)
+                               for m in cl.messages_since(0)[0]), EXIT_GRACE)
             self.send({"jsonrpc":"2.0","method":"exit","params":None})
-            if expect_exit and not _wait_for_exit(self.p, 5):
+            if expect_exit and not _wait_for_exit(self.p, EXIT_GRACE):
                 CLOSE_FAILURES.append(
                     (CURRENT_TEST, "server did not exit after shutdown+exit",
                      self.stderr_text()[-2000:]))
@@ -219,7 +235,7 @@ def _count_diag_events(client, uri):
                and m["params"]["diagnostics"])
 
 
-def _init(c, root=None, timeout=5, encodings=("utf-8",)):
+def _init(c, root=None, timeout=30, encodings=("utf-8",)):
     """Handshake, advertising ENCODINGS as the position encodings this
     client can take.  Defaults to utf-8 because every helper here
     counts bytes (see `_line_col_at`), which is also what eglot
@@ -233,8 +249,16 @@ def _init(c, root=None, timeout=5, encodings=("utf-8",)):
     def got_init_reply(cl):
         msgs, _ = cl.messages_since(0)
         return any(m.get("id") == 1 for m in msgs)
+    t0 = time.time()
     if not c.wait_until(got_init_reply, timeout):
-        raise RuntimeError("initialize timed out")
+        rc = c.p.poll()
+        raise RuntimeError(
+            "initialize timed out: waited %.1fs of a %ss budget; spawn took "
+            "%.1fs; server %s; stderr tail: %r"
+            % (time.time() - t0, timeout,
+               c.spawn_done - c.spawn_started,
+               "still running" if rc is None else f"exited rc={rc}",
+               c.stderr_text()[-400:]))
     c.send({"jsonrpc":"2.0","method":"initialized","params":{}})
 
 
@@ -283,6 +307,73 @@ class Failed(Exception): pass
 def assert_eq(actual, expected, label):
     if actual != expected:
         raise Failed(f"{label}: expected {expected!r}, got {actual!r}")
+
+class Skipped(Exception):
+    """A prerequisite this tree does not have is missing.
+
+    Not a pass: `main' counts and lists these separately, so a suite
+    that silently stopped covering something cannot read as green.
+    """
+
+
+# Tests that need a directory `base-hol' does not reach.  Each tag has
+# its own test directory under `tests/', whose Holmakefile INCLUDES the
+# source directory and so builds it; `--requires <tag>' is how that
+# directory selects its own tests, and `--requires none' is how the
+# parent skips them.  The witness is what that INCLUDES produces.
+_REQUIREMENTS = {
+    "integer": ("src/integer", "src/integer", "integerTheory.uo"),
+    "sorting": ("src/sort",    "src/sort",    "sortingTheory.uo"),
+}
+
+
+def _built(d, obj):
+    """Is `obj' built in directory `d'?
+
+    Holmake keeps objects under `<d>/.hol/objs/' and presents them as
+    if they sat in `<d>'; only the munged path is really on disk.
+    Checking the plain one alone reports every built directory as
+    unbuilt, which here would have shown up as a whole group quietly
+    skipping.
+    """
+    return (os.path.exists(os.path.join(REPO, d, obj))
+            or os.path.exists(os.path.join(REPO, d, ".hol", "objs", obj)))
+
+
+def _point_at_sorting(d):
+    """Give a scratch directory a Holmakefile naming `src/sort'.
+
+    `sortingTheory' is built by that directory's own Holmake run and
+    stays there: `bin/build' uploads to sigobj per *sequence*
+    directory, and `src/sort' is reached through INCLUDES, so nothing
+    ever copies it.  A bare scratch directory therefore cannot see it.
+    Writing the INCLUDES line is also what a real user's directory
+    looks like, and it is the path the server already resolves.
+    """
+    with open(os.path.join(d, "Holmakefile"), "w") as f:
+        f.write(f"INCLUDES = {REPO}/src/sort\n")
+
+
+def requires(tag):
+    """Mark a test as needing `tag''s directory built, and check it.
+
+    One mechanism, not two: the tag drives both the `--requires'
+    selection and the skip, so a test cannot be filed under a
+    prerequisite it does not actually check for.
+    """
+    where, d, obj = _REQUIREMENTS[tag]
+
+    def deco(fn):
+        def wrapper():
+            if not _built(d, obj):
+                raise Skipped(f"{where} is not built in this tree")
+            return fn()
+        wrapper.__name__ = fn.__name__
+        wrapper.__doc__ = fn.__doc__
+        wrapper.requires = tag
+        return wrapper
+    return deco
+
 
 def assert_le(actual, expected, label):
     if not (actual <= expected):
@@ -408,6 +499,7 @@ def test_small_recompile_type_error_inserted():
         c.close()
 
 
+@requires("integer")
 def test_integer_first_compile():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -427,6 +519,7 @@ def test_integer_first_compile():
         c.close()
 
 
+@requires("integer")
 def test_integer_recompile_blank_lines():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -459,6 +552,7 @@ def test_integer_recompile_blank_lines():
         c.close()
 
 
+@requires("integer")
 def test_integer_recompile_with_type_error():
     """Michael's specific scenario: insert `val x = 3 + true` after the header."""
     src = f"{REPO}/src/integer/integerScript.sml"
@@ -529,6 +623,7 @@ def test_small_recompile_bare_val():
         c.close()
 
 
+@requires("integer")
 def test_integer_didChange_interrupts_stale_compile():
     """didChange mid-compile must interrupt the stale compile and start a
     fresh one.  Otherwise we get two compiles running against the same
@@ -571,6 +666,7 @@ def test_integer_didChange_interrupts_stale_compile():
         c.close()
 
 
+@requires("integer")
 def test_hover_responsive_during_compile():
     """A didChange kicks off a compile; while it's running, hover
     requests must still be answered promptly (recv thread must not
@@ -1698,6 +1794,7 @@ def test_snapshot_resume_whole_document_range():
         shutil.rmtree(d, ignore_errors=True)
 
 
+@requires("sorting")
 def test_whole_file_recompile_keeps_ancestors_loaded():
     """An edit at byte 0 leaves no snapshot to resume from, so the whole
     file is recompiled.  That must not restart from the boot state.
@@ -1715,6 +1812,7 @@ def test_whole_file_recompile_keeps_ancestors_loaded():
     nothing gets loaded and the test cannot fail."""
     d = tempfile.mkdtemp(prefix="lsp_wholefile_")
     try:
+        _point_at_sorting(d)
         src = ("Theory wholefile\nAncestors sorting\n\n"
                + "\n".join(f"val x{i} = {i}" for i in range(10))
                + "\nval s = sortingTheory.SORTED_DEF\n")
@@ -2284,6 +2382,7 @@ def _send_goalstate(c, req_id, uri, line, char):
     return c.wait_until(got, 5)
 
 
+@requires("integer")
 def test_full_replace_resumes_from_the_common_prefix():
     """A whole-document replace is usually a revert or a reformat, so
     the old and new texts agree for most of their length.  Resume from
@@ -2370,6 +2469,53 @@ def test_goalState_inside_proof():
         goal_text = goals[0].get("goal", "")
         assert_true("n + 0 = n" in goal_text or "n + 0" in goal_text,
                     f"goal renders the theorem statement ({goal_text!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
+    """A `by' block is structurally step-able without desugaring it to
+    ordinary `sg'.  In particular, the second block's `_ = ...' quotation
+    must be resolved from the labelled equality installed by the first."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_by.sml"
+        src = ("Theory goalstate_by\n"
+               "Ancestors hol arithmetic\n\n"
+               "Theorem by_steps:\n"
+               "  f (x * 1 + y * 2) = z\n"
+               "Proof\n"
+               "  `x * 1 + y * 2 = y * 2 + x`\n"
+               "    by (CONV_TAC $ LAND_CONV $ LAND_CONV $ SCONV [] >>\n"
+               "        CONV_TAC $ LAND_CONV $ REWR_CONV ADD_COMM >>\n"
+               "        REFL_TAC) >>\n"
+               "  `_ = y + x + y` by simp[] >> cheat\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        # Inside the first body, the focus is its quoted equality rather
+        # than the theorem's outer `f ... = z' goal.
+        r1 = _send_goalstate(c, 1021, uri, 7, 9)
+        g1 = r1.get("result")
+        assert_true(g1 is not None and g1.get("goals"),
+                    f"first by body has a goal ({r1!r})")
+        t1 = g1["goals"][0].get("goal", "")
+        assert_true("y * 2" in t1 and "f (" not in t1,
+                    f"first by body focuses its quoted equality ({t1!r})")
+
+        # Entering the second body exercises by0's special wildcard path.
+        # The displayed goal must contain the concrete left side recovered
+        # from the top equality assumption, never the source `_'.
+        r2 = _send_goalstate(c, 1022, uri, 10, 25)
+        g2 = r2.get("result")
+        assert_true(g2 is not None and g2.get("goals"),
+                    f"wildcard by body has a goal ({r2!r})")
+        t2 = g2["goals"][0].get("goal", "")
+        assert_true("y * 2" in t2 and "y + x + y" in t2 and "_" not in t2,
+                    f"wildcard quotation was resolved ({t2!r})")
     finally:
         c.close()
 
@@ -2784,16 +2930,17 @@ def test_goalState_thenl_context_line():
         assert_eq(list(result.get("context") or []),
                   ["branch 2 of 3 of THENL"],
                   f"context field ({result!r})")
-        pretty = result.get("pretty", "")
-        assert_true("[branch 2 of 3 of THENL]" in pretty,
-                    f"expected [branch 2 of 3 of THENL] context, "
-                    f"got: {pretty!r}")
+        # ... and `pretty' is the goals alone.  The two are separate
+        # response fields so a client can pin the tag in a header while
+        # the goals scroll under it.
+        assert_true("THENL" not in (result.get("pretty") or ""),
+                    f"pretty carries goals only ({result!r})")
         # Line 9 char 4 = start of branch 3's `SIMP_TAC`.
         r = _send_goalstate(c, 812, uri, 9, 4)
-        pretty = r.get("result", {}).get("pretty", "")
-        assert_true("[branch 3 of 3 of THENL]" in pretty,
-                    f"expected [branch 3 of 3 of THENL] context, "
-                    f"got: {pretty!r}")
+        result = r.get("result") or {}
+        assert_eq(list(result.get("context") or []),
+                  ["branch 3 of 3 of THENL"],
+                  f"branch 3 context field ({result!r})")
     finally:
         c.close()
 
@@ -3304,8 +3451,9 @@ def test_goalState_focused_subgoal_solved_between_close_and_outer():
         pretty = result.get("pretty", "")
         assert_true("No subgoals but proof incomplete" not in pretty,
                     f"NOT the stale close-pending message: {pretty!r}")
-        assert_true("Focused subgoal(s) solved" in pretty,
-                    f"clearer solved message: {pretty!r}")
+        note = result.get("note") or ""
+        assert_true("Focused subgoal(s) solved" in note,
+                    f"clearer solved message, in `note': {result!r}")
         assert_true("0 < 1" in pretty,
                     f"remaining subgoal visible: {pretty!r}")
     finally:
@@ -3540,6 +3688,7 @@ def test_goalState_walks_into_select_goal_block():
         c.close()
 
 
+@requires("integer")
 def test_goalState_walks_map_every():
     """`MAP_EVERY f [a, b]` is a single `MapEvery` atom annotated with
     the span of `f` alone — the head token `MAP_EVERY` and the argument
@@ -3824,8 +3973,9 @@ def test_goalState_before_thenl_shows_all_branches():
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
         assert_eq(len(result["goals"]), 1, f"branch 1 focused ({result!r})")
-        assert_true("branch 1 of 2 of THENL" in (result.get("pretty") or ""),
-                    f"captioned as branch 1 ({result!r})")
+        assert_eq(list(result.get("context") or []),
+                  ["branch 1 of 2 of THENL"],
+                  f"captioned as branch 1 ({result!r})")
     finally:
         c.close()
 
@@ -3863,12 +4013,15 @@ def test_goalState_thenl_branch_proved_is_acknowledged():
         assert_eq(len(result["goals"]), 0,
                   f"branch 1's goal is gone ({result!r})")
         pretty = result.get("pretty") or ""
-        assert_true("Focused subgoal(s) solved" in pretty,
-                    f"the branch is acknowledged as proved ({pretty!r})")
-        assert_true("No subgoals but proof incomplete" not in pretty,
-                    f"not the misleading close_paren message ({pretty!r})")
-        assert_true("branch 1 of 2 of THENL" in pretty,
-                    f"names the branch just finished ({pretty!r})")
+        note = result.get("note") or ""
+        assert_true("Focused subgoal(s) solved" in note,
+                    f"the branch is acknowledged as proved ({result!r})")
+        assert_true("No subgoals but proof incomplete" not in note
+                    and "No subgoals but proof incomplete" not in pretty,
+                    f"not the misleading close_paren message ({result!r})")
+        assert_eq(list(result.get("context") or []),
+                  ["branch 1 of 2 of THENL"],
+                  f"names the branch just finished ({result!r})")
     finally:
         c.close()
 
@@ -3905,8 +4058,9 @@ def test_goalState_thenl_branch_left_open_shows_its_goal():
                     and goals[0]["asms"] == ["0 < a"],
                     f"branch 1's own leftover goal, post-DISCH_TAC "
                     f"({result!r})")
-        assert_true("branch 1 of 2 of THENL" in (result.get("pretty") or ""),
-                    f"captioned as branch 1, not branch 2 ({result!r})")
+        assert_eq(list(result.get("context") or []),
+                  ["branch 1 of 2 of THENL"],
+                  f"captioned as branch 1, not branch 2 ({result!r})")
     finally:
         c.close()
 
@@ -4114,8 +4268,9 @@ def test_goalState_thenl_leftovers_survive_a_skipped_branch():
         mid = _send_goalstate(c, 761, uri, 7, 24).get("result")
         assert_true(mid is not None, "goal state inside branch 2")
         assert_eq(mid.get("error"), None, "no error inside branch 2")
-        assert_true("branch 2 of 2 of THENL" in (mid.get("pretty") or ""),
-                    f"captioned as branch 2 ({mid!r})")
+        assert_eq(list(mid.get("context") or []),
+                  ["branch 2 of 2 of THENL"],
+                  f"captioned as branch 2 ({mid!r})")
         # Past the last branch the block has closed, and the closed
         # state concatenates every branch's leftovers -- so branch 1
         # must have really run.
@@ -5460,12 +5615,21 @@ def test_a_failed_proof_is_reported_at_the_step_that_fails():
                       if "proof failed" in x.get("message", "")]
                 return ds or None
 
-            ds = c.wait_until(located, 60)
-            assert_true(ds is not None, "the failure is reported at all")
-            line = ds[0]["range"]["start"]["line"]
-            assert_eq(line, tactic_line,
-                      f"reported against the tactic, not the theorem's "
-                      f"name on line 4 ({ds!r})")
+            # The pool's verdict is published against the theorem's
+            # name as soon as it arrives, and the walk then moves it to
+            # the step.  Waiting for "a proof-failed diagnostic exists"
+            # catches that transient, which is a race whoever publishes
+            # first wins -- so wait for the moved one.
+            def relocated(cl):
+                return ([x for x in (located(cl) or [])
+                         if x["range"]["start"]["line"] == tactic_line]
+                        or None)
+
+            ds = c.wait_until(relocated, 60)
+            assert_true(ds is not None,
+                        f"the failure is relocated to the tactic on line "
+                        f"{tactic_line + 1}, not left against the "
+                        f"theorem's name (saw {located(c)!r})")
             assert_true("FAIL_TAC" in ds[0]["message"],
                         f"and says what was raised ({ds[0]['message']!r})")
         finally:
@@ -6542,6 +6706,7 @@ def test_check_proofs_switchable_without_a_restart():
         shutil.rmtree(d, ignore_errors=True)
 
 
+@requires("sorting")
 def test_check_proofs_enabled_during_a_compile():
     """A client sends its configuration right after the handshake, so
     `checkProofs' arrives while the first compile is still running.
@@ -6559,6 +6724,7 @@ def test_check_proofs_enabled_during_a_compile():
     `hol.state', or nothing is loaded and the test cannot fail."""
     d = tempfile.mkdtemp(prefix="lsp_cpdur_")
     try:
+        _point_at_sorting(d)
         src = ("Theory cpdur\n"
                "Ancestors sorting\n\n"
                "Theorem t1:\n  1 = 1\nProof\n  REFL_TAC\nQED\n\n"
@@ -7254,6 +7420,91 @@ def test_goal_state_segments_rebuild_pretty_with_annotations():
         c.close()
 
 
+def test_goalState_note_at_end_of_an_unparenthesised_branch():
+    """A `>- tac` branch has no closing delimiter, so its end byte is its
+    tactic's end: there is no position that means "the branch has run but
+    has not closed", which is where the note about a solved focus lives.
+    The run of whitespace up to the next token is that position -- what a
+    `>- ( ... )` gets for free from its `)`.
+
+    Three cursors on one line: inside the branch's tactic (it has not run
+    yet), just after it (run, not closed -- the note), and past the next
+    connective (closed, so the note is gone and the next goal is up)."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_note.sml"
+        # `strip_tac' strips the quantifier and leaves the conjunction
+        # for `conj_tac'.  (`rpt strip_tac' would split the conjunction
+        # itself, leaving `conj_tac' nothing to do and no branch to
+        # watch.)
+        tac = "  strip_tac >> conj_tac >- metis_tac [] >> simp []\n"
+        src = ("Theory goalstate_note\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem n_refl_and_le:\n"
+               "  !n:num. n = n /\\ n <= n\n"
+               "Proof\n"
+               + tac +
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        line = src.split("\n")[6]
+        # Columns either side of the branch's tactic and its `>>`.
+        end_of_branch = line.index("metis_tac []") + len("metis_tac []")
+        inside_branch = end_of_branch - 2
+        after_connective = line.index(">> simp") + 3
+
+        def note_at(col, ident):
+            reply = _send_goalstate(c, ident, uri, 6, col)
+            assert_true(reply is not None, f"reply at col {col}")
+            result = reply.get("result")
+            assert_true(result is not None, f"result at col {col}")
+            return result.get("note")
+
+        assert_true(note_at(inside_branch, 201) is None,
+                    "no note while the branch's own tactic has not run")
+        note = note_at(end_of_branch, 202)
+        assert_true(note is not None and "Focused subgoal" in note,
+                    f"note just after the branch ({note!r})")
+        assert_true(note_at(after_connective, 203) is None,
+                    "no note once the next connective is passed")
+    finally:
+        c.close()
+
+
+def test_goalState_failing_branch_still_reports_at_its_end():
+    """Deferring the close is conditional on it succeeding: a `>- tac`
+    that proves nothing has to keep saying where the proof stops, which
+    is what closing it says.  Without the condition this position would
+    quietly show the goals the branch left open instead."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_badbranch.sml"
+        src = ("Theory goalstate_badbranch\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem p_imp_p_and_p2:\n"
+               "  !p:bool. p ==> p /\\ p\n"
+               "Proof\n"
+               "  rpt strip_tac >> conj_tac >- all_tac >> simp []\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        line = src.split("\n")[6]
+        col = line.index("all_tac") + len("all_tac")
+        reply = _send_goalstate(c, 204, uri, 6, col)
+        result = (reply or {}).get("result") or {}
+        assert_true(result.get("error") is not None,
+                    f"the branch that proved nothing is reported "
+                    f"({result.get('error')!r})")
+        assert_true(result.get("note") is None,
+                    "and says that rather than a solved focus")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -7359,6 +7610,8 @@ TESTS = [
     ("statement_edit_still_clears_later_proofs",
                                      test_statement_edit_still_clears_later_proofs),
     ("goalState_inside_proof",       test_goalState_inside_proof),
+    ("goalState_steps_inside_by_and_resolves_wildcard_equality",
+                    test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
                                      test_goalState_between_two_theorems),
@@ -7531,15 +7784,60 @@ TESTS = [
      test_disconnect_before_handshake_exits_cleanly),
     ("a_burst_of_edits_leaves_diagnostics_matching_the_text",
      test_a_burst_of_edits_leaves_diagnostics_matching_the_text),
+    ("goalState_note_at_end_of_an_unparenthesised_branch",
+     test_goalState_note_at_end_of_an_unparenthesised_branch),
+    ("goalState_failing_branch_still_reports_at_its_end",
+     test_goalState_failing_branch_still_reports_at_its_end),
 ]
+
+
+def _check_all_registered():
+    """Every `def test_*' must appear in TESTS.
+
+    Two of them once did not: they were written below the
+    `if __name__ == "__main__"' block, so they were defined after
+    `main' had already run and never entered the table.  An
+    unregistered test is indistinguishable from a passing one in the
+    output, so make it an error rather than a silence.
+    """
+    listed = {fn for _, fn in TESTS}
+    missing = sorted(k for k, v in sorted(globals().items())
+                     if k.startswith("test_") and callable(v)
+                     and v not in listed)
+    if missing:
+        print("%d test(s) defined but not in TESTS:" % len(missing))
+        for m in missing:
+            print("  " + m)
+        sys.exit(2)
 
 
 def main():
     global CURRENT_TEST
-    wanted = set(sys.argv[1:])
+    _check_all_registered()
+    argv = sys.argv[1:]
+    # `--requires none' selects the tests with no prerequisite beyond a
+    # built `hol.state'; `--requires <tag>' selects exactly one group.
+    req = None
+    while "--requires" in argv:
+        i = argv.index("--requires")
+        if i + 1 >= len(argv):
+            print("--requires needs a tag (one of: none, "
+                  + ", ".join(sorted(_REQUIREMENTS)) + ")")
+            sys.exit(2)
+        req = argv[i + 1]
+        del argv[i:i + 2]
+    if req is not None and req != "none" and req not in _REQUIREMENTS:
+        print(f"unknown --requires tag {req!r} (one of: none, "
+              + ", ".join(sorted(_REQUIREMENTS)) + ")")
+        sys.exit(2)
+    wanted = set(argv)
     passed = failed = 0
+    skipped = []
     for name, fn in TESTS:
         if wanted and name not in wanted: continue
+        tag = getattr(fn, "requires", None)
+        if req == "none" and tag is not None: continue
+        if req not in (None, "none") and tag != req: continue
         CURRENT_TEST = name
         t0 = time.time()
         try:
@@ -7547,6 +7845,9 @@ def main():
             dt = time.time() - t0
             print(f"  PASS  {name}  ({dt:.1f}s)")
             passed += 1
+        except Skipped as e:
+            print(f"  SKIP  {name}: {e}")
+            skipped.append(name)
         except Failed as e:
             dt = time.time() - t0
             print(f"  FAIL  {name}  ({dt:.1f}s): {e}")
@@ -7562,7 +7863,13 @@ def main():
             if err.strip():
                 print("        stderr tail: " + err.strip()[-500:])
         failed += len(CLOSE_FAILURES)
-    print(f"\n{passed} passed, {failed} failed")
+    if skipped:
+        print(f"\n{len(skipped)} skipped (prerequisite not built in this "
+              f"tree): {', '.join(skipped)}")
+    if req is not None and passed + failed + len(skipped) == 0:
+        print(f"--requires {req} selected no tests")
+        sys.exit(2)
+    print(f"\n{passed} passed, {failed} failed, {len(skipped)} skipped")
     sys.exit(0 if failed == 0 else 1)
 
 

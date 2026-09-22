@@ -1,3 +1,4 @@
+include $(HOLDIR)/src/TeX/mungedeps.hmf
 INCLUDES = $(HOLDIR)/tools/cmp ..
 TEST_PROGS = test_coopers.exe test_omega.exe selftest.exe
 
@@ -48,7 +49,7 @@ modTeX_comparison: modTex.tex $(HOLDIR)/tools/cmp/cmp.exe modTex_expected
 modTex.tex: modTex.htex munger
 	./munger < $< > $@
 
-munger: ../integerTheory.uo $(HOLDIR)/bin/mkmunge.exe
+munger: ../integerTheory.uo $(MUNGE_DEPS)
 	$(HOLDIR)/bin/mkmunge.exe $< -o $@
 
 .PHONY: all modTeX_comparison

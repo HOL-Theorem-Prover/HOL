@@ -1,7 +1,24 @@
 structure TacticParse :> TacticParse =
 struct
 
-open Lib
+(* The seven combinators this file wants from `Lib', defined here
+   instead of opening it.  `Lib' belongs to the kernel, and nothing else
+   here does: the rest is `HOLSourceAST', `HOLSourceParser', `Binarymap'
+   and the basis.  Staying off the kernel is what lets this module be
+   compiled into `bin/hol' and Holmake alongside the source parser it
+   reads, rather than loaded from sigobj at every LSP server start. *)
+fun I x = x
+fun K x _ = x
+fun fst (x, _) = x
+fun snd (_, y) = y
+fun uncurry f (x, y) = f x y
+fun funpow n f x = if n <= 0 then x else funpow (n - 1) f (f x)
+(* `infixr 1', as `Overlay.sml' declares it -- `open Lib' never brought
+   the fixity, the overlay did, and a different precedence here would
+   quietly reassociate every use below. *)
+infixr 1 $
+fun f $ x = f x
+
 open HOLSourceAST
 
 fun identName (Ident {id = (_, s), ...}) = SOME s
@@ -49,7 +66,10 @@ datatype 'a tac_expr
   = Then of 'a tac_expr list
   | ThenLT of 'a tac_expr * 'a tac_expr list
   | Subgoal of 'a
+  | By of 'a * 'a tac_expr
+  | SufficesBy of 'a * 'a tac_expr
   | First of 'a tac_expr list
+  | FirstProve of 'a tac_expr list
   | Try of 'a tac_expr
   | Repeat of 'a tac_expr
   | MapEvery of 'a * 'a tac_expr list
@@ -86,7 +106,10 @@ datatype 'a tac_expr
 fun isTac (Then _) = true
   | isTac (ThenLT _) = true
   | isTac (Subgoal _) = true
+  | isTac (By _) = true
+  | isTac (SufficesBy _) = true
   | isTac (First _) = true
+  | isTac (FirstProve _) = true
   | isTac (Try _) = true
   | isTac (Repeat _) = true
   | isTac (MapEvery _) = true
@@ -130,7 +153,11 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
     | _ => NONE
 
   fun simplifys e acc = case stripParens e of
-      SOME e' => simplifys e' acc
+      (* Parentheses delimit one operand of the surrounding tactic sequence.
+         Retain that boundary rather than flattening the enclosed sequence into
+         this accumulator: consumers such as ProofStepPlan need to know that
+         the whole operand is applied at this point. *)
+      SOME _ => grouped true simplify e :: acc
     | NONE => case matchInfix e of
       SOME (lhs, ">>", rhs) => simplifys lhs (simplifys rhs acc)
     | SOME (lhs, "++", rhs) => simplifys lhs (simplifys rhs acc)
@@ -196,12 +223,9 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
             group true (tr rhs') $ Then (simplifys rhs' [First []]))]
       | _ => Opaque (trPrec e))
     | SOME (lhs, "by", rhs) =>
-        ThenLT (Subgoal (tr lhs), [LThen1 (grouped true simplify rhs)])
-    | SOME (lhs, "suffices_by", rhs) => let
-        val p = tr lhs
-        in ThenLT (
-          group false p (ThenLT (Subgoal p, [LReverse])),
-          [LThen1 (grouped true simplify rhs)]) end
+        By (tr lhs, grouped true simplify rhs)
+    | SOME (lhs, "suffices_by", rhs) =>
+        SufficesBy (tr lhs, grouped true simplify rhs)
     (* Application forms *)
     | _ => case matchApp e of
       SOME ("subgoal", [rhs]) => group true (tr e) (Subgoal (tr rhs))
@@ -215,13 +239,21 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
         SOME args => Then (foldr (uncurry simplifys) [] args)
       | NONE => Opaque (trPrec e))
     | SOME ("FIRST", [le]) => (case listElems le of
-        SOME args => First (foldr (uncurry simplifyFirst) [] args)
+        SOME args => group true (tr e)
+          (First (foldr (uncurry simplifyFirst) [] args))
+      | NONE => Opaque (trPrec e))
+    | SOME ("FIRST_PROVE", [le]) => (case listElems le of
+        SOME args => group true (tr e) (FirstProve (map simplify args))
       | NONE => Opaque (trPrec e))
     | SOME ("MAP_EVERY", [f, le]) => (case listElems le of
         SOME args => MapEvery (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
+    | SOME ("map_every", [f, le]) => (case listElems le of
+        SOME args => MapEvery (tr f, map (fn e => OOpaque (trPrec e)) args)
+      | NONE => Opaque (trPrec e))
     | SOME ("MAP_FIRST", [f, le]) => (case listElems le of
-        SOME args => MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args)
+        SOME args => group true (tr e)
+          (MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args))
       | NONE => Opaque (trPrec e))
     | SOME ("RENAME_TAC", [pat]) => group true (tr e) (Rename (tr pat))
     (* QLib.rename = Q.RENAME_TAC; same argument, a quotation list. *)
@@ -310,7 +342,10 @@ fun mapTacExpr {start, stop, repair} = let
     | go (Then ls) = Then (map go ls)
     | go (ThenLT (e, ls)) = ThenLT (go e, map go ls)
     | go (Subgoal t) = Subgoal (tr false t)
+    | go (By (q, e)) = By (tr false q, go e)
+    | go (SufficesBy (q, e)) = SufficesBy (tr false q, go e)
     | go (First ls) = First (map go ls)
+    | go (FirstProve ls) = FirstProve (map go ls)
     | go (Try e) = Try (go e)
     | go (Repeat e) = Repeat (go e)
     | go (Rename p) = Rename (tr false p)
@@ -369,8 +404,12 @@ local
       | go (ThenLT (e, ls)) = mkInfixl ">>>" (map go (e::ls))
       | go (LThen1 e) = TApp ("THEN1_LT", [go e])
       | go (Subgoal t) = TApp ("sg", [TAtom (sub t)])
+      | go (By (q, e)) = TInfix (TAtom (sub q), "by", go e)
+      | go (SufficesBy (q, e)) =
+          TInfix (TAtom (sub q), "suffices_by", go e)
       | go (First []) = TAtom "NO_TAC"
       | go (First ls) = mkInfixl "ORELSE" (map go ls)
+      | go (FirstProve ls) = TApp ("FIRST_PROVE", [TList (map go ls)])
       | go (Try e) = TApp ("TRY", [go e])
       | go (Repeat e) = TApp ("rpt", [go e])
       | go (Rename p) = TApp ("RENAME_TAC", [TAtom (sub p)])
@@ -480,6 +519,8 @@ end (* local *)
 datatype tac_frag_open
   = FOpen
   | FOpenThen1
+  | FOpenBy of int * int
+  | FOpenSufficesBy of int * int
   | FOpenFirst
   | FOpenRepeat
   | FOpenTacsToLT
@@ -540,6 +581,10 @@ fun linearize isAtom e = let
     | First (e::ls) =>
       asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls))) acc
+    | FirstProve [] => (true, FAtom (FirstProve []) :: acc')
+    | FirstProve (e::ls) =>
+      asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
+        map (fn e => snd (go e (one, []))) (e::ls))) acc
     | Try e' => asTac (tryish FClose e') acc
     | Repeat e => asTac (bracket2 FCloseRepeat (fn one => go e (one, [])) FOpenRepeat) acc
     | MapEvery (_, []) => acc
@@ -579,6 +624,10 @@ fun linearize isAtom e = let
     | MapFirst _     => (false, FAtom e :: acc')
     | Rename _       => (false, FAtom e :: acc')
     | Subgoal _      => (false, FAtom e :: acc')
+    | By (q, body) =>
+      asTac (bracket (fn _ => go body (true, [])) (FOpenBy q)) acc
+    | SufficesBy (q, body) =>
+      asTac (bracket (fn _ => go body (true, [])) (FOpenSufficesBy q)) acc
     | LSelectGoal _  => (false, FAtom e :: acc')
     | LSelectGoals _ => (false, FAtom e :: acc')
     | Opaque _       => (false, FAtom e :: acc')
@@ -610,6 +659,8 @@ val unlinearize = let
       if isTac e then mkLThen lhs l (e::acc) else mkLThenL l [e, LThen (lhs, rev acc)]
   fun mkOpen FOpen acc = mkThen acc []
     | mkOpen FOpenThen1 acc = LHeadGoal (mkThen acc [])
+    | mkOpen (FOpenBy q) acc = By (q, mkThen acc [])
+    | mkOpen (FOpenSufficesBy q) acc = SufficesBy (q, mkThen acc [])
     | mkOpen FOpenFirst acc = Try (mkThen acc [])
     | mkOpen FOpenRepeat acc = Repeat (mkThen acc [])
     | mkOpen FOpenTacsToLT acc = LHeadGoal (mkThen acc [])
@@ -658,6 +709,8 @@ fun sliceTacticBlock start stop sliceClose sp e = let
         (case start of
           FOpen => separateE sp ls I acc
         | FOpenThen1 => separateE sp ls (cons (FAtom (First []))) acc
+        | FOpenBy _ => separateE sp ls (cons (FAtom (First []))) acc
+        | FOpenSufficesBy _ => separateE sp ls (cons (FAtom (First []))) acc
         | FOpenNullOk => join sp ls I acc
         | FOpenNthGoal _ => join sp ls I acc
         | FOpenLastGoal => join sp ls I acc

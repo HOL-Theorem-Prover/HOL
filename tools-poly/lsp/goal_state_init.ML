@@ -40,9 +40,13 @@ local
     fun str t = Lib.with_flag (Globals.linewidth, width)
                               Parse.term_to_string t
     in {asms = List.map str asms, goal = str g} end
+  (* `pp_goals_only', not `pp_goalstate': the combinator tags and the
+     note about a solved focus go in `context' and `note', so a client
+     can keep them where the goals scrolling does not take them with
+     it.  Rendering them here too would show them twice. *)
   fun ppState width st =
     Lib.with_flag (Parse.current_backend, PPBackEnd.vt100_terminal)
-      (HOLPP.pp_to_string width goalFrag.pp_goalstate) st
+      (HOLPP.pp_to_string width goalFrag.pp_goals_only) st
     handle _ => ""
 
   (* The same state, rendered again through the back end that says in
@@ -60,7 +64,7 @@ local
   fun ppSegments width st =
     PPBackEnd.lsp_segments
       (Lib.with_flag (Parse.current_backend, PPBackEnd.lsp_terminal)
-         (HOLPP.pp_to_string width goalFrag.pp_goalstate) st)
+         (HOLPP.pp_to_string width goalFrag.pp_goals_only) st)
     handle _ => []
 
   val fragEndByte = TacticSteps.atomEndByte
@@ -157,7 +161,8 @@ val () = LSPExtension.goalStateAtPos :=
                       frags = fs, cursor = tacCursor}) of
                 NONE => SOME
                   {theorem = name, step = step,
-                   goals = [], pretty = "", context = [], status = "ok",
+                   goals = [], pretty = "", context = [],
+                   note = NONE, status = "ok",
                    error = SOME ("walker timed out (>"
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
                    failedRange = NONE, segments = []}
@@ -171,6 +176,7 @@ val () = LSPExtension.goalStateAtPos :=
                    goals = List.map (ppGoal width) (goalFrag.top_goals state),
                    pretty = ppState width state,
                    context = goalFrag.context_lines state,
+                   note = goalFrag.focus_note state,
                    status = if silent andalso not compileDone
                             then "pending" else "ok",
                    error = Option.map (failMsg tacText o #1) reported,
@@ -187,6 +193,7 @@ val () = LSPExtension.goalStateAtPos :=
                                         Parse.term_to_string tm}],
                     pretty = ppState width startState,
                     context = goalFrag.context_lines startState,
+                    note = goalFrag.focus_note startState,
                     status = "ok", error = NONE,
                     failedRange = NONE,
                     segments = ppSegments width startState}

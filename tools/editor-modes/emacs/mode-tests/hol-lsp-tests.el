@@ -491,6 +491,56 @@ would shift every annotation."
      6)
     (should (equal (get-text-property 1 'hol-lsp-doc) "x :num"))))
 
+(ert-deftest hol-lsp-goals-header-shows-the-note ()
+  "The header line says what stepping out will show.
+`pretty' used to announce it on its first line, where scrolling to the
+end carried it out of sight; the server now sends it as `note'."
+  (let ((h (hol-lsp--goals-header
+            '(:theorem "doubleL_thm" :step 24 :context ["inside >-"]
+              :note "Focused subgoal(s) solved; remaining after close:"))))
+    (should (string-match-p "doubleL_thm" h))
+    (should (string-match-p (regexp-quote "[inside >-]") h))
+    (should (string-match-p "Focused subgoal(s) solved; remaining after close"
+                            h))
+    ;; The colon introduced the goals, which are not in the header.
+    (should-not (string-match-p ":\\'" h))))
+
+(ert-deftest hol-lsp-goals-header-falls-back-without-a-note ()
+  "A server too old to send `note' still gets the fact, inferred.
+No goals and no error is exactly a solved focus."
+  (let ((h (hol-lsp--goals-header
+            '(:theorem "t" :step 1 :goals [] :pretty "x"))))
+    (should (string-match-p "solved" h))))
+
+(ert-deftest hol-lsp-goals-eldoc-reports-once ()
+  "Eldoc is told about the symbol exactly once.
+`eldoc-documentation-functions' takes either the return value or the
+callback, not both; a function that used both had the echo area show
+the symbol twice over while the tooltip, on a separate path, showed it
+once.  Driving eldoc rather than calling the function directly is what
+makes that visible."
+  (require 'eldoc)
+  (with-temp-buffer
+    (insert "MAP")
+    (hol-lsp--apply-segments
+     1 '((:text "MAP" :kind "const" :name "listTheory$MAP" :ty "'a")) 0)
+    (goto-char 2)
+    (setq-local eldoc-documentation-functions (list #'hol-lsp--goals-eldoc))
+    (setq-local eldoc-documentation-strategy #'eldoc-documentation-default)
+    (let (collected)
+      (setq-local eldoc-display-functions
+                  (list (lambda (docs &rest _) (setq collected docs))))
+      (eldoc-print-current-symbol-info)
+      (should (equal (mapcar #'car collected)
+                     '("listTheory$MAP : 'a"))))))
+
+(ert-deftest hol-lsp-goals-eldoc-silent-off-a-symbol ()
+  "Nowhere in particular gets no documentation, not an empty one."
+  (with-temp-buffer
+    (insert "  ")
+    (goto-char 1)
+    (should-not (hol-lsp--goals-eldoc #'ignore))))
+
 (ert-deftest hol-lsp-apply-segments-tolerates-disagreement ()
   "Segments running past the buffer annotate nothing rather than
 the wrong text."

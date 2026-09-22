@@ -1,9 +1,10 @@
+include $(HOLDIR)/src/TeX/mungedeps.hmf
 CMPDIR = $(protect $(HOLDIR)/tools/cmp)
 CMP = $(CMPDIR)/cmp.exe
 
 INCLUDES = $(CMPDIR) ../
 
-PARENT_DEPS = ../EmitTeX.uo ../mungeTools.uo ../mkmunger.sml
+PARENT_DEPS = ../EmitTeX.uo ../mungeTools.uo ../mkmunger.sml ../munger.lex.sml
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
@@ -28,19 +29,19 @@ tyabb_output: tyabb_input tymunge.exe
 utyabb_output: tyabb_input utymunge.exe
 	./utymunge.exe < $< > $@
 
-munge.exe: mdtTheory.uo $(dprot $(HOLDIR)/bin/mkmunge.exe) $(PARENT_DEPS)
+munge.exe: mdtTheory.uo $(MUNGE_DEPS)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) mdtTheory
 
-tymunge.exe: tyabbrevTheory.uo ../EmitTeX.uo
+tymunge.exe: tyabbrevTheory.uo $(MUNGE_DEPS)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ tyabbrevTheory
 
-utymunge.exe: untyabbrevTheory.uo ../EmitTeX.uo
+utymunge.exe: untyabbrevTheory.uo $(MUNGE_DEPS)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ untyabbrevTheory
 
-munge248.exe: pp248Theory.uo ../EmitTeX.uo
+munge248.exe: pp248Theory.uo $(MUNGE_DEPS)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ pp248Theory
 
-munge_d20171208.exe: dupop20171208bTheory.uo ../EmitTeX.uo
+munge_d20171208.exe: dupop20171208bTheory.uo $(MUNGE_DEPS)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ dupop20171208bTheory
 
 check_gh242: gh242_input gh242_expected munge.exe $(CMP)

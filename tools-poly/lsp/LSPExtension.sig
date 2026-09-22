@@ -118,19 +118,27 @@ type goal_state = {asms: string list, goal: string}
 type pp_segment = {text: string, kind: string, name: string, ty: string}
 type goal_state_response = {
   theorem: string, step: int, goals: goal_state list,
-  (* Rendered form of the whole state — HOL's own `pp_goalstate`
+  (* The goals, and only the goals: HOL's own `pp_goals_only`
      pretty-print, matching the REPL's "N subgoals: … ⊨ …" layout
      (no turnstile, blank-line-separated assumptions, `----`
      separator).  Clients that just want to display the state
      verbatim should prefer this; `goals` remains for clients that
-     want to render individual subgoals structurally. *)
+     want to render individual subgoals structurally.
+
+     What `pp_goalstate` puts *above* the goals is not in here: it is
+     in `context` and `note`.  A client showing all three is showing
+     what the REPL shows, and can put the first two where the goals
+     scrolling will not take them away. *)
   pretty: string,
-  (* The combinator tags `pretty` prints above the goals, outermost
-     first ("branch 2 of 3 of THENL", "inside >-"), sent separately
-     so a client can show them in a fixed header while the goals
-     scroll.  `pretty` still carries them, so a client that renders
-     it verbatim needs no change. *)
+  (* The combinator tags, outermost first ("branch 2 of 3 of THENL",
+     "inside >-"). *)
   context: string list,
+  (* SOME line when the focused subgoals have just been proved and
+     stepping out is what makes the next ones visible: "Focused
+     subgoal(s) solved; remaining after close:".  Like `context` it
+     belongs above the goals, and for the same reason is not in
+     `pretty`. *)
+  note: string option,
   (* "ok", or "pending" when the answer is provisional because the
      file's own compile hasn't finished: the walker compiles each
      tactic against the file's namespace, and until the file's

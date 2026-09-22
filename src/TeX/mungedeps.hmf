@@ -1,0 +1,3 @@
+MUNGE_SRCS = munger.lex.sml EmitTeX.uo mungeTools.uo holindex.uo
+MUNGE_DEPS = $(dprot $(HOLDIR)/bin/mkmunge.exe) \
+             $(patsubst %,$(dprot $(HOLDIR)/src/TeX/%),$(MUNGE_SRCS))

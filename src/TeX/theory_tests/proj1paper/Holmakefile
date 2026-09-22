@@ -1,3 +1,5 @@
+include $(HOLDIR)/src/TeX/mungedeps.hmf
+
 paper.tex : paper.htex munge.exe overrides
 	./munge.exe -m';' overrides < $< > $@
 
@@ -5,7 +7,7 @@ INCLUDES = ../proj1
 
 MAIN = ppLib
 
-munge.exe : $(MAIN).uo ppTheory.uo
+munge.exe : $(MAIN).uo ppTheory.uo $(MUNGE_DEPS)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) $(MAIN)
 
 HOLHEAP = heap

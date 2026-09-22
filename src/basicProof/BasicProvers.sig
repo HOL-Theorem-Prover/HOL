@@ -87,6 +87,7 @@ sig
   val by                : term quotation * tactic -> tactic  (* infix *)
   val byA               : term quotation * tactic -> tactic
   val suffices_by       : term quotation * tactic -> tactic  (* infix *)
+  val suffices_byA      : term quotation * tactic -> tactic
   val on                : (thm -> tactic) * (term quotation * tactic) -> tactic
                           (* infix *)
   val subgoal           : term quotation -> tactic

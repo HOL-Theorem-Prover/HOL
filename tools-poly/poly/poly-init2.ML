@@ -21,6 +21,13 @@ val _ = use "../tools/parsing/HOLSourcePrinter.sig";
 val _ = use "../tools/parsing/HOLSourcePrinter.sml";
 val _ = use "../tools/parsing/HOLSource.sig";
 val _ = use "../tools/parsing/HOLSource.sml";
+(* Reads what HOLSourceParser produces and nothing from the kernel, so
+   it belongs in the executable rather than in sigobj, where `hol lsp'
+   had to `Meta.load' it at every server start. *)
+val _ = use "../tools/parsing/TacticParse.sig";
+val _ = use "../tools/parsing/TacticParse.sml";
+val _ = use "../tools/parsing/ProofStepPlan.sig";
+val _ = use "../tools/parsing/ProofStepPlan.sml";
 val _ = use "poly/sref-bootstrap.ML";
 
 val _ = use "../src/portableML/UniversalType.sig";
@@ -89,7 +96,8 @@ val loadedMods = ref (Binaryset.empty String.compare);
 val _ = loadedMods := Binaryset.addList (!loadedMods, [
   "Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
   "Array", "Array2", "Vector", "UniversalType", "DArray", "DString",
-  "HOLSourceAST", "HOLSourceParser", "HOLSourceExpand", "HOLSourcePrinter", "HOLSource",
+  "HOLSourceAST", "HOLSourceParser", "HOLSourceExpand", "HOLSourcePrinter",
+  "HOLSource", "TacticParse", "ProofStepPlan",
   "Systeml", "PrettyImpl", "LSPExtension", "SHA1"])
 
 fun findUo modPath [] = NONE

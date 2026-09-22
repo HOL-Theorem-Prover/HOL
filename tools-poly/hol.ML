@@ -668,8 +668,10 @@ in
            SML rather than an evalString, so it is type-checked at load
            and can be read; see the file for why the replay guard is
            per-thread. *)
-        (* Future (Isabelle's task framework) is in sigobj but not the
-           base heap, so pull it in before the pool that uses it. *)
+        (* Future (Isabelle's task framework).  `src/proofman' bakes it
+           into `hol.state0', which every later heap is built on, so
+           this load costs nothing on any of them.  Kept for a heap
+           built some other way. *)
         Meta.load "Future";
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/deferred_proofs.ML"));
@@ -733,10 +735,9 @@ in
                                  "tools-poly/lsp/hover_quote_init.ML"));
         (* Tactic-step compiler used by later slices to walk a Proof
            body via goalFrag; also runs its selftest at load time.
-           Depends on TacticParse (src/parse/) for the surface-sugar
-           elaboration -- boss's ancestor chain doesn't autoload it,
-           so pull it in explicitly. *)
-        Meta.load "TacticParse";
+           Depends on TacticParse (tools/parsing/) for the surface-sugar
+           elaboration.  No load: `poly-init2' compiles TacticParse
+           into this executable, beside the source parser it reads. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/tactic_steps.ML"));
         (* goalFrag-based interpreter for the step stream. *)

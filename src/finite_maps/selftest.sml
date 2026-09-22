@@ -32,6 +32,22 @@ fun testeval (s, t, expected) =
                 (rhs o concl o EVAL) t
   end
 
+val _ =
+  let
+    val list_info =
+      valOf (TypeBase.read {Thy = "list", Tyop = "list"})
+    val cs = computeLib.copy reduceLib.num_compset
+             |> (fn cs => computeLib.add_datatype_info cs list_info)
+             |> computeLib.add_thmset "compute"
+  in
+    convtest
+      ("patricia does not redirect nub through LIST_TO_SET",
+       computeLib.CBV_CONV cs,
+       “nub [0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;
+             0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;0;1;2;3;4]”,
+       “[0;1;2;3;4]”)
+  end
+
 val _ = tprint "sptreeSyntax.fromList"
 val tm1 =
     fromList (List.tabulate (100, fn i => numSyntax.term_of_int (2 * i)))

@@ -1,3 +1,4 @@
+include $(HOLDIR)/src/TeX/mungedeps.hmf
 INCDIRS = examples/lambda/basics src/finite_maps src/TeX
 
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/%),$(INCDIRS))
@@ -11,12 +12,12 @@ all: $(DEFAULT_TARGETS) munge.exe selftest.exe
 selftest.exe: selftest.uo CCSConv.uo
 	$(HOLMOSMLC) -o $@ $<
 
-MUNGE_DEPS = CCS StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws \
+MUNGE_THY_DEPS = CCS StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws \
 	     BisimulationUpto Congruence CoarsestCongr Trace Expansion \
              Contraction UniqueSolutions Multivariate Example
 
-munge.exe: $(patsubst %,%Theory.uo,$(MUNGE_DEPS)) $(HOLDIR)/bin/mkmunge.exe
-	$(HOLDIR)/bin/mkmunge.exe $(patsubst %,%Theory,$(MUNGE_DEPS))
+munge.exe: $(patsubst %,%Theory.uo,$(MUNGE_THY_DEPS)) $(MUNGE_DEPS)
+	$(HOLDIR)/bin/mkmunge.exe $(patsubst %,%Theory,$(MUNGE_THY_DEPS))
 
 output: munge.exe
 	echo '\HOLtm{R1 RUNION R2}' | ./munge.exe

@@ -23,12 +23,9 @@ formula does not yield either `"T"` or `"F"`.
 ### Example
 
 ``` hol4
-#ARITH_CONV "!n. 0 <= n";;
-|- (!n. 0 <= n) = T
+>> Arith.ARITH_CONV “!n. 0 <= n”;
 
-#NEGATE_CONV ARITH_CONV "~(!n. 0 <= n)";;
-|- ~(!n. 0 <= n) = F
+>> Arith.NEGATE_CONV Arith.ARITH_CONV “~(!n. 0 <= n)”;
 
-#NEGATE_CONV ARITH_CONV "?n. ~(0 <= n)";;
-|- (?n. ~0 <= n) = F
+>> Arith.NEGATE_CONV Arith.ARITH_CONV “∃n. ~(0 <= n)”;
 ```

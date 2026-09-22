@@ -1,0 +1,35 @@
+# The `src/sort' group of the LSP protocol suite.  These want an
+# ancestor that is NOT resident in `hol.state', so that loading it is
+# observable; `sortingTheory' is the one chosen.
+#
+# Sequenced after `src/parallel_builds/core', which builds `src/sort';
+# the INCLUDES below is how the tests find it, not what pays for it.
+# See `../integer/Holmakefile' for why that ordering matters.
+INCLUDES = $(HOLDIR)/src/sort
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+# No `HOLSELFTESTLEVEL' check: this directory is reached through
+# `src/parallel_builds/core's INCLUDES, which consults it, and is
+# scanned into that Holmake's graph rather than run by the build
+# sequence.  Holmake here at all means run the tests, which is also
+# what someone typing `Holmake' in this directory wants.
+ifdef POLY
+all: lsp-sorting-selftest.log
+
+SUITE = $(HOLDIR)/tools-poly/lsp/tests/lsp_tests.py
+
+SORTING_CMD = if command -v python3 > /dev/null 2>&1 ; \
+              then python3 -u $(protect $(SUITE)) --requires sorting 2>&1 ; \
+              else echo "python3 not found: LSP sorting tests NOT run" ; \
+              fi
+
+lsp-sorting-selftest.log: $(dprot $(SUITE)) \
+                         $(dprot $(HOLDIR)/bin/hol) \
+                         $(dprot $(HOLDIR)/bin/hol.state) \
+                         $(dprot $(HOLDIR)/src/sort/sortingTheory.uo)
+	$(tee $(SORTING_CMD), $@)
+
+EXTRA_CLEANS = lsp-sorting-selftest.log
+endif
