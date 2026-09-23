@@ -6739,6 +6739,75 @@ def test_check_proofs_switchable_without_a_restart():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_script_level_simp_reads_the_pinned_simpset():
+    """A script that builds its own tactics from `srw_ss()' -- which
+    `src/num/theories/arithmeticScript.sml' does, and it is the shape
+    the early theories use -- reads the *ambient* simpset: the
+    context-reading shim covers a declaration's own `srw_ss()', not one
+    a top-level function called.  The expander defers the tactic
+    expression to when the proof runs, and a deferred proof runs under
+    `Context.with_context', so that read happens under a pin.
+
+    Ambient reads answer from the pin while writes go to the live cell,
+    and initialising the simpset was a write read back -- so the read
+    returned the simpset uninitialised: no TypeBase simpls, and none of
+    the updates the ancestors had parked.  Three proofs of
+    `arithmeticScript' that a build proves were reported as failures,
+    and stepping through them in a goals pane showed them going
+    through, because a walk restores the context rather than pinning
+    it.
+
+    On `hol.state0' and a bare theory, which is where the cell stays
+    uninitialised: nothing in such a session reads the ambient simpset
+    except proofs, and those read it under the pin."""
+    d = tempfile.mkdtemp(prefix="lsp_pinss_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        src = ("Theory pinss[bare]\n"
+               "Ancestors arithmetic\n"
+               "Libs HolKernel boolLib Parse BasicProvers simpLib\n"
+               "\n"
+               "fun ambient_is_the_contexts g ctxt =\n"
+               "  let\n"
+               "    val amb = simpLib.ssfrag_names_of (srw_ss())\n"
+               "    val ofc = simpLib.ssfrag_names_of "
+               "(BasicProvers.srw_ss_of ctxt)\n"
+               "  in\n"
+               "    if amb = ofc then ALL_TAC g ctxt\n"
+               "    else raise Fail (\"ambient simpset has \" ^\n"
+               "                     Int.toString (length amb) ^\n"
+               "                     \" fragments, the context's \" ^\n"
+               "                     Int.toString (length ofc))\n"
+               "  end\n\n"
+               "Theorem pinned_read_is_the_contexts:\n"
+               "  T\n"
+               "Proof\n"
+               "  ambient_is_the_contexts >> ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        uri = f"file://{d}/pinssScript.sml"
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                st = _proof_states(cl, uri).get("pinned_read_is_the_contexts")
+                return st if st and st[0] != "checking" else None
+
+            got = c.wait_until(settled, 60)
+            assert_true(got is not None,
+                        f"the proof was checked ({_proof_states(c, uri)!r})")
+            assert_eq(got[0], "proved",
+                      f"and the pinned read is the context's ({got!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 @requires("sorting")
 def test_check_proofs_enabled_during_a_compile():
     """A client sends its configuration right after the handshake, so
@@ -7791,6 +7860,8 @@ TESTS = [
      test_quotation_hover_positions_under_utf16),
     ("check_proofs_switchable_without_a_restart",
      test_check_proofs_switchable_without_a_restart),
+    ("a_script_level_simp_reads_the_pinned_simpset",
+     test_a_script_level_simp_reads_the_pinned_simpset),
     ("check_proofs_enabled_during_a_compile",
      test_check_proofs_enabled_during_a_compile),
     ("goalState_select_then_completes",

@@ -39,6 +39,14 @@ val _ =
               " (want 1), unpinned gave " ^ Int.toString unpinned ^
               " (want 2)")
 
+val _ = tprint "is_pinned says which side of a pin a reader is on"
+
+val _ =
+    if not (Context.is_pinned ()) andalso
+       Context.with_context pinnedCtx Context.is_pinned ()
+    then print "OK\n"
+    else die "FAILED: is_pinned does not follow with_context"
+
 val _ = tprint "with_context releases the pin when its body raises"
 
 exception Boom

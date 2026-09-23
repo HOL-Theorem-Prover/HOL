@@ -1187,16 +1187,44 @@ fun apply_srw_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
    only costs the reader its own derivation. *)
 fun renorm ({sset,initp,upds,...}:srw_state) = mkstate (sset, initp, upds)
 
+(* What an uninitialised state folds in is decided by the state itself
+   and by the TypeBase it is initialised against, so one entry keyed on
+   the identity of those two is enough: a script hands the same pair
+   over and over.  The ambient read below shares its answer by writing
+   it to the live cell, which the context-taking read has nowhere to do
+   -- under a pin, not writing is the whole point -- and the fold is
+   ~3ms.  Without this every `srw_ss_of' call redoes it: `listTheory'
+   paid two seconds of them, and said so 651 times. *)
+val init_memo :
+    (srw_state * TypeBasePure.typeBase * srw_state) option Sref.t =
+    Sref.new NONE
+
 fun init_state_of ctxt (st as {sset,initp,upds,...} : srw_state) =
     if initp then st
     else
-      let fun init() =
-              mkstate
-                (List.foldl apply_srw_update sset (List.rev upds)
-                            |> rev_itlist add_simpls (tyinfol_of ctxt),
-                 true, [])
+      let
+        val tyb = TypeBase.theTypeBase_of ctxt
+        fun sameInputs (st', tyb', _) =
+            Portable.pointer_eq (st', st) andalso
+            Portable.pointer_eq (tyb', tyb)
+        fun init() =
+            mkstate
+              (List.foldl apply_srw_update sset (List.rev upds)
+                          |> rev_itlist add_simpls (TypeBasePure.listItems tyb),
+               true, [])
+        fun derive () =
+            let
+              val st' =
+                  HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done")
+                                    init ()
+            in
+              Sref.update init_memo (fn _ => SOME (st, tyb, st')); st'
+            end
       in
-        HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done") init ()
+        case Sref.value init_memo of
+            SOME (entry as (_, _, st')) =>
+              if sameInputs entry then st' else derive ()
+          | NONE => derive ()
       end
 fun init_state st = init_state_of (Context.snapshot()) st
 fun opt_partition f g ls =
@@ -1294,16 +1322,36 @@ val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 
 (* init_state is pure, so the context-taking read need not write one; it
    redoes the fold per call on a state nobody has initialised yet.  The
-   ambient read keeps the write, so that the fold is done once. *)
+   ambient read keeps the write, so that the fold is done once.
+
+   Except under a pin, where the write cannot reach the read: ambient
+   reads answer from the pinned context and writes go to the live cell
+   (see `Context.with_context'), so writing and reading back returns
+   the state as it was -- `initp = false', TypeBase simpls not folded
+   in and every update the theories parked in `upds' still waiting.
+   That is not a weaker cache but a weaker simpset, and a proof
+   replayed under a pin -- what the LSP's proof checker does with
+   every proof it defers -- then fails on goals a build proves.  It
+   would also leave the live cell initialised against the pinned
+   context's type information, which is nobody's correct state.
+   Derive it here instead, and leave the cell alone. *)
 fun srw_ss_of ctxt = #sset (init_state_of ctxt (get_global_value_of ctxt))
 fun srw_ss () =
     case get_global_value() of
         {sset, initp = true, ...} => sset
-      | _ => (update_global_value init_state; #sset (get_global_value()))
+      | _ => if Context.is_pinned () then srw_ss_of (Context.snapshot())
+             else (update_global_value init_state;
+                   #sset (get_global_value()))
 
 (* The window saves and restores the whole value, and a value carries
    the values derived from it, so both ends of the bracket are coherent
-   without telling anyone about them. *)
+   without telling anyone about them.
+
+   It is ambient, so it reaches nobody under a pin: the value it
+   installs goes to the live cell and a pinned read does not look
+   there (`Context.sig' says as much of `Data.with_slot_value').  A
+   tactic that wants a `Proof' attribute to reach it has to read the
+   context it is passed -- which is the half `map_simpset' covers. *)
 fun with_simpset_updates f g x =
   let val ss' = f (srw_ss()) handle Conv.UNCHANGED => srw_ss()
   in AncestryData.with_temp_value adresult (mkstate (ss', true, [])) g x end
