@@ -23,9 +23,9 @@ val rw = SRW_TAC [ARITH_ss];
 val std_ss = arith_ss;
 val qabbrev_tac = Q.ABBREV_TAC;
 val qexists_tac = Q.EXISTS_TAC;
-fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
-fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
-fun rfs l = REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
+fun simp l g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) l g ctxt;
+fun fs l g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) l g ctxt;
+fun rfs l g ctxt = REV_FULL_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) l g ctxt;
 
 (* ----------------------------------------------------------------------- *)
 

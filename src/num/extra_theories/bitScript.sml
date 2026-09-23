@@ -1767,7 +1767,8 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-fun simp thl = simpLib.ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
+fun simp thl g ctxt =
+    simpLib.ASM_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss) thl g ctxt
 
 Theorem BIT_TIMES2:
   BIT z (2 * n) <=> 0 < z /\ BIT (z-1) n

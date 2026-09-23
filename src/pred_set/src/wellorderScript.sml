@@ -24,7 +24,8 @@ val EXISTS_SUM = sumTheory.EXISTS_SUM
 val FORALL_SUM = sumTheory.FORALL_SUM
 val ARITH_ss = numSimps.ARITH_ss
 
-fun bossify stac ths = stac (srw_ss() ++ numSimps.ARITH_ss) ths
+fun bossify stac ths g ctxt =
+    stac (srw_ss_of ctxt ++ numSimps.ARITH_ss) ths g ctxt
 val simp = bossify asm_simp_tac
 val fs = bossify full_simp_tac
 val gvs = bossify (global_simp_tac {droptrues = true, elimvars = true,

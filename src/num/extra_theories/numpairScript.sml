@@ -5,8 +5,8 @@ Libs
   HolKernel boolLib Parse BasicProvers TotalDefn numSimps numLib
   simpLib metisLib
 
-fun fs ths = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
-fun simp ths = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
+fun fs ths g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) ths g ctxt
+fun simp ths g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) ths g ctxt
 val metis_tac = METIS_TAC
 
 (* ----------------------------------------------------------------------

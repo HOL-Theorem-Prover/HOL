@@ -8,8 +8,10 @@ Libs
 
 val _ = Defn.SUC_TO_NUMERAL_DEFN_CONV_hook := numLib.SUC_TO_NUMERAL_DEFN_CONV
 
-fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) ths
-fun fs ths = simpLib.FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) ths
+fun simp ths g ctxt =
+    simpLib.ASM_SIMP_TAC (srw_ss_of ctxt++numSimps.ARITH_ss) ths g ctxt
+fun fs ths g ctxt =
+    simpLib.FULL_SIMP_TAC (srw_ss_of ctxt++numSimps.ARITH_ss) ths g ctxt
 fun rw ths = SRW_TAC[numSimps.ARITH_ss]ths
 val metis_tac = METIS_TAC
 val qspec_then = Q.SPEC_THEN

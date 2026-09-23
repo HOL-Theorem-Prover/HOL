@@ -13,7 +13,7 @@ val T = {Name = "TRUTH", Thy = "bool"} (* placeholder *)
     some bossLib emulation
    ---------------------------------------------------------------------- *)
 
-fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()) ths
+fun simp ths g ctxt = simpLib.ASM_SIMP_TAC (srw_ss_of ctxt) ths g ctxt
 val metis_tac = METIS_TAC
 val op >~ = Q.>~
 

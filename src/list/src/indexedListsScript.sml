@@ -6,16 +6,20 @@ Libs
   IndDefLib
 
 (* bossLib approximation *)
-fun simp thl = ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
-fun dsimp thl =
-  ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss ++ boolSimps.DNF_ss) thl
-fun csimp thl =
-  ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss ++ boolSimps.CONJ_ss) thl
+fun simp thl g ctxt =
+    ASM_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss) thl g ctxt
+fun dsimp thl g ctxt =
+  ASM_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss ++ boolSimps.DNF_ss)
+               thl g ctxt
+fun csimp thl g ctxt =
+  ASM_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss ++ boolSimps.CONJ_ss)
+               thl g ctxt
 fun kall_tac th = K ALL_TAC th
 val metis_tac = metisLib.METIS_TAC
 val qid_spec_tac = Q.ID_SPEC_TAC
 fun rw thl = SRW_TAC[] thl
-fun fs thl = full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) thl;
+fun fs thl g ctxt =
+    full_simp_tac (srw_ss_of ctxt ++ numSimps.ARITH_ss) thl g ctxt;
 val rename1 = Q.RENAME1_TAC
 val qspec_then = Q.SPEC_THEN
 

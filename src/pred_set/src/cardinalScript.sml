@@ -6,17 +6,17 @@ Libs
   TotalDefn QLib numSimps numLib boolSimps mesonLib tautLib wlogLib
 
 (* emulation of bossLib environment *)
-fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()) ths
+fun simp ths g ctxt = simpLib.ASM_SIMP_TAC (srw_ss_of ctxt) ths g ctxt
 fun csimp ths = simp(SF CONJ_ss::ths)
 fun dsimp ths = simp(SF DNF_ss::ths)
-fun gvs ths = simpLib.global_simp_tac
+fun gvs ths g ctxt = simpLib.global_simp_tac
                      {elimvars = true, strip = true,
                       droptrues = true, oldestfirst = true}
-                     (srw_ss()) ths
-fun gs ths = simpLib.global_simp_tac
+                     (srw_ss_of ctxt) ths g ctxt
+fun gs ths g ctxt = simpLib.global_simp_tac
                      {elimvars = false, strip = true,
                       droptrues = true, oldestfirst = true}
-                     (srw_ss()) ths
+                     (srw_ss_of ctxt) ths g ctxt
 fun rw ths = BasicProvers.SRW_TAC[]ths
 val metis_tac = METIS_TAC
 val decide_tac = DECIDE_TAC

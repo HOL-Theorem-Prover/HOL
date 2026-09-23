@@ -26,10 +26,11 @@ Libs
 val ERR = mk_HOL_ERR "listScript"
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
-fun simp l = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss) l
+fun simp l g ctxt =
+    ASM_SIMP_TAC (srw_ss_of ctxt++boolSimps.LET_ss++numSimps.ARITH_ss) l g ctxt
 val rw = SRW_TAC []
 val metis_tac = METIS_TAC
-fun fs l = FULL_SIMP_TAC (srw_ss()) l
+fun fs l g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt) l g ctxt
 val std_ss = arith_ss ++ boolSimps.LET_ss;
 
 fun DECIDE_TAC (g as (asl,_)) =
@@ -4633,9 +4634,9 @@ Proof
   metis_tac[SUBSET_DEF, LIST_TO_SET_TAKE]
 QED
 
-fun gvs ths =
+fun gvs ths g ctxt =
   global_simp_tac{elimvars = true, droptrues = true, strip = true,
-                  oldestfirst = false} (srw_ss()) ths
+                  oldestfirst = false} (srw_ss_of ctxt) ths g ctxt
 
 Theorem FINITE_BOUNDED_LISTS:
   !s n. FINITE s ==> FINITE { l | set l SUBSET s /\ LENGTH l <= n}
@@ -5253,6 +5254,9 @@ Proof
 QED
 
 local
+  (* `val', so the simpset is the one in force here rather than a
+     proof's: these are read once, and widening them to the
+     proof's context stops a proof below terminating. *)
   val fs = FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss)
   val rw = SRW_TAC [numSimps.ARITH_ss]
 in

@@ -30,9 +30,9 @@ val qid_spec_tac = Q.ID_SPEC_TAC;
 val rename = Q.RENAME_TAC;
 val rename1 = Q.RENAME1_TAC;
 val rw = SRW_TAC [];
-fun simp ths = ASM_SIMP_TAC (srw_ss()) ths;
-fun fs ths = FULL_SIMP_TAC (srw_ss()) ths;
-fun rfs ths = REV_FULL_SIMP_TAC (srw_ss()) ths;
+fun simp ths g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt) ths g ctxt;
+fun fs ths g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt) ths g ctxt;
+fun rfs ths g ctxt = REV_FULL_SIMP_TAC (srw_ss_of ctxt) ths g ctxt;
 
 val metis_tac = METIS_TAC;
 

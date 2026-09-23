@@ -5,7 +5,7 @@ Libs
   HolKernel Parse boolLib IndDefLib DefnBase BasicProvers simpLib
   newtypeTools[qualified] metisLib[qualified]
 
-fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
+fun simp ths g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt) ths g ctxt
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
 val N0_def = new_definition("N0_def",

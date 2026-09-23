@@ -18,7 +18,7 @@ in
 end
 
 fun INDUCT_TAC g = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g;
-fun simp ths = asm_simp_tac (srw_ss()) ths
+fun simp ths g ctxt = asm_simp_tac (srw_ss_of ctxt) ths g ctxt
 
 Theorem cond_lemma[local]:
     (if ~p then q else r) = (if p then r else q)

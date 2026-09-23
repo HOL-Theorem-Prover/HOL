@@ -20,7 +20,7 @@ Libs
   quotientLib simpLib boolSimps BasicProvers
   computeLib[qualified] OpenTheoryMap[qualified]
 
-fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
+fun simp ths g ctxt = simpLib.asm_simp_tac (srw_ss_of ctxt) ths g ctxt
 
 (*---------------------------------------------------------------------------*)
 (* Define the type of pairs and tell the grammar about it.                   *)

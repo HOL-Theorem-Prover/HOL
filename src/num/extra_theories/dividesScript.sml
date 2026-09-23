@@ -21,12 +21,14 @@ val rw = srw_tac[];
 val qabbrev_tac = Q.ABBREV_TAC;
 val qspec_then = Q.SPEC_THEN;
 
-fun simp ths = asm_simp_tac (srw_ss() ++ numSimps.ARITH_ss) ths
-fun gvs ths = global_simp_tac {droptrues = true, elimvars = true,
-                               oldestfirst = true, strip = true}
-                              (srw_ss() ++ numSimps.ARITH_ss) ths
+fun simp ths g ctxt =
+    asm_simp_tac (srw_ss_of ctxt ++ numSimps.ARITH_ss) ths g ctxt
+fun gvs ths g ctxt = global_simp_tac {droptrues = true, elimvars = true,
+                                      oldestfirst = true, strip = true}
+                                     (srw_ss_of ctxt ++ numSimps.ARITH_ss)
+                                     ths g ctxt
 
-fun fs l = FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) l;
+fun fs l g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss) l g ctxt;
 
 val op >~ = Q.>~
 

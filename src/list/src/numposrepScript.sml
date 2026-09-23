@@ -7,8 +7,8 @@ Libs
 
 val ARITH_ss = numSimps.ARITH_ss
 
-val simp = ASM_SIMP_TAC (srw_ss()++ARITH_ss)
-val fs = FULL_SIMP_TAC (srw_ss()++ARITH_ss)
+fun simp ths g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt++ARITH_ss) ths g ctxt
+fun fs ths g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt++ARITH_ss) ths g ctxt
 val rw = SRW_TAC[ARITH_ss]
 
 (* ------------------------------------------------------------------------- *)

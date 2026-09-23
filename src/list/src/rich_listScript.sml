@@ -22,9 +22,12 @@ val decide_tac = numLib.DECIDE_TAC;
 val list_ss = arith_ss ++ listSimps.LIST_ss ++ pred_setSimps.PRED_SET_ss
 val metis_tac = METIS_TAC
 val rw = SRW_TAC[numSimps.ARITH_ss]
-fun simp thl = ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
-fun fs thl = FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
-fun rfs thl = REV_FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl;
+fun simp thl g ctxt =
+    ASM_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss) thl g ctxt
+fun fs thl g ctxt =
+    FULL_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss) thl g ctxt
+fun rfs thl g ctxt =
+    REV_FULL_SIMP_TAC (srw_ss_of ctxt ++ numSimps.ARITH_ss) thl g ctxt;
 val qabbrev_tac = Q.ABBREV_TAC;
 val qexists_tac = Q.EXISTS_TAC;
 val qspecl_then = Q.SPECL_THEN;
@@ -2635,6 +2638,9 @@ QED
 local
   val op >> = op THEN
   val rw = SRW_TAC[]
+  (* `val', so the simpset is the one in force here rather than a
+     proof's: these are read once, and widening them to the
+     proof's context stops rich_listTheory terminating. *)
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
   val fs = FULL_SIMP_TAC(srw_ss())
 in
@@ -4085,6 +4091,9 @@ QED
 local
   val rw = SRW_TAC []
   val metis_tac = METIS_TAC
+  (* `val', so the simpset is the one in force here rather than a
+     proof's: these are read once, and widening them to the
+     proof's context stops rich_listTheory terminating. *)
   val fs = FULL_SIMP_TAC (srw_ss())
   val rfs = REV_FULL_SIMP_TAC (srw_ss())
   fun simpss() = srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss

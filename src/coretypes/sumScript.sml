@@ -36,7 +36,7 @@ Libs
   HolKernel Parse boolLib BasicProvers quotientLib boolSimps
   simpLib DefnBase[qualified] OpenTheoryMap[qualified]
 
-fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta reduce *)
+fun simp ths g ctxt = simpLib.asm_simp_tac (srw_ss_of ctxt) ths g ctxt
 
 val o_DEF = combinTheory.o_DEF
 and o_THM = combinTheory.o_THM;
