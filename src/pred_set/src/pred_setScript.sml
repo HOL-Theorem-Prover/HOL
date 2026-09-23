@@ -39,10 +39,10 @@ fun K_TAC _ = ALL_TAC
 val KILL_TAC = POP_ASSUM_LIST K_TAC
 val Rewr' = DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
 
-(* don't eta-contract these; that will force tactics to use one fixed version
-   of srw_ss() *)
-fun fs thl = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
-fun simp thl = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
+(* the context parameter is what picks up the simpset the proof is
+   being run against; see `BasicProvers.srw_ss_of' *)
+fun fs thl g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) thl g ctxt
+fun simp thl g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) thl g ctxt
 fun rw thl = SRW_TAC[ARITH_ss]thl
 
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
@@ -8221,7 +8221,7 @@ QED
 (* Theorems about countability added by Scott Owens on 2009-03-20, plus a few
 * misc. theorems *)
 
-fun FSTAC thms = FULL_SIMP_TAC (srw_ss()) thms;
+fun FSTAC thms g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt) thms g ctxt;
 fun RWTAC thms = SRW_TAC [] thms;
 
 Theorem UNIQUE_MEMBER_SING:

@@ -27,8 +27,8 @@ val decide_tac = DECIDE_TAC;
 val metis_tac = METIS_TAC;
 val rw = SRW_TAC [ARITH_ss];
 val qabbrev_tac = Q.ABBREV_TAC;
-fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
-fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
+fun simp l g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) l g ctxt;
+fun fs l g ctxt = FULL_SIMP_TAC (srw_ss_of ctxt ++ ARITH_ss) l g ctxt;
 
 Definition is_gcd_def[nocompute]:
   is_gcd a b c <=> divides c a /\ divides c b /\

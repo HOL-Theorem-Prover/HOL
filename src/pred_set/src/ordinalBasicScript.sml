@@ -6,7 +6,8 @@ Libs
   HolKernel Parse boolLib boolSimps simpLib BasicProvers QLib metisLib
   TotalDefn pred_setLib pureSimps TypeBase tautLib[qualified]
 
-fun bossify stac ths = stac (srw_ss() ++ numSimps.ARITH_ss) ths
+fun bossify stac ths g ctxt =
+    stac (srw_ss_of ctxt ++ numSimps.ARITH_ss) ths g ctxt
 val simp = bossify asm_simp_tac
 fun dsimp ths = simp(SF DNF_ss :: ths)
 val fs = bossify full_simp_tac

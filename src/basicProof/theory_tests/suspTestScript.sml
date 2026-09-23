@@ -6,7 +6,7 @@ Theory suspTest[bare]
 
 Libs HolKernel Parse boolLib markerLib BasicProvers Q[qualified]
 
-fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths
+fun simp ths g ctxt = simpLib.asm_simp_tac (srw_ss_of ctxt) ths g ctxt
 fun SCONV ths = simpLib.SIMP_CONV (srw_ss()) ths
 
 Theorem willsplit:

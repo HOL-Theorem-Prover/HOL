@@ -19,6 +19,16 @@ sig
 
   val bool_ss         : simpset
   val srw_ss          : unit -> simpset
+  (* The simpset a proof is being run against.  A tactic a script
+     defines for itself -- `fun simp ths = ASM_SIMP_TAC (srw_ss()) ths'
+     and its kin -- should take the goal and the context and read this,
+     as `srw_tac' does: the context-reading `srw_ss' a declaration is
+     elaborated under reaches the declaration's own reads and not a
+     top-level function's, the expander defers a tactic expression to
+     when the proof runs, and an ambient read then answers for whatever
+     the process is doing then.  For a proof replayed under a pin that
+     is another context entirely, and a `Proof[exclude_simps = ...]'
+     window -- which is ambient -- does not reach it either. *)
   val srw_ss_of       : Context.t -> simpset
   val Abbr            : term quotation -> thm
   val LEAVE_LETS      : thm

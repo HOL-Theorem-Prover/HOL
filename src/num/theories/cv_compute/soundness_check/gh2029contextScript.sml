@@ -4,7 +4,7 @@ Ancestors
 Libs
   HolKernel Parse boolLib cv_computeLib BasicProvers metisLib numLib
 
-fun simp ths = simpLib.SIMP_TAC (srw_ss()) ths
+fun simp ths g ctxt = simpLib.SIMP_TAC (srw_ss_of ctxt) ths g ctxt
 
 (* -------------------------------------------------------------------------
  * A polymorphic family of prospective compute-value types.

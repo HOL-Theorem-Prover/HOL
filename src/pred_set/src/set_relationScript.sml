@@ -14,7 +14,7 @@ in
   fun ot x = ot0 x x
 end
 
-fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
+fun simp ths g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt) ths g ctxt
 
 (* ------------------------------------------------------------------------ *)
 (*  Basic concepts                                                          *)

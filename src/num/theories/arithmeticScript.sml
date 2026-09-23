@@ -35,7 +35,9 @@ val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 Theorem num_case_def = num_case_def
 
 val metis_tac = METIS_TAC;
-fun bossify stac ths = stac (srw_ss()) ths
+(* the context parameter is what picks up the simpset the proof is
+   being run against; see `BasicProvers.srw_ss_of' *)
+fun bossify stac ths g ctxt = stac (srw_ss_of ctxt) ths g ctxt
 val simp = bossify asm_simp_tac
 val fs = bossify full_simp_tac
 val gvs = bossify (global_simp_tac {droptrues = true, elimvars = true,
