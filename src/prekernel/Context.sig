@@ -97,6 +97,17 @@ sig
          third figure, with nothing failing to say so. *)
   val with_context : t -> ('a -> 'b) -> 'a -> 'b
 
+  (* Whether a pin is answering this thread's ambient reads.  For the
+     one pattern the read/write asymmetry above silently breaks:
+     deriving a value from an ambient read and writing it back so the
+     derivation is done once.  Under a pin the write lands in the live
+     cell, which is not where the read came from, so the re-read hands
+     back the underived value -- and the cell is left holding something
+     derived from another context's data.  Such a caller answers from
+     what it derived and skips the write; `BasicProvers.srw_ss' is the
+     first to need it.  As cheap as the counter `ambient' reads. *)
+  val is_pinned : unit -> bool
+
   (* Whole-context mutators.  Both take the RW-lock's read side so
      `restore` won't interleave.  `f` runs under the internal Sref
      mutex, so nested `update` / `gen_update` inside `f` deadlocks;

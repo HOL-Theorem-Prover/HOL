@@ -131,11 +131,12 @@ struct
        that has never held a pin, `SOME NONE` for one that has released
        it -- and only the join of the two is interesting. *)
     fun pinned () = Option.join (ThreadLocal.get override)
+    (* The counter first, so a process with no pin anywhere pays an
+       integer test rather than a thread-local lookup. *)
+    fun current_pin () =
+        if Sref.value overrides = 0 then NONE else pinned ()
     fun ambient () =
-        if Sref.value overrides = 0 then Sref.value ctx
-        else case pinned () of
-                 SOME c => c
-               | NONE => Sref.value ctx
+        case current_pin () of SOME c => c | NONE => Sref.value ctx
     fun thyname () =
         case #current_thy (Sref.value ctx) of
             NONE => "<no current theory>"
@@ -218,6 +219,7 @@ struct
         in
           install (); Portable.finally uninstall f x
         end
+    fun is_pinned () = Option.isSome (current_pin ())
     (* consumed by Data.get, which is the only thing that can name the
        slot an ambient read was after *)
     fun claim_pending () =
