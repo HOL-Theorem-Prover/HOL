@@ -8,10 +8,10 @@ val ERR = mk_HOL_ERR "ThyDataSexp"
 val anon_thm_lookup : (string * int -> Thm.thm option) ref
     = ref (fn _ => NONE)
 
-val theory_debug_trace = get_tracefn "Theory.debug"
+fun theory_debug_trace() = HOLFlags.current_trace "Theory.debug" > 0
 
 fun DPRINT f =
-    if theory_debug_trace() <> 0 then
+    if theory_debug_trace() then
       print ("ThyDataSexp/DEBUG: " ^ f () ^ "\n")
     else ()
 

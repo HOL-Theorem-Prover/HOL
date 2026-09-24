@@ -29,6 +29,7 @@ sig
                             and type hol_type = Type.hol_type
                             and type term = Term.term
   structure Context : FinalContext
+  structure HOLFlags : FinalHOLFlags where type ctxt = Context.t
 end
 
 structure Kernel :> KERNEL =
@@ -39,6 +40,7 @@ struct
   structure Net = Net
   structure Thm = Thm
   structure Context = Context
+  structure HOLFlags = HOLFlags
 end
 
 open Kernel

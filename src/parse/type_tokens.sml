@@ -1,9 +1,10 @@
 structure type_tokens :> type_tokens =
 struct
 
-val greek_tyvars = ref true
-
-val _ = Feedback.register_btrace ("Greek tyvars", greek_tyvars)
+val {get = greek_tyvars, ...} = HOLFlags.create_btrace(
+  {group = "PP", name = "Greek-tyvars"},
+  true
+)
 
 datatype type_token = datatype type_tokens_dtype.type_token
 
@@ -104,7 +105,7 @@ fun split_and_check fb s locn = let
         end
   open UnicodeChars
 in
-  if s0 = "'" orelse (isGreekLower i andalso !greek_tyvars) then
+  if s0 = "'" orelse (isGreekLower i andalso greek_tyvars()) then
     consume_type typevarp (TypeVar o munge) [s0] srest
   else if isAlpha s0 then consume_type typeidentp MkTypeIdent ([s0],[]) srest
   else if Char.isDigit (String.sub(s0,0)) then

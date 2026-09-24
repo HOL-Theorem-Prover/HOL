@@ -45,12 +45,13 @@ fun report_sanity_problem___verbose thy thm_name warning =
 fun init_report_sanity_problem () =
    (report_last_thm := "");
 
-val report_verbose = ref true;
-val _ = Feedback.register_btrace ("Sanity Check Verbose", report_verbose);
-
+val {get = report_verbose,...} = HOLFlags.create_btrace(
+      {group = "Sanity", name = "check_verbose"},
+      true
+    );
 
 fun report_sanity_problem thy thm_name warning =
-  (if (!report_verbose) then
+  (if report_verbose() then
       report_sanity_problem___verbose thy thm_name warning
    else
       report_sanity_problem___plain thy thm_name warning);
@@ -110,11 +111,13 @@ end;
 (* Check for theorem name clashes                                             *)
 (******************************************************************************)
 
-val check_thm_name_flag = ref true;
-val _ = Feedback.register_btrace ("Sanity Check Thm-Name Clash", check_thm_name_flag);
+val {get = check_thm_name_flag, ...} = HOLFlags.create_btrace(
+      {group = "Sanity", name = "check_thmname_clash"},
+      true
+    );
 
 fun check_thm_name ((thy, name), thm) =
-if (!check_thm_name_flag) then
+if check_thm_name_flag() then
 let
   val dL = DB.listDB ();
   val dL' = filter (fn ((thy',name'), _) =>
@@ -143,11 +146,13 @@ in
 end;
 
 
-val check_var_names___const_flag = ref true;
-val _ = Feedback.register_btrace ("Sanity Check Var-Const Clash", check_var_names___const_flag);
+val {get = check_var_const_clash,...} = HOLFlags.create_btrace(
+      {group = "Sanity", name = "check_var-const_clash"},
+      true
+    );
 
 fun check_var_names___const ((thy, name), thm) =
-if (!check_var_names___const_flag) then
+if check_var_const_clash() then
 let
   val vL = all_varsl ((concl thm)::hyp thm)
   val vL' = filter (fn v => Parse.is_constname (fst (dest_var v))) vL
@@ -167,17 +172,19 @@ end else false;
 (* Check for free top-level variables                                         *)
 (******************************************************************************)
 
-val check_free_vars_ref = ref 1;
-val _ = Feedback.register_trace ("Sanity Check Free Vars", check_free_vars_ref, 1);
+val {get = check_free_vars_flag, ...} = HOLFlags.create_btrace(
+      {group = "Sanity", name = "check_free_vars"},
+      true
+    );
 
 fun varlist_to_string vL =
   concat (commafy (map (fn v => "'"^(ppstring pp_term v)^"'") vL))
 
 fun check_free_vars ((thy, name), thm) =
 let
-   val do_check = if (!check_free_vars_ref = 0) then true
-                  else (if (!check_free_vars_ref = 1) then
-                     exists is_forall (strip_conj (concl thm)) else false)
+   val do_check = if not (check_free_vars_flag()) then true
+                  else
+                    exists is_forall (strip_conj (concl thm))
 in
 if (do_check) then
 let
@@ -256,12 +263,14 @@ fun sanity_check_thm thm = sanity_check_named_thm ("-", thm)
 (* Apply the checks when saving theorems                                      *)
 (******************************************************************************)
 
-val strict_sanity = ref true;
-val _ = Feedback.register_btrace ("Sanity Check Strict", strict_sanity);
+val {get = strict_sanity, ...} = HOLFlags.create_btrace(
+      {group = "Sanity", name = "strict"},
+      true
+    );
 
 exception sanity_exn;
 fun sanity_check_exn_thm (name, thm) =
-   if (not (sanity_check_named_thm (name, thm)) orelse not (!strict_sanity))
+   if not (sanity_check_named_thm (name, thm)) orelse not (strict_sanity())
    then
       thm
    else

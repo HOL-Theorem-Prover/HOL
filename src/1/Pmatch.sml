@@ -451,7 +451,8 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
           (pat_rect1',tree)
          end
        | SOME t => mk_case_fail ("Pattern "^
-                                 trace ("Unicode", 0) Parse.term_to_string t^
+                                 HOLFlags.trace ("PP.avoid_unicode", 1)
+                                                Parse.term_to_string t^
                                  " is not a constructor or variable")
      end
      end

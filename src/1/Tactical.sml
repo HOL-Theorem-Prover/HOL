@@ -27,9 +27,10 @@ fun empty th [] = th
  * we should do this check in the hypotheses of the goal as well.
  *---------------------------------------------------------------------------*)
 
-val notheory_action = ref 1
-val _ = Feedback.register_trace
-          ("TAC_PROOF requires current theory", notheory_action, 1)
+val {get = proof_requires_CT, ...} = HOLFlags.create_btrace(
+      {group = "Tactics", name = "TAC_PROOF-requires-CT"},
+      true
+    )
 
 fun check_current_thy ctxt (_, t) =
     case Context.current_thy ctxt of
@@ -39,7 +40,7 @@ fun check_current_thy ctxt (_, t) =
             val msg = "no current theory when proving: " ^
                       (Parse.term_to_string t handle _ => "<unprintable goal>")
           in
-            if !notheory_action > 0 then
+            if proof_requires_CT() then
               raise ERR "TAC_PROOF" msg
             else
               Feedback.HOL_WARNING "Tactical" "TAC_PROOF"
@@ -218,7 +219,8 @@ val _ = op THEN : list_tactic * tactic -> list_tactic ;
    that is the whole point -- the flag has to still be set when the
    tactic runs, not merely when its closure is built. *)
 fun trace_tac (nm, i) (tac: tactic) : tactic =
-    fn g => fn ctxt => Feedback.trace (nm, i) (fn () => tac g ctxt) ()
+    fn g => fn (ctxt:Context.t) =>
+       tac g (HOLFlags.gen_set_trace_C (HOLFlags.str2name nm,i) ctxt)
 
 fun TACS_TO_LT (tacl: tactic list) : list_tactic =
    fn gl => fn ctxt =>
@@ -849,9 +851,9 @@ val every_assum = EVERY_ASSUM
  *---------------------------------------------------------------------------*)
 
 val shut_parser_up =
-   trace ("notify type variable guesses", 0) o
-   trace ("syntax_error", 0) o
-   trace ("show_typecheck_errors", 0)
+    HOLFlags.with_traces [("Parse.notify type variable guesses", 0),
+                          ("Parse.syntax_error", 0),
+                          ("Parse.show_typecheck_errors", 0)]
 
 local
   fun find ttac name goal ctxt [] = raise ERR name  ""
@@ -1110,8 +1112,8 @@ fun elicit_parse_failure ctxt fvs q tyopt =
 
 fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) ctxt =
   let open Parse
-      val ttac = with_traces traces tac
-      val dest_seq = with_traces traces seq.cases
+      val ttac = HOLFlags.with_traces traces tac
+      val dest_seq = HOLFlags.with_traces traces seq.cases
       val fvs = free_varsl (w::asl)
       val ab =
         case tyopt of

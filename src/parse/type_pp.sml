@@ -27,44 +27,36 @@ fun dest_thy_type ty =
     in {Thy = Thy, Tyop = Type.display_name_of_id id, Args = Args}
     end
 
-val avoid_unicode = ref (Systeml.OS = "winNT")
-local
-  open Globals
-  fun ascii_delims () =
-    (List.app (fn r => r := "``") [type_pp_prefix, type_pp_suffix,
-                                   term_pp_prefix, term_pp_suffix];
-     thm_pp_prefix := "|- ";
-     thm_pp_suffix := "")
-  fun unicode_delims () =
-    (List.app (fn r => r := UnicodeChars.ldquo)
-              [type_pp_prefix, term_pp_prefix];
-     List.app (fn r => r := UnicodeChars.rdquo)
-              [type_pp_suffix, term_pp_suffix];
-     thm_pp_prefix := UnicodeChars.turnstile ^ " ";
-     thm_pp_suffix := "")
-  fun avoidset i = if i = 0 then (unicode_delims(); avoid_unicode := false)
-                   else (ascii_delims(); avoid_unicode := true)
-  fun avoidget () = if !avoid_unicode then 1 else 0
-in
+val {get = avoid_unicode,...} = HOLFlags.create_btrace(
+      {group = "PP", name = "avoid_unicode"},
+      Systeml.OS = "winNT"
+    )
 
-val _ = register_ftrace("PP.avoid_unicode", (avoidget, avoidset), 1)
-val _ = register_ftrace("Unicode",
-                        (fn () => 1 - avoidget(), fn n => avoidset (1 - n)),
-                        1)
-val _ = avoidset (avoidget())
-end
+fun type_pp_prefix () =
+    if avoid_unicode() then "``" else UnicodeChars.ldquo
+fun type_pp_suffix() =
+    if avoid_unicode() then "``" else UnicodeChars.rdquo
+fun term_pp_prefix () =
+    if avoid_unicode() then "``" else UnicodeChars.ldquo
+fun term_pp_suffix() =
+    if avoid_unicode() then "``" else UnicodeChars.rdquo
+fun thm_pp_prefix () =
+    if avoid_unicode() then "|- " else UnicodeChars.turnstile ^ " "
 
+val {get = pp_num_types,...} = HOLFlags.create_btrace(
+      {group = "PP", name = "num_types"},
+      true
+    )
 
-val pp_num_types = ref true
-val _ = register_btrace("pp_num_types", pp_num_types)
-
-val pp_annotations = ref (!Globals.interactive)
-val _ = register_btrace ("pp_annotations", pp_annotations)
+val {get = pp_annotations,...} = HOLFlags.create_btrace(
+      {group = "PP", name = "annotations"},
+      !Globals.interactive
+    )
 
 fun dest_numtype ty = let
   open Arbnum
   val _ = (* respect pp_num_types flag *)
-      !pp_num_types orelse raise mk_HOL_ERR "" "" ""
+      pp_num_types() orelse raise mk_HOL_ERR "" "" ""
   val _ = (* exception: don't print :one as one *)
       let val {Thy,Tyop,Args} = dest_thy_type ty
       in
@@ -116,8 +108,10 @@ in
   recurse false st
 end
 
-val pp_array_types = ref true
-val _ = register_btrace ("pp_array_types", pp_array_types)
+val {get = pp_array_types,...} = HOLFlags.create_btrace(
+      {group = "PP", name = "array_types"},
+      true
+    )
 
 fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
   val {infixes,suffixes} = rules G
@@ -145,8 +139,9 @@ fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
         if b then add_string "(" >> ublock INCONSISTENT 1 p >> add_string ")"
         else p
     fun uniconvert s =
-        if not (!avoid_unicode) andalso get_tracefn "Greek tyvars" () = 1
-           andalso size s = 2
+        if not (avoid_unicode()) andalso
+           HOLFlags.current_trace "PP.Greek-tyvars" = 1 andalso
+           size s = 2
         then
           let
             val i = Char.ord (String.sub(s, 1)) - Char.ord #"a" + 0x3B1
@@ -236,7 +231,7 @@ fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
           val {Thy, Tyop = realTyop, Args = realArgs} = dest_thy_type ty
         in
           if abop = "cart" andalso length abargs = 2 andalso
-             Thy = "fcp" andalso realTyop = "cart" andalso !pp_array_types
+             Thy = "fcp" andalso realTyop = "cart" andalso pp_array_types()
           then
             pr_ty (hd realArgs) Sfx (depth - 1) >>
             add_string "[" >>

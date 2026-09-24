@@ -47,9 +47,10 @@ fun mk_rewrites th =
   handle e => raise (wrap_exn "Ho_Rewrite" "mk_rewrites" e);
 
 
-val monitoring = ref false;
-
-val _ = register_btrace ("Ho_Rewrite", monitoring);
+val {get = monitoring,...} = HOLFlags.create_btrace(
+      {group = "Ho_Rewrite", name = "monitoring"},
+      false
+    )
 
 (*---------------------------------------------------------------------------
     A datatype of rewrite rule sets.
@@ -95,7 +96,7 @@ fun stringulate _ [] = []
  ---------------------------------------------------------------------------*)
 
 fun REWRITES_CONV (RW{net,...}) tm =
- if !monitoring
+ if monitoring()
  then case mapfilter (fn f => f tm) (Ho_Net.lookup tm net)
        of []   => Conv.NO_CONV tm
         | [x]  => (HOL_MESG (String.concat
@@ -278,7 +279,7 @@ fun num_matches th t =
       length (find_terms match t)
     end
 
-val thm_to_string = trace ("Unicode", 0) Parse.thm_to_string
+val thm_to_string = HOLFlags.trace ("PP.avoid_unicode", 1) Parse.thm_to_string
 fun REQUIRE0_TAC th =
     check_delta (ERR "REQUIRE0_TAC"
                      ("LHS of " ^ thm_to_string th ^ " remains in goal"))

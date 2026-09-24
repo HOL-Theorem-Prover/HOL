@@ -14,7 +14,7 @@ val ERR = mk_HOL_ERR "AncestryData"
 fun smem s e = HOLset.member(s,e)
 fun sadd e s = HOLset.add(s,e)
 
-val tdebug = get_tracefn "Theory.debug"
+fun tdebug () = HOLFlags.current_trace "Theory.debug"
 
 fun DPRINT s = if tdebug() > 0 then print ("* " ^s^"\n") else ()
 

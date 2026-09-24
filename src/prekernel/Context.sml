@@ -1,6 +1,9 @@
 structure Context :> Context =
 struct
 
+  fun mem x [] = false
+    | mem x (y::ys) = x = y orelse mem x ys
+
   val ERR = Feedback.mk_HOL_ERR "Context"
 
 
@@ -92,14 +95,11 @@ struct
        there are 611k reads to report across a core build, which costs
        about a tenth of the build's heaviest theory and buries its log. *)
     val action = ref 1
-    val _ = Feedback.register_trace ("ambient context inside proof", action, 3)
     (* The same levels for the kernel-signature reads that `live` serves,
        reported separately and silent by default.  They are a different
        population with a different fix -- see `live` -- and mixing them
        into the tactic-state census would swamp it. *)
     val sig_action = ref 0
-    val _ = Feedback.register_trace
-              ("ambient signature inside proof", sig_action, 3)
     val reported : string list ref = ref []
     val sig_reported : string list ref = ref []
     (* An ambient read reports from `snapshot`, which cannot say *what*
@@ -150,7 +150,7 @@ struct
             fun warn () = Feedback.HOL_WARNING "Context" fname (msg ())
         in
           case lvl of
-              1 => if Lib.mem thy (!seen) then ()
+              1 => if mem thy (!seen) then ()
                    else (seen := thy :: !seen; warn ())
             | 2 => warn ()
             | _ => raise ERR fname (msg ())

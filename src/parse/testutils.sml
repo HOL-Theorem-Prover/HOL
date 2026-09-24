@@ -125,7 +125,7 @@ fun exit_count0 iref =
          (print ("Failure count = " ^ Int.toString (!iref) ^ "\n");
           OS.Process.failure))
 
-fun unicode_off f = Feedback.trace ("Unicode", 0) f
+fun unicode_off f = HOLFlags.trace ("PP.avoid_unicode", 1) f
 fun raw_backend f =
     Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal) f
 

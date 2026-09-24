@@ -31,10 +31,7 @@ val begin_block    : ppstream -> break_style -> int -> unit
 val end_block      : ppstream -> unit
 val clear_ppstream : ppstream -> unit
 val flush_ppstream : ppstream -> unit
-val with_pp        : ppconsumer -> (ppstream -> unit) -> unit
-val pp_to_string   : int -> (ppstream -> 'a -> unit) -> 'a -> string
 val lineWidth      : ppstream -> int
-val catch_withpp_err : bool ref
 
 val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c) -> 'a list ->
               unit

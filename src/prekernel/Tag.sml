@@ -134,13 +134,13 @@ fun pp_tag (TAG (_,olist,axlist)) =
   PrettyBlock(0, true, [],
     [PrettyString "[oracles: ",
      PrettyBlock(1, false, [],
-                 if !Globals.show_tags then pr_list I "," (1,0) olist
+                 if HOLFlags.show_tags() then pr_list I "," (1,0) olist
                  else [PrettyString(repl #"#" olist)]),
       add_string "]",
       add_break(1,0),
       add_string "[axioms: ",
       PrettyBlock(1, false, [],
-                  if !Globals.show_axioms then
+                  if HOLFlags.show_axioms() then
                     pr_list Nonce.dest "," (1,0) axlist
                   else [add_string(repl #"#" axlist)]),
       add_string "]"

@@ -19,9 +19,11 @@ fun tmlist_tyvs tlist =
 
 type 'a in_env = 'a Pretype.in_env
 
-val show_typecheck_errors = ref false
-val _ = register_btrace ("show_typecheck_errors", show_typecheck_errors)
-fun tcheck_say s = if !show_typecheck_errors then Lib.say s else ()
+val {get = show_typecheck_errors,...} = HOLFlags.create_btrace(
+      {group = "Parse", name = "show_typecheck_errors"},
+      false
+    )
+fun tcheck_say s = if show_typecheck_errors() then Lib.say s else ()
 
 val last_tcerror : error option ref = ref NONE
 
@@ -260,15 +262,23 @@ fun tyVars ptm =  (* the pretype variables in a preterm *)
     overloading resolution should already have gotten rid of them.
  ---------------------------------------------------------------------------*)
 
-val _ =
-    register_btrace ("notify type variable guesses",
-                     Globals.notify_on_tyvar_guess)
+val {get = notify_on_tyvar_guess, ...} = HOLFlags.create_btrace(
+      {group = "Parse", name = "notify_on_tyvar_guess"},
+      true
+    )
 
-val _ =
-    register_btrace ("guess overloads", Globals.guessing_overloads)
+val {get = guessing_overloads, ...} = HOLFlags.create_btrace(
+      {group = "Parse", name = "guess_overloads"},
+      true
+    )
+
+val {get = guessing_tyvars, ...} = HOLFlags.create_btrace(
+      {group = "Parse", name = "guess_tyvars"},
+      true
+    )
 
 fun to_term (tm : preterm) : term in_env =
-    if !Globals.guessing_tyvars then
+    if guessing_tyvars() then
       let
         fun cleanup tm = let
           infix >> >-
@@ -332,7 +342,7 @@ fun to_term (tm : preterm) : term in_env =
                  val guessed_vars = List.take(vs, length vs - length vs0)
                  val _ =
                      if not (null guessed_vars) andalso
-                        !Globals.notify_on_tyvar_guess andalso
+                        notify_on_tyvar_guess() andalso
                         !Globals.interactive
                      then
                        Feedback.HOL_MESG
@@ -558,9 +568,9 @@ fun do_overloading_removal ptm =
 fun report_ovl_ambiguity b env =
   (* b is true if multiple resolutions weren't possible *)
   if not b andalso
-     (not (!Globals.guessing_overloads) orelse !Globals.notify_on_tyvar_guess)
+     (not (guessing_overloads()) orelse notify_on_tyvar_guess())
   then
-    if not (!Globals.guessing_overloads) then
+    if not (guessing_overloads()) then
       error (OvlTooMany, locn.Loc_None) env
     else if !Globals.interactive then
       (Feedback.HOL_MESG "more than one resolution of overloading was possible";
@@ -642,8 +652,8 @@ local
   open errormonad
   infix ++?
   fun smashTm ptm =
-    Lib.with_flag (Globals.notify_on_tyvar_guess, false)
-                  (smash (overloading_resolution ptm >- (to_term o #1)))
+    HOLFlags.trace ("Parse.notify_on_tyvar_guess", 0)
+                   (smash (overloading_resolution ptm >- (to_term o #1)))
   fun safe_decase t = !rcm_for_msg t handle HOL_ERR _ => t
 in
 fun typecheck_phase1 printers = let
@@ -927,7 +937,9 @@ fun typecheck pfns ptm0 =
 fun typecheckS ptm =
   let
     open seqmonad
-    val TC' = errormonad.with_flagM (show_typecheck_errors, false) (TC NONE ptm)
+    val TC' = errormonad.with_Modifier
+                (HOLFlags.trace("Parse.show_typecheck_errors", 0))
+                (TC NONE ptm)
   in
     lift (!post_process_term o remove_case_magic)
          (fromErr TC' >> overloading_resolutionS ptm >-

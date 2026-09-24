@@ -56,8 +56,8 @@ fun REWR_CONV0 (part_matcher, fn_name) th =
                    wrap_exn "Conv"
                       (String.concat
                          [fn_name, ": bad theorem argument: ",
-                          trace ("PP.avoid_unicode", 1)
-                                term_to_string (concl th)]) e
+                          HOLFlags.trace ("PP.avoid_unicode", 1)
+                                         term_to_string (concl th)]) e
    in fn tm =>
          let
             val eqn = instth tm

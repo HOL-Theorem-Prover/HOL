@@ -507,10 +507,6 @@ fun overloading_of_nametype (oinfo:overload_info) r =
 fun rev_append [] rest = rest
   | rev_append (x::xs) rest = rev_append xs (x::rest)
 
-val show_alias_resolution = ref true
-val _ = Feedback.register_btrace ("show_alias_printing_choices",
-                                  show_alias_resolution)
-
 fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
   val O1ops_sorted = Symtab.dest (#1 O1)
   val O2ops_sorted = Symtab.dest (#1 O2)

@@ -49,6 +49,8 @@ fun option_to_string p NONE = "NONE"
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
 
+fun show_types() = HOLFlags.current_trace "PP.types" = 1
+
 fun ellist_size els =
   let
     fun recurse A els =
@@ -123,12 +125,15 @@ fun convert_case tm =
         (split_on, splits)
       end
 
-val prettyprint_cases = ref true;
-val _ = register_btrace ("pp_cases", prettyprint_cases)
+val {get = prettyprint_cases,...} = HOLFlags.create_btrace(
+      {group="PP", name = "cases"},
+      true
+    )
 
-val {get = read_qblock_smash, ...} =
-    create_trace {name = "PP.qblock_smash_limit", max = 1000,
-                  initial = 4}
+val {get = read_qblock_smash, ...} = HOLFlags.create_trace (
+      {group = "PP", name = "qblock_smash_limit"},
+      {max = 1000, initial = 4}
+    )
 
 
 
@@ -143,7 +148,10 @@ val {get = read_qblock_smash, ...} =
    ---------------------------------------------------------------------- *)
 open HOLPP smpp term_pp_types term_pp_utils
 
-val dollar_escape = ref true
+val {get = dollar_escapes,...} = HOLFlags.create_btrace(
+      {group = "PP", name = "dollar_escapes"},
+      true
+    )
 
 (* When printing with parentheses, make consecutive calls to the
    supplied printing function (add_string) so that the "tokens"
@@ -153,12 +161,10 @@ val dollar_escape = ref true
    In the dollar-branch, we're happy to have the dollar smashed up
    against what follows it. *)
 fun dollarise contentpfn parenpfn s =
-    if !dollar_escape then contentpfn ("$" ^ s) >> return (UTF8.size s + 1)
+    if dollar_escapes() then contentpfn ("$" ^ s) >> return (UTF8.size s + 1)
     else parenpfn "(" >> contentpfn s >> parenpfn ")" >>
          return (UTF8.size s + 2)
 
-
-val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
 
 (* ----------------------------------------------------------------------
     Functions for manipulating the "printing info" data that is carried
@@ -194,8 +200,10 @@ end
    fast on its second argument.
 *)
 
-val avoid_symbol_merges = ref true
-val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
+val {get = avoid_symbol_merges,...} = HOLFlags.create_btrace(
+      {group = "PP", name = "avoid_symbol_merges"},
+      true
+    )
 
 fun creates_comment(s1, s2) = let
   val last = String.sub(s1, size s1 - 1)
@@ -226,7 +234,7 @@ fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
     case s of
       "" => nothing
     | _ => (if ls = " " orelse allspaces then f xstr
-            else if not (!avoid_symbol_merges) then f xstr
+            else if not (avoid_symbol_merges()) then f xstr
             else if mem (snd $ valOf $ UTF8.lastChar ls) rstr_quotes then f xstr
             (* special case the quotation because term_tokens relies on
                the base token technology (see base_lexer) to separate the
@@ -398,12 +406,16 @@ fun str_unicode_ok s = CharVector.all Char.isPrint s
 
 fun overloads_to_string_form G = term_grammar.strlit_map G
 
+fun avoid_unicode() = HOLFlags.current_trace "PP.avoid_unicode" = 1
+
 fun oi_strip_comb' oinfo t =
-    if current_trace "PP.avoid_unicode" = 0 then Overload.oi_strip_comb oinfo t
-    else Overload.oi_strip_combP oinfo str_unicode_ok t
+    if not (avoid_unicode()) then
+      Overload.oi_strip_comb oinfo t
+    else
+      Overload.oi_strip_combP oinfo str_unicode_ok t
 
 fun overloading_of_term' oinfo t =
-    if current_trace "PP.avoid_unicode" = 0 then
+    if not (avoid_unicode()) then
       Overload.overloading_of_term oinfo t
     else
       Overload.overloading_of_termP oinfo str_unicode_ok t
@@ -416,7 +428,7 @@ fun pp_unicode_free ppel =
       | _ => true
 
 fun is_unicode_ok_rule r =
-    current_trace "PP.avoid_unicode" = 0 orelse
+    not (avoid_unicode()) orelse
     (case r of
          PREFIX (STD_prefix rrs) =>
            List.all (fn {elements,...} => List.all pp_unicode_free elements)
@@ -457,8 +469,10 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
     EQUAL => String.compare(thy1, thy2)
   | x => x
 
-val pp_print_firstcasebar = ref false
-val _ = register_btrace ("PP.print_firstcasebar", pp_print_firstcasebar)
+val {get = pp_print_firstcasebar,...} = HOLFlags.create_btrace(
+      {group = "PP", name = "print_firstcasebar"},
+      false
+    )
 
 val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
 
@@ -1039,8 +1053,7 @@ fun pp_term (G : grammar) TyG backend = let
                        restr_binders
       val (bvars, body) = strip_vstructs NONE restr_binder tm
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
-      val lambda' = if current_trace "PP.avoid_unicode" > 0 then
-                      List.filter str_unicode_ok lambda
+      val lambda' = if avoid_unicode() then List.filter str_unicode_ok lambda
                     else lambda
       val tok = case lambda' of
                     [] => raise PP_ERR "pr_abs" "No token for lambda abstraction"
@@ -1068,7 +1081,10 @@ fun pp_term (G : grammar) TyG backend = let
           | SOME oi => op_mem aconv inj_t (#actual_ops oi)
       val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
       val sfx =
-          if not is_a_real_numeral orelse !Globals.show_numeral_types then let
+          if not is_a_real_numeral orelse
+             HOLFlags.current_trace "PP.show_numeral_types" = 1
+          then
+            let
               val (k, _) =
                   valOf (List.find (fn (_, s') => s' = numinfo_search_string)
                                    num_info)
@@ -1801,7 +1817,7 @@ fun pp_term (G : grammar) TyG backend = let
             showtypes andalso not isfake andalso (binderp orelse nfv)
           val adds =
               if is_constish tm then constann tm else var_ann tm
-          val uok = current_trace "PP.avoid_unicode" = 0
+          val uok = not (avoid_unicode())
           val styled_name = if isfake then vname else vname_styling uok vname
         in
           fupdate (fn x => x) >- return o new_freevar >-
@@ -1882,7 +1898,7 @@ fun pp_term (G : grammar) TyG backend = let
             (true, false, true) => add_prim_name() >> return ()
           | (true, true, true) => with_type add_prim_name
           | (true, true, false) => with_type normal_const
-          | _ => if !show_types andalso combpos <> RatorCP andalso
+          | _ => if showtypes andalso combpos <> RatorCP andalso
                     const_is_polymorphic tm
                  then
                    with_type normal_const
@@ -1966,7 +1982,7 @@ fun pp_term (G : grammar) TyG backend = let
 
           (* case expressions *)
           (fn () =>
-              if (is_const f andalso (!prettyprint_cases)) then
+              if is_const f andalso prettyprint_cases() then
                 case grammar_name G oif of
                   SOME "case" =>
                   (let
@@ -2000,7 +2016,7 @@ fun pp_term (G : grammar) TyG backend = let
                              add_break(1,2) >>
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>
-                        (if !pp_print_firstcasebar then
+                        (if pp_print_firstcasebar() then
                            casebar
                          else
                            add_break (1,2)) >>
@@ -2045,8 +2061,8 @@ in
     in
        ublock CONSISTENT 0 (
          pr_term false
-                 (!Globals.show_types orelse !Globals.show_types_verbosely)
-                 (!Globals.show_types_verbosely)
+                 (show_types())
+                 false (* (!Globals.show_types_verbosely) *)
                  ppfns NoCP t RealTop RealTop RealTop
                  (!Globals.max_print_depth)
        )

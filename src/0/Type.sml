@@ -206,14 +206,17 @@ val delta  = Tyv "'d"
 val etyvar = Tyv "'e"
 val ftyvar = Tyv "'f"
 
-val varcomplain = ref true
-val _ = register_btrace ("Vartype Format Complaint", varcomplain)
+val {get=getvc,...} =
+    HOLFlags.create_btrace (
+      {group="Kernel",name = "Vartype_Format_Complaint"},
+      true
+    )
 
 fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
   | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
   | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
-                   else (if !varcomplain then
+                   else (if getvc() then
                            WARN "mk_vartype"
                                 ("non-standard syntax: \""^ String.toString s ^
                                  "\"")

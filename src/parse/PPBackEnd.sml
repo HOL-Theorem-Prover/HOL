@@ -126,18 +126,25 @@ fun user_push_styleL b style_stack styL =
 (* Traces                           *)
 (* -------------------------------- *)
 
-val add_type_information = ref true
-val _ = Feedback.register_btrace ("PPBackEnd show types", add_type_information)
+val {get = add_type_information, ...} = HOLFlags.create_btrace(
+      {group = "PPBackEnd", name = "show_types"},
+      true
+    )
 
-val backend_use_annotations = ref true
-val _ = Feedback.register_btrace ("PPBackEnd use annotations",
-                                  backend_use_annotations)
+val {get = backend_use_annotations,...} = HOLFlags.create_btrace(
+      {group = "PPBackEnd", name = "use_annotations"},
+      true
+    )
 
-val backend_use_styles = ref true
-val _ = Feedback.register_btrace ("PPBackEnd use styles", backend_use_styles)
+val {get = backend_use_styles,...} = HOLFlags.create_btrace(
+      {group = "PPBackEnd", name = "use_styles"},
+      true
+    )
 
-val backend_use_css = ref true
-val _ = Feedback.register_btrace ("PPBackEnd use css", backend_use_css)
+val {get = backend_use_css,...} = HOLFlags.create_btrace(
+      {group = "PPBackEnd", name = "use_css"},
+      true
+    )
 
 fun add_ssz (s,sz) =
   case sz of NONE => smpp.add_string s | SOME sz => smpp.add_stringsz (s,sz)
@@ -214,7 +221,7 @@ let
   fun reset_style() = set_style (top_style style_stack)
 
   fun ustyle styL p =
-    if not (!backend_use_styles) then nothing
+    if not (backend_use_styles()) then nothing
     else
       (user_push_styleL name style_stack styL; reset_style()) >> p >>
       (pop_style style_stack ; reset_style())
@@ -225,7 +232,7 @@ let
     reset_style()
 
   fun add_xstring {s,sz,ann} =
-    if not (!backend_use_annotations) orelse not (isSome ann) then
+    if not (backend_use_annotations()) orelse not (isSome ann) then
       add_ssz (s,sz)
     else
       case valOf ann of
@@ -293,7 +300,7 @@ fun full_style_to_emacs_string (fg,bg,b,u,_) =
 val emacs_terminal = let
   open smpp
   val name = "emacs_terminal";
-  fun lazy_string ls = if !add_type_information then (ls ()) else "";
+  fun lazy_string ls = if add_type_information() then (ls ()) else "";
   fun fv s tystr = "(*(*(*FV\000"^(lazy_string tystr)^"\000"^s^"*)*)*)"
   fun bv s tystr = "(*(*(*BV\000"^(lazy_string tystr)^"\000"^s^"*)*)*)"
   fun tyv s = "(*(*(*TV"^s^"*)*)*)"
@@ -306,7 +313,7 @@ val emacs_terminal = let
     "\000" ^ s ^ "*)*)*)"
   end
   fun add_xstring {s, sz, ann} =
-      if not (!backend_use_annotations) orelse not (isSome ann) then
+      if not (backend_use_annotations()) orelse not (isSome ann) then
         add_ssz (s,sz)
       else
         let
@@ -326,7 +333,7 @@ val emacs_terminal = let
 
   val style_stack = ref ([]:pp_full_style list);
   fun ustyle sty p =
-     if not (!backend_use_styles) then nothing else
+     if not (backend_use_styles()) then nothing else
      let
         val fsty      = user_push_styleL name style_stack sty
         val sty_str   = full_style_to_emacs_string fsty
@@ -371,7 +378,7 @@ val lsp_terminal = let
       add_stringsz (s, sz) >>
       add_stringsz (str lspClose, 0)
   fun add_xstring {s, sz, ann} =
-      if not (!backend_use_annotations) orelse not (isSome ann) then
+      if not (backend_use_annotations()) orelse not (isSome ann) then
         add_ssz (s, sz)
       else let
         val sz = case sz of NONE => UTF8.size s | SOME sz => sz
@@ -489,9 +496,9 @@ let
       add_stringsz ("<span "^(full_style_to_html fsty)^">", 0)
 
   fun ustyle styL p =
-      if not (!backend_use_styles) then p
+      if not (backend_use_styles()) then p
       else
-        ((if (!backend_use_css) then push_styleL
+        ((if (backend_use_css()) then push_styleL
           else user_push_styleL name) style_stack styL;
          set_style (top_style style_stack)) >>
         p >>
@@ -506,7 +513,7 @@ let
 
   fun add_ann_string_general ty ls_opt ssz =
      add_stringsz ("<span class=\""^ty^"\"", 0) >>
-     (if ((!add_type_information) andalso (isSome ls_opt)) then
+     (if add_type_information() andalso isSome ls_opt then
         add_stringsz (" title=\""^((valOf ls_opt) ())^"\"", 0)
       else nothing) >>
      add_stringsz (">", 0) >>
@@ -540,9 +547,9 @@ let
       | _ => add_ssz ssz
 
   fun add_xstring {s,sz,ann} =
-    if not (!backend_use_annotations) orelse not (isSome ann) then
+    if not (backend_use_annotations()) orelse not (isSome ann) then
       add_ssz (s,sz)
-    else (if (!backend_use_css) then add_ann_string___css
+    else (if backend_use_css() then add_ann_string___css
           else add_ann_string___simple) ((s,sz), valOf ann)
 in
   {extras = {name           = name,

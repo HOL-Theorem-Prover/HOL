@@ -186,7 +186,7 @@ fun collapse_map (freeset,empty,dosub) subst =
 
 fun collapse0 E =
     let
-      val mk_vartype = trace ("Vartype Format Complaint", 0) mk_vartype
+      val mk_vartype = HOLFlags.trace ("Kernel.Vartype_Format_Complaint", 0) mk_vartype
       val tymap =
           collapse_map (HOLset.fromList Type.compare o Type.type_vars,
                       HOLset.empty Type.compare,

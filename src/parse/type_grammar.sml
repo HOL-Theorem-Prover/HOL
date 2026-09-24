@@ -5,6 +5,12 @@ open HOLgrammars
 open Lib
 open type_grammar_dtype
 
+val tyabbrev_flag_name = "print_tyabbrevs"
+val {get = print_abbrevs,...} = HOLFlags.create_btrace(
+      {group = "PP", name = tyabbrev_flag_name},
+      true
+    )
+
 fun typstruct_uptodate ts =
     case ts of
       PARAM _ => true
@@ -305,7 +311,7 @@ fun new_abbreviation {knm,print,ty} tyg = let
                       "type_grammar"
                       "new_abbreviation"
                       ("Replacing old mapping from " ^ s ^ " to "^
-                       PP.pp_to_string (!Globals.linewidth)
+                       PP.pp_to_string (HOLFlags.linewidth())
                                        (pp_type tyg')
                                        (structure_to_type st'));
                     tyg'
@@ -341,7 +347,7 @@ fun merge_abbrevs G (d1, d2) = let
                                 ("Conflicting entries for op/abbrev "^
                                  KernelSig.name_toString k ^
                                  "; arbitrarily keeping map to "^
-                                 PP.pp_to_string (!Globals.linewidth)
+                                 PP.pp_to_string (HOLFlags.linewidth())
                                                  (pp_type G)
                                                  (structure_to_type v0));
            newdict)
@@ -416,7 +422,7 @@ fun prettyprint_grammar G = let
     val ty = structure_to_type st
     val printed = can_print pmap kid ty
     val ty_string = PP.pp_to_string 100
-                      (Feedback.trace ("print_tyabbrevs", 0) (pp_type G))
+                      (HOLFlags.trace ("PP.print_tyabbrevs", 0) (pp_type G))
                       ty
   in
     block INCONSISTENT 0 (
@@ -520,9 +526,6 @@ in
   )
 end;
 
-val print_abbrevs = ref true
-val _ = Feedback.register_btrace ("print_tyabbrevs", print_abbrevs)
-
 fun tysize ty =
     if Type.is_vartype ty then 1
     else let
@@ -571,7 +574,7 @@ in
     end
 end
 
-fun abb_dest_type G ty = if !print_abbrevs then abb_dest_type0 G ty
+fun abb_dest_type G ty = if print_abbrevs() then abb_dest_type0 G ty
                          else dest_type' ty
 
 fun disable_abbrev_printing s (g as TYG grm) = let

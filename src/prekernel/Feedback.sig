@@ -40,7 +40,7 @@ sig
     (* heeds emit_ERR, uses ERR_outstream *)
     val output_ERR        : string -> unit
 
-    val format_ERR        : hol_error -> string
+    val format_ERR        : int -> hol_error -> string
     val format_MESG       : string -> string
     val format_WARNING    : string -> string -> string -> string
     val format_INFO       : string -> string
@@ -64,31 +64,5 @@ sig
     val HOL_WARNING       : string -> string -> string -> unit
     val HOL_WARNINGloc    : string -> string -> locn.locn -> string -> unit
     val HOL_INFO          : string -> unit
-
-    datatype trace_elt =
-       TraceElt of
-         {name : string, aliases : string list,
-          trace_level : int, default : int, max : int}
-
-    val pp_trace_elt      : trace_elt -> HOLPP.pretty
-    val traces            : unit -> trace_elt list
-    val register_trace    : (string * int ref * int) -> unit
-    val create_trace      : {name:string,initial:int,max:int} ->
-                            {get : unit -> int, set : int -> unit}
-
-    val register_alias_trace : {original:string,alias:string} -> unit
-    val register_ftrace   : (string * ((unit -> int) * (int -> unit)) * int)
-                             -> unit
-    val register_btrace   : (string * bool ref) -> unit
-    val create_btrace     : string * bool ->
-                            {get : unit -> bool, set : bool -> unit}
-
-    val current_trace     : string -> int
-    val get_tracefn       : string -> unit -> int
-    val set_trace         : string -> int -> unit
-    val reset_trace       : string -> unit
-    val reset_traces      : unit -> unit
-    val trace             : string * int -> ('a -> 'b) -> 'a -> 'b
-    val with_traces       : (string * int) list -> ('a -> 'b) -> 'a -> 'b
 
 end
