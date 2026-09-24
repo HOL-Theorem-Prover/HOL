@@ -768,18 +768,17 @@ in
         (* Searching the theorem database by name, theory and term
            pattern -- what `M-h M' asks for. *)
         useInit "tools-poly/lsp/db_search_init.ML";
-        (* Hover shows no entry documentation: `LSPExtension.helpLookup'
-           is installed by `Help.sml', which only the REPL prelude
-           loads, so in LSP mode the hook has never had an
-           implementation.  Loading it here does not work as it stands
-           -- `Help.sml' relies on the names the prelude's
-           `open HolKernel Parse boolLib' puts in scope (`$', `last',
-           ...), and this branch opens nothing on purpose, since the
-           server's namespace is what user files compile against.  The
-           fix belongs in `Help.sml': qualify what it uses.  Until then
-           `helpLookup' answers the empty list, as it always has.  Note
-           the documentation itself is built from help/Docfiles/*.smd,
-           so it is a product either way. *)
+        (* Entry documentation in hovers, from `help/HOL.Help' and the
+           processed Reference entries.  `Database' first, from source:
+           the index reader is in no heap, and `help_init' reads the
+           index through it.  Adding `Database' to the namespace user
+           files compile against is the cost; the alternative -- a
+           private namespace for it -- buys little, since the LSP boot
+           session `open's nothing and so the name cannot shadow
+           anything a file refers to unqualified. *)
+        useInit "help/src-sml/Database.sig";
+        useInit "help/src-sml/Database.sml";
+        useInit "tools-poly/lsp/help_init.ML";
         (* --lsp-check-proofs: replay what the cheating pass deferred,
            rather than discarding it.  Off by default, so an LSP session
            costs elaboration only unless asked otherwise.  The pool is

@@ -3107,7 +3107,10 @@ fun start {diag, dbg, warnings} = let
                   PrettyBreak(1, 2), ty])
               @ [PrettyBreak(1, 2), PrettyString "="]),
              PrettyBreak(1, 0), value]))]
-      in thyHov @ help @ out end
+      (* Documentation last.  An entry runs to tens of lines, and what
+         the reader came for -- the type, and the value where there is
+         one -- would sit off the top of the box behind it. *)
+      in thyHov @ out @ help end
     (* Bounded by the text as well as by the span: a built tree is a
        record of the last compile, and the buffer has moved on.  A
        declaration the user has not finished -- no `QED`, no closing

@@ -305,6 +305,67 @@ client treats single newlines as spaces and reflows the statement in a
 proportional font, which throws away every break the pretty printer
 just chose.
 
+### Entry documentation
+
+Below the type and value, a hover carries the identifier's Reference
+entry -- what `help/Docfiles/<Struct>.<name>.smd` says about it -- and
+a link to the file it was read from:
+
+```
+val STRIP_TAC: Tactic.tactic = fn
+
+---
+
+## `STRIP_TAC`
+...
+Splits a goal by eliminating one outermost connective.
+...
+
+[📖 Tactic.STRIP_TAC](file:///…/Tactic.STRIP_TAC.smd)
+```
+
+Documentation comes last on purpose: an entry runs to tens of lines,
+and the type would otherwise sit off the top of the box behind it.
+
+Two build products are involved, and neither is in the repository:
+
+- `help/HOL.Help`, the index `help/src-sml/makebase.exe` writes, is how
+  a name is turned into an entry.  Matching is by the entry's own
+  structure component: a bare `STRIP_TAC` matches `Tactic.STRIP_TAC`
+  only if the declaring structure Poly/ML reports (`PStructureAt`) is
+  `Tactic`, and a written `Tactic.STRIP_TAC` only if the prefix is.
+  One name can therefore produce several entries, and all of them are
+  shown.
+- `Manual/build/Docfiles-processed/<Struct>.<name>.smd`, written by
+  `help/src-sml/process_docfiles`, is what the hover shows and links
+  to.  These are the polyscripter-evaluated entries: markdown a client
+  can render, unlike the `.txt` beside each source (a pandoc
+  plain-text rendering) or the source `.smd` (still carrying its
+  frontmatter and `>>` directives, which the hover strips and
+  evaluates respectively).
+
+`bin/build` writes both as part of its help step, so an ordinary build
+has them; one run with `--no-helpdocs` does not, and the hover then
+shows what it always did -- a type and a value.  Nothing else changes,
+and there is no diagnostic: a tree with no documentation built and an
+identifier with no entry look the same from here.
+
+An entry's cross-references -- its "See also" list, and the "Also
+exported as" banner on an aliased entry -- are written against the
+anchor scheme the Reference manual used to have (`](#Foo.bar)`).
+Nothing in a hover resolves those, so each is rewritten to point at
+that entry's own processed file; a reference to an entry that no
+longer exists is left as it was written.
+
+The wiring is `lsp/help_init.ML`, which installs
+`LSPExtension.helpLookup`; `hol.ML`'s LSP branch loads it, and
+`help/src-sml/Database` (the index reader) just before it, from
+source, since neither is in any heap.  The index is read once, on the
+first documented hover, and a tree that has none is remembered as
+having none -- a hover is not a place to rediscover the same missing
+file.  `tools-poly/poly/Help.sml` reads the same index for the REPL's
+`help` command and knows nothing about any of the above.
+
 ### Positions
 
 A hover's range, like every position on the wire, counts whatever
