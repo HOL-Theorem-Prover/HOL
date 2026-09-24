@@ -357,6 +357,24 @@ Nothing in a hover resolves those, so each is rewritten to point at
 that entry's own processed file; a reference to an entry that no
 longer exists is left as it was written.
 
+The processed tree is not finished markdown -- mdbook runs `smdpp`
+over it -- so the hover repeats what `smdpp` *deletes*: `\index{}`,
+`\label{}`, and `` ```{=latex} ``/`` ```{=html} `` raw blocks (body
+and all; a `` ```{=mdbook} `` block keeps its body).  Those are the
+constructs whose correct rendering is nothing at all, so an author has
+no reason to expect one to surface, and a hover that passed them
+through would be the only place they showed up.  No entry uses any of
+them today, which is why `help_init.ML` carries a load-time selftest
+rather than relying on the built tree to exercise the pass.
+
+What `smdpp` *resolves* -- `\ref{}`, `\refentry{}`, `\cite{}` -- is
+left as written, and renders as literal text: CommonMark escapes only
+punctuation, so `\refentry{Foo.bar}` is visible.  Deleting a
+cross-reference is worse than showing one the reader has to look up.
+If entries start using these, resolving them here stops being
+defensible and the pass belongs in `process_docfiles` instead, so that
+the processed tree is markdown and can be named `.md`.
+
 The wiring is `lsp/help_init.ML`, which installs
 `LSPExtension.helpLookup`; `hol.ML`'s LSP branch loads it, and
 `help/src-sml/Database` (the index reader) just before it, from
