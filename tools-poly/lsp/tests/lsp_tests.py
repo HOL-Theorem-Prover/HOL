@@ -884,6 +884,60 @@ def test_thm_hover_shows_statement():
         c.close()
 
 
+def test_hover_shows_entry_documentation():
+    """Hover on a documented entry point carries its Reference entry
+    and a link to the file the entry was read from.
+
+    `help_init.ML' installs `LSPExtension.helpLookup', which the hover
+    has called since it was written; until the LSP branch of `hol.ML'
+    loaded an implementation, the hook answered the empty list and
+    every hover showed a type and nothing else.  Prose and link come
+    from Manual/build/Docfiles-processed, which `bin/build' writes
+    from help/Docfiles/*.smd -- so skip where the tree has no help
+    documentation built rather than read an empty answer as a pass."""
+    entry = os.path.join(REPO, "Manual", "build", "Docfiles-processed",
+                         "Tactic.STRIP_TAC.smd")
+    if not os.path.exists(os.path.join(REPO, "help", "HOL.Help")):
+        raise Skipped("help/HOL.Help is not built in this tree")
+    if not os.path.exists(entry):
+        raise Skipped("Manual/build/Docfiles-processed is not built in "
+                      "this tree")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/doc_hover.sml"
+        src = ("Theory doc_hover\n"
+               "Ancestors arithmetic\n\n"
+               "val mytac = STRIP_TAC\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 3 = "val mytac = STRIP_TAC", char 14 is inside the name.
+        res = _hover_at(c, 43, uri, 3, 14)
+        assert_true(res is not None, "hover result non-null")
+        md = res["contents"]["value"]
+        assert_contains(md, "Splits a goal by eliminating one outermost",
+                        "hover carries the entry's prose")
+        assert_true(re.search(r"Tactic\.STRIP_TAC\]\(file://\S*"
+                              r"Tactic\.STRIP_TAC\.smd\)", md),
+                    "hover links to the processed entry file")
+        # The entry's own cross-references resolve too: a "See also"
+        # target is rewritten from the manual's `#Foo.bar' anchor to
+        # the file that entry lives in.
+        assert_contains(md, "Tactic.GEN_TAC.smd)",
+                        "a See-also reference resolves to its entry")
+        assert_true("](#" not in md,
+                    "no unresolvable manual anchors survive "
+                    "({0!r})".format(md[:200]))
+        # Type first: the documentation runs to tens of lines, and
+        # what the reader came for must not sit behind it.
+        assert_true(md.index("val STRIP_TAC")
+                    < md.index("Splits a goal by eliminating"),
+                    "the SML type comes before the documentation")
+    finally:
+        c.close()
+
+
 def test_cheat_proofs_installed():
     """LSP session installs a set_prover thunk that returns
     mk_oracle_thm for any goal, so tactic bodies never run.  A goal
@@ -7660,6 +7714,8 @@ TESTS = [
     ("workdone_progress",            test_workdone_progress),
     ("cheat_proofs_installed",       test_cheat_proofs_installed),
     ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
+    ("hover_shows_entry_documentation",
+                                     test_hover_shows_entry_documentation),
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),
     ("hover_on_proof_body_whitespace_is_null",
                                      test_hover_on_proof_body_whitespace_is_null),

@@ -31,7 +31,7 @@ LSPINIT = $(LSPDIR)/deferred_proofs.ML $(LSPDIR)/pretty_printers_init.ML \
           $(LSPDIR)/defnbase_init.ML $(LSPDIR)/hover_quote_init.ML \
           $(LSPDIR)/tactic_steps.ML $(LSPDIR)/tactic_walker.ML \
           $(LSPDIR)/goal_state_init.ML $(LSPDIR)/db_symbols_init.ML \
-          $(LSPDIR)/db_search_init.ML
+          $(LSPDIR)/db_search_init.ML $(LSPDIR)/help_init.ML
 
 # `bin/hol' rather than a selftest.exe: these files want the heap a
 # server has, and loading them is the test.  The script exits non-zero
