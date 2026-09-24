@@ -60,6 +60,84 @@ fun stripFrontmatter s =
       | drop (_ :: rest) = drop rest
   in drop (List.tl (splitOn #"\n" s)) end
 
+(* Drop every `\\cmd{...}' call, brace-matched, and any line the
+   removal leaves blank that was not blank before -- an `\\index{}'
+   alone on its line would otherwise leave one, and a blank line makes
+   the next 4-space-indented line reparse as a code block.  Mirrors
+   `stripCmd' in Manual/Tools/smdpp.sml. *)
+fun stripCmd cmdName s = let
+  val sz = String.size s
+  val cmd = "\\" ^ cmdName ^ "{"
+  val cmdsz = String.size cmd
+  fun matchAt i =
+    i + cmdsz <= sz andalso String.substring (s, i, cmdsz) = cmd
+  fun skipBraces (i, depth) =
+    if i >= sz then i
+    else case String.sub (s, i) of
+           #"{" => skipBraces (i + 1, depth + 1)
+         | #"}" => if depth = 1 then i + 1 else skipBraces (i + 1, depth - 1)
+         | _ => skipBraces (i + 1, depth)
+  fun loop (i, acc) =
+    if i >= sz then String.concat (List.rev acc)
+    else if matchAt i then loop (skipBraces (i + cmdsz, 1), acc)
+    else loop (i + 1, String.str (String.sub (s, i)) :: acc)
+  fun isBlank ln = CharVector.all Char.isSpace ln
+  fun zip ([], [], acc) = List.rev acc
+    | zip (o1 :: orest, n1 :: nrest, acc) =
+      if isBlank n1 andalso not (isBlank o1) then zip (orest, nrest, acc)
+      else zip (orest, nrest, n1 :: acc)
+    | zip (_, news, acc) = List.rev acc @ news
+  in
+    if not (String.isSubstring cmd s) then s
+    else String.concatWith "\n"
+           (zip (splitOn #"\n" s, splitOn #"\n" (loop (0, [])), []))
+  end
+
+(* Pandoc raw fenced blocks, ```{=<fmt>} ... ```.  The PDF pipeline
+   hands the body to the matching writer and discards the rest, and
+   mdbook's markdown parser does not, so smdpp disposes of them: a
+   `{=mdbook}' block keeps its body, any other drops body and all.
+   Mirrors `handleRawBlocks' in Manual/Tools/smdpp.sml.  Neither
+   renderer ever shows a `{=latex}' body, so nor does a hover. *)
+fun handleRawBlocks s = let
+  fun firstTok ln = case String.tokens Char.isSpace ln of
+                      [] => NONE
+                    | t :: _ => SOME t
+  fun fenceOpenFormat ln =
+    case firstTok ln of
+      SOME t =>
+      if String.isPrefix "```{=" t andalso String.isSuffix "}" t
+      then SOME (String.substring (t, 5, String.size t - 6))
+      else NONE
+    | NONE => NONE
+  fun isFenceClose ln = firstTok ln = SOME "```"
+  datatype state = Outside | Stripping | Inlining
+  fun loop ([], acc, _) = List.rev acc
+    | loop (l :: rest, acc, Stripping) =
+      loop (rest, acc, if isFenceClose l then Outside else Stripping)
+    | loop (l :: rest, acc, Inlining) =
+      if isFenceClose l then loop (rest, acc, Outside)
+      else loop (rest, l :: acc, Inlining)
+    | loop (l :: rest, acc, Outside) =
+      case fenceOpenFormat l of
+        SOME "mdbook" => loop (rest, acc, Inlining)
+      | SOME _ => loop (rest, acc, Stripping)
+      | NONE => loop (rest, l :: acc, Outside)
+  in String.concatWith "\n" (loop (splitOn #"\n" s, [], Outside)) end
+
+(* What smdpp deletes on the way to HTML, deleted here too.  These are
+   the constructs whose correct rendering is *absence*: an author has
+   no reason to expect an `\\index{}' or a `{=latex}' block to surface
+   anywhere, so nothing would stop them writing one, and a hover that
+   passed it through would be the only place it showed up.
+
+   The constructs smdpp *resolves* -- `\\ref{}', `\\refentry{}',
+   `\\cite{}' -- are left as written.  A hover cannot follow them, but
+   deleting a cross-reference is worse than showing one the reader has
+   to look up; and `](#Foo.bar)', the one that is resolvable from here,
+   is resolved below. *)
+fun dropPandocOnly s = stripCmd "label" (handleRawBlocks (stripCmd "index" s))
+
 (* `file://' URI for an absolute path.  Percent-encoded, so a path
    holding a space or a bracket still travels as one markdown link
    destination. *)
@@ -113,7 +191,8 @@ fun getDoc file = let
     | SOME p =>
       case read p of
         NONE => plain ()
-      | SOME s => SOME {markdown = linkAnchors (stripFrontmatter s),
+      | SOME s => SOME {markdown =
+                          linkAnchors (dropPandocOnly (stripFrontmatter s)),
                         link = SOME p}
   end
 
@@ -159,6 +238,45 @@ fun helpLookup (id, validate) =
            else out)
       | build (_ : Database.entry, out) = out
     in List.foldr build [] (Database.lookup (db, toLower id)) end
+
+(* Load-time selftest -- raises Fail on regression.
+
+   No Reference entry carries any of these constructs today, so a test
+   driven from the built tree would pass over zero cases and read
+   exactly like a clean result.  They are what an author gains the
+   moment an entry starts using what smdpp offers, which is the point
+   of stripping them before anyone does. *)
+local
+  fun check (name, input, expected) =
+    case dropPandocOnly input of
+      out => if out = expected then ()
+             else raise Fail ("help_init selftest [" ^ name ^
+                              "]: expected " ^ String.toString expected ^
+                              ", got " ^ String.toString out)
+in
+val () = List.app check [
+  ("index-inline",
+   "A \\index{simp}tactic.", "A tactic."),
+  (* the line goes, rather than being left blank: a blank line here
+     would make an indented line after it reparse as a code block *)
+  ("index-own-line",
+   "one\n\\index{a}\n    two", "one\n    two"),
+  ("index-nested-braces",
+   "x \\index{a{b}c} y", "x  y"),
+  ("label-dropped",
+   "See \\label{sec:x}here.", "See here."),
+  ("latex-block-goes",
+   "a\n```{=latex}\n\\input{HOLlist}\n```\nb", "a\nb"),
+  ("html-block-goes",
+   "a\n```{=html}\n<b>x</b>\n```\nb", "a\nb"),
+  ("mdbook-block-keeps-its-body",
+   "a\n```{=mdbook}\n*cap*\n```\nb", "a\n*cap*\nb"),
+  (* a plain fenced block is content, not a raw block *)
+  ("ordinary-fence-survives",
+   "a\n``` hol4\n\\input{x}\n```\nb", "a\n``` hol4\n\\input{x}\n```\nb"),
+  ("nothing-to-do",
+   "plain text", "plain text")]
+end
 
 in
 
