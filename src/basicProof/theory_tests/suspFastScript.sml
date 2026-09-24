@@ -25,7 +25,8 @@ Libs HolKernel Parse boolLib markerLib BasicProvers
    tactic, so suspend never inserts any suspendlabel hypotheses. *)
 val _ =
   Tactical.set_prover
-    (fn (g, _ : tactic) => Thm.mk_oracle_thm "fast_proof" g)
+    (fn _ : Context.t => fn (g, _ : tactic) =>
+        Thm.mk_oracle_thm "fast_proof" g)
 
 (* The tactic bodies below are never actually run (the oracle prover
    discards them), so they need only be syntactically valid SML. *)

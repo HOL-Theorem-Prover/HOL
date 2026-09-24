@@ -621,7 +621,7 @@ val x86_write_jump_cond_thm = prove(
   \\ REPEAT STRIP_TAC \\ IMP_RES_TAC x86_write_jump_thm
   \\ ASM_SIMP_TAC std_ss [LET_DEF]);
 
-fun TRY_TAC t goal = t goal handle e => ALL_TAC goal;
+fun TRY_TAC t goal c = t goal c handle e => ALL_TAC goal c;
 
 (* r6 remembers last poniter *)
 (* r1 remembers how many to drop for r6 *)

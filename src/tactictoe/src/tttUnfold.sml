@@ -1265,8 +1265,17 @@ fun ttt_rewrite_thy_in_context thy
     print_endline ("ttt_rewrite_thy time: " ^ rts_round 4 t)
   end
 
+(* Theories present in every heap tactictoe could start a child from, so
+   their scripts cannot be re-run: `new_theory` finds the theory already
+   there.  `min` and `bool` have always been so, and coreboolSupport
+   joined them when boolLib's and Prim_rec's load-time proofs were
+   relocated into a theory of their own -- which put it in src/1, and so
+   into hol.state0.  Excluded from the recording plan as well as from
+   recording itself, or the plan asks for data nothing will produce. *)
+val unrecordable_theories = ["min", "bool", "coreboolSupport"]
+
 fun ttt_rewrite_thy thy =
-  if mem thy ["bool","min"] then () else
+  if mem thy unrecordable_theories then () else
     ttt_rewrite_thy_in_context thy (mk_record_context thy)
 
 (* -------------------------------------------------------------------------
@@ -1274,7 +1283,7 @@ fun ttt_rewrite_thy thy =
    ------------------------------------------------------------------------ *)
 
 fun record_thy_raw thy =
-  if mem thy ["min","bool"] then () else
+  if mem thy unrecordable_theories then () else
   let
     val publish_tacdata = !record_flag
     val current_file = current_tacdata_file thy
@@ -1424,7 +1433,7 @@ fun theories_of_scope scope =
       | Ancestry thy => ancestry thy
       | Theories thyl0 => thyl0 @ List.concat (map ancestry thyl0)
   in
-    filter (fn x => not (mem x ["min","bool"]))
+    filter (fn x => not (mem x unrecordable_theories))
       (sort_thyl (mk_sameorder_set String.compare thyl))
   end
 
@@ -2078,7 +2087,7 @@ fun record_thy_with_side_effects thy =
   end
 
 fun ttt_record_thy thy =
-  if mem thy ["min","bool"] then () else
+  if mem thy unrecordable_theories then () else
   if tactic_data_only () then
     (ttt_record_opts [Scope (Theories [thy])];
      let val plan = compute_record_plan false (Theories [thy]) in

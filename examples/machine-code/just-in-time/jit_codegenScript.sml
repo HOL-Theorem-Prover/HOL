@@ -259,7 +259,7 @@ val LENGTH_X86_ENCODE = prove(
   ``!n b. LENGTH (X86_ENCODE b n) = LENGTH (X86_ENCODE (\x.0w) n)``,
   Cases THEN SIMP_TAC std_ss [LENGTH,X86_ENCODE_def,X86_IMMEDIATE_def,APPEND]);
 
-fun TRY_TAC t goal = t goal handle e => ALL_TAC goal;
+fun TRY_TAC t goal c = t goal c handle e => ALL_TAC goal c;
 
 val x86_addr_thm = prove(
   ``!y ns r x b2 f df r1 r5 r6.

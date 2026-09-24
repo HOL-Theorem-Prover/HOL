@@ -71,7 +71,7 @@ val FULL_DATATYPE_RULE = utilsLib.FULL_CONV_RULE DATATYPE_CONV
 
 val COND_UPDATE_CONV =
    REWRITE_CONV
-     (utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
+     (utilsLibSupportTheory.COND_UPDATE3 ::
       utilsLib.mk_cond_update_thms (List.map mk_arm_type ["m0_state", "PSR"]))
 
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
@@ -139,30 +139,11 @@ val write'PC_rwt =
    EV [write'PC_def] [] []
       ``write'PC x`` |> hd
 
-local
-   val mask_sp =
-      blastLib.BBLAST_PROVE
-         ``d && 0xFFFFFFFCw : word32 = ((31 >< 2) d : word30) @@ (0w: word2)``
-
-   fun r_rwt t = Q.prove(t,
-      wordsLib.Cases_on_word_value `n`
-      \\ simp [write'R_def, R_def, R_name_def, LookUpSP_def, num2RName_thm,
-               mask_sp]
-      )
-      |> Drule.UNDISCH
-in
-   val R_name_rwt = r_rwt
-      `n <> 15w ==> (R n ^st = ^st.REG (R_name ^st.CONTROL.SPSEL n))`
-
-   val write'R_name_rwt = r_rwt
-      `n <> 15w ==>
-       (write'R (d, n) ^st =
-        ^st with REG :=
-        (R_name ^st.CONTROL.SPSEL n =+
-        if n = 13w then d && 0xFFFFFFFCw else d) ^st.REG)`
-
-   val RName_LR_rwt = EVAL ``m0_step$R_name x 14w``
-end
+(* R_name_rwt and write'R_name_rwt live in m0_stepTheory now; import
+   them in the UNDISCHed form for use below. *)
+val R_name_rwt = Drule.UNDISCH (Drule.SPEC_ALL m0_stepTheory.R_name_rwt)
+val write'R_name_rwt = Drule.UNDISCH (Drule.SPEC_ALL m0_stepTheory.write'R_name_rwt)
+val RName_LR_rwt = EVAL ``m0_step$R_name x 14w``
 
 (* ---------------------------- *)
 
@@ -328,9 +309,7 @@ val Shift_C_rwt =
       |> hd
       |> SIMP_RULE std_ss []
 
-val SND_Shift_C_rwt = Q.prove(
-   `!s. SND (Shift_C (value,typ,amount,carry_in) s) = s`,
-   Cases_on `typ` \\ lrw [Shift_C_rwt]) |> Drule.GEN_ALL
+val SND_Shift_C_rwt = m0_stepTheory.SND_Shift_C_rwt
 
 (* ---------------------------- *)
 
@@ -428,10 +407,7 @@ local
                        LDM_UPTO_components]
              THENC numLib.REDUCE_CONV)
 
-   val lem = Q.prove(
-      `!registers:word9. ~word_bit (w2n (13w: word4)) registers`,
-      simp [wordsTheory.word_bit_def]
-      )
+   val lem = m0_stepTheory.not_word_bit_13_word9
 in
    val POP_rwt =
       EV [LDM, LDM_UPTO_def, IncPC_rwt, LDM_UPTO_PC, write'R_name_rwt,
@@ -483,20 +459,9 @@ local
    val PUSH_thm = Conv.RIGHT_CONV_RULE PairedLambda.let_CONV
                     (unfold_for_loop 8 dfn'Push_def)
 
-   val cond_lsb = Q.prove(
-      `i < 8 ==>
-       (word_bit (w2n n) r ==>
-        (n2w (LowestSetBit (r: word8)) = n: word4)) ==>
-       ((if word_bit i r then
-           (x1, if (n2w i = n) /\ (i <> LowestSetBit r) then x2 else x3)
-         else
-           x4) =
-        (if word_bit i r then (x1, x3) else x4))`,
-      lrw [m0Theory.LowestSetBit_def, wordsTheory.word_reverse_thm,
-           CountLeadingZeroBits8]
-      \\ lrfs []
-      \\ lfs []
-      )
+   val cond_lsb =
+      m0_stepTheory.cond_lsb_lemma
+      |> Drule.SPEC_ALL
       |> Drule.UNDISCH_ALL
 
    fun FOR_BETA_CONV i tm =
@@ -633,11 +598,7 @@ val BIT_THMS_CONV_9 = BIT_THMS_CONV 9
 val BIT_THMS_CONV_8 = BIT_THMS_CONV 8 ORELSEC BIT_THMS_CONV_9
 
 local
-   val eq0_rwts = Q.prove(
-      `(NUMERAL (BIT1 x) <> 0) /\ (NUMERAL (BIT2 x) <> 0)`,
-      REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.BIT1,
-                   arithmeticTheory.BIT2]
-      \\ DECIDE_TAC)
+   val eq0_rwts = m0_stepTheory.numeral_bit12_eq0
    val count8 = rhsc count_list_8
    (* val count9 = rhsc count_list_9 *)
    val ok8 = Term.term_eq count8
@@ -933,14 +894,7 @@ in
 end
 
 local
-   val lem = Q.prove (
-      `(!p. ((if p then v2w [b1; b2; b3] else v2w [b4; b5; b6]) = 7w : word3) =
-             (if p then b1 /\ b2 /\ b3 else b4 /\ b5 /\ b6)) /\
-       (!p. ((if p then v2w [b1; b2] else v2w [b3; b4]) = 0w : word2) =
-             (if p then ~b1 /\ ~b2 else ~b3 /\ ~b4))`,
-      lrw []
-      \\ CONV_TAC (Conv.LHS_CONV bitstringLib.v2w_eq_CONV)
-      \\ decide_tac)
+   val lem = m0_stepTheory.cond_v2w_eq_lemma
 
    val CONC_RULE =
      SIMP_RULE (srw_ss()++boolSimps.LET_ss)
@@ -1610,9 +1564,7 @@ val BranchLinkExchangeRegister_rwt =
 (* ---------------------------- *)
 
 local
-   val rwt =
-      utilsLib.qm [wordsTheory.SHIFT_ZERO]
-        ``(if n = 0 then (x: 'a word,s) else (x #>> n, ^st)) = (x #>> n, s)``
+   val rwt = Drule.SPEC_ALL m0_stepTheory.ROR_cond_rewrite
 in
    val ROR_rwt =
       EV [ROR_def, ROR_C_def] [] []

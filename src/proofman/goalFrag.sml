@@ -55,13 +55,16 @@ fun concatMapV f (ls, v: list_validation) = let
   val (gs, v1) = go ls
   in (gs, v o v1: list_validation) end
 
-fun expandf (tac:tactic) (n, g) =
+fun expandf (tac:tactic) ctxt (n, g) =
   (n, apply (fn (gs, v) =>
-    Base (concatMapV ((fn (gs, v) => (gs, single o v)) o tac) (gs, v))) g)
+    Base (concatMapV ((fn (gs, v) => (gs, single o v)) o
+                      (Lib.C tac ctxt))
+                     (gs, v))) g)
 val expand = expandf o Tactical.VALID
 
-fun expand_listf (ltac:list_tactic) (n, g) =
-  (n, apply (fn (gs, v) => (fn (gs', v') => Base (gs', v o v')) (ltac gs)) g)
+fun expand_listf (ltac:list_tactic) ctxt (n, g) =
+  (n, apply (fn (gs, v) =>
+                (fn (gs', v') => Base (gs', v o v')) (ltac gs ctxt)) g)
 val expand_list = expand_listf o Tactical.VALID_LT
 
 fun top_goals (_, Base (gs, _)) = gs
@@ -128,6 +131,8 @@ fun open_then1 (n, g) = (n+1, apply (fn
     ([], _) => raise ERR "THEN1" "goal completely solved by first tactic"
   | (g::gs, v) => Stashed (Base ([g], I), Then1 (gs, v))) g)
 
+fun open_then1_with tac ctxt = open_then1 o expandf tac ctxt
+
 fun open_first (n, g) = (n+1, apply (fn gs => Try (Running (Base gs), gs)) g)
 
 fun next_first (n, g) = let
@@ -154,7 +159,16 @@ fun close_repeat (n, g) = let;
           | Running g' => let
             val (g1, v1) = asBase g'
             val (acc, v2) = repeat g1 (acc, fn x => ([], x))
-            fun v' (ths, thacc) = apfst (fn th1 => v1 th1 @ ths) (v2 thacc)
+            (* `repeat' prepends each goal's theorem to what it has
+               built, so `v2' hands back the subgoals' theorems in
+               reverse -- which is what the `rev' below the top-level
+               call undoes for the frame's own validation.  `v1' is the
+               body's validation for *this* goal and gets no such
+               treatment, so reverse here: pairing subgoal theorems
+               with the wrong subgoals proves the wrong thing, silently
+               where the statements happen to typecheck. *)
+            fun v' (ths, thacc) =
+                apfst (fn th1 => v1 (rev th1) @ ths) (v2 thacc)
             in repeat gs (acc, v' o v) end
       val (gs', v) = asBase gs
       val (gs', v') = repeat gs' ([], fn x => ([], x))
@@ -203,10 +217,28 @@ fun next_select_lt (n, g) = let
   fun go [] success (failed: (goal list * list_validation) list) v = let
       val (gs1, v1) = concatMapV I (rev success, I)
       val (gs2, v2) = concatMapV I (rev failed, I)
+      (* `v' consumes its lists head-first from the last selected goal
+         backwards, so the theorems must be reversed -- but *outside*
+         `v1', which pairs theorems with goals by position.  Reversing
+         first hands each theorem to another goal's validation.  With
+         one theorem per selected goal and identity validations the
+         two orders coincide, so this only shows once a selected
+         goal's tactic does real work: `gvs' on two goals matching the
+         same pattern proved the wrong thing, and the mismatch
+         surfaced as a failure inside `Thm.CHOOSE'. *)
       fun v' n ths = let
         val (ths1, ths2) = Lib.split_after n ths
-        in v ([], v1 (rev ths1), v2 (rev ths2)) end
-      in Stashed (Base (gs1, v2), NthGoal ([], gs2, v' (length gs1))) end
+        in v ([], rev (v1 ths1), rev (v2 ths2)) end
+      (* The focus carries `I', not `v1' or `v2': `v'` below applies
+         both, `v1' to the theorems of the selected goals and `v2' to
+         the stashed ones, so anything applied here would be applied
+         twice.  It used to carry `v2', which is built for the
+         *stashed* goals -- so with a different number selected than
+         stashed it was handed the wrong count and `Lib.split_after'
+         said "index too big".  Only `finish' runs validations, so the
+         goals looked right the whole way and a completed proof
+         reported "No subgoals but proof incomplete". *)
+      in Stashed (Base (gs1, I), NthGoal ([], gs2, v' (length gs1))) end
     | go (Try (Running gs, _) :: rest) success failed v =
       go rest (asBase gs :: success) failed (v o (fn (a,b,c) => (hd b::a,tl b,c)))
     | go (Try (Failed _, ([g], v')) :: rest) success failed v =
@@ -264,7 +296,42 @@ fun context_lines (_, g) = let
         in here @ collapse rest end
   in collapse (rev (go g [])) end
 
-fun pp_goalstate gs = let
+(* If the current focus is empty and the outer combinators can't
+   yet close cleanly, step them one at a time until goals become
+   visible again (or every step fails).  The user sees the state
+   that WILL be current once the pending steps fire, so cursor
+   positions just past a solved subgoal don't render as the
+   misleading "No subgoals but proof incomplete." message.
+
+   A solved THENL branch needs `next_tacs_to_lt' rather than
+   `close_paren': closing a TacsToLT frame with branches still to
+   come is a length mismatch, so closing is not available until the
+   last branch.  Report which step got us moving, and keep the
+   first one -- that is the one describing what the user just
+   finished. *)
+fun stepOut gs = case total close_paren gs of
+    SOME closed => SOME ("remaining after close", closed)
+  | NONE => (case total next_tacs_to_lt gs of
+      SOME next => SOME ("next branch", next)
+    | NONE => NONE)
+fun peek gs =
+  case stepOut gs of
+    NONE => NONE
+  | SOME (how, gs') =>
+    if not (null (top_goals gs')) then SOME (how, gs')
+    else Option.map (fn (_, gs'') => (how, gs'')) (peek gs')
+
+fun focus_note gs =
+  case top_goals gs of
+    [] => (case total finish gs of
+             SOME _ => NONE
+           | NONE => Option.map
+                       (fn (how, _) => "Focused subgoal(s) solved; " ^
+                                       how ^ ":")
+                       (peek gs))
+  | _ => NONE
+
+fun pp_goalstate_gen preamble gs = let
   open smpp
   val pr_goal = goalStack.pr_goal
   val show_nsubgoals = current_trace "Goalstack.howmany_printed_subgoals"
@@ -272,35 +339,20 @@ fun pp_goalstate gs = let
     current_trace "Goalstack.other_subgoals_pretty_limit"
   val show_stack_subgoal_count =
     current_trace "Goalstack.show_stack_subgoal_count" = 1
+  (* Both of these are *about* the goals rather than part of them, and
+     a client that can pin them somewhere that does not scroll wants
+     them separately -- see `context_lines' and `focus_note'.  Asking
+     for them here as well would show them twice. *)
   val pp_context =
-    case context_lines gs of
+    if not preamble then nothing
+    else case context_lines gs of
       [] => nothing
     | ls => add_string ("[" ^ String.concatWith "] [" ls ^ "]") >>
             add_newline >> add_newline
-  (* If the current focus is empty and the outer combinators can't
-     yet close cleanly, step them one at a time until goals become
-     visible again (or every step fails).  The user sees the state
-     that WILL be current once the pending steps fire, so cursor
-     positions just past a solved subgoal don't render as the
-     misleading "No subgoals but proof incomplete." message.
-
-     A solved THENL branch needs `next_tacs_to_lt' rather than
-     `close_paren': closing a TacsToLT frame with branches still to
-     come is a length mismatch, so closing is not available until the
-     last branch.  Report which step got us moving, and keep the
-     first one -- that is the one describing what the user just
-     finished. *)
-  fun stepOut gs = case total close_paren gs of
-      SOME closed => SOME ("remaining after close", closed)
-    | NONE => (case total next_tacs_to_lt gs of
-        SOME next => SOME ("next branch", next)
-      | NONE => NONE)
-  fun peek gs =
-    case stepOut gs of
-      NONE => NONE
-    | SOME (how, gs') =>
-      if not (null (top_goals gs')) then SOME (how, gs')
-      else Option.map (fn (_, gs'') => (how, gs'')) (peek gs')
+  fun pp_note how =
+    if not preamble then nothing
+    else add_string ("Focused subgoal(s) solved; " ^ how ^ ":") >>
+         add_newline >> add_newline
   in
     case top_goals gs of
       [] =>
@@ -315,12 +367,34 @@ fun pp_goalstate gs = let
           SOME (how, rest) =>
             block Portable.CONSISTENT 0 (
               pp_context >>
-              add_string ("Focused subgoal(s) solved; " ^ how ^ ":") >>
-              add_newline >> add_newline >>
-              pp_goalstate rest)
+              pp_note how >>
+              pp_goalstate_gen preamble rest)
         | NONE =>
-          add_string "No subgoals but proof incomplete (try close_paren)." >>
-          add_newline))
+          (* Two very different states reach here, and telling a user
+             the wrong one is worse than saying nothing.
+
+             If something is still open, the proof really is unfinished
+             and `close_paren' is the advice.  If nothing is open --
+             `close_paren' raising `Bind' is exactly "no frame at this
+             depth" -- then every step ran and every frame closed, and
+             what failed was rebuilding the theorem from the subgoals'
+             validations.  That is ours to fix, not the user's, and
+             must not be reported as their proof being incomplete. *)
+          let
+            val nothing_open =
+                (close_paren gs; false) handle Bind => true | _ => false
+          in
+            if nothing_open then
+              add_string "All subgoals are closed, but the theorem \
+                         \could not be rebuilt from them: a \
+                         \validation rejected the subgoals' \
+                         \theorems.  This is a limitation of \
+                         \stepping through the proof, not a report \
+                         \about the proof itself." >> add_newline
+            else
+              add_string "No subgoals but proof incomplete (try \
+                         \close_paren)." >> add_newline
+          end))
     | goals => let
       val (ellipsis_action, goals_to_print) =
         if length goals > show_nsubgoals then let
@@ -354,6 +428,7 @@ fun pp_goalstate gs = let
       end
   end
 
-val pp_goalstate = Parse.mlower o pp_goalstate
+val pp_goalstate = Parse.mlower o pp_goalstate_gen true
+val pp_goals_only = Parse.mlower o pp_goalstate_gen false
 
 end

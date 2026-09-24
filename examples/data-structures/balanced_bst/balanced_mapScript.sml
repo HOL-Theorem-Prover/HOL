@@ -2734,13 +2734,9 @@ Proof
      simp [] >>
      strip_tac >>
      conj_tac
-     >- (rfs [key_ordered_to_fmap, restrict_domain_def] >>
-         Cases_on `blo` >>
-         fs [restrict_set_def, option_cmp_def, option_cmp2_def]) >>
+     >- (rfs [key_ordered_to_fmap, restrict_domain_def]) >>
      conj_tac
-     >- (rfs [key_ordered_to_fmap, restrict_domain_def] >>
-         Cases_on `bhi` >>
-         fs [restrict_set_def, option_cmp_def, option_cmp2_def]) >>
+     >- (rfs [key_ordered_to_fmap, restrict_domain_def]) >>
      `restrict_domain cmp blo bhi FEMPTY = FEMPTY` by rw [restrict_domain_def]>>
      rw [to_fmap_def, restrict_domain_union, restrict_domain_update] >>
      fmrw [restrict_domain_def, FLOOKUP_EXT'] >>

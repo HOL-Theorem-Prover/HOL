@@ -63,6 +63,34 @@ sig
   val user_printers :
     grammar -> (term * string * userprinter)FCNet.t
 
+  (* State belonging to a user-registered parser or printer function.
+
+     A registered function is handed the grammar it works with -- an
+     absyn postprocessor directly, a user printer as the second half of
+     its (tyg,tmg) pair -- but its type mentions nothing else, so a
+     registrant needing auxiliary state of its own had to keep it in a
+     process-global.  A slot in the grammar gives it somewhere to live
+     that travels with the grammar it extends, and the registrant reads
+     it from the argument it already receives.  Registration is
+     unchanged; a stateless registrant is unaffected.
+
+     `upd_user_state' is an ordinary grammar transformation, so going
+     through Parse.upd_term_grammar rederives the parser and the value
+     cannot go stale.
+
+     A grammar is itself reconstructed by replaying its recorded deltas
+     over its merged parents, so a value only installed into the ambient
+     grammar would not survive a theory load.  Persistence therefore goes
+     the same way the registration does: ADD_USER_STATE carries the
+     registrant's own encoded delta in the grammar's delta stream, and
+     the replay applies it through the registry below.  `merge' says how
+     two ancestors' values combine when their grammars do. *)
+  type 'a state_key
+  val new_state_key : {name : string, init : 'a,
+                       merge : 'a * 'a -> 'a} -> 'a state_key
+  val get_user_state : 'a state_key -> grammar -> 'a
+  val upd_user_state : 'a state_key -> ('a -> 'a) -> grammar -> grammar
+
   type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
   type AbPTME = Absyn.absyn -> Parse_supportENV.preterm_in_env
   type preterm_processor = grammar -> AbPTME -> AbPTME
@@ -75,6 +103,12 @@ sig
       val get_userPP : userprinter getter
       val get_absynPostProcessor : absyn_postprocessor getter
       val register_absynPostProcessor : absyn_postprocessor setter
+
+      (* applies one ADD_USER_STATE delta, decoding it with whatever
+         encoding the registrant used to record it *)
+      type state_delta = ThyDataSexp.t -> grammar -> grammar
+      val get_stateDelta : state_delta getter
+      val register_stateDelta : state_delta setter
     end
 
   val absyn_postprocessors :

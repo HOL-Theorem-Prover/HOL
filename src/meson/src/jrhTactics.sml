@@ -71,7 +71,9 @@ structure jrhTactics :> jrhTactics =
       in bys (replicate (t2, length gls)) g
       end
 
-    fun convert (T:Tactic) ((asl:term list), (g:term)) =
+    (* jrh Tactics are meson's own self-contained machinery, so the
+       converted HOL tactic has no use for the context. *)
+    fun convert (T:Tactic) ((asl:term list), (g:term)) (_ : Context.t) =
       let val (gs, jf) = T (map ASSUME asl, g)
           val newgs = map (fn (asl, g) => (map concl asl, g)) gs
       in (newgs, jf)

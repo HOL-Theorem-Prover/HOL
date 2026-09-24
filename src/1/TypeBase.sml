@@ -99,8 +99,9 @@ local
 in
   fun register_update_fn f =
       Context.Data.modify update_fns_slot (fn fs => fs @ [f])
-  fun apply_update_fns tyi =
-      list_compose (Context.Data.get update_fns_slot (Context.snapshot())) tyi
+  fun apply_update_fns_of ctxt tyi =
+      list_compose (Context.Data.get update_fns_slot ctxt) tyi
+  fun apply_update_fns tyi = apply_update_fns_of (Context.snapshot()) tyi
 end;
 
 fun apply_delta tyi tyb = TypeBasePure.insert tyb (tweak_tyi tyi)
@@ -110,6 +111,7 @@ val initial_tydb = TypeBasePure.empty
                      |> rev_itlist apply_delta [bool_info, itself_info]
 
 val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
+                   get_global_value_of = theTypeBase_of,
                    record_delta, get_deltas = thy_updates,
                    merge = merge_typebases, update_global_value, ...} =
     let open TypeBasePure
@@ -131,7 +133,9 @@ fun export tyis = (write tyis; List.app record_delta tyis)
 
 (* various ways to access the global value *)
 fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
-fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
+fun fetch_of ctxt ty = TypeBasePure.fetch (theTypeBase_of ctxt) ty
+fun fetch ty = fetch_of (Context.snapshot()) ty
+fun elts_of ctxt = listItems (theTypeBase_of ctxt)
 val elts = listItems o theTypeBase;
 
 fun print_sp_type ty =
@@ -182,7 +186,7 @@ fun encode_of ty       = valOf2 ty "encode_of"
 
 
 
-fun tyi_from_name s =
+fun tyi_from_name_of ctxt s =
   let
     open type_grammar
     fun tyi_from_kid thy nm =
@@ -192,7 +196,7 @@ fun tyi_from_name s =
           let
             val st = TYOP {Args = List.tabulate(i, PARAM), Thy = thy, Tyop = nm}
           in
-            case fetch (structure_to_type st) of
+            case fetch_of ctxt (structure_to_type st) of
                 NONE => raise ERR "tyi_from_name" ("No tyinfo for "^thy^"$"^nm)
               | SOME tyi => tyi
           end
@@ -200,7 +204,7 @@ fun tyi_from_name s =
     case String.fields (equal #"$") s of
         [nm] =>
         let
-          val tyg = Parse.type_grammar()
+          val tyg = Parse.get_type_grammar ctxt
         in
           case Symtab.lookup (privileged_abbrevs tyg) nm of
               NONE => raise ERR "tyi_from_name"
@@ -218,9 +222,11 @@ fun tyi_from_name s =
       | _ => raise ERR "tyi_from_name" ("Malformed tyname: "^s)
   end
 
-val CaseEq = TypeBasePure.case_eq_of o tyi_from_name
-val CaseEqs = Drule.LIST_CONJ o map CaseEq
-fun AllCaseEqs() =
+fun CaseEq_of ctxt = TypeBasePure.case_eq_of o tyi_from_name_of ctxt
+fun CaseEqs_of ctxt = Drule.LIST_CONJ o map (CaseEq_of ctxt)
+fun CaseEq s = CaseEq_of (Context.snapshot()) s
+fun CaseEqs ss = CaseEqs_of (Context.snapshot()) ss
+fun AllCaseEqs_of ctxt =
   let
     fun foldthis(ty, tyi, acc) =
       case Lib.total TypeBasePure.case_eq_of tyi of
@@ -228,8 +234,9 @@ fun AllCaseEqs() =
         | SOME th => if aconv (concl acc) boolSyntax.T then th
                      else CONJ th acc
   in
-    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
+    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase_of ctxt)
   end
+fun AllCaseEqs() = AllCaseEqs_of (Context.snapshot())
 
 fun type_info_of ty = {case_def = case_def_of ty, nchotomy = nchotomy_of ty}
 
@@ -250,10 +257,11 @@ fun CasePred' tyinfo =
       |> Conv.CONV_RULE (Conv.LHS_CONV Thm.BETA_CONV)
     end
 
-val CasePred = CasePred' o tyi_from_name
-
-val CasePreds = Drule.LIST_CONJ o map CasePred
-fun AllCasePreds() =
+fun CasePred_of ctxt = CasePred' o tyi_from_name_of ctxt
+fun CasePreds_of ctxt = Drule.LIST_CONJ o map (CasePred_of ctxt)
+fun CasePred s = CasePred_of (Context.snapshot()) s
+fun CasePreds ss = CasePreds_of (Context.snapshot()) ss
+fun AllCasePreds_of ctxt =
   let
     fun foldthis(ty, tyi, acc) =
       case Lib.total CasePred' tyi of
@@ -261,8 +269,9 @@ fun AllCasePreds() =
         | SOME th => if aconv (concl acc) boolSyntax.T then th
                      else CONJ th acc
   in
-    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
+    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase_of ctxt)
   end
+fun AllCasePreds() = AllCasePreds_of (Context.snapshot())
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *
@@ -294,8 +303,10 @@ fun is_constructor x = TypeBasePure.is_constructor (theTypeBase()) x;
 (*---------------------------------------------------------------------------*)
 
 fun mk_case x   = TypeBasePure.mk_case (theTypeBase()) x
-fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
-fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
+fun dest_case_of c x = TypeBasePure.dest_case (theTypeBase_of c) x
+fun dest_case x = dest_case_of (Context.snapshot()) x
+fun is_case_of c x = TypeBasePure.is_case (theTypeBase_of c) x
+fun is_case x   = is_case_of (Context.snapshot()) x;
 fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 
 fun mk_pattern_fn css =

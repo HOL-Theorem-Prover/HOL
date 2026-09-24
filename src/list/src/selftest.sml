@@ -155,6 +155,11 @@ val _ = List.app ct [
   ("MAP2i-NIL1", “MAP2i (\i x y. x + i * y) [] []”, “[] : num list”),
   ("MAP2i-CONS", “MAP2i (\i x y. x + i * y) [1;2;3] [4;5;6]”,
                  “[1;7;15] : num list”),
+  ("ALL_DISTINCT-singleton", “ALL_DISTINCT [NONE : num option]”, “T”),
+  ("nub-closed-repeated",
+   “nub [0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;
+         0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;0;1;2;3;4]”,
+   “[0;1;2;3;4]”),
   ("FOLDL1", “FOLDL $+ 0 [1;2;3;4]”, “10n”),
   ("FOLDR1", “FOLDR (\n a. (n * 2) :: a) [] [1;2;3;4]”, “[2;4;6;8]”),
   ("GENLIST", “GENLIST (\n. 2 * n + 4) 6”, “[4; 6; 8; 10; 12; 14]”),
@@ -192,6 +197,15 @@ val _ = List.app ct [
   ("n2l_base_256",   ``n2l 256 21542142465``, ``[1; 2; 3; 4; 5n]``)
 ]
 
+val _ =
+  let
+    val cs = computeLib.copy listSimps.list_compset
+             |> computeLib.add_thms [listTheory.LIST_TO_SET_THM]
+  in
+    convtest ("explicit LIST_TO_SET computation", computeLib.CBV_CONV cs,
+              “set [1;2n]”, “{1;2n}”)
+  end
+
 val _ = let
   open BasicProvers listTheory
   val op using = markerLib.using
@@ -218,7 +232,7 @@ val _ = let
   val bitind_goal = “0 < n”
   val bitind_expected = [([], “0 < ZERO”), ([“0 < n”], “0 < BIT1 n”),
                          ([“0 < n”], “0 < BIT2 n”)]
-  fun TAC t g = fst (VALID t g)
+  fun TAC t g = fst (runtac (VALID t) g)
 in
   tprint "Cases_on ‘m’ using bit_cases";
   require_msg (check_result (

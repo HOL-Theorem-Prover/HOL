@@ -645,34 +645,34 @@ fragments are described in more detail in the REFERENCE.
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lp{0.7\textwidth}}
-`ARITH_ss` &
+\ml{ARITH\_ss} &
 Embodies decision
 procedure for universal Presburger arithmetic over $\mathbb{N}$.
-(Defined in `numSimps`; used in high-level simplification tactics.)
+(Defined in \ml{numSimps}; used in high-level simplification tactics.)
 \\
-`BOOL_ss` &
+\ml{BOOL\_ss} &
 Standard rewrites for the boolean operators
 (conjunction, negation \emph{etc.}), and conversion for performing
-$\beta$-reduction.  (Defined in `boolSimps`; part of `bool_ss`.)
+$\beta$-reduction.  (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
 \\
-`CONG_ss` & Congruence rules for implication and conditional
-expressions. (Defined in `boolSimps`; part of `bool_ss`.)
+\ml{CONG\_ss} & Congruence rules for implication and conditional
+expressions. (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
 \\
-`CONJ_ss` &
+\ml{CONJ\_ss} &
 Lets conjuncts be used as assumptions when rewriting other conjuncts.
 If simplifying $c_1\land c_2$, $c_2$ is assumed while $c_1$ is simplified to $c_1'$.
 Then $c_1'$ is assumed while $c_2$ is simplified.
-(Defined in `boolSimps`.)
+(Defined in \ml{boolSimps}.)
 \\
-`DNF_ss` &
+\ml{DNF\_ss} &
 Normalises to disjunctive normal form; quantifiers moved for elimination over equalities.
-(Defined in `boolSimps`.)\\
-`ETA_ss` &
+(Defined in \ml{boolSimps}.)\\
+\ml{ETA\_ss} &
 Eliminates eta-redexes, \emph{i.e.}, terms of form $(\lambda x. M x)$ with $x$ not free in $M$.
-(Defined in `boolSimps`.)\\
+(Defined in \ml{boolSimps}.)\\
 \end{tabular}
 \end{center}
-\caption{Some of HOL’s standard *simpset* fragments}
+\caption{Some of HOL’s standard \emph{simpset} fragments}
 \label{table:ssfrags}
 \end{table}
 ```
@@ -1489,11 +1489,12 @@ simplifier may have failed to discharge side-conditions.  For
 example:
 
 ```repl
->> val th = arithmeticTheory.ZERO_MOD;
->>+ simp[Req0 th] ([], ``0 MOD z``);
+>> val c = Context.snapshot()
+>> val th = listTheory.CONS;
+>>+ simp[Req0 th] ([], “HD l :: TL l”) c;
 
->> simp[Req0 th] ([], ``0 MOD (z + 1)``)
-    (* succeeds because arithmetic d.p. knows z + 1 is nonzero *);
+>> simp[Req0 th, listTheory.NULL_EQ] 
+    ([], “l ≠ [] ⇒ P (HD l :: TL l)”) c
 ```
 
 \index{ReqD (simplification theorem modifier)@\ml{ReqD} (simplification theorem modifier)}
@@ -1521,16 +1522,16 @@ the standard stateful simpset includes the theorem stating that
 $x < x + y \Leftrightarrow 0 < y$, with name `X_LT_X_PLUS`:
 
 ```repl
->> simp[] ([], “x < x + 2 * y”);
+>> simp[] ([], “x < x + 2 * y”) c;
 
->> simp[Excl "X_LT_X_PLUS"] ([], “x < x + 2 * y”);
+>> simp[Excl "X_LT_X_PLUS"] ([], “x < x + 2 * y”) c;
 ```
 
 In addition to rewrites, conversions and decision procedures can
 also be temporarily excluded in this way:
 
 ```repl
->> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
+>> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”) c;
 ```
 
 ##### Excluding assumptions
@@ -1547,8 +1548,10 @@ with the `NoAsms` and `IgnAsm` forms.  The `NoAsms` form
 prevents the use of all of a goal’s assumptions:
 
 ```repl
->> simp[NoAsms] ([“x = 3”], “x < 10”);
-##assert (#2(hd(#1(simp[NoAsms]([“x =3”], “x < 10”)))) ~~ “x < 10”)
+>>__ drop_all()
+>>- set_goal([“x = 3”], “x < 10”);
+>> e (simp[NoAsms]);
+##assert (#2(top_goal())) ~~ “x < 10”
 ```
 
 The `IgnAsm` form takes a quotation argument corresponding to
@@ -1563,13 +1566,13 @@ spaces; “sa” stands for “sub-assumption”), the matching succeeds
 sub-term of the assumption.  Thus:
 
 ```repl
->> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
+>> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”) c;
 
->> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”); (* nothing matches *)
+>> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”) c; (* nothing matches *)
 
->> simp[IgnAsm‘F(* sa *)’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
+>> simp[IgnAsm‘F(* sa *)’] ([“x = F”, “y = T”], “p ∧ x ∧ y”) c;
 
->> simp[IgnAsm‘_ = _’] ([“x = F”, “y = T”, “p:bool”], “p ∧ x ∧ y”);
+>> simp[IgnAsm‘_ = _’] ([“x = F”, “y = T”, “p:bool”], “p ∧ x ∧ y”) c;
 ```
 
 ##### Including *simpset* fragments

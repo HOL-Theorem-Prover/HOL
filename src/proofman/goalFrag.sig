@@ -12,10 +12,13 @@ val finish        : goalstate -> thm
 val top_goal      : goalstate -> goal
 val top_goals     : goalstate -> goal list
 
-val expand          : tactic -> frag_tactic
-val expandf         : tactic -> frag_tactic
-val expand_list     : list_tactic -> frag_tactic
-val expand_listf    : list_tactic -> frag_tactic
+(* the context the tactic is run against is supplied explicitly; the
+   interactive callers snapshot the session's, and a replay can pass a
+   context captured at the proof's own position *)
+val expand          : tactic -> Context.t -> frag_tactic
+val expandf         : tactic -> Context.t -> frag_tactic
+val expand_list     : list_tactic -> Context.t -> frag_tactic
+val expand_listf    : list_tactic -> Context.t -> frag_tactic
 val open_paren      : frag_tactic
 val open_first      : frag_tactic
 val open_head_goal  : frag_tactic
@@ -27,6 +30,7 @@ val open_select_lt  : frag_tactic
 val open_split_lt   : int -> frag_tactic
 val open_tacs_to_lt : frag_tactic
 val open_then1      : frag_tactic
+val open_then1_with : tactic -> Context.t -> frag_tactic
 val open_first_lt   : frag_tactic
 val next_select_lt  : frag_tactic
 val next_first      : frag_tactic
@@ -43,7 +47,21 @@ val close_first_lt  : frag_tactic
    client can pin them somewhere that does not scroll away. *)
 val context_lines   : goalstate -> string list
 
+(* The line `pp_goalstate' puts above the goals when the focused
+   subgoals have just been proved and stepping out is what makes the
+   next ones visible: "Focused subgoal(s) solved; remaining after
+   close:".  NONE when there is nothing to say.  Exposed for the same
+   reason as `context_lines': it is about the goals rather than part
+   of them, and a client wants to pin it where it does not scroll
+   away. *)
+val focus_note      : goalstate -> string option
+
 val pp_goalstate    : goalstate Parse.pprinter
+
+(* `pp_goalstate' with neither of the above: just the goals.  For a
+   client that has asked for them separately and would otherwise show
+   them twice. *)
+val pp_goals_only   : goalstate Parse.pprinter
 
 end
 

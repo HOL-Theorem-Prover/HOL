@@ -296,6 +296,50 @@ f x y = if x < y then 10
     (indent-for-tab-command)
     (should (= 2 (current-indentation)))))
 
+(ert-deftest holscript-ts-indent-sibling-under-unclosed-paren ()
+  "A tactic on the line after `>- (tac >>' aligns with that tactic,
+even though the unclosed paren leaves the whole block an ERROR."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theory foo
+Ancestors hol
+
+Theorem bar:
+  p
+Proof
+  Induct_on `n` >> rw[]
+  >- (drule_then assume_tac thm1 >>
+drule_then assume_tac thm2 >>
+QED
+"
+    (goto-char (point-min))
+    (re-search-forward "^drule_then assume_tac thm2")
+    (beginning-of-line)
+    (indent-for-tab-command)
+    (should (= 6 (current-indentation)))))
+
+(ert-deftest holscript-ts-indent-hanging-unclosed-paren-by-two ()
+  "When the unclosed paren ends its line, the continuation indents
+two columns past that line's own indentation."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theory foo
+Ancestors hol
+
+Theorem bar:
+  p
+Proof
+  rw[]
+  >- (
+simp[] >>
+QED
+"
+    (goto-char (point-min))
+    (re-search-forward "^simp\\[\\]")
+    (beginning-of-line)
+    (indent-for-tab-command)
+    (should (= 4 (current-indentation)))))
+
 (ert-deftest holscript-ts-indent-else-aligns-with-if ()
   "`else' typed at BOL inside a broken `if x then N' aligns with `if'."
   (skip-unless (holscript-ts-tests--preconds))

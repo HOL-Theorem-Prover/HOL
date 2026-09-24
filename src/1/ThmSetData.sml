@@ -106,8 +106,8 @@ local
         {name = "ThmSetData.data_map", empty = Symtab.empty,
          pp = fn _ => "<ThmSetData.data_map>"}
 in
-  fun data_map () =
-      Context.Data.get data_map_slot (Context.snapshot())
+  fun data_map_of ctxt = Context.Data.get data_map_slot ctxt
+  fun data_map () = data_map_of (Context.snapshot())
   val upd_data_map = Context.Data.modify data_map_slot
 end
 
@@ -281,8 +281,10 @@ fun export_with_ancestry
           if null args then
             let val d = rADD(lift name)
             in
-              #record_delta fullresult d;
-              #update_global_value fullresult (raw_apply_global d)
+              (* apply first: a delta rejected by apply_to_global must not
+                 reach the segment, where it would raise on every load *)
+              #update_global_value fullresult (raw_apply_global d);
+              #record_delta fullresult d
             end
           else raise ERR "store_attrfun"
                      ("Arguments not allowed for attribute " ^ attrname)
@@ -306,11 +308,14 @@ fun export_with_ancestry
         settype, {storedf = store_attrfun, localf = local_attrfun}
       );
       {merge = #merge fullresult, DB = #DB fullresult,
+       DB_of = #DB_of fullresult,
        get_deltas = get_fulldeltas,
        record_delta = #record_delta fullresult o mk_raw,
        parents = #parents fullresult, set_parents = #set_parents fullresult,
        get_global_value = #get_global_value fullresult,
-       update_global_value = #update_global_value fullresult
+       get_global_value_of = #get_global_value_of fullresult,
+       update_global_value = #update_global_value fullresult,
+       update_global_value_of = #update_global_value_of fullresult
       }
     end
 

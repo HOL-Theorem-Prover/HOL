@@ -10,7 +10,28 @@ The [Language server protocol](https://microsoft.github.io/language-server-proto
 
 ## Usage
 
-> **TODO** The server does not yet handle multiple files as well as it could
+One server serves one theory script, and this is a contract rather
+than a limitation awaiting work.  The process binds to the first
+`*Script.sml` it is given and never releases it, and it declines to
+compile any other file: loading a theory *seals* it
+(`Theory.load_complete` → `KernelSig.sealed_ref`, deliberately outside
+the snapshot machinery as a soundness gate), so an ancestor loaded for
+one file can be neither re-read nor withdrawn for a second.
+
+What follows from that:
+
+* Per-file state — buffers, versions, diagnostics — is isolated by
+  URI.  HOL's state — `Context`, the sealed set, `Meta.loadedMods` —
+  is process-global and is not.  Two files edited in two servers
+  cannot affect each other's answers; two files in one process would
+  corrupt each other, which is why the second is refused.
+* Dependencies are consumed as built artifacts, loaded at most once
+  per process.  Rebuilding one does not reach a running server;
+  restart it.  A dependency that was *missing* is re-read, which is
+  what `$/hol/retryCompile` is for.
+* `$/setConfig` is process-wide, and `$/eval` runs in the shared
+  process state with no snapshot bracket, so it can perturb the
+  file's compiles.
 
 To start a server, use `hol lsp`. This should be run in the project root (containing the files you are editing).
 
@@ -110,6 +131,92 @@ In addition to the usual LSP commands, the server supports the following extensi
 
 * The `$/compileInterrupted` notification is sent when an asynchronous compile caused by a file open or modification event is interrupted.
     * `uri: URI` - the file being compiled
+
+* **Position encoding.**  The server's own offsets are bytes, so it asks
+  for `utf-8` when the client's `general.positionEncodings` offers it
+  (eglot offers `["utf-32", "utf-8", "utf-16"]`) and answers `utf-16`
+  otherwise, converting every `character` it reads or writes.  A client
+  that offers nothing gets `utf-16`, which is what the spec says its
+  silence means.  Declaring `utf-8` regardless is not a way of getting
+  it: `vscode-languageclient` advertises only `utf-16` and throws on any
+  other answer.
+
+* `$/setConfig` carries the settings a client knows and the server
+  cannot work out: `elabOn` (when to compile), `hoverWidth` (columns to
+  render hover text at, since only the client knows how wide its hover
+  box is), and `checkProofs` (whether to replay proofs rather than take
+  them on trust).  `checkProofs` takes effect immediately: switching it
+  on re-elaborates every open script from byte 0, because the pass that
+  already ran cheated its proofs and enqueued nothing; switching it off
+  cancels the pool and clears its diagnostics.
+
+* On startup the server loads the heap named by the working directory's
+  `Holmakefile` (`HOLHEAP`), else `bin/hol.state`.  If that heap cannot
+  be loaded -- missing, or exported from a different executable, which
+  every `polyc` produces -- the `lsp` subcommand falls back to
+  `bin/hol.state` and reports it with `window/showMessage` after the
+  handshake, rather than exiting: a process that dies before answering
+  `initialize` can only be reported as "died", and none of the server's
+  own channels are available to say why.  `LSPServer.start` takes those
+  messages as its `warnings` argument.  Other subcommands still die.
+
+* The `$/compileBlocked` notification is sent instead of compiling a file
+  whose declared dependencies are not available.  A file that names an
+  ancestor or library it cannot get has nothing to be elaborated against,
+  so the server compiles none of it, and answers `null` to
+  `$/hol/goalState` for it.  Availability is decided by looking the
+  declared structure up in the namespace, so it covers a dependency that
+  loads without binding the name the header opens, and a retry that
+  plans nothing because the module is still marked in
+  `Meta.loadedMods` -- neither of which raises anything to catch.
+  The failures themselves are published as
+  diagnostics, positioned on the names in the header that asked for them;
+  no `$/compileProgress` or `$/compileCompleted` follows.
+
+  The block is cleared by an edit that changes the file's declared
+  dependency list -- the `Ancestors` and `Libs` entries of its `Theory`
+  header, plus the identifiers of any leading top-level `open` -- or by
+  the `$/hol/retryCompile` notification below.  Nothing else lifts it:
+  no edit to the body can make a missing ancestor appear.  The
+  notification is re-sent on each later edit that leaves that list
+  alone, so a client need not remember the state.
+    * `uri: URI` - the file that is not being compiled
+    * `modules: [string]` - its declared dependencies, i.e. the list
+      whose change clears the block
+    * `message: string` - what went wrong, e.g.
+      `cannot load fooTheory: Cannot find file fooTheory.ui`
+
+* `textDocument/documentSymbol` lists a file's declarations, answered
+  from the parser rather than from the last compile — so it works on a
+  file that does not compile, or one blocked on an unloadable
+  ancestor.  A client advertising
+  `hierarchicalDocumentSymbolSupport` gets nested `DocumentSymbol`s,
+  with the keyword and any attributes (`[simp]`, `[local]`) as
+  `detail`; otherwise flat `SymbolInformation`.
+
+* `workspace/symbol` searches stored theorems: those of the theories
+  this server loaded, plus any theory built in the project, read from
+  its `Theory.dat` without loading it.  The latter are marked
+  `(not an ancestor)` in `containerName`, since using one requires
+  adding the theory to `Ancestors` first.  Declarations of the open
+  buffers are included.  A query shorter than two characters answers
+  nothing: the search matches substrings.
+
+* `textDocument/completion` offers the SML names in scope for the file
+  and the theorem names HOL knows, with `.` as a trigger character.
+  An empty prefix answers nothing, marked `isIncomplete`, rather than
+  the whole namespace.
+
+* There is no `textDocument/references`, and `referencesProvider` is
+  not advertised.  Poly records references only within the
+  compilation unit it is compiling, and HOL has no index of which
+  proofs cite a theorem — `DB.revlookup` gives where a theorem was
+  stored, not who uses it.
+
+* The `$/hol/retryCompile` notification asks the server to compile a file
+  it has blocked, without waiting for the header to change.  It is for the
+  case where the missing ancestor has been built outside the editor.
+    * `uri: URI` - the file to compile
 
 * > **TODO** unimplemented; this is an API proposal
 

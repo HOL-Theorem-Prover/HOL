@@ -26,29 +26,35 @@ val _ = use "lsp/server.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate16 z
+  fun makeUpdateT z = makeUpdate17 z
 in
 fun updateT z = let
-  fun from all_forced bare base_state checkerr checkfors debug defaultout exe
+  fun from all_forced bare base_state check_proofs checkerr checkfors debug
+           defaultout exe
            extra_data forced_objs help multithread output quietp thmsrc z_repl =
     {all_forced = all_forced, bare = bare, base_state = base_state,
+     check_proofs = check_proofs,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
   fun from' z_repl thmsrc quietp output multithread help forced_objs extra_data exe
-            defaultout debug checkfors checkerr base_state bare all_forced =
+            defaultout debug checkfors checkerr check_proofs base_state bare
+            all_forced =
     {all_forced = all_forced, bare = bare, base_state = base_state,
+     check_proofs = check_proofs,
      checkfors = checkfors, checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
-  fun to f {all_forced, bare, base_state, checkerr, checkfors, debug, defaultout,
+  fun to f {all_forced, bare, base_state, check_proofs, checkerr, checkfors,
+            debug, defaultout,
             exe, extra_data,
             forced_objs, help, multithread, output, quietp, thmsrc, z_repl} =
-    f all_forced bare base_state checkerr checkfors debug defaultout exe extra_data
+    f all_forced bare base_state check_proofs checkerr checkfors debug defaultout
+      exe extra_data
       forced_objs help multithread
       output quietp thmsrc z_repl
 in
@@ -115,6 +121,9 @@ datatype option_record = OR of {
   bare : bool,
   base_state : string option,
   checkfors : string list,
+  (* LSP only: replay the proofs a compile pass cheated, on the worker
+     pool, instead of discarding them. *)
+  check_proofs : bool,
   checkerr : string option,
   debug : bool,
   defaultout : string option,
@@ -177,6 +186,8 @@ val cline_opts = [
    desc = mkBoolT #bare},
   {help = "use min-only heap (just the kernel, no boolTheory)",
    long = ["min"], short = "", desc = setBaseMin},
+  {help = "LSP: replay cheated proofs on the worker pool",
+   long = ["lsp-check-proofs"], short = "", desc = mkBoolT #check_proofs},
   {help = "error if checked for file is absent", long = ["checkerr"],
    short = "e", desc = setStringOpt "message" #checkerr},
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
@@ -219,6 +230,7 @@ val cline_opts = [
 val initial_cline = OR {all_forced = false,
                         bare = false,
                         base_state = !heapname,
+                        check_proofs = false,
                         checkerr = NONE,
                         checkfors = [],
                         debug = false,
@@ -438,15 +450,51 @@ fun main() = let
               (BUILDHEAP, NONE, _) => die "buildheap subcommand requires -o option"
             | (_, NONE, SOME _) => die "Can't have exe without an output"
             | _ => ()
-  (* Load base state if specified *)
+  (* Load base state if specified.
+
+     A heap a Holmakefile asks for can be missing or built by a
+     different executable, and for the LSP dying on that is invisible:
+     the server exits before answering `initialize', so the client can
+     only say the server died, and every channel we have for explaining
+     ourselves -- diagnostics, `$/compileBlocked', the status line -- is
+     unreachable.  So for `lsp' fall back to the default state and carry
+     a warning to show once the handshake is done.  Whatever the named
+     heap was providing then turns up as an unavailable ancestor, which
+     is a diagnostic the user can act on.
+
+     Every other subcommand still dies: they have a terminal to
+     complain to, and a build that quietly used a different heap from
+     the one it was told to use would be worse than a failure. *)
+  val startup_warnings : string list ref = ref []
+  (* Shown to the user after the handshake, and echoed to stderr so
+     the server's log says the same thing. *)
+  fun startupWarn msg =
+    (startup_warnings := !startup_warnings @ [msg];
+     warn ("[LSP-init] " ^ msg))
   val _ =
       case base_state of
           NONE => (diag "Not loading a base state"; heapname := NONE)
-        | SOME f => (diag ("About to load base-state "^f);
-                     heapname := SOME f;
-                     PolyML.SaveState.loadState f
-                     handle e => die ("Couldn't load HOL base-state "^f^": "^
-                                      General.exnMessage e))
+        | SOME f => let
+            fun load g = (heapname := SOME g; PolyML.SaveState.loadState g)
+            val fallback = mkAbs Systeml.DEFAULT_STATE
+            fun fatal g e = die ("Couldn't load HOL base-state "^g^": "^
+                                 General.exnMessage e)
+          in
+            diag ("About to load base-state "^f);
+            load f
+            handle e =>
+              if subcmd = LSP andalso f <> fallback then
+                (startupWarn
+                   ("cannot load the heap this directory asks for ("^f^"): "^
+                    General.exnMessage e^
+                    " -- falling back to "^fallback^
+                    ", so anything that heap supplied will be reported as \
+                    \an unavailable ancestor.  Rebuild it with `Holmake' \
+                    \in that directory.");
+                 diag ("falling back to "^fallback);
+                 load fallback handle e2 => fatal fallback e2)
+              else fatal f e
+          end
   (* AFTER loadState — the saved state restores refs to their save-
      time values and would otherwise wipe any earlier extension.
      Owns Meta.loadPath extension so prelude.ML doesn't have to,
@@ -545,34 +593,53 @@ in
       end
     | LSP =>
       let
+        (* One piece of startup that will not compile costs its own
+           feature, not the session.  Dying here is the one failure the
+           user cannot be told about: it happens before `initialize' is
+           answered, so the client can report only that the server
+           exited.  That is how a `DefnBase' reference in
+           `defnbase_init' -- a structure `hol.state0' does not have --
+           read from `src/num/theories': "exited abnormally with code
+           1", and nothing else.  The failure becomes a startup warning
+           the client shows once the handshake is done, and whatever
+           else loaded still serves. *)
+        fun initStep what f =
+          f ()
+          handle e =>
+            startupWarn ("LSP startup: " ^ what ^ " did not load (" ^
+                         General.exnMessage e ^
+                         ") -- what it provides is unavailable for \
+                         \this session")
         (* Compile a source string through PolyML.compiler, looping
            until the reader is exhausted (PolyML consumes one top-level
-           declaration per call).  Diagnostics go to stderr tagged
-           [LSP-init] since stdout is owned by the JSON-RPC framing. *)
-        fun evalString s = let
+           declaration per call). *)
+        fun evalString what s = let
           val i = ref 0
           fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)
                         handle Subscript => NONE
-          fun err {message, hard, ...} =
-            (TextIO.output (TextIO.stdErr,
-               "[LSP-init] " ^ (if hard then "ERROR" else "warning") ^ ": ");
-             PolyML.prettyPrint (fn s => TextIO.output (TextIO.stdErr, s), 80) message;
-             TextIO.output (TextIO.stdErr, "\n");
-             TextIO.flushOut TextIO.stdErr)
           fun runall () =
             if !i >= String.size s then ()
-            else (PolyML.compiler
-                    (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
-                  runall ())
-        in runall () end
+            else (PolyML.compiler (read, []) (); runall ())
+        in initStep what runall end
+        fun useInit relpath =
+          initStep relpath
+            (fn () => QUse.use (OS.Path.concat (Systeml.HOLDIR, relpath)))
       in
+        (* Before anything else: stdout is the JSON-RPC wire, and every
+           message below -- a compiler error, a HOL_MESG, a stray
+           `print' in a startup file -- would otherwise be written onto
+           it.  `LSPServer.start' claims it too, but only once all of
+           this has run. *)
+        ignore (LSPServer.claimStdout ());
         QUse.failOnError := false; (* heap may carry true from BUILDHEAP *)
         (* Setup that references hol.state bindings not in hol.ML's
            compile-time namespace: Globals.interactive (so uncaught
            HOL_ERRs don't call OS.Process.exit via Feedback.render_exn's
-           batch-mode branch), and the Feedback streams which default
-           to stdout — that's the JSON-RPC wire, so redirect to stderr. *)
-        evalString
+           batch-mode branch), and the Feedback streams, which default
+           to stdout.  `claimStdout' has already sent stdout to stderr;
+           these are named anyway, since a stream the heap froze at
+           save time does not follow that. *)
+        evalString "the interactive-mode and output-stream setup"
           "Globals.interactive := true; \
           \Feedback.MESG_outstream := \
           \  (fn s => (TextIO.output (TextIO.stdErr, s); \
@@ -585,8 +652,7 @@ in
           \            TextIO.flushOut TextIO.stdErr))";
         (* Load HOL_Interactive so the parser's open-rewriting works
            on Script.sml files (issue #1865). *)
-        QUse.use (OS.Path.concat(Systeml.HOLDIR,
-                                 "tools-poly/holinteractive.ML"));
+        useInit "tools-poly/holinteractive.ML";
         (* CompilerSpecific is baked into hol.state via poly-init.ML;
            the load system doesn't know that, so fake-load it to stop
            holdep from complaining when it appears in Q-filter-expanded
@@ -601,41 +667,53 @@ in
            `captureCompileSnap` is the mid-compile companion used by
            incremental resume: it captures Context + loaded modules +
            the LSP namespace layer at a dec boundary; the returned
-           thunk restores each channel and forces
-           `Parse.invalidate_caches` so the parser closure caches
-           (`type_parser1`, `the_absyn_parser`, ...) rebuild against
-           the restored grammars.  The boot-restore path in
-           `resetForCompile` also calls `invalidate_caches`, fixing
-           a latent staleness between restore and the next grammar-
-           mutating dec. *)
-        evalString
+           thunk restores each channel.  The parsers and printers
+           derived from the grammars live in the context alongside
+           them, so restoring it restores a consistent set and there
+           is nothing to invalidate. *)
+        evalString "the compile-snapshot hooks"
           "let val snap = Context.snapshot () \
           \    val restoreLoaded = Meta.snapshotLoaded () in \
           \  LSPExtension.resetForCompile := \
           \    (fn () => (Context.restore snap; restoreLoaded (); \
-          \               LSPNameSpace.clearFileLayer (); \
-          \               Parse.invalidate_caches ())); \
+          \               LSPNameSpace.clearFileLayer ())); \
           \  LSPExtension.captureCompileSnap := \
           \    (fn () => let val cSnap = Context.snapshot () \
           \                  val loadedR = Meta.snapshotLoaded () \
           \                  val nsR = LSPNameSpace.snapshotLayer () \
           \              in fn () => (Context.restore cSnap; \
-          \                           loadedR (); nsR (); \
-          \                           Parse.invalidate_caches ()) end) \
+          \                           loadedR (); nsR ()) end) \
           \end";
-        (* Cheat every tactic proof: return an oracle-tagged theorem
-           for the goal instead of running the tactic.  Same hook that
-           fastbuild (Holmake --fast) uses.  The tag identifies theorems
-           whose proofs were skipped in an LSP session. *)
-        evalString
-          "Tactical.set_prover \
-          \  (fn (g, _) => Thm.mk_oracle_thm \"lsp_compile_skip\" g)";
+        (* The prover hook: don't run tactic proofs during elaboration,
+           return an oracle-tagged theorem instead (the same hook
+           fastbuild uses), and with LSPExtension.deferProofs set also
+           enqueue the proof so it can be replayed afterwards.  Ordinary
+           SML rather than an evalString, so it is type-checked at load
+           and can be read; see the file for why the replay guard is
+           per-thread. *)
+        (* Future (Isabelle's task framework).  `src/proofman' bakes it
+           into `hol.state0', which every later heap is built on, so
+           this load costs nothing on any of them.  Kept for a heap
+           built some other way. *)
+        initStep "Future" (fn () => Meta.load "Future");
+        useInit "tools-poly/lsp/deferred_proofs.ML";
+        (* Pretty printers for thm/term/hol_type, so hover can print a
+           value of one of those types instead of `?'.  Installed
+           before the DB fallback below, which is the weaker path: it
+           can only find a theorem by name. *)
+        useInit "tools-poly/lsp/pretty_printers_init.ML";
         (* Wire LSPExtension.thmLookup to DB + Parse so the hover
            handler can render a theorem's statement when the cursor
-           lands on an SML identifier of type thm.  Handles bare names
-           and dotted references like arithmeticTheory.ADD_COMM (with
-           the -Theory suffix stripped for DB.fetch). *)
-        evalString
+           lands on a *dotted* identifier of type thm, which Poly/ML's
+           flat value tables cannot resolve.  A theorem the file has in
+           scope is printed from its value by the pretty printer above.
+           Handles bare names too, and dotted references like
+           arithmeticTheory.ADD_COMM (with the -Theory suffix stripped
+           for DB.fetch).  Hands back a pretty tree, which the server
+           lays out at the client's hover width; `raw_terminal' because
+           the session's backend emits ANSI escapes that would be
+           garbage in markdown. *)
+        evalString "the theorem-lookup hover fallback"
           "LSPExtension.thmLookup := (fn id => \
           \  let \
           \    fun findLast i c = \
@@ -663,26 +741,57 @@ in
           \          (case matchExact name of \
           \             th :: _ => SOME th | [] => NONE) \
           \        end \
-          \  in Option.map Parse.thm_to_string thm_opt end \
+          \    fun render th = \
+          \      Lib.with_flag (Parse.current_backend, \
+          \                     PPBackEnd.raw_terminal) Parse.pp_thm th \
+          \  in Option.map render thm_opt end \
           \  handle _ => NONE)";
+        (* Go-to-definition, and the default hover. *)
+        useInit "tools-poly/lsp/defnbase_init.ML";
         (* HOL-side hover for cursors inside quotations: parses the
-           captured quote to a resolved Preterm and walks it. *)
-        QUse.use (OS.Path.concat(Systeml.HOLDIR,
-                                 "tools-poly/lsp/hover_quote_init.ML"));
+           captured quote to a resolved Preterm and walks it.  Reached
+           only when the default hover returns nothing. *)
+        useInit "tools-poly/lsp/hover_quote_init.ML";
         (* Tactic-step compiler used by later slices to walk a Proof
            body via goalFrag; also runs its selftest at load time.
-           Depends on TacticParse (src/parse/) for the surface-sugar
-           elaboration -- boss's ancestor chain doesn't autoload it,
-           so pull it in explicitly. *)
-        Meta.load "TacticParse";
-        QUse.use (OS.Path.concat(Systeml.HOLDIR,
-                                 "tools-poly/lsp/tactic_steps.ML"));
+           Depends on TacticParse (tools/parsing/) for the surface-sugar
+           elaboration.  No load: `poly-init2' compiles TacticParse
+           into this executable, beside the source parser it reads. *)
+        useInit "tools-poly/lsp/tactic_steps.ML";
         (* goalFrag-based interpreter for the step stream. *)
-        QUse.use (OS.Path.concat(Systeml.HOLDIR,
-                                 "tools-poly/lsp/tactic_walker.ML"));
+        useInit "tools-poly/lsp/tactic_walker.ML";
         (* Goal-state at cursor inside a Proof-QED body. *)
-        QUse.use (OS.Path.concat(Systeml.HOLDIR,
-                                 "tools-poly/lsp/goal_state_init.ML"));
+        useInit "tools-poly/lsp/goal_state_init.ML";
+        (* Stored-theorem names for workspace/symbol and completion,
+           from DB and from built Theory.dat files. *)
+        useInit "tools-poly/lsp/db_symbols_init.ML";
+        (* Searching the theorem database by name, theory and term
+           pattern -- what `M-h M' asks for. *)
+        useInit "tools-poly/lsp/db_search_init.ML";
+        (* Entry documentation in hovers, from `help/HOL.Help' and the
+           processed Reference entries.  `Database' first, from source:
+           the index reader is in no heap, and `help_init' reads the
+           index through it.  Adding `Database' to the namespace user
+           files compile against is the cost; the alternative -- a
+           private namespace for it -- buys little, since the LSP boot
+           session `open's nothing and so the name cannot shadow
+           anything a file refers to unqualified. *)
+        useInit "help/src-sml/Database.sig";
+        useInit "help/src-sml/Database.sml";
+        useInit "tools-poly/lsp/help_init.ML";
+        (* --lsp-check-proofs: replay what the cheating pass deferred,
+           rather than discarding it.  Off by default, so an LSP session
+           costs elaboration only unless asked otherwise.  The pool is
+           given workers explicitly: Multithreading defaults to one, and
+           0 asks for one per processor, capped at 8. *)
+        (* Workers are configured whether or not checking is on at
+           startup: `$/setConfig' can switch it on mid-session, and the
+           pool then needs somewhere to run. *)
+        evalString "the proof-checking worker pool"
+                   "DeferredProofs.setWorkerCount 0";
+        if #check_proofs options then
+          evalString "proof checking" "LSPExtension.deferProofs := true"
+        else ();
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
@@ -692,7 +801,18 @@ in
                 NONE => []
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
-        LSPServer.start {diag = diag, dbg = debug}
+        LSPServer.start {diag = diag, dbg = debug,
+                         warnings = !startup_warnings};
+        (* Explicit, as in the RUN branch.  Returning would do it -- the
+           `PolyML.export` wrapper exits for us -- but when the session
+           ends there can still be a compile thread inside the
+           elaborator, forked with interrupts deferred and cancelled
+           only cooperatively, and a debounce thread able to start
+           another.  `success`, because a client going away is the
+           normal end of a session and editors report a non-zero server
+           exit as a fault. *)
+        diag "LSP session ended";
+        OS.Process.exit OS.Process.success
       end
     | REPL =>
       let in

@@ -686,6 +686,44 @@ fallback when the parse tree is already broken."
       (when (re-search-backward holscript-ts-mode--block-opener-re nil t)
         (point)))))
 
+(defun holscript-ts-mode--unclosed-opener-pos (bol)
+  "Position of the innermost unclosed `(' / `[' / `{' before BOL, or nil.
+Only counts an opener that lies after the last column-0 HOL
+block-opener keyword, so a stray unbalanced delimiter earlier in
+the file can't drag a later block's indentation with it."
+  (let ((open (nth 1 (syntax-ppss bol)))
+        (block-start (holscript-ts-mode--last-block-opener-pos bol)))
+    (and open
+         (or (null block-start) (> open block-start))
+         open)))
+
+(defun holscript-ts-mode--opener-hangs-p (open)
+  "Non-nil when nothing but whitespace follows OPEN on its own line."
+  (save-excursion
+    (goto-char (1+ open))
+    (skip-chars-forward " \t")
+    (eolp)))
+
+(defun holscript-ts-mode--unclosed-opener-anchor (_node _parent bol)
+  "Anchor for a line continuing an unclosed delimiter before BOL.
+When code follows the opener on the opener's line, that code is
+the anchor, so a sibling lines up under the first thing inside the
+bracket.  When the opener ends its line, the opener's own line
+indentation is the anchor and the rule's offset adds 2."
+  (let ((open (holscript-ts-mode--unclosed-opener-pos bol)))
+    (when open
+      (save-excursion
+        (if (holscript-ts-mode--opener-hangs-p open)
+            (progn (goto-char open) (back-to-indentation))
+          (goto-char (1+ open))
+          (skip-chars-forward " \t"))
+        (point)))))
+
+(defun holscript-ts-mode--unclosed-opener-offset (_node _parent bol)
+  "Offset paired with `holscript-ts-mode--unclosed-opener-anchor'."
+  (let ((open (holscript-ts-mode--unclosed-opener-pos bol)))
+    (if (and open (holscript-ts-mode--opener-hangs-p open)) 2 0)))
+
 (defun holscript-ts-mode--matching-if-pos (bol)
   "Position of the `if' matching an `else' or `then' at BOL, by
 backward text scan.  Each `else' seen going backward increments
@@ -803,6 +841,18 @@ happens to have been absorbed upstream."
               (holscript-ts-mode--matching-if-pos bol)))
       ,(lambda (_n _p bol) (holscript-ts-mode--matching-if-pos bol))
       0)
+     ;; Inside a parse-recovered region, a line sitting inside an
+     ;; unclosed bracket aligns under that bracket's contents — the
+     ;; text scan below can't see the bracket, and would throw a
+     ;; sibling tactic under `>- (' back to the block's body column.
+     ;; Same topdec exclusion as the rule below.
+     ((and holscript-ts-mode--inside-error-p
+           ,(lambda (n p bol)
+              (not (holscript-ts-mode--line-starts-sml-topdec-kw-p n p bol)))
+           ,(lambda (_n _p bol)
+              (holscript-ts-mode--unclosed-opener-pos bol)))
+      holscript-ts-mode--unclosed-opener-anchor
+      holscript-ts-mode--unclosed-opener-offset)
      ;; Inside a parse-recovered region (any `ERROR' ancestor), use
      ;; the last column-0 HOL block-opener line as anchor + 2 — a
      ;; mid-edit `Definition foo:' with an incomplete body still

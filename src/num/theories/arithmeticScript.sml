@@ -35,7 +35,9 @@ val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 Theorem num_case_def = num_case_def
 
 val metis_tac = METIS_TAC;
-fun bossify stac ths = stac (srw_ss()) ths
+(* the context parameter is what picks up the simpset the proof is
+   being run against; see `BasicProvers.srw_ss_of' *)
+fun bossify stac ths g ctxt = stac (srw_ss_of ctxt) ths g ctxt
 val simp = bossify asm_simp_tac
 val fs = bossify full_simp_tac
 val gvs = bossify (global_simp_tac {droptrues = true, elimvars = true,
@@ -1339,8 +1341,8 @@ Proof
     REWRITE_TAC [SUB] THEN REPEAT GEN_TAC THEN
     ASM_CASES_TAC (“n < m”) THEN
     ASM_REWRITE_TAC [NOT_LESS_0,LESS_THM] THEN
-    let fun tac th g = SUBST1_TAC th g
-                       handle _ => ASSUME_TAC th g
+    let fun tac th g c = SUBST1_TAC th g c
+                         handle _ => ASSUME_TAC th g c
     in
     DISCH_THEN (STRIP_THM_THEN tac)
     end THENL
@@ -1560,8 +1562,8 @@ Theorem ZERO_LESS_EXP:
 Proof
    REPEAT STRIP_TAC THEN
    let val th = SPEC (“(SUC n) EXP m”) LESS_0_CASES
-       fun tac th g = ASSUME_TAC (SYM th) g
-                      handle _ => ACCEPT_TAC th g
+       fun tac th g c = ASSUME_TAC (SYM th) g c
+                        handle _ => ACCEPT_TAC th g c
    in
    STRIP_THM_THEN tac th THEN
    IMP_RES_TAC NOT_EXP_0

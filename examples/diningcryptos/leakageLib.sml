@@ -11,7 +11,7 @@ open HolKernel Parse boolTheory boolLib bossLib metisLib arithmeticTheory
      stringTheory rich_listTheory stringSimps realTheory realLib
      listSimps extra_stringTheory extra_stringLib leakageTheory;
 
-open real_sigmaTheory;
+open real_sigmaTheory leakageLibContextTheory;
 structure Parse = struct
 open Parse
 val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="leakage"}
@@ -149,9 +149,8 @@ fun LEAKAGE_COMPUTE_HLR_CROSS
                                               THENC (TRY_CONV l_dups_conv)
                                               THENC (TRY_CONV r_dups_conv)))));
 
-val lg_times_compute_simp_lem = prove
-   (``!x y. x * lg (y * x) = (\x. x * lg (y * x)) x``,
-    RW_TAC std_ss []);
+val lg_times_compute_simp_lem =
+    leakageLibContextTheory.lg_times_compute_simp_lem;
 
 fun LEAKAGE_COMPUTE_IMAGE_HLR_CROSS ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list) (prog_tl:Abbrev.thm list)
         (h_expand_conv:Abbrev.term->Abbrev.thm)

@@ -197,7 +197,33 @@ val _ = let
 in
   require_msg (check_result (equal expected o #2))
               (DB_dtype.thminfo_toString o #2)
-              (fn () => (TotalDefn.located_qDefine loc "bar" `bar=1` NONE;
+              (fn () => (TotalDefn.located_qDefine loc "bar" `bar=1` NONE
+                                                   (Context.snapshot());
                          valOf $ DB.lookup{Thy="-", Name = "bar"}))
               ()
 end
+
+(* ----------------------------------------------------------------------
+    A failed definition made from inside a goalstack tactic.  TotalDefn
+    hands the termination goal to the proof manager, so expand must let
+    the tactic re-enter the proof manager.  The deadlock itself is guarded
+    by src/proofman/interactive_tests.
+   ---------------------------------------------------------------------- *)
+
+val _ = proofManagerLib.chatting := false
+val user_goal : goal = ([], mk_var ("user_goal", Type.bool))
+fun top_is (g : goal) =
+    aconv (snd (proofManagerLib.top_goal ())) (snd g) handle _ => false
+val _ = proofManagerLib.drop_all ()
+val _ = proofManagerLib.set_goal user_goal
+
+val _ = tprint "Define's failed termination goal reaches the goalstack"
+fun bad_define_tac (g : goal) =
+    (Define ‘bad_in_tac (n:num) = bad_in_tac (n + 1)’; ALL_TAC g)
+val _ = (in_repl_mode (quietly proofManagerLib.e) bad_define_tac;
+         die "e succeeded")
+        handle HOL_ERR _ => ()
+val _ = if is_exists (snd (proofManagerLib.top_goal ())) andalso
+           (proofManagerLib.drop (); top_is user_goal)
+        then OK () else die "wrong proof state"
+val _ = proofManagerLib.drop_all ()

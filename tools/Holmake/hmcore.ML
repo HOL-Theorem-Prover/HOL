@@ -40,7 +40,8 @@ in
     app apphfs ["HOLFileSys"] ;
     app appparsing ["AttributeSyntax"] ;
     app (myuse parsingdir) ["HolLex.sml"];
-    app appparsing ["HOLSourceAST", "HOLSourceExpand", "HOLSourcePrinter", "HOLSourceParser", "HOLSource"]
+    app appparsing ["HOLSourceAST", "HOLSourceExpand", "HOLSourcePrinter",
+                    "HOLSourceParser", "HOLSource"]
   ) else ();
   app apputil ["regexpMatch"] ;
   app apphmf ["parse_glob"] ;

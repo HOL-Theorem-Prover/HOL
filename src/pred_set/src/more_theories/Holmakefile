@@ -18,11 +18,15 @@ link-to-sigobj: $(DEFAULT_TARGETS)
 endif
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = cardinal ordinal topology wellorder
+BARE_THYS = ordinal topology
+LOCAL_ARTS = $(patsubst %,%.ot.art,$(BARE_THYS))
+# these four theories now live one directory up
+UPSTREAM_ARTS = ../cardinal.ot.art ../ordinalBasic.ot.art \
+                ../permutes.ot.art ../wellorder.ot.art
 
 all: hol4-set.art
 
-hol4-set-unint.art: hol4-set-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
+hol4-set-unint.art: hol4-set-unint.thy $(LOCAL_ARTS) $(UPSTREAM_ARTS)
 	opentheory info --article -o $@ $<
 
 hol4-set.art: hol4-set.thy hol4-set-unint.art ../../../opentheory/hol4.int

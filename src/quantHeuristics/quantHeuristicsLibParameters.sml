@@ -66,10 +66,7 @@ in
    p
 end;
 
-val GUESS_PAIR_THM = prove (
-``!P (i:'b -> 'a). (!v. ?x. v = i x) ==>
-  (GUESS_EXISTS_GAP i P /\ GUESS_FORALL_GAP i P)``,
-simpLib.SIMP_TAC numLib.std_ss [GUESS_REWRITES])
+val GUESS_PAIR_THM = quantHeuristicsTheory.GUESS_PAIR_THM
 
 
 fun QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN PL (sys:quant_heuristic_base) v t =

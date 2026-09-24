@@ -4,7 +4,8 @@ struct
 open HolKernel boolLib bossLib Parse;
 
 open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory;
+open set_sepTheory progTheory helperLib addressTheory
+     decompilerLibSupportTheory;
 
 structure Parse =
 struct
@@ -164,8 +165,7 @@ fun get_output_list def = let
                   handle HOL_ERR e => x
   in pairSyntax.list_mk_pair(map deprime result) end;
 
-val GUARD_THM =
-  prove(``!m n x. GUARD n x = GUARD m x``, REWRITE_TAC [GUARD_def]);
+val GUARD_THM = decompilerLibSupportTheory.GUARD_THM
 
 
 (* -------------------------------------------------------------------------- *)
@@ -423,10 +423,7 @@ fun UNABBREV_CODE_RULE th = let
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) c) th
   in th end;
 
-val ABBBREV_CODE_LEMMA = prove(
-  ``!a (x :('a, 'b, 'c) processor) p c q.
-      (a ==> SPEC x p c q) ==> !d. c SUBSET d ==> a ==> SPEC x p d q``,
-  REPEAT STRIP_TAC THEN RES_TAC THEN IMP_RES_TAC SPEC_SUBSET_CODE);
+val ABBBREV_CODE_LEMMA = decompilerLibSupportTheory.ABBBREV_CODE_LEMMA
 
 fun abbreviate_code name thms = let
   fun extract_code (_,(th,_,_),_) =
@@ -992,8 +989,8 @@ fun tagged_var_to_num v = let
   val s = if s = "" then "100000" else s
   in string_to_int s end
 
-val GUARD_T = prove(``!x. x = (x = GUARD 0 T)``,REWRITE_TAC [GUARD_def])
-val GUARD_F = prove(``!x. ~x = (x = GUARD 0 F)``,REWRITE_TAC [GUARD_def])
+val GUARD_T = decompilerLibSupportTheory.GUARD_T
+val GUARD_F = decompilerLibSupportTheory.GUARD_F
 
 fun init_clean th = let
   fun side2guard_conv tm =
@@ -1412,7 +1409,7 @@ fun erase_conds (FUN_VAL tm) = FUN_VAL tm
   | erase_conds (FUN_LET (x,y,t)) = FUN_LET (x,y,erase_conds t)
 
 val REMOVE_TAGS_CONV = let
-  val alpha_lemma = prove(``!b:bool. (b = T) ==> b``,Cases THEN REWRITE_TAC []);
+  val alpha_lemma = decompilerLibSupportTheory.alpha_lemma
   fun REMOVE_TAG_CONV tm = let
     val (v,x) = dest_abs tm
     val xs = free_vars x

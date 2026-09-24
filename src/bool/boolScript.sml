@@ -2576,6 +2576,62 @@ let val b    = “b:bool”
  end);
 
 
+(* ---------------------------------------------------------------------*)
+(* COND_BOOL_CLAUSES                                                    *)
+(*                                                                      *)
+(* |- (!b e. (if b then T else e) = (b \/ e)) /\                        *)
+(*    (!b t. (if b then t else T) = (b ==> t)) /\                       *)
+(*    (!b e. (if b then F else e) = (~b /\ e)) /\                       *)
+(*    (!b t. (if b then t else F) = (b /\ t))                           *)
+(*                                                                      *)
+(* Each conjunct is one of the COND_EXPAND family with a T or an F for  *)
+(* one of the arms, tidied up with the relevant *_CLAUSES.              *)
+(* ---------------------------------------------------------------------*)
+
+val COND_BOOL_CLAUSES = thm (#(FILE), #(LINE))("COND_BOOL_CLAUSES",
+let val b = “b:bool”
+    val e = “e:bool”
+    val t = “t:bool”
+    val [AND1,AND2,_,AND4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL AND_CLAUSES))
+    and [_,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+    and [_,IMP2,_,_,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL IMP_CLAUSES))
+    val cnj1 =
+      let val th = SUBS [SPEC (mk_neg b) OR2] (SPECL [b,“T”,e] COND_EXPAND)
+      in GENL [b,e] (SUBS [SPEC (mk_disj(b,e)) AND1] th)
+      end
+    val cnj2 =
+      let val th = SUBS [SPEC (mk_neg b) IMP2]
+                        (SPECL [b,t,“T”] COND_EXPAND_IMP)
+      in GENL [b,t] (SUBS [SPEC (mk_imp(b,t)) AND2] th)
+      end
+    val cnj3 =
+      let val th = SUBS [SPEC b AND4] (SPECL [b,“F”,e] COND_EXPAND_OR)
+      in GENL [b,e] (SUBS [SPEC (mk_conj(mk_neg b,e)) OR3] th)
+      end
+    val cnj4 =
+      let val th = SUBS [SPEC (mk_neg b) AND4] (SPECL [b,t,“F”] COND_EXPAND_OR)
+      in GENL [b,t] (SUBS [SPEC (mk_conj(b,t)) OR4] th)
+      end
+in
+  CONJ cnj1 (CONJ cnj2 (CONJ cnj3 cnj4))
+end);
+
+(* ---------------------------------------------------------------------*)
+(* IF_THEN_T_IMP                                                        *)
+(*                                                                      *)
+(* |- !b e. (if b then T else e) = (~b ==> e)                           *)
+(* ---------------------------------------------------------------------*)
+
+val IF_THEN_T_IMP = thm (#(FILE), #(LINE))("IF_THEN_T_IMP",
+let val b = “b:bool”
+    val e = “e:bool”
+    val AND1 = GEN_ALL (CONJUNCT1 (SPEC_ALL AND_CLAUSES))
+    val IMP2 = GEN_ALL (el 2 (CONJUNCTS (SPEC_ALL IMP_CLAUSES)))
+    val th = SUBS [SPEC b IMP2] (SPECL [b,“T”,e] COND_EXPAND_IMP)
+in
+  GENL [b,e] (SUBS [SPEC (mk_imp(mk_neg b,e)) AND1] th)
+end);
+
 val TYPE_DEFINITION_THM = thm (#(FILE), #(LINE))("TYPE_DEFINITION_THM",
   let val P   = “P:'a-> bool”
       val rep = “rep :'b -> 'a”
@@ -2775,6 +2831,27 @@ val EXISTS_UNIQUE_ALT' = thm (#(FILE), #(LINE))(
     val eqn = IMP_ANTISYM_RULE (DISCH_ALL th1) (DISCH_ALL th2)
   in
     TRANS EXISTS_UNIQUE_THM eqn
+  end);
+
+(* ----------------------------------------------------------------------
+    EXISTS_UNIQUE_ALT
+
+    |- !P. (?!x. P x) <=> ?x. !y. P y <=> (x = y)
+
+    EXISTS_UNIQUE_ALT' with the witness equation the other way round.
+   ---------------------------------------------------------------------- *)
+
+val EXISTS_UNIQUE_ALT = thm (#(FILE), #(LINE))(
+  "EXISTS_UNIQUE_ALT",
+  let
+    val P = mk_var("P", alpha --> bool)
+    val x = mk_var("x", alpha)
+    val y = mk_var("y", alpha)
+    val Py = mk_comb(P,y)
+    val body = AP_TERM (rator (mk_eq(Py,Py))) (SPECL [y,x] EQ_SYM_EQ)
+    val inner = AP_TERM (rator (mk_forall(y,Py))) (ABS y body)
+  in
+    GEN P (TRANS EXISTS_UNIQUE_ALT' (MK_EXISTS (GEN x inner)))
   end);
 
 
@@ -3527,6 +3604,143 @@ val SKOLEM_THM = thm (#(FILE), #(LINE))("SKOLEM_THM",
      GEN P (SYM th19)
  end);
 
+
+(* ------------------------------------------------------------------------- *)
+(* UNIQUE_SKOLEM_ALT                                                         *)
+(*                                                                           *)
+(* Intuitionistic + intensional form of Skolem for unique existence:         *)
+(*   |- !P. (!x. ?!y. P x y) <=> ?f. !x y. P x y <=> (f x = y)               *)
+(* ------------------------------------------------------------------------- *)
+
+val UNIQUE_SKOLEM_ALT = thm (#(FILE), #(LINE))("UNIQUE_SKOLEM_ALT",
+ let val P = mk_var("P", alpha --> beta --> bool)
+     val x = mk_var("x", alpha)
+     val y = mk_var("y", beta)
+     val g = mk_var("g", beta)
+     val Pxy = mk_comb(mk_comb(P,x),y)
+     val Q = mk_abs(x, mk_abs(g, mk_forall(y, mk_eq(Pxy, mk_eq(g,y)))))
+     (* (?!y. P x y) <=> ?g. !y. P x y <=> (g = y), generalised over x *)
+     val inner = SPEC (mk_comb(P,x))
+                      (INST_TYPE [alpha |-> beta] EXISTS_UNIQUE_ALT)
+     val stepA = AP_TERM (rator (mk_forall(x,tb))) (ABS x inner)
+     (* Skolemise the inner existential; the instance needs two betas at
+        each of the two quantified positions. *)
+     fun BETA2 tm =
+       let val th = RATOR_CONV BETA_CONV tm
+       in TRANS th (BETA_CONV (rhs (concl th)))
+       end
+     val SK = SPEC Q SKOLEM_THM
+     val (skl,skr) = dest_eq (concl SK)
+     val stepB = TRANS (SYM (QUANT_CONV (QUANT_CONV BETA2) skl))
+                       (TRANS SK (QUANT_CONV (QUANT_CONV BETA2) skr))
+     val f = mk_var("f", alpha --> beta)
+     val target =
+       mk_eq(mk_forall(x, mk_exists1(y, Pxy)),
+             mk_exists(f, mk_forall(x, mk_forall(y,
+               mk_eq(Pxy, mk_eq(mk_comb(f,x), y))))))
+     val th = TRANS stepA stepB
+ in
+   GEN P (EQ_MP (ALPHA (concl th) target) th)
+ end);
+
+(* ------------------------------------------------------------------------- *)
+(* UNIQUE_SKOLEM_THM                                                         *)
+(*                                                                           *)
+(* Intuitionistic + extensional form of Skolem for unique existence:         *)
+(*   |- !P. (!x. ?!y. P x y) <=> ?!f. !x. P x (f x)                          *)
+(*                                                                           *)
+(* Both sides are put into the ALT form; what is left to prove is            *)
+(*   (?f. !x y. P x y <=> f x = y) <=> (?g. !h. (!x. P x (h x)) <=> g = h)   *)
+(* whose right-to-left half is the one that has to perturb a Skolem          *)
+(* function at a single point.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+val UNIQUE_SKOLEM_THM = thm (#(FILE), #(LINE))("UNIQUE_SKOLEM_THM",
+ let val P = mk_var("P", alpha --> beta --> bool)
+     val x = mk_var("x", alpha)
+     val z = mk_var("z", alpha)
+     val y = mk_var("y", beta)
+     val f = mk_var("f", alpha --> beta)
+     val g = mk_var("g", alpha --> beta)
+     val h = mk_var("h", alpha --> beta)
+     fun Pap s t = mk_comb(mk_comb(P,s),t)
+     fun pointwise k = mk_forall(x, Pap x (mk_comb(k,x)))
+     val condths = INST_TYPE [alpha |-> beta] COND_CLAUSES
+     fun COND_T l r = CONJUNCT1 (SPECL [l,r] condths)
+     fun COND_F l r = CONJUNCT2 (SPECL [l,r] condths)
+     val Abody = mk_forall(x, mk_forall(y, mk_eq(Pap x y,
+                                                 mk_eq(mk_comb(f,x), y))))
+     val A = mk_exists(f, Abody)
+     val Bbody = mk_forall(h, mk_eq(pointwise h, mk_eq(g,h)))
+     val B = mk_exists(g, Bbody)
+     (* left to right: the Skolem function is the unique one *)
+     val af = ASSUME Abody
+     val d1 =
+       let val ph = pointwise h
+           val feqh = mk_eq(f,h)
+           val eqv = SPECL [x, mk_comb(h,x)] af
+           val d1a = DISCH ph
+             (EQ_MP (SYM (SPECL [f,h] FUN_EQ_THM))
+                    (GEN x (EQ_MP eqv (SPEC x (ASSUME ph)))))
+           val d1b = DISCH feqh
+             (GEN x (EQ_MP (SYM eqv) (AP_THM (ASSUME feqh) x)))
+       in
+         DISCH A (CHOOSE (f, ASSUME A)
+                   (EXISTS (B,f) (GEN h (IMP_ANTISYM_RULE d1a d1b))))
+       end
+     (* right to left: a unique Skolem function pins down each point *)
+     val bg = ASSUME Bbody
+     val Rg = EQ_MP (SYM (SPEC g bg)) (REFL g)
+     val d2 =
+       let val gxy = mk_eq(mk_comb(g,x), y)
+           val pxy = Pap x y
+           val d2b = DISCH gxy (SUBS [ASSUME gxy] (SPEC x Rg))
+           (* h is g, moved to y at x; it is pointwise good, so it is g *)
+           val hdef = mk_abs(z, mk_cond{cond = mk_eq(z,x), larm = y,
+                                        rarm = mk_comb(g,z)})
+           val zeqx = mk_eq(z,x)
+           val betaz = BETA_CONV (mk_comb(hdef,z))
+           val thT =
+             let val asm = ASSUME (mk_eq(zeqx,“T”))
+                 val hz = TRANS (SUBS [asm] betaz) (COND_T y (mk_comb(g,z)))
+                 val pzy = EQ_MP (SYM (AP_THM (AP_TERM P (EQT_ELIM asm)) y))
+                                 (ASSUME pxy)
+             in SUBS [SYM hz] pzy
+             end
+           val thF =
+             let val asm = ASSUME (mk_eq(zeqx,“F”))
+                 val hz = TRANS (SUBS [asm] betaz) (COND_F y (mk_comb(g,z)))
+             in SUBS [SYM hz] (SPEC z Rg)
+             end
+           val geqh = EQ_MP (SPEC hdef bg)
+                        (GEN z (DISJ_CASES (SPEC zeqx BOOL_CASES_AX) thT thF))
+           val hx = TRANS (SUBS [EQT_INTRO (REFL x)]
+                                (BETA_CONV (mk_comb(hdef,x))))
+                          (COND_T y (mk_comb(g,x)))
+           val d2a = DISCH pxy (TRANS (AP_THM geqh x) hx)
+       in
+         DISCH B (CHOOSE (g, ASSUME B)
+                   (EXISTS (A,g) (GENL [x,y] (IMP_ANTISYM_RULE d2a d2b))))
+       end
+     (* both sides in ALT form *)
+     val lhs_alt = SPEC P UNIQUE_SKOLEM_ALT
+     val rhs_alt =
+       let val Pf = mk_abs(f, pointwise f)
+           val th0 = SPEC Pf (INST_TYPE [alpha |-> (alpha --> beta)]
+                                        EXISTS_UNIQUE_ALT)
+           val (l0,r0) = dest_eq (concl th0)
+       in
+         TRANS (SYM (QUANT_CONV BETA_CONV l0))
+               (TRANS th0 (QUANT_CONV
+                            (QUANT_CONV (RATOR_CONV (RAND_CONV BETA_CONV)))
+                            r0))
+       end
+     val th = TRANS lhs_alt (TRANS (IMP_ANTISYM_RULE d1 d2) (SYM rhs_alt))
+     val target = mk_eq(mk_forall(x, mk_exists1(y, Pap x y)),
+                        mk_exists1(f, pointwise f))
+ in
+   GEN P (EQ_MP (ALPHA (concl th) target) th)
+ end);
 
 (*---------------------------------------------------------------------------
     Support for pattern matching on booleans.

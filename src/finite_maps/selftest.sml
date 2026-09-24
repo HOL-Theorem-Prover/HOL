@@ -8,7 +8,15 @@ fun optionToString f NONE = "NONE"
   | optionToString f (SOME x) = "SOME("^f x^")"
 fun pairToString f g (x,y) = "(" ^ f x ^ ", " ^ g y ^ ")"
 
-val _ = app tpp ["fm⟨k⟩", "fm⟨k1 ↦ v1; k2 ↦ v2⟩"]
+(* combin, list and finite_map each register their own brackets into
+   one dictionary, and this theory has all three as ancestors, so a
+   round-trip here checks the grammar merge kept every registrant's
+   entries rather than just one's *)
+val _ = app tpp ["fm⟨k⟩", "fm⟨k1 ↦ v1; k2 ↦ v2⟩",
+                 "l❲i❳", "l❲i ↦ v❳",
+                 (* combin registers this one twice, ASCII "(|" and
+                    these lens brackets; the printer prefers these *)
+                 "f⦇k ↦ v⦈"]
 
 val _ = tprint "Check that finite maps have plausible size in TypeBase"
 val _ = require_msg
@@ -22,6 +30,22 @@ fun testeval (s, t, expected) =
   in
     require_msg (check_result (aconv expected)) term_to_string
                 (rhs o concl o EVAL) t
+  end
+
+val _ =
+  let
+    val list_info =
+      valOf (TypeBase.read {Thy = "list", Tyop = "list"})
+    val cs = computeLib.copy reduceLib.num_compset
+             |> (fn cs => computeLib.add_datatype_info cs list_info)
+             |> computeLib.add_thmset "compute"
+  in
+    convtest
+      ("patricia does not redirect nub through LIST_TO_SET",
+       computeLib.CBV_CONV cs,
+       “nub [0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;
+             0;1;2;3;4;0;1;2;3;4;0;1;2;3;4;0;1;2;3;4]”,
+       “[0;1;2;3;4]”)
   end
 
 val _ = tprint "sptreeSyntax.fromList"

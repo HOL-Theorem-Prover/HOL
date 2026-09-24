@@ -179,7 +179,7 @@ val _ = let
                          aconv a ``xx = (aa:bool,bb:bool)``
         | _ => false
 in
-  require (check_result check) split_pair_case_tac g
+  require (check_result check) (runtac split_pair_case_tac) g
 end;
 
 val _ = tprint "split_pair_case_tac (case in assumptions)"
@@ -193,7 +193,8 @@ val _ = let
                               aconv a2 a
         | _ => false
 in
-  require (check_result check) split_pair_case_tac ([a], ``pp /\ qq``)
+  require (check_result check) (runtac split_pair_case_tac)
+          ([a], ``pp /\ qq``)
 end
 
 val _ = Feedback.emit_MESG := false
@@ -301,6 +302,17 @@ val spvcross2_def =
     spvcross2_def0
       |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [FORALL_PROD]))
 val _ = test "sum+pair, pair components unused" spvcross2_def
+
+val spvcross3_def0 = new_recursive_definition{
+  name = "spvcross3_def",
+  rec_axiom = sumTheory.sum_Axiom,
+  def = “spvcross3 f (INL x) (p:'a # 'b) = f (FST p) /\
+         spvcross3 f (INR y) p = y”};
+(* both clauses must end up with pair patterns: it is the clause that uses
+   its pattern's variables that keeps the column from being vacuous *)
+val spvcross3_def =
+    spvcross3_def0 |> SIMP_RULE bool_ss [FORALL_PROD, FST]
+val _ = test "sum+pair, pair components used in one clause only" spvcross3_def
 
 
 

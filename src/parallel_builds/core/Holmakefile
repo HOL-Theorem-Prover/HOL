@@ -133,4 +133,21 @@ endif
 INCLUDES += $(patsubst %,../../../examples/%,$(EX3DIRS))
 endif
 
+# The LSP tests.  Here rather than as directories of their own in the
+# build sequence because each is one job that spends nearly all of its
+# time waiting on a server rather than on the CPU: alone in the
+# sequence that is minutes of one core with everything else stopped,
+# and alongside these it is close to free.  `CLINE_OPTIONS = -r' above
+# builds each one's top target, so naming the directories is enough.
+#
+# `HOLSELFTESTLEVEL' is consulted here and nowhere below: this file is
+# a build-sequence directory and so is passed it, while the directories
+# reached through INCLUDES are scanned into this same Holmake's graph
+# and do not check it at all.  Poly-only, as the LSP is.
+ifdef POLY
+INCLUDES += ../../../tools-poly/lsp/tests \
+            ../../../tools-poly/lsp/tests/integer \
+            ../../../tools-poly/lsp/tests/sorting
+endif
+
 endif

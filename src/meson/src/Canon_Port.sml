@@ -1,12 +1,8 @@
 structure Canon_Port :> Canon_Port =
 struct
 
-open HolKernel Parse boolLib liteLib Ho_Rewrite tautLib;
-
-(* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val SOME combin_grammars = grammarDB {thyname="combin"};
-val _ = Parse.temp_set_grammars combin_grammars;
+open HolKernel Parse boolLib liteLib Ho_Rewrite tautLib
+     Canon_Port_ContextTheory;
 
 val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
 val LEFT_AND_EXISTS_THM  = GSYM LEFT_EXISTS_AND_THM;
@@ -55,10 +51,7 @@ end;
 
 
 local
-  val APP_CONV =
-    let val eq = ``!f:'a->'b. !x. f x = I f x``
-    in REWR_CONV (prove (eq, REWRITE_TAC[combinTheory.I_THM]))
-    end
+  val APP_CONV = REWR_CONV APP_EQ_I
 
   fun APP_N_CONV n tm =
     if n = 1 then APP_CONV tm
@@ -103,27 +96,12 @@ end
 
 
 local
-  val NOT_EXISTS_UNIQUE_THM = Tactical.prove(
-    ``~(?!x:'a. P x) <=> (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')``,
-    REWRITE_TAC [EXISTS_UNIQUE_THM, DE_MORGAN_THM,NOT_EXISTS_THM]
-     THEN CONV_TAC (REDEPTH_CONV NOT_FORALL_CONV)
-     THEN REWRITE_TAC [NOT_IMP, CONJ_ASSOC])
   val common_tauts =
-    [TAUT `~~p:bool = p`,
-     TAUT `~(p /\ q) <=> ~p \/ ~q`,
-     TAUT `~(p \/ q) <=> ~p /\ ~q`,
-     TAUT `~(p ==> q) <=> p /\ ~q`,
-     TAUT `p ==> q <=> ~p \/ q`,
-     NOT_FORALL_THM,
-     NOT_EXISTS_THM,
-     EXISTS_UNIQUE_THM,
+    [cp_not_not, cp_not_and, cp_not_or, cp_not_imp, cp_imp,
+     NOT_FORALL_THM, NOT_EXISTS_THM, EXISTS_UNIQUE_THM,
      NOT_EXISTS_UNIQUE_THM]
-  and dnf_tauts =
-    map TAUT [`~(p = q) <=> (p /\ ~q) \/ (~p /\ q)`,
-              `(p = q) <=> (p /\ q) \/ (~p /\ ~q)`]
-  and cnf_tauts =
-    map TAUT [`~(p = q) <=> (p \/ q) /\ (~p \/ ~q)`,
-              `(p = q) <=> (p \/ ~q) /\ (~p \/ q)`]
+  and dnf_tauts = [cp_not_eq_dnf, cp_eq_dnf]
+  and cnf_tauts = [cp_not_eq_cnf, cp_eq_cnf]
   val NNFC_CONV0 =
     GEN_REWRITE_CONV TOP_SWEEP_CONV (common_tauts @ cnf_tauts)
 in
@@ -149,11 +127,7 @@ fun has_abs tm =
     | other => false
 
 val DELAMB_CONV =
-  let val pth = prove(
-        ``(((\x. s x) = t) = (!x:'a. s x:'b = t x)) /\
-           ((s = \x. t x) = (!x. s x = t x))``,
-        CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN
-        REWRITE_TAC [])
+  let val pth = DELAMB_PTH
       val qconv =
           TOP_DEPTH_CONV BETA_CONV THENC
           REPEATC (QCHANGED_CONV (GEN_REWRITE_CONV ONCE_DEPTH_CONV [pth]) THENC
@@ -200,9 +174,7 @@ val DELAMB_CONV =
 
 val PROP_CNF_CONV =
   GEN_REWRITE_CONV REDEPTH_CONV
-   [TAUT `a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`,
-    TAUT `(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`,
-    GSYM CONJ_ASSOC, GSYM DISJ_ASSOC];;
+   [cp_cnf_l, cp_cnf_r, GSYM CONJ_ASSOC, GSYM DISJ_ASSOC];;
 
 
 val PRESIMP_CONV =
@@ -214,7 +186,7 @@ val PRESIMP_CONV =
 
 
 val REFUTE_THEN =
-  let val conv = REWR_CONV(TAUT `p <=> ~p ==> F`)
+  let val conv = REWR_CONV cp_refute
   in fn ttac => CONV_TAC conv THEN DISCH_THEN ttac
   end;;
 
@@ -283,7 +255,5 @@ val PRENEX_CONV =
  in
    fn tm => TRY_CONV PRENEX_QCONV tm
  end;
-
-val _ = Parse.temp_set_grammars ambient_grammars;
 
 end

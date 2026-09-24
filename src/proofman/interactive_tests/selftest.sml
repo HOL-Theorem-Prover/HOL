@@ -1,10 +1,13 @@
 infix ++
 val op++ = OS.Path.concat;
 
-val result =
-  OS.Process.system (
-    Globals.HOLDIR ++ "bin" ++ "hol" ^ " --min < gh2023.ML"
-  );
+val hol = Globals.HOLDIR ++ "bin" ++ "hol"
 
-val _ = if OS.Process.isSuccess result then OS.Process.exit OS.Process.success
+fun run args script =
+    OS.Process.isSuccess (OS.Process.system (hol ^ " " ^ args ^ " < " ^ script))
+
+val gh2023 = run "--min" "gh2023.ML"
+val reentrancy = run "--bare" "reentrancy.ML"
+
+val _ = if gh2023 andalso reentrancy then OS.Process.exit OS.Process.success
         else OS.Process.exit OS.Process.failure

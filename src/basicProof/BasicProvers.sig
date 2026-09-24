@@ -19,6 +19,17 @@ sig
 
   val bool_ss         : simpset
   val srw_ss          : unit -> simpset
+  (* The simpset a proof is being run against.  A tactic a script
+     defines for itself -- `fun simp ths = ASM_SIMP_TAC (srw_ss()) ths'
+     and its kin -- should take the goal and the context and read this,
+     as `srw_tac' does: the context-reading `srw_ss' a declaration is
+     elaborated under reaches the declaration's own reads and not a
+     top-level function's, the expander defers a tactic expression to
+     when the proof runs, and an ambient read then answers for whatever
+     the process is doing then.  For a proof replayed under a pin that
+     is another context entirely, and a `Proof[exclude_simps = ...]'
+     window -- which is ambient -- does not reach it either. *)
+  val srw_ss_of       : Context.t -> simpset
   val Abbr            : term quotation -> thm
   val LEAVE_LETS      : thm
 
@@ -51,11 +62,23 @@ sig
   (* update stateful simpset for duration of function call and then restore;
      has same locking guarantees as underlying AncestryData.with_temp_value *)
   val with_simpset_updates : (simpset -> simpset) -> ('a -> 'b) -> ('a -> 'b)
+  (* the same adjustment made to a context rather than around a call.
+     Everything reached from that context sees the adjusted simpset, for
+     as long as the context lives; there is no window to close. *)
+  val map_simpset     : (simpset -> simpset) -> Context.t -> Context.t
+  (* for tactics and list-tactics: adjusts the context they are given,
+     and, for as long as ambient readers remain, the ambient simpset for
+     the duration of the call *)
+  val with_simpset_updates_tac :
+      (simpset -> simpset) -> ('a -> Context.t -> 'b) ->
+      ('a -> Context.t -> 'b)
   val mk_tacmod : string -> Manager.tacmodifier
 
+  (* A value derived from the stateful simpset.  It is stored with the
+     simpset it derives from, so it moves whenever that does. *)
   val make_simpset_derived_value :
       string -> (simpset -> 'a -> 'a) -> 'a ->
-      {get : unit -> 'a, set : 'a -> unit}
+      {get : unit -> 'a, get_of : Context.t -> 'a}
 
   (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic
@@ -74,6 +97,7 @@ sig
   val by                : term quotation * tactic -> tactic  (* infix *)
   val byA               : term quotation * tactic -> tactic
   val suffices_by       : term quotation * tactic -> tactic  (* infix *)
+  val suffices_byA      : term quotation * tactic -> tactic
   val on                : (thm -> tactic) * (term quotation * tactic) -> tactic
                           (* infix *)
   val subgoal           : term quotation -> tactic
@@ -87,6 +111,7 @@ sig
   val dest_tmkind       : tmkind -> term
   val prim_find_subterm : term list -> term -> goal -> tmkind
   val find_subterm      : term quotation -> goal -> tmkind
+  val find_subterm_in   : Context.t -> term quotation -> goal -> tmkind
   val primInduct        : tmkind -> tactic -> tactic
   val Cases             : tactic
   val Induct            : tactic

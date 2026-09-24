@@ -169,7 +169,7 @@ fun expandf _ (GSTK{prop=PROVED _, ...}) =
        raise ERR "expandf" "goal has already been proved"
   | expandf tac (GSTK{prop as POSED g, stack,final}) =
      let val arg = (case stack of [] => g | tr::_ => hd (#goals tr))
-         val (glist,vf) = tac arg
+         val (glist,vf) = tac arg (Context.snapshot())
          val dpth = length stack
          val gs = return(GSTK{prop=prop,final=final,
                               stack={goals=glist, validation=vf} :: stack})
@@ -182,7 +182,7 @@ fun expand_listf ltac (GSTK{prop=PROVED _, ...}) =
     expand_listf ltac (GSTK{prop = POSED g,
       stack = [{goals = [g], validation = hd}], final = final})
   | expand_listf ltac (GSTK{prop, stack as {goals,validation}::rst, final}) =
-    let val (new_goals, new_vf) = ltac goals
+    let val (new_goals, new_vf) = ltac goals (Context.snapshot())
       val dpth = length stack - 1 (* because we don't augment the stack *)
       val new_gs = return (GSTK{prop=prop, final=final,
         stack={goals=new_goals, validation=validation o new_vf} :: rst})
@@ -396,13 +396,13 @@ fun pp_gstk gstk =
 
 val pp_gstk = Parse.mlower o pp_gstk
 
-fun print_tac pfx g = let
+fun print_tac pfx g ctxt = let
 in
   print pfx;
   HOLPP.prettyPrint(print,!Globals.linewidth) (pp_goal g);
-  Tactical.ALL_TAC g
+  Tactical.ALL_TAC g ctxt
 end
 
-fun note_tac msg g = (print (msg ^ "\n"); Tactical.ALL_TAC g)
+fun note_tac msg g ctxt = (print (msg ^ "\n"); Tactical.ALL_TAC g ctxt)
 
 end (* goalStack *)

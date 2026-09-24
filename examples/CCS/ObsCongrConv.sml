@@ -115,7 +115,7 @@ end;
 (* Define the tactic OC_LHS_SUBST1_TAC: thm_tactic which substitutes a theorem
    in the left-hand side of an observation congruence. *)
 fun OC_LHS_SUBST1_TAC thm :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if opt ~~ ``OBS_CONGR`` then

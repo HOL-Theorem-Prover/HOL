@@ -162,10 +162,13 @@ fun reduce_cst rws (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
            NONE => false
          | SOME f => f Head
        val (spec_thm, new_rhs, cl, ants) = inst_rw (rule_inst, monitoring_p)
+       (* `thml` lists the antecedent proofs in the order of `ants`, which is
+          the order the implications are nested in, so each `MP` discharges
+          the current leading antecedent of the accumulator. *)
        fun mk_thm thml =
          TRANS th
                (List.foldl (fn (ant_eq_t, thm) =>
-                              MP spec_thm (EQT_ELIM ant_eq_t))
+                              MP thm (EQT_ELIM ant_eq_t))
                            spec_thm
                            thml)
      in
@@ -174,16 +177,28 @@ fun reduce_cst rws (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
      handle No_match
      => reduce_cst rws (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
   | reduce_cst rws (th,{Head, Args, Rws=Try{Hcst,Rws=Conv conv,Tail},Skip}) =
-    (let
-       val thm = conv (rhs (concl th))
-       val (_, dt) = from_term(rws, [], rhs (concl thm))
-       val cl = mk_clos([], dt)
-       val mk_thm = K (TRANS th thm)
-     in
-       (true, rhs (concl thm), cl, [], mk_thm)
-     end
-     handle HOL_ERR _
-     => reduce_cst rws (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
+    let
+      fun next () = reduce_cst rws (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip})
+      val t = rhs (concl th)
+    in
+      (let
+         val thm = conv t
+         val t' = rhs (concl thm)
+         (* A conversion reports no progress by failing, by raising
+            UNCHANGED, or by returning |- t = t.  All three move on to the
+            next rule: `t'` would otherwise be recompiled and sent through
+            this same chain again, so a reflexive result never terminates. *)
+         val _ = if aconv t t' then raise No_match else ()
+         val (_, dt) = from_term(rws, [], t')
+         val cl = mk_clos([], dt)
+         val mk_thm = K (TRANS th thm)
+       in
+         (true, t', cl, [], mk_thm)
+       end
+       handle HOL_ERR _ => next ()
+            | Conv.UNCHANGED => next ()
+            | No_match => next ())
+    end
   | reduce_cst _ (th,cst) =
     (false, rhs (concl th), CST cst, [], K th)
 

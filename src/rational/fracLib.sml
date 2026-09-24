@@ -64,7 +64,7 @@ handle HOL_ERR _ => raise ERR "FRAC_NOTEQ_CONV" "";
  *     A ?- a1=a2 | A ?- b1=b2
  *--------------------------------------------------------------------------*)
 
-val FRAC_EQ_TAC:tactic = fn (asm_list,goal) =>
+val FRAC_EQ_TAC:tactic = fn (asm_list,goal) => fn _ (* ctxt *) =>
 let
         val (lhs,rhs) = dest_eq goal;
         val (lhc, lha) = dest_comb lhs;
@@ -168,15 +168,15 @@ val FRAC_NOT0_CONV = frac_not0_conv [];
  *  FRAC_POS_TAC : term -> tactic
  *--------------------------------------------------------------------------*)
 
-fun FRAC_POS_TAC term1 (asm_list, goal) =
-        (ASSUME_TAC (frac_pos_conv asm_list term1)) (asm_list, goal);
+fun FRAC_POS_TAC term1 (asm_list, goal) ctxt =
+        (ASSUME_TAC (frac_pos_conv asm_list term1)) (asm_list, goal) ctxt;
 
 (*--------------------------------------------------------------------------
  *  FRAC_NOT0_TAC : term -> tactic
  *--------------------------------------------------------------------------*)
 
-fun FRAC_NOT0_TAC term1 (asm_list, goal) =
-        (ASSUME_TAC (frac_not0_conv asm_list term1)) (asm_list, goal);
+fun FRAC_NOT0_TAC term1 (asm_list, goal) ctxt =
+        (ASSUME_TAC (frac_not0_conv asm_list term1)) (asm_list, goal) ctxt;
 
 
 (*==========================================================================
@@ -254,7 +254,7 @@ fun frac_dnm_tac (asm_list:term list) (nmr,dnm) =
  *  simplify resp. nmr(abs_frac(a1,b1)) to a1 and frac_dnm(abs_frac(a1,b1)) to b1
  *--------------------------------------------------------------------------*)
 
-fun FRAC_NMRDNM_TAC (asm_list, goal) =
+fun FRAC_NMRDNM_TAC (asm_list, goal) ctxt =
   let
     val term_list = extract_frac_fun [frac_nmr_tm,frac_dnm_tm] goal
     val nmr_term_list =
@@ -270,7 +270,7 @@ fun FRAC_NMRDNM_TAC (asm_list, goal) =
       MAP_EVERY (frac_nmr_tac asm_list) nmr_term_list THEN
       MAP_EVERY (frac_dnm_tac asm_list) dnm_term_list THEN
       SIMP_TAC int_ss [INT_MUL_LID, INT_MUL_RID, INT_MUL_LZERO, INT_MUL_RZERO]
-    ) (asm_list,goal)
+    ) (asm_list,goal) ctxt
 end
 handle HOL_ERR _ => raise ERR "FRAC_NMRDNM_TAC" "";
 
@@ -370,14 +370,14 @@ fun FRAC_CALC_CONV (t1:term) =
  *  FRAC_STRICT_CALC_TAC : tactic
  *--------------------------------------------------------------------------*)
 
-fun FRAC_STRICT_CALC_TAC (asm_list,goal) =
+fun FRAC_STRICT_CALC_TAC (asm_list,goal) ctxt =
         let
                 val frac_terms = extract_frac goal;
                 val calc_thms = map FRAC_CALC_CONV frac_terms;
         in
                 (
                         SUBST_TAC calc_thms
-                ) (asm_list,goal)
+                ) (asm_list,goal) ctxt
         end
 handle HOL_ERR _ => raise ERR "FRAC_STRICT_CALCULATE_TAC" "";
 
@@ -387,7 +387,8 @@ handle HOL_ERR _ => raise ERR "FRAC_STRICT_CALCULATE_TAC" "";
  *  frac_calc_tac : term list -> tactic
  *--------------------------------------------------------------------------*)
 
-fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
+fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term)
+                  (_ : Context.t) =
   let
     (* generate calculation theorems for these terms *)
     val calc_thms = map FRAC_CALC_CONV frac_terms
@@ -496,15 +497,15 @@ handle HOL_ERR _ => raise ERR "FRAC_CALC_TAC" "";
  *  FRAC_CALCTERM_TAC : term -> tactic
  *--------------------------------------------------------------------------*)
 
-fun FRAC_CALCTERM_TAC (t1:term) (asm_list:term list,goal:term) =
-        (frac_calc_tac [t1]) (asm_list:term list,goal:term);
+fun FRAC_CALCTERM_TAC (t1:term) (asm_list:term list,goal:term) ctxt =
+        (frac_calc_tac [t1]) (asm_list:term list,goal:term) ctxt;
 
 (*--------------------------------------------------------------------------
  *  FRAC_CALC_TAC : tactic
  *--------------------------------------------------------------------------*)
 
-fun FRAC_CALC_TAC (asm_list, goal) =
-        (frac_calc_tac (extract_frac goal)) (asm_list, goal);
+fun FRAC_CALC_TAC (asm_list, goal) ctxt =
+        (frac_calc_tac (extract_frac goal)) (asm_list, goal) ctxt;
 
 (*--------------------------------------------------------------------------
  *  FRAC_STRICT_CALCEQ_TAC : tactic

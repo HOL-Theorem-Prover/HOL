@@ -33,11 +33,22 @@ val list_ss  =
 (* Auxiliary stuff                             *)
 (***********************************************)
 
-fun make_gen_conv_ss c name ssl = let
+(* The base is a thunk the whole way down to rc_ss, so it is read only
+   once a conversion has committed to work on a PMATCH term.  A fragment
+   is built when this library is loaded, which -- since bossLib opens it
+   -- is the construction of hol.state, so a base captured at that point
+   would be the simpset of the build rather than of the session, and the
+   datatypes a pattern match ranges over need not exist before then.
+
+   Forcing it here instead would read the stateful simpset on every
+   subterm of every goal: this reducer has no key, so it fires on all of
+   them, and all but a handful raise UNCHANGED at their is_PMATCH guard
+   without ever looking at the base. *)
+fun make_gen_conv_ss c name basef ssl = let
    exception genconv_reducer_exn
    fun addcontext (context,thms) = context
    fun apply {solver,conv,context,stack,relation} tm = (
-     QCHANGED_CONV (c (ssl, SOME (conv stack))) tm
+     QCHANGED_CONV (c (basef, ssl, SOME (conv stack))) tm
    )
    in simpLib.dproc_ss (REDUCER {name=SOME name,
                addcontext=addcontext, apply=apply,
@@ -107,10 +118,7 @@ fun does_conv_loop thm = let
 (* Simpset to evaluate PMATCH_ROWS             *)
 (***********************************************)
 
-val PAIR_EQ_COLLAPSE = prove (
-  ``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
-  STRUCT_CASES_TAC (SPEC ``x:'a#'b`` pairTheory.pair_CASES) THEN
-  SIMP_TAC std_ss []);
+val PAIR_EQ_COLLAPSE = patternMatchesTheory.PAIR_EQ_COLLAPSE
 
 fun is_FST_eq x t = let
   val (l, r) = dest_eq t
@@ -190,13 +198,15 @@ val static_ss = simpLib.merge_ss
      PAIR_EQ_COLLAPSE,
      oneTheory.one]];
 
-(* We add the stateful rewrite set (to simplify
-   e.g. case-constants or constructors) and a
-   custum component as well. *)
-fun rc_ss gl =
+(* Dropping patternMatchesSimp is what stops the nested SIMP_CONV
+   re-entering this reducer -- and note
+   remove_ssfrags raises UNCHANGED when it removes nothing, so a base with
+   no patternMatchesSimp in it disables the conversion outright.  The
+   custom component is added on top as before. *)
+fun rc_ss (basef, gl) =
     simpLib.remove_ssfrags
       ["patternMatchesSimp"]
-      (srw_ss() ++ simpLib.merge_ss (static_ss :: gl) -*
+      (basef () ++ simpLib.merge_ss (static_ss :: gl) -*
        ["lift_disj_eq", "lift_imp_disj"])
 
 (* finally we add a call-back component. This is an
@@ -211,16 +221,16 @@ fun callback_CONV cb_opt t = (case cb_opt of
                   NO_CONV t
                 else cb t));
 
-fun rc_conv_rws (gl, callback_opt) thms = REPEATC (
-  SIMP_CONV (rc_ss gl) thms THENC
+fun rc_conv_rws (basef, gl, callback_opt) thms = REPEATC (
+  SIMP_CONV (rc_ss (basef, gl)) thms THENC
   TRY_CONV (callback_CONV callback_opt))
 
 (* So, now combine it to get some convenient high-level
    functions. *)
 fun rc_conv rc_arg = rc_conv_rws rc_arg []
 
-fun rc_tac (gl, callback_opt) =
-  CONV_TAC (rc_conv (gl, callback_opt))
+fun rc_tac (basef, gl, callback_opt) =
+  CONV_TAC (rc_conv (basef, gl, callback_opt))
 
 fun rc_elim_precond rc_arg thm = let
   val pre = rand (rator (concl thm))
@@ -502,9 +512,7 @@ end
    case-splits and evaluation. This allows to
    define some conversions then. *)
 
-val COND_CONG_STOP = prove (``
-  (c = c') ==> ((if c then x else y:'a) = (if c' then x else y))``,
-SIMP_TAC std_ss [])
+val COND_CONG_STOP = patternMatchesTheory.COND_CONG_STOP
 
 fun case_pmatch_eq_prove t t' = let
   val tm = mk_eq (t, t')
@@ -514,7 +522,7 @@ fun case_pmatch_eq_prove t t' = let
   val my_tac = (
     REPEAT (BasicProvers.TOP_CASE_TAC THEN
             ASM_REWRITE_TAC[]) THEN
-    FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL, PMATCH_ROW_COND_def,
+    FULL_SIMP_TAC (rc_ss (srw_ss, [])) [PMATCH_EVAL, PMATCH_ROW_COND_def,
       PMATCH_INCOMPLETE_def]
   )
 in
@@ -578,7 +586,7 @@ fun PMATCH_ELIM_CONV t =
 (***********************************************)
 
 (*
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 
 val t = ``
    case l of
@@ -676,8 +684,9 @@ in
 end handle HOL_ERR _ => raise UNCHANGED
 
 fun PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL rc_arg = REPEATC (PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL_SINGLE rc_arg)
-fun PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN ssl = PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL (ssl, NONE)
-val PMATCH_REMOVE_FAST_REDUNDANT_CONV = PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN []
+fun PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN base ssl =
+    PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL (fn () => base, ssl, NONE)
+fun PMATCH_REMOVE_FAST_REDUNDANT_CONV t = PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN (srw_ss()) [] t
 
 
 (***********************************************)
@@ -685,7 +694,7 @@ val PMATCH_REMOVE_FAST_REDUNDANT_CONV = PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN []
 (***********************************************)
 
 (*
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 
 set_trace "parse deep cases" 0
 val t = case2pmatch false ``case x of NONE => 0``
@@ -789,8 +798,10 @@ in
 end handle HOL_ERR _ => raise UNCHANGED
 
 fun PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL eme rc_arg = REPEATC (PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL_SINGLE eme rc_arg)
-fun PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN eme ssl = PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL eme (ssl, NONE)
-fun PMATCH_REMOVE_FAST_SUBSUMED_CONV eme = PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN eme []
+fun PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN eme base ssl =
+    PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL eme (fn () => base, ssl, NONE)
+fun PMATCH_REMOVE_FAST_SUBSUMED_CONV eme t =
+  PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN eme (srw_ss()) [] t
 
 
 (***********************************************)
@@ -829,7 +840,7 @@ fun PMATCH_CLEANUP_PVARS_CONV t = let
      (* set_goal ([], eq_tm) *)
      val eq_thm = prove (eq_tm,
         MATCH_MP_TAC PMATCH_ROW_EQ_AUX THEN
-        rc_tac ([], NONE)
+        rc_tac (srw_ss, [], NONE)
      )
   in
      eq_thm
@@ -860,7 +871,7 @@ val t = ``PMATCH y [PMATCH_ROW (\_0_1. _0_1) (\_0_1. T) (\_0_1. F)]``
 
 val t = ``case (SUC x) of x => x + 3``
 
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 
 val t' = rhs (concl (PMATCH_CLEANUP_CONV t))
 *)
@@ -982,11 +993,14 @@ in
 end handle HOL_ERR _ => raise UNCHANGED
 
 
-fun PMATCH_CLEANUP_CONV_GEN ssl = PMATCH_CLEANUP_CONV_GENCALL (ssl, NONE)
-fun PMATCH_CLEANUP_GEN_ss ssl =
-  make_gen_conv_ss PMATCH_CLEANUP_CONV_GENCALL "PMATCH_CLEANUP_REDUCER" ssl
-val PMATCH_CLEANUP_ss = PMATCH_CLEANUP_GEN_ss []
-val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN [];
+fun PMATCH_CLEANUP_CONV_GEN base ssl =
+    PMATCH_CLEANUP_CONV_GENCALL (fn () => base, ssl, NONE)
+fun PMATCH_CLEANUP_GENCALL_ss basef ssl =
+  make_gen_conv_ss PMATCH_CLEANUP_CONV_GENCALL "PMATCH_CLEANUP_REDUCER"
+                   basef ssl
+fun PMATCH_CLEANUP_GEN_ss base ssl = PMATCH_CLEANUP_GENCALL_ss (fn () => base) ssl
+val PMATCH_CLEANUP_ss = PMATCH_CLEANUP_GENCALL_ss srw_ss []
+fun PMATCH_CLEANUP_CONV t = PMATCH_CLEANUP_CONV_GEN (srw_ss()) [] t;
 val _ = computeLib.add_convs [(patternMatchesSyntax.PMATCH_tm, 2, QCHANGED_CONV PMATCH_CLEANUP_CONV)];
 
 
@@ -1393,8 +1407,9 @@ in
                 | SOME thm => thm
 end
 
-fun PMATCH_SIMP_COLS_CONV_GEN ssl = PMATCH_SIMP_COLS_CONV_GENCALL (ssl, NONE)
-val PMATCH_SIMP_COLS_CONV = PMATCH_SIMP_COLS_CONV_GEN [];
+fun PMATCH_SIMP_COLS_CONV_GEN base ssl =
+    PMATCH_SIMP_COLS_CONV_GENCALL (fn () => base, ssl, NONE)
+fun PMATCH_SIMP_COLS_CONV t = PMATCH_SIMP_COLS_CONV_GEN (srw_ss()) [] t;
 
 
 (***********************************************)
@@ -1414,7 +1429,7 @@ val nv = ``((l:num list), x : 'a option, xx:'a, s:'a option, z:'b)``
 val t = ``case (xs : num list) of [] => x | _ => HD xs``
 val t = ``case (xs : num list) of [] => x | _::_ => HD xs``
 val nv = ``(xs: num list, x:num)``
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 
 *)
 fun PMATCH_EXTEND_INPUT_CONV_GENCALL rc_arg nv t = let
@@ -1541,8 +1556,9 @@ in
 end handle HOL_ERR _ => raise UNCHANGED
 
 
-fun PMATCH_EXTEND_INPUT_CONV_GEN ssl = PMATCH_EXTEND_INPUT_CONV_GENCALL (ssl, NONE)
-val PMATCH_EXTEND_INPUT_CONV = PMATCH_EXTEND_INPUT_CONV_GEN [];
+fun PMATCH_EXTEND_INPUT_CONV_GEN base ssl =
+    PMATCH_EXTEND_INPUT_CONV_GENCALL (fn () => base, ssl, NONE)
+fun PMATCH_EXTEND_INPUT_CONV t = PMATCH_EXTEND_INPUT_CONV_GEN (srw_ss()) [] t;
 
 
 (***********************************************)
@@ -1616,7 +1632,7 @@ fun PMATCH_EXPAND_COLS_CONV t = let
      val row' = mk_PMATCH_ROW_PABS vars' (pt', gt', rh')
 
      val eq_tm = mk_eq(row, row')
-     val eq_thm = prove (eq_tm, rc_tac ([], NONE))
+     val eq_thm = prove (eq_tm, rc_tac (srw_ss, [], NONE))
      val thm = AP_THM eq_thm v
   in
      SOME thm
@@ -1690,14 +1706,17 @@ fun PMATCH_SIMP_CONV_GENCALL rc_arg t =
   if (is_PMATCH t) then PMATCH_SIMP_CONV_GENCALL_AUX rc_arg t else
   raise UNCHANGED
 
-fun PMATCH_SIMP_CONV_GEN ssl = PMATCH_SIMP_CONV_GENCALL (ssl, NONE)
+fun PMATCH_SIMP_CONV_GEN base ssl =
+  PMATCH_SIMP_CONV_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN [];
+fun PMATCH_SIMP_CONV t = PMATCH_SIMP_CONV_GEN (srw_ss()) [] t;
 
-fun PMATCH_SIMP_GEN_ss ssl =
-  make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
+fun PMATCH_SIMP_GENCALL_ss basef ssl =
+  make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" basef ssl
 
-val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GEN_ss [])
+fun PMATCH_SIMP_GEN_ss base ssl = PMATCH_SIMP_GENCALL_ss (fn () => base) ssl
+
+val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GENCALL_ss srw_ss [])
 val _ = logged_addfrags {thyname="patternMatches"} [PMATCH_SIMP_ss];
 
 
@@ -1711,14 +1730,19 @@ fun PMATCH_FAST_SIMP_CONV_GENCALL rc_arg t =
   if (is_PMATCH t) then PMATCH_FAST_SIMP_CONV_GENCALL_AUX rc_arg t else
   raise UNCHANGED
 
-fun PMATCH_FAST_SIMP_CONV_GEN ssl = PMATCH_FAST_SIMP_CONV_GENCALL (ssl, NONE)
+fun PMATCH_FAST_SIMP_CONV_GEN base ssl =
+    PMATCH_FAST_SIMP_CONV_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_FAST_SIMP_CONV = PMATCH_FAST_SIMP_CONV_GEN [];
+fun PMATCH_FAST_SIMP_CONV t = PMATCH_FAST_SIMP_CONV_GEN (srw_ss()) [] t;
 
-fun PMATCH_FAST_SIMP_GEN_ss ssl =
-  make_gen_conv_ss PMATCH_FAST_SIMP_CONV_GENCALL "PMATCH_FAST_SIMP_REDUCER" ssl
+fun PMATCH_FAST_SIMP_GENCALL_ss basef ssl =
+  make_gen_conv_ss PMATCH_FAST_SIMP_CONV_GENCALL "PMATCH_FAST_SIMP_REDUCER"
+                   basef ssl
 
-val PMATCH_FAST_SIMP_ss = name_ss "patternMatchesFastSimp" (PMATCH_FAST_SIMP_GEN_ss [])
+fun PMATCH_FAST_SIMP_GEN_ss base ssl = PMATCH_FAST_SIMP_GENCALL_ss (fn () => base) ssl
+
+val PMATCH_FAST_SIMP_ss =
+  name_ss "patternMatchesFastSimp" (PMATCH_FAST_SIMP_GENCALL_ss srw_ss [])
 
 
 (***********************************************)
@@ -1807,15 +1831,19 @@ fun PMATCH_REMOVE_DOUBLE_BIND_CONV_GENCALL rc_arg t =
   PMATCH_ROWS_CONV (PMATCH_ROW_REMOVE_DOUBLE_BIND_CONV_GENCALL
     rc_arg) t
 
-fun PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN ssl =
-  PMATCH_REMOVE_DOUBLE_BIND_CONV_GENCALL (ssl, NONE)
+fun PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN base ssl =
+  PMATCH_REMOVE_DOUBLE_BIND_CONV_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_REMOVE_DOUBLE_BIND_CONV = PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN [];
+fun PMATCH_REMOVE_DOUBLE_BIND_CONV t = PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN (srw_ss()) [] t;
 
-fun PMATCH_REMOVE_DOUBLE_BIND_GEN_ss ssl =
-  make_gen_conv_ss PMATCH_ROW_REMOVE_DOUBLE_BIND_CONV_GENCALL "PMATCH_REMOVE_DOUBLE_BIND_REDUCER" ssl
+fun PMATCH_REMOVE_DOUBLE_BIND_GENCALL_ss basef ssl =
+  make_gen_conv_ss PMATCH_ROW_REMOVE_DOUBLE_BIND_CONV_GENCALL
+                   "PMATCH_REMOVE_DOUBLE_BIND_REDUCER" basef ssl
 
-val PMATCH_REMOVE_DOUBLE_BIND_ss = PMATCH_REMOVE_DOUBLE_BIND_GEN_ss []
+fun PMATCH_REMOVE_DOUBLE_BIND_GEN_ss base ssl =
+  PMATCH_REMOVE_DOUBLE_BIND_GENCALL_ss (fn () => base) ssl
+
+val PMATCH_REMOVE_DOUBLE_BIND_ss = PMATCH_REMOVE_DOUBLE_BIND_GENCALL_ss srw_ss []
 
 
 (***********************************************)
@@ -1829,7 +1857,7 @@ val t = ``case (x, y) of
   | (SUC x, 1) => x
   | (x, _) => x+3``
 
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 val rows = 0
 *)
 
@@ -1876,22 +1904,26 @@ end handle HOL_ERR _ => raise UNCHANGED
 
 fun PMATCH_REMOVE_GUARDS_CONV_GENCALL rc_arg t = let
   val thm0 = REPEATC (PMATCH_REMOVE_GUARD_AUX rc_arg) t
-  val m_ss = simpLib.merge_ss (fst rc_arg)
+  val m_ss = simpLib.merge_ss (#2 rc_arg)
   val c = SIMP_CONV (std_ss ++ m_ss ++
-    PMATCH_SIMP_GEN_ss (fst rc_arg)) []
+    PMATCH_SIMP_GENCALL_ss (#1 rc_arg) (#2 rc_arg)) []
   val thm1 = CONV_RULE (RHS_CONV c) thm0
 in
   thm1
 end handle HOL_ERR _ => raise UNCHANGED
 
-fun PMATCH_REMOVE_GUARDS_CONV_GEN ssl = PMATCH_REMOVE_GUARDS_CONV_GENCALL (ssl, NONE)
+fun PMATCH_REMOVE_GUARDS_CONV_GEN base ssl =
+    PMATCH_REMOVE_GUARDS_CONV_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_REMOVE_GUARDS_CONV = PMATCH_REMOVE_GUARDS_CONV_GEN [];
+fun PMATCH_REMOVE_GUARDS_CONV t = PMATCH_REMOVE_GUARDS_CONV_GEN (srw_ss()) [] t;
 
-fun PMATCH_REMOVE_GUARDS_GEN_ss ssl =
-  make_gen_conv_ss PMATCH_REMOVE_GUARDS_CONV_GENCALL "PMATCH_REMOVE_GUARDS_REDUCER" ssl
+fun PMATCH_REMOVE_GUARDS_GENCALL_ss basef ssl =
+  make_gen_conv_ss PMATCH_REMOVE_GUARDS_CONV_GENCALL
+                   "PMATCH_REMOVE_GUARDS_REDUCER" basef ssl
 
-val PMATCH_REMOVE_GUARDS_ss = PMATCH_REMOVE_GUARDS_GEN_ss []
+fun PMATCH_REMOVE_GUARDS_GEN_ss base ssl = PMATCH_REMOVE_GUARDS_GENCALL_ss (fn () => base) ssl
+
+val PMATCH_REMOVE_GUARDS_ss = PMATCH_REMOVE_GUARDS_GENCALL_ss srw_ss []
 
 
 
@@ -2036,9 +2068,7 @@ val t = ``case (a,x,xs) of
 fun literal_case_CONV c tt = if boolSyntax.is_literal_case tt then
    RATOR_CONV (RAND_CONV (ABS_CONV c)) tt else c tt
 
-val literal_cong_stop = prove(
-   ``(v = v') ==> (literal_case (f:'a -> 'b) v = literal_case f v')``,
-   SIMP_TAC std_ss [])
+val literal_cong_stop = patternMatchesTheory.literal_cong_stop
 
 fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
   val (v, rows) = dest_PMATCH t
@@ -2082,7 +2112,9 @@ fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
      case information *)
   val thm3 = if (does_conv_loop thm2) then let
        val thm3 = CONV_RULE (RHS_CONV (literal_case_CONV (SIMP_CONV (
-           (std_ss++simpLib.merge_ss (fst rc_arg) ++ PMATCH_SIMP_GEN_ss (fst rc_arg))) [PMATCH_INCOMPLETE_def, Cong literal_cong_stop]))) thm2
+           (std_ss ++ simpLib.merge_ss (#2 rc_arg) ++
+            PMATCH_SIMP_GENCALL_ss (#1 rc_arg) (#2 rc_arg)))
+           [PMATCH_INCOMPLETE_def, Cong literal_cong_stop]))) thm2
        val _ = if  (does_conv_loop thm3) then raise UNCHANGED else ()
        in thm3 end
      else thm2
@@ -2093,7 +2125,7 @@ end
 (*
 val t = t'
 val col_no = 1
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 val gl = []
 val callback_opt = NONE
 val db = !thePmatchCompileDB
@@ -2101,7 +2133,8 @@ val col_heu = colHeu_default
 val t = ``case x of 3 => 1 | _ => 0``
 *)
 
-fun PMATCH_CASE_SPLIT_CONV_GENCALL_STEP (gl, callback_opt) db col_heu t = let
+fun PMATCH_CASE_SPLIT_CONV_GENCALL_STEP (base, gl, callback_opt)
+                                        db col_heu t = let
   val _ = if (is_PMATCH t) then () else raise UNCHANGED
 
   fun find_col cols = if (List.null cols) then raise UNCHANGED else let
@@ -2122,7 +2155,7 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL_STEP (gl, callback_opt) db col_heu t = let
 
   val (col_no, expand_thm, expand_ss) = find_col (dest_PMATCH_COLS t)
   val thm1 = QCHANGED_CONV (PMATCH_CASE_SPLIT_AUX
-    (expand_ss::gl, callback_opt) col_no expand_thm) t
+    (base, expand_ss::gl, callback_opt) col_no expand_thm) t
 
   (* check whether it got simpler *)
   val _ = if (does_conv_loop thm1) then raise UNCHANGED else ()
@@ -2189,21 +2222,24 @@ in
   thm4
 end
 
-fun PMATCH_CASE_SPLIT_CONV_GEN ssl = PMATCH_CASE_SPLIT_CONV_GENCALL (ssl, NONE)
+fun PMATCH_CASE_SPLIT_CONV_GEN base ssl =
+    PMATCH_CASE_SPLIT_CONV_GENCALL (fn () => base, ssl, NONE)
 
 fun PMATCH_CASE_SPLIT_CONV_HEU col_heu t =
-  PMATCH_CASE_SPLIT_CONV_GEN [] (!thePmatchCompileDB) col_heu t
+  PMATCH_CASE_SPLIT_CONV_GEN (srw_ss()) [] (!thePmatchCompileDB) col_heu t
 
 fun PMATCH_CASE_SPLIT_CONV t =
   PMATCH_CASE_SPLIT_CONV_HEU colHeu_default t
 
-fun PMATCH_CASE_SPLIT_GEN_ss ssl db col_heu =
+fun PMATCH_CASE_SPLIT_GENCALL_ss basef ssl db col_heu =
   make_gen_conv_ss (fn rc_arg =>
     PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu)
-   "PMATCH_CASE_SPLIT_REDUCER" ssl
+   "PMATCH_CASE_SPLIT_REDUCER" basef ssl
+
+fun PMATCH_CASE_SPLIT_GEN_ss base ssl = PMATCH_CASE_SPLIT_GENCALL_ss (fn () => base) ssl
 
 fun PMATCH_CASE_SPLIT_HEU_ss col_heu =
-  PMATCH_CASE_SPLIT_GEN_ss [] (!thePmatchCompileDB) col_heu
+  PMATCH_CASE_SPLIT_GENCALL_ss srw_ss [] (!thePmatchCompileDB) col_heu
 
 fun PMATCH_CASE_SPLIT_ss () =
   PMATCH_CASE_SPLIT_HEU_ss colHeu_default
@@ -2240,14 +2276,8 @@ val t = ``
 
 local
 
-  val case_dist_exists_thm = prove (``!Q. (
-    (!(x:'a). Q x) ==>
-    !P. (?x. P x) = (?x. Q x /\ P x))``,
-  SIMP_TAC std_ss []);
-
-  val label_over_or_thm = prove (
-    ``(lbl :- (t1 \/ t2)) <=> (lbl :- t1) \/ (lbl :- t2)``,
-    REWRITE_TAC[markerTheory.label_def]);
+  val case_dist_exists_thm = patternMatchesTheory.case_dist_exists_thm
+  val label_over_or_thm    = patternMatchesTheory.label_over_or_thm
 
   fun find_nchotomy_for_cols db col_heu cols = let
     val _ = if (List.null cols) then
@@ -2525,7 +2555,7 @@ val weaken_ce = el 4 row_cs
 val weaken_thm = ASSUME (mk_neg weaken_ce)
 val ce = el 4 cs
 
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 *)
 
 (* apply thm PMATCH_ROW_COND_EX_WEAKEN *)
@@ -2636,7 +2666,8 @@ fun SIMPLIFY_PMATCH_ROW_COND_EX_IMP_CONV rc_arg tt = let
     else c t
 
   val thm05 = RIGHT_CONV_RULE (
-      (STRIP_QUANT_CONV (imp_or_no_imp_CONV (RATOR_CONV (RAND_CONV (SIMP_CONV (rc_ss []) []))))) THENC
+      (STRIP_QUANT_CONV (imp_or_no_imp_CONV
+         (RATOR_CONV (RAND_CONV (SIMP_CONV (rc_ss (srw_ss, [])) []))))) THENC
       REWRITE_CONV[]) thm04
 
   val rr = rhs (concl thm05)
@@ -2651,7 +2682,7 @@ end
 
 (* val ttts = strip_disj pre
    val ttt = el 1 ttts
-   val rc_arg = ([], NONE) *)
+   val rc_arg = (srw_ss, [], NONE) *)
 
 fun SIMPLIFY_PMATCH_ROW_COND_EX_IMP_CONV rc_arg cc_thm v ttt = let
 
@@ -2688,8 +2719,7 @@ end
    val (tts, _) = (listSyntax.dest_list o rand o concl) thm
    val tt = el 2 tts *)
 
-val simple_imp_thm  = prove ( ``!X Y X'. ((Y ==> (X = X')) ==> ((X ==> ~Y) = (X' ==> ~Y)))``,
-PROVE_TAC[])
+val simple_imp_thm = patternMatchesTheory.simple_imp_thm
 
 fun SIMPLIFY_REDUNDANT_ROWS_INFO_AUX rc_arg tt = let
   val (pre, cc_neg) = dest_imp tt
@@ -2732,7 +2762,7 @@ fun COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL rc_arg db col_heu t =
 let
   val (v, rows) = dest_PMATCH t
   val rc_arg = case rc_arg of
-    (sl, cb_opt) => ((#pcdb_ss db)::sl, cb_opt)
+    (base, sl, cb_opt) => (base, (#pcdb_ss db)::sl, cb_opt)
 
 
   (* compute initial enchotomy *)
@@ -2791,11 +2821,12 @@ in
   List.foldl add_row init_info rows
 end
 
-fun COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GEN ss db col_heu =
-  COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL (ss, NONE) db col_heu
+fun COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GEN base ss db col_heu =
+  COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL (fn () => base, ss, NONE)
+    db col_heu
 
 fun COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH t =
-  COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL ([], NONE)
+  COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL (srw_ss, [], NONE)
     (!thePmatchCompileDB) colHeu_default t
 
 
@@ -2860,17 +2891,21 @@ in
   IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM info_thm
 end
 
-fun PMATCH_REMOVE_REDUNDANT_CONV_GEN db col_heu ssl =
-  PMATCH_REMOVE_REDUNDANT_CONV_GENCALL db col_heu (ssl, NONE)
+fun PMATCH_REMOVE_REDUNDANT_CONV_GEN db col_heu base ssl =
+  PMATCH_REMOVE_REDUNDANT_CONV_GENCALL db col_heu (fn () => base, ssl, NONE)
 
 fun PMATCH_REMOVE_REDUNDANT_CONV t = PMATCH_REMOVE_REDUNDANT_CONV_GEN
-  (!thePmatchCompileDB) colHeu_default [] t;
+  (!thePmatchCompileDB) colHeu_default (srw_ss()) [] t;
 
-fun PMATCH_REMOVE_REDUNDANT_GEN_ss db col_heu ssl =
-  make_gen_conv_ss (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL db col_heu)  "PMATCH_REMOVE_REDUNDANT_REDUCER" ssl
+fun PMATCH_REMOVE_REDUNDANT_GENCALL_ss basef ssl db col_heu =
+  make_gen_conv_ss (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL db col_heu)
+                   "PMATCH_REMOVE_REDUNDANT_REDUCER" basef ssl
+
+fun PMATCH_REMOVE_REDUNDANT_GEN_ss db col_heu base ssl =
+  PMATCH_REMOVE_REDUNDANT_GENCALL_ss (fn () => base) ssl db col_heu
 
 fun PMATCH_REMOVE_REDUNDANT_ss () =
-  PMATCH_REMOVE_REDUNDANT_GEN_ss (!thePmatchCompileDB) colHeu_default []
+  PMATCH_REMOVE_REDUNDANT_GENCALL_ss srw_ss [] (!thePmatchCompileDB) colHeu_default
 
 
 fun IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT thm i tac =
@@ -2916,16 +2951,16 @@ in
   REWRITE_CONV (PMATCH_IS_EXHAUSTIVE_REWRITES::rewrite_thms) t0
 end;
 
-fun PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN ssl =
-    PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL (ssl, NONE)
+fun PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN base ssl =
+    PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_IS_EXHAUSTIVE_FAST_CHECK =
-    PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN [];
+fun PMATCH_IS_EXHAUSTIVE_FAST_CHECK t =
+    PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN (srw_ss()) [] t;
 
 (*
 val db = !thePmatchCompileDB
 val col_heu = colHeu_default
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 *)
 
 
@@ -2959,27 +2994,29 @@ in
   thm0
 end
 
-fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGENCALL db col_heu rc_arg t =
+let
   val info_thm = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL rc_arg db col_heu t
 in
   IS_REDUNDANT_ROWS_INFO_TO_PMATCH_IS_EXHAUSTIVE info_thm
 end
 
 fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GENCALL rc_arg t =
-  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGENCALL
     (!thePmatchCompileDB) colHeu_default rc_arg t
 
-fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN ssl =
-  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GENCALL (ssl, NONE)
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN base ssl =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK =
-  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN [];
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK t =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN (srw_ss()) [] t;
 
 
-val IMP_TO_EQ_THM = prove (``!P Q. (P ==> Q) ==> (~P ==> ~Q) ==> (Q <=> P)``, PROVE_TAC[])
+val IMP_TO_EQ_THM = patternMatchesTheory.IMP_TO_EQ_THM
 
-fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN db col_heu rc_arg t = let
-  val thm0 = PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGENCALL db col_heu rc_arg t = let
+  val thm0 =
+      PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGENCALL db col_heu rc_arg t
 in
   let
     val thm = rc_elim_precond rc_arg thm0
@@ -3002,38 +3039,39 @@ in
 end
 
 fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GENCALL rc_arg t =
-  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGENCALL
     (!thePmatchCompileDB) colHeu_default rc_arg t
 
-fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN ssl =
-  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GENCALL (ssl, NONE)
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN base ssl =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK =
-  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN [];
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK t =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN (srw_ss()) [] t;
 
 
-fun PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN db col_heu rc_arg t =
+fun PMATCH_IS_EXHAUSTIVE_CHECK_FULLGENCALL db col_heu rc_arg t =
   QCHANGED_CONV (PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg) t
   handle HOL_ERR _ =>
-    PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN db col_heu rc_arg t;
+    PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGENCALL db col_heu rc_arg t;
 
 fun PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL rc_arg t =
-  PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN (!thePmatchCompileDB) colHeu_default rc_arg t
+  PMATCH_IS_EXHAUSTIVE_CHECK_FULLGENCALL (!thePmatchCompileDB)
+    colHeu_default rc_arg t
 
-fun PMATCH_IS_EXHAUSTIVE_CHECK_GEN ssl =
-  PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL (ssl, NONE)
+fun PMATCH_IS_EXHAUSTIVE_CHECK_GEN base ssl =
+  PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_IS_EXHAUSTIVE_CHECK = PMATCH_IS_EXHAUSTIVE_CHECK_GEN []
+fun PMATCH_IS_EXHAUSTIVE_CHECK t = PMATCH_IS_EXHAUSTIVE_CHECK_GEN (srw_ss()) [] t
 
 
 local
-  val EQ_F_ELIM = prove (``!b. F ==> b``, PROVE_TAC[])
-  val EQ_T_ELIM = prove (``!b. (b = T) ==> ~F ==> b``, PROVE_TAC[])
-  val EQ_O_ELIM = prove (``!b1 b2. (b1 = b2) ==> b2 ==> b1``, PROVE_TAC[])
+  val EQ_F_ELIM = patternMatchesTheory.EQ_F_ELIM
+  val EQ_T_ELIM = patternMatchesTheory.EQ_T_ELIM
+  val EQ_O_ELIM = patternMatchesTheory.EQ_O_ELIM
 
 in
 
-fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
+fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGENCALL db col_heu rc_arg t = let
     val thm0 = QCHANGED_CONV (PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg) t
     val (ex_t, r) = dest_eq (concl thm0)
   in
@@ -3044,17 +3082,37 @@ fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
     else
       MP (SPEC r (SPEC ex_t EQ_O_ELIM)) thm0
   end handle HOL_ERR _ =>
-    PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t
+    PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGENCALL db col_heu rc_arg t
 end;
 
 
+(* the exported forms take the base as a simpset; rc_arg
+   carries it as a thunk from here down *)
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu
+                                                      (base, ssl, cb) t =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGENCALL db col_heu
+    (fn () => base, ssl, cb) t
+
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN db col_heu (base, ssl, cb) t =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGENCALL db col_heu
+    (fn () => base, ssl, cb) t
+
+fun PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN db col_heu (base, ssl, cb) t =
+  PMATCH_IS_EXHAUSTIVE_CHECK_FULLGENCALL db col_heu
+    (fn () => base, ssl, cb) t
+
+fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN db col_heu (base, ssl, cb) t =
+  PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGENCALL db col_heu
+    (fn () => base, ssl, cb) t
+
 fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GENCALL rc_arg t =
-  PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN (!thePmatchCompileDB) colHeu_default rc_arg t
+  PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGENCALL (!thePmatchCompileDB)
+    colHeu_default rc_arg t
 
-fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN ssl =
-  PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GENCALL (ssl, NONE)
+fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN base ssl =
+  PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GENCALL (fn () => base, ssl, NONE)
 
-val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK = PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN []
+fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK t = PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN (srw_ss()) [] t
 
 
 (*************************************)
@@ -3064,11 +3122,11 @@ val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK = PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN []
 (*
 val db = !thePmatchCompileDB
 val col_heu = colHeu_default
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 *)
 
 
-val neg_imp_rewr = prove (``(~A ==> B) = (~B ==> A)``, tautLib.PTAUT_TAC);
+val neg_imp_rewr = patternMatchesTheory.neg_imp_rewr
 
 fun nchotomy_PMATCH_ROW_COND_EX_CONSEQ_CONV_GEN rc_arg db col_heu tt = let
   (* destruct everything *)
@@ -3124,12 +3182,14 @@ in
 end
 
 
-fun SHOW_NCHOTOMY_CONSEQ_CONV_GEN ssl db col_heu tt = let
+fun SHOW_NCHOTOMY_CONSEQ_CONV_GEN base ssl db col_heu tt = let
   val (x, b) = dest_forall tt
   val b_thm = ALL_DISJ_CONV (PMATCH_ROW_COND_EX_INTRO_CONV_GEN
     (find_non_constructor_pattern db) x) b
 
-  val thm2 = nchotomy_PMATCH_ROW_COND_EX_CONSEQ_CONV_GEN (ssl, NONE) db col_heu (rhs (concl b_thm))
+  val thm2 = nchotomy_PMATCH_ROW_COND_EX_CONSEQ_CONV_GEN
+               (fn () => base, ssl, NONE)
+      db col_heu (rhs (concl b_thm))
 
   val thm3 = CONV_RULE (RAND_CONV (K (GSYM b_thm))) thm2
 
@@ -3141,7 +3201,8 @@ in
 end
 
 fun SHOW_NCHOTOMY_CONSEQ_CONV tt =
-  SHOW_NCHOTOMY_CONSEQ_CONV_GEN [] (!thePmatchCompileDB) colHeu_default tt
+  SHOW_NCHOTOMY_CONSEQ_CONV_GEN (srw_ss()) [] (!thePmatchCompileDB)
+                                colHeu_default tt
 
 
 (*************************************)
@@ -3150,7 +3211,7 @@ fun SHOW_NCHOTOMY_CONSEQ_CONV tt =
 
 (*
 val use_guards = true
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 val db = !thePmatchCompileDB
 val col_heu = colHeu_default
 val t = ``case (x, y) of ([], x::xs) => x | (_, _) => 2``
@@ -3216,26 +3277,33 @@ fun PMATCH_COMPLETE_CONV_GENCALL rc_arg db col_heu use_guards t =
     val _ = if ch then () else raise UNCHANGED
   in thm end;
 
-fun PMATCH_COMPLETE_CONV_GEN ssl =
-    PMATCH_COMPLETE_CONV_GENCALL (ssl, NONE);
+fun PMATCH_COMPLETE_CONV_GEN base ssl =
+    PMATCH_COMPLETE_CONV_GENCALL (fn () => base, ssl, NONE);
 
 fun PMATCH_COMPLETE_CONV use_guards =
-    PMATCH_COMPLETE_CONV_GEN [] (!thePmatchCompileDB) colHeu_default use_guards;
+    PMATCH_COMPLETE_CONV_GEN (srw_ss()) [] (!thePmatchCompileDB) colHeu_default use_guards;
 
-fun PMATCH_COMPLETE_GEN_ss ssl db colHeu use_guards =
+fun PMATCH_COMPLETE_GENCALL_ss basef ssl db colHeu use_guards =
   make_gen_conv_ss (fn rc_arg =>
     PMATCH_COMPLETE_CONV_GENCALL rc_arg db colHeu use_guards)
-    "PMATCH_COMPLETE_REDUCER" ssl;
+    "PMATCH_COMPLETE_REDUCER" basef ssl;
 
-fun PMATCH_COMPLETE_ss use_guards = PMATCH_COMPLETE_GEN_ss [] (!thePmatchCompileDB) colHeu_default use_guards;
+fun PMATCH_COMPLETE_GEN_ss base ssl = PMATCH_COMPLETE_GENCALL_ss (fn () => base) ssl
+
+fun PMATCH_COMPLETE_ss use_guards =
+  PMATCH_COMPLETE_GENCALL_ss srw_ss [] (!thePmatchCompileDB) colHeu_default use_guards;
 
 
-fun PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF ssl db col_heu use_guards t =
-    let val (ch, mt, rt) = PMATCH_COMPLETE_CONV_GENCALL_AUX (ssl, NONE) db col_heu use_guards t in
+fun PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF base ssl db col_heu
+                                            use_guards t =
+    let val (ch, mt, rt) =
+            PMATCH_COMPLETE_CONV_GENCALL_AUX (fn () => base, ssl, NONE)
+        db col_heu use_guards t in
     (if ch then SOME mt else NONE, rt ()) end
 
 fun PMATCH_COMPLETE_CONV_WITH_EXH_PROOF use_guards =
-    PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF [] (!thePmatchCompileDB) colHeu_default use_guards;
+    PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF (srw_ss()) []
+      (!thePmatchCompileDB) colHeu_default use_guards;
 
 
 
@@ -3291,14 +3359,13 @@ val OPT_PAIR_def = TotalDefn.Define `OPT_PAIR xy = pmatch xy of
 val thm = OPT_PAIR_def
 val tm = concl (hd (BODY_CONJUNCTS thm))
 val force_minimal = false
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 val try_exh = true
 *)
 
 
 local
-val IMP_AUX_THM = prove (``(P ==> (X <=> Y)) <=>
-   ((P ==> X) <=> (P ==> Y))``, PROVE_TAC[])
+val IMP_AUX_THM = patternMatchesTheory.IMP_AUX_THM
 in
 fun SIMPLE_IMP_COND_REWRITE_CONV thm tt = let
   val (pre, post) = dest_imp tt
@@ -3444,20 +3511,26 @@ in
   thm4
 end
 
-fun PMATCH_LIFT_BOOL_CONV_GEN ssl try_exh = PMATCH_LIFT_BOOL_CONV_GENCALL true try_exh (ssl, NONE)
+fun PMATCH_LIFT_BOOL_CONV_GEN base ssl try_exh =
+    PMATCH_LIFT_BOOL_CONV_GENCALL true try_exh (fn () => base, ssl, NONE)
 
-val PMATCH_LIFT_BOOL_CONV = PMATCH_LIFT_BOOL_CONV_GEN [];
+fun PMATCH_LIFT_BOOL_CONV t = PMATCH_LIFT_BOOL_CONV_GEN (srw_ss()) [] t;
 
-fun PMATCH_LIFT_BOOL_GEN_ss ssl try_exh =
-  make_gen_conv_ss (PMATCH_LIFT_BOOL_CONV_GENCALL true try_exh) "PMATCH_LIFT_BOOL_REDUCER" ssl
+fun PMATCH_LIFT_BOOL_GENCALL_ss basef ssl try_exh =
+  make_gen_conv_ss (PMATCH_LIFT_BOOL_CONV_GENCALL true try_exh)
+                   "PMATCH_LIFT_BOOL_REDUCER" basef ssl
 
-val PMATCH_LIFT_BOOL_ss = PMATCH_LIFT_BOOL_GEN_ss []
+fun PMATCH_LIFT_BOOL_GEN_ss base ssl = PMATCH_LIFT_BOOL_GENCALL_ss (fn () => base) ssl
+
+val PMATCH_LIFT_BOOL_ss = PMATCH_LIFT_BOOL_GENCALL_ss srw_ss []
 
 
-fun PMATCH_TO_TOP_RULE_SINGLE ssl thm = let
+fun PMATCH_TO_TOP_RULE_SINGLE base ssl thm = let
   val thm0 = GEN_ALL thm
 
-  val thm1 = CONV_RULE (STRIP_QUANT_CONV (PMATCH_LIFT_BOOL_CONV_GENCALL false false (ssl, NONE))) thm0
+  val thm1 =
+      CONV_RULE (STRIP_QUANT_CONV (PMATCH_LIFT_BOOL_CONV_GENCALL false false
+                                     (fn () => base, ssl, NONE))) thm0
   val thm2 = CONV_RULE (STRIP_QUANT_CONV (
      EVERY_CONJ_CONV (STRIP_QUANT_CONV (TRY_CONV (RAND_CONV markerLib.stmark_term))))) thm1
   val thm3 = SIMP_RULE std_ss [FORALL_AND_THM,
@@ -3469,16 +3542,16 @@ in
   thm5
 end
 
-fun PMATCH_TO_TOP_RULE_GEN ssl thm = let
+fun PMATCH_TO_TOP_RULE_GEN base ssl thm = let
   val thms = BODY_CONJUNCTS thm
-  val thms' = List.map (PMATCH_TO_TOP_RULE_SINGLE ssl) thms
+  val thms' = List.map (PMATCH_TO_TOP_RULE_SINGLE base ssl) thms
   val thm0 = LIST_CONJ thms'
   val thm1 = CONV_RULE unwindLib.FLATTEN_CONJ_CONV thm0
 in
   thm1
 end
 
-fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN [] thm;
+fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN (srw_ss()) [] thm;
 
 
 (*************************************)
@@ -3570,17 +3643,18 @@ fun PMATCH_LIFT_CONV_GENCALL_WITH_EXH_PROOF rc_arg db col_heu t =
     val (thm, exh) = (PMATCH_LIFT_CONV_GENCALL_AUX rc_arg db col_heu t)
   in (thm, exh()) end;
 
-fun PMATCH_LIFT_CONV_GEN ssl =
-    PMATCH_LIFT_CONV_GENCALL (ssl, NONE);
+fun PMATCH_LIFT_CONV_GEN base ssl =
+    PMATCH_LIFT_CONV_GENCALL (fn () => base, ssl, NONE);
 
 fun PMATCH_LIFT_CONV t =
-    PMATCH_LIFT_CONV_GEN [] (!thePmatchCompileDB) colHeu_default t;
+    PMATCH_LIFT_CONV_GEN (srw_ss()) [] (!thePmatchCompileDB) colHeu_default t;
 
-fun PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF ssl =
-    PMATCH_LIFT_CONV_GENCALL_WITH_EXH_PROOF (ssl, NONE);
+fun PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF base ssl =
+    PMATCH_LIFT_CONV_GENCALL_WITH_EXH_PROOF (fn () => base, ssl, NONE);
 
 fun PMATCH_LIFT_CONV_WITH_EXH_PROOF t =
-    PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF [] (!thePmatchCompileDB) colHeu_default t;
+    PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF (srw_ss()) []
+      (!thePmatchCompileDB) colHeu_default t;
 
 
 (*************************************)
@@ -3590,7 +3664,7 @@ fun PMATCH_LIFT_CONV_WITH_EXH_PROOF t =
 (*
 val do_lift = false
 val use_guards = true
-val rc_arg = ([], NONE)
+val rc_arg = (srw_ss, [], NONE)
 val db = !thePmatchCompileDB
 val col_heu = colHeu_default
 
@@ -3727,18 +3801,21 @@ end
 fun PMATCH_FLATTEN_CONV_GENCALL rc_arg db col_heu do_lift =
   REPEATC (PMATCH_FLATTEN_CONV_GENCALL_AUX rc_arg db col_heu do_lift)
 
-fun PMATCH_FLATTEN_CONV_GEN ssl =
-    PMATCH_FLATTEN_CONV_GENCALL (ssl, NONE);
+fun PMATCH_FLATTEN_CONV_GEN base ssl =
+    PMATCH_FLATTEN_CONV_GENCALL (fn () => base, ssl, NONE);
 
 fun PMATCH_FLATTEN_CONV do_lift =
-    PMATCH_FLATTEN_CONV_GEN [] (!thePmatchCompileDB) colHeu_default do_lift;
+    PMATCH_FLATTEN_CONV_GEN (srw_ss()) [] (!thePmatchCompileDB) colHeu_default do_lift;
 
-fun PMATCH_FLATTEN_GEN_ss ssl db col_heu do_lift =
-  make_gen_conv_ss (fn rc_arg => PMATCH_FLATTEN_CONV_GENCALL rc_arg db col_heu do_lift)
-    "PMATCH_FLATTEN_REDUCER" ssl
+fun PMATCH_FLATTEN_GENCALL_ss basef ssl db col_heu do_lift =
+  make_gen_conv_ss
+    (fn rc_arg => PMATCH_FLATTEN_CONV_GENCALL rc_arg db col_heu do_lift)
+    "PMATCH_FLATTEN_REDUCER" basef ssl
+
+fun PMATCH_FLATTEN_GEN_ss base ssl = PMATCH_FLATTEN_GENCALL_ss (fn () => base) ssl
 
 fun PMATCH_FLATTEN_ss do_lift =
-  PMATCH_FLATTEN_GEN_ss [] (!thePmatchCompileDB) colHeu_default do_lift;
+  PMATCH_FLATTEN_GENCALL_ss srw_ss [] (!thePmatchCompileDB) colHeu_default do_lift;
 
 
 (*************************************)

@@ -30,7 +30,7 @@ fun apply_once f [] acc = NONE
 (*---------------------------------------------------------------------------*)
 
 fun expand_opt (s,t) (vGoal g) =
-      SOME (case Tactical.VALID t g
+      SOME (case Tactical.VALID t g (Context.snapshot())
             of ([],f)  => vAtom(s,t)
              | ([x],f) => vThen(vAtom(s,t),vGoal x)
              | (gl,f)  => vThenl(vAtom(s,t),map vGoal gl))

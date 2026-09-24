@@ -53,11 +53,10 @@ directory that has `bin/hol` inside it.
 The HOL4 VS Code extension lives in its own repository, separate from
 HOL itself.
 
-**Important:** the LSP support is on a branch called
-`lsp-integration`, *not* on the default `main` branch, and it is not
-in the version published on the VS Code Marketplace.  So installing
-"HOL4 mode" from the Marketplace, or cloning and stopping there, will
-not give you the goals pane.  You must switch to that branch.
+**Important:** the LSP support is on `main`, but it is not in the
+version published on the VS Code Marketplace.  So installing "HOL4
+mode" from the Marketplace will not give you the goals pane; build
+from source as described here.
 
 Open a terminal, go somewhere sensible to keep the code (your home
 directory is fine), and run:
@@ -65,18 +64,17 @@ directory is fine), and run:
 ```
 git clone https://github.com/HOL-Theorem-Prover/hol4-vscode.git
 cd hol4-vscode
-git switch lsp-integration
 ```
 
-To confirm you are on the right branch:
+To confirm you have the right code:
 
 ```
 ls src/lspClient.ts
 ```
 
-If that prints `src/lspClient.ts`, you have the right code.  If it
-says "No such file", the `git switch` did not take effect — re-run it
-and read any error message.
+If that prints `src/lspClient.ts`, you are set.  If it says "No such
+file", your clone predates the LSP client — run `git pull` and look
+again.
 
 ## Step 2 — Build the extension
 
@@ -105,8 +103,8 @@ ls out/extension.js
 
 This extension is not on the Marketplace, so you cannot install it the
 usual way.  There are two routes.  Do the first one now; it needs
-nothing further and is the better choice while you are tracking a
-branch that changes.
+nothing further and is the better choice while the extension is still
+changing.
 
 **Do not** simply copy or symlink the folder into
 `~/.vscode/extensions`.  Older guides tell you to, and it silently
@@ -202,6 +200,23 @@ Two things tell you the extension has connected:
 If the status bar says `HOL LSP: exe missing` or `no executable`,
 Step 4 has not taken effect — see Troubleshooting.
 
+### Work on one file at a time
+
+Keep one `*Script.sml` file open at a time, and close a file before
+opening the next one.
+
+The reason is a real limitation, not tidiness.  HOL loads the theories
+your file builds on, and loading a theory *seals* it — nothing can
+re-read it or take it back for the rest of that session.  A second
+file usually needs a different set of theories, and they can no longer
+be arranged, so the second file's goals and error markers come out
+wrong with nothing on screen to say why.
+
+The extension currently runs one HOL for the whole folder, so it
+cannot arrange this for you.  If you do open a second file, HOL warns
+you with a notification.  Emacs users get one HOL per buffer and are
+not affected.
+
 ## Step 6 — Open the HOL Goals pane
 
 Press **`Ctrl+H Ctrl+G`** (on macOS, `Cmd+H Cmd+G`).
@@ -246,7 +261,7 @@ Two things worth knowing:
 
 ## Step 8 — Keeping it up to date
 
-The extension is on a development branch, so it changes.  To update:
+The extension is still under development, so it changes.  To update:
 
 ```
 cd ~/hol4-vscode
@@ -317,6 +332,18 @@ The extension is loaded but not activating by itself.  Its
 `activationEvents` in `package.json` must name the language id it
 registers for `.sml` — check that the two agree.  Running any `HOL:`
 command from the palette activates it in the meantime.
+
+**Nothing at all happens on a file — no errors, no goals.**
+Look for a message saying the file is not being compiled, and for a
+single error on one of its `Ancestors` / `Libs` entries.  When a
+theory or library a file names cannot be loaded, the server stops
+there rather than reporting every name the file takes from it: there
+is no environment to compile the rest against.  Build the missing
+ancestor with `Holmake`, then edit the header — any change to the
+`Ancestors` / `Libs` list, including a change and its undo — to make
+the server try again.  If the header is already right, Command
+Palette → **"HOL: Compile the active script again"** retries without
+touching the file.
 
 **Errors appear that `Holmake` does not report.**
 Make sure the folder you opened is the one containing your theory

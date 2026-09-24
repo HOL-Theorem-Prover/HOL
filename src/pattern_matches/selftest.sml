@@ -1565,3 +1565,64 @@ val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
   | SNOC x _ => x
   | x::_ => x + y
   ”, NONE)
+
+(* ----------------------------------------------------------------------
+    The registered fragments read the stateful simpset as they fire
+   ---------------------------------------------------------------------- *)
+
+val _ = Datatype.Datatype ‘dtcolour = DTRed | DTGreen | DTBlue num’;
+
+val dtcolour_pm =
+  “pmatch (DTBlue n) of DTRed => 0 | DTGreen => 1 | DTBlue m => m”
+
+(* under pure_ss nothing but the fragment's own reading of srw_ss() can
+   know dtcolour, which was declared long after the fragment was built *)
+val _ = test_conv "SIMP_CONV (pure_ss ++ PMATCH_SIMP_ss)"
+                  (SIMP_CONV (pureSimps.pure_ss ++ PMATCH_SIMP_ss) [])
+                  (dtcolour_pm, SOME “n:num”)
+
+val _ = test_conv "SIMP_CONV (srw_ss())"
+                  (SIMP_CONV (srw_ss()) [])
+                  (dtcolour_pm, SOME “n:num”)
+
+(* the subsumed row is only detectable with a base that can decide the
+   overlap; it stopped being removed when the base froze *)
+val _ = test_conv "SIMP_CONV (srw_ss()) [subsumed row]"
+                  (SIMP_CONV (srw_ss()) [])
+                  (“pmatch (x,y,z) of
+                      (1,y,z) => y + z
+                    | (x,2,4) => x - 4
+                    | (x,2,z) => x - z
+                    | (x,y,3) => x * y”,
+                   SOME “pmatch (x,y,z) of
+                           (1,y,z) => y + z
+                         | (x,2,z) => x - z
+                         | (x,y,3) => x * y”)
+
+(* reading the base from the ambient context is what lets a simpset window
+   a tactic opens reach the precondition prover: kfn_def decides that the
+   first row cannot match, and neither the simpset SIMP_TAC was handed nor
+   the callback into it knows anything of kfn *)
+val kfn_def = new_definition("kfn_def", “kfn (n:num) = n + 1”);
+
+(* the second row's result does not mention m, so the goal says nothing
+   about how far kfn 3 itself is reduced *)
+val window_goal =
+  “(pmatch (DTBlue (kfn 3)) of DTBlue 0 => 1 | DTBlue m => 7) = 7”
+
+fun window_tac f =
+    BasicProvers.with_simpset_updates_tac f
+      (SIMP_TAC (pureSimps.pure_ss ++ PMATCH_SIMP_ss) [] THEN REFL_TAC)
+
+val _ = tprint "PMATCH_SIMP_ss reads a tactic's simpset window"
+val _ = require_msg (check_result (K true)) thm_to_string
+          (fn g => prove(g, window_tac
+                              (fn ss => ss ++ simpLib.rewrites [kfn_def])))
+          window_goal
+
+val _ = shouldfail {
+          checkexn = isHE,
+          printarg = K "PMATCH_SIMP_ss without the window cannot",
+          printresult = thm_to_string,
+          testfn = quietly (fn g => prove(g, window_tac (fn ss => ss)))
+        } window_goal

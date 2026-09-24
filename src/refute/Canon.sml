@@ -1,7 +1,8 @@
 structure Canon :> Canon =
 struct
 
-open HolKernel Parse boolLib liteLib AC Ho_Rewrite Abbrev tautLib;
+open HolKernel Parse boolLib liteLib AC Ho_Rewrite Abbrev tautLib
+     canonContextTheory;
 
 infixr 5 |-> -->
 infix THEN THENL THENC THENCQC THENQC
@@ -9,10 +10,6 @@ infix THEN THENL THENC THENCQC THENQC
 fun ERR x = STRUCT_ERR "Canon" x;
 fun WRAP_ERR x = STRUCT_WRAP "Canon" x;
 
-(* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val combin_grammars = Option.valOf $ grammarDB {thyname="combin"}
-val _ = Parse.temp_set_grammars combin_grammars
 
 val INST  = HolKernel.INST;
 val subst = HolKernel.subst;
@@ -45,13 +42,8 @@ val (args,ONEWAY_SKOLEM_CONV) =
       val P = ``P:'a->bool``
       and z = ``z:'a``
       and aty = Type.alpha
-  and pth1 = prove
-   (``(?x:'a. P) = P``,
-    REWRITE_TAC[EXISTS_SIMP])
-  and pth2 = prove
-   (``(z:'a = $@ P) ==> ($? P = P z)``,
-    DISCH_THEN SUBST1_TAC THEN
-    REWRITE_TAC [BETA_THM,EXISTS_DEF])
+      and pth1 = canonContextTheory.pth1
+      and pth2 = canonContextTheory.pth2
   in (args,fn gvs => fn tm =>
     let val _ = args := (gvs,tm)::(!args)
         val (eq,atm) = dest_comb tm
@@ -111,35 +103,6 @@ val (args,ONEWAY_SKOLEM_CONV) =
 val (NNF_CONV,NNF_SKOLEM_CONV) =
     let val p = ``p:bool`` and q = ``q:bool`` and q' = ``q':bool``
         val P = ``P:'a->bool`` and aty = ``:'a``
-        val pth_pimp = TAUT`(p ==> q) <=> q \/ ~p`
-        val pth_peq1 = TAUT`(p = q) <=> (p \/ ~q) /\ (~p \/ q)`
-        val pth_peq2 = TAUT`(p = q) <=> (p /\ q) \/ (~p /\ ~q)`
-        val pth_pcond1 =
-          TAUT`(if p then q else q') <=> (p \/ q') /\ (~p \/ q)`
-        val pth_pcond2 =
-          TAUT`(if p then q else q') <=> (p /\ q) \/ (~p /\ q')`
-        val pth_nnot = TAUT`~~p:bool <=> p`
-        val pth_nand = TAUT`~(p /\ q) <=> ~p \/ ~q`
-        val pth_nor = TAUT`~(p \/ q) <=> ~p /\ ~q`
-        val pth_nimp = TAUT`~(p ==> q) <=> ~q /\ p`
-        val pth_neq1 = TAUT`~(p = q) <=> (p \/ q) /\ (~p \/ ~q)`
-        val pth_neq2 = TAUT`~(p = q) <=> (p /\ ~q) \/ (~p /\ q)`
-        val pth_ncond1 =
-          TAUT`~(if p then q else q') <=> (p \/ ~q') /\ (~p \/ ~q)`
-        val pth_ncond2 =
-          TAUT`~(if p then q else q') <=> (p /\ ~q) \/ (~p /\ ~q')`
-        val EXISTS_UNIQUE_THM2 = prove
-            (``!P. (?!x:'a. P x) = (?x. P x /\ !y. P y ==> (y = x))``,
-                GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_DEF,
-                                          LEFT_AND_EXISTS_THM,BETA_THM] THEN
-                EQ_TAC THEN DISCH_THEN(X_CHOOSE_THEN ``x:'a`` STRIP_ASSUME_TAC)
-                THEN
-                EXISTS_TAC ``x:'a`` THEN
-                ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THENL
-                [ALL_TAC, MATCH_MP_TAC EQ_TRANS THEN
-                 EXISTS_TAC ``x:'a`` THEN
-                 CONJ_TAC THENL [ALL_TAC, CONV_TAC SYM_CONV]] THEN
-                FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[])
         val TRIVIALIZE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV
             [NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES,
              COND_CLAUSES, COND_ID, FORALL_SIMP, EXISTS_SIMP,
@@ -164,16 +127,8 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
             let val pth = eta (ISPEC P NOT_EXISTS_THM)
             in LOCAL_QUANT_CONV pth
             end
-        val LOCAL_COND_ELIM_THM1 = prove
-            (``!P:'a->bool.
-                   P(if a then b else c) <=> (~a \/ P(b)) /\ (a \/ P(c))``,
-                GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[])
         val LOCAL_COND_ELIM_CONV1 =
             HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM1]
-        val LOCAL_COND_ELIM_THM2 = prove
-            (``!P:'a->bool.
-                   P(if a then b else c) <=> a /\ P(b) \/ ~a /\ P(c)``,
-                GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[])
         val LOCAL_COND_ELIM_CONV2 = HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM2]
         fun NNF_CONV_OPT baseconv skolemize cnflag =
             let fun NNF_CONV_P emb bvs tm =
@@ -370,9 +325,7 @@ val PRENEX_CONV = let
  * ------------------------------------------------------------------------- *)
 
 val PROP_CNF_CONV =
-  let val th1 = TAUT`a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`
-      and th2 = TAUT`(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`
-      val f = DISTRIB_CONV(th1,th2) THENC
+  let val f = DISTRIB_CONV(cnf_th1,cnf_th2) THENC
           DEPTH_BINOP_CONV conj_tm (ASSOC_CONV DISJ_ASSOC) THENC
           ASSOC_CONV CONJ_ASSOC
   in fn tm => f tm
@@ -385,9 +338,7 @@ val PROP_CNF_CONV =
  * ------------------------------------------------------------------------- *)
 
 val PROP_DNF_CONV =
-    let val th1 = TAUT`a /\ (b \/ c) <=> (a /\ b) \/ (a /\ c)`
-        and th2 = TAUT`(a \/ b) /\ c <=> (a /\ c) \/ (b /\ c)`
-        val f = DISTRIB_CONV(th1,th2) THENC
+    let val f = DISTRIB_CONV(dnf_th1,dnf_th2) THENC
             DEPTH_BINOP_CONV disj_tm (ASSOC_CONV CONJ_ASSOC) THENC
             ASSOC_CONV DISJ_ASSOC
     in fn tm => f tm
@@ -560,10 +511,10 @@ end;;
 val latest = ref (NONE: (thm * thm * term) option);
 
 val REFUTE =
-  let val pth = TAUT`(~p ==> F) ==> p`
+  let val pth = refute_pth
       val p = Term`p:bool`
       val CONJ_AC = EQT_ELIM o AC_CONV(CONJ_ASSOC,CONJ_SYM)
-      val pth_d = TAUT`(a \/ b) /\ c <=> (a /\ c) \/ (b /\ c)`
+      val pth_d = refute_pth_d
       fun refute refuter tm =
           let (* val _ = trace (1,"refute -- ",tm)  *)
               val (l,r) = dest_disj tm
@@ -621,9 +572,7 @@ handle e => WRAP_ERR("CONV_OF_PROVER",e);;
 (* ------------------------------------------------------------------------- *)
 
 val EQ_ABS_CONV =
-  let val pth = prove
-      (``(f:'a->'b = \x. t x) = (!x. f x = t x)``,
-       REWRITE_TAC[FUN_EQ_THM, BETA_THM])
+  let val pth = eq_abs_pth
       val cnv = REWR_CONV pth
       fun EQ_ABS_CONV tm =
           (cnv THENC BINDER_CONV EQ_ABS_CONV) tm
@@ -636,10 +585,7 @@ val EQ_ABS_CONV =
 (* ------------------------------------------------------------------------- *)
 
 val UNLAMB_CONV =
-    let val pth = prove
-        (``P (t:'a) = (!x. (x = t) ==> P x)``,
-            EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-            FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
+    let val pth = unlamb_pth
         and P_tm = ``P:'a->bool`` and t_tm = ``t:'a``
         and aty = Type.alpha
     in fn tm =>
@@ -668,11 +614,7 @@ fun last [] = failwith "last"
   | last (h::t) = last t;
 
 val FOL_CONV =
-    let val APP_CONV =
-        let val th = prove
-            (``!(f:'a->'b) x. f x = I f x``, REWRITE_TAC[I_THM])
-        in REWR_CONV th
-        end
+    let val APP_CONV = REWR_CONV app_conv_th
         fun get_heads x tm sofar =
             let val (v,bod) = dest_forall tm
             in if aconv x v then sofar else get_heads x bod sofar
@@ -735,7 +677,6 @@ val FOL_CONV =
         end
     end;
 
-val _ = Parse.temp_set_grammars ambient_grammars;
 
 (* ------------------------------------------------------------------------- *)
 (* ACI rearrangements of conjunctions and disjunctions. This is much faster  *)
@@ -773,13 +714,13 @@ in
 end; (* CONJ_ACI_RULE *)
 
 val DISJ_ACI_RULE = let
-  val pth_left = UNDISCH(TAUT `~(a \/ b) ==> ~a`)
-  and pth_right = UNDISCH(TAUT `~(a \/ b) ==> ~b`)
+  val pth_left = UNDISCH disj_aci_left
+  and pth_right = UNDISCH disj_aci_right
   (* NOTE: HOL4's UNDISCH treats ‘~(a \/ b)’ as ‘a \/ b ==> F’, while HOL-Light
      doesn't. We have changed ‘repeat’ to ‘funpow 2’ here.
    *)
-  and pth = funpow 2 UNDISCH (TAUT `~a ==> ~b ==> ~(a \/ b)`)
-  and pth_neg = UNDISCH(TAUT `(~a <=> ~b) ==> (a <=> b)`)
+  and pth = funpow 2 UNDISCH disj_aci_pth
+  and pth_neg = UNDISCH disj_aci_neg
   and a_tm = “a:bool” and b_tm = “b:bool”;
   fun NOT_DISJ_PAIR th = let
       val (p,q) = dest_disj(rand(concl th));

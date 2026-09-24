@@ -310,9 +310,8 @@ val penv = ``penv :'c |-> ('d -> ('d, 'b, 'c, 'a) asl_program)``
 val p = ``(asl_prog_block (p1::(asl_prog_block L)::p3::L')):('d, 'b, 'c, 'a) asl_program``
 *)
 
-val append_thm_comment_nil1 = prove (``
-   (asl_comment_location c []) ++ h::hs =
-   (asl_comment_location c (h:'a))::hs``, REWRITE_TAC[asl_comment_location_def, APPEND])
+val append_thm_comment_nil1 =
+    separationLogicTheory.asl_comment_location_APPEND_NIL_CONS
 fun is_comment_nil t =
    listSyntax.is_nil (#3 (dest_asl_comment t)) handle HOL_ERR _ => false
 

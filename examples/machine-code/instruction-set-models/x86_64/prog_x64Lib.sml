@@ -5,7 +5,7 @@ open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory pred_setTheory combinTheory;
 open set_sepTheory x64_Theory x64_Lib helperLib;
 open x64_seq_monadTheory x64_coretypesTheory x64_astTheory x64_icacheTheory;
-open prog_x64Theory wordsTheory x64_encodeLib;
+open prog_x64Theory wordsTheory x64_encodeLib prog_x64LibContextTheory;
 
 structure Parse = struct
   open Parse
@@ -47,9 +47,7 @@ fun name_for_resource counter tm = let
 val word2bytes_lemma = CONJ (EVAL ``word2bytes 2 (w:'a word)``)
                             (EVAL ``word2bytes 4 (w:'a word)``)
 
-val w2n_MOD = prove(
-  ``!imm32. w2n (imm32:word32) MOD 4294967296 = w2n imm32``,
-  Cases THEN FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]);
+val w2n_MOD = prog_x64LibContextTheory.w2n_MOD;
 
 fun pre_process_thm th = let
   val th = RW [ZREAD_MEM2_WORD64_THM,ZWRITE_MEM2_WORD64_THM,wordsTheory.WORD_ADD_0,
@@ -135,9 +133,7 @@ fun x64_pre_post g s = let
             else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
   in (pre,post) end;
 
-val SING_SUBSET = prove(
-  ``!x:'a y. {x} SUBSET y = x IN y``,
-  REWRITE_TAC [INSERT_SUBSET,EMPTY_SUBSET]);
+val SING_SUBSET = prog_x64LibContextTheory.SING_SUBSET;
 
 fun introduce_zBYTE_MEMORY_ANY th = if
   not (can (find_term (can (match_term ``zM1``))) (concl th))

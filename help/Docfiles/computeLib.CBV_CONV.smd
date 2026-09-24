@@ -35,7 +35,11 @@ there is at least one implication then also add `P1 ⇒ P2 ⇒ ... ⇒ t ⇔ T`.
 It is also possible to add conversions to a simplification set with
 `add_conv`. The only restriction is that a constant (`c`) and an arity
 (`n`) must be provided. The conversion will be called only on terms in
-which `c` is applied to `n` arguments.
+which `c` is applied to `n` arguments. A conversion that makes no
+progress on such a term, whether by failing, by raising `UNCHANGED`, or
+by returning a reflexive theorem, is skipped and the remaining rules for
+`c` are tried; its result is otherwise evaluated further in the same
+compset.
 
 Two theorem "preprocessors" are provided to control the strictness of
 the arguments of a constant. `lazyfy_thm` has pattern variables on the

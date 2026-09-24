@@ -81,17 +81,8 @@ val FPSCR_components =
   ["N", "Z", "C", "V", "AHP", "DN", "DZC", "DZE", "FZ", "IDC", "IDE", "IOC",
    "IOE", "IXC", "IXE", "OFC", "OFE", "QC", "RMode", "UFC", "UFE", "fpscr'rst"]
 
-val arm_frame =
-   stateLib.update_frame_state_thm arm_proj_def
-     (List.map (fn s => "CPSR." ^ s) PSR_components @
-      List.map (fn s => "FP.FPSCR." ^ s) FPSCR_components @
-      ["REG", "MEM", "FP.REG"])
-
-val arm_frame_hidden =
-   stateLib.update_hidden_frame_state_thm arm_proj_def
-      [``s with Encoding := x``,
-       ``s with CurrentCondition := x``,
-       ``s with undefined := x``]
+val arm_frame = arm_progTheory.arm_frame
+val arm_frame_hidden = arm_progTheory.arm_frame_hidden
 
 (* -- *)
 
@@ -729,8 +720,9 @@ local
          [r, m, _, fp] => [r, m, fp]
        | _ => raise ERR "component_11" ""
    val sym_R_x_pc =
-      REWRITE_RULE [utilsLib.qm [] ``(a = RName_PC) = (RName_PC = a)``]
-         arm_stepTheory.R_x_pc
+      REWRITE_RULE
+        [Drule.ISPECL [``a: RName``, ``RName_PC``] boolTheory.EQ_SYM_EQ]
+        arm_stepTheory.R_x_pc
    val EXTRA_TAC =
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, arm_stepTheory.R_x_pc])
       THEN ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]

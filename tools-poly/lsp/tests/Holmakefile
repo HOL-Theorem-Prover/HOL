@@ -1,0 +1,80 @@
+# `tools-poly/lsp' is deliberately not a Holmake directory: nothing
+# under `src/' names `LSPExtension', which is what lets the Moscow ML
+# build ignore the LSP entirely.  The cost is that the files a language
+# server QUse's at startup are compiled by nothing, so a rename in
+# `TacticParse', `DefnBase', `Preterm' or `DB' breaks them silently.
+#
+# This directory buys the check back without giving that up: it compiles
+# those files by loading them, and is `[poly]' in the build sequence, so
+# the Moscow ML build still never looks at any of it.
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+# No `HOLSELFTESTLEVEL' check: this directory is reached through
+# `src/parallel_builds/core's INCLUDES, which consults it, and is
+# scanned into that Holmake's graph rather than run by the build
+# sequence.  Holmake here at all means run the tests, which is also
+# what someone typing `Holmake' in this directory wants.
+ifdef POLY
+all: lsp-init-selftest.log lsp-init-bare-selftest.log
+all: tacticparse-selftest.log
+all: lsp-protocol-selftest.log
+
+# The files under test.  `bin/hol' reads them at every server start, so
+# editing one changes what the tests below exercise while leaving every
+# object file alone; named here, that is a rebuild.  The `integer' and
+# `sorting' groups run servers too, and are deliberately not listed
+# against them: nine more tests are not worth another 50s per edit.
+LSPDIR = $(dprot $(HOLDIR)/tools-poly/lsp)
+LSPINIT = $(LSPDIR)/deferred_proofs.ML $(LSPDIR)/pretty_printers_init.ML \
+          $(LSPDIR)/defnbase_init.ML $(LSPDIR)/hover_quote_init.ML \
+          $(LSPDIR)/tactic_steps.ML $(LSPDIR)/tactic_walker.ML \
+          $(LSPDIR)/goal_state_init.ML $(LSPDIR)/db_symbols_init.ML \
+          $(LSPDIR)/db_search_init.ML $(LSPDIR)/help_init.ML
+
+# `bin/hol' rather than a selftest.exe: these files want the heap a
+# server has, and loading them is the test.  The script exits non-zero
+# if any of them fails to compile.  Twice, because the heap decides
+# what they may name: once on the full heap, and once on `hol.state0',
+# which is what a server gets in every directory up to `src/boss' --
+# `src/num/theories' among them.
+LOADTEST = load-init-files.ML $(LSPINIT) $(dprot $(HOLDIR)/bin/hol)
+
+lsp-init-selftest.log: $(LOADTEST) $(dprot $(HOLDIR)/bin/hol.state)
+	$(tee $(protect $(HOLDIR)/bin/hol) < load-init-files.ML 2>&1, $@)
+
+lsp-init-bare-selftest.log: $(LOADTEST) $(dprot $(HOLDIR)/bin/hol.state0)
+	$(tee $(protect $(HOLDIR)/bin/hol) --bare < load-init-files.ML 2>&1, $@)
+
+# TacticParse is compiled into `bin/hol' rather than sigobj, so a
+# selftest.exe cannot link it; it is driven the same way as the above.
+tacticparse-selftest.log: tacticparse-tests.ML $(dprot $(HOLDIR)/bin/hol)
+	$(tee $(protect $(HOLDIR)/bin/hol) < tacticparse-tests.ML 2>&1, $@)
+
+# The protocol suite: ~150 scenarios driving `bin/hol lsp' as a
+# scripted LSP client.  It wants the full heap, which `src/boss' has
+# deposited well before this directory is reached.
+#
+# `--requires none' is everything needing nothing beyond that heap.
+# The tests that need a source directory the core build never reaches
+# live in `integer/' and `sorting/', which build their own
+# prerequisite through INCLUDES.
+#
+# Python is not a HOL build dependency, so a tree without `python3'
+# says so in the log and moves on rather than failing the build.  The
+# message is the point: a suite that quietly stops running reads
+# exactly like a suite that passes.
+PROTOCOL_CMD = if command -v python3 > /dev/null 2>&1 ; \
+               then python3 -u lsp_tests.py --requires none 2>&1 ; \
+               else echo "python3 not found: LSP protocol suite NOT run" ; \
+               fi
+
+lsp-protocol-selftest.log: lsp_tests.py $(LSPINIT) \
+                           $(dprot $(HOLDIR)/bin/hol) \
+                           $(dprot $(HOLDIR)/bin/hol.state)
+	$(tee $(PROTOCOL_CMD), $@)
+
+EXTRA_CLEANS = lsp-init-selftest.log lsp-init-bare-selftest.log \
+               tacticparse-selftest.log lsp-protocol-selftest.log
+endif

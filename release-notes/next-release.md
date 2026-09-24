@@ -117,6 +117,22 @@ New features
     effect under Moscow ML (whose `Holmake` is always
     sequential) or under Poly/ML `Holmake -j 1`.
 
+-   `Holmake` (under Poly/ML) takes a new option `--retry-oos=n`,
+    which allows each target up to `n` further attempts when its
+    build fails with the Poly/ML runtime reporting that it has run
+    out of store.  That message means the runtime could not grow
+    the ML heap; because the shortage is a property of the machine
+    at that moment rather than of the target, running the same
+    build again will often succeed.  A failure that does not carry
+    the message is never retried, and the default of zero leaves
+    the previous behaviour unchanged.  An attempt that is going to
+    be retried is reported as `RETRY` rather than as a failure, and
+    the number of re-runs performed is reported when the build
+    finishes.  Recognising the message means reading the log
+    `Holmake` keeps for each job, so the option has no effect under
+    `Holmake -j 1`, which writes a command's output straight to the
+    terminal.
+
 -   `Holmake` recognises a project-root marker file
     `holproject.toml`: dropping one at the top of a multi-directory
     development tells `Holmake` that every `Holmakefile`-bearing
@@ -205,6 +221,13 @@ Bugs fixed
     In long-running sessions the cache accumulated entries — both in number of cached goals and in the per-key list of `(context, result)` pairs under each goal — and `simp` invocations slowed down approximately linearly with session length, dominated by linear scans of the per-key list under `boolSyntax.F`.
     The cache now uses LRU eviction on the keyspace and a per-key list cap, with both bounds set at cache-creation time.
     See the `Cache.sig` header for the new `{capacity, per_key_cap}` constructor argument.
+
+-   metis's finite-model heuristic, which weights clauses by how often they hold in a model of the axioms, sampled its valuations from a single random generator created when `mlibModel` was loaded and never reset, and numbered its models from a counter with the same lifetime — a number that is hashed into the model's interpretation.
+    Every metis call therefore started from whatever state the previous one left behind, so what a goal cost depended on what had been proved before it in the same session: repeats of one identical relevant-logic proof in a single process ranged from 0.5s to 40s, and the theory containing it built in either 5.6s or 32s depending only on how far the generator had advanced.
+    Each model now carries its own generator, and both that and the model's identity are seeded from the structure of the problem being refuted, so which models a call gets no longer depends on its predecessors.
+    The two models behind `mlibSupport`'s probable-tautology filter are likewise built per call rather than once per process, which also stops their memoisation caches growing for the lifetime of the session.
+    Repeats of one goal still search slightly differently, because HOL's CNF names skolem constants from a genvar counter and model interpretations are md5-derived from those names; that residual is in the naming rather than in metis.
+    `developers/bench-metis-order.sml` measures what is left.
 
 New theories
 ------------

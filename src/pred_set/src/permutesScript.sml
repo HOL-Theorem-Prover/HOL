@@ -20,7 +20,7 @@ val qexistsl_tac = map_every qexists_tac;
 val qid_spec_tac = Q.ID_SPEC_TAC;
 val rename1 = Q.RENAME1_TAC;
 val rw = SRW_TAC [];
-fun simp ths = ASM_SIMP_TAC (srw_ss()) ths;
+fun simp ths g ctxt = ASM_SIMP_TAC (srw_ss_of ctxt) ths g ctxt;
 
 (* ========================================================================= *)
 (* HOL-Light compatibility layer                                             *)

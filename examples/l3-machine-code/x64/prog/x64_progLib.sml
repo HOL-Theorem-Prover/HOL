@@ -75,9 +75,7 @@ val state_id =
        ["XMM_REG"]
       ]
 
-val x64_frame =
-   stateLib.update_frame_state_thm x64_proj_def
-     ["RIP", "REG", "MEM", "EFLAGS", "MXCSR", "XMM_REG"]
+val x64_frame = x64_progTheory.x64_frame
 
 (* -- *)
 

@@ -129,6 +129,7 @@ datatype grammar = GCONS of
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
    preterm_processors : ptmprocessor SI_Tab.table,
+   user_state : UniversalType.t Symtab.table,
    next_timestamp : int
    }
 and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
@@ -164,32 +165,118 @@ fun preterm_processor (GCONS g) k =
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate9 z
+fun gcons_mkUp z = makeUpdate10 z
 fun update_G z = let
   fun from rules specials numeral_info overload_info user_printers
-           absyn_postprocessors preterm_processors next_timestamp
+           absyn_postprocessors preterm_processors user_state next_timestamp
            strlit_map =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
-     preterm_processors = preterm_processors, next_timestamp = next_timestamp}
+     preterm_processors = preterm_processors, user_state = user_state,
+     next_timestamp = next_timestamp}
   (* fields in reverse order to above *)
-  fun from' strlit_map next_timestamp preterm_processors absyn_postprocessors
-            user_printers
+  fun from' strlit_map next_timestamp user_state preterm_processors
+            absyn_postprocessors user_printers
             overload_info numeral_info specials rules =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
-     preterm_processors = preterm_processors, next_timestamp = next_timestamp }
+     preterm_processors = preterm_processors, user_state = user_state,
+     next_timestamp = next_timestamp }
   (* first order *)
   fun to f {rules, specials, numeral_info,
             overload_info, user_printers, absyn_postprocessors,
-            preterm_processors, next_timestamp, strlit_map} =
+            preterm_processors, user_state, next_timestamp, strlit_map} =
     f rules specials numeral_info overload_info user_printers
-      absyn_postprocessors preterm_processors next_timestamp strlit_map
+      absyn_postprocessors preterm_processors user_state next_timestamp
+      strlit_map
 in
   gcons_mkUp (from, from', to)
 end z
+
+fun fupdate_user_state f (GCONS g) =
+    GCONS (update_G g (U #user_state (f (#user_state g))) $$)
+
+(* ----------------------------------------------------------------------
+    State belonging to a user-registered parser or printer function
+
+    A function registered through `userSyntaxFns' is handed the grammar it
+    is working with --- an absyn postprocessor takes it directly, a user
+    printer takes it as the second half of its (tyg,tmg) pair --- but its
+    type mentions nothing else, so a registrant needing auxiliary state of
+    its own had no home for it and had to reach for a process-global.
+    That is wrong twice over: such state belongs with the grammar it
+    extends the behaviour of, and reading it ambiently during a proof is
+    exactly what the context-passing migration is removing.
+
+    So the grammar carries a slot per registrant, and the registrant reads
+    it out of the grammar it was already given.  Registration is
+    unchanged, and a function with no state of its own is unaffected.
+
+    Updating a slot is an ordinary grammar transformation, which is the
+    point: it travels the same path as adding a rule or an overload, so
+    `Parse.upd_term_grammar' rederives the parser and nothing can go
+    stale.
+
+    Persistence goes the same way registration does.  A grammar is not
+    stored whole: it is rebuilt on load by replaying its recorded deltas
+    over its merged parents, which is why ADD_ABSYN_POSTP names the code
+    to reinstall rather than storing it.  A value installed only into the
+    ambient grammar would therefore not survive a theory load, so the
+    registrant's own encoded delta rides that same stream as
+    ADD_USER_STATE, and `add_delta' applies it through the registry.
+    Ancestors that both hold a value meet in `merge_grammars', using the
+    merge the key was made with.
+   ---------------------------------------------------------------------- *)
+type 'a state_key = {name : string, init : 'a,
+                     inj : 'a -> UniversalType.t,
+                     prj : UniversalType.t -> 'a option}
+
+(* merge_grammars sees only the slot's name, so each key leaves behind a
+   merge that has already forgotten the type it was made for *)
+val state_mergers :
+    (UniversalType.t * UniversalType.t -> UniversalType.t) Symtab.table ref =
+    ref Symtab.empty
+
+fun merge_user_state (t1, t2) =
+    Symtab.join
+      (fn k => fn (u1, u2) =>
+          case Symtab.lookup (!state_mergers) k of
+              SOME m => m (u1, u2)
+            | NONE => u1)
+      (t1, t2)
+
+(* Two registrants under one name would each read the other's value,
+   see it fail to project, and silently fall back to `init' -- that is,
+   quietly lose their state.  Refuse the clash instead. *)
+fun new_state_key {name, init, merge} =
+    let
+      val _ = if Symtab.defined (!state_mergers) name then
+                raise ERROR "new_state_key"
+                      ("Grammar state slot " ^ Lib.mlquote name ^
+                       " is already registered")
+              else ()
+      val (inj, prj) = UniversalType.embed ()
+      fun umerge (u1, u2) =
+          case (prj u1, prj u2) of
+              (SOME v1, SOME v2) => inj (merge (v1, v2))
+            | (NONE, _) => u2
+            | _ => u1
+      val _ = state_mergers := Symtab.update (name, umerge) (!state_mergers)
+    in {name = name, init = init, inj = inj, prj = prj} end
+
+(* `init' answers for a grammar built before the registrant existed, and
+   for one whose slot holds another registrant's value under the same
+   name --- neither should be an error at parse time. *)
+fun get_user_state ({name, init, prj, ...} : 'a state_key) (GCONS g) =
+    case Symtab.lookup (#user_state g) name of
+        NONE => init
+      | SOME u => (case prj u of SOME v => v | NONE => init)
+
+fun upd_user_state (key as {name, inj, ...} : 'a state_key) f G =
+    fupdate_user_state
+      (Symtab.update (name, inj (f (get_user_state key G)))) G
 
 fun fupdate_rules f (GCONS g) =
     GCONS (update_G g (U #rules (f (#rules g))) $$)
@@ -499,6 +586,7 @@ val stdhol : grammar =
    user_printers = (FCNet.empty, HOLset.empty String.compare),
    absyn_postprocessors = [],
    preterm_processors = SI_Tab.empty,
+   user_state = Symtab.empty,
    next_timestamp = 1
    }
 
@@ -1042,6 +1130,8 @@ structure userSyntaxFns = struct
   val (get_userPP, register_userPP) = mk_table() : userprinter t
   val (get_absynPostProcessor, register_absynPostProcessor) =
       mk_table() : absyn_postprocessor t
+  type state_delta = ThyDataSexp.t -> grammar -> grammar
+  val (get_stateDelta, register_stateDelta) = mk_table() : state_delta t
 end
 
 fun add_delta ud G =
@@ -1090,6 +1180,16 @@ fun add_delta ud G =
                         " registered for add absyn-postprocessor")
       in
         new_absyn_postprocessor (codename, code) G
+      end
+    | ADD_USER_STATE {codename, delta} =>
+      let
+        val code = userSyntaxFns.get_stateDelta codename
+          handle Option =>
+                 raise ERROR "add_delta"
+                       ("No code named "^codename^
+                        " registered for user grammar state")
+      in
+        code delta G
       end
     | ADD_STRLIT r => add_strlit_injector r G
     | RM_STRLIT r => remove_strlit_injector r G
@@ -1181,6 +1281,11 @@ in
                                             (absyn_postprocessors0 G2),
          preterm_processors =
            bmap_merge (#preterm_processors g1) (#preterm_processors g2),
+         (* Two ancestors can each have extended the same registrant --
+            combin, list and finite_map all add to combinpp's bracket
+            dictionary -- so this has to combine the values, not pick
+            one.  How is the registrant's business; see new_state_key. *)
+         user_state = merge_user_state (#user_state g1, #user_state g2),
          next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2),
          strlit_map = Symtab.join (fn _ => fn (_,v2) => v2)
                                   (#strlit_map g1, #strlit_map g2)

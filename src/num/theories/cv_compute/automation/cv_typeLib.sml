@@ -14,7 +14,7 @@ open integerTheory wordsTheory cv_typeTheory cv_memLib cv_repTheory;
 val ERR = mk_HOL_ERR "cv_typeLib";
 
 fun auto_prove proof_name (goal,tac:tactic) = let
-  val (rest,validation) = tac ([],goal)
+  val (rest,validation) = tac ([],goal) (Context.snapshot())
     handle HOL_ERR r => raise (ERR "auto_prove" "tactic failure")
       | Empty => raise (ERR "auto_prove" "tactic raised Empty")
   in if length rest = 0 then validation [] else let

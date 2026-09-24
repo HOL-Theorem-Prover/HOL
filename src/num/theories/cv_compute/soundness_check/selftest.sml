@@ -4,6 +4,8 @@ open cv_compute_unsoundTheory
 open cv_computeLib
 open gh2029contextTheory
 
+val _ = new_theory "scratch"
+
 val bad_cv_fst1 = bad_cv_fst1_lemma |> UNDISCH;
 
 val cval_terms = [

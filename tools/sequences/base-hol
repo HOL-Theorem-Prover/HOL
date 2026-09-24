@@ -59,3 +59,7 @@ src/boss
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
+# The LSP tests are not here: they are INCLUDES of
+# `src/parallel_builds/core', so they run as jobs among the theory
+# builds rather than as minutes of one core with the rest stopped.
+

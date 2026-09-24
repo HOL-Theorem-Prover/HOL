@@ -84,6 +84,8 @@ local
     | NONE => raise Fail ("parseFrags: no HOLTheoremDecl in " ^ tacText)
   fun open_ch FOpen           = "("
     | open_ch FOpenThen1      = "["
+    | open_ch (FOpenBy _)     = "B"
+    | open_ch (FOpenSufficesBy _) = "U"
     | open_ch FOpenFirst      = "<"
     | open_ch FOpenRepeat     = "R"
     | open_ch FOpenTacsToLT   = "T"
@@ -144,8 +146,8 @@ in
   val _ = check "THENL single"     "tac1 THENL [b1]"             "EKTE))"
   val _ = check ">~ selector"      "tac1 >~ [`P`]"               "EG"
   val _ = check ">>~ selector"     "tac1 >>~ [`P`, `Q`]"         "Eg"
-  val _ = check "by block"         "`n < 10` by (rw[] >> simp[])" "S[EE)"
-  val _ = check "suffices_by"      "`n < 10` suffices_by rw[]"    "SV[E)"
+  val _ = check "by block"         "`n < 10` by (rw[] >> simp[])" "BEE)"
+  val _ = check "suffices_by"      "`n < 10` suffices_by rw[]"    "UE)"
   (* MapEvery/MapFirst/Rename are single atoms whose span covers only
      an operand -- the walker reaches them through TacticParse's
      inverse printer, so pin that they stay atoms. *)

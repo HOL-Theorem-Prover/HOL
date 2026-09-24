@@ -31,7 +31,7 @@ fun fold_file path add acc0 =
     loop acc0 before TextIO.closeIn ins
   end
 
-fun theory_cost m fp =
+fun cost m fp =
     case Binarymap.peek (m, Holmake_tools.rel_to_holdir fp) of
         NONE => 0.0
       | SOME v => v
@@ -52,19 +52,12 @@ fun warn s =
   (TextIO.output (TextIO.stdErr, "target_times: " ^ s ^ "\n");
    TextIO.flushOut TextIO.stdErr)
 
-fun merge_from_log {root, log_path} =
+fun merge_with root add =
   let
     val outpath = file_for root
     val tmp = outpath ^ ".tmp"
     val () = HOLFileSys.createDirIfNecessary (dir_for root)
-    val m0 = load {root = SOME root}
-    val m1 =
-      if HOLFileSys.exists_readable log_path then
-        fold_file log_path
-          (fn (SOME (k, v), m) => Binarymap.insert (m, k, v)
-            | (NONE, m) => m)
-          m0
-      else m0
+    val m1 = add (load {root = SOME root})
     val outs = TextIO.openOut tmp
     (* Fixed-point matches the per-run log format (0.760, not 1E~3);
        both parse via Real.fromString, but FIX keeps the file
@@ -80,5 +73,22 @@ fun merge_from_log {root, log_path} =
   handle IO.Io _ => warn ("could not update " ^ file_for root)
        | OS.SysErr (msg, _) =>
            warn ("could not update " ^ file_for root ^ ": " ^ msg)
+
+fun merge_from_log {root, log_path} =
+    merge_with root
+      (fn m0 =>
+          if HOLFileSys.exists_readable log_path then
+            fold_file log_path
+              (fn (SOME (k, v), m) => Binarymap.insert (m, k, v)
+                | (NONE, m) => m)
+              m0
+          else m0)
+
+fun merge_entries {root, entries} =
+    if null entries then ()
+    else merge_with root
+           (fn m0 => List.foldl
+                       (fn ((k, v), m) => Binarymap.insert (m, k, v))
+                       m0 entries)
 
 end

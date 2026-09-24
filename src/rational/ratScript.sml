@@ -825,7 +825,7 @@ end;
  *  calculates the value of t1:rat
  *--------------------------------------------------------------------------*)
 
-fun RAT_CALCTERM_TAC (t1:term) (asm_list,goal) =
+fun RAT_CALCTERM_TAC (t1:term) (asm_list,goal) ctxt =
         let
                 val calc_thm = RAT_CALC_CONV t1;
                 val (calc_asms, calc_concl) = dest_thm calc_thm;
@@ -833,7 +833,7 @@ fun RAT_CALCTERM_TAC (t1:term) (asm_list,goal) =
                 (
                         MAP_EVERY ASSUME_TAC (map (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [FRAC_DNMPOS,INT_MUL_POS_SIGN,INT_NOTPOS0_NEG,INT_NOT0_MUL,INT_GT0_IMP_NOT0,INT_ABS_NOT0POS])) calc_asms) THEN
                         SUBST_TAC[calc_thm]
-                ) (asm_list,goal)
+                ) (asm_list,goal) ctxt
         end
 handle HOL_ERR _ => raise ERR "RAT_CALCTERM_TAC" "";
 
@@ -845,7 +845,7 @@ handle HOL_ERR _ => raise ERR "RAT_CALCTERM_TAC" "";
  *  assumptions that were needed for the simplification are added to the goal
  *--------------------------------------------------------------------------*)
 
-fun RAT_CALC_TAC (asm_list,goal) =
+fun RAT_CALC_TAC (asm_list,goal) (_ : Context.t) =
         let
                         (* extract terms of type ``:rat`` *)
                 val rat_terms = extract_rat goal;
@@ -4129,6 +4129,48 @@ Proof
   >> metis_tac[RAT_EXP_LT2,RAT_EXP_INJ]
 QED
 
+
+(* Rational-addition AC helpers ratLib formerly proved at load time. *)
+
+Theorem RAT_ADD_ASSOC_COMM_L:
+  !x y z:rat. (x + y) + z = (x + z) + y
+Proof
+  REPEAT GEN_TAC THEN
+  CONV_TAC (BINOP_CONV (REWR_CONV (GSYM RAT_ADD_ASSOC))) THEN
+  CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV RAT_ADD_COMM))) THEN
+  REFL_TAC
+QED
+
+Theorem RAT_ADD_ASSOC_COMM_R:
+  !x y z:rat. x + (y + z) = y + (x + z)
+Proof
+  REPEAT GEN_TAC THEN
+  CONV_TAC (BINOP_CONV (REWR_CONV RAT_ADD_ASSOC)) THEN
+  CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV RAT_ADD_COMM))) THEN
+  REFL_TAC
+QED
+
+Theorem RAT_DIV_NUMERAL_BIT1_SELF:
+  !x. &(NUMERAL (BIT1 x)) / &(NUMERAL (BIT1 x)) = 1
+Proof
+  GEN_TAC THEN MATCH_MP_TAC RAT_DIV_INV THEN
+  REWRITE_TAC [RAT_EQ_NUM_CALCULATE] THEN
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
+               arithmeticTheory.BIT2,
+               arithmeticTheory.BIT1, numTheory.NOT_SUC,
+               arithmeticTheory.ADD_CLAUSES]
+QED
+
+Theorem RAT_DIV_NUMERAL_BIT2_SELF:
+  !x. &(NUMERAL (BIT2 x)) / &(NUMERAL (BIT2 x)) = 1
+Proof
+  GEN_TAC THEN MATCH_MP_TAC RAT_DIV_INV THEN
+  REWRITE_TAC [RAT_EQ_NUM_CALCULATE] THEN
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
+               arithmeticTheory.BIT2,
+               arithmeticTheory.BIT1, numTheory.NOT_SUC,
+               arithmeticTheory.ADD_CLAUSES]
+QED
 
 (*==========================================================================
  * end of theory

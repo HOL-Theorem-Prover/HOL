@@ -31,7 +31,7 @@ is `SELECT_ELIM_THM`, from theory `bool`.)
 When applied to this goal,
 
 ``` hol4
-   - SELECT_ELIM_TAC ([], ``(@x. x < 4) < 5``);
+   - SELECT_ELIM_TAC ([], ``(@x. x < 4) < 5``) (Context.snapshot());
    > val it = ([([], ``(?x. x < 4) /\ !x. x < 4 ==> x < 5``)], fn) :
        (term list * term) list * (thm list -> thm)
 ```

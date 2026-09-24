@@ -106,7 +106,10 @@ Theorem s_conj_intro_rule:
           slaney_provable (A -->ₛ C) ⇒
           slaney_provable (A -->ₛ (B &ₛ C))
 Proof
-  metis_tac[slaney_provable_rules]
+  rpt strip_tac >>
+  ‘slaney_provable ((A -->ₛ B) &ₛ (A -->ₛ C))’
+    by metis_tac[s_adjunction_rule] >>
+  metis_tac[s_conj_introduction, s_modus_ponens]
 QED
 
 Theorem s_equiv_replacement:
@@ -216,7 +219,13 @@ Proof
       last_x_assum $ qspecl_then [‘~ₛ (A Vₛ B)’, ‘~ₛ A’, ‘~ₛ B’] strip_assume_tac >>
       ‘slaney_provable (((~ₛ (A Vₛ B) -->ₛ ~ₛ A) &ₛ (~ₛ (A Vₛ B) -->ₛ ~ₛ B)))’ suffices_by
         metis_tac[s_modus_ponens] >>
-      metis_tac[slaney_provable_rules, s_double_negative_equiv, s_equiv_replacement])
+      ‘slaney_provable (~ₛ (A Vₛ B) -->ₛ ~ₛ A)’
+        by metis_tac[s_disjunction_l, s_contrapositive_2,
+                     s_equiv_replacement] >>
+      ‘slaney_provable (~ₛ (A Vₛ B) -->ₛ ~ₛ B)’
+        by metis_tac[s_disjunction_r, s_contrapositive_2,
+                     s_equiv_replacement] >>
+      metis_tac[s_adjunction_rule])
 QED
 
 Theorem s_IO_definable:

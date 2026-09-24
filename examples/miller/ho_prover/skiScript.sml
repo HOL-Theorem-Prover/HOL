@@ -86,5 +86,52 @@ Proof
    ++ RW_TAC std_ss [S_DEF, K_DEF]
 QED
 
+Theorem S_K_o:
+     !x. S (K x) = $o x
+Proof
+   !! STRIP_TAC
+   ++ CONV_TAC (FUN_EQ_CONV)
+   ++ !! STRIP_TAC
+   ++ CONV_TAC (FUN_EQ_CONV)
+   ++ RW_TAC std_ss [S_DEF, K_DEF, o_DEF]
+QED
+
+Theorem S_o_K:
+     S o K = $o
+Proof
+   CONV_TAC (FUN_EQ_CONV)
+   ++ RW_TAC std_ss [S_K_o, o_DEF]
+QED
+
+Theorem S_K_C:
+     !x y. S x (K y) = C x y
+Proof
+   !! STRIP_TAC
+   ++ CONV_TAC (FUN_EQ_CONV)
+   ++ RW_TAC std_ss [S_DEF, K_DEF, C_DEF]
+QED
+
+Theorem C_K_K:
+     !x y. C (K x) y = K (x y)
+Proof
+   !! STRIP_TAC
+   ++ CONV_TAC (FUN_EQ_CONV)
+   ++ RW_TAC std_ss [K_DEF, C_DEF]
+QED
+
+Theorem o_I_EQ_I:
+     $o I = I
+Proof
+   CONV_TAC (FUN_EQ_CONV)
+   ++ RW_TAC std_ss [I_THM, o_DEF]
+QED
+
+Theorem S_K_K_EQ_I:
+     S K K = I
+Proof
+   CONV_TAC (FUN_EQ_CONV)
+   ++ RW_TAC std_ss [I_THM, S_DEF, K_DEF]
+QED
+
 (* non-interactive mode
 *)

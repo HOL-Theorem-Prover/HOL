@@ -180,8 +180,6 @@ val tree_partial_foldl :
 val memoize   : (unit -> 'a) -> unit -> 'a
 val new_int   : unit -> int
 val new_ints  : int -> int list
-val uniform   : unit -> real
-val coin_flip : unit -> bool
 val with_flag : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
 
 (* The environment *)

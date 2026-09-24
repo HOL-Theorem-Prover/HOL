@@ -12,6 +12,8 @@ sig
     val prove_it :  Hol_pp.term ->   Parse.term ->  Parse.term -> Parse.term -> Parse.term -> Abbrev.thm * Abbrev.tactic
     val obtain_proofs : unit -> Abbrev.thm
     val GO_ON_TAC : unit -> Abbrev.tactic
+    val GO_ON_TAC_G : Abbrev.tactic
+    val GO_ON_N : int -> Abbrev.tactic
     val go_on : int -> proofManagerLib.proof
     val go_on_p : int -> proofManagerLib.proof
     val thm_prove : Hol_pp.term -> Abbrev.thm
@@ -22,7 +24,7 @@ sig
     val prove_and_save_s : Hol_pp.term * string -> Theory.thm
     val prove_and_save_p : Hol_pp.term * string * Parse.term -> Theory.thm
     val prove_and_save_p_helper : Hol_pp.term * string -> Theory.thm
-    val MODE_MIX_TAC : Term.term ->  Abbrev.term list * Abbrev.term -> Abbrev.goal list * Abbrev.validation
-    val LITTLE_MODE_MIX_TAC : Term.term ->  Abbrev.term list * Abbrev.term -> Abbrev.goal list * Abbrev.validation
+    val MODE_MIX_TAC : Term.term -> Abbrev.tactic
+    val LITTLE_MODE_MIX_TAC : Term.term -> Abbrev.tactic
 end
 

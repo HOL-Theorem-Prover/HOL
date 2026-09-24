@@ -1,3 +1,4 @@
+include $(HOLDIR)/src/TeX/mungedeps.hmf
 INCLUDES = ../theories
 
 LATEXMK_EXISTS = $(if $(which latexmk),yes,no)
@@ -10,7 +11,7 @@ endif
 paper.tex: paper.htex overrides munge
 	./munge overrides < $< > $@
 
-munge: ppLib.uo
+munge: ppLib.uo $(MUNGE_DEPS)
 	$(HOLDIR)/bin/mkmunge.exe -o $@ $<
 
 holtexbasic.sty: $(HOLDIR)/src/TeX/holtexbasic.sty

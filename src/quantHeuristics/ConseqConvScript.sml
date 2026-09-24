@@ -150,3 +150,7 @@ Proof
   REWRITE_TAC[ASM_MARKER_DEF] THEN
   BETA_TAC THEN REWRITE_TAC []
 QED
+
+Theorem true_imp_elim_thm:  (T ==> b) <=> b
+Proof REWRITE_TAC []
+QED

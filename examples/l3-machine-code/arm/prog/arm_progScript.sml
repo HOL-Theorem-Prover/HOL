@@ -56,6 +56,31 @@ val (arm_REGISTERS_def, arm_REGISTERS_INSERT) =
 val (arm_MEMORY_def, arm_MEMORY_INSERT) =
    stateLib.define_map_component ("arm_MEMORY", "mem", arm_MEM_def)
 
+(* Frame theorems moved here from arm_progLib so that stateLib's
+   Tactical.prove-based helpers run inside a Script (with a current
+   theory) instead of at library load time.  arm_progLib pulls these
+   back via arm_progTheory. *)
+val arm_proj_def = DB.definition "arm_proj_def"
+val PSR_components =
+  ["N", "Z", "C", "V", "Q", "J", "T", "E", "A", "I", "F", "M", "IT",
+   "GE", "psr'rst"]
+val FPSCR_components =
+  ["N", "Z", "C", "V", "AHP", "DN", "DZC", "DZE", "FZ", "IDC", "IDE",
+   "IOC", "IOE", "IXC", "IXE", "OFC", "OFE", "QC", "RMode", "UFC",
+   "UFE", "fpscr'rst"]
+
+Theorem arm_frame =
+   stateLib.update_frame_state_thm arm_proj_def
+     (List.map (fn s => "CPSR." ^ s) PSR_components @
+      List.map (fn s => "FP.FPSCR." ^ s) FPSCR_components @
+      ["REG", "MEM", "FP.REG"])
+
+Theorem arm_frame_hidden =
+   stateLib.update_hidden_frame_state_thm arm_proj_def
+      [``s with Encoding := x``,
+       ``s with CurrentCondition := x``,
+       ``s with undefined := x``]
+
 Definition arm_WORD_def:
    arm_WORD a (i: word32) =
    arm_MEM a ((7 >< 0) i) *

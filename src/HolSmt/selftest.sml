@@ -116,7 +116,7 @@ fun mk_test_fun is_configured expect_fun name smt_tac =
 (* performance)                                                              *)
 (*****************************************************************************)
 
-fun auto_tac (_, t) =
+fun auto_tac (_, t) (_ : Context.t) =
   let
     val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
     val simp_thms =

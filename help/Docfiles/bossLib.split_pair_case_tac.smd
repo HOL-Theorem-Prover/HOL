@@ -30,7 +30,9 @@ Fails if there is no such sub-term.
 ### Example
 
 ``` hol4
->> split_pair_case_tac ([], ``(case p of (x,y,z) => x + y * z) > 10``);
+>> split_pair_case_tac 
+     ([], “(case p of (x,y,z) => x + y * z) > 10”)
+     (Context.snapshot())
 ```
 
 ### See also

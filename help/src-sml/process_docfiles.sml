@@ -353,6 +353,72 @@ fun process_docfiles_main () =
               List.foldl add ([], Binarymap.mkDict String.compare)
                          (List.concat (map entries_of src_dirs))
         in (List.rev acc, seen) end
+    (* An entry's ML directives may `load` a structure that this
+       configuration never built.  The otknl kernel, for instance, leaves
+       out src/num/theories/cv_compute/automation -- Thm.compute is not
+       available under that kernel -- so the cv_transLib entries cannot be
+       polyscripted there, and `load` fails with
+
+           Cannot find file cv_transLib.ui
+
+       Drop those entries with a warning rather than failing: the docs are
+       missing a library this build does not have, which is not a reason to
+       fail a build whose theories are all fine.  Same spirit as the
+       missing-pandoc downgrade below.  Entries that merely mention such a
+       structure in prose are unaffected; only a `load` of it matters. *)
+    val sigobj = pjoin (Systeml.HOLDIR, "sigobj")
+    fun ui_present s =
+        OS.FileSys.access (pjoin (sigobj, s ^ ".ui"), [OS.FileSys.A_READ])
+    (* Only ML directives count: a `load` shown inside a plain ``` block
+       is illustration, not something polyscripter runs.  A directive runs
+       from its `>>` line to the next blank line (see getRest in
+       polyscripter), and may be indented. *)
+    fun directive_text txt =
+      let
+        fun trim l = Substring.string (Substring.dropl Char.isSpace
+                                        (Substring.full l))
+        fun recurse (acc, indir, []) = String.concat (List.rev acc)
+          | recurse (acc, indir, l::ls) =
+            let
+              val t = trim l
+              val starts = String.isPrefix ">>" t
+              val blank = t = ""
+              val indir' = if starts then true
+                           else if blank then false
+                           else indir
+            in
+              recurse (if indir' then (l ^ "\n") :: acc else acc,
+                       indir', ls)
+            end
+      in recurse ([], false, String.fields (fn c => c = #"\n") txt) end
+    fun loaded_structures txt =
+      let
+        fun recurse (acc, ss) =
+          let val (_, rest) = Substring.position "load \"" ss
+          in
+            if Substring.isEmpty rest then List.rev acc
+            else
+              let
+                val rest = Substring.triml 6 rest
+                val (nm, rest') = Substring.splitl (fn c => c <> #"\"") rest
+              in recurse (Substring.string nm :: acc, rest') end
+          end
+      in recurse ([], Substring.full (directive_text txt)) end
+    fun missing_load (d, b) =
+        List.find (not o ui_present)
+                  (loaded_structures
+                     (readWholeFile (pjoin (d, b ^ ".smd"))
+                      handle _ => ""))
+    val entries =
+        List.filter
+          (fn e as (_, b) =>
+              case missing_load e of
+                  NONE => true
+                | SOME s =>
+                  (warnLn ("Skipping " ^ b ^ ".smd: it loads " ^ s ^
+                           ", which this build did not produce");
+                   false))
+          entries
     val bases = map #2 entries
     (* The dedup map doubles as the base -> source-directory lookup. *)
     fun srcdir_of b = Binarymap.find (srcdir, b)

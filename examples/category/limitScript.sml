@@ -438,7 +438,8 @@ Proof
       srw_tac [][EXISTS_UNIQUE_THM]
       >- (pop_assum (K ALL_TAC) >>
           pop_assum mp_tac >>
-          trace ("BasicProvers.var_eq_old", 1) (srw_tac [][cone_cat_maps_to]) >>
+          Tactical.trace_tac ("BasicProvers.var_eq_old", 1)
+            (srw_tac [][cone_cat_maps_to]) >>
           qexists_tac `FST m.map` >>
           pop_assum (K ALL_TAC) >>
           pop_assum mp_tac >>
