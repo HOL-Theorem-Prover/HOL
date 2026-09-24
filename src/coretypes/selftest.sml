@@ -303,6 +303,17 @@ val spvcross2_def =
       |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [FORALL_PROD]))
 val _ = test "sum+pair, pair components unused" spvcross2_def
 
+val spvcross3_def0 = new_recursive_definition{
+  name = "spvcross3_def",
+  rec_axiom = sumTheory.sum_Axiom,
+  def = “spvcross3 f (INL x) (p:'a # 'b) = f (FST p) /\
+         spvcross3 f (INR y) p = y”};
+(* both clauses must end up with pair patterns: it is the clause that uses
+   its pattern's variables that keeps the column from being vacuous *)
+val spvcross3_def =
+    spvcross3_def0 |> SIMP_RULE bool_ss [FORALL_PROD, FST]
+val _ = test "sum+pair, pair components used in one clause only" spvcross3_def
+
 
 
 val cpairdef = new_definition("cpairdef", “cpair (f,x) = T”)
