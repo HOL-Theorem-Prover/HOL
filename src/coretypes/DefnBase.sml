@@ -519,6 +519,9 @@ fun one_line_ify heuristic def =
           GENASSUME
       fun multi_constructor ty =
           length (TypeBase.constructors_of ty) > 1
+      (* a vacuous column has its pattern replaced by a variable in every
+         clause below, so one clause that does use its pattern's variables
+         stops the whole column from being vacuous. *)
       fun vfold (cnum,A) =
           if multi_constructor (type_of (List.nth(actual_args, cnum))) then
             HOLset.delete(A, cnum)
@@ -528,12 +531,13 @@ fun one_line_ify heuristic def =
                   let val pat = List.nth(args, cnum)
                       val (_, args_of) = strip_comb pat
                   in
-                    not (is_var pat) andalso
-                    List.all is_var args_of andalso
-                    null (op_intersect aconv (free_vars bod) (free_vars pat))
+                    is_var pat orelse
+                    (List.all is_var args_of andalso
+                     null (op_intersect aconv (free_vars bod)
+                                        (free_vars pat)))
                   end
             in
-              if List.exists test fs_args then A
+              if List.all test fs_args then A
               else HOLset.delete(A, cnum)
             end
       val vacuous_pats = HOLset.foldl vfold patcols patcols
