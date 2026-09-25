@@ -57,6 +57,12 @@ fun gen_find_record (tmap : trace_map) (tnm as {group,name})  =
       | SOME (TR tr) => SOME (tnm, tr)
       | SOME (ALIAS a) => gen_find_record tmap a
 
+fun gen_get_trace_C ctxt tnm =
+    case gen_find_record (Context.Data.get tmap_slot ctxt) tnm of
+        NONE => raise ERR "gen_get_trace_C"
+                      ("No such trace: "^trace_name_toString tnm)
+      | SOME (_, tr) => #current tr
+
 fun global_tmap() = Context.Data.get tmap_slot (Context.snapshot())
 
 fun find_record arg = gen_find_record (global_tmap()) arg

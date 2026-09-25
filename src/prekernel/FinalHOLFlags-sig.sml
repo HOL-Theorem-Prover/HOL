@@ -21,6 +21,7 @@ sig
     val create_btrace     : trace_name * bool ->
                             {get : unit -> bool, set : bool -> unit}
     val gen_set_trace_C   : trace_name * int -> ctxt -> ctxt
+    val gen_get_trace_C   : ctxt -> trace_name -> int
 
     val current_trace     : string -> int
     val set_trace         : string -> int -> unit

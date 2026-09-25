@@ -5,7 +5,7 @@ sig
     type tacmodifier = Manager.tacmodifier
     type proofs = Manager.proofs
 
-    val chatting : bool ref
+    val chatting : unit -> bool
 
     (* Starting a proof *)
 

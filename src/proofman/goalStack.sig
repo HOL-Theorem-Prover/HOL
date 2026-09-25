@@ -4,7 +4,7 @@ sig
 
    type gstk
 
-   val chatting : bool ref
+   val chatting : unit -> bool
 
    val expand       : tactic -> gstk -> gstk
    val expandf      : tactic -> gstk -> gstk

@@ -11,35 +11,30 @@ infix 0 before;
 
 val ERR = mk_HOL_ERR "goalStack";
 
-val show_nsubgoals = ref 10;
-val chatting = ref true;
-val show_stack_subgoal_count = ref true
-val print_fvs = ref false
-val print_goal_at_top = ref false;
-val reverse_assums = ref false;
-val print_number_assums = ref 1000000;
-val other_subgoals_pretty_limit = ref 100;
-
-val _ = register_trace ("Goalstack.howmany_printed_subgoals", show_nsubgoals,
-                        10000);
-val _ = register_btrace("Goalstack.show_proved_subtheorems", chatting);
-val _ = register_btrace("Goalstack.show_stack_subgoal_count",
-                        show_stack_subgoal_count);
-val _ = register_btrace("Goalstack.print_goal_fvs", print_fvs)
-val _ = register_btrace("Goalstack.print_goal_at_top", print_goal_at_top)
-val _ = register_btrace("Goalstack.print_assums_reversed", reverse_assums)
-val _ = register_trace ("Goalstack.howmany_printed_assums",
-                        print_number_assums, 1000000)
-val _ = register_trace("Goalstack.other_subgoals_pretty_limit",
-                       other_subgoals_pretty_limit, 100000)
+fun ct nm mxinit =
+    #get (HOLFlags.create_trace({group = "Goalstack", name = nm}, mxinit))
+fun cbt nm i =
+    #get (HOLFlags.create_btrace({group = "Goalstack", name = nm}, i))
 
 
-fun say s = if !chatting then Lib.say s else ();
+val show_nsubgoals = ct "howmany_printed_subgoals" {max = 10000, initial = 10}
+val print_number_assums =
+    ct "howmany_printed_assums" {max = 1000000, initial = 1000000}
+val other_subgoals_pretty_limit =
+    ct "howmany_printed_assums" {max = 100000, initial = 100}
+
+val chatting = cbt "show_proved_subtheorems" true
+val show_stack_subgoal_count = cbt "show_stack_subgoal_count" true
+val print_fvs = cbt "print_goal_fvs" false
+val print_goal_at_top = cbt "print_goal_at_top" false
+val reverse_assums = cbt "print_assums_reversed" false
+
+fun say s = if chatting() then Lib.say s else ();
 
 fun add_string_cr s = say (s^"\n")
 fun cr_add_string_cr s = say ("\n"^s^"\n")
 
-fun printthm th = if !chatting then say (Parse.thm_to_string th) else ()
+fun printthm th = if chatting() then say (Parse.thm_to_string th) else ()
 
 fun rotl (a::rst) = rst@[a]
   | rotl [] = raise ERR "rotl" "empty list"
@@ -274,11 +269,12 @@ fun pr_maybe_hidden_assum (SOME a) = pr_numbered_assum a
 fun pr_assums asl =
     let
       val length_asl = length asl
-      val length_assums = min (length_asl, !print_number_assums)
+      val pna = print_number_assums()
+      val length_assums = min (length_asl, pna)
       val assums = List.rev (List.take (asl, length_assums))
       val l = Lib.enumerate (length_asl - length_assums) assums
-      val l = if !reverse_assums then List.rev l else l
-      val has = if !print_number_assums < length_asl then NONE :: map SOME l
+      val l = if reverse_assums() then List.rev l else l
+      val has = if pna < length_asl then NONE :: map SOME l
                 else map SOME l
     in
       pr_list pr_maybe_hidden_assum add_newline has
@@ -301,7 +297,7 @@ fun print_goalfvs (asl,w) =
     let
       val fvs = free_varsl (w::asl) |> Listsort.sort Term.compare
     in
-      if !print_fvs andalso not (null fvs) then
+      if print_fvs() andalso not (null fvs) then
         add_newline >> add_newline >> print_fvs0 fvs
       else nothing
     end
@@ -330,7 +326,7 @@ fun ppgoal_assums_last (g as (asl,w)) =
 fun ppgoal (g as (asl,w)) =
     if null asl then pr_goal w >> print_goalfvs g >> check_vars g
     else
-      if !print_goal_at_top then ppgoal_assums_last g
+      if print_goal_at_top() then ppgoal_assums_last g
       else ppgoal_assums_first g
    handle e => (Lib.say "\nError in attempting to print a goal!\n";  raise e);
 
@@ -350,15 +346,17 @@ fun pp_gstk gstk =
                pr_goal g
              )
        | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) =
-           let val (ellipsis_action, goals_to_print) =
-                 if length goals > !show_nsubgoals then
-                   let val num_elided = length goals - !show_nsubgoals
+           let
+             val nsubs = show_nsubgoals()
+             val (ellipsis_action, goals_to_print) =
+                 if length goals > nsubs then
+                   let val num_elided = length goals - nsubs
                    in
                      (add_string ("..."^Int.toString num_elided ^ " subgoal"^
                                   (if num_elided = 1 then "" else "s") ^
                                   " elided...") >>
                       add_newline >> add_newline,
-                      rev (List.take (goals, !show_nsubgoals)))
+                      rev (List.take (goals, nsubs)))
                    end
                  else
                    (add_newline, rev goals)
@@ -369,7 +367,7 @@ fun pp_gstk gstk =
                val size = List.foldl (fn (g,acc) => goal_size g + acc) 0 pfx
            in
              block Portable.CONSISTENT 0 (
-               (if size > current_trace "Goalstack.other_subgoals_pretty_limit"
+               (if size > other_subgoals_pretty_limit()
                 then
                   with_flag(Parse.current_backend, PPBackEnd.raw_terminal)
                            start()
@@ -377,7 +375,7 @@ fun pp_gstk gstk =
                (if not (null pfx) then add_newline >> add_newline
                 else nothing) >>
                pr_goal lastg >>
-              (if length goals > 1 andalso !show_stack_subgoal_count then
+              (if length goals > 1 andalso show_stack_subgoal_count() then
                  add_string ("\n\n" ^ Int.toString (length goals) ^
                              " subgoals")>>
                  add_newline

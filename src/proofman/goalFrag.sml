@@ -334,11 +334,12 @@ fun focus_note gs =
 fun pp_goalstate_gen preamble gs = let
   open smpp
   val pr_goal = goalStack.pr_goal
-  val show_nsubgoals = current_trace "Goalstack.howmany_printed_subgoals"
+  val show_nsubgoals =
+      HOLFlags.current_trace "Goalstack.howmany_printed_subgoals"
   val other_subgoals_pretty_limit =
-    current_trace "Goalstack.other_subgoals_pretty_limit"
+    HOLFlags.current_trace "Goalstack.other_subgoals_pretty_limit"
   val show_stack_subgoal_count =
-    current_trace "Goalstack.show_stack_subgoal_count" = 1
+    HOLFlags.current_trace "Goalstack.show_stack_subgoal_count" = 1
   (* Both of these are *about* the goals rather than part of them, and
      a client that can pin them somewhere that does not scroll wants
      them separately -- see `context_lines' and `focus_note'.  Asking

@@ -222,7 +222,7 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm
     =
     let
       open term_pp_utils term_pp_types smpp
-      val avoid_unicode = get_tracefn "PP.avoid_unicode" () = 1
+      val avoid_unicode = HOLFlags.current_trace "PP.avoid_unicode" = 1
       val oinfo = term_grammar.overload_info tmg
       fun oi_strip t =
           case Overload.oi_strip_comb oinfo t of
@@ -302,7 +302,7 @@ val _ = term_grammar.userSyntaxFns.register_userPP
 fun seln_printer  (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     let
       open term_pp_utils term_pp_types smpp
-      val avoid_unicode = get_tracefn "PP.avoid_unicode" () = 1
+      val avoid_unicode = HOLFlags.current_trace "PP.avoid_unicode" = 1
       val oinfo = term_grammar.overload_info tmg
       fun oi_strip t =
           case Overload.oi_strip_comb oinfo t of

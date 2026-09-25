@@ -27,7 +27,7 @@ fun contextTerm ctxt q = Parse.parse_in_context ctxt (normalise_quotation q);
 
 fun ptm_with_ctxtty ctxt ty q = Parse.typed_parse_in_context ty ctxt q
 
-fun TC_OFF f x = trace ("show_typecheck_errors", 0) f x
+fun TC_OFF f x = HOLFlags.trace ("Parse.show_typecheck_errors", 0) f x
 fun ptm_with_ctxtty' ctxt ty = TC_OFF (ptm_with_ctxtty ctxt ty)
 
 (* The same three against a supplied prover context, for the tactics.
@@ -280,8 +280,9 @@ fun LIST_REFINE_EXISTS_TAC qs (asl, g) c = let
     val qs_bvs = zip qs exists_vars
     val ctxt = free_varsl (g::asl)
     fun is_underscore q =
-      let val tm = trace ("notify type variable guesses", 0)
-                         (Parse.Term_in c) q
+      let
+        val tm = HOLFlags.trace ("notify type variable guesses", 0)
+                                (Parse.Term_in c) q
       in
         if not (is_var tm) then false
         else String.isPrefix "_" (fst (dest_var tm))
@@ -358,11 +359,11 @@ in Tactic.UNDISCH_TAC asm g c
 end;
 
 fun PAT_ASSUM q ttac =
-  Q_TAC0 {traces = [("notify type variable guesses", 0)]} (SOME bool)
+  Q_TAC0 {traces = [("Parse.notify_on_tyvar_guess", 0)]} (SOME bool)
          (fn t => Tactical.PAT_ASSUM t ttac)
          q
 fun PAT_X_ASSUM q ttac =
-  Q_TAC0 {traces = [("notify type variable guesses", 0)]} (SOME bool)
+  Q_TAC0 {traces = [("Parse.notify_on_tyvar_guess", 0)]} (SOME bool)
          (fn t => Tactical.PAT_X_ASSUM t ttac)
          q
 
@@ -517,8 +518,8 @@ val strip_uscore_bindings = filter (fn {redex,residue} => isnt_uscore_var redex)
 fun redex_map f {redex,residue} = {redex = f redex, residue = residue}
 
 fun PQ (* parser quiet *) f =
-  f |> trace ("notify type variable guesses", 0)
-    |> trace ("show_typecheck_errors", 0)
+  f |> HOLFlags.trace ("Parse.notify_on_tyvar_guess", 0)
+    |> HOLFlags.trace ("Parse.show_typecheck_errors", 0)
 
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch

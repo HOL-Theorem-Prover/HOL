@@ -851,7 +851,7 @@ val every_assum = EVERY_ASSUM
  *---------------------------------------------------------------------------*)
 
 val shut_parser_up =
-    HOLFlags.with_traces [("Parse.notify type variable guesses", 0),
+    HOLFlags.with_traces [("Parse.notify_on_tyvar_guess", 0),
                           ("Parse.syntax_error", 0),
                           ("Parse.show_typecheck_errors", 0)]
 

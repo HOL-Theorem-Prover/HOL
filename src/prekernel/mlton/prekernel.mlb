@@ -13,6 +13,7 @@ stubs.sml
 ../Context.sig
 ../Context.sml
 ../KNametab.sml
+../FinalHOLFlags-sig.sml
 ../HOLFlags.sig
 ../HOLFlags.sml
 ../Lib.sig

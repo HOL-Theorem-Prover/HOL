@@ -324,7 +324,7 @@ With a prefix ARG, uses `expandf' rather than `e'."
                 genvar tactic-string2 genvar))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
        (etactic-string
-        (format "Feedback.trace(\"show_typecheck_errors\", 0) %s (%s)"
+        (format "HOLFLags.trace(\"Parse.show_typecheck_errors\", 0) %s (%s)"
                 e-string tactic-string2))
        (region-string (with-hol-locpragma (+ start start-offset) etactic-string))
        (sender (if hol-emit-time-elapsed-p
@@ -1543,8 +1543,8 @@ argument N, sets the trace to that value in particular."
         (send-raw-string-to-hol
          (format "local open Int in
                   val _ = let val nm = \"%s\"
-                      fun findfn (Feedback.TraceElt r) = #name r = nm
-                      fun level (Feedback.TraceElt r) = #trace_level r
+                      fun findfn (HOLFlags.TraceElt r) = #name r = nm
+                      fun level (HOLFlags.TraceElt r) = #trace_level r
                       val old =
                             level (valOf (List.find findfn (traces())))
                   in

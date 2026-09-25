@@ -136,7 +136,7 @@ in
   PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proof);
   PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proofs);
   PolyML.addPrettyPrinter (pp2polypp type_grammar.prettyprint_grammar);
-  PolyML.addPrettyPrinter (pp2polypp Feedback.pp_trace_elt);
+  PolyML.addPrettyPrinter (pp2polypp HOLFlags.pp_trace_elt);
   PolyML.addPrettyPrinter (pp2polypp Feedback.pp_hol_error)
 end
 
@@ -179,7 +179,7 @@ in
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
-    ; Feedback.set_trace "pp_annotations" 1
+    ; HOLFlags.set_trace "PP.annotations" 1
     ; PolyML.use (HOLDIR ++ "tools" ++ "check-intconfig.sml")
     )
 end;

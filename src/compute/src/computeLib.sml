@@ -12,9 +12,10 @@ open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
      https://doi.org/10.1007/3-540-44659-1_2
 *)
 
-val auto_import_definitions = ref true;
-val _ = Feedback.register_btrace
-          ("computeLib.auto_import_definitions", auto_import_definitions)
+val {get = auto_import_definitions,...} = HOLFlags.create_btrace(
+      {group = "computeLib", name = "auto_import_definitions"},
+      true
+    );
 
 (* re-exporting types from clauses *)
 
