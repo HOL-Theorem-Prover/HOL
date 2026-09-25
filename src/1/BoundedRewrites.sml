@@ -12,8 +12,10 @@ struct
       else
     ADD_ASSUM (mk_comb(bounded_tm, mk_var(Int.toString n, bool))) th
 
+  fun is_bound h = is_comb h andalso aconv bounded_tm (rator h)
+
   fun DEST_BOUNDED th =
-      case HOLset.find (aconv bounded_tm o rator) (hypset th) of
+      case HOLset.find is_bound (hypset th) of
         SOME h => let
           val arg = rand h
         in
