@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `refute_goal`
+
+``` hol4
+Refute.refute_goal : config -> goal -> outcome
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample to a tactic goal.
+
+`Refute.refute_goal cfg (asms, tm)` searches for values that make every
+term in `asms` true and `tm` false, with free variables universally
+closed.  If `cfg.no_assms` is true the assumptions are ignored.
+Reporting, expectations, timeout, racing, and the structured result are
+as for `Refute.refute`.
+
+### Failure
+
+Fails only when a non-default `expect` field is not met.  Backend
+failures are returned as `Unknown`; interrupts are re-raised.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute),
+[`Refute.refute_goal_with`](#Refute.refute_goal_with),
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.try_refute`](#Refute.try_refute)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

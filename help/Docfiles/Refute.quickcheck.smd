@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `quickcheck`
+
+``` hol4
+Refute.quickcheck : term -> outcome
+```
+
+------------------------------------------------------------------------
+
+Runs Refute's Quickcheck backends.
+
+`Refute.quickcheck tm` is `refute_with [upd_search QuickcheckBackends] tm`:
+the `exhaustive`, `random`, and `narrowing` backends run with every
+other field of `!Refute.the_config`, including substrate, size,
+iterations, seed, certification, quiet mode, and expectations.
+
+The exhaustive and random backends need an executable goal and use the
+substrate the configuration selects.  Narrowing accepts any goal, so it
+may be the only backend that applies; a counterexample it finds records
+`"narrowing"` as its backend.  [`Refute.model_refute`](#Refute.model_refute)
+selects the `kodkod` model finder instead.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute),
+[`Refute.refute_with`](#Refute.refute_with),
+[`Refute.model_refute`](#Refute.model_refute),
+[`Refute.register_generator`](#Refute.register_generator)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

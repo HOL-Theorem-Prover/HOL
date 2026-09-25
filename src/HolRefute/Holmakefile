@@ -1,0 +1,103 @@
+# Multithreading, Future, Timeout and ParList come from
+# src/portableML/poly/concurrent, which the kernel band builds with
+# --poly_not_hol and links into sigobj.  Naming it in INCLUDES would make
+# Holmake rebuild it here with the overlay in scope, and the resulting
+# Sref -> Overlay dependency breaks the next kernel bootstrap in src/bool.
+INCLUDES = ../n-bit ../sort \
+           ../real ../coalgebras ../finite_maps \
+           ../pred_set/src/more_theories
+
+all: $(DEFAULT_TARGETS) build-tests
+.PHONY: all
+
+# The selftest, the fixture theories it compiles against, and its
+# goldens live in tests/.  Holmake rejects a parent that INCLUDEs its
+# own subdirectory ("INCLUDES chain"), so the dependency runs the other
+# way and that directory is driven recursively from here, as
+# theory_tests/ and examples/ already are.  tests/ decides for itself
+# whether HOLSELFTESTLEVEL means "build" or "build and run".
+.PHONY: build-tests
+build-tests: $(DEFAULT_TARGETS)
+	$(HOLDIR)/bin/Holmake -C tests --no_prereqs
+
+# The substrate layer reaches the shared type/term helpers through a
+# `structure Util = Refute_Util` alias, which holdep does not follow, so the
+# dependency is declared explicitly.
+Refute_Gen.uo: Refute_Util.uo
+Refute_Core.uo: Refute_ModelFinder_Names.uo
+Refute_ModelFinder_Names.uo: Refute_Util.uo
+Refute_ModelFinder_HOL.uo: Refute_Skolem.uo Refute_Util.uo
+Refute_Cert_Narrow.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
+                       Refute_ModelFinder_HOL.uo
+Refute_Cert_Model.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
+                      Refute_ModelFinder_HOL.uo Refute_Skolem.uo
+Refute_Narrow.uo: Refute_Util.uo Refute_Gen.uo Refute_ModelFinder_Names.uo
+Refute_SmartGen.uo: Refute_Util.uo
+# negative_candidates calls Refute_EvalEnum.negation_condition directly;
+# none of Refute_QC's other prerequisites reach Refute_EvalEnum, so this
+# edge is new, not a restatement of an existing transitive one.
+Refute_QC.uo: Refute_Cert_Narrow.uo Refute_ModelFinder_HOL.uo \
+              Refute_EvalEnum.uo
+Refute_QC_Narrow.uo: Refute_QC.uo Refute_Narrow.uo
+Refute_EvalEnum.uo: Refute_Util.uo
+Refute_EvalCompute.uo: Refute_Util.uo Refute_EvalEnum.uo
+Refute_EvalSML.uo: Refute_ModelFinder_Names.uo Refute_Util.uo
+Refute_Extract.uo: Refute_Util.uo Refute_EvalEnum.uo
+
+# Keep the foundational modules ahead of the FORL stack.  Refute_Forl
+# reports its kodkodi errors through Refute_Core.Private, so that the
+# warning a backend worker emits is serialized like every other one.
+Refute_Forl.uo: Refute_ModelFinder_Util.uo Refute_PropSat.uo \
+                Refute_Core.uo
+Refute_ForlSat.uo: Refute_Forl.uo
+
+# Keep Mono between HOL and Scope, matching the calculus dependency order.
+Refute_ModelFinder_Mono.uo: Refute_PropSat.uo \
+                            Refute_ModelFinder_Util.uo \
+                            Refute_ModelFinder_HOL.uo
+Refute_ModelFinder_Scope.uo: Refute_ModelFinder_Mono.uo
+Refute_ModelFinder_Model.uo: Refute_Cert_Model.uo
+
+Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
+                       Refute_ModelFinder_Kodkod.uo \
+                       Refute_ModelFinder_Model.uo \
+                       Refute_ModelFinder_Nut.uo \
+                       Refute_ModelFinder_Scope.uo \
+                       Refute_ModelFinder_Mono.uo \
+                       Refute_ModelFinder_HOL.uo Refute_Cert.uo \
+                       Refute_Skolem.uo
+
+# The unused-assumption engine is kept below the facade so its probes can
+# call the core without introducing a Refute -> Refute_Unused cycle.
+Refute_Unused.uo: Refute_Core.uo
+Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo Refute_QC_Narrow.uo
+
+ifdef HOLSELFTESTLEVEL
+
+ifdef POLY
+ifneq ($(HOLSELFTESTLEVEL),0)
+ifneq ($(HOLSELFTESTLEVEL),1)
+all: theory-tests
+.PHONY: theory-tests
+
+# theory_tests reaches a fixture theory in tests/, so that
+# directory has to be built first.
+theory-tests: build-tests
+	$(HOLDIR)/bin/Holmake -C theory_tests clean
+	$(HOLDIR)/bin/Holmake -C theory_tests --no_prereqs
+endif
+endif
+endif
+endif
+
+
+.PHONY: examples
+examples: $(DEFAULT_TARGETS)
+	$(HOLDIR)/bin/Holmake -C examples --no_prereqs
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

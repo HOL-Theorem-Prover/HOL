@@ -1,0 +1,9 @@
+## `refute_def`
+
+``` hol4
+Refute.refute_def : term -> outcome
+```
+
+Searches for a counterexample to a term using the interactive default
+configuration: `refute_def tm` abbreviates `refute (!the_config) tm`.
+See [`Refute.refute`](#Refute.refute).
