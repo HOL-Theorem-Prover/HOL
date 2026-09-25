@@ -663,6 +663,20 @@ fun successor_map g =
 fun successors_of succs n =
     case Map.peek (succs, n) of NONE => [] | SOME l => l
 
+(* `BIC_BuildScript` is built from a bare theory name at one site and
+   from an absolute path at another, so its argument goes through
+   `hmdir.extendp`, which lets an absolute extension win. *)
+fun cost_key {root} (nI : 'a nodeInfo) =
+  let
+    val path =
+        case #command nI of
+            BuiltInCmd (BIC_BuildScript s, _) =>
+              hmdir.toAbsPath (hmdir.extendp {base = #dir nI, extension = s})
+          | _ => hm_target.toString (#target nI)
+  in
+    rel_to_root {root = root} path
+  end
+
 fun compute_cp_weights (cost : 'a nodeInfo -> real) (g : 'a t) =
   let
     val succs = successor_map g

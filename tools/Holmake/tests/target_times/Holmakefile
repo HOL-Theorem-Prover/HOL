@@ -7,4 +7,4 @@ target_times-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = target_times-selftest.log selftest.exe tmp-log tmp-root
+EXTRA_CLEANS = target_times-selftest.log selftest.exe tmp-seed tmp-root

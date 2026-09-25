@@ -135,6 +135,18 @@ sig
     (* Critical-path weight lookup: `cp n = cost n + max cp m` over
        successors `m`.  Unknown nodes score 0.0. *)
 
+  val cost_key : {root : string option} -> 'a nodeInfo -> string
+    (* The key under which a node's build cost is looked up and
+       recorded, in `Holmake_tools.rel_to_root` form.  A theory keys on
+       its theory name under its directory, so all three
+       `Theory.{dat,sml,sig}` siblings -- which share one
+       `BIC_BuildScript` command, and one job -- share one key; every
+       other node keys on its own target path.  The two spaces cannot
+       collide.
+
+       One function, so that the scheduler's lookup and the recorder's
+       write cannot drift apart. *)
+
   val toString : 'a t -> string
   val toJSONString : 'a t -> string
 

@@ -2,45 +2,59 @@ signature target_times =
 sig
 
   (* Cost data for the parallel scheduler, in child CPU seconds --
-     what `Theory.sml' measures with `Timer.checkCPUTimer', not
-     wall-clock.  Read from and
-     merged into <root>/.hol/build-logs/target-times, one line per
-     entry, format "<theory-log-key> <secs>" (same key scheme as
-     src/postkernel/Theory.sml's thy_log_key, same line format as the
-     per-run logs under Systeml.build_log_dir).
+     what `ProcessMultiplexor' measures for each job it runs, and hands
+     to that job's `update'.  Holmake records every job it runs,
+     theories included; `Theory.sml' still reports and logs its own
+     proof times, but nothing here reads them.
 
-     The file records the most-recently-observed time for each key
-     across all builds that have run in this project; entries survive
-     until overwritten by a later run of the same target. *)
+     Two sources, presented as one map:
+
+       * <root>/.hol/build-logs/target-times, the project's own cache,
+         rewritten by every parallel Holmake run in that project;
+       * zero or more committed *seed* files, which a project ships so
+         that a fresh checkout -- where no cache exists yet -- still
+         schedules well.  `HMProject.build_times_files' finds them.
+
+     One format for both: one line per entry, "<key> <secs>", with `#'
+     comments and malformed lines skipped.  Keys are as
+     `HM_DepGraph.cost_key' builds them, so they are relative to the
+     governing project root and portable between checkouts.
+
+     A cache entry always beats a seed entry for the same key: a seed
+     is a floor, local measurement is the truth.  Seeds are read-only
+     and are never written back into the cache.
+
+     Only parallel builds record: `HM_GraphBuildJ1' (-j1) times
+     nothing.  Holmake's default is -j4 and `bin/build' passes -j
+     through, so in practice every build contributes. *)
 
   type map = (string, real) Binarymap.dict
 
-  (* Read the target-times file for the project rooted at `root`, if
-     any.  NONE, a missing file, or an unreadable file all yield an
-     empty map. *)
+  (* `load {root}` - the seeds `HMProject.build_times_files' names for
+     `root`, with the project's own cache folded over the top so local
+     entries win per key.  A file that is missing or unreadable
+     contributes nothing, and `root = NONE` contributes no cache;
+     neither is an error. *)
   val load : {root : string option} -> map
 
-  (* `cost m fp` = the recorded time for the target or script whose
-     fully-qualified path is `fp`, or 0.0 if unknown.  Combines
-     `Holmake_tools.rel_to_holdir` with a map lookup.
+  (* As `load', over seeds named outright rather than looked up.  Only
+     the tests want this: they must not depend on which seeds happen to
+     be committed in the tree they run inside. *)
+  val load_seeds : {seeds : string list, root : string option} -> map
 
-     A theory is keyed by its `Script.sml' and any other target by
-     itself, so the two cannot collide. *)
+  (* `cost m k` = the recorded time for key `k`, or 0.0 if unknown.
+     Unknown scoring 0.0 is what makes a checkout with no data at all
+     behave exactly as it did before HLFET: every cp_weight is 0.0 and
+     `find_best_runnable_pred' ties on node id. *)
   val cost : map -> string -> real
 
-  (* Merge each (key, secs) entry from `log_path` into
-     <root>/.hol/build-logs/target-times, last-observed wins.
-     Entries already in target-times but absent from log_path are
-     preserved.  Creates <root>/.hol/build-logs/ if needed.  Malformed
-     lines in log_path are silently skipped.  I/O errors are swallowed
-     with a note on stdErr; a failed merge never derails the build. *)
-  val merge_from_log : {root : string, log_path : string} -> unit
+  (* Merge `entries` into <root>/.hol/build-logs/target-times,
+     last-observed wins, preserving entries this run did not touch.
+     Creates the directory if needed.  I/O errors are swallowed with a
+     note on stdErr; a failed merge never derails the build.
 
-  (* As `merge_from_log`, for entries already in hand rather than in a
-     file.  Holmake records what it times itself this way: a theory's
-     cost is written by `Theory.sml' into the per-run log, but nothing
-     else is, so every other target read as costing nothing and the
-     scheduler ran it last however long it really took. *)
+     Writes the cache and only the cache -- never a seed, and never
+     seed values that came back through `load'. *)
   val merge_entries : {root : string,
                        entries : (string * real) list} -> unit
 

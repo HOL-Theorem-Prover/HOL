@@ -107,12 +107,20 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
 
-fun rel_to_holdir d =
-  let val h = Systeml.HOLDIR
-  in if d = h then ""
-     else if String.isPrefix (h ^ "/") d then
-       String.extract (d, String.size h + 1, NONE)
-     else d
+fun rel_to_root {root} d =
+  let
+    fun under p =
+        if d = p then SOME ""
+        else if String.isPrefix (p ^ "/") d then
+          SOME (String.extract (d, String.size p + 1, NONE))
+        else NONE
+    val r = Option.getOpt (root, Systeml.HOLDIR)
+  in
+    case under r of
+        SOME rel => rel
+      | NONE => (case under Systeml.HOLDIR of
+                     SOME rel => "$(HOLDIR)/" ^ rel
+                   | NONE => d)
   end
 
 val spacify = String.concatWith " "

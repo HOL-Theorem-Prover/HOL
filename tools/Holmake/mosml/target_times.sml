@@ -5,9 +5,9 @@ type map = (string, real) Binarymap.dict
 
 fun load _ = Binarymap.mkDict String.compare
 
-fun cost _ _ = 0.0
+fun load_seeds _ = Binarymap.mkDict String.compare
 
-fun merge_from_log _ = ()
+fun cost _ _ = 0.0
 
 fun merge_entries _ = ()
 

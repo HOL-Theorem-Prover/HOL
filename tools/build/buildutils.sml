@@ -1474,10 +1474,7 @@ in
         val newpath = fullPath [logdir, newname]
       in
         HOLFileSys.rename {old = logfilename, new = newpath};
-        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl};
-        (* HOL's governing holproject.toml lives at HOLDIR. *)
-        target_times.merge_from_log { root = Systeml.HOLDIR,
-                                      log_path = newpath }
+        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
       end
     else abort_logging ()
   else ()

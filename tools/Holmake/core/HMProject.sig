@@ -73,6 +73,19 @@ sig
      already absolute.  Raises Fail on parse errors. *)
   val load : { root : string } -> config
 
+  (* build_times_files root - the committed cost-seed files to consult
+     for a build governed by `root` (NONE = no project; HOLDIR is
+     assumed).  HOL's own seed comes first, so a project's entries win
+     any key they share; a project outside HOLDIR gets HOL's seed too,
+     because its graph contains HOL nodes and their `$(HOLDIR)/`-prefixed
+     keys cannot collide with the project's own.  Paths are candidates:
+     one that does not exist simply contributes nothing. *)
+  val build_times_files : string option -> string list
+
+  (* build_times_file root - the seed path for a single project: its
+     `build_times` key if it has one, else `<root>/build-times`. *)
+  val build_times_file : string -> string
+
   (* discover_dirs cfg - DFS preorder under cfg.root and each external
      project root, returning absolute paths of every directory that
      joins the project's scope: every directory below the project
