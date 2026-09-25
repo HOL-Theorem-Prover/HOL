@@ -51,8 +51,9 @@ val map2 = mk_comb(mk_update(b, map1), baboolf)
 val s = "g⦇(b:'b) ↦ (f1:'a -> bool)⦇a ↦ T⦈ ⦈"
 in
 val _ = tprint ("Parsing nested updates: "^ s)
-val _ = require_msg (check_result (aconv map2))
-                    (trace ("types", 2) term_to_string)
-                    Parse.Term
-                    [QUOTE s]
+val _ = require_msg
+          (check_result (aconv map2))
+          (HOLFlags.with_bflags [(Parse.show_types, true)] term_to_string)
+          Parse.Term
+          [QUOTE s]
 end

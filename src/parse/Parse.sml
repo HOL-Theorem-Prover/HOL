@@ -404,8 +404,9 @@ fun pp_thm th =
           if !Globals.max_print_depth = 0 then add_string " ... "
           else
             let
+              open HOLFlags
               val (tg,asl,st,sa) =
-                  (tag th, hyp th, HOLFlags.show_tags(), HOLFlags.show_assums())
+                  (tag th, hyp th, get_bflag show_tags, get_bflag show_assums)
             in
               (if not st andalso not sa andalso null asl then nothing
                else
@@ -1230,6 +1231,18 @@ val TOK = term_grammar.RE o term_grammar.TOK
   in
     put_term_grammar new_grammar
   end
+
+(* ----------------------------------------------------------------------
+    Common flags/traces
+   ---------------------------------------------------------------------- *)
+
+val avoid_unicode = type_pp.avoid_unicode
+val show_types = HOLFlags.show_types
+val show_assums = HOLFlags.show_assums
+
+val ambiguous_grammar_warning = parse_term.ambiguous_grammar_warning
+val notify_on_tyvar_guess = Preterm.notify_on_tyvar_guess
+val show_typecheck_errors = Preterm.show_typecheck_errors
 
   val _ = Theory.register_hook
               ("Parse.clear_consts_from_grammar",

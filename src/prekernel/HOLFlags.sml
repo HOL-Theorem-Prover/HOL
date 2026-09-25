@@ -100,6 +100,11 @@ end
 fun gen_set_trace_C (tnm,value) =
     Context.Data.update tmap_slot (gen_set_value tnm value)
 
+type bflag = trace_name
+type flag = trace_name
+
+
+
 fun get_ttrace nm =
    case find_record nm of
       NONE => registered_err "get_tracefn" nm
@@ -108,6 +113,20 @@ fun get_ttrace nm =
 fun set_ttrace tnm newvalue =
     Context.Data.modify tmap_slot (gen_set_value tnm newvalue)
 fun set_trace nm v = set_ttrace (str2name nm) v
+
+fun set_flag (fl, i) = set_ttrace fl i
+val get_flag = get_ttrace
+val set_flagC = gen_set_trace_C
+val get_flagC = gen_get_trace_C
+fun flag_name f = trace_name_toString f
+
+fun set_bflag (fl, b) = set_ttrace fl (if b then 1 else 0)
+fun get_bflag fl = get_ttrace fl > 0
+fun set_bflagC (fl, b) = gen_set_trace_C (fl, (if b then 1 else 0))
+fun get_bflagC c f = let val i = get_flagC c f in i > 0 end
+fun bflag_name f = trace_name_toString f
+
+fun flag_of_bflag f = f
 
 fun gen_create_trace (tnm as {group, name}, {max, initial}) tmap =
     let
@@ -130,9 +149,9 @@ fun gen_create_trace (tnm as {group, name}, {max, initial}) tmap =
         tmap
     end
 
-fun create_trace arg = (
+fun create_trace (arg as (tnm,_)) = (
   Context.Data.modify tmap_slot (gen_create_trace arg);
-  {get = fn () => get_ttrace (#1 arg), set = set_ttrace (#1 arg)}
+  {get = fn () => get_ttrace tnm, set = set_ttrace tnm, flag = tnm}
 )
 
 fun gen_register_alias_trace {original = original as {group,name}, alias} tmap =
@@ -220,7 +239,7 @@ fun get_btrace nm = get_ttrace nm = 1
 
 fun create_btrace (tnm as {group,name}, initb) = (
   create_trace (tnm, {initial=if initb then 1 else 0, max=1});
-  {get = fn () => get_btrace tnm, set = set_btrace tnm}
+  {get = fn () => get_btrace tnm, set = set_btrace tnm, flag = tnm}
 )
 
 
@@ -262,6 +281,15 @@ fun with_traces flags f x =
      Context.Data.with_slot_value tmap_slot tempv f x
   end
 
+fun with_bflags bfls f x =
+    let
+      val base = global_tmap()
+      fun foldthis ((tnm,b), m) = gen_set_value tnm (if b then 1 else 0) m
+      val tempv = List.foldl foldthis base bfls
+    in
+      Context.Data.with_slot_value tmap_slot tempv f x
+    end
+
 fun trace flag = with_traces [flag]
 (*
   val show_types              : bool ref
@@ -291,11 +319,12 @@ val {get=linewidth,set=set_linewidth} =
 fun set_linewidth i = (Globals.linewidth := i)
 fun linewidth () = !Globals.linewidth
 
-fun mkboolreporter nm () = get_btrace {group="PP",name=nm}
+fun mkflag nm = {group = "PP", name = nm}
 
-val show_tags = mkboolreporter "show_tags"
-val show_axioms = mkboolreporter "show_axioms"
-val show_assums = mkboolreporter "show_assums"
+val show_tags = mkflag "show_tags"
+val show_axioms = mkflag "show_axioms"
+val show_assums = mkflag "show_assums"
+val show_types = mkflag "types"
 
 
 end

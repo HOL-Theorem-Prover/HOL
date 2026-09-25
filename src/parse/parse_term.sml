@@ -185,7 +185,8 @@ in
   Id :: map STD_HOL_TOK (binders G) @ map hd prefix_rules
 end
 
-val {get = ambigrm, ...} = HOLFlags.create_trace(
+val {get = ambigrm, flag = ambiguous_grammar_warning, ...} =
+    HOLFlags.create_trace(
       {group = "Parse", name = "ambiguous_grammar"},
       {max = 2, initial = 1}
     )

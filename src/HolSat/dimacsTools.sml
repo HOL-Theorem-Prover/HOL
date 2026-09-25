@@ -90,7 +90,7 @@ fun showSatVarMap svm =
 ** Print a term showing types
 *)
 
-val print_all_term = with_flag(show_types,true)print_term;
+val print_all_term = HOLFlags.with_bflags[(show_types,true)]print_term;
 
 (*
 ** Convert a literal to a (bool * integer) pair, where

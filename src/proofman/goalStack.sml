@@ -14,27 +14,31 @@ val ERR = mk_HOL_ERR "goalStack";
 fun ct nm mxinit =
     #get (HOLFlags.create_trace({group = "Goalstack", name = nm}, mxinit))
 fun cbt nm i =
-    #get (HOLFlags.create_btrace({group = "Goalstack", name = nm}, i))
+    let val finfo =
+            HOLFlags.create_btrace({group = "Goalstack", name = nm}, i)
+    in
+      (#get finfo, #flag finfo)
+    end
 
 
 val show_nsubgoals = ct "howmany_printed_subgoals" {max = 10000, initial = 10}
 val print_number_assums =
     ct "howmany_printed_assums" {max = 1000000, initial = 1000000}
 val other_subgoals_pretty_limit =
-    ct "howmany_printed_assums" {max = 100000, initial = 100}
+    ct "other_subgoals_pretty_limit" {max = 100000, initial = 100}
 
-val chatting = cbt "show_proved_subtheorems" true
-val show_stack_subgoal_count = cbt "show_stack_subgoal_count" true
-val print_fvs = cbt "print_goal_fvs" false
-val print_goal_at_top = cbt "print_goal_at_top" false
-val reverse_assums = cbt "print_assums_reversed" false
+val (get_chatting, chatting) = cbt "chatting" true
+val (show_stack_subgoal_count, _) = cbt "show_stack_subgoal_count" true
+val (get_print_fvs, print_fvs) = cbt "print_goal_fvs" false
+val (print_goal_at_top, _) = cbt "print_goal_at_top" false
+val (reverse_assums, _) = cbt "print_assums_reversed" false
 
-fun say s = if chatting() then Lib.say s else ();
+fun say s = if get_chatting() then Lib.say s else ();
 
 fun add_string_cr s = say (s^"\n")
 fun cr_add_string_cr s = say ("\n"^s^"\n")
 
-fun printthm th = if chatting() then say (Parse.thm_to_string th) else ()
+fun printthm th = say (Parse.thm_to_string th)
 
 fun rotl (a::rst) = rst@[a]
   | rotl [] = raise ERR "rotl" "empty list"
@@ -297,7 +301,7 @@ fun print_goalfvs (asl,w) =
     let
       val fvs = free_varsl (w::asl) |> Listsort.sort Term.compare
     in
-      if print_fvs() andalso not (null fvs) then
+      if get_print_fvs() andalso not (null fvs) then
         add_newline >> add_newline >> print_fvs0 fvs
       else nothing
     end

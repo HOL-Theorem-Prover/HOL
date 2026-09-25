@@ -4,7 +4,8 @@ sig
 
    type gstk
 
-   val chatting : unit -> bool
+   val chatting     : HOLFlags.bflag
+   val print_fvs    : HOLFlags.bflag
 
    val expand       : tactic -> gstk -> gstk
    val expandf      : tactic -> gstk -> gstk

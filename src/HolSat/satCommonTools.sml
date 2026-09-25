@@ -37,7 +37,11 @@ fun termFromFile fname =
 
 fun termToFile fname t =
 let val fout = TextIO.openOut (fname^".term")
-    val _ = TextIO.output (fout,with_flag (show_types,true) term_to_string t)
+    val _ =
+        TextIO.output (
+          fout,
+          HOLFlags.with_bflags [(Parse.show_types,true)] term_to_string t
+        )
     val _ = TextIO.flushOut fout
     val _ = TextIO.closeOut fout
 in () end

@@ -119,7 +119,7 @@ fun pp_to_disk ppstrm (TAG (d,olist,_)) =
      Prettyprint a tag (for interactive work).
  ---------------------------------------------------------------------------*)
 
-local open Portable
+local open Portable HOLFlags
       fun repl ch alist = CharVector.tabulate(length alist, fn _ => ch)
       open HOLPP
       fun pr_list s c b [] = []
@@ -134,13 +134,13 @@ fun pp_tag (TAG (_,olist,axlist)) =
   PrettyBlock(0, true, [],
     [PrettyString "[oracles: ",
      PrettyBlock(1, false, [],
-                 if HOLFlags.show_tags() then pr_list I "," (1,0) olist
+                 if get_bflag show_tags then pr_list I "," (1,0) olist
                  else [PrettyString(repl #"#" olist)]),
       add_string "]",
       add_break(1,0),
       add_string "[axioms: ",
       PrettyBlock(1, false, [],
-                  if HOLFlags.show_axioms() then
+                  if get_bflag show_axioms then
                     pr_list Nonce.dest "," (1,0) axlist
                   else [add_string(repl #"#" axlist)]),
       add_string "]"

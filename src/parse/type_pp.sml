@@ -27,21 +27,22 @@ fun dest_thy_type ty =
     in {Thy = Thy, Tyop = Type.display_name_of_id id, Args = Args}
     end
 
-val {get = avoid_unicode,...} = HOLFlags.create_btrace(
+val {flag = avoid_unicode,get = get_avoid_unicode,...} =
+    HOLFlags.create_btrace(
       {group = "PP", name = "avoid_unicode"},
       Systeml.OS = "winNT"
     )
 
 fun type_pp_prefix () =
-    if avoid_unicode() then "``" else UnicodeChars.ldquo
+    if get_avoid_unicode() then "``" else UnicodeChars.ldquo
 fun type_pp_suffix() =
-    if avoid_unicode() then "``" else UnicodeChars.rdquo
+    if get_avoid_unicode() then "``" else UnicodeChars.rdquo
 fun term_pp_prefix () =
-    if avoid_unicode() then "``" else UnicodeChars.ldquo
+    if get_avoid_unicode() then "``" else UnicodeChars.ldquo
 fun term_pp_suffix() =
-    if avoid_unicode() then "``" else UnicodeChars.rdquo
+    if get_avoid_unicode() then "``" else UnicodeChars.rdquo
 fun thm_pp_prefix () =
-    if avoid_unicode() then "|- " else UnicodeChars.turnstile ^ " "
+    if get_avoid_unicode() then "|- " else UnicodeChars.turnstile ^ " "
 
 val {get = pp_num_types,...} = HOLFlags.create_btrace(
       {group = "PP", name = "num_types"},
@@ -139,7 +140,7 @@ fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
         if b then add_string "(" >> ublock INCONSISTENT 1 p >> add_string ")"
         else p
     fun uniconvert s =
-        if not (avoid_unicode()) andalso
+        if not (get_avoid_unicode()) andalso
            HOLFlags.current_trace "PP.Greek-tyvars" = 1 andalso
            size s = 2
         then

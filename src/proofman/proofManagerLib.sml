@@ -14,7 +14,7 @@ type proofs = Manager.proofs
 type tacmodifier = Manager.tacmodifier
 
 val chatting = goalStack.chatting;
-fun say s = if chatting() then Lib.say s else ();
+fun say s = if HOLFlags.get_bflag chatting then Lib.say s else ();
 
 local
   val proofs_slot : Manager.proofs Context.Data.slot =

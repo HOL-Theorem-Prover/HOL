@@ -81,7 +81,9 @@ fun assert_reduces_to t t' =
   end
 
 val t1 = “x ∧ T”
-val (th, s) = Feedback.trace ("Unicode", 0) (capture_mesg (monitor_and EVAL)) t1
+val (th, s) =
+    HOLFlags.with_bflags [(Parse.avoid_unicode, true)]
+                         (capture_mesg (monitor_and EVAL)) t1
 
 val _ = if lhs (concl th) ~~ t1 andalso rhs (concl th) ~~ lhand (lhs (concl th))
         then
