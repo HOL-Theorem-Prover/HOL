@@ -283,6 +283,42 @@ Unless otherwise noted, they are built by the configuration process.
 
 `tools/build-logs` and `tools-poly/build-logs`
 :   As each build proceeds, log files recording execution times *per* theory are generated and stored in these directories.
+    These feed `checkRegressions`, which compares a finished build against the median of recent ones.
+    They are *not* what the parallel scheduler reads; see `build-times` below.
+
+`build-times` (at a project root) and `.hol/build-logs/target-times`
+:   Cost data for Holmake's parallel scheduler, in child CPU seconds: `<key> <secs>` per line, `#` comments allowed.
+    `Holmake` picks the ready job with the largest sum-of-costs-to-a-sink, so without these it falls back to the order jobs happened to be added to the graph.
+
+    `.hol/build-logs/target-times` is the per-project cache, rewritten by every parallel `Holmake` run out of the child-CPU time it already measures for each job.
+    It is gitignored, so a fresh checkout starts with nothing --- which is when the longest build of all is run.
+
+    `build-times` is the committed *seed* that covers that gap.
+    It is read-only, and any locally measured value overrides it, so it matters only until a target has been built once here.
+    A project names a different path for it with a `build_times` key in its `holproject.toml`.
+
+    Regenerate it with `developers/gen-build-times`, never by hand:
+
+    ~~~~
+    cd src/parallel_builds/core
+    HOLSELFTESTLEVEL=3 Holmake --json > /tmp/g.json
+    cd $HOLDIR
+    developers/gen-build-times --graph /tmp/g.json --level 3 > build-times
+    ~~~~
+
+    The generator refuses to write a seed unless every theory target in the supplied dependency graph has a measurement.
+    That check is the point of the tool.
+    A seed that omits an expensive target is *worse than no seed*: the scheduler orders everything else confidently while the uncovered target weighs nothing and is run last.
+    Measured, a seed built from a core build --- and so missing `examples/` --- was slower than shipping nothing at all.
+    Nothing at build time can detect this, because a missing entry looks exactly like a cheap one.
+
+    So regenerate from a *full* build (`bin/build -F -t`) at the highest selftest level anyone runs.
+    The level is part of the contract: a seed generated and checked at `-t1` leaves whoever builds `-t3` with precisely the most expensive subtrees uncovered.
+
+    Staleness is otherwise soft, and in one direction only.
+    A key whose theory has been renamed or deleted is inert --- costs are only ever looked up for targets already in the graph, so a dead key is never consulted.
+    A *new* expensive theory with no entry is the case that costs you something.
+    Regenerate when large theories land or directories move, rather than on a calendar: drift among cheap entries is worth about 0.2%.
 
 `tools-poly/poly`
 :   Implementations of `Binarymap`, `Binaryset`, `Listsort` and `Help` (from the Moscow\ ML library) so that these libraries can be used in Poly/ML.

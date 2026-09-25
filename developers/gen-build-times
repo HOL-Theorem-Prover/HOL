@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+"""
+Generate a committed build-time seed from a project's cost cache.
+
+A seed lets a fresh checkout schedule well before it has measured
+anything of its own: Holmake reads it, then lets any locally measured
+value in .hol/build-logs/target-times override it (see
+tools/Holmake/core/target_times.sig).
+
+    developers/gen-build-times --graph g.json > build-times
+
+WHY THE COVERAGE GATE.  A seed that omits an expensive target is worse
+than no seed at all: the scheduler orders everything else confidently
+while the uncovered giant weighs nothing and is run last.  Measured, a
+seed built from a core build -- so missing examples/ -- was slower than
+shipping nothing.  Nothing at build time can detect that, because a
+missing entry is indistinguishable from a cheap one, so this script
+refuses to write a seed it cannot show to be complete.
+
+Coverage is checked against a `Holmake --json' dep graph rather than
+against the source tree: the tree is full of scripts a given build
+never reaches (HOLSELFTESTLEVEL, KERNELID, POLY conditionals in
+src/parallel_builds/core/Holmakefile), while the graph already accounts
+for them.  Capture one with:
+
+    cd src/parallel_builds/core
+    HOLSELFTESTLEVEL=3 Holmake --json > g.json
+
+from an *unbuilt* tree, or pass --assume-all-rebuild to holsched_sim's
+equivalent; nodes already built report needs_rebuild = false but are
+still listed, and this script ignores that field.
+
+The selftest level is part of the contract: a cache from a -t1 build
+checked against a -t1 graph passes, and then leaves users who build -t3
+with exactly the most expensive subtrees uncovered.  Generate from a
+build at the highest level you expect anyone to run.
+"""
+from __future__ import annotations
+import argparse, datetime, os, socket, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from holsched_sim import load_graph, load_log, is_theory_node, node_key
+
+
+def note(msg: str) -> None:
+    print(f'gen-build-times: {msg}', file=sys.stderr)
+
+
+def die(msg: str) -> None:
+    note(msg)
+    sys.exit(1)
+
+
+# --------------------------------------------------------------------
+# keys
+
+def read_cache(path: str) -> dict[str, float]:
+    try:
+        return load_log(path)
+    except OSError as e:
+        die(f'cannot read {path}: {e}')
+
+
+def fmt_cost(v: float) -> str:
+    """Coarse on purpose: run-to-run noise should not rewrite the file
+    on every regeneration."""
+    return f'{v:.2f}' if v < 10.0 else f'{v:.1f}'
+
+
+# --------------------------------------------------------------------
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--root', default=os.getcwd(),
+                    help='project root (default: cwd)')
+    ap.add_argument('--holdir',
+                    help='HOLDIR (default: same as --root)')
+    ap.add_argument('--cache',
+                    help='cost cache to read '
+                         '(default <root>/.hol/build-logs/target-times)')
+    ap.add_argument('--graph', action='append', default=[],
+                    help='Holmake --json graph for the coverage gate; '
+                         'repeatable')
+    ap.add_argument('--min-cost', type=float, default=1.0,
+                    help='drop entries below this many seconds (default 1)')
+    ap.add_argument('--exempt',
+                    help='file of keys allowed to be uncovered, one per line')
+    ap.add_argument('--level', help='selftest level, recorded in the header')
+    ap.add_argument('--no-coverage-check', action='store_true',
+                    help='write a seed without checking coverage. Only for '
+                         'a project with no graph to check against; the '
+                         'result is unverified')
+    args = ap.parse_args()
+
+    root = os.path.abspath(args.root).rstrip('/')
+    holdir = os.path.abspath(args.holdir).rstrip('/') if args.holdir else root
+    cache_path = args.cache or os.path.join(
+        root, '.hol', 'build-logs', 'target-times')
+
+    cache = read_cache(cache_path)
+    if not cache:
+        die(f'{cache_path} has no usable entries')
+    note(f'read {len(cache)} entries from {cache_path}')
+
+    # Machine-specific leftovers: keys under neither root nor HOLDIR are
+    # absolute, and mean nothing in anyone else's checkout.
+    foreign = [k for k in cache if k.startswith('/')]
+    for k in foreign:
+        del cache[k]
+    if foreign:
+        note(f'dropped {len(foreign)} absolute (out-of-project) keys')
+
+    # ---- coverage gate
+    if args.graph:
+        exempt = set()
+        if args.exempt:
+            with open(args.exempt) as f:
+                exempt = {l.strip() for l in f
+                          if l.strip() and not l.startswith('#')}
+        wanted = set()
+        for gp in args.graph:
+            for node in load_graph(gp):
+                if is_theory_node(node['target']):
+                    wanted.add(node_key(node['target'], holdir, root))
+        if not wanted:
+            die(f'no theory nodes in {", ".join(args.graph)}: not a '
+                f'Holmake --json graph?')
+        # A wrong --root/--holdir shows up here rather than in the
+        # overlap with the cache: the graph's targets stop being under
+        # either base, so their keys come out absolute.  Cache overlap
+        # is no test at all -- a cache legitimately covers whatever
+        # invocations have run, which need not be this graph's.
+        astray = sum(1 for k in wanted if k.startswith('/'))
+        if astray * 2 > len(wanted):
+            die(f'{astray} of {len(wanted)} graph targets fall outside '
+                f'both --root ({root}) and --holdir ({holdir}); those '
+                f'options do not match this graph')
+        uncovered = sorted(wanted - set(cache) - exempt)
+        if uncovered:
+            note(f'{len(uncovered)} of {len(wanted)} theory targets have no '
+                 f'measurement:')
+            for k in uncovered[:20]:
+                note(f'    {k}')
+            if len(uncovered) > 20:
+                note(f'    ... and {len(uncovered) - 20} more')
+            die('refusing to write a seed with uncovered targets. Build '
+                'those targets and regenerate, or list them in --exempt. '
+                'A seed that omits expensive work schedules worse than no '
+                'seed at all.')
+        note(f'coverage OK: {len(wanted)} theory targets, all measured')
+    elif not args.no_coverage_check:
+        die('no --graph given. Pass one for the coverage gate, or '
+            '--no-coverage-check to write an unverified seed')
+    else:
+        note('WARNING: coverage unchecked; this seed may be worse than none')
+
+    # ---- staleness report.  The harmless direction: `cost' only ever
+    # peeks by the key of a target already in the graph, so a key whose
+    # script has gone is never looked up.  Report, never gate -- gating
+    # here would fail on every legitimate rename.  Only theory-shaped
+    # keys are checkable; a target key names a product, not a source.
+    HOLVAR = '$(HOLDIR)/'
+
+    def script_for(k):
+        if k.startswith(HOLVAR):
+            return os.path.join(holdir, k[len(HOLVAR):] + 'Script.sml')
+        return os.path.join(root, k + 'Script.sml')
+
+    dead = [k for k in cache
+            if '.' not in os.path.basename(k)
+            and not os.path.exists(script_for(k))]
+    if dead:
+        note(f'{len(dead)} theory keys have no Script.sml in the tree '
+             f'(renamed or removed; harmless, never looked up)')
+
+    # ---- filter and emit
+    kept = {k: v for k, v in cache.items() if v >= args.min_cost}
+    dropped = len(cache) - len(kept)
+    dropped_cost = sum(v for v in cache.values() if v < args.min_cost)
+    if len(kept) < 10:
+        die(f'only {len(kept)} entries survive --min-cost {args.min_cost}; '
+            f'that is not a useful seed')
+
+    kernel = ''
+    try:
+        with open(os.path.join(holdir, '.kernelidstr')) as f:
+            kernel = f.read().strip()
+    except OSError:
+        pass
+
+    when = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M')
+    w = sys.stdout.write
+    w('# Holmake build-time seed: scheduling costs for a fresh checkout.\n')
+    w('#\n')
+    w('# Child CPU seconds, keyed as HM_DepGraph.cost_key builds them.\n')
+    w('# Locally measured values in .hol/build-logs/target-times always\n')
+    w('# win over these.  Regenerate with developers/gen-build-times\n')
+    w('# after a full build; see Manual/Developers/developers.md.\n')
+    w('#\n')
+    w(f'# generated : {when} on {socket.gethostname()}\n')
+    if kernel:
+        w(f'# kernel    : {kernel}\n')
+    if args.level:
+        w(f'# selftest  : {args.level}\n')
+    w(f'# threshold : >= {args.min_cost}s\n')
+    w(f'# entries   : {len(kept)} kept, {dropped} below threshold '
+      f'({dropped_cost:.1f}s in total)\n')
+    w('#\n')
+    for k in sorted(kept):
+        w(f'{k} {fmt_cost(kept[k])}\n')
+
+    note(f'wrote {len(kept)} entries ({dropped} dropped, '
+         f'{dropped_cost:.1f}s total)')
+
+
+if __name__ == '__main__':
+    main()

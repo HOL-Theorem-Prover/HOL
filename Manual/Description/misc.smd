@@ -570,12 +570,38 @@ can sit alongside `holproject.toml` and carry the same
 file override entries in the committed file, letting individual
 developers point externals at their own local paths.
 
+#### Committed build times
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!build\_times@\texttt{build\_times}}
+`Holmake` schedules parallel jobs by cost, reading what it measured on
+earlier runs from `.hol/build-logs/target-times`.  That file is
+per-checkout and normally gitignored, so a fresh clone schedules
+blind.  A project can commit a *seed* of costs to cover that gap; by
+default `Holmake` looks for one at `build-times` beside
+`holproject.toml`, and the `build_times` key names a different path:
+
+```
+build_times = "developers/build-times"
+```
+
+The path is resolved relative to the project root.  A seed is read
+only: any value the local cache holds for the same target wins, so the
+seed matters only until that target has been built once.  Keys are
+relative to the project root, with HOL's own targets written
+`$(HOLDIR)/...`, which is what makes a seed portable between checkouts
+and machines.  The `build_times` path itself may use `$(HOLDIR)` too,
+as `external_includes` does.  Generate one with `developers/gen-build-times` rather
+than by hand --- see the *Developers* manual for why the tool refuses
+to emit a seed whose coverage it cannot verify.
+
+This key is read whatever `holmake` is set to.
+
 #### Unrecognised keys
 
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!unrecognised keys}
 The keys recognised at the top level of `holproject.toml` are
 exactly `name`, `holpath`, `exclude`, `external_includes`,
-`holmake`, `projects` and `h4pedant`.  Inside a `[projects.<id>]`
+`holmake`, `projects`, `h4pedant` and `build_times`.  Inside a `[projects.<id>]`
 table they are `path` and `exclude`, and `holproject.local.toml`
 recognises `projects` alone.  A TOML lookup cannot tell a
 misspelled key from an absent one, so anything outside those sets

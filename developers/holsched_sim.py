@@ -4,8 +4,18 @@ Simulate parallel Holmake scheduling under different pickers.
 
 Input:
   --graph FILE  Holmake --json dep graph (see tools/Holmake/tests/json-strings/)
-  --log FILE    hol4-<ts> build log (see src/postkernel/Theory.sml
-                maybe_log_time_to_disk).  Format:  <key> <seconds>
+  --log FILE    <key> <seconds> cost data: either a hol4-<ts> build log (see
+                src/postkernel/Theory.sml maybe_log_time_to_disk) or a
+                .hol/build-logs/target-times cache.  Used for DURATIONS --
+                how long each job really takes.
+  --priority-log FILE
+                the cost data the SCHEDULER gets to see (default: --log).
+                Separating the two is the whole point: it answers "what does
+                a schedule built from degraded information cost in real
+                time?", which is exactly the cold-checkout question.
+  --seed FILE   a committed seed file, merged UNDER --priority-log
+                (priority-log entries win per key), mirroring how
+                target_times would consume one.
   -j N          worker count (default: 8)
 
 Output:
@@ -34,128 +44,224 @@ def load_graph(path: str):
 # --------------------------------------------------------------------
 # cost oracle
 
-def load_log(path: str) -> dict[str, float]:
+def load_log(path: str, min_cost: float = 0.0) -> dict[str, float]:
+    """Read <key> <seconds> lines.  `#' comments and malformed lines are
+    skipped; entries below min_cost are dropped, which is how the seed
+    threshold sweep is done."""
     log = {}
     with open(path) as f:
         for line in f:
-            parts = line.rstrip('\n').split(' ')
+            if line.lstrip().startswith('#'):
+                continue
+            parts = line.split()
             if len(parts) == 2:
                 try:
-                    log[parts[0]] = float(parts[1])
+                    v = float(parts[1])
                 except ValueError:
-                    pass
+                    continue
+                if v >= min_cost:
+                    log[parts[0]] = v
     return log
 
 
-def theory_key(target: str, holdir: str) -> str | None:
-    """Recover the log key from a *Theory.dat target path.
-    /repo/src/x/y/fooTheory.dat  ->  src/x/y/foo"""
-    prefix = holdir.rstrip('/') + '/'
-    if not target.startswith(prefix):
-        return None
-    rel = target[len(prefix):]
-    if not rel.endswith('Theory.dat'):
-        return None
-    return rel[:-len('Theory.dat')]
+THEORY_SUFFIXES = ('Theory.dat', 'Theory.sml', 'Theory.sig')
 
 
-def build_cost_table(nodes, log, holdir, default_cost):
-    """Return (cost[], coverage report).  cost[i] is 0 if the node is
-    already built (needs_rebuild=false); otherwise the log entry for
-    theory nodes, or default_cost for everything else."""
+def rel_to_root(path: str, holdir: str, root: str | None = None) -> str:
+    """Mirror Holmake_tools.rel_to_root: relative to the project root,
+    else `$(HOLDIR)/'-prefixed, else left absolute."""
+    for base, pfx in ((root or holdir, ''), (holdir, '$(HOLDIR)/')):
+        base = base.rstrip('/')
+        if path.startswith(base + '/'):
+            return pfx + path[len(base) + 1:]
+    return path
+
+
+def node_key(target: str, holdir: str, root: str | None = None) -> str:
+    """Mirror HM_DepGraph.cost_key.
+
+    A theory node is keyed by its theory name under its directory --
+    /repo/src/x/y/fooTheory.dat -> src/x/y/foo -- which is what the
+    BIC_BuildScript path reduces to and what Theory.sml's thy_log_key
+    writes.  Every other node is keyed by its own target path, so the
+    two spaces cannot collide."""
+    for sfx in THEORY_SUFFIXES:
+        if target.endswith(sfx):
+            target = target[:-len(sfx)]
+            break
+    return rel_to_root(target, holdir, root)
+
+
+def is_theory_node(target: str) -> bool:
+    return any(target.endswith(sfx) for sfx in THEORY_SUFFIXES)
+
+
+def build_tables(nodes, pri_log, dur_log, holdir, default_duration,
+                 all_rebuild):
+    """Return (pri[], dur[], needs[], coverage).
+
+    `pri' is what the scheduler weighs: the log value for the node's key,
+    or 0.0 when absent -- exactly what target_times.cost answers, so a
+    missing entry degrades the schedule the same way it does in the real
+    build.
+
+    `dur' is how long the node really takes.  A theory's three
+    Theory.{dat,sml,sig} siblings share one BIC_BuildScript job
+    (Holmake.sml:1695-1697) and complete together, so the duration is
+    charged to the .dat sibling alone and the group is collapsed into a
+    single task in Graph; charging all three would triple-count every
+    theory in the build."""
     n = len(nodes)
-    cost = [0.0] * n
-    n_theory = 0
-    n_matched = 0
-    n_theory_rebuild = 0
-    n_nonthy_rebuild = 0
-    for node in nodes:
-        i = node['node_id']
-        if not node['needs_rebuild']:
-            cost[i] = 0.0
+    pri = [0.0] * n
+    dur = [0.0] * n
+    needs = [True if all_rebuild else bool(nd['needs_rebuild'])
+             for nd in nodes]
+    n_theory = n_matched = n_nonthy = n_nonthy_matched = 0
+    for nd in nodes:
+        i = nd['node_id']
+        if not needs[i]:
             continue
-        if node['target'].endswith('Theory.dat'):
+        tgt = nd['target']
+        k = node_key(tgt, holdir)
+        pri[i] = pri_log.get(k, 0.0)
+        if is_theory_node(tgt):
             n_theory += 1
-            n_theory_rebuild += 1
-            k = theory_key(node['target'], holdir)
-            if k is not None and k in log:
-                cost[i] = log[k]
+            if k in dur_log:
                 n_matched += 1
-            else:
-                cost[i] = default_cost
+            # only the .dat sibling carries the group's duration
+            dur[i] = dur_log.get(k, default_duration) \
+                     if tgt.endswith('Theory.dat') else 0.0
         else:
-            n_nonthy_rebuild += 1
-            cost[i] = default_cost
+            n_nonthy += 1
+            if k in dur_log:
+                n_nonthy_matched += 1
+            dur[i] = dur_log.get(k, default_duration)
     report = {
         'total_nodes': n,
-        'need_rebuild': n_theory_rebuild + n_nonthy_rebuild,
-        'theory_rebuild': n_theory_rebuild,
+        'need_rebuild': sum(1 for x in needs if x),
+        'theory_rebuild': n_theory,
         'theory_matched': n_matched,
-        'nonthy_rebuild': n_nonthy_rebuild,
-        'default_cost': default_cost,
+        'nonthy_rebuild': n_nonthy,
+        'nonthy_matched': n_nonthy_matched,
+        'default_duration': default_duration,
+        'pri_entries': len(pri_log),
     }
-    return cost, report
+    return pri, dur, needs, report
 
 
 # --------------------------------------------------------------------
 # graph structure derived once at load time
 
 class Graph:
-    """Compact representation of the sub-DAG of nodes needing rebuild.
-    Predecessors that are needs_rebuild=false are elided (they add no
-    wait).  Successors are inverted from `dependencies`.
-    Critical-path weights are computed via reverse topological order."""
+    """The sub-DAG of nodes needing rebuild, collapsed into *tasks*.
 
-    def __init__(self, raw_nodes, cost):
+    Two distinct structures live here, and the difference matters:
+
+      * Critical-path weights are computed over the RAW nodes with the
+        priority costs, because that is what HM_DepGraph.compute_cp_weights
+        does -- including giving each of a theory's three siblings the
+        theory's full cost.  Reproducing Holmake's picker means
+        reproducing its arithmetic, warts included.
+
+      * Execution is simulated over TASKS, where a theory's siblings are
+        one task: multibuild's find_nodes_by_command marks the whole
+        group Succeeded from one job (multibuild.sml:435-441), so one
+        job takes one duration.
+    """
+
+    def __init__(self, raw_nodes, pri, dur, needs, holdir='/repo'):
         n = len(raw_nodes)
-        # sanity: node_ids are 0..n-1 (Holmake's invariant)
-        assert all(node['node_id'] == i for i, node in enumerate(raw_nodes)), \
+        assert all(nd['node_id'] == i for i, nd in enumerate(raw_nodes)), \
             "node_ids are expected to be 0..n-1"
-        self.n = n
-        self.cost = cost
-        self.needs = [bool(node['needs_rebuild']) for node in raw_nodes]
-        self.targets = [node['target'] for node in raw_nodes]
+        self.targets = [nd['target'] for nd in raw_nodes]
 
-        # Effective predecessors: only those that also need rebuild.
-        # Effective successors: inverse.
-        eff_preds = [[] for _ in range(n)]
-        eff_succs = [[] for _ in range(n)]
-        for i, node in enumerate(raw_nodes):
-            if not self.needs[i]:
+        # ---- raw effective edges (only among nodes needing rebuild)
+        raw_succs = [[] for _ in range(n)]
+        raw_preds = [[] for _ in range(n)]
+        for i, nd in enumerate(raw_nodes):
+            if not needs[i]:
                 continue
-            for j in node['dependencies']:
-                if self.needs[j]:
-                    eff_preds[i].append(j)
-                    eff_succs[j].append(i)
-        self.preds = eff_preds
-        self.succs = eff_succs
+            for j in nd['dependencies']:
+                if needs[j]:
+                    raw_preds[i].append(j)
+                    raw_succs[j].append(i)
+        cp_weight = self._cp(n, raw_succs, pri, needs)
 
-        # Critical-path weight: cp[i] = cost[i] + max cp[j] over succs.
-        # Compute by reverse-topological walk (deepest sinks first).
-        self.cp_weight = self._compute_cp()
+        # ---- collapse theory sibling groups into tasks
+        group_of = [None] * n
+        by_key = {}
+        for i, nd in enumerate(raw_nodes):
+            if not needs[i]:
+                continue
+            tgt = nd['target']
+            if is_theory_node(tgt):
+                gk = (nd['dir'], node_key(tgt, holdir))
+                by_key.setdefault(gk, []).append(i)
+            else:
+                by_key[('', f'node{i}')] = [i]
+        self.tasks = []          # list of member-node lists
+        for gk in sorted(by_key, key=lambda k: min(by_key[k])):
+            members = by_key[gk]
+            group_of_id = len(self.tasks)
+            for i in members:
+                group_of[i] = group_of_id
+            self.tasks.append(members)
+        t = len(self.tasks)
+        self.n = t
 
-    def _compute_cp(self):
-        # Iterative topological sort on the rebuild sub-DAG.
-        n = self.n
-        indeg = [len(self.preds[i]) if self.needs[i] else -1 for i in range(n)]
+        # task cost = the one job's duration; task priority = the best
+        # cp any member offers (all members share deps, so they become
+        # runnable together)
+        self.cost = [max(dur[i] for i in m) for m in self.tasks]
+        self.priority = [max(cp_weight[i] for i in m)
+                         for m in self.tasks]
+        self.rep = [min(m) for m in self.tasks]
+
+        preds = [set() for _ in range(t)]
+        succs = [set() for _ in range(t)]
+        for i in range(n):
+            if not needs[i]:
+                continue
+            gi = group_of[i]
+            for j in raw_preds[i]:
+                gj = group_of[j]
+                if gj != gi:
+                    preds[gi].add(gj)
+                    succs[gj].add(gi)
+        self.indeg = [len(s) for s in preds]
+        self.succs = [sorted(s) for s in succs]
+
+        # duration-based critical path, for the lower bound
+        self.cp_bound = max(self._cp(t, self.succs, self.cost,
+                                     [True] * t), default=0.0)
+
+    @staticmethod
+    def _cp(n, succs, cost, needs):
+        """cp[i] = cost[i] + max cp[j] over succs, by reverse topo order."""
+        indeg = [0] * n
+        for i in range(n):
+            if not needs[i]:
+                continue
+            for j in succs[i]:
+                indeg[j] += 1
+        stack = [i for i in range(n) if needs[i] and indeg[i] == 0]
         order = []
-        stack = [i for i in range(n) if self.needs[i] and indeg[i] == 0]
         while stack:
             i = stack.pop()
             order.append(i)
-            for j in self.succs[i]:
+            for j in succs[i]:
                 indeg[j] -= 1
                 if indeg[j] == 0:
                     stack.append(j)
-        if len(order) != sum(1 for x in self.needs if x):
+        if len(order) != sum(1 for x in needs if x):
             raise RuntimeError("cycle detected in rebuild sub-DAG")
         cp = [0.0] * n
         for i in reversed(order):
             best = 0.0
-            for j in self.succs[i]:
+            for j in succs[i]:
                 if cp[j] > best:
                     best = cp[j]
-            cp[i] = self.cost[i] + best
+            cp[i] = cost[i] + best
         return cp
 
 
@@ -163,17 +269,17 @@ class Graph:
 # simulator
 
 def simulate(g: Graph, num_workers: int, priority_fn) -> tuple[float, list]:
-    """Event-driven simulation.
-    priority_fn(i) -> sort key; the picker pops the ready node with
+    """Event-driven simulation over tasks.
+    priority_fn(i) -> sort key; the picker pops the ready task with
     the SMALLEST key (so negate for max-priority pickers).
     Returns (makespan, done-order)."""
     n = g.n
-    remaining = [len(g.preds[i]) if g.needs[i] else -1 for i in range(n)]
-    ready = []  # min-heap of (priority, node_id)
+    remaining = list(g.indeg)
+    ready = []  # min-heap of (priority, task_id)
     for i in range(n):
-        if g.needs[i] and remaining[i] == 0:
+        if remaining[i] == 0:
             heapq.heappush(ready, (priority_fn(i), i))
-    running = []  # min-heap of (completion_time, node_id)
+    running = []  # min-heap of (completion_time, task_id)
     now = 0.0
     order = []
     while running or ready:
@@ -195,15 +301,15 @@ def simulate(g: Graph, num_workers: int, priority_fn) -> tuple[float, list]:
 
 def picker_insertion(g: Graph):
     """Smallest node_id first (mirrors HM_DepGraph.find_runnable_pred)."""
-    return lambda i: i
+    return lambda i: g.rep[i]
 
 def picker_lpt(g: Graph):
     """Largest cost first.  Tie-break on node_id for determinism."""
-    return lambda i: (-g.cost[i], i)
+    return lambda i: (-g.cost[i], g.rep[i])
 
 def picker_hlfet(g: Graph):
     """Largest critical-path weight first.  Tie-break on node_id."""
-    return lambda i: (-g.cp_weight[i], i)
+    return lambda i: (-g.priority[i], g.rep[i])
 
 
 # --------------------------------------------------------------------
@@ -221,12 +327,15 @@ def report(g: Graph, coverage: dict, num_workers: int, results: dict,
            lower_bounds: dict, top_cp: int = 0):
     print()
     print(f'graph: {coverage["total_nodes"]} nodes total, '
-          f'{coverage["need_rebuild"]} need rebuild')
-    print(f'  theory nodes needing rebuild: {coverage["theory_rebuild"]}, '
-          f'matched to log: {coverage["theory_matched"]} '
+          f'{coverage["need_rebuild"]} need rebuild, '
+          f'{g.n} tasks after collapsing theory siblings')
+    print(f'  theory nodes: {coverage["theory_rebuild"]}, '
+          f'matched to duration log: {coverage["theory_matched"]} '
           f'({100 * coverage["theory_matched"] / max(1, coverage["theory_rebuild"]):.1f}%)')
-    print(f'  non-theory rebuild nodes: {coverage["nonthy_rebuild"]}  '
-          f'(default cost = {coverage["default_cost"]}s)')
+    print(f'  non-theory nodes: {coverage["nonthy_rebuild"]}, '
+          f'matched: {coverage["nonthy_matched"]}  '
+          f'(default duration = {coverage["default_duration"]}s)')
+    print(f'  priority-log entries: {coverage["pri_entries"]}')
     print()
     print(f'workers (j) = {num_workers}')
     print(f'{"":22s}{"simulated makespan":>28s}')
@@ -238,25 +347,28 @@ def report(g: Graph, coverage: dict, num_workers: int, results: dict,
 
     if top_cp:
         print()
-        print(f'Top {top_cp} nodes by critical-path weight:')
-        idxs = sorted(range(g.n), key=lambda i: -g.cp_weight[i])[:top_cp]
+        print(f'Top {top_cp} tasks by critical-path weight:')
+        idxs = sorted(range(g.n), key=lambda i: -g.priority[i])[:top_cp]
         for i in idxs:
-            if g.needs[i]:
-                print(f'  cp={g.cp_weight[i]:8.1f}s  cost={g.cost[i]:7.1f}s  '
-                      f'{g.targets[i]}')
+            print(f'  cp={g.priority[i]:8.1f}s  cost={g.cost[i]:7.1f}s  '
+                  f'{g.targets[g.rep[i]]}')
 
 
 # --------------------------------------------------------------------
 # entry
 
+def _mk(nodes, pri, dur):
+    needs = [True] * len(nodes)
+    return Graph(nodes, pri, dur, needs, holdir='/x')
+
+
 def selftest():
-    """Two hand-built cases; assert HLFET beats insertion where expected."""
+    """Hand-built cases; assert HLFET beats insertion where expected."""
     # Case 1: A trivial chain X → Y where X (small) blocks Y (huge).
     # With j=2 and a bunch of small independent nodes, insertion picks the
     # small ones first, delaying Y.  HLFET sees Y downstream of X and picks
     # X immediately.
     nodes = [
-        # node 0..3: independent small tasks
         {'node_id': 0, 'target': '/x/a.uo', 'dir': '.', 'dependencies': [],
          'needs_rebuild': True},
         {'node_id': 1, 'target': '/x/b.uo', 'dir': '.', 'dependencies': [],
@@ -265,15 +377,13 @@ def selftest():
          'needs_rebuild': True},
         {'node_id': 3, 'target': '/x/d.uo', 'dir': '.', 'dependencies': [],
          'needs_rebuild': True},
-        # node 4: X — small predecessor of Y
         {'node_id': 4, 'target': '/x/X.uo', 'dir': '.', 'dependencies': [],
          'needs_rebuild': True},
-        # node 5: Y — huge, depends on X
         {'node_id': 5, 'target': '/x/Y.uo', 'dir': '.', 'dependencies': [4],
          'needs_rebuild': True},
     ]
     cost = [1.0, 1.0, 1.0, 1.0, 1.0, 100.0]
-    g = Graph(nodes, cost)
+    g = _mk(nodes, cost, cost)
     ins, _ = simulate(g, 2, picker_insertion(g))
     hl,  _ = simulate(g, 2, picker_hlfet(g))
     print(f'case 1  (j=2, 4 small + X→Y_huge):  insertion={ins:.1f}s  HLFET={hl:.1f}s')
@@ -286,6 +396,31 @@ def selftest():
     print(f'case 2  (j=inf, same graph):        insertion={ins2:.1f}s  HLFET={hl2:.1f}s')
     assert abs(ins2 - hl2) < 1e-6, 'at j=inf both pickers should tie at CP'
     assert abs(hl2 - 101.0) < 1e-6, f'CP = X(1) + Y(100) = 101, got {hl2}'
+
+    # Case 3: blind priorities must not change durations.  Same graph,
+    # zero priority information: HLFET degenerates to insertion order.
+    g3 = _mk(nodes, [0.0] * 6, cost)
+    blind, _ = simulate(g3, 2, picker_hlfet(g3))
+    ins3,  _ = simulate(g3, 2, picker_insertion(g3))
+    print(f'case 3  (j=2, blind priorities):    insertion={ins3:.1f}s  HLFET={blind:.1f}s')
+    assert abs(blind - ins3) < 1e-6, \
+        f'with no cost data HLFET should tie insertion, got {blind} vs {ins3}'
+    assert blind > hl, 'blind HLFET should be worse than informed HLFET'
+
+    # Case 4: a theory's three siblings are one job, not three.
+    thy = [
+        {'node_id': 0, 'target': '/x/fooTheory.dat', 'dir': '/x',
+         'dependencies': [], 'needs_rebuild': True},
+        {'node_id': 1, 'target': '/x/fooTheory.sml', 'dir': '/x',
+         'dependencies': [], 'needs_rebuild': True},
+        {'node_id': 2, 'target': '/x/fooTheory.sig', 'dir': '/x',
+         'dependencies': [], 'needs_rebuild': True},
+    ]
+    gt = _mk(thy, [10.0, 10.0, 10.0], [10.0, 0.0, 0.0])
+    assert gt.n == 1, f'three siblings should collapse to one task, got {gt.n}'
+    mk, _ = simulate(gt, 4, picker_hlfet(gt))
+    print(f'case 4  (theory siblings collapse): makespan={mk:.1f}s')
+    assert abs(mk - 10.0) < 1e-6, f'one job of 10s, got {mk}'
     print('selftest OK')
 
 
@@ -294,14 +429,27 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--test', action='store_true', help='run built-in selftest and exit')
     ap.add_argument('--graph', help='Holmake --json output')
-    ap.add_argument('--log',   help='hol4-<ts> timing log')
+    ap.add_argument('--log',   help='<key> <secs> cost data, used as '
+                                    'the real durations')
+    ap.add_argument('--priority-log',
+                    help='cost data the scheduler sees (default: --log). '
+                         'Pass /dev/null to model a cold checkout.')
+    ap.add_argument('--seed', help='seed file merged under --priority-log')
+    ap.add_argument('--min-cost', type=float, default=0.0,
+                    help='drop seed entries below this (default 0)')
     ap.add_argument('--holdir', default='/repo',
                     help='HOL root prefix stripped from targets (default /repo)')
     ap.add_argument('-j', '--jobs', type=int, default=8, help='worker count')
-    ap.add_argument('--default-cost', type=float, default=0.1,
-                    help='cost (secs) for nodes with no log entry (default 0.1)')
+    ap.add_argument('--default-duration', type=float, default=0.1,
+                    help='duration (secs) for nodes with no log entry '
+                         '(default 0.1).  Priorities always fall back to '
+                         '0.0, as target_times.cost does.')
+    ap.add_argument('--assume-all-rebuild', action='store_true',
+                    help='force needs_rebuild on every node')
     ap.add_argument('--top-cp', type=int, default=0,
-                    help='list top N nodes on the critical path')
+                    help='list top N tasks on the critical path')
+    ap.add_argument('--brief', action='store_true',
+                    help='one line: makespan for HLFET only')
     args = ap.parse_args()
     if args.test:
         selftest()
@@ -310,23 +458,34 @@ def main():
         ap.error('--graph and --log are required (or use --test)')
 
     nodes = load_graph(args.graph)
-    log = load_log(args.log)
-    cost, coverage = build_cost_table(nodes, log, args.holdir, args.default_cost)
-    g = Graph(nodes, cost)
+    dur_log = load_log(args.log)
+    pri_log = dict(load_log(args.seed, args.min_cost)) if args.seed else {}
+    if args.priority_log:
+        pri_log.update(load_log(args.priority_log))
+    elif not args.seed:
+        pri_log = dict(dur_log)
+
+    pri, dur, needs, coverage = build_tables(
+        nodes, pri_log, dur_log, args.holdir, args.default_duration,
+        args.assume_all_rebuild)
+    g = Graph(nodes, pri, dur, needs, holdir=args.holdir)
 
     results = {}
     for name, mk_pri in [
-        ('insertion (current)', picker_insertion),
+        ('insertion', picker_insertion),
         ('LPT', picker_lpt),
         ('HLFET', picker_hlfet),
     ]:
-        pri = mk_pri(g)
-        makespan, _ = simulate(g, args.jobs, pri)
+        makespan, _ = simulate(g, args.jobs, mk_pri(g))
         results[name] = makespan
 
-    sum_c = sum(g.cost[i] for i in range(g.n) if g.needs[i])
-    cp = max((g.cp_weight[i] for i in range(g.n) if g.needs[i]), default=0.0)
-    lower_bounds = {'sum_over_j': sum_c / args.jobs, 'cp': cp}
+    if args.brief:
+        print(f'{results["insertion"]:.1f} {results["LPT"]:.1f} '
+              f'{results["HLFET"]:.1f}')
+        return
+
+    sum_c = sum(g.cost)
+    lower_bounds = {'sum_over_j': sum_c / args.jobs, 'cp': g.cp_bound}
     report(g, coverage, args.jobs, results, lower_bounds, top_cp=args.top_cp)
 
 
