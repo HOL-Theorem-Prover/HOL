@@ -30,6 +30,7 @@ type t = {
   rebuild_deps : bool,
   recursive_build : bool,
   recursive_clean : bool,
+  strict_outputs : bool,
   hmakefile : string option,
   thmsrc : string option,
   verbose : bool

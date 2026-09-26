@@ -37,7 +37,7 @@ fun 'a graphbuildj1 static_info =
   let
     val {build_command : 'a build_command,
          mosml_build_command : 'a mosml_build_command, outs, keep_going,
-         quiet, hmenv, system} = static_info
+         quiet, hmenv, strict_outputs, system} = static_info
     val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
     val diagK = diag "graphbuildj1" o (fn x => fn _ => x)
     fun build_graph g =
@@ -123,9 +123,21 @@ fun 'a graphbuildj1 static_info =
                       let
                         val hypargs as {noecho,ignore_error,command=c} =
                             process_hypat_options c
+                        (* A command that exits 0 without writing its
+                           target leaves the failure to be found by
+                           whatever reads the file next, which can be a
+                           long way off and in another directory.  A
+                           rule whose errors the Holmakefile has already
+                           said to ignore is left alone. *)
+                        fun chk ns =
+                            ignore_error orelse
+                            HM_DepGraph.check_outputs
+                              {outs = outs, strict = strict_outputs} g ns
                       in
                         case mosml_build_command hmenv extra hypargs deps of
-                            SOME r => k (upd1 n) (OS.Process.isSuccess r)
+                            SOME r =>
+                              k (upd1 n)
+                                (OS.Process.isSuccess r andalso chk [n])
                           | NONE =>
                             let
                               val () =
@@ -141,7 +153,9 @@ fun 'a graphbuildj1 static_info =
                                 (warn ("[" ^ tgt_toString target_d ^
                                        "] Error (ignored)");
                                  k (updall (n::others)) true)
-                              else k (updall (n::others)) res_b
+                              else
+                                k (updall (n::others))
+                                  (res_b andalso chk (n::others))
                             end
                       end
                     | NoCmd => k (upd1 n) true

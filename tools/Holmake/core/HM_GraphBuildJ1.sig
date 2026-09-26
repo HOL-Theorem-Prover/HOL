@@ -33,6 +33,7 @@ sig
                       outs : Holmake_tools.output_functions,
                       keep_going : bool,
                       quiet : bool,
+                      strict_outputs : bool,
                       system : string -> OS.Process.status,
                       hmenv : Holmake_types.env} ->
                      'a HM_DepGraph.t -> OS.Process.status * 'a HM_DepGraph.t

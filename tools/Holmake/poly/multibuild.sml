@@ -68,7 +68,7 @@ fun graphbuild optinfo g =
           mosml_build_command : GraphExtra.t mosml_build_command,
           diag,
           keep_going, quiet, hmenv, jobs, time_limit, maxheap,
-          relocbuild, thmsrc, retry_oos,
+          relocbuild, thmsrc, retry_oos, strict_outputs,
           outs : Holmake_tools.output_functions } = optinfo
     val {warn, info, tgtfatal, ...} = outs
     (* `info' is shadowed below by the monitor's two-column version *)
@@ -415,12 +415,26 @@ fun graphbuild optinfo g =
                         (warn ("Ignoring error executing: " ^ c);
                          Succeeded)
                       else RealFail
+                    (* A command that exits 0 without writing its target
+                       leaves the failure to be found by whatever reads
+                       the file next -- which under -j is minutes away
+                       and in another directory, with nothing left to
+                       say where it came from.  A rule whose errors the
+                       Holmakefile already said to ignore is left
+                       alone. *)
+                    fun error_chk g ns b =
+                        error (b andalso
+                               (ignore_error orelse
+                                HM_DepGraph.check_outputs
+                                  {outs = outs, strict = strict_outputs} g ns))
                   in
                     case pushdir dir
                                  (mosml_build_command hmenv extra hypargs) deps
                      of
                         SOME r =>
-                          k (error (OS.Process.isSuccess r) = Succeeded) g
+                          k (error_chk g [n] (OS.Process.isSuccess r) =
+                             Succeeded)
+                            g
                           (* lock released via k *)
                       | NONE =>
                         let
@@ -436,7 +450,7 @@ fun graphbuild optinfo g =
                           val (thycount,neededi) = count_theories_needed others
                           fun update ((g,ok), b, t) =
                               let
-                                val status = error b
+                                val status = error_chk g (n::others) b
                               in
                                 if status <> Succeeded andalso
                                    oos_retry {node = n, tag = tag, dir = dir}

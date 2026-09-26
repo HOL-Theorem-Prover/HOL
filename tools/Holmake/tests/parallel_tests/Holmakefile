@@ -49,6 +49,7 @@ DIRNAMES = \
   empty_script \
   deps_of_depthys \
   gh569_info \
+  missing_output \
   gh569_error \
   gh604 \
   gh679 \

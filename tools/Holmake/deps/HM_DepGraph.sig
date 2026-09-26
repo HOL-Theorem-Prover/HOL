@@ -103,6 +103,11 @@ sig
   val nodeStatus : 'a t -> node -> target_status
   val peeknode : 'a t -> node -> 'a nodeInfo option
   val target_node : 'a t -> dep -> node option
+  val check_outputs : {outs : Holmake_tools.output_functions, strict : bool} ->
+                      'a t -> node list -> bool
+    (* True if the command that just succeeded for these nodes left
+       every target it promised in place.  Under `strict' a shortfall
+       fails the node; otherwise it is reported and tolerated. *)
   val size : 'a t -> int
   val listNodes : 'a t -> (node * 'a nodeInfo) list
   val find_nodes_by_command : 'a t -> dir * command -> node list

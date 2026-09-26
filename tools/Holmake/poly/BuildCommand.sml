@@ -571,6 +571,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       else NONE
     end
   val jobs = #jobs (#core optv)
+  val strict_outputs = #strict_outputs (#core optv)
   open HM_DepGraph
   fun pr s = s
   fun interpret_graph (g,ok) =
@@ -616,6 +617,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               keep_going = keep_going,
               quiet = quiet_flag,
               hmenv = hmenv,
+              strict_outputs = strict_outputs,
               system = system } g)
       else
         (fn g =>
@@ -629,6 +631,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     time_limit = time_limit,
                                     maxheap = maxheap,
                                     retry_oos = retry_oos,
+                                    strict_outputs = strict_outputs,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs,
                                     outs = outs } g |> interpret_graph)

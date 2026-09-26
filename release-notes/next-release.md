@@ -223,6 +223,15 @@ New features
     contradiction, and is an abbreviation for
     `SPOSE_NOT_THEN STRIP_ASSUME_TAC`.
 
+-   `Holmake --strict-outputs` fails a rule whose command exits
+    successfully without creating the target it was supposed to create.
+    Without the flag such a rule draws a warning instead, which is the
+    default for now.
+    Exempt are phony targets, which name no file; commands whose errors
+    the Holmakefile has already said to ignore with a leading `-`; and
+    the earlier commands of a multi-command rule, only the last of which
+    is expected to have produced the target.
+
 Bugs fixed
 ----------
 

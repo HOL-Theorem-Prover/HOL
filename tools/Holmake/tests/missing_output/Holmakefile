@@ -1,0 +1,9 @@
+ifdef POLY
+HOLMAKE_OPTS = --holstate=$(protect $(HOLDIR)/bin/hol.state0)
+endif
+
+missing_output.log: doit.sh testd/Holmakefile
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/Holmake) $(HOLMAKE_OPTS), $@)
+
+EXTRA_CLEANS = missing_output.log testd/multi testd/stdout.txt \
+               testd/stderr.txt

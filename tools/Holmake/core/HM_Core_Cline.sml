@@ -3,7 +3,7 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate31 z
+  fun makeUpdateT z = makeUpdate32 z
 in
 fun updateT z = let
   fun from cache_dir cachekey debug dirs do_logging fast force_lastmaker
@@ -12,7 +12,7 @@ fun updateT z = let
            no_lastmaker_check no_overlay
            no_preexecs no_prereqs no_project opentheory quiet
            quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
-           thmsrc verbose =
+           strict_outputs thmsrc verbose =
     {
       cache_dir = cache_dir,
       cachekey = cachekey,
@@ -29,11 +29,12 @@ fun updateT z = let
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild = rebuild,
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
-      recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
+      recursive_clean = recursive_clean, strict_outputs = strict_outputs,
+      thmsrc = thmsrc, verbose = verbose
     }
-  fun from' verbose thmsrc recursive_clean recursive_build rebuild_deps
-            rebuild
-            quit_on_failure
+  fun from' verbose thmsrc strict_outputs recursive_clean recursive_build
+            rebuild_deps
+            rebuild quit_on_failure
             quiet opentheory no_project no_prereqs no_preexecs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             json jobs interactive
@@ -56,7 +57,8 @@ fun updateT z = let
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild = rebuild,
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
-      recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
+      recursive_clean = recursive_clean, strict_outputs = strict_outputs,
+      thmsrc = thmsrc, verbose = verbose
     }
   fun to f {cache_dir, cachekey, debug, dirs, do_logging, fast,
             force_lastmaker, help, hmakefile, holdir,
@@ -64,14 +66,14 @@ fun updateT z = let
             no_hmakefile, no_lastmaker_check,
             no_overlay, no_preexecs, no_prereqs, no_project, opentheory,
             quiet, quit_on_failure, rebuild, rebuild_deps, recursive_build,
-            recursive_clean, thmsrc, verbose} =
+            recursive_clean, strict_outputs, thmsrc, verbose} =
     f cache_dir cachekey debug dirs do_logging fast force_lastmaker
       help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
       no_prereqs no_project opentheory quiet
       quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
-      thmsrc verbose
+      strict_outputs thmsrc verbose
 in
   makeUpdateT (from, from', to)
 end z
@@ -112,6 +114,7 @@ type t = {
   rebuild_deps : bool,
   recursive_build : bool,
   recursive_clean : bool,
+  strict_outputs : bool,
   thmsrc : string option,
   verbose : bool
 }
@@ -155,6 +158,7 @@ val default_core_options : t =
   rebuild_deps = false,
   recursive_build = false,
   recursive_clean = false,
+  strict_outputs = false,
   thmsrc = NONE,
   verbose = false
 }
@@ -360,6 +364,11 @@ val core_option_descriptions = [
     long = ["recursive-build"], desc = mkBoolT #recursive_build},
   { help = "clean recursively", short = "",
     long = ["recursive-clean"], desc = mkBoolT #recursive_clean},
+  { help = "fail when a rule's command leaves its target absent",
+    short = "", long = ["strict-outputs"], desc = mkBoolT #strict_outputs},
+  { help = "only warn when a rule's command leaves its target absent",
+    short = "", long = ["no-strict-outputs"],
+    desc = mkBoolF #strict_outputs},
   { help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",
     desc = ReqArg (set_thmsrc, "dat|tr") },
   { help = "verbose output", short = "v", long = ["verbose"],

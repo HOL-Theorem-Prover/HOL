@@ -308,6 +308,57 @@ fun find_best_runnable_pred (score : node -> real) P (g : 'a t) =
   end
 
 fun target_node (g:'a t) t = Map.peek(#target_map g,t)
+
+(* Of [ns] -- the nodes a single command that exited successfully was
+   taken to satisfy -- those naming a file it was supposed to have
+   created and didn't.
+
+   Two kinds of node are exempt.  A phony target names no file at all.
+   And a rule with several commands becomes a chain of nodes sharing
+   the one target, of which only the last is expected to have produced
+   it; `target_map' records exactly that one, so a node the map does
+   not point at is an earlier link in some chain.
+
+   Callers pass the node they ran consed onto the nodes sharing its
+   command, and `find_nodes_by_command' already returns the former
+   among the latter, so the list arrives with a duplicate in it. *)
+fun missing_outputs (g:'a t) ns =
+    let
+      fun missing n =
+          case peeknode g n of
+              NONE => NONE
+            | SOME nI =>
+              let val t = #target nI
+              in
+                if #phony nI orelse
+                   (case target_node g t of SOME n' => n' <> n | NONE => false)
+                   orelse hm_target.tgtexists_readable t
+                then NONE
+                else SOME t
+              end
+    in
+      List.mapPartial missing
+        (Binaryset.listItems
+           (Binaryset.addList (Binaryset.empty node_compare, ns)))
+    end
+
+(* True if the command that just succeeded for [ns] left every target
+   it promised in place.  Under [strict] a shortfall fails the node;
+   otherwise it is reported and tolerated.  Both builders call this, so
+   -j1 and -jN cannot drift apart on either the verdict or the
+   wording. *)
+fun check_outputs {outs : output_functions, strict} (g:'a t) ns =
+    case missing_outputs g ns of
+        [] => true
+      | ts =>
+        let
+          val what = String.concatWith ", " (map tgt_toString ts)
+          val msg = "*** Command succeeded but did not create " ^ what
+        in
+          if strict then (#tgtfatal outs msg; false)
+          else (#warn outs (msg ^ " (--strict-outputs makes this an error)");
+                true)
+        end
 fun listNodes (g:'a t) = Map.foldr (fn (k,v,acc) => (k,v)::acc) [] (#nodes g)
 
 val node_toString = Int.toString
