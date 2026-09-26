@@ -85,8 +85,13 @@ def main() -> None:
                          'repeatable')
     ap.add_argument('--min-cost', type=float, default=1.0,
                     help='drop entries below this many seconds (default 1)')
-    ap.add_argument('--exempt',
-                    help='file of keys allowed to be uncovered, one per line')
+    ap.add_argument('--exempt', action='append', default=[], metavar='KEY',
+                    help='a theory key allowed to be uncovered; repeatable. '
+                         'For targets a normal build never builds, such as '
+                         'the OpenTheory-only src/real/prove_real_assums')
+    ap.add_argument('--exempt-keys-file', metavar='FILE',
+                    help='file of keys allowed to be uncovered, one per '
+                         'line; `#` comments and blanks ignored')
     ap.add_argument('--level', help='selftest level, recorded in the header')
     ap.add_argument('--no-coverage-check', action='store_true',
                     help='write a seed without checking coverage. Only for '
@@ -114,11 +119,14 @@ def main() -> None:
 
     # ---- coverage gate
     if args.graph:
-        exempt = set()
-        if args.exempt:
-            with open(args.exempt) as f:
-                exempt = {l.strip() for l in f
-                          if l.strip() and not l.startswith('#')}
+        exempt = set(args.exempt)
+        if args.exempt_keys_file:
+            try:
+                with open(args.exempt_keys_file) as f:
+                    exempt |= {l.strip() for l in f
+                               if l.strip() and not l.startswith('#')}
+            except OSError as e:
+                die(f'cannot read {args.exempt_keys_file}: {e}')
         wanted = set()
         for gp in args.graph:
             for node in load_graph(gp):
@@ -146,9 +154,9 @@ def main() -> None:
             if len(uncovered) > 20:
                 note(f'    ... and {len(uncovered) - 20} more')
             die('refusing to write a seed with uncovered targets. Build '
-                'those targets and regenerate, or list them in --exempt. '
-                'A seed that omits expensive work schedules worse than no '
-                'seed at all.')
+                'them and regenerate, or, for a target a normal build never '
+                'builds, pass --exempt <key> for each. A seed that omits '
+                'expensive work schedules worse than no seed at all.')
         note(f'coverage OK: {len(wanted)} theory targets, all measured')
     elif not args.no_coverage_check:
         die('no --graph given. Pass one for the coverage gate, or '

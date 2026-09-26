@@ -303,8 +303,15 @@ Unless otherwise noted, they are built by the configuration process.
     cd src/parallel_builds/core
     HOLSELFTESTLEVEL=3 Holmake --json > /tmp/g.json
     cd $HOLDIR
-    developers/gen-build-times --graph /tmp/g.json --level 3 > build-times
+    developers/gen-build-times --graph /tmp/g.json --level 3 \
+        --exempt src/real/prove_real_assums > build-times
     ~~~~
+
+    A target the build never builds has to be named: `prove_real_assums` is
+    excluded from `src/real`'s `TARGETS` and exists only for the OpenTheory
+    `hol4-real.art` path, so it appears in the graph and will never have a
+    measurement.
+    `--exempt` is repeatable, and `--exempt-keys-file` reads a list.
 
     The generator refuses to write a seed unless every theory target in the supplied dependency graph has a measurement.
     That check is the point of the tool.
