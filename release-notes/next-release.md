@@ -226,6 +226,20 @@ New features
 Bugs fixed
 ----------
 
+-   `bin/hol` reading a script on its standard input — the shape a
+    Holmakefile rule uses when it writes `$(HOLDIR)/bin/hol < build.ML`
+    — reported success however badly the script went.
+    The REPL recovers from a compile error by discarding buffered input,
+    which is what someone at a terminal wants; but on a redirected file
+    everything as far as end-of-file is buffered, so the run stopped at
+    the error and still exited 0, and a rule driving HOL this way could
+    produce nothing at all and be recorded as having built it.
+    Such a run now exits with failure.
+
+    An uncaught exception is deliberately not treated the same way: the
+    declarations after it still run and the run still succeeds, because
+    the script did reach its end.
+
 -   `Holmake -r` now overrides `--no_prereqs`, as the documentation
     has always said it does.  Previously the two fought: `-r` seeded
     the targets of every `INCLUDES` directory and `--no_prereqs`

@@ -1,0 +1,2 @@
+val _ = raise Fail "deliberate";
+val _ = TextIO.closeOut (TextIO.openOut "test8.sentinel");
