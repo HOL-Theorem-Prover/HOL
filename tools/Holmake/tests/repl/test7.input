@@ -1,0 +1,2 @@
+val x : int = "not an int";
+val _ = TextIO.closeOut (TextIO.openOut "test7.sentinel");

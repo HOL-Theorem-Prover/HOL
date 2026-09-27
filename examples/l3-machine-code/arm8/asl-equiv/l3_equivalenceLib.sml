@@ -42,8 +42,7 @@ local
       (Lib.total lhs tm,
        if boolSyntax.is_neg tm then boolSyntax.F else boolSyntax.T)
 
-  val iff_not = Q.prove (
-    `(a ⇎ ¬b) ⇔ (a ⇔ b)`, rw[EQ_IMP_THM, DISJ_EQ_IMP] >> gvs[])
+  val iff_not = DECIDE “(a ⇎ ¬b) ⇔ (a ⇔ b)”
 
 in
   fun mk_blast_thm l =

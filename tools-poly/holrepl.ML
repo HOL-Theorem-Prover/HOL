@@ -1,7 +1,12 @@
 signature HOL_REPL =
 sig
   val sigint_handler : unit -> unit
-  val topLevel : {diag: string -> unit, zeroTerm : bool} -> unit
+  val topLevel : {diag: string -> unit, zeroTerm : bool} -> bool
+    (* True iff the session stopped short of the end of its input, which
+       can only happen to a script on a redirected standard input; the
+       caller turns it into a non-zero exit status.  An uncaught
+       exception is deliberately not that: the declarations after it
+       still run, so the script did reach its end. *)
   val resetOpenHook : (unit -> unit) ref
 end
 
@@ -33,6 +38,9 @@ fun topLevel {diag, zeroTerm} =
     (* Don't use the end_of_stream because it may have been set by typing
        EOT to the command we were running. *)
     val endOfFile    = ref false
+
+    val batch = not (terminal_primitives.stdin_is_tty ())
+    val compileFailed = ref false
 
     fun reportTiming compileTime runTime =
       (* Print the times if required. *)
@@ -242,7 +250,17 @@ fun topLevel {diag, zeroTerm} =
               (TextIO.input TextIO.stdIn; flushInput ())
             else (* No input waiting or we're at EOF. *) ()
 
-          fun resetAfterCompileFail () = (flushInput (); cgen := mk_cgen ())
+          (* Discarding typeahead and prompting afresh is recovery for
+             someone at a keyboard.  On redirected input `hasInput'
+             stays true right up to EOF, so the flush swallows every
+             declaration still to come; and skipping it would not
+             recover either, since the reader being replaced has already
+             pulled the next block out of the stream with no way to ask
+             it back.  A script therefore stops here, and `topLevel'
+             reports that it did. *)
+          fun resetAfterCompileFail () =
+            if batch then compileFailed := true
+            else (flushInput (); cgen := mk_cgen ())
 
         in fn () =>
           let
@@ -275,11 +293,12 @@ fun topLevel {diag, zeroTerm} =
         if zeroTerm then printOut "\000" else ();
         (* Exit if we've seen end-of-file or we're in the debugger
            and we've run "continue". *)
-        if !endOfFile then ()
+        if !endOfFile orelse !compileFailed then ()
         else handledLoop ()
       )
   in
-    handledLoop ()
+    handledLoop ();
+    !compileFailed
   end
 
 (* Set up a handler for SIGINT if that is currently set to SIG_DFL.

@@ -103,6 +103,11 @@ sig
   val nodeStatus : 'a t -> node -> target_status
   val peeknode : 'a t -> node -> 'a nodeInfo option
   val target_node : 'a t -> dep -> node option
+  val check_outputs : {outs : Holmake_tools.output_functions, strict : bool} ->
+                      'a t -> node list -> bool
+    (* True if the command that just succeeded for these nodes left
+       every target it promised in place.  Under `strict' a shortfall
+       fails the node; otherwise it is reported and tolerated. *)
   val size : 'a t -> int
   val listNodes : 'a t -> (node * 'a nodeInfo) list
   val find_nodes_by_command : 'a t -> dir * command -> node list
@@ -134,6 +139,18 @@ sig
       ('a nodeInfo -> real) -> 'a t -> (node -> real)
     (* Critical-path weight lookup: `cp n = cost n + max cp m` over
        successors `m`.  Unknown nodes score 0.0. *)
+
+  val cost_key : {root : string option} -> 'a nodeInfo -> string
+    (* The key under which a node's build cost is looked up and
+       recorded, in `Holmake_tools.rel_to_root` form.  A theory keys on
+       its theory name under its directory, so all three
+       `Theory.{dat,sml,sig}` siblings -- which share one
+       `BIC_BuildScript` command, and one job -- share one key; every
+       other node keys on its own target path.  The two spaces cannot
+       collide.
+
+       One function, so that the scheduler's lookup and the recorder's
+       write cannot drift apart. *)
 
   val toString : 'a t -> string
   val toJSONString : 'a t -> string

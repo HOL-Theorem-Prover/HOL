@@ -81,9 +81,13 @@ sig
   val setup_logfile : unit -> unit
   val finish_logging : {buildok : bool, selftest_level : int} -> unit
     (* On buildok=true the current-build-log is renamed
-       `<host>-<timestamp>-<kernel>-t<level>` and merged into the
-       canonical `<HOLDIR>/.hol/build-logs/target-times` cache.
-       On buildok=false the in-progress log is discarded. *)
+       `<host>-<timestamp>-<kernel>-t<level>` and handed to
+       `checkRegressions`.  On buildok=false the in-progress log is
+       discarded.
+
+       Scheduler cost data is no longer bin/build's business: Holmake
+       records every job it runs, so the per-run log feeds regression
+       checking only. *)
 
   val Holmake : (string -> string list -> 'a) -> ('a -> bool) ->
                 (unit -> string list) ->
