@@ -2262,11 +2262,31 @@ fun start {diag, dbg, warnings} = let
        Bracketed from both ends against the text the last compile
        elaborated, so it does not matter how many `didChange`s
        delivered the edit or what each one claimed to touch. *)
-    val tacticOnlyEdit = let
+    (* Paired with why it was not available, for `$/compileScope`:
+       with `tacticOnly` false and nothing else said, the only way to
+       tell these apart was to instrument the server. *)
+    val (tacticOnlyWhy, tacticOnlyEdit) = let
       val prev = !compiledText
       val cur = #text text
       in
-        if prev = "" orelse prev = cur then NONE
+        if prev = "" then ("no previous pass", NONE)
+        else if prev = cur then
+          (* The buffer is back on the text the last pass compiled: an
+             undo of everything typed since, a revert, a reformat that
+             changed nothing.  Something still asked for a compile --
+             the edits that cancelled the pass in between left their
+             mark -- but the file below the mark elaborates to exactly
+             what the last pass recorded, so this is the fast path's
+             case with a width of zero, not a reason to re-elaborate
+             the rest of the file.
+
+             That it was not is how a stray keystroke and its undo
+             came to re-elaborate everything below them. *)
+          (case proofBodySpan cur editOff of
+               SOME (a, aEnd) =>
+                 ("taken",
+                  SOME {decStart = a, decEnd = aEnd, delta = 0, lines = 0})
+             | NONE => ("text unchanged, mark outside a proof body", NONE))
         else let
           val pre = commonPrefixLen (prev, cur)
           val suf = commonSuffixLen (prev, cur, pre)
@@ -2281,13 +2301,14 @@ fun start {diag, dbg, warnings} = let
                   proofBodySpan cur (SOME lastChanged)) of
                 (SOME (a, aEnd), SOME (b, _)) =>
                   if a = b
-                  then SOME {decStart = a,
-                             decEnd = aEnd,
-                             delta = size cur - size prev,
-                             lines = newlines (cur, pre, size cur - suf)
-                                     - newlines (prev, pre, size prev - suf)}
-                  else NONE
-              | _ => NONE
+                  then ("taken",
+                        SOME {decStart = a,
+                              decEnd = aEnd,
+                              delta = size cur - size prev,
+                              lines = newlines (cur, pre, size cur - suf)
+                                      - newlines (prev, pre, size prev - suf)})
+                  else ("edit spans two declarations", NONE)
+              | _ => ("edit is not inside one Proof-QED body", NONE)
           end
       end
     (* Take the fast path only when all of: the change is confined to
@@ -2332,6 +2353,7 @@ fun start {diag, dbg, warnings} = let
                 print (case tacticOnlyEdit of NONE => "false" | _ => "true");
                 print ",\"reuseTail\":";
                 print (case reuseTail of NONE => "false" | _ => "true");
+                print ",\"why\":"; encString tacticOnlyWhy print;
                 (case tacticOnlyEdit of
                      NONE => ()
                    | SOME {decStart, decEnd, delta, lines} => (

@@ -7762,9 +7762,59 @@ def test_walk_and_compile_do_not_share_the_context():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_undo_to_compiled_text_keeps_the_tail():
+    """Typing into a proof body and undoing it leaves the buffer on the
+    text the last pass compiled -- but the edits still left a mark, so a
+    compile runs.  It must stay on the fast path and re-elaborate the
+    one declaration, not the whole file below it.
+
+    `tacticOnlyEdit` used to answer NONE for "the texts are equal",
+    which took the fast path away for the one edit that changes
+    nothing at all."""
+    d = tempfile.mkdtemp(prefix="lsp_undo_")
+    try:
+        filler = "\n".join(f"val x{i} = {i}" for i in range(40))
+        src = ("Theory undoscr\nAncestors arithmetic prim_rec\n\n"
+               "Theorem t1:\n  !m:num. 0 <= m\nProof\n  simp[]\nQED\n\n"
+               + filler + "\n\n" + _REDEF_PROBE)
+        uri = f"file://{d}/undoscrScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 300), "c1")
+            assert_eq(_diag_count(c, uri), [], "first compile is clean")
+
+            # Typed and undone inside the debounce, so the pass that
+            # would have recorded the typed text never runs -- which is
+            # what leaves the buffer sitting on the last compiled text.
+            at = src.index("  simp[]") + len("  simp[]")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, " >> ALL_TAC", 2)
+            typed = src[:at] + " >> ALL_TAC" + src[at:]
+            _did_change_incr(c, uri, typed, at, at + len(" >> ALL_TAC"), "", 3)
+            assert_true(c.wait_for_method("$/compileCompleted", 300, idx),
+                        "c2")
+            scopes = _scope_of(c, idx)
+            assert_eq(len(scopes), 1,
+                      f"one compile after the undo ({scopes!r})")
+            assert_eq((scopes[0]["tacticOnly"], scopes[0]["reuseTail"]),
+                      (True, True),
+                      f"undo stays on the fast path ({scopes[0]!r})")
+            assert_eq(scopes[0]["delta"], 0,
+                      f"zero-width edit ({scopes[0]!r})")
+            assert_eq(_diag_count(c, uri), [], "no diagnostics after the undo")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("walk_and_compile_do_not_share_the_context",
                             test_walk_and_compile_do_not_share_the_context),
+    ("undo_to_compiled_text_keeps_the_tail",
+                                 test_undo_to_compiled_text_keeps_the_tail),
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
     ("small_clean_file",             test_small_clean_file),
