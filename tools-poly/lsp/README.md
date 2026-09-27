@@ -117,7 +117,7 @@ of them by hand means run the tests.
     `bin/hol` because the module is compiled into the executable by
     `poly-init2.ML` and a `selftest.exe`, which links sigobj, cannot
     see it.
-  - `lsp-protocol-selftest.log` — the 148 scenarios in `lsp_tests.py`
+  - `lsp-protocol-selftest.log` — the 153 scenarios in `lsp_tests.py`
     that need nothing beyond that heap, driving `bin/hol lsp` as a
     scripted LSP client.
 
@@ -148,6 +148,15 @@ Run the suite by hand with
     python3 tools-poly/lsp/tests/lsp_tests.py --requires integer
 
 It tests the tree it lives in; `HOL_LSP_TEST_REPO` overrides that.
+
+One switch exists for the tests rather than for users:
+
+  - `HOL_LSP_WALK_HOLD_MS` stretches a goal-state walk just before it
+    puts the process state back.  A walk and a compile must not rewind
+    the process at the same time, and the order that used to corrupt
+    one needs the walk to still be running when the compile starts;
+    holding the walk puts the two in that window without depending on
+    how long a real walk happens to take.
 
 Three things are worth knowing before reading a green run as full
 coverage:

@@ -53,12 +53,12 @@ CURRENT_TEST = "<none>"
 
 
 class Client:
-    def __init__(self, cwd, args=None):
+    def __init__(self, cwd, args=None, env=None):
         self.spawn_started = time.time()
         self.p = subprocess.Popen(
             [HOL_BIN, "lsp", *(args if args is not None else LSP_ARGS)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            cwd=cwd)
+            cwd=cwd, env=None if env is None else {**os.environ, **env})
         self.buf = bytearray()
         self.buf_pos = 0
         self.msgs = []
@@ -5024,16 +5024,28 @@ def test_hover_on_an_overloaded_name():
 # ------------------------------------------------------------------
 # IDE providers: documentSymbol, workspace/symbol, completion
 # ------------------------------------------------------------------
-def _request(c, rid, method, params, timeout=20):
-    """Send a request and wait for its reply.  `_hover_at` and
-    `_send_goalstate` are both specialisations of this."""
+def _send_request(c, rid, method, params):
+    """Send a request without waiting.  Split out of `_request` for the
+    tests that have to do something else before the reply lands."""
     c.send({"jsonrpc": "2.0", "id": rid, "method": method, "params": params})
+
+
+def _await_reply(c, rid, timeout=20):
+    """Wait for the reply to request `rid`.  Scans under the lock rather
+    than copying the message list, which matters on the large fixtures."""
     def got(cl):
         with cl.msgs_lock:
             for m in cl.msgs:
                 if m.get("id") == rid: return m
         return None
     return c.wait_until(got, timeout)
+
+
+def _request(c, rid, method, params, timeout=20):
+    """Send a request and wait for its reply.  `_hover_at` and
+    `_send_goalstate` are both specialisations of this."""
+    _send_request(c, rid, method, params)
+    return _await_reply(c, rid, timeout)
 
 
 def _init_hierarchical(c, root):
@@ -7661,7 +7673,98 @@ def test_goalState_failing_branch_still_reports_at_its_end():
         c.close()
 
 
+# A `new_recursive_definition` is the probe for a Context that has not
+# been rewound: it generalises over the function it is defining, so a
+# `FOO` that is already a constant makes `list_mk_exists` fail with
+# `Term.list_mk_binder: expected list of variables` -- the error the
+# eglot log opened with.  A plain `new_definition` does not: HOL lets
+# that one through.
+_REDEF_PROBE = (
+    "val FOO = Prim_rec.new_recursive_definition\n"
+    "  {name = \"FOO\", rec_axiom = prim_recTheory.num_Axiom,\n"
+    "   def = \u201c(FOO 0 = 1) /\\ (FOO (SUC n) = SUC n * FOO n)\u201d};\n")
+
+
+def test_walk_and_compile_do_not_share_the_context():
+    """A goal-state walk and a compile must not rewind the process at
+    the same time.
+
+    The walk captures the state it found, rewinds to the snapshot
+    before the theorem it is walking, and puts the captured state back
+    when it is done.  A compile does its own rewind at the start of the
+    pass.  Nothing used to keep the two apart -- the walk asked whether
+    a compile was in flight and went ahead if not, which a compile
+    starting a moment later made false -- so the walk's closing restore
+    landed after the compile's and handed it the *previous* pass's
+    end-of-file Context.  The compile then re-elaborated the file's
+    tail against a state that already held everything the tail
+    declares.
+
+    `HOL_LSP_WALK_HOLD_MS` stretches the walk so the two overlap
+    without depending on how long a real walk takes; the failure it
+    used to produce is the redefinition probe above raising, plus an
+    SML cascade below it."""
+    d = tempfile.mkdtemp(prefix="lsp_walkrace_")
+    try:
+        # Long enough that the compile is still elaborating when the
+        # walk lets go, and the probe sits at the end of it.
+        filler = "\n".join(
+            f"Theorem f{i}:\n  !a b:num. a + b + {i} = b + a + {i}\n"
+            f"Proof\n  rpt strip_tac >> simp[]\nQED\n" for i in range(500))
+        src = ("Theory walkracescr\nAncestors arithmetic prim_rec\n\n"
+               "Theorem t1:\n  !m:num. 0 <= m\nProof\n  simp[]\nQED\n\n"
+               + filler + "\n" + _REDEF_PROBE)
+        uri = f"file://{d}/walkracescrScript.sml"
+        c = Client(d, args=["--dbg"], env={"HOL_LSP_WALK_HOLD_MS": "1500"})
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 600), "c1")
+            assert_eq(_diag_count(c, uri), [], "first compile is clean")
+
+            idx = c.total_msgs()
+            # The walk goes first, so it is holding the state before
+            # anything schedules a compile -- the overlap is arranged
+            # rather than raced for.
+            line, ch = _line_col_at(src, src.index("  simp[]") + 3)
+            t0 = time.time()
+            _send_request(c, 800, "$/hol/goalState",
+                          {"textDocument": {"uri": uri},
+                           "position": {"line": line, "character": ch}})
+            # A statement edit, so the whole tail re-elaborates and the
+            # probe is actually re-run.  Its compile starts 300 ms from
+            # now, well inside the walk's hold.
+            at = src.index("  !m:num. 0 <= m") + len("  !m:num. 0 <= m")
+            _did_change_incr(c, uri, src, at, at, " /\\ T", 2)
+            reply = _await_reply(c, 800, 60)
+            walk_dt = time.time() - t0
+            # Positive controls: a walk that was refused answers at
+            # once, and a compile that had already finished never
+            # wanted the state -- either way a test that set no
+            # overlap up would read exactly like a clean one.  These
+            # are also what keeps the fixture honest: shrink the
+            # filler too far and the second one fires.
+            assert_true(reply is not None and walk_dt > 1.0,
+                        f"the walk ran and was held ({walk_dt:.2f}s)")
+            with c.msgs_lock:
+                done = any(m.get("method") == "$/compileCompleted"
+                           for m in c.msgs[idx:])
+            assert_true(not done,
+                        "the compile was still running when the walk "
+                        "let go")
+            assert_true(c.wait_for_method("$/compileCompleted", 600, idx),
+                        "c2")
+            assert_eq(_diag_count(c, uri), [],
+                      "no diagnostics from a compile that overlapped a walk")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
+    ("walk_and_compile_do_not_share_the_context",
+                            test_walk_and_compile_do_not_share_the_context),
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
     ("small_clean_file",             test_small_clean_file),

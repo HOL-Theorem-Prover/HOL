@@ -1245,10 +1245,82 @@ fun start {diag, dbg, warnings} = let
   (* Exclusive use of the process's compile state -- the Context, the
      loaded-module set and the file's namespace layer that
      `captureCompileSnap` bundles.  Whoever restores a snapshot holds
-     this: a goal-state request (one thread per request) and the walk a
-     failed proof is localised by.  Process-global because the state
-     is. *)
+     this: a compile pass, a goal-state request (one thread per
+     request) and the walk a failed proof is localised by.
+     Process-global because the state is.
+
+     Two locks, because there are two different questions.
+     `compileState` queues walks behind one another, so a second
+     goal-state request waits for the one ahead of it rather than
+     being turned away.  `compileStateOwner` says who is *actually*
+     rewinding the process right now, and is what a compile and a walk
+     exclude each other with.
+
+     A single sampled check used to stand in for the second: a walk
+     asked whether a compile was in flight and, seeing none, went
+     ahead.  That is not an exclusion.  `stopCompile` drops the
+     compile record before its replacement is registered, so a walk
+     could enter in that gap; and even outside it, a compile starting
+     while a walk was running was excluded by nothing at all.  Either
+     way the walk's closing `restoreLater ()` -- which puts back the
+     state the process was in when the walk *started* -- lands after
+     the compile's `restoreSnap ()` and silently hands the compile the
+     previous pass's end-of-file Context.  The compile then
+     re-elaborates the file's tail against a state that already holds
+     everything the tail declares, and every declaration that mints a
+     constant fails: `Term.list_mk_binder: expected list of variables`
+     from a `new_recursive_definition` whose function is already a
+     constant, `No rule for [MOD]` from a `?MOD. ...` whose name has
+     already been given a fixity further down the file, and an SML
+     cascade below each of them.  See `tests/lsp_tests.py`'s
+     `test_walk_and_compile_do_not_share_the_context`. *)
   val compileState : unit Sref.t = Sref.new ()
+  datatype state_owner = Free | ByCompile | ByWalk
+  (* `Synchronized` rather than `Sref` for this one: a compile that
+     finds the state held has to wait for it, and a condition variable
+     waits without a poll loop -- `releaseCompileState` broadcasts, so
+     a waiter wakes when the state is actually free rather than at the
+     next tick of its own clock. *)
+  val compileStateOwner = Synchronized.var "lsp.compileState" Free
+  (* Claim it, or find it already claimed -- in one step; see
+     `claimDrain` for why that has to be atomic.  Never waits: the
+     walk wants an answer, not a turn. *)
+  fun claimCompileState who =
+      Synchronized.change_result compileStateOwner
+        (fn Free => (true, who) | held => (false, held))
+  fun releaseCompileState () =
+      Synchronized.change compileStateOwner (fn _ => Free)
+  (* Is a *compile* rewinding the process?  This is the question
+     `stateNotReady` asks -- a walk holding the state is not a reason
+     to turn a goal-state request away, since it will queue on
+     `compileState` and get its turn.
+
+     Read from the state's own side rather than from the compile
+     record, which answers a question about the pass: `stopCompile`
+     clears it while the thread it belonged to is still elaborating.
+
+     Whatever the answer, it has to be asked before rewinding and not
+     after.  The theory graph is a slot in the Context
+     (`Theory.Graph`), so a restore takes back every theory the pass
+     has loaded since the snapshot, and the pass's next `link_parents`
+     reports a parent that "should already be in the theory graph (but
+     isn't)". *)
+  fun compileUsingState () =
+      case Synchronized.value compileStateOwner of
+          ByCompile => true
+        | _ => false
+  (* Test hook: stretch a walk by this long, just before it puts the
+     state back, so a test can place a walk's closing `restoreLater ()`
+     after a compile's `restoreSnap ()` without depending on how long a
+     real walk happens to take.  That is the order that used to hand
+     the compile the previous pass's end-of-file Context.  Unset (the
+     default) means no hold. *)
+  val walkHoldMs =
+      getOpt (Option.mapPartial Int.fromString
+                (OS.Process.getEnv "HOL_LSP_WALK_HOLD_MS"), 0)
+  fun holdForTests () =
+      if walkHoldMs <= 0 then ()
+      else OS.Process.sleep (Time.fromMilliseconds (IntInf.fromInt walkHoldMs))
 
   datatype report =
     Error of {hard: bool, pos: range, msg: encode}
@@ -1327,14 +1399,7 @@ fun start {diag, dbg, warnings} = let
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
-                       thread: Thread.thread, cancelled: bool ref,
-                       (* Whether the pass is still using the compile
-                          state.  Distinct from the thread being alive:
-                          the pass clears this before its last act,
-                          which is to look for work that had to wait
-                          for it -- work it cannot see itself doing if
-                          it asks whether its own thread is running. *)
-                       elaborating: bool ref}
+                       thread: Thread.thread, cancelled: bool ref}
   type file_data = {
     compile: compile_data option ref,
     lastTrees: {parse: parse_data, text: text_data} ref,
@@ -1468,31 +1533,14 @@ fun start {diag, dbg, warnings} = let
      didChanges.  The `cancelled` flag doubles as a "no longer
      current" marker: the compile thread checks it before writing
      lastTrees so a stale finish can't clobber the new state. *)
-  (* Alive and not superseded.  Three places asked this and two spelled
-     it out; the third also wants `elaborating`, which is a different
-     question and is asked separately where it matters. *)
+  (* Alive and not superseded.  Not the same question as "is a pass
+     using the compile state", which `compileUsingState ()` answers
+     from the state's own side. *)
   fun compileRunning r =
       case !r of
           NONE => false
         | SOME {thread, cancelled, ...} =>
           Thread.isActive thread andalso not (!cancelled)
-
-  (* Is a pass still *using* the process's compile state?  Not
-     `compileRunning': that asks whether a pass is alive, and this asks
-     whether one is still using the state, which it stops doing before
-     its thread exits -- see `elaborating'.
-
-     Anything that rewinds the Context has to ask this first.  The
-     theory graph is a slot in the Context (`Theory.Graph'), so a
-     restore takes back every theory the pass has loaded since the
-     snapshot, and the pass's next `link_parents' reports a parent that
-     "should already be in the theory graph (but isn't)". *)
-  fun usingCompileState r =
-      case !r of
-          NONE => false
-        | SOME {thread, cancelled, elaborating, ...} =>
-          !elaborating andalso Thread.isActive thread
-          andalso not (!cancelled)
 
   fun stopCompile r = case !r of
     NONE => ()
@@ -2099,7 +2147,16 @@ fun start {diag, dbg, warnings} = let
     if #done (#parse (!lastTrees)) andalso not (isSome editOff) then
       (!LSPExtension.notifyCompileStart editOff;
        invalidateProofs {resumeStart = NONE, inProofBody = NONE};
-       !LSPExtension.resetForCompile (); ())
+       (* A rewind like any other, so it needs the claim -- but this
+          branch runs inline on the message loop (`didOpen`, `didSave`
+          and `$/hol/retryCompile` are dispatched there), which must
+          not block behind a walk.  The reset is housekeeping for a
+          pass that is not going to run, so a walk holding the state
+          means skip it, not wait for it. *)
+       if claimCompileState ByCompile
+       then (!LSPExtension.resetForCompile (); releaseCompileState ())
+       else logMessage "compile state held; skipped the reset";
+       ())
     else let
     val _ = stopCompile compile
     val {text as {lines, ...}, parse = lastParse} = !lastTrees
@@ -2153,10 +2210,12 @@ fun start {diag, dbg, warnings} = let
        *this* thread and leave the compile with an empty layer, so the
        recompile could not see `ACCEPT_TAC`.
 
-       Only the boot-state path needs no such care, because there the
-       compile thread re-executes the `Theory` dec, opens and all --
-       and that is now the rare case, taken only when the header drew a
-       diagnostic and so was never captured. *)
+       The boot-state path is a thunk for the same reason and one
+       more: `resetForCompile` ends in `LSPNameSpace.clearFileLayer`,
+       and the layer is thread-local, so run here it would clear this
+       thread's and leave the compile's standing.  It is the rare
+       case, taken only when the header drew a diagnostic and so was
+       never captured. *)
     val (restoreSnap, initialTrees, resumeStart, oldDiags) =
       case resumeSnap of
         NONE => (
@@ -2165,7 +2224,7 @@ fun start {diag, dbg, warnings} = let
                             inProofBody = proofBodyAt (#text text)
                                                       editOff};
           ((case baseSnap of
-              NONE => (!LSPExtension.resetForCompile (); (fn () => ()))
+              NONE => (fn () => !LSPExtension.resetForCompile ())
             | SOME s =>
               (fn () => !LSPExtension.restoreCompileSnap (#compileSnap s))),
            emptyParseData 8, 0, oldDiags))
@@ -2297,9 +2356,54 @@ fun start {diag, dbg, warnings} = let
        declaration's own.  Starts at whatever the resume seeded. *)
     val diagsAtLastSnap = ref (DArray.size (#diags initialTrees))
     val cancelled = ref false
-    val elaborating = ref true
 
-    fun compileThread () = ((let
+    (* This pass's hold on `compileStateOwner`, released exactly once
+       -- see the walk in `goalStateAtPos` for why that matters. *)
+    val ownsState = ref false
+    fun releaseState () =
+        if !ownsState then (ownsState := false; releaseCompileState ())
+        else ()
+    (* Wait for whatever is rewinding the process to finish before
+       rewinding it ourselves.  A walk is short and a predecessor pass
+       ends at its next declaration, so this waits rather than gives
+       up -- but only while this pass is still the current one, which
+       is why `cancelled` is read before `Free` and not after: a
+       superseded pass has nothing left to do, and the pass that
+       replaced it is waiting on the same variable.
+
+       The deadline is for neither of those.  A request thread is
+       interruptible (`$/cancelRequest` calls `Thread.interrupt`), so
+       a walk killed between claiming the state and installing its
+       handler leaves the claim behind, and an unbounded wait would
+       make that the end of compiling in this process.  Timing out
+       puts the edit mark back and reschedules, so the pass returns
+       rather than is dropped: a genuinely slow predecessor is
+       retried, and a leaked claim shows up as a log line every 30s
+       instead of as silence.
+
+       `sync_interrupts` keeps this thread's `InterruptDefer` while it
+       waits, so waiting here does not make a compile interruptible
+       where running one is not. *)
+    fun awaitState () = let
+      (* Once, not per wake: `timed_access` re-evaluates the limit
+         each time round, so a fresh `Time.now ()` here would start
+         the thirty seconds again on every release it loses. *)
+      val deadline = Time.now () + Time.fromSeconds 30
+      in
+        case Synchronized.timed_access compileStateOwner
+               (fn _ => SOME deadline)
+               (fn owner =>
+                   if !cancelled then SOME (false, owner)
+                   else case owner of
+                            Free => SOME (true, ByCompile)
+                          | _ => NONE) of
+            SOME got => (if got then ownsState := true else (); got)
+          | NONE => (
+              logMessage "compile state still held after 30s; retrying";
+              putBack (); scheduleCompile uri v; false)
+      end
+
+    fun compileThread () = ((if not (awaitState ()) then () else let
       val () = restoreSnap ()
       fun encDiag (Error {hard, pos, msg}) print = (
           print "{\"range\":"; encRangeLC lines pos print;
@@ -2837,7 +2941,11 @@ fun start {diag, dbg, warnings} = let
              stays queued with nothing left to trigger it.  What
              localised it in the end was the user happening to ask for
              a goal state. *)
-          elaborating := false;
+          (* And the state itself goes back before draining, for the
+             same reason: the walk the drain forks claims it, and
+             `drainFailures` refuses while a compile holds it -- which
+             would be this one asking about itself. *)
+          releaseState ();
           (!drainFailures uri v handle _ => ()))))
       in (
         case missingDeps () of
@@ -2879,14 +2987,24 @@ fun start {diag, dbg, warnings} = let
         sendProgressEnd ();
         send (mkNotif "$/compileInterrupted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}"))))
-      end);
+      end)
+      (* The block above has its own catch-all, so this one is for
+         what raises out of the declarations before it -- `restoreSnap`
+         and the holdep preload.  Reported rather than swallowed: it
+         would otherwise be a compile that produced nothing and said
+         nothing. *)
+      handle e => logMessage ("compile thread died: " ^ exnMessage e);
+      (* Whatever happened, this pass is no longer rewinding the
+         process.  Ordinarily released before the drain above; this is
+         the backstop for every other way out. *)
+      releaseState ();
       (* Don't clobber `compile` here — stopCompile may have moved on
          and started another compile that installed a fresh SOME.
          The `cancelled` flag already fences correctness. *)
       ())
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread,
-                        cancelled = cancelled, elaborating = elaborating} end
+                        cancelled = cancelled} end
     ) handle e => (putBack (); raise e)
     end
     end)
@@ -3226,10 +3344,17 @@ fun start {diag, dbg, warnings} = let
      being no theorem at the position, which is an answer, and from
      `DepsBlocked', which will not change until the header does.  The
      caller needs the difference to say "pending" rather than "no goal
-     state here", which reads as a fault in the proof. *)
-  fun stateNotReady ({depsBlocked, compile, ...}:file_data) =
+     state here", which reads as a fault in the proof.
+
+     Asked of the state rather than of this file's compile record --
+     not because a second file's compile could be the one running
+     (`mayCompile' binds the process to one script), but because the
+     record goes false too early for its own pass: `stopCompile'
+     clears it on every `didChange', while the thread it belonged to
+     is still elaborating. *)
+  fun stateNotReady ({depsBlocked, ...}:file_data) =
       (case !depsBlocked of DepsUnchecked => true | _ => false)
-      orelse usingCompileState compile
+      orelse compileUsingState ()
 
   fun goalStateAtPos uri (v as {lastTrees, depsBlocked, ...}:file_data)
                      (target, width) =
@@ -3298,17 +3423,38 @@ fun start {diag, dbg, warnings} = let
             Serialising costs a queued request the length of the one
             ahead of it.  A walk is measured in tens of milliseconds;
             replaying a long tactic is slower, but the alternative was
-            a wrong answer. *)
+            a wrong answer.
+
+            A compile is excluded separately, and not by queueing:
+            `compileStateOwner` is claimed here and waited for there,
+            so a request that reaches the front of this queue while a
+            compile holds the process answers "pending" rather than
+            blocking a request thread for the length of a compile.
+            `stateNotReady` says the same thing earlier and more
+            cheaply; this is the check that is actually atomic with
+            the rewind below. *)
          Sref.gen_update compileState (fn held =>
            (held,
-            let val restoreLater = !LSPExtension.captureCompileSnap ()
-                val () = case snapBefore quoteStart of
-                  NONE => ()
-                | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
-                val r = !LSPExtension.goalStateAtPos (ctx, thm)
-                        handle e => (restoreLater (); raise e)
-                val () = restoreLater ()
-            in r end))
+            if not (claimCompileState ByWalk) then NONE
+            else
+            (* The two `releaseCompileState` calls are on exclusive
+               paths -- raise and the `before` never runs, return and
+               the handler never does -- so the claim is dropped once
+               either way. *)
+            (let val restoreLater = !LSPExtension.captureCompileSnap ()
+                 (* `restoreLater` puts back the state this walk
+                    found, so it must run before the claim is
+                    dropped: a compile taking the state in between
+                    would have its own `restoreSnap` undone by it. *)
+                 val () = case snapBefore quoteStart of
+                   NONE => ()
+                 | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+                 val r = !LSPExtension.goalStateAtPos (ctx, thm)
+                 val () = holdForTests ()
+                 val () = restoreLater ()
+             in r end
+             handle e => (releaseCompileState (); raise e))
+            before releaseCompileState ()))
     end handle Empty => NONE
 
   (* Walk a failed proof to the end of its tactic and record the pool's
@@ -3343,15 +3489,16 @@ fun start {diag, dbg, warnings} = let
   fun claimDrain () = Sref.gen_update draining (fn d => (true, not d))
   fun releaseDrain () = Sref.update draining (fn _ => false)
   val () = drainFailures :=
-    (fn uri => fn (v as {pendingFailures, compile, ...}: file_data) => let
+    (fn uri => fn (v as {pendingFailures, ...}: file_data) => let
         (* Nothing else may be using the compile state: not a worker
            still replaying a proof, and not the compile itself, which
            is elaborating and enqueueing them.  Missing the second was
            enough on its own -- a dozen sound proofs reported failures
            that varied from run to run. *)
-        (* See `usingCompileState': not `compileRunning', which asks a
-           different question. *)
-        fun compiling () = usingCompileState compile
+        (* See `compileStateOwner': not `compileRunning', which asks a
+           different question.  This is a cheap early-out; the walk it
+           forks claims the state itself and gives up if refused. *)
+        fun compiling () = compileUsingState ()
         fun proving () = !LSPExtension.poolBusy ()
      in
         if null (Sref.value pendingFailures)
