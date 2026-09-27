@@ -1243,6 +1243,7 @@ val show_assums = HOLFlags.show_assums
 val ambiguous_grammar_warning = parse_term.ambiguous_grammar_warning
 val notify_on_tyvar_guess = Preterm.notify_on_tyvar_guess
 val show_typecheck_errors = Preterm.show_typecheck_errors
+val show_syntax_errors = parse_term.show_syntax_errors
 
   val _ = Theory.register_hook
               ("Parse.clear_consts_from_grammar",

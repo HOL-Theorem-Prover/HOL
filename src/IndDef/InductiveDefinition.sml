@@ -596,8 +596,10 @@ end
 (* "Unschematize" a set of clauses.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val inddef_strict = ref false;
-val _ = Feedback.register_btrace ("inddef strict", inddef_strict);
+val {get = strictp,...} = HOLFlags.create_btrace(
+      {group = "IndDefLib", name = "strict"},
+      false
+    );
 
 fun indented_term_to_string n tm = let
   val nspaces = CharVector.tabulate(n, K #" ")
@@ -677,12 +679,17 @@ fun unschematize_clauses clauses = let
   end
 in
   if is_var(hd schem) then (clauses,[])
-  else if !inddef_strict then
+  else if strictp() then
     if not (HOLset.numItems all_instances = 1) then let
         val instlist = HOLset.listItems all_instances
-        val t1_s = trace("types", 1) (indented_term_to_string 2) (hd instlist)
+        val t1_s = HOLFlags.trace
+                     ("PP.types", 1)
+                     (indented_term_to_string 2)
+                     (hd instlist)
         val t2_s =
-            trace("types", 1) (indented_term_to_string 2) (hd (tl instlist))
+            HOLFlags.trace
+              ("PP.types", 1)
+              (indented_term_to_string 2) (hd (tl instlist))
       in
         failwith ("Schematic variable(s) not used consistently - witness\n"^
                   t1_s^"\nand\n"^t2_s)
@@ -762,7 +769,8 @@ fun check_definition schemevars clocs tm = let
         val free_list0 = HOLset.foldr (fn (v,sl) => dest_vartype v :: sl)
                                       [] really_free
         val free_list = Lib.commafy free_list0
-        val tmstring = trace ("types", 1) (indented_term_to_string 2) c
+        val tmstring =
+            HOLFlags.trace ("PP.types", 1) (indented_term_to_string 2) c
         val loc = List.nth (clocs, n) handle Subscript => locn.Loc_None
       in
         raise mk_HOL_ERRloc
@@ -792,8 +800,9 @@ fun check_definition schemevars clocs tm = let
         val free_list = Lib.commafy free_list0
         val loc = List.nth(clocs, n) handle Subscript => locn.Loc_None
       in
-        if !inddef_strict then let
-            val tmstring = trace ("types", 1) (indented_term_to_string 2) c
+        if strictp() then let
+            val tmstring =
+                HOLFlags.trace ("PP.types", 1) (indented_term_to_string 2) c
           in
             raise mk_HOL_ERRloc
                       "InductiveDefinition"

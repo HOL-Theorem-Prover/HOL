@@ -40,7 +40,7 @@ sig
     (* heeds emit_ERR, uses ERR_outstream *)
     val output_ERR        : string -> unit
 
-    val format_ERR        : int -> hol_error -> string
+    val format_ERR        : hol_error -> string
     val format_MESG       : string -> string
     val format_WARNING    : string -> string -> string -> string
     val format_INFO       : string -> string

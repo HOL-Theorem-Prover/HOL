@@ -17,7 +17,6 @@ sig
 
    val trace_hook  : (int * action) Listener.t
    val trace       : int * action -> unit
-   val trace_level : int ref
    val tty_trace   : action -> unit
 
 end

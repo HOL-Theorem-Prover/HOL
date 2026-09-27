@@ -27,8 +27,10 @@ val say = Lib.say
    val trace_hook : (int * action) Listener.t = Listener.new_listener()
    fun trace x = ignore (Listener.call_listener trace_hook x)
 
-val trace_level = ref 0;
-val _ = Feedback.register_trace("simplifier", trace_level, 7);
+val _ = HOLFlags.create_trace(
+      {group = "simplifier", name = "trace"},
+      {max = 7, initial = 0}
+    );
 
 fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
   | tty_trace (TEXT s) = (say "  "; say s; say "\n")
@@ -59,7 +61,7 @@ fun fudge t = Time.+(t, Time.fromSeconds 10)
 
 val _ = Listener.add_listener trace_hook
         ("default",
-         (fn (n,a) => if (n <= !trace_level) then
+         (fn (n,a) => if n <= HOLFlags.current_trace "simplifier.trace" then
                         (say "[";
                          say ((Arbnum.toString o #usec o Portable.dest_time o
                                fudge)

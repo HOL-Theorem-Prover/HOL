@@ -65,8 +65,8 @@ val pp_hol_error =
             else [add_break(1,2), add_string message]))
   end
 
-fun format_hol_error lwidth holerr =
-  HOLPP.pp_to_string lwidth pp_hol_error holerr
+fun format_hol_error holerr =
+  HOLPP.pp_to_string (!Globals.linewidth) pp_hol_error holerr
 
 (*-------------------------------------------------------------------------*)
 (* Exceptions used in HOL code.                                              *)
@@ -132,8 +132,8 @@ fun quiet_info f     = Portable.with_flag (emit_INFO, false) f
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
 
-fun format_ERR width holerr =
-   String.concat ["\nException raised ", format_hol_error width holerr, "\n"]
+fun format_ERR holerr =
+   String.concat ["\nException raised ", format_hol_error holerr, "\n"]
 
 fun format_MESG s = String.concat ["<<HOL message: ", s, ">>\n"]
 
@@ -143,7 +143,7 @@ fun format_WARNING structName fnName mesg =
 
 fun format_INFO s = s
 
-val ERR_to_string     = ref (format_ERR 70)
+val ERR_to_string     = ref format_ERR
 val MESG_to_string    = ref format_MESG
 val WARNING_to_string = ref format_WARNING
 val INFO_to_string    = ref format_INFO

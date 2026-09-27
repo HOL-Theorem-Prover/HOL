@@ -311,5 +311,6 @@ signature Parse = sig
   val ambiguous_grammar_warning : HOLFlags.flag
   val notify_on_tyvar_guess : HOLFlags.bflag
   val show_typecheck_errors : HOLFlags.bflag
+  val show_syntax_errors : HOLFlags.bflag
 
 end

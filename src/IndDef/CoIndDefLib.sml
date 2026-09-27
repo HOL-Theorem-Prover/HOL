@@ -195,8 +195,9 @@ end
 handle e => raise (wrap_exn "CoIndDefLib" "Hol_mono_coreln" e);
 
 fun parse_in ctxt =
-  IndDefLib.term_of_in ctxt |> trace ("syntax_error", 0)
-                            |> trace ("show_typecheck_errors", 0)
+  IndDefLib.term_of_in ctxt
+    |> HOLFlags.with_bflags [(Parse.show_syntax_errors, false),
+                             (Parse.show_typecheck_errors, false)]
 fun parse q = parse_in (Context.snapshot()) q
 
 fun xHol_coreln name q ctxt =

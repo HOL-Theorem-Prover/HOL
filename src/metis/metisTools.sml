@@ -42,8 +42,10 @@ local
      {module = "folTools",       alignment = I},
      {module = "metisTools",     alignment = I},
      {module = "metisLib",       alignment = I}];
-  val () = register_trace ("metis", trace_level, 10)
-  val () = trace_level := (if !Globals.interactive then 1 else 0) (* OK *)
+  val _ = HOLFlags.create_trace(
+        {group = "metis", name = "trace"},
+        {max = 10, initial = if !Globals.interactive then 1 else 0}
+      )
   val () = set_traces aligned_traces
 in
   fun chatting l = tracing {module = module, level = l};

@@ -4,7 +4,7 @@ open testutils
 
 val _ = new_theory "scratch"
 
-val _ = Feedback.set_trace "Theory.allow_rebinds" 1
+val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1
 
 fun checkhyps th = if null (hyp th) then ()
                    else die "FAILED - Hyps in theorem!"
@@ -266,18 +266,20 @@ val _ = require_msg (check_result good1296) thm_to_string (#2 o Hol_reln)
                     ‘eq_reln k x x /\
                      (eq_reln k' x y /\ x < y ==> eq_reln k x z)’
 
+val with_assums_print =
+    HOLFlags.with_bflags [(Parse.show_assums, true)] thm_to_string
 val _ = shouldfail {
-  checkexn = is_struct_HOL_ERR "CoIndDefLib",
-  testfn = quietly (in_repl_mode CoIndDefLib.Hol_coreln),
-  printarg = K "Non-monotone definition (schematic)",
-  printresult = with_flag (show_assums, true) thm_to_string o #1}
-                   ‘ ((¬test (n : num)) ⇒ test n) ’;
+      checkexn = is_struct_HOL_ERR "CoIndDefLib",
+      testfn = quietly (in_repl_mode CoIndDefLib.Hol_coreln),
+      printarg = K "Non-monotone definition (schematic)",
+      printresult = with_assums_print o #1}
+      ‘ ((¬test (n : num)) ⇒ test n) ’;
 
 val _ = shouldfail {
       checkexn = is_struct_HOL_ERR "CoIndDefLib",
       testfn = quietly (in_repl_mode CoIndDefLib.Hol_coreln),
       printarg = K "Non-monotone definition (schematic)",
-      printresult = with_flag (show_assums, true) thm_to_string o #1}
+      printresult = with_assums_print o #1}
       ‘ ∀n. ((¬test (n : num)) ⇒ test n) ’;
 
 val _ = tprint "Github 1931: comment containing opening parenthesis before first label"

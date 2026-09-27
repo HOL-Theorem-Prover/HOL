@@ -8,7 +8,8 @@ open parse_term_dtype
 
 infix >> >- ++ >->
 
-val {get = syntax_error_trace, ...} = HOLFlags.create_btrace(
+val {get = syntax_error_trace,flag=show_syntax_errors,...} =
+    HOLFlags.create_btrace(
       {group = "Parse", name = "syntax_error"},
       true
     )
