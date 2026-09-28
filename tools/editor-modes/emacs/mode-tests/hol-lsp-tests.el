@@ -181,6 +181,15 @@ file's own directory -- not a VC root, and not the file itself."
                   '(:theorem "a%b" :step 0 :context nil :error nil))
                  "a%%b — step 0")))
 
+(ert-deftest hol-lsp-pending-is-not-a-goal-state ()
+  ;; The server answers `{"status":"pending"}' -- with no theorem and
+  ;; no step in it -- while the compile has not reached the proof.
+  ;; Handing that to the header formatter formats nil with %d and
+  ;; errors, which is what a caller has to keep it away from.
+  (should (hol-lsp--pending-p '(:status "pending")))
+  (should-not (hol-lsp--pending-p '(:theorem "foo" :step 7)))
+  (should-not (hol-lsp--pending-p nil)))
+
 (ert-deftest hol-lsp-strip-context-removes-the-repeated-line ()
   ;; `pretty' repeats the tags at its top; the buffer shows only the
   ;; goals, the tags having moved to the header line.

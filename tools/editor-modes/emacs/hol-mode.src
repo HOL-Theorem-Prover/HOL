@@ -3293,6 +3293,14 @@ in Lisp, so convert before testing it."
     (when tags
       (mapconcat (lambda (c) (concat "[" c "]")) tags " "))))
 
+(defun hol-lsp--pending-p (result)
+  "Whether RESULT is the server saying \"not yet\" rather than a state.
+`$/hol/goalState\=' answers `{\"status\": \"pending\"}\=' -- and nothing
+else: no theorem, no step, no goals -- when the walk was refused only
+because the compile has not reached that proof.  Rendering that as a
+goal state formats a nil step with %d, which is an error."
+  (equal (plist-get result :status) "pending"))
+
 (defun hol-lsp--solved-p (result)
   "Whether RESULT says the focused subgoal(s) have been proved.
 No goals and no error is exactly that: the server sends the goals
@@ -3506,7 +3514,9 @@ by default via `hol-map'."
   (unless (hol-lsp--server)
     (user-error "No LSP server for this buffer"))
   (let ((result (hol-lsp--query)))
-    (cond (result (hol-lsp--render-goals result))
+    (cond ((and result (hol-lsp--pending-p result))
+           (message "HOL: compile in progress — goal state pending"))
+          (result (hol-lsp--render-goals result))
           ;; A blocked buffer has no goal state anywhere in it, and
           ;; saying only "no goal state at point" would send the user
           ;; looking for the fault in their proof.
@@ -3534,7 +3544,12 @@ render on success."
   (when (buffer-live-p buf)
     (with-current-buffer buf
       (let ((result (hol-lsp--query t)))
-        (when result (hol-lsp--render-goals result))))))
+        ;; A pending reply is silent here: the tick fires on every
+        ;; cursor movement, so saying so would fill the echo area for
+        ;; as long as the compile runs, and the mode line says it
+        ;; already.  The pane keeps the last state it was given.
+        (when (and result (not (hol-lsp--pending-p result)))
+          (hol-lsp--render-goals result))))))
 
 (defun hol-lsp--goals-schedule ()
   "Post-command hook: reschedule the auto-follow refresh if
