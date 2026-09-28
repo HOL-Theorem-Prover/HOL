@@ -346,7 +346,7 @@ into primitive terms.  For example, if `+` has been declared an infix
 \index{infixes, in HOL logic@infixes, in \HOL{} logic}
 (as explained in Section \ref{theoryfns}), as it is when
 `arithmeticTheory` has been loaded, then `` ``x+1`` ``
-is translated to `` ``$+ x 1`` ``.  The escape character `$`
+is translated to `“$+ x 1”`.  The escape character `$`
 \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}
 \index{declared constants, in HOL logic@declared constants, in \HOL{} logic}
 \index{infixes, in HOL logic@infixes, in \HOL{} logic}
