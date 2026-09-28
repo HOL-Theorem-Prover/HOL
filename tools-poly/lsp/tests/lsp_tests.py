@@ -6031,6 +6031,69 @@ def test_an_edit_confined_to_a_tactic_is_recognised():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_compile_completed_means_the_goal_state_is_askable():
+    """`$/compileCompleted' is what a goals pane refreshes on, so it has
+    to be true when it is sent.  It used to go out the moment
+    elaboration finished, while the pass still held the process: the
+    reused tail was not spliced back yet, `lastTrees' still described
+    the text before the edit, and a goal-state request landing in that
+    window was refused with `pending'.  On a file long enough for a
+    splice to be worth doing that window is hundreds of milliseconds --
+    so the refresh the notification provoked was the one refused, and
+    the pane, with nothing further to wait for, sat on that answer.
+    What the user sees is a goals pane that blanks when a space is
+    added to the end of a tactic line.
+
+    Long enough that the splice takes time, edited near the top so
+    there is a tail to splice, and the state asked for the moment the
+    compile says it is done.  The fixture size is calibrated against
+    `wait_for_method`'s 50 ms poll, which is how late this can be in
+    noticing the notification: measured against the unfixed server the
+    window is ~55 ms of declarations at 60 and ~130 ms at 120, so 60 is
+    a coin flip and 120 is the smallest size with margin."""
+    n = 120
+    src = ["Theory askable\n", "Ancestors arithmetic\n\n"]
+    for i in range(n):
+        src.append(f"Theorem thm{i}:\n  {i} + 1 = 1 + {i}\n"
+                   f"Proof\n  simp[]\nQED\n\n")
+    src = "".join(src)
+    uri = "file:///tmp/askable_probe.sml"
+    at = src.index("simp[]", src.index("Theorem thm2:")) + len("simp[]")
+    line, col = _line_col_at(src, at)
+    c = Client("/tmp", args=["--dbg"])
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 180)
+                    is not None, "compiled to begin with")
+        # Positive control: the position has a goal state to begin
+        # with, so an `ok` after the edit cannot be one for want of a
+        # theorem there.
+        before = (_send_goalstate(c, 940, uri, line, col) or {}).get(
+            "result") or {}
+        assert_eq(before.get("theorem"), "thm2",
+                  f"the cursor is in thm2's proof ({before!r})")
+        mark = c.total_msgs()
+        _did_change_incr(c, uri, src, at, at, " ", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 120,
+                                      since=mark) is not None,
+                    "recompiled after the space")
+        after = (_send_goalstate(c, 941, uri, line, col + 1) or {}).get(
+            "result") or {}
+        assert_eq(after.get("status"), "ok",
+                  f"the state is there as soon as the compile says it is "
+                  f"({after!r})")
+        assert_eq(after.get("pretty"), before.get("pretty"),
+                  "and says what it said before the space")
+        # Not a vacuous pass: the tail whose splice this is about was
+        # really spliced.
+        scopes = _scope_of(c, mark)
+        assert_true(scopes and scopes[0].get("reuseTail") is True,
+                    f"the tail was reused ({scopes!r})")
+    finally:
+        c.close()
+
+
 def test_the_proof_under_the_cursor_is_checked():
     """Asking for goal state used to hold that proof back from the pool
     -- the walker replays the same tactic, so a worker doing it too is
@@ -8126,6 +8189,8 @@ TESTS = [
      test_a_reused_tail_answers_as_a_full_compile_would),
     ("an_edit_confined_to_a_tactic_is_recognised",
      test_an_edit_confined_to_a_tactic_is_recognised),
+    ("compile_completed_means_the_goal_state_is_askable",
+     test_compile_completed_means_the_goal_state_is_askable),
     ("the_proof_under_the_cursor_is_checked",
      test_the_proof_under_the_cursor_is_checked),
     ("a_name_that_occurs_once_never_gets_an_ordinal",

@@ -3022,9 +3022,9 @@ fun start {diag, dbg, warnings} = let
              `DepsUnchecked' did not. *)
           depsBlocked := DepsLoaded;
           flushDiags ();
-          sendProgressEnd ();
-          send (mkNotif "$/compileCompleted" (fn print => (
-            print "{\"uri\":"; encString uri print; print "}")));
+          (* Completion is announced at the end of this branch, not
+             here: everything from this point down is state the answer
+             it provokes reads. *)
           (* This pass stopped after the edited declaration, so put the
              rest of the file back: what the previous pass recorded
              about it is still true, only moved.  The trees and the
@@ -3107,6 +3107,18 @@ fun start {diag, dbg, warnings} = let
              `drainFailures` refuses while a compile holds it -- which
              would be this one asking about itself. *)
           releaseState ();
+          (* The tail is back, `lastTrees' is this text, and the
+             process is nobody's, so a client acting on this -- and
+             the goals pane acts on it by asking -- gets the answer
+             this compile just produced.  Sent any earlier and the
+             request lands on `stateNotReady' and is refused with
+             "pending": on a file whose tail is worth splicing that is
+             a window of hundreds of milliseconds, so the refresh the
+             notification provoked was reliably the one refused, and
+             the pane had nothing further to wait for. *)
+          sendProgressEnd ();
+          send (mkNotif "$/compileCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print; print "}")));
           (!drainFailures uri v handle _ => ()))))
       in (
         case missingDeps () of
