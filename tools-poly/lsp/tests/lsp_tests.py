@@ -7810,7 +7810,103 @@ def test_undo_to_compiled_text_keeps_the_tail():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_interrupted_passes_do_not_leave_stale_proofs():
+    """Typing junk into a proof body, letting a pass complete on it, then
+    undoing it in bursts must leave every proof proved again.
+
+    Three things conspire.  While the junk is in the file the
+    `Proof … QED` does not parse, so each pass widens its invalidation
+    from "this declaration's proof" to "every proof below the edit" and
+    takes the lot.  Those passes are abandoned by the next keystroke,
+    so they update neither `compiledText` nor `reusableFrom` and leave
+    no mark the next pass reads.  The pass that finally sees the
+    restored text is then a tactic-only edit like any other, reuses the
+    tail -- and keeps proofs that are no longer there, while `check`
+    forks the items the abandoned passes left in the deferred queue and
+    reports their verdicts against this buffer.
+
+    What that looked like was a proof failing on a `dest_comb` for a
+    term the file does not contain, on a buffer identical to the one
+    that had just proved it."""
+    n = 120
+    src = ["Theory stale_undo\n", "Ancestors arithmetic\n\n",
+           "Theorem base_thm:\n  !m:num. 0 <= m\nProof\n"
+           "  rpt strip_tac\n  THEN simp[]\nQED\n\n"]
+    # consumers that take the edited theorem as an SML value, which is
+    # what makes a stale item raise rather than merely re-prove
+    for i in range(n):
+        src.append(f"Theorem uses{i}:\n  0 <= {i}\nProof\n"
+                   f"  ACCEPT_TAC (SPEC (“{i}:num”) base_thm)\nQED\n\n")
+    src = "".join(src)
+    uri = "file:///tmp/stale_undo_probe.sml"
+    junk = " ;lj ;laksjdf;asklj"
+    at = src.index("  rpt strip_tac") + len("  rpt strip_tac")
+
+    def tally(c):
+        st = {}
+        with c.msgs_lock:
+            for m in c.msgs:
+                if m.get("method") == "$/proofStates":
+                    for p in m["params"]["states"]:
+                        st[p.get("name")] = p.get("status")
+        return st
+    def settled(c):
+        t = tally(c)
+        return len(t) == n + 1 and all(v != "checking" for v in t.values())
+
+    c = Client("/tmp", args=["--dbg"])
+    try:
+        _init(c, "/tmp", timeout=60)
+        _request(c, 987, "$/setConfig", {"checkProofs": True})
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 300), "c1")
+        # Positive control: without this the probe cannot fail, since a
+        # suite run has proof checking off by default.
+        assert_true(c.wait_until(lambda cl: settled(cl) and
+                        all(v == "proved" for v in tally(cl).values()), 240),
+                    f"every proof proved before the edit ({tally(c)})")
+
+        idx = c.total_msgs()
+        _did_change_incr(c, uri, src, at, at, junk, 2)
+        junked = src[:at] + junk + src[at:]
+        assert_true(c.wait_for_method("$/compileCompleted", 300, idx),
+                    "a pass completes on the junk text")
+
+        # Undo one character at a time, in bursts, so passes start and
+        # are abandoned mid-flight -- which is what leaves the queue
+        # dirty and the proofs cancelled.
+        # In bursts with a gap wider than the 300 ms debounce, so each
+        # burst starts a pass that the next one abandons.  Deleting at
+        # a steady sub-debounce rate never starts one at all, and the
+        # test then passes against the unfixed server.
+        cur = junked
+        k = 0
+        while k < len(junk):
+            for _ in range(min(3, len(junk) - k)):
+                hi = at + len(junk) - k
+                _did_change_incr(c, uri, cur, hi - 1, hi, "", 3 + k)
+                cur = cur[:hi - 1] + cur[hi:]
+                k += 1
+            time.sleep(0.55)
+        assert_eq(cur, src, "the undo restores the original text")
+
+        # Wait for the end state rather than merely a settled one: the
+        # pass that re-establishes the edited declaration is the last
+        # to report, so a tally taken the moment nothing says
+        # `checking` can still be a pass short.
+        c.wait_until(lambda cl: settled(cl) and
+                     all(v == "proved" for v in tally(cl).values()), 120)
+        t = tally(c)
+        assert_eq({k: v for k, v in t.items() if v != "proved"}, {},
+                  "every proof proved again after the undo")
+        assert_eq(_diag_count(c, uri), [], "no diagnostics after the undo")
+    finally:
+        c.close()
+
+
 TESTS = [
+    ("interrupted_passes_do_not_leave_stale_proofs",
+                          test_interrupted_passes_do_not_leave_stale_proofs),
     ("walk_and_compile_do_not_share_the_context",
                             test_walk_and_compile_do_not_share_the_context),
     ("undo_to_compiled_text_keeps_the_tail",

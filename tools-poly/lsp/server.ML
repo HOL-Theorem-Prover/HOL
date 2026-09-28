@@ -1473,6 +1473,13 @@ fun start {diag, dbg, warnings} = let
        about; below one of its diagnostics, the squiggle would vanish
        while the error was still in the file. *)
     reusableFrom: int ref,
+    (* `LSPExtension.proofGeneration` as the last completed pass left
+       it.  Reusing a tail keeps that pass's proofs instead of
+       re-enqueueing them, so it is only sound while they are still
+       there; a pass abandoned in between can have cancelled every
+       proof below the edit, and leaves nothing else behind to say
+       so. *)
+    lastProofGen: int ref,
     (* Set when a compile was abandoned because the file's declared
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
@@ -1516,6 +1523,7 @@ fun start {diag, dbg, warnings} = let
         proofDiags = Sref.new (Binarymap.mkDict String.compare),
         pendingFailures = Sref.new [],
         compiledText = ref "", reusableFrom = ref ~1,
+        lastProofGen = ref 0,
         depsBlocked = ref DepsUnchecked, symbols = ref NONE,
         nsLayer = ref NONE, nsGen = ref 0, nsNames = ref NONE} end
 
@@ -2068,7 +2076,7 @@ fun start {diag, dbg, warnings} = let
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
                               walkerDiags, proofDiags, depsBlocked,
                               publishLock,
-                              compiledText, reusableFrom,
+                              compiledText, reusableFrom, lastProofGen,
                               nsLayer, nsGen, ...}:file_data) =
     (* Every route to a compile comes through here -- didOpen,
        didChange's debounce, didSave, `$/hol/retryCompile', and the
@@ -2159,6 +2167,9 @@ fun start {diag, dbg, warnings} = let
        ())
     else let
     val _ = stopCompile compile
+    (* Before `invalidateProofs` below, which for an edit outside any
+       proof body is itself a wide cancellation. *)
+    val proofGenAtEntry = !LSPExtension.proofGeneration
     val {text as {lines, ...}, parse = lastParse} = !lastTrees
     val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
     (* Resume decision: pick the largest snapshot with `endByte <=
@@ -2332,19 +2343,44 @@ fun start {diag, dbg, warnings} = let
        diagnostic-free made most keystrokes in a proof re-elaborate
        every declaration below it.
 
+       What *is* disqualifying is the tail's proofs having been
+       cancelled since.  Reusing the tail keeps them rather than
+       re-enqueueing them, so it assumes they are still there -- and
+       while the declaration is mid-edit its `Proof … QED` often does
+       not parse at all, which sends `invalidateProofs` down the wide
+       branch and takes every proof below the edit with it.  Those
+       passes are abandoned by the next keystroke, so they update
+       neither `compiledText` nor `reusableFrom`, and the generation
+       count is the only mark they leave.  Reuse the tail then and the
+       file keeps the verdicts of a buffer that no longer exists: the
+       ones that were cancelled never come back, and stale items left
+       in the deferred queue are forked in their place and fail on
+       names the edit had removed.
+
        Anything else, and the whole file is re-elaborated as before. *)
-    val reuseTail =
+    (* Reported beside `why` in `$/compileScope`: with the edit
+       confined to one proof body and the tail still declined, the two
+       answers are about different questions and only one of them was
+       visible. *)
+    val (tailWhy, reuseTail) =
       case (tacticOnlyEdit, resumeSnap, lastSnaps) of
           (SOME {decStart, decEnd, delta, lines}, SOME rs, prev :: _) =>
             let val oldDecEnd = decEnd - delta in
-              if !reusableFrom >= 0 andalso oldDecEnd >= !reusableFrom
-                 andalso #endByte rs <= decStart
-                 andalso #endByte prev >= oldDecEnd
-              then SOME {decStart = decStart, delta = delta, lines = lines,
-                         prev = prev}
-              else NONE
+              if !reusableFrom < 0
+              then ("last pass left no usable record", NONE)
+              else if oldDecEnd < !reusableFrom
+              then ("last pass reported below the declaration", NONE)
+              else if proofGenAtEntry <> !lastProofGen
+              then ("proofs cancelled since the last completed pass", NONE)
+              else if #endByte rs > decStart
+              then ("resuming below the declaration", NONE)
+              else if #endByte prev < oldDecEnd
+              then ("no snapshot covering the tail", NONE)
+              else ("taken",
+                    SOME {decStart = decStart, delta = delta, lines = lines,
+                          prev = prev})
             end
-        | _ => NONE
+        | _ => ("no tactic-only edit to reuse a tail for", NONE)
     val stopAfter = Option.map (fn {decStart, ...} => decStart + 1) reuseTail
     val _ = if dbg then
               send (mkNotif "$/compileScope" (fn print => (
@@ -2354,6 +2390,7 @@ fun start {diag, dbg, warnings} = let
                 print ",\"reuseTail\":";
                 print (case reuseTail of NONE => "false" | _ => "true");
                 print ",\"why\":"; encString tacticOnlyWhy print;
+                print ",\"tailWhy\":"; encString tailWhy print;
                 (case tacticOnlyEdit of
                      NONE => ()
                    | SOME {decStart, decEnd, delta, lines} => (
@@ -2943,6 +2980,7 @@ fun start {diag, dbg, warnings} = let
           (* One past the last diagnostic this pass reported, or 0 if
              it reported none; a report that could not be placed bounds
              everything, since we cannot say what it describes. *)
+          lastProofGen := !LSPExtension.proofGeneration;
           reusableFrom :=
             DArray.foldl (fn (Error {pos = (s, _), ...}, acc) =>
                              Int.max (s + 1, acc)
@@ -2989,6 +3027,7 @@ fun start {diag, dbg, warnings} = let
           compiledText := #text text;
           (* Whatever this pass captured, it stopped at the header, so
              there is no tail to carry forward from it. *)
+          lastProofGen := !LSPExtension.proofGeneration;
           reusableFrom := ~1;
           (* Elaboration never got past the header: an ancestor that
              loads but whose `open' fails is the case holdep cannot

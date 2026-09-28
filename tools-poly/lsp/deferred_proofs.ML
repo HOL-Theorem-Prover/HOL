@@ -469,9 +469,17 @@ fun cancelIf doomed_at =
                       in (k, d) end)
     in discard doomed end
 
-fun cancelAtOrAfter off = cancelIf (fn off' => off' >= off)
+(* The two wide cancellations bump `proofGeneration`: they can empty
+   the tail of the file, and a later pass that means to reuse that tail
+   has to know the proofs in it are gone.  `cancelAt` takes one
+   declaration's proof, which is the case the reuse is built around,
+   and leaves the count alone. *)
+fun bumpGeneration () =
+    LSPExtension.proofGeneration := !LSPExtension.proofGeneration + 1
+fun cancelAtOrAfter off =
+    (bumpGeneration (); cancelIf (fn off' => off' >= off))
 fun cancelAt off = cancelIf (fn off' => off' = off)
-fun cancelAll () = cancelIf (fn _ => true)
+fun cancelAll () = (bumpGeneration (); cancelIf (fn _ => true))
 
 end;
 
