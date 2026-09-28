@@ -467,19 +467,24 @@ fun cancelIf doomed_at =
           Sref.gen_update entries
             (fn es => let val (d, k) = List.partition (doomed_at o offsetOf) es
                       in (k, d) end)
-    in discard doomed end
+    in discard doomed; doomed end
 
 (* The two wide cancellations bump `proofGeneration`: they can empty
    the tail of the file, and a later pass that means to reuse that tail
    has to know the proofs in it are gone.  `cancelAt` takes one
    declaration's proof, which is the case the reuse is built around,
-   and leaves the count alone. *)
-fun bumpGeneration () =
-    LSPExtension.proofGeneration := !LSPExtension.proofGeneration + 1
-fun cancelAtOrAfter off =
-    (bumpGeneration (); cancelIf (fn off' => off' >= off))
-fun cancelAt off = cancelIf (fn off' => off' = off)
-fun cancelAll () = (bumpGeneration (); cancelIf (fn _ => true))
+   and leaves the count alone.
+
+   Only when something was actually taken.  Bumping for a cancellation
+   that found an empty pool -- with proof checking off, every one of
+   them -- would have the next pass re-elaborate the file for a loss
+   that never happened. *)
+fun bumpIfAny doomed =
+    if null doomed then ()
+    else LSPExtension.proofGeneration := !LSPExtension.proofGeneration + 1
+fun cancelAtOrAfter off = bumpIfAny (cancelIf (fn off' => off' >= off))
+fun cancelAt off = ignore (cancelIf (fn off' => off' = off))
+fun cancelAll () = bumpIfAny (cancelIf (fn _ => true))
 
 end;
 

@@ -7828,6 +7828,9 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
     What that looked like was a proof failing on a `dest_comb` for a
     term the file does not contain, on a buffer identical to the one
     that had just proved it."""
+    # Enough tail below the edit that a burst's pass is still
+    # elaborating when the next burst abandons it; at ~15 the passes
+    # all complete and the gesture never produces an abandoned one.
     n = 120
     src = ["Theory stale_undo\n", "Ancestors arithmetic\n\n",
            "Theorem base_thm:\n  !m:num. 0 <= m\nProof\n"
@@ -7843,16 +7846,10 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
     at = src.index("  rpt strip_tac") + len("  rpt strip_tac")
 
     def tally(c):
-        st = {}
-        with c.msgs_lock:
-            for m in c.msgs:
-                if m.get("method") == "$/proofStates":
-                    for p in m["params"]["states"]:
-                        st[p.get("name")] = p.get("status")
-        return st
-    def settled(c):
+        return {k: v[0] for k, v in _proof_states(c, uri).items()}
+    def all_proved(c):
         t = tally(c)
-        return len(t) == n + 1 and all(v != "checking" for v in t.values())
+        return len(t) == n + 1 and all(v == "proved" for v in t.values())
 
     c = Client("/tmp", args=["--dbg"])
     try:
@@ -7862,8 +7859,7 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
         assert_true(c.wait_for_method("$/compileCompleted", 300), "c1")
         # Positive control: without this the probe cannot fail, since a
         # suite run has proof checking off by default.
-        assert_true(c.wait_until(lambda cl: settled(cl) and
-                        all(v == "proved" for v in tally(cl).values()), 240),
+        assert_true(c.wait_until(all_proved, 240),
                     f"every proof proved before the edit ({tally(c)})")
 
         idx = c.total_msgs()
@@ -7877,22 +7873,18 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
         # a steady sub-debounce rate never starts a pass at all, and
         # the test is then inert against the unfixed server.
         cur = junked
-        k = 0
-        while k < len(junk):
-            for _ in range(min(3, len(junk) - k)):
-                hi = at + len(junk) - k
-                _did_change_incr(c, uri, cur, hi - 1, hi, "", 3 + k)
-                cur = cur[:hi - 1] + cur[hi:]
-                k += 1
-            time.sleep(0.55)
+        for k in range(len(junk)):
+            hi = at + len(junk) - k
+            _did_change_incr(c, uri, cur, hi - 1, hi, "", 3 + k)
+            cur = cur[:hi - 1] + cur[hi:]
+            if k % 3 == 2 or k == len(junk) - 1:
+                time.sleep(0.55)
         assert_eq(cur, src, "the undo restores the original text")
 
-        # Wait for the end state rather than merely a settled one: the
-        # pass that re-establishes the edited declaration is the last
-        # to report, so a tally taken the moment nothing says
+        # The pass that re-establishes the edited declaration is the
+        # last to report, so a tally taken the moment nothing says
         # `checking` can still be a pass short.
-        c.wait_until(lambda cl: settled(cl) and
-                     all(v == "proved" for v in tally(cl).values()), 120)
+        c.wait_until(all_proved, 120)
         t = tally(c)
         assert_eq({k: v for k, v in t.items() if v != "proved"}, {},
                   "every proof proved again after the undo")

@@ -231,10 +231,25 @@ fun findEnclosingTheorem compileDone text cursor = let
     | SOME _ => loop ()
   in loop () end
 
-(* SML identifier characters, for the two places that scan raw text:
-   the `Datatype:' name scrape and completion's prefix.  Not
-   `HOLSourceParser''s own `isIdRest', which it does not export. *)
+(* SML identifier characters, for the three places that scan raw text:
+   the `Datatype:' name scrape, completion's prefix, and
+   `tacticBodyDecl'.  Not `HOLSourceParser''s own `isIdRest', which it
+   does not export. *)
 fun isIdentChar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+
+(* The identifiers `HOLSourceParser' treats as HOL keywords when they
+   open a line (`identKind', and `colZero' for the position).  Kept in
+   step with that list by hand, there being no export to share: a name
+   missing here is a barrier `tacticBodyDecl' fails to see, which is
+   how a scan runs past a declaration and pairs up a `Proof' that is
+   not the one the edit is in.  `Datatype' is the one name the parser
+   qualifies further -- it is a keyword only before a `:' -- and
+   treating it as a barrier unconditionally is the safe direction. *)
+val holKeywords =
+    ["Datatype", "Type", "Overload", "Definition", "Theorem",
+     "Triviality", "Quote", "Inductive", "CoInductive", "Proof", "QED",
+     "Termination", "End", "Theory", "Ancestors", "Libs", "Resume",
+     "Finalise"]
 
 (* The declarations of a buffer, for `textDocument/documentSymbol'.
 
@@ -2200,45 +2215,56 @@ fun start {diag, dbg, warnings} = let
        end of the file re-enqueues them all anyway.  `tacticOnlyEdit`
        does not use this -- the tail is reused on the strength of what
        the parser says, not of what the keywords suggest. *)
-    fun tacticBodyDecl (text, off) = let
-      val n = size text
-      fun isIdent c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+    fun tacticBodyDecl off = let
+      val str = #text text
+      val n = size str
+      (* Walked rather than read off `lines`, the buffer's line table.
+         The table is indexed by line and answers in one lookup, but
+         it has no answer for a position past the last line, and this
+         scans until it runs out of file -- where the walk simply
+         stops.  Bounded by line length either way, and the whole
+         scan costs under a millisecond on a 180KB file, once per
+         compile pass behind a 300 ms debounce. *)
       fun lineStart i = let
         fun go j = if j <= 0 then 0
-                   else if String.sub (text, j - 1) = #"\n" then j
+                   else if String.sub (str, j - 1) = #"\n" then j
                    else go (j - 1)
         in go (Int.min (i, n)) end
       fun nextLine i = let
         fun go j = if j >= n then n
-                   else if String.sub (text, j) = #"\n" then j + 1
+                   else if String.sub (str, j) = #"\n" then j + 1
                    else go (j + 1)
         in go i end
-      (* A HOL keyword opening the line at `i`, if any. *)
+      (* A HOL keyword opening the line at `i`, if any.  Compared
+         without copying: the same test per candidate, one substring
+         view instead of eleven fresh strings per line scanned. *)
       fun keywordAt i = let
-        fun match s = size s <= n - i
-                      andalso String.substring (text, i, size s) = s
+        val rest = Substring.extract (str, i, NONE)
+        fun match s = Substring.isPrefix s rest
                       andalso (i + size s >= n
-                               orelse not (isIdent (String.sub
-                                                     (text, i + size s))))
-        in List.find match ["Theorem", "Triviality", "Proof", "QED",
-                            "Definition", "Inductive", "Datatype", "End",
-                            "Theory", "Ancestors", "Libs"]
-        end
-      (* Walk `step` from `i` until a column-0 keyword turns up; NONE at
-         the end of the walk. *)
+                               orelse not (isIdentChar
+                                             (String.sub (str, i + size s))))
+        in List.find match holKeywords end
+      (* Walk `step` from `i` until a column-0 keyword turns up; NONE
+         at the end of the walk.  Every keyword that is not the one
+         being looked for is a barrier: the scan stops there and the
+         caller falls back to the wide branch, so the list needs to be
+         complete rather than short. *)
       fun scan step i =
           if i < 0 orelse i >= n then NONE
           else case keywordAt i of
                    SOME k => SOME (i, k)
                  | NONE => scan step (step i)
       fun back i = if i <= 0 then ~1 else lineStart (i - 1)
+      fun up i = scan back (back i)
+      fun down i = scan nextLine (nextLine i)
+      val here = lineStart off
       in
         (* `QED` must come next going down, `Proof` going up, and a
            `Theorem` or `Triviality` above that. *)
-        case (scan nextLine (nextLine (lineStart off)),
-              scan back (back (lineStart off))) of
+        case (down here, up here) of
             (SOME (_, "QED"), SOME (p, "Proof")) =>
-            (case scan back (back p) of
+            (case up p of
                  SOME (t, "Theorem") => SOME t
                | SOME (t, "Triviality") => SOME t
                | _ => NONE)
@@ -2247,9 +2273,7 @@ fun start {diag, dbg, warnings} = let
     fun editedProofBody () =
         case proofBodyAt (#text text) editOff of
             SOME d => SOME d
-          | NONE => (case editOff of
-                         NONE => NONE
-                       | SOME off => tacticBodyDecl (#text text, off))
+          | NONE => Option.mapPartial tacticBodyDecl editOff
     (* Resume decision: pick the largest snapshot with `endByte <=
        the edit mark.  If none, recompile the whole file. *)
     val resumeSnap =
@@ -3054,10 +3078,10 @@ fun start {diag, dbg, warnings} = let
           lastTrees := {text = text,
                         parse = setParseDone (size (#text text)) (!trees)};
           compiledText := #text text;
+          lastProofGen := !LSPExtension.proofGeneration;
           (* One past the last diagnostic this pass reported, or 0 if
              it reported none; a report that could not be placed bounds
              everything, since we cannot say what it describes. *)
-          lastProofGen := !LSPExtension.proofGeneration;
           reusableFrom :=
             DArray.foldl (fn (Error {pos = (s, _), ...}, acc) =>
                              Int.max (s + 1, acc)
@@ -3102,9 +3126,9 @@ fun start {diag, dbg, warnings} = let
           lastTrees := {text = text,
                         parse = setParseDone (size (#text text)) (!trees)};
           compiledText := #text text;
+          lastProofGen := !LSPExtension.proofGeneration;
           (* Whatever this pass captured, it stopped at the header, so
              there is no tail to carry forward from it. *)
-          lastProofGen := !LSPExtension.proofGeneration;
           reusableFrom := ~1;
           (* Elaboration never got past the header: an ancestor that
              loads but whose `open' fails is the case holdep cannot
