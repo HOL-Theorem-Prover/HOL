@@ -2172,6 +2172,84 @@ fun start {diag, dbg, warnings} = let
     val proofGenAtEntry = !LSPExtension.proofGeneration
     val {text as {lines, ...}, parse = lastParse} = !lastTrees
     val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
+    (* Which declaration's proof body the edit is in, for deciding how
+       much of the pool to invalidate.
+
+       Asked of the parser first.  While a tactic is being edited the
+       answer is very often NONE for a cursor that is plainly inside a
+       `Proof ... QED`: a `;` in the body leaves `parseHolKeyword` with
+       no column-0 `QED` to close the declaration on, so the whole
+       declaration fails to parse.  `invalidateProofs` then takes its
+       wide branch and cancels every proof below the edit, which is
+       why a half-typed tactic greyed out the rest of the file until
+       some pass ran to the end of it.
+
+       So fall back to the column-0 keywords, which is the same thing
+       the parser anchors on (`HOLSourceParser`'s `colZero`) and the
+       one piece of structure a broken tactic body cannot disturb:
+       whatever the user has typed between `Proof` and `QED`, those
+       two are still in column 0 and still say where the declaration
+       begins and ends.  The `Theorem` line that opens it is the
+       offset the pool keys the proof on -- `onDecStarted` reports
+       `decSpan`'s start, and that is the keyword itself.
+
+       Deliberately conservative: any column-0 keyword found out of
+       order gives up and lets the wide branch run.  Getting it wrong
+       the other way keeps verdicts that are out of date rather than
+       blanking ones that are right, and the next pass to reach the
+       end of the file re-enqueues them all anyway.  `tacticOnlyEdit`
+       does not use this -- the tail is reused on the strength of what
+       the parser says, not of what the keywords suggest. *)
+    fun tacticBodyDecl (text, off) = let
+      val n = size text
+      fun isIdent c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+      fun lineStart i = let
+        fun go j = if j <= 0 then 0
+                   else if String.sub (text, j - 1) = #"\n" then j
+                   else go (j - 1)
+        in go (Int.min (i, n)) end
+      fun nextLine i = let
+        fun go j = if j >= n then n
+                   else if String.sub (text, j) = #"\n" then j + 1
+                   else go (j + 1)
+        in go i end
+      (* A HOL keyword opening the line at `i`, if any. *)
+      fun keywordAt i = let
+        fun match s = size s <= n - i
+                      andalso String.substring (text, i, size s) = s
+                      andalso (i + size s >= n
+                               orelse not (isIdent (String.sub
+                                                     (text, i + size s))))
+        in List.find match ["Theorem", "Triviality", "Proof", "QED",
+                            "Definition", "Inductive", "Datatype", "End",
+                            "Theory", "Ancestors", "Libs"]
+        end
+      (* Walk `step` from `i` until a column-0 keyword turns up; NONE at
+         the end of the walk. *)
+      fun scan step i =
+          if i < 0 orelse i >= n then NONE
+          else case keywordAt i of
+                   SOME k => SOME (i, k)
+                 | NONE => scan step (step i)
+      fun back i = if i <= 0 then ~1 else lineStart (i - 1)
+      in
+        (* `QED` must come next going down, `Proof` going up, and a
+           `Theorem` or `Triviality` above that. *)
+        case (scan nextLine (nextLine (lineStart off)),
+              scan back (back (lineStart off))) of
+            (SOME (_, "QED"), SOME (p, "Proof")) =>
+            (case scan back (back p) of
+                 SOME (t, "Theorem") => SOME t
+               | SOME (t, "Triviality") => SOME t
+               | _ => NONE)
+          | _ => NONE
+      end
+    fun editedProofBody () =
+        case proofBodyAt (#text text) editOff of
+            SOME d => SOME d
+          | NONE => (case editOff of
+                         NONE => NONE
+                       | SOME off => tacticBodyDecl (#text text, off))
     (* Resume decision: pick the largest snapshot with `endByte <=
        the edit mark.  If none, recompile the whole file. *)
     val resumeSnap =
@@ -2232,8 +2310,7 @@ fun start {diag, dbg, warnings} = let
         NONE => (
           !LSPExtension.notifyCompileStart editOff;
           invalidateProofs {resumeStart = NONE,
-                            inProofBody = proofBodyAt (#text text)
-                                                      editOff};
+                            inProofBody = editedProofBody ()};
           ((case baseSnap of
               NONE => (fn () => !LSPExtension.resetForCompile ())
             | SOME s =>
@@ -2243,7 +2320,7 @@ fun start {diag, dbg, warnings} = let
           val _ = !LSPExtension.notifyCompileStart editOff
           val _ = invalidateProofs
                     {resumeStart = SOME (#endByte snap),
-                     inProofBody = proofBodyAt (#text text) editOff}
+                     inProofBody = editedProofBody ()}
           val {endByte, builtTrees, diags = snapDiags, plugins,
                ...} = snap
           (* Seed `diags` with the frozen snapshot; leave `oldDiags`

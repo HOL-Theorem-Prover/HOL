@@ -7872,13 +7872,10 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
         assert_true(c.wait_for_method("$/compileCompleted", 300, idx),
                     "a pass completes on the junk text")
 
-        # Undo one character at a time, in bursts, so passes start and
-        # are abandoned mid-flight -- which is what leaves the queue
-        # dirty and the proofs cancelled.
-        # In bursts with a gap wider than the 300 ms debounce, so each
-        # burst starts a pass that the next one abandons.  Deleting at
-        # a steady sub-debounce rate never starts one at all, and the
-        # test then passes against the unfixed server.
+        # Undo in bursts with a gap wider than the 300 ms debounce, so
+        # each burst starts a pass the next one abandons.  Deleting at
+        # a steady sub-debounce rate never starts a pass at all, and
+        # the test is then inert against the unfixed server.
         cur = junked
         k = 0
         while k < len(junk):
