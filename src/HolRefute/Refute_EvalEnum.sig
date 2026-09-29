@@ -4,6 +4,8 @@ signature Refute_EvalEnum = sig
 
   exception Invalid of string
 
+  (* The literal forms clause patterns match by equality. *)
+  val special_literal : term -> bool
   val same_program :
     Refute_SmartGen.enumerator -> Refute_SmartGen.enumerator -> bool
   val find_by_mode :

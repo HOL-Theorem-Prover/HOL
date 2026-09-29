@@ -942,11 +942,7 @@ structure Refute_Extract :> Refute_Extract = struct
      [lazy_match_pattern_with] can observe: variables, the literal forms it
      tests by equality, and saturated constructor spines. *)
   fun is_pattern tm =
-    Term.is_var tm orelse Literal.is_numeral tm orelse
-    intSyntax.is_int_literal tm orelse Literal.is_char_lit tm orelse
-    Literal.is_string_lit tm orelse oneSyntax.is_one tm orelse
-    Term.aconv tm boolSyntax.T orelse Term.aconv tm boolSyntax.F orelse
-    wordsSyntax.is_word_literal tm orelse
+    Term.is_var tm orelse Refute_EvalEnum.special_literal tm orelse
     let val (head, arguments) = boolSyntax.strip_comb tm
     in
       Term.is_const head andalso TypeBase.is_constructor head andalso
@@ -2144,13 +2140,7 @@ structure Refute_Extract :> Refute_Extract = struct
                 | NONE => "let val " ^ variable ^ " = " ^ matched ^ " in " ^
                     success ^ " end"
           end
-        else if Literal.is_numeral pattern orelse
-                intSyntax.is_int_literal pattern orelse
-                Literal.is_char_lit pattern orelse
-                Literal.is_string_lit pattern orelse oneSyntax.is_one pattern
-                orelse Term.aconv pattern boolSyntax.T orelse
-                Term.aconv pattern boolSyntax.F orelse
-                wordsSyntax.is_word_literal pattern then
+        else if Refute_EvalEnum.special_literal pattern then
           "if " ^ equality_name context (Term.type_of pattern) ^ " " ^
             parens matched ^ " " ^ parens (expression context pattern) ^
             " then " ^ success ^ " else " ^ failure
@@ -3327,13 +3317,7 @@ structure Refute_Extract :> Refute_Extract = struct
                   ("_", [], ["val " ^ binder ^ " = " ^ value],
                    [(tm, binder, rebuild)], tm :: seen)
                 end
-            else if Literal.is_numeral tm orelse
-                    intSyntax.is_int_literal tm orelse
-                    Literal.is_char_lit tm orelse
-                    Literal.is_string_lit tm orelse
-                    oneSyntax.is_one tm orelse
-                    Term.aconv tm boolSyntax.T orelse
-                    Term.aconv tm boolSyntax.F then
+            else if Refute_EvalEnum.special_literal tm then
               ("_",
                [equality_name context (Term.type_of tm) ^ " " ^
                 parens value ^ " " ^ parens (expression context tm)],
