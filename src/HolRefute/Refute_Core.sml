@@ -1,5 +1,4 @@
 structure Refute_Core :> Refute_Core = struct
-  structure Names = Refute_ModelFinder_Names
 
   type term = Term.term
   type thm = Thm.thm
@@ -202,6 +201,11 @@ structure Refute_Core :> Refute_Core = struct
 
   datatype backend_family = QuickcheckFamily | ModelFinderFamily | OtherFamily
 
+  (* A witness's backend-specific text, each part empty or starting with a
+     newline: the scope, the bindings, and the model after the evaluated
+     terms. *)
+  type witness_text = {scope : string, bindings : string, model : string}
+
   type backend =
     { name : string,
       family : backend_family,
@@ -210,7 +214,9 @@ structure Refute_Core :> Refute_Core = struct
       requires : requirement,
       input : goal_form,
       certainty_ceiling : certainty_ceiling,
-      run : config -> instance list -> outcome }
+      run : config -> instance list -> outcome,
+      (* [NONE] shows the bindings with [format_term]. *)
+      render : (mf_config -> counterexample -> witness_text) option }
 
   val default_qc_config : qc_config =
     { size = 10,
@@ -1206,7 +1212,7 @@ structure Refute_Core :> Refute_Core = struct
       val unrenamed_evals = #evals problem @ #evals cfg
       (* `_` is the shared model/narrowing marker.  Vary a colliding user
          free once for every backend, before any marker can be introduced. *)
-      val (renamed, _) = Names.rename_irrelevant_collisions
+      val (renamed, _) = Refute_ModelFinder_Names.rename_irrelevant_collisions
         (unrenamed_goal :: unrenamed_evals)
       val original_goal = hd renamed
       val input_evals = tl renamed
@@ -1668,74 +1674,32 @@ structure Refute_Core :> Refute_Core = struct
       if null present then "" else ", " ^ String.concatWith ", " present
     end
 
+  (* [refute$Quot x] shows as [«x»]; the printer is added to a copy of the
+     grammar, so the global one never changes. *)
   fun format_term term =
     let
-      fun quotient_argument candidate =
-        let val (head, arguments) = HolKernel.strip_comb candidate
-        in
-          case Lib.total Term.dest_thy_const head of
-              SOME {Thy = "refute", Name = "Quot", ...} =>
-                if length arguments = 1 then SOME (hd arguments) else NONE
-            | _ => NONE
-        end
       fun delimit value =
         if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
           "<<" ^ value ^ ">>"
         else
           "«" ^ value ^ "»"
-      fun replace_quotients candidate index replacements =
-        case quotient_argument candidate of
-            SOME argument =>
-              let
-                val name = "refute$quotdisplay$" ^ Int.toString index ^
-                  "$value"
-                val placeholder = Term.variant (Term.all_vars term)
-                  (Term.mk_var (name, Term.type_of candidate))
-              in
-                (placeholder, index + 1,
-                 (placeholder, delimit (format_term argument)) :: replacements)
-              end
-          | NONE =>
-              if Term.is_abs candidate then
-                let
-                  val (variable, body) = Term.dest_abs candidate
-                  val (body, next, replacements) =
-                    replace_quotients body index replacements
-                in
-                  (Term.mk_abs (variable, body), next, replacements)
-                end
-              else if Term.is_comb candidate then
-                let
-                  val (function, argument) = Term.dest_comb candidate
-                  val (function, next, replacements) =
-                    replace_quotients function index replacements
-                  val (argument, next, replacements) =
-                    replace_quotients argument next replacements
-                in
-                  (Term.mk_comb (function, argument), next, replacements)
-                end
-              else
-                (candidate, index, replacements)
-      fun replace_all needle replacement source =
-        let
-          val needle_length = size needle
-          val source_length = size source
-          fun scan index parts =
-            if index >= source_length then String.concat (rev parts)
-            else if index + needle_length <= source_length andalso
-                    String.substring (source, index, needle_length) = needle
-            then scan (index + needle_length) (replacement :: parts)
-            else scan (index + 1)
-              (String.substring (source, index, 1) :: parts)
-        in
-          scan 0 []
-        end
-      val (printable, _, replacements) = replace_quotients term 0 []
-      (* A placeholder must print identically in isolation and in context.
-         Suppressing free-variable annotations also prevents line wrapping
+      val quotient = Term.mk_comb
+        (Term.mk_thy_const {Thy = "refute", Name = "Quot",
+                            Ty = Type.-->(Type.alpha, Type.beta)},
+         Term.mk_var ("x", Type.alpha))
+      fun print_quotient _ _ _ (ppfns : term_pp_types.ppstream_funs) _ _
+            candidate =
+        #add_string ppfns (delimit (format_term (Term.rand candidate)))
+      val (type_grammar, term_grammar) = Parse.current_grammars ()
+      val grammars =
+        (type_grammar,
+         term_grammar.add_user_printer
+           ("Refute_Core.format_term", quotient, print_quotient)
+           term_grammar)
+      (* Suppressing free-variable annotations also prevents line wrapping
          from splitting an annotation away from its marker. *)
       val string = Lib.with_flag (Globals.show_types, false)
-        Parse.term_to_string printable
+        (Parse.term_to_string_by_grammar grammars) term
       val length = size string
       fun clean index parts =
         if index >= length then String.concat (rev parts)
@@ -1749,11 +1713,7 @@ structure Refute_Core :> Refute_Core = struct
           clean (index + 1)
             (String.substring (string, index, 1) :: parts)
     in
-      List.foldl (fn ((placeholder, replacement), result) =>
-        replace_all
-          (Lib.with_flag (Globals.show_types, false)
-             Parse.term_to_string placeholder)
-          replacement result) (clean 0 []) replacements
+      clean 0 []
     end
 
   fun format_pairs show_value pairs =
@@ -1776,33 +1736,6 @@ structure Refute_Core :> Refute_Core = struct
       end
       handle Interrupt => raise Interrupt | _ => NONE
 
-  fun format_bool_function value =
-    case Lib.total Type.dom_rng (Term.type_of value) of
-        SOME (domain, range) =>
-          if domain = Type.bool andalso range = Type.bool then
-            let
-              fun at argument = boolean_value_for_display
-                (Term.mk_comb (value, argument))
-            in
-              case (at boolSyntax.F, at boolSyntax.T) of
-                  (SOME at_false, SOME at_true) =>
-                    let val arrow =
-                      if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
-                        "|->"
-                      else
-                        "↦"
-                    in
-                      SOME ("{F " ^ arrow ^ " " ^ format_term at_false ^
-                        ", T " ^ arrow ^ " " ^ format_term at_true ^ "}")
-                    end
-                | _ => NONE
-            end
-          else NONE
-      | NONE => NONE
-
-  val format_kodkod_bindings = format_pairs (fn value =>
-    Option.getOpt (format_bool_function value, format_term value))
-
   val format_evals = format_pairs (fn value =>
     format_term (Option.getOpt (boolean_value_for_display value, value)))
 
@@ -1820,106 +1753,30 @@ structure Refute_Core :> Refute_Core = struct
         printed
     end
 
-  fun unbox_display_type ty =
-    if Type.is_vartype ty then ty
-    else
-      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
-      in
-        if Thy = Names.refute_theory andalso Tyop = Names.funbox_tyop then
-          Type.-->(unbox_display_type (List.nth (Args, 0)),
-            unbox_display_type (List.nth (Args, 1)))
-        else if Thy = Names.refute_theory andalso
-                Tyop = Names.pairbox_tyop then
-          pairSyntax.mk_prod
-            (unbox_display_type (List.nth (Args, 0)),
-             unbox_display_type (List.nth (Args, 1)))
-        else
-          Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
-            Args = map unbox_display_type Args}
-      end
-
-  fun is_boxed_type ty =
-    Names.is_refute_type Names.funbox_tyop ty orelse
-    Names.is_refute_type Names.pairbox_tyop ty
-
-  fun iterator_scope_name ty =
-    if Type.is_vartype ty then
-      let
-        val name = Type.dest_vartype ty
-        val lfp_prefix = "'" ^ Names.lfp_iterator_prefix
-        val gfp_prefix = "'" ^ Names.gfp_iterator_prefix
-        fun after prefix = String.extract (name, size prefix, NONE)
-      in
-        if String.isPrefix lfp_prefix name then SOME (after lfp_prefix)
-        else if String.isPrefix gfp_prefix name then SOME (after gfp_prefix)
-        else NONE
-      end
-    else NONE
-
-  fun format_scope_assignment (ty, card) =
-    case iterator_scope_name ty of
-        SOME predicate =>
-          "iter " ^ predicate ^ " = " ^ Int.toString (Int.max (0, card - 1))
-      | NONE =>
-          if Names.is_refute_type Names.bisim_iterator_tyop ty then
-            "bisim_depth = " ^ Int.toString (card - 1)
-          else
-            "card " ^ type_name (unbox_display_type ty) ^ " = " ^
-            Int.toString card
-
-  fun format_scope NONE = ""
-    | format_scope (SOME assignments) =
-        "\nScope: " ^ String.concatWith ", "
-          (map format_scope_assignment assignments)
-
-  fun format_named_terms title entries =
-    if null entries then "" else
-      "\n" ^ title ^ ":\n" ^ String.concatWith "\n"
-        (map (fn (name, value) =>
-          "  " ^ name ^ " = " ^ format_term value) entries)
-
-  fun format_types types =
-    if null types then "" else
-      "\nTypes:\n" ^ String.concatWith "\n" (map
-        (fn (ty, values, complete) =>
-          "  " ^ type_name (unbox_display_type ty) ^
-          (if is_boxed_type ty then " [boxed]" else "") ^ " = {" ^
-          String.concatWith ", " (map format_term values) ^
-          (if complete then "" else
-             if null values then "..." else ", ...") ^ "}") types)
-
-  fun format_model (mf : mf_config) NONE = ""
-    | format_model mf (SOME ({skolems, consts, types} : model_report)) =
-        (if #show_types mf then format_types types else "") ^
-        (if #show_skolems mf then
-           format_named_terms "Skolem constants" skolems
-         else "") ^
-        (if #show_consts mf andalso not (null consts) then
-           "\nConstants:\n" ^ String.concatWith "\n"
-             (map (fn (name, operator, value) =>
-               "  " ^ format_term name ^ " " ^ operator ^ " " ^
-               format_term value) consts)
-         else "")
+  fun render_of name =
+    case List.find (fn (registered, _) => registered = name)
+           (Refute_Session.read backend_registry) of
+        SOME (_, backend : backend) => #render backend
+      | NONE => NONE
 
   fun format_witness noun (mf : mf_config) (cex : counterexample) =
     let
-      val {backend, substrate, certainty, bindings, evals, cert, scope,
-           model, stats} = cex
+      val {backend, substrate, certainty, bindings, evals, cert, stats, ...} =
+        cex
       val candidate_word =
         case certainty of Potential _ => "candidate " | _ => ""
       val header = "Refute found a " ^ candidate_word ^ noun ^
         " (backend: " ^ backend ^ ", substrate: " ^ substrate ^
         format_stats stats ^ "):"
-      val scope_text =
-        if substrate = "kodkod" then format_scope scope else ""
-      val binding_text =
-        if null bindings then ""
-        else "\n" ^
-          (if substrate = "kodkod" then format_kodkod_bindings bindings
-           else format_bindings bindings)
+      val {scope = scope_text, bindings = binding_text, model = model_text} =
+        case render_of backend of
+            SOME render => render mf cex
+          | NONE =>
+              {scope = "", model = "",
+               bindings = if null bindings then ""
+                          else "\n" ^ format_bindings bindings}
       val eval_text =
         if null evals then "" else "\nEvaluated terms:\n" ^ format_evals evals
-      val model_text = format_model mf model
       val cert_text =
         case (certainty, cert) of
             (Genuine, NONE) => "\nCertification: uncertified"

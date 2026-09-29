@@ -336,7 +336,8 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
      requires = Refute_Core.AnyGoal,
      input = Refute_Core.MonoInstances,
      certainty_ceiling = certainty_ceiling,
-     run = run}
+     run = run,
+     render = NONE}
 
   fun register_backend () = Refute_Core.register_backend backend
 end

@@ -171,6 +171,8 @@ signature Refute_ModelFinder_HOL = sig
   val is_pairbox_type : hol_type -> bool
   val is_fp_iterator_type : hol_type -> bool
   val is_bisim_iterator_type : hol_type -> bool
+  val is_lfp_iterator_type : hol_type -> bool
+  val is_gfp_iterator_type : hol_type -> bool
   val is_iterator_type : hol_type -> bool
   val iterator_info_for_type : mf_context -> hol_type -> iterator_info option
   val refresh_iterator_arg_types : mf_context -> term list -> unit

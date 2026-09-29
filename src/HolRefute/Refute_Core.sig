@@ -77,6 +77,11 @@ signature Refute_Core = sig
 
   datatype backend_family = QuickcheckFamily | ModelFinderFamily | OtherFamily
 
+  (* A witness's backend-specific text, each part empty or starting with a
+     newline: the scope, the bindings, and the model after the evaluated
+     terms. *)
+  type witness_text = {scope : string, bindings : string, model : string}
+
   type backend =
     { name : string,
       family : backend_family,
@@ -85,7 +90,9 @@ signature Refute_Core = sig
       requires : requirement,
       input : goal_form,
       certainty_ceiling : certainty_ceiling,
-      run : config -> instance list -> outcome }
+      run : config -> instance list -> outcome,
+      (* [NONE] shows the bindings with [format_term]. *)
+      render : (mf_config -> counterexample -> witness_text) option }
 
   val config_of : Context.t -> config
   val upd_backends : string list option -> config -> config
@@ -157,7 +164,10 @@ signature Refute_Core = sig
     {tests : int, match_failures : int, counters : qc_counters} ->
     (string * int) list
   val format_counters : qc_counters -> string
-  val format_scope_assignment : hol_type * int -> string
+  val format_term : term -> string
+  val format_pairs : (term -> string) -> (term * term) list -> string
+  val boolean_value_for_display : term -> term option
+  val type_name : hol_type -> string
   val report_outcome : config -> outcome -> unit
 
   type search_context =

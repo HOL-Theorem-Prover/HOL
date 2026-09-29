@@ -232,7 +232,7 @@ fun stub name weight enabled run : backend =
   {name = name, family = OtherFamily, weight = weight,
    configured = fn () => !enabled,
    requires = AnyGoal, input = MonoInstances,
-   certainty_ceiling = fn _ => fn _ => Genuine, run = run}
+   certainty_ceiling = fn _ => fn _ => Genuine, run = run, render = NONE}
 
 (* The ceiling a backend races under is a field, so a stub overrides just
    that one and keeps the rest. *)
@@ -240,7 +240,7 @@ fun with_ceiling ceiling (b : backend) : backend =
   {name = #name b, family = #family b, weight = #weight b,
    configured = #configured b,
    requires = #requires b, input = #input b,
-   certainty_ceiling = ceiling, run = #run b}
+   certainty_ceiling = ceiling, run = #run b, render = #render b}
 
 fun with_enabled flags body =
   (app (fn f => f := true) flags;
@@ -400,7 +400,8 @@ val _ = test "QuickcheckBackends selects by backend family" (fn () =>
       {name = #name qc_stub, family = QuickcheckFamily,
        weight = #weight qc_stub, configured = #configured qc_stub,
        requires = #requires qc_stub, input = #input qc_stub,
-       certainty_ceiling = #certainty_ceiling qc_stub, run = #run qc_stub}
+       certainty_ceiling = #certainty_ceiling qc_stub, run = #run qc_stub,
+       render = #render qc_stub}
     val _ = register_backend (stub "selftest-other-family" ~100 enabled none)
     val sort = Listsort.sort String.compare
   in
@@ -584,13 +585,15 @@ val _ = test "backend input form selects instances or the original"
          configured = fn () => !enabled, requires = AnyGoal,
          input = MonoInstances,
          certainty_ceiling = fn _ => fn _ => Genuine,
-         run = fn _ => fn insts => (mono_seen := insts; Unknown [])}
+         run = fn _ => fn insts => (mono_seen := insts; Unknown []),
+         render = NONE}
       val _ = register_backend
         {name = "selftest-input-poly", family = OtherFamily, weight = ~93,
          configured = fn () => !enabled, requires = AnyGoal,
          input = PolyOriginal,
          certainty_ceiling = fn _ => fn _ => Genuine,
-         run = fn _ => fn insts => (poly_seen := insts; Unknown [])}
+         run = fn _ => fn insts => (poly_seen := insts; Unknown []),
+         render = NONE}
       val cfg = default_config |> quiet |> upd_sequential true
         |> upd_finite_type_size 3
         |> only [RegisteredBackend "selftest-input-mono",
@@ -668,7 +671,7 @@ val _ = test "admission is bounded by the timeout" (fn () =>
        requires = ExecutableGoalUnless (fn _ => fn _ =>
          (OS.Process.sleep (Time.fromReal 1.0); true)),
        input = MonoInstances, certainty_ceiling = fn _ => fn _ => Genuine,
-       run = fn _ => fn _ => Unknown ["ran"]}
+       run = fn _ => fn _ => Unknown ["ran"], render = NONE}
   in
     with_enabled [enabled] (fn () =>
       refute (default_config |> quiet |> upd_timeout 0.05
@@ -687,7 +690,7 @@ val _ = test "admission errors are reported in registry order" (fn () =>
        requires = ExecutableGoalUnless (fn _ => fn _ =>
          (OS.Process.sleep (Time.fromReal delay); raise Fail (name ^ " boom"))),
        input = MonoInstances, certainty_ceiling = fn _ => fn _ => Genuine,
-       run = fn _ => fn _ => Unknown ["ran"]}
+       run = fn _ => fn _ => Unknown ["ran"], render = NONE}
     val _ = failing "selftest-admission-alpha" 0.3
     val _ = failing "selftest-admission-beta" 0.0
   in
@@ -812,7 +815,8 @@ local
        in
          wait (); OS.Process.sleep (Time.fromReal 0.05);
          Counterexample [stub_cex "selftest-race-genuine" Genuine]
-       end}
+       end,
+     render = NONE}
   val _ = register_backend
     (cex_backend "selftest-merge-low" 10 (Potential ["stub"]))
   val _ = register_backend

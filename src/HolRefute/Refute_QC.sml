@@ -1917,7 +1917,8 @@ structure Refute_QC :> Refute_QC = struct
       requires = Refute_Core.ExecutableGoalUnless smart_gate_override,
       input = Refute_Core.MonoInstances,
       certainty_ceiling = fn _ => fn _ => Refute_Core.Genuine,
-      run = strategy_run Exhaustive }
+      run = strategy_run Exhaustive,
+      render = NONE }
 
   val random_backend : Refute_Core.backend =
     { name = "random",
@@ -1928,7 +1929,8 @@ structure Refute_QC :> Refute_QC = struct
       input = Refute_Core.MonoInstances,
       certainty_ceiling = fn _ => fn _ => Refute_Core.Genuine,
       run = fn config =>
-        strategy_run (Random {seed = strategy_seed config}) config }
+        strategy_run (Random {seed = strategy_seed config}) config,
+      render = NONE }
 
   fun register_backends () =
     (Refute_EvalSML.register_substrate

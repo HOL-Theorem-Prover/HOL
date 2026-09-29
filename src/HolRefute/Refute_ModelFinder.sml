@@ -29,6 +29,118 @@ type term = Term.term
 type hol_type = Type.hol_type
 type rich_problem = MFK.rich_problem
 
+(* Display of kodkod witnesses, through the backend's [render] hook. *)
+
+fun unbox_display_type ty =
+  if Type.is_vartype ty then ty
+  else
+    let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+    in
+      if MFH.is_funbox_type ty then
+        Type.-->(unbox_display_type (List.nth (Args, 0)),
+          unbox_display_type (List.nth (Args, 1)))
+      else if MFH.is_pairbox_type ty then
+        pairSyntax.mk_prod
+          (unbox_display_type (List.nth (Args, 0)),
+           unbox_display_type (List.nth (Args, 1)))
+      else
+        Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
+          Args = map unbox_display_type Args}
+    end
+
+fun is_boxed_type ty = MFH.is_funbox_type ty orelse MFH.is_pairbox_type ty
+
+(* The predicate an iterator type variable [:'<prefix>p] counts for. *)
+fun iterator_scope_name ty =
+  let
+    fun after prefix =
+      SOME (String.extract (Type.dest_vartype ty, size prefix + 1, NONE))
+  in
+    if MFH.is_lfp_iterator_type ty then after MFN.lfp_iterator_prefix
+    else if MFH.is_gfp_iterator_type ty then after MFN.gfp_iterator_prefix
+    else NONE
+  end
+
+fun format_scope_assignment (ty, card) =
+  case iterator_scope_name ty of
+      SOME predicate =>
+        "iter " ^ predicate ^ " = " ^ Int.toString (Int.max (0, card - 1))
+    | NONE =>
+        if MFH.is_bisim_iterator_type ty then
+          "bisim_depth = " ^ Int.toString (card - 1)
+        else
+          "card " ^ Refute_Core.type_name (unbox_display_type ty) ^ " = " ^
+          Int.toString card
+
+fun format_scope NONE = ""
+  | format_scope (SOME assignments) =
+      "\nScope: " ^ String.concatWith ", "
+        (map format_scope_assignment assignments)
+
+fun format_bool_function value =
+  case Lib.total Type.dom_rng (Term.type_of value) of
+      SOME (domain, range) =>
+        if domain = Type.bool andalso range = Type.bool then
+          let
+            fun at argument = Refute_Core.boolean_value_for_display
+              (Term.mk_comb (value, argument))
+          in
+            case (at boolSyntax.F, at boolSyntax.T) of
+                (SOME at_false, SOME at_true) =>
+                  let val arrow =
+                    if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
+                      "|->"
+                    else
+                      "↦"
+                  in
+                    SOME ("{F " ^ arrow ^ " " ^
+                      Refute_Core.format_term at_false ^ ", T " ^ arrow ^
+                      " " ^ Refute_Core.format_term at_true ^ "}")
+                  end
+              | _ => NONE
+          end
+        else NONE
+    | NONE => NONE
+
+val format_bindings = Refute_Core.format_pairs (fn value =>
+  Option.getOpt (format_bool_function value, Refute_Core.format_term value))
+
+fun format_named_terms title entries =
+  if null entries then "" else
+    "\n" ^ title ^ ":\n" ^ String.concatWith "\n"
+      (map (fn (name, value) =>
+        "  " ^ name ^ " = " ^ Refute_Core.format_term value) entries)
+
+fun format_types types =
+  if null types then "" else
+    "\nTypes:\n" ^ String.concatWith "\n" (map
+      (fn (ty, values, complete) =>
+        "  " ^ Refute_Core.type_name (unbox_display_type ty) ^
+        (if is_boxed_type ty then " [boxed]" else "") ^ " = {" ^
+        String.concatWith ", " (map Refute_Core.format_term values) ^
+        (if complete then "" else
+           if null values then "..." else ", ...") ^ "}") types)
+
+fun format_model (_ : Refute_Core.mf_config) NONE = ""
+  | format_model mf
+      (SOME ({skolems, consts, types} : Refute_Core.model_report)) =
+      (if #show_types mf then format_types types else "") ^
+      (if #show_skolems mf then
+         format_named_terms "Skolem constants" skolems
+       else "") ^
+      (if #show_consts mf andalso not (null consts) then
+         "\nConstants:\n" ^ String.concatWith "\n"
+           (map (fn (name, operator, value) =>
+             "  " ^ Refute_Core.format_term name ^ " " ^ operator ^ " " ^
+             Refute_Core.format_term value) consts)
+       else "")
+
+fun render_witness mf (cex : Refute_Core.counterexample) =
+  {scope = format_scope (#scope cex),
+   bindings = if null (#bindings cex) then ""
+              else "\n" ^ format_bindings (#bindings cex),
+   model = format_model mf (#model cex)}
+
 val max_unsound_delay_ms = 200
 val max_unsound_delay_percent = 2
 
@@ -1176,7 +1288,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         | (scope : MFS.scope) :: _ =>
             ["searched up to size: " ^
              String.concatWith ", "
-               (map Refute_Core.format_scope_assignment
+               (map format_scope_assignment
                  (#card_assigns scope))]
 
     fun skipped_reason () =
@@ -1386,7 +1498,8 @@ val kodkod_backend : Refute_Core.backend =
    requires = Refute_Core.AnyGoal,
    input = Refute_Core.PolyOriginal,
    certainty_ceiling = kodkod_certainty_ceiling,
-   run = run}
+   run = run,
+   render = SOME render_witness}
 
 fun register_backends () =
   Refute_Core.register_backend kodkod_backend

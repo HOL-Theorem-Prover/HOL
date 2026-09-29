@@ -24,7 +24,6 @@ build-tests: $(DEFAULT_TARGETS)
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
 # dependency is declared explicitly.
 Refute_Gen.uo: Refute_Util.uo
-Refute_Core.uo: Refute_ModelFinder_Names.uo
 Refute_ModelFinder_Names.uo: Refute_Util.uo
 Refute_ModelFinder_HOL.uo: Refute_Skolem.uo Refute_Util.uo
 Refute_Cert_Narrow.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
