@@ -173,6 +173,8 @@ Module layout
 
 * `Refute.sig`/`Refute.sml`: public facade over `Refute_Core`.
 * `Refute_Core`: types, configuration, backend registry, orchestration.
+* `Refute_Config`: configuration types and updaters shared by
+  `Refute_Core` and the facade.
 * `Refute_Session`: Refute's state in the HOL context; one call reads the
   context captured at its entry and commits its cache changes at exit.
 * `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
