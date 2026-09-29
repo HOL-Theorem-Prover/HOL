@@ -10,16 +10,15 @@ Refute.register_typedef :
 
 Registers a type definition with the model finder.
 
-`ty`'s parameters must be distinct type variables, and the
+`ty`'s parameters must be distinct type variables, and its
 representation type may mention no others.  `abs` and `rep` are the
 abstraction and representation constants.  `absrep_thms` is `[th]`,
-with `th` the theorem `define_new_type_bijections` returns, or `th`'s two
-conjuncts in either order.  The representation predicate is checked
-against the type's `TY_DEF` theorem.
+for `th` the theorem `define_new_type_bijections` returns, or `th`'s
+two conjuncts in either order.  The representation predicate is
+checked against the type's `TY_DEF` theorem.
 
-The model finder registers a typedef by itself when its bijection
-theorem, or its two conjuncts, is stored in a theory.  Registrations
-last for the session.
+The model finder registers a typedef by itself when `th` or its two
+conjuncts are stored in a theory.  Registrations last for the session.
 
 ### Failure
 

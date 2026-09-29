@@ -8,14 +8,14 @@ Refute.abstract_generator :
 
 ------------------------------------------------------------------------
 
-Registers a generator building values of a type from given terms.
+Registers a test-data generator building values from constructors.
 
 Values of `ty` are built by applying `constructors` to generated
-arguments, keeping only those satisfying `pred` (a closed `ty -> bool`
-term) if present.  Each constructor is a constant whose declared result
-type is `ty`'s type operator applied to type variables.  The
-registration replaces the type's previous generator, and lasts for the
-session.  The generator never establishes `NoCounterexample`.
+arguments, keeping those satisfying `pred`, a closed `ty -> bool` term,
+if present.  Each constructor is a constant whose declared result type
+is `ty`'s type operator applied to type variables.  The generator never
+establishes `NoCounterexample`.  The registration replaces the type's
+previous generator and lasts for the session.
 
 ### Failure
 

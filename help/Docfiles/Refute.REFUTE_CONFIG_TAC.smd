@@ -9,10 +9,8 @@ Refute.REFUTE_CONFIG_TAC : config -> tactic
 
 Searches for a counterexample under an exact configuration.
 
-`REFUTE_CONFIG_TAC cfg` runs `Refute.refute_goal cfg` on the goal,
-prints the report, and then behaves as `ALL_TAC`.  It ignores
-`Refute.the_config`, so its result does not depend on the session's
-defaults.
+`REFUTE_CONFIG_TAC cfg` runs `refute_goal cfg` on the goal and then
+behaves as `ALL_TAC`.  It ignores the stored configuration.
 
 ### Failure
 

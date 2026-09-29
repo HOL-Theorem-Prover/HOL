@@ -9,12 +9,10 @@ Refute.MODEL_REFUTE_TAC : tactic
 
 Searches for a counterexample with the finite model finder.
 
-`MODEL_REFUTE_TAC` is `REFUTE_TAC_WITH [upd_search (Only [ModelFinder])]`:
-it runs the `kodkod` backend, which needs the external Kodkodi
-component; without it the result is `Unknown`.  With the `falsify`
-field false it searches for a model of the goal and reports `Model`
-or `NoModel`.  `model_refute` (see `Refute.refute`) is the
-corresponding function on terms.
+`MODEL_REFUTE_TAC` is `REFUTE_TAC_WITH [upd_search (Only [ModelFinder])]`,
+which runs the `kodkod` backend.  It needs the external Kodkodi
+component; without it the outcome is `Unknown`.  With the `falsify`
+field false it searches for a model of the goal instead.
 
 ### Failure
 
@@ -22,10 +20,9 @@ Fails only if the configuration's `expect` field is not met.
 
 ### Comments
 
-The model finder reads only the equations a user wrote.  The `ARB`
-case HOL4 adds to a non-exhaustive definition is unconstrained, so a
-goal true only because of it can get a counterexample, as in Isabelle's
-Nitpick.
+The model finder leaves unconstrained the `ARB` case HOL4 adds to a
+non-exhaustive definition, so a goal true only because of that case
+can get a counterexample, as in Isabelle's Nitpick.
 
 ### See also
 

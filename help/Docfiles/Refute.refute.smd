@@ -10,7 +10,7 @@ Refute.refute : config -> term -> outcome
 Searches for a counterexample to a term.
 
 `refute cfg tm` closes `tm` universally, runs the backends `cfg`
-selects, prints the report unless `cfg` is quiet, checks its `expect`
+selects, prints the outcome unless `cfg` is quiet, checks its `expect`
 field, and returns the outcome:
 
 ``` hol4
@@ -22,16 +22,17 @@ datatype outcome =
   | Unknown of string list
 ```
 
-A counterexample's `certainty` is `Genuine`, `QuasiGenuine` or
-`Potential`; its `cert` field, when `SOME th`, is a theorem refuting
-`tm`.  `NoCounterexample` means the whole relevant space was covered;
+`NoCounterexample` means the whole relevant space was covered;
 `Unknown` lists why the search was inconclusive.  `Model` and
 `NoModel` answer a model-finder search with the `falsify` field false.
+A counterexample's `certainty` is `Genuine`, `QuasiGenuine` or
+`Potential`; its `cert` field, when `SOME th`, is a theorem refuting
+`tm`.
 
-`refute_def tm` is `refute (!the_config) tm`, and
-`refute_with updates tm` is `refute (current_config updates) tm`.
-`quickcheck` and `model_refute` are `refute_with` with
-`[upd_search QuickcheckBackends]` and `[upd_search (Only [ModelFinder])]`.
+`refute_with updates tm` is `refute (current_config updates) tm`, and
+`refute_def tm` is `refute_with [] tm`.  `quickcheck` and
+`model_refute` are `refute_with [upd_search QuickcheckBackends]` and
+`refute_with [upd_search (Only [ModelFinder])]`.
 
 ### Failure
 

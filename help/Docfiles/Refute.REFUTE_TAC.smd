@@ -9,11 +9,10 @@ Refute.REFUTE_TAC : tactic
 
 Searches for a counterexample to the current goal.
 
-`REFUTE_TAC` is `REFUTE_TAC_WITH []`: it runs the backends
-`!Refute.the_config` selects, prints the resulting `Counterexample`,
-`NoCounterexample` or `Unknown` report, and then behaves as
-`ALL_TAC`.  The search looks for values of the goal's free variables
-that make every assumption true and the conclusion false.
+`REFUTE_TAC` runs the backends the stored configuration selects,
+prints the outcome, and then behaves as `ALL_TAC`.  A counterexample
+assigns values to the goal's free variables that make every assumption
+true and the conclusion false.  `REFUTE_TAC` is `REFUTE_TAC_WITH []`.
 
 ### Failure
 

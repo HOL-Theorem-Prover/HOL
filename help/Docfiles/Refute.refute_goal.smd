@@ -9,13 +9,11 @@ Refute.refute_goal : config -> goal -> outcome
 
 Searches for a counterexample to a goal.
 
-`refute_goal cfg (asms, tm)` behaves as `Refute.refute cfg`, searching
-for values that make every term of `asms` true and `tm` false.  The
-`no_assms` field makes it ignore `asms`.
-
+`refute_goal cfg (asms, tm)` is `refute cfg tm` with `asms` as
+assumptions, which the `no_assms` field makes it ignore.
 `refute_goal_with updates` is `refute_goal (current_config updates)`,
-and `refute_top ()` applies `refute_goal (!the_config)` to the goal
-stack's current goal.
+and `refute_top ()` applies `refute_goal_with []` to the goal stack's
+current goal.
 
 `try_refute cfg g`, for use by automation, runs `refute_goal` on `g`
 sequentially and quietly, with seed 42 and no expectation.  It returns

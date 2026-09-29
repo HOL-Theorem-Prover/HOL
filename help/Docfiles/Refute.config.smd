@@ -10,16 +10,17 @@ Refute.type config
 Type of Refute search configurations.
 
 A `config` is an immutable record, built from `default_config` by
-updater functions `upd_<field> : <value> -> config -> config`, which
-compose with `|>`.  `the_config : config ref` holds the interactive
-default read by `REFUTE_TAC` and the other tactics when they are
-applied; `show_config ()` prints it.  `apply_updates updates cfg`
-applies a list of updaters to `cfg` from left to right, and
-`current_config updates` applies them to `!the_config`.
+updaters `upd_<field> : <value> -> config -> config`, which compose
+with `|>`; `apply_updates updates cfg` applies a list of them from
+left to right.  In row-valued fields, such as `upd_card`, a `NONE` key
+gives the fallback and a `SOME` key an override; a Boolean row value
+of `NONE` lets Refute choose.
 
-In row-valued fields, such as `upd_card`, a `NONE` key gives the
-fallback and a `SOME` key an override; a Boolean row value of `NONE`
-lets Refute choose.
+The stored configuration, read by the tactics and by the functions
+without a `config` argument, lives in the HOL context: `set_config cfg`
+replaces it, `with_config cfg f x` evaluates `f x` with `cfg` stored,
+`current_config updates` returns it with `updates` applied, and
+`show_config ()` prints it.
 
 ### Failure
 

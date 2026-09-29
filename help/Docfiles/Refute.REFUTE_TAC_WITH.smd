@@ -9,15 +9,14 @@ Refute.REFUTE_TAC_WITH : config_update list -> tactic
 
 Searches for a counterexample under per-call configuration updates.
 
-`REFUTE_TAC_WITH updates` behaves as
-`REFUTE_CONFIG_TAC (current_config updates)`: when the tactic is
-applied, `updates` are applied to `!Refute.the_config` from left to
-right.  `the_config` itself is unchanged.
+`REFUTE_TAC_WITH updates` is `REFUTE_CONFIG_TAC cfg`, where `cfg` is
+the stored configuration of the context the tactic is applied in, with
+`updates` applied from left to right.  The stored configuration is
+unchanged.
 
 ### Failure
 
-Fails only if the resulting `expect` field is not met.  An invalid
-update, such as `upd_search (Only [])`, raises when it is built.
+Fails if an update fails or the resulting `expect` field is not met.
 
 ### Example
 

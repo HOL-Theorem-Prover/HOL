@@ -9,10 +9,8 @@ Refute.QUICKCHECK_TAC : tactic
 
 Searches for a counterexample by testing.
 
-`QUICKCHECK_TAC` is `REFUTE_TAC_WITH [upd_search QuickcheckBackends]`:
-it runs the `exhaustive`, `random` and `narrowing` backends.
-`quickcheck` (see `Refute.refute`) is the corresponding function on
-terms.
+`QUICKCHECK_TAC` is `REFUTE_TAC_WITH [upd_search QuickcheckBackends]`,
+which runs the `exhaustive`, `random` and `narrowing` backends.
 
 ### Failure
 

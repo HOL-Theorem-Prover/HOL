@@ -10,8 +10,8 @@ Refute.NARROWING_TAC : tactic
 Searches for a counterexample by symbolic narrowing.
 
 `NARROWING_TAC` is `REFUTE_TAC_WITH [upd_search (Only [Narrowing])]`.
-Narrowing accepts goals the executable backends decline, including
-prenex existentials when the `allow_existentials` field is true.
+Narrowing accepts goals the executable backends decline, including,
+while the `allow_existentials` field is true, prenex existentials.
 
 ### Failure
 
