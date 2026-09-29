@@ -1614,6 +1614,43 @@ structure Refute_Core :> Refute_Core = struct
   fun lookup_stat key stats =
     Option.map #2 (List.find (fn (name, _) => name = key) stats)
 
+  type qc_counters = {generated : int, satisfied : int, evaluated : int}
+
+  val no_counters : qc_counters = {generated = 0, satisfied = 0, evaluated = 0}
+
+  fun add_counters (left : qc_counters) (right : qc_counters) : qc_counters =
+    {generated = #generated left + #generated right,
+     satisfied = #satisfied left + #satisfied right,
+     evaluated = #evaluated left + #evaluated right}
+
+  fun counter_stats ({generated, satisfied, evaluated} : qc_counters) =
+    [("assumption_satisfied", satisfied),
+     ("conclusion_evaluated", evaluated),
+     ("candidates_generated", generated)]
+
+  fun is_counter_stat key =
+    List.exists (fn (name, _) => name = key) (counter_stats no_counters)
+
+  (* [NONE] unless all three are present: a substrate reports either all
+     of them or none. *)
+  fun counters_of_stats stats =
+    case (lookup_stat "candidates_generated" stats,
+          lookup_stat "assumption_satisfied" stats,
+          lookup_stat "conclusion_evaluated" stats) of
+        (SOME generated, SOME satisfied, SOME evaluated) =>
+          SOME {generated = generated, satisfied = satisfied,
+                evaluated = evaluated}
+      | _ => NONE
+
+  fun substrate_stats {tests, match_failures, counters} =
+    [("tests", tests), ("match_failures", match_failures)] @
+    counter_stats counters
+
+  fun format_counters ({generated, satisfied, evaluated} : qc_counters) =
+    "candidates generated " ^ Int.toString generated ^
+    ", assumptions satisfied " ^ Int.toString satisfied ^
+    ", conclusions evaluated " ^ Int.toString evaluated
+
   fun format_stats stats =
     let
       val msec =
@@ -1625,15 +1662,7 @@ structure Refute_Core :> Refute_Core = struct
         [ Option.map (fn value => "size " ^ Int.toString value)
             (lookup_stat "size" stats),
           msec,
-          Option.map (fn value =>
-            "candidates generated " ^ Int.toString value)
-            (lookup_stat "candidates_generated" stats),
-          Option.map (fn value =>
-            "assumptions satisfied " ^ Int.toString value)
-            (lookup_stat "assumption_satisfied" stats),
-          Option.map (fn value =>
-            "conclusions evaluated " ^ Int.toString value)
-            (lookup_stat "conclusion_evaluated" stats) ]
+          Option.map format_counters (counters_of_stats stats) ]
       val present = List.mapPartial (fn value => value) fields
     in
       if null present then "" else ", " ^ String.concatWith ", " present

@@ -1244,42 +1244,23 @@ structure Refute_QC :> Refute_QC = struct
      same three counters over the same three-way discipline. *)
   fun new_counter_totals () =
     let
-      val assumption_satisfied = ref 0
-      val conclusion_evaluated = ref 0
-      val candidates_generated = ref 0
+      val totals = ref Refute_Core.no_counters
       val measured = ref true
-      fun is_counter key =
-        key = "assumption_satisfied" orelse key = "conclusion_evaluated"
-        orelse key = "candidates_generated"
       fun absorb call_stats =
-        case (Refute_Core.lookup_stat "assumption_satisfied" call_stats,
-              Refute_Core.lookup_stat "conclusion_evaluated" call_stats,
-              Refute_Core.lookup_stat "candidates_generated" call_stats) of
-            (SOME satisfied, SOME evaluated, SOME generated) =>
-              (assumption_satisfied := !assumption_satisfied + satisfied;
-               conclusion_evaluated := !conclusion_evaluated + evaluated;
-               candidates_generated := !candidates_generated + generated)
-          | _ => measured := false
+        case Refute_Core.counters_of_stats call_stats of
+            SOME counters =>
+              totals := Refute_Core.add_counters (!totals) counters
+          | NONE => measured := false
       fun decorate stats =
-        List.filter (fn (key, _) => not (is_counter key)) stats @
-        (if !measured then
-           [("assumption_satisfied", !assumption_satisfied),
-            ("conclusion_evaluated", !conclusion_evaluated),
-            ("candidates_generated", !candidates_generated)]
-         else [])
+        List.filter (not o Refute_Core.is_counter_stat o #1) stats @
+        (if !measured then Refute_Core.counter_stats (!totals) else [])
       (* [NONE] on an uninstrumented substrate, and the caller then prints
          nothing at all.  The counts earn their place at the default trace
          level because they separate a real search from a vacuous one; an
          announcement that they are missing carries neither signal, so it
          is noise to a reader who only wants the verdict. *)
       fun reason () =
-        if !measured then
-          SOME ("candidates generated " ^
-            Int.toString (!candidates_generated) ^
-            ", assumptions satisfied " ^
-            Int.toString (!assumption_satisfied) ^
-            ", conclusions evaluated " ^
-            Int.toString (!conclusion_evaluated))
+        if !measured then SOME (Refute_Core.format_counters (!totals))
         else NONE
     in
       {absorb = absorb, decorate = decorate, reason = reason}

@@ -145,6 +145,18 @@ signature Refute_Core = sig
   val register_backend : backend -> unit
   val family_backend_names : backend_family -> string list
   val lookup_stat : ''a -> (''a * 'b) list -> 'b option
+  (* One QC substrate call's candidate counters; the stats list is only
+     their rendering. *)
+  type qc_counters = {generated : int, satisfied : int, evaluated : int}
+  val no_counters : qc_counters
+  val add_counters : qc_counters -> qc_counters -> qc_counters
+  val counter_stats : qc_counters -> (string * int) list
+  val counters_of_stats : (string * int) list -> qc_counters option
+  val is_counter_stat : string -> bool
+  val substrate_stats :
+    {tests : int, match_failures : int, counters : qc_counters} ->
+    (string * int) list
+  val format_counters : qc_counters -> string
   val format_scope_assignment : hol_type * int -> string
   val report_outcome : config -> outcome -> unit
 

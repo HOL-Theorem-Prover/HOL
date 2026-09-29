@@ -420,13 +420,13 @@ structure Refute_EvalSML :> Refute_EvalSML = struct
                   val answer = with_native_hooks limit run_depth
                     (#ignored input) (fn () => run_before limit invoke)
                   val _ = state := #state answer
-                  val _ = last_stats :=
-                    [("tests", #tests answer),
-                     ("match_failures", #match_failures answer),
-                     ("assumption_satisfied", #assumption_satisfied answer),
-                     ("conclusion_evaluated", #conclusion_evaluated answer),
-                     ("candidates_generated",
-                       #candidates_generated answer)]
+                  val _ = last_stats := Refute_Core.substrate_stats
+                    {tests = #tests answer,
+                     match_failures = #match_failures answer,
+                     counters =
+                       {generated = #candidates_generated answer,
+                        satisfied = #assumption_satisfied answer,
+                        evaluated = #conclusion_evaluated answer}}
                 in
                   case #hit answer of
                       NONE => Refute_Eval.Exhausted

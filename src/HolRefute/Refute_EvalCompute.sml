@@ -414,12 +414,11 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
     in
       { result = result,
         complete = !complete,
-        stats = [
-          ("tests", !tests),
-          ("match_failures", !match_failures),
-          ("assumption_satisfied", !assumption_satisfied),
-          ("conclusion_evaluated", !conclusion_evaluated),
-          ("candidates_generated", !candidates_generated)] }
+        counts =
+          {tests = !tests, match_failures = !match_failures,
+           counters = {generated = !candidates_generated,
+                       satisfied = !assumption_satisfied,
+                       evaluated = !conclusion_evaluated}} }
     end
 
   fun exhaustive_compile (config : Refute_Core.config) plans programs =
@@ -485,10 +484,10 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
                     (complete := false;
                      exhaustive_values (Refute_Gen.spec_of ty) size try)
             end
-          val {result, complete, stats} =
+          val {result, complete, counts} =
             traverse (enum_values size) programs gen
               genuine_only ignored plan
-          val _ = last_stats := stats
+          val _ = last_stats := Refute_Core.substrate_stats counts
         in
           case result of
               Found candidate => CexFound candidate
@@ -698,9 +697,6 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
             (Term.list_mk_comb (constructor, arguments), final)
           end
 
-  fun stat name stats =
-    Option.getOpt (Refute_Core.lookup_stat name stats, 0)
-
   fun random_gen state size visit _ env genuine variable next =
     let
       val (value, after_draw) =
@@ -719,26 +715,20 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
           val plan = List.nth (plans, card - 1)
           val tests = ref 0
           val match_failures = ref 0
-          val assumption_satisfied = ref 0
-          val conclusion_evaluated = ref 0
-          val candidates_generated = ref 0
+          val counters = ref Refute_Core.no_counters
           val all_complete = ref true
 
           fun attempt 0 = Exhausted {complete = !all_complete}
             | attempt remaining =
                 let
-                  val {result, complete, stats} =
+                  val {result, complete, counts} =
                     traverse (fn _ => fn _ => []) []
                       (random_gen state size) genuine_only ignored plan
-                  val _ = tests := !tests + stat "tests" stats
-                  val _ = match_failures := !match_failures +
-                    stat "match_failures" stats
-                  val _ = assumption_satisfied := !assumption_satisfied +
-                    stat "assumption_satisfied" stats
-                  val _ = conclusion_evaluated := !conclusion_evaluated +
-                    stat "conclusion_evaluated" stats
-                  val _ = candidates_generated := !candidates_generated +
-                    stat "candidates_generated" stats
+                  val _ = tests := !tests + #tests counts
+                  val _ = match_failures :=
+                    !match_failures + #match_failures counts
+                  val _ = counters :=
+                    Refute_Core.add_counters (!counters) (#counters counts)
                   val _ = all_complete := (!all_complete andalso complete)
                 in
                   case result of
@@ -752,12 +742,9 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
                   | Fail reason => GaveUp reason
                   | Feedback.HOL_ERR error =>
                       GaveUp (Feedback.message_of error))
-          val _ = last_stats := [
-            ("tests", !tests),
-            ("match_failures", !match_failures),
-            ("assumption_satisfied", !assumption_satisfied),
-            ("conclusion_evaluated", !conclusion_evaluated),
-            ("candidates_generated", !candidates_generated)]
+          val _ = last_stats := Refute_Core.substrate_stats
+            {tests = !tests, match_failures = !match_failures,
+             counters = !counters}
         in
           result
         end
