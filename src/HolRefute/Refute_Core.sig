@@ -174,7 +174,14 @@ signature Refute_Core = sig
     { started : Time.time,
       deadline : Time.time,
       expired : unit -> bool,
-      remaining : unit -> Time.time }
+      remaining : unit -> Time.time,
+      memo : Universal.universal list Synchronized.var }
+
+  (* [call_memo key build] runs [build] once per key for the running
+     Refute call, backends included; outside a call it just runs it. *)
+  type 'a call_key
+  val call_key : unit -> 'a call_key
+  val call_memo : 'a call_key -> (unit -> 'a) -> 'a
 
   val publish_counterexamples : counterexample list -> unit
   val publish_models : counterexample list -> unit

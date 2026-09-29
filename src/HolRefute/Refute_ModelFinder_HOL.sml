@@ -1249,10 +1249,14 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun is_core_theory theory = Lib.mem theory core_theories
 
+  val nondefs_key : term list Refute_Core.call_key = Refute_Core.call_key ()
+
+  (* Shared by every backend of one Refute call. *)
   fun all_nondefs_of () =
-    oldest_first_theories ()
-    |> List.filter (not o is_core_theory)
-    |> List.concat o map (map (theorem_term o #2) o axioms_of)
+    Refute_Core.call_memo nondefs_key (fn () =>
+      oldest_first_theories ()
+      |> List.filter (not o is_core_theory)
+      |> List.concat o map (map (theorem_term o #2) o axioms_of))
 
   fun is_poly_term term = not (null (Term.type_vars_in_term term))
 
@@ -6472,14 +6476,24 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       do_term 0 term
     end
 
+  val context_fields_key :
+    {tables : {def_tables : const_table * const_table,
+               simp_table : const_table, psimp_table : const_table,
+               choice_spec_table : term list KNametab.table},
+     nondefs : term list, nondef_table : const_table} Refute_Core.call_key =
+    Refute_Core.call_key ()
+
+  (* The tables depend on the theory alone, not on registrations, so one
+     build serves every context of a call, harvest restarts included. *)
   fun empty_context_fields () =
-    let
-      val tables = make_tables ()
-      val nondefs = all_nondefs_of ()
-    in
-      {tables = tables, nondefs = nondefs,
-       nondef_table = const_nondef_table nondefs}
-    end
+    Refute_Core.call_memo context_fields_key (fn () =>
+      let
+        val tables = make_tables ()
+        val nondefs = all_nondefs_of ()
+      in
+        {tables = tables, nondefs = nondefs,
+         nondef_table = const_nondef_table nondefs}
+      end)
 
   fun make_context (mf : Refute_Core.mf_config) evals =
     let

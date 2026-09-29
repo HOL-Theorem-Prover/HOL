@@ -1898,9 +1898,10 @@ structure Refute_Core :> Refute_Core = struct
     { started : Time.time,
       deadline : Time.time,
       expired : unit -> bool,
-      remaining : unit -> Time.time }
+      remaining : unit -> Time.time,
+      memo : Universal.universal list Synchronized.var }
 
-  fun make_search_context timeout : search_context =
+  fun make_search_context_with memo timeout : search_context =
     let
       val started = Time.now ()
       val budget =
@@ -1910,8 +1911,11 @@ structure Refute_Core :> Refute_Core = struct
       fun remaining () = Refute_Util.remaining deadline
     in
       {started = started, deadline = deadline,
-       expired = expired, remaining = remaining}
+       expired = expired, remaining = remaining, memo = memo}
     end
+
+  fun make_search_context timeout =
+    make_search_context_with (Synchronized.var "call_memo" []) timeout
 
   val active_search_context : search_context Thread_Data.var =
     Thread_Data.var ()
@@ -1959,6 +1963,42 @@ structure Refute_Core :> Refute_Core = struct
 
   fun search_expired cfg = #expired (search_context_for cfg) ()
 
+  datatype 'a memo_slot = Unclaimed | Building | Built of 'a
+  type 'a call_key = 'a memo_slot Synchronized.var Universal.tag
+  fun call_key () : 'a call_key = Universal.tag ()
+
+  (* Concurrent callers wait for the first; if its build fails, the next
+     one builds. *)
+  fun call_memo key build =
+    case Thread_Data.get active_search_context of
+        NONE => build ()
+      | SOME {memo, ...} =>
+          let
+            val slot = Synchronized.change_result memo (fn entries =>
+              case List.find (Universal.tagIs key) entries of
+                  SOME entry => (Universal.tagProject key entry, entries)
+                | NONE =>
+                    let val slot = Synchronized.var "call_memo" Unclaimed
+                    in (slot, Universal.tagInject key slot :: entries) end)
+            val claimed = Synchronized.guarded_access slot
+              (fn Built value => SOME (SOME value, Built value)
+                | Unclaimed => SOME (NONE, Building)
+                | Building => NONE)
+          in
+            case claimed of
+                SOME value => value
+              | NONE =>
+                  let
+                    val value = build ()
+                      handle e =>
+                        (Synchronized.change slot (fn _ => Unclaimed);
+                         raise e)
+                  in
+                    Synchronized.change slot (fn _ => Built value);
+                    value
+                  end
+          end
+
   datatype admission =
       Eligible of backend
     | Excluded of backend
@@ -1983,7 +2023,7 @@ structure Refute_Core :> Refute_Core = struct
           val share = Time.toReal (#remaining context ()) / Real.fromInt left
           val _ = unstarted := left - 1
         in
-          make_search_context share
+          make_search_context_with (#memo context) share
         end
 
   fun run_backend context budget (cfg : config) ceiling forms
