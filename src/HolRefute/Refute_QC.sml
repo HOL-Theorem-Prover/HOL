@@ -1928,6 +1928,7 @@ structure Refute_QC :> Refute_QC = struct
 
   val exhaustive_backend : Refute_Core.backend =
     { name = "exhaustive",
+      family = Refute_Core.QuickcheckFamily,
       weight = 20,
       configured = fn () => true,
       (* Exhaustive SmartGen can discharge an ordinary executability gate
@@ -1939,6 +1940,7 @@ structure Refute_QC :> Refute_QC = struct
 
   val random_backend : Refute_Core.backend =
     { name = "random",
+      family = Refute_Core.QuickcheckFamily,
       weight = 30,
       configured = fn () => true,
       requires = Refute_Core.ExecutableGoal,
@@ -1946,8 +1948,6 @@ structure Refute_QC :> Refute_QC = struct
       certainty_ceiling = fn _ => fn _ => Refute_Core.Genuine,
       run = fn config =>
         strategy_run (Random {seed = strategy_seed config}) config }
-
-  fun qc_backend_names () = ["exhaustive", "random", "narrowing"]
 
   fun register_backends () =
     (Refute_EvalSML.register_substrate

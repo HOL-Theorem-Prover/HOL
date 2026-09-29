@@ -229,14 +229,16 @@ fun stub_cex backend certainty : counterexample =
    stats = []}
 
 fun stub name weight enabled run : backend =
-  {name = name, weight = weight, configured = fn () => !enabled,
+  {name = name, family = OtherFamily, weight = weight,
+   configured = fn () => !enabled,
    requires = AnyGoal, input = MonoInstances,
    certainty_ceiling = fn _ => fn _ => Genuine, run = run}
 
 (* The ceiling a backend races under is a field, so a stub overrides just
    that one and keeps the rest. *)
 fun with_ceiling ceiling (b : backend) : backend =
-  {name = #name b, weight = #weight b, configured = #configured b,
+  {name = #name b, family = #family b, weight = #weight b,
+   configured = #configured b,
    requires = #requires b, input = #input b,
    certainty_ceiling = ceiling, run = #run b}
 
@@ -387,6 +389,23 @@ val _ = test "re-registering a backend name replaces it" (fn () =>
       refute (default_config |> only [RegisteredBackend "selftest-replace"]
                 |> quiet) ``T``)
     == Unknown ["selftest-replace: second"]
+  end)
+
+val _ = test "QuickcheckBackends selects by backend family" (fn () =>
+  let
+    val enabled = ref false
+    fun none _ _ = Unknown []
+    val qc_stub = stub "selftest-qc-family" ~100 enabled none
+    val _ = register_backend
+      {name = #name qc_stub, family = QuickcheckFamily,
+       weight = #weight qc_stub, configured = #configured qc_stub,
+       requires = #requires qc_stub, input = #input qc_stub,
+       certainty_ceiling = #certainty_ceiling qc_stub, run = #run qc_stub}
+    val _ = register_backend (stub "selftest-other-family" ~100 enabled none)
+    val sort = Listsort.sort String.compare
+  in
+    Option.map sort (#backends (upd_search QuickcheckBackends default_config))
+    = SOME ["exhaustive", "narrowing", "random", "selftest-qc-family"]
   end)
 
 val _ = test "preset tactics never run a registered backend" (fn () =>
@@ -561,13 +580,13 @@ val _ = test "backend input form selects instances or the original"
       val mono_seen = ref ([] : instance list)
       val poly_seen = ref ([] : instance list)
       val _ = register_backend
-        {name = "selftest-input-mono", weight = ~94,
+        {name = "selftest-input-mono", family = OtherFamily, weight = ~94,
          configured = fn () => !enabled, requires = AnyGoal,
          input = MonoInstances,
          certainty_ceiling = fn _ => fn _ => Genuine,
          run = fn _ => fn insts => (mono_seen := insts; Unknown [])}
       val _ = register_backend
-        {name = "selftest-input-poly", weight = ~93,
+        {name = "selftest-input-poly", family = OtherFamily, weight = ~93,
          configured = fn () => !enabled, requires = AnyGoal,
          input = PolyOriginal,
          certainty_ceiling = fn _ => fn _ => Genuine,
@@ -644,7 +663,7 @@ val _ = test "admission is bounded by the timeout" (fn () =>
   let
     val enabled = ref false
     val _ = register_backend
-      {name = "selftest-slow-admission", weight = ~80,
+      {name = "selftest-slow-admission", family = OtherFamily, weight = ~80,
        configured = fn () => !enabled,
        requires = ExecutableGoalUnless (fn _ => fn _ =>
          (OS.Process.sleep (Time.fromReal 1.0); true)),
@@ -663,7 +682,7 @@ val _ = test "admission errors are reported in registry order" (fn () =>
   let
     val enabled = ref false
     fun failing name delay = register_backend
-      {name = name, weight = ~79,
+      {name = name, family = OtherFamily, weight = ~79,
        configured = fn () => !enabled,
        requires = ExecutableGoalUnless (fn _ => fn _ =>
          (OS.Process.sleep (Time.fromReal delay); raise Fail (name ^ " boom"))),
@@ -782,7 +801,7 @@ local
        Counterexample [stub_cex "selftest-race-slow-quasi"
                                 (QuasiGenuine ["stub"])]))))
   val _ = register_backend
-    {name = "selftest-race-genuine", weight = 20,
+    {name = "selftest-race-genuine", family = OtherFamily, weight = 20,
      configured = fn () => !enabled, requires = ExecutableGoal,
      input = MonoInstances,
      certainty_ceiling = fn _ => fn _ => Genuine,

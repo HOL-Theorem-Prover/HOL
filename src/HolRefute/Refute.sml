@@ -114,7 +114,7 @@ structure Refute :> Refute = struct
 
   fun upd_search AllBackends = upd_backends NONE
     | upd_search QuickcheckBackends = upd_backends
-        (SOME (Refute_QC.qc_backend_names ()))
+        (SOME (Refute_Core.family_backend_names Refute_Core.QuickcheckFamily))
     | upd_search (Only []) =
         raise Feedback.mk_HOL_ERR "Refute" "upd_search"
           "Only requires at least one backend"

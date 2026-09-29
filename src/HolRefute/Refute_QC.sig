@@ -51,6 +51,5 @@ signature Refute_QC = sig
   val strategy_run :
     Refute_Eval.strategy -> Refute_Core.config -> Refute_Core.instance list ->
     Refute_Core.outcome
-  val qc_backend_names : unit -> string list
   val register_backends : unit -> unit
 end

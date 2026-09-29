@@ -1381,7 +1381,7 @@ fun run config instances =
   end
 
 val kodkod_backend : Refute_Core.backend =
-  {name = "kodkod", weight = 50,
+  {name = "kodkod", family = Refute_Core.ModelFinderFamily, weight = 50,
    configured = Refute_Forl.is_configured,
    requires = Refute_Core.AnyGoal,
    input = Refute_Core.PolyOriginal,

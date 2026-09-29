@@ -26,6 +26,7 @@ signature Refute = sig
   type config = Refute_Core.config
   type instance = Refute_Core.instance
   type certainty_ceiling = Refute_Core.certainty_ceiling
+  datatype backend_family = datatype Refute_Core.backend_family
   type backend = Refute_Core.backend
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng

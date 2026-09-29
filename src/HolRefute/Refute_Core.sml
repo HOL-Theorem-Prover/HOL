@@ -200,8 +200,11 @@ structure Refute_Core :> Refute_Core = struct
      the conservative [fn _ => fn _ => Genuine]. *)
   type certainty_ceiling = config -> instance list -> certainty
 
+  datatype backend_family = QuickcheckFamily | ModelFinderFamily | OtherFamily
+
   type backend =
     { name : string,
+      family : backend_family,
       weight : int,
       configured : unit -> bool,
       requires : requirement,
@@ -1581,6 +1584,12 @@ structure Refute_Core :> Refute_Core = struct
     Refute_Session.publish backend_registry (fn registry =>
       insert_backend (#name backend, backend)
         (List.filter (fn (name, _) => name <> #name backend) registry))
+
+  fun family_backend_names family =
+    List.mapPartial
+      (fn (name, backend : backend) =>
+         if #family backend = family then SOME name else NONE)
+      (Refute_Session.read backend_registry)
 
   fun resolve_backend_registrations names =
     let

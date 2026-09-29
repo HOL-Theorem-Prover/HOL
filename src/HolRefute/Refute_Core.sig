@@ -189,8 +189,11 @@ signature Refute_Core = sig
 
   type certainty_ceiling = config -> instance list -> certainty
 
+  datatype backend_family = QuickcheckFamily | ModelFinderFamily | OtherFamily
+
   type backend =
     { name : string,
+      family : backend_family,
       weight : int,
       configured : unit -> bool,
       requires : requirement,
@@ -328,6 +331,7 @@ signature Refute_Core = sig
   val show_config : unit -> unit
   val register_run_release : string -> (unit -> unit) -> unit
   val register_backend : backend -> unit
+  val family_backend_names : backend_family -> string list
   val lookup_stat : ''a -> (''a * 'b) list -> 'b option
   val format_scope_assignment : hol_type * int -> string
   val report_outcome : config -> outcome -> unit
