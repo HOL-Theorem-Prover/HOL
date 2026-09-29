@@ -1038,38 +1038,81 @@ in
 end
 
 (* ----------------------------------------------------------------------
-    mk_prec_matrix is memoised, so a cached matrix must not swallow the
-    error that the "ambiguous grammar warning" trace asks for at level 2.
+    A grammar carries the precedence matrix built from its rules and its
+    specials, so the matrix has to be shared exactly as far as those two
+    fields are --- and a matrix that is reused rather than built must
+    still be complained about as the "ambiguous grammar warning" trace
+    asks, and still count as an unambiguous use when it is one.
    ---------------------------------------------------------------------- *)
 
 local
   open term_grammar term_grammar_dtype
-  fun ambrule nm prec =
+  val mx = parse_term.mk_prec_matrix
+  fun infixrule nm tok prec =
     {term_name = nm, fixity = Infix(LEFT, prec),
-     pp_elements = [mTOK "@@"], paren_style = OnlyIfNecessary,
+     pp_elements = [mTOK tok], paren_style = OnlyIfNecessary,
      block_style = (AroundEachPhrase, (HOLPP.CONSISTENT, 0))}
-  (* one token as an infix at two levels gives ((@@,true),@@) both
+  fun shares s (g1, g2) =
+    (tprint ("prec matrix kept: " ^ s);
+     if Portable.pointer_eq (mx g1, mx g2) then OK() else die "\nrebuilt")
+  fun rebuilds s (g1, g2) =
+    (tprint ("prec matrix rebuilt: " ^ s);
+     if Portable.pointer_eq (mx g1, mx g2) then die "\nreused" else OK())
+  (* one token as an infix at two levels gives ((tok,true),tok) both
      PM_GREATER Ifx and PM_LESS Ifx, which is what insert_bail reports *)
-  val ambig_g = add_rule (ambrule "AMB2" 400) (add_rule (ambrule "AMB1" 500) g0)
+  fun ambiguous tok =
+      g0 |> add_rule (infixrule (tok ^ "1") tok 500)
+         |> add_rule (infixrule (tok ^ "2") tok 400)
+  fun at_level n = Feedback.set_trace "ambiguous grammar warning" n
+  fun raises g = (ignore (mx g); false) handle Feedback.HOL_ERR _ => true
+  (* run f with Globals.interactive set to i, warnings silenced, and the
+     trace put back to its default of 1 afterwards *)
+  fun in_mode i f =
+      let
+        val oldi = !Globals.interactive
+        val () = Globals.interactive := i
+        val r = Exn.capture (with_flag (Feedback.emit_WARNING, false) f) ()
+      in
+        Globals.interactive := oldi;
+        at_level 1;
+        Exn.release r
+      end
 in
-val _ = tprint "mk_prec_matrix memo: ambigrm=2 still raises"
+val _ = shares "same grammar" (g0, g0)
+val _ = shares "overloads cleared" (g0, clear_overloads g0)
+val _ = shares "string literal injector"
+               (g0, add_strlit_injector {ldelim = "strlitL",
+                                         tmnm = "strlitT"} g0)
+val _ = rebuilds "rule added" (g0, add_rule (infixrule "SHR" "&&&" 500) g0)
+val _ = rebuilds "specials changed"
+                 (g0, fupdate_specials (fupd_lambda (cons "LAM")) g0)
+
+val _ = tprint "prec matrix kept: level 2 still raises"
 val _ =
     let
-      val oldi = !Globals.interactive
-      (* non-interactive, so the first build leaves complained_already
-         alone: the raise below is gated on it, and a clean build in
-         between would evict the entry the memo must still be holding *)
-      val () = Globals.interactive := false
-      val () = Feedback.set_trace "ambiguous grammar warning" 1
-      val () = ignore (parse_term.mk_prec_matrix ambig_g)
-      val () = Feedback.set_trace "ambiguous grammar warning" 2
-      val raised = (ignore (parse_term.mk_prec_matrix ambig_g); false)
-                   handle Feedback.HOL_ERR _ => true
+      val g = ambiguous "@@"
+      (* non-interactive, so level 1 is silent and the matrix is simply
+         built and kept *)
+      val raised = in_mode false (fn () => (at_level 1; ignore (mx g);
+                                            at_level 2; raises g))
     in
-      Globals.interactive := oldi;
-      Feedback.set_trace "ambiguous grammar warning" 1;
       if raised then OK() else die "\nno exception raised"
-    end;
+    end
+
+val _ = tprint "prec matrix kept: unambiguous reuse resets the complaint"
+val _ =
+    let
+      val g1 = ambiguous "@1@"
+      val g2 = ambiguous "@2@"
+      val () = ignore (mx g0)  (* so that the use below is a reuse *)
+      (* interactive, so level 1 warns about g1 and so holds off further
+         complaints; the reuse of g0's matrix has to lift that again *)
+      val raised = in_mode true (fn () => (at_level 1; ignore (mx g1);
+                                           ignore (mx g0);
+                                           at_level 2; raises g2))
+    in
+      if raised then OK() else die "\nno exception raised"
+    end
 end (* local *)
 
 val _ = exit_count0 failcount

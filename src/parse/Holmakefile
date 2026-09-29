@@ -38,6 +38,7 @@ TypeNet.uo: TypeNet.sml TypeNet.ui $(TABLE_UID) \
 
 term_grammar.uo: term_grammar.sml term_grammar.ui $(TABLE_UID) \
                  HOLgrammars.uo GrammarSpecials.uo term_grammar_dtype.uo \
+                 parse_term_dtype.uo \
                  Absyn.ui $(dprot $(SIGOBJ)/HolKernel.ui) \
                  $(dprot $(SIGOBJ)/Symtab.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
