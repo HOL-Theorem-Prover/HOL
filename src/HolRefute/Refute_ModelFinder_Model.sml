@@ -58,14 +58,6 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
     hol_type -> term_postprocessor option
   val snapshot_term_postprocessors : unit -> term_postprocessor_snapshot
   val postprocess_term : term_postprocessor_snapshot -> term -> term
-  (* [Refute_Gen] has no dependency on this structure, so a generator
-     family's canonical display snapshot is threaded in as a callback
-     instead of registered directly; see [Refute.sml], which depends on
-     both and installs [Refute_Gen.snapshot_family_canonicals] here, on the
-     same precedent as [Refute_Core.register_backend] and
-     [register_mono_instance_transform]. *)
-  val register_family_canonical_lookup :
-    (unit -> hol_type -> term_postprocessor option) -> unit
   val register_frac_type_rat : unit -> unit
   (* Installed by default (see Refute.sml).  Idempotent, like
      [register_frac_type_rat]. *)
@@ -233,33 +225,18 @@ type term_postprocessor_snapshot =
   {registry : term_postprocessor_registry,
    family : hol_type -> term_postprocessor option}
 
-(* Model display extensions are process-local ML data.  The registry uses
+(* Model display extensions are context state.  The registry uses
    type patterns: every pattern that matches an actual type participates.
    Composition is deterministic: general patterns run before strictly more
    specific patterns, and otherwise older registrations run before newer
    ones.  Re-registering an alpha-equivalent pattern replaces its callback
    without adding a duplicate or changing its established position. *)
-val term_postprocessors = ref
+val term_postprocessors = Refute_Session.state "term_postprocessors"
   ({entries = [], next_serial = 0} : term_postprocessor_registry)
 
-fun with_term_postprocessor_lock body = MFH.with_registration_lock body
-
-(* Settable snapshot hook for generator-family canonical display forms
-   (Refute_Gen.sml).  Defaults to "no family registered anything";
-   [Refute.sml] installs the real snapshot provider at load time (see the
-   signature comment on
-   [register_family_canonical_lookup]). *)
-val family_canonical_lookup :
-    (unit -> hol_type -> term_postprocessor option) ref =
-  ref (fn () => fn (_ : hol_type) => NONE)
-
-fun register_family_canonical_lookup f =
-  with_term_postprocessor_lock (fn () => family_canonical_lookup := f)
-
 fun snapshot_term_postprocessors () =
-  with_term_postprocessor_lock (fn () =>
-    {registry = !term_postprocessors,
-     family = (!family_canonical_lookup) ()})
+  {registry = Refute_Session.read term_postprocessors,
+   family = Refute_Gen.snapshot_family_canonicals ()}
 
 fun pattern_matches pattern actual =
   Lib.can (Type.match_type pattern) actual
@@ -307,8 +284,8 @@ fun safe_postprocess postprocessor candidate =
    [safe_postprocess] contract: this is the single copy of it.  Both
    sources are read from [snapshot], never from a live global: that is
    what makes one registry snapshot mean one coherent view of the whole
-   model, and it avoids taking [Refute_Gen]'s registration mutex (behind
-   [family]) at every term node of every model. *)
+   model, and it avoids reading [Refute_Gen]'s registry (behind [family])
+   at every term node of every model. *)
 fun composed_postprocessor
       (snapshot : term_postprocessor_snapshot) ty =
   let
@@ -349,9 +326,8 @@ fun insert_postprocessor pattern postprocessor
   end
 
 fun register_term_postprocessor pattern postprocessor =
-  with_term_postprocessor_lock (fn () =>
-    term_postprocessors :=
-      insert_postprocessor pattern postprocessor (!term_postprocessors))
+  Refute_Session.publish term_postprocessors
+    (insert_postprocessor pattern postprocessor)
 
 fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
   let
@@ -383,8 +359,9 @@ fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
                  Term.mk_comb (descend function, descend argument)
              | NONE => candidate)
     (* The family half of [snapshot] is never checked here: [Refute.sml]
-       installs both it and the four built-in pattern entries together,
-       unconditionally, at load, and the public surface exposes no way to
+       registers the fmap family and the four built-in pattern entries
+       together, unconditionally, at load, and the public surface exposes
+       no way to
        remove a pattern entry, so [#entries] is never empty in a real
        session -- this is purely a fast path for that case, not a
        correctness gate. *)
@@ -488,35 +465,14 @@ fun qualifying_frac_binding (variable, value) =
             | NONE => false)
      | _ => false)
 
-fun prepare_frac_term_postprocessor pattern postprocessor =
-  let
-    val updated = insert_postprocessor pattern postprocessor
-      (!term_postprocessors)
-  in
-    fn () => term_postprocessors := updated
-  end
-
-(* Shared two-phase commit for every Frac-carrier registration: the Frac
-   classification and its display postprocessor are prepared (validated,
-   with every replacement precomputed) before either registry is touched,
-   then committed together under one uninterruptible section so an
-   interrupt cannot leave the encoding registered without its display
-   transform, or vice versa.  [MFH.prepare_frac_type_unlocked], not a
-   locking variant, is correct here because [with_term_postprocessor_lock]
-   *is* [MFH.with_registration_lock] (see above): both prepare steps are
-   callback-free and already run under that one shared mutex, so a locking
-   variant would deadlock. *)
+(* Shared by every Frac-carrier registration.  Only the classification can
+   fail, and it changes nothing when it does; the display registration
+   cannot fail, and masking interrupts across both means neither lands
+   without the other. *)
 fun register_frac_type_with_display (frac_info, pattern, postprocessor) =
-  with_term_postprocessor_lock (fn () =>
-    let
-      val commit_frac = MFH.prepare_frac_type_unlocked frac_info
-      val commit_postprocessor =
-        prepare_frac_term_postprocessor pattern postprocessor
-    in
-      Thread_Attributes.uninterruptible (fn _ => fn () =>
-        (commit_frac ();
-         commit_postprocessor ())) ()
-    end)
+  Thread_Attributes.uninterruptible (fn _ => fn () =>
+    (MFH.register_frac_type frac_info;
+     register_term_postprocessor pattern postprocessor)) ()
 
 fun register_frac_type_rat () =
   register_frac_type_with_display

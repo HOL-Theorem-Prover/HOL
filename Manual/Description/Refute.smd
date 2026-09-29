@@ -48,7 +48,7 @@ run backends sequentially on the `Compute` substrate, so each report
 names a predictable backend.
 
 ```repl
->> the_config :=
+>> set_config
      (default_config
         |> upd_sequential true
         |> upd_substrate Compute
@@ -100,8 +100,8 @@ reports; `upd_quiet true` silences a single call.
 
 ### Configuring a search
 
-The tactics read the configuration `!the_config` when applied;
-`show_config ()` prints it.  `REFUTE_TAC_WITH` applies updates to it
+The tactics read the stored configuration from the context they are
+applied in; `set_config` replaces it and `show_config ()` prints it.  `REFUTE_TAC_WITH` applies updates to it
 for one call, from left to right:
 
 ```sml
@@ -109,7 +109,7 @@ for one call, from left to right:
          [upd_search (Only [Narrowing]), upd_size 7, upd_timeout 5.0]
 ```
 
-`REFUTE_CONFIG_TAC` ignores `the_config`, for reproducible tools and
+`REFUTE_CONFIG_TAC` ignores the stored configuration, for reproducible tools and
 tests:
 
 ```sml
@@ -452,5 +452,5 @@ from Isabelle's Nitpick and Quickcheck, are in `src/HolRefute/examples`.
 \index{HolRefute|)}
 
 >>__ drop();
->>__ the_config := default_config;
+>>__ set_config default_config;
 >>__ Parse.temp_set_grammars refute_initial_grammars;

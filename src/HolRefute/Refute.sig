@@ -52,7 +52,7 @@ signature Refute = sig
   val refute_goal_with : config_update list -> goal -> outcome
   val refute_top    : unit -> outcome
   val try_refute    : config -> goal -> (string * outcome) option
-  (* [NONE] derives a QC-only configuration from [the_config].  [SOME cfg]
+  (* [NONE] derives a QC-only configuration from the stored one.  [SOME cfg]
      supplies the base configuration and preserves its backend selection.
      Every probe forces a sequential, quiet, abort-potential,
      expectation-free profile. *)
@@ -64,8 +64,9 @@ signature Refute = sig
   val quickcheck    : term -> outcome
   val model_refute  : term -> outcome
   (* Diagnostic tactics return the original goal unchanged.  The exact-config
-     form honours every field.  The update form reads [the_config] when the
-     tactic is applied, then applies its updates from left to right. *)
+     form honours every field.  The update form reads the stored configuration
+     from the context the tactic is applied in, then applies its updates
+     from left to right. *)
   val REFUTE_CONFIG_TAC : config -> Abbrev.tactic
   val REFUTE_TAC_WITH   : config_update list -> Abbrev.tactic
   val REFUTE_TAC        : Abbrev.tactic
@@ -144,7 +145,11 @@ signature Refute = sig
   val default_qc_config : qc_config
   val default_mf_config : mf_config
   val default_config : config
-  val the_config : config ref
+  (* The stored configuration lives in the context: [set_config] replaces
+     it, [with_config] installs one for the duration of a call, and
+     [current_config updates] applies [updates] to it. *)
+  val set_config : config -> unit
+  val with_config : config -> ('a -> 'b) -> 'a -> 'b
   val show_config : unit -> unit
   val upd_search : search -> config_update
   val apply_updates : config_update list -> config -> config

@@ -1,4 +1,4 @@
-structure Refute_QC_Narrow = struct
+structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
   open Refute_Eval
   structure QC = Refute_QC
 

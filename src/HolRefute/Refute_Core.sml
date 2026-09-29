@@ -1,9 +1,19 @@
-structure Refute_Core = struct
+structure Refute_Core :> Refute_Core = struct
   structure Names = Refute_ModelFinder_Names
 
   type term = Term.term
   type thm = Thm.thm
   type hol_type = Type.hol_type
+
+  (* The result of [ThmSetData.export_list]. *)
+  type theorem_set =
+    {merge : string list -> thm list option,
+     DB : {thyname : string} -> thm list option,
+     export : string -> unit,
+     temp_export : string -> unit,
+     temp_exclude : thm -> unit,
+     getDB : unit -> thm list,
+     temp_setDB : thm list -> unit}
 
   val refute_simp =
     ThmSetData.export_list {settype = "refute_simp", initial = []}
@@ -274,7 +284,14 @@ structure Refute_Core = struct
       qc = default_qc_config,
       mf = default_mf_config }
 
-  val the_config = ref default_config
+  (* The configuration a Refute call starts from when none is given. *)
+  val config_slot = Context.Data.new
+    {name = "Refute.config", empty = default_config,
+     pp = fn _ => "<Refute.config>"}
+
+  fun config_of ctxt = Context.Data.get config_slot ctxt
+  fun set_config cfg = Context.Data.write config_slot cfg
+  fun with_config cfg f x = Context.Data.with_slot_value config_slot cfg f x
 
   datatype config_update =
       ConfigTimeout of real
@@ -1151,10 +1168,12 @@ structure Refute_Core = struct
      on the same precedent as [register_backend] below.  Applied only to
      [MonoInstances] instances, in [preprocess_forms]; [PolyOriginal]
      instances (the model finder's input) never reach it. *)
-  val mono_instance_transform : (config -> instance -> instance) ref =
-    ref (fn (_ : config) => fn (instance : instance) => instance)
+  val mono_instance_transform =
+    Refute_Session.state "mono_instance_transform"
+      (fn (_ : config) => fn (instance : instance) => instance)
 
-  fun register_mono_instance_transform f = mono_instance_transform := f
+  fun register_mono_instance_transform f =
+    Refute_Session.publish mono_instance_transform (fn _ => f)
 
   (* A configuration error diagnosed while building the instances, e.g. an
      [upd_instantiate] pin naming a type variable absent from the goal.
@@ -1305,7 +1324,8 @@ structure Refute_Core = struct
       val poly_original =
         if null tyvars then raw_mono_instances else [make_instance 0 []]
       val mono_instances =
-        map (!mono_instance_transform cfg) raw_mono_instances
+        map (Refute_Session.read mono_instance_transform cfg)
+          raw_mono_instances
     in
       {mono_instances = mono_instances, poly_original = poly_original}
     end
@@ -1341,10 +1361,10 @@ structure Refute_Core = struct
       | _ => result
 
   structure Private = struct
-    val trace = ref 1
-    val _ = Feedback.register_trace ("Refute", trace, 4)
+    val {get = trace_level, ...} =
+      Feedback.create_trace {name = "Refute", initial = 1, max = 4}
 
-    fun enabled level = !trace >= level
+    fun enabled level = trace_level () >= level
 
     (* Backends trace from their own workers, so two of them can be inside
        [HOL_MESG] at once.  [Feedback.MESG_outstream] is a plain callback
@@ -1392,7 +1412,7 @@ structure Refute_Core = struct
       val {timeout, backends, sequential, genuine_only, abort_potential,
            quiet, no_assms, evals, expect, max_counterexamples, tag, widths,
            qc, mf} =
-        !the_config
+        config_of (Context.snapshot ())
       val q = qc
       val m = mf
       val show = Private.say 1
@@ -1513,18 +1533,16 @@ structure Refute_Core = struct
             "\n" ]
     end
 
-  val backend_registry : (string * backend) list ref = ref []
-  val registry_mutex = Mutex.mutex ()
-
-  fun synchronized_registry f =
-    Multithreading.synchronized "Refute_Core.registry" registry_mutex f
+  val backend_registry =
+    Refute_Session.state "backends" ([] : (string * backend) list)
 
   (* Deciding whether a backend is eligible can compile and park resources
      (the QC smart-generator gate compiles a trial test).  A backend that is
      never run, or is killed by the parallel race, cannot release them
      itself, so holders register a run-scoped release here; it runs on every
      exit path of [refute_problem_unquiet]. *)
-  val run_releases : (string * (unit -> unit)) list ref = ref []
+  val run_releases =
+    Refute_Session.state "run_releases" ([] : (string * (unit -> unit)) list)
 
   (* Registrations are made when implementation units are loaded, so give
      releases stable names and replace an old registration on reload. *)
@@ -1543,13 +1561,12 @@ structure Refute_Core = struct
     end
 
   fun register_run_release name release =
-    synchronized_registry (fn () =>
-      run_releases :=
-        List.filter (fn (old_name, _) => old_name <> name) (!run_releases) @
-        [(name, release)])
+    Refute_Session.publish run_releases (fn releases =>
+      List.filter (fn (old_name, _) => old_name <> name) releases @
+      [(name, release)])
 
   fun release_run_resources () =
-    release_actions (synchronized_registry (fn () => !run_releases))
+    release_actions (Refute_Session.read run_releases)
 
   fun backend_before (left : string * backend) (right : string * backend) =
     #weight (#2 left) < #weight (#2 right) orelse
@@ -1561,19 +1578,13 @@ structure Refute_Core = struct
         else other :: insert_backend entry rest
 
   fun register_backend (backend : backend) =
-    synchronized_registry (fn () =>
-      let
-        val without_old =
-          List.filter (fn (name, _) => name <> #name backend)
-            (!backend_registry)
-      in
-        backend_registry :=
-          insert_backend (#name backend, backend) without_old
-      end)
+    Refute_Session.publish backend_registry (fn registry =>
+      insert_backend (#name backend, backend)
+        (List.filter (fn (name, _) => name <> #name backend) registry))
 
   fun resolve_backend_registrations names =
     let
-      val snapshot = synchronized_registry (fn () => !backend_registry)
+      val snapshot = Refute_Session.read backend_registry
       fun requested (registration : backend) =
         case names of
             NONE => true
@@ -2010,7 +2021,6 @@ structure Refute_Core = struct
        expired = expired, remaining = remaining}
     end
 
-  val active_refute_context : unit ref Thread_Data.var = Thread_Data.var ()
   val active_search_context : search_context Thread_Data.var =
     Thread_Data.var ()
   val active_backend_result : outcome option ref Thread_Data.var =
@@ -2088,7 +2098,7 @@ structure Refute_Core = struct
     let
       val search_context = budget_context budget
     in
-    Thread_Data.setmp active_refute_context context (fn () =>
+    Refute_Session.bind context (fn () =>
     Thread_Data.setmp active_search_context (SOME search_context) (fn () =>
     let
       val name = #name backend
@@ -2158,7 +2168,7 @@ structure Refute_Core = struct
 
   fun admit_backend context search_context (cfg : config) forms
         (backend : backend) =
-    Thread_Data.setmp active_refute_context context (fn () =>
+    Refute_Session.bind context (fn () =>
     Thread_Data.setmp active_search_context (SOME search_context) (fn () =>
       let
         val name = #name backend
@@ -2239,7 +2249,7 @@ structure Refute_Core = struct
             (preprocess_forms cfg) problem
           fun registration_instances registration =
             instances_for_form (#input registration) forms
-          val context = Thread_Data.get active_refute_context
+          val context = Refute_Session.current ()
           fun admit registration =
             admit_backend context search_context cfg forms registration
           (* Admission may compile and park a complete smart-generator test.
@@ -2329,12 +2339,12 @@ structure Refute_Core = struct
                        unstarted = ref (length jobs)}
                   in
                     ParList.get_first
-                      (run_backend (Thread_Data.get active_refute_context)
+                      (run_backend (Refute_Session.current ())
                         budget cfg ceiling forms) jobs
                   end
                 else
                   ParList.get_some_with_workers (length jobs)
-                    (run_backend (Thread_Data.get active_refute_context)
+                    (run_backend (Refute_Session.current ())
                       (SharedBudget search_context) cfg ceiling forms) jobs
             in
               case winner of
@@ -2363,7 +2373,7 @@ structure Refute_Core = struct
 
   val quiet_mutex = Mutex.mutex ()
 
-  fun refute_problem (cfg : config) problem =
+  fun refute_problem ctxt (cfg : config) problem =
     let
       fun run () =
         if not (#quiet cfg) then refute_problem_unquiet cfg problem
@@ -2375,10 +2385,10 @@ structure Refute_Core = struct
       (* Output settings in Feedback are process-global, so one call owns
          the output scope for its whole duration. *)
       fun in_context () =
-        Thread_Data.setmp active_refute_context (SOME (ref ())) run ()
+        Refute_Session.run ctxt run
     in
-      case Thread_Data.get active_refute_context of
-          (* The context token reaches backend workers, so this catches a
+      case Refute_Session.current () of
+          (* The session reaches backend workers, so this catches a
              backend calling back into Refute.  Such a call would compile a
              second substrate test inside the enclosing call's open theory
              bracket and then wait on a theory lock its own caller holds.
@@ -2391,6 +2401,6 @@ structure Refute_Core = struct
               in_context
     end
 
-  fun refute cfg tm =
-    refute_problem cfg {goal = tm, assumptions = [], evals = []}
+  fun refute ctxt cfg tm =
+    refute_problem ctxt cfg {goal = tm, assumptions = [], evals = []}
 end

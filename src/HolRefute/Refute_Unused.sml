@@ -58,7 +58,7 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
     |> Refute_Core.upd_quiet true
     |> Refute_Core.upd_expect Refute_Core.NoExpectation
 
-  fun check_detailed config (name, theorem) =
+  fun check_detailed ctxt config (name, theorem) =
     let
       val (variables, body) = boolSyntax.strip_forall (Thm.concl theorem)
       val (premises, conclusion) = boolSyntax.strip_imp body
@@ -73,7 +73,7 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
           boolSyntax.list_mk_imp
             (hypotheses @ drop_indexes indexes premises, conclusion))
       fun droppable indexes =
-        case Refute_Core.refute config' (conjecture indexes) of
+        case Refute_Core.refute ctxt config' (conjecture indexes) of
             Refute_Core.NoCounterexample => true
           | Refute_Core.Counterexample _ => false
           | Refute_Core.Model _ => false
@@ -104,7 +104,7 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
     end
 
   fun check_unused_assms config named_theorem =
-    #result (check_detailed config named_theorem)
+    #result (check_detailed (Context.snapshot ()) config named_theorem)
 
   fun sort_theorems theorems =
     Listsort.sort (fn ((left, _), (right, _)) =>
@@ -113,7 +113,8 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
   (* Keep theorem probes serial as well as forcing serial backend execution
      inside each probe. *)
   fun detailed_theory config theory =
-    map (check_detailed config) (sort_theorems (DB.thms theory))
+    map (check_detailed (Context.snapshot ()) config)
+      (sort_theorems (DB.thms theory))
 
   fun find_unused_assms config theory =
     map #result (detailed_theory config theory)

@@ -27,7 +27,7 @@ val configured_outcome =
   refute_with automation_updates ``REVERSE (xs : num list) = xs``
 
 (* An exact configuration is preferable when a tool must be independent of
-   the interactive [the_config].  Updates are applied from left to right. *)
+   the stored configuration.  Updates are applied from left to right. *)
 
 val automation_config =
   default_config |> apply_updates automation_updates

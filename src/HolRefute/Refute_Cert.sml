@@ -1,4 +1,4 @@
-structure Refute_Cert = struct
+structure Refute_Cert :> Refute_Cert = struct
   type term = Term.term
 
   datatype result =

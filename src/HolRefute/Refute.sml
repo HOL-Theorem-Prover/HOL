@@ -88,21 +88,23 @@ structure Refute :> Refute = struct
     {tyop = {Thy = "finite_map", Tyop = "fmap"},
      constructors = [finite_mapSyntax.fempty_tm, finite_mapSyntax.fupdate_tm],
      canonical = SOME canonical_fmap_chain}
-  (* [Refute_Gen] cannot register this directly with the model finder --
-     it has no dependency on [Refute_ModelFinder_Model] -- so this module,
-     which depends on both, installs the callback.  This is the single
-     source [Refute_QC.record_candidate_with] now consults through the
-     shared walk, replacing its own former copy of the same lookup. *)
-  val () = Refute_ModelFinder_Model.register_family_canonical_lookup
-    Refute_Gen.snapshot_family_canonicals
-
-  fun refute_def tm = refute (!the_config) tm
 
   fun apply_updates updates config =
     List.foldl (fn (update, current) => update current) config updates
 
-  fun current_config updates =
-    apply_updates updates (!the_config)
+  fun config_in ctxt updates = apply_updates updates (config_of ctxt)
+
+  fun current_config updates = config_in (Context.snapshot ()) updates
+
+  (* Each entry point captures the context once; the call reads nothing
+     else. *)
+  fun refute cfg tm = Refute_Core.refute (Context.snapshot ()) cfg tm
+
+  fun refute_with updates tm =
+    let val ctxt = Context.snapshot ()
+    in Refute_Core.refute ctxt (config_in ctxt updates) tm end
+
+  fun refute_def tm = refute_with [] tm
 
   fun backend_name Exhaustive = "exhaustive"
     | backend_name Random = "random"
@@ -119,17 +121,17 @@ structure Refute :> Refute = struct
     | upd_search (Only choices) =
         upd_backends (SOME (map backend_name choices))
 
-  fun refute_with updates tm = refute (current_config updates) tm
-
-  fun refute_goal cfg (assumptions, goal) =
-    refute_problem cfg
+  fun refute_goal_in ctxt cfg (assumptions, goal) =
+    refute_problem ctxt cfg
       {goal = goal, assumptions = assumptions, evals = []}
 
-  fun refute_goal_with updates goal =
-    refute_goal (current_config updates) goal
+  fun refute_goal cfg goal = refute_goal_in (Context.snapshot ()) cfg goal
 
-  fun refute_top () = refute_goal (!the_config)
-    (proofManagerLib.top_goal ())
+  fun refute_goal_with updates goal =
+    let val ctxt = Context.snapshot ()
+    in refute_goal_in ctxt (config_in ctxt updates) goal end
+
+  fun refute_top () = refute_goal_with [] (proofManagerLib.top_goal ())
 
   val try_seed = 42
 
@@ -141,7 +143,7 @@ structure Refute :> Refute = struct
         |> upd_expect NoExpectation
         |> upd_quiet true
     in
-      case refute_problem try_config
+      case refute_problem (Context.snapshot ()) try_config
              {goal = goal, assumptions = assumptions, evals = []} of
           outcome as Counterexample (cex :: _) =>
             SOME (#backend cex, outcome)
@@ -153,7 +155,7 @@ structure Refute :> Refute = struct
 
   (* The option distinguishes the QC-only convenience from an explicitly
      supplied configuration whose [backends = NONE] means the full registry. *)
-  fun unused_config NONE = qc_only (!the_config)
+  fun unused_config NONE = qc_only (current_config [])
     | unused_config (SOME config) = config
 
   fun check_unused_assms config named_theorem =
@@ -169,11 +171,12 @@ structure Refute :> Refute = struct
 
   fun model_refute tm = refute_with [upd_search (Only [ModelFinder])] tm
 
-  fun REFUTE_CONFIG_TAC config goal =
-    (refute_goal config goal; Tactical.ALL_TAC goal)
+  (* A tactic's context is its entry capture, configuration included. *)
+  fun REFUTE_CONFIG_TAC config goal ctxt =
+    (refute_goal_in ctxt config goal; Tactical.ALL_TAC goal ctxt)
 
-  fun REFUTE_TAC_WITH updates goal =
-    REFUTE_CONFIG_TAC (current_config updates) goal
+  fun REFUTE_TAC_WITH updates goal ctxt =
+    REFUTE_CONFIG_TAC (config_in ctxt updates) goal ctxt
 
   fun REFUTE_TAC goal =
     REFUTE_TAC_WITH [] goal
@@ -191,16 +194,12 @@ structure Refute :> Refute = struct
   val register_generator_family = Refute_Gen.register_generator_family
   val register_term_postprocessor =
     Refute_ModelFinder_Model.register_term_postprocessor
-  fun register_codatatype registration =
-    Refute_ModelFinder_HOL.with_registration_lock (fn () =>
-      Refute_ModelFinder_HOL.register_codatatype registration)
+  val register_codatatype = Refute_ModelFinder_HOL.register_codatatype
   val register_quotient = Refute_ModelFinder_HOL.register_quotient
   val register_typedef = Refute_ModelFinder_HOL.register_typedef
   val harvest_registrations = Refute_ModelFinder_HOL.harvest_registrations
   val register_frac_type = Refute_ModelFinder_HOL.register_frac_type
-  fun register_ersatz registration =
-    Refute_ModelFinder_HOL.with_registration_lock (fn () =>
-      Refute_ModelFinder_HOL.register_ersatz registration)
+  val register_ersatz = Refute_ModelFinder_HOL.register_ersatz
   val abstract_generator = Refute_Gen.abstract_generator
 
   val export_refute_simp = #export refute_simp

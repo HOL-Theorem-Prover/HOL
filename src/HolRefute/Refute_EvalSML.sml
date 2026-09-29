@@ -1,4 +1,4 @@
-structure Refute_EvalSML = struct
+structure Refute_EvalSML :> Refute_EvalSML = struct
   structure Names = Refute_ModelFinder_Names
 
   type term = Term.term
@@ -22,7 +22,6 @@ structure Refute_EvalSML = struct
   type generated_answer =
     { hit : generated_hit option,
       complete : bool,
-      table : int,
       state : IntInf.int,
       tests : int,
       match_failures : int,
@@ -68,10 +67,13 @@ structure Refute_EvalSML = struct
   fun install_dispatch dispatch =
     #installed (native_state ()) := SOME dispatch
 
-  val table_serial = ref 0
-  val term_tables = ref
-    ([] : (int * term vector * term vector) list)
-  val table_mutex = Mutex.mutex ()
+  (* The constructor and raw terms generated code refers to by index. *)
+  type term_tables = {constructors : term vector, terms : term vector}
+
+  fun term_tables constructor_terms terms : term_tables =
+    {constructors = Vector.fromList constructor_terms,
+     terms = Vector.fromList terms}
+
   val compiler_mutex = Mutex.mutex ()
   val goal_compile_mutex = Mutex.mutex ()
 
@@ -83,56 +85,15 @@ structure Refute_EvalSML = struct
     | CompileError of string list
 
   datatype extraction_result =
-      Extracted of {source : string, entry : string, table : int}
+      Extracted of {source : string, entry : string, table : term_tables}
     | ExtractionFailed of string list
 
-  fun register_term_tables constructor_terms terms =
-    Thread_Attributes.uninterruptible
-      (fn restore => fn () =>
-        let
-          val _ = lock_interruptibly restore table_mutex
-          val serial = !table_serial
-          val entry =
-            (serial, Vector.fromList constructor_terms,
-             Vector.fromList terms)
-          val _ = table_serial := serial + 1
-          val _ = term_tables := entry :: !term_tables
-          val _ = Mutex.unlock table_mutex
-        in
-          serial
-        end) ()
-
-  fun unregister_term_tables serial =
-    let
-      fun remove () =
-        term_tables := List.filter (fn (index, _, _) => index <> serial)
-          (!term_tables)
-    in
-      Thread_Attributes.uninterruptible
-        (fn restore => fn () =>
-          (lock_interruptibly restore table_mutex;
-           remove () before Mutex.unlock table_mutex)) ()
-    end
-
-  (* The registry lookup is the only shared step; the tables themselves go
-     into the calling thread's own cells, so the action runs unlocked. *)
-  fun lookup_term_tables serial =
-    Thread_Attributes.uninterruptible
-      (fn restore => fn () =>
-        let
-          val _ = lock_interruptibly restore table_mutex
-          val found = Exn.capture (fn () =>
-            List.find (fn (index, _, _) => index = serial) (!term_tables)) ()
-          val _ = Mutex.unlock table_mutex
-        in
-          Exn.release found
-        end) ()
-
-  fun with_term_tables serial action =
+  (* The tables go into the calling thread's own cells, so the action
+     runs unlocked. *)
+  fun with_term_tables ({constructors = constructor_table,
+                         terms = term_table} : term_tables) action =
     let
       val {constructors, raw_terms, ...} = native_state ()
-      val (_, constructor_table, term_table) =
-        valOf (lookup_term_tables serial)
     in
       Thread_Attributes.uninterruptible
         (fn restore => fn () =>
@@ -149,9 +110,6 @@ structure Refute_EvalSML = struct
           end) ()
     end
 
-  fun wrap_reconstruction serial rebuild () =
-    with_term_tables serial rebuild
-
   fun check_deadline () =
     case !(#deadline (native_state ())) of
         NONE => ()
@@ -162,9 +120,8 @@ structure Refute_EvalSML = struct
   (* Generated code tests every candidate hit against this filter. *)
   fun ignored_hit_now found = !(#ignored (native_state ())) found
 
-  fun table_term serial index =
-    with_term_tables serial (fn () =>
-      Vector.sub (!(#raw_terms (native_state ())), index))
+  fun table_term ({terms, ...} : term_tables) index =
+    Vector.sub (terms, index)
 
   fun raw_term index = Vector.sub (!(#raw_terms (native_state ())), index)
 
@@ -434,11 +391,9 @@ structure Refute_EvalSML = struct
               else ()
           in
           case Exn.capture (fn () => compile_install source entry) () of
-          Exn.Exn error =>
-            (unregister_term_tables table; raise error)
+          Exn.Exn error => raise error
         | Exn.Res (CompileError chunks) =>
             let
-              val _ = unregister_term_tables table
               val detail = String.concat chunks
               val reason = "native: internal: " ^
                 (if detail = "" then "generated code did not compile"
@@ -455,15 +410,15 @@ structure Refute_EvalSML = struct
                      Refute_Eval.Exhaustive => 0
                    | Refute_Eval.Random {seed} => seed
                    | Refute_Eval.Narrowing => 0)
-              val closed = ref false
-
               fun run input =
                 let
                   val limit = #deadline
                     (Refute_Core.search_context_for config)
-                  fun invoke () = dispatch (#card input)
-                    (#genuine_only input) (#size input) (#draws input)
-                    (!state)
+                  fun invoke () = with_term_tables table (fn () =>
+                    dispatch (#card input) (#genuine_only input)
+                      (#size input) (#draws input) (!state))
+                  fun rebuilt (index, rebuild) =
+                    (table_term table index, with_term_tables table rebuild)
                   val run_depth =
                     case strategy of
                         Refute_Eval.Narrowing => SOME (#size input)
@@ -484,13 +439,9 @@ structure Refute_EvalSML = struct
                         {complete = #complete answer}
                     | SOME (environment, grounding, case_tree, genuine) =>
                         Refute_Eval.CexFound
-                          {env = List.map (fn (index, rebuild) =>
-                             (table_term (#table answer) index, rebuild ()))
-                             environment,
-                           ground_env = Option.map (List.map
-                             (fn (index, rebuild) =>
-                               (table_term (#table answer) index,
-                                rebuild ()))) grounding,
+                          {env = List.map rebuilt environment,
+                           ground_env =
+                             Option.map (List.map rebuilt) grounding,
                            case_tree = case_tree,
                            genuine = genuine,
                            run_depth = run_depth}
@@ -498,16 +449,13 @@ structure Refute_EvalSML = struct
                 handle Deadline => Refute_Eval.GaveUp "deadline"
                      | Timeout.TIMEOUT _ => Refute_Eval.GaveUp "deadline"
 
-              fun close () =
-                if !closed then ()
-                else (unregister_term_tables table; closed := true)
+              fun close () = ()
             in
               Refute_Eval.Compiled
                 {run = run, close = close, max_chunk = NONE,
                  last_stats = last_stats}
             end
           end)
-          handle error => (unregister_term_tables table; raise error)
     end
     handle Interrupt => raise Interrupt
          | error =>

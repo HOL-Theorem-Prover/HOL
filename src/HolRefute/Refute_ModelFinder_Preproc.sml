@@ -1,4 +1,4 @@
-structure Refute_ModelFinder_Preproc = struct
+structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
   open Portable Feedback
   infix |>
 

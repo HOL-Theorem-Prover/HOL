@@ -1,4 +1,4 @@
-structure Refute_ModelFinder_HOL = struct
+structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   open Portable Feedback
   infix |>
 
@@ -55,25 +55,182 @@ structure Refute_ModelFinder_HOL = struct
      pred : term, inverse_axioms : term list, univ : bool}
   type frac_info = {tyop : type_operator, ersatz : ersatz list}
 
-  (* Registrations are session-level ML state.  In particular, registering a
-     codatatype, quotient, typedef, or frac type never extends the current HOL
-     theory. *)
-  val codatatype_registry = ref ([] : codatatype_info list)
-  val quotient_registry = ref ([] : quotient_info list)
-  val typedef_registry = ref ([] : typedef_info list)
-  val frac_registry = ref ([] : frac_info list)
-  val ersatz_registry = ref ([] : ersatz list)
+  (* Registrations and the harvest indices are one context state.  A
+     change runs as a transaction: the state is thawed into mutable cells
+     bound on the changing thread and frozen back when it ends, so an
+     exception or interrupt leaves no partial change.  Outside a
+     transaction every cell is a fresh copy of the state, and writing it
+     changes nothing.  Registering a codatatype, quotient, typedef, or frac
+     type never extends the current HOL theory.  Functions suffixed
+     "_staged" change the cells, so they run only inside a transaction.
 
-  (* Every classification registration and lazy harvest is serialized here.
-     Model-display registration shares the mutex so rational registration
-     can install both halves atomically.  Functions suffixed "_unlocked" are
-     internal helpers whose callers already hold it. *)
-  val registration_mutex = Mutex.mutex ()
+     Successful harvests live in the registries themselves.  The session
+     index records only theories directly mentioned by relevant theorem
+     conclusions: the theorem's own theory and the owning theories of its
+     constants.  In particular, neither index maintenance nor lookup walks a
+     theory ancestry or enumerates the session's constants. *)
+  type harvest_fingerprint = int * (string * int) list
+  type harvest_miss = harvest_fingerprint KNametab.table
+  type harvest_index_entry =
+    {operator : type_operator,
+     theorem_theories : string list,
+     constant_theories : string list}
+  type harvest_binding =
+    {theory : string,
+     name : string,
+     theorem_operators : type_operator list,
+     constant_operators : (type_operator * string) list}
 
-  fun with_registration_lock body =
-    Multithreading.synchronized "Refute model registrations"
-      registration_mutex body
+  type registrations =
+    {codatatypes : codatatype_info list,
+     quotients : quotient_info list,
+     typedefs : typedef_info list,
+     fracs : frac_info list,
+     ersatz : ersatz list,
+     quotient_misses : harvest_miss,
+     typedef_misses : harvest_miss,
+     session_index : harvest_index_entry KNametab.table,
+     session_index_stale : bool,
+     binding_index : harvest_binding KNametab.table,
+     theory_bindings : string list Symtab.table,
+     operator_generations : int KNametab.table,
+     operator_generation : int,
+     indexed_theories : unit Symtab.table,
+     pending_theories : string list,
+     db_generation : int,
+     theory_generations : int Symtab.table}
 
+  type cells =
+    {codatatypes : codatatype_info list ref,
+     quotients : quotient_info list ref,
+     typedefs : typedef_info list ref,
+     fracs : frac_info list ref,
+     ersatz : ersatz list ref,
+     quotient_misses : harvest_miss ref,
+     typedef_misses : harvest_miss ref,
+     session_index : harvest_index_entry KNametab.table ref,
+     session_index_stale : bool ref,
+     binding_index : harvest_binding KNametab.table ref,
+     theory_bindings : string list Symtab.table ref,
+     operator_generations : int KNametab.table ref,
+     operator_generation : int ref,
+     indexed_theories : unit Symtab.table ref,
+     pending_theories : string list ref,
+     db_generation : int ref,
+     theory_generations : int Symtab.table ref}
+
+  fun thaw (value : registrations) : cells =
+    {codatatypes = ref (#codatatypes value),
+     quotients = ref (#quotients value),
+     typedefs = ref (#typedefs value),
+     fracs = ref (#fracs value),
+     ersatz = ref (#ersatz value),
+     quotient_misses = ref (#quotient_misses value),
+     typedef_misses = ref (#typedef_misses value),
+     session_index = ref (#session_index value),
+     session_index_stale = ref (#session_index_stale value),
+     binding_index = ref (#binding_index value),
+     theory_bindings = ref (#theory_bindings value),
+     operator_generations = ref (#operator_generations value),
+     operator_generation = ref (#operator_generation value),
+     indexed_theories = ref (#indexed_theories value),
+     pending_theories = ref (#pending_theories value),
+     db_generation = ref (#db_generation value),
+     theory_generations = ref (#theory_generations value)}
+
+  fun freeze (cells : cells) : registrations =
+    {codatatypes = !(#codatatypes cells),
+     quotients = !(#quotients cells),
+     typedefs = !(#typedefs cells),
+     fracs = !(#fracs cells),
+     ersatz = !(#ersatz cells),
+     quotient_misses = !(#quotient_misses cells),
+     typedef_misses = !(#typedef_misses cells),
+     session_index = !(#session_index cells),
+     session_index_stale = !(#session_index_stale cells),
+     binding_index = !(#binding_index cells),
+     theory_bindings = !(#theory_bindings cells),
+     operator_generations = !(#operator_generations cells),
+     operator_generation = !(#operator_generation cells),
+     indexed_theories = !(#indexed_theories cells),
+     pending_theories = !(#pending_theories cells),
+     db_generation = !(#db_generation cells),
+     theory_generations = !(#theory_generations cells)}
+
+  val registrations = Refute_Session.state "model_registrations"
+    ({codatatypes = [],
+      quotients = [],
+      typedefs = [],
+      fracs = [],
+      ersatz = [],
+      quotient_misses = KNametab.empty,
+      typedef_misses = KNametab.empty,
+      session_index = KNametab.empty,
+      session_index_stale = false,
+      binding_index = KNametab.empty,
+      theory_bindings = Symtab.empty,
+      operator_generations = KNametab.empty,
+      operator_generation = 0,
+      indexed_theories = Symtab.empty,
+      pending_theories = [],
+      db_generation = 0,
+      theory_generations = Symtab.empty} : registrations)
+
+  val transaction : cells Thread_Data.var = Thread_Data.var ()
+
+  fun cell (from_cells : cells -> 'a ref) (from_value : registrations -> 'a)
+        () =
+    case Thread_Data.get transaction of
+        SOME cells => from_cells cells
+      | NONE => ref (from_value (Refute_Session.read registrations))
+
+  val codatatype_registry = cell #codatatypes #codatatypes
+  val quotient_registry = cell #quotients #quotients
+  val typedef_registry = cell #typedefs #typedefs
+  val frac_registry = cell #fracs #fracs
+  val ersatz_registry = cell #ersatz #ersatz
+  val quotient_harvest_misses = cell #quotient_misses #quotient_misses
+  val typedef_harvest_misses = cell #typedef_misses #typedef_misses
+  val harvest_session_index = cell #session_index #session_index
+  val harvest_session_index_stale =
+    cell #session_index_stale #session_index_stale
+  val harvest_binding_index = cell #binding_index #binding_index
+  val harvest_theory_bindings = cell #theory_bindings #theory_bindings
+  val harvest_operator_generations =
+    cell #operator_generations #operator_generations
+  val harvest_operator_generation =
+    cell #operator_generation #operator_generation
+  val harvest_indexed_theories = cell #indexed_theories #indexed_theories
+  val harvest_pending_theories = cell #pending_theories #pending_theories
+  val harvest_db_generation = cell #db_generation #db_generation
+  val harvest_theory_generations = cell #theory_generations #theory_generations
+
+  fun run_transaction cells body =
+    Thread_Data.setmp transaction (SOME cells) body ()
+
+  fun in_transaction () = Option.isSome (Thread_Data.get transaction)
+
+  (* A lazy harvest: a change of the running Refute call's own. *)
+  fun with_harvest body =
+    if in_transaction () then body ()
+    else
+      Refute_Session.transact registrations (fn value =>
+        let val cells = thaw value
+        in (run_transaction cells body, freeze cells) end)
+
+  (* A registration or a theory event: authoritative for every call. *)
+  fun with_registration body =
+    if in_transaction () then body ()
+    else
+      let
+        val result = ref NONE
+        fun apply value =
+          let val cells = thaw value
+          in result := SOME (run_transaction cells body); freeze cells end
+      in
+        Refute_Session.publish registrations apply;
+        valOf (!result)
+      end
   type mf_context =
     {max_bisim_depth : int,
      boxes : (hol_type option * bool option) list,
@@ -452,7 +609,7 @@ structure Refute_ModelFinder_HOL = struct
     case Lib.total Type.dest_thy_type ty of
         SOME {Thy, Tyop, Args = []} =>
           List.exists (fn ({tyop, ...} : frac_info) =>
-            #Thy tyop = Thy andalso #Tyop tyop = Tyop) (!frac_registry)
+            #Thy tyop = Thy andalso #Tyop tyop = Tyop) (!(frac_registry ()))
       | _ => false
 
   fun frac_target_for_constant constant =
@@ -1960,16 +2117,15 @@ structure Refute_ModelFinder_HOL = struct
   val max_cached_wfs = 50
   type cached_wf_state =
     {timeout : Time.time, entries : (term * bool) list}
-  val cached_wf_props = Synchronized.var
-    "Refute_ModelFinder_HOL.cached_wf_props"
+  val cached_wf_props = Refute_Session.state "wf_props"
     ({timeout = Time.zeroTime, entries = []} : cached_wf_state)
 
   fun cached_wf_lookup timeout proposition =
     let val {timeout = old_timeout, entries} =
-          Synchronized.value cached_wf_props
+          Refute_Session.read cached_wf_props
     in
       if Time.compare (timeout, old_timeout) <> EQUAL then
-        (Synchronized.change cached_wf_props (fn _ =>
+        (Refute_Session.update cached_wf_props (fn _ =>
            {timeout = timeout, entries = []}); NONE)
       else
         Option.map #2 (List.find (fn (other, _) =>
@@ -1977,7 +2133,7 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun cache_wf timeout proposition result =
-    Synchronized.change cached_wf_props (fn state =>
+    Refute_Session.update cached_wf_props (fn state =>
       let
         val entries =
           if Time.compare (timeout, #timeout state) <> EQUAL orelse
@@ -2173,46 +2329,6 @@ structure Refute_ModelFinder_HOL = struct
   fun same_type_operator (left : type_operator) right =
     #Thy left = #Thy right andalso #Tyop left = #Tyop right
 
-  (* Successful harvests live in the normal registries above.  The session
-     index records only theories directly mentioned by relevant theorem
-     conclusions: the theorem's own theory and the owning theories of its
-     constants.  In particular, neither index maintenance nor lookup walks a
-     theory ancestry or enumerates the session's constants. *)
-  type harvest_fingerprint = int * (string * int) list
-  type harvest_miss = harvest_fingerprint KNametab.table
-  type harvest_index_entry =
-    {operator : type_operator,
-     theorem_theories : string list,
-     constant_theories : string list}
-  type harvest_binding =
-    {theory : string,
-     name : string,
-     theorem_operators : type_operator list,
-     constant_operators : (type_operator * string) list}
-
-  val quotient_harvest_misses =
-    ref (KNametab.empty : harvest_miss)
-  val typedef_harvest_misses =
-    ref (KNametab.empty : harvest_miss)
-
-  val harvest_session_index =
-    ref (KNametab.empty : harvest_index_entry KNametab.table)
-  val harvest_session_index_stale = ref false
-  val harvest_binding_index =
-    ref (KNametab.empty : harvest_binding KNametab.table)
-  val harvest_theory_bindings =
-    ref (Symtab.empty : string list Symtab.table)
-  val harvest_operator_generations =
-    ref (KNametab.empty : int KNametab.table)
-  val harvest_operator_generation = ref 0
-  val harvest_indexed_theories =
-    ref (Symtab.empty : unit Symtab.table)
-  val harvest_pending_theories = ref ([] : string list)
-
-  val harvest_db_generation = ref 0
-  val harvest_theory_generations =
-    ref (Symtab.empty : int Symtab.table)
-
   (* Constant specifications (including define_new_type_bijections) are
      stored in HOL4's definition class, whereas quotient saves are ordinary
      theorems.  DB.thms covers both persisted classes. *)
@@ -2309,10 +2425,10 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun rebuild_harvest_session_index () =
-    harvest_session_index := KNametab.fold
+    harvest_session_index () := KNametab.fold
       (fn (_, binding) => fn table =>
         add_harvest_binding_to_index binding table)
-      (!harvest_binding_index) KNametab.empty
+      (!(harvest_binding_index ())) KNametab.empty
 
   fun binding_operators
         ({theorem_operators, constant_operators, ...} : harvest_binding) =
@@ -2323,49 +2439,49 @@ structure Refute_ModelFinder_HOL = struct
   fun note_harvest_operator_changes operators =
     if null operators then ()
     else
-      let val generation = !harvest_operator_generation + 1
+      let val generation = !(harvest_operator_generation ()) + 1
       in
-        harvest_operator_generation := generation;
-        harvest_operator_generations := List.foldl
+        harvest_operator_generation () := generation;
+        harvest_operator_generations () := List.foldl
           (fn (operator, table) =>
             KNametab.update (operator_key operator, generation) table)
-          (!harvest_operator_generations) operators
+          (!(harvest_operator_generations ())) operators
       end
 
   fun note_harvest_theory_binding theory name =
     let
       val names = Option.getOpt
-        (Symtab.lookup (!harvest_theory_bindings) theory, [])
+        (Symtab.lookup (!(harvest_theory_bindings ())) theory, [])
     in
-      harvest_theory_bindings := Symtab.update
-        (theory, name :: names) (!harvest_theory_bindings)
+      harvest_theory_bindings () := Symtab.update
+        (theory, name :: names) (!(harvest_theory_bindings ()))
     end
 
   fun forget_harvest_theory_binding theory name =
-    case Symtab.lookup (!harvest_theory_bindings) theory of
+    case Symtab.lookup (!(harvest_theory_bindings ())) theory of
         NONE => ()
       | SOME names =>
           let val remaining = List.filter (fn old => old <> name) names
           in
-            harvest_theory_bindings :=
+            harvest_theory_bindings () :=
               if null remaining then
-                Symtab.delete_safe theory (!harvest_theory_bindings)
+                Symtab.delete_safe theory (!(harvest_theory_bindings ()))
               else
                 Symtab.update (theory, remaining)
-                  (!harvest_theory_bindings)
+                  (!(harvest_theory_bindings ()))
           end
 
   fun remove_harvest_binding theory name =
     let val key = {Thy = theory, Name = name}
     in
-      case KNametab.lookup (!harvest_binding_index) key of
+      case KNametab.lookup (!(harvest_binding_index ())) key of
           NONE => ()
         | SOME old =>
             (note_harvest_operator_changes (binding_operators old);
-             harvest_binding_index := KNametab.delete key
-               (!harvest_binding_index);
+             harvest_binding_index () := KNametab.delete key
+               (!(harvest_binding_index ()));
              forget_harvest_theory_binding theory name;
-             harvest_session_index_stale := true)
+             harvest_session_index_stale () := true)
     end
 
   fun remove_harvest_theory theory =
@@ -2379,19 +2495,19 @@ structure Refute_ModelFinder_HOL = struct
                 (KNametab.delete key table, binding :: removed)
         end
       val names = Option.getOpt
-        (Symtab.lookup (!harvest_theory_bindings) theory, [])
+        (Symtab.lookup (!(harvest_theory_bindings ())) theory, [])
       val (kept, removed) =
-        List.foldl remove (!harvest_binding_index, []) names
+        List.foldl remove (!(harvest_binding_index ()), []) names
       val operators = rev (List.foldl (fn (binding, result) =>
         List.foldl (fn (operator, operators) =>
           add_type_operator operator operators) result
           (binding_operators binding)) [] removed)
       val _ = note_harvest_operator_changes operators
     in
-      harvest_binding_index := kept;
-      harvest_theory_bindings :=
-        Symtab.delete_safe theory (!harvest_theory_bindings);
-      if null removed then () else harvest_session_index_stale := true
+      harvest_binding_index () := kept;
+      harvest_theory_bindings () :=
+        Symtab.delete_safe theory (!(harvest_theory_bindings ()));
+      if null removed then () else harvest_session_index_stale () := true
     end
 
   fun note_harvest_binding theory (name, theorem) =
@@ -2405,17 +2521,17 @@ structure Refute_ModelFinder_HOL = struct
            constant_operators = constant_operator_pairs conclusion}
         val key = {Thy = theory, Name = name}
         val replacing =
-          Option.isSome (KNametab.lookup (!harvest_binding_index) key)
-        val _ = harvest_binding_index :=
-          KNametab.update (key, binding) (!harvest_binding_index)
+          Option.isSome (KNametab.lookup (!(harvest_binding_index ())) key)
+        val _ = harvest_binding_index () :=
+          KNametab.update (key, binding) (!(harvest_binding_index ()))
         val _ =
           if replacing then () else note_harvest_theory_binding theory name
         val _ = note_harvest_operator_changes
           (binding_operators binding)
       in
-        if replacing then harvest_session_index_stale := true
-        else harvest_session_index := add_harvest_binding_to_index binding
-          (!harvest_session_index)
+        if replacing then harvest_session_index_stale () := true
+        else harvest_session_index () := add_harvest_binding_to_index binding
+          (!(harvest_session_index ()))
       end
 
   fun index_harvest_theory theory =
@@ -2424,29 +2540,30 @@ structure Refute_ModelFinder_HOL = struct
       val _ = remove_harvest_theory theory
       val _ = List.app (note_harvest_binding theory) theorems
     in
-      harvest_indexed_theories := Symtab.update (theory, ())
-        (!harvest_indexed_theories)
+      harvest_indexed_theories () := Symtab.update (theory, ())
+        (!(harvest_indexed_theories ()))
     end
     handle HOL_ERR _ => ()
 
   fun note_harvest_db_change theory =
-    let val generation = !harvest_db_generation + 1
+    let val generation = !(harvest_db_generation ()) + 1
     in
-      harvest_db_generation := generation;
-      harvest_theory_generations := Symtab.update (theory, generation)
-        (!harvest_theory_generations)
+      harvest_db_generation () := generation;
+      harvest_theory_generations () := Symtab.update (theory, generation)
+        (!(harvest_theory_generations ()))
     end
 
   fun harvest_db_hook delta =
-    with_registration_lock (fn () =>
+    with_registration (fn () =>
       let
         fun current () = Theory.current_theory ()
         fun changed theory = note_harvest_db_change theory
         fun invalidate theory =
           (changed theory;
-           harvest_indexed_theories :=
-             Symtab.delete_safe theory (!harvest_indexed_theories);
-           harvest_pending_theories := theory :: !harvest_pending_theories)
+           harvest_indexed_theories () :=
+             Symtab.delete_safe theory (!(harvest_indexed_theories ()));
+           harvest_pending_theories () :=
+             theory :: !(harvest_pending_theories ()))
         fun add theory named_theorem =
           (changed theory; note_harvest_binding theory named_theorem)
       in
@@ -2738,13 +2855,14 @@ structure Refute_ModelFinder_HOL = struct
      {Thy = "path", Tyop = "path", case_name = "path_case",
       constructor_names = ["stopped_at", "pcons"]}]
 
-  val builtin_codatatype_cache = ref ([] : codatatype_info list)
+  val builtin_codatatype_cache =
+    Refute_Session.state "builtin_codatatypes" ([] : codatatype_info list)
 
   fun builtin_codatatype_for (operator as {Thy, ...} : type_operator) =
     if not (theory_is_available Thy) then NONE
     else
       case List.find (fn {tyop, ...} => same_type_operator tyop operator)
-             (!builtin_codatatype_cache) of
+             (Refute_Session.read builtin_codatatype_cache) of
           SOME info => SOME info
         | NONE =>
             (case List.find (fn {Thy, Tyop, ...} =>
@@ -2755,13 +2873,13 @@ structure Refute_ModelFinder_HOL = struct
                    (case builtin_codatatype_info descriptor of
                         NONE => NONE
                       | SOME info =>
-                          (builtin_codatatype_cache :=
-                             info :: !builtin_codatatype_cache;
+                          (Refute_Session.update builtin_codatatype_cache
+                             (fn cache => info :: cache);
                            SOME info)))
 
   fun explicit_codatatype_for operator =
     List.find (fn {tyop, ...} => same_type_operator tyop operator)
-      (!codatatype_registry)
+      (!(codatatype_registry ()))
 
   fun codatatype_for operator =
     case explicit_codatatype_for operator of
@@ -2770,7 +2888,7 @@ structure Refute_ModelFinder_HOL = struct
 
   fun current_codatatype_registry () =
     let
-      val explicit = !codatatype_registry
+      val explicit = !(codatatype_registry ())
       fun built_in {Thy, Tyop, ...} =
         builtin_codatatype_for {Thy = Thy, Tyop = Tyop}
       fun shadowed ({tyop, ...} : codatatype_info) =
@@ -2868,7 +2986,7 @@ structure Refute_ModelFinder_HOL = struct
       ()
     end
 
-  fun register_codatatype
+  fun register_codatatype_staged
         ({tyop, case_const, constructors, witness} :
          codatatype_registration) =
     let
@@ -2886,19 +3004,22 @@ structure Refute_ModelFinder_HOL = struct
           NONE => ()
         | SOME theorem => validate_codatatype_witness normalized theorem
       val _ = if has_type_operator (type_operator_of o #qty)
-                       quotient_registry result_ty orelse
+                       (quotient_registry ()) result_ty orelse
                      has_type_operator (type_operator_of o #ty)
-                       typedef_registry result_ty orelse
-                     has_type_operator #tyop frac_registry result_ty then
+                       (typedef_registry ()) result_ty orelse
+                     has_type_operator #tyop (frac_registry ()) result_ty then
           raise err "register_codatatype"
             "type operator already has an incompatible registration"
         else ()
       fun other ({tyop = old, ...} : codatatype_info) =
         not (same_type_operator old tyop)
     in
-      codatatype_registry := normalized ::
-        List.filter other (!codatatype_registry)
+      codatatype_registry () := normalized ::
+        List.filter other (!(codatatype_registry ()))
     end
+
+  fun register_codatatype registration =
+    with_registration (fn () => register_codatatype_staged registration)
 
   fun same_named key term =
     same_key (const_key term) key handle HOL_ERR _ => false
@@ -3007,7 +3128,7 @@ structure Refute_ModelFinder_HOL = struct
       ()
     end
 
-  fun register_quotient_unlocked
+  fun register_quotient_staged
         ({qty, rty, abs, rep, equiv_thm} : quotient_registration) =
     let
       val _ = validate_registered_type "register_quotient" qty
@@ -3024,9 +3145,9 @@ structure Refute_ModelFinder_HOL = struct
           "representation type has unbound type variables"
       val _ =
         if Option.isSome (codatatype_for (type_operator_of qty)) orelse
-           has_type_operator (type_operator_of o #ty) typedef_registry qty
+           has_type_operator (type_operator_of o #ty) (typedef_registry ()) qty
              orelse
-           has_type_operator #tyop frac_registry qty orelse
+           has_type_operator #tyop (frac_registry ()) qty orelse
            raw_free_datatype qty then
           raise err "register_quotient"
             "type operator already has an incompatible classification"
@@ -3053,13 +3174,12 @@ structure Refute_ModelFinder_HOL = struct
       fun other ({qty = old, ...} : quotient_info) =
         not (same_type_operator (type_operator_of old) operator)
     in
-      quotient_registry := normalized ::
-        List.filter other (!quotient_registry)
+      quotient_registry () := normalized ::
+        List.filter other (!(quotient_registry ()))
     end
 
   fun register_quotient registration =
-    with_registration_lock (fn () =>
-      register_quotient_unlocked registration)
+    with_registration (fn () => register_quotient_staged registration)
 
   fun raw_typedef_data_generic ty =
     let
@@ -3239,7 +3359,7 @@ structure Refute_ModelFinder_HOL = struct
     parse_absrep_conjunction (pair_absrep_thms thms) supplied_abs
       supplied_rep
 
-  fun register_typedef_unlocked
+  fun register_typedef_staged
         {ty : hol_type, abs : term, rep : term, absrep_thms : thm list} =
     let
       val _ = validate_registered_type "register_typedef" ty
@@ -3257,9 +3377,9 @@ structure Refute_ModelFinder_HOL = struct
           "representation type has unbound type variables"
       val _ =
         if Option.isSome (codatatype_for (type_operator_of ty)) orelse
-           has_type_operator (type_operator_of o #qty) quotient_registry ty
-             orelse
-           has_type_operator #tyop frac_registry ty orelse
+           has_type_operator (type_operator_of o #qty) (quotient_registry ())
+             ty orelse
+           has_type_operator #tyop (frac_registry ()) ty orelse
            raw_free_datatype ty then
           raise err "register_typedef"
             "type operator already has an incompatible classification"
@@ -3287,13 +3407,12 @@ structure Refute_ModelFinder_HOL = struct
       fun other ({ty = old, ...} : typedef_info) =
         not (same_type_operator (type_operator_of old) operator)
     in
-      typedef_registry := normalized ::
-        List.filter other (!typedef_registry)
+      typedef_registry () := normalized ::
+        List.filter other (!(typedef_registry ()))
     end
 
   fun register_typedef registration =
-    with_registration_lock (fn () =>
-      register_typedef_unlocked registration)
+    with_registration (fn () => register_typedef_staged registration)
 
   fun validate_ersatz function ({original, replacement} : ersatz) =
     let
@@ -3306,7 +3425,7 @@ structure Refute_ModelFinder_HOL = struct
     end handle HOL_ERR _ => raise err function
       "ersatz constants must name existing theory constants"
 
-  fun prepare_frac_type_unlocked
+  fun register_frac_type_staged
         (registration as {tyop, ersatz} : frac_info) =
     let
       val function = "register_frac_type"
@@ -3331,8 +3450,6 @@ structure Refute_ModelFinder_HOL = struct
       val _ = if unique ersatz then () else
         raise err function "ersatz originals must be distinct"
 
-      (* Compute every replacement before touching session state.  The
-         returned commit only assigns precomputed values and cannot fail. *)
       fun other_frac ({tyop = old, ...} : frac_info) =
         not (same_type_operator old tyop)
       fun other_quotient ({qty, ...} : quotient_info) =
@@ -3340,32 +3457,24 @@ structure Refute_ModelFinder_HOL = struct
       fun other_typedef ({ty = old, ...} : typedef_info) =
         not (same_type_operator (type_operator_of old) tyop)
       val new_fracs = registration ::
-        List.filter other_frac (!frac_registry)
-      val new_quotients = List.filter other_quotient (!quotient_registry)
-      val new_typedefs = List.filter other_typedef (!typedef_registry)
+        List.filter other_frac (!(frac_registry ()))
+      val new_quotients = List.filter other_quotient (!(quotient_registry ()))
+      val new_typedefs = List.filter other_typedef (!(typedef_registry ()))
       val key = operator_key tyop
       val new_quotient_misses =
-        KNametab.delete_safe key (!quotient_harvest_misses)
+        KNametab.delete_safe key (!(quotient_harvest_misses ()))
       val new_typedef_misses =
-        KNametab.delete_safe key (!typedef_harvest_misses)
-      fun commit () =
-        (quotient_registry := new_quotients;
-         typedef_registry := new_typedefs;
-         quotient_harvest_misses := new_quotient_misses;
-         typedef_harvest_misses := new_typedef_misses;
-         frac_registry := new_fracs)
+        KNametab.delete_safe key (!(typedef_harvest_misses ()))
     in
-      commit
-    end
-
-  fun register_frac_type_unlocked registration =
-    let val commit = prepare_frac_type_unlocked registration in
-      Thread_Attributes.uninterruptible (fn _ => fn () => commit ()) ()
+      quotient_registry () := new_quotients;
+      typedef_registry () := new_typedefs;
+      quotient_harvest_misses () := new_quotient_misses;
+      typedef_harvest_misses () := new_typedef_misses;
+      frac_registry () := new_fracs
     end
 
   fun register_frac_type registration =
-    with_registration_lock (fn () =>
-      register_frac_type_unlocked registration)
+    with_registration (fn () => register_frac_type_staged registration)
 
   val rat_frac_registration : frac_info =
     {tyop = {Thy = "rat", Tyop = "rat"},
@@ -3415,12 +3524,12 @@ structure Refute_ModelFinder_HOL = struct
   fun harvest_index_entry operator =
     let
       val _ =
-        if !harvest_session_index_stale then
+        if !(harvest_session_index_stale ()) then
           (rebuild_harvest_session_index ();
-           harvest_session_index_stale := false)
+           harvest_session_index_stale () := false)
         else ()
       val {operator, theorem_theories, constant_theories} =
-        Option.getOpt (KNametab.lookup (!harvest_session_index)
+        Option.getOpt (KNametab.lookup (!(harvest_session_index ()))
           (operator_key operator),
           {operator = operator, theorem_theories = [],
            constant_theories = []})
@@ -3431,14 +3540,14 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun seed_harvest_theory theory =
-    if Option.isSome (Symtab.lookup (!harvest_indexed_theories) theory)
+    if Option.isSome (Symtab.lookup (!(harvest_indexed_theories ())) theory)
     then ()
     else index_harvest_theory theory
 
   fun seed_pending_harvest_theories () =
     let
-      val pending = rev (!harvest_pending_theories)
-      val _ = harvest_pending_theories := []
+      val pending = rev (!(harvest_pending_theories ()))
+      val _ = harvest_pending_theories () := []
     in
       List.app seed_harvest_theory pending
     end
@@ -3463,10 +3572,10 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun harvest_theory_generation theory =
-    Option.getOpt (Symtab.lookup (!harvest_theory_generations) theory, 0)
+    Option.getOpt (Symtab.lookup (!(harvest_theory_generations ())) theory, 0)
 
   fun harvest_fingerprint operator theories : harvest_fingerprint =
-    (Option.getOpt (KNametab.lookup (!harvest_operator_generations)
+    (Option.getOpt (KNametab.lookup (!(harvest_operator_generations ()))
        (operator_key operator), 0),
      map (fn theory => (theory, harvest_theory_generation theory)) theories)
 
@@ -3482,7 +3591,7 @@ structure Refute_ModelFinder_HOL = struct
       val (rty, qty) = Type.dom_rng (Term.type_of abs)
       val _ = if same_type_operator (type_operator_of qty) operator then ()
         else raise Match
-      val _ = register_quotient_unlocked
+      val _ = register_quotient_staged
         {qty = qty, rty = rty, abs = abs, rep = rep, equiv_thm = theorem}
     in
       true
@@ -3501,7 +3610,7 @@ structure Refute_ModelFinder_HOL = struct
       val (_, ty) = Type.dom_rng (Term.type_of abs)
       val _ = if same_type_operator (type_operator_of ty) operator then ()
         else raise Match
-      val _ = register_typedef_unlocked
+      val _ = register_typedef_staged
         {ty = ty, abs = abs, rep = rep, absrep_thms = [theorem]}
     in
       true
@@ -4125,7 +4234,7 @@ structure Refute_ModelFinder_HOL = struct
       val operator = type_operator_of ty
       val info = List.find (fn {qty, ...} =>
         same_type_operator (type_operator_of qty) operator)
-        (!quotient_registry)
+        (!(quotient_registry ()))
     in
       case info of
           NONE => NONE
@@ -4179,7 +4288,7 @@ structure Refute_ModelFinder_HOL = struct
      is_fmap'/abs_fmap' comment for why.  This branch runs before
      harvesting is ever attempted for [fmap]: [typedef_for_type] returns
      [SOME] here whenever the registry has no entry, so [is_typedef]
-     is already true and harvest_typedef_unlocked's own
+     is already true and harvest_typedef_staged's own
      [if is_typedef ty then true else ...] short-circuits, never
      registering fmap's real, harvest-eligible but far slower
      is_fmap/fmap_ABS/fmap_REP typedef instead.
@@ -4188,7 +4297,7 @@ structure Refute_ModelFinder_HOL = struct
      abs_fmap'_FLOOKUP/FLOOKUP_abs_fmap' (refuteScript.sml) are proved HOL
      theorems, instantiated to this instance and supplied the same slot a
      validated typedef fills from its own bijection theorem
-     (register_typedef_unlocked above), rather than left empty as
+     (register_typedef_staged above), rather than left empty as
      synthetic_frac_typedef's are.  [FLOOKUP_abs_fmap'] is stated as a
      biconditional rather than a one-way implication specifically so
      [guarded_inverse_axiom] below also emits an [onto] surjectivity
@@ -4329,7 +4438,7 @@ structure Refute_ModelFinder_HOL = struct
       val operator = type_operator_of ty
       val info = List.find (fn ({ty = registered, ...} : typedef_info) =>
         same_type_operator (type_operator_of registered) operator)
-        (!typedef_registry)
+        (!(typedef_registry ()))
     in
       case info of
           NONE =>
@@ -4409,14 +4518,14 @@ structure Refute_ModelFinder_HOL = struct
       | NONE => raise err "quotient_relation_for_type"
           "unregistered quotient type"
 
-  fun is_frac_type ty = has_type_operator #tyop frac_registry ty
+  fun is_frac_type ty = has_type_operator #tyop (frac_registry ()) ty
 
   fun is_data_type ty =
     not (is_interpreted_type ty) andalso
     (is_codatatype ty orelse is_raw_free_datatype ty orelse
      is_quot_type ty orelse is_typedef ty orelse is_frac_type ty)
 
-  fun harvest_quotient_unlocked ty =
+  fun harvest_quotient_staged ty =
     let
       val operator = type_operator_of ty
       val theories = indexed_harvest_theories ty
@@ -4439,18 +4548,19 @@ structure Refute_ModelFinder_HOL = struct
       if is_quot_type ty then true
       else if incompatible orelse
               cached_harvest_miss operator fingerprint
-                (!quotient_harvest_misses) then false
+                (!(quotient_harvest_misses ())) then false
       else if fast () orelse scan theories then true
       else
-        (remember_harvest_miss quotient_harvest_misses operator fingerprint;
+        (remember_harvest_miss (quotient_harvest_misses ()) operator
+           fingerprint;
          false)
     end
     handle HOL_ERR _ => false
 
   fun harvest_quotient ty =
-    with_registration_lock (fn () => harvest_quotient_unlocked ty)
+    with_harvest (fn () => harvest_quotient_staged ty)
 
-  fun harvest_typedef_unlocked ty =
+  fun harvest_typedef_staged ty =
     let
       val operator = type_operator_of ty
       val theories = indexed_harvest_theories ty
@@ -4474,26 +4584,27 @@ structure Refute_ModelFinder_HOL = struct
       if is_typedef ty then true
       else if incompatible orelse not has_definition orelse
               cached_harvest_miss operator fingerprint
-                (!typedef_harvest_misses) then false
+                (!(typedef_harvest_misses ())) then false
       else if scan theories then true
       else
-        (remember_harvest_miss typedef_harvest_misses operator fingerprint;
+        (remember_harvest_miss (typedef_harvest_misses ()) operator
+           fingerprint;
          false)
     end
     handle HOL_ERR _ => false
 
   fun harvest_typedef ty =
-    with_registration_lock (fn () => harvest_typedef_unlocked ty)
+    with_harvest (fn () => harvest_typedef_staged ty)
 
   (* Opt-in whole-ancestry sweep.  [oldest_first_theories] is already the
      module's canonical deterministic theory order; within a theory,
      [Theory.types] enumerates by type-operator name (it folds a
      [KernelSig.listThy] table ordered by [String.compare]), so neither
      the sweep nor its result depends on any hash order.  Reuses the same
-     [harvest_typedef_unlocked]/[harvest_quotient_unlocked] the lazy path
+     [harvest_typedef_staged]/[harvest_quotient_staged] the lazy path
      calls, so every incompatibility guard, clash guard and miss cache
      behaves identically; this is not a second harvest implementation. *)
-  fun harvest_registrations_unlocked () =
+  fun harvest_registrations_staged () =
     let
       val theories = oldest_first_theories ()
       fun operators_of theory =
@@ -4505,8 +4616,8 @@ structure Refute_ModelFinder_HOL = struct
            val ty = type_operator_instance (thy, tyop, arity)
            val had_typedef = is_typedef ty
            val had_quotient = is_quot_type ty
-           val got_quotient = harvest_quotient_unlocked ty
-           val got_typedef = harvest_typedef_unlocked ty
+           val got_quotient = harvest_quotient_staged ty
+           val got_typedef = harvest_typedef_staged ty
          in
            ((if got_typedef andalso not had_typedef then ty :: typedefs
              else typedefs),
@@ -4522,7 +4633,7 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun harvest_registrations () =
-    with_registration_lock harvest_registrations_unlocked
+    with_harvest harvest_registrations_staged
 
   fun quot_constructor rty qty =
     Term.mk_thy_const
@@ -4965,13 +5076,14 @@ structure Refute_ModelFinder_HOL = struct
       replacement = {Thy = "refute", Name = "fdom'"}}]
 
   fun register_ersatz replacement =
-    let
-      fun same_original ({original, ...} : ersatz) =
-        same_key original (#original replacement)
-    in
-      ersatz_registry := replacement ::
-        List.filter (not o same_original) (!ersatz_registry)
-    end
+    with_registration (fn () =>
+      let
+        fun same_original ({original, ...} : ersatz) =
+          same_key original (#original replacement)
+      in
+        ersatz_registry () := replacement ::
+          List.filter (not o same_original) (!(ersatz_registry ()))
+      end)
 
   fun append_new_ersatz (entry, table) =
     if List.exists (fn ({original, ...} : ersatz) =>
@@ -4981,8 +5093,8 @@ structure Refute_ModelFinder_HOL = struct
   fun current_ersatz_table () =
     let
       val ordinary = List.foldl append_new_ersatz
-        (!ersatz_registry) builtin_ersatz
-      val frac = List.concat (map #ersatz (!frac_registry))
+        (!(ersatz_registry ())) builtin_ersatz
+      val frac = List.concat (map #ersatz (!(frac_registry ())))
     in
       (* Upstream prepends active frac mappings to the ordinary table.  Keep
          collisions rather than deduplicating them: replacement_for selects

@@ -1,4 +1,4 @@
-structure Refute_Skolem = struct
+structure Refute_Skolem :> Refute_Skolem = struct
   type dependency =
     {origin : int,
      source_type : Type.hol_type}

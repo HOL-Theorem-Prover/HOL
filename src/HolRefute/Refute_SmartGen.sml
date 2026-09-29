@@ -8,7 +8,7 @@
    (function flattening, in the Isabelle predicate-compiler sense), and
    [infer_graph] mode-checks that graph through the same fixpoint, keyed
    on [Graph f].  The module creates no theory definitions. *)
-structure Refute_SmartGen = struct
+structure Refute_SmartGen :> Refute_SmartGen = struct
   type term = Term.term
 
   type intro_triple =
@@ -324,15 +324,16 @@ structure Refute_SmartGen = struct
   type 'a cache_entry =
     {constant : term, stamp : term option, result : 'a list option}
 
-  (* Positive and negative results are session-local ML state.  The source
+  (* Positive and negative results are cached in the context.  The source
      stamp prevents a transient current-theory presentation from poisoning a
      later definition with the same name after snapshot/revert. *)
-  val intro_cache : inference_clause cache_entry list ref = ref []
+  val intro_cache = Refute_Session.state "intro_clauses"
+    ([] : inference_clause cache_entry list)
 
   val same_stamp = Lib.option_eq same_term
 
-  fun cached_synthesis (cache : 'a cache_entry list ref) synthesize
-        constant =
+  fun cached_synthesis (cache : 'a cache_entry list Refute_Session.state)
+        synthesize constant =
     if not (Term.is_const constant) then NONE
     else
       let
@@ -340,7 +341,7 @@ structure Refute_SmartGen = struct
         val stamp = Option.map #1 source
         val cached = List.find (fn {constant = other, stamp = old, ...} =>
           same_constant constant other andalso same_stamp stamp old)
-          (!cache)
+          (Refute_Session.read cache)
       in
         case cached of
             SOME {result, ...} => result
@@ -350,10 +351,10 @@ structure Refute_SmartGen = struct
                   case source of
                       SOME (_, equations) => synthesize constant equations
                     | NONE => NONE
-                val _ = cache :=
+                val _ = Refute_Session.update cache (fn entries =>
                   {constant = constant, stamp = stamp, result = result} ::
                   List.filter (fn {constant = other, ...} =>
-                    not (same_constant constant other)) (!cache)
+                    not (same_constant constant other)) entries)
               in
                 result
               end
@@ -603,7 +604,8 @@ structure Refute_SmartGen = struct
   (* Separate from [intro_cache]: a [Graph f] entry and a [Predicate f]
      entry for the same [f] therefore cannot collide, because they are
      never in the same table. *)
-  val graph_cache : graph_clause cache_entry list ref = ref []
+  val graph_cache = Refute_Session.state "graph_clauses"
+    ([] : graph_clause cache_entry list)
 
   (* The sole construction site for clause synthesis outside the accessor
      pins.  The [allow_function_inversion] gate lives in [infer_graph]
@@ -1735,33 +1737,19 @@ structure Refute_SmartGen = struct
 
   (* The logical fields of an enumerator are not enough to identify the
      definition generation from which they were inferred: snapshot/revert can
-     install a same-named constant with an identical printed payload.  Keep a
-     session-opaque generation plus a deterministic inference fingerprint and
-     bind every compiled plan to that pair. *)
-  (* The cache and its generation are one mutable state: invalidation must
-     not race a compilation publishing entries from the old generation. *)
-  val enumerator_cache_mutex = Mutex.mutex ()
-  fun synchronized_cache f =
-    Multithreading.synchronized "Refute_SmartGen.enumerator_cache"
-      enumerator_cache_mutex f
-
+     install a same-named constant with an identical printed payload.  Keep an
+     opaque generation plus a deterministic inference fingerprint and bind
+     every compiled plan to that pair. *)
   abstype program_version = ProgramVersion of
-    {generation : int, fingerprint : string}
+    {generation : unit ref, fingerprint : string}
   with
-    val source_generation = ref 0
-
     fun same_program_version
           (ProgramVersion left, ProgramVersion right) = left = right
 
-    fun current_program_version_raw
-          (ProgramVersion {generation, ...}) =
-      generation = !source_generation
+    fun program_generation (ProgramVersion {generation, ...}) = generation
 
-    fun new_program_version fingerprint = ProgramVersion
-      {generation = !source_generation, fingerprint = fingerprint}
-
-    fun advance_source_generation () =
-      source_generation := !source_generation + 1
+    fun new_program_version generation fingerprint = ProgramVersion
+      {generation = generation, fingerprint = fingerprint}
   end
 
   type enumerator =
@@ -1854,9 +1842,19 @@ structure Refute_SmartGen = struct
   type enumerator_cache_entry =
     {relation : relation_key, mode : mode, program : enumerator}
 
-  (* Session-local only: enumerator compilation creates no HOL definition.
-     Recompiling a typed relation/mode replaces its previous program. *)
-  val enumerator_cache = ref ([] : enumerator_cache_entry list)
+  (* Enumerator compilation creates no HOL definition.  Recompiling a typed
+     relation/mode replaces its previous program.  The entries and their
+     generation are one state: invalidation must not race a compilation
+     storing entries from the old generation. *)
+  type enumerator_cache =
+    {generation : unit ref, entries : enumerator_cache_entry list}
+
+  val enumerator_cache = Refute_Session.state "enumerators"
+    ({generation = ref (), entries = []} : enumerator_cache)
+
+  fun current_program_version_raw version =
+    program_generation version =
+      #generation (Refute_Session.read enumerator_cache)
 
   fun same_enumerator_key relation mode
         ({relation = other, mode = other_mode, ...} :
@@ -1870,33 +1868,36 @@ structure Refute_SmartGen = struct
      mode it was asked for, so an absent mode there means nothing -- some
      other specialisation of the same relation may still hold the only
      copy of it.  A relation's clauses cannot change within one
-     [source_generation], so a retained mode's program still matches them;
+     cache generation, so a retained mode's program still matches them;
      [program_is_fresh]/[current_program_version_raw] handle staleness
      across generations regardless of how retention is keyed. *)
   fun cache_inference ({relations, ...} : inference_result) =
     let
-      val version = synchronized_cache (fn () =>
-        new_program_version (inference_fingerprint relations))
+      val generation = #generation (Refute_Session.read enumerator_cache)
+      val version =
+        new_program_version generation (inference_fingerprint relations)
       val programs = List.concat (map (compile_relation version) relations)
       val fresh = map (fn program as {relation, mode, ...} =>
         {relation = relation, mode = mode, program = program}) programs
     in
-      synchronized_cache (fn () =>
-        if current_program_version_raw version then
-          let val retained = List.filter (fn old =>
-            not (List.exists (fn {relation, mode, ...} =>
-              same_enumerator_key relation mode old) fresh))
-            (!enumerator_cache)
-          in enumerator_cache := fresh @ retained end
-        else ())
+      Refute_Session.update enumerator_cache
+        (fn (cache as {generation = current, entries}) =>
+          if current = generation then
+            {generation = current,
+             entries = fresh @ List.filter (fn old =>
+               not (List.exists (fn {relation, mode, ...} =>
+                 same_enumerator_key relation mode old) fresh)) entries}
+          else cache)
     end
 
-  fun program_is_fresh_unlocked ({relation, version, ...} : enumerator) =
-    current_program_version_raw version andalso
+  fun program_is_fresh_in generation
+        ({relation, version, ...} : enumerator) =
+    program_generation version = generation andalso
     Theory.uptodate_term (relation_term relation)
 
-  fun program_is_fresh program =
-    synchronized_cache (fn () => program_is_fresh_unlocked program)
+  fun program_is_fresh (program : enumerator) =
+    current_program_version_raw (#version program) andalso
+    Theory.uptodate_term (relation_term (#relation program))
 
   fun enumerator_for_with is_fresh entries relation mode =
     case List.find (same_enumerator_key relation mode) entries of
@@ -1908,16 +1909,18 @@ structure Refute_SmartGen = struct
     enumerator_for_with program_is_fresh entries relation mode
 
   fun enumerator_for relation mode =
-    synchronized_cache (fn () =>
-      enumerator_for_with program_is_fresh_unlocked (!enumerator_cache)
-        relation mode)
+    let val {generation, entries} = Refute_Session.read enumerator_cache
+    in
+      enumerator_for_with (program_is_fresh_in generation) entries
+        relation mode
+    end
 
   (* A compile invocation takes this immutable value once.  Code extraction
      must resolve the complete recursive closure from that value, never from
-     the mutable session cache. *)
+     the cache, which later stores can change. *)
   fun enumerator_snapshot () =
-    synchronized_cache (fn () =>
-      List.filter (program_is_fresh_unlocked o #program) (!enumerator_cache))
+    let val {generation, entries} = Refute_Session.read enumerator_cache
+    in List.filter (program_is_fresh_in generation o #program) entries end
 
   fun enumerator_gen_types ({clauses, ...} : enumerator) =
     List.concat (map (fn CpsClause {premises, ...} =>
@@ -1934,21 +1937,23 @@ structure Refute_SmartGen = struct
      no longer finds the program.  Deltas are only ignored between
      [enter_private_theory] and the matching [leave_private_theory], and
      the evaluator holds HOL's single-mutator lock across exactly that
-     span, so no user theory change can hide inside it. *)
-  val private_theory_depth = ref 0
+     span, so no user theory change can hide inside it.  The depth belongs
+     to the Refute call: a theory change outside every call always
+     invalidates. *)
+  val private_theory_depth = Refute_Session.local_state "private_theory" 0
 
   fun enter_private_theory () =
-    synchronized_cache (fn () =>
-      private_theory_depth := !private_theory_depth + 1)
+    Refute_Session.update private_theory_depth (fn depth => depth + 1)
 
   fun leave_private_theory () =
-    synchronized_cache (fn () =>
-      private_theory_depth := Int.max (0, !private_theory_depth - 1))
+    Refute_Session.update private_theory_depth
+      (fn depth => Int.max (0, depth - 1))
 
   fun invalidate_enumerator_cache _ =
-    synchronized_cache (fn () =>
-      if !private_theory_depth > 0 then ()
-      else (advance_source_generation (); enumerator_cache := []))
+    if Refute_Session.read private_theory_depth > 0 then ()
+    else
+      Refute_Session.publish enumerator_cache
+        (fn _ => {generation = ref (), entries = []})
 
   val _ = Theory.register_hook
     ("Refute_SmartGen.enumerators", invalidate_enumerator_cache)

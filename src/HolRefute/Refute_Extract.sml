@@ -1,4 +1,4 @@
-structure Refute_Extract = struct
+structure Refute_Extract :> Refute_Extract = struct
   type term = Term.term
   type hol_type = Type.hol_type
   structure Util = Refute_Util
@@ -18,7 +18,7 @@ structure Refute_Extract = struct
   type registered_extraction =
     { source : string,
       entry : string,
-      table : int }
+      table : Refute_EvalSML.term_tables }
 
   datatype ml_ty =
       MLVar of string
@@ -2592,49 +2592,10 @@ structure Refute_Extract = struct
 
   fun term_list items = "[" ^ join ", " items ^ "]"
 
-  (* Runs [finish] and releases [table_id] again if it fails. *)
-  fun finish_or_unregister table_id finish =
-    finish ()
-    handle error =>
-      let
-        val cleanup = Exn.capture
-          Refute_EvalSML.unregister_term_tables table_id
-      in
-        case (error, cleanup) of
-            (Interrupt, _) => raise Interrupt
-          | (_, Exn.Exn Interrupt) => raise Interrupt
-          | _ => Exn.reraise error
-      end
-
-  (* The generated dispatch wrapper; [size_name] is the generated binder
-     for the size or depth argument. *)
-  fun install_source size_name =
-    "fun protected_dispatch card genuine_only " ^ size_name ^
-    " draws state =\n" ^
-    "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
-    "    let val answer = dispatch card genuine_only " ^ size_name ^
-    " draws state\n" ^
-    "        val hit = Option.map\n" ^
-    "          (fn (environment, grounding, case_tree, genuine) =>\n" ^
-    "          (List.map (fn (index, rebuild) =>\n" ^
-    "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-    "               refute_table_id rebuild)) environment,\n" ^
-    "           Option.map (List.map (fn (index, rebuild) =>\n" ^
-    "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-    "               refute_table_id rebuild))) grounding,\n" ^
-    "           case_tree, genuine))\n" ^
-    "          (#hit answer)\n" ^
-    "    in {hit = hit, complete = #complete answer,\n" ^
-    "        table = refute_table_id, state = #state answer,\n" ^
-    "        tests = #tests answer,\n" ^
-    "        match_failures = #match_failures answer,\n" ^
-    "        assumption_satisfied = #assumption_satisfied answer,\n" ^
-    "        conclusion_evaluated = #conclusion_evaluated answer,\n" ^
-    "        candidates_generated = " ^
-      "#candidates_generated answer}\n" ^
-    "    end)\n" ^
-    "fun install () =\n" ^
-    "  Refute_EvalSML.install_dispatch protected_dispatch\n"
+  (* The host runs the installed dispatch, and every reconstruction it
+     returns, under the extraction's term tables. *)
+  val install_source =
+    "fun install () = Refute_EvalSML.install_dispatch dispatch\n"
 
   fun extract_tests_with mode
         (config : Refute_Core.config) strategy plans : registered_extraction =
@@ -4023,8 +3984,7 @@ structure Refute_Extract = struct
               "      val hit = case answer of RefuteContinue => NONE\n" ^
               "        | RefuteHit found => SOME found\n" ^
               "  in {hit = hit, complete = !complete,\n" ^
-              "      table = refute_table_id, state = state, " ^
-              "tests = !tests,\n" ^
+              "      state = state, tests = !tests,\n" ^
               "      match_failures = !match_failures,\n" ^
               "      assumption_satisfied = !assumption_satisfied,\n" ^
               "      conclusion_evaluated = !conclusion_evaluated,\n" ^
@@ -4048,7 +4008,7 @@ structure Refute_Extract = struct
               "      val (hit, final_state) =\n" ^
               "        loop (Int.max (0, draws)) state\n" ^
               "  in {hit = hit, complete = !complete,\n" ^
-              "      table = refute_table_id, state = final_state,\n" ^
+              "      state = final_state,\n" ^
               "      tests = !tests, match_failures = !match_failures,\n" ^
               "      assumption_satisfied = !assumption_satisfied,\n" ^
               "      conclusion_evaluated = !conclusion_evaluated,\n" ^
@@ -4078,33 +4038,25 @@ structure Refute_Extract = struct
         in payload plan end) plans
       val cards = String.concat
         (List.map card_declaration (Lib.enumerate 0 plans))
-      val table_id = Refute_EvalSML.register_term_tables
+      val tables = Refute_EvalSML.term_tables
         (rev (!(#list constructor_terms))) (rev (!(#list raw_terms)))
-      fun finish () =
-        let
-          val table_declaration =
-            "val refute_table_id = " ^ integer table_id ^ "\n"
-          val card_names = List.map (fn index =>
-            "card_" ^ integer (index + 1))
-            (List.tabulate (length plans, fn x => x))
-          val dispatch =
-            "val test_cards = Vector.fromList [" ^
-            join ", " card_names ^ "]\n" ^
-            "fun dispatch card genuine_only size draws state =\n" ^
-            "  Vector.sub (test_cards, card - 1)\n" ^
-            "    genuine_only size draws state\n" ^
-            install_source "size"
-          val _ = drain_definitions context
-          val source = source_prefix context ^
-            definition_declarations context ^ "\n" ^
-            generator_runtime ^ "\n" ^ exhaustive_generators ^
-            random_generators ^ enum_declarations ^ table_declaration ^
-            cards ^ dispatch
-        in
-          {source = source, entry = "install ()", table = table_id}
-        end
+      val card_names = List.map (fn index =>
+        "card_" ^ integer (index + 1))
+        (List.tabulate (length plans, fn x => x))
+      val dispatch =
+        "val test_cards = Vector.fromList [" ^
+        join ", " card_names ^ "]\n" ^
+        "fun dispatch card genuine_only size draws state =\n" ^
+        "  Vector.sub (test_cards, card - 1)\n" ^
+        "    genuine_only size draws state\n" ^
+        install_source
+      val _ = drain_definitions context
+      val source = source_prefix context ^
+        definition_declarations context ^ "\n" ^
+        generator_runtime ^ "\n" ^ exhaustive_generators ^
+        random_generators ^ enum_declarations ^ cards ^ dispatch
     in
-      finish_or_unregister table_id finish
+      {source = source, entry = "install ()", table = tables}
     end
 
   (* Compile the first-order bridge between generic narrowing terms and the
@@ -4666,50 +4618,44 @@ structure Refute_Extract = struct
           "    | Refute_Narrow.PlainExhausted {tests, decided, complete} =>\n" ^
           "        (NONE, tests, decided, complete)\n"
 
-      val table_id = Refute_EvalSML.register_term_tables
+      val tables = Refute_EvalSML.term_tables
         (rev (!(#list constructor_terms))) (rev (!(#list raw_terms)))
-      fun finish () =
-        let
-          val _ = drain_definitions context
-          val runtime =
-            "val refute_table_id = " ^ integer table_id ^ "\n" ^
-            replay_rebuild ^
-            "fun candidate depth arguments case_tree genuine =\n" ^
-            "  (" ^ environment_source ^ ", " ^
-            ground_environment_source ^ ", case_tree, genuine)\n" ^
-            "fun accept_hit depth genuine_only arguments genuine =\n" ^
-            "  (not genuine_only orelse Refute_Narrow.all_ground arguments)\n" ^
-            "  andalso not (Refute_EvalSML.ignored_hit_now\n" ^
-            "    (candidate depth arguments NONE genuine))\n" ^
-            "fun make_hit depth arguments case_tree genuine =\n" ^
-            "  let val found = candidate depth arguments case_tree genuine\n" ^
-            "  in if Refute_EvalSML.ignored_hit_now found then NONE\n" ^
-            "     else SOME found\n  end\n" ^
-            "fun dispatch card genuine_only depth draws state =\n" ^
-            "  if card <> 1 then raise Subscript else\n" ^
-            "  let\n    " ^ engine ^
-            "  in {hit = hit, complete = complete, table = refute_table_id,\n" ^
-            "      state = state, tests = tests, match_failures = 0,\n" ^
-            (* Narrowing evaluates one combined prenex formula per
-               candidate, so it has no separate assumption/conclusion
-               phase -- but [tests] still conflates decided rows
-               ([Known]) with rows that only got refined further
-               ([NeedsRefinement]).  [decided] is the honest count of
-               the former; [tests] is every attempt, decided or not, so
-               it is the candidates_generated denominator. *)
-            "      assumption_satisfied = decided,\n" ^
-            "      conclusion_evaluated = decided,\n" ^
-            "      candidates_generated = tests}\n" ^
-            "  end\n" ^
-            install_source "depth"
-          val source = source_prefix context ^
-            definition_declarations context ^ "\n" ^ shape_declaration ^
-            conversions ^ reconstructions ^ evaluate ^ runtime
-        in
-          {source = source, entry = "install ()", table = table_id}
-        end
+      val _ = drain_definitions context
+      val runtime =
+        replay_rebuild ^
+        "fun candidate depth arguments case_tree genuine =\n" ^
+        "  (" ^ environment_source ^ ", " ^
+        ground_environment_source ^ ", case_tree, genuine)\n" ^
+        "fun accept_hit depth genuine_only arguments genuine =\n" ^
+        "  (not genuine_only orelse Refute_Narrow.all_ground arguments)\n" ^
+        "  andalso not (Refute_EvalSML.ignored_hit_now\n" ^
+        "    (candidate depth arguments NONE genuine))\n" ^
+        "fun make_hit depth arguments case_tree genuine =\n" ^
+        "  let val found = candidate depth arguments case_tree genuine\n" ^
+        "  in if Refute_EvalSML.ignored_hit_now found then NONE\n" ^
+        "     else SOME found\n  end\n" ^
+        "fun dispatch card genuine_only depth draws state =\n" ^
+        "  if card <> 1 then raise Subscript else\n" ^
+        "  let\n    " ^ engine ^
+        "  in {hit = hit, complete = complete, state = state,\n" ^
+        "      tests = tests, match_failures = 0,\n" ^
+        (* Narrowing evaluates one combined prenex formula per
+           candidate, so it has no separate assumption/conclusion
+           phase -- but [tests] still conflates decided rows
+           ([Known]) with rows that only got refined further
+           ([NeedsRefinement]).  [decided] is the honest count of
+           the former; [tests] is every attempt, decided or not, so
+           it is the candidates_generated denominator. *)
+        "      assumption_satisfied = decided,\n" ^
+        "      conclusion_evaluated = decided,\n" ^
+        "      candidates_generated = tests}\n" ^
+        "  end\n" ^
+        install_source
+      val source = source_prefix context ^
+        definition_declarations context ^ "\n" ^ shape_declaration ^
+        conversions ^ reconstructions ^ evaluate ^ runtime
     in
-      finish_or_unregister table_id finish
+      {source = source, entry = "install ()", table = tables}
     end
 
   val active_narrowing_window :

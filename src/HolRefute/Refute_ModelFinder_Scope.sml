@@ -1,4 +1,4 @@
-structure Refute_ModelFinder_Scope = struct
+structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
   open Portable Feedback
 
   type hol_type = Type.hol_type

@@ -1,4 +1,4 @@
-structure Refute_Narrow = struct
+structure Refute_Narrow :> Refute_Narrow = struct
   type hol_type = Type.hol_type
   type position = int list
   structure Util = Refute_Util

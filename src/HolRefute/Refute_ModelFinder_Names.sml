@@ -1,4 +1,4 @@
-structure Refute_ModelFinder_Names = struct
+structure Refute_ModelFinder_Names :> Refute_ModelFinder_Names = struct
   type term = Term.term
   type hol_type = Type.hol_type
 

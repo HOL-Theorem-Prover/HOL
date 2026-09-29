@@ -3,19 +3,13 @@ open HolKernel Parse boolLib bossLib
 (* HOL synthesis for depth-bounded SmartGen enumerators: the equations are
    defined as ordinary constants, which the compute substrate then
    evaluates. *)
-structure Refute_EvalEnum = struct
+structure Refute_EvalEnum :> Refute_EvalEnum = struct
   type term = Term.term
   type hol_type = Type.hol_type
   structure Util = Refute_Util
 
   exception Invalid of string
   exception CleanupFailed of exn
-
-  (* Private deterministic fault-injection seam.  Tests arm it only while
-     checking cleanup after the definition has landed; production leaves it
-     at NONE. *)
-  val post_definition_failure_hook =
-    ref (NONE : (Thm.thm -> unit) option)
 
   fun reject message = raise Invalid ("smart plan: " ^ message)
 
@@ -760,8 +754,6 @@ structure Refute_EvalEnum = struct
             (conjunction (List.concat (map equations skeletons)))]
         val _ = quiet_theory_work (fn () => List.app after_define theorems)
         val theorem = LIST_CONJ theorems
-        val _ = Option.app (fn hook => hook theorem)
-          (!post_definition_failure_hook)
         fun defined variable = Term.prim_mk_const
           {Thy = Theory.current_theory (), Name = #1 (Term.dest_var variable)}
         val enumerators = map (fn
@@ -785,49 +777,51 @@ structure Refute_EvalEnum = struct
     Term.list_mk_comb (function,
       generator_values @ inputs @ [numSyntax.term_of_int fuel])
 
-  (* Shared process-global theory bracket: HOL's theory state tolerates one
-     mutator at a time, so every substrate's definitions serialize on it.
-
-     An ownerless binary lock rather than a [Mutex.mutex]: the bracket is
-     released by whichever thread runs the substrate's [close], and
-     [Refute_QC.bounded_close] runs a cleanup on a thread of its own, so
-     the releasing thread is not in general the one that took the lock.
-     Poly/ML leaves [Mutex.unlock] undefined in that case. *)
-  val theory_lock = Synchronized.var "Refute evaluator theory" false
-
-  fun try_lock_theory () =
-    Synchronized.change_result theory_lock
-      (fn held => (not held, true))
-
-  fun unlock_theory () = Synchronized.change theory_lock (fn _ => false)
-
-  fun lock_interruptibly restore =
-    Util.acquire_interruptibly restore try_lock_theory
-
-  (* Prefix allocation is independent of the theory bracket: compute
-     allocates its definition prefix before the first run, ahead of taking
-     [theory_lock]. *)
-  val name_mutex = Mutex.mutex ()
-  val name_serial = ref 0
-
-  fun fresh_prefix stem =
-    Multithreading.synchronized "Refute evaluator names" name_mutex
-      (fn () =>
-        let
-          val serial = !name_serial
-          val _ = name_serial := serial + 1
-        in
-          stem ^ Int.toString serial ^ "_"
-        end)
-
   fun type_names () = List.map #1 (Theory.types "-")
   fun constant_names () =
     List.map (fn tm => #1 (Term.dest_const tm)) (Theory.constants "-")
   fun binding_names () = List.map (fn ((_, name), _) => name) (DB.thy "-")
 
+  (* The first [stem ^ n ^ "_"] that starts no name in the current theory.
+     Only called inside the bracket, whose lock keeps it fresh until the
+     definitions land; the revert frees it for the next bracket. *)
+  fun fresh_prefix stem =
+    let
+      val names = type_names () @ constant_names () @ binding_names ()
+      fun free prefix =
+        not (List.exists (String.isPrefix prefix) names)
+      fun search serial =
+        let val prefix = stem ^ Int.toString serial ^ "_"
+        in if free prefix then prefix else search (serial + 1) end
+    in
+      search 0
+    end
+
   type snapshot =
     {theory : string, types : string list, constants : string list,
      bindings : string list}
+
+  (* The theory bracket: HOL's theory state tolerates one mutator at a
+     time, so every substrate's definitions serialize on it.  [Open] holds
+     the baseline the bracket reverts to.
+
+     An ownerless lock rather than a [Mutex.mutex]: the bracket is released
+     by whichever thread runs the substrate's [close], and
+     [Refute_QC.bounded_close] runs a cleanup on a thread of its own, so
+     the releasing thread is not in general the one that took the lock.
+     Poly/ML leaves [Mutex.unlock] undefined in that case. *)
+  datatype bracket = Unlocked | Locked | Open of snapshot
+
+  val bracket = Synchronized.var "Refute evaluator theory" Unlocked
+
+  fun try_lock_theory () =
+    Synchronized.change_result bracket
+      (fn Unlocked => (true, Locked) | held => (false, held))
+
+  fun unlock_theory () = Synchronized.change bracket (fn _ => Unlocked)
+
+  fun lock_interruptibly restore =
+    Util.acquire_interruptibly restore try_lock_theory
 
   fun snapshot () : snapshot =
     {theory = Theory.current_theory (), types = type_names (),
@@ -886,8 +880,7 @@ structure Refute_EvalEnum = struct
      from the first definition it makes until [close], and [Refute_Core]
      refuses a Refute call made from inside a running one, so no thread can
      reach a second open while holding the first.  A second test's open
-     therefore waits on [theory_lock], as another thread's would. *)
-  val bracket_open = ref (NONE : snapshot option)
+     therefore waits on [bracket], as another thread's would. *)
 
   (* Both of these must be called with interrupts masked, so that a lock
      is never acquired or released without its bookkeeping. *)
@@ -903,15 +896,17 @@ structure Refute_EvalEnum = struct
           Exn.Exn error =>
             (Refute_SmartGen.leave_private_theory ();
              unlock_theory (); raise error)
-        | Exn.Res baseline => bracket_open := SOME baseline
+        | Exn.Res baseline =>
+            Synchronized.change bracket (fn _ => Open baseline)
     end
 
   (* Returns the close's cleanup outcome for the caller to release once it
      has decided which exception wins. *)
   fun leave_theory_bracket () =
     let
-      val baseline = !bracket_open
-      val _ = bracket_open := NONE
+      val baseline = Synchronized.change_result bracket
+        (fn Open baseline => (SOME baseline, Locked)
+          | held => (NONE, held))
       val cleanup =
         case baseline of
             NONE => Exn.Res ()

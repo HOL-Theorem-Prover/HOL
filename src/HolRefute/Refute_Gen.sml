@@ -1,4 +1,4 @@
-structure Refute_Gen = struct
+structure Refute_Gen :> Refute_Gen = struct
   type term = Term.term
   type hol_type = Type.hol_type
   structure Util = Refute_Util
@@ -31,19 +31,6 @@ structure Refute_Gen = struct
 
   exception NoGenerator of hol_type * string
 
-  val spec_cache : (hol_type, genspec) Redblackmap.dict ref =
-    ref (Redblackmap.mkDict Type.compare)
-
-  val cardinality_cache : (hol_type, int option) Redblackmap.dict ref =
-    ref (Redblackmap.mkDict Type.compare)
-
-  val enumerate_cache : (hol_type, term list option) Redblackmap.dict ref =
-    ref (Redblackmap.mkDict Type.compare)
-
-  val user_generators : (hol_type * custom_gen) list ref = ref []
-  val abstract_specs : (hol_type * genspec) list ref = ref []
-  val abstract_predicates : (hol_type * term) list ref = ref []
-
   (* A family fires on demand, at every concrete instance of a type
      operator, unlike [abstract_specs] which is keyed by one exact type.
      [canonical], if present, picks one term to represent every value a
@@ -54,15 +41,41 @@ structure Refute_Gen = struct
   type generator_family =
     { thy : string, tyop : string, constructors : term list,
       canonical : (term -> term) option }
-  val generator_families : generator_family list ref = ref []
-  val registry_mutex = Mutex.mutex ()
-  val registry_generation = ref 0
 
-  fun synchronized_registry f =
-    Multithreading.synchronized "Refute_Gen.registry" registry_mutex f
+  type registrations =
+    {generators : (hol_type * custom_gen) list,
+     abstract_specs : (hol_type * genspec) list,
+     abstract_predicates : (hol_type * term) list,
+     families : generator_family list}
 
-  fun current_generation () =
-    synchronized_registry (fn () => !registry_generation)
+  (* The registrations and the caches derived from them, in one state so
+     that a registration empties the caches atomically.  Every emptying
+     starts a new [generation]; an entry computed under an older one is
+     not stored. *)
+  type registry =
+    {registrations : registrations,
+     generation : unit ref,
+     specs : (hol_type, genspec) Redblackmap.dict,
+     cardinalities : (hol_type, int option) Redblackmap.dict,
+     enumerations : (hol_type, term list option) Redblackmap.dict}
+
+  fun empty_caches registrations : registry =
+    {registrations = registrations, generation = ref (),
+     specs = Redblackmap.mkDict Type.compare,
+     cardinalities = Redblackmap.mkDict Type.compare,
+     enumerations = Redblackmap.mkDict Type.compare}
+
+  val registry = Refute_Session.state "generators"
+    (empty_caches {generators = [], abstract_specs = [],
+                   abstract_predicates = [], families = []})
+
+  fun registrations () = #registrations (Refute_Session.read registry)
+
+  fun register change =
+    Refute_Session.publish registry (fn ({registrations, ...} : registry) =>
+      empty_caches (change registrations))
+
+  fun current_generation () = #generation (Refute_Session.read registry)
 
   fun same_type (ty1, ty2) = Util.same_type ty1 ty2
 
@@ -74,62 +87,64 @@ structure Refute_Gen = struct
     List.filter (fn (entry_ty, _) => not (same_type (entry_ty, ty))) entries
 
   fun cached_spec ty =
-    synchronized_registry (fn () => Redblackmap.peek (!spec_cache, ty))
+    Redblackmap.peek (#specs (Refute_Session.read registry), ty)
+
+  (* Stores one cache entry, unless the caches were emptied since
+     [generation] was read. *)
+  fun cache generation store =
+    Refute_Session.update registry (fn (current : registry) =>
+      if #generation current = generation then store current else current)
 
   fun cache_spec generation ty spec =
-    synchronized_registry (fn () =>
-      if !registry_generation = generation then
-        spec_cache := Redblackmap.insert (!spec_cache, ty, spec)
-      else ())
+    cache generation (fn {registrations, generation, specs, cardinalities,
+                          enumerations} =>
+      {registrations = registrations, generation = generation,
+       specs = Redblackmap.insert (specs, ty, spec),
+       cardinalities = cardinalities, enumerations = enumerations})
 
   fun cache_cardinality generation ty result =
-    synchronized_registry (fn () =>
-      if !registry_generation = generation then
-        cardinality_cache :=
-          Redblackmap.insert (!cardinality_cache, ty, result)
-      else ())
+    cache generation (fn {registrations, generation, specs, cardinalities,
+                          enumerations} =>
+      {registrations = registrations, generation = generation,
+       specs = specs,
+       cardinalities = Redblackmap.insert (cardinalities, ty, result),
+       enumerations = enumerations})
 
   fun cache_enumeration generation ty result =
-    synchronized_registry (fn () =>
-      if !registry_generation = generation then
-        enumerate_cache := Redblackmap.insert (!enumerate_cache, ty, result)
-      else ())
+    cache generation (fn {registrations, generation, specs, cardinalities,
+                          enumerations} =>
+      {registrations = registrations, generation = generation,
+       specs = specs, cardinalities = cardinalities,
+       enumerations = Redblackmap.insert (enumerations, ty, result)})
 
-  fun invalidate_cache _ =
-    synchronized_registry (fn () =>
-      (registry_generation := !registry_generation + 1;
-       spec_cache := Redblackmap.mkDict Type.compare;
-       cardinality_cache := Redblackmap.mkDict Type.compare;
-       enumerate_cache := Redblackmap.mkDict Type.compare))
+  fun invalidate_cache _ = register (fn registrations => registrations)
 
   val _ = Theory.register_hook
     ("Refute_Gen.spec_of", invalidate_cache)
 
-  fun generator_of ty =
-    synchronized_registry (fn () => lookup_type (!user_generators) ty)
+  fun generator_of ty = lookup_type (#generators (registrations ())) ty
 
   fun predicate_of ty =
-    synchronized_registry (fn () => lookup_type (!abstract_predicates) ty)
+    lookup_type (#abstract_predicates (registrations ())) ty
 
   fun has_registered_generator ty =
-    synchronized_registry (fn () =>
-      Option.isSome (lookup_type (!user_generators) ty) orelse
-      Option.isSome (lookup_type (!abstract_specs) ty))
+    let val {generators, abstract_specs, ...} = registrations ()
+    in
+      Option.isSome (lookup_type generators ty) orelse
+      Option.isSome (lookup_type abstract_specs ty)
+    end
 
   fun register_generator ty generator =
     case (#enumerate generator, #random generator) of
       (NONE, NONE) =>
         raise Fail "Refute_Gen.register_generator: empty generator"
     | _ =>
-        synchronized_registry (fn () =>
-          (user_generators :=
-             (ty, generator) :: remove_type ty (!user_generators);
-           abstract_specs := remove_type ty (!abstract_specs);
-           abstract_predicates := remove_type ty (!abstract_predicates);
-           registry_generation := !registry_generation + 1;
-           spec_cache := Redblackmap.mkDict Type.compare;
-           cardinality_cache := Redblackmap.mkDict Type.compare;
-           enumerate_cache := Redblackmap.mkDict Type.compare))
+        register (fn {generators, abstract_specs, abstract_predicates,
+                      families} =>
+          {generators = (ty, generator) :: remove_type ty generators,
+           abstract_specs = remove_type ty abstract_specs,
+           abstract_predicates = remove_type ty abstract_predicates,
+           families = families})
 
   fun word_kind ty =
     let
@@ -171,7 +186,8 @@ structure Refute_Gen = struct
       (ThmSetData.added_thms
         (ThmSetData.theory_data {settype = "quotient", thy = thy}))
 
-  val quotient_cache : (string list * hol_type list) option ref = ref NONE
+  val quotient_cache = Refute_Session.state "quotient_types"
+    (NONE : (string list * hol_type list) option)
 
   (* Only the sealed ancestors are cached: the open segment still accepts
      new quotient definitions, and a scan that raised found no exporter --
@@ -180,7 +196,7 @@ structure Refute_Gen = struct
     let
       val ancestors = Theory.ancestry "-"
       val cached =
-        case !quotient_cache of
+        case Refute_Session.read quotient_cache of
             SOME (key, tys) => if key = ancestors then SOME tys else NONE
           | NONE => NONE
       val inherited =
@@ -190,7 +206,9 @@ structure Refute_Gen = struct
               let
                 val tys = List.concat (map quotient_types_in ancestors)
               in
-                quotient_cache := SOME (ancestors, tys); tys
+                Refute_Session.update quotient_cache
+                  (fn _ => SOME (ancestors, tys));
+                tys
               end
     in
       quotient_types_in (Theory.current_theory ()) @ inherited
@@ -367,9 +385,10 @@ structure Refute_Gen = struct
           handle Feedback.HOL_ERR _ => [])
 
   (* Registers a constructor family for every concrete instance of a type
-     operator, e.g. FEMPTY/FUPDATE for [:'a |-> 'b].  Session-local, like
-     [abstract_generator]; unlike it, nothing is stored per instance, so
-     [spec_of] builds and caches each encountered instance on demand. *)
+     operator, e.g. FEMPTY/FUPDATE for [:'a |-> 'b].  Not stored with the
+     theory, like [abstract_generator]; unlike it, nothing is stored per
+     instance, so [spec_of] builds and caches each encountered instance on
+     demand. *)
   fun register_generator_family {tyop = {Thy = thy, Tyop = tyop},
         constructors, canonical} =
     let
@@ -385,17 +404,16 @@ structure Refute_Gen = struct
         else bad (thy ^ "$" ^ tyop ^
              " already has TypeBase datatype constructors")
     in
-      synchronized_registry (fn () =>
-        (generator_families :=
+      register (fn {generators, abstract_specs, abstract_predicates,
+                    families} =>
+        {generators = generators, abstract_specs = abstract_specs,
+         abstract_predicates = abstract_predicates,
+         families =
            { thy = thy, tyop = tyop, constructors = constructors,
              canonical = canonical } ::
            List.filter
              (fn fam => not (#thy fam = thy andalso #tyop fam = tyop))
-             (!generator_families);
-         registry_generation := !registry_generation + 1;
-         spec_cache := Redblackmap.mkDict Type.compare;
-         cardinality_cache := Redblackmap.mkDict Type.compare;
-         enumerate_cache := Redblackmap.mkDict Type.compare))
+             families})
     end
 
   fun family_for_in families ty =
@@ -405,23 +423,20 @@ structure Refute_Gen = struct
           List.find (fn fam => #thy fam = Thy andalso #tyop fam = Tyop)
             families
 
-  fun family_for ty =
-    synchronized_registry (fn () => family_for_in (!generator_families) ty)
+  fun family_for ty = family_for_in (#families (registrations ())) ty
 
-  (* Copy the registry once and close over that immutable list, so a
+  (* Read the registry once and close over that immutable list, so a
      family replacement cannot change canonicalization halfway through one
-     model display report and the display walk does not retake
-     [registry_mutex] at every term node. *)
+     model display report. *)
   fun snapshot_family_canonicals () =
-    synchronized_registry (fn () =>
-      let
-        val families = !generator_families
-      in
-        fn ty =>
-          case family_for_in families ty of
-              SOME {canonical, ...} => canonical
-            | NONE => NONE
-      end)
+    let
+      val families = #families (registrations ())
+    in
+      fn ty =>
+        case family_for_in families ty of
+            SOME {canonical, ...} => canonical
+          | NONE => NONE
+    end
 
   (* A registered family's constructors (e.g. FEMPTY/FUPDATE) are as
      [nocompute]/constructor-like as an ordinary datatype's, so
@@ -429,10 +444,9 @@ structure Refute_Gen = struct
      trusts [TypeBase.is_constructor]. *)
   fun is_family_constructor constant =
     Term.is_const constant andalso
-    synchronized_registry (fn () =>
-      List.exists (fn fam =>
-        List.exists (fn c => Term.same_const c constant) (#constructors fam))
-        (!generator_families))
+    List.exists (fn fam =>
+      List.exists (fn c => Term.same_const c constant) (#constructors fam))
+      (#families (registrations ()))
 
   fun own_floor (GenDatatype {min_size, ...}) =
         List.foldl Int.min 1073741823
@@ -448,8 +462,7 @@ structure Refute_Gen = struct
     case generator_of ty of
       SOME generator => GenCustom (ty, generator)
     | NONE =>
-        (case synchronized_registry (fn () =>
-            lookup_type (!abstract_specs) ty) of
+        (case lookup_type (#abstract_specs (registrations ())) ty of
        SOME spec => spec
      | NONE =>
     (case cached_spec ty of
@@ -658,23 +671,17 @@ structure Refute_Gen = struct
                 bad "predicate must be closed"
               else ()
             end
-      val _ = synchronized_registry (fn () =>
-        (user_generators := remove_type ty (!user_generators);
-         abstract_specs := (ty, spec) :: remove_type ty (!abstract_specs);
-         (case pred of
-              NONE =>
-                abstract_predicates :=
-                  remove_type ty (!abstract_predicates)
-            | SOME predicate =>
-                abstract_predicates :=
-                  (ty, predicate) ::
-                    remove_type ty (!abstract_predicates));
-         registry_generation := !registry_generation + 1;
-         spec_cache := Redblackmap.mkDict Type.compare;
-         cardinality_cache := Redblackmap.mkDict Type.compare;
-         enumerate_cache := Redblackmap.mkDict Type.compare))
     in
-      ()
+      register (fn {generators, abstract_specs, abstract_predicates,
+                    families} =>
+        {generators = remove_type ty generators,
+         abstract_specs = (ty, spec) :: remove_type ty abstract_specs,
+         abstract_predicates =
+           (case pred of
+                NONE => remove_type ty abstract_predicates
+              | SOME predicate =>
+                  (ty, predicate) :: remove_type ty abstract_predicates),
+         families = families})
     end
 
   fun cap_product values =
@@ -767,8 +774,8 @@ structure Refute_Gen = struct
   fun cardinality ty =
     let val generation = current_generation ()
     in
-    case synchronized_registry (fn () =>
-        Redblackmap.peek (!cardinality_cache, ty)) of
+    case Redblackmap.peek
+           (#cardinalities (Refute_Session.read registry), ty) of
         SOME cached => cached
       | NONE =>
     let
@@ -828,8 +835,8 @@ structure Refute_Gen = struct
   fun enumerate ty =
     let val generation = current_generation ()
     in
-    case synchronized_registry (fn () =>
-        Redblackmap.peek (!enumerate_cache, ty)) of
+    case Redblackmap.peek
+           (#enumerations (Refute_Session.read registry), ty) of
         SOME cached => cached
       | NONE =>
     let

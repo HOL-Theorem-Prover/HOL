@@ -1,4 +1,4 @@
-structure Refute_QC = struct
+structure Refute_QC :> Refute_QC = struct
   type term = Term.term
   open Refute_Cert Refute_Eval
   structure SmartGen = Refute_SmartGen
@@ -1349,16 +1349,18 @@ structure Refute_QC = struct
       Selected of string * compiled_test
     | SelectionFailed of string list
 
-  (* A smart-gate compilation owns backend resources, so key the cache by
-     the call token [Refute_Core] propagates: the run-release hook then
-     closes exactly this call's selection, and none outlives its call. *)
+  (* A smart-gate compilation owns backend resources, so it is held in
+     the call's own session: the run-release hook then closes exactly this
+     call's selection, and none outlives its call. *)
   val smart_gate_cache =
-    ref ([] : (unit ref * plan list * selected_compile) list)
-  val smart_gate_mutex = Mutex.mutex ()
+    Refute_Session.local_state "smart_gate"
+      (NONE : (plan list * selected_compile) option)
 
-  fun smart_gate_context () =
-    case Thread_Data.get Refute_Core.active_refute_context of
-        SOME context => context
+  (* Swaps in [entry] and returns the call's previous selection. *)
+  fun exchange_smart_gate_selection entry =
+    case Refute_Session.current () of
+        SOME _ =>
+          Refute_Session.transact smart_gate_cache (fn old => (old, entry))
       | NONE => raise Fail "Refute_QC: no active Refute call"
 
   fun same_terms left right =
@@ -1482,8 +1484,10 @@ structure Refute_QC = struct
     let
       val outcome = Synchronized.var "Refute substrate cleanup"
         (NONE : unit Exn.result option)
+      (* The close's theory events belong to this call's session. *)
+      val session = Refute_Session.current ()
       fun body () =
-        let val result = Exn.capture close ()
+        let val result = Exn.capture (Refute_Session.bind session close) ()
         in Synchronized.change outcome (fn _ => SOME result) end
       val _ = Standard_Thread.fork
         {name = "refute-cleanup", stack_limit = NONE, interrupts = false} body
@@ -1523,42 +1527,17 @@ structure Refute_QC = struct
     | close_selection (Selected (_, test)) =
         Exn.release (bounded_close (#close test))
 
-  fun same_smart_gate_context (left, right) =
-    Portable.pointer_eq (left, right)
-
-  fun remove_smart_gate_selection context =
-    Multithreading.synchronized "Refute smart gate cache" smart_gate_mutex
-      (fn () =>
-        let
-          fun remove [] kept = (NONE, List.rev kept)
-            | remove ((entry as (old_context, plans, selection)) :: rest) kept =
-                if same_smart_gate_context (context, old_context) then
-                  (SOME (plans, selection), List.revAppend (kept, rest))
-                else remove rest (entry :: kept)
-          val (selection, cache) = remove (!smart_gate_cache) []
-          val _ = smart_gate_cache := cache
-        in
-          selection
-        end)
-
   fun clear_smart_gate_cache () =
-    case remove_smart_gate_selection (smart_gate_context ()) of
+    case exchange_smart_gate_selection NONE of
         NONE => ()
       | SOME (_, selection) => close_selection selection
 
   fun store_smart_gate_selection plans selection =
-    let
-      val context = smart_gate_context ()
-      val old = remove_smart_gate_selection context
-      val _ = Option.app (close_selection o #2) old
-    in
-      Multithreading.synchronized "Refute smart gate cache" smart_gate_mutex
-        (fn () => smart_gate_cache :=
-          (context, plans, selection) :: !smart_gate_cache)
-    end
+    Option.app (close_selection o #2)
+      (exchange_smart_gate_selection (SOME (plans, selection)))
 
   fun take_smart_gate_selection plans =
-    case remove_smart_gate_selection (smart_gate_context ()) of
+    case exchange_smart_gate_selection NONE of
         NONE => NONE
       | SOME (cached_plans, selection) =>
           if same_plans cached_plans plans then SOME selection

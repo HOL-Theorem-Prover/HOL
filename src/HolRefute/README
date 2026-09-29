@@ -14,7 +14,8 @@ User interface
 goal unchanged.  `QUICKCHECK_TAC`, `NARROWING_TAC` and `MODEL_REFUTE_TAC`
 narrow the selection to exhaustive/random/narrowing, narrowing only, and the
 model finder only.  `REFUTE_TAC_WITH [upd_...]` applies `config -> config`
-updaters, left to right, to `the_config` for one application;
+updaters, left to right, to the stored configuration of the context it is
+applied in (`set_config` replaces it, `with_config` scopes one);
 `REFUTE_CONFIG_TAC cfg` uses exactly `cfg`.  `refute_with` and
 `refute_goal_with` are the same outside the tactic layer; `apply_updates`
 and `current_config` build configurations from update lists.
@@ -141,8 +142,9 @@ keyed on the head constant under its conclusion, looking through a
 negation; one with no constant head is dropped with a warning when the
 tables are built rather than aborting harvesting.
 
-The `register_*` entry points and `abstract_generator` are session-local
-ML state; the `export_refute_*` sets persist with the theory.  Typedef and
+The `register_*` entry points and `abstract_generator` change Refute's
+state in the HOL context, which is not stored with the theory; the
+`export_refute_*` sets persist with the theory.  Typedef and
 quotient metadata is harvested lazily on first demand;
 `harvest_registrations ()` sweeps the ancestry and the current theory
 once.  `refuteTheory` supplies ersatz definitions (`wf'`, `wfrec'`,
@@ -171,8 +173,10 @@ Module layout
 
 * `Refute.sig`/`Refute.sml`: public facade over `Refute_Core`.
 * `Refute_Core`: types, configuration, backend registry, orchestration.
+* `Refute_Session`: Refute's state in the HOL context; one call reads the
+  context captured at its entry and commits its cache changes at exit.
 * `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
-* `Refute_Eval` (+ `.sig`): substrate seam and PRNG;
+* `Refute_Eval`: substrate seam and PRNG;
   `Refute_EvalCompute`, `Refute_EvalSML`: substrates;
   `Refute_EvalEnum`: shared enumerator compiler;
   `Refute_EvalRat`, `Refute_EvalReal`: built-in generators and compsets;

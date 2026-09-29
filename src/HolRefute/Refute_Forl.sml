@@ -1346,15 +1346,15 @@ structure Refute_Forl :> REFUTE_FORL = struct
       end
 
   val configured =
-    Synchronized.var "Refute_Forl.configured" (NONE : bool option)
+    Refute_Session.state "kodkodi_configured" (NONE : bool option)
 
   fun is_configured () =
-    Synchronized.change_result configured (fn cached =>
-      case cached of
-          SOME answer => (answer, cached)
-        | NONE =>
-            let val answer = launcher_is_configured ()
-            in (answer, SOME answer) end)
+    case Refute_Session.read configured of
+        SOME answer => answer
+      | NONE =>
+          let val answer = launcher_is_configured ()
+          in Refute_Session.update configured (fn _ => SOME answer); answer
+          end
 
   fun uname field =
     case List.find (fn (name, _) => name = field) (Posix.ProcEnv.uname ()) of
@@ -1697,9 +1697,8 @@ structure Refute_Forl :> REFUTE_FORL = struct
         end
     end
 
-  val cached_outcome =
-    Synchronized.var "Refute_Forl.cached_outcome"
-      (NONE : ((int * problem list) * outcome) option)
+  val cached_outcome = Refute_Session.state "kodkodi_outcome"
+    (NONE : ((int * problem list) * outcome) option)
 
   (* ListPair.allEq is already false on unequal lengths. *)
   fun problem_lists_equivalent (first, second) =
@@ -1720,7 +1719,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
         in
           (case outcome of
                Normal (_, _, "") =>
-                 Synchronized.change cached_outcome
+                 Refute_Session.update cached_outcome
                    (fn _ => SOME ((max_solutions, problems), outcome))
              | _ => ());
           outcome
@@ -1728,7 +1727,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
     in
       if debug orelse overlord then solve ()
       else
-        case Synchronized.value cached_outcome of
+        case Refute_Session.read cached_outcome of
             SOME (key, outcome) =>
               if keys_equivalent (key, (max_solutions, problems)) then outcome
               else fresh ()

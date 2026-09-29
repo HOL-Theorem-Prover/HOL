@@ -1,4 +1,4 @@
-structure Refute_EvalCompute = struct
+structure Refute_EvalCompute :> Refute_EvalCompute = struct
   type term = Term.term
   open Refute_Cert Refute_Eval
   structure Util = Refute_Util
@@ -430,13 +430,12 @@ structure Refute_EvalCompute = struct
           (int * (Refute_EvalEnum.definition * term list)) list)
       val active : Refute_EvalEnum.definition Refute_EvalEnum.held_bracket =
         Refute_EvalEnum.held_bracket (fn () => enum_cache := [])
-      val prefix = Refute_EvalEnum.fresh_prefix "refute_compute_enum_"
-
       fun close () = Refute_EvalEnum.close_held_bracket active
 
       fun start () = Refute_EvalEnum.start_held_bracket active (fn () =>
         Refute_EvalEnum.define
-          {prefix = prefix, programs = programs, after_define = fn _ => ()})
+          {prefix = Refute_EvalEnum.fresh_prefix "refute_compute_enum_",
+           programs = programs, after_define = fn _ => ()})
 
       fun enum_values size program inputs =
         let

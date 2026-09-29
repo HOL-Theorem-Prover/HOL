@@ -128,21 +128,12 @@ structure Refute_Eval :> Refute_Eval = struct
 
   val rand_below_limit = rand_output_divisor
 
-  val session_seed : IntInf.int ref = ref 42
-  val session_seed_mutex = Mutex.mutex ()
+  val session_seed = Refute_Session.state "seed" (42 : IntInf.int)
 
-  (* Reserving an implicit seed advances the session stream exactly once.
-     Backend workers reserve concurrently within one call, which the output
-     mutex does not cover, so this stream needs a mutex of its own. *)
+  (* Reserving an implicit seed advances the session stream exactly once,
+     also when backend workers of one call reserve concurrently. *)
   fun take_session_seed () =
-    Multithreading.synchronized "Refute random seed" session_seed_mutex
-      (fn () =>
-        let
-          val seed = !session_seed
-          val _ = session_seed := rand_next seed
-        in
-          seed
-        end)
+    Refute_Session.transact session_seed (fn seed => (seed, rand_next seed))
 
   (* Preorder, may contain duplicates; callers dedup as needed. *)
   fun plan_gen_types plan =
@@ -278,11 +269,8 @@ structure Refute_Eval :> Refute_Eval = struct
       else NONE
     end
 
-  val substrate_registry : substrate list ref = ref []
-  val substrate_mutex = Mutex.mutex ()
-
-  fun synchronized_substrates f =
-    Multithreading.synchronized "Refute_Eval.substrates" substrate_mutex f
+  val substrate_registry =
+    Refute_Session.state "substrates" ([] : substrate list)
 
   fun substrate_before (left : substrate) (right : substrate) =
     #priority left < #priority right orelse
@@ -295,15 +283,9 @@ structure Refute_Eval :> Refute_Eval = struct
         else other :: insert substrate rest
 
   fun register_substrate substrate =
-    synchronized_substrates (fn () =>
-      let
-        val remaining = List.filter
-          (fn registered => #name registered <> #name substrate)
-          (!substrate_registry)
-      in
-        substrate_registry := insert substrate remaining
-      end)
+    Refute_Session.publish substrate_registry (fn registry =>
+      insert substrate (List.filter
+        (fn registered => #name registered <> #name substrate) registry))
 
-  fun get_substrates () =
-    synchronized_substrates (fn () => !substrate_registry)
+  fun get_substrates () = Refute_Session.read substrate_registry
 end

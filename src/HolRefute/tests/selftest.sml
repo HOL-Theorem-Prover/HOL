@@ -317,14 +317,24 @@ val _ = test "preset tactics leave the goal unchanged" (fn () =>
   tactic_keeps (REFUTE_TAC_WITH [only [Random], upd_size 2])
     ([], arith))
 
-val _ = test "REFUTE_TAC reads the_config at application time" (fn () =>
+val _ = test "REFUTE_TAC reads the stored configuration at application"
+  (fn () =>
   let
-    val raised = ref false
     fun body () =
       (ignore (runtac REFUTE_TAC ([], arith)); false)
       handle Feedback.HOL_ERR e => Feedback.top_function_of e = "expect"
   in
-    Lib.with_flag (the_config, exhaustive |> upd_expect ExpectNone) body ()
+    with_config (exhaustive |> upd_expect ExpectNone) body ()
+  end)
+
+val _ = test "REFUTE_TAC reads the configuration of its own context"
+  (fn () =>
+  let
+    val ctxt =
+      with_config (exhaustive |> upd_expect ExpectNone) Context.snapshot ()
+  in
+    (ignore (REFUTE_TAC ([], arith) ctxt); false)
+    handle Feedback.HOL_ERR e => Feedback.top_function_of e = "expect"
   end)
 
 val _ = raises_holerr "REFUTE_CONFIG_TAC honours the given expectation"
@@ -477,8 +487,7 @@ val _ = test "show_config prints every field" (fn () =>
       "mf.bisim_depth = [9]", "mf.finitize = [NONE => NONE]",
       "mf.whack = []", "mf.need = NONE", "mf.merge_type_vars = false"] ^ "\n"
     val (_, text) =
-      Lib.with_flag (the_config, upd_quiet true (upd_certify false
-                                                   default_config))
+      with_config (upd_quiet true (upd_certify false default_config))
         (Lib.with_flag (Feedback.MESG_to_string, fn text => text)
           (fn () => capture 1 show_config)) ()
   in
@@ -835,6 +844,7 @@ val _ = Datatype.Datatype `rg_rose = RGLeaf | RGNode (rg_rose list)`
 val _ = Datatype.Datatype
   `rg_stream_record = <| rg_stream_field : num; rg_stream_flag : bool |>`
 val _ = Datatype.Datatype `rg_custom = RGC0 | RGC1`
+val _ = Datatype.Datatype `rg_reentrant = RGR0 | RGR1`
 val _ = Datatype.Datatype `rg_avl = RGET | RGMKT num rg_avl rg_avl num`
 
 val rx_enum_code_def = TotalDefn.Define
@@ -1072,11 +1082,11 @@ val _ = test "an expired deadline never claims NoCounterexample" (fn () =>
     val cfg = exhaustive |> only [RegisteredBackend "selftest-expired"]
     val _ = with_enabled [enabled]
       (fn () => ignore (refute cfg ``(b : bool) \/ ~b``))
-    (* The smart-gate cache is keyed by the call token, so the backend body
-       needs one even with no call around it. *)
+    (* The smart-gate cache lives in the call's session, so the backend
+       body needs one even with no call around it. *)
     fun run_exhaustive config =
-      Thread_Data.setmp Refute_Core.active_refute_context (SOME (ref ()))
-        (Refute_QC.strategy_run Refute_Eval.Exhaustive config) (!seen)
+      Refute_Session.run (Context.snapshot ()) (fn () =>
+        Refute_QC.strategy_run Refute_Eval.Exhaustive config (!seen))
   in
     not (null (!seen)) andalso
     run_exhaustive exhaustive == NoCounterexample andalso
@@ -2090,14 +2100,14 @@ val _ = test "check_unused_assms NONE uses a quickcheck-only profile"
       val theorem = ("selection", refuteUnusedTheory.needed_assumption)
     in
       with_enabled [enabled] (fn () =>
-        Lib.with_flag (the_config,
-          default_config |> upd_search AllBackends |> upd_substrate Compute
+        with_config
+          (default_config |> upd_search AllBackends |> upd_substrate Compute
             |> upd_size 2 |> upd_timeout 2.0)
           (fn () =>
             (seen := false;
              check_unused_assms NONE theorem = ("selection", SOME []) andalso
              not (!seen) andalso
-             check_unused_assms (SOME (!the_config)) theorem
+             check_unused_assms (SOME (current_config [])) theorem
                = ("selection", SOME []) andalso
              !seen)) ())
     end)
@@ -2594,6 +2604,21 @@ fun accepted f = (f (); true) handle Feedback.HOL_ERR _ => false
 fun rejected f = (f (); false) handle Feedback.HOL_ERR _ => true
 fun rejected_with message f =
   (f (); false) handle Feedback.HOL_ERR e => Feedback.message_of e = message
+
+(* A registration from inside a running call publishes to the call's own
+   view as well as the live context; validation there reads other state. *)
+val _ = test "a registration made during a Refute call completes" (fn () =>
+  let
+    fun reregister () =
+      register_typedef {ty = ``:zoo_three``, abs = ``zoo_three_abs``,
+                        rep = ``zoo_three_rep``,
+                        absrep_thms = [zoo_three_absrep]}
+    val _ = register_generator ``:rg_reentrant``
+      {enumerate = SOME (fn _ => (reregister (); [``RGR0``, ``RGR1``])),
+       random = NONE}
+  in
+    is_cex (refute exhaustive ``(r : rg_reentrant) = RGR0``)
+  end)
 
 val _ = test "codatatype registrations are validated" (fn () =>
   let

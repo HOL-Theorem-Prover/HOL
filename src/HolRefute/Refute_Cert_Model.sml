@@ -1,4 +1,4 @@
-structure Refute_Cert_Model = struct
+structure Refute_Cert_Model :> Refute_Cert_Model = struct
   open Refute_Cert
   structure Util = Refute_Util
   structure MFH = Refute_ModelFinder_HOL
