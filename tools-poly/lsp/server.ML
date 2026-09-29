@@ -2706,6 +2706,25 @@ fun start {diag, dbg, warnings} = let
         send (mkNotif "$/progress" (fn print => (
           print "{\"token\":"; encString progressToken print;
           print ",\"value\":{\"kind\":\"end\"}}")))
+      (* The pass is over, and the state goes back before anyone is
+         told so.  A client acts on `$/compileCompleted' by asking --
+         the goals pane refreshes on it precisely because there was no
+         answer before it -- and a request landing while this pass
+         still holds the state is refused by `stateNotReady' with
+         "pending".  On a file whose tail is worth splicing that is a
+         window of hundreds of milliseconds, so the refresh the
+         notification provoked was reliably the one refused, and the
+         pane had nothing further to wait for.
+
+         Releasing and announcing are one step so that an edit cannot
+         separate them again; the bare `releaseState' at the end of
+         the thread is the backstop for the ways out that announce
+         nothing. *)
+      fun finishPass () = (
+        releaseState ();
+        sendProgressEnd ();
+        send (mkNotif "$/compileCompleted" (fn print => (
+          print "{\"uri\":"; encString uri print; print "}"))))
 
       val ls = ref (beforeCompile ())
       (* Where the last declaration this pass compiled ended.  With
@@ -3041,14 +3060,50 @@ fun start {diag, dbg, warnings} = let
                               lines = lines}
                  fun spanStart (HOL_IDE.Built ((a, _), _, _)) =
                      FixedInt.toInt a
-                 (* cumulative and newest-first, so the declarations
-                    after the edited one are a prefix *)
-                 fun tailOf [] = []
-                   | tailOf (t :: ts) =
-                     if spanStart t >= oldDecEnd
-                     then HOL_IDE.shiftBuilt delta t :: tailOf ts
-                     else []
                  val fresh = !trees
+                 (* How many trees at the head of a cumulative list
+                    are below the edit.  `#builtTrees' is cumulative
+                    and newest-first, so they are a prefix. *)
+                 fun tailLen [] = 0
+                   | tailLen (t :: ts) =
+                     if spanStart t >= oldDecEnd then 1 + tailLen ts else 0
+                 (* The shifted tail of a cumulative list, ending in
+                    the trees this pass built -- which is what every
+                    record below the edit wants in front of them.
+
+                    Shared between the records that want the same
+                    trees, and that is the point.  Every snapshot
+                    below the edit carries every declaration below the
+                    edit, so shifting each one's tail on its own
+                    copies the whole tail once per snapshot in it, and
+                    `shiftBuilt' is a deep copy of a declaration's
+                    AST.  Sharing makes it one shift per declaration.
+
+                    Measured on a file of trivial theorems, a space
+                    typed into the second one, `didChange' to
+                    `$/compileCompleted' -- which is what the user
+                    waits for, the pass holding the state until it is
+                    done.  With declarations below the edit numbering
+                    60 / 120 / 240 / 480: 358 / 461 / 783 / 3172ms
+                    before, 315 / 312 / 361 / 367ms after, i.e. flat
+                    in the size of the tail rather than quadratic.
+
+                    Keyed on the count rather than on the list: two
+                    lists with the same count have the same trees
+                    below the edit, cumulative lists agreeing on a
+                    suffix, and a count is something a list can be
+                    asked for. *)
+                 val tails = ref (Binarymap.mkDict Int.compare)
+                 fun sharedTail (0, _) = #builtTrees fresh
+                   | sharedTail (_, []) = #builtTrees fresh
+                   | sharedTail (n, t :: ts) =
+                     (case Binarymap.peek (!tails, n) of
+                          SOME l => l
+                        | NONE => let
+                            val l = HOL_IDE.shiftBuilt delta t
+                                    :: sharedTail (n - 1, ts)
+                          in tails := Binarymap.insert (!tails, n, l); l end)
+                 fun tailOf ts = sharedTail (tailLen ts, ts)
                  (* Frozen, and from this pass: a snapshot below the
                     edit is preceded by exactly the diagnostics this
                     pass reported, there being none between the edited
@@ -3057,7 +3112,7 @@ fun start {diag, dbg, warnings} = let
                                                 DArray.size (#diags fresh))
                  fun carry (s : declSnapshot) : declSnapshot = {
                    endByte = #endByte s + delta,
-                   builtTrees = tailOf (#builtTrees s) @ #builtTrees fresh,
+                   builtTrees = tailOf (#builtTrees s),
                    diags = freshDiags,
                    plugins = LSPExtension.reusePluginData
                                reuse (#plugins s) (#plugins fresh),
@@ -3068,7 +3123,7 @@ fun start {diag, dbg, warnings} = let
                in
                  trees := {
                    done = #done fresh, pos = #pos fresh,
-                   builtTrees = tailOf (#builtTrees prev) @ #builtTrees fresh,
+                   builtTrees = tailOf (#builtTrees prev),
                    diags = #diags fresh,
                    plugins = LSPExtension.reusePluginData
                                reuse (#plugins prev) (#plugins fresh),
@@ -3105,43 +3160,21 @@ fun start {diag, dbg, warnings} = let
           (* And the state itself goes back before draining, for the
              same reason: the walk the drain forks claims it, and
              `drainFailures` refuses while a compile holds it -- which
-             would be this one asking about itself. *)
-          releaseState ();
-          (* The tail is back, `lastTrees' is this text, and the
-             process is nobody's, so a client acting on this -- and
-             the goals pane acts on it by asking -- gets the answer
-             this compile just produced.  Sent any earlier and the
-             request lands on `stateNotReady' and is refused with
-             "pending": on a file whose tail is worth splicing that is
-             a window of hundreds of milliseconds, so the refresh the
-             notification provoked was reliably the one refused, and
-             the pane had nothing further to wait for. *)
-          sendProgressEnd ();
-          send (mkNotif "$/compileCompleted" (fn print => (
-            print "{\"uri\":"; encString uri print; print "}")));
+             would be this one asking about itself.  `finishPass'
+             releases before it announces. *)
+          finishPass ();
           (!drainFailures uri v handle _ => ()))))
       in (
         case missingDeps () of
           fails as (_::_) => blockOnDeps fails
         | [] => runCompile ()
       ) handle Thread.Interrupt => (
-        sendProgressEnd ();
         (* When the compile aborted because a single dec produced a
            runaway cascade of errors, the diagnostics are complete
            (up to the abort) and clients should treat the compile as
            done, not interrupted.  A user-initiated cancel or a
            didChange-driven stop remain compileInterrupted. *)
-        if !abortedByRunOfErrors then (
-          flushDiags ();
-          send (mkNotif "$/compileCompleted" (fn print => (
-            print "{\"uri\":"; encString uri print; print "}")));
-          lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)};
-          compiledText := #text text;
-          lastProofGen := !LSPExtension.proofGeneration;
-          (* Whatever this pass captured, it stopped at the header, so
-             there is no tail to carry forward from it. *)
-          reusableFrom := ~1;
+        if !abortedByRunOfErrors then let
           (* Elaboration never got past the header: an ancestor that
              loads but whose `open' fails is the case holdep cannot
              see, so treat it exactly like a load failure and stop
@@ -3149,13 +3182,40 @@ fun start {diag, dbg, warnings} = let
              of the last dec that completed, and the header dec runs
              past the last name it declares, so it not having reached
              `headerEnd' is precisely "the header did not compile". *)
-          if !lastPos <= headerEnd andalso not (null declaredNames) then
+          val headerFailed =
+              !lastPos <= headerEnd andalso not (null declaredNames)
+        in
+          flushDiags ();
+          lastTrees := {text = text,
+                        parse = setParseDone (size (#text text)) (!trees)};
+          compiledText := #text text;
+          lastProofGen := !LSPExtension.proofGeneration;
+          (* Whatever this pass captured, it stopped at the header, so
+             there is no tail to carry forward from it. *)
+          reusableFrom := ~1;
+          (* The header did compile -- the cascade is somewhere below
+             it -- so the ancestors are in the graph, which is what
+             `DepsLoaded' says.  Nothing else on this path says it,
+             and a file starts at `DepsUnchecked': left there,
+             `stateNotReady' answers "pending" to every goal-state
+             request for the life of the process, and the client,
+             having just been told the compile finished, asks once and
+             then waits for a notification that is not coming. *)
+          if headerFailed then () else depsBlocked := DepsLoaded;
+          finishPass ();
+          (* After the completion, not before it: a client clears
+             whatever it was blocked on when it hears a compile
+             finished, so a block announced first is a block thrown
+             away. *)
+          if headerFailed then
             markDepsBlocked uri v
               {mods = declaredNames,
                message = "the theory header did not compile"}
-          else ())
-        else send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}"))))
+          else ()
+        end
+        else (sendProgressEnd ();
+              send (mkNotif "$/compileInterrupted" (fn print => (
+                print "{\"uri\":"; encString uri print; print "}")))))
            | e => (
         logMessage ("compile aborted: " ^ exnMessage e);
         sendProgressEnd ();

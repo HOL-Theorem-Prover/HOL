@@ -6094,6 +6094,58 @@ def test_compile_completed_means_the_goal_state_is_askable():
         c.close()
 
 
+def test_a_runaway_cascade_below_the_header_still_answers():
+    """A dec that produces a run of errors aborts the compile, and the
+    server reports that as a completed compile -- the diagnostics are
+    as complete as they are going to get.  Everything that made the
+    claim true used to happen after the notification: `lastTrees' was
+    committed below it and the state was still held.  And one thing
+    never happened at all -- nothing on this path set `depsBlocked',
+    which a file starts at `DepsUnchecked'.  That one does not close
+    on its own: `stateNotReady' then answered "pending" to every
+    goal-state request for the life of the process, and a client that
+    had just been told the compile finished had nothing left to wait
+    for.
+
+    The header compiles here and a theorem above the cascade proves,
+    so there is a real state to ask for; the cascade is below both."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/cascade_state.sml"
+        # `runOfErrorsLimit` hard errors from ONE declaration, with no
+        # Progress in between -- which is what the counter asks for.
+        # A line each of broken SML does not do it: every line is its
+        # own declaration and every declaration resets the count.
+        src = ("Theory cascade_state\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem above:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n\n"
+               "val broken = "
+               + " + ".join(f"nope{i}" for i in range(15)) + "\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60) is not None,
+                    "the abort is reported as a completed compile")
+        # Positive control, and the only thing that says the abort
+        # fired: an ordinary compile of a file with errors in it takes
+        # the other branch entirely and sets `depsBlocked` on the way.
+        time.sleep(1)
+        with c.msgs_lock:
+            logs = [m["params"].get("message", "") for m in c.msgs
+                    if m.get("method") == "window/logMessage"]
+        assert_true(any("errors from a single dec" in l for l in logs),
+                    f"the run of errors aborted the pass ({logs!r})")
+        r = (_send_goalstate(c, 950, uri, 6, 4) or {}).get("result") or {}
+        assert_eq(r.get("theorem"), "above",
+                  f"the theorem above the cascade has a state ({r!r})")
+        assert_eq(r.get("status"), "ok", f"and it is settled ({r!r})")
+    finally:
+        c.close()
+
+
 def test_the_proof_under_the_cursor_is_checked():
     """Asking for goal state used to hold that proof back from the pool
     -- the walker replays the same tactic, so a worker doing it too is
@@ -8191,6 +8243,8 @@ TESTS = [
      test_an_edit_confined_to_a_tactic_is_recognised),
     ("compile_completed_means_the_goal_state_is_askable",
      test_compile_completed_means_the_goal_state_is_askable),
+    ("a_runaway_cascade_below_the_header_still_answers",
+     test_a_runaway_cascade_below_the_header_still_answers),
     ("the_proof_under_the_cursor_is_checked",
      test_the_proof_under_the_cursor_is_checked),
     ("a_name_that_occurs_once_never_gets_an_ordinal",

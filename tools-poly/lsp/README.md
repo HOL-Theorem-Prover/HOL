@@ -653,6 +653,16 @@ end, and anything in the same flow above them goes out of sight.
   which reads as a fault in the proof rather than a server that is not
   ready.
 
+  The refusal is the one a client has to have something to do about,
+  and `$/compileCompleted` is what it waits for: **that notification
+  is sent only once a request made on hearing it will be answered.**
+  It is the last thing a pass does, after it has put the reused tail
+  back, committed what it elaborated and let go of the process — see
+  `finishPass`.  A client is therefore right to refresh on it, and
+  right to expect no further notification, which is why a refusal
+  announced before it was a pane that stayed empty.  Anything else
+  added to that path belongs before the call, not after it.
+
   A tactic whose source doesn't compile never produces an `error`
   either way: the file's compile reports the real message against that
   very text, and the walker would only duplicate and misdescribe it.
