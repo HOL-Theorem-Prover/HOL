@@ -3294,12 +3294,25 @@ in Lisp, so convert before testing it."
       (mapconcat (lambda (c) (concat "[" c "]")) tags " "))))
 
 (defun hol-lsp--pending-p (result)
-  "Whether RESULT is the server saying \"not yet\" rather than a state.
-`$/hol/goalState\=' answers `{\"status\": \"pending\"}\=' -- and nothing
-else: no theorem, no step, no goals -- when the walk was refused only
-because the compile has not reached that proof.  Rendering that as a
-goal state formats a nil step with %d, which is an error."
+  "Whether RESULT says \"ask again when the compile is done\".
+The server says it two ways.  A *provisional* answer carries a state:
+the walker compiles each tactic against the file\='s namespace, so
+until the file\='s `open\='s have run the tactic names are not there and
+the walk stops at the first one it cannot apply.  What it reached is
+worth showing -- it is simply not settled.  A *refusal* carries
+nothing at all; see `hol-lsp--refused-p\='."
   (equal (plist-get result :status) "pending"))
+
+(defun hol-lsp--refused-p (result)
+  "Whether RESULT is the server saying \"not yet\" and nothing else.
+`$/hol/goalState\=' answers `{\"status\": \"pending\"}\=' -- no theorem, no
+step, no goals -- when a walk was refused outright, the ancestors
+still loading or a compile owning the state.  Rendering that as a goal
+state formats a nil step with %d, which is an error.  A provisional
+answer is `pending\=' too and is a state, so the theorem is what tells
+them apart."
+  (and (hol-lsp--pending-p result)
+       (null (plist-get result :theorem))))
 
 (defun hol-lsp--solved-p (result)
   "Whether RESULT says the focused subgoal(s) have been proved.
@@ -3337,7 +3350,20 @@ constructs."
                        ;; inferred.
                        (cond (note (concat "  " (string-remove-suffix
                                                  ":" note)))
-                             ((hol-lsp--solved-p result) "  ✓ solved"))
+                             ;; Not while the answer is provisional:
+                             ;; the walk stopped where a tactic would
+                             ;; not resolve, so no goals there means
+                             ;; "got no further", not "proved".
+                             ((and (hol-lsp--solved-p result)
+                                   (not (hol-lsp--pending-p result)))
+                              "  ✓ solved"))
+                       ;; What is on show is as far as the walk got
+                       ;; against a namespace the compile has not
+                       ;; finished filling.  Saying so is the whole
+                       ;; difference between a stale-looking state and
+                       ;; a wrong one.
+                       (and (hol-lsp--pending-p result)
+                            "  ⋯ still compiling")
                        (and err (concat "  ⚠ " err)))))
     (replace-regexp-in-string "%" "%%" text)))
 
@@ -3514,7 +3540,7 @@ by default via `hol-map'."
   (unless (hol-lsp--server)
     (user-error "No LSP server for this buffer"))
   (let ((result (hol-lsp--query)))
-    (cond ((and result (hol-lsp--pending-p result))
+    (cond ((and result (hol-lsp--refused-p result))
            (message "HOL: compile in progress — goal state pending"))
           (result (hol-lsp--render-goals result))
           ;; A blocked buffer has no goal state anywhere in it, and
@@ -3544,11 +3570,13 @@ render on success."
   (when (buffer-live-p buf)
     (with-current-buffer buf
       (let ((result (hol-lsp--query t)))
-        ;; A pending reply is silent here: the tick fires on every
-        ;; cursor movement, so saying so would fill the echo area for
-        ;; as long as the compile runs, and the mode line says it
-        ;; already.  The pane keeps the last state it was given.
-        (when (and result (not (hol-lsp--pending-p result)))
+        ;; A refusal is silent here: the tick fires on every cursor
+        ;; movement, so saying so would fill the echo area for as long
+        ;; as the compile runs, and the mode line says it already.
+        ;; The pane keeps the last state it was given.  A provisional
+        ;; answer is not a refusal -- it has a state in it, and the
+        ;; header says it is not settled.
+        (when (and result (not (hol-lsp--refused-p result)))
           (hol-lsp--render-goals result))))))
 
 (defun hol-lsp--goals-schedule ()

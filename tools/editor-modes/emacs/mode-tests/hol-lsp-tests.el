@@ -186,9 +186,32 @@ file's own directory -- not a VC root, and not the file itself."
   ;; no step in it -- while the compile has not reached the proof.
   ;; Handing that to the header formatter formats nil with %d and
   ;; errors, which is what a caller has to keep it away from.
-  (should (hol-lsp--pending-p '(:status "pending")))
-  (should-not (hol-lsp--pending-p '(:theorem "foo" :step 7)))
-  (should-not (hol-lsp--pending-p nil)))
+  (should (hol-lsp--refused-p '(:status "pending")))
+  (should-not (hol-lsp--refused-p '(:theorem "foo" :step 7)))
+  (should-not (hol-lsp--refused-p nil)))
+
+(ert-deftest hol-lsp-a-provisional-answer-is-a-state ()
+  ;; `pending' also arrives WITH a state: the walker compiles tactics
+  ;; against the file's namespace, so until its `open's have run the
+  ;; names are not there and the walk stops early.  That reply is a
+  ;; goal state -- refusing it shows nothing where there was something
+  ;; to show -- and the header says it is not settled.
+  (let ((prov '(:theorem "foo" :step 7 :status "pending"
+                :goals [] :context nil :error nil)))
+    (should (hol-lsp--pending-p prov))
+    (should-not (hol-lsp--refused-p prov))
+    (should (string-match-p "still compiling"
+                            (hol-lsp--goals-header prov)))
+    ;; and it does not also claim the focus is proved: no goals here
+    ;; means the walk got no further, not that anything was solved.
+    (should-not (string-match-p "solved" (hol-lsp--goals-header prov)))))
+
+(ert-deftest hol-lsp-a-settled-answer-says-nothing-about-compiling ()
+  (should-not (string-match-p
+               "still compiling"
+               (hol-lsp--goals-header
+                '(:theorem "foo" :step 7 :status "ok"
+                  :goals [] :context nil :error nil)))))
 
 (ert-deftest hol-lsp-strip-context-removes-the-repeated-line ()
   ;; `pretty' repeats the tags at its top; the buffer shows only the
