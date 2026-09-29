@@ -2,33 +2,33 @@
 ## `try_refute`
 
 ``` hol4
-Refute.try_refute :
-  config -> goal -> (string * outcome) option
+Refute.try_refute : config -> goal -> (string * outcome) option
 ```
 
 ------------------------------------------------------------------------
 
-Quietly probes a goal for use by other automation.
+Silently searches a goal for a counterexample, for use by automation.
 
-`Refute.try_refute cfg goal` keeps `cfg`'s backend selection but forces
-sequential execution, random seed 42, `NoExpectation`, and quiet mode,
-so no Refute traces, messages, or warnings are printed.  `cfg.timeout`
-is the whole-call deadline, as for every Refute call.
-
-The result is `SOME (backend, outcome)` exactly when the search returns
-a nonempty `Counterexample`, with `backend` the name recorded by its
-first counterexample; a miss, `Unknown`, or expiry of the deadline
-returns `NONE`.
+`try_refute cfg g` runs `refute_goal` with `cfg`'s backends, forcing
+sequential, quiet execution with seed 42 and no expectation.  It
+returns `SOME (backend, outcome)` for a counterexample, `backend`
+naming the backend that found the first one, and `NONE` otherwise.
 
 ### Failure
 
-Backend and timeout failures become `NONE`.  Interrupts are re-raised.
+Backend failures and timeouts give `NONE`.
+
+### Example
+
+>>__ load "Refute";
+>> Option.map #1
+     (Refute.try_refute
+        (Refute.default_config
+           |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+           |> Refute.upd_size 4)
+        ([``n < 5``], ``(n : num) < 3``));
 
 ### See also
 
-[`Refute.config`](#Refute.config),
-[`Refute.refute`](#Refute.refute),
 [`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.find_unused_assms`](#Refute.find_unused_assms)
-
-The complete library guide is \ref{Description:the-holrefute-library}.

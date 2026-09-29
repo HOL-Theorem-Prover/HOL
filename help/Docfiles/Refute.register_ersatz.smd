@@ -9,25 +9,14 @@ Refute.register_ersatz :
 
 ------------------------------------------------------------------------
 
-Adds or replaces one model-finder constant substitution.
+Makes the model finder use one constant in place of another.
 
-When model-finder preprocessing meets the `original` constant, it
-instantiates `replacement` to the occurrence's type and encodes that
-instead.  A later row with the same original key replaces an earlier
-session-local row and shadows a built-in one.  An active fraction
-registration takes precedence: a colliding row is retained but takes
-effect only once that registration is replaced or removed.
-
-Neither name is resolved, and no types are checked, at registration
-time; an absent constant or a replacement that cannot be retyped is
-reported when preprocessing uses the row.  No HOL constant or theorem is
-created.
+Model-finder preprocessing replaces `original` by `replacement`,
+instantiated to the occurrence's type.  A later registration for the
+same `original` replaces an earlier one; a `register_frac_type` row
+takes precedence.  Neither constant is checked until preprocessing
+uses the row.  Registrations last for the session.
 
 ### See also
 
-[`Refute.register_frac_type`](#Refute.register_frac_type),
-[`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
-[`Refute.model_refute`](#Refute.model_refute)
-
-Model-finder preprocessing is described in
-\ref{Description:the-holrefute-library}.
+[`Refute.register_frac_type`](#Refute.register_frac_type)

@@ -3,41 +3,24 @@
 
 ``` hol4
 Refute.register_term_postprocessor :
-  hol_type -> term_postprocessor -> unit
+  hol_type -> (term -> term) -> unit
 ```
 
 ------------------------------------------------------------------------
 
-Registers a display-only model-term transformation.
+Registers a display transformation for reported values.
 
-``` hol4
-type term_postprocessor = term -> term
-```
+`register_term_postprocessor pat f` applies `f` bottom-up to every
+subterm of a reported value whose type matches `pat`.  Callbacks for
+more general patterns run before more specific ones, and otherwise in
+registration order; registering a pattern again replaces its callback.
+A callback that raises or changes the type is skipped.  Testing and
+certification use the unprocessed value.
 
-The first argument is a type pattern.  Every pattern matching a model
-term's type participates: more general patterns run before strictly
-more specific ones, and otherwise older registrations run first.
-Re-registering an alpha-equivalent pattern replaces its callback in
-place.
-
-Refute snapshots the registry, together with any `canonical` callback
-from `register_generator_family`, and applies the composition bottom-up
-to reported terms.  A callback that raises a non-interrupt exception or
-changes the term's type is ignored and composition continues from its
-input.  Postprocessing never changes the raw model value, the
-certainty, or the certificate.  This is the one walk both a model
-finder display and a QC counterexample's reported binding go through.
-
-Four patterns are installed by default: function-update-chain
-deduplication at `:'a -> 'b`, finite-map notation at `:'a |-> 'b`, and
-the fraction-atom renderers at `:rat` and `:real`.  Registering at
-exactly one of those patterns replaces the built-in for the rest of the
-session.  Registrations are session-local.
+Built-in patterns are `:'a -> 'b` (update chains), `:'a |-> 'b`
+(finite-map notation), `:rat` and `:real`; registering one of them
+replaces the built-in.  Registrations last for the session.
 
 ### See also
 
-[`Refute.register_frac_type`](#Refute.register_frac_type),
-[`Refute.register_generator_family`](#Refute.register_generator_family),
-[`Refute.model_refute`](#Refute.model_refute)
-
-Model reconstruction is described in \ref{Description:the-holrefute-library}.
+[`Refute.register_generator_family`](#Refute.register_generator_family)

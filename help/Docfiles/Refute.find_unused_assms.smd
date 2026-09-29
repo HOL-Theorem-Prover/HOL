@@ -8,42 +8,39 @@ Refute.find_unused_assms :
 
 ------------------------------------------------------------------------
 
-Searches a theory for theorem assumptions that may be unnecessary.
+Searches a theory's theorems for premises that may be unnecessary.
 
-`Refute.find_unused_assms cfgopt thy` checks the theorems of `DB.thms
-thy` in name order.  `NONE` takes `!Refute.the_config` restricted to the
-Quickcheck backends `exhaustive`, `random`, and `narrowing`; `SOME cfg`
-keeps `cfg`'s backend selection, `AllBackends` included.  Every probe
-additionally forces sequential, quiet, abort-potential,
-expectation-free operation, and theorems are probed one at a time.
+`find_unused_assms cfgopt thy` checks each theorem of `DB.thms thy`,
+in name order.  A theorem's premises are the antecedents left after
+stripping outer universal quantifiers, indexed from zero; a conjunctive
+antecedent is one premise.  A set of premises is droppable when the
+theorem without them gets `NoCounterexample`.  The result for a
+theorem is `NONE` if it has no premises, and otherwise `SOME sets`,
+listing the maximal droppable sets.
 
-For each theorem the outer universal quantifiers are stripped and the
-implication premises are indexed from zero, left to right; a
-conjunctive antecedent is one premise.  Single premises are tested
-first, combinations grow only from individually droppable premises, and
-the maximal simultaneously droppable sets are returned.  An `Unknown` or
-timed-out probe counts as not droppable.
+`NONE` for `cfgopt` uses `!the_config` restricted to the
+`exhaustive`, `random` and `narrowing` backends; `SOME cfg` keeps
+`cfg`'s backends.  Each probe is sequential and quiet, has no
+expectation, and stops at its first counterexample.
 
-Each result is `(name, NONE)` when the theorem has no implication
-premises, `(name, SOME [])` when no premise was shown droppable, and
-`(name, SOME sets)` otherwise.
+`check_unused_assms cfgopt (name, th)` checks one theorem, and
+`print_unused_assms cfgopt thyopt` prints the result for a theory, or
+for the current theory given `NONE`, with one-based indexes.
 
-Only a counterexample is decisive and the default bounds deepen until
-the deadline, so a probe that misses runs for the whole `timeout`,
-which paces a sweep of a large theory; supply `SOME cfg` with a smaller
-`timeout`, and fixed bounds where reproducibility matters.
+### Example
 
-`check_unused_assms cfgopt (name, thm)` performs the same analysis on
-one theorem.  `print_unused_assms cfgopt thyopt` checks the named
-theory, or the current theory for `NONE`, and prints one-based indexes
-plus the number of inconclusive probes.
+>>__ load "Refute";
+>> Refute.check_unused_assms NONE
+     ("demo", prove (``!p q. p ==> q ==> q``, simp []));
+
+### Comments
+
+A probe that neither finds a counterexample nor covers its space runs
+until the `timeout` field expires, so sweeping a large theory is slow
+unless `cfg` has a short timeout.
 
 ### See also
 
-[`Refute.check_unused_assms`](#Refute.check_unused_assms),
-[`Refute.print_unused_assms`](#Refute.print_unused_assms),
-[`Refute.config`](#Refute.config),
 [`Refute.try_refute`](#Refute.try_refute),
+[`Refute.config`](#Refute.config),
 [`DB.thms`](#DB.thms)
-
-The complete library guide is \ref{Description:the-holrefute-library}.

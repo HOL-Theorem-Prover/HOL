@@ -2,40 +2,34 @@
 ## `MODEL_REFUTE_TAC`
 
 ``` hol4
-Refute.MODEL_REFUTE_TAC : Abbrev.tactic
+Refute.MODEL_REFUTE_TAC : tactic
 ```
 
 ------------------------------------------------------------------------
 
-Runs the finite model finder on the current tactic goal.
+Searches for a counterexample with the finite model finder.
 
 `MODEL_REFUTE_TAC` is `REFUTE_TAC_WITH [upd_search (Only [ModelFinder])]`:
-it runs only the `kodkod` backend, with every other field of
-`!Refute.the_config` as read when the tactic is applied, `quiet` and
-`expect` included.  It prints the resulting `Counterexample`,
-`NoCounterexample`, or `Unknown` report (`Model` or `NoModel` when
-`falsify` is false) and then behaves as `ALL_TAC`, never closing or
-altering the goal; a counterexample is not a tactic failure.  Without
-a configured Kodkodi the search is `Unknown`.
-
-Only the clauses a user wrote reach the model finder.  HOL4 completes a
-non-exhaustive pattern set with `ARB`, so a function defined by
-`f (x::xs) = x` leaves `f []` unconstrained here, and a goal whose truth
-depends on that completed value can be reported as a genuine
-counterexample, as in Isabelle's Nitpick.
+it runs the `kodkod` backend, which needs the external Kodkodi
+component; without it the result is `Unknown`.  With the `falsify`
+field false it searches for a model of the goal and reports `Model`
+or `NoModel`.  `model_refute` (see `Refute.refute`) is the
+corresponding function on terms.
 
 ### Failure
 
-Fails only when a non-default `expect` field is not met.  Interrupts
-are re-raised.
+Fails only if the configuration's `expect` field is not met.
+
+### Comments
+
+The model finder reads only the equations a user wrote.  The `ARB`
+case HOL4 adds to a non-exhaustive definition is unconstrained, so a
+goal true only because of it can get a counterexample, as in Isabelle's
+Nitpick.
 
 ### See also
 
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
-[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
-[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
-[`Refute.model_refute`](#Refute.model_refute),
+[`Refute.register_typedef`](#Refute.register_typedef),
 [`Refute.config`](#Refute.config)
-
-The complete library guide is \ref{Description:the-holrefute-library}.

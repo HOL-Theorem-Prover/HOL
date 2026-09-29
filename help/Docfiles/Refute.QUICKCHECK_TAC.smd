@@ -2,33 +2,32 @@
 ## `QUICKCHECK_TAC`
 
 ``` hol4
-Refute.QUICKCHECK_TAC : Abbrev.tactic
+Refute.QUICKCHECK_TAC : tactic
 ```
 
 ------------------------------------------------------------------------
 
-Quickchecks the current tactic goal for a counterexample.
+Searches for a counterexample by testing.
 
 `QUICKCHECK_TAC` is `REFUTE_TAC_WITH [upd_search QuickcheckBackends]`:
-it runs only the `exhaustive`, `random`, and `narrowing` backends, with
-every other field of `!Refute.the_config` as read when the tactic is
-applied, `quiet` and `expect` included.  It prints the resulting
-`Counterexample`, `NoCounterexample`, or `Unknown` report and then
-behaves as `ALL_TAC`, never closing or altering the goal; a
-counterexample is not a tactic failure.
+it runs the `exhaustive`, `random` and `narrowing` backends.
+`quickcheck` (see `Refute.refute`) is the corresponding function on
+terms.
 
 ### Failure
 
-Fails only when a non-default `expect` field is not met.  Interrupts
-are re-raised.
+Fails only if the configuration's `expect` field is not met.
+
+### Example
+
+>>__ load "Refute";
+>> g `!xs ys : num list. REVERSE (xs ++ ys) = REVERSE xs ++ REVERSE ys`;
+
+>> e Refute.QUICKCHECK_TAC;
+>>__ drop();
 
 ### See also
 
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
-[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
-[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
-[`Refute.quickcheck`](#Refute.quickcheck),
-[`Refute.config`](#Refute.config)
-
-The complete library guide is \ref{Description:the-holrefute-library}.
+[`Refute.refute`](#Refute.refute)

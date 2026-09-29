@@ -2,33 +2,31 @@
 ## `NARROWING_TAC`
 
 ``` hol4
-Refute.NARROWING_TAC : Abbrev.tactic
+Refute.NARROWING_TAC : tactic
 ```
 
 ------------------------------------------------------------------------
 
-Runs native symbolic narrowing on the current tactic goal.
+Searches for a counterexample by symbolic narrowing.
 
-`NARROWING_TAC` is `REFUTE_TAC_WITH [upd_search (Only [Narrowing])]`:
-it runs only the `narrowing` backend, with every other field of
-`!Refute.the_config` as read when the tactic is applied, `quiet` and
-`expect` included.  It prints the resulting `Counterexample`,
-`NoCounterexample`, or `Unknown` report and then behaves as `ALL_TAC`,
-never closing or altering the goal; a counterexample is not a tactic
-failure.  Narrowing accepts goals the executable backends decline,
-including prenex existentials when `allow_existentials` is true.
+`NARROWING_TAC` is `REFUTE_TAC_WITH [upd_search (Only [Narrowing])]`.
+Narrowing accepts goals the executable backends decline, including
+prenex existentials when the `allow_existentials` field is true.
 
 ### Failure
 
-Fails only when a non-default `expect` field is not met.  Interrupts
-are re-raised.
+Fails only if the configuration's `expect` field is not met.
+
+### Example
+
+>>__ load "Refute";
+>> g `!m : num. ?n. n + 1 = m`;
+
+>> e Refute.NARROWING_TAC;
+>>__ drop();
 
 ### See also
 
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
-[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
-[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
 [`Refute.config`](#Refute.config)
-
-The complete library guide is \ref{Description:the-holrefute-library}.

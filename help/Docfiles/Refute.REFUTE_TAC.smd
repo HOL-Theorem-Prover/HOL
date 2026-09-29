@@ -2,35 +2,42 @@
 ## `REFUTE_TAC`
 
 ``` hol4
-Refute.REFUTE_TAC : Abbrev.tactic
+Refute.REFUTE_TAC : tactic
 ```
 
 ------------------------------------------------------------------------
 
-Searches for a counterexample to the current tactic goal.
+Searches for a counterexample to the current goal.
 
-`REFUTE_TAC` is `REFUTE_TAC_WITH []`: it runs `Refute.refute_goal` with
-`!Refute.the_config`, read when the tactic is applied, so every backend
-the current configuration selects takes part.  It prints the resulting
-`Counterexample`, `NoCounterexample`, or `Unknown` report and then
-behaves as `ALL_TAC`: the goal is never closed or altered, and a
-counterexample is not a tactic failure.  Every configuration field is
-honoured, including `quiet` and `expect`.
+`REFUTE_TAC` is `REFUTE_TAC_WITH []`: it runs the backends
+`!Refute.the_config` selects, prints the resulting `Counterexample`,
+`NoCounterexample` or `Unknown` report, and then behaves as
+`ALL_TAC`.  The search looks for values of the goal's free variables
+that make every assumption true and the conclusion false.
 
 ### Failure
 
-Fails only when a non-default `expect` field is not met.  Interrupts
-are re-raised.
+Fails only if the configuration's `expect` field is not met.  A
+counterexample is not a failure.
+
+### Example
+
+>>__ load "Refute";
+>> g `(n : num) < 3`;
+
+>> e Refute.REFUTE_TAC;
+>>__ drop();
+
+### Comments
+
+The HolRefute library is described in the DESCRIPTION manual.
 
 ### See also
 
-[`Refute.config`](#Refute.config),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
 [`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
 [`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.refute`](#Refute.refute),
-[`Refute.refute_goal`](#Refute.refute_goal)
-
-The complete library guide is \ref{Description:the-holrefute-library}.
+[`Refute.config`](#Refute.config)

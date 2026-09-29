@@ -7,37 +7,26 @@ Refute.register_generator : hol_type -> custom_gen -> unit
 
 ------------------------------------------------------------------------
 
-Adds or replaces a Quickcheck generator for a HOL type.
+Adds or replaces a test-data generator for a type.
 
 ``` hol4
-type rng = IntInf.int
 type custom_gen =
   {enumerate : (int -> term list) option,
    random : (int -> rng -> term * rng) option}
 ```
 
-`enumerate size` returns the terms for exhaustive testing at `size`;
-`random size rng` returns one term and the successor random state.  At
-least one callback must be `SOME`; a backend needing the absent one is
-inapplicable for that type.  Returned terms must have the registered
-type, and callbacks should respect the requested size and the
-deterministic random-state protocol.
-
-Registrations are session-local.  Registering the same type again
-replaces the callbacks, drops any abstract generator for the type, and
-clears the generator, cardinality, and enumeration caches.
+`enumerate size` lists the values for exhaustive testing at `size`;
+`random size rng` returns one value and the next state, of type
+`rng = IntInf.int`.  A backend needing an absent callback cannot test the type.
+Registering replaces the type's previous generator, including an
+`abstract_generator` one.  Registrations last for the session.
 
 ### Failure
 
-Raises `Fail` if both callbacks are `NONE`.  Ill-typed callback results
-are rejected when a backend consumes them.
+Fails if both callbacks are `NONE`.  Ill-typed values are rejected
+when a backend uses them.
 
 ### See also
 
 [`Refute.register_generator_family`](#Refute.register_generator_family),
-[`Refute.abstract_generator`](#Refute.abstract_generator),
-[`Refute.quickcheck`](#Refute.quickcheck),
-[`Refute.config`](#Refute.config)
-
-Abstract generators and built-in generation are described in
-\ref{Description:the-holrefute-library}.
+[`Refute.abstract_generator`](#Refute.abstract_generator)
