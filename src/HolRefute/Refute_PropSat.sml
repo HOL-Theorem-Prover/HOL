@@ -41,13 +41,6 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
     | SAnd (_, False) = False
     | SAnd formulas = And formulas
 
-  fun simplify (Not formula) = SNot (simplify formula)
-    | simplify (Or (left, right)) =
-        SOr (simplify left, simplify right)
-    | simplify (And (left, right)) =
-        SAnd (simplify left, simplify right)
-    | simplify formula = formula
-
   fun add_indices True values = values
     | add_indices False values = values
     | add_indices (BoolVar index) values = Lib.insert index values

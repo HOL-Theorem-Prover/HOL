@@ -7,7 +7,8 @@ sig
      the race; interrupted losers unwind before return. *)
   val get_some_with_workers:
     int -> ('a -> 'b option) -> 'a list -> 'b option
-  val get_some: ('a -> 'b option) -> 'a list -> 'b option
+  (* Sequential counterpart: the first [SOME], skipping inputs whose call
+     raises anything but an interrupt. *)
   val get_first: ('a -> 'b option) -> 'a list -> 'b option
   (* Like [Thread_Attributes.uninterruptible], for a wait that must run to
      completion yet must not swallow the user's Ctrl-C.  A plain mask clears

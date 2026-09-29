@@ -1095,10 +1095,6 @@ structure Refute_Core :> Refute_Core = struct
       (Listsort.sort String.compare
         (map Parse.term_to_string constants))
 
-  fun rf_type number =
-    Type.mk_thy_type
-      { Thy = "refute", Tyop = "rf" ^ Int.toString number, Args = [] }
-
   (* A type variable in the index position of a [cart] - the width slot of
      a machine word - cannot take an [rf] carrier: nothing computes
      [dimindex (:rf1)], so every substrate declines.  Such a variable is
@@ -1123,7 +1119,8 @@ structure Refute_Core :> Refute_Core = struct
 
   fun monomorphic_types qc =
     if #finite_types qc then
-      List.tabulate (#finite_type_size qc, fn index => rf_type (index + 1))
+      List.tabulate (#finite_type_size qc,
+        fn index => Refute_Util.rf_type (index + 1))
     else
       #default_type qc
 
@@ -1143,9 +1140,8 @@ structure Refute_Core :> Refute_Core = struct
       not (Option.isSome (Refute_Gen.enumerate (Term.type_of variable))))
       (Term.free_vars_lr goal)
 
-  (* Shared by [make_instance] and [Refute_QC]'s [use_subtype] transform,
-     which recomputes this for the rewritten goal: a syntactic executability
-     scan, not a claim about what testing does at a concrete value. *)
+  (* A syntactic executability scan, not a claim about what testing does
+     at a concrete value. *)
   fun compute_qc_gate goal evals =
     let
       val binders_remain = has_unexpanded_binder goal
@@ -1156,6 +1152,22 @@ structure Refute_Core :> Refute_Core = struct
       if binders_remain then SOME ["not executable: unexpanded binder"]
       else if null constants then NONE
       else SOME ["not executable: " ^ show_constants constants]
+    end
+
+  (* Normalise [raw_goal] into an instance goal and derive the fields that
+     depend on it.  Shared by [make_instance] and [Refute_QC]'s
+     [use_subtype] transform, so a transported goal gets the same
+     simplification as its hand-written equivalent. *)
+  fun rebuild_instance {original, raw_goal, evals_for, card, transport} =
+    let
+      val goal = expand_quantifiers
+        (strip_outer_forall_body (normalize raw_goal))
+      val evals = evals_for goal
+    in
+      {original = original, goal = goal,
+       qc_gate = compute_qc_gate goal evals, evals = evals, card = card,
+       size_matters = instance_size_matters goal,
+       transport = transport} : instance
     end
 
   type preprocessed_forms =
@@ -1249,22 +1261,14 @@ structure Refute_Core :> Refute_Core = struct
         List.filter (fn tyvar => not (Lib.mem tyvar width_vars))
           unpinned_tyvars
       fun make_instance card theta =
-        let
-          val original = Term.inst theta original_goal
-          val initial_goal = strip_outer_forall_body original
-          val normalized_goal =
-            strip_outer_forall_body (normalize initial_goal)
-          val goal = expand_quantifiers normalized_goal
-          val evals = map (Term.inst theta) input_evals
-          val evals = add_equation_eval_terms goal evals
+        let val original = Term.inst theta original_goal
         in
-          { original = original,
-            goal = goal,
-            qc_gate = compute_qc_gate goal evals,
-            evals = evals,
-            card = card,
-            size_matters = instance_size_matters goal,
-            transport = [] }
+          rebuild_instance
+            {original = original,
+             raw_goal = strip_outer_forall_body original,
+             evals_for = fn goal => add_equation_eval_terms goal
+               (map (Term.inst theta) input_evals),
+             card = card, transport = []}
         end
       (* One replacement interprets every *unpinned* type variable at once
          (see [upd_instantiate]), so [card] is the index of the single
@@ -1313,14 +1317,10 @@ structure Refute_Core :> Refute_Core = struct
         else
           List.tabulate (instance_count, fn index =>
             monomorphic_instance (index + 1))
-      (* Absent the [use_subtype] transform, a monomorphic goal hands both
-         forms literally the same backend input -- stronger than merely
-         constructing an equivalent singleton, and it keeps the old
-         front-end behaviour exact.  Read it off [raw_mono_instances],
-         before the transform runs below: the model finder handles
-         typedefs natively and must never see the rewrite, so when the
-         transform does fire the two forms deliberately diverge and
-         [poly_original] keeps the untransported goal. *)
+      (* A monomorphic goal hands both forms the same instance list, read
+         off [raw_mono_instances] before the [use_subtype] transform: the
+         model finder handles typedefs natively and must never see the
+         rewrite, so [poly_original] keeps the untransported goal. *)
       val poly_original =
         if null tyvars then raw_mono_instances else [make_instance 0 []]
       val mono_instances =
@@ -2012,10 +2012,7 @@ structure Refute_Core :> Refute_Core = struct
         if timeout <= 0.0 then Time.zeroTime else Time.fromReal timeout
       val deadline = started + budget
       fun expired () = Time.now () >= deadline
-      fun remaining () =
-        let val now = Time.now ()
-        in if now >= deadline then Time.zeroTime else Time.- (deadline, now)
-        end
+      fun remaining () = Refute_Util.remaining deadline
     in
       {started = started, deadline = deadline,
        expired = expired, remaining = remaining}
@@ -2070,6 +2067,7 @@ structure Refute_Core :> Refute_Core = struct
   datatype admission =
       Eligible of backend
     | Excluded of backend
+    | Unconfigured of backend
     | AdmissionTimeout of string
     | AdmissionError of string * exn
 
@@ -2173,22 +2171,21 @@ structure Refute_Core :> Refute_Core = struct
       let
         val name = #name backend
         fun attempt () =
-          if not (#configured backend ()) then
-            (Excluded backend, false)
+          if not (#configured backend ()) then Unconfigured backend
           else
             let
               val instances = instances_for_form (#input backend) forms
             in
               if meets_requirement cfg
                    (instances_are_executable instances) backend instances
-              then (Eligible backend, true)
-              else (Excluded backend, true)
+              then Eligible backend
+              else Excluded backend
             end
       in
         Timeout.apply (#remaining search_context ()) attempt ()
-        handle Timeout.TIMEOUT _ => (AdmissionTimeout name, true)
+        handle Timeout.TIMEOUT _ => AdmissionTimeout name
              | Interrupt => raise Interrupt
-             | error => (AdmissionError (name, error), true)
+             | error => AdmissionError (name, error)
       end) ()) ()
 
   fun certainty_expectation Genuine = ExpectGenuine
@@ -2262,22 +2259,26 @@ structure Refute_Core :> Refute_Core = struct
                   [] => []
                 | _ => ParList.map_with_workers (length candidates) admit
                     candidates
-          val selected = List.mapPartial (fn (admission, _) =>
+          val selected = List.mapPartial (fn admission =>
             case admission of Eligible registration => SOME registration
                             | _ => NONE) admissions
-          val configured = List.exists #2 admissions
-          fun admission_reasons ((admission, _), reasons) =
+          val configured = List.exists
+            (fn Unconfigured _ => false | _ => true) admissions
+          fun gate_reasons registration reasons =
+            add_reasons
+              (instance_gate_reasons (registration_instances registration),
+               reasons)
+          fun admission_reasons (admission, reasons) =
             case admission of
-                Excluded registration =>
-                  add_reasons
-                    (instance_gate_reasons
-                       (registration_instances registration), reasons)
+                Excluded registration => gate_reasons registration reasons
+              | Unconfigured registration =>
+                  gate_reasons registration reasons
               | AdmissionTimeout name =>
                   add_reason (name ^ " admission timed out", reasons)
               | _ => reasons
           val excluded_reasons =
             List.foldl admission_reasons [] admissions
-          fun admission_error (admission, _) =
+          fun admission_error admission =
             case admission of
                 AdmissionError (name, error) =>
                   SOME (name ^ ": " ^ exception_reason error)

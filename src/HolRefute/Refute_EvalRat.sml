@@ -119,80 +119,46 @@ end = struct
     handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_EQ_DECIDE_CONV"
          | Conv.UNCHANGED => Feedback.failwith "RAT_EQ_DECIDE_CONV"
 
-  fun RAT_LES_DECIDE_CONV tm =
-    RAT_CMP_STEP ratTheory.RAT_LES_CALCULATE ratSyntax.rat_les_tm
-      (ratSyntax.dest_rat_les tm)
-    handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_LES_DECIDE_CONV"
-         | Conv.UNCHANGED => Feedback.failwith "RAT_LES_DECIDE_CONV"
+  fun order_conv name calculate head dest tm =
+    RAT_CMP_STEP calculate head (dest tm)
+    handle Feedback.HOL_ERR _ => Feedback.failwith name
+         | Conv.UNCHANGED => Feedback.failwith name
 
-  fun RAT_LEQ_DECIDE_CONV tm =
-    RAT_CMP_STEP ratTheory.RAT_LEQ_CALCULATE ratSyntax.rat_leq_tm
-      (ratSyntax.dest_rat_leq tm)
-    handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_LEQ_DECIDE_CONV"
-         | Conv.UNCHANGED => Feedback.failwith "RAT_LEQ_DECIDE_CONV"
+  val RAT_LES_DECIDE_CONV =
+    order_conv "RAT_LES_DECIDE_CONV" ratTheory.RAT_LES_CALCULATE
+      ratSyntax.rat_les_tm ratSyntax.dest_rat_les
+  val RAT_LEQ_DECIDE_CONV =
+    order_conv "RAT_LEQ_DECIDE_CONV" ratTheory.RAT_LEQ_CALCULATE
+      ratSyntax.rat_leq_tm ratSyntax.dest_rat_leq
 
-  (* rat_gre_def and rat_geq_def are argument swaps of rat_les/rat_leq
-     (ratScript.sml:233,235), so rewrite to the swapped form and hand
-     off to the conversion already proven above, instead of repeating
-     the cross-multiplication a third and fourth time. *)
-  fun RAT_GRE_DECIDE_CONV tm =
-    (let
-      val step1 = Conv.REWR_CONV ratTheory.rat_gre_def tm
-      val step2 = RAT_LES_DECIDE_CONV (boolSyntax.rhs (Thm.concl step1))
-    in
-      Thm.TRANS step1 step2
-    end)
-    handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_GRE_DECIDE_CONV"
+  (* [rat_gre_def] and [rat_geq_def] swap the arguments of [rat_les] and
+     [rat_leq]; rewrite and reuse the conversions above. *)
+  fun swapped_conv name definition decide tm =
+    (let val step = Conv.REWR_CONV definition tm
+     in Thm.TRANS step (decide (boolSyntax.rhs (Thm.concl step))) end)
+    handle Feedback.HOL_ERR _ => Feedback.failwith name
 
-  fun RAT_GEQ_DECIDE_CONV tm =
-    (let
-      val step1 = Conv.REWR_CONV ratTheory.rat_geq_def tm
-      val step2 = RAT_LEQ_DECIDE_CONV (boolSyntax.rhs (Thm.concl step1))
-    in
-      Thm.TRANS step1 step2
-    end)
-    handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_GEQ_DECIDE_CONV"
+  val RAT_GRE_DECIDE_CONV =
+    swapped_conv "RAT_GRE_DECIDE_CONV" ratTheory.rat_gre_def
+      RAT_LES_DECIDE_CONV
+  val RAT_GEQ_DECIDE_CONV =
+    swapped_conv "RAT_GEQ_DECIDE_CONV" ratTheory.rat_geq_def
+      RAT_LEQ_DECIDE_CONV
 
-  (* Equality at :rat is [[rat_eq_tm]], an instance of polymorphic [[=]]
-     (min$=).  [[computeLib.add_extern]] keys solely on (Name, Thy), so
-     ("=", "min") is one key shared by every type, and the [[Conv]]
-     branch of [[reduce_cst]] (src/compute/src/equations.sml:175-185)
-     never checks the redex's head constant against that key at all
-     (unlike the [[Rewrite]] branch's [[match_term]] at :156): the conv
-     below really is tried against equality redexes at any type that
-     reach it.  [[add_convs]] appends it after the rules the key holds
-     when Refute loads, but not after those a later [[Datatype]] adds,
-     so it is genuinely reached first for every type defined in the
-     session from here on: its own type guard, not its position in the
-     chain, is what keeps it off them.  Rejecting there raises
-     [[HOL_ERR]], which [[reduce_cst]] catches and falls through on. *)
+  (* computeLib keys on (Name, Thy) alone, so [rat_eq_tm] shares the
+     polymorphic [=] key and its conversion is offered equality redexes
+     at every type; RAT_EQ_DECIDE_CONV's own type guard keeps it off
+     them. *)
   val rat_eq_tm =
     Term.inst [{redex = Type.alpha, residue = rat_ty}] boolSyntax.equality
 
-  (* rat_add, rat_sub and rat_mul have ordinary but empty compset
-     entries from their Definition; rat_div has none at all; only
-     rat_ainv, rat_minv and rat_les carry rules.  [[computeLib.del_consts]]
-     removes whatever entry each key below already has so the conv
-     registered immediately after is the only one computeLib can try;
-     unlike [[scrub_const]], it threads the update through the
-     persistent global compset ref, so the deletion actually takes
-     effect for every redex compiled from here on.  It does not reach an
-     occurrence sitting inside an already-compiled rule's right-hand
-     side: [[from_term]] captures each constant's clause ref as the rule
-     is added (src/compute/src/clauses.sml:311-314) while
-     [[scrub_const]] deletes only the dictionary entry, so such an
-     occurrence still sees the pre-deletion clauses.  Like the shared
-     [[=]] key above, it keys on (Name, Thy)
-     alone, so it must never run on [[rat_eq_tm]]: deleting that key
-     would remove equality reduction for every type, not just rat. *)
-  (* [[computeLib.add_conv]] on an existing key mutates that key's clause
-     list in place, but [[del_consts]] just removed these keys, so the
-     re-insertion below needs [[add_convs]]'s [[upd_compset]] threading,
-     not a raw per-call [[add_conv]] whose return value is discarded. *)
-  (* Runs once, from [[register]] below, at Refute's module load; not
-     idempotent -- [[rat_eq_tm]] is correctly absent from [[del_consts]],
-     so a second call would append a second [[RAT_EQ_DECIDE_CONV]] to
-     the shared [[=]] chain rather than replacing the first. *)
+  (* Delete each arithmetic key's existing entry so the conversion added
+     after it is the only one computeLib tries, re-inserting through
+     [add_convs] because [del_consts] removed the keys; occurrences inside
+     rules compiled earlier keep the old clauses.  [rat_eq_tm] must
+     never be deleted: that would drop equality at every type.  Not
+     idempotent (a second call appends a second equality conversion), so
+     it runs once, from [register]. *)
   fun install () =
     let
       val () = computeLib.del_consts

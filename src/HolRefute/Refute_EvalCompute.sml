@@ -861,6 +861,4 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
 
   fun register_substrate () =
     Refute_Eval.register_substrate compute_substrate
-
-  val _ = register_substrate ()
 end

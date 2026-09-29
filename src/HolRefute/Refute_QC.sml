@@ -8,7 +8,6 @@ structure Refute_QC :> Refute_QC = struct
 
   val union_terms = Refute_Util.union_terms
 
-  (* Also read by Refute_QC_Narrow for its per-entry statistics. *)
   val elapsed_msec = Refute_Util.elapsed_msec
 
   val subtract_terms = Portable.op_set_diff Term.aconv
@@ -164,7 +163,7 @@ structure Refute_QC :> Refute_QC = struct
     end
 
   fun transport_guard ({pred, r, ...} : transport_entry) =
-    MFH.beta_normalize (Term.mk_comb (pred, r))
+    Refute_Util.beta_normalize (Term.mk_comb (pred, r))
 
   (* Installed as [Refute_Core]'s [mono_instance_transform]; runs once per
      [MonoInstances] instance, after monomorphization, before any plan is
@@ -178,32 +177,17 @@ structure Refute_QC :> Refute_QC = struct
         | entries =>
             let
               val body = apply_transport_entries entries (#goal instance)
-              val raw_goal = List.foldr boolSyntax.mk_imp body
-                (map transport_guard entries)
-              (* [make_instance] runs every goal through [normalize] (and
-                 [expand_quantifiers]) before anything downstream sees it;
-                 skipping that step here would let an entirely ordinary
-                 simplification -- e.g. the [P ==> P] the docstring's own
-                 worked example reduces to once the guard and the
-                 contracted body coincide -- go unrecognised only because
-                 this rewrite built its implication after that pass ran.
-                 Re-running it is what makes a transported goal reach the
-                 exact completeness verdict its hand-written equivalent
-                 would. *)
-              val goal = Refute_Core.expand_quantifiers
-                (Refute_Core.strip_outer_forall_body
-                   (Refute_Core.normalize raw_goal))
               val evals =
                 map (apply_transport_entries entries) (#evals instance)
             in
-              { original = #original instance,
-                goal = goal,
-                qc_gate = Refute_Core.compute_qc_gate goal evals,
-                evals = evals,
-                card = #card instance,
-                size_matters = Refute_Core.instance_size_matters goal,
-                transport = map (fn {x, r, abs, ...} : transport_entry =>
-                  (r, x, abs)) entries }
+              Refute_Core.rebuild_instance
+                {original = #original instance,
+                 raw_goal = List.foldr boolSyntax.mk_imp body
+                   (map transport_guard entries),
+                 evals_for = fn _ => evals,
+                 card = #card instance,
+                 transport = map (fn {x, r, abs, ...} : transport_entry =>
+                   (r, x, abs)) entries}
             end
 
   val _ = Refute_Core.register_mono_instance_transform transport_instance
@@ -295,11 +279,8 @@ structure Refute_QC :> Refute_QC = struct
         #smart_generators (#qc config) andalso
         #allow_function_inversion (#qc config)
       (* [Refute_Core.normalize]'s [AND_IMP_INTRO] folds a multi-premise
-         chain into one conjunction before a real goal ever reaches here
-         (a bare [compile_plan] call on an unnormalized goal does not);
-         flatten it back so each conjunct is classified on its own,
-         instead of the whole conjunction being handed to [classify] as
-         a single opaque, headless assumption. *)
+         chain into one conjunction; flatten it back so each conjunct is
+         classified on its own rather than as one headless assumption. *)
       val assumptions =
         List.concat (map boolSyntax.strip_conj raw_assumptions)
       (* Building a model-finder context scans the whole theory ancestry,
@@ -318,11 +299,6 @@ structure Refute_QC :> Refute_QC = struct
                 smart_context_cache := SOME built; built
               end
       fun vars_of bound tm = subtract_terms (Term.free_vars_lr tm) bound
-
-      fun premise_head premise =
-        let val (head, _) = HolKernel.strip_comb premise
-        in if Term.is_const head then SOME head else NONE end
-        handle HOL_ERR _ => NONE
 
       fun error_text error =
         ((case General.exnMessage error of
@@ -646,7 +622,7 @@ structure Refute_QC :> Refute_QC = struct
             (graph_recognise bound assumption))
 
       fun positive_candidates bound assumption =
-        case premise_head assumption of
+        case SmartGen.premise_head assumption of
             NONE => ([], false, NONE)
           | SOME relation =>
               let val {result, trigger, reason} = analyse relation
@@ -674,7 +650,7 @@ structure Refute_QC :> Refute_QC = struct
       fun negative_candidates bound assumption =
         let val call = boolSyntax.dest_neg assumption
         in
-          case premise_head call of
+          case SmartGen.premise_head call of
               NONE => ([], false, NONE)
             | SOME relation =>
                 let val {result, trigger, reason} = analyse relation
@@ -759,14 +735,11 @@ structure Refute_QC :> Refute_QC = struct
         let
           val ordinary = (Ordinary, ordinary_score bound assumption)
           val (modes, trigger, reason) = smart_candidates bound assumption
-          fun add ((mode as {score, ...} : SmartGen.goal_mode, program),
-                   NONE) = SOME (Smart (mode, program), score)
-            | add ((mode as {score, ...} : SmartGen.goal_mode, program),
-                   current as SOME (_, old)) =
-                if SmartGen.compare_score (score, old) = LESS then
-                  SOME (Smart (mode, program), score)
-                else current
-          val smart = List.foldl add NONE modes
+          val smart =
+            Option.map (fn (mode as {score, ...} : SmartGen.goal_mode,
+                            program) => (Smart (mode, program), score))
+              (SmartGen.least_by
+                 (fn ({score, ...} : SmartGen.goal_mode, _) => score) modes)
           val best =
             case smart of
                 NONE => ordinary
@@ -795,14 +768,9 @@ structure Refute_QC :> Refute_QC = struct
           val reorder = length all > 1 andalso
             List.exists (fn (_, _, _, trigger, _) => trigger) all
           val candidates = if reorder then all else [first]
-          fun least (item as (_, _, (_, score), _, _)) NONE = SOME item
-            | least (item as (_, _, (_, score), _, _))
-                (current as SOME (_, _, (_, old), _, _)) =
-                if SmartGen.compare_score (score, old) = LESS
-                then SOME item else current
+          fun score_of (_, _, (_, score), _, _) = score
         in
-          (valOf (List.foldl (fn (item, result) => least item result)
-             NONE candidates), reorder)
+          (valOf (SmartGen.least_by score_of candidates), reorder)
         end
 
       fun compile conclusion bound assumptions =
@@ -937,9 +905,6 @@ structure Refute_QC :> Refute_QC = struct
       else
         gen_all (Term.free_vars_lr goal) (Test goal)
     end
-
-  fun compile_plan config goal =
-    compile_plan_with (new_plan_cache ()) config goal
 
   fun pp_plan plan =
     let
@@ -1084,11 +1049,9 @@ structure Refute_QC :> Refute_QC = struct
          retry_potential : bool -> candidate list -> unit}
         {env, ground_env, case_tree, genuine, genuine_only, ignored} =
     let
+      val goal_frees = Term.free_vars_lr (#goal instance)
       val bindings = List.filter
-        (fn (variable, _) =>
-          List.exists (fn free => Term.aconv free variable)
-            (Term.free_vars_lr (#goal instance)))
-        env
+        (fn (variable, _) => member variable goal_frees) env
       val report_bindings =
         case (pnf_prefix, case_tree, genuine) of
             (SOME prefix, SOME tree, true) =>
@@ -1127,11 +1090,14 @@ structure Refute_QC :> Refute_QC = struct
       fun canonicalize (variable, value) = (variable, canonicalize_term value)
       val ordered_bindings = List.map
         (canonicalize o apply_report_transport) goal_ordered_bindings
+      val stuck = "evaluation stuck during testing"
+      val approximated =
+        "PNF testing used an incomplete finite approximation"
       val cex : Refute_Core.counterexample =
         { backend = display_name strategy,
           substrate = substrate,
           certainty = if genuine then Refute_Core.Potential []
-            else Refute_Core.Potential ["evaluation stuck during testing"],
+            else Refute_Core.Potential [stuck],
           bindings = ordered_bindings,
           evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats }
@@ -1166,18 +1132,12 @@ structure Refute_QC :> Refute_QC = struct
          false and safely upgrade it; only semantically complete case trees
          are themselves replayed as exhaustive proofs. *)
       if incomplete_pnf andalso not (#certify (#qc config)) then
-        (keep_potential (Refute_Cert.replace cex
-           (Refute_Core.Potential
-             ["PNF testing used an incomplete finite approximation"])
-           [] NONE);
-         ())
+        ignore (keep_potential (Refute_Cert.downgrade cex approximated))
       else if not genuine andalso
           (not (narrowing andalso Option.isSome case_tree)
            orelse not (#certify (#qc config))) then
-        (keep_potential (Refute_Cert.replace cex
-           (Refute_Core.Potential ["evaluation stuck during testing"])
-           [] NONE);
-         ())
+        (* [cex] already carries [stuck]. *)
+        ignore (keep_potential cex)
       else if not (#certify (#qc config)) then
         counterexamples :=
           Refute_Cert.replace cex Refute_Core.Genuine [] NONE ::
@@ -1213,13 +1173,8 @@ structure Refute_QC :> Refute_QC = struct
                  counterexamples := certified :: !counterexamples
              | Refute_Cert.Uncertified uncertified =>
                  if incomplete_pnf orelse not genuine then
-                   ignore (keep_potential (Refute_Cert.replace uncertified
-                     (Refute_Core.Potential
-                       [if incomplete_pnf then
-                          "PNF testing used an incomplete finite " ^
-                          "approximation"
-                        else "evaluation stuck during testing"])
-                     [] NONE))
+                   ignore (keep_potential (Refute_Cert.downgrade uncertified
+                     (if incomplete_pnf then approximated else stuck)))
                  else
                    counterexamples := uncertified :: !counterexamples
              | Refute_Cert.Discarded =>
@@ -1229,11 +1184,7 @@ structure Refute_QC :> Refute_QC = struct
                  let
                    val reported =
                      if incomplete_pnf then
-                       Refute_Cert.replace potential
-                         (Refute_Core.Potential
-                           ["PNF testing used an incomplete finite " ^
-                            "approximation"])
-                         [] NONE
+                       Refute_Cert.downgrade potential approximated
                      else potential
                  in
                    if keep_potential reported andalso
@@ -1345,6 +1296,32 @@ structure Refute_QC :> Refute_QC = struct
   fun add_reason reason reasons =
     reasons := Refute_Core.add_reason (reason, !reasons)
 
+  (* Keep a replay failure as the fallback outcome and publish it now. *)
+  fun retain_potential slot potential =
+    (slot := SOME potential;
+     Refute_Core.publish_counterexamples [potential])
+
+  fun say_schedule_entry backend substrate (card, size) elapsed =
+    Refute_Core.Private.say 2
+      ("Refute schedule entry (backend: " ^ backend ^ ", substrate: " ^
+       substrate ^ ", card " ^ Int.toString card ^ ", size " ^
+       Int.toString size ^ "): " ^ Int.toString elapsed ^ "ms\n")
+
+  (* Found counterexamples, else a retained replay failure, else the
+     vacuity telemetry followed by [otherwise ()]. *)
+  fun finish_outcome backend counterexamples replay_potential
+        counter_reason otherwise =
+    if not (null counterexamples) then
+      Refute_Core.Counterexample (rev counterexamples)
+    else
+      case replay_potential of
+          SOME potential => Refute_Core.Counterexample [potential]
+        | NONE =>
+            (Option.app (fn text =>
+               Refute_Core.Private.say 2 (backend ^ ": " ^ text ^ "\n"))
+               counter_reason;
+             otherwise ())
+
   datatype selected_compile =
       Selected of string * compiled_test
     | SelectionFailed of string list
@@ -1429,53 +1406,20 @@ structure Refute_QC :> Refute_QC = struct
     length left = length right andalso
     ListPair.allEq same_plan (left, right)
 
-  (* Substrates are public extension points, so a cleanup callback gets a
-     thread and a deadline of its own.  Two properties have to hold at once.
-
-     A cleanup that runs to completion wins, however long it takes.  Cleanup
-     is work that may not be torn in half — the theory revert runs inside
-     [Thread_Attributes.uninterruptible], because a half-reverted snapshot
-     would strand Refute definitions in the user's theory, which is exactly
-     the invariant cleanup exists to keep — and theory hygiene is the
-     stronger of the two invariants here.  Preemption was never on offer
-     anyway: [Timeout.apply] cancels by interrupting the calling thread, and
-     Poly/ML defers a masked thread's directed interrupt until the mask
-     ends, i.e. until after the cleanup has done all of its work, so its
-     expiry could only mislabel a cleanup that had in fact succeeded.  That
-     spurious [Timeout.TIMEOUT] escaped [strategy_run] into [run_backend],
-     which charged it to the backend's own deadline and discarded a verdict
-     the search had already reached.
-
-     A cleanup that never returns must not take the run down with it.  So the
-     cleanup runs on its own masked thread and the caller stops *waiting* on
-     it after [cleanup_timeout] rather than trying to interrupt it: control
-     always comes back, and a cleanup still in progress is reported as
-     [CleanupAbandoned] rather than as a search result.  The wait itself is
-     masked, so that a run whose own deadline has already expired reports its
-     own result instead of having the pending interrupt abort the cleanup.
-
-     Masked, but not deaf.  HOL's Ctrl-C is [Thread.broadcastInterrupt], and
-     a broadcast aimed at a thread that is not accepting one is dropped
-     outright rather than retained the way a directed interrupt is, so a
-     plain mask over a ten-second wait would silently eat the user's first
-     Ctrl-C.  The wait therefore steps through
-     [ParList.uninterruptible_wait]: the cleanup is still waited out in
-     full, and the interrupt is reported afterwards, as a result rather than
-     as a raise, so that a caller closing several tests still closes them
-     all before the interrupt surfaces.
-
-     An abandoned cleanup leaks its thread.  That is deliberate: Poly/ML
-     cannot cancel masked work, and cancelling it is precisely what must not
-     happen.  Such a thread keeps whatever the cleanup holds, including
-     [Refute_EvalEnum]'s theory lock, but that lock is taken by interruptible
-     polling and released without regard to which thread took it, so later
-     calls wait interruptibly instead of deadlocking.
-
-     The bound is generous because it now really does abandon work rather
-     than merely relabel it: a correct cleanup routinely costs tens to
-     hundreds of milliseconds, so anything near that is a knife edge,
-     whereas the only cost of a large bound is how long a substrate that has
-     already broken its contract can stall one close. *)
+  (* Substrate cleanup runs on its own masked thread; the caller stops
+     waiting after [cleanup_timeout] and reports [CleanupAbandoned] instead
+     of a search result.  A cleanup that finishes wins however long it
+     takes: it must not be torn in half (a half-reverted theory snapshot
+     would strand Refute definitions), and [Timeout.apply] could not
+     preempt it anyway, only mislabel a completed cleanup as a timeout.
+     The wait is masked so an expired run deadline cannot abort it, but
+     goes through [ParList.uninterruptible_wait] so a broadcast Ctrl-C is
+     reported afterwards, as a result, instead of being dropped; a caller
+     closing several tests still closes them all.  An abandoned cleanup
+     leaks its thread by design; [Refute_EvalEnum]'s theory lock is taken
+     by interruptible polling and released by any thread, so later calls
+     wait rather than deadlock.  The bound is generous because correct
+     cleanups take tens to hundreds of milliseconds. *)
   val cleanup_timeout = Time.fromSeconds 10
 
   exception CleanupAbandoned of string
@@ -1496,8 +1440,7 @@ structure Refute_QC :> Refute_QC = struct
         Synchronized.timed_access outcome (fn _ => SOME deadline)
           (Option.map (fn result => (result, SOME result)))
       (* One last look after the wait expires: a cleanup that completed as
-         the deadline passed has still completed, and reporting it would be
-         the old defect again, merely at a boundary rather than routinely. *)
+         the deadline passed has still completed. *)
       val finished = Exn.capture
         (ParList.uninterruptible_wait (fn observe => fn () =>
           let
@@ -1833,6 +1776,14 @@ structure Refute_QC :> Refute_QC = struct
                              but if retries continue, NoCounterexample must
                              remain unavailable. *)
                           val _ = complete := false
+                          fun retry go ig =
+                            case retry_budget of
+                                NONE => one (card, size) draws go ig NONE
+                              | SOME budget =>
+                                  if !budget <= 0 then complete := false
+                                  else
+                                    (budget := !budget - 1;
+                                     one (card, size) 1 go ig retry_budget)
                           val _ = record_candidate
                           { config = config,
                             strategy = strategy,
@@ -1846,28 +1797,10 @@ structure Refute_QC :> Refute_QC = struct
                             (* Only replay failures accepted by the ordinary
                                keep-potential policy may enter the fallback;
                                genuine-only and continuing retries never do. *)
-                            retain_replay_potential = fn potential =>
-                              (replay_potential := SOME potential;
-                               Refute_Core.publish_counterexamples
-                                 [potential]),
-                            retry = fn go => fn ig =>
-                              (case retry_budget of
-                                  NONE => one (card, size) draws go ig NONE
-                                | SOME budget =>
-                                    if !budget <= 0 then complete := false
-                                    else
-                                      (budget := !budget - 1;
-                                       one (card, size) 1 go ig
-                                         retry_budget)),
-                            retry_potential = fn go => fn ig =>
-                              (case retry_budget of
-                                  NONE => one (card, size) draws go ig NONE
-                                | SOME budget =>
-                                    if !budget <= 0 then complete := false
-                                    else
-                                      (budget := !budget - 1;
-                                       one (card, size) 1 go ig
-                                         retry_budget)) }
+                            retain_replay_potential =
+                              retain_potential replay_potential,
+                            retry = retry,
+                            retry_potential = retry }
                           { env = env,
                             ground_env = ground_env,
                             case_tree = case_tree,
@@ -1909,14 +1842,8 @@ structure Refute_QC :> Refute_QC = struct
                   val _ =
                     if is_random strategy then chunks ()
                     else one entry 0 (#genuine_only config) [] NONE
-                  val (card, size) = entry
-                  val backend = strategy_name strategy
-                  val elapsed = elapsed_msec started
-                  val _ = Refute_Core.Private.say 2
-                    ("Refute schedule entry (backend: " ^ backend ^
-                     ", substrate: " ^ substrate ^ ", card " ^
-                     Int.toString card ^ ", size " ^ Int.toString size ^
-                     "): " ^ Int.toString elapsed ^ "ms\n")
+                  val _ = say_schedule_entry (strategy_name strategy)
+                    substrate entry (elapsed_msec started)
                 in
                   frontier := SOME entry
                 end
@@ -1976,20 +1903,11 @@ structure Refute_QC :> Refute_QC = struct
                  these, one per backend. *)
               val counter_reason = #reason counters ()
             in
-                  if not (null (!counterexamples)) then
-                    Refute_Core.Counterexample (rev (!counterexamples))
-                  else
-                    case !replay_potential of
-                        SOME potential =>
-                          Refute_Core.Counterexample [potential]
-                      | NONE =>
-                          (Option.app (fn text =>
-                             Refute_Core.Private.say 2
-                               (strategy_name strategy ^ ": " ^ text ^ "\n"))
-                             counter_reason;
-                           if !complete then Refute_Core.NoCounterexample
-                           else Refute_Core.Unknown
-                             (generic_reason :: !gave_up @ frontier_reason))
+              finish_outcome (strategy_name strategy) (!counterexamples)
+                (!replay_potential) counter_reason (fn () =>
+                  if !complete then Refute_Core.NoCounterexample
+                  else Refute_Core.Unknown
+                    (generic_reason :: !gave_up @ frontier_reason))
                 end
               val body_result = Exn.capture selected_body ()
               val close_result = bounded_close (#close compiled)
@@ -2040,6 +1958,4 @@ structure Refute_QC :> Refute_QC = struct
      Refute_Core.register_backend random_backend;
      Refute_Core.register_run_release "qc-smart-gate-cache"
        clear_smart_gate_cache)
-
-  val _ = register_backends ()
 end

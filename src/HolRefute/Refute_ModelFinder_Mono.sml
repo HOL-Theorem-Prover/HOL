@@ -44,15 +44,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     let val result = !counter + 1
     in counter := result; result end
 
-  fun member equal value = List.exists (fn other => equal (value, other))
-
-  fun insert equal value values =
-    if member equal value values then values else value :: values
-
   fun same_term (left, right) = Term.aconv left right
-
-  fun lookup equal key pairs =
-    Option.map #2 (List.find (fn (other, _) => equal (key, other)) pairs)
 
   fun update equal (key, value) pairs =
     (key, value) ::
@@ -133,10 +125,10 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
           List.concat (map
             (flatten_mtype o repair_mtype cache seen) arguments))
     | repair_mtype cache seen (MRec ty) =
-        (case lookup (Lib.uncurry Util.same_type) ty cache of
+        (case AList.lookup (Lib.uncurry Util.same_type) cache ty of
              SOME (MRec _) => MType (type_name ty, [])
            | SOME mtype =>
-               if member (op =) mtype seen then
+               if Lib.mem mtype seen then
                  MType (type_name ty, [])
                else
                  repair_mtype cache (mtype :: seen) mtype
@@ -163,7 +155,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
 
   fun union_mtypes new old =
     List.foldl (fn (mtype, result) =>
-      insert (op =) mtype result) old new
+      Lib.insert mtype result) old new
 
   fun fresh_mfun_for_fun_type
         (mdata as {max_fresh, ...} : mdata) all_minus domain range =
@@ -190,8 +182,8 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         if not (could_exist_alpha_sub_mtype context alpha_ty current) then
           MType (type_name current, [])
         else
-          case lookup (Lib.uncurry Util.same_type) current
-                 (!data_type_mcache) of
+          case AList.lookup (Lib.uncurry Util.same_type)
+                 (!data_type_mcache) current of
               SOME mtype => mtype
             | NONE =>
                 let
@@ -233,8 +225,8 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                     (repair_data_type_mcache data_type_mcache;
                      repair_constr_mcache (!data_type_mcache)
                        constr_mcache;
-                     case lookup (Lib.uncurry Util.same_type) current
-                            (!data_type_mcache) of
+                     case AList.lookup (Lib.uncurry Util.same_type)
+                            (!data_type_mcache) current of
                          SOME repaired => repaired
                        | NONE => raise MTYPE
                            ("Refute_ModelFinder_Mono.mtype_of_type",
@@ -268,7 +260,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     let val ty = Term.type_of constructor
     in
       if could_exist_alpha_sub_mtype context alpha_ty ty then
-        case lookup same_term constructor (!constr_mcache) of
+        case AList.lookup same_term (!constr_mcache) constructor of
             SOME mtype => mtype
           | NONE =>
               if Util.same_type ty alpha_ty then
@@ -284,8 +276,8 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                   val _ = fresh_mtype_for_type mdata false
                     (MFH.constructor_result_type constructor)
                 in
-                  case lookup same_term constructor
-                         (!constr_mcache) of
+                  case AList.lookup same_term (!constr_mcache)
+                         constructor of
                       SOME mtype => mtype
                     | NONE => raise MTYPE
                         ("Refute_ModelFinder_Mono.mtype_for_constr",
@@ -315,11 +307,11 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
 
   fun add_assign_disjunct _ NONE = NONE
     | add_assign_disjunct literal (SOME literals) =
-        SOME (insert (op =) literal literals)
+        SOME (Lib.insert literal literals)
 
   fun add_assign_clause_opt NONE clauses = clauses
     | add_assign_clause_opt (SOME clause) clauses =
-        insert (op =) clause clauses
+        Lib.insert clause clauses
 
   fun annotation_comp Eq left right = left = right
     | annotation_comp Neq left right = left <> right
@@ -341,7 +333,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                  NONE
            | _ =>
                SOME
-                 (insert (op =) (left, right, Leq, []) comps, clauses))
+                 (Lib.insert (left, right, Leq, []) comps, clauses))
     | do_annotation_atom_comp comparison [] left right
         (constraints as (comps, clauses)) =
         (case (left, right) of
@@ -358,12 +350,12 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                do_annotation_atom_comp comparison [] right left constraints
            | (V _, V _) =>
                SOME
-                 (insert (op =)
+                 (Lib.insert
                    (left, right, comparison, []) comps, clauses))
     | do_annotation_atom_comp comparison unless left right
         (comps, clauses) =
         SOME
-          (insert (op =)
+          (Lib.insert
             (left, right, comparison, unless) comps, clauses)
 
   fun add_annotation_atom_comp comparison unless left right constraints =
@@ -430,7 +422,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     | do_notin_mtype_fv Plus [literal] MAlpha (SOME clauses) =
         add_assign_literal literal clauses
     | do_notin_mtype_fv Plus unless MAlpha (SOME clauses) =
-        SOME (insert (op =) unless clauses)
+        SOME (Lib.insert unless clauses)
     | do_notin_mtype_fv sign unless
         (MFun (domain, A annotation, range)) constraints =
         let
@@ -519,7 +511,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   fun snd_var variable = 2 * variable + 1
 
   fun bools_from_annotation annotation =
-    case lookup (op =) annotation bool_table of
+    case AList.lookup (op =) bool_table annotation of
         SOME result => result
       | NONE => raise Fail "Refute_ModelFinder_Mono: bad annotation"
 
@@ -782,7 +774,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                | V variable =>
                    add rest
                      (Option.map (fn clause =>
-                       insert (op =)
+                       Lib.insert
                          (variable,
                           (sign_for_comp_op comparison, annotation)) clause)
                        result))
@@ -1086,7 +1078,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
          frees = (term, mtype) :: frees, consts = consts,
          next_bound = next_bound}
 
-      fun lookup_term term pairs = lookup same_term term pairs
+      fun lookup_term term pairs = AList.lookup same_term pairs term
 
       fun lookup_bound term bounds =
         case List.find (fn (_, variable, _) =>

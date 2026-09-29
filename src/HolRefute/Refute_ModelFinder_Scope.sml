@@ -831,15 +831,7 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
       (NONE, candidates) ::
       repair_cards_assigns_wrt_boxing_etc mono_types assigns
 
-  fun take_at_most count values =
-    let
-      fun take 0 _ result = rev result
-        | take _ [] result = rev result
-        | take remaining (value :: rest) result =
-            take (remaining - 1) rest (value :: result)
-    in
-      take (Int.max (0, count)) values []
-    end
+  fun take_at_most count values = #1 (Util.chop (Int.max (0, count)) values)
 
   fun same_max_assigns (left, right) =
     ListPair.allEq (fn ((left_const, left_max),
@@ -874,27 +866,24 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
   fun adaptive_row context (Card ty, _) = adaptive_card_type context ty
     | adaptive_row _ (Max _, _) = false
 
-  fun project_adaptive_row _ false column row = project_row column row
-    | project_adaptive_row context true column
-        (row as (kind, candidates)) =
-        if adaptive_row context row then (kind, [column + 1])
-        else project_row column (kind, candidates)
+  fun project_adaptive_row context column (row as (kind, candidates)) =
+    if adaptive_row context row then (kind, [column + 1])
+    else project_row column (kind, candidates)
 
-  fun project_adaptive_block context iterative (column, block) =
-    map (project_adaptive_row context iterative column) block
+  fun project_adaptive_block context (column, block) =
+    map (project_adaptive_row context column) block
 
   type scope_cursor =
     {context : context,
      binarize : bool,
      blocks : block list,
-     iterative : bool,
      combinations : combination_cursor,
      deep_data_types : hol_type list,
      finitizable_data_types : hol_type list,
      emitted : (scope_desc, unit) Redblackmap.dict ref,
      skipped : int ref}
 
-  fun new_scope_cursor context binarize iterative cards_assigns maxes_assigns
+  fun new_scope_cursor context binarize cards_assigns maxes_assigns
         iters_assigns bitss bisim_depths mono_types nonmono_types
         deep_data_types finitizable_data_types =
     let
@@ -904,11 +893,10 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
         maxes_assigns iters_assigns bitss bisim_depths mono_types
         nonmono_types
       fun block_rank block =
-        if iterative andalso List.exists (adaptive_row context) block then NONE
+        if List.exists (adaptive_row context) block then NONE
         else SOME (rank_of_block block)
     in
       {context = context, binarize = binarize, blocks = blocks,
-       iterative = iterative,
        combinations = new_combination_cursor (map block_rank blocks),
        deep_data_types = deep_data_types,
        finitizable_data_types = finitizable_data_types,
@@ -929,8 +917,7 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
                 let
                   val rows = List.concat
                     (ListPair.map
-                      (project_adaptive_block (#context cursor)
-                        (#iterative cursor))
+                      (project_adaptive_block (#context cursor))
                       (columns, #blocks cursor))
                   val descriptor = scope_descriptor_from_block rows
                   val repaired = Option.map (fn cards =>

@@ -91,9 +91,9 @@ fun uninterruptible_wait f =
     end);
 
 (* Losing workers are interrupted, never killed.  A worker can hold a
-   process-global lock across an uninterruptible section (Refute's theory
-   bracket is one), and Thread.kill terminates without unwinding, so a kill
-   would leak that lock for the rest of the session.
+   process-global lock across an uninterruptible section, and Thread.kill
+   terminates without unwinding, so a kill would leak that lock for the
+   rest of the session.
 
    The join is mandatory: a straggler outliving the call would go on
    mutating state the caller has moved on from.  So the poll sleeps through
@@ -133,13 +133,8 @@ fun run_workers name worker_count f xs publish finished =
       (List.tabulate (List.length xs, fn n => n), xs);
     val forked = ref ([] : Thread.thread list);
     val workers = Int.min (List.length xs, worker_count);
-
-    fun split 0 rest front = (List.rev front, rest)
-      | split count (job :: rest) front =
-          split (count - 1) rest (job :: front)
-      | split _ [] front = (List.rev front, []);
-    val (initial, later) = split workers indexed [];
-    val pending = ref later;
+    val initial = List.take (indexed, workers);
+    val pending = ref (List.drop (indexed, workers));
 
     fun synchronized e = with_lock lock e;
 
@@ -277,11 +272,5 @@ fun get_some_with_workers worker_count f xs =
             !answer
           end
   end;
-
-fun get_some f [] = NONE
-  | get_some f [x] = get_first f [x]
-  | get_some f xs =
-      if Multithreading.max_threads () <= 1 then get_first f xs
-      else get_some_with_workers (Multithreading.max_threads ()) f xs;
 
 end;

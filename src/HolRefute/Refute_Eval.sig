@@ -120,8 +120,6 @@ signature Refute_Eval = sig
       compile : Refute_Core.config -> strategy -> qc_problem ->
         compile_result }
 
-  val rand_next : IntInf.int -> IntInf.int
-  val rand_out : IntInf.int -> IntInf.int
   val rand_below : IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
   val rand_below_limit : IntInf.int
   val checked_rand_below :
@@ -138,8 +136,6 @@ signature Refute_Eval = sig
   (* Contains any smart construct -- [Enum], [SmartGuard] or a smart
      [Guard] -- that the executability gate must account for. *)
   val plan_uses_smart : plan -> bool
-  val same_env : (term * term) list -> (term * term) list -> bool
-  val same_case_tree : case_tree option -> case_tree option -> bool
   val ignored_candidate : candidate -> candidate list -> bool
   val fully_applied_constructor : term -> (term * term list) option
 

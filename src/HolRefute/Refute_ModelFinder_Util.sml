@@ -29,6 +29,7 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   val all_combinations : (int * int) list -> int list list
   val remove_nth : int -> 'a list -> 'a list
   val all_permutations : 'a list -> 'a list list
+  val chop : int -> 'a list -> 'a list * 'a list
   val chunk_list : int -> 'a list -> 'a list list
   val chunk_list_unevenly : int list -> 'a list -> 'a list list
 
@@ -37,9 +38,7 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   val triple_lookup :
     (''a * ''a -> bool) -> (''a option * 'b) list -> ''a -> 'b option
 
-  val plural_s : int -> string
   val plural_s_for_list : 'a list -> string
-  val serial_commas : string -> string list -> string list
   val signed_string_of_int : int -> string
 
   val apply_within_budget : Time.time -> ('a -> 'b) -> 'a -> 'b
@@ -263,40 +262,38 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
             (all_permutations (remove_nth index values)))
           (index_seq 0 (length values)))
 
-  local
-    fun chop count values =
-      let
-        fun split 0 front rest = (rev front, rest)
-          | split _ front [] = (rev front, [])
-          | split remaining front (value :: rest) =
-              split (remaining - 1) (value :: front) rest
-      in
-        if count < 0 then
-          raise ARG ("Refute_ModelFinder_Util.chop", "negative chunk size")
-        else
-          split count [] values
-      end
-  in
-    fun chunk_list size values =
-      if size <= 0 then
-        raise ARG
-          ("Refute_ModelFinder_Util.chunk_list", "nonpositive chunk size")
+  fun chop count values =
+    let
+      fun split 0 front rest = (rev front, rest)
+        | split _ front [] = (rev front, [])
+        | split remaining front (value :: rest) =
+            split (remaining - 1) (value :: front) rest
+    in
+      if count < 0 then
+        raise ARG ("Refute_ModelFinder_Util.chop", "negative count")
       else
-        let
-          fun chunks [] = []
-            | chunks values =
-                let val (chunk, rest) = chop size values
-                in chunk :: chunks rest end
-        in
-          chunks values
-        end
+        split count [] values
+    end
 
-    fun chunk_list_unevenly _ [] = []
-      | chunk_list_unevenly [] values = List.map (fn value => [value]) values
-      | chunk_list_unevenly (size :: sizes) values =
-          let val (chunk, rest) = chop size values
-          in chunk :: chunk_list_unevenly sizes rest end
-  end
+  fun chunk_list size values =
+    if size <= 0 then
+      raise ARG
+        ("Refute_ModelFinder_Util.chunk_list", "nonpositive chunk size")
+    else
+      let
+        fun chunks [] = []
+          | chunks values =
+              let val (chunk, rest) = chop size values
+              in chunk :: chunks rest end
+      in
+        chunks values
+      end
+
+  fun chunk_list_unevenly _ [] = []
+    | chunk_list_unevenly [] values = List.map (fn value => [value]) values
+    | chunk_list_unevenly (size :: sizes) values =
+        let val (chunk, rest) = chop size values
+        in chunk :: chunk_list_unevenly sizes rest end
 
   fun double_lookup equal pairs key =
     case AList.lookup
@@ -313,29 +310,10 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
           SOME value => SOME value
         | NONE => double_lookup equal pairs key
 
-  fun plural_s count = if count = 1 then "" else "s"
+  fun plural_s_for_list values = if length values = 1 then "" else "s"
 
-  fun plural_s_for_list values = plural_s (length values)
-
-  fun serial_commas _ [] = ["??"]
-    | serial_commas _ [value] = [value]
-    | serial_commas conjunction [left, right] =
-        [left, conjunction, right]
-    | serial_commas conjunction [first, second, third] =
-        [first ^ ",", second ^ ",", conjunction, third]
-    | serial_commas conjunction (value :: values) =
-        (value ^ ",") :: serial_commas conjunction values
-
-  (* Timeout.apply raises only when the Event_Timer thread interrupts the
-     body before it returns, so an already-spent budget is a race rather
-     than a decision: the body may well finish first and be accepted.  On
-     this tree that is observable.  The monotonicity calculus run under
-     "tac_timeout = 0.0" completed, and fused the scope grid it was meant
-     to leave alone, in 1 of 12 measured runs.  A budget of zero means the
-     work does not get to start, so decide that here instead of asking a
-     timer to win a race it has no reason to win.  The exception is the
-     one the deadline itself would have raised, so callers need no second
-     abandonment path. *)
+  (* Timeout.apply lets a body beat an already-spent budget, so a
+     non-positive budget raises the deadline's own TIMEOUT up front. *)
   fun apply_within_budget budget work argument =
     if Time.<= (budget, Time.zeroTime) then raise Timeout.TIMEOUT budget
     else Timeout.apply budget work argument
@@ -353,8 +331,4 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
   val distinct_terms = Refute_Util.distinct_terms
   val update_term = Refute_Util.update_term
 
-  (* Prefix ownership belongs to Refute_ModelFinder_Names. *)
-  (* Upstream Pretty/PIDE, parsing, type, tactic, hash, and spy helpers
-     drop, along with pairf, is_substring_of and string_of_time;
-     n_fold_cartesian_product survives unexported as [product]. *)
 end

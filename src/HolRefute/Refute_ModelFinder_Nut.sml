@@ -61,8 +61,6 @@ signature REFUTE_MODEL_FINDER_NUT = sig
   structure NameTable : TABLE
   exception NUT of string * nut list
 
-  val string_for_nut : nut -> string
-  val inline_nut : nut -> bool
   val type_of : nut -> hol_type
   val rep_of : nut -> rep
   val nickname_of : nut -> string
@@ -70,7 +68,6 @@ signature REFUTE_MODEL_FINDER_NUT = sig
   val is_eval_name : nut -> bool
   val is_Cst : cst -> nut -> bool
   val fold_nut : (nut -> 'a -> 'a) -> nut -> 'a -> 'a
-  val map_nut : (nut -> nut) -> nut -> nut
   val untuple : (nut -> 'a) -> nut -> 'a list
   val add_free_and_const_names :
     nut -> nut list * nut list -> nut list * nut list
@@ -94,6 +91,7 @@ signature REFUTE_MODEL_FINDER_NUT = sig
     nut list * name_pool * nut NameTable.table
   val rename_vars_in_nut :
     name_pool -> nut NameTable.table -> nut -> nut
+  val selector_const_names : term -> nut list
 end
 
 structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
@@ -433,13 +431,6 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
           else NONE
       | NONE => NONE
 
-  fun factor_types ty =
-    if MFH.is_pair_type ty then
-      let val (left, right) = pairSyntax.dest_prod ty
-      in factor_types left @ factor_types right end
-    else
-      [ty]
-
   fun factorize (ty, term) =
     if MFH.is_pair_type ty then
       let
@@ -460,14 +451,18 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       val discriminator = MFN.mk_discriminator constructor_id
         (Type.-->(data_ty, Type.bool))
       val selector_tys = List.concat
-        (map factor_types (MFH.constructor_arg_types constructor))
+        (map MFH.factor_types (MFH.constructor_arg_types constructor))
       fun selector (index, ty) = MFN.mk_selector index constructor_id
         (Type.-->(data_ty, ty))
     in
-      discriminator :: map selector
-        (ListPair.zip (List.tabulate (length selector_tys, fn x => x),
-           selector_tys))
+      discriminator :: map selector (Lib.enumerate 0 selector_tys)
     end
+
+  fun const_name_for selector =
+    ConstName (MFN.variable_name selector, Term.type_of selector, MFR.Any)
+
+  fun selector_const_names constructor =
+    map const_name_for (selector_names_for constructor)
 
   fun fresh_extensional_variables left right ty =
     let
@@ -505,7 +500,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
      [is_named] re-destructs the head. *)
   fun guarded_key_lookup applies table head =
     if applies (Term.type_of head) then
-      Option.map #2 (List.find (fn (key, _) => is_named key head) table)
+      AList.lookup (fn (head, key) => is_named key head) table head
     else NONE
 
   fun word_key_lookup table head =
@@ -623,12 +618,6 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
 
   fun nut_from_term context equality term =
     let
-      fun int_of_numeral integer =
-        Arbint.toInt integer
-        handle Overflow =>
-          raise Util.TOO_LARGE
-            ("Refute_ModelFinder_Nut.nut_from_term",
-             "numeral does not fit in int")
       (* HOL4 binders expose named variables.  The environment records their
          de Bruijn levels, preserving Nitpick's BoundName convention. *)
       fun aux ambient environment candidate =
@@ -687,10 +676,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             in
               if missing = 0 then
                 let
-                  val selectors = map (fn selector =>
-                    ConstName (MFN.variable_name selector,
-                      Term.type_of selector, MFR.Any))
-                    (selector_names_for constructor)
+                  val selectors = selector_const_names constructor
                   val typed_arguments = ListPair.zip
                     (MFH.constructor_arg_types constructor, arguments)
                   val flattened = List.concat (map factorize typed_arguments)
@@ -760,7 +746,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             | NONE =>
               (case MFH.numeral_value candidate of
                    SOME integer =>
-                     Cst (Num (int_of_numeral integer),
+                     Cst (Num (MFH.int_of_numeral integer),
                        Term.type_of candidate, MFR.Any)
                  | NONE =>
               case word_literal_value candidate of
@@ -1098,7 +1084,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   fun generated_names_for_constructor scope constructor =
     let
       val raw_arguments = MFH.constructor_arg_types constructor
-      val flattened = List.concat (map factor_types raw_arguments)
+      val flattened = List.concat (map MFH.factor_types raw_arguments)
       val selectors =
         if length raw_arguments = length flattened then
           MFH.binarized_and_boxed_nth_sel_for_constr
@@ -1108,8 +1094,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               (#hol_ctxt scope) (#binarize scope) constructor index)
         else selector_names_for constructor
     in
-      map (fn selector => ConstName (MFN.variable_name selector,
-        Term.type_of selector, MFR.Any)) selectors
+      map const_name_for selectors
     end
 
   fun choose_rep_for_selector scope index selector (selectors, table) =
@@ -1133,9 +1118,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     in
       List.foldr (fn ((index, selector), current) =>
         choose_rep_for_selector scope (index - 1) selector current)
-        result
-        (ListPair.zip
-          (List.tabulate (length selectors, fn index => index), selectors))
+        result (Lib.enumerate 0 selectors)
     end
 
   fun choose_reps_for_data_type scope

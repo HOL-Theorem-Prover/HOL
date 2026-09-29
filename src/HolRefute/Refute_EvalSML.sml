@@ -10,8 +10,6 @@ structure Refute_EvalSML :> Refute_EvalSML = struct
   exception Hole of int list
   exception Deadline
 
-  datatype extraction_mode = StrictExtraction | LazyExtraction
-
   fun lazy_hole position = Susp.delay (fn () => raise Hole position)
 
   type reconstruction = unit -> term
@@ -374,11 +372,7 @@ structure Refute_EvalSML :> Refute_EvalSML = struct
 
   fun compile_locked extract (config : Refute_Core.config) strategy problem =
     let
-      val mode =
-        case strategy of
-            Refute_Eval.Narrowing => LazyExtraction
-          | _ => StrictExtraction
-      val extracted = extract mode config strategy problem
+      val extracted = extract config strategy problem
     in
       case extracted of
           ExtractionFailed reasons => Refute_Eval.Inapplicable reasons

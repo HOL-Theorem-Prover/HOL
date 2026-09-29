@@ -180,19 +180,11 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
 
   fun binarize_nat_and_int_in_term original =
     let
-      fun int_of_numeral value =
-        Arbint.toInt value
-        handle Overflow =>
-          raise Util.TOO_LARGE
-            ("Refute_ModelFinder_Preproc.binarize_nat_and_int_in_term",
-             "numeral does not fit in int")
-      fun lookup variable [] = NONE
-        | lookup variable ((old, replacement) :: rest) =
-            if Term.aconv variable old then SOME replacement
-            else lookup variable rest
+      val original_vars = Term.all_vars original
+      val lookup = AList.lookup (Lib.uncurry Term.aconv)
       fun recurse environment candidate =
         case MFH.numeral_value candidate of
-            SOME value => MFN.mk_numeral (int_of_numeral value)
+            SOME value => MFN.mk_numeral (MFH.int_of_numeral value)
               (MFH.binarize_nat_and_int_in_type (Term.type_of candidate))
           | NONE =>
               if Term.is_abs candidate then
@@ -202,7 +194,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
                   (* Retyping a binder can otherwise capture a free variable
                      with the same name at its new representation type. *)
                   val replacement = Term.variant
-                    (Term.all_vars original @ map #2 environment)
+                    (original_vars @ map #2 environment)
                     (Term.mk_var
                       (name, MFH.binarize_nat_and_int_in_type ty))
                 in
@@ -216,7 +208,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
                    recurse environment argument)
                 end
               else if Term.is_var candidate then
-                (case lookup candidate environment of
+                (case lookup environment candidate of
                      SOME replacement => replacement
                    | NONE =>
                        let val (name, ty) = Term.dest_var candidate
@@ -231,14 +223,6 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
     in
       recurse [] original
     end
-
-  fun is_higher_order_type ty =
-    case Lib.total Type.dom_rng ty of
-        SOME _ => true
-      | NONE =>
-          (case Lib.total Type.dest_thy_type ty of
-               SOME {Args, ...} => List.exists is_higher_order_type Args
-             | NONE => false)
 
   fun skolemize_term_with_origins prefix_origins
         (context as {skolems, ...} : context) skolem_depth term =
@@ -293,7 +277,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
                 val transformed = recurse
                   (dependencies @ [(variable, original, origin)])
                   (skolemizable andalso
-                   not (is_higher_order_type (Term.type_of variable)))
+                   not (MFH.is_higher_order_type (Term.type_of variable)))
                   polarity body
               in
                 if existential then
@@ -482,11 +466,6 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
     else
       term
 
-  fun is_set_type ty =
-    case Lib.total Type.dom_rng ty of
-        SOME (_, range) => range = Type.bool
-      | NONE => false
-
   fun heavy_variables active term =
     List.filter (fn variable =>
       is_value_var variable orelse Util.aconv_member variable active)
@@ -497,7 +476,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
         [] => false
       | [variable] =>
           let val ty = Term.type_of variable
-          in MFH.is_fun_type ty orelse is_set_type ty orelse
+          in MFH.is_fun_type ty orelse pred_setSyntax.is_set_type ty orelse
              MFH.is_pair_type ty
           end
       | _ => true
@@ -517,7 +496,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
      a concrete FunBox/PairBox into a low-cardinality existential can omit
      the very wrapped value required by its selector equation. *)
   fun is_function_set_or_pair preserve_boxes ty =
-    MFH.is_fun_type ty orelse is_set_type ty orelse
+    MFH.is_fun_type ty orelse pred_setSyntax.is_set_type ty orelse
     MFH.is_pair_type ty orelse
     preserve_boxes andalso
       (MFH.is_funbox_type ty orelse MFH.is_pairbox_type ty)
@@ -528,8 +507,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
         (value_var_prefix ^ Int.toString serial) ty)
 
   fun pulled_lookup term pulled =
-    Option.map #2 (List.find (fn (other, _) => Term.aconv other term)
-      pulled)
+    AList.lookup (Lib.uncurry Term.aconv) pulled term
 
   fun pull_candidate preserve_boxes avoids active forbidden relax
         candidate pulled =
@@ -848,9 +826,8 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
                 let
                   val argument_tys =
                     MFH.constructor_arg_types constructor
-                  val indexed = ListPair.zip
-                    (Util.index_seq 0 (length arguments),
-                     ListPair.zip (arguments, argument_tys))
+                  val indexed =
+                    Lib.enumerate 0 (ListPair.zip (arguments, argument_tys))
                   fun constraints value =
                     let
                       val discriminator =
@@ -1499,7 +1476,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
     in
       if null call_sites then []
       else List.mapPartial classify
-        (ListPair.zip (Util.index_seq 0 (length sets), sets))
+        (Lib.enumerate 0 sets)
     end
 
   fun same_static ((left_index, left_term),
@@ -1559,8 +1536,8 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
       (arguments1, arguments2)
 
   fun special_cache_lookup entries key =
-    Option.map #2 (List.find (fn (stored, _) =>
-      special_fun_aconv (stored, key)) entries)
+    AList.lookup (fn (key, stored) => special_fun_aconv (stored, key))
+      entries key
 
   fun specialize_consts_in_term
         (context as {specialize, special_funs, simp_table, ...} : context)
@@ -1602,8 +1579,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
               val eligible = List.mapPartial (fn (index, argument) =>
                 if is_special_eligible_arg bound argument then SOME index
                 else NONE)
-                (ListPair.zip
-                  (Util.index_seq 0 (length arguments), arguments))
+                (Lib.enumerate 0 arguments)
               val old_axioms = map destroy_existential_equalities
                 (MFH.equational_fun_axioms context original)
               val static = static_args_in_terms context original old_axioms
@@ -1867,9 +1843,8 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
         def_assumptions
       val mono_nondefs = List.filter (not o MFH.is_poly_term) nondefs
       val poly_nondefs = List.filter MFH.is_poly_term nondefs
-      fun lookup_def variable = Option.map #2
-        (List.find (fn (other, _) => Term.aconv variable other)
-          def_assumption_table)
+      fun lookup_def variable =
+        AList.lookup (Lib.uncurry Term.aconv) def_assumption_table variable
       (* Term.compare is alpha-invariant (src/0/Term.sml: the Abs case
          compares binder types and de Bruijn bodies only), so these HOLsets
          decide exactly what the old linear Term.aconv scans decided.  The
@@ -2059,9 +2034,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
       fun eval_axiom (serial, term) =
         boolSyntax.mk_eq
           (MFN.mk_eval serial (Term.type_of term), term)
-      val eval_axioms = ListPair.zip
-        (Util.index_seq 0 (length evals), evals)
-        |> map eval_axiom
+      val eval_axioms = map eval_axiom (Lib.enumerate 0 evals)
       val initial = add_axioms_for_term 1 [] negated
         (no_terms, [], no_terms, [], no_terms)
       val with_assumptions = List.foldr
@@ -2125,8 +2098,8 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
 
   fun uncurry_term table term =
     let
-      fun lookup candidate = Option.map #2
-        (List.find (Term.aconv candidate o #1) table)
+      fun lookup candidate =
+        AList.lookup (Lib.uncurry Term.aconv) table candidate
       fun recurse candidate arguments =
         if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
@@ -2191,6 +2164,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
 
   fun box_fun_and_pair_in_term context def original =
     let
+      val original_vars = Term.all_vars original
       fun positive_existential polarity existential =
         (polarity = Util.Pos andalso existential) orelse
         (polarity = Util.Neg andalso not existential)
@@ -2198,8 +2172,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
         if Type.is_vartype ty then 1
         else 1 + List.foldl (op +) 0
           (map type_size (#Args (Type.dest_thy_type ty)))
-      fun env_lookup environment variable =
-        Option.map #2 (List.find (Term.aconv variable o #1) environment)
+      val env_lookup = AList.lookup (Lib.uncurry Term.aconv)
       fun rebind environment variable new_ty body =
         let
           val (name, _) = Term.dest_var variable
@@ -2207,7 +2180,7 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
              variable.  Also avoid replacements of outer binders whose
              formerly distinct types collapse under boxing. *)
           val variable' = Term.variant
-            (Term.all_vars original @ map #2 environment)
+            (original_vars @ map #2 environment)
             (Term.mk_var (name, new_ty))
         in (variable', body, (variable, variable') :: environment) end
       fun quantifier environment polarity existential candidate =

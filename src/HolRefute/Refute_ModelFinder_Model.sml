@@ -8,7 +8,6 @@ specialization display. *)
 signature REFUTE_MODEL_FINDER_MODEL = sig
   type term = Term.term
   type hol_type = Type.hol_type
-  type rep = Refute_ModelFinder_Rep.rep
   type nut = Refute_ModelFinder_Nut.nut
   type scope = Refute_ModelFinder_Scope.scope
   type raw_bound = Refute_Forl.raw_bound
@@ -70,41 +69,6 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      [register_fmap_display]; valid at every function type. *)
   val register_function_display : unit -> unit
 
-  val term_for_rep :
-    {scope : scope,
-     atoms : (hol_type option * string list) list,
-     sel_names : nut list,
-     rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
-     bounds : raw_bound list,
-     maybe_opt : bool,
-     ty : hol_type,
-     representation : rep,
-     tuples : int list list} -> term
-
-  val user_friendly_const :
-    Refute_ModelFinder_HOL.special_fun list -> string -> hol_type -> term
-
-  val format_type : int list -> int list -> hol_type -> hol_type
-  val format_term_type :
-    Refute_ModelFinder_HOL.mf_context ->
-    (term option * int list) list -> term -> hol_type
-  val format_fun : hol_type -> term -> term
-
-  val bisimilar_values :
-    hol_type list -> int -> term * term -> bool
-
-  val reconstruct :
-    {scope : scope,
-     atoms : (hol_type option * string list) list,
-     special_funs : Refute_ModelFinder_HOL.special_fun list,
-     real_frees : term list,
-     eval_terms : term list,
-     free_names : nut list,
-     sel_names : nut list,
-     nonsel_names : nut list,
-     rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
-     bounds : raw_bound list} -> reconstruction
-
   val reconstruct_both :
     {context : Refute_ModelFinder_HOL.mf_context,
      formats : (term option * int list) list,
@@ -129,7 +93,6 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val display_counterexample :
     term_postprocessor_snapshot -> reconstruction ->
     Refute_Core.counterexample -> Refute_Core.counterexample
-  val assignment_operator : string -> string
   val certification_env_with_holes :
     replay_sidecar -> (term * term) list -> (term * term) list option
   val genuine_means_genuine :
@@ -358,13 +321,7 @@ fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
                SOME (function, argument) =>
                  Term.mk_comb (descend function, descend argument)
              | NONE => candidate)
-    (* The family half of [snapshot] is never checked here: [Refute.sml]
-       registers the fmap family and the four built-in pattern entries
-       together, unconditionally, at load, and the public surface exposes
-       no way to
-       remove a pattern entry, so [#entries] is never empty in a real
-       session -- this is purely a fast path for that case, not a
-       correctness gate. *)
+    (* A fast path only: Refute.sml registers built-in entries at load. *)
     val nothing_registered = null (#entries (#registry snapshot))
   in
     if nothing_registered then term else descend term
@@ -546,17 +503,6 @@ fun set_replay_hole_origin ({replay_holes, ...} : context) variable origin =
     replay_holes := {next = next, holes = map update holes}
   end
 
-fun chop count values =
-  let
-    fun split 0 front rest = (rev front, rest)
-      | split _ front [] = (rev front, [])
-      | split remaining front (value :: rest) =
-          split (remaining - 1) (value :: front) rest
-  in
-    if count < 0 then raise err "chop" "negative count"
-    else split count [] values
-  end
-
 fun tuples_for_name ({rel_table, bounds, ...} : context) name =
   let val relation = MFNT.the_rel rel_table name
   in Option.getOpt (AList.lookup (op =) bounds relation, []) end
@@ -692,7 +638,6 @@ fun make_set (context as {scope, ...} : context) maybe_opt actual_element_ty
           UnrepresentedSetElement display_element_ty]
       else
         present
-    fun insert (element, set) = pred_setSyntax.mk_insert (element, set)
   in
     (* An exact set asserts every omitted member is absent.  Retaining the
        true tuples while discarding unknown memberships would therefore make
@@ -701,7 +646,7 @@ fun make_set (context as {scope, ...} : context) maybe_opt actual_element_ty
       fresh_replay_hole context DisplayUnknown PartialSetMembership
         (pred_setSyntax.mk_set_type display_element_ty)
     else
-      List.foldr insert (pred_setSyntax.mk_empty display_element_ty) elements
+      pred_setSyntax.prim_mk_set (elements, display_element_ty)
   end
 
 fun make_fun_or_set context maybe_opt ty pairs =
@@ -715,13 +660,6 @@ fun make_fun_or_set context maybe_opt ty pairs =
     else
       make_fun context domain_ty display_domain_ty display_range_ty pairs
   end
-
-fun factor_types ty =
-  if MFH.is_pair_type ty then
-    let val (left, right) = pairSyntax.dest_prod ty
-    in factor_types left @ factor_types right end
-  else
-    [ty]
 
 fun rebuild_value ty values =
   if MFH.is_pair_type ty then
@@ -773,7 +711,7 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               let
                 val (left_ty, right_ty) = pairSyntax.dest_prod ty
                 val (left_tuple, right_tuple) =
-                  chop (MFR.arity_of_rep left_rep) tuple
+                  Util.chop (MFR.arity_of_rep left_rep) tuple
                 val left = term_for_rep true seen left_ty left_rep
                   [left_tuple]
                 val right = term_for_rep true seen right_ty right_rep
@@ -834,7 +772,7 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
                      tail :: Option.getOpt
                        (Redblackmap.peek (table, prefix), [])))
                 (Redblackmap.mkDict (Portable.list_compare Int.compare))
-                (map (chop domain_width) tuples)
+                (map (Util.chop domain_width) tuples)
               fun tails tuple =
                 rev (Option.getOpt (Redblackmap.peek (tail_table, tuple), []))
               val domains = map (fn tuple =>
@@ -944,7 +882,7 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
         val constructor = #const constructor_spec
         val constructor_id = MFH.constructor_name constructor
         val argument_tys = MFH.constructor_arg_types constructor
-        val flat_tys = List.concat (map factor_types argument_tys)
+        val flat_tys = List.concat (map MFH.factor_types argument_tys)
 
         fun selector_info index =
           let
@@ -997,9 +935,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
         else
           let
             val next_seen = if co then (ty, atom) :: seen else seen
-            val flat_values = map (selector_value next_seen)
-              (ListPair.zip
-                (List.tabulate (length flat_tys, fn index => index), flat_tys))
+            val flat_values =
+              map (selector_value next_seen) (Lib.enumerate 0 flat_tys)
             fun rebuild (argument_ty, (arguments, values)) =
               let val (argument, values) = rebuild_value argument_ty values
               in (argument :: arguments, values) end
@@ -1409,13 +1346,6 @@ fun format_term_type_for_name context formats special_funs name term =
                    | NONE => format_term_type context formats term)
   end
 
-fun pair_leaves ty =
-  if MFH.is_pair_type ty then
-    let val (left, right) = pairSyntax.dest_prod ty
-    in pair_leaves left @ pair_leaves right end
-  else
-    [ty]
-
 fun flatten_pair_term ty term =
   if MFH.is_pair_type ty then
     let
@@ -1451,8 +1381,8 @@ fun build_pair_term ty terms =
 
 fun reshape_pair target_ty source_ty term =
   let
-    val source_leaves = pair_leaves source_ty
-    val target_leaves = pair_leaves target_ty
+    val source_leaves = MFH.factor_types source_ty
+    val target_leaves = MFH.factor_types target_ty
     val _ = if Lib.list_eq Util.same_type source_leaves target_leaves then ()
       else raise err "reshape_pair" "tuple types have different leaves"
     val (result, rest) = build_pair_term target_ty
@@ -1470,57 +1400,32 @@ fun marker_with_type ty marker =
         else raise err "marker_with_type" "cannot retype function base"
 
 fun dest_display_fun term =
-  case Lib.total combinSyntax.dest_update_comb term of
-      SOME ((point, value), base) =>
-        let val (marker, pairs) = dest_display_fun base
-        in (marker, pairs @ [(point, value)]) end
-    | NONE =>
-        if combinSyntax.is_K_1 term then
-          (combinSyntax.dest_K_1 term, [])
-        else
-          raise err "dest_display_fun" "not a reconstructed function"
+  let
+    fun strip term pairs =
+      case Lib.total combinSyntax.dest_update_comb term of
+          SOME (pair, base) => strip base (pair :: pairs)
+        | NONE =>
+            if combinSyntax.is_K_1 term then
+              (combinSyntax.dest_K_1 term, pairs)
+            else
+              raise err "dest_display_fun" "not a reconstructed function"
+  in
+    strip term []
+  end
 
 fun make_display_fun domain_ty marker pairs =
   List.foldl (fn ((point, value), base) =>
     Util.update_term point value base)
     (combinSyntax.mk_K_1 (marker, domain_ty)) pairs
 
-(* fmap's synthetic rep is [key -> range option]
-   (synthetic_fmap_typedef, Refute_ModelFinder_HOL.sml), so a
-   reconstructed [abs_fmap' f] displays through [dest_display_fun]'s
-   generic update-chain parser exactly like any other reconstructed
-   function value.  The chain's base case must be safe to render as
-   [NONE]: either it already is the literal [NONE], or it is
-   [MFN.irrelevant_marker] -- a hole the reconstruction has already
-   certified as fillable with *any* well-typed value without changing
-   the verdict (Refute_ModelFinder_Names.sml), so [NONE] is one sound
-   choice among the ones that hole permits.  [MFN.unknown_marker] gets
-   no such license: unlike [DisplayIrrelevant], [DisplayUnknown] does
-   not promise every filling is safe, so treating it as [NONE] could
-   show a different map than the one certified -- decline instead.
-   The same reasoning applies per explicit point: a value is rendered
-   only when it is the literal [NONE] or [SOME v]; if any named point's
-   value is itself an opaque marker, the whole rewrite is declined
-   rather than guessing whether that point is present.  Kept points are
-   rendered via [pairs] in the order [dest_display_fun] returns them,
-   innermost first, so the outermost (highest-priority) update lands
-   last and wins ties exactly as it does in the rep chain -- making the
-   result denote the identical rep function, and hence (abs_fmap' being
-   a bijection on such reps) the identical fmap atom.  That relies on
-   each key occurring at most once: [binding] below drops a [NONE]
-   point rather than emitting an [FUPDATE] for it, which is only sound
-   when no later point re-adds that same key -- a duplicate key with a
-   [NONE] point after a [SOME v] one would otherwise silently keep the
-   stale [v] instead of the point that actually wins.  [pairs] is
-   therefore checked for a duplicate key first, and the whole rewrite
-   is declined (not guessed at) if one is found.  A key carrying a
-   display marker is never counted as a duplicate of another, even an
-   [aconv]-equal one: the same policy [dedup_update_chain] applies to
-   the rep chain below this node, for the same reason (a marker stands
-   for an unspecified value, so two occurrences are never known to
-   collide).  Genuine (marker-free) duplicate keys are defensive only:
-   [dedup_update_chain] already dedups the rep chain bottom-up before
-   this node runs, so [dest_display_fun] cannot currently surface one. *)
+(* fmap's synthetic rep is [key -> range option], so an [abs_fmap' f] atom
+   renders as an FUPDATE chain.  Only a [NONE] or [MFN.irrelevant_marker]
+   base and literal [NONE]/[SOME v] points are rendered; anything else is
+   declined, never guessed.  Dropping a [NONE] point is sound only if no
+   later point re-adds its key, so a duplicate key also declines; as in
+   [dedup_update_chain], keys carrying a display marker never collide.
+   Points keep [dest_display_fun]'s innermost-first order, so the
+   outermost update still wins. *)
 fun has_duplicate_key pairs =
   let
     val seen = Util.aconv_member
@@ -1538,12 +1443,6 @@ fun fmap_atom_to_chain term =
         if MFH.raw_constructor_name constructor = "refute$abs_fmap'" then
           (case Lib.total dest_display_fun rep of
                SOME (marker, pairs) =>
-                 (* Declining (not guessing) covers a base that is
-                    [unknown_marker] rather than [NONE]/[irrelevant_marker];
-                    [dest_display_fun] cannot currently produce that for a
-                    fmap rep, so this branch is defensive only.  A genuine
-                    duplicate key is likewise defensive only, per
-                    [has_duplicate_key]'s comment above. *)
                  if Lib.can optionSyntax.dest_none marker orelse
                     MFN.is_irrelevant_marker marker
                  then
@@ -1634,33 +1533,13 @@ fun register_function_display () =
   register_term_postprocessor
     (Type.-->(Type.alpha, Type.beta)) dedup_update_chain
 
-fun dest_literal_set term =
-  if pred_setSyntax.is_empty term then SOME []
-  else
-    case Lib.total pred_setSyntax.dest_insert term of
-        SOME (element, rest) =>
-          Option.map (fn elements => element :: elements)
-            (dest_literal_set rest)
-      | NONE => NONE
-
-fun make_literal_set element_ty elements =
-  List.foldr (fn (element, set) =>
-      pred_setSyntax.mk_insert (element, set))
-    (pred_setSyntax.mk_empty element_ty) elements
-
-fun factor_count ty =
-  if MFH.is_pair_type ty then
-    let val (left, right) = pairSyntax.dest_prod ty
-    in factor_count left + factor_count right end
-  else 1
-
 fun factor_out_types left right =
   if MFH.is_pair_type left andalso MFH.is_pair_type right then
     let
       val (left_head, left_tail) = pairSyntax.dest_prod left
       val (right_head, right_tail) = pairSyntax.dest_prod right
-      val left_count = factor_count left_head
-      val right_count = factor_count right_head
+      val left_count = length (MFH.factor_types left_head)
+      val right_count = length (MFH.factor_types right_head)
     in
       if left_count = right_count then
         let
@@ -1717,7 +1596,7 @@ fun format_fun target_ty term =
           [(left, [(right, value)])]
       | add_group ((left, right, value), (key, pairs) :: rest) =
           if Term.aconv left key then
-            (key, pairs @ [(right, value)]) :: rest
+            (key, (right, value) :: pairs) :: rest
           else
             (key, pairs) ::
               add_group ((left, right, value), rest)
@@ -1728,7 +1607,9 @@ fun format_fun target_ty term =
           let val (left, right) =
             split_point source_domain left_ty right_ty point
           in (left, right, value) end) pairs
-        fun grouped pairs = List.foldl add_group [] (triples pairs)
+        fun grouped pairs =
+          map (fn (key, reversed) => (key, rev reversed))
+            (List.foldl add_group [] (triples pairs))
         fun ordinary marker pairs =
           let
             val groups = grouped pairs
@@ -1739,20 +1620,21 @@ fun format_fun target_ty term =
             make_display_fun left_ty outer_base
               (map (fn (left, entries) => (left, inner entries)) groups)
           end
-        fun set_value entries = make_literal_set right_ty
-          (map #1 entries)
+        fun set_value entries =
+          pred_setSyntax.prim_mk_set (map #1 entries, right_ty)
       in
         case Lib.total dest_display_fun candidate of
             SOME (marker, pairs) => ordinary marker pairs
           | NONE =>
-              (case dest_literal_set candidate of
+              (case Lib.total pred_setSyntax.strip_set candidate of
                    SOME elements =>
                      if MFH.is_boolean_type source_range then
                        let
                          val groups = grouped
                            (map (fn element =>
                              (element, boolSyntax.T)) elements)
-                         val outer_base = make_literal_set right_ty []
+                         val outer_base =
+                           pred_setSyntax.prim_mk_set ([], right_ty)
                        in
                          make_display_fun left_ty outer_base
                            (map (fn (left, entries) =>
@@ -1777,7 +1659,7 @@ fun format_fun target_ty term =
                   case Lib.total dest_display_fun inner of
                       SOME (_, pairs) => (pairs, false)
                     | NONE =>
-                        (case dest_literal_set inner of
+                        (case Lib.total pred_setSyntax.strip_set inner of
                              SOME elements =>
                                (map (fn element =>
                                   (element, boolSyntax.T)) elements, true)
@@ -1793,16 +1675,17 @@ fun format_fun target_ty term =
             val expanded = map expand outer_pairs
             val pairs = List.concat (map #1 expanded)
             val empty_set_default =
-              case dest_literal_set outer_marker of
+              case Lib.total pred_setSyntax.strip_set outer_marker of
                   SOME [] => true
                 | _ => false
             val all_sets = MFH.is_boolean_type target_range andalso
               empty_set_default andalso List.all #2 expanded
           in
             if all_sets then
-              make_literal_set target_domain
+              pred_setSyntax.prim_mk_set
                 (map #1 (List.filter
-                  (fn (_, value) => Term.aconv value boolSyntax.T) pairs))
+                  (fn (_, value) => Term.aconv value boolSyntax.T) pairs),
+                 target_domain)
             else
               make_display_fun target_domain
                 (deepest_marker target_range outer_marker) pairs
@@ -1851,8 +1734,8 @@ fun format_fun target_ty term =
       else if MFH.is_pair_type target andalso MFH.is_pair_type source then
         if pairSyntax.is_pair candidate then
           let
-            val source_tys = pair_leaves source
-            val target_tys = pair_leaves target
+            val source_tys = MFH.factor_types source
+            val target_tys = MFH.factor_types target
             val source_terms = flatten_pair_term source candidate
             val _ = if length source_tys = length target_tys then ()
               else raise err "format_fun" "tuple arities differ"
@@ -2010,31 +1893,16 @@ fun sidecar_for holes reconstruction : replay_sidecar =
        Util.aconv_member variable frees) holes}
   end
 
-fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
-                  ty, representation, tuples} =
-  let
-    val replay_holes = new_replay_hole_pool ()
-    val context =
-      {scope = scope, atoms = atoms, sel_names = sel_names,
-       rel_table = rel_table, bounds = bounds, atom_avoids = [],
-       pool = new_atom_pool (), replay_holes = replay_holes}
-    val private = reconstruct_term context maybe_opt ty representation tuples
-  in
-    render_replay_holes (rev (#holes (!replay_holes))) private
-  end
-
-fun reconstruct_with formatting
-      {scope, atoms, special_funs, real_frees, eval_terms,
-       free_names, sel_names, nonsel_names, rel_table, bounds} =
+fun reconstruct_both
+      {context = format_context, formats, scope, atoms, special_funs,
+       real_frees, eval_terms, free_names, sel_names, nonsel_names,
+       rel_table, bounds} =
   let
     (* One immutable callback snapshot governs the displayed model.  The raw
        public view never consults callbacks; certification uses its separate
        private view containing sidecar-declared replay holes. *)
     val postprocessors = snapshot_term_postprocessors ()
-    val skolem_infos =
-      case formatting of
-          SOME (format_context, _) => !(#skolems format_context)
-        | NONE => []
+    val skolem_infos = !(#skolems format_context)
     val context =
       {scope = scope, atoms = atoms, sel_names = sel_names,
        rel_table = rel_table, bounds = bounds,
@@ -2056,10 +1924,7 @@ fun reconstruct_with formatting
             (tuples_for_name context name)
 
     fun formatted_value key value =
-      case formatting of
-          NONE => value
-        | SOME (format_context, formats) =>
-            format_fun (format_term_type format_context formats key) value
+      format_fun (format_term_type format_context formats key) value
 
     fun binding term =
       let val name = free_name_for_term free_names term
@@ -2117,12 +1982,9 @@ fun reconstruct_with formatting
           (Term.type_of lhs) private_raw_value
         val raw_value = curry_uncurried_value nickname
           (Term.type_of lhs) raw_value
-        val display_value =
-          case formatting of
-              NONE => raw_value
-            | SOME (format_context, formats) => format_fun
-                (format_term_type_for_name format_context formats special_funs
-                  nickname lhs) raw_value
+        val display_value = format_fun
+          (format_term_type_for_name format_context formats special_funs
+            nickname lhs) raw_value
       in
         if MFNT.is_skolem_name name then
           ((cert_evals,
@@ -2248,38 +2110,22 @@ fun reconstruct_with formatting
       (left, operator, postprocess_term postprocessors value)
     fun process_type (ty, values, complete) =
       (ty, map (postprocess_term postprocessors) values, complete)
-    fun displayed_result () = result
-      (map process_pair display_bindings)
-      (map process_pair display_evals)
-      (map process_skolem display_skolems)
-      (map process_const display_consts)
-      (map process_type raw_types)
     val certification = result cert_bindings cert_evals cert_skolems
       cert_consts cert_types
     val sidecar = sidecar_for (current_holes ()) certification
   in
     {raw = result raw_bindings raw_evals raw_skolems raw_consts raw_types,
      certification = certification,
-     displayed =
-       (case formatting of
-            NONE => result display_bindings display_evals display_skolems
-              display_consts raw_types
-          | SOME _ => displayed_result ()),
+     displayed = result
+       (map process_pair display_bindings)
+       (map process_pair display_evals)
+       (map process_skolem display_skolems)
+       (map process_const display_consts)
+       (map process_type raw_types),
      replay_hints = rev replay_hints,
      replay_sidecar = sidecar,
      postprocessors = postprocessors}
   end
-
-fun reconstruct arguments = #raw (reconstruct_with NONE arguments)
-
-fun reconstruct_both
-      {context, formats, scope, atoms, special_funs, real_frees, eval_terms,
-       free_names, sel_names, nonsel_names, rel_table, bounds} =
-  reconstruct_with (SOME (context, formats))
-    {scope = scope, atoms = atoms, special_funs = special_funs,
-     real_frees = real_frees, eval_terms = eval_terms,
-     free_names = free_names, sel_names = sel_names,
-     nonsel_names = nonsel_names, rel_table = rel_table, bounds = bounds}
 
 fun model_report ({skolems, consts, types, ...} : reconstruction) =
   {skolems = skolems, consts = consts, types = types}
@@ -2292,9 +2138,8 @@ fun display_counterexample postprocessors
       (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
   let
     fun displayed_value entries (key, value) =
-      case List.find (fn (candidate, _) => Term.aconv candidate key)
-             entries of
-          SOME (_, displayed) =>
+      case AList.lookup (Lib.uncurry Term.aconv) entries key of
+          SOME displayed =>
             if is_unknown displayed then
               (key, displayed)
             else if Util.same_type
@@ -2363,10 +2208,6 @@ fun certification_env_with_holes (sidecar as {holes}) bindings =
     if valid_replay_sidecar sidecar then keep bindings else NONE
   end
 
-fun rf_type card =
-  Type.mk_thy_type
-    {Thy = "refute", Tyop = "rf" ^ Int.toString card, Args = []}
-
 fun rf_constructor card serial =
   Term.prim_mk_const
     {Thy = "refute", Name = "rf" ^ Int.toString card ^ "_" ^
@@ -2413,8 +2254,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints
     fun scope_card ty =
       case scope of
           SOME assignments =>
-            Option.map #2 (List.find (fn (other, _) => Util.same_type ty other)
-              assignments)
+            AList.lookup (Lib.uncurry Util.same_type) assignments ty
         | NONE => NONE
     fun collect [] = SOME []
       | collect (tyvar :: rest) =
@@ -2495,7 +2335,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints
         | SOME rows =>
             let
               val theta = map (fn (tyvar, card) =>
-                {redex = tyvar, residue = rf_type card}) rows
+                {redex = tyvar, residue = Refute_Util.rf_type card}) rows
               fun atom_substitutions (tyvar, card) =
                 case List.find (fn (other, _, _) =>
                     Util.same_type tyvar other) types of

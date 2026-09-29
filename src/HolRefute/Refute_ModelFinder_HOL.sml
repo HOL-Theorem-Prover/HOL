@@ -309,35 +309,22 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               const_key constant
           end
 
-  (* Buckets are stored newest-first so that table_append stays O(1);
-     table_lookup is the only reader and restores insertion order. *)
+  (* Buckets are stored newest-first (KNametab.cons_list); table_lookup
+     restores insertion order. *)
   fun table_lookup table constant =
     case Lib.total const_key constant of
-        SOME key => rev (Option.getOpt (KNametab.lookup table key, []))
+        SOME key => rev (KNametab.lookup_list table key)
       | NONE => []
-
-  fun table_append key value table =
-    let val old = Option.getOpt (KNametab.lookup table key, [])
-    in KNametab.update (key, value :: old) table end
 
   fun add_simps table constant axioms =
     let val key = const_key constant
     in table := List.foldl (fn (axiom, result) =>
-         table_append key axiom result) (!table) axioms
+         KNametab.cons_list (key, axiom) result) (!table) axioms
     end
 
-  fun theorem_term theorem =
-    let
-      val proposition =
-        boolSyntax.list_mk_imp (Thm.hyp theorem, Thm.concl theorem)
-    in
-      (* HOL theorem frees are implicitly universal.  Isabelle presents the
-         corresponding table variables as schematic Vars, which close_form
-         closes before nut conversion.  Close them here so they cannot be
-         mistaken for freely interpreted model constants. *)
-      boolSyntax.list_mk_forall
-        (Term.free_vars_lr proposition, proposition)
-    end
+  (* Closed, as Isabelle's close_form closes schematic Vars, so theorem
+     frees are not mistaken for freely interpreted model constants. *)
+  val theorem_term = Refute_Util.theorem_term
 
   fun clauses_of theorem = map theorem_term (Drule.CONJUNCTS theorem)
 
@@ -430,7 +417,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun def_table_for props =
     List.foldl (fn (prop, table) =>
       let val (key, value) = pair_for_prop prop
-      in table_append key value table end) KNametab.empty props
+      in KNametab.cons_list (key, value) table end) KNametab.empty props
 
   fun matching_instantiations constant prop =
     let
@@ -857,8 +844,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   val generic_built_in_arity = keyed_built_in_arity built_in_consts
 
   fun typed_built_in_arity key ty =
-    Option.map #2 (List.find (fn ((other, other_ty), _) =>
-      same_key key other andalso ty = other_ty) built_in_typed_consts)
+    AList.lookup (fn ((key, ty), (other, other_ty)) =>
+      same_key key other andalso ty = other_ty) built_in_typed_consts (key, ty)
 
   (* Both carriers' tables are single-theory, so the theory name decides
      before the type guard runs.  That matters: these two are reached
@@ -933,13 +920,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     Option.isSome (arity_of_built_in_const constant)
 
   fun is_registered_lfp constant =
-    Option.isSome (KNametab.lookup (IndDefLib.rule_induction_map ())
-      (original_const_key constant))
+    KNametab.defined (IndDefLib.rule_induction_map ())
+      (original_const_key constant)
     handle HOL_ERR _ => false
 
   fun is_registered_gfp constant =
-    Option.isSome (KNametab.lookup (CoIndDefLib.coinduction_map ())
-      (original_const_key constant))
+    KNametab.defined (CoIndDefLib.coinduction_map ())
+      (original_const_key constant)
     handle HOL_ERR _ => false
 
   fun fixpoint_kind_from_memberships gfp lfp =
@@ -1005,7 +992,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             | SOME target =>
                 let val key = original_const_key constant
                 in
-                  rev (Option.getOpt (KNametab.lookup table key, []))
+                  rev (KNametab.lookup_list table key)
                   |> map (specialize_frac_prop target constant)
                 end
       in
@@ -1097,7 +1084,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       fun step (constant, (seen, result)) =
         let val key = const_key constant
         in
-          if Option.isSome (KNametab.lookup seen key) then (seen, result)
+          if KNametab.defined seen key then (seen, result)
           else (KNametab.update (key, ()) seen, (key, constant) :: result)
         end
     in
@@ -1108,7 +1095,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun nondef_table_for props =
     List.foldl (fn (prop, table) =>
-      List.foldl (fn ((key, _), result) => table_append key prop result)
+      List.foldl (fn ((key, _), result) =>
+        KNametab.cons_list (key, prop) result)
         table (constants_in prop)) KNametab.empty props
 
   fun oldest_first_theories () =
@@ -1143,7 +1131,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       KNametab.update (presentation_key presentation, ()) table)
       KNametab.empty presentations
 
-  fun has_presentation keys key = Option.isSome (KNametab.lookup keys key)
+  fun has_presentation keys key = KNametab.defined keys key
 
   fun standard_user_props presentations =
     List.concat (List.mapPartial (fn {thm, ...} =>
@@ -1241,7 +1229,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val psimp_props =
         theorem_set_props Refute_Core.refute_psimp "refute_psimp"
       val choice_table = List.foldl (fn ((key, prop), table) =>
-        table_append key prop table) KNametab.empty
+        KNametab.cons_list (key, prop) table) KNametab.empty
         (choice_spec_entries ())
     in
       {def_tables = (def_table_for unfold_props,
@@ -1496,7 +1484,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           fun extend table props = List.foldl
             (fn (prop, entries) =>
               let val (head, value) = pair_for_prop prop
-              in table_append head value entries end)
+              in KNametab.cons_list (head, value) entries end)
             table props
           (* Both tables are built before either is assigned, so a raise
              cannot leave one populated for a group the caller discards. *)
@@ -1594,12 +1582,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                          val _ = intro_table := List.foldl
                            (fn (prop, table) =>
                              let val (head, value) = pair_for_prop prop
-                             in table_append head value table end)
+                             in KNametab.cons_list (head, value) table end)
                            (!intro_table) rules
                          val _ = case_table := List.foldl
                            (fn (prop, table) =>
                              let val (head, value) = pair_for_prop prop
-                             in table_append head value table end)
+                             in KNametab.cons_list (head, value) table end)
                            (!case_table) cases
                        in
                          SOME group
@@ -2128,8 +2116,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         (Refute_Session.update cached_wf_props (fn _ =>
            {timeout = timeout, entries = []}); NONE)
       else
-        Option.map #2 (List.find (fn (other, _) =>
-          Term.aconv other proposition) entries)
+        AList.lookup (Lib.uncurry Term.aconv) entries proposition
     end
 
   fun cache_wf timeout proposition result =
@@ -2521,7 +2508,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
            constant_operators = constant_operator_pairs conclusion}
         val key = {Thy = theory, Name = name}
         val replacing =
-          Option.isSome (KNametab.lookup (!(harvest_binding_index ())) key)
+          KNametab.defined (!(harvest_binding_index ())) key
         val _ = harvest_binding_index () :=
           KNametab.update (key, binding) (!(harvest_binding_index ()))
         val _ =
@@ -2858,24 +2845,26 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   val builtin_codatatype_cache =
     Refute_Session.state "builtin_codatatypes" ([] : codatatype_info list)
 
+  (* The descriptor test goes first: [theory_is_available] walks the
+     whole ancestry, and almost every operator asked about is not here. *)
   fun builtin_codatatype_for (operator as {Thy, ...} : type_operator) =
-    if not (theory_is_available Thy) then NONE
-    else
-      case List.find (fn {tyop, ...} => same_type_operator tyop operator)
-             (Refute_Session.read builtin_codatatype_cache) of
-          SOME info => SOME info
-        | NONE =>
-            (case List.find (fn {Thy, Tyop, ...} =>
-                     same_type_operator {Thy = Thy, Tyop = Tyop} operator)
-                   builtin_codatatypes of
-                 NONE => NONE
-               | SOME descriptor =>
-                   (case builtin_codatatype_info descriptor of
-                        NONE => NONE
-                      | SOME info =>
-                          (Refute_Session.update builtin_codatatype_cache
-                             (fn cache => info :: cache);
-                           SOME info)))
+    case List.find (fn {Thy, Tyop, ...} =>
+           same_type_operator {Thy = Thy, Tyop = Tyop} operator)
+           builtin_codatatypes of
+        NONE => NONE
+      | SOME descriptor =>
+          if not (theory_is_available Thy) then NONE
+          else
+            case List.find (fn {tyop, ...} => same_type_operator tyop operator)
+                   (Refute_Session.read builtin_codatatype_cache) of
+                SOME info => SOME info
+              | NONE =>
+                  (case builtin_codatatype_info descriptor of
+                       NONE => NONE
+                     | SOME info =>
+                         (Refute_Session.update builtin_codatatype_cache
+                            (fn cache => info :: cache);
+                          SOME info))
 
   fun explicit_codatatype_for operator =
     List.find (fn {tyop, ...} => same_type_operator tyop operator)
@@ -3030,8 +3019,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       if Term.is_abs function then Term.beta_conv application
       else application
     end
-
-  val beta_normalize = Refute_Util.beta_normalize
 
   (* Naming both accepted shapes keeps the diagnostic actionable: neither
      destructor alone can tell which one the caller was aiming at. *)
@@ -3341,7 +3328,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val probe = Term.variant (Term.all_vars pred)
         (Term.mk_var ("r", Term.type_of representation))
       val univ = Term.aconv
-        (beta_normalize (beta_apply (pred, probe))) boolSyntax.T
+        (Refute_Util.beta_normalize (beta_apply (pred, probe))) boolSyntax.T
       val inverse_axioms =
         let
           val (outer, body) = boolSyntax.strip_forall conclusion
@@ -3396,8 +3383,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val _ =
         if raw_rty = rty andalso
            Term.aconv
-             (beta_normalize (beta_apply (pred, probe)))
-             (beta_normalize (beta_apply (raw_pred, probe))) then ()
+             (Refute_Util.beta_normalize (beta_apply (pred, probe)))
+             (Refute_Util.beta_normalize (beta_apply (raw_pred, probe))) then ()
         else raise err "register_typedef"
           "bijections predicate does not match the type definition"
       val normalized : typedef_info =
@@ -3667,6 +3654,23 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         SOME {Thy = "pair", Tyop = "prod", ...} => true
       | _ => false
 
+  fun is_higher_order_type ty = type_has is_fun_type ty
+
+  (* The leaves of a nested product type, left to right. *)
+  fun factor_types ty =
+    if is_pair_type ty then
+      let val (left, right) = pairSyntax.dest_prod ty
+      in factor_types left @ factor_types right end
+    else
+      [ty]
+
+  fun int_of_numeral value =
+    Arbint.toInt value
+    handle Overflow =>
+      raise Util.TOO_LARGE
+        ("Refute_ModelFinder_HOL.int_of_numeral",
+         "numeral does not fit in int")
+
   fun is_funbox_type ty =
     Refute_ModelFinder_Names.is_refute_type
       Refute_ModelFinder_Names.funbox_tyop ty
@@ -3697,7 +3701,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun iterator_info_for_type
         ({iterator_table, ...} : mf_context) ty =
-    Option.map #2 (List.find (fn (other, _) => other = ty) (!iterator_table))
+    AList.lookup (op =) (!iterator_table) ty
 
   fun refresh_iterator_arg_types
         ({iterator_table, ...} : mf_context) terms =
@@ -4160,10 +4164,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     | in_fun_rhs_for InFunRHS1 = InFunRHS2
     | in_fun_rhs_for _ = InFunRHS1
 
-  fun is_boolean_type ty =
-    case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "min", Tyop = "bool", ...} => true
-      | _ => false
+  fun is_boolean_type ty = ty = Type.bool
 
   fun is_integer_type ty =
     case Lib.total Type.dest_thy_type ty of
@@ -4280,75 +4281,24 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun retype_fmap_constant thy name ty =
     Term.mk_thy_const {Thy = thy, Name = name, Ty = ty}
 
-  (* fmap gets its own synthetic typedef, unconditionally -- unlike frac
-     it needs no opt-in registration call, matching how fmap's QC
-     generator family (Refute.sml) is also unconditional.  [rty] is
-     'a -> 'b option, a plain function type rather than fmap's own
-     recursive [is_fmap] representation; see refuteScript.sml's
-     is_fmap'/abs_fmap' comment for why.  This branch runs before
-     harvesting is ever attempted for [fmap]: [typedef_for_type] returns
-     [SOME] here whenever the registry has no entry, so [is_typedef]
-     is already true and harvest_typedef_staged's own
-     [if is_typedef ty then true else ...] short-circuits, never
-     registering fmap's real, harvest-eligible but far slower
-     is_fmap/fmap_ABS/fmap_REP typedef instead.
+  (* fmap gets its own synthetic typedef, unconditionally, like its QC
+     generator family (Refute.sml).  [rty] is 'a -> 'b option rather than
+     fmap's recursive [is_fmap] representation (see refuteScript.sml's
+     is_fmap'/abs_fmap' comment); because [typedef_for_type] answers here
+     first, harvesting never registers the slower is_fmap/fmap_ABS/fmap_REP
+     typedef.
 
-     Unlike synthetic_frac_typedef, [inverse_axioms] here is not empty:
-     abs_fmap'_FLOOKUP/FLOOKUP_abs_fmap' (refuteScript.sml) are proved HOL
-     theorems, instantiated to this instance and supplied the same slot a
-     validated typedef fills from its own bijection theorem
-     (register_typedef_staged above), rather than left empty as
-     synthetic_frac_typedef's are.  [FLOOKUP_abs_fmap'] is stated as a
-     biconditional rather than a one-way implication specifically so
-     [guarded_inverse_axiom] below also emits an [onto] surjectivity
-     axiom for fmap, which an implication's [dest_eq] does not match
-     (checked: [optimized_inverse_axioms_for_rep_fun] on FLOOKUP now
-     returns 3 axioms -- abs_fmap'_FLOOKUP's own [dest_eq] fails the
-     [bool] guard check and falls back to itself unguarded, while
-     FLOOKUP_abs_fmap' fires the guarded path and contributes both the
-     guarded equation and the onto axiom).
-
-     [guarded_inverse_axiom] then emits its guard as the literal term
-     [FINITE {x | f x <> NONE}], not as [pred] ([is_fmap'], the
-     registration's own membership predicate, which is that same FINITE
-     disjoined with [unknown]) -- verified rather than assumed coherent:
-     [MFNT.Op1(MFNT.Finite, _)] and [MFNT.Cst(MFNT.Unknown, _)] both
-     translate through [to_f] (Refute_ModelFinder_Kodkod.sml) to the same
-     truth value at every polarity ({Pos: False, Neg: True, Neut: True}),
-     so a disjunction of the two behaves identically to the first disjunct
-     alone at any polarity the guard can appear under.  Using the literal
-     FINITE guard is strictly more restrictive on paper (it drops the
-     [unknown] escape) but identical in the one place it is consumed, so
-     no scope the full [pred] would admit is lost here.
-
-     This is the structurally correct thing to supply regardless of
-     whether any one goal needs it -- measured, though, no fmap-fact pin
-     tried so far actually needs it: emptying [inverse_axioms] and
-     rebuilding turns the level-1 selftest from 939 OK/0 failures to 938
-     OK/1 failure, and the one failure was a since-removed pin that
-     probed [optimized_inverse_axioms_for_rep_fun]'s output directly.
-     FLOOKUP injectivity still holds ([abs_fmap'_FLOOKUP] alone already
-     forces it on the abstract carrier unconditionally, independent of
-     [FLOOKUP_abs_fmap']), and so, contrary to what an earlier version of
-     this comment claimed without having measured it, does the ersatz
-     FDOM FEMPTY = {}: [FLOOKUP] is itself a registered typedef rep
-     function, so occurrences of it are
-     rewritten structurally to a constructor-selector pattern on [abs]
-     (typedef_for_rep's dispatch in unfold_defs_in_term's do_const, this
-     file) rather than left as an opaque relation depending on a
-     supplied axiom, and [abs_fmap'] is an ordinary [Definition] (unlike
-     a genuine typedef's kernel-introduced Abs), so it unfolds to its own
-     Hilbert-choice body wherever it occurs and is handled by the
-     general [min$@] guard machinery instead.  Between the two, the
-     [rep(abs f) = f] direction this route needs for both pins above
-     comes out already true by construction, without consulting
-     [inverse_axioms] at all.  The axioms remain worth supplying for the
-     coverage guarantee the [onto] half states -- the structural
-     encoding does not by itself bound the abstract carrier to exactly
-     [pred]'s extension at a proper-subset scope -- but no goal tried
-     here has been found where omitting them changes a verdict.  See
-     refuteScript.sml's Part 6 comment for the same point stated where
-     the theorems are proved.
+     [inverse_axioms] are the proved abs_fmap'_FLOOKUP/FLOOKUP_abs_fmap'
+     (refuteScript.sml).  FLOOKUP_abs_fmap' is a biconditional so that
+     [guarded_inverse_axiom] also emits the [onto] axiom bounding the
+     abstract carrier to [pred]'s extension.  That function guards with the
+     literal [FINITE {x | f x <> NONE}] rather than [pred] ([is_fmap'],
+     FINITE disjoined with [unknown]); the two translate identically at
+     every polarity, so no scope is lost.  No tested verdict depends on
+     these axioms: FLOOKUP, a registered rep function, is rewritten to a
+     selector pattern on [abs] (do_const in unfold_defs_in_term), and
+     abs_fmap' is a plain definition unfolding to its choice body, so
+     [rep (abs f) = f] holds by construction.
 
      Built once at the generic instance [:'a |-> 'b]; every fmap type is a
      type instantiation of it, so a call only has to instantiate.  The two
@@ -4926,9 +4876,15 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       fun candidate ty =
         if is_classified_type ty then NONE
         else Option.map (fn _ => ty) (raw_typedef_data ty)
+      (* First-occurrence order, so the type reported is unchanged. *)
+      fun distinct tys = rev (#2 (List.foldl (fn (ty, (seen, kept)) =>
+          if HOLset.member (seen, ty) then (seen, kept)
+          else (HOLset.add (seen, ty), ty :: kept))
+        (HOLset.empty Type.compare, []) tys))
       val subterms = List.concat
         (map (HolKernel.find_terms (K true)) terms)
-      val types = List.concat (map (types_beneath o Term.type_of) subterms)
+      val types = distinct (List.concat (map types_beneath
+        (distinct (map Term.type_of subterms))))
       val constants = List.concat
         (map (HolKernel.find_terms Term.is_const) terms)
     in
@@ -4980,15 +4936,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         in
           search (0, TypeBasePure.fields_of info)
         end
-      (* Early exit: the old List.find over a full map searched every
-         TypeBase entry even after the field was found. *)
-      fun scan [] = NONE
-        | scan (info :: rest) =
-            (case search_type info of
-                 NONE => scan rest
-               | found => found)
     in
-      scan (TypeBase.elts ())
+      Lib.get_first search_type (TypeBase.elts ())
     end handle HOL_ERR _ => NONE
 
   fun dest_record_get term = find_field #accessor term
@@ -5698,8 +5647,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             val abstract = Term.mk_var ("a", ty)
             val represented = Term.mk_comb (rep, abstract)
           in
-            [boolSyntax.mk_forall
-              (abstract, beta_normalize (beta_apply (pred, represented)))]
+            [boolSyntax.mk_forall (abstract,
+               Refute_Util.beta_normalize (beta_apply (pred, represented)))]
           end
 
   (* HOL4 states the second bijection law as the biconditional
@@ -5731,7 +5680,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
            same_registered_constant abs abs_head andalso
            Term.aconv (hd abs_arguments) argument then ()
         else raise Match
-      val guard = beta_normalize raw_guard
+      val guard = Refute_Util.beta_normalize raw_guard
       val abstract = Term.variant (Term.all_vars axiom)
         (Term.mk_var ("a", Term.type_of (hd rep_arguments)))
       val onto = boolSyntax.mk_exists (abstract,
@@ -5789,11 +5738,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         let
           val argument_tys = constructor_arg_types constructor
           val same_constructor = discriminate_value context constructor y
-          val indexed = ListPair.zip
-            (List.tabulate (length argument_tys, fn index => index),
-             argument_tys)
           val comparisons = map (fn (index, argument_ty) =>
-            comparison constructor index argument_ty) indexed
+            comparison constructor index argument_ty)
+            (Lib.enumerate 0 argument_tys)
           val body = List.foldr smart_conj boolSyntax.T
             (same_constructor :: comparisons)
           fun abstract (argument_ty, (serial, result)) =
@@ -5860,8 +5807,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           end
       | NONE => raise err "optimized_record_update" "not a record updater"
 
-  fun assignment_lookup assigns ty =
-    Option.map #2 (List.find (fn (other, _) => other = ty) assigns)
+  fun assignment_lookup assigns ty = AList.lookup (op =) assigns ty
 
   fun is_itself_type ty =
     case Lib.total Type.dest_thy_type ty of

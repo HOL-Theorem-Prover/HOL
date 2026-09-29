@@ -39,6 +39,8 @@ signature Refute_Cert = sig
   val replace :
     Refute_Core.counterexample -> Refute_Core.certainty ->
     (term * term) list -> Thm.thm option -> Refute_Core.counterexample
+  val downgrade :
+    Refute_Core.counterexample -> string -> Refute_Core.counterexample
   val certify :
     {cex : Refute_Core.counterexample,
      env : (term * term) list,

@@ -1,7 +1,6 @@
 signature Refute_QC = sig
   type term = Term.term
 
-  val elapsed_msec : Time.time -> int
   val record_candidate :
     {config : Refute_Core.config,
      counterexamples : Refute_Core.counterexample list ref,
@@ -31,6 +30,14 @@ signature Refute_QC = sig
     ((string * int) list -> (string * int) list) -> int ref ->
     (string * int) list ref -> int -> int -> int -> (string * int) list
   val add_reason : ''a -> ''a list ref -> unit
+  val retain_potential :
+    Refute_Core.counterexample option ref -> Refute_Core.counterexample ->
+    unit
+  val say_schedule_entry : string -> string -> int * int -> int -> unit
+  val finish_outcome :
+    string -> Refute_Core.counterexample list ->
+    Refute_Core.counterexample option -> string option ->
+    (unit -> Refute_Core.outcome) -> Refute_Core.outcome
 
   datatype selected_compile =
       Selected of string * Refute_Eval.compiled_test

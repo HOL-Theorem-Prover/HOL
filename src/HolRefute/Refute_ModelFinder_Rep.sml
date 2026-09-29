@@ -15,7 +15,6 @@ signature REFUTE_MODEL_FINDER_REP = sig
 
   exception REP of string * rep list
 
-  val string_for_polarity : polarity -> string
   val string_for_rep : rep -> string
   val is_Func : rep -> bool
   val is_Opt : rep -> bool
@@ -32,11 +31,9 @@ signature REFUTE_MODEL_FINDER_REP = sig
   val binder_reps : rep -> rep list
   val body_rep : rep -> rep
   val one_rep : offset_table -> hol_type -> rep -> rep
-  val optable_rep : offset_table -> hol_type -> rep -> rep
   val opt_rep : offset_table -> hol_type -> rep -> rep
   val unopt_rep : rep -> rep
   val min_rep : rep -> rep -> rep
-  val min_reps : rep list -> rep list -> rep list
   val card_of_domain_from_rep : int -> rep -> int
   val rep_to_binary_rel_rep : offset_table -> hol_type -> rep -> rep
   val best_one_rep_for_type : scope -> hol_type -> rep
@@ -46,8 +43,6 @@ signature REFUTE_MODEL_FINDER_REP = sig
   val atom_schema_of_rep : rep -> (int * int) list
   val atom_schema_of_reps : rep list -> (int * int) list
   val type_schema_of_rep : hol_type -> rep -> hol_type list
-  val type_schema_of_reps :
-    hol_type list -> rep list -> hol_type list
   val all_combinations_for_rep : rep -> int list list
 end
 

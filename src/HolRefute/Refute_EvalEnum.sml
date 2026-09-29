@@ -512,11 +512,9 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
          Both are enforced two modules away, not here: guess instead of
          checking would silently test the wrong condition, so a
          violation is fatal rather than reported as unavailable. *)
-      val serial = ref 0
+      val serial = Portable.make_counter {init = 0, inc = 1}
       fun fresh ty =
-        let val index = !serial
-            val _ = serial := index + 1
-        in Term.mk_var ("complement_pat_" ^ Int.toString index, ty) end
+        Term.mk_var ("complement_pat_" ^ Int.toString (serial ()), ty)
       fun guard_term (Refute_SmartGen.CpsGuard tm) = tm
         | guard_term _ = reject
             "negation_condition: clause premise is not a guard"
@@ -634,11 +632,6 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
         (fn q => List.map define_clique_of (Defn.Hol_multi_defns q))
         quotation)
 
-  fun define_clique quotation =
-    case define_cliques quotation of
-        [] => raise Fail "Refute enum definition produced no clique"
-      | theorems => LIST_CONJ theorems
-
   type hol_enumerator =
     {program : Refute_SmartGen.enumerator, function : term,
      input_types : hol_type list, output_types : hol_type list}
@@ -687,11 +680,9 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
         fun bind values variable body = listSyntax.mk_flat
           (listSyntax.mk_map (Term.mk_abs (variable, body), values))
 
-        val match_serial = ref 0
+        val match_serial = Portable.make_counter {init = 0, inc = 1}
         fun fresh ty =
-          let val index = !match_serial
-              val _ = match_serial := index + 1
-          in named ("enum_match_" ^ Int.toString index) ty end
+          named ("enum_match_" ^ Int.toString (match_serial ())) ty
 
         val match = match_patterns fresh
 

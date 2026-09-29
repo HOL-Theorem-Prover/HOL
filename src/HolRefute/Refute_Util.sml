@@ -3,9 +3,9 @@
  * Refute stack.
  *
  * This module deliberately depends only on the HOL kernel (Type, Term,
- * List), combinSyntax and the Basis, so it can be loaded by both the
- * substrate layer (compiled for refuteTableZooTheory) and the model-finder
- * layer.
+ * Thm), boolSyntax, combinSyntax and the Basis, so it can be loaded by
+ * both the substrate layer (compiled for refuteTableZooTheory) and the
+ * model-finder layer.
  * Layer-specific utilities live in Refute_ModelFinder_Util, which
  * re-exports these for the model-finder modules' convenience.
  *)
@@ -21,9 +21,13 @@ signature REFUTE_UTIL = sig
   val distinct_terms : Term.term list -> Term.term list
   val union_terms : Term.term list -> Term.term list -> Term.term list
   val update_term : Term.term -> Term.term -> Term.term -> Term.term
+  val close_free : Term.term -> Term.term
+  val theorem_term : Thm.thm -> Term.term
   val acquire_interruptibly :
     ((unit -> unit) -> unit -> unit) -> (unit -> bool) -> unit
   val elapsed_msec : Time.time -> int
+  val remaining : Time.time -> Time.time
+  val rf_type : int -> Type.hol_type
 end
 
 structure Refute_Util :> REFUTE_UTIL = struct
@@ -81,6 +85,14 @@ structure Refute_Util :> REFUTE_UTIL = struct
   fun update_term point value base =
     Term.mk_comb (combinSyntax.mk_update (point, value), base)
 
+  (* Universal closure, binding the free variables in textual order. *)
+  fun close_free term =
+    boolSyntax.list_mk_forall (Term.free_vars_lr term, term)
+
+  (* A theorem as one closed proposition: hypotheses imply conclusion. *)
+  fun theorem_term theorem =
+    close_free (boolSyntax.list_mk_imp (Thm.hyp theorem, Thm.concl theorem))
+
   (* Spin-acquire a lock without blocking with interrupts masked:
      [Timeout.apply] cancels by raising an interrupt, which a masked block
      would never see.  Callers hold the mask of an enclosing
@@ -105,4 +117,15 @@ structure Refute_Util :> REFUTE_UTIL = struct
   fun elapsed_msec start =
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle Interrupt => raise Interrupt | _ => 0
+
+  (* Time left before [deadline], clamped at zero. *)
+  fun remaining deadline =
+    let val now = Time.now ()
+    in if Time.>= (now, deadline) then Time.zeroTime
+       else Time.- (deadline, now)
+    end
+
+  (* The [n]-element carrier type of refuteTheory. *)
+  fun rf_type n =
+    Type.mk_thy_type {Thy = "refute", Tyop = "rf" ^ Int.toString n, Args = []}
 end

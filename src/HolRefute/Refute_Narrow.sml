@@ -715,17 +715,20 @@ structure Refute_Narrow :> Refute_Narrow = struct
     length prefix <= length position andalso
     prefix = List.take (position, length prefix)
 
-  fun termlists_of select prefix (terms, Leaf result) =
+  fun choose_all branches =
+    List.filter (is_false o value_of o #2) branches
+
+  fun alltermlist_of prefix (terms, Leaf result) =
         [(terms, Leaf result)]
-    | termlists_of select prefix
+    | alltermlist_of prefix
         (terms, Variable (quantifier, result, position, ty, subtree)) =
         if is_prefix prefix position then
-          termlists_of select prefix
+          alltermlist_of prefix
             (terms @ [Narrowing_variable (position, ty)], subtree)
         else
           [(terms,
             Variable (quantifier, result, position, ty, subtree))]
-    | termlists_of select prefix
+    | alltermlist_of prefix
         (terms, Constructor
           (quantifier, result, position, shape, pending, branches)) =
         if is_prefix prefix position then
@@ -733,7 +736,7 @@ structure Refute_Narrow :> Refute_Narrow = struct
             fun fixpoint argument state =
               let
                 val next =
-                  termlists_of select (position @ [argument]) state
+                  alltermlist_of (position @ [argument]) state
               in
                 case next of
                     [single] =>
@@ -751,17 +754,12 @@ structure Refute_Narrow :> Refute_Narrow = struct
                 (terms @ [Narrowing_constructor (id, arguments)], residual))
                 (fixpoint 0 ([], subtree))
           in
-            List.concat (List.map extract (select branches))
+            List.concat (List.map extract (choose_all branches))
           end
         else
           [(terms,
             Constructor
               (quantifier, result, position, shape, pending, branches))]
-
-  fun choose_all branches =
-    List.filter (is_false o value_of o #2) branches
-
-  val alltermlist_of = termlists_of choose_all
 
   fun quantifier_of (Variable (quantifier, _, _, _, _)) = quantifier
     | quantifier_of (Constructor (quantifier, _, _, _, _, _)) = quantifier
@@ -962,13 +960,8 @@ structure Refute_Narrow :> Refute_Narrow = struct
 
       fun step tm =
         let
-          val beta =
-            (Conv.DEPTH_CONV Thm.BETA_CONV tm
-             handle Conv.UNCHANGED => Thm.REFL tm)
-          val reduced = rhs_of beta
-          val rewrite =
-            (rewrite_conv reduced
-             handle Conv.UNCHANGED => Thm.REFL reduced)
+          val beta = Conv.QCONV (Conv.DEPTH_CONV Thm.BETA_CONV) tm
+          val rewrite = Conv.QCONV rewrite_conv (rhs_of beta)
         in
           Thm.TRANS beta rewrite
         end
@@ -1011,9 +1004,7 @@ structure Refute_Narrow :> Refute_Narrow = struct
   in
     (* Free variables denote universally quantified test inputs.  Textual
        left-to-right order makes the public PNF entry deterministic. *)
-    fun pnf_of tm =
-      pnf_of_closed
-        (boolSyntax.list_mk_forall (Term.free_vars_lr tm, tm))
+    fun pnf_of tm = pnf_of_closed (Refute_Util.close_free tm)
   end
 
   fun ffun_type domain range =

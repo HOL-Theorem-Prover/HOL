@@ -75,6 +75,8 @@ signature Refute_SmartGen = sig
   val mode_string : mode -> string
   val predicate_mode_of : Type.hol_type -> mode option
   val compare_score : premise_score * premise_score -> order
+  val least_by : ('a -> premise_score) -> 'a list -> 'a option
+  val premise_head : term -> term option
   val lookup_assoc : term -> (term * 'a) list -> 'a option
   val split_arguments : mode -> term list -> term list * term list
   val infer_group :

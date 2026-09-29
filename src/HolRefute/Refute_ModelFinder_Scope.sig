@@ -33,15 +33,6 @@ signature Refute_ModelFinder_Scope = sig
      data_types : data_type_spec list,
      ofs : offset_table}
 
-  datatype row_kind = Card of hol_type | Max of term
-
-  type row = row_kind * int list
-
-  type block = row list
-
-  type scope_desc =
-    (hol_type * int) list * (term * int) list
-
   val max_scopes : int
   val type_arguments : hol_type -> hol_type list
   val data_type_spec : data_type_spec list -> hol_type -> data_type_spec option
@@ -54,31 +45,13 @@ signature Refute_ModelFinder_Scope = sig
   val max_word_width : scope -> int
   val scopes_equivalent : scope * scope -> bool
 
-  datatype frontier_heap =
-      FrontierEmpty
-    | FrontierNode of int * int list * frontier_heap * frontier_heap
-
-  type combination_cursor =
-    {ranks : int option list,
-     heap : frontier_heap ref,
-     visited : (int list, unit) Redblackmap.dict ref}
-
   val is_self_recursive_constr_type : hol_type -> bool
   val take_at_most : int -> 'a list -> 'a list
 
-  type scope_cursor =
-    {context : context,
-     binarize : bool,
-     blocks : block list,
-     iterative : bool,
-     combinations : combination_cursor,
-     deep_data_types : hol_type list,
-     finitizable_data_types : hol_type list,
-     emitted : (scope_desc, unit) Redblackmap.dict ref,
-     skipped : int ref}
+  type scope_cursor
 
   val new_scope_cursor :
-    context -> bool -> bool -> (hol_type option * int list) list ->
+    context -> bool -> (hol_type option * int list) list ->
     (term option * int list) list -> (term option * int list) list ->
     int list -> int list -> hol_type list -> hol_type list ->
     hol_type list -> hol_type list -> scope_cursor

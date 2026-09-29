@@ -151,7 +151,6 @@ signature Refute_ModelFinder_HOL = sig
   val print_wf_cache : mf_context -> unit
   val is_equational_fun_surely_complete : mf_context -> term -> bool
   val register_codatatype : codatatype_registration -> unit
-  val beta_normalize : term -> term
   val register_quotient : quotient_registration -> unit
   val raw_typedef_data : hol_type -> {pred : term, rty : hol_type} option
   val register_typedef :
@@ -161,6 +160,9 @@ signature Refute_ModelFinder_HOL = sig
   val real_frac_registration : frac_info
   val is_fun_type : hol_type -> bool
   val is_pair_type : hol_type -> bool
+  val is_higher_order_type : hol_type -> bool
+  val factor_types : hol_type -> hol_type list
+  val int_of_numeral : Arbint.int -> int
   val is_funbox_type : hol_type -> bool
   val is_pairbox_type : hol_type -> bool
   val is_fp_iterator_type : hol_type -> bool

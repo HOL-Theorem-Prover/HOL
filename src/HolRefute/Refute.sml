@@ -25,8 +25,8 @@ structure Refute :> Refute = struct
      update descriptor: the user-facing update is a function. *)
   type config_update = config -> config
 
-  (* Register the built-in backends through this public entry point.
-     Refute_QC passes the native extractor explicitly, making both
+  (* The built-in backends register here only, through this public entry
+     point.  Refute_QC passes the native extractor explicitly, making both
      implementation units dependencies of [load "Refute"]. *)
   val () = Refute_QC.register_backends ()
   val () = Refute_QC_Narrow.register_backend ()

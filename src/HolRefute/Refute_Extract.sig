@@ -7,7 +7,6 @@ signature Refute_Extract = sig
     Refute_Core.config -> Refute_Eval.strategy -> Refute_Eval.plan list ->
     term list -> string list
   val extract_problem :
-    Refute_EvalSML.extraction_mode -> Refute_Core.config ->
-    Refute_Eval.strategy -> Refute_Eval.qc_problem ->
+    Refute_Core.config -> Refute_Eval.strategy -> Refute_Eval.qc_problem ->
     Refute_EvalSML.extraction_result
 end

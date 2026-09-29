@@ -1,7 +1,6 @@
 signature REFUTE_FORL_SAT = sig
   val configured_sat_solvers : bool -> string list
   val smart_sat_solver_name : bool -> string
-  val executable_available : string -> bool
   val sat_solver_spec : Time.time -> string -> string * string list
 end
 

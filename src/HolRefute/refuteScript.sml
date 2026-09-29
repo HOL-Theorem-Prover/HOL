@@ -645,91 +645,18 @@ Theorem eval_cfun_compute[compute] = eval_cfun_def
    uninterpreted.
 
    is_fmap'/abs_fmap' below give the model finder its own [fmap]
-   typedef, over representation type 'a -> 'b option instead: a plain
-   function type, already well supported for scope-search exactness
-   (Refute_ModelFinder_Scope.sml), unlike is_fmap's recursive one.
-   is_fmap' carries the same FINITE-guarded [unknown] escape as wf'_def
-   above, and for the same syntactic reason (FINITE is encoded against
-   'a's own type, not against the Kodkod scope).  Measured: dropping the
-   [\/ unknown] disjunct from is_fmap'_def (and, correspondingly,
-   disj1_tac from is_fmap'_FLOOKUP's proof below) leaves the level-1
-   selftest at 939 OK/0 failures, byte-identical to the pre-ablation
-   baseline; no pin, including finite_map_model_finder_reaches_genuine,
-   is sensitive to the escape's presence.  So the escape's necessity is
-   not established by anything in this suite, and the previously stated
-   reason for keeping it -- that dropping it "kills the search" over an
-   infinite key type in a positive-polarity sound problem -- is refuted
-   by that measurement and is not repeated here.  The escape is kept
-   anyway, for the same reason wf'_def carries one: FLOOKUP a's domain
-   is a HOL-level FINITE claim over 'a's own (possibly infinite) type,
-   which the model finder has no general syntactic way to certify True
-   at every instance and scope, so removing the escape would trade an
-   unmeasured amount of scope-search coverage for no observed benefit;
-   see [Refute_ModelFinder_HOL.sml]'s [synthetic_fmap_typedef] comment
-   for how FLOOKUP/is_fmap' are actually dispatched at a typedef
-   instance, which is the more likely reason no tested goal exercises
-   this particular disjunct either way.
+   typedef over the plain function type 'a -> 'b option.  is_fmap'
+   carries the same FINITE-guarded [unknown] escape as wf'_def, because
+   FINITE over 'a's own type cannot be certified at every scope.
 
-   abs_fmap' is Hilbert choice, so it is a real inverse of FLOOKUP only
-   where a preimage exists; the theorems below say exactly that, and are
-   precisely what a genuine (non-synthetic) HOL typedef would give
-   [register_typedef] as its bijection theorem -- [FLOOKUP]/[abs_fmap']/
-   [is_fmap'] are all genuine constants at every instance the model finder
-   uses, unlike frac's [abs_frac]/[rep_frac], which [retype_constant]
-   turns into reserved variables with no proof obligation to discharge
-   (Refute_ModelFinder_HOL.sml).  [register_typedef] itself cannot accept
-   this typedef: it requires the supplied representation type to match
-   fmap's own kernel [fmap_TY_DEF] representation ['a -> 'b + one], and
-   this route deliberately uses the simpler ['a -> 'b option] instead (see
-   above).  [synthetic_fmap_typedef] (Refute_ModelFinder_HOL.sml) stays,
-   but now consumes [abs_fmap'_FLOOKUP]/[FLOOKUP_abs_fmap'] as the
-   typedef's inverse axioms, the same slot a validated typedef fills from
-   its own bijection theorem.  [FLOOKUP_abs_fmap'] is stated as the full
-   biconditional [FINITE {x | f x <> NONE} <=> FLOOKUP (abs_fmap' f) = f]
-   rather than the one-way implication a HOL typedef's second bijection
-   law states informally: [Refute_ModelFinder_HOL.sml]'s
-   [guarded_inverse_axiom] pattern-matches this exact biconditional shape
-   to also emit an [onto] surjectivity axiom, which an implication does
-   not trigger -- see [guarded_inverse_axiom]'s own comment.  Both
-   directions are genuine theorems here (forward: Hilbert choice finds a
-   preimage when one exists; backward: [FLOOKUP]'s own range always has
-   finite support, via [FDOM_FINITE]), so restating as a biconditional
-   loses no generality.
-
-   [is_fmap'_FLOOKUP] below is the fact [is_fmap'_def]'s own comment above
-   needs: a typo in [is_fmap'_def] -- a dropped disjunct, [f x = NONE],
-   the wrong set -- now fails this proof, exactly as a typo in
-   [abs_fmap'_def] already failed [abs_fmap'_FLOOKUP]'s.  That alone pins
-   [is_fmap'_def]'s statement, not its *use* as the typedef's [pred]:
-   [Refute_ModelFinder_HOL.sml]'s [generic_fmap_typedef] additionally
-   checks, at the generic instance every fmap type instantiates, that
-   this theorem's instantiated conclusion is literally the membership
-   term [pred (rep a)] the module would otherwise construct from
-   separately-retyped [is_fmap']/[FLOOKUP] constants, raising if they
-   diverge -- so a wiring bug that reassigns [pred] or [rep] to the
-   wrong constant fails loudly at module load too, not only a typo
-   caught by the theorem's own proof.
-
-   Measured, no fmap-fact pin tried so far is actually load-bearing on
-   the inverse axioms: emptying [inverse_axioms] in
-   [synthetic_fmap_typedef] and rebuilding turns the level-1 selftest
-   from 939 OK/0 failures to 938 OK/1 failure, and the one failure was a
-   since-removed mechanism pin on the axiom emission itself, not a fmap
-   fact.  Both FLOOKUP injectivity and the ersatz FDOM FEMPTY = {}
-   still hold: [FLOOKUP] is dispatched structurally as the typedef's rep
-   (constructor/selector encoding, [Refute_ModelFinder_HOL.sml]) and
-   [abs_fmap'] unfolds to its own Hilbert-choice body (an ordinary
-   [Definition], unlike a genuine typedef's kernel-introduced Abs), so
-   [FLOOKUP (abs_fmap' f) = f] comes out true by construction for these
-   goals without appeal to [FLOOKUP_abs_fmap'].  This is nonetheless the
-   structurally correct thing to supply regardless of whether any one
-   goal needs it -- in particular the [onto] half still states a
-   coverage guarantee (the abstract carrier is pinned to exactly
-   [is_fmap']'s extension, not some subset of it at a proper-subset
-   scope) that the structural encoding does not supply by itself, even
-   though no goal tried here has been found where dropping it changes a
-   verdict; see [Refute_ModelFinder_HOL.sml]'s [synthetic_fmap_typedef]
-   comment for the same point and the counts. *)
+   [synthetic_fmap_typedef] (Refute_ModelFinder_HOL.sml) consumes
+   [abs_fmap'_FLOOKUP]/[FLOOKUP_abs_fmap'] as the typedef's inverse
+   axioms; [register_typedef] cannot take this typedef, since its
+   representation differs from fmap_TY_DEF's.  [FLOOKUP_abs_fmap'] is a
+   biconditional because [guarded_inverse_axiom] matches that shape to
+   emit the [onto] axiom; both directions hold.  [is_fmap'_FLOOKUP] pins
+   [is_fmap'_def]'s statement, and [generic_fmap_typedef] checks at load
+   that it matches the [pred (rep a)] term the module builds. *)
 Definition is_fmap'_def:
   is_fmap' (f : 'a -> 'b option) =
     (FINITE {x | f x <> NONE} \/ unknown)

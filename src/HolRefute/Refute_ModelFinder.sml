@@ -6,26 +6,6 @@ Driver for the HOL4 Refute model finder.  The control flow is a port of
 Nitpick's pick_them_nits_in_term. *)
 
 signature REFUTE_MODEL_FINDER = sig
-  val prepare_instance_input :
-    Refute_Core.instance -> Term.term * Term.term list
-  val merge_type_vars_in_terms : Term.term list -> Term.term list
-  val merge_type_vars_in_context_input :
-    Refute_Core.mf_config -> Term.term -> Term.term list ->
-    Refute_Core.mf_config * Term.term * Term.term list
-  val scope_limit_hint : string
-  val finitizable_data_types :
-    Refute_ModelFinder_HOL.mf_context ->
-    (Type.hol_type option * bool option) list ->
-    (Type.hol_type -> bool) -> Type.hol_type list ->
-    Type.hol_type list -> Type.hol_type list
-  val authenticity_reasons :
-    Refute_Core.mf_config -> bool -> bool -> bool -> string list
-  val abandoned_mono_verdict : (string * string -> unit) -> exn -> bool
-  val liberal_budget_after_models :
-    {max_potential : int, max_genuine : int, delivered : int,
-     kept : int, promoted : bool, incremental : bool} -> int * int
-  val kodkod_backend : Refute_Core.backend
-  val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
   val register_backends : unit -> unit
 end
 
@@ -52,17 +32,13 @@ type rich_problem = MFK.rich_problem
 val max_unsound_delay_ms = 200
 val max_unsound_delay_percent = 2
 
-fun remaining deadline =
-  if Time.now () >= deadline then Time.zeroTime
-  else deadline - Time.now ()
-
 fun check_deadline deadline =
   if Time.now () >= deadline then raise Timeout.TIMEOUT Time.zeroTime
   else ()
 
 fun unsound_delay deadline =
   Int.max (0, Int.min (max_unsound_delay_ms,
-    LargeInt.toInt (Time.toMilliseconds (remaining deadline)) *
+    LargeInt.toInt (Time.toMilliseconds (Refute_Util.remaining deadline)) *
       max_unsound_delay_percent div 100))
   handle Interrupt => raise Interrupt | _ => 0
 
@@ -219,7 +195,7 @@ fun actual_solver incremental (mf : Refute_Core.mf_config) =
   end
 
 fun solver_arguments deadline solver =
-  #2 (Refute_ForlSat.sat_solver_spec (remaining deadline) solver)
+  #2 (Refute_ForlSat.sat_solver_spec (Refute_Util.remaining deadline) solver)
 
 fun problem_for_scope deadline (mf : Refute_Core.mf_config)
       all_types solver free_names nonsel_names nondef_us def_us need_us
@@ -356,9 +332,7 @@ fun valid_instance (problem : KK.problem) assignments =
       in
         loop (sorted_set left) (sorted_set right)
       end
-    fun assignment relation =
-      Option.map #2 (List.find (fn (other, _) => other = relation)
-        assignments)
+    fun assignment relation = AList.lookup (op =) assignments relation
     fun valid_bound (relations, sets) =
       let
         fun valid_relation relation =
@@ -527,10 +501,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
     val (_, closure, _) = Refute_Cert.closure_of original
-    fun normalization_step conversion tm =
-      conversion tm handle Conv.UNCHANGED => Thm.REFL tm
-    val (_, _, pnf) =
-      Refute_Cert.normalize_to_pnf normalization_step closure
+    val (_, _, pnf) = Refute_Cert.normalize_to_pnf Conv.QCONV closure
     val prefix_origins = Refute_Skolem.mark_source_ambiguities original
       (Refute_Skolem.prefix_binders pnf)
     val context = MFH.make_context context_mf eval_terms
@@ -659,7 +630,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         mono_types nonmono_types deep_types finitizable_types
     val adaptive_cursor =
       if adaptive then
-        SOME (MFS.new_scope_cursor context binarize true
+        SOME (MFS.new_scope_cursor context binarize
           (#card mf) (#max mf) (#iter mf) (#bits mf) (#bisim_depth mf)
           mono_types nonmono_types deep_types finitizable_types)
       else NONE
@@ -1051,6 +1022,7 @@ fun run_instance deadline started (config : Refute_Core.config)
           end
       end
 
+    (* [problems] is newest-first. *)
     fun add_problem flags scope (problems, donno) =
       let
         fun add unsound (kept, unknown) =
@@ -1065,12 +1037,12 @@ fun run_instance deadline started (config : Refute_Core.config)
                   if rich_member problem (!generated_problems) then
                     (kept, unknown)
                   else
-                    (case rev kept of
+                    (case kept of
                          previous :: _ =>
                            if KK.problems_equivalent
                                 (raw_problem previous, raw_problem problem)
                            then (kept, unknown)
-                           else (kept @ [problem], unknown)
+                           else (problem :: kept, unknown)
                        | [] => ([problem], unknown))
           end
       in
@@ -1100,10 +1072,13 @@ fun run_instance deadline started (config : Refute_Core.config)
         val flags =
           (if max_genuine > 0 then [false] else []) @
           (if max_potential > 0 orelse max_genuine > 0 then [true] else [])
-        val (problems, donno) = List.foldl (fn (scope, result) =>
+        val (newest_first, donno) = List.foldl (fn (scope, result) =>
           add_problem flags scope result) ([], donno) scope_batch
+        val problems = rev newest_first
         val _ = last_donno := donno
-        val _ = generated_problems := !generated_problems @ problems
+        (* Order-free: only filtered, partitioned and counted. *)
+        val _ = generated_problems :=
+          List.revAppend (problems, !generated_problems)
         val _ = generated_scopes := !generated_scopes @ scope_batch
         val _ = if last then potential_only_warning () else ()
       in
@@ -1415,7 +1390,5 @@ val kodkod_backend : Refute_Core.backend =
 
 fun register_backends () =
   Refute_Core.register_backend kodkod_backend
-
-val _ = register_backends ()
 
 end

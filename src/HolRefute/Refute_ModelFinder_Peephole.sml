@@ -46,22 +46,17 @@ sig
   val gcd_rel : n_ary_index
   val lcm_rel : n_ary_index
   val norm_frac_rel : n_ary_index
-  val atom_for_bool : int -> bool -> rel_expr
   val formula_for_bool : bool -> formula
   val atom_for_nat : int * int -> int -> int
-  val min_int_for_card : int -> int
   val max_int_for_card : int -> int
   val int_for_atom : int * int -> int -> int
   val atom_for_int : int * int -> int -> int
   val is_twos_complement_representable : int -> int -> bool
-  val default_bit_width : int
   val bit_width_for : int -> int -> int
-  val max_squeeze_card : int
-  val suc_rel_for_atom_seq : (int * int) * bool -> n_ary_index
-  val atom_seq_for_suc_rel : n_ary_index -> (int * int) * bool
+  val suc_rel_for_atom_seq : int * int -> n_ary_index
+  val atom_seq_for_suc_rel : n_ary_index -> int * int
   val inline_rel_expr : rel_expr -> bool
   val empty_n_ary_rel : int -> rel_expr
-  val num_seq : int -> int -> int_expr list
   val s_and : formula -> formula -> formula
 
   type kodkod_constrs =
@@ -175,15 +170,10 @@ fun squeeze (m, n) =
 
 fun unsqueeze p = (p div (max_squeeze_card + 1), p mod (max_squeeze_card + 1))
 
-fun boolify (j, b) = 2 * j + (if b then 0 else 1)
-fun unboolify j = (j div 2, j mod 2 = 0)
+(* Successor relations sit at even offsets below [suc_rels_base]. *)
+fun suc_rel_for_atom_seq x = (2, suc_rels_base - 2 * squeeze x)
 
-fun suc_rel_for_atom_seq (x, tabulate) =
-  (2, suc_rels_base - boolify (squeeze x, tabulate))
-
-fun atom_seq_for_suc_rel (_, j) =
-  let val (index, tabulate) = unboolify (~j + suc_rels_base)
-  in (unsqueeze index, tabulate) end
+fun atom_seq_for_suc_rel (_, j) = unsqueeze ((~j + suc_rels_base) div 2)
 
 fun is_none_product (Product (r1, r2)) =
     is_none_product r1 orelse is_none_product r2

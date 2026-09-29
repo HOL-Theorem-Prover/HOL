@@ -128,17 +128,11 @@ signature REFUTE_FORL = sig
      int_expr_func : int_expr -> 'a -> 'a}
 
   val fold_formula : 'a fold_expr_funcs -> formula -> 'a -> 'a
-  val fold_rel_expr : 'a fold_expr_funcs -> rel_expr -> 'a -> 'a
-  val fold_int_expr : 'a fold_expr_funcs -> int_expr -> 'a -> 'a
-  val fold_decl : 'a fold_expr_funcs -> decl -> 'a -> 'a
-  val fold_expr_assign : 'a fold_expr_funcs -> expr_assign -> 'a -> 'a
 
   type 'a fold_tuple_funcs =
     {tuple_func : tuple -> 'a -> 'a,
      tuple_set_func : tuple_set -> 'a -> 'a}
 
-  val fold_tuple : 'a fold_tuple_funcs -> tuple -> 'a -> 'a
-  val fold_tuple_set : 'a fold_tuple_funcs -> tuple_set -> 'a -> 'a
   val fold_bound :
     'a fold_expr_funcs -> 'a fold_tuple_funcs -> bound -> 'a -> 'a
 
@@ -156,22 +150,15 @@ signature REFUTE_FORL = sig
 
   exception SYNTAX of string * string
 
-  val extract_instance : string -> raw_bound list
   (* The third component reports a transcript that stops mid-section, i.e.
      one the solver was killed before it finished writing.  The solutions
      and unsat indices returned beside it are the ones it did write. *)
-  val parse_output : string ->
-    (int * raw_bound list) list * int list * bool
   val first_error : string -> string
-
-  val production_header : unit -> string
-  val write_problem : TextIO.outstream -> string -> problem list -> unit
 
   (* Shared with Refute_ForlSat, which loads after this structure. *)
   val getenv : string -> string
   val readable_file : string -> bool
   val uname : string -> string
-  val platform_name : unit -> string
   val jni_dir : unit -> string
   (* An absolute scratch path with the given suffix, under the temporary
      root and cleaned up by the solve that uses it. *)

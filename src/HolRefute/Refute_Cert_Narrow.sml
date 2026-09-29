@@ -4,10 +4,8 @@ structure Refute_Cert_Narrow :> Refute_Cert_Narrow = struct
   structure MFH = Refute_ModelFinder_HOL
 
   fun replay_failure cex detail =
-    Potential (replace cex
-      (Refute_Core.Potential
-        ["existential narrowing case-tree replay failed: " ^ detail])
-      [] NONE)
+    Potential (downgrade cex
+      ("existential narrowing case-tree replay failed: " ^ detail))
 
   (* Replay never infers exhaustiveness from a successful simplification.
      Every existential node's frozen shape and pattern cover are checked

@@ -407,9 +407,8 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
             let
               val stage = !normalization_stage
               val _ = charge stage 0
-              val theorem = within_deadline stage 0
-                (fn input => conversion input
-                  handle Conv.UNCHANGED => Thm.REFL input) tm
+              val theorem =
+                within_deadline stage 0 (Conv.QCONV conversion) tm
               val theorem = require_theorem stage 0
                 (SOME (boolSyntax.mk_eq (tm, rhs_of theorem))) theorem
               val _ = normalization_stage := "prenex conversion"

@@ -207,6 +207,10 @@ structure Refute_Extract :> Refute_Extract = struct
       ml_name : string,
       constructors : (term * hol_type list * string) list }
 
+  type record_field =
+    TypeBasePure.tyinfo * (string * TypeBasePure.rcd_fieldinfo) list *
+    (bool * int)
+
   type context =
     { mode : extraction_mode,
       operations : mode_operations,
@@ -219,9 +223,11 @@ structure Refute_Extract :> Refute_Extract = struct
       pending : term list ref,
       compset_items :
         ((string * string) * computeLib.transform list) list option ref,
-      next_type : int ref,
-      next_const : int ref,
-      next_pattern : int ref }
+      record_fields :
+        ((string * string), record_field) Redblackmap.dict option ref,
+      next_type : unit -> int,
+      next_const : unit -> int,
+      next_pattern : unit -> int }
 
   fun new_context mode : context =
     { mode = mode,
@@ -234,9 +240,10 @@ structure Refute_Extract :> Refute_Extract = struct
       definition_clauses = ref [],
       pending = ref [],
       compset_items = ref NONE,
-      next_type = ref 0,
-      next_const = ref 0,
-      next_pattern = ref 0 }
+      record_fields = ref NONE,
+      next_type = Portable.make_counter {init = 0, inc = 1},
+      next_const = Portable.make_counter {init = 0, inc = 1},
+      next_pattern = Portable.make_counter {init = 0, inc = 1} }
 
   fun context_operations ({operations, ...} : context) = operations
   fun context_mode ({mode, ...} : context) = mode
@@ -249,19 +256,13 @@ structure Refute_Extract :> Refute_Extract = struct
     List.find (fn info => Util.same_type (#hol_ty info) ty) (!datatypes)
 
   fun fresh_type ({next_type, ...} : context) =
-    let val number = !next_type
-        val _ = next_type := number + 1
-    in "refute_ty_" ^ Int.toString number end
+    "refute_ty_" ^ Int.toString (next_type ())
 
   fun fresh_const ({next_const, ...} : context) base =
-    let val number = !next_const
-        val _ = next_const := number + 1
-    in lower_name base ^ "_" ^ Int.toString number end
+    lower_name base ^ "_" ^ Int.toString (next_const ())
 
   fun fresh_pattern ({next_pattern, ...} : context) prefix =
-    let val number = !next_pattern
-        val _ = next_pattern := number + 1
-    in prefix ^ Int.toString number end
+    prefix ^ Int.toString (next_pattern ())
 
   fun word_width ty =
     let
@@ -323,8 +324,7 @@ structure Refute_Extract :> Refute_Extract = struct
       SOME (mlty, _) => mlty
     | NONE =>
         let
-          val number = !(#next_type context)
-          val _ = #next_type context := number + 1
+          val number = #next_type context ()
           val equality = "eq_refute_" ^ Int.toString number
           val primitive = classify_primitive context ty
         in
@@ -1123,28 +1123,54 @@ structure Refute_Extract :> Refute_Extract = struct
     let val (name, ty) = Term.dest_var variable
     in clean_name (name ^ "\000" ^ type_key ty) end
 
-  fun with_arity arguments arity build =
+  (* Build from exactly [arity] values: missing arguments are abstracted
+     as [prefix]-named variables and extra ones are applied. *)
+  fun saturate {prefix, abstract, apply} arguments arity build =
     let
-      val supplied = length arguments
-      val used = Int.min (supplied, arity)
-      val initial = List.take (arguments, used)
-      val extra = List.drop (arguments, used)
-      val missing = arity - used
-      val variables = List.tabulate (missing, fn index =>
-        "refute_arg_" ^ Int.toString index)
-      val body = build (initial @ variables)
-      (* An under-applied primitive compiles to an abstraction, and a bare
-         [fn x => ...] is legal in neither the head nor the argument of an
-         application.  Bracket it here, once, so that no splice site has to
-         know that [with_arity] can hand it one. *)
-      val abstraction =
-        if null variables then body
-        else parens (List.foldr (fn (variable, result) =>
-          "fn " ^ variable ^ " => " ^ result) body variables)
+      val used = Int.min (length arguments, arity)
+      val variables = List.tabulate (arity - used, fn index =>
+        prefix ^ Int.toString index)
+      val body = build (List.take (arguments, used) @ variables)
     in
-      List.foldl (fn (argument, result) =>
-        parens (result ^ " " ^ parens argument)) abstraction extra
+      List.foldl (fn (argument, result) => apply result argument)
+        (abstract variables body) (List.drop (arguments, used))
     end
+
+  (* An under-applied primitive compiles to an abstraction, and a bare
+     [fn x => ...] is legal in neither the head nor the argument of an
+     application.  Bracket it here, once, so that no splice site has to
+     know that [with_arity] can hand it one. *)
+  fun strict_abstraction [] body = body
+    | strict_abstraction variables body =
+        parens (List.foldr (fn (variable, result) =>
+          "fn " ^ variable ^ " => " ^ result) body variables)
+
+  fun lazy_abstraction delay variables body =
+    List.foldr (fn (variable, result) =>
+      delay ("fn " ^ variable ^ " => " ^ result)) body variables
+
+  fun with_arity arguments =
+    saturate {prefix = "refute_arg_", abstract = strict_abstraction,
+              apply = strict_apply} arguments
+
+  fun lazy_with_arity context =
+    let val {delay, apply, ...} = context_operations context
+    in
+      saturate {prefix = "refute_lazy_arg_",
+                abstract = lazy_abstraction delay, apply = apply}
+    end
+
+  (* Destructure the exactly-[n] values a saturating builder receives. *)
+  fun arity1 saturated arguments build =
+    saturated arguments 1 (fn values =>
+      case values of [a] => build a | _ => raise Fail "arity1")
+  fun arity2 saturated arguments build =
+    saturated arguments 2 (fn values =>
+      case values of [a, b] => build (a, b) | _ => raise Fail "arity2")
+  fun arity3 saturated arguments build =
+    saturated arguments 3 (fn values =>
+      case values of [a, b, c] => build (a, b, c)
+      | _ => raise Fail "arity3")
 
   (* A lazy expression denotes one suspension, never a suspension of a
      suspension.  When an ML computation returns a lazy value, defer the
@@ -1166,40 +1192,23 @@ structure Refute_Extract :> Refute_Extract = struct
         | [argument] => name ^ " " ^ parens argument
         | _ => name ^ " " ^ parens (join ", " values)
       fun lazy_custom name =
-        let
-          fun abstract [] body = body
-            | abstract (variable :: variables) body =
-                delay ("fn " ^ variable ^ " => " ^
-                  abstract variables body)
-          val supplied = Int.min (length arguments, arity)
-          val initial = List.take (arguments, supplied)
-          val extra = List.drop (arguments, supplied)
-          val variables = List.tabulate (arity - supplied, fn index =>
-            "refute_arg_" ^ Int.toString index)
-          val built = delay (custom name (initial @ variables))
-          val abstraction = abstract variables built
-        in
-          List.foldl (fn (argument, result) =>
-            apply result argument) abstraction extra
-        end
+        saturate {prefix = "refute_arg_", abstract = lazy_abstraction delay,
+                  apply = apply} arguments arity
+          (fn values => delay (custom name values))
       fun strict_custom name = with_arity arguments arity (custom name)
       fun strict () =
         case kname constructor of
             ("list", "NIL") =>
               if is_char_list (#2 (boolSyntax.strip_fun
                 (Term.type_of constructor))) then quote "" else "[]"
-          | ("list", "CONS") => with_arity arguments 2 (fn values =>
-              case values of
-                [head, tail] =>
-                  if is_char_list (#2 (boolSyntax.strip_fun
-                    (Term.type_of constructor))) then
-                    parens ("String.str " ^ parens head ^ " ^ " ^ tail)
-                  else parens (head ^ " :: " ^ tail)
-              | _ => raise Fail "CONS")
+          | ("list", "CONS") => arity2 with_arity arguments (fn (head, tail) =>
+              if is_char_list (#2 (boolSyntax.strip_fun
+                (Term.type_of constructor))) then
+                parens ("String.str " ^ parens head ^ " ^ " ^ tail)
+              else parens (head ^ " :: " ^ tail))
           | ("option", "NONE") => "NONE"
-          | ("option", "SOME") => with_arity arguments 1 (fn values =>
-              case values of [argument] => "SOME " ^ parens argument
-              | _ => raise Fail "SOME")
+          | ("option", "SOME") => arity1 with_arity arguments (fn argument =>
+              "SOME " ^ parens argument)
           | ("pair", ",") => with_arity arguments 2 (fn values =>
               parens (join ", " values))
           | _ =>
@@ -1261,28 +1270,45 @@ structure Refute_Extract :> Refute_Extract = struct
                   Parse.term_to_string term)
       end
 
-  fun binary operator arguments = with_arity arguments 2 (fn values =>
-    case values of [left, right] => parens (left ^ " " ^ operator ^ " " ^
-      right) | _ => raise Fail "binary")
+  fun binary operator arguments =
+    arity2 with_arity arguments (fn (left, right) =>
+      parens (left ^ " " ^ operator ^ " " ^ right))
 
   fun call name arity arguments = with_arity arguments arity (fn values =>
     parens (name ^ " " ^ join " " (List.map parens values)))
 
-  fun record_primitive context head arguments =
-    let
-      fun find_field info =
+  (* Record accessors and updaters by constant, built from TypeBase once per
+     extraction; the first entry in TypeBase order wins. *)
+  fun record_field_table ({record_fields, ...} : context) =
+    case !record_fields of
+      SOME table => table
+    | NONE =>
         let
-          val fields = TypeBasePure.fields_of info
-          fun matching (index, (_, {accessor, fupd, ...})) =
-            if Term.same_const accessor head then SOME (false, index)
-            else if Term.same_const fupd head then SOME (true, index)
-            else NONE
+          fun add (key, field) table =
+            case key of
+              SOME key =>
+                if Option.isSome (Redblackmap.peek (table, key)) then table
+                else Redblackmap.insert (table, key, field)
+            | NONE => table
+          fun add_info (info, table) =
+            let val fields = TypeBasePure.fields_of info
+            in
+              List.foldl (fn ((index, (_, {accessor, fupd, ...})), table) =>
+                add (Lib.total kname fupd, (info, fields, (true, index)))
+                  (add (Lib.total kname accessor,
+                        (info, fields, (false, index))) table))
+                table (Lib.enumerate 0 fields)
+            end
+          val table = List.foldl add_info
+            (Redblackmap.mkDict (Lib.pair_compare
+              (String.compare, String.compare)))
+            (TypeBase.elts ())
         in
-          Option.map (fn match => (info, fields, match))
-            (Lib.get_first matching (Lib.enumerate 0 fields))
+          record_fields := SOME table; table
         end
-    in
-      case Lib.get_first find_field (TypeBase.elts ()) of
+
+  fun record_primitive context head arguments =
+    case Redblackmap.peek (record_field_table context, kname head) of
         NONE => NONE
       | SOME (info, fields, (is_update, selected)) =>
           let
@@ -1305,32 +1331,23 @@ structure Refute_Extract :> Refute_Extract = struct
               | _ => parens (join ", " values)
             fun record_pattern name =
               constructor_name ^ " " ^ payload variables ^ " => " ^ name
-            fun accessor values =
-              case values of
-                [record] =>
-                  parens ("case " ^ record ^ " of " ^
-                    record_pattern (List.nth (variables, selected)))
-              | _ => raise Fail "record accessor"
-            fun updater values =
-              case values of
-                [update, record] =>
-                  let
-                    val new_fields = List.map (fn (index, variable) =>
-                      if index = selected then
-                        parens (parens update ^ " " ^ variable)
-                      else variable) (Lib.enumerate 0 variables)
-                    val rebuilt = constructor_name ^ " " ^
-                      payload new_fields
-                  in
-                    parens ("case " ^ record ^ " of " ^
-                      record_pattern rebuilt)
-                  end
-              | _ => raise Fail "record updater"
+            fun accessor record =
+              parens ("case " ^ record ^ " of " ^
+                record_pattern (List.nth (variables, selected)))
+            fun updater (update, record) =
+              let
+                val new_fields = List.map (fn (index, variable) =>
+                  if index = selected then
+                    parens (parens update ^ " " ^ variable)
+                  else variable) (Lib.enumerate 0 variables)
+                val rebuilt = constructor_name ^ " " ^ payload new_fields
+              in
+                parens ("case " ^ record ^ " of " ^ record_pattern rebuilt)
+              end
           in
-            SOME (if is_update then with_arity arguments 2 updater
-                  else with_arity arguments 1 accessor)
+            SOME (if is_update then arity2 with_arity arguments updater
+                  else arity1 with_arity arguments accessor)
           end
-    end
 
   fun word_result_width head arguments =
     let
@@ -1347,16 +1364,19 @@ structure Refute_Extract :> Refute_Extract = struct
   fun strict_primitive context head argument_terms arguments =
     let
       val key = kname head
+      fun with1 build = arity1 with_arity arguments build
+      fun with2 build = arity2 with_arity arguments build
+      fun with3 build = arity3 with_arity arguments build
       fun num_binary operator = binary operator arguments
+      fun width_call name arity =
+        let val width = word_result_width head argument_terms
+        in call (name ^ " " ^ Int.toString width) arity arguments end
       fun norm_binary operator =
         let val width = word_result_width head argument_terms
         in
-          with_arity arguments 2 (fn values =>
-            case values of
-              [left, right] =>
-                "refute_norm " ^ Int.toString width ^ " " ^
-                parens (left ^ " " ^ operator ^ " " ^ right)
-            | _ => raise Fail "norm_binary")
+          with2 (fn (left, right) =>
+            "refute_norm " ^ Int.toString width ^ " " ^
+            parens (left ^ " " ^ operator ^ " " ^ right))
         end
       fun compare signed operator =
         let val width = word_result_width head argument_terms
@@ -1364,10 +1384,8 @@ structure Refute_Extract :> Refute_Extract = struct
               "refute_signed " ^ Int.toString width ^ " " ^ parens value
               else value
         in
-          with_arity arguments 2 (fn values =>
-            case values of [left, right] =>
-              parens (side left ^ " " ^ operator ^ " " ^ side right)
-            | _ => raise Fail "compare")
+          with2 (fn (left, right) =>
+            parens (side left ^ " " ^ operator ^ " " ^ side right))
         end
       fun argument_types () = #1 (boolSyntax.strip_fun (Term.type_of head))
       fun list_domain () = #1 (Type.dom_rng (Term.type_of head))
@@ -1378,8 +1396,8 @@ structure Refute_Extract :> Refute_Extract = struct
         let val element = listSyntax.dest_list_type (list_domain ())
         in equality_name context element end
     in
-      (* The key table covers the common intrinsics; the record scan over
-         TypeBase runs only when nothing in the table matches. *)
+      (* The key table covers the common intrinsics; record accessors and
+         updaters are looked up only when nothing in the table matches. *)
       case key of
         ("bool", "T") => SOME "true"
       | ("bool", "ARB") =>
@@ -1393,33 +1411,23 @@ structure Refute_Extract :> Refute_Extract = struct
          [GSPECIFICATION], a rewrite about [GSPEC] rather than [IN]'s
          defining equation, so the definition route reaches [IN_DEF] only
          through [definition_theorem]'s own-theory recovery. *)
-      | ("bool", "IN") => SOME (with_arity arguments 2 (fn values =>
-          case values of [element, set] =>
-            parens (parens set ^ " " ^ parens element)
-          | _ => raise Fail "membership"))
-      | ("min", "==>") => SOME (with_arity arguments 2 (fn values =>
-          case values of [left, right] =>
-            parens ("not " ^ parens left ^ " orelse " ^ right)
-          | _ => raise Fail "implication"))
+      | ("bool", "IN") => SOME (with2 (fn (element, set) =>
+            parens (parens set ^ " " ^ parens element)))
+      | ("min", "==>") => SOME (with2 (fn (left, right) =>
+            parens ("not " ^ parens left ^ " orelse " ^ right)))
       | ("min", "=") =>
           let val compared = #1 (Type.dom_rng (Term.type_of head))
           in SOME (call (equality_name context compared) 2 arguments) end
       | ("num", "0") => SOME (num_literal Arbnum.zero)
       | ("arithmetic", "ZERO") => SOME (num_literal Arbnum.zero)
       | ("arithmetic", "NUMERAL") => SOME (call "(fn x => x)" 1 arguments)
-      | ("arithmetic", "BIT1") => SOME (with_arity arguments 1 (fn values =>
-          case values of [value] => parens ("2 * " ^ value ^ " + 1")
-          | _ => raise Fail "BIT1"))
-      | ("arithmetic", "BIT2") => SOME (with_arity arguments 1 (fn values =>
-          case values of [value] => parens ("2 * " ^ value ^ " + 2")
-          | _ => raise Fail "BIT2"))
-      | ("num", "SUC") => SOME (with_arity arguments 1 (fn values =>
-          case values of [value] => parens (value ^ " + 1")
-          | _ => raise Fail "SUC"))
-      | ("prim_rec", "PRE") => SOME (with_arity arguments 1 (fn values =>
-          case values of [value] =>
-            parens ("if " ^ value ^ " = 0 then 0 else " ^ value ^ " - 1")
-          | _ => raise Fail "PRE"))
+      | ("arithmetic", "BIT1") => SOME (with1 (fn value =>
+          parens ("2 * " ^ value ^ " + 1")))
+      | ("arithmetic", "BIT2") => SOME (with1 (fn value =>
+          parens ("2 * " ^ value ^ " + 2")))
+      | ("num", "SUC") => SOME (with1 (fn value => parens (value ^ " + 1")))
+      | ("prim_rec", "PRE") => SOME (with1 (fn value =>
+            parens ("if " ^ value ^ " = 0 then 0 else " ^ value ^ " - 1")))
       | ("arithmetic", "+") => SOME (num_binary "+")
       | ("arithmetic", "-") => SOME (call "refute_num_sub" 2 arguments)
       | ("arithmetic", "*") => SOME (num_binary "*")
@@ -1430,26 +1438,18 @@ structure Refute_Extract :> Refute_Extract = struct
       | ("arithmetic", "<=") => SOME (num_binary "<=")
       | ("arithmetic", ">") => SOME (num_binary ">")
       | ("arithmetic", ">=") => SOME (num_binary ">=")
-      | ("arithmetic", "MIN") => SOME (with_arity arguments 2 (fn values =>
-          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
-            " then " ^ a ^ " else " ^ b)
-          | _ => raise Fail "MIN"))
-      | ("arithmetic", "MAX") => SOME (with_arity arguments 2 (fn values =>
-          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
-            " then " ^ b ^ " else " ^ a)
-          | _ => raise Fail "MAX"))
-      | ("arithmetic", "EVEN") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] => "IntInf.mod (" ^ a ^ ", 2) = 0"
-          | _ => raise Fail "EVEN"))
-      | ("arithmetic", "ODD") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] => "IntInf.mod (" ^ a ^ ", 2) = 1"
-          | _ => raise Fail "ODD"))
-      | ("arithmetic", "DIV2") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] => "IntInf.div (" ^ a ^ ", 2)"
-          | _ => raise Fail "DIV2"))
-      | ("integer", "int_neg") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] => parens ("~" ^ parens a)
-          | _ => raise Fail "int_neg"))
+      | ("arithmetic", "MIN") => SOME (with2 (fn (a, b) =>
+          parens ("if " ^ a ^ " < " ^ b ^ " then " ^ a ^ " else " ^ b)))
+      | ("arithmetic", "MAX") => SOME (with2 (fn (a, b) =>
+          parens ("if " ^ a ^ " < " ^ b ^ " then " ^ b ^ " else " ^ a)))
+      | ("arithmetic", "EVEN") => SOME (with1 (fn a =>
+          "IntInf.mod (" ^ a ^ ", 2) = 0"))
+      | ("arithmetic", "ODD") => SOME (with1 (fn a =>
+          "IntInf.mod (" ^ a ^ ", 2) = 1"))
+      | ("arithmetic", "DIV2") => SOME (with1 (fn a =>
+          "IntInf.div (" ^ a ^ ", 2)"))
+      | ("integer", "int_neg") => SOME (with1 (fn a =>
+          parens ("~" ^ parens a)))
       | ("integer", "int_add") => SOME (binary "+" arguments)
       | ("integer", "int_sub") => SOME (binary "-" arguments)
       | ("integer", "int_mul") => SOME (binary "*" arguments)
@@ -1463,72 +1463,55 @@ structure Refute_Extract :> Refute_Extract = struct
       | ("integer", "int_gt") => SOME (binary ">" arguments)
       | ("integer", "int_ge") => SOME (binary ">=" arguments)
       | ("integer", "ABS") => SOME (call "IntInf.abs" 1 arguments)
-      | ("integer", "int_min") => SOME (with_arity arguments 2 (fn values =>
-          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
-            " then " ^ a ^ " else " ^ b) | _ => raise Fail "int_min"))
-      | ("integer", "int_max") => SOME (with_arity arguments 2 (fn values =>
-          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
-            " then " ^ b ^ " else " ^ a) | _ => raise Fail "int_max"))
+      | ("integer", "int_min") => SOME (with2 (fn (a, b) =>
+          parens ("if " ^ a ^ " < " ^ b ^ " then " ^ a ^ " else " ^ b)))
+      | ("integer", "int_max") => SOME (with2 (fn (a, b) =>
+          parens ("if " ^ a ^ " < " ^ b ^ " then " ^ b ^ " else " ^ a)))
       | ("integer", "int_of_num") => SOME (call "(fn x => x)" 1 arguments)
       | ("integer", "Num") => SOME (call "IntInf.abs" 1 arguments)
       | ("combin", "I") => SOME (call "(fn x => x)" 1 arguments)
-      | ("combin", "K") => SOME (with_arity arguments 2 (fn values =>
-          case values of [left, _] => left | _ => raise Fail "K"))
-      | ("combin", "o") => SOME (with_arity arguments 3 (fn values =>
-          case values of [f, g, x] => parens (atom f ^ " " ^ parens
-            (atom g ^ " " ^ parens x)) | _ => raise Fail "o"))
+      | ("combin", "K") => SOME (with2 (fn (left, _) => left))
+      | ("combin", "o") => SOME (with3 (fn (f, g, x) =>
+          parens (atom f ^ " " ^ parens (atom g ^ " " ^ parens x))))
       | ("combin", "UPDATE") =>
           let
             val domain = hd (#1 (boolSyntax.strip_fun
               (Term.type_of head)))
             val equality = equality_name context domain
           in
-            SOME (with_arity arguments 3 (fn values =>
-              case values of [point, value, base] =>
+            SOME (with3 (fn (point, value, base) =>
                 parens ("fn refute_update_x => if " ^ equality ^
                   " refute_update_x " ^ atom point ^ " then " ^ value ^
-                  " else " ^ atom base ^ " refute_update_x")
-              | _ => raise Fail "UPDATE"))
+                  " else " ^ atom base ^ " refute_update_x")))
           end
       | ("pair", "FST") => SOME (call "#1" 1 arguments)
       | ("pair", "SND") => SOME (call "#2" 1 arguments)
-      | ("pair", "CURRY") => SOME (with_arity arguments 3 (fn values =>
-          case values of [f, a, b] => atom f ^ " " ^ parens (a ^ ", " ^ b)
-          | _ => raise Fail "CURRY"))
-      | ("pair", "UNCURRY") => SOME (with_arity arguments 2 (fn values =>
-          case values of [f, pair] => atom f ^ " " ^ parens pair
-          | _ => raise Fail "UNCURRY"))
-      | ("list", "NULL") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] =>
+      | ("pair", "CURRY") => SOME (with3 (fn (f, a, b) =>
+          atom f ^ " " ^ parens (a ^ ", " ^ b)))
+      | ("pair", "UNCURRY") => SOME (with2 (fn (f, pair) =>
+          atom f ^ " " ^ parens pair))
+      | ("list", "NULL") => SOME (with1 (fn a =>
             if string_list () then "String.size " ^ parens a ^ " = 0"
-            else parens ("case " ^ a ^ " of [] => true | _ => false")
-          | _ => raise Fail "NULL"))
-      | ("list", "HD") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] =>
+            else parens ("case " ^ a ^ " of [] => true | _ => false")))
+      | ("list", "HD") => SOME (with1 (fn a =>
             if string_list () then parens ("if String.size " ^ parens a ^
               " = 0 then raise Refute_EvalSML.Stuck \"HD []\" " ^
               "else " ^ Refute_EvalSML.char_list_head_source a)
-            else "refute_hd " ^ parens a
-          | _ => raise Fail "HD"))
-      | ("list", "TL") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] =>
+            else "refute_hd " ^ parens a))
+      | ("list", "TL") => SOME (with1 (fn a =>
             if string_list () then Refute_EvalSML.char_list_tail_source a
-            else "refute_tl " ^ parens a
-          | _ => raise Fail "TL"))
+            else "refute_tl " ^ parens a))
       | ("list", "APPEND") =>
           SOME (binary (if string_list () then "^" else "@") arguments)
       | ("list", "FLAT") => SOME (call
           (if is_char_list (listSyntax.dest_list_type (list_domain ())) then
              "String.concat"
            else "List.concat") 1 arguments)
-      | ("list", "LENGTH") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] =>
+      | ("list", "LENGTH") => SOME (with1 (fn a =>
             "IntInf.fromInt (" ^
             (if string_list () then "String.size " else "List.length ") ^
-            parens a ^ ")"
-          | _ => raise Fail "LENGTH"))
-      | ("list", "MAP") => SOME (with_arity arguments 2 (fn values =>
-          case values of [f, xs] =>
+            parens a ^ ")"))
+      | ("list", "MAP") => SOME (with2 (fn (f, xs) =>
             let
               val input = if string_argument 1 then
                 "String.explode " ^ parens xs else xs
@@ -1537,49 +1520,38 @@ structure Refute_Extract :> Refute_Extract = struct
             in
               if is_char_list result_ty then
                 "String.implode " ^ parens mapped else mapped
-            end
-          | _ => raise Fail "MAP"))
-      | ("list", "FILTER") => SOME (with_arity arguments 2 (fn values =>
-          case values of [f, xs] =>
+            end))
+      | ("list", "FILTER") => SOME (with2 (fn (f, xs) =>
             if string_argument 1 then
               "String.implode (List.filter " ^ parens f ^
               " (String.explode " ^ parens xs ^ "))"
-            else "List.filter " ^ parens f ^ " " ^ parens xs
-          | _ => raise Fail "FILTER"))
-      | ("list", "EVERY") => SOME (with_arity arguments 2 (fn values =>
-          case values of [f, xs] => "List.all " ^ parens f ^ " " ^
+            else "List.filter " ^ parens f ^ " " ^ parens xs))
+      | ("list", "EVERY") => SOME (with2 (fn (f, xs) =>
+          "List.all " ^ parens f ^ " " ^
             parens (if string_argument 1 then
-              "String.explode " ^ parens xs else xs)
-          | _ => raise Fail "EVERY"))
-      | ("list", "EXISTS") => SOME (with_arity arguments 2 (fn values =>
-          case values of [f, xs] => "List.exists " ^ parens f ^ " " ^
+              "String.explode " ^ parens xs else xs)))
+      | ("list", "EXISTS") => SOME (with2 (fn (f, xs) =>
+          "List.exists " ^ parens f ^ " " ^
             parens (if string_argument 1 then
-              "String.explode " ^ parens xs else xs)
-          | _ => raise Fail "EXISTS"))
-      | ("list", "FOLDR") => SOME (with_arity arguments 3 (fn values =>
-          case values of [f, z, xs] =>
+              "String.explode " ^ parens xs else xs)))
+      | ("list", "FOLDR") => SOME (with3 (fn (f, z, xs) =>
             "refute_foldr " ^ atom f ^ " " ^ atom z ^ " " ^
             parens (if string_argument 2 then
-              "String.explode " ^ parens xs else xs)
-          | _ => raise Fail "FOLDR"))
-      | ("list", "FOLDL") => SOME (with_arity arguments 3 (fn values =>
-          case values of [f, z, xs] =>
+              "String.explode " ^ parens xs else xs)))
+      | ("list", "FOLDL") => SOME (with3 (fn (f, z, xs) =>
             "refute_foldl " ^ atom f ^ " " ^ atom z ^ " " ^
             parens (if string_argument 2 then
-              "String.explode " ^ parens xs else xs)
-          | _ => raise Fail "FOLDL"))
+              "String.explode " ^ parens xs else xs)))
       | ("list", "REVERSE") =>
           SOME (call (if string_list () then
             "(String.implode o List.rev o String.explode)" else "List.rev")
             1 arguments)
-      | ("list", "EL") => SOME (with_arity arguments 2 (fn values =>
-          case values of [n, xs] =>
+      | ("list", "EL") => SOME (with2 (fn (n, xs) =>
             if string_argument 1 then
               "(String.sub (" ^ xs ^ ", IntInf.toInt " ^ atom n ^ ") " ^
               "handle Interrupt => raise Interrupt " ^
               "| _ => raise Refute_EvalSML.Stuck \"EL\")"
-            else "refute_nth " ^ atom xs ^ " " ^ atom n
-          | _ => raise Fail "EL"))
+            else "refute_nth " ^ atom xs ^ " " ^ atom n))
       | ("list", "LAST") =>
           SOME (call (if string_list () then
             "(refute_last o String.explode)" else "refute_last")
@@ -1588,46 +1560,34 @@ structure Refute_Extract :> Refute_Extract = struct
           SOME (call (if string_list () then
             "(String.implode o refute_front o String.explode)"
             else "refute_front") 1 arguments)
-      | ("list", "SNOC") => SOME (with_arity arguments 2 (fn values =>
-          case values of [x, xs] =>
+      | ("list", "SNOC") => SOME (with2 (fn (x, xs) =>
             if string_argument 1 then
               parens (xs ^ " ^ String.str " ^ parens x)
-            else parens (xs ^ " @ [" ^ x ^ "]")
-          | _ => raise Fail "SNOC"))
+            else parens (xs ^ " @ [" ^ x ^ "]")))
       | ("list", "ALL_DISTINCT") =>
-          SOME (with_arity arguments 1 (fn values =>
-            case values of [xs] =>
+          SOME (with1 (fn xs =>
               "refute_all_distinct " ^ list_eq_argument () ^ " " ^
               parens (if string_list () then
-                "String.explode " ^ parens xs else xs)
-            | _ => raise Fail "ALL_DISTINCT"))
+                "String.explode " ^ parens xs else xs)))
       | ("option", "THE") => SOME (call "refute_the" 1 arguments)
-      | ("option", "IS_SOME") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] => parens ("case " ^ a ^
-            " of SOME _ => true | NONE => false")
-          | _ => raise Fail "IS_SOME"))
-      | ("option", "IS_NONE") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] => parens ("case " ^ a ^
-            " of NONE => true | SOME _ => false")
-          | _ => raise Fail "IS_NONE"))
+      | ("option", "IS_SOME") => SOME (with1 (fn a =>
+          parens ("case " ^ a ^ " of SOME _ => true | NONE => false")))
+      | ("option", "IS_NONE") => SOME (with1 (fn a =>
+          parens ("case " ^ a ^ " of NONE => true | SOME _ => false")))
       | ("option", "OPTION_MAP") => SOME (call "Option.map" 2 arguments)
-      | ("option", "OPTION_JOIN") => SOME (with_arity arguments 1 (fn values =>
-          case values of [value] => parens ("case " ^ value ^
-            " of NONE => NONE | SOME x => x")
-          | _ => raise Fail "OPTION_JOIN"))
+      | ("option", "OPTION_JOIN") => SOME (with1 (fn value =>
+          parens ("case " ^ value ^ " of NONE => NONE | SOME x => x")))
       | ("string", "CHR") => SOME (call "refute_chr" 1 arguments)
-      | ("string", "ORD") => SOME (with_arity arguments 1 (fn values =>
-          case values of [a] => "IntInf.fromInt (Char.ord " ^ parens a ^
-            ")" | _ => raise Fail "ORD"))
+      | ("string", "ORD") => SOME (with1 (fn a =>
+          "IntInf.fromInt (Char.ord " ^ parens a ^ ")"))
       | ("string", "EXPLODE") => SOME (call "(fn x => x)" 1 arguments)
       | ("string", "IMPLODE") => SOME (call "(fn x => x)" 1 arguments)
       | ("string", "DEST_STRING") =>
-          SOME (with_arity arguments 1 (fn values =>
-            case values of [value] => parens ("if String.size " ^
+          SOME (with1 (fn value =>
+            parens ("if String.size " ^
               parens value ^ " = 0 then NONE else SOME (" ^
               Refute_EvalSML.char_list_head_source value ^ ", " ^
-              Refute_EvalSML.char_list_tail_source value ^ ")")
-            | _ => raise Fail "DEST_STRING"))
+              Refute_EvalSML.char_list_tail_source value ^ ")")))
       | ("string", "string_lt") => SOME (binary "<" arguments)
       | ("string", "string_le") => SOME (binary "<=" arguments)
       | ("string", "string_gt") => SOME (binary ">" arguments)
@@ -1636,77 +1596,46 @@ structure Refute_Extract :> Refute_Extract = struct
       | ("string", "char_le") => SOME (binary "<=" arguments)
       | ("string", "char_gt") => SOME (binary ">" arguments)
       | ("string", "char_ge") => SOME (binary ">=" arguments)
-      | ("words", "n2w") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_norm " ^ Int.toString width) 1 arguments) end
+      | ("words", "n2w") => SOME (width_call "refute_norm" 1)
       | ("words", "w2n") => SOME (call "(fn x => x)" 1 arguments)
       | ("words", "word_add") => SOME (norm_binary "+")
       | ("words", "word_sub") => SOME (norm_binary "-")
       | ("words", "word_mul") => SOME (norm_binary "*")
       | ("words", "word_exp") =>
           let val width = word_result_width head argument_terms
-          in SOME (with_arity arguments 2 (fn values =>
-            case values of [a, b] => "refute_norm " ^ Int.toString width ^
-              " (refute_pow " ^ atom a ^ " " ^ atom b ^ ")"
-            | _ => raise Fail "word_exp")) end
+          in SOME (with2 (fn (a, b) =>
+            "refute_norm " ^ Int.toString width ^
+              " (refute_pow " ^ atom a ^ " " ^ atom b ^ ")")) end
       | ("words", "word_1comp") =>
           let val width = word_result_width head argument_terms
-          in SOME (with_arity arguments 1 (fn values =>
-            case values of [a] => "refute_norm " ^ Int.toString width ^
-              " (IntInf.notb " ^ atom a ^ ")"
-            | _ => raise Fail "word_1comp")) end
+          in SOME (with1 (fn a =>
+            "refute_norm " ^ Int.toString width ^
+              " (IntInf.notb " ^ atom a ^ ")")) end
       | ("words", "word_2comp") =>
           let val width = word_result_width head argument_terms
-          in SOME (with_arity arguments 1 (fn values =>
-            case values of [a] => "refute_norm " ^ Int.toString width ^
-              " (~" ^ parens a ^ ")"
-            | _ => raise Fail "word_2comp")) end
-      | ("words", "word_and") => SOME (with_arity arguments 2 (fn values =>
-          case values of [a, b] => "IntInf.andb (" ^ a ^ ", " ^ b ^ ")"
-          | _ => raise Fail "word_and"))
-      | ("words", "word_or") => SOME (with_arity arguments 2 (fn values =>
-          case values of [a, b] => "IntInf.orb (" ^ a ^ ", " ^ b ^ ")"
-          | _ => raise Fail "word_or"))
-      | ("words", "word_xor") => SOME (with_arity arguments 2 (fn values =>
-          case values of [a, b] => "IntInf.xorb (" ^ a ^ ", " ^ b ^ ")"
-          | _ => raise Fail "word_xor"))
-      | ("words", "word_div") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_word_div " ^ Int.toString width)
-            2 arguments) end
-      | ("words", "word_mod") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_word_mod " ^ Int.toString width)
-            2 arguments) end
-      | ("words", "word_quot") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_word_quot " ^ Int.toString width)
-            2 arguments) end
-      | ("words", "word_rem") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_word_rem " ^ Int.toString width)
-            2 arguments) end
-      | ("words", "word_lsl") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_word_lsl " ^ Int.toString width)
-            2 arguments) end
-      | ("words", "word_lsr") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_word_lsr " ^ Int.toString width)
-            2 arguments) end
-      | ("words", "word_asr") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_word_asr " ^ Int.toString width)
-            2 arguments) end
-      | ("words", "word_lsb") => SOME (with_arity arguments 1 (fn values =>
-          case values of [value] => "IntInf.mod (" ^ value ^ ", 2) = 1"
-          | _ => raise Fail "word_lsb"))
+          in SOME (with1 (fn a =>
+            "refute_norm " ^ Int.toString width ^
+              " (~" ^ parens a ^ ")")) end
+      | ("words", "word_and") => SOME (with2 (fn (a, b) =>
+          "IntInf.andb (" ^ a ^ ", " ^ b ^ ")"))
+      | ("words", "word_or") => SOME (with2 (fn (a, b) =>
+          "IntInf.orb (" ^ a ^ ", " ^ b ^ ")"))
+      | ("words", "word_xor") => SOME (with2 (fn (a, b) =>
+          "IntInf.xorb (" ^ a ^ ", " ^ b ^ ")"))
+      | ("words", "word_div") => SOME (width_call "refute_word_div" 2)
+      | ("words", "word_mod") => SOME (width_call "refute_word_mod" 2)
+      | ("words", "word_quot") => SOME (width_call "refute_word_quot" 2)
+      | ("words", "word_rem") => SOME (width_call "refute_word_rem" 2)
+      | ("words", "word_lsl") => SOME (width_call "refute_word_lsl" 2)
+      | ("words", "word_lsr") => SOME (width_call "refute_word_lsr" 2)
+      | ("words", "word_asr") => SOME (width_call "refute_word_asr" 2)
+      | ("words", "word_lsb") => SOME (with1 (fn value =>
+          "IntInf.mod (" ^ value ^ ", 2) = 1"))
       | ("words", "word_msb") =>
           let val width = word_result_width head argument_terms
-          in SOME (with_arity arguments 1 (fn values =>
-            case values of [value] => "refute_signed " ^
-              Int.toString width ^ " " ^ atom value ^ " < 0"
-            | _ => raise Fail "word_msb")) end
+          in SOME (with1 (fn value =>
+            "refute_signed " ^ Int.toString width ^ " " ^ atom value ^
+            " < 0")) end
       | ("words", "word_lt") => SOME (compare true "<")
       | ("words", "word_le") => SOME (compare true "<=")
       | ("words", "word_gt") => SOME (compare true ">")
@@ -1715,10 +1644,7 @@ structure Refute_Extract :> Refute_Extract = struct
       | ("words", "word_ls") => SOME (compare false "<=")
       | ("words", "word_hi") => SOME (compare false ">")
       | ("words", "word_hs") => SOME (compare false ">=")
-      | ("words", "w2w") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_norm " ^ Int.toString width)
-            1 arguments) end
+      | ("words", "w2w") => SOME (width_call "refute_norm" 1)
       | ("words", "sw2sw") =>
           let
             val output_width = word_result_width head argument_terms
@@ -1726,16 +1652,11 @@ structure Refute_Extract :> Refute_Extract = struct
               argument :: _ => word_width (Term.type_of argument)
             | [] => output_width
           in
-            SOME (with_arity arguments 1 (fn values =>
-              case values of [value] => "refute_norm " ^
-                Int.toString output_width ^ " (refute_signed " ^
-                Int.toString input_width ^ " " ^ atom value ^ ")"
-              | _ => raise Fail "sw2sw"))
+            SOME (with1 (fn value =>
+              "refute_norm " ^ Int.toString output_width ^ " (refute_signed " ^
+                Int.toString input_width ^ " " ^ atom value ^ ")"))
           end
-      | ("integer_word", "i2w") =>
-          let val width = word_result_width head argument_terms
-          in SOME (call ("refute_norm " ^ Int.toString width)
-            1 arguments) end
+      | ("integer_word", "i2w") => SOME (width_call "refute_norm" 1)
       | ("integer_word", "w2i") =>
           let val width = case argument_terms of
                 argument :: _ => word_width (Term.type_of argument)
@@ -1745,36 +1666,19 @@ structure Refute_Extract :> Refute_Extract = struct
       | _ => record_primitive context head arguments
     end
 
-  fun lazy_with_arity context arguments arity build =
-    let
-      val {delay, apply, ...} = context_operations context
-      val supplied = Int.min (length arguments, arity)
-      val initial = List.take (arguments, supplied)
-      val extra = List.drop (arguments, supplied)
-      val variables = List.tabulate (arity - supplied, fn index =>
-        "refute_lazy_arg_" ^ Int.toString index)
-      val body = build (initial @ variables)
-      val abstraction = List.foldr (fn (variable, result) =>
-        delay ("fn " ^ variable ^ " => " ^ result))
-        body variables
-    in
-      List.foldl (fn (argument, result) =>
-        apply result argument) abstraction extra
-    end
-
   fun lazy_primitive context head argument_terms arguments =
     let
       val {delay, force, defer, apply, ...} =
         context_operations context
       val key = kname head
       val arity = length (#1 (boolSyntax.strip_fun (Term.type_of head)))
-      fun unary operation = lazy_with_arity context arguments 1 (fn values =>
-        case values of [value] => delay (operation (force value))
-        | _ => raise Fail "lazy unary")
-      fun binary operation = lazy_with_arity context arguments 2 (fn values =>
-        case values of [left, right] =>
-          delay (operation (force left, force right))
-        | _ => raise Fail "lazy binary")
+      fun with1 build = arity1 (lazy_with_arity context) arguments build
+      fun with2 build = arity2 (lazy_with_arity context) arguments build
+      fun with3 build = arity3 (lazy_with_arity context) arguments build
+      fun unary operation = with1 (fn value =>
+        delay (operation (force value)))
+      fun binary operation = with2 (fn (left, right) =>
+        delay (operation (force left, force right)))
       fun flat () = lazy_with_arity context arguments arity (fn values =>
         let
           val forced = map force values
@@ -1786,21 +1690,18 @@ structure Refute_Extract :> Refute_Extract = struct
                               kname_text key)
         end)
       fun pair_selector index =
-        lazy_with_arity context arguments 1 (fn values =>
-        case values of
-            [value] =>
-              let
-                val ty = #1 (Type.dom_rng (Term.type_of head))
-                val _ = ignore (ensure_type context ty)
-                val info = valOf (lookup_datatype context ty)
-                val (_, _, constructor) = hd (#constructors info)
-                val fields = if index = 0 then "left" else "right"
-              in
-                defer
-                  (parens ("case " ^ force value ^ " of " ^ constructor ^
-                    " (left, right) => " ^ fields))
-              end
-          | _ => raise Fail "lazy pair selector")
+        with1 (fn value =>
+          let
+            val ty = #1 (Type.dom_rng (Term.type_of head))
+            val _ = ignore (ensure_type context ty)
+            val info = valOf (lookup_datatype context ty)
+            val (_, _, constructor) = hd (#constructors info)
+            val fields = if index = 0 then "left" else "right"
+          in
+            defer
+              (parens ("case " ^ force value ^ " of " ^ constructor ^
+                " (left, right) => " ^ fields))
+          end)
       fun list_info () =
         let
           val ty = #1 (Type.dom_rng (Term.type_of head))
@@ -1841,69 +1742,48 @@ structure Refute_Extract :> Refute_Extract = struct
             left ^ " orelse " ^ right))
         (* See the strict table: membership is application. *)
         | ("bool", "IN") => SOME
-            (lazy_with_arity context arguments 2 (fn values =>
-              case values of [element, set] => apply set element
-              | _ => raise Fail "lazy membership"))
+            (with2 (fn (element, set) => apply set element))
         | ("min", "==>") => SOME (binary (fn (left, right) =>
             "not " ^ parens left ^ " orelse " ^ right))
         | ("min", "=") =>
             let val compared = #1 (Type.dom_rng (Term.type_of head))
             in
-              SOME (lazy_with_arity context arguments 2 (fn values =>
-                case values of [left, right] =>
-                  delay (equality_name context compared ^ " " ^
-                    parens left ^ " " ^ parens right)
-                | _ => raise Fail "lazy equality"))
+              SOME (with2 (fn (left, right) =>
+                delay (equality_name context compared ^ " " ^
+                  parens left ^ " " ^ parens right)))
             end
         | ("combin", "I") =>
-            SOME (lazy_with_arity context arguments 1 (fn values =>
-            case values of [value] => defer value
-            | _ => raise Fail "lazy I"))
+            SOME (with1 (fn value => defer value))
         | ("combin", "K") =>
-            SOME (lazy_with_arity context arguments 2 (fn values =>
-            case values of [value, _] => defer value
-            | _ => raise Fail "lazy K"))
+            SOME (with2 (fn (value, _) => defer value))
         | ("combin", "o") =>
-            SOME (lazy_with_arity context arguments 3 (fn values =>
-            case values of [f, g, x] => apply f (apply g x)
-            | _ => raise Fail "lazy composition"))
+            SOME (with3 (fn (f, g, x) => apply f (apply g x)))
         | ("pair", "FST") => SOME (pair_selector 0)
         | ("pair", "SND") => SOME (pair_selector 1)
         | ("list", "NULL") =>
-            SOME (lazy_with_arity context arguments 1 (fn values =>
-            case values of [value] => delay (list_case value "true" "false")
-            | _ => raise Fail "lazy NULL"))
+            SOME (with1 (fn value =>
+              delay (list_case value "true" "false")))
         | ("list", "HD") =>
-            SOME (lazy_with_arity context arguments 1 (fn values =>
-            case values of [value] => defer (list_case value
-              "(raise Refute_EvalSML.Stuck \"HD []\")" "refute_head")
-            | _ => raise Fail "lazy HD"))
+            SOME (with1 (fn value => defer (list_case value
+              "(raise Refute_EvalSML.Stuck \"HD []\")" "refute_head")))
         | ("list", "TL") =>
-            SOME (lazy_with_arity context arguments 1 (fn values =>
-            case values of [value] => defer (list_case value
-              (delay (lazy_list_nil ())) "refute_tail")
-            | _ => raise Fail "lazy TL"))
-        | ("option", "THE") =>
+            SOME (with1 (fn value => defer (list_case value
+              (delay (lazy_list_nil ())) "refute_tail")))
+        | ("option", "THE") => SOME (with1 (fn value =>
             let
-              fun build values =
-                case values of
-                    [value] =>
-                      let
-                        val ty = #1 (Type.dom_rng (Term.type_of head))
-                        val _ = ignore (ensure_type context ty)
-                        val info = valOf (lookup_datatype context ty)
-                        fun named name = #3 (valOf (List.find
-                          (fn (constructor, _, _) =>
-                            kname constructor = ("option", name))
-                          (#constructors info)))
-                      in
-                        defer
-                          ("(case " ^ force value ^ " of " ^ named "NONE" ^
-                           " => raise Refute_EvalSML.Stuck \"THE NONE\" | " ^
-                           named "SOME" ^ " result => result)")
-                      end
-                  | _ => raise Fail "lazy THE"
-            in SOME (lazy_with_arity context arguments 1 build) end
+              val ty = #1 (Type.dom_rng (Term.type_of head))
+              val _ = ignore (ensure_type context ty)
+              val info = valOf (lookup_datatype context ty)
+              fun named name = #3 (valOf (List.find
+                (fn (constructor, _, _) =>
+                  kname constructor = ("option", name))
+                (#constructors info)))
+            in
+              defer
+                ("(case " ^ force value ^ " of " ^ named "NONE" ^
+                 " => raise Refute_EvalSML.Stuck \"THE NONE\" | " ^
+                 named "SOME" ^ " result => result)")
+            end))
         | (thy, _) =>
             if Lib.mem thy
               ["num", "arithmetic", "prim_rec", "integer", "words",
@@ -2036,14 +1916,7 @@ structure Refute_Extract :> Refute_Extract = struct
                                arity invoke
                            end)
                      end)
-          else
-            choose (context_mode context)
-              (fn () =>
-                List.foldl (fn (argument, result) =>
-                  parens (result ^ " " ^ parens argument))
-                  (expression context head) arguments)
-              (fn () =>
-                application (expression context head) arguments)
+          else application (expression context head) arguments
         end
     in
       case form of
@@ -2051,34 +1924,16 @@ structure Refute_Extract :> Refute_Extract = struct
         | FCond =>
             let val (condition, left, right) = boolSyntax.dest_cond term
             in
-              choose (context_mode context)
-                (fn () =>
-                  parens ("if " ^ expression context condition ^ " then " ^
-                    expression context left ^ " else " ^
-                    expression context right))
-                (fn () =>
-                  defer
-                    (parens ("if " ^ force (expression context condition) ^
-                      " then " ^ expression context left ^ " else " ^
-                      expression context right)))
+              defer
+                (parens ("if " ^ force (expression context condition) ^
+                  " then " ^ expression context left ^ " else " ^
+                  expression context right))
             end
         | FNumeral =>
-            choose (context_mode context)
-              (fn () => num_literal (Literal.relaxed_dest_numeral term))
-              (fn () =>
-                delay (num_literal (Literal.relaxed_dest_numeral term)))
-        | FIntLit =>
-            choose (context_mode context)
-              (fn () => int_literal (intSyntax.int_of_term term))
-              (fn () => delay (int_literal (intSyntax.int_of_term term)))
+            delay (num_literal (Literal.relaxed_dest_numeral term))
+        | FIntLit => delay (int_literal (intSyntax.int_of_term term))
         | FChar =>
-            let
-              val source =
-                "#" ^ quote (String.str (Literal.dest_char_lit term))
-            in
-              choose (context_mode context)
-                (fn () => source) (fn () => delay source)
-            end
+            delay ("#" ^ quote (String.str (Literal.dest_char_lit term)))
         | FString =>
             choose (context_mode context)
               (fn () => quote (Literal.relaxed_dest_string_lit term))
@@ -2091,11 +1946,7 @@ structure Refute_Extract :> Refute_Extract = struct
                 in
                   list_value stringSyntax.string_ty chars
                 end)
-        | FWord =>
-            choose (context_mode context)
-              (fn () => num_literal (wordsSyntax.dest_word_literal term))
-              (fn () =>
-                delay (num_literal (wordsSyntax.dest_word_literal term)))
+        | FWord => delay (num_literal (wordsSyntax.dest_word_literal term))
         | FPair =>
             let
               val (left, right) = pairSyntax.dest_pair term
@@ -2134,8 +1985,7 @@ structure Refute_Extract :> Refute_Extract = struct
                 (fn () => delay ("fn " ^ variable_name argument ^ " => " ^
                   expression context body))
             end
-        | FOne => choose (context_mode context)
-            (fn () => "()") (fn () => delay "()")
+        | FOne => delay "()"
         | FRecord =>
             let
               val (record_ty, fields) = TypeBase.dest_record term
@@ -2597,24 +2447,23 @@ structure Refute_Extract :> Refute_Extract = struct
   val install_source =
     "fun install () = Refute_EvalSML.install_dispatch dispatch\n"
 
-  fun extract_tests_with mode
-        (config : Refute_Core.config) strategy plans : registered_extraction =
+  fun extract_tests_with (config : Refute_Core.config) strategy plans
+        : registered_extraction =
     let
       open Refute_Eval
 
       (* One immutable cache view governs validation, dependency closure and
          emission for this compile call. *)
       val enum_cache = Refute_SmartGen.enumerator_snapshot ()
-      val context = new_context mode
+      val context = new_context Strict
       val constructor_terms = new_term_table ()
       val raw_terms = new_term_table ()
-      val next_bound = ref 0
+      val next_bound = Portable.make_counter {init = 0, inc = 1}
       val original_variables = ref ([] : (term * term) list)
 
       fun fresh_bound original =
         let
-          val serial = !next_bound
-          val _ = next_bound := serial + 1
+          val serial = next_bound ()
           val safe = Term.mk_var
             ("refute_bound_" ^ Int.toString serial, Term.type_of original)
           val _ = original_variables :=
@@ -2692,25 +2541,6 @@ structure Refute_Extract :> Refute_Extract = struct
 
       val plans = List.map (fn plan => rename_plan plan []) plans
 
-      (* Lazy extraction installs only the property compiler.  Generation
-         and refinement belong to the narrowing engine; accepting those nodes
-         here would accidentally run strict enumeration over lazy values.
-         No plan reaches this today: [Refute_EvalSML.compile_locked] picks
-         [Lazy] only for [Narrowing], and the one [Narrowing] compile call
-         ([Refute_QC_Narrow.compile_instances_window]) supplies a [Pnf]
-         problem or raises, so [extract_tests_with] never runs under
-         [Lazy].  The guard stays complete for every node regardless. *)
-      fun test_only current =
-        case current of
-            Test _ => true
-          | Guard {cont, ...} => test_only cont
-          | Prune => true
-          | _ => false
-      val _ =
-        if mode = Lazy andalso not (List.all test_only plans) then
-          reject "native: narrowing engine is not installed"
-        else ()
-
       fun smart_reject message = reject ("smart plan: " ^ message)
 
       val same_program = Refute_EvalEnum.same_program
@@ -2769,14 +2599,11 @@ structure Refute_Extract :> Refute_Extract = struct
       (* Enumerator clauses come from arbitrary HOL source.  Rename every
          clause-local variable into a generated namespace whose sanitized
          spelling is injective and disjoint from all emitter helper names. *)
-      val next_enum_local = ref 0
+      val next_enum_local = Portable.make_counter {init = 0, inc = 1}
       fun fresh_enum_local variable =
-        let val serial = !next_enum_local
-            val _ = next_enum_local := serial + 1
-        in
-          Term.mk_var ("refute_enum_local_" ^ Int.toString serial,
-            Term.type_of variable)
-        end
+        Term.mk_var
+          ("refute_enum_local_" ^ Int.toString (next_enum_local ()),
+           Term.type_of variable)
       fun rename_program
             ({relation, mode, version, clauses} :
               Refute_SmartGen.enumerator) =
@@ -3367,12 +3194,11 @@ structure Refute_Extract :> Refute_Extract = struct
           bump_with (parens ("RefuteContinue, " ^ state)) ^
           " else " ^ fallback)
 
-      val guard_serial = ref 0
+      val guard_serial = Portable.make_counter {init = 1, inc = 1}
 
       fun guard_names () =
         let
-          val n = (guard_serial := !guard_serial + 1;
-            integer (!guard_serial))
+          val n = integer (guard_serial ())
         in
           ("refute_guard_" ^ n, "refute_genuine_" ^ n)
         end
@@ -3477,11 +3303,9 @@ structure Refute_Extract :> Refute_Extract = struct
       fun generated_from environment tm =
         pair (expression context tm) (evaluation_thunk tm environment)
 
-      val enum_match_serial = ref 0
+      val enum_match_serial = Portable.make_counter {init = 0, inc = 1}
       fun fresh_enum_match () =
-        let val serial = !enum_match_serial
-            val _ = enum_match_serial := serial + 1
-        in "refute_enum_match_" ^ integer serial end
+        "refute_enum_match_" ^ integer (enum_match_serial ())
 
       fun match_generated terms generated environment success failure =
         let
@@ -4708,14 +4532,12 @@ structure Refute_Extract :> Refute_Extract = struct
                    "" => "unknown validation exception"
                  | text => text)]
 
-  fun extract_problem extraction_mode config strategy problem =
+  (* Plans compile strictly; a Pnf problem is narrowing's lazy extraction. *)
+  fun extract_problem config strategy problem =
     let
-      val mode = case extraction_mode of
-          Refute_EvalSML.StrictExtraction => Strict
-        | Refute_EvalSML.LazyExtraction => Lazy
       val extracted = case problem of
           Refute_Eval.Plans plans =>
-            extract_tests_with mode config strategy plans
+            extract_tests_with config strategy plans
         | Refute_Eval.Pnf {prefix, body} =>
             extract_narrowing config prefix body
     in

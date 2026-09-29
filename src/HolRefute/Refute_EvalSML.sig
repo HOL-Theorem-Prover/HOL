@@ -5,8 +5,6 @@ signature Refute_EvalSML = sig
 
   exception Hole of int list
 
-  datatype extraction_mode = StrictExtraction | LazyExtraction
-
   val lazy_hole : int list -> 'a Susp.susp
 
   type reconstruction = unit -> term
@@ -60,7 +58,7 @@ signature Refute_EvalSML = sig
   val split_term : int -> int -> int -> (int * (unit -> term)) list -> term
   val register_substrate :
     {extract :
-       extraction_mode -> Refute_Core.config -> Refute_Eval.strategy ->
+       Refute_Core.config -> Refute_Eval.strategy ->
        Refute_Eval.qc_problem -> extraction_result,
      preflight :
        Refute_Core.config -> Refute_Eval.strategy -> Refute_Eval.plan list ->

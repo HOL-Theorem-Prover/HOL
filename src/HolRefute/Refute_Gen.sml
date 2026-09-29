@@ -86,9 +86,6 @@ structure Refute_Gen :> Refute_Gen = struct
   fun remove_type ty entries =
     List.filter (fn (entry_ty, _) => not (same_type (entry_ty, ty))) entries
 
-  fun cached_spec ty =
-    Redblackmap.peek (#specs (Refute_Session.read registry), ty)
-
   (* Stores one cache entry, unless the caches were emptied since
      [generation] was read. *)
   fun cache generation store =
@@ -116,6 +113,18 @@ structure Refute_Gen :> Refute_Gen = struct
       {registrations = registrations, generation = generation,
        specs = specs, cardinalities = cardinalities,
        enumerations = Redblackmap.insert (enumerations, ty, result)})
+
+  (* [compute ty], read from or stored into the cache that [get] selects
+     and [store] extends. *)
+  fun memo get store compute ty =
+    let val generation = current_generation ()
+    in
+      case Redblackmap.peek (get (Refute_Session.read registry), ty) of
+          SOME cached => cached
+        | NONE =>
+            let val result = compute ty
+            in store generation ty result; result end
+    end
 
   fun invalidate_cache _ = register (fn registrations => registrations)
 
@@ -457,166 +466,158 @@ structure Refute_Gen :> Refute_Gen = struct
     NoGenerator (ty, "no TypeBase information; register a generator")
 
   fun spec_of ty =
-    let val generation = current_generation ()
-    in
     case generator_of ty of
-      SOME generator => GenCustom (ty, generator)
-    | NONE =>
-        (case lookup_type (#abstract_specs (registrations ())) ty of
-       SOME spec => spec
-     | NONE =>
-    (case cached_spec ty of
-      SOME spec => spec
-    | NONE =>
+        SOME generator => GenCustom (ty, generator)
+      | NONE =>
+          (case lookup_type (#abstract_specs (registrations ())) ty of
+               SOME spec => spec
+             | NONE => memo #specs cache_spec derived_spec ty)
+
+  and derived_spec ty =
+    let
+      fun floor_of family floors arg_ty =
+        if Type.is_vartype arg_ty then 0
+        else
+          case List.find (fn (family_ty, _) =>
+            same_type (family_ty, arg_ty)) floors of
+            SOME (_, floor) => floor
+          | NONE => own_floor (spec_of arg_ty)
+
+      fun family_floors family =
         let
-          fun floor_of family floors arg_ty =
-            if Type.is_vartype arg_ty then 0
-            else
-              case List.find (fn (family_ty, _) =>
-                same_type (family_ty, arg_ty)) floors of
-                SOME (_, floor) => floor
-              | NONE => own_floor (spec_of arg_ty)
-
-          fun family_floors family =
-            let
-              fun floor_for floors family_ty =
-                case TypeBase.fetch family_ty of
-                  NONE => 0
-                | SOME family_info =>
-                    let
-                      val constrs = constructor_data family_ty family_info
-                      fun ctor_floor (_, args) =
-                        if List.null args then 0
-                        else
-                          List.foldl Int.max 0
-                            (List.map (fn arg_ty =>
-                              if type_mentions family arg_ty then
-                                (case List.find (fn (family_ty, _) =>
-                                  same_type (family_ty, arg_ty)) floors of
-                                   SOME (_, floor) => floor + 1
-                                 | NONE => 1)
-                              else
-                                floor_of family floors arg_ty) args)
-                    in
-                      List.foldl Int.min 1073741823
-                        (List.map ctor_floor constrs)
-                    end
-
-              fun improve floors =
-                List.map (fn family_ty =>
-                  (family_ty, floor_for floors family_ty)) family
-
-              fun equal_floors ([], []) = true
-                | equal_floors ((ty1, floor1) :: rest1,
-                    (ty2, floor2) :: rest2) =
-                    same_type (ty1, ty2) andalso floor1 = floor2 andalso
-                    equal_floors (rest1, rest2)
-                | equal_floors _ = false
-
-              fun iterate 0 floors =
+          fun floor_for floors family_ty =
+            case TypeBase.fetch family_ty of
+              NONE => 0
+            | SOME family_info =>
                 let
-                  val next = improve floors
+                  val constrs = constructor_data family_ty family_info
+                  fun ctor_floor (_, args) =
+                    if List.null args then 0
+                    else
+                      List.foldl Int.max 0
+                        (List.map (fn arg_ty =>
+                          if type_mentions family arg_ty then
+                            (case List.find (fn (family_ty, _) =>
+                              same_type (family_ty, arg_ty)) floors of
+                               SOME (_, floor) => floor + 1
+                             | NONE => 1)
+                          else
+                            floor_of family floors arg_ty) args)
                 in
-                  if equal_floors (floors, next) then next
-                  else
-                    raise NoGenerator
-                      (ty,
-                       "datatype has no finite value; register a generator")
+                  List.foldl Int.min 1073741823
+                    (List.map ctor_floor constrs)
                 end
-                | iterate remaining floors =
-                let
-                  val next = improve floors
-                in
-                  if equal_floors (floors, next) then next
-                  else iterate (remaining - 1) next
-                end
-            in
-              iterate (List.length family)
-                (List.map (fn family_ty => (family_ty, 0)) family)
-            end
 
-          fun datatype_spec info =
+          fun improve floors =
+            List.map (fn family_ty =>
+              (family_ty, floor_for floors family_ty)) family
+
+          fun equal_floors ([], []) = true
+            | equal_floors ((ty1, floor1) :: rest1,
+                (ty2, floor2) :: rest2) =
+                same_type (ty1, ty2) andalso floor1 = floor2 andalso
+                equal_floors (rest1, rest2)
+            | equal_floors _ = false
+
+          fun iterate 0 floors =
             let
-              (* A TypeBase entry need not describe a datatype: [:'a fset]'s
-                 entry, for one, lists no constructors, so there is nothing
-                 to build values from.  (The finite-map entry is the same
-                 way, but [non_function_spec] below routes it to a
-                 registered family before this is ever reached.)  Refuse in
-                 the same words as the other missing-generator cases rather
-                 than returning an empty enumeration, which would make the
-                 type look uninhabited and the search look exhausted. *)
-              val constrs = constructor_data ty info
-              val _ =
-                if List.null constrs then
-                  raise NoGenerator
-                    (ty, "no constructors in TypeBase; register a generator")
-                else ()
-              val family = family_of ty info
-              val floors = family_floors family
-              val recursive = List.map (fn (_, args) =>
-                List.map (type_mentions family) args) constrs
-              (* A constructor recursive under a function type (e.g. an
-                 interaction tree's [Vis]) is left to build here: exhaustive
-                 enumeration of it is genuinely impossible, but the random
-                 strategy can still lift a random function generator.  The
-                 refusal for the exhaustive case belongs to the
-                 strategy-aware consumer -- [Refute_Extract.validate_type]
-                 and [Refute_EvalCompute.validation_reasons] -- not here:
-                 [spec_of] is strategy-agnostic and shared by every backend
-                 through one cache. *)
-              val min_size = List.map (fn (_, args) =>
-                List.map (fn arg_ty =>
-                  if type_mentions family arg_ty then
-                    (case List.find (fn (family_ty, _) =>
-                      same_type (family_ty, arg_ty)) floors of
-                       SOME (_, floor) => floor + 1
-                     | NONE => 1)
-                  else
-                    floor_of family floors arg_ty) args) constrs
-              val fun_recursive = List.map (fn (_, args) =>
-                List.exists (recursive_under_function family) args) constrs
+              val next = improve floors
             in
-              if List.all (fn (_, args) => List.null args) constrs then
-                GenEnum (List.map #1 constrs)
+              if equal_floors (floors, next) then next
               else
-                GenDatatype
-                  { constrs = constrs,
-                    exhaustive = true,
-                    recursive = recursive,
-                    min_size = min_size,
-                    fun_recursive = fun_recursive,
-                    family = family }
+                raise NoGenerator
+                  (ty,
+                   "datatype has no finite value; register a generator")
             end
-
-          fun no_typebase_spec () =
-            case TypeBase.fetch ty of
-                SOME info => datatype_spec info
-              | NONE =>
-                  if is_quotient_type ty then
-                    raise NoGenerator
-                      (ty, "quotient type; register a generator")
-                  else
-                    raise no_generator ty
-
-          fun non_function_spec () =
-            case family_for ty of
-                SOME {constructors, ...} =>
-                  family_datatype_spec ty
-                    (fn message => raise NoGenerator (ty, message))
-                    constructors
-              | NONE => no_typebase_spec ()
-
-          val spec =
-            case numeric_kind ty of
-                SOME kind => GenNum kind
-              | NONE =>
-                  (case Lib.total Type.dom_rng ty of
-                       SOME (dom, rng) => GenFun (dom, rng)
-                     | NONE => non_function_spec ())
-          val _ = cache_spec generation ty spec
+            | iterate remaining floors =
+            let
+              val next = improve floors
+            in
+              if equal_floors (floors, next) then next
+              else iterate (remaining - 1) next
+            end
         in
-          spec
-        end))
+          iterate (List.length family)
+            (List.map (fn family_ty => (family_ty, 0)) family)
+        end
+
+      fun datatype_spec info =
+        let
+          (* A TypeBase entry need not describe a datatype: [:'a fset]'s
+             entry, for one, lists no constructors, so there is nothing
+             to build values from.  (The finite-map entry is the same
+             way, but [non_function_spec] below routes it to a
+             registered family before this is ever reached.)  Refuse in
+             the same words as the other missing-generator cases rather
+             than returning an empty enumeration, which would make the
+             type look uninhabited and the search look exhausted. *)
+          val constrs = constructor_data ty info
+          val _ =
+            if List.null constrs then
+              raise NoGenerator
+                (ty, "no constructors in TypeBase; register a generator")
+            else ()
+          val family = family_of ty info
+          val floors = family_floors family
+          val recursive = List.map (fn (_, args) =>
+            List.map (type_mentions family) args) constrs
+          (* A constructor recursive under a function type (e.g. an
+             interaction tree's [Vis]) is left to build here: exhaustive
+             enumeration of it is genuinely impossible, but the random
+             strategy can still lift a random function generator.  The
+             refusal for the exhaustive case belongs to the
+             strategy-aware consumer -- [Refute_Extract.validate_type]
+             and [Refute_EvalCompute.validation_reasons] -- not here:
+             [spec_of] is strategy-agnostic and shared by every backend
+             through one cache. *)
+          val min_size = List.map (fn (_, args) =>
+            List.map (fn arg_ty =>
+              if type_mentions family arg_ty then
+                (case List.find (fn (family_ty, _) =>
+                  same_type (family_ty, arg_ty)) floors of
+                   SOME (_, floor) => floor + 1
+                 | NONE => 1)
+              else
+                floor_of family floors arg_ty) args) constrs
+          val fun_recursive = List.map (fn (_, args) =>
+            List.exists (recursive_under_function family) args) constrs
+        in
+          if List.all (fn (_, args) => List.null args) constrs then
+            GenEnum (List.map #1 constrs)
+          else
+            GenDatatype
+              { constrs = constrs,
+                exhaustive = true,
+                recursive = recursive,
+                min_size = min_size,
+                fun_recursive = fun_recursive,
+                family = family }
+        end
+
+      fun no_typebase_spec () =
+        case TypeBase.fetch ty of
+            SOME info => datatype_spec info
+          | NONE =>
+              if is_quotient_type ty then
+                raise NoGenerator
+                  (ty, "quotient type; register a generator")
+              else
+                raise no_generator ty
+
+      fun non_function_spec () =
+        case family_for ty of
+            SOME {constructors, ...} =>
+              family_datatype_spec ty
+                (fn message => raise NoGenerator (ty, message))
+                constructors
+          | NONE => no_typebase_spec ()
+    in
+      case numeric_kind ty of
+          SOME kind => GenNum kind
+        | NONE =>
+            (case Lib.total Type.dom_rng ty of
+                 SOME (dom, rng) => GenFun (dom, rng)
+               | NONE => non_function_spec ())
     end
 
   (* Transitive form of the spec's own [fun_recursive]: a container
@@ -772,12 +773,9 @@ structure Refute_Gen :> Refute_Gen = struct
     end
 
   fun cardinality ty =
-    let val generation = current_generation ()
-    in
-    case Redblackmap.peek
-           (#cardinalities (Refute_Session.read registry), ty) of
-        SOME cached => cached
-      | NONE =>
+    memo #cardinalities cache_cardinality computed_cardinality ty
+
+  and computed_cardinality ty =
     let
       fun datatype_cardinality (constrs, recursive) =
         let
@@ -808,13 +806,7 @@ structure Refute_Gen :> Refute_Gen = struct
             else NONE
         | from_spec (GenCustom _) = NONE
     in
-      let
-        val result = from_spec (spec_of ty) handle NoGenerator _ => NONE
-      in
-        cache_cardinality generation ty result;
-        result
-      end
-    end
+      from_spec (spec_of ty) handle NoGenerator _ => NONE
     end
 
   fun choices 0 _ = [[]]
@@ -833,12 +825,9 @@ structure Refute_Gen :> Refute_Gen = struct
                List.map (fn tail => value :: tail) tails) values)))
 
   fun enumerate ty =
-    let val generation = current_generation ()
-    in
-    case Redblackmap.peek
-           (#enumerations (Refute_Session.read registry), ty) of
-        SOME cached => cached
-      | NONE =>
+    memo #enumerations cache_enumeration computed_enumeration ty
+
+  and computed_enumeration ty =
     let
       fun word_terms width =
         List.tabulate (int_power 2 width, fn value =>
@@ -893,16 +882,9 @@ structure Refute_Gen :> Refute_Gen = struct
             datatype_terms (constrs, recursive)
         | from_spec (GenCustom _) = NONE
     in
-      let
-        val result =
-          (case cardinality ty of
-             NONE => NONE
-           | SOME _ => from_spec (spec_of ty))
-          handle NoGenerator _ => NONE
-      in
-        cache_enumeration generation ty result;
-        result
-      end
-    end
+      (case cardinality ty of
+         NONE => NONE
+       | SOME _ => from_spec (spec_of ty))
+      handle NoGenerator _ => NONE
     end
 end

@@ -313,17 +313,16 @@ signature Refute_Core = sig
   val upd_whack : term list -> config -> config
   val upd_need : term list option -> config -> config
   val upd_merge_type_vars : bool -> config -> config
-  val strip_outer_forall_body : term -> term
   val bounded_rewrites : thm list
   val normal_rewrites : thm list
   val has_bounded_quantifier : term -> bool
   val normalize : term -> term
-  val expand_quantifiers : term -> term
   val has_unexpanded_binder : term -> bool
   val nonexecutable_constants : term list -> term list
   val show_constants : term list -> string
-  val instance_size_matters : term -> bool
-  val compute_qc_gate : term -> term list -> string list option
+  val rebuild_instance :
+    {original : term, raw_goal : term, evals_for : term -> term list,
+     card : int, transport : (term * term * term) list} -> instance
   val register_mono_instance_transform :
     (config -> instance -> instance) -> unit
   val show_config : unit -> unit

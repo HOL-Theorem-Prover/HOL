@@ -19,44 +19,17 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
       Listsort.sort compare entries
     end
 
-  (* Keep free inputs free until selection has inserted any registered
-     abstract-generator guards.  [pnf_of] closes them afterwards, preserving
-     leading explicit universals in the prefix.  A guarded hit is certified
-     against the original formula, so the restriction only narrows search.
+  (* Free inputs stay free until selection has inserted any registered
+     abstract-generator guards; [pnf_of] then closes them, keeping leading
+     explicit universals in the prefix.  A guarded hit is certified
+     against the original formula, so a guard only narrows the search.
 
-     [use_subtype] transport rewrites [#goal], never [#original] (see
-     [Refute_QC.transport_instance]): [#original] still quantifies over the
-     untransportable abstract type, which narrowing could never search
-     either way, so a transported instance must be handed [#goal].  Hand
-     it over open, exactly as it is: [#goal] is a rep-typed implication
-     whose fresh representation variables are free, and [pnf_of] closes
-     free variables itself, so they become the prefix's leading
-     universals by the same route every other narrowing input takes.
-     Closing them here first instead is what the guard makes tempting and
-     it is wrong: measured on [zoo_three_ne_2], [Refute_Core.normalize]
-     rewrites the closed [!r. r < 3 ==> r <> 2] to the bounded, ground
-     [EVERY (\r. r <> 2) (COUNT_LIST 3)], leaving [pnf_of] an empty
-     prefix.  Narrowing then refutes at depth 0 with nothing instantiated
-     and an empty [env], and [Refute_QC.record_candidate_with]'s binding
-     filter -- which keeps exactly the [env] entries free in [#goal] --
-     has nothing to keep, so the hit reports a counterexample naming no
-     witness at all.  Every certification call site in [Refute_QC] --
-     [Refute_Cert.certify], [Refute_Cert.ground_and_certify], and
-     [Refute_Cert_Narrow.certify_case_tree] alike -- is passed
-     [original = #original instance] regardless of substrate, so a
-     transported hit's replay always closes over the pre-transport
-     formula quantifying [x], while its [env] only ever binds the fresh
-     [r]: [Refute_Cert.certify]'s direct replay finds [x] unsubstituted
-     and gets stuck, and its PNF fallback's [binding_for] finds no [env]
-     entry named [x] and raises, so both routes land on [Uncertified].
-     That is not a certainty downgrade -- [Refute_Cert.uncertified]
-     keeps the payload's [certainty] at whatever testing already
-     established (see [Refute_Core]'s "certainty and cert are
-     independent axes") -- so reusing [#goal] here, rather than trying
-     to route narrowing's own formula into certification, costs nothing:
-     certification was never going to see [#goal] either way.  Measured
-     on [zoo_three_ne_2] under [Only [Exhaustive]] and [Only [Narrowing]]
-     alike: both report [certainty = Genuine], [cert = NONE]. *)
+     A [use_subtype]-transported instance is searched on [#goal], since
+     [#original] quantifies over the untransportable abstract type.  It is
+     passed open: closing it first lets [Refute_Core.normalize] turn a
+     bounded universal into a ground [EVERY ... (COUNT_LIST n)], leaving an
+     empty prefix and a counterexample that names no witness.
+     Certification always replays [#original], so it is unaffected. *)
   fun narrowing_goal (instance : Refute_Core.instance) =
     case #transport instance of
         [] => Refute_Core.normalize (#original instance)
@@ -65,12 +38,11 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
   (* A narrowing problem is one PNF formula rather than a list of plans.
      Compile each monomorphic/cardinality instance independently and
      multiplex the resulting native tests behind the depth scheduler. *)
-  fun compile_instances_window config window instances =
+  fun compile_instances_window config select window instances =
     Refute_Extract.with_narrowing_window window (fn instances =>
     let
       fun compile_one instance =
-        case Refute_Narrow.select_for_config config
-          (narrowing_goal instance) of
+        case select instance of
             (Refute_Narrow.PlainRefusal reasons, _) =>
               (NONE, QC.SelectionFailed reasons)
           | (_, problem as Pnf {prefix, ...}) =>
@@ -176,6 +148,22 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
       fun record_incomplete entry =
         if entry_incomplete entry then ()
         else incomplete_entries := entry :: !incomplete_entries
+      (* Selection does not depend on the depth window, so each instance
+         is normalised and put in PNF once per search. *)
+      val selections = map (fn _ => ref NONE) instances
+      fun select instance =
+        let val slot = List.nth (selections, #card instance - 1)
+        in
+          case !slot of
+              SOME selected => selected
+            | NONE =>
+                let
+                  val selected = Refute_Narrow.select_for_config config
+                    (narrowing_goal instance)
+                in
+                  slot := SOME selected; selected
+                end
+        end
       fun depth_complete depth =
         not (null instances) andalso
         List.all (fn instance => entry_member (#card instance, depth))
@@ -186,7 +174,7 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
         else
           let
             val (selection, prefixes) =
-              compile_instances_window config window instances
+              compile_instances_window config select window instances
             fun prefix_for card =
               case List.find (fn (other, _) => other = card) prefixes of
                   SOME (_, prefix) => prefix
@@ -207,7 +195,7 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
                         val result = #run compiled
                           {genuine_only = genuine_only, card = card,
                            size = size, draws = 0, ignored = ignored}
-                        val msec = QC.elapsed_msec start
+                        val msec = Refute_Util.elapsed_msec start
                         val _ = #absorb counters (!(#last_stats compiled))
                       in
                         case result of
@@ -228,10 +216,8 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
                                  discarded = discarded,
                                  run_depth = SOME size,
                                  pnf_prefix = SOME (prefix_for card),
-                                 retain_replay_potential = fn potential =>
-                                   (replay_potential := SOME potential;
-                                    Refute_Core.publish_counterexamples
-                                      [potential]),
+                                 retain_replay_potential =
+                                   QC.retain_potential replay_potential,
                                  retry = fn go => fn ignored =>
                                    spend (card, size) go ignored budget,
                                  retry_potential = fn go => fn ignored =>
@@ -262,17 +248,13 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
                         val budget = ref
                           (QC.bounded_size (#iterations (#qc config)))
                         val _ = one entry genuine_only ignored budget
-                        val elapsed = QC.elapsed_msec started
+                        val elapsed = Refute_Util.elapsed_msec started
                         val _ = frontier := SOME size
                         val _ = if depth_complete size then
                             totally_exhausted_depth := SOME size
                           else ()
-                        val _ = Refute_Core.Private.say 2
-                          ("Refute schedule entry (backend: narrowing" ^
-                           ", substrate: " ^ substrate ^ ", card " ^
-                           Int.toString card ^ ", size " ^
-                           Int.toString size ^ "): " ^
-                           Int.toString elapsed ^ "ms\n")
+                        val _ = QC.say_schedule_entry "narrowing" substrate
+                          entry elapsed
                       in
                         ()
                       end
@@ -323,27 +305,20 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
          comment in [Refute_QC.strategy_run_body]. *)
       val counter_reason = #reason counters ()
     in
-      if not (null (!counterexamples)) then
-        Refute_Core.Counterexample (rev (!counterexamples))
-      else
-        case !replay_potential of
-            SOME potential => Refute_Core.Counterexample [potential]
-          | NONE =>
-              (Option.app (fn text =>
-                 Refute_Core.Private.say 2 ("narrowing: " ^ text ^ "\n"))
-                 counter_reason;
-               if Option.isSome (!totally_exhausted_depth) andalso
-                  not (!failed) andalso null (!gave_up) then
-                 Refute_Core.NoCounterexample
-               else
-                 (* A run that never finished a depth has not exhausted
-                    anything; saying so would read as a completed search
-                    that found nothing. *)
-                 Refute_Core.Unknown
-                   ((if Option.isSome (!frontier) then
-                       "narrowing search exhausted"
-                     else "narrowing reached no depth") ::
-                    !gave_up @ frontier_reason))
+      QC.finish_outcome "narrowing" (!counterexamples) (!replay_potential)
+        counter_reason (fn () =>
+          if Option.isSome (!totally_exhausted_depth) andalso
+             not (!failed) andalso null (!gave_up) then
+            Refute_Core.NoCounterexample
+          else
+            (* A run that never finished a depth has not exhausted
+               anything; saying so would read as a completed search
+               that found nothing. *)
+            Refute_Core.Unknown
+              ((if Option.isSome (!frontier) then
+                  "narrowing search exhausted"
+                else "narrowing reached no depth") ::
+               !gave_up @ frontier_reason))
     end
 
   fun run config instances =
@@ -363,6 +338,4 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
      run = run}
 
   fun register_backend () = Refute_Core.register_backend backend
-
-  val _ = register_backend ()
 end

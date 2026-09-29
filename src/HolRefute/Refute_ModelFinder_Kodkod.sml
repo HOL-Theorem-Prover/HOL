@@ -11,49 +11,7 @@ and the HOL4-only word and char operations.
 *)
 
 signature REFUTE_MODEL_FINDER_KODKOD = sig
-  type hol_type = Type.hol_type
   type nut = Refute_ModelFinder_Nut.nut
-  type rep = Refute_ModelFinder_Rep.rep
-  type data_type_spec = Refute_ModelFinder_Scope.data_type_spec
-  type offset_table = Refute_ModelFinder_Scope.offset_table
-  type kodkod_constrs = Refute_ModelFinder_Peephole.kodkod_constrs
-  type need_values =
-    (hol_type * (nut * int) list option) list
-
-  val datatype_sym_break : int
-  val kodkod_sym_break : int
-  val sharing_level : int
-  val flatten : bool
-  val kodkod_settings : int -> Refute_Forl.setting list
-  val kodkod_problem_settings :
-    string list -> int -> int -> int -> Refute_Forl.setting list
-
-  val univ_card :
-    int -> int -> int -> Refute_Forl.bound list ->
-    Refute_Forl.formula -> int
-  val check_bits : int -> Refute_Forl.formula -> unit
-  val check_arity : string -> int -> int -> unit
-  val empty_offset_table : unit -> offset_table
-  val with_arity_retry :
-    offset_table -> (offset_table -> 'a) -> 'a
-
-  val kk_tuple : bool -> int -> int list -> Refute_Forl.tuple
-  val tuple_set_from_atom_schema :
-    (int * int) list -> Refute_Forl.tuple_set
-  val sequential_int_bounds : int -> Refute_Forl.int_bound list
-  val pow_of_two_int_bounds : int -> int -> Refute_Forl.int_bound list
-  val bounds_and_axioms_for_built_in_rels_in_formulas :
-    bool -> int -> int -> int -> int -> Refute_Forl.formula list ->
-    Refute_Forl.bound list * Refute_Forl.formula list
-
-  val bound_for_plain_rel : bool -> nut -> Refute_Forl.bound
-  val bound_for_sel_rel :
-    bool -> need_values -> data_type_spec list -> nut ->
-    Refute_Forl.bound
-  val merge_bounds : Refute_Forl.bound list -> Refute_Forl.bound list
-  val kodkod_formula_from_nut :
-    offset_table -> kodkod_constrs -> nut -> Refute_Forl.formula
-
   type problem_metadata =
     {free_names : nut list,
      sel_names : nut list,
@@ -80,25 +38,6 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
   val assemble_problem :
     assembly_params -> bool -> Refute_ModelFinder_Scope.scope ->
     rich_problem option
-
-  val needed_values_for_data_type :
-    nut list -> offset_table -> data_type_spec -> (nut * int) list option
-  val declarative_axiom_for_plain_rel :
-    kodkod_constrs -> nut -> Refute_Forl.formula
-  val acyclicity_axioms_for_data_types :
-    kodkod_constrs -> Refute_ModelFinder_Nut.nut
-      Refute_ModelFinder_Nut.NameTable.table -> data_type_spec list ->
-    Refute_Forl.formula list
-  val sym_break_axioms_for_data_types :
-    Refute_ModelFinder_HOL.mf_context -> nut list -> int ->
-    kodkod_constrs ->
-    Refute_ModelFinder_Nut.nut Refute_ModelFinder_Nut.NameTable.table ->
-    data_type_spec list -> Refute_Forl.formula list
-  val declarative_axioms_for_data_types :
-    Refute_ModelFinder_HOL.mf_context -> bool -> nut list -> need_values ->
-    int -> int -> offset_table -> kodkod_constrs ->
-    Refute_ModelFinder_Nut.nut Refute_ModelFinder_Nut.NameTable.table ->
-    data_type_spec list -> Refute_Forl.formula list
 end
 
 structure Refute_ModelFinder_Kodkod
@@ -125,26 +64,21 @@ type offset_table = MFS.offset_table
 type kodkod_constrs = MFP.kodkod_constrs
 type need_values = (hol_type * (nut * int) list option) list
 
-val datatype_sym_break = 5
-val kodkod_sym_break = 15
 val sharing_level = 3
 val flatten = false
 
-fun kodkod_settings delay =
-  [("symmetry_breaking", Int.toString kodkod_sym_break),
+fun kodkod_settings sym_break delay =
+  [("symmetry_breaking", Int.toString sym_break),
    ("sharing", Int.toString sharing_level),
    ("flatten", Bool.toString flatten),
    ("delay", Util.signed_string_of_int delay)]
 
-fun kodkod_problem_settings solver bits word_width delay =
+fun kodkod_problem_settings solver bits word_width sym_break delay =
   [("solver", String.concatWith ", " (map quote solver)),
    ("bit_width", Int.toString (MFP.bit_width_for bits word_width))] @
-  kodkod_settings delay
+  kodkod_settings sym_break delay
 
 fun maps f values = List.concat (map f values)
-fun pull equal value values =
-  value :: filter_out (fn other => equal (value, other)) values
-
 fun single_atom atom = TupleSet [Tuple [atom]]
 
 fun univ_card nat_card int_card main_j0 bounds formula =
@@ -444,17 +378,11 @@ fun tabulate_built_in_rel debug universe_card nat_card int_card main_j0
 fun bound_for_built_in_rel debug universe_card nat_card int_card main_j0
       (index as (arity, relation)) =
   if arity = 2 andalso relation <= MFP.suc_rels_base then
-    let
-      val (sequence as (card, offset), tabulate) =
-        MFP.atom_seq_for_suc_rel index
-      val tuple_sets =
-        if tabulate then
-          [TupleSet (tabulate_func1 debug universe_card
-            (card - 1, offset) (fn value => value + 1))]
-        else
-          [TupleSet [], tuple_set_from_atom_schema [sequence, sequence]]
+    let val (card, offset) = MFP.atom_seq_for_suc_rel index
     in
-      ([(index, "suc")], tuple_sets)
+      ([(index, "suc")],
+       [TupleSet (tabulate_func1 debug universe_card
+          (card - 1, offset) (fn value => value + 1))])
     end
   else
     let
@@ -464,28 +392,10 @@ fun bound_for_built_in_rel debug universe_card nat_card int_card main_j0
       ([(index, nickname)], [TupleSet tuples])
     end
 
-fun axiom_for_built_in_rel (index as (arity, relation)) =
-  if arity = 2 andalso relation <= MFP.suc_rels_base then
-    let
-      val (sequence as (card, offset), tabulate) =
-        MFP.atom_seq_for_suc_rel index
-    in
-      if tabulate then NONE
-      else if card < 2 then SOME (No (Rel index))
-      else SOME (TotalOrdering
-        (index, AtomSeq sequence, Atom offset, Atom (offset + 1)))
-    end
-  else
-    NONE
-
-fun bounds_and_axioms_for_built_in_rels_in_formulas debug universe_card
+fun bounds_for_built_in_rels_in_formulas debug universe_card
       nat_card int_card main_j0 formulas =
-  let val relations = built_in_rels_in_formulas formulas
-  in
-    (map (bound_for_built_in_rel debug universe_card nat_card int_card
-       main_j0) relations,
-     List.mapPartial axiom_for_built_in_rel relations)
-  end
+  map (bound_for_built_in_rel debug universe_card nat_card int_card main_j0)
+    (built_in_rels_in_formulas formulas)
 
 fun bound_comment debug nickname ty representation =
   MFN.original_name nickname ^
@@ -531,8 +441,8 @@ fun is_data_type_nat_like ({typ, constrs, ...} : data_type_spec) =
     | _ => false
 
 fun needed_values need_values ty =
-  case List.find (fn (other, _) => Util.same_type other ty) need_values of
-      SOME (_, SOME values) => values
+  case AList.lookup (Lib.uncurry Util.same_type) need_values ty of
+      SOME (SOME values) => values
     | _ => []
 
 fun all_values_are_needed need_values
@@ -565,10 +475,6 @@ fun find_constr_spec data_types constructor_name ty =
           ("missing constructor specification for " ^ constructor_name)
   end
 
-fun data_type_spec data_types ty =
-  List.find (fn (spec : data_type_spec) => Util.same_type (#typ spec) ty)
-    data_types
-
 fun tuple_union [] = TupleSet []
   | tuple_union (first :: rest) =
       List.foldl (fn (next, result) => TupleUnion (result, next))
@@ -583,7 +489,7 @@ fun bound_for_sel_rel debug need_values data_types
       val constructor_name = MFN.original_name nickname
       val {delta, epsilon, exclusive, explicit_max, ...} =
         find_constr_spec data_types constructor_name domain_ty
-      val data_type = valOf (data_type_spec data_types domain_ty)
+      val data_type = valOf (MFS.data_type_spec data_types domain_ty)
       val domain_need_values = needed_values need_values domain_ty
       val discriminator = range_rep = MFR.Formula Util.Neut
       val complete_need_values =
@@ -605,10 +511,10 @@ fun bound_for_sel_rel debug need_values data_types
                 val selector = MFN.sel_no_from_name nickname
                 val argument = List.nth (arguments, selector)
               in
-                Option.map (fn (_, argument_atom) =>
+                Option.map (fn argument_atom =>
                     TupleAtomSeq (1, argument_atom))
-                  (List.find (fn (other, _) => other = argument)
-                    (needed_values need_values range_ty))
+                  (AList.lookup (op =)
+                    (needed_values need_values range_ty) argument)
               end
           | _ => NONE
 
@@ -795,36 +701,6 @@ fun declarative_axiom_for_plain_rel kk
         ("Refute_ModelFinder_Kodkod.declarative_axiom_for_plain_rel",
          [nut])
 
-fun factor_types ty =
-  if MFH.is_pair_type ty then
-    let val (left, right) = pairSyntax.dest_prod ty
-    in factor_types left @ factor_types right end
-  else
-    [ty]
-
-fun generated_names_for_constructor constructor =
-  let
-    val data_ty = MFH.constructor_result_type constructor
-    val constructor_name = MFH.constructor_name constructor
-    val discriminator = MFNT.ConstName
-      (#1 (Term.dest_var (MFN.mk_discriminator constructor_name
-        (Type.-->(data_ty, Type.bool)))),
-       Type.-->(data_ty, Type.bool), MFR.Any)
-    val selector_types = List.concat
-      (map factor_types (MFH.constructor_arg_types constructor))
-    fun selector (index, range_ty) =
-      let val term = MFN.mk_selector index constructor_name
-        (Type.-->(data_ty, range_ty))
-      in
-        MFNT.ConstName
-          (#1 (Term.dest_var term), Term.type_of term, MFR.Any)
-      end
-  in
-    discriminator ::
-    map selector (ListPair.zip
-      (Util.index_seq 0 (length selector_types), selector_types))
-  end
-
 fun const_triple relation_table name =
   case MFNT.the_name relation_table name of
       MFNT.FreeRel (index as (arity, _), _, representation, _) =>
@@ -833,13 +709,13 @@ fun const_triple relation_table name =
         ("Refute_ModelFinder_Kodkod.const_triple", [nut])
 
 fun discriminator_name constructor =
-  hd (generated_names_for_constructor constructor)
+  hd (MFNT.selector_const_names constructor)
 
 fun discriminator_rel_expr relation_table constructor =
   #1 (const_triple relation_table (discriminator_name constructor))
 
 fun selector_names constructor =
-  tl (generated_names_for_constructor constructor)
+  tl (MFNT.selector_const_names constructor)
 
 type transition = (nut * rel_expr) * hol_type
 type nfa = (hol_type * transition list) list
@@ -875,8 +751,8 @@ fun nfa_entry_for_data_type _ _ _
 val empty_binary_rel = Product (None, None)
 
 fun direct_path_rel_exprs nfa start_ty final_ty =
-  case List.find (fn (ty, _) => Util.same_type ty final_ty) nfa of
-      SOME (_, transitions) =>
+  case AList.lookup (Lib.uncurry Util.same_type) nfa final_ty of
+      SOME transitions =>
         map (#2 o #1)
           (List.filter (fn (_, source_ty) => Util.same_type source_ty start_ty)
             transitions)
@@ -948,8 +824,7 @@ fun acyclicity_axioms_for_nfa _ [_] = []
       maps (fn (start_ty, _) =>
         [kk_no (kk_intersect
           (loop_path_rel_expr kk nfa
-            (pull (fn (left, right) => Util.same_type left right)
-              start_ty (map #1 nfa)) start_ty)
+            (op_update Util.same_type start_ty (map #1 nfa)) start_ty)
           Iden)]) nfa
 
 fun acyclicity_axioms_for_data_types kk relation_table data_types =
@@ -969,40 +844,35 @@ fun gt ({kk_subset, kk_join, kk_closure, ...} : kodkod_constrs)
     (kk_join right (kk_closure
       (Rel (MFP.suc_rel_for_atom_seq sequence))))
 
-(* [deviation from upstream] Always tabulate the datatype successor order,
-   rather than upstream's is_asymmetric_non_data_type-or-self_rec test.
-   Tabulating unconditionally keeps the cycle-breaking bounds and the
-   symmetry-breaking order in step by construction, the invariant
-   upstream's predicate exists to maintain. *)
-fun should_tabulate_suc_for_type _ _ = true
-
+(* [deviation from upstream] The datatype successor order is always
+   tabulated, rather than upstream's is_asymmetric_non_data_type-or-self_rec
+   test, keeping the cycle-breaking bounds and the symmetry-breaking order
+   in step by construction; a successor relation is therefore keyed by its
+   atom sequence alone. *)
 fun lex_order_rel_expr
       (kk as {kk_implies, kk_and, kk_subset, kk_join, ...} : kodkod_constrs)
-      data_types selector_triples =
+      selector_triples =
   case selector_triples of
       [] => True
-    | ((relation, MFR.Func (MFR.Atom _, MFR.Atom sequence), 2),
-       (_, ty)) :: rest =>
+    | ((relation, MFR.Func (MFR.Atom _, MFR.Atom sequence), 2), _)
+        :: rest =>
         let
-          val range_ty = #2 (Type.dom_rng ty)
-          val order =
-            (sequence, should_tabulate_suc_for_type data_types range_ty)
           val left = kk_join (Var (1, 1)) relation
           val right = kk_join (Var (1, 0)) relation
         in
           if null rest then
-            gt kk order left right
+            gt kk sequence left right
           else
-            kk_and (kk_subset left (all_ge kk order right))
+            kk_and (kk_subset left (all_ge kk sequence right))
               (kk_implies (kk_subset left right)
-                (lex_order_rel_expr kk data_types rest))
+                (lex_order_rel_expr kk rest))
         end
-    | _ :: rest => lex_order_rel_expr kk data_types rest
+    | _ :: rest => lex_order_rel_expr kk rest
 
 fun is_nil_like_constr_type data_types constructor_ty =
   let val data_ty = #2 (boolSyntax.strip_fun constructor_ty)
   in
-    case data_type_spec data_types data_ty of
+    case MFS.data_type_spec data_types data_ty of
         SOME {constrs, ...} =>
           (case List.filter (fn spec =>
                    not (MFS.is_self_recursive_constr_type
@@ -1087,8 +957,7 @@ fun sym_break_axioms_for_constr_pair context
         val sequence =
           case discriminator_rep of
               MFR.Func (MFR.Atom atom_sequence, MFR.Formula _) =>
-                (atom_sequence,
-                 should_tabulate_suc_for_type data_types data_ty)
+                atom_sequence
             | representation => raise MFR.REP
                 ("Refute_ModelFinder_Kodkod." ^
                  "sym_break_axioms_for_constr_pair",
@@ -1139,8 +1008,7 @@ fun sym_break_axioms_for_constr_pair context
           case constructor_order of
               EQUAL =>
                 kk_and
-                  (lex_order_rel_expr kk data_types
-                    (selector_triples ()))
+                  (lex_order_rel_expr kk (selector_triples ()))
                   (kk_all [DeclOne ((1, 2),
                      subterms true first_selectors 0)]
                     (gt kk sequence (Var (1, 1)) (Var (1, 2))))
@@ -1173,14 +1041,8 @@ fun sym_break_axioms_for_data_type context kk relation_table nfas
 
 val min_sym_break_card = 7
 
-fun is_higher_order_type ty =
-  MFH.is_fun_type ty orelse
-  (case Lib.total Type.dest_thy_type ty of
-       SOME {Args, ...} => List.exists is_higher_order_type Args
-     | NONE => false)
-
 fun first_order_constructor (spec : MFS.constr_spec) =
-  List.all (not o is_higher_order_type)
+  List.all (not o MFH.is_higher_order_type)
     (MFH.constructor_arg_types (#const spec))
 
 fun is_data_type_in_needed_value ty
@@ -1287,7 +1149,7 @@ fun uniqueness_axioms_for_constr
       need_values relation_table (data_type : data_type_spec)
       ({const, ...} : MFS.constr_spec) =
   let
-    val names = generated_names_for_constructor const
+    val names = MFNT.selector_const_names const
     val triples = map (const_triple relation_table) names
     val discriminator = #1 (hd triples)
     val selectors = tl triples
@@ -2152,115 +2014,80 @@ fun kodkod_formula_from_nut offsets
                  | _ => raise MFNT.NUT
                      ("Refute_ModelFinder_Kodkod.to_r (Suc)", [candidate]))
         | MFNT.Cst (MFNT.Add, ty, _) =>
-            if #1 (Type.dom_rng ty) = MFH.num_type then
-              KK.Rel MFP.nat_add_rel
-            else if #1 (Type.dom_rng ty) = MFH.int_type then
-              KK.Rel MFP.int_add_rel
-            else if #1 (Type.dom_rng ty) = MFH.unsigned_bitword_type then
-              to_bit_word_binary_op ty (MFNT.rep_of candidate) NONE
-                (SOME (fn left => fn right => KK.Add (left, right)))
-            else if #1 (Type.dom_rng ty) = MFH.signed_bitword_type then
-              to_bit_word_binary_op ty (MFNT.rep_of candidate)
+            let fun add left right = KK.Add (left, right)
+            in
+              to_arithmetic candidate "Add" ty
+                (MFP.nat_add_rel, MFP.int_add_rel) (NONE, add)
                 (SOME (fn first => fn second => fn result =>
-                  kk_implies
-                    (KK.LE (KK.Num 0, KK.BitXor (first, second)))
-                    (KK.LE (KK.Num 0, KK.BitXor (second, result)))))
-                (SOME (fn left => fn right => KK.Add (left, right)))
-            else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              to_wrapping_word_binary_op ty (MFNT.rep_of candidate)
-                (fn left => fn right => KK.Add (left, right))
-            else
-              raise MFNT.NUT
-                ("Refute_ModelFinder_Kodkod.to_r (Add)", [candidate])
+                   kk_implies
+                     (KK.LE (KK.Num 0, KK.BitXor (first, second)))
+                     (KK.LE (KK.Num 0, KK.BitXor (second, result)))),
+                 add)
+                (SOME add)
+            end
         | MFNT.Cst (MFNT.Subtract, ty, _) =>
-            if #1 (Type.dom_rng ty) = MFH.num_type then
-              KK.Rel MFP.nat_subtract_rel
-            else if #1 (Type.dom_rng ty) = MFH.int_type then
-              KK.Rel MFP.int_subtract_rel
-            else if #1 (Type.dom_rng ty) = MFH.unsigned_bitword_type then
-              to_bit_word_binary_op ty (MFNT.rep_of candidate) NONE
-                (SOME (fn left => fn right =>
-                  KK.IntIf (KK.LE (left, right), KK.Num 0,
-                    KK.Sub (left, right))))
-            else if #1 (Type.dom_rng ty) = MFH.signed_bitword_type then
-              to_bit_word_binary_op ty (MFNT.rep_of candidate)
+            let fun subtract left right = KK.Sub (left, right)
+            in
+              to_arithmetic candidate "Subtract" ty
+                (MFP.nat_subtract_rel, MFP.int_subtract_rel)
+                (NONE, fn left => fn right =>
+                   KK.IntIf (KK.LE (left, right), KK.Num 0,
+                     subtract left right))
                 (SOME (fn first => fn second => fn result =>
-                  kk_implies
-                    (KK.LT (KK.BitXor (first, second), KK.Num 0))
-                    (KK.LT (KK.BitXor (second, result), KK.Num 0))))
-                (SOME (fn left => fn right => KK.Sub (left, right)))
-            else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              to_wrapping_word_binary_op ty (MFNT.rep_of candidate)
-                (fn left => fn right => KK.Sub (left, right))
-            else
-              raise MFNT.NUT
-                ("Refute_ModelFinder_Kodkod.to_r (Subtract)", [candidate])
+                   kk_implies
+                     (KK.LT (KK.BitXor (first, second), KK.Num 0))
+                     (KK.LT (KK.BitXor (second, result), KK.Num 0))),
+                 subtract)
+                (SOME subtract)
+            end
         | MFNT.Cst (MFNT.Multiply, ty, _) =>
-            if #1 (Type.dom_rng ty) = MFH.num_type then
-              KK.Rel MFP.nat_multiply_rel
-            else if #1 (Type.dom_rng ty) = MFH.int_type then
-              KK.Rel MFP.int_multiply_rel
-            else if MFH.is_bitword_type (#1 (Type.dom_rng ty)) then
-              let
-                val signed = #1 (Type.dom_rng ty) = MFH.signed_bitword_type
-                fun guard first second result =
-                  kk_or (KK.IntEq (second, KK.Num 0))
-                    (let val exact = KK.IntEq
-                           (KK.Div (result, second), first)
-                     in
-                       if signed then
-                         kk_and exact
-                           (KK.LE (KK.Num 0,
-                             Util.fold1 (fn left => fn right =>
-                               KK.BitAnd (left, right))
-                               [first, second, result]))
-                       else exact
-                     end)
-              in
-                to_bit_word_binary_op ty (MFNT.rep_of candidate)
-                  (SOME guard)
-                  (SOME (fn left => fn right => KK.Mult (left, right)))
-              end
-            else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              to_wrapping_word_binary_op ty (MFNT.rep_of candidate)
-                (fn left => fn right => KK.Mult (left, right))
-            else
-              raise MFNT.NUT
-                ("Refute_ModelFinder_Kodkod.to_r (Multiply)", [candidate])
+            let
+              fun multiply left right = KK.Mult (left, right)
+              fun guard signed first second result =
+                kk_or (KK.IntEq (second, KK.Num 0))
+                  (let val exact = KK.IntEq
+                         (KK.Div (result, second), first)
+                   in
+                     if signed then
+                       kk_and exact
+                         (KK.LE (KK.Num 0,
+                           Util.fold1 (fn left => fn right =>
+                             KK.BitAnd (left, right))
+                             [first, second, result]))
+                     else exact
+                   end)
+            in
+              to_arithmetic candidate "Multiply" ty
+                (MFP.nat_multiply_rel, MFP.int_multiply_rel)
+                (SOME (guard false), multiply) (SOME (guard true), multiply)
+                (SOME multiply)
+            end
         | MFNT.Cst (MFNT.Divide, ty, _) =>
-            if #1 (Type.dom_rng ty) = MFH.num_type then
-              KK.Rel MFP.nat_divide_rel
-            else if #1 (Type.dom_rng ty) = MFH.int_type then
-              KK.Rel MFP.int_divide_rel
-            else if #1 (Type.dom_rng ty) = MFH.unsigned_bitword_type then
-              to_bit_word_binary_op ty (MFNT.rep_of candidate) NONE
-                (SOME (fn left => fn right =>
-                  KK.IntIf (KK.IntEq (right, KK.Num 0), KK.Num 0,
-                    KK.Div (left, right))))
-            else if #1 (Type.dom_rng ty) = MFH.signed_bitword_type then
-              let
-                fun negative integer = KK.LT (integer, KK.Num 0)
-                fun positive integer = KK.LT (KK.Num 0, integer)
-                fun divide first second =
-                  KK.IntIf (kk_and (negative first) (positive second),
-                    KK.Sub (KK.Div (KK.Add (first, KK.Num 1), second),
+            let
+              fun negative integer = KK.LT (integer, KK.Num 0)
+              fun positive integer = KK.LT (KK.Num 0, integer)
+              fun divide first second =
+                KK.IntIf (kk_and (negative first) (positive second),
+                  KK.Sub (KK.Div (KK.Add (first, KK.Num 1), second),
+                    KK.Num 1),
+                  KK.IntIf (kk_and (positive first) (negative second),
+                    KK.Sub (KK.Div (KK.Sub (first, KK.Num 1), second),
                       KK.Num 1),
-                    KK.IntIf (kk_and (positive first) (negative second),
-                      KK.Sub (KK.Div (KK.Sub (first, KK.Num 1), second),
-                        KK.Num 1),
-                      KK.IntIf (KK.IntEq (second, KK.Num 0), KK.Num 0,
-                        KK.Div (first, second))))
-                fun guard first second result =
-                  KK.LE (KK.Num 0,
-                    Util.fold1 (fn left => fn right =>
-                      KK.BitAnd (left, right)) [first, second, result])
-              in
-                to_bit_word_binary_op ty (MFNT.rep_of candidate)
-                  (SOME guard) (SOME divide)
-              end
-            else
-              raise MFNT.NUT
-                ("Refute_ModelFinder_Kodkod.to_r (Divide)", [candidate])
+                    KK.IntIf (KK.IntEq (second, KK.Num 0), KK.Num 0,
+                      KK.Div (first, second))))
+              fun guard first second result =
+                KK.LE (KK.Num 0,
+                  Util.fold1 (fn left => fn right =>
+                    KK.BitAnd (left, right)) [first, second, result])
+            in
+              to_arithmetic candidate "Divide" ty
+                (MFP.nat_divide_rel, MFP.int_divide_rel)
+                (NONE, fn left => fn right =>
+                   KK.IntIf (KK.IntEq (right, KK.Num 0), KK.Num 0,
+                     KK.Div (left, right)))
+                (SOME guard, divide)
+                NONE
+            end
         | MFNT.Cst (MFNT.Gcd, _, _) => KK.Rel MFP.gcd_rel
         | MFNT.Cst (MFNT.Lcm, _, _) => KK.Rel MFP.lcm_rel
         | MFNT.Cst (MFNT.Fracs, _, MFR.Func (MFR.Atom (1, _), _)) =>
@@ -2991,6 +2818,30 @@ fun kodkod_formula_from_nut offsets
       to_indexed_int_op (int_expr_from_atom kk) ty representation 1
         (KK.IntEq (KK.IntReg 1, operation (KK.IntReg 0)))
 
+    (* An arithmetic constant at its num, int, bit-word or word carrier. *)
+    and to_arithmetic candidate name ty (nat_rel, int_rel)
+          (unsigned_guard, unsigned_operation)
+          (signed_guard, signed_operation) wrapping =
+      let
+        val domain = #1 (Type.dom_rng ty)
+        val representation = MFNT.rep_of candidate
+      in
+        if domain = MFH.num_type then KK.Rel nat_rel
+        else if domain = MFH.int_type then KK.Rel int_rel
+        else if domain = MFH.unsigned_bitword_type then
+          to_bit_word_binary_op ty representation unsigned_guard
+            (SOME unsigned_operation)
+        else if domain = MFH.signed_bitword_type then
+          to_bit_word_binary_op ty representation signed_guard
+            (SOME signed_operation)
+        else
+          case (wrapping, MFH.is_word_type domain) of
+              (SOME operation, true) =>
+                to_wrapping_word_binary_op ty representation operation
+            | _ => raise MFNT.NUT
+                ("Refute_ModelFinder_Kodkod.to_r (" ^ name ^ ")", [candidate])
+      end
+
     and to_bit_word_binary_op ty representation guard operation =
       let
         val formulas =
@@ -3102,7 +2953,7 @@ fun atom_equation_for_nut offsets kk (nut, atom) =
 fun needed_value_axioms_for_data_type _ _ _ (_, NONE) = [KK.False]
   | needed_value_axioms_for_data_type offsets kk data_types
       (ty, SOME fixed) =
-      (case data_type_spec data_types ty of
+      (case MFS.data_type_spec data_types ty of
            SOME spec =>
              if is_data_type_nat_like spec then []
              else List.mapPartial (atom_equation_for_nut offsets kk) fixed
@@ -3271,12 +3122,12 @@ fun assemble_problem_once
       (univ_card nat_card int_card main_j0
          (plain_bounds @ sel_bounds) formula,
        if bits = 0 then 0 else main_j0 + bits + 1)
-    val (built_in_bounds, built_in_axioms) =
-      bounds_and_axioms_for_built_in_rels_in_formulas debug universe_card
+    val built_in_bounds =
+      bounds_for_built_in_rels_in_formulas debug universe_card
         nat_card int_card main_j0 (formula :: declarative_axioms)
     val bounds = built_in_bounds @ plain_bounds @ sel_bounds
     val bounds = if debug then bounds else merge_bounds bounds
-    val axioms = built_in_axioms @ declarative_axioms
+    val axioms = declarative_axioms
     val highest_bound_arity = List.foldl (fn ((declarations, _), result) =>
       List.foldl (fn (((arity, _), _), maximum) =>
         Int.max (arity, maximum)) result declarations) 0 bounds
@@ -3288,11 +3139,9 @@ fun assemble_problem_once
       else check_arity "" universe_card highest_bound_arity
     val problem : KK.problem =
       {comment = (if unsound then "unsound" else "sound") ^ "\n" ^ comment,
-       settings = map (fn ("symmetry_breaking", _) =>
-           ("symmetry_breaking", Int.toString kodkod_sym_break)
-         | setting => setting)
-         (kodkod_problem_settings solver bits (MFS.max_word_width scope)
-           (if unsound then unsound_delay else 0)),
+       settings =
+         kodkod_problem_settings solver bits (MFS.max_word_width scope)
+           kodkod_sym_break (if unsound then unsound_delay else 0),
        univ_card = universe_card, tuple_assigns = [],
        bounds = bounds,
        int_bounds = if bits = 0 then sequential_int_bounds universe_card

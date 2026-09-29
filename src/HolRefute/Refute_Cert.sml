@@ -278,6 +278,9 @@ structure Refute_Cert :> Refute_Cert = struct
   fun uncertified cex =
     Uncertified (replace cex Refute_Core.Genuine [] NONE)
 
+  fun downgrade cex reason =
+    replace cex (Refute_Core.Potential [reason]) [] NONE
+
   (* Both certification paths must end at exactly the negated closure the
      caller supplied.  Keep theorem trust and display-evaluation attachment
      in one place so the PNF fallback cannot acquire a weaker audit than the
@@ -372,9 +375,8 @@ structure Refute_Cert :> Refute_Cert = struct
     handle Interrupt => raise Interrupt | _ => uncertified cex
 
   fun grounding_failure cex =
-    Potential (replace cex
-      (Refute_Core.Potential
-        ["partial counterexample; grounding uncertifiable"]) [] NONE)
+    Potential
+      (downgrade cex "partial counterexample; grounding uncertifiable")
 
   (* Bindings in [cex] deliberately remain partial for display.  Native
      narrowing supplies a separately reconstructed environment grounded from

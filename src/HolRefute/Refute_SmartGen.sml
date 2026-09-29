@@ -231,8 +231,7 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
     end
     handle Feedback.HOL_ERR _ => false
 
-  fun close_free term =
-    boolSyntax.list_mk_forall (Term.free_vars_lr term, term)
+  val close_free = Refute_Util.close_free
 
   type clause =
     {patterns : pattern list, premises : term list, conclusion : term}
@@ -296,14 +295,6 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
     end
     handle Feedback.HOL_ERR _ => NONE
 
-  fun theorem_term theorem =
-    let
-      val proposition =
-        boolSyntax.list_mk_imp (Thm.hyp theorem, Thm.concl theorem)
-    in
-      close_free proposition
-    end
-
   fun equation_source constant =
     (case DefnBase.lookup_userdef constant of
          SOME {const = generic, thm = DefnBase.STDEQNS theorem, ...} =>
@@ -314,9 +305,10 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
              val _ = if Theory.uptodate_thm theorem then ()
                else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
                  "equation_source" "stale defining equations"
-             val clauses = map theorem_term (Drule.CONJUNCTS theorem)
+             val clauses =
+               map Refute_Util.theorem_term (Drule.CONJUNCTS theorem)
            in
-             SOME (theorem_term theorem, clauses)
+             SOME (Refute_Util.theorem_term theorem, clauses)
            end
        | _ => NONE)
     handle Feedback.HOL_ERR _ => NONE
@@ -870,6 +862,13 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
                         preferred right_recursive)]
     end
 
+  (* The first item with the least [compare_score]. *)
+  fun least_by score items =
+    List.foldl (fn (item, NONE) => SOME item
+                 | (item, current as SOME best) =>
+                     if compare_score (score item, score best) = LESS
+                     then SOME item else current) NONE items
+
   fun output_positions mode =
     let
       fun has_output (Pair (left, right)) =
@@ -977,7 +976,6 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
   fun premise_head premise =
     let val (head, _) = HolKernel.strip_comb premise
     in if Term.is_const head then SOME head else NONE end
-    handle Feedback.HOL_ERR _ => NONE
 
   (* No external entry can ever name a graph: [flatten_rhs] refuses any
      call to another function, so a graph's only callee is itself and its
@@ -1084,15 +1082,8 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
                  functional = false, generator = false, outputs = 0,
                  recursive = false})]
           | Generator _ => []
-      fun least candidate NONE = SOME candidate
-        | least (candidate as (_, _, score))
-            (current as SOME (_, _, current_score)) =
-            if compare_score (score, current_score) = LESS then
-              SOME candidate
-            else current
     in
-      List.foldl (fn (candidate, current) =>
-        least candidate current) NONE candidates
+      least_by #3 candidates
     end
 
   fun remove_index selected entries =
@@ -1105,16 +1096,8 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
         Option.map (fn (derivation, missing, score) =>
           (index, premise, derivation, missing, score))
           (best_derivation relation table external known premise)
-      fun least NONE current = current
-        | least candidate NONE = candidate
-        | least (candidate as SOME (_, _, _, _, score))
-            (current as SOME (_, _, _, _, current_score)) =
-            if compare_score (score, current_score) = LESS then
-              candidate
-            else current
     in
-      List.foldl (fn (entry, result) => least (decorate entry) result)
-        NONE candidates
+      least_by #5 (List.mapPartial decorate candidates)
     end
 
   fun split_arguments mode arguments =
