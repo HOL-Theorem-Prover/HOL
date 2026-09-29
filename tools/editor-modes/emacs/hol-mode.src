@@ -3295,12 +3295,8 @@ in Lisp, so convert before testing it."
 
 (defun hol-lsp--pending-p (result)
   "Whether RESULT says \"ask again when the compile is done\".
-The server says it two ways.  A *provisional* answer carries a state:
-the walker compiles each tactic against the file\='s namespace, so
-until the file\='s `open\='s have run the tactic names are not there and
-the walk stops at the first one it cannot apply.  What it reached is
-worth showing -- it is simply not settled.  A *refusal* carries
-nothing at all; see `hol-lsp--refused-p\='."
+The server says it two ways, and `hol-lsp--refused-p\=' is where the
+difference is explained."
   (equal (plist-get result :status) "pending"))
 
 (defun hol-lsp--refused-p (result)
@@ -3308,9 +3304,14 @@ nothing at all; see `hol-lsp--refused-p\='."
 `$/hol/goalState\=' answers `{\"status\": \"pending\"}\=' -- no theorem, no
 step, no goals -- when a walk was refused outright, the ancestors
 still loading or a compile owning the state.  Rendering that as a goal
-state formats a nil step with %d, which is an error.  A provisional
-answer is `pending\=' too and is a state, so the theorem is what tells
-them apart."
+state formats a nil step with %d, which is an error.
+
+The other `pending\=' is a *provisional* answer, and is a state: the
+walker compiles each tactic against the file\='s namespace, so until
+the file\='s `open\='s have run the tactic names are not there and the
+walk stops at the first one it cannot apply.  What it reached is worth
+showing; it is simply not settled.  The theorem is what tells the two
+apart."
   (and (hol-lsp--pending-p result)
        (null (plist-get result :theorem))))
 
@@ -3336,6 +3337,7 @@ constructs."
   (let* ((ctx (hol-lsp--context-line (plist-get result :context)))
          (note (plist-get result :note))
          (err (plist-get result :error))
+         (pending (hol-lsp--pending-p result))
          (text (concat (format "%s — step %d"
                                (plist-get result :theorem)
                                (plist-get result :step))
@@ -3355,15 +3357,14 @@ constructs."
                              ;; not resolve, so no goals there means
                              ;; "got no further", not "proved".
                              ((and (hol-lsp--solved-p result)
-                                   (not (hol-lsp--pending-p result)))
+                                   (not pending))
                               "  ✓ solved"))
                        ;; What is on show is as far as the walk got
                        ;; against a namespace the compile has not
                        ;; finished filling.  Saying so is the whole
                        ;; difference between a stale-looking state and
                        ;; a wrong one.
-                       (and (hol-lsp--pending-p result)
-                            "  ⋯ still compiling")
+                       (and pending "  ⋯ still compiling")
                        (and err (concat "  ⚠ " err)))))
     (replace-regexp-in-string "%" "%%" text)))
 

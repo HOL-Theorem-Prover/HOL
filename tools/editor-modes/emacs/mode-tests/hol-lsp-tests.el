@@ -195,23 +195,20 @@ file's own directory -- not a VC root, and not the file itself."
   ;; against the file's namespace, so until its `open's have run the
   ;; names are not there and the walk stops early.  That reply is a
   ;; goal state -- refusing it shows nothing where there was something
-  ;; to show -- and the header says it is not settled.
-  (let ((prov '(:theorem "foo" :step 7 :status "pending"
-                :goals [] :context nil :error nil)))
+  ;; to show -- and the header says it is not settled.  One fixture,
+  ;; two statuses: the status is the whole of the difference.
+  (let* ((base '(:theorem "foo" :step 7 :goals [] :context nil :error nil))
+         (prov (append '(:status "pending") base))
+         (hdr (hol-lsp--goals-header prov)))
     (should (hol-lsp--pending-p prov))
     (should-not (hol-lsp--refused-p prov))
-    (should (string-match-p "still compiling"
-                            (hol-lsp--goals-header prov)))
+    (should (string-match-p "still compiling" hdr))
     ;; and it does not also claim the focus is proved: no goals here
     ;; means the walk got no further, not that anything was solved.
-    (should-not (string-match-p "solved" (hol-lsp--goals-header prov)))))
-
-(ert-deftest hol-lsp-a-settled-answer-says-nothing-about-compiling ()
-  (should-not (string-match-p
-               "still compiling"
-               (hol-lsp--goals-header
-                '(:theorem "foo" :step 7 :status "ok"
-                  :goals [] :context nil :error nil)))))
+    (should-not (string-match-p "solved" hdr))
+    (should-not (string-match-p
+                 "still compiling"
+                 (hol-lsp--goals-header (append '(:status "ok") base))))))
 
 (ert-deftest hol-lsp-strip-context-removes-the-repeated-line ()
   ;; `pretty' repeats the tags at its top; the buffer shows only the
