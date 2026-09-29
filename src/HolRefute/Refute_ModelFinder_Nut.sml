@@ -495,13 +495,14 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
         SOME (value, _) => Lib.total Arbnum.toInt value
       | NONE => NONE
 
+  fun key_lookup table head =
+    AList.lookup (fn (head, key) => is_named key head) table head
+
   (* Shared by both carriers' tables: [applies] gates on the operation's
      type first, since a table miss is the common case and every entry's
      [is_named] re-destructs the head. *)
   fun guarded_key_lookup applies table head =
-    if applies (Term.type_of head) then
-      AList.lookup (fn (head, key) => is_named key head) table head
-    else NONE
+    if applies (Term.type_of head) then key_lookup table head else NONE
 
   fun word_key_lookup table head =
     guarded_key_lookup (Option.isSome o MFH.word_op_dimension) table head
@@ -616,6 +617,42 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       if negate then Op1 (Not, Type.bool, MFR.Any, less) else less
     end
 
+  val arithmetic_csts =
+    [({Thy = "num", Name = "SUC"}, Suc),
+     ({Thy = "arithmetic", Name = "+"}, Add),
+     ({Thy = "integer", Name = "int_add"}, Add),
+     ({Thy = "arithmetic", Name = "-"}, Subtract),
+     ({Thy = "integer", Name = "int_sub"}, Subtract),
+     ({Thy = "arithmetic", Name = "*"}, Multiply),
+     ({Thy = "integer", Name = "int_mul"}, Multiply),
+     ({Thy = "arithmetic", Name = "DIV"}, Divide),
+     ({Thy = "integer", Name = "int_div"}, Divide)]
+
+  (* [SOME strict] for a built-in order. *)
+  val order_strictness =
+    key_lookup (map (fn (key, _, strict) => (key, strict)) MFH.order_consts)
+
+  (* The encoder's direct tier at word and char types must be exactly the
+     constants [Refute_ModelFinder_HOL] declares built in, at the same
+     arities: a constant missing here would reach the encoder untranslated,
+     one missing there would be unfolded instead of encoded. *)
+  val () =
+    let
+      fun rows arity table = map (fn (key, _) => (key, arity)) table
+      fun same_rows expected actual =
+        length expected = length actual andalso
+        List.all (fn row => Lib.mem row actual) expected
+    in
+      if same_rows MFH.word_built_in_consts
+           (rows 0 word_csts @ rows 0 word_subtract_bases @
+            rows 2 word_orders) andalso
+         same_rows MFH.char_built_in_consts
+           (rows 0 char_csts @ rows 2 char_orders)
+      then ()
+      else raise Fail "Refute_ModelFinder_Nut: direct-tier tables \
+                      \disagree with Refute_ModelFinder_HOL"
+    end
+
   fun nut_from_term context equality term =
     let
       (* HOL4 binders expose named variables.  The environment records their
@@ -695,20 +732,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
           fun arithmetic_cst head =
             if MFH.iterator_marker_of_term context head =
                  SOME MFH.IteratorSuc then SOME Suc
-            else if is_named {Thy = "num", Name = "SUC"} head then SOME Suc
-            else if is_named {Thy = "arithmetic", Name = "+"} head orelse
-                    is_named {Thy = "integer", Name = "int_add"} head then
-              SOME Add
-            else if is_named {Thy = "arithmetic", Name = "-"} head orelse
-                    is_named {Thy = "integer", Name = "int_sub"} head then
-              SOME Subtract
-            else if is_named {Thy = "arithmetic", Name = "*"} head orelse
-                    is_named {Thy = "integer", Name = "int_mul"} head then
-              SOME Multiply
-            else if is_named {Thy = "arithmetic", Name = "DIV"} head orelse
-                    is_named {Thy = "integer", Name = "int_div"} head then
-              SOME Divide
-            else NONE
+            else key_lookup arithmetic_csts head
           fun is_numeral_skeleton head =
             is_named {Thy = "arithmetic", Name = "NUMERAL"} head orelse
             is_named {Thy = "arithmetic", Name = "BIT1"} head orelse
@@ -874,19 +898,14 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       andalso length arguments = 1 then
                 Op1 (SafeThe, Term.type_of candidate, MFR.Any,
                   sub (hd arguments))
-              else if (is_named {Thy = "prim_rec", Name = "<"} head orelse
-                       is_named {Thy = "integer", Name = "int_lt"} head orelse
-                       is_named {Thy = "arithmetic", Name = "<="} head orelse
-                       is_named {Thy = "integer", Name = "int_le"} head)
+              else if Option.isSome (order_strictness head)
                       andalso length arguments < 2 then
                 sub (MFH.eta_expand candidate (2 - length arguments))
-              else if (is_named {Thy = "prim_rec", Name = "<"} head orelse
-                       is_named {Thy = "integer", Name = "int_lt"} head)
+              else if order_strictness head = SOME true
                       andalso length arguments = 2 then
                 Op2 (Less, Type.bool, MFR.Any,
                   sub (hd arguments), sub (List.nth (arguments, 1)))
-              else if (is_named {Thy = "arithmetic", Name = "<="} head orelse
-                       is_named {Thy = "integer", Name = "int_le"} head)
+              else if order_strictness head = SOME false
                       andalso length arguments = 2 then
                 (* As in Nitpick, whose own comment here is "FIXME: find
                    out if this case is necessary".  Both tools admit <=
@@ -1045,8 +1064,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
 
   fun is_set_rule_constant name =
     List.exists (fn special => MFN.original_name name = special)
-      ["list$LIST_TO_SET", "list$ALL_DISTINCT", "prim_rec$<",
-       "arithmetic$<=", "integer$int_lt", "integer$int_le"]
+      (["list$LIST_TO_SET", "list$ALL_DISTINCT"] @ MFH.order_const_names)
 
   fun choose_rep_for_const scope total_consts constant (constants, table) =
     let

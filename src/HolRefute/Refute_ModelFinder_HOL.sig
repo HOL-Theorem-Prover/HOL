@@ -114,6 +114,10 @@ signature Refute_ModelFinder_HOL = sig
   val is_exact_carrier_type : hol_type -> bool
   val is_char_literal : term -> bool
   val is_char_op_type : hol_type -> bool
+  val order_consts : (KernelSig.kernelname * hol_type * bool) list
+  val order_const_names : string list
+  val word_built_in_consts : (KernelSig.kernelname * int) list
+  val char_built_in_consts : (KernelSig.kernelname * int) list
   val arity_of_built_in_const : term -> int option
   val is_built_in_const : term -> bool
   val raw_fixpoint_kind : term -> fixpoint_kind

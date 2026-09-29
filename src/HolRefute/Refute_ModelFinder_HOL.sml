@@ -764,6 +764,17 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     let val (domains, range) = boolSyntax.strip_fun ty
     in List.exists is_char_type (domains @ [range]) end
 
+  (* The built-in orders on [num] and [int], with their carrier and
+     whether they are strict. *)
+  val order_consts =
+    [({Thy = "prim_rec", Name = "<"}, num_type, true),
+     ({Thy = "arithmetic", Name = "<="}, num_type, false),
+     ({Thy = "integer", Name = "int_lt"}, int_type, true),
+     ({Thy = "integer", Name = "int_le"}, int_type, false)]
+
+  val order_const_names =
+    map (fn ({Thy, Name}, _, _) => Thy ^ "$" ^ Name) order_consts
+
   val built_in_typed_consts =
     [(({Thy = "num", Name = "0"}, num_type), 0),
      (({Thy = "arithmetic", Name = "+"},
@@ -776,10 +787,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        binary_type num_type num_type), 0),
      (* MOD has no nut primitive.  It must remain unfoldable rather than
         entering the built-in table and becoming an untranslatable leaf. *)
-     (({Thy = "prim_rec", Name = "<"},
-       binary_type num_type Type.bool), 2),
-     (({Thy = "arithmetic", Name = "<="},
-       binary_type num_type Type.bool), 2),
      (({Thy = "integer", Name = "int_of_num"},
        fun_type (num_type, int_type)), 0),
      (({Thy = "integer", Name = "int_add"},
@@ -792,11 +799,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        binary_type int_type int_type), 0),
      (* As above, int_mod is deliberately unfolded in M3. *)
      (({Thy = "integer", Name = "int_neg"},
-       fun_type (int_type, int_type)), 0),
-     (({Thy = "integer", Name = "int_lt"},
-       binary_type int_type Type.bool), 2),
-     (({Thy = "integer", Name = "int_le"},
-       binary_type int_type Type.bool), 2)]
+       fun_type (int_type, int_type)), 0)] @
+    map (fn (key, ty, _) => ((key, binary_type ty Type.bool), 2))
+      order_consts
 
   (* [built_in_typed_consts] matches one exact type, which cannot express
      "at any concrete width", so the word family needs its own lookup.  The

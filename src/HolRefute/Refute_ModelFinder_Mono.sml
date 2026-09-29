@@ -1488,9 +1488,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
       do_formula
     end
 
-  val harmless_consts =
-    ["prim_rec$<", "arithmetic$<=", "integer$int_lt",
-     "integer$int_le"]
+  val harmless_consts = MFH.order_const_names
   fun term_name term =
     if Term.is_const term then
       let val {Thy, Name, ...} = Term.dest_thy_const term
