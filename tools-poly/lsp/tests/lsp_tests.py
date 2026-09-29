@@ -5709,7 +5709,11 @@ def test_goalState_reports_where_a_failure_is():
     `encGoalStateResponse` destructured it and never printed it, so no
     client could point at the step even though the server knew.  A
     combinator had no span of its own either, so a `>-` whose branch
-    proved nothing reported no position at all."""
+    proved nothing reported no position at all.
+
+    It then reported the whole branch, which is the text being written
+    when a branch proves nothing -- so the range is the `>-` itself,
+    and the paren closing the branch comes back separately."""
     src = ("Theory failrange\n"
            "Ancestors arithmetic\n\n"
            "Theorem t:\n"
@@ -5735,8 +5739,134 @@ def test_goalState_reports_where_a_failure_is():
         rng = result.get("failedRange")
         assert_true(rng is not None,
                     f"and says where it is ({result!r})")
-        assert_eq(rng["start"]["line"], 7,
-                  f"which is the `>-` branch's own line ({rng!r})")
+        # "  >- (ASSUME_TAC TRUTH)": the `>-` at 2-4, its `)` at 22-23.
+        assert_eq((rng["start"]["line"], rng["start"]["character"],
+                   rng["end"]["line"], rng["end"]["character"]),
+                  (7, 2, 7, 4),
+                  f"which is the `>-` token, not the branch ({rng!r})")
+        close = result.get("failedCloseRange")
+        assert_true(close is not None,
+                    f"and where the branch closes ({result!r})")
+        assert_eq((close["start"]["line"], close["start"]["character"],
+                   close["end"]["line"], close["end"]["character"]),
+                  (7, 22, 7, 23),
+                  f"which is the branch's own `)` ({close!r})")
+    finally:
+        c.close()
+
+
+def test_a_failing_branch_is_squiggled_at_its_two_ends():
+    """The two ranges reach the client as two diagnostics on one
+    theorem, so the branch's contents are left unmarked.  The
+    per-theorem diagnostic map holds a list for this; counting its
+    entries counted theorems, and the publish gate reading that count
+    would have let the second squiggle sit unsent."""
+    src = ("Theory twoends\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem t:\n"
+           "  (0 = 0) /\\ (1 = 1)\n"
+           "Proof\n"
+           "  conj_tac\n"
+           "  >- (ASSUME_TAC TRUTH >>\n"
+           "      ASSUME_TAC TRUTH)\n"
+           "  \\\\ simp[]\n"
+           "QED\n")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/twoends_probe.sml"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        _send_goalstate(c, 763, uri, 9, 5)
+
+        def both(cl):
+            ds = [x for x in (_diag_count(cl, uri) or [])
+                  if "branch" in x.get("message", "")]
+            return ds if len(ds) == 2 else None
+
+        ds = c.wait_until(both, 30)
+        assert_true(ds is not None,
+                    f"two diagnostics for the one branch "
+                    f"(saw {_diag_count(c, uri)!r})")
+        spans = sorted((d["range"]["start"]["line"],
+                        d["range"]["start"]["character"]) for d in ds)
+        assert_eq(spans, [(7, 2), (8, 22)],
+                  f"one on the `>-`, one on the closing paren ({ds!r})")
+    finally:
+        c.close()
+
+
+def test_an_unparenthesised_branch_has_no_closing_paren():
+    """The close range comes from the branch's own group span, not from
+    looking for a `)` at the end of the branch: in `>- metis_tac (foo)`
+    the last character is a paren too, and it is an argument's."""
+    src = ("Theory noclose\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem t:\n"
+           "  (0 = 0) /\\ (1 = 1)\n"
+           "Proof\n"
+           "  conj_tac\n"
+           "  >- ASSUME_TAC (TRUTH)\n"
+           "  \\\\ simp[]\n"
+           "QED\n")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/noclose_probe.sml"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 764, uri, 8, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_true(result.get("failedRange") is not None,
+                    f"the branch that proves nothing is located ({result!r})")
+        assert_true(result.get("failedCloseRange") is None,
+                    f"but the argument's `)` is not its close "
+                    f"({result.get('failedCloseRange')!r})")
+    finally:
+        c.close()
+
+
+def test_a_failing_by_is_squiggled_at_its_assertion():
+    """`by` had the same fault as `>-` and worse: its range ran from
+    the assertion quote to the end of the body, under the message
+    "Bracket failed".  The assertion and the keyword are short and say
+    what was demanded, so they are what is marked."""
+    src = ("Theory byrange\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem t:\n"
+           "  0 = 0\n"
+           "Proof\n"
+           "  `1 = 1` by (ASSUME_TAC TRUTH)\n"
+           "  \\\\ simp[]\n"
+           "QED\n")
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/byrange_probe.sml"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 765, uri, 7, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_true("by" in (result.get("error") or ""),
+                    f"the assertion its tactic did not prove is named "
+                    f"({result.get('error')!r})")
+        rng = result.get("failedRange")
+        assert_true(rng is not None, f"and located ({result!r})")
+        # "  `1 = 1` by (ASSUME_TAC TRUTH)": assertion at 2, `by` ends
+        # at 12, and the body's `)` is at 30-31.
+        assert_eq((rng["start"]["character"], rng["end"]["character"]),
+                  (2, 12),
+                  f"from the assertion through the keyword ({rng!r})")
+        close = result.get("failedCloseRange")
+        assert_true(close is not None, f"with its body's `)` ({result!r})")
+        assert_eq((close["start"]["character"], close["end"]["character"]),
+                  (30, 31),
+                  f"which is the body's own paren ({close!r})")
     finally:
         c.close()
 
@@ -8231,6 +8361,12 @@ TESTS = [
      test_a_failed_proof_is_reported_at_the_step_that_fails),
     ("goalState_reports_where_a_failure_is",
      test_goalState_reports_where_a_failure_is),
+    ("a_failing_branch_is_squiggled_at_its_two_ends",
+     test_a_failing_branch_is_squiggled_at_its_two_ends),
+    ("an_unparenthesised_branch_has_no_closing_paren",
+     test_an_unparenthesised_branch_has_no_closing_paren),
+    ("a_failing_by_is_squiggled_at_its_assertion",
+     test_a_failing_by_is_squiggled_at_its_assertion),
     ("hover_on_a_half_typed_declaration_does_not_die",
      test_hover_on_a_half_typed_declaration_does_not_die),
     ("a_theorem_jumps_to_the_script_it_is_proved_in",

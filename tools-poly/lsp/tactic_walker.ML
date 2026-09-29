@@ -27,6 +27,12 @@ structure TacticWalker :> sig
      decides whether the cursor has passed one. *)
   val fragSpan : TacticParse.tac_frag -> (int * int) option
 
+  (* The span of the combinator token itself, for the fragments that
+     record one: a `>-', `by' or `suffices_by' bracket.  NONE for every
+     other fragment.  A caller reporting a failed branch points here
+     rather than at `fragSpan', which is the branch. *)
+  val combinatorSpan : TacticParse.tac_frag -> (int * int) option
+
   val walkTo : {
     plugins: LSPExtension.plugin_data,
     theoremName: string,
@@ -210,12 +216,12 @@ fun openThen1With src state =
 
 fun applyOpen tacText ok state = case ok of
     FOpen           => Portable.total goalFrag.open_paren      state
-  | FOpenThen1      => Portable.total goalFrag.open_then1      state
-  | FOpenBy q       =>
+  | FOpenThen1 _    => Portable.total goalFrag.open_then1      state
+  | FOpenBy (q, _)  =>
       openThen1With
         ("BasicProvers.byA (" ^ textAt tacText q ^ ", Tactical.ALL_TAC)")
         state
-  | FOpenSufficesBy q =>
+  | FOpenSufficesBy (q, _) =>
       openThen1With
         ("BasicProvers.suffices_byA (" ^ textAt tacText q ^
          ", Tactical.ALL_TAC)") state
@@ -304,10 +310,16 @@ and firstSectionStart sections = case sections of
          NONE => firstSectionStart rest
        | some => some)
 
+(* `FOpenThen1' is deliberately absent from the two cases below, even
+   though it carries a span of its own: this start is what
+   `walkFrag' compares the cursor against to decide whether a bracket
+   has been entered.  A `>-' starting at its combinator rather than at
+   its branch would make a cursor sitting on the `>-' open and walk the
+   branch, where today it reports the state the branch starts from. *)
 and bracketStartByte ok te firstInner =
   case ok of
-    FOpenBy (s, _) => SOME s
-  | FOpenSufficesBy (s, _) => SOME s
+    FOpenBy ((s, _), _) => SOME s
+  | FOpenSufficesBy ((s, _), _) => SOME s
   | _ => (case topSpan te of
       SOME (s, _) => SOME s
     | NONE => (case TacticSteps.atomSpan te of
@@ -332,6 +344,23 @@ fun fragSpan frag =
   case (fragStart frag, fragEnd frag) of
       (SOME s, SOME e) => SOME (s, e)
     | _ => NONE
+
+(* The combinator token alone, for the three that record where they
+   were written: `>-' (and `THEN1', `>>-'), `by' and `suffices_by'.
+   Answers for a failed open as well as for a failed close -- an open's
+   fragment has no extent at all, so a caller reporting one otherwise
+   has nowhere to point. *)
+fun combinatorSpan frag = let
+  fun ofOpen ok = case ok of
+      FOpenThen1 k           => SOME k
+    | FOpenBy (_, k)         => SOME k
+    | FOpenSufficesBy (_, k) => SOME k
+    | _ => NONE
+in case frag of
+     FBracket (ok, _, _, _) => ofOpen ok
+   | FFOpen ok => ofOpen ok
+   | _ => NONE
+end
 
 (* Steps a fragment list contributes to `stepIdx', mirroring exactly
    what the walk counts.  Skipping a branch must advance the index by

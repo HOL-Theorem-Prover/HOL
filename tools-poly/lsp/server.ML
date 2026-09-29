@@ -137,7 +137,8 @@ fun encSegment ({text, kind, name, ty}: LSPExtension.pp_segment) print = (
 
 fun encGoalStateResponse encRng
                          ({theorem, step, goals, pretty, context, note,
-                           status, error, failedRange, segments}
+                           status, error, failedRange, failedCloseRange,
+                           segments}
                             : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
@@ -150,6 +151,9 @@ fun encGoalStateResponse encRng
   (* Where the walk stopped, so a client can point at it rather than
      make the reader find it from the message. *)
   print ",\"failedRange\":"; encOrNull encRng failedRange print;
+  (* And the paren closing what it points at, when there is one, so a
+     client marks both ends of a branch rather than all of it. *)
+  print ",\"failedCloseRange\":"; encOrNull encRng failedCloseRange print;
   print ",\"segments\":"; encArray encSegment segments print;
   print "}")
 
@@ -1434,11 +1438,13 @@ fun start {diag, dbg, warnings} = let
        previous compile took it) — treated as 0, a full restart. *)
     minEditOffset: int option Sref.t,
     (* Runtime-diagnostic squiggles the walker has observed since
-       the last compile: keyed by theorem name, value is the
-       Error report for the failed leaf.  Fresh compiles clear
+       the last compile: keyed by theorem name, value is the Error
+       reports for the failed leaf -- more than one when the failure
+       is a combinator marked at both ends.  Fresh compiles clear
        these; a successful walker query for a theorem removes its
        entry so a user-fix removes the squiggle without waiting
-       for the next compile. *)
+       for the next compile.  A theorem with nothing to say has no
+       entry; an entry is never the empty list. *)
     (* Held across taking a diagnostic snapshot and sending it, by both
        publishers.  Each of them reads the compile's list and the two
        maps, dedups, encodes and sends; without this two threads can
@@ -1451,7 +1457,7 @@ fun start {diag, dbg, warnings} = let
        delays only other publishes -- which would have blocked on the
        same channel regardless. *)
     publishLock: unit Sref.t,
-    walkerDiags: (string, report) Binarymap.dict Sref.t,
+    walkerDiags: (string, report list) Binarymap.dict Sref.t,
     (* Squiggles for the proofs the pool has an opinion about, keyed by
        theorem name.  Deliberately *not* cleared by a fresh compile,
        unlike `walkerDiags': the pool owns these entries' lifetime and
@@ -1459,7 +1465,7 @@ fun start {diag, dbg, warnings} = let
        drops one.  A compile that re-enqueues an unchanged proof reuses
        its entry rather than re-announcing it, so clearing here would
        lose a squiggle with nothing left to restore it. *)
-    proofDiags: (string, report) Binarymap.dict Sref.t,
+    proofDiags: (string, report list) Binarymap.dict Sref.t,
     (* The text the last compile elaborated, or "" before there has
        been one.  Comparing it with the buffer says exactly which
        bytes have changed since -- one region, however many
@@ -1782,6 +1788,15 @@ fun start {diag, dbg, warnings} = let
     val () = DArray.app step d
     in out end
 
+  (* A per-theorem diagnostic map holds a *list*: one failure can be
+     marked in more than one place.  Counting entries would count
+     theorems, and the count is what decides whether anything moved
+     since the last publish -- so a theorem that grows a second
+     squiggle would never ship it. *)
+  fun nReports m = Binarymap.foldl (fn (_, l, n) => n + length l) 0 m
+  fun pushReports (d, m) =
+      Binarymap.app (fn (_, l) => List.app (fn r => DArray.push (d, r)) l) m
+
   (* Emit `$/proofStates` for `uri`: one change in what the
      proof-checking pool is doing.
 
@@ -1991,6 +2006,20 @@ fun start {diag, dbg, warnings} = let
               \not what the proof gives")
       | _ => NONE
 
+  (* The squiggles for one located failure.  A walk that stops at a
+     combinator reports the combinator and, separately, the paren
+     closing what it brackets -- so the branch is marked at its two
+     ends and the text between them, which is what is being written,
+     is left clean.  The closing marker carries a message of its own:
+     a client shows it on its own, away from the first. *)
+  fun failReports (pos, close, msg) =
+      Error {hard = true, pos = pos, msg = encString msg} ::
+      (case close of
+           NONE => []
+         | SOME p =>
+           [Error {hard = true, pos = p,
+                   msg = encString "end of the failing branch"}])
+
   (* Emit publishDiagnostics for `uri` combining the last-completed
      compile's diagnostics and any walker-observed runtime squiggles. *)
   fun publishAllDiagnostics uri
@@ -2002,11 +2031,10 @@ fun start {diag, dbg, warnings} = let
     val compileDiags = #diags parse
     val wd = Sref.value walkerDiags
     val pd = Sref.value proofDiags
-    val total = DArray.size compileDiags + Binarymap.numItems wd +
-                Binarymap.numItems pd
+    val total = DArray.size compileDiags + nReports wd + nReports pd
     val snapshot = DArray.clone (compileDiags, total)
-    val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) wd
-    val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) pd
+    val _ = pushReports (snapshot, wd)
+    val _ = pushReports (snapshot, pd)
     val snapshot = dedupReports snapshot
     fun encDiag (Error {hard, pos, msg}) print = (
         print "{\"range\":"; encRangeLC lines pos print;
@@ -2083,7 +2111,7 @@ fun start {diag, dbg, warnings} = let
                 | (SOME _, NONE) => (#1 (Binarymap.remove (pd, site)), true)
                 (* Re-published even when the entry looks the same: the
                    text it points into may have moved under it. *)
-                | (_, SOME d) => (Binarymap.insert (pd, site, d), true))
+                | (_, SOME d) => (Binarymap.insert (pd, site, [d]), true))
     in
       if changed then republish () else ()
     end
@@ -2648,15 +2676,13 @@ fun start {diag, dbg, warnings} = let
         val n = DArray.size oldDiags
         val wd = Sref.value walkerDiags
         val pd = Sref.value proofDiags
-        val ws = Binarymap.numItems wd + Binarymap.numItems pd
+        val ws = nReports wd + nReports pd
         val total = n + ws
         in if total = !lastSentSize then () else (
           lastSentSize := total;
           let val snapshot = DArray.clone (oldDiags, total)
-              val _ = Binarymap.app
-                        (fn (_, r) => DArray.push (snapshot, r)) wd
-              val _ = Binarymap.app
-                        (fn (_, r) => DArray.push (snapshot, r)) pd
+              val _ = pushReports (snapshot, wd)
+              val _ = pushReports (snapshot, pd)
               val snapshot = dedupReports snapshot
           in
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
@@ -3795,7 +3821,7 @@ fun start {diag, dbg, warnings} = let
            NONE => ()
          | SOME tacEnd =>
            (case goalStateAtPos uri v (getLineCol lines tacEnd, !hoverWidth) of
-                SOME {failedRange = SOME pos, ...} =>
+                SOME {failedRange = SOME pos, failedCloseRange, ...} =>
                   (* Replaces the entry `updateProofDiag' made under the
                      same key, rather than adding a second one beside
                      it: this is that verdict, better placed.  Cleared
@@ -3817,8 +3843,8 @@ fun start {diag, dbg, warnings} = let
                             if !LSPExtension.deferProofs then
                               (Binarymap.insert
                                  (pd, site,
-                                  Error {hard = true, pos = pos,
-                                         msg = encString msg}), true)
+                                  failReports
+                                    (pos, failedCloseRange, msg)), true)
                             else (pd, false))
                    then publishAllDiagnostics uri v
                    else ())
@@ -4278,10 +4304,11 @@ fun start {diag, dbg, warnings} = let
            the squiggle without waiting for the next compile.  Emit
            publishDiagnostics whenever the walker's slot changes. *)
         val () = case (v_opt, resp) of
-            (SOME (v: file_data), SOME {theorem, failedRange, error, ...}) => let
+            (SOME (v: file_data),
+             SOME {theorem, failedRange, failedCloseRange, error, ...}) => let
               val next = case (failedRange, error) of
-                  (SOME (s, e), SOME msg) => SOME (Error {
-                    hard = true, pos = (s, e), msg = encString msg })
+                  (SOME pos, SOME msg) =>
+                    SOME (failReports (pos, failedCloseRange, msg))
                 | _ => NONE
               (* Decide and write in one step.  A request thread is
                  forked per `$/hol/goalState`, so two can be here at

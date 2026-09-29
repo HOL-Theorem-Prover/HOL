@@ -516,7 +516,9 @@ for the running server.  Turn it off on a machine you would rather
 keep for yourself: the pool runs the proofs for real.
 
 Three of the pool's verdicts are diagnostics, keyed by theorem name
-and squiggled on the theorem's own name:
+and squiggled on the theorem's own name — a `Failed` only until the
+walk finds the step it stops at, which replaces the entry with one
+placed there (see `failedRange` under `$/hol/goalState`):
 
 | verdict | severity | means |
 |---|---|---|
@@ -591,7 +593,9 @@ when the theorem statement can't be parsed).  Otherwise:
   "context": ["<combinator tag>", ...],
   "note": <string or null>,
   "status": "ok" | "pending",
-  "error": <string or null>
+  "error": <string or null>,
+  "failedRange": <range or null>,
+  "failedCloseRange": <range or null>
 }
 ```
 
@@ -676,6 +680,18 @@ end, and anything in the same flow above them goes out of sight.
   server refuses to send it and returns `error` instead.  A stderr
   line `goal-state walker exceeded Nms budget; interrupting` is
   also emitted for visibility.
+- `failedRange` — where in the file the `error` belongs, when the walk
+  stopped somewhere with a natural extent.  For a combinator that
+  obliged what it brackets to prove a goal — `>-`, `by`,
+  `suffices_by` — it is the combinator, **not** the branch under it: a
+  branch that proves nothing yet is usually the text being written,
+  and marking all of it says nothing the reader doesn't know.
+- `failedCloseRange` — the paren closing that branch, when it has one,
+  so a client marks the branch at its two ends and leaves the middle
+  alone.  `null` for a branch written without parens, and for any
+  failure that is not one of those three combinators.  The server
+  publishes both as ordinary diagnostics; a client reading
+  `textDocument/publishDiagnostics` needs no work for this.
 
 ### Client cookbook
 

@@ -155,8 +155,19 @@ type goal_state_response = {
      failed — the file byte range the client should surface as a
      runtime diagnostic (LSP squiggle).  NONE when there is no
      failure or the failure has no natural byte range (e.g. a
-     structural marker, or a timeout). *)
+     structural marker, or a timeout).
+
+     For a combinator that obliged what it brackets to prove a goal —
+     `>-`, `by`, `suffices_by` — this is the combinator itself, not
+     the branch under it: the branch is usually the text being
+     written, and marking all of it says nothing the reader doesn't
+     already know. *)
   failedRange: (int * int) option,
+  (* The paren closing the branch `failedRange` points at, when the
+     branch is parenthesised, so a client can mark both ends of it and
+     leave the middle alone.  NONE otherwise, and for every failure
+     that is not one of the three combinators above. *)
+  failedCloseRange: (int * int) option,
   (* `pretty` again, but taken apart: consecutive pieces whose texts
      concatenate to exactly what `pretty` prints once its colour
      escapes are removed.  Each piece carries what the pretty-printer

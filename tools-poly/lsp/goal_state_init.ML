@@ -115,10 +115,14 @@ local
     | FFClose _ => "Combinator close failed"
     | FGroup _  => "Group failed"
       (* A bracket reported as a whole is one whose close would not go
-         through -- `>-' is the one that says something: its branch was
-         obliged to prove the goal and did not. *)
-    | FBracket (FOpenThen1, _, _, _) =>
+         through.  Three of them say something: each obliged what it
+         brackets to prove a goal, and it did not. *)
+    | FBracket (FOpenThen1 _, _, _, _) =>
         "`>-` branch did not prove its goal"
+    | FBracket (FOpenBy _, _, _, _) =>
+        "`by` assertion was not proved by its tactic"
+    | FBracket (FOpenSufficesBy _, _, _, _) =>
+        "`suffices_by` reduction was not proved by its tactic"
     | FBracket _  => "Bracket failed"
     | FMBracket _ => "Bracket failed"
 
@@ -131,14 +135,49 @@ local
   fun sourceFailure (_, TacticWalker.CompileFailed) = true
     | sourceFailure _ = false
 
-  (* Where in the file to point at what failed.  `fragSpan' answers for
-     a bracket as well as a leaf, falling back to the contents when the
-     combinator has no span of its own -- which is what a `>- tac' whose
-     branch proved nothing needs, the alternative being the theorem's
-     name a long way above it. *)
-  fun failRange tacStart frag =
-    Option.map (fn (s, e) => (tacStart + s, tacStart + e))
-               (TacticWalker.fragSpan frag)
+  (* Where in the file to point at what failed, as a pair: the range
+     the message belongs on, and a second one closing it off.
+
+     `fragSpan' answers for a bracket as well as a leaf, falling back
+     to the contents when the combinator has no span of its own.  For
+     the three combinators that oblige what they bracket to prove a
+     goal, that fallback is the whole branch -- and a branch that
+     proves nothing yet is usually the very thing being written, so
+     marking all of it tells the reader what they already know and
+     buries the message in it.  Point at the combinator that made the
+     demand instead, and separately at the paren closing what it was
+     demanded of.
+
+     For `by' and `suffices_by' the demand is the assertion as much as
+     the keyword, and the two together are short, so the first range
+     runs from the assertion through the keyword. *)
+  fun failRanges tacText tacStart frag = let
+    fun shift (s, e) = (tacStart + s, tacStart + e)
+    val whole = TacticWalker.fragSpan frag
+    fun openOf (FBracket (ok, _, _, _)) = SOME ok
+      | openOf (FFOpen ok) = SOME ok
+      | openOf _ = NONE
+    (* The branch's own `)', when it has one.  Taken from the body
+       group's span rather than by looking for a `)' at the end of the
+       branch: in `>- metis_tac (foo x)' the last character is a paren
+       too, and it is the argument's.  An unclosed branch parses to a
+       RepairGroup whose span ends at the next token, so the character
+       test rejects it. *)
+    val close = case frag of
+        FBracket (_, [FGroup ((s, e), _)], _, _) =>
+          if s >= 0 andalso e <= size tacText andalso e - s >= 2
+             andalso String.sub (tacText, s) = #"("
+             andalso String.sub (tacText, e - 1) = #")"
+          then SOME (e - 1, e) else NONE
+      | _ => NONE
+    val first = case (openOf frag, TacticWalker.combinatorSpan frag) of
+        (SOME (FOpenThen1 _), SOME k) => SOME k
+      | (SOME _, SOME (ks, ke)) =>
+          (case whole of
+               SOME (s, _) => SOME (Int.min (s, ks), ke)
+             | NONE => SOME (ks, ke))
+      | _ => whole
+  in (Option.map shift first, Option.map shift close) end
 in
 
 val () = LSPExtension.goalStateAtPos :=
@@ -165,12 +204,16 @@ val () = LSPExtension.goalStateAtPos :=
                    note = NONE, status = "ok",
                    error = SOME ("walker timed out (>"
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
-                   failedRange = NONE, segments = []}
+                   failedRange = NONE, failedCloseRange = NONE,
+                   segments = []}
               | SOME {state, failedAt} => let
                   val silent = case failedAt of
                       SOME f => sourceFailure f
                     | NONE => false
                   val reported = if silent then NONE else failedAt
+                  val ranges = case reported of
+                      NONE => (NONE, NONE)
+                    | SOME (frag, _) => failRanges tacText tacStart frag
                   in SOME
                   {theorem = name, step = step,
                    goals = List.map (ppGoal width) (goalFrag.top_goals state),
@@ -180,8 +223,8 @@ val () = LSPExtension.goalStateAtPos :=
                    status = if silent andalso not compileDone
                             then "pending" else "ok",
                    error = Option.map (failMsg tacText o #1) reported,
-                   failedRange =
-                     Option.mapPartial (failRange tacStart o #1) reported,
+                   failedRange = #1 ranges,
+                   failedCloseRange = #2 ranges,
                    segments = ppSegments width state}
                   end
            end
@@ -195,7 +238,7 @@ val () = LSPExtension.goalStateAtPos :=
                     context = goalFrag.context_lines startState,
                     note = goalFrag.focus_note startState,
                     status = "ok", error = NONE,
-                    failedRange = NONE,
+                    failedRange = NONE, failedCloseRange = NONE,
                     segments = ppSegments width startState}
            end
        | _ => NONE

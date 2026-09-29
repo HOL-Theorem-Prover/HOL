@@ -210,6 +210,7 @@ type goal_state_response = {
   theorem: string, step: int, goals: goal_state list, pretty: string,
   context: string list, note: string option, status: string,
   error: string option, failedRange: (int * int) option,
+  failedCloseRange: (int * int) option,
   segments: pp_segment list}
 type theorem_context = {
   name: string, quote: string, quoteStart: int,
