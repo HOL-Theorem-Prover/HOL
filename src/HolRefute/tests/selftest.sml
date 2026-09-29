@@ -2798,6 +2798,14 @@ val _ = test "frac registrations" (fn () =>
                {original = {Thy = "rat", Name = "rat_add"},
                 replacement = {Thy = "refute", Name = "times_frac"}}]}))
 
+(* fmap's built-in encoding is a classification like any registration. *)
+val _ = test "fmap's built-in classification refuses a typedef" (fn () =>
+  rejected_with "type operator already has an incompatible classification"
+    (fn () => register_typedef
+      {ty = ``:('a, 'b) fmap``, abs = ``finite_map$fmap_ABS``,
+       rep = ``finite_map$fmap_REP``,
+       absrep_thms = [finite_mapTheory.fmap_ISO_DEF]}))
+
 val _ = test "an empty custom generator is refused" (fn () =>
   (register_generator ``:ind`` {enumerate = NONE, random = NONE}; false)
   handle Fail _ => true)

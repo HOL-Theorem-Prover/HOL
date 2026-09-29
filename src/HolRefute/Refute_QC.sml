@@ -100,26 +100,14 @@ structure Refute_QC :> Refute_QC = struct
      does reach this check -- the free variable's type is [:t list],
      [spec_of] fails for it, so [has_generator] is false and the test
      proceeds -- and what refuses it is [MFH.harvest_typedef]:
-     [:t list] is a raw free datatype, one of the classifications its
-     own [incompatible] test excludes.  So no container is ever
-     transported and the goal keeps today's [NoGenerator]/[Unknown]
-     behaviour. *)
-  (* [MFH.typedef_for_type] also answers for the synthetic frac/fmap
-     entries [MFH.harvest_typedef] admits via its own [is_typedef]
-     short-circuit (bypassing that function's [incompatible] test, which
-     would otherwise exclude frac): those have no [TYPE_DEFINITION]
-     theorem, so [abs] there is not a licensed bijection -- for frac it is
-     not even a constant, since [retype_frac_constant] cannot match
-     [abs_frac]'s monomorphic generic type to any other carrier and falls
-     back to a reserved variable.  [MFH.raw_typedef_data] being [SOME] is
-     exactly [register_typedef_unlocked]'s own admission requirement, so
-     every genuine entry already satisfies it; requiring it here closes
-     the synthetic bypass without disturbing genuine typedefs. *)
+     [:t list] is a raw free datatype, which it never classifies as a
+     typedef.  So no container is ever transported and the goal keeps
+     today's [NoGenerator]/[Unknown] behaviour.  [MFH.harvest_typedef]
+     also refuses frac and fmap, whose synthetic typedefs have no
+     licensed bijection. *)
   fun transportable_typedef ty =
     if has_generator ty then NONE
-    else if MFH.harvest_typedef ty andalso
-            Option.isSome (MFH.raw_typedef_data ty)
-    then MFH.typedef_for_type ty
+    else if MFH.harvest_typedef ty then MFH.typedef_for_type ty
     else NONE
 
   type transport_entry =

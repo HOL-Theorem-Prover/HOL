@@ -156,7 +156,6 @@ signature Refute_ModelFinder_HOL = sig
   val is_equational_fun_surely_complete : mf_context -> term -> bool
   val register_codatatype : codatatype_registration -> unit
   val register_quotient : quotient_registration -> unit
-  val raw_typedef_data : hol_type -> {pred : term, rty : hol_type} option
   val register_typedef :
     {abs : term, absrep_thms : thm list, rep : term, ty : hol_type} -> unit
   val register_frac_type : frac_info -> unit

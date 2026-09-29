@@ -54,6 +54,17 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     {ty : hol_type, rty : hol_type, abs : term, rep : term,
      pred : term, inverse_axioms : term list, univ : bool}
   type frac_info = {tyop : type_operator, ersatz : ersatz list}
+  (* A type operator's classification.  The registry holds at most one per
+     operator; [Fmap] and the built-in codatatypes are never stored. *)
+  datatype type_class =
+      Codatatype of codatatype_info
+    | Quotient of quotient_info
+    | Typedef of typedef_info
+    | Frac of frac_info
+    | Fmap
+
+  fun operator_key ({Thy, Tyop} : type_operator) =
+    {Thy = Thy, Name = Tyop}
 
   (* Registrations and the harvest indices are one context state.  A
      change runs as a transaction: the state is thawed into mutable cells
@@ -64,7 +75,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      type never extends the current HOL theory.  Functions suffixed
      "_staged" change the cells, so they run only inside a transaction.
 
-     Successful harvests live in the registries themselves.  The session
+     Successful harvests live in the class registry itself.  The session
      index records only theories directly mentioned by relevant theorem
      conclusions: the theorem's own theory and the owning theories of its
      constants.  In particular, neither index maintenance nor lookup walks a
@@ -82,10 +93,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      constant_operators : (type_operator * string) list}
 
   type registrations =
-    {codatatypes : codatatype_info list,
-     quotients : quotient_info list,
-     typedefs : typedef_info list,
-     fracs : frac_info list,
+    {classes : type_class KNametab.table,
      ersatz : ersatz list,
      quotient_misses : harvest_miss,
      typedef_misses : harvest_miss,
@@ -101,10 +109,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations : int Symtab.table}
 
   type cells =
-    {codatatypes : codatatype_info list ref,
-     quotients : quotient_info list ref,
-     typedefs : typedef_info list ref,
-     fracs : frac_info list ref,
+    {classes : type_class KNametab.table ref,
      ersatz : ersatz list ref,
      quotient_misses : harvest_miss ref,
      typedef_misses : harvest_miss ref,
@@ -120,10 +125,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations : int Symtab.table ref}
 
   fun thaw (value : registrations) : cells =
-    {codatatypes = ref (#codatatypes value),
-     quotients = ref (#quotients value),
-     typedefs = ref (#typedefs value),
-     fracs = ref (#fracs value),
+    {classes = ref (#classes value),
      ersatz = ref (#ersatz value),
      quotient_misses = ref (#quotient_misses value),
      typedef_misses = ref (#typedef_misses value),
@@ -139,10 +141,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations = ref (#theory_generations value)}
 
   fun freeze (cells : cells) : registrations =
-    {codatatypes = !(#codatatypes cells),
-     quotients = !(#quotients cells),
-     typedefs = !(#typedefs cells),
-     fracs = !(#fracs cells),
+    {classes = !(#classes cells),
      ersatz = !(#ersatz cells),
      quotient_misses = !(#quotient_misses cells),
      typedef_misses = !(#typedef_misses cells),
@@ -158,10 +157,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations = !(#theory_generations cells)}
 
   val registrations = Refute_Session.state "model_registrations"
-    ({codatatypes = [],
-      quotients = [],
-      typedefs = [],
-      fracs = [],
+    ({classes = KNametab.empty,
       ersatz = [],
       quotient_misses = KNametab.empty,
       typedef_misses = KNametab.empty,
@@ -184,10 +180,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         SOME cells => from_cells cells
       | NONE => ref (from_value (Refute_Session.read registrations))
 
-  val codatatype_registry = cell #codatatypes #codatatypes
-  val quotient_registry = cell #quotients #quotients
-  val typedef_registry = cell #typedefs #typedefs
-  val frac_registry = cell #fracs #fracs
+  val class_registry = cell #classes #classes
   val ersatz_registry = cell #ersatz #ersatz
   val quotient_harvest_misses = cell #quotient_misses #quotient_misses
   val typedef_harvest_misses = cell #typedef_misses #typedef_misses
@@ -231,6 +224,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         Refute_Session.publish registrations apply;
         valOf (!result)
       end
+
+  fun registered_class operator =
+    KNametab.lookup (!(class_registry ())) (operator_key operator)
+
+  fun set_class operator class =
+    class_registry () :=
+      KNametab.update (operator_key operator, class) (!(class_registry ()))
   type mf_context =
     {max_bisim_depth : int,
      boxes : (hol_type option * bool option) list,
@@ -595,8 +595,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun registered_frac_type ty =
     case Lib.total Type.dest_thy_type ty of
         SOME {Thy, Tyop, Args = []} =>
-          List.exists (fn ({tyop, ...} : frac_info) =>
-            #Thy tyop = Thy andalso #Tyop tyop = Tyop) (!(frac_registry ()))
+          (case registered_class {Thy = Thy, Tyop = Tyop} of
+               SOME (Frac _) => true
+             | _ => false)
       | _ => false
 
   fun frac_target_for_constant constant =
@@ -2377,9 +2378,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       List.foldl add [] (constants_in term)
     end
 
-  fun operator_key ({Thy, Tyop} : type_operator) =
-    {Thy = Thy, Name = Tyop}
-
   fun update_harvest_index operator update table =
     let
       val key = operator_key operator
@@ -2871,34 +2869,50 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                             (fn cache => info :: cache);
                           SOME info))
 
-  fun explicit_codatatype_for operator =
-    List.find (fn {tyop, ...} => same_type_operator tyop operator)
-      (!(codatatype_registry ()))
+  val fmap_operator = {Thy = "finite_map", Tyop = "fmap"}
+
+  (* A registration shadows a built-in classification of its operator. *)
+  fun class_of_operator operator =
+    case registered_class operator of
+        SOME class => SOME class
+      | NONE =>
+          case builtin_codatatype_for operator of
+              SOME info => SOME (Codatatype info)
+            | NONE =>
+                if same_type_operator operator fmap_operator then SOME Fmap
+                else NONE
+
+  fun class_of_type ty =
+    class_of_operator (type_operator_of ty) handle HOL_ERR _ => NONE
 
   fun codatatype_for operator =
-    case explicit_codatatype_for operator of
-        SOME info => SOME info
-      | NONE => builtin_codatatype_for operator
+    case class_of_operator operator of
+        SOME (Codatatype info) => SOME info
+      | _ => NONE
 
   fun current_codatatype_registry () =
     let
-      val explicit = !(codatatype_registry ())
+      fun explicit (_, Codatatype info) = SOME info
+        | explicit _ = NONE
       fun built_in {Thy, Tyop, ...} =
-        builtin_codatatype_for {Thy = Thy, Tyop = Tyop}
-      fun shadowed ({tyop, ...} : codatatype_info) =
-        Option.isSome (explicit_codatatype_for tyop)
+        case registered_class {Thy = Thy, Tyop = Tyop} of
+            NONE => builtin_codatatype_for {Thy = Thy, Tyop = Tyop}
+          | SOME _ => NONE
     in
-      explicit @
-      List.filter (not o shadowed)
-        (List.mapPartial built_in builtin_codatatypes)
+      List.mapPartial explicit (KNametab.dest (!(class_registry ()))) @
+      List.mapPartial built_in builtin_codatatypes
     end
 
-  fun has_type_operator project registry ty =
-    let val operator = type_operator_of ty
-    in
-      List.exists (fn entry =>
-        same_type_operator (project entry) operator) (!registry)
-    end handle HOL_ERR _ => false
+  (* One classification per type operator: a registration replaces only
+     its own kind, except that Frac replaces a quotient or typedef, which
+     may have been harvested merely by looking at a goal first. *)
+  fun claim_operator function replaceable operator =
+    case class_of_operator operator of
+        NONE => ()
+      | SOME class =>
+          if replaceable class then ()
+          else raise err function
+            "type operator already has an incompatible classification"
 
   fun raw_free_datatype ty = not (null (database_constructors ty))
 
@@ -2997,19 +3011,11 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val _ = case witness of
           NONE => ()
         | SOME theorem => validate_codatatype_witness normalized theorem
-      val _ = if has_type_operator (type_operator_of o #qty)
-                       (quotient_registry ()) result_ty orelse
-                     has_type_operator (type_operator_of o #ty)
-                       (typedef_registry ()) result_ty orelse
-                     has_type_operator #tyop (frac_registry ()) result_ty then
-          raise err "register_codatatype"
-            "type operator already has an incompatible registration"
-        else ()
-      fun other ({tyop = old, ...} : codatatype_info) =
-        not (same_type_operator old tyop)
+      fun replaceable (Codatatype _) = true
+        | replaceable _ = false
     in
-      codatatype_registry () := normalized ::
-        List.filter other (!(codatatype_registry ()))
+      claim_operator "register_codatatype" replaceable tyop;
+      set_class tyop (Codatatype normalized)
     end
 
   fun register_codatatype registration =
@@ -3135,12 +3141,11 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
              (Type.type_vars qty)) (Type.type_vars rty) then ()
         else raise err "register_quotient"
           "representation type has unbound type variables"
-      val _ =
-        if Option.isSome (codatatype_for (type_operator_of qty)) orelse
-           has_type_operator (type_operator_of o #ty) (typedef_registry ()) qty
-             orelse
-           has_type_operator #tyop (frac_registry ()) qty orelse
-           raw_free_datatype qty then
+      fun replaceable (Quotient _) = true
+        | replaceable _ = false
+      val _ = claim_operator "register_quotient" replaceable
+        (type_operator_of qty)
+      val _ = if raw_free_datatype qty then
           raise err "register_quotient"
             "type operator already has an incompatible classification"
         else ()
@@ -3162,12 +3167,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val normalized : quotient_info =
         {qty = qty, rty = rty, abs = abs, rep = rep,
          equiv_thm = equiv_thm, partial = inferred_partial}
-      val operator = type_operator_of qty
-      fun other ({qty = old, ...} : quotient_info) =
-        not (same_type_operator (type_operator_of old) operator)
     in
-      quotient_registry () := normalized ::
-        List.filter other (!(quotient_registry ()))
+      set_class (type_operator_of qty) (Quotient normalized)
     end
 
   fun register_quotient registration =
@@ -3367,12 +3368,11 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
              (Type.type_vars ty)) (Type.type_vars rty) then ()
         else raise err "register_typedef"
           "representation type has unbound type variables"
-      val _ =
-        if Option.isSome (codatatype_for (type_operator_of ty)) orelse
-           has_type_operator (type_operator_of o #qty) (quotient_registry ())
-             ty orelse
-           has_type_operator #tyop (frac_registry ()) ty orelse
-           raw_free_datatype ty then
+      fun replaceable (Typedef _) = true
+        | replaceable _ = false
+      val _ = claim_operator "register_typedef" replaceable
+        (type_operator_of ty)
+      val _ = if raw_free_datatype ty then
           raise err "register_typedef"
             "type operator already has an incompatible classification"
         else ()
@@ -3395,12 +3395,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val normalized : typedef_info =
         {ty = ty, rty = rty, abs = abs, rep = rep, pred = pred,
          inverse_axioms = inverse_axioms, univ = univ}
-      val operator = type_operator_of ty
-      fun other ({ty = old, ...} : typedef_info) =
-        not (same_type_operator (type_operator_of old) operator)
     in
-      typedef_registry () := normalized ::
-        List.filter other (!(typedef_registry ()))
+      set_class (type_operator_of ty) (Typedef normalized)
     end
 
   fun register_typedef registration =
@@ -3423,13 +3419,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val function = "register_frac_type"
       val ty = Type.mk_thy_type
         {Thy = #Thy tyop, Tyop = #Tyop tyop, Args = []}
-      (* Quotient and typedef entries can have been harvested merely by
-         looking at a goal before Frac registration or after session-level
-         customization.  They are the representation we are replacing, not
-         an incompatible user choice. *)
-      val _ = if is_interpreted_type ty orelse
-                     raw_free_datatype ty orelse
-                     Option.isSome (codatatype_for tyop) then
+      fun replaceable (Frac _) = true
+        | replaceable (Quotient _) = true
+        | replaceable (Typedef _) = true
+        | replaceable _ = false
+      val _ = claim_operator function replaceable tyop
+      val _ = if is_interpreted_type ty orelse raw_free_datatype ty then
           raise err function
             "type operator already has an incompatible classification"
         else ()
@@ -3441,28 +3436,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             unique rest
       val _ = if unique ersatz then () else
         raise err function "ersatz originals must be distinct"
-
-      fun other_frac ({tyop = old, ...} : frac_info) =
-        not (same_type_operator old tyop)
-      fun other_quotient ({qty, ...} : quotient_info) =
-        not (same_type_operator (type_operator_of qty) tyop)
-      fun other_typedef ({ty = old, ...} : typedef_info) =
-        not (same_type_operator (type_operator_of old) tyop)
-      val new_fracs = registration ::
-        List.filter other_frac (!(frac_registry ()))
-      val new_quotients = List.filter other_quotient (!(quotient_registry ()))
-      val new_typedefs = List.filter other_typedef (!(typedef_registry ()))
-      val key = operator_key tyop
-      val new_quotient_misses =
-        KNametab.delete_safe key (!(quotient_harvest_misses ()))
-      val new_typedef_misses =
-        KNametab.delete_safe key (!(typedef_harvest_misses ()))
     in
-      quotient_registry () := new_quotients;
-      typedef_registry () := new_typedefs;
-      quotient_harvest_misses () := new_quotient_misses;
-      typedef_harvest_misses () := new_typedef_misses;
-      frac_registry () := new_fracs
+      set_class tyop (Frac registration)
     end
 
   fun register_frac_type registration =
@@ -4232,15 +4207,16 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   val is_raw_free_datatype = raw_free_datatype
 
   fun is_codatatype ty =
-    Option.isSome (codatatype_for (type_operator_of ty))
-    handle HOL_ERR _ => false
+    case class_of_type ty of
+        SOME (Codatatype _) => true
+      | _ => false
 
   fun quotient_for_type ty =
     let
-      val operator = type_operator_of ty
-      val info = List.find (fn {qty, ...} =>
-        same_type_operator (type_operator_of qty) operator)
-        (!(quotient_registry ()))
+      val info =
+        case class_of_type ty of
+            SOME (Quotient info) => SOME info
+          | _ => NONE
     in
       case info of
           NONE => NONE
@@ -4257,23 +4233,21 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun is_quot_type ty = Option.isSome (quotient_for_type ty)
 
   fun synthetic_frac_typedef ty =
-    if not (registered_frac_type ty) then NONE
-    else
-      let
-        val abs = retype_frac_constant
-          (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
-          (Type.-->(frac_pair_type, ty))
-        val rep = retype_frac_constant
-          (Term.prim_mk_const {Thy = "frac", Name = "rep_frac"})
-          (Type.-->(ty, frac_pair_type))
-        val pred = Term.prim_mk_const {Thy = "refute", Name = "Frac"}
-      in
-        (* As in Nitpick's synthetic frac typedef, constructor/selector
-           axioms provide the bijection.  Inverse theorems belong only to
-           genuine HOL typedefs and would duplicate that encoding here. *)
-        SOME {ty = ty, rty = frac_pair_type, abs = abs, rep = rep,
-          pred = pred, inverse_axioms = [], univ = false}
-      end
+    let
+      val abs = retype_frac_constant
+        (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
+        (Type.-->(frac_pair_type, ty))
+      val rep = retype_frac_constant
+        (Term.prim_mk_const {Thy = "frac", Name = "rep_frac"})
+        (Type.-->(ty, frac_pair_type))
+      val pred = Term.prim_mk_const {Thy = "refute", Name = "Frac"}
+    in
+      (* As in Nitpick's synthetic frac typedef, constructor/selector
+         axioms provide the bijection.  Inverse theorems belong only to
+         genuine HOL typedefs and would duplicate that encoding here. *)
+      {ty = ty, rty = frac_pair_type, abs = abs, rep = rep,
+       pred = pred, inverse_axioms = [], univ = false}
+    end
 
   (* Retypes one of the fmap route's own constants (abs_fmap'/FLOOKUP/
      is_fmap') to a specific key/range instance.  Unlike frac's
@@ -4383,25 +4357,17 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     end
 
   fun synthetic_fmap_typedef ty =
-    case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "finite_map", Tyop = "fmap", Args = [_, _]} =>
-          SOME (instantiate_typedef generic_fmap_typedef ty)
-      | _ => NONE
+    instantiate_typedef generic_fmap_typedef ty
 
+  (* Frac and fmap answer with a synthetic typedef that has no
+     TYPE_DEFINITION theorem behind it. *)
   fun typedef_for_type ty =
-    let
-      val operator = type_operator_of ty
-      val info = List.find (fn ({ty = registered, ...} : typedef_info) =>
-        same_type_operator (type_operator_of registered) operator)
-        (!(typedef_registry ()))
-    in
-      case info of
-          NONE =>
-            (case synthetic_frac_typedef ty of
-                 SOME t => SOME t
-               | NONE => synthetic_fmap_typedef ty)
-        | SOME registered => SOME (instantiate_typedef registered ty)
-    end handle HOL_ERR _ => NONE
+    (case class_of_type ty of
+         SOME (Typedef registered) => SOME (instantiate_typedef registered ty)
+       | SOME (Frac _) => SOME (synthetic_frac_typedef ty)
+       | SOME Fmap => SOME (synthetic_fmap_typedef ty)
+       | _ => NONE)
+    handle HOL_ERR _ => NONE
 
   fun is_typedef ty = Option.isSome (typedef_for_type ty)
 
@@ -4473,12 +4439,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       | NONE => raise err "quotient_relation_for_type"
           "unregistered quotient type"
 
-  fun is_frac_type ty = has_type_operator #tyop (frac_registry ()) ty
-
   fun is_data_type ty =
     not (is_interpreted_type ty) andalso
-    (is_codatatype ty orelse is_raw_free_datatype ty orelse
-     is_quot_type ty orelse is_typedef ty orelse is_frac_type ty)
+    (Option.isSome (class_of_type ty) orelse is_raw_free_datatype ty)
 
   fun harvest_quotient_staged ty =
     let
@@ -4495,20 +4458,19 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                (#Tyop operator ^ "_QUOTIENT") of
             SOME theorem => quotient_candidate operator theorem
           | NONE => false
-      val incompatible =
-        is_interpreted_type ty orelse is_codatatype ty orelse
-        is_typedef ty orelse is_frac_type ty orelse
-        is_raw_free_datatype ty
     in
-      if is_quot_type ty then true
-      else if incompatible orelse
-              cached_harvest_miss operator fingerprint
-                (!(quotient_harvest_misses ())) then false
-      else if fast () orelse scan theories then true
-      else
-        (remember_harvest_miss (quotient_harvest_misses ()) operator
-           fingerprint;
-         false)
+      case class_of_operator operator of
+          SOME (Quotient _) => true
+        | SOME _ => false
+        | NONE =>
+            if is_interpreted_type ty orelse is_raw_free_datatype ty orelse
+               cached_harvest_miss operator fingerprint
+                 (!(quotient_harvest_misses ())) then false
+            else if fast () orelse scan theories then true
+            else
+              (remember_harvest_miss (quotient_harvest_misses ()) operator
+                 fingerprint;
+               false)
     end
     handle HOL_ERR _ => false
 
@@ -4530,21 +4492,22 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                 (absrep_pairs theorems)
               orelse scan rest
             end
-      val incompatible =
-        is_interpreted_type ty orelse is_codatatype ty orelse
-        is_quot_type ty orelse is_frac_type ty orelse
-        is_raw_free_datatype ty
-      val has_definition = Option.isSome (raw_typedef_data_generic ty)
     in
-      if is_typedef ty then true
-      else if incompatible orelse not has_definition orelse
-              cached_harvest_miss operator fingerprint
-                (!(typedef_harvest_misses ())) then false
-      else if scan theories then true
-      else
-        (remember_harvest_miss (typedef_harvest_misses ()) operator
-           fingerprint;
-         false)
+      (* Only a genuine typedef counts: Frac and fmap have no
+         TYPE_DEFINITION theorem. *)
+      case class_of_operator operator of
+          SOME (Typedef _) => true
+        | SOME _ => false
+        | NONE =>
+            if is_interpreted_type ty orelse is_raw_free_datatype ty orelse
+               not (Option.isSome (raw_typedef_data_generic ty)) orelse
+               cached_harvest_miss operator fingerprint
+                 (!(typedef_harvest_misses ())) then false
+            else if scan theories then true
+            else
+              (remember_harvest_miss (typedef_harvest_misses ()) operator
+                 fingerprint;
+               false)
     end
     handle HOL_ERR _ => false
 
@@ -4850,8 +4813,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       | NONE => raise err "mate_of_rep_fun" "unregistered Rep function"
 
   fun is_classified_type ty =
-    is_interpreted_type ty orelse is_codatatype ty orelse
-    is_quot_type ty orelse is_typedef ty orelse is_raw_free_datatype ty
+    is_interpreted_type ty orelse Option.isSome (class_of_type ty) orelse
+    is_raw_free_datatype ty
 
   fun unregistered_typedef_type constant =
     let
@@ -5048,7 +5011,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     let
       val ordinary = List.foldl append_new_ersatz
         (!(ersatz_registry ())) builtin_ersatz
-      val frac = List.concat (map #ersatz (!(frac_registry ())))
+      fun frac_ersatz (_, Frac {ersatz, ...}) = ersatz
+        | frac_ersatz _ = []
+      val frac = List.concat
+        (map frac_ersatz (KNametab.dest (!(class_registry ()))))
     in
       (* Upstream prepends active frac mappings to the ordinary table.  Keep
          collisions rather than deduplicating them: replacement_for selects
