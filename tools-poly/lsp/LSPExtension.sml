@@ -299,6 +299,7 @@ type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
 val checkDeferred : (check_scope -> unit) ref = ref (fn _ => ())
 val poolBusy : (unit -> bool) ref = ref (fn () => false)
 val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
+val proofGeneration : int ref = ref 0
 val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
 val cancelAllProofs : (unit -> unit) ref = ref (fn () => ())
 val proofStateChanged : (proof_state list -> unit) ref = ref (fn _ => ())

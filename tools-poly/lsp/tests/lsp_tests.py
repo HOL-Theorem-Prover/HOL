@@ -53,12 +53,12 @@ CURRENT_TEST = "<none>"
 
 
 class Client:
-    def __init__(self, cwd, args=None):
+    def __init__(self, cwd, args=None, env=None):
         self.spawn_started = time.time()
         self.p = subprocess.Popen(
             [HOL_BIN, "lsp", *(args if args is not None else LSP_ARGS)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            cwd=cwd)
+            cwd=cwd, env=None if env is None else {**os.environ, **env})
         self.buf = bytearray()
         self.buf_pos = 0
         self.msgs = []
@@ -5024,16 +5024,28 @@ def test_hover_on_an_overloaded_name():
 # ------------------------------------------------------------------
 # IDE providers: documentSymbol, workspace/symbol, completion
 # ------------------------------------------------------------------
-def _request(c, rid, method, params, timeout=20):
-    """Send a request and wait for its reply.  `_hover_at` and
-    `_send_goalstate` are both specialisations of this."""
+def _send_request(c, rid, method, params):
+    """Send a request without waiting.  Split out of `_request` for the
+    tests that have to do something else before the reply lands."""
     c.send({"jsonrpc": "2.0", "id": rid, "method": method, "params": params})
+
+
+def _await_reply(c, rid, timeout=20):
+    """Wait for the reply to request `rid`.  Scans under the lock rather
+    than copying the message list, which matters on the large fixtures."""
     def got(cl):
         with cl.msgs_lock:
             for m in cl.msgs:
                 if m.get("id") == rid: return m
         return None
     return c.wait_until(got, timeout)
+
+
+def _request(c, rid, method, params, timeout=20):
+    """Send a request and wait for its reply.  `_hover_at` and
+    `_send_goalstate` are both specialisations of this."""
+    _send_request(c, rid, method, params)
+    return _await_reply(c, rid, timeout)
 
 
 def _init_hierarchical(c, root):
@@ -7661,7 +7673,233 @@ def test_goalState_failing_branch_still_reports_at_its_end():
         c.close()
 
 
+# A `new_recursive_definition` is the probe for a Context that has not
+# been rewound: it generalises over the function it is defining, so a
+# `FOO` that is already a constant makes `list_mk_exists` fail with
+# `Term.list_mk_binder: expected list of variables` -- the error the
+# eglot log opened with.  A plain `new_definition` does not: HOL lets
+# that one through.
+_REDEF_PROBE = (
+    "val FOO = Prim_rec.new_recursive_definition\n"
+    "  {name = \"FOO\", rec_axiom = prim_recTheory.num_Axiom,\n"
+    "   def = \u201c(FOO 0 = 1) /\\ (FOO (SUC n) = SUC n * FOO n)\u201d};\n")
+
+
+def test_walk_and_compile_do_not_share_the_context():
+    """A goal-state walk and a compile must not rewind the process at
+    the same time.
+
+    The walk captures the state it found, rewinds to the snapshot
+    before the theorem it is walking, and puts the captured state back
+    when it is done.  A compile does its own rewind at the start of the
+    pass.  Nothing used to keep the two apart -- the walk asked whether
+    a compile was in flight and went ahead if not, which a compile
+    starting a moment later made false -- so the walk's closing restore
+    landed after the compile's and handed it the *previous* pass's
+    end-of-file Context.  The compile then re-elaborated the file's
+    tail against a state that already held everything the tail
+    declares.
+
+    `HOL_LSP_WALK_HOLD_MS` stretches the walk so the two overlap
+    without depending on how long a real walk takes; the failure it
+    used to produce is the redefinition probe above raising, plus an
+    SML cascade below it."""
+    d = tempfile.mkdtemp(prefix="lsp_walkrace_")
+    try:
+        # Long enough that the compile is still elaborating when the
+        # walk lets go, and the probe sits at the end of it.
+        filler = "\n".join(
+            f"Theorem f{i}:\n  !a b:num. a + b + {i} = b + a + {i}\n"
+            f"Proof\n  rpt strip_tac >> simp[]\nQED\n" for i in range(500))
+        src = ("Theory walkracescr\nAncestors arithmetic prim_rec\n\n"
+               "Theorem t1:\n  !m:num. 0 <= m\nProof\n  simp[]\nQED\n\n"
+               + filler + "\n" + _REDEF_PROBE)
+        uri = f"file://{d}/walkracescrScript.sml"
+        c = Client(d, args=["--dbg"], env={"HOL_LSP_WALK_HOLD_MS": "1500"})
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 600), "c1")
+            assert_eq(_diag_count(c, uri), [], "first compile is clean")
+
+            idx = c.total_msgs()
+            # The walk goes first, so it is holding the state before
+            # anything schedules a compile -- the overlap is arranged
+            # rather than raced for.
+            line, ch = _line_col_at(src, src.index("  simp[]") + 3)
+            t0 = time.time()
+            _send_request(c, 800, "$/hol/goalState",
+                          {"textDocument": {"uri": uri},
+                           "position": {"line": line, "character": ch}})
+            # A statement edit, so the whole tail re-elaborates and the
+            # probe is actually re-run.  Its compile starts 300 ms from
+            # now, well inside the walk's hold.
+            at = src.index("  !m:num. 0 <= m") + len("  !m:num. 0 <= m")
+            _did_change_incr(c, uri, src, at, at, " /\\ T", 2)
+            reply = _await_reply(c, 800, 60)
+            walk_dt = time.time() - t0
+            # Positive controls: a walk that was refused answers at
+            # once, and a compile that had already finished never
+            # wanted the state -- either way a test that set no
+            # overlap up would read exactly like a clean one.  These
+            # are also what keeps the fixture honest: shrink the
+            # filler too far and the second one fires.
+            assert_true(reply is not None and walk_dt > 1.0,
+                        f"the walk ran and was held ({walk_dt:.2f}s)")
+            with c.msgs_lock:
+                done = any(m.get("method") == "$/compileCompleted"
+                           for m in c.msgs[idx:])
+            assert_true(not done,
+                        "the compile was still running when the walk "
+                        "let go")
+            assert_true(c.wait_for_method("$/compileCompleted", 600, idx),
+                        "c2")
+            assert_eq(_diag_count(c, uri), [],
+                      "no diagnostics from a compile that overlapped a walk")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_undo_to_compiled_text_keeps_the_tail():
+    """Typing into a proof body and undoing it leaves the buffer on the
+    text the last pass compiled -- but the edits still left a mark, so a
+    compile runs.  It must stay on the fast path and re-elaborate the
+    one declaration, not the whole file below it.
+
+    `tacticOnlyEdit` used to answer NONE for "the texts are equal",
+    which took the fast path away for the one edit that changes
+    nothing at all."""
+    d = tempfile.mkdtemp(prefix="lsp_undo_")
+    try:
+        filler = "\n".join(f"val x{i} = {i}" for i in range(40))
+        src = ("Theory undoscr\nAncestors arithmetic prim_rec\n\n"
+               "Theorem t1:\n  !m:num. 0 <= m\nProof\n  simp[]\nQED\n\n"
+               + filler + "\n\n" + _REDEF_PROBE)
+        uri = f"file://{d}/undoscrScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 300), "c1")
+            assert_eq(_diag_count(c, uri), [], "first compile is clean")
+
+            # Typed and undone inside the debounce, so the pass that
+            # would have recorded the typed text never runs -- which is
+            # what leaves the buffer sitting on the last compiled text.
+            at = src.index("  simp[]") + len("  simp[]")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, " >> ALL_TAC", 2)
+            typed = src[:at] + " >> ALL_TAC" + src[at:]
+            _did_change_incr(c, uri, typed, at, at + len(" >> ALL_TAC"), "", 3)
+            assert_true(c.wait_for_method("$/compileCompleted", 300, idx),
+                        "c2")
+            scopes = _scope_of(c, idx)
+            assert_eq(len(scopes), 1,
+                      f"one compile after the undo ({scopes!r})")
+            assert_eq((scopes[0]["tacticOnly"], scopes[0]["reuseTail"]),
+                      (True, True),
+                      f"undo stays on the fast path ({scopes[0]!r})")
+            assert_eq(scopes[0]["delta"], 0,
+                      f"zero-width edit ({scopes[0]!r})")
+            assert_eq(_diag_count(c, uri), [], "no diagnostics after the undo")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_interrupted_passes_do_not_leave_stale_proofs():
+    """Typing junk into a proof body, letting a pass complete on it, then
+    undoing it in bursts must leave every proof proved again.
+
+    Three things conspire.  While the junk is in the file the
+    `Proof … QED` does not parse, so each pass widens its invalidation
+    from "this declaration's proof" to "every proof below the edit" and
+    takes the lot.  Those passes are abandoned by the next keystroke,
+    so they update neither `compiledText` nor `reusableFrom` and leave
+    no mark the next pass reads.  The pass that finally sees the
+    restored text is then a tactic-only edit like any other, reuses the
+    tail -- and keeps proofs that are no longer there, while `check`
+    forks the items the abandoned passes left in the deferred queue and
+    reports their verdicts against this buffer.
+
+    What that looked like was a proof failing on a `dest_comb` for a
+    term the file does not contain, on a buffer identical to the one
+    that had just proved it."""
+    # Enough tail below the edit that a burst's pass is still
+    # elaborating when the next burst abandons it; at ~15 the passes
+    # all complete and the gesture never produces an abandoned one.
+    n = 120
+    src = ["Theory stale_undo\n", "Ancestors arithmetic\n\n",
+           "Theorem base_thm:\n  !m:num. 0 <= m\nProof\n"
+           "  rpt strip_tac\n  THEN simp[]\nQED\n\n"]
+    # consumers that take the edited theorem as an SML value, which is
+    # what makes a stale item raise rather than merely re-prove
+    for i in range(n):
+        src.append(f"Theorem uses{i}:\n  0 <= {i}\nProof\n"
+                   f"  ACCEPT_TAC (SPEC (“{i}:num”) base_thm)\nQED\n\n")
+    src = "".join(src)
+    uri = "file:///tmp/stale_undo_probe.sml"
+    junk = " ;lj ;laksjdf;asklj"
+    at = src.index("  rpt strip_tac") + len("  rpt strip_tac")
+
+    def tally(c):
+        return {k: v[0] for k, v in _proof_states(c, uri).items()}
+    def all_proved(c):
+        t = tally(c)
+        return len(t) == n + 1 and all(v == "proved" for v in t.values())
+
+    c = Client("/tmp", args=["--dbg"])
+    try:
+        _init(c, "/tmp", timeout=60)
+        _request(c, 987, "$/setConfig", {"checkProofs": True})
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 300), "c1")
+        # Positive control: without this the probe cannot fail, since a
+        # suite run has proof checking off by default.
+        assert_true(c.wait_until(all_proved, 240),
+                    f"every proof proved before the edit ({tally(c)})")
+
+        idx = c.total_msgs()
+        _did_change_incr(c, uri, src, at, at, junk, 2)
+        junked = src[:at] + junk + src[at:]
+        assert_true(c.wait_for_method("$/compileCompleted", 300, idx),
+                    "a pass completes on the junk text")
+
+        # Undo in bursts with a gap wider than the 300 ms debounce, so
+        # each burst starts a pass the next one abandons.  Deleting at
+        # a steady sub-debounce rate never starts a pass at all, and
+        # the test is then inert against the unfixed server.
+        cur = junked
+        for k in range(len(junk)):
+            hi = at + len(junk) - k
+            _did_change_incr(c, uri, cur, hi - 1, hi, "", 3 + k)
+            cur = cur[:hi - 1] + cur[hi:]
+            if k % 3 == 2 or k == len(junk) - 1:
+                time.sleep(0.55)
+        assert_eq(cur, src, "the undo restores the original text")
+
+        # The pass that re-establishes the edited declaration is the
+        # last to report, so a tally taken the moment nothing says
+        # `checking` can still be a pass short.
+        c.wait_until(all_proved, 120)
+        t = tally(c)
+        assert_eq({k: v for k, v in t.items() if v != "proved"}, {},
+                  "every proof proved again after the undo")
+        assert_eq(_diag_count(c, uri), [], "no diagnostics after the undo")
+    finally:
+        c.close()
+
+
 TESTS = [
+    ("interrupted_passes_do_not_leave_stale_proofs",
+                          test_interrupted_passes_do_not_leave_stale_proofs),
+    ("walk_and_compile_do_not_share_the_context",
+                            test_walk_and_compile_do_not_share_the_context),
+    ("undo_to_compiled_text_keeps_the_tail",
+                                 test_undo_to_compiled_text_keeps_the_tail),
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
     ("small_clean_file",             test_small_clean_file),

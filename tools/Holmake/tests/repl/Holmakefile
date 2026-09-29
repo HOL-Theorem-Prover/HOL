@@ -1,7 +1,10 @@
 ifdef POLY
 CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
 
-HOL = $(protect $(HOLDIR)/bin/hol) --bare --zero --noconfig
+# PLAINHOL is how a Holmakefile rule drives the REPL; HOL adds the
+# zero-terminated editor protocol on top.
+PLAINHOL = $(protect $(HOLDIR)/bin/hol) --bare --noconfig
+HOL = $(PLAINHOL) --zero
 INCLUDES = $(HOLDIR)/tools/cmp
 
 all: $(DEFAULT_TARGETS)
@@ -12,7 +15,8 @@ all: $(DEFAULT_TARGETS)
 # CMP = $(protect $(HOLDIR)/tools/cmp/cmp.exe)
 CMP = diff -a
 
-DEPS = test1.out test2.out test3.out test4.out test5.out test6.out
+DEPS = test1.out test2.out test3.out test4.out test5.out test6.out \
+       test7.out test8.out
 
 all: $(DEPS)
 
@@ -42,6 +46,23 @@ test6.out: test6.input test6.expected
 	$(HOL) < $< 2>&1 | tail -n +8 > $@
 	$(CMP) $@ $(patsubst %.input,%.expected,$<)
 
+# A redirected script is a build step, and the REPL used to report
+# success however badly it went: a static error drained the rest of the
+# stream, so nothing after it ran, and the process still exited 0.  Now
+# a batch run stops at the static error and says so in its exit status.
+test7.out: test7.input
+	/bin/rm -f test7.sentinel
+	! $(PLAINHOL) < $< > $@ 2>&1
+	[ ! -e test7.sentinel ]
+
+# An uncaught exception is the other side of that line: the run does
+# reach the end of its script, so it still succeeds.  HOL scripts raise
+# on purpose often enough that it has to.
+test8.out: test8.input
+	/bin/rm -f test8.sentinel
+	$(PLAINHOL) < $< > $@ 2>&1
+	[ -e test8.sentinel ]
+
 endif
 
-EXTRA_CLEANS = $(wildcard *.out)
+EXTRA_CLEANS = $(wildcard *.out) $(wildcard *.sentinel)

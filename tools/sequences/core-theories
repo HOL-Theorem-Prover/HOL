@@ -5,5 +5,4 @@
 [poly]src/AI/proof_search
 [poly]src/AI/machine_learning
 [poly]src/tactictoe/src
-[poly]!!src/tactictoe/selftest
 [poly]src/holyhammer

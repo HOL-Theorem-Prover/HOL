@@ -839,7 +839,10 @@ in
         diag "Starting REPL";
         PolyML.print_depth 100;
         HOL_REPL.sigint_handler();
-        HOL_REPL.topLevel {diag = diag, zeroTerm = z_repl}
+        if HOL_REPL.topLevel {diag = diag, zeroTerm = z_repl} then
+          (diag "Script stopped short of its end; exiting failure";
+           OS.Process.exit OS.Process.failure)
+        else ()
       end
     | RUN =>
       let

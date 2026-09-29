@@ -30,10 +30,22 @@ sig
   (* string/path manipulations *)
   val normPath : string -> string
   val fullPath : string list -> string
-  val rel_to_holdir : string -> string
-    (* Strip a leading `Systeml.HOLDIR` from `d`.  `HOLDIR` itself
-       yields `""`; a path not under `HOLDIR` is returned unchanged.
-       Same convention as `thy_log_key` in `src/postkernel/Theory.sml`. *)
+  val rel_to_root : {root : string option} -> string -> string
+    (* Key a build-cost entry: make `d` relative to the governing
+       project root -- the directory holding `holproject.toml`, or
+       `Systeml.HOLDIR` when there is none.
+
+         under the root     ->  root-relative, `basis/basis`
+         else under HOLDIR  ->  `$(HOLDIR)/`-prefixed
+         else               ->  unchanged (absolute)
+
+       With the root at HOLDIR, as it is throughout HOL's own tree, the
+       first case covers everything in-tree and the keys are exactly
+       what `thy_log_key` in `src/postkernel/Theory.sml` writes, so
+       caches predating this convention stay valid.  The prefixed case
+       keeps a foreign project's `examples/...` from colliding with
+       HOL's, and is spelled the way `holpathdb.subst_pathvars` and
+       `external_includes` already read it. *)
   val spacify : string list -> string
   val nspaces : (string -> unit) -> int -> unit
   val collapse_bslash_lines : string -> string

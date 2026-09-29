@@ -471,6 +471,15 @@ type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
 val checkDeferred: (check_scope -> unit) ref
 val poolBusy: (unit -> bool) ref
 val cancelProofsAtOrAfter: (int -> unit) ref
+(* Bumped by the two cancellations that take proofs away wholesale --
+   `cancelProofsAtOrAfter` and `cancelAllProofs`, not `cancelProofAt`.
+   A pass that reuses the tail of an earlier one keeps that pass's
+   proofs rather than re-enqueueing them, which is only sound while
+   they are still there: an abandoned pass in between can have
+   cancelled the lot, and an abandoned pass leaves no other trace for
+   the next one to read.  Compare the value at the start of a pass
+   with the value the last completed pass recorded. *)
+val proofGeneration: int ref
 (* Give up on just this declaration's proofs, for an edit inside a
    `Proof ... QED` body: a tactic contributes nothing to the elaboration
    context, so every later declaration's obligation is unchanged and the

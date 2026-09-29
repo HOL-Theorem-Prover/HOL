@@ -1,0 +1,28 @@
+.PHONY: all phony_ok
+
+all: phony_ok multi ignored liar
+
+# Each rule's command text differs from every other's on purpose: two
+# rules in a directory sharing one command are how a Holmakefile says
+# that the one command builds both targets, and that is not what any of
+# these are testing.
+
+# A phony target names no file, so there is nothing to have failed to
+# create.
+phony_ok:
+	@echo phony_ok > /dev/null
+
+# A rule's commands become a chain of nodes sharing the one target;
+# only the last of them is expected to have produced it.
+multi:
+	@echo step one > /dev/null
+	@echo built > $@
+
+# A `-'-prefixed command is one whose failure the Holmakefile has
+# already said to tolerate, so its output is not promised either.
+ignored:
+	-false
+
+# The case the check exists for: exits 0, creates nothing.
+liar:
+	@echo liar > /dev/null

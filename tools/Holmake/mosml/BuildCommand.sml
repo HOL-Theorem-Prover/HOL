@@ -44,6 +44,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val quiet_flag = #quiet (#core optv)
   val interactive_flag = #interactive (#core optv)
   val no_overlay = #no_overlay (#core optv)
+  val strict_outputs = #strict_outputs (#core optv)
   val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   val MOSMLDIR = case #mosmldir optv of NONE => MOSMLDIR0 | SOME s => s
   val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
@@ -202,6 +203,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                    outs = outs,
                                    keep_going = keep_going,
                                    quiet = quiet_flag,
+                                   strict_outputs = strict_outputs,
                                    system = Systeml.system_ps,
                                    hmenv = hmenv}
 in

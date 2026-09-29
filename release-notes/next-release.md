@@ -52,6 +52,36 @@ New features
     don't compile every HOL library and so can't successfully
     evaluate every polyscripter `>>` directive.
 
+-   A project can now commit a *seed* of build times for `Holmake`'s
+    parallel scheduler, so that a fresh checkout schedules well
+    before it has measured anything itself.
+    `Holmake` picks the ready job with the largest
+    sum-of-costs-to-a-sink; the costs come from
+    `.hol/build-logs/target-times`, which is per-checkout and
+    gitignored, so a clone previously scheduled blind through the
+    longest build it would ever run.
+    A seed at `build-times` beside `holproject.toml` (or wherever a
+    new `build_times` key in that file points) fills the gap.
+    It is read-only and any locally measured value overrides it, so
+    it matters only until a target has been built once locally.
+    Generate one with `developers/gen-build-times`, which refuses to
+    write a seed whose coverage it cannot verify against a
+    dependency graph: a seed that omits an expensive target
+    schedules *worse* than no seed at all.
+
+    Cost keys are now relative to the enclosing project root, with
+    HOL's own targets spelled `$(HOLDIR)/…`, which is what lets a
+    project outside `HOLDIR` ship a seed at all — such entries were
+    previously keyed by absolute path and so were meaningless in
+    anyone else's checkout.
+    `Holmake` also now records the time for *every* job it runs,
+    theories included, rather than relying on `bin/build` to fold in
+    what `Theory.sml` logged; a plain `Holmake` in a directory
+    therefore contributes cost data where before it contributed
+    none.
+    Existing caches stay valid for HOL itself; entries for other
+    projects are simply re-measured on the next build.
+
 -   `Holmake` has a new flag `--dirs` that re-interprets the
     positional command-line arguments as *root directories* to
     operate on, rather than build targets.
@@ -193,8 +223,31 @@ New features
     contradiction, and is an abbreviation for
     `SPOSE_NOT_THEN STRIP_ASSUME_TAC`.
 
+-   `Holmake --strict-outputs` fails a rule whose command exits
+    successfully without creating the target it was supposed to create.
+    Without the flag such a rule draws a warning instead, which is the
+    default for now.
+    Exempt are phony targets, which name no file; commands whose errors
+    the Holmakefile has already said to ignore with a leading `-`; and
+    the earlier commands of a multi-command rule, only the last of which
+    is expected to have produced the target.
+
 Bugs fixed
 ----------
+
+-   `bin/hol` reading a script on its standard input — the shape a
+    Holmakefile rule uses when it writes `$(HOLDIR)/bin/hol < build.ML`
+    — reported success however badly the script went.
+    The REPL recovers from a compile error by discarding buffered input,
+    which is what someone at a terminal wants; but on a redirected file
+    everything as far as end-of-file is buffered, so the run stopped at
+    the error and still exited 0, and a rule driving HOL this way could
+    produce nothing at all and be recorded as having built it.
+    Such a run now exits with failure.
+
+    An uncaught exception is deliberately not treated the same way: the
+    declarations after it still run and the run still succeeds, because
+    the script did reach its end.
 
 -   `Holmake -r` now overrides `--no_prereqs`, as the documentation
     has always said it does.  Previously the two fought: `-r` seeded

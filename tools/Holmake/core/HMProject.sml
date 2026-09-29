@@ -18,13 +18,14 @@ type config = {
 (* Every key any reader of holproject.toml consults.  `name` and
    `holpath` are read here and by holpathdb's registration walk;
    `h4pedant` is read by tools/h4pedant, which owns that block's
-   schema (so we never descend into it); the rest are `load`'s own.
+   schema (so we never descend into it); `build_times` likewise by
+   `build_times_file` below; the rest are `load`'s own.
    A key outside this set is a typo: TOML lookups answer NONE for an
    absent key and for a misspelled one alike, so `load` collects the
    strangers into `unknown_keys` rather than discarding them. *)
 val recognised_keys =
     ["name", "holpath", "exclude", "external_includes", "holmake",
-     "projects", "h4pedant"]
+     "projects", "h4pedant", "build_times"]
 
 (* holproject.local.toml is the per-developer override file; only
    [projects.<id>] means anything in it. *)
@@ -384,6 +385,33 @@ fun load { root } =
         holmake = holmake,
         dead_keys = dead_keys,
         unknown_keys = unknown_keys }
+    end
+
+(* ----------------------------------------------------------------------
+   build_times: where a project keeps its committed cost seed.
+   ---------------------------------------------------------------------- *)
+fun default_times_file root = abs_relative_to root "build-times"
+
+(* One key out of one file, in the shape of `excludes_declared_at'
+   above: the full `load' would also parse holproject.local.toml and
+   every declared external, all to reach one string.
+
+   A malformed or absent holproject.toml falls back to the default
+   name rather than raising -- `load' reports those to the user
+   already, and a seed lookup is no place to stop a build.  A path
+   that does not exist simply contributes no entries. *)
+fun build_times_file root =
+    (case lookup_string (#2 (read_external_decls root)) ["build_times"] of
+         SOME p => abs_relative_to root (expand_holdir p)
+       | NONE => default_times_file root)
+    handle _ => default_times_file root
+
+fun build_times_files root =
+    let
+      val h = Systeml.HOLDIR
+      val r = Option.getOpt (root, h)
+    in
+      build_times_file h :: (if r = h then [] else [build_times_file r])
     end
 
 (* ----------------------------------------------------------------------

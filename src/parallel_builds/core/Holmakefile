@@ -111,6 +111,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
 
 ifdef POLY
 EX2DIRS += separationLogic/src/holfoot/poly logic/temporal_deep/src/examples
+SRCTESTDIRS += tactictoe/selftest
 
 ifeq ($(KERNELID),stdknl)
 EX2DIRS += bootstrap

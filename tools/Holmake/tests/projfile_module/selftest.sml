@@ -533,11 +533,63 @@ val _ =
     val rk = HMProject.recognised_keys_for
   in
     if rk "projekt" = ["name", "holpath", "exclude", "external_includes",
-                       "holmake", "projects", "h4pedant"] andalso
+                       "holmake", "projects", "h4pedant",
+                       "build_times"] andalso
        rk "[projects.x].paths" = ["path", "exclude"] andalso
        rk "bogus (local)" = ["projects"]
     then OK ()
     else die "recognised_keys_for answered with the wrong set"
   end
+
+(* build_times: where a project keeps its committed cost seed.  Read
+   whatever `holmake' is set to -- HOL's own root sets it false and
+   still ships a seed -- and resolved relative to the project root. *)
+val bt_dir = scratch ++ "buildtimes"
+val () = mkdirs bt_dir
+val () = write (bt_dir ++ "holproject.toml") "name = \"bt\"\n"
+
+val _ = tprint "build_times defaults to <root>/build-times"
+val _ =
+  if HMProject.build_times_file bt_dir = (bt_dir ++ "build-times") then OK ()
+  else die ("got " ^ HMProject.build_times_file bt_dir)
+
+val bt2_dir = scratch ++ "buildtimes2"
+val () = mkdirs bt2_dir
+val () = write (bt2_dir ++ "holproject.toml")
+  "holmake = false\nbuild_times = \"developers/times\"\n"
+
+val _ = tprint "build_times is honoured under holmake = false"
+val _ =
+  if HMProject.build_times_file bt2_dir =
+     (bt2_dir ++ "developers" ++ "times")
+  then OK () else die ("got " ^ HMProject.build_times_file bt2_dir)
+
+val bt3_dir = scratch ++ "buildtimes3"
+val () = mkdirs bt3_dir
+val () = write (bt3_dir ++ "holproject.toml")
+  "build_times = \"$(HOLDIR)/developers/times\"\n"
+
+val _ = tprint "build_times expands $(HOLDIR), as external_includes does"
+val _ =
+  if HMProject.build_times_file bt3_dir =
+     (Systeml.HOLDIR ++ "developers" ++ "times")
+  then OK () else die ("got " ^ HMProject.build_times_file bt3_dir)
+
+val _ = tprint "a project outside HOLDIR also consults HOL's seed"
+val _ =
+  let val fs = HMProject.build_times_files (SOME bt_dir)
+  in
+    if length fs = 2 andalso
+       List.exists (fn f => f = HMProject.build_times_file Systeml.HOLDIR) fs
+       andalso List.exists (fn f => f = (bt_dir ++ "build-times")) fs
+    then OK ()
+    else die ("got [" ^ String.concatWith ", " fs ^ "]")
+  end
+
+val _ = tprint "a HOLDIR-rooted build consults one seed only"
+val _ =
+  if length (HMProject.build_times_files (SOME Systeml.HOLDIR)) = 1 andalso
+     length (HMProject.build_times_files NONE) = 1
+  then OK () else die "expected exactly HOL's own seed"
 
 val () = rm_rf scratch
