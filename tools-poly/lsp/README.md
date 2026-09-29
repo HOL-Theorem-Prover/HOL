@@ -656,12 +656,15 @@ end, and anything in the same flow above them goes out of sight.
   The refusal is the one a client has to have something to do about,
   and `$/compileCompleted` is what it waits for: **that notification
   is sent only once a request made on hearing it will be answered.**
-  It is the last thing a pass does, after it has put the reused tail
-  back, committed what it elaborated and let go of the process — see
-  `finishPass`.  A client is therefore right to refresh on it, and
-  right to expect no further notification, which is why a refusal
-  announced before it was a pane that stayed empty.  Anything else
-  added to that path belongs before the call, not after it.
+  It goes out from `finishPass`, after the pass has put the reused
+  tail back, committed what it elaborated and let go of the process.
+  A client is therefore right to refresh on it and right to expect
+  nothing further, which is why a refusal announced before it left a
+  pane empty with nothing coming to fill it.  State a pass sets
+  belongs before that call; a *notification* the completion would
+  undo belongs after it, which is where the block on a failed header
+  goes — a client clears what it was blocked on when it hears a
+  compile finished.
 
   A tactic whose source doesn't compile never produces an `error`
   either way: the file's compile reports the real message against that

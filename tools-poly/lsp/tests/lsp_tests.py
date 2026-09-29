@@ -6098,14 +6098,10 @@ def test_a_runaway_cascade_below_the_header_still_answers():
     """A dec that produces a run of errors aborts the compile, and the
     server reports that as a completed compile -- the diagnostics are
     as complete as they are going to get.  Everything that made the
-    claim true used to happen after the notification: `lastTrees' was
-    committed below it and the state was still held.  And one thing
-    never happened at all -- nothing on this path set `depsBlocked',
-    which a file starts at `DepsUnchecked'.  That one does not close
-    on its own: `stateNotReady' then answered "pending" to every
-    goal-state request for the life of the process, and a client that
-    had just been told the compile finished had nothing left to wait
-    for.
+    claim true used to happen after the notification, and one thing
+    never happened at all: no way out of the pass but the successful
+    one set `depsBlocked', which a file starts at `DepsUnchecked' and
+    `stateNotReady' answers "pending" to for ever.
 
     The header compiles here and a theorem above the cascade proves,
     so there is a real state to ask for; the cascade is below both."""
@@ -6131,13 +6127,15 @@ def test_a_runaway_cascade_below_the_header_still_answers():
                     "the abort is reported as a completed compile")
         # Positive control, and the only thing that says the abort
         # fired: an ordinary compile of a file with errors in it takes
-        # the other branch entirely and sets `depsBlocked` on the way.
-        time.sleep(1)
-        with c.msgs_lock:
-            logs = [m["params"].get("message", "") for m in c.msgs
-                    if m.get("method") == "window/logMessage"]
-        assert_true(any("errors from a single dec" in l for l in logs),
-                    f"the run of errors aborted the pass ({logs!r})")
+        # the other branch entirely.
+        def aborted(cl):
+            with cl.msgs_lock:
+                return any("errors from a single dec"
+                           in m["params"].get("message", "")
+                           for m in cl.msgs
+                           if m.get("method") == "window/logMessage")
+        assert_true(c.wait_until(aborted, 5),
+                    "the run of errors aborted the pass")
         r = (_send_goalstate(c, 950, uri, 6, 4) or {}).get("result") or {}
         assert_eq(r.get("theorem"), "above",
                   f"the theorem above the cascade has a state ({r!r})")

@@ -2725,6 +2725,16 @@ fun start {diag, dbg, warnings} = let
         sendProgressEnd ();
         send (mkNotif "$/compileCompleted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}"))))
+      (* The pass gave up instead, and the same order applies for the
+         same reason.  No client subscribes to this today, so nothing
+         asks on hearing it -- but that is a fact about the clients,
+         not about when the notification is true, and the obvious next
+         thing a client does with it is stop its spinner and refresh. *)
+      fun abandonPass () = (
+        releaseState ();
+        sendProgressEnd ();
+        send (mkNotif "$/compileInterrupted" (fn print => (
+          print "{\"uri\":"; encString uri print; print "}"))))
 
       val ls = ref (beforeCompile ())
       (* Where the last declaration this pass compiled ended.  With
@@ -2873,6 +2883,12 @@ fun start {diag, dbg, warnings} = let
              would stop that one from ever running. *)
           if !cancelled then () else (
             lastTrees := {text = text, parse = setParsePos 0 (!trees)};
+            (* Before the block goes out, for the reason `finishPass'
+               gives: what a client does with the news is ask, and
+               this pass holds the process until it says otherwise.
+               No progress to end -- `sendProgressBegin' is inside
+               `runCompile', which this path does not reach. *)
+            releaseState ();
             publishAllDiagnostics uri v;
             markDepsBlocked uri v {mods = declaredNames, message = message})
         end
@@ -3030,16 +3046,8 @@ fun start {diag, dbg, warnings} = let
              `lastTrees` commit below hands the next pass a base it had
              already moved past.  Leave all of it to the pass that now
              owns the buffer. *)
-          if !cancelled then (
-            sendProgressEnd ();
-            send (mkNotif "$/compileInterrupted" (fn print => (
-              print "{\"uri\":"; encString uri print; print "}"))))
+          if !cancelled then abandonPass ()
           else (
-          (* The file compiled, so whatever it was blocked on is
-             resolved -- and, either way, the ancestors are now known to
-             be in the graph, which is what `DepsLoaded' says and
-             `DepsUnchecked' did not. *)
-          depsBlocked := DepsLoaded;
           flushDiags ();
           (* Completion is announced at the end of this branch, not
              here: everything from this point down is state the answer
@@ -3088,13 +3096,26 @@ fun start {diag, dbg, warnings} = let
                     before, 315 / 312 / 361 / 367ms after, i.e. flat
                     in the size of the tail rather than quadratic.
 
-                    Keyed on the count rather than on the list: two
-                    lists with the same count have the same trees
-                    below the edit, cumulative lists agreeing on a
-                    suffix, and a count is something a list can be
-                    asked for. *)
+                    Keyed on the count: two lists with the same
+                    count have the same trees below the edit,
+                    cumulative lists agreeing on a suffix.  Not on the
+                    tree the list starts at, which is the obvious
+                    cheaper key and is wrong -- `Theory foo' expands
+                    to several SML declarations sharing one source
+                    position, so two different lists can start at the
+                    same span, and the collision would hand one of
+                    them the other's tail.  Counting costs a walk per
+                    record, which is the whole of what this is still
+                    quadratic in: 14ms at 1920 declarations below the
+                    edit against a 424ms pass, 57ms at 3840.  The
+                    longest script in the tree has about 1700
+                    declarations in total. *)
                  val tails = ref (Binarymap.mkDict Int.compare)
                  fun sharedTail (0, _) = #builtTrees fresh
+                   (* Unreachable -- `tailOf' is the only caller and
+                      counts the list it passes -- but the match has
+                      to be exhaustive, and the answer is the one the
+                      clause above would give. *)
                    | sharedTail (_, []) = #builtTrees fresh
                    | sharedTail (n, t :: ts) =
                      (case Binarymap.peek (!tails, n) of
@@ -3165,9 +3186,18 @@ fun start {diag, dbg, warnings} = let
           finishPass ();
           (!drainFailures uri v handle _ => ()))))
       in (
+        (* `missingDeps ()' empty *is* `DepsLoaded': it asks whether
+           every module the header declares resolves in the namespace,
+           which is the whole of what the flag claims.  Said here, once,
+           rather than by each way out of the pass that happens to know
+           it -- and the ways out that did not say it left a file at
+           `DepsUnchecked' for the life of the process, which
+           `stateNotReady' answers "pending" to for ever.  A header
+           that turns out not to compile is still put back to
+           `DepsBlocked' by `markDepsBlocked'. *)
         case missingDeps () of
           fails as (_::_) => blockOnDeps fails
-        | [] => runCompile ()
+        | [] => (depsBlocked := DepsLoaded; runCompile ())
       ) handle Thread.Interrupt => (
         (* When the compile aborted because a single dec produced a
            runaway cascade of errors, the diagnostics are complete
@@ -3193,34 +3223,21 @@ fun start {diag, dbg, warnings} = let
           (* Whatever this pass captured, it stopped at the header, so
              there is no tail to carry forward from it. *)
           reusableFrom := ~1;
-          (* The header did compile -- the cascade is somewhere below
-             it -- so the ancestors are in the graph, which is what
-             `DepsLoaded' says.  Nothing else on this path says it,
-             and a file starts at `DepsUnchecked': left there,
-             `stateNotReady' answers "pending" to every goal-state
-             request for the life of the process, and the client,
-             having just been told the compile finished, asks once and
-             then waits for a notification that is not coming. *)
-          if headerFailed then () else depsBlocked := DepsLoaded;
-          finishPass ();
-          (* After the completion, not before it: a client clears
-             whatever it was blocked on when it hears a compile
-             finished, so a block announced first is a block thrown
-             away. *)
+          (* The block goes out after the completion, not before it: a
+             client clears whatever it was blocked on when it hears a
+             compile finished, so a block announced first is a block
+             thrown away. *)
           if headerFailed then
-            markDepsBlocked uri v
-              {mods = declaredNames,
-               message = "the theory header did not compile"}
-          else ()
+            (finishPass ();
+             markDepsBlocked uri v
+               {mods = declaredNames,
+                message = "the theory header did not compile"})
+          else finishPass ()
         end
-        else (sendProgressEnd ();
-              send (mkNotif "$/compileInterrupted" (fn print => (
-                print "{\"uri\":"; encString uri print; print "}")))))
+        else abandonPass ())
            | e => (
         logMessage ("compile aborted: " ^ exnMessage e);
-        sendProgressEnd ();
-        send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}"))))
+        abandonPass ())
       end)
       (* The block above has its own catch-all, so this one is for
          what raises out of the declarations before it -- `restoreSnap`
