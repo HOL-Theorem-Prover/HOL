@@ -6517,6 +6517,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
            nondefs, nondef_table} = empty_context_fields ()
       val max_bisim_depth = List.foldl Int.max (~1) (#bisim_depth mf)
     in
+      (* Mirrors Nitpick's params -> hol_context copy: config fields keep
+         the option names (box, wf, ...), context fields hol_context's. *)
       {max_bisim_depth = max_bisim_depth,
        boxes = #box mf,
        wfs = #wf mf,
