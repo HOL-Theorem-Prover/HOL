@@ -34,4 +34,4 @@ Fails only if `cfg`'s `expect` field is not met.
 
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
 [`Refute.refute_goal`](#Refute.refute_goal),
-[`Refute.config`](#Refute.config)
+[`Refute.config`](#Refute.config).

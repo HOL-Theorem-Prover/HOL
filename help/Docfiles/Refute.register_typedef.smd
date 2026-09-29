@@ -17,7 +17,8 @@ with `th` the theorem `define_new_type_bijections` returns, or `th`'s two
 conjuncts in either order.  The representation predicate is checked
 against the type's `TY_DEF` theorem.
 
-The model finder harvests standard typedefs by itself.  Registrations
+The model finder registers a typedef by itself when its bijection
+theorem, or its two conjuncts, is stored in a theory.  Registrations
 last for the session.
 
 ### Failure
@@ -29,4 +30,4 @@ registered as a different kind of type.
 ### See also
 
 [`Refute.register_quotient`](#Refute.register_quotient),
-[`Refute.harvest_registrations`](#Refute.harvest_registrations)
+[`Refute.register_codatatype`](#Refute.register_codatatype).

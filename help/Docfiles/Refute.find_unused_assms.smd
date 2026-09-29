@@ -27,6 +27,10 @@ expectation, and stops at its first counterexample.
 `print_unused_assms cfgopt thyopt` prints the result for a theory, or
 for the current theory given `NONE`, with one-based indexes.
 
+### Failure
+
+Never fails.  An unknown theory has no theorems.
+
 ### Example
 
 >>__ load "Refute";
@@ -41,6 +45,6 @@ unless `cfg` has a short timeout.
 
 ### See also
 
-[`Refute.try_refute`](#Refute.try_refute),
+[`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.config`](#Refute.config),
-[`DB.thms`](#DB.thms)
+[`DB.thms`](#DB.thms).

@@ -73,6 +73,10 @@ signature Refute = sig
   val NARROWING_TAC     : Abbrev.tactic
   val MODEL_REFUTE_TAC  : Abbrev.tactic
 
+  (* Replaces a backend of the same name.  [certainty_ceiling] must bound
+     what [run] can return: a search stops once a result reaches the best
+     ceiling among the selected backends.  A nested Refute call from
+     [run] raises, so the backend yields [Unknown]. *)
   val register_backend : backend -> unit
   val register_generator : hol_type -> custom_gen -> unit
   (* Registers a QC generator for every concrete instance of a type
@@ -119,6 +123,9 @@ signature Refute = sig
   val harvest_registrations : unit ->
     {typedefs : hol_type list, quotients : hol_type list,
      theories_scanned : string list}
+  (* Model-finder constant replacements; a [register_frac_type] row
+     takes precedence over a [register_ersatz] one.  [rat] and [real] are
+     registered already. *)
   val register_frac_type :
     {tyop : {Thy : string, Tyop : string},
      ersatz :
@@ -129,6 +136,7 @@ signature Refute = sig
      replacement : {Thy : string, Name : string}} -> unit
   val abstract_generator :
     {ty : hol_type, constructors : term list, pred : term option} -> unit
+  (* The theorem attributes of the same names. *)
   val export_refute_simp : string -> unit
   val export_refute_psimp : string -> unit
   val export_refute_unfold : string -> unit

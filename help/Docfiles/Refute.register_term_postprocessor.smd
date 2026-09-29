@@ -21,6 +21,10 @@ Built-in patterns are `:'a -> 'b` (update chains), `:'a |-> 'b`
 (finite-map notation), `:rat` and `:real`; registering one of them
 replaces the built-in.  Registrations last for the session.
 
+### Failure
+
+Never fails.
+
 ### See also
 
-[`Refute.register_generator_family`](#Refute.register_generator_family)
+[`Refute.refute`](#Refute.refute).

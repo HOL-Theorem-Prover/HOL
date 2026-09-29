@@ -33,4 +33,4 @@ update, such as `upd_search (Only [])`, raises when it is built.
 
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
-[`Refute.config`](#Refute.config)
+[`Refute.config`](#Refute.config).

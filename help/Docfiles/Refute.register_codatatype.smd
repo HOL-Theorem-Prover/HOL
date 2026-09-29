@@ -39,4 +39,4 @@ different kind of type.
 
 [`Refute.register_typedef`](#Refute.register_typedef),
 [`Refute.register_quotient`](#Refute.register_quotient),
-[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC)
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC).

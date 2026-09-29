@@ -60,4 +60,4 @@ meaning.
 
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
 [`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
-[`Refute.refute`](#Refute.refute)
+[`Refute.refute`](#Refute.refute).

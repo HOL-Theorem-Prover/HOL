@@ -16,9 +16,9 @@ Registers a quotient type with the model finder.
 encoded as a partial quotient, or a total equivalence
 `!x y. R x y <=> (R x = R y)`, which needs no domain axiom.
 
-The model finder harvests standard quotients by itself; registration
-is for quotients stored in another place or shape.  Registrations last
-for the session.
+The model finder registers a quotient by itself when a `QUOTIENT`
+theorem for it is stored in a theory.  Registrations last for the
+session.
 
 ### Failure
 
@@ -29,4 +29,4 @@ registered as a different kind of type.
 ### See also
 
 [`Refute.register_typedef`](#Refute.register_typedef),
-[`Refute.harvest_registrations`](#Refute.harvest_registrations)
+[`Refute.register_codatatype`](#Refute.register_codatatype).

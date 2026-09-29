@@ -29,4 +29,4 @@ Fails only if the configuration's `expect` field is not met.
 
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
-[`Refute.config`](#Refute.config)
+[`Refute.config`](#Refute.config).

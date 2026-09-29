@@ -40,4 +40,4 @@ The HolRefute library is described in the DESCRIPTION manual.
 [`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.refute`](#Refute.refute),
-[`Refute.config`](#Refute.config)
+[`Refute.config`](#Refute.config).

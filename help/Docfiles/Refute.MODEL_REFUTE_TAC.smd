@@ -32,4 +32,4 @@ Nitpick.
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
 [`Refute.register_typedef`](#Refute.register_typedef),
-[`Refute.config`](#Refute.config)
+[`Refute.config`](#Refute.config).

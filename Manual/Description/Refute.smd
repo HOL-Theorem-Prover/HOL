@@ -391,19 +391,24 @@ A `counterexample` records its `backend`, `substrate`, `certainty`,
 These registrations last for the session; each reference entry gives
 its conditions.
 
-* `register_generator`, `abstract_generator` and
-  `register_generator_family` add test-data generators.
-* `register_backend` adds a backend.
-* `register_term_postprocessor` changes how reported values print.
+* `register_generator` and `abstract_generator` add test-data
+  generators.
 * `register_codatatype`, `register_typedef` and `register_quotient`
-  describe types to the model finder, which also harvests typedefs and
-  quotients itself; `harvest_registrations` does so eagerly.
-* `register_frac_type` and `register_ersatz` replace constants during
-  model finding.
+  describe types to the model finder; it finds typedefs and quotients
+  with stored defining theorems by itself.
+* `register_term_postprocessor` changes how reported values print.
 
-`export_refute_simp`, `export_refute_psimp` and `export_refute_unfold`,
-or the theorem attributes of the same names, give the model finder
-equations that persist with the theory.
+Three theorem attributes give the model finder equations that persist
+with the theory.  Each conjunct of the theorem, under its universal
+quantifiers, must be an equation `c t1 ... tn = u` for a constant
+`c`; `refute_simp` and `refute_psimp` also accept premises and the
+forms `c t1 ... tn` and `~(c t1 ... tn)`.
+
+| Attribute | Use of the conjuncts for `c` |
+|---|---|
+| `refute_simp` | Replace the equations of `c`'s definition. |
+| `refute_psimp` | Define `c` if it has no equations from its definition or `refute_simp`. |
+| `refute_unfold` | Unfold `c` during preprocessing. |
 
 ### Installing Kodkodi
 

@@ -10,17 +10,19 @@ Refute.abstract_generator :
 
 Registers a generator building values of a type from given terms.
 
-Values of `ty` are built by applying `constructors`, constants whose
-result type matches `ty`, to generated arguments, keeping only those
-satisfying `pred` (a closed `ty -> bool` term) if present.  The
-generator never establishes `NoCounterexample`.
+Values of `ty` are built by applying `constructors` to generated
+arguments, keeping only those satisfying `pred` (a closed `ty -> bool`
+term) if present.  Each constructor is a constant whose declared result
+type is `ty`'s type operator applied to type variables.  The
+registration replaces the type's previous generator, and lasts for the
+session.  The generator never establishes `NoCounterexample`.
 
 ### Failure
 
-Fails if `constructors` is empty, or a constructor is not a constant,
-does not have result type `ty`, or is recursive under a function type.
+Fails if `constructors` is empty, a constructor is not a constant of
+the required result type or is recursive under a function type, or
+`pred` is not a closed `ty -> bool` term.
 
 ### See also
 
-[`Refute.register_generator`](#Refute.register_generator),
-[`Refute.register_generator_family`](#Refute.register_generator_family)
+[`Refute.register_generator`](#Refute.register_generator).

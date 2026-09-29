@@ -53,6 +53,5 @@ timeouts become `Unknown`.
 ### See also
 
 [`Refute.refute_goal`](#Refute.refute_goal),
-[`Refute.try_refute`](#Refute.try_refute),
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
-[`Refute.config`](#Refute.config)
+[`Refute.config`](#Refute.config).

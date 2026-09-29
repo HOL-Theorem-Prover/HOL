@@ -28,5 +28,4 @@ when a backend uses them.
 
 ### See also
 
-[`Refute.register_generator_family`](#Refute.register_generator_family),
-[`Refute.abstract_generator`](#Refute.abstract_generator)
+[`Refute.abstract_generator`](#Refute.abstract_generator).
