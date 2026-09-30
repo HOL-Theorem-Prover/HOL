@@ -4415,8 +4415,13 @@ def test_goalState_reports_a_then1_branch_that_does_not_close():
     as though it had been proved, and any failure inside a branch was
     invisible because its tactics never ran -- which is exactly when
     someone is looking at the goal state.  So the branch is run, and a
-    close that cannot discharge the goal is reported where it happens,
-    with the undischarged goal still on show."""
+    close that cannot discharge the goal is reported.
+
+    Which goal is on show beside that report is the cursor's to say.
+    Inside the branch it is the one the branch owes -- where someone
+    fixing it is looking.  Past the branch the reader has moved on, so
+    `cheat` stands in for the discharge that never came and the goal
+    after the branch is what they get, with the same report."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -4436,16 +4441,28 @@ def test_goalState_reports_a_then1_branch_that_does_not_close():
         _did_open(c, uri, src, 1)
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
+        # Line 8, past the branch: what the proof does next.
         r = _send_goalstate(c, 760, uri, 8, 5)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
         assert_true(result.get("error") is not None,
                     f"the branch that proves nothing is reported "
                     f"({result!r})")
-        goals = result["goals"]
-        assert_true(len(goals) == 1 and goals[0]["goal"] == "0 = 0",
-                    f"and the goal it failed to discharge is the one on "
-                    f"show ({result!r})")
+        goals = [g["goal"] for g in result["goals"]]
+        assert_true(goals == ["1 = 1"],
+                    f"and the goal after the branch is the one on show "
+                    f"({result!r})")
+        # Inside the branch: the goal it owes, and no report yet --
+        # nothing has been run past.
+        inside = src.split("\n")[7].index("ASSUME_TAC") + 1
+        r2 = _send_goalstate(c, 761, uri, 7, inside)
+        result2 = r2.get("result")
+        assert_true(result2 is not None, f"got a result ({r2!r})")
+        assert_true(result2.get("error") is None,
+                    f"nothing has failed at this cursor yet ({result2!r})")
+        inner = [g["goal"] for g in result2["goals"]]
+        assert_true(inner == ["0 = 0"],
+                    f"the goal the branch owes ({result2!r})")
     finally:
         c.close()
 
@@ -8169,7 +8186,8 @@ def test_goalState_failing_branch_still_reports_at_its_end():
     """Deferring the close is conditional on it succeeding: a `>- tac`
     that proves nothing has to keep saying where the proof stops, which
     is what closing it says.  Without the condition this position would
-    quietly show the goals the branch left open instead."""
+    quietly show the goals the branch left open instead -- no report,
+    and a focus that reads as solved."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -8193,6 +8211,89 @@ def test_goalState_failing_branch_still_reports_at_its_end():
                     f"({result.get('error')!r})")
         assert_true(result.get("note") is None,
                     "and says that rather than a solved focus")
+    finally:
+        c.close()
+
+
+def test_goalState_past_a_placeholder_branch_shows_what_follows():
+    """`>- ()` is how a branch gets held open while the tactic that
+    will fill it is still being thought about.  `()` is not a tactic,
+    so the walk stopped inside the branch and every cursor from there
+    on showed the goal the branch was handed -- the goals after it
+    were unreachable without writing `>- (cheat) >>` instead.
+
+    Past the branch, `cheat` now stands in for the discharge `()`
+    never made.  Nothing is reported: the file's own compile has
+    already said what is wrong with `()`, and repeating it here would
+    both duplicate and misdescribe it."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_placeholder_branch.sml"
+        src = ("Theory goalstate_placeholder_branch\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >- ()\n"
+               "  >> simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 7 = "  >- ()"; cursor inside the parens, where the
+        # tactic is going to be written.
+        r = _send_goalstate(c, 766, uri, 7, 6)
+        result = (r or {}).get("result") or {}
+        inner = [g["goal"] for g in result.get("goals", [])]
+        assert_true(inner == ["0 = 0"],
+                    f"the goal the branch is there to prove ({result!r})")
+        # Line 8, past the branch: the goal that comes after it.
+        r2 = _send_goalstate(c, 767, uri, 8, 5)
+        result2 = (r2 or {}).get("result") or {}
+        after = [g["goal"] for g in result2.get("goals", [])]
+        assert_true(after == ["1 = 1"],
+                    f"and past it, the goal that follows ({result2!r})")
+        assert_true(result2.get("error") is None,
+                    f"with nothing said about `()` that the compile has "
+                    f"not already said ({result2.get('error')!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_past_a_failing_branch_shows_what_follows():
+    """The same for a branch that does compile and does run and still
+    does not prove its goal.  `cheat` stands in for what `all_tac`
+    owed, so the goal after the branch is on show -- and the branch is
+    still reported, on the combinator that made the demand."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_past_failing_branch.sml"
+        src = ("Theory goalstate_past_failing_branch\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >- all_tac\n"
+               "  >> simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 768, uri, 8, 5)
+        result = (r or {}).get("result") or {}
+        after = [g["goal"] for g in result.get("goals", [])]
+        assert_true(after == ["1 = 1"],
+                    f"the goal after the branch ({result!r})")
+        err = result.get("error")
+        assert_true(err is not None and "did not prove its goal" in err,
+                    f"and the branch that owed one is named ({err!r})")
+        rng = result.get("failedRange")
+        assert_true(rng is not None and rng["start"]["line"] == 7,
+                    f"pointing at the `>-` on line 7 ({rng!r})")
     finally:
         c.close()
 
@@ -8734,6 +8835,10 @@ TESTS = [
      test_goalState_note_at_end_of_an_unparenthesised_branch),
     ("goalState_failing_branch_still_reports_at_its_end",
      test_goalState_failing_branch_still_reports_at_its_end),
+    ("goalState_past_a_placeholder_branch_shows_what_follows",
+     test_goalState_past_a_placeholder_branch_shows_what_follows),
+    ("goalState_past_a_failing_branch_shows_what_follows",
+     test_goalState_past_a_failing_branch_shows_what_follows),
 ]
 
 
