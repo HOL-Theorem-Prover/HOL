@@ -276,7 +276,7 @@ fun isa_gcd (left, 0) = left
 fun isa_lcm (left, right) =
   isa_div (left * right, isa_gcd (left, right))
 
-val isa_zgcd = isa_gcd o (fn (left, right) => (abs left, abs right))
+val isa_zgcd = isa_gcd o (fn (left, right) => (Int.abs left, Int.abs right))
 
 fun isa_norm_frac (left, right) =
   if right < 0 then isa_norm_frac (~left, ~right)

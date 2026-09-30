@@ -243,7 +243,7 @@ structure Refute_PropSat :> Refute_PropSat = struct
     if literal > 0 then value else Option.map not value
 
   fun variable_of variables literal =
-    case table_lookup (abs literal) variables of
+    case table_lookup (Int.abs literal) variables of
         SOME variable => variable
       | NONE => raise Fail "Refute_PropSat: unknown variable"
 
@@ -260,7 +260,7 @@ structure Refute_PropSat :> Refute_PropSat = struct
   fun assignment_of variables index =
     if index = 0 then NONE
     else
-      case table_lookup (abs index) variables of
+      case table_lookup (Int.abs index) variables of
           NONE => NONE
         | SOME (value, _, _, _) => literal_value index value
 
@@ -271,10 +271,10 @@ structure Refute_PropSat :> Refute_PropSat = struct
     (value, reason, level, rank + 1)
 
   fun update_variable literal function variables =
-    table_map_entry (abs literal) function variables
+    table_map_entry (Int.abs literal) function variables
 
   fun add_variable literal variables =
-    table_insert (abs literal) (NONE, Decided, ~1, 0) variables
+    table_insert (Int.abs literal) (NONE, Decided, ~1, 0) variables
 
   fun assign literal reason level variables =
     update_variable literal
@@ -356,10 +356,10 @@ structure Refute_PropSat :> Refute_PropSat = struct
         (SOME literal, _) => SOME (literal, push_decided literal state)
       | (NONE, _) => NONE
 
-  fun mark literal marks = table_insert (abs literal) true marks
+  fun mark literal marks = table_insert (Int.abs literal) true marks
 
   fun marked marks literal =
-    Option.getOpt (table_lookup (abs literal) marks, false)
+    Option.getOpt (table_lookup (Int.abs literal) marks, false)
 
   fun ignore_literal literal marks other =
     other = literal orelse marked marks other
