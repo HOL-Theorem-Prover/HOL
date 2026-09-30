@@ -57,6 +57,7 @@ sig
   val NO_LT          : list_tactic
   val ALL_TAC        : tactic
   val all_tac        : tactic
+  val cheat          : tactic
   val ALL_LT         : list_tactic
   val TRY            : tactic -> tactic
   val TRY_LT         : list_tactic -> list_tactic
