@@ -5,11 +5,7 @@
 Driver for the HOL4 Refute model finder.  The control flow is a port of
 Nitpick's pick_them_nits_in_term. *)
 
-signature REFUTE_MODEL_FINDER = sig
-  val register_backends : unit -> unit
-end
-
-structure Refute_ModelFinder :> REFUTE_MODEL_FINDER = struct
+structure Refute_ModelFinder :> Refute_ModelFinder = struct
 
 open Portable Feedback
 infix |>

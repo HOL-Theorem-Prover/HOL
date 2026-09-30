@@ -1,3 +1,5 @@
+(* Signature-only, but a .sml: holdep makes every reference to
+   [Refute_Config] depend on Refute_Config.uo. *)
 signature Refute_Config = sig
   (* Configuration shared by [Refute_Core] and the [Refute] facade,
      which replaces [Refute_Core.upd_backends] with [upd_search]. *)

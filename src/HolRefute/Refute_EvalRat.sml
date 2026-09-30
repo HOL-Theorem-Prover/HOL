@@ -16,10 +16,7 @@
    cannot be discharged, e.g. division by a zero candidate.  Either way
    nothing unsound follows: [[Refute_EvalCompute.sml]] maps any
    non-[[T]]/[[F]] result to [[IsStuck]]. *)
-structure Refute_EvalRat :> sig
-  val generator : Refute_Gen.custom_gen
-  val register : unit -> unit
-end = struct
+structure Refute_EvalRat :> Refute_EvalRat = struct
 
   val rat_ty = ratSyntax.rat_ty
 

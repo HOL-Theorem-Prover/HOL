@@ -1,10 +1,4 @@
-signature REFUTE_FORL_SAT = sig
-  val configured_sat_solvers : bool -> string list
-  val smart_sat_solver_name : bool -> string
-  val sat_solver_spec : Time.time -> string -> string * string list
-end
-
-structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
+structure Refute_ForlSat :> Refute_ForlSat = struct
   datatype sink = ToStdout | ToFile
   datatype availability = Java | JNI of string
   datatype mode = Batch | Incremental

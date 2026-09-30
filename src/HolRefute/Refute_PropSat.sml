@@ -8,7 +8,7 @@
  * license.  HOL4 adaptation copyright 2026 The HOL4 contributors.
  *)
 
-structure Refute_PropSat :> REFUTE_PROP_SAT = struct
+structure Refute_PropSat :> Refute_PropSat = struct
   datatype prop_formula =
       True
     | False

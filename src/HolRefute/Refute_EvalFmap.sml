@@ -21,9 +21,7 @@
    conversion and the redex stays stuck, exactly as before.  The conv is
    reached with both sides already reduced by call-by-value, so keys and
    values arrive in whatever normal form the compset gives them. *)
-structure Refute_EvalFmap :> sig
-  val register : unit -> unit
-end = struct
+structure Refute_EvalFmap :> Refute_EvalFmap = struct
 
   open HolKernel boolLib
 

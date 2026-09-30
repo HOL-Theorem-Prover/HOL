@@ -27,10 +27,7 @@
    [[inv 0 = 0]] is a theorem, so reducing it would not be unsound, but
    [[x / 0]] already declines rather than reducing, and matching that
    existing convention beats introducing a second one. *)
-structure Refute_EvalReal :> sig
-  val generator : Refute_Gen.custom_gen
-  val register : unit -> unit
-end = struct
+structure Refute_EvalReal :> Refute_EvalReal = struct
 
   val real_ty = realSyntax.real_ty
 

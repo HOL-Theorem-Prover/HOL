@@ -50,6 +50,9 @@ repository.
   registered substrate (`Refute_Eval.substrate`) compiles plans into a
   `compiled_test` and runs it; `Refute_Cert` certifies candidates.
   `Refute.sml` is a thin facade over `Refute_Core` orchestration.
+- Every structure `X` has `X.sig` declaring `signature X`, ascribed
+  `structure X :> X`; no inline signatures.  Signature-only
+  `Refute_Config` stays a `.sml`: holdep needs its `.uo`.
 - Trust model: QC certainty comes from the substrate's testing verdict;
   certification is an independent, best-effort theorem audit.  With
   `certify=true` (the default), `Refute_Cert` re-evaluates the instantiated

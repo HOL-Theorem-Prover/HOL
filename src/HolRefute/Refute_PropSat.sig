@@ -1,4 +1,4 @@
-signature REFUTE_PROP_SAT = sig
+signature Refute_PropSat = sig
   datatype prop_formula =
       True
     | False

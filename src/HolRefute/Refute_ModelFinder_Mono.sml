@@ -10,7 +10,7 @@
  * infrastructure.  Upstream's tracing facility is not ported.
  *)
 
-structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
+structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
   structure MFH = Refute_ModelFinder_HOL
   structure MFN = Refute_ModelFinder_Names
   structure Util = Refute_ModelFinder_Util
