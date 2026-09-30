@@ -3165,6 +3165,124 @@ def test_incomplete_proof_body_mid_file_stays_narrow():
         c.close()
 
 
+def test_trailing_operand_type_error_narrows_to_it():
+    """A finished proof whose last operand is ill-typed -- `simp` left
+    without its `thm list` -- used to squiggle the whole `>>` chain.
+    Poly/ML blames a failed application on the application node, and
+    for the root of that chain the node is the entire tactic.  The
+    prefix is fine; saying otherwise buries the real message.  Poly/ML
+    reports the innermost application that failed, so a compound left
+    operand has already typechecked and the culprit is the right one."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/trailing_operand.sml"
+        #  6   gen_tac >> simp[] >>
+        #  7   simp                    <- chars 2..6
+        src = ("Theory trailing_operand\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n. n + 0 = n\n"
+               "Proof\n"
+               "  gen_tac >> simp[] >>\n"
+               "  simp\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        hard = [d for d in _diag_count(c, uri) if d.get("severity") == 1]
+        assert_ge(len(hard), 1, f"a hard diagnostic ({hard!r})")
+        assert_true(all(d["range"]["start"]["line"] == 7 for d in hard),
+                    f"nothing hard on the well-formed prefix "
+                    f"({[(d['range'], d.get('message','')[:60]) for d in hard]!r})")
+        assert_true(any((d["range"]["start"]["character"],
+                         d["range"]["end"]["line"],
+                         d["range"]["end"]["character"]) == (2, 7, 6)
+                        for d in hard),
+                    f"squiggled on the trailing `simp` alone "
+                    f"({[d['range'] for d in hard]!r})")
+    finally:
+        c.close()
+
+
+def test_dangling_combinator_flags_the_operator():
+    """A proof abandoned mid-combinator -- `>-` with nothing after it
+    -- used to squiggle the whole chain with a `unit` vs `tactic`
+    message, an artefact of the parser repairing the missing operand
+    to `()`.  There is no operand to point at, so the report goes on
+    the combinator that is missing one, in our own words."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/dangling_then1.sml"
+        #  6   conj_tac >> ALL_TAC
+        #  7   >-                      <- chars 2..4
+        src = ("Theory dangling_then1\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac >> ALL_TAC\n"
+               "  >-\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        diags = _diag_count(c, uri)
+        hard = [d for d in diags if d.get("severity") == 1]
+        assert_ge(len(hard), 1, f"a hard diagnostic ({diags!r})")
+        assert_true(all(d["range"]["start"]["line"] == 7 for d in hard),
+                    f"nothing hard on the well-formed prefix "
+                    f"({[(d['range'], d.get('message','')[:60]) for d in hard]!r})")
+        assert_true(any("has no right-hand argument" in d.get("message", "")
+                        for d in hard),
+                    f"the combinator is named as the one missing an argument "
+                    f"({[d.get('message','')[:80] for d in hard]!r})")
+        assert_true(all("Can't unify" not in d.get("message", "")
+                        for d in hard),
+                    f"no `unit` vs `tactic` artefact "
+                    f"({[d.get('message','')[:80] for d in hard]!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_unwritten_then1_branch_shows_its_goal():
+    """With the cursor just after a `>-` whose branch is not written
+    yet, the walk used to bail before it ever opened the bracket:
+    `linearize` drops the repaired operand, so the bracket arrives with
+    no body and hence no end byte, and the opaque bail reported a close
+    that never ran as a branch that failed to prove its goal -- while
+    handing back the *unfocused* goals.  Opening it and stopping gives
+    what the reader wants: the goal the branch was handed, no
+    complaint, and only that one goal."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_unwritten_then1.sml"
+        src = ("Theory goalstate_unwritten_then1\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac >> ALL_TAC\n"
+               "  >-\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        # line 7 = "  >-"; cursor immediately after the combinator.
+        r = _send_goalstate(c, 762, uri, 7, 4)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_true(result.get("error") is None,
+                    f"an unwritten branch is not a failed one ({result!r})")
+        goals = result["goals"]
+        # One goal, not two: the `>-` focused the first subgoal.  A test
+        # that only checked `goals` was non-empty would pass against the
+        # unfocused pair the bail used to return.
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "0 = 0",
+                    f"the focused first subgoal is on show ({result!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_available_past_compile_pos():
     """A `$/hol/goalState' issued between a didChange and the fresh
     compile finishing must still return a valid result -- otherwise
@@ -8403,6 +8521,12 @@ TESTS = [
                                      test_incomplete_theorem_statement_mid_file_stays_narrow),
     ("incomplete_proof_body_mid_file_stays_narrow",
                                      test_incomplete_proof_body_mid_file_stays_narrow),
+    ("trailing_operand_type_error_narrows_to_it",
+                                     test_trailing_operand_type_error_narrows_to_it),
+    ("dangling_combinator_flags_the_operator",
+                                     test_dangling_combinator_flags_the_operator),
+    ("goalState_unwritten_then1_branch_shows_its_goal",
+                                test_goalState_unwritten_then1_branch_shows_its_goal),
     ("goalState_available_past_compile_pos",
                                      test_goalState_available_past_compile_pos),
     ("runaway_errors_still_publish_diagnostics",

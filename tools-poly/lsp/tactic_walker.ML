@@ -545,6 +545,27 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
      hide the inner TacsToLT context from `pp_goalstate`. *)
   | FBracket (FOpenNullOk, inner, _, _) =>
       walkFrags env state snaps stepIdx inner
+  (* An empty body is a branch the user has not written yet.  `>-'
+     with nothing after it parses to a `RepairEmpty', which `linearize'
+     drops, so `inner' arrives empty -- and then nothing carries an end
+     byte: the `>-' wrapper has no span of its own and there is no last
+     fragment to borrow one from.  The general case below would fall to
+     its `NONE' arm and bail as opaque, which `failMsg' reports as a
+     branch that did not prove its goal: a close that never ran,
+     described as one that failed.  Open the bracket and stop instead --
+     what is wanted at that cursor is the goal the branch was handed.
+
+     A written `>- ALL_TAC' does not come here.  It linearizes to an
+     `FGroup', which carries a span of its own, so an empty `inner'
+     means the operand is genuinely absent. *)
+  | FBracket (ok, [], _, _) =>
+      if replaying then Done {state = state, snaps = snaps, stepIdx = stepIdx}
+      else (case applyOpen tacText ok state of
+              NONE => Failed {state = state, snaps = snaps,
+                              stepIdx = stepIdx, at = FFOpen ok,
+                              why = ApplyFailed}
+            | SOME state' =>
+                Halted {state = state', snaps = snaps, stepIdx = stepIdx})
   | FBracket (ok, inner, cc, te) =>
       (case bracketEndByteB te (fn () => lastFragEnd inner) of
         SOME (be, borrowed) =>

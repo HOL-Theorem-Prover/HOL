@@ -671,6 +671,133 @@ and annotateStrexp (StrIdent id) pt = annotateId id pt
       val (acc, pt) = annotateDecs strdec (PTInner (moveDown pt)) []
       in rev (annotateStrexp strexp (topAsInner pt) :: acc) end)
 
+(* ----------------------------------------------------------------------
+    Blaming one operand of an infix chain
+
+    A tactic is one long left-associative chain of `>>' and `>-', and
+    Poly/ML blames a failed application on the application node --
+    whose extent, for the root of that chain, is the whole tactic.  So
+    a `simp' left without its `thm list' on the last line paints every
+    line of the proof red, and the well-formed prefix is what the
+    reader is told to look at.
+
+    Poly/ML reports the *innermost* application that failed to unify,
+    which is what makes narrowing possible: a mid-chain operand that
+    is wrong gets its own `A >> B' blamed, not the whole chain, so the
+    node in hand is always one whose left operand already typechecked.
+
+    Typechecking is not enough on its own, though.  `Q.SPEC `x'' is a
+    perfectly good expression and is not a tactic, so "the left operand
+    is compound" would blame the right one for the left one's fault.
+    What settles it is the operator: these combinators take two
+    tactics and give a tactic, so a left operand that is one of them
+    and typechecked has exactly the type the operator above it wants
+    there -- and the operand at fault has to be the right one.
+
+    Anything else is left alone.  Where both operands are leaves the
+    failure could be either, and the range is a token or two wide
+    anyway; `narrowBlame' only ever shrinks a range it positively
+    recognises, and answers NONE for everything else.
+   ---------------------------------------------------------------------- *)
+
+(* Infixes of type `tactic * tactic -> tactic'.  Deliberately not the
+   whole tactic family: `THENL'/`>|' take a tactic *list* on the right
+   and `THENC'/`ORELSEC' are conversions, so a chain through one of
+   those says nothing about its own type. *)
+val tacticInfixes =
+  ["THEN", ">>", "\\\\", "THEN1", ">-", ">>-", "ORELSE"]
+
+(* Immediate sub-expressions, for the search below.  A constructor
+   missing from here simply ends the descent, which costs a narrowing
+   and never makes a wrong one. *)
+fun expKids e = case e of
+    List {elems = {args, ...}, ...} => args
+  | Tuple {elems = {args, ...}, ...} => args
+  | Record {elems = {args, ...}, ...} =>
+    List.mapPartial (fn LabEq {exp, ...} => SOME exp | _ => NONE) args
+  | Parens {exp, ...} => [exp]
+  | Infix {left, right, ...} => [left, right]
+  | Typed {exp, ...} => [exp]
+  | Sequence {elems = {args, ...}, ...} => args
+  | LetInEnd {exps = {args, ...}, ...} => args
+  | App (f, x) => [f, x]
+  | AndAlso {left, right, ...} => [left, right]
+  | OrElse {left, right, ...} => [left, right]
+  | Handle {exp, elems, ...} => exp :: List.map #exp elems
+  | Raise {exp, ...} => [exp]
+  | IfThenElse {exp1, exp2, else_, ...} =>
+    exp1 :: exp2 :: (case else_ of SOME {exp3, ...} => [exp3] | NONE => [])
+  | While {exp1, exp2, ...} => [exp1, exp2]
+  | Case {exp, elems, ...} => exp :: List.map #exp elems
+  | Fn {elems, ...} => List.map #exp elems
+  | ExpExpansion {orig, ...} => [orig]
+  | _ => []
+
+(* The smallest sub-expression whose extent still covers `span'.
+   Compared inclusively: the printer's spans are what Poly/ML was
+   given, so the blamed node's own extent is the one being looked
+   for, not something strictly inside it. *)
+fun smallestCovering e (span as (s, t)) = let
+  fun covers e' = case expSpan e' of (a, b) => a <= s andalso t <= b
+  fun go e = let
+    fun first [] = e
+      | first (k :: ks) = if covers k then go k else first ks
+    in first (expKids e) end
+  in if covers e then SOME (go e) else NONE end
+
+(* An operand the parser invented to repair a missing one.  There is
+   no source text behind it, so it cannot be pointed at. *)
+fun repairedExp e = case e of
+    ExpEmpty _ => true
+  | ExpExpansion {orig, ...} => repairedExp orig
+  | _ => false
+
+(* The infix operator an operand was built with, through whatever
+   parentheses and expansions wrap it. *)
+fun infixOp e = case e of
+    Infix {id, ...} => SOME (#2 id)
+  | Parens {exp, ...} => infixOp exp
+  | ExpExpansion {orig, ...} => infixOp orig
+  | _ => NONE
+
+(* The declaration's tactic and the range Poly/ML blamed, in; either a
+   narrower range with a message of our own, or NONE to leave the
+   report exactly as it came. *)
+fun narrowBlame tac span =
+  case smallestCovering tac span of
+    SOME (Infix {left, id, right}) => let
+      fun isTacOp s = List.exists (fn t => t = s) tacticInfixes
+      fun composes e = case infixOp e of
+          SOME s => isTacOp s
+        | NONE => false
+      (* Nothing was written on that side, so Poly/ML's complaint is
+         about the `()' the expansion stood in with rather than about
+         anything the reader can see.  Name the operator that is
+         missing an argument instead; which side is missing is not in
+         doubt, so this does not need the test below. *)
+      fun missing side =
+        SOME (idSpan id,
+              SOME ("`" ^ #2 id ^ "` has no " ^ side ^ "-hand argument"))
+      in
+        if repairedExp right then missing "right"
+        else if repairedExp left then missing "left"
+        else if isTacOp (#2 id) andalso composes left then
+          SOME (expSpan right, NONE)
+        else NONE
+      end
+  | _ => NONE
+
+(* The tactic of a declaration that has one, taken from the original
+   rather than the expansion: the spans are the same either way, but
+   a repaired operand is still an `ExpEmpty' here instead of the
+   `Unit' the expansion puts in its place. *)
+fun decTactic dec = case dec of
+    DecExpansion {orig, ...} => decTactic orig
+  | HOLTheoremDecl {tac, ...} => SOME tac
+  | HOLResume {tac, ...} => SOME tac
+  | HOLDefinition {termination = SOME {tac, ...}, ...} => SOME tac
+  | _ => NONE
+
 end
 
 fun initialize {
@@ -705,10 +832,35 @@ fun initialize {
      not to offer a second opinion on a tactic already reported on. *)
   val hardError = ref false
   val muffled = ref false
+  val decsRef = ref []
+  (* Poly/ML blames a failed application on the application node, and
+     for the root of a tactic's `>>' chain that is the whole tactic.
+     Name the operand instead where `narrowBlame' can tell which one it
+     is; it declines otherwise, and the report goes out as it came.
+     Only hard reports are touched -- the soft ones are the parser's
+     own and are already placed where they belong. *)
+  fun narrowed (e as {context, hard, location, message} : error) =
+    if not hard then e else let
+      val {file, startLine, endLine, startPosition, endPosition} = location
+      val span = (FixedInt.toInt startPosition, FixedInt.toInt endPosition)
+      val tac = case !decsRef of [dec] => decTactic dec | _ => NONE
+      fun narrow t = narrowBlame t span
+      in case Option.mapPartial narrow tac of
+           NONE => e
+         | SOME ((s, t), msg) =>
+           {hard = hard,
+            context = (case msg of NONE => context | SOME _ => NONE),
+            location = {file = file, startLine = startLine,
+                        endLine = endLine,
+                        startPosition = FixedInt.fromInt s,
+                        endPosition = FixedInt.fromInt t},
+            message = (case msg of
+                NONE => message
+              | SOME m => PolyML.PrettyString m)}
+      end
   fun error' (e as {hard, ...} : error) =
       if !muffled then ()
-      else (if hard then hardError := true else (); error e)
-  val decsRef = ref []
+      else (if hard then hardError := true else (); error (narrowed e))
   val ptRef = ref []
   fun fetchDec () =
     case parseDec () of

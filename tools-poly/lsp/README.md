@@ -51,6 +51,23 @@ practical guide to trying it out; the protocol details live in
   the editor and the header is already right — `M-h M-C` in the
   shipped eglot client, "HOL: Compile the active script again" in
   hol4-vscode.
+- **A blamed operand, not a blamed chain.**  A tactic is one long
+  left-associative chain of `>>` and `>-`, and Poly/ML blames a failed
+  application on the application node — which for the root of that
+  chain is the whole tactic, so a `simp` left without its `thm list`
+  on the last line used to paint every line of the proof red.  Poly/ML
+  reports the *innermost* application that failed to unify, and that is
+  what makes narrowing sound: if the blamed node's left operand is
+  itself an application it has already typechecked, or the error would
+  have been reported on it instead, so the operand at fault is the
+  right one.  `narrowBlame` in `holide.ML` moves the report there,
+  taking associativity from the parser's own infix table.  Where both
+  operands are leaves the failure could be either and nothing is
+  claimed — the range is a token or two wide anyway.  A combinator
+  left without an operand at all, `>-` at the end of a half-written
+  proof, has nothing to point at and draws a complaint about the `()`
+  the expansion stood in with; that one is reported on the combinator,
+  with a message of our own — `` `>-` has no right-hand argument ``.
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so
@@ -673,13 +690,26 @@ end, and anything in the same flow above them goes out of sight.
   A tactic whose source doesn't compile never produces an `error`
   either way: the file's compile reports the real message against that
   very text, and the walker would only duplicate and misdescribe it.
-- `error` — non-null when the walker gave up (e.g. wall-clock budget
-  exceeded); `goals` / `pretty` are empty and clients should render
-  the message in place of the state.  A mid-walk partial state is
-  complete for its own step but wrong for the cursor's step, so the
-  server refuses to send it and returns `error` instead.  A stderr
-  line `goal-state walker exceeded Nms budget; interrupting` is
-  also emitted for visibility.
+
+  Nor does a branch the user has not written.  `>-` with nothing after
+  it parses to a repair that `linearize` drops, so the bracket arrives
+  with an empty body and no end byte to walk to; the walk used to bail
+  there and report a close that never ran as a branch that failed to
+  prove its goal, handing back the goals *unfocused* into the bargain.
+  It now opens the bracket and stops, which is the same answer every
+  written branch gets at that cursor: the goal the branch was handed,
+  and no complaint.
+- `error` — non-null either when the walker gave up (e.g. wall-clock
+  budget exceeded), in which case `goals` / `pretty` are empty and the
+  message is all there is to render; or when a step the walk ran did
+  not do what it promised, in which case the state it stopped at comes
+  *with* it and a client should show both — the undischarged goal of a
+  `>-` branch that proves nothing is the whole point of reporting it.
+  Rendering the message in place of the state loses exactly the thing
+  the reader wanted.  A mid-walk partial state is complete for its own
+  step but wrong for the cursor's step, so the server refuses to send
+  it and returns `error` instead.  A stderr line `goal-state walker
+  exceeded Nms budget; interrupting` is also emitted for visibility.
 - `failedRange` — where in the file the `error` belongs, when the walk
   stopped somewhere with a natural extent.  For a combinator that
   obliged what it brackets to prove a goal — `>-`, `by`,
