@@ -4172,16 +4172,18 @@ def test_goalState_suffices_by_gives_the_implication():
 _RESUME_SRC = ("Theory goalstate_resume\n"
                "Ancestors arithmetic\n\n"
                "Theorem t:\n"
-               "  !a:num. (0 < a ==> a + 0 = a) /\\ 0 + a = a\n"
+               "  !a:num. ((0 < a ==> a + 0 = a) /\\ (a = a)) /\\ 0 + a = a\n"
                "Proof\n"
                "  rpt gen_tac\n"                        # nested: FBracket
                "  THEN CONJ_TAC\n"
-               "  THENL [DISCH_TAC, ALL_TAC]\n"          # nested: FMBracket
+               "  THENL [CONJ_TAC\n"                     # nested: FMBracket
+               "         THENL [DISCH_TAC, REFL_TAC],\n"  # and one inside it
+               "         ALL_TAC]\n"
                "  THEN ASSUME_TAC TRUTH\n"
                "  THEN ASSUME_TAC TRUTH\n"
                "  THEN simp[]\n"
                "QED\n")
-_RESUME_LINES = list(range(6, 12))
+_RESUME_LINES = list(range(6, 14))
 
 
 def _resume_probe(c, uri, line, rid):
@@ -6849,6 +6851,125 @@ def test_a_hol_state0_directory_serves():
         shutil.rmtree(d, ignore_errors=True)
 
 
+# A theory whose header carries `bare' opens nothing, so `bossLib' is
+# not in scope; on `hol.state0' it is not in the heap either.  Both
+# tests below need that combination -- it is what every directory
+# below `src/boss' looks like, and what the full-heap tests cannot see.
+_BARE_NEST_SRC = ("Theory barenest[bare]\n"
+                  "Ancestors bool\n"
+                  "Libs HolKernel boolLib Parse\n"
+                  "\n"
+                  "Theorem t:\n"
+                  "  (p ==> p) /\\ ((q ==> q) /\\ (r ==> r))\n"
+                  "Proof\n"
+                  "  CONJ_TAC THENL\n"
+                  "  [REWRITE_TAC [],\n"
+                  "   CONJ_TAC THENL\n"
+                  "   [REWRITE_TAC [],\n"
+                  "    REWRITE_TAC []]]\n"
+                  "QED\n")
+
+
+def test_goalState_nested_thenl_on_a_bare_theory():
+    """A cursor past a THENL branch makes the walker skip that branch
+    by discharging its goal with `cheat', which it used to obtain by
+    compiling the name `bossLib.cheat'.  Below `src/boss' there is no
+    bossLib to compile it against, so the skip failed, and a failure
+    to compile is silenced as "the file's opens have not run yet" --
+    leaving a wrong goal with no error: the *outer* block's first
+    branch, whatever the cursor was actually inside.
+
+    Line 10 is the first branch of the nested THENL, reached only by
+    skipping the outer block's first branch.  Warming the cache hides
+    the bug (a resume never cheats), so this asks cold."""
+    d = tempfile.mkdtemp(prefix="lsp_barenest_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/barenestScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _BARE_NEST_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            assert_eq(len(_diag_count(c, uri)), 0, "the proof itself is fine")
+            r = _send_goalstate(c, 910, uri, 10, 4)
+            res = (r or {}).get("result")
+            assert_true(res is not None, f"got a result ({r!r})")
+            assert_eq(res.get("error"), None, f"no error ({res!r})")
+            assert_eq(res.get("context"),
+                      ["branch 2 of 2 of THENL", "branch 1 of 2 of THENL"],
+                      f"the cursor's own branch, two blocks deep ({res!r})")
+            goals = res.get("goals") or []
+            assert_eq(len(goals), 1, f"one focused goal ({goals!r})")
+            assert_eq(goals[0].get("goal"), "q \u21d2 q",
+                      f"the nested branch's goal, not the outer block's "
+                      f"({goals!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+_BARE_FAIL_SRC = ("Theory barefail[bare]\n"
+                  "Ancestors bool\n"
+                  "Libs HolKernel boolLib Parse\n"
+                  "\n"
+                  "Theorem thm1:\n"
+                  "  p ==> p\n"
+                  "Proof\n"
+                  "  no_such_tactic\n"
+                  "QED\n"
+                  "\n"
+                  "Theorem thm2:\n"
+                  "  (p ==> p) /\\ (q ==> q)\n"
+                  "Proof\n"
+                  "  CONJ_TAC THENL [ACCEPT_TAC thm1, REWRITE_TAC []]\n"
+                  "QED\n")
+
+
+def test_a_bare_theorys_failed_tactic_does_not_cascade():
+    """A tactic that does not compile takes its theorem's binding down
+    with it, and every consumer below fails too -- so the declaration
+    is retried with the proof replaced by `cheat', which only has to
+    compile.  Naming `bossLib.cheat' meant the retry did not compile
+    either on a heap without bossLib, and it runs muffled, so the
+    rescue failed silently and the errors it exists to contain ran on
+    down the file.
+
+    Here `thm2' consumes `thm1'.  Only `thm1's tactic is wrong, so
+    only `thm1's tactic may be reported."""
+    d = tempfile.mkdtemp(prefix="lsp_barefail_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/barefailScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _BARE_FAIL_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            diags = _diag_count(c, uri)
+            # Positive control: without this the test passes vacuously
+            # on a server that reported nothing at all.
+            assert_true(any("no_such_tactic" in dg.get("message", "")
+                            for dg in diags),
+                        f"the broken tactic is reported ({diags!r})")
+            cascaded = [dg for dg in diags
+                        if "thm1" in dg.get("message", "")]
+            assert_true(not cascaded,
+                        f"thm1's statement still binds, so thm2 compiles "
+                        f"({cascaded!r})")
+            assert_eq(len(diags), 1,
+                      f"nothing but the tactic is reported ({diags!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_overload_hover_names_the_expansion():
     """An overloaded name that resolves to a *term* rather than to one
     constant used to hover as a bare "overloaded", which says only that
@@ -8399,6 +8520,10 @@ TESTS = [
      test_unloadable_heap_falls_back_with_a_warning),
     ("a_hol_state0_directory_serves",
      test_a_hol_state0_directory_serves),
+    ("goalState_nested_thenl_on_a_bare_theory",
+     test_goalState_nested_thenl_on_a_bare_theory),
+    ("a_bare_theorys_failed_tactic_does_not_cascade",
+     test_a_bare_theorys_failed_tactic_does_not_cascade),
     ("overload_hover_names_the_expansion",
      test_overload_hover_names_the_expansion),
     ("overload_hover_sees_through_the_alias_chain",

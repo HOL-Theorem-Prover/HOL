@@ -864,10 +864,16 @@ fun initialize {
      kept out of the checking pool, since replaying `cheat` would report
      `Proved` for a proof that does not compile.
 
+     `Tactical.cheat` rather than `bossLib.cheat`: every directory
+     below `src/boss` runs on `bin/hol.state0`, which has no bossLib,
+     and a `Theory foo[bare]` header opens none either -- so the retry
+     did not compile there, and the errors it exists to contain ran on
+     down the file instead.
+
      `ExpExpansion` rather than a bare `Ident` so the built tree keeps
      the original tactic's span: hover over the statement still works,
-     and nothing claims the first thirteen bytes of the user's tactic
-     are an identifier.
+     and nothing claims the opening bytes of the user's tactic are an
+     identifier.
 
      An in-progress block (`qed_ = NONE`) needs none of this: it already
      expands to a separate binding plus a standalone tac. *)
@@ -882,7 +888,7 @@ fun initialize {
                         result = HOLSourceAST.Ident
                                    {op_ = NONE,
                                     id = (#1 (HOLSourceAST.expSpan tac),
-                                          "bossLib.cheat")}},
+                                          "Tactical.cheat")}},
                qed_ = SOME q, stop = stop})
     | cheatDec _ = NONE
 

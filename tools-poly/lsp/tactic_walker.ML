@@ -133,8 +133,20 @@ fun compileAndApplyLT src state =
    discharge the focused goal entirely, so its only effect on what
    follows is that one goal is gone -- which `cheat' reproduces
    exactly, at no cost.  Verified against real branches: the goal
-   lists coincide. *)
-fun cheatBranch state = compileAndApply "bossLib.cheat" state
+   lists coincide.
+
+   Applied as a value rather than compiled from source.  A server in
+   any directory below `src/boss' runs on `bin/hol.state0', which has
+   no bossLib, and a `Theory foo[bare]' header opens none either, so
+   compiling a name for `cheat' there failed -- and the skip then
+   reported a branch-advance failure that `goal_state_init' silenced
+   as source noise, leaving every query inside a THENL showing the
+   block's first branch. *)
+fun cheatBranch state =
+  case Portable.total (goalFrag.expand Tactical.cheat (Context.snapshot()))
+                      state of
+      NONE => Rejected ApplyFailed
+    | SOME state' => Applied state'
 
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
@@ -628,57 +640,61 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
               case sections of
                 [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
               | [sec] => walkFrags env state snaps stepIdx sec
-              | sec :: rest =>
-                  if mayCheat andalso cheatLT andalso stepIdx >= resumeIdx
-                     andalso cursor >= Option.getOpt
-                                         (firstSectionStart rest, be)
-                  then
-                    (* This branch's turn is over and the cursor is
-                       still inside the block, so only its effect on
-                       the branches after it matters -- and that is
-                       nothing: each gets its own goal, fixed when the
-                       block opened. *)
-                    (cheatedLT := true;
-                     case cheatBranch state of
-                       Rejected why => Failed {state = state, snaps = snaps,
-                                               stepIdx = stepIdx,
-                                               at = FFMid mid, why = why}
-                     | Applied state' =>
-                       (case applyMid mid state' of
-                          NONE => Failed {state = state', snaps = snaps,
-                                          stepIdx = stepIdx, at = FFMid mid,
+              | sec :: rest => let
+                  fun walkIt () =
+                    case walkFrags env state snaps stepIdx sec of
+                      Done r =>
+                        if #stepIdx r < resumeIdx then
+                          (* still replaying: this mid already fired *)
+                          walkSections mayCheat (#state r) (#snaps r)
+                                       (#stepIdx r) rest
+                        (* `walkFrags' says Done as soon as a section's
+                           frags run out, which for an ALL_TAC branch is
+                           immediately.  Only advance once the cursor has
+                           actually reached the next section, so the text
+                           between two branches reports the first one's
+                           result -- solved, or its leftover goals. *)
+                        else if cursor <
+                                Option.getOpt (firstSectionStart rest, be)
+                        then Halted {state = #state r, snaps = #snaps r,
+                                     stepIdx = #stepIdx r}
+                        else
+                        (case applyMid mid (#state r) of
+                           NONE => Failed {state = #state r,
+                                           snaps = #snaps r,
+                                           stepIdx = #stepIdx r,
+                                           at = FFMid mid,
                                            why = ApplyFailed}
-                        | SOME state'' =>
-                            walkSections mayCheat state'' snaps
-                              (stepIdx + countSteps sec) rest))
-                  else
-                  (case walkFrags env state snaps stepIdx sec of
-                     Done r =>
-                       if #stepIdx r < resumeIdx then
-                         (* still replaying: this mid already fired *)
-                         walkSections mayCheat (#state r) (#snaps r)
-                                      (#stepIdx r) rest
-                       (* `walkFrags' says Done as soon as a section's
-                          frags run out, which for an ALL_TAC branch is
-                          immediately.  Only advance once the cursor has
-                          actually reached the next section, so the text
-                          between two branches reports the first one's
-                          result -- solved, or its leftover goals. *)
-                       else if cursor <
-                               Option.getOpt (firstSectionStart rest, be)
-                       then Halted {state = #state r, snaps = #snaps r,
-                                    stepIdx = #stepIdx r}
-                       else
-                       (case applyMid mid (#state r) of
-                          NONE => Failed {state = #state r,
-                                          snaps = #snaps r,
-                                          stepIdx = #stepIdx r,
-                                          at = FFMid mid,
-                                          why = ApplyFailed}
-                        | SOME state' =>
-                            walkSections mayCheat state' (#snaps r)
-                                         (#stepIdx r) rest)
-                   | out => out)
+                         | SOME state' =>
+                             walkSections mayCheat state' (#snaps r)
+                                          (#stepIdx r) rest)
+                    | out => out
+                  in
+                    if mayCheat andalso cheatLT andalso stepIdx >= resumeIdx
+                       andalso cursor >= Option.getOpt
+                                           (firstSectionStart rest, be)
+                    then
+                      (* This branch's turn is over and the cursor is
+                         still inside the block, so only its effect on
+                         the branches after it matters -- and that is
+                         nothing: each gets its own goal, fixed when the
+                         block opened.
+
+                         Skipping is an optimisation, so a branch that
+                         will not go this way is walked rather than
+                         reported: a skip that cannot be applied costs
+                         time, never an answer. *)
+                      (case cheatBranch state of
+                         Rejected _ => walkIt ()
+                       | Applied state' =>
+                         (case applyMid mid state' of
+                            NONE => walkIt ()
+                          | SOME state'' =>
+                              (cheatedLT := true;
+                               walkSections mayCheat state'' snaps
+                                 (stepIdx + countSteps sec) rest)))
+                    else walkIt ()
+                  end
             fun opened k =
               if replaying then k state
               else (case applyOpen tacText ok state of
