@@ -3283,6 +3283,48 @@ def test_goalState_unwritten_then1_branch_shows_its_goal():
         c.close()
 
 
+def test_goalState_before_an_unwritten_then1_shows_both_goals():
+    """The cursor has not reached the `>-` yet, so it has not run:
+    what the reader is looking at is the pair of goals it is about to
+    act on.  The clause that handles an unwritten branch opened the
+    bracket whatever the cursor, because the guard the other brackets
+    use takes its boundary from the branch's first token and an
+    unwritten branch has none -- so this position and the one just
+    after the `>-` reported the same single focused goal, and the
+    second goal was nowhere to be seen."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_before_unwritten_then1.sml"
+        src = ("Theory goalstate_before_unwritten_then1\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac >> ALL_TAC\n"
+               "  >-\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        # line 6 = "  conj_tac >> ALL_TAC"; cursor at its end.
+        eol = len(src.split("\n")[6])
+        r = _send_goalstate(c, 764, uri, 6, eol)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_true(result.get("error") is None,
+                    f"nothing has failed here ({result!r})")
+        goals = [g["goal"] for g in result["goals"]]
+        assert_true(goals == ["0 = 0", "1 = 1"],
+                    f"both of `conj_tac`'s subgoals, unfocused ({goals!r})")
+        # And one line down the `>-` has run: the first of them alone.
+        r2 = _send_goalstate(c, 765, uri, 7, 4)
+        after = [g["goal"] for g in r2["result"]["goals"]]
+        assert_true(after == ["0 = 0"],
+                    f"the `>-` focused the first subgoal ({after!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_available_past_compile_pos():
     """A `$/hol/goalState' issued between a didChange and the fresh
     compile finishing must still return a valid result -- otherwise
@@ -8527,6 +8569,8 @@ TESTS = [
                                      test_dangling_combinator_flags_the_operator),
     ("goalState_unwritten_then1_branch_shows_its_goal",
                                 test_goalState_unwritten_then1_branch_shows_its_goal),
+    ("goalState_before_an_unwritten_then1_shows_both_goals",
+                          test_goalState_before_an_unwritten_then1_shows_both_goals),
     ("goalState_available_past_compile_pos",
                                      test_goalState_available_past_compile_pos),
     ("runaway_errors_still_publish_diagnostics",

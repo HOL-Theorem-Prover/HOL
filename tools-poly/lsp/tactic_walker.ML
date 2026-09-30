@@ -557,9 +557,23 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
 
      A written `>- ALL_TAC' does not come here.  It linearizes to an
      `FGroup', which carries a span of its own, so an empty `inner'
-     means the operand is genuinely absent. *)
+     means the operand is genuinely absent.
+
+     Opening is still conditional on the cursor having reached the
+     combinator, as it is for every other bracket.  The boundary comes
+     from the combinator token rather than from the branch's first
+     token, which is what `bracketStartByte' answers and what the
+     general case asks it for: there is no branch to take one from,
+     and `firstFragStart []' is NONE, which `startsAfter' reads as
+     "not before".  Without this the line the `>-' was written on and
+     the line above it report the same state, and the goals `>-' is
+     about to act on are nowhere to be seen. *)
   | FBracket (ok, [], _, _) =>
-      if replaying then Done {state = state, snaps = snaps, stepIdx = stepIdx}
+      if not replaying andalso
+         startsAfter cursor (Option.map #1 (combinatorSpan (FFOpen ok)))
+      then Halted {state = state, snaps = snaps, stepIdx = stepIdx}
+      else if replaying then
+        Done {state = state, snaps = snaps, stepIdx = stepIdx}
       else (case applyOpen tacText ok state of
               NONE => Failed {state = state, snaps = snaps,
                               stepIdx = stepIdx, at = FFOpen ok,
