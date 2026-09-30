@@ -242,6 +242,13 @@ fun with_ceiling ceiling (b : backend) : backend =
    requires = #requires b, input = #input b,
    certainty_ceiling = ceiling, run = #run b, render = #render b}
 
+fun with_family family (b : backend) : backend =
+  {name = #name b, family = family, weight = #weight b,
+   configured = #configured b,
+   requires = #requires b, input = #input b,
+   certainty_ceiling = #certainty_ceiling b, run = #run b,
+   render = #render b}
+
 fun with_enabled flags body =
   (app (fn f => f := true) flags;
    Portable.finally (fn () => app (fn f => f := false) flags) body ())
@@ -395,18 +402,32 @@ val _ = test "QuickcheckBackends selects by backend family" (fn () =>
   let
     val enabled = ref false
     fun none _ _ = Unknown []
-    val qc_stub = stub "selftest-qc-family" ~100 enabled none
-    val _ = register_backend
-      {name = #name qc_stub, family = QuickcheckFamily,
-       weight = #weight qc_stub, configured = #configured qc_stub,
-       requires = #requires qc_stub, input = #input qc_stub,
-       certainty_ceiling = #certainty_ceiling qc_stub, run = #run qc_stub,
-       render = #render qc_stub}
+    val _ = register_backend (with_family QuickcheckFamily
+      (stub "selftest-qc-family" ~100 enabled none))
     val _ = register_backend (stub "selftest-other-family" ~100 enabled none)
     val sort = Listsort.sort String.compare
   in
     Option.map sort (#backends (upd_search QuickcheckBackends default_config))
     = SOME ["exhaustive", "narrowing", "random", "selftest-qc-family"]
+  end)
+
+(* The live registry has moved the backend out of the family since the
+   tactic's context was captured; reading it would skip the backend. *)
+val _ = test "QUICKCHECK_TAC takes its backends from its context" (fn () =>
+  let
+    val enabled = ref false
+    val runs = ref 0
+    val probe = stub "selftest-qc-context" ~100 enabled
+      (fn _ => fn _ => (runs := !runs + 1; Unknown []))
+    val _ = register_backend (with_family QuickcheckFamily probe)
+    (* Sequential, so the probe runs first by weight. *)
+    val ctxt = with_config (default_config |> upd_sequential true |> quiet)
+      Context.snapshot ()
+    val _ = register_backend probe
+  in
+    with_enabled [enabled]
+      (fn () => ignore (QUICKCHECK_TAC ([], ``T``) ctxt));
+    !runs = 1
   end)
 
 val _ = test "preset tactics never run a registered backend" (fn () =>

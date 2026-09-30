@@ -92,7 +92,10 @@ structure Refute :> Refute = struct
   fun apply_updates updates config =
     List.foldl (fn (update, current) => update current) config updates
 
-  fun config_in ctxt updates = apply_updates updates (config_of ctxt)
+  (* The session makes updates that read Refute state, such as
+     [upd_search QuickcheckBackends], read it from [ctxt]. *)
+  fun config_in ctxt updates =
+    Refute_Session.run ctxt (fn () => apply_updates updates (config_of ctxt))
 
   fun current_config updates = config_in (Context.snapshot ()) updates
 
@@ -113,8 +116,10 @@ structure Refute :> Refute = struct
     | backend_name (RegisteredBackend name) = name
 
   fun upd_search AllBackends = upd_backends NONE
-    | upd_search QuickcheckBackends = upd_backends
+    (* Resolved on application, so the registry read is the caller's. *)
+    | upd_search QuickcheckBackends = (fn config => upd_backends
         (SOME (Refute_Core.family_backend_names Refute_Core.QuickcheckFamily))
+        config)
     | upd_search (Only []) =
         raise Feedback.mk_HOL_ERR "Refute" "upd_search"
           "Only requires at least one backend"
