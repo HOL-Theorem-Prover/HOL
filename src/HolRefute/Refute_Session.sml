@@ -40,10 +40,12 @@ struct
 
   fun cell_in (State {slot, ...}) ctxt = Context.Data.get slot ctxt
 
-  fun read st =
+  fun context () =
     case current () of
-        SOME {view, ...} => #value (cell_in st (Synchronized.value view))
-      | NONE => #value (cell_in st (Context.snapshot ()))
+        SOME {view, ...} => Synchronized.value view
+      | NONE => Context.snapshot ()
+
+  fun read st = #value (cell_in st (context ()))
 
   (* The caller holds the state's lock, so no other change of the state
      comes between its read of the view and this store.  Only the store

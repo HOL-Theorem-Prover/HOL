@@ -430,6 +430,24 @@ val _ = test "QUICKCHECK_TAC takes its backends from its context" (fn () =>
     !runs = 1
   end)
 
+(* A datatype defined after the tactic's context was captured is absent
+   from that context's TypeBase, so its constructors are not executable. *)
+val before_ctx_late = Context.snapshot ()
+val _ = Datatype.Datatype `ctx_late = CtxLateA | CtxLateB`
+val _ = test "tactics read datatypes from their own context" (fn () =>
+  let
+    val goal = ([], ``!x. x = CtxLateA``)
+    fun finds ctxt =
+      (ignore (REFUTE_CONFIG_TAC (exhaustive |> upd_expect ExpectCex)
+                 goal ctxt);
+       true)
+      handle HOL_ERR e =>
+        if Feedback.top_function_of e = "expect" then false
+        else raise HOL_ERR e
+  in
+    finds (Context.snapshot ()) andalso not (finds before_ctx_late)
+  end)
+
 val _ = test "preset tactics never run a registered backend" (fn () =>
   let
     val enabled = ref false

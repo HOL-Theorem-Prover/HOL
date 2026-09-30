@@ -335,7 +335,7 @@ structure Refute_Extract :> Refute_Extract = struct
           | NONE =>
               let
                 val info =
-                  case TypeBase.fetch ty of
+                  case Refute_TypeBase.fetch ty of
                     SOME found => found
                   | NONE =>
                       reject ("no TypeBase information for " ^ type_name ty)
@@ -881,7 +881,7 @@ structure Refute_Extract :> Refute_Extract = struct
           List.find has_head theorems
         end
     in
-      Lib.get_first from_info (TypeBase.elts ())
+      Lib.get_first from_info (Refute_TypeBase.elts ())
     end
 
   fun compset_items ({compset_items = items, ...} : context) =
@@ -945,7 +945,7 @@ structure Refute_Extract :> Refute_Extract = struct
     Term.is_var tm orelse Refute_EvalEnum.special_literal tm orelse
     let val (head, arguments) = boolSyntax.strip_comb tm
     in
-      Term.is_const head andalso TypeBase.is_constructor head andalso
+      Term.is_const head andalso Refute_TypeBase.is_constructor head andalso
       List.all is_pattern arguments
     end
 
@@ -1244,7 +1244,7 @@ structure Refute_Extract :> Refute_Extract = struct
       let
         val (head, arguments) = boolSyntax.strip_comb term
       in
-        if Term.is_const head andalso TypeBase.is_constructor head then
+        if Term.is_const head andalso Refute_TypeBase.is_constructor head then
           choose (context_mode context)
             (fn () => constructor_expression context head
               (List.map (pattern context) arguments))
@@ -1298,7 +1298,7 @@ structure Refute_Extract :> Refute_Extract = struct
           val table = List.foldl add_info
             (Redblackmap.mkDict (Lib.pair_compare
               (String.compare, String.compare)))
-            (TypeBase.elts ())
+            (Refute_TypeBase.elts ())
         in
           record_fields := SOME table; table
         end
@@ -1812,8 +1812,8 @@ structure Refute_Extract :> Refute_Extract = struct
     else if pairSyntax.is_pabs term then FPabs
     else if Term.is_abs term then FAbs
     else if oneSyntax.is_one term then FOne
-    else if TypeBase.is_record term then FRecord
-    else if TypeBase.is_case term then FCase
+    else if Refute_TypeBase.is_record term then FRecord
+    else if Refute_TypeBase.is_case term then FCase
     else FApp
 
   fun expression context term =
@@ -1857,7 +1857,7 @@ structure Refute_Extract :> Refute_Extract = struct
       fun strict_char_list_value ty elements =
         let
           val constructors = map (TypeBasePure.cinst ty)
-            (TypeBase.constructors_of ty)
+            (Refute_TypeBase.constructors_of ty)
           fun named wanted =
             valOf (List.find (fn constructor =>
               kname constructor = wanted) constructors)
@@ -1883,7 +1883,7 @@ structure Refute_Extract :> Refute_Extract = struct
             (case primitive context head argument_terms arguments of
                  SOME result => result
                | NONE =>
-                   if TypeBase.is_constructor head then
+                   if Refute_TypeBase.is_constructor head then
                      constructor_expression context head arguments
                    else
                      let
@@ -1954,7 +1954,7 @@ structure Refute_Extract :> Refute_Extract = struct
                   let
                     val ty = Term.type_of term
                     val constructor = TypeBasePure.cinst ty
-                      (hd (TypeBase.constructors_of ty))
+                      (hd (Refute_TypeBase.constructors_of ty))
                   in
                     constructor_expression context constructor
                       [expression context left, expression context right]
@@ -1984,8 +1984,8 @@ structure Refute_Extract :> Refute_Extract = struct
         | FOne => delay "()"
         | FRecord =>
             let
-              val (record_ty, fields) = TypeBase.dest_record term
-              val constructor = hd (TypeBase.constructors_of record_ty)
+              val (record_ty, fields) = Refute_TypeBase.dest_record term
+              val constructor = hd (Refute_TypeBase.constructors_of record_ty)
             in
               constructor_expression context constructor
                 (List.map (expression context o #2) fields)
@@ -2061,7 +2061,7 @@ structure Refute_Extract :> Refute_Extract = struct
 
   and strict_case_expression context term =
     let
-      val (scrutinee, rows) = TypeBase.strip_case term
+      val (scrutinee, rows) = Refute_TypeBase.strip_case term
       fun row (pat, rhs) = pattern context pat ^ " => " ^
         expression context rhs
       (* Strings are represented as ML strings, not ML lists.  Compile their
@@ -2092,7 +2092,7 @@ structure Refute_Extract :> Refute_Extract = struct
   and lazy_case_expression context term =
     let
       val {defer, ...} = context_operations context
-      val (scrutinee, rows) = TypeBase.strip_case term
+      val (scrutinee, rows) = Refute_TypeBase.strip_case term
       val value = fresh_pattern context "refute_lazy_scrutinee_"
       fun dispatch [] = "(raise Match)"
         | dispatch ((pat, rhs) :: rest) =
@@ -2201,7 +2201,8 @@ structure Refute_Extract :> Refute_Extract = struct
                        " else " ^ failure ^ " end"
                      end
                  | _ => reject "malformed lazy SUC pattern")
-            else if Term.is_const head andalso TypeBase.is_constructor head then
+            else if Term.is_const head andalso
+                    Refute_TypeBase.is_constructor head then
               let
                 val children = List.map (fn _ =>
                   fresh_pattern context "refute_lazy_field_") arguments
@@ -2735,7 +2736,8 @@ structure Refute_Extract :> Refute_Extract = struct
         else
           let val (head, arguments) = boolSyntax.strip_comb tm
           in
-            if Term.is_const head andalso TypeBase.is_constructor head then
+            if Term.is_const head andalso
+               Refute_TypeBase.is_constructor head then
               let
                 val index = constructor_index head
                 val children = List.map reconstruction arguments
@@ -3376,7 +3378,7 @@ structure Refute_Extract :> Refute_Extract = struct
                          end
                      | _ => smart_reject "malformed CONS output pattern")
                 else if Term.is_const constructor andalso
-                        TypeBase.is_constructor constructor then
+                        Refute_TypeBase.is_constructor constructor then
                   let
                     val constructor_number = constructor_index constructor
                     val child_names = List.tabulate (length arguments,

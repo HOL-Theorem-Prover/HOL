@@ -510,7 +510,7 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
                 | SOME constructors =>
                     if null constructors then NONE
                     else Option.map (fn info => (info, constructors))
-                      (TypeBase.fetch ty)
+                      (Refute_TypeBase.fetch ty)
             handle Feedback.HOL_ERR _ => NONE
 
           fun constructor_info ty =
@@ -899,7 +899,7 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
                     if regular_recursive_type ty constructors then ()
                     else no_proof "structural induction" depth
                       "datatype is nonrecursive, mutual, or nested"
-                  val induction_theorem = TypeBase.induction_of ty
+                  val induction_theorem = Refute_TypeBase.induction_of ty
                     handle Feedback.HOL_ERR _ => no_proof
                       "structural induction" depth
                       "datatype has no induction theorem"

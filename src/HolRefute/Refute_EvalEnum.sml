@@ -449,7 +449,7 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
                   let
                     val ty = Term.type_of value
                     val constructors = map (TypeBasePure.cinst ty)
-                      (TypeBase.constructors_of ty)
+                      (Refute_TypeBase.constructors_of ty)
                     fun branch constructor =
                       let
                         val (argument_types, _) =
@@ -465,7 +465,7 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
                         (Term.list_mk_comb (constructor, arguments), body)
                       end
                   in
-                    TypeBase.mk_case (value, map branch constructors)
+                    Refute_TypeBase.mk_case (value, map branch constructors)
                   end
               | NONE =>
                   boolSyntax.mk_cond
@@ -612,7 +612,7 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
       | _ =>
           Option.app DefnBase.register_indn
             (Lib.total
-              (Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of})
+              (Prim_rec.gen_indthm {lookup_ind = Refute_TypeBase.induction_of})
               theorem)
 
   fun define_clique_of defn =

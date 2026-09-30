@@ -290,7 +290,7 @@ structure Refute_Cert_Narrow :> Refute_Cert_Narrow = struct
               let
                 fun splittable variable =
                   Term.free_in variable conclusion andalso
-                  Option.isSome (TypeBase.fetch (Term.type_of variable))
+                  Option.isSome (Refute_TypeBase.fetch (Term.type_of variable))
                 fun named theorem =
                   case cover_variable (Thm.concl theorem) conclusion of
                       SOME found =>
@@ -303,7 +303,7 @@ structure Refute_Cert_Narrow :> Refute_Cert_Narrow = struct
                         "case split did not reach a replay leaf"
                 val _ = if budget > 0 then () else raise Fail
                   "case split exceeded the cover's split budget"
-                val nchotomy = TypeBase.nchotomy_of
+                val nchotomy = Refute_TypeBase.nchotomy_of
                   (Term.type_of variable)
               in
                 Tactical.THEN

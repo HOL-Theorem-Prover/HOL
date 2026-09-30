@@ -263,7 +263,7 @@ structure Refute_Eval :> Refute_Eval = struct
       val (constructor, arguments) = boolSyntax.strip_comb tm
       val (domain, _) = boolSyntax.strip_fun (Term.type_of constructor)
     in
-      if TypeBase.is_constructor constructor andalso
+      if Refute_TypeBase.is_constructor constructor andalso
          length domain = length arguments
       then SOME (constructor, arguments)
       else NONE

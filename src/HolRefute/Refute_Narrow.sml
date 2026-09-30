@@ -818,7 +818,7 @@ structure Refute_Narrow :> Refute_Narrow = struct
             at (index - 1) rest subtree
         | at index ((Refute_Eval.Exists, variable) :: rest)
             (Refute_Eval.CaseExistential {branches, ...}) =
-            TypeBase.mk_case
+            Refute_TypeBase.mk_case
               (variable, map (fn (_, value, subtree) =>
                 (value, at (index - 1) rest subtree)) branches)
         | at _ _ _ = raise InvalidPath

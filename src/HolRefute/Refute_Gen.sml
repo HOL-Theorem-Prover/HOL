@@ -266,7 +266,8 @@ structure Refute_Gen :> Refute_Gen = struct
       fun instantiate family_info =
         Type.type_subst theta (TypeBasePure.ty_of family_info)
     in
-      List.map instantiate (List.filter (same_family key) (TypeBase.elts ()))
+      List.map instantiate
+        (List.filter (same_family key) (Refute_TypeBase.elts ()))
     end
 
   fun type_mentions family ty =
@@ -387,7 +388,7 @@ structure Refute_Gen :> Refute_Gen = struct
                Args = List.tabulate (List.length Args,
                  fn index => Type.mk_vartype ("'family" ^ Int.toString index))}
           in
-            case TypeBase.fetch generic of
+            case Refute_TypeBase.fetch generic of
                 SOME info => TypeBasePure.constructors_of info
               | NONE => []
           end
@@ -450,7 +451,7 @@ structure Refute_Gen :> Refute_Gen = struct
   (* A registered family's constructors (e.g. FEMPTY/FUPDATE) are as
      [nocompute]/constructor-like as an ordinary datatype's, so
      [Refute_Core.nonexecutable_constants] trusts them the same way it
-     trusts [TypeBase.is_constructor]. *)
+     trusts [Refute_TypeBase.is_constructor]. *)
   fun is_family_constructor constant =
     Term.is_const constant andalso
     List.exists (fn fam =>
@@ -486,7 +487,7 @@ structure Refute_Gen :> Refute_Gen = struct
       fun family_floors family =
         let
           fun floor_for floors family_ty =
-            case TypeBase.fetch family_ty of
+            case Refute_TypeBase.fetch family_ty of
               NONE => 0
             | SOME family_info =>
                 let
@@ -595,7 +596,7 @@ structure Refute_Gen :> Refute_Gen = struct
         end
 
       fun no_typebase_spec () =
-        case TypeBase.fetch ty of
+        case Refute_TypeBase.fetch ty of
             SOME info => datatype_spec info
           | NONE =>
               if is_quotient_type ty then

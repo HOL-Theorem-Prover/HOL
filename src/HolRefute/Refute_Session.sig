@@ -20,6 +20,7 @@ signature Refute_Session = sig
   val local_state : string -> 'a -> 'a state
 
   (* The bound session's view, or the live context outside any call. *)
+  val context : unit -> Context.t
   val read : 'a state -> 'a
 
   (* Every change of a state is serialized with the others, and its

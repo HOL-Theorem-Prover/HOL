@@ -177,6 +177,7 @@ Module layout
   `Refute_Core` and the facade.
 * `Refute_Session`: Refute's state in the HOL context; one call reads the
   context captured at its entry and commits its cache changes at exit.
+* `Refute_TypeBase`: `TypeBase` accessors that read the call's context.
 * `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
 * `Refute_Eval`: substrate seam and PRNG;
   `Refute_EvalCompute`, `Refute_EvalSML`: substrates;

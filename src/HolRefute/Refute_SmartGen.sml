@@ -51,12 +51,12 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
       (* The nchotomy theorem is the authoritative exhaustiveness witness.
          In particular, a collection of terms merely marked as constructors
          is not enough to establish that a pattern matrix covers its type. *)
-      val cases = TypeBase.nchotomy_of ty
+      val cases = Refute_TypeBase.nchotomy_of ty
       val _ = if Theory.uptodate_thm cases then ()
         else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
           "constructors_for" "stale TypeBase cases theorem"
       val constructors =
-        map (TypeBasePure.cinst ty) (TypeBase.constructors_of ty)
+        map (TypeBasePure.cinst ty) (Refute_TypeBase.constructors_of ty)
       val _ = if null constructors then
           raise Feedback.mk_HOL_ERR "Refute_SmartGen"
             "constructors_for" "empty constructor family"
@@ -73,7 +73,7 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
         val (domains, range) = boolSyntax.strip_fun (Term.type_of head)
         val family = constructors_for (Term.type_of term)
         val constructor = Term.is_const head andalso
-          TypeBase.is_constructor head andalso
+          Refute_TypeBase.is_constructor head andalso
           length arguments = length domains andalso
           range = Term.type_of term andalso
           List.exists (same_constant head) family
@@ -479,7 +479,8 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
     else
       let val (head, arguments) = HolKernel.strip_comb term
       in
-        if Term.is_const head andalso TypeBase.is_constructor head andalso
+        if Term.is_const head andalso
+           Refute_TypeBase.is_constructor head andalso
            length (#1 (boolSyntax.strip_fun (Term.type_of head))) =
              length arguments
         then
@@ -888,7 +889,7 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
   fun is_equality_type ty = not (contains_function_type ty)
 
   fun invertible_head term =
-    Term.is_const term andalso TypeBase.is_constructor term
+    Term.is_const term andalso Refute_TypeBase.is_constructor term
     handle Feedback.HOL_ERR _ => false
 
   fun noninvertible_subterms term =

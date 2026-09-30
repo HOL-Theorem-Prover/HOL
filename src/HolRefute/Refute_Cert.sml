@@ -253,7 +253,7 @@ structure Refute_Cert :> Refute_Cert = struct
                 val constructors =
                   Option.map (fn info => map (TypeBasePure.cinst ty)
                     (TypeBasePure.constructors_of info))
-                    (TypeBase.fetch ty)
+                    (Refute_TypeBase.fetch ty)
                   handle Feedback.HOL_ERR _ => NONE
                 val _ = cache :=
                   Redblackmap.insert (!cache, ty, constructors)

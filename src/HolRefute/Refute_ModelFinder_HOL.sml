@@ -1984,7 +1984,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           List.nth (argument_tys, index)))
       val tuple = tuple_term arguments
       fun size_function ty =
-        TypeBasePure.type_size (TypeBase.theTypeBase ()) ty
+        TypeBasePure.type_size (Refute_TypeBase.theTypeBase ()) ty
       fun component_size (argument, ty) =
         Term.mk_comb (size_function ty, argument)
       fun abstraction body =
@@ -2078,7 +2078,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         handle HOL_ERR _ => NONE
 
       val whole_functions = List.mapPartial (fn ty =>
-        Lib.total (TypeBasePure.type_size (TypeBase.theTypeBase ())) ty)
+        Lib.total (TypeBasePure.type_size (Refute_TypeBase.theTypeBase ())) ty)
         tuple_tys
       val whole = if length whole_functions = length tuple_tys then
           case_measure whole_functions
@@ -2090,7 +2090,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       fun component_function argument_tys index =
         tuple_abstraction argument_tys (fn arguments =>
           Term.mk_comb
-            (TypeBasePure.type_size (TypeBase.theTypeBase ())
+            (TypeBasePure.type_size (Refute_TypeBase.theTypeBase ())
                (List.nth (argument_tys, index)),
              List.nth (arguments, index)))
 
@@ -2641,12 +2641,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   (* Classification is operator-level: every Refute registry is keyed by type
      operator and [validate_registered_type] forbids non-variable type
      arguments, so the generic instance is the authoritative answer.
-     [TypeBase.fetch] is a type-net lookup, so asking at a specialized
+     [Refute_TypeBase.fetch] is a type-net lookup, so asking at a specialized
      instance can pick a different entry for one operator - [:'a word] finds
      the constructor-free word entry while [:('a,'b) cart] finds the cart
      entry - and callers would then disagree about [cart]. *)
   fun database_constructors ty =
-    (case TypeBase.fetch (generic_instance ty) of
+    (case Refute_TypeBase.fetch (generic_instance ty) of
          SOME info => TypeBasePure.constructors_of info
        | NONE => [])
     handle HOL_ERR _ => []
@@ -4601,7 +4601,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       case registered_constructors ty of
           constructors as _ :: _ => constructors
         | [] =>
-            (case TypeBase.fetch ty of
+            (case Refute_TypeBase.fetch ty of
                  SOME info => map (TypeBasePure.cinst ty)
                    (TypeBasePure.constructors_of info)
                | NONE => [])
@@ -4660,7 +4660,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               val raw =
                 if is_codatatype result_ty then []
                 else
-                  (case TypeBase.fetch result_ty of
+                  (case Refute_TypeBase.fetch result_ty of
                        SOME info => map (TypeBasePure.cinst result_ty)
                          (TypeBasePure.constructors_of info)
                      | NONE => [])
@@ -4680,7 +4680,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       in
         registered_constructor term orelse
         (not (is_codatatype result_ty) andalso
-         TypeBase.is_constructor term)
+         Refute_TypeBase.is_constructor term)
       end handle HOL_ERR _ => false
     else
       reserved_constructor term
@@ -4735,7 +4735,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       let
         val result_ty = #2 (boolSyntax.strip_fun (Term.type_of term))
       in
-        is_codatatype result_ty andalso TypeBase.is_constructor term andalso
+        is_codatatype result_ty andalso
+        Refute_TypeBase.is_constructor term andalso
         not (registered_constructor term)
       end handle HOL_ERR _ => false
     else
@@ -4909,7 +4910,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           search (0, TypeBasePure.fields_of info)
         end
     in
-      Lib.get_first search_type (TypeBase.elts ())
+      Lib.get_first search_type (Refute_TypeBase.elts ())
     end handle HOL_ERR _ => NONE
 
   fun dest_record_get term = find_field #accessor term
@@ -5040,7 +5041,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
              not (is_data_type ty) then NONE
           else SOME (const_key case_const, (length constructors, 0))
         end handle HOL_ERR _ => NONE
-      val raw = List.mapPartial entry (TypeBase.elts ())
+      val raw = List.mapPartial entry (Refute_TypeBase.elts ())
       (* Revalidation, not a formality: a registration that passed at
          [register_codatatype] can fail here once its constructors are
          deleted or the type gains a datatype entry.  Drop that one type
@@ -5078,7 +5079,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun constructors_for context ty =
     if is_pair_type ty then
-      map (TypeBasePure.cinst ty) (TypeBase.constructors_of ty)
+      map (TypeBasePure.cinst ty) (Refute_TypeBase.constructors_of ty)
     else
       data_type_constrs context ty
 
