@@ -1306,3 +1306,56 @@ Proof
         simp[] >> disch_then irule >> gs[Natural_def, PULL_EXISTS]) >>
   gen_tac >> first_x_assum (qspec_then ‘rep n’ mp_tac) >> simp[]
 QED
+
+(* ----------------------------------------------------------------------
+    The degenerate fixed point.
+
+    A specification with no recursion — an enumeration, a record, any
+    sum of products the type itself does not occur in — gives a functor
+    that does not use the recursive argument at all, and μα. C is C.
+
+    The construction above cannot build it: the cardinality argument
+    needs the recursive argument to be somewhere non-empty, which for a
+    constant functor it never is.  It does not need to.  A type in
+    bijection with C satisfies the same three principles, with the map
+    an identity and the sub-term set empty, and that is all the rest of
+    the package asks of a fixed point.
+
+    The map and the set function are parameters here, as they are
+    everywhere else, so that a caller instantiates them with the terms
+    its own functor gives and proves the two degeneracy facts about
+    those terms.
+   ---------------------------------------------------------------------- *)
+
+Theorem COPY_RECURSION:
+  (∀n. abs (rep n) = n) ∧ (∀p. rep (abs p) = p) ∧
+  (∀h:'n -> 'c. ∀af. mp h af = af) ⇒
+  ∀t. ∃!h. ∀af. h (abs af) = t (mp h af)
+Proof
+  strip_tac >> gen_tac >> simp[EXISTS_UNIQUE_THM] >> conj_tac
+  >- (qexists ‘t o rep’ >> simp[]) >>
+  ‘∀k. (∀af. k (abs af) = t (mp k af)) ⇒ k = t o rep’
+    suffices_by metis_tac[] >>
+  rpt strip_tac >> simp[FUN_EQ_THM, FUN_EQ_THM] >> qx_gen_tac ‘n’ >>
+  first_x_assum (qspec_then ‘rep n’ mp_tac) >> simp[]
+QED
+
+Theorem COPY_PRIM_REC:
+  (∀n. abs (rep n) = n) ∧ (∀p. rep (abs p) = p) ∧
+  (∀h:'n -> 'c. ∀af. mp h af = af) ⇒
+  ∀t. ∃!h. ∀af. h (abs af) = t af (mp h af)
+Proof
+  strip_tac >> gen_tac >> simp[EXISTS_UNIQUE_THM] >> conj_tac
+  >- (qexists ‘λn. t (rep n) (rep n)’ >> simp[]) >>
+  ‘∀k. (∀af. k (abs af) = t af (mp k af)) ⇒ k = λn. t (rep n) (rep n)’
+    suffices_by metis_tac[] >>
+  rpt strip_tac >> simp[FUN_EQ_THM] >> qx_gen_tac ‘n’ >>
+  first_x_assum (qspec_then ‘rep n’ mp_tac) >> simp[]
+QED
+
+Theorem COPY_IND:
+  (∀n. abs (rep n) = n) ∧ (∀af. stn af = ∅) ⇒
+  ∀P. (∀af. (∀y. y ∈ stn af ⇒ P y) ⇒ P (abs af)) ⇒ ∀n. P n
+Proof
+  rpt strip_tac >> first_x_assum (qspec_then ‘rep n’ mp_tac) >> simp[]
+QED

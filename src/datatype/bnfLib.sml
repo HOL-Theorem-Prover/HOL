@@ -81,6 +81,55 @@ fun specToFunctor0 s =
 fun specToFunctor s = #2 (specToFunctor0 s empty_cstate)
 
 (* ----------------------------------------------------------------------
+    A whole specification, not one type of it.
+
+    `parse_bnf.parse2ftor` gives one functor per member of a mutually
+    recursive family, with the siblings as mutrec variables; what the
+    construction wants is a type per member and, per member, the
+    variable that stands for each of the family's types in it — its own
+    being the recursive argument.  One conversion state runs through all
+    the members, so that the specification's own type variables mean the
+    same thing in each.
+   ---------------------------------------------------------------------- *)
+
+fun specToFunctors specs =
+    let
+      val names = List.map #1 specs
+      val n = length names
+      val (st, ftys) = mmap specToFunctor0 (List.map #2 specs) empty_cstate
+      (* the specification's own variables, in the order they were met *)
+      fun byIndex ty =
+          Option.valOf (Int.fromString (String.extract (dest_vartype ty, 2,
+                                                        NONE)))
+          handle Option => 0
+      val params =
+          Listsort.sort (fn (t1,t2) => Int.compare (byIndex t1, byIndex t2))
+                        (List.map #2 (Symtab.dest (#1 (#tyvars st))))
+      val mvtab = #1 (#mutrecvars st)
+      (* a member no functor mentions still needs a slot of its own *)
+      fun freshFrom i avoid =
+          let val v = mk_vartype ("'m" ^ Int.toString i)
+          in if Lib.mem v avoid then freshFrom (i + 1) avoid else v end
+      fun slotOf (nm, (acc, avoid)) =
+          case Symtab.lookup mvtab nm of
+              SOME ty => (acc @ [ty], avoid)
+            | NONE => let val v = freshFrom 1 avoid
+                      in (acc @ [v], v :: avoid) end
+      val (slots, _) =
+          List.foldl slotOf
+                     ([], alpha :: params @
+                          List.concat (List.map type_vars ftys))
+                     names
+      fun slotsFor j =
+          List.tabulate (n, fn k => if k = j then alpha
+                                    else List.nth (slots, k))
+    in
+      {tynames = names, params = params,
+       functors = List.tabulate (n, fn j => (List.nth (ftys, j), slotsFor j))}
+    end
+
+
+(* ----------------------------------------------------------------------
     recognising a stored BNF's map constant.  The type of
 
        map : (α₁ → γ₁) → ... → (αₙ → γₙ) → (α₁,...,αₙ,β₁,...)F →

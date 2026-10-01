@@ -234,3 +234,267 @@ val _ =
                  (∀a l. (∀y. y ∈ mylistSET l ⇒ P y) ⇒ P (RNode a l)) ⇒
                  ∀r. P r”
     then OK() else die (thm_to_string (#set_induction rcs))
+
+(* ----------------------------------------------------------------------
+    The case constant, and the TypeBase entry.
+
+    This is the whole way: from the axiom the package derived, a case
+    constant that `Prim_rec.define_case_constant` cannot build for a
+    nested type, and then the entry the rest of HOL reads — after which
+    the type's own tactics and the simplifier work as they do for a type
+    the old package defined.
+   ---------------------------------------------------------------------- *)
+
+val mylist_case = hd (defineCases mylist_axiom)
+
+(* each conjunct binds its own v and f, so nothing ties the two
+   together: the annotations do it *)
+val _ = checkthm "mylist's case constant" mylist_case
+   “(∀(v:'r) f. mylist_CASE (MyNil : 'b1 mylist) v f = v) ∧
+    (∀(a:'b1) l (v:'r) f. mylist_CASE (MyCons a l) v f = f a l)”
+
+val rose_case = hd (defineCases rose_axiom)
+
+val _ = tprint "define_case_constant cannot take the nested axiom"
+val _ = (ignore (Prim_rec.define_case_constant rose_axiom); die "accepted")
+        handle HOL_ERR _ => OK()
+
+val _ = checkthm "and the nested type's case constant is derived anyway"
+   rose_case
+   “(∀(v:'r) f. rose_CASE (RLeaf : 'b1 rose) v f = v) ∧
+    (∀(a:'b1) l (v:'r) f. rose_CASE (RNode a l) v f = f a l)”
+
+val mylist_tyinfo =
+    hd (typeBaseInfo {axiom = #axiom cs, induction = mylist_induction,
+                      case_defs = [mylist_case],
+                      rewrites = [[mylistMAP_thm, mylistSET_thm]]})
+
+val _ = TypeBase.export [mylist_tyinfo]
+
+val _ = tprint "the type is in TypeBase"
+val _ =
+    if isSome (TypeBase.read {Thy = current_theory(), Tyop = "mylist"}) andalso
+       null (hyp (TypeBase.nchotomy_of “:'a mylist”)) andalso
+       aconv (TypeBase.case_const_of “:'a mylist”)
+             (repeat rator (lhs (#2 (strip_forall (hd (strip_conj
+                                       (concl mylist_case)))))))
+    then OK() else die "no entry"
+
+(* and what the entry is for: the type's own tactics, its case syntax,
+   and the map and set equations in the simplifier *)
+val _ = tprint "induction and the simplifier over the new type"
+val _ =
+    let val th = Q.prove (‘∀l. mylistMAP I l = l’, Induct_on ‘l’ >> simp[])
+    in
+      if null (hyp th) then OK() else die (thm_to_string th)
+    end
+
+val _ = tprint "case expressions over the new type"
+val _ =
+    let val th = Q.prove (‘(case MyCons a l of MyNil => F | MyCons _ _ => T)’,
+                          simp[])
+    in
+      if null (hyp th) then OK() else die (thm_to_string th)
+    end
+
+(* ----------------------------------------------------------------------
+    And the whole way from a specification as written.
+
+    The steps are the ones above, with the specification supplying what
+    was written by hand there: the functor, the parameters and the
+    constructors' names.
+   ---------------------------------------------------------------------- *)
+
+val spec = parseSpec `expr = Var 'a | Lit num | Op expr num expr`
+
+val _ = tprint "a specification's functor"
+val _ =
+    if #tynames spec = ["expr"] andalso
+       #constructors spec = [["Var", "Lit", "Op"]] andalso
+       List.map #1 (#functors spec) = [“:'b1 + num + 'a # num # 'a”]
+    then OK()
+    else die (String.concatWith ", "
+                (List.map (type_to_string o #1) (#functors spec)))
+
+val ebnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params spec)
+                      (#1 (hd (#functors spec)))
+val efix = defineFixpoint {tyname = "expr", ABS = "expr_ABS",
+                           REP = "expr_REP"} ebnf
+val ecs = defineConstructors (hd (#constructors spec)) ebnf efix
+val eres = fixpointBNF ebnf efix
+val eeqns = constructorEqns ecs eres
+
+Theorem expr_axiom = #existential_axiom ecs
+Theorem exprMAP_thm[simp] = #map_eqns eeqns
+Theorem exprSET_thm[simp] = hd (#set_eqns eeqns)
+
+val _ = TypeBase.export
+          (typeBaseInfo {axiom = expr_axiom,
+                         induction = valOf (#induction ecs),
+                         case_defs = defineCases expr_axiom,
+                         rewrites = [[exprMAP_thm, exprSET_thm]]})
+
+val _ = tprint "a specified type behaves like a datatype"
+val _ =
+    let
+      val th1 = Q.prove (‘∀e. exprMAP I e = e’, Induct_on ‘e’ >> simp[])
+      val th2 = Q.prove (‘Var a ≠ Lit n ∧ (Op e1 n e2 = Op e3 n e4 ⇔
+                                           e1 = e3 ∧ e2 = e4)’, simp[])
+      val th3 = Q.prove (‘case Lit n of
+                            Var a => F | Lit m => T | Op _ _ _ => F’,
+                         simp[])
+    in
+      if List.all (null o hyp) [th1, th2, th3] then OK()
+      else die "not proved"
+    end
+
+(* ----------------------------------------------------------------------
+    The same definition, through the axiom rather than by hand.
+   ---------------------------------------------------------------------- *)
+
+val {definition = rsize2_def, unique = rsize2_unique} =
+    defineRecursion {
+      name = "rsize2_def",
+      axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+      def = “(rsize2 RLeaf = 0n) ∧
+             (rsize2 (RNode a l) = 1 + mylistSUM (mylistMAP rsize2 l))”}
+
+val _ = tprint "a nested definition, from its clauses"
+val _ =
+    if null (hyp rsize2_def) andalso
+       (* the conjuncts share no variable, so the annotation is what
+          ties their types together *)
+       same (concl rsize2_def)
+            “(rsize2 (RLeaf : 'p rose) = 0n) ∧
+             ∀(a:'p) l. rsize2 (RNode a l) =
+                        1 + mylistSUM (mylistMAP rsize2 l)”
+    then OK() else die (thm_to_string rsize2_def)
+
+(* the nested type's own entry: its induction principle is the
+   set-based one, since a nested recursion has no other *)
+(* the nested type's own entry: its induction principle is the
+   set-based one, since a nested recursion has no other, and TypeBase
+   reads the existence half of the axiom *)
+val rose_tyinfos =
+    typeBaseInfo {axiom = #axiom rcs,
+                  induction = #set_induction rcs,
+                  case_defs = [rose_case], rewrites = [[]]}
+val _ = TypeBase.export rose_tyinfos
+
+(* ----------------------------------------------------------------------
+    What Define makes of the same type.
+
+    With the entry in place, a definition written the way the axiom
+    hands its recursive calls over — under the map — goes through
+    Define as it stands.  One written the way the old package's nested
+    axioms take them, with a function of its own over the operator
+    recursed under, does not yet: that is a well-founded recursion, and
+    the measure it wants is a size function, which the package does not
+    define yet.
+   ---------------------------------------------------------------------- *)
+
+val _ = tprint "Define takes a definition in the shape the axiom hands over"
+val _ =
+    let val th = TotalDefn.Define
+                   ‘rsize3 RLeaf = 0n ∧
+                    rsize3 (RNode a l) = 1 + mylistSUM (mylistMAP rsize3 l)’
+    in
+      if null (hyp th) andalso
+         can (find_term (can (match_term “mylistMAP rsize3”))) (concl th)
+      then OK() else die (thm_to_string th)
+    end
+
+(* The other way round — a function of its own over the operator
+   recursed under, which is how the old package's nested axioms take a
+   definition — is a well-founded recursion.  What it wants is a
+   measure, and the entry brought one: the size, and the lemma that
+   connects its two shapes.
+
+   `Define` itself cannot be called here: its wrapper hands a failure to
+   `Feedback.render_exn`, which in a script prints and exits rather than
+   raising.  One layer down raises the HOL_ERR it should. *)
+
+val _ = tprint "a function of its own over the operator recursed under"
+val _ =
+    let val dfn = Defn.Hol_defn "rsize4_def"
+                    ‘rsize4 RLeaf = 0n ∧
+                     rsize4 (RNode a l) = 1 + rsizel l ∧
+                     rsizel MyNil = 0n ∧
+                     rsizel (MyCons r rs) = rsize4 r + rsizel rs’
+    in
+      case Lib.total TotalDefn.primDefine dfn of
+          NONE => die "not accepted"
+        | SOME _ => OK()   (* and no measure was supplied *)
+    end
+
+val _ = tprint "defineRecursion says so rather than guessing"
+val _ =
+    (ignore (defineRecursion {
+        name = "rsize5_def",
+        axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+        def = “(rsize5 RLeaf = 0n) ∧
+               (rsize5 (RNode a l) = 1 + rsizel5 l) ∧
+               (rsizel5 MyNil = 0n) ∧
+               (rsizel5 (MyCons r rs) = rsize5 r + rsizel5 rs)”});
+     die "accepted")
+    handle HOL_ERR e =>
+           if String.isSubstring "Define is the route" (Feedback.message_of e)
+           then OK() else die (Feedback.message_of e)
+
+(* ----------------------------------------------------------------------
+    What a termination proof needs, which the entry brought with it.
+
+    A size of a nested argument is a fold — `mylist_size (rose_size f) l`
+    — and what the axiom hands over is a map, so the size reads
+    `mylist_size (λx. x) (mylistMAP (rose_size f) l)`.  The two are
+    connected by a lemma the registration proves and exports as a
+    *termination* simplification, and with it Define finds the
+    well-founded relation for a definition written the old way by
+    itself.
+   ---------------------------------------------------------------------- *)
+
+val _ = tprint "the size lemma the entry proved"
+val _ =
+    let val th = DB.fetch "-" "mylist_size_MAP"
+    in
+      if null (hyp th) andalso
+         same (concl th)
+              “∀f l. mylist_size (λx. x) (mylistMAP f l) = mylist_size f l”
+      then OK() else die (thm_to_string th)
+    end
+
+val _ = tprint "a sub-term is smaller, with the sizes as defined"
+val _ =
+    let val th = Q.prove (‘∀f a l. mylist_size (rose_size f) l <
+                                   rose_size f (RNode a l)’,
+                          simp[#2 (TypeBase.size_of “:'a rose”),
+                               #2 (TypeBase.size_of “:'a mylist”),
+                               DB.fetch "-" "mylist_size_MAP"])
+    in
+      if null (hyp th) then OK() else die "not proved"
+    end
+
+val _ = tprint "the types' size functions"
+val _ =
+    let val (mtm, mth) = TypeBase.size_of “:'a mylist”
+        val (rtm, rth) = TypeBase.size_of “:'a rose”
+    in
+      if same (concl mth)
+              “∀f. mylist_size f MyNil = 0 ∧
+                   ∀a l. mylist_size f (MyCons a l) =
+                         1 + f a + mylist_size f l”
+         andalso
+         (* the nested argument's size is its own type's, at the map the
+            axiom hands over *)
+         same (concl rth)
+              “∀f. rose_size f RLeaf = 0 ∧
+                   ∀a l. rose_size f (RNode a l) =
+                         1 + f a +
+                         mylist_size (λx. x) (mylistMAP (rose_size f) l)”
+      then OK() else die (thm_to_string rth)
+    end
+
+val _ = print ("PROBE unique: " ^
+               (case rsize2_unique of
+                    NONE => "none"
+                  | SOME th => thm_to_string th) ^ "\n")

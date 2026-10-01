@@ -102,6 +102,24 @@ sig
   val defineFixpoint : {tyname : string, ABS : string, REP : string} ->
                        bnfLib.derived_bnfn -> fixpoint
 
+  (* the same, for a functor that does not use the recursive argument at
+     all — an enumeration, a record, any specification with no recursion.
+     Its fixed point is the functor itself, so the type is defined in
+     bijection with it and the three principles come from
+     bnfInitialTheory's COPY_ theorems.  Everything downstream is
+     defineFixpoint's code; the new type's functoriality, when it is
+     wanted, is transportBNF's.
+
+     The bijection comes back with it: it is what the new type's
+     functoriality is transported across, and what the constructors'
+     definitions unfold through. *)
+  type copy = {fixpoint : fixpoint, abs : term, rep : term,
+               absrep : thm,          (* |- ABS o REP = I *)
+               repabs : thm}          (* |- REP o ABS = I *)
+
+  val defineCopy : {tyname : string, ABS : string, REP : string} ->
+                   bnfLib.derived_bnfn -> copy
+
   (* ----------------------------------------------------------------------
       The datatype's own constructors, and its axiom in the shape the
       rest of HOL expects:
@@ -291,8 +309,132 @@ sig
      ---------------------------------------------------------------------- *)
   val familySetInduction : family -> thm -> thm
 
+  (* the same three steps over whatever types the family has been put
+     on: the constructors' definitions, and the types and constructors
+     themselves, rather than the record the construction produced *)
+  val familyAxiomOf : thm list list -> thm -> thm
+  val familyInductionOf : thm list list -> thm -> thm
+  val familySetInductionOf : family -> hol_type list * term list -> thm -> thm
+
   (* and the same principle one clause per constructor, which is the
      form a proof is written against *)
   val familyInduction : constructors list -> family -> thm -> thm
+
+  (* ----------------------------------------------------------------------
+      The case constants, from an axiom one clause per constructor —
+      one per type the axiom defines, named and stated as the old
+      package's are.  Prim_rec's own version defines them by a recursive
+      definition, which a nested axiom cannot be; nothing about a case
+      constant is recursive, so this takes the axiom with every target
+      ignoring the results of the recursive calls.
+     ---------------------------------------------------------------------- *)
+  val defineCases : thm -> thm list
+
+  (* ----------------------------------------------------------------------
+      Collapsing a family onto types of its own.
+
+      A member after the first comes out of the construction as an
+      instance of an operator that also takes the earlier members'
+      slots; what the specification says, and what a TypeBase entry is
+      keyed on, is an operator over the specification's own variables.
+      This copies each member onto a type of its own, once the family is
+      built, and carries the constructors and the principle across.
+     ---------------------------------------------------------------------- *)
+  type collapsed = {
+    types : hol_type list,
+    abs : term list,
+    rep : term list,
+    absrep : thm list,          (* |- ABS o REP = I *)
+    repabs : thm list,          (* |- REP o ABS = I *)
+    cons : term list,
+    cons_defs : thm list,
+    principle : thm
+  }
+
+  val collapseFamily : {tynames : string list} -> family -> thm -> collapsed
+
+  (* and its constructors, one per summand of each member's functor *)
+  (* ----------------------------------------------------------------------
+      The BNF structure of a type defined as a copy of another: the map
+      conjugated by the bijection, the set functions after the
+      representation, and every law from the original's with one
+      direction of the bijection undone in the middle.  A collapsed
+      member of a family is such a copy — of a composite of functors
+      already in the database — but nothing here is particular to one.
+     ---------------------------------------------------------------------- *)
+  type copied_bnf = {
+    key : KernelSig.kernelname,
+    info : thm bnfBase_dtype.info,
+    map_def : thm,
+    set_defs : thm list,
+    relator_def : thm
+  }
+
+  val transportBNF : {abs : term, rep : term, absrep : thm, repabs : thm} ->
+                     bnfLib.derived_bnfn -> copied_bnf
+
+  val collapsedConstructors :
+      string list list -> collapsed ->
+      {constructors : term list, defs : thm list} list
+
+  (* and its map and set functions one constructor at a time, which is
+     what a TypeBase entry's simplification set wants *)
+  val collapsedEqns :
+      collapsed -> family -> copied_bnf list ->
+      {constructors : term list, defs : thm list} list ->
+      {map_eqns : thm, set_eqns : thm list} list
+
+  (* ----------------------------------------------------------------------
+      The TypeBase entries, one per type the axiom defines: the axiom,
+      the induction principle and the case definitions are what
+      TypeBasePure derives the rest from, and the map and set equations
+      per constructor are what the entry's simplification set wants —
+      one list of those per type, in the case definitions' order.
+
+      Registering the result is the caller's separate decision, as it is
+      with the BNF database: TypeBase.export writes it to the theory.
+     ---------------------------------------------------------------------- *)
+  (* ----------------------------------------------------------------------
+      A specification as written, through the parser and parse_bnf, to
+      what the construction takes: a functor per member with the
+      variable standing for each member in it, the specification's own
+      type variables, and the constructors' names.
+     ---------------------------------------------------------------------- *)
+  type spec = {
+    tynames : string list,
+    params : hol_type list,
+    functors : (hol_type * hol_type list) list,
+    constructors : string list list,
+    fields : string list option list   (* a record's, for its apparatus *)
+  }
+
+  val parseSpec : hol_type quotation -> spec
+
+  (* ----------------------------------------------------------------------
+      Defining a function by the axiom, which is
+      Prim_rec.new_recursive_definition for an axiom whose recursive
+      calls arrive under a map.  The clauses are written as the axiom
+      hands the calls over — `f a` for a direct occurrence, `MAP f l`
+      for one under a functor — and an axiom over a family takes the
+      clauses for all of its functions at once.
+     ---------------------------------------------------------------------- *)
+  val defineRecursion : {name : string, axiom : thm, def : term} ->
+                        {definition : thm, unique : thm option}
+
+  (* the size function, out of what the axiom says: what a constructor
+     is worth is one plus what each argument's own type's size says of
+     it.  NONE when some argument has no size — a function space, say *)
+  val defineSize : {tyname : string} -> thm ->
+                   {sizes : term list, definition : thm,
+                    unique : thm option} option
+
+  (* and what connects a nested size's two shapes, which a termination
+     proof over the operator recursed under needs *)
+  val sizeMapLemma : {unique : thm, sizedef : thm, mapeqn : thm,
+                      sizes : term list} -> thm
+
+  val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
+                      rewrites : thm list list} ->
+                     TypeBasePure.tyinfo list
 
 end

@@ -49,9 +49,15 @@ fun mk_bintyop thy tyop bty1 bty2 =
 val mk_sum = mk_bintyop "sum" "sum"
 val mk_prod = mk_bintyop "pair" "prod"
 
+(* both of these nest to the right, which is how the shape is read back:
+   a sum of products is taken apart along its right spine *)
 fun list_mk_prod [] = constty (one_ty())
-  | list_mk_prod (bty::rest) =
-    List.foldl (fn (ty1, ty2) => mk_prod ty2 ty1) bty rest
+  | list_mk_prod [bty] = bty
+  | list_mk_prod (bty::rest) = mk_prod bty (list_mk_prod rest)
+
+fun list_mk_sum [bty] = bty
+  | list_mk_sum (bty::rest) = mk_sum bty (list_mk_sum rest)
+  | list_mk_sum [] = raise Fail "parse_bnf: no constructors"
 
 fun dest_constty (constty ty) = SOME ty
   | dest_constty _ = NONE
@@ -87,14 +93,7 @@ fun parse_one_ast fmap (nm, dtyform) =
         Record flds =>
         parse_one_ast fmap (nm, Constructors [(nm, map snd flds)])
       | Constructors cs =>
-        let
-          val bnfs = map (parse_one_constructor fmap nm) cs
-        in
-          case bnfs of
-              [] => raise Fail "parse_bnf: no constructors"
-            | b::rest =>
-              (nm, List.foldl (fn (ty1, ty2) => mk_sum ty2 ty1) b rest)
-        end
+        (nm, list_mk_sum (map (parse_one_constructor fmap nm) cs))
 
 fun parse2ftor asts =
     let

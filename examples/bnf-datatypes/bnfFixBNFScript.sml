@@ -176,6 +176,14 @@ QED
     where set notation is wanted.
    ---------------------------------------------------------------------- *)
 
+(* the argument's own set function, as a set: a composite over a bare
+   parameter is the equality predicate at it *)
+Theorem EQUAL_SING:
+  (=) a = {a}
+Proof
+  simp[EXTENSION, bnfPrelimsTheory.IN_equal, EQ_SYM_EQ]
+QED
+
 Theorem LAM_EQ_SING:
   (λx. x = a) = {a}
 Proof
