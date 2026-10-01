@@ -77,6 +77,7 @@ val _ = TypeBase.export
           (typeBaseInfo {axiom = #axiom ecs,
                          induction = valOf (#induction ecs),
                          case_defs = defineCases (#existential_axiom ecs),
+                         mapIDs = [],
                          rewrites = [[]], names = [noNames]})
 
 val _ = tprint "an enumeration in TypeBase"
@@ -151,6 +152,7 @@ val rtyinfo =
     hd (typeBaseInfo {axiom = #axiom rcs,
                       induction = valOf (#induction rcs),
                       case_defs = defineCases (#existential_axiom rcs),
+                      mapIDs = [],
                       rewrites = [[]], names = [noNames]})
 val _ = TypeBase.export
           [RecordType.prove_recordtype_thms

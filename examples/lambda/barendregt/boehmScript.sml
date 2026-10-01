@@ -5961,6 +5961,8 @@ Proof
      Q.EXISTS_TAC ‘r’ >> art [])
  >> NTAC 2 (POP_ASSUM K_TAC) (* only keep ‘FINITE X’ *)
  >> HO_MATCH_MP_TAC rose_tree_induction
+ (* name the children, as the steps below refer to them by name *)
+ >> Q.X_GEN_TAC ‘ts’
  >> rw [rose_to_term_def, Once rose_reduce_def]
  >> POP_ASSUM (MP_TAC o AP_TERM “from_rose :BT_node rose_tree -> BT_node ltree”)
  >> ‘ltree_finite (BT' X M r)’ by PROVE_TAC [ltree_finite_BT_bnf]
@@ -6242,6 +6244,8 @@ Proof
  >> KILL_TAC >> DISCH_TAC
  (* applying induction on rose tree *)
  >> HO_MATCH_MP_TAC rose_tree_induction
+ (* name the children, as the steps below refer to them by name *)
+ >> Q.X_GEN_TAC ‘ts’
  >> NTAC 2 (rpt GEN_TAC >> STRIP_TAC)
  >> Q.PAT_X_ASSUM ‘Rose a ts = _’ (MP_TAC o SYM)
  >> POP_ORW

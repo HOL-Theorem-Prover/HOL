@@ -771,7 +771,14 @@ fun defineCopy {tyname, ABS, REP} bnf : copy =
 (* A constructor's name is not always a name a theorem can be saved
    under: a record's has a dot in it and an infix constructor is
    punctuation.  The constant keeps the name the specification gave it;
-   the definition is stored under one the theory will take. *)
+   the definition is stored under one the theory will take.
+
+   And stored only for as long as the construction needs it.  What a
+   constructor is, in terms of the sum of products underneath, is this
+   package's business and not a fact the theory should carry: a
+   development that happens to name a constructor after something it
+   already has a definition for would find that definition shadowed.
+   A temporary binding evaporates when the theory is exported. *)
 fun defnName nm =
     let val mangled = String.translate
                         (fn #"." => "_"
@@ -784,6 +791,10 @@ fun defnName nm =
       if Lexis.ok_sml_identifier mangled then mangled
       else "constructor" ^ mangled
     end
+
+(* a constructor's defining equation is not a fact about the new type;
+   it evaporates on export *)
+fun defnBinding nm = Theory.temp_binding (defnName nm ^ "_def")
 
 (* The constructors cannot be read off the functor's shape: a
    constructor whose argument is itself a sum — `V (v_rec + num)` — is
@@ -927,6 +938,13 @@ val setElimRWs =
         the equation it finds *)
      GSYM boolTheory.LEFT_EXISTS_AND_THM,
      GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+     (* and the same on the other side: a constructor holding several
+        values of one type has one hypothesis about all of them, whose
+        set is a union, so the membership is a disjunction.  Splitting
+        it says one thing per argument, which is what a proof about that
+        constructor is written against — and for a value's own slot
+        unwinding then leaves the value itself. *)
+     boolTheory.DISJ_IMP_THM, boolTheory.FORALL_AND_THM,
      (* set notation *)
      pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
      pred_setTheory.IN_UNION, pred_setTheory.IN_BIGUNION,
@@ -1002,7 +1020,7 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
                 (* defined at the specification's own variables, and
                    read back at the construction's *)
                 val def = INST_TYPE built
-                            (new_definition (defnName nm ^ "_def",
+                            (new_definition (defnBinding nm,
                                              Term.inst wrote eqn))
                 val ctm = #1 (strip_comb (lhs (concl (SPEC_ALL def))))
                 val recs = isRec facs
@@ -3866,7 +3884,7 @@ fun defineRecursion {name, axiom, def} =
     gets no size at all, and TypeBase is content without one.
    ---------------------------------------------------------------------- *)
 
-fun defineSize {tyname, sizes = sizenames} axiom =
+fun defineSize {tyname, sizes = sizenames, mapIDs} axiom =
     let
       val (fvars0, body0) = strip_forall (concl axiom)
       val axE = if is_exists1 body0 then
@@ -3988,9 +4006,22 @@ fun defineSize {tyname, sizes = sizenames} axiom =
          right-hand side and carrying only those laws: the sum is
          associated the way the old package associates it, and a
          simpset would reassociate it. *)
+      (* The tidying below has to normalise, so the laws are chosen to
+         leave no map behind and to overlap only where they agree.  A
+         pair the axiom hands over arrives written out at its
+         components, `(f (FST p), g (SND p))`, which is what ## is
+         defined to be, so putting the ## back is what lets the pair's
+         own size-of-map law fire; each law then strictly reduces the
+         number of maps under a size function, and I and the redexes go
+         last. *)
       fun sizeMapRWs () =
+          [GSYM pairTheory.PAIR_MAP, bnfPrelimsTheory.pair_size_map,
+           bnfPrelimsTheory.option_size_map, bnfPrelimsTheory.sum_size_map,
+           combinTheory.I_THM] @
+          mapIDs @
           List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
-                          [("list", "list_size_map")]
+                          [("list", "list_size_map"), ("list", "MAP_ID"),
+                           ("list", "MAP_ID_I")]
       val tidy =
           STRIP_QUANT_CONV
             (RAND_CONV (QCONV (PURE_REWRITE_CONV (sizeMapRWs())) THENC
@@ -4104,7 +4135,7 @@ fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
     the order the case definitions come.
    ---------------------------------------------------------------------- *)
 
-fun typeBaseInfo {axiom, induction, case_defs, rewrites, names} =
+fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
     let
       (* TypeBase reads the existence half; the size's own lemma wants
          the uniqueness, so an axiom that carries it is welcome here *)
@@ -4126,7 +4157,8 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites, names} =
               [] => NONE
             | ti :: _ =>
               case defineSize {tyname = #2 (TypeBasePure.ty_name_of ti),
-                               sizes = List.map #size names}
+                               sizes = List.map #size names,
+                               mapIDs = mapIDs}
                               axiom of
                   NONE => NONE
                 | SOME {sizes, definition, unique} =>
@@ -4648,7 +4680,7 @@ fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
                   (* at the specification's own variables, read back at
                      the construction's *)
                   INST_TYPE (asBuilt nms0)
-                    (new_definition (defnName nm ^ "_def",
+                    (new_definition (defnBinding nm,
                                      Term.inst (asSpecWrote nms0) eqn))
                 end
             val defs = List.tabulate (length nms,

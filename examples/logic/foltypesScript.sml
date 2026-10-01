@@ -13,10 +13,10 @@ Theorem foterm_induct:
   ∀P. (∀s. P (V s)) ∧ (∀f ts. (∀t. MEM t ts ⇒ P t) ⇒ P(TFn f ts)) ⇒
       ∀t. P t
 Proof
-  rpt strip_tac >>
-  qspecl_then [‘P’, ‘λts. ∀t. MEM t ts ⇒ P t’]
-    (assume_tac o SIMP_RULE bool_ss [])
-    (TypeBase.induction_of “:foterm”) >> fs[DISJ_IMP_THM, FORALL_AND_THM]
+  (* the package proves this shape itself, and quantifies a
+     constructor's other arguments inside the implication *)
+  gen_tac >> strip_tac >> ho_match_mp_tac (TypeBase.induction_of “:foterm”) >>
+  simp[]
 QED
 
 val _ = TypeBase.update_induction foterm_induct

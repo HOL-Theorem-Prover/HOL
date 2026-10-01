@@ -8,7 +8,7 @@ Theory generic_terms
 Ancestors
   pred_set list relation basic_swap nomset
 Libs
-  BasicProvers boolSimps quotientLib binderLib
+  BasicProvers boolSimps quotientLib binderLib legacyInduction
 
 
 Datatype:
@@ -23,7 +23,12 @@ Definition fv_def[nocompute]:
 End
 val _ = augment_srw_ss [rewrites [fv_def]]
 
-val oldind = TypeBase.induction_of ``:α pregterm``
+(* The proofs below are about a term and a list of terms at once, which
+   is the shape the older construction's principle had.  The package
+   proves the one about a term; legacyInduction puts the other back. *)
+val newind = TypeBase.induction_of ``:α pregterm``
+val oldind = legacyInduction.mutual_induction
+               (legacyInduction.operators_of newind) newind
 
 Theorem pind[local]:
   ∀P.
@@ -33,7 +38,7 @@ Theorem pind[local]:
       ∀t. P t
 Proof
   (* the package's principle says of a list's terms what EVERY says *)
-  gen_tac >> strip_tac >> ho_match_mp_tac oldind >>
+  gen_tac >> strip_tac >> ho_match_mp_tac newind >>
   full_simp_tac (srw_ss()) [listTheory.EVERY_MEM] >> metis_tac []
 QED
 

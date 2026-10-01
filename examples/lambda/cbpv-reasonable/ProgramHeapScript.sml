@@ -737,8 +737,8 @@ Proof
       rw[Once substP, compileVal_def])
   (* app *)
   >- (rw[Once compileVal_def, substVal_def] >>
-      first_x_assum (qspecl_then [`k`, `[appT] ⧺ c'`, `t`] ASSUME_TAC) >>
       first_x_assum (qspecl_then [`k`, `compileVal s' ⧺ [appT] ⧺ c'`, `t`] ASSUME_TAC) >>
+      first_x_assum (qspecl_then [`k`, `[appT] ⧺ c'`, `t`] ASSUME_TAC) >>
       rw[] >> gs[] >> rw[Once substP] >>
       simp[SimpR ``$=``, Once compileVal_def])
   (* ret *)

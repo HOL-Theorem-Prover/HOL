@@ -421,7 +421,7 @@ Theorem subst_EQ1':
             (!x. (x IN FV_method1 a) ==> ALPHA_obj (SUB1 s1 x) (SUB1 s2 x)) ==>
                   ALPHA_method (a <[ s1) (a <[ s2))
 Proof
-    Induct
+    MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN REWRITE_TAC[FV_object1_def,IN_UNION,IN]
     THEN REWRITE_TAC[OR_IMP]
     THEN CONV_TAC (DEPTH_CONV FORALL_AND_CONV)
@@ -520,7 +520,7 @@ Theorem HEIGHT1_var_list_subst:
         (!t:^method xs ys.
           HEIGHT_method1 (t <[ (xs // ys)) = HEIGHT_method1 t)
 Proof
-    Induct
+    MUTUAL_INDUCT_THEN obj1_induction ASSUME_TAC
     THEN REPEAT GEN_TAC
     THEN ASM_REWRITE_TAC[SUB_object1_def,SUB1,HEIGHT1_def]
     THENL

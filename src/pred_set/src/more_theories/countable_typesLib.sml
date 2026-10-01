@@ -23,20 +23,42 @@ val var_case_tac = goal_tac (fn gl => let
 val countable_tm = concl inj_countable |> strip_forall |> snd
     |> dest_imp |> snd |> rator
 
+(* the size of a value of a type, composed from the operators' own:
+   `list_size rose_tricky_size` of a list of them *)
+fun size_term ty =
+    let val zero = mk_abs (mk_var ("x", ty), numSyntax.zero_tm)
+    in
+      if is_vartype ty then zero
+      else
+        let val (_, args) = dest_type ty
+            val sz = #1 (TypeBase.size_of ty)
+        in if null args then sz else list_mk_icomb (sz, map size_term args) end
+        handle HOL_ERR _ => zero
+    end
+
 fun mk_countable_lemma ty = let
-    val ind = TypeBase.induction_of ty
+    (* The older datatype construction presented a type recursing under
+       an operator as a mutually recursive family, and defined a size
+       function for each member -- the `<ty>1_size` of a list of the
+       type.  The BNF construction defines the type's own and nothing
+       else, so the family is what legacyInduction makes of the type's
+       principle, and each member's size is composed rather than named. *)
+    val ind0 = TypeBase.induction_of ty
+    val ind = legacyInduction.mutual_induction
+                (legacyInduction.operators_of ind0) ind0
+              handle HOL_ERR _ => ind0
     val conses = find_terms (fn t => is_comb t andalso is_var (rator t)) (concl ind)
       |> map rand |> filter (not o is_var)
-(*    val size_thm = snd (TypeBase.size_of ty)
-   -- the auto-defined size definition is (A) stored in the theory segment, but
-      (B) may be revised by size_eq theorems before being tucked into the
-      TypeBase. Using such revised size definitions makes mk_countable_lemma fail,
-      so we grab (A) out of the theory rather than (B) out of the TypeBase. *)
-    val {Tyop,Thy,Args} = dest_thy_type ty
-    val size_thm = DB.fetch Thy (Tyop^"_size_def")
-    val sizes = strip_conj (concl size_thm) |> map (lhs o snd o strip_forall)
-      |> map rator |> HOLset.fromList Term.compare |> HOLset.listItems
-    val lemma_tys = map (fst o dom_rng o type_of) sizes
+    val lemma_tys = concl ind |> strip_forall |> snd |> dest_imp |> snd
+      |> strip_conj |> map (type_of o fst o dest_forall)
+    val sizes = map size_term lemma_tys
+(*  The size definition stored in the theory segment says of a member's
+    contents what the construction's axiom handed over -- `list_size (\x. x)
+    (MAP rose_tricky_size l)` -- where the TypeBase holds the same equation
+    with the fold stated, which is what a composed size is written as.  So
+    this takes the TypeBase's, for the type and for the operators alike. *)
+    fun eqnsFor t = [#2 (TypeBase.size_of t)] handle HOL_ERR _ => []
+    val size_thm = LIST_CONJ (List.concat (map eqnsFor lemma_tys))
     fun ty_n ty = total (index (fn ty2 => ty2 = ty)) lemma_tys
     val ex_param_tys = map (snd o strip_comb) conses |> List.concat |> map type_of
       |> HOLset.fromList Type.compare |> HOLset.listItems
@@ -86,14 +108,25 @@ fun mk_countable ty = let
       in DEPTH_CONSEQ_CONV (CONSEQ_REWRITE_CONV ([], lemmas, []))
           CONSEQ_CONV_STRENGTHEN_direction final_concl end
     val thm = mk_thm (mk_countable_lemma ty :: lemmas)
-    fun loop (thm, lemmas) = let
+    (* A lemma that does not discharge the type it is about leaves that
+       type to be asked for again, and the loop would go round for ever
+       gathering lemmas.  So each type is asked for once. *)
+    fun loop (thm, lemmas, asked) = let
         val thm = mk_thm (thm :: lemmas)
         val tys = find_terms pred_setSyntax.is_univ (concl thm)
           |> map (fst o dom_rng o pred_setSyntax.dest_univ)
           |> filter (fn ty2 => ty2 <> ty andalso can TypeBase.induction_of ty2)
-      in case tys of [] => thm
-        | (ty2 :: _) => loop (thm, mk_countable_lemma ty2 :: lemmas)
+      in case filter (fn ty2 => not (Lib.mem ty2 asked)) tys of
+          [] => (case tys of
+                     [] => thm
+                   | ty2 :: _ =>
+                     raise mk_HOL_ERR "countable_typesLib" "mk_countable"
+                       ("no lemma of " ^ type_to_string ty2 ^
+                        " settles it; " ^ type_to_string ty ^
+                        " is left asking for it"))
+        | (ty2 :: _) =>
+          loop (thm, mk_countable_lemma ty2 :: lemmas, ty2 :: asked)
       end
-  in loop (thm, lemmas) |> REWRITE_RULE [] end
+  in loop (thm, lemmas, [ty]) |> REWRITE_RULE [] end
 
 end

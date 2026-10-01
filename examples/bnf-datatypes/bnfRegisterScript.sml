@@ -269,7 +269,7 @@ val _ = checkthm "and the nested type's case constant is derived anyway"
 
 val mylist_tyinfo =
     hd (typeBaseInfo {axiom = #axiom cs, induction = mylist_induction,
-                      case_defs = [mylist_case],
+                      case_defs = [mylist_case], mapIDs = [],
                       rewrites = [[mylistMAP_thm, mylistSET_thm]],
                       names = [noNames]})
 
@@ -335,7 +335,7 @@ Theorem exprSET_thm[simp] = hd (#set_eqns eeqns)
 val _ = TypeBase.export
           (typeBaseInfo {axiom = expr_axiom,
                          induction = valOf (#induction ecs),
-                         case_defs = defineCases expr_axiom,
+                         case_defs = defineCases expr_axiom, mapIDs = [],
                          rewrites = [[exprMAP_thm, exprSET_thm]],
                          names = [noNames]})
 
@@ -383,7 +383,7 @@ val _ =
 val rose_tyinfos =
     typeBaseInfo {axiom = #axiom rcs,
                   induction = #set_induction rcs,
-                  case_defs = [rose_case], rewrites = [[]],
+                  case_defs = [rose_case], mapIDs = [], rewrites = [[]],
                   names = [noNames]}
 val _ = TypeBase.export rose_tyinfos
 
@@ -543,7 +543,7 @@ Theorem stack_to_set_thm[simp] = hd (#set_eqns neqns)
 val _ = TypeBase.export
           (typeBaseInfo {axiom = stack_axiom,
                          induction = valOf (#induction ncs),
-                         case_defs = defineCases stack_axiom,
+                         case_defs = defineCases stack_axiom, mapIDs = [],
                          rewrites = [[STMAP_thm, stack_to_set_thm]],
                          names = #names nspec})
 

@@ -15,7 +15,7 @@ Ancestors
   integer finite_map alist arithmetic num imp listImp combin
   option pred_set list
 Libs
-  stringLib
+  stringLib legacyInduction
 
 
 (* *********TYPES********* *)
@@ -802,6 +802,15 @@ Proof
   Induct_on `l1` >> simp[embed_def]
 QED
 
+(* These proofs are written against the principle with a predicate for
+   a list of commands as well, which is what the older construction
+   gave.  `Induct` reaches for it by itself when the TypeBase holds it;
+   here it is what the package's principle makes of itself. *)
+val com_mutual_induction =
+    let val ind = TypeBase.induction_of “:com”
+    in legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
+    end
+
 Theorem embed_out:
   (!c t s.
     cval t (embed c) s = NONE \/
@@ -810,7 +819,7 @@ Theorem embed_out:
     pval t (embedl l) s = NONE \/
     ?z. pval t (embedl l) s = SOME (ResNone, z))
 Proof
-  Induct >> Cases_on `t` >> simp[]
+  Mutual.MUTUAL_INDUCT_TAC com_mutual_induction >> Cases_on `t` >> simp[]
     >>~- ([`While _ _`],
           Induct_on `n` >>
           (* SUC 0 = 1 so need to use pure_rewrite_tac first *)
@@ -882,7 +891,8 @@ Theorem preserve_state_conj:
     (!x. z.frame.vars x <> NONE) /\
     z = empty_global with frame := empty_local with vars := z.frame.vars))
 Proof
-  conj_tac >> Induct >> Cases_on `t` >> simp[evaluate_def, embed_def] >>
+  conj_tac >> Mutual.MUTUAL_INDUCT_TAC com_mutual_induction >>
+  Cases_on `t` >> simp[evaluate_def, embed_def] >>
   rpt gen_tac >> disch_then assume_tac
     >>~- ([`While _ _`],
           IF_CASES_TAC >> pop_assum kall_tac >> pop_assum mp_tac >>
