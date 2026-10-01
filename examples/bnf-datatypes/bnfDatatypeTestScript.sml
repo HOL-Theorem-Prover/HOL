@@ -1,6 +1,7 @@
 Theory bnfDatatypeTest
 Ancestors
-  bnfInitial bnfFixBNF bnfPrelims finite_map list pred_set cardinal
+  bnfInitial bnfFixBNF bnfPrelims finite_map finite_set list pred_set
+  cardinal
 Libs
   HolKernel Parse boolLib bossLib bnfBase bnfLib bnfFixLib bnfDatatypeLib
   legacyInduction testutils
@@ -240,3 +241,39 @@ val _ =
               (∀v. P v) ∧ (∀l. Q0 l) ∧ ∀l. Q1 l”
       then OK() else die "not the order the specification mentions them"
     end
+
+(* ----------------------------------------------------------------------
+    a recursion through a finite set
+   ---------------------------------------------------------------------- *)
+
+val _ = bnfDatatype `fstree = FSLeaf 'a | FSNode (fstree fset)`
+
+val _ = tprint "a declaration recurses through a finite set"
+val _ =
+    if List.all (fn s => exists ("fstree" ^ s))
+                ["_11", "_distinct", "_nchotomy", "_Axiom", "_induction"]
+    then OK() else die "not all saved"
+
+val _ = tprint "the set function collects under the finite set"
+val _ =
+    if same (concl (DB.fetch "-" "fstreeSET_thm"))
+         “fstreeSET (FSLeaf (a:'a)) = {a} ∧
+          fstreeSET (FSNode (s:'a fstree fset)) =
+            BIGUNION (IMAGE fstreeSET (toSet s))”
+    then OK() else die "not what the fset's own set function says"
+
+val _ = tprint "the map moves under the finite set"
+val _ =
+    if same (concl (DB.fetch "-" "fstreeMAP_thm"))
+         “fstreeMAP (f:'a -> 'b) (FSLeaf a) = FSLeaf (f a) ∧
+          fstreeMAP f (FSNode (s:'a fstree fset)) =
+            FSNode (fIMAGE (fstreeMAP f) s)”
+    then OK() else die "not what the fset's own map says"
+
+val _ = tprint "induction reaches the elements of the finite set"
+val _ =
+    if same (concl (TypeBase.induction_of “:'a fstree”))
+         “∀P. (∀a. P (FSLeaf a)) ∧
+              (∀f. (∀f0. f0 ∈ toSet f ⇒ P f0) ⇒ P (FSNode f)) ⇒
+              ∀f. P f”
+    then OK() else die "the hypothesis does not reach the elements"

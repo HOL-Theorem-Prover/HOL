@@ -1,8 +1,8 @@
 Theory finite_set
 Ancestors
-  arithmetic list lifting transfer
+  arithmetic list lifting transfer cardinal
 Libs
-  quotient transferLib
+  quotient transferLib bnfBase
 
 Theorem psEXTENSION[local] = pred_setTheory.EXTENSION
 
@@ -1269,3 +1269,85 @@ Theorem fBIGUNION_fset_ABS_FOLDL:
 Proof
   rw[fBIGUNION_fset_ABS_FOLDL_aux]
 QED
+
+
+(* ----------------------------------------------------------------------
+    Finite sets as a bounded natural functor, so that a datatype
+    specification can recurse through one: fIMAGE is the map, toSet the
+    set function, rel_set on the elements the relator, and a finite set
+    holds no more atoms than there are numbers.
+   ---------------------------------------------------------------------- *)
+
+fun bnm s : KernelSig.kernelname = {Thy = "finite_set", Name = s}
+
+Definition fsetREL_def:
+  fsetREL AB fs1 fs2 <=> rel_set AB (toSet fs1) (toSet fs2)
+End
+
+Theorem fsetMap_ID:
+  fIMAGE (I:'a1 -> 'a1) = (I : 'a1 fset -> 'a1 fset)
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem fsetMap_O:
+  fIMAGE (f1:'c1 -> 'd1) o fIMAGE (g1:'a1 -> 'c1) = fIMAGE (f1 o g1)
+Proof
+  simp[FUN_EQ_THM, fIMAGE_COMPOSE]
+QED
+
+Theorem fsetMapIMAGE1:
+  !(f1:'a1 -> 'c1) s. toSet (fIMAGE f1 s) = IMAGE f1 (toSet s)
+Proof
+  simp[toSet_fIMAGE]
+QED
+
+Theorem fsetMapCONG:
+  (!a1. a1 IN toSet (s:'a1 fset) ==> (f1:'a1 -> 'c1) a1 = g1 a1) ==>
+  fIMAGE f1 s = fIMAGE g1 s
+Proof
+  strip_tac >> simp[GSYM toSet_11, toSet_fIMAGE] >>
+  irule pred_setTheory.IMAGE_CONG >> simp[]
+QED
+
+Theorem fset_bnd1:
+  !s : 'a1 fset. toSet s <<= univ(:num)
+Proof
+  gen_tac >> ONCE_REWRITE_TAC[cardinalTheory.cardleq_lteq] >>
+  disj1_tac >> simp[GSYM cardinalTheory.FINITE_CARD_LT]
+QED
+
+Theorem fset_wit1:
+  !a1:'a1. toSet (K fEMPTY a1 : 'a1 fset) SUBSET {}
+Proof
+  simp[]
+QED
+
+Theorem fset_inh1:
+  !v:'a1. v IN toSet (combin$C fINSERT fEMPTY v)
+Proof
+  simp[toSet_fINSERT]
+QED
+
+val _ = bnfBase.updateDB (
+  {Thy = "finite_set", Name = "fset"},
+  bnfBase.bI {
+    canontype = “:'a1 fset”,
+
+    map = “finite_set$fIMAGE : ('a1 -> 'c1) -> 'a1 fset -> 'c1 fset”,
+    set = [“finite_set$toSet : 'a1 fset -> 'a1 set”],
+    mapID = bnm "fsetMap_ID",
+    mapO = bnm "fsetMap_O",
+    mapIMAGE = [bnm "fsetMapIMAGE1"],
+    mapCONG = bnm "fsetMapCONG",
+
+    relator = “finite_set$fsetREL : ('a1 -> 'c1 -> bool) ->
+                                    'a1 fset -> 'c1 fset -> bool”,
+    bnd = “univ(:num)”,
+    bndthms = [bnm "fset_bnd1"],
+
+    wits = [(“K fEMPTY : 'a1 -> 'a1 fset”, bnm "fset_wit1")],
+    inhabits = [(“combin$C fINSERT fEMPTY : 'a1 -> 'a1 fset”,
+                 bnm "fset_inh1")]
+  }
+)
