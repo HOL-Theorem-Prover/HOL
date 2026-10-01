@@ -556,13 +556,10 @@ val tree_induction = fetch "-" "tree_induction";
 Theorem tree_ind:
      !p. (!a ts. (!t. MEM t ts ==> p t) ==> p (Node a ts)) ==> (!t. p t)
 Proof
-   GEN_TAC
-   >> REPEAT DISCH_TAC
-   >> Suff `(!t. p t) /\ (!l : 'a tree list. EVERY p l)` >- PROVE_TAC []
-   >> HO_MATCH_MP_TAC tree_induction
-   >> RW_TAC std_ss [EVERY_DEF]
-   >> Q.PAT_X_ASSUM `!x. Q x` MATCH_MP_TAC
-   >> FULL_SIMP_TAC std_ss [EVERY_MEM]
+   (* the datatype package proves this shape itself, and quantifies a
+      constructor's other arguments inside the implication *)
+   GEN_TAC >> STRIP_TAC >> HO_MATCH_MP_TAC tree_induction
+   >> ASM_SIMP_TAC (srw_ss()) []
 QED
 
 Theorem wf_encode_tree:

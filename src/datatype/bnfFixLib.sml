@@ -802,6 +802,26 @@ fun splitProd 0 ty = []
   | splitProd k ty =
       let val (l, r) = pairSyntax.dest_prod ty in l :: splitProd (k - 1) r end
 
+(* One binder per constructor argument, and no more: letting the
+   simplifier expand the quantifier would split an argument that is
+   itself a product into two, and the clause would then not be the shape
+   the rest of HOL reads a datatype's axiom in. *)
+fun expandArgs k =
+    if k = 0 then HO_REWR_CONV oneTheory.FORALL_ONE
+    else if k = 1 then ALL_CONV
+    else HO_REWR_CONV pairTheory.FORALL_PROD THENC
+         BINDER_CONV (expandArgs (k - 1))
+fun expandCons [k] = expandArgs k
+  | expandCons (k::ks) = HO_REWR_CONV sumTheory.FORALL_SUM THENC
+                         LAND_CONV (expandArgs k) THENC
+                         RAND_CONV (expandCons ks)
+  | expandCons [] = ALL_CONV
+
+(* how many arguments a constructor takes, which its own definition
+   says *)
+fun arityOfDef d =
+    length (#2 (strip_comb (lhs (#2 (strip_forall (concl d))))))
+
 fun factorsOf ty =
     if Type.compare (ty, oneSyntax.one_ty) = EQUAL then []
     else pairSyntax.strip_prod ty
@@ -840,6 +860,106 @@ type constructors = {
   legacy_axiom : thm, existential_axiom : thm, induction : thm option,
   set_induction : thm, distinct : thm option list, one_one : thm option list
 }
+
+(* taking a sum of products apart *)
+val shapeRWs = [sumTheory.SUM_MAP_def, pairTheory.PAIR_MAP,
+                combinTheory.I_THM, oneTheory.one]
+
+(* A law about set terms is stated point-free, and stops firing as soon
+   as a term has been unfolded and applied — which is what happens to
+   one side of an equation between a constructor's set and what its
+   arguments say.  These are the same laws about an application.  One
+   argument is supplied, not as many as the types allow: a set is itself
+   a function, so stripping to a fixed point would leave a statement
+   about membership, which matches no set term at all. *)
+fun appliedForms th =
+    let
+      fun one th =
+          let
+            val th = SPEC_ALL th
+            val (l, _) = dest_eq (concl th)
+            val (d, _) = dom_rng (type_of l)
+            val x = variant (free_vars (concl th)) (mk_var ("x", d))
+            val cnv = QCONV (PURE_REWRITE_CONV [combinTheory.o_THM,
+                                                combinTheory.I_THM,
+                                                combinTheory.K_THM] THENC
+                             QCONV (DEPTH_CONV BETA_CONV))
+          in
+            [GEN_ALL (CONV_RULE (BINOP_CONV cnv) (AP_THM th x))]
+          end handle HOL_ERR _ => []
+    in
+      List.concat (List.map one (CONJUNCTS (SPEC_ALL th)))
+    end
+
+(* and the same for a set function, which is built out of BIMG and a
+   lifted union, and whose leaves are the components' set functions —
+   stated as predicates, so set notation has to be put back *)
+val pointFreeRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
+                    combinTheory.I_o_ID]
+(* a law whose applied form has collapsed to reflexivity says nothing
+   and matches everything: I_o_ID applied is `f x = f x` *)
+val setRWs = pointFreeRWs @
+             rules (List.concat (List.map appliedForms pointFreeRWs)) @
+             [combinTheory.S_DEF, combinTheory.o_DEF,
+              combinTheory.K_DEF, pairTheory.setFST_thm,
+              pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
+              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
+
+(* ----------------------------------------------------------------------
+    One simpset for reducing a set term.
+
+    srw_ss() is not it.  What a constructor holds nothing of has to
+    collapse before a membership in it is taken apart, and srw_ss() will
+    take the membership apart first; it also carries every rewrite every
+    loaded theory has exported, so what the driver proves depends on what
+    happens to be in scope.  This lists what a set term is made of and
+    nothing else.
+
+    Eta reduction is part of unfolding a set term: the lifted union
+    leaves a component's set function applied to a bound variable.
+    Unwinding, with the existentials pulled out of the conjunctions that
+    hide them, is what disposes of an argument the recursion does not
+    reach.
+   ---------------------------------------------------------------------- *)
+
+val setElimRWs =
+    [(* the existentials a membership leaves, where unwinding can use
+        the equation it finds *)
+     GSYM boolTheory.LEFT_EXISTS_AND_THM,
+     GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+     (* set notation *)
+     pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
+     pred_setTheory.IN_UNION, pred_setTheory.IN_BIGUNION,
+     pred_setTheory.IN_IMAGE, pred_setTheory.IN_SING,
+     pred_setTheory.IMAGE_EMPTY, pred_setTheory.IMAGE_INSERT,
+     pred_setTheory.IMAGE_SING, pred_setTheory.IMAGE_I,
+     pred_setTheory.IMAGE_UNION, pred_setTheory.BIGUNION_EMPTY,
+     pred_setTheory.BIGUNION_INSERT, pred_setTheory.BIGUNION_UNION,
+     pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
+     (* and the leaves themselves: the components' own set functions,
+        at the components' own constructors.  sumTheory's SUM_MAP_SET is
+        deliberately absent: it is about the same term as the database's
+        own naturality for the sum, and says it in predicate form, so
+        having both makes which one fires an accident of rule order. *)
+     sumTheory.setL_def, sumTheory.setR_def, bnfPrelimsTheory.optSET_def,
+     pairTheory.FST, pairTheory.SND,
+     combinTheory.I_THM, combinTheory.K_THM, combinTheory.o_THM]
+
+(* The list is built by this package, so src/list comes after this file
+   and listTheory cannot be named in it.  Its few set rewrites are
+   looked up when a set term is actually reduced, which is always in a
+   theory that has the list — and a declaration made before there is one
+   simply does not need them. *)
+fun lateRWs () =
+    List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
+                    [("list", "MEM"), ("list", "IN_LIST_TO_SET"),
+                     ("list", "LIST_TO_SET"), ("list", "MAP")]
+
+fun set_ss () =
+    simpLib.&& (simpLib.++ (simpLib.++ (boolSimps.bool_ss, boolSimps.ETA_ss),
+                            boolSimps.UNWIND_ss),
+                setElimRWs @ lateRWs ())
+
 
 fun defineConstructors (nms : names) cspecs bnf fix : constructors =
     let val wrote = asSpecWrote nms and built = asBuilt nms
@@ -935,16 +1055,6 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
            simplifier expand the quantifier would split an argument that
            is itself a product into two, and the clause would then not
            be the shape the rest of HOL reads a datatype axiom in. *)
-        fun expandArgs k =
-            if k = 0 then HO_REWR_CONV oneTheory.FORALL_ONE
-            else if k = 1 then ALL_CONV
-            else HO_REWR_CONV pairTheory.FORALL_PROD THENC
-                 BINDER_CONV (expandArgs (k - 1))
-        fun expandCons [k] = expandArgs k
-          | expandCons (k::ks) = HO_REWR_CONV sumTheory.FORALL_SUM THENC
-                                 LAND_CONV (expandArgs k) THENC
-                                 RAND_CONV (expandCons ks)
-          | expandCons [] = ALL_CONV
         (* the clause the axiom is read in, on the right of the
            equation only: a single constructor leaves nothing to expand,
            and rewriting both sides of |- body = body would say |- T *)
@@ -1036,25 +1146,18 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
         val set_induction =
             REWRITE_RULE (map (GSYM o #def) cs)
               (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
-                 (QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
-                                            bnfPrelimsTheory.BIMG_K0,
-                                            combinTheory.I_o_ID]) THENC
+                 (QCONV (PURE_REWRITE_CONV setRWs) THENC
                   (* one binder per constructor argument here too: an
                      argument that is itself a sum would otherwise be
                      split, and the clause would be about `P (V (INL x))`
                      rather than about `P (V a)` *)
                   expandCons (map (length o #args) cs) THENC
-                  (* not FORALL_ONE: a constructor with an argument of
+                  (* the set simpset says nothing about one, which is
+                     what is wanted: a constructor with an argument of
                      type one has that argument, and a clause about
                      `P (C ())` is not the shape a datatype's induction
                      principle is read in *)
-                  QCONV (simpLib.SIMP_CONV
-                    (simpLib.-* (BasicProvers.srw_ss(),
-                                 ["one.FORALL_ONE", "one.one"]))
-                    [combinTheory.S_DEF,
-                     combinTheory.o_DEF, combinTheory.K_DEF,
-                     pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
-                     pairTheory.setFST_thm, pairTheory.setSND_thm]))))
+                  QCONV (simpLib.SIMP_CONV (set_ss()) setRWs))))
                  (#set_induction fix))
         (* whether this is a nested recursion is known structurally: a
            nested factor's mapped type is not the answer type.  Deciding
@@ -1892,23 +1995,6 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
     each constructor says what to instantiate at.
    ---------------------------------------------------------------------- *)
 
-(* taking a sum of products apart *)
-val shapeRWs = [sumTheory.SUM_MAP_def, pairTheory.PAIR_MAP,
-                combinTheory.I_THM, oneTheory.one]
-
-(* and the same for a set function, which is built out of BIMG and a
-   lifted union, and whose leaves are the components' set functions —
-   stated as predicates, so set notation has to be put back *)
-val setRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
-              combinTheory.I_o_ID, combinTheory.S_DEF, combinTheory.o_DEF,
-              combinTheory.K_DEF, pairTheory.setFST_thm,
-              pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
-              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
-
-(* eta reduction is part of unfolding a set term: the lifted union leaves
-   a component's set function applied to a bound variable *)
-val set_ss = simpLib.++ (BasicProvers.srw_ss(), boolSimps.ETA_ss)
-
 fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
     let
       val defs = #defs cs
@@ -1930,7 +2016,7 @@ fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
                     (SPECL (fvars @ [injOf def]) (#map_thm res)))
       fun setEqn i def =
           REWRITE_RULE folds
-            (unfold set_ss setRWs
+            (unfold (set_ss()) setRWs
                     (SPEC (injOf def) (List.nth (#set_thms res, i))))
     in
       {map_eqns = LIST_CONJ (List.map mapEqn defs),
@@ -2024,7 +2110,7 @@ type mutual = {
    sees that without running a tactic. *)
 val normRWs = setRWs @ [BIGUNION_IMAGE_UNION, BIGUNION_IMAGE_BIGUNION]
 fun normEqWith rws (t1,t2) =
-    let val cnv = QCONV (simpLib.SIMP_CONV set_ss (normRWs @ rws))
+    let val cnv = QCONV (simpLib.SIMP_CONV (set_ss()) (normRWs @ rws))
         val (e1,e2) = (cnv t1, cnv t2)
     in
       if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
@@ -2034,7 +2120,7 @@ fun normEqWith rws (t1,t2) =
     end
 
 fun normEq (t1,t2) =
-    let val cnv = QCONV (simpLib.SIMP_CONV set_ss normRWs)
+    let val cnv = QCONV (simpLib.SIMP_CONV (set_ss()) normRWs)
         val (e1,e2) = (cnv t1, cnv t2)
     in
       if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
@@ -2329,7 +2415,7 @@ fun mutualInduction (cs1 : constructors, cs2 : constructors)
       val expand =
           QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
                                     combinTheory.I_o_ID]) THENC
-          QCONV (simpLib.SIMP_CONV set_ss
+          QCONV (simpLib.SIMP_CONV (set_ss())
                    (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
                               oneTheory.FORALL_ONE]))
       (* expanding the quantifier names each constructor's arguments after
@@ -2473,10 +2559,16 @@ fun defineFamily {tynames} db params specs : family =
                                others: a declared argument the functor
                                never mentions is not one the copy can be
                                conjugated in *)
+                            (* in the order the new type takes them: a
+                               type definition sorts its arguments, and
+                               the map has to say what the type says *)
                             let val used = Type.type_vars fty
                                 val slotsleft =
-                                    List.filter (fn v => Lib.mem v used)
-                                                (List.take (vs, i) @ params)
+                                    List.filter
+                                      (fn v => Lib.mem v used andalso
+                                               (isSome (slotIdx v) orelse
+                                                Lib.mem v params))
+                                      args
                                 val fbnf = bnfLib.deriveBNFn db slotsleft fty
                             in
                               copyMemberBNF c
@@ -2520,7 +2612,6 @@ fun defineFamily {tynames} db params specs : family =
        functors = functors, maps = maps, raw = List.map #2 ks, slots = vs,
        params = params, db = db}
     end
-
 
 
 (* the witnesses of a nest of existentials, and what they satisfy *)
@@ -3149,8 +3240,9 @@ fun familyAxiomOf (defs : thm list list) recursion =
             val vv = mk_var ("v", vty)
             fun branch i =
                 let
-                  val nfacs = factorsOf (List.nth (nSummands, i))
-                  val cfacs = factorsOf (List.nth (cSummands, i))
+                  val k = arityOfDef (List.nth (ds, i))
+                  val nfacs = splitProd k (List.nth (nSummands, i))
+                  val cfacs = splitProd k (List.nth (cSummands, i))
                   val recs = ListPair.mapEq (fn (a,b) => a <> b) (nfacs, cfacs)
                   val xv = mk_var ("x", List.nth (nSummands, i))
                   val args =
@@ -3186,13 +3278,19 @@ fun familyAxiomOf (defs : thm list list) recursion =
       (* expanding the quantifier over each functor's shape gives every
          constructor's equation at once, and the definitions fold the
          injections back into the constructors *)
-      val expand =
+      val reduce =
           QCONV (simpLib.SIMP_CONV boolSimps.bool_ss
-                   [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
-                    oneTheory.FORALL_ONE, sumTheory.SUM_MAP_def,
+                   [sumTheory.SUM_MAP_def,
                     sumTheory.sum_case_def, sumTheory.OUTL, sumTheory.OUTR,
                     pairTheory.PAIR_MAP, pairTheory.FST, pairTheory.SND,
                     combinTheory.I_THM])
+      fun expandFor ds = expandCons (List.map arityOfDef ds) THENC reduce
+      fun expand tm =
+          let fun go [ds] t = expandFor ds t
+                | go (ds :: rest) t = (LAND_CONV (expandFor ds) THENC
+                                       RAND_CONV (go rest)) t
+                | go [] t = REFL t
+          in go defs tm end
     in
       (* one clause per constructor, in one list: expanding a member's
          equation leaves its own clauses nested inside the family's, and
@@ -3382,12 +3480,33 @@ fun familySetInductionOf (fam : family) (types, conss) principle =
 
 fun familyInductionOf (defs : thm list list) induction =
     let
-      val expand =
-          QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
-                                    combinTheory.I_o_ID]) THENC
-          QCONV (simpLib.SIMP_CONV set_ss
-                   (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
-                              oneTheory.FORALL_ONE]))
+      (* one binder per constructor argument here too: the simplifier
+         would split an argument that is itself a product, and the
+         clause would be about `P (C (a,b))` rather than about `P (C a)` *)
+      (* the set rewrites go first, and by themselves: what says that a
+         constructor holds nothing is about the set as the construction
+         wrote it, and the simplifier would have taken the membership
+         apart before it could fire *)
+      val reduce =
+          QCONV (PURE_REWRITE_CONV setRWs) THENC
+          QCONV (simpLib.SIMP_CONV (set_ss())
+                   (setRWs @ [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
+                              sumTheory.OUTL, sumTheory.OUTR,
+                              pairTheory.PAIR_MAP, pairTheory.FST,
+                              pairTheory.SND, combinTheory.I_THM]))
+      (* only the pure rewrites before the quantifier is expanded: the
+         simplifier would take a membership apart while the set it is
+         about is still a union over a shape not yet opened, and what
+         says the union is empty could then no longer fire *)
+      fun expandFor ds =
+          QCONV (PURE_REWRITE_CONV setRWs) THENC
+          expandCons (List.map arityOfDef ds) THENC reduce
+      fun expand tm =
+          let fun go [ds] t = expandFor ds t
+                | go (ds :: rest) t = (LAND_CONV (expandFor ds) THENC
+                                       RAND_CONV (go rest)) t
+                | go [] t = REFL t
+          in go defs tm end
     in
       PURE_REWRITE_RULE [GSYM CONJ_ASSOC]
         (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (renameBlocks defs)))
@@ -3425,13 +3544,20 @@ fun defineCases ax0 =
       val (hvars, body) = strip_exists (#2 (strip_forall (concl ax)))
       (* one clause per constructor: what the function does to it, and
          what the target is handed *)
+      (* A clause quantifies what the axiom hands over, which is not
+         always the constructor's own arguments: a constructor taking a
+         product has the components quantified and the pair built —
+         `∀a p. h (C (a,p)) = f a p (h a) (h p)`.  So the two are kept
+         apart: `args` is what the clause binds, `cargs` what the
+         constructor is applied to. *)
       fun clauseOf tm =
           let val (args, eq) = strip_forall tm
               val (h, capp) = dest_comb (lhs eq)
               val (cons, cargs) = strip_comb capp
               val (f, fargs) = strip_comb (rhs eq)
           in
-            {h = h, cons = cons, cargs = cargs, f = f, fargs = fargs}
+            {h = h, cons = cons, args = args, cargs = cargs, f = f,
+             fargs = fargs}
           end
       val clauses = List.map clauseOf (strip_conj body)
       fun clausesOf h = List.filter (fn c => aconv (#h c) h) clauses
@@ -3457,13 +3583,13 @@ fun defineCases ax0 =
       fun targetOf (c, b) =
           let
             fun freshen (t, (vs, away)) =
-                if is_var t andalso List.exists (aconv t) (#cargs c) then
+                if is_var t andalso List.exists (aconv t) (#args c) then
                   (vs @ [t], away)
                 else
                   let val v = numvariant away (mk_var ("r", type_of t))
                   in (vs @ [v], v :: away) end
             val (vs, _) = List.foldl freshen
-                            ([], free_varsl (#cargs c @ #fargs c))
+                            ([], free_varsl (#args c @ #fargs c))
                             (#fargs c)
           in
             (#f c, list_mk_abs (vs, list_mk_comb (b, #cargs c)))
@@ -3503,8 +3629,8 @@ fun defineCases ax0 =
                 let val capp = list_mk_comb (#cons c, #cargs c)
                     val app = list_mk_comb (casetm, capp :: bs)
                 in
-                  GENL (#cargs c @ bs)
-                       (TRANS (LIST_BETA_CONV app) (SPECL (#cargs c) eq))
+                  GENL (#args c @ bs)
+                       (TRANS (LIST_BETA_CONV app) (SPECL (#args c) eq))
                 end
             val cs = clausesOf h
             fun aboutSel eq =
@@ -3704,10 +3830,13 @@ fun defineRecursion {name, axiom, def} =
               val spec = SPECL (hvs @ List.map theOne fns) uq
               val (ant, _) = dest_imp (concl spec)
               val (mine, theirs) = dest_conj ant
+              (* the definition quantifies its parameters in each clause,
+                 so each clause is where they are supplied *)
+              val atParams =
+                  LIST_CONJ (List.map (SPECL params) (CONJUNCTS def))
             in
               SOME (GENL (params @ hvs)
-                         (DISCH mine (MP spec (CONJ (ASSUME mine)
-                                                    (SPECL params def)))))
+                         (DISCH mine (MP spec (CONJ (ASSUME mine) atParams))))
             end
     in
       {definition = def, unique = uniqueness}
@@ -3850,6 +3979,23 @@ fun defineSize {tyname, sizes = sizenames} axiom =
                          consts of
               SOME c => c
             | NONE => raise ERR "defineSize" "the definition made no constant"
+      (* A size of a nested argument arrives as a map, because that is
+         what the axiom hands over: `list_size (λx. x) (MAP h l)`.  A
+         measure over the operator recursed under is written as the fold
+         `list_size h l`, and that is also what the equation should say
+         — the operator's own size-of-map law turns the one into the
+         other, leaving `λx. h x`, which contracts.  Aimed at the
+         right-hand side and carrying only those laws: the sum is
+         associated the way the old package associates it, and a
+         simpset would reassociate it. *)
+      fun sizeMapRWs () =
+          List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
+                          [("list", "list_size_map")]
+      val tidy =
+          STRIP_QUANT_CONV
+            (RAND_CONV (QCONV (PURE_REWRITE_CONV (sizeMapRWs())) THENC
+                        QCONV (DEPTH_CONV BETA_CONV) THENC
+                        QCONV (DEPTH_CONV ETA_CONV)))
       (* clause by clause, with the parameters quantified inside each,
          which is the shape the old package's definitions have and the
          shape a development that rewrites with a size has seen *)
@@ -3859,7 +4005,7 @@ fun defineSize {tyname, sizes = sizenames} axiom =
             val specd = SPECL fs def
             fun reshape c =
                 let val (vs, _) = strip_forall (concl c)
-                in GENL (fs @ vs) (SPECL vs c) end
+                in CONV_RULE tidy (GENL (fs @ vs) (SPECL vs c)) end
           in
             LIST_CONJ (List.map reshape (CONJUNCTS specd))
           end
@@ -4468,7 +4614,6 @@ fun collapseFamily {tynames} (fam : family) principle : collapsed =
     end
 
 
-
 (* ----------------------------------------------------------------------
     The collapsed family's constructors, one per summand of each
     member's functor — the same split defineConstructors makes for a
@@ -4521,7 +4666,8 @@ fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
 
 
 (* ----------------------------------------------------------------------
-    The collapsed family's map, one constructor at a time.
+    The collapsed family's map and set functions, one constructor at a
+    time.
 
     A collapsed member's map is defined through the bijection, so what it
     does at a constructor is what the member's own map does at the
@@ -4531,11 +4677,10 @@ fun collapsedConstructors (nms0 : names) names (coll : collapsed) =
     normalised the same way, with the representation's own naturality to
     put a member's map back together.
 
-    The set functions are not here yet: their two sides normalise to
-    different shapes, because the one that goes through the map pushes
-    the representation inside the sets and the other does not.  Closing
-    that wants the components' naturality in the set normaliser, which
-    is the same polish the pair's set equations are waiting for.
+    A set function is not folded back but stated: what an argument
+    contributes is what that argument's own type's set function says, and
+    the two sides then differ only in where the representation's map
+    sits, which the components' naturality moves.
    ---------------------------------------------------------------------- *)
 
 fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
@@ -4580,22 +4725,42 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
                                 (upto n))
       val unfoldRWs = List.concat (List.map #defs ccs) @ consP @ mapP @ setP @
                       repabsP @ memberEqns
+      (* naturality, setᵢ (map f⃗ x) = IMAGE fᵢ (setᵢ x), for every
+         component the specification's own functors are built from:
+         those are the ones whose maps a constructor applies, since a
+         member stands at a slot variable there and the equations that
+         unfold its own map are left to do that.  Fusing the image
+         naturality leaves into the union it sits under then puts the
+         maps at a collection's elements, which is where the argument's
+         own type says they are. *)
+      val comps =
+          case #functors fam of
+              [] => raise ERR "collapsedEqns" "a family with no functors"
+            | F :: Fs => List.foldl (fn (G,A) =>
+                                        HOLset.union (A, #components G))
+                                    (#components F) Fs
+      val natRWs = List.concat (List.map (fn bnfBase.bI i => #mapIMAGE i)
+                                         (HOLset.listItems comps))
+      val fuseRWs = [REWRITE_RULE [combinTheory.o_DEF]
+                                  pred_setTheory.IMAGE_IMAGE]
       (* the sets of a constructor's arguments come out grouped by where
          the member's own set function found them; union is associative
-         and commutative, and that is the whole difference *)
-      val acRWs = unfoldRWs @ [bnfFixBNFTheory.EQUAL_SING,
-                               simpLib.AC pred_setTheory.UNION_ASSOC
-                                          pred_setTheory.UNION_COMM]
+         and commutative, and that is the whole remaining difference *)
+      val acRWs = unfoldRWs @ natRWs @ fuseRWs @
+                  [bnfFixBNFTheory.EQUAL_SING,
+                   simpLib.AC pred_setTheory.UNION_ASSOC
+                              pred_setTheory.UNION_COMM]
       (* the database with the collapsed types in it, which is what says
          what an argument's own set function is *)
       val db = List.foldl (fn (r, d) => bnfBase.insert (#key r, #info r) d)
                           (#db fam) cbnfs
       fun norm tm =
-          rhs (concl (QCONV (simpLib.SIMP_CONV set_ss
+          rhs (concl (QCONV (simpLib.SIMP_CONV (set_ss())
                                (setRWs @ shapeRWs @ unfoldRWs))
                             tm))
       fun normth tm =
-          QCONV (simpLib.SIMP_CONV set_ss (setRWs @ shapeRWs @ unfoldRWs)) tm
+          QCONV (simpLib.SIMP_CONV (set_ss())
+                   (setRWs @ shapeRWs @ unfoldRWs)) tm
       (* what the representation does to a mapped value: this is what
          puts a member's own map back together underneath a
          constructor, and it cannot be in the unfolding — the map's
