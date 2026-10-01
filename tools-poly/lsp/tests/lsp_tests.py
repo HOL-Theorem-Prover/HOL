@@ -3654,6 +3654,57 @@ def test_appending_a_definition_at_eof_clears_its_unclosed_quotation():
             c.close()
 
 
+def test_replacing_one_error_with_another_republishes():
+    """`sendDiags' used to decide whether to publish by comparing the
+    *count* of diagnostics with the last publish's.  Swapping one error
+    for a different one somewhere else leaves the count alone, so the
+    send was skipped and the client went on pointing at the place the
+    error used to be.
+
+    A characterisation test rather than a tight reproduction: whether
+    the old code actually skipped depended on how the pass's Progress
+    events interleaved with the merge in `updateDiags'.  What it pins
+    down is the property that matters -- what the client last heard
+    names the error the file actually has."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/swap_error.sml"
+        first = ("Theory swap_error\n"
+                 "Ancestors hol\n"
+                 "\n"
+                 "val padding = 1;\n"
+                 "val padding2 = 2;\n"
+                 "val wrong = first_bogus_name;\n")
+        _did_open(c, uri, first, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60), "c0")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 1, f"one diagnostic to start with ({d!r})")
+        assert_true("first_bogus_name" in d[0].get("message", ""),
+                    f"it names the first bad identifier ({d[0]!r})")
+
+        # Same number of diagnostics, different identifier, higher up.
+        second = ("Theory swap_error\n"
+                  "Ancestors hol\n"
+                  "\n"
+                  "val wrong = second_bogus_name;\n"
+                  "val padding = 1;\n"
+                  "val padding2 = 2;\n")
+        mark = c.total_msgs()
+        _did_change_full(c, uri, second, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, mark),
+                    "compiled the replacement")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 1, f"still one diagnostic ({d!r})")
+        assert_true("second_bogus_name" in d[0].get("message", ""),
+                    f"the client was told about the new one, not the old "
+                    f"({d[0].get('message','')[:80]!r})")
+        assert_eq(d[0]["range"]["start"]["line"], 3,
+                  f"at the line it is actually on ({d[0]['range']!r})")
+    finally:
+        c.close()
+
+
 def test_diagnostic_above_the_resume_point_survives_an_eof_edit():
     """The upper guard on the same prune.  A resumed pass drops the
     seeded diagnostics anchored inside the declaration it is about to
@@ -8838,6 +8889,8 @@ TESTS = [
                      test_appending_a_definition_at_eof_clears_its_unclosed_quotation),
     ("diagnostic_above_the_resume_point_survives_an_eof_edit",
                      test_diagnostic_above_the_resume_point_survives_an_eof_edit),
+    ("replacing_one_error_with_another_republishes",
+                     test_replacing_one_error_with_another_republishes),
     ("stale_diags_dont_survive_char_by_char_typing",
                                      test_stale_diags_dont_survive_char_by_char_typing),
     ("diagnostics_deduplicated_across_publish",

@@ -2719,14 +2719,25 @@ fun start {diag, dbg, warnings} = let
           in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
         in loop 0; DArray.replace (oldDiags, newDiags) end
 
-      (* Only emit publishDiagnostics when the accumulated list has
-         actually changed size since the last emit -- Progress events
-         far past the point where an error was found still update
-         `oldDiags` (by re-merging), but if the size didn't change,
-         re-sending is pure noise for the client's log.  Both compile
-         diagnostics AND walker-detected runtime squiggles contribute
-         to the size we compare against. *)
-      val lastSentSize = ref ~1
+      (* Only emit publishDiagnostics when what would be published has
+         actually changed since the last emit -- Progress events far
+         past the point where an error was found still update
+         `oldDiags` (by re-merging), and re-sending an identical list
+         is pure noise for the client's log.
+
+         Compared by content, not by count.  A count told these apart
+         only when their lengths differed: `updateDiags' drops the
+         previous pass's entries above the progress point as it adds
+         this pass's, so one error giving way to a different error at a
+         different place left the total where it was, the send was
+         skipped, and the client kept pointing at the old place for the
+         rest of the pass.  The list has to be built to compare it
+         anyway -- `dedupReports` is what decides what goes out, so it
+         is what has to be keyed on -- and it already runs every
+         message through `encodeToString', so the key costs a concat
+         per diagnostic and no extra formatting.  Walker-detected
+         runtime squiggles and proof verdicts go into it too. *)
+      val lastSentKey : string list option ref = ref NONE
       (* Snapshot oldDiags for the writer thread.  A live reference
          races updateDiags on the next Progress event: DArray.replace
          mid-encode makes encDArray raise Subscript, which kills the
@@ -2736,19 +2747,24 @@ fun start {diag, dbg, warnings} = let
         val wd = Sref.value walkerDiags
         val pd = Sref.value proofDiags
         val ws = nReports wd + nReports pd
-        val total = n + ws
-        in if total = !lastSentSize then () else (
-          lastSentSize := total;
-          let val snapshot = DArray.clone (oldDiags, total)
-              val _ = pushReports (snapshot, wd)
-              val _ = pushReports (snapshot, pd)
-              val snapshot = dedupReports snapshot
-          in
+        val snapshot = DArray.clone (oldDiags, n + ws)
+        val _ = pushReports (snapshot, wd)
+        val _ = pushReports (snapshot, pd)
+        val snapshot = dedupReports snapshot
+        val key =
+            DArray.foldl
+              (fn (Error {hard, pos = (s, e), msg}, acc) =>
+                  (if hard then "!" else "?") :: Int.toString s :: ":" ::
+                  Int.toString e :: ":" :: encodeToString msg :: "\n" :: acc
+                | (_, acc) => acc)
+              [] snapshot
+        in if SOME key = !lastSentKey then () else (
+          lastSentKey := SOME key;
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"version\":"; encInt (#version text) print;
             print ",\"diagnostics\":"; encDArray encDiag snapshot print;
-            print "}"))) end);
+            print "}"))));
           held
         end)
 
