@@ -74,10 +74,11 @@ val _ =
     in
       if null (hyp th) andalso
          same (concl szth)
-              “∀f. rose_size f RLeaf = 0 ∧
-                   ∀a l. rose_size f (RNode a l) =
-                         1 + f a +
-                         mylist_size (λx. x) (mylistMAP (rose_size f) l)”
+              “(∀f: 'a -> num. rose_size f RLeaf = 0) ∧
+               ∀(f: 'a -> num) a l.
+                 rose_size f (RNode a l) =
+                 1 + (f a +
+                      mylist_size (λx. x) (mylistMAP (rose_size f) l))”
       then OK() else die "not as expected"
     end
 

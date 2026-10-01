@@ -67,6 +67,15 @@ fun parse_one_pty fmap nm pty =
         dVartype s => constty (mk_vartype s)
       | dAQ ty => constty ty
       | dTyop{Thy=SOME thy,Tyop,Args} =>
+        (* a specification may name one of its own types the way any
+           other type is named — `num = C10 num$num | C12 scratch$num`
+           says both the numbers and the type being defined — and the
+           qualified name is then the member, not a type that exists *)
+        if thy = current_theory() andalso
+           (Tyop = nm orelse isSome (Symtab.lookup fmap Tyop))
+        then parse_one_pty fmap nm (dTyop{Thy = NONE, Tyop = Tyop,
+                                          Args = Args})
+        else
         let val args = map (parse_one_pty fmap nm) Args
         in
           case omap dest_constty args of

@@ -772,21 +772,87 @@ fun astHol_datatype astl =
   HOL_MESG message
  end
 
+(*---------------------------------------------------------------------------*)
+
+fun spec_recurses astl =
+    let
+      val tynames = map #1 astl
+      fun here NONE = true
+        | here (SOME thy) = thy = current_theory()
+      fun mentions pty =
+          case pty of
+              ParseDatatype.dVartype _ => false
+            | ParseDatatype.dAQ _ => false
+            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
+                (Lib.mem Tyop tynames andalso here Thy) orelse
+                List.exists mentions Args
+      fun inForm (ParseDatatype.Constructors cs) =
+            List.exists (List.exists mentions o #2) cs
+        | inForm (ParseDatatype.Record flds) =
+            List.exists (mentions o #2) flds
+    in
+      List.exists (inForm o #2) astl
+    end
+
+(* Does the specification say anything about a type variable?  A type
+   with a type variable in it is a candidate functor, and a later
+   specification may want to recurse through it — `fake_pair = FP of 'a
+   => 'b` and then `t = C of bool ** t ** t`.  Nothing registers a type
+   the old construction builds as a functor, so a specification that
+   mentions a type variable goes to the BNF package even when it does
+   not recurse: that is what leaves it in the functor database. *)
+fun spec_has_tyvars astl =
+    let
+      fun mentions pty =
+          case pty of
+              ParseDatatype.dVartype _ => true
+            | ParseDatatype.dAQ ty => not (null (Type.type_vars ty))
+            | ParseDatatype.dTyop {Args, ...} => List.exists mentions Args
+      fun inForm (ParseDatatype.Constructors cs) =
+            List.exists (List.exists mentions o #2) cs
+        | inForm (ParseDatatype.Record flds) =
+            List.exists (mentions o #2) flds
+    in
+      List.exists (inForm o #2) astl
+    end
+
+(* the same three-way choice as Datatype below: the older syntax says
+   the same things *)
+fun dispatch astl =
+    if is_enum_type_spec astl orelse
+       not (spec_recurses astl orelse spec_has_tyvars astl) orelse
+       not (bnfDatatypeLib.expressible astl)
+    then
+      astHol_datatype astl
+    else bnfDatatypeLib.bnfDatatypeASTs astl
+
 fun Hol_datatype q =
-    astHol_datatype (ParseDatatype.parse (type_grammar()) q)
+    dispatch (ParseDatatype.parse (type_grammar()) q)
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Hol_datatype" e)
 
-(* A specification this construction cannot build — one that recurses
-   under another type operator, say — goes to the BNF package, which
-   takes the fixed point of the functor the specification describes.  A
-   specification neither can build reports this one's failure, which is
-   the message developments know. *)
+(*---------------------------------------------------------------------------*)
+(* Does the specification recurse?  A specification whose constructors       *)
+(* mention none of the types being defined is a sum of products of types     *)
+(* that already exist, which this construction builds directly.  One that    *)
+(* does recurse is a fixed point, and the fixed point is what the BNF        *)
+(* package takes — and what leaves the new type in the functor database,     *)
+(* so that a later specification can recurse through it in turn.             *)
+
+(*---------------------------------------------------------------------------*)
+(* An enumeration is what EnumType builds, from a representation in the      *)
+(* numbers; a specification that does not recurse is a sum of products,      *)
+(* which this construction builds; and everything that does recurse is a     *)
+(* fixed point, which the BNF package takes — and which leaves the new type  *)
+(* in the functor database, so that the next specification can recurse       *)
+(* through it.  Records are orthogonal to all three: whichever built the     *)
+(* type, the record apparatus goes on top of it.                            *)
+(*---------------------------------------------------------------------------*)
+
 fun Datatype q =
-    astHol_datatype (ParseDatatype.hparse (type_grammar()) q)
+    dispatch (ParseDatatype.hparse (type_grammar()) q)
     handle e as HOL_ERR _ =>
-    bnfDatatypeLib.bnfDatatype q
-    handle HOL_ERR _ => render_exn (wrap_exn "Datatype" "Datatype" e)
+    render_exn (wrap_exn "Datatype" "Datatype" e)
 
 val _ = Parse.temp_set_grammars ambient_grammars
 

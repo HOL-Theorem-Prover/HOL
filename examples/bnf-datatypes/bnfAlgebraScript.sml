@@ -2,6 +2,9 @@ Theory bnfAlgebra
 Ancestors
   relation pair combin pred_set cardinal ordinal ordinalBasic
 
+(* cardinalTheory keeps the sets' own exponent to itself, since the
+   datatype package makes it everyone's ancestor *)
+Overload "**"[local] = “set_exp”
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
 val _ = new_type ("F", 2)

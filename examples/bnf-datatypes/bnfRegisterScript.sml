@@ -23,7 +23,7 @@ val db = bnfBase.fullDB()
 val bnf = deriveBNFn db [alpha, “:'b1”] “:one + 'b1 # 'a”
 val fix = defineFixpoint {tyname = "mylist", ABS = "mylist_ABS",
                           REP = "mylist_REP"} bnf
-val cs = defineConstructors ["MyNil", "MyCons"] bnf fix
+val cs = defineConstructors noNames [("MyNil", 0), ("MyCons", 2)] bnf fix
 
 Theorem mylist_axiom = #existential_axiom cs
 Theorem mylist_induction = valOf (#induction cs)
@@ -152,7 +152,7 @@ val _ =
        null (free_vars (concl (#recursion rose)))
     then OK() else die (thm_to_string (#recursion rose))
 
-val rcs = defineConstructors ["RLeaf", "RNode"] nested rose
+val rcs = defineConstructors noNames [("RLeaf", 0), ("RNode", 2)] nested rose
 Theorem rose_axiom = #axiom rcs
 
 (* ----------------------------------------------------------------------
@@ -197,8 +197,11 @@ val mylistSUM_def = Prim_rec.new_recursive_definition {
   def = “(mylistSUM MyNil = 0n) ∧
          (mylistSUM (MyCons (n:num) l) = n + mylistSUM l)”}
 
+(* the axiom names its answer type itself *)
+val roseAnswer = type_of (hd (#1 (strip_forall (concl rose_axiom))))
+
 val rsize_def =
-    let val ax = INST_TYPE [alpha |-> numSyntax.num] rose_axiom
+    let val ax = INST_TYPE [roseAnswer |-> numSyntax.num] rose_axiom
         val inst = SPECL [“0n”, “λ(a:'b1) (l:'b1 rose mylist) (r:num mylist).
                                     1 + mylistSUM r”] ax
     in
@@ -311,7 +314,7 @@ val spec = parseSpec `expr = Var 'a | Lit num | Op expr num expr`
 val _ = tprint "a specification's functor"
 val _ =
     if #tynames spec = ["expr"] andalso
-       #constructors spec = [["Var", "Lit", "Op"]] andalso
+       #constructors spec = [[("Var",1), ("Lit",1), ("Op",3)]] andalso
        List.map #1 (#functors spec) = [“:'b1 + num + 'a # num # 'a”]
     then OK()
     else die (String.concatWith ", "
@@ -321,7 +324,7 @@ val ebnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params spec)
                       (#1 (hd (#functors spec)))
 val efix = defineFixpoint {tyname = "expr", ABS = "expr_ABS",
                            REP = "expr_REP"} ebnf
-val ecs = defineConstructors (hd (#constructors spec)) ebnf efix
+val ecs = defineConstructors noNames (hd (#constructors spec)) ebnf efix
 val eres = fixpointBNF noNames ebnf efix
 val eeqns = constructorEqns ecs eres
 
@@ -357,7 +360,7 @@ val _ =
 val {definition = rsize2_def, unique = rsize2_unique} =
     defineRecursion {
       name = "rsize2_def",
-      axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+      axiom = INST_TYPE [roseAnswer |-> numSyntax.num] rose_axiom,
       def = “(rsize2 RLeaf = 0n) ∧
              (rsize2 (RNode a l) = 1 + mylistSUM (mylistMAP rsize2 l))”}
 
@@ -434,7 +437,7 @@ val _ = tprint "defineRecursion says so rather than guessing"
 val _ =
     (ignore (defineRecursion {
         name = "rsize5_def",
-        axiom = INST_TYPE [alpha |-> numSyntax.num] rose_axiom,
+        axiom = INST_TYPE [roseAnswer |-> numSyntax.num] rose_axiom,
         def = “(rsize5 RLeaf = 0n) ∧
                (rsize5 (RNode a l) = 1 + rsizel5 l) ∧
                (rsizel5 MyNil = 0n) ∧
@@ -522,7 +525,7 @@ val nbnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params nspec)
                       (#1 (hd (#functors nspec)))
 val nfix = defineFixpoint {tyname = "stack", ABS = "stack_ABS",
                            REP = "stack_REP"} nbnf
-val ncs = defineConstructors (hd (#constructors nspec)) nbnf nfix
+val ncs = defineConstructors noNames (hd (#constructors nspec)) nbnf nfix
 val nres = fixpointBNF (hd (#names nspec)) nbnf nfix
 val neqns = constructorEqns ncs nres
 

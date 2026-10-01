@@ -5,6 +5,10 @@ Ancestors
 Libs
   HolKernel bnfBase bnfLib
 
+(* cardinalTheory keeps the sets' own exponent to itself, since the
+   datatype package makes it everyone's ancestor *)
+Overload "**"[local] = “set_exp”
+
 (* ----------------------------------------------------------------------
     This file is bnfFixpointScript.sml with one line changed: the functor
     below.  It is the functor from concreteBNFScript.sml — recursion

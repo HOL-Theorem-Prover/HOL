@@ -32,7 +32,7 @@ val espec = parseSpec `colour = Red | Green | Blue`
 val _ = tprint "an enumeration's specification"
 val _ =
     if #tynames espec = ["colour"] andalso null (#params espec) andalso
-       #constructors espec = [["Red", "Green", "Blue"]] andalso
+       #constructors espec = [[("Red",0), ("Green",0), ("Blue",0)]] andalso
        List.all (fn (ty,_) => ty = “:unit + unit + unit”) (#functors espec)
     then OK() else die "not as expected"
 
@@ -56,7 +56,7 @@ val _ =
 val ecopy = defineCopy {tyname = "colour", ABS = "colour_ABS",
                         REP = "colour_REP"} ebnf
 val efix = #fixpoint ecopy
-val ecs = defineConstructors (hd (#constructors espec)) ebnf efix
+val ecs = defineConstructors noNames (hd (#constructors espec)) ebnf efix
 
 val _ = tprint "an enumeration's axiom"
 val _ =
@@ -106,7 +106,7 @@ val pointC = TypeBasePure.mk_recordtype_constructor "point"
 val _ = tprint "a record's specification"
 val _ =
     if #tynames rspec = ["point"] andalso
-       #constructors rspec = [[pointC]] andalso
+       #constructors rspec = [[(pointC, 2)]] andalso
        #fields rspec = [SOME ["x", "y"]] andalso
        List.all (fn (ty,_) => ty = “:num # num”) (#functors rspec)
     then OK() else die "not as expected"
@@ -114,7 +114,7 @@ val _ =
 val rbnf = deriveBNFn db [alpha] (#1 (hd (#functors rspec)))
 val rfix = #fixpoint (defineCopy {tyname = "point", ABS = "point_ABS",
                                   REP = "point_REP"} rbnf)
-val rcs = defineConstructors (hd (#constructors rspec)) rbnf rfix
+val rcs = defineConstructors noNames (hd (#constructors rspec)) rbnf rfix
 
 (* the constructor's name is not one the parser can read, so the axiom is
    compared against a term built rather than written *)
@@ -178,7 +178,7 @@ val pbnf = deriveBNFn db [alpha, pty] “:'p # num”
 val pcopy = defineCopy {tyname = "wrap", ABS = "wrap_ABS",
                         REP = "wrap_REP"} pbnf
 val pfix = #fixpoint pcopy
-val pcs = defineConstructors ["Wrap"] pbnf pfix
+val pcs = defineConstructors noNames [("Wrap", 2)] pbnf pfix
 
 val _ = tprint "a parameterised record's axiom"
 val _ =

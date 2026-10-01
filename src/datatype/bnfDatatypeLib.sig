@@ -25,6 +25,17 @@ sig
      ---------------------------------------------------------------------- *)
   val bnfDatatype : hol_type quotation -> unit
 
+  (* the same for a caller that has parsed already, which is what the
+     older entry point's syntax needs *)
+  val bnfDatatypeASTs : ParseDatatype.AST list -> unit
+
+  (* Whether this construction can express the specification: every
+     occurrence of a type it defines has to be somewhere a map can move
+     it.  A recursion through an operator that holds no elements of its
+     argument — `t = c of 'a => t itself` — is not something a fixed
+     point can be taken of, and the caller sends it elsewhere. *)
+  val expressible : ParseDatatype.AST list -> bool
+
 
   (* the same, handing back the entries it made, for a caller that wants
      to look at them rather than trust them *)

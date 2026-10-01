@@ -34,6 +34,9 @@ Overload "+"[local] = “ordADD”
 Overload "ω"[local] = “omega”
 Overload islimit[local] = “\a:'a ordinal. omax (preds a) = NONE”
 Overload TC[local] = “ordSUC”   (* which is what writes a successor a⁺ *)
+(* and the same for the sets' own exponent, which cardinalTheory keeps
+   to itself for the same reason *)
+Overload "**"[local] = “set_exp”
 val _ = temp_add_numeral_form (#"o", SOME "fromNat")
 val op >~ = Q.>~
 val op >>~ = Q.>>~

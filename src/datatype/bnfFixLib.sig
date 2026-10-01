@@ -20,7 +20,13 @@ sig
       the number of arguments names the first few and leaves the rest.
      ---------------------------------------------------------------------- *)
   type names = {map : string option, sets : string option list,
-                relator : string option, size : string option}
+                relator : string option, size : string option,
+                (* the specification's own type variables, against the
+                   ones the construction works with: what reads a
+                   datatype instantiates a constant's variables by name,
+                   so the constants are defined at the ones the
+                   specification wrote *)
+                written : (hol_type * hol_type) list}
 
   val noNames : names
 
@@ -163,8 +169,13 @@ sig
     distinct : thm option list, one_one : thm option list
   }
 
+  (* each constructor's name and how many arguments it takes: the
+     functor's shape does not say, since a constructor whose argument is
+     a sum looks like two constructors and one whose arguments are
+     products looks like more arguments *)
   val defineConstructors :
-      string list -> bnfLib.derived_bnfn -> fixpoint -> constructors
+      names -> (string * int) list -> bnfLib.derived_bnfn -> fixpoint ->
+      constructors
 
   (* ----------------------------------------------------------------------
       The new type as a functor.
@@ -397,7 +408,7 @@ sig
                      bnfLib.derived_bnfn -> copied_bnf
 
   val collapsedConstructors :
-      string list list -> collapsed ->
+      names -> (string * int) list list -> collapsed ->
       {constructors : term list, defs : thm list} list
 
   (* and its map and set functions one constructor at a time, which is
@@ -427,12 +438,17 @@ sig
     tynames : string list,
     params : hol_type list,
     functors : (hol_type * hol_type list) list,
-    constructors : string list list,
+    constructors : (string * int) list list,   (* name and arity *)
     fields : string list option list,  (* a record's, for its apparatus *)
-    names : names list                 (* what its attributes say *)
+    names : names list,                (* what its attributes say *)
+    written : (hol_type * hol_type) list  (* parameter, as written *)
   }
 
   val parseSpec : hol_type quotation -> spec
+
+  (* the same, for a caller that has parsed already — the older entry
+     point's syntax gives the same declarations *)
+  val specOfASTs : ParseDatatype.annotatedAST list -> spec
 
   (* ----------------------------------------------------------------------
       Defining a function by the axiom, which is
