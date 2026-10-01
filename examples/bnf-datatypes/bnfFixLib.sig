@@ -167,4 +167,132 @@ sig
   val constructorEqns : constructors -> fixpoint_bnf ->
                         {map_eqns : thm, set_eqns : thm list}
 
+  (* ----------------------------------------------------------------------
+      Mutual recursion.
+
+      A mutually recursive pair arrives as one functor per type with the
+      sibling as an extra argument, 'a1 — which is what parse_bnf's
+      translation of a mutrec_var produces.  defineMutual takes the two
+      functors and the parameters they are both over, and defines the
+      second type as a datatype in the sibling's slot and the first as a
+      recursion nested through it; the second type is then the first
+      substituted into it.  The pair's recursion principle comes back
+      ground and hypothesis-free.
+
+      The database is extended in memory with the second type as a
+      functor, which is what the nesting needs, and returned so that the
+      caller can go on nesting through the result.
+     ---------------------------------------------------------------------- *)
+  type mutual = {
+    ty1 : hol_type, ty2 : hol_type,
+    cons1 : term, cons2 : term,
+    fix1 : fixpoint, fix2 : fixpoint,
+    sibling : fixpoint_bnf,
+    bnf1 : bnfLib.derived_bnfn,   (* each type's functor, as the *)
+    bnf2 : bnfLib.derived_bnfn,   (* construction saw it *)
+    db : bnfBase.t,
+    iterator : thm,        (* MUTITER cons1 cons2 .., folded *)
+    recursion : thm,       (* its two equations written out *)
+    prim_recursion : thm,  (* and the form that hears the arguments too *)
+    induction : thm
+  }
+
+  val defineMutual : {tyname1 : string, tyname2 : string} ->
+                     bnfBase.t -> hol_type list -> hol_type * hol_type ->
+                     mutual
+
+  (* ----------------------------------------------------------------------
+      The pair's induction principle, one clause per constructor:
+
+        |- !P1 P2. (!p. P1 (A p)) /\ (!x y. P1 x /\ P2 y ==> P1 (B x y)) /\
+                   (!x. P1 x ==> P2 (C x)) /\ (!p y. P2 y ==> P2 (D p y)) ==>
+                   (!m. P1 m) /\ !m. P2 m
+
+      The constructors come from defineConstructors over each type's own
+      functor — the second type's over the sibling at its own parameter,
+      which is instantiated here.
+     ---------------------------------------------------------------------- *)
+  val mutualInduction : constructors * constructors -> mutual -> thm
+
+  (* ----------------------------------------------------------------------
+      A whole family of mutually recursive types.
+
+      The pair's reduction generalises by taking the family from the last
+      member back: each type is built with the slots of the members
+      before it left as parameters, and nested through the ones after it.
+
+      A caller gives a name per type and, per specification, its functor
+      together with the type variable standing for each member of the
+      family — the translation of a specification numbers those per
+      functor, so the same 'a1 means different things in different ones,
+      and a member's own variable marks where its recursion goes.
+
+      Each type is made a functor in what is left of it, in memory, so
+      that the ones before it can nest through it.
+     ---------------------------------------------------------------------- *)
+  type family = {
+    types : hol_type list,
+    cons : term list,
+    fixes : fixpoint list,
+    bnfs : bnfLib.derived_bnfn list,
+    functors : bnfLib.derived_bnfn list,
+    maps : fixpoint_bnf option list,
+    raw : (hol_type * hol_type list) list,
+    slots : hol_type list,
+    params : hol_type list,
+    db : bnfBase.t
+  }
+
+  val defineFamily : {tynames : string list} ->
+                     bnfBase.t -> hol_type list ->
+                     (hol_type * hol_type list) list -> family
+
+  (* ----------------------------------------------------------------------
+      The family's recursion principle, in the shape HOL's own axiom for a
+      mutually recursive family takes:
+
+        |- !t0 .. tn. ?h0 .. hn.
+             (!af. h0 (cons0 af) = t0 (F0map h0 .. hn af)) /\ ..
+
+      Solved from the last member back: at each member the ones after it
+      have already been solved, as a family over its own slot, and their
+      functions are what its target folds with.
+     ---------------------------------------------------------------------- *)
+  val familyPrinciple : family -> thm
+  val familyExistence : thm -> thm
+  val familyUniqueness : thm -> thm
+  val familyPrimRecursion : family -> thm
+
+  (* the same principle as an iterator: a target that ignores the
+     argument its constructor was applied to hears only the results of
+     the recursive calls *)
+  val familyRecursion : family -> thm
+
+  (* ----------------------------------------------------------------------
+      The same principle one constructor at a time, which is the form a
+      proof is written against:
+
+        |- !f0 f1 f2. ?h0 h1.
+             (!a. h0 (A a) = f0 a) /\
+             (!n m. h0 (B n m) = f1 n m (h0 n) (h1 m)) /\ ..
+
+      one constructors record per member, in the family's order, and the
+      principle to state this way — familyPrimRecursion's, for the shape
+      above, or familyRecursion's for one where a target hears only the
+      results of the recursive calls.
+     ---------------------------------------------------------------------- *)
+  val familyAxiom : constructors list -> family -> thm -> thm
+
+  (* ----------------------------------------------------------------------
+      The family's induction principle, from its principle at the
+      booleans: a clause per member, with the hypothesis "every sub-term
+      the functor holds of a member's type satisfies that member's
+      predicate", which is the set-based form a nested recursion leaves.
+     ---------------------------------------------------------------------- *)
+  val familySetInduction : family -> thm -> thm
+
+  (* and the same principle one clause per constructor, which is the
+     form a proof is written against *)
+  val familyInduction : constructors list -> family -> thm -> thm
+
 end
