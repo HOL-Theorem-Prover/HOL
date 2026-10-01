@@ -37,6 +37,7 @@ structure TacticWalker :> sig
     plugins: LSPExtension.plugin_data,
     theoremName: string,
     theoremStart: int,   (* file byte offset of the theorem's dec *)
+    goalText: string,    (* the theorem's statement, as written *)
     tacText: string,
     startState: goalFrag.goalstate,
     frags: TacticParse.tac_frag list,
@@ -392,7 +393,12 @@ and countFrag f = case f of
   | FFOpen _ | FFMid _ | FFClose _ => 0
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
+(* `goalText' and `tacText' are together what the entry is addressed
+   by: a snapshot is a state some prefix of the tactics reached from
+   the statement, so either one changing makes it a state about a
+   different proof. *)
 type cacheEntry = {
+  goalText: string,
   tacText: string,
   theoremStart: int,
   snapshots: snap list}
@@ -452,11 +458,21 @@ fun commonPrefixLen (a, b) = let
              else go (i + 1)
   in go 0 end
 
+(* A changed statement invalidates the whole entry, not a suffix of
+   it: there is no prefix of the tactics that is still about the old
+   goal.  The prune in `notifyCompileStart' below does not catch this
+   one -- it drops the entries that start at or after the edit, and an
+   edit *within* a statement is after that theorem's own start -- and
+   nothing downstream would: `startState' is reparsed from the buffer
+   every time, but a surviving snapshot outranks it. *)
 fun resumeFrom NONE _ startState = (0, startState, [])
-  | resumeFrom (SOME cacheRef) {theoremName, tacText, cursor} startState =
+  | resumeFrom (SOME cacheRef) {theoremName, goalText, tacText, cursor}
+               startState =
       case Binarymap.peek (!cacheRef, theoremName) of
         NONE => (0, startState, [])
-      | SOME {tacText = t, snapshots, ...} => let
+      | SOME {goalText = g, tacText = t, snapshots, ...} =>
+        if g <> goalText then (0, startState, [])
+        else let
           val validUpTo = if t = tacText then String.size t
                           else commonPrefixLen (t, tacText)
           val kept = List.filter (fn s => #endByte s <= validUpTo) snapshots
@@ -884,12 +900,13 @@ and walkFrags (env as {tacText, cursor, resumeIdx, ...}) state snaps
            walkFrags env (#state r) (#snaps r) (#stepIdx r) rest
        | out => out)
 
-fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
-            frags, cursor} = let
+fun walkTo {plugins, theoremName, theoremStart, goalText, tacText,
+            startState, frags, cursor} = let
   val cacheRefOpt = LSPExtension.getPluginData (plugins, cacheTag)
   val (resumeIdx, resumeState, priorSnaps) =
     resumeFrom cacheRefOpt
-      {theoremName = theoremName, tacText = tacText, cursor = cursor}
+      {theoremName = theoremName, goalText = goalText, tacText = tacText,
+       cursor = cursor}
       startState
   fun run cheatLT idx state =
     (cheatedLT := false;
@@ -931,7 +948,8 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
                         allSnaps
         in cacheRef := Binarymap.insert
                          (!cacheRef, theoremName,
-                          {tacText = tacText, theoremStart = theoremStart,
+                          {goalText = goalText, tacText = tacText,
+                           theoremStart = theoremStart,
                            snapshots = deduped})
         end
     | _ => ()

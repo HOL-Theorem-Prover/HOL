@@ -195,7 +195,7 @@ val () = LSPExtension.goalStateAtPos :=
            in case withTimeout walkerBudgetMs (fn () =>
                     TacticWalker.walkTo {
                       plugins = plugins, theoremName = name,
-                      theoremStart = quoteStart,
+                      theoremStart = quoteStart, goalText = quote,
                       tacText = tacText, startState = startState,
                       frags = fs, cursor = tacCursor}) of
                 NONE => SOME

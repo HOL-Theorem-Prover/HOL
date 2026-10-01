@@ -581,6 +581,12 @@ inside a `Proof … QED` block.  The server walks the tactic body via
 `goalFrag` up to the step under the cursor, snapshotting states in a
 per-theorem cache so subsequent queries at nearby cursors reuse work.
 
+A snapshot is a state the statement and some prefix of the tactics
+reached together, so an entry is addressed by both: editing either the
+statement or the tactics past that prefix discards the snapshots it
+invalidates.  An edit at or above the declaration drops the entry
+outright, there being nothing below the edit worth keeping.
+
 ### Request
 
 ```json

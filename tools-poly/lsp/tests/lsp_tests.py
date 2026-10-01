@@ -2808,6 +2808,70 @@ def test_goalState_cache_preserved_when_edit_is_downstream():
         c.close()
 
 
+def test_goalState_cache_invalidates_on_statement_edit():
+    """Editing a theorem's STATEMENT while leaving its tactics alone
+    used to leave the cached snapshots standing, so the walk answered
+    with the goal the user had just replaced.
+
+    Neither guard catches it on its own: the compile-start prune drops
+    the entries that start at or *after* the edit, and an edit inside a
+    statement is after that theorem's own start; and the entry's
+    `tacText` is what it was, so the prefix check keeps every snapshot.
+    The freshly parsed start state is no help -- a surviving snapshot
+    outranks it.  So the statement is part of what the entry is
+    addressed by."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/statement_edit.sml"
+        v1 = ("Theory statement_edit\n"
+              "Ancestors arithmetic\n\n"
+              "Theorem t:\n"
+              "  !n. x < FUNPOW SUC n x <=> 0 < n\n"
+              "Proof\n"
+              "  Induct >> simp[]\n"
+              "QED\n")
+
+        # Line 6 is `  Induct >> simp[]`; char 8 is just past `Induct`,
+        # so the answer is the two subgoals the induction left.  A
+        # query answered while the state is not ready caches nothing,
+        # and this one populating the cache is the whole point of the
+        # test -- so wait for a real answer rather than take the first.
+        def goals_after_induct(req_id):
+            for k in range(20):
+                r = _send_goalstate(c, req_id + k, uri, 6, 8)
+                gs = ((r or {}).get("result") or {}).get("goals")
+                if gs: return [g["goal"] for g in gs]
+                time.sleep(0.5)
+            return None
+
+        _did_open(c, uri, v1, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "v1 compileCompleted")
+        goals1 = goals_after_induct(8310)
+        assert_true(goals1 is not None, "v1 goal state answers")
+        assert_eq(len(goals1), 2, "v1 Induct leaves two subgoals")
+        assert_true(all("!" not in g and "\u2200" not in g
+                        for g in goals1),
+                    f"v1 goals leave x free ({goals1!r})")
+
+        # Bind x in the statement.  The tactic body is untouched, and
+        # the edit lands inside the declaration, past its start.
+        v2 = v1.replace("  !n. x <", "  !n x. x <")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, v2, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "v2 compileCompleted")
+        goals2 = goals_after_induct(8330)
+        assert_true(goals2 is not None, "v2 goal state answers")
+        assert_eq(len(goals2), 2, "v2 Induct leaves two subgoals")
+        assert_true(all("!" in g or "\u2200" in g for g in goals2),
+                    f"v2 goals quantify x rather than repeating the "
+                    f"pre-edit state ({goals2!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_case_split_produces_two_subgoals():
     """Slice D: after `Cases_on \\`p\\``, the goalstate should have two
     subgoals — one with `p` as an assumption, one with `¬p`.  The tactic
@@ -8732,6 +8796,8 @@ TESTS = [
                                      test_goalState_cache_invalidates_on_upstream_change),
     ("goalState_cache_preserved_when_edit_is_downstream",
                                      test_goalState_cache_preserved_when_edit_is_downstream),
+    ("goalState_cache_invalidates_on_statement_edit",
+                                     test_goalState_cache_invalidates_on_statement_edit),
     ("hover_shows_the_value_of_a_local_binding",
      test_hover_shows_the_value_of_a_local_binding),
     ("hover_shows_a_local_theorem_statement",
