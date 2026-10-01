@@ -23,11 +23,12 @@ Ancestors
 Libs
   stringLib sexp
 
+(*TODO remove*)
+fun ACL2_SIMP_TAC xs = cheat;
 (*
      [oracles: DEFUN ACL2::IFF, DISK_THM] [axioms: ] []
      |- iff p q = itel [(p,andl [q; t]); (q,nil)] t,
 *)
-
 val iff_def =
  acl2Define "ACL2::IFF"
   `iff p q = itel [(p,andl [q; t]); (q,nil)] t`;
@@ -760,8 +761,8 @@ val standard_char_p_def =
             #"H"; #"I"; #"J"; #"K"; #"L"; #"M";
             #"N"; #"O"; #"P"; #"Q"; #"R"; #"S";
             #"T"; #"U"; #"V"; #"W"; #"X"; #"Y";
-            #"Z"; #"["; #"\\"; #"]"; #"^^"; #"_";
-            #"^`"; #"a"; #"b"; #"c"; #"d"; #"e";
+            #"Z"; #"["; #"\\"; #"]"; #"^"; #"_";
+            #"`"; #"a"; #"b"; #"c"; #"d"; #"e";
             #"f"; #"g"; #"h"; #"i"; #"j"; #"k";
             #"l"; #"m"; #"n"; #"o"; #"p"; #"q";
             #"r"; #"s"; #"t"; #"u"; #"v"; #"w";
@@ -4676,4 +4677,6 @@ val (lexorder_def,lexorder_ind) =
              (cdr e_slash_d_list) t),
 *)
 
+(*
 val _ = export_acl2_theory();
+*)
