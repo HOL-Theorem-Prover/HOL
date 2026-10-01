@@ -300,7 +300,46 @@ fun oneType db (spec : spec) =
       List.app (fn th => ignore (save_thm (name_of_eqn th, th))) eqns
     ; datatype_presentation spec
     ; persist tyinfos
+    ; (* only the recursive construction builds an ambient to discard;
+         a copy's witnesses are transported through its own bijection
+         and want it kept *)
+      (if recursive then discardAmbient tyname else ())
     ; tyinfos
+    end
+(* The type the algebra was built in has done its work once the
+   declaration's own type exists: everything kept is about that type and
+   its constructors, and nothing about the type it was carved out of.
+   Left behind it would sit in the theory carrying the functor written
+   out over the ordinals, and every declaration after it would pay to
+   walk that. *)
+and discardAmbient tyname =
+    let
+      val {ABS, REP, ...} = theTypesConstants tyname
+      val carrier = tyname ^ "_carrier"
+      val doomed = [ABS, REP, carrier ^ "_ABS", carrier ^ "_REP"]
+      (* A theorem that says what something is *in the ambient* goes
+         with the ambient -- the type's own definition as much as a
+         constructor's.  What is kept says what those things do, and
+         mentions neither the ambient nor the maps onto it. *)
+      fun inTy ty =
+          (case Lib.total dest_thy_type ty of
+               SOME {Tyop, ...} => Tyop = carrier
+             | NONE => false) orelse
+          (case Lib.total dest_type ty of
+               SOME (_, args) => List.exists inTy args
+             | NONE => false)
+      fun scaffolding th =
+          List.exists (fn t => Lib.mem (#1 (dest_const t)) doomed)
+                      (find_terms is_const (concl th)) orelse
+          List.exists (fn t => inTy (type_of t))
+                      (find_terms (fn _ => true) (concl th))
+      fun gone f x = ignore (Lib.total f x)
+    in
+      List.app (fn (nm, th) =>
+                   if scaffolding th then gone Theory.delete_binding nm else ())
+               (DB.thms "-")
+    ; List.app (gone Theory.delete_const) doomed
+    ; gone Theory.delete_type carrier
     end
 (* an equation is named after the constant it is about.  Each
    constructor's clause carries its own quantifier, so the conjunct has

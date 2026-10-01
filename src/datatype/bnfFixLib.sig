@@ -104,11 +104,20 @@ sig
   type initial_algebra = {
     carrier : hol_type, prodty : hol_type, target : hol_type,
     alg : term, cons : term,
-    bij : thm, init : thm, inhabited : thm, induction : thm,
+    (* Lambek's bijection is what the construction is built to give
+       and is not what it is built with: nothing downstream of the
+       initial algebra reads it, and matching it out of LAMBEK costs
+       more than everything else the declaration does.  So it is asked
+       for rather than made. *)
+    bij : unit -> thm, init : thm, inhabited : thm, induction : thm,
     isALG : thm
   }
 
-  val initialAlgebra : bnfLib.derived_bnfn -> initial_algebra
+  (* The carrier the bound is stated at writes the functor out over the
+     ordinals; a type is defined to stand for it, named after the type
+     being declared, and the caller deletes it once that type exists. *)
+  val initialAlgebra : {tyname : string} -> bnfLib.derived_bnfn ->
+                       initial_algebra
 
   (* ----------------------------------------------------------------------
       The datatype itself.  Defines a type in bijection with the initial

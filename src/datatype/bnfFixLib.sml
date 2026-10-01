@@ -453,7 +453,10 @@ fun minsetBound bnf ty =
 type initial_algebra = {
   carrier : hol_type, prodty : hol_type, target : hol_type,
   alg : term, cons : term,
-  bij : thm, init : thm, inhabited : thm, induction : thm,
+  (* asked for, not made: nothing downstream reads it, and matching it
+     out of LAMBEK costs more than everything else the declaration
+     does *)
+  bij : unit -> thm, init : thm, inhabited : thm, induction : thm,
   isALG : thm
 }
 
@@ -469,12 +472,56 @@ fun witnessThm bnf ty =
       EXISTS (mk_exists (x, subst [w |-> x] (concl th)), w) th
     end
 
-fun initialAlgebra bnf =
+(* ----------------------------------------------------------------------
+    A type standing for the one the bound is stated at.
+
+    `minsetBound` states its bound at a type that writes the functor out
+    over the ordinals, so that type is as big as the declaration has
+    constructors -- and the initial algebra is built in a function space
+    over it, which is bigger again by the same factor.  Every law the
+    construction proves then carries those types at every leaf, and the
+    matching and instantiation that handle them walk the types out.
+
+    So a type is defined to stand for the carrier, the bound is carried
+    onto it, and everything below is about the small type.  It is only
+    the ambient the algebra is built in: nothing the declaration leaves
+    behind is about it, and `bnfDatatypeLib` deletes it once the type it
+    was for exists.
+   ---------------------------------------------------------------------- *)
+
+fun standInFor nm carrier bound =
+    let
+      (* the carrier is a set, so the empty one witnesses the type *)
+      val (dom, _) = dom_rng carrier
+      val w = mk_abs (mk_var ("z", dom), boolSyntax.F)
+      val pred = mk_abs (mk_var ("y", carrier), boolSyntax.T)
+      val holds = EQ_MP (SYM (BETA_CONV (mk_comb (pred, w)))) TRUTH
+      val x = mk_var ("x", carrier)
+      val ex = EXISTS (mk_exists (x, mk_comb (pred, x)), w) holds
+      val bij =
+          REWRITE_RULE []
+            (CONV_RULE (DEPTH_CONV BETA_CONV)
+               (define_new_type_bijections
+                  {name = Theory.temp_binding (nm ^ "_bij"),
+                   ABS = nm ^ "_ABS", REP = nm ^ "_REP",
+                   tyax = new_type_definition (nm, ex)}))
+      val newty = type_of (#1 (dest_forall (concl (CONJUNCT1 bij))))
+      val across = MATCH_MP cardleq_ACROSS_BIJ bij
+      val (sv, body) = dest_forall (concl bound)
+      val minset = rand (rator body)
+    in
+      {carrier = newty,
+       thm = GEN sv (MP (SPEC minset across) (SPEC sv bound))}
+    end
+
+fun initialAlgebra {tyname} bnf =
     let (* the type variable initiality is stated at, so that INST_TYPE
            gives it at any carrier.  The functor's own argument will do:
            it is not free in anything the construction has built yet. *)
         val target = recTy bnf
-        val {carrier, thm = bound} = minsetBound bnf target
+        val big = minsetBound bnf target
+        val {carrier, thm = bound} =
+            standInFor (tyname ^ "_carrier") (#carrier big) (#thm big)
         (* the product's index type, and the product's carrier *)
         val idxty = pairSyntax.mk_prod (carrier --> bool,
                                         functorAt bnf carrier --> carrier)
@@ -509,7 +556,8 @@ fun initialAlgebra bnf =
             PART_MATCH I IALG_ALG
               (list_mk_icomb (ALG_tm, [st prodty,
                                        pairSyntax.mk_pair (alg,cons)]))
-        val lambek =
+        (* asked for, not made: see the signature *)
+        fun lambek () =
             MATCH_MP LAMBEK
               (LIST_CONJ [MapCongThm bnf (prodty,prodty),
                           MapIdThm bnf prodty,
@@ -557,7 +605,7 @@ type fixpoint = {newty : hol_type, cons : term, cons_def : thm,
                  recursion : thm, prim_recursion : thm, set_induction : thm}
 
 fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
-    let val ia = initialAlgebra bnf
+    let val ia = initialAlgebra {tyname = tyname} bnf
         val prodty = #prodty ia
         val itype = newtypeTools.rich_new_type
                       {tyname = tyname, exthm = #inhabited ia,
@@ -585,12 +633,17 @@ fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
                             mk_eq (mk_var (tyname ^ "_CONS",
                                            fnty --> newty), consbody))
         val cons = lhs (concl cons_def)
+        (* the four the induction principle asks for as well *)
+        val mapComp_pnp = MapCompThm bnf (prodty,newty,prodty)
+        val mapId_p = MapIdThm bnf prodty
+        val mapCong_pp = MapCongThm bnf (prodty,prodty)
+        val natural_pn = NaturalThm bnf (prodty,newty)
         val laws =
-            LIST_CONJ [MapCompThm bnf (prodty,newty,prodty),
-                       MapIdThm bnf prodty,
-                       MapCongThm bnf (prodty,prodty),
+            LIST_CONJ [mapComp_pnp,
+                       mapId_p,
+                       mapCong_pp,
                        NaturalThm bnf (newty,prodty),
-                       NaturalThm bnf (prodty,newty),
+                       natural_pn,
                        MapCompThm bnf (newty,prodty,#target ia),
                        MapCompThm bnf (prodty,newty,#target ia),
                        MapCongThm bnf (prodty,#target ia),
@@ -622,10 +675,10 @@ fun defineFixpoint {tyname, ABS, REP} bnf : fixpoint =
             CONV_RULE (DEPTH_CONV BETA_CONV)
               (REWRITE_RULE [GSYM cons_def]
                  (MATCH_MP NEWTYPE_IND
-                    (LIST_CONJ [MapCompThm bnf (prodty,newty,prodty),
-                                MapIdThm bnf prodty,
-                                MapCongThm bnf (prodty,prodty),
-                                NaturalThm bnf (prodty,newty),
+                    (LIST_CONJ [mapComp_pnp,
+                                mapId_p,
+                                mapCong_pp,
+                                natural_pn,
                                 #absrep_id itype,
                                 REWRITE_RULE [IALG_def] repabs_IN,
                                 REWRITE_RULE [IALG_def] termP_IN])))
@@ -822,11 +875,29 @@ fun expandArgs k =
     else if k = 1 then ALL_CONV
     else HO_REWR_CONV pairTheory.FORALL_PROD THENC
          BINDER_CONV (expandArgs (k - 1))
-fun expandCons [k] = expandArgs k
-  | expandCons (k::ks) = HO_REWR_CONV sumTheory.FORALL_SUM THENC
-                         LAND_CONV (expandArgs k) THENC
-                         RAND_CONV (expandCons ks)
-  | expandCons [] = ALL_CONV
+(* The same expansion, reducing what is left of the shape as each
+   summand comes off.  Every clause carries the shape's whole term, so
+   reducing them one by one costs the constructors twice over; pushing
+   the injection through the remainder first makes the next step's term
+   smaller, and each summand is discarded once rather than once per
+   clause that follows it. *)
+fun expandConsWith red items =
+    let fun go [(k, f)] = expandArgs k THENC f
+          | go ((k, f) :: rest) =
+              HO_REWR_CONV sumTheory.FORALL_SUM THENC
+              LAND_CONV (expandArgs k THENC f) THENC
+              RAND_CONV (red THENC go rest)
+          | go [] = ALL_CONV
+    in go items
+    end
+
+fun expandConsRed red ks = expandConsWith red (map (fn k => (k, red)) ks)
+
+(* the plain expansion, with nothing done to the shape between the
+   summands.  A reduction that runs on a summand still to be opened is
+   not always sound for what the caller is building -- see the family's
+   own expansion below. *)
+fun expandCons ks = expandConsRed ALL_CONV ks
 
 (* how many arguments a constructor takes, which its own definition
    says *)
@@ -914,7 +985,47 @@ val setRWs = pointFreeRWs @
              [combinTheory.S_DEF, combinTheory.o_DEF,
               combinTheory.K_DEF, pairTheory.setFST_thm,
               pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
-              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
+              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY,
+              (* the pair's applied set laws have a sum counterpart.
+                 Whichever way a shape's argument is injected, the
+                 summands it is not in contribute nothing, and saying so
+                 discards them before anything walks over them *)
+              sumTheory.setL_def, sumTheory.setR_def,
+              (* and what a discarded summand leaves behind: nothing
+                 collected over nothing, however deep what is being
+                 collected *)
+              pred_setTheory.UNION_EMPTY, pred_setTheory.IMAGE_EMPTY,
+              pred_setTheory.BIGUNION_EMPTY]
+
+(* ----------------------------------------------------------------------
+    Rules enough to discard a shape's dead summands.
+
+    Every clause of the set induction principle carries the shape's
+    whole set term, which grows with the constructors however few of
+    them the one constructor the clause is about reaches.  The clause's
+    injection says which summand survives and the sum's set laws
+    discard the rest, but the descent gets past an injection only with
+    the unit law, which setRWs leaves to the simpset it is handed to.
+    Adding it here reduces a clause to what its own constructor holds
+    before anything general walks over it.
+   ---------------------------------------------------------------------- *)
+
+val pruneRWs = setRWs @ [pred_setTheory.IMAGE_INSERT,
+                         pred_setTheory.BIGUNION_INSERT]
+
+(* the traversal has to be the outside-in one: a simpset would reduce a
+   dead summand in full before finding out that it is dead *)
+fun outsideIn rws tm =
+    TOP_DEPTH_CONV
+      (BETA_CONV ORELSEC
+       Rewrite.GEN_REWRITE_CONV I Rewrite.empty_rewrites rws) tm
+
+val pruneConv = outsideIn pruneRWs
+
+(* what takes an injection apart, for the same reason *)
+val caseRWs = [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
+               sumTheory.OUTL, sumTheory.OUTR, pairTheory.PAIR_MAP,
+               pairTheory.FST, pairTheory.SND, combinTheory.I_THM]
 
 (* ----------------------------------------------------------------------
     One simpset for reducing a set term.
@@ -1080,13 +1191,9 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
             CONV_RULE
               (RAND_CONV (QCONV (REWRITE_CONV (map (GSYM o #def) cs))))
               (QCONV
-                 (expandCons (map (length o #args) cs) THENC
-                  QCONV (simpLib.SIMP_CONV boolSimps.bool_ss
-                           [sumTheory.SUM_MAP_def,
-                            sumTheory.sum_case_def, sumTheory.OUTL,
-                            sumTheory.OUTR, pairTheory.PAIR_MAP,
-                            pairTheory.FST, pairTheory.SND,
-                            combinTheory.I_THM]))
+                 (expandConsRed (QCONV (outsideIn caseRWs))
+                                (map (length o #args) cs) THENC
+                  QCONV (simpLib.SIMP_CONV boolSimps.bool_ss caseRWs))
                  body)
         (* expanding the quantifier names the constructors' arguments
            after the product projections it went through; rename them to
@@ -1161,22 +1268,33 @@ fun defineConstructors (nms : names) cspecs bnf fix : constructors =
         (* the set-based induction, split along the constructors: the
            hypothesis becomes "for every sub-term in the set", which is
            the form a nested recursion keeps *)
+        (* only a constructor's own definition folds back into its own
+           clause, so each clause is handed just its own *)
+        val clauses =
+            map (fn c =>
+                    (length (#args c),
+                     QCONV pruneConv THENC
+                     (* the set simpset says nothing about one, which
+                        is what is wanted: a constructor with an
+                        argument of type one has that argument, and a
+                        clause about `P (C ())` is not the shape a
+                        datatype's induction principle is read in *)
+                     QCONV (simpLib.SIMP_CONV (set_ss()) setRWs) THENC
+                     QCONV (PURE_REWRITE_CONV [GSYM (#def c)])))
+                cs
         val set_induction =
-            REWRITE_RULE (map (GSYM o #def) cs)
-              (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
-                 (QCONV (PURE_REWRITE_CONV setRWs) THENC
-                  (* one binder per constructor argument here too: an
-                     argument that is itself a sum would otherwise be
-                     split, and the clause would be about `P (V (INL x))`
-                     rather than about `P (V a)` *)
-                  expandCons (map (length o #args) cs) THENC
-                  (* the set simpset says nothing about one, which is
-                     what is wanted: a constructor with an argument of
-                     type one has that argument, and a clause about
-                     `P (C ())` is not the shape a datatype's induction
-                     principle is read in *)
-                  QCONV (simpLib.SIMP_CONV (set_ss()) setRWs))))
-                 (#set_induction fix))
+            CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
+               (QCONV (PURE_REWRITE_CONV setRWs) THENC
+                (* once, for every clause: unfolding the combinators
+                   leaves the shape's whole set term a nest of redexes,
+                   and each clause would otherwise reduce it again *)
+                QCONV (REDEPTH_CONV BETA_CONV) THENC
+                (* one binder per constructor argument here too: an
+                   argument that is itself a sum would otherwise be
+                   split, and the clause would be about `P (V (INL x))`
+                   rather than about `P (V a)` *)
+                expandConsWith (QCONV pruneConv) clauses)))
+               (#set_induction fix)
         (* whether this is a nested recursion is known structurally: a
            nested factor's mapped type is not the answer type.  Deciding
            it by catching an exception out of Prim_rec would swallow
