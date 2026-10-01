@@ -49,17 +49,17 @@ sig
   val setOp : bnfLib.derived_bnfn -> hol_type -> term
   val mapOp : bnfLib.derived_bnfn -> hol_type * hol_type -> term
 
-  (* |- MapId (mapOp bnf (ty,ty)) *)
+  (* |- bnfMapId (mapOp bnf (ty,ty)) *)
   val MapIdThm : bnfLib.derived_bnfn -> hol_type -> thm
 
-  (* |- MapComp (mapOp bnf (a,b)) (mapOp bnf (b,c)) (mapOp bnf (a,c)) *)
+  (* |- bnfMapComp (mapOp bnf (a,b)) (mapOp bnf (b,c)) (mapOp bnf (a,c)) *)
   val MapCompThm : bnfLib.derived_bnfn ->
                    hol_type * hol_type * hol_type -> thm
 
-  (* |- Natural (mapOp bnf (a,b)) (setOp bnf a) (setOp bnf b) *)
+  (* |- bnfNatural (mapOp bnf (a,b)) (setOp bnf a) (setOp bnf b) *)
   val NaturalThm : bnfLib.derived_bnfn -> hol_type * hol_type -> thm
 
-  (* |- MapCong (mapOp bnf (a,b)) (setOp bnf a) *)
+  (* |- bnfMapCong (mapOp bnf (a,b)) (setOp bnf a) *)
   val MapCongThm : bnfLib.derived_bnfn -> hol_type * hol_type -> thm
 
   (* An ordinal as big as the functor's own bound: the term bd, and
@@ -73,7 +73,7 @@ sig
 
   (* The cardinality bound the construction runs on: a type big enough
      to hold every minimal algebra over ty, and
-        |- !s. MINSET (setOp bnf ty) s <<= univ(:carrier)
+        |- !s. bnfMINSET (setOp bnf ty) s <<= univ(:carrier)
      ty is normally left a type variable, so that the theorem covers
      every carrier at once. *)
   val minsetBound : bnfLib.derived_bnfn -> hol_type ->
@@ -88,10 +88,10 @@ sig
 
         alg   : the carrier, a prodty set
         cons  : F[prodty] -> prodty
-        isALG : |- ALG st (alg,cons)
-        bij   : |- BIJ cons (FIN st alg) alg
-        init  : |- !t G. ALG stc (G,t) ==>
-                         ?!h. HOM .. h (alg,cons) (G,t) /\ ..
+        isALG : |- bnfALG st (alg,cons)
+        bij   : |- BIJ cons (bnfFIN st alg) alg
+        init  : |- !t G. bnfALG stc (G,t) ==>
+                         ?!h. bnfHOM .. h (alg,cons) (G,t) /\ ..
         inhabited : |- ?x. alg x
         induction : the reachability principle for alg
      ---------------------------------------------------------------------- *)
@@ -231,7 +231,7 @@ sig
     bnf1 : bnfLib.derived_bnfn,   (* each type's functor, as the *)
     bnf2 : bnfLib.derived_bnfn,   (* construction saw it *)
     db : bnfBase.t,
-    iterator : thm,        (* MUTITER cons1 cons2 .., folded *)
+    iterator : thm,        (* bnfMUTITER cons1 cons2 .., folded *)
     recursion : thm,       (* its two equations written out *)
     prim_recursion : thm,  (* and the form that hears the arguments too *)
     induction : thm

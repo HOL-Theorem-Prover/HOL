@@ -25,6 +25,7 @@ sig
      ---------------------------------------------------------------------- *)
   val bnfDatatype : hol_type quotation -> unit
 
+
   (* the same, handing back the entries it made, for a caller that wants
      to look at them rather than trust them *)
   val bnfDatatypeInfo : hol_type quotation -> TypeBasePure.tyinfo list

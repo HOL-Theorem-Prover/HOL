@@ -13,6 +13,7 @@ val specToFunctor : bnfBase.bnftor -> hol_type
 val specToFunctors :
     (string * bnfBase.bnftor) list ->
     {tynames : string list, params : hol_type list,
+     origins : (hol_type * hol_type) list,   (* param, as written *)
      functors : (hol_type * hol_type list) list}
 
 (* the composite functor's map and set terms, along with the BNFs that

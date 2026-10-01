@@ -777,10 +777,16 @@ fun Hol_datatype q =
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Hol_datatype" e)
 
+(* A specification this construction cannot build — one that recurses
+   under another type operator, say — goes to the BNF package, which
+   takes the fixed point of the functor the specification describes.  A
+   specification neither can build reports this one's failure, which is
+   the message developments know. *)
 fun Datatype q =
     astHol_datatype (ParseDatatype.hparse (type_grammar()) q)
     handle e as HOL_ERR _ =>
-    render_exn (wrap_exn "Datatype" "Datatype" e)
+    bnfDatatypeLib.bnfDatatype q
+    handle HOL_ERR _ => render_exn (wrap_exn "Datatype" "Datatype" e)
 
 val _ = Parse.temp_set_grammars ambient_grammars
 
