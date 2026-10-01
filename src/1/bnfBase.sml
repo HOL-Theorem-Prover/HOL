@@ -14,9 +14,10 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
    let
      val {bnd,bndthms,canontype,
           map,mapID,mapO,mapIMAGE,mapCONG,
-          relator,set,siblings} =
+          relator,set,siblings,wits,inhabits} =
          fields
      val convertN = DB.fetch_knm
+     fun convertP (t,knm) = (t, convertN knm)
    in
      bI {
        bnd = bnd,
@@ -31,7 +32,10 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
 
        relator = relator,
        set = set,
-       siblings = siblings
+       siblings = siblings,
+
+       wits = List.map convertP wits,
+       inhabits = List.map convertP inhabits
      }
    end
 
@@ -43,20 +47,20 @@ in
   fun tup2rec ((siblings,map,set),
                (relator,bnd,bndthms),
                (mapO,mapID,mapIMAGE,mapCONG),
-               canontype
+               (canontype,wits,inhabits)
               ) =
       bI {siblings = siblings, map = map, set = set,
           relator = relator, bnd = bnd, bndthms = bndthms,
           mapO = mapO, mapID = mapID, mapIMAGE = mapIMAGE, mapCONG = mapCONG,
-          canontype = canontype}
+          canontype = canontype, wits = wits, inhabits = inhabits}
   fun rec2tup (bI {siblings, map, set,
                    relator, bnd, bndthms,
                    mapO, mapID, mapIMAGE, mapCONG,
-                   canontype}) =
+                   canontype, wits, inhabits}) =
       ((siblings,map,set),
        (relator,bnd,bndthms),
        (mapO,mapID,mapIMAGE,mapCONG),
-       canontype)
+       (canontype,wits,inhabits))
 
 
   val ed0 = pair4_ed (
@@ -70,7 +74,9 @@ in
                   add_label "mapO" kname_ed,
                   add_label "mapIMAGE" $ list_ed kname_ed,
                   add_label "mapCONG" kname_ed),
-        add_label "canontype" type_ed
+        pair3_ed (add_label "canontype" type_ed,
+                  add_label "wits" $ list_ed termdef_ed,
+                  add_label "inhabits" $ list_ed termdef_ed)
       )
   val ed1 = bij_ed (rec2tup, tup2rec) ed0
   val bnf_ed = pair_ed (kname_ed, ed1)
@@ -125,11 +131,19 @@ fun kname_of_type ty =
       {Thy = Thy, Name = Tyop}
     end
 
-fun sanity_check (ty:key) ((info as bI {set,map,canontype,...}) : thm info) =
+fun sanity_check (ty:key) ((info as bI {set,map,canontype,wits,inhabits,...})
+                            : thm info) =
     let val tys = "{Thy=\"" ^ #Thy ty ^ "\",Name=\"" ^ #Name ty ^ "\"}"
         val n = num_alphas canontype
         fun c p x m = check p x tys m
-
+        fun result_after k t = funpow k (#2 o dom_rng) (type_of t)
+        (* a stray type variable in the theorem means the term it talks
+           about isn't the one being stored *)
+        fun no_stray_tyvars (t,th) =
+            let val ok = type_vars (type_of t)
+            in
+              List.all (fn v => Lib.mem v ok) (type_vars_in_term (concl th))
+            end
     in
       c (fn knm => kname_of_type canontype = knm) ty
         "Kernel name (key) doesn't correspond to canontype field" ;
@@ -139,7 +153,20 @@ fun sanity_check (ty:key) ((info as bI {set,map,canontype,...}) : thm info) =
             (m |> type_of |> funpow n (#2 o dom_rng) |> dom_rng |> #1) =
             canontype)
         map
-        "map constant's type incorrect"
+        "map constant's type incorrect" ;
+      c (List.all (null o free_vars o #1)) wits "a witness is not ground" ;
+      c (List.all (fn (t,_) => result_after n t = canontype)) wits
+        "a witness doesn't take one argument per type variable" ;
+      c (List.all no_stray_tyvars) wits
+        "a witness's theorem has a type variable the witness doesn't" ;
+      c (List.all (null o free_vars o #1)) inhabits
+        "an inhabits value is not ground" ;
+      c (List.all (fn (t,_) => result_after 1 t = canontype)) inhabits
+        "an inhabits term is not a function into the type" ;
+      c (List.all no_stray_tyvars) inhabits
+        "an inhabits theorem has a type variable its term doesn't" ;
+      c (fn l => length l = length set) inhabits
+        "there isn't one inhabits entry per set function"
     end
 
 fun updateDB (ty,info as bI fields) =
