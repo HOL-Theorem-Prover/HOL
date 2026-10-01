@@ -172,3 +172,200 @@ val _ =
                  (bnfLib.deriveBNF db) “:'a -> num”)
 
 Theorem bnfDerive_ran = boolTheory.TRUTH
+
+(* ----------------------------------------------------------------------
+    The n-ary derivation.  A functor with several arguments has one map
+    taking a function per argument, and a set function, naturality
+    theorem and bound per argument.
+   ---------------------------------------------------------------------- *)
+
+val a1 = mk_vartype "'a1"
+val a2 = mk_vartype "'a2"
+val b1 = mk_vartype "'b1"
+
+fun lawsOKn lives (d : bnfLib.derived_bnfn) =
+    let
+      val {bnd,bndthms,mapCONG,mapID,mapIMAGE,mapO,mkmap,sets,...} = d
+      val n = length lives
+      fun named th nm =
+          valOf (List.find (fn v => #1 (dest_var v) = nm)
+                           (free_vars (concl th)))
+      fun nmi base i = base ^ Int.toString (i + 1)
+      val ty = #1 (dom_rng (type_of (hd sets)))
+      val x = mk_var("x", ty)
+      fun I_of t = inst [alpha |-> t] combinSyntax.I_tm
+      val oO = combinSyntax.mk_o
+
+      val idOK = aconv (concl mapID) (mk_eq(mkmap (map I_of lives), I_of ty))
+
+      val fs = List.tabulate (n, fn i => named mapO (nmi "f" i))
+      val gs = List.tabulate (n, fn i => named mapO (nmi "g" i))
+      val oOK = aconv (concl mapO)
+                      (mk_eq(oO(mkmap fs, mkmap gs),
+                             mkmap (ListPair.map oO (fs,gs))))
+
+      (* naturality, argument by argument *)
+      val nfs = List.tabulate (n, fn i => named (hd mapIMAGE) (nmi "f" i))
+      val theta = ListPair.map (fn (v,f) => v |-> #2 (dom_rng (type_of f)))
+                               (lives, nfs)
+      fun imgOK (i, th) =
+          aconv (concl th)
+                (mk_eq(oO(inst theta (List.nth (sets,i)), mkmap nfs),
+                       oO(mk_IMAGE (List.nth (nfs,i)), List.nth (sets,i))))
+
+      val cfs = List.tabulate (n, fn i => named mapCONG (nmi "f" i))
+      val cgs = List.tabulate (n, fn i => named mapCONG (nmi "g" i))
+      fun conghyp i =
+          let val a = mk_var("a", List.nth (lives,i))
+          in
+            mk_forall(a,
+              mk_imp(pred_setSyntax.mk_in(a, mk_comb(List.nth (sets,i), x)),
+                     mk_eq(mk_comb(List.nth (cfs,i), a),
+                           mk_comb(List.nth (cgs,i), a))))
+          end
+      val congOK =
+          aconv (concl mapCONG)
+                (mk_imp(list_mk_conj (List.tabulate (n, conghyp)),
+                        mk_eq(mk_comb(mkmap cfs, x), mk_comb(mkmap cgs, x))))
+
+      fun bndOK (i, th) =
+          aconv (concl th)
+                (mk_forall(x, mk_cardleq(mk_comb(List.nth (sets,i), x), bnd)))
+    in
+      List.all (null o hyp) ([mapCONG,mapID,mapO] @ mapIMAGE @ bndthms) andalso
+      idOK andalso oOK andalso congOK andalso
+      List.all imgOK (Lib.enumerate 0 mapIMAGE) andalso
+      List.all bndOK (Lib.enumerate 0 bndthms)
+    end
+
+fun testtyn (lives, ty) =
+    (tprint ("deriveBNFn " ^ type_to_string ty);
+     require_msg (check_result (lawsOKn lives)) (K "<derived BNF>")
+                 (bnfLib.deriveBNFn db lives) ty)
+
+val _ = List.app (ignore o testtyn) [
+      ([a1,a2], “:'a1 + 'a2”),
+      ([a1,a2], “:one + 'a2 # 'a1”),
+      ([a1,a2], “:('b1 -> 'a1) # 'a2 option”),
+      ([a1,a2], “:('a1 # 'a2) option + 'b1 # 'a1”)
+    ]
+
+(* The laws relating one argument to another are instances of these, not
+   separate obligations: setᵢ ignores what mapⱼ does because naturality
+   for argument i puts IMAGE fᵢ on the right, and fᵢ can be I. *)
+val _ = tprint "setᵢ ignores mapⱼ, as an instance of naturality"
+val _ =
+    let val d = bnfLib.deriveBNFn db [a1,a2] “:one + 'a2 # 'a1”
+        val nat1 = hd (#mapIMAGE d)
+        val set1 = hd (#sets d)
+        fun findf th = valOf (List.find (fn v => #1 (dest_var v) = "f1")
+                                        (free_vars (concl th)))
+        (* put I in argument 1's position, whatever its target was named *)
+        val bty = #2 (dom_rng (type_of (findf nat1)))
+        val nat1' = INST_TYPE [bty |-> a1] nat1
+        val I1 = inst [alpha |-> a1] combinSyntax.I_tm
+        val x = mk_var("x", #1 (dom_rng (type_of set1)))
+        (* the composition is unfolded only at the top: the set term is
+           itself built out of o, and rewriting inside it would leave
+           nothing recognisable *)
+        val pw = CONV_RULE (RAND_CONV (REWR_CONV pred_setTheory.IMAGE_I))
+                   (CONV_RULE (BINOP_CONV (REWR_CONV combinTheory.o_THM))
+                      (AP_THM (INST [findf nat1' |-> I1] nat1') x))
+        val (l,r) = dest_eq (concl pw)
+    in
+      (* what is left is set₁ (map f₂ I x) = set₁ x; on the left set₁ is
+         at the instance f₂ moved argument 2 to *)
+      if null (hyp pw) andalso aconv r (mk_comb(set1, x)) andalso
+         can (match_term set1) (rator l)
+      then OK()
+      else die (thm_to_string pw)
+    end
+
+(* ----------------------------------------------------------------------
+    Witnesses and inhabitation, in the form the database stores them: a
+    witness takes one argument per live argument and its theorem records
+    which of them it needed, and each argument has a term with an element
+    of that argument inside it.  Registering a functor the package builds
+    needs both in exactly this form.
+   ---------------------------------------------------------------------- *)
+
+fun witShapeOK lives (d : bnfLib.derived_bnfn) =
+    let
+      val n = length lives
+      val {sets, wits, inhabits, ...} = d
+      val ty = #1 (dom_rng (type_of (hd sets)))
+      fun witOK (w, th) =
+          let
+            val args = #1 (strip_forall (concl th))
+            val app = list_mk_comb (w, args)
+            (* one argument per live argument, landing in the type *)
+            val tyOK = null (free_vars w) andalso
+                       length args = n andalso type_of app = ty andalso
+                       ListPair.all (fn (a,v) => type_of a = v) (args, lives)
+            fun conjOK (i, c) =
+                let val (l, r) = pred_setSyntax.dest_subset c
+                    val ai = List.nth (args, i)
+                in
+                  aconv l (mk_comb (List.nth (sets, i), app)) andalso
+                  (pred_setSyntax.is_empty r orelse
+                   aconv r (pred_setSyntax.mk_set [ai]))
+                end
+            val conjs = strip_conj (#2 (strip_forall (concl th)))
+          in
+            null (hyp th) andalso tyOK andalso length conjs = n andalso
+            List.all conjOK (Lib.enumerate 0 conjs)
+          end
+      fun inhOK (_, NONE) = true
+        | inhOK (i, SOME (t, th)) =
+          let val v = #1 (dest_forall (concl th))
+              val app = mk_comb (t, v)
+          in
+            null (hyp th) andalso null (free_vars t) andalso
+            type_of t = (List.nth (lives, i) --> ty) andalso
+            aconv (#2 (dest_forall (concl th)))
+                  (pred_setSyntax.mk_in (v, mk_comb (List.nth (sets, i), app)))
+          end
+    in
+      not (null wits) andalso List.all witOK wits andalso
+      length inhabits = n andalso List.all inhOK (Lib.enumerate 0 inhabits)
+    end
+
+fun testwitn (lives, ty) =
+    (tprint ("witnesses of " ^ type_to_string ty);
+     require_msg (check_result (witShapeOK lives)) (K "<derived BNF>")
+                 (bnfLib.deriveBNFn db lives) ty)
+
+val _ = List.app (ignore o testwitn) [
+      ([a1,a2], “:'a1 + 'a2”),
+      ([a1,a2], “:one + 'a2 # 'a1”),
+      ([a1,a2], “:('b1 -> 'a1) # 'a2 option”),
+      ([a1,a2], “:('a1 # 'a2) option + 'b1 # 'a1”),
+      ([alpha], “:one + 'b1 # 'a”),
+      ([alpha], “:('a # 'a) option”)
+    ]
+
+(* which arguments the witnesses need is the whole point of keeping
+   several of them: the functor behind ‘mylist = Nil | Cons 'a mylist’
+   has one witness needing nothing (Nil), while every element of the one
+   behind ‘fstrm = FSCons 'a fstrm’ needs both arguments *)
+fun needsOf (d : bnfLib.derived_bnfn) =
+    let fun sigOf (_, th) =
+            List.map (not o pred_setSyntax.is_empty o #2 o
+                      pred_setSyntax.dest_subset)
+                     (strip_conj (#2 (strip_forall (concl th))))
+    in
+      List.map sigOf (#wits d)
+    end
+
+val _ = tprint "the witnesses' demands"
+val _ =
+    let
+      val mylist = needsOf (bnfLib.deriveBNFn db [alpha,b1] “:one + 'b1 # 'a”)
+      val fstrm = needsOf (bnfLib.deriveBNFn db [alpha,b1] “:'b1 # 'a”)
+      val sum = needsOf (bnfLib.deriveBNFn db [a1,a2] “:'a1 + 'a2”)
+    in
+      if mylist = [[false,false]] andalso fstrm = [[true,true]] andalso
+         sum = [[true,false],[false,true]]
+      then OK()
+      else die "unexpected demands"
+    end

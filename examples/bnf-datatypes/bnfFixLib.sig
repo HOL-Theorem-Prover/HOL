@@ -9,48 +9,53 @@ sig
 
       bnfInitialTheory states the construction over parameters: the
       functor's map and set functions are term variables and the BNF
-      laws are hypotheses.  The functions here turn a derived_bnf into
+      laws are hypotheses.  The functions here turn a derived BNF into
       those parameters at whatever instance is asked for, and prove the
       corresponding law.  Everything is forward proof over the stored
       laws; nothing here parses or runs a tactic.
+
+      The fixed point is taken over the functor's *first* argument; any
+      further argument it was derived in is a parameter, carried along by
+      I and kept as an argument of the new type.  A caller that only
+      wants the type can derive the functor in one argument alone.
      ---------------------------------------------------------------------- *)
 
   (* F[ty], for the functor underlying the derived BNF *)
-  val functorAt : bnfLib.derived_bnf -> hol_type -> hol_type
+  val functorAt : bnfLib.derived_bnfn -> hol_type -> hol_type
 
   (* the set function at ty, and the map operator from ty1 to ty2, as
      the terms bnfInitialTheory's parameters stand for *)
-  val setOp : bnfLib.derived_bnf -> hol_type -> term
-  val mapOp : bnfLib.derived_bnf -> hol_type * hol_type -> term
+  val setOp : bnfLib.derived_bnfn -> hol_type -> term
+  val mapOp : bnfLib.derived_bnfn -> hol_type * hol_type -> term
 
   (* |- MapId (mapOp bnf (ty,ty)) *)
-  val MapIdThm : bnfLib.derived_bnf -> hol_type -> thm
+  val MapIdThm : bnfLib.derived_bnfn -> hol_type -> thm
 
   (* |- MapComp (mapOp bnf (a,b)) (mapOp bnf (b,c)) (mapOp bnf (a,c)) *)
-  val MapCompThm : bnfLib.derived_bnf ->
+  val MapCompThm : bnfLib.derived_bnfn ->
                    hol_type * hol_type * hol_type -> thm
 
   (* |- Natural (mapOp bnf (a,b)) (setOp bnf a) (setOp bnf b) *)
-  val NaturalThm : bnfLib.derived_bnf -> hol_type * hol_type -> thm
+  val NaturalThm : bnfLib.derived_bnfn -> hol_type * hol_type -> thm
 
   (* |- MapCong (mapOp bnf (a,b)) (setOp bnf a) *)
-  val MapCongThm : bnfLib.derived_bnf -> hol_type * hol_type -> thm
+  val MapCongThm : bnfLib.derived_bnfn -> hol_type * hol_type -> thm
 
   (* An ordinal as big as the functor's own bound: the term bd, and
         |- preds bd = ~ <the bound>,  |- w <= bd
      The ordinal is a choice term, so no constant is introduced. *)
-  val boundOrdinal : bnfLib.derived_bnf -> {bd : term, cardeq : thm,
-                                            omega_le : thm}
+  val boundOrdinal : bnfLib.derived_bnfn -> {bd : term, cardeq : thm,
+                                             omega_le : thm}
 
-  (* |- !x. setOp bnf ty x <<= preds bd *)
-  val setBoundThm : bnfLib.derived_bnf -> term -> hol_type -> thm
+  (* |- !x. setOp bnf ty x <<= preds bd, given boundOrdinal's cardeq *)
+  val setBoundThm : bnfLib.derived_bnfn -> thm -> hol_type -> thm
 
   (* The cardinality bound the construction runs on: a type big enough
      to hold every minimal algebra over ty, and
         |- !s. MINSET (setOp bnf ty) s <<= univ(:carrier)
      ty is normally left a type variable, so that the theorem covers
      every carrier at once. *)
-  val minsetBound : bnfLib.derived_bnf -> hol_type ->
+  val minsetBound : bnfLib.derived_bnfn -> hol_type ->
                     {carrier : hol_type, thm : thm}
 
   (* ----------------------------------------------------------------------
@@ -76,7 +81,7 @@ sig
     isALG : thm
   }
 
-  val initialAlgebra : bnfLib.derived_bnf -> initial_algebra
+  val initialAlgebra : bnfLib.derived_bnfn -> initial_algebra
 
   (* ----------------------------------------------------------------------
       The datatype itself.  Defines a type in bijection with the initial
@@ -90,10 +95,12 @@ sig
       tyname names the type; ABS and REP name the type definition's
       abstraction and representation functions.
      ---------------------------------------------------------------------- *)
+  type fixpoint = {newty : hol_type, cons : term, cons_def : thm,
+                   recursion : thm, prim_recursion : thm,
+                   set_induction : thm}
+
   val defineFixpoint : {tyname : string, ABS : string, REP : string} ->
-                       bnfLib.derived_bnf ->
-                       {newty : hol_type, cons : term, cons_def : thm,
-                        recursion : thm, prim_recursion : thm}
+                       bnfLib.derived_bnfn -> fixpoint
 
   (* ----------------------------------------------------------------------
       The datatype's own constructors, and its axiom in the shape the
@@ -109,12 +116,55 @@ sig
       argument itself or free of it; nesting is rejected here, since
       HOL's axiom takes a different shape for it.
      ---------------------------------------------------------------------- *)
+  type constructors = {
+    constructors : term list, defs : thm list, axiom : thm,
+    legacy_axiom : thm, existential_axiom : thm,
+    induction : thm option,   (* NONE for a nested recursion *)
+    set_induction : thm,      (* hypothesis: every sub-term in the set *)
+    distinct : thm option list, one_one : thm option list
+  }
+
   val defineConstructors :
-      string list -> bnfLib.derived_bnf ->
-      {newty : hol_type, cons : term, cons_def : thm,
-       recursion : thm, prim_recursion : thm} ->
-      {constructors : term list, defs : thm list, axiom : thm,
-       legacy_axiom : thm, existential_axiom : thm, induction : thm,
-       distinct : thm option list, one_one : thm option list}
+      string list -> bnfLib.derived_bnfn -> fixpoint -> constructors
+
+  (* ----------------------------------------------------------------------
+      The new type as a functor.
+
+      A datatype the package builds is a functor in whatever arguments of
+      the underlying functor were not the recursive one, and everything
+      the BNF database stores about it — a map, a set function per
+      argument, the four laws, a bound, witnesses and inhabitation — comes
+      out of the recursion principle and the laws F was derived with.  The
+      map, the set functions and the relator are defined as constants
+      along the way, named after the type.
+
+      Nothing is registered: the result is a value, which a caller adds to
+      a database with bnfBase.insert or names and records.  The
+      intermediate type a mutual recursion goes through has no business
+      being exported.
+     ---------------------------------------------------------------------- *)
+  type fixpoint_bnf = {
+    key : KernelSig.kernelname,
+    info : thm bnfBase_dtype.info,
+    map_thm : thm,          (* !f.. af. MAP f.. (cons af) = cons (Fmap ..) *)
+    set_thms : thm list,    (* !af. SETi (cons af) = Fseti af UNION .. *)
+    relator_def : thm
+  }
+
+  val fixpointBNF : bnfLib.derived_bnfn -> fixpoint -> fixpoint_bnf
+
+  (* ----------------------------------------------------------------------
+      The map and the set functions at each constructor:
+
+        MAP f (MyCons a l) = MyCons (f a) (MAP f l)
+        SET (MyCons a l)   = a INSERT SET l
+
+      which is the form a user reads them in, and the form a size
+      definition or a TypeBase entry is written with.  One theorem for the
+      map and one per argument for the sets, each a conjunction over the
+      constructors.
+     ---------------------------------------------------------------------- *)
+  val constructorEqns : constructors -> fixpoint_bnf ->
+                        {map_eqns : thm, set_eqns : thm list}
 
 end

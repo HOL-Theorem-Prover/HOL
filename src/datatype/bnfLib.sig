@@ -32,6 +32,48 @@ type derived_bnf = {
                                built without an α *)
 }
 
+(* The same, for a functor with several arguments: one map taking a
+   function per argument, and a set function, naturality theorem and
+   bound per argument.  The laws relating *different* arguments — that
+   setᵢ ignores mapⱼ, and that mapᵢ and mapⱼ commute — are instances of
+   these rather than extra obligations: put I in the other positions of
+   mapIMAGE and of mapO. *)
+type derived_bnfn = {
+  bnd : term,
+  bndINFINITE : thm,
+  bndthms : thm list,       (* |- !x. setᵢ x <<= bnd, one per argument *)
+  components : info HOLset.set,
+  inhabits : (term * thm) option list,
+                            (* (inhᵢ, |- !v. v IN setᵢ (inhᵢ v)), NONE if
+                               argument i doesn't occur *)
+  lives : hol_type list,    (* the arguments, in the order map takes them *)
+  mapCONG : thm,            (* hypotheses conjoined, one per argument *)
+  mapID : thm,              (* |- map I .. I = I *)
+  mapIMAGE : thm list,      (* |- setᵢ o map f₁..fₙ = IMAGE fᵢ o setᵢ *)
+  mapO : thm,
+  mkmap : term list -> term,
+  sets : term list,
+  wits : (term * thm) list  (* (w, |- !a⃗. set₁ (w a⃗) SUBSET W₁ /\ ...),
+                               each Wᵢ either {aᵢ} or {}: the witnesses,
+                               in the form the database stores them, and
+                               pruned to those whose demands are
+                               subset-minimal *)
+}
+
+(* |- P ((\xs. t) xs), from |- P t and the position cnv aims at.  A
+   witness is stored as a function of its arguments, so its theorem has to
+   be about the application rather than about the body. *)
+val unbeta_at : (conv -> conv) -> term list -> term -> thm -> thm
+
+val deriveBNFn : bnfBase.t -> hol_type list -> hol_type -> derived_bnfn
+
 val deriveBNF : bnfBase.t -> hol_type -> derived_bnf
+
+(* ground elements, as the fixed-point construction wants them: an
+   element whose i-th set is empty — which is what makes a datatype
+   specification legal, since it is its base case — and one whose i-th
+   set is not.  Both come from the witnesses above by supplying ARB. *)
+val groundEmpty : derived_bnfn -> int -> (term * thm) option
+val groundNonempty : derived_bnfn -> int -> (term * thm) option
 
 end
