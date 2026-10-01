@@ -19,6 +19,11 @@ Libs
 val _ = deprecate_int ();
 val INT_ARITH = intLib.ARITH_PROVE;
 
+(* cardinalTheory keeps this to itself now — the datatype package needs
+   that theory, so what it exports reaches everywhere, and ** is the
+   exponent of the numbers, the words and the rationals too *)
+Overload "**"[local] = “set_exp”
+
 val std_ss' = std_ss ++ PRED_SET_ss;
 
 (* NOTE: HOL4's ‘trivial_ring’ is HOL-Light's ‘singleton_ring’ (also here).
