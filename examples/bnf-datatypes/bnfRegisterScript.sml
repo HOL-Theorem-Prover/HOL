@@ -34,7 +34,7 @@ Theorem mylist_distinct = valOf (hd (#distinct cs))
     the BNF structure of the new type, derived
    ---------------------------------------------------------------------- *)
 
-val mylist_bnf = fixpointBNF bnf fix
+val mylist_bnf = fixpointBNF noNames bnf fix
 val bnfBase.bI mylist_info = #info mylist_bnf
 
 (* the map and the set function are defined by the library, which saves
@@ -267,7 +267,8 @@ val _ = checkthm "and the nested type's case constant is derived anyway"
 val mylist_tyinfo =
     hd (typeBaseInfo {axiom = #axiom cs, induction = mylist_induction,
                       case_defs = [mylist_case],
-                      rewrites = [[mylistMAP_thm, mylistSET_thm]]})
+                      rewrites = [[mylistMAP_thm, mylistSET_thm]],
+                      names = [noNames]})
 
 val _ = TypeBase.export [mylist_tyinfo]
 
@@ -321,7 +322,7 @@ val ebnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params spec)
 val efix = defineFixpoint {tyname = "expr", ABS = "expr_ABS",
                            REP = "expr_REP"} ebnf
 val ecs = defineConstructors (hd (#constructors spec)) ebnf efix
-val eres = fixpointBNF ebnf efix
+val eres = fixpointBNF noNames ebnf efix
 val eeqns = constructorEqns ecs eres
 
 Theorem expr_axiom = #existential_axiom ecs
@@ -332,7 +333,8 @@ val _ = TypeBase.export
           (typeBaseInfo {axiom = expr_axiom,
                          induction = valOf (#induction ecs),
                          case_defs = defineCases expr_axiom,
-                         rewrites = [[exprMAP_thm, exprSET_thm]]})
+                         rewrites = [[exprMAP_thm, exprSET_thm]],
+                         names = [noNames]})
 
 val _ = tprint "a specified type behaves like a datatype"
 val _ =
@@ -378,7 +380,8 @@ val _ =
 val rose_tyinfos =
     typeBaseInfo {axiom = #axiom rcs,
                   induction = #set_induction rcs,
-                  case_defs = [rose_case], rewrites = [[]]}
+                  case_defs = [rose_case], rewrites = [[]],
+                  names = [noNames]}
 val _ = TypeBase.export rose_tyinfos
 
 (* ----------------------------------------------------------------------
@@ -494,7 +497,69 @@ val _ =
       then OK() else die (thm_to_string rth)
     end
 
-val _ = print ("PROBE unique: " ^
-               (case rsize2_unique of
-                    NONE => "none"
-                  | SOME th => thm_to_string th) ^ "\n")
+(* ----------------------------------------------------------------------
+    Naming the constants the package generates.
+
+    A type the rest of HOL already knows has names of its own for its
+    map and its set function — `list` has MAP and LIST_TO_SET — and
+    Overloading onto generated names will not do, because a user writes
+    `list$MAP`, which needs a constant of that name in that theory.  So
+    a declaration says the names in its attributes, and the package uses
+    them where it would otherwise have named them after the type.
+   ---------------------------------------------------------------------- *)
+
+val nspec =
+    parseSpec `stack[map=STMAP,set=stack_to_set,rel=STACK_REL,size=stack_sz] =
+                 Empty | Push 'a stack`
+
+val _ = tprint "a specification's names"
+val _ =
+    if #names nspec = [{map = SOME "STMAP", sets = [SOME "stack_to_set"],
+                        relator = SOME "STACK_REL", size = SOME "stack_sz"}]
+    then OK() else die "not as expected"
+
+val nbnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params nspec)
+                      (#1 (hd (#functors nspec)))
+val nfix = defineFixpoint {tyname = "stack", ABS = "stack_ABS",
+                           REP = "stack_REP"} nbnf
+val ncs = defineConstructors (hd (#constructors nspec)) nbnf nfix
+val nres = fixpointBNF (hd (#names nspec)) nbnf nfix
+val neqns = constructorEqns ncs nres
+
+Theorem stack_axiom = #existential_axiom ncs
+Theorem STMAP_thm[simp] = #map_eqns neqns
+Theorem stack_to_set_thm[simp] = hd (#set_eqns neqns)
+
+val _ = TypeBase.export
+          (typeBaseInfo {axiom = stack_axiom,
+                         induction = valOf (#induction ncs),
+                         case_defs = defineCases stack_axiom,
+                         rewrites = [[STMAP_thm, stack_to_set_thm]],
+                         names = #names nspec})
+
+val _ = tprint "the generated constants take the names asked for"
+val _ =
+    let val ns = List.map (#1 o dest_const) (Theory.constants "-")
+        fun has s = Lib.mem s ns
+    in
+      if List.all has ["STMAP", "stack_to_set", "STACK_REL", "stack_sz"]
+         andalso
+         not (List.exists has ["stackMAP", "stackSET", "stackREL",
+                               "stack_size"])
+      then OK() else die "not as expected"
+    end
+
+val _ = tprint "and they are the type's own map, set and size"
+val _ =
+    let val th1 = Q.prove (‘∀s : 'a stack. STMAP I s = s’,
+                           Induct_on ‘s’ >> simp[])
+        val th2 = Q.prove (‘stack_to_set (Push a s) = a INSERT stack_to_set s’,
+                           simp[])
+        val (sztm, szth) = TypeBase.size_of “:'a stack”
+    in
+      if List.all (null o hyp) [th1, th2] andalso
+         same (concl szth)
+              “∀f. stack_sz f Empty = 0 ∧
+                   ∀a s. stack_sz f (Push a s) = 1 + f a + stack_sz f s”
+      then OK() else die "not as expected"
+    end

@@ -7,6 +7,23 @@ open bnfInitialTheory bnfFixBNFTheory bnfMutualTheory
 val ERR = mk_HOL_ERR "bnfFixLib"
 
 (* ----------------------------------------------------------------------
+    What the package calls the constants it generates for a type.  A
+    declaration says these in its attributes; what it does not say is
+    named after the type.
+   ---------------------------------------------------------------------- *)
+
+type names = {map : string option, sets : string option list,
+              relator : string option, size : string option}
+
+val noNames : names = {map = NONE, sets = [], relator = NONE, size = NONE}
+
+fun nameOr d NONE = d
+  | nameOr _ (SOME s) = s
+
+fun setNameOr (nms : names) i d =
+    if i < length (#sets nms) then nameOr d (List.nth (#sets nms, i)) else d
+
+(* ----------------------------------------------------------------------
     The parameters.
 
     The fixed point is taken over the functor's *first* argument; any
@@ -926,7 +943,7 @@ type fixpoint_bnf = {
   map_thm : thm, set_thms : thm list, relator_def : thm
 }
 
-fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
+fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
     let
       val newty = #newty fix
       val consN = #cons fix
@@ -1004,7 +1021,7 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
             TRANS (SYM (ISPECL [mapB, mkmapA bnf h, af] combinTheory.o_THM))
                   (AP_THM th af)
           end
-      val mapname = Tyop ^ "MAP"
+      val mapname = nameOr (Tyop ^ "MAP") (#map nms)
       val map_thm =
           new_specification
             (mapname ^ "_def", [mapname],
@@ -1042,8 +1059,9 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
             val cross = PURE_REWRITE_RULE [pred_setTheory.IMAGE_I]
                                   (#thm (bnatEq bnf j (newty,setty) pIs))
             val down = #thm (bnatEq bnf 0 (newty,setty) pIs)
-            val nm = Tyop ^ "SET" ^
-                     (if n = 1 then "" else Int.toString (i + 1))
+            val nm = setNameOr nms i
+                       (Tyop ^ "SET" ^
+                        (if n = 1 then "" else Int.toString (i + 1)))
           in
             new_specification (nm ^ "_def", [nm],
                                PURE_REWRITE_RULE [cross, down] ex)
@@ -1265,9 +1283,10 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
                       mk_eq(mapped pairSyntax.snd_tm, y)]))
             val relty = List.foldr (op -->) (newty --> (mty --> bool))
                                    (List.map type_of Rs)
+            val relname = nameOr (Tyop ^ "REL") (#relator nms)
           in
-            new_definition (Tyop ^ "REL_def",
-                            mk_eq(mk_var(Tyop ^ "REL", relty),
+            new_definition (relname ^ "_def",
+                            mk_eq(mk_var(relname, relty),
                                   list_mk_abs(Rs @ [x,y], body)))
           end
 
@@ -1468,7 +1487,7 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
       val bnf2 = bnfLib.deriveBNFn db lives f2ty
       val fix2 = defineFixpoint {tyname = tyname2, ABS = tyname2 ^ "_ABS",
                                  REP = tyname2 ^ "_REP"} bnf2
-      val res2 = fixpointBNF bnf2 fix2
+      val res2 = fixpointBNF noNames bnf2 fix2
       val db = bnfBase.insert (#key res2, #info res2) db
       val sibty = #newty fix2
       fun sibAt ty = type_subst [a1 |-> ty] sibty
@@ -1850,7 +1869,7 @@ fun defineFamily {tynames} db params specs : family =
                 if List.exists (isSome o slotIdx) args orelse
                    List.exists (fn a => Lib.mem a params) args
                 then
-                  let val res = fixpointBNF bnf fix
+                  let val res = fixpointBNF noNames bnf fix
                   in
                     (SOME res, bnfBase.insert (#key res, #info res) db)
                   end
@@ -3037,7 +3056,7 @@ fun defineRecursion {name, axiom, def} =
     gets no size at all, and TypeBase is content without one.
    ---------------------------------------------------------------------- *)
 
-fun defineSize {tyname} axiom =
+fun defineSize {tyname, sizes = sizenames} axiom =
     let
       val (fvars0, body0) = strip_forall (concl axiom)
       val axE = if is_exists1 body0 then
@@ -3066,13 +3085,16 @@ fun defineSize {tyname} axiom =
                   fn i => mk_var ("f" ^ Int.toString i,
                                   List.nth (targs, i) --> num))
       val sizes =
-          List.map (fn ty =>
-                       let val nm = #Tyop (dest_thy_type ty) ^ "_size"
+          List.map (fn (i, ty) =>
+                       let val dflt = #Tyop (dest_thy_type ty) ^ "_size"
+                           val nm = if i < length sizenames then
+                                      nameOr dflt (List.nth (sizenames, i))
+                                    else dflt
                        in
                          mk_var (nm, List.foldr (op -->) (ty --> num)
                                                 (List.map type_of fs))
                        end)
-                   tys
+                   (ListPair.zipEq (upto (length tys), tys))
       fun sizeApp i = list_mk_comb (List.nth (sizes, i), fs)
       (* what a value of a given type contributes *)
       fun theta ty =
@@ -3234,7 +3256,7 @@ fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
     the order the case definitions come.
    ---------------------------------------------------------------------- *)
 
-fun typeBaseInfo {axiom, induction, case_defs, rewrites} =
+fun typeBaseInfo {axiom, induction, case_defs, rewrites, names} =
     let
       (* TypeBase reads the existence half; the size's own lemma wants
          the uniqueness, so an axiom that carries it is welcome here *)
@@ -3255,7 +3277,8 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites} =
           case tyinfos of
               [] => NONE
             | ti :: _ =>
-              case defineSize {tyname = #2 (TypeBasePure.ty_name_of ti)}
+              case defineSize {tyname = #2 (TypeBasePure.ty_name_of ti),
+                               sizes = List.map #size names}
                               axiom of
                   NONE => NONE
                 | SOME {sizes, definition, unique} =>
@@ -3334,14 +3357,64 @@ type spec = {
   params : hol_type list,
   functors : (hol_type * hol_type list) list,
   constructors : string list list,
-  fields : string list option list
+  fields : string list option list,
+  names : names list
 }
+
+(* what a declaration's attributes say the generated constants are
+   called.  An attribute the package does not know is an error rather
+   than a silence: it would otherwise look like a name that was taken. *)
+fun attrNames nargs tyname attrs : names =
+    let
+      fun one (key, args) (acc : names) =
+          let
+            fun single () =
+                case args of
+                    [v] => SOME v
+                  | _ => raise ERR "parseSpec"
+                               ("the " ^ key ^ " attribute of " ^ tyname ^
+                                " takes one name")
+            fun dup () = raise ERR "parseSpec"
+                               (tyname ^ " names its " ^ key ^ " twice")
+            fun once NONE = () | once (SOME _) = dup ()
+            val () = case key of
+                         "map" => once (#map acc)
+                       | "rel" => once (#relator acc)
+                       | "size" => once (#size acc)
+                       | "set" => if null (#sets acc) then () else dup ()
+                       | _ => ()
+            val () = if key = "set" andalso length args > nargs then
+                       raise ERR "parseSpec"
+                             (tyname ^ " takes " ^ Int.toString nargs ^
+                              " argument(s), and " ^
+                              Int.toString (length args) ^
+                              " set functions are named")
+                     else ()
+          in
+            case key of
+                "map" => {map = single(), sets = #sets acc,
+                          relator = #relator acc, size = #size acc}
+              | "set" => {map = #map acc, sets = List.map SOME args,
+                          relator = #relator acc, size = #size acc}
+              | "rel" => {map = #map acc, sets = #sets acc,
+                          relator = single(), size = #size acc}
+              | "size" => {map = #map acc, sets = #sets acc,
+                           relator = #relator acc, size = single()}
+              | _ => raise ERR "parseSpec"
+                           (tyname ^ " carries an attribute " ^ key ^
+                            ", and the ones read here are map, set, rel " ^
+                            "and size")
+          end
+    in
+      List.foldl (fn (a, acc) => one a acc) noNames attrs
+    end
 
 fun parseSpec q : spec =
     let
-      val asts = ParseDatatype.hparse (Parse.type_grammar()) q
+      val asts = ParseDatatype.hparse_annotated (Parse.type_grammar()) q
+      val plain = List.map (fn {name, form, ...} => (name, form)) asts
       val {tynames, params, functors} =
-          bnfLib.specToFunctors (parse_bnf.parse2ftor asts)
+          bnfLib.specToFunctors (parse_bnf.parse2ftor plain)
       (* a record is one constructor of its fields, named the way the
          record apparatus looks it up *)
       fun namesOf (nm, form) =
@@ -3355,8 +3428,11 @@ fun parseSpec q : spec =
             | ParseDatatype.Record flds => SOME (List.map #1 flds)
     in
       {tynames = tynames, params = params, functors = functors,
-       constructors = List.map namesOf asts,
-       fields = List.map fieldsOf asts}
+       constructors = List.map namesOf plain,
+       fields = List.map fieldsOf plain,
+       names = List.map (fn {name, attrs, ...} =>
+                            attrNames (length params) name attrs)
+                        asts}
     end
 
 
@@ -3719,8 +3795,8 @@ type copied_bnf = {
   relator_def : thm
 }
 
-fun transportBNF {abs, rep, absrep, repabs} (bnf : bnfLib.derived_bnfn)
-    : copied_bnf =
+fun transportBNF (nms : names) {abs, rep, absrep, repabs}
+                 (bnf : bnfLib.derived_bnfn) : copied_bnf =
     let
       val (rep_ty, newty) = dom_rng (type_of abs)
       val {Thy, Tyop, Args} = dest_thy_type newty
@@ -3758,7 +3834,7 @@ fun transportBNF {abs, rep, absrep, repabs} (bnf : bnfLib.derived_bnfn)
       (* ------------------------------------------------------------
           the map and the set functions
          ------------------------------------------------------------ *)
-      val mapname = Tyop ^ "MAP"
+      val mapname = nameOr (Tyop ^ "MAP") (#map nms)
       val mapty = List.foldr (op -->) (newty --> atLargs tvs newty)
                              (List.map type_of fs)
       val map_def =
@@ -3787,8 +3863,9 @@ fun transportBNF {abs, rep, absrep, repabs} (bnf : bnfLib.derived_bnfn)
                           (AP_THM (SPECL hs (INST_TYPE (mapTheta hs) map_def))
                                   x))
           end
-      fun setname i = Tyop ^ "SET" ^ (if n = 1 then "" else
-                                      Int.toString (i + 1))
+      fun setname i = setNameOr nms i
+                        (Tyop ^ "SET" ^
+                         (if n = 1 then "" else Int.toString (i + 1)))
       val set_defs =
           List.map (fn i =>
                        let val body = mk_o (List.nth (#sets bnf, i), rep)
@@ -3993,9 +4070,10 @@ fun transportBNF {abs, rep, absrep, repabs} (bnf : bnfLib.derived_bnfn)
             val relty = List.foldr (op -->) (newty --> (atLargs tvs newty -->
                                                         bool))
                                    (List.map type_of Rs)
+            val relname = nameOr (Tyop ^ "REL") (#relator nms)
           in
-            new_definition (Tyop ^ "REL_def",
-                            mk_eq (mk_var (Tyop ^ "REL", relty),
+            new_definition (relname ^ "_def",
+                            mk_eq (mk_var (relname, relty),
                                    list_mk_abs (Rs @ [x,y], body)))
           end
 

@@ -1,6 +1,6 @@
 Theory bnfDeriveFmap
 Ancestors
-  bnfMoreFunctors bnfPrelims finite_map list pred_set cardinal
+  bnfPrelims finite_map list pred_set cardinal
 Libs
   HolKernel Parse boolLib bossLib bnfBase bnfLib testutils
 

@@ -289,6 +289,49 @@ fun idxOf lives ty =
     end
 fun livesIn lives ty = List.exists (fn v => mem v (type_vars ty)) lives
 
+(* ----------------------------------------------------------------------
+    Which of a type's variables a functor over it can be live in.
+
+    A variable can be live only where every occurrence of it is in a
+    functorial position: `'k |-> 'a` is a functor in 'a, and not in 'k,
+    because a finite map's map function leaves the keys alone.  A
+    specification's own variables are decided this way — the ones that
+    do not survive are the type's arguments all the same, carried along
+    as passive.
+   ---------------------------------------------------------------------- *)
+
+fun liveTyvars db ty =
+    let
+      fun walk ty (live, dead) =
+          if is_vartype ty then (Lib.insert ty live, dead)
+          else
+            let val {Tyop, Thy, Args} = dest_thy_type ty
+            in
+              case pure_lookup db {Name = Tyop, Thy = Thy} of
+                  (* nothing recurses through an operator the database
+                     does not know *)
+                  NONE => (live, type_vars ty @ dead)
+                | SOME (bI i) =>
+                  let
+                    val (_, (d,_)) = strip_mapargs (type_of (#map i))
+                    val params = #Args (dest_thy_type d)
+                    fun sift ([], []) acc = acc
+                      | sift (a::As, p::Ps) acc =
+                        if is_alphanum_tyv p then sift (As, Ps) (walk a acc)
+                        else
+                          let val (l, dd) = acc
+                          in sift (As, Ps) (l, type_vars a @ dd) end
+                      | sift _ _ = raise ERR "liveTyvars"
+                                         "map constant has wrong arity"
+                  in
+                    sift (Args, params) (live, dead)
+                  end
+            end
+      val (live, dead) = walk ty ([], [])
+    in
+      List.filter (fn v => not (Lib.mem v dead)) live
+    end
+
 fun mkplan db lives ty =
     case idxOf lives ty of
         SOME i => FPvar (i, ty)

@@ -5,6 +5,8 @@ sig
  datatype pretype = datatype ParseDatatype_dtype.pretype
  datatype datatypeForm = datatype ParseDatatype_dtype.datatypeForm
  type AST = ParseDatatype_dtype.AST
+ type attributes = ParseDatatype_dtype.attributes
+ type annotatedAST = ParseDatatype_dtype.annotatedAST
  type field = ParseDatatype_dtype.field
  type constructor = ParseDatatype_dtype.constructor
  val pretypeToType : pretype -> Type.hol_type
@@ -40,6 +42,21 @@ val hparse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
   where record_defn is as above, and an atomic-typ is either a type variable,
   or a type-constant of arity 0, or one of the types being defined.
 *)
+
+(* The same two grammars, with what a declaration says about itself:
+
+     G ::= id <attrs>? "=" <form> (";" id <attrs>? "=" <form>)* ";"?
+     attrs ::= "[" attr ("," attr)* "]" | "[" "]"
+     attr  ::= id ("=" id+)?
+
+   The attributes are the datatype package's, and say what it should
+   call the constants it generates for the type; nothing here reads
+   them.  parse and hparse reject a declaration that carries any, rather
+   than dropping them silently. *)
+val parse_annotated : type_grammar.grammar ->
+                      Type.hol_type Portable.quotation -> annotatedAST list
+val hparse_annotated : type_grammar.grammar ->
+                       Type.hol_type Portable.quotation -> annotatedAST list
 
 val parse_listener : (AST list) Listener.t
 

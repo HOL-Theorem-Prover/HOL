@@ -4,6 +4,27 @@ sig
   include Abbrev
 
   (* ----------------------------------------------------------------------
+      What the package calls the constants it generates for a type.  A
+      declaration says these in its attributes —
+
+          list[map=MAP,set=LIST_TO_SET,rel=LIST_REL,size=list_size]
+
+      — because a type the rest of HOL already knows has names of its
+      own, and Overloading onto the generated ones is not enough: a user
+      writes `list$MAP`, which needs a constant of that name in that
+      theory.
+
+      What a declaration does not say is named after the type: <Tyop>MAP,
+      <Tyop>SET (SET1, SET2, ... when the type has more than one
+      argument), <Tyop>REL and <tyname>_size.  A `sets` list shorter than
+      the number of arguments names the first few and leaves the rest.
+     ---------------------------------------------------------------------- *)
+  type names = {map : string option, sets : string option list,
+                relator : string option, size : string option}
+
+  val noNames : names
+
+  (* ----------------------------------------------------------------------
       Instantiating a composite BNF's laws for the fixed-point
       construction.
 
@@ -169,7 +190,8 @@ sig
     relator_def : thm
   }
 
-  val fixpointBNF : bnfLib.derived_bnfn -> fixpoint -> fixpoint_bnf
+  val fixpointBNF : names -> bnfLib.derived_bnfn -> fixpoint ->
+                    fixpoint_bnf
 
   (* ----------------------------------------------------------------------
       The map and the set functions at each constructor:
@@ -370,7 +392,8 @@ sig
     relator_def : thm
   }
 
-  val transportBNF : {abs : term, rep : term, absrep : thm, repabs : thm} ->
+  val transportBNF : names ->
+                     {abs : term, rep : term, absrep : thm, repabs : thm} ->
                      bnfLib.derived_bnfn -> copied_bnf
 
   val collapsedConstructors :
@@ -405,7 +428,8 @@ sig
     params : hol_type list,
     functors : (hol_type * hol_type list) list,
     constructors : string list list,
-    fields : string list option list   (* a record's, for its apparatus *)
+    fields : string list option list,  (* a record's, for its apparatus *)
+    names : names list                 (* what its attributes say *)
   }
 
   val parseSpec : hol_type quotation -> spec
@@ -424,7 +448,7 @@ sig
   (* the size function, out of what the axiom says: what a constructor
      is worth is one plus what each argument's own type's size says of
      it.  NONE when some argument has no size — a function space, say *)
-  val defineSize : {tyname : string} -> thm ->
+  val defineSize : {tyname : string, sizes : string option list} -> thm ->
                    {sizes : term list, definition : thm,
                     unique : thm option} option
 
@@ -434,7 +458,7 @@ sig
                       sizes : term list} -> thm
 
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
-                      rewrites : thm list list} ->
+                      rewrites : thm list list, names : names list} ->
                      TypeBasePure.tyinfo list
 
 end
