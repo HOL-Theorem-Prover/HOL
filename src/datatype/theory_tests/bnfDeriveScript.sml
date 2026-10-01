@@ -47,7 +47,8 @@ fun mk_IMAGE f =
               f)
     end
 fun mk_cardleq (l,r) =
-    list_mk_icomb (prim_mk_const{Thy = "cardinal", Name = "cardleq"}, [l,r])
+    list_mk_icomb (prim_mk_const{Thy = "cardinalityCore",
+                                 Name = "cardleq"}, [l,r])
 
 (* the derived theorems must be exactly the BNF laws for the map and set
    terms that were derived alongside them, and must not depend on any

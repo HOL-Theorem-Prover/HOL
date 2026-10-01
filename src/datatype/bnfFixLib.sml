@@ -369,7 +369,8 @@ fun boundOrdinal bnf =
         val leUNIV = ISPEC B CARDLEQ_UNIV
         val leSUM = INST_TYPE [alpha |-> numSyntax.num, beta |-> bty]
                               bnfPrelimsTheory.UNIV_CARD_LE_ADDL
-        val le = MATCH_MP cardinalTheory.cardleq_TRANS (CONJ leUNIV leSUM)
+        val le = MATCH_MP cardinalityCoreTheory.cardleq_TRANS
+                          (CONJ leUNIV leSUM)
         val th = SELECT_RULE (MATCH_MP ordinalBasicTheory.cardeq_ordinals_exist
                                        le)
         val bd = rand (rand (rator (concl th)))
@@ -433,7 +434,7 @@ fun minsetBound bnf ty =
         val th = SPEC s th
         val bset = rand (concl th)
         val carrier = #1 (dom_rng (type_of bset))
-        val th = GEN s (MATCH_MP cardinalTheory.cardleq_TRANS
+        val th = GEN s (MATCH_MP cardinalityCoreTheory.cardleq_TRANS
                                  (CONJ th (ISPEC bset CARDLEQ_UNIV)))
     in
       {carrier = carrier, thm = th}
