@@ -1690,7 +1690,7 @@ fun start {diag, dbg, warnings} = let
     end
 
   fun compileForReport uri code startByte stopAfter lastPos builtTree
-                       onDecCompleted report = let
+                       onDecStarted' onDecCompleted report = let
     (* A deferred proof belongs to the declaration being compiled when it
        is enqueued, so record that declaration's start as each one
        begins.  Elaboration is single-threaded, so a plain ref is
@@ -1736,7 +1736,8 @@ fun start {diag, dbg, warnings} = let
                           1 decOrds
     fun onDecStarted off = (
       LSPExtension.currentProofOffset := off;
-      LSPExtension.currentProofOrd := ordAt off)
+      LSPExtension.currentProofOrd := ordAt off;
+      onDecStarted' off)
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -2543,6 +2544,64 @@ fun start {diag, dbg, warnings} = let
        captured, so `captureSnap` can tell which are the current
        declaration's own.  Starts at whatever the resume seeded. *)
     val diagsAtLastSnap = ref (DArray.size (#diags initialTrees))
+    (* Drop the resume seed's claims about the declaration this pass is
+       about to re-elaborate.
+
+       A resumed pass skips *compiling* everything below its resume
+       point, but it re-parses the whole file, so the first declaration
+       it does compile can straddle that point.  Completing a
+       `Definition ... End` at the end of the file is the case that
+       bites: the snapshot resumed from is the one the synthesised
+       end-of-theory declaration took at the old EOF, and the
+       diagnostics frozen into it include the `unclosed quotation' that
+       the half-written body drew.  Appending puts the edit exactly at
+       that snapshot's `endByte', so it is chosen, and the warning is
+       seeded into a pass whose text no longer deserves it.  Nothing
+       else removes a seeded entry, so it stood for the rest of the
+       session.
+
+       This pass derives that declaration's diagnostics afresh, so a
+       seeded entry anchored inside it is either about to be reported
+       again or is no longer true; either way the frozen copy has
+       nothing left to say.  Done once, at the first declaration
+       compiled: a seed that survives that one starts above it, and so
+       above every declaration after it too.
+
+       Seeds are picked out by index and not by position alone.
+       `fetchDec' reports a declaration's parse errors before
+       `onDecStarted' fires, so by the time this runs the fresh copy is
+       already in the array -- and a filter that went by position would
+       take it down with the stale one, leaving a quotation that is
+       still open with no squiggle at all.  The seed is exactly the
+       prefix the resume cloned in; everything this pass reports lands
+       after it.
+
+       `diagsAtLastSnap' goes back to the seeds that were kept, not to
+       the new total, so `captureSnap' still reads anything reported
+       from here on as the current declaration's own.  Counting the
+       total instead would let a `Definition' that is *still*
+       unterminated capture a snapshot -- its own warning would read as
+       something that stood before it -- which is the bug again. *)
+    val seedSize = DArray.size (#diags initialTrees)
+    val seedPruned = ref (seedSize = 0)
+    fun pruneSeedAt decStart =
+      if !seedPruned then () else let
+        val () = seedPruned := true
+        val diags = #diags (!trees)
+        val out = DArray.new (DArray.size diags, Completed)
+        val kept = ref 0
+        fun step (i, r) =
+            if i >= seedSize then DArray.push (out, r)
+            else case r of
+                     Error {pos = (s, _), ...} =>
+                       if s >= decStart then ()
+                       else (kept := !kept + 1; DArray.push (out, r))
+                   | _ => (kept := !kept + 1; DArray.push (out, r))
+      in
+        DArray.appi step diags;
+        DArray.replace (diags, out);
+        diagsAtLastSnap := !kept
+      end
     val cancelled = ref false
 
     (* This pass's hold on `compileStateOwner`, released exactly once
@@ -2962,7 +3021,7 @@ fun start {diag, dbg, warnings} = let
       fun runCompile () = (
         sendProgressBegin ();
         compileForReport uri (#text text) resumeStart stopAfter lastPos
-                         processBuiltTree captureSnap process;
+                         processBuiltTree pruneSeedAt captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
            we might land here on a stale thread whose applyEdit has
@@ -4088,7 +4147,7 @@ fun start {diag, dbg, warnings} = let
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
     val compile = compileForReport uri code 0 NONE (ref 0) (fn _ => ())
-                                   (fn _ => ())
+                                   (fn _ => ()) (fn _ => ())
     in
       case incr of
         IncrNone => let

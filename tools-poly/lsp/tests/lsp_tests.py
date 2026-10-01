@@ -3580,6 +3580,124 @@ def test_stale_diagnostic_from_partial_parse_clears_on_completion():
         c.close()
 
 
+def test_appending_a_definition_at_eof_clears_its_unclosed_quotation():
+    """Writing a `Definition ... End` at the bottom of a buffer used to
+    leave its `unclosed quotation` warning on the colon for good.
+
+    The parser synthesises a zero-width end-of-theory declaration at
+    EOF.  It draws no diagnostic of its own and sits past the one the
+    half-written body drew, so `captureSnap` captured a resume snapshot
+    there with that warning frozen into it.  Appending puts the next
+    edit exactly at that snapshot's `endByte`, so the next pass resumed
+    from it and seeded the warning back -- and nothing removes a seeded
+    entry, so it stood for the rest of the session however the
+    declaration was finished.
+
+    Every `... End' block form scans its body with the same
+    `parseQuoteBody', so every one of them was affected; `Inductive' is
+    here beside `Definition' because it is the other one this was
+    reported on.
+
+    Regression: type each block in at EOF, one pass per line.  The
+    warning is wanted while the body is open, so the states before the
+    closing keyword must still carry it; only the close clears it."""
+    blocks = [
+        ("Definition f_def[simp]:\n", "  f x = x + 1\n", "End\n"),
+        ("Inductive P:\n", "  P 0 /\\\n", "  (!n. P n ==> P (SUC n))\n",
+         "End\n"),
+    ]
+    for n, block in enumerate(blocks):
+        c = Client("/tmp", args=["--dbg"])
+        try:
+            _init(c, "/tmp")
+            uri = f"file:///tmp/eof_block_{n}.sml"
+            text = f"Theory eof_block_{n}\nAncestors hol\n\n"
+            _did_open(c, uri, text, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        f"block {n}: compiled the header")
+
+            def unclosed():
+                return [d for d in _diag_count(c, uri)
+                        if "unclosed quotation" in d.get("message", "")]
+
+            ver = 1
+            for k, chunk in enumerate(block):
+                last = k == len(block) - 1
+                ver += 1
+                at = len(text.encode("utf8"))
+                mark = c.total_msgs()
+                # Each append is its own pass: that is what leaves a
+                # snapshot at the old EOF for the next one to resume
+                # from.
+                _did_change_incr(c, uri, text, at, at, chunk, ver)
+                text = text + chunk
+                assert_true(c.wait_for_method("$/compileCompleted", 60, mark),
+                            f"block {n}: compiled after {chunk!r}")
+                if not last:
+                    assert_true(unclosed(),
+                                f"block {n}: unclosed-quotation warning while "
+                                f"the body is open, after {chunk!r}")
+                    continue
+                assert_eq(unclosed(), [],
+                          f"block {n}: the warning clears on {chunk.strip()!r} "
+                          f"({[d.get('message','')[:40] for d in _diag_count(c, uri)]!r})")
+                # The whole point is that this pass *resumed*; if it
+                # ever stops doing so the test proves nothing, so say
+                # so rather than passing quietly.
+                res = _resume_events(c, since=mark, uri=uri)
+                assert_true(any(r.get("pos") == at for r in res),
+                            f"block {n}: the closing pass resumed at the old "
+                            f"EOF {at} ({res!r})")
+            assert_eq(_diag_count(c, uri), [],
+                      f"block {n}: the finished file is clean")
+        finally:
+            c.close()
+
+
+def test_diagnostic_above_the_resume_point_survives_an_eof_edit():
+    """The upper guard on the same prune.  A resumed pass drops the
+    seeded diagnostics anchored inside the declaration it is about to
+    re-elaborate -- it must not touch the ones above that.
+
+    Deliberately a *hard* compile error and not a parse error: the
+    parser runs over the whole file every pass, so a parse error above
+    the resume point comes back on its own and could not be lost.  A
+    compile error from a declaration whose compilation is skipped has
+    no second source, and the resume seed is the only thing carrying
+    it."""
+    c = Client("/tmp", args=["--dbg"])
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/above_resume.sml"
+        text = ("Theory above_resume\n"
+                "Ancestors hol\n"
+                "\n"
+                "val broken = no_such_identifier_xyz;\n"
+                "\n"
+                "val ok = 2;\n")
+        _did_open(c, uri, text, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60), "c0")
+        before = _diag_count(c, uri)
+        assert_eq(len(before), 1, f"one diagnostic to start with ({before!r})")
+        rng, msg = before[0]["range"], before[0]["message"]
+
+        at = len(text.encode("utf8"))
+        mark = c.total_msgs()
+        _did_change_incr(c, uri, text, at, at, "\nval extra = 3;\n", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, mark),
+                    "compiled after the append")
+        res = _resume_events(c, since=mark, uri=uri)
+        assert_true(res, "the append resumed rather than recompiling "
+                         "from the top -- otherwise this proves nothing")
+        after = _diag_count(c, uri)
+        assert_eq(len(after), 1,
+                  f"the error above the resume point survives ({after!r})")
+        assert_eq(after[0]["range"], rng, "its range is unchanged")
+        assert_eq(after[0]["message"], msg, "its message is unchanged")
+    finally:
+        c.close()
+
+
 def test_goalState_failed_tactic_publishes_diagnostic():
     """After a walker query that halts at a failed tactic, the server
     must publish a `textDocument/publishDiagnostics` covering the
@@ -8716,6 +8834,10 @@ TESTS = [
                                      test_goalState_failed_tactic_signals_error),
     ("goalState_failed_tactic_publishes_diagnostic",
                                      test_goalState_failed_tactic_publishes_diagnostic),
+    ("appending_a_definition_at_eof_clears_its_unclosed_quotation",
+                     test_appending_a_definition_at_eof_clears_its_unclosed_quotation),
+    ("diagnostic_above_the_resume_point_survives_an_eof_edit",
+                     test_diagnostic_above_the_resume_point_survives_an_eof_edit),
     ("stale_diags_dont_survive_char_by_char_typing",
                                      test_stale_diags_dont_survive_char_by_char_typing),
     ("diagnostics_deduplicated_across_publish",
