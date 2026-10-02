@@ -5,6 +5,7 @@ sig
  datatype pretype = datatype ParseDatatype_dtype.pretype
  datatype datatypeForm = datatype ParseDatatype_dtype.datatypeForm
  type AST = ParseDatatype_dtype.AST
+ type attrarg = ParseDatatype_dtype.attrarg
  type attributes = ParseDatatype_dtype.attributes
  type annotatedAST = ParseDatatype_dtype.annotatedAST
  type field = ParseDatatype_dtype.field
@@ -47,7 +48,8 @@ val hparse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
 
      G ::= id <attrs>? "=" <form> (";" id <attrs>? "=" <form>)* ";"?
      attrs ::= "[" attr ("," attr)* "]" | "[" "]"
-     attr  ::= id ("=" id+)?
+     attr  ::= id ("=" arg+)?
+     arg   ::= id <attrs>?
 
    The attributes are the datatype package's, and say what it should
    call the constants it generates for the type; nothing here reads

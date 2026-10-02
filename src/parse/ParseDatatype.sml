@@ -345,23 +345,35 @@ fun parse_attributes qb =
                      (adv, base_tokens.BT_Ident s', _) =>
                        if s = s' then SOME adv else NONE
                    | _ => NONE
-    fun args acc =
+    (* an argument is a name, which may carry its own attributes *)
+    fun arg () =
+        let val nm = ident qb
+        in
+          case peek "[" of
+              NONE => (nm, [])
+            | SOME adv =>
+              (adv();
+               case peek "]" of
+                   SOME adv' => (adv'(); (nm, []))
+                 | NONE => (nm, List.map #1 (attributes [])))
+        end
+    and args acc =
         case pdtok_of qb of
             (_, base_tokens.BT_Ident s, _) =>
               if s = "," orelse s = "]" then List.rev acc
-              else args (ident qb :: acc)
+              else args (arg () :: acc)
           | (_, t, locn) =>
               raise ERRloc "parse_attributes" locn
                     ("Wanted an attribute argument; got \"" ^
                      base_tokens.toString t ^ "\"")
-    fun attribute () =
+    and attribute () =
         let val key = ident qb
         in
           case peek "=" of
               SOME adv => (adv(); (key, args []))
             | NONE => (key, [])
         end
-    fun attributes acc =
+    and attributes acc =
         let val a = attribute ()
         in
           case peek "," of

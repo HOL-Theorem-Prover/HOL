@@ -883,18 +883,26 @@ fun adtest (s, expected) =
                          (map ParseDatatype_dtype.annotated_toString r))))
           s
   end
+fun A nm = (nm, [] : string list)
 val _ = List.app adtest [
   ("ty = N | C 'a ty", [[]]),
   ("ty[] = N | C 'a ty", [[]]),
-  ("ty[map=tyMAP] = N | C 'a ty", [[("map", ["tyMAP"])]]),
+  ("ty[map=tyMAP] = N | C 'a ty", [[("map", [A"tyMAP"])]]),
   ("ty[map=tyMAP,set=LIST_TO_SET] = N | C 'a ty",
-   [[("map", ["tyMAP"]), ("set", ["LIST_TO_SET"])]]),
-  ("ty[set=fsts snds] = N | C 'a ty", [[("set", ["fsts", "snds"])]]),
+   [[("map", [A"tyMAP"]), ("set", [A"LIST_TO_SET"])]]),
+  ("ty[set=fsts snds] = N | C 'a ty", [[("set", [A"fsts", A"snds"])]]),
   ("ty [ map = tyMAP , nocompute ] = N | C 'a ty",
-   [[("map", ["tyMAP"]), ("nocompute", [])]]),
-  ("ty[map=tyMAP] = <| fld1 : bool |>", [[("map", ["tyMAP"])]]),
+   [[("map", [A"tyMAP"]), ("nocompute", [])]]),
+  ("ty[map=tyMAP] = <| fld1 : bool |>", [[("map", [A"tyMAP"])]]),
   ("ty[map=tyMAP] = N | C 'a ty; ty2 = D bool",
-   [[("map", ["tyMAP"])], []])
+   [[("map", [A"tyMAP"])], []]),
+  (* an argument may say something about itself *)
+  ("ty[set=tySET[nocompute]] = N | C 'a ty",
+   [[("set", [("tySET", ["nocompute"])])]]),
+  ("ty[set=tySET[]] = N | C 'a ty", [[("set", [A"tySET"])]]),
+  ("ty[map=tyMAP[a,b],set=s1 s2[c]] = N | C 'a ty",
+   [[("map", [("tyMAP", ["a", "b"])]),
+     ("set", [A"s1", ("s2", ["c"])])]])
 ]
 
 (* and the plain entry points say so rather than dropping them *)

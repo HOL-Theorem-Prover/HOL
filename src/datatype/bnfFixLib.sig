@@ -21,6 +21,13 @@ sig
      ---------------------------------------------------------------------- *)
   type names = {map : string option, sets : string option list,
                 relator : string option, size : string option,
+                (* what a generated constant says about its own
+                   equations, in attributes on its name:
+                   `<attr>=<name>[nocompute,simp]`.  They go to the
+                   compute set unless nocompute, as a definition's do,
+                   and to the simplifier only if asked. *)
+                nocompute : string list,
+                simp : string list,
                 (* the specification's own type variables, against the
                    ones the construction works with: what reads a
                    datatype instantiates a constant's variables by name,

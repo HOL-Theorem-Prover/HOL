@@ -816,18 +816,39 @@ fun spec_has_tyvars astl =
       List.exists (inForm o #2) astl
     end
 
+(* What a declaration says about itself is the BNF package's: the names
+   it should give the constants it generates.  The older construction
+   generates none of them and so cannot honour the request; a
+   specification it has to build must not carry any, and saying so is
+   better than building the type under names it was not asked for. *)
+fun unannotate ({name, form, ...} : ParseDatatype.annotatedAST) =
+    (name, form) : ParseDatatype.AST
+
+fun attrs_of astl =
+    List.concat (List.map (List.map #1 o #attrs) astl)
+
 (* the same three-way choice as Datatype below: the older syntax says
    the same things *)
 fun dispatch astl =
-    if is_enum_type_spec astl orelse
-       not (spec_recurses astl orelse spec_has_tyvars astl) orelse
-       not (bnfDatatypeLib.expressible astl)
-    then
-      astHol_datatype astl
-    else bnfDatatypeLib.bnfDatatypeASTs astl
+    let
+      val plain = List.map unannotate astl
+    in
+      if is_enum_type_spec plain orelse
+         not (spec_recurses plain orelse spec_has_tyvars plain) orelse
+         not (bnfDatatypeLib.expressible astl)
+      then
+        case attrs_of astl of
+            [] => astHol_datatype plain
+          | ks =>
+            raise ERR "dispatch"
+                  ("this specification is the older construction's to \
+                   \build, and that construction names no constants: " ^
+                   String.concatWith ", " ks)
+      else bnfDatatypeLib.bnfDatatypeASTs astl
+    end
 
 fun Hol_datatype q =
-    dispatch (ParseDatatype.parse (type_grammar()) q)
+    dispatch (ParseDatatype.parse_annotated (type_grammar()) q)
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Hol_datatype" e)
 
@@ -850,7 +871,7 @@ fun Hol_datatype q =
 (*---------------------------------------------------------------------------*)
 
 fun Datatype q =
-    dispatch (ParseDatatype.hparse (type_grammar()) q)
+    dispatch (ParseDatatype.hparse_annotated (type_grammar()) q)
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Datatype" e)
 

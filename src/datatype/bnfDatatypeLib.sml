@@ -100,7 +100,36 @@ fun datatype_presentation (spec : spec) =
                                         boolTheory.DATATYPE_TAG_THM)))
     end
 
-fun persist tyinfos =
+(* A constant the declaration marks nocompute keeps its equations out
+   of the entry altogether, which is more than the word says: on a
+   definition it stops only the compute set.  The difference is not
+   this package's to fix.  Registering a type with TypeBase feeds EVAL
+   by itself -- computeLib registers an update function there -- so an
+   entry cannot be given to TypeBase and withheld from the compute
+   set, and deleting the constant afterwards takes the theory's own
+   equations with it, the two delta streams replaying independently.
+   When EVAL no longer takes a type's simplification set for its own,
+   this becomes the narrow thing it is named for; until then a
+   declaration that says it is one that states the equations itself. *)
+fun withoutCompute nocomp tyi =
+    if null nocomp then tyi
+    else
+      let
+        val sf = TypeBasePure.simpls_of tyi
+        fun says th =
+            Lib.total (fn () =>
+              let val c = hd (strip_conj (#2 (strip_forall (concl th))))
+                  val l = lhs (#2 (strip_forall c))
+              in #1 (dest_const (#1 (strip_comb l))) end) ()
+        fun wanted th = case says th of
+                            SOME nm => not (Lib.mem nm nocomp)
+                          | NONE => true
+      in
+        TypeBasePure.put_simpls
+          {convs = #convs sf, rewrs = List.filter wanted (#rewrs sf)} tyi
+      end
+
+fun persist nocomp tyinfos =
     let
       open TypeBasePure
       fun saveThms tyi =
@@ -125,11 +154,12 @@ fun persist tyinfos =
                     (if length tynames > 1 then "s" else "") ^ ": " ^
                     String.concat (Lib.commafy tynames)
     in
-      TypeBase.export tyinfos
+      TypeBase.export (List.map (withoutCompute nocomp) tyinfos)
     ; List.app saveThms tyinfos
     ; List.app (fn tyi => Parse.overload_on ("case", case_const_of tyi))
                tyinfos
-    ; List.app computeLib.write_datatype_info tyinfos
+    ; List.app (computeLib.write_datatype_info o withoutCompute nocomp)
+               tyinfos
     ; Feedback.HOL_MESG message
     end
 
@@ -297,9 +327,9 @@ fun oneType db (spec : spec) =
             | SOME flds =>
               [RecordType.prove_recordtype_thms (hd tyinfos, flds)]
     in
-      List.app (fn th => ignore (save_thm (name_of_eqn th, th))) eqns
+      List.app (saveEqn nms) eqns
     ; datatype_presentation spec
-    ; persist tyinfos
+    ; persist (#nocompute nms) tyinfos
     ; (* only the recursive construction builds an ambient to discard;
          a copy's witnesses are transported through its own bijection
          and want it kept *)
@@ -350,6 +380,37 @@ and name_of_eqn th =
     in
       #1 (dest_const (#1 (strip_comb l))) ^ "_thm"
     end
+
+(* What a generated constant's equations are to the rest of HOL, which
+   is what a definition's are: the function's definition, so that a
+   reader wanting one does not get the specification the construction
+   built (`MAP f (list_CONS af) = ...`, which is not about the
+   constructors and which cv_transLib cannot make a case of); and the
+   compute set's, unless the declaration said otherwise.  The
+   simplifier's only if it asked: a definition is not a rewrite by
+   default, and this is a definition. *)
+and saveEqn nms th =
+    let
+      val nm = name_of_eqn th
+      val c = #1 (dest_const (#1 (strip_comb
+                   (lhs (#2 (strip_forall
+                     (hd (strip_conj (#2 (strip_forall (concl th)))))))))))
+    in
+      ignore (save_thm (nm, th))
+    ; DefnBase.register_defn {tag = "user", thmname = nm}
+    ; if Lib.mem c (#nocompute nms) then ()
+      else computeLib.add_persistent_funs [nm]
+    ; if Lib.mem c (#simp nms) then BasicProvers.export_rewrites [nm] else ()
+    end
+
+(* a family's members are saved together, and each says for itself what
+   its constants want; the flags are read as one *)
+and unionNames nmss =
+    {map = NONE, sets = [], relator = NONE, size = NONE,
+     nocompute = List.concat (List.map #nocompute nmss),
+     simp = List.concat (List.map #simp nmss),
+     written = []} : bnfFixLib.names
+
 
 (* ----------------------------------------------------------------------
     A specification of several types at once.
@@ -421,10 +482,10 @@ fun manyTypes db (spec : spec) =
                   RecordType.prove_recordtype_thms (tyi, flds))
             (#fields spec, tyinfos)
     in
-      List.app (fn th => ignore (save_thm (name_of_eqn th, th)))
+      List.app (saveEqn (unionNames (#names spec)))
                (List.concat rewrites)
     ; datatype_presentation spec
-    ; persist tyinfos
+    ; persist (List.concat (List.map #nocompute (#names spec))) tyinfos
     ; tyinfos
     end
 
@@ -562,10 +623,7 @@ fun bnfDatatype q = ignore (bnfDatatypeInfo q)
    ---------------------------------------------------------------------- *)
 fun expressible astl =
     let
-      val spec = specOfASTs (List.map (fn (name, form) =>
-                                          {name = name, attrs = [],
-                                           form = form})
-                                      astl)
+      val spec = specOfASTs astl
       val db = bnfBase.fullDB()
       fun ok (fty, slots) =
           let val live = bnfLib.liveTyvars db fty
@@ -579,12 +637,9 @@ fun expressible astl =
     end
     handle HOL_ERR _ => false
 
-(* what a caller that has parsed already hands over: the older entry
-   point's syntax gives the same declarations, without attributes *)
-fun bnfDatatypeASTs astl =
-    ignore (ofSpec (specOfASTs
-                      (List.map (fn (name, form) =>
-                                    {name = name, attrs = [], form = form})
-                                astl)))
+(* what a caller that has parsed already hands over: the same
+   declarations, carrying whatever they say about the constants they
+   generate *)
+fun bnfDatatypeASTs astl = ignore (ofSpec (specOfASTs astl))
 
 end

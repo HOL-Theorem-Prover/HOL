@@ -734,16 +734,21 @@ val _ =
       if null (hyp th) then OK() else die (thm_to_string th)
     end
 
-(* and the entries carry them: a proof by the family's induction closes
-   on the constructor equations alone *)
-val _ = tprint "the entries' simplification set"
+(* the equations are the package's own, not the user's simplification
+   set: a proof by the family's induction closes on them once it names
+   them.  What the entry carries is what it has always carried -- the
+   constructors' distinctness and injectivity, the case constant and
+   the size -- and the case constants are still enough by themselves. *)
+val _ = tprint "the generated equations, named"
 val _ =
-    let val th = Q.prove (‘(∀x:'p ct1. ct1MAP I x = x) ∧
+    let val mapEqns = List.map #map_eqns ceqns
+        val setEqns = List.concat (List.map #set_eqns ceqns)
+        val th = Q.prove (‘(∀x:'p ct1. ct1MAP I x = x) ∧
                            (∀y:'p ct2. ct2MAP I y = y) ∧
                            ∀z:'p ct3. ct3MAP I z = z’,
-                          ho_match_mp_tac cinduction >> simp[])
-        (* the sets are there too, and the case constants with them *)
-        val th2 = Q.prove (‘ct1SET (CB (CA a) u) = {a} ∪ ct2SET u’, simp[])
+                          ho_match_mp_tac cinduction >> simp mapEqns)
+        val th2 = Q.prove (‘ct1SET (CB (CA a) u) = {a} ∪ ct2SET u’,
+                           simp setEqns)
     in
       if List.all (null o hyp) [th, th2] then OK()
       else die (thm_to_string th)

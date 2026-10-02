@@ -14,10 +14,12 @@ val ERR = mk_HOL_ERR "bnfFixLib"
 
 type names = {map : string option, sets : string option list,
               relator : string option, size : string option,
+              nocompute : string list,
+              simp : string list,
               written : (hol_type * hol_type) list}
 
 val noNames : names = {map = NONE, sets = [], relator = NONE, size = NONE,
-                       written = []}
+                       nocompute = [], simp = [], written = []}
 
 (* The construction works at variables of its own, and what reads a
    datatype instantiates a constant's type variables by name — `mk_list`
@@ -4324,16 +4326,20 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
                    else TypeBasePure.COPY (orig, def))
                   tyi
               end
-      fun withRewrs (tyi, ths) =
-          let val {convs, rewrs} = TypeBasePure.simpls_of tyi
-          in
-            TypeBasePure.put_simpls {convs = convs, rewrs = rewrs @ ths} tyi
-          end
+      (* A generated constant's equations are not the entry's.  What an
+         entry's simplification set has always held is what the
+         constructors say about each other -- that they are distinct and
+         injective -- together with the case constant's equations and
+         the size's, both of which it carries in fields of its own and
+         gen_std_rewrs reads from there.  Equations put here reach more
+         than simp does: EVAL takes them, computeLib registering an
+         update function with TypeBase, and so does RW_TAC, whose
+         PRIM_STP_TAC reads the entry whatever simpset it is handed.
+         A constant the package defines is a definition like any other,
+         and says for itself what it wants. *)
     in
-      List.tabulate
-        (length tyinfos,
-         fn i => withSize (i, withRewrs (List.nth (tyinfos, i),
-                                         List.nth (rewrites, i))))
+      List.tabulate (length tyinfos,
+                     fn i => withSize (i, List.nth (tyinfos, i)))
     end
 
 
@@ -4371,7 +4377,7 @@ fun attrNames nargs tyname attrs : names =
           let
             fun single () =
                 case args of
-                    [v] => SOME v
+                    [(v, _)] => SOME v
                   | _ => raise ERR "parseSpec"
                                ("the " ^ key ^ " attribute of " ^ tyname ^
                                 " takes one name")
@@ -4391,20 +4397,45 @@ fun attrNames nargs tyname attrs : names =
                               Int.toString (length args) ^
                               " set functions are named")
                      else ()
+            (* what an argument says about itself.  The compute set is
+               the only thing a generated constant has an opinion on so
+               far, and an unknown flag is an error for the same reason
+               an unknown attribute is. *)
+            fun flagged want =
+                List.concat
+                  (List.map
+                     (fn (nm, flags) =>
+                         List.mapPartial
+                           (fn f => if f = want then SOME nm
+                                    else if f = "nocompute" orelse f = "simp"
+                                    then NONE
+                                    else raise ERR "parseSpec"
+                                           (tyname ^ "'s " ^ nm ^
+                                            " carries a flag " ^ f ^
+                                            ", and the ones read here " ^
+                                            "are nocompute and simp"))
+                           flags)
+                     args)
+            val nocompute = #nocompute acc @ flagged "nocompute"
+            val simp = #simp acc @ flagged "simp"
           in
             case key of
                 "map" => {map = single(), sets = #sets acc,
                           relator = #relator acc, size = #size acc,
+                          nocompute = nocompute, simp = simp,
                           written = #written acc}
-              | "set" => {map = #map acc, sets = List.map SOME args,
+              | "set" => {map = #map acc, sets = List.map (SOME o #1) args,
                           relator = #relator acc, size = #size acc,
+                          nocompute = nocompute, simp = simp,
                           written = #written acc}
               | "rel" => {map = #map acc, sets = #sets acc,
                           relator = single(), size = #size acc,
+                          nocompute = nocompute, simp = simp,
                           written = #written acc}
               | "size" => {map = #map acc, sets = #sets acc,
                            relator = #relator acc, size = single(),
-                           written = #written acc}
+                           nocompute = nocompute, simp = simp,
+                          written = #written acc}
               | _ => raise ERR "parseSpec"
                            (tyname ^ " carries an attribute " ^ key ^
                             ", and the ones read here are map, set, rel " ^
@@ -4454,7 +4485,8 @@ fun specOfASTs asts : spec =
                             in
                               {map = #map nms, sets = #sets nms,
                                relator = #relator nms, size = #size nms,
-                               written = origins}
+                               nocompute = #nocompute nms,
+                               simp = #simp nms, written = origins}
                             end)
                         asts,
        written = origins}

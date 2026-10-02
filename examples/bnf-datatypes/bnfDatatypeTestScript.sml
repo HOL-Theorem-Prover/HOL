@@ -28,6 +28,11 @@ val _ =
                  "_case_cong", "_case_eq"]
     then OK() else die "not all saved"
 
+(* A generated constant's equations are the package's own, not the
+   user's simplification set; a proof about one names it.  They are
+   saved as <constant>_thm. *)
+fun geqs cs = List.map (fn c => DB.fetch "bnfDatatypeTest" (c ^ "_thm")) cs
+
 val _ = tprint "and it behaves like a datatype"
 val _ =
     let val th1 = Q.prove (‘MNil ≠ MCons a l ∧
@@ -36,10 +41,13 @@ val _ =
                            Cases >> simp[])
         val th3 = Q.prove (‘(case MCons a l of MNil => 0n | MCons _ _ => 1)
                             = 1’, simp[])
+        (* the generated constants' equations are the package's, not
+           the user's simplification set: a proof about them names
+           them *)
         val th4 = Q.prove (‘∀l : 'a mylist. mylistMAP I l = l’,
-                           Induct >> simp[])
+                           Induct >> simp (geqs ["mylistMAP"]))
         val th5 = Q.prove (‘mylistSET (MCons a l) = a INSERT mylistSET l’,
-                           simp[])
+                           simp (geqs ["mylistSET"]))
     in
       if List.all (null o hyp) [th1, th2, th3, th4, th5] then OK()
       else die "not proved"
@@ -70,7 +78,7 @@ val _ =
                              RNode (f a) (mylistMAP (roseMAP f) l) ∧
                            roseSET (RNode a l) =
                              a INSERT BIGUNION (IMAGE roseSET (mylistSET l))’,
-                          simp[])
+                          simp (geqs ["roseMAP", "roseSET"]))
         val (_, szth) = TypeBase.size_of “:'a rose”
     in
       if null (hyp th) andalso
@@ -121,7 +129,7 @@ val _ =
     let val ns = List.map (#1 o dest_const) (Theory.constants "-")
         fun has s = Lib.mem s ns
         val th = Q.prove (‘stack_elems (Psh a s) = a INSERT stack_elems s’,
-                          simp[])
+                          simp (geqs ["stack_elems"]))
     in
       if List.all has ["SMAP", "stack_elems", "SREL", "stack_sz"] andalso
          not (List.exists has ["stackMAP", "stackSET", "stackREL"]) andalso
@@ -147,8 +155,9 @@ val _ = tprint "the family's types and constructors"
 val _ =
     let val th1 = Q.prove (‘A a ≠ B t u ∧ (E x = E y ⇔ x = y)’, simp[])
         val th2 = Q.prove (‘t1MAP f (B t u) = B (t1MAP f t) (t2MAP f u)’,
-                           simp[])
-        val th3 = Q.prove (‘t2SET (D a t) = a INSERT t2SET t’, simp[])
+                           simp (geqs ["t1MAP", "t2MAP"]))
+        val th3 = Q.prove (‘t2SET (D a t) = a INSERT t2SET t’,
+                           simp (geqs ["t2SET"]))
     in
       if List.all (null o hyp) [th1, th2, th3] then OK() else die "not proved"
     end
@@ -159,7 +168,8 @@ val _ =
             Q.prove (‘(∀t : 'a t1. t1MAP I t = t) ∧
                       (∀t : 'a t2. t2MAP I t = t) ∧
                       ∀t : 'a t3. t3MAP I t = t’,
-                     ho_match_mp_tac (DB.fetch "-" "t1_induction") >> simp[])
+                     ho_match_mp_tac (DB.fetch "-" "t1_induction") >>
+                     simp (geqs ["t1MAP", "t2MAP", "t3MAP"]))
     in
       if null (hyp th) then OK() else die "not proved"
     end
@@ -204,12 +214,14 @@ val _ =
 
 val _ = tprint "and what its set functions reach"
 val _ =
-    let val th1 = Q.prove (‘p ∈ n3SET1 (P2 t p q) ∧ q ∈ n3SET2 (P2 t p q)’,
-                           simp[])
-        val th2 = Q.prove (‘x ∈ n1SET1 t ⇒ x ∈ n3SET1 (P2 t p q)’, simp[])
+    let val nsets = geqs ["n1SET1", "n1SET2", "n3SET1", "n3SET2"]
+        val th1 = Q.prove (‘p ∈ n3SET1 (P2 t p q) ∧ q ∈ n3SET2 (P2 t p q)’,
+                           simp nsets)
+        val th2 = Q.prove (‘x ∈ n1SET1 t ⇒ x ∈ n3SET1 (P2 t p q)’,
+                           simp nsets)
         (* nothing reaches through an empty collection, which is the
            doubly nested argument saying so *)
-        val th3 = Q.prove (‘n1SET1 (N1 l []) = ∅’, simp[])
+        val th3 = Q.prove (‘n1SET1 (N1 l []) = ∅’, simp nsets)
     in
       if List.all (null o hyp) [th1, th2, th3] then OK() else die "not proved"
     end

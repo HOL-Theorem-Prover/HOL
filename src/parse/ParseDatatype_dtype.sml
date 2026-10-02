@@ -23,7 +23,11 @@ struct
     spelled the way a theorem's attributes are — comma-separated, each
     with whitespace-separated arguments after an "=".  What they mean is
     the datatype package's business, not the parser's. *)
- type attributes = (string * string list) list
+ (* an attribute's argument is a name, which may itself carry
+    attributes: `set=LIST_TO_SET[nocompute]` says what to call the set
+    function and that its equations are not the compute set's. *)
+ type attrarg = string * string list
+ type attributes = (string * attrarg list) list
  type annotatedAST = {name : string, attrs : attributes, form : datatypeForm}
 
  fun str s = "\"" ^ s ^ "\""
@@ -46,8 +50,12 @@ struct
        Constructors cl => "Constructors" ^ list_toString c_toString cl
      | Record fl => "Record" ^ list_toString fld_toString fl
  val toString = pr (str, dtF_toString)
+ fun attrarg_toString (nm, flags) =
+   nm ^ (if null flags then ""
+         else "[" ^ String.concatWith "," flags ^ "]")
  fun attr_toString (k, args) =
-   k ^ (if null args then "" else "=" ^ String.concatWith " " args)
+   k ^ (if null args then ""
+        else "=" ^ String.concatWith " " (map attrarg_toString args))
  fun annotated_toString {name, attrs, form} =
    "(" ^ str name ^ "," ^ list_toString attr_toString attrs ^ "," ^
    dtF_toString form ^ ")"

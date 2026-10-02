@@ -20,7 +20,7 @@ Ancestors
   arithmetic pair pred_set relation combin basicSize[qualified]
 Libs
   HolKernel Parse boolLib BasicProvers Num_conv mesonLib simpLib
-  boolSimps pred_setLib TotalDefn metisLib quotientLib bnfBase
+  boolSimps pred_setLib TotalDefn metisLib quotientLib
   Datatype[qualified] OpenTheoryMap[qualified]
 
 (* the bound is a cardinality, and cardinalityCoreTheory makes no
@@ -70,7 +70,10 @@ val PAIR_EQ      = pairTheory.PAIR_EQ;
 (* Declare the datatype of lists                                             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Datatype.Hol_datatype ‘list = NIL | CONS of 'a => list’;
+val _ = Datatype.Hol_datatype
+          ‘list[map=MAP[nocompute],set=LIST_TO_SET[nocompute],rel=LIST_REL,
+            size=list_size] =
+             NIL | CONS of 'a => list’;
 
 local open OpenTheoryMap val cname = OpenTheory_const_name in
 val ns = ["Data","List"]
@@ -176,15 +179,35 @@ Definition LENGTH[simp]:
   LENGTH (h::t) = SUC (LENGTH t)
 End
 
-Definition MAP[simp]:
-  MAP (f:'a -> 'b) [] = [] /\
-  MAP f (h::t) = f h::MAP f t
-End
+(* MAP and LIST_TO_SET are the datatype package's: the declaration above
+   asks for them by name.  These say what the definitions here used to,
+   in the shape they used to: a consumer that takes the conjunction
+   apart and instantiates it — List_conv's MAP_CONV does — is written
+   against that shape and not merely against the name. *)
+Theorem MAP[simp,compute]:
+  (!f:'a -> 'b. MAP f [] = []) /\
+  (!(f:'a -> 'b) h t. MAP f (h::t) = f h::MAP f t)
+Proof
+  SRW_TAC [] [DB.fetch "list" "MAP_thm"]
+QED
 
-Definition LIST_TO_SET_DEF[simp]:
-  (LIST_TO_SET [] x <=> F) /\
-  (LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
-End
+(* a function the package generates comes without the induction a
+   definition would have registered for it *)
+Theorem MAP_ind:
+  !P. (!f:'a -> 'b. P f ([]:'a list)) /\
+      (!(f:'a -> 'b) (h:'a) t. P f t ==> P f (h::t)) ==>
+      !(f:'a -> 'b) (l:'a list). P f l
+Proof
+  REPEAT GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] []
+QED
+val _ = DefnBase.register_indn (MAP_ind, [{Thy = "list", Name = "MAP"}])
+
+Theorem LIST_TO_SET_DEF[simp,compute]:
+  (!x. LIST_TO_SET [] x <=> F) /\
+  (!h t x. LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
+Proof
+  SRW_TAC [] [DB.fetch "list" "LIST_TO_SET_thm", IN_DEF]
+QED
 
 Overload set = “LIST_TO_SET”
 Overload MEM = “\h:'a l:'a list. h IN LIST_TO_SET l”
@@ -200,7 +223,7 @@ Theorem LIST_TO_SET[simp]:
   LIST_TO_SET [] = {} /\
   LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t
 Proof
-  SRW_TAC [] [FUN_EQ_THM, IN_DEF]
+  SRW_TAC [] [DB.fetch "list" "LIST_TO_SET_thm"]
 QED
 
 Definition FILTER[simp]:
@@ -1436,12 +1459,72 @@ QED
     Lifts a relation point-wise to two lists
    ---------------------------------------------------------------------- *)
 
-Inductive LIST_REL:
-[~nil_rule:]
-  LIST_REL R [] []
-[~cons_I:]
-  !h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==> LIST_REL R (h1::t1) (h2::t2)
-End
+(* The relator is the datatype package's, stated as the map and set
+   functions determine it: two lists are related when a list of pairs
+   maps onto both.  What the inductive definition used to say about the
+   constructors is read back from that, and the rules, the cases and
+   the two induction principles follow. *)
+val LIST_REL_span = DB.fetch "list" "LIST_REL_def"
+
+Theorem LIST_REL_def[simp,compute,allow_rebind]:
+  (LIST_REL R []      []      <=> T) /\
+  (LIST_REL R (a::as) []      <=> F) /\
+  (LIST_REL R []      (b::bs) <=> F) /\
+  (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)
+Proof
+  REWRITE_TAC[LIST_REL_span] THEN BETA_TAC THEN REPEAT CONJ_TAC THEN
+  SRW_TAC[][MAP_EQ_CONS, EQ_IMP_THM] THEN
+  TRY (FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC[][] THEN NO_TAC) THEN
+  TRY (Q.EXISTS_TAC ‘t0’ THEN SRW_TAC[][] THEN METIS_TAC[] THEN NO_TAC) THEN
+  Q.EXISTS_TAC ‘(a,b)::z’ THEN SRW_TAC[][] THEN
+  METIS_TAC[pairTheory.FST, pairTheory.SND]
+QED
+
+Theorem LIST_REL_rules:
+  !R. LIST_REL R [] [] /\
+      !h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==>
+                    LIST_REL R (h1::t1) (h2::t2)
+Proof SRW_TAC[][]
+QED
+
+Theorem LIST_REL_cases:
+  !R a0 a1.
+    LIST_REL R a0 a1 <=>
+    a0 = [] /\ a1 = [] \/
+    ?h1 h2 t1 t2. a0 = h1::t1 /\ a1 = h2::t2 /\ R h1 h2 /\ LIST_REL R t1 t2
+Proof
+  REPEAT GEN_TAC THEN
+  Q.ISPEC_THEN ‘a0’ STRUCT_CASES_TAC list_CASES THEN
+  Q.ISPEC_THEN ‘a1’ STRUCT_CASES_TAC list_CASES THEN SRW_TAC[][]
+QED
+
+Theorem LIST_REL_ind:
+  !R LIST_REL'.
+    LIST_REL' [] [] /\
+    (!h1 h2 t1 t2. R h1 h2 /\ LIST_REL' t1 t2 ==>
+                   LIST_REL' (h1::t1) (h2::t2)) ==>
+    !a0 a1. LIST_REL R a0 a1 ==> LIST_REL' a0 a1
+Proof
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Induct THEN REPEAT GEN_TAC THEN Cases_on ‘a1’ THEN
+  SRW_TAC[][] THEN METIS_TAC[]
+QED
+
+(* Induct_on `LIST_REL` takes the strong principle: that is what
+   Inductive registers (IndDefLib exports <name>_strongind), and a
+   proof that case-splits and then searches needs the relation's own
+   hypothesis in the step case. *)
+Theorem LIST_REL_strongind[rule_induction]:
+  !R LIST_REL'.
+    LIST_REL' [] [] /\
+    (!h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 /\ LIST_REL' t1 t2 ==>
+                   LIST_REL' (h1::t1) (h2::t2)) ==>
+    !a0 a1. LIST_REL R a0 a1 ==> LIST_REL' a0 a1
+Proof
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Induct THEN REPEAT GEN_TAC THEN Cases_on ‘a1’ THEN
+  SRW_TAC[][] THEN METIS_TAC[]
+QED
 
 Theorem LIST_REL_EL_EQN:
   !R l1 l2. LIST_REL R l1 l2 <=>
@@ -1457,14 +1540,6 @@ Proof
                         Q.SPEC_THEN ‘SUC m’ (MP_TAC o Q.GEN ‘m’) th) THEN
     SRW_TAC [] [LIST_REL_rules]
   ]
-QED
-
-Theorem LIST_REL_def[simp,compute]:
-  (LIST_REL R []      []      <=> T) /\
-  (LIST_REL R (a::as) []      <=> F) /\
-  (LIST_REL R []      (b::bs) <=> F) /\
-  (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)
-Proof REPEAT CONJ_TAC THEN SRW_TAC [] [Once LIST_REL_cases, SimpLHS]
 QED
 
 Theorem LIST_REL_mono:
@@ -5928,79 +6003,3 @@ val _ =
  List.app TotalDefn.export_termsimp
    ["list.list_size_append", "list.list_size_reverse",
     "list.list_size_map", "list.list_size_snoc", "list.list_size_zip"];
-
-
-(* ----------------------------------------------------------------------
-    Lists as a bounded natural functor, so that a datatype specification
-    can recurse through one: MAP is the map, LIST_TO_SET the set
-    function, LIST_REL the relator, and a list holds no more atoms than
-    there are numbers.
-   ---------------------------------------------------------------------- *)
-
-fun bnm s : KernelSig.kernelname = {Thy = "list", Name = s}
-
-Theorem listMap_ID:
-  MAP (I:'a1 -> 'a1) = (I : 'a1 list -> 'a1 list)
-Proof
-  simp[FUN_EQ_THM]
-QED
-
-Theorem listMap_O:
-  MAP (f1:'c1 -> 'd1) o MAP (g1:'a1 -> 'c1) = MAP (f1 o g1)
-Proof
-  simp[FUN_EQ_THM, MAP_MAP_o]
-QED
-
-Theorem listMapIMAGE1:
-  !(f1:'a1 -> 'c1) l. set (MAP f1 l) = IMAGE f1 (set l)
-Proof
-  simp[LIST_TO_SET_MAP]
-QED
-
-Theorem listMapCONG:
-  (!a1. a1 IN set (l:'a1 list) ==> (f1:'a1 -> 'c1) a1 = g1 a1) ==>
-  MAP f1 l = MAP g1 l
-Proof
-  strip_tac >> irule MAP_CONG >> simp[]
-QED
-
-Theorem list_bnd1:
-  !l : 'a1 list. set l <<= univ(:num)
-Proof
-  gen_tac >> ONCE_REWRITE_TAC[cardinalityCoreTheory.cardleq_lteq] >>
-  disj1_tac >> simp[GSYM cardinalityCoreTheory.FINITE_CARD_LT]
-QED
-
-Theorem list_wit1:
-  !a1:'a1. set (K [] a1 : 'a1 list) SUBSET {}
-Proof
-  simp[]
-QED
-
-Theorem list_inh1:
-  !v:'a1. v IN set (combin$C CONS [] v)
-Proof
-  simp[]
-QED
-
-val _ = bnfBase.updateDB (
-  {Thy = "list", Name = "list"},
-  bnfBase.bI {
-    canontype = “:'a1 list”,
-
-    map = “list$MAP : ('a1 -> 'c1) -> 'a1 list -> 'c1 list”,
-    set = [“list$LIST_TO_SET : 'a1 list -> 'a1 set”],
-    mapID = bnm "listMap_ID",
-    mapO = bnm "listMap_O",
-    mapIMAGE = [bnm "listMapIMAGE1"],
-    mapCONG = bnm "listMapCONG",
-
-    relator = “list$LIST_REL : ('a1 -> 'c1 -> bool) ->
-                               'a1 list -> 'c1 list -> bool”,
-    bnd = “univ(:num)”,
-    bndthms = [bnm "list_bnd1"],
-
-    wits = [(“K [] : 'a1 -> 'a1 list”, bnm "list_wit1")],
-    inhabits = [(“combin$C CONS [] : 'a1 -> 'a1 list”, bnm "list_inh1")]
-  }
-)
