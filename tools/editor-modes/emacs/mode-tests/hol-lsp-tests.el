@@ -369,6 +369,31 @@ the tally, not the per-proof marks."
     (hol-lsp-tests--put "c" "failed" 15)
     (should (equal (hol-lsp-proof-summary) "\u22a22/3!1 "))))
 
+(ert-deftest hol-lsp-a-suspension-is-settled-not-outstanding ()
+  "A proof split up with `suspend' and finished off in `Resume'
+blocks is complete, and the tally has to read it that way.
+
+The buckets used to be decided by exclusion -- anything that was not
+proved, checking or cheated was a bad verdict -- so a finished file
+reported a proof to go and look at that nobody needed to look at.
+The parent's own tactic ran and did what it said; what it stashed is
+proved by the Resume blocks, which are entries in their own right.
+
+The `failed' proof is the control: the mark has to stay at one
+rather than vanish, or this would pass just as well with the bad
+count broken outright."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (hol-lsp-tests--put "split" "suspended" 3)
+    (hol-lsp-tests--put "split[p]" "proved" 9)
+    (hol-lsp-tests--put "split[q]" "proved" 14)
+    (should (equal (hol-lsp-proof-summary) ""))
+    (should (equal (hol-lsp--outstanding-proofs) nil))
+    (hol-lsp-tests--put "other" "failed" 20)
+    (should (equal (hol-lsp-proof-summary) "\u22a23/4!1 "))
+    (should (equal (mapcar #'car (hol-lsp--outstanding-proofs))
+                   '("other")))))
+
 (ert-deftest hol-lsp-a-proof-that-moves-keeps-one-entry ()
   "An edit above a proof moves it, so the pool announces the same
 proof at one line and then another.  Keyed by position that counted it
@@ -435,7 +460,7 @@ than sticking on the first."
                        (number-sequence 0 20) "\n"))
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
     (hol-lsp-tests--put "a" "checking" 4)
-    (hol-lsp-tests--put "b" "suspended" 12)
+    (hol-lsp-tests--put "b" "failed" 12)
     (goto-char (point-min))
     (hol-lsp-goto-outstanding-proof)
     (should (equal (line-number-at-pos) 5))

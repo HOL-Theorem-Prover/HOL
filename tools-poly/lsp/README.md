@@ -566,9 +566,25 @@ proof settles as `proved`.
 Every change is also announced on `$/proofStates` as a transition --
 `checking`, then a verdict, `cheated` when an entry is dropped.
 
-Both shipped clients consume it as a **tally**, shown in the mode line
-(`HOL[12/37]`, `HOL[37 ok]`, `HOL[35/37 2!]`) and in the VS Code
-status bar (`HOL LSP — proofs 12/37`).  A count rather than a bar,
+A client sorting those six statuses wants three buckets, and should
+decide each one rather than take a default:
+
+| bucket | statuses | |
+|---|---|---|
+| settled | `proved`, `suspended` | nothing to do.  A proof that suspends *ran*, and did what it said; the subgoals it stashed are proved by the `Resume` blocks, which are entries in their own right. |
+| outstanding | `checking`, `cheated` | not checked yet.  `cheated` especially: it means the pool is **not** working on this one. |
+| wrong | `failed`, `diverged` | worth going to look at. |
+
+Deciding by exclusion is the trap -- a catch-all that counts
+everything which is not `proved`/`checking`/`cheated` as wrong put
+`suspended` in the "to look at" column in both clients, so a file
+finished off with suspensions reported work the reader did not have.
+
+Both shipped clients consume this as a **tally**, shown in the emacs
+mode line (`⊢12/37`, with `!2` appended when something is wrong, and
+nothing at all once everything is checked) and in the VS Code status
+bar (`HOL LSP — proofs 12/37`, or `HOL LSP — 37 proofs checked`).  A
+count rather than a bar,
 because the states regress: a proof that suspends makes the server
 re-elaborate and drops the entries below it, so a bar would run
 backwards while a count falling from 30 to 12 reads as what it is.

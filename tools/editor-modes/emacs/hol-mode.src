@@ -2814,6 +2814,11 @@ same thing.  See `hol-lsp-retry-compile'.")
 A hash table from theorem name to (STATUS LINE NAME) -- status is
 one of \"checking\",
 \"proved\", \"failed\", \"suspended\", \"diverged\" or \"cheated\".
+Of those, \"proved\" and \"suspended\" are settled: a proof that
+suspends has run and done what it said, and the subgoals it stashed
+are proved by the `Resume' blocks, which are pool entries in their
+own right.  \"checking\" and \"cheated\" are outstanding, and
+\"failed\" and \"diverged\" want attention.
 Built from the `$/proofStates' transition stream: the server
 announces each change as it happens and never sends a snapshot, so a
 client accumulates.  nil until the first notification arrives.")
@@ -2886,14 +2891,16 @@ the end of the buffer go."
   "Proofs this buffer's pool has not settled, as (NAME STATUS LINE).
 Sorted by position, so walking them goes down the file.  `checking'
 and `cheated' are outstanding -- one has a worker on it, the other is
-waiting for the compile to re-enqueue it -- and the three bad verdicts
+waiting for the compile to re-enqueue it -- and the two bad verdicts
 are listed too, since those are what a user most wants to reach.
-`proved' is not listed: it is the state that needs nothing."
+`proved' is not listed: it is the state that needs nothing.  Nor is
+`suspended', which `hol-lsp-proof-summary' also counts as checked --
+see there for why."
   (let (out)
     (when hol-lsp--proof-states
       (maphash (lambda (_k v)
                  (let ((status (nth 0 v)) (line (nth 1 v)) (name (nth 2 v)))
-                   (unless (equal status "proved")
+                   (unless (member status '("proved" "suspended"))
                      (push (list name
                                  (if (equal status "cheated")
                                      "not checked" status)
@@ -2961,7 +2968,24 @@ from 30 to 12 reads as what it is."
                          ;; does.  Either way it is not checked.
                          ((equal status "cheated")
                           (setq unchecked (1+ unchecked)))
-                         ((equal status "proved") (setq proved (1+ proved)))
+                         ;; `suspended' is settled, not outstanding.
+                         ;; Splitting a long proof with `suspend' and
+                         ;; finishing it off in `Resume' blocks is how
+                         ;; the feature is meant to be used: the tactic
+                         ;; ran, for real, and did what it said, and
+                         ;; what is left to prove lives in the Resume
+                         ;; blocks, which have pool entries of their
+                         ;; own.  The server stopped treating it as a
+                         ;; diagnostic for the same reason -- if there
+                         ;; is nothing to squiggle there is nothing to
+                         ;; look at.
+                         ((member status '("proved" "suspended"))
+                          (setq proved (1+ proved)))
+                         ;; `failed', `diverged', or a status this
+                         ;; client does not know.  An unrecognised one
+                         ;; is counted loudly on purpose: better to
+                         ;; point at something harmless than to hide
+                         ;; something that matters.
                          (t (setq bad (1+ bad))))))
                hol-lsp--proof-states)
       (let ((total (+ checking unchecked proved bad)))
