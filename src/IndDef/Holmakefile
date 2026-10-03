@@ -2,7 +2,7 @@ HOLHEAP = $(HOLDIR)/bin/hol.state0
 all: selftest.exe
 .PHONY: all
 
-selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo CoIndDefLib.uo
+selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo CoIndDefLib.uo KeyedThmSet.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe inddef-selftest.log
