@@ -214,7 +214,8 @@ type goal_state_response = {
   segments: pp_segment list}
 type theorem_context = {
   name: string, quote: string, quoteStart: int,
-  tacText: string, tacStart: int, cursor: int, compileDone: bool}
+  tacText: string, tacStart: int, cursor: int, compileDone: bool,
+  resumeOf: {suspension: string, label: string} option}
 
 val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])

@@ -532,7 +532,7 @@ In VS Code it is `hol4-mode.lsp.checkProofs`; under eglot it is
 for the running server.  Turn it off on a machine you would rather
 keep for yourself: the pool runs the proofs for real.
 
-Three of the pool's verdicts are diagnostics, keyed by theorem name
+Two of the pool's verdicts are diagnostics, keyed by theorem name
 and squiggled on the theorem's own name — a `Failed` only until the
 walk finds the step it stops at, which replaces the entry with one
 placed there (see `failedRange` under `$/hol/goalState`):
@@ -540,11 +540,20 @@ placed there (see `failedRange` under `$/hol/goalState`):
 | verdict | severity | means |
 |---|---|---|
 | `Failed` | error | the replay did not go through.  A real build would have raised out of `store_thm_at`, so nothing below it is trustworthy. |
-| `Suspended` | warning | the proof is *correct*; our model of the file was wrong.  A real build stashes such a theorem instead of saving it, so the declarations below were elaborated as though it had been saved.  Names the subgoals. |
 | `Diverged` | warning | the proof went through but produced extra hypotheses, so what elaboration stood in for was not what the proof gives. |
 
 The other states are not diagnostics: `Proved` and `Cheated` are not
 complaints, and `Checking` is not one yet.
+
+`Suspended` is not one either, though it used to be.  Splitting a long
+proof with `suspend` and resuming it below is how the feature is meant
+to be used, and the verdict is not a report that the model is wrong so
+much as the thing that *corrects* it: it puts the proof in the
+no-cheat set, and the pass after that stashes the theorem exactly as a
+build would.  The warning therefore marked a file doing the right
+thing, with a claim that had already stopped being true by the time
+anyone read it.  The subgoal names still travel, on the `suspended`
+status.
 
 These entries are **not** cleared by a fresh compile, unlike the
 walker's.  The pool owns their lifetime and announces every change,
@@ -580,6 +589,30 @@ Custom LSP request that returns the goal-state for a cursor position
 inside a `Proof … QED` block.  The server walks the tactic body via
 `goalFrag` up to the step under the cursor, snapshotting states in a
 per-theorem cache so subsequent queries at nearby cursors reuse work.
+
+A `Resume thm[label]: … QED` block answers too, and the same way: the
+only difference is where the walk starts from.  A `Theorem` parses its
+statement out of the buffer; a `Resume` has none to parse, so the
+subgoal `thm` suspended under `label` is read out of markerLib's
+suspension store — the same lookup `markerLib.resume` itself does, so
+the goal shown is the goal the body will be handed.  A cursor placed
+just past the opening `:`, before any tactic, is step 0 and shows that
+subgoal.  `theorem` comes back as `thm[label]`, which is also what the
+proof pool calls the body.
+
+Reading the store works because the handler restores the per-dec
+compile snapshot taken just before the declaration (`snapBefore`): the
+store is a `Context.Data` slot, so that rewind puts back the parent's
+suspension *and* undoes a `Finalise` lower down the file, which would
+otherwise have removed it.
+
+The subgoal only exists once the parent's proof has actually run,
+which elaboration does not do by default.  So a Resume cursor that
+finds nothing answers `pending` and asks for the parent to be run —
+`addNoCheatSite` plus a recompile from its declaration, the same route
+a discovered suspension takes.  Once per parent: the name already
+being in the no-cheat set is what stops a cursor-following goals pane
+scheduling a compile per keystroke.
 
 A snapshot is a state the statement and some prefix of the tactics
 reached together, so an entry is addressed by both: editing either the

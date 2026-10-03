@@ -762,6 +762,40 @@ in
         useInit "tools-poly/lsp/tactic_walker.ML";
         (* Goal-state at cursor inside a Proof-QED body. *)
         useInit "tools-poly/lsp/goal_state_init.ML";
+        (* And inside a `Resume thm[label]:' body, whose goal is not
+           in the file: it is the subgoal `thm' suspended under
+           `label'.  Found the way `markerLib.prim_set_suspended_goal'
+           finds it, rather than by some other route, so the goal the
+           cursor shows is the goal `Resume' is handed -- the parent
+           from the suspension store, the resumptions already recorded
+           for the same label folded in beside it (that list is what
+           makes a re-suspending `Resume' come out right), and the two
+           functions that turn those into a goal.
+
+           `evalString' because `markerLib' is absent from
+           `hol.state0', which is the heap every directory up to
+           `src/boss' asks for.  Asked for by name first rather than
+           compiled and allowed to fail: a failure here is a startup
+           warning the user sees, and "did not load" is the wrong
+           thing to say about a heap that was never going to have it.
+           Where it is missing the hook keeps its NONE default and
+           the goal-state handler reports `pending', which is the
+           truth -- no suspension store, no suspended subgoal. *)
+        if not (isSome (#lookupStruct PolyML.globalNameSpace "markerLib"))
+        then ()
+        else evalString "the suspended-goal lookup"
+          "LSPSuspendedGoal.lookup := \
+          \  (fn {suspension, label} => \
+          \     case markerLib.lookup_suspension suspension of \
+          \       NONE => NONE \
+          \     | SOME (thy, th) => \
+          \       let val sths = markerLib.lookup_resumption \
+          \             {parent_thy = thy, parent_name = suspension, \
+          \              label = label} \
+          \       in Lib.total (fn () => markerLib.resumption_to_goal \
+          \            (markerLib.extract_suspended_goal (th :: sths) \
+          \                                              label)) () \
+          \       end)";
         (* Stored-theorem names for workspace/symbol and completion,
            from DB and from built Theory.dat files. *)
         useInit "tools-poly/lsp/db_symbols_init.ML";

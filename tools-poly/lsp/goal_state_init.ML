@@ -2,6 +2,23 @@
    statement quote and tactic body, walk the tactic stepwise via
    goalFrag and return the goal-state at the cursor. *)
 
+(* The goal a `Resume thm[label]:' body discharges -- whatever the
+   parent proof suspended under `label'.
+
+   A ref filled in from `tools-poly/hol.ML' rather than a direct
+   `markerLib' call, because this file is `QUse'd at LSP startup
+   against whatever heap the buffer's directory asks for, and
+   everything up to `src/boss' asks for `hol.state0', which has no
+   `markerLib'.  Naming it here would take the whole goal-state hook
+   down in those directories, silently.
+
+   NONE means "no such suspension", which is the ordinary state until
+   the parent's proof has been run for real. *)
+structure LSPSuspendedGoal = struct
+  val lookup: ({suspension: string, label: string} ->
+               (Term.term list * Term.term) option) ref = ref (fn _ => NONE)
+end
+
 local
   open TacticParse
 
@@ -182,20 +199,41 @@ in
 
 val () = LSPExtension.goalStateAtPos :=
   (fn ({plugins, width, ...}: LSPExtension.hover_context,
-       {name, quote, quoteStart, tacText, tacStart, cursor, compileDone}
+       {name, quote, quoteStart, tacText, tacStart, cursor, compileDone,
+        resumeOf}
          : LSPExtension.theorem_context) => let
-    val initialGoal = Lib.total Parse.Term [QUOTE quote]
+    (* A Theorem carries its goal in the file and it is parsed; a
+       Resume's is in the suspension store and it is looked up.  Both
+       answer with a whole goal, assumptions included: the suspended
+       one routinely has them, `resumption_to_goal' having folded the
+       `suspendimp' chain back into an assumption list. *)
+    val startGoal: (Term.term list * Term.term) option =
+      case resumeOf of
+          NONE => Option.map (fn tm => ([], tm))
+                             (Lib.total Parse.Term [QUOTE quote])
+        | SOME r => !LSPSuspendedGoal.lookup r
+    (* What the walker's cache addresses an entry by, beside the
+       tactic text.  A Resume's `quote' is empty, so the parse is no
+       use as a validator; the goal it opens on is the thing that
+       would have to change. *)
+    val goalText =
+      case (resumeOf, startGoal) of
+          (NONE, _) => quote
+        | (SOME _, NONE) => quote
+        | (SOME _, SOME (asl, g)) =>
+          String.concatWith "\n"
+            (List.map Parse.term_to_string asl @ [Parse.term_to_string g])
     val frags = TacticSteps.fragsOfTacText
                   {label = "goal_state", tacText = tacText}
     val tacCursor = cursor - tacStart
-    in case (initialGoal, frags) of
-         (SOME tm, SOME fs) => let
-           val startState = goalFrag.new_goal ([], tm)
+    in case (startGoal, frags) of
+         (SOME goal, SOME fs) => let
+           val startState = goalFrag.new_goal goal
            val step = stepIndex (fs, tacCursor)
            in case withTimeout walkerBudgetMs (fn () =>
                     TacticWalker.walkTo {
                       plugins = plugins, theoremName = name,
-                      theoremStart = quoteStart, goalText = quote,
+                      theoremStart = quoteStart, goalText = goalText,
                       tacText = tacText, startState = startState,
                       frags = fs, cursor = tacCursor}) of
                 NONE => SOME
@@ -228,12 +266,10 @@ val () = LSPExtension.goalStateAtPos :=
                    segments = ppSegments width state}
                   end
            end
-       | (SOME tm, NONE) => let
-           val startState = goalFrag.new_goal ([], tm)
+       | (SOME goal, NONE) => let
+           val startState = goalFrag.new_goal goal
            in SOME {theorem = name, step = 0,
-                    goals = [{asms = [],
-                               goal = Lib.with_flag (Globals.linewidth, width)
-                                        Parse.term_to_string tm}],
+                    goals = [ppGoal width goal],
                     pretty = ppState width startState,
                     context = goalFrag.context_lines startState,
                     note = goalFrag.focus_note startState,
@@ -241,7 +277,25 @@ val () = LSPExtension.goalStateAtPos :=
                     failedRange = NONE, failedCloseRange = NONE,
                     segments = ppSegments width startState}
            end
-       | _ => NONE
+       (* A statement that does not parse says nothing, and `null' is
+          the honest answer.  A Resume is different: the block is
+          there and the cursor is in it, so `null' would read as "no
+          goal state here" -- a fault in the proof.  The subgoal is
+          simply not available yet, which is what `pending' says.  No
+          `failedRange' with it, so nothing is squiggled: the server
+          only makes a diagnostic when a range and a message arrive
+          together. *)
+       | (NONE, _) =>
+         (case resumeOf of
+              NONE => NONE
+            | SOME {suspension, label} => SOME
+                {theorem = name, step = 0, goals = [], pretty = "",
+                 context = [], note = NONE, status = "pending",
+                 error = SOME ("no subgoal suspended under `" ^ label ^
+                               "' by " ^ suspension ^ " (yet): its proof \
+                               \has to run before the subgoal exists"),
+                 failedRange = NONE, failedCloseRange = NONE,
+                 segments = []})
     end)
 
 end;

@@ -169,6 +169,22 @@ fun bufferDecs text = let
     HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
   in parseDec end
 
+(* The label of a `Resume thm[label, smlname=x]' block.  The expander
+   takes the first attribute carrying no `=' as the label and leaves
+   the rest as proof kvals (`HOLSourceExpand.expandDec', the
+   `HOLResume' case); an attribute list that opens with `smlname=x',
+   or none at all, leaves the label empty -- and "" is a label like
+   any other, which is why `resumeOf' is an option rather than a
+   string that could be blank.
+
+   Kept in step with the expander by hand, there being no export to
+   share.  A disagreement names the subgoal the pool never reports
+   under that name, and the goal looked up would be somebody else's. *)
+fun resumeLabel (attrs: HOLSourceAST.kvals HOLSourceAST.attrs) =
+  case (case attrs of NONE => [] | SOME v => #args (#attrs v)) of
+      {key = (_, k), bind = NONE} :: _ => k
+    | _ => ""
+
 (* Given the buffer text and a cursor byte offset, return the enclosing
    `Theorem NAME[attrs]: … Proof … QED` block (also `Triviality`) as a
    `theorem_context`, or NONE if the cursor isn't inside one.  The
@@ -193,6 +209,28 @@ fun theoremTacEnd text decStart = let
         if #1 (HOLSourceAST.decSpan dec) = decStart
         then SOME (#2 (HOLSourceAST.expSpan tac))
         else loop ()
+      (* A `Resume' body is a tactic proof like any other, and the
+         pool reports it failing like any other, so it gets the same
+         narrowing: without this the message stays on the whole
+         declaration. *)
+      | SOME (dec as HOLSourceAST.HOLResume {tac, ...}) =>
+        if #1 (HOLSourceAST.decSpan dec) = decStart
+        then SOME (#2 (HOLSourceAST.expSpan tac))
+        else loop ()
+      | SOME _ => loop ()
+  in loop () end
+  handle _ => NONE
+
+(* Where `Theorem nm' is declared in the buffer, if it is.  Only the
+   first occurrence: that is the one whose proof-pool site is the bare
+   name, which is the name a `Resume' of it refers to. *)
+fun theoremDeclStart text nm = let
+  val parseDec = bufferDecs text
+  fun loop () =
+    case parseDec () of
+        NONE => NONE
+      | SOME (dec as HOLSourceAST.HOLTheoremDecl {id = (_, n), ...}) =>
+        if n = nm then SOME (#1 (HOLSourceAST.decSpan dec)) else loop ()
       | SOME _ => loop ()
   in loop () end
   handle _ => NONE
@@ -228,9 +266,52 @@ fun findEnclosingTheorem compileDone text cursor = let
                                               Int.max (0, tacEnd - tacStart)),
                   tacStart = tacStart,
                   cursor = cursor,
-                  compileDone = compileDone})
+                  compileDone = compileDone,
+                  resumeOf = NONE})
         end
         else loop ()
+        end
+    (* `Resume thm[label]: tac QED'.  The same thing as the block
+       above with the statement taken away: the goal this body
+       discharges is the subgoal `thm' suspended under `label', which
+       is recorded in the suspension store rather than written in the
+       file.  `resumeOf' is what tells the hook to look it up. *)
+    | SOME (dec as HOLSourceAST.HOLResume {
+              resume_, id = (_, nm), attrs, colon, tac, qed_, stop}) =>
+        let
+          val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
+          (* There is no `Proof' keyword to open the body, so the
+             colon does it.  Starting at the colon rather than at the
+             first tactic is what makes a cursor parked just after it
+             -- which is where a reader looks to ask "what am I
+             proving?" -- land inside the block. *)
+          val lower = case colon of SOME c => c | NONE => tacStart
+          val upperBound = case qed_ of SOME q => q | NONE => stop
+          val label = resumeLabel attrs
+        in
+          if lower <= cursor andalso cursor <= upperBound
+          then SOME (HOLSourceAST.decSpan dec,
+                     {(* The name `markerLib.resume' gives the proof
+                         (`prove_named', markerLib.sml), so the walker
+                         cache, the walker's diagnostics and the
+                         pool's own entry all agree -- and none of
+                         them collides with `Theorem thm'. *)
+                      name = nm ^ "[" ^ label ^ "]",
+                      quote = "",
+                      (* The declaration's own start: `goalStateAtPos'
+                         restores the last per-dec snapshot before
+                         this byte, which is the Context the compile
+                         had when it reached this `Resume' -- the
+                         parent stashed, and any `Finalise' below not
+                         yet run. *)
+                      quoteStart = resume_,
+                      tacText = String.substring (text, tacStart,
+                                            Int.max (0, tacEnd - tacStart)),
+                      tacStart = tacStart,
+                      cursor = cursor,
+                      compileDone = compileDone,
+                      resumeOf = SOME {suspension = nm, label = label}})
+          else loop ()
         end
     | SOME _ => loop ()
   in loop () end
@@ -289,11 +370,17 @@ fun bufferSymbols text = let
   val count = ref 0
   fun bump () = (count := !count + 1; !count <= maxSymbols)
   open HOLSourceAST
+  (* `selSpan' given outright, for the one symbol whose name is not
+     the source text at the ident's offset. *)
+  fun mkSymSel {name, selSpan, detail, kind, span, children} =
+      if name = "" then NONE
+      else SOME (Sym {name = name, detail = detail, kind = kind,
+                      span = span, selSpan = selSpan, children = children})
   fun mkSym {name = (p, nm), detail, kind, span, children} =
       if nm = "" then NONE   (* parse repair invents empty idents *)
-      else SOME (Sym {name = nm, detail = detail, kind = kind,
-                      span = span, selSpan = (p, p + size nm),
-                      children = children})
+      else mkSymSel {name = nm, selSpan = (p, p + size nm),
+                     detail = detail, kind = kind, span = span,
+                     children = children}
   (* `[simp]', `[local]' and friends.  LSP's SymbolTag has only
      Deprecated, so an attribute cannot be structural; it goes in the
      detail line where a client will show it beside the name. *)
@@ -418,7 +505,33 @@ fun bufferSymbols text = let
                      kind = if overload then symOperator else symStruct,
                      span = span, children = []}
           end
-      | HOLResume {id, ...} => simple "Resume" symConstant id
+      (* `thm[label]', not the bare `thm'.  Every `Resume' of one
+         theorem shares its name, so the bare form gave an outline of
+         identically-named entries -- eighteen of them in CakeML's
+         `type_e_subst' -- with no way to tell which subgoal each
+         one discharges.
+
+         It also decides what the pool calls the proof.  `decOrds'
+         counts occurrences of a symbol's name to disambiguate a
+         rebound one, so under the bare name each `Resume' read as
+         another occurrence of the parent and the proof came back as
+         `thm[label]#2'.  There is exactly one `thm[label]'.
+
+         The name is synthesised, so `selSpan' has to be given: it
+         runs from the identifier to the end of the attribute block,
+         which is the `thm[label]' the reader sees.  `Resume thm [l]'
+         with a space is legal, hence the attributes' own `stop'
+         rather than the length of the name. *)
+      | HOLResume {id = (p, nm), attrs, ...} =>
+          (case mkSymSel {
+                  name = if nm = "" then ""
+                         else nm ^ "[" ^ resumeLabel attrs ^ "]",
+                  selSpan = (p, case attrs of
+                                    SOME {stop, ...} => stop
+                                  | NONE => p + size nm),
+                  detail = SOME "Resume", kind = symConstant,
+                  span = span, children = []} of
+             NONE => [] | SOME sym => [sym])
       | HOLFinalise {id, ...} => simple "Finalise" symConstant id
       | DecVal {elems = {args, ...}, ...} =>
           List.concat (map (fn {pat, ...} =>
@@ -1979,9 +2092,9 @@ fun start {diag, dbg, warnings} = let
 
   (* What a verdict means for the file, as a diagnostic.
      `Failed' is an error: the real build would have raised out of
-     `store_thm_at', so nothing below it is trustworthy.  The other two
-     are warnings about our *model* of the file rather than about the
-     file -- the proof itself went through -- so they say what is
+     `store_thm_at', so nothing below it is trustworthy.  `Diverged' is
+     a warning about our *model* of the file rather than about the
+     file -- the proof itself went through -- so it says what is
      actually wrong.  The remaining states are not diagnostics: they
      say the pool has no complaint, or none yet. *)
   (* `exn_to_string' comes with a leading newline and wraps, which in
@@ -1994,12 +2107,15 @@ fun start {diag, dbg, warnings} = let
     case status of
         LSPExtension.Failed msg =>
         SOME (true, "proof failed: " ^ oneLine msg)
-      | LSPExtension.Suspended names =>
-        SOME (false,
-              "proof suspends subgoals (" ^ names ^
-              "), so a real build stashes this theorem instead of \
-              \saving it; the declarations below were elaborated as \
-              \though it had been saved")
+      (* Not a diagnostic.  Suspending is how a long proof is meant
+         to be split up, and the verdict is not a report that our
+         model is wrong but the thing that *corrects* it: it puts the
+         proof in the no-cheat set, and the pass that follows stashes
+         the theorem exactly as a build would.  By the time a reader
+         saw the warning its claim had stopped being true, and what it
+         marked was a file doing the right thing.  The subgoal names
+         still travel, on the pool's `suspended' status. *)
+      | LSPExtension.Suspended _ => NONE
       | LSPExtension.Diverged detail =>
         SOME (false,
               "proof produced " ^ detail ^
@@ -3708,7 +3824,8 @@ fun start {diag, dbg, warnings} = let
       (case !depsBlocked of DepsUnchecked => true | _ => false)
       orelse compileUsingState ()
 
-  fun goalStateAtPos uri (v as {lastTrees, depsBlocked, ...}:file_data)
+  fun goalStateAtPos uri (v as {lastTrees, depsBlocked, minEditOffset,
+                                ...}:file_data)
                      (target, width) =
     (* Nothing to walk against unless the ancestors are known to be
        loaded.  `DepsBlocked' is the case that used to be checked here:
@@ -3759,9 +3876,43 @@ fun start {diag, dbg, warnings} = let
        and the release depended on the client going on to ask about
        somewhere else.  One duplicated replay, in a bounded pool that
        can cancel it, is the cheaper of the two. *)
+    (* A `Resume' body's goal is whatever its parent suspended, and
+       the parent suspends nothing until its tactic has actually run.
+       With proof checking off -- the default -- the elaboration stands
+       an oracle in for every proof, so the suspension store stays
+       empty and the subgoal never exists: `markerLib.resume' takes
+       its `fast_shortcut' and hands back `|- T'.  The goal pane would
+       then say `pending' for the rest of the session.
+
+       So when the cursor asks for a subgoal that is not there, ask
+       for the parent to be run.  This is the route
+       `$/proofStates' already takes for a suspension it discovers
+       (`retract', in `startCompile'): put the proof in the no-cheat
+       set and recompile from its declaration, which makes the next
+       pass run it instead of cheating it.
+
+       `addNoCheatSite' answering false -- the name was already there
+       -- is what stops this repeating.  A goals pane that follows the
+       cursor asks on every keystroke, and without the guard every one
+       of them would schedule a compile.
+
+       A parent that is not declared in this buffer is a cross-file
+       suspension: its store entry came in with the ancestor and is
+       already there, so there is nothing to re-run. *)
+    fun demandParentProof (resumeOf: {suspension: string,
+                                      label: string} option)
+                          (resp: LSPExtension.goal_state_response option) =
+      case (resumeOf, resp) of
+          (SOME {suspension, ...}, SOME {status = "pending", ...}) =>
+          if not (LSPExtension.addNoCheatSite suspension) then ()
+          else (case theoremDeclStart (#text text) suspension of
+                    NONE => ()
+                  | SOME off => (bumpMinEdit minEditOffset off;
+                                 scheduleCompile uri v))
+        | _ => ()
     in case findEnclosingTheorem (#done parse) (#text text) offset of
          NONE => NONE
-       | SOME (_, thm as {quoteStart, ...}) =>
+       | SOME (_, thm as {quoteStart, resumeOf, ...}) =>
          (* One at a time.  Everything between the capture and the
             restore below runs against the process's single compile
             state, and a second walker in that window sees a Context
@@ -3785,6 +3936,13 @@ fun start {diag, dbg, warnings} = let
             `stateNotReady` says the same thing earlier and more
             cheaply; this is the check that is actually atomic with
             the rewind below. *)
+         (* `demandParentProof' runs on the result, deliberately
+            *outside* the `Sref.gen_update' below: that is a held
+            mutex, and `scheduleCompile' forks a thread that goes for
+            the compile state.  Asking for it from under the lock
+            stalls, or deadlocks against the compile it just asked
+            for. *)
+         let val resp =
          Sref.gen_update compileState (fn held =>
            (held,
             if not (claimCompileState ByWalk) then NONE
@@ -3807,6 +3965,7 @@ fun start {diag, dbg, warnings} = let
              in r end
              handle e => (releaseCompileState (); raise e))
             before releaseCompileState ()))
+         in demandParentProof resumeOf resp; resp end
     end handle Empty => NONE
 
   (* Walk a failed proof to the end of its tactic and record the pool's

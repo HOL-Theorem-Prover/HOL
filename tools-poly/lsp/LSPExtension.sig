@@ -193,7 +193,19 @@ type theorem_context = {
   tacText: string,        (* raw text between `Proof` and `QED` *)
   tacStart: int,          (* file byte offset of `tacText` start *)
   cursor: int,            (* cursor byte offset (file coords) *)
-  compileDone: bool       (* has the file's own compile finished? *)
+  compileDone: bool,      (* has the file's own compile finished? *)
+  (* SOME for a `Resume thm[label]: tac QED' block.  The goal such a
+     body discharges is written nowhere in the file -- it is whatever
+     the parent proof suspended under `label' -- so `quote' is empty
+     and the hook looks the goal up in the suspension store instead of
+     parsing it.  NONE for Theorem and Triviality.
+
+     An option rather than an empty `suspension', because "" is a
+     legal label: `Resume foo:' with no attribute list defaults to it.
+     Strings only, like the rest of this signature: the structure is
+     compiled into `bin/hol' by polyc, below the kernel, and cannot
+     name a term. *)
+  resumeOf: {suspension: string, label: string} option
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref

@@ -2131,6 +2131,56 @@ _SUSP_PREAMBLE = ("Theory %s[bare]\n"
                   "\n")
 
 
+# A whole suspend/Resume/Finalise cycle, which is how the feature is
+# meant to be used: the parent splits into two labelled subgoals, each
+# is discharged by its own `Resume` block, and `Finalise` assembles
+# them.  The trailing `Finalise` is load-bearing in these tests -- it
+# records a RemoveSuspended delta, so by the time the file has
+# compiled the suspension store no longer holds `willsplit`.  A
+# goal-state lookup that read the *current* context would come back
+# empty; it works because the handler rewinds to the per-dec snapshot
+# taken before the Resume.
+_SUSP_RESUME_SRC = ("Theorem willsplit:\n"
+               "  p /\\ (p ==> q) ==> p /\\ q\n"
+               "Proof\n"
+               "  strip_tac >> conj_tac\n"
+               "  >- suspend \"p\"\n"
+               "  >- suspend \"q\"\n"
+               "QED\n"
+               "\n"
+               "Resume willsplit[p]:\n"
+               "  first_assum ACCEPT_TAC\n"
+               "QED\n"
+               "\n"
+               "Resume willsplit[q]:\n"
+               "  RES_TAC\n"
+               "QED\n"
+               "\n"
+               "Finalise willsplit\n")
+# Line numbers into `_SUSP_PREAMBLE % tag` + _SUSP_RESUME_SRC.  The
+# preamble is three lines (Theory, Libs, blank).
+_SUSP_COLON_LINE = 11      # `Resume willsplit[p]:`
+_SUSP_BODY_LINE = 12       # `  first_assum ACCEPT_TAC`
+
+
+def _susp_goal(c, uri, rid, line, char, tries=25):
+    """Ask for goal state and wait out the `pending` that the first
+    request provokes.
+
+    A Resume's subgoal does not exist until the parent's proof has
+    actually run, which elaboration does not do on its own.  The first
+    request answers `pending` and asks for the parent to be run; the
+    recompile that follows is what makes the subgoal available.  So a
+    test polls rather than asking once."""
+    for i in range(tries):
+        m = _send_goalstate(c, rid + i, uri, line, char)
+        r = (m or {}).get("result")
+        if r and r.get("status") == "ok":
+            return r
+        time.sleep(2)
+    return (m or {}).get("result")
+
+
 def _proof_states(c, uri, since=0):
     """Accumulate the $/proofStates transition stream for `uri` into
     {name: (status, detail)}."""
@@ -2261,6 +2311,271 @@ def test_suspension_re_elaborates_with_the_real_theorem():
             assert_true(msgs is not None,
                         f"citation of a suspended theorem is reported "
                         f"({[dg for dg in _diag_count(c, uri)]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_goalState_at_a_resume_colon():
+    """The ask that started this: a cursor just past the `:` of
+    `Resume willsplit[p]:` shows the subgoal that body discharges.
+
+    There is no statement to parse -- a Resume carries none -- so the
+    goal comes out of markerLib's suspension store, looked up the way
+    `markerLib.resume` itself looks it up.  The assumptions matter as
+    much as the conclusion: `suspend` folds the goal's assumptions
+    into a `suspendimp` chain, and `resumption_to_goal` unfolds them
+    again, so getting this wrong shows a goal with no hypotheses."""
+    d = tempfile.mkdtemp(prefix="lsp_rgoal_")
+    try:
+        src = _SUSP_PREAMBLE % "rgoal" + _SUSP_RESUME_SRC
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/rgoalScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            # Just past the colon, before any tactic text.
+            col = len("Resume willsplit[p]:")
+            r = _susp_goal(c, uri, 900, _SUSP_COLON_LINE, col)
+            assert_true(r is not None, "goalState answered")
+            assert_eq(r["status"], "ok",
+                      f"the subgoal is available ({r!r})")
+            assert_eq(r["theorem"], "willsplit[p]",
+                      f"named as the pool names it ({r['theorem']!r})")
+            assert_eq(len(r["goals"]), 1, f"one subgoal ({r['goals']!r})")
+            g = r["goals"][0]
+            assert_eq(g["goal"], "p", f"the suspended conclusion ({g!r})")
+            assert_true(sorted(g["asms"]) == ["p", "p \u21d2 q"],
+                        f"with the assumptions it was suspended under "
+                        f"({g['asms']!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_goalState_in_a_resume_survives_a_later_finalise():
+    """The positive control for the snapshot rewind.
+
+    `Finalise willsplit` at the foot of the file records a
+    RemoveSuspended delta, so once the compile has run to the end the
+    suspension store does not hold `willsplit` any more.  Looking the
+    subgoal up in the *current* context would therefore find nothing.
+    It works because the goal-state handler restores the per-dec
+    snapshot taken just before the Resume, and the store is a
+    `Context.Data` slot, so the rewind undoes the Finalise with it.
+
+    Asked only after the whole file has compiled -- which is the point:
+    ask too early and the test would pass without the rewind."""
+    d = tempfile.mkdtemp(prefix="lsp_rfin_")
+    try:
+        src = _SUSP_PREAMBLE % "rfin" + _SUSP_RESUME_SRC
+        assert_true(src.rstrip().endswith("Finalise willsplit"),
+                    "the fixture really does finalise")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/rfinScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            col = len("Resume willsplit[q]:")
+            # The *second* Resume, four lines further down, so the
+            # Finalise is nearer still.
+            r = _susp_goal(c, uri, 920, _SUSP_COLON_LINE + 4, col)
+            assert_true(r is not None and r["status"] == "ok",
+                        f"the second Resume has its subgoal too ({r!r})")
+            assert_eq(r["theorem"], "willsplit[q]", f"named ({r!r})")
+            assert_eq(r["goals"][0]["goal"], "q",
+                      f"the other suspended conclusion ({r['goals']!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_goalState_steps_through_a_resume_body():
+    """A Resume body is walked like any other tactic body: past the
+    tactic that closes the subgoal there is nothing left."""
+    d = tempfile.mkdtemp(prefix="lsp_rstep_")
+    try:
+        src = _SUSP_PREAMBLE % "rstep" + _SUSP_RESUME_SRC
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/rstepScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            col = len("Resume willsplit[p]:")
+            before = _susp_goal(c, uri, 930, _SUSP_COLON_LINE, col)
+            assert_true(before is not None and before["status"] == "ok",
+                        f"a goal before the tactic ({before!r})")
+            assert_eq(len(before["goals"]), 1, "one goal to start with")
+            after = _send_goalstate(c, 960, uri, _SUSP_BODY_LINE,
+                                    len("  first_assum ACCEPT_TAC"))
+            res = (after or {}).get("result")
+            assert_true(res is not None, f"goalState answered ({after!r})")
+            assert_eq(res["goals"], [],
+                      f"the tactic closed the subgoal ({res['goals']!r})")
+            assert_true(res.get("error") is None,
+                        f"and did not fail doing it ({res['error']!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_goalState_resume_unknown_label_is_not_null():
+    """A label that matches no suspension is worth saying out loud.
+
+    At build time a mistyped label is silent: `markerLib.resume` takes
+    its `fast_shortcut` and hands back `|- T`, and nothing complains
+    until `Finalise` cannot find a resumption proof.  `null` here
+    would read as "no goal state at this position", which sends the
+    reader looking at their tactic instead of at the label."""
+    d = tempfile.mkdtemp(prefix="lsp_rbad_")
+    try:
+        src = (_SUSP_PREAMBLE % "rbad" +
+               _SUSP_RESUME_SRC.replace("Resume willsplit[p]:",
+                                        "Resume willsplit[typo]:"))
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/rbadScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            col = len("Resume willsplit[typo]:")
+            # Never settles to `ok`; take whatever the last answer is.
+            r = _susp_goal(c, uri, 980, _SUSP_COLON_LINE, col, tries=4)
+            assert_true(r is not None,
+                        "a response rather than null for a Resume block")
+            assert_eq(r["status"], "pending", f"reported pending ({r!r})")
+            assert_true("typo" in (r.get("error") or ""),
+                        f"and the message names the label ({r!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_resume_proof_has_no_ordinal():
+    """`willsplit[p]`, not `willsplit[p]#2`.
+
+    The ordinal exists to tell two proofs of the same name apart, and
+    it is counted off the outline's symbol names.  A Resume's symbol
+    used to be named after the parent theorem, so every Resume read as
+    another occurrence of `willsplit` and the pool reported subgoals
+    that occur exactly once as `#2`, `#3`."""
+    d = tempfile.mkdtemp(prefix="lsp_rord_")
+    try:
+        src = _SUSP_PREAMBLE % "rord" + _SUSP_RESUME_SRC
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/rordScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def both(cl):
+                seen = _proof_states(cl, uri)
+                return seen if ("willsplit[p]" in seen
+                                and "willsplit[q]" in seen) else None
+
+            seen = c.wait_until(both, 120)
+            assert_true(seen is not None,
+                        f"both resumptions reported under their plain "
+                        f"names ({_proof_states(c, uri)!r})")
+            bogus = [n for n in seen if "#" in n]
+            assert_eq(bogus, [], f"no ordinals anywhere ({seen!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_documentSymbol_names_a_resume_by_its_label():
+    """Eighteen Resume blocks of one theorem gave eighteen outline
+    entries all called `type_e_subst`.  The label is the only thing
+    that distinguishes them, so it belongs in the name."""
+    d = tempfile.mkdtemp(prefix="lsp_rsym_")
+    try:
+        src = _SUSP_PREAMBLE % "rsym" + _SUSP_RESUME_SRC
+        c = Client(d)
+        try:
+            # The nested DocumentSymbol form, which is the one that
+            # carries `selectionRange'; the flat fallback has only a
+            # `location'.
+            _init_hierarchical(c, d)
+            uri = f"file://{d}/rsymScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            r = _request(c, 990, "textDocument/documentSymbol",
+                         {"textDocument": {"uri": uri}})
+            syms = r["result"]
+            names = [x["name"] for x in syms]
+            for want in ("willsplit", "willsplit[p]", "willsplit[q]"):
+                assert_true(want in names, f"{want} in the outline ({names})")
+            # The selection range has to cover real text, the name
+            # being synthesised rather than lifted from the source.
+            for x in syms:
+                if x["name"] == "willsplit[p]":
+                    sel, full = x["selectionRange"], x["range"]
+                    assert_true(sel["start"]["line"] == _SUSP_COLON_LINE,
+                                f"selSpan on the Resume line ({sel!r})")
+                    assert_true(
+                        full["start"]["character"] <= sel["start"]["character"]
+                        and sel["end"]["character"] <= len(
+                            "Resume willsplit[p]:"),
+                        f"selSpan inside the declaration ({x!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_resume_goal_does_not_recompile_on_every_request():
+    """Asking for a Resume's subgoal when the parent has not been run
+    schedules a compile that runs it.  A goals pane that follows the
+    cursor asks on every keystroke, so that has to happen once, not
+    once per request: `addNoCheatSite` answering false the second time
+    is what stops it.
+
+    Counts compiles over a burst of requests made after the subgoal is
+    already available -- none of those should provoke one."""
+    d = tempfile.mkdtemp(prefix="lsp_rloop_")
+    try:
+        src = _SUSP_PREAMBLE % "rloop" + _SUSP_RESUME_SRC
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/rloopScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            col = len("Resume willsplit[p]:")
+            r = _susp_goal(c, uri, 1000, _SUSP_COLON_LINE, col)
+            assert_true(r is not None and r["status"] == "ok",
+                        f"the subgoal settled first ({r!r})")
+            _, mark = c.messages_since(0)
+            for i in range(8):
+                got = _send_goalstate(c, 1100 + i, uri, _SUSP_COLON_LINE, col)
+                res = (got or {}).get("result")
+                assert_true(res is not None and res["status"] == "ok",
+                            f"request {i} still answers ({got!r})")
+            time.sleep(5)
+            msgs, _ = c.messages_since(mark)
+            compiles = [m for m in msgs
+                        if m.get("method") == "$/compileCompleted"]
+            assert_eq(len(compiles), 0,
+                      f"a settled Resume provokes no further compiles "
+                      f"({len(compiles)} seen)")
         finally:
             c.close()
     finally:
@@ -5862,10 +6177,19 @@ def test_failed_proof_becomes_a_diagnostic():
         shutil.rmtree(d, ignore_errors=True)
 
 
-def test_suspending_proof_becomes_a_warning():
-    """A suspension is not the file's fault -- the proof went through.
-    What is wrong is our model of it, so it warns rather than errors,
-    and says what the cost is."""
+def test_suspending_proof_draws_no_diagnostic():
+    """Suspending is how a long proof is meant to be split up, so it
+    is not a defect and gets no squiggle.
+
+    It used to warn that a real build stashes the theorem instead of
+    saving it and that the declarations below had been elaborated as
+    though it had been saved.  That claim stops being true almost at
+    once: the `Suspended` verdict is itself what puts the proof in the
+    no-cheat set, and the pass after it stashes the theorem exactly as
+    a build would.  So the squiggle marked a file doing the right
+    thing.  The subgoal names still reach a client, on the pool's
+    `suspended` status -- which this pins, so that dropping the
+    diagnostic cannot quietly drop the report with it."""
     d = tempfile.mkdtemp(prefix="lsp_pdiagsusp_")
     try:
         src = (_SUSP_PREAMBLE % "pdiagsusp" +
@@ -5884,22 +6208,25 @@ def test_suspending_proof_becomes_a_warning():
             assert_true(c.wait_for_method("$/compileCompleted", 60),
                         "compileCompleted")
 
-            def warned(cl):
-                ds = [x for x in _diag_count(cl, uri)
-                      if "suspends subgoals" in x.get("message", "")]
-                return ds or None
+            # Positive control: wait for the verdict that used to
+            # produce the squiggle, so "no diagnostic" cannot pass by
+            # the pool simply not having got there yet.
+            def settled(cl):
+                seen = _proof_states(cl, uri)
+                st = seen.get("willsplit")
+                return seen if st and st[0] == "suspended" else None
 
-            ds = c.wait_until(warned, 90)
-            assert_true(ds is not None,
-                        f"a diagnostic for the suspension "
-                        f"({_proof_states(c, uri)!r}, "
-                        f"{_diag_count(c, uri)!r})")
-            assert_eq(ds[0]["severity"], 2, "a warning, not an error")
-            msg = ds[0]["message"]
-            assert_true("p" in msg and "q" in msg,
-                        f"naming the suspended subgoals ({msg!r})")
-            assert_true("stashes" in msg,
-                        f"and saying what it costs ({msg!r})")
+            seen = c.wait_until(settled, 90)
+            assert_true(seen is not None,
+                        f"the pool reached its `suspended' verdict "
+                        f"({_proof_states(c, uri)!r})")
+            assert_true("p" in seen["willsplit"][1]
+                        and "q" in seen["willsplit"][1],
+                        f"still naming the subgoals ({seen!r})")
+            time.sleep(3)
+            ds = [x for x in _diag_count(c, uri)
+                  if "suspend" in x.get("message", "")]
+            assert_eq(ds, [], f"no diagnostic for the suspension ({ds!r})")
         finally:
             c.close()
     finally:
@@ -8859,6 +9186,20 @@ TESTS = [
                                      test_suspending_proof_reported_as_suspended),
     ("suspension_re_elaborates_with_the_real_theorem",
                                      test_suspension_re_elaborates_with_the_real_theorem),
+    ("goalState_at_a_resume_colon",
+                                     test_goalState_at_a_resume_colon),
+    ("goalState_in_a_resume_survives_a_later_finalise",
+                           test_goalState_in_a_resume_survives_a_later_finalise),
+    ("goalState_steps_through_a_resume_body",
+                                test_goalState_steps_through_a_resume_body),
+    ("goalState_resume_unknown_label_is_not_null",
+                           test_goalState_resume_unknown_label_is_not_null),
+    ("a_resume_proof_has_no_ordinal",
+                                     test_a_resume_proof_has_no_ordinal),
+    ("documentSymbol_names_a_resume_by_its_label",
+                           test_documentSymbol_names_a_resume_by_its_label),
+    ("resume_goal_does_not_recompile_on_every_request",
+                       test_resume_goal_does_not_recompile_on_every_request),
     ("tactic_edit_spares_later_proofs",
                                      test_tactic_edit_spares_later_proofs),
     ("statement_edit_still_clears_later_proofs",
@@ -8982,8 +9323,8 @@ TESTS = [
     ("hover_markdown_is_fenced",      test_hover_markdown_is_fenced),
     ("failed_proof_becomes_a_diagnostic",
      test_failed_proof_becomes_a_diagnostic),
-    ("suspending_proof_becomes_a_warning",
-     test_suspending_proof_becomes_a_warning),
+    ("suspending_proof_draws_no_diagnostic",
+     test_suspending_proof_draws_no_diagnostic),
     ("proof_diagnostic_clears_when_the_proof_is_fixed",
      test_proof_diagnostic_clears_when_the_proof_is_fixed),
     ("search_finds_theorems_by_name_theory_and_pattern",
