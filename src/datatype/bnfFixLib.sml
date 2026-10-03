@@ -4390,13 +4390,26 @@ fun attrNames nargs tyname attrs : names =
                        | "size" => once (#size acc)
                        | "set" => if null (#sets acc) then () else dup ()
                        | _ => ()
-            val () = if key = "set" andalso length args > nargs then
-                       raise ERR "parseSpec"
-                             (tyname ^ " takes " ^ Int.toString nargs ^
-                              " argument(s), and " ^
-                              Int.toString (length args) ^
-                              " set functions are named")
-                     else ()
+            (* A type with no type variables is not a functor: there
+               is nothing for a map to move, nothing for a set
+               function to collect and nothing for a relator to
+               relate, so there is nothing to call.  Its size is its
+               own and may still be named. *)
+            val () =
+                if nargs = 0 andalso Lib.mem key ["map", "set", "rel"] then
+                  raise ERR "parseSpec"
+                        (tyname ^ " has no type variables, so the \
+                         \construction gives it no " ^
+                         (case key of
+                              "map" => "map"
+                            | "set" => "set function"
+                            | _ => "relator") ^ " to name")
+                else if key = "set" andalso length args > nargs then
+                  raise ERR "parseSpec"
+                        (tyname ^ " takes " ^ Int.toString nargs ^
+                         " argument(s), and " ^ Int.toString (length args) ^
+                         " set functions are named")
+                else ()
             (* what an argument says about itself.  The compute set is
                the only thing a generated constant has an opinion on so
                far, and an unknown flag is an error for the same reason

@@ -662,7 +662,15 @@ fun bnfDatatype q = ignore (bnfDatatypeInfo q)
    ---------------------------------------------------------------------- *)
 fun expressible astl =
     let
-      val spec = specOfASTs astl
+      (* what a declaration asks its constants be called has no bearing
+         on whether this construction can express it, and a complaint
+         about the names must not be read here as a no: it would send
+         the specification to the older construction, which would then
+         complain about something else entirely. *)
+      val spec = specOfASTs (List.map (fn {name, form, ...} =>
+                                          {name = name, attrs = [],
+                                           form = form})
+                                      astl)
       val db = bnfBase.fullDB()
       fun ok (fty, slots) =
           let val live = bnfLib.liveTyvars db fty

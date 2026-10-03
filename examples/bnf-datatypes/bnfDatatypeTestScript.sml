@@ -137,6 +137,25 @@ val _ =
       then OK() else die "not as expected"
     end
 
+(* A type with no type variables is not a functor, so there is no map,
+   set function or relator for a declaration to call.  Saying which is
+   better than letting the name be dropped, or than the complaint being
+   read as "this construction cannot express it" and the specification
+   sent to the older one, which then objects to something else. *)
+val _ = tprint "a type with no variables has nothing to name"
+val _ =
+    let
+      fun refused q = (bnfDatatype q; false) handle HOL_ERR _ => true
+      fun built q = (bnfDatatype q; true) handle HOL_ERR _ => false
+    in
+      if List.all refused [`mono1[set=M1S] = C1 (mono1 list)`,
+                           `mono2[map=M2M] = C2 (mono2 list)`,
+                           `mono3[rel=M3R] = C3 (mono3 list)`] andalso
+         (* its size is its own, and may still be named *)
+         built `mono4[size=mono4_sz] = C4 (mono4 list)`
+      then OK() else die "not as expected"
+    end
+
 (* ----------------------------------------------------------------------
     and a family, through the same call
    ---------------------------------------------------------------------- *)
