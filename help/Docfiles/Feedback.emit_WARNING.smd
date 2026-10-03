@@ -31,3 +31,5 @@ The default value of `emit_WARNING` is `true`.
 [`Feedback.HOL_WARNING`](#Feedback.HOL_WARNING),
 [`Feedback.emit_ERR`](#Feedback.emit_ERR),
 [`Feedback.emit_MESG`](#Feedback.emit_MESG)
+
+>>__ Feedback.emit_WARNING := true;

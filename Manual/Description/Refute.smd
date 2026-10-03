@@ -1,0 +1,457 @@
+## The `HolRefute` Library
+
+\label{sec:HolRefute}
+\index{HolRefute|(}
+\index{counterexamples|see {HolRefute}}
+\index{model finding|see {HolRefute}}
+
+>>__ val refute_initial_grammars =
+      (Parse.type_grammar(), Parse.term_grammar());
+>>__ load "Refute"; open Refute;
+
+`HolRefute` searches for counterexamples to HOL goals by exhaustive
+and random testing, symbolic narrowing, and a Kodkod-based finite model
+finder, in the style of Isabelle's Quickcheck and Nitpick.  It finds
+mistakes; it proves nothing.
+
+The library is built with Poly/ML only.  A theory script uses it by
+naming `Refute` under `Libs`.  The model finder needs the external
+Kodkodi component (see "Installing Kodkodi" below); the other backends
+are native.  Refute leaves no type, constant, theorem or binding in the
+user's theory.  Its one lasting effect is on the `EVAL` compset, which
+it extends to decide closed `:rat` literals and `:real` `inv`.
+
+### The diagnostic tactics
+
+| Tactic | Backends |
+|---|---|
+| `REFUTE_TAC` | Those the configuration selects (default: all). |
+| `QUICKCHECK_TAC` | `exhaustive`, `random` and `narrowing`. |
+| `NARROWING_TAC` | `narrowing`. |
+| `MODEL_REFUTE_TAC` | `kodkod`, the model finder. |
+
+Each tactic prints a report and then behaves as `ALL_TAC`, so it can
+precede the real proof:
+
+```sml
+Theorem tail_is_shorter:
+  xs <> [] ==> LENGTH (TL (xs : num list)) < LENGTH xs
+Proof
+  REFUTE_TAC >>
+  Cases_on `xs` >> simp []
+QED
+```
+
+The search looks for values of the goal's free variables that make
+every assumption true and the conclusion false.  The sessions below
+run backends sequentially on the `Compute` substrate, so each report
+names a predictable backend.
+
+```repl
+>> set_config
+     (default_config
+        |> upd_sequential true
+        |> upd_substrate Compute
+        |> upd_size 4);
+
+>> g `(n : num) < 3`;
+
+>> e REFUTE_TAC;
+```
+
+### Reading a report
+
+A counterexample report names the backend and substrate, the bound
+reached, the time taken, and, for the testing backends, how many
+candidates were generated, satisfied the assumptions, and had their
+conclusion evaluated.  Then come the variable bindings and either
+`Certified:` with a theorem refuting the goal or
+`Certification: uncertified`.
+
+When the search covers every relevant value, the result is
+`NoCounterexample`:
+
+```repl
+>>__ drop();
+>> g `!p q : bool. p /\ q ==> p \/ q`;
+
+>> e (REFUTE_TAC_WITH [upd_search (Only [Exhaustive])]);
+```
+
+Otherwise the result is `Unknown`, with each backend's reasons.  At
+trace level 2 the `"Refute"` trace also shows backend and substrate
+choices, the schedule, and each backend's counts:
+
+```repl
+>>__ drop();
+>> set_trace "Refute" 2;
+
+>> g `!n : num. n * n = 7 ==> n < 3`;
+
+>> e (REFUTE_TAC_WITH [upd_search QuickcheckBackends, upd_size 3]);
+>>__ set_trace "Refute" 1;
+```
+
+Counts accumulate over sizes: `exhaustive` tried 2, 3 and 4 values at
+sizes 1 to 3, and `random` 100 per size.  Narrowing declined the goal,
+so its counts are zero.  Trace level 3 adds generated SML and plans,
+level 4 a per-candidate trace on `Compute`, and level 0 silences
+reports; `upd_quiet true` silences a single call.
+
+### Configuring a search
+
+The tactics read the stored configuration from the context they are
+applied in; `set_config` replaces it and `show_config ()` prints it.
+`REFUTE_TAC_WITH` applies updates to it for one call, from left to
+right:
+
+```sml
+##eval REFUTE_TAC_WITH
+         [upd_search (Only [Narrowing]), upd_size 7, upd_timeout 5.0]
+```
+
+`REFUTE_CONFIG_TAC` ignores the stored configuration, for reproducible
+tools and tests:
+
+```sml
+##eval REFUTE_CONFIG_TAC
+         (default_config |> upd_search (Only [Narrowing]) |> upd_size 7)
+```
+
+`upd_expect` makes a tactic fail unless the outcome matches one of
+`ExpectNone` (that is, `NoCounterexample`), `ExpectUnknown`,
+`ExpectCex`, `ExpectModel`, `ExpectNoModel`, `ExpectGenuine`,
+`ExpectQuasiGenuine` or `ExpectPotential`.  All fields are listed
+under "Configuration reference" below.
+
+### Backends
+
+| Weight | Backend | Search |
+|---:|---|---|
+| 20 | `exhaustive` | Enumerates values up to a size. |
+| 30 | `random` | Draws seeded random values. |
+| 40 | `narrowing` | Refines partially known values symbolically. |
+| 50 | `kodkod` | Finds finite models with Kodkodi. |
+
+`upd_search` takes `AllBackends`, `QuickcheckBackends` (the first
+three) or `Only choices`, a nonempty list of `Exhaustive`, `Random`,
+`Narrowing`, `ModelFinder` and `RegisteredBackend name`.  By default
+backends race; `upd_sequential true` runs them in weight order.  A
+search stops at the first result as certain as the best any selected
+backend could give, and one `timeout` covers the whole call.
+
+`exhaustive` and `random` run a compiled test plan on a substrate:
+`NativeSML` compiles the goal's executable fragment to SML, and
+`Compute` interprets it with `computeLib`.  The default `Auto` tries
+`NativeSML`, then `Compute`.  Both draw from the same random stream,
+so a seed reproduces the same candidates on either.
+
+`narrowing` deepens from 0 up to `size`, or until the deadline in the
+default iterative mode.  With `allow_existentials` it also handles
+prenex existentials; with `finite_functions` it represents function
+inputs as finite update chains.  Unrefined parts of a value print as
+`_`.
+
+`kodkod` encodes the goal as a bounded relational problem, covering
+datatypes and codatatypes, functions, sets, inductive and coinductive
+predicates, typedefs, quotients, integers, words, characters, finite
+maps, `rat` and `real`.  Its report gives the cardinalities tried.
+This session is not generated with the manual, since building the
+manual does not require Kodkodi:
+
+```repl
+> g `(x : 'a) = y`;
+val it =
+   Proof manager status: 1 proof.
+   1. Incomplete goalstack:
+        Initial goal:
+        x = y
+
+> e (REFUTE_TAC_WITH
+       [upd_search (Only [ModelFinder]), upd_card [(NONE, [2])]]);
+OK..
+<<HOL message: Refute found a counterexample (backend: kodkod, substrate: kodkod, 1.622s):
+Scope: card α = 2
+  x = a2
+  y = a1
+Certified: ⊢ ¬∀x y. x = y
+>>>
+1 subgoal:
+val it =
+
+   x = y
+```
+
+With `upd_falsify false`, `kodkod` searches for a model of the goal
+instead, reporting `Model` or `NoModel`.  A word of width `w` is
+encoded exactly as `2^w` atoms, up to 1024 (width 10); `:char` as 256
+atoms.  Word constants other than literals, `n2w`, `w2n`, arithmetic,
+bitwise operations, shifts and comparisons are refused, as is a word
+or character goal with binary integers forced on.
+
+### What testing can reach
+
+The testing backends need executable goals and a generator for each
+variable's type.  `:rat` and `:real` have generators, and closed
+literals are decided by `EVAL`, so a closed goal can get
+`NoCounterexample`; a goal quantified over them cannot.  Finite maps
+have a never-exhaustive generator on `Compute` only.  `kodkod` needs
+neither, and can exhaust a finite-map goal whose key type fits its
+scope.
+
+Bounded quantifiers such as `!n. n < e ==> P n`, `!x. MEM x xs ==> P x`
+and `!n. lo <= n /\ n < hi ==> P n`, and their existential duals, are
+made executable.  With `smart_quantifier`, premises are tested as soon
+as their variables are generated, and equations can bind variables.
+With `smart_generators`, a first-order inductive premise can generate
+its variables directly in exhaustive testing, and a negated
+non-recursive one can become an exact test.  Here the `ALL_DISTINCT`
+premise generates distinct lists, which plain generate-and-test misses
+at the same bound:
+
+```repl
+>>__ drop();
+>> g `ALL_DISTINCT (xs : bool list) ==> LENGTH xs < 1`;
+
+>> e (REFUTE_TAC_WITH
+        [upd_search (Only [Exhaustive]), upd_size 1, upd_depth 8]);
+
+>> e (REFUTE_TAC_WITH
+        [upd_search (Only [Exhaustive]), upd_size 1, upd_depth 8,
+         upd_smart_generators false]);
+```
+
+`depth` bounds each such generator, so exhausting one is inconclusive.
+
+### Certification and certainty
+
+Substrates, generated SML and Kodkodi are untrusted.  With the default
+`certify = true`, each testing counterexample is replayed with
+`computeLib`: a replay proving the instance true discards it, and one
+proving it false yields the `Certified:` theorem.  No oracle tag is
+ever added.
+
+A counterexample's `certainty` is independent of its certificate.
+`Genuine` means the backend's conditions for a real counterexample
+hold; `QuasiGenuine` and `Potential` carry the reasons they do not.
+For `kodkod`, as for Nitpick, certainty follows the encoding: exact
+gives `Genuine`, approximate `QuasiGenuine`, unsound `Potential`.  A
+client needing a theorem must check `cert`.  With `certify = false`
+nothing is replayed:
+
+```repl
+>>__ drop();
+>> g `(n : num) < 3`;
+
+>> e (REFUTE_TAC_WITH [upd_certify false]);
+>>__ drop();
+```
+
+### Finding unused assumptions
+
+`find_unused_assms cfgopt thy` checks which premises of a theory's
+theorems can be dropped with `NoCounterexample`; `check_unused_assms`
+checks one theorem, and `print_unused_assms` prints a report.  Premise
+indexes start at 0:
+
+```repl
+>> val th = prove (``!p q. p ==> q ==> q``, simp []);
+
+>> check_unused_assms NONE ("demo", th);
+```
+
+### Configuration reference
+
+A `config` is built from `default_config` with updaters, as above.
+The reference entry `Refute.config` gives the validation rules.
+
+| Updater | Default | Meaning |
+|---|---:|---|
+| `upd_timeout` | `10.0` | Seconds for the whole call. |
+| `upd_search` | `AllBackends` | Backend selection. |
+| `upd_sequential` | `false` | Run backends in weight order instead of racing. |
+| `upd_genuine_only` | `false` | Skip potential results and keep searching for genuine ones. |
+| `upd_abort_potential` | `false` | Stop at the first result of any certainty. |
+| `upd_quiet` | `false` | Print nothing. |
+| `upd_no_assms` | `false` | Ignore the goal's assumptions. |
+| `upd_evals` | `[]` | Terms whose values to report. |
+| `upd_expect` | `NoExpectation` | Outcome the call must have. |
+| `upd_max_counterexamples` | `1` | Testing counterexamples requested. |
+| `upd_tag` | `""` | Text appended to the report. |
+| `upd_widths` | `[1,2,3,4]` | Widths tried for a word-width type variable (1 to 32). |
+
+#### Testing fields
+
+| Updater | Default | Meaning |
+|---|---:|---|
+| `upd_iterative_size` | `10` | Start at this size and deepen until the deadline. |
+| `upd_size` | | Fix the maximum size and narrowing depth instead. |
+| `upd_iterations` | `100` | Random draws per size. |
+| `upd_depth` | `10` | Bound for each smart generator. |
+| `upd_finite_types` | `true` | Instantiate type variables with small finite types. |
+| `upd_finite_type_size` | `3` | Number of finite types tried. |
+| `upd_default_type` | `[``:num``]` | Instances when `finite_types` is false. |
+| `upd_instantiate` | `[]` | Instances for particular type variables. |
+| `upd_substrate` | `Auto` | `Auto`, `NativeSML` or `Compute`. |
+| `upd_allow_existentials` | `true` | Narrow prenex existentials. |
+| `upd_finite_functions` | `true` | Narrow function inputs as finite update chains. |
+| `upd_certify` | `true` | Replay counterexamples in HOL. |
+| `upd_smart_quantifier` | `true` | Test premises as early as possible. |
+| `upd_smart_generators` | `true` | Generate from inductive premises. |
+| `upd_optimise_equality` | `true` | Bind variables from equations. |
+| `upd_reorder_premises` | `true` | Reorder premises for generation. |
+| `upd_use_subtype` | `false` | Test a typedef through its representation type. |
+| `upd_allow_function_inversion` | `false` | Generate from `f ... = res` premises. |
+| `upd_seed` | `NONE` | Random seed; `NONE` continues the session's stream. |
+
+`upd_instantiate` rows map `SOME 'a` to a ground type for `'a`, and
+`NONE` to one for every other non-width type variable.  Instances are
+proxies: a goal still polymorphic never gets `NoCounterexample` from
+them.  `upd_use_subtype true` tests a variable `x` of typedef type `t`
+with no generator as `abs r`, for representation values `r` satisfying
+the typedef's predicate; its counterexamples are genuine but
+uncertified.
+
+#### Model-finder fields
+
+Row-valued fields take `(NONE, v)` as the fallback and `(SOME k, v)`
+for key `k`; a Boolean value of `NONE` lets Refute choose.
+
+| Updater | Default | Meaning |
+|---|---:|---|
+| `upd_iterative_card` | `[1,...,10]` | Start with these cardinalities, by type, and grow them until the deadline. |
+| `upd_card` | | Fix the cardinalities instead. |
+| `upd_max` | `[~1]` | Constructor multiplicities; `~1` is automatic. |
+| `upd_mono` | `NONE` | Monotonicity, by type. |
+| `upd_wf` | `NONE` | Well-foundedness, by constant. |
+| `upd_sat_solver` | `"smart"` | SAT solver. |
+| `upd_batch_size` | `50` | Problems per solver call. |
+| `upd_falsify` | `true` | Search for a counterexample, not a model. |
+| `upd_user_axioms` | `NONE` | Include user axioms. |
+| `upd_destroy_constrs` | `true` | Simplify constructor applications. |
+| `upd_total_consts` | `NONE` | Encode constants as total. |
+| `upd_peephole_optim` | `true` | Optimize the relational problem. |
+| `upd_datatype_sym_break` | `5` | Datatype symmetry breaking. |
+| `upd_kodkod_sym_break` | `15` | Kodkod symmetry breaking. |
+| `upd_max_potential` | `1` | Potential models requested. |
+| `upd_max_genuine` | `1` | Genuine models requested. |
+| `upd_atoms` | `[]` | Atom names, by type. |
+| `upd_format` | `[1]` | Argument tupling for display, by constant. |
+| `upd_show_types` | `false` | Show type universes. |
+| `upd_show_skolems` | `true` | Show Skolem values. |
+| `upd_show_consts` | `false` | Show constant tables. |
+| `upd_debug` | `false` | Debug output, one problem per batch. |
+| `upd_overlord` | `false` | Keep the solver's files. |
+| `upd_max_threads` | `0` | Kodkodi threads; `0` leaves it to Kodkodi. |
+| `upd_tac_timeout` | `0.5` | Seconds for internal proofs. |
+| `upd_specialize` | `true` | Specialize constants at fixed arguments. |
+| `upd_box` | `NONE` | Box function and pair types, by type. |
+| `upd_binary_ints` | `NONE` | Encode integers in binary. |
+| `upd_bits` | `[1,...,10]` | Binary integer widths (1 to 31). |
+| `upd_star_linear_preds` | `true` | Encode linear inductive predicates exactly. |
+| `upd_iter` | `[0,1,2,4,8,12,16,20,24,28]` | Unrolling depths of inductive predicates. |
+| `upd_bisim_depth` | `[9]` | Codatatype bisimulation depths; `~1` disables. |
+| `upd_finitize` | `NONE` | Finitize infinite types, by type. |
+| `upd_whack` | `[]` | Constants whose definitions are ignored. |
+| `upd_need` | `NONE` | Terms that must have values in a model. |
+| `upd_merge_type_vars` | `false` | Give all type variables one cardinality. |
+
+### The SML interface
+
+```sml
+datatype outcome =
+    Counterexample of counterexample list
+  | NoCounterexample
+  | Model of counterexample list
+  | NoModel
+  | Unknown of string list
+```
+
+A `counterexample` records its `backend`, `substrate`, `certainty`,
+`bindings`, `evals`, `cert`, `scope`, `model` and `stats`.
+
+| Function | Searches |
+|---|---|
+| `refute cfg tm` | `tm` with `cfg`. |
+| `refute_goal cfg g` | goal `g` with `cfg`. |
+| `refute_with updates tm` | `tm` with `current_config updates`. |
+| `quickcheck tm`, `model_refute tm` | `tm` as `QUICKCHECK_TAC`, `MODEL_REFUTE_TAC`. |
+| `try_refute cfg g` | `g` silently; the finding backend, if any. |
+
+```repl
+>> Option.map #1
+     (try_refute
+        (default_config
+           |> upd_search (Only [Exhaustive])
+           |> upd_size 4)
+        ([], ``(n : num) < 3``));
+```
+
+### Extending Refute
+
+These registrations last for the session; each reference entry gives
+its conditions.
+
+* `register_generator` and `abstract_generator` add test-data
+  generators.
+* `register_codatatype`, `register_typedef` and `register_quotient`
+  describe types to the model finder; it finds typedefs and quotients
+  with stored defining theorems by itself.
+* `register_term_postprocessor` changes how reported values print.
+
+Three theorem attributes give the model finder equations that persist
+with the theory.  Each conjunct of the theorem, under its universal
+quantifiers, must be an equation `c t1 ... tn = u` for a constant
+`c`; `refute_simp` and `refute_psimp` also accept premises and the
+forms `c t1 ... tn` and `~(c t1 ... tn)`.
+
+| Attribute | Use of the conjuncts for `c` |
+|---|---|
+| `refute_simp` | Replace the equations of `c`'s definition. |
+| `refute_psimp` | Define `c` if it has no equations from its definition or `refute_simp`. |
+| `refute_unfold` | Unfold `c` during preprocessing. |
+
+### Installing Kodkodi
+
+`kodkod` needs Unix, Java, `setsid`, and Kodkodi 1.5.7 from the
+Isabelle components at <https://isabelle.in.tum.de/components/>.  Set
+`HOL4_KODKODI` to the unpacked `kodkodi-1.5.7` directory.  Java is
+taken from `HOL4_JAVA_EXECUTABLE`, `JAVA_HOME/bin/java` or `PATH`;
+alternatively `HOL4_KODKODI_EXEC` gives a complete launcher command.
+
+The `"smart"` solver uses SAT4J unless an external solver is found
+through Nitpick's variables (`MINISAT_HOME`, `CRYPTOMINISAT_HOME`,
+`ZCHAFF_HOME`, `RSAT_HOME`, `RISS3G_HOME`, `BERKMIN_HOME`,
+`BERKMINALLOY_HOME`) or a JNI solver in the component's `jni`
+directory; there are none for Apple Silicon.
+
+### Limitations
+
+* No finite search refutes `?x. P x` over an infinite type; such goals
+  get at most `Potential` counterexamples.
+* Model-finder reals are rational, so a goal false only at irrational
+  values has no counterexample.
+* A goal polymorphic after instantiation never gets `NoCounterexample`.
+* The model finder sees only the equations a user wrote, not the `ARB`
+  cases HOL4 adds to a non-exhaustive definition, so a goal true only
+  because of them can get a spurious counterexample.
+* Random testing, smart generators and narrowing are bounded, so their
+  exhaustion is inconclusive.
+* A datatype recursive under a function type can only be tested
+  randomly.
+* Smart generators do not complement recursive relations; function
+  inversion covers only self-recursive functions.
+* `upd_use_subtype` does not reach inside other types, such as `t list`.
+* The model finder refuses word widths above 10 and unsupported word
+  constants.  `WF`, `CARD`, `SUM_IMAGE`, `WFREC`, `FAPPLY` and Hilbert
+  choice are encoded approximately, which can cost a goal its
+  `NoCounterexample` or its `Genuine` certainty.
+
+Worked examples of all four tactics, including case studies adapted
+from Isabelle's Nitpick and Quickcheck, are in `src/HolRefute/examples`.
+
+\index{HolRefute|)}
+
+>>__ drop();
+>>__ set_config default_config;
+>>__ Parse.temp_set_grammars refute_initial_grammars;
