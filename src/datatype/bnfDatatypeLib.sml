@@ -327,7 +327,7 @@ fun oneType db (spec : spec) =
             | SOME flds =>
               [RecordType.prove_recordtype_thms (hd tyinfos, flds)]
     in
-      List.app (saveEqn nms) eqns
+      List.app (saveEqn (SOME induction) nms) eqns
     ; datatype_presentation spec
     ; persist (#nocompute nms) tyinfos
     ; (* only the recursive construction builds an ambient to discard;
@@ -389,18 +389,57 @@ and name_of_eqn th =
    compute set's, unless the declaration said otherwise.  The
    simplifier's only if it asked: a definition is not a rewrite by
    default, and this is a definition. *)
-and saveEqn nms th =
+(* The induction a definition would have had registered for it.  A
+   generated function recurses structurally on its last argument with
+   its parameters fixed, so the principle is the type's own with those
+   parameters quantified inside each clause; and that is what the type
+   induction gives when its predicate is the function's applied to
+   them.  The parameters avoid every variable the induction mentions,
+   bound ones included: the construction names a constructor's
+   arguments a0, a1, ..., and an outer binder of the same name would
+   be shadowed where it is needed. *)
+and liftInduction induction c =
+    let
+      val body = #2 (dest_imp (#2 (strip_forall (concl induction))))
+      val ty = type_of (hd (#1 (strip_forall body)))
+      fun before [] = []
+        | before (d :: ds) = if d = ty then [] else d :: before ds
+      val params = before (#1 (strip_fun (type_of c)))
+      val (avs, _) =
+          List.foldl (fn (pty, (vs, avoid)) =>
+                         let val v = variant avoid (mk_var ("f", pty))
+                         in (vs @ [v], v :: avoid) end)
+                     ([], all_vars (concl induction))
+                     params
+      val Q = variant (all_vars (concl induction))
+                      (mk_var ("P", List.foldr (op -->) (ty --> bool) params))
+      val ith = ISPEC (list_mk_comb (Q, avs)) induction
+      val hyp = list_mk_forall (avs, #1 (dest_imp (concl ith)))
+    in
+      GEN Q (DISCH hyp (GENL avs (MP ith (SPECL avs (ASSUME hyp)))))
+    end
+
+and saveEqn ind nms th =
     let
       val nm = name_of_eqn th
       val c = #1 (dest_const (#1 (strip_comb
                    (lhs (#2 (strip_forall
                      (hd (strip_conj (#2 (strip_forall (concl th)))))))))))
+      fun withInduction induction =
+          let
+            val knm = {Thy = current_theory(), Name = c}
+            val ith = liftInduction induction (prim_mk_const knm)
+          in
+            ignore (save_thm (c ^ "_ind", ith))
+          ; DefnBase.register_indn (ith, [knm])
+          end
     in
       ignore (save_thm (nm, th))
     ; DefnBase.register_defn {tag = "user", thmname = nm}
     ; if Lib.mem c (#nocompute nms) then ()
       else computeLib.add_persistent_funs [nm]
     ; if Lib.mem c (#simp nms) then BasicProvers.export_rewrites [nm] else ()
+    ; case ind of NONE => () | SOME i => withInduction i
     end
 
 (* a family's members are saved together, and each says for itself what
@@ -482,7 +521,7 @@ fun manyTypes db (spec : spec) =
                   RecordType.prove_recordtype_thms (tyi, flds))
             (#fields spec, tyinfos)
     in
-      List.app (saveEqn (unionNames (#names spec)))
+      List.app (saveEqn NONE (unionNames (#names spec)))
                (List.concat rewrites)
     ; datatype_presentation spec
     ; persist (List.concat (List.map #nocompute (#names spec))) tyinfos

@@ -191,16 +191,6 @@ Proof
   SRW_TAC [] [DB.fetch "list" "MAP_thm"]
 QED
 
-(* a function the package generates comes without the induction a
-   definition would have registered for it *)
-Theorem MAP_ind:
-  !P. (!f:'a -> 'b. P f ([]:'a list)) /\
-      (!(f:'a -> 'b) (h:'a) t. P f t ==> P f (h::t)) ==>
-      !(f:'a -> 'b) (l:'a list). P f l
-Proof
-  REPEAT GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] []
-QED
-val _ = DefnBase.register_indn (MAP_ind, [{Thy = "list", Name = "MAP"}])
 
 Theorem LIST_TO_SET_DEF[simp,compute]:
   (!x. LIST_TO_SET [] x <=> F) /\
