@@ -1,6 +1,7 @@
 [poly]tools/check-builds
 !tools/Holmake/tests/recursiveclean
 !tools/Holmake/tests/dashn_works
+!tools/quote-filter
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
