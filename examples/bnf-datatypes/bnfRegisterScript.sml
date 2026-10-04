@@ -102,7 +102,7 @@ val _ =
     constructor's own argument and the functor simplified away.
    ---------------------------------------------------------------------- *)
 
-val eqns = constructorEqns cs mylist_bnf
+val eqns = constructorEqns (eqnsOf (#components bnf)) cs mylist_bnf
 
 Theorem mylistMAP_thm[simp] = #map_eqns eqns
 Theorem mylistSET_thm[simp] = hd (#set_eqns eqns)
@@ -270,6 +270,7 @@ val _ = checkthm "and the nested type's case constant is derived anyway"
 val mylist_tyinfo =
     hd (typeBaseInfo {axiom = #axiom cs, induction = mylist_induction,
                       case_defs = [mylist_case], mapIDs = [],
+                      eqns = eqnsOf (#components bnf),
                       rewrites = [[mylistMAP_thm, mylistSET_thm]],
                       names = [noNames]})
 
@@ -326,7 +327,7 @@ val efix = defineFixpoint {tyname = "expr", ABS = "expr_ABS",
                            REP = "expr_REP"} ebnf
 val ecs = defineConstructors noNames (hd (#constructors spec)) ebnf efix
 val eres = fixpointBNF noNames ebnf efix
-val eeqns = constructorEqns ecs eres
+val eeqns = constructorEqns (eqnsOf (#components ebnf)) ecs eres
 
 Theorem expr_axiom = #existential_axiom ecs
 Theorem exprMAP_thm[simp] = #map_eqns eeqns
@@ -336,6 +337,7 @@ val _ = TypeBase.export
           (typeBaseInfo {axiom = expr_axiom,
                          induction = valOf (#induction ecs),
                          case_defs = defineCases expr_axiom, mapIDs = [],
+                         eqns = eqnsOf (#components ebnf),
                          rewrites = [[exprMAP_thm, exprSET_thm]],
                          names = [noNames]})
 
@@ -384,6 +386,7 @@ val rose_tyinfos =
     typeBaseInfo {axiom = #axiom rcs,
                   induction = #set_induction rcs (),
                   case_defs = [rose_case], mapIDs = [], rewrites = [[]],
+                  eqns = eqnsOf (#components nested),
                   names = [noNames]}
 val _ = TypeBase.export rose_tyinfos
 
@@ -534,7 +537,7 @@ val nfix = defineFixpoint {tyname = "stack", ABS = "stack_ABS",
                            REP = "stack_REP"} nbnf
 val ncs = defineConstructors noNames (hd (#constructors nspec)) nbnf nfix
 val nres = fixpointBNF (hd (#names nspec)) nbnf nfix
-val neqns = constructorEqns ncs nres
+val neqns = constructorEqns (eqnsOf (#components nbnf)) ncs nres
 
 Theorem stack_axiom = #existential_axiom ncs
 Theorem STMAP_thm[simp] = #map_eqns neqns
@@ -544,6 +547,7 @@ val _ = TypeBase.export
           (typeBaseInfo {axiom = stack_axiom,
                          induction = valOf (#induction ncs),
                          case_defs = defineCases stack_axiom, mapIDs = [],
+                         eqns = eqnsOf (#components nbnf),
                          rewrites = [[STMAP_thm, stack_to_set_thm]],
                          names = #names nspec})
 

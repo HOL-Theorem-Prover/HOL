@@ -329,7 +329,7 @@ fun oneType db (spec : spec) =
               if null params then []
               else
               let val res = fixpointBNF nms bnf fix
-                  val e = constructorEqns cs res
+                  val e = constructorEqns (eqnsOf (#components bnf)) cs res
                   val eqs = List.map wr ([#map_eqns e] @ #set_eqns e)
               in
                 registerBNF {tyname = tyname,
@@ -350,7 +350,8 @@ fun oneType db (spec : spec) =
                     val res = transportBNF nms {abs = #abs c, rep = #rep c,
                                                 absrep = #absrep c,
                                                 repabs = #repabs c} fbnf
-                    val e = constructorEqns cs (copyMemberBNF c res)
+                    val e = constructorEqns (eqnsOf (#components bnf)) cs
+                                            (copyMemberBNF c res)
                     val eqs = List.map wr ([#map_eqns e] @ #set_eqns e)
                 in
                   (* restated at the copy's _CONS, these are equations at
@@ -366,7 +367,8 @@ fun oneType db (spec : spec) =
           typeBaseInfo {axiom = axiom, induction = induction,
                         case_defs = defineCases axiom,
                         rewrites = [eqns], names = #names spec,
-                        mapIDs = mapIDsOf (#components bnf)}
+                        mapIDs = mapIDsOf (#components bnf),
+                        eqns = eqnsOf (#components bnf)}
       (* a record's accessors, update functions and literal syntax are
          the existing apparatus's, over the entry just made *)
       val tyinfos =
@@ -535,6 +537,10 @@ fun manyTypes db (spec : spec) =
       val params = liveParams db spec
       val fam = defineFamily {tynames = List.map (fn s => s ^ "_raw") tynames}
                              db params (#functors spec)
+      (* what the members' components say at their own constructors, which
+         is what reduces a set term anywhere in the family's derivation *)
+      val fameqns = List.concat (List.map (eqnsOf o #components)
+                                          (#functors fam))
       val principle = familyPrinciple fam
       val coll = collapseFamily {tynames = tynames} fam principle
       val ccs = collapsedConstructors (hd (#names spec))
@@ -545,7 +551,7 @@ fun manyTypes db (spec : spec) =
       val induction =
           legacyInduction.munge_ind_thm
             (asOldQuantified
-               (wr (familyInductionOf cdefs
+               (wr (familyInductionOf fameqns cdefs
                       (familySetInductionOf fam (#types coll, #cons coll)
                                             (#principle coll)))))
       (* each member as a functor of its own: the copy of a composite
@@ -586,7 +592,8 @@ fun manyTypes db (spec : spec) =
                         mapIDs =
                           List.concat
                             (List.map (mapIDsOf o #components)
-                                      (#functors fam))}
+                                      (#functors fam)),
+                        eqns = fameqns}
       (* a member written as a record gets the record apparatus, as a
          type of its own would *)
       val tyinfos =
