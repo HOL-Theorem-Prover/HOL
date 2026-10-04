@@ -1043,9 +1043,10 @@ fun initialize {
      down the file instead.
 
      `ExpExpansion` rather than a bare `Ident` so the built tree keeps
-     the original tactic's span: hover over the statement still works,
-     and nothing claims the opening bytes of the user's tactic are an
-     identifier.
+     the original tactic's span: nothing then claims the opening bytes
+     of the user's tactic are an identifier.  This only decides what
+     the fallback in `recompileAsCheat` looks like -- normally the
+     failed compile's own tree is the one kept.
 
      An in-progress block (`qed_ = NONE`) needs none of this: it already
      expands to a separate binding plus a standalone tac. *)
@@ -1067,8 +1068,24 @@ fun initialize {
   fun recompileAsCheat dec =
       let
         val expanded = expandDec dec
+        (* Hover and go-to-definition read the tree `emitBuilt' hands
+           out, and the retry's is a single `Tactical.cheat' node
+           carrying the whole proof's span -- so every identifier the
+           user wrote inside the tactic loses both.  Poly/ML hands back
+           a typed tree for a declaration that failed to typecheck
+           (which is why a proof block still without its `QED', where
+           this retry does not fire, keeps its hovers), so put the
+           failed compile's tree back once the retry has bound the
+           theorem.  If it produced none, the retry's stands. *)
+        val failedDecs = !decsRef
+        val failedPts = !ptRef
+        fun keepFailedTree () =
+          case failedPts of
+            [] => ()
+          | _ => (decsRef := failedDecs; ptRef := failedPts)
         fun restore () = (muffled := false;
-                          LSPExtension.cheatSubstituted := false)
+                          LSPExtension.cheatSubstituted := false;
+                          keepFailedTree ())
       in
         DArray.clear queue;
         HOLSourcePrinter.printDecs parseError'

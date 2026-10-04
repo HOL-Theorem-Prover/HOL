@@ -1170,6 +1170,61 @@ def test_hover_inside_theorem_body():
         c.close()
 
 
+def test_hover_inside_a_tactic_that_failed_to_compile():
+    """A `Theorem` whose tactic will not compile is recompiled with the
+    proof replaced by `cheat`, so the name still binds and the rest of
+    the file carries on.  That retry's parse tree used to be the one
+    hover reads, and the substituted `cheat` carries the whole proof's
+    span -- so every identifier the user wrote inside the tactic
+    answered with one node named after the source text it covered.
+    Poly/ML types a declaration that failed to typecheck, so the failed
+    compile's tree is kept and the retry does nothing but bind."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/cheat_retry_hover.sml"
+        #  6   gen_tac >> simp[ADD_CLAUSES] >>   <- ADD_CLAUSES at 18
+        # 12   simp[t]                           <- `t` at 7
+        src = ("Theory cheat_retry_hover\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  gen_tac >> simp[ADD_CLAUSES] >>\n"
+               "QED\n\n"
+               "Theorem u:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  simp[t]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+
+        inner = _hover_at(c, 230, uri, 6, 20)
+        assert_true(inner is not None,
+                    "hover inside the failed tactic answers")
+        md = inner["contents"]["value"]
+        assert_true("ADD_CLAUSES" in md and "Thm.thm" in md,
+                    f"and names the theorem it is over ({md!r})")
+        assert_true(">>" not in md,
+                    f"not the whole proof as one `cheat` node ({md!r})")
+
+        # The retry still has to do its own job: `t` binds regardless.
+        bound = _hover_at(c, 231, uri, 12, 7)
+        assert_true(bound is not None,
+                    "hover on the theorem used below answers")
+        md = bound["contents"]["value"]
+        assert_true("val t" in md,
+                    f"the failed theorem still bound ({md!r})")
+
+        hard = [d for d in _diag_count(c, uri) if d.get("severity") == 1]
+        assert_true(all(d["range"]["start"]["line"] < 8 for d in hard),
+                    f"nothing hard below the broken proof "
+                    f"({[d['range'] for d in hard]!r})")
+    finally:
+        c.close()
+
+
 def test_hover_at_body_boundary_and_operators():
     """Cursor at three tricky positions in a Theorem body:
     (a) the very first byte of the body — must not be claimed by
@@ -9387,6 +9442,8 @@ TESTS = [
                                      test_hover_type_only_no_identifier_is_null),
     ("hover_inside_term_quotation",  test_hover_inside_term_quotation),
     ("hover_inside_theorem_body",    test_hover_inside_theorem_body),
+    ("hover_inside_a_tactic_that_failed_to_compile",
+                            test_hover_inside_a_tactic_that_failed_to_compile),
     ("hover_at_body_boundary_and_operators",
                                      test_hover_at_body_boundary_and_operators),
     ("hover_across_utf8_binder_and_var",

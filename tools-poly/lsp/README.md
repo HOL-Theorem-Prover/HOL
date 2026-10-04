@@ -104,6 +104,17 @@ practical guide to trying it out; the protocol details live in
   about the `()` the expansion stood in with; that one is reported on
   the combinator, with a message of our own — `` `>-` has no
   right-hand argument ``.
+- **Hover survives a tactic that will not compile.**  A `Theorem`
+  whose proof fails to compile is quietly recompiled with the body
+  replaced by `cheat`, so the name still binds and the rest of the
+  file carries on.  That retry's parse tree is not the one hover and
+  go-to-definition read, though: the substituted `cheat` carries the
+  whole proof's span, so every identifier the user wrote inside the
+  tactic would answer with a single node named after the source text
+  it covered.  Poly/ML types a declaration that failed to typecheck —
+  which is why a proof block still missing its `QED`, where the retry
+  does not fire, keeps its hovers — so the failed compile's tree is
+  the one kept and the retry does nothing but bind.
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so
