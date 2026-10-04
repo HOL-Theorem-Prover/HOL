@@ -945,7 +945,8 @@ fun mkCaseTerm [_] [(x,b)] scrut = subst [x |-> scrut] b
 type constructors = {
   constructors : term list, defs : thm list, axiom : thm,
   legacy_axiom : thm, existential_axiom : thm, induction : thm option,
-  set_induction : thm, distinct : thm option list, one_one : thm option list
+  set_induction : unit -> thm,
+  distinct : unit -> thm option list, one_one : unit -> thm option list
 }
 
 (* taking a sum of products apart *)
@@ -1275,19 +1276,25 @@ fun defineConstructors (nms : names) cspecs bnf (fix:fixpoint) : constructors =
            the form a nested recursion keeps *)
         (* only a constructor's own definition folds back into its own
            clause, so each clause is handed just its own *)
-        val clauses =
-            map (fn c =>
-                    (length (#args c),
-                     QCONV pruneConv THENC
-                     (* the set simpset says nothing about one, which
-                        is what is wanted: a constructor with an
-                        argument of type one has that argument, and a
-                        clause about `P (C ())` is not the shape a
-                        datatype's induction principle is read in *)
-                     QCONV (simpLib.SIMP_CONV (set_ss()) setRWs) THENC
-                     QCONV (PURE_REWRITE_CONV [GSYM (#def c)])))
-                cs
-        val set_induction =
+        fun set_induction () =
+          let
+            (* every clause reduces with the same simpset, and building
+               one re-fetches and re-merges its rewrites: once, not once
+               per constructor *)
+            val ss = set_ss()
+            val clauses =
+                map (fn c =>
+                        (length (#args c),
+                         QCONV pruneConv THENC
+                         (* the set simpset says nothing about one, which
+                            is what is wanted: a constructor with an
+                            argument of type one has that argument, and a
+                            clause about `P (C ())` is not the shape a
+                            datatype's induction principle is read in *)
+                         QCONV (simpLib.SIMP_CONV ss setRWs) THENC
+                         QCONV (PURE_REWRITE_CONV [GSYM (#def c)])))
+                    cs
+          in
             CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
                (QCONV (PURE_REWRITE_CONV setRWs) THENC
                 (* once, for every clause: unfolding the combinators
@@ -1300,6 +1307,7 @@ fun defineConstructors (nms : names) cspecs bnf (fix:fixpoint) : constructors =
                    rather than about `P (V a)` *)
                 expandConsWith (QCONV pruneConv) clauses)))
                (#set_induction fix)
+          end
         (* whether this is a nested recursion is known structurally: a
            nested factor's mapped type is not the answer type.  Deciding
            it by catching an exception out of Prim_rec would swallow
@@ -1320,8 +1328,8 @@ fun defineConstructors (nms : names) cspecs bnf (fix:fixpoint) : constructors =
        legacy_axiom = legacy, induction = induction,
        set_induction = set_induction,
        existential_axiom = existential,
-       distinct = Prim_rec.prove_constructors_distinct existential,
-       one_one = Prim_rec.prove_constructors_one_one existential}
+       distinct = (fn () => Prim_rec.prove_constructors_distinct existential),
+       one_one = (fn () => Prim_rec.prove_constructors_one_one existential)}
     end
 
 

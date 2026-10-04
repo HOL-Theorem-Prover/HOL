@@ -283,7 +283,7 @@ fun oneType db (spec : spec) =
             (asOldQuantified
                (wr (case #induction cs of
                         SOME th => th
-                      | NONE => #set_induction cs)))
+                      | NONE => #set_induction cs ())))
       (* the new type as a functor of its own, so that a later
          specification can recurse through it *)
       (* a type with no arguments is not a functor: there is nothing for
@@ -358,11 +358,26 @@ and discardAmbient tyname =
           (case Lib.total dest_type ty of
                SOME (_, args) => List.exists inTy args
              | NONE => false)
+      (* every theorem in the segment is asked this, and the ones that
+         answer no are the common case, so the question is asked in one
+         pass that stops at the first yes rather than by building a list
+         of every constant and then a list of every subterm *)
       fun scaffolding th =
-          List.exists (fn t => Lib.mem (#1 (dest_const t)) doomed)
-                      (find_terms is_const (concl th)) orelse
-          List.exists (fn t => inTy (type_of t))
-                      (find_terms (fn _ => true) (concl th))
+          let
+            fun walk t =
+                case Lib.total dest_const t of
+                    SOME (nm, ty) => Lib.mem nm doomed orelse inTy ty
+                  | NONE =>
+                    inTy (type_of t) orelse
+                    (case Lib.total dest_comb t of
+                         SOME (f, x) => walk f orelse walk x
+                       | NONE =>
+                         case Lib.total dest_abs t of
+                             SOME (v, b) => walk v orelse walk b
+                           | NONE => false)
+          in
+            walk (concl th)
+          end
       fun gone f x = ignore (Lib.total f x)
     in
       List.app (fn (nm, th) =>

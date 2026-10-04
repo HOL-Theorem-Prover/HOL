@@ -139,7 +139,7 @@ val _ =
 
 val _ = tprint "a record's constructor is injective"
 val _ =
-    case hd (#one_one rcs) of
+    case hd (#one_one rcs ()) of
         NONE => die "none derived"
       | SOME th =>
           if length (strip_conj (#2 (strip_forall (concl th)))) = 1 andalso

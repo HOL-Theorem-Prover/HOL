@@ -164,11 +164,11 @@ val btree_ind = valOf (#induction btcs)
 val _ = checkthm "btree induction" btree_ind
    “∀P. P Lf ∧ (∀a0 a2. P a0 ∧ P a2 ⇒ ∀a1. P (Nd a0 a1 a2)) ⇒ ∀b. P b”
 
-val _ = checkthm "btree distinctness" (valOf (hd (#distinct btcs)))
+val _ = checkthm "btree distinctness" (valOf (hd (#distinct btcs ())))
    “∀a2 a1 a0. Lf ≠ Nd a0 a1 a2”
 
 val _ = checkthm "btree injectivity"
-   (valOf (hd (List.filter isSome (#one_one btcs))))
+   (valOf (hd (List.filter isSome (#one_one btcs ()))))
    “∀a0 a1 a2 a0' a1' a2'.
       Nd a0 a1 a2 = Nd a0' a1' a2' ⇔ a0 = a0' ∧ a1 = a1' ∧ a2 = a2'”
 

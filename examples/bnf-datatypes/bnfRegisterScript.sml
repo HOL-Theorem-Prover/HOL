@@ -27,8 +27,8 @@ val cs = defineConstructors noNames [("MyNil", 0), ("MyCons", 2)] bnf fix
 
 Theorem mylist_axiom = #existential_axiom cs
 Theorem mylist_induction = valOf (#induction cs)
-Theorem MyCons_11 = valOf (List.last (#one_one cs))
-Theorem mylist_distinct = valOf (hd (#distinct cs))
+Theorem MyCons_11 = valOf (List.last (#one_one cs ()))
+Theorem mylist_distinct = valOf (hd (#distinct cs ()))
 
 (* ----------------------------------------------------------------------
     the BNF structure of the new type, derived
@@ -232,11 +232,11 @@ val _ =
 
 val _ = tprint "set-based induction, split along the constructors"
 val _ =
-    if same (concl (#set_induction rcs))
+    if same (concl (#set_induction rcs ()))
             “∀P. P RLeaf ∧
                  (∀a l. (∀y. y ∈ mylistSET l ⇒ P y) ⇒ P (RNode a l)) ⇒
                  ∀r. P r”
-    then OK() else die (thm_to_string (#set_induction rcs))
+    then OK() else die (thm_to_string (#set_induction rcs ()))
 
 (* ----------------------------------------------------------------------
     The case constant, and the TypeBase entry.
@@ -382,7 +382,7 @@ val _ =
    reads the existence half of the axiom *)
 val rose_tyinfos =
     typeBaseInfo {axiom = #axiom rcs,
-                  induction = #set_induction rcs,
+                  induction = #set_induction rcs (),
                   case_defs = [rose_case], mapIDs = [], rewrites = [[]],
                   names = [noNames]}
 val _ = TypeBase.export rose_tyinfos

@@ -161,7 +161,7 @@ val _ =
    second type's are those of the sibling functor, at the first *)
 val _ = tprint "the pair's constructors are distinct and injective"
 val _ =
-    case (hd (#distinct cs1), List.last (#one_one cs2)) of
+    case (hd (#distinct cs1 ()), List.last (#one_one cs2 ())) of
         (SOME d, SOME i) =>
           if null (hyp d) andalso null (hyp i) then OK()
           else die (thm_to_string d ^ "\n" ^ thm_to_string i)
