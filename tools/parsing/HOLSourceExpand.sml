@@ -825,6 +825,27 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       | (SOME _, ExpEmpty _) => []
       | (SOME _, _) => [valWild theorem_ (expandExp false tac)]
     in DecExpansion {orig = dec, result = bind :: extra} end
+  (* `Theorem name: ... QED' with no `Proof' between them -- deleted,
+     or merely indented, since the parser only stops a statement
+     quotation at a `Proof' in column 0.  What it hands us then is a
+     quotation holding the statement *and* the tactic text, and a `tac'
+     that is empty.  Neither can be stored: the quotation does not
+     parse as a term, and `wrapTac' on an empty tactic builds
+     `fn g => () g', whose "Function: () : unit, Argument: g" type
+     error describes synthesised code and tells the reader nothing
+     about their file.
+
+     So bind the name and stop, exactly as the still-being-typed case
+     above does and for the same reason: without a binding every later
+     use of the theorem reports it undeclared, and a block the user is
+     in the middle of repairing takes the rest of the file down with
+     it.  The parse error on the `QED' is what says what is wrong. *)
+  | expandDec _ (dec as HOLTheoremDecl {
+      triv = _, theorem_, id, attrs = _, colon = _, quote = _,
+      proof_ = NONE, tac = _, qed_ = _, stop = _}) =
+    DecExpansion {orig = dec,
+                  result = [valPat theorem_ (mkIdent id)
+                              (mkIdent (theorem_, "boolTheory.TRUTH"))]}
   | expandDec _ (dec as HOLTheoremDecl {
       triv, theorem_, id,
       attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) = let

@@ -9226,6 +9226,60 @@ def test_an_edit_during_a_commit_is_not_lost():
         c.close()
 
 
+def test_a_theorem_without_proof_keeps_the_file_compiling():
+    """`Theorem … : stmt <tactics> QED`, with no `Proof` between the
+    statement and the tactics.
+
+    The parser ends a statement quotation at a `Proof` in column 0, so
+    deleting that line -- or merely indenting it -- hands the expander a
+    quotation holding the statement *and* the tactic text, and an empty
+    tactic.  Wrapping that empty tactic built `fn g => () g`, whose
+    "Function: () : unit, Argument: g" type error is about synthesised
+    code and says nothing about the file; and with the theorem left
+    unbound, every later use of it reported it undeclared.  One missing
+    line took the rest of the file with it.
+
+    What should survive: a diagnostic that names `Proof`, no type error
+    about the wrapping, and a file that still compiles below."""
+    for label, proof_line in (("deleted", ""), ("indented", "  Proof\n")):
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            uri = f"file:///tmp/no_proof_{label}.sml"
+            src = ("Theory no_proof_" + label + "\n"
+                   "Ancestors arithmetic\n\n"
+                   "Theorem thm_a:\n"
+                   "  T\n"
+                   + proof_line +
+                   "  ACCEPT_TAC TRUTH\n"
+                   "QED\n\n"
+                   "Theorem thm_b:\n"
+                   "  T\n"
+                   "Proof\n"
+                   "  ACCEPT_TAC thm_a\n"
+                   "QED\n")
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        f"{label}: compiled")
+            diags = _diag_count(c, uri)
+            msgs = [d.get("message", "") for d in diags]
+            wrapping = [m for m in msgs
+                        if "() : unit" in m or "Can't unify" in m]
+            assert_eq(wrapping, [],
+                      f"{label}: no type error from the synthesised tactic")
+            undeclared = [m for m in msgs
+                          if "thm_a" in m and "has not been declared" in m]
+            assert_eq(undeclared, [],
+                      f"{label}: thm_a still binds, so the file below "
+                      f"still elaborates")
+            says_proof = [m for m in msgs if "Proof" in m and "column 0" in m]
+            assert_true(says_proof,
+                        f"{label}: a diagnostic says a Proof is wanted in "
+                        f"column 0; got {[m[:70] for m in msgs]!r}")
+        finally:
+            c.close()
+
+
 TESTS = [
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
@@ -9573,6 +9627,8 @@ TESTS = [
      test_an_overlong_range_does_not_merge_lines),
     ("an_edit_during_a_commit_is_not_lost",
      test_an_edit_during_a_commit_is_not_lost),
+    ("a_theorem_without_proof_keeps_the_file_compiling",
+     test_a_theorem_without_proof_keeps_the_file_compiling),
 ]
 
 
