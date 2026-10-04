@@ -81,18 +81,29 @@ practical guide to trying it out; the protocol details live in
   application on the application node — which for the root of that
   chain is the whole tactic, so a `simp` left without its `thm list`
   on the last line used to paint every line of the proof red.  Poly/ML
-  reports the *innermost* application that failed to unify, and that is
-  what makes narrowing sound: if the blamed node's left operand is
-  itself an application it has already typechecked, or the error would
-  have been reported on it instead, so the operand at fault is the
-  right one.  `narrowBlame` in `holide.ML` moves the report there,
-  taking associativity from the parser's own infix table.  Where both
-  operands are leaves the failure could be either and nothing is
-  claimed — the range is a token or two wide anyway.  A combinator
-  left without an operand at all, `>-` at the end of a half-written
-  proof, has nothing to point at and draws a complaint about the `()`
-  the expansion stood in with; that one is reported on the combinator,
-  with a message of our own — `` `>-` has no right-hand argument ``.
+  reports the *innermost* application that failed to unify, so the
+  blamed node's left operand has already typechecked — but that on its
+  own does not clear it, because `Q.SPEC ‘x’` typechecks too and is
+  not a tactic.  What clears it is the two operators, each asked its
+  own question: the blamed one has to take a tactic on its *left*, and
+  the left operand's own has to *give* one back.  Together those say
+  the left operand already has the type its slot wants, so the operand
+  at fault is the right one.  `narrowBlame` in `holide.ML` moves the
+  report there, taking associativity from the parser's own infix
+  table.  The two questions are two lists, and they differ at the
+  edges: `by` takes a term quotation on its left and so answers only
+  the second, while `>>-` takes a tactic but makes `A >>- 3` a
+  *function* and so answers only the first.  Asking one question of
+  both used to make `>~` opaque — its right operand is a `tmquote
+  list`, so a chain that renamed a subgoal on its way past narrowed
+  nowhere, though what `>~` gives back is a perfectly good tactic.
+  Where both operands are leaves the failure could be either and
+  nothing is claimed — the range is a token or two wide anyway.  A
+  combinator left without an operand at all, `>-` at the end of a
+  half-written proof, has nothing to point at and draws a complaint
+  about the `()` the expansion stood in with; that one is reported on
+  the combinator, with a message of our own — `` `>-` has no
+  right-hand argument ``.
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so

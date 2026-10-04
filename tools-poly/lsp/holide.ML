@@ -689,10 +689,17 @@ and annotateStrexp (StrIdent id) pt = annotateId id pt
     Typechecking is not enough on its own, though.  `Q.SPEC `x'' is a
     perfectly good expression and is not a tactic, so "the left operand
     is compound" would blame the right one for the left one's fault.
-    What settles it is the operator: these combinators take two
-    tactics and give a tactic, so a left operand that is one of them
-    and typechecked has exactly the type the operator above it wants
-    there -- and the operand at fault has to be the right one.
+    What settles it is the two operators, each asked its own question:
+    the blamed one has to take a tactic on its *left*, and the left
+    operand's own has to *give* one.  Together those say the left
+    operand has exactly the type the slot it sits in wants -- so the
+    operand at fault has to be the right one.
+
+    Asking one question of both is what used to make `>~' opaque.  Its
+    right operand is a `tmquote list' rather than a tactic, so a chain
+    that renamed a subgoal on its way past narrowed nowhere; but what
+    `>~' gives back is a tactic, which is all the slot above it cares
+    about.
 
     Anything else is left alone.  Where both operands are leaves the
     failure could be either, and the range is a token or two wide
@@ -700,12 +707,23 @@ and annotateStrexp (StrIdent id) pt = annotateId id pt
     recognises, and answers NONE for everything else.
    ---------------------------------------------------------------------- *)
 
-(* Infixes of type `tactic * tactic -> tactic'.  Deliberately not the
-   whole tactic family: `THENL'/`>|' take a tactic *list* on the right
-   and `THENC'/`ORELSEC' are conversions, so a chain through one of
-   those says nothing about its own type. *)
-val tacticInfixes =
-  ["THEN", ">>", "\\\\", "THEN1", ">-", ">>-", "ORELSE"]
+(* Operators that take a tactic on their left.  `??' is absent because
+   it is fully generic -- `('a -> 'b) * 'a -> 'b' constrains neither
+   operand. *)
+val tacticLeftInfixes =
+  ["THEN", ">>", "\\\\", "THEN1", ">-", "ORELSE",
+   "THENL", ">|", "THEN_LT", ">>>", ">>-", ">~", ">>~", ">>~-"]
+
+(* Operators whose result is a tactic, whatever their operands are:
+   `THENL' takes a tactic list, `>~' a `tmquote list', `by' a term
+   quotation on its left.  A typechecked application of one of these
+   has the type the slot above it wants.  `>>-' is deliberately
+   missing -- `tactic * int -> tactic -> tactic' makes `A >>- 3' a
+   function rather than a tactic, so it fills no such slot. *)
+val tacticValuedInfixes =
+  ["THEN", ">>", "\\\\", "THEN1", ">-", "ORELSE",
+   "THENL", ">|", "THEN_LT", ">>>", ">~", ">>~", ">>~-",
+   "by", "suffices_by", "via"]
 
 (* Immediate sub-expressions, for the search below.  A constructor
    missing from here simply ends the descent, which costs a narrowing
@@ -766,9 +784,11 @@ fun infixOp e = case e of
 fun narrowBlame tac span =
   case smallestCovering tac span of
     SOME (Infix {left, id, right}) => let
-      fun isTacOp s = List.exists (fn t => t = s) tacticInfixes
-      fun composes e = case infixOp e of
-          SOME s => isTacOp s
+      fun mem s l = List.exists (fn t => t = s) l
+      (* The left operand was built with something that gives a
+         tactic, so it fits the slot the blamed operator has for it. *)
+      fun gives e = case infixOp e of
+          SOME s => mem s tacticValuedInfixes
         | NONE => false
       (* Nothing was written on that side, so Poly/ML's complaint is
          about the `()' the expansion stood in with rather than about
@@ -781,7 +801,7 @@ fun narrowBlame tac span =
       in
         if repairedExp right then missing "right"
         else if repairedExp left then missing "left"
-        else if isTacOp (#2 id) andalso composes left then
+        else if mem (#2 id) tacticLeftInfixes andalso gives left then
           SOME (expSpan right, NONE)
         else NONE
       end

@@ -3623,6 +3623,45 @@ def test_dangling_combinator_flags_the_operator():
         c.close()
 
 
+def test_narrowing_sees_past_a_renaming_step():
+    """Narrowing asks two questions, one of each operator: does the
+    blamed one take a tactic on its left, and does the left operand's
+    own give one back.  Asking the first of both made `>~` opaque --
+    its right operand is a `tmquote list`, so a chain that renamed a
+    subgoal on its way past narrowed nowhere and the whole proof went
+    red.  What `>~` *gives* is a tactic, which is all the slot above
+    it cares about."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/rename_then_operand.sml"
+        #  6   conj_tac >~ [`1 = 1`]
+        #  7   >- ()                   <- chars 5..7
+        src = ("Theory rename_then_operand\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac >~ [`1 = 1`]\n"
+               "  >- ()\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        hard = [d for d in _diag_count(c, uri) if d.get("severity") == 1]
+        assert_ge(len(hard), 1, f"a hard diagnostic ({hard!r})")
+        assert_true(all(d["range"]["start"]["line"] == 7 for d in hard),
+                    f"nothing hard on the well-formed prefix "
+                    f"({[(d['range'], d.get('message','')[:60]) for d in hard]!r})")
+        assert_true(any((d["range"]["start"]["character"],
+                         d["range"]["end"]["line"],
+                         d["range"]["end"]["character"]) == (5, 7, 7)
+                        for d in hard),
+                    f"squiggled on the `()` alone "
+                    f"({[d['range'] for d in hard]!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_unwritten_then1_branch_shows_its_goal():
     """With the cursor just after a `>-` whose branch is not written
     yet, the walk used to bail before it ever opened the bracket:
@@ -9450,6 +9489,8 @@ TESTS = [
                                      test_trailing_operand_type_error_narrows_to_it),
     ("dangling_combinator_flags_the_operator",
                                      test_dangling_combinator_flags_the_operator),
+    ("narrowing_sees_past_a_renaming_step",
+                                     test_narrowing_sees_past_a_renaming_step),
     ("goalState_unwritten_then1_branch_shows_its_goal",
                                 test_goalState_unwritten_then1_branch_shows_its_goal),
     ("goalState_before_an_unwritten_then1_shows_both_goals",
