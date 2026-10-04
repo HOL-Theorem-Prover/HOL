@@ -22,6 +22,16 @@ datatype 'a info = bI of {
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
   relator : term,           (* type's rel term *)
   set : term list,          (* type's set terms *)
+  eqns : 'a list,           (* what reduces this operator's map and set
+                               terms at its own constructors, for the
+                               construction's own simplification.  Not
+                               one per set function: an operator may say
+                               it in one theorem over all constructors
+                               (sum's setL_def) or in one per
+                               constructor (fmap's FRANGE_FEMPTY and
+                               FRANGE_FUPDATE).  Empty where there are
+                               no constructors to speak of, as for the
+                               function type. *)
 
   wits : (term * 'a) list,  (* nonemptiness witnesses; see below *)
   inhabits : (term * 'a) list (* set₁ is inhabited, ...; see below *)

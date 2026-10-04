@@ -1749,6 +1749,9 @@ fun transportBNF (nms : names) {abs, rep, absrep, repabs}
 
          relator = cinst (lhs (concl relator_def)),
          set = List.map (cinst o setTm) (upto n),
+         (* the constructors are not split yet, so what the map and set
+            do at them is not known here; registerBNF fills it in *)
+         eqns = [],
 
          wits = List.map ((fn (t,th) => (cinst t, cthm th)) o witOf)
                          (#wits bnf),
@@ -2179,6 +2182,9 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
 
          relator = cinst relator,
          set = List.map (cinst o setTm) (upto n),
+         (* the constructors are not split yet, so what the map and set
+            do at them is not known here; registerBNF fills it in *)
+         eqns = [],
 
          wits = List.map ((fn (t,th) => (cinst t, cthm th)) o witOf) fwits,
          inhabits = List.map ((fn (t,th) => (cinst t, cthm th)) o inhOf)

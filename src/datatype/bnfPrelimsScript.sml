@@ -382,6 +382,7 @@ val _ = bnfBase.updateDB (
     relator = “SUM_REL : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
                          'a1 + 'a2 -> 'c1 + 'c2 -> bool”,
     set = [“setL : 'a1 + 'a2 -> 'a1 set”, “setR : 'a1 + 'a2 -> 'a2 set”],
+    eqns = [sum_nm "SUM_MAP_def", sum_nm "setL_def", sum_nm "setR_def"],
 
     wits = [(“(K o INL) : 'a1 -> 'a2 -> 'a1 + 'a2”, pnm "sum_wit1"),
             (“K INR : 'a1 -> 'a2 -> 'a1 + 'a2”, pnm "sum_wit2")],
@@ -463,6 +464,8 @@ val _ = bnfBase.updateDB (
 
     map = “pair$## : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'a1 # 'a2 -> 'c1 # 'c2”,
     set = [“setFST : 'a1 # 'a2 -> 'a1 set”, “setSND : 'a1 # 'a2 -> 'a2 set”],
+    eqns = [pair_nm "PAIR_MAP_THM", pair_nm "setFST_thm",
+            pair_nm "setSND_thm"],
     mapID = pnm "pairMap_ID",
     mapO = pnm "pairMap_O",
     mapIMAGE = [pnm "pairMapIMAGE1", pnm "pairMapIMAGE2"],
@@ -540,6 +543,8 @@ val _ = bnfBase.updateDB (
     canontype = “:'b1 -> 'a1”,
     map = “combin$o : ('a1 -> 'c1) -> ('b1 -> 'a1) -> ('b1 -> 'c1)”,
     set = [“fset: ('b1 -> 'a1) -> 'a1 set”],
+    (* the function type has no constructors, so nothing reduces at them *)
+    eqns = [],
     mapID = pnm "funMap_ID",
     mapO = pnm "funMap_O",
     mapIMAGE = [pnm "funMapIMAGE1"],
@@ -647,6 +652,7 @@ val _ = bnfBase.updateDB (
     canontype = “:'a1 option”,
     map = “option$OPTION_MAP : ('a1 -> 'c1) -> 'a1 option -> 'c1 option”,
     set = [“optSET : 'a1 option -> 'a1 set”],
+    eqns = [{Thy = "option", Name = "OPTION_MAP_DEF"}, pnm "optSET_def"],
     mapID = pnm "optMap_ID",
     mapO = pnm "optMap_O",
     mapIMAGE = [pnm "optMapIMAGE1"],
