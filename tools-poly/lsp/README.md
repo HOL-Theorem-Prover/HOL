@@ -25,7 +25,7 @@ practical guide to trying it out; the protocol details live in
   arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
   below), `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted` /
-  `$/compileBlocked`, `$/hol/retryCompile`.
+  `$/compileBlocked`, `$/hol/retryCompile`, `$/hol/desync`.
 - Server capabilities also cover `documentSymbolProvider`,
   `workspaceSymbolProvider` and `completionProvider`, so an editor's
   outline, symbol search and completion work with no client-side code
@@ -51,6 +51,31 @@ practical guide to trying it out; the protocol details live in
   the editor and the header is already right — `M-h M-C` in the
   shipped eglot client, "HOL: Compile the active script again" in
   hol4-vscode.
+- **The server says when its copy has drifted (`$/hol/desync`).**  The
+  server holds the document by applying the incremental ranges a
+  client sends, and there is nothing in LSP that resends one: if the
+  two texts ever stop being identical, every position the server
+  reports is wrong from the drift down, for the rest of the session.
+  So each change is checked against the text it lands on — a range
+  from line `l1` to line `l2` has to span exactly `l2 - l1` newlines,
+  and a line the server does not have is the same disagreement one
+  size larger.  On a mismatch the server applies the change clamped to
+  the line the client named, so its copy at least stays structurally
+  sound, and sends
+
+  ```json
+  {"uri": "file:///…", "version": 17, "message": "<what did not fit>"}
+  ```
+
+  A client answers by sending the whole buffer as a single
+  full-document `didChange`.  That is cheap: `applyEdit`'s
+  whole-document case keeps the declaration snapshots and takes the
+  edit offset from the first byte at which the two texts actually
+  differ, so a document that drifted by a few bytes re-elaborates from
+  there rather than from the top.  The shipped eglot client does this
+  automatically; `M-x hol-lsp-resync` forces it by hand.  A client
+  that ignores the notification keeps working, badly — the whole point
+  of the message is that it is not supposed to be ignorable.
 - **A blamed operand, not a blamed chain.**  A tactic is one long
   left-associative chain of `>>` and `>-`, and Poly/ML blames a failed
   application on the application node — which for the root of that

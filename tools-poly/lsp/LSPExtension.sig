@@ -19,6 +19,12 @@ val fromLineCol: lines -> posLC -> int
    Mixing the two silently works under utf-8, where they agree, and
    skews every position in a line containing a non-ASCII character
    under utf-16. *)
+(* Whether a client-sent position names a column past the end of its
+   line, in the negotiated units.  `fromLineCol' clamps such a position
+   rather than running into the next line; this is how a caller finds
+   out that it had to. *)
+val posOvershoots: lines -> posLC -> bool
+
 val getLineColBytes: lines -> int -> posLC
 val fromLineColBytes: lines -> posLC -> int
 

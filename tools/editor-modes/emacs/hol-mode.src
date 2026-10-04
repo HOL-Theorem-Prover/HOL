@@ -3022,8 +3022,61 @@ from 30 to 12 reads as what it is."
              &allow-other-keys)
     "Note that URI compiled, which is to say it is no longer blocked."
     (hol-lsp--set-blocked uri nil)
-    (hol-lsp--prune-stale-proofs uri)))
+    (hol-lsp--prune-stale-proofs uri))
 
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/hol/desync)) &key uri message
+             &allow-other-keys)
+    "Send the whole buffer again: the server's copy of URI has drifted.
+The server noticed that a change we described no longer fits the text
+it holds, which means every position it reports below the drift is
+wrong and will stay wrong -- nothing in LSP resends a document.  So
+resend it, now, rather than leaving the session quietly answering
+about a file nobody has."
+    (let ((buf (hol-lsp--buffer-for-uri uri)))
+      (when buf
+        (with-current-buffer buf
+          (hol-lsp-resync)
+          (message "HOL: resent the buffer; the server's copy had drifted (%s)"
+                   message))))))
+
+
+(defun hol-lsp-resync ()
+  "Replace the server's copy of this buffer with what is really here.
+Normally the server tracks the buffer through incremental `didChange'
+ranges and the two stay identical.  If they ever stop being identical
+there is no way back: the protocol has no resync, the client never
+repeats itself, and from then on the server answers about a document
+that differs from the one on screen.  This sends the whole text as a
+single full-document change, which is the one message that makes the
+two agree again whatever the disagreement was.
+
+Sent through eglot's own change machinery so that eglot's version
+counter stays authoritative -- a hand-rolled notification with a
+version the client does not know about would leave the next
+incremental change describing the wrong text."
+  (interactive)
+  (let ((server (hol-lsp--server)))
+    (unless server (user-error "No LSP server for this buffer"))
+    (cond
+     ;; `:emacs-messup' is eglot's own sentinel for "I cannot describe
+     ;; this as ranges", and it makes the next didChange carry the
+     ;; whole document.  Using it means the version number and the
+     ;; change bookkeeping are eglot's, not ours.
+     ((and (boundp 'eglot--recent-changes)
+           (fboundp 'eglot--signal-textDocument/didChange))
+      (setq eglot--recent-changes :emacs-messup)
+      (eglot--signal-textDocument/didChange))
+     ;; No such internal: reconnecting re-opens the document, which is
+     ;; the same repair at a much higher price (the server reloads the
+     ;; file's ancestors).  Still better than staying out of step.
+     ((fboundp 'eglot-reconnect) (eglot-reconnect server))
+     (t (user-error "Cannot resynchronise: eglot is too old")))))
+
+(defun hol-lsp--buffer-for-uri (uri)
+  "The live buffer visiting URI, or nil."
+  (let ((path (ignore-errors (hol-lsp--uri-to-path uri))))
+    (and path (find-buffer-visiting path))))
 
 (defun hol-lsp-retry-compile ()
   "Ask the server to compile this buffer again.

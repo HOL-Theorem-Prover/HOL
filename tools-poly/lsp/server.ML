@@ -1454,6 +1454,26 @@ fun start {diag, dbg, warnings} = let
       if walkHoldMs <= 0 then ()
       else OS.Process.sleep (Time.fromMilliseconds (IntInf.fromInt walkHoldMs))
 
+  (* Test hook: stretch the gap between a compile finishing and it
+     installing its trees, so a test can land a `didChange` in the
+     window that used to lose it.  The loss needs no help to happen in
+     real use -- a user typing while a half-second compile finishes is
+     enough, and two recorded sessions show it -- but it needs help to
+     happen on demand.  Unset (the default) means no hold. *)
+  val commitHoldMs =
+      getOpt (Option.mapPartial Int.fromString
+                (OS.Process.getEnv "HOL_LSP_COMMIT_HOLD_MS"), 0)
+  fun holdBeforeCommit () =
+      if commitHoldMs <= 0 then ()
+      else (
+        (* Announced at both ends so a test can send its edit *inside*
+           the window rather than guessing at a sleep.  A race test that
+           quietly missed its window would report the same "passed" as
+           one that hit it. *)
+        logMessage "commit hold: begin";
+        OS.Process.sleep (Time.fromMilliseconds (IntInf.fromInt commitHoldMs));
+        logMessage "commit hold: end")
+
   datatype report =
     Error of {hard: bool, pos: range, msg: encode}
   | CompilerOut of int * string list
@@ -1534,7 +1554,17 @@ fun start {diag, dbg, warnings} = let
                        thread: Thread.thread, cancelled: bool ref}
   type file_data = {
     compile: compile_data option ref,
-    lastTrees: {parse: parse_data, text: text_data} ref,
+    (* Synchronised, and not a plain `ref', because two threads write
+       it: the reader thread through `applyEdit', which is the only
+       thing that knows what the buffer says, and a finishing compile
+       installing the trees it built.  `stopCompile' used to be the
+       whole defence -- it sets `cancelled', and a pass tests that
+       before writing -- but a test and a write are two steps, and an
+       edit that lands between them is overwritten by the text the
+       pass started from.  That edit is then gone for good: the client
+       never resends it, so our copy of the document is permanently a
+       few bytes short of the buffer.  See `commitTrees'. *)
+    lastTrees: {parse: parse_data, text: text_data} Sref.t,
     (* debounce epoch: incremented on didChange and at startCompile
        entry.  scheduleCompile's forked thread captures the epoch and
        only fires startCompile if its epoch still matches when it
@@ -1650,7 +1680,8 @@ fun start {diag, dbg, warnings} = let
 
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
-    in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
+    in {compile = ref NONE,
+        lastTrees = Sref.new {parse = emptyParseData 0, text = text},
         debounce = ref 0, minEditOffset = Sref.new NONE,
         publishLock = Sref.new (),
         walkerDiags = Sref.new (Binarymap.mkDict String.compare),
@@ -1673,8 +1704,10 @@ fun start {diag, dbg, warnings} = let
      (e.g., HOL's parser recovering from an unterminated `Theorem`)
      would otherwise block recv, freezing hover requests and further
      didChanges.  The `cancelled` flag doubles as a "no longer
-     current" marker: the compile thread checks it before writing
-     lastTrees so a stale finish can't clobber the new state. *)
+     current" marker, which is enough for deciding not to publish but
+     was never enough for `lastTrees`: testing a flag and writing the
+     trees are two steps, and an edit landing between them was lost.
+     `commitTrees` does the deciding and the writing together. *)
   (* Alive and not superseded.  Not the same question as "is a pass
      using the compile state", which `compileUsingState ()` answers
      from the state's own side. *)
@@ -1718,11 +1751,99 @@ fun start {diag, dbg, warnings} = let
                else go (i + 1)
     in go 0 end
 
-  fun applyEdit ({compile, lastTrees, minEditOffset, ...}:file_data) version changes = let
+  (* Said out loud once per server run.  The client resyncs on the
+     notification without the user doing anything, but a condition that
+     should never arise correcting itself in silence is how it goes
+     unnoticed for a release. *)
+  val desyncAnnounced = ref false
+
+  (* Our copy of a document no longer matches the buffer.  Tell the
+     client, which answers by sending the whole text back (`$/hol/desync'
+     in the README); `applyEdit's `range = NONE' case takes it from
+     there, keeping the declaration snapshots and re-elaborating from
+     the first byte that actually differs rather than from scratch. *)
+  fun reportDesync uri version msgs =
+      if null msgs then () else let
+        val detail = String.concatWith "; " msgs
+        val what = "copy of the document is out of step with the client \
+                   \at version " ^ Int.toString version ^ ": " ^ detail
+      in
+        logMessage (uri ^ ": " ^ what);
+        send (mkNotif "$/hol/desync" (fn print => (
+          print "{\"uri\":"; encString uri print;
+          print ",\"version\":"; print (Int.toString version);
+          print ",\"message\":"; encString detail print;
+          print "}")));
+        if !desyncAnnounced then ()
+        else (desyncAnnounced := true;
+              warnUser ("HOL LSP: " ^ what ^ " -- resynchronising"))
+      end
+
+  (* Install the trees a finishing compile built -- but only if the text
+     they describe is not older than the one already in place.
+     `applyEdit' is the authority on what the buffer says; a pass that
+     started before an edit carries a text that predates it, and
+     installing that text drops the edit.  Nothing resends it, so from
+     then on our copy of the document is a few bytes short of the
+     buffer's, which is how a position the client computed honestly
+     ends up naming the wrong byte here.
+
+     `stopCompile' setting `cancelled' was meant to be the defence, and
+     cannot be: reading the flag and writing the trees are two steps,
+     and an edit that lands between them is overwritten anyway.  The
+     test and the write happen together here instead. *)
+  fun commitTrees lastTrees (new as {text, parse = _}) = (
+    (* Outside the lock on purpose: holding it would make `applyEdit'
+       wait, and waiting is the one thing that would hide the race the
+       hold is there to expose. *)
+    holdBeforeCommit ();
+    Sref.update lastTrees (fn cur =>
+      if #version text < #version (#text cur) then cur else new))
+
+  (* Newlines in `s[i..j)'. *)
+  fun newlinesIn (s, i, j) = let
+    fun go (k, n) =
+      if k >= j then n
+      else go (k + 1, if String.sub (s, k) = #"\n" then n + 1 else n)
+    in go (Int.max (i, 0), 0) end
+
+  fun applyEdit uri ({compile, lastTrees, minEditOffset, ...}:file_data)
+                version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
     val bumpMin = bumpMinEdit minEditOffset
+    (* The client computed its range from its own buffer, so what the
+       range says about the text it replaces is a fact we can check
+       against ours: a span from line `l1' to line `l2' crosses exactly
+       `l2 - l1' newlines.  It is not a malformed request when it
+       doesn't -- it is proof that the two texts have drifted apart,
+       and this is the last moment at which saying so is cheap.  Left
+       unsaid, the drift is only discovered later, as a declaration
+       that lost its `Proof' or a goal state that stopped answering,
+       with nothing left to point at the edit that caused it. *)
+    fun overshot lines what (p as (l, c)) =
+        if not (posOvershoots lines p) then NONE
+        else SOME ("its " ^ what ^ " names column " ^ Int.toString c ^
+                   " of line " ^ Int.toString l ^ ", past the end of the \
+                   \line we hold")
+    fun checkSpan lines base (f as (fl, _)) (t as (tl, _)) (from, to) =
+        (* Asked of the positions first, because `fromLineCol' has
+           already clamped an overshooting column back to its line end
+           by the time the span exists -- which is what stops the
+           splice from eating the newline, and also what would hide the
+           disagreement from the newline count below. *)
+        case List.mapPartial (fn x => x)
+               [overshot lines "start" f, overshot lines "end" t] of
+          m :: _ => SOME m
+        | [] =>
+          if from > to then SOME "the range ends before it starts"
+          else let val n = newlinesIn (base, from, to) in
+            if n = tl - fl then NONE
+            else SOME ("the text it spans holds " ^ Int.toString n ^
+                       " newline(s), not the " ^ Int.toString (tl - fl) ^
+                       " the range claims")
+          end
     (* The old `parse` value is carried through the fold so we can
        preserve its `declSnapshots` on each step (via
        `carryOverSnapshots`).
@@ -1747,22 +1868,42 @@ fun start {diag, dbg, warnings} = let
        a buffer has Emacs report one change spanning the entire
        document, whose `from' is 0 like any other. *)
     fun applyText [] data = data
-      | applyText ({range = NONE, text}::cs) (parse, base, _) =
+      | applyText ({range = NONE, text}::cs) (parse, base, _, bad) =
         (bumpMin (commonPrefixLen (base, text));
-         applyText cs (carryOverSnapshots parse, text, NONE))
-      | applyText ({range = SOME (from, to), text}::cs) (parse, base, lines) = let
+         applyText cs (carryOverSnapshots parse, text, NONE, bad))
+      | applyText ({range = SOME (f, t), text}::cs)
+                  (parse, base, lines, bad) = let
         val lines = getLines base lines
-        val (from, to) = (fromLineCol lines from, fromLineCol lines to)
+        (* A line we do not have is the same disagreement, one size
+           larger; `Subscript' from `bolOf' is how it arrives.  Treat
+           the position as the end of our text: the splice then still
+           produces something, and the resync below replaces it. *)
+        fun conv p = SOME (fromLineCol lines p) handle Subscript => NONE
+        val (from, to, bad) =
+            case (conv f, conv t) of
+              (SOME a, SOME b) =>
+                (a, Int.max (a, b),
+                 case checkSpan lines base f t (a, b) of
+                   NONE => bad | SOME m => m :: bad)
+            | _ => (size base, size base,
+                    "it names a line the server's copy does not have" :: bad)
         val text = Substring.concat [
           Substring.substring (base, 0, from),
           Substring.full text,
           Substring.substring (base, to, size base - to)]
         val _ = bumpMin (commonPrefixLen (base, text))
-        in applyText cs (carryOverSnapshots parse, text, NONE) end
-    val {parse, text = {text, lines, version = _}} = !lastTrees
-    val (parse, text, lines) = applyText changes (parse, text, SOME lines)
-    val text = {text = text, lines = getLines text lines, version = version}
-    in lastTrees := {parse = parse, text = text} end
+        in applyText cs (carryOverSnapshots parse, text, NONE, bad) end
+    (* The whole fold runs under the lock.  Splicing a buffer-sized
+       string is microseconds, and doing it outside would put the read
+       and the write back on either side of a window a didChange can
+       land in -- the bug this is here to close. *)
+    val bad = Sref.gen_update lastTrees (
+      fn {parse, text = {text, lines, ...}} => let
+      val (parse, text, lines, bad) =
+          applyText changes (parse, text, SOME lines, [])
+      val text = {text = text, lines = getLines text lines, version = version}
+      in ({parse = parse, text = text}, rev bad) end)
+    in reportDesync uri version bad end
 
   fun exceptionMessage (exn: exn) =
     PolyML.PrettyBlock(0, false, [], [
@@ -2061,7 +2202,7 @@ fun start {diag, dbg, warnings} = let
      outline is asked for on every edit, and `workspace/symbol' asks
      every open buffer on every keystroke of the search box. *)
   fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
-    val {text = {text, version, ...}, ...} = !lastTrees
+    val {text = {text, version, ...}, ...} = Sref.value lastTrees
     fun parse () = let val syms = bufferSymbols text
                    in symbols := SOME (version, syms); syms end
     in
@@ -2143,7 +2284,7 @@ fun start {diag, dbg, warnings} = let
                             ({lastTrees, walkerDiags, proofDiags,
                               publishLock, ...}:file_data) =
     Sref.update publishLock (fn held => let
-    val {text, parse} = !lastTrees
+    val {text, parse} = Sref.value lastTrees
     val {lines, version, ...} = text
     val compileDiags = #diags parse
     val wd = Sref.value walkerDiags
@@ -2185,7 +2326,7 @@ fun start {diag, dbg, warnings} = let
   fun updateProofDiag uri (v as {proofDiags, lastTrees, compile,
                                  ...}: file_data)
                       {site, offset, status} = let
-    val {text = {text, ...}, ...} = !lastTrees
+    val {text = {text, ...}, ...} = Sref.value lastTrees
     (* Publishing from here while a compile is running would undo that
        compile's own publishDiagnostics: it sends its in-progress list,
        this one sends the frozen `lastTrees' prefix -- and during a
@@ -2260,7 +2401,7 @@ fun start {diag, dbg, warnings} = let
        module the text mentions, including basis structures and ones
        the file declares itself, and "Cannot find file" for those is
        routine and harmless. *)
-    val declared = headerModules (#text (#text (!lastTrees)))
+    val declared = headerModules (#text (#text (Sref.value lastTrees)))
     val declaredNames = map #1 declared
     (* A file whose declared dependencies did not load gets no compile
        at all until that list changes.  The check is the list itself
@@ -2312,7 +2453,7 @@ fun start {diag, dbg, warnings} = let
        `carryOverSnapshots`, which clears `done`, so the second condition
        is what lets a *non*-edit ask for a recompile of unchanged text --
        which is how discovering that a proof suspends gets acted on. *)
-    if #done (#parse (!lastTrees)) andalso not (isSome editOff) then
+    if #done (#parse (Sref.value lastTrees)) andalso not (isSome editOff) then
       (!LSPExtension.notifyCompileStart editOff;
        invalidateProofs {resumeStart = NONE, inProofBody = NONE};
        (* A rewind like any other, so it needs the claim -- but this
@@ -2330,7 +2471,7 @@ fun start {diag, dbg, warnings} = let
     (* Before `invalidateProofs` below, which for an edit outside any
        proof body is itself a wide cancellation. *)
     val proofGenAtEntry = !LSPExtension.proofGeneration
-    val {text as {lines, ...}, parse = lastParse} = !lastTrees
+    val {text as {lines, ...}, parse = lastParse} = Sref.value lastTrees
     val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
     (* Which declaration's proof body the edit is in, for deciding how
        much of the pool to invalidate.
@@ -3099,7 +3240,8 @@ fun start {diag, dbg, warnings} = let
              owns `lastTrees', and blocking on the text it replaced
              would stop that one from ever running. *)
           if !cancelled then () else (
-            lastTrees := {text = text, parse = setParsePos 0 (!trees)};
+            commitTrees lastTrees
+              {text = text, parse = setParsePos 0 (!trees)};
             (* Before the block goes out, for the reason `finishPass'
                gives: what a client does with the news is ask, and
                this pass holds the process until it says otherwise.
@@ -3368,8 +3510,8 @@ fun start {diag, dbg, warnings} = let
                    declSnapshots = carried @ #declSnapshots fresh};
                  !LSPExtension.restoreCompileSnap (#compileSnap prev)
                end);
-          lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)};
+          commitTrees lastTrees
+            {text = text, parse = setParseDone (size (#text text)) (!trees)};
           compiledText := #text text;
           lastProofGen := !LSPExtension.proofGeneration;
           (* One past the last diagnostic this pass reported, or 0 if
@@ -3433,8 +3575,8 @@ fun start {diag, dbg, warnings} = let
               !lastPos <= headerEnd andalso not (null declaredNames)
         in
           flushDiags ();
-          lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)};
+          commitTrees lastTrees
+            {text = text, parse = setParseDone (size (#text text)) (!trees)};
           compiledText := #text text;
           lastProofGen := !LSPExtension.proofGeneration;
           (* Whatever this pass captured, it stopped at the header, so
@@ -3499,7 +3641,10 @@ fun start {diag, dbg, warnings} = let
     val state = case !compile of
       SOME {parse, text, ...} => getIfValid {parse = !parse, text = text}
     | NONE => NONE
-    in case state of NONE => getIfValid (!lastTrees) | state => state end
+    in case state of
+         NONE => getIfValid (Sref.value lastTrees)
+       | state => state
+    end
 
   fun hover uri v (startTarget, endTarget) = let
     val ({plugins, builtTrees, ...}, text, endOffset) =
@@ -3844,7 +3989,7 @@ fun start {diag, dbg, warnings} = let
     if stateNotReady v then NONE
     else if (case !depsBlocked of DepsLoaded => false | _ => true)
     then NONE else let
-    val {parse, text} = !lastTrees
+    val {parse, text} = Sref.value lastTrees
     val {plugins, declSnapshots, ...} = parse
     val offset = fromLineCol (#lines text) target
     fun ppToString pp = let
@@ -4049,7 +4194,7 @@ fun start {diag, dbg, warnings} = let
   val () = localiseFailure :=
     (fn uri => fn (v as {lastTrees, proofDiags, ...}: file_data) =>
      fn {site, offset, msg} => let
-       val {text = {text, lines, ...}, ...} = !lastTrees
+       val {text = {text, lines, ...}, ...} = Sref.value lastTrees
      in
        case theoremTacEnd text offset of
            NONE => ()
@@ -4123,7 +4268,7 @@ fun start {diag, dbg, warnings} = let
          built. *)
       val open_ = withFileInfo (fn fi => (fi, Binarymap.listItems fi))
       fun ofBuffer (uri, v) = let
-        val {text = {lines, ...}, ...} = !(#lastTrees (v: file_data))
+        val {text = {lines, ...}, ...} = Sref.value (#lastTrees (v: file_data))
         fun keep (Sym {name, span, ...}) =
             if String.isSubstring q (CharVector.map Char.toLower name)
             then SOME {name = name, container = "this file",
@@ -4212,7 +4357,7 @@ fun start {diag, dbg, warnings} = let
     end
 
   fun completionsAt uri (v as {lastTrees, nsLayer, ...}: file_data) pos = let
-    val {text = {text, lines, ...}, ...} = !lastTrees
+    val {text = {text, lines, ...}, ...} = Sref.value lastTrees
     val offset = fromLineCol lines pos
     val {prefix, qual} = identPrefixAt text offset
     in
@@ -4413,7 +4558,8 @@ fun start {diag, dbg, warnings} = let
                (fileInfo, Binarymap.peek (fileInfo, uri))) of
           NONE => Ok (fn print => print "[]")
         | SOME v => let
-            val {text = {lines, ...}, ...} = !(#lastTrees (v: file_data))
+            val {text = {lines, ...}, ...} =
+                Sref.value (#lastTrees (v: file_data))
             val syms = symbolsOf v
           in
             Ok (if !hierarchicalSymbols
@@ -4503,7 +4649,8 @@ fun start {diag, dbg, warnings} = let
                     (* `declSnapshots' is newest-first, so the last one
                        is the header's. *)
                     val headerEnd =
-                        case rev (#declSnapshots (#parse (!lastTrees))) of
+                        case rev (#declSnapshots
+                                    (#parse (Sref.value lastTrees))) of
                             [] => NONE
                           | snap :: _ => SOME (#endByte snap)
                   in
@@ -4565,7 +4712,7 @@ fun start {diag, dbg, warnings} = let
           | _ => ()
         val lines = case v_opt of
                         NONE => mkLineCounter ""
-                      | SOME v => #lines (#text (!(#lastTrees v)))
+                      | SOME v => #lines (#text (Sref.value (#lastTrees v)))
         (* `null' says "no goal state at this position", which sends a
            reader looking for the fault in their proof.  When the walk
            was refused only because the state is not ready yet, say so
@@ -4592,7 +4739,9 @@ fun start {diag, dbg, warnings} = let
           SOME v => (fileInfo, (v, true))
         | NONE => let val v = newFile text version
                   in (Binarymap.insert (fileInfo, uri, v), (v, false)) end)
-      val () = if existed then applyEdit v version [{range = NONE, text = text}]
+      val () = if existed
+               then applyEdit uri v version
+                              [{range = NONE, text = text}]
                else augmentLoadPathForUri uri
       in if !elabOnRef = ElabOnChange then startCompile uri v else () end
     | Notification {method = "textDocument/didChange", params} => let
@@ -4600,7 +4749,7 @@ fun start {diag, dbg, warnings} = let
       val _ = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
         NONE => ()
       | SOME v => (
-        applyEdit v version changes;
+        applyEdit uri v version changes;
         (* Debounce so keystroke bursts don't kick off a compile per
            character; only the last edit in a 300 ms window fires. *)
         if !elabOnRef = ElabOnChange then scheduleCompile uri v else ())

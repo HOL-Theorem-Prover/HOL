@@ -9078,6 +9078,154 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
         c.close()
 
 
+def _wait_for_log(c, needle, timeout, since=0):
+    """Index just past the first window/logMessage containing NEEDLE at
+    or after SINCE, or None."""
+    deadline = time.time() + timeout
+    idx = since
+    while time.time() < deadline:
+        msgs, total = c.messages_since(idx)
+        for k, m in enumerate(msgs):
+            if (m.get("method") == "window/logMessage"
+                    and needle in m.get("params", {}).get("message", "")):
+                return idx + k + 1
+        idx = total
+        time.sleep(0.02)
+    return None
+
+
+def test_an_overlong_range_does_not_merge_lines():
+    """A `didChange` range that starts and ends on the same line must
+    not cost the document a line, however far past the line's last byte
+    its end column reaches.
+
+    A client that has drifted a few bytes from us sends exactly that:
+    honest positions, computed from a text we no longer share.  The
+    conversion used to be `bol + col` with nothing stopping it at the
+    newline, so the splice swallowed the newline and merged the line
+    below -- and when the line below is a theorem's `Proof`, the
+    statement quotation then runs on to the `QED` and the whole
+    declaration stops existing.  Everything under it is off by one line
+    from then on, for the rest of the session.
+
+    So: clamp, and say so.  The reply to a range that cannot be true of
+    our text is `$/hol/desync`, which is a client's cue to send the
+    whole buffer back."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/overlong_range.sml"
+        # The statement line holds a multibyte character, which is how
+        # a few bytes of drift arise in the first place.
+        stmt = "  !n. n + 0 = n \u21d2 T\n"
+        src = ("Theory overlong_range\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem thm_a:\n"
+               + stmt +
+               "Proof\n"
+               "  simp[]\n"
+               "QED\n\n"
+               "Theorem thm_b:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "first compile")
+        n = c.total_msgs()
+        # Line 4 (0-based) is the statement; its last byte is at
+        # column len-1.  Aim an end column several bytes past that, as a
+        # client whose copy of the line is longer than ours would.
+        line_bytes = len(stmt.encode("utf8")) - 1  # without the newline
+        c.send({"jsonrpc": "2.0", "method": "textDocument/didChange",
+                "params": {"textDocument": {"uri": uri, "version": 2},
+                           "contentChanges": [{
+                               "range": {
+                                   "start": {"line": 4,
+                                             "character": line_bytes - 1},
+                                   "end": {"line": 4,
+                                           "character": line_bytes + 4}},
+                               "text": ""}]}})
+        desync = c.wait_for_method("$/hol/desync", 20, since=n)
+        assert_true(desync, "server reported the range it could not believe")
+        assert_eq(desync["params"]["uri"], uri, "desync names the file")
+        assert_eq(desync["params"]["version"], 2, "desync names the version")
+        assert_true(c.wait_for_method("$/compileCompleted", 30, since=n),
+                    "compiled again after the clamped edit")
+        # Truncating the statement line leaves the term ill-formed --
+        # that is not what is on trial.  What is on trial is whether the
+        # `Proof' on the next line is still there, and the parser says
+        # so in one specific way when it is not.
+        diags = _diag_count(c, uri)
+        lost = [d for d in diags
+                if "expected [Proof]" in d.get("message", "")]
+        assert_eq(lost, [],
+                  "the Proof line survived the overlong range: "
+                  f"{[d.get('message','')[:70] for d in lost]!r}")
+    finally:
+        c.close()
+
+
+def test_an_edit_during_a_commit_is_not_lost():
+    """A `didChange` that lands while a compile is installing its trees
+    has to win.
+
+    The compile carries the text it started from, and tested a
+    `cancelled` flag some time earlier to decide it was still the
+    current pass.  An edit arriving between that test and the write is
+    overwritten by the older text -- and nothing ever sends it again,
+    so from then on the server's copy of the document is a few bytes
+    short of the buffer and every position it reports is quietly wrong.
+    Two recorded sessions show it happening; one of them shows the
+    server's own hover echoing a line the buffer never contained.
+
+    `HOL_LSP_COMMIT_HOLD_MS` stretches the window, and the server
+    announces both of its ends so this test places its edit inside it
+    rather than guessing at a sleep.  `elabOn: 0` stops the edit from
+    starting a compile of its own: the only pass in flight is the one
+    in the hold, so what the server ends up holding is decided by the
+    commit alone."""
+    c = Client("/tmp", env={"HOL_LSP_COMMIT_HOLD_MS": "3000"})
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/commit_race.sml"
+        src = ("Theory commit_race\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem thm_before_the_edit:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60), "first compile")
+        _request(c, 991, "$/setConfig", {"elabOn": 0})
+        n = c.total_msgs()
+        # An edit first, so the pass below has something to do, then the
+        # pass -- neither of which the server starts by itself now.
+        src2 = src + "\n"
+        _did_change_incr(c, uri, src, len(src.encode("utf8")),
+                         len(src.encode("utf8")), "\n", 2)
+        c.send({"jsonrpc": "2.0", "method": "$/hol/retryCompile",
+                "params": {"textDocument": {"uri": uri}}})
+        after = _wait_for_log(c, "commit hold: begin", 90, since=n)
+        assert_true(after, "a commit reached its hold")
+        # Rename the theorem while that commit waits.
+        b = src2.encode("utf8")
+        off = b.index(b"thm_before_the_edit")
+        _did_change_incr(c, uri, src2, off, off + len(b"thm_before_the_edit"),
+                         "thm_after_the_edit", 3)
+        assert_true(_wait_for_log(c, "commit hold: end", 90, since=after),
+                    "the commit finished")
+        r = _request(c, 992, "textDocument/documentSymbol",
+                     {"textDocument": {"uri": uri}})
+        names = [x["name"] for x in (r.get("result") or [])]
+        assert_true("thm_after_the_edit" in names,
+                    "the server holds the text the edit made, not the one "
+                    f"the commit carried; outline says {names!r}")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
@@ -9421,6 +9569,10 @@ TESTS = [
      test_goalState_past_a_placeholder_branch_shows_what_follows),
     ("goalState_past_a_failing_branch_shows_what_follows",
      test_goalState_past_a_failing_branch_shows_what_follows),
+    ("an_overlong_range_does_not_merge_lines",
+     test_an_overlong_range_does_not_merge_lines),
+    ("an_edit_during_a_commit_is_not_lost",
+     test_an_edit_during_a_commit_is_not_lost),
 ]
 
 
