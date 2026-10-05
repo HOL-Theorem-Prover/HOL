@@ -103,19 +103,21 @@ val mk_o = combinSyntax.mk_o
 fun recTy (bnf : bnfLib.derived_bnfn) = hd (#lives bnf)
 fun paramTys (bnf : bnfLib.derived_bnfn) = tl (#lives bnf)
 
-fun functorTy bnf = #1 (dom_rng (type_of (hd (#sets bnf))))
+fun functorTy (bnf:bnfLib.derived_bnfn) =
+    #1 (dom_rng (type_of (hd (#sets bnf))))
 
 (* the functor at a whole tuple of arguments: the recursive one at ty and
    the parameters at ptys.  The construction only ever moves the
    recursive argument, but registering the fixed point moves the
    parameters too. *)
-fun atArgs bnf (ty,ptys) =
+fun atArgs (bnf:bnfLib.derived_bnfn) (ty,ptys) =
     Term.inst (ListPair.mapEq (fn (l,t) => l |-> t) (#lives bnf, ty::ptys))
-fun typeAtArgs bnf (ty,ptys) =
+fun typeAtArgs (bnf:bnfLib.derived_bnfn) (ty,ptys) =
     type_subst (ListPair.mapEq (fn (l,t) => l |-> t) (#lives bnf, ty::ptys))
 
 fun functorAtArgs bnf tys = typeAtArgs bnf tys (functorTy bnf)
-fun setAtArgs bnf i tys = atArgs bnf tys (List.nth (#sets bnf, i))
+fun setAtArgs (bnf:bnfLib.derived_bnfn) i tys =
+    atArgs bnf tys (List.nth (#sets bnf, i))
 
 fun functorAt bnf ty = functorAtArgs bnf (ty, paramTys bnf)
 fun setOp bnf ty = setAtArgs bnf 0 (ty, paramTys bnf)
@@ -123,7 +125,7 @@ fun setOp bnf ty = setAtArgs bnf 0 (ty, paramTys bnf)
 (* F's map with a tuple of functions on the parameters baked in, as a
    term and as the operator the laws are stated over.  The construction
    itself always carries the parameters along by I. *)
-fun bmapT bnf f fs = #mkmap bnf (f :: fs)
+fun bmapT (bnf:bnfLib.derived_bnfn) f fs = #mkmap bnf (f :: fs)
 fun bmapOp bnf (ty1,ty2) fs =
     let val f = mk_var("f", ty1 --> ty2)
     in
@@ -365,7 +367,7 @@ fun bMapCongPThm bnf i (t1,t2) (us,vs) =
     introducing a constant.
    ---------------------------------------------------------------------- *)
 
-fun boundOrdinal bnf =
+fun boundOrdinal (bnf:bnfLib.derived_bnfn) =
     let val B = #bnd bnf
         val bty = #1 (dom_rng (type_of B))
         val leUNIV = ISPEC B CARDLEQ_UNIV
@@ -1093,14 +1095,14 @@ fun set_ss () =
                 setElimRWs @ lateRWs ())
 
 
-fun defineConstructors (nms : names) cspecs bnf fix : constructors =
+fun defineConstructors (nms : names) cspecs bnf (fix:fixpoint) : constructors =
     let val wrote = asSpecWrote nms and built = asBuilt nms
         val newty = #newty fix
         val cons = #cons fix
         val prim = #prim_recursion fix
         val cty = #2 (dom_rng (#2 (dom_rng
                         (type_of (#1 (dest_forall (concl prim)))))))
-        val names = List.map #1 cspecs
+        val names = List.map fst cspecs
         val n = length cspecs
         val summands = splitSum n (functorTy bnf)
                        handle HOL_ERR _ =>
@@ -4258,6 +4260,7 @@ fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
 
 fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
     let
+      val names : names list = names
       (* TypeBase reads the existence half; the size's own lemma wants
          the uniqueness, so an axiom that carries it is welcome here *)
       val (fvars, body) = strip_forall (concl axiom)
@@ -4472,7 +4475,7 @@ fun freshSlots n avoid =
       go 1 [] n
     end
 
-fun specOfASTs asts : spec =
+fun specOfASTs (asts:ParseDatatype.annotatedAST list) : spec =
     let
       val plain = List.map (fn {name, form, ...} => (name, form)) asts
       val {tynames, params, functors, origins} =

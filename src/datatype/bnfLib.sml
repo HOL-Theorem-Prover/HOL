@@ -92,7 +92,7 @@ fun specToFunctor s = #2 (specToFunctor0 s empty_cstate)
     same thing in each.
    ---------------------------------------------------------------------- *)
 
-fun specToFunctors specs =
+fun specToFunctors (specs : (string * bnftor) list) =
     let
       val names = List.map #1 specs
       val n = length names
@@ -1109,7 +1109,7 @@ fun groundEmpty b i =
           end
     end
 
-fun groundNonempty b i =
+fun groundNonempty (b:derived_bnfn) i =
     case List.nth (#inhabits b, i) of
         NONE => NONE
       | SOME (inh,th) =>

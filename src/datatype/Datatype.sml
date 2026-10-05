@@ -774,7 +774,7 @@ fun astHol_datatype astl =
 
 (*---------------------------------------------------------------------------*)
 
-fun spec_recurses astl =
+fun spec_recurses (astl : ParseDatatype.AST list) =
     let
       val tynames = map #1 astl
       fun here NONE = true
@@ -801,7 +801,7 @@ fun spec_recurses astl =
    the old construction builds as a functor, so a specification that
    mentions a type variable goes to the BNF package even when it does
    not recurse: that is what leaves it in the functor database. *)
-fun spec_has_tyvars astl =
+fun spec_has_tyvars (astl : ParseDatatype.AST list) =
     let
       fun mentions pty =
           case pty of
@@ -824,7 +824,7 @@ fun spec_has_tyvars astl =
 fun unannotate ({name, form, ...} : ParseDatatype.annotatedAST) =
     (name, form) : ParseDatatype.AST
 
-fun attrs_of astl =
+fun attrs_of (astl : ParseDatatype.annotatedAST list) =
     List.concat (List.map (List.map #1 o #attrs) astl)
 
 (* the same three-way choice as Datatype below: the older syntax says

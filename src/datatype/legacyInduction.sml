@@ -251,6 +251,7 @@ fun chainsOf Ps c = List.mapPartial (chainAt Ps) (hypsOf c)
 
 (* A level with the values its set collects: the next level's argument,
    or — where the chain ends — the type the chain is about. *)
+type auglevel = {arg : term, set : term, elemty: hol_type}
 fun levelsOf {P = _, z, levels, hyp = _} =
     let
       val ty = type_of z
@@ -291,7 +292,7 @@ fun readPrinciple ind =
    the second, and `setFST` and `setSND` collect them.  Each way has a
    set function and a type of what it collects, and the level's own
    predicate answers for all of them at once. *)
-fun waysOfType levels opty =
+fun waysOfType (levels : auglevel list) opty =
     let
       val here = List.filter (fn r => type_of (#arg r) = opty) levels
       val _ = not (null here) orelse

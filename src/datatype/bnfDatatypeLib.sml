@@ -402,9 +402,9 @@ and liftInduction induction c =
     let
       val body = #2 (dest_imp (#2 (strip_forall (concl induction))))
       val ty = type_of (hd (#1 (strip_forall body)))
-      fun before [] = []
-        | before (d :: ds) = if d = ty then [] else d :: before ds
-      val params = before (#1 (strip_fun (type_of c)))
+      fun b4 [] = []
+        | b4 (d :: ds) = if d = ty then [] else d :: b4 ds
+      val params = b4 (#1 (strip_fun (type_of c)))
       val (avs, _) =
           List.foldl (fn (pty, (vs, avoid)) =>
                          let val v = variant avoid (mk_var ("f", pty))
@@ -444,7 +444,7 @@ and saveEqn ind nms th =
 
 (* a family's members are saved together, and each says for itself what
    its constants want; the flags are read as one *)
-and unionNames nmss =
+and unionNames (nmss:names list) =
     {map = NONE, sets = [], relator = NONE, size = NONE,
      nocompute = List.concat (List.map #nocompute nmss),
      simp = List.concat (List.map #simp nmss),
@@ -660,7 +660,7 @@ fun bnfDatatype q = ignore (bnfDatatypeInfo q)
     specification is outside the BNF world rather than merely awkward,
     and it is the older construction's to build.
    ---------------------------------------------------------------------- *)
-fun expressible astl =
+fun expressible (astl:ParseDatatype.annotatedAST list) =
     let
       (* what a declaration asks its constants be called has no bearing
          on whether this construction can express it, and a complaint
