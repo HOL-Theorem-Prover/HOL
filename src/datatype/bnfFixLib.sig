@@ -122,9 +122,16 @@ sig
 
   (* The carrier the bound is stated at writes the functor out over the
      ordinals; a type is defined to stand for it, named after the type
-     being declared, and the caller deletes it once that type exists. *)
+     being declared, and the caller deletes it once that type exists.
+     The functor at that carrier gets a type of its own for the same
+     reason, so that the product the algebra is built in does not grow
+     with the declaration. *)
   val initialAlgebra : {tyname : string} -> bnfLib.derived_bnfn ->
                        initial_algebra
+
+  (* what those types are called, for the caller that retires them *)
+  val ambientNames : string -> {carrier : string, fcarrier : string}
+  val ambientList : string -> string list
 
   (* ----------------------------------------------------------------------
       The datatype itself.  Defines a type in bijection with the initial

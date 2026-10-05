@@ -519,6 +519,67 @@ fun standInFor nm carrier bound =
        thm = GEN sv (MP (SPEC minset across) (SPEC sv bound))}
     end
 
+(* ----------------------------------------------------------------------
+    A type of its own, in bijection with one concrete type.
+
+    The predicate is trivially true, so the type is the whole of the one
+    it is carved from and the bijection is total: `repabs` holds of every
+    element rather than of the ones a predicate admits.  HOL's types are
+    inhabited, so ARB witnesses any of them.
+
+    Three constructions wanted this: a non-recursive declaration, whose
+    type is a copy of its functor; a collapsed family member, whose type
+    is a copy of one instance; and the initial algebra, which stands a
+    type in for the functor at its carrier.
+   ---------------------------------------------------------------------- *)
+
+fun copyOf {tyname, ABS, REP} ty =
+    let
+      val x = mk_var ("x", ty)
+      val P = mk_abs (x, boolSyntax.T)
+      val arb = mk_arb ty
+      val ex = EXISTS (mk_exists (x, mk_comb (P, x)), arb)
+                      (EQT_ELIM (BETA_CONV (mk_comb (P, arb))))
+      val itype = newtypeTools.rich_new_type
+                    {tyname = tyname, exthm = ex, ABS = ABS, REP = REP}
+      (* the predicate the pseudo-identity is conditional on is T *)
+      val repabs =
+          let val th = #repabs_pseudo_id itype
+              val (r, eq) = dest_forall (concl th)
+              val triv = EQT_ELIM (BETA_CONV (lhs (#1 (dest_imp eq)))
+                                   handle HOL_ERR _ =>
+                                     BETA_CONV (#1 (dest_imp eq)))
+          in
+            GEN r (MP (SPEC r th) triv)
+          end
+    in
+      {newty = #newty itype, abs = #term_ABS_t itype,
+       rep = #term_REP_t itype, absrep = GEN_ALL (#absrep_id itype),
+       repabs = repabs}
+    end
+
+(* the same two facts as compositions, which is the form a transport of
+   the functor's structure across them takes *)
+fun compEq (f, g, th) =
+    let val x = mk_var ("x", #1 (dom_rng (type_of g)))
+    in
+      EXT (GEN x (TRANS (TRANS (ISPECL [f,g,x] combinTheory.o_THM)
+                               (SPEC x th))
+                        (SYM (ISPEC x combinTheory.I_THM))))
+    end
+
+(* The types the construction works in and the declaration does not
+   keep: the carrier the cardinality argument bounds, and the copy of the
+   functor at it.  Named here, where they are built, so that the caller
+   that retires them does not spell them again. *)
+fun ambientNames tyname =
+    {carrier = tyname ^ "_carrier", fcarrier = tyname ^ "_fcarrier"}
+
+(* the same two, for the caller that only has to retire them *)
+fun ambientList tyname =
+    let val {carrier, fcarrier} = ambientNames tyname
+    in [carrier, fcarrier] end
+
 fun initialAlgebra {tyname} bnf =
     let (* the type variable initiality is stated at, so that INST_TYPE
            gives it at any carrier.  The functor's own argument will do:
@@ -526,24 +587,44 @@ fun initialAlgebra {tyname} bnf =
         val target = recTy bnf
         val big = minsetBound bnf target
         val {carrier, thm = bound} =
-            standInFor (tyname ^ "_carrier") (#carrier big) (#thm big)
+            standInFor (#carrier (ambientNames tyname))
+                       (#carrier big) (#thm big)
+        (* A second type stands in for the functor at the carrier.  The
+           product every algebra over the carrier is indexed by is
+           written in terms of it, so left as it is the product is as
+           big as the declaration has constructors, and the functor at
+           the product is bigger again by the same factor.
+
+           INITIALITY0 states the product over a type variable for the
+           functor at the carrier, so the standing type goes in with no
+           change to the theorem.  Six of its hypotheses mention that
+           variable, and those are the ones carried across. *)
+        val fcnm = #fcarrier (ambientNames tyname)
+        val fcopy = copyOf {tyname = fcnm, ABS = fcnm ^ "_ABS",
+                            REP = fcnm ^ "_REP"}
+                           (functorAt bnf carrier)
+        val onto = #repabs fcopy
+        fun absOut th = MATCH_MP Natural_ABS_out (CONJ onto th)
+        fun repIn th = MATCH_MP Natural_REP_in (CONJ onto th)
+        fun compOut th = MATCH_MP MapComp_ABS_out (CONJ onto th)
+        fun compMid th = MATCH_MP MapComp_ABS_mid (CONJ onto th)
         (* the product's index type, and the product's carrier *)
         val idxty = pairSyntax.mk_prod (carrier --> bool,
-                                        functorAt bnf carrier --> carrier)
+                                        #newty fcopy --> carrier)
         val prodty = idxty --> carrier
         fun st ty = setOp bnf ty
         val laws =
             CONJ (MapCongThm bnf (prodty,target))
-                 (LIST_CONJ [NaturalThm bnf (prodty,carrier),
+                 (LIST_CONJ [absOut (NaturalThm bnf (prodty,carrier)),
                              NaturalThm bnf (prodty,prodty),
                              MapIdThm bnf prodty,
-                             MapCompThm bnf (prodty,prodty,carrier),
+                             compOut (MapCompThm bnf (prodty,prodty,carrier)),
                              NaturalThm bnf (prodty,target),
-                             MapCompThm bnf (prodty,carrier,target),
+                             compMid (MapCompThm bnf (prodty,carrier,target)),
                              MapCompThm bnf (prodty,target,target),
-                             NaturalThm bnf (carrier,target),
-                             NaturalThm bnf (target,carrier),
-                             MapCompThm bnf (target,carrier,target),
+                             repIn (NaturalThm bnf (carrier,target)),
+                             absOut (NaturalThm bnf (target,carrier)),
+                             compMid (MapCompThm bnf (target,carrier,target)),
                              MapIdThm bnf target,
                              MapCongThm bnf (target,target),
                              bound])
@@ -728,35 +809,9 @@ fun defineCopy {tyname, ABS, REP} bnf : copy =
       val _ = not (Lib.mem (recTy bnf) (Type.type_vars ft)) orelse
               raise ERR "defineCopy"
                     "the functor uses the recursive argument"
-      (* the new type, in bijection with the functor: the predicate is
-         trivially true, so its two facts are the bijection's *)
-      val x = mk_var ("x", ft)
-      val P = mk_abs (x, boolSyntax.T)
-      val arb = mk_arb ft
-      val ex = EXISTS (mk_exists (x, mk_comb (P, x)), arb)
-                      (EQT_ELIM (BETA_CONV (mk_comb (P, arb))))
-      val itype = newtypeTools.rich_new_type
-                    {tyname = tyname, exthm = ex, ABS = ABS, REP = REP}
-      val newty = #newty itype
-      val abst = #term_ABS_t itype
-      val rept = #term_REP_t itype
-      val absrep = GEN_ALL (#absrep_id itype)
-      val repabs =
-          let val th = #repabs_pseudo_id itype
-              val (r, eq) = dest_forall (concl th)
-              val triv = EQT_ELIM (BETA_CONV (#1 (dest_imp eq)))
-          in
-            GEN r (MP (SPEC r th) triv)
-          end
-      (* the same two facts as compositions, which is the form a
-         transport of the functor's structure across them takes *)
-      fun compEq (f, g, th) =
-          let val x = mk_var ("x", #1 (dom_rng (type_of g)))
-          in
-            EXT (GEN x (TRANS (TRANS (ISPECL [f,g,x] combinTheory.o_THM)
-                                     (SPEC x th))
-                              (SYM (ISPEC x combinTheory.I_THM))))
-          end
+      (* the new type, in bijection with the functor *)
+      val {newty, abs = abst, rep = rept, absrep, repabs} =
+          copyOf {tyname = tyname, ABS = ABS, REP = REP} ft
       val cons_def =
           new_definition (tyname ^ "_CONS_def",
                           mk_eq (mk_var (tyname ^ "_CONS", ft --> newty),
@@ -4565,46 +4620,21 @@ fun collapseFamily {tynames} (fam : family) principle : collapsed =
       fun famMap j fs = #mkmap (List.nth (#functors fam, j)) (fs @ pIs)
       (* a type of its own per member, in bijection with the instance *)
       fun copy (j, nm) =
-          let
-            val rep_ty = List.nth (#types fam, j)
-            val x = mk_var ("x", rep_ty)
-            val P = mk_abs (x, boolSyntax.T)
-            val arb = mk_arb rep_ty
-            val ex = EXISTS (mk_exists (x, mk_comb (P, x)), arb)
-                            (EQT_ELIM (BETA_CONV (mk_comb (P, arb))))
-          in
-            newtypeTools.rich_new_type
-              {tyname = nm, exthm = ex, ABS = nm ^ "_ABS", REP = nm ^ "_REP"}
-          end
+          copyOf {tyname = nm, ABS = nm ^ "_ABS", REP = nm ^ "_REP"}
+                 (List.nth (#types fam, j))
       val copies = List.tabulate (n, fn j => copy (j, List.nth (tynames, j)))
       val newtys = List.map #newty copies
-      val abss = List.map #term_ABS_t copies
-      val reps = List.map #term_REP_t copies
+      val abss = List.map #abs copies
+      val reps = List.map #rep copies
       (* the two directions, as compositions: what the maps need *)
-      fun compEq (f, g, th) =
-          let val x = mk_var ("x", #1 (dom_rng (type_of g)))
-          in
-            EXT (GEN x
-                   (TRANS (TRANS (ISPECL [f, g, x] combinTheory.o_THM)
-                                 (SPEC x th))
-                          (SYM (ISPEC x combinTheory.I_THM))))
-          end
       val absreps =
           List.tabulate
             (n, fn j => compEq (List.nth (abss,j), List.nth (reps,j),
-                                GEN_ALL (#absrep_id (List.nth (copies,j)))))
+                                #absrep (List.nth (copies,j))))
       val repabss =
           List.tabulate
-            (n, fn j =>
-                  let val th = #repabs_pseudo_id (List.nth (copies,j))
-                      val (r, eq) = dest_forall (concl th)
-                      val triv = EQT_ELIM (BETA_CONV (lhs (#1 (dest_imp eq)))
-                                           handle HOL_ERR _ =>
-                                             BETA_CONV (#1 (dest_imp eq)))
-                  in
-                    compEq (List.nth (reps,j), List.nth (abss,j),
-                            GEN r (MP (SPEC r th) triv))
-                  end)
+            (n, fn j => compEq (List.nth (reps,j), List.nth (abss,j),
+                                #repabs (List.nth (copies,j))))
       (* the constructors, and what a member's argument does on the way
          across *)
       fun repArgs j = famMap j reps
@@ -4622,12 +4652,7 @@ fun collapseFamily {tynames} (fam : family) principle : collapsed =
       val conss = List.map (lhs o concl) cons_defs
       (* the two directions pointwise, which is what the constructors'
          definitions unfold against *)
-      fun pointwise j =
-          let val r = mk_var ("r", List.nth (#types fam, j))
-              val th = #repabs_pseudo_id (List.nth (copies, j))
-              val (v, eq) = dest_forall (concl th)
-              val triv = EQT_ELIM (BETA_CONV (#1 (dest_imp eq)))
-          in GEN r (MP (SPEC r th) (INST [v |-> r] triv)) end
+      fun pointwise j = #repabs (List.nth (copies, j))
       (* |- map gs (map fs x) = map (gs o fs) x, at the family's functor *)
       fun famMapO j (fs,gs) =
           let val Fj = List.nth (#functors fam, j)

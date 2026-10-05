@@ -177,6 +177,55 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
+    The functor's value at one type, replaced by a copy of it.
+
+    A law is about the functor at a tuple of types, and its statement
+    carries those types at every leaf.  Where one of them is large and
+    the construction only passes it along, a type standing for it shrinks
+    every law that mentions it -- the initial algebra's F[carrier] is the
+    case, and these are the laws its copy satisfies.
+
+    Only `rep o abs = I` is wanted, in whichever direction the law puts
+    the copy: nothing here asks the copy to be injective, and `bnfMapCong`
+    is never demanded of a map the copy is the value of.
+
+    All four take that equation, including the two whose proofs do not
+    need it.  It is what says which copy the law is about: `abs` and `rep`
+    appear in these conclusions and nowhere else, so without a hypothesis
+    naming them a use of the law would leave them free, and two laws
+    transported for the same construction would not be about the same
+    copy.
+   ---------------------------------------------------------------------- *)
+
+Theorem Natural_ABS_out:
+  (∀x. rep (abs x) = x) ∧ bnfNatural mp sta stb ⇒
+  bnfNatural (λf. abs o mp f) sta (stb o rep)
+Proof
+  simp[Natural_def, o_THM] >> rpt strip_tac >> simp[]
+QED
+
+Theorem Natural_REP_in:
+  (∀x. rep (abs x) = x) ∧ bnfNatural mp sta stb ⇒
+  bnfNatural (λf. mp f o rep) (sta o rep) stb
+Proof
+  simp[Natural_def, o_THM]
+QED
+
+Theorem MapComp_ABS_out:
+  (∀x. rep (abs x) = x) ∧ bnfMapComp mp_ab mp_bc mp_ac ⇒
+  bnfMapComp mp_ab (λg. abs o mp_bc g) (λg. abs o mp_ac g)
+Proof
+  simp[MapComp_def, o_THM]
+QED
+
+Theorem MapComp_ABS_mid:
+  (∀x. rep (abs x) = x) ∧ bnfMapComp mp_ab mp_bc mp_ac ⇒
+  bnfMapComp (λf. abs o mp_ab f) (λg. mp_bc g o rep) mp_ac
+Proof
+  simp[MapComp_def, o_THM] >> rpt strip_tac >> simp[]
+QED
+
+(* ----------------------------------------------------------------------
     algebras and homomorphisms
    ---------------------------------------------------------------------- *)
 
