@@ -11,5 +11,5 @@ all: otpkgcheck.exe
 # a standalone binary: this runs from the directory of whatever package
 # description it is checking, so it must not depend on a heap beside it
 otpkgcheck.exe: otpkgcheck.sml
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 endif
