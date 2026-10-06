@@ -52,7 +52,9 @@ parent aborts the benchmark rather than timing unsuccessful validation.
 Before timing each file the harness checks that all three readers return
 identical parent identities and that complete parent validation succeeds.
 The old scanner is the pre-change Holmake implementation, retained in the
-harness. The structured baseline uses `RawTheoryReader.load_raw_thydata`.
+harness. The structured baseline uses the same parser and decoder as
+`RawTheoryReader.load_raw_thydata`, but reads through a stream to avoid
+HOLFileSys munging of the supplied physical `.hol/objs` paths.
 
 Each round rotates the order of five measurements:
 

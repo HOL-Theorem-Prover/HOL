@@ -55,9 +55,18 @@ fun new_parents path =
         TheoryDat.Success ps => map (fn {thy, hash} => (thy, hash)) ps
       | TheoryDat.Failure s => raise Fail (path ^ ": " ^ s)
 
+(* load_raw_thydata uses HOLFileSys name munging. Read a physical path
+   through a stream, then use exactly the same parser and decoder. *)
 fun full_parents path =
-    map (fn {thy, hash} => (thy, hash))
-        (#parents (RawTheoryReader.load_raw_thydata {path = path}))
+    let
+      val ins = TextIO.openIn path
+      val raw = HOLsexp.fromStream ins
+                handle e => (TextIO.closeIn ins; raise e)
+      val _ = TextIO.closeIn ins
+      val thy = case RawTheoryReader.decode raw of
+                    SOME thy => thy
+                  | NONE => raise Fail ("Invalid theory: " ^ path)
+    in map (fn {thy, hash} => (thy, hash)) (#parents thy) end
 
 fun canonical ps =
     Listsort.sort
