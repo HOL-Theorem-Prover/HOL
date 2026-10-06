@@ -4,7 +4,7 @@ Theory refuteExample12
 Ancestors
   integer string words rat finite_map
 Libs
-  Refute intLib wordsLib
+  Refute Refute_Rat intLib wordsLib
 
 (* The executable backends use the evaluation support loaded for each
    library type. *)

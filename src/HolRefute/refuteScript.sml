@@ -1,6 +1,6 @@
 Theory refute
 Ancestors
-  real sorting words rat finite_map listRange
+  sorting words frac finite_map listRange
 Libs
   EnumType
 
@@ -422,16 +422,6 @@ Definition less_eq_frac_def:
     integer$int_le (num (plus_frac q (uminus_frac r)))
       (integer$int_of_num 0)
 End
-
-Definition of_frac_def:
-  of_frac q = rat$abs_rat q
-End
-
-Theorem of_frac_frac[compute]:
-  of_frac (frac a b) = rat$abs_rat (frac$abs_frac (norm_frac a b))
-Proof
-  simp [of_frac_def, frac_def]
-QED
 
 (* Part 4 continued: executable forms for bounded quantifiers.  Refute's
    preprocessing rewrites to these list combinators before checking for

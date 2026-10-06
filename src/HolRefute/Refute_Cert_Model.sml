@@ -97,18 +97,34 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
     "model replay [" ^ failure_kind_name kind ^ "] " ^ stage ^
     " at depth " ^ Int.toString depth ^ ": " ^ detail
 
-  (* [realLib.REAL_ARITH] is a prover ([term -> thm]), not a [conv]; the
-     other two leaf decision procedures are already [conv]s, so wrap it
-     the same way as [Drule.EQT_INTRO]. *)
-  fun real_arith_conv goal = Drule.EQT_INTRO (realLib.REAL_ARITH goal)
+  (* Installed by Refute_Real; absent in a core-only session.  Registrations
+     follow the same captured context as the rest of replay. *)
+  type real_arithmetic =
+    {applies : term -> bool, conv : Abbrev.conv, tactic : Abbrev.tactic}
+  val real_arithmetic = Refute_Session.state "real_arithmetic"
+    (NONE : real_arithmetic option)
 
-  (* [REAL_ARITH] is two provers (the second Positivstellensatz-based)
-     behind one flat fuel charge, so [decision_leaf] must not spend it
-     on goals with no [:real] subterm at all - unlike
-     [TAUT_CONV]/[OMEGA_CONV], it cannot even apply. *)
+  fun register_real_arithmetic procedures =
+    Refute_Session.publish real_arithmetic (fn _ => SOME procedures)
+
   fun mentions_real goal =
-    Lib.can (HolKernel.find_term
-      (fn tm => Util.same_type (Term.type_of tm) realSyntax.real_ty)) goal
+    case Refute_Session.read real_arithmetic of
+        NONE => false
+      | SOME {applies, ...} => applies goal
+
+  fun real_arith_conv goal =
+    case Refute_Session.read real_arithmetic of
+        NONE => raise Feedback.mk_HOL_ERR "Refute_Cert_Model"
+          "real_arith_conv" "load Refute_Real for real arithmetic"
+      | SOME {conv, ...} => conv goal
+
+  fun real_goal (goal as (asl, w)) =
+    case Refute_Session.read real_arithmetic of
+        NONE => Tactical.ALL_TAC goal
+      | SOME {applies, tactic, ...} =>
+          if List.exists applies (w :: asl)
+          then Tactical.TRY tactic goal
+          else Tactical.ALL_TAC goal
 
   fun resource_failure ({kind, ...} : failure) =
     kind = DeadlineExhausted orelse kind = FuelExhausted
@@ -706,14 +722,6 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
                 simpLib.ASM_SIMP_TAC (BasicProvers.srw_ss ()) []
               val taut_goal = Tactical.TRY tautLib.ASM_TAUT_TAC
               val omega_goal = Tactical.TRY Omega.OMEGA_TAC
-              (* Unlike [decision_leaf]'s single-formula gate,
-                 [REAL_ASM_ARITH_TAC] consumes assumptions too, so the
-                 gate must see the whole goal - every assumption plus the
-                 conclusion - not the conclusion alone. *)
-              fun real_goal (goal as (asl, w)) =
-                if List.exists mentions_real (w :: asl)
-                then Tactical.TRY realLib.REAL_ASM_ARITH_TAC goal
-                else Tactical.ALL_TAC goal
               fun account goal =
                 (charge "induction constructor obligation" depth;
                  Tactical.EVERY

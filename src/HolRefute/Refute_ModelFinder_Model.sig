@@ -50,13 +50,12 @@ signature Refute_ModelFinder_Model = sig
     hol_type -> term_postprocessor option
   val snapshot_term_postprocessors : unit -> term_postprocessor_snapshot
   val postprocess_term : term_postprocessor_snapshot -> term -> term
-  val register_frac_type_rat : unit -> unit
-  (* Installed by default (see Refute.sml).  Idempotent, like
-     [register_frac_type_rat]. *)
-  val register_frac_type_real : unit -> unit
-  (* Installed by default (see Refute.sml).  Idempotent, like
-     [register_frac_type_rat]; unlike the frac registrations there is
-     only one fmap display, valid at every [:'a |-> 'b] instance. *)
+  (* Optional fraction support: display and untrusted replay hints. *)
+  val dest_frac_atom : term -> (term * term) option
+  val register_frac_type_with_display :
+    Refute_ModelFinder_HOL.frac_info * hol_type * term_postprocessor -> unit
+  val register_frac_replay : ((term * term) -> term option) -> unit
+  (* Installed by default (see Refute.sml), valid at every fmap instance. *)
   val register_fmap_display : unit -> unit
   (* Installed by default (see Refute.sml).  Idempotent, like
      [register_fmap_display]; valid at every function type. *)

@@ -2,24 +2,24 @@ Theory refuteRegistrationClean
 Ancestors
   refuteTableZoo
 Libs
-  Refute Refute_ModelFinder_Model
+  Refute_Rat Refute_Real Refute_ModelFinder_Model
 
 val _ = Refute.register_typedef
   {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
    absrep_thms = [zoo_three_absrep]};
 
-(* The default Frac registration is session data and creates no theory
-   content.  Its display half is present without an explicit
-   registration, for both [rat] and [real]. *)
+(* The optional Frac registration is session data and creates no theory
+   content.  Its display half is present after loading the optional
+   libraries, for both [rat] and [real]. *)
 val _ =
   case Refute_ModelFinder_Model.lookup_term_postprocessor ``:rat`` of
       SOME _ => ()
-    | NONE => raise Fail "default rational Frac registration is missing";
+    | NONE => raise Fail "optional rational Frac registration is missing";
 
 val _ =
   case Refute_ModelFinder_Model.lookup_term_postprocessor ``:real`` of
       SOME _ => ()
-    | NONE => raise Fail "default real Frac registration is missing";
+    | NONE => raise Fail "optional real Frac registration is missing";
 
 (* The inductive conjunct takes the normal well-foundedness-check path; the
    typedef conjunct takes registration, unfolding, and axiom generation. *)

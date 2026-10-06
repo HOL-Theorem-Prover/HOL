@@ -59,6 +59,12 @@ signature Refute_Cert_Model = sig
      consumed_fuel : int,
      failure : failure option}
 
+  (* Optional real procedures; [applies] gates both the leaf formula and
+     all assumptions of an induction obligation. *)
+  val register_real_arithmetic :
+    {applies : term -> bool, conv : Abbrev.conv, tactic : Abbrev.tactic} ->
+    unit
+
   val replay_candidate_limit : int
   val default_policy : int -> policy
   val certify_portfolio_detailed_rich :

@@ -140,6 +140,7 @@ signature Refute_Core = sig
   val has_bounded_quantifier : term -> bool
   val normalize : term -> term
   val has_unexpanded_binder : term -> bool
+  val register_literal_constants : (term -> term list option) -> unit
   val nonexecutable_constants : term list -> term list
   val show_constants : term list -> string
   val rebuild_instance :

@@ -31,21 +31,12 @@ structure Refute :> Refute = struct
   val () = Refute_QC.register_backends ()
   val () = Refute_QC_Narrow.register_backend ()
   val () = Refute_ModelFinder.register_backends ()
-  (* Rational and real Frac encoding and display are part of the default
-     session setup; the normalization-faithfulness corpus in selftest.sml
-     keeps them honest. *)
-  val () = Refute_ModelFinder_Model.register_frac_type_rat ()
-  val () = Refute_ModelFinder_Model.register_frac_type_real ()
   (* fmap's model-finder typedef (Refute_ModelFinder_HOL.sml) is itself
      unconditional, so its display is installed unconditionally too. *)
   val () = Refute_ModelFinder_Model.register_fmap_display ()
   (* Update-chain dedup applies to every function type, so it too is
      unconditional; see the comment on [dedup_update_chain]. *)
   val () = Refute_ModelFinder_Model.register_function_display ()
-  (* Quickcheck generator and compset fragment for :rat and :real,
-     independent of the model-finder Frac registration above. *)
-  val () = Refute_EvalRat.register ()
-  val () = Refute_EvalReal.register ()
   (* Equality decision for ground finite maps: without it computeLib only
      decides [fm = fm'] for identical chains, and the Compute substrate
      can never confirm a candidate whose conclusion is such an equality. *)

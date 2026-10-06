@@ -4,8 +4,8 @@
    decide on numeral (rational-literal) redexes: realSimps.sml installs
    an [[elim_common_factor]] conv for [[/]] plus a family of literal
    rewrites into the global compset the moment realLib loads, and
-   Refute_Cert_Model.sml's genuine dependency on [[realLib.REAL_ARITH]]
-   forces that load whenever Refute is used.  This fragment adds exactly
+   Refute_Real's arithmetic replay support loads [[realLib.REAL_ARITH]]
+   when real support is requested.  This fragment adds exactly
    one thing that gap leaves open -- [[inv]], which has no compset entry
    of its own -- and otherwise only supplies the generator.
 

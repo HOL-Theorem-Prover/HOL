@@ -667,7 +667,7 @@ structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
       val (domain, _) = Type.dom_rng selector_ty
       val constructor =
         MFH.binarized_and_boxed_constr_for_sel context binarize selector
-        handle HOL_ERR _ => raise MTYPE
+        handle Feedback.HOL_ERR _ => raise MTYPE
           ("Refute_ModelFinder_Mono.mtype_for_sel", [], [domain])
     in
       sel_mtype_from_constr_mtype name

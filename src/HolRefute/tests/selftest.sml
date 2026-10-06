@@ -5,6 +5,7 @@
 open testutils
 open refuteTheory refuteTableZooTheory refuteUnusedTheory
 open Refute
+local open Refute_Rat Refute_Real in end
 
 (* Three deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
@@ -268,7 +269,7 @@ val same_string_set : string list -> string list -> bool = Lib.set_eq
    [listRangeLHI]/[listRangeINC]. *)
 fun refute_ancestry_is_exact () =
   same_string_set (Theory.parents "refute")
-    ["real", "words", "rat", "finite_map", "listRange"]
+    ["words", "frac", "finite_map", "listRange"]
 
 val _ = tprint "refuteTheory has exactly its declared parents"
 val _ = require_msg (check_result refute_ancestry_is_exact) (fn () =>

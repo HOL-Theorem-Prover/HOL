@@ -18,8 +18,10 @@ The library is built with Poly/ML only.  A theory script uses it by
 naming `Refute` under `Libs`.  The model finder needs the external
 Kodkodi component (see "Installing Kodkodi" below); the other backends
 are native.  Refute leaves no type, constant, theorem or binding in the
-user's theory.  Its one lasting effect is on the `EVAL` compset, which
-it extends to decide closed `:rat` literals and `:real` `inv`.
+user's theory.  The `refute` theory contains the shared model-finder
+encodings and preprocessing lemmas, including fraction arithmetic over
+`frac`; it does not depend on `rat` or `real`.  The optional `refuteRat`
+theory contains the conversion from these fractions to rationals.
 
 ### The diagnostic tactics
 
@@ -155,7 +157,8 @@ inputs as finite update chains.  Unrefined parts of a value print as
 `kodkod` encodes the goal as a bounded relational problem, covering
 datatypes and codatatypes, functions, sets, inductive and coinductive
 predicates, typedefs, quotients, integers, words, characters, finite
-maps, `rat` and `real`.  Its report gives the cardinalities tried.
+maps, and, with the optional libraries, `rat` and `real`.  Its report
+gives the cardinalities tried.
 This session is not generated with the manual, since building the
 manual does not require Kodkodi:
 
@@ -192,7 +195,8 @@ or character goal with binary integers forced on.
 ### What testing can reach
 
 The testing backends need executable goals and a generator for each
-variable's type.  `:rat` and `:real` have generators, and closed
+variable's type.  With `Refute_Rat` or `Refute_Real`, the corresponding
+`:rat` or `:real` type has a generator, and closed
 literals are decided by `EVAL`, so a closed goal can get
 `NoCounterexample`; a goal quantified over them cannot.  Finite maps
 have a never-exhaustive generator on `Compute` only.  `kodkod` needs

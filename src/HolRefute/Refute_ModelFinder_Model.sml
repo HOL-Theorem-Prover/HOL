@@ -214,7 +214,7 @@ fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
     if nothing_registered then term else descend term
   end
 
-(* The recognition contract shared by both frac renderers below: a
+(* The recognition contract shared by the optional frac renderers: a
    reconstructed [abs_frac] atom over a pair of integer literals.
    [raw_constructor_name] deliberately covers reconstructed variables as well
    as constants: the atom reaching this postprocessor is usually a variable
@@ -236,78 +236,18 @@ fun dest_frac_atom term =
           NONE
     | _ => NONE
 
-fun frac_atom_to_rat term =
-  case dest_frac_atom term of
-      NONE => term
-    | SOME (numerator, denominator) =>
-        (let
-           val rat_cons = Term.prim_mk_const {Thy = "rat", Name = "rat_cons"}
-           val denominator =
-             if Arbint.compare
-                  (intSyntax.int_of_term numerator, Arbint.zero) = EQUAL
-             then intSyntax.term_of_int Arbint.one
-             else denominator
-         in
-           Term.list_mk_comb (rat_cons, [numerator, denominator])
-         end handle HOL_ERR _ => term)
+(* A registered recovery callback only supplies an untrusted replay hint.
+   The original binding is dropped; every proof still goes through replay. *)
+val frac_replay = Refute_Session.state "frac_replay"
+  (fn (_ : term * term) => NONE : term option)
 
-(* [realax$real] has no literal constructor the way [rat$rat_cons] does, so
-   a reconstructed [abs_frac] value is rendered through division instead: a
-   zero numerator or a denominator of [1] prints as the bare numerator
-   (a real model value must print as [3], never [3 / 1]), any other
-   denominator prints as [realSyntax.mk_div] of the two rendered integers.
-   That is a deliberate divergence from [frac_atom_to_rat], which always
-   prints [n // d]; it is not an oversight to "fix" back into symmetry. *)
-fun frac_atom_to_real term =
-  case dest_frac_atom term of
-      NONE => term
-    | SOME (numerator, denominator) =>
-        (let
-           val numerator_int = intSyntax.int_of_term numerator
-           val denominator_int = intSyntax.int_of_term denominator
-           val numerator_term = realSyntax.term_of_int numerator_int
-         in
-           if Arbint.compare (numerator_int, Arbint.zero) = EQUAL orelse
-              Arbint.compare (denominator_int, Arbint.one) = EQUAL
-           then numerator_term
-           else
-             realSyntax.mk_div
-               (numerator_term, realSyntax.term_of_int denominator_int)
-         end handle HOL_ERR _ => term)
+fun register_frac_replay recover =
+  Refute_Session.publish frac_replay (fn _ => recover)
 
-(* Narrowed to [:real] by type, not by the reserved name alone: [abs_frac]
-   is [int # int -> frac] (retypes to neither [real] nor [rat]), so [rat]
-   hits the identical opaque-reserved-variable fallback and a bare name
-   match would also authorize it.  [MFN.original_name] alone is not
-   enough either: it strips every generated-name layer, so a selector or
-   discriminator wrapping the same tail ([refute$sel0$frac$abs_frac])
-   would match too, hence the explicit [not (MFN.is_sel name)].  This
-   predicate need not discriminate precisely for soundness - see
-   [certification_env_with_holes] below: a qualifying binding is dropped,
-   not trusted. *)
-fun qualifying_frac_head head =
-  case Lib.total Term.dest_var head of
-      SOME (name, _) =>
-        MFN.is_reserved_name name andalso not (MFN.is_sel name) andalso
-        MFN.original_name name = "frac$abs_frac"
-    | NONE => false
+fun recover_frac_binding binding = Refute_Session.read frac_replay binding
 
-fun qualifying_frac_binding (variable, value) =
-  Util.same_type (Term.type_of variable) realSyntax.real_ty andalso
-  Util.same_type (Term.type_of value) realSyntax.real_ty andalso
-  (case HolKernel.strip_comb value of
-       (head, [pair]) =>
-         qualifying_frac_head head andalso
-         (case Lib.total pairSyntax.dest_pair pair of
-              SOME (n, d) =>
-                intSyntax.is_int_literal n andalso
-                intSyntax.is_int_literal d andalso
-                let val converted = frac_atom_to_real value in
-                  not (Term.aconv converted value) andalso
-                  null (Term.free_vars converted)
-                end
-            | NONE => false)
-     | _ => false)
+fun qualifying_frac_binding binding =
+  Option.isSome (recover_frac_binding binding)
 
 (* Shared by every Frac-carrier registration.  Only the classification can
    fail, and it changes nothing when it does; the display registration
@@ -317,18 +257,6 @@ fun register_frac_type_with_display (frac_info, pattern, postprocessor) =
   Thread_Attributes.uninterruptible (fn _ => fn () =>
     (MFH.register_frac_type frac_info;
      register_term_postprocessor pattern postprocessor)) ()
-
-fun register_frac_type_rat () =
-  register_frac_type_with_display
-    (MFH.rat_frac_registration,
-     Type.mk_thy_type {Thy = "rat", Tyop = "rat", Args = []},
-     frac_atom_to_rat)
-
-fun register_frac_type_real () =
-  register_frac_type_with_display
-    (MFH.real_frac_registration,
-     Type.mk_thy_type {Thy = "realax", Tyop = "real", Args = []},
-     frac_atom_to_real)
 
 (* Per-type running counters plus the numbers already handed out, so
    that numbering an atom is a pair of lookups rather than a scan. *)
@@ -2105,9 +2033,7 @@ fun rf_constructor card serial =
    [replay_candidate_limit] budget as [replay_hints]/[type_values], so it
    must be computed before that budget is split. *)
 fun frac_terms bindings =
-  List.mapPartial (fn binding as (_, value) =>
-    if qualifying_frac_binding binding then SOME (frac_atom_to_real value)
-    else NONE) bindings
+  List.mapPartial recover_frac_binding bindings
 
 fun certification_hint_inputs types replay_hints frac_hints =
   let
