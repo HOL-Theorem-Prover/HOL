@@ -5,7 +5,7 @@ endif
 ifeq ($(KERNELID),otknl)
 EXTRA_CLEANS = otpkgcheck.exe
 
-all: otpkgcheck.exe
+all: otpkgcheck.exe $(DEFAULT_TARGETS)
 .PHONY: all
 
 # a standalone binary: this runs from the directory of whatever package
