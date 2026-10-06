@@ -172,8 +172,13 @@ val _ =
     val _ = writeFile publicationGuard ""
     val (s3, log3) = run_holmake_in outerDir ["--verbose"] logfile
 
+    (* BuildCommand redirects cache diagnostics into the theory's log,
+       not Holmake's outer progress output. *)
+    val childLog = readFile
+        (outerDir ++ ".hol" ++ "logs" ++ "wrapping_childTheory")
+        handle IO.Io _ => "(child theory log unavailable)"
     val ok = OS.Process.isSuccess s3 andalso
-             String.isSubstring "Cache hit ignored: parent hashes" log3
+             String.isSubstring "Cache hit ignored: parent hashes" childLog
   in
     if ok then (discard_parent (); OK ())
     else
@@ -191,7 +196,8 @@ val _ =
       in
         discard_parent ();
         die ("Stale-cache validation regression.\n  " ^ why ^
-             "\n  --- captured outer log ---\n" ^ log3)
+             "\n  --- captured outer log ---\n" ^ log3 ^
+             "\n  --- child theory log ---\n" ^ childLog)
       end
   end
   handle e => (discard_parent (); raise e)
