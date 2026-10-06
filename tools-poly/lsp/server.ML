@@ -2043,10 +2043,14 @@ fun start {diag, dbg, warnings} = let
       text = code,
       filename = uri,
       (* `unclosed quotation` / `expected ...` almost always mean an
-         in-progress edit; surface those as Warning, not Error. *)
+         in-progress edit; surface those as Warning, not Error.  So does
+         a theory name disagreeing with the file name: the header
+         recompiles on every keystroke, so the name a user is part-way
+         through typing disagrees at each one. *)
       parseError = fn pos => fn s => let
         val soft = String.isSubstring "unclosed quotation" s
                    orelse String.isSubstring "expected" s
+                   orelse String.isSubstring "does not match file" s
       in report (Error {hard = not soft, pos = pos, msg = encString s}) end,
       compilerOut = fn s => report (CompilerOut (!lastPos, [s])),
       toplevelOut = fn s => report (ToplevelOut (!lastPos, [s])),

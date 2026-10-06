@@ -9761,6 +9761,43 @@ def test_theory_rename_and_back():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_theory_name_must_match_file_name():
+    """A script's file name is the authority on its theory name:
+    Holmake derives the products it demands from the file, so
+    `fooScript.sml` must yield `fooTheory.*` whatever the header says.
+    Before this was checked at parse time the only symptom was a build
+    failing later with `Couldn't find required output file`, and the
+    editor said nothing at all.
+
+    Warning, not Error: the header recompiles on every keystroke, so a
+    name part-way through being typed disagrees at each one."""
+    d = tempfile.mkdtemp(prefix="lsp_thyname_")
+    try:
+        uri = f"file://{d}/fooScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, "Theory bar\nval x = 1\n")
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            diags = _diag_count(c, uri)
+            hits = [dg for dg in diags
+                    if "does not match file" in dg.get("message", "")]
+            assert_eq(len(hits), 1, f"one mismatch diagnostic ({diags!r})")
+            assert_eq(len(diags), 1, f"and nothing else ({diags!r})")
+            assert_eq(hits[0].get("severity"), 2, "reported as a Warning")
+            assert_eq(hits[0]["range"]["start"]["line"], 0,
+                      "anchored to the header line")
+            assert_contains(hits[0]["message"], "fooScript.sml",
+                            "the message names the file")
+            assert_contains(hits[0]["message"], "bar",
+                            "the message names the theory")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
@@ -9769,6 +9806,7 @@ TESTS = [
     ("undo_to_compiled_text_keeps_the_tail",
                                  test_undo_to_compiled_text_keeps_the_tail),
     ("theory_rename_and_back",       test_theory_rename_and_back),
+    ("theory_name_must_match_file",  test_theory_name_must_match_file_name),
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
     ("small_clean_file",             test_small_clean_file),

@@ -79,6 +79,42 @@ fun main () = let
       if errs = "" then fail name ["expected a diagnostic, got none"]
       else print ("OK    " ^ name ^ "\n")
     end
+
+  (* `translate` goes through `HOLSource.fromString`, which supplies no
+     file name, so it cannot reach the checks that compare a theory name
+     against the file it is declared in.  `inputToReader` takes one
+     without needing a file on disk. *)
+  fun translateIn fname input = let
+    val errs = ref ([]: string list)
+    val {read, ...} =
+      HOLSource.inputToReader
+        {quietOpen = true, print = fn s => errs := s :: !errs}
+        fname (stringReader input)
+    fun drain acc = case read () of
+                        NONE => String.concat (List.rev acc)
+                      | SOME c => drain (str c :: acc)
+    val sml = drain []
+    in (sml, String.concat (List.rev (!errs))) end
+
+  (* The theory header alone is not a whole file; `Ancestors`-free and
+     `[bare]` so the expansion stays small and needs nothing loaded. *)
+  fun theoryIn fname name = translateIn fname ("Theory" ^ name ^ "[bare]\n")
+
+  fun headerOK name fname thyname = let
+    val (_, errs) = theoryIn fname (" " ^ thyname)
+    in
+      if errs = "" then print ("OK    " ^ name ^ "\n")
+      else fail name ["unexpected diagnostics: " ^ errs]
+    end
+
+  fun headerRejects name fname thyname expected = let
+    val (_, errs) = theoryIn fname (" " ^ thyname)
+    in
+      if errs = "" then fail name ["expected a diagnostic, got none"]
+      else if not (isSubstring expected errs) then
+        fail name ["expected substring = " ^ expected, "got = " ^ errs]
+      else print ("OK    " ^ name ^ "\n")
+    end
 in
   check "backtick pair"      ("`foo`\n")       (lsquo ^ "foo" ^ rsquo ^ "\n");
   check "double backtick"    ("``foo``\n")     (ldquo ^ "foo" ^ rdquo ^ "\n");
@@ -110,6 +146,45 @@ in
   (* ... but it must still fire for a body of HOL terms. *)
   rejects "unclosed Definition body"
         ("Definition foo:\n  f x = x\nfun bar y = y\n");
+
+  (* A script's file name is the authority on its theory name: Holmake
+     demands `fooTheory.*` from `fooScript.sml` whatever the header
+     says, so a header that disagrees is reported where it is written
+     rather than later, as a product that failed to appear. *)
+  headerOK "theory name agreeing with the file" "fooScript.sml" "foo";
+  headerOK "theory name agreeing, with a directory"
+           "/a/b/fooScript.sml" "foo";
+  (* The LSP passes a URI here rather than a path. *)
+  headerOK "theory name agreeing, given a URI"
+           "file:///a/b/fooScript.sml" "foo";
+  headerOK "theory name agreeing, given a Windows path"
+           "C:\\a\\fooScript.sml" "foo";
+  headerRejects "theory name disagreeing with the file"
+                "fooScript.sml" "bar" "does not match file";
+  headerRejects "theory name disagreeing, named in the message"
+                "fooScript.sml" "bar" "fooScript.sml";
+  (* Only a script file names a theory after itself.  Everything else --
+     an ordinary .sml file, and the callers that supply no file name at
+     all -- is left alone. *)
+  headerOK "theory name in a non-script file" "scratch.sml" "bar";
+  headerOK "theory name with no file name at all" "" "bar";
+
+  (* A half-typed header: the parser already says `expected identifier`,
+     and `new_theory ""` would raise on top of that, saying the same
+     thing less clearly.  Neither it nor `set_grammar_ancestry` is
+     emitted, so there is nothing left to raise. *)
+  let val (sml, errs) = translateIn "fooScript.sml" "Theory\n"
+  in
+    if not (isSubstring "expected identifier" errs) then
+      fail "nameless header still reports a parse error"
+           ["got = " ^ errs]
+    else if isSubstring "new_theory" sml then
+      fail "nameless header emits no new_theory" ["got = " ^ sml]
+    else if isSubstring "does not match file" errs then
+      fail "nameless header does not also report a mismatch"
+           ["got = " ^ errs]
+    else print ("OK    nameless header: one diagnostic, no new_theory\n")
+  end;
 
   OS.Process.exit
     (if !failures = 0 then OS.Process.success else OS.Process.failure)
