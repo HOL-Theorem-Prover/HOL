@@ -848,6 +848,86 @@ def test_hover_inside_proof_qed():
         c.close()
 
 
+def test_completion_offers_hol_keywords():
+    """`Proof' typed in column 0 completes to the keyword.
+
+    The namespace has no binding for any of HOL's block keywords, so
+    completion used to answer a half-typed `Proof' with the only name
+    in the heap that shares the prefix -- `ProofStepPlan', which
+    poly-init2.ML bakes into every bin/hol -- and the client took it
+    on the Enter that always follows a `Proof' line.
+
+    They are column-0 keywords only (HOLSourceParser's `colZero'), so
+    the same five characters indented must still get the namespace and
+    nothing else."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/completion_keywords.sml"
+        src = ("Theory completion_keywords\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem foo:\n"
+               "  T\n"
+               "Proof\n"
+               "  (*Proof*)\n"
+               "  rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def complete(rid, line, char):
+            reply = _request(c, rid, "textDocument/completion",
+                             {"textDocument": {"uri": uri},
+                              "position": {"line": line,
+                                           "character": char}})
+            assert_true(reply is not None, "completion reply arrived")
+            res = reply.get("result")
+            assert_true(res is not None, "completion result non-null")
+            return res["items"]
+
+        def labelled(items, label):
+            return next((i for i in items if i["label"] == label), None)
+
+        # Line 5 is `Proof' in column 0; char 5 is just past it.
+        items = complete(70, 5, 5)
+        kw = labelled(items, "Proof")
+        assert_true(kw is not None,
+                    "`Proof' itself is offered (got {0!r})".format(
+                        sorted(i["label"] for i in items)[:20]))
+        assert_eq(kw.get("kind"), 14, "`Proof' is a Keyword item")
+
+        # Positive control: the namespace arm ran as well, so a pass
+        # here cannot be `completionsAt''s outer handler answering [].
+        plan = labelled(items, "ProofStepPlan")
+        assert_true(plan is not None,
+                    "the structure that caused all this is still offered")
+
+        # Absent a sortText the client sorts on the label, so the one
+        # sortText has to beat the bare label it competes with.
+        assert_true(kw.get("sortText", kw["label"])
+                    < plan.get("sortText", plan["label"]),
+                    "`Proof' sorts ahead of `ProofStepPlan' ({0!r} vs "
+                    "{1!r})".format(kw.get("sortText"), plan.get("sortText")))
+
+        # Line 6 is `  (*Proof*)': char 9 is just past the same five
+        # characters, but they start in column 4, so they are not a
+        # keyword and must not be offered as one.
+        # This is also the control for the assertions above: with the
+        # keyword arm not firing, the answer is exactly what it used to
+        # be everywhere -- `ProofStepPlan' and no `Proof' -- so `Proof'
+        # appearing in column 0 can only have come from the new arm.
+        indented = complete(71, 6, 9)
+        assert_true(labelled(indented, "ProofStepPlan") is not None,
+                    "the namespace still answers off column 0")
+        assert_true(labelled(indented, "Proof") is None,
+                    "nothing in the namespace is called `Proof'")
+        assert_eq([i["label"] for i in indented if i.get("kind") == 14], [],
+                  "no keyword offered away from column 0")
+    finally:
+        c.close()
+
+
 def test_thm_hover_shows_statement():
     """Hover on an SML identifier of type thm should render the
     theorem statement (⊢ ...) alongside the SML type."""
@@ -9436,6 +9516,8 @@ TESTS = [
     ("hover_shows_entry_documentation",
                                      test_hover_shows_entry_documentation),
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),
+    ("completion_offers_hol_keywords",
+                                     test_completion_offers_hol_keywords),
     ("hover_on_proof_body_whitespace_is_null",
                                      test_hover_on_proof_body_whitespace_is_null),
     ("hover_type_only_no_identifier_is_null",

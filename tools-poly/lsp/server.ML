@@ -4333,7 +4333,7 @@ fun start {diag, dbg, warnings} = let
         val qs = back (st - 1)
         in SOME (String.substring (text, qs, st - 1 - qs)) end
       else NONE
-    in {prefix = prefix, qual = qual} end
+    in {prefix = prefix, qual = qual, start = st} end
 
   (* Every name in scope for the file, with its CompletionItemKind,
      computed once per `nsLayer' generation.  `#allVal' and friends
@@ -4359,7 +4359,7 @@ fun start {diag, dbg, warnings} = let
   fun completionsAt uri (v as {lastTrees, nsLayer, ...}: file_data) pos = let
     val {text = {text, lines, ...}, ...} = Sref.value lastTrees
     val offset = fromLineCol lines pos
-    val {prefix, qual} = identPrefixAt text offset
+    val {prefix, qual, start} = identPrefixAt text offset
     in
       (* Nothing typed yet: the answer would be the whole namespace, and
          the client re-asks as soon as there is a character. *)
@@ -4367,6 +4367,7 @@ fun start {diag, dbg, warnings} = let
       else let
         val () = case !nsLayer of SOME restore => restore () | NONE => ()
         val items = ref ([]: {label: string, kind: int,
+                              sortText: string option,
                               detail: string option} list)
         val count = ref 0
         fun add it = if !count >= maxCompletions then ()
@@ -4374,14 +4375,38 @@ fun start {diag, dbg, warnings} = let
         fun addNames kind names =
             app (fn (nm, _) => if String.isPrefix prefix nm
                                then add {label = nm, kind = kind,
-                                         detail = NONE}
+                                         sortText = NONE, detail = NONE}
                                else ()) names
+        (* HOL's block keywords open a line and nothing else -- that is
+           what `colZero' means in `HOLSourceParser', and what
+           `tacticBodyDecl' leans on when it reads the structure of a
+           file it cannot parse.  The namespace has no binding for any
+           of them, so until now the only candidate for a half-typed
+           `Proof' was whatever structure happened to share the prefix:
+           `ProofStepPlan', which `poly-init2.ML' bakes into every heap,
+           and which the client would then accept on the Enter that
+           always follows a `Proof' line.
+
+           First, so the `maxCompletions' cap -- which `add' applies
+           first-come -- cannot starve them; they cost at most as many
+           slots as there are keywords. *)
+        val atColZero = start = 0 orelse String.sub (text, start - 1) = #"\n"
+        val () =
+          if qual = NONE andalso atColZero then
+            app (fn k =>
+                    if String.isPrefix prefix k
+                    then add {label = k, kind = 14,
+                              sortText = SOME ("0" ^ k), detail = NONE}
+                    else ())
+                holKeywords
+          else ()
         val ns = LSPNameSpace.fileNS
         val () = case qual of
             NONE =>
             app (fn (nm, kind) =>
                     if String.isPrefix prefix nm
-                    then add {label = nm, kind = kind, detail = NONE}
+                    then add {label = nm, kind = kind,
+                              sortText = NONE, detail = NONE}
                     else ())
                 (scopeNames v)
           | SOME q =>
@@ -4402,7 +4427,7 @@ fun start {diag, dbg, warnings} = let
           if prefix = "" then ()
           else app (fn ({name, theory, class, visible, ...}
                           : LSPExtension.ide_symbol) =>
-                       add {label = name, kind = 21,
+                       add {label = name, kind = 21, sortText = NONE,
                             detail = SOME (theory ^ "Theory" ^
                                            (if visible then ""
                                             else " (not an ancestor)"))})
@@ -4412,9 +4437,18 @@ fun start {diag, dbg, warnings} = let
         end
     end handle _ => {items = [], incomplete = true}
 
-  fun encCompletionItem {label, kind, detail} print = (
+  (* `sortText' is sent only where it has to be.  Absent, the client
+     sorts on `label', and "0" sorts ahead of any letter -- so the one
+     on a keyword is enough to float `Proof' above `ProofStepPlan'
+     without rearranging the thousands of namespace and theorem
+     entries, whose order would otherwise go from the order they were
+     collected in to alphabetical. *)
+  fun encCompletionItem {label, kind, sortText, detail} print = (
       print "{\"label\":"; encString label print;
       print ",\"kind\":"; encInt kind print;
+      (case sortText of
+         NONE => ()
+       | SOME s => (print ",\"sortText\":"; encString s print));
       (case detail of
          NONE => ()
        | SOME d => (print ",\"detail\":"; encString d print));
