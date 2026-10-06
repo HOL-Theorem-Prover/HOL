@@ -70,7 +70,10 @@ ARTS = bool_defs.ot.art \
   ../list/src/numposrep.ot.art \
   ../quotient/src/quotient.ot.art
 
+OTPKGCHECK = $(protect $(HOLDIR)/src/opentheory/otpkgcheck.exe)
+
 hol4-base-unint.art: hol4-base-unint.thy $(ARTS)
+	$(OTPKGCHECK) $<
 	opentheory info --article -o $@ $<
 
 base-theorems.art:

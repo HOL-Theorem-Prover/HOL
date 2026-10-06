@@ -23,6 +23,7 @@ LOCAL_ARTS = $(patsubst %,%.ot.art,$(BARE_THYS))
 all: hol4-set.art
 
 hol4-set-unint.art: hol4-set-unint.thy $(LOCAL_ARTS)
+	$(protect $(HOLDIR)/src/opentheory/otpkgcheck.exe) $<
 	opentheory info --article -o $@ $<
 
 hol4-set.art: hol4-set.thy hol4-set-unint.art ../../../opentheory/hol4.int

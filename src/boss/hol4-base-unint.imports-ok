@@ -1,0 +1,24 @@
+# Blocks that reach a definition along a longer route rather than by a
+# direct import.  opentheory accepts each of these today, because every
+# block on the route exports a theorem mentioning the symbol, but that is
+# a property of what those articles happen to export rather than anything
+# this file controls.  Settling one means adding the import named here.
+reduce prim-rec
+numeral prim-rec
+numpair arithmetic
+divides prim-rec
+logroot marker
+logroot prim-rec
+gcd prim-rec
+bit prim-rec
+numeral-bit prim-rec
+set-relation numeral
+set-relation prim-rec
+ind-type numeral
+ind-type prim-rec
+rich-list prim-rec
+indexed-lists arithmetic
+indexed-lists numeral
+indexed-lists prim-rec
+numposrep logroot
+numposrep prim-rec
