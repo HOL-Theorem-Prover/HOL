@@ -129,4 +129,52 @@ val _ = testf "PIntMap size after missing remove"
               Int.toString
               2
 
+local
+  open TheoryDat
+  fun with_file text f =
+      let val path = OS.FileSys.tmpName ()
+          val out = TextIO.openOut path
+          val _ = TextIO.output (out, text)
+          val _ = TextIO.closeOut out
+          fun cleanup () = OS.FileSys.remove path
+          val r = f path handle e => (cleanup (); raise e)
+      in cleanup (); r end
+  fun header ps = "(theory (\"child\" " ^ ps ^ ") (core-data "
+  fun pair thy hash = "(\"" ^ thy ^ "\" . \"" ^ hash ^ "\")"
+  fun rejects text =
+      with_file text (fn p => case read_parents p of
+                                 Failure _ => true | _ => false)
+in
+  val _ = assert ("TheoryDat empty parent header", fn () =>
+    with_file (header "") (fn p => read_parents p = Success []))
+  val _ = assert ("TheoryDat bootstrap identity", fn () =>
+    with_file (header (pair "min" "")) (fn p =>
+      null (validate {path = p, resolve = fn _ => raise Fail "resolved min"})))
+  val _ = assert ("TheoryDat wrong bootstrap identity", fn () =>
+    with_file (header (pair "min" "wrong")) (fn p =>
+      case validate {path = p, resolve = fn _ => Missing} of
+          [HashMismatch _] => true | _ => false))
+  val _ = assert ("TheoryDat strict header parsing", fn () =>
+    List.all rejects
+      ["", "junk " ^ header "", "(theory (\"child\"",
+       "(theory (\"child\" (\"min\" . \"\"))",
+       header (pair "parent" "bad"),
+       header (pair "min" "" ^ pair "min" ""),
+       "(theory (\"child\") (core-data-bogus "])
+  val _ = assert ("TheoryDat parent byte identity and failures", fn () =>
+    with_file "parent artifact bytes" (fn parent =>
+      let val hash = SHA1.sha1_file {filename = parent}
+      in with_file (header (pair "parent" hash)) (fn child =>
+        null (validate {path = child,
+                        resolve = fn _ => Artifact parent}) andalso
+        (case validate {path = child, resolve = fn _ => Missing} of
+             [MissingParent _] => true | _ => false) andalso
+        (case validate {path = child,
+                        resolve = fn _ => Ambiguous [parent, parent]} of
+             [AmbiguousParent _] => true | _ => false) andalso
+        with_file "different bytes" (fn other =>
+          case validate {path = child, resolve = fn _ => Artifact other} of
+              [HashMismatch _] => true | _ => false)) end))
+end
+
 val _ = OS.Process.exit OS.Process.success

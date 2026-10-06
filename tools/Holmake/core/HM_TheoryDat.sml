@@ -1,51 +1,12 @@
 structure HM_TheoryDat :> HM_TheoryDat =
 struct
 
+(* Cachekey ancestry discovery retains its conservative failure fallback.
+   Cache acceptance uses TheoryDat.validate directly instead. *)
 fun extract_parents dat_path =
-    let
-      val ins = TextIO.openIn dat_path
-      val content = TextIO.inputAll ins
-      val _ = TextIO.closeIn ins
-      val full = Substring.full content
-      val (_, at_theory) = Substring.position "(theory" full
-    in
-      if Substring.size at_theory < 7 then []
-      else
-        let
-          val after_theory =
-              Substring.dropl Char.isSpace (Substring.triml 7 at_theory)
-          val (header, _) = Substring.position "(core-data" after_theory
-          fun loop ss acc =
-              let val (_, rest) = Substring.position "(\"" ss
-              in
-                if Substring.size rest < 2 then List.rev acc
-                else
-                  let
-                    val after_open = Substring.triml 2 rest
-                    val (xss, ass) = Substring.position "\"" after_open
-                  in
-                    if Substring.size ass < 1 then List.rev acc
-                    else
-                      let val ass1 = Substring.triml 1 ass
-                      in
-                        if Substring.isPrefix " . \"" ass1 then
-                          let
-                            val ass2 = Substring.triml 4 ass1
-                            val (yss, ass3) = Substring.position "\"" ass2
-                          in
-                            if Substring.size ass3 >= 1 then
-                              loop (Substring.triml 1 ass3)
-                                   ((Substring.string xss,
-                                     Substring.string yss) :: acc)
-                            else List.rev acc
-                          end
-                        else loop ass1 acc
-                      end
-                  end
-              end
-        in loop header [] end
-    end
-    handle _ => []
+    case TheoryDat.read_parents dat_path of
+        TheoryDat.Success ps => map (fn {thy, hash} => (thy, hash)) ps
+      | TheoryDat.Failure _ => []
 
 fun find_parent_dat search_dirs thy =
     let
