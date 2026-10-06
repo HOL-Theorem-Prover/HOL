@@ -43,6 +43,7 @@ ARTS = bool_defs.ot.art \
   ../num/theories/prim_rec.ot.art \
   ../num/theories/arithmetic.ot.art \
   ../num/theories/numeral.ot.art \
+  ../num/reduce/src/reduce.ot.art \
   ../num/theories/basicSize.ot.art \
   ../num/theories/While.ot.art \
   ../num/extra_theories/numpair.ot.art \
@@ -52,15 +53,27 @@ ARTS = bool_defs.ot.art \
   ../num/extra_theories/bit.ot.art \
   ../num/extra_theories/numeral_bit.ot.art \
   ../datatype/ind_type.ot.art \
+  ../datatype/bnfPrelims.ot.art \
+  ../datatype/bnfInitial.ot.art \
+  ../datatype/bnfFixBNF.ot.art \
+  ../datatype/bnfMutual.ot.art \
   ../pred_set/src/pred_set.ot.art \
   ../pred_set/src/set_relation.ot.art \
+  ../pred_set/src/permutes.ot.art \
+  ../pred_set/src/wellorder.ot.art \
+  ../pred_set/src/cardinalityCore.ot.art \
+  ../pred_set/src/cardinal.ot.art \
+  ../pred_set/src/ordinalBasic.ot.art \
   ../list/src/list.ot.art \
   ../list/src/rich_list.ot.art \
   ../list/src/indexedLists.ot.art \
   ../list/src/numposrep.ot.art \
   ../quotient/src/quotient.ot.art
 
+OTPKGCHECK = $(protect $(HOLDIR)/src/opentheory/otpkgcheck.exe)
+
 hol4-base-unint.art: hol4-base-unint.thy $(ARTS)
+	$(OTPKGCHECK) $<
 	opentheory info --article -o $@ $<
 
 base-theorems.art:
