@@ -91,3 +91,39 @@ val () =
               ^ " post=" ^ Int.toString e_post_restore)
 
 end (* local *)
+
+(* ==================================================================
+   `new_theory` must not export the segment it abandons when the
+   session is interactive.  `export_theory` is already a no-op there,
+   but the implicit export inside `new_theory` was not: changing a
+   script's `Theory` name under an editor wrote the old theory to disk,
+   added it to the theory graph, and sealed its name in KernelSig --
+   which sits outside Context, so no snapshot restore reaches it.
+   Changing the name back then failed with `theory: "..." already
+   exists.` for the life of the process.
+   ================================================================== *)
+
+val _ = tprint "interactive new_theory can return to an abandoned name"
+val saved_interactive = !Globals.interactive
+val () = Globals.interactive := true
+(* The segment this abandons is `scratch`, which the tests above left
+   non-empty -- so the first call already takes the branch under test
+   rather than the empty-scratch shortcut beside it. *)
+val returned =
+    (Theory.new_theory "nt_abandon_a";
+     Theory.new_theory "nt_abandon_b";
+     Theory.new_theory "nt_abandon_a";
+     NONE)
+    handle e => SOME e
+val () = Globals.interactive := saved_interactive
+val () =
+    case returned of
+        SOME e => die ("could not return to the abandoned name: " ^
+                       Feedback.exn_to_string e)
+      | NONE =>
+        if KernelSig.is_sealed_thy "nt_abandon_a" then
+          die "the abandoned segment was sealed, so it had been exported"
+        else if Theory.current_theory () <> "nt_abandon_a" then
+          die ("current theory is " ^ Theory.current_theory () ^
+               ", not the name returned to")
+        else OK ()

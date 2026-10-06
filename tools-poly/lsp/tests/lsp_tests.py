@@ -9706,6 +9706,61 @@ def test_a_theorem_without_proof_keeps_the_file_compiling():
             c.close()
 
 
+def test_theory_rename_and_back():
+    """Renaming a script's theory and then renaming it back must leave
+    the session compiling.  `new_theory` used to export the segment it
+    abandoned whenever the name changed: that wrote the theory to disk,
+    added it to the theory graph, and sealed its name in
+    `KernelSig.sealed_ref` -- process-global and deliberately outside
+    `Context`, so no snapshot restore could take it back.  The second
+    `Theory foo` then raised `theory: "foo" already exists.` on every
+    pass for the rest of the session's life.
+
+    `export_theory` already keys off `Globals.interactive`, which is
+    true under `hol lsp`; the implicit export inside `new_theory` did
+    not.  The header recompiles per keystroke, so this fired while
+    simply *typing* a name too -- `Theory f` then `Theory fo` exported
+    and sealed each prefix in turn."""
+    d = tempfile.mkdtemp(prefix="lsp_thyrename_")
+    try:
+        body = "\nval x = 1\n"
+        uri = f"file://{d}/fooScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, "Theory foo" + body)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+            v1 = _diag_count(c, uri)
+            assert_eq(len(v1), 0, f"a clean file compiles clean ({v1!r})")
+
+            # Away (which is also a file-name mismatch, so this pass is
+            # expected to carry exactly that one diagnostic) ...
+            idx = c.total_msgs()
+            _did_change_full(c, uri, "Theory bar" + body, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                        "compileCompleted after renaming away")
+
+            # ... and back.
+            idx = c.total_msgs()
+            _did_change_full(c, uri, "Theory foo" + body, 3)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                        "compileCompleted after renaming back")
+            v3 = _diag_count(c, uri, ver=3)
+            assert_eq(len(v3), 0,
+                      f"the original name compiles clean again ({v3!r})")
+
+            # Nothing may have been written: an editing session is not a
+            # build.  `.hol/objs/` is where HFS_NameMunge puts these.
+            written = sorted(f for _, _, fs in os.walk(d) for f in fs
+                             if f.startswith(("fooTheory", "barTheory")))
+            assert_eq(written, [], "no theory products written")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
@@ -9713,6 +9768,7 @@ TESTS = [
                             test_walk_and_compile_do_not_share_the_context),
     ("undo_to_compiled_text_keeps_the_tail",
                                  test_undo_to_compiled_text_keeps_the_tail),
+    ("theory_rename_and_back",       test_theory_rename_and_back),
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
     ("small_clean_file",             test_small_clean_file),
