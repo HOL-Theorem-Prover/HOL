@@ -55,6 +55,8 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
                  | Broken of string * string * t
   fun batch_sexp (Batch (_, _, s)) = s
     | batch_sexp (Broken (_, _, s)) = s
+  fun batch_origin (Batch (thy, _, _)) = thy
+    | batch_origin (Broken (thy, _, _)) = thy
   fun decode_batch s =
     let
       val origin = case s of
@@ -114,8 +116,8 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
   val store = AncestryData.fullmake
     {adinfo = {tag = "Refute.structural_registrations",
                initial_values = [("min", empty)], apply_delta = apply},
-     (* Retirement is checked during replay, so stale metadata cannot
-        disappear silently and reveal a different harvested encoding. *)
+     (* Replay and theory export check retirement against the retained
+        history, even if the raw ancestry deltas have been pruned. *)
      uptodate_delta = fn _ => true,
      sexps = {enc = batch_sexp, dec = decode_batch},
      globinfo = {initial_value = empty, apply_to_global = apply,
@@ -133,7 +135,16 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
           let
             val local_deltas = case Context.current_thy (Context.snapshot ()) of
                 NONE => []
-              | SOME thy => #get_deltas store {thyname = thy}
+              | SOME thy =>
+                  let
+                    (* Raw deltas may already have been pruned after a
+                       retirement.  Keep authored history across imports
+                       so the export check can still diagnose that loss. *)
+                    val retained = List.filter
+                      (fn d => batch_origin d = thy)
+                      (List.mapPartial decode_batch
+                        (#seen (#get_global_value store ())))
+                  in retained @ #get_deltas store {thyname = thy} end
             val value = List.foldl (fn (d, v) => apply d v)
               inherited local_deltas
           in #update_global_value store (fn _ => value) end
@@ -141,6 +152,26 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
     ("Refute_RegistrationData.ancestry_merge", fn delta =>
       case delta of TheoryDelta.TheoryLoaded _ => synchronise () | _ => ())
   val _ = synchronise ()
+
+  (* AncestryData prunes a whole raw batch when any of its terms retires,
+     before consulting uptodate_delta.  The global history retains every
+     descriptor: check it before writing a theory so pruning cannot silently
+     erase valid entries from the same batch in a subsequent process. *)
+  fun check_export thy =
+    let
+      val value = #get_global_value store ()
+      fun check opn =
+        List.app (fn (origin, d) =>
+          if fresh d then () else raise ERR "export"
+            ("exporting theory " ^ thy ^ ", registration from " ^ origin ^
+             ", " ^ #Thy opn ^ "$" ^ #Tyop opn ^
+             ": registration refers to retired symbols"))
+          (valOf (KNametab.lookup (#histories value) (key opn)))
+    in List.app check (#operators value) end
+  val _ = Theory.register_hook
+    ("Refute_RegistrationData.check_export", fn delta =>
+      case delta of TheoryDelta.ExportTheory thy => check_export thy
+                  | _ => ())
 
   fun read ctxt =
     let val value = #get_global_value_of store ctxt

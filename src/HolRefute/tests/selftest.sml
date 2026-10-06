@@ -347,6 +347,41 @@ val _ = test "selected exports retain registrations and deduplicate"
      andalso accepted (fn () => export_registrations [``:api_local``])
      andalso accepted (fn () => export_registrations []))))
 
+val _ = test "retirement cannot silently drop a persistent export batch"
+  (fn () => registration_context (fn () =>
+    let
+      val case_name = "api_retired_case"
+      val _ = Theory.new_constant
+        (case_name, type_of (#case_const api_local_registration))
+      val _ = register_codatatype
+        {tyop = #tyop api_local_registration,
+         case_const = Term.prim_mk_const
+           {Thy = Theory.current_theory (), Name = case_name},
+         constructors = #constructors api_local_registration, witness = NONE}
+      val _ = register_codatatype
+        {tyop = {Thy = "refutePersistentType", Tyop = "api_small"},
+         case_const = ``api_small_case``, constructors = [``api_small_cons``],
+         witness = NONE}
+      val _ = export_registrations [``:api_local``, ``:api_small``]
+      val _ = Theory.delete_const case_name
+      fun export_rejected () =
+        ((Portable.with_flag (Globals.interactive, false)
+            Theory.export_theory (); false)
+         handle Feedback.HOL_ERR e =>
+           let val message = Feedback.message_of e
+           in
+             String.isSubstring "registration refers to retired symbols"
+               message andalso
+             String.isSubstring "refutePersistentType$api_local" message
+           end)
+      val rejected_before_import = export_rejected ()
+      (* Loading an ancestor remerges the registry.  It must retain the
+         original local batch even though the raw deltas are now absent. *)
+      val _ = Theory.load_complete "refutePersistentType"
+    in
+      rejected_before_import andalso export_rejected ()
+    end))
+
 val _ = test "restoring context removes descriptors and replay caches"
   (fn () => registration_context (fn () =>
     let

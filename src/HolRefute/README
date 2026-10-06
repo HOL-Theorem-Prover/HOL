@@ -258,3 +258,8 @@ replay caches together; restoring a snapshot restores both.  Only explicit
 export writes this metadata.  It adds no public theorem bindings, types,
 constants, axioms or oracle tags; theorem persistence uses HOL's existing
 anonymous-theorem serialization.
+
+Retiring a symbol used by an exported description rejects theory export
+with the description's origin and type operator.  This also protects other
+descriptions exported in the same batch from being silently omitted.  Restore
+the context from before the export and export the valid descriptions again.
