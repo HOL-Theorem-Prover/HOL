@@ -169,15 +169,6 @@ Definition persist_stream_CASE_def:
     f (persist_shd s) (persist_stl s)
 End
 
-(* The stream eta law: every stream is its own head/tail reassembly. *)
-Theorem persist_stream_eta:
-  !s. s = persist_scons (persist_shd s) (persist_stl s)
-Proof
-  simp [GSYM persist_stream_rep_11, persist_scons_def, persist_shd_def,
-        persist_stl_def, persist_stream_repabs, FUN_EQ_THM] >>
-  rw []
-QED
-
 (* The registration witness: the constant stream of [a] is cyclic under
    [persist_scons], which is exactly what justifies dropping acyclicity. *)
 Theorem persist_stream_witness:
@@ -186,8 +177,6 @@ Proof
   qexists_tac `persist_stream_abs (\n. a)` >>
   simp [GSYM persist_stream_rep_11, persist_scons_def, persist_stream_repabs]
 QED
-
-
 
 val _ = Refute.export_codatatype
   {tyop = {Thy = "refutePersist", Tyop = "persist_stream"},

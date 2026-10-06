@@ -1,6 +1,6 @@
-val _ = load (String.concat ["refutePersist", "OldTheory"])
-val _ = load (String.concat ["Re", "fute"])
+val _ = load "refutePersistOldTheory"
+val _ = load "Refute"
 val _ = use "preferred-setup.sml"
-val _ = load (String.concat ["refutePersist", "PreferredTheory"])
+val _ = load "refutePersistPreferredTheory"
 val _ = load "testutils"
 val _ = use "preferred-checks.sml"

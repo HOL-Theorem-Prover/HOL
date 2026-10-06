@@ -264,18 +264,20 @@ fun rejected_with message f =
 
 (* Restore only around isolated tests, never as export's rollback scheme. *)
 fun registration_context body =
-  let
-    val ctxt = Context.snapshot ()
-    val result = Exn.capture body ()
-    val _ = Context.restore ctxt
-  in Exn.release result end
+  let val ctxt = Context.snapshot ()
+  in Portable.finally (fn () => Context.restore ctxt) body () end
 
 val api_pair_registration =
   {ty = ``:('a, 'b) api_pair``, abs = ``api_pair_abs``,
    rep = ``api_pair_rep``, absrep_thms = [api_pair_bij]}
-val api_small_registration =
+fun api_small_typedef laws =
   {ty = ``:api_small``, abs = ``api_small_abs``, rep = ``api_small_rep``,
-   absrep_thms = [api_small_bij]}
+   absrep_thms = laws}
+val api_small_registration = api_small_typedef [api_small_bij]
+val api_small_codata =
+  {tyop = {Thy = "refutePersistentType", Tyop = "api_small"},
+   case_const = ``api_small_case``, constructors = [``api_small_cons``],
+   witness = (NONE : thm option)}
 fun api_stream_registration witness =
   {tyop = {Thy = "refutePersistentType", Tyop = "api_stream"},
    case_const = ``api_stream_CASE``, constructors = [``api_scons``],
@@ -284,6 +286,10 @@ val api_local_registration =
   {tyop = {Thy = "refutePersistentType", Tyop = "api_local"},
    case_const = ``api_local_case``, constructors = [``api_local_cons``],
    witness = (NONE : thm option)}
+val api_local_other_registration =
+  {tyop = #tyop api_local_registration,
+   constructors = [``api_local_other``],
+   case_const = ``api_local_other_case``, witness = (NONE : thm option)}
 fun api_quot_registration theorem =
   {qty = ``:api_quot``, rty = ``:bool``, abs = ``api_quot_abs``,
    rep = ``api_quot_rep``, equiv_thm = theorem}
@@ -305,8 +311,8 @@ val _ = test "singular exports use structural registration validation"
     rejected (fn () => export_codatatype (api_stream_registration
       (SOME (Drule.ADD_ASSUM boolSyntax.T api_stream_witness)))) andalso
     rejected (fn () => export_typedef
-      {ty = ``:api_small``, abs = ``api_small_abs``, rep = ``api_small_rep``,
-       absrep_thms = [Drule.ADD_ASSUM boolSyntax.T api_small_bij]}) andalso
+      (api_small_typedef [Drule.ADD_ASSUM boolSyntax.T api_small_bij]))
+    andalso
     rejected (fn () => export_codatatype
       {tyop = #tyop api_local_registration,
        case_const = ``api_local_case``, constructors = [], witness = NONE})))
@@ -330,9 +336,7 @@ val _ = test "typedef exports preserve both theorem input forms"
     let
       val first = Thm.CONJUNCT1 api_small_bij
       val second = Thm.CONJUNCT2 api_small_bij
-      fun export laws = export_typedef
-        {ty = ``:api_small``, abs = ``api_small_abs``, rep = ``api_small_rep``,
-         absrep_thms = laws}
+      fun export laws = export_typedef (api_small_typedef laws)
     in
       accepted (fn () => export [first, second]) andalso
       accepted (fn () => export [second, first]) andalso
@@ -358,15 +362,11 @@ val _ = test "retirement cannot silently drop a persistent export batch"
          case_const = Term.prim_mk_const
            {Thy = Theory.current_theory (), Name = case_name},
          constructors = #constructors api_local_registration, witness = NONE}
-      val _ = register_codatatype
-        {tyop = {Thy = "refutePersistentType", Tyop = "api_small"},
-         case_const = ``api_small_case``, constructors = [``api_small_cons``],
-         witness = NONE}
+      val _ = register_codatatype api_small_codata
       val _ = export_registrations [``:api_local``, ``:api_small``]
       val _ = Theory.delete_const case_name
       fun export_rejected () =
-        ((Portable.with_flag (Globals.interactive, false)
-            Theory.export_theory (); false)
+        ((in_batch_mode Theory.export_theory (); false)
          handle Feedback.HOL_ERR e =>
            let val message = Feedback.message_of e
            in
@@ -398,10 +398,7 @@ val _ = test "a failed selected export installs none of its discoveries"
     andalso
     (* Discovery must have stayed in scratch state: after the rejected
        batch, this operator is still available for a codata registration. *)
-    accepted (fn () => register_codatatype
-      {tyop = {Thy = "refutePersistentType", Tyop = "api_small"},
-       case_const = ``api_small_case``, constructors = [``api_small_cons``],
-       witness = NONE})))
+    accepted (fn () => register_codatatype api_small_codata)))
 
 val _ = test "persistent classification compatibility and Frac replacement"
   (fn () => registration_context (fn () =>
@@ -477,10 +474,7 @@ val _ = mf_test "re-exporting an earlier description replaces a later one"
   (fn () => registration_context (fn () =>
     let
       val _ = export_codatatype api_local_registration
-      val _ = export_codatatype
-        {tyop = #tyop api_local_registration,
-         constructors = [``api_local_other``],
-         case_const = ``api_local_other_case``, witness = NONE}
+      val _ = export_codatatype api_local_other_registration
       val _ = export_codatatype api_local_registration
       val cfg = mf |> upd_card [(NONE, [1, 2])]
         |> upd_user_axioms (SOME false)
@@ -529,10 +523,7 @@ val _ = mf_test "a stale worker cache cannot overwrite a later registration"
               else (ConditionVar.wait (signal, mutex); wait ())
         in wait () end)
       val replacement = Exn.capture (fn () =>
-        register_codatatype
-          {tyop = #tyop api_local_registration,
-           constructors = [``api_local_other``],
-           case_const = ``api_local_other_case``, witness = NONE}) ()
+        register_codatatype api_local_other_registration) ()
       val _ = sync (fn () =>
         (released := true; ConditionVar.broadcast signal))
       val _ = Standard_Thread.join worker

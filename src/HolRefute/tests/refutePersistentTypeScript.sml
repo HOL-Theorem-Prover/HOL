@@ -49,15 +49,6 @@ Definition api_stream_CASE_def:
     f (api_shd s) (api_stl s)
 End
 
-(* The stream eta law: every stream is its own head/tail reassembly. *)
-Theorem api_stream_eta:
-  !s. s = api_scons (api_shd s) (api_stl s)
-Proof
-  simp [GSYM api_stream_rep_11, api_scons_def, api_shd_def,
-        api_stl_def, api_stream_repabs, FUN_EQ_THM] >>
-  rw []
-QED
-
 (* The registration witness: the constant stream of [a] is cyclic under
    [api_scons], which is exactly what justifies dropping acyclicity. *)
 Theorem api_stream_witness:
@@ -66,7 +57,6 @@ Proof
   qexists_tac `api_stream_abs (\n. a)` >>
   simp [GSYM api_stream_rep_11, api_scons_def, api_stream_repabs]
 QED
-
 
 Theorem api_pair_exists[local]:
   ?r : 'a # 'b. (\r. T) r
@@ -89,12 +79,6 @@ val api_small_tydef = new_type_definition ("api_small", api_small_exists);
 val api_small_bij = define_new_type_bijections
   {name = "api_small_bij", ABS = "api_small_abs", REP = "api_small_rep",
    tyax = api_small_tydef};
-
-val api_batch_tydef = new_type_definition ("api_batch", api_small_exists);
-val api_batch_bij = define_new_type_bijections
-  {name = "api_batch_bij", ABS = "api_batch_abs", REP = "api_batch_rep",
-   tyax = api_batch_tydef};
-val _ = Theory.delete_binding "api_batch_bij";
 
 Definition api_rel_def:
   api_rel (x : bool) y = (x = y)

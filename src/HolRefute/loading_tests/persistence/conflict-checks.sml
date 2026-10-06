@@ -1,10 +1,8 @@
 open HolKernel Parse testutils
 val _ = Thm.setCT "scratch"
-val rejected_conflict =
-  ((Refute.export_registrations [Parse.Type [QUOTE ":persist_old"]]; false)
-   handle HOL_ERR e =>
-     String.isSubstring "refutePersistWrapper" (Feedback.message_of e)
-     andalso String.isSubstring "persist_old" (Feedback.message_of e)
-     andalso String.isSubstring "incompatible" (Feedback.message_of e))
+fun mentions parts (_, _, message) =
+  List.all (fn part => String.isSubstring part message) parts
 val _ = tprint "import conflicts with an incompatible explicit registration"
-val _ = if rejected_conflict then OK () else die "conflict was hidden"
+val _ = require (check_HOL_ERR (mentions
+  ["refutePersistWrapper", "persist_old", "incompatible"]))
+  Refute.export_registrations [Parse.Type [QUOTE ":persist_old"]]

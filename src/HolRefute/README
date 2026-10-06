@@ -247,8 +247,6 @@ Same-kind replacements follow AncestryData delta order: ancestors precede
 descendants, and later deltas replace earlier ones.  Sibling replacements
 follow the framework's ancestry merge order, so sibling descriptions
 are not order-independent.  Common diamond ancestors contribute once.
-For the loading fixture, the diamond parent order is Right then Left; the
-Left sibling's later delta takes effect with either Refute loading order.
 Incompatible kinds are rejected, retaining the existing exception permitting
 an explicit Frac registration to replace a typedef or quotient.
 
@@ -256,8 +254,7 @@ Exports require a current, unpinned theory-authoring context and are rejected
 inside a running Refute call.  Context snapshots capture descriptions and
 replay caches together; restoring a snapshot restores both.  Only explicit
 export writes this metadata.  It adds no public theorem bindings, types,
-constants, axioms or oracle tags; theorem persistence uses HOL's existing
-anonymous-theorem serialization.
+constants, axioms or oracle tags.
 
 Retiring a symbol used by an exported description rejects theory export
 with the description's origin and type operator.  This also protects other

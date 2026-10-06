@@ -55,13 +55,11 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
                  | Broken of string * string * t
   fun batch_sexp (Batch (_, _, s)) = s
     | batch_sexp (Broken (_, _, s)) = s
-  fun batch_origin (Batch (thy, _, _)) = thy
-    | batch_origin (Broken (thy, _, _)) = thy
+  fun sexp_origin (List [Int _, String thy, Int _, _]) = SOME thy
+    | sexp_origin _ = NONE
   fun decode_batch s =
     let
-      val origin = case s of
-          List [Int _, String thy, Int _, _] => thy
-        | _ => "<unknown theory>"
+      val origin = Option.getOpt (sexp_origin s, "<unknown theory>")
     in
       SOME (case s of
           List [Int 1, String thy, Int _, ds] =>
@@ -93,12 +91,13 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
         fun add thy (d, (histories, operators)) =
           let
             val opn = operator d
-            val history = case KNametab.lookup histories (key opn) of
-                NONE => [] | SOME ds => ds
           in
-            (KNametab.update (key opn, history @ [(thy, d)]) histories,
-             if List.exists (fn old => old = opn) operators then operators
-             else operators @ [opn])
+            case KNametab.lookup histories (key opn) of
+                NONE => (KNametab.update (key opn, [(thy, d)]) histories,
+                         operators @ [opn])
+              | SOME ds =>
+                  (KNametab.update (key opn, ds @ [(thy, d)]) histories,
+                   operators)
           end
         val (histories, operators, errors) = case batch of
             Broken (thy, why, _) =>
@@ -116,35 +115,32 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
   val store = AncestryData.fullmake
     {adinfo = {tag = "Refute.structural_registrations",
                initial_values = [("min", empty)], apply_delta = apply},
-     (* Replay and theory export check retirement against the retained
-        history, even if the raw ancestry deltas have been pruned. *)
+     (* Retirement is checked against the retained history instead. *)
      uptodate_delta = fn _ => true,
      sexps = {enc = batch_sexp, dec = decode_batch},
      globinfo = {initial_value = empty, apply_to_global = apply,
                  thy_finaliser = NONE}}
-  (* Delta side effects alone follow module loading order, which differs
-     from ancestry merge order for siblings (and for late initialization).
-     After fullmake's load hooks have built the per-theory values, publish
-     the canonical merge.  Preserve deltas authored in the current theory.
-     Listener runs older hooks first; this hook is registered afterwards.
-     All work here is structural bookkeeping, never Refute validation. *)
+  (* Load-time side effects follow module loading order, which differs
+     from ancestry merge order for siblings and late initialization, so
+     republish the canonical merge plus the current theory's own deltas.
+     Registered after fullmake's hooks, so it runs after them.  Structural
+     bookkeeping only, never Refute validation. *)
   fun synchronise () =
     case #merge store (Theory.parents "-") of
         NONE => ()
       | SOME inherited =>
           let
-            val local_deltas = case Context.current_thy (Context.snapshot ()) of
-                NONE => []
-              | SOME thy =>
-                  let
-                    (* Raw deltas may already have been pruned after a
-                       retirement.  Keep authored history across imports
-                       so the export check can still diagnose that loss. *)
-                    val retained = List.filter
-                      (fn d => batch_origin d = thy)
-                      (List.mapPartial decode_batch
-                        (#seen (#get_global_value store ())))
-                  in retained @ #get_deltas store {thyname = thy} end
+            val local_deltas =
+              case Context.current_thy (Context.snapshot ()) of
+                  NONE => []
+                | SOME thy =>
+                    let
+                      (* Keep authored batches whose raw deltas were pruned,
+                         so check_export can still diagnose that loss. *)
+                      val retained = List.mapPartial decode_batch
+                        (List.filter (fn s => sexp_origin s = SOME thy)
+                          (#seen (#get_global_value store ())))
+                    in retained @ #get_deltas store {thyname = thy} end
             val value = List.foldl (fn (d, v) => apply d v)
               inherited local_deltas
           in #update_global_value store (fn _ => value) end

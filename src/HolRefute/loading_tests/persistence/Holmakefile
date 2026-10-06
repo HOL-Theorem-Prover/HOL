@@ -1,62 +1,30 @@
 CLINE_OPTIONS = --no_prereqs
 INCLUDES = ../..
 
-all: $(DEFAULT_TARGETS) early.exe late.exe descendant.exe diamond.exe \
-     diamond_early.exe conflict.exe cross.exe bad_version.exe preferred.exe
+EXES = early.exe late.exe descendant.exe diamond.exe diamond_early.exe \
+       conflict.exe cross.exe bad_version.exe preferred.exe
+
+all: $(DEFAULT_TARGETS) $(EXES)
 .PHONY: all
 
-early.exe: early.uo refutePersistTheory.uo
+%.exe: %.uo
 	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run early' > $@
+	  '$(HOLDIR)/bin/hol --gcthreads=1 run $*' > $@
 	@chmod +x $@
 
 # No static Refute dependency: checks load after the explicit runtime loads.
-late.exe: late.uo refutePersistTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run late' > $@
-	@chmod +x $@
-
-descendant.exe: descendant.uo refutePersistDescendantTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run descendant' > $@
-	@chmod +x $@
-
-diamond.exe: diamond.uo refutePersistDiamondTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run diamond' > $@
-	@chmod +x $@
-
-diamond_early.exe: diamond_early.uo refutePersistDiamondTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run diamond_early' > $@
-	@chmod +x $@
-
-conflict.exe: conflict.uo refutePersistWrapperTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run conflict' > $@
-	@chmod +x $@
-
-cross.exe: cross.uo refutePersistCrossTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run cross' > $@
-	@chmod +x $@
-
-bad_version.exe: bad_version.uo refutePersistBadVersionTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run bad_version' > $@
-	@chmod +x $@
-
-preferred.exe: preferred.uo refutePersistPreferredTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run preferred' > $@
-	@chmod +x $@
+early.exe late.exe: refutePersistTheory.uo
+descendant.exe: refutePersistDescendantTheory.uo
+diamond.exe diamond_early.exe: refutePersistDiamondTheory.uo
+conflict.exe: refutePersistWrapperTheory.uo
+cross.exe: refutePersistCrossTheory.uo
+bad_version.exe: refutePersistBadVersionTheory.uo
+preferred.exe: refutePersistPreferredTheory.uo
 
 ifdef HOLSELFTESTLEVEL
 all: persistence-selftest.log replacement-tests
 .PHONY: persistence-selftest.log
-persistence-selftest.log: early.exe late.exe descendant.exe diamond.exe \
-                          diamond_early.exe conflict.exe cross.exe \
-                          bad_version.exe preferred.exe
+persistence-selftest.log: $(EXES)
 	$(tee ./early.exe 2>&1,$@)
 	$(tee ./late.exe 2>&1,$@)
 	$(tee ./descendant.exe 2>&1,$@)
@@ -77,6 +45,4 @@ replacement-tests: refutePersistOldTheory.uo
 	REFUTE_EXPECT_CASE=b $(HOLDIR)/bin/Holmake -C .hol/replacement --no_prereqs
 endif
 
-EXTRA_CLEANS = early.exe late.exe descendant.exe diamond.exe \
-               diamond_early.exe conflict.exe cross.exe bad_version.exe \
-               preferred.exe persistence-selftest.log
+EXTRA_CLEANS = $(EXES) persistence-selftest.log

@@ -8,7 +8,6 @@ signature Refute_RegistrationData = sig
     | Quotient of {qty : Type.hol_type, rty : Type.hol_type,
                    abs : Term.term, rep : Term.term, equiv_thm : Thm.thm}
   val operator : descriptor -> operator
-  val encode : descriptor -> ThyDataSexp.t
   val fresh : descriptor -> bool
   (* Ordered history, rather than an unchecked last-writer map. *)
   val history : Context.t -> operator -> (string * descriptor) list
