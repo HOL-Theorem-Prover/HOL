@@ -161,6 +161,45 @@ in
        header (pair "parent" "bad"),
        header (pair "min" "" ^ pair "min" ""),
        "(theory (\"child\") (core-data-bogus "])
+  val _ = assert ("TheoryDat comments and escaped names", fn () =>
+    let val hash = String.implode (List.tabulate (40, fn _ => #"a"))
+        val text = "; prefix\n(theory ; tag\n(\"child\"\n" ^
+                   "(\"pa\\\"rent\\\\name\\110\" ; name\n. \"" ^ hash ^
+                   "\")) ; parentage\n(core-data "
+    in with_file text (fn p =>
+         read_parents p =
+         Success [{thy = "pa\"rent\\namen", hash = hash}]) end)
+  val _ = assert ("TheoryDat rejects each truncated header prefix", fn () =>
+    let val text = header (pair "min" "")
+    in List.all (fn n => rejects (String.substring (text, 0, n)))
+                (List.tabulate (size text, fn n => n)) end)
+  val _ = assert ("TheoryDat rejects malformed string escapes", fn () =>
+    List.all rejects
+      [header (pair "mi\\q" ""), header (pair "mi\\999" ""),
+       header (pair "mi\\12" ""), header (pair "mi\\^a" "")])
+  val _ = assert ("TheoryDat deliberately ignores malformed body", fn () =>
+    with_file (header (pair "min" "") ^ "BROKEN ((\"unterminated")
+      (fn p => read_parents p = Success [{thy = "min", hash = ""}] andalso
+               null (validate {path = p, resolve = fn _ => Missing})))
+  val _ = assert ("TheoryDat parent-like body text is not parentage", fn () =>
+    with_file (header "" ^ pair "min" "wrong")
+      (fn p => read_parents p = Success []))
+  val _ = assert ("TheoryDat missing header file is a failure", fn () =>
+    let val path = OS.FileSys.tmpName ()
+        val _ = OS.FileSys.remove path handle OS.SysErr _ => ()
+    in case read_parents path of Failure _ => true | _ => false end)
+  val _ = assert ("TheoryDat normal parent chain", fn () =>
+    with_file (header (pair "min" "")) (fn base =>
+      let val baseHash = SHA1.sha1_file {filename = base}
+      in with_file (header (pair "base" baseHash)) (fn middle =>
+        let val middleHash = SHA1.sha1_file {filename = middle}
+        in with_file (header (pair "middle" middleHash)) (fn leaf =>
+          null (validate {path = middle,
+                          resolve = fn "base" => Artifact base
+                                     | _ => Missing}) andalso
+          null (validate {path = leaf,
+                          resolve = fn "middle" => Artifact middle
+                                     | _ => Missing})) end) end))
   val _ = assert ("TheoryDat parent byte identity and failures", fn () =>
     with_file "parent artifact bytes" (fn parent =>
       let val hash = SHA1.sha1_file {filename = parent}
@@ -172,6 +211,13 @@ in
         (case validate {path = child,
                         resolve = fn _ => Ambiguous [parent, parent]} of
              [AmbiguousParent _] => true | _ => false) andalso
+        (case validate {path = child,
+                        resolve = fn _ => raise Fail "resolver failed"} of
+             [ResolverError _] => true | _ => false) andalso
+        let val absent = OS.FileSys.tmpName ()
+            val _ = OS.FileSys.remove absent handle OS.SysErr _ => ()
+        in case validate {path = child, resolve = fn _ => Artifact absent} of
+               [UnreadableParent _] => true | _ => false end andalso
         with_file "different bytes" (fn other =>
           case validate {path = child, resolve = fn _ => Artifact other} of
               [HashMismatch _] => true | _ => false)) end))

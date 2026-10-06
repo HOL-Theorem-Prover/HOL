@@ -32,20 +32,23 @@ The deliberately long theory name `wrapping_child` is chosen so that
 the .dat header's sexp pretty-printer wraps `(theory ...)` onto a new
 line (i.e. emits `(theory\n("wrapping_child" ...)` rather than
 `(theory ("...")`).  This exercises the newline case in
-`HM_CacheFetch.extract_parents`; with a shorter name the header fits
-on one line and the parser's space-only matcher would accept it
-regardless.
+`TheoryDat.read_parents`.
 
 The harness:
 
 1. Builds the world with parent at "v1".
 2. Mutates `parentScript.sml` to a different theorem ("v2") and
    rebuilds *inner* only -- parent's `.dat` hash changes.
-3. `cleanAll` outer and rebuild from there.  Without the fetch-time
-   parent-hash validation, Holmake would cache-hit a `childTheory.dat`
-   built against parent v1 and consume would fail `link_parents`
-   against the v2 parent.  With validation, the cache hit is rejected,
-   child is rebuilt locally, and consume succeeds.
+3. Removes outer's build outputs, computes the current child cachekey,
+   and installs the saved v1 manifest under that key. This deliberately
+   forces a stale hit even when cachekey computation is correct.
+4. Rebuilds outer and requires the parent-validation rejection warning.
+   A marker enables checks in the child script that none of its cached
+   `.dat`, `.sml`, or `.sig` products were exposed before local rebuilding.
+   The child rebuild and downstream consume must both succeed.
+
+The test therefore exercises fetch-time validation independently of the
+cachekey algorithm, including a parent imported through an SML library.
 
 The mechanism that surfaced the original bug in
 `tools/Holmake/tests/coproduct/` is the same: `secondSimpleScript`'s
