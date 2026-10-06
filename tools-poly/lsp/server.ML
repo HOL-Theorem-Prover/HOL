@@ -609,27 +609,62 @@ fun bufferSymbols text = let
    can be reported against the text that asked for it.  `Ancestors foo'
    loads the module `fooTheory'; `Libs bar' loads `bar'.
 
+   Order is significant, and so are two further facts about the scope
+   each name is resolved in, because one entry can be what makes the
+   next one resolve (see `missingDeps'):
+
+     - `opens' says whether the header brings the name into scope
+       unqualified.  A `[qualified]' entry -- on the element or on its
+       `Ancestors' / `Libs' keyword -- expands to `local open X in end'
+       (`HOLSourceExpand.sml:635-642') and so contributes nothing to
+       what follows it.
+     - `bare' is the `Theory foo[bare]' attribute, which suppresses the
+       implicit `open Parse bossLib boolLib HolKernel holTheory' that
+       otherwise runs ahead of the declared list
+       (`HOLSourceExpand.sml:681').  `header' distinguishes "not bare"
+       from "no `Theory' header at all", where no such prefix exists
+       either.
+
    `parseDec' streams, and we stop at the first declaration that is
    neither the header nor an `open', so this reads no further than the
    top of the file. *)
 fun headerModules text = let
   val parseDec = bufferDecs text
-  fun named suffix ((p, nm): HOLSourceAST.ident) =
-      (nm ^ suffix, (p, p + size nm))
-  fun elems suffix es = map (fn {id, ...} => named suffix id) es
-  fun header (HOLSourceAST.HOLAncestors {elems = es, ...}) = elems "Theory" es
-    | header (HOLSourceAST.HOLLibs {elems = es, ...}) = elems "" es
+  val bare = ref false
+  val sawHeader = ref false
+  fun attrArgs (NONE: HOLSourceAST.kvals HOLSourceAST.attrs) = []
+    | attrArgs (SOME v) = #args (#attrs v)
+  fun hasKey k a =
+      List.exists (fn ({key = (_, s), ...}: HOLSourceAST.kvals) => s = k)
+                  (attrArgs a)
+  fun named suffix opens ((p, nm): HOLSourceAST.ident) =
+      {name = nm ^ suffix, pos = (p, p + size nm), opens = opens}
+  fun entries suffix q es =
+      map (fn {id, attrs} =>
+              named suffix (not (q orelse hasKey "qualified" attrs)) id) es
+  fun header (HOLSourceAST.HOLAncestors {elems, attrs, ...}) =
+        entries "Theory" (hasKey "qualified" attrs) elems
+    | header (HOLSourceAST.HOLLibs {elems, attrs, ...}) =
+        entries "" (hasKey "qualified" attrs) elems
   fun loop acc =
     case parseDec () of
       NONE => rev acc
-    | SOME (HOLSourceAST.HOLTheory {elems, ...}) =>
-        loop (List.revAppend (List.concat (map header elems), acc))
+    | SOME (HOLSourceAST.HOLTheory {elems, attrs, ...}) => (
+        sawHeader := true;
+        bare := (!bare orelse hasKey "bare" attrs);
+        loop (List.revAppend (List.concat (map header elems), acc)))
     | SOME (HOLSourceAST.DecOpen {elems, ...}) =>
-        loop (List.revAppend (map (named "") elems, acc))
+        loop (List.revAppend (map (named "" true) elems, acc))
     | SOME (HOLSourceAST.HOLLinePragmaWith _) => loop acc
     | SOME (HOLSourceAST.HOLFilePragmaWith _) => loop acc
     | SOME _ => rev acc
-  in loop [] handle _ => [] end
+  val mods = loop [] handle _ => []
+  in {bare = !bare, header = !sawHeader, mods = mods} end
+
+(* The structures a non-`bare' `Theory' header opens before anything the
+   file declares; `HOLSourceExpand.sml:681' is the authority. *)
+val implicitHeaderOpens =
+    ["Parse", "bossLib", "boolLib", "HolKernel", "holTheory"]
 
 (* `Meta.load' reports a module it cannot find or read by raising
    `Fail msg'; unwrap that, so a diagnostic reads as the message rather
@@ -2401,8 +2436,9 @@ fun start {diag, dbg, warnings} = let
        module the text mentions, including basis structures and ones
        the file declares itself, and "Cannot find file" for those is
        routine and harmless. *)
-    val declared = headerModules (#text (#text (Sref.value lastTrees)))
-    val declaredNames = map #1 declared
+    val {bare = hdrBare, header = hdrSeen, mods = declared} =
+        headerModules (#text (#text (Sref.value lastTrees)))
+    val declaredNames = map #name declared
     (* A file whose declared dependencies did not load gets no compile
        at all until that list changes.  The check is the list itself
        rather than a general "has the file changed": nothing the user
@@ -2925,13 +2961,13 @@ fun start {diag, dbg, warnings} = let
       (* The last byte the header claims, i.e. the end of the last name
          it declares. *)
       val headerEnd =
-          foldl (fn ((_, (_, e)), m) => Int.max (e, m)) 0 declared
+          foldl (fn ({pos = (_, e), ...}, m) => Int.max (e, m)) 0 declared
       val depFails = ref ([]: (string * (int * int) * exn) list)
       fun noteFail m e = (
         DArray.push (errors, e);
-        case List.find (fn (n, _) => n = m) declared of
+        case List.find (fn {name, ...} => name = m) declared of
           NONE => ()
-        | SOME (_, pos) => depFails := (m, pos, e) :: !depFails)
+        | SOME {pos, ...} => depFails := (m, pos, e) :: !depFails)
       val _ = app (fn m =>
         loadPlan (fn f => DArray.push (files, (f, m))) m
         handle e => noteFail m e) mods
@@ -3283,15 +3319,54 @@ fun start {diag, dbg, warnings} = let
           if List.exists (fn n => n = m) mods
           then Fail "the load produced no structure of that name"
           else Fail "nothing to load, and no structure of that name"
-        in
-          List.mapPartial
-            (fn (m, pos) =>
-                if isSome (#lookupStruct LSPNameSpace.fileNS m) then NONE
-                else case failure m of
-                       SOME f => SOME f
-                     | NONE => SOME (m, pos, why m))
-            declared
-        end
+        (* A name the header `open's need not be a module of its own.
+           `open Unicode' after `Libs ... Parse ...' means
+           `Parse.Unicode' (`src/parse/Parse.sig:299'): there is no
+           `Unicode.ui' for the load to find and `globalNameSpace' has
+           never heard of the name, yet the file compiles, because by
+           the time that `open' runs the structure containing it is in
+           scope.  Asking a flat `lookupStruct' for it answers "is
+           there a top-level structure called this?", which is not the
+           question that decides the file.
+
+           So walk the declared list in the order it is written,
+           carrying the structures each entry actually brings into
+           scope, and look an unresolved name up in those as well --
+           the same walk hover's `lookupDotted' and qualified
+           completion do.  A genuinely absent module still has nothing
+           to be found in and blocks the file exactly as before. *)
+        fun subLookup st m =
+            #lookupStruct (PolyML.NameSpace.Structures.contents st) m
+            handle _ => NONE
+        fun inScope [] _ = NONE
+          | inScope (st :: sts) m =
+            (case subLookup st m of NONE => inScope sts m | found => found)
+        fun resolve scope m =
+            case #lookupStruct LSPNameSpace.fileNS m of
+                NONE => inScope scope m
+              | found => found
+        fun scan _ acc [] = rev acc
+          | scan scope acc ({name, pos, opens} :: rest) =
+            case resolve scope name of
+                SOME st => scan (if opens then st :: scope else scope)
+                                acc rest
+              | NONE =>
+                scan scope
+                     ((case failure name of
+                           SOME f => f
+                         | NONE => (name, pos, why name)) :: acc)
+                     rest
+        (* The prefix a non-`bare' header opens ahead of the declared
+           list.  Absent names are dropped rather than reported: they
+           are not what the file asked for, and on a heap without
+           `bossLib' -- every directory below `src/boss' -- one of them
+           is always missing. *)
+        val scope0 =
+            if hdrSeen andalso not hdrBare
+            then List.mapPartial (#lookupStruct LSPNameSpace.fileNS)
+                                 implicitHeaderOpens
+            else []
+        in scan scope0 [] declared end
       fun runCompile () = (
         sendProgressBegin ();
         compileForReport uri (#text text) resumeStart stopAfter lastPos

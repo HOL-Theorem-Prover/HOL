@@ -5692,6 +5692,79 @@ def test_deps_body_reference_does_not_block():
 
 
 # ------------------------------------------------------------------
+# A header name that is a substructure of something opened before it
+# ------------------------------------------------------------------
+# `Unicode' is not a module: it is `Parse.Unicode'
+# (src/parse/Parse.sig), so nothing can load it and it is in no
+# namespace under that bare name until the header's `open Parse' has
+# run.  Scripts write it on its own line below the header for exactly
+# that reason -- a `Libs' run is merged into one `open', and SML
+# resolves every strid of an `open' against the environment before the
+# declaration.  src/bool/boolScript.sml and
+# src/pred_set/src/pred_setScript.sml both do this.
+#
+# `UChar.emptyset' is the positive control: `UChar' arrives only via
+# `open Unicode', so the test cannot pass against an empty namespace
+# layer.
+_SUBSTRUCT_SRC = ("Theory substruct_open[bare]\n"
+                  "Libs\n"
+                  "  HolKernel Parse boolLib\n"
+                  "\n"
+                  "open Unicode\n"
+                  "\n"
+                  "val a = UChar.emptyset\n")
+
+
+def test_open_substructure_not_blocked():
+    """`open Unicode' names a substructure of an already-opened `Parse',
+    not a module.  It must not block the file."""
+    uri = "file:///tmp/substruct_open.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _SUBSTRUCT_SRC)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted arrived")
+        assert_true(c.wait_for_method("$/compileBlocked", 1) is None,
+                    "a substructure `open' does not block the file")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 0,
+                  f"no diagnostics ({[x['message'][:60] for x in d]})")
+    finally:
+        c.close()
+
+
+def test_open_missing_module_still_blocks():
+    """The substructure search must not make the check vacuous: an
+    `open' of something that is neither a module nor in scope still
+    stops the file, reported on the `open'."""
+    uri = "file:///tmp/substruct_bad.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, "Theory substruct_bad[bare]\n"
+                          "Libs\n"
+                          "  HolKernel Parse boolLib\n"
+                          "\n"
+                          "open nosuchsubstructure\n"
+                          "\n"
+                          "val a = 3\n")
+        m = c.wait_for_method("$/compileBlocked", 30)
+        assert_true(m is not None, "compileBlocked arrived")
+        assert_true("nosuchsubstructure" in m["params"]["modules"],
+                    f"modules lists it ({m['params']['modules']})")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 1,
+                  f"one diagnostic ({[x['message'][:60] for x in d]})")
+        assert_contains(d[0]["message"], "cannot load nosuchsubstructure",
+                        "diagnostic text")
+        assert_eq(d[0]["range"]["start"]["line"], 4,
+                  "reported against the `open'")
+    finally:
+        c.close()
+
+
+# ------------------------------------------------------------------
 # Position encoding negotiated from the client's capabilities
 # ------------------------------------------------------------------
 # `xyzzy` sits after three ∀ (3 bytes each in UTF-8, one utf-16 code
@@ -9474,6 +9547,10 @@ TESTS = [
                                      test_deps_blocked_clears_on_header_edit),
     ("deps_body_reference_does_not_block",
                                      test_deps_body_reference_does_not_block),
+    ("open_substructure_not_blocked",
+                                     test_open_substructure_not_blocked),
+    ("open_missing_module_still_blocks",
+                                     test_open_missing_module_still_blocks),
     ("position_encoding_utf8_when_offered",
                                      test_position_encoding_utf8_when_offered),
     ("position_encoding_utf16_when_utf8_not_offered",
