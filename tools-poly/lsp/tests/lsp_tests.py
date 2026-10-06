@@ -2332,6 +2332,29 @@ def _proof_states(c, uri, since=0):
     return seen
 
 
+def _census(c, uri, since=0):
+    """The census of the latest $/compileCompleted for `uri`, as
+    (version, names), or None when the notification carried none.
+
+    The names are everything the buffer declares, under the names a
+    proof there would be given -- a superset of the proof sites, since
+    the only question asked of it is whether a name a client holds is
+    still declared.
+
+    Absent is not the same as empty: a server not checking proofs sends
+    neither field, and a client must then leave its tally alone."""
+    msgs, _ = c.messages_since(since)
+    got = None
+    for m in msgs:
+        if m.get("method") != "$/compileCompleted":
+            continue
+        p = m["params"]
+        if p["uri"] != uri:
+            continue
+        got = ((p["version"], p["declared"]) if "declared" in p else None)
+    return got
+
+
 def _proof_transitions(c, uri, since=0):
     """Every announced (name, status) for `uri`, in order."""
     msgs, _ = c.messages_since(since)
@@ -7427,6 +7450,162 @@ def test_a_rebound_name_gets_its_own_entry():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_deleted_proof_leaves_the_tally():
+    """Write a failing proof and it is correctly reported as one to
+    look at.  Delete the whole `Theorem ... QED' and it must stop being
+    reported -- the count, the name in the tooltip, and the squiggle.
+
+    A client cannot work this out.  The pool announces the entry it
+    drops as `cheated', which is what it also announces when an edit
+    merely reached a proof, and a client that forgot every `cheated'
+    would under-count the proofs still waiting to be re-checked.  So
+    the server says which names the buffer still declares, and the
+    client keeps exactly those."""
+    d = tempfile.mkdtemp(prefix="lsp_delproof_")
+    try:
+        head = ("Theory delproof\n"
+                "Ancestors arithmetic\n"
+                "\n"
+                "Theorem keep_me:\n"
+                "  1 + 1 = 2\n"
+                "Proof\n"
+                "  DECIDE_TAC\n"
+                "QED\n"
+                "\n")
+        doomed = ("Theorem not_worth_it:\n"
+                  "  1 = 2\n"
+                  "Proof\n"
+                  "  DECIDE_TAC\n"
+                  "QED\n"
+                  "\n")
+        tail = ("Theorem keep_me_too:\n"
+                "  2 + 2 = 4\n"
+                "Proof\n"
+                "  DECIDE_TAC\n"
+                "QED\n")
+        src = head + doomed + tail
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/delproofScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # The positive control: without it a census that named
+            # nothing would read exactly like one that worked.
+            def failed(cl):
+                st = _proof_states(cl, uri)
+                return st if st.get("not_worth_it", (None,))[0] == "failed" \
+                    else None
+
+            assert_true(c.wait_until(failed, 60) is not None,
+                        f"the bad proof is reported failed first "
+                        f"({_proof_states(c, uri)!r})")
+            before = _census(c, uri)
+            assert_true(before is not None, "the census is sent at all")
+            assert_true("not_worth_it" in before[1],
+                        f"and names the proof while it exists ({before!r})")
+
+            mark = c.total_msgs()
+            at = len(head.encode("utf-8"))
+            _did_change_incr(c, uri, src, at,
+                             at + len(doomed.encode("utf-8")), "", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=mark),
+                        "compileCompleted after the deletion")
+
+            def gone(cl):
+                got = _census(cl, uri, since=mark)
+                return got if got is not None \
+                    and "not_worth_it" not in got[1] else None
+
+            after = c.wait_until(gone, 60)
+            assert_true(after is not None,
+                        f"the deleted proof leaves the census "
+                        f"({_census(c, uri, since=mark)!r})")
+            assert_true(all(n in after[1] for n in ("keep_me", "keep_me_too")),
+                        f"and the surviving two stay in it ({after!r})")
+            assert_eq(after[0], 2, "stamped with the text it was read from")
+
+            # The other half of the same complaint: the squiggle.
+            def unsquiggled(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "not_worth_it" in x.get("message", "")
+                      or "proof failed" in x.get("message", "")]
+                return True if not ds else None
+
+            assert_true(c.wait_until(unsquiggled, 60) is not None,
+                        f"and its diagnostic goes with it "
+                        f"({_diag_count(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_the_census_names_proofs_not_verdicts():
+    """The census says which proofs the buffer *has*, not what the pool
+    makes of them -- so an unchecked proof is still named, and a client
+    pruning against it reports the proof rather than hiding it.
+
+    That is also what makes the list safe to send.  A snapshot of the
+    pool's verdicts could not be: it would have to be sampled and only
+    then put on the wire, so a worker settling in between would lose
+    its newer verdict to the older sample.  Nothing a worker does adds
+    or removes a declaration, so this list has no such race.
+
+    The occurrence numbers are the pool's own, which is why a rebound
+    name appears as `foo#2' here exactly as it does on
+    `$/proofStates'."""
+    d = tempfile.mkdtemp(prefix="lsp_census_")
+    try:
+        src = ("Theory census\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem foo:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n"
+               "\n"
+               "Theorem foo[allow_rebind]:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/censusScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            got = _census(c, uri)
+            assert_true(got is not None, "a census is sent")
+            assert_true(all(n in got[1] for n in ("foo", "foo#2")),
+                        f"both occurrences, under the names the pool uses "
+                        f"({got!r})")
+
+            # Said without waiting for a verdict, which is the point:
+            # the names are there whether or not the pool has settled.
+            def settled(cl):
+                st = _proof_states(cl, uri)
+                return st if len(st) >= 2 and all(
+                    v[0] != "checking" for v in st.values()) else None
+
+            st = c.wait_until(settled, 60)
+            assert_true(st is not None, f"the proofs do settle ({st!r})")
+            assert_true(all(n in got[1] for n in st),
+                        f"and every name the pool used is one the census "
+                        f"names, which is what makes pruning against it "
+                        f"safe ({sorted(st)!r} vs {got[1]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_an_edit_above_a_proof_keeps_one_entry():
     """An edit above every proof re-elaborates the file, so each proof
     is dropped and forked again somewhere else.  It must come back
@@ -9816,6 +9995,10 @@ TESTS = [
      test_a_name_that_occurs_once_never_gets_an_ordinal),
     ("a_rebound_name_gets_its_own_entry",
      test_a_rebound_name_gets_its_own_entry),
+    ("a_deleted_proof_leaves_the_tally",
+     test_a_deleted_proof_leaves_the_tally),
+    ("the_census_names_proofs_not_verdicts",
+     test_the_census_names_proofs_not_verdicts),
     ("an_edit_above_a_proof_keeps_one_entry",
      test_an_edit_above_a_proof_keeps_one_entry),
     ("a_reused_proof_reports_where_it_moved_to",

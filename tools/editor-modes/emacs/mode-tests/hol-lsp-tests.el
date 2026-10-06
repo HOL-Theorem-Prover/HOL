@@ -489,6 +489,73 @@ an unchecked proof as checked.  Only what has left the buffer goes."
           (kill-buffer buf))
       (delete-file file))))
 
+(ert-deftest hol-lsp-a-census-forgets-a-deleted-proof ()
+  "The server names the proofs the buffer still declares, and that is
+the only way to tell a deleted theorem from one the pass has not got
+round to.  The named ones stay -- `cheated' included, since those are
+the unchecked proofs the tally exists to report -- and anything the
+census does not mention has had its declaration deleted or renamed."
+  (let ((file (make-temp-file "holcensus" nil "Script.sml")))
+    (unwind-protect
+        (let ((buf (find-file-noselect file)))
+          (with-current-buffer buf
+            (insert "one\ntwo\nthree\n")
+            (save-buffer)
+            (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+            (hol-lsp-tests--put "waiting" "cheated" 0)
+            (hol-lsp-tests--put "deleted" "failed" 1)
+            (should (equal (hol-lsp-proof-summary) "\u22a20/2!1 "))
+            ;; a vector, which is how eglot hands a JSON array over
+            (hol-lsp--prune-stale-proofs (hol-lsp--path-to-uri file)
+                                         ["waiting"])
+            (should (equal (hol-lsp-proof-summary) "\u22a20/1 ")))
+          (kill-buffer buf))
+      (delete-file file))))
+
+(ert-deftest hol-lsp-the-notification-carries-the-census ()
+  "The census only works if the handler reads the field the server
+writes, and a disagreement there is silent: nothing would ever be
+pruned and the tally would look exactly as it did before.  So this
+goes through `eglot-handle-notification' rather than calling the prune
+directly, which is what the other census tests do."
+  (skip-unless (require 'eglot nil t))
+  (let ((file (make-temp-file "holnotif" nil "Script.sml")))
+    (unwind-protect
+        (let ((buf (find-file-noselect file)))
+          (with-current-buffer buf
+            (insert "one\ntwo\nthree\n")
+            (save-buffer)
+            (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+            (hol-lsp-tests--put "still_here" "cheated" 1)
+            (hol-lsp-tests--put "deleted" "failed" 1)
+            (eglot-handle-notification
+             nil '$/compileCompleted
+             :uri (hol-lsp--path-to-uri file)
+             :declared ["still_here"])
+            (should (equal (hol-lsp-proof-summary) "\u22a20/1 ")))
+          (kill-buffer buf))
+      (delete-file file))))
+
+(ert-deftest hol-lsp-no-census-is-not-an-empty-one ()
+  "A server that is not checking proofs sends no census at all, and
+that must not be read as a buffer with no proofs in it -- which would
+empty the tally on the first compile of every unchecked session."
+  (let ((file (make-temp-file "holnocensus" nil "Script.sml")))
+    (unwind-protect
+        (let ((buf (find-file-noselect file)))
+          (with-current-buffer buf
+            (insert "one\ntwo\nthree\n")
+            (save-buffer)
+            (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+            (hol-lsp-tests--put "kept" "cheated" 1)
+            (hol-lsp--prune-stale-proofs (hol-lsp--path-to-uri file) nil)
+            (should (equal (hol-lsp-proof-summary) "\u22a20/1 "))
+            ;; and an empty census is the other thing: it says so.
+            (hol-lsp--prune-stale-proofs (hol-lsp--path-to-uri file) [])
+            (should (equal (hol-lsp-proof-summary) "")))
+          (kill-buffer buf))
+      (delete-file file))))
+
 ;;; ---------------------------------------------------------------
 ;;; Goals-pane annotations
 ;;;

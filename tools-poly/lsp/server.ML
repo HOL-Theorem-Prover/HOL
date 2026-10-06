@@ -601,6 +601,23 @@ fun bufferSymbols text = let
            | SOME dec => loop (List.revAppend (symsOf dec, acc))
   in loop [] handle _ => [] end
 
+(* The outline's declarations, each paired with the occurrence number
+   of its name: the first `Theorem foo' is 1, a later rebound one is 2.
+
+   One walk, two readers.  `compileForReport' wants the number, to tell
+   the pool which occurrence a proof it is enqueuing belongs to;
+   `finishPass' wants the qualified name, to tell the client which
+   names the buffer still has.  The two lists are compared against each
+   other, entry by entry, so they must be counted the same way -- hence
+   one function rather than two that agree today. *)
+fun declOrds syms = let
+  fun go [] _ acc = rev acc
+    | go (Sym {name, span = (start, _), ...} :: rest) seen acc =
+      let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
+      in go rest (Binarymap.insert (seen, name, n)) ((start, name, n) :: acc)
+      end
+  in go syms (Binarymap.mkDict String.compare) [] end
+
 (* The modules a script names as its dependencies: the theories and
    libraries of its `Theory ... Ancestors ... Libs ...' header, plus the
    identifiers of any top-level `open' preceding the first real
@@ -1999,17 +2016,12 @@ fun start {diag, dbg, warnings} = let
        which on a resumed compile re-elaborating one declaration is the
        dominant cost of the pass. *)
     val decOrds = let
-      fun go [] _ acc = acc
-        | go (Sym {name, span = (start, _), ...} :: rest) seen acc =
-          let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
-          in go rest (Binarymap.insert (seen, name, n))
-                (Binarymap.insert (acc, start, n))
-          end
+      fun add ((start, _, n), acc) = Binarymap.insert (acc, start, n)
+      val empty = Binarymap.mkDict Int.compare
       in
-        if not (!LSPExtension.deferProofs) then Binarymap.mkDict Int.compare
-        else go (bufferSymbols code) (Binarymap.mkDict String.compare)
-                (Binarymap.mkDict Int.compare)
-             handle _ => Binarymap.mkDict Int.compare
+        if not (!LSPExtension.deferProofs) then empty
+        else List.foldl add empty (declOrds (bufferSymbols code))
+             handle _ => empty
       end
     (* The compile driver's notion of where a declaration begins and
        the outline's normally agree, so the exact hit is the usual
@@ -2236,8 +2248,7 @@ fun start {diag, dbg, warnings} = let
   (* The buffer's outline, parsed at most once per text version: the
      outline is asked for on every edit, and `workspace/symbol' asks
      every open buffer on every keystroke of the search box. *)
-  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
-    val {text = {text, version, ...}, ...} = Sref.value lastTrees
+  fun symbolsOfText symbols (text, version) = let
     fun parse () = let val syms = bufferSymbols text
                    in symbols := SOME (version, syms); syms end
     in
@@ -2245,6 +2256,57 @@ fun start {diag, dbg, warnings} = let
         SOME (v, syms) => if v = version then syms else parse ()
       | NONE => parse ()
     end
+
+  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = Sref.value lastTrees
+    in symbolsOfText symbols (text, version) end
+
+  (* What the buffer declares, under the names a proof there would be
+     given, and the text version it was read from.
+
+     This is what lets a client forget a proof whose `Theorem' block
+     has been deleted.  The pool cannot tell it: an entry it drops is
+     announced `cheated' whether an edit merely reached the proof or
+     whether the declaration is gone, and a client that forgot every
+     `cheated' would under-count the proofs still waiting to be
+     re-checked.  The buffer's outline can tell it, and does.
+
+     Every declaration, not only the ones that can carry a proof: the
+     `Theory' header and each `val' and `fun' are in here too.  The
+     question a client asks is "is the name I am holding still
+     declared?", and for that a superset is not merely harmless but
+     safer.  Narrowing it means filtering on declaration kind, and a
+     filter that is wrong errs by dropping a name that *is* declared --
+     which silently deletes a live proof from the tally, the failure
+     this is here to fix.  Erring the other way keeps a name a moment
+     longer, and the next pass settles it.
+
+     Names, not verdicts.  A snapshot of what the pool *thinks* cannot
+     be sent correctly -- it would have to be sampled and only then
+     put on the wire, so a worker settling in between would have its
+     newer verdict overwritten by the older sample.  Nothing a worker
+     does can add or remove a declaration from the buffer, so this
+     list has no such race; it says which names are legitimate, and
+     leaves every verdict to `$/proofStates'.
+
+     Read from one snapshot of `lastTrees' so that the version and the
+     names cannot come from different texts. *)
+  fun proofCensus ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = Sref.value lastTrees
+    val syms = symbolsOfText symbols (text, version)
+    in
+      (version,
+       map (fn (_, nm, n) => LSPExtension.qualifyProof nm n) (declOrds syms))
+    end
+
+  (* Is this proof site still one the buffer declares?  A failed proof
+     waits in `pendingFailures' for a compile to finish before its
+     diagnostic can be placed, and the user can delete the theorem in
+     between -- and placing it is precisely putting an entry *back*
+     into `proofDiags', under a key no later transition will remove,
+     pointing into text that has gone. *)
+  fun proofStillDeclared v site =
+      List.exists (fn s => s = site) (#2 (proofCensus v))
 
   (* The range to squiggle for a proof: the theorem's own name, via
      the outline symbol whose span covers the declaration's start byte.
@@ -2407,6 +2469,39 @@ fun start {diag, dbg, warnings} = let
                 | (_, SOME d) => (Binarymap.insert (pd, site, [d]), true))
     in
       if changed then republish () else ()
+    end
+
+  (* Drop the proof diagnostics of declarations the buffer no longer
+     has, given the census of the ones it does.
+
+     `proofDiags' is deliberately not cleared by a compile -- the pool
+     owns each entry's lifetime and announces every change, the
+     `Cheated' of a dropped proof included, so a compile that reuses
+     its entries would wipe squiggles with nothing left to restore
+     them.  That argument holds for a proof that still exists.  For one
+     whose `Theorem' block has been deleted there is no transition left
+     to come: a pass that stops early never reaches it to announce
+     anything, and the entry would outlive the text it points into.
+     The census is what distinguishes the two.
+
+     Called from `finishPass', where `lastTrees' is current, so the
+     publish is the catch-up one that `updateProofDiag' defers to. *)
+  fun dropDeadProofDiags uri (v as {proofDiags, ...}: file_data) sites = let
+    val live = Binaryset.addList (Binaryset.empty String.compare, sites)
+    val changed =
+        Sref.gen_update proofDiags
+          (fn pd => let
+             val dead = Binarymap.foldl
+                          (fn (site, _, acc) =>
+                              if Binaryset.member (live, site) then acc
+                              else site :: acc)
+                          [] pd
+             in (List.foldl (fn (site, m) => #1 (Binarymap.remove (m, site)))
+                            pd dead,
+                 not (null dead))
+             end)
+    in
+      if changed then publishAllDiagnostics uri v else ()
     end
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
@@ -3114,11 +3209,40 @@ fun start {diag, dbg, warnings} = let
          separate them again; the bare `releaseState' at the end of
          the thread is the backstop for the ways out that announce
          nothing. *)
-      fun finishPass () = (
-        releaseState ();
-        sendProgressEnd ();
-        send (mkNotif "$/compileCompleted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}"))))
+      (* `declared' is the census: what the buffer still declares, under
+         the names a proof there would be given, with the `version' of
+         the text it was read from.  A client keeping a tally of proofs
+         drops any name the list does not mention -- that is how a
+         deleted or renamed `Theorem' leaves the count.
+
+         Sent only when proofs are being deferred, because only then is
+         there a pool whose entries a client could be holding, and
+         because reading the census parses the whole file.  The field
+         is then *absent*, which is not the same as present-and-empty:
+         absent means this server is not saying, and a client must
+         leave its tally alone; empty means the buffer declares nothing
+         at all and every entry goes.  An older client that knows
+         neither field ignores both and behaves as it did. *)
+      fun finishPass () = let
+        val census = if !LSPExtension.deferProofs then SOME (proofCensus v)
+                     else NONE
+        val () = case census of
+                     SOME (_, sites) => dropDeadProofDiags uri v sites
+                   | NONE => ()
+        fun encCensus print =
+            case census of
+                NONE => ()
+              | SOME (version, sites) => (
+                  print ",\"version\":"; encInt version print;
+                  print ",\"declared\":"; encArray encString sites print)
+        in
+          releaseState ();
+          sendProgressEnd ();
+          send (mkNotif "$/compileCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            encCensus print;
+            print "}")))
+        end
       (* The pass gave up instead, and the same order applies for the
          same reason.  No client subscribes to this today, so nothing
          asks on hearing it -- but that is a fact about the clients,
@@ -4271,6 +4395,7 @@ fun start {diag, dbg, warnings} = let
      fn {site, offset, msg} => let
        val {text = {text, lines, ...}, ...} = Sref.value lastTrees
      in
+       if not (proofStillDeclared v site) then () else
        case theoremTacEnd text offset of
            NONE => ()
          | SOME tacEnd =>

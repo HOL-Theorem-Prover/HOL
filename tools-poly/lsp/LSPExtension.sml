@@ -313,6 +313,8 @@ in
 end
 val currentProofOffset = ref 0
 val currentProofOrd = ref 1
+fun qualifyProof nm ord =
+    if nm = "" orelse ord <= 1 then nm else nm ^ "#" ^ Int.toString ord
 local
   (* Enqueued in reverse; the drain takes the whole queue in one step.
 

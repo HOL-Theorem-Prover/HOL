@@ -2867,22 +2867,62 @@ that reason."
         (hol-lsp--merge-proof-states (hol-lsp--proof-states-table) states)
         (force-mode-line-update)))))
 
-(defun hol-lsp--prune-stale-proofs (uri)
+(defun hol-lsp--census-applies-p (version)
+  "Is a census read from text VERSION still about this buffer?
+The user can type between the server reading the buffer and the
+notification arriving, and a census naming the declarations of an
+older text would then forget a proof the newer one has.  That edit
+starts a pass of its own, which sends a census that does apply, so
+skipping is the whole of the fix.
+
+VERSION nil means the server did not say, and we take the census as
+given.  So does an eglot without `eglot--versioned-identifier', where
+there is nothing to compare against."
+  (or (null version)
+      (not (boundp 'eglot--versioned-identifier))
+      (equal version (symbol-value 'eglot--versioned-identifier))))
+
+(defun hol-lsp--prune-stale-proofs (uri &optional census version)
   "Drop entries for proofs no longer in the buffer visiting URI.
-A proof still `cheated' when a compile finishes was not re-enqueued by
-that pass -- which happens both when its theorem has been deleted and
-when the server did not get round to it.  Those look identical from
-here, and dropping them silently is the worse mistake: it counts an
-unchecked proof as though it had been checked.  So only entries past
-the end of the buffer go."
+
+CENSUS is the server's list of what the buffer still declares, under
+the names a proof there would be given, read from text VERSION.
+Anything the tally holds that the census does not mention has had its
+declaration deleted or renamed, and goes.  The list names more than
+proofs -- every `val' and `fun' is in it too -- which costs nothing:
+the only question asked of it is whether a name we hold is still
+there.
+
+This is the one thing a client cannot work out for itself.  A proof
+still `cheated' when a compile finishes was not re-enqueued by that
+pass, which happens both when its theorem has been deleted and when
+the server did not get round to it -- and those are indistinguishable
+from here, while dropping both would count an unchecked proof as
+though it had been checked.  The server can tell them apart, because
+it holds the buffer's outline, so it says.
+
+A census of nil is the server declining to say -- it is not checking
+proofs, or it predates the field -- and must not be read as a buffer
+that declares nothing; the positional rule below is then the only one
+that applies.  That rule stays because it needs no census at all: an entry past the
+end of the buffer cannot be anything but stale."
   (let* ((path (ignore-errors (hol-lsp--uri-to-path uri)))
          (buf (and path (find-buffer-visiting path))))
     (when (buffer-live-p buf)
       (with-current-buffer buf
         (when hol-lsp--proof-states
-          (let ((last (line-number-at-pos (point-max))) stale)
+          ;; `have' rather than a non-empty `names': eglot hands a
+          ;; JSON array over as a vector, and an empty one is not nil
+          ;; -- it is the server saying this buffer declares nothing
+          ;; at all, which is exactly when every entry should go.
+          (let* ((have (and census (hol-lsp--census-applies-p version)))
+                 (names (and have (append census nil)))
+                 (last (line-number-at-pos (point-max)))
+                 stale)
             (maphash (lambda (k v)
-                       (when (>= (or (nth 1 v) 0) last) (push k stale)))
+                       (when (or (>= (or (nth 1 v) 0) last)
+                                 (and have (not (member k names))))
+                         (push k stale)))
                      hol-lsp--proof-states)
             (dolist (k stale) (remhash k hol-lsp--proof-states))
             (when stale (force-mode-line-update))))))))
@@ -3018,11 +3058,14 @@ from 30 to 12 reads as what it is."
     (hol-lsp--set-blocked uri message))
 
   (cl-defmethod eglot-handle-notification
-    (_server (_method (eql $/compileCompleted)) &key uri
+    (_server (_method (eql $/compileCompleted)) &key uri declared version
              &allow-other-keys)
-    "Note that URI compiled, which is to say it is no longer blocked."
+    "Note that URI compiled, which is to say it is no longer blocked.
+DECLARED is the census of the names the buffer still declares, as of
+text VERSION; both are absent from a server that is not checking
+proofs.  eglot hands a JSON array over as a vector."
     (hol-lsp--set-blocked uri nil)
-    (hol-lsp--prune-stale-proofs uri))
+    (hol-lsp--prune-stale-proofs uri declared version))
 
   (cl-defmethod eglot-handle-notification
     (_server (_method (eql $/hol/desync)) &key uri message

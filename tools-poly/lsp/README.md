@@ -610,6 +610,14 @@ left to restore it.  A proof that gets fixed therefore clears in two
 steps: the edit drops the entry (`cheated`), and the re-elaborated
 proof settles as `proved`.
 
+The exception is a declaration that is no longer there.  A proof whose
+`Theorem` block has been deleted gets no further transition -- a pass
+that stops early never reaches it to announce one -- so its entry
+would outlive the text it points into.  `finishPass` drops those
+against the census below, and a failure still queued for localisation
+is dropped the same way, rather than being placed into a buffer that
+no longer has anywhere to put it.
+
 Every change is also announced on `$/proofStates` as a transition --
 `checking`, then a verdict, `cheated` when an entry is dropped.
 
@@ -645,6 +653,62 @@ checked 61 proofs looks identical to one that checked none.  There is
 deliberately no full-state message: the state would have to be
 sampled and only then sent, so a worker settling in between would have
 its newer verdict overwritten by the older sample.
+
+### The census, on `$/compileCompleted`
+
+What a client cannot accumulate its way to is a *deletion*.  The pool
+announces a dropped entry as `cheated` whether an edit merely reached
+the proof or its declaration is gone, and those want opposite
+treatment: the first is outstanding work, the second is nothing at
+all.  A client that forgot every `cheated` would under-count the
+proofs still waiting; a client that keeps them reports a theorem the
+user deleted, for the life of the session, with a line number that now
+belongs to something else.
+
+So `$/compileCompleted` carries a census -- what the buffer still
+declares, under the names a proof there would be given:
+
+```json
+{"uri": "file:///…/fooScript.sml", "version": 7,
+ "declared": ["fooScript", "thm_a", "helper", "thm_b", "thm_b#2",
+              "thm_c[sub1]"]}
+```
+
+A client drops any proof the list does not mention, and keeps every one
+it does, `cheated` included.
+
+It names *every* declaration, not only the ones that can carry a
+proof -- the `Theory` header and each `val` and `fun` are in there too.
+The question a client asks is "is the name I am holding still
+declared?", and for that a superset is not merely harmless but safer.
+Narrowing it means filtering on declaration kind, and a filter that is
+wrong errs by dropping a name that *is* declared -- which silently
+deletes a live proof from the tally, the failure this exists to fix.
+Erring the other way keeps a name one pass longer.
+
+Names, not verdicts -- which is why this is not the full-state message
+refused just above.  A snapshot of what the pool *thinks* has to be
+sampled and only then sent, so a worker settling in between loses its
+newer verdict to the older sample.  Nothing a worker does can add or
+remove a declaration from the buffer, so a list of names has no such
+race.
+
+The names are the pool's own: `LSPExtension.qualifyProof` applied to
+the outline's declarations, which is the same rule, from the same
+walk, that gives a proof its `foo#2` in the first place.  A `Resume`
+block appears as `thm[label]`, as it does on `$/proofStates`.
+
+Both fields are **absent** unless the server is checking proofs.
+Absent is not the same as present-and-empty: absent means the server
+is not saying, and a client must leave its tally alone; `[]` means the
+buffer declares nothing at all and every entry goes.  A client that
+knows neither field ignores both, which is what makes this additive.
+
+`version` is the text the census was read from.  A client that has
+edited since can skip the prune -- that edit starts a pass of its own,
+whose census will apply -- but need not: a name wrongly dropped is
+re-announced by the next pass, where a name wrongly kept is kept
+forever.
 
 ## Goal-state at cursor (`$/hol/goalState`)
 
