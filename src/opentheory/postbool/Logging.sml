@@ -748,7 +748,7 @@ fun log_some_thms axdefs th = let
        | _ => false)
   then Thm.delete_proof th
   else th;
-in definitions := th::(!definitions) end
+in definitions := th::(!definitions); th end
 
 fun raw_start_logging axdefs out =
   case !log_state of

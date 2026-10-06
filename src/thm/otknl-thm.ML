@@ -107,7 +107,7 @@ end;
  * The type of theorems and some basic operations on it.                     *
  *---------------------------------------------------------------------------*)
 
-datatype thm = THM of Tag.tag * term HOLset.set * term * proof
+datatype thm = THM of Tag.tag * term HOLset.set * term * (bool ref * proof)
 and proof =
   Axiom_prf
 | deleted_prf
@@ -155,8 +155,8 @@ and proof =
 | deductAntisym_prf of thm * thm
 | compute_prf
 
-fun proof (THM(_,_,_,p)) = p
-fun delete_proof (THM(x,y,z,p)) = THM(x,y,z,deleted_prf)
+fun proof (THM(_,_,_,(r,p))) = if !r then p else raise Fail "invalid proof"
+fun delete_proof (THM(x,y,z,(r,p))) = (r := false; THM(x,y,z,(ref true,deleted_prf)))
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
@@ -170,7 +170,7 @@ val hyp = hyplist   (* backwards compatibility *)
 
 fun dest_thm(t as THM(_,asl,w,_)) = (hyplist t,w) (* Compatible with old code. *)
 fun sdest_thm(THM(_,asl,w,_)) = (asl,w)
-fun make_thm R th = (Count.inc_count R; THM th);   (* internal only *)
+fun make_thm R (x,y,z,p) = (Count.inc_count R; THM (x,y,z,(ref true,p)));   (* internal only *)
 
 fun thm_frees (t as THM(_,asl,c,_)) = free_varsl (c::hyplist t);
 
@@ -1151,15 +1151,14 @@ fun mk_axiom_thm (r,c) =
    (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";
     make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c, Axiom_prf))
 
-val defn_callback = ref (K ())
+val defn_callback = ref I
 fun set_definition_callback f = defn_callback := f
-fun clear_definition_callback () = defn_callback := K ()
+fun clear_definition_callback () = defn_callback := I
 
 fun mk_defn_thm (witness_tag, c, p) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
     let val th = make_thm Count.Definition (witness_tag,empty_hyp,c, p)
-        val _  = (!defn_callback) th
-        in th end)
+        in (!defn_callback) th end)
 
 (* ----------------------------------------------------------------------
     Primitive Definition Principles
