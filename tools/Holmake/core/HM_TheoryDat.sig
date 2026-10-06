@@ -1,10 +1,9 @@
 signature HM_TheoryDat =
 sig
 
-  (* Textual scan of a Theory.dat header, returning the recorded
-     parents as (name, sha1) pairs.  Returns [] on read or parse
-     failure -- callers should treat that as "can't recover the
-     ancestry chain through this file". *)
+  (* Compatibility wrapper for cachekey ancestry discovery. Returns []
+     on failure, conservatively retaining hash inputs. For validation
+     use TheoryDat, which distinguishes failure from empty parentage. *)
   val extract_parents : string -> (string * string) list
 
   (* Locate a parent theory's .dat file by name, searching

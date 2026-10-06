@@ -106,27 +106,19 @@ fun is_theory_output f =
    no longer match the current on-disk parents.  Loading that .dat
    would fail link_parents.  Detect and treat as a cache miss.
 
-   The textual scan of the .dat header lives in core/HM_TheoryDat so
-   that HM_Cachekey can use the same parser without picking up a
-   dependency on this poly-only module. *)
+   TheoryDat checks the parent header; HM_TheoryDat supplies the
+   Holmake-specific artifact search policy. *)
 
-(* Validate that the parent hashes recorded in [dat_path] match the
-   hashes of the current on-disk parents.  An empty extracted-parents
-   list means we couldn't parse the .dat header at all (every real
-   theory has at least one parent in its .dat -- bool records "min"
-   even though "min" has no .dat of its own) so we fail-safe and
-   reject the cache. *)
+(* Validate before exposing staged outputs. This checks compatibility,
+   not the validity of the theory body. *)
 fun validate_dat search_dirs dat_path =
     let
-      val parents = HM_TheoryDat.extract_parents dat_path
-      fun check (thy, recorded_hash) =
+      fun resolve thy =
           case HM_TheoryDat.find_parent_dat search_dirs thy of
-              NONE => false   (* can't locate current parent; fail-safe *)
-            | SOME path =>
-                (SHA1.sha1_file {filename = path} = recorded_hash
-                 handle _ => false)
+              NONE => TheoryDat.Missing
+            | SOME path => TheoryDat.Artifact path
     in
-      not (List.null parents) andalso List.all check parents
+      List.null (TheoryDat.validate {path = dat_path, resolve = resolve})
     end
 
 fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_functions) =
