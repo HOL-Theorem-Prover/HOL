@@ -1,0 +1,10 @@
+Theory refutePersistChanged
+Ancestors
+  refutePersistOld
+Libs
+  Refute
+
+val _ = Refute.export_codatatype
+  {tyop = {Thy = "refutePersistOld", Tyop = "persist_old"},
+   case_const = ``persist_old_case_b``,
+   constructors = [``persist_old_b``], witness = NONE};

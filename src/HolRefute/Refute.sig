@@ -108,6 +108,25 @@ signature Refute = sig
      equiv_thm : thm} -> unit
   val register_typedef :
     {ty : hol_type, abs : term, rep : term, absrep_thms : thm list} -> unit
+  (* Validated structural descriptions stored in the current theory and
+     inherited on import.  Export is rejected under a context pin or during
+     a Refute call; register_* remains session-local.  Same-kind exports
+     replace in ancestry delta order; incompatible kinds are rejected. *)
+  val export_codatatype :
+    {tyop : {Thy : string, Tyop : string},
+     case_const : term, constructors : term list, witness : thm option} ->
+    unit
+  val export_quotient :
+    {qty : hol_type, rty : hol_type, abs : term, rep : term,
+     equiv_thm : thm} -> unit
+  val export_typedef :
+    {ty : hol_type, abs : term, rep : term, absrep_thms : thm list} -> unit
+  (* Export exactly these generic operators, retaining earlier harvested
+     proofs or discovering only the selected operators.  Deduplicates in
+     input order; [] is a no-op.  Failure exports none of the selection.
+     Frac and fmap are unsupported.  Built-in codata without retained
+     inputs needs an explicit export_codatatype description. *)
+  val export_registrations : hol_type list -> unit
   (* Sweeps every theory in [Theory.ancestry] once, in a canonical
      deterministic order, attempting typedef and quotient harvesting for
      every type operator those theories declare.  The lazy, demand-driven

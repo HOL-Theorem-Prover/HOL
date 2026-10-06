@@ -22,6 +22,15 @@ repository.
   `Holmake -C`, because a parent may not INCLUDE its own subdirectory.
   Fixture theories stay out of the global sigobj namespace by living
   here.
+- `loading_tests/persistence/` builds exported structural registrations,
+  then imports them in separate processes with both Refute loading orders.
+  Its unexported controls and unnamed typedef proofs prevent harvesting
+  from hiding broken persistence.  Ancestry, import conflicts, and changed
+  metadata have dedicated consumers.  Semantic rows use the existing
+  solver availability gate; structural and loading rows need no Kodkodi.
+- `Refute_RegistrationData` owns codecs and descriptor bookkeeping only.
+  Validation and lazy replay belong in `Refute_ModelFinder_HOL`.  Keep the
+  ancestry merge hook free of registration locks, search and callbacks.
 - Interactive session: start `bin/hol`, then run `load "Refute"`.
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` here.  Level 2 is not optional —
   cross-substrate conformance and the acceptance tables only run there.

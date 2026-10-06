@@ -158,6 +158,11 @@ signature Refute_ModelFinder_HOL = sig
   val register_quotient : quotient_registration -> unit
   val register_typedef :
     {abs : term, absrep_thms : thm list, rep : term, ty : hol_type} -> unit
+  val export_codatatype : codatatype_registration -> unit
+  val export_quotient : quotient_registration -> unit
+  val export_typedef :
+    {abs : term, absrep_thms : thm list, rep : term, ty : hol_type} -> unit
+  val export_registrations : hol_type list -> unit
   val register_frac_type : frac_info -> unit
   val rat_frac_registration : frac_info
   val real_frac_registration : frac_info

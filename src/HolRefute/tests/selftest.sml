@@ -5,6 +5,7 @@
 open testutils
 open refuteTheory refuteTableZooTheory refuteUnusedTheory
 open Refute
+open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
 (* Three deliberate reaches outside the [Refute] signature.  One is a
@@ -253,6 +254,261 @@ fun with_family family (b : backend) : backend =
 fun with_enabled flags body =
   (app (fn f => f := true) flags;
    Portable.finally (fn () => app (fn f => f := false) flags) body ())
+
+val _ = section "persistent registration APIs"
+
+fun accepted f = (f (); true) handle Feedback.HOL_ERR _ => false
+fun rejected f = (f (); false) handle Feedback.HOL_ERR _ => true
+fun rejected_with message f =
+  (f (); false) handle Feedback.HOL_ERR e => Feedback.message_of e = message
+
+(* Restore only around isolated tests, never as export's rollback scheme. *)
+fun registration_context body =
+  let
+    val ctxt = Context.snapshot ()
+    val result = Exn.capture body ()
+    val _ = Context.restore ctxt
+  in Exn.release result end
+
+val api_pair_registration =
+  {ty = ``:('a, 'b) api_pair``, abs = ``api_pair_abs``,
+   rep = ``api_pair_rep``, absrep_thms = [api_pair_bij]}
+val api_small_registration =
+  {ty = ``:api_small``, abs = ``api_small_abs``, rep = ``api_small_rep``,
+   absrep_thms = [api_small_bij]}
+fun api_stream_registration witness =
+  {tyop = {Thy = "refutePersistentType", Tyop = "api_stream"},
+   case_const = ``api_stream_CASE``, constructors = [``api_scons``],
+   witness = witness}
+val api_local_registration =
+  {tyop = {Thy = "refutePersistentType", Tyop = "api_local"},
+   case_const = ``api_local_case``, constructors = [``api_local_cons``],
+   witness = (NONE : thm option)}
+fun api_quot_registration theorem =
+  {qty = ``:api_quot``, rty = ``:bool``, abs = ``api_quot_abs``,
+   rep = ``api_quot_rep``, equiv_thm = theorem}
+
+val _ = test "singular exports use structural registration validation"
+  (fn () => registration_context (fn () =>
+    accepted (fn () => export_typedef api_pair_registration) andalso
+    accepted (fn () => export_typedef api_small_registration) andalso
+    accepted (fn () => export_codatatype
+      (api_stream_registration (SOME api_stream_witness))) andalso
+    accepted (fn () => export_codatatype (api_stream_registration NONE))
+    andalso accepted (fn () => export_quotient
+      (api_quot_registration api_partial_thm)) andalso
+    accepted (fn () => export_quotient (api_quot_registration api_equiv))
+    andalso rejected (fn () => export_quotient
+      (api_quot_registration boolTheory.TRUTH)) andalso
+    rejected (fn () => export_quotient (api_quot_registration
+      (Drule.ADD_ASSUM boolSyntax.T api_equiv))) andalso
+    rejected (fn () => export_codatatype (api_stream_registration
+      (SOME (Drule.ADD_ASSUM boolSyntax.T api_stream_witness)))) andalso
+    rejected (fn () => export_typedef
+      {ty = ``:api_small``, abs = ``api_small_abs``, rep = ``api_small_rep``,
+       absrep_thms = [Drule.ADD_ASSUM boolSyntax.T api_small_bij]}) andalso
+    rejected (fn () => export_codatatype
+      {tyop = #tyop api_local_registration,
+       case_const = ``api_local_case``, constructors = [], witness = NONE})))
+
+val _ = test "export rejects concrete and repeated type arguments"
+  (fn () => registration_context (fn () =>
+    rejected (fn () => export_typedef
+      {ty = ``:('a, 'a) api_pair``,
+       abs = ``api_pair_abs : 'a # 'a -> ('a, 'a) api_pair``,
+       rep = ``api_pair_rep : ('a, 'a) api_pair -> 'a # 'a``,
+       absrep_thms = [api_pair_bij]}) andalso
+    rejected (fn () => export_typedef
+      {ty = ``:(bool, num) api_pair``,
+       abs = ``api_pair_abs : bool # num -> (bool, num) api_pair``,
+       rep = ``api_pair_rep : (bool, num) api_pair -> bool # num``,
+       absrep_thms = [api_pair_bij]}) andalso
+    rejected (fn () => export_registrations [``:(bool, num) api_pair``])))
+
+val _ = test "typedef exports preserve both theorem input forms"
+  (fn () => registration_context (fn () =>
+    let
+      val first = Thm.CONJUNCT1 api_small_bij
+      val second = Thm.CONJUNCT2 api_small_bij
+      fun export laws = export_typedef
+        {ty = ``:api_small``, abs = ``api_small_abs``, rep = ``api_small_rep``,
+         absrep_thms = laws}
+    in
+      accepted (fn () => export [first, second]) andalso
+      accepted (fn () => export [second, first]) andalso
+      accepted (fn () => export [Thm.CONJ first second]) andalso
+      rejected (fn () => export [first, first])
+    end))
+
+val _ = test "selected exports retain registrations and deduplicate"
+  (fn () => registration_context (fn () =>
+    (register_codatatype api_local_registration;
+     accepted (fn () => export_registrations [``:api_local``, ``:api_local``])
+     andalso accepted (fn () => export_registrations [``:api_local``])
+     andalso accepted (fn () => export_registrations []))))
+
+val _ = test "restoring context removes descriptors and replay caches"
+  (fn () => registration_context (fn () =>
+    let
+      val earlier_context = Context.snapshot ()
+      val _ = export_codatatype api_local_registration
+      val used = accepted (fn () => export_registrations [``:api_local``])
+      val _ = Context.restore earlier_context
+    in used andalso rejected
+      (fn () => export_registrations [``:api_local``]) end))
+
+val _ = test "a failed selected export installs none of its discoveries"
+  (fn () => registration_context (fn () =>
+    rejected (fn () => export_registrations [``:api_small``, ``:api_local``])
+    andalso
+    (* Discovery must have stayed in scratch state: after the rejected
+       batch, this operator is still available for a codata registration. *)
+    accepted (fn () => register_codatatype
+      {tyop = {Thy = "refutePersistentType", Tyop = "api_small"},
+       case_const = ``api_small_case``, constructors = [``api_small_cons``],
+       witness = NONE})))
+
+val _ = test "persistent classification compatibility and Frac replacement"
+  (fn () => registration_context (fn () =>
+    (export_typedef api_small_registration;
+     accepted (fn () => register_typedef api_small_registration) andalso
+     rejected (fn () => export_quotient
+       {qty = ``:api_small``, rty = ``:num``, abs = ``api_small_abs``,
+        rep = ``api_small_rep``, equiv_thm = boolTheory.TRUTH}) andalso
+     accepted (fn () => register_frac_type
+       {tyop = {Thy = "refutePersistentType", Tyop = "api_small"},
+        ersatz = []}) andalso
+     rejected (fn () => export_registrations [``:api_small``]) andalso
+     rejected (fn () => export_registrations [``:('a, 'b) fmap``]))))
+
+val _ = test "a backend can register but cannot export"
+  (fn () => registration_context (fn () =>
+    let
+      val enabled = ref false
+      val rejected_export = ref false
+      val registered = ref false
+      fun run _ _ =
+        (rejected_export := rejected (fn () =>
+           export_codatatype api_local_registration);
+         registered := accepted (fn () =>
+           register_codatatype api_local_registration);
+         Unknown [])
+      val _ = register_backend
+        (stub "selftest-export-environment" ~100 enabled run)
+      val _ = with_enabled [enabled] (fn () =>
+        refute (default_config |> only
+          [RegisteredBackend "selftest-export-environment"] |> quiet) ``T``)
+    in !rejected_export andalso !registered end))
+
+val _ = mf_test "generic exported typedef works at two concrete instances"
+  (fn () => registration_context (fn () =>
+    (export_typedef api_pair_registration;
+     genuine (refute (mf |> upd_card
+       [(SOME ``:(bool, bool) api_pair``, [4]), (NONE, [2])])
+       ``(x : (bool, bool) api_pair) = y``) andalso
+     genuine (refute (mf |> upd_card
+       [(SOME ``:(bool, num) api_pair``, [4]), (NONE, [2])])
+       ``(x : (bool, num) api_pair) = y``))))
+
+val _ = test "export under a context pin is rejected without residue"
+  (fn () => registration_context (fn () =>
+    Context.with_context (Context.snapshot ()) (fn () =>
+      rejected (fn () => export_codatatype api_local_registration)) ()
+    andalso rejected (fn () => export_registrations [``:api_local``])))
+
+val _ = mf_test "a tactic captured before export keeps the earlier context"
+  (fn () => registration_context (fn () =>
+    let
+      val earlier = Context.snapshot ()
+      val _ = export_codatatype api_local_registration
+      val goal = ([], ``api_local_case (api_local_cons s) (\_. T)``)
+      val cfg = mf |> upd_card [(NONE, [1, 2])]
+        |> upd_user_axioms (SOME false)
+      fun holds expectation ctxt =
+        accepted (fn () => ignore
+          (REFUTE_CONFIG_TAC (cfg |> upd_expect expectation) goal ctxt))
+      val captured = holds ExpectGenuine earlier
+      val current = holds ExpectUnknown (Context.snapshot ()) orelse
+        holds ExpectNone (Context.snapshot ())
+      (* The live lookup prepared a replay cache; restore must remove it
+         together with the later descriptor. *)
+      val _ = Context.restore earlier
+    in
+      captured andalso current andalso
+      holds ExpectGenuine (Context.snapshot ())
+    end))
+
+val _ = mf_test "re-exporting an earlier description replaces a later one"
+  (fn () => registration_context (fn () =>
+    let
+      val _ = export_codatatype api_local_registration
+      val _ = export_codatatype
+        {tyop = #tyop api_local_registration,
+         constructors = [``api_local_other``],
+         case_const = ``api_local_other_case``, witness = NONE}
+      val _ = export_codatatype api_local_registration
+      val cfg = mf |> upd_card [(NONE, [1, 2])]
+        |> upd_user_axioms (SOME false)
+    in
+      not (is_cex (refute cfg ``api_local_case (api_local_cons s) (\_. T)``))
+      andalso is_cex (refute cfg
+        ``api_local_other_case (api_local_other s) (\_. T)``)
+    end))
+
+val _ = mf_test "a stale worker cache cannot overwrite a later registration"
+  (fn () => registration_context (fn () =>
+    let
+      val _ = export_codatatype api_local_registration
+      val mutex = Mutex.mutex ()
+      val signal = ConditionVar.conditionVar ()
+      val entered = ref false
+      val released = ref false
+      val finished = ref false
+      val result = ref NONE
+      fun sync f = Multithreading.synchronized "registration cache test"
+        mutex f
+      fun display tm =
+        (sync (fn () =>
+          let
+            val _ = entered := true
+            val _ = ConditionVar.broadcast signal
+            fun wait () = if !released then ()
+              else (ConditionVar.wait (signal, mutex); wait ())
+          in wait () end);
+         tm)
+      val _ = register_term_postprocessor ``:api_local`` display
+      val cfg = mf |> upd_card [(NONE, [1, 2])]
+        |> upd_user_axioms (SOME false)
+      val worker = Standard_Thread.fork
+        {name = "registration cache worker", stack_limit = NONE,
+         interrupts = false}
+        (fn () =>
+          let val outcome = Exn.capture
+                (fn () => refute cfg
+                  ``(s : api_local) <> api_local_cons s``) ()
+          in sync (fn () =>
+               (result := SOME outcome; finished := true;
+                ConditionVar.broadcast signal)) end)
+      val prepared = sync (fn () =>
+        let fun wait () = if !entered orelse !finished then !entered
+              else (ConditionVar.wait (signal, mutex); wait ())
+        in wait () end)
+      val replacement = Exn.capture (fn () =>
+        register_codatatype
+          {tyop = #tyop api_local_registration,
+           constructors = [``api_local_other``],
+           case_const = ``api_local_other_case``, witness = NONE}) ()
+      val _ = sync (fn () =>
+        (released := true; ConditionVar.broadcast signal))
+      val _ = Standard_Thread.join worker
+      val _ = Exn.release replacement
+      val outcome = Exn.release (valOf (!result))
+    in
+      prepared andalso is_cex outcome andalso
+      not (is_cex (refute cfg
+        ``api_local_other_case (api_local_other s) (\_. T)``)) andalso
+      is_cex (refute cfg ``api_local_case (api_local_cons s) (\_. T)``)
+    end))
 
 (* ------------------------------------------------------------------- *)
 (* Theories                                                            *)
@@ -2662,11 +2918,6 @@ val _ = mf_test "a shadowed binder is not a static argument" (fn () =>
 (* ------------------------------------------------------------------- *)
 
 val _ = section "registrations"
-
-fun accepted f = (f (); true) handle Feedback.HOL_ERR _ => false
-fun rejected f = (f (); false) handle Feedback.HOL_ERR _ => true
-fun rejected_with message f =
-  (f (); false) handle Feedback.HOL_ERR e => Feedback.message_of e = message
 
 (* A registration from inside a running call publishes to the call's own
    view as well as the live context; validation there reads other state. *)

@@ -31,11 +31,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   type fixpoint_cache = (kname * fixpoint_group option) list
   type type_operator = {Thy : string, Tyop : string}
   type ersatz = {original : kname, replacement : kname}
-  (* What a caller supplies to register_codatatype.  [witness] is
-     consumed only by validation itself - supplying one narrows what the
-     registration can get away with - and is not part of the stored
-     registry entry below, mirroring quotient_registration/quotient_info
-     just below. *)
+  (* Keep original proof inputs separately from normalized classes. *)
+  datatype registration_origin = Explicit | Harvested
   type codatatype_registration =
     {tyop : type_operator, case_const : term, constructors : term list,
      witness : thm option}
@@ -94,6 +91,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   type registrations =
     {classes : type_class KNametab.table,
+     inputs : Refute_RegistrationData.descriptor KNametab.table,
+     origins : registration_origin KNametab.table,
+     replay : (ThyDataSexp.t * type_class) KNametab.table,
      ersatz : ersatz list,
      quotient_misses : harvest_miss,
      typedef_misses : harvest_miss,
@@ -110,6 +110,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   type cells =
     {classes : type_class KNametab.table ref,
+     inputs : Refute_RegistrationData.descriptor KNametab.table ref,
+     origins : registration_origin KNametab.table ref,
+     replay : (ThyDataSexp.t * type_class) KNametab.table ref,
      ersatz : ersatz list ref,
      quotient_misses : harvest_miss ref,
      typedef_misses : harvest_miss ref,
@@ -126,6 +129,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun thaw (value : registrations) : cells =
     {classes = ref (#classes value),
+     inputs = ref (#inputs value), origins = ref (#origins value),
+     replay = ref (#replay value),
      ersatz = ref (#ersatz value),
      quotient_misses = ref (#quotient_misses value),
      typedef_misses = ref (#typedef_misses value),
@@ -142,6 +147,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun freeze (cells : cells) : registrations =
     {classes = !(#classes cells),
+     inputs = !(#inputs cells), origins = !(#origins cells),
+     replay = !(#replay cells),
      ersatz = !(#ersatz cells),
      quotient_misses = !(#quotient_misses cells),
      typedef_misses = !(#typedef_misses cells),
@@ -158,6 +165,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   val registrations = Refute_Session.state "model_registrations"
     ({classes = KNametab.empty,
+      inputs = KNametab.empty, origins = KNametab.empty,
+      replay = KNametab.empty,
       ersatz = [],
       quotient_misses = KNametab.empty,
       typedef_misses = KNametab.empty,
@@ -180,6 +189,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         SOME cells => from_cells cells
       | NONE => ref (from_value (Refute_Session.read registrations))
 
+  val retained_inputs = cell #inputs #inputs
+  val registration_origins = cell #origins #origins
+  val replay_cache = cell #replay #replay
   val class_registry = cell #classes #classes
   val ersatz_registry = cell #ersatz #ersatz
   val quotient_harvest_misses = cell #quotient_misses #quotient_misses
@@ -228,9 +240,26 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun registered_class operator =
     KNametab.lookup (!(class_registry ())) (operator_key operator)
 
+  val remove_key = KNametab.delete_safe
+
   fun set_class operator class =
-    class_registry () :=
-      KNametab.update (operator_key operator, class) (!(class_registry ()))
+    let val key = operator_key operator in
+      class_registry () := KNametab.update (key, class) (!(class_registry ()));
+      retained_inputs () := remove_key key (!(retained_inputs ()));
+      registration_origins () := KNametab.update (key, Explicit)
+        (!(registration_origins ()))
+    end
+
+  fun install_input origin descriptor class =
+    let val operator = Refute_RegistrationData.operator descriptor
+        val key = operator_key operator
+    in
+      set_class operator class;
+      retained_inputs () := KNametab.update (key, descriptor)
+        (!(retained_inputs ()));
+      registration_origins () := KNametab.update (key, origin)
+        (!(registration_origins ()))
+    end
   type mf_context =
     {max_bisim_depth : int,
      boxes : (hol_type option * bool option) list,
@@ -2561,6 +2590,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         fun add theory named_theorem =
           (changed theory; note_harvest_binding theory named_theorem)
       in
+        replay_cache () := KNametab.empty;
         case delta of
             TheoryDelta.NewBinding (name, (theorem, _)) =>
               if Theory.is_temp_binding name then ()
@@ -2875,48 +2905,17 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   val fmap_operator = {Thy = "finite_map", Tyop = "fmap"}
 
-  (* A registration shadows a built-in classification of its operator. *)
-  fun class_of_operator operator =
-    case registered_class operator of
-        SOME class => SOME class
-      | NONE =>
-          case builtin_codatatype_for operator of
-              SOME info => SOME (Codatatype info)
-            | NONE =>
-                if same_type_operator operator fmap_operator then SOME Fmap
+  fun builtin_class operator =
+    case builtin_codatatype_for operator of
+        SOME info => SOME (Codatatype info)
+      | NONE => if same_type_operator operator fmap_operator then SOME Fmap
                 else NONE
 
-  fun class_of_type ty =
-    class_of_operator (type_operator_of ty) handle HOL_ERR _ => NONE
-
-  fun codatatype_for operator =
-    case class_of_operator operator of
-        SOME (Codatatype info) => SOME info
-      | _ => NONE
-
-  fun current_codatatype_registry () =
-    let
-      fun explicit (_, Codatatype info) = SOME info
-        | explicit _ = NONE
-      fun built_in {Thy, Tyop, ...} =
-        case registered_class {Thy = Thy, Tyop = Tyop} of
-            NONE => builtin_codatatype_for {Thy = Thy, Tyop = Tyop}
-          | SOME _ => NONE
-    in
-      List.mapPartial explicit (KNametab.dest (!(class_registry ()))) @
-      List.mapPartial built_in builtin_codatatypes
-    end
-
-  (* One classification per type operator: a registration replaces only
-     its own kind, except that Frac replaces a quotient or typedef, which
-     may have been harvested merely by looking at a goal first. *)
-  fun claim_operator function replaceable operator =
-    case class_of_operator operator of
+  fun claim_class function replaceable current =
+    case current of
         NONE => ()
-      | SOME class =>
-          if replaceable class then ()
-          else raise err function
-            "type operator already has an incompatible classification"
+      | SOME class => if replaceable class then () else raise err function
+          "type operator already has an incompatible classification"
 
   fun raw_free_datatype ty = not (null (database_constructors ty))
 
@@ -2998,7 +2997,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       ()
     end
 
-  fun register_codatatype_staged
+  fun prepare_codatatype current
         ({tyop, case_const, constructors, witness} :
          codatatype_registration) =
     let
@@ -3018,12 +3017,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       fun replaceable (Codatatype _) = true
         | replaceable _ = false
     in
-      claim_operator "register_codatatype" replaceable tyop;
-      set_class tyop (Codatatype normalized)
+      claim_class "register_codatatype" replaceable current;
+      Codatatype normalized
     end
-
-  fun register_codatatype registration =
-    with_registration (fn () => register_codatatype_staged registration)
 
   fun same_named key term =
     same_key (const_key term) key handle HOL_ERR _ => false
@@ -3130,7 +3126,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       ()
     end
 
-  fun register_quotient_staged
+  fun prepare_quotient current
         ({qty, rty, abs, rep, equiv_thm} : quotient_registration) =
     let
       val _ = validate_registered_type "register_quotient" qty
@@ -3147,8 +3143,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           "representation type has unbound type variables"
       fun replaceable (Quotient _) = true
         | replaceable _ = false
-      val _ = claim_operator "register_quotient" replaceable
-        (type_operator_of qty)
+      val _ = claim_class "register_quotient" replaceable current
       val _ = if raw_free_datatype qty then
           raise err "register_quotient"
             "type operator already has an incompatible classification"
@@ -3172,11 +3167,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         {qty = qty, rty = rty, abs = abs, rep = rep,
          equiv_thm = equiv_thm, partial = inferred_partial}
     in
-      set_class (type_operator_of qty) (Quotient normalized)
+      Quotient normalized
     end
-
-  fun register_quotient registration =
-    with_registration (fn () => register_quotient_staged registration)
 
   fun raw_typedef_data_generic ty =
     let
@@ -3356,7 +3348,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     parse_absrep_conjunction (pair_absrep_thms thms) supplied_abs
       supplied_rep
 
-  fun register_typedef_staged
+  fun prepare_typedef current
         {ty : hol_type, abs : term, rep : term, absrep_thms : thm list} =
     let
       val _ = validate_registered_type "register_typedef" ty
@@ -3374,8 +3366,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           "representation type has unbound type variables"
       fun replaceable (Typedef _) = true
         | replaceable _ = false
-      val _ = claim_operator "register_typedef" replaceable
-        (type_operator_of ty)
+      val _ = claim_class "register_typedef" replaceable current
       val _ = if raw_free_datatype ty then
           raise err "register_typedef"
             "type operator already has an incompatible classification"
@@ -3400,11 +3391,184 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         {ty = ty, rty = rty, abs = abs, rep = rep, pred = pred,
          inverse_axioms = inverse_axioms, univ = univ}
     in
-      set_class (type_operator_of ty) (Typedef normalized)
+      Typedef normalized
     end
 
+  fun prepare_descriptor current descriptor =
+    case descriptor of
+        Refute_RegistrationData.Codata d => prepare_codatatype current d
+      | Refute_RegistrationData.Typedef d => prepare_typedef current d
+      | Refute_RegistrationData.Quotient d => prepare_quotient current d
+
+  fun compatible newer older =
+    case (newer, older) of
+        (Codatatype _, Codatatype _) => true
+      | (Typedef _, Typedef _) => true
+      | (Quotient _, Quotient _) => true
+      | (Frac _, Frac _) => true
+      | (Frac _, Typedef _) => true
+      | (Frac _, Quotient _) => true
+      | _ => false
+
+  fun registration_fallback error fallback =
+    if List.exists (fn {origin_structure, origin_function, ...} =>
+         origin_structure = "Refute_RegistrationData" orelse
+         (origin_structure = "Refute_ModelFinder_HOL" andalso
+          origin_function = "replay")) (Feedback.origins_of error)
+    then raise HOL_ERR error else fallback
+
+  fun prepare_history operator history =
+    let
+      fun validate ((thy, descriptor), previous) =
+        (if Refute_RegistrationData.fresh descriptor then () else
+           raise err "replay" "registration refers to retired symbols";
+         SOME (prepare_descriptor previous descriptor))
+        handle HOL_ERR error => raise err "replay"
+          ("exporting theory " ^ thy ^ ", " ^ #Thy operator ^ "$" ^
+           #Tyop operator ^ ": " ^ Feedback.message_of error)
+    in
+      valOf (List.foldl validate (builtin_class operator) history)
+    end
+
+  (* TypeBase can be changed without retiring kernel symbols.  A cached
+     class must still satisfy the guards that consult that context view. *)
+  fun prepared_is_current (Codatatype info) =
+        ((ignore (validate_codatatype_shape info); true)
+         handle HOL_ERR _ => false)
+    | prepared_is_current (Quotient {qty, ...}) = not (raw_free_datatype qty)
+    | prepared_is_current (Typedef {ty, ...}) = not (raw_free_datatype ty)
+    | prepared_is_current _ = false
+
+  fun persistent_class operator history =
+    let
+      val key = operator_key operator
+      val identity = Refute_RegistrationData.identity history
+      (* Freshness is cheap and must also be checked on cache hits. *)
+      val fresh = List.all (Refute_RegistrationData.fresh o #2) history
+      fun prepare () =
+        let val class = prepare_history operator history
+        in
+          replay_cache () := KNametab.update (key, (identity, class))
+            (!(replay_cache ()));
+          class
+        end
+    in
+      case KNametab.lookup (!(replay_cache ())) key of
+          SOME (old, class) =>
+            if fresh andalso ThyDataSexp.compare (old, identity) = EQUAL
+               andalso prepared_is_current class
+            then class else prepare ()
+        | NONE => prepare ()
+    end
+
+  (* No preparation function calls this resolver: compatibility is passed
+     explicitly, preventing recursive lookup while replay validates. *)
+  fun resolve_class prepare operator history =
+    let
+      val runtime = registered_class operator
+    in
+      if null history then
+        case runtime of SOME class => SOME class
+                      | NONE => builtin_class operator
+      else
+        let
+          val persisted = prepare operator history
+          val explicit = KNametab.lookup (!(registration_origins ()))
+            (operator_key operator) = SOME Explicit
+          val _ = case runtime of
+              NONE => ()
+            | SOME class =>
+                (claim_class "replay"
+                  (if explicit then compatible class
+                   else fn old => compatible old class) (SOME persisted)
+                 handle HOL_ERR error => raise err "replay"
+                   ("exporting theory " ^ #1 (List.last history) ^ ", " ^
+                    #Thy operator ^ "$" ^ #Tyop operator ^ ": " ^
+                    Feedback.message_of error))
+        in
+          if explicit then runtime else SOME persisted
+        end
+    end
+
+  fun class_of_operator operator =
+    let
+      val history = Refute_RegistrationData.history
+        (Refute_Session.context ()) operator
+    in
+      if null history then
+        case registered_class operator of
+            SOME class => SOME class | NONE => builtin_class operator
+      else with_harvest (fn () =>
+        resolve_class persistent_class operator history)
+    end
+
+  fun class_of_type ty =
+    case Lib.total type_operator_of ty of
+        NONE => NONE
+      | SOME operator => class_of_operator operator
+
+  fun codatatype_for operator =
+    case class_of_operator operator of
+        SOME (Codatatype info) => SOME info
+      | _ => NONE
+
+  fun current_codatatype_registry () =
+    let
+      val registered = map (fn (key, _) =>
+        {Thy = #Thy key, Tyop = #Name key})
+        (KNametab.dest (!(class_registry ())))
+      val builtin = map (fn {Thy, Tyop, ...} => {Thy = Thy, Tyop = Tyop})
+        builtin_codatatypes
+      val ctxt = Refute_Session.context ()
+      fun codata operator =
+        case List.last (Refute_RegistrationData.history ctxt operator) of
+            (_, Refute_RegistrationData.Codata _) => true
+          | _ => false
+      val persisted = List.filter codata
+        (Refute_RegistrationData.operators ctxt)
+    in
+      List.mapPartial codatatype_for
+        (Lib.mk_set (registered @ persisted @ builtin))
+    end
+
+  (* Authoritative registration validates without publishing a worker's
+     prepared replay cache.  Check both the call's captured metadata and
+     the live metadata, which may have changed since the call started. *)
+  fun registration_class ctxt operator =
+    resolve_class prepare_history operator
+      (Refute_RegistrationData.history ctxt operator)
+
+  fun claim_operator function replaceable operator =
+    (claim_class function replaceable
+       (registration_class (Refute_Session.context ()) operator);
+     claim_class function replaceable
+       (registration_class (Context.snapshot ()) operator))
+
+  fun descriptor_function descriptor =
+    case descriptor of
+        Refute_RegistrationData.Codata _ => "register_codatatype"
+      | Refute_RegistrationData.Typedef _ => "register_typedef"
+      | Refute_RegistrationData.Quotient _ => "register_quotient"
+
+  fun register_descriptor_staged origin descriptor =
+    let
+      val operator = Refute_RegistrationData.operator descriptor
+      val current = registration_class (Refute_Session.context ()) operator
+      val class = prepare_descriptor current descriptor
+      val live = registration_class (Context.snapshot ()) operator
+      val _ = claim_class (descriptor_function descriptor)
+        (compatible class) live
+    in install_input origin descriptor class end
+
+  fun register_codatatype registration =
+    with_registration (fn () => register_descriptor_staged Explicit
+      (Refute_RegistrationData.Codata registration))
+  fun register_quotient registration =
+    with_registration (fn () => register_descriptor_staged Explicit
+      (Refute_RegistrationData.Quotient registration))
   fun register_typedef registration =
-    with_registration (fn () => register_typedef_staged registration)
+    with_registration (fn () => register_descriptor_staged Explicit
+      (Refute_RegistrationData.Typedef registration))
 
   fun validate_ersatz function ({original, replacement} : ersatz) =
     let
@@ -3562,8 +3726,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val (rty, qty) = Type.dom_rng (Term.type_of abs)
       val _ = if same_type_operator (type_operator_of qty) operator then ()
         else raise Match
-      val _ = register_quotient_staged
+      val descriptor = Refute_RegistrationData.Quotient
         {qty = qty, rty = rty, abs = abs, rep = rep, equiv_thm = theorem}
+      val _ = install_input Harvested descriptor
+        (prepare_descriptor (registered_class operator) descriptor)
     in
       true
     end
@@ -3581,8 +3747,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val (_, ty) = Type.dom_rng (Term.type_of abs)
       val _ = if same_type_operator (type_operator_of ty) operator then ()
         else raise Match
-      val _ = register_typedef_staged
+      val descriptor = Refute_RegistrationData.Typedef
         {ty = ty, abs = abs, rep = rep, absrep_thms = [theorem]}
+      val _ = install_input Harvested descriptor
+        (prepare_descriptor (registered_class operator) descriptor)
     in
       true
     end
@@ -4232,7 +4400,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                  abs = Term.inst theta abs, rep = Term.inst theta rep,
                  equiv_thm = equiv_thm, partial = partial}
             end
-    end handle HOL_ERR _ => NONE
+    end handle HOL_ERR error => registration_fallback error NONE
 
   fun is_quot_type ty = Option.isSome (quotient_for_type ty)
 
@@ -4371,7 +4539,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        | SOME (Frac _) => SOME (synthetic_frac_typedef ty)
        | SOME Fmap => SOME (synthetic_fmap_typedef ty)
        | _ => NONE)
-    handle HOL_ERR _ => NONE
+    handle HOL_ERR error => registration_fallback error NONE
 
   fun is_typedef ty = Option.isSome (typedef_for_type ty)
 
@@ -4475,8 +4643,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               (remember_harvest_miss (quotient_harvest_misses ()) operator
                  fingerprint;
                false)
-    end
-    handle HOL_ERR _ => false
+    end handle HOL_ERR error => registration_fallback error false
 
   fun harvest_quotient ty =
     with_harvest (fn () => harvest_quotient_staged ty)
@@ -4512,8 +4679,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               (remember_harvest_miss (typedef_harvest_misses ()) operator
                  fingerprint;
                false)
-    end
-    handle HOL_ERR _ => false
+    end handle HOL_ERR error => registration_fallback error false
 
   fun harvest_typedef ty =
     with_harvest (fn () => harvest_typedef_staged ty)
@@ -4546,7 +4712,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             (if got_quotient andalso not had_quotient then ty :: quotients
              else quotients))
          end
-         handle HOL_ERR _ => (typedefs, quotients))
+         handle HOL_ERR error =>
+           registration_fallback error (typedefs, quotients))
       val (typedefs, quotients) =
         List.foldl attempt ([], []) operators
     in
@@ -4556,6 +4723,116 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun harvest_registrations () =
     with_harvest harvest_registrations_staged
+
+  fun export_environment () =
+    if Context.is_pinned () then raise err "export_registrations"
+      "export requires an unpinned theory-authoring context"
+    else if Option.isSome (Refute_Session.current ()) then
+      raise err "export_registrations" "cannot export inside a Refute call"
+    else case Context.current_thy (Context.snapshot ()) of
+        NONE => raise err "export_registrations" "no current theory"
+      | SOME thy => thy
+
+  (* Scratch preparation never commits harvests, misses or replay caches.
+     Commit changes only the selected operators in the live registry. *)
+  fun export_batch collect =
+    let
+      val thy = export_environment ()
+      val ctxt = Refute_Session.context ()
+      val scratch = thaw (Refute_Session.read registrations)
+      val descriptors = run_transaction scratch (fn () =>
+        let
+          val ds = collect ()
+          fun validate descriptor =
+            let
+              val operator = Refute_RegistrationData.operator descriptor
+              val _ = if Refute_RegistrationData.fresh descriptor then () else
+                raise err "export_registrations"
+                  "registration refers to retired symbols"
+              val class = prepare_descriptor
+                (class_of_operator operator) descriptor
+            in install_input Explicit descriptor class end
+          val _ = List.app validate ds
+        in ds end)
+      val commit_data = Refute_RegistrationData.prepare ctxt thy descriptors
+      val keys = map (operator_key o Refute_RegistrationData.operator)
+        descriptors
+      fun reconcile value =
+        let
+          val cells = thaw value
+          fun remove key =
+            (#classes cells := remove_key key (!(#classes cells));
+             #inputs cells := remove_key key (!(#inputs cells));
+             #origins cells := remove_key key (!(#origins cells));
+             #replay cells := remove_key key (!(#replay cells)))
+          val _ = List.app remove keys
+          val prepared = freeze cells
+          val _ = commit_data ()
+        in prepared end
+    in
+      if null descriptors then () else
+        Thread_Attributes.uninterruptible (fn _ => fn () =>
+          Refute_Session.publish registrations reconcile) ()
+    end
+
+  fun export_codatatype d =
+    export_batch (fn () => [Refute_RegistrationData.Codata d])
+  fun export_typedef d =
+    export_batch (fn () => [Refute_RegistrationData.Typedef d])
+  fun export_quotient d =
+    export_batch (fn () => [Refute_RegistrationData.Quotient d])
+
+  fun export_registrations [] = ()
+    | export_registrations tys = export_batch (fn () =>
+        let
+          fun unique (ty, selected) =
+            let
+              val _ = validate_registered_type "export_registrations" ty
+              val operator = type_operator_of ty
+            in
+              if List.exists (fn old =>
+                   same_type_operator (type_operator_of old) operator) selected
+              then selected else selected @ [ty]
+            end
+          val selected = List.foldl unique [] tys
+          fun description ty =
+            let
+              val operator = type_operator_of ty
+              val key = operator_key operator
+              val class = class_of_operator operator
+              val _ = case class of
+                  SOME (Frac _) => raise err "export_registrations"
+                    "Frac registrations cannot be exported"
+                | SOME Fmap => raise err "export_registrations"
+                    "fmap registrations cannot be exported"
+                | _ => ()
+              val explicit = KNametab.lookup (!(registration_origins ())) key
+                = SOME Explicit
+              val history = Refute_RegistrationData.history
+                (Refute_Session.context ()) operator
+              fun retained () = KNametab.lookup (!(retained_inputs ())) key
+              val input =
+                if explicit then retained ()
+                else if not (null history) then SOME (#2 (List.last history))
+                else retained ()
+            in
+              case input of
+                  SOME d => d
+                | NONE =>
+                    let
+                      val _ = harvest_quotient_staged ty orelse
+                        harvest_typedef_staged ty
+                    in
+                      case retained () of
+                          SOME d => d
+                        | NONE => raise err "export_registrations"
+                            (#Thy operator ^ "$" ^ #Tyop operator ^
+                             ": no exportable description; use an explicit " ^
+                             "export_codatatype, export_typedef or " ^
+                             "export_quotient description")
+                    end
+            end
+        in map description selected end)
 
   fun quot_constructor rty qty =
     Term.mk_thy_const
@@ -4578,7 +4855,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                    (case typedef_for_type ty of
                         SOME {abs, ...} => [abs]
                       | NONE => []))
-    end handle HOL_ERR _ => []
+    end handle HOL_ERR error => registration_fallback error []
 
   (* Operator-level classification makes every [cart] a free datatype, but
      [mk_cart] takes a function into [:'a finite_image], whose defining
@@ -4639,7 +4916,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         Term.same_const constructor term andalso
         Term.type_of constructor = Term.type_of term)
         (registered_constructors result_ty)
-    end handle HOL_ERR _ => false
+    end handle HOL_ERR error => registration_fallback error false
 
   fun raw_constructor_name constructor =
     case Lib.total Term.dest_thy_const constructor of
@@ -4671,7 +4948,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                 (raw @ registered)
             end
         | NONE => false
-    handle HOL_ERR _ => false
+    handle HOL_ERR error => registration_fallback error false
 
   fun is_nonfree_constr term =
     if Term.is_const term then
@@ -4681,7 +4958,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         registered_constructor term orelse
         (not (is_codatatype result_ty) andalso
          Refute_TypeBase.is_constructor term)
-      end handle HOL_ERR _ => false
+      end handle HOL_ERR error => registration_fallback error false
     else
       reserved_constructor term
 
@@ -4705,7 +4982,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         is_nonfree_constr head andalso
         List.all (is_constructor_pattern_gen is_leaf bound) arguments
       end
-      handle HOL_ERR _ => false
+      handle HOL_ERR error => registration_fallback error false
 
   fun is_constructor_pattern_formula_gen is_leaf term =
     let
@@ -4717,7 +4994,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           lhs variables (#2 (boolSyntax.dest_imp candidate))
         else
           SOME (variables, #1 (boolSyntax.dest_eq candidate))
-          handle HOL_ERR _ => NONE
+          handle HOL_ERR error => registration_fallback error NONE
     in
       case lhs [] term of
           SOME (variables, left) =>
@@ -4738,7 +5015,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         is_codatatype result_ty andalso
         Refute_TypeBase.is_constructor term andalso
         not (registered_constructor term)
-      end handle HOL_ERR _ => false
+      end handle HOL_ERR error => registration_fallback error false
     else
       false
 
@@ -4752,7 +5029,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           case typedef_for_type result_ty of
               SOME {univ, ...} => univ
             | NONE => true
-      end handle HOL_ERR _ => false
+      end handle HOL_ERR error => registration_fallback error false
 
   fun is_constr term =
     is_nonfree_constr term andalso
@@ -4762,7 +5039,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun same_registered_constant expected actual =
     Term.type_of expected = Term.type_of actual andalso
     (Term.aconv expected actual orelse Term.same_const expected actual)
-    handle HOL_ERR _ => false
+    handle HOL_ERR error => registration_fallback error false
 
   (* [side] picks the abstract type out of the morphism's (domain, range);
      [morphism] projects the registered constant it must match. *)
@@ -4774,7 +5051,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             if same_registered_constant (morphism info) constant
             then SOME info else NONE
         | NONE => NONE
-    end handle HOL_ERR _ => NONE
+    end handle HOL_ERR error => registration_fallback error NONE
 
   fun quotient_for_abs constant =
     registered_morphism quotient_for_type #abs #2 constant
@@ -4800,7 +5077,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               then SOME found else NONE
             end
         | NONE => NONE
-    end handle HOL_ERR _ => NONE
+    end handle HOL_ERR error => registration_fallback error NONE
 
   fun quotient_class_abs_for constant =
     quotient_class_for #abs #2
@@ -4835,7 +5112,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       case candidate range domain of
           SOME ty => SOME ty
         | NONE => candidate domain range
-    end handle HOL_ERR _ => NONE
+    end handle HOL_ERR error => registration_fallback error NONE
 
   (* A typedef need not occur through Abs or Rep: it can occur solely in a
      variable, binder, or equality.  Search every type in the term tree (and
@@ -4843,7 +5120,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun first_unregistered_typedef terms =
     let
       fun type_parts ty =
-        #2 (Type.dest_type ty) handle HOL_ERR _ => []
+        #2 (Type.dest_type ty)
+        handle HOL_ERR error => registration_fallback error []
       fun types_beneath ty = ty :: List.concat (map types_beneath
         (type_parts ty))
       fun candidate ty =
@@ -4911,7 +5189,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         end
     in
       Lib.get_first search_type (Refute_TypeBase.elts ())
-    end handle HOL_ERR _ => NONE
+    end handle HOL_ERR error => registration_fallback error NONE
 
   fun dest_record_get term = find_field #accessor term
   fun dest_record_update term = find_field #fupd term
@@ -4919,7 +5197,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun is_record_update term = Option.isSome (dest_record_update term)
 
   fun is_named_const expected term =
-    same_key (original_const_key term) expected handle HOL_ERR _ => false
+    same_key (original_const_key term) expected
+    handle HOL_ERR error => registration_fallback error false
 
   fun is_descr term =
     let
@@ -4942,10 +5221,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun numeral_value term =
     if Term.type_of term = int_type then
       SOME (relaxed_int_of_term term)
-      handle HOL_ERR _ => NONE
+      handle HOL_ERR error => registration_fallback error NONE
     else if Term.type_of term = num_type then
       SOME (Arbint.fromNat (Literal.relaxed_dest_numeral term))
-      handle HOL_ERR _ => NONE
+      handle HOL_ERR error => registration_fallback error NONE
     else
       NONE
 
@@ -5040,7 +5319,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           if null constructors orelse is_codatatype ty orelse
              not (is_data_type ty) then NONE
           else SOME (const_key case_const, (length constructors, 0))
-        end handle HOL_ERR _ => NONE
+        end handle HOL_ERR error => registration_fallback error NONE
       val raw = List.mapPartial entry (Refute_TypeBase.elts ())
       (* Revalidation, not a formality: a registration that passed at
          [register_codatatype] can fail here once its constructors are

@@ -177,6 +177,8 @@ Module layout
   `Refute_Core` and the facade.
 * `Refute_Session`: Refute's state in the HOL context; one call reads the
   context captured at its entry and commits its cache changes at exit.
+* `Refute_RegistrationData`: structural descriptors, typed theorem codecs,
+  and ancestry storage; its load hooks never validate or start Refute.
 * `Refute_TypeBase`: `TypeBase` accessors that read the call's context.
 * `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
 * `Refute_Eval`: substrate seam and PRNG;
@@ -197,3 +199,62 @@ Module layout
 
 Only Poly/ML builds this directory.  `HOLSELFTESTLEVEL=2 Holmake` is the
 quality gate.
+
+Persistent structural registrations
+-----------------------------------
+
+`register_codatatype`, `register_typedef` and `register_quotient` change
+only the current Refute context.  Search and `harvest_registrations ()`
+never write structural metadata into a theory.  Theory authors can instead
+call `export_codatatype`, `export_typedef` or `export_quotient` with the
+same record accepted by the corresponding registration operation.  An
+export validates the description and stores the original types, constants
+and supporting theorems in the current theory.  Importing that theory makes
+its descriptions available to Refute, which validates them on first use.
+Derived encoding flags are recomputed; supporting theorems need not have
+public DB names.  Codatatype constructor order and the optional witness are
+preserved, including the existing trust contract when `witness = NONE`.
+
+For example, after defining a typedef and its bijection laws in a script:
+
+    Refute.export_typedef
+      {ty = ``:'a my_type``, abs = ``my_abs``, rep = ``my_rep``,
+       absrep_thms = [my_bijections]};
+
+Both a conjunction theorem and a list of its two halves are supported.
+As with session registration, type arguments must be distinct variables
+(or absent).  A generic description applies at every concrete instance.
+Typedef replay still requires the type's `<tyop>_TY_DEF` theorem.
+
+`export_registrations [``:'a old_type``, ``:another_type``]` exports exactly
+those operators.  It uses retained inputs from an earlier registration or
+harvest, otherwise attempting the ordinary quotient-then-typedef discovery
+for each selection.  It does not sweep ancestry.  Repeated operators are
+deduplicated in input order; `[]` does nothing.  Every selection must have
+an exportable description: failure exports none, and scratch discovery
+changes no live harvest caches.  Frac and fmap have no persistent format.
+Built-in codata without retained inputs needs an explicit codatatype record.
+
+A wrapper theory may export descriptions for types defined in ancestors;
+the wrapper owns the metadata, and clients must import the wrapper or a
+descendant.  Rebuild the theory containing the export call to change its
+compiled metadata.  Refute may be loaded before or after those imports;
+metadata alone does not start a solver or load optional rational/real support.
+
+A deliberate session registration takes precedence over a compatible
+persistent description, which takes precedence over an earlier harvest.
+Same-kind replacements follow AncestryData delta order: ancestors precede
+descendants, and later deltas replace earlier ones.  Sibling replacements
+follow the framework's ancestry merge order, so sibling descriptions
+are not order-independent.  Common diamond ancestors contribute once.
+For the loading fixture, the diamond parent order is Right then Left; the
+Left sibling's later delta takes effect with either Refute loading order.
+Incompatible kinds are rejected, retaining the existing exception permitting
+an explicit Frac registration to replace a typedef or quotient.
+
+Exports require a current, unpinned theory-authoring context and are rejected
+inside a running Refute call.  Context snapshots capture descriptions and
+replay caches together; restoring a snapshot restores both.  Only explicit
+export writes this metadata.  It adds no public theorem bindings, types,
+constants, axioms or oracle tags; theorem persistence uses HOL's existing
+anonymous-theorem serialization.

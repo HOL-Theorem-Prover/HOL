@@ -27,13 +27,15 @@ build-loading-tests: $(DEFAULT_TARGETS)
 	$(HOLDIR)/bin/Holmake -C loading_tests/core --no_prereqs
 	$(HOLDIR)/bin/Holmake -C loading_tests/rat --no_prereqs
 	$(HOLDIR)/bin/Holmake -C loading_tests/real --no_prereqs
+	$(HOLDIR)/bin/Holmake -C loading_tests/persistence --no_prereqs
 
 # The substrate layer reaches the shared type/term helpers through a
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
 # dependency is declared explicitly.
 Refute_Gen.uo: Refute_Util.uo
 Refute_ModelFinder_Names.uo: Refute_Util.uo
-Refute_ModelFinder_HOL.uo: Refute_Skolem.uo Refute_Util.uo
+Refute_ModelFinder_HOL.uo: Refute_Skolem.uo Refute_Util.uo \
+                           Refute_RegistrationData.uo
 Refute_Cert_Narrow.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
                        Refute_ModelFinder_HOL.uo
 Refute_Cert_Model.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
