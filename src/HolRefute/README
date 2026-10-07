@@ -197,8 +197,10 @@ Module layout
   checks.  `examples/`: executable usage examples (documentation, not
   tests).
 
-Only Poly/ML builds this directory.  `HOLSELFTESTLEVEL=2 Holmake` is the
-quality gate.
+Only Poly/ML builds this directory.  Plain `Holmake` builds the library.
+`HOLSELFTESTLEVEL=1 Holmake` also builds the test-only directories and runs
+their selftests; level 2 adds the acceptance suites and theory-hygiene
+checks.  `HOLSELFTESTLEVEL=2 Holmake` is the quality gate.
 
 Persistent structural registrations
 -----------------------------------

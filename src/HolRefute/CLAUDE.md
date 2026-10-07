@@ -5,12 +5,15 @@ repository.
 
 ## Build & test
 
-- `Holmake` in this directory builds the module and then recurses into
-  `tests/` to build `tests/selftest.exe` (plain `Holmake`, boss-onwards
-  band).  Poly/ML only; the tree build skips this directory on other MLs.
-- `HOLSELFTESTLEVEL=2 Holmake` also runs the selftest (output tees to
-  `tests/holrefute-selftest.log`) and `theory_tests/`.
-- After building, `tests/selftest.exe` reruns the selftest directly, from
+- Plain `Holmake` in this directory builds the module (boss-onwards band).
+  Poly/ML only; the tree build skips this directory on other MLs.
+- `HOLSELFTESTLEVEL=1 Holmake` also builds `tests/` and `loading_tests/`
+  and runs their selftests.  The main selftest output tees to
+  `tests/holrefute-selftest.log`.
+- `HOLSELFTESTLEVEL=2 Holmake` adds the level-2 suites and `theory_tests/`.
+- `Holmake build-tests build-loading-tests` builds the test artifacts
+  without running the selftests when `HOLSELFTESTLEVEL` is unset.
+- After building the tests, `tests/selftest.exe` reruns the selftest from
   inside `tests/`.  `HOLSELFTESTLEVEL=2 ./selftest.exe` there enables the
   level-2 suites (cross-substrate conformance, narrowing table, corpus,
   model-finder acceptance tables).  `tests/selftest.sml` is one program

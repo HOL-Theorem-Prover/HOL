@@ -7,8 +7,15 @@ INCLUDES = ../n-bit ../sort \
            ../real ../coalgebras ../finite_maps \
            ../pred_set/src/more_theories
 
-all: $(DEFAULT_TARGETS) build-tests build-loading-tests
+all: $(DEFAULT_TARGETS)
 .PHONY: all
+
+# Test-only directories are built when selftests are enabled.
+ifdef HOLSELFTESTLEVEL
+ifneq ($(HOLSELFTESTLEVEL),0)
+all: build-tests build-loading-tests
+endif
+endif
 
 # The selftest, the fixture theories it compiles against, and its
 # goldens live in tests/.  Holmake rejects a parent that INCLUDEs its
