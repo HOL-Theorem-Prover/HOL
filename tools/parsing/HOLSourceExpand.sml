@@ -194,8 +194,9 @@ fun mapSep f {args, seps, stop} = {args = map f args, seps = seps, stop = stop}
 (* The stem of a HOL script file name: `SOME ("foo", "fooScript.sml")`
    for a path or URI ending in `fooScript.sml`, and NONE for anything
    else -- an ordinary .sml file, and the callers that supply no file
-   name at all (`HOLSource.fromString`, the REPL).  Only a script file
-   names a theory after itself, so only a script file is checked.
+   name at all (`HOLSource.fromString`, the REPL), and a script name
+   whose stem could not be a theory name.  Only a script file names a
+   theory after itself, so only a script file is checked.
    Spelled out rather than built on `OS.Path`, because the LSP passes a
    `file://` URI here rather than a path. *)
 val scriptSuffix = "Script.sml"
@@ -206,11 +207,24 @@ fun scriptStem file = let
     else if sep (String.sub (file, i)) then i + 1
     else start (i - 1)
   val base = String.extract (file, start (size file - 1), NONE)
+  (* A theory name is parsed as an alphanumeric identifier, so a stem
+     that is not one names no theory and its file is the authority on
+     nothing.  Holmake synthesises such names: an article build
+     hard-links `fooScript.sml` to `foo.artScript.sml` and compiles
+     that, and the stem `foo.art` must not be read as demanding a
+     header to match it. *)
+  fun idChar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+  fun isIdent s =
+    s <> "" andalso Char.isAlpha (String.sub (s, 0)) andalso
+    CharVector.all idChar s
   in
     if String.isSuffix scriptSuffix base andalso
        size base > size scriptSuffix
-    then SOME (String.substring (base, 0, size base - size scriptSuffix),
-               base)
+    then let
+      val stem = String.substring (base, 0, size base - size scriptSuffix)
+      in
+        if isIdent stem then SOME (stem, base) else NONE
+      end
     else NONE
   end
 

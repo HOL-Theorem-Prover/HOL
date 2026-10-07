@@ -168,6 +168,13 @@ in
      all -- is left alone. *)
   headerOK "theory name in a non-script file" "scratch.sml" "bar";
   headerOK "theory name with no file name at all" "" "bar";
+  (* To build an article, Holmake hard-links `fooScript.sml` to
+     `foo.artScript.sml` and compiles that, so the synthesised name
+     reaches the parser attached to the original header.  Its stem could
+     not be a theory name, so the file names no theory to disagree
+     with. *)
+  headerOK "theory name under an article script alias"
+           "sat.artScript.sml" "sat";
 
   (* A half-typed header: the parser already says `expected identifier`,
      and `new_theory ""` would raise on top of that, saying the same
