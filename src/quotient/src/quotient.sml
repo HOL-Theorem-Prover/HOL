@@ -56,6 +56,8 @@ struct
 end
 open Parse
 
+fun show_typify f = HOLFlags.with_bflags [(show_types, true)] f
+
 (* versions of pairSyntax functions that don't induce a dependency on pairs
    being in ancestry *)
 val ERR = mk_HOL_ERR "quotient"
@@ -114,18 +116,13 @@ fun dest_pabs tm =
     end
 
 
-(* In interactive sessions, omit the chatting section below. *)
-
-val chatting = ref false;  (* When chatting is false,
-                                 gives no output of lifting.
-                              When chatting is true, then
-                                 every type, constant, and theorem lifted
-                                 is printed. *)
-
-val _ = register_btrace("quotient", chatting);
-
-(* End of chatting section. *)
-
+(* When chatting is false, gives no output of lifting.
+   When chatting is true, then every type, constant, and theorem lifted
+   is printed. *)
+val {flag=chatting,get=chatlvl,...} = HOLFlags.create_btrace(
+      {group = "quotient", name = "chatting"},
+      false
+    )
 
 val caching = ref true; (* should be pure efficiency gain *)
 
@@ -139,7 +136,7 @@ fun reset_cache () =
       (quotient_cache := Typetab.empty;
        hits := 0; misses := 0)
 
-fun list_cache () = (if !chatting andalso !caching then (
+fun list_cache () = (if chatlvl() andalso !caching then (
                      print (    "Hits = " ^ Int.toString (!hits) ^
                             ", Misses = " ^ Int.toString (!misses) ^
                             ", Cache size = " ^
@@ -845,10 +842,10 @@ fun fun_quotient domain_QUOTIENT range_QUOTIENT =
 
 
 (**)
-fun ptm s tm = if !chatting then (print s; print_term tm; print "\n"; tm)
+fun ptm s tm = if chatlvl() then (print s; print_term tm; print "\n"; tm)
                             else tm;
 
-fun pth s th = if !chatting then (print s; print_thm th; print "\n"; th)
+fun pth s th = if chatlvl() then (print s; print_thm th; print "\n"; th)
                             else th;
 (**)
 
@@ -1354,15 +1351,17 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
 (* Check that for each quotient theorem in "tyops", the corresponding relation *)
 (* and map simplification theorems are present in  "tyop_simps".               *)
 
-        fun check_simp tm = exists (fn th => (Term.match_term tm (concl th); true)
-                                             handle HOL_ERR _ => false
-                               )   tyop_simps
-                            orelse
-                          Raise (mk_HOL_ERR "quotient" "check_simp"
+        fun check_simp tm =
+            exists (fn th => (Term.match_term tm (concl th); true)
+                             handle HOL_ERR _ => false
+                   )   tyop_simps
+            orelse
+            Raise (mk_HOL_ERR "quotient" "check_simp"
                               ("Missing quotient simplification theorem:\n" ^
-                               with_flag (show_types, true)
-                                   thm_to_string (mk_oracle_thm "quotient" ([],tm)) ^ "\n" ^
-                               "Please prove and add to \"tyop_simps\" inputs for quotient package.\n "))
+                               show_typify thm_to_string
+                                     (mk_oracle_thm "quotient" ([],tm)) ^ "\n" ^
+                               "Please prove and add to \"tyop_simps\" inputs \
+                               \for quotient package.\n "))
 
         fun check_tyop_simps_present tyop =
             let val (taus,ksis,Rs,abss,reps,conseq) = strip_QUOTIENT_cond (concl tyop)
@@ -1494,7 +1493,7 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
                handle e => raise ERR "make_missing_respects"
                               ("Missing respectfulness theorem for " ^
                                         term_to_string mfunc ^ ".\n" ^
-                               with_flag (show_types, true)
+                               HOLFlags.with_bflags [(show_types, true)]
                                    thm_to_string (mk_oracle_thm "quotient" ([], fake_respects mfunc)) ^ "\n" ^
                                "Please prove and add to \"respects\" inputs for quotient package.\n ")
         in
@@ -1867,7 +1866,9 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
               val nm = dest_vartype tau
               fun new_name nm =
                  if mem nm used then new_name (nm ^ "1") else nm
-          in trace ("Vartype Format Complaint",0) mk_vartype (new_name nm)
+          in HOLFlags.with_bflags [(Type.vartype_fmt_complaint,false)]
+                                  mk_vartype
+                                  (new_name nm)
           end
 
         fun mk_ksis taus =
@@ -1984,29 +1985,42 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
                  (findops opr) @ flatten (map findops args)
               end
            else if is_var tm then []
-           else let val {Name=nm, Ty= ty} = dest_const tm
-                    val (atys,rty) = strip_type ty
-                    fun err1 () = ERR "findops"
-                             ("Missing polymorphic respectfulness theorem for `" ^
-                                         term_to_string tm ^ "`.\n" ^
-                               with_flag (show_types, true)
-                                   thm_to_string (mk_oracle_thm "quotient" ([], fake_poly_respects tm)) ^ "\n" ^
-                               "Please prove and add to \"poly_respects\" inputs for quotient package.\n ")
-                    fun err2 () = ERR "findops"
-                             ("Missing polymorphic preservation theorem for `" ^
-                                         term_to_string tm ^ "`.\n" ^
-                               with_flag (show_types, true)
-                                   thm_to_string (mk_oracle_thm "quotient" ([], fake_poly_preserves tm)) ^ "\n" ^
-                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n ")
-                in if is_rep_ty ty
-                   then if mem (#Name(dest_const tm)) ("respects" :: RELnms @ tyop_RELnms)
-                                orelse exists (can (match_ty_term tm)) newdeffuncs
-                             then []
-                        else      if not (exists (match_higher_th tm) ho_polywfs) then raise (err1())
-                             else if not (match_higher_df tm) then raise (err2())
-                             else if poly_liftedf tm then [tm] else []
-                   else []
-                end
+           else
+             let
+               val {Name=nm, Ty= ty} = dest_const tm
+               val (atys,rty) = strip_type ty
+               fun err1 () =
+                   ERR "findops"
+                       ("Missing polymorphic respectfulness theorem for `" ^
+                        term_to_string tm ^ "`.\n" ^
+                        show_typify thm_to_string
+                                    (mk_oracle_thm
+                                       "quotient"
+                                       ([], fake_poly_respects tm)) ^ "\n" ^
+                        "Please prove and add to \"poly_respects\" inputs for \
+                        \quotient package.\n ")
+               fun err2 () =
+                   ERR "findops"
+                       ("Missing polymorphic preservation theorem for `" ^
+                        term_to_string tm ^ "`.\n" ^
+                        show_typify thm_to_string
+                                    (mk_oracle_thm
+                                       "quotient"
+                                       ([], fake_poly_preserves tm)) ^ "\n" ^
+                        "Please prove and add to \"poly_preserves\" inputs for \
+                        \quotient package.\n ")
+             in
+               if is_rep_ty ty then
+                 if mem (#Name(dest_const tm))
+                        ("respects" :: RELnms @ tyop_RELnms) orelse
+                    exists (can (match_ty_term tm)) newdeffuncs
+                 then []
+                 else if not (exists (match_higher_th tm) ho_polywfs) then
+                   raise (err1())
+                 else if not (match_higher_df tm) then raise (err2())
+                 else if poly_liftedf tm then [tm] else []
+               else []
+             end
 
 
 (* The function findaps returns a list of the types of function variables
@@ -3448,19 +3462,19 @@ fun define_quotient_types_rule {types, defs,
       val equivs = filter is_equiv equivs
       val all_equivs = equivs @ tyop_equivs
 
-      fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)
+      fun print_thm' th = if chatlvl() then (print_thm th; print "\n"; th)
                                        else th
       val quotients = map (fn {name, equiv} =>
             define_quotient_type name (name^"_ABS") (name^"_REP") equiv)
                           types
-      val _ = if !chatting then print "Quotients:\n" else ()
-      val _ = if !chatting then map print_thm' quotients else []
+      val _ = if chatlvl() then print "Quotients:\n" else ()
+      val _ = if chatlvl() then map print_thm' quotients else []
 
       val fn_defns =
           map (define_quotient_lifted_function
                      quotients tyop_quotients tyop_simps) defs
-      val _ = if !chatting then print "\nDefinitions:\n" else ()
-      val _ = if !chatting then map print_thm' fn_defns else []
+      val _ = if chatlvl() then print "\nDefinitions:\n" else ()
+      val _ = if chatlvl() then map print_thm' fn_defns else []
 
       val _ = map check_respects respects
       val _ = map check_poly_preserves poly_preserves
@@ -3496,7 +3510,7 @@ fun define_quotient_types_rule {types, defs,
 
 fun define_quotient_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
                            respects, poly_preserves, poly_respects, old_thms} =
-  let fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)
+  let fun print_thm' th = if chatlvl() then (print_thm th; print "\n"; th)
                                        else th
 
       val LIFT_RULE =
@@ -3509,7 +3523,7 @@ fun define_quotient_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
                respects=respects,
                poly_preserves=poly_preserves, poly_respects=poly_respects}
 
-      val _ = if !chatting then print "\nLifted theorems:\n" else ()
+      val _ = if chatlvl() then print "\nLifted theorems:\n" else ()
       val new_thms = map (print_thm' o LIFT_RULE)
                          old_thms   handle e => Raise e
   in
@@ -3600,7 +3614,7 @@ fun define_quotient_types_full_rule {types, defs, tyop_equivs, tyop_quotients,
 
 fun define_quotient_types_full {types, defs, tyop_equivs, tyop_quotients,
                tyop_simps, respects, poly_preserves, poly_respects, old_thms} =
-  let fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)
+  let fun print_thm' th = if chatlvl() then (print_thm th; print "\n"; th)
                                        else th
 
       val LIFT_RULE =
@@ -3611,7 +3625,7 @@ fun define_quotient_types_full {types, defs, tyop_equivs, tyop_quotients,
                respects=respects,
                poly_preserves=poly_preserves, poly_respects=poly_respects}
 
-      val _ = if !chatting then print "\nLifted theorems:\n" else ()
+      val _ = if chatlvl() then print "\nLifted theorems:\n" else ()
       val new_thms = map (print_thm' o LIFT_RULE)
                          old_thms   handle e => Raise e
   in
@@ -3853,7 +3867,7 @@ fun define_subset_types_rule {types, defs, tyop_equivs, tyop_quotients,tyop_simp
 
 fun define_subset_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
                            inhabs, poly_preserves, poly_respects, old_thms} =
-  let fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)
+  let fun print_thm' th = if chatlvl() then (print_thm th; print "\n"; th)
                                        else th
 
       val LIFT_RULE =
@@ -3866,7 +3880,7 @@ fun define_subset_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
                tyop_simps=tyop_simps,
                poly_preserves=poly_preserves, poly_respects=poly_respects}
 
-      val _ = if !chatting then print "\nLifted theorems:\n" else ()
+      val _ = if chatlvl() then print "\nLifted theorems:\n" else ()
       val new_thms = map (print_thm' o LIFT_RULE)
                          old_thms   handle e => Raise e
   in

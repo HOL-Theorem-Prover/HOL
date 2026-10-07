@@ -12,7 +12,7 @@ sig
    val dcutin    : int ref
    val skew      : int ref
    val cache     : bool ref
-   val chatting  : int ref
+   val chatting  : HOLFlags.flag
    val max_depth : int ref
 
    val GEN_MESON_TAC : int -> int -> int -> thm list -> tactic

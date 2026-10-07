@@ -22,25 +22,25 @@ infix ~~ !~ Un Isct -- IN -*
 signature KERNEL =
 sig
   structure Tag : FinalTag
-  structure Type : FinalType
+  structure Context : FinalContext
+  structure HOLFlags : FinalHOLFlags where type ctxt = Context.t
+  structure Type : FinalType where type bflag = HOLFlags.bflag
   structure Term : FinalTerm where type hol_type = Type.hol_type
   structure Net : FinalNet where type term = Term.term
   structure Thm : Thm where type tag = Tag.tag
                             and type hol_type = Type.hol_type
                             and type term = Term.term
-  structure Context : FinalContext
-  structure HOLFlags : FinalHOLFlags where type ctxt = Context.t
 end
 
 structure Kernel :> KERNEL =
 struct
   structure Tag = Tag
+  structure HOLFlags = HOLFlags
   structure Type = Type
   structure Term = Term
   structure Net = Net
   structure Thm = Thm
   structure Context = Context
-  structure HOLFlags = HOLFlags
 end
 
 open Kernel

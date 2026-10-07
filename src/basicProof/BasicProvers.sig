@@ -7,6 +7,7 @@ sig
 
   val VAR_EQ_TAC      : tactic
   val var_eq_tac      : tactic
+  val veq_old         : HOLFlags.bflag
 
   (* First order automatic proof *)
 

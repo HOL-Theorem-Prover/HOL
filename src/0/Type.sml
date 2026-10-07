@@ -206,7 +206,8 @@ val delta  = Tyv "'d"
 val etyvar = Tyv "'e"
 val ftyvar = Tyv "'f"
 
-val {get=getvc,...} =
+type bflag = HOLFlags.bflag
+val {get=getvc,flag=vartype_fmt_complaint,...} =
     HOLFlags.create_btrace (
       {group="Kernel",name = "Vartype_Format_Complaint"},
       true
