@@ -17,7 +17,14 @@ all: $(DEFAULT_TARGETS) build-tests build-loading-tests
 # theory_tests/ and examples/ already are.  tests/ decides for itself
 # whether HOLSELFTESTLEVEL means "build" or "build and run".
 .PHONY: build-tests
-build-tests: $(DEFAULT_TARGETS)
+# The child uses --no_prereqs, so its imports outside this directory must
+# be ready before it starts.  INCLUDES makes these theories visible but
+# does not order this recipe after their rebuilds in a parallel tree build.
+build-tests: $(DEFAULT_TARGETS) \
+             ../coalgebras/ltreeTheory.uo ../coalgebras/itreeTauTheory.uo \
+             ../coalgebras/lbtreeTheory.uo ../coalgebras/pathTheory.uo \
+             ../coalgebras/llistTheory.uo \
+             ../pred_set/src/more_theories/finite_setTheory.uo
 	$(HOLDIR)/bin/Holmake -C tests --no_prereqs
 
 # Each loading test needs its own HOL process to observe independent theory
