@@ -1037,9 +1037,12 @@ structure Refute_Extract :> Refute_Extract = struct
             (map instantiate (Drule.CONJUNCTS listTheory.LIST_TO_SET_DEF))
         end
       else case DefnBase.lookup_userdef constant of
-        SOME {const, thm = DefnBase.STDEQNS theorem, ...} =>
+        SOME {thm = DefnBase.STDEQNS theorem, ...} =>
           let
-            val theta = Type.match_type (Term.type_of const)
+            (* Equation variables may differ from the indexed constant's. *)
+            val (head, _) = boolSyntax.strip_comb
+              (boolSyntax.lhs (hd (equations_of theorem)))
+            val theta = Type.match_type (Term.type_of head)
               (Term.type_of constant)
             val presented = Thm.INST_TYPE theta theorem
           in

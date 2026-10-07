@@ -370,6 +370,23 @@ val _ = test "a retired description is absent in the session"
           String.isSubstring "no exportable description" (Feedback.message_of e)
     in present andalso absent end))
 
+val _ = test "register_codatatype rejects retired symbols"
+  (fn () => registration_context (fn () =>
+    let
+      val case_name = "api_retired_registration_case"
+      val _ = Theory.new_constant
+        (case_name, type_of (#case_const api_local_registration))
+      val case_const = Term.prim_mk_const
+        {Thy = Theory.current_theory (), Name = case_name}
+      val _ = Theory.delete_const case_name
+    in
+      rejected_with "registration refers to retired symbols" (fn () =>
+        register_codatatype
+          {tyop = #tyop api_local_registration, case_const = case_const,
+           constructors = #constructors api_local_registration,
+           witness = NONE})
+    end))
+
 val _ = test "restoring context removes descriptors and replay caches"
   (fn () => registration_context (fn () =>
     let

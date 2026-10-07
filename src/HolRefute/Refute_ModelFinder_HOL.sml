@@ -3398,11 +3398,23 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       Typedef normalized
     end
 
-  fun prepare_descriptor current descriptor =
+  fun descriptor_function descriptor =
     case descriptor of
+        Refute_RegistrationData.Codata _ => "register_codatatype"
+      | Refute_RegistrationData.Typedef _ => "register_typedef"
+      | Refute_RegistrationData.Quotient _ => "register_quotient"
+
+  fun prepare_descriptor current descriptor =
+    if not (Refute_RegistrationData.fresh descriptor) then
+      raise err (descriptor_function descriptor)
+        "registration refers to retired symbols"
+    else case descriptor of
         Refute_RegistrationData.Codata d => prepare_codatatype current d
       | Refute_RegistrationData.Typedef d => prepare_typedef current d
       | Refute_RegistrationData.Quotient d => prepare_quotient current d
+
+  fun install_validated origin current descriptor =
+    install_input origin descriptor (prepare_descriptor current descriptor)
 
   fun operator_name ({Thy, Tyop} : type_operator) = Thy ^ "$" ^ Tyop
 
@@ -3532,24 +3544,24 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun claim_operator function replaceable operator =
     (claim_class function replaceable
        (registration_class (Refute_Session.context ()) operator);
-     claim_class function replaceable
-       (registration_class (Context.snapshot ()) operator))
-
-  fun descriptor_function descriptor =
-    case descriptor of
-        Refute_RegistrationData.Codata _ => "register_codatatype"
-      | Refute_RegistrationData.Typedef _ => "register_typedef"
-      | Refute_RegistrationData.Quotient _ => "register_quotient"
+     case Refute_Session.current () of
+         NONE => ()
+       | SOME _ => claim_class function replaceable
+           (registration_class (Context.snapshot ()) operator))
 
   fun register_descriptor_staged origin descriptor =
     let
       val operator = Refute_RegistrationData.operator descriptor
       val current = registration_class (Refute_Session.context ()) operator
-      val class = prepare_descriptor current descriptor
-      val live = registration_class (Context.snapshot ()) operator
-      val _ = claim_class (descriptor_function descriptor)
-        (compatible class) live
-    in install_input origin descriptor class end
+      val _ = case Refute_Session.current () of
+          NONE => ()
+        | SOME _ =>
+            let
+              val class = prepare_descriptor current descriptor
+              val live = registration_class (Context.snapshot ()) operator
+            in claim_class (descriptor_function descriptor)
+              (compatible class) live end
+    in install_validated origin current descriptor end
 
   fun register_codatatype registration =
     with_registration (fn () => register_descriptor_staged Explicit
@@ -3707,7 +3719,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun remember_harvest_miss misses operator fingerprint =
     misses := KNametab.update (operator_key operator, fingerprint) (!misses)
 
-  fun quotient_candidate operator theorem =
+  fun quotient_candidate operator current theorem =
     let
       val (_, abs, rep) = dest_bare_quotient theorem
       val (rty, qty) = Type.dom_rng (Term.type_of abs)
@@ -3715,14 +3727,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         else raise Match
       val descriptor = Refute_RegistrationData.Quotient
         {qty = qty, rty = rty, abs = abs, rep = rep, equiv_thm = theorem}
-      val _ = install_input Harvested descriptor
-        (prepare_descriptor (registered_class operator) descriptor)
+      val _ = install_validated Harvested current descriptor
     in
       true
     end
     handle HOL_ERR _ => false | Match => false
 
-  fun typedef_candidate operator theorem =
+  fun typedef_candidate operator current theorem =
     let
       val (first, _) = boolSyntax.dest_conj (Thm.concl theorem)
       val (_, equation) = boolSyntax.strip_forall first
@@ -3736,8 +3747,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         else raise Match
       val descriptor = Refute_RegistrationData.Typedef
         {ty = ty, abs = abs, rep = rep, absrep_thms = [theorem]}
-      val _ = install_input Harvested descriptor
-        (prepare_descriptor (registered_class operator) descriptor)
+      val _ = install_validated Harvested current descriptor
     in
       true
     end
@@ -4607,25 +4617,26 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val operator = type_operator_of ty
       val theories = indexed_harvest_theories ty
       val fingerprint = harvest_fingerprint operator theories
-      fun scan [] = false
-        | scan (theory :: rest) =
-            List.exists (quotient_candidate operator o #2)
+      fun scan current [] = false
+        | scan current (theory :: rest) =
+            List.exists (quotient_candidate operator current o #2)
               (scan_harvest_theorems theory)
-            orelse scan rest
-      fun fast () =
+            orelse scan current rest
+      fun fast current =
         case Lib.total (DB.fetch (#Thy operator))
                (#Tyop operator ^ "_QUOTIENT") of
-            SOME theorem => quotient_candidate operator theorem
+            SOME theorem => quotient_candidate operator current theorem
           | NONE => false
     in
       case class_of_operator operator of
           SOME (Quotient _) => true
         | SOME _ => false
-        | NONE =>
+        (* The guard scans only for unclassified operators. *)
+        | current as NONE =>
             if is_interpreted_type ty orelse is_raw_free_datatype ty orelse
                cached_harvest_miss operator fingerprint
                  (!(quotient_harvest_misses ())) then false
-            else if fast () orelse scan theories then true
+            else if fast current orelse scan current theories then true
             else
               (remember_harvest_miss (quotient_harvest_misses ()) operator
                  fingerprint;
@@ -4640,15 +4651,15 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val operator = type_operator_of ty
       val theories = indexed_harvest_theories ty
       val fingerprint = harvest_fingerprint operator theories
-      fun scan [] = false
-        | scan (theory :: rest) =
+      fun scan current [] = false
+        | scan current (theory :: rest) =
             let val theorems = scan_harvest_theorems theory in
-              List.exists (typedef_candidate operator o #2) theorems
+              List.exists (typedef_candidate operator current o #2) theorems
               orelse
               List.exists (fn (first, second) =>
-                typedef_candidate operator (Thm.CONJ first second))
+                typedef_candidate operator current (Thm.CONJ first second))
                 (absrep_pairs theorems)
-              orelse scan rest
+              orelse scan current rest
             end
     in
       (* Only a genuine typedef counts: Frac and fmap have no
@@ -4656,12 +4667,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       case class_of_operator operator of
           SOME (Typedef _) => true
         | SOME _ => false
-        | NONE =>
+        (* The guard scans only for unclassified operators. *)
+        | current as NONE =>
             if is_interpreted_type ty orelse is_raw_free_datatype ty orelse
                not (Option.isSome (raw_typedef_data_generic ty)) orelse
                cached_harvest_miss operator fingerprint
                  (!(typedef_harvest_misses ())) then false
-            else if scan theories then true
+            else if scan current theories then true
             else
               (remember_harvest_miss (typedef_harvest_misses ()) operator
                  fingerprint;
@@ -4729,16 +4741,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val descriptors = run_transaction scratch (fn () =>
         let
           val ds = collect ()
-          fun validate descriptor =
-            let
-              val operator = Refute_RegistrationData.operator descriptor
-              val _ = if Refute_RegistrationData.fresh descriptor then () else
-                raise err "export_registrations"
-                  "registration refers to retired symbols"
-              val class = prepare_descriptor
-                (class_of_operator operator) descriptor
-            in install_input Explicit descriptor class end
-          val _ = List.app validate ds
+          val _ = List.app (register_descriptor_staged Explicit) ds
         in ds end)
       val commit_data = Refute_RegistrationData.prepare ctxt thy descriptors
       val keys = map (operator_key o Refute_RegistrationData.operator)
