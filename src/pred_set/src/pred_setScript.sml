@@ -1059,6 +1059,12 @@ Proof
   >> METIS_TAC []
 QED
 
+Theorem DIFF_EMPTY_IMP_EQ:
+  s DIFF t = ∅ ∧ t DIFF s = ∅ ==> s = t
+Proof
+  rw[EXTENSION] >> metis_tac[]
+QED
+
 Theorem DISJOINT_DIFFS:
      !f g m n.
        (!n. f n SUBSET f (SUC n)) /\
@@ -7175,6 +7181,47 @@ Proof
   metis_tac[MIN_SET_IN_SET] >>
   `MIN_SET s <= 0` by rw[MIN_SET_LEM] >>
   decide_tac
+QED
+
+Theorem MAX_SET_IMAGE_SUC:
+  FINITE P ∧ P ≠ ∅ ==> MAX_SET (IMAGE SUC P) = SUC (MAX_SET P)
+Proof
+  Induct_on `FINITE` >> rw[MAX_SET_THM]
+  >> Cases_on `P = ∅` >> gvs[MAX_SUC]
+QED
+
+Theorem MAX_SET_BIGUNION:
+  FINITE P ∧ (∀s. s ∈ P ==> FINITE s) ∧ P ≠ ∅ ∧ P ≠ {∅}
+    ==> ∃s. s ∈ P ∧ MAX_SET s = MAX_SET (BIGUNION P) ∧
+        ∀s'. s' ∈ P ==> MAX_SET s' ≤ MAX_SET s
+Proof
+  rw[] >> `MAX_SET (BIGUNION P) ∈ BIGUNION P` by (
+    irule MAX_SET_IN_SET
+    >> rw[FINITE_BIGUNION, EXTENSION]
+  )
+  >> gvs[BIGUNION] >> gvs[GSYM BIGUNION]
+  >> qexists `s` >> simp[] >> conj_asm1_tac >- (
+    dep_rewrite.DEP_REWRITE_TAC[MAX_SET_TEST_IFF] >> rw[]
+    >- (rw[EXTENSION] >> metis_tac[]) 
+    >> irule X_LE_MAX_SET >> rw[]
+    >> metis_tac[]
+  )
+  >> rw[]
+  >> Cases_on `s' = ∅` >> rw[]
+  >> irule X_LE_MAX_SET >> rw[]
+  >> metis_tac[MAX_SET_IN_SET]
+QED
+
+Theorem FINITE_SET_OF_SETS_UPPER_BOUNDED:
+  (∀s. s ∈ P ==> FINITE s ∧ MAX_SET s ≤ n) ==> FINITE P
+Proof
+  rw[] >> irule SUBSET_FINITE_I
+  >> qexists `POW {k | k ≤ n}`
+  >> rw[num_FINITE]
+  >- metis_tac[]
+  >> rw[SUBSET_DEF, IN_POW]
+  >> first_x_assum dxrule >> rw[]
+  >> metis_tac[X_LE_MAX_SET, LE_TRANS]
 QED
 
 (*---------------------------------------------------------------------------*)

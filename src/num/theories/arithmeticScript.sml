@@ -4109,6 +4109,18 @@ Proof
   PROVE_TAC [LESS_OR_EQ, NOT_LESS, LESS_TRANS]
 QED
 
+Theorem MIN_SUC:
+  MIN (SUC n) (SUC m) = SUC (MIN n m)
+Proof
+  rw[MIN_DEF]
+QED
+
+Theorem MAX_SUC:
+  MAX (SUC n) (SUC m) = SUC (MAX n m)
+Proof
+  rw[MAX_DEF]
+QED
+
 Theorem MIN_EQ_LE:
   (a <= b ==> MIN a b = a) /\
   (b <= a ==> MIN a b = b)
