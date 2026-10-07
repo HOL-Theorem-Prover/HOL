@@ -24,6 +24,7 @@ Libs
  *)
 
 val Thy = "prove_base_assums";
+val Thy_ = Thy;
 
 val ERR = mk_HOL_ERR Thy;
 
@@ -153,10 +154,25 @@ local
   fun find_const {Name,...} = definition(Name^"_def")
   handle HOL_ERR _ => first (equal Name o #1 o dest_const o lhs o concl) (!defs)
                       handle HOL_ERR _ => raise(Fail Name)
+  (* An assumptions article may define a constant this theory has no
+     definition for, as the datatype package's use of pred_set, sum and
+     pair makes it do.  Define it here, under the name const_name's
+     catch-all clause gives it.  Nothing proves anything about such a
+     constant, and the name it gets is local to this theory, so it
+     collides with nothing downstream. *)
+  fun safe_ML_name nm =
+    String.translate
+      (fn c => if Char.isAlphaNum c orelse c = #"_" then str c
+               else "_" ^ Int.toString (Char.ord c) ^ "_")
+      nm
+  fun define_const_or_make c tm =
+    find_const c handle Fail _ => define_const_in_thy safe_ML_name c tm
 in
   val (reader:reader) = {
-    define_tyop = fn x => find_tyop (fix_tyop x),
-    define_const = fn x => fn _ => find_const x,
+    define_tyop =
+      fn x => (find_tyop (fix_tyop x)
+               handle HOL_ERR _ => define_tyop_in_thy (fix_tyop x)),
+    define_const = define_const_or_make,
     axiom = fn _ => mk_thm,
     const_name = const_name,
     tyop_name = tyop_name}
@@ -178,7 +194,35 @@ val _ = Parse.hide "_";
  *)
 fun term_lt t1 t2 = (Term.compare(t1,t2) = LESS);
 fun thm_lt th1 th2 = term_lt (concl th1) (concl th2);
-val goals = sort thm_lt goals_unsorted;
+val goals_sorted = sort thm_lt goals_unsorted;
+
+(* Assumptions that mention a HOL4 constant other than marker's Abbrev are
+   ones the datatype package's use of pred_set, sum, pair, cardinalityCore
+   and bnfInitial brought in.  Nothing here discharges them, and the
+   proofs below index into 'goals' positionally, so hold them apart rather
+   than letting them renumber every proof in this file. *)
+fun is_HOL4_leak th =
+  let
+    fun leaked_name nm = String.isPrefix "HOL4_" nm andalso
+                         nm <> "HOL4_marker_Abbrev"
+    fun leaked_ty ty =
+      case Lib.total dest_thy_type ty of
+          SOME {Thy,Tyop,Args} =>
+            (Thy = Thy_ andalso leaked_name Tyop) orelse
+            List.exists leaked_ty Args
+        | NONE => false
+    fun leaked t =
+      (case Lib.total dest_thy_const t of
+           SOME {Thy,Name,...} => Thy = Thy_ andalso leaked_name Name
+         | NONE => false)
+      orelse leaked_ty (type_of t)
+    val tm = concl th
+  in
+    List.exists leaked (find_terms is_const tm) orelse
+    List.exists leaked (find_terms is_var tm)
+  end
+
+val (leaked_goals, goals) = List.partition is_HOL4_leak goals_sorted;
 
 (* NOTE: contents of goals (List.length goals = 97)
 val goals =
@@ -377,11 +421,15 @@ val if_F = hd (amatch ``if F then t1 else t2``);
    article's assumption set shifts every index after the change.  Check the
    count up front: otherwise the mismatch surfaces as a pile of tactic
    failures in unrelated proofs, tens of minutes into an otknl build. *)
-val _ = if List.length goals <> 147 then
+val _ = if List.length goals <> 153 then
           raise ERR "-"
-            ("assumptions changed: expected 147, found " ^
+            ("assumptions changed: expected 153, found " ^
              Int.toString (List.length goals))
         else ();
+
+val _ = Feedback.HOL_MESG
+          ("prove_base_assums: " ^ Int.toString (List.length leaked_goals) ^
+           " assumption(s) left undischarged over HOL4 constants");
 
 Theorem th1: ^(el 1 goals |> concl)
 Proof
@@ -448,7 +496,7 @@ val fun_eq_thm = hd(amatch``(!x. f x = g x) <=> (f = g)``);
         fn1 Data_List_nil = x /\
         !h t. fn1 (Data_List_cons h t) = f (fn1 t) h t
  *)
-Theorem th7: ^(el 8 goals |> concl)
+Theorem th7: ^(el 9 goals |> concl)
 Proof
   rpt gen_tac
   \\ CONV_TAC(HO_REWR_CONV ex_unique_thm)
@@ -472,14 +520,14 @@ QED
 val cons_neq_nil = hd(amatch``Data_List_cons _ _ <> Data_List_nil``);
 
 (* |- !a1 a0. Data_List_nil <> Data_List_cons a0 a1 *)
-Theorem th8: ^(el 9 goals |> concl)
+Theorem th8: ^(el 10 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM cons_neq_nil)
 QED
 
 val suc_11 = hd(amatch``Number_Natural_suc _ = Number_Natural_suc _``);
 
 (* |- !m n. Number_Natural_suc m = Number_Natural_suc n ==> m = n *)
-Theorem th9: ^(el 10 goals |> concl)
+Theorem th9: ^(el 11 goals |> concl)
 Proof
   rpt gen_tac \\ MATCH_ACCEPT_TAC (#1 (EQ_IMP_RULE (SPEC_ALL suc_11)))
 QED
@@ -496,7 +544,7 @@ val less_mod = hd(amatch``Number_Natural_less (Number_Natural_mod _ _)``);
                 (Number_Natural_mod k n) /\
               Number_Natural_less (Number_Natural_mod k n) n
  *)
-Theorem th10: ^(el 11 goals |> concl)
+Theorem th10: ^(el 12 goals |> concl)
 Proof
   PURE_REWRITE_TAC[less_zero]
   \\ gen_tac
@@ -515,7 +563,7 @@ val if_F = hd(amatch``(if F then _ else _) = _``);
           (P <=> Q) /\ (Q ==> x = x') /\ (~Q ==> y = y') ==>
           (if P then x else y) = if Q then x' else y'
  *)
-Theorem th11: ^(el 12 goals |> concl)
+Theorem th11: ^(el 14 goals |> concl)
 Proof
   rpt gen_tac
   \\ rpt strip_tac
@@ -529,7 +577,7 @@ QED
 (* |- !x x' y y'.
           (x <=> x') /\ (x' ==> (y <=> y')) ==> (x ==> y <=> x' ==> y')
  *)
-Theorem th12: ^(el 13 goals |> concl)
+Theorem th12: ^(el 15 goals |> concl)
 Proof
   rpt strip_tac
   \\ last_x_assum SUBST_ALL_TAC
@@ -549,7 +597,7 @@ val and_i = hd(amatch``t /\ t``);
 (* |- !P P' Q Q'.
           (Q ==> (P <=> P')) /\ (P' ==> (Q <=> Q')) ==> (P /\ Q <=> P' /\ Q')
  *)
-Theorem th13: ^(el 14 goals |> concl)
+Theorem th13: ^(el 16 goals |> concl)
 Proof
   rpt strip_tac
   \\ Q.ISPEC_THEN`Q`FULL_STRUCT_CASES_TAC bool_cases
@@ -565,35 +613,35 @@ QED
 val and_assoc = hd (amatch``(a /\ b) /\ c``);
 
 (* |- !t1 t2 t3. t1 /\ t2 /\ t3 <=> (t1 /\ t2) /\ t3 *)
-Theorem th14: ^(el 16 goals |> concl)
+Theorem th14: ^(el 18 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM and_assoc)
 QED
 
 val or_distrib_and = hd (amatch``(b \/ c) /\ a <=> _``);
 
 (* |- !A B C. (B \/ C) /\ A <=> B /\ A \/ C /\ A *)
-Theorem th15: ^(el 17 goals |> concl)
+Theorem th15: ^(el 19 goals |> concl)
 Proof MATCH_ACCEPT_TAC or_distrib_and
 QED
 
 val or_assoc = hd (amatch``(a \/ b) \/ c``);
 
 (* |- !A B C. A \/ B \/ C <=> (A \/ B) \/ C *)
-Theorem th16: ^(el 18 goals |> concl)
+Theorem th16: ^(el 20 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM or_assoc)
 QED
 
 val demorgan = hd (amatch``(b \/ a) /\ (c \/ a)``);
 
 (* |- !A B C. B /\ C \/ A <=> (B \/ A) /\ (C \/ A) *)
-Theorem th17: ^(el 19 goals |> concl)
+Theorem th17: ^(el 21 goals |> concl)
 Proof MATCH_ACCEPT_TAC demorgan
 QED
 
 val not_or = hd(amatch``~(_ \/ _)``);
 
 (* |- !A B. (~(A /\ B) <=> ~A \/ ~B) /\ (~(A \/ B) <=> ~A /\ ~B) *)
-Theorem th18: ^(el 23 goals |> concl)
+Theorem th18: ^(el 25 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[not_and,not_or]
@@ -601,7 +649,7 @@ Proof
 QED
 
 (* |- !t1 t2. (t1 <=> t2) <=> (t1 ==> t2) /\ (t2 ==> t1) *)
-Theorem th19: ^(el 26 goals |> concl)
+Theorem th19: ^(el 28 goals |> concl)
 Proof
   rpt gen_tac
   \\ Q.ISPEC_THEN`t1`FULL_STRUCT_CASES_TAC bool_cases
@@ -612,7 +660,7 @@ QED
 val eq_imp_thm = th19;
 
 (* |- !A B. (A <=> B \/ A) <=> B ==> A *)
-Theorem th20: ^(el 29 goals |> concl)
+Theorem th20: ^(el 31 goals |> concl)
 Proof
   rpt gen_tac
   \\ Q.ISPEC_THEN`A`FULL_STRUCT_CASES_TAC bool_cases
@@ -645,11 +693,11 @@ Theorem th21 = ((* this forward proof comes from boolScript.sml *)
     |> GENL [``A:bool``,``B:bool``]
   end)
 
-val _ = if concl th21 ~~ concl (el 32 goals) then ()
+val _ = if concl th21 ~~ concl (el 34 goals) then ()
         else raise ERR "th21" "assumptions changed";
 
 (* |- !t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 <=> t2) *)
-Theorem th22: ^(el 34 goals |> concl)
+Theorem th22: ^(el 36 goals |> concl)
 Proof
   rpt strip_tac
   \\ Q.ISPEC_THEN ‘t1’ mp_tac bool_cases
@@ -671,7 +719,7 @@ val imp_antisym_ax = th22;
 (* |- !t. (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\
           (t /\ F <=> F) /\ (t /\ t <=> t)
  *)
-Theorem th23: ^(el 36 goals |> concl)
+Theorem th23: ^(el 38 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_and
@@ -686,7 +734,7 @@ val AND_CLAUSES = th23;
 (* |- !t. ((T <=> t) <=> t) /\ ((t <=> T) <=> t) /\ ((F <=> t) <=> ~t) /\
           ((t <=> F) <=> ~t)   (EQ_CLAUSES)
  *)
-Theorem th24: ^(el 37 goals |> concl)
+Theorem th24: ^(el 39 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_iff
@@ -700,7 +748,7 @@ val EQ_CLAUSES = th24;
 (* |- !t. (T ==> t <=> t) /\ (t ==> T <=> T) /\ (F ==> t <=> T) /\
           (t ==> t <=> T) /\ (t ==> F <=> ~t)
  *)
-Theorem th25: ^(el 38 goals |> concl)
+Theorem th25: ^(el 40 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_imp
@@ -715,7 +763,7 @@ val IMP_CLAUSES = th25;
 (* |- !t. (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\
           (t \/ F <=> t) /\ (t \/ t <=> t)
  *)
-Theorem th26: ^(el 39 goals |> concl)
+Theorem th26: ^(el 41 goals |> concl)
 Proof
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_or
@@ -728,26 +776,26 @@ QED
 val OR_CLAUSES = th26;
 
 (* |- !t. t ==> F <=> (t <=> F) *)
-Theorem th27: ^(el 41 goals |> concl)
+Theorem th27: ^(el 43 goals |> concl)
 Proof
   PURE_REWRITE_TAC[imp_F, iff_F]
   \\ gen_tac \\ REFL_TAC
 QED
 
 (* |- !t. F ==> t *)
-Theorem th28: ^(el 42 goals |> concl)
+Theorem th28: ^(el 44 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC(EQT_ELIM(SPEC_ALL F_imp))
 QED
 
 (* |- !t. ~t ==> t ==> F (boolTheory.F_IMP) *)
-Theorem th29: ^(el 43 goals |> concl)
+Theorem th29: ^(el 45 goals |> concl)
 Proof
   imp_F |> SPEC_ALL |> EQ_IMP_RULE |> #2 |> MATCH_ACCEPT_TAC
 QED
 
 (* |- !t. (t ==> F) ==> ~t *)
-Theorem th30: ^(el 45 goals |> concl)
+Theorem th30: ^(el 47 goals |> concl)
 Proof
   imp_F |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> MATCH_ACCEPT_TAC
 QED
@@ -755,12 +803,12 @@ QED
 val app_if = hd (amatch ``f (if b then x else y) = if b then f x else f y``);
 
 (* |- !f b x y. f (if b then x else y) = if b then f x else f y *)
-Theorem th31: ^(el 48 goals |> concl)
+Theorem th31: ^(el 50 goals |> concl)
 Proof MATCH_ACCEPT_TAC app_if
 QED
 
 (* |- !f g M N. M = N /\ (!x. x = N ==> f x = g x) ==> LET f M = LET g N *)
-Theorem th32: ^(el 49 goals |> concl)
+Theorem th32: ^(el 51 goals |> concl)
 Proof
   rpt strip_tac
   \\ VAR_EQ_TAC
@@ -773,7 +821,7 @@ QED
 val ext = hd(amatch``(!x. f x = g x) <=> _``);
 
 (* |- !f g. f = g <=> !x. f x = g x *)
-Theorem th33: ^(el 50 goals |> concl)
+Theorem th33: ^(el 53 goals |> concl)
 Proof MATCH_ACCEPT_TAC (GSYM ext)
 QED
 
@@ -786,7 +834,7 @@ val sum_case_thms = amatch``Data_Sum_case_left_right f g (_ _) = _``;
 (* |- !f g. ?!h. Function_o h Data_Sum_left = f /\
                  Function_o h Data_Sum_right = g
  *)
-Theorem th34: ^(el 52 goals |> concl)
+Theorem th34: ^(el 55 goals |> concl)
 Proof
   rpt gen_tac
   \\ CONV_TAC(HO_REWR_CONV ex_unique_thm)
@@ -812,7 +860,7 @@ val ex_def = hd(amatch``$? = _``);
 val select_ax = hd(amatch ``p t ==> p ($@ p)``);
 
 (* |- !P t. (!x. x = t ==> P x) ==> $? P *)
-Theorem th35: ^(el 53 goals |> concl)
+Theorem th35: ^(el 56 goals |> concl)
 Proof
   PURE_REWRITE_TAC[forall_eq,ex_def]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -829,7 +877,7 @@ val imp_all = hd(amatch``(_ ==> (!x. _)) <=> _``);
           ((!x. P x) /\ Q <=> !x. P x /\ Q) /\
           (Q /\ (!x. P x) <=> !x. Q /\ P x)
  *)
-Theorem th36: ^(el 54 goals |> concl)
+Theorem th36: ^(el 57 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[and_all,all_and,all_imp,imp_all]
@@ -845,7 +893,7 @@ val ex_imp = hd(amatch``((?x. _) ==> _) <=> _``);
           ((?x. P x) /\ Q <=> ?x. P x /\ Q) /\
           (Q /\ (?x. P x) <=> ?y. Q /\ P y)
  *)
-Theorem th37: ^(el 55 goals |> concl)
+Theorem th37: ^(el 58 goals |> concl)
 Proof
   rpt gen_tac
   \\ PURE_REWRITE_TAC[and_ex,ex_and,ex_imp]
@@ -861,7 +909,7 @@ th40: |- !P f. RES_FORALL P f <=> !x. x IN P ==> f x
 val eta_ax = hd(amatch``!f. (\x. f x) = f``);
 
 (* |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P) *)
-Theorem th41: ^(el 59 goals |> concl)
+Theorem th41: ^(el 62 goals |> concl)
 Proof
   PURE_REWRITE_TAC[ex_def]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -878,7 +926,7 @@ val eq_trans = hd(amatch``(x = y) /\ (y = z) ==> _``);
           (!x y. f x y = f y x) ==>
           !x y z. f x (f y z) = f y (f x z)
  *)
-Theorem th42: ^(el 62 goals |> concl)
+Theorem th42: ^(el 65 goals |> concl)
 Proof
   rpt strip_tac
   \\ first_assum(qspecl_then[`x`,`y`,`z`] SUBST_ALL_TAC)
@@ -894,7 +942,7 @@ val list_ind = hd(amatch``_ ==> !(l:'a Data_List_list). P l``);
 (* |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
           !l. P l
  *)
-Theorem th43: ^(el 66 goals |> concl)
+Theorem th43: ^(el 69 goals |> concl)
 Proof
   rpt strip_tac
   \\ match_mp_tac list_ind
@@ -904,7 +952,7 @@ Proof
 QED
 
 (* |- ~(t /\ ~t) *)
-Theorem th44: ^(el 68 goals |> concl)
+Theorem th44: ^(el 71 goals |> concl)
 Proof
   PURE_REWRITE_TAC[not_and,not_not]
   \\ Q.SPEC_THEN`t`FULL_STRUCT_CASES_TAC bool_cases
@@ -917,7 +965,7 @@ val right_11 = hd(amatch``Data_Sum_right _ = Data_Sum_right _``);
 (* |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\
       !y y'. Data_Sum_right y = Data_Sum_right y' <=> y = y'
  *)
-Theorem th45: ^(el 69 goals |> concl)
+Theorem th45: ^(el 72 goals |> concl)
 Proof
     conj_tac
  >| [ MATCH_ACCEPT_TAC left_11,
@@ -930,7 +978,7 @@ val isNone_none = hd(amatch``Data_Option_isNone (Data_Option_none)``);
 (* |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\
       (Data_Option_isNone Data_Option_none <=> T)
  *)
-Theorem th46: ^(el 70 goals |> concl)
+Theorem th46: ^(el 73 goals |> concl)
 Proof
     conj_tac
  >| [ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL isNone_some)),
@@ -943,7 +991,7 @@ val isSome_none = hd(amatch``Data_Option_isSome (Data_Option_none)``);
 (* |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\
       (Data_Option_isSome Data_Option_none <=> F)
  *)
-Theorem th47: ^(el 71 goals |> concl)
+Theorem th47: ^(el 74 goals |> concl)
 Proof
     conj_tac
  >| [ MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL isSome_some)),
@@ -956,7 +1004,7 @@ val isLeft_left = hd(amatch``Data_Sum_isLeft (Data_Sum_left _)``);
 (* |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\
       !y. Data_Sum_isLeft (Data_Sum_right y) <=> F
  *)
-Theorem th48: ^(el 72 goals |> concl)
+Theorem th48: ^(el 75 goals |> concl)
 Proof
     conj_tac
  >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isLeft_left,
@@ -969,7 +1017,7 @@ val isRight_left = hd(amatch``Data_Sum_isRight (Data_Sum_left _)``);
 (* |- (!x. Data_Sum_isRight (Data_Sum_right x)) /\
       !y. ~Data_Sum_isRight (Data_Sum_left y)
  *)
-Theorem th49: ^(el 73 goals |> concl)
+Theorem th49: ^(el 76 goals |> concl)
 Proof
     conj_tac
  >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isRight_right,
@@ -986,7 +1034,7 @@ val append_cons =
           Data_List_append (Data_List_cons h l1) l2 =
           Data_List_cons h (Data_List_append l1 l2)
  *)
-Theorem th50: ^(el 74 goals |> concl)
+Theorem th50: ^(el 77 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC append_nil
   \\ MATCH_ACCEPT_TAC append_cons
@@ -1000,7 +1048,7 @@ val plus_comm = hd(amatch``Number_Natural_plus x y = Number_Natural_plus y x``);
       !m n. Number_Natural_plus (Number_Natural_suc m) n =
             Number_Natural_suc (Number_Natural_plus m n)
  *)
-Theorem th51: ^(el 75 goals |> concl)
+Theorem th51: ^(el 78 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_zero)
   \\ MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_suc)
@@ -1014,7 +1062,7 @@ val power_suc = hd(amatch``Number_Natural_power _ (Number_Natural_suc _)``);
       !m n. Number_Natural_power m (Number_Natural_suc n) =
             Number_Natural_times m (Number_Natural_power m n)
  *)
-Theorem th52: ^(el 76 goals |> concl)
+Theorem th52: ^(el 79 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC power_zero
   \\ MATCH_ACCEPT_TAC power_suc
@@ -1030,7 +1078,7 @@ val times_zero_comm = PURE_ONCE_REWRITE_RULE [times_comm] times_zero;
           Number_Natural_times (Number_Natural_suc m) n =
           Number_Natural_plus (Number_Natural_times m n) n
  *)
-Theorem th53: ^(el 77 goals |> concl)
+Theorem th53: ^(el 80 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC times_zero_comm
   \\ MATCH_ACCEPT_TAC
@@ -1038,7 +1086,7 @@ Proof
 QED
 
 (* |- (!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T) *)
-Theorem th54: ^(el 79 goals |> concl)
+Theorem th54: ^(el 82 goals |> concl)
 Proof
   PURE_REWRITE_TAC[not_not,iff_F,iff_T,truth,not_F,and_T]
   \\ gen_tac \\ REFL_TAC
@@ -1052,7 +1100,7 @@ val map_some = hd(amatch``Data_Option_map _ (Data_Option_some _) = _``)
 (* |- (!f x. Data_Option_map f (Data_Option_some x) = Data_Option_some (f x)) /\
       !f. Data_Option_map f Data_Option_none = Data_Option_none
  *)
-Theorem th55: ^(el 80 goals |> concl)
+Theorem th55: ^(el 83 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC map_some
   \\ MATCH_ACCEPT_TAC map_none
@@ -1066,11 +1114,14 @@ val map_cons = hd(amatch``Data_List_map _ (Data_List_cons _ _)``);
           Data_List_map f (Data_List_cons h t) =
           Data_List_cons (f h) (Data_List_map f t)
  *)
-Theorem th56: ^(el 81 goals |> concl)
+(* No longer an assumption: hol-base provides the Data.List.map clauses.
+
+Theorem th56: ^(el ?? goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC map_nil
   \\ MATCH_ACCEPT_TAC map_cons
 QED
+ *)
 
 (* NOTE: This theorem will be proved later under a different name.
 
@@ -1087,7 +1138,7 @@ val filter_cons = hd(amatch``Data_List_filter _ (Data_List_cons _ _)``);
           if P h then Data_List_cons h (Data_List_filter P t)
           else Data_List_filter P t
  *)
-Theorem th58: ^(el 83 goals |> concl)
+Theorem th58: ^(el 85 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC filter_nil
   \\ MATCH_ACCEPT_TAC filter_cons
@@ -1100,7 +1151,7 @@ val all_cons = hd(amatch``Data_List_all _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_all P (Data_List_cons h t) <=> P h /\ Data_List_all P t
  *)
-Theorem th59: ^(el 84 goals |> concl)
+Theorem th59: ^(el 86 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL all_nil))
   \\ MATCH_ACCEPT_TAC all_cons
@@ -1113,7 +1164,7 @@ val any_cons = hd(amatch``Data_List_any _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_any P (Data_List_cons h t) <=> P h \/ Data_List_any P t
  *)
-Theorem th60: ^(el 85 goals |> concl)
+Theorem th60: ^(el 87 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL any_nil))
   \\ MATCH_ACCEPT_TAC any_cons
@@ -1124,7 +1175,7 @@ val concat_cons = hd(amatch``Data_List_concat (Data_List_cons _ _)``);
 (*
 (* |- (T <> F) /\ (F <> T) *)
 val th61 = store_thm
-  ("th61",  el 87 goals |> concl,
+  ("th61",  el 90 goals |> concl,
   PURE_REWRITE_TAC[iff_F,not_not,iff_T,not_F,and_T]);
 
 val BOOL_EQ_DISTINCT = th61;
@@ -1134,7 +1185,7 @@ val BOOL_EQ_DISTINCT = th61;
           Data_List_concat (Data_List_cons h t) =
           Data_List_append h (Data_List_concat t)
  *)
-Theorem th61: ^(el 87 goals |> concl)
+Theorem th61: ^(el 90 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC concat_nil
   \\ MATCH_ACCEPT_TAC concat_cons
@@ -1149,7 +1200,7 @@ val reverse_cons = hd(amatch``Data_List_reverse (Data_List_cons _ _)``);
           Data_List_append (Data_List_reverse t)
             (Data_List_cons h Data_List_nil)
  *)
-Theorem th62: ^(el 88 goals |> concl)
+Theorem th62: ^(el 91 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC reverse_nil
   \\ MATCH_ACCEPT_TAC reverse_cons
@@ -1169,7 +1220,7 @@ val unzip_cons = hd(amatch``Data_List_unzip (Data_List_cons _ _)``);
             (Data_List_cons (Data_Pair_snd x)
                (Data_Pair_snd (Data_List_unzip l)))
  *)
-Theorem th63: ^(el 89 goals |> concl)
+Theorem th63: ^(el 92 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC unzip_nil
   \\ PURE_REWRITE_TAC[unzip_cons]
@@ -1186,7 +1237,7 @@ val length_cons = hd(amatch``Data_List_length (Data_List_cons _ _)``);
           Data_List_length (Data_List_cons h t) =
           Number_Natural_suc (Data_List_length t)
  *)
-Theorem th64: ^(el 90 goals |> concl)
+Theorem th64: ^(el 93 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC length_nil
   \\ MATCH_ACCEPT_TAC length_cons
@@ -1202,7 +1253,7 @@ val fact_suc = hd(amatch``Number_Natural_factorial (Number_Natural_suc _)``);
           Number_Natural_times (Number_Natural_suc n)
             (Number_Natural_factorial n)
  *)
-Theorem th65: ^(el 91 goals |> concl)
+Theorem th65: ^(el 94 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC fact_zero
   \\ MATCH_ACCEPT_TAC fact_suc
@@ -1214,7 +1265,7 @@ val null_cons = hd(amatch``Data_List_null (Data_List_cons _ _)``);
 (* |- (Data_List_null Data_List_nil <=> T) /\
       !h t. Data_List_null (Data_List_cons h t) <=> F
  *)
-Theorem th66: ^(el 92 goals |> concl)
+Theorem th66: ^(el 95 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO null_nil)
   \\ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL null_cons))
@@ -1226,7 +1277,7 @@ val even_cons = hd(amatch``Number_Natural_even (Number_Natural_suc _)``);
 (* |- (Number_Natural_even Number_Natural_zero <=> T) /\
       !n. Number_Natural_even (Number_Natural_suc n) <=> ~Number_Natural_even n
  *)
-Theorem th67: ^(el 93 goals |> concl)
+Theorem th67: ^(el 96 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO even_nil)
   \\ MATCH_ACCEPT_TAC even_cons
@@ -1238,7 +1289,7 @@ val odd_cons = hd(amatch``Number_Natural_odd (Number_Natural_suc _)``);
 (* |- (Number_Natural_odd Number_Natural_zero <=> F) /\
       !n. Number_Natural_odd (Number_Natural_suc n) <=> ~Number_Natural_odd n
  *)
-Theorem th68: ^(el 94 goals |> concl)
+Theorem th68: ^(el 97 goals |> concl)
 Proof
   conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO odd_nil)
   \\ MATCH_ACCEPT_TAC odd_cons
@@ -1247,13 +1298,13 @@ QED
 val one_thm = hd(amatch``_ = Data_Unit_unit``);
 
 (* |- Data_Unit_unit = @x. T *)
-Theorem th69: ^(el 96 goals |> concl)
+Theorem th69: ^(el 99 goals |> concl)
 Proof
   PURE_ONCE_REWRITE_TAC[one_thm] \\ REFL_TAC
 QED
 
 (* |- Number_Natural_zero = Number_Natural_zero *)
-Theorem th70: ^(el 97 goals |> concl)
+Theorem th70: ^(el 100 goals |> concl)
 Proof
   REFL_TAC
 QED
@@ -1261,7 +1312,7 @@ QED
 val exists_simp = hd(amatch “(?x. t) <=> t”);
 
 (* |- (?!x. F) <=> F *)
-Theorem th71: ^(el 99 goals |> concl)
+Theorem th71: ^(el 102 goals |> concl)
 Proof
   PURE_REWRITE_TAC [BETA_RULE (SPEC “\x:'a. F” ex_unique_thm)] \\
   PURE_REWRITE_TAC [SPEC “F” exists_simp, F_and] \\
@@ -1271,19 +1322,19 @@ QED
 val comma_11 = hd(amatch``Data_Pair_comma _ _ = Data_Pair_comma _ _``);
 
 (* |- Data_Pair_comma x y = Data_Pair_comma a b <=> x = a /\ y = b *)
-Theorem th72: ^(el 110 goals |> concl)
+Theorem th72: ^(el 114 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC comma_11
 QED
 
 (* |- Data_Sum_left x = Data_Sum_left y <=> x = y *)
-Theorem th73: ^(el 111 goals |> concl)
+Theorem th73: ^(el 115 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC left_11
 QED
 
 (* |- Data_Sum_right x = Data_Sum_right y <=> x = y *)
-Theorem th74: ^(el 112 goals |> concl)
+Theorem th74: ^(el 116 goals |> concl)
 Proof
   MATCH_ACCEPT_TAC right_11
 QED
@@ -1292,7 +1343,7 @@ val mono_not_eq = hd (amatch “~t1 ==> ~t2 <=> t2 ==> t1”);
 val eq_sym_eq = hd (amatch “x = y <=> y = x”);
 
 (* |- y ==> x <=> ~x ==> ~y *)
-Theorem th75: ^(el 117 goals |> concl)
+Theorem th75: ^(el 121 goals |> concl)
 Proof
     PURE_ONCE_REWRITE_TAC [eq_sym_eq]
  >> MATCH_ACCEPT_TAC mono_not_eq
@@ -1303,7 +1354,7 @@ val MONO_NOT_EQ = th75;
 val skk = hd(amatch``Function_Combinator_s _ _ = Function_id``);
 
 (* |- Function_id = Function_Combinator_s Function_const Function_const *)
-Theorem th76: ^(el 123 goals |> concl)
+Theorem th76: ^(el 128 goals |> concl)
 Proof
   PURE_REWRITE_TAC[skk] \\ REFL_TAC
 QED
@@ -1311,7 +1362,7 @@ QED
 val empty_thm = hd(amatch``Relation_empty _ _``);
 
 (* |- Relation_empty = (\x y. F) *)
-Theorem th77: ^(el 125 goals |> concl)
+Theorem th77: ^(el 130 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,EQF_INTRO (SPEC_ALL empty_thm)]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1321,7 +1372,7 @@ QED
 val universe_thm = hd(amatch``Relation_universe _ _``);
 
 (* |- Relation_universe = (\x y. T) *)
-Theorem th78: ^(el 126 goals |> concl)
+Theorem th78: ^(el 131 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,EQT_INTRO(SPEC_ALL universe_thm)]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1344,7 +1395,7 @@ val num_less_ind = hd(amatch``(!x. _ ==> _) ==> !n. P (n:Number_Natural_natural)
            Number_Natural_plus n
              (Number_Natural_plus n (Number_Natural_suc Number_Natural_zero)))
  *)
-Theorem th79: ^(el 127 goals |> concl)
+Theorem th79: ^(el 132 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,bit1_thm,plus_suc]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1365,7 +1416,7 @@ val if_id   = hd(amatch``if _ then x else x``);
 val less_or_eq   = hd(amatch``Number_Natural_lesseq _ _ <=> (Number_Natural_less _ _) \/ _``);
 
 (* |- Number_Natural_max = (\m n. if Number_Natural_less m n then n else m) *)
-Theorem th80: ^(el 128 goals |> concl)
+Theorem th80: ^(el 133 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,max_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1382,7 +1433,7 @@ QED
 val min_thm = hd(amatch``Number_Natural_min _ _ = COND _ _ _``);
 
 (* |- Number_Natural_min = (\m n. if Number_Natural_less m n then m else n) *)
-Theorem th81: ^(el 129 goals |> concl)
+Theorem th81: ^(el 134 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,min_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1399,7 +1450,7 @@ QED
 val greater_thm   = hd(amatch``Number_Natural_greater _ _ = _``);
 
 (* |- Number_Natural_greater = (\m n. Number_Natural_less n m) *)
-Theorem th82: ^(el 130 goals |> concl)
+Theorem th82: ^(el 135 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,greater_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1409,7 +1460,7 @@ QED
 val greatereq_thm = hd(amatch``Number_Natural_greatereq _ _``);
 
 (* |- Number_Natural_greatereq = (\m n. Number_Natural_greater m n \/ m = n) *)
-Theorem th83: ^(el 131 goals |> concl)
+Theorem th83: ^(el 136 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,greatereq_thm,less_or_eq,greater_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1440,7 +1491,7 @@ QED
 (* |- Number_Natural_less =
       (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n)
  *)
-Theorem th84: ^(el 132 goals |> concl)
+Theorem th84: ^(el 137 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ qx_genl_tac[`a`,`b`]
@@ -1501,7 +1552,7 @@ Proof
 QED
 
 (* |- Number_Natural_lesseq = (\m n. Number_Natural_less m n \/ m = n) *)
-Theorem th85: ^(el 133 goals |> concl)
+Theorem th85: ^(el 138 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1511,7 +1562,7 @@ QED
 val irreflexive_thm = hd(amatch``Relation_irreflexive _ = _``);
 
 (* |- Relation_irreflexive = (\R. !x. ~R x x) *)
-Theorem th86: ^(el 134 goals |> concl)
+Theorem th86: ^(el 139 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm, irreflexive_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1522,7 +1573,7 @@ QED
 val reflexive_thm = hd(amatch``Relation_reflexive _ = _``);
 
 (* |- Relation_reflexive = (\R. !x. R x x) *)
-Theorem th87: ^(el 135 goals |> concl)
+Theorem th87: ^(el 140 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm, reflexive_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1532,7 +1583,7 @@ QED
 val transitive_thm = hd(amatch``Relation_transitive s <=> _``);
 
 (* |- Relation_transitive = (\R. !x y z. R x y /\ R y z ==> R x z) *)
-Theorem th88: ^(el 136 goals |> concl)
+Theorem th88: ^(el 141 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,transitive_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1544,7 +1595,7 @@ val wellFounded_thm = hd(amatch``Relation_wellFounded r <=> !p. (?x. _) ==> _``)
 (* |- Relation_wellFounded =
       (\R. !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b)
  *)
-Theorem th89: ^(el 137 goals |> concl)
+Theorem th89: ^(el 142 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ PURE_REWRITE_TAC[wellFounded_thm]
@@ -1562,7 +1613,7 @@ val subrelation_thm  = hd(amatch``Relation_subrelation x s <=> !x y. _``);
            !P. (!x y. R x y ==> P x y) /\ (!x y z. P x y /\ P y z ==> P x z) ==>
                P a b)
  *)
-Theorem th90: ^(el 138 goals |> concl)
+Theorem th90: ^(el 143 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ PURE_REWRITE_TAC[tc_def,bigIntersect_thm,mem_fromPred]
@@ -1577,7 +1628,7 @@ Proof
 QED
 
 (* |- Relation_subrelation = (\R1 R2. !x y. R1 x y ==> R2 x y) *)
-Theorem th91: ^(el 139 goals |> concl)
+Theorem th91: ^(el 144 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,subrelation_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1592,7 +1643,7 @@ val mem_union = hd(amatch``Set_member _ (Set_union _ _) <=> _``);
 val mem_toSet = hd(amatch``Set_member _ (Relation_toSet _)``);
 
 (* |- Relation_intersect = (\R1 R2 x y. R1 x y /\ R2 x y) *)
-Theorem th92: ^(el 140 goals |> concl)
+Theorem th92: ^(el 145 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,intersect_thm,fromSet_thm,mem_inter,mem_toSet]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1600,7 +1651,7 @@ Proof
 QED
 
 (* |- Relation_union = (\R1 R2 x y. R1 x y \/ R2 x y) *)
-Theorem th93: ^(el 141 goals |> concl)
+Theorem th93: ^(el 146 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,union_thm,fromSet_thm,mem_union,mem_toSet]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1610,7 +1661,7 @@ QED
 val o_thm = hd(amatch``(Function_o _ _) _ = _``);
 
 (* |- Function_o = (\f g x. f (g x)) *)
-Theorem th94: ^(el 142 goals |> concl)
+Theorem th94: ^(el 147 goals |> concl)
 Proof
   PURE_REWRITE_TAC[GSYM fun_eq_thm,o_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -1640,7 +1691,7 @@ val th94' = store_thm
  *)
 
 (* |- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w *)
-Theorem th96: ^(el 144 goals |> concl)
+Theorem th96: ^(el 149 goals |> concl)
 Proof
    rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
@@ -1649,7 +1700,7 @@ Proof
 QED
 
 (* |- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w *)
-Theorem th97: ^(el 145 goals |> concl)
+Theorem th97: ^(el 150 goals |> concl)
 Proof
   rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
@@ -1711,73 +1762,73 @@ Proof
 QED
 
 (* |- !c a b. ~(if c then a else b) <=> (~c \/ ~a) /\ (c \/ ~b) *)
-Theorem thx15: ^(el 15 goals |> concl)
+Theorem thx15: ^(el 17 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !a b c. (a ==> (b <=> c)) /\ b ==> ~a \/ c *)
-Theorem thx20: ^(el 20 goals |> concl)
+Theorem thx20: ^(el 22 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !a b b'. (~a ==> (b <=> b')) ==> (a \/ b <=> a \/ b') *)
-Theorem thx21: ^(el 21 goals |> concl)
+Theorem thx21: ^(el 23 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !a b b'. (~a ==> (b <=> b')) ==> ~a ==> (a \/ b <=> b') *)
-Theorem thx22: ^(el 22 goals |> concl)
+Theorem thx22: ^(el 24 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !x y. (x <=/=> y) <=> (x \/ y) /\ (~x \/ ~y) *)
-Theorem thx24: ^(el 24 goals |> concl)
+Theorem thx24: ^(el 26 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !a b. (a <=/=> b) <=> (a <=> ~b) *)
-Theorem thx25: ^(el 25 goals |> concl)
+Theorem thx25: ^(el 27 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !x y. (x <=> y) <=> (x \/ ~y) /\ (~x \/ y) *)
-Theorem thx27: ^(el 27 goals |> concl)
+Theorem thx27: ^(el 29 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !t1 t2. (t1 <=> t2) <=> t1 /\ t2 \/ ~t1 /\ ~t2 *)
-Theorem thx28: ^(el 28 goals |> concl)
+Theorem thx28: ^(el 30 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !x y. x ==> y <=> y \/ ~x *)
-Theorem thx30: ^(el 30 goals |> concl)
+Theorem thx30: ^(el 32 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !A B. A ==> B <=> ~A \/ B *)
-Theorem thx31: ^(el 31 goals |> concl)
+Theorem thx31: ^(el 33 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !a b. (a ==> b) /\ (~a ==> b) ==> b *)
-Theorem thx33: ^(el 33 goals |> concl)
+Theorem thx33: ^(el 35 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !a b. a \/ b ==> ~a ==> b *)
-Theorem thx35: ^(el 35 goals |> concl)
+Theorem thx35: ^(el 37 goals |> concl)
 Proof
   DECIDE_TAC
 QED
@@ -1792,223 +1843,223 @@ QED
    "different constants named HOL4.marker.Abbrev". *)
 
 (* |- !a. a /\ ~a ==> F *)
-Theorem thx44: ^(el 44 goals |> concl)
+Theorem thx44: ^(el 46 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !x. (~x ==> F) ==> x *)
-Theorem thx46: ^(el 46 goals |> concl)
+Theorem thx46: ^(el 48 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- !f x. f x = Function_id f x *)
-Theorem thx47: ^(el 47 goals |> concl)
+Theorem thx47: ^(el 49 goals |> concl)
 Proof
   combinator_tac
 QED
 
 (* |- !s t. s = (\x. t x) <=> !x. s x = t x *)
-Theorem thx51: ^(el 51 goals |> concl)
+Theorem thx51: ^(el 54 goals |> concl)
 Proof
   metis_tac[]
 QED
 
 (* |- !p. $?! p <=> (?x. p x) /\ !x y. p x /\ p y ==> x = y *)
-Theorem thx60: ^(el 60 goals |> concl)
+Theorem thx60: ^(el 63 goals |> concl)
 Proof
   metis_tac[]
 QED
 
 (* |- !p. ~$?! p <=> (!x. ~p x) \/ ?x y. p x /\ p y /\ x <> y *)
-Theorem thx61: ^(el 61 goals |> concl)
+Theorem thx61: ^(el 64 goals |> concl)
 Proof
   metis_tac[]
 QED
 
 (* |- !x y. (\v. x v y) = Function_flip x y *)
-Theorem thx63: ^(el 63 goals |> concl)
+Theorem thx63: ^(el 66 goals |> concl)
 Proof
   combinator_tac
 QED
 
 (* |- !x y. (\v. x v (y v)) = Function_Combinator_s x y *)
-Theorem thx64: ^(el 64 goals |> concl)
+Theorem thx64: ^(el 67 goals |> concl)
 Proof
   combinator_tac
 QED
 
 (* |- !x y. (\v. x (y v)) = Function_o x y *)
-Theorem thx65: ^(el 65 goals |> concl)
+Theorem thx65: ^(el 68 goals |> concl)
 Proof
   combinator_tac
 QED
 
 (* |- !P p. P p <=> (p ==> P T) /\ (~p ==> P F) *)
-Theorem thx67: ^(el 67 goals |> concl)
+Theorem thx67: ^(el 70 goals |> concl)
 Proof
   rpt gen_tac \\ BOOL_CASES_TAC ``p:bool`` \\ REWRITE_TAC[]
 QED
 
 (* |- (!b e. (if b then T else e) <=> b \/ e) /\ (!b t. (if b then t else T) <=> b ==> t) /\ (!b e. (if b then F else e) <=> ~b /\ e) /\ !b t. (if b then t else F) <=> b /\ t *)
-Theorem thx78: ^(el 78 goals |> concl)
+Theorem thx78: ^(el 81 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- x = x /\ (x <> y \/ x <> z \/ y = z) *)
-Theorem thx86: ^(el 86 goals |> concl)
+Theorem thx86: ^(el 89 goals |> concl)
 Proof
   metis_tac[]
 QED
 
 (* |- LET f (Function_id x) = f x *)
-Theorem thx95: ^(el 95 goals |> concl)
+Theorem thx95: ^(el 98 goals |> concl)
 Proof
   PURE_REWRITE_TAC[id_thm,boolTheory.LET_THM] \\ REFL_TAC
 QED
 
 (* |- p <=> ~p ==> F *)
-Theorem thx98: ^(el 98 goals |> concl)
+Theorem thx98: ^(el 101 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- ~(?!x. P x) <=> (!x. ~P x) \/ ?x x'. P x /\ P x' /\ x <> x' *)
-Theorem thx100: ^(el 100 goals |> concl)
+Theorem thx100: ^(el 103 goals |> concl)
 Proof
   metis_tac[]
 QED
 
 (* |- ~~p <=> p *)
-Theorem thx101: ^(el 101 goals |> concl)
+Theorem thx101: ^(el 104 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- ~(p /\ q) <=> ~p \/ ~q *)
-Theorem thx102: ^(el 102 goals |> concl)
+Theorem thx102: ^(el 105 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (p <=/=> q) <=> (p \/ q) /\ (~p \/ ~q) *)
-Theorem thx103: ^(el 103 goals |> concl)
+Theorem thx103: ^(el 106 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (p <=/=> q) <=> p /\ ~q \/ ~p /\ q *)
-Theorem thx104: ^(el 104 goals |> concl)
+Theorem thx104: ^(el 107 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- ~(p ==> q) <=> p /\ ~q *)
-Theorem thx105: ^(el 105 goals |> concl)
+Theorem thx105: ^(el 108 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- ~(p \/ q) <=> ~p /\ ~q *)
-Theorem thx106: ^(el 106 goals |> concl)
+Theorem thx106: ^(el 109 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- a /\ (b \/ c) <=> a /\ b \/ a /\ c *)
-Theorem thx107: ^(el 107 goals |> concl)
+Theorem thx107: ^(el 110 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (a /\ b) /\ c <=> b /\ a /\ c *)
-Theorem thx108: ^(el 108 goals |> concl)
+Theorem thx108: ^(el 111 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (a \/ b) /\ c <=> a /\ c \/ b /\ c *)
-Theorem thx109: ^(el 109 goals |> concl)
+Theorem thx109: ^(el 112 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (p <=> q) <=> (p \/ ~q) /\ (~p \/ q) *)
-Theorem thx113: ^(el 113 goals |> concl)
+Theorem thx113: ^(el 117 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (p <=> q) <=> p /\ q \/ ~p /\ ~q *)
-Theorem thx114: ^(el 114 goals |> concl)
+Theorem thx114: ^(el 118 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- a ==> b <=> ~a \/ b *)
-Theorem thx115: ^(el 115 goals |> concl)
+Theorem thx115: ^(el 119 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- p ==> q <=> ~p \/ q *)
-Theorem thx116: ^(el 116 goals |> concl)
+Theorem thx116: ^(el 120 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- ~p ==> p <=> p *)
-Theorem thx118: ^(el 118 goals |> concl)
+Theorem thx118: ^(el 122 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- a \/ b <=> ~b ==> a *)
-Theorem thx119: ^(el 119 goals |> concl)
+Theorem thx119: ^(el 124 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- a \/ b /\ c <=> (a \/ b) /\ (a \/ c) *)
-Theorem thx120: ^(el 120 goals |> concl)
+Theorem thx120: ^(el 125 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- a /\ b \/ c <=> (a \/ c) /\ (b \/ c) *)
-Theorem thx121: ^(el 121 goals |> concl)
+Theorem thx121: ^(el 126 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (a \/ b) \/ c <=> b \/ a \/ c *)
-Theorem thx122: ^(el 122 goals |> concl)
+Theorem thx122: ^(el 127 goals |> concl)
 Proof
   DECIDE_TAC
 QED
 
 (* |- (\a. a) = Function_id *)
-Theorem thx124: ^(el 124 goals |> concl)
+Theorem thx124: ^(el 129 goals |> concl)
 Proof
   combinator_tac
 QED
 
 (* |- (!x. P x ==> Q x) ==> $? P ==> $? Q *)
-Theorem thx143: ^(el 143 goals |> concl)
+Theorem thx143: ^(el 148 goals |> concl)
 Proof
   PURE_ONCE_REWRITE_TAC[eta_exists] \\ metis_tac[]
 QED
 
 (* |- v = v' ==> LET f v = LET f (Function_id v') *)
-Theorem thx146: ^(el 146 goals |> concl)
+Theorem thx146: ^(el 152 goals |> concl)
 Proof
   strip_tac \\ PURE_REWRITE_TAC[id_thm] \\ ASM_REWRITE_TAC[]
 QED
 
 (* |- (a <=> b) ==> b \/ ~a *)
-Theorem thx147: ^(el 147 goals |> concl)
+Theorem thx147: ^(el 153 goals |> concl)
 Proof
   DECIDE_TAC
 QED

@@ -134,6 +134,8 @@ sig
   val fupd_lambda    : (string list -> string list) -> special_info ->
                        special_info
 
+  val prec_matrix : grammar -> parse_term_dtype.prec_matrix option ref
+
   type ruleset
   val rules          : grammar -> (int option * grammar_rule) list
   val ruleset        : grammar -> ruleset

@@ -4,6 +4,9 @@ Ancestors
 Libs
   bnfBase bnfLib
 
+(* cardinalTheory keeps the sets' own exponent to itself, since the
+   datatype package makes it everyone's ancestor *)
+Overload "**"[local] = “set_exp”
 (* example defining a mutually recursive pair of types that one would
    specify as
 

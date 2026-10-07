@@ -2211,7 +2211,10 @@ Proof
  >> simp [Once from_rose_def]
 QED
 
-Theorem rose_tree_induction[allow_rebind] = from_rose_ind;
+(* from_rose needs no termination argument — the recursion is the one the
+   type's own axiom hands over — so what TFL says of it is nothing, and
+   the induction principle to use is the type's own *)
+val rose_tree_induction = TypeBase.induction_of “:'a rose_tree”;
 
 Theorem from_rose_11 :
     !r1 r2. from_rose r1 = from_rose r2 <=> r1 = r2
@@ -2224,11 +2227,14 @@ Proof
  >> rpt STRIP_TAC
  >> Cases_on ‘r2’
  >> fs [from_rose_def]
- >> POP_ASSUM MP_TAC
+ (* the equation between the mapped lists, and then the induction
+    hypothesis at the element the two lists differ at *)
+ >> Q.PAT_X_ASSUM ‘MAP from_rose _ = MAP from_rose _’ MP_TAC
  >> rw [LIST_EQ_REWRITE, EL_MAP]
- >> rename1 ‘n < LENGTH l’
- >> Q.PAT_X_ASSUM ‘!r1. MEM r1 ts ==> P’ (MP_TAC o Q.SPEC ‘EL n ts’)
- >> rw [EL_MEM, EL_MAP]
+ >> Q.PAT_X_ASSUM ‘∀r1. MEM r1 _ ⇒ _’ (MP_TAC o Q.SPEC ‘EL x l’)
+ >> rw [EL_MEM]
+ >> fs [EL_MAP]
+ >> metis_tac []
 QED
 
 Theorem ltree_finite_from_rose:
@@ -2243,7 +2249,7 @@ Proof
     \\ first_assum (qspec_then `h` assume_tac) \\ fs []
     \\ qexists_tac `r::rs` \\ fs [])
   \\ fs [PULL_EXISTS]
-  \\ ho_match_mp_tac from_rose_ind \\ rw []
+  \\ ho_match_mp_tac rose_tree_induction \\ rw []
   \\ once_rewrite_tac [ltree_finite_cases]
   \\ fs [from_rose_def,Branch_11]
   \\ CONV_TAC (DEPTH_CONV ETA_CONV)

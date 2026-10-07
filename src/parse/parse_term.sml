@@ -89,7 +89,6 @@ structure STBSTab = Table(struct
   val ord = pair_compare(pair_compare(ST_compare, bool_compare), ST_compare)
   fun pp _ = HOLPP.add_string "<stbs-key>"
 end)
-type 'a stbstab = 'a STBSTab.table
 
 structure RElist_Tab = Table(struct
   type key = rule_element list
@@ -99,8 +98,7 @@ end)
 
 (* Tiny ref wrappers — preserve the original Polyhash idiom (a refcell
    containing a dict updated in place by the building code). *)
-fun stbs_peek (r : 'a STBSTab.table Uref.t) k = STBSTab.lookup (Uref.!r) k
-fun stbs_peekInsert r (k, v) =
+fun stbs_peekInsert (r : 'a STBSTab.table Uref.t) (k, v) =
     case STBSTab.lookup (Uref.!r) k of
         NONE => (Uref.:= (r, STBSTab.update (k, v) (Uref.!r)); NONE)
       | x => x
@@ -198,7 +196,7 @@ fun STtoString (G:grammar) x =
   | EndBinding => #endbinding (specials G) ^ " (end binding)"
   | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
-fun mk_prec_matrix G = let
+fun mk_prec_matrix0 G = let
   exception BadTokList
   type dict = mx_order STBSTab.table Uref.t
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
@@ -216,27 +214,15 @@ fun mk_prec_matrix G = let
       *)
 
   val rule_elements = term_grammar.rule_elements o #elements
-  val complained_this_iteration = Uref.new false
+  val ambiguity = Uref.new NONE
   fun insert_bail k =
       (stbs_insert matrix (k, PM_LESS MS_Multi);
-       let open Uref in complained_this_iteration := true end;
-       if not (!complained_already) andalso
-          (!Globals.interactive orelse !ambigrm = 2)
-       then let
-           val msg = "Grammar ambiguous on token pair "^
-                     STtoString G (#1 (#1 k)) ^ " and " ^
-                     STtoString G (#2 k) ^ ", and "^
-                     "probably others too"
-         in
-           case !ambigrm of
-             0 => ()
-           | 1 => (Feedback.HOL_WARNING "Parse" "Term" msg;
-                   complained_already := true)
-           | 2 => raise Feedback.mk_HOL_ERR "parse_term" "mk_prec_matrix" msg
-           | _ => raise Fail "parse_term: matrix construction invariant fail!"
-         end
-       else
-         ())
+       if isSome (Uref.!ambiguity) then ()
+       else Uref.:= (ambiguity,
+                     SOME ("Grammar ambiguous on token pair "^
+                           STtoString G (#1 (#1 k)) ^ " and " ^
+                           STtoString G (#2 k) ^ ", and "^
+                           "probably others too")))
   fun insert k v = let
     val insert_result = stbs_peekInsert matrix (k, v)
     val raw_insert = stbs_insert matrix
@@ -511,10 +497,34 @@ in
   insert_rhs_relns () ;
   insert_lhs_relns () ;
   apply_them_all process_rule Grules;
-  if (not (Uref.!complained_this_iteration)) then complained_already := false
-  else ();
-  matrix
+  {lookup = STBSTab.lookup (Uref.!matrix), ambiguity = Uref.!ambiguity}
 end
+
+fun report_ambiguity ({ambiguity, ...} : prec_matrix) =
+    case ambiguity of
+      NONE => complained_already := false
+    | SOME msg =>
+        if not (!complained_already) andalso
+           (!Globals.interactive orelse !ambigrm = 2)
+        then
+          case !ambigrm of
+            0 => ()
+          | 1 => (Feedback.HOL_WARNING "Parse" "Term" msg;
+                  complained_already := true)
+          | 2 => raise Feedback.mk_HOL_ERR "parse_term" "mk_prec_matrix" msg
+          | _ => raise Fail "parse_term: matrix construction invariant fail!"
+        else ()
+
+fun mk_prec_matrix G =
+    let
+      val cache = term_grammar.prec_matrix G
+      val m = case !cache of
+                SOME m => m
+              | NONE => let val m = mk_prec_matrix0 G in cache := SOME m; m end
+    in
+      report_ambiguity m;
+      m
+    end
 
 (* string is name of term; list of pairs, is list of token-pairs between
    which a list style reduction is required *)
@@ -743,7 +753,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
       isSome (findpos (fn (SUFFIX TYPE_annotation) => true | _ => false)
                       Grules)
       orelse raise Fail "Grammar must allow type annotation"
-  val prec_matrix = mk_prec_matrix G
+  val prec_lookup = #lookup (mk_prec_matrix G)
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
   val binder_table = let
@@ -831,7 +841,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         case rest of
           [] => FAILloc x1locn "find_reduction : impossible"
         | (((Terminal x2,x2locn), _)::_) => let
-            val res = valOf (stbs_peek prec_matrix ((x2,false),x1))
+            val res = valOf (prec_lookup ((x2,false),x1))
               handle Option =>
                 FAILloc (locn.between x2locn x1locn)
                         ("No relation between "^STtoString G x2^" and "^
@@ -851,7 +861,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
             case rest2 of
               [] => FAILloc t2locn "find_reduction : nonterminal at stack base!"
             | (((Terminal x2,x2locn), _)::_) => let
-                val res = valOf (stbs_peek prec_matrix ((x2,true), x1))
+                val res = valOf (prec_lookup ((x2,true), x1))
                   handle Option =>
                     FAILloc (locn.between x2locn t2locn)
                             ("No relation between "^STtoString G x2^" and "^
@@ -1507,7 +1517,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
           | ((Terminal _,_), _) :: _ => return (false,stk)
           | _ => return (true,stk)
       fun check_order (topntp,stk) =
-          case stbs_peek prec_matrix ((top,topntp), input_term) of
+          case prec_lookup ((top,topntp), input_term) of
             NONE => let
               val msg = "Don't expect to find a "^STtoString G input_term^
                         " in this position after a "^STtoString G top^"\n"^

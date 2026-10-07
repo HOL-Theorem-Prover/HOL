@@ -27,10 +27,17 @@ structure TacticWalker :> sig
      decides whether the cursor has passed one. *)
   val fragSpan : TacticParse.tac_frag -> (int * int) option
 
+  (* The span of the combinator token itself, for the fragments that
+     record one: a `>-', `by' or `suffices_by' bracket.  NONE for every
+     other fragment.  A caller reporting a failed branch points here
+     rather than at `fragSpan', which is the branch. *)
+  val combinatorSpan : TacticParse.tac_frag -> (int * int) option
+
   val walkTo : {
     plugins: LSPExtension.plugin_data,
     theoremName: string,
     theoremStart: int,   (* file byte offset of the theorem's dec *)
+    goalText: string,    (* the theorem's statement, as written *)
     tacText: string,
     startState: goalFrag.goalstate,
     frags: TacticParse.tac_frag list,
@@ -127,8 +134,20 @@ fun compileAndApplyLT src state =
    discharge the focused goal entirely, so its only effect on what
    follows is that one goal is gone -- which `cheat' reproduces
    exactly, at no cost.  Verified against real branches: the goal
-   lists coincide. *)
-fun cheatBranch state = compileAndApply "bossLib.cheat" state
+   lists coincide.
+
+   Applied as a value rather than compiled from source.  A server in
+   any directory below `src/boss' runs on `bin/hol.state0', which has
+   no bossLib, and a `Theory foo[bare]' header opens none either, so
+   compiling a name for `cheat' there failed -- and the skip then
+   reported a branch-advance failure that `goal_state_init' silenced
+   as source noise, leaving every query inside a THENL showing the
+   block's first branch. *)
+fun cheatBranch state =
+  case Portable.total (goalFrag.expand Tactical.cheat (Context.snapshot()))
+                      state of
+      NONE => Rejected ApplyFailed
+    | SOME state' => Applied state'
 
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
@@ -210,12 +229,12 @@ fun openThen1With src state =
 
 fun applyOpen tacText ok state = case ok of
     FOpen           => Portable.total goalFrag.open_paren      state
-  | FOpenThen1      => Portable.total goalFrag.open_then1      state
-  | FOpenBy q       =>
+  | FOpenThen1 _    => Portable.total goalFrag.open_then1      state
+  | FOpenBy (q, _)  =>
       openThen1With
         ("BasicProvers.byA (" ^ textAt tacText q ^ ", Tactical.ALL_TAC)")
         state
-  | FOpenSufficesBy q =>
+  | FOpenSufficesBy (q, _) =>
       openThen1With
         ("BasicProvers.suffices_byA (" ^ textAt tacText q ^
          ", Tactical.ALL_TAC)") state
@@ -304,10 +323,16 @@ and firstSectionStart sections = case sections of
          NONE => firstSectionStart rest
        | some => some)
 
+(* `FOpenThen1' is deliberately absent from the two cases below, even
+   though it carries a span of its own: this start is what
+   `walkFrag' compares the cursor against to decide whether a bracket
+   has been entered.  A `>-' starting at its combinator rather than at
+   its branch would make a cursor sitting on the `>-' open and walk the
+   branch, where today it reports the state the branch starts from. *)
 and bracketStartByte ok te firstInner =
   case ok of
-    FOpenBy (s, _) => SOME s
-  | FOpenSufficesBy (s, _) => SOME s
+    FOpenBy ((s, _), _) => SOME s
+  | FOpenSufficesBy ((s, _), _) => SOME s
   | _ => (case topSpan te of
       SOME (s, _) => SOME s
     | NONE => (case TacticSteps.atomSpan te of
@@ -333,6 +358,23 @@ fun fragSpan frag =
       (SOME s, SOME e) => SOME (s, e)
     | _ => NONE
 
+(* The combinator token alone, for the three that record where they
+   were written: `>-' (and `THEN1', `>>-'), `by' and `suffices_by'.
+   Answers for a failed open as well as for a failed close -- an open's
+   fragment has no extent at all, so a caller reporting one otherwise
+   has nowhere to point. *)
+fun combinatorSpan frag = let
+  fun ofOpen ok = case ok of
+      FOpenThen1 k           => SOME k
+    | FOpenBy (_, k)         => SOME k
+    | FOpenSufficesBy (_, k) => SOME k
+    | _ => NONE
+in case frag of
+     FBracket (ok, _, _, _) => ofOpen ok
+   | FFOpen ok => ofOpen ok
+   | _ => NONE
+end
+
 (* Steps a fragment list contributes to `stepIdx', mirroring exactly
    what the walk counts.  Skipping a branch must advance the index by
    what walking it would have, or snapshots recorded by one query
@@ -351,7 +393,12 @@ and countFrag f = case f of
   | FFOpen _ | FFMid _ | FFClose _ => 0
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
+(* `goalText' and `tacText' are together what the entry is addressed
+   by: a snapshot is a state some prefix of the tactics reached from
+   the statement, so either one changing makes it a state about a
+   different proof. *)
 type cacheEntry = {
+  goalText: string,
   tacText: string,
   theoremStart: int,
   snapshots: snap list}
@@ -411,11 +458,21 @@ fun commonPrefixLen (a, b) = let
              else go (i + 1)
   in go 0 end
 
+(* A changed statement invalidates the whole entry, not a suffix of
+   it: there is no prefix of the tactics that is still about the old
+   goal.  The prune in `notifyCompileStart' below does not catch this
+   one -- it drops the entries that start at or after the edit, and an
+   edit *within* a statement is after that theorem's own start -- and
+   nothing downstream would: `startState' is reparsed from the buffer
+   every time, but a surviving snapshot outranks it. *)
 fun resumeFrom NONE _ startState = (0, startState, [])
-  | resumeFrom (SOME cacheRef) {theoremName, tacText, cursor} startState =
+  | resumeFrom (SOME cacheRef) {theoremName, goalText, tacText, cursor}
+               startState =
       case Binarymap.peek (!cacheRef, theoremName) of
         NONE => (0, startState, [])
-      | SOME {tacText = t, snapshots, ...} => let
+      | SOME {goalText = g, tacText = t, snapshots, ...} =>
+        if g <> goalText then (0, startState, [])
+        else let
           val validUpTo = if t = tacText then String.size t
                           else commonPrefixLen (t, tacText)
           val kept = List.filter (fn s => #endByte s <= validUpTo) snapshots
@@ -450,6 +507,19 @@ type walkenv = {tacText: string, cursor: int, resumeIdx: int,
    the walk lands on an empty focus, `walkTo' runs it again with
    `cheatLT' false and reports that instead. *)
 val cheatedLT = ref false
+
+(* The first failure the walk stood `cheat' in for and ran past.  A
+   `>-' branch owes the goal it was handed a discharge, and that
+   discharge is its whole effect on what follows -- so once the
+   cursor has left the branch, a branch that did not pay is treated
+   as though it had, and the goals after it come into view.  The debt
+   is not forgiven: `walkTo' reads this and hands it back as the
+   failure, beside the state the cursor asked for.  A reader whose
+   cursor is still in the branch sees the goal it owes instead, which
+   is where someone fixing it has their cursor anyway. *)
+val recoveredFail : (tac_frag * failkind) option ref = ref NONE
+fun noteRecovered f =
+  if isSome (!recoveredFail) then () else recoveredFail := SOME f
 
 fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
              stepIdx frag =
@@ -504,6 +574,41 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
      hide the inner TacsToLT context from `pp_goalstate`. *)
   | FBracket (FOpenNullOk, inner, _, _) =>
       walkFrags env state snaps stepIdx inner
+  (* An empty body is a branch the user has not written yet.  `>-'
+     with nothing after it parses to a `RepairEmpty', which `linearize'
+     drops, so `inner' arrives empty -- and then nothing carries an end
+     byte: the `>-' wrapper has no span of its own and there is no last
+     fragment to borrow one from.  The general case below would fall to
+     its `NONE' arm and bail as opaque, which `failMsg' reports as a
+     branch that did not prove its goal: a close that never ran,
+     described as one that failed.  Open the bracket and stop instead --
+     what is wanted at that cursor is the goal the branch was handed.
+
+     A written `>- ALL_TAC' does not come here.  It linearizes to an
+     `FGroup', which carries a span of its own, so an empty `inner'
+     means the operand is genuinely absent.
+
+     Opening is still conditional on the cursor having reached the
+     combinator, as it is for every other bracket.  The boundary comes
+     from the combinator token rather than from the branch's first
+     token, which is what `bracketStartByte' answers and what the
+     general case asks it for: there is no branch to take one from,
+     and `firstFragStart []' is NONE, which `startsAfter' reads as
+     "not before".  Without this the line the `>-' was written on and
+     the line above it report the same state, and the goals `>-' is
+     about to act on are nowhere to be seen. *)
+  | FBracket (ok, [], _, _) =>
+      if not replaying andalso
+         startsAfter cursor (Option.map #1 (combinatorSpan (FFOpen ok)))
+      then Halted {state = state, snaps = snaps, stepIdx = stepIdx}
+      else if replaying then
+        Done {state = state, snaps = snaps, stepIdx = stepIdx}
+      else (case applyOpen tacText ok state of
+              NONE => Failed {state = state, snaps = snaps,
+                              stepIdx = stepIdx, at = FFOpen ok,
+                              why = ApplyFailed}
+            | SOME state' =>
+                Halted {state = state', snaps = snaps, stepIdx = stepIdx})
   | FBracket (ok, inner, cc, te) =>
       (case bracketEndByteB te (fn () => lastFragEnd inner) of
         SOME (be, borrowed) =>
@@ -521,14 +626,64 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                                       stepIdx = stepIdx, at = FFOpen ok,
                                        why = ApplyFailed}
                     | SOME state' => k state')
+            (* Only these three oblige what they bracket to prove a
+               goal, so only under these three is `cheat' a faithful
+               stand-in for what the branch owed.  A plain paren
+               demands nothing, and a failure under one is a failure
+               of the proof: it has to stop the walk where it
+               happened. *)
+            val demandsDischarge = case ok of
+                FOpenThen1 _       => true
+              | FOpenBy _          => true
+              | FOpenSufficesBy _  => true
+              | _ => false
+            (* A branch that failed part-way can have left more than
+               one goal in focus; `expand' runs its tactic over all of
+               them, so one round of `cheat' clears the focus and the
+               close is worth another try.
+
+               The empty-focus test is what makes that a loop of two
+               and not a spin: `expand' over no goals *succeeds*,
+               quietly, so "cheat until the close goes through" would
+               never come back if the close were failing for some
+               reason cheating cannot fix -- an inner `rpt' the branch
+               left open, say.  Nothing is claimed in that case. *)
+            fun cheatUntilClosed st =
+              case applyClose cc st of
+                SOME st' => SOME st'
+              | NONE =>
+                if null (goalFrag.top_goals st) then NONE
+                else (case cheatBranch st of
+                        Rejected _ => NONE
+                      | Applied st' => cheatUntilClosed st')
+            (* Reached only past the whole bracket, where the reader
+               has moved on and what they want is what comes next.
+               The index is what a full walk of the branch would have
+               left rather than where this one stopped: a later query
+               replaying this prefix counts every atom in it, and an
+               index that disagrees resumes from a snapshot belonging
+               to a different step.  Same reason the THENL skip below
+               advances by `countSteps'. *)
+            fun recover st snps fail =
+              if not demandsDischarge then NONE
+              else (case cheatUntilClosed st of
+                      NONE => NONE
+                    | SOME st' =>
+                        (noteRecovered fail;
+                         SOME (Done {state = st', snaps = snps,
+                                     stepIdx = stepIdx
+                                               + countSteps inner})))
             (* A bracket wholly inside the replayed prefix had its
                close accounted for as well as its open. *)
             fun closed r =
               if #stepIdx r < resumeIdx then Done r
               else (case applyClose cc (#state r) of
-                      NONE => Failed {state = #state r, snaps = #snaps r,
-                                      stepIdx = #stepIdx r, at = frag,
-                                       why = ApplyFailed}
+                      NONE =>
+                        Option.getOpt
+                          (recover (#state r) (#snaps r) (frag, ApplyFailed),
+                           Failed {state = #state r, snaps = #snaps r,
+                                   stepIdx = #stepIdx r, at = frag,
+                                   why = ApplyFailed})
                     | SOME state'' =>
                         Done {state = state'', snaps = #snaps r,
                               stepIdx = #stepIdx r})
@@ -576,10 +731,21 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                  cache having already absorbed it (0.051s against
                  0.055s on `ssub_cong', whose branch is a `metis_tac'),
                  and it is what makes the close report where the proof
-                 actually stops. *)
+                 actually stops.
+
+                 Where it stops is not where it ends, though.  A
+                 branch that failed and a branch that closed leave
+                 the reader in the same place -- past both of them,
+                 looking at what comes next -- so a failure here is
+                 recovered from rather than propagated, and the
+                 report goes out beside the state that follows. *)
               opened (fn state' =>
                 case walkFrags env state' snaps stepIdx inner of
                   Done r => heldOrClosed r
+                | Failed r =>
+                    Option.getOpt
+                      (recover (#state r) (#snaps r) (#at r, #why r),
+                       Failed r)
                 | out => out)
           end
       | NONE => (* no end position: bail as opaque *)
@@ -599,57 +765,61 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
               case sections of
                 [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
               | [sec] => walkFrags env state snaps stepIdx sec
-              | sec :: rest =>
-                  if mayCheat andalso cheatLT andalso stepIdx >= resumeIdx
-                     andalso cursor >= Option.getOpt
-                                         (firstSectionStart rest, be)
-                  then
-                    (* This branch's turn is over and the cursor is
-                       still inside the block, so only its effect on
-                       the branches after it matters -- and that is
-                       nothing: each gets its own goal, fixed when the
-                       block opened. *)
-                    (cheatedLT := true;
-                     case cheatBranch state of
-                       Rejected why => Failed {state = state, snaps = snaps,
-                                               stepIdx = stepIdx,
-                                               at = FFMid mid, why = why}
-                     | Applied state' =>
-                       (case applyMid mid state' of
-                          NONE => Failed {state = state', snaps = snaps,
-                                          stepIdx = stepIdx, at = FFMid mid,
+              | sec :: rest => let
+                  fun walkIt () =
+                    case walkFrags env state snaps stepIdx sec of
+                      Done r =>
+                        if #stepIdx r < resumeIdx then
+                          (* still replaying: this mid already fired *)
+                          walkSections mayCheat (#state r) (#snaps r)
+                                       (#stepIdx r) rest
+                        (* `walkFrags' says Done as soon as a section's
+                           frags run out, which for an ALL_TAC branch is
+                           immediately.  Only advance once the cursor has
+                           actually reached the next section, so the text
+                           between two branches reports the first one's
+                           result -- solved, or its leftover goals. *)
+                        else if cursor <
+                                Option.getOpt (firstSectionStart rest, be)
+                        then Halted {state = #state r, snaps = #snaps r,
+                                     stepIdx = #stepIdx r}
+                        else
+                        (case applyMid mid (#state r) of
+                           NONE => Failed {state = #state r,
+                                           snaps = #snaps r,
+                                           stepIdx = #stepIdx r,
+                                           at = FFMid mid,
                                            why = ApplyFailed}
-                        | SOME state'' =>
-                            walkSections mayCheat state'' snaps
-                              (stepIdx + countSteps sec) rest))
-                  else
-                  (case walkFrags env state snaps stepIdx sec of
-                     Done r =>
-                       if #stepIdx r < resumeIdx then
-                         (* still replaying: this mid already fired *)
-                         walkSections mayCheat (#state r) (#snaps r)
-                                      (#stepIdx r) rest
-                       (* `walkFrags' says Done as soon as a section's
-                          frags run out, which for an ALL_TAC branch is
-                          immediately.  Only advance once the cursor has
-                          actually reached the next section, so the text
-                          between two branches reports the first one's
-                          result -- solved, or its leftover goals. *)
-                       else if cursor <
-                               Option.getOpt (firstSectionStart rest, be)
-                       then Halted {state = #state r, snaps = #snaps r,
-                                    stepIdx = #stepIdx r}
-                       else
-                       (case applyMid mid (#state r) of
-                          NONE => Failed {state = #state r,
-                                          snaps = #snaps r,
-                                          stepIdx = #stepIdx r,
-                                          at = FFMid mid,
-                                          why = ApplyFailed}
-                        | SOME state' =>
-                            walkSections mayCheat state' (#snaps r)
-                                         (#stepIdx r) rest)
-                   | out => out)
+                         | SOME state' =>
+                             walkSections mayCheat state' (#snaps r)
+                                          (#stepIdx r) rest)
+                    | out => out
+                  in
+                    if mayCheat andalso cheatLT andalso stepIdx >= resumeIdx
+                       andalso cursor >= Option.getOpt
+                                           (firstSectionStart rest, be)
+                    then
+                      (* This branch's turn is over and the cursor is
+                         still inside the block, so only its effect on
+                         the branches after it matters -- and that is
+                         nothing: each gets its own goal, fixed when the
+                         block opened.
+
+                         Skipping is an optimisation, so a branch that
+                         will not go this way is walked rather than
+                         reported: a skip that cannot be applied costs
+                         time, never an answer. *)
+                      (case cheatBranch state of
+                         Rejected _ => walkIt ()
+                       | Applied state' =>
+                         (case applyMid mid state' of
+                            NONE => walkIt ()
+                          | SOME state'' =>
+                              (cheatedLT := true;
+                               walkSections mayCheat state'' snaps
+                                 (stepIdx + countSteps sec) rest)))
+                    else walkIt ()
+                  end
             fun opened k =
               if replaying then k state
               else (case applyOpen tacText ok state of
@@ -730,15 +900,17 @@ and walkFrags (env as {tacText, cursor, resumeIdx, ...}) state snaps
            walkFrags env (#state r) (#snaps r) (#stepIdx r) rest
        | out => out)
 
-fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
-            frags, cursor} = let
+fun walkTo {plugins, theoremName, theoremStart, goalText, tacText,
+            startState, frags, cursor} = let
   val cacheRefOpt = LSPExtension.getPluginData (plugins, cacheTag)
   val (resumeIdx, resumeState, priorSnaps) =
     resumeFrom cacheRefOpt
-      {theoremName = theoremName, tacText = tacText, cursor = cursor}
+      {theoremName = theoremName, goalText = goalText, tacText = tacText,
+       cursor = cursor}
       startState
   fun run cheatLT idx state =
     (cheatedLT := false;
+     recoveredFail := NONE;
      walkFrags {tacText = tacText, cursor = cursor, resumeIdx = idx,
                 cheatLT = cheatLT}
                state priorSnaps 0 frags
@@ -762,9 +934,12 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
     if !cheatedLT andalso null (goalFrag.top_goals (stateOf outcome))
     then run false resumeIdx resumeState
     else outcome
+  (* A walk that ran on past a branch still reports what that branch
+     owed; a walk that stopped reports where it stopped, which is the
+     later news of the two. *)
   val (finalState, allSnaps, failedAt) = case outcome of
-      Done r    => (#state r, #snaps r, NONE)
-    | Halted r  => (#state r, #snaps r, NONE)
+      Done r    => (#state r, #snaps r, !recoveredFail)
+    | Halted r  => (#state r, #snaps r, !recoveredFail)
     | Failed r  => (#state r, #snaps r, SOME (#at r, #why r))
   val _ = case (cacheRefOpt, allSnaps) of
       (SOME cacheRef, _ :: _) => let
@@ -773,7 +948,8 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
                         allSnaps
         in cacheRef := Binarymap.insert
                          (!cacheRef, theoremName,
-                          {tacText = tacText, theoremStart = theoremStart,
+                          {goalText = goalText, tacText = tacText,
+                           theoremStart = theoremStart,
                            snapshots = deduped})
         end
     | _ => ()

@@ -23,6 +23,12 @@ Libs
   boolSimps pred_setLib TotalDefn metisLib quotientLib
   Datatype[qualified] OpenTheoryMap[qualified]
 
+(* the bound is a cardinality, and cardinalityCoreTheory makes no
+   grammar of its own; this is kept to itself so that a theory
+   declaring a datatype does not inherit the notation *)
+Overload "<<="[local] = “cardleq”
+
+
 val ERR = mk_HOL_ERR "listScript"
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
@@ -64,7 +70,10 @@ val PAIR_EQ      = pairTheory.PAIR_EQ;
 (* Declare the datatype of lists                                             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Datatype.Hol_datatype ‘list = NIL | CONS of 'a => list’;
+val _ = Datatype.Hol_datatype
+          ‘list[map=MAP[nocompute],set=LIST_TO_SET[nocompute],rel=LIST_REL,
+            size=list_size] =
+             NIL | CONS of 'a => list’;
 
 local open OpenTheoryMap val cname = OpenTheory_const_name in
 val ns = ["Data","List"]
@@ -103,7 +112,6 @@ val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
 (*---------------------------------------------------------------------------*)
 
 val list_Axiom = TypeBase.axiom_of “:'a list”;
-
 Theorem list_Axiom_old:
   !x f. ?!fn1:'a list -> 'b.
           (fn1 [] = x) /\ (!h t. fn1 (h::t) = f (fn1 t) h t)
@@ -171,15 +179,25 @@ Definition LENGTH[simp]:
   LENGTH (h::t) = SUC (LENGTH t)
 End
 
-Definition MAP[simp]:
-  MAP (f:'a -> 'b) [] = [] /\
-  MAP f (h::t) = f h::MAP f t
-End
+(* MAP and LIST_TO_SET are the datatype package's: the declaration above
+   asks for them by name.  These say what the definitions here used to,
+   in the shape they used to: a consumer that takes the conjunction
+   apart and instantiates it — List_conv's MAP_CONV does — is written
+   against that shape and not merely against the name. *)
+Theorem MAP[simp,compute]:
+  (!f:'a -> 'b. MAP f [] = []) /\
+  (!(f:'a -> 'b) h t. MAP f (h::t) = f h::MAP f t)
+Proof
+  SRW_TAC [] [DB.fetch "list" "MAP_thm"]
+QED
 
-Definition LIST_TO_SET_DEF[simp]:
-  (LIST_TO_SET [] x <=> F) /\
-  (LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
-End
+
+Theorem LIST_TO_SET_DEF[simp,compute]:
+  (!x. LIST_TO_SET [] x <=> F) /\
+  (!h t x. LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
+Proof
+  SRW_TAC [] [DB.fetch "list" "LIST_TO_SET_thm", IN_DEF]
+QED
 
 Overload set = “LIST_TO_SET”
 Overload MEM = “\h:'a l:'a list. h IN LIST_TO_SET l”
@@ -195,7 +213,7 @@ Theorem LIST_TO_SET[simp]:
   LIST_TO_SET [] = {} /\
   LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t
 Proof
-  SRW_TAC [] [FUN_EQ_THM, IN_DEF]
+  SRW_TAC [] [DB.fetch "list" "LIST_TO_SET_thm"]
 QED
 
 Definition FILTER[simp]:
@@ -1431,12 +1449,72 @@ QED
     Lifts a relation point-wise to two lists
    ---------------------------------------------------------------------- *)
 
-Inductive LIST_REL:
-[~nil_rule:]
-  LIST_REL R [] []
-[~cons_I:]
-  !h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==> LIST_REL R (h1::t1) (h2::t2)
-End
+(* The relator is the datatype package's, stated as the map and set
+   functions determine it: two lists are related when a list of pairs
+   maps onto both.  What the inductive definition used to say about the
+   constructors is read back from that, and the rules, the cases and
+   the two induction principles follow. *)
+val LIST_REL_span = DB.fetch "list" "LIST_REL_def"
+
+Theorem LIST_REL_def[simp,compute,allow_rebind]:
+  (LIST_REL R []      []      <=> T) /\
+  (LIST_REL R (a::as) []      <=> F) /\
+  (LIST_REL R []      (b::bs) <=> F) /\
+  (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)
+Proof
+  REWRITE_TAC[LIST_REL_span] THEN BETA_TAC THEN REPEAT CONJ_TAC THEN
+  SRW_TAC[][MAP_EQ_CONS, EQ_IMP_THM] THEN
+  TRY (FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC[][] THEN NO_TAC) THEN
+  TRY (Q.EXISTS_TAC ‘t0’ THEN SRW_TAC[][] THEN METIS_TAC[] THEN NO_TAC) THEN
+  Q.EXISTS_TAC ‘(a,b)::z’ THEN SRW_TAC[][] THEN
+  METIS_TAC[pairTheory.FST, pairTheory.SND]
+QED
+
+Theorem LIST_REL_rules:
+  !R. LIST_REL R [] [] /\
+      !h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==>
+                    LIST_REL R (h1::t1) (h2::t2)
+Proof SRW_TAC[][]
+QED
+
+Theorem LIST_REL_cases:
+  !R a0 a1.
+    LIST_REL R a0 a1 <=>
+    a0 = [] /\ a1 = [] \/
+    ?h1 h2 t1 t2. a0 = h1::t1 /\ a1 = h2::t2 /\ R h1 h2 /\ LIST_REL R t1 t2
+Proof
+  REPEAT GEN_TAC THEN
+  Q.ISPEC_THEN ‘a0’ STRUCT_CASES_TAC list_CASES THEN
+  Q.ISPEC_THEN ‘a1’ STRUCT_CASES_TAC list_CASES THEN SRW_TAC[][]
+QED
+
+Theorem LIST_REL_ind:
+  !R LIST_REL'.
+    LIST_REL' [] [] /\
+    (!h1 h2 t1 t2. R h1 h2 /\ LIST_REL' t1 t2 ==>
+                   LIST_REL' (h1::t1) (h2::t2)) ==>
+    !a0 a1. LIST_REL R a0 a1 ==> LIST_REL' a0 a1
+Proof
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Induct THEN REPEAT GEN_TAC THEN Cases_on ‘a1’ THEN
+  SRW_TAC[][] THEN METIS_TAC[]
+QED
+
+(* Induct_on `LIST_REL` takes the strong principle: that is what
+   Inductive registers (IndDefLib exports <name>_strongind), and a
+   proof that case-splits and then searches needs the relation's own
+   hypothesis in the step case. *)
+Theorem LIST_REL_strongind[rule_induction]:
+  !R LIST_REL'.
+    LIST_REL' [] [] /\
+    (!h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 /\ LIST_REL' t1 t2 ==>
+                   LIST_REL' (h1::t1) (h2::t2)) ==>
+    !a0 a1. LIST_REL R a0 a1 ==> LIST_REL' a0 a1
+Proof
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Induct THEN REPEAT GEN_TAC THEN Cases_on ‘a1’ THEN
+  SRW_TAC[][] THEN METIS_TAC[]
+QED
 
 Theorem LIST_REL_EL_EQN:
   !R l1 l2. LIST_REL R l1 l2 <=>
@@ -1452,14 +1530,6 @@ Proof
                         Q.SPEC_THEN ‘SUC m’ (MP_TAC o Q.GEN ‘m’) th) THEN
     SRW_TAC [] [LIST_REL_rules]
   ]
-QED
-
-Theorem LIST_REL_def[simp,compute]:
-  (LIST_REL R []      []      <=> T) /\
-  (LIST_REL R (a::as) []      <=> F) /\
-  (LIST_REL R []      (b::bs) <=> F) /\
-  (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)
-Proof REPEAT CONJ_TAC THEN SRW_TAC [] [Once LIST_REL_cases, SimpLHS]
 QED
 
 Theorem LIST_REL_mono:

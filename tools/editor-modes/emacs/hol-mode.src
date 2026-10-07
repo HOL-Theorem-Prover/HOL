@@ -2814,6 +2814,11 @@ same thing.  See `hol-lsp-retry-compile'.")
 A hash table from theorem name to (STATUS LINE NAME) -- status is
 one of \"checking\",
 \"proved\", \"failed\", \"suspended\", \"diverged\" or \"cheated\".
+Of those, \"proved\" and \"suspended\" are settled: a proof that
+suspends has run and done what it said, and the subgoals it stashed
+are proved by the `Resume' blocks, which are pool entries in their
+own right.  \"checking\" and \"cheated\" are outstanding, and
+\"failed\" and \"diverged\" want attention.
 Built from the `$/proofStates' transition stream: the server
 announces each change as it happens and never sends a snapshot, so a
 client accumulates.  nil until the first notification arrives.")
@@ -2886,14 +2891,16 @@ the end of the buffer go."
   "Proofs this buffer's pool has not settled, as (NAME STATUS LINE).
 Sorted by position, so walking them goes down the file.  `checking'
 and `cheated' are outstanding -- one has a worker on it, the other is
-waiting for the compile to re-enqueue it -- and the three bad verdicts
+waiting for the compile to re-enqueue it -- and the two bad verdicts
 are listed too, since those are what a user most wants to reach.
-`proved' is not listed: it is the state that needs nothing."
+`proved' is not listed: it is the state that needs nothing.  Nor is
+`suspended', which `hol-lsp-proof-summary' also counts as checked --
+see there for why."
   (let (out)
     (when hol-lsp--proof-states
       (maphash (lambda (_k v)
                  (let ((status (nth 0 v)) (line (nth 1 v)) (name (nth 2 v)))
-                   (unless (equal status "proved")
+                   (unless (member status '("proved" "suspended"))
                      (push (list name
                                  (if (equal status "cheated")
                                      "not checked" status)
@@ -2961,7 +2968,24 @@ from 30 to 12 reads as what it is."
                          ;; does.  Either way it is not checked.
                          ((equal status "cheated")
                           (setq unchecked (1+ unchecked)))
-                         ((equal status "proved") (setq proved (1+ proved)))
+                         ;; `suspended' is settled, not outstanding.
+                         ;; Splitting a long proof with `suspend' and
+                         ;; finishing it off in `Resume' blocks is how
+                         ;; the feature is meant to be used: the tactic
+                         ;; ran, for real, and did what it said, and
+                         ;; what is left to prove lives in the Resume
+                         ;; blocks, which have pool entries of their
+                         ;; own.  The server stopped treating it as a
+                         ;; diagnostic for the same reason -- if there
+                         ;; is nothing to squiggle there is nothing to
+                         ;; look at.
+                         ((member status '("proved" "suspended"))
+                          (setq proved (1+ proved)))
+                         ;; `failed', `diverged', or a status this
+                         ;; client does not know.  An unrecognised one
+                         ;; is counted loudly on purpose: better to
+                         ;; point at something harmless than to hide
+                         ;; something that matters.
                          (t (setq bad (1+ bad))))))
                hol-lsp--proof-states)
       (let ((total (+ checking unchecked proved bad)))
@@ -2998,8 +3022,61 @@ from 30 to 12 reads as what it is."
              &allow-other-keys)
     "Note that URI compiled, which is to say it is no longer blocked."
     (hol-lsp--set-blocked uri nil)
-    (hol-lsp--prune-stale-proofs uri)))
+    (hol-lsp--prune-stale-proofs uri))
 
+  (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/hol/desync)) &key uri message
+             &allow-other-keys)
+    "Send the whole buffer again: the server's copy of URI has drifted.
+The server noticed that a change we described no longer fits the text
+it holds, which means every position it reports below the drift is
+wrong and will stay wrong -- nothing in LSP resends a document.  So
+resend it, now, rather than leaving the session quietly answering
+about a file nobody has."
+    (let ((buf (hol-lsp--buffer-for-uri uri)))
+      (when buf
+        (with-current-buffer buf
+          (hol-lsp-resync)
+          (message "HOL: resent the buffer; the server's copy had drifted (%s)"
+                   message))))))
+
+
+(defun hol-lsp-resync ()
+  "Replace the server's copy of this buffer with what is really here.
+Normally the server tracks the buffer through incremental `didChange'
+ranges and the two stay identical.  If they ever stop being identical
+there is no way back: the protocol has no resync, the client never
+repeats itself, and from then on the server answers about a document
+that differs from the one on screen.  This sends the whole text as a
+single full-document change, which is the one message that makes the
+two agree again whatever the disagreement was.
+
+Sent through eglot's own change machinery so that eglot's version
+counter stays authoritative -- a hand-rolled notification with a
+version the client does not know about would leave the next
+incremental change describing the wrong text."
+  (interactive)
+  (let ((server (hol-lsp--server)))
+    (unless server (user-error "No LSP server for this buffer"))
+    (cond
+     ;; `:emacs-messup' is eglot's own sentinel for "I cannot describe
+     ;; this as ranges", and it makes the next didChange carry the
+     ;; whole document.  Using it means the version number and the
+     ;; change bookkeeping are eglot's, not ours.
+     ((and (boundp 'eglot--recent-changes)
+           (fboundp 'eglot--signal-textDocument/didChange))
+      (setq eglot--recent-changes :emacs-messup)
+      (eglot--signal-textDocument/didChange))
+     ;; No such internal: reconnecting re-opens the document, which is
+     ;; the same repair at a much higher price (the server reloads the
+     ;; file's ancestors).  Still better than staying out of step.
+     ((fboundp 'eglot-reconnect) (eglot-reconnect server))
+     (t (user-error "Cannot resynchronise: eglot is too old")))))
+
+(defun hol-lsp--buffer-for-uri (uri)
+  "The live buffer visiting URI, or nil."
+  (let ((path (ignore-errors (hol-lsp--uri-to-path uri))))
+    (and path (find-buffer-visiting path))))
 
 (defun hol-lsp-retry-compile ()
   "Ask the server to compile this buffer again.
@@ -3294,12 +3371,26 @@ in Lisp, so convert before testing it."
       (mapconcat (lambda (c) (concat "[" c "]")) tags " "))))
 
 (defun hol-lsp--pending-p (result)
-  "Whether RESULT is the server saying \"not yet\" rather than a state.
-`$/hol/goalState\=' answers `{\"status\": \"pending\"}\=' -- and nothing
-else: no theorem, no step, no goals -- when the walk was refused only
-because the compile has not reached that proof.  Rendering that as a
-goal state formats a nil step with %d, which is an error."
+  "Whether RESULT says \"ask again when the compile is done\".
+The server says it two ways, and `hol-lsp--refused-p\=' is where the
+difference is explained."
   (equal (plist-get result :status) "pending"))
+
+(defun hol-lsp--refused-p (result)
+  "Whether RESULT is the server saying \"not yet\" and nothing else.
+`$/hol/goalState\=' answers `{\"status\": \"pending\"}\=' -- no theorem, no
+step, no goals -- when a walk was refused outright, the ancestors
+still loading or a compile owning the state.  Rendering that as a goal
+state formats a nil step with %d, which is an error.
+
+The other `pending\=' is a *provisional* answer, and is a state: the
+walker compiles each tactic against the file\='s namespace, so until
+the file\='s `open\='s have run the tactic names are not there and the
+walk stops at the first one it cannot apply.  What it reached is worth
+showing; it is simply not settled.  The theorem is what tells the two
+apart."
+  (and (hol-lsp--pending-p result)
+       (null (plist-get result :theorem))))
 
 (defun hol-lsp--solved-p (result)
   "Whether RESULT says the focused subgoal(s) have been proved.
@@ -3323,6 +3414,7 @@ constructs."
   (let* ((ctx (hol-lsp--context-line (plist-get result :context)))
          (note (plist-get result :note))
          (err (plist-get result :error))
+         (pending (hol-lsp--pending-p result))
          (text (concat (format "%s — step %d"
                                (plist-get result :theorem)
                                (plist-get result :step))
@@ -3337,7 +3429,19 @@ constructs."
                        ;; inferred.
                        (cond (note (concat "  " (string-remove-suffix
                                                  ":" note)))
-                             ((hol-lsp--solved-p result) "  ✓ solved"))
+                             ;; Not while the answer is provisional:
+                             ;; the walk stopped where a tactic would
+                             ;; not resolve, so no goals there means
+                             ;; "got no further", not "proved".
+                             ((and (hol-lsp--solved-p result)
+                                   (not pending))
+                              "  ✓ solved"))
+                       ;; What is on show is as far as the walk got
+                       ;; against a namespace the compile has not
+                       ;; finished filling.  Saying so is the whole
+                       ;; difference between a stale-looking state and
+                       ;; a wrong one.
+                       (and pending "  ⋯ still compiling")
                        (and err (concat "  ⚠ " err)))))
     (replace-regexp-in-string "%" "%%" text)))
 
@@ -3514,7 +3618,7 @@ by default via `hol-map'."
   (unless (hol-lsp--server)
     (user-error "No LSP server for this buffer"))
   (let ((result (hol-lsp--query)))
-    (cond ((and result (hol-lsp--pending-p result))
+    (cond ((and result (hol-lsp--refused-p result))
            (message "HOL: compile in progress — goal state pending"))
           (result (hol-lsp--render-goals result))
           ;; A blocked buffer has no goal state anywhere in it, and
@@ -3544,11 +3648,13 @@ render on success."
   (when (buffer-live-p buf)
     (with-current-buffer buf
       (let ((result (hol-lsp--query t)))
-        ;; A pending reply is silent here: the tick fires on every
-        ;; cursor movement, so saying so would fill the echo area for
-        ;; as long as the compile runs, and the mode line says it
-        ;; already.  The pane keeps the last state it was given.
-        (when (and result (not (hol-lsp--pending-p result)))
+        ;; A refusal is silent here: the tick fires on every cursor
+        ;; movement, so saying so would fill the echo area for as long
+        ;; as the compile runs, and the mode line says it already.
+        ;; The pane keeps the last state it was given.  A provisional
+        ;; answer is not a refusal -- it has a state in it, and the
+        ;; header says it is not settled.
+        (when (and result (not (hol-lsp--refused-p result)))
           (hol-lsp--render-goals result))))))
 
 (defun hol-lsp--goals-schedule ()

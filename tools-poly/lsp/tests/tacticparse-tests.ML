@@ -63,7 +63,7 @@ val _ =
       | SOME frags =>
         let
           fun then1s [] = []
-            | then1s (FBracket (FOpenThen1, inner, FClose, te) :: r) =
+            | then1s (FBracket (FOpenThen1 _, inner, FClose, te) :: r) =
                 (inner, te) :: then1s r
             | then1s (FGroup (_, inner) :: r) = then1s inner @ then1s r
             | then1s (_ :: r) = then1s r
@@ -122,7 +122,7 @@ val _ =
           | SOME frags =>
             let
               fun go [] = NONE
-                | go (FBracket (FOpenThen1, inner, _, te) :: _) =
+                | go (FBracket (FOpenThen1 _, inner, _, te) :: _) =
                     SOME (te, inner)
                 | go (FGroup (_, inner) :: r) =
                     (case go inner of NONE => go r | x => x)
@@ -140,6 +140,48 @@ val _ =
             die "the parenthesised body's span is not the parens"
           else OK()
       | _ => die "branch bodies are not (atom, group)"
+    end
+
+val _ = tprint "TacticParse: a combinator bracket records its own token"
+val _ =
+    let
+      (* The span the LSP squiggles when a branch proves nothing.  It
+         is separate from the wrapper's extent, which stays absent --
+         see above -- so nothing the walk measures moves with it. *)
+      fun opens txt =
+          case fragsOf txt of
+            NONE => []
+          | SOME frags =>
+            let
+              fun go [] = []
+                | go (FBracket (ok, inner, _, _) :: r) =
+                    ok :: go inner @ go r
+                | go (FFOpen ok :: r) = ok :: go r
+                | go (FGroup (_, inner) :: r) = go inner @ go r
+                | go (_ :: r) = go r
+            in go frags end
+      fun tokenOf txt =
+          case List.mapPartial
+                 (fn FOpenThen1 sp => SOME sp
+                   | FOpenBy (_, sp) => SOME sp
+                   | FOpenSufficesBy (_, sp) => SOME sp
+                   | _ => NONE)
+                 (opens txt) of
+            [sp] => SOME (textAt txt sp)
+          | _ => NONE
+      val cases = [("rw [] >- metis_tac []", ">-"),
+                   ("rw [] >- (simp [] >> rw [])", ">-"),
+                   ("rw [] THEN1 metis_tac []", "THEN1"),
+                   ("`p` by simp []", "by"),
+                   ("`p` suffices_by simp []", "suffices_by")]
+      val bad = List.filter (fn (txt, want) => tokenOf txt <> SOME want) cases
+    in
+      case bad of
+        [] => OK()
+      | (txt, want) :: _ =>
+          die ("`" ^ txt ^ "` records " ^
+               (case tokenOf txt of NONE => "no token" | SOME t => "`"^t^"`") ^
+               ", want `" ^ want ^ "`")
     end
 
 end (* TacticParse local *)
@@ -292,30 +334,32 @@ val _ = let
   val _ = tprint "TacticParse preserves by rather than elaborating it as sg"
   val parsedBy = parseTactic "q by tac"
   val _ = assert "by parsed as ordinary subgoal/THEN1 structure"
-    (case parsedBy of By ((0, 1), _) => true | _ => false)
+    (case parsedBy of By ((0, 1), (2, 4), _) => true | _ => false)
   val _ = tprint "TacticParse preserves suffices_by as a primitive"
   val parsedSuffices = parseTactic "q suffices_by tac"
   val _ = assert "suffices_by parsed as ordinary subgoal structure"
-    (case parsedSuffices of SufficesBy ((0, 1), _) => true | _ => false)
+    (case parsedSuffices of
+         SufficesBy ((0, 1), (2, 13), _) => true | _ => false)
   val _ = tprint "TacticParse prints preserved by syntax"
   val _ = assert "by did not print as by"
     (case printTacAsSML "q by tac" parsedBy of
        SOME text => String.isSubstring "by" text
      | NONE => false)
   val _ = tprint "ProofStepPlan preserves by semantics structurally"
-  val byPlan = fromTactic (By ("assertion", b))
+  val byPlan = fromTactic (By ("assertion", "by", b))
   val _ = assert "by was lowered through ordinary Subgoal"
     (case byPlan of
-       [Leaf {kind = TacticLeaf, tactic = By ("assertion", Then [] )},
+       [Leaf {kind = TacticLeaf,
+              tactic = By ("assertion", "by", Then [] )},
         Select {selector = SelectFirst, mode = SelectSolve,
                 body = [Leaf {kind = TacticLeaf, ...}]}] => true
      | _ => false)
   val _ = tprint "ProofStepPlan preserves suffices_by semantics structurally"
-  val sufficesPlan = fromTactic (SufficesBy ("assertion", b))
+  val sufficesPlan = fromTactic (SufficesBy ("assertion", "suffices_by", b))
   val _ = assert "suffices_by was lowered through ordinary Subgoal"
     (case sufficesPlan of
        [Leaf {kind = TacticLeaf,
-              tactic = SufficesBy ("assertion", Then [])},
+              tactic = SufficesBy ("assertion", "suffices_by", Then [])},
         Select {selector = SelectFirst, mode = SelectSolve,
                 body = [Leaf {kind = TacticLeaf, ...}]}] => true
      | _ => false)

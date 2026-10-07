@@ -924,8 +924,8 @@ Theorem FCT_term_functions:
 Proof
 completeInduct_on `term_size t` >> Cases_on `t` >> rw[FCT_def,term_functions_def]>>
 rw[SUBSET_DEF] >> fs[MEM_MAP,PULL_FORALL] >>
-first_x_assum (qspec_then `a` assume_tac) >> drule term_size_lemma >>
-strip_tac >> `term_size a < n + (list_size term_size l + 1)` by fs[ADD_CLAUSES] >> fs[] >>
+first_x_assum (qspec_then `y` assume_tac) >> drule term_size_lemma >>
+strip_tac >> `term_size y < n + (list_size term_size l + 1)` by fs[ADD_CLAUSES] >> fs[] >>
 rw[] >> fs[SUBSET_DEF] >> first_x_assum drule >> rw[PULL_EXISTS] >>
 qexists_tac `c` >> rw[] >> metis_tac[]
 QED

@@ -57,7 +57,7 @@ Proof
 QED
 
 Theorem com_lt:
-  !c h t. MEM c t ==> com_size c < com1_size (h::t)
+  !c h t. MEM c t ==> com_size c < list_size com_size (h::t)
 Proof
   rw[] >>
   simp[com_size_def] >>
@@ -67,13 +67,9 @@ Proof
 QED
 
 Theorem com_leq:
-  !c cs. MEM c cs ==> com_size c <= com1_size cs
+  !c cs. MEM c cs ==> com_size c <= list_size com_size cs
 Proof
-  rw[] >>
-  simp[LESS_OR_EQ] >>
-  Cases_on `cs` >>
-  fs[MEM] >>
-  simp[com_size_def, com_lt]
+  Induct_on `cs` >> rw[] >> simp[com_size_def] >> res_tac >> simp[]
 QED
 
 Theorem pval_pos:

@@ -9,7 +9,7 @@ Ancestors
   comparison bag container pred_set
   mergesort charset FormalLang
 Libs
-  BasicProvers TotalDefn
+  BasicProvers TotalDefn legacyInduction
   numSyntax[qualified]
   wordsLib[qualified]
 
@@ -124,6 +124,10 @@ Datatype:
 End
 ;
 
+(* The proofs below induct over a regexp and the list of them an `Or`
+   holds, which is what the older construction saved under this name.
+   legacyInduction makes it of the type's own principle, up to the
+   order a clause binds its variables. *)
 Theorem regexp_induction[allow_rebind] :
  !P Q.
      (!cs. P (Chset cs)) /\
@@ -132,7 +136,12 @@ Theorem regexp_induction[allow_rebind] :
      (!r. P r ==> P (Neg r)) /\ Q [] /\ (!r l. P r /\ Q l ==> Q (r::l)) ==>
      (!r. P r) /\ !l. Q l
 Proof
-  ACCEPT_TAC (fetch "-" "regexp_induction")
+  rpt gen_tac >> strip_tac >>
+  ho_match_mp_tac
+    (let val ind = TypeBase.induction_of “:regexp”
+     in legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
+     end) >>
+  metis_tac []
 QED
 
 Theorem regexp_distinct[local] = fetch "-" "regexp_distinct";
@@ -1183,7 +1192,8 @@ Theorem regexp_smart_constructors_def =
 Theorem assoc_cat_correct[local] :
  !r1 r2 s. regexp_lang (assoc_cat r1 r2) s = regexp_lang (Cat r1 r2) s
 Proof
- Induct_on `r2`
+ (* the recursion is on the first argument *)
+ Induct_on `r1`
    >> rw []
    >> rw [assoc_cat_def, regexp_lang_eqns, regexp_lang_thm]
 QED
@@ -1891,7 +1901,9 @@ QED
 Theorem normalize_thm :
  !r. is_normalized (normalize r)
 Proof
- recInduct normalize_ind
+ (* the construction handles this recursion, so what TFL says of it is
+    nothing; the type's own principle is what inducts here *)
+ Induct
   >> rw [normalize_def, norm_char_set, norm_cat, norm_neg, norm_star]
   >> metis_tac [norm_or, EVERY_MEM, MEM_MAP]
 QED
@@ -2033,12 +2045,15 @@ QED
 Theorem smart_deriv_normalize_deriv :
  !r c. is_normalized r ==> (smart_deriv c r = normalize (deriv c r))
 Proof
- recInduct normalize_ind THEN
+ (* the type's own principle, TFL having nothing to say of a recursion
+    the construction handles; it splits the concatenation in two *)
+ Induct THEN
  RW_TAC list_ss [is_normalized_def, smart_deriv_def, normalize_def, deriv_def,
         LET_THM, Epsilon_def, Empty_def]
  THENL
   [rw [build_char_set_def, build_star_def],
    rw [build_char_set_def],
+   RW_TAC list_ss [normalize_def,LET_THM] THEN METIS_TAC [normalize_id],
    RW_TAC list_ss [normalize_def,LET_THM] THEN METIS_TAC [normalize_id],
    METIS_TAC [normalize_id],
    RW_TAC list_ss [MAP_MAP_o,combinTheory.o_DEF] THEN

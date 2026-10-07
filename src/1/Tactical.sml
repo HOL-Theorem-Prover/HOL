@@ -422,6 +422,18 @@ val ALL_TAC: tactic = fn (g: goal) => fn _ (* ctxt *) => ([g], hd)
 val ALL_LT: list_tactic = fn (gl: goal list) => fn _ => (gl, Lib.I)
 val all_tac = ALL_TAC
 
+(*---------------------------------------------------------------------------
+ * Tactic that proves any goal, by oracle rather than by proof.  Lives here
+ * rather than in bossLib because the tools that stand it in for a proof --
+ * the LSP walker skipping a THENL branch, the LSP's retry of a declaration
+ * whose tactic did not compile -- run in every heap, and bossLib is in none
+ * of those below src/boss.  The tag is what Theory reads to mark a theory
+ * CHEAT, so it has to stay "cheat".
+ *---------------------------------------------------------------------------*)
+
+val cheat: tactic =
+    fn g => fn _ (* ctxt *) => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
+
 fun TRY tac = tac ORELSE ALL_TAC
 fun TRY_LT ltac = ltac ORELSE_LT ALL_LT
 fun TRYALL tac = ALLGOALS (TRY tac) ;

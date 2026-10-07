@@ -66,8 +66,8 @@ datatype 'a tac_expr
   = Then of 'a tac_expr list
   | ThenLT of 'a tac_expr * 'a tac_expr list
   | Subgoal of 'a
-  | By of 'a * 'a tac_expr
-  | SufficesBy of 'a * 'a tac_expr
+  | By of 'a * 'a * 'a tac_expr
+  | SufficesBy of 'a * 'a * 'a tac_expr
   | First of 'a tac_expr list
   | FirstProve of 'a tac_expr list
   | Try of 'a tac_expr
@@ -79,7 +79,7 @@ datatype 'a tac_expr
 
   | LThen of 'a tac_expr * 'a tac_expr list
   | LThenLT of 'a tac_expr list
-  | LThen1 of 'a tac_expr
+  | LThen1 of 'a * 'a tac_expr
   | LTacsToLT of 'a tac_expr
   | LNullOk of 'a tac_expr
   | LFirst of 'a tac_expr list
@@ -147,6 +147,14 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
   fun matchInfix (Infix {left, id = (_, s), right}) = SOME (left, s, right)
     | matchInfix _ = NONE
 
+  (* The operator token's own extent, for the nodes that record where
+     the combinator was as well as what it applied to.  Only reached
+     once `matchInfix' has matched, so Infix is the only case that can
+     occur; the fallback keeps this total rather than raising if the
+     shape ever changes. *)
+  fun opSpan (Infix {id, ...}) = idSpan id
+    | opSpan e = tr e
+
   (* Match App with a head identifier, returning args *)
   fun matchApp e = case flattenApp e of
       f :: args => Option.map (fn s => (s, args)) (identName f)
@@ -206,10 +214,13 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
     | SOME (lhs, "THEN", rhs) => Then (simplifys lhs (simplifys rhs []))
     | SOME (lhs, ">|", rhs) => group true (tr e) (simplifyThenL lhs rhs)
     | SOME (lhs, "THENL", rhs) => group true (tr e) (simplifyThenL lhs rhs)
-    | SOME (lhs, ">-", rhs) => simplifyThenLT lhs [LThen1 (grouped true simplify rhs)]
-    | SOME (lhs, "THEN1", rhs) => simplifyThenLT lhs [LThen1 (grouped true simplify rhs)]
+    | SOME (lhs, ">-", rhs) =>
+        simplifyThenLT lhs [LThen1 (opSpan e, grouped true simplify rhs)]
+    | SOME (lhs, "THEN1", rhs) =>
+        simplifyThenLT lhs [LThen1 (opSpan e, grouped true simplify rhs)]
     | SOME (lhs, ">>-", rhs) => (case tupleElems lhs of
-        SOME [lhs', _] => simplifyThenLT lhs' [LThen1 (grouped true simplify rhs)]
+        SOME [lhs', _] =>
+          simplifyThenLT lhs' [LThen1 (opSpan e, grouped true simplify rhs)]
       | _ => Opaque (trPrec e))
     | SOME (lhs, ">>>", rhs) => simplifyThenLT lhs (simplifysLT rhs [])
     | SOME (lhs, "THEN_LT", rhs) => simplifyThenLT lhs (simplifysLT rhs [])
@@ -223,9 +234,9 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
             group true (tr rhs') $ Then (simplifys rhs' [First []]))]
       | _ => Opaque (trPrec e))
     | SOME (lhs, "by", rhs) =>
-        By (tr lhs, grouped true simplify rhs)
+        By (tr lhs, opSpan e, grouped true simplify rhs)
     | SOME (lhs, "suffices_by", rhs) =>
-        SufficesBy (tr lhs, grouped true simplify rhs)
+        SufficesBy (tr lhs, opSpan e, grouped true simplify rhs)
     (* Application forms *)
     | _ => case matchApp e of
       SOME ("subgoal", [rhs]) => group true (tr e) (Subgoal (tr rhs))
@@ -342,8 +353,9 @@ fun mapTacExpr {start, stop, repair} = let
     | go (Then ls) = Then (map go ls)
     | go (ThenLT (e, ls)) = ThenLT (go e, map go ls)
     | go (Subgoal t) = Subgoal (tr false t)
-    | go (By (q, e)) = By (tr false q, go e)
-    | go (SufficesBy (q, e)) = SufficesBy (tr false q, go e)
+    | go (By (q, k, e)) = By (tr false q, tr false k, go e)
+    | go (SufficesBy (q, k, e)) =
+        SufficesBy (tr false q, tr false k, go e)
     | go (First ls) = First (map go ls)
     | go (FirstProve ls) = FirstProve (map go ls)
     | go (Try e) = Try (go e)
@@ -354,7 +366,7 @@ fun mapTacExpr {start, stop, repair} = let
     | go (Opaque (prec, p)) = Opaque (prec, tr true p)
     | go (LThenLT ls) = LThenLT (map go ls)
     | go (LThen (e, ls)) = LThen (go e, map go ls)
-    | go (LThen1 e) = LThen1 (go e)
+    | go (LThen1 (k, e)) = LThen1 (tr false k, go e)
     | go (LTacsToLT e) = LTacsToLT (go e)
     | go (LNullOk e) = LNullOk (go e)
     | go (LFirst ls) = LFirst (map go ls)
@@ -402,10 +414,10 @@ local
       | go (LThenLT []) = TAtom "ALL_LT"
       | go (LThenLT ls) = mkInfixl ">>>" (map go ls)
       | go (ThenLT (e, ls)) = mkInfixl ">>>" (map go (e::ls))
-      | go (LThen1 e) = TApp ("THEN1_LT", [go e])
+      | go (LThen1 (_, e)) = TApp ("THEN1_LT", [go e])
       | go (Subgoal t) = TApp ("sg", [TAtom (sub t)])
-      | go (By (q, e)) = TInfix (TAtom (sub q), "by", go e)
-      | go (SufficesBy (q, e)) =
+      | go (By (q, _, e)) = TInfix (TAtom (sub q), "by", go e)
+      | go (SufficesBy (q, _, e)) =
           TInfix (TAtom (sub q), "suffices_by", go e)
       | go (First []) = TAtom "NO_TAC"
       | go (First ls) = mkInfixl "ORELSE" (map go ls)
@@ -518,9 +530,9 @@ end (* local *)
 
 datatype tac_frag_open
   = FOpen
-  | FOpenThen1
-  | FOpenBy of int * int
-  | FOpenSufficesBy of int * int
+  | FOpenThen1 of int * int
+  | FOpenBy of (int * int) * (int * int)
+  | FOpenSufficesBy of (int * int) * (int * int)
   | FOpenFirst
   | FOpenRepeat
   | FOpenTacsToLT
@@ -591,7 +603,8 @@ fun linearize isAtom e = let
     | MapFirst (_, []) => (true, FAtom (First []) :: acc')
     | LThenLT ls => goList ls acc
     | LThen (e, ls) => goList ls $ go e acc
-    | LThen1 e => span e (bracket (fn _ => go e (true, [])) FOpenThen1) acc
+    | LThen1 (k, e) =>
+      span e (bracket (fn _ => go e (true, [])) (FOpenThen1 k)) acc
     | LTacsToLT (List (p, e::ls)) =>
       group p (mbracket FClose FNextTacsToLT FOpenTacsToLT (fn _ =>
         map (fn e => snd (go e (true, []))) (e::ls))) acc
@@ -624,10 +637,11 @@ fun linearize isAtom e = let
     | MapFirst _     => (false, FAtom e :: acc')
     | Rename _       => (false, FAtom e :: acc')
     | Subgoal _      => (false, FAtom e :: acc')
-    | By (q, body) =>
-      asTac (bracket (fn _ => go body (true, [])) (FOpenBy q)) acc
-    | SufficesBy (q, body) =>
-      asTac (bracket (fn _ => go body (true, [])) (FOpenSufficesBy q)) acc
+    | By (q, k, body) =>
+      asTac (bracket (fn _ => go body (true, [])) (FOpenBy (q, k))) acc
+    | SufficesBy (q, k, body) =>
+      asTac (bracket (fn _ => go body (true, []))
+                     (FOpenSufficesBy (q, k))) acc
     | LSelectGoal _  => (false, FAtom e :: acc')
     | LSelectGoals _ => (false, FAtom e :: acc')
     | Opaque _       => (false, FAtom e :: acc')
@@ -658,9 +672,10 @@ val unlinearize = let
     | mkLThen lhs (e::l) acc =
       if isTac e then mkLThen lhs l (e::acc) else mkLThenL l [e, LThen (lhs, rev acc)]
   fun mkOpen FOpen acc = mkThen acc []
-    | mkOpen FOpenThen1 acc = LHeadGoal (mkThen acc [])
-    | mkOpen (FOpenBy q) acc = By (q, mkThen acc [])
-    | mkOpen (FOpenSufficesBy q) acc = SufficesBy (q, mkThen acc [])
+    | mkOpen (FOpenThen1 _) acc = LHeadGoal (mkThen acc [])
+    | mkOpen (FOpenBy (q, k)) acc = By (q, k, mkThen acc [])
+    | mkOpen (FOpenSufficesBy (q, k)) acc =
+        SufficesBy (q, k, mkThen acc [])
     | mkOpen FOpenFirst acc = Try (mkThen acc [])
     | mkOpen FOpenRepeat acc = Repeat (mkThen acc [])
     | mkOpen FOpenTacsToLT acc = LHeadGoal (mkThen acc [])
@@ -708,7 +723,7 @@ fun sliceTacticBlock start stop sliceClose sp e = let
       if sliceClose then cons (FFClose stop) $ slice sp ls acc else
         (case start of
           FOpen => separateE sp ls I acc
-        | FOpenThen1 => separateE sp ls (cons (FAtom (First []))) acc
+        | FOpenThen1 _ => separateE sp ls (cons (FAtom (First []))) acc
         | FOpenBy _ => separateE sp ls (cons (FAtom (First []))) acc
         | FOpenSufficesBy _ => separateE sp ls (cons (FAtom (First []))) acc
         | FOpenNullOk => join sp ls I acc

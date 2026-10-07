@@ -1873,6 +1873,11 @@ val MAP_EQ = prove(
   ``!xs f g. (MAP f xs = MAP g xs) = EVERY (\x. f x = g x) xs``,
   Induct \\ SRW_TAC [] []);
 
+(* the theory's own size equation says what the axiom handed over,
+   a map under a list_size; the TypeBase states the fold, which is
+   the form this proof reasons with *)
+val logic_term_size_eq = #2 (TypeBase.size_of ``:logic_term``);
+
 Theorem term_sub_EQ:
   !x xs. (set (free_vars x) SUBSET set xs) ==>
          (term_sub (MAP (\v. (v,f v)) xs) x =
@@ -1891,19 +1896,26 @@ Proof
          THEN MP_TAC (Q.SPECL [‘a’,‘(FLAT (MAP (\a. free_vars a) l))’] th))
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (IMP_RES_TAC MEM_logic_term_size
-      \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC THEN1 simp[logic_term_size_def]
+      \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC THEN1 simp[logic_term_size_eq]
       \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
       \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (POP_ASSUM (K ALL_TAC) \\ IMP_RES_TAC MEM_logic_term_size
-      \\ FULL_SIMP_TAC std_ss [logic_term_size_def] \\ STRIP_TAC THEN1 DECIDE_TAC
+      \\ FULL_SIMP_TAC std_ss [logic_term_size_eq]
+      \\ STRIP_TAC THEN1 DECIDE_TAC
       \\ MATCH_MP_TAC SUBSET_TRANS
       \\ Q.EXISTS_TAC ‘set (FLAT (MAP (\a. free_vars a) l))’
-      \\ ASM_SIMP_TAC std_ss []
-      \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-      \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
-    \\ FULL_SIMP_TAC std_ss [])
+      (* transitivity leaves both inclusions.  The first is what
+         membership gives, and the second is what the context already
+         says once the map it collects over is read as the eta
+         expansion it is *)
+      \\ CONJ_TAC THEN1
+       (Q.PAT_X_ASSUM ‘MEM a _’ MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
+        \\ SIMP_TAC (srw_ss()) [SUBSET_DEF, MEM_FLAT, MEM_MAP, PULL_EXISTS]
+        \\ METIS_TAC [])
+      \\ ASM_SIMP_TAC (std_ss ++ boolSimps.ETA_ss) [])
+    \\ FULL_SIMP_TAC (std_ss ++ boolSimps.ETA_ss) [])
   THEN1
    (Q.ABBREV_TAC ‘vs = l’ \\ POP_ASSUM (K ALL_TAC)
     \\ Q.ABBREV_TAC ‘l = l0’ \\ POP_ASSUM (K ALL_TAC)
@@ -1912,19 +1924,27 @@ Proof
          THEN MP_TAC (Q.SPECL [‘a’,‘(FLAT (MAP (\a. free_vars a) l))’] th))
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (IMP_RES_TAC MEM_logic_term_size
-      \\ FULL_SIMP_TAC std_ss [logic_term_size_def] \\ STRIP_TAC THEN1 DECIDE_TAC
+      \\ FULL_SIMP_TAC std_ss [logic_term_size_eq]
+      \\ STRIP_TAC THEN1 DECIDE_TAC
       \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
       \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (POP_ASSUM (K ALL_TAC) \\ IMP_RES_TAC MEM_logic_term_size
-      \\ FULL_SIMP_TAC std_ss [logic_term_size_def] \\ STRIP_TAC THEN1 DECIDE_TAC
+      \\ FULL_SIMP_TAC std_ss [logic_term_size_eq]
+      \\ STRIP_TAC THEN1 DECIDE_TAC
       \\ MATCH_MP_TAC SUBSET_TRANS
       \\ Q.EXISTS_TAC ‘set (FLAT (MAP (\a. free_vars a) l))’
-      \\ ASM_SIMP_TAC std_ss []
-      \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-      \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
-    \\ FULL_SIMP_TAC std_ss [])
+      (* transitivity leaves both inclusions.  The first is what
+         membership gives, and the second is what the context already
+         says once the map it collects over is read as the eta
+         expansion it is *)
+      \\ CONJ_TAC THEN1
+       (Q.PAT_X_ASSUM ‘MEM a _’ MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
+        \\ SIMP_TAC (srw_ss()) [SUBSET_DEF, MEM_FLAT, MEM_MAP, PULL_EXISTS]
+        \\ METIS_TAC [])
+      \\ ASM_SIMP_TAC (std_ss ++ boolSimps.ETA_ss) [])
+    \\ FULL_SIMP_TAC (std_ss ++ boolSimps.ETA_ss) [])
 QED
 
 val inst_term_thm = prove(

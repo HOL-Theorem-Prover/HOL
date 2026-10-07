@@ -287,20 +287,14 @@ QED
 (******************************************************************************
 * Structural induction rule for SEREs
 ******************************************************************************)
+(* the package's principle says what each component of the pair a
+   constructor holds satisfies; a pair's own set functions say which *)
 val sere_induct = save_thm
   ("sere_induct",
-   Q.GEN
-    `P`
-    (MATCH_MP
-     (DECIDE ``(A ==> (B1 /\ B2 /\ B3)) ==> (A ==> B1)``)
-     (SIMP_RULE
-       std_ss
-       [pairTheory.FORALL_PROD,
-        PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
-        PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
-       (Q.SPECL
-         [`P`,`\ (r,b). P r`,`\ (r1,r2). P r1 /\ P r2`]
-         (TypeBase.induction_of ``:'a sere``)))));
+   SIMP_RULE (srw_ss())
+     [pairTheory.FORALL_PROD, pairTheory.setFST_thm,
+      pairTheory.setSND_thm]
+     (TypeBase.induction_of ``:'a sere``));
 
 (******************************************************************************
 * S_CLOCK_FREE r means r contains no clocking statements
@@ -352,21 +346,14 @@ QED
 (******************************************************************************
 * Structural induction rule for FL formulas
 ******************************************************************************)
-val fl_induct =
- save_thm
+(* the package's principle says what each component of the pair a
+   constructor holds satisfies; a pair's own set functions say which *)
+val fl_induct = save_thm
   ("fl_induct",
-   Q.GEN
-    `P`
-    (MATCH_MP
-     (DECIDE ``(A ==> (B1 /\ B2 /\ B3)) ==> (A ==> B1)``)
-     (SIMP_RULE
-       std_ss
-       [pairTheory.FORALL_PROD,
-        PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
-        PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
-       (Q.SPECL
-         [`P`,`\ (r,f). P f`,`\ (f,b). P f`,`\ (f1,f2). P f1 /\ P f2`]
-         (TypeBase.induction_of ``:'a fl``)))));
+   SIMP_RULE (srw_ss())
+     [pairTheory.FORALL_PROD, pairTheory.setFST_thm,
+      pairTheory.setSND_thm]
+     (TypeBase.induction_of ``:'a fl``));
 
 (******************************************************************************
 * Negated clocking of f with T! equal to clocking with T of F_NOT f:

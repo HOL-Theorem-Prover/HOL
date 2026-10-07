@@ -311,7 +311,12 @@ fun get_induction_for_def def = let
     in (split_at (not o is_var) xs) end
   val xs = map find_pat_match cs
   val ty = map (fn (_,x,_) => type_of x) xs |> hd
-  val raw_ind = TypeBase.induction_of ty
+  (* this builds a predicate per member, which is what the older
+     construction's principle had; the package proves the one-predicate
+     form and legacyInduction puts it back *)
+  val ind0 = TypeBase.induction_of ty
+  val raw_ind = legacyInduction.mutual_induction
+                  (legacyInduction.operators_of ind0) ind0
   fun my_mk_var ty = mk_var("pat_var", ty)
   fun list_mk_fun_type [] = hd []
     | list_mk_fun_type [ty] = ty

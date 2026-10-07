@@ -1,7 +1,28 @@
 Theory bnfPrelims[bare]
-Ancestors sum pair option pred_set cardinal quotient
+Ancestors sum pair option pred_set cardinalityCore quotient basicSize
 Libs HolKernel Parse boolLib BasicProvers simpLib TotalDefn[qualified] QLib
      metisLib
+
+(* cardinalityCoreTheory makes no grammar of its own -- it is every
+   theory's ancestor through the datatype package, and the ASCII
+   forms are tokens wherever they reach.  What this theory writes
+   it sets up for itself. *)
+Overload "<<="[local] = “cardleq”
+Overload cardlt[local] = “λs1 s2. ¬cardleq s2 s1”
+val _ = temp_set_fixity "<</=" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+Overload "<</="[local] = “cardlt”
+val _ = temp_set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+Overload "=~"[local] = “cardeq”
+Overload cardlt[local] = “λs1 s2. ¬cardleq s2 s1”
+val _ = temp_set_fixity "<</=" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+Overload "<</="[local] = “cardlt”
+val _ = temp_set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+Overload "=~"[local] = “cardeq”
+
 
 
 fun sum_nm s : KernelSig.kernelname = {Thy = "sum", Name = s}
@@ -187,6 +208,80 @@ QED
 
 
 (* ----------------------------------------------------------------------
+    Results supporting the compositional derivation of a composite
+    functor's nonemptiness witnesses, and of the fact that each of its
+    arguments is inhabited.
+
+    A witness takes one argument per genuine type variable and its
+    theorem bounds each of the composite's set functions either by ∅ (the
+    witness didn't need that argument) or by the singleton of the
+    argument it was given.  So the lemmas below are stated with an
+    arbitrary bounding set: each says how bounds on a node's parts bound
+    the whole, and the bound only becomes a singleton at the leaf where
+    the argument itself sits.
+   ---------------------------------------------------------------------- *)
+
+Theorem K0_SUBSET:
+  ∀W x:'b. (K ∅ : 'b -> 'a set) x ⊆ W
+Proof
+  simp[]
+QED
+
+Theorem EQ_SUBSET:
+  ∀a:'a. $= a ⊆ {a}
+Proof
+  simp[EQ_SING]
+QED
+
+Theorem EMPTY_ALL:
+  ∀(s:'b -> 'a set) W. ∀w. w ∈ (∅ : 'b set) ⇒ s w ⊆ W
+Proof
+  simp[]
+QED
+
+Theorem SING_ALL:
+  ∀(s:'b -> 'a set) a W. s a ⊆ W ⇒ ∀w. w ∈ {a} ⇒ s w ⊆ W
+Proof
+  simp[]
+QED
+
+Theorem BIMGo_SUBSET:
+  ∀s st x V W. st x ⊆ V ∧ (∀w. w ∈ V ⇒ s w ⊆ W) ⇒ (BIMG s o st) x ⊆ W
+Proof
+  simp[PULL_EXISTS, SUBSET_DEF] >> metis_tac[]
+QED
+
+Theorem LU_SUBSET:
+  ∀a b x W. a x ⊆ W ∧ b x ⊆ W ⇒ S ($UNION o a) b x ⊆ W
+Proof
+  simp[combinTheory.S_THM]
+QED
+
+Theorem EQ_IN:
+  ∀v:'a. v ∈ $= v
+Proof
+  simp[IN_equal]
+QED
+
+Theorem BIMGo_IN:
+  ∀s st x t v. t ∈ st x ∧ v ∈ s t ⇒ v ∈ (BIMG s o st) x
+Proof
+  simp[PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem LU_IN1:
+  ∀a b x v. v ∈ a x ⇒ v ∈ S ($UNION o a) b x
+Proof
+  simp[combinTheory.S_THM]
+QED
+
+Theorem LU_IN2:
+  ∀a b x v. v ∈ b x ⇒ v ∈ S ($UNION o a) b x
+Proof
+  simp[combinTheory.S_THM]
+QED
+
+(* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
    ---------------------------------------------------------------------- *)
 
@@ -243,6 +338,34 @@ Proof
   GEN_TAC >> Cases_on ‘s’ >> simp[cardleq_def, INJ_DEF]
 QED
 
+Theorem sum_wit1:
+  ∀(a1:'a1) (a2:'a2).
+    setL ((K o INL) a1 a2 : 'a1 + 'a2) ⊆ {a1} ∧
+    setR ((K o INL) a1 a2 : 'a1 + 'a2) ⊆ ∅
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
+Theorem sum_wit2:
+  ∀(a1:'a1) (a2:'a2).
+    setL (K INR a1 a2 : 'a1 + 'a2) ⊆ ∅ ∧
+    setR (K INR a1 a2 : 'a1 + 'a2) ⊆ {a2}
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
+Theorem sum_inh1:
+  ∀v:'a1. v ∈ setL (INL v : 'a1 + 'a2)
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
+Theorem sum_inh2:
+  ∀v:'a2. v ∈ setR (INR v : 'a1 + 'a2)
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
 val _ = bnfBase.updateDB (
   {Name = "sum", Thy = "sum"},
   bnfBase.bI {
@@ -259,7 +382,11 @@ val _ = bnfBase.updateDB (
     relator = “SUM_REL : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
                          'a1 + 'a2 -> 'c1 + 'c2 -> bool”,
     set = [“setL : 'a1 + 'a2 -> 'a1 set”, “setR : 'a1 + 'a2 -> 'a2 set”],
-    siblings = []
+
+    wits = [(“(K o INL) : 'a1 -> 'a2 -> 'a1 + 'a2”, pnm "sum_wit1"),
+            (“K INR : 'a1 -> 'a2 -> 'a1 + 'a2”, pnm "sum_wit2")],
+    inhabits = [(“INL : 'a1 -> 'a1 + 'a2”, pnm "sum_inh1"),
+                (“INR : 'a2 -> 'a1 + 'a2”, pnm "sum_inh2")]
   }
 )
 
@@ -311,11 +438,28 @@ Proof
   Cases >> simp[cardleq_def, INJ_DEF]
 QED
 
+Theorem pair_wit1:
+  ∀(a1:'a1) (a2:'a2). setFST ($, a1 a2) ⊆ {a1} ∧ setSND ($, a1 a2) ⊆ {a2}
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
+Theorem pair_inh1:
+  ∀v:'a1. v ∈ setFST (flip $, (ARB:'a2) v)
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
+Theorem pair_inh2:
+  ∀v:'a2. v ∈ setSND ($, (ARB:'a1) v)
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
 val _ = bnfBase.updateDB (
   {Thy = "pair", Name = "prod"},
   bnfBase.bI {
     canontype = “:'a1 # 'a2”,
-    siblings = [],
 
     map = “pair$## : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'a1 # 'a2 -> 'c1 # 'c2”,
     set = [“setFST : 'a1 # 'a2 -> 'a1 set”, “setSND : 'a1 # 'a2 -> 'a2 set”],
@@ -326,7 +470,11 @@ val _ = bnfBase.updateDB (
     relator = “pair$RPROD : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
                             ('a1 # 'a2 -> 'c1 # 'c2 -> bool)”,
     bnd = “univ(:num)”,
-    bndthms = [pnm "pair_bnd1", pnm "pair_bnd2"]
+    bndthms = [pnm "pair_bnd1", pnm "pair_bnd2"],
+
+    wits = [(“$, : 'a1 -> 'a2 -> 'a1 # 'a2”, pnm "pair_wit1")],
+    inhabits = [(“flip $, (ARB:'a2) : 'a1 -> 'a1 # 'a2”, pnm "pair_inh1"),
+                (“$, (ARB:'a1) : 'a2 -> 'a1 # 'a2”, pnm "pair_inh2")]
   }
 )
 
@@ -374,11 +522,22 @@ Proof
   irule_at Any SURJ_IMAGE
 QED
 
+Theorem fun_wit1:
+  ∀a1:'a1. fset (K a1 : 'b1 -> 'a1) ⊆ {a1}
+Proof
+  simp[SUBSET_DEF, PULL_EXISTS, IN_DEF]
+QED
+
+Theorem fun_inh1:
+  ∀v:'a1. v ∈ fset (K v : 'b1 -> 'a1)
+Proof
+  simp[SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
 val _ = bnfBase.updateDB (
   {Thy = "min", Name = "fun"},
   bnfBase.bI {
     canontype = “:'b1 -> 'a1”,
-    siblings = [],
     map = “combin$o : ('a1 -> 'c1) -> ('b1 -> 'a1) -> ('b1 -> 'c1)”,
     set = [“fset: ('b1 -> 'a1) -> 'a1 set”],
     mapID = pnm "funMap_ID",
@@ -388,7 +547,10 @@ val _ = bnfBase.updateDB (
     relator = “quotient$===> $= : ('a1 -> 'c1 -> bool) ->
                                   (('b1 -> 'a1) -> ('b1 -> 'c1) -> bool)”,
     bnd = “univ(:'b1)”,
-    bndthms = [pnm "fun_bnd1"]
+    bndthms = [pnm "fun_bnd1"],
+
+    wits = [(“K : 'a1 -> 'b1 -> 'a1”, pnm "fun_wit1")],
+    inhabits = [(“K : 'a1 -> 'b1 -> 'a1”, pnm "fun_inh1")]
   }
 )
 
@@ -421,7 +583,10 @@ Proof
   simp[FUN_EQ_THM] >> Cases >> simp[]
 QED
 
-Definition optSET_def:
+(* what a registered operator's set function says at the operator's own
+   constructors is what a proof about the operator's contents needs, so
+   it simplifies: listTheory's LIST_TO_SET already does *)
+Definition optSET_def[simp]:
   optSET NONE = {} ∧
   optSET (SOME x) = {x}
 End
@@ -446,11 +611,28 @@ Proof
   Cases >> simp[cardleq_def, optSET_def, INJ_DEF]
 QED
 
+Theorem opt_wit1:
+  ∀a1:'a1. optSET (K NONE a1 : 'a1 option) ⊆ ∅
+Proof
+  simp[optSET_def, SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
+Theorem opt_wit2:
+  ∀a1:'a1. optSET (SOME a1) ⊆ {a1}
+Proof
+  simp[optSET_def, SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
+Theorem opt_inh1:
+  ∀v:'a1. v ∈ optSET (SOME v)
+Proof
+  simp[optSET_def, SUBSET_DEF, EXTENSION, IN_DEF]
+QED
+
 val _ = bnfBase.updateDB (
   {Thy = "option", Name = "option"},
   bnfBase.bI {
     canontype = “:'a1 option”,
-    siblings = [],
     map = “option$OPTION_MAP : ('a1 -> 'c1) -> 'a1 option -> 'c1 option”,
     set = [“optSET : 'a1 option -> 'a1 set”],
     mapID = pnm "optMap_ID",
@@ -460,7 +642,11 @@ val _ = bnfBase.updateDB (
     relator = “option$OPTREL : ('a1 -> 'c1 -> bool) ->
                                ('a1 option -> 'c1 option -> bool)”,
     bnd = “univ(:num)”,
-    bndthms = [pnm "opt_bnd1"]
+    bndthms = [pnm "opt_bnd1"],
+
+    wits = [(“K NONE : 'a1 -> 'a1 option”, pnm "opt_wit1"),
+            (“SOME : 'a1 -> 'a1 option”, pnm "opt_wit2")],
+    inhabits = [(“SOME : 'a1 -> 'a1 option”, pnm "opt_inh1")]
   }
 )
 
@@ -476,3 +662,206 @@ Proof
       Q.EXISTS_TAC ‘(a,b)’ >> simp[]) >>
   simp[pairTheory.EXISTS_PROD]
 QED
+
+(* ----------------------------------------------------------------------
+    Results supporting the compositional derivation of bounds for
+    composite functors.
+
+    A composite functor's set-function is built (see bnfLib) out of
+
+       $=                     (at the functor's own argument)
+       K ∅                    (at argument-free positions)
+       BIMG s ∘ set           (descending through a component functor)
+       S ($UNION ∘ s₁) s₂     (combining a component's various arguments)
+
+    so a bound for the composite follows from bounds for the pieces, as
+    long as the bound is infinite.  The results below are the four cases.
+   ---------------------------------------------------------------------- *)
+
+Theorem EQ_CARDLE:
+  ∀B. B ≠ ∅ ⇒ ∀x:'a. $= x ≼ B
+Proof
+  simp[SING_CARDLE]
+QED
+
+Theorem CARDEQ_IMP_CARDLEQ:
+  ∀s t. s ≈ t ⇒ s ≼ t
+Proof
+  metis_tac[cardleq_lteq]
+QED
+
+Theorem CARDLEQ_INFINITE:
+  ∀s t. INFINITE s ∧ s ≼ t ⇒ INFINITE t
+Proof
+  metis_tac[CARD_LE_FINITE]
+QED
+
+Theorem INFINITE_NOT_EMPTY:
+  ∀B. INFINITE B ⇒ B ≠ ∅
+Proof
+  metis_tac[FINITE_EMPTY]
+QED
+
+Theorem K0_CARDLE:
+  ∀B x:'b. (K ∅ : 'b -> 'a set) x ≼ B
+Proof
+  simp[]
+QED
+
+Theorem LU_CARDLE:
+  ∀B f1 f2.
+    INFINITE B ∧ (∀x. f1 x ≼ B) ∧ (∀x. f2 x ≼ B) ⇒
+    ∀x. S ($UNION o f1) f2 x ≼ B
+Proof
+  rpt gen_tac >> strip_tac >> simp[combinTheory.S_THM] >> gen_tac >>
+  irule UNION_CARDLE >> simp[]
+QED
+
+Theorem BIMGo_CARDLE:
+  ∀B g st.
+    INFINITE B ∧ (∀y. g y ≼ B) ∧ (∀x. st x ≼ B) ⇒
+    ∀x. (BIMG g o st) x ≼ B
+Proof
+  rpt gen_tac >> strip_tac >> simp[combinTheory.o_THM] >> gen_tac >>
+  irule CARD_BIGUNION >> simp[PULL_EXISTS] >>
+  irule IMAGE_cardleq_rwt >> simp[]
+QED
+
+(* ----------------------------------------------------------------------
+    ... and the results used to see that a component functor's own bound
+    is dominated by the composite's, which is always of the form
+    univ(:num + τ₁ + ... + τₙ)
+   ---------------------------------------------------------------------- *)
+
+Theorem UNIV_CARD_LE_ADDR:
+  univ(:'a) ≼ univ(:'a + 'b)
+Proof
+  simp[disjUNION_UNIV, CARD_LE_ADDR]
+QED
+
+Theorem UNIV_CARD_LE_ADDL:
+  univ(:'b) ≼ univ(:'a + 'b)
+Proof
+  simp[disjUNION_UNIV, CARD_LE_ADDL]
+QED
+
+Theorem INFINITE_num_sum[simp]:
+  INFINITE univ(:num + 'a)
+Proof
+  ‘INJ INL univ(:num) univ(:num + 'a)’ by simp[INJ_DEF] >>
+  metis_tac[INFINITE_INJ, num_INFINITE]
+QED
+
+Theorem UNIV_NUM_NOT_EMPTY[simp]:
+  univ(:num) ≠ ∅
+Proof
+  simp[EXTENSION]
+QED
+
+(* ----------------------------------------------------------------------
+    Results supporting the compositional derivation of the map/set laws
+    for a composite functor.  Each result handles one node of the
+    composite's set-function (see bnfLib): the functor's own argument
+    ($=), an argument-free position (K ∅), a descent through a component
+    functor (BIMG s ∘ set), and the combination of a component's various
+    arguments (S ($UNION ∘ s₁) s₂).
+   ---------------------------------------------------------------------- *)
+
+Theorem EQ_natural:
+  ∀f:'a -> 'b. $= o f = IMAGE f o $=
+Proof
+  MATCH_ACCEPT_TAC (GSYM IMAGE_o_equal)
+QED
+
+(* the map is arbitrary, not I: in an n-ary functor an occurrence of a
+   *different* argument contributes nothing to this argument's set, but
+   still has that argument's function applied to it *)
+Theorem K0_natural:
+  ∀(f:'a -> 'b) (h:'c -> 'd).
+    (K ∅ : 'd -> 'b set) o h = IMAGE f o (K ∅ : 'c -> 'a set)
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem BIMG_o_natural:
+  ∀stB stA sB sA mp h f.
+    stB o mp = IMAGE h o stA ∧ sB o h = IMAGE f o sA ⇒
+    (BIMG sB o stB) o mp = IMAGE f o (BIMG sA o stA)
+Proof
+  rpt gen_tac >> strip_tac >>
+  RULE_ASSUM_TAC (SIMP_RULE bool_ss [Once FUN_EQ_THM, combinTheory.o_THM]) >>
+  CONV_TAC (ONCE_REWRITE_CONV [FUN_EQ_THM]) >>
+  simp[combinTheory.o_THM, IMAGE_IMAGE, combinTheory.o_DEF, IMAGE_BIGUNION]
+QED
+
+Theorem LU_natural:
+  ∀aB aA bB bA mp f.
+    aB o mp = IMAGE f o aA ∧ bB o mp = IMAGE f o bA ⇒
+    S ($UNION o aB) bB o mp = IMAGE f o S ($UNION o aA) bA
+Proof
+  rpt gen_tac >> strip_tac >>
+  RULE_ASSUM_TAC (SIMP_RULE bool_ss [Once FUN_EQ_THM, combinTheory.o_THM]) >>
+  CONV_TAC (ONCE_REWRITE_CONV [FUN_EQ_THM]) >>
+  simp[combinTheory.o_THM, combinTheory.S_THM, IMAGE_UNION]
+QED
+
+Theorem EQ_CONG:
+  ∀f g x. (∀a. a ∈ $= x ⇒ f a = g a) ⇒ f x = g x
+Proof
+  simp[IN_DEF]
+QED
+
+Theorem BIMG_o_CONG_hyp:
+  ∀sA stA x y f g.
+    (∀a. a ∈ (BIMG sA o stA) x ⇒ f a = g a) ∧ y ∈ stA x ⇒
+    ∀a. a ∈ sA y ⇒ f a = g a
+Proof
+  rpt strip_tac >> first_x_assum irule >> simp[PULL_EXISTS] >>
+  metis_tac[]
+QED
+
+Theorem LU_CONG_hyp:
+  ∀aA bA x f g.
+    (∀a. a ∈ S ($UNION o aA) bA x ⇒ f a = g a) ⇒
+    (∀a. a ∈ aA x ⇒ f a = g a) ∧ (∀a. a ∈ bA x ⇒ f a = g a)
+Proof
+  simp[combinTheory.S_THM] >> rpt strip_tac >> first_x_assum irule >> simp[]
+QED
+
+(* ----------------------------------------------------------------------
+    What a size says about a mapped value.
+
+    A datatype recursing through an operator has its size read off the
+    value the recursion hands over, which is the argument with the size
+    already mapped across it: `1 + option_size (λx. x) (OPTION_MAP sz v)`.
+    Termination proofs take that apart with the operator's own size
+    clauses, which are about `option_size sz v`, so the two are brought
+    together here — `list_size_map` says the same of lists.
+   ---------------------------------------------------------------------- *)
+
+Theorem option_size_map:
+  option_size f (OPTION_MAP g x) = option_size (\a. f (g a)) x
+Proof
+  Cases_on ‘x’ >> simp[]
+QED
+
+val _ = TotalDefn.export_termsimp "bnfPrelims.option_size_map"
+
+(* and of a sum, whose size counts the tag *)
+Theorem sum_size_map:
+  full_sum_size f g (SUM_MAP h k s) =
+  full_sum_size (\a. f (h a)) (\b. g (k b)) s
+Proof
+  Cases_on ‘s’ >> simp[basicSizeTheory.full_sum_size_thm]
+QED
+
+val _ = TotalDefn.export_termsimp "bnfPrelims.sum_size_map"
+
+(* and the same of a pair, whose map is written with ## *)
+Theorem pair_size_map:
+  pair_size f g ((h ## k) p) = pair_size (\a. f (h a)) (\b. g (k b)) p
+Proof
+  Cases_on ‘p’ >> simp[]
+QED
+
+val _ = TotalDefn.export_termsimp "bnfPrelims.pair_size_map"

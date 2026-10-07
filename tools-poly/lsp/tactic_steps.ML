@@ -83,7 +83,7 @@ local
       SOME frags => frags
     | NONE => raise Fail ("parseFrags: no HOLTheoremDecl in " ^ tacText)
   fun open_ch FOpen           = "("
-    | open_ch FOpenThen1      = "["
+    | open_ch (FOpenThen1 _)  = "["
     | open_ch (FOpenBy _)     = "B"
     | open_ch (FOpenSufficesBy _) = "U"
     | open_ch FOpenFirst      = "<"

@@ -84,7 +84,9 @@ QED
 Theorem ptree_fringe_real_fringe:
    ∀pt. ptree_fringe pt = MAP FST (real_fringe pt)
 Proof
-  ho_match_mp_tac real_fringe_ind >>
+  (* real_fringe_ind is now trivial: the recursion is structural, so the
+     datatype's own principle is what covers it *)
+  ho_match_mp_tac (TypeBase.induction_of “:('a,'b,'c) parsetree”) >>
   simp[pairTheory.FORALL_PROD, MAP_FLAT, MAP_MAP_o, combinTheory.o_ABS_R] >>
   rpt strip_tac >> AP_TERM_TAC >> simp[MAP_EQ_f]
 QED
@@ -183,12 +185,9 @@ Theorem derives_paste_horizontally:
 Proof metis_tac [RTC_CASES_RTC_TWICE, derives_common_suffix, derives_common_prefix]
 QED
 
+(* the package's principle says what each sub-tree satisfies already *)
 Theorem ptree_ind =
   TypeBase.induction_of ``:('a,'b,'l)parsetree``
-     |> Q.SPECL [`P`, `λl. ∀pt. MEM pt l ⇒ P pt`]
-     |> SIMP_RULE (srw_ss() ++ CONJ_ss) []
-     |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]
-     |> Q.GEN `P`;
 
 Theorem valid_ptree_derive:
   ∀pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)

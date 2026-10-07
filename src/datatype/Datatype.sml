@@ -772,13 +772,106 @@ fun astHol_datatype astl =
   HOL_MESG message
  end
 
+(*---------------------------------------------------------------------------*)
+
+fun spec_recurses (astl : ParseDatatype.AST list) =
+    let
+      val tynames = map #1 astl
+      fun here NONE = true
+        | here (SOME thy) = thy = current_theory()
+      fun mentions pty =
+          case pty of
+              ParseDatatype.dVartype _ => false
+            | ParseDatatype.dAQ _ => false
+            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
+                (Lib.mem Tyop tynames andalso here Thy) orelse
+                List.exists mentions Args
+      fun inForm (ParseDatatype.Constructors cs) =
+            List.exists (List.exists mentions o #2) cs
+        | inForm (ParseDatatype.Record flds) =
+            List.exists (mentions o #2) flds
+    in
+      List.exists (inForm o #2) astl
+    end
+
+(* Does the specification say anything about a type variable?  A type
+   with a type variable in it is a candidate functor, and a later
+   specification may want to recurse through it — `fake_pair = FP of 'a
+   => 'b` and then `t = C of bool ** t ** t`.  Nothing registers a type
+   the old construction builds as a functor, so a specification that
+   mentions a type variable goes to the BNF package even when it does
+   not recurse: that is what leaves it in the functor database. *)
+fun spec_has_tyvars (astl : ParseDatatype.AST list) =
+    let
+      fun mentions pty =
+          case pty of
+              ParseDatatype.dVartype _ => true
+            | ParseDatatype.dAQ ty => not (null (Type.type_vars ty))
+            | ParseDatatype.dTyop {Args, ...} => List.exists mentions Args
+      fun inForm (ParseDatatype.Constructors cs) =
+            List.exists (List.exists mentions o #2) cs
+        | inForm (ParseDatatype.Record flds) =
+            List.exists (mentions o #2) flds
+    in
+      List.exists (inForm o #2) astl
+    end
+
+(* What a declaration says about itself is the BNF package's: the names
+   it should give the constants it generates.  The older construction
+   generates none of them and so cannot honour the request; a
+   specification it has to build must not carry any, and saying so is
+   better than building the type under names it was not asked for. *)
+fun unannotate ({name, form, ...} : ParseDatatype.annotatedAST) =
+    (name, form) : ParseDatatype.AST
+
+fun attrs_of (astl : ParseDatatype.annotatedAST list) =
+    List.concat (List.map (List.map #1 o #attrs) astl)
+
+(* the same three-way choice as Datatype below: the older syntax says
+   the same things *)
+fun dispatch astl =
+    let
+      val plain = List.map unannotate astl
+    in
+      if is_enum_type_spec plain orelse
+         not (spec_recurses plain orelse spec_has_tyvars plain) orelse
+         not (bnfDatatypeLib.expressible astl)
+      then
+        case attrs_of astl of
+            [] => astHol_datatype plain
+          | ks =>
+            raise ERR "dispatch"
+                  ("this specification is the older construction's to \
+                   \build, and that construction names no constants: " ^
+                   String.concatWith ", " ks)
+      else bnfDatatypeLib.bnfDatatypeASTs astl
+    end
+
 fun Hol_datatype q =
-    astHol_datatype (ParseDatatype.parse (type_grammar()) q)
+    dispatch (ParseDatatype.parse_annotated (type_grammar()) q)
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Hol_datatype" e)
 
+(*---------------------------------------------------------------------------*)
+(* Does the specification recurse?  A specification whose constructors       *)
+(* mention none of the types being defined is a sum of products of types     *)
+(* that already exist, which this construction builds directly.  One that    *)
+(* does recurse is a fixed point, and the fixed point is what the BNF        *)
+(* package takes — and what leaves the new type in the functor database,     *)
+(* so that a later specification can recurse through it in turn.             *)
+
+(*---------------------------------------------------------------------------*)
+(* An enumeration is what EnumType builds, from a representation in the      *)
+(* numbers; a specification that does not recurse is a sum of products,      *)
+(* which this construction builds; and everything that does recurse is a     *)
+(* fixed point, which the BNF package takes — and which leaves the new type  *)
+(* in the functor database, so that the next specification can recurse       *)
+(* through it.  Records are orthogonal to all three: whichever built the     *)
+(* type, the record apparatus goes on top of it.                            *)
+(*---------------------------------------------------------------------------*)
+
 fun Datatype q =
-    astHol_datatype (ParseDatatype.hparse (type_grammar()) q)
+    dispatch (ParseDatatype.hparse_annotated (type_grammar()) q)
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Datatype" e)
 

@@ -813,7 +813,19 @@ fun parseSML file read parseError: scope -> result = let
           end
         else (next (); qtoken cm)
 
-    fun expected () = "expected [" ^ String.concatWith ", " s ^ "]"
+    (* The only quotation that ends at `Proof' is a theorem's
+       statement, so name the keyword and say where it has to be.
+       Reaching here means some other column-0 keyword turned up
+       first, and the position this message gets is that keyword --
+       typically the `QED', which on its own tells the reader
+       nothing.  A `Proof' indented by even one space is the case
+       worth spelling out: it is not in column 0, so it reads as part
+       of the statement and the scan runs straight past it. *)
+    fun expected () =
+        case s of
+          ["Proof"] => "expected [Proof]: a theorem's statement ends at \
+                       \a `Proof' starting in column 0"
+        | _ => "expected [" ^ String.concatWith ", " s ^ "]"
 
     fun mismatch_msg mismatches =
       case rev mismatches of

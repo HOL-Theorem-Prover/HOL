@@ -193,8 +193,11 @@ token that denotes a `hol_type` (e.g. `num`, `real`, or `'a`).*
 ```
 Datatype `[binding ;]* binding`
 
-binding          ::= ident = constructor-spec
-                   | ident = record-spec
+binding          ::= ident attrs? = constructor-spec
+                   | ident attrs? = record-spec
+attrs            ::= [ [attr ,]* attr ]  |  [ ]
+attr             ::= ident [ = arg+ ]?
+arg              ::= ident attrs?
 constructor-spec ::= [clause |]* clause
 clause           ::= ident ty-spec*
 ty-spec          ::= ( hol_type )  |  atomic-type
@@ -223,6 +226,48 @@ stored in the database.
 When the HOL system starts up, the `TypeBase` already contains the
 relevant entries for the types `bool`, `prod`, `num`, `option`, and
 `list`.
+
+#### Naming what the construction generates
+
+\index{Datatype@\ml{Datatype}!attributes of a declaration}
+A declaration that recurses, or that mentions a type variable, is built
+by the bounded natural functor construction, which defines a map
+function for the type, a set function for each of its type variables, a
+relator and a size function.  What these are called is the
+declaration's to say, in attributes after the type's name:
+
+```
+Datatype:
+  list[map=MAP,set=LIST_TO_SET,rel=LIST_REL,size=list_size] =
+    NIL | CONS of 'a => list
+End
+```
+
+What a declaration does not name is called after the type: `<ty>MAP`,
+`<ty>SET` (`SET1`, `SET2`, and so on when the type has more than one
+variable), `<ty>REL`, and `<tyname>_size`.  An attribute the package
+does not know is an error rather than a silence; it would otherwise
+look like a name that had been taken.
+
+A name may itself carry attributes, which say what is to become of that
+constant's equations:
+
+- `nocompute` keeps them out of the global compset that `EVAL` uses,
+  exactly as it does for a `Definition`.
+- `simp` adds them to the simplifier's set, which they do not join
+  otherwise: a definition is not a rewrite unless it says so.
+
+So `set=LIST_TO_SET[nocompute]` names the set function and says that
+its equations are not `EVAL`'s --- `listTheory` states them itself, in
+a form of its own choosing.
+
+For each such constant the construction saves its equations as
+`<constant>_thm`, registers them as the function's definition, so that
+a tool asking for one is given the constructors rather than the
+specification the construction built, and saves an induction principle
+for it as `<constant>_ind`.  None of these equations joins the type's
+entry in the `TypeBase`: what an entry holds is what the list above
+describes, and nothing a generated constant says about itself.
 
 #### Example: Binary trees
 

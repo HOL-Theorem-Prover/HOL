@@ -186,9 +186,29 @@ file's own directory -- not a VC root, and not the file itself."
   ;; no step in it -- while the compile has not reached the proof.
   ;; Handing that to the header formatter formats nil with %d and
   ;; errors, which is what a caller has to keep it away from.
-  (should (hol-lsp--pending-p '(:status "pending")))
-  (should-not (hol-lsp--pending-p '(:theorem "foo" :step 7)))
-  (should-not (hol-lsp--pending-p nil)))
+  (should (hol-lsp--refused-p '(:status "pending")))
+  (should-not (hol-lsp--refused-p '(:theorem "foo" :step 7)))
+  (should-not (hol-lsp--refused-p nil)))
+
+(ert-deftest hol-lsp-a-provisional-answer-is-a-state ()
+  ;; `pending' also arrives WITH a state: the walker compiles tactics
+  ;; against the file's namespace, so until its `open's have run the
+  ;; names are not there and the walk stops early.  That reply is a
+  ;; goal state -- refusing it shows nothing where there was something
+  ;; to show -- and the header says it is not settled.  One fixture,
+  ;; two statuses: the status is the whole of the difference.
+  (let* ((base '(:theorem "foo" :step 7 :goals [] :context nil :error nil))
+         (prov (append '(:status "pending") base))
+         (hdr (hol-lsp--goals-header prov)))
+    (should (hol-lsp--pending-p prov))
+    (should-not (hol-lsp--refused-p prov))
+    (should (string-match-p "still compiling" hdr))
+    ;; and it does not also claim the focus is proved: no goals here
+    ;; means the walk got no further, not that anything was solved.
+    (should-not (string-match-p "solved" hdr))
+    (should-not (string-match-p
+                 "still compiling"
+                 (hol-lsp--goals-header (append '(:status "ok") base))))))
 
 (ert-deftest hol-lsp-strip-context-removes-the-repeated-line ()
   ;; `pretty' repeats the tags at its top; the buffer shows only the
@@ -349,6 +369,31 @@ the tally, not the per-proof marks."
     (hol-lsp-tests--put "c" "failed" 15)
     (should (equal (hol-lsp-proof-summary) "\u22a22/3!1 "))))
 
+(ert-deftest hol-lsp-a-suspension-is-settled-not-outstanding ()
+  "A proof split up with `suspend' and finished off in `Resume'
+blocks is complete, and the tally has to read it that way.
+
+The buckets used to be decided by exclusion -- anything that was not
+proved, checking or cheated was a bad verdict -- so a finished file
+reported a proof to go and look at that nobody needed to look at.
+The parent's own tactic ran and did what it said; what it stashed is
+proved by the Resume blocks, which are entries in their own right.
+
+The `failed' proof is the control: the mark has to stay at one
+rather than vanish, or this would pass just as well with the bad
+count broken outright."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (hol-lsp-tests--put "split" "suspended" 3)
+    (hol-lsp-tests--put "split[p]" "proved" 9)
+    (hol-lsp-tests--put "split[q]" "proved" 14)
+    (should (equal (hol-lsp-proof-summary) ""))
+    (should (equal (hol-lsp--outstanding-proofs) nil))
+    (hol-lsp-tests--put "other" "failed" 20)
+    (should (equal (hol-lsp-proof-summary) "\u22a23/4!1 "))
+    (should (equal (mapcar #'car (hol-lsp--outstanding-proofs))
+                   '("other")))))
+
 (ert-deftest hol-lsp-a-proof-that-moves-keeps-one-entry ()
   "An edit above a proof moves it, so the pool announces the same
 proof at one line and then another.  Keyed by position that counted it
@@ -415,7 +460,7 @@ than sticking on the first."
                        (number-sequence 0 20) "\n"))
     (setq hol-lsp--proof-states (make-hash-table :test #'equal))
     (hol-lsp-tests--put "a" "checking" 4)
-    (hol-lsp-tests--put "b" "suspended" 12)
+    (hol-lsp-tests--put "b" "failed" 12)
     (goto-char (point-min))
     (hol-lsp-goto-outstanding-proof)
     (should (equal (line-number-at-pos) 5))
