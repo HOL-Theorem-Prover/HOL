@@ -1,4 +1,6 @@
 signature Refute_RegistrationData = sig
+  (* Never HOL_ERR: lookup catch-alls must not hide invalid registrations. *)
+  exception Invalid of Feedback.hol_error
   type operator = {Thy : string, Tyop : string}
   datatype descriptor =
       Codata of {tyop : operator, case_const : Term.term,

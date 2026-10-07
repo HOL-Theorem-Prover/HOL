@@ -123,7 +123,8 @@ fun safe_postprocess postprocessor candidate =
     else
       candidate
   end
-  handle error =>
+  handle e as Refute_RegistrationData.Invalid _ => raise e
+       | error =>
     if Exn.is_interrupt error then Exn.reraise error else candidate
 
 (* One walk, two registration sources: the pattern registry above (user

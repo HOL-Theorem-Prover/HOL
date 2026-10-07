@@ -680,8 +680,8 @@ fun run_instance deadline started (config : Refute_Core.config)
                 (Util.apply_within_budget (#tac_timeout context)
                    (MFMono.formulas_monotonic context binarize ty)
                    (nondef_ts, def_ts)
-                 handle exn =>
-                   abandoned_mono_verdict
+                 handle e as Refute_RegistrationData.Invalid _ => raise e
+                      | exn => abandoned_mono_verdict
                      (fn (kind, detail) =>
                         report_mono_failure kind ty detail) exn)
               val _ = check_deadline deadline

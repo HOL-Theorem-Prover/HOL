@@ -333,6 +333,7 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
              | ReplayFailure issue =>
                  if resource_failure issue then raise ReplayFailure issue
                  else NONE
+             | e as Refute_RegistrationData.Invalid _ => raise e
              | _ => NONE
 
       fun optional_equality stage depth input operation =
@@ -999,6 +1000,7 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
               | ReplayFailure issue =>
                   (reported_failure := SOME issue;
                    NoCertificate (render_failure issue))
+              | e as Refute_RegistrationData.Invalid _ => raise e
               | error =>
                   let val issue =
                     {kind = InternalFailure,

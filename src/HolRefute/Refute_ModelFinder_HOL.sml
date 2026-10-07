@@ -3416,18 +3416,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       | Refute_RegistrationData.Typedef d => prepare_typedef current d
       | Refute_RegistrationData.Quotient d => prepare_quotient current d
 
-  fun registration_fallback error fallback =
-    if List.exists (fn {origin_structure, origin_function, ...} =>
-         origin_structure = "Refute_RegistrationData" orelse
-         (origin_structure = "Refute_ModelFinder_HOL" andalso
-          origin_function = "replay")) (Feedback.origins_of error)
-    then raise HOL_ERR error else fallback
-
   fun operator_name ({Thy, Tyop} : type_operator) = Thy ^ "$" ^ Tyop
 
   fun replay_error thy operator error =
-    err "replay" ("exporting theory " ^ thy ^ ", " ^ operator_name operator ^
-                  ": " ^ Feedback.message_of error)
+    Refute_RegistrationData.Invalid (Feedback.mk_hol_error
+      "Refute_ModelFinder_HOL" "replay" locn.Loc_None
+      ("exporting theory " ^ thy ^ ", " ^ operator_name operator ^
+       ": " ^ Feedback.message_of error))
 
   fun prepare_history operator history =
     let
@@ -4396,7 +4391,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                  abs = Term.inst theta abs, rep = Term.inst theta rep,
                  equiv_thm = equiv_thm, partial = partial}
             end
-    end handle HOL_ERR error => registration_fallback error NONE
+    end handle HOL_ERR _ => NONE
 
   fun is_quot_type ty = Option.isSome (quotient_for_type ty)
 
@@ -4535,7 +4530,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        | SOME (Frac _) => SOME (synthetic_frac_typedef ty)
        | SOME Fmap => SOME (synthetic_fmap_typedef ty)
        | _ => NONE)
-    handle HOL_ERR error => registration_fallback error NONE
+    handle HOL_ERR _ => NONE
 
   fun is_typedef ty = Option.isSome (typedef_for_type ty)
 
@@ -4639,7 +4634,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               (remember_harvest_miss (quotient_harvest_misses ()) operator
                  fingerprint;
                false)
-    end handle HOL_ERR error => registration_fallback error false
+    end handle HOL_ERR _ => false
 
   fun harvest_quotient ty =
     with_harvest (fn () => harvest_quotient_staged ty)
@@ -4675,7 +4670,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               (remember_harvest_miss (typedef_harvest_misses ()) operator
                  fingerprint;
                false)
-    end handle HOL_ERR error => registration_fallback error false
+    end handle HOL_ERR _ => false
 
   fun harvest_typedef ty =
     with_harvest (fn () => harvest_typedef_staged ty)
@@ -4708,8 +4703,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             (if got_quotient andalso not had_quotient then ty :: quotients
              else quotients))
          end
-         handle HOL_ERR error =>
-           registration_fallback error (typedefs, quotients))
+         handle HOL_ERR _ => (typedefs, quotients))
       val (typedefs, quotients) =
         List.foldl attempt ([], []) operators
     in
@@ -4847,7 +4841,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                    (case typedef_for_type ty of
                         SOME {abs, ...} => [abs]
                       | NONE => []))
-    end handle HOL_ERR error => registration_fallback error []
+    end handle HOL_ERR _ => []
 
   (* Operator-level classification makes every [cart] a free datatype, but
      [mk_cart] takes a function into [:'a finite_image], whose defining
@@ -4908,7 +4902,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         Term.same_const constructor term andalso
         Term.type_of constructor = Term.type_of term)
         (registered_constructors result_ty)
-    end handle HOL_ERR error => registration_fallback error false
+    end handle HOL_ERR _ => false
 
   fun raw_constructor_name constructor =
     case Lib.total Term.dest_thy_const constructor of
@@ -4940,7 +4934,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                 (raw @ registered)
             end
         | NONE => false
-    handle HOL_ERR error => registration_fallback error false
+    handle HOL_ERR _ => false
 
   fun is_nonfree_constr term =
     if Term.is_const term then
@@ -4950,7 +4944,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         registered_constructor term orelse
         (not (is_codatatype result_ty) andalso
          Refute_TypeBase.is_constructor term)
-      end handle HOL_ERR error => registration_fallback error false
+      end handle HOL_ERR _ => false
     else
       reserved_constructor term
 
@@ -4974,7 +4968,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         is_nonfree_constr head andalso
         List.all (is_constructor_pattern_gen is_leaf bound) arguments
       end
-      handle HOL_ERR error => registration_fallback error false
+      handle HOL_ERR _ => false
 
   fun is_constructor_pattern_formula_gen is_leaf term =
     let
@@ -5007,7 +5001,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         is_codatatype result_ty andalso
         Refute_TypeBase.is_constructor term andalso
         not (registered_constructor term)
-      end handle HOL_ERR error => registration_fallback error false
+      end handle HOL_ERR _ => false
     else
       false
 
@@ -5021,7 +5015,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           case typedef_for_type result_ty of
               SOME {univ, ...} => univ
             | NONE => true
-      end handle HOL_ERR error => registration_fallback error false
+      end handle HOL_ERR _ => false
 
   fun is_constr term =
     is_nonfree_constr term andalso
@@ -5043,7 +5037,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             if same_registered_constant (morphism info) constant
             then SOME info else NONE
         | NONE => NONE
-    end handle HOL_ERR error => registration_fallback error NONE
+    end handle HOL_ERR _ => NONE
 
   fun quotient_for_abs constant =
     registered_morphism quotient_for_type #abs #2 constant
@@ -5069,7 +5063,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               then SOME found else NONE
             end
         | NONE => NONE
-    end handle HOL_ERR error => registration_fallback error NONE
+    end handle HOL_ERR _ => NONE
 
   fun quotient_class_abs_for constant =
     quotient_class_for #abs #2
@@ -5104,7 +5098,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       case candidate range domain of
           SOME ty => SOME ty
         | NONE => candidate domain range
-    end handle HOL_ERR error => registration_fallback error NONE
+    end handle HOL_ERR _ => NONE
 
   (* A typedef need not occur through Abs or Rep: it can occur solely in a
      variable, binder, or equality.  Search every type in the term tree (and
@@ -5180,7 +5174,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         end
     in
       Lib.get_first search_type (Refute_TypeBase.elts ())
-    end handle HOL_ERR error => registration_fallback error NONE
+    end handle HOL_ERR _ => NONE
 
   fun dest_record_get term = find_field #accessor term
   fun dest_record_update term = find_field #fupd term
@@ -5309,7 +5303,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           if null constructors orelse is_codatatype ty orelse
              not (is_data_type ty) then NONE
           else SOME (const_key case_const, (length constructors, 0))
-        end handle HOL_ERR error => registration_fallback error NONE
+        end handle HOL_ERR _ => NONE
       val raw = List.mapPartial entry (Refute_TypeBase.elts ())
       (* Revalidation, not a formality: a registration that passed at
          [register_codatatype] can fail here once its constructors are
@@ -6810,4 +6804,17 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        wf_cache = ref [],
        constr_cache = ref []}
     end
+
+  fun registration_api f x =
+    f x handle Refute_RegistrationData.Invalid error => raise HOL_ERR error
+
+  val register_codatatype = registration_api register_codatatype
+  val register_quotient = registration_api register_quotient
+  val register_typedef = registration_api register_typedef
+  val register_frac_type = registration_api register_frac_type
+  val export_codatatype = registration_api export_codatatype
+  val export_typedef = registration_api export_typedef
+  val export_quotient = registration_api export_quotient
+  val export_registrations = registration_api export_registrations
+  val harvest_registrations = registration_api harvest_registrations
 end

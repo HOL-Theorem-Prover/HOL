@@ -298,8 +298,8 @@ structure Refute_QC :> Refute_QC = struct
       (* The memoise-and-recover shape shared by the three [analyse*]
          functions below: consult the cache, else compute, cache the
          answer and register any inference it produced.  An exception
-         (other than [Interrupt]) is itself cached, as a triggered
-         [NONE] carrying its text, so a relation that raises is not
+         (other than [Interrupt] or invalid registration data) is cached
+         as a triggered [NONE] carrying its text, so a relation is not
          re-analysed on every candidate.  The caches differ in key
          shape, so each caller supplies its own [find]/[store]. *)
       fun memoised {find, store} compute =
@@ -314,6 +314,7 @@ structure Refute_QC :> Refute_QC = struct
                 answer
               end
               handle Interrupt => raise Interrupt
+                   | e as Refute_RegistrationData.Invalid _ => raise e
                    | error =>
                        let
                          val answer =
@@ -371,7 +372,9 @@ structure Refute_QC :> Refute_QC = struct
         (case clause_source relation of
              Clauses pair => SOME pair
            | NoClauses _ => NONE)
-        handle Interrupt => raise Interrupt | _ => NONE
+        handle Interrupt => raise Interrupt
+             | e as Refute_RegistrationData.Invalid _ => raise e
+             | _ => NONE
 
       (* Static-parameter specialisation: [relation]'s argument at
          [position] is pinned to the one closed [value] found at a call
@@ -1575,6 +1578,8 @@ structure Refute_QC :> Refute_QC = struct
     end
     handle Interrupt =>
              (ignore (Exn.capture clear_smart_gate_cache ()); raise Interrupt)
+         | e as Refute_RegistrationData.Invalid _ =>
+             (ignore (Exn.capture clear_smart_gate_cache ()); raise e)
          | _ =>
              (ignore (Exn.capture clear_smart_gate_cache ()); false)
 
@@ -1624,7 +1629,12 @@ structure Refute_QC :> Refute_QC = struct
       val plans =
         (List.map (fn instance =>
            compile_plan_with cache plan_config (#goal instance)) instances
-         handle error =>
+         handle e as Refute_RegistrationData.Invalid _ =>
+           (if strategy = Exhaustive then
+              ignore (Exn.capture clear_smart_gate_cache ())
+            else ();
+            raise e)
+              | error =>
            (if strategy = Exhaustive then
               ignore (Exn.capture clear_smart_gate_cache ())
             else ();

@@ -9,7 +9,7 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
     | Quotient of {qty : Type.hol_type, rty : Type.hol_type,
                    abs : Term.term, rep : Term.term, equiv_thm : Thm.thm}
 
-  val ERR = Feedback.mk_HOL_ERR "Refute_RegistrationData"
+  exception Invalid of Feedback.hol_error
   fun type_operator ty =
     let val {Thy, Tyop, ...} = Type.dest_thy_type ty
     in {Thy = Thy, Tyop = Tyop} end
@@ -140,8 +140,9 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
     in
       case #errors value of
           [] => value
-        | (thy, why) :: _ => raise ERR "import"
-            ("exporting theory " ^ thy ^ ": " ^ why)
+        | (thy, why) :: _ => raise Invalid (Feedback.mk_hol_error
+            "Refute_RegistrationData" "import" locn.Loc_None
+            ("exporting theory " ^ thy ^ ": " ^ why))
     end
   fun history ctxt opn =
     case KNametab.lookup (#histories (read ctxt)) (key opn) of

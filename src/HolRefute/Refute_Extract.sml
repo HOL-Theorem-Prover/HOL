@@ -4531,6 +4531,7 @@ structure Refute_Extract :> Refute_Extract = struct
     end
     handle Interrupt => raise Interrupt
          | NotExtractable reasons => reasons
+         | e as Refute_RegistrationData.Invalid _ => raise e
          | error =>
              ["native preflight: " ^
               (case General.exnMessage error of

@@ -25,7 +25,9 @@ structure Refute_Cert_Narrow :> Refute_Cert_Narrow = struct
          negation of the caller's unnormalised closure. *)
       fun normalization_step conversion tm =
         conversion tm
-        handle Interrupt => raise Interrupt | _ => Thm.REFL tm
+        handle Interrupt => raise Interrupt
+             | e as Refute_RegistrationData.Invalid _ => raise e
+             | _ => Thm.REFL tm
       val (normalized_equality, prenex_equality, pnf) =
         normalize_to_pnf normalization_step closure
 
@@ -379,5 +381,6 @@ structure Refute_Cert_Narrow :> Refute_Cert_Narrow = struct
       Certified (replace cex Refute_Core.Genuine values (SOME certificate))
     end
     handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
          | error => replay_failure cex (replay_error_text error)
 end

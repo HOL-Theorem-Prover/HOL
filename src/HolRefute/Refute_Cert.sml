@@ -21,7 +21,7 @@ structure Refute_Cert :> Refute_Cert = struct
     | InstanceStuck of string
 
   (* Shared by the narrowing and model replay engines: an exception raised
-     inside a replay step is reported by message, never propagated. *)
+     by a proof step is reported by message. *)
   fun replay_error_text error =
     let val message = General.exnMessage error
     in if message = "" then "unknown proof failure" else message end
@@ -140,7 +140,9 @@ structure Refute_Cert :> Refute_Cert = struct
      reported as [NONE]. *)
   fun plain_step _ input conversion =
     SOME (conversion input)
-    handle Interrupt => raise Interrupt | _ => NONE
+    handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
+         | _ => NONE
 
   fun is_quantifier tm =
     boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
@@ -172,6 +174,7 @@ structure Refute_Cert :> Refute_Cert = struct
         else Term.mk_var ("?", Term.type_of tm)
       end)
      handle Interrupt => raise Interrupt
+          | e as Refute_RegistrationData.Invalid _ => raise e
           | _ => Term.mk_var ("?", Term.type_of tm))
 
   fun closure_of tm =
@@ -299,7 +302,9 @@ structure Refute_Cert :> Refute_Cert = struct
       else
         uncertified cex
     end
-    handle Interrupt => raise Interrupt | _ => uncertified cex
+    handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
+         | _ => uncertified cex
 
   (* Direct evaluation may be stuck on the quantified source even though
      theorem-producing normalization exposes the fully instantiated matrix
@@ -349,7 +354,9 @@ structure Refute_Cert :> Refute_Cert = struct
         | InstanceTrue => Discarded
         | InstanceStuck _ => uncertified cex
     end
-    handle Interrupt => raise Interrupt | _ => uncertified cex
+    handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
+         | _ => uncertified cex
 
   fun certify {original, evals, env, cex} =
     let
@@ -372,7 +379,9 @@ structure Refute_Cert :> Refute_Cert = struct
                 certificate
             end
     end
-    handle Interrupt => raise Interrupt | _ => uncertified cex
+    handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
+         | _ => uncertified cex
 
   fun grounding_failure cex =
     Potential
@@ -395,5 +404,6 @@ structure Refute_Cert :> Refute_Cert = struct
         | _ => grounding_failure cex
     end
     handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
          | _ => grounding_failure cex
 end

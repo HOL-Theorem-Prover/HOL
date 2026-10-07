@@ -1697,7 +1697,9 @@ structure Refute_Core :> Refute_Core = struct
            Term.aconv value boolSyntax.F then SOME value
         else NONE
       end
-      handle Interrupt => raise Interrupt | _ => NONE
+      handle Interrupt => raise Interrupt
+           | e as Refute_RegistrationData.Invalid _ => raise e
+           | _ => NONE
 
   val format_evals = format_pairs (fn value =>
     format_term (Option.getOpt (boolean_value_for_display value, value)))
@@ -1852,7 +1854,9 @@ structure Refute_Core :> Refute_Core = struct
     List.exists (fn (_, result_ref) =>
       case !result_ref of SOME NoModel => true | _ => false) jobs
 
-  fun exception_reason e = Feedback.exn_to_string e
+  fun exception_reason (Refute_RegistrationData.Invalid error) =
+        exception_reason (Feedback.HOL_ERR error)
+    | exception_reason e = Feedback.exn_to_string e
 
   fun no_generator_reason (ty, reason) =
     "no generator for " ^ Parse.type_to_string ty ^ ": " ^ reason
@@ -1953,7 +1957,10 @@ structure Refute_Core :> Refute_Core = struct
               | NONE =>
                   let
                     val value = build ()
-                      handle e =>
+                      handle e as Refute_RegistrationData.Invalid _ =>
+                        (Synchronized.change slot (fn _ => Unclaimed);
+                         raise e)
+                           | e =>
                         (Synchronized.change slot (fn _ => Unclaimed);
                          raise e)
                   in

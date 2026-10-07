@@ -452,6 +452,7 @@ structure Refute_EvalSML :> Refute_EvalSML = struct
           end)
     end
     handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
          | error =>
              let
                val reason = "native: internal: " ^ exception_text error
