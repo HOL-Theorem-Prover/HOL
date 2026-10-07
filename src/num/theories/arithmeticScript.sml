@@ -4110,15 +4110,15 @@ Proof
 QED
 
 Theorem MIN_SUC:
-  MIN (SUC n) (SUC m) = SUC (MIN n m)
+  MIN (SUC m) (SUC n) = SUC (MIN m n)
 Proof
-  rw[MIN_DEF]
+  rw[MIN_DEF, LESS_MONO_EQ] >> Cases_on `m < n` >> metis_tac[NOT_LT]
 QED
 
 Theorem MAX_SUC:
-  MAX (SUC n) (SUC m) = SUC (MAX n m)
+  MAX (SUC m) (SUC n) = SUC (MAX m n)
 Proof
-  rw[MAX_DEF]
+  rw[MAX_DEF, LESS_MONO_EQ] >> Cases_on `m < n` >> metis_tac[NOT_LT]
 QED
 
 Theorem MIN_EQ_LE:

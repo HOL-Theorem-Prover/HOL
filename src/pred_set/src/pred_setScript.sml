@@ -7187,7 +7187,7 @@ Theorem MAX_SET_IMAGE_SUC:
   FINITE P ∧ P ≠ ∅ ==> MAX_SET (IMAGE SUC P) = SUC (MAX_SET P)
 Proof
   Induct_on `FINITE` >> rw[MAX_SET_THM]
-  >> Cases_on `P = ∅` >> gvs[MAX_SUC]
+  >> Cases_on `P = ∅` >> fs[MAX_SUC]
 QED
 
 Theorem MAX_SET_BIGUNION:
@@ -7199,8 +7199,8 @@ Proof
     irule MAX_SET_IN_SET
     >> rw[FINITE_BIGUNION, EXTENSION]
   )
-  >> gvs[BIGUNION] >> gvs[GSYM BIGUNION]
-  >> qexists `s` >> simp[] >> conj_asm1_tac >- (
+  >> fs[BIGUNION] >> fs[GSYM BIGUNION]
+  >> qexists_tac `s` >> simp[] >> conj_asm1_tac >- (
     dep_rewrite.DEP_REWRITE_TAC[MAX_SET_TEST_IFF] >> rw[]
     >- (rw[EXTENSION] >> metis_tac[])
     >> irule X_LE_MAX_SET >> rw[]
@@ -7210,18 +7210,6 @@ Proof
   >> Cases_on `s' = ∅` >> rw[]
   >> irule X_LE_MAX_SET >> rw[]
   >> metis_tac[MAX_SET_IN_SET]
-QED
-
-Theorem FINITE_SET_OF_SETS_UPPER_BOUNDED:
-  (∀s. s ∈ P ==> FINITE s ∧ MAX_SET s ≤ n) ==> FINITE P
-Proof
-  rw[] >> irule SUBSET_FINITE_I
-  >> qexists `POW {k | k ≤ n}`
-  >> rw[num_FINITE]
-  >- metis_tac[]
-  >> rw[SUBSET_DEF, IN_POW]
-  >> first_x_assum dxrule >> rw[]
-  >> metis_tac[X_LE_MAX_SET, LE_TRANS]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -7338,6 +7326,18 @@ Theorem lem[local]:
   !n. 2 * 2**n = 2**n + 2**n
 Proof
  RW_TAC arith_ss [EXP]
+QED
+
+Theorem FINITE_SET_OF_SETS_UPPER_BOUNDED:
+  (∀s. s ∈ P ==> FINITE s ∧ MAX_SET s ≤ n) ==> FINITE P
+Proof
+  rw[] >> irule SUBSET_FINITE_I
+  >> qexists_tac `POW {k | k ≤ n}`
+  >> rw[num_FINITE]
+  >- metis_tac[]
+  >> rw[SUBSET_DEF, IN_POW]
+  >> first_x_assum dxrule >> rw[]
+  >> metis_tac[X_LE_MAX_SET, LE_TRANS]
 QED
 
 (*---------------------------------------------------------------------------*)
