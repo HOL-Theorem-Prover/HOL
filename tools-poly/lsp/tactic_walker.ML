@@ -178,7 +178,16 @@ fun cheatBranch state =
       NONE => Rejected ApplyFailed
     | SOME state' => Applied state'
 
-fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
+(* Total, because a span that escapes the body must not take the walk
+   down with it.  `TacticSteps.fragsOfTacText' already clamps what it
+   hands out, so this is the second line of the same defence: several
+   of the call sites below sit outside the `Portable.total' that guards
+   their step, and a `Subscript' there escapes the whole walk. *)
+fun textAt tacText (s, e) = let
+  val n = String.size tacText
+  val s' = Int.max (0, Int.min (s, n))
+  val e' = Int.max (s', Int.min (e, n))
+  in String.substring (tacText, s', e' - s') end
 
 (* The source to compile for a leaf, or NONE for one that is a
    no-op.  The four sugars name their entry point in full because

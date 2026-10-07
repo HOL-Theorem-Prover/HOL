@@ -58,13 +58,32 @@ fun parseTacText {label, tacText} = let
      | _ => NONE
   end
 
-fun fragsOfTacText args =
+(* A span is clamped to the body it indexes, which is what every
+   consumer already assumes of it.  An unterminated string, character
+   literal or HOL quotation makes the lexer run to the end of the
+   *wrapped* source, so the span recorded for that leaf covers the
+   synthetic `QED' too: measured here, `simp["abc]' is ten characters
+   and comes back spanning fifteen.  Unclamped, the walker's `textAt'
+   is then an out-of-range `String.substring' -- and several of its
+   call sites sit outside the `Portable.total' guarding their step --
+   while `failedRange' would ask the client to squiggle past the end of
+   the proof.
+
+   Clamping where the spans are shifted keeps every consumer honest at
+   once; `linearize' runs afterwards, so the fragment opens carrying
+   spans of their own inherit it too. *)
+fun fragsOfTacText (args as {tacText, ...}) =
   case parseTacText args of
     NONE => NONE
   | SOME tac_ast => let
       val d = wrapPrefixLen
+      val n = String.size tacText
+      fun clamp (s, e) = let
+        val s' = Int.max (0, Int.min (s - d, n))
+        val e' = Int.max (s', Int.min (e - d, n))
+        in (s', e') end
       val shifted = TacticParse.mapTacExpr {
-          start = fn _ => fn (s, e) => (s - d, e - d),
+          start = fn _ => clamp,
           stop  = fn _ => fn x => x,
           repair = fn _ => fn _ => () }
         (TacticParse.parseTacticBlock tac_ast)
@@ -133,6 +152,37 @@ local
                         ^ expected ^ ", got " ^ got
                         ^ " for tactic: " ^ tacText)
     end
+  (* Every span a consumer will slice `tacText' with has to index it.
+     The walker's `textAt' and the client's `failedRange' both do, and
+     an unterminated string, character literal or quotation used to run
+     the lexer past the body and into the synthetic `QED'. *)
+  fun checkSpans name tacText = let
+    val n = String.size tacText
+    fun bad what (s, e) =
+      if s < 0 orelse e < s orelse e > n then
+        raise Fail ("TacticSteps selftest [" ^ name ^ "]: " ^ what
+                    ^ " span (" ^ Int.toString s ^ "," ^ Int.toString e
+                    ^ ") outside body of size " ^ Int.toString n
+                    ^ " for tactic: " ^ tacText)
+      else ()
+    fun atom te = case TacticSteps.atomSpan te of
+                      SOME sp => bad "atom" sp
+                    | NONE => ()
+    fun opn ok = case ok of
+                     FOpenThen1 sp => bad "THEN1" sp
+                   | FOpenBy (q, sp) => (bad "by-quote" q; bad "by" sp)
+                   | FOpenSufficesBy (q, sp) =>
+                       (bad "suffices_by-quote" q; bad "suffices_by" sp)
+                   | _ => ()
+    fun walk [] = ()
+      | walk (FAtom te :: r) = (atom te; walk r)
+      | walk (FFOpen o' :: r) = (opn o'; walk r)
+      | walk (FGroup (_, fs) :: r) = (walk fs; walk r)
+      | walk (FBracket (o', fs, _, _) :: r) = (opn o'; walk fs; walk r)
+      | walk (FMBracket (o', _, _, secs, _) :: r) =
+          (opn o'; List.app walk secs; walk r)
+      | walk (_ :: r) = walk r
+    in walk (parseFrags tacText) end
 in
   val _ = check "single leaf"      "simp[]"                      "E"
   val _ = check "ALL_TAC no-op"    "ALL_TAC"                     ""
@@ -161,4 +211,16 @@ in
   val _ = check "ORELSE"           "tac1 ORELSE tac2"            "<E|E)"
   val _ = check "TRY_LT"           "tac1 THEN_LT TRY_LT (ALLGOALS tac2)"
                                                                  "E<E|>"
+  (* A body being typed in: the closing delimiter is not there yet.
+     The lexer runs to the end of the wrapped source, so these are the
+     shapes whose spans used to cover the synthetic `QED'. *)
+  val _ = checkSpans "unterminated string"  "simp[\"abc]"
+  val _ = checkSpans "unterminated string mid-chain" "rw[] >> simp[\"abc]"
+  val _ = checkSpans "unterminated quote"   "`n < 10 by simp[]"
+  val _ = checkSpans "unterminated char"    "simp[#\"a]"
+  val _ = checkSpans "unclosed comment"     "simp[] (* oops"
+  val _ = checkSpans "unclosed paren"       "tac1 >- (a >> b"
+  val _ = checkSpans "unclosed by-paren"    "`n < 10` by (rw[]"
+  val _ = checkSpans "stray close paren"    "tac1 >> tac2)"
+  val _ = checkSpans "balanced control"     "tac1 >- (a >> b) >- (c >> d)"
 end;

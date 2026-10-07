@@ -3210,6 +3210,66 @@ def test_goalState_inside_proof():
         c.close()
 
 
+def test_goalState_with_an_unterminated_quotation():
+    """A body still being typed can hold an unterminated quotation.  The
+    lexer then runs past the end of the tactic, so the spans downstream
+    code slices `tacText' with are the ones most likely to escape it.
+    Two things have to hold: the half-typed proof still answers, and the
+    *next* theorem is still identified as itself rather than swallowed
+    into the broken block above it.
+
+    The second half is the one with teeth.  An unterminated *string* or
+    character literal does swallow the rest of the file -- the block's
+    `QED' goes with it, `findEnclosingTheorem' falls back to the dec's
+    `stop', and a cursor in a later theorem is answered with the broken
+    theorem's goal and no error at all.  That is not fixed here; this
+    pins the quotation case, which is the common one, so a regression
+    spreading it further is caught."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_unterminated.sml"
+        src = ("Theory goalstate_unterminated\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem half_typed:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  rw[] >> `n < 10\n"
+               "QED\n\n"
+               "Theorem healthy:\n"
+               "  !m:num. m + 0 = m\n"
+               "Proof\n"
+               "  rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        # Line 6 = "  rw[] >> `n < 10" — inside the half-typed body.
+        broken = _send_goalstate(c, 1101, uri, 6, 8)
+        assert_true(broken is not None,
+                    "the half-typed proof got a reply at all")
+        assert_true(broken.get("error") is None,
+                    f"no protocol error ({broken!r})")
+
+        # And the next request on the same server is unharmed: a leaked
+        # canary would interrupt it up to the budget later.
+        for attempt in range(3):
+            ok = _send_goalstate(c, 1102 + attempt, uri, 12, 3)
+            assert_true(ok is not None, "healthy proof got a reply")
+            res = ok.get("result")
+            assert_true(res is not None,
+                        f"healthy proof has a result ({ok!r})")
+            assert_eq(res.get("theorem"), "healthy", "theorem name")
+            goals = res.get("goals")
+            assert_true(isinstance(goals, list) and len(goals) == 1,
+                        f"one goal ({goals!r})")
+            assert_true("m + 0" in goals[0].get("goal", ""),
+                        f"goal renders the statement ({goals!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
     """A `by' block is structurally step-able without desugaring it to
     ordinary `sg'.  In particular, the second block's `_ = ...' quotation
@@ -11434,6 +11494,8 @@ TESTS = [
     ("statement_edit_still_clears_later_proofs",
                                      test_statement_edit_still_clears_later_proofs),
     ("goalState_inside_proof",       test_goalState_inside_proof),
+    ("goalState_with_an_unterminated_quotation",
+                    test_goalState_with_an_unterminated_quotation),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),
