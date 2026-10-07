@@ -30,5 +30,3 @@ The default value of `emit_MESG` is `true`.
 [`Feedback`](#Feedback), [`Feedback.HOL_MESG`](#Feedback.HOL_MESG),
 [`Feedback.emit_ERR`](#Feedback.emit_ERR),
 [`Feedback.emit_WARNING`](#Feedback.emit_WARNING)
-
->>__ Feedback.emit_MESG := true;

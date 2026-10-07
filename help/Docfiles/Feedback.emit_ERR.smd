@@ -31,5 +31,3 @@ The default value of `emit_ERR` is `true`.
 [`Feedback`](#Feedback), [`Feedback.Raise`](#Feedback.Raise),
 [`Feedback.emit_MESG`](#Feedback.emit_MESG),
 [`Feedback.emit_WARNING`](#Feedback.emit_WARNING)
-
->>__ Feedback.emit_ERR := true;
