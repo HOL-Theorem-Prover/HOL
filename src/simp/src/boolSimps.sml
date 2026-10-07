@@ -223,7 +223,9 @@ val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss
 
 
 (* NESTED_COND from boolSimpsContextTheory *)
-
+local
+val cond_rand_conv = REWR_CONV boolTheory.COND_RAND
+in
 fun celim_rand_CONV tm = let
   val (Rator, Rand) = Term.dest_comb tm
   val proceed = let
@@ -244,7 +246,8 @@ fun celim_rand_CONV tm = let
     end
   end
 in
-  (if proceed then REWR_CONV boolTheory.COND_RAND else NO_CONV) tm
+  (if proceed then cond_rand_conv else NO_CONV) tm
+end
 end
 
 fun COND_ABS_CONV tm = let
