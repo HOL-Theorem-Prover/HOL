@@ -718,6 +718,8 @@ Proof
   simp[FUN_REL, FORALL_SUM]
 QED
 
+(* A rearranged version of sum_CASE to allow for point free theorems *)
+
 val alt_sum_case_def = new_definition(
   "alt_sum_case_def",
   ``sum_case f g = λx. sum_CASE x f g``
@@ -728,8 +730,6 @@ Theorem alt_sum_case_thm[simp]:
 Proof
   CASE_TAC >> simp[alt_sum_case_def]
 QED
-
-(* A rearranged version of sum_CASE to allow for point free theorems *)
 
 
 val _ = temp_remove_termtok {term_name = "SUM_MAP", tok = "++"}
