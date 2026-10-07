@@ -89,11 +89,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theorem_operators : type_operator list,
      constant_operators : (type_operator * string) list}
 
+  type registry_entry =
+    {class : type_class, origin : registration_origin,
+     input : Refute_RegistrationData.descriptor option}
+
   type registrations =
-    {classes : type_class KNametab.table,
-     (* Original proof inputs, kept beside the normalized classes. *)
-     inputs : Refute_RegistrationData.descriptor KNametab.table,
-     origins : registration_origin KNametab.table,
+    {entries : registry_entry KNametab.table,
      replay : (persisted_history * type_class) KNametab.table,
      ersatz : ersatz list,
      quotient_misses : harvest_miss,
@@ -110,9 +111,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations : int Symtab.table}
 
   type cells =
-    {classes : type_class KNametab.table ref,
-     inputs : Refute_RegistrationData.descriptor KNametab.table ref,
-     origins : registration_origin KNametab.table ref,
+    {entries : registry_entry KNametab.table ref,
      replay : (persisted_history * type_class) KNametab.table ref,
      ersatz : ersatz list ref,
      quotient_misses : harvest_miss ref,
@@ -129,8 +128,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations : int Symtab.table ref}
 
   fun thaw (value : registrations) : cells =
-    {classes = ref (#classes value),
-     inputs = ref (#inputs value), origins = ref (#origins value),
+    {entries = ref (#entries value),
      replay = ref (#replay value),
      ersatz = ref (#ersatz value),
      quotient_misses = ref (#quotient_misses value),
@@ -147,8 +145,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations = ref (#theory_generations value)}
 
   fun freeze (cells : cells) : registrations =
-    {classes = !(#classes cells),
-     inputs = !(#inputs cells), origins = !(#origins cells),
+    {entries = !(#entries cells),
      replay = !(#replay cells),
      ersatz = !(#ersatz cells),
      quotient_misses = !(#quotient_misses cells),
@@ -165,8 +162,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      theory_generations = !(#theory_generations cells)}
 
   val registrations = Refute_Session.state "model_registrations"
-    ({classes = KNametab.empty,
-      inputs = KNametab.empty, origins = KNametab.empty,
+    ({entries = KNametab.empty,
       replay = KNametab.empty,
       ersatz = [],
       quotient_misses = KNametab.empty,
@@ -190,10 +186,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         SOME cells => from_cells cells
       | NONE => ref (from_value (Refute_Session.read registrations))
 
-  val retained_inputs = cell #inputs #inputs
-  val registration_origins = cell #origins #origins
+  val registry_entries = cell #entries #entries
   val replay_cache = cell #replay #replay
-  val class_registry = cell #classes #classes
   val ersatz_registry = cell #ersatz #ersatz
   val quotient_harvest_misses = cell #quotient_misses #quotient_misses
   val typedef_harvest_misses = cell #typedef_misses #typedef_misses
@@ -238,24 +232,18 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         valOf (!result)
       end
 
-  fun registered_class operator =
-    KNametab.lookup (!(class_registry ())) (operator_key operator)
+  fun registered_entry operator =
+    KNametab.lookup (!(registry_entries ())) (operator_key operator)
+
+  fun registered_class operator = Option.map #class (registered_entry operator)
 
   fun is_explicit operator =
-    KNametab.lookup (!(registration_origins ())) (operator_key operator) =
-    SOME Explicit
+    Option.map #origin (registered_entry operator) = SOME Explicit
 
   fun set_entry operator class origin input =
-    let val key = operator_key operator in
-      class_registry () := KNametab.update (key, class) (!(class_registry ()));
-      registration_origins () := KNametab.update (key, origin)
-        (!(registration_origins ()));
-      retained_inputs () :=
-        (case input of
-             NONE => KNametab.delete_safe key
-           | SOME descriptor => KNametab.update (key, descriptor))
-        (!(retained_inputs ()))
-    end
+    registry_entries () := KNametab.update
+      (operator_key operator, {class = class, origin = origin, input = input})
+      (!(registry_entries ()))
 
   fun set_class operator class = set_entry operator class Explicit NONE
 
@@ -3466,35 +3454,42 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             class
           end)
 
-  fun session_class operator =
-    case registered_class operator of
-        SOME class => SOME class
-      | NONE => builtin_class operator
+  fun entry_description ({class, input, ...} : registry_entry) =
+    {class = class, input = input}
+
+  fun session_description operator =
+    case registered_entry operator of
+        SOME entry => SOME (entry_description entry)
+      | NONE => Option.map (fn class => {class = class, input = NONE})
+          (builtin_class operator)
 
   (* No preparation function calls this resolver: compatibility is passed
      explicitly, preventing recursive lookup while replay validates. *)
   fun resolve_class prepare operator history =
-    if null history then session_class operator
+    if null history then session_description operator
     else
       let
-        val runtime = registered_class operator
+        val runtime = registered_entry operator
         val persisted = prepare operator history
         val explicit = is_explicit operator
         val _ = case runtime of
             NONE => ()
-          | SOME class =>
+          | SOME {class, ...} =>
               (claim_class "replay"
                 (if explicit then compatible class
                  else fn old => compatible old class) (SOME persisted)
                handle HOL_ERR error =>
                  raise replay_error (#1 (List.last history)) operator error)
       in
-        if explicit then runtime else SOME persisted
+        if explicit then Option.map entry_description runtime
+        else SOME {class = persisted, input = SOME (#2 (List.last history))}
       end
 
-  fun class_of_operator operator =
+  fun resolve_operator operator =
     resolve_class persistent_class operator
       (Refute_RegistrationData.history (Refute_Session.context ()) operator)
+
+  fun class_of_operator operator = Option.map #class (resolve_operator operator)
 
   fun class_of_type ty =
     case Lib.total type_operator_of ty of
@@ -3508,9 +3503,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun current_codatatype_registry () =
     let
-      val registered = map (fn (key, _) =>
-        {Thy = #Thy key, Tyop = #Name key})
-        (KNametab.dest (!(class_registry ())))
+      val registered = List.mapPartial
+        (fn (key, {class = Codatatype _, ...} : registry_entry) =>
+              SOME {Thy = #Thy key, Tyop = #Name key}
+          | _ => NONE) (KNametab.dest (!(registry_entries ())))
       val builtin = map (fn {Thy, Tyop, ...} => {Thy = Thy, Tyop = Tyop})
         builtin_codatatypes
       val ctxt = Refute_Session.context ()
@@ -3528,8 +3524,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   (* Authoritative registration validates without publishing a worker's
      prepared replay cache. *)
   fun registration_class ctxt operator =
-    resolve_class prepare_history operator
-      (Refute_RegistrationData.history ctxt operator)
+    Option.map #class (resolve_class prepare_history operator
+      (Refute_RegistrationData.history ctxt operator))
 
   (* Check both the call's captured metadata and the live metadata, which
      may have changed since the call started. *)
@@ -4751,9 +4747,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         let
           val cells = thaw value
           fun remove key =
-            (#classes cells := KNametab.delete_safe key (!(#classes cells));
-             #inputs cells := KNametab.delete_safe key (!(#inputs cells));
-             #origins cells := KNametab.delete_safe key (!(#origins cells));
+            (#entries cells := KNametab.delete_safe key (!(#entries cells));
              #replay cells := KNametab.delete_safe key (!(#replay cells)))
           val _ = List.app remove keys
           val prepared = freeze cells
@@ -4785,33 +4779,21 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             end
           val selected = List.foldl unique [] tys
           fun description ty =
-            let
-              val operator = type_operator_of ty
-              val key = operator_key operator
-              val class = class_of_operator operator
-              val _ = case class of
-                  SOME (Frac _) => raise err "export_registrations"
+            let val operator = type_operator_of ty in
+              case resolve_operator operator of
+                  SOME {class = Frac _, ...} => raise err "export_registrations"
                     "Frac registrations cannot be exported"
-                | SOME Fmap => raise err "export_registrations"
+                | SOME {class = Fmap, ...} => raise err "export_registrations"
                     "fmap registrations cannot be exported"
-                | _ => ()
-              val history = Refute_RegistrationData.history
-                (Refute_Session.context ()) operator
-              fun retained () = KNametab.lookup (!(retained_inputs ())) key
-              val input =
-                if null history orelse is_explicit operator then retained ()
-                else SOME (#2 (List.last history))
-            in
-              case input of
-                  SOME d => d
-                | NONE =>
+                | SOME {input = SOME d, ...} => d
+                | _ =>
                     let
                       val _ = harvest_quotient_staged ty orelse
                         harvest_typedef_staged ty
                     in
-                      case retained () of
-                          SOME d => d
-                        | NONE => raise err "export_registrations"
+                      case resolve_operator operator of
+                          SOME {input = SOME d, ...} => d
+                        | _ => raise err "export_registrations"
                             (operator_name operator ^
                              ": no exportable description; use an explicit " ^
                              "export_codatatype, export_typedef or " ^
@@ -5279,10 +5261,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     let
       val ordinary = List.foldl append_new_ersatz
         (!(ersatz_registry ())) builtin_ersatz
-      fun frac_ersatz (_, Frac {ersatz, ...}) = ersatz
-        | frac_ersatz _ = []
+      fun frac_ersatz (_, entry : registry_entry) =
+        case #class entry of Frac {ersatz, ...} => ersatz | _ => []
       val frac = List.concat
-        (map frac_ersatz (KNametab.dest (!(class_registry ()))))
+        (map frac_ersatz (KNametab.dest (!(registry_entries ()))))
     in
       (* Upstream prepends active frac mappings to the ordinary table.  Keep
          collisions rather than deduplicating them: replacement_for selects
