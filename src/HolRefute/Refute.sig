@@ -111,7 +111,8 @@ signature Refute = sig
   (* Validated structural descriptions stored in the current theory and
      inherited on import.  Export is rejected under a context pin or during
      a Refute call; register_* remains session-local.  Same-kind exports
-     replace in ancestry delta order; incompatible kinds are rejected. *)
+     replace in ancestry delta order; incompatible kinds are rejected.
+     A description whose symbols retire is dropped. *)
   val export_codatatype :
     {tyop : {Thy : string, Tyop : string},
      case_const : term, constructors : term list, witness : thm option} ->

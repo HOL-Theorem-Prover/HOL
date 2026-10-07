@@ -1019,7 +1019,24 @@ structure Refute_Extract :> Refute_Extract = struct
             else SOME theorem
         | NONE => NONE
     in
-      case DefnBase.lookup_userdef constant of
+      (* Generated list set equations contain GSPEC; use pointwise
+         recursion for executable membership.  The conjuncts have
+         independent type variables, so instantiate each separately. *)
+      if Term.same_const constant listSyntax.list_to_set_tm then
+        let
+          fun instantiate theorem =
+            let
+              val (head, _) = boolSyntax.strip_comb
+                (boolSyntax.lhs (hd (equations_of theorem)))
+            in
+              Thm.INST_TYPE (Type.match_type
+                (Term.type_of head) (Term.type_of constant)) theorem
+            end
+        in
+          Drule.LIST_CONJ
+            (map instantiate (Drule.CONJUNCTS listTheory.LIST_TO_SET_DEF))
+        end
+      else case DefnBase.lookup_userdef constant of
         SOME {const, thm = DefnBase.STDEQNS theorem, ...} =>
           let
             val theta = Type.match_type (Term.type_of const)
@@ -1046,7 +1063,9 @@ structure Refute_Extract :> Refute_Extract = struct
     end
 
   fun mutual_constants constant =
-    case (DefnBase.lookup_userdef constant,
+    (* Pointwise list membership is a self-contained recursion. *)
+    if Term.same_const constant listSyntax.list_to_set_tm then [constant]
+    else case (DefnBase.lookup_userdef constant,
           DefnBase.lookup_indn constant) of
       (SOME {const = generic, ...}, SOME (_, names)) =>
         let

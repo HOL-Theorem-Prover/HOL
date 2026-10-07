@@ -12,5 +12,5 @@ val data = ThyDataSexp.new
    other_tds = fn (s, _) => SOME s};
 val _ = #export data (ThyDataSexp.List
   [ThyDataSexp.List [ThyDataSexp.Int 2,
-    ThyDataSexp.String "refutePersistBadVersion", ThyDataSexp.Int 0,
+    ThyDataSexp.String "refutePersistBadVersion",
     ThyDataSexp.List []]]);

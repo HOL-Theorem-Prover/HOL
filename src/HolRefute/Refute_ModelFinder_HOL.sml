@@ -3432,9 +3432,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   fun prepare_history operator history =
     let
       fun validate ((thy, descriptor), previous) =
-        (if Refute_RegistrationData.fresh descriptor then () else
-           raise err "replay" "registration refers to retired symbols";
-         SOME (prepare_descriptor previous descriptor))
+        SOME (prepare_descriptor previous descriptor)
         handle HOL_ERR error => raise replay_error thy operator error
     in
       valOf (List.foldl validate (builtin_class operator) history)
@@ -3454,12 +3452,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     ThyDataSexp.compare (Refute_RegistrationData.identity old,
                          Refute_RegistrationData.identity new) = EQUAL
 
-  (* Freshness must also be checked on cache hits. *)
   fun cached_class operator history =
     case KNametab.lookup (!(replay_cache ())) (operator_key operator) of
         SOME (old, class) =>
-          if List.all (Refute_RegistrationData.fresh o #2) history andalso
-             same_history (old, history) andalso prepared_is_current class
+          if same_history (old, history) andalso prepared_is_current class
           then SOME class else NONE
       | NONE => NONE
 

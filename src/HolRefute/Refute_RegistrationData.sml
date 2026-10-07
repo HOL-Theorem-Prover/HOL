@@ -45,79 +45,72 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
      (fn in13 d => Codata d | in23 d => Typedef d | in33 d => Quotient d))
     (tagged_sum3 ("codata", codata_ed) ("typedef", typedef_ed)
                  ("quotient", quotient_ed))
-  fun fresh d = uptodate (encode d) andalso
+  fun fresh d =
+    (case d of
+         Codata {case_const, constructors, witness, ...} =>
+           Term.uptodate_term case_const andalso
+           List.all Term.uptodate_term constructors andalso
+           (case witness of NONE => true | SOME th => Theory.uptodate_thm th)
+       | Typedef {ty, abs, rep, absrep_thms} =>
+           Type.uptodate_type ty andalso Term.uptodate_term abs andalso
+           Term.uptodate_term rep andalso
+           List.all Theory.uptodate_thm absrep_thms
+       | Quotient {qty, rty, abs, rep, equiv_thm} =>
+           Type.uptodate_type qty andalso Type.uptodate_type rty andalso
+           Term.uptodate_term abs andalso Term.uptodate_term rep andalso
+           Theory.uptodate_thm equiv_thm) andalso
     (let val {Thy, Tyop} = operator d
      in Option.isSome (Type.op_arity {Thy = Thy, Tyop = Tyop}) end)
 
-  (* Broken batches remain visible: hook warnings must not turn corrupt
-     metadata into an absent entry that harvesting could rescue. *)
-  datatype batch = Batch of string * descriptor list * t
+  (* Broken deltas remain visible so harvesting cannot rescue corrupt data. *)
+  datatype delta = Entry of string * descriptor * t
                  | Broken of string * string * t
-  fun batch_sexp (Batch (_, _, s)) = s
-    | batch_sexp (Broken (_, _, s)) = s
-  fun sexp_origin (List [Int _, String thy, Int _, _]) = SOME thy
-    | sexp_origin _ = NONE
-  fun decode_batch s =
-    let
-      val origin = Option.getOpt (sexp_origin s, "<unknown theory>")
-    in
-      SOME (case s of
-          List [Int 1, String thy, Int _, ds] =>
-            (case list_decode decode ds of
-                 SOME entries =>
-                   ((List.app (fn d => ignore (operator d)) entries;
-                     Batch (thy, entries, s))
-                    handle Feedback.HOL_ERR error => Broken
-                      (thy, "malformed operator: " ^
-                            Feedback.message_of error, s))
-               | NONE => Broken (thy, "malformed descriptor", s))
-        | List [Int version, _, _, _] => Broken (origin,
-            "unsupported format version " ^ Int.toString version, s)
-        | _ => Broken (origin, "malformed batch", s))
-    end
+  fun encode_delta (Entry (_, _, raw)) = raw
+    | encode_delta (Broken (_, _, raw)) = raw
+  fun decode_delta s = SOME (case s of
+      List [Int 1, String thy, ds] =>
+        (case decode ds of
+             SOME d =>
+               ((ignore (operator d); Entry (thy, d, s))
+                handle Feedback.HOL_ERR error => Broken
+                  (thy, "malformed operator: " ^ Feedback.message_of error, s))
+           | NONE => Broken (thy, "malformed descriptor", s))
+    | List (Int version :: String thy :: _) =>
+        if version <> 1 then Broken (thy,
+          "unsupported format version " ^ Int.toString version, s)
+        else Broken ("<unknown theory>", "malformed delta", s)
+    | _ => Broken ("<unknown theory>", "malformed delta", s))
   type value =
-    {seen : t list,
-     histories : (string * descriptor) list KNametab.table,
+    {histories : (string * descriptor) list KNametab.table,
      operators : operator list,
      errors : (string * string) list}
   val empty : value =
-    {seen = [], histories = KNametab.empty, operators = [], errors = []}
+    {histories = KNametab.empty, operators = [], errors = []}
   fun key ({Thy, Tyop} : operator) = {Thy = Thy, Name = Tyop}
-  fun apply batch (value : value) =
-    if List.exists (fn old => compare (old, batch_sexp batch) = EQUAL)
-         (#seen value) then value
-    else
-      let
-        fun add thy (d, (histories, operators)) =
+  fun apply delta (value : value) =
+    case delta of
+        Broken (thy, why, _) =>
+          {histories = #histories value, operators = #operators value,
+           errors = #errors value @ [(thy, why)]}
+      | Entry (thy, d, _) =>
           let
             val opn = operator d
+            val old = KNametab.lookup (#histories value) (key opn)
           in
-            case KNametab.lookup histories (key opn) of
-                NONE => (KNametab.update (key opn, [(thy, d)]) histories,
-                         operators @ [opn])
-              | SOME ds =>
-                  (KNametab.update (key opn, ds @ [(thy, d)]) histories,
-                   operators)
+            {histories = KNametab.update
+               (key opn, Option.getOpt (old, []) @ [(thy, d)])
+               (#histories value),
+             operators = if Option.isSome old then #operators value
+                         else #operators value @ [opn],
+             errors = #errors value}
           end
-        val (histories, operators, errors) = case batch of
-            Broken (thy, why, _) =>
-              (#histories value, #operators value,
-               #errors value @ [(thy, why)])
-          | Batch (thy, ds, _) =>
-              let val (hs, ops) = List.foldl (add thy)
-                    (#histories value, #operators value) ds
-              in (hs, ops, #errors value) end
-      in
-        {seen = #seen value @ [batch_sexp batch], histories = histories,
-         operators = operators, errors = errors}
-      end
 
   val store = AncestryData.fullmake
     {adinfo = {tag = "Refute.structural_registrations",
                initial_values = [("min", empty)], apply_delta = apply},
-     (* Retirement is checked against the retained history instead. *)
-     uptodate_delta = fn _ => true,
-     sexps = {enc = batch_sexp, dec = decode_batch},
+     (* Raw-sexp pruning already checks freshness; this states intent. *)
+     uptodate_delta = fn Entry (_, d, _) => fresh d | Broken _ => true,
+     sexps = {enc = encode_delta, dec = decode_delta},
      globinfo = {initial_value = empty, apply_to_global = apply,
                  thy_finaliser = NONE}}
   (* Load-time side effects follow module loading order, which differs
@@ -133,14 +126,7 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
             val local_deltas =
               case Context.current_thy (Context.snapshot ()) of
                   NONE => []
-                | SOME thy =>
-                    let
-                      (* Keep authored batches whose raw deltas were pruned,
-                         so check_export can still diagnose that loss. *)
-                      val retained = List.mapPartial decode_batch
-                        (List.filter (fn s => sexp_origin s = SOME thy)
-                          (#seen (#get_global_value store ())))
-                    in retained @ #get_deltas store {thyname = thy} end
+                | SOME thy => #get_deltas store {thyname = thy}
             val value = List.foldl (fn (d, v) => apply d v)
               inherited local_deltas
           in #update_global_value store (fn _ => value) end
@@ -148,26 +134,6 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
     ("Refute_RegistrationData.ancestry_merge", fn delta =>
       case delta of TheoryDelta.TheoryLoaded _ => synchronise () | _ => ())
   val _ = synchronise ()
-
-  (* AncestryData prunes a whole raw batch when any of its terms retires,
-     before consulting uptodate_delta.  The global history retains every
-     descriptor: check it before writing a theory so pruning cannot silently
-     erase valid entries from the same batch in a subsequent process. *)
-  fun check_export thy =
-    let
-      val value = #get_global_value store ()
-      fun check opn =
-        List.app (fn (origin, d) =>
-          if fresh d then () else raise ERR "export"
-            ("exporting theory " ^ thy ^ ", registration from " ^ origin ^
-             ", " ^ #Thy opn ^ "$" ^ #Tyop opn ^
-             ": registration refers to retired symbols"))
-          (valOf (KNametab.lookup (#histories value) (key opn)))
-    in List.app check (#operators value) end
-  val _ = Theory.register_hook
-    ("Refute_RegistrationData.check_export", fn delta =>
-      case delta of TheoryDelta.ExportTheory thy => check_export thy
-                  | _ => ())
 
   fun read ctxt =
     let val value = #get_global_value_of store ctxt
@@ -179,18 +145,19 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
     end
   fun history ctxt opn =
     case KNametab.lookup (#histories (read ctxt)) (key opn) of
-        NONE => [] | SOME ds => ds
-  fun operators ctxt = #operators (read ctxt)
+        NONE => [] | SOME ds => List.filter (fresh o #2) ds
+  fun operators ctxt =
+    List.filter (fn opn => not (null (history ctxt opn)))
+      (#operators (read ctxt))
   val identity = mk_list (pair_encode (String, encode))
   fun prepare ctxt thy descriptors =
     let
-      val index = length (#get_deltas store {thyname = thy})
-      val sexp = List [Int 1, String thy, Int index,
-                       mk_list encode descriptors]
-      val batch = Batch (thy, descriptors, sexp)
-      val value = apply batch (#get_global_value_of store ctxt)
+      val entries = map (fn d => Entry
+        (thy, d, List [Int 1, String thy, encode d])) descriptors
+      val value = List.foldl (fn (d, v) => apply d v)
+        (#get_global_value_of store ctxt) entries
     in
-      fn () => (#record_delta store batch;
+      fn () => (List.app (#record_delta store) entries;
                 #update_global_value store (fn _ => value))
     end
 end
