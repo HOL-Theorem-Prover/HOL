@@ -18,11 +18,15 @@ practical guide to trying it out; the protocol details live in
   `fast_proof` oracle tag.  Compilation is therefore near-batch-build
   speed even for files heavy in tactic proofs, at the cost of not
   detecting tactic errors.
-- Server capabilities advertised: `textDocumentSync`, `hoverProvider`,
-  `definitionProvider`, `referencesProvider`.  Plus LSP extensions:
+- Server capabilities advertised: `textDocumentSync`,
+  `positionEncoding`, `hoverProvider`, `definitionProvider`,
+  `documentSymbolProvider`, `workspaceSymbolProvider` and
+  `completionProvider`.  Not `referencesProvider`: see
+  `Manual/Developers/lsp-server.md` for why there is no
+  `textDocument/references`.  Plus LSP extensions:
   `$/setConfig` (elabOn mode, holdep behaviour, hover width),
-  `$/eval` (streamed
-  arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
+  `$/eval` (arbitrary SML at a position — see below),
+  `$/hol/goalState` (goal-state at cursor — see
   below), `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted` /
   `$/compileBlocked`, `$/hol/retryCompile`, `$/hol/desync`.
@@ -128,7 +132,8 @@ loop).  Send a full initialize / shutdown / exit handshake through
 That sends the full initialize / initialized / shutdown / exit
 handshake in one go.  You should see the `initialize` response
 advertising `textDocumentSync`, `hoverProvider`,
-`definitionProvider`, `referencesProvider`; a
+`definitionProvider`, `documentSymbolProvider`,
+`workspaceSymbolProvider` and `completionProvider`; a
 `window/logMessage "started"` notification; the `shutdown` response
 (`{"id":2,"result":null}`); and a clean exit 0.
 
@@ -966,6 +971,54 @@ Note for a client built on `vscode-languageclient`: it advertises only
 `utf-16` and throws on any other answer, so it gets `utf-16` and must
 not translate positions itself.
 
+## Evaluating a chunk (`$/eval`)
+
+`$/eval` compiles a string of HOL/SML source in the server's own
+session and reports what it printed, which is the protocol's answer to
+"send a string, get its value back".  LSP has no evaluate request —
+it is a document protocol — so this is a custom method, which is what
+every language server that wants one does.
+
+The request takes `uri`, `code`, and optionally `incr`, `holdep` and
+`position`; `Manual/Developers/lsp-server.md` is the reference.  The
+reports come back as a list (`incr = None`), per chunk
+(`$/eval/P`), or one at a time as they happen (`$/eval/1`).  A
+`toplevelOut` report carries what Poly printed — `val it = … : …` —
+which for a `thm` is the theorem, via the pretty-printers installed in
+`pretty_printers_init.ML`.
+
+**Send the cursor.**  `position` decides what is in scope.  A file's
+declarations run in order, so a name is in scope from the point the
+compile reached it; evaluating with no position evaluates after the
+file's last declaration, where everything later in the file is in
+scope too.  For a scratch buffer that is what you want and for a
+script it is a quietly wrong answer.
+
+This is the supported form of a trick that works by accident
+otherwise: typing `val x = <expr>` into blank space and hovering `x`.
+That reads the right thing because the compiler runs the inserted text
+where it sits — which is exactly what `position` reproduces, without
+editing the buffer.
+
+**Bindings persist** for the next chunk evaluated at the same
+position, and are dropped anywhere else; see the protocol reference
+for why.
+
+**It can be refused.**  A chunk runs on the compile state, and a
+compile may hold it — the 300 ms-debounced one behind the user's last
+keystroke, most often.  `$/eval` does not wait: it answers with an
+`error` report saying the state is held.  A client should show that as
+what it is and let the user ask again.
+
+### Client cookbook
+
+- **eglot (shipped in this repo)** — `hol-lsp-eval-region` bound to
+  `M-h M-e`, with the region (or, with no region, the top-level phrase
+  around point) sent as `code` and point sent as `position`.  Output is
+  appended to `*HOL LSP Eval*`.
+- **VS Code (`hol4-vscode`)** — `HOL: Evaluate Selection`, bound to
+  `Ctrl+H Ctrl+E`, writing to the `HOL4 LSP Eval` output channel.
+
 ## Emacs
 
 The repo ships `holscript-mode` (`tools/editor-modes/emacs/`), which
@@ -1190,7 +1243,10 @@ endif
 
 ## VS Code
 
-There is no first-party HOL extension for VS Code.  Two paths:
+There is a first-party extension, `hol4-vscode`, and `vscode-setup.md`
+in this directory is the walkthrough for installing it.  Prefer that to
+anything below; what follows is kept for someone building a client of
+their own.
 
 1. **Write a minimal client extension.**  Yeoman scaffold + a few
    lines of `LanguageClient` glue.  Marketplace has several LSP

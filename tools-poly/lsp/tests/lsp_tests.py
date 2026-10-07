@@ -9842,6 +9842,169 @@ def test_theory_name_must_match_file_name():
         shutil.rmtree(d, ignore_errors=True)
 
 
+# ------------------------------------------------------------------
+# $/eval
+# ------------------------------------------------------------------
+
+# Three declarations with a snapshot boundary between each, so a
+# cursor in the middle has one of them behind it and one ahead.
+_EVAL_CTX_SRC = ("Theory evalctx[bare]\n"      # line 0
+                 "Ancestors bool\n"            # line 1
+                 "Libs HolKernel boolLib Parse\n"
+                 "\n"
+                 "val above = 42;\n"           # line 4
+                 "\n"
+                 "val middle = 1;\n"           # line 6
+                 "\n"
+                 "val below = 99;\n")          # line 8
+
+# Between `above' and `middle': the first is behind the cursor, the
+# other two are ahead of it.
+_EVAL_CURSOR = (6, 0)
+
+
+def _eval(c, rid, uri, code, pos=None, timeout=30):
+    """`$/eval' in its simplest mode: batch reports, no holdep preload
+    (the snippets here have no `open' to resolve, and a preload would
+    be one more thing between the request and what it is testing)."""
+    params = {"uri": uri, "code": code, "incr": 0, "holdep": 0}
+    if pos is not None:
+        params["position"] = {"line": pos[0], "character": pos[1]}
+    return _request(c, rid, "$/eval", params, timeout)
+
+
+def _eval_text(reply):
+    """Every report body and message in an `$/eval' reply, run
+    together.  The tests below ask what the evaluation said, not which
+    report kind it arrived in."""
+    out = []
+    for r in ((reply or {}).get("result") or []):
+        for k in ("body", "msg"):
+            if k in r:
+                out.append(r[k])
+    return "".join(out)
+
+
+def test_eval_runs_in_the_context_at_the_cursor():
+    """`$/eval' evaluates where the cursor is, not where the compile
+    stopped.
+
+    A file's declarations run in order, so a name is in scope from the
+    point the pass reached it.  With the cursor between `above' and
+    `middle', the first must be visible and the other two must not --
+    and the negative half is the half that matters: evaluating at the
+    end of the file would answer `above' correctly too, and silently
+    put every later declaration in scope with it."""
+    d = tempfile.mkdtemp(prefix="lsp_evalctx_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            assert_eq(len(_diag_count(c, uri)), 0, "the file itself is fine")
+
+            got = _eval_text(_eval(c, 700, uri, "above;", _EVAL_CURSOR))
+            assert_true("42" in got,
+                        f"a declaration above the cursor is in scope ({got!r})")
+
+            got = _eval_text(_eval(c, 701, uri, "below;", _EVAL_CURSOR))
+            assert_true("99" not in got,
+                        f"a declaration below the cursor is not ({got!r})")
+            assert_true("below" in got,
+                        f"and saying so names it ({got!r})")
+
+            # The end of the file is the other answer, and asking for it
+            # is how a client with no cursor asks.
+            got = _eval_text(_eval(c, 702, uri, "below;"))
+            assert_true("99" in got,
+                        f"no position means after the last dec ({got!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_eval_bindings_outlive_the_request():
+    """What one `$/eval' binds, the next one can use.  A REPL whose
+    `val x = ...' is gone by the next request is not a REPL.
+
+    The bindings are kept against the snapshot they were made over,
+    and dropped anywhere else: a value built against one `Context'
+    must not be installed over another, a `thm' whose theory a rewind
+    has taken back being the case that argument is about.  So the
+    second half of this asks at a different position and expects the
+    binding to be gone rather than wrong."""
+    d = tempfile.mkdtemp(prefix="lsp_evalkeep_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            _eval(c, 710, uri, "val stashed = above + 1;", _EVAL_CURSOR)
+            got = _eval_text(_eval(c, 711, uri, "stashed;", _EVAL_CURSOR))
+            assert_true("43" in got,
+                        f"the previous eval's binding is still there "
+                        f"({got!r})")
+
+            got = _eval_text(_eval(c, 712, uri, "stashed;"))
+            assert_true("43" not in got,
+                        f"but not over a different snapshot ({got!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_eval_does_not_disturb_the_next_compile():
+    """`$/eval' used to run in the shared process state with no
+    snapshot bracket, which `Manual/Developers/lsp-server.md' recorded
+    as a caveat: it could perturb the file's compiles.  It now takes
+    the state the way a walk does and puts back what it found, so an
+    eval between two passes leaves the second one's diagnostics
+    exactly as they would have been without it.
+
+    The eval below is one that would be noticed if it leaked: it binds
+    a name the file also binds, at a different type."""
+    d = tempfile.mkdtemp(prefix="lsp_evalclean_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            assert_eq(len(_diag_count(c, uri)), 0, "clean to start with")
+
+            _eval(c, 720, uri, 'val above = "not an int";', _EVAL_CURSOR)
+
+            since = c.total_msgs()
+            edited = _EVAL_CTX_SRC + "\nval after = above + 1;\n"
+            _did_change_full(c, uri, edited, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, since),
+                        "recompiled")
+            assert_eq(len(_diag_count(c, uri)), 0,
+                      "the eval's shadowing binding did not reach the "
+                      "compile")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
@@ -10209,6 +10372,12 @@ TESTS = [
      test_an_edit_during_a_commit_is_not_lost),
     ("a_theorem_without_proof_keeps_the_file_compiling",
      test_a_theorem_without_proof_keeps_the_file_compiling),
+    ("eval_runs_in_the_context_at_the_cursor",
+     test_eval_runs_in_the_context_at_the_cursor),
+    ("eval_bindings_outlive_the_request",
+     test_eval_bindings_outlive_the_request),
+    ("eval_does_not_disturb_the_next_compile",
+     test_eval_does_not_disturb_the_next_compile),
 ]
 
 

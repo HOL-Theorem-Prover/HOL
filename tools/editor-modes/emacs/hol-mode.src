@@ -2187,6 +2187,8 @@ the surrounding text (as done by ‘hol-do-goal’ and
 ;; meta is already the convention for a second claim on a letter here
 ;; -- compare `\M-C' and `\M-P'.
 (define-key hol-map "\M-M" 'hol-lsp-search)
+;; `M-E', not `M-e': `hol-find-eval-next-tactic' had that key first.
+(define-key hol-map "\M-E" 'hol-lsp-eval-region)
 (define-key hol-map "2"    'hol-vertical)
 (define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "4"    'hol-display)
@@ -3068,6 +3070,11 @@ proofs.  eglot hands a JSON array over as a vector."
     (hol-lsp--prune-stale-proofs uri declared version))
 
   (cl-defmethod eglot-handle-notification
+    (_server (_method (eql $/eval/1)) &key out &allow-other-keys)
+    "Append one streamed `$/eval' report to the transcript."
+    (hol-lsp--eval-note-report out))
+
+  (cl-defmethod eglot-handle-notification
     (_server (_method (eql $/hol/desync)) &key uri message
              &allow-other-keys)
     "Send the whole buffer again: the server's copy of URI has drifted.
@@ -3268,6 +3275,111 @@ so a slow server never freezes emacs on a keystroke."
                            (hol-lsp--goalstate-params)
                            :cancel-on-input cancel-on-input)
         (error nil)))))
+
+(defcustom hol-lsp-eval-buffer-name "*HOL LSP Eval*"
+  "Buffer that `hol-lsp-eval-region' appends the server's output to."
+  :type 'string
+  :group 'hol)
+
+(defcustom hol-lsp-eval-display t
+  "Whether evaluating shows the transcript buffer.
+nil leaves that to `hol-lsp-show-eval-output'; the buffer is written
+either way."
+  :type 'boolean
+  :group 'hol)
+
+(defun hol-lsp--eval-buffer ()
+  "The eval transcript buffer, created if it is not there yet."
+  (or (get-buffer hol-lsp-eval-buffer-name)
+      (get-buffer-create hol-lsp-eval-buffer-name)))
+
+(defun hol-lsp--eval-append (text)
+  "Append TEXT to the eval transcript, keeping its windows at the end."
+  (when (and (stringp text) (not (string-empty-p text)))
+    (with-current-buffer (hol-lsp--eval-buffer)
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (goto-char (point-max))
+          (insert text)
+          (unless (bolp) (insert "\n"))))
+      (dolist (w (get-buffer-window-list (current-buffer) nil t))
+        (set-window-point w (point-max))))))
+
+(defun hol-lsp--eval-note-report (report)
+  "Append REPORT, one result of an `$/eval' request, to the transcript.
+`toplevelOut' is what the chunk printed -- the `val it = ...' that
+makes this a REPL -- and `compilerOut' the compiler's own chatter.  An
+`error' report carries `msg' rather than `body'; the server sends one
+of those when a compile holds the state, which is an ordinary thing to
+see, so it is shown rather than signalled."
+  (let ((kind (plist-get report :kind))
+        (body (or (plist-get report :body) (plist-get report :msg))))
+    (cond
+     ((equal kind "interrupted") (hol-lsp--eval-append "*** interrupted"))
+     ((member kind '("compileCompleted" "compileProgress")) nil)
+     ((null body) nil)
+     ((equal kind "error") (hol-lsp--eval-append (concat "*** " body)))
+     (t (hol-lsp--eval-append body)))))
+
+(defun hol-lsp--eval-bounds ()
+  "What `hol-lsp-eval-region' evaluates: the region, or the block at point.
+With no region, the blank-line-delimited block around point, which for
+a top-level SML phrase is usually the phrase."
+  (if (region-active-p)
+      (cons (region-beginning) (region-end))
+    (save-excursion
+      (let* ((end (progn (forward-paragraph) (point)))
+             (beg (progn (backward-paragraph) (point))))
+        (cons beg end)))))
+
+(defun hol-lsp-show-eval-output ()
+  "Show the buffer `hol-lsp-eval-region' writes to."
+  (interactive)
+  (display-buffer (hol-lsp--eval-buffer)))
+
+(defun hol-lsp-eval-region (start end)
+  "Evaluate the region, or the block at point, in this buffer's server.
+
+The chunk runs in the server's own session, at START.  A file's
+declarations run in order, so what is in scope is what the compile had
+reached by there: a name bound further down the file is not available.
+That is the context that hovering a `val' typed into blank space reads
+-- this is the same thing without editing the buffer.
+
+What a chunk binds is available to the next one evaluated at the same
+place, so `val x = ...' is worth typing.  Output is appended to
+`hol-lsp-eval-buffer-name'.  A compile may be holding the state, in
+which case the server says so and the request can simply be repeated."
+  (interactive (let ((b (hol-lsp--eval-bounds))) (list (car b) (cdr b))))
+  (let ((server (hol-lsp--server))
+        (code (buffer-substring-no-properties start end)))
+    (unless server (user-error "No LSP server for this buffer"))
+    (when (string-empty-p (string-trim code))
+      (user-error "Nothing to evaluate"))
+    ;; The server has to be looking at the text this position is in,
+    ;; and eglot batches `didChange' on an idle timer; same flush as
+    ;; `hol-lsp--query' does, for the same reason.
+    (when (fboundp 'eglot--signal-textDocument/didChange)
+      (ignore-errors (eglot--signal-textDocument/didChange)))
+    (hol-lsp--eval-append (concat "> " (string-trim code)))
+    (when hol-lsp-eval-display (hol-lsp-show-eval-output))
+    (jsonrpc-async-request
+     server :$/eval
+     (list :uri (hol-lsp--path-to-uri buffer-file-name)
+           :code code
+           ;; Streamed, so a long evaluation shows its output as it
+           ;; happens rather than as silence and then everything.
+           :incr 2
+           :holdep 1
+           :position (save-excursion
+                       (goto-char start)
+                       (list :line (1- (line-number-at-pos))
+                             :character (hol-lsp--point-byte-in-line))))
+     :success-fn #'ignore
+     :error-fn (lambda (err)
+                 (hol-lsp--eval-append
+                  (format "*** %s"
+                          (or (plist-get err :message) err)))))))
 
 (defcustom hol-lsp-search-limit 100
   "How many theorems `hol-lsp-search' asks the server for at once."

@@ -834,10 +834,15 @@ val searchParams = map3 (fn (sels, query, limit) =>
 
 val cancelParams = field "id" req_id
 
-val evalParams = map4 (fn (uri, code, incr, holdep) =>
-    {uri = uri, code = code, incr = incr, holdep = holdep})
+(* `position' is where in the file to evaluate: absent means after the
+   file's last compiled declaration, which is all a client that does
+   not track a cursor can mean. *)
+val evalParams = map4 (fn (uri, code, incr, (holdep, position)) =>
+    {uri = uri, code = code, incr = incr, holdep = holdep,
+     position = position})
   (field "uri" string, field "code" string, fieldD "incr" incr IncrNone,
-    fieldD "holdep" holdepKind HoldepQuiet)
+    tuple2 (fieldD "holdep" holdepKind HoldepQuiet,
+            fieldO "position" position))
 
 val textDocumentParams = field "textDocument" (
   map3 (fn (uri, version, text) => {uri = uri, version = version, text = text})
@@ -4742,7 +4747,26 @@ fun start {diag, dbg, warnings} = let
       print ",\"items\":"; encArray encCompletionItem items print;
       print "}")
 
-  fun eval id {uri, code, incr, holdep} = let
+  (* What a previous `$/eval' left bound, and where it was bound: the
+     file's `nsGen' and the `endByte' of the snapshot it was layered
+     on.  Keeping those bindings is most of what makes this a REPL --
+     a `val x = ...' that is gone by the next request is not one --
+     but they only mean anything over the state they were built
+     against, so they are carried when the generation and the snapshot
+     both match and dropped otherwise.  A `thm' whose theory a rewind
+     has taken back is the case that argument is about.
+
+     Not kept in `file_data': `nsLayer' there is reassigned after every
+     declaration of every compile (`captureSnap'), so bindings written
+     into it would not outlive the next keystroke. *)
+  val evalLayer : (unit -> unit) option ref = ref NONE
+  val evalLayerAt : (int * int) ref = ref (~1, ~1)
+
+  val busyReport = Error {
+    hard = true, pos = (0, 0),
+    msg = encString "$/eval: a compile holds the state; try again"}
+
+  fun eval id {uri, code, incr, holdep, position} = let
     val lines = mkLineCounter code
 
     val mods = case holdep of HoldepNone => [] | _ => getHoldep code
@@ -4785,12 +4809,87 @@ fun start {diag, dbg, warnings} = let
 
     val compile = compileForReport uri code 0 NONE (ref 0) (fn _ => ())
                                    (fn _ => ()) (fn _ => ())
+
+    (* Evaluate where the cursor is, not where the last compile
+       stopped.  A file's declarations run in order, so a name is in
+       scope from the point the pass reached it and not before: an
+       eval that ignored the position would answer about the end of
+       the file, where a theorem proved *below* the cursor is in scope
+       and the answer is quietly wrong.  Hovering a `val' typed into
+       blank space -- the trick this request is meant to replace --
+       gets that right for free, because the compiler runs that text
+       where it sits.
+
+       The bracket is the walk's in `goalStateAtPos', for its reasons.
+       `restoreCompileSnap' carries the file's namespace layer as well
+       as its `Context', and that layer is thread-local, so this has to
+       run on the thread that compiles: inside the fork for the
+       streaming modes, not around them.
+
+       A claim that fails is reported rather than waited for, again as
+       in the walk.  A compile holds the state for a whole pass, and a
+       REPL that blocks for one is worse than a REPL that says to ask
+       again -- the pass it loses to being the 300ms-debounced one
+       behind the user's own last keystroke. *)
+    fun inEvalContext run busy = let
+      val v = withFileInfo (fn fi => (fi, Binarymap.peek (fi, uri)))
+      val (snap, key) = case v of
+          NONE => (NONE, (~1, ~1))
+        | SOME ({lastTrees, nsGen, ...}: file_data) => let
+            val {parse, text} = Sref.value lastTrees
+            val {declSnapshots, ...} = parse
+            val at = case position of
+                SOME p => fromLineCol (#lines text) p
+              | NONE => size (#text text) + 1
+            (* Largest snapshot strictly before the cursor; the same
+               fold as `snapBefore' there. *)
+            val s = List.foldl
+              (fn (s, best) =>
+                if #endByte s >= at then best
+                else case best of
+                       NONE => SOME s
+                     | SOME b => if #endByte s > #endByte b then SOME s
+                                 else best)
+              NONE declSnapshots
+            in (s, (!nsGen, case s of SOME s => #endByte s | NONE => ~1)) end
+      in
+        Sref.gen_update compileState (fn held => (held,
+          if not (claimCompileState ByWalk) then busy ()
+          else let
+            val restoreLater = !LSPExtension.captureCompileSnap ()
+            (* Both exits run this, and only one of them is taken. *)
+            fun finish () = (HOL_IDE.printBindings := false;
+                             restoreLater (); releaseCompileState ())
+          in
+            (let
+               val () = case snap of
+                   NONE => ()
+                 | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+               val () = if !evalLayerAt = key then
+                          (case !evalLayer of
+                               SOME install => install ()
+                             | NONE => ())
+                        else ()
+               (* What a chunk bound is the answer here, where in a
+                  buffer elaboration it would be noise; see `codeFn'. *)
+               val () = HOL_IDE.printBindings := true
+               val () = run ()
+               val () = (evalLayer := SOME (LSPNameSpace.snapshotLayer ());
+                         evalLayerAt := key)
+             in () end
+             handle e => (finish (); raise e))
+            before finish ()
+          end))
+      end
     in
       case incr of
         IncrNone => let
         val buf = DArray.new (8, Completed)
-        val _ = compile (fn Progress _ => () | msg => mergeInto msg buf) handle
-          Thread.Interrupt => DArray.push (buf, Interrupted)
+        val _ = inEvalContext
+          (fn () =>
+            compile (fn Progress _ => () | msg => mergeInto msg buf) handle
+              Thread.Interrupt => DArray.push (buf, Interrupted))
+          (fn () => DArray.push (buf, busyReport))
         in Ok (encDArray encReport buf) end
       | IncrChunk => (
         spawnJobCore id (fn () => let
@@ -4803,8 +4902,12 @@ fun start {diag, dbg, warnings} = let
               print ",\"out\":"; encDArray encReport buf print;
               if complete then print ",\"complete\":true" else (); print "}")
             in send (mkNotif "$/eval/P" params); DArray.clear buf end
-          val _ = compile (fn Progress i => clearBuf false i | msg => mergeInto msg buf)
-            handle Thread.Interrupt => DArray.push (buf, Interrupted)
+          val _ = inEvalContext
+            (fn () =>
+              compile (fn Progress i => clearBuf false i
+                        | msg => mergeInto msg buf)
+                handle Thread.Interrupt => DArray.push (buf, Interrupted))
+            (fn () => DArray.push (buf, busyReport))
           in clearBuf true (size code) end);
         Ok encNull)
       | IncrStream => (
@@ -4812,9 +4915,12 @@ fun start {diag, dbg, warnings} = let
           fun sendMsg msg = send (mkNotif "$/eval/1" (fn print => (
             print "{\"id\":"; encReqId id print;
             print ",\"out\":"; encReport msg print; print "}")))
-          val ok = (compile sendMsg; true) handle
-            Thread.Interrupt => (sendMsg Interrupted; false)
-          in if ok then sendMsg Completed else () end);
+          val ok = ref false
+          val _ = inEvalContext
+            (fn () => (compile sendMsg; ok := true) handle
+              Thread.Interrupt => (sendMsg Interrupted; ok := false))
+            (fn () => sendMsg busyReport)
+          in if !ok then sendMsg Completed else () end);
         Ok encNull)
     end
 

@@ -29,9 +29,12 @@ What follows from that:
   per process.  Rebuilding one does not reach a running server;
   restart it.  A dependency that was *missing* is re-read, which is
   what `$/hol/retryCompile` is for.
-* `$/setConfig` is process-wide, and `$/eval` runs in the shared
-  process state with no snapshot bracket, so it can perturb the
-  file's compiles.
+* `$/setConfig` is process-wide.  `$/eval` takes the compile state the
+  way a walk does — restoring the snapshot at its `position`, running
+  there, and putting back what it found — so it no longer perturbs the
+  file's compiles.  What it cannot do is run while a compile holds the
+  state: it reports that and leaves the client to ask again, rather
+  than waiting out a whole pass.
 
 To start a server, use `hol lsp`. This should be run in the project root (containing the files you are editing).
 
@@ -76,6 +79,25 @@ In addition to the usual LSP commands, the server supports the following extensi
   * `code: string` - The HOL text to compile
   * `incr?: Incr` where `enum Incr { None = 0, Chunk = 1, Stream = 2 }` (default: `None`)
   * `holdep?: HoldepKind` where `enum HoldepKind { None = 0, Quiet = 1, List = 2 }` (default: `Quiet`) - controls whether it should first call `holdep` to collect and preload any `open`s and other qualified names, and whether to print bindings (`List`) or not (`Quiet`).
+  * `position?: Position` - where in `uri` to evaluate.  A file's
+    declarations run in order, so a name is in scope from the point the
+    compile reached it and not before; the chunk is evaluated against
+    the state the compile had at the start of the declaration holding
+    `position`.  Absent means after the file's last compiled
+    declaration, which is all a client that does not track a cursor can
+    mean.  Evaluating at the end of a file puts every later declaration
+    in scope, which for anything but a scratch buffer is the wrong
+    answer quietly given, so a client with a cursor should send it.
+
+  What a chunk binds is kept for the next chunk evaluated at the same
+  position — without that there is no `val x = …` worth typing — and
+  dropped anywhere else.  The bindings are values built against one
+  `Context`, and installing them over another would, at the limit, put
+  a `thm` on top of a theory the rewind has taken back.
+
+  A chunk is evaluated on the compile state, which a compile may be
+  holding.  `$/eval` does not wait for one: it answers with an `error`
+  report saying so, and the client may retry.
 
   Depending on the options set, it will send various notifications back, in the following order:
 
@@ -218,7 +240,9 @@ In addition to the usual LSP commands, the server supports the following extensi
   case where the missing ancestor has been built outside the editor.
     * `uri: URI` - the file to compile
 
-* > **TODO** unimplemented; this is an API proposal
+* > **TODO** superseded, and never implemented in this form.  The
+  > shipped request is `$/hol/goalState`, which answers the same
+  > question; this entry is kept for the shape it proposed.
 
   `$/getState` request to get the current goal view state:
   * `uri: URI` - the file being compiled
