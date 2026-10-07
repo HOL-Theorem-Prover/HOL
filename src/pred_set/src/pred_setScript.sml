@@ -7202,7 +7202,7 @@ Proof
   >> gvs[BIGUNION] >> gvs[GSYM BIGUNION]
   >> qexists `s` >> simp[] >> conj_asm1_tac >- (
     dep_rewrite.DEP_REWRITE_TAC[MAX_SET_TEST_IFF] >> rw[]
-    >- (rw[EXTENSION] >> metis_tac[]) 
+    >- (rw[EXTENSION] >> metis_tac[])
     >> irule X_LE_MAX_SET >> rw[]
     >> metis_tac[]
   )
