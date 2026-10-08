@@ -7060,6 +7060,63 @@ def test_a_theorem_jumps_to_the_script_it_is_proved_in():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_target_outside_the_file_is_an_absolute_path():
+    """A target the editor cannot open reads exactly like no target.
+
+    `pathToUri` gave a path the `file://` scheme and stopped there, but
+    Poly/ML records a declaration's file as the path it was compiled
+    under, and the structures compiled into `bin/hol` were `use`d from
+    `$HOLDIR/tools-poly` -- so `HOLSourceAST` reports
+    `../tools/parsing/HOLSourceAST.sml`.  Sent as
+    `file://../tools/parsing/HOLSourceAST.sml` that resolves against
+    nothing and VS Code declines it in silence, which from the outside
+    is indistinguishable from the jump finding nothing at all.
+
+    `startswith("file://")` is not the check: the broken form passed
+    it.  The target has to be absolute, and has to name a file that is
+    there."""
+    d = tempfile.mkdtemp(prefix="lsp_absuri_")
+    try:
+        # `poly-init2` compiles this structure into `bin/hol`, so the
+        # buffer needs nothing built in order to compile, and the
+        # declaration it reaches is one of the relative-path ones.
+        src = "open HOLSourceAST\n"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/absuri.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            c.send({"jsonrpc": "2.0", "id": 772,
+                    "method": "textDocument/definition",
+                    "params": {"textDocument": {"uri": uri},
+                               "position": {"line": 0, "character": 7}}})
+
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == 772: return m
+                return None
+
+            reply = c.wait_until(got, 20)
+            assert_true(reply is not None, "definition reply arrived")
+            res = reply.get("result")
+            assert_true(res, f"a definition was found ({reply!r})")
+            target = res[0]["targetUri"]
+            assert_true(target.startswith("file:///"),
+                        f"the target is an absolute URI ({target!r})")
+            path = target[len("file://"):]
+            assert_true(os.path.isfile(path),
+                        f"and names a file that is there ({path!r})")
+            assert_true(path.endswith("HOLSourceAST.sml"),
+                        f"namely the structure's own source ({path!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_a_reused_tail_answers_as_a_full_compile_would():
     """An edit confined to a tactic lets the compile stop after that
     declaration and keep what the last pass recorded about the rest of
@@ -10350,6 +10407,8 @@ TESTS = [
      test_hover_on_a_half_typed_declaration_does_not_die),
     ("a_theorem_jumps_to_the_script_it_is_proved_in",
      test_a_theorem_jumps_to_the_script_it_is_proved_in),
+    ("a_target_outside_the_file_is_an_absolute_path",
+     test_a_target_outside_the_file_is_an_absolute_path),
     ("a_reused_tail_answers_as_a_full_compile_would",
      test_a_reused_tail_answers_as_a_full_compile_would),
     ("an_edit_confined_to_a_tactic_is_recognised",

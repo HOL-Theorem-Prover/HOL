@@ -1225,9 +1225,50 @@ fun uriToPath uri =
 (* The other direction, for a location that came out of HOL rather than
    off the wire: `PDeclaredAt` and the DB both name a file by its path,
    and a client handed one of those as a `targetUri` has been handed
-   something that is not a URI. *)
+   something that is not a URI.
+
+   A relative one is worse than it looks.  Poly/ML records a
+   declaration's file as the path it was compiled under, and the
+   structures compiled into `bin/hol' were `use'd from
+   `$HOLDIR/tools-poly' by `poly/poly-init2.ML' -- so `HOLSourceAST'
+   reports `../tools/parsing/HOLSourceAST.sml', which resolves against
+   neither the server's directory nor the client's.  Sent as a
+   `file://' URI it names nothing, and the editor fails to open it in
+   silence: from the outside that reads exactly like goto-definition
+   having found nothing at all.
+
+   So resolve against the directories those paths are written relative
+   to -- `tools-poly' for the `use' chain above, `$HOLDIR' for one
+   recorded during the build, the server's own directory for the file
+   it was started on -- and take the first that names a file which is
+   there.  A path that resolves nowhere answers NONE and the caller
+   drops the target: no answer is better than one the client cannot
+   follow, because the person who pressed the key cannot tell a wrong
+   jump from a right one. *)
+fun absolutePath path =
+  if OS.Path.isAbsolute path then SOME path
+  else
+    let
+      fun under base =
+        let
+          val p = OS.Path.mkCanonical
+                    (OS.Path.mkAbsolute {path = path, relativeTo = base})
+        in
+          if OS.FileSys.access (p, []) then SOME p else NONE
+        end
+        handle _ => NONE
+      fun first [] = NONE
+        | first (b :: bs) =
+          (case under b of SOME p => SOME p | NONE => first bs)
+    in
+      first [OS.Path.concat (Systeml.HOLDIR, "tools-poly"),
+             Systeml.HOLDIR,
+             OS.FileSys.getDir ()]
+    end
+
 fun pathToUri path =
-  if String.isPrefix "file://" path then path else "file://" ^ path
+  if String.isPrefix "file://" path then SOME path
+  else Option.map (fn p => "file://" ^ p) (absolutePath path)
 
 (* `hol.ML` at boot preloads project_dirs / external_includes from
    cwd's `holproject.toml`; this handler catches files whose
@@ -4316,7 +4357,15 @@ fun start {diag, dbg, warnings} = let
   fun gotoDefinition uri v target = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
-      in {origin = origin, uri = SOME (pathToUri file),
+      (* `Empty' rather than `uri = NONE', which the consumer below
+         reads as "this document": an unresolvable path would then
+         jump within the open file, to the target's line number.  The
+         handler turns this into "no definition here", which is what
+         an unfollowable target amounts to. *)
+      val uri = case pathToUri file of
+          NONE => raise Empty
+        | SOME u => u
+      in {origin = origin, uri = SOME uri,
           range = range, selRange = range} end
     val ({plugins, builtTrees, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
@@ -4709,9 +4758,9 @@ fun start {diag, dbg, warnings} = let
       print ",\"theory\":"; encString theory print;
       print ",\"class\":"; encString class print;
       print ",\"statement\":"; encPretty width statement print;
-      (case file of
+      (case Option.mapPartial pathToUri file of
          NONE => ()
-       | SOME f => (print ",\"uri\":"; encString (pathToUri f) print));
+       | SOME u => (print ",\"uri\":"; encString u print));
       print ",\"line\":"; encInt line print;
       print "}")
 
