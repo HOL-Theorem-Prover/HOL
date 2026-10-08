@@ -8461,6 +8461,50 @@ def test_check_proofs_enabled_during_a_compile():
         shutil.rmtree(d, ignore_errors=True)
 
 
+@requires("sorting")
+def test_a_module_the_file_defines_is_not_preloaded():
+    """A `[bare]' script can supply a structure the bare heap lacks --
+
+        structure bossLib = struct val Datatype = Datatype.Datatype end
+
+    is how `listScript.sml' reaches the `Datatype:' block -- and the
+    holdep preload must not go and load the real module on the
+    strength of that mention.  Here the file defines `sortingTheory';
+    loading the real one calls `Theory.load_complete', which seals
+    `sorting' in `KernelSig', and `new_theory "sorting"' then cannot
+    enter its own theory.  Every declaration below the header fails
+    with "no current theory" -- nearly three thousand diagnostics in
+    the case this came from.
+
+    The name has to be one the server can actually find, or there is
+    nothing to load and the test cannot fail; `sortingTheory' is the
+    one this suite already arranges to be reachable."""
+    d = tempfile.mkdtemp(prefix="lsp_selfmod_")
+    try:
+        _point_at_sorting(d)
+        src = ("Theory sorting[bare]\n"
+               "Libs HolKernel\n\n"
+               "structure sortingTheory = struct val SORTED_DEF = 1 end\n"
+               "val x = sortingTheory.SORTED_DEF\n")
+        uri = f"file://{d}/sortingScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "compileCompleted")
+            msgs = [x.get("message", "") for x in _diag_count(c, uri)]
+            assert_eq(msgs, [], "no diagnostics")
+            err = c.stderr_text()
+            assert_true("sealed" not in err,
+                        f"and nothing sealed the theory being built "
+                        f"({err[-400:]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_goalState_select_then_completes():
     """`>>~-' selects the goals a pattern matches and runs its tactic
     on them, leaving the rest stashed.  With a different number
@@ -10123,6 +10167,8 @@ TESTS = [
      test_a_script_level_simp_reads_the_pinned_simpset),
     ("check_proofs_enabled_during_a_compile",
      test_check_proofs_enabled_during_a_compile),
+    ("a_module_the_file_defines_is_not_preloaded",
+     test_a_module_the_file_defines_is_not_preloaded),
     ("goalState_select_then_completes",
      test_goalState_select_then_completes),
     ("a_typo_in_a_tactic_leaves_the_next_edit_on_the_fast_path",

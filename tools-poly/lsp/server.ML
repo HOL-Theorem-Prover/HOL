@@ -2532,10 +2532,14 @@ fun start {diag, dbg, warnings} = let
     (* The dependencies the file declares, and where it names them.
        A failure to load one of these is fatal to the whole file, so
        it is tracked apart from the rest: `getHoldep' reports every
-       module the text mentions, including basis structures and ones
-       the file declares itself, and "Cannot find file" for those is
-       routine and harmless. *)
-    val {bare = hdrBare, header = hdrSeen, mods = declared} =
+       module the text mentions, basis structures included, and
+       "Cannot find file" for one of those is routine and harmless.
+       A module the file itself defines is not among them --
+       `Holdep_tokens' drops a `structure M = ...' whose every mention
+       follows it -- because loading the real one in its place is how
+       `bossLib' came to seal `list' out from under `listScript.sml'. *)
+    val {bare = hdrBare, header = hdrSeen, theory = hdrTheory,
+         mods = declared} =
         headerModules (#text (#text (Sref.value lastTrees)))
     val declaredNames = map #name declared
     (* A file whose declared dependencies did not load gets no compile

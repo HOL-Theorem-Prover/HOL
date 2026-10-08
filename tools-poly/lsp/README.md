@@ -276,6 +276,16 @@ has to be there: `getHoldep` works out which modules it needs,
 `useFiles` `quse`s them.  `link_parents` runs here, so this is where a
 missing ancestor surfaces.
 
+A module the file *defines* is not among them.  `Holdep_tokens` drops
+a top-level `structure M = …` whose every mention of `M` follows it,
+so a `[bare]` script can supply a stand-in for something its heap
+lacks — `structure bossLib = struct val Datatype = Datatype.Datatype
+end` is how `listScript.sml` once reached the `Datatype:` block —
+without the real module being loaded behind its back.  That mattered
+rather than merely wasting time: `bossLib` brings `listTheory`,
+`Theory.load_complete` seals `list` in `KernelSig`, and `new_theory`
+cannot then enter the theory the file exists to build.
+
 **Elaboration** — compiling the declarations with the fast-oracle prover
 in place.  No tactic is run; see *Proof checking*.
 
