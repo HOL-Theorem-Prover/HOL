@@ -118,6 +118,14 @@ In addition to the usual LSP commands, the server supports the following extensi
       * `id: integer | string` - the current request
       * `out: Report` - the report
 
+      A `toplevelOut`/`compilerOut` body here is whole lines: the
+      server holds a partial line back until its newline arrives.
+      Poly's pretty printer emits a value one item at a time (`val`,
+      ` `, `it`, ` `, `=`, …), so without that a client appending a
+      line per report renders `val it = 39: int` as ten lines.  Append
+      the bodies as text; they carry their own newlines, and only the
+      last report of a run may lack one.
+
   The `Report` object is a possible output of the compiler:
   ```ts
   type Report = ErrorReport | CompilerOutReport | ToplevelOutReport | CompileProgressReport | { kind: "compileCompleted" } | { kind: "interrupted" };

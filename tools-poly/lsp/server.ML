@@ -2036,6 +2036,55 @@ fun start {diag, dbg, warnings} = let
       else DArray.push (buf, msg)
     | _ => DArray.push (buf, msg)
 
+  (* The same coalescing as `mergeInto', for a stream that cannot wait
+     for the end.
+
+     Poly's pretty printer calls the output function once per item --
+     "val", " ", "it", " ", "=", ... -- and a stream that forwarded
+     each report as it arrived left a client no way to tell those
+     apart from successive lines: `val it = 39 : int' reached the
+     transcript as ten of them.  So text is held here until its
+     newline comes, and what goes out is always whole lines.
+
+     `flush' is what makes a chunk that printed without a trailing
+     newline arrive at all, and every other kind of report runs it
+     first: an error sent while output was pending would otherwise
+     overtake the output that preceded it. *)
+  fun lineBuffer send = let
+    (* Toplevel output or compiler output, where it came from, and the
+       part of it that has no newline yet. *)
+    val pending: (bool * int * string) option ref = ref NONE
+    fun emit (_, _, "") = ()
+      | emit (true, pos, s) = send (ToplevelOut (pos, [s]))
+      | emit (false, pos, s) = send (CompilerOut (pos, [s]))
+    fun flush () = case !pending of
+        NONE => ()
+      | SOME p => (pending := NONE; emit p)
+    (* One past the last newline; 0 when there is none. *)
+    fun afterLastNL s = let
+      fun go i = if i < 0 then 0
+                 else if String.sub (s, i) = #"\n" then i + 1
+                 else go (i - 1)
+      in go (size s - 1) end
+    fun add (k, pos, s) = let
+      val s = case !pending of
+          SOME (k', pos', prev) =>
+          if k' = k andalso pos' = pos then (pending := NONE; prev ^ s)
+          else (flush (); s)
+        | NONE => s
+      val i = afterLastNL s
+      in
+        if i = 0 then pending := SOME (k, pos, s)
+        else (emit (k, pos, String.substring (s, 0, i));
+              pending :=
+                (if i < size s then SOME (k, pos, String.extract (s, i, NONE))
+                 else NONE))
+      end
+    fun msg (ToplevelOut (pos, ss)) = add (true, pos, concat (rev ss))
+      | msg (CompilerOut (pos, ss)) = add (false, pos, concat (rev ss))
+      | msg m = (flush (); send m)
+    in {msg = msg, flush = flush} end
+
   fun getHoldep text = let
     val {read, ...} = HOLSource.stringToReader {quietOpen = false, print = fn _ => ()} text
     in
@@ -5037,15 +5086,18 @@ fun start {diag, dbg, warnings} = let
         Ok encNull)
       | IncrStream => (
         spawnJobCore id (fn () => let
-          fun sendMsg msg = send (mkNotif "$/eval/1" (fn print => (
+          fun send1 msg = send (mkNotif "$/eval/1" (fn print => (
             print "{\"id\":"; encReqId id print;
             print ",\"out\":"; encReport msg print; print "}")))
+          (* Whole lines, not the pretty printer's own tokens; see
+             `lineBuffer'. *)
+          val {msg = sendMsg, flush} = lineBuffer send1
           val ok = ref false
           val _ = inEvalContext
             (fn () => (compile sendMsg; ok := true) handle
               Thread.Interrupt => (sendMsg Interrupted; ok := false))
             (fn () => sendMsg busyReport)
-          in if !ok then sendMsg Completed else () end);
+          in flush (); if !ok then sendMsg Completed else () end);
         Ok encNull)
     end
 

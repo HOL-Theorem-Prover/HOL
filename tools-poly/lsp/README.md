@@ -1000,6 +1000,15 @@ That reads the right thing because the compiler runs the inserted text
 where it sits — which is exactly what `position` reproduces, without
 editing the buffer.
 
+**A report body is text, not a line.**  Poly's pretty printer calls
+its output function once per item — `val`, ` `, `it`, ` `, `=`, … —
+so a report is not a unit of layout.  The batch modes coalesce
+adjacent reports (`mergeInto`); the stream, which cannot wait for the
+end, holds a partial line until its newline arrives (`lineBuffer`).
+Either way a client should append what it gets and let the newlines in
+it do the breaking.  Appending a *line* per report is what rendered
+`val it = 39: int` down the left margin, a lone space to a line.
+
 **Bindings persist** for the next chunk evaluated at the same
 position, and are dropped anywhere else; see the protocol reference
 for why.
@@ -1016,8 +1025,12 @@ what it is and let the user ask again.
   `M-h M-e`, with the region (or, with no region, the top-level phrase
   around point) sent as `code` and point sent as `position`.  Output is
   appended to `*HOL LSP Eval*`.
-- **VS Code (`hol4-vscode`)** — `HOL: Evaluate Selection`, bound to
-  `Ctrl+H Ctrl+E`, writing to the `HOL4 LSP Eval` output channel.
+- **VS Code (`hol4-vscode`)** — `HOL: Evaluate selection`, bound to
+  `Ctrl+H Ctrl+E`, writing to the `HOL4 LSP Eval` output channel.  With
+  nothing selected it prompts for an expression (also `HOL: Evaluate
+  expression…`) and sends the cursor, which is the analogue of emacs's
+  `M-h s`: there is then nothing to type into the script and delete
+  again.
 
 ## Emacs
 

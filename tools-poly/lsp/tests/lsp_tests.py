@@ -9951,6 +9951,76 @@ def _eval_text(reply):
     return "".join(out)
 
 
+def _eval_stream(c, rid, uri, code, pos=None, timeout=30):
+    """`$/eval' in streaming mode, gathering the `$/eval/1' reports it
+    sends.  The reply itself is `null' and arrives at once, so what
+    there is to wait for is the `compileCompleted' report that ends
+    the run."""
+    since = c.total_msgs()
+    params = {"uri": uri, "code": code, "incr": 2, "holdep": 0}
+    if pos is not None:
+        params["position"] = {"line": pos[0], "character": pos[1]}
+    _send_request(c, rid, "$/eval", params)
+
+    def done(cl):
+        msgs, _ = cl.messages_since(since)
+        out = [(m.get("params") or {}).get("out") or {} for m in msgs
+               if m.get("method") == "$/eval/1"
+               and (m.get("params") or {}).get("id") == rid]
+        if any(r.get("kind") == "compileCompleted" for r in out):
+            return out
+        return None
+    return c.wait_until(done, timeout) or []
+
+
+def test_eval_streams_whole_lines():
+    """A streamed `$/eval' reports whole lines.
+
+    Poly's pretty printer calls the output function once per item --
+    "val", " ", "it", " ", "=", ... -- and the stream used to forward
+    each of those as its own report.  Both shipped clients append a
+    line per report, so `val it = 39: int' reached their transcripts
+    as ten lines, two of them a lone space.  The batch modes never had
+    this: `mergeInto' coalesces their reports already, and the stream
+    was the one place with nothing to coalesce into."""
+    d = tempfile.mkdtemp(prefix="lsp_evalline_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            out = _eval_stream(c, 730, uri, "3 * 13;", _EVAL_CURSOR)
+            bodies = [r.get("body") or "" for r in out
+                      if r.get("kind") == "toplevelOut"]
+            assert_true(bodies, f"the eval said something ({out!r})")
+
+            # The value and its type on one line, not a line each.
+            joined = "".join(bodies)
+            said = [l for l in joined.split("\n") if "39" in l]
+            assert_eq(len(said), 1, f"the value is on one line ({joined!r})")
+            assert_true("val it" in said[0] and "int" in said[0],
+                        f"with its name and its type ({said[0]!r})")
+
+            # Not merely few enough to look right: a report that is a
+            # break on its own is the shape the clients cannot render,
+            # whatever else arrives with it.
+            assert_true(all(b.strip() for b in bodies),
+                        f"no report is a bare break ({bodies!r})")
+            assert_true(all(b.endswith("\n") for b in bodies[:-1]),
+                        f"every report but the last ends its line "
+                        f"({bodies!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_eval_runs_in_the_context_at_the_cursor():
     """`$/eval' evaluates where the cursor is, not where the compile
     stopped.
@@ -10440,6 +10510,7 @@ TESTS = [
      test_an_edit_during_a_commit_is_not_lost),
     ("a_theorem_without_proof_keeps_the_file_compiling",
      test_a_theorem_without_proof_keeps_the_file_compiling),
+    ("eval_streams_whole_lines", test_eval_streams_whole_lines),
     ("eval_runs_in_the_context_at_the_cursor",
      test_eval_runs_in_the_context_at_the_cursor),
     ("eval_bindings_outlive_the_request",
