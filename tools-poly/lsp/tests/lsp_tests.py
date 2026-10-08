@@ -3219,55 +3219,62 @@ def test_goalState_with_an_unterminated_quotation():
     into the broken block above it.
 
     The second half is the one with teeth.  An unterminated *string* or
-    character literal does swallow the rest of the file -- the block's
-    `QED' goes with it, `findEnclosingTheorem' falls back to the dec's
-    `stop', and a cursor in a later theorem is answered with the broken
-    theorem's goal and no error at all.  That is not fixed here; this
-    pins the quotation case, which is the common one, so a regression
-    spreading it further is caught."""
-    c = Client("/tmp")
-    try:
-        _init(c, "/tmp")
-        uri = "file:///tmp/goalstate_unterminated.sml"
-        src = ("Theory goalstate_unterminated\n"
-               "Ancestors arithmetic\n\n"
-               "Theorem half_typed:\n"
-               "  !n:num. n + 0 = n\n"
-               "Proof\n"
-               "  rw[] >> `n < 10\n"
-               "QED\n\n"
-               "Theorem healthy:\n"
-               "  !m:num. m + 0 = m\n"
-               "Proof\n"
-               "  rw[]\n"
-               "QED\n")
-        _did_open(c, uri, src, 1)
-        assert_true(c.wait_for_method("$/compileCompleted", 30),
-                    "compileCompleted")
+    character literal used to swallow the rest of the file: the block's
+    `QED' went with it, `findEnclosingTheorem' fell back to the dec's
+    `stop', and a cursor in a later theorem was answered with the broken
+    theorem's goal, status "ok" and no error.  SML admits a newline in a
+    literal only inside a `\\ ... \\' gap, so HolLex now ends an
+    unterminated one at the newline and the damage stops at that line.
+    All three forms are checked here."""
+    for tag, body in [("quote", "  rw[] >> `n < 10"),
+                      ("string", '  rw[] >> simp["abc]'),
+                      ("char", '  rw[] >> simp[#"a]')]:
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            uri = "file:///tmp/goalstate_untermd_%s.sml" % tag
+            src = ("Theory goalstate_untermd_%s\n" % tag +
+                   "Ancestors arithmetic\n\n"
+                   "Theorem half_typed:\n"
+                   "  !n:num. n + 0 = n\n"
+                   "Proof\n"
+                   + body + "\n"
+                   "QED\n\n"
+                   "Theorem healthy:\n"
+                   "  !m:num. m + 0 = m\n"
+                   "Proof\n"
+                   "  rw[]\n"
+                   "QED\n")
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted (%s)" % tag)
 
-        # Line 6 = "  rw[] >> `n < 10" — inside the half-typed body.
-        broken = _send_goalstate(c, 1101, uri, 6, 8)
-        assert_true(broken is not None,
-                    "the half-typed proof got a reply at all")
-        assert_true(broken.get("error") is None,
-                    f"no protocol error ({broken!r})")
+            # Line 6 is the half-typed body itself.
+            broken = _send_goalstate(c, 1101, uri, 6, len(body))
+            assert_true(broken is not None,
+                        "half-typed proof got a reply (%s)" % tag)
+            assert_true(broken.get("error") is None,
+                        f"no protocol error ({tag}, {broken!r})")
 
-        # And the next request on the same server is unharmed: a leaked
-        # canary would interrupt it up to the budget later.
-        for attempt in range(3):
-            ok = _send_goalstate(c, 1102 + attempt, uri, 12, 3)
-            assert_true(ok is not None, "healthy proof got a reply")
-            res = ok.get("result")
-            assert_true(res is not None,
-                        f"healthy proof has a result ({ok!r})")
-            assert_eq(res.get("theorem"), "healthy", "theorem name")
-            goals = res.get("goals")
-            assert_true(isinstance(goals, list) and len(goals) == 1,
-                        f"one goal ({goals!r})")
-            assert_true("m + 0" in goals[0].get("goal", ""),
-                        f"goal renders the statement ({goals!r})")
-    finally:
-        c.close()
+            # Line 12 is `healthy's body.  Asked three times: a budget
+            # canary left armed by a walk that raised would interrupt a
+            # later request, not the one that armed it.
+            for attempt in range(3):
+                ok = _send_goalstate(c, 1102 + attempt, uri, 12, 3)
+                assert_true(ok is not None,
+                            "healthy proof got a reply (%s)" % tag)
+                res = ok.get("result")
+                assert_true(res is not None,
+                            f"healthy proof has a result ({tag}, {ok!r})")
+                assert_eq(res.get("theorem"), "healthy",
+                          "theorem name (%s)" % tag)
+                goals = res.get("goals")
+                assert_true(isinstance(goals, list) and len(goals) == 1,
+                            f"one goal ({tag}, {goals!r})")
+                assert_true("m + 0" in goals[0].get("goal", ""),
+                            f"goal renders the statement ({tag}, {goals!r})")
+        finally:
+            c.close()
 
 
 def test_goalState_steps_inside_by_and_resolves_wildcard_equality():

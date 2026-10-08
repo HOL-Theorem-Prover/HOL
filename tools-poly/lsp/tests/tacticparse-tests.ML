@@ -436,6 +436,52 @@ in
        | _ => false)
 end
 
+(* ----------------------------------------------------------------------
+    HOLSourceParser: an unterminated literal stops at its line
+
+    SML admits a newline inside a string or character literal only
+    inside a `\ ... \' gap, so a raw one means the closing quote is
+    missing.  Scanning on regardless takes the rest of the file into
+    the literal -- the `QED' delimiting the enclosing proof included,
+    after which the LSP answered a cursor in a later theorem with the
+    broken theorem's goal and no error.
+   ---------------------------------------------------------------------- *)
+
+local
+  fun theoremNames src = let
+    val consumed = ref false
+    fun read _ = if !consumed then "" else (consumed := true; src)
+    fun err _ _ _ = ()
+    val {parseDec, ...} =
+      HOLSourceParser.parseSML "untermd_selftest" read err
+                               HOLSourceParser.initialScope
+    fun go acc =
+      case parseDec () of
+        NONE => List.rev acc
+      | SOME (HOLSourceAST.HOLTheoremDecl {id = (_, nm), ...}) =>
+          go (nm :: acc)
+      | SOME _ => go acc
+  in go [] end
+  fun twoTheorems body =
+    "Theory t\nAncestors arithmetic\n\nTheorem half_typed:\n\
+    \  !n:num. n + 0 = n\nProof\n" ^ body ^
+    "\nQED\n\nTheorem healthy:\n  !m:num. m + 0 = m\nProof\n  rw[]\nQED\n"
+  fun check what body = let
+    val _ = tprint ("HOLSourceParser: " ^ what ^ " leaves the next theorem")
+    in case theoremNames (twoTheorems body) of
+         ["half_typed", "healthy"] => OK()
+       | ns => die ("saw [" ^ String.concatWith ", " ns ^ "]")
+    end
+in
+  val _ = check "an unterminated string" "  rw[] >> simp[\"abc]"
+  val _ = check "an unterminated char"   "  rw[] >> simp[#\"a]"
+  val _ = check "an unterminated quote"  "  rw[] >> `n < 10"
+  (* The positive control: a `\ ... \' gap is the one way a literal may
+     span lines, and it has to keep working. *)
+  val _ = check "a string spanning lines by a gap"
+                "  simp[\"ab\\\n   \\cd\"]"
+end
+
 val () = OS.Process.exit
            (if !failcount = 0 then OS.Process.success
             else OS.Process.failure)
