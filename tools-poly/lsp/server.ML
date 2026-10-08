@@ -644,11 +644,16 @@ fun declOrds syms = let
 
    `parseDec' streams, and we stop at the first declaration that is
    neither the header nor an `open', so this reads no further than the
-   top of the file. *)
+   top of the file.
+
+   `theory' is the name the header gives, with the byte range of the
+   name as written: the one declaration whose failure the compile
+   wants to be able to explain by itself. *)
 fun headerModules text = let
   val parseDec = bufferDecs text
   val bare = ref false
   val sawHeader = ref false
+  val theory = ref (NONE : (string * (int * int)) option)
   fun attrArgs (NONE: HOLSourceAST.kvals HOLSourceAST.attrs) = []
     | attrArgs (SOME v) = #args (#attrs v)
   fun hasKey k a =
@@ -666,9 +671,10 @@ fun headerModules text = let
   fun loop acc =
     case parseDec () of
       NONE => rev acc
-    | SOME (HOLSourceAST.HOLTheory {elems, attrs, ...}) => (
+    | SOME (HOLSourceAST.HOLTheory {id = (p, nm), elems, attrs, ...}) => (
         sawHeader := true;
         bare := (!bare orelse hasKey "bare" attrs);
+        if isSome (!theory) then () else theory := SOME (nm, (p, p + size nm));
         loop (List.revAppend (List.concat (map header elems), acc)))
     | SOME (HOLSourceAST.DecOpen {elems, ...}) =>
         loop (List.revAppend (map (named "" true) elems, acc))
@@ -676,7 +682,7 @@ fun headerModules text = let
     | SOME (HOLSourceAST.HOLFilePragmaWith _) => loop acc
     | SOME _ => rev acc
   val mods = loop [] handle _ => []
-  in {bare = !bare, header = !sawHeader, mods = mods} end
+  in {bare = !bare, header = !sawHeader, theory = !theory, mods = mods} end
 
 (* The structures a non-`bare' `Theory' header opens before anything the
    file declares; `HOLSourceExpand.sml:681' is the authority. *)
@@ -3066,6 +3072,17 @@ fun start {diag, dbg, warnings} = let
       val headerEnd =
           foldl (fn ({pos = (_, e), ...}, m) => Int.max (e, m)) 0 declared
       val depFails = ref ([]: (string * (int * int) * exn) list)
+      (* The theory this file declares, when the session has not
+         already got it.  Sampled before the preload so that a seal
+         found afterwards is this pass's own doing: a file recompiled
+         in a process that was poisoned earlier must not be told the
+         same news twice, and a theory sealed for some other reason is
+         not what this is about. *)
+      val thyAtRisk =
+          case hdrTheory of
+              NONE => NONE
+            | SOME (nm, pos) =>
+              if !LSPExtension.theorySealed nm then NONE else SOME (nm, pos)
       fun noteFail m e = (
         DArray.push (errors, e);
         case List.find (fn {name, ...} => name = m) declared of
@@ -3096,6 +3113,21 @@ fun start {diag, dbg, warnings} = let
               print ",\"errors\":"; encDArray (encDiag o exnToReport 0) errors print);
             print "}")))
         | _ => ())
+
+      (* Whether the preload has just sealed the theory the header is
+         about to create, and the modules it loaded on the way.  Asked
+         after the loads have run, not after the plan was built: a
+         module already resident seals nothing. *)
+      fun sealedByPreload () =
+          case thyAtRisk of
+              NONE => NONE
+            | SOME (nm, pos) =>
+              if not (!LSPExtension.theorySealed nm) then NONE
+              else SOME (nm, pos,
+                         DArray.foldr (fn ((_, m), acc) =>
+                                          if List.exists (fn x => x = m) acc
+                                          then acc else m :: acc)
+                                      [] files)
 
       fun beforeCompile () = let
         val ls = getPlugins ()
@@ -3415,6 +3447,42 @@ fun start {diag, dbg, warnings} = let
                this pass holds the process until it says otherwise.
                No progress to end -- `sendProgressBegin' is inside
                `runCompile', which this path does not reach. *)
+            releaseState ();
+            publishAllDiagnostics uri v;
+            markDepsBlocked uri v {mods = declaredNames, message = message})
+        end
+      (* The preload has brought in the theory this file exists to
+         build.  Nothing below the header can work: `new_theory'
+         refuses to enter a sealed theory, so there is no current
+         theory for any declaration to extend, and elaborating anyway
+         buys a "no current theory" diagnostic per declaration -- some
+         three thousand of them for `listScript.sml' -- for one cause.
+         Say the cause once, against the name in the header.
+
+         Unlike a failed load this is not something editing the header
+         undoes: sealing is a soundness gate in `KernelSig', outside
+         the Context, and nothing in the session takes it back.  The
+         `DepsBlocked' latch is still where it belongs, being what
+         stops the next keystroke paying to discover it again. *)
+      fun blockOnSealed (nm, pos, loaded) = let
+        val diags = #diags (!trees)
+        val via = if null loaded then ""
+                  else " (loaded " ^ String.concatWith ", " loaded ^ ")"
+        val message =
+            "theory \"" ^ nm ^
+            "\" is already loaded in this session" ^ via ^
+            ", so this file cannot create it"
+        val () = DArray.push (diags, Error {
+                   hard = true, pos = pos,
+                   msg = encString (message ^
+                     "\n\nrestart the language server to compile this file")})
+        in
+          (* The same fence as `blockOnDeps': a `didChange' during the
+             load owns `lastTrees' now, and blocking on the text it
+             replaced would stop that pass from ever running. *)
+          if !cancelled then () else (
+            commitTrees lastTrees
+              {text = text, parse = setParsePos 0 (!trees)};
             releaseState ();
             publishAllDiagnostics uri v;
             markDepsBlocked uri v {mods = declaredNames, message = message})
@@ -3763,7 +3831,14 @@ fun start {diag, dbg, warnings} = let
            `DepsBlocked' by `markDepsBlocked'. *)
         case missingDeps () of
           fails as (_::_) => blockOnDeps fails
-        | [] => (depsBlocked := DepsLoaded; runCompile ())
+        | [] =>
+          (* Asked after `missingDeps', which is the more informative
+             answer when both hold: a module that failed to load names
+             itself, where a sealed theory can only name what the
+             preload got through. *)
+          (case sealedByPreload () of
+               SOME sealed => blockOnSealed sealed
+             | NONE => (depsBlocked := DepsLoaded; runCompile ()))
       ) handle Thread.Interrupt => (
         (* When the compile aborted because a single dec produced a
            runaway cascade of errors, the diagnostics are complete

@@ -284,7 +284,10 @@ end` is how `listScript.sml` once reached the `Datatype:` block —
 without the real module being loaded behind its back.  That mattered
 rather than merely wasting time: `bossLib` brings `listTheory`,
 `Theory.load_complete` seals `list` in `KernelSig`, and `new_theory`
-cannot then enter the theory the file exists to build.
+cannot then enter the theory the file exists to build.  Should a
+preload seal the header's own theory anyway, the compile says so once
+against the theory name and blocks, rather than reporting "no current
+theory" for every declaration below it.
 
 **Elaboration** — compiling the declarations with the fast-oracle prover
 in place.  No tactic is run; see *Proof checking*.

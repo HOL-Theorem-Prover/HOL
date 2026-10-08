@@ -284,6 +284,8 @@ type compileSnap = unit -> unit
 val captureCompileSnap : (unit -> compileSnap) ref = ref (fn () => (fn () => ()))
 val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
 
+val theorySealed : (string -> bool) ref = ref (fn _ => false)
+
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string

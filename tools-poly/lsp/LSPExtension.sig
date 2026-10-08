@@ -332,6 +332,19 @@ type compileSnap = unit -> unit
 val captureCompileSnap: (unit -> compileSnap) ref
 val restoreCompileSnap: (compileSnap -> unit) ref
 
+(* Whether the kernel considers a theory sealed, i.e. already loaded
+   from disk or exported in this session, so that `new_theory' on that
+   name must fail.  Sealing is process-global and deliberately outside
+   the Context (`KernelSig.sealed_ref'), so no snapshot restores it.
+
+   The compile uses this to notice that its own preload has sealed the
+   theory the file is about to create -- which `bossLib' does to
+   `list', by way of `listTheory' -- and say so once, rather than
+   elaborate a file in which nothing below the header can work.
+   Default answers "no"; installed by the LSP runtime init in
+   tools-poly/hol.ML. *)
+val theorySealed: (string -> bool) ref
+
 (* ----------------------------------------------------------------------
    Deferred proofs — Phase A of the LSP's proof replay.
 
