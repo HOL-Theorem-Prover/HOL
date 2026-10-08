@@ -3399,6 +3399,142 @@ def test_tryTactic_honours_a_step_anchor():
         c.close()
 
 
+def _send_eval(c, req_id, uri, code):
+    """`$/eval` with holdep off, so nothing is preloaded as a side
+    effect and the reply is only about the chunk."""
+    c.send({"jsonrpc":"2.0","id":req_id,
+            "method":"$/eval",
+            "params":{"uri":uri,"code":code,"holdep":0}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    return c.wait_until(got, 30)
+
+
+def _eval_text(reply):
+    """Every string the reports carry, in one blob: `body` for output,
+    `msg` for an error or a note."""
+    res = (reply or {}).get("result") or []
+    out = []
+    for r in res:
+        for k in ("body", "msg"):
+            v = r.get(k)
+            if isinstance(v, str):
+                out.append(v)
+    return "\n".join(out)
+
+
+def _search_names(c, req_id, fragment):
+    """`$/hol/search` for a theorem-name fragment; the double quotes
+    are the selector syntax, not JSON."""
+    c.send({"jsonrpc":"2.0","id":req_id,"method":"$/hol/search",
+            "params":{"selectors":['"%s"' % fragment],"limit":10}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    r = c.wait_until(got, 20)
+    return [x.get("name") for x in ((r or {}).get("result") or [])]
+
+
+def test_eval_runs_in_a_world_that_is_thrown_away():
+    """`$/eval` gives the caller a transient session: the chunk runs,
+    and then the Context, the loaded-module set and the namespace layer
+    are all put back.  So a `Definition` works -- and is gone.
+
+    Proved against the database rather than against anything the server
+    says about itself: the theorem is absent before, the chunk runs
+    without being refused, and it is still absent after.  `ADD_COMM' is
+    the control for the probe itself -- without it an always-empty
+    search would read exactly like a clean rollback."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/eval_scratch.sml"
+        # A chunk that defines anything needs a current theory, which
+        # the server only has once it has compiled a script.
+        _did_open(c, uri, "Theory eval_scratch\nAncestors arithmetic\n", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        assert_true("ADD_COMM" in _search_names(c, 7400, "ADD_COMM"),
+                    "the search probe works at all")
+        assert_eq(_search_names(c, 7401, "zzdef_def"), [],
+                  "the theorem is not there to begin with")
+
+        defn = _send_eval(c, 7402, uri,
+                          "Definition zzdef_def:\n  zzdef = T\nEnd\n")
+        assert_true(defn is not None, "the Definition got a reply")
+        assert_eq(defn.get("error"), None,
+                  f"it ran rather than being refused ({defn!r})")
+        assert_eq(_search_names(c, 7403, "zzdef_def"), [],
+                  "and the definition did not outlive the request")
+
+        q = _send_eval(c, 7404, uri, "1 + 1;")
+        assert_eq(q.get("error"), None, "a question is not refused")
+    finally:
+        c.close()
+
+
+def test_eval_refuses_what_it_cannot_throw_away():
+    """A snapshot puts the Context back, but loading a theory *seals*
+    it -- that lives in `KernelSig`, outside the Context -- and
+    `export_theory` writes files.  Neither can be undone, so those are
+    turned away rather than run.
+
+    The last case is the control for the blanking: a name inside a
+    comment or a string is not a call."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/eval_irrev.sml"
+
+        def err_of(rid, code):
+            r = _send_eval(c, rid, uri, code)
+            assert_true(r is not None, f"a reply came back for {code!r}")
+            e = r.get("error")
+            return (e or {}).get("message", "") if e else None
+
+        msg = err_of(7411, 'val _ = load "pairTheory";')
+        assert_true(msg is not None, "load is refused")
+        assert_contains(msg, "load", "the refusal names the call")
+        assert_contains(msg, "thrown away", "the refusal says why")
+
+        assert_true(err_of(7412, "val _ = export_theory();") is not None,
+                    "export_theory is refused")
+
+        assert_eq(err_of(7413, '(* load *) val s = "use"; 1+1;'), None,
+                  "a name in a comment or string is not a call")
+    finally:
+        c.close()
+
+
+def test_eval_is_logged():
+    """The prompt a chunk is typed into need not keep a transcript --
+    that is half the reason for holding `$/eval` to questions -- but a
+    reader still deserves to see what was asked, so an accepted chunk
+    goes to the client's log."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/eval_logged.sml"
+        probe = "4 + 38;"
+        r = _send_eval(c, 7411, uri, probe)
+        assert_true(r is not None, "a reply came back")
+        assert_eq(r.get("error"), None, "the probe was accepted")
+        msgs, _ = c.messages_since(0)
+        logged = [m for m in msgs
+                  if m.get("method") == "window/logMessage"
+                  and probe in (m.get("params") or {}).get("message", "")]
+        assert_true(len(logged) > 0,
+                    "the chunk appears in window/logMessage")
+    finally:
+        c.close()
+
+
 def test_goalState_addresses_a_step_directly():
     """A caller with no cursor names the step it wants.  The position
     then only has to land in the right `Proof … QED' -- which is why
@@ -11771,6 +11907,11 @@ TESTS = [
                     test_tryTactic_probes_without_committing),
     ("tryTactic_honours_a_step_anchor",
                     test_tryTactic_honours_a_step_anchor),
+    ("eval_runs_in_a_world_that_is_thrown_away",
+                    test_eval_runs_in_a_world_that_is_thrown_away),
+    ("eval_refuses_what_it_cannot_throw_away",
+                    test_eval_refuses_what_it_cannot_throw_away),
+    ("eval_is_logged", test_eval_is_logged),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),

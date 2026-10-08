@@ -169,6 +169,80 @@ fun bufferDecs text = let
     HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
   in parseDec end
 
+(* ----------------------------------------------------------------
+   What `$/eval' will not run.
+
+   `inEvalContext' below brackets a chunk: the Context, the loaded
+   module set and the namespace layer are captured before it runs and
+   put back after, with the SML bindings deliberately carried forward
+   so the thing still behaves like a REPL.  So a `Definition' typed
+   into the prompt is undone, and that is a *semantic* guarantee where
+   a list of forbidden constructs would be only a syntactic one -- a
+   definition reached through an alias rolls back just the same.
+
+   This list is for what the bracket cannot undo.  `load' and `use'
+   bring in a theory, and loading one *seals* it -- that lives in
+   `KernelSig', outside the Context, so restoring leaves the theory
+   sealed while marking it unloaded, which is worse than not having
+   rolled back at all.  `export_theory' writes files.  Those three are
+   turned away; everything else runs and is rolled back.
+   ---------------------------------------------------------------- *)
+
+(* Comments and string literals blanked, length preserved.  Non-nested,
+   so `(* (* load *) *)' leaves the inner text visible -- a refusal too
+   many rather than one too few, and the message says what it matched. *)
+fun blankNonCode s = let
+  val n = String.size s
+  val buf = CharArray.array (n, #" ")
+  fun code i =
+    if i >= n then ()
+    else if i + 1 < n andalso String.sub (s, i) = #"(" andalso
+            String.sub (s, i + 1) = #"*" then comment (i + 2)
+    else if String.sub (s, i) = #"\"" then quoted (i + 1)
+    else (CharArray.update (buf, i, String.sub (s, i)); code (i + 1))
+  and comment i =
+    if i >= n then ()
+    else if i + 1 < n andalso String.sub (s, i) = #"*" andalso
+            String.sub (s, i + 1) = #")" then code (i + 2)
+    else comment (i + 1)
+  and quoted i =
+    if i >= n then ()
+    else if String.sub (s, i) = #"\\" then quoted (i + 2)
+    else if String.sub (s, i) = #"\"" then code (i + 1)
+    else quoted (i + 1)
+  in code 0; CharArray.vector buf end
+
+(* The entry points whose effects outlive a Context restore. *)
+val evalIrreversible = ["load", "use", "export_theory"]
+
+fun irreversibleIn s = let
+  val t = blankNonCode s
+  val n = String.size t
+  fun isIdChar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+  fun go i =
+    if i >= n then NONE
+    else if isIdChar (String.sub (t, i)) then let
+      fun endOf j = if j < n andalso isIdChar (String.sub (t, j))
+                    then endOf (j + 1) else j
+      val j = endOf i
+      val w = String.substring (t, i, j - i)
+      in if List.exists (fn m => m = w) evalIrreversible then SOME w
+         else go j
+      end
+    else go (i + 1)
+  in go 0 end
+
+fun evalRefusal code =
+  Option.map
+    (fn nm =>
+       "`$/eval' runs its chunk in a world that is thrown away, and a \
+       \call to `" ^ nm ^ "' is not something that world can throw: \
+       \loading a theory seals it, and writing one leaves a file \
+       \behind.  Name the dependency in the script -- `Ancestors', or \
+       \a top-level `open' -- and the server will load it for the \
+       \file.")
+    (irreversibleIn code)
+
 (* The label of a `Resume thm[label, smlname=x]' block.  The expander
    takes the first attribute carrying no `=' as the label and leaves
    the rest as proof kvals (`HOLSourceExpand.expandDec', the
@@ -5328,7 +5402,17 @@ fun start {diag, dbg, warnings} = let
     hard = true, pos = (0, 0),
     msg = encString "$/eval: a compile holds the state; try again"}
 
-  fun eval id {uri, code, incr, holdep, position} = let
+  fun eval id args =
+    case evalRefusal (#code args) of
+      SOME why => mkErr InvalidParams why
+    | NONE => evalChunk id args
+
+  (* Logged whole, to the client's own log.  The prompt a chunk is
+     typed into need not keep a transcript -- the point of holding
+     `$/eval' to questions is that none of them has to be recoverable
+     afterwards, but a reader still deserves to see what was asked. *)
+  and evalChunk id {uri, code, incr, holdep, position} = let
+    val () = logMessage ("eval: " ^ code)
     val lines = mkLineCounter code
 
     val mods = case holdep of HoldepNone => [] | _ => getHoldep code

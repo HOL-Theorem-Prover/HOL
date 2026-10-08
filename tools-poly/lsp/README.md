@@ -39,11 +39,29 @@ practical guide to trying it out; the protocol details live in
   `Manual/Developers/lsp-server.md` for why there is no
   `textDocument/references`.  Plus LSP extensions:
   `$/setConfig` (elabOn mode, holdep behaviour, hover width),
-  `$/eval` (arbitrary SML at a position — see below),
+  `$/eval` (SML at a position, restricted to questions — see below),
   `$/hol/goalState` (goal-state at cursor — see
-  below), `$/cancelRequest`, `$/compileProgress` /
+  below), `$/hol/tryTactic` (a candidate tactic at a point in a proof),
+  `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted` /
   `$/compileBlocked`, `$/hol/retryCompile`, `$/hol/desync`.
+- **`$/eval` runs its chunk in a world that is thrown away.**  The
+  Context, the loaded-module set and the namespace layer are captured
+  before it runs and restored after, so a `Definition` works, the
+  caller sees it work, and it is gone by the time the answer is sent.
+  A *semantic* guarantee rather than a syntactic one: a definition
+  reached through an alias rolls back the same as a plain one.  What
+  is deliberately carried across is the SML bindings a chunk made —
+  a `val x = ...` that vanished by the next request would not be a
+  REPL — so the thing that rolls back is the *HOL* state, not the
+  prompt's own scratch names.  The bracket is taken under the state
+  lock a walk uses, which is also what stops an eval perturbing the
+  file's own compile; a compile already holding the state is reported
+  rather than waited for.  Still refused, being what a snapshot
+  cannot undo: `load` and `use` (loading a theory seals it, in
+  `KernelSig`, outside the Context) and `export_theory` (it writes
+  files).  Every accepted chunk goes to `window/logMessage`, which is
+  the record a transient prompt is not.
 - Server capabilities also cover `documentSymbolProvider`,
   `workspaceSymbolProvider` and `completionProvider`, so an editor's
   outline, symbol search and completion work with no client-side code
