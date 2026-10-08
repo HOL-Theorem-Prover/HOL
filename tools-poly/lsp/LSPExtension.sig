@@ -248,6 +248,24 @@ type theorem_context = {
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref
 
+(* The cursor offset that puts a walk at a given step of this body --
+   the inverse of the `step' a `goal_state_response' comes back with.
+
+   A caller holding a cursor does not need this; a caller that has no
+   cursor does.  An agent driving the server asks for "the state after
+   step 7 of this proof", or for the frontier, and cannot work the
+   offset out for itself: steps are counted over `TacticParse's
+   fragments, so mapping one to a byte means parsing the tactic body,
+   which is exactly the work the server already did.  `documentSymbol'
+   already answers the easier half, which theorem a name denotes.
+
+   The int is the step index, as `goal_state_response.step' reports it;
+   a negative one asks for the last step in the body.  NONE when the
+   body has no such step.  Offsets are file coordinates, matching
+   `theorem_context.cursor'.  Default no-op; installed by
+   `lsp/goal_state_init.ML'. *)
+val stepCursor: (theorem_context * int -> int option) ref
+
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->
    {file: string, line: int} option) ref

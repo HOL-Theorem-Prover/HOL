@@ -927,10 +927,28 @@ outright, there being nothing below the edit worth keeping.
     "textDocument": {"uri": "file:///path/to/Script.sml"},
     "position": {"line": <0-based>, "character": <0-based, in the
                  negotiated encoding>},
-    "width": <optional: column width to render `pretty` at; default 75>
+    "width": <optional: column width to render `pretty` at; default 75>,
+    "step": <optional: a step index within the theorem the position
+             picked out; negative means the last step>
   }
 }
 ```
+
+`step` is for a caller that has no cursor.  An editor has one and
+should keep sending `position` alone; a program driving the server
+knows which *step* it wants — the frontier, or the one before the
+tactic it is about to change — and cannot work out the offset for
+itself, because steps are counted over the parsed tactic body.  With
+`step` given, the position only has to land somewhere in the right
+`Proof … QED`; `documentSymbol` already says where each theorem is, so
+the two together address a step by name.
+
+It is the index the response reports: `0` is the body's start, before
+any tactic has run, and `k` is the end of the k'th step, so the state
+that comes back is the one that step produced.  A negative index asks
+for the last.  An index past the end of the body leaves the position's
+own cursor in place rather than failing, so a caller walking forward
+stops seeing new states rather than starting to see errors.
 
 ### Response
 

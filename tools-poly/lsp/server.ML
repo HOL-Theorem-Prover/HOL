@@ -902,9 +902,10 @@ val textDocumentPositionParams =
    render the goal state at.  Absent means `defaultGoalWidth', so a
    client that does not measure its pane gets what it always got. *)
 val goalStateParams =
-  map3 (fn (uri, pos, width) => {uri = uri, pos = pos, width = width})
+  map4 (fn (uri, pos, width, step) =>
+           {uri = uri, pos = pos, width = width, step = step})
     (field "textDocument" (field "uri" string), field "position" position,
-     fieldD "width" int defaultGoalWidth)
+     fieldD "width" int defaultGoalWidth, fieldO "step" int)
 
 val workspaceSymbolParams = field "query" string
 
@@ -4724,13 +4725,26 @@ fun start {diag, dbg, warnings} = let
       (case !depsBlocked of DepsUnchecked => true | _ => false)
       orelse compileUsingState ()
 
+  (* `theorem_context' with its cursor moved.  A step-addressed
+     request names a step rather than a position, and which byte that
+     step ends at is only knowable once the body has been parsed --
+     so the move happens after `findEnclosingTheorem', not before. *)
+  fun atCursor ({name, quote, quoteStart, tacText, tacStart, compileDone,
+                 resumeOf, terminationOf, locate, ...}
+                  : LSPExtension.theorem_context) cursor =
+    {name = name, quote = quote, quoteStart = quoteStart,
+     tacText = tacText, tacStart = tacStart, cursor = cursor,
+     compileDone = compileDone, resumeOf = resumeOf,
+     terminationOf = terminationOf, locate = locate}
+      : LSPExtension.theorem_context
+
   (* `locate` asks where the proof first goes wrong instead of what the
      state at `target` is; see `locate` in `LSPExtension.theorem_context`
      for why the two cannot be the same walk.  A locating walk ignores
      `target` beyond using it to find the enclosing theorem. *)
   fun goalStateAtPos locate uri (v as {lastTrees, depsBlocked,
                                        minEditOffset, ...}:file_data)
-                     (target, width) =
+                     (target, width, stepReq) =
     (* Nothing to walk against unless the ancestors are known to be
        loaded.  `DepsBlocked' is the case that used to be checked here:
        the walker would compile each tactic against a namespace missing
@@ -4872,6 +4886,15 @@ fun start {diag, dbg, warnings} = let
                      NONE => ()
                    | SOME s =>
                      !LSPExtension.restoreCompileSnap (#compileSnap s)
+                 (* A step the caller named wins over the position
+                    it came in with; the position only had to pick out
+                    the theorem. *)
+                 val thm = case stepReq of
+                     NONE => thm
+                   | SOME k =>
+                     (case !LSPExtension.stepCursor (thm, k) of
+                        NONE => thm
+                      | SOME c => atCursor thm c)
                  val r = !LSPExtension.goalStateAtPos (ctx, thm)
                  val () = holdForTests ()
                in finish (); r end
@@ -4985,7 +5008,7 @@ fun start {diag, dbg, warnings} = let
            NONE => ()
          | SOME tacEnd =>
            (case goalStateAtPos true uri v
-                   (getLineCol lines tacEnd, !hoverWidth) of
+                   (getLineCol lines tacEnd, !hoverWidth, NONE) of
                 SOME {failedRange = SOME pos, failedCloseRange, ...} =>
                   (* Written *beside* the entry `updateProofDiag' made
                      under the same key, not over it.  The two say the
@@ -5642,11 +5665,11 @@ fun start {diag, dbg, warnings} = let
     | Request {method = "$/eval", id, params} =>
       spawnJob id params evalParams (eval id)
     | Request {method = "$/hol/goalState", id, params} =>
-      spawnJob id params goalStateParams (fn {uri, pos, width} => let
+      spawnJob id params goalStateParams (fn {uri, pos, width, step} => let
         val (v_opt, resp) = case withFileInfo (fn fileInfo =>
               (fileInfo, Binarymap.peek (fileInfo, uri))) of
             NONE => (NONE, NONE)
-          | SOME v => (SOME v, goalStateAtPos false uri v (pos, width))
+          | SOME v => (SOME v, goalStateAtPos false uri v (pos, width, step))
         (* Fold the walker's failure/success into per-file walker
            diagnostics keyed by theorem name so a user-fix removes
            the squiggle without waiting for the next compile.  Emit

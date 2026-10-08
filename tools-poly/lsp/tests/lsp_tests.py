@@ -3044,11 +3044,14 @@ def test_statement_edit_still_clears_later_proofs():
         shutil.rmtree(d, ignore_errors=True)
 
 
-def _send_goalstate(c, req_id, uri, line, char):
+def _send_goalstate(c, req_id, uri, line, char, step=None):
+    params = {"textDocument":{"uri":uri},
+              "position":{"line":line,"character":char}}
+    if step is not None:
+        params["step"] = step
     c.send({"jsonrpc":"2.0","id":req_id,
             "method":"$/hol/goalState",
-            "params":{"textDocument":{"uri":uri},
-                      "position":{"line":line,"character":char}}})
+            "params":params})
     def got(cl):
         with cl.msgs_lock:
             for m in cl.msgs:
@@ -3277,6 +3280,68 @@ def test_goalState_with_an_unterminated_quotation():
             c.close()
 
 
+def test_goalState_addresses_a_step_directly():
+    """A caller with no cursor names the step it wants.  The position
+    then only has to land in the right `Proof … QED' -- which is why
+    every request below sends the *end* of the body and still gets the
+    step it asked for: without the override they would all answer the
+    last one.
+
+    Index 0 is the body's start, k is the end of the k'th step, and a
+    negative index is the last.  An index past the end leaves the
+    position's own cursor alone, so a caller walking forward stops
+    seeing new states rather than starting to see errors."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_stepaddr.sml"
+        src = ("Theory gs_stepaddr\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem stepaddr:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  rpt strip_tac >> simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        END = 25   # end of "  rpt strip_tac >> simp[]"
+
+        def ask(rid, step):
+            r = _send_goalstate(c, rid, uri, 6, END, step=step)
+            assert_true(r is not None, f"reply for step={step}")
+            res = r.get("result")
+            assert_true(res is not None, f"result for step={step} ({r!r})")
+            return res
+
+        # The control: no `step', so the cursor at the body's end wins.
+        last = ask(7201, None)
+        nsteps = last["step"]
+        assert_true(nsteps >= 2,
+                    f"the body has at least two steps ({nsteps})")
+
+        at0 = ask(7202, 0)
+        assert_eq(at0["step"], 0, "step 0 overrides the cursor")
+        assert_true(len(at0["goals"]) == 1,
+                    f"step 0 has the opening goal ({at0['goals']!r})")
+
+        at1 = ask(7203, 1)
+        assert_eq(at1["step"], 1, "step 1 overrides the cursor")
+        assert_true(at0["goals"] != at1["goals"],
+                    f"step 1 is not step 0 ({at1['goals']!r})")
+
+        atlast = ask(7204, -1)
+        assert_eq(atlast["step"], nsteps,
+                  "a negative index asks for the last step")
+
+        # Past the end: the position's own cursor stands.
+        beyond = ask(7205, 99)
+        assert_eq(beyond["step"], nsteps,
+                  "an index past the end falls back to the position")
+    finally:
+        c.close()
+
+
 def test_goalState_budget_timeout_names_the_step():
     """A walk that outruns its budget has to say what it was running.
     Naming only the budget leaves a looping tactic to be found by
@@ -3291,35 +3356,49 @@ def test_goalState_budget_timeout_names_the_step():
     src = ("Theory gs_budget\n"
            "Ancestors arithmetic\n\n"
            "Theorem slow_one:\n"
-           "  !n:num. n + 0 = n\n"
+           "  !a b c:num. a + (b + c) = c + (b + a)\n"
            "Proof\n"
-           "  rw[] >> simp[] >> metis_tac[]\n"
+           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC]\n"
            "QED\n")
     uri = "file:///tmp/gs_budget.sml"
+    END = 40   # past `metis_tac[...]', so the walk runs it
 
-    c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
-    try:
-        _init(c, "/tmp")
-        _did_open(c, uri, src, 1)
-        assert_true(c.wait_for_method("$/compileCompleted", 30),
-                    "compileCompleted")
-        r = _send_goalstate(c, 7101, uri, 6, 29)
-        res = (r or {}).get("result")
-        assert_true(res is not None, f"a result came back ({r!r})")
-        err = res.get("error") or ""
-        assert_contains(err, "budget", "the report names the budget")
-        assert_contains(err, "step(s) completed",
-                        "the report counts what finished")
-        assert_true("`" in err,
-                    f"the report names a step in backticks ({err!r})")
-        rng = res.get("failedRange")
-        assert_true(rng is not None,
-                    f"the in-flight step is ranged ({res!r})")
-        assert_eq(rng["start"]["line"], 6, "range sits on the tactic line")
-        assert_true(rng["end"]["character"] > rng["start"]["character"],
-                    f"range is not empty ({rng!r})")
-    finally:
-        c.close()
+    # Whether the canary wins is a race: it sleeps the budget and then
+    # has to be scheduled, while the walk runs.  A slow last step makes
+    # the window wide, and three tries make one scheduling fluke
+    # harmless -- a server that stopped attributing would fail all of
+    # them.
+    timed_out = None
+    for attempt in range(3):
+        c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted")
+            r = _send_goalstate(c, 7101 + attempt, uri, 6, END)
+            res = (r or {}).get("result")
+            assert_true(res is not None, f"a result came back ({r!r})")
+            if res.get("error"):
+                timed_out = res
+                break
+        finally:
+            c.close()
+
+    assert_true(timed_out is not None,
+                "a 1ms budget stopped the walk in three tries")
+    err = timed_out.get("error") or ""
+    assert_contains(err, "budget", "the report names the budget")
+    assert_contains(err, "step(s) completed",
+                    "the report counts what finished")
+    assert_true("`" in err,
+                f"the report names a step in backticks ({err!r})")
+    rng = timed_out.get("failedRange")
+    assert_true(rng is not None,
+                f"the in-flight step is ranged ({timed_out!r})")
+    assert_eq(rng["start"]["line"], 6, "range sits on the tactic line")
+    assert_true(rng["end"]["character"] > rng["start"]["character"],
+                f"range is not empty ({rng!r})")
 
     c = Client("/tmp")
     try:
@@ -3327,7 +3406,10 @@ def test_goalState_budget_timeout_names_the_step():
         _did_open(c, uri, src, 1)
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted (default budget)")
-        r = _send_goalstate(c, 7102, uri, 6, 29)
+        # Stopping before `metis_tac' keeps this half cheap by
+        # construction rather than by luck, so it tests what it says:
+        # a walk inside its budget says nothing about cost.
+        r = _send_goalstate(c, 7110, uri, 6, 6)
         res = (r or {}).get("result")
         assert_true(res is not None, f"a result came back ({r!r})")
         assert_eq(res.get("error"), None,
@@ -11564,6 +11646,8 @@ TESTS = [
                     test_goalState_with_an_unterminated_quotation),
     ("goalState_budget_timeout_names_the_step",
                     test_goalState_budget_timeout_names_the_step),
+    ("goalState_addresses_a_step_directly",
+                    test_goalState_addresses_a_step_directly),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),

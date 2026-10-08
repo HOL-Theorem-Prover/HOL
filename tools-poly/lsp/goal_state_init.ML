@@ -194,6 +194,23 @@ local
       | go (_ :: rest) n = go rest n
     in go frags 0 end
 
+  (* Where each step ends, in the order the walk runs them.
+     `stepIndex' counts the atoms whose end the cursor has passed, so
+     putting the cursor on the k'th of these is exactly what makes it
+     answer step k -- which is what `stepCursor' below inverts. *)
+  fun stepEnds frags = let
+    fun go [] acc = acc
+      | go (FAtom te :: rest) acc =
+          (case fragEndByte te of
+             SOME e => go rest (e :: acc)
+           | NONE => go rest acc)
+      | go (FGroup (_, inner) :: rest) acc = go rest (go inner acc)
+      | go (FBracket (_, inner, _, _) :: rest) acc = go rest (go inner acc)
+      | go (FMBracket (_, _, _, sections, _) :: rest) acc =
+          go rest (List.foldl (fn (s, a) => go s a) acc sections)
+      | go (_ :: rest) acc = go rest acc
+    in List.rev (go frags []) end
+
   (* User-facing error message per failing frag.  Uses the surface
      sugar name rather than the internal synthesis (e.g. "Selector
      `>~ [pat]` found no matching subgoal", not the `ALL_TAC >~ …`
@@ -529,5 +546,30 @@ val () = LSPExtension.goalStateAtPos :=
            NONE => timedOutResponse ()
          | SOME r => r
     end)
+
+(* The inverse of the `step' a response reports: which cursor offset
+   puts the walk there.  A step index is counted over `TacticParse's
+   fragments, so only something that has parsed the body can answer,
+   which is why this is a hook rather than arithmetic in `server.ML'.
+
+   Step 0 is the body's start, before any tactic has run; step k is the
+   end of the k'th, so the state it reports is the one that step
+   produced.  A negative index asks for the last step, which is the
+   frontier a caller writing the proof usually wants. *)
+val () = LSPExtension.stepCursor :=
+  (fn (ctx: LSPExtension.theorem_context, step) =>
+     case TacticSteps.fragsOfTacText
+            {label = "step_cursor", tacText = #tacText ctx} of
+       NONE => NONE
+     | SOME frags => let
+         val ends = stepEnds frags
+         val n = length ends
+         val off =
+           if n = 0 then (if step = 0 orelse step < 0 then SOME 0 else NONE)
+           else if step < 0 then SOME (List.nth (ends, n - 1))
+           else if step = 0 then SOME 0
+           else if step <= n then SOME (List.nth (ends, step - 1))
+           else NONE
+         in Option.map (fn b => #tacStart ctx + b) off end)
 
 end;

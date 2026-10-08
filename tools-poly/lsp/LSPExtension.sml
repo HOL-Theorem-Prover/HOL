@@ -258,6 +258,8 @@ val hoverQuotation = ref (fn _ => [])
 val goalStateAtPos :
     (hover_context * theorem_context -> goal_state_response option) ref =
   ref (fn _ => NONE)
+val stepCursor : (theorem_context * int -> int option) ref =
+  ref (fn _ => NONE)
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
 val thmLookup : (string -> PrettyImpl.pretty option) ref =
