@@ -48,7 +48,15 @@ end
 local
   open TacticParse
 
-  val walkerBudgetMs = 1500
+  (* What a walk may spend before the canary interrupts it.  The
+     default is what a keystroke can afford, since the shipped clients
+     follow the cursor; a caller replaying whole proofs rather than
+     painting a pane wants more, and sets it. *)
+  val walkerBudgetMs =
+    case Option.mapPartial LargeInt.fromString
+           (OS.Process.getEnv "HOL_LSP_WALK_BUDGET_MS") of
+      SOME n => if n > 0 then n else 1500
+    | NONE => 1500
 
   (* The backstop on the whole answer, as against `walkerBudgetMs` on
      the walk alone.  Deliberately loose: it is not there to keep the
@@ -99,6 +107,43 @@ local
                 Thread_Attributes.private_interrupts (fn _ => f ())) ()
     val () = markDone ()
   in if !timedOut then NONE else SOME (Exn.release r) end
+
+  (* A timeout that names only the budget tells the reader the walk was
+     slow and nothing they can act on -- which is the shape of report
+     that leaves a looping tactic to be found by bisection.  The walker
+     records what finished and what it was still running, and those
+     answer different questions: a step that blew up eventually reports
+     a time, a step that loops only ever shows up as the one in
+     flight. *)
+  fun budgetReport tacText = let
+    fun src (s, e) =
+      if s >= 0 andalso e <= String.size tacText andalso e > s then let
+        val t = String.substring (tacText, s, e - s)
+        val t = String.translate
+                  (fn c => if Char.isSpace c then " " else String.str c) t
+        in if String.size t > 60 then String.substring (t, 0, 57) ^ "..."
+           else t
+        end
+      else "?"
+    fun slowestOf [] = NONE
+      | slowestOf ((c: TacticWalker.step_cost) :: rest) =
+          (case slowestOf rest of
+             NONE => SOME c
+           | SOME b => if #ms c >= #ms b then SOME c else SOME b)
+    val costs = TacticWalker.lastCosts ()
+    val at = case TacticWalker.inFlight () of
+        SOME sp => " in `" ^ src sp ^ "`, which had not finished"
+      | NONE => " between steps"
+    val slow = case slowestOf costs of
+        SOME c => (case #span c of
+                     SOME sp => "; slowest completed `" ^ src sp ^ "` at "
+                                ^ Int.toString (#ms c) ^ "ms"
+                   | NONE => "")
+      | NONE => ""
+    in "walker exceeded its " ^ LargeInt.toString walkerBudgetMs
+       ^ "ms budget" ^ at ^ " (" ^ Int.toString (length costs)
+       ^ " step(s) completed" ^ slow ^ ")"
+    end
 
   (* Rendered at the width the client says its pane is, so the line
      breaking the pretty printer chooses is the one the reader sees.
@@ -369,9 +414,11 @@ val () = LSPExtension.goalStateAtPos :=
                   {theorem = name, step = step,
                    goals = [], pretty = "", context = [],
                    note = NONE, status = "ok",
-                   error = SOME ("walker timed out (>"
-                                 ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
-                   failedRange = NONE, failedCloseRange = NONE,
+                   error = SOME (budgetReport tacText),
+                   failedRange =
+                     Option.map (fn (s, e) => (tacStart + s, tacStart + e))
+                                (TacticWalker.inFlight ()),
+                   failedCloseRange = NONE,
                    segments = []}
               | SOME {state, failedAt, recovered} => let
                   (* Where the walk came to rest is the news, unless

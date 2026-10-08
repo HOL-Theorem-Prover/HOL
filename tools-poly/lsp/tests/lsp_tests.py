@@ -3277,6 +3277,65 @@ def test_goalState_with_an_unterminated_quotation():
             c.close()
 
 
+def test_goalState_budget_timeout_names_the_step():
+    """A walk that outruns its budget has to say what it was running.
+    Naming only the budget leaves a looping tactic to be found by
+    bisection, which is the expensive way round.  `HOL_LSP_WALK_BUDGET_MS'
+    shrinks the budget so the timeout is deterministic rather than a
+    race; the report must then name the step in flight, give its range,
+    and count what finished before it.
+
+    The second half is the control: the same walk under the shipped
+    budget says nothing at all, so the attribution cannot become noise
+    on a healthy proof."""
+    src = ("Theory gs_budget\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem slow_one:\n"
+           "  !n:num. n + 0 = n\n"
+           "Proof\n"
+           "  rw[] >> simp[] >> metis_tac[]\n"
+           "QED\n")
+    uri = "file:///tmp/gs_budget.sml"
+
+    c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 7101, uri, 6, 29)
+        res = (r or {}).get("result")
+        assert_true(res is not None, f"a result came back ({r!r})")
+        err = res.get("error") or ""
+        assert_contains(err, "budget", "the report names the budget")
+        assert_contains(err, "step(s) completed",
+                        "the report counts what finished")
+        assert_true("`" in err,
+                    f"the report names a step in backticks ({err!r})")
+        rng = res.get("failedRange")
+        assert_true(rng is not None,
+                    f"the in-flight step is ranged ({res!r})")
+        assert_eq(rng["start"]["line"], 6, "range sits on the tactic line")
+        assert_true(rng["end"]["character"] > rng["start"]["character"],
+                    f"range is not empty ({rng!r})")
+    finally:
+        c.close()
+
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted (default budget)")
+        r = _send_goalstate(c, 7102, uri, 6, 29)
+        res = (r or {}).get("result")
+        assert_true(res is not None, f"a result came back ({r!r})")
+        assert_eq(res.get("error"), None,
+                  "a walk that fits its budget reports no cost")
+    finally:
+        c.close()
+
+
 def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
     """A `by' block is structurally step-able without desugaring it to
     ordinary `sg'.  In particular, the second block's `_ = ...' quotation
@@ -11503,6 +11562,8 @@ TESTS = [
     ("goalState_inside_proof",       test_goalState_inside_proof),
     ("goalState_with_an_unterminated_quotation",
                     test_goalState_with_an_unterminated_quotation),
+    ("goalState_budget_timeout_names_the_step",
+                    test_goalState_budget_timeout_names_the_step),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),

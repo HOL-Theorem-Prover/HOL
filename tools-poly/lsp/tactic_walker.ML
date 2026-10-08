@@ -33,6 +33,17 @@ structure TacticWalker :> sig
      rather than at `fragSpan', which is the branch. *)
   val combinatorSpan : TacticParse.tac_frag -> (int * int) option
 
+  (* What the last `walkTo' spent its wall clock on.  `lastCosts' is
+     the steps it finished, in the order it ran them; `inFlight' is the
+     span of the step it was running when it stopped, and is `SOME'
+     only when something cut the walk short -- the budget canary, in
+     practice, which otherwise leaves its caller able to report the
+     budget and not what exceeded it. *)
+  type step_cost = {span: (int * int) option, ms: int,
+                    goalsBefore: int, goalsAfter: int}
+  val lastCosts : unit -> step_cost list
+  val inFlight : unit -> (int * int) option
+
   val walkTo : {
     plugins: LSPExtension.plugin_data,
     theoremName: string,
@@ -244,14 +255,45 @@ fun isListTactic te = case te of
   | LOpaque _ => true
   | _ => false
 
+(* Where the wall clock went.  The budget canary in `goal_state_init'
+   interrupts the walk, which tells its caller the walk was too slow
+   and nothing about what was slow -- so a timeout could only ever name
+   the budget.  `costs' is what finished, `inFlight' the span of what
+   was running when the interrupt arrived.
+
+   Deliberately not cleared when a step raises: the interrupt comes
+   through as an exception, and `inFlight' surviving it is the whole
+   point.  `walkTo' clears both before it starts.
+
+   Together they separate the two pathologies: a step that blew up
+   eventually reports an `ms', a step that loops only ever appears in
+   `inFlight'. *)
+type step_cost = {span: (int * int) option, ms: int,
+                  goalsBefore: int, goalsAfter: int}
+val costsRef : step_cost list ref = ref []
+val inFlightRef : (int * int) option ref = ref NONE
+fun lastCosts () = List.rev (!costsRef)
+fun inFlight () = !inFlightRef
+
 fun applyAtom tacText te state = case atomSrc tacText te of
     NONE => Applied state
   | SOME s => let
       val (src, ours) = case s of
           Synthesised x => (x, true)
         | Verbatim x => (x, false)
+      val span = TacticSteps.atomSpan te
+      val before = length (goalFrag.top_goals state)
+      val timer = Timer.startRealTimer ()
+      val () = inFlightRef := span
       val r = if isListTactic te then compileAndApplyLT src state
               else compileAndApply src state
+      val () = inFlightRef := NONE
+      val ms = Int.fromLarge (Time.toMilliseconds (Timer.checkRealTimer timer))
+      val after = case r of
+                      Applied state' => length (goalFrag.top_goals state')
+                    | Rejected _ => before
+      val () = costsRef := {span = span, ms = ms, goalsBefore = before,
+                            goalsAfter = after} :: !costsRef
       in case r of
            (* Our own source not compiling is not the user's problem
               to hide; report it like any other failure. *)
@@ -941,6 +983,8 @@ and walkFrags (env as {tacText, cursor, resumeIdx, ...}) state snaps
 
 fun walkTo {plugins, theoremName, theoremStart, goalText, tacText,
             startState, frags, cursor, stopAtFail} = let
+  val () = costsRef := []
+  val () = inFlightRef := NONE
   (* No cache either way when locating: see `stopAtFail' in the
      signature.  `NONE' here turns off the resume below and the write
      at the end together, which is what keeps the two walks' snapshots

@@ -1078,8 +1078,33 @@ end, and anything in the same flow above them goes out of sight.
   work that is merely slow; a first request against a cold walker
   cache has tactic leaves to compile and takes seconds.
 
-  An `error` with no `failedRange` is how either budget reports, and
-  a client should read it as "this walk learned nothing" rather than
+  A blown **walk** budget says what it was running, not just that it
+  ran out:
+
+  ```
+  walker exceeded its 1500ms budget in `metis_tac [foo, bar]`, which
+  had not finished (4 step(s) completed; slowest completed `simp[]`
+  at 180ms)
+  ```
+
+  and `failedRange` points at that step, so it can be squiggled like
+  any other failure.  The two halves answer different questions, which
+  is why both are there: a step that blows up eventually reports a
+  time among the completed ones, while a step that loops only ever
+  appears as the one in flight.  No context size predicts either —
+  `metis_tac` and the normalisers can run away on a small goal — so an
+  empirical per-step time is the only thing that separates them.
+
+  The walk budget is overridable with **`HOL_LSP_WALK_BUDGET_MS`**;
+  the 1.5s default is what a keystroke can afford, because the shipped
+  clients follow the cursor, and a client replaying whole proofs
+  rather than painting a pane should raise it.  A walk that fits its
+  budget reports no cost at all — the attribution is a failure report,
+  not telemetry, and a healthy proof stays silent.
+
+  The outer budget has no step to name — nothing got far enough to
+  count one — so it reports an `error` with no `failedRange`, and a
+  client should read that as "this walk learned nothing" rather than
   "there is nothing wrong here".  In particular it is not grounds for
   withdrawing a squiggle the walker drew earlier.
 
