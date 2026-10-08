@@ -266,6 +266,31 @@ val goalStateAtPos:
    `lsp/goal_state_init.ML'. *)
 val stepCursor: (theorem_context * int -> int option) ref
 
+(* Apply a candidate tactic to the state a walk reaches, and report
+   what it did -- without committing it anywhere.
+
+   The candidate is never spliced into the body.  Text splicing needs a
+   separator that depends on whether the prefix ends mid-chain, and a
+   cursor inside a tactic makes nonsense of it; the walker works on
+   goal *states*, so the candidate is simply walked from the state the
+   anchor reached.  Nor is the goal passed in: a goal round-tripped
+   through its printed form is not reliably the same goal, since
+   printing omits types that were inferred and what a numeral denotes
+   depends on what is loaded.  The anchor is the only honest way to
+   name a goal.
+
+   `budgetMs' is per request, 0 meaning the server's own: a model's
+   candidate can loop, and what a speculative probe may spend is not
+   what a goals pane following a cursor may spend.
+
+   `failedRange' always comes back NONE for a failure in the candidate
+   -- it is not in the file, so there is no range to point at, and
+   `error' names the step instead.  A failure in the *anchor* is a
+   different thing and is reported against the file as usual. *)
+val tryTacticAt:
+  (hover_context * theorem_context * {tactic: string, budgetMs: int} ->
+   goal_state_response option) ref
+
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->
    {file: string, line: int} option) ref

@@ -3280,6 +3280,125 @@ def test_goalState_with_an_unterminated_quotation():
             c.close()
 
 
+def _send_trytactic(c, req_id, uri, line, char, tactic,
+                    step=None, budget_ms=None):
+    params = {"textDocument":{"uri":uri},
+              "position":{"line":line,"character":char},
+              "tactic":tactic}
+    if step is not None:
+        params["step"] = step
+    if budget_ms is not None:
+        params["budgetMs"] = budget_ms
+    c.send({"jsonrpc":"2.0","id":req_id,
+            "method":"$/hol/tryTactic","params":params})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    return c.wait_until(got, 15)
+
+
+def test_tryTactic_probes_without_committing():
+    """A candidate tactic applied at the anchor, committing nothing.
+
+    The three things that matter: it answers about the state the anchor
+    reached (not the goal re-parsed from a string, and not a splice of
+    the body); a candidate that fails does not squiggle the file,
+    because the user never wrote it; and the probe leaves the walker's
+    per-theorem cache alone, so the real goal state at the same place
+    is unchanged afterwards."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_try.sml"
+        src = ("Theory gs_try\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_me:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        # The state the real proof reaches after `strip_tac'.
+        before = _send_goalstate(c, 7301, uri, 6, 12)
+        base = (before or {}).get("result")
+        assert_true(base is not None, f"anchor has a state ({before!r})")
+        assert_true(len(base["goals"]) == 1,
+                    f"one goal at the anchor ({base['goals']!r})")
+
+        # A candidate that closes it.
+        good = _send_trytactic(c, 7302, uri, 6, 12, "simp[]")
+        gres = (good or {}).get("result")
+        assert_true(gres is not None, f"probe answered ({good!r})")
+        assert_eq(gres.get("error"), None,
+                  f"a candidate that works reports no error ({gres!r})")
+        assert_eq(len(gres["goals"]), 0,
+                  f"`simp[]' closes the goal ({gres['goals']!r})")
+
+        # A candidate that cannot apply.  It must not be squiggled: the
+        # user never wrote it, so there is nothing in the file to mark.
+        bad = _send_trytactic(c, 7303, uri, 6, 12, "Cases_on `zzz`")
+        bres = (bad or {}).get("result")
+        assert_true(bres is not None, f"failing probe answered ({bad!r})")
+        assert_eq(bres.get("failedRange"), None,
+                  f"a candidate failure has no file range ({bres!r})")
+        # Give any stray publish a moment to arrive before looking.
+        c.wait_for_method("textDocument/publishDiagnostics", 2)
+        assert_eq(_diag_count(c, uri), [],
+                  "a failed probe publishes no diagnostics")
+
+        # And the real state at the anchor is exactly as it was: the
+        # probe did not write the per-theorem snapshot cache.
+        after = _send_goalstate(c, 7304, uri, 6, 12)
+        ares = (after or {}).get("result")
+        assert_true(ares is not None, f"anchor still answers ({after!r})")
+        assert_eq(ares.get("goals"), base.get("goals"),
+                  "the probe left the real goal state alone")
+        assert_eq(ares.get("step"), base.get("step"), "same step")
+    finally:
+        c.close()
+
+
+def test_tryTactic_honours_a_step_anchor():
+    """The anchor may be named by step rather than position, so a
+    caller with no cursor can probe.  Both probes below send the same
+    position and differ only in `step', and `simp[]' closes the goal
+    only after `strip_tac' has run."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_try_step.sml"
+        src = ("Theory gs_try_step\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_step:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        at1 = _send_trytactic(c, 7311, uri, 6, 12, "simp[]", step=1)
+        r1 = (at1 or {}).get("result")
+        assert_true(r1 is not None, f"step-1 probe answered ({at1!r})")
+        assert_eq(len(r1["goals"]), 0,
+                  f"after strip_tac, simp[] closes it ({r1['goals']!r})")
+
+        at0 = _send_trytactic(c, 7312, uri, 6, 12, "strip_tac", step=0)
+        r0 = (at0 or {}).get("result")
+        assert_true(r0 is not None, f"step-0 probe answered ({at0!r})")
+        assert_eq(r0.get("step"), 0, "the step anchor was honoured")
+        assert_eq(len(r0["goals"]), 1,
+                  f"strip_tac at step 0 leaves one goal ({r0['goals']!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_addresses_a_step_directly():
     """A caller with no cursor names the step it wants.  The position
     then only has to land in the right `Proof … QED' -- which is why
@@ -11648,6 +11767,10 @@ TESTS = [
                     test_goalState_budget_timeout_names_the_step),
     ("goalState_addresses_a_step_directly",
                     test_goalState_addresses_a_step_directly),
+    ("tryTactic_probes_without_committing",
+                    test_tryTactic_probes_without_committing),
+    ("tryTactic_honours_a_step_anchor",
+                    test_tryTactic_honours_a_step_anchor),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),

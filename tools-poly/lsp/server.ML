@@ -907,6 +907,20 @@ val goalStateParams =
     (field "textDocument" (field "uri" string), field "position" position,
      fieldD "width" int defaultGoalWidth, fieldO "step" int)
 
+(* `$/hol/tryTactic': the goal-state request plus a candidate to apply
+   at it, and what that probe may spend.  `budgetMs' 0 means the
+   server's own: a model's candidate can loop, and what a speculative
+   probe may cost is not what a goals pane following a cursor may. *)
+val tryTacticParams =
+  map2 (fn ((uri, pos, width, step), (tactic, budgetMs)) =>
+           {uri = uri, pos = pos, width = width, step = step,
+            tactic = tactic, budgetMs = budgetMs})
+    (tuple4 (field "textDocument" (field "uri" string),
+             field "position" position,
+             fieldD "width" int defaultGoalWidth,
+             fieldO "step" int),
+     tuple2 (field "tactic" string, fieldD "budgetMs" int 0))
+
 val workspaceSymbolParams = field "query" string
 
 (* Each selector as the user typed it, quoting and all -- reading that
@@ -4741,10 +4755,15 @@ fun start {diag, dbg, warnings} = let
   (* `locate` asks where the proof first goes wrong instead of what the
      state at `target` is; see `locate` in `LSPExtension.theorem_context`
      for why the two cannot be the same walk.  A locating walk ignores
-     `target` beyond using it to find the enclosing theorem. *)
+     `target` beyond using it to find the enclosing theorem.
+
+     `run` is what to do once the context and the theorem are in hand:
+     the plain goal-state hook, or a probe that applies a candidate at
+     the same anchor.  Passed in rather than chosen here so that both
+     share this function's snapshot and locking exactly. *)
   fun goalStateAtPos locate uri (v as {lastTrees, depsBlocked,
                                        minEditOffset, ...}:file_data)
-                     (target, width, stepReq) =
+                     (target, width, stepReq, run) =
     (* Nothing to walk against unless the ancestors are known to be
        loaded.  `DepsBlocked' is the case that used to be checked here:
        the walker would compile each tactic against a namespace missing
@@ -4895,7 +4914,7 @@ fun start {diag, dbg, warnings} = let
                      (case !LSPExtension.stepCursor (thm, k) of
                         NONE => thm
                       | SOME c => atCursor thm c)
-                 val r = !LSPExtension.goalStateAtPos (ctx, thm)
+                 val r = run (ctx, thm)
                  val () = holdForTests ()
                in finish (); r end
                handle e => (finish (); raise e))
@@ -5008,7 +5027,8 @@ fun start {diag, dbg, warnings} = let
            NONE => ()
          | SOME tacEnd =>
            (case goalStateAtPos true uri v
-                   (getLineCol lines tacEnd, !hoverWidth, NONE) of
+                   (getLineCol lines tacEnd, !hoverWidth, NONE,
+                    !LSPExtension.goalStateAtPos) of
                 SOME {failedRange = SOME pos, failedCloseRange, ...} =>
                   (* Written *beside* the entry `updateProofDiag' made
                      under the same key, not over it.  The two say the
@@ -5669,7 +5689,9 @@ fun start {diag, dbg, warnings} = let
         val (v_opt, resp) = case withFileInfo (fn fileInfo =>
               (fileInfo, Binarymap.peek (fileInfo, uri))) of
             NONE => (NONE, NONE)
-          | SOME v => (SOME v, goalStateAtPos false uri v (pos, width, step))
+          | SOME v => (SOME v, goalStateAtPos false uri v
+                                 (pos, width, step,
+                                  !LSPExtension.goalStateAtPos))
         (* Fold the walker's failure/success into per-file walker
            diagnostics keyed by theorem name so a user-fix removes
            the squiggle without waiting for the next compile.  Emit
@@ -5723,6 +5745,32 @@ fun start {diag, dbg, warnings} = let
            a silent failure mid-compile reports, and both mean the same
            thing to a reader -- wait for the compile.  No goals with it,
            there being none to give. *)
+        val notReady = case (resp, v_opt) of
+                           (NONE, SOME v) => stateNotReady v
+                         | _ => false
+        in Ok (if notReady then (fn print => print "{\"status\":\"pending\"}")
+               else encOrNull (encGoalStateResponse (encRangeLC lines)) resp)
+        end)
+    | Request {method = "$/hol/tryTactic", id, params} =>
+      spawnJob id params tryTacticParams
+        (fn {uri, pos, width, step, tactic, budgetMs} => let
+          val (v_opt, resp) = case withFileInfo (fn fileInfo =>
+                (fileInfo, Binarymap.peek (fileInfo, uri))) of
+              NONE => (NONE, NONE)
+            | SOME v =>
+              (SOME v,
+               goalStateAtPos uri v
+                 (pos, width, step,
+                  fn (c, t) =>
+                     !LSPExtension.tryTacticAt
+                       (c, t, {tactic = tactic, budgetMs = budgetMs})))
+        (* Deliberately no `walkerDiags' fold, unlike `$/hol/goalState'.
+           The candidate is not in the file, so a failure of it is not a
+           fault in what the user wrote and must not squiggle anything;
+           the probe's answer is the whole report. *)
+        val lines = case v_opt of
+                        NONE => mkLineCounter ""
+                      | SOME v => #lines (#text (Sref.value (#lastTrees v)))
         val notReady = case (resp, v_opt) of
                            (NONE, SOME v) => stateNotReady v
                          | _ => false

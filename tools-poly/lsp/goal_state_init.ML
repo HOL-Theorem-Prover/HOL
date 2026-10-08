@@ -115,7 +115,7 @@ local
      answer different questions: a step that blew up eventually reports
      a time, a step that loops only ever shows up as the one in
      flight. *)
-  fun budgetReport tacText = let
+  fun budgetReport (budget, tacText) = let
     fun src (s, e) =
       if s >= 0 andalso e <= String.size tacText andalso e > s then let
         val t = String.substring (tacText, s, e - s)
@@ -140,7 +140,7 @@ local
                                 ^ Int.toString (#ms c) ^ "ms"
                    | NONE => "")
       | NONE => ""
-    in "walker exceeded its " ^ LargeInt.toString walkerBudgetMs
+    in "walker exceeded its " ^ LargeInt.toString budget
        ^ "ms budget" ^ at ^ " (" ^ Int.toString (length costs)
        ^ " step(s) completed" ^ slow ^ ")"
     end
@@ -210,6 +210,48 @@ local
           go rest (List.foldl (fn (s, a) => go s a) acc sections)
       | go (_ :: rest) acc = go rest acc
     in List.rev (go frags []) end
+
+  (* A Theorem carries its goal in the file and it is parsed; a
+     Resume's is in the suspension store and it is looked up; a
+     Termination's is derived from the equations beside it.  All three
+     answer with a whole goal, assumptions included: the suspended one
+     routinely has them, `resumption_to_goal' having folded the
+     `suspendimp' chain back into an assumption list.
+
+     The termination lookup's own answer travels back with it, because
+     it tells apart "no obligation, so the tactic beside it is dead"
+     from "this definition will not build yet".  Those are different
+     things to say to a reader, and neither of them is a goal. *)
+  fun startGoalOf (terminationOf, resumeOf, quote) = let
+    val tcResult =
+      case terminationOf of
+          NONE => NONE
+        | SOME {stem} =>
+          SOME (!LSPTerminationGoal.lookup {stem = stem, quote = quote})
+    val startGoal: (Term.term list * Term.term) option =
+      case (terminationOf, resumeOf) of
+          (SOME _, _) =>
+          (case tcResult of
+               SOME (LSPTerminationGoal.Obligation g) => SOME g
+             | _ => NONE)
+        | (NONE, SOME r) => !LSPSuspendedGoal.lookup r
+        | (NONE, NONE) => Option.map (fn tm => ([], tm))
+                                     (Lib.total Parse.Term [QUOTE quote])
+    in {tcResult = tcResult, startGoal = startGoal} end
+
+  (* What the walker's cache addresses an entry by, beside the tactic
+     text.  A Resume's `quote' is empty, so the parse is no use as a
+     validator; the goal it opens on is the thing that would have to
+     change.  A Termination's `quote' is the equations, which is
+     exactly what would have to change for the obligation to be a
+     different one. *)
+  fun goalTextOf (resumeOf, startGoal, quote) =
+    case (resumeOf, startGoal) of
+        (NONE, _) => quote
+      | (SOME _, NONE) => quote
+      | (SOME _, SOME (asl, g)) =>
+        String.concatWith "\n"
+          (List.map Parse.term_to_string asl @ [Parse.term_to_string g])
 
   (* User-facing error message per failing frag.  Uses the surface
      sugar name rather than the internal synthesis (e.g. "Selector
@@ -380,39 +422,8 @@ val () = LSPExtension.goalStateAtPos :=
        through being typed can run a long way, and so can parsing a
        statement, which is why the budget above covers the whole
        answer rather than the walk alone. *)
-    val tcResult =
-      case terminationOf of
-          NONE => NONE
-        | SOME {stem} =>
-          SOME (!LSPTerminationGoal.lookup {stem = stem, quote = quote})
-    (* A Theorem carries its goal in the file and it is parsed; a
-       Resume's is in the suspension store and it is looked up; a
-       Termination's is derived from the equations beside it.  All
-       three answer with a whole goal, assumptions included: the
-       suspended one routinely has them, `resumption_to_goal' having
-       folded the `suspendimp' chain back into an assumption list. *)
-    val startGoal: (Term.term list * Term.term) option =
-      case (terminationOf, resumeOf) of
-          (SOME _, _) =>
-          (case tcResult of
-               SOME (LSPTerminationGoal.Obligation g) => SOME g
-             | _ => NONE)
-        | (NONE, SOME r) => !LSPSuspendedGoal.lookup r
-        | (NONE, NONE) => Option.map (fn tm => ([], tm))
-                                     (Lib.total Parse.Term [QUOTE quote])
-    (* What the walker's cache addresses an entry by, beside the
-       tactic text.  A Resume's `quote' is empty, so the parse is no
-       use as a validator; the goal it opens on is the thing that
-       would have to change.  A Termination's `quote' is the equations,
-       which is exactly what would have to change for the obligation to
-       be a different one. *)
-    val goalText =
-      case (resumeOf, startGoal) of
-          (NONE, _) => quote
-        | (SOME _, NONE) => quote
-        | (SOME _, SOME (asl, g)) =>
-          String.concatWith "\n"
-            (List.map Parse.term_to_string asl @ [Parse.term_to_string g])
+    val {tcResult, startGoal} = startGoalOf (terminationOf, resumeOf, quote)
+    val goalText = goalTextOf (resumeOf, startGoal, quote)
     val frags = TacticSteps.fragsOfTacText
                   {label = "goal_state", tacText = tacText}
     val tacCursor = cursor - tacStart
@@ -431,7 +442,7 @@ val () = LSPExtension.goalStateAtPos :=
                   {theorem = name, step = step,
                    goals = [], pretty = "", context = [],
                    note = NONE, status = "ok",
-                   error = SOME (budgetReport tacText),
+                   error = SOME (budgetReport (walkerBudgetMs, tacText)),
                    failedRange =
                      Option.map (fn (s, e) => (tacStart + s, tacStart + e))
                                 (TacticWalker.inFlight ()),
@@ -545,6 +556,113 @@ val () = LSPExtension.goalStateAtPos :=
     in case withTimeout hookBudgetMs answer of
            NONE => timedOutResponse ()
          | SOME r => r
+    end)
+
+(* Try a candidate tactic at the anchor, committing nothing.
+
+   Two walks: the body up to the anchor, which is the ordinary cached
+   path, and then the candidate from the state that reached.  The
+   second passes `emptyPluginData' deliberately -- the walker's cache
+   is keyed by theorem name and remembers the `tacText' it was built
+   from, so letting a speculative body write into it would leave the
+   next real request with nothing to resume from and a walk from the
+   top.  Nothing else here persists: the goalstate is a value, and the
+   caller has already bracketed us in a Context snapshot.
+
+   No test covers that `emptyPluginData': for an ordinary candidate the
+   cost of getting it wrong is a slow next request rather than a wrong
+   one -- the poisoned entry records the candidate as its `tacText', a
+   later real request shares no prefix with it, and the walk simply
+   starts over.  It turns into a wrong answer only for a candidate that
+   shares a long prefix with the body *and* whose first step still
+   applies at the anchor, which is a contrived enough fixture that a
+   test built on it would pin the fixture rather than the rule.  The
+   rule is the comment. *)
+val () = LSPExtension.tryTacticAt :=
+  (fn ({plugins, width, ...}: LSPExtension.hover_context,
+       {name, quote, quoteStart, tacText, tacStart, cursor, compileDone,
+        resumeOf, terminationOf, ...} : LSPExtension.theorem_context,
+       {tactic, budgetMs}) => let
+    val {startGoal, ...} = startGoalOf (terminationOf, resumeOf, quote)
+    val goalText = goalTextOf (resumeOf, startGoal, quote)
+    val frags = TacticSteps.fragsOfTacText
+                  {label = "try_tactic_body", tacText = tacText}
+    val candidate = TacticSteps.fragsOfTacText
+                      {label = "try_tactic", tacText = tactic}
+    val tacCursor = cursor - tacStart
+    val budget = if budgetMs > 0 then Int.toLarge budgetMs
+                 else walkerBudgetMs
+    in case (startGoal, frags, candidate) of
+         (SOME goal, SOME fs, SOME cfs) => let
+           val startState = goalFrag.new_goal goal
+           val step = stepIndex (fs, tacCursor)
+           in case withTimeout budget (fn () => let
+                    val anchor = TacticWalker.walkTo {
+                          plugins = plugins, theoremName = name,
+                          theoremStart = quoteStart, goalText = goalText,
+                          tacText = tacText, startState = startState,
+                          frags = fs, cursor = tacCursor,
+                          (* A cursor walk, not a locating one: the
+                             anchor is a place in the proof, and
+                             getting to it means carrying on past a
+                             branch that is not finished yet. *)
+                          stopAtFail = false}
+                    (* A proof that is already broken above the anchor
+                       makes the probe meaningless: the candidate would
+                       be answered against an earlier state than the
+                       caller believes it is asking about.  Report the
+                       anchor's own failure instead.  A source-level
+                       one is the ordinary half-written case and is not
+                       that. *)
+                    val anchorBad = case #failedAt anchor of
+                        SOME f => not (sourceFailure f)
+                      | NONE => false
+                  in if anchorBad then (true, anchor)
+                     else (false,
+                           TacticWalker.walkTo {
+                             plugins = LSPExtension.emptyPluginData,
+                             theoremName = name, theoremStart = quoteStart,
+                             goalText = goalText, tacText = tactic,
+                             startState = #state anchor, frags = cfs,
+                             cursor = String.size tactic,
+                             stopAtFail = false})
+                  end) of
+                NONE => SOME
+                  {theorem = name, step = step,
+                   goals = [], pretty = "", context = [],
+                   note = NONE, status = "ok",
+                   error = SOME (budgetReport (budget, tactic)),
+                   failedRange = NONE, failedCloseRange = NONE,
+                   segments = []}
+              | SOME (anchorBad, {state, failedAt, ...}) => let
+                  val silent = case failedAt of
+                      SOME f => sourceFailure f
+                    | NONE => false
+                  val reported = if silent then NONE else failedAt
+                  (* The anchor is in the file and can be pointed at;
+                     the candidate is not, so its failure travels in
+                     the message alone. *)
+                  val ranges =
+                    case (anchorBad, reported) of
+                        (true, SOME (frag, _)) =>
+                          failRanges tacText tacStart frag
+                      | _ => (NONE, NONE)
+                  val blamed = if anchorBad then tacText else tactic
+                  in SOME
+                  {theorem = name, step = step,
+                   goals = List.map (ppGoal width) (goalFrag.top_goals state),
+                   pretty = ppState width state,
+                   context = goalFrag.context_lines state,
+                   note = goalFrag.focus_note state,
+                   status = if silent andalso not compileDone
+                            then "pending" else "ok",
+                   error = Option.map (failMsg blamed o #1) reported,
+                   failedRange = #1 ranges,
+                   failedCloseRange = #2 ranges,
+                   segments = ppSegments width state}
+                  end
+           end
+       | _ => NONE
     end)
 
 (* The inverse of the `step' a response reports: which cursor offset

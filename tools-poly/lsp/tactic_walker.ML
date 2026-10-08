@@ -282,18 +282,20 @@ fun applyAtom tacText te state = case atomSrc tacText te of
           Synthesised x => (x, true)
         | Verbatim x => (x, false)
       val span = TacticSteps.atomSpan te
-      val before = length (goalFrag.top_goals state)
+      (* Not `before'/`after': both are infix in the basis, and
+         binding one as a plain name draws a warning at every use. *)
+      val nBefore = length (goalFrag.top_goals state)
       val timer = Timer.startRealTimer ()
       val () = inFlightRef := span
       val r = if isListTactic te then compileAndApplyLT src state
               else compileAndApply src state
       val () = inFlightRef := NONE
       val ms = Int.fromLarge (Time.toMilliseconds (Timer.checkRealTimer timer))
-      val after = case r of
-                      Applied state' => length (goalFrag.top_goals state')
-                    | Rejected _ => before
-      val () = costsRef := {span = span, ms = ms, goalsBefore = before,
-                            goalsAfter = after} :: !costsRef
+      val nAfter = case r of
+                       Applied state' => length (goalFrag.top_goals state')
+                     | Rejected _ => nBefore
+      val () = costsRef := {span = span, ms = ms, goalsBefore = nBefore,
+                            goalsAfter = nAfter} :: !costsRef
       in case r of
            (* Our own source not compiling is not the user's problem
               to hide; report it like any other failure. *)

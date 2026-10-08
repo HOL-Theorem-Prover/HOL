@@ -1184,6 +1184,60 @@ end, and anything in the same flow above them goes out of sight.
   publishes both as ordinary diagnostics; a client reading
   `textDocument/publishDiagnostics` needs no work for this.
 
+## Trying a tactic (`$/hol/tryTactic`)
+
+What a candidate tactic would do at a point in a proof, committing
+nothing:
+
+```json
+{
+  "jsonrpc": "2.0", "id": <n>,
+  "method": "$/hol/tryTactic",
+  "params": {
+    "textDocument": {"uri": "file:///path/to/Script.sml"},
+    "position": {"line": <0-based>, "character": <0-based>},
+    "step": <optional, as for $/hol/goalState>,
+    "tactic": "rw[] >> metis_tac[FOO]",
+    "width": <optional>,
+    "budgetMs": <optional; 0 or absent = the server's own budget>
+  }
+}
+```
+
+The reply is a `$/hol/goalState` response, so a client that renders one
+renders this.  Empty `goals` means the candidate closed what was in
+front of it.
+
+**The candidate is never spliced into the body.** Splicing needs a
+separator that depends on whether the prefix ends mid-chain, and a
+cursor inside a tactic makes nonsense of it.  The walker works on goal
+*states*, so the server walks the body to the anchor — the ordinary
+cached path — and then walks the candidate from the state that
+reached.  A chain is therefore as good as a leaf: `tactic` goes
+through the same fragment parser the file does, so `>>`, `>-`, `>~`
+and the rest behave as they would in the proof.
+
+**Nor is a goal accepted in place of an anchor**, which is the other
+shape this could have had.  A goal handed back as text is not reliably
+the same goal: printing omits types that were inferred from context,
+and what a numeral denotes depends on which theories are loaded.  A
+probe against a goal that is subtly not the one on screen is worse
+than no probe, so the anchor is required — and `step` means a caller
+without a cursor can still name one.
+
+Nothing persists.  The walk is already bracketed by a Context snapshot
+under the state lock, a goalstate is a value, and the speculative walk
+is passed no plugin data so it cannot write the walker's per-theorem
+cache — which is keyed by theorem name and would otherwise leave the
+next real request re-walking from the top.
+
+`failedRange` is `null` when the *candidate* fails: it is not in the
+file, so there is nothing to point at, and `error` names the step
+instead.  A failure in the body above the anchor is a different thing
+— the probe would be answering about a state the caller does not
+think it is asking about — so that is reported against the file,
+ranges and all, and the candidate is not run.
+
 ### Client cookbook
 
 - **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` on
