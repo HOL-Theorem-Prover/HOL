@@ -282,6 +282,19 @@ fun withProps sp NONE ls = Built (sp, [], ls)
 fun onList _ [] pt acc = (acc, pt)
   | onList f (x::xs) pt acc = onList f xs (moveRight pt) (f (x, pt, acc))
 
+(* Where a `fun' group's clauses start in Poly/ML's tree.
+   Poly/ML gives a group a node per `|'-separated clause, but only when
+   there is more than one: a single-clause group IS its clause, with the
+   function name, the parameters and the body as its own flat children.
+   Descending as though the clause level were always there walked past
+   the name into nothing, and every identifier in the clause was then
+   annotated against NONE -- so it carried `PIdContent' and none of
+   Poly's own properties, which are what hover and goto-definition read.
+   `fun's written with two or more clauses were unaffected, which is
+   what hid it. *)
+fun funClauses [_] pt = pt
+  | funClauses _ pt = moveDown pt
+
 fun skipDecs [] pt = pt
   | skipDecs (DecExpansion {result, ...} :: ds) pt = skipDecs ds (skipDecs result pt)
   | skipDecs (DecSemi _ :: ds) pt = skipDecs ds (moveTopSemi pt)
@@ -570,7 +583,7 @@ and annotateDec (DecExpansion {orig = DecExp _,
           val pt = moveDown pt
           val (pt, pat) = annotateFunPat pat pt
           in mkList [pat, annotateExp NONE exp pt] :: acc end
-          ) ls (moveDown pt) []))) :: acc
+          ) ls (funClauses ls pt) []))) :: acc
         ) args (moveTopDown pt) [])
     | DecType {tybind, ...} => #1 (annotateTybinds tybind (moveTopDown pt) [])
     | DecDatatype {datbind, withtype_, ...} =>

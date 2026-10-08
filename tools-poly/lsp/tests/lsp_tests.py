@@ -7117,6 +7117,86 @@ def test_a_target_outside_the_file_is_an_absolute_path():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_single_clause_fun_carries_poly_properties():
+    """Identifiers inside a one-clause `fun` must answer hover and
+    goto-definition.
+
+    Poly/ML gives a `fun` group a node per `|`-separated clause, but
+    only when there is more than one: a single-clause group IS its
+    clause, with the name, the parameters and the body as its own flat
+    children.  `annotateDec`'s DecFun case descended as though the
+    clause level were always present, walked past the name into
+    nothing, and annotated every identifier in the clause against
+    NONE.  Those nodes then carried `PIdContent` and none of Poly's own
+    properties -- no Type, no DeclaredAt, no DefId/RefId -- which are
+    exactly what hover and goto-definition read.
+
+    A `fun` written with two or more clauses took the other branch and
+    worked, which is what hid this.  So did `val` bindings.  Since
+    `let fun ... in ... end` reaches the same case through LetInEnd,
+    a reference inside a `let`'s function body failed the same way
+    while the expression after `in` was fine.
+
+    Covers a declaration's own name, a reference from a function body,
+    and a reference from inside a `let` binding group."""
+    src = ("fun addOne x = x + 1\n"
+           "fun useIt w = addOne w\n"
+           "val nested = let fun g z = addOne z in g 3 end\n")
+    lines = src.split("\n")
+    d = tempfile.mkdtemp(prefix="lsp_funclause_")
+    try:
+        uri = f"file://{d}/funclause.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            rid = [860]
+
+            def ask(method, line, char):
+                rid[0] += 1
+                c.send({"jsonrpc": "2.0", "id": rid[0], "method": method,
+                        "params": {"textDocument": {"uri": uri},
+                                   "position": {"line": line,
+                                                "character": char}}})
+
+                def got(cl):
+                    with cl.msgs_lock:
+                        for m in cl.msgs:
+                            if m.get("id") == rid[0]: return m
+                    return None
+
+                reply = c.wait_until(got, 20)
+                assert_true(reply is not None,
+                            f"{method} replied at {line}:{char}")
+                return reply.get("result")
+
+            # (a) the declaration's own name, in a one-clause `fun`
+            at = lines[0].index("addOne")
+            hov = ask("textDocument/hover", 0, at)
+            assert_true(hov, f"hover on the declaration name ({hov!r})")
+            assert_true("int" in (hov.get("contents") or {}).get("value", ""),
+                        f"and it carries a type ({hov!r})")
+
+            # (b) a reference from inside a function body, and
+            # (c) a reference from inside a `let` binding group
+            for line, what in ((1, "a function body"),
+                               (2, "a let binding group")):
+                at = lines[line].index("addOne")
+                hov = ask("textDocument/hover", line, at)
+                assert_true(hov, f"hover from {what} ({hov!r})")
+                res = ask("textDocument/definition", line, at)
+                assert_true(res, f"a definition from {what} ({res!r})")
+                tgt = res[0]["targetRange"]["start"]["line"]
+                assert_eq(tgt, 0,
+                          f"reaching the declaration on line 0 from {what}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_a_reused_tail_answers_as_a_full_compile_would():
     """An edit confined to a tactic lets the compile stop after that
     declaration and keep what the last pass recorded about the rest of
@@ -10409,6 +10489,8 @@ TESTS = [
      test_a_theorem_jumps_to_the_script_it_is_proved_in),
     ("a_target_outside_the_file_is_an_absolute_path",
      test_a_target_outside_the_file_is_an_absolute_path),
+    ("a_single_clause_fun_carries_poly_properties",
+     test_a_single_clause_fun_carries_poly_properties),
     ("a_reused_tail_answers_as_a_full_compile_would",
      test_a_reused_tail_answers_as_a_full_compile_would),
     ("an_edit_confined_to_a_tactic_is_recognised",
