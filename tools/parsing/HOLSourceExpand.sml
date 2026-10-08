@@ -786,7 +786,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val dec' = magicBind indThm [valPat definition_ (mkIdent id) e]
     in DecExpansion {orig = dec, result = rev dec'} end
   | expandDec _ (dec as HOLDatatype {datatype_, quote, stop, ...}) = let
-    val e = App (mkIdent (datatype_, "bossLib.Datatype"), expandQuote datatype_ stop quote)
+    val e = App (mkIdent (datatype_, "Datatype.Datatype"),
+                 expandQuote datatype_ stop quote)
     in DecExpansion {orig = dec, result = [valWild datatype_ e]} end
   | expandDec _ (dec as HOLQuoteDecl {quote_, id, bind, colon = _, quote, end_ = _, stop}) = let
     val (pat, e) = case bind of

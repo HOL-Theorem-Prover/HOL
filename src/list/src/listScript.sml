@@ -70,10 +70,11 @@ val PAIR_EQ      = pairTheory.PAIR_EQ;
 (* Declare the datatype of lists                                             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Datatype.Hol_datatype
-          ‘list[map=MAP[nocompute],set=LIST_TO_SET[nocompute],rel=LIST_REL,
-            size=list_size] =
-             NIL | CONS of 'a => list’;
+Datatype:
+  list[map=MAP[nocompute],set=LIST_TO_SET[nocompute],rel=LIST_REL,
+       size=list_size] =
+    NIL | CONS 'a list
+End
 
 local open OpenTheoryMap val cname = OpenTheory_const_name in
 val ns = ["Data","List"]

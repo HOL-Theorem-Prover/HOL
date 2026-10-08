@@ -421,7 +421,7 @@ fun bufferSymbols text = let
     | Infix {id, ...} => SOME id
     | _ => NONE
   (* `Datatype:' carries no parsed identifier -- the names live in the
-     quotation, which the expander hands to bossLib.Datatype unread.
+     quotation, which the expander hands to Datatype.Datatype unread.
      A QuoteLiteral is (file offset, raw slice), so scan the text for
      the identifier before each top-level `=' and keep its offset. *)
   fun quoteTypeNames qs = let

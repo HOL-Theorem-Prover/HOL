@@ -126,7 +126,7 @@ in
         (lsquo ^ "f" ^ rsquo ^ " " ^ lsquo ^ "g" ^ rsquo ^ "\n");
   (* Issue #2022: an old-style `Datatype `...`` whose `Datatype` sits at
      column zero (the `val _ =` on the preceding line) must be treated as
-     the ordinary bossLib.Datatype function applied to a quotation, not as
+     the ordinary Datatype.Datatype function applied to a quotation, not as
      the modern `Datatype: ... End` keyword -- the latter has no backtick
      quotation and left the parser in a state that raised Unreachable. *)
   check "col-0 old-style Datatype"

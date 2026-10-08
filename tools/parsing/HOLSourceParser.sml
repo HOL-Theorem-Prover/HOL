@@ -195,7 +195,7 @@ fun parseSML file read parseError: scope -> result = let
     fun holKw () = if colZero start then HolKeyword else Regular
     (* `Datatype' at column zero introduces a `Datatype: ... End'
        declaration only when a colon follows (after non-newline whitespace);
-       otherwise it is the ordinary bossLib.Datatype function applied to a
+       otherwise it is the ordinary Datatype.Datatype function applied to a
        quotation -- e.g. an old-style `Datatype `...`` -- and must stay
        Regular so it parses as an expression. *)
     fun holKwColon () =

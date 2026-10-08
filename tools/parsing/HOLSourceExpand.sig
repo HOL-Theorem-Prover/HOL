@@ -62,7 +62,7 @@ end
              plus a magicBind for the induction theorem (foo_ind / _IND
              / _ind name guessed from foo_def / foo_DEF, overridable by
              [induction=name])
-      Datatype: q End  ~>  val _ = bossLib.Datatype q
+      Datatype: q End  ~>  val _ = Datatype.Datatype q
       [Co]Inductive id: q End
           ~> (id_rules, id_(co)ind, id_cases) = IndDefLib.xHol_reln
              ("id", split_quote); plus per-conjunct save_thm calls for

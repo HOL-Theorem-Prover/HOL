@@ -6073,7 +6073,7 @@ _SYM_SRC = ("Theory idesym\nAncestors arithmetic\n\n"
 def test_documentSymbol_lists_the_declarations():
     """The outline covers HOL declarations and SML ones alike, and the
     Datatype's type name is scraped from its quotation -- the parser
-    hands that block to bossLib.Datatype unread, so there is no
+    hands that block to Datatype.Datatype unread, so there is no
     identifier in the tree to take."""
     uri = "file:///tmp/idesymScript.sml"
     c = Client("/tmp")
