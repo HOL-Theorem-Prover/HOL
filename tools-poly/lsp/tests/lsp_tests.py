@@ -268,6 +268,11 @@ def _did_open(c, uri, text, version=1):
                                         "version":version,"text":text}}})
 
 
+def _did_close(c, uri):
+    c.send({"jsonrpc":"2.0","method":"textDocument/didClose",
+            "params":{"textDocument":{"uri":uri}}})
+
+
 def _did_change_full(c, uri, text, version):
     c.send({"jsonrpc":"2.0","method":"textDocument/didChange",
             "params":{"textDocument":{"uri":uri,"version":version},
@@ -2955,6 +2960,67 @@ def test_full_replace_resumes_from_the_common_prefix():
                     "compileCompleted after the revert")
         after = _send_goalstate(c, 791, uri, 3940, 8).get("result")
         assert_true(after is not None, "goal state after the revert")
+        assert_eq(after.get("error"), None,
+                  f"no tactic reported as failing ({after!r})")
+        assert_eq(after.get("goals"), base.get("goals"),
+                  f"same state as before the round trip ({after!r})")
+    finally:
+        c.close()
+
+
+@requires("integer")
+def test_close_and_reopen_keeps_ancestors_loaded():
+    """The same revert as the test above, by the other route.
+
+    A version-control revert kills and re-reads the buffer, which
+    restarts the major mode, so eglot leaves `eglot--managed-mode` and
+    re-enters it: the server sees `didClose` followed at once by
+    `didOpen`, not a `didChange`.  Dropping the file's record on the
+    close left the reopen with no `declSnapshots`, which is what sends
+    `startCompile` back to the boot state — `Meta.loadedMods` rewound,
+    the preload re-reading ancestors that `Theory.load_complete` has
+    already sealed in `KernelSig.sealed_ref`, `TheoryReader` refusing
+    every one of them, and the rest of the file drawing a diagnostic
+    per declaration for the remaining life of the process.
+
+    Needs a real `Ancestors` the running heap does not already hold —
+    a theory only gets sealed by being loaded — which is why this is an
+    `integer` test rather than one over a scratch file in /tmp."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src, encoding="utf8") as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        assert_eq(len(_diag_count(c, uri)), 0, "clean before the close")
+        base = _send_goalstate(c, 792, uri, 3940, 8).get("result")
+        assert_true(base is not None, "baseline goal state")
+
+        idx = c.total_msgs()
+        _did_close(c, uri)
+        # Version 0 is what eglot sends: its numbering starts over with
+        # the buffer, so the reopen is not merely a later edit.
+        _did_open(c, uri, text, version=0)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the reopen")
+
+        d = _diag_count(c, uri)
+        first = d[0].get("message", "")[:160] if d else ""
+        assert_eq(len(d), 0,
+                  f"no diagnostics after close+reopen ({len(d)}; {first!r})")
+        # Named, so a failure says which wreckage it is and not only how
+        # much of it there was.  Both only ever reach stderr.
+        blob = c.stderr_text()
+        assert_true("is sealed" not in blob,
+                    "no sealed-theory refusal on stderr")
+        assert_true("not in ancestry" not in blob,
+                    "no 'not in ancestry' on stderr")
+
+        after = _send_goalstate(c, 793, uri, 3940, 8).get("result")
+        assert_true(after is not None, "goal state after the reopen")
         assert_eq(after.get("error"), None,
                   f"no tactic reported as failing ({after!r})")
         assert_eq(after.get("goals"), base.get("goals"),
@@ -10060,6 +10126,8 @@ TESTS = [
     ("integer_first_compile",        test_integer_first_compile),
     ("full_replace_resumes_from_the_common_prefix",
                                      test_full_replace_resumes_from_the_common_prefix),
+    ("close_and_reopen_keeps_ancestors_loaded",
+                                 test_close_and_reopen_keeps_ancestors_loaded),
     ("integer_recompile_blank",      test_integer_recompile_blank_lines),
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),
     ("integer_didChange_interrupts",

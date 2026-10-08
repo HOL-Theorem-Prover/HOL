@@ -1712,6 +1712,20 @@ fun start {diag, dbg, warnings} = let
        loaded; it carries that module list.  See `startCompile' for what
        lifts the block. *)
     depsBlocked: deps_state ref,
+    (* Set while the client holds no buffer for this uri.  The record
+       outlives the close, which is the whole point of the flag: a
+       buffer revert reaches us as `didClose' followed at once by
+       `didOpen', and dropping the record in between left the reopen
+       with no `declSnapshots' -- which is what sends `startCompile'
+       down the from-boot path, fatal for the reason `baseSnap' gives.
+       Kept, the reopen is just the full-text `applyEdit' that the
+       `didChange' spelling of the same gesture performs, and resumes
+       from a snapshot like any other edit.
+
+       What the flag itself gates is the two walks over the whole map:
+       a buffer that is not on screen is not one `workspace/symbol'
+       should quote from, nor one `$/setConfig' should set compiling. *)
+    closed: bool ref,
     (* The outline for this buffer, with the text version it was parsed
        from.  documentSymbol is asked on every edit and
        `workspace/symbol' re-asks for every open buffer on every
@@ -1752,7 +1766,8 @@ fun start {diag, dbg, warnings} = let
         pendingFailures = Sref.new [],
         compiledText = ref "", reusableFrom = ref ~1,
         lastProofGen = ref 0,
-        depsBlocked = ref DepsUnchecked, symbols = ref NONE,
+        depsBlocked = ref DepsUnchecked, closed = ref false,
+        symbols = ref NONE,
         nsLayer = ref NONE, nsGen = ref 0, nsNames = ref NONE} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
@@ -1783,6 +1798,28 @@ fun start {diag, dbg, warnings} = let
   fun stopCompile r = case !r of
     NONE => ()
   | SOME {cancelled, ...} => (r := NONE; cancelled := true)
+
+  (* Retire a buffer the client has closed, without losing what a
+     reopen needs.  The record stays in `fileInfo' and keeps its text,
+     its snapshots and its last pass's record; all that changes is that
+     no compile is running, none that was scheduled will fire, and the
+     two walks over the whole map pass it by.
+
+     It stays because a close is not always the end of a buffer: a
+     version-control revert, or anything else that re-runs the major
+     mode, reaches us as `didClose' immediately followed by `didOpen',
+     and `didOpen' on a record that is still there is the full-text
+     `applyEdit' that the `didChange' spelling of the same gesture
+     performs.  Removing the record made the reopen build a fresh one,
+     whose empty `declSnapshots' is precisely the from-boot case
+     `baseSnap' exists to avoid. *)
+  fun closeFile ({compile, debounce, closed, ...}: file_data) = (
+    stopCompile compile;
+    (* A `scheduleCompile' thread forked before the close is still
+       asleep holding the old epoch.  Without this, it wakes and
+       compiles a buffer the client has let go. *)
+    debounce := !debounce + 1;
+    closed := true)
 
   (* Push `off` into the rolling min-edit tracker; a later `startCompile`
      consults this to decide whether to resume from a snapshot.  An edit
@@ -3098,7 +3135,45 @@ fun start {diag, dbg, warnings} = let
         handle e => noteFail m e) mods
       fun useFiles () = DArray.app (fn (f, m) =>
         qquse f handle e => noteFail m e) files
-      val _ = if DArray.isEmpty files andalso DArray.isEmpty errors then () else (
+      (* Theories the plan proposes to read that this session has
+         already got, with the module that asked for each.  Reading one
+         cannot work: `Theory.load_complete' sealed it in
+         `KernelSig.sealed_ref', which is outside `Context' -- a
+         soundness gate, not a cache -- so no snapshot restore takes it
+         back, `TheoryReader' refuses, and the theory ends up neither
+         loaded nor in the graph.  Every ancestor behind it then fails
+         "not in ancestry", and nothing the user can type undoes any of
+         it.
+
+         Only the from-boot restore puts an already-loaded theory back
+         within `loadPlan's reach -- it rewinds `Meta.loadedMods', and
+         `loadPlan' skips what is marked there -- so a non-empty list
+         here says, in the one place that can see it, that the restore
+         `baseSnap' exists to avoid has been taken anyway.
+
+         Collected from the plan rather than from the exceptions the
+         preload raises, for the reason `missingDeps' gives about its
+         own question: a module left marked in `loadedMods' by a failed
+         use raises nothing on the next attempt. *)
+      val sealedReloads = let
+        fun theoryOf f = let val b = OS.Path.file f in
+            if String.isSuffix "Theory.sml" b
+            then SOME (String.substring (b, 0, size b - size "Theory.sml"))
+            else NONE
+          end
+        in
+          DArray.foldr
+            (fn ((f, m), acc) =>
+                case theoryOf f of
+                    SOME nm =>
+                      if !LSPExtension.theorySealed nm andalso
+                         not (List.exists (fn (x, _) => x = nm) acc)
+                      then (nm, m) :: acc else acc
+                  | NONE => acc)
+            [] files
+        end
+      val _ = if DArray.isEmpty files andalso DArray.isEmpty errors
+              then () else (
         case holdepMode of
           HoldepList => send (mkNotif "$/holdep" (fn print => (
             print "{\"uri\":"; encString uri print;
@@ -3492,6 +3567,43 @@ fun start {diag, dbg, warnings} = let
             publishAllDiagnostics uri v;
             markDepsBlocked uri v {mods = declaredNames, message = message})
         end
+      (* The preload re-read a theory the session already holds;
+         `sealedReloads' says why that cannot work.  The restore that
+         got us here has already put `Meta.loadedMods' back to its boot
+         value and only a snapshot can undo that, so this file is past
+         helping in this process: elaborating on top of what the
+         preload left buys a diagnostic per declaration -- some three
+         thousand of them for `listScript.sml' -- for one cause.  Say
+         the cause once, against the name that asked for the theory,
+         and latch it like any other block. *)
+      fun blockOnReload reloads = let
+        val diags = #diags (!trees)
+        val nms = map #1 reloads
+        val pos =
+            case List.mapPartial
+                   (fn (_, m) =>
+                       Option.map #pos
+                         (List.find (fn {name, ...} => name = m) declared))
+                   reloads of
+                p :: _ => p
+              | [] => (case hdrTheory of SOME (_, p) => p | NONE => (0, 0))
+        val message =
+            "the preload had to re-read " ^
+            String.concatWith ", "
+              (map (fn nm => "theory \"" ^ nm ^ "\"") nms) ^
+            ", which this session had already loaded and sealed"
+        val () = DArray.push (diags, Error {
+                   hard = true, pos = pos,
+                   msg = encString (message ^
+                     "\n\nrestart the language server to compile this file")})
+        in
+          if !cancelled then () else (
+            commitTrees lastTrees
+              {text = text, parse = setParsePos 0 (!trees)};
+            releaseState ();
+            publishAllDiagnostics uri v;
+            markDepsBlocked uri v {mods = declaredNames, message = message})
+        end
       (* Which of the modules the header declares are not available?
          That question, and not "did some load function raise", is what
          decides the file's fate: every name here is `open'ed by the
@@ -3834,7 +3946,7 @@ fun start {diag, dbg, warnings} = let
            `stateNotReady' answers "pending" to for ever.  A header
            that turns out not to compile is still put back to
            `DepsBlocked' by `markDepsBlocked'. *)
-        case missingDeps () of
+        (case missingDeps () of
           fails as (_::_) => blockOnDeps fails
         | [] =>
           (* Asked after `missingDeps', which is the more informative
@@ -3843,7 +3955,17 @@ fun start {diag, dbg, warnings} = let
              preload got through. *)
           (case sealedByPreload () of
                SOME sealed => blockOnSealed sealed
-             | NONE => (depsBlocked := DepsLoaded; runCompile ()))
+             | NONE =>
+               (* Last of the three, because it is the least specific:
+                  it reports the state the session is in rather than
+                  anything about this file, and both questions above
+                  name something the user can act on.  A stale ancestor
+                  whose own parent the previous attempt loaded and
+                  sealed answers both, and "your ancestor is stale" is
+                  the one worth printing. *)
+               (case sealedReloads of
+                    reloads as (_::_) => blockOnReload reloads
+                  | [] => (depsBlocked := DepsLoaded; runCompile ()))))
       ) handle Thread.Interrupt => (
         (* When the compile aborted because a single dec produced a
            runaway cascade of errors, the diagnostics are complete
@@ -4553,8 +4675,11 @@ fun start {diag, dbg, warnings} = let
                        line = Int.max (0, line - 1)}
       val fromHol = List.mapPartial located hits
       (* The open buffers, by their own text rather than by anything
-         built. *)
-      val open_ = withFileInfo (fn fi => (fi, Binarymap.listItems fi))
+         built.  A record whose buffer has been closed is still in the
+         map -- see `closeFile' -- and its text is no longer on screen,
+         so it does not answer "this file". *)
+      val open_ = List.filter (fn (_, v: file_data) => not (!(#closed v)))
+                    (withFileInfo (fn fi => (fi, Binarymap.listItems fi)))
       fun ofBuffer (uri, v) = let
         val {text = {lines, ...}, ...} = Sref.value (#lastTrees (v: file_data))
         fun keep (Sym {name, span, ...}) =
@@ -5066,9 +5191,13 @@ fun start {diag, dbg, warnings} = let
                theories. *)
             List.app
               (fn (uri, v as {compile, lastTrees, minEditOffset,
-                              ...}: file_data) =>
+                              closed, ...}: file_data) =>
                   let
-                    val running = compileRunning compile
+                    (* A closed buffer is not re-elaborated: the setting
+                       applies to what the user is looking at, and
+                       compiling takes the process-global HOL state
+                       away from the file that is. *)
+                    val skip = !closed orelse compileRunning compile
                     (* `declSnapshots' is newest-first, so the last one
                        is the header's. *)
                     val headerEnd =
@@ -5077,7 +5206,7 @@ fun start {diag, dbg, warnings} = let
                             [] => NONE
                           | snap :: _ => SOME (#endByte snap)
                   in
-                    case (running, headerEnd) of
+                    case (skip, headerEnd) of
                         (true, _) => ()
                       | (_, NONE) => ()
                       | (_, SOME off) => (bumpMinEdit minEditOffset off;
@@ -5162,6 +5291,7 @@ fun start {diag, dbg, warnings} = let
           SOME v => (fileInfo, (v, true))
         | NONE => let val v = newFile text version
                   in (Binarymap.insert (fileInfo, uri, v), (v, false)) end)
+      val () = #closed v := false
       val () = if existed
                then applyEdit uri v version
                               [{range = NONE, text = text}]
@@ -5193,8 +5323,7 @@ fun start {diag, dbg, warnings} = let
       val _ = withFileInfo (fn fileInfo => (
         case Binarymap.peek (fileInfo, uri) of
           NONE => (fileInfo, ())
-        | SOME {compile, ...} =>
-          (stopCompile compile; (#1 (Binarymap.remove (fileInfo, uri)), ()))))
+        | SOME v => (closeFile v; (fileInfo, ()))))
       in () end
     | Notification {method = "textDocument/didSave", params} =>
       if !elabOnRef <> ElabOnSave then () else let
