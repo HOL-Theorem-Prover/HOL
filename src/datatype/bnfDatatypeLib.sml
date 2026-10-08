@@ -235,7 +235,7 @@ fun asWritten (spec : spec) =
       if null theta then Lib.I else rename
     end
 
-(* The older construction quantifies a clause's arguments outside the
+(* The shape HOL expects quantifies a clause's arguments outside the
    hypothesis, and `munge_ind_thm` pushes back in the ones the
    hypothesis does not mention — one at a time, innermost first, which
    turns their order around.  A clause built with them already inside
@@ -279,7 +279,7 @@ fun oneType db (spec : spec) =
          argument's quantifiers past the hypothesis, and the bound
          variables named for their types *)
       val induction =
-          ind_types.munge_ind_thm
+          legacyInduction.munge_ind_thm
             (asOldQuantified
                (wr (case #induction cs of
                         SOME th => th
@@ -494,7 +494,7 @@ fun manyTypes db (spec : spec) =
       val wr = asWritten spec
       val axiom = wr (familyAxiomOf cdefs (familyExistence (#principle coll)))
       val induction =
-          ind_types.munge_ind_thm
+          legacyInduction.munge_ind_thm
             (asOldQuantified
                (wr (familyInductionOf cdefs
                       (familySetInductionOf fam (#types coll, #cons coll)

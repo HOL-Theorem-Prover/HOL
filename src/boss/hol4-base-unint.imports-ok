@@ -14,8 +14,6 @@ bit prim-rec
 numeral-bit prim-rec
 set-relation numeral
 set-relation prim-rec
-ind-type numeral
-ind-type prim-rec
 rich-list prim-rec
 indexed-lists arithmetic
 indexed-lists numeral

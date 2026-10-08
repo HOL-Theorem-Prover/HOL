@@ -9157,7 +9157,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-(* NOTE: The original proofs by Joe Hurd depend on “ind_type$NUMPAIR” *)
+(* NOTE: The original proofs by Joe Hurd depend on numeric pairing *)
 Theorem NUM_2D_BIJ :
     ?f. BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
               (UNIV : num -> bool)

@@ -183,42 +183,62 @@ val _ = Hol_datatype`
       | trpW of (num ** num) ** bool ** trprime
 `;
 
-(* can see it "more directly" with
-val spec =
-    [(``:'trp``,
-      [("trpSkip", []),
-       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
-       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
-       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
-val result = ind_types.define_type spec handle e => Raise e;
-
-- note also that switching the order of the trpSeq and trpIf entries in the
-  list above makes it work again.  I.e.,
-
-val spec' =
-    [(``:'trp``,
-      [("trpSkip", []),
-       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
-       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
-       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
-val result = ind_types.define_type spec' handle e => Raise e;
-
-- works.
-
-*)
-
 (* Ramana Kumar's example from 2010/08/19 *)
 val _ = Hol_datatype`pointer = pnil | pref of 'a`
 val _ = Hol_datatype`failure = <| head : 'a pointer; tail : failure pointer |>`
 
-(* Ramana Kumar's examples from 2010/08/25 *)
-val _ = Hol_datatype `t1 = c1 of 'a => t1 itself `;
-val _ = Hol_datatype `t2 = c2 of t2 t1 itself ` ;
+(* Ramana Kumar's examples from 2010/08/25.  A type that recurses through
+   an operator holding none of its argument is not something a fixed
+   point can be taken of: `t1 itself` has exactly one inhabitant whatever
+   t1 is, so such an argument says nothing, and the type it would pin is
+   already fixed by the constructor's result.  These are rejected rather
+   than built.  (in_repl_mode, because a declaration that fails outside
+   the REPL exits the process rather than raising.) *)
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype.Hol_datatype,
+      printarg = (fn _ => "reject t1 = c1 of 'a => t1 itself"),
+      printresult = (fn _ => "<type defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `t1 = c1 of 'a => t1 itself `
 
+(* An `itself` argument over a parameter, rather than over the type being
+   declared, pins a type variable that occurs nowhere else.  That is the
+   useful idiom, it does not recurse, and it is unaffected. *)
 val _ = Hol_datatype `u1 = d1 of 'a itself`;
 val _ = Hol_datatype `u2 = d2 of 'a u1 `;
-val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
-                      u4 = d4 of u3 u1 `;
+
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype.Hol_datatype,
+      printarg = (fn _ => "reject u3/u4, mutually recursive through u1"),
+      printresult = (fn _ => "<types defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `u3 = d3 of u4 u2 u1 ;
+       u4 = d4 of u3 u1 `
+
+(* An AST list built by hand, rather than parsed from a quotation, can
+   name a type an earlier call defined and leave it unqualified:
+   Import.CTy in examples/l3-machine-code does exactly that, and armScript
+   declares CP15 with fields of types declared a few lines earlier.  A
+   quotation would have been parsed against the grammar with only the
+   declaration's own names hidden, so the package takes an unqualified
+   name to be one of the types being defined; astHol_datatype has to
+   resolve the others before handing them over. *)
+val _ = tprint "astHol_datatype resolves an unqualified earlier type"
+val _ = let
+  open ParseDatatype
+  fun bare s = dTyop {Thy = NONE, Tyop = s, Args = []}
+  val build = testutils.quietly (fn () =>
+      (Datatype.astHol_datatype
+         [("l3likeA", Constructors [("L3A", [bare "num"])])];
+       (* a record field naming the type declared just above *)
+       Datatype.astHol_datatype
+         [("l3likeB", Record [("l3fld", bare "l3likeA")])];
+       (* and a constructor argument naming it *)
+       Datatype.astHol_datatype
+         [("l3likeC", Constructors [("L3C", [bare "l3likeB"])])]))
+in
+  require (check_result (fn _ => true)) build ()
+end
 
 (* Ramana Kumar's TypeNet bug from 2010/08/25 *)
 val _ = Hol_datatype `foo = fooC of 'a`

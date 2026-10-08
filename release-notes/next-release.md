@@ -362,6 +362,26 @@ Incompatibilities
 -   The trace `TheoryPP.include_docs` has been renamed to `TheoryPP.include_html_docs`.
     Note that the now-preferred way to have documentation omitted is to add the `[no_sig_docs]` annotation to the `Theory` declaration at the head of a `..Script.sml` file.
 
+-   The `ind_type` theory and the `ind_types` structure have been removed.
+    They implemented the original (Harrison) datatype construction, which
+    carved every declared type out of a universal `:α recspace`.  The BNF
+    package now builds everything `Datatype`/`Hol_datatype` accepts, and
+    builds it faster, so nothing was left for the older construction to do.
+    `recspace` and its constants (`CONSTR`, `FCONS`, `FNIL`, `BOTTOM`) are
+    gone, as is the `ind-type` OpenTheory package.
+
+-   A datatype declaration that recurses through an operator holding none of
+    its argument — `t = C of 'a => t itself` — is now rejected rather than
+    built.  Such a declaration never said anything: `τ itself` has exactly one
+    inhabitant whatever `τ` is, so the argument carries no information and the
+    type it would pin is already fixed by the constructor's result; `t = C of
+    'a => t itself` is isomorphic to `t = C of 'a`.  An `itself` argument over
+    a *parameter* rather than over the type being declared — a field of type
+    `'a itself` pinning a type variable that occurs nowhere else — does not
+    recurse and is unaffected.
+
+-   `ind_types.munge_ind_thm` is now `legacyInduction.munge_ind_thm`.
+
 Deprecations
 ------------
 

@@ -24,7 +24,6 @@ main {
   import: while
   import: divides
   import: numpair
-  import: ind-type
   import: gcd
   import: pred-set
   import: list
@@ -351,12 +350,6 @@ bnf-mutual {
   import: pred-set
   import: bnf-fix-bnf
   article: "../datatype/bnfMutual.ot.art"
-}
-ind-type {
-  import: bool
-  import: arithmetic
-  import: numpair
-  article: "../datatype/ind_type.ot.art"
 }
 list {
   import: bool

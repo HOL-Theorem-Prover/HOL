@@ -30,15 +30,14 @@
 
 (* Interactive:
 
-    app load ["ind_types", "ParseDatatype", "RecordType"];
+    app load ["ParseDatatype", "RecordType"];
     open Rsyntax ParseDatatype;
 *)
 
 structure Datatype :> Datatype =
 struct
 
-open HolKernel Parse boolLib Prim_rec ParseDatatype DataSize
-local open ind_typeTheory in end;
+open HolKernel Parse boolLib Prim_rec ParseDatatype
 
 type hol_type     = Type.hol_type
 type thm          = Thm.thm
@@ -73,12 +72,6 @@ val _ = Parse.temp_set_grammars arithmetic_grammars;
 val ERR = mk_HOL_ERR "Datatype";
 
 val empty_stringset = HOLset.empty String.compare
-
-(*---------------------------------------------------------------------------
-           Basic datatype definition support
- ---------------------------------------------------------------------------*)
-
-val define_type = ind_types.define_type;
 
 (*---------------------------------------------------------------------------*)
 (* Generate a string that, when evaluated as ML, will create the given type. *)
@@ -174,90 +167,6 @@ in
   app warn common
 end
 
-fun ast_tyvar_strings (dAQ ty) = map dest_vartype $ type_vars ty
-  | ast_tyvar_strings (dVartype s) = [s]
-  | ast_tyvar_strings (dTyop {Args, ...}) =
-      List.concat (map ast_tyvar_strings Args)
-
-val typecheck_listener : (string Symtab.table * pretype * hol_type) Listener.t =
-    Listener.new_listener()
-
-local
-  fun strvariant avoids s = if mem s avoids then strvariant avoids (s ^ "a")
-                            else s
-  fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
-  fun stage1 (s,Constructors l) = (s,l)
-    | stage1 (s,Record fields)  = (s,[(mk_recordtype_constructor s,
-                                       map snd fields)])
-  fun check_fields (s,Record fields) =
-      (case duplicate_names (map fst fields) of
-           NONE => ()
-         | SOME n => raise ERR "check_fields" ("Duplicate field name: "^n))
-    | check_fields _ = ()
-  fun cnames (s,Record _) A = s::A
-    | cnames (_,Constructors l) A = map fst l @ A
-  fun check_constrs asts =
-      case duplicate_names (itlist cnames asts []) of
-          NONE => ()
-        | SOME n => raise ERR "check_constrs"
-                          ("Duplicate constructor name: "^n)
-in
-fun to_tyspecs ASTs =
- let val _ = List.app check_fields ASTs
-     val _ = check_constrs ASTs
-     val _ = check_constrs_unique_in_theory ASTs
-     val asts = map stage1 ASTs
-     val new_type_names = map #1 asts
-
-     fun mk_hol_ty d (dAQ ty) = ty
-       | mk_hol_ty d (dVartype s) = mk_vartype (valOf $ Symtab.lookup d s)
-       | mk_hol_ty d (dTyop{Tyop=s, Args, Thy}) =
-            if Lib.mem s new_type_names andalso
-               (Thy = NONE orelse Thy = SOME (current_theory()))
-            then if null Args then tyname_as_tyvar s
-                 else raise ERR "to_tyspecs"
-                     ("Omit arguments to new type:"^Lib.quote s)
-            else
-              case Thy of
-                NONE => mk_type(s, map (mk_hol_ty d) Args)
-              | SOME t => mk_thy_type {Tyop = s, Thy = t,
-                                       Args = map (mk_hol_ty d) Args}
-     fun mk_hol_type d pty = let
-       val ty = mk_hol_ty d pty
-       val _ = Listener.call_listener typecheck_listener (d, pty, ty)
-     in
-       if Theory.uptodate_type ty then ty
-       else let val tyname = #1 (dest_type ty)
-            in raise ERR "to_tyspecs" (tyname^" not up-to-date")
-            end
-     end
-     val allvars = let
-       fun perc ((cnm, ptys), A) =
-           List.foldl
-             (fn (pt,A) => HOLset.addList(A,ast_tyvar_strings pt)) A ptys
-       fun perty ((nm, cs), A) = List.foldl perc A cs
-     in
-       HOLset.listItems (List.foldl perty (HOLset.empty String.compare) asts)
-     end
-     val (dict,_) = List.foldl
-                  (fn (nm, (d,avds)) =>
-                      let val nm' = strvariant avds nm
-                      in
-                        (Symtab.update(nm,nm') d, nm'::avds)
-                      end)
-                  (Symtab.empty, map (fn (s,_) => "'" ^ s) asts)
-                  allvars
-     fun constructor (cname, ptys) = (cname, map (mk_hol_type dict) ptys)
-  in
-    map (tyname_as_tyvar ## map constructor) asts
-  end
-end;
-
-fun tyspecs_of tyg q = to_tyspecs (ParseDatatype.parse tyg q);
-
-val new_asts_datatype = define_type o to_tyspecs;
-fun new_datatype q =
-  new_asts_datatype (ParseDatatype.parse (type_grammar()) q);
 
 
 (*---------------------------------------------------------------------------*)
@@ -297,41 +206,6 @@ in
 end
 
 
-(*---------------------------------------------------------------------------
-    Returns a list of tyinfo thingies
- ---------------------------------------------------------------------------*)
-
-local
-  fun insert_size {def, const_tyopl} tyinfol =
-   case tyinfol
-    of [] => raise ERR "build_tyinfos" "empty tyinfo list"
-     | tyinfo::rst =>
-       let val first_tyname = TypeBasePure.ty_name_of tyinfo
-           fun insert_size info size_eqs =
-            let val tyname = TypeBasePure.ty_name_of info
-            in case assoc2 tyname const_tyopl
-                of SOME(c,tyop) => TypeBasePure.put_size(c,size_eqs) info
-                 | NONE => (HOL_MESG
-                              ("Can't find size constant for"^(snd tyname))
-                             ; raise ERR "build_tyinfos" "")
-            end
-       in
-         insert_size tyinfo (TypeBasePure.ORIG def)
-         :: map (C insert_size (TypeBasePure.COPY (first_tyname,def))) rst
-       end
-       handle HOL_ERR _ => tyinfol
-in
-
-fun build_tyinfos db {induction,recursion} =
- let val case_defs = Prim_rec.define_case_constant recursion
-     val tyinfol = TypeBasePure.gen_datatype_info
-                    {ax=recursion, ind=induction, case_defs=case_defs}
- in
-   case define_size {induction = induction, recursion = recursion} db
-    of NONE => (HOL_MESG "Couldn't define size function"; tyinfol)
-     | SOME s => insert_size s tyinfol
-    end
-end;
 
 (* ----------------------------------------------------------------------
     Topological sort of datatype declarations so that the system can
@@ -532,11 +406,6 @@ end
 
 
 local
-  fun add_record_facts (tyinfo, NONE) = tyinfo
-    | add_record_facts (tyinfo, SOME fields) =
-      RecordType.prove_recordtype_thms (tyinfo, fields)
-  fun field_names_of (_,Record l) = SOME (map fst l)
-    | field_names_of _ = NONE
   fun astpty_map f ast = let
     open ParseDatatype
   in
@@ -605,10 +474,8 @@ fun prim_define_type_from_astl prevtypes f db astl0 = let
   val astl = insert_tyarguments prevtypes astl0
 in
   if is_enum_type_spec astl then (db, build_enum_tyinfos astl)
-  else (db,
-        map add_record_facts
-            (zip (build_tyinfos db (new_asts_datatype astl))
-                 (map field_names_of astl)))
+  else raise ERR "prim_define_type_from_astl"
+                 "only an enumeration is built here; see dispatch below"
 end (* let *)
 end (* local *)
 
@@ -758,7 +625,11 @@ fun datatype_thm (n,M) = save_thm
   ("datatype_"^n,
    EQT_ELIM (ISPEC M DATATYPE_TAG_THM));
 
-fun astHol_datatype astl =
+(* The enumeration construction, and the bookkeeping that goes with it.
+   An enumeration can shadow a constructor of a type already in the
+   segment, and scrub is what clears the stale items before the
+   presentation and the TypeBase entry are made. *)
+fun enumHol_datatype astl =
  let
   val (_,tyinfos) = primHol_datatype (TypeBase.theTypeBase()) astl
   val _ = Theory.scrub()
@@ -772,80 +643,94 @@ fun astHol_datatype astl =
   HOL_MESG message
  end
 
-(*---------------------------------------------------------------------------*)
-
-fun spec_recurses (astl : ParseDatatype.AST list) =
-    let
-      val tynames = map #1 astl
-      fun here NONE = true
-        | here (SOME thy) = thy = current_theory()
-      fun mentions pty =
-          case pty of
-              ParseDatatype.dVartype _ => false
-            | ParseDatatype.dAQ _ => false
-            | ParseDatatype.dTyop {Tyop, Thy, Args} =>
-                (Lib.mem Tyop tynames andalso here Thy) orelse
-                List.exists mentions Args
-      fun inForm (ParseDatatype.Constructors cs) =
-            List.exists (List.exists mentions o #2) cs
-        | inForm (ParseDatatype.Record flds) =
-            List.exists (mentions o #2) flds
-    in
-      List.exists (inForm o #2) astl
-    end
-
-(* Does the specification say anything about a type variable?  A type
-   with a type variable in it is a candidate functor, and a later
-   specification may want to recurse through it — `fake_pair = FP of 'a
-   => 'b` and then `t = C of bool ** t ** t`.  Nothing registers a type
-   the old construction builds as a functor, so a specification that
-   mentions a type variable goes to the BNF package even when it does
-   not recurse: that is what leaves it in the functor database. *)
-fun spec_has_tyvars (astl : ParseDatatype.AST list) =
-    let
-      fun mentions pty =
-          case pty of
-              ParseDatatype.dVartype _ => true
-            | ParseDatatype.dAQ ty => not (null (Type.type_vars ty))
-            | ParseDatatype.dTyop {Args, ...} => List.exists mentions Args
-      fun inForm (ParseDatatype.Constructors cs) =
-            List.exists (List.exists mentions o #2) cs
-        | inForm (ParseDatatype.Record flds) =
-            List.exists (mentions o #2) flds
-    in
-      List.exists (inForm o #2) astl
-    end
-
 (* What a declaration says about itself is the BNF package's: the names
-   it should give the constants it generates.  The older construction
-   generates none of them and so cannot honour the request; a
+   it should give the constants it generates.  The enumeration
+   construction generates none of them and cannot honour the request; a
    specification it has to build must not carry any, and saying so is
    better than building the type under names it was not asked for. *)
 fun unannotate ({name, form, ...} : ParseDatatype.annotatedAST) =
     (name, form) : ParseDatatype.AST
 
+fun annotate ((name, form) : ParseDatatype.AST) =
+    {name = name, attrs = [], form = form} : ParseDatatype.annotatedAST
+
 fun attrs_of (astl : ParseDatatype.annotatedAST list) =
     List.concat (List.map (List.map #1 o #attrs) astl)
 
-(* the same three-way choice as Datatype below: the older syntax says
-   the same things *)
+(* An enumeration is what EnumType builds, from a representation in the
+   numbers.  Everything else is the BNF package's, whether it recurses or
+   not: a specification that does not recurse is a copy of its functor,
+   and taking it here is what leaves the new type in the functor
+   database, so that a later specification can recurse through it.
+
+   A specification the package cannot express has nowhere left to go.  A
+   type of its own has to occur where a map can move it, and an operator
+   holding none of its argument -- `t = C of 'a => t itself` -- leaves
+   the fixed point nothing to be taken of. *)
 fun dispatch astl =
     let
       val plain = List.map unannotate astl
     in
-      if is_enum_type_spec plain orelse
-         not (spec_recurses plain orelse spec_has_tyvars plain) orelse
-         not (bnfDatatypeLib.expressible astl)
-      then
-        case attrs_of astl of
-            [] => astHol_datatype plain
-          | ks =>
-            raise ERR "dispatch"
-                  ("this specification is the older construction's to \
-                   \build, and that construction names no constants: " ^
-                   String.concatWith ", " ks)
-      else bnfDatatypeLib.bnfDatatypeASTs astl
+      if is_enum_type_spec plain then
+        (case attrs_of astl of
+             [] => enumHol_datatype plain
+           | ks =>
+             raise ERR "dispatch"
+                   ("an enumeration is EnumType's to build, and that \
+                    \construction names no constants: " ^
+                    String.concatWith ", " ks))
+      else if bnfDatatypeLib.expressible astl then
+        bnfDatatypeLib.bnfDatatypeASTs astl
+      else
+        raise ERR "dispatch"
+              ("this specification recurses through an operator that holds \
+               \none of its argument, so there is no fixed point to take: " ^
+               String.concatWith ", " (List.map #name astl))
     end
+
+(* A quotation is parsed against the type grammar with the names the
+   declaration introduces hidden, so every other type operator comes back
+   qualified and an unqualified one is necessarily a type being defined.
+   The package relies on that.  An AST list built by hand carries no such
+   guarantee -- `Import.CTy` in examples/l3-machine-code names a type
+   declared by an earlier call and leaves it unqualified -- so resolve
+   the names that are not this declaration's, the way mk_type would. *)
+fun qualify_tyops astl =
+    let
+      val mine = List.map #1 astl
+      fun pty (p as dVartype _) = p
+        | pty (p as dAQ _) = p
+        | pty (dTyop {Thy, Tyop, Args}) =
+          let
+            val args = List.map pty Args
+          in
+            if isSome Thy orelse Lib.mem Tyop mine then
+              dTyop {Thy = Thy, Tyop = Tyop, Args = args}
+            else
+              let
+                val probe =
+                    Type.mk_type (Tyop, List.tabulate (length args,
+                                                       fn _ => Type.alpha))
+                    handle HOL_ERR _ =>
+                           raise ERR "astHol_datatype"
+                                 ("Can't resolve the type operator " ^
+                                  Lib.quote Tyop)
+              in
+                dTyop {Thy = SOME (#Thy (Type.dest_thy_type probe)),
+                       Tyop = Tyop, Args = args}
+              end
+          end
+      fun form (Constructors cs) =
+            Constructors (List.map (fn (c, ptys) => (c, List.map pty ptys)) cs)
+        | form (Record flds) =
+            Record (List.map (fn (f, p) => (f, pty p)) flds)
+    in
+      List.map (fn (n, f) => (n, form f)) astl
+    end
+
+(* An AST list says nothing about the constants it wants named, so a
+   caller holding one gets the same choice with nothing requested. *)
+fun astHol_datatype astl = dispatch (List.map annotate (qualify_tyops astl))
 
 fun Hol_datatype q =
     dispatch (ParseDatatype.parse_annotated (type_grammar()) q)

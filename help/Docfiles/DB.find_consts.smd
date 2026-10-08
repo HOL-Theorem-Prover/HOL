@@ -33,7 +33,7 @@ and with
    val it =
       [“napp”, “ncons”, “$*,”, “internal_mult”, “numeral$onecount”,
        “numeral$texp_help”, “$*”, “$+”, “$-”, “ABS_DIFF”, “$DIV”,
-       “$**”, “MAX”, “MIN”, “$MOD”, “ind_type$NUMPAIR”]: term list
+       “$**”, “MAX”, “MIN”, “$MOD”]: term list
 ```
 
 The fact that type-matching is performed is apparent with this call:

@@ -1,6 +1,6 @@
 val () = ProofTraceReplay.replay_sequence
 ["bool", "marker", "num", "sat", "combin", "relation", "prim_rec",
- "quotient", "pair", "arithmetic", "numeral", "cv", "numpair", "ind_type",
+ "quotient", "pair", "arithmetic", "numeral", "cv", "numpair",
  "one", "sum", "option", "While", "reduce", "divides", "normalForms",
  "pred_set", "basicSize", "list", "rich_list", "sorting", "finite_map",
  "alist", "indexedLists", "logroot", "sptree", "permutes", "iterate",
