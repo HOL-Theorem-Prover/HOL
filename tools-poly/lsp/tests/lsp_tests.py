@@ -6158,6 +6158,45 @@ def test_documentSymbol_lists_the_declarations():
         c.close()
 
 
+def test_documentSymbol_keeps_a_name_inside_its_own_range():
+    """Keep each symbol's selection range inside its full range."""
+    src = ("fun f x = g x\n"
+           "and g x = x + 1\n"
+           "val a = 1 and b = 2\n"
+           "type t = int and u = bool\n"
+           "datatype d = A and e = B\n"
+           "exception E1 and E2\n")
+    uri = "file:///tmp/andsym.sml"
+    c = Client("/tmp")
+    try:
+        _init_hierarchical(c, "/tmp")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        r = _request(c, 803, "textDocument/documentSymbol",
+                     {"textDocument": {"uri": uri}})
+        syms = r["result"]
+        def pos(p):
+            return (p["line"], p["character"])
+        bad, seen = [], []
+        def walk(ss):
+            for sym in ss or []:
+                seen.append(sym["name"])
+                lo, hi = pos(sym["range"]["start"]), pos(sym["range"]["end"])
+                slo = pos(sym["selectionRange"]["start"])
+                shi = pos(sym["selectionRange"]["end"])
+                if not (lo <= slo and shi <= hi):
+                    bad.append((sym["name"], (lo, hi), (slo, shi)))
+                walk(sym.get("children"))
+        walk(syms)
+        # Exercise the second binding in every `and` form.
+        for want in ("g", "b", "u", "e", "E2"):
+            assert_true(want in seen, f"{want} in the outline ({seen})")
+        assert_true(not bad, f"every name inside its own range ({bad})")
+    finally:
+        c.close()
+
+
 def test_documentSymbol_while_blocked_on_unloadable_ancestor():
     """The outline is parse-driven, not compile-driven, so it still
     answers for a file the server has refused to compile -- which is
@@ -10271,6 +10310,8 @@ TESTS = [
     ("hover_on_an_overloaded_name",  test_hover_on_an_overloaded_name),
     ("documentSymbol_lists_the_declarations",
                                  test_documentSymbol_lists_the_declarations),
+    ("documentSymbol_keeps_a_name_inside_its_own_range",
+     test_documentSymbol_keeps_a_name_inside_its_own_range),
     ("documentSymbol_while_blocked",
                      test_documentSymbol_while_blocked_on_unloadable_ancestor),
     ("documentSymbol_hierarchical",
