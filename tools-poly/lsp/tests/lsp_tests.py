@@ -7102,6 +7102,68 @@ def test_a_target_outside_the_file_is_an_absolute_path():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_basis_jump_resolves_through_a_polyml_checkout():
+    """Resolve Basis declarations through a matching Poly/ML checkout."""
+    d = tempfile.mkdtemp(prefix="lsp_basis_")
+    try:
+        poly = os.path.join(d, "polysrc")
+        os.makedirs(os.path.join(poly, "basis"))
+        with open(os.path.join(poly, "basis", "OS.sml"), "w") as f:
+            f.write("".join(f"(* line {i} *)\n" for i in range(1, 1001)))
+        src = "val ok = OS.Process.isSuccess\n"
+        uri = f"file://{d}/basisjump.sml"
+        c = Client(d, env={"HOL_LSP_POLYML_SRC": poly})
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            col = src.index("isSuccess") + 2
+            c.send({"jsonrpc": "2.0", "id": 773,
+                    "method": "textDocument/definition",
+                    "params": {"textDocument": {"uri": uri},
+                               "position": {"line": 0, "character": col}}})
+
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == 773: return m
+                return None
+
+            reply = c.wait_until(got, 20)
+            assert_true(reply is not None, "definition reply arrived")
+            res = reply.get("result")
+            assert_true(res, f"a definition was found ({reply!r})")
+            target = res[0]["targetUri"]
+            assert_true(target.startswith("file:///"),
+                        f"the target is an absolute URI ({target!r})")
+            path = target[len("file://"):]
+            assert_eq(os.path.realpath(path),
+                      os.path.realpath(os.path.join(poly, "basis", "OS.sml")),
+                      "the target is the checkout's own basis/OS.sml")
+            line = res[0]["targetRange"]["start"]["line"]
+            assert_true(0 < line < 1000,
+                        f"at a line Poly recorded ({line!r})")
+            warn = c.wait_for_method("window/showMessage", 1)
+            assert_true(warn is None, f"no complaint about it ({warn!r})")
+        finally:
+            c.close()
+
+        c = Client(d, env={"HOL_LSP_POLYML_SRC": os.path.join(d, "nope")})
+        try:
+            _init(c, d, timeout=30)
+            warn = c.wait_for_method("window/showMessage", 20)
+            assert_true(warn is not None, "a checkout that is not there "
+                                          "is complained about")
+            assert_contains(warn["params"]["message"],
+                            "HOL_LSP_POLYML_SRC",
+                            "and the complaint names the variable")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_a_single_clause_fun_carries_poly_properties():
     """Single-clause functions retain properties used by LSP queries."""
     src = ("fun addOne x = x + 1\n"
@@ -10451,6 +10513,8 @@ TESTS = [
      test_a_theorem_jumps_to_the_script_it_is_proved_in),
     ("a_target_outside_the_file_is_an_absolute_path",
      test_a_target_outside_the_file_is_an_absolute_path),
+    ("a_basis_jump_resolves_through_a_polyml_checkout",
+     test_a_basis_jump_resolves_through_a_polyml_checkout),
     ("a_single_clause_fun_carries_poly_properties",
      test_a_single_clause_fun_carries_poly_properties),
     ("a_reused_tail_answers_as_a_full_compile_would",
