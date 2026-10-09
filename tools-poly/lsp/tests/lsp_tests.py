@@ -7061,25 +7061,10 @@ def test_a_theorem_jumps_to_the_script_it_is_proved_in():
 
 
 def test_a_target_outside_the_file_is_an_absolute_path():
-    """A target the editor cannot open reads exactly like no target.
-
-    `pathToUri` gave a path the `file://` scheme and stopped there, but
-    Poly/ML records a declaration's file as the path it was compiled
-    under, and the structures compiled into `bin/hol` were `use`d from
-    `$HOLDIR/tools-poly` -- so `HOLSourceAST` reports
-    `../tools/parsing/HOLSourceAST.sml`.  Sent as
-    `file://../tools/parsing/HOLSourceAST.sml` that resolves against
-    nothing and VS Code declines it in silence, which from the outside
-    is indistinguishable from the jump finding nothing at all.
-
-    `startswith("file://")` is not the check: the broken form passed
-    it.  The target has to be absolute, and has to name a file that is
-    there."""
+    """An external definition target must be an absolute existing file."""
     d = tempfile.mkdtemp(prefix="lsp_absuri_")
     try:
-        # `poly-init2` compiles this structure into `bin/hol`, so the
-        # buffer needs nothing built in order to compile, and the
-        # declaration it reaches is one of the relative-path ones.
+        # HOLSourceAST is loaded from a relative path during bootstrap.
         src = "open HOLSourceAST\n"
         c = Client(d)
         try:
@@ -7118,27 +7103,7 @@ def test_a_target_outside_the_file_is_an_absolute_path():
 
 
 def test_a_single_clause_fun_carries_poly_properties():
-    """Identifiers inside a one-clause `fun` must answer hover and
-    goto-definition.
-
-    Poly/ML gives a `fun` group a node per `|`-separated clause, but
-    only when there is more than one: a single-clause group IS its
-    clause, with the name, the parameters and the body as its own flat
-    children.  `annotateDec`'s DecFun case descended as though the
-    clause level were always present, walked past the name into
-    nothing, and annotated every identifier in the clause against
-    NONE.  Those nodes then carried `PIdContent` and none of Poly's own
-    properties -- no Type, no DeclaredAt, no DefId/RefId -- which are
-    exactly what hover and goto-definition read.
-
-    A `fun` written with two or more clauses took the other branch and
-    worked, which is what hid this.  So did `val` bindings.  Since
-    `let fun ... in ... end` reaches the same case through LetInEnd,
-    a reference inside a `let`'s function body failed the same way
-    while the expression after `in` was fine.
-
-    Covers a declaration's own name, a reference from a function body,
-    and a reference from inside a `let` binding group."""
+    """Single-clause functions retain properties used by LSP queries."""
     src = ("fun addOne x = x + 1\n"
            "fun useIt w = addOne w\n"
            "val nested = let fun g z = addOne z in g 3 end\n")
@@ -7172,15 +7137,12 @@ def test_a_single_clause_fun_carries_poly_properties():
                             f"{method} replied at {line}:{char}")
                 return reply.get("result")
 
-            # (a) the declaration's own name, in a one-clause `fun`
             at = lines[0].index("addOne")
             hov = ask("textDocument/hover", 0, at)
             assert_true(hov, f"hover on the declaration name ({hov!r})")
             assert_true("int" in (hov.get("contents") or {}).get("value", ""),
                         f"and it carries a type ({hov!r})")
 
-            # (b) a reference from inside a function body, and
-            # (c) a reference from inside a `let` binding group
             for line, what in ((1, "a function body"),
                                (2, "a let binding group")):
                 at = lines[line].index("addOne")

@@ -1222,29 +1222,9 @@ fun uriToPath uri =
   if String.isPrefix "file://" uri
   then SOME (String.extract (uri, 7, NONE)) else NONE
 
-(* The other direction, for a location that came out of HOL rather than
-   off the wire: `PDeclaredAt` and the DB both name a file by its path,
-   and a client handed one of those as a `targetUri` has been handed
-   something that is not a URI.
-
-   A relative one is worse than it looks.  Poly/ML records a
-   declaration's file as the path it was compiled under, and the
-   structures compiled into `bin/hol' were `use'd from
-   `$HOLDIR/tools-poly' by `poly/poly-init2.ML' -- so `HOLSourceAST'
-   reports `../tools/parsing/HOLSourceAST.sml', which resolves against
-   neither the server's directory nor the client's.  Sent as a
-   `file://' URI it names nothing, and the editor fails to open it in
-   silence: from the outside that reads exactly like goto-definition
-   having found nothing at all.
-
-   So resolve against the directories those paths are written relative
-   to -- `tools-poly' for the `use' chain above, `$HOLDIR' for one
-   recorded during the build, the server's own directory for the file
-   it was started on -- and take the first that names a file which is
-   there.  A path that resolves nowhere answers NONE and the caller
-   drops the target: no answer is better than one the client cannot
-   follow, because the person who pressed the key cannot tell a wrong
-   jump from a right one. *)
+(* Poly/ML records source paths relative to their compilation roots.
+   Resolve them against those roots and drop a path that names no file:
+   a target the client cannot open reads like no target at all. *)
 fun absolutePath path =
   if OS.Path.isAbsolute path then SOME path
   else
@@ -4357,11 +4337,7 @@ fun start {diag, dbg, warnings} = let
   fun gotoDefinition uri v target = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
-      (* `Empty' rather than `uri = NONE', which the consumer below
-         reads as "this document": an unresolvable path would then
-         jump within the open file, to the target's line number.  The
-         handler turns this into "no definition here", which is what
-         an unfollowable target amounts to. *)
+      (* NONE means the current document below, so discard unresolved paths. *)
       val uri = case pathToUri file of
           NONE => raise Empty
         | SOME u => u
