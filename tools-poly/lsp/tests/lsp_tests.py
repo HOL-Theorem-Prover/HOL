@@ -7260,6 +7260,85 @@ def test_a_single_clause_fun_carries_poly_properties():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_fun_clause_result_type_keeps_poly_properties():
+    """A clause written `fun f x : ty = e` answers inside its body.
+
+    Poly/ML gives the result constraint a sibling of its own, between
+    the last parameter and the body; a constraint inside a parameter's
+    parentheses does not get one.  Annotating as though neither did
+    left every identifier in the body aligned with the first parameter.
+    """
+    src = ("fun plain a (b, c) = a + b + c\n"
+           "fun typed x : int = plain x (1, 2)\n"
+           "fun parTyped (x : int) = plain x (1, 2)\n"
+           "fun multi 0 : int = 0 | multi n : int = plain n (1, 2)\n"
+           "fun andA x : int = plain x (1, 2) "
+           "and andB y : int = plain y (3, 4)\n"
+           "val nest = let fun inner z : int = plain z (1, 2) "
+           "in inner 5 end\n")
+    lines = src.split("\n")
+    d = tempfile.mkdtemp(prefix="lsp_funresty_")
+    try:
+        uri = f"file://{d}/funresty.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            rid = [880]
+
+            def ask(method, line, char):
+                rid[0] += 1
+                c.send({"jsonrpc": "2.0", "id": rid[0], "method": method,
+                        "params": {"textDocument": {"uri": uri},
+                                   "position": {"line": line,
+                                                "character": char}}})
+
+                def got(cl):
+                    with cl.msgs_lock:
+                        for m in cl.msgs:
+                            if m.get("id") == rid[0]: return m
+                    return None
+
+                reply = c.wait_until(got, 20)
+                assert_true(reply is not None,
+                            f"{method} replied at {line}:{char}")
+                return reply.get("result")
+
+            # A reference to line 0's `plain` from each shape's body.
+            for line, what in ((1, "a result-typed clause"),
+                               (2, "a clause with a typed parameter"),
+                               (3, "the second of two typed clauses"),
+                               (4, "a typed `and'-list clause"),
+                               (5, "a typed `let fun' clause")):
+                at = lines[line].rindex("plain")
+                hov = ask("textDocument/hover", line, at)
+                assert_true(hov, f"hover from {what} ({hov!r})")
+                res = ask("textDocument/definition", line, at)
+                assert_true(res, f"a definition from {what} ({res!r})")
+                tgt = res[0]["targetRange"]["start"]["line"]
+                assert_eq(tgt, 0,
+                          f"reaching the declaration on line 0 from {what}")
+
+            # The constrained clause's own name spans the name alone,
+            # not `typed x : int', and a parameter of it still answers.
+            at = lines[1].index("typed")
+            hov = ask("textDocument/hover", 1, at)
+            assert_true("int -> int" in
+                        (hov.get("contents") or {}).get("value", ""),
+                        f"the clause name types as a function ({hov!r})")
+            at = lines[1].index("plain x") + len("plain ")
+            res = ask("textDocument/definition", 1, at)
+            assert_true(res, f"a parameter of it answers ({res!r})")
+            assert_eq(res[0]["targetRange"]["start"]["line"], 1,
+                      "reaching the parameter's own binding")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_a_reused_tail_answers_as_a_full_compile_would():
     """An edit confined to a tactic lets the compile stop after that
     declaration and keep what the last pass recorded about the rest of
@@ -10558,6 +10637,8 @@ TESTS = [
      test_a_basis_jump_resolves_through_a_polyml_checkout),
     ("a_single_clause_fun_carries_poly_properties",
      test_a_single_clause_fun_carries_poly_properties),
+    ("a_fun_clause_result_type_keeps_poly_properties",
+     test_a_fun_clause_result_type_keeps_poly_properties),
     ("a_reused_tail_answers_as_a_full_compile_would",
      test_a_reused_tail_answers_as_a_full_compile_would),
     ("an_edit_confined_to_a_tactic_is_recognised",
