@@ -367,6 +367,47 @@ in
   ()
 end
 
+(* ----------------------------------------------------------------------
+    HOLSourceParser declaration spans
+   ---------------------------------------------------------------------- *)
+
+local
+  fun decSpansOf text = let
+    val consumed = ref false
+    fun read _ = if !consumed then "" else (consumed := true; text)
+    fun err _ _ _ = ()
+    val {parseDec, ...} =
+      HOLSourceParser.parseSML "decspan_selftest" read err
+                               HOLSourceParser.initialScope
+    fun loop acc =
+      case parseDec () of
+          NONE => rev acc
+        | SOME d => loop (HOLSourceAST.decSpan d :: acc)
+    in loop [] end
+  fun covers text =
+      case decSpansOf text of
+          [(s, e)] => SOME (String.substring (text, s, e - s))
+        | _ => NONE
+  fun check (text, expected) = (
+    tprint ("decSpan covers " ^ String.toString expected);
+    case covers text of
+        NONE => die "did not parse as one declaration"
+      | SOME got => if got = expected then OK ()
+                    else die ("got " ^ String.toString got))
+in
+  val _ = List.app check [
+    (* Every `and'-list form, plus representative single bindings. *)
+    ("fun f x = g x\nand g x = x + 1\n", "fun f x = g x\nand g x = x + 1"),
+    ("val x = 1 and y = 2\n", "val x = 1 and y = 2"),
+    ("type a = int and b = bool\n", "type a = int and b = bool"),
+    ("datatype t = A and u = B\n", "datatype t = A and u = B"),
+    ("exception E and F\n", "exception E and F"),
+    ("structure A = B and C = D\n", "structure A = B and C = D"),
+    ("fun f x = x\n", "fun f x = x"),
+    ("fun f x = x | f y = y\n", "fun f x = x | f y = y"),
+    ("val x = (1, 2)\n", "val x = (1, 2)")]
+end
+
 val () = OS.Process.exit
            (if !failcount = 0 then OS.Process.success
             else OS.Process.failure)

@@ -6158,6 +6158,45 @@ def test_documentSymbol_lists_the_declarations():
         c.close()
 
 
+def test_documentSymbol_keeps_a_name_inside_its_own_range():
+    """Keep each symbol's selection range inside its full range."""
+    src = ("fun f x = g x\n"
+           "and g x = x + 1\n"
+           "val a = 1 and b = 2\n"
+           "type t = int and u = bool\n"
+           "datatype d = A and e = B\n"
+           "exception E1 and E2\n")
+    uri = "file:///tmp/andsym.sml"
+    c = Client("/tmp")
+    try:
+        _init_hierarchical(c, "/tmp")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        r = _request(c, 803, "textDocument/documentSymbol",
+                     {"textDocument": {"uri": uri}})
+        syms = r["result"]
+        def pos(p):
+            return (p["line"], p["character"])
+        bad, seen = [], []
+        def walk(ss):
+            for sym in ss or []:
+                seen.append(sym["name"])
+                lo, hi = pos(sym["range"]["start"]), pos(sym["range"]["end"])
+                slo = pos(sym["selectionRange"]["start"])
+                shi = pos(sym["selectionRange"]["end"])
+                if not (lo <= slo and shi <= hi):
+                    bad.append((sym["name"], (lo, hi), (slo, shi)))
+                walk(sym.get("children"))
+        walk(syms)
+        # Exercise the second binding in every `and` form.
+        for want in ("g", "b", "u", "e", "E2"):
+            assert_true(want in seen, f"{want} in the outline ({seen})")
+        assert_true(not bad, f"every name inside its own range ({bad})")
+    finally:
+        c.close()
+
+
 def test_documentSymbol_while_blocked_on_unloadable_ancestor():
     """The outline is parse-driven, not compile-driven, so it still
     answers for a file the server has refused to compile -- which is
@@ -7054,6 +7093,246 @@ def test_a_theorem_jumps_to_the_script_it_is_proved_in():
             assert_true(target.endswith("arithmeticScript.sml"),
                         f"and it is the script, not the signature "
                         f"({target!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_target_outside_the_file_is_an_absolute_path():
+    """An external definition target must be an absolute existing file."""
+    d = tempfile.mkdtemp(prefix="lsp_absuri_")
+    try:
+        # HOLSourceAST is loaded from a relative path during bootstrap.
+        src = "open HOLSourceAST\n"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/absuri.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            c.send({"jsonrpc": "2.0", "id": 772,
+                    "method": "textDocument/definition",
+                    "params": {"textDocument": {"uri": uri},
+                               "position": {"line": 0, "character": 7}}})
+
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == 772: return m
+                return None
+
+            reply = c.wait_until(got, 20)
+            assert_true(reply is not None, "definition reply arrived")
+            res = reply.get("result")
+            assert_true(res, f"a definition was found ({reply!r})")
+            target = res[0]["targetUri"]
+            assert_true(target.startswith("file:///"),
+                        f"the target is an absolute URI ({target!r})")
+            path = target[len("file://"):]
+            assert_true(os.path.isfile(path),
+                        f"and names a file that is there ({path!r})")
+            assert_true(path.endswith("HOLSourceAST.sml"),
+                        f"namely the structure's own source ({path!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_basis_jump_resolves_through_a_polyml_checkout():
+    """Resolve Basis declarations through a matching Poly/ML checkout."""
+    d = tempfile.mkdtemp(prefix="lsp_basis_")
+    try:
+        poly = os.path.join(d, "polysrc")
+        os.makedirs(os.path.join(poly, "basis"))
+        with open(os.path.join(poly, "basis", "OS.sml"), "w") as f:
+            f.write("".join(f"(* line {i} *)\n" for i in range(1, 1001)))
+        src = "val ok = OS.Process.isSuccess\n"
+        uri = f"file://{d}/basisjump.sml"
+        c = Client(d, env={"HOL_LSP_POLYML_SRC": poly})
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            col = src.index("isSuccess") + 2
+            c.send({"jsonrpc": "2.0", "id": 773,
+                    "method": "textDocument/definition",
+                    "params": {"textDocument": {"uri": uri},
+                               "position": {"line": 0, "character": col}}})
+
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == 773: return m
+                return None
+
+            reply = c.wait_until(got, 20)
+            assert_true(reply is not None, "definition reply arrived")
+            res = reply.get("result")
+            assert_true(res, f"a definition was found ({reply!r})")
+            target = res[0]["targetUri"]
+            assert_true(target.startswith("file:///"),
+                        f"the target is an absolute URI ({target!r})")
+            path = target[len("file://"):]
+            assert_eq(os.path.realpath(path),
+                      os.path.realpath(os.path.join(poly, "basis", "OS.sml")),
+                      "the target is the checkout's own basis/OS.sml")
+            line = res[0]["targetRange"]["start"]["line"]
+            assert_true(0 < line < 1000,
+                        f"at a line Poly recorded ({line!r})")
+            warn = c.wait_for_method("window/showMessage", 1)
+            assert_true(warn is None, f"no complaint about it ({warn!r})")
+        finally:
+            c.close()
+
+        c = Client(d, env={"HOL_LSP_POLYML_SRC": os.path.join(d, "nope")})
+        try:
+            _init(c, d, timeout=30)
+            warn = c.wait_for_method("window/showMessage", 20)
+            assert_true(warn is not None, "a checkout that is not there "
+                                          "is complained about")
+            assert_contains(warn["params"]["message"],
+                            "HOL_LSP_POLYML_SRC",
+                            "and the complaint names the variable")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_single_clause_fun_carries_poly_properties():
+    """Single-clause functions retain properties used by LSP queries."""
+    src = ("fun addOne x = x + 1\n"
+           "fun useIt w = addOne w\n"
+           "val nested = let fun g z = addOne z in g 3 end\n")
+    lines = src.split("\n")
+    d = tempfile.mkdtemp(prefix="lsp_funclause_")
+    try:
+        uri = f"file://{d}/funclause.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            rid = [860]
+
+            def ask(method, line, char):
+                rid[0] += 1
+                c.send({"jsonrpc": "2.0", "id": rid[0], "method": method,
+                        "params": {"textDocument": {"uri": uri},
+                                   "position": {"line": line,
+                                                "character": char}}})
+
+                def got(cl):
+                    with cl.msgs_lock:
+                        for m in cl.msgs:
+                            if m.get("id") == rid[0]: return m
+                    return None
+
+                reply = c.wait_until(got, 20)
+                assert_true(reply is not None,
+                            f"{method} replied at {line}:{char}")
+                return reply.get("result")
+
+            at = lines[0].index("addOne")
+            hov = ask("textDocument/hover", 0, at)
+            assert_true(hov, f"hover on the declaration name ({hov!r})")
+            assert_true("int" in (hov.get("contents") or {}).get("value", ""),
+                        f"and it carries a type ({hov!r})")
+
+            for line, what in ((1, "a function body"),
+                               (2, "a let binding group")):
+                at = lines[line].index("addOne")
+                hov = ask("textDocument/hover", line, at)
+                assert_true(hov, f"hover from {what} ({hov!r})")
+                res = ask("textDocument/definition", line, at)
+                assert_true(res, f"a definition from {what} ({res!r})")
+                tgt = res[0]["targetRange"]["start"]["line"]
+                assert_eq(tgt, 0,
+                          f"reaching the declaration on line 0 from {what}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_fun_clause_result_type_keeps_poly_properties():
+    """A clause written `fun f x : ty = e` answers inside its body.
+
+    Poly/ML gives the result constraint a sibling of its own, between
+    the last parameter and the body; a constraint inside a parameter's
+    parentheses does not get one.  Annotating as though neither did
+    left every identifier in the body aligned with the first parameter.
+    """
+    src = ("fun plain a (b, c) = a + b + c\n"
+           "fun typed x : int = plain x (1, 2)\n"
+           "fun parTyped (x : int) = plain x (1, 2)\n"
+           "fun multi 0 : int = 0 | multi n : int = plain n (1, 2)\n"
+           "fun andA x : int = plain x (1, 2) "
+           "and andB y : int = plain y (3, 4)\n"
+           "val nest = let fun inner z : int = plain z (1, 2) "
+           "in inner 5 end\n")
+    lines = src.split("\n")
+    d = tempfile.mkdtemp(prefix="lsp_funresty_")
+    try:
+        uri = f"file://{d}/funresty.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            rid = [880]
+
+            def ask(method, line, char):
+                rid[0] += 1
+                c.send({"jsonrpc": "2.0", "id": rid[0], "method": method,
+                        "params": {"textDocument": {"uri": uri},
+                                   "position": {"line": line,
+                                                "character": char}}})
+
+                def got(cl):
+                    with cl.msgs_lock:
+                        for m in cl.msgs:
+                            if m.get("id") == rid[0]: return m
+                    return None
+
+                reply = c.wait_until(got, 20)
+                assert_true(reply is not None,
+                            f"{method} replied at {line}:{char}")
+                return reply.get("result")
+
+            # A reference to line 0's `plain` from each shape's body.
+            for line, what in ((1, "a result-typed clause"),
+                               (2, "a clause with a typed parameter"),
+                               (3, "the second of two typed clauses"),
+                               (4, "a typed `and'-list clause"),
+                               (5, "a typed `let fun' clause")):
+                at = lines[line].rindex("plain")
+                hov = ask("textDocument/hover", line, at)
+                assert_true(hov, f"hover from {what} ({hov!r})")
+                res = ask("textDocument/definition", line, at)
+                assert_true(res, f"a definition from {what} ({res!r})")
+                tgt = res[0]["targetRange"]["start"]["line"]
+                assert_eq(tgt, 0,
+                          f"reaching the declaration on line 0 from {what}")
+
+            # The constrained clause's own name spans the name alone,
+            # not `typed x : int', and a parameter of it still answers.
+            at = lines[1].index("typed")
+            hov = ask("textDocument/hover", 1, at)
+            assert_true("int -> int" in
+                        (hov.get("contents") or {}).get("value", ""),
+                        f"the clause name types as a function ({hov!r})")
+            at = lines[1].index("plain x") + len("plain ")
+            res = ask("textDocument/definition", 1, at)
+            assert_true(res, f"a parameter of it answers ({res!r})")
+            assert_eq(res[0]["targetRange"]["start"]["line"], 1,
+                      "reaching the parameter's own binding")
         finally:
             c.close()
     finally:
@@ -10180,6 +10459,8 @@ TESTS = [
     ("hover_on_an_overloaded_name",  test_hover_on_an_overloaded_name),
     ("documentSymbol_lists_the_declarations",
                                  test_documentSymbol_lists_the_declarations),
+    ("documentSymbol_keeps_a_name_inside_its_own_range",
+     test_documentSymbol_keeps_a_name_inside_its_own_range),
     ("documentSymbol_while_blocked",
                      test_documentSymbol_while_blocked_on_unloadable_ancestor),
     ("documentSymbol_hierarchical",
@@ -10420,6 +10701,14 @@ TESTS = [
      test_hover_on_a_half_typed_declaration_does_not_die),
     ("a_theorem_jumps_to_the_script_it_is_proved_in",
      test_a_theorem_jumps_to_the_script_it_is_proved_in),
+    ("a_target_outside_the_file_is_an_absolute_path",
+     test_a_target_outside_the_file_is_an_absolute_path),
+    ("a_basis_jump_resolves_through_a_polyml_checkout",
+     test_a_basis_jump_resolves_through_a_polyml_checkout),
+    ("a_single_clause_fun_carries_poly_properties",
+     test_a_single_clause_fun_carries_poly_properties),
+    ("a_fun_clause_result_type_keeps_poly_properties",
+     test_a_fun_clause_result_type_keeps_poly_properties),
     ("a_reused_tail_answers_as_a_full_compile_would",
      test_a_reused_tail_answers_as_a_full_compile_would),
     ("an_edit_confined_to_a_tactic_is_recognised",

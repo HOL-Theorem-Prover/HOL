@@ -307,7 +307,13 @@ fun parseSML file read parseError: scope -> result = let
         parseError (#1 tk, !pos) "unexpected delimiter";
         parseSeparated (e :: args) (NONE :: seps) NONE getStop f)
       | NONE => let
-        val stop = case stop of SOME stop => stop | _ => getStop e handle List.Empty => #1 tk
+        (* Include the last element in the separated declaration's span. *)
+        val eStop = SOME (getStop e) handle List.Empty => NONE
+        val stop = case (eStop, stop) of
+                       (SOME a, SOME b) => Int.max (a, b)
+                     | (SOME a, NONE) => a
+                     | (NONE, SOME b) => b
+                     | (NONE, NONE) => #1 tk
         in unread tk; {args = rev (e :: args), seps = rev seps, stop = stop} end
 
   fun isKeyword kw = fn (s, IdentTk) => if ident s = kw then SOME true else NONE | _ => NONE

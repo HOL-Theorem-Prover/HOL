@@ -1222,12 +1222,107 @@ fun uriToPath uri =
   if String.isPrefix "file://" uri
   then SOME (String.extract (uri, 7, NONE)) else NONE
 
-(* The other direction, for a location that came out of HOL rather than
-   off the wire: `PDeclaredAt` and the DB both name a file by its path,
-   and a client handed one of those as a `targetUri` has been handed
-   something that is not a URI. *)
+(* Optional Poly/ML source checkout for resolving Basis declarations.
+   This must be read at server startup, not frozen into `bin/hol'. *)
+fun polymlSrc () =
+    case OS.Process.getEnv "HOL_LSP_POLYML_SRC" of
+        NONE => NONE
+      | SOME "" => NONE
+      | SOME d =>
+        SOME (OS.Path.mkCanonical
+                (OS.Path.mkAbsolute {path = d,
+                                     relativeTo = OS.FileSys.getDir ()}))
+        handle _ => NONE
+
+(* The `basis/<file>' tail of a path that has one. *)
+fun basisTail path = let
+  val (_, tail) = Substring.position "basis/" (Substring.full path)
+  in if Substring.isEmpty tail then NONE
+     else SOME (Substring.string tail) end
+
+(* Poly/ML records source paths relative to their compilation roots.
+   Resolve HOL paths against the installation and Basis paths against
+   the optional Poly/ML checkout. *)
+fun absolutePath path =
+  if OS.Path.isAbsolute path then SOME path
+  else
+    let
+      fun under base p =
+        let
+          val q = OS.Path.mkCanonical
+                    (OS.Path.mkAbsolute {path = p, relativeTo = base})
+        in
+          if OS.FileSys.access (q, []) then SOME q else NONE
+        end
+        handle _ => NONE
+      fun first [] = NONE
+        | first ((b, p) :: bs) =
+          (case under b p of SOME q => SOME q | NONE => first bs)
+      val holBases = [OS.Path.concat (Systeml.HOLDIR, "tools-poly"),
+                      Systeml.HOLDIR,
+                      OS.FileSys.getDir ()]
+      (* Poly/ML paths may be relative to the checkout or a build directory. *)
+      val polyBases =
+        case polymlSrc () of
+          NONE => []
+        | SOME d =>
+          (d, path) ::
+          (case basisTail path of NONE => [] | SOME t => [(d, t)])
+    in
+      first (map (fn b => (b, path)) holBases @ polyBases)
+    end
+
 fun pathToUri path =
-  if String.isPrefix "file://" path then path else "file://" ^ path
+  if String.isPrefix "file://" path then SOME path
+  else Option.map (fn p => "file://" ^ p) (absolutePath path)
+
+(* Warn about unusable or version-mismatched Poly/ML sources. *)
+local
+  (* Extract the first dotted version number from an AC_INIT line. *)
+  fun dottedNumber s = let
+    fun part c = Char.isDigit c orelse c = #"."
+    fun ok t = Char.isDigit (String.sub (t, 0)) andalso
+               String.isSubstring "." t
+    in List.find ok (String.tokens (not o part) s) end
+  fun acInitVersion dir = let
+    val f = TextIO.openIn (OS.Path.concat (dir, "configure.ac"))
+    fun look 0 = NONE
+      | look n =
+        case TextIO.inputLine f of
+            NONE => NONE
+          | SOME l => if String.isSubstring "AC_INIT" l
+                      then dottedNumber l else look (n - 1)
+    val out = look 100 handle _ => NONE
+    in TextIO.closeIn f; out end
+    handle _ => NONE
+  fun runningVersion () =
+    case String.tokens Char.isSpace PolyML.Compiler.compilerVersion of
+        v :: _ => SOME v
+      | [] => NONE
+in
+fun polymlSrcComplaint () =
+    case polymlSrc () of
+        NONE => NONE
+      | SOME d => let
+          val what = "HOL_LSP_POLYML_SRC=" ^ d
+          val stays = "; Basis declarations keep answering no definition"
+          fun isDir p = OS.FileSys.isDir p handle _ => false
+        in
+          if not (isDir d) then SOME (what ^ ": not a directory" ^ stays)
+          else if not (isDir (OS.Path.concat (d, "basis"))) then
+            SOME (what ^ ": no `basis' subdirectory, so this is not a \
+                  \Poly/ML source tree" ^ stays)
+          else
+            case (acInitVersion d, runningVersion ()) of
+                (SOME src, SOME running) =>
+                if src = running then NONE
+                else SOME (what ^ ": Poly/ML " ^ src ^ ", but this \
+                           \server runs on " ^ running ^ "; a Basis \
+                           \jump will land on the right file at the \
+                           \wrong line")
+              | _ => NONE
+        end
+end
 
 (* `hol.ML` at boot preloads project_dirs / external_includes from
    cwd's `holproject.toml`; this handler catches files whose
@@ -1325,6 +1420,9 @@ fun start {diag, dbg, warnings} = let
   (* Held until after the handshake: `window/showMessage' before the
      client is initialized has nowhere to go. *)
   val _ = List.app (fn w => (logMessage w; warnUser w)) warnings
+  val _ = case polymlSrcComplaint () of
+              NONE => ()
+            | SOME w => (logMessage w; warnUser w)
 
   (* A server process is bound to the first file it opens.  A second
      file cannot be served correctly: its ancestors have to be in the
@@ -4365,7 +4463,11 @@ fun start {diag, dbg, warnings} = let
   fun gotoDefinition uri v target = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
-      in {origin = origin, uri = SOME (pathToUri file),
+      (* NONE means the current document below, so discard unresolved paths. *)
+      val uri = case pathToUri file of
+          NONE => raise Empty
+        | SOME u => u
+      in {origin = origin, uri = SOME uri,
           range = range, selRange = range} end
     val ({plugins, builtTrees, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
@@ -4758,9 +4860,9 @@ fun start {diag, dbg, warnings} = let
       print ",\"theory\":"; encString theory print;
       print ",\"class\":"; encString class print;
       print ",\"statement\":"; encPretty width statement print;
-      (case file of
+      (case Option.mapPartial pathToUri file of
          NONE => ()
-       | SOME f => (print ",\"uri\":"; encString (pathToUri f) print));
+       | SOME u => (print ",\"uri\":"; encString u print));
       print ",\"line\":"; encInt line print;
       print "}")
 

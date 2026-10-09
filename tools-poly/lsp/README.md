@@ -1310,3 +1310,17 @@ their own.
   skips `tac`.  The pending proof-state work adds a background
   walker that evaluates tactics for `$/getState`; until it lands,
   tactic-level checking still requires a real `Holmake` build.
+- **Go-to-definition on a Basis Library identifier finds nothing** —
+  Poly/ML records a Basis declaration as a path relative to the tree it
+  was *built* in: `OS.Process.isSuccess` comes back as
+  `./basis/OS.sml`, line 98.  An installed compiler need not ship those
+  sources at all (Homebrew's does not), so there is nothing for the
+  client to open, and the server answers nothing rather than a target
+  the editor declines in silence.  Point `HOL_LSP_POLYML_SRC` at a
+  Poly/ML checkout and those jumps resolve, landing in the signature
+  the declaration is written in.  Use the release the server runs on
+  (`poly -v`): the line number is Poly's own, and another tag's copy of
+  the file resolves just as well to the wrong line.  A checkout that is
+  not there, that has no `basis/`, or whose `configure.ac` names
+  another version, is named once in a `window/showMessage` at startup
+  — the unset case stays silent, since that is the default.
