@@ -243,6 +243,89 @@ fun evalRefusal code =
        \file.")
     (irreversibleIn code)
 
+(* ----------------------------------------------------------------
+   Stale ancestors.
+
+   A dependency is consumed as a built artifact and loaded at most once
+   per process, so a theory whose script has been edited since it was
+   built goes on answering from the version that *was* built.  Nothing
+   about that looks wrong -- names resolve, goals compute, proofs check
+   -- they are simply about an older theory.  Having no symptom of its
+   own is the whole hazard, so the point of this is to give it one.
+
+   Reported rather than blocked, unlike a missing ancestor.  A missing
+   one leaves nothing to elaborate against; a stale one elaborates
+   perfectly well, and taking the editor away over an upstream edit the
+   reader may not have finished making would cost more than it saves.
+
+   The artifact's path is the one the loader actually used, recorded as
+   the plan runs, so nothing here searches the load path or guesses at
+   the `.hol/objs' indirection.  The script is its sibling; where there
+   is none -- a core theory loaded from `sigobj' -- nothing is claimed,
+   which leaves this looking at the files someone is likely to be
+   editing.
+   ---------------------------------------------------------------- *)
+val loadedFrom : (string, string) Binarymap.dict ref =
+  ref (Binarymap.mkDict String.compare)
+
+(* Every file the loader uses, keyed by the module it belongs to.  The
+   plan covers transitive dependencies too, so this ends up knowing
+   where more theories came from than the header names. *)
+fun noteLoadedFrom path =
+  (loadedFrom :=
+     Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path))
+  handle _ => ()
+
+(* Holmake writes `d/fooTheory.uo' as `d/.hol/objs/fooTheory.uo' and
+   presents it as if it were the former; the script is beside the
+   former.  NONE for anything that is not a theory artifact. *)
+fun scriptBeside path = let
+  val dir = OS.Path.dir path
+  val dir = if OS.Path.file dir = "objs" andalso
+               OS.Path.file (OS.Path.dir dir) = ".hol"
+            then OS.Path.dir (OS.Path.dir dir)
+            else dir
+  val stem = OS.Path.base (OS.Path.file path)
+  in
+    if String.isSuffix "Theory" stem andalso size stem > 6 then
+      SOME (OS.Path.concat
+              (dir, String.substring (stem, 0, size stem - 6) ^ "Script.sml"))
+    else NONE
+  end handle _ => NONE
+
+(* Where a logical object path really is.  Holmake keeps a directory's
+   objects in `.hol/objs' and presents them as if they sat beside the
+   source, so the path the loader reports is the presented one and
+   stat-ing it answers "absent" for every built directory.  Try the
+   path as given -- an unmunged tree, or sigobj -- then the munged
+   one. *)
+fun physicalArtifact path =
+  (if OS.FileSys.access (path, []) then SOME path
+   else let
+     val p = OS.Path.concat
+               (OS.Path.concat (OS.Path.dir path, ".hol"),
+                OS.Path.concat ("objs", OS.Path.file path))
+     in if OS.FileSys.access (p, []) then SOME p else NONE end)
+  handle _ => NONE
+
+(* Of the modules named, those whose script is newer than the artifact
+   in use, with the script that says so.  Silent about anything it
+   cannot see both halves of. *)
+fun staleAncestors names = let
+  fun newer (a, b) =
+    Time.compare (OS.FileSys.modTime a, OS.FileSys.modTime b) = GREATER
+  fun stale m =
+    (case Binarymap.peek (!loadedFrom, m) of
+       NONE => NONE
+     | SOME logical =>
+       (case (scriptBeside logical, physicalArtifact logical) of
+          (SOME src, SOME art) =>
+            if OS.FileSys.access (src, []) andalso newer (src, art)
+            then SOME (m, src) else NONE
+        | _ => NONE))
+    handle _ => NONE
+  in List.mapPartial stale names end
+
 (* The label of a `Resume thm[label, smlname=x]' block.  The expander
    takes the first attribute carrying no `=' as the label and leaves
    the rest as proof kvals (`HOLSourceExpand.expandDec', the
@@ -3517,7 +3600,8 @@ fun start {diag, dbg, warnings} = let
           NONE => ()
         | SOME {pos, ...} => depFails := (m, pos, e) :: !depFails)
       val _ = app (fn m =>
-        loadPlan (fn f => DArray.push (files, (f, m))) m
+        loadPlan (fn f => (noteLoadedFrom f;
+                           DArray.push (files, (f, m)))) m
         handle e => noteFail m e) mods
       fun useFiles () = DArray.app (fn (f, m) =>
         qquse f handle e => noteFail m e) files
@@ -4056,6 +4140,63 @@ fun start {diag, dbg, warnings} = let
          The recorded exception supplies the message when there is one,
          since "Cannot find file X.ui" or the TheoryReader complaint
          from a stale object is the useful thing to say. *)
+      (* On the header entry that named it, because that is the line
+         the reader has to change something about.  A warning, not an
+         error: the file still elaborates, just against an older
+         theory.
+
+         Rebuilding is only half the remedy and the other half is not
+         discoverable, so the message says it: a dependency is read
+         once per process, and `$/hol/retryCompile' re-reads only ones
+         that were *missing*.  An already-loaded theory needs the
+         server restarted. *)
+      fun warnStaleDeps () = let
+        val diags = #diags (!trees)
+        fun posOf m =
+          Option.map #pos (List.find (fn {name, ...} => name = m) declared)
+        fun warn (m, src) =
+          case posOf m of
+            NONE => ()
+          | SOME pos =>
+            DArray.push (diags, Error {
+              hard = false, pos = pos,
+              msg = encString
+                (m ^ " is older than " ^ src ^ ", so this file is being \
+                 \elaborated against the theory as it was built.  \
+                 \Rebuild it *and restart this server*: a dependency is \
+                 \read once per process, so a rebuild on its own does \
+                 \not reach the session you are talking to.")})
+        val stale = staleAncestors declaredNames
+        (* Beside `$/compileScope', and for the same reason: when this
+           says nothing the question is which half was empty -- the
+           names, the recorded paths, or the comparison. *)
+        val () = if not dbg then () else
+          send (mkNotif "$/staleCheck" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            print ",\"declared\":"; encArray encString declaredNames print;
+            print ",\"recorded\":";
+            encInt (Binarymap.numItems (!loadedFrom)) print;
+            print ",\"paths\":";
+            encArray encString
+              (map (fn m =>
+                      case Binarymap.peek (!loadedFrom, m) of
+                        NONE => m ^ " => (not recorded)"
+                      | SOME a =>
+                        m ^ " => " ^
+                        (case physicalArtifact a of
+                           NONE => a ^ " [no artifact]"
+                         | SOME art => art) ^ " | script " ^
+                        (case scriptBeside a of
+                           NONE => "(none)"
+                         | SOME src =>
+                           src ^ (if OS.FileSys.access (src, [])
+                                  then " [exists]" else " [absent]")))
+                   declaredNames) print;
+            print ",\"stale\":"; encArray encString (map #1 stale) print;
+            print "}")))
+        in app warn stale end
+        handle _ => ()
+
       fun missingDeps () = let
         val failed = rev (!depFails)
         fun failure m = List.find (fn (n, _, _) => n = m) failed
@@ -4392,7 +4533,12 @@ fun start {diag, dbg, warnings} = let
                   the one worth printing. *)
                (case sealedReloads of
                     reloads as (_::_) => blockOnReload reloads
-                  | [] => (depsBlocked := DepsLoaded; runCompile ()))))
+                  (* Nothing blocks, so the last thing to say is the
+                     one that does not: an ancestor older than its
+                     own script elaborates perfectly well and is
+                     simply about an older theory. *)
+                  | [] => (depsBlocked := DepsLoaded; warnStaleDeps ();
+                           runCompile ()))))
       ) handle Thread.Interrupt => (
         (* When the compile aborted because a single dec produced a
            runaway cascade of errors, the diagnostics are complete

@@ -3440,6 +3440,79 @@ def _search_names(c, req_id, fragment):
     return [x.get("name") for x in ((r or {}).get("result") or [])]
 
 
+def test_stale_ancestor_draws_a_warning():
+    """A dependency is read once per process, so a theory whose script
+    has been edited since it was built goes on answering from the
+    version that was built -- with nothing about it looking wrong.
+    The server gives that a symptom: a warning on the header entry
+    that named the theory.
+
+    Built here rather than borrowed from the tree, so the test owns
+    both halves of the comparison and touches nothing it does not own.
+    The artifacts land in `.hol/objs/', which is the indirection the
+    sibling-script lookup has to see through, so that is exercised too.
+
+    The first half is the control: a freshly built ancestor draws
+    nothing.  Without it a server that warned about everything would
+    read exactly like one that warned correctly."""
+    import subprocess, tempfile, shutil
+    d = tempfile.mkdtemp(prefix="hol-stale-")
+    try:
+        up = os.path.join(d, "zzupScript.sml")
+        with open(up, "w") as f:
+            f.write("Theory zzup\nAncestors bool\n\n"
+                    "Theorem zzup_triv:\n  T\nProof\n  REWRITE_TAC[]\nQED\n")
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write("")
+        r = subprocess.run([f"{REPO}/bin/Holmake"], cwd=d,
+                           capture_output=True, text=True, timeout=300)
+        assert_true(os.path.exists(os.path.join(d, ".hol", "objs",
+                                                "zzupTheory.uo")),
+                    f"the scratch theory built ({r.stdout[-400:]!r})")
+
+        uri = "file://" + os.path.join(d, "zzdownScript.sml")
+        src = ("Theory zzdown\n"
+               "Ancestors zzup\n\n"
+               "Theorem zzdown_triv:\n  T\nProof\n  REWRITE_TAC[]\nQED\n")
+
+        c = Client(d)
+        try:
+            _init(c, d)
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            fresh = [x.get("message", "") for x in _diag_count(c, uri)]
+            assert_true(not any("older than" in m for m in fresh),
+                        f"a freshly built ancestor draws nothing ({fresh!r})")
+
+            # Now the script is newer than what the server loaded.
+            future = time.time() + 10
+            os.utime(up, (future, future))
+
+            _did_change_full(c, uri, src + "\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, since=0),
+                        "second compileCompleted")
+
+            def warned(cl):
+                msgs = [x.get("message", "") for x in _diag_count(cl, uri)]
+                return msgs if any("older than" in m for m in msgs) else None
+            got = c.wait_until(warned, 30)
+            seen = [x.get("message", "") for x in _diag_count(c, uri)]
+            assert_true(got is not None,
+                        f"the stale ancestor is reported ({seen!r})")
+            joined = "\n".join(got)
+            assert_contains(joined, "zzupTheory", "it names the theory")
+            assert_contains(joined, "restart",
+                            "it says a rebuild alone is not enough")
+            sev = [x.get("severity") for x in _diag_count(c, uri)
+                   if "older than" in x.get("message", "")]
+            assert_eq(sev, [2], "a warning, not an error")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_eval_runs_in_a_world_that_is_thrown_away():
     """`$/eval` gives the caller a transient session: the chunk runs,
     and then the Context, the loaded-module set and the namespace layer
@@ -11907,6 +11980,8 @@ TESTS = [
                     test_tryTactic_probes_without_committing),
     ("tryTactic_honours_a_step_anchor",
                     test_tryTactic_honours_a_step_anchor),
+    ("stale_ancestor_draws_a_warning",
+                    test_stale_ancestor_draws_a_warning),
     ("eval_runs_in_a_world_that_is_thrown_away",
                     test_eval_runs_in_a_world_that_is_thrown_away),
     ("eval_refuses_what_it_cannot_throw_away",

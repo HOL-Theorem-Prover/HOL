@@ -66,6 +66,25 @@ practical guide to trying it out; the protocol details live in
   `workspaceSymbolProvider` and `completionProvider`, so an editor's
   outline, symbol search and completion work with no client-side code
   — see "Symbols, completion and their scope".
+- **A stale ancestor draws a warning, not a block.**  A dependency is
+  consumed as a built artifact and loaded at most once per process, so
+  a theory whose script has been edited since it was built goes on
+  answering from the version that *was* built — names resolve, goals
+  compute, proofs check, and they are all about an older theory.
+  Having no symptom of its own is the whole hazard, so the server
+  gives it one: a warning on the header entry that named the theory,
+  saying which script is newer.  A warning rather than a block because
+  a stale ancestor still elaborates, unlike a missing one, and because
+  the upstream edit may not be finished.  The message says **rebuild
+  and restart**: a dependency is read once per process, and
+  `$/hol/retryCompile` re-reads only the ones that were *missing*, so
+  a rebuild alone never reaches the running session.  The artifact's
+  path is the one the loader used, recorded as the plan runs, so
+  nothing searches the load path or guesses at `.hol/objs/`; the
+  script is its sibling, and a theory loaded from `sigobj` has none,
+  which leaves this looking at the files someone is likely to be
+  editing.  Direct ancestors only — a theory built before *its* own
+  ancestors is the transitive case and is not checked.
 - **Unavailable ancestors stop the file.**  A script that names an
   ancestor or library the server cannot get — not built yet, raising
   on load, or stale against a HOL that has moved on — gets no compile
@@ -253,11 +272,17 @@ It tests the tree it lives in; `HOL_LSP_TEST_REPO` overrides that.
 Two switches exist for the tests rather than for users:
 
   - `bin/hol lsp --dbg` adds `$/compileResumedAt` (where a resumed
-    pass starts) and `$/compileScope` (whether the edit was confined
+    pass starts), `$/compileScope` (whether the edit was confined
     to one proof body, whether the tail was reused, and — as `why` —
-    what ruled the fast path out when it was not).  A test that cares
-    which path a compile took asserts on these rather than inferring
-    it from timing.
+    what ruled the fast path out when it was not), and `$/staleCheck`
+    (the ancestors the header declared, how many artifact paths have
+    been recorded, the artifact and script the check compared for
+    each, and which came out stale).  A test that cares which path a
+    compile took asserts on these rather than inferring it from
+    timing.  `$/staleCheck` earned its place immediately: when the
+    stale check reported nothing, the question was which half was
+    empty, and it showed the loader hands out the *presented* object
+    path rather than the one under `.hol/objs/`.
   - `HOL_LSP_WALK_HOLD_MS` stretches a goal-state walk just before it
     puts the process state back.  A walk and a compile must not rewind
     the process at the same time, and the order that used to corrupt
