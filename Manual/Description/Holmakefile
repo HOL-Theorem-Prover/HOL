@@ -224,6 +224,8 @@ libraries.md: $(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
 
 HolSat.md: zchaff.cnf
 
+Refute.md: $(dprot $(SIGOBJ)/Refute.uo)
+
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
 	mpost -mem=metafun -tex=latex figure.mp

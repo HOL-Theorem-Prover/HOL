@@ -1,0 +1,64 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `config`
+
+``` hol4
+Refute.type config
+```
+
+------------------------------------------------------------------------
+
+Type of Refute search configurations.
+
+A `config` is an immutable record, built from `default_config` by
+updaters `upd_<field> : <value> -> config -> config`, which compose
+with `|>`; `apply_updates updates cfg` applies a list of them from
+left to right.  In row-valued fields, such as `upd_card`, a `NONE` key
+gives the fallback and a `SOME` key an override; a Boolean row value
+of `NONE` lets Refute choose.
+
+The stored configuration, read by the tactics and by the functions
+without a `config` argument, lives in the HOL context: `set_config cfg`
+replaces it, `with_config cfg f x` evaluates `f x` with `cfg` stored,
+`current_config updates` returns it with `updates` applied, and
+`show_config ()` prints it.
+
+### Failure
+
+An updater fails if the resulting configuration is invalid:
+
+  - `upd_search (Only [])`;
+  - a negative count, size, depth or time;
+  - `max_counterexamples`, `max_genuine` or `batch_size` below 1;
+  - an empty candidate list or row, or a value outside its range
+    (`widths` 1 to 32, `bits` 1 to 31, `finite_type_size` 1 to 6,
+    `card` from 1, `max` from `~1`);
+  - a `card` without a `NONE` row, or an iterative `card` row other
+    than `[1, ..., n]`;
+  - a `bisim_depth` mixing `~1` with depths;
+  - a row key of the wrong kind (a type variable for `instantiate`, a
+    constant or variable for `max`, `wf` and `iter`), or an
+    `instantiate` value with type variables.
+
+### Example
+
+>>__ load "Refute";
+>>_ val cfg =
+      Refute.default_config
+        |> Refute.upd_timeout 5.0
+        |> Refute.upd_search
+             (Refute.Only [Refute.Exhaustive, Refute.Narrowing])
+        |> Refute.upd_size 7;
+>> (#timeout cfg, #backends cfg, #size (#qc cfg));
+
+>>+ Refute.default_config |> Refute.upd_search (Refute.Only []);
+
+### Comments
+
+The DESCRIPTION manual lists every field with its updater, default and
+meaning.
+
+### See also
+
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
+[`Refute.refute`](#Refute.refute).

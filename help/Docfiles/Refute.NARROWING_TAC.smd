@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `NARROWING_TAC`
+
+``` hol4
+Refute.NARROWING_TAC : tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample by symbolic narrowing.
+
+`NARROWING_TAC` is `REFUTE_TAC_WITH [upd_search (Only [Narrowing])]`.
+Narrowing accepts goals the executable backends decline, including,
+while the `allow_existentials` field is true, prenex existentials.
+
+### Failure
+
+Fails only if the configuration's `expect` field is not met.
+
+### Example
+
+>>__ load "Refute";
+>> g `!m : num. ?n. n + 1 = m`;
+
+>> e Refute.NARROWING_TAC;
+>>__ drop();
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.config`](#Refute.config).

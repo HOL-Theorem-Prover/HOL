@@ -1,0 +1,6 @@
+val _ = load "refutePersistOldTheory"
+val _ = load "Refute"
+val _ = use "preferred-setup.sml"
+val _ = load "refutePersistPreferredTheory"
+val _ = load "testutils"
+val _ = use "preferred-checks.sml"
