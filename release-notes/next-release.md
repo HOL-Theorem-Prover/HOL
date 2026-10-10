@@ -37,6 +37,12 @@ New features
 
     The old `M-h C-u` binding which toggles Unicode pretty-printing in the output `*HOL*` buffer has now moved to `M-h u p`.
 
+-   The emacs LSP client now shares keys with the older `*HOL*`-process mode rather than avoiding them.
+    A script is driven one way or the other, never both at once, so `M-h M-r`, `M-h s`, `M-h m`, `M-h M`, `M-h p`, `M-h g` and `M-h i` each run the LSP command when a server is serving the buffer, and the `*HOL*`-process command when none is.
+    `M-h M-M` and `M-h M-E` (which existed only to dodge the older bindings) and `M-h M-g` are gone; `M-h M-C` stays LSP-only, and `M-h M-m` stays `holmake` in both.
+
+    `M-h s` under the LSP is a new command, `hol-lsp-eval-string`: it prompts for an expression and evaluates it at point in the server's session, which is what `interactive-send-string-to-hol` does for the `*HOL*` process.
+
 -   `bin/build` has two new flags that control how per-entry HTML
     pages for `help/Docfiles/*.smd` are produced.  By default, if
     `mdbook` is on the user's PATH, `build_help` now invokes the

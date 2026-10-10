@@ -943,8 +943,10 @@ end, and anything in the same flow above them goes out of sight.
 
 ### Client cookbook
 
-- **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` bound
-  to `M-h M-g`.  The *HOL Goals* window is scrolled to the buffer's
+- **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` on
+  `M-h p`, shared with `hol-print-goal` (see [Keys, shared with the
+  REPL mode](#keys-shared-with-the-repl-mode)); `M-h g` reaches it
+  too.  The *HOL Goals* window is scrolled to the buffer's
   end, the current goal being last and the subgoal count printed
   after them, with `theorem`, `step`, `context` and `error` in the
   window's `header-line-format` so they stay visible.  An empty
@@ -1035,18 +1037,51 @@ what it is and let the user ask again.
 
 ### Client cookbook
 
-- **eglot (shipped in this repo)** — `hol-lsp-eval-region` bound to
-  `M-h M-e`, with the region (or, with no region, the top-level phrase
-  around point) sent as `code` and point sent as `position`.  Output is
-  appended to `*HOL LSP Eval*`.
+- **eglot (shipped in this repo)** — `hol-lsp-eval-region` on
+  `M-h M-r`, shared with `copy-region-as-hol-definition`, with the
+  region (or, with no region, the top-level phrase around point) sent
+  as `code` and the region's start sent as `position`.
+  `hol-lsp-eval-string` on `M-h s`, shared with
+  `interactive-send-string-to-hol`, prompts for an expression and
+  sends point as `position`.  Output is appended to `*HOL LSP Eval*`.
 - **VS Code (`hol4-vscode`)** — `HOL: Evaluate selection`, bound to
   `Ctrl+H Ctrl+E`, writing to the `HOL4 LSP Eval` output channel.  With
   nothing selected it prompts for an expression (also `HOL: Evaluate
-  expression…`) and sends the cursor, which is the analogue of emacs's
-  `M-h s`: there is then nothing to type into the script and delete
+  expression…`) and sends the cursor, which is what emacs's `M-h s`
+  does: there is then nothing to type into the script and delete
   again.
 
 ## Emacs
+
+### Keys, shared with the REPL mode
+
+A script is driven from the `*HOL*` process or from a server, never
+from both at once, so the key for a thing means that one thing and the
+buffer decides who answers it.  Each of these runs the LSP command
+where a server is serving the buffer, and the `*HOL*`-process command
+where none is:
+
+| key | LSP | `*HOL*` process |
+|---|---|---|
+| `M-h M-r` | `hol-lsp-eval-region` | `copy-region-as-hol-definition` |
+| `M-h s` | `hol-lsp-eval-string` | `interactive-send-string-to-hol` |
+| `M-h m` | `hol-lsp-search` | `hol-db-match` |
+| `M-h M` | `hol-lsp-search` | `hol-db-select` |
+| `M-h p` | `hol-lsp-show-goal-state` | `hol-print-goal` |
+| `M-h g` | `hol-lsp-show-goal-state` | `hol-do-goal` |
+| `M-h i` | hover, via `eldoc-doc-buffer` | `hol-type-info` |
+
+`M-h M-C` (`hol-lsp-retry-compile`) is LSP-only — it has no
+`*HOL*`-process counterpart.  `M-h M-m` is `holmake` in both: a server
+is pinned to the artifacts it first loaded, so rebuilding a stale
+ancestor and then `M-h M-C` is the way out, which makes Holmake more
+wanted in a served buffer rather than less.
+
+Every other `M-h` key still addresses the `*HOL*` process whatever the
+buffer — `M-h e` and `M-h M-e` (applying a tactic; under the server
+the goals follow the cursor instead), `M-h b`, `M-h d`, `M-h r`,
+`M-h R`, `M-h ,`, `M-h f` and `M-h c`.  `M-h f`'s question is
+reachable through `M-h m` as a `"name"` selector.
 
 The repo ships `holscript-mode` (`tools/editor-modes/emacs/`), which
 does the syntax highlighting and structural editing but is not itself

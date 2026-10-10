@@ -7,6 +7,11 @@
 (load (concat (file-name-as-directory (getenv "HOLDIR"))
               "tools/editor-modes/emacs/hol-mode"))
 
+;; `jsonrpc-async-request' is what the eval tests stand in for, and
+;; `cl-letf' will not restore a function cell that was never bound.
+(require 'jsonrpc)
+(require 'cl-lib)
+
 (defun hol-lsp-tests--setup-alternate-install (root)
   "Symlink ROOT/bin/{hol,Holmake} to the current install's binaries
 so routing tests can stage a second HOL without a real build."
@@ -675,13 +680,20 @@ the wrong text."
 ;;; Search results: their locations, and getting to them
 ;;; ---------------------------------------------------------------
 
-(ert-deftest hol-lsp-search-does-not-shadow-holmake ()
-  "`holmake' keeps `M-h M-m'; the search has its own key.
-Both were bound to `M-m', and the later binding won, so the search
-was unreachable from the keymap -- which no test noticed because
-nothing asserted what a key resolved to."
+(ert-deftest hol-lsp-holmake-keeps-its-key ()
+  "`holmake' keeps `M-h M-m' outright rather than sharing it.
+A served buffer wants Holmake more, not less: a server is pinned to
+the artifacts it first loaded, so rebuilding a stale ancestor and
+then `M-h M-C' is the documented way out.
+
+The three keys asserted gone are what the old avoidance bought --
+each of those commands now answers to the key its *HOL*-process
+counterpart already had."
   (should (eq (lookup-key hol-map "\M-m") 'holmake))
-  (should (eq (lookup-key hol-map "\M-M") 'hol-lsp-search)))
+  (should (eq (lookup-key hol-map "\M-C") 'hol-lsp-retry-compile))
+  (should-not (lookup-key hol-map "\M-M"))
+  (should-not (lookup-key hol-map "\M-E"))
+  (should-not (lookup-key hol-map "\M-g")))
 
 (ert-deftest hol-lsp-search-location-is-legible ()
   "A location says which script and which line, not the whole path."
@@ -732,3 +744,136 @@ results looked as though HOL had not recorded one."
               'hol-lsp-search-mouse-goto))
   (should (eq (lookup-key hol-lsp-search-mode-map (kbd "RET"))
               'hol-lsp-search-goto)))
+
+
+;;; ---------------------------------------------------------------
+;;; One key, both modes
+;;; ---------------------------------------------------------------
+
+(ert-deftest hol-lsp-shared-keys-are-dispatchers ()
+  "Each shared key resolves to its dispatcher, not to either target."
+  (dolist (pair '(("\M-r" . hol-eval-region)
+                  ("s"    . hol-eval-string)
+                  ("m"    . hol-match-theorems)
+                  ("M"    . hol-select-theorems)
+                  ("p"    . hol-show-goals)
+                  ("g"    . hol-goal-at-point)
+                  ("i"    . hol-term-info)))
+    (should (eq (lookup-key hol-map (car pair)) (cdr pair)))))
+
+(ert-deftest hol-lsp-dispatch-picks-the-served-command ()
+  "Where a server answers, a shared key runs the LSP half."
+  (let ((ran nil))
+    (cl-letf (((symbol-function 'hol-lsp-active-p) (lambda () t))
+              ((symbol-function 'hol-lsp-search)
+               (lambda () (interactive) (setq ran 'lsp)))
+              ((symbol-function 'hol-db-match)
+               (lambda (&optional _tm) (interactive) (setq ran 'repl))))
+      (call-interactively 'hol-match-theorems))
+    (should (eq ran 'lsp))))
+
+(ert-deftest hol-lsp-dispatch-picks-the-repl-command ()
+  "Where none does, the same key runs the *HOL*-process half."
+  (let ((ran nil))
+    (cl-letf (((symbol-function 'hol-lsp-active-p) (lambda () nil))
+              ((symbol-function 'hol-lsp-search)
+               (lambda () (interactive) (setq ran 'lsp)))
+              ((symbol-function 'hol-db-match)
+               (lambda (&optional _tm) (interactive) (setq ran 'repl))))
+      (call-interactively 'hol-match-theorems))
+    (should (eq ran 'repl))))
+
+(ert-deftest hol-lsp-dispatch-forwards-the-prefix-argument ()
+  "A prefix argument reaches the command the dispatcher picked.
+`copy-region-as-hol-definition' reads `C-u C-u' as \"quietly\", so a
+dispatcher that used `funcall' rather than `call-interactively' would
+drop that without saying so."
+  (let ((seen 'none))
+    (cl-letf (((symbol-function 'hol-lsp-active-p) (lambda () nil))
+              ((symbol-function 'copy-region-as-hol-definition)
+               (lambda (arg) (interactive "P") (setq seen arg))))
+      (let ((prefix-arg '(16)))
+        (command-execute 'hol-eval-region)))
+    (should (equal seen '(16)))))
+
+(ert-deftest hol-lsp-not-active-in-another-languages-buffer ()
+  "A server alone must not decide which half of a shared key runs.
+`hol-map' is global, so without the major-mode test `M-h m' would
+become a HOL theorem search in any buffer that happened to have an
+eglot server of its own."
+  (cl-letf (((symbol-function 'hol-lsp--server) (lambda () 'a-server)))
+    (with-temp-buffer
+      (text-mode)
+      (should-not (hol-lsp-active-p)))
+    (with-temp-buffer
+      (holscript-mode)
+      (should (hol-lsp-active-p)))))
+
+(ert-deftest hol-lsp-not-active-without-eglot ()
+  "With eglot never loaded the predicate answers nil, not an error."
+  (with-temp-buffer
+    (holscript-mode)
+    (should-not (hol-lsp-active-p))))
+
+;;; ---------------------------------------------------------------
+;;; $/eval: what the two forms send
+;;; ---------------------------------------------------------------
+
+(defmacro hol-lsp-tests--capturing-eval (params-var &rest body)
+  "Run BODY with the `$/eval' request captured into PARAMS-VAR.
+A `*Script.sml' buffer is current, so `buffer-file-name' and point
+are the ones the request is built from."
+  (declare (indent 1))
+  `(let ((,params-var nil)
+         (hol-lsp-eval-display nil))
+     (cl-letf (((symbol-function 'hol-lsp--server) (lambda () 'srv))
+               ((symbol-function 'jsonrpc-async-request)
+                (lambda (_server _method p &rest _) (setq ,params-var p))))
+       (with-temp-buffer
+         (setq buffer-file-name "/hol/src/fooScript.sml")
+         ,@body))
+     ,params-var))
+
+(ert-deftest hol-lsp-eval-string-sends-the-cursor ()
+  "The typed-in form evaluates where point is.
+Leaving `position' out would make the server use the end of the last
+compiled declaration instead, which for a script is a different and
+quietly wrong context."
+  (let ((params (hol-lsp-tests--capturing-eval params
+                  (insert "line one\nline two\nline three\n")
+                  (goto-char (point-min))
+                  (forward-line 1)
+                  (forward-char 3)
+                  (hol-lsp-eval-string "val x = 1;"))))
+    (should (equal (plist-get params :code) "val x = 1;"))
+    (should (equal (plist-get params :incr) 2))
+    (should (equal (plist-get params :holdep) 1))
+    (should (string-suffix-p "fooScript.sml" (plist-get params :uri)))
+    (should (equal (plist-get (plist-get params :position) :line) 1))
+    (should (equal (plist-get (plist-get params :position) :character) 3))))
+
+(ert-deftest hol-lsp-eval-region-sends-the-region-start ()
+  "The region form evaluates at the region's start, not at point.
+Both forms go through `hol-lsp--eval-send' and differ only in the
+position they hand it, so this is what that sharing could break."
+  (let ((params (hol-lsp-tests--capturing-eval params
+                  (insert "aaa\nbbb\nccc\n")
+                  (goto-char (point-max))
+                  (hol-lsp-eval-region 5 8))))
+    (should (equal (plist-get params :code) "bbb"))
+    (should (equal (plist-get (plist-get params :position) :line) 1))
+    (should (equal (plist-get (plist-get params :position) :character) 0))))
+
+(ert-deftest hol-lsp-eval-string-refuses-an-empty-expression ()
+  "Whitespace is not something to send."
+  (cl-letf (((symbol-function 'hol-lsp--server) (lambda () 'srv)))
+    (with-temp-buffer
+      (setq buffer-file-name "/hol/src/fooScript.sml")
+      (should-error (hol-lsp-eval-string "   ") :type 'user-error))))
+
+(ert-deftest hol-lsp-eval-string-needs-a-server ()
+  "Without a server the typed-in form says so rather than failing late."
+  (cl-letf (((symbol-function 'hol-lsp--server) (lambda () nil)))
+    (with-temp-buffer
+      (setq buffer-file-name "/hol/src/fooScript.sml")
+      (should-error (hol-lsp-eval-string "val x = 1;") :type 'user-error))))
