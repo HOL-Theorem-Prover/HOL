@@ -91,6 +91,28 @@ fun nukeBuildArtifacts () =
      rm_rf (outerDir ++ "qux"))
 
 val logfile = testRoot ++ ".selftest-step.log"
+val publicationGuard = outerDir ++ ".check-cache-publication"
+
+fun readFile path =
+    let val ins = TextIO.openIn path
+        val text = TextIO.inputAll ins
+    in TextIO.closeIn ins; text end
+
+(* Save the child's manifest before changing its indirectly imported parent.
+   Later install it under the NEW key, forcing validation to do the work. *)
+fun childManifest () =
+    let val dir = cacheDir ++ "key"
+        val ds = OS.FileSys.openDir dir
+        fun loop () =
+            case OS.FileSys.readDir ds of
+                NONE => raise Fail "No wrapping_child cache manifest"
+              | SOME name =>
+                  let val text = readFile (dir ++ name)
+                  in if String.isSubstring "wrapping_childTheory.dat" text
+                     then text else loop () end
+        val text = loop ()
+                   handle e => (OS.FileSys.closeDir ds; raise e)
+    in OS.FileSys.closeDir ds; text end
 
 (* ------------------------------------------------------------------ *)
 val _ = tprint "cachekey_transitive_parent reproducer"
@@ -108,10 +130,12 @@ fun mustSucceed (status, log, what) =
    left modified by any run killed before it could restore it.  Remove
    it on the way out; step 1 writes it afresh each time. *)
 fun discard_parent () =
-    OS.FileSys.remove parentScript handle OS.SysErr _ => ()
+    (OS.FileSys.remove parentScript handle OS.SysErr _ => ();
+     OS.FileSys.remove publicationGuard handle OS.SysErr _ => ())
 
 val _ =
   let
+    val _ = discard_parent ()
     (* Step 1: Build with parent v1.  Establishes the (buggy) cachekey
        for wrapping_child in the cache. *)
     val _ = writeFile parentScript parentV1
@@ -119,6 +143,7 @@ val _ =
     val _ = mustSucceed (s1a, log1a, "Step 1 inner v1 build")
     val (s1b, log1b) = run_holmake_in outerDir [] logfile
     val _ = mustSucceed (s1b, log1b, "Step 1 outer v1 build")
+    val staleManifest = childManifest ()
 
     (* Step 2: Change parent's content; rebuild inner only. *)
     val _ = writeFile parentScript parentV2
@@ -135,9 +160,25 @@ val _ =
        fails with link_parents, the bug is present. *)
     val _ = rm_rf (outerDir ++ ".hol")
     val _ = rm_rf (outerDir ++ "qux")
-    val (s3, log3) = run_holmake_in outerDir [] logfile
+    val (keyStatus, keyLog) =
+        run_holmake_in outerDir ["--cachekey", "wrapping_childTheory"] logfile
+    val _ = mustSucceed (keyStatus, keyLog, "Computing current child key")
+    val keys = List.filter
+        (fn s => size s = 40 andalso CharVector.all Char.isHexDigit s)
+        (String.tokens Char.isSpace keyLog)
+    val key = case keys of [k] => k
+                        | _ => raise Fail ("Unexpected cachekey: " ^ keyLog)
+    val _ = writeFile (cacheDir ++ "key" ++ key) staleManifest
+    val _ = writeFile publicationGuard ""
+    val (s3, log3) = run_holmake_in outerDir ["--verbose"] logfile
 
-    val ok = OS.Process.isSuccess s3
+    (* BuildCommand redirects cache diagnostics into the theory's log,
+       not Holmake's outer progress output. *)
+    val childLog = readFile
+        (outerDir ++ ".hol" ++ "logs" ++ "wrapping_childTheory")
+        handle IO.Io _ => "(child theory log unavailable)"
+    val ok = OS.Process.isSuccess s3 andalso
+             String.isSubstring "Cache hit ignored: parent hashes" childLog
   in
     if ok then (discard_parent (); OK ())
     else
@@ -150,12 +191,13 @@ val _ =
               \link_parents check failed against current parent.  \
               \This IS the bug under test (expected until fixed)."
             else
-              "outer rebuild failed for another reason (not the \
-              \link_parents signature)."
+              "outer rebuild failed, or the forced stale cache hit was \
+              \not explicitly rejected by parent validation."
       in
         discard_parent ();
-        die ("Bug reproduced.\n  " ^ why ^
-             "\n  --- captured outer log ---\n" ^ log3)
+        die ("Stale-cache validation regression.\n  " ^ why ^
+             "\n  --- captured outer log ---\n" ^ log3 ^
+             "\n  --- child theory log ---\n" ^ childLog)
       end
   end
   handle e => (discard_parent (); raise e)
