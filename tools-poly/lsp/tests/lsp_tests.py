@@ -11,6 +11,8 @@ Run:  python3 tools-poly/lsp/tests/lsp_tests.py [test_name ...]
 Exit code: 0 if all passed, 1 if any failed.
 """
 import subprocess, threading, time, json, os, sys, re, tempfile, shutil
+import functools
+from concurrent.futures import ThreadPoolExecutor
 
 # The tree under test.  Default: the one this script lives in, four
 # levels up from <HOLDIR>/tools-poly/lsp/tests/lsp_tests.py -- so a
@@ -49,12 +51,50 @@ LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 EXIT_GRACE = int(os.environ.get("HOL_LSP_EXIT_GRACE", "30"))
 
 CLOSE_FAILURES = []
-CURRENT_TEST = "<none>"
+_CLOSE_LOCK = threading.Lock()
+
+# Which test the calling thread is running.  Under `-j' there is no one
+# answer, so a thread local rather than a module global: there is
+# nothing to serialise, the value is per-thread by construction.
+_tls = threading.local()
+
+
+def _current_test():
+    return getattr(_tls, "name", "<none>")
+
+
+def _close_failure(owner, why, err):
+    """File a teardown failure against the test that spawned the server.
+
+    `list.append' is atomic under the GIL, but nothing here should
+    depend on that -- a free-threaded build has no GIL -- and saying so
+    costs one lock."""
+    with _CLOSE_LOCK:
+        CLOSE_FAILURES.append((owner, why, err))
+
+
+# Every timeout below is a budget measured against one server booting on
+# an idle machine.  Under `-j N' there are N of them, contending for
+# exactly what those budgets were sized against: mapping an 18.7MB heap
+# and QUse-ing ten .ML files.  Scale them together rather than raising
+# each by hand -- the ratios between them are deliberate, and the
+# negative waits (`assert_true(not wait_for_method(...))') must widen
+# too, or under load they quietly weaken into vacuous passes.
+TIME_SCALE = 1.0
+
+
+def _budget(t):
+    return t * TIME_SCALE
 
 
 class Client:
     def __init__(self, cwd, args=None, env=None):
         self.spawn_started = time.time()
+        # The test that spawned this server, captured now rather than
+        # read in `close': what a leak wants attributed is who started
+        # it.  It also keeps `close' correct when called from a thread
+        # other than the test's own.
+        self.owner = _current_test()
         self.p = subprocess.Popen(
             [HOL_BIN, "lsp", *(args if args is not None else LSP_ARGS)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -73,7 +113,8 @@ class Client:
         try:
             self._reader_loop()
         except Exception as e:
-            sys.stderr.write(f"[client reader died] {type(e).__name__}: {e}\n")
+            sys.stderr.write(f"[client reader died] {self.owner}: "
+                             f"{type(e).__name__}: {e}\n")
 
     def _reader_loop(self):
         while not self._stop:
@@ -130,7 +171,7 @@ class Client:
         """Return the first message m with m.method == method arriving at
         index >= since.  Efficient for large message volumes: scans only
         the new tail on each poll, no whole-list copy."""
-        deadline = time.time() + timeout
+        deadline = time.time() + _budget(timeout)
         idx = since
         while time.time() < deadline:
             # Snapshot end-index under lock, then scan msgs[idx:end]
@@ -150,7 +191,7 @@ class Client:
 
     def wait_until(self, pred, timeout):
         """Wait until pred(client) is truthy. `pred` takes the client."""
-        deadline = time.time() + timeout
+        deadline = time.time() + _budget(timeout)
         while time.time() < deadline:
             r = pred(self)
             if r: return r
@@ -179,19 +220,19 @@ class Client:
                                for m in cl.messages_since(0)[0]), EXIT_GRACE)
             self.send({"jsonrpc":"2.0","method":"exit","params":None})
             if expect_exit and not _wait_for_exit(self.p, EXIT_GRACE):
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST, "server did not exit after shutdown+exit",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner, "server did not exit after shutdown+exit",
+                    self.stderr_text()[-2000:])
             elif expect_exit and self.p.returncode not in (0, None):
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST,
-                     f"server exited with code {self.p.returncode}",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner,
+                    f"server exited with code {self.p.returncode}",
+                    self.stderr_text()[-2000:])
         except Exception as e:
             if expect_exit:
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST, f"teardown raised {type(e).__name__}: {e}",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner, f"teardown raised {type(e).__name__}: {e}",
+                    self.stderr_text()[-2000:])
         finally:
             try:
                 if self.p.poll() is None:
@@ -369,15 +410,35 @@ def requires(tag):
     where, d, obj = _REQUIREMENTS[tag]
 
     def deco(fn):
+        # `functools.wraps' rather than copying __name__/__doc__ by
+        # hand: it also carries __dict__ across, so a tag an inner
+        # decorator set survives being wrapped and decorator order
+        # stops mattering.
+        @functools.wraps(fn)
         def wrapper():
             if not _built(d, obj):
                 raise Skipped(f"{where} is not built in this tree")
             return fn()
-        wrapper.__name__ = fn.__name__
-        wrapper.__doc__ = fn.__doc__
         wrapper.requires = tag
         return wrapper
     return deco
+
+
+def serial(fn):
+    """Mark a test as one to run alone, after the pool has drained.
+
+    For a test that asserts how *long* something took: those bounds
+    were measured on a machine running one server, and `-j' makes that
+    false.  Not for tests that share a place on disk -- there are
+    none: every fixture is its own `tempfile.mkdtemp', which gets the
+    `bin/Holmake' shell-outs their own `.hol/locks' too.
+
+    A final sequential pass rather than a lock, because a lock still
+    leaves the other N-1 tests running, which is exactly what a
+    latency bound cannot tolerate.
+    """
+    fn.serial = True
+    return fn
 
 
 def assert_le(actual, expected, label):
@@ -505,6 +566,7 @@ def test_small_recompile_type_error_inserted():
 
 
 @requires("integer")
+@serial
 def test_integer_first_compile():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -525,6 +587,7 @@ def test_integer_first_compile():
 
 
 @requires("integer")
+@serial
 def test_integer_recompile_blank_lines():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -629,6 +692,7 @@ def test_small_recompile_bare_val():
 
 
 @requires("integer")
+@serial
 def test_integer_didChange_interrupts_stale_compile():
     """didChange mid-compile must interrupt the stale compile and start a
     fresh one.  Otherwise we get two compiles running against the same
@@ -672,6 +736,7 @@ def test_integer_didChange_interrupts_stale_compile():
 
 
 @requires("integer")
+@serial
 def test_hover_responsive_during_compile():
     """A didChange kicks off a compile; while it's running, hover
     requests must still be answered promptly (recv thread must not
@@ -1647,7 +1712,7 @@ def test_hover_inside_inductive_body():
 
 
 def _wait_for_exit(p, timeout=10):
-    deadline = time.time() + timeout
+    deadline = time.time() + _budget(timeout)
     while time.time() < deadline:
         if p.poll() is not None: return True
         time.sleep(0.1)
@@ -2303,7 +2368,7 @@ _SUSP_COLON_LINE = 11      # `Resume willsplit[p]:`
 _SUSP_BODY_LINE = 12       # `  first_assum ACCEPT_TAC`
 
 
-def _susp_goal(c, uri, rid, line, char, tries=25):
+def _susp_goal(c, uri, rid, line, char, timeout=50):
     """Ask for goal state and wait out the `pending` that the first
     request provokes.
 
@@ -2311,14 +2376,32 @@ def _susp_goal(c, uri, rid, line, char, tries=25):
     actually run, which elaboration does not do on its own.  The first
     request answers `pending` and asks for the parent to be run; the
     recompile that follows is what makes the subgoal available.  So a
-    test polls rather than asking once."""
-    for i in range(tries):
-        m = _send_goalstate(c, rid + i, uri, line, char)
-        r = (m or {}).get("result")
+    test polls rather than asking once.
+
+    A deadline rather than a fixed number of tries, and a wait on that
+    recompile rather than a flat two seconds.  A loop count is the one
+    budget in this file that `TIME_SCALE' cannot reach, so under `-j'
+    it would quietly become tighter than it was sized to be -- while
+    also costing 2s a round when the answer had already arrived.
+    """
+    deadline = time.time() + _budget(timeout)
+    n, r = 0, None
+    while True:
+        since = c.total_msgs()
+        r = (_send_goalstate(c, rid + n, uri, line, char) or {}).get("result")
         if r and r.get("status") == "ok":
             return r
-        time.sleep(2)
-    return (m or {}).get("result")
+        n += 1
+        # `deadline' is already scaled, so poll here rather than going
+        # through `wait_for_method' and scaling a second time.
+        saw = False
+        while time.time() < deadline and not saw:
+            saw = any(m.get("method") == "$/compileCompleted"
+                      for m in c.messages_since(since)[0])
+            if not saw:
+                time.sleep(0.05)
+        if not saw:
+            return r
 
 
 def _proof_states(c, uri, since=0):
@@ -2614,7 +2697,9 @@ def test_goalState_resume_unknown_label_is_not_null():
                         "compileCompleted")
             col = len("Resume willsplit[typo]:")
             # Never settles to `ok`; take whatever the last answer is.
-            r = _susp_goal(c, uri, 980, _SUSP_COLON_LINE, col, tries=4)
+            # Short budget on purpose: this one never settles, so the
+            # default would mean waiting out the whole deadline.
+            r = _susp_goal(c, uri, 980, _SUSP_COLON_LINE, col, timeout=6)
             assert_true(r is not None,
                         "a response rather than null for a Resume block")
             assert_eq(r["status"], "pending", f"reported pending ({r!r})")
@@ -2915,6 +3000,7 @@ def _send_goalstate(c, req_id, uri, line, char):
 
 
 @requires("integer")
+@serial
 def test_full_replace_resumes_from_the_common_prefix():
     """A whole-document replace is usually a revert or a reformat, so
     the old and new texts agree for most of their length.  Resume from
@@ -8791,6 +8877,7 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
         for old, new in [("  simp[]", "  alL_tac"), ("  alL_tac", "  simp[]"),
                          ("  simp[]", "  all_tac"), ("  all_tac", "  simp[]")]:
             ver += 1
+            since = c.total_msgs()
             _did_change_incr(c, uri, cur, at, at + len(old), "", ver)
             cur = cur[:at] + cur[at + len(old):]
             built = ""
@@ -8801,7 +8888,15 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
                                  at + len(built), ch, ver)
                 cur = cur[:at + len(built)] + ch + cur[at + len(built):]
                 built += ch
-            time.sleep(3)
+            # Let this burst's pass get going before the next one, so
+            # that there is something for the next burst to interrupt.
+            # Waiting on the pass saying so rather than three flat
+            # seconds: under `-j' three seconds may not be enough to
+            # start one, and then the next burst abandons nothing and
+            # the test goes inert while still reporting PASS.  This
+            # waits longer when the machine is busy and returns at once
+            # when it is not.
+            c.wait_for_method("$/proofStates", 10, since=since)
 
         deadline = time.time() + 90
         while time.time() < deadline:
@@ -8997,10 +9092,26 @@ def test_a_burst_of_edits_leaves_diagnostics_matching_the_text():
     final = src.replace(old, "all_tac >>", 1)
     uri = "file:///tmp/burst_probe.sml"
 
-    def settled(c, seconds):
-        deadline = time.time() + seconds
+    def settled(c, seconds, quiet=5.0):
+        """Wait for the server to stop talking, then read the diagnostics.
+
+        The quiet window *is* the test, not an optimisation: what used
+        to stick was a **late** publish from a pass that had already
+        been abandoned, so reading the moment the expected text arrives
+        would pass for the wrong reason.  `seconds' stays exactly the
+        cap it always was -- this only stops idling once the server has
+        gone silent for `quiet', rather than always sleeping the whole
+        budget.
+        """
+        deadline = time.time() + _budget(seconds)
+        last, quiet_since = c.total_msgs(), time.time()
         while time.time() < deadline:
-            time.sleep(2)
+            time.sleep(0.2)
+            now = c.total_msgs()
+            if now != last:
+                last, quiet_since = now, time.time()
+            elif time.time() - quiet_since >= quiet:
+                break
         return sorted((d["range"]["start"]["line"] + 1,
                        d.get("message", "").split("\n")[0][:40])
                       for d in _diag_count(c, uri))
@@ -9689,7 +9800,7 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
 def _wait_for_log(c, needle, timeout, since=0):
     """Index just past the first window/logMessage containing NEEDLE at
     or after SINCE, or None."""
-    deadline = time.time() + timeout
+    deadline = time.time() + _budget(timeout)
     idx = since
     while time.time() < deadline:
         msgs, total = c.messages_since(idx)
@@ -10614,8 +10725,58 @@ def _check_all_registered():
         sys.exit(2)
 
 
+def _default_jobs():
+    """Workers for a run that did not say.
+
+    Capped at 8 whatever the machine has.  Past that the suite stops
+    scaling for a reason that is not the machine's: every server's
+    stdout is framed and JSON-parsed in *this* process, one reader
+    thread each, under the GIL.
+    """
+    return min(8, os.cpu_count() or 1)
+
+
+def _run_one(item):
+    """Run one test and return a record; never raises.
+
+    The verdict comes back as a value rather than being printed here,
+    so the thread that computed it is not the thread that reports it.
+    That is what keeps the log in TESTS order under `-j'.
+    """
+    name, fn = item
+    _tls.name = name
+    t0 = time.time()
+    try:
+        fn()
+        return (name, "PASS", time.time() - t0, None)
+    except Skipped as e:
+        return (name, "SKIP", time.time() - t0, str(e))
+    except Failed as e:
+        return (name, "FAIL", time.time() - t0, str(e))
+    except Exception as e:
+        return (name, "ERROR", time.time() - t0, f"{type(e).__name__}: {e}")
+    finally:
+        _tls.name = "<none>"
+
+
+def _report(rec, counts):
+    """Print one record in the format this log has always had."""
+    name, verdict, dt, msg = rec
+    if verdict == "PASS":
+        print(f"  PASS  {name}  ({dt:.1f}s)", flush=True)
+        counts["passed"] += 1
+    elif verdict == "SKIP":
+        print(f"  SKIP  {name}: {msg}", flush=True)
+        counts["skipped"].append(name)
+    elif verdict == "FAIL":
+        print(f"  FAIL  {name}  ({dt:.1f}s): {msg}", flush=True)
+        counts["failed"] += 1
+    else:
+        print(f"  ERROR {name}  ({dt:.1f}s): {msg}", flush=True)
+        counts["failed"] += 1
+
+
 def main():
-    global CURRENT_TEST
     _check_all_registered()
     argv = sys.argv[1:]
     # `--requires none' selects the tests with no prerequisite beyond a
@@ -10633,35 +10794,71 @@ def main():
         print(f"unknown --requires tag {req!r} (one of: none, "
               + ", ".join(sorted(_REQUIREMENTS)) + ")")
         sys.exit(2)
+    # `-j' before the positional sweep below, so a worker count can
+    # never be mistaken for a test name.
+    jobs = None
+    while "-j" in argv:
+        i = argv.index("-j")
+        if i + 1 >= len(argv) or not argv[i + 1].isdigit() \
+           or int(argv[i + 1]) < 1:
+            print("-j needs a positive integer")
+            sys.exit(2)
+        jobs = int(argv[i + 1])
+        del argv[i:i + 2]
+    if jobs is None:
+        jobs = int(os.environ.get("HOL_LSP_TEST_JOBS", "0")) or _default_jobs()
+    global TIME_SCALE
+    TIME_SCALE = float(os.environ.get("HOL_LSP_TIME_SCALE",
+                                      max(1.0, jobs / 4.0)))
+
     wanted = set(argv)
-    passed = failed = 0
-    skipped = []
+    selected = []
     for name, fn in TESTS:
         if wanted and name not in wanted: continue
         tag = getattr(fn, "requires", None)
         if req == "none" and tag is not None: continue
         if req not in (None, "none") and tag != req: continue
-        CURRENT_TEST = name
-        t0 = time.time()
+        selected.append((name, fn))
+
+    # Tests marked `@serial' run alone, after the pool has drained, so
+    # that whatever they measure is measured on a quiet machine.  A
+    # lock would not do: it still leaves the other N-1 running.
+    par = [it for it in selected if not getattr(it[1], "serial", False)]
+    ser = [it for it in selected if getattr(it[1], "serial", False)]
+
+    counts = {"passed": 0, "failed": 0, "skipped": []}
+    print(f"running {len(selected)} test(s), {jobs} worker(s), "
+          f"timeouts x{TIME_SCALE:g}", flush=True)
+    # `map' yields in submission order while running out of order, so
+    # the log stays in TESTS order and diffs cleanly between runs and
+    # between machines.  The cost is head-of-line blocking: nothing
+    # past position k prints until test k finishes.
+    if jobs > 1 and len(par) > 1:
+        ex = ThreadPoolExecutor(max_workers=jobs)
         try:
-            fn()
-            dt = time.time() - t0
-            print(f"  PASS  {name}  ({dt:.1f}s)")
-            passed += 1
-        except Skipped as e:
-            print(f"  SKIP  {name}: {e}")
-            skipped.append(name)
-        except Failed as e:
-            dt = time.time() - t0
-            print(f"  FAIL  {name}  ({dt:.1f}s): {e}")
-            failed += 1
-        except Exception as e:
-            dt = time.time() - t0
-            print(f"  ERROR {name}  ({dt:.1f}s): {type(e).__name__}: {e}")
-            failed += 1
+            for rec in ex.map(_run_one, par):
+                _report(rec, counts)
+        except KeyboardInterrupt:
+            # Without this, Ctrl-C waits out every queued test.
+            ex.shutdown(wait=False, cancel_futures=True)
+            raise
+        finally:
+            ex.shutdown(wait=True)
+    else:
+        for it in par:
+            _report(_run_one(it), counts)
+    for it in ser:
+        _report(_run_one(it), counts)
+    passed, failed, skipped = (counts["passed"], counts["failed"],
+                               counts["skipped"])
     if CLOSE_FAILURES:
+        # Sorted into TESTS order: workers appended in whatever order
+        # they finished, and a log that reorders itself between runs
+        # cannot be diffed.
+        _order = {nm: i for i, (nm, _) in enumerate(TESTS)}
         print(f"\n{len(CLOSE_FAILURES)} session(s) did not shut down cleanly:")
-        for name, why, err in CLOSE_FAILURES:
+        for name, why, err in sorted(
+                CLOSE_FAILURES, key=lambda t: (_order.get(t[0], -1), t[1])):
             print(f"  LEAK  {name}: {why}")
             if err.strip():
                 print("        stderr tail: " + err.strip()[-500:])
