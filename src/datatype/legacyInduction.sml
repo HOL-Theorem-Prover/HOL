@@ -801,6 +801,11 @@ fun mutual_induction ops ind =
                   (LIST_CONJ (allXs @ List.map allQof (#optys info))))
     end
 
+fun mutual_ind_from_ops th =
+    let val ops = operators_of th
+    in
+      mutual_induction ops th
+    end
 
 (*---------------------------------------------------------------------------
    An induction principle in the shape the rest of HOL reads one.

@@ -43,6 +43,7 @@ sig
   val operators_of : thm -> operator list
 
   val mutual_induction : operator list -> thm -> thm
+  val mutual_ind_from_ops : thm -> thm (* composition of two above *)
 
   (* what that will prove, for a caller who would rather see it first *)
   val mutual_induction_goal : operator list -> thm -> term
