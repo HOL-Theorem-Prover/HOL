@@ -24,6 +24,19 @@ local
 
   val walkerBudgetMs = 1500
 
+  (* The backstop on the whole answer, as against `walkerBudgetMs` on
+     the walk alone.  Deliberately loose: it is not there to keep the
+     goals pane responsive -- that is the walk's budget, and it is two
+     orders of magnitude tighter -- but to stop one request owning the
+     process's compile state for ever.  Everything else that wants to
+     rewind the Context, a compile included, waits behind this one.
+
+     So it should fire only where nothing else can help, and never
+     where the work was merely slow: a first request against a cold
+     walker cache, which has to compile the tactic's leaves, is
+     seconds. *)
+  val hookBudgetMs = 30000
+
   fun logStderr s =
     (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
@@ -44,10 +57,22 @@ local
              Thread.interrupt here));
       Mutex.unlock mtx)
     val _ = Thread.fork (canary, [])
-    val r = Thread_Attributes.with_attributes
-              Thread_Attributes.private_interrupts (fn _ => f ())
+    (* Captured, not allowed to propagate.  The canary's interrupt
+       arrives as an exception inside `f', and whether anything catches
+       it on the way out is not ours to decide: a tactic walk swallows
+       it and reports the leaf as failed, while a pretty-printer or a
+       parser lets it straight through.  Releasing it unchanged would
+       make the budget's effect depend on which of those the walk
+       happened to be in -- an empty goal state from one, a raise out of
+       the hook from the other.  So: if the canary fired, the budget is
+       the answer and whatever `f' raised on its way out is that
+       interrupt arriving; otherwise the exception is the caller's and
+       goes back to them intact. *)
+    val r = Exn.capture (fn () =>
+              Thread_Attributes.with_attributes
+                Thread_Attributes.private_interrupts (fn _ => f ())) ()
     val () = markDone ()
-  in if !timedOut then NONE else SOME r end
+  in if !timedOut then NONE else SOME (Exn.release r) end
 
   (* Rendered at the width the client says its pane is, so the line
      breaking the pretty printer chooses is the one the reader sees.
@@ -202,6 +227,31 @@ val () = LSPExtension.goalStateAtPos :=
        {name, quote, quoteStart, tacText, tacStart, cursor, compileDone,
         resumeOf}
          : LSPExtension.theorem_context) => let
+    (* The budget covers the whole answer, not just the walk.
+
+       Its caller holds the process's compile state for as long as this
+       runs -- it has rewound the Context to this theorem's snapshot and
+       must put it back before anything else may rewind it -- so every
+       part of this that can run long is part of what a compile and the
+       next goal-state request are waiting on.  The walk is the part
+       most likely to, but it is not the only one: parsing the statement
+       and rendering the goals both run user-supplied code (a custom
+       parser, a pretty-printer) that can loop.  Bounding only the walk
+       left those able to wedge the process.
+
+       `step` is 0 on this path because nothing got far enough to count
+       one.  The server reads a response carrying `error` without a
+       `failedRange` as "this walk learned nothing", so a 0 here cannot
+       be mistaken for a walk that reached the start and stopped. *)
+    fun timedOutResponse () =
+      SOME {theorem = name, step = 0,
+            goals = [], pretty = "", context = [],
+            note = NONE, status = "ok",
+            error = SOME ("goal state timed out (>"
+                          ^ LargeInt.toString hookBudgetMs ^ "ms)"),
+            failedRange = NONE, failedCloseRange = NONE,
+            segments = []}
+    fun answer () = let
     (* A Theorem carries its goal in the file and it is parsed; a
        Resume's is in the suspension store and it is looked up.  Both
        answer with a whole goal, assumptions included: the suspended
@@ -296,6 +346,10 @@ val () = LSPExtension.goalStateAtPos :=
                                \has to run before the subgoal exists"),
                  failedRange = NONE, failedCloseRange = NONE,
                  segments = []})
+    end
+    in case withTimeout hookBudgetMs answer of
+           NONE => timedOutResponse ()
+         | SOME r => r
     end)
 
 end;

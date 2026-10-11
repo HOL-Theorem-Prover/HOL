@@ -2897,12 +2897,13 @@ same thing.  See `hol-lsp-retry-compile'.")
   "What the proof-checking pool is doing in this buffer.
 A hash table from theorem name to (STATUS LINE NAME) -- status is
 one of \"checking\",
-\"proved\", \"failed\", \"suspended\", \"diverged\" or \"cheated\".
+\"proved\", \"failed\", \"suspended\", \"diverged\", \"cheated\" or
+\"timedout\".
 Of those, \"proved\" and \"suspended\" are settled: a proof that
 suspends has run and done what it said, and the subgoals it stashed
 are proved by the `Resume' blocks, which are pool entries in their
 own right.  \"checking\" and \"cheated\" are outstanding, and
-\"failed\" and \"diverged\" want attention.
+\"failed\", \"diverged\" and \"timedout\" want attention.
 Built from the `$/proofStates' transition stream: the server
 announces each change as it happens and never sends a snapshot, so a
 client accumulates.  nil until the first notification arrives.")
@@ -3026,8 +3027,16 @@ see there for why."
                  (let ((status (nth 0 v)) (line (nth 1 v)) (name (nth 2 v)))
                    (unless (member status '("proved" "suspended"))
                      (push (list name
-                                 (if (equal status "cheated")
-                                     "not checked" status)
+                                 (cond ((equal status "cheated")
+                                        "not checked")
+                                       ;; The pool stopped waiting on
+                                       ;; it.  Says what happened, not
+                                       ;; that the proof is wrong: it
+                                       ;; may well go through, given
+                                       ;; longer than `proofTimeoutMs'.
+                                       ((equal status "timedout")
+                                        "not checked (timed out)")
+                                       (t status))
                                  (or line 0))
                            out))))
                hol-lsp--proof-states))
@@ -3105,11 +3114,21 @@ from 30 to 12 reads as what it is."
                          ;; look at.
                          ((member status '("proved" "suspended"))
                           (setq proved (1+ proved)))
-                         ;; `failed', `diverged', or a status this
-                         ;; client does not know.  An unrecognised one
-                         ;; is counted loudly on purpose: better to
-                         ;; point at something harmless than to hide
-                         ;; something that matters.
+                         ;; `failed', `diverged', `timedout', or a
+                         ;; status this client does not know.  An
+                         ;; unrecognised one is counted loudly on
+                         ;; purpose: better to point at something
+                         ;; harmless than to hide something that
+                         ;; matters.
+                         ;;
+                         ;; `timedout' is here rather than with
+                         ;; `cheated' because the two differ in what
+                         ;; happens next.  A cheated proof is waiting
+                         ;; for a pass that is coming; a timed-out one
+                         ;; has had its pass, and is retried only once
+                         ;; an edit reaches it, so counting it as
+                         ;; merely outstanding would leave the tally
+                         ;; short with nothing coming to fill it.
                          (t (setq bad (1+ bad))))))
                hol-lsp--proof-states)
       (let ((total (+ checking unchecked proved bad)))

@@ -611,15 +611,58 @@ In VS Code it is `hol4-mode.lsp.checkProofs`; under eglot it is
 for the running server.  Turn it off on a machine you would rather
 keep for yourself: the pool runs the proofs for real.
 
-Two of the pool's verdicts are diagnostics, keyed by theorem name
-and squiggled on the theorem's own name — a `Failed` only until the
-walk finds the step it stops at, which replaces the entry with one
-placed there (see `failedRange` under `$/hol/goalState`):
+Three of the pool's verdicts are diagnostics, keyed by theorem name
+and squiggled on the theorem's own name.  A `Failed` gains a second
+squiggle once the walk finds the step it stops at, on that step (see
+`failedRange` under `$/hol/goalState`):
 
 | verdict | severity | means |
 |---|---|---|
 | `Failed` | error | the replay did not go through.  A real build would have raised out of `store_thm_at`, so nothing below it is trustworthy. |
 | `Diverged` | warning | the proof went through but produced extra hypotheses, so what elaboration stood in for was not what the proof gives. |
+| `TimedOut` | warning | the replay was still running when its budget ran out.  Nothing is known to be wrong; the server stopped waiting. |
+
+The three have three different relationships to the file, which is
+why they are separate rather than one "something is up" bucket.
+`Failed` says the file is wrong.  `Diverged` says our model of it is.
+`TimedOut` says neither — only that nobody found out, which a reader
+still needs told, the alternative being a theorem that silently never
+gets checked.
+
+### Locating a failure
+
+The walk that places a failed proof's diagnostic restores a compile
+snapshot, which is process-global, so it has to exclude whatever else
+might be rewinding the process.  That is the compile, and only the
+compile: a pass elaborating and enqueueing proofs rewinds the very
+cell the walk restores, and missing that exclusion had a dozen sound
+proofs reporting failures that varied from run to run.
+
+A worker still replaying a proof is deliberately *not* excluded.  It
+was, and the cost was that the walk waited for the pool to go idle --
+which means waiting for the file's slowest proof.  One proof that
+never returns then held up the localisation of every failure in the
+file, so a file with a hanging proof showed its other failures only
+on the `Theorem` line and never on the tactic, with nothing to say
+anything was being waited for.
+
+What makes that safe is that a replaying worker does not read what the
+walk rewinds.  `replay` pins its own `Context` for the whole replay --
+it has to, so that a pass resuming part-way down the file is invisible
+to it — and that pin covers this walk for the same reason.  The rest
+of the snapshot is the loaded-module set and the file's namespace
+layer, and a worker needs neither: its tactic was elaborated during
+the pass, and only compiling tactic *text* wants the layer.
+
+The located squiggle is kept *beside* the one on the theorem's name
+rather than replacing it, because the two are not equally certain.
+The verdict is a fact about the theorem: the replay ran the whole
+tactic and raised.  The position is the walker's, and the walker is a
+different execution — it cheats past a branch that fails so it can
+carry on, so where it stops need not be where the replay raised, and
+on a proof with several failing branches it is the last one walked
+rather than the first.  Replacing the one with the other traded a
+certain claim for an uncertain one.
 
 The other states are not diagnostics: `Proved` and `Cheated` are not
 complaints, and `Checking` is not one yet.
@@ -653,19 +696,56 @@ no longer has anywhere to put it.
 Every change is also announced on `$/proofStates` as a transition --
 `checking`, then a verdict, `cheated` when an entry is dropped.
 
-A client sorting those six statuses wants three buckets, and should
+A client sorting those seven statuses wants three buckets, and should
 decide each one rather than take a default:
 
 | bucket | statuses | |
 |---|---|---|
 | settled | `proved`, `suspended` | nothing to do.  A proof that suspends *ran*, and did what it said; the subgoals it stashed are proved by the `Resume` blocks, which are entries in their own right. |
 | outstanding | `checking`, `cheated` | not checked yet.  `cheated` especially: it means the pool is **not** working on this one. |
-| wrong | `failed`, `diverged` | worth going to look at. |
+| wrong | `failed`, `diverged`, `timedout` | worth going to look at. |
+
+`timedout` belongs with the other two rather than with `cheated`,
+even though nothing is known to be wrong with the proof, because the
+buckets are about what happens next.  A `cheated` proof is waiting for
+a pass that is coming; a timed-out one has had its pass, and the next
+one re-uses its entry rather than forking a second attempt, so nothing
+is on its way to settle it.  It is retried when an edit reaches it --
+the same point at which a `failed` proof is -- which is also the point
+at which raising `proofTimeoutMs` takes effect for it.  Counting it as
+outstanding would leave the tally short with nothing coming to fill
+it.
 
 Deciding by exclusion is the trap -- a catch-all that counts
 everything which is not `proved`/`checking`/`cheated` as wrong put
 `suspended` in the "to look at" column in both clients, so a file
 finished off with suspensions reported work the reader did not have.
+
+### The budget
+
+A replay runs under a wall-clock budget, after which the pool settles
+the entry as `timedout` and stops waiting on it.  Default 120s;
+`$/setConfig`'s `proofTimeoutMs` sets it, `HOL_LSP_PROOF_TIMEOUT_MS`
+in the environment is the default it starts from, and `0` means no
+limit.
+
+The budget is about saying so.  An entry that stays `checking` for
+ever is indistinguishable from a proof that is merely slow, so a
+client's tally sits one short with nothing on its way to fill it and
+no account of why.
+
+It is *not* what keeps a wedged proof from holding up the rest of the
+file.  Nothing waits for the pool any more: see "Locating a failure"
+below.
+
+Two things enforce it, because the first can be defeated.  The replay
+runs under `Timeout.apply`, which interrupts the tactic; a tactic that
+catches broadly can swallow that interrupt and carry on, which is why
+the compile thread polls a flag rather than relying on
+`Thread.interrupt` at all.  So the entry also settles on an
+`Event_Timer` request a few seconds behind the budget, whether or not
+the worker ever notices.  A runaway thread then costs a core, but
+the server is not wedged behind it.
 
 Both shipped clients consume this as a **tally**, shown in the emacs
 mode line (`⊢12/37`, with `!2` appended when something is wrong, and
@@ -928,6 +1008,41 @@ end, and anything in the same flow above them goes out of sight.
   step but wrong for the cursor's step, so the server refuses to send
   it and returns `error` instead.  A stderr line `goal-state walker
   exceeded Nms budget; interrupting` is also emitted for visibility.
+
+  There are two budgets.  The walk's own is 1.5s, and is about keeping
+  a goals pane that follows the cursor responsive.  Around the whole
+  answer -- parsing the statement, stepping the tactics, rendering the
+  goals -- there is a much looser 30s, which is about something else:
+  the caller holds the process's compile state for all of it, so a
+  request that never returns stops every compile and every other
+  goal-state request in the process.  That one should never fire on
+  work that is merely slow; a first request against a cold walker
+  cache has tactic leaves to compile and takes seconds.
+
+  An `error` with no `failedRange` is how either budget reports, and
+  a client should read it as "this walk learned nothing" rather than
+  "there is nothing wrong here".  In particular it is not grounds for
+  withdrawing a squiggle the walker drew earlier.
+
+  The server keeps squiggles of its own from these replies, one per
+  distinct failure per theorem, and **only ever adds to them**.  A
+  reply that reports no failure withdraws nothing.
+
+  That is not caution, it is what the replies mean.  This walk answers
+  from wherever it happens to start and stops wherever the cursor is:
+  it stands `cheat` in for a `>-` branch that has not discharged its
+  goal and carries on, so for a proof full of unfinished branches it
+  routinely reports nothing; and it resumes from a snapshot cache, so
+  whether it notices a failure depends on how much of the proof that
+  particular walk replayed.  The same cursor position can report a
+  failure on one visit and nothing on the next.  Withdrawing a
+  squiggle on a quiet reply therefore made them appear and disappear
+  as the cursor moved over a buffer nobody had edited, and a proof
+  with several failing tactics could never show more than one.
+
+  What withdraws them is an edit: every edit goes through
+  `startCompile`, which clears the map wholesale, and fixing a tactic
+  is an edit.
 - `failedRange` — where in the file the `error` belongs, when the walk
   stopped somewhere with a natural extent.  For a combinator that
   obliged what it brackets to prove a goal — `>-`, `by`,

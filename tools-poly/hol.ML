@@ -698,11 +698,24 @@ in
            SML rather than an evalString, so it is type-checked at load
            and can be read; see the file for why the replay guard is
            per-thread. *)
-        (* Future (Isabelle's task framework).  `src/proofman' bakes it
-           into `hol.state0', which every later heap is built on, so
-           this load costs nothing on any of them.  Kept for a heap
-           built some other way. *)
+        (* Future (Isabelle's task framework), and `Timeout', which
+           bounds how long a replay may run.  `src/proofman' bakes
+           `Future' into `hol.state0', which every later heap is built
+           on, so that load costs nothing on any of them; the loads are
+           kept for a heap built some other way.
+
+           `Timeout' is in `sigobj' but in no heap's namespace, and a
+           structure the init names and cannot find takes the whole LSP
+           runtime down -- silently, since this runs before there is a
+           client to tell.  What that looks like from the outside is a
+           server that works except that no proof is ever checked,
+           `set_prover' never having been installed.  `Event_Timer' is
+           what `Timeout' schedules on, and is named directly from
+           `deferred_proofs.ML', so it is loaded rather than left to
+           arrive as a dependency. *)
         initStep "Future" (fn () => Meta.load "Future");
+        initStep "Event_Timer" (fn () => Meta.load "Event_Timer");
+        initStep "Timeout" (fn () => Meta.load "Timeout");
         useInit "tools-poly/lsp/deferred_proofs.ML";
         (* Pretty printers for thm/term/hol_type, so hover can print a
            value of one of those types instead of `?'.  Installed

@@ -399,6 +399,31 @@ count broken outright."
     (should (equal (mapcar #'car (hol-lsp--outstanding-proofs))
                    '("other")))))
 
+(ert-deftest hol-lsp-a-timeout-is-outstanding-and-marked ()
+  "The pool gives up on a replay that outstays its budget and reports
+`timedout'.  Nothing is known to be wrong with the proof -- only that
+nobody waited to find out -- but it is not settled either, and the
+next pass re-uses its entry rather than forking a second attempt, so
+nothing is on its way to settle it.  Counting it with `cheated' would
+leave the tally short with no sign of why.
+
+So it goes in the same bucket as a bad verdict, and earns the mark.
+The `proved' entries are the control: the tally has to keep counting
+them, or this would pass with the arithmetic broken outright."
+  (with-temp-buffer
+    (setq hol-lsp--proof-states (make-hash-table :test #'equal))
+    (hol-lsp-tests--put "quick" "proved" 3)
+    (hol-lsp-tests--put "alsoquick" "proved" 9)
+    (should (equal (hol-lsp-proof-summary) ""))
+    (hol-lsp-tests--put "slow" "timedout" 14)
+    (should (equal (hol-lsp-proof-summary) "\u22a22/3!1 "))
+    (should (equal (mapcar #'car (hol-lsp--outstanding-proofs))
+                   '("slow")))
+    ;; Said in words rather than echoed as a status, since `timedout'
+    ;; on its own reads as a verdict on the proof.
+    (should (equal (nth 1 (car (hol-lsp--outstanding-proofs)))
+                   "not checked (timed out)"))))
+
 (ert-deftest hol-lsp-a-proof-that-moves-keeps-one-entry ()
   "An edit above a proof moves it, so the pool announces the same
 proof at one line and then another.  Keyed by position that counted it

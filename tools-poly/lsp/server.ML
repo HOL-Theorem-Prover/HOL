@@ -1742,6 +1742,29 @@ fun start {diag, dbg, warnings} = let
        delays only other publishes -- which would have blocked on the
        same channel regardless. *)
     publishLock: unit Sref.t,
+    (* Squiggles the walker drew, keyed by theorem name.  Every failure
+       a walk of that theorem has reported, accumulated.
+
+       Accumulated, and never withdrawn by a walk that saw nothing,
+       because a walk that sees nothing is not evidence of anything.
+       A goals pane asks for a state on every cursor movement, and
+       such a walk answers from wherever it happens to start and stops
+       wherever the cursor is: it stands `cheat' in for a `>-' branch
+       that has not discharged its goal and carries on, so it routinely
+       reports no failure for a proof full of them; and it resumes from
+       a snapshot cache, so whether it notices a failure at all depends
+       on how much of the proof that particular walk replayed.  The
+       same cursor position would report a failure on one visit and
+       nothing on the next.
+
+       Holding one failure per theorem and clearing it on a quiet walk
+       therefore made squiggles appear and disappear as the cursor
+       moved over an unedited buffer, and a proof with several failing
+       tactics could never show more than one of them.
+
+       What does withdraw them is `startCompile', which clears this map
+       wholesale -- and every edit goes through `startCompile'.  Fixing
+       a tactic is an edit, so that is the event that matters. *)
     walkerDiags: (string, report list) Binarymap.dict Sref.t,
     (* Squiggles for the proofs the pool has an opinion about, keyed by
        theorem name.  Deliberately *not* cleared by a fresh compile,
@@ -2255,18 +2278,24 @@ fun start {diag, dbg, warnings} = let
      passes each emitting the same "expected 'QED'" / "expected an
      expression" pair -- users don't need to see them twice.  Non-
      Error reports pass through unchanged. *)
+  (* What makes two reports the same report: where they point and what
+     they say.  Shared with the walker's accumulation below, so that
+     revisiting a failing tactic adds nothing and a second failure
+     elsewhere in the same proof adds an entry of its own. *)
+  fun reportKey (Error {pos = (s, e), msg, ...}) =
+        SOME (Int.toString s ^ ":" ^ Int.toString e ^ ":"
+              ^ encodeToString msg)
+    | reportKey _ = NONE
+
   fun dedupReports d = let
     val seen = ref (Binaryset.empty String.compare)
     val out = DArray.new (DArray.size d, Completed)
-    fun step r = case r of
-        Error {pos = (s, e), msg, ...} =>
-          let val k = Int.toString s ^ ":" ^ Int.toString e ^ ":"
-                      ^ encodeToString msg
-          in if Binaryset.member (!seen, k) then ()
-             else (seen := Binaryset.add (!seen, k);
-                   DArray.push (out, r))
-          end
-      | _ => DArray.push (out, r)
+    fun step r = case reportKey r of
+        SOME k =>
+          if Binaryset.member (!seen, k) then ()
+          else (seen := Binaryset.add (!seen, k);
+                DArray.push (out, r))
+      | NONE => DArray.push (out, r)
     val () = DArray.app step d
     in out end
 
@@ -2286,10 +2315,11 @@ fun start {diag, dbg, warnings} = let
                                 "name": "foo",
                                 "status": "checking" | "proved" | "failed"
                                         | "suspended" | "diverged"
-                                        | "cheated",
+                                        | "cheated" | "timedout",
                                 "detail": "..."}, ...]}
 
-     `detail` is present only for `failed`, `suspended` and `diverged`.
+     `detail` is present only for `failed`, `suspended`, `diverged` and
+     `timedout`.
 
      A transition stream, not a snapshot: merge each state in, keyed by
      `pos`.  The pool announces every change from the thread that causes
@@ -2331,11 +2361,17 @@ fun start {diag, dbg, warnings} = let
           | LSPExtension.Failed _ => "failed"
           | LSPExtension.Suspended _ => "suspended"
           | LSPExtension.Diverged _ => "diverged"
+          | LSPExtension.TimedOut _ => "timedout"
+    (* The budget that was hit, not how long the replay actually ran:
+       the latter is not known -- the point of the state is that nobody
+       waited to find out -- and the former is the number a reader can
+       act on, raising it being the response. *)
     fun detailOf st =
         case st of
             LSPExtension.Failed m => SOME m
           | LSPExtension.Suspended m => SOME m
           | LSPExtension.Diverged m => SOME m
+          | LSPExtension.TimedOut t => SOME (Time.fmt 0 t ^ "s")
           | _ => NONE
     fun encState ({site, offset, status} : LSPExtension.proof_state) print = (
         print "{\"pos\":"; encPosLC lines offset print;
@@ -2513,8 +2549,12 @@ fun start {diag, dbg, warnings} = let
      `store_thm_at', so nothing below it is trustworthy.  `Diverged' is
      a warning about our *model* of the file rather than about the
      file -- the proof itself went through -- so it says what is
-     actually wrong.  The remaining states are not diagnostics: they
-     say the pool has no complaint, or none yet. *)
+     actually wrong.  `TimedOut' is a warning for a third reason again:
+     nothing is known to be wrong with anything.  It says only that the
+     server stopped waiting, which a reader needs to see, because the
+     alternative is a theorem that silently never gets checked.  The
+     remaining states are not diagnostics: they say the pool has no
+     complaint, or none yet. *)
   (* `exn_to_string' comes with a leading newline and wraps, which in
      a diagnostic reads as a blank first line.  One line is what a
      gutter tooltip and a `flymake' echo want. *)
@@ -2539,6 +2579,10 @@ fun start {diag, dbg, warnings} = let
               "proof produced " ^ detail ^
               ", so what elaboration stood in for this theorem was \
               \not what the proof gives")
+      | LSPExtension.TimedOut t =>
+        SOME (false,
+              "proof not checked: still running after " ^ Time.fmt 0 t ^
+              "s, so the server stopped waiting for it")
       | _ => NONE
 
   (* The squiggles for one located failure.  A walk that stops at a
@@ -4678,24 +4722,32 @@ fun start {diag, dbg, warnings} = let
            (held,
             if not (claimCompileState ByWalk) then NONE
             else
-            (* The two `releaseCompileState` calls are on exclusive
-               paths -- raise and the `before` never runs, return and
-               the handler never does -- so the claim is dropped once
-               either way. *)
-            (let val restoreLater = !LSPExtension.captureCompileSnap ()
-                 (* `restoreLater` puts back the state this walk
-                    found, so it must run before the claim is
-                    dropped: a compile taking the state in between
-                    would have its own `restoreSnap` undone by it. *)
+            (* Both exits run `finish`, and only one of them is
+               taken.  The restore belongs on the raise path too: a
+               walk that leaves by exception has still rewound the
+               process to its theorem's snapshot, and dropping the
+               claim without putting that back hands the next compile a
+               Context belonging to somebody else's declaration.  The
+               raising walk is the one case where that is easy to
+               arrange and hard to see afterwards, since the symptom
+               lands on whoever takes the state next. *)
+            let val restoreLater = !LSPExtension.captureCompileSnap ()
+                (* `restoreLater` puts back the state this walk
+                   found, so it must run before the claim is
+                   dropped: a compile taking the state in between
+                   would have its own `restoreSnap` undone by it. *)
+                fun finish () = (restoreLater (); releaseCompileState ())
+            in
+              (let
                  val () = case snapBefore quoteStart of
-                   NONE => ()
-                 | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+                     NONE => ()
+                   | SOME s =>
+                     !LSPExtension.restoreCompileSnap (#compileSnap s)
                  val r = !LSPExtension.goalStateAtPos (ctx, thm)
                  val () = holdForTests ()
-                 val () = restoreLater ()
-             in r end
-             handle e => (releaseCompileState (); raise e))
-            before releaseCompileState ()))
+               in finish (); r end
+               handle e => (finish (); raise e))
+            end))
          in demandParentProof resumeOf resp; resp end
     end handle Empty => NONE
 
@@ -4732,19 +4784,36 @@ fun start {diag, dbg, warnings} = let
   fun releaseDrain () = Sref.update draining (fn _ => false)
   val () = drainFailures :=
     (fn uri => fn (v as {pendingFailures, ...}: file_data) => let
-        (* Nothing else may be using the compile state: not a worker
-           still replaying a proof, and not the compile itself, which
-           is elaborating and enqueueing them.  Missing the second was
-           enough on its own -- a dozen sound proofs reported failures
-           that varied from run to run. *)
+        (* The compile may not be using the compile state.  That is
+           the exclusion that was shown to matter: missing it had a
+           dozen sound proofs reporting failures that varied from run
+           to run, because a pass elaborating and enqueueing proofs
+           rewinds the very cell this walk restores.
+
+           A worker still replaying is *not* excluded, and used to be.
+           Waiting for the pool to go idle means waiting for its
+           slowest proof, so one proof that never returns held up the
+           localisation of every failure in the file -- for as long as
+           the process lived, before there was a budget, and for the
+           length of the budget after.  A failure the pool has already
+           reported is a fact, and placing it should not be hostage to
+           an unrelated proof somewhere else in the file.
+
+           What makes that safe is that a replaying worker does not
+           read what this walk rewinds.  `replay' pins its own
+           `Context' for the whole replay precisely so a pass resuming
+           part-way down the file is invisible to it, and that pin
+           covers this walk's rewind for the same reason.  The rest of
+           the snapshot is the loaded-module set and the file's
+           namespace layer, and a worker needs neither: its tactic was
+           elaborated during the pass, and only compiling tactic *text*
+           wants the layer. *)
         (* See `compileStateOwner': not `compileRunning', which asks a
            different question.  This is a cheap early-out; the walk it
            forks claims the state itself and gives up if refused. *)
         fun compiling () = compileUsingState ()
-        fun proving () = !LSPExtension.poolBusy ()
      in
-        if null (Sref.value pendingFailures)
-           orelse compiling () orelse proving ()
+        if null (Sref.value pendingFailures) orelse compiling ()
         then ()
         else if not (claimDrain ()) then ()
         else let
@@ -4788,11 +4857,25 @@ fun start {diag, dbg, warnings} = let
          | SOME tacEnd =>
            (case goalStateAtPos uri v (getLineCol lines tacEnd, !hoverWidth) of
                 SOME {failedRange = SOME pos, failedCloseRange, ...} =>
-                  (* Replaces the entry `updateProofDiag' made under the
-                     same key, rather than adding a second one beside
-                     it: this is that verdict, better placed.  Cleared
-                     when the proof comes good by the machinery that
-                     already does that.
+                  (* Written *beside* the entry `updateProofDiag' made
+                     under the same key, not over it.  The two say the
+                     same thing in two places, and both are worth
+                     having, because they are not equally certain.  The
+                     pool's verdict is a fact about the theorem: its
+                     replay ran the whole tactic and raised.  The
+                     position is the walker's, and the walker is a
+                     different execution -- it cheats past a branch
+                     that fails so it can carry on, so where it stops
+                     need not be where the replay raised.  Dropping the
+                     theorem's own squiggle for the located one traded
+                     the certain claim for the uncertain one.
+
+                     Both rebuilt here rather than appended to what is
+                     there, so that running twice for one proof leaves
+                     one of each.  The theorem's is reconstructed
+                     exactly as `updateProofDiag' writes it -- `msg'
+                     arrives already carrying its "proof failed: "
+                     prefix, which is why the two agree.
 
                      Not written at all once proof checking is off.
                      This runs on a thread of its own and takes as long
@@ -4809,6 +4892,10 @@ fun start {diag, dbg, warnings} = let
                             if !LSPExtension.deferProofs then
                               (Binarymap.insert
                                  (pd, site,
+                                  Error {hard = true,
+                                         pos = proofRange v (size text)
+                                                         offset,
+                                         msg = encString msg} ::
                                   failReports
                                     (pos, failedCloseRange, msg)), true)
                             else (pd, false))
@@ -5328,6 +5415,24 @@ fun start {diag, dbg, warnings} = let
                  ignored. *)
               logMessage ("hoverWidth = " ^ Int.toString w))
         else logMessage ("ignoring hoverWidth " ^ Int.toString w);
+      (* How long a deferred proof may run before the pool settles it as
+         `timedout' and stops waiting.  Takes effect for proofs forked
+         after this arrives; one already running keeps the budget it was
+         forked under, there being no way to move a deadline a sleeping
+         watchdog is already holding.  `0' asks for no limit.
+
+         Negative is nonsense rather than a shorthand, and is ignored:
+         read as a duration it is a deadline already past, which would
+         time out every proof the instant it started. *)
+      case JSONDecode.decode
+             (JSONDecode.fieldO "proofTimeoutMs" JSONDecode.int) params of
+        NONE => ()
+      | SOME ms =>
+        if ms < 0 then logMessage ("ignoring proofTimeoutMs " ^
+                                   Int.toString ms)
+        else (LSPExtension.proofTimeout :=
+                Time.fromMilliseconds (IntInf.fromInt ms);
+              logMessage ("proofTimeoutMs = " ^ Int.toString ms));
       (* Proof checking, switchable without a restart -- the CLI flag
          `--lsp-check-proofs' only sets the initial value.  Turning it
          on recompiles, because the proofs of a pass that has already
@@ -5415,14 +5520,21 @@ fun start {diag, dbg, warnings} = let
         (* Fold the walker's failure/success into per-file walker
            diagnostics keyed by theorem name so a user-fix removes
            the squiggle without waiting for the next compile.  Emit
-           publishDiagnostics whenever the walker's slot changes. *)
+           publishDiagnostics whenever the walker's slot changes.
+
+           Only ever added to.  A walk reporting no failure withdraws
+           nothing, for the reasons at `walkerDiags': such a walk is
+           the ordinary outcome for a proof whose branches are
+           unfinished, and says nothing about the tactics it cheated
+           past or never replayed.  The event that withdraws these is
+           an edit, by way of `startCompile'. *)
         val () = case (v_opt, resp) of
             (SOME (v: file_data),
              SOME {theorem, failedRange, failedCloseRange, error, ...}) => let
               val next = case (failedRange, error) of
                   (SOME pos, SOME msg) =>
-                    SOME (failReports (pos, failedCloseRange, msg))
-                | _ => NONE
+                    failReports (pos, failedCloseRange, msg)
+                | _ => []
               (* Decide and write in one step.  A request thread is
                  forked per `$/hol/goalState`, so two can be here at
                  once, and `startCompile` clears this map from a third:
@@ -5430,16 +5542,22 @@ fun start {diag, dbg, warnings} = let
                  entry, or writes a stale map back over the clear and
                  leaves a squiggle no recompile removes. *)
               val changed =
+                  if null next then false
+                  else
                   Sref.gen_update (#walkerDiags v)
-                    (fn wd =>
-                        case (Binarymap.peek (wd, theorem), next) of
-                            (NONE, NONE) => (wd, false)
-                          | (_, NONE) =>
-                            (#1 (Binarymap.remove (wd, theorem)), true)
-                            (* re-emitted even for the same theorem:
-                               the text it points into may have moved *)
-                          | (_, SOME r) =>
-                            (Binarymap.insert (wd, theorem, r), true))
+                    (fn wd => let
+                        val had = getOpt (Binarymap.peek (wd, theorem), [])
+                        val keys = List.mapPartial reportKey had
+                        fun known r =
+                            case reportKey r of
+                                NONE => false
+                              | SOME k => List.exists (fn k' => k' = k) keys
+                        val fresh = List.filter (not o known) next
+                      in
+                        if null fresh then (wd, false)
+                        else (Binarymap.insert (wd, theorem, had @ fresh),
+                              true)
+                      end)
             in if changed then publishAllDiagnostics uri v else () end
           | _ => ()
         val lines = case v_opt of

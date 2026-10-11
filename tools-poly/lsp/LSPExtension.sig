@@ -386,7 +386,7 @@ val theorySealed: (string -> bool) ref
               dropped, which is right, because an edit above it means its
               recorded position is about to be stale.
 
-   The remaining three are the pool's own:
+   The rest are the pool's own:
 
      Checking  a worker is on it
      Proved    the replay went through
@@ -400,6 +400,13 @@ val theorySealed: (string -> bool) ref
      Diverged  the replay went through but produced extra hypotheses for
                some other reason.  Everything elaborated below this
                declaration is suspect.
+     TimedOut  the replay was still running when its budget ran out, so
+               nobody knows whether the proof goes through.  Not a
+               verdict on the proof: a report that we stopped asking.
+               It exists because the alternative -- leaving the entry
+               `Checking' -- reads exactly like a proof that is merely
+               slow, and a pool that never settles holds up everything
+               downstream that waits for it to.
 
    Suspended and Failed want opposite treatment downstream, which is why
    they are separate states rather than one "did not match" bucket.
@@ -420,17 +427,33 @@ val theorySealed: (string -> bool) ref
    cheating it, since its result is not predictable from its statement.
 
    So a caller assembling a display walks its own list of declarations
-   and consults the pool: an entry gives one of the last five, and
+   and consults the pool: an entry gives one of the pool's own, and
    absence means Unseen or Cheated according to whether elaboration has
    reached that declaration.
    ---------------------------------------------------------------------- *)
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string
+       | TimedOut of Time.time
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs: bool ref
+(* How long a replay may run before the pool stops waiting on it and
+   reports `TimedOut'.  `Time.zeroTime' means no limit, which is the
+   behaviour this had before there was a budget at all.
+
+   A budget is not an optimisation.  A replay that never returns leaves
+   its entry `Checking' for the life of the process, and `poolBusy'
+   then answers yes for ever -- which stops the server localising *any*
+   failed proof in the file onto the tactic that failed, since that walk
+   restores process-global state and may not run while a worker might
+   be reading it.  One wedged proof otherwise silences the diagnostics
+   for every other proof beside it.
+
+   Set from `$/setConfig`'s `proofTimeoutMs`, or from
+   `HOL_LSP_PROOF_TIMEOUT_MS` in the environment. *)
+val proofTimeout: Time.time ref
 (* Set by the compile driver while it retries a declaration whose tactic
    would not compile, with the proof body replaced by `cheat`.  Such a
    proof must not be enqueued: replaying `cheat` would report `Proved`

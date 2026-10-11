@@ -51,15 +51,16 @@ fun tryLoad f =
    print ("  ok   " ^ f ^ "\n"))
   handle e => note f e
 
-(* hol.ML loads `Future' before the file that needs it, so do the same
-   here.  `TacticParse' needs no load: `poly-init2' compiles it into this
+(* hol.ML loads these before the files that need them, so do the same
+   here, and in the same order: `Timeout' names `Event_Timer'.
+   `TacticParse' needs no load: `poly-init2' compiles it into this
    executable, and `Database' -- which `help_init' reads its index
    through -- is already in the namespace, because the prelude that
    started this session `use'd it. *)
 fun tryMeta m =
   (Meta.load m; print ("  ok   " ^ m ^ " (heap)\n")) handle e => note m e
 
-val () = tryMeta "Future"
+val () = List.app tryMeta ["Future", "Event_Timer", "Timeout"]
 val () = List.app tryLoad
   ["deferred_proofs.ML", "pretty_printers_init.ML", "defnbase_init.ML",
    "hover_quote_init.ML", "tactic_steps.ML", "tactic_walker.ML",

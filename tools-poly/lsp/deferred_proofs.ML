@@ -121,16 +121,36 @@ fun verdict g th =
    compile is in progress, and a pass resuming part-way down the file
    rewinds it: the worker then cannot find a constant its own file
    defines and reports a sound proof as failed, differently on each
-   keystroke.  Pinned here, the rewind is invisible to it. *)
-fun replay ctxt g tac =
-    Context.with_context ctxt
-      (fn () =>
-          verdict g (asReplay (fn () =>
-                                  Tactical.TAC_PROOF_in ctxt (g, tac))))
-      ()
-    handle e =>
-           if Exn.is_interrupt e then Exn.reraise e
-           else LSPExtension.Failed (Feedback.exn_to_string e)
+   keystroke.  Pinned here, the rewind is invisible to it.
+
+   The budget is read once, here, rather than per use: it is what the
+   verdict reports, and a `$/setConfig' arriving mid-replay would
+   otherwise have the report name a limit this replay was never run
+   under.
+
+   `Timeout.apply' tells its own timer firing apart from a group
+   cancellation arriving -- it cancels the timer before deciding, and
+   calls it a timeout only if the timer had already gone off -- so this
+   composes with `Future.cancel' rather than stealing from it: an edit
+   still interrupts a proof, and that proof is still reported
+   `Cheated'.  Hence `Timeout.TIMEOUT' and the interrupt get separate
+   arms, and the order between them does not matter.
+
+   A zero budget asks for the behaviour this had before there was a
+   budget, which is the call without the wrapper rather than
+   `Timeout.apply' with a deadline already in the past. *)
+fun replay ctxt g tac = let
+  val budget = !LSPExtension.proofTimeout
+  fun prove () = Tactical.TAC_PROOF_in ctxt (g, tac)
+  fun go () = if budget = Time.zeroTime then prove ()
+              else Timeout.apply budget prove ()
+in
+  Context.with_context ctxt (fn () => verdict g (asReplay go)) ()
+  handle Timeout.TIMEOUT _ => LSPExtension.TimedOut budget
+       | e =>
+         if Exn.is_interrupt e then Exn.reraise e
+         else LSPExtension.Failed (Feedback.exn_to_string e)
+end
 
 (* The checker found this proof suspends, so elaboration cannot stand in
    `mk_oracle_thm g` for it and still be right about what the
@@ -237,13 +257,36 @@ fun install () = Tactical.set_prover prover
    the task, and at that point the future is not yet fulfilled, so peek
    still says NONE and every report would read `Checking`.
 
-   Both refs are written by the one worker and read by whoever is
-   reporting, and each holds an immutable value, so the worst a racing
-   reader sees is the previous one -- and another announcement follows. *)
+   `result` is read lock-free by whoever is reporting, and holds an
+   immutable value, so the worst a racing reader sees is the previous
+   one -- and another announcement follows.  It is *written* under its
+   own lock, because the worker is no longer the only writer: the
+   watchdog at `forkAt` writes it too when a replay outstays its
+   budget, and whichever of the two gets there first has to be the one
+   that stands.  The lock is the entry's own, so this never meets the
+   `entries` lock. *)
 type entry = {site : string,
               offset : int,
-              result : LSPExtension.proof_status option ref,
-              future : LSPExtension.proof_status Future.future}
+              result : LSPExtension.proof_status option Sref.t,
+              future : LSPExtension.proof_status Future.future,
+              (* The budget's backstop, kept so that dropping the entry
+                 can disarm it.  A dropped proof is announced `Cheated`
+                 and is no longer the pool's; a timer still holding its
+                 site would announce `TimedOut` for it later -- and, if
+                 the next pass has re-forked the proof by then, against
+                 a site that now has an entry of its own.
+
+                 NONE when the budget is off, there being nothing
+                 armed. *)
+              timer : Event_Timer.request option}
+
+(* Record a verdict for an entry, and say whether this caller is the one
+   that recorded it.  A loser reports nothing: the winner's
+   announcement has already gone, and a second one would contradict
+   it. *)
+fun claim result st =
+    Sref.gen_update result
+      (fn r => case r of SOME _ => (r, false) | NONE => (SOME st, true))
 
 fun offsetOf ({offset, ...} : entry) = offset
 
@@ -274,20 +317,51 @@ fun statusAs status (es : entry list) =
     List.map (fn e => {site = #site e, offset = #offset e,
                        status = status}) es
 
+(* Stop an entry's backstop from reporting.  Cancelling the timer is
+   the first half and loses a race: a timer that has already fired has
+   a `settle` on its way, and `Event_Timer.cancel` cannot recall it.
+   So the verdict is claimed here too, which is the thing `settle`
+   needs and will not get.  `Cheated` is what it is claimed as, since
+   that is what the caller is about to announce.
+
+   Silent: announcing is the caller's, and it announces the whole
+   batch in one message. *)
+fun disarm ({timer, result, ...} : entry) =
+    ((case timer of NONE => () | SOME r => ignore (Event_Timer.cancel r));
+     ignore (claim result LSPExtension.Cheated))
+
 (* Cancel after removing from `entries`: an interrupted worker needs its
    group cancelled whether or not we still track it, and a caller that
    cancelled first would leave a window in which the entry is live but
    its future is already dead. *)
 fun discard (doomed : entry list) =
-    (List.app (Future.cancel o #future) doomed;
+    (List.app disarm doomed;
+     List.app (Future.cancel o #future) doomed;
      announceAll (statusAs LSPExtension.Cheated doomed))
+
+(* How long after a replay's own budget the pool stops believing the
+   replay will report at all.  `Timeout.apply', inside `replay`,
+   interrupts the tactic and returns `TimedOut` by itself, and that is
+   the path nearly every overrun takes; the grace period is what keeps
+   the watchdog below from racing it and reporting first for a proof
+   that was about to answer cleanly.
+
+   The watchdog is not redundant with the budget, because an interrupt
+   can be swallowed.  Poly delivers it as an exception, and HOL tactics
+   that catch broadly -- `handle _ =>`, or `handle HOL_ERR _ =>` around
+   something that re-raises -- can absorb it and carry on.  That is why
+   the compile thread does not use `Thread.interrupt` at all but a flag
+   it polls (see `server.ML`'s note on `stopCompile`).  A worker has no
+   such poll to offer, so the pool stops waiting on it instead: the
+   entry settles whether or not the thread does. *)
+val watchdogGrace = Time.fromSeconds 5
 
 fun forkAt ({site, offset, run} : LSPExtension.deferred) =
     let
       val group = Future.new_group NONE
       val params = {name = "lsp_proof:" ^ site, group = SOME group,
                     deps = [], pri = 0, interrupts = true}
-      val result = ref NONE
+      val result = Sref.new NONE
       (* Announce the new state on the worker that settled it, so the
          caller need not poll, recording it first for the reasons given
          at `entry`.  An interrupt is not announced: whoever cancelled
@@ -296,13 +370,55 @@ fun forkAt ({site, offset, run} : LSPExtension.deferred) =
           let
             val r = run ()
           in
-            result := SOME r;
-            announce {site = site, offset = offset, status = r};
+            if claim result r
+            then announce {site = site, offset = offset, status = r}
+            else ();
             r
           end
+      val future = Portable.singleton (Future.forks params) announcing
+      (* Settle the entry if nothing else has by the time the budget and
+         its grace are up.
+
+         `Event_Timer` rather than a thread that sleeps, because the
+         common case is a file's worth of proofs forked at once and
+         none of them overrunning: a thread apiece would be one sleeping
+         thread per theorem, forked again every time a statement edit
+         re-elaborates the file.  The timer has one manager thread for
+         the whole process, and `Timeout.apply` is already using it.
+
+         Not a pool task either: it must not occupy a worker slot,
+         since the proof it is waiting on is holding one already, and a
+         pool whose every slot was waiting would never run the proofs
+         being waited for.
+
+         The work does go on a thread of its own, forked when the timer
+         fires.  Announcing blocks until the client has read the
+         previous frame, and the manager thread is what every other
+         timeout in the process is queued behind -- including the
+         `Timeout.apply` deadlines of the other replays.
+
+         Cancelled after the verdict is recorded and announced, not
+         before: cancelling is a courtesy to a thread that may ignore
+         it, and the report must not depend on it being taken. *)
+      fun settle budget () =
+          if Future.is_finished future then ()
+          else let val st = LSPExtension.TimedOut budget in
+                 if claim result st
+                 then (announce {site = site, offset = offset, status = st};
+                       Future.cancel future)
+                 else ()
+               end
+      fun watch budget =
+          Event_Timer.request (Time.now () + budget + watchdogGrace)
+            (fn () => if Future.is_finished future then ()
+                      else ignore (Thread.fork (settle budget, [])))
+      val timer =
+          let val t = !LSPExtension.proofTimeout in
+            if t = Time.zeroTime then NONE else SOME (watch t)
+          end
     in
-      {site = site, offset = offset, result = result,
-       future = Portable.singleton (Future.forks params) announcing}
+      {site = site, offset = offset, result = result, future = future,
+       timer = timer}
     end
 
 fun siteOf ({site, ...} : entry) = site
@@ -321,7 +437,7 @@ fun itemSite ({site, ...} : LSPExtension.deferred) = site
    above its resume point survive the pass untouched, so their numbers
    are already assigned and this pass's items carry on from there. *)
 fun statusOf ({future, result, ...} : entry) =
-    case !result of
+    case Sref.value result of
         SOME st => st
       | NONE =>
     case Future.peek future of
@@ -410,7 +526,8 @@ fun check {resumeFrom, keptFrom, bytes} =
                      question.  Anything else the pass has orphaned. *)
                   fun moveTo off (e : entry) =
                       {site = #site e, offset = off,
-                       result = #result e, future = #future e}
+                       result = #result e, future = #future e,
+                       timer = #timer e}
                   (* A pass that stopped early did not re-enqueue what
                      it never reached, but those are still the right
                      proofs: keep them, moved to where the edit has put
@@ -496,3 +613,16 @@ val () = LSPExtension.poolBusy := DeferredProofs.anyChecking;
 val () = LSPExtension.cancelProofsAtOrAfter := DeferredProofs.cancelAtOrAfter;
 val () = LSPExtension.cancelProofAt := DeferredProofs.cancelAt;
 val () = LSPExtension.cancelAllProofs := DeferredProofs.cancelAll;
+
+(* The budget's environment default, read once here rather than on every
+   replay.  `$/setConfig` writes the same ref afterwards, so a client
+   that sets `proofTimeoutMs` wins over the environment, which is the
+   order the other knobs use.  An unparseable value is ignored rather
+   than taken as zero: "no limit" is a thing a reader has to ask for. *)
+val () =
+    case Option.mapPartial Int.fromString
+           (OS.Process.getEnv "HOL_LSP_PROOF_TIMEOUT_MS") of
+        NONE => ()
+      | SOME ms =>
+        LSPExtension.proofTimeout :=
+          Time.fromMilliseconds (IntInf.fromInt (Int.max (0, ms)));

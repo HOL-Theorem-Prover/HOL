@@ -289,10 +289,12 @@ val theorySealed : (string -> bool) ref = ref (fn _ => false)
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string
+       | TimedOut of Time.time
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs = ref false
+val proofTimeout = ref (Time.fromSeconds 120)
 val cheatSubstituted = ref false
 
 local
