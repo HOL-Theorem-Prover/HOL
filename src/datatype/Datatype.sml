@@ -657,6 +657,64 @@ fun annotate ((name, form) : ParseDatatype.AST) =
 fun attrs_of (astl : ParseDatatype.annotatedAST list) =
     List.concat (List.map (List.map #1 o #attrs) astl)
 
+(* A type this declaration introduces has no parameters of its own to be
+   applied to.  It is written as a bare name, and the arguments it ends
+   up taking are whatever type variables the declaration turns out to
+   mention, in an order the declaration itself fixes -- so there is
+   nothing for an occurrence of it to say, and arguments written on one
+   have nowhere to be recorded.  They used to be dropped in silence:
+
+       ty = Lf 'a | Nd (('a # 'a) ty)
+
+   gave Nd the type `'a ty -> 'a ty`, not the `('a # 'a) ty -> 'a ty`
+   the notation suggests, and a type variable occurring only inside the
+   discarded arguments vanished with them.  The notation misleads, so a
+   specification carrying it is refused.
+
+   The refusal belongs here rather than in the parser.  ParseDatatype
+   reports what was written, arguments and all, because its other
+   readers want them -- EmitTeX prints a declaration's types, and prints
+   a recursive occurrence applied.  It is only as a specification to
+   build a type from that the arguments are a mistake, so it is this
+   package that reads them as one.
+
+   A quotation is parsed with the declaration's own names hidden from
+   the grammar, so an unqualified operator here is necessarily one of
+   them; the same name qualified with the theory being built names the
+   same type, and is caught too. *)
+fun check_no_self_args astl =
+    let
+      val mine = List.map #name astl
+      fun is_self (dTyop {Tyop, Thy, Args}) =
+            not (null Args) andalso Lib.mem Tyop mine andalso
+            (case Thy of
+                 NONE => true
+               | SOME thy => thy = Theory.current_theory())
+        | is_self _ = false
+      fun complain site nm =
+          raise ERR "check_no_self_args"
+                (nm ^ " is being defined here, so it cannot be applied \
+                 \to type arguments, but is, in " ^ site ^
+                 "; the arguments it takes are the type variables this \
+                 \declaration mentions, so write " ^ nm ^ " on its own")
+      fun chk site pty =
+          case pty of
+              dTyop {Tyop, Args, ...} =>
+                if is_self pty then complain site Tyop
+                else List.app (chk site) Args
+            | _ => ()
+      fun chk_form form =
+          case form of
+              Constructors cs =>
+                List.app
+                  (fn (c, ptys) => List.app (chk ("constructor " ^ c)) ptys)
+                  cs
+            | Record flds =>
+                List.app (fn (f, pty) => chk ("field " ^ f) pty) flds
+    in
+      List.app (chk_form o #form) astl
+    end
+
 (* An enumeration is what EnumType builds, from a representation in the
    numbers.  Everything else is the BNF package's, whether it recurses or
    not: a specification that does not recurse is a copy of its functor,
@@ -669,6 +727,7 @@ fun attrs_of (astl : ParseDatatype.annotatedAST list) =
    the fixed point nothing to be taken of. *)
 fun dispatch astl =
     let
+      val () = check_no_self_args astl
       val plain = List.map unannotate astl
     in
       if is_enum_type_spec plain then

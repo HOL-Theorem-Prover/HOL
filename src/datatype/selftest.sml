@@ -215,6 +215,45 @@ val _ = shouldfail {
     } `u3 = d3 of u4 u2 u1 ;
        u4 = d4 of u3 u1 `
 
+(* A type being defined has no parameters of its own to be applied to:
+   it is written as a bare name, and the arguments it ends up taking
+   are whatever type variables the declaration turns out to mention.
+   Arguments written on a recursive occurrence had nowhere to be
+   recorded and were dropped in silence, so this gave Nd the type
+   `'a sa -> 'a sa` rather than the `('a # 'a) sa -> 'a sa` the
+   notation suggests.  The notation misleads, so it is rejected. *)
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype,
+      printarg = (fn _ => "reject sa = Lf 'a | Nd (('a # 'a) sa)"),
+      printresult = (fn _ => "<type defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `sa = Lf 'a | Nd (('a # 'a) sa)`
+
+(* the same name qualified with the theory being built names the type
+   being defined, so it is held to the same rule *)
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype,
+      printarg = (fn _ => "reject a qualified self-application"),
+      printresult = (fn _ => "<type defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `sa = Lf 'a | Nd (('a # 'a) scratch$sa)`
+
+(* and the spelling that does work: the recursive occurrence bare, with
+   the parameter coming from the type variables that are mentioned *)
+val _ = tprint "recursive occurrence without arguments"
+val _ = let
+  val _ = testutils.quietly Datatype `sa = Lf 'a | Nd sa sa`
+  val ndty = type_of (Parse.Term `Nd`)
+  (* both of Nd's arguments are the type being declared, and so is its
+     result; which type variable that type carries is not the point *)
+  val (arg1, rest) = dom_rng ndty
+  val (arg2, res) = dom_rng rest
+in
+  if arg1 = res andalso arg2 = res andalso #1 (dest_type res) = "sa" then
+    OK()
+  else die ("FAILED: Nd : " ^ Parse.type_to_string ndty)
+end
+
 (* An AST list built by hand, rather than parsed from a quotation, can
    name a type an earlier call defined and leave it unqualified:
    Import.CTy in examples/l3-machine-code does exactly that, and armScript

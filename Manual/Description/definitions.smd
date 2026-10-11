@@ -204,6 +204,25 @@ ty-spec          ::= ( hol_type )  |  atomic-type
 record-spec      ::= <| [ident : hol_type ;]* ident : hol_type ;? |>
 ```
 
+A type that the declaration is introducing is written as a bare name
+wherever it occurs, and is never applied to type arguments.  This holds
+inside a parenthesised `hol_type` and inside a record field's type as
+much as it does for an `atomic-type`.  Such a name has no parameters of
+its own to be applied to: the arguments the new type ends up taking are
+determined by the type variables the declaration mentions, so they are
+not written at the occurrence.  For example
+
+    Datatype: tree = Lf 'a | Nd tree tree
+    End
+
+declares a unary `tree`, with `Lf : 'a -> 'a tree` and
+`Nd : 'a tree -> 'a tree -> 'a tree`; the recursive occurrences are
+written `tree`, not `'a tree`.  Writing arguments on one of the new
+names, as in `Nd (('a # 'a) tree)`, is an error.  A bare occurrence
+nested inside some other type operator, as in `Nd (tree list)`, is of
+course still allowed: it is the new name itself that takes no
+arguments, not the type built around it.
+
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!maintenance of TypeBase@maintenance of \ml{TypeBase}}
 \index{TypeBase@\ml{TypeBase}}
 HOL maintains an underlying database of datatype facts called the

@@ -868,6 +868,25 @@ val _ = List.app pdtest [
 
 val _ = List.app (ignore o pdfail) [("h", "C = foo bool->bool")]
 
+(* A type the declaration is introducing has no parameters of its own
+   to be applied to, so arguments written on an occurrence of one say
+   nothing.  Deciding that is the datatype package's business and not
+   the parser's -- the parser reports what was written, arguments and
+   all, and src/datatype/selftest.sml has the rejection.  Other readers
+   of this AST want those arguments: EmitTeX prints them. *)
+fun applied s = [("ty", Constructors [("N", []), ("C", [s])])]
+val _ = List.app pdtest [
+  ("h", "ty = N | C (bool ty)",
+   applied (dTyop{Thy = NONE, Tyop = "ty", Args = [vbool]})),
+  ("p", "ty = N | C of bool ty",
+   applied (dTyop{Thy = NONE, Tyop = "ty", Args = [vbool]})),
+  (* and what is not an application: juxtaposition is argument
+     sequencing, and a bare occurrence nested inside another operator
+     carries no arguments of its own *)
+  ("h", "ty = N | C (ty -> ty)",
+   applied (recop "ty" -=> recop "ty"))
+]
+
 (* the attributes a declaration may carry, which say what the datatype
    package should call the constants it generates *)
 fun adparse s = hparse_annotated mintyg [QUOTE s]
