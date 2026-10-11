@@ -19,7 +19,13 @@
    actually serving. *)
 
 val _ = Meta.load "RawTheoryReader"
-val _ = Meta.load "theorystats"
+(* `theoryfiles' rather than `theorystats': the latter's signature
+   exposes two `Graph' instantiations, so loading it elaborates them --
+   0.146s, paid at every server start for one 25-line directory scan,
+   and the single largest item in LSP startup.  `theoryfiles' holds
+   just the scan.  (`RawTheoryReader' above is already in `hol.state',
+   so that load is free; it is still needed under `hol.state0'.) *)
+val _ = Meta.load "theoryfiles"
 
 local
   fun lower s = CharVector.map Char.toLower s
@@ -108,7 +114,7 @@ local
     val dirs = "." :: !Meta.loadPath
     val now = Time.now ()
     fun scan () = let
-      val m = List.foldl (fn (d, m) => theorystats.find_theory_files_action d m
+      val m = List.foldl (fn (d, m) => theoryfiles.find_theory_files_action d m
                                        handle _ => m)
                          Symtab.empty dirs
       val found = Symtab.dest m
