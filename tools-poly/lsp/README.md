@@ -12,6 +12,20 @@ practical guide to trying it out; the protocol details live in
   `PolyML.compiler`.  Compilation is execution: every SML top-level
   declaration is type-checked, run, and its HOL side-effects (theory
   segment, DB, TypeBase, simpsets, grammars) applied to live state.
+- **A file that exits takes the server with it, and is told so.**
+  Because compiling is running, a top-level `OS.Process.exit` in the
+  opened file ends the server process: an exit is not an exception, so
+  nothing in the compile's handlers can catch it.  The server does not
+  try to survive that -- shadowing `OS` beneath the compile would cover
+  the buffer's own source text and not the library code it calls, and
+  `testutils.die` exits too.  What it does instead is say why before it
+  goes: a line on stderr, a `window/showMessage` naming the file and
+  roughly where it got to, and a `$/compileInterrupted` so a client is
+  not left waiting on a `$/compileCompleted` that will never come.
+  Without that the client sees only EOF, and one that restarts on close
+  loads another heap to die the same way.  The workaround while editing
+  such a file is to comment the exit out.  (gh #2077.  `$/eval` is not
+  covered: an exit there is one the user just typed.)
 - **Fast-oracle prover swap.**  `holide.ML` replaces `Tactical.set_prover`
   with `fn (t, _) => mk_oracle_thm "fast_proof" t`.  `prove(term, tac)`
   never actually calls `tac`; the theorem is minted with a

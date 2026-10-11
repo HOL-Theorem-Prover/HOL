@@ -957,7 +957,9 @@ fun recv (cvar, mutex, r) =
 
 end
 
-type connection = {recv: unit -> JSON.value message, send: encode message -> unit}
+type connection = {recv: unit -> JSON.value message,
+                   send: encode message -> unit,
+                   drain: unit -> unit}
 
 (* Hijack the real stdOut for our JSON-RPC frames, and re-point
    TextIO.stdOut at TextIO.stdErr so anything that writes via
@@ -1014,9 +1016,44 @@ fun stdioConnection (): connection = let
     in fn () => Channel.recv recv end
 
   val lspOut = claimStdout ()
+  (* Frames go out on a thread of their own, so a `send' that returns
+     says only that the writer has been handed the message -- not that
+     any of it has reached the client.  Everywhere but one place that
+     is exactly right.  The exception is a process about to die: a
+     frame still held by a thread that will never run again is the same
+     as a frame never sent, and the `atExit' notice below is worth
+     nothing if it goes that way.  `drain' is how that one caller waits
+     for the writer to finish what it has been given.
+
+     `owed' is what the writer has taken on and not yet flushed.  It is
+     bumped by `send' before the handoff and dropped by the writer
+     after the flush -- on the failure arm too, or a message the
+     encoder choked on would be owed for ever.  It floors at zero so
+     that a drop with no matching bump (a `recv' that raised, which the
+     same handler covers) cannot leave `drain' waiting on a debt that
+     will never be paid. *)
+  val wlock = Mutex.mutex ()
+  val wcond = ConditionVar.conditionVar ()
+  val owed = ref 0
+  fun owe d = Multithreading.synchronized "Conn.owed" wlock (fn () => (
+        owed := Int.max (0, !owed + d); ConditionVar.broadcast wcond))
+  (* Bounded, and deliberately: a client that has stopped reading
+     wedges the writer, and an exit must not become a hang because of
+     it.  The deadline is tested here rather than read off
+     `waitUntil's result, which keeps this correct whichever way that
+     flag runs. *)
+  fun drain () = Multithreading.synchronized "Conn.drain" wlock (fn () => let
+    val deadline = Time.+ (Time.now (), Time.fromMilliseconds 2000)
+    fun loop () =
+      if !owed <= 0 then ()
+      else if Time.>= (Time.now (), deadline) then ()
+      else (ConditionVar.waitUntil (wcond, wlock, deadline); loop ())
+    in loop () end)
   val send = let
     val (send, recv) = Channel.channel ()
-    fun writerThread () = let
+    (* The recursive call sits outside the handler, so the loop is a
+       tail call and does not stack a handler frame per message. *)
+    fun writerThread () = ((let
       val msg: encode message = Channel.recv recv
       val buf = ref []
       val () = encMessage msg (fn s => buf := s :: !buf)
@@ -1024,18 +1061,18 @@ fun stdioConnection (): connection = let
         | write (n, [], acc) =
           TextIO.StreamIO.output (lspOut,
             String.concat ("Content-Length: " :: Int.toString n :: "\r\n\r\n" :: acc))
-      in write (0, !buf, []); TextIO.StreamIO.flushOut lspOut;
-         writerThread () end
+      in write (0, !buf, []); TextIO.StreamIO.flushOut lspOut; owe ~1 end
        (* An encode-time exception must not kill the writer: the
           channel would stay Full and every send would hang. *)
        handle e => (
          TextIO.output (TextIO.stdErr,
            "[LSP-writer] dropping message; encode raised: " ^ exnMessage e ^ "\n");
          TextIO.flushOut TextIO.stdErr;
-         writerThread ())
+         owe ~1));
+      writerThread ())
     val _ = Thread.fork (writerThread, [])
-    in Channel.send send end
-  in {send = send, recv = recv} end
+    in fn v => (owe 1; Channel.send send v) end
+  in {send = send, recv = recv, drain = drain} end
 
 exception ProtocolError
 
@@ -1090,7 +1127,7 @@ in
   print "}"
 end
 
-fun initialize ({send, recv}:connection) capabilitiesFor = let
+fun initialize ({send, recv, ...}:connection) capabilitiesFor = let
   fun init () =
     case recv () of
       Request {method = "initialize", id, params} => (id, params)
@@ -1239,7 +1276,7 @@ fun augmentLoadPathForUri uri = case uriToPath uri of
 
 fun start {diag, dbg, warnings} = let
   val _ = PolyML.print_depth 100
-  val conn as {send, recv} = stdioConnection ()
+  val conn as {send, recv, drain} = stdioConnection ()
   (* LSP 3.17 position encoding.  Server-side buffers and offsets count
      bytes, so utf-8 is what this server would rather speak: it costs
      nothing and an edit crossing a multi-byte character (`⇒`, `∧`)
@@ -1326,6 +1363,46 @@ fun start {diag, dbg, warnings} = let
      client is initialized has nowhere to go. *)
   val _ = List.app (fn w => (logMessage w; warnUser w)) warnings
 
+  (* A file the server compiles can end the process under it: compiling
+     a file runs it, and `OS.Process.exit' is not an exception, so
+     nothing in the compile's handlers ever sees one.  `compileThread'
+     arms the notice below for exactly as long as it is compiling, so
+     `NONE' means no pass was running and there is nothing to say.
+
+     `atExit' runs on the thread that called `exit', and other threads
+     are still scheduled while it runs, so the notice can go out and
+     `drain' can wait for the writer to put it on the wire before the
+     process goes.  See gh #2077.
+
+     Which thread that is decides whether there is anything to say.
+     The file's exit runs on the compile thread, so the notice is
+     armed with the thread that armed it and fires only there.  The
+     server's own exit -- a `shutdown'/`exit' pair, a client that
+     dropped the pipe -- comes off the main thread, and it can perfectly
+     well arrive with a pass still running: without the test, every
+     editor window closed mid-compile would be told its file called
+     `OS.Process.exit'.
+
+     The pass's `cancelled' ref comes along as its identity.
+     `stopCompile' does not wait for the thread it supersedes, so a
+     pass on its way out would otherwise disarm the notice of the pass
+     that replaced it, and that loss would show up as exactly the
+     silence this is here to remove. *)
+  val onUnexpectedExit
+        : (bool ref * Thread.thread * (unit -> unit)) option ref = ref NONE
+  val reportingExit = ref false
+  val _ = OS.Process.atExit (fn () =>
+    case !onUnexpectedExit of
+        NONE => ()
+      | SOME (_, owner, report) =>
+        (* An exit raised from inside the notice must not re-enter it,
+           and a notice that raises must not make the shutdown worse
+           than the one it was explaining. *)
+        if !reportingExit orelse not (Thread.equal (Thread.self (), owner))
+        then ()
+        else (reportingExit := true;
+              (report (); drain ()) handle _ => ()))
+
   (* A server process is bound to the first file it opens.  A second
      file cannot be served correctly: its ancestors have to be in the
      theory graph, only loading puts them there, and loading a theory
@@ -1340,9 +1417,11 @@ fun start {diag, dbg, warnings} = let
      nonsense.
 
      Only `*Script.sml' takes the binding.  A `.sig' or an ordinary
-     `.sml' declares no theory of its own, and editors routinely open
-     them alongside a script -- the hol4-vscode selector matches the
-     whole language, so it sends every one of them.  Letting those
+     `.sml' declares no theory of its own, and a client can sync them
+     alongside a script: the shipped ones attach only to scripts
+     (hol4-vscode gates on `isHolScript', and `holscript-mode' claims
+     only `*Script.sml'), but a generic SML client -- or the scripted one
+     the protocol suite uses -- syncs whatever is open.  Letting those
      claim the process would hand it to whichever file the client
      happened to sync first and then report the user's actual script
      as the offender.
@@ -3429,6 +3508,47 @@ fun start {diag, dbg, warnings} = let
          reused tail is found in the previous pass's records. *)
       val lastDecEnd = ref ~1
       val lastPos = ref resumeStart
+      (* Armed for as long as this pass runs, and read only if the pass
+         never finishes because the file ended the process.  What the
+         user would otherwise get is EOF and nothing else -- and from a
+         client that restarts on close, another heap loaded to die the
+         same way, several times over, still silently.
+
+         Not a promise to survive the exit.  Surviving would mean
+         shadowing `OS' beneath the file's own compile, and that covers
+         the buffer's source text only: the library code it calls keeps
+         the real `exit' either way -- `testutils.die' is one, and
+         `Theory' is another when it cannot read the keywords file.
+         Saying what happened covers all of them. *)
+      fun exitNotice () = let
+        (* `lastPos' is where the last declaration that *finished*
+           ended, so it lands at the start of the one that exited:
+           "from line N onwards", not "after line N", which would point
+           past the culprit. *)
+        val (ln, _) = getLineCol lines (!lastPos)
+        val msg = String.concat [
+          "hol lsp is exiting: ", uri, " called OS.Process.exit -- ",
+          "directly, or through something that does -- while the ",
+          "server was compiling it, somewhere from line ",
+          Int.toString (ln + 1), " onwards",
+          ".  Compiling a file runs it, and a process exit is not ",
+          "something the compile can catch.  Comment the top-level ",
+          "exit out while you edit this file."]
+        in
+          (* stderr first, and unconditionally: it needs no wire and no
+             drain, so it survives a client that has already gone. *)
+          TextIO.output (TextIO.stdErr, "[hol lsp] " ^ msg ^ "\n");
+          TextIO.flushOut TextIO.stdErr;
+          logMessage msg;
+          warnUser msg;
+          (* `$/compileCompleted' is never coming.  Close the pass off
+             so a client waiting on one stops waiting. *)
+          sendProgressEnd ();
+          send (mkNotif "$/compileInterrupted" (fn print => (
+            print "{\"uri\":"; encString uri print; print "}")))
+        end
+      val () = onUnexpectedExit :=
+                 SOME (cancelled, Thread.self (), exitNotice)
       (* Abort a doomed dec: if the file's `Libs` / `Ancestors`
          `open`s fail (e.g., a dependency of an external HOL project
          hasn't been built yet, so `open jrhUtils` fails at the top),
@@ -4062,6 +4182,14 @@ fun start {diag, dbg, warnings} = let
          would otherwise be a compile that produced nothing and said
          nothing. *)
       handle e => logMessage ("compile thread died: " ^ exnMessage e);
+      (* Reached however the pass ended, so the exit notice is disarmed
+         on every path a pass can leave by -- and an exit after this
+         point is the server's own.  Only if the notice is still this
+         pass's: see where it is armed. *)
+      (case !onUnexpectedExit of
+           SOME (pass, _, _) =>
+             if pass = cancelled then onUnexpectedExit := NONE else ()
+         | NONE => ());
       (* Whatever happened, this pass is no longer rewinding the
          process.  Ordinarily released before the drain above; this is
          the backstop for every other way out. *)

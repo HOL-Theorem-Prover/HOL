@@ -9102,6 +9102,16 @@ def test_abrupt_disconnect_during_compile_exits():
                     "server exited with a compile in flight\n" +
                     c.stderr_text()[-2000:])
         assert_eq(c.p.returncode, 0, "exit code with a compile in flight")
+        # This is the server's own exit, not the file's.  The notice
+        # that explains a file-driven exit (see
+        # `toplevel_exit_says_why') is armed right now, and fires only
+        # on the thread that armed it -- without that test, closing an
+        # editor window mid-compile would tell the user their file
+        # called `OS.Process.exit'.
+        blamed = [m["params"]["message"] for m in c.messages_since(0)[0]
+                  if m.get("method") == "window/showMessage"
+                  and "OS.Process.exit" in m["params"]["message"]]
+        assert_eq(blamed, [], "the file was not blamed for our own exit")
     finally:
         c.close(expect_exit=False)
 
@@ -9167,6 +9177,68 @@ def test_disconnect_before_handshake_exits_cleanly():
                   c.stderr_text()[-2000:])
     finally:
         c.close(expect_exit=False)
+
+
+def test_toplevel_exit_says_why_before_it_goes():
+    """A file whose top level calls `OS.Process.exit' takes the server
+    with it (gh #2077): compilation is execution, and an exit is not an
+    exception, so none of the compile's handlers see it.
+
+    The server does not promise to survive it.  Staying alive would
+    mean shadowing `OS' beneath the file's own compile, and that guards
+    the buffer's source text only -- the library code it calls keeps
+    the real `exit' (`testutils.die' is the common one).  What it
+    promises is to say why it went.  Without that the client gets EOF
+    with nothing anywhere, and an auto-restarting one reloads a whole
+    heap to die the same way again.
+
+    The notice has to be flushed before the process goes, which is what
+    the connection's `drain' is for: the writer thread would otherwise
+    still be holding the frame when the exit lands."""
+    d = tempfile.mkdtemp(prefix="lsp_exit_")
+    try:
+        uri = f"file://{d}/exittopScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri,
+                      "Theory exittop\nAncestors bool\n\n"
+                      "fun f x = x + 1\n"
+                      "val g = f 1\n"
+                      "val () = OS.Process.exit OS.Process.success\n")
+
+            # Wait for the death first, not for the message: once the
+            # process is gone nothing further can arrive, so the short
+            # waits below are instant when the notice is there and
+            # bounded when it is not.  Waiting on the message first
+            # costs its whole timeout on every regression.
+            assert_true(_wait_for_exit(c.p, 120),
+                        "the file's exit took the server down\n"
+                        + c.stderr_text()[-2000:])
+
+            def told_why(cl):
+                ws = [m["params"]["message"]
+                      for m in cl.messages_since(0)[0]
+                      if m.get("method") == "window/showMessage"]
+                return ws if any("OS.Process.exit" in w for w in ws) else None
+
+            warns = c.wait_until(told_why, 10)
+            seen = [m["params"]["message"] for m in c.messages_since(0)[0]
+                    if m.get("method") == "window/showMessage"]
+            assert_true(warns,
+                        f"the server named the exit before going "
+                        f"(showMessage seen: {seen!r}; stderr: "
+                        f"{c.stderr_text()[-1000:]!r})")
+            assert_true(any("exittopScript.sml" in w for w in warns),
+                        f"and named the file ({warns!r})")
+            # `$/compileCompleted' is never coming, so a client that
+            # waits for one waits for ever.  Close the pass off.
+            assert_true(c.wait_for_method("$/compileInterrupted", 10),
+                        "the pass was closed off")
+        finally:
+            c.close(expect_exit=False)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def test_goal_state_segments_rebuild_pretty_with_annotations():
@@ -10494,6 +10566,8 @@ TESTS = [
     ("malformed_frame_does_not_wedge", test_malformed_frame_does_not_wedge),
     ("disconnect_before_handshake_exits_cleanly",
      test_disconnect_before_handshake_exits_cleanly),
+    ("toplevel_exit_says_why",
+     test_toplevel_exit_says_why_before_it_goes),
     ("a_burst_of_edits_leaves_diagnostics_matching_the_text",
      test_a_burst_of_edits_leaves_diagnostics_matching_the_text),
     ("goalState_note_at_end_of_an_unparenthesised_branch",
