@@ -3399,6 +3399,76 @@ def test_tryTactic_honours_a_step_anchor():
         c.close()
 
 
+def test_tryTactic_says_when_a_candidate_will_not_compile():
+    """A candidate whose SML does not compile is told so.
+
+    `sourceFailure' silences a leaf that would not compile, and for the
+    file's own text that is right: either the compile has not run the
+    `open's yet, so the answer is provisional, or it has and already
+    published the real message against that very text.  Neither holds
+    for a candidate -- it is not in the file and no compile has ever
+    seen it -- so silencing it returned the anchor's goal unchanged and
+    no error, which is exactly what a tactic that compiled and made no
+    progress returns.  A typo was indistinguishable from a useless
+    tactic.
+
+    Three candidates, which must give three different answers, and the
+    first is the control: without it a server that reported an error
+    for everything would pass."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_trycompile.sml"
+        src = ("Theory gs_trycompile\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_me:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def probe(req_id, tactic):
+            r = (_send_trytactic(c, req_id, uri, 6, 12, tactic) or {})
+            res = r.get("result")
+            assert_true(res is not None,
+                        f"probe {tactic!r} answered ({r!r})")
+            return res
+
+        works = probe(7321, "simp[]")
+        assert_eq(works.get("error"), None,
+                  f"control: a candidate that works has no error "
+                  f"({works!r})")
+        assert_eq(len(works["goals"]), 0,
+                  f"control: `simp[]' closes the goal ({works!r})")
+
+        applies = probe(7322, "Cases_on `zzz`")
+        msg = applies.get("error") or ""
+        assert_true("failed to apply" in msg,
+                    f"a tactic that compiled but could not apply says so "
+                    f"({msg!r})")
+
+        for req_id, tactic in ((7323, "NO_SUCH_TAC_HERE"), (7324, "simp[[")):
+            res = probe(req_id, tactic)
+            msg = res.get("error") or ""
+            assert_true("did not compile" in msg or "did not parse" in msg,
+                        f"{tactic!r} is reported as not compiling, not as "
+                        f"silence ({msg!r})")
+            # The whole point: not mistaken for a tactic that ran.
+            assert_true("failed to apply" not in msg,
+                        f"{tactic!r} is not described as having applied "
+                        f"({msg!r})")
+
+        # Still the caller's text, not the file's: nothing is squiggled.
+        c.wait_for_method("textDocument/publishDiagnostics", 2)
+        assert_eq(_diag_count(c, uri), [],
+                  "an uncompilable probe publishes no diagnostics")
+    finally:
+        c.close()
+
+
 def _send_eval(c, req_id, uri, code):
     """`$/eval` with holdep off, so nothing is preloaded as a side
     effect and the reply is only about the chunk."""
@@ -11980,6 +12050,8 @@ TESTS = [
                     test_tryTactic_probes_without_committing),
     ("tryTactic_honours_a_step_anchor",
                     test_tryTactic_honours_a_step_anchor),
+    ("tryTactic_says_when_a_candidate_will_not_compile",
+                    test_tryTactic_says_when_a_candidate_will_not_compile),
     ("stale_ancestor_draws_a_warning",
                     test_stale_ancestor_draws_a_warning),
     ("eval_runs_in_a_world_that_is_thrown_away",

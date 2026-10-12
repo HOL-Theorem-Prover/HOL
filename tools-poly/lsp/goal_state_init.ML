@@ -635,10 +635,27 @@ val () = LSPExtension.tryTacticAt :=
                    failedRange = NONE, failedCloseRange = NONE,
                    segments = []}
               | SOME (anchorBad, {state, failedAt, ...}) => let
-                  val silent = case failedAt of
+                  val srcFail = case failedAt of
                       SOME f => sourceFailure f
                     | NONE => false
-                  val reported = if silent then NONE else failedAt
+                  (* `sourceFailure' silences a leaf whose SML did not
+                     compile, and both its reasons are about text that
+                     is *in the file*: either the compile has not run
+                     the `open's yet, so the answer is provisional, or
+                     it has and already published the real message
+                     against that very text.  Neither holds for the
+                     candidate.  It is not in the file, no compile has
+                     ever seen it, and "it does not compile" is the
+                     answer the caller asked for -- silencing it
+                     reported a typo as a tactic that ran and changed
+                     nothing, which is the same unchanged goal a
+                     caller gets from a tactic that is merely useless.
+                     Said in its own words, because `failMsg' would
+                     call it "failed to apply", which is what a tactic
+                     that *did* compile does. *)
+                  val candidateFail = srcFail andalso not anchorBad
+                  val silent = srcFail andalso anchorBad
+                  val reported = if srcFail then NONE else failedAt
                   (* The anchor is in the file and can be pointed at;
                      the candidate is not, so its failure travels in
                      the message alone. *)
@@ -656,12 +673,28 @@ val () = LSPExtension.tryTacticAt :=
                    note = goalFrag.focus_note state,
                    status = if silent andalso not compileDone
                             then "pending" else "ok",
-                   error = Option.map (failMsg blamed o #1) reported,
+                   error =
+                     if candidateFail
+                     then SOME ("Candidate `" ^ tactic ^
+                                "` did not compile, so nothing was \
+                                \applied to the goal")
+                     else Option.map (failMsg blamed o #1) reported,
                    failedRange = #1 ranges,
                    failedCloseRange = #2 ranges,
                    segments = ppSegments width state}
                   end
            end
+       (* The anchor is walkable and only the candidate would not
+          parse.  Answering NONE here would say "no goal state at this
+          position", sending the caller to look for a fault in a proof
+          that has none; the fault is in what they just submitted. *)
+       | (SOME _, SOME fs, NONE) => SOME
+           {theorem = name, step = stepIndex (fs, tacCursor),
+            goals = [], pretty = "", context = [], note = NONE,
+            status = "ok",
+            error = SOME ("Candidate `" ^ tactic ^ "` did not parse as \
+                          \a tactic, so nothing was applied to the goal"),
+            failedRange = NONE, failedCloseRange = NONE, segments = []}
        | _ => NONE
     end)
 
