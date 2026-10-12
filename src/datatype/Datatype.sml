@@ -682,7 +682,7 @@ fun attrs_of (astl : ParseDatatype.annotatedAST list) =
    the grammar, so an unqualified operator here is necessarily one of
    them; the same name qualified with the theory being built names the
    same type, and is caught too. *)
-fun check_no_self_args astl =
+fun check_no_self_args (astl : annotatedAST list) =
     let
       val mine = List.map #name astl
       fun is_self (dTyop {Tyop, Thy, Args}) =
