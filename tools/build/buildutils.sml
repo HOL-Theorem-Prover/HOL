@@ -1470,11 +1470,13 @@ in
         val knl = read_kernelid ()
         val knl_suffix = if knl = "" then "" else "-" ^ knl
         val stlvl_suffix = "-t" ^ Int.toString selftest_level
-        val newname = hostname^timestamp^knl_suffix^stlvl_suffix
+        val logsuffix = knl_suffix^stlvl_suffix
+        val newname = hostname^timestamp^logsuffix
         val newpath = fullPath [logdir, newname]
       in
         HOLFileSys.rename {old = logfilename, new = newpath};
-        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
+        checkRegressions.run {logdir = logdir, latest = newpath,
+                              logsuffix = logsuffix}
       end
     else abort_logging ()
   else ()
