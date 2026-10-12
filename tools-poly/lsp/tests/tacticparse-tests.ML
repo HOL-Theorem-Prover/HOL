@@ -367,6 +367,143 @@ in
   ()
 end
 
+(* ----------------------------------------------------------------------
+    TacticLeafSource
+
+    Shared leaf-source lowering and leaf-kind classification.  Synthesised
+    source is compiled in the ordinary session namespace rather than only
+    compared as text.
+   ---------------------------------------------------------------------- *)
+
+structure LeafSrcTest = struct
+  (* PolyML.compiler assigns compiled values through these qualified names. *)
+  val tac: Abbrev.tactic option ref = ref NONE
+  val ltac: Abbrev.list_tactic option ref = ref NONE
+end
+
+local
+  open TacticParse ProofStepPlan TacticLeafSource
+  fun assert msg true = OK ()
+    | assert msg false = die msg
+  fun parseTactic source = let
+    val fed = ref false
+    fun read _ = if !fed then "" else (fed := true; source)
+    fun ignoreParseError _ _ _ = ()
+    val result = HOLSourceParser.parseSML
+      "<TacticLeafSource selftest>" read ignoreParseError
+      HOLSourceParser.initialScope
+    in
+      case #parseDec result () of
+        SOME (HOLSourceAST.DecExp expression) => parseTacticBlock expression
+      | _ => raise Fail "expected tactic expression"
+    end
+
+  (* Compile through the same quotation filter as the walker. *)
+  fun compilesAs holder src = let
+    val wrapped = holder ^ " := SOME (" ^ src ^ ");"
+    val filtered =
+        HOLSource.fromString {quietOpen = true, print = fn _ => ()} wrapped
+    val i = ref 0
+    val n = String.size filtered
+    fun read () = if !i >= n then NONE
+                  else SOME (String.sub (filtered, !i)) before i := !i + 1
+    fun swallow _ = ()
+    val () = (LeafSrcTest.tac := NONE; LeafSrcTest.ltac := NONE)
+    val _ = Portable.total (fn () => PolyML.compiler
+              (read, [PolyML.Compiler.CPErrorMessageProc swallow,
+                      PolyML.Compiler.CPPrintStream swallow,
+                      PolyML.Compiler.CPOutStream swallow]) ()) ()
+    in
+      Option.isSome (!LeafSrcTest.tac) orelse
+      Option.isSome (!LeafSrcTest.ltac)
+    end
+  fun compiles TacticLeaf src = compilesAs "LeafSrcTest.tac" src
+    | compiles ListTacticLeaf src = compilesAs "LeafSrcTest.ltac" src
+
+  fun firstLeaf source =
+      case fromTactic (parseTactic source) of
+        Leaf {kind, tactic} :: _ => (kind, tactic)
+      | Select {body = Leaf {kind, tactic} :: _, ...} :: _ => (kind, tactic)
+      | _ => raise Fail ("no leading leaf in: " ^ source)
+
+  fun synthesised source =
+      case leafSource source (#2 (firstLeaf source)) of
+        SOME (Synthesised text) => SOME text
+      | _ => NONE
+
+  val byText = "`a = b` by ACCEPT_TAC TRUTH"
+  val _ = tprint "TacticLeafSource lowers a by-assertion applicatively"
+  val _ = assert "by leaf did not lower through BasicProvers.byA"
+    (case synthesised byText of
+       SOME text => String.isPrefix "BasicProvers.byA (" text andalso
+                    String.isSubstring "Tactical.ALL_TAC" text
+     | NONE => false)
+
+  (* `q by ALL_TAC' fails because `by' must discharge q. *)
+  val _ = tprint "TacticLeafSource avoids by's failing surface form"
+  val _ = assert "the surface rendering was already applicative"
+    (case printTacAsSML byText (#2 (firstLeaf byText)) of
+       SOME text => not (String.isSubstring "byA" text)
+     | NONE => false)
+
+  val sufficesText = "`a = b` suffices_by ACCEPT_TAC TRUTH"
+  val _ = tprint "TacticLeafSource lowers suffices_by applicatively"
+  val _ = assert "suffices_by leaf did not lower through suffices_byA"
+    (case synthesised sufficesText of
+       SOME text => String.isPrefix "BasicProvers.suffices_byA (" text
+     | NONE => false)
+
+  val subgoalText = "sg `a = b`"
+  val _ = tprint "TacticLeafSource qualifies sg through its own structure"
+  val _ = assert "sg was left as surface syntax"
+    (case synthesised subgoalText of
+       SOME text => String.isPrefix "BasicProvers.subgoal" text
+     | NONE => false)
+
+  (* ProofStepPlan keeps Group wrappers; linearize removes them. *)
+  val _ = tprint "TacticLeafSource agrees on a grouped and a bare leaf"
+  val _ = assert "grouping changed the answer"
+    (let val grouped = parseTactic subgoalText
+         fun strip (Group (_, _, e)) = e
+           | strip e = e
+     in
+       Option.map sourceText (leafSource subgoalText grouped) =
+       Option.map sourceText (leafSource subgoalText (strip grouped))
+     end)
+
+  val _ = tprint "TacticLeafSource answers NONE for a spanless no-op"
+  val _ = assert "a no-op leaf offered source"
+    (not (Option.isSome (leafSource "" (Then []))))
+
+  val _ = tprint "TacticLeafSource routes a tactic in a list as a tactic"
+  val _ = assert "OOpaque was misrouted as a list_tactic"
+    (fragmentLeafKind (OOpaque (0, (0, 0))) = TacticLeaf)
+  val _ = tprint "TacticLeafSource routes goal reordering as a list_tactic"
+  val _ = assert "LReverse was misrouted as a tactic"
+    (fragmentLeafKind LReverse = ListTacticLeaf)
+
+  (* Synthesised source must not depend on script-local opens. *)
+  val corpus =
+    [byText, sufficesText, subgoalText,
+     "RENAME_TAC [`x`]",
+     "MAP_EVERY ACCEPT_TAC [TRUTH]",
+     "CONJ_TAC"]
+  fun checkCompiles source = let
+    val (kind, tactic) = firstLeaf source
+    in
+      case leafSource source tactic of
+        NONE => ()
+      | SOME (Verbatim _) => ()   (* User source may depend on local opens. *)
+      | SOME (Synthesised text) =>
+        (tprint ("TacticLeafSource compiles: " ^ text);
+         assert ("synthesised source did not compile: " ^ text)
+                (compiles kind text))
+    end
+  val _ = List.app checkCompiles corpus
+in
+  ()
+end
+
 val () = OS.Process.exit
            (if !failcount = 0 then OS.Process.success
             else OS.Process.failure)
