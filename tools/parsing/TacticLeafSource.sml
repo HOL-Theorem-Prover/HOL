@@ -10,8 +10,7 @@ fun sourceText (Verbatim s) = s
 
 fun textAt text (s, e) = String.substring (text, s, e - s)
 
-(* `ProofStepPlan' keeps a leaf's enclosing Group and `linearize'
-   discards it, so strip before dispatching and both callers agree. *)
+(* ProofStepPlan keeps these wrappers; linearize removes them. *)
 fun stripGroup (Group (_, _, e)) = stripGroup e
   | stripGroup (RepairGroup (_, _, e, _)) = stripGroup e
   | stripGroup e = e
@@ -19,15 +18,12 @@ fun stripGroup (Group (_, _, e)) = stripGroup e
 fun leafSource text leaf = let
   val txt = textAt text
   fun synth s = SOME (Synthesised s)
-  (* Whatever the constructor did not claim: the user's own source if
-     the leaf spans a whole expression, else the inverse printer. *)
+  (* Prefer a complete source span; otherwise use the inverse printer. *)
   fun printed () =
       case topSpan leaf of
           SOME span => SOME (Verbatim (txt span))
         | NONE => Option.map Synthesised (printTacAsSML text leaf)
-  (* `by' proves its assertion with `tac THEN NO_TAC', so the surface
-     form of an empty body cannot go through; `byA' is the applicative
-     equivalent that leaves the assertion standing. *)
+  (* Empty bodies use applicative forms; the surface forms would fail. *)
   fun applicative name quotation body =
       case stripGroup body of
           Then [] => synth ("BasicProvers." ^ name ^ " (" ^ txt quotation ^
@@ -45,9 +41,7 @@ fun leafSource text leaf = let
       | _ => printed ()
   end
 
-(* Enumerated rather than read off `isTac', which also answers false
-   for OOpaque -- a tactic sitting in a tactic list -- and so would
-   misroute it. *)
+(* isTac misclassifies OOpaque, which is a tactic inside a tactic list. *)
 fun fragmentLeafKind leaf =
     case stripGroup leaf of
         LReverse => ProofStepPlan.ListTacticLeaf

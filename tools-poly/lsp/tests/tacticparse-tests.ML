@@ -370,23 +370,19 @@ end
 (* ----------------------------------------------------------------------
     TacticLeafSource
 
-    The lowering `TacticWalker' and any `ProofStepPlan' executor share.
-    The property that matters is not the exact string but that it
-    compiles against a plain session namespace, so the corpus below is
-    compiled rather than compared.
+    Shared leaf-source lowering and leaf-kind classification.  Synthesised
+    source is compiled in the ordinary session namespace rather than only
+    compared as text.
    ---------------------------------------------------------------------- *)
 
 structure LeafSrcTest = struct
-  (* Reachable by qualified name from the wrapped source `compilesAs'
-     feeds to PolyML.compiler, which compiles at top level. *)
+  (* PolyML.compiler assigns compiled values through these qualified names. *)
   val tac: Abbrev.tactic option ref = ref NONE
   val ltac: Abbrev.list_tactic option ref = ref NONE
 end
 
 local
   open TacticParse ProofStepPlan TacticLeafSource
-  (* `Lib.assert' is in scope from the prelude and takes a predicate;
-     this is the same two-argument helper the blocks above define. *)
   fun assert msg true = OK ()
     | assert msg false = die msg
   fun parseTactic source = let
@@ -402,9 +398,7 @@ local
       | _ => raise Fail "expected tactic expression"
     end
 
-  (* The walker's route: filter the quotations, then compile a wrapped
-     assignment and see whether the holder was set.  No CPNameSpace, so
-     this is the plain session namespace -- which is the point. *)
+  (* Compile through the same quotation filter as the walker. *)
   fun compilesAs holder src = let
     val wrapped = holder ^ " := SOME (" ^ src ^ ");"
     val filtered =
@@ -445,9 +439,7 @@ local
                     String.isSubstring "Tactical.ALL_TAC" text
      | NONE => false)
 
-  (* Why that case exists: `by' discharges its assertion with
-     `tac THEN NO_TAC', so the surface form the inverse printer offers
-     for an empty body always fails. *)
+  (* `q by ALL_TAC' fails because `by' must discharge q. *)
   val _ = tprint "TacticLeafSource avoids by's failing surface form"
   val _ = assert "the surface rendering was already applicative"
     (case printTacAsSML byText (#2 (firstLeaf byText)) of
@@ -468,8 +460,7 @@ local
        SOME text => String.isPrefix "BasicProvers.subgoal" text
      | NONE => false)
 
-  (* A Group is stripped before dispatch, so the two shapes of the same
-     leaf -- ProofStepPlan keeps it, linearize discards it -- agree. *)
+  (* ProofStepPlan keeps Group wrappers; linearize removes them. *)
   val _ = tprint "TacticLeafSource agrees on a grouped and a bare leaf"
   val _ = assert "grouping changed the answer"
     (let val grouped = parseTactic subgoalText
@@ -491,8 +482,7 @@ local
   val _ = assert "LReverse was misrouted as a tactic"
     (fragmentLeafKind LReverse = ListTacticLeaf)
 
-  (* The property the issue asks for: synthesised source compiles with
-     no opens beyond what a bare session has. *)
+  (* Synthesised source must not depend on script-local opens. *)
   val corpus =
     [byText, sufficesText, subgoalText,
      "RENAME_TAC [`x`]",
@@ -503,7 +493,7 @@ local
     in
       case leafSource source tactic of
         NONE => ()
-      | SOME (Verbatim _) => ()   (* the file's own source; its opens *)
+      | SOME (Verbatim _) => ()   (* User source may depend on local opens. *)
       | SOME (Synthesised text) =>
         (tprint ("TacticLeafSource compiles: " ^ text);
          assert ("synthesised source did not compile: " ^ text)

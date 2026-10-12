@@ -151,16 +151,7 @@ fun cheatBranch state =
 
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
-(* The leaf-to-source lowering and the tactic/list_tactic
-   classification both live in `TacticLeafSource' (tools/parsing/) now,
-   beside `TacticParse' and `ProofStepPlan', so that consumers of a
-   `ProofStepPlan.plan' share them rather than copying them -- which is
-   what HOL#2069 asked for, and what holbuild had duplicated.  No load:
-   `poly-init2' compiles it into this executable along with the two
-   modules it sits between.
-
-   A list_tactic leaf is compiled and applied as one; see
-   `compileAndApplyLT'. *)
+(* Shared lowering keeps the LSP and ProofStepPlan consumers consistent. *)
 open TacticLeafSource
 
 fun applyAtom tacText te state = case leafSource tacText te of
@@ -173,8 +164,7 @@ fun applyAtom tacText te state = case leafSource tacText te of
                   ProofStepPlan.ListTacticLeaf => compileAndApplyLT src state
                 | ProofStepPlan.TacticLeaf => compileAndApply src state
       in case r of
-           (* Our own source not compiling is not the user's problem
-              to hide; report it like any other failure. *)
+           (* Failure in synthesised source is an internal lowering error. *)
            Rejected CompileFailed => if ours then Rejected ApplyFailed else r
          | _ => r
       end
