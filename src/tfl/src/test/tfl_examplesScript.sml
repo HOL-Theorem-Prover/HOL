@@ -236,3 +236,43 @@ Termination
   rw [foo_def]
 End
 *)
+
+(*---------------------------------------------------------------------------
+   A mutual recursion over a type that recurses under an operator.  The
+   package states such a type's recursion axiom with the operator's map,
+   so these are no longer primitive recursive and have to be measured.
+   Each wants the measure to say something different about a leaf of the
+   domain's sum: the first that the list shrinks while the accumulator is
+   merely carried, the second that an entry's method is smaller than the
+   entry, the third that two parameters both functions share weigh
+   nothing.
+ ---------------------------------------------------------------------------*)
+
+Datatype:
+  rlp = RLPB num | RLPL (rlp list)
+End
+
+val rlp_acc_def = function "rlp_acc"
+   `(rlp_it (RLPB n) = 2n ** n) /\
+    (rlp_it (RLPL rps) = rlp_acc [] rps) /\
+    (rlp_acc acc [] = FOLDL $- 0 acc) /\
+    (rlp_acc acc (x::xs) = rlp_acc (rlp_it x :: acc) xs)`;
+
+Datatype:
+  obj = OVAR num | OBJ ((num # meth) list) ;
+  meth = SIGMA num obj
+End
+
+val height_obj_def = function "height_obj"
+   `(height_obj (OVAR x) = 1n) /\
+    (height_obj (OBJ d) = SUC (height_dict d)) /\
+    (height_dict [] = 0n) /\
+    (height_dict (e::d) = MAX (height_entry e) (height_dict d)) /\
+    (height_entry (l, m) = SUC (height_meth m)) /\
+    (height_meth (SIGMA x a) = SUC (height_obj a))`;
+
+val tp_it_def = function "tp_it"
+   `(tp_it (RLPB n) a b = a + b + n) /\
+    (tp_it (RLPL rps) a b = tp_acc rps a b) /\
+    (tp_acc [] a b = a * b) /\
+    (tp_acc (x::xs) a b = tp_acc xs (tp_it x a b) (b + 1))`;
