@@ -65,8 +65,32 @@ tacticparse-selftest.log: tacticparse-tests.ML $(dprot $(HOLDIR)/bin/hol)
 # says so in the log and moves on rather than failing the build.  The
 # message is the point: a suite that quietly stops running reads
 # exactly like a suite that passes.
+# One worker per Holmake job.  Nearly all of a test is a server
+# booting -- mapping an 18.7MB heap and QUse-ing ten .ML files -- so
+# the suite sits idle about three quarters of the time and N
+# concurrent tests cost well under N cores.  Running N of them beside
+# the build's other N-1 jobs is a mild overcommit rather than a
+# doubling, and it matters: at `-t1' this target *is* the critical
+# path of `src/parallel_builds/core', so until it shortens, adding
+# cores to the build buys nothing.
+#
+# `HOL_NUMJOBS' is Holmake's own `-j' (4 when nobody said), so a `-j1'
+# build runs the suite exactly as it always did.  The `ifdef' guard
+# matters: a bare `-j' with nothing after it would swallow
+# `--requires'.
+#
+# Deliberately NOT `LOCAL_PARALLELISM_LIMIT': that caps the *global*
+# job count for this node, so any value would stop the suite running
+# alongside the rest of the build, which is the whole reason it is
+# reached from `src/parallel_builds/core'.
+PROTOCOL_JOBS =
+ifdef HOL_NUMJOBS
+PROTOCOL_JOBS = -j $(HOL_NUMJOBS)
+endif
+
 PROTOCOL_CMD = if command -v python3 > /dev/null 2>&1 ; \
-               then python3 -u lsp_tests.py --requires none 2>&1 ; \
+               then python3 -u lsp_tests.py $(PROTOCOL_JOBS) \
+                      --requires none 2>&1 ; \
                else echo "python3 not found: LSP protocol suite NOT run" ; \
                fi
 

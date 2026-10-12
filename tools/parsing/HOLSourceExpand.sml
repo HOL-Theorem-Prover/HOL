@@ -191,6 +191,43 @@ fun withLocalAttrs _ false attrs = attrs
 exception HasOrPat
 fun mapSep f {args, seps, stop} = {args = map f args, seps = seps, stop = stop}
 
+(* The stem of a HOL script file name: `SOME ("foo", "fooScript.sml")`
+   for a path or URI ending in `fooScript.sml`, and NONE for anything
+   else -- an ordinary .sml file, and the callers that supply no file
+   name at all (`HOLSource.fromString`, the REPL), and a script name
+   whose stem could not be a theory name.  Only a script file names a
+   theory after itself, so only a script file is checked.
+   Spelled out rather than built on `OS.Path`, because the LSP passes a
+   `file://` URI here rather than a path. *)
+val scriptSuffix = "Script.sml"
+fun scriptStem file = let
+  fun sep c = c = #"/" orelse c = #"\\"
+  fun start i =
+    if i < 0 then 0
+    else if sep (String.sub (file, i)) then i + 1
+    else start (i - 1)
+  val base = String.extract (file, start (size file - 1), NONE)
+  (* A theory name is parsed as an alphanumeric identifier, so a stem
+     that is not one names no theory and its file is the authority on
+     nothing.  Holmake synthesises such names: an article build
+     hard-links `fooScript.sml` to `foo.artScript.sml` and compiles
+     that, and the stem `foo.art` must not be read as demanding a
+     header to match it. *)
+  fun idChar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+  fun isIdent s =
+    s <> "" andalso Char.isAlpha (String.sub (s, 0)) andalso
+    CharVector.all idChar s
+  in
+    if String.isSuffix scriptSuffix base andalso
+       size base > size scriptSuffix
+    then let
+      val stem = String.substring (base, 0, size base - size scriptSuffix)
+      in
+        if isIdent stem then SOME (stem, base) else NONE
+      end
+    else NONE
+  end
+
 fun expandDec {parseError, quietOpen, fileline} = let
 
 (* Whether a srw_ss rebind can be compiled in this file.  The shim names
@@ -587,6 +624,26 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       | {key = (_, "no_sig_docs"), bind = NONE} => ()  (* considered in HOLTheoryEnd *)
       | {key = (p, s), ...} => parseError (p, p + size s) "unknown theory attribute"
       ) (case attrs of NONE => [] | SOME v => #args (#attrs v))
+    (* An empty name is a header mid-keystroke; the parser has already
+       reported `expected identifier` for it, and `new_theory ""` would
+       only add a kernel exception saying the same thing less clearly. *)
+    val named = #2 id <> ""
+    (* The file name is the authority on a script's theory name: Holmake
+       derives the products it demands from the file (`fooScript.sml`
+       must yield `fooTheory.*`), so a header naming a different theory
+       builds something nobody asked for.  Reporting it here serves both
+       consumers -- the editor squiggles the name as it is typed, and a
+       batch build stops at the header rather than at a missing
+       product. *)
+    val _ =
+      if not named then ()
+      else case scriptStem (#file (fileline theory_)) of
+          NONE => ()
+        | SOME (stem, base) =>
+          if stem = #2 id then ()
+          else parseError (idSpan id)
+                 ("theory name \"" ^ #2 id ^ "\" does not match file \"" ^
+                  base ^ "\"")
     val grammar = ref (if !bare then [] else [mkString (theory_, "hol")])
     fun finish (NONE, acc) = acc
       | finish (SOME (false, ns), acc) = mkSemi (DecOpen {open_ = theory_, elems = rev ns} :: acc)
@@ -650,8 +707,16 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     else process elems (lhs, acc)
     val _ = srwShimOK := (not (!bare) orelse !libBasicProvers)
     val _ = caseEqShimOK := (#2 id <> "bool")
-    val acc = valWild theory_ (App (mkIdent (theory_, "Theory.new_theory"), mkString id)) :: acc
-    val acc = if !bare then acc else
+    (* The `open`s above still stand when the name is missing: they are
+       what the editor's completion and hovers read, and they already ran
+       ahead of `new_theory` before this guard existed.  What is dropped
+       is the pair that needs a theory to act on -- `set_grammar_ancestry`
+       included, which would otherwise rewrite the grammar of whichever
+       segment happened to be current. *)
+    val acc = if not named then acc else
+      valWild theory_ (App (mkIdent (theory_, "Theory.new_theory"),
+                            mkString id)) :: acc
+    val acc = if !bare orelse not named then acc else
       valWild theory_ (App (mkIdent (theory_, "Parse.set_grammar_ancestry"),
         mkList (theory_, rev (!grammar)))) :: acc
     in DecExpansion {orig = dec, result = rev acc} end
@@ -721,7 +786,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val dec' = magicBind indThm [valPat definition_ (mkIdent id) e]
     in DecExpansion {orig = dec, result = rev dec'} end
   | expandDec _ (dec as HOLDatatype {datatype_, quote, stop, ...}) = let
-    val e = App (mkIdent (datatype_, "bossLib.Datatype"), expandQuote datatype_ stop quote)
+    val e = App (mkIdent (datatype_, "Datatype.Datatype"),
+                 expandQuote datatype_ stop quote)
     in DecExpansion {orig = dec, result = [valWild datatype_ e]} end
   | expandDec _ (dec as HOLQuoteDecl {quote_, id, bind, colon = _, quote, end_ = _, stop}) = let
     val (pat, e) = case bind of

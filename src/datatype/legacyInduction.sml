@@ -801,4 +801,99 @@ fun mutual_induction ops ind =
                   (LIST_CONJ (allXs @ List.map allQof (#optys info))))
     end
 
+
+(*---------------------------------------------------------------------------
+   An induction principle in the shape the rest of HOL reads one.
+
+   A principle built constructor-wise quantifies a clause's arguments
+   together, in front of the hypothesis that mentions them:
+      !P. P [] /\ (!h t. P t ==> P (h::t)) ==> !l. P l
+   HOL's tradition is to push each argument the hypothesis does not
+   mention as far to the right as it will go:
+      !P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l
+   A small difference, but INDUCT_THEN depends on it, and so do
+   developments that name the variables an induction leaves them.
+   push_in_vars below performs that conversion.
+
+   An induction principle is also expected to name its bound variables
+   after their types -- the first letter of the type, basically -- which
+   is what rename_bvars does.
+
+   Finally, munge_ind_thm composes the two.
+ ---------------------------------------------------------------------------*)
+
+local
+  fun CONJUNCTS_CONV c tm =
+    if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
+  fun SWAP_TILL_BOTTOM_THEN c t =
+    ((SWAP_VARS_CONV THENC BINDER_CONV (SWAP_TILL_BOTTOM_THEN c)) ORELSEC c) t
+  fun app_letter ty =
+    if is_vartype ty then String.sub(dest_vartype ty, 1)
+    else let
+        val {Thy,Tyop=outerop,Args} = dest_thy_type ty
+      in
+        if Thy = "list" andalso outerop = "list" then
+          case Lib.total dest_thy_type (hd Args) of
+            SOME {Thy,Tyop,...} =>
+            if Thy = "string" andalso Tyop = "char" then #"s"
+            else String.sub(outerop, 0)
+          | NONE => #"l"
+        else String.sub(outerop,0)
+      end
+  fun new_name ctxt ty = let
+    fun nvary ctxt nm n = let
+      val fullname = nm ^ Int.toString n
+    in
+      if Lib.mem fullname ctxt then nvary ctxt nm (n + 1) else fullname
+    end
+    val name = str (app_letter ty)
+  in
+    if Lib.mem name ctxt then nvary ctxt name 0 else name
+  end
+in
+  fun push_in_vars thm = let
+    fun each_conj tm =
+      if is_forall tm then let
+        val (vs, body) = strip_forall tm
+      in
+        if is_imp body then let
+          val (ant,con) = Psyntax.dest_imp body
+        in
+          if tmem (hd vs) (free_vars ant) then
+            BINDER_CONV each_conj tm
+          else
+            (SWAP_TILL_BOTTOM_THEN FORALL_IMP_CONV THENC each_conj) tm
+        end
+        else REFL tm
+      end
+      else REFL tm
+    val c =
+      STRIP_QUANT_CONV (RATOR_CONV (RAND_CONV (CONJUNCTS_CONV each_conj)))
+  in
+    CONV_RULE c thm
+  end
+
+  fun rename_bvars thm = let
+    fun renCONV ctxt tm =
+      if is_forall tm orelse is_exists tm then let
+        val dest = if is_forall tm then dest_forall else dest_exists
+        val (Bvar, Body) = dest tm
+        val vname = new_name ctxt (type_of Bvar)
+      in
+        (RENAME_VARS_CONV [vname] THENC
+         BINDER_CONV (renCONV (vname::ctxt))) tm
+      end
+      else if is_abs tm then ABS_CONV (renCONV ctxt) tm
+      else if is_comb tm then (RATOR_CONV (renCONV ctxt) THENC
+                               RAND_CONV (renCONV ctxt)) tm
+      else REFL tm
+    val Pvars = map (#1 o dest_var) (#1 (strip_forall (concl thm)))
+  in
+    CONV_RULE (STRIP_QUANT_CONV (renCONV Pvars)) thm
+  end
+
+  val munge_ind_thm = rename_bvars o push_in_vars
+
+end
+
 end

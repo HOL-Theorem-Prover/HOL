@@ -12,17 +12,35 @@ practical guide to trying it out; the protocol details live in
   `PolyML.compiler`.  Compilation is execution: every SML top-level
   declaration is type-checked, run, and its HOL side-effects (theory
   segment, DB, TypeBase, simpsets, grammars) applied to live state.
+- **A file that exits takes the server with it, and is told so.**
+  Because compiling is running, a top-level `OS.Process.exit` in the
+  opened file ends the server process: an exit is not an exception, so
+  nothing in the compile's handlers can catch it.  The server does not
+  try to survive that -- shadowing `OS` beneath the compile would cover
+  the buffer's own source text and not the library code it calls, and
+  `testutils.die` exits too.  What it does instead is say why before it
+  goes: a line on stderr, a `window/showMessage` naming the file and
+  roughly where it got to, and a `$/compileInterrupted` so a client is
+  not left waiting on a `$/compileCompleted` that will never come.
+  Without that the client sees only EOF, and one that restarts on close
+  loads another heap to die the same way.  The workaround while editing
+  such a file is to comment the exit out.  (gh #2077.  `$/eval` is not
+  covered: an exit there is one the user just typed.)
 - **Fast-oracle prover swap.**  `holide.ML` replaces `Tactical.set_prover`
   with `fn (t, _) => mk_oracle_thm "fast_proof" t`.  `prove(term, tac)`
   never actually calls `tac`; the theorem is minted with a
   `fast_proof` oracle tag.  Compilation is therefore near-batch-build
   speed even for files heavy in tactic proofs, at the cost of not
   detecting tactic errors.
-- Server capabilities advertised: `textDocumentSync`, `hoverProvider`,
-  `definitionProvider`, `referencesProvider`.  Plus LSP extensions:
+- Server capabilities advertised: `textDocumentSync`,
+  `positionEncoding`, `hoverProvider`, `definitionProvider`,
+  `documentSymbolProvider`, `workspaceSymbolProvider` and
+  `completionProvider`.  Not `referencesProvider`: see
+  `Manual/Developers/lsp-server.md` for why there is no
+  `textDocument/references`.  Plus LSP extensions:
   `$/setConfig` (elabOn mode, holdep behaviour, hover width),
-  `$/eval` (streamed
-  arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
+  `$/eval` (arbitrary SML at a position — see below),
+  `$/hol/goalState` (goal-state at cursor — see
   below), `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted` /
   `$/compileBlocked`, `$/hol/retryCompile`, `$/hol/desync`.
@@ -128,7 +146,8 @@ loop).  Send a full initialize / shutdown / exit handshake through
 That sends the full initialize / initialized / shutdown / exit
 handshake in one go.  You should see the `initialize` response
 advertising `textDocumentSync`, `hoverProvider`,
-`definitionProvider`, `referencesProvider`; a
+`definitionProvider`, `documentSymbolProvider`,
+`workspaceSymbolProvider` and `completionProvider`; a
 `window/logMessage "started"` notification; the `shutdown` response
 (`{"id":2,"result":null}`); and a clean exit 0.
 
@@ -275,6 +294,19 @@ has to be there: `getHoldep` works out which modules it needs,
 `loadPlan` walks the `.uo` graph for the files that implies, and
 `useFiles` `quse`s them.  `link_parents` runs here, so this is where a
 missing ancestor surfaces.
+
+A module the file *defines* is not among them.  `Holdep_tokens` drops
+a top-level `structure M = …` whose every mention of `M` follows it,
+so a `[bare]` script can supply a stand-in for something its heap
+lacks — `structure bossLib = struct val Datatype = Datatype.Datatype
+end` is how `listScript.sml` once reached the `Datatype:` block —
+without the real module being loaded behind its back.  That mattered
+rather than merely wasting time: `bossLib` brings `listTheory`,
+`Theory.load_complete` seals `list` in `KernelSig`, and `new_theory`
+cannot then enter the theory the file exists to build.  Should a
+preload seal the header's own theory anyway, the compile says so once
+against the theory name and blocks, rather than reporting "no current
+theory" for every declaration below it.
 
 **Elaboration** — compiling the declarations with the fast-oracle prover
 in place.  No tactic is run; see *Proof checking*.
@@ -610,6 +642,14 @@ left to restore it.  A proof that gets fixed therefore clears in two
 steps: the edit drops the entry (`cheated`), and the re-elaborated
 proof settles as `proved`.
 
+The exception is a declaration that is no longer there.  A proof whose
+`Theorem` block has been deleted gets no further transition -- a pass
+that stops early never reaches it to announce one -- so its entry
+would outlive the text it points into.  `finishPass` drops those
+against the census below, and a failure still queued for localisation
+is dropped the same way, rather than being placed into a buffer that
+no longer has anywhere to put it.
+
 Every change is also announced on `$/proofStates` as a transition --
 `checking`, then a verdict, `cheated` when an entry is dropped.
 
@@ -645,6 +685,62 @@ checked 61 proofs looks identical to one that checked none.  There is
 deliberately no full-state message: the state would have to be
 sampled and only then sent, so a worker settling in between would have
 its newer verdict overwritten by the older sample.
+
+### The census, on `$/compileCompleted`
+
+What a client cannot accumulate its way to is a *deletion*.  The pool
+announces a dropped entry as `cheated` whether an edit merely reached
+the proof or its declaration is gone, and those want opposite
+treatment: the first is outstanding work, the second is nothing at
+all.  A client that forgot every `cheated` would under-count the
+proofs still waiting; a client that keeps them reports a theorem the
+user deleted, for the life of the session, with a line number that now
+belongs to something else.
+
+So `$/compileCompleted` carries a census -- what the buffer still
+declares, under the names a proof there would be given:
+
+```json
+{"uri": "file:///…/fooScript.sml", "version": 7,
+ "declared": ["fooScript", "thm_a", "helper", "thm_b", "thm_b#2",
+              "thm_c[sub1]"]}
+```
+
+A client drops any proof the list does not mention, and keeps every one
+it does, `cheated` included.
+
+It names *every* declaration, not only the ones that can carry a
+proof -- the `Theory` header and each `val` and `fun` are in there too.
+The question a client asks is "is the name I am holding still
+declared?", and for that a superset is not merely harmless but safer.
+Narrowing it means filtering on declaration kind, and a filter that is
+wrong errs by dropping a name that *is* declared -- which silently
+deletes a live proof from the tally, the failure this exists to fix.
+Erring the other way keeps a name one pass longer.
+
+Names, not verdicts -- which is why this is not the full-state message
+refused just above.  A snapshot of what the pool *thinks* has to be
+sampled and only then sent, so a worker settling in between loses its
+newer verdict to the older sample.  Nothing a worker does can add or
+remove a declaration from the buffer, so a list of names has no such
+race.
+
+The names are the pool's own: `LSPExtension.qualifyProof` applied to
+the outline's declarations, which is the same rule, from the same
+walk, that gives a proof its `foo#2` in the first place.  A `Resume`
+block appears as `thm[label]`, as it does on `$/proofStates`.
+
+Both fields are **absent** unless the server is checking proofs.
+Absent is not the same as present-and-empty: absent means the server
+is not saying, and a client must leave its tally alone; `[]` means the
+buffer declares nothing at all and every entry goes.  A client that
+knows neither field ignores both, which is what makes this additive.
+
+`version` is the text the census was read from.  A client that has
+edited since can skip the prune -- that edit starts a pass of its own,
+whose census will apply -- but need not: a name wrongly dropped is
+re-announced by the next pass, where a name wrongly kept is kept
+forever.
 
 ## Goal-state at cursor (`$/hol/goalState`)
 
@@ -847,8 +943,10 @@ end, and anything in the same flow above them goes out of sight.
 
 ### Client cookbook
 
-- **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` bound
-  to `M-h M-g`.  The *HOL Goals* window is scrolled to the buffer's
+- **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` on
+  `M-h p`, shared with `hol-print-goal` (see [Keys, shared with the
+  REPL mode](#keys-shared-with-the-repl-mode)); `M-h g` reaches it
+  too.  The *HOL Goals* window is scrolled to the buffer's
   end, the current goal being last and the subgoal count printed
   after them, with `theorem`, `step`, `context` and `error` in the
   window's `header-line-format` so they stay visible.  An empty
@@ -889,7 +987,101 @@ Note for a client built on `vscode-languageclient`: it advertises only
 `utf-16` and throws on any other answer, so it gets `utf-16` and must
 not translate positions itself.
 
+## Evaluating a chunk (`$/eval`)
+
+`$/eval` compiles a string of HOL/SML source in the server's own
+session and reports what it printed, which is the protocol's answer to
+"send a string, get its value back".  LSP has no evaluate request —
+it is a document protocol — so this is a custom method, which is what
+every language server that wants one does.
+
+The request takes `uri`, `code`, and optionally `incr`, `holdep` and
+`position`; `Manual/Developers/lsp-server.md` is the reference.  The
+reports come back as a list (`incr = None`), per chunk
+(`$/eval/P`), or one at a time as they happen (`$/eval/1`).  A
+`toplevelOut` report carries what Poly printed — `val it = … : …` —
+which for a `thm` is the theorem, via the pretty-printers installed in
+`pretty_printers_init.ML`.
+
+**Send the cursor.**  `position` decides what is in scope.  A file's
+declarations run in order, so a name is in scope from the point the
+compile reached it; evaluating with no position evaluates after the
+file's last declaration, where everything later in the file is in
+scope too.  For a scratch buffer that is what you want and for a
+script it is a quietly wrong answer.
+
+This is the supported form of a trick that works by accident
+otherwise: typing `val x = <expr>` into blank space and hovering `x`.
+That reads the right thing because the compiler runs the inserted text
+where it sits — which is exactly what `position` reproduces, without
+editing the buffer.
+
+**A report body is text, not a line.**  Poly's pretty printer calls
+its output function once per item — `val`, ` `, `it`, ` `, `=`, … —
+so a report is not a unit of layout.  The batch modes coalesce
+adjacent reports (`mergeInto`); the stream, which cannot wait for the
+end, holds a partial line until its newline arrives (`lineBuffer`).
+Either way a client should append what it gets and let the newlines in
+it do the breaking.  Appending a *line* per report is what rendered
+`val it = 39: int` down the left margin, a lone space to a line.
+
+**Bindings persist** for the next chunk evaluated at the same
+position, and are dropped anywhere else; see the protocol reference
+for why.
+
+**It can be refused.**  A chunk runs on the compile state, and a
+compile may hold it — the 300 ms-debounced one behind the user's last
+keystroke, most often.  `$/eval` does not wait: it answers with an
+`error` report saying the state is held.  A client should show that as
+what it is and let the user ask again.
+
+### Client cookbook
+
+- **eglot (shipped in this repo)** — `hol-lsp-eval-region` on
+  `M-h M-r`, shared with `copy-region-as-hol-definition`, with the
+  region (or, with no region, the top-level phrase around point) sent
+  as `code` and the region's start sent as `position`.
+  `hol-lsp-eval-string` on `M-h s`, shared with
+  `interactive-send-string-to-hol`, prompts for an expression and
+  sends point as `position`.  Output is appended to `*HOL LSP Eval*`.
+- **VS Code (`hol4-vscode`)** — `HOL: Evaluate selection`, bound to
+  `Ctrl+H Ctrl+E`, writing to the `HOL4 LSP Eval` output channel.  With
+  nothing selected it prompts for an expression (also `HOL: Evaluate
+  expression…`) and sends the cursor, which is what emacs's `M-h s`
+  does: there is then nothing to type into the script and delete
+  again.
+
 ## Emacs
+
+### Keys, shared with the REPL mode
+
+A script is driven from the `*HOL*` process or from a server, never
+from both at once, so the key for a thing means that one thing and the
+buffer decides who answers it.  Each of these runs the LSP command
+where a server is serving the buffer, and the `*HOL*`-process command
+where none is:
+
+| key | LSP | `*HOL*` process |
+|---|---|---|
+| `M-h M-r` | `hol-lsp-eval-region` | `copy-region-as-hol-definition` |
+| `M-h s` | `hol-lsp-eval-string` | `interactive-send-string-to-hol` |
+| `M-h m` | `hol-lsp-search` | `hol-db-match` |
+| `M-h M` | `hol-lsp-search` | `hol-db-select` |
+| `M-h p` | `hol-lsp-show-goal-state` | `hol-print-goal` |
+| `M-h g` | `hol-lsp-show-goal-state` | `hol-do-goal` |
+| `M-h i` | hover, via `eldoc-doc-buffer` | `hol-type-info` |
+
+`M-h M-C` (`hol-lsp-retry-compile`) is LSP-only — it has no
+`*HOL*`-process counterpart.  `M-h M-m` is `holmake` in both: a server
+is pinned to the artifacts it first loaded, so rebuilding a stale
+ancestor and then `M-h M-C` is the way out, which makes Holmake more
+wanted in a served buffer rather than less.
+
+Every other `M-h` key still addresses the `*HOL*` process whatever the
+buffer — `M-h e` and `M-h M-e` (applying a tactic; under the server
+the goals follow the cursor instead), `M-h b`, `M-h d`, `M-h r`,
+`M-h R`, `M-h ,`, `M-h f` and `M-h c`.  `M-h f`'s question is
+reachable through `M-h m` as a `"name"` selector.
 
 The repo ships `holscript-mode` (`tools/editor-modes/emacs/`), which
 does the syntax highlighting and structural editing but is not itself
@@ -1113,7 +1305,10 @@ endif
 
 ## VS Code
 
-There is no first-party HOL extension for VS Code.  Two paths:
+There is a first-party extension, `hol4-vscode`, and `vscode-setup.md`
+in this directory is the walkthrough for installing it.  Prefer that to
+anything below; what follows is kept for someone building a client of
+their own.
 
 1. **Write a minimal client extension.**  Yeoman scaffold + a few
    lines of `LanguageClient` glue.  Marketplace has several LSP

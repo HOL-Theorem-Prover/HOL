@@ -131,6 +131,25 @@ fun mk_thy_type {Thy, Tyop, Args} =
           make_type const Args ("mk_thy_type", name_toString knm)
     end
 
+(* Declare {Thy,Tyop} at arity |Args| and return that mint applied to
+   Args.  prim_type_definition used to declare the operator and then
+   look the name up again to build its theorem, which is one step more
+   than it needs: the mint is in the caller's hand already, and every
+   constant path has always used what prim_new_const returned.  See
+   Context.with_context for what the round trip cost back when the
+   write and the read could answer from different contexts. *)
+fun prim_mk_new_type {Thy,Tyop} Args =
+    let
+      val _ = not (KernelSig.is_sealed_thy Thy) orelse
+              raise ERR "prim_mk_new_type"
+                    ("target theory \"" ^ Thy ^
+                     "\" is sealed; cross-theory mints are refused")
+      val arity = length Args
+      val id = genupd_typesig (KernelSig.insert({Thy=Thy,Name=Tyop}, arity))
+    in
+      Tyapp ((id, arity), Args)
+    end
+
 fun dest_thy_typeid (Tyv _) =
     raise ERR "dest_thy_typeid" "Type a variable"
   | dest_thy_typeid (Tyapp((tyc,_), args)) =

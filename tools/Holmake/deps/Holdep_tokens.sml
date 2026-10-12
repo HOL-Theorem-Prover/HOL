@@ -48,16 +48,42 @@ fun advance (c as CR {pos, buffer, maxpos, reader, current, closer}) =
     else if buffer = "" then c
     else make reader closer
 
+(* What the scan remembers about the modules the file defines for
+   itself; `dropSelfBound' below says what it is for.
+
+     - `depth' counts the `struct' / `sig' / `let' / `local' /
+       `abstype' bodies open at this point.  Those are the only
+       constructs SML closes with `end', so counting their keywords
+       against `end' tracks nesting without parsing.
+     - `awaiting' means the last keyword was a top-level `structure',
+       so the next identifier is the name it binds.
+     - `binder' is the name of the binding whose declaration we are
+       inside, with the depth it started at.
+     - `ends' maps such a name to the position just past the end of
+       its declaration, and `first' maps every identifier recorded as
+       a dependency to the position just past its first occurrence. *)
+type selfbind = {depth : int,
+                 awaiting : bool,
+                 binder : (string * int) option,
+                 ends : (string,int) Binarymap.dict,
+                 first : (string,int) Binarymap.dict}
+
 datatype SCR = SCR of {linenum : int,
                        filename : string,
                        colnum : int,
+                       pos : int,
                        ids : (string,int) Binarymap.dict,
+                       sb : selfbind,
                        cr : char_reader}
 
 
 fun SCRfromNamedCR (name, cr) =
-  SCR { linenum = 1, colnum = 0, filename = name,
-        ids = Binarymap.mkDict String.compare, cr = cr }
+  SCR { linenum = 1, colnum = 0, pos = 0, filename = name,
+        ids = Binarymap.mkDict String.compare,
+        sb = {depth = 0, awaiting = false, binder = NONE,
+              ends = Binarymap.mkDict String.compare,
+              first = Binarymap.mkDict String.compare},
+        cr = cr }
 
 fun makeSCR fname = SCRfromNamedCR (fname, fromFile fname)
 fun SCRfromStream (name, is) = SCRfromNamedCR (name, fromStream is)
@@ -65,19 +91,25 @@ fun SCRfromReader (name, uc) = SCRfromNamedCR (name, fromReader uc)
 
 fun currentChar (SCR{cr,...}) = current cr
 fun closeSCR (SCR{cr,...}) = closeCR cr
-fun getIDs (SCR{ids,...}) = ids
-fun inc (SCR {linenum, filename, colnum, ids, cr}) =
+fun inc (SCR {linenum, filename, colnum, pos, ids, sb, cr}) =
     SCR{linenum = linenum, filename = filename, colnum = colnum + 1,
-        ids = ids, cr = advance cr}
-fun newline (SCR{linenum, filename, colnum, ids, cr}) =
+        pos = pos + 1, ids = ids, sb = sb, cr = advance cr}
+fun newline (SCR{linenum, filename, colnum, pos, ids, sb, cr}) =
     SCR{linenum = linenum + 1, filename = filename, colnum = 0,
-        ids = ids, cr = advance cr}
-fun completeID s (SCR{linenum, filename, colnum, ids, cr}) =
-    SCR{linenum = linenum, filename = filename, colnum = colnum,
-        ids = case Binarymap.peek(ids,s) of
-                  NONE => Binarymap.insert(ids, s, linenum)
-                | SOME _ => ids,
-        cr = cr}
+        pos = pos + 1, ids = ids, sb = sb, cr = advance cr}
+fun completeID s (SCR{linenum, filename, colnum, pos, ids, sb, cr}) = let
+  val {depth, awaiting, binder, ends, first} = sb
+in
+  SCR{linenum = linenum, filename = filename, colnum = colnum, pos = pos,
+      ids = case Binarymap.peek(ids,s) of
+                NONE => Binarymap.insert(ids, s, linenum)
+              | SOME _ => ids,
+      sb = {depth = depth, awaiting = awaiting, binder = binder, ends = ends,
+            first = case Binarymap.peek(first,s) of
+                        NONE => Binarymap.insert(first, s, pos)
+                      | SOME _ => first},
+      cr = cr}
+end
 
 fun mem x [] = false
   | mem x (y::ys) = x = y orelse mem x ys
@@ -88,6 +120,54 @@ fun isSMLSym c = Vector.sub(symb_vec, Char.ord c)
 
 fun isSMLAlphaCont c =
     Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+
+(* The constructs SML closes with `end'.  Nothing else does, so the
+   difference between these and `end' is the nesting depth. *)
+val blockOpeners = ["struct", "sig", "let", "local", "abstype"]
+(* A keyword that can only begin a new declaration, and so ends the
+   one before it.  Used to find where `structure M = N' stops, which
+   opens no block for an `end' to close. *)
+val decKeywords = ["val", "fun", "datatype", "abstype", "type",
+                   "exception", "structure", "signature", "functor",
+                   "open", "include", "local", "infix", "infixl",
+                   "infixr", "nonfix"]
+
+(* An alphabetic keyword or identifier has just been read, outside any
+   comment or string literal.  Move the self-binding state over it. *)
+fun sbNote nm (SCR{linenum,filename,colnum,pos,ids,sb,cr}) = let
+  val {depth, awaiting, binder, ends, first} = sb
+  fun put sb' = SCR{linenum = linenum, filename = filename, colnum = colnum,
+                    pos = pos, ids = ids, sb = sb', cr = cr}
+in
+  if awaiting then
+    put {depth = depth, awaiting = false, binder = SOME (nm, depth),
+         ends = ends, first = first}
+  else let
+    (* The binding ends at the `end' that takes us back to the depth
+       it started at, or -- when its right-hand side opened no block --
+       at the next declaration keyword written at that depth. *)
+    val leaving =
+        case binder of
+            NONE => false
+          | SOME (_, d) => if nm = "end" then depth - 1 <= d
+                           else depth = d andalso mem nm decKeywords
+    val (binder', ends') =
+        case (leaving, binder) of
+            (true, SOME (m, _)) =>
+              (NONE, case Binarymap.peek (ends, m) of
+                         NONE => Binarymap.insert (ends, m, pos)
+                       | SOME _ => ends)
+          | _ => (binder, ends)
+    (* Clamped: a file we cannot nest correctly must not be made to
+       look as though a binding had been left. *)
+    val depth' = if nm = "end" then Int.max (0, depth - 1)
+                 else if mem nm blockOpeners then depth + 1
+                 else depth
+  in
+    put {depth = depth', awaiting = nm = "structure" andalso depth' = 0,
+         binder = binder', ends = ends', first = first}
+  end
+end
 
 fun Error(SCR {filename,colnum,linenum,...}, msg) =
     raise LEX_ERROR (filename^" "^Int.toString linenum ^ "." ^
@@ -102,7 +182,7 @@ fun clean_open scr =
       | SOME #"e" => opene (inc scr) (* exception, end *)
       | SOME #"f" => openf (inc scr) (* fun, functor *)
       | SOME #"i" => openi (inc scr) (* in, infixl, infix, infixr *)
-      | SOME #"l" => openTermPFX "local" 1 (inc scr)
+      | SOME #"l" => openTermPFXsb "local" 1 (inc scr)
       | SOME #"n" => openTermPFX "nonfix" 1 (inc scr)
       | SOME #"o" => modTermPFX true "open" 1 (clean_open, clean_open) (inc scr)
       | SOME #"p" => openTermPFX "prim_val" 1 (inc scr)
@@ -121,11 +201,17 @@ fun clean_open scr =
                   else Error(scr, "Bad character >"^str c^"< after open")
 and openTermPFX kstr c scr =
     modTermPFX true kstr c (clean_initial, clean_open) scr
+(* As `openTermPFX', for the keywords an `open' list can end at that
+   also move the self-binding state: `end', `local' and `structure'
+   mean there what they mean anywhere else. *)
+and openTermPFXsb kstr c scr =
+    modTermPFX true kstr c (fn s => clean_initial (sbNote kstr s), clean_open)
+               scr
 and openOnKWord kstr scr = OnKWord true kstr (clean_initial, clean_open) scr
 and opene scr =
     case currentChar scr of
         NONE => scr |> completeID "e"
-      | SOME #"n" => openTermPFX "end" 2 (inc scr)
+      | SOME #"n" => openTermPFXsb "end" 2 (inc scr)
       | SOME #"x" => openTermPFX "exception" 2 (inc scr)
       | SOME c => extend_openAlpha "e" c scr
 and openf scr =
@@ -173,7 +259,7 @@ and opens scr =
     case currentChar scr of
         NONE => scr |> completeID "s"
       | SOME #"i" => openTermPFX "signature" 2 (inc scr)
-      | SOME #"t" => openTermPFX "structure" 2 (inc scr)
+      | SOME #"t" => openTermPFXsb "structure" 2 (inc scr)
       | SOME c => extend_openAlpha "s" c scr
 and extend_openAlpha pfx c scr =
     if Char.isSpace c then clean_open (scr |> inc |> completeID pfx)
@@ -262,7 +348,10 @@ and clean_include scr =
           modTermPFX false "datatype" 1 (clean_initial, clean_include) (inc scr)
       | SOME #"e" => includee (inc scr)
       | SOME #"s" =>
-          modTermPFX false "structure" 1 (clean_initial, clean_include) (inc scr)
+          modTermPFX false "structure" 1
+                     (fn s => clean_initial (sbNote "structure" s),
+                      clean_include)
+                     (inc scr)
       | SOME #"t" =>
           modTermPFX false "type" 1 (clean_initial, clean_include) (inc scr)
       | SOME #"v" =>
@@ -283,7 +372,9 @@ and includee scr =
         NONE => scr |> completeID "e"
       | SOME #"\n" => clean_include (scr |> newline |> completeID "e")
       | SOME #"n" =>
-          modTermPFX false "end" 2 (clean_initial, clean_include) (inc scr)
+          modTermPFX false "end" 2
+                     (fn s => clean_initial (sbNote "end" s), clean_include)
+                     (inc scr)
       | SOME #"x" =>
           modTermPFX false "exception" 2 (clean_initial, clean_include) (inc scr)
       | SOME c => if Char.isSpace c then clean_include (scr |> inc |> completeID "e")
@@ -305,15 +396,20 @@ and clean_initial scr =
         else if Char.isAlpha c then initialAlphaID("", [c]) (inc scr)
         else if isSMLSym c then initialSymID("", [c]) (inc scr)
         else clean_initial (inc scr)
-and initialAlphaID (pfx, cs) scr =
-    case currentChar scr of
-        NONE => scr
-      | SOME #"." =>
-          initialQID0 (scr |> inc
-                           |> completeID (pfx ^ String.implode (List.rev cs)))
-      | SOME #"\n" => clean_initial (newline scr)
-      | SOME c => if isSMLAlphaCont c then initialAlphaID (pfx, c::cs) (inc scr)
-                  else clean_initial scr
+and initialAlphaID (pfx, cs) scr = let
+  fun idstr () = pfx ^ String.implode (List.rev cs)
+in
+  (* Every alphabetic identifier outside an `open' or `include' list
+     arrives here, which is where `sbNote' gets to see the keywords it
+     tracks.  The qualified branch is a reference rather than a
+     keyword, so it is left alone. *)
+  case currentChar scr of
+      NONE => sbNote (idstr()) scr
+    | SOME #"." => initialQID0 (scr |> inc |> completeID (idstr()))
+    | SOME #"\n" => clean_initial (newline (sbNote (idstr()) scr))
+    | SOME c => if isSMLAlphaCont c then initialAlphaID (pfx, c::cs) (inc scr)
+                else clean_initial (sbNote (idstr()) scr)
+end
 and initialSymID (pfx, cs) scr =
     case currentChar scr of
         NONE => scr
@@ -435,13 +531,52 @@ and initialAlphaKWordPFX kword numseen k scr =
         else clean_initial scr
 and initialAlphaKWord kword k scr =
     case currentChar scr of
-        NONE => k scr
+        NONE => k (sbNote kword scr)
       | SOME c => if isSMLAlphaCont c then
                     initialAlphaID (kword, [c]) (inc scr)
-                  else k scr
+                  else k (sbNote kword scr)
+
+(* Drop the modules the file defines for itself.  A script that writes
+
+     structure bossLib = struct val Datatype = Datatype.Datatype end
+
+   so that a `[bare]' theory can use the `Datatype:' block does not
+   depend on the real `bossLib', and loading it on the strength of
+   that mention is not merely wasteful: `bossLib' brings `listTheory'
+   with it, and a theory already loaded in the session is sealed
+   against the `new_theory' that `listScript.sml' is about to perform.
+
+   Dropping every self-bound name would be wrong, because the binder
+   is not in scope in its own right-hand side:
+
+     structure Parse = struct open Parse ... end
+
+   opens the *outer* `Parse', which is a real dependency, and the idiom
+   appears in some ninety files here.  So a name survives if it is
+   mentioned anywhere up to the end of its own declaration, and is
+   dropped only when every mention of it comes afterwards, where the
+   file's own structure is what the name means.
+
+   A binding whose end was never found -- `structure M = N' at the end
+   of a file, or anything the depth counting could not follow -- has no
+   entry in `ends' and keeps its dependency. *)
+fun dropSelfBound (SCR{ids, sb, ...}) = let
+  val ends = #ends sb and first = #first sb
+  fun keep nm =
+      case Binarymap.peek (ends, nm) of
+          NONE => true
+        | SOME e => (case Binarymap.peek (first, nm) of
+                         NONE => true
+                       | SOME p => p < e)
+in
+  Binarymap.foldl (fn (nm, ln, acc) =>
+                      if keep nm then Binarymap.insert (acc, nm, ln) else acc)
+                  (Binarymap.mkDict String.compare)
+                  ids
+end
 
 fun scrdeps scr =
-    getIDs (clean_initial scr) before
+    dropSelfBound (clean_initial scr) before
     closeSCR scr
 
 fun file_deps fname = scrdeps (makeSCR fname)

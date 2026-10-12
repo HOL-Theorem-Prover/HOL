@@ -7647,6 +7647,20 @@ Proof
   \\ rw[]
 QED
 
+Theorem partition_partitions:
+  R equiv_on A ==> partition R A partitions A
+Proof
+  rw[partitions_thm, EXISTS_UNIQUE_THM]
+  >- metis_tac[EMPTY_NOT_IN_partition]
+  >- (`x ⊆ BIGUNION (partition R A)` suffices_by metis_tac[BIGUNION_partition]
+     >> rw[SUBSET_DEF] >> metis_tac[])
+  >- (rw[partition_def, SF DNF_ss] >> metis_tac[equiv_on_def])
+  >> fs[partition_def] >> rw[equiv_class_eq]
+  >> dxrule $ iffLR equiv_on_def >> rw[]
+  >> fs[SPECIFICATION]
+  >> metis_tac[]
+QED
+
 Theorem partitions_PAIR_DISJOINT:
   !x y. x partitions y <=>
         {} NOTIN x /\
@@ -9157,7 +9171,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-(* NOTE: The original proofs by Joe Hurd depend on “ind_type$NUMPAIR” *)
+(* NOTE: The original proofs by Joe Hurd depend on numeric pairing *)
 Theorem NUM_2D_BIJ :
     ?f. BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
               (UNIV : num -> bool)

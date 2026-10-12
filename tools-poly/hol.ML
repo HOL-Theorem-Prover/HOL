@@ -684,6 +684,13 @@ in
           \              in fn () => (Context.restore cSnap; \
           \                           loadedR (); nsR ()) end) \
           \end";
+        (* Sealing lives in `KernelSig', outside the Context, because
+           it is a soundness gate rather than a cache -- so none of the
+           restores above take it back.  The compile asks about it to
+           tell a preload that has loaded the file's own theory from
+           what it is supposed to do, which is build it. *)
+        evalString "the sealed-theory predicate"
+          "LSPExtension.theorySealed := Thm.is_sealed";
         (* The prover hook: don't run tactic proofs during elaboration,
            return an oracle-tagged theorem instead (the same hook
            fastbuild uses), and with LSPExtension.deferProofs set also

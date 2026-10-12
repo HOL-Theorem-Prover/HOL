@@ -11,6 +11,8 @@ Run:  python3 tools-poly/lsp/tests/lsp_tests.py [test_name ...]
 Exit code: 0 if all passed, 1 if any failed.
 """
 import subprocess, threading, time, json, os, sys, re, tempfile, shutil
+import functools
+from concurrent.futures import ThreadPoolExecutor
 
 # The tree under test.  Default: the one this script lives in, four
 # levels up from <HOLDIR>/tools-poly/lsp/tests/lsp_tests.py -- so a
@@ -49,12 +51,50 @@ LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 EXIT_GRACE = int(os.environ.get("HOL_LSP_EXIT_GRACE", "30"))
 
 CLOSE_FAILURES = []
-CURRENT_TEST = "<none>"
+_CLOSE_LOCK = threading.Lock()
+
+# Which test the calling thread is running.  Under `-j' there is no one
+# answer, so a thread local rather than a module global: there is
+# nothing to serialise, the value is per-thread by construction.
+_tls = threading.local()
+
+
+def _current_test():
+    return getattr(_tls, "name", "<none>")
+
+
+def _close_failure(owner, why, err):
+    """File a teardown failure against the test that spawned the server.
+
+    `list.append' is atomic under the GIL, but nothing here should
+    depend on that -- a free-threaded build has no GIL -- and saying so
+    costs one lock."""
+    with _CLOSE_LOCK:
+        CLOSE_FAILURES.append((owner, why, err))
+
+
+# Every timeout below is a budget measured against one server booting on
+# an idle machine.  Under `-j N' there are N of them, contending for
+# exactly what those budgets were sized against: mapping an 18.7MB heap
+# and QUse-ing ten .ML files.  Scale them together rather than raising
+# each by hand -- the ratios between them are deliberate, and the
+# negative waits (`assert_true(not wait_for_method(...))') must widen
+# too, or under load they quietly weaken into vacuous passes.
+TIME_SCALE = 1.0
+
+
+def _budget(t):
+    return t * TIME_SCALE
 
 
 class Client:
     def __init__(self, cwd, args=None, env=None):
         self.spawn_started = time.time()
+        # The test that spawned this server, captured now rather than
+        # read in `close': what a leak wants attributed is who started
+        # it.  It also keeps `close' correct when called from a thread
+        # other than the test's own.
+        self.owner = _current_test()
         self.p = subprocess.Popen(
             [HOL_BIN, "lsp", *(args if args is not None else LSP_ARGS)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -73,7 +113,8 @@ class Client:
         try:
             self._reader_loop()
         except Exception as e:
-            sys.stderr.write(f"[client reader died] {type(e).__name__}: {e}\n")
+            sys.stderr.write(f"[client reader died] {self.owner}: "
+                             f"{type(e).__name__}: {e}\n")
 
     def _reader_loop(self):
         while not self._stop:
@@ -130,7 +171,7 @@ class Client:
         """Return the first message m with m.method == method arriving at
         index >= since.  Efficient for large message volumes: scans only
         the new tail on each poll, no whole-list copy."""
-        deadline = time.time() + timeout
+        deadline = time.time() + _budget(timeout)
         idx = since
         while time.time() < deadline:
             # Snapshot end-index under lock, then scan msgs[idx:end]
@@ -150,7 +191,7 @@ class Client:
 
     def wait_until(self, pred, timeout):
         """Wait until pred(client) is truthy. `pred` takes the client."""
-        deadline = time.time() + timeout
+        deadline = time.time() + _budget(timeout)
         while time.time() < deadline:
             r = pred(self)
             if r: return r
@@ -179,19 +220,19 @@ class Client:
                                for m in cl.messages_since(0)[0]), EXIT_GRACE)
             self.send({"jsonrpc":"2.0","method":"exit","params":None})
             if expect_exit and not _wait_for_exit(self.p, EXIT_GRACE):
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST, "server did not exit after shutdown+exit",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner, "server did not exit after shutdown+exit",
+                    self.stderr_text()[-2000:])
             elif expect_exit and self.p.returncode not in (0, None):
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST,
-                     f"server exited with code {self.p.returncode}",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner,
+                    f"server exited with code {self.p.returncode}",
+                    self.stderr_text()[-2000:])
         except Exception as e:
             if expect_exit:
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST, f"teardown raised {type(e).__name__}: {e}",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner, f"teardown raised {type(e).__name__}: {e}",
+                    self.stderr_text()[-2000:])
         finally:
             try:
                 if self.p.poll() is None:
@@ -266,6 +307,11 @@ def _did_open(c, uri, text, version=1):
     c.send({"jsonrpc":"2.0","method":"textDocument/didOpen",
             "params":{"textDocument":{"uri":uri,"languageId":"holsml",
                                         "version":version,"text":text}}})
+
+
+def _did_close(c, uri):
+    c.send({"jsonrpc":"2.0","method":"textDocument/didClose",
+            "params":{"textDocument":{"uri":uri}}})
 
 
 def _did_change_full(c, uri, text, version):
@@ -364,15 +410,35 @@ def requires(tag):
     where, d, obj = _REQUIREMENTS[tag]
 
     def deco(fn):
+        # `functools.wraps' rather than copying __name__/__doc__ by
+        # hand: it also carries __dict__ across, so a tag an inner
+        # decorator set survives being wrapped and decorator order
+        # stops mattering.
+        @functools.wraps(fn)
         def wrapper():
             if not _built(d, obj):
                 raise Skipped(f"{where} is not built in this tree")
             return fn()
-        wrapper.__name__ = fn.__name__
-        wrapper.__doc__ = fn.__doc__
         wrapper.requires = tag
         return wrapper
     return deco
+
+
+def serial(fn):
+    """Mark a test as one to run alone, after the pool has drained.
+
+    For a test that asserts how *long* something took: those bounds
+    were measured on a machine running one server, and `-j' makes that
+    false.  Not for tests that share a place on disk -- there are
+    none: every fixture is its own `tempfile.mkdtemp', which gets the
+    `bin/Holmake' shell-outs their own `.hol/locks' too.
+
+    A final sequential pass rather than a lock, because a lock still
+    leaves the other N-1 tests running, which is exactly what a
+    latency bound cannot tolerate.
+    """
+    fn.serial = True
+    return fn
 
 
 def assert_le(actual, expected, label):
@@ -500,6 +566,7 @@ def test_small_recompile_type_error_inserted():
 
 
 @requires("integer")
+@serial
 def test_integer_first_compile():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -520,6 +587,7 @@ def test_integer_first_compile():
 
 
 @requires("integer")
+@serial
 def test_integer_recompile_blank_lines():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -624,6 +692,7 @@ def test_small_recompile_bare_val():
 
 
 @requires("integer")
+@serial
 def test_integer_didChange_interrupts_stale_compile():
     """didChange mid-compile must interrupt the stale compile and start a
     fresh one.  Otherwise we get two compiles running against the same
@@ -667,6 +736,7 @@ def test_integer_didChange_interrupts_stale_compile():
 
 
 @requires("integer")
+@serial
 def test_hover_responsive_during_compile():
     """A didChange kicks off a compile; while it's running, hover
     requests must still be answered promptly (recv thread must not
@@ -1642,7 +1712,7 @@ def test_hover_inside_inductive_body():
 
 
 def _wait_for_exit(p, timeout=10):
-    deadline = time.time() + timeout
+    deadline = time.time() + _budget(timeout)
     while time.time() < deadline:
         if p.poll() is not None: return True
         time.sleep(0.1)
@@ -2298,7 +2368,7 @@ _SUSP_COLON_LINE = 11      # `Resume willsplit[p]:`
 _SUSP_BODY_LINE = 12       # `  first_assum ACCEPT_TAC`
 
 
-def _susp_goal(c, uri, rid, line, char, tries=25):
+def _susp_goal(c, uri, rid, line, char, timeout=50):
     """Ask for goal state and wait out the `pending` that the first
     request provokes.
 
@@ -2306,14 +2376,32 @@ def _susp_goal(c, uri, rid, line, char, tries=25):
     actually run, which elaboration does not do on its own.  The first
     request answers `pending` and asks for the parent to be run; the
     recompile that follows is what makes the subgoal available.  So a
-    test polls rather than asking once."""
-    for i in range(tries):
-        m = _send_goalstate(c, rid + i, uri, line, char)
-        r = (m or {}).get("result")
+    test polls rather than asking once.
+
+    A deadline rather than a fixed number of tries, and a wait on that
+    recompile rather than a flat two seconds.  A loop count is the one
+    budget in this file that `TIME_SCALE' cannot reach, so under `-j'
+    it would quietly become tighter than it was sized to be -- while
+    also costing 2s a round when the answer had already arrived.
+    """
+    deadline = time.time() + _budget(timeout)
+    n, r = 0, None
+    while True:
+        since = c.total_msgs()
+        r = (_send_goalstate(c, rid + n, uri, line, char) or {}).get("result")
         if r and r.get("status") == "ok":
             return r
-        time.sleep(2)
-    return (m or {}).get("result")
+        n += 1
+        # `deadline' is already scaled, so poll here rather than going
+        # through `wait_for_method' and scaling a second time.
+        saw = False
+        while time.time() < deadline and not saw:
+            saw = any(m.get("method") == "$/compileCompleted"
+                      for m in c.messages_since(since)[0])
+            if not saw:
+                time.sleep(0.05)
+        if not saw:
+            return r
 
 
 def _proof_states(c, uri, since=0):
@@ -2330,6 +2418,29 @@ def _proof_states(c, uri, since=0):
         for st in p["states"]:
             seen[st["name"]] = (st["status"], st.get("detail"))
     return seen
+
+
+def _census(c, uri, since=0):
+    """The census of the latest $/compileCompleted for `uri`, as
+    (version, names), or None when the notification carried none.
+
+    The names are everything the buffer declares, under the names a
+    proof there would be given -- a superset of the proof sites, since
+    the only question asked of it is whether a name a client holds is
+    still declared.
+
+    Absent is not the same as empty: a server not checking proofs sends
+    neither field, and a client must then leave its tally alone."""
+    msgs, _ = c.messages_since(since)
+    got = None
+    for m in msgs:
+        if m.get("method") != "$/compileCompleted":
+            continue
+        p = m["params"]
+        if p["uri"] != uri:
+            continue
+        got = ((p["version"], p["declared"]) if "declared" in p else None)
+    return got
 
 
 def _proof_transitions(c, uri, since=0):
@@ -2586,7 +2697,9 @@ def test_goalState_resume_unknown_label_is_not_null():
                         "compileCompleted")
             col = len("Resume willsplit[typo]:")
             # Never settles to `ok`; take whatever the last answer is.
-            r = _susp_goal(c, uri, 980, _SUSP_COLON_LINE, col, tries=4)
+            # Short budget on purpose: this one never settles, so the
+            # default would mean waiting out the whole deadline.
+            r = _susp_goal(c, uri, 980, _SUSP_COLON_LINE, col, timeout=6)
             assert_true(r is not None,
                         "a response rather than null for a Resume block")
             assert_eq(r["status"], "pending", f"reported pending ({r!r})")
@@ -2887,6 +3000,7 @@ def _send_goalstate(c, req_id, uri, line, char):
 
 
 @requires("integer")
+@serial
 def test_full_replace_resumes_from_the_common_prefix():
     """A whole-document replace is usually a revert or a reformat, so
     the old and new texts agree for most of their length.  Resume from
@@ -2932,6 +3046,67 @@ def test_full_replace_resumes_from_the_common_prefix():
                     "compileCompleted after the revert")
         after = _send_goalstate(c, 791, uri, 3940, 8).get("result")
         assert_true(after is not None, "goal state after the revert")
+        assert_eq(after.get("error"), None,
+                  f"no tactic reported as failing ({after!r})")
+        assert_eq(after.get("goals"), base.get("goals"),
+                  f"same state as before the round trip ({after!r})")
+    finally:
+        c.close()
+
+
+@requires("integer")
+def test_close_and_reopen_keeps_ancestors_loaded():
+    """The same revert as the test above, by the other route.
+
+    A version-control revert kills and re-reads the buffer, which
+    restarts the major mode, so eglot leaves `eglot--managed-mode` and
+    re-enters it: the server sees `didClose` followed at once by
+    `didOpen`, not a `didChange`.  Dropping the file's record on the
+    close left the reopen with no `declSnapshots`, which is what sends
+    `startCompile` back to the boot state — `Meta.loadedMods` rewound,
+    the preload re-reading ancestors that `Theory.load_complete` has
+    already sealed in `KernelSig.sealed_ref`, `TheoryReader` refusing
+    every one of them, and the rest of the file drawing a diagnostic
+    per declaration for the remaining life of the process.
+
+    Needs a real `Ancestors` the running heap does not already hold —
+    a theory only gets sealed by being loaded — which is why this is an
+    `integer` test rather than one over a scratch file in /tmp."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src, encoding="utf8") as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        assert_eq(len(_diag_count(c, uri)), 0, "clean before the close")
+        base = _send_goalstate(c, 792, uri, 3940, 8).get("result")
+        assert_true(base is not None, "baseline goal state")
+
+        idx = c.total_msgs()
+        _did_close(c, uri)
+        # Version 0 is what eglot sends: its numbering starts over with
+        # the buffer, so the reopen is not merely a later edit.
+        _did_open(c, uri, text, version=0)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the reopen")
+
+        d = _diag_count(c, uri)
+        first = d[0].get("message", "")[:160] if d else ""
+        assert_eq(len(d), 0,
+                  f"no diagnostics after close+reopen ({len(d)}; {first!r})")
+        # Named, so a failure says which wreckage it is and not only how
+        # much of it there was.  Both only ever reach stderr.
+        blob = c.stderr_text()
+        assert_true("is sealed" not in blob,
+                    "no sealed-theory refusal on stderr")
+        assert_true("not in ancestry" not in blob,
+                    "no 'not in ancestry' on stderr")
+
+        after = _send_goalstate(c, 793, uri, 3940, 8).get("result")
+        assert_true(after is not None, "goal state after the reopen")
         assert_eq(after.get("error"), None,
                   f"no tactic reported as failing ({after!r})")
         assert_eq(after.get("goals"), base.get("goals"),
@@ -5692,6 +5867,79 @@ def test_deps_body_reference_does_not_block():
 
 
 # ------------------------------------------------------------------
+# A header name that is a substructure of something opened before it
+# ------------------------------------------------------------------
+# `Unicode' is not a module: it is `Parse.Unicode'
+# (src/parse/Parse.sig), so nothing can load it and it is in no
+# namespace under that bare name until the header's `open Parse' has
+# run.  Scripts write it on its own line below the header for exactly
+# that reason -- a `Libs' run is merged into one `open', and SML
+# resolves every strid of an `open' against the environment before the
+# declaration.  src/bool/boolScript.sml and
+# src/pred_set/src/pred_setScript.sml both do this.
+#
+# `UChar.emptyset' is the positive control: `UChar' arrives only via
+# `open Unicode', so the test cannot pass against an empty namespace
+# layer.
+_SUBSTRUCT_SRC = ("Theory substruct_open[bare]\n"
+                  "Libs\n"
+                  "  HolKernel Parse boolLib\n"
+                  "\n"
+                  "open Unicode\n"
+                  "\n"
+                  "val a = UChar.emptyset\n")
+
+
+def test_open_substructure_not_blocked():
+    """`open Unicode' names a substructure of an already-opened `Parse',
+    not a module.  It must not block the file."""
+    uri = "file:///tmp/substruct_open.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _SUBSTRUCT_SRC)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted arrived")
+        assert_true(c.wait_for_method("$/compileBlocked", 1) is None,
+                    "a substructure `open' does not block the file")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 0,
+                  f"no diagnostics ({[x['message'][:60] for x in d]})")
+    finally:
+        c.close()
+
+
+def test_open_missing_module_still_blocks():
+    """The substructure search must not make the check vacuous: an
+    `open' of something that is neither a module nor in scope still
+    stops the file, reported on the `open'."""
+    uri = "file:///tmp/substruct_bad.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, "Theory substruct_bad[bare]\n"
+                          "Libs\n"
+                          "  HolKernel Parse boolLib\n"
+                          "\n"
+                          "open nosuchsubstructure\n"
+                          "\n"
+                          "val a = 3\n")
+        m = c.wait_for_method("$/compileBlocked", 30)
+        assert_true(m is not None, "compileBlocked arrived")
+        assert_true("nosuchsubstructure" in m["params"]["modules"],
+                    f"modules lists it ({m['params']['modules']})")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 1,
+                  f"one diagnostic ({[x['message'][:60] for x in d]})")
+        assert_contains(d[0]["message"], "cannot load nosuchsubstructure",
+                        "diagnostic text")
+        assert_eq(d[0]["range"]["start"]["line"], 4,
+                  "reported against the `open'")
+    finally:
+        c.close()
+
+
+# ------------------------------------------------------------------
 # Position encoding negotiated from the client's capabilities
 # ------------------------------------------------------------------
 # `xyzzy` sits after three ∀ (3 bytes each in UTF-8, one utf-16 code
@@ -5977,7 +6225,7 @@ _SYM_SRC = ("Theory idesym\nAncestors arithmetic\n\n"
 def test_documentSymbol_lists_the_declarations():
     """The outline covers HOL declarations and SML ones alike, and the
     Datatype's type name is scraped from its quotation -- the parser
-    hands that block to bossLib.Datatype unread, so there is no
+    hands that block to Datatype.Datatype unread, so there is no
     identifier in the tree to take."""
     uri = "file:///tmp/idesymScript.sml"
     c = Client("/tmp")
@@ -7354,6 +7602,162 @@ def test_a_rebound_name_gets_its_own_entry():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_deleted_proof_leaves_the_tally():
+    """Write a failing proof and it is correctly reported as one to
+    look at.  Delete the whole `Theorem ... QED' and it must stop being
+    reported -- the count, the name in the tooltip, and the squiggle.
+
+    A client cannot work this out.  The pool announces the entry it
+    drops as `cheated', which is what it also announces when an edit
+    merely reached a proof, and a client that forgot every `cheated'
+    would under-count the proofs still waiting to be re-checked.  So
+    the server says which names the buffer still declares, and the
+    client keeps exactly those."""
+    d = tempfile.mkdtemp(prefix="lsp_delproof_")
+    try:
+        head = ("Theory delproof\n"
+                "Ancestors arithmetic\n"
+                "\n"
+                "Theorem keep_me:\n"
+                "  1 + 1 = 2\n"
+                "Proof\n"
+                "  DECIDE_TAC\n"
+                "QED\n"
+                "\n")
+        doomed = ("Theorem not_worth_it:\n"
+                  "  1 = 2\n"
+                  "Proof\n"
+                  "  DECIDE_TAC\n"
+                  "QED\n"
+                  "\n")
+        tail = ("Theorem keep_me_too:\n"
+                "  2 + 2 = 4\n"
+                "Proof\n"
+                "  DECIDE_TAC\n"
+                "QED\n")
+        src = head + doomed + tail
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/delproofScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # The positive control: without it a census that named
+            # nothing would read exactly like one that worked.
+            def failed(cl):
+                st = _proof_states(cl, uri)
+                return st if st.get("not_worth_it", (None,))[0] == "failed" \
+                    else None
+
+            assert_true(c.wait_until(failed, 60) is not None,
+                        f"the bad proof is reported failed first "
+                        f"({_proof_states(c, uri)!r})")
+            before = _census(c, uri)
+            assert_true(before is not None, "the census is sent at all")
+            assert_true("not_worth_it" in before[1],
+                        f"and names the proof while it exists ({before!r})")
+
+            mark = c.total_msgs()
+            at = len(head.encode("utf-8"))
+            _did_change_incr(c, uri, src, at,
+                             at + len(doomed.encode("utf-8")), "", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=mark),
+                        "compileCompleted after the deletion")
+
+            def gone(cl):
+                got = _census(cl, uri, since=mark)
+                return got if got is not None \
+                    and "not_worth_it" not in got[1] else None
+
+            after = c.wait_until(gone, 60)
+            assert_true(after is not None,
+                        f"the deleted proof leaves the census "
+                        f"({_census(c, uri, since=mark)!r})")
+            assert_true(all(n in after[1] for n in ("keep_me", "keep_me_too")),
+                        f"and the surviving two stay in it ({after!r})")
+            assert_eq(after[0], 2, "stamped with the text it was read from")
+
+            # The other half of the same complaint: the squiggle.
+            def unsquiggled(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "not_worth_it" in x.get("message", "")
+                      or "proof failed" in x.get("message", "")]
+                return True if not ds else None
+
+            assert_true(c.wait_until(unsquiggled, 60) is not None,
+                        f"and its diagnostic goes with it "
+                        f"({_diag_count(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_the_census_names_proofs_not_verdicts():
+    """The census says which proofs the buffer *has*, not what the pool
+    makes of them -- so an unchecked proof is still named, and a client
+    pruning against it reports the proof rather than hiding it.
+
+    That is also what makes the list safe to send.  A snapshot of the
+    pool's verdicts could not be: it would have to be sampled and only
+    then put on the wire, so a worker settling in between would lose
+    its newer verdict to the older sample.  Nothing a worker does adds
+    or removes a declaration, so this list has no such race.
+
+    The occurrence numbers are the pool's own, which is why a rebound
+    name appears as `foo#2' here exactly as it does on
+    `$/proofStates'."""
+    d = tempfile.mkdtemp(prefix="lsp_census_")
+    try:
+        src = ("Theory census\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem foo:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n"
+               "\n"
+               "Theorem foo[allow_rebind]:\n"
+               "  2 + 2 = 4\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/censusScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            got = _census(c, uri)
+            assert_true(got is not None, "a census is sent")
+            assert_true(all(n in got[1] for n in ("foo", "foo#2")),
+                        f"both occurrences, under the names the pool uses "
+                        f"({got!r})")
+
+            # Said without waiting for a verdict, which is the point:
+            # the names are there whether or not the pool has settled.
+            def settled(cl):
+                st = _proof_states(cl, uri)
+                return st if len(st) >= 2 and all(
+                    v[0] != "checking" for v in st.values()) else None
+
+            st = c.wait_until(settled, 60)
+            assert_true(st is not None, f"the proofs do settle ({st!r})")
+            assert_true(all(n in got[1] for n in st),
+                        f"and every name the pool used is one the census "
+                        f"names, which is what makes pruning against it "
+                        f"safe ({sorted(st)!r} vs {got[1]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_an_edit_above_a_proof_keeps_one_entry():
     """An edit above every proof re-elaborates the file, so each proof
     is dropped and forked again somewhere else.  It must come back
@@ -8209,6 +8613,50 @@ def test_check_proofs_enabled_during_a_compile():
         shutil.rmtree(d, ignore_errors=True)
 
 
+@requires("sorting")
+def test_a_module_the_file_defines_is_not_preloaded():
+    """A `[bare]' script can supply a structure the bare heap lacks --
+
+        structure bossLib = struct val Datatype = Datatype.Datatype end
+
+    is how `listScript.sml' reaches the `Datatype:' block -- and the
+    holdep preload must not go and load the real module on the
+    strength of that mention.  Here the file defines `sortingTheory';
+    loading the real one calls `Theory.load_complete', which seals
+    `sorting' in `KernelSig', and `new_theory "sorting"' then cannot
+    enter its own theory.  Every declaration below the header fails
+    with "no current theory" -- nearly three thousand diagnostics in
+    the case this came from.
+
+    The name has to be one the server can actually find, or there is
+    nothing to load and the test cannot fail; `sortingTheory' is the
+    one this suite already arranges to be reachable."""
+    d = tempfile.mkdtemp(prefix="lsp_selfmod_")
+    try:
+        _point_at_sorting(d)
+        src = ("Theory sorting[bare]\n"
+               "Libs HolKernel\n\n"
+               "structure sortingTheory = struct val SORTED_DEF = 1 end\n"
+               "val x = sortingTheory.SORTED_DEF\n")
+        uri = f"file://{d}/sortingScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "compileCompleted")
+            msgs = [x.get("message", "") for x in _diag_count(c, uri)]
+            assert_eq(msgs, [], "no diagnostics")
+            err = c.stderr_text()
+            assert_true("sealed" not in err,
+                        f"and nothing sealed the theory being built "
+                        f"({err[-400:]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_goalState_select_then_completes():
     """`>>~-' selects the goals a pattern matches and runs its tactic
     on them, leaving the rest stashed.  With a different number
@@ -8429,6 +8877,7 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
         for old, new in [("  simp[]", "  alL_tac"), ("  alL_tac", "  simp[]"),
                          ("  simp[]", "  all_tac"), ("  all_tac", "  simp[]")]:
             ver += 1
+            since = c.total_msgs()
             _did_change_incr(c, uri, cur, at, at + len(old), "", ver)
             cur = cur[:at] + cur[at + len(old):]
             built = ""
@@ -8439,7 +8888,15 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
                                  at + len(built), ch, ver)
                 cur = cur[:at + len(built)] + ch + cur[at + len(built):]
                 built += ch
-            time.sleep(3)
+            # Let this burst's pass get going before the next one, so
+            # that there is something for the next burst to interrupt.
+            # Waiting on the pass saying so rather than three flat
+            # seconds: under `-j' three seconds may not be enough to
+            # start one, and then the next burst abandons nothing and
+            # the test goes inert while still reporting PASS.  This
+            # waits longer when the machine is busy and returns at once
+            # when it is not.
+            c.wait_for_method("$/proofStates", 10, since=since)
 
         deadline = time.time() + 90
         while time.time() < deadline:
@@ -8635,10 +9092,26 @@ def test_a_burst_of_edits_leaves_diagnostics_matching_the_text():
     final = src.replace(old, "all_tac >>", 1)
     uri = "file:///tmp/burst_probe.sml"
 
-    def settled(c, seconds):
-        deadline = time.time() + seconds
+    def settled(c, seconds, quiet=5.0):
+        """Wait for the server to stop talking, then read the diagnostics.
+
+        The quiet window *is* the test, not an optimisation: what used
+        to stick was a **late** publish from a pass that had already
+        been abandoned, so reading the moment the expected text arrives
+        would pass for the wrong reason.  `seconds' stays exactly the
+        cap it always was -- this only stops idling once the server has
+        gone silent for `quiet', rather than always sleeping the whole
+        budget.
+        """
+        deadline = time.time() + _budget(seconds)
+        last, quiet_since = c.total_msgs(), time.time()
         while time.time() < deadline:
-            time.sleep(2)
+            time.sleep(0.2)
+            now = c.total_msgs()
+            if now != last:
+                last, quiet_since = now, time.time()
+            elif time.time() - quiet_since >= quiet:
+                break
         return sorted((d["range"]["start"]["line"] + 1,
                        d.get("message", "").split("\n")[0][:40])
                       for d in _diag_count(c, uri))
@@ -8740,6 +9213,16 @@ def test_abrupt_disconnect_during_compile_exits():
                     "server exited with a compile in flight\n" +
                     c.stderr_text()[-2000:])
         assert_eq(c.p.returncode, 0, "exit code with a compile in flight")
+        # This is the server's own exit, not the file's.  The notice
+        # that explains a file-driven exit (see
+        # `toplevel_exit_says_why') is armed right now, and fires only
+        # on the thread that armed it -- without that test, closing an
+        # editor window mid-compile would tell the user their file
+        # called `OS.Process.exit'.
+        blamed = [m["params"]["message"] for m in c.messages_since(0)[0]
+                  if m.get("method") == "window/showMessage"
+                  and "OS.Process.exit" in m["params"]["message"]]
+        assert_eq(blamed, [], "the file was not blamed for our own exit")
     finally:
         c.close(expect_exit=False)
 
@@ -8805,6 +9288,68 @@ def test_disconnect_before_handshake_exits_cleanly():
                   c.stderr_text()[-2000:])
     finally:
         c.close(expect_exit=False)
+
+
+def test_toplevel_exit_says_why_before_it_goes():
+    """A file whose top level calls `OS.Process.exit' takes the server
+    with it (gh #2077): compilation is execution, and an exit is not an
+    exception, so none of the compile's handlers see it.
+
+    The server does not promise to survive it.  Staying alive would
+    mean shadowing `OS' beneath the file's own compile, and that guards
+    the buffer's source text only -- the library code it calls keeps
+    the real `exit' (`testutils.die' is the common one).  What it
+    promises is to say why it went.  Without that the client gets EOF
+    with nothing anywhere, and an auto-restarting one reloads a whole
+    heap to die the same way again.
+
+    The notice has to be flushed before the process goes, which is what
+    the connection's `drain' is for: the writer thread would otherwise
+    still be holding the frame when the exit lands."""
+    d = tempfile.mkdtemp(prefix="lsp_exit_")
+    try:
+        uri = f"file://{d}/exittopScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri,
+                      "Theory exittop\nAncestors bool\n\n"
+                      "fun f x = x + 1\n"
+                      "val g = f 1\n"
+                      "val () = OS.Process.exit OS.Process.success\n")
+
+            # Wait for the death first, not for the message: once the
+            # process is gone nothing further can arrive, so the short
+            # waits below are instant when the notice is there and
+            # bounded when it is not.  Waiting on the message first
+            # costs its whole timeout on every regression.
+            assert_true(_wait_for_exit(c.p, 120),
+                        "the file's exit took the server down\n"
+                        + c.stderr_text()[-2000:])
+
+            def told_why(cl):
+                ws = [m["params"]["message"]
+                      for m in cl.messages_since(0)[0]
+                      if m.get("method") == "window/showMessage"]
+                return ws if any("OS.Process.exit" in w for w in ws) else None
+
+            warns = c.wait_until(told_why, 10)
+            seen = [m["params"]["message"] for m in c.messages_since(0)[0]
+                    if m.get("method") == "window/showMessage"]
+            assert_true(warns,
+                        f"the server named the exit before going "
+                        f"(showMessage seen: {seen!r}; stderr: "
+                        f"{c.stderr_text()[-1000:]!r})")
+            assert_true(any("exittopScript.sml" in w for w in warns),
+                        f"and named the file ({warns!r})")
+            # `$/compileCompleted' is never coming, so a client that
+            # waits for one waits for ever.  Close the pass off.
+            assert_true(c.wait_for_method("$/compileInterrupted", 10),
+                        "the pass was closed off")
+        finally:
+            c.close(expect_exit=False)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def test_goal_state_segments_rebuild_pretty_with_annotations():
@@ -9255,7 +9800,7 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
 def _wait_for_log(c, needle, timeout, since=0):
     """Index just past the first window/logMessage containing NEEDLE at
     or after SINCE, or None."""
-    deadline = time.time() + timeout
+    deadline = time.time() + _budget(timeout)
     idx = since
     while time.time() < deadline:
         msgs, total = c.messages_since(idx)
@@ -9454,6 +9999,331 @@ def test_a_theorem_without_proof_keeps_the_file_compiling():
             c.close()
 
 
+def test_theory_rename_and_back():
+    """Renaming a script's theory and then renaming it back must leave
+    the session compiling.  `new_theory` used to export the segment it
+    abandoned whenever the name changed: that wrote the theory to disk,
+    added it to the theory graph, and sealed its name in
+    `KernelSig.sealed_ref` -- process-global and deliberately outside
+    `Context`, so no snapshot restore could take it back.  The second
+    `Theory foo` then raised `theory: "foo" already exists.` on every
+    pass for the rest of the session's life.
+
+    `export_theory` already keys off `Globals.interactive`, which is
+    true under `hol lsp`; the implicit export inside `new_theory` did
+    not.  The header recompiles per keystroke, so this fired while
+    simply *typing* a name too -- `Theory f` then `Theory fo` exported
+    and sealed each prefix in turn."""
+    d = tempfile.mkdtemp(prefix="lsp_thyrename_")
+    try:
+        body = "\nval x = 1\n"
+        uri = f"file://{d}/fooScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, "Theory foo" + body)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+            v1 = _diag_count(c, uri)
+            assert_eq(len(v1), 0, f"a clean file compiles clean ({v1!r})")
+
+            # Away (which is also a file-name mismatch, so this pass is
+            # expected to carry exactly that one diagnostic) ...
+            idx = c.total_msgs()
+            _did_change_full(c, uri, "Theory bar" + body, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                        "compileCompleted after renaming away")
+
+            # ... and back.
+            idx = c.total_msgs()
+            _did_change_full(c, uri, "Theory foo" + body, 3)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                        "compileCompleted after renaming back")
+            v3 = _diag_count(c, uri, ver=3)
+            assert_eq(len(v3), 0,
+                      f"the original name compiles clean again ({v3!r})")
+
+            # Nothing may have been written: an editing session is not a
+            # build.  `.hol/objs/` is where HFS_NameMunge puts these.
+            written = sorted(f for _, _, fs in os.walk(d) for f in fs
+                             if f.startswith(("fooTheory", "barTheory")))
+            assert_eq(written, [], "no theory products written")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_theory_name_must_match_file_name():
+    """A script's file name is the authority on its theory name:
+    Holmake derives the products it demands from the file, so
+    `fooScript.sml` must yield `fooTheory.*` whatever the header says.
+    Before this was checked at parse time the only symptom was a build
+    failing later with `Couldn't find required output file`, and the
+    editor said nothing at all.
+
+    Warning, not Error: the header recompiles on every keystroke, so a
+    name part-way through being typed disagrees at each one."""
+    d = tempfile.mkdtemp(prefix="lsp_thyname_")
+    try:
+        uri = f"file://{d}/fooScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, "Theory bar\nval x = 1\n")
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            diags = _diag_count(c, uri)
+            hits = [dg for dg in diags
+                    if "does not match file" in dg.get("message", "")]
+            assert_eq(len(hits), 1, f"one mismatch diagnostic ({diags!r})")
+            assert_eq(len(diags), 1, f"and nothing else ({diags!r})")
+            assert_eq(hits[0].get("severity"), 2, "reported as a Warning")
+            assert_eq(hits[0]["range"]["start"]["line"], 0,
+                      "anchored to the header line")
+            assert_contains(hits[0]["message"], "fooScript.sml",
+                            "the message names the file")
+            assert_contains(hits[0]["message"], "bar",
+                            "the message names the theory")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+# ------------------------------------------------------------------
+# $/eval
+# ------------------------------------------------------------------
+
+# Three declarations with a snapshot boundary between each, so a
+# cursor in the middle has one of them behind it and one ahead.
+_EVAL_CTX_SRC = ("Theory evalctx[bare]\n"      # line 0
+                 "Ancestors bool\n"            # line 1
+                 "Libs HolKernel boolLib Parse\n"
+                 "\n"
+                 "val above = 42;\n"           # line 4
+                 "\n"
+                 "val middle = 1;\n"           # line 6
+                 "\n"
+                 "val below = 99;\n")          # line 8
+
+# Between `above' and `middle': the first is behind the cursor, the
+# other two are ahead of it.
+_EVAL_CURSOR = (6, 0)
+
+
+def _eval(c, rid, uri, code, pos=None, timeout=30):
+    """`$/eval' in its simplest mode: batch reports, no holdep preload
+    (the snippets here have no `open' to resolve, and a preload would
+    be one more thing between the request and what it is testing)."""
+    params = {"uri": uri, "code": code, "incr": 0, "holdep": 0}
+    if pos is not None:
+        params["position"] = {"line": pos[0], "character": pos[1]}
+    return _request(c, rid, "$/eval", params, timeout)
+
+
+def _eval_text(reply):
+    """Every report body and message in an `$/eval' reply, run
+    together.  The tests below ask what the evaluation said, not which
+    report kind it arrived in."""
+    out = []
+    for r in ((reply or {}).get("result") or []):
+        for k in ("body", "msg"):
+            if k in r:
+                out.append(r[k])
+    return "".join(out)
+
+
+def _eval_stream(c, rid, uri, code, pos=None, timeout=30):
+    """`$/eval' in streaming mode, gathering the `$/eval/1' reports it
+    sends.  The reply itself is `null' and arrives at once, so what
+    there is to wait for is the `compileCompleted' report that ends
+    the run."""
+    since = c.total_msgs()
+    params = {"uri": uri, "code": code, "incr": 2, "holdep": 0}
+    if pos is not None:
+        params["position"] = {"line": pos[0], "character": pos[1]}
+    _send_request(c, rid, "$/eval", params)
+
+    def done(cl):
+        msgs, _ = cl.messages_since(since)
+        out = [(m.get("params") or {}).get("out") or {} for m in msgs
+               if m.get("method") == "$/eval/1"
+               and (m.get("params") or {}).get("id") == rid]
+        if any(r.get("kind") == "compileCompleted" for r in out):
+            return out
+        return None
+    return c.wait_until(done, timeout) or []
+
+
+def test_eval_streams_whole_lines():
+    """A streamed `$/eval' reports whole lines.
+
+    Poly's pretty printer calls the output function once per item --
+    "val", " ", "it", " ", "=", ... -- and the stream used to forward
+    each of those as its own report.  Both shipped clients append a
+    line per report, so `val it = 39: int' reached their transcripts
+    as ten lines, two of them a lone space.  The batch modes never had
+    this: `mergeInto' coalesces their reports already, and the stream
+    was the one place with nothing to coalesce into."""
+    d = tempfile.mkdtemp(prefix="lsp_evalline_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            out = _eval_stream(c, 730, uri, "3 * 13;", _EVAL_CURSOR)
+            bodies = [r.get("body") or "" for r in out
+                      if r.get("kind") == "toplevelOut"]
+            assert_true(bodies, f"the eval said something ({out!r})")
+
+            # The value and its type on one line, not a line each.
+            joined = "".join(bodies)
+            said = [l for l in joined.split("\n") if "39" in l]
+            assert_eq(len(said), 1, f"the value is on one line ({joined!r})")
+            assert_true("val it" in said[0] and "int" in said[0],
+                        f"with its name and its type ({said[0]!r})")
+
+            # Not merely few enough to look right: a report that is a
+            # break on its own is the shape the clients cannot render,
+            # whatever else arrives with it.
+            assert_true(all(b.strip() for b in bodies),
+                        f"no report is a bare break ({bodies!r})")
+            assert_true(all(b.endswith("\n") for b in bodies[:-1]),
+                        f"every report but the last ends its line "
+                        f"({bodies!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_eval_runs_in_the_context_at_the_cursor():
+    """`$/eval' evaluates where the cursor is, not where the compile
+    stopped.
+
+    A file's declarations run in order, so a name is in scope from the
+    point the pass reached it.  With the cursor between `above' and
+    `middle', the first must be visible and the other two must not --
+    and the negative half is the half that matters: evaluating at the
+    end of the file would answer `above' correctly too, and silently
+    put every later declaration in scope with it."""
+    d = tempfile.mkdtemp(prefix="lsp_evalctx_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            assert_eq(len(_diag_count(c, uri)), 0, "the file itself is fine")
+
+            got = _eval_text(_eval(c, 700, uri, "above;", _EVAL_CURSOR))
+            assert_true("42" in got,
+                        f"a declaration above the cursor is in scope ({got!r})")
+
+            got = _eval_text(_eval(c, 701, uri, "below;", _EVAL_CURSOR))
+            assert_true("99" not in got,
+                        f"a declaration below the cursor is not ({got!r})")
+            assert_true("below" in got,
+                        f"and saying so names it ({got!r})")
+
+            # The end of the file is the other answer, and asking for it
+            # is how a client with no cursor asks.
+            got = _eval_text(_eval(c, 702, uri, "below;"))
+            assert_true("99" in got,
+                        f"no position means after the last dec ({got!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_eval_bindings_outlive_the_request():
+    """What one `$/eval' binds, the next one can use.  A REPL whose
+    `val x = ...' is gone by the next request is not a REPL.
+
+    The bindings are kept against the snapshot they were made over,
+    and dropped anywhere else: a value built against one `Context'
+    must not be installed over another, a `thm' whose theory a rewind
+    has taken back being the case that argument is about.  So the
+    second half of this asks at a different position and expects the
+    binding to be gone rather than wrong."""
+    d = tempfile.mkdtemp(prefix="lsp_evalkeep_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            _eval(c, 710, uri, "val stashed = above + 1;", _EVAL_CURSOR)
+            got = _eval_text(_eval(c, 711, uri, "stashed;", _EVAL_CURSOR))
+            assert_true("43" in got,
+                        f"the previous eval's binding is still there "
+                        f"({got!r})")
+
+            got = _eval_text(_eval(c, 712, uri, "stashed;"))
+            assert_true("43" not in got,
+                        f"but not over a different snapshot ({got!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_eval_does_not_disturb_the_next_compile():
+    """`$/eval' used to run in the shared process state with no
+    snapshot bracket, which `Manual/Developers/lsp-server.md' recorded
+    as a caveat: it could perturb the file's compiles.  It now takes
+    the state the way a walk does and puts back what it found, so an
+    eval between two passes leaves the second one's diagnostics
+    exactly as they would have been without it.
+
+    The eval below is one that would be noticed if it leaked: it binds
+    a name the file also binds, at a different type."""
+    d = tempfile.mkdtemp(prefix="lsp_evalclean_")
+    try:
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write(f"HOLHEAP = {HOL_STATE0}\n")
+        uri = f"file://{d}/evalctxScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _did_open(c, uri, _EVAL_CTX_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            assert_eq(len(_diag_count(c, uri)), 0, "clean to start with")
+
+            _eval(c, 720, uri, 'val above = "not an int";', _EVAL_CURSOR)
+
+            since = c.total_msgs()
+            edited = _EVAL_CTX_SRC + "\nval after = above + 1;\n"
+            _did_change_full(c, uri, edited, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, since),
+                        "recompiled")
+            assert_eq(len(_diag_count(c, uri)), 0,
+                      "the eval's shadowing binding did not reach the "
+                      "compile")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
@@ -9461,6 +10331,8 @@ TESTS = [
                             test_walk_and_compile_do_not_share_the_context),
     ("undo_to_compiled_text_keeps_the_tail",
                                  test_undo_to_compiled_text_keeps_the_tail),
+    ("theory_rename_and_back",       test_theory_rename_and_back),
+    ("theory_name_must_match_file",  test_theory_name_must_match_file_name),
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
     ("small_clean_file",             test_small_clean_file),
@@ -9474,6 +10346,10 @@ TESTS = [
                                      test_deps_blocked_clears_on_header_edit),
     ("deps_body_reference_does_not_block",
                                      test_deps_body_reference_does_not_block),
+    ("open_substructure_not_blocked",
+                                     test_open_substructure_not_blocked),
+    ("open_missing_module_still_blocks",
+                                     test_open_missing_module_still_blocks),
     ("position_encoding_utf8_when_offered",
                                      test_position_encoding_utf8_when_offered),
     ("position_encoding_utf16_when_utf8_not_offered",
@@ -9503,6 +10379,8 @@ TESTS = [
     ("integer_first_compile",        test_integer_first_compile),
     ("full_replace_resumes_from_the_common_prefix",
                                      test_full_replace_resumes_from_the_common_prefix),
+    ("close_and_reopen_keeps_ancestors_loaded",
+                                 test_close_and_reopen_keeps_ancestors_loaded),
     ("integer_recompile_blank",      test_integer_recompile_blank_lines),
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),
     ("integer_didChange_interrupts",
@@ -9739,6 +10617,10 @@ TESTS = [
      test_a_name_that_occurs_once_never_gets_an_ordinal),
     ("a_rebound_name_gets_its_own_entry",
      test_a_rebound_name_gets_its_own_entry),
+    ("a_deleted_proof_leaves_the_tally",
+     test_a_deleted_proof_leaves_the_tally),
+    ("the_census_names_proofs_not_verdicts",
+     test_the_census_names_proofs_not_verdicts),
     ("an_edit_above_a_proof_keeps_one_entry",
      test_an_edit_above_a_proof_keeps_one_entry),
     ("a_reused_proof_reports_where_it_moved_to",
@@ -9769,6 +10651,8 @@ TESTS = [
      test_a_script_level_simp_reads_the_pinned_simpset),
     ("check_proofs_enabled_during_a_compile",
      test_check_proofs_enabled_during_a_compile),
+    ("a_module_the_file_defines_is_not_preloaded",
+     test_a_module_the_file_defines_is_not_preloaded),
     ("goalState_select_then_completes",
      test_goalState_select_then_completes),
     ("a_typo_in_a_tactic_leaves_the_next_edit_on_the_fast_path",
@@ -9793,6 +10677,8 @@ TESTS = [
     ("malformed_frame_does_not_wedge", test_malformed_frame_does_not_wedge),
     ("disconnect_before_handshake_exits_cleanly",
      test_disconnect_before_handshake_exits_cleanly),
+    ("toplevel_exit_says_why",
+     test_toplevel_exit_says_why_before_it_goes),
     ("a_burst_of_edits_leaves_diagnostics_matching_the_text",
      test_a_burst_of_edits_leaves_diagnostics_matching_the_text),
     ("goalState_note_at_end_of_an_unparenthesised_branch",
@@ -9809,6 +10695,13 @@ TESTS = [
      test_an_edit_during_a_commit_is_not_lost),
     ("a_theorem_without_proof_keeps_the_file_compiling",
      test_a_theorem_without_proof_keeps_the_file_compiling),
+    ("eval_streams_whole_lines", test_eval_streams_whole_lines),
+    ("eval_runs_in_the_context_at_the_cursor",
+     test_eval_runs_in_the_context_at_the_cursor),
+    ("eval_bindings_outlive_the_request",
+     test_eval_bindings_outlive_the_request),
+    ("eval_does_not_disturb_the_next_compile",
+     test_eval_does_not_disturb_the_next_compile),
 ]
 
 
@@ -9832,8 +10725,58 @@ def _check_all_registered():
         sys.exit(2)
 
 
+def _default_jobs():
+    """Workers for a run that did not say.
+
+    Capped at 8 whatever the machine has.  Past that the suite stops
+    scaling for a reason that is not the machine's: every server's
+    stdout is framed and JSON-parsed in *this* process, one reader
+    thread each, under the GIL.
+    """
+    return min(8, os.cpu_count() or 1)
+
+
+def _run_one(item):
+    """Run one test and return a record; never raises.
+
+    The verdict comes back as a value rather than being printed here,
+    so the thread that computed it is not the thread that reports it.
+    That is what keeps the log in TESTS order under `-j'.
+    """
+    name, fn = item
+    _tls.name = name
+    t0 = time.time()
+    try:
+        fn()
+        return (name, "PASS", time.time() - t0, None)
+    except Skipped as e:
+        return (name, "SKIP", time.time() - t0, str(e))
+    except Failed as e:
+        return (name, "FAIL", time.time() - t0, str(e))
+    except Exception as e:
+        return (name, "ERROR", time.time() - t0, f"{type(e).__name__}: {e}")
+    finally:
+        _tls.name = "<none>"
+
+
+def _report(rec, counts):
+    """Print one record in the format this log has always had."""
+    name, verdict, dt, msg = rec
+    if verdict == "PASS":
+        print(f"  PASS  {name}  ({dt:.1f}s)", flush=True)
+        counts["passed"] += 1
+    elif verdict == "SKIP":
+        print(f"  SKIP  {name}: {msg}", flush=True)
+        counts["skipped"].append(name)
+    elif verdict == "FAIL":
+        print(f"  FAIL  {name}  ({dt:.1f}s): {msg}", flush=True)
+        counts["failed"] += 1
+    else:
+        print(f"  ERROR {name}  ({dt:.1f}s): {msg}", flush=True)
+        counts["failed"] += 1
+
+
 def main():
-    global CURRENT_TEST
     _check_all_registered()
     argv = sys.argv[1:]
     # `--requires none' selects the tests with no prerequisite beyond a
@@ -9851,35 +10794,71 @@ def main():
         print(f"unknown --requires tag {req!r} (one of: none, "
               + ", ".join(sorted(_REQUIREMENTS)) + ")")
         sys.exit(2)
+    # `-j' before the positional sweep below, so a worker count can
+    # never be mistaken for a test name.
+    jobs = None
+    while "-j" in argv:
+        i = argv.index("-j")
+        if i + 1 >= len(argv) or not argv[i + 1].isdigit() \
+           or int(argv[i + 1]) < 1:
+            print("-j needs a positive integer")
+            sys.exit(2)
+        jobs = int(argv[i + 1])
+        del argv[i:i + 2]
+    if jobs is None:
+        jobs = int(os.environ.get("HOL_LSP_TEST_JOBS", "0")) or _default_jobs()
+    global TIME_SCALE
+    TIME_SCALE = float(os.environ.get("HOL_LSP_TIME_SCALE",
+                                      max(1.0, jobs / 4.0)))
+
     wanted = set(argv)
-    passed = failed = 0
-    skipped = []
+    selected = []
     for name, fn in TESTS:
         if wanted and name not in wanted: continue
         tag = getattr(fn, "requires", None)
         if req == "none" and tag is not None: continue
         if req not in (None, "none") and tag != req: continue
-        CURRENT_TEST = name
-        t0 = time.time()
+        selected.append((name, fn))
+
+    # Tests marked `@serial' run alone, after the pool has drained, so
+    # that whatever they measure is measured on a quiet machine.  A
+    # lock would not do: it still leaves the other N-1 running.
+    par = [it for it in selected if not getattr(it[1], "serial", False)]
+    ser = [it for it in selected if getattr(it[1], "serial", False)]
+
+    counts = {"passed": 0, "failed": 0, "skipped": []}
+    print(f"running {len(selected)} test(s), {jobs} worker(s), "
+          f"timeouts x{TIME_SCALE:g}", flush=True)
+    # `map' yields in submission order while running out of order, so
+    # the log stays in TESTS order and diffs cleanly between runs and
+    # between machines.  The cost is head-of-line blocking: nothing
+    # past position k prints until test k finishes.
+    if jobs > 1 and len(par) > 1:
+        ex = ThreadPoolExecutor(max_workers=jobs)
         try:
-            fn()
-            dt = time.time() - t0
-            print(f"  PASS  {name}  ({dt:.1f}s)")
-            passed += 1
-        except Skipped as e:
-            print(f"  SKIP  {name}: {e}")
-            skipped.append(name)
-        except Failed as e:
-            dt = time.time() - t0
-            print(f"  FAIL  {name}  ({dt:.1f}s): {e}")
-            failed += 1
-        except Exception as e:
-            dt = time.time() - t0
-            print(f"  ERROR {name}  ({dt:.1f}s): {type(e).__name__}: {e}")
-            failed += 1
+            for rec in ex.map(_run_one, par):
+                _report(rec, counts)
+        except KeyboardInterrupt:
+            # Without this, Ctrl-C waits out every queued test.
+            ex.shutdown(wait=False, cancel_futures=True)
+            raise
+        finally:
+            ex.shutdown(wait=True)
+    else:
+        for it in par:
+            _report(_run_one(it), counts)
+    for it in ser:
+        _report(_run_one(it), counts)
+    passed, failed, skipped = (counts["passed"], counts["failed"],
+                               counts["skipped"])
     if CLOSE_FAILURES:
+        # Sorted into TESTS order: workers appended in whatever order
+        # they finished, and a log that reorders itself between runs
+        # cannot be diffed.
+        _order = {nm: i for i, (nm, _) in enumerate(TESTS)}
         print(f"\n{len(CLOSE_FAILURES)} session(s) did not shut down cleanly:")
-        for name, why, err in CLOSE_FAILURES:
+        for name, why, err in sorted(
+                CLOSE_FAILURES, key=lambda t: (_order.get(t[0], -1), t[1])):
             print(f"  LEAK  {name}: {why}")
             if err.strip():
                 print("        stderr tail: " + err.strip()[-500:])

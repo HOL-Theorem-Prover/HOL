@@ -35,5 +35,31 @@ datatype datafoo
 
 include included5 where type t = int
 
+(* A module the file defines for itself is not a dependency of it *)
+structure selfbound = struct val x = 1 end
+val a = selfbound.x
+
+(* ... but the one its own body opens is: the binder is not in scope
+   in its own right-hand side, so this `keepme' is the outer one *)
+structure keepme = struct open keepme val y = 2 end
+val b = keepme.y
+
+(* a mention before the binding is the outer module too *)
+val c = early.z
+structure early = struct val z = 3 end
+
+(* a binding that opens no block ends at the next declaration *)
+structure abbrev = somewhere
+val d = abbrev.w
+
+(* only a top-level binding shadows: `nested' is still the outer one *)
+structure outer = struct structure nested = struct val n = 4 end end
+val e = nested.n
+
+(* the `Datatype:' block expands to a call the file itself supplies *)
+structure bossLib = struct val Datatype = Datatype.Datatype end
+Datatype: tyname = con1 | con2
+End
+
 open functortest
 functor funct(val x : int) =

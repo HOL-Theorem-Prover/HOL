@@ -269,16 +269,26 @@ end (* local *)
 
 (* Seed the proof manager with the failing goal, then write a Poly/ML
    heap (a no-op under Moscow ML) to <theory>.<name>.dumpedheap in the
-   current directory.  Returns the file name so the caller can quote
-   it in messages. *)
+   current directory.  Returns the file name so the caller can quote it
+   in messages, or NONE if no heap was written.
+
+   The dump is a diagnostic convenience, so neither half may bring the
+   build down: saveChild can fail for perfectly ordinary reasons (an
+   unwritable directory, a name that is already an ancestor of the
+   running heap).  Under --noqof in particular, failing to write a heap
+   must not turn a CHEAT into an abort. *)
 fun dump_failure_state (name, g) =
   let val nm = if name = "" then next_anon_thm_name () else name
       val file = Theory.current_theory() ^ "." ^ nm ^ ".dumpedheap"
   in
     (!dump_setup_hook) g;
     Portable.save_heap file;
-    file
+    SOME file
   end
+  handle Interrupt => raise Interrupt
+       | e => (Feedback.HOL_WARNING "boolLib" "dump_failure_state"
+                 ("Could not write a dumpedheap: " ^ General.exnMessage e);
+               NONE)
 
 local
   open Feedback
@@ -293,12 +303,17 @@ fun store_thm_at loc (n0,t,tac) ctxt =
                if !Globals.dumpheap_on_failure andalso
                   not (!Globals.interactive)
                then
-                 let val file = dump_failure_state (name, ([], t))
+                 let val fileopt = dump_failure_state (name, ([], t))
+                     val mesg =
+                         case fileopt of
+                             NONE => ".\n"
+                           | SOME file =>
+                             "; heap saved to " ^ file ^
+                             ".\nResume with: bin/hol --holstate=" ^
+                             file ^ "\n"
                  in
                    TextIO.output (TextIO.stdErr,
-                     "Tactic failure proving " ^ Lib.quote name ^
-                     "; heap saved to " ^ file ^
-                     ".\nResume with: bin/hol --holstate=" ^ file ^ "\n");
+                     "Tactic failure proving " ^ Lib.quote name ^ mesg);
                    OS.Process.exit OS.Process.failure
                  end
                else

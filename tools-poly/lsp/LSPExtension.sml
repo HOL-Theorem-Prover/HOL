@@ -284,6 +284,8 @@ type compileSnap = unit -> unit
 val captureCompileSnap : (unit -> compileSnap) ref = ref (fn () => (fn () => ()))
 val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
 
+val theorySealed : (string -> bool) ref = ref (fn _ => false)
+
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string
@@ -313,6 +315,8 @@ in
 end
 val currentProofOffset = ref 0
 val currentProofOrd = ref 1
+fun qualifyProof nm ord =
+    if nm = "" orelse ord <= 1 then nm else nm ^ "#" ^ Int.toString ord
 local
   (* Enqueued in reverse; the drain takes the whole queue in one step.
 

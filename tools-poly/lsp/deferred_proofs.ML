@@ -76,9 +76,11 @@ fun asReplay f = Portable.genwith_flag (replayFlag, true) f ()
    name can occur twice, though -- `Theorem foo' and a later
    `Theorem foo[allow_rebind]' -- so it is paired with the occurrence
    number the compile driver read off the buffer, and the first
-   occurrence is left unadorned: `foo' and `foo#2'. *)
-fun qualify nm ord =
-    if nm = "" orelse ord <= 1 then nm else nm ^ "#" ^ Int.toString ord
+   occurrence is left unadorned: `foo' and `foo#2'.
+
+   The rule itself is `LSPExtension.qualifyProof', which the server
+   also uses to name the declarations the buffer still has. *)
+val qualify = LSPExtension.qualifyProof
 
 fun proofName ctxt =
     qualify (boolLib.current_thm_name ctxt) (!LSPExtension.currentProofOrd)

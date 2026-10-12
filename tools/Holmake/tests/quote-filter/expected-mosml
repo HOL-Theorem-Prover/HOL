@@ -58,7 +58,7 @@ NONE
 
 ( Context.snapshot () ) val sexpPEG_ind = DB.fetch "-" "sexpPEG_ind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH ; val sexpPEG_start = boolLib.save_thm ( "sexpPEG_start[simp]" , SIMP_CONV ( srw_ss () ) [ sexpPEG_def ] ( Parse.Term [ QUOTE " (*#loc 59 66*)sexpPEG.start" ] ) ) ; 
 
-val _ = bossLib.Datatype [ QUOTE " (*#loc 61 11*) foo = bar\n" ] 
+val _ = Datatype.Datatype [ QUOTE " (*#loc 61 11*) foo = bar\n" ] 
 ; 
 
 val ( reln_rules , reln_ind , reln_cases ) = IndDefLib.xHol_reln "reln" [ QUOTE "(" , QUOTE " (*#loc 64 16*)\n   !x y. x < y ==> reln (x + 1) y\n" , QUOTE ") /\\ (" , QUOTE " (*#loc 66 5*)\n   !x y. reln x y ==> reln y x\n" , QUOTE ") /\\ (" , QUOTE " (*#loc 68 9*)\n   !x. reln x 0\n" , QUOTE ")" ] 

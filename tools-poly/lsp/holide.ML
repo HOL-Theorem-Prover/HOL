@@ -21,6 +21,10 @@ val prelude: unit -> unit
 val postPrelude: unit -> unit
 
 val compile: bool ref
+(* Whether a compiled declaration reports what it bound, the way a
+   REPL does.  Off for buffer elaboration, which binds the whole
+   file; `$/eval' turns it on.  See `codeFn'. *)
+val printBindings: bool ref
 
 datatype props =
   PQuote
@@ -128,6 +132,12 @@ fun prelude () = let
 fun postPrelude () = ()
 
 val compile = ref true
+val printBindings = ref false
+(* What `printBindings' renders at.  The width is a plain default --
+   unlike hover, an eval's output goes to a transcript the client
+   scrolls, not into a box whose width only the client knows. *)
+val printWidth = 77
+val printDepth = 100
 
 datatype props =
   PQuote
@@ -931,6 +941,28 @@ fun initialize {
          next `resetForCompile` when the user deletes a `val` from
          the file. *)
       fun enter f = app (f LSPNameSpace.fileNS)
+      (* Supplying `CPCompilerResultFun' takes the compiler's own
+         result handling away, and saying what a declaration bound is
+         part of what it took: Poly's default result function runs the
+         code *and* prints the bindings.  Elaborating a buffer does
+         not want that -- it would print the whole file, declaration
+         by declaration -- so it stays off and `$/eval' turns it on.
+         Without it an eval can say that its code failed but never
+         what it computed, which is most of the reason to send it one.
+
+         Values only.  A chunk that declares a structure or a type is
+         not what this is for, and Poly's own rendering of those is a
+         signature, which is not what a REPL line should expand to.
+
+         `printWithType' renders the whole `val name = value: type'
+         line, name included, so there is nothing to put in front of
+         it, and `prettyPrint' ends the block with its own newline. *)
+      val () = if not (!printBindings) then () else
+        app (fn (_, v) =>
+              PolyML.prettyPrint (toplevelOut, printWidth)
+                (PolyML.NameSpace.Values.printWithType
+                   (v, printDepth, SOME LSPNameSpace.fileNS)))
+            values
       in enter #enterFix fixes; enter #enterType types; enter #enterSig signatures;
         enter #enterStruct structures; enter #enterFunct functors; enter #enterVal values end
   fun getOffset () =

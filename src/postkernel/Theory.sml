@@ -1238,6 +1238,24 @@ fun new_theory str =
               raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
             else if thyname="scratch" andalso empty_segment (theCT()) then
               mk_thy()
+            else if !Globals.interactive then
+              (* `export_theory` is a no-op in an interactive session
+                 (above), so the implicit export below would be the only
+                 thing such a session writes to disk, and its `Graph.add`
+                 would make the abandoned segment an ancestor -- coming
+                 back to its name would then raise "already exists".
+                 Worse, exporting seals the name in
+                 `KernelSig.sealed_ref`, which sits outside `Context` by
+                 design, so no snapshot restore can recover it.  An
+                 editor re-running a script's header after the name
+                 changed must be able to change it back.  Discard the
+                 abandoned segment instead.  `thyname` is the current
+                 theory, and a sealed theory can never be current, so
+                 `zapCT`'s del_segment cannot trip the sealed guard. *)
+              (if empty_segment (theCT()) then ()
+               else HOL_MESG ("Discarding theory "^Lib.quote thyname);
+               zapCT thyname;
+               mk_thy ())
             else let
               val hash = export_theory_return_hash ();
               val thid = make_thyid(thyname, hash);

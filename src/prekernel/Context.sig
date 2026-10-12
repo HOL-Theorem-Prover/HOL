@@ -40,12 +40,12 @@ sig
          to release. *)
   val snapshot : unit -> t
   (* Note that this does not reach a thread inside `with_context`:
-     that thread's ambient reads answer from its pin, so a `restore`
-     is invisible to it until the pin is released.  Deliberate -- it is
-     what makes a replayed proof immune to a compile rewinding the cell
-     under it -- but it means capture/restore-bracketed code inside a
-     pin keeps working on the write side and quietly stops working on
-     the read side. *)
+     that thread reads and writes its pin, so a `restore` of the live
+     cell is invisible to it until the pin is released.  Deliberate --
+     it is what makes a replayed proof immune to a compile rewinding
+     the cell under it.  A `restore` issued *by* a pinned thread
+     replaces that thread's pin, so capture/restore brackets keep
+     working inside one. *)
   val restore  : t -> unit
 
   (* Runs `f x` as a parameterised proof: while it is running, an
@@ -74,11 +74,15 @@ sig
      proof is halfway through resolving names against -- reported as a
      failure of a proof that is in fact fine.
 
-     Reads only.  A write still goes to the live cell, so a
-     set-read-restore bracket over context state (`Data.with_slot_value`)
-     does not do what it says inside a pin: the value it installs is
-     visible to every *other* thread and not to the code it was
-     installed for.  Don't pin around one.
+     Reads and writes both.  `update`, `gen_update`, `restore`,
+     `Data.write` and `Data.modify` all land in the pin while it is
+     held, so the thread reads back what it wrote and no other thread
+     sees any of it.  A pin is a sandbox rather than a window, and the
+     sandbox is thrown away at the end: a type or constant minted
+     inside one is not in the live signature when the pin is released,
+     and a theorem naming it will not be up to date.  (`Data.new` is
+     the exception and registers into the live cell -- slots are minted
+     at load time, by a process that is not replaying anything.)
 
      Two standing assumptions, both load-bearing and neither enforced:
 
@@ -97,15 +101,14 @@ sig
          third figure, with nothing failing to say so. *)
   val with_context : t -> ('a -> 'b) -> 'a -> 'b
 
-  (* Whether a pin is answering this thread's ambient reads.  For the
-     one pattern the read/write asymmetry above silently breaks:
-     deriving a value from an ambient read and writing it back so the
-     derivation is done once.  Under a pin the write lands in the live
-     cell, which is not where the read came from, so the re-read hands
-     back the underived value -- and the cell is left holding something
-     derived from another context's data.  Such a caller answers from
-     what it derived and skips the write; `BasicProvers.srw_ss' is the
-     first to need it.  As cheap as the counter `ambient' reads. *)
+  (* Whether a pin is answering this thread's reads and taking its
+     writes.  Introspection rather than a correctness tool: callers
+     that derive a value and write it back so the derivation is done
+     once needed this while the write went somewhere the read could
+     not see it, and no longer do.  What it is still good for is
+     deciding whether a write is worth making at all, a pinned one
+     being discarded with the pin.  As cheap as the counter `ambient'
+     reads. *)
   val is_pinned : unit -> bool
 
   (* Whole-context mutators.  Both take the RW-lock's read side so
