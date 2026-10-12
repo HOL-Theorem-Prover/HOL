@@ -217,6 +217,15 @@ fun theoremTacEnd text decStart = let
         if #1 (HOLSourceAST.decSpan dec) = decStart
         then SOME (#2 (HOLSourceAST.expSpan tac))
         else loop ()
+      (* And a `Termination' body, which the pool reports under
+         `<stem>_termination' at the declaration's own offset -- so
+         `decStart' identifies the Definition and the tactic to walk is
+         the one between `Termination' and `End'. *)
+      | SOME (dec as HOLSourceAST.HOLDefinition {
+                termination = SOME {tac, ...}, ...}) =>
+        if #1 (HOLSourceAST.decSpan dec) = decStart
+        then SOME (#2 (HOLSourceAST.expSpan tac))
+        else loop ()
       | SOME _ => loop ()
   in loop () end
   handle _ => NONE
@@ -267,7 +276,8 @@ fun findEnclosingTheorem compileDone text cursor = let
                   tacStart = tacStart,
                   cursor = cursor,
                   compileDone = compileDone,
-                  resumeOf = NONE})
+                  resumeOf = NONE,
+                  terminationOf = NONE})
         end
         else loop ()
         end
@@ -310,7 +320,57 @@ fun findEnclosingTheorem compileDone text cursor = let
                       tacStart = tacStart,
                       cursor = cursor,
                       compileDone = compileDone,
-                      resumeOf = SOME {suspension = nm, label = label}})
+                      resumeOf = SOME {suspension = nm, label = label},
+                      terminationOf = NONE})
+          else loop ()
+        end
+    (* `Definition foo: <eqns> Termination tac End'.  A third body
+       whose goal is not written in the file: it is the termination
+       obligation the definition principle derives from `<eqns>', which
+       is what `terminationOf' tells the hook to go and build.
+
+       The window opens at `Termination', the keyword standing in for
+       `Proof', and closes at `End' -- or at the declaration's `stop'
+       when the user has not typed `End' yet, exactly as a missing
+       `QED' is handled above. *)
+    | SOME (dec as HOLSourceAST.HOLDefinition {
+              definition_, id = (_, stem), colon = SOME colon,
+              termination = SOME {termination_, tac}, end_, stop, ...}) =>
+        let
+          val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
+          val upperBound = case end_ of SOME e => e | NONE => stop
+        in
+          if termination_ <= cursor andalso cursor <= upperBound
+          then SOME (HOLSourceAST.decSpan dec,
+                     {(* What `Defn.tc_obligation' calls the proof, and
+                         therefore what the pool's site is and what the
+                         census publishes.  No `Theorem' can collide
+                         with it: a theorem of that name would have to
+                         be declared, and then it is the same proof
+                         under the same name twice, which `declOrds'
+                         numbers. *)
+                      name = stem ^ "_termination",
+                      (* The equations: colon to `Termination', which is
+                         precisely the slice the expander hands to
+                         `located_qDefine' -- `parseQuoteBody' ends the
+                         quote at that keyword. *)
+                      quote = String.substring
+                                (text, colon + 1,
+                                 Int.max (0, termination_ - colon - 1)),
+                      (* The declaration's own start, not the quote's:
+                         `goalStateAtPos' restores the last snapshot
+                         before this byte, and building the defn mints
+                         the constant, which must not already be
+                         there. *)
+                      quoteStart = definition_,
+                      tacText = String.substring
+                                  (text, tacStart,
+                                   Int.max (0, tacEnd - tacStart)),
+                      tacStart = tacStart,
+                      cursor = cursor,
+                      compileDone = compileDone,
+                      resumeOf = NONE,
+                      terminationOf = SOME {stem = stem}})
           else loop ()
         end
     | SOME _ => loop ()
@@ -353,6 +413,15 @@ datatype symbol = Sym of {
   kind: int,
   span: int * int,
   selSpan: int * int,
+  (* Set on a *child* that names a proof in its own right, which is
+     how `declOrds' knows to count it.  Every top-level symbol is
+     counted whether or not this is set -- a declaration's proof is
+     named after the declaration -- so the flag exists for the one
+     symbol that is neither: a `Definition's termination obligation,
+     which sits among the labelled conjuncts, which are not proofs.
+     A flag rather than a test on `detail', which is a human-facing
+     string nobody should be parsing. *)
+  proofSite: bool,
   children: symbol list }
 
 (* LSP SymbolKind, the few we use. *)
@@ -372,15 +441,18 @@ fun bufferSymbols text = let
   open HOLSourceAST
   (* `selSpan' given outright, for the one symbol whose name is not
      the source text at the ident's offset. *)
-  fun mkSymSel {name, selSpan, detail, kind, span, children} =
+  fun mkSymSel {name, selSpan, detail, kind, span, proofSite, children} =
       if name = "" then NONE
       else SOME (Sym {name = name, detail = detail, kind = kind,
-                      span = span, selSpan = selSpan, children = children})
+                      span = span, selSpan = selSpan,
+                      proofSite = proofSite, children = children})
+  (* `false' because `mkSym' builds top-level declaration symbols,
+     which `declOrds' counts regardless; see the field's comment. *)
   fun mkSym {name = (p, nm), detail, kind, span, children} =
       if nm = "" then NONE   (* parse repair invents empty idents *)
       else mkSymSel {name = nm, selSpan = (p, p + size nm),
                      detail = detail, kind = kind, span = span,
-                     children = children}
+                     proofSite = false, children = children}
   (* `[simp]', `[local]' and friends.  LSP's SymbolTag has only
      Deprecated, so an attribute cannot be structural; it goes in the
      detail line where a client will show it beside the name. *)
@@ -483,10 +555,36 @@ fun bufferSymbols text = let
       | HOLTheoremDecl {triv, id, attrs, quote, ...} =>
           thmSym triv attrs id (childrenOf quote)
       | HOLSimpleThm {triv, id, attrs, ...} => thmSym triv attrs id []
-      | HOLDefinition {id, attrs, quote, ...} =>
+      (* A `Termination' block is a proof, and the pool reports it under
+         `<stem>_termination' -- the name `Defn.tc_obligation' gives
+         it.  Without a symbol of that name the census does not have
+         it, `proofStillDeclared' is false for it, and every verdict
+         the pool reaches about it is dropped on the floor.
+
+         A child rather than a sibling: the server emits `syms' without
+         nesting them, so a top-level symbol whose range sits inside
+         the `Definition's would be an overlapping sibling, which
+         `DocumentSymbol' does not allow.  A child whose range is
+         contained is exactly the shape it asks for, and the flat form
+         names the parent in `containerName' anyway. *)
+      | HOLDefinition {id = id as (_, stem), attrs, quote,
+                       termination, stop, ...} => let
+          val tcSym = case termination of
+              NONE => []
+            | SOME {termination_, ...} =>
+              (case mkSymSel {
+                      name = if stem = "" then "" else stem ^ "_termination",
+                      selSpan = (termination_,
+                                 termination_ + size "Termination"),
+                      detail = SOME "Termination", kind = symConstant,
+                      span = (termination_, stop), proofSite = true,
+                      children = []} of
+                 NONE => [] | SOME sym => [sym])
+        in
           mklist {name = id, detail = kw "Definition" attrs,
                   kind = symFunction, span = span,
-                  children = childrenOf quote}
+                  children = childrenOf quote @ tcSym}
+        end
       | HOLInductiveDecl {co, id, quote, ...} =>
           mklist {name = id,
                   detail = SOME (if co then "CoInductive" else "Inductive"),
@@ -530,7 +628,7 @@ fun bufferSymbols text = let
                                     SOME {stop, ...} => stop
                                   | NONE => p + size nm),
                   detail = SOME "Resume", kind = symConstant,
-                  span = span, children = []} of
+                  span = span, proofSite = false, children = []} of
              NONE => [] | SOME sym => [sym])
       | HOLFinalise {id, ...} => simple "Finalise" symConstant id
       | DecVal {elems = {args, ...}, ...} =>
@@ -610,11 +708,27 @@ fun bufferSymbols text = let
    names the buffer still has.  The two lists are compared against each
    other, entry by entry, so they must be counted the same way -- hence
    one function rather than two that agree today. *)
+(* Children count too, but only the ones marked `proofSite': a
+   `Definition's termination obligation is a proof the pool reports on
+   and the labelled conjuncts beside it are not.  Visited after their
+   parent, which is where they are in the file -- the obligation starts
+   at `Termination', inside the declaration whose name came first. *)
 fun declOrds syms = let
   fun go [] _ acc = rev acc
-    | go (Sym {name, span = (start, _), ...} :: rest) seen acc =
+    | go (Sym {name, span = (start, _), children, ...} :: rest)
+         seen acc =
       let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
-      in go rest (Binarymap.insert (seen, name, n)) ((start, name, n) :: acc)
+          val seen = Binarymap.insert (seen, name, n)
+          val acc = (start, name, n) :: acc
+          val sites = List.filter (fn Sym {proofSite, ...} => proofSite)
+                                  children
+          val (seen, acc) = countSites sites seen acc
+      in go rest seen acc end
+  and countSites [] seen acc = (seen, acc)
+    | countSites (Sym {name, span = (start, _), ...} :: rest) seen acc =
+      let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
+      in countSites rest (Binarymap.insert (seen, name, n))
+                    ((start, name, n) :: acc)
       end
   in go syms (Binarymap.mkDict String.compare) [] end
 
@@ -1156,7 +1270,7 @@ fun locToRange ({startPosition,endPosition,...}:PolyML.location) =
 (* DocumentSymbol: hierarchical, with `children' and `detail' omitted
    when empty so the wire form stays the shape clients expect. *)
 fun encDocumentSymbol lines (Sym {name, detail, kind, span, selSpan,
-                                  children}) print = (
+                                  children, ...}) print = (
     print "{\"name\":"; encString name print;
     (case detail of
        NONE => ()
@@ -2422,12 +2536,20 @@ fun start {diag, dbg, warnings} = let
      the same walk the goal-state handler does.  Its `compileDone`
      argument only reaches the `theorem_context` it builds, which we
      discard, so anything will do here. *)
+  (* A `Termination' body is a tactic body and `findEnclosingTheorem'
+     now answers for it, but it is deliberately not one of these.  The
+     fast path's warrant is that re-elaborating the edited declaration
+     leaves every later one alone, and a `Definition' declares a
+     constant: that warrant has not been established here, so the
+     conservative branch is kept rather than silently widened.  Nothing
+     stops it being claimed later, with a test of its own. *)
   fun proofBodySpan text off =
       (case off of
            NONE => NONE
-         | SOME b => (case findEnclosingTheorem false text b of
-                          SOME (span, _) => SOME span
-                        | NONE => NONE))
+         | SOME b =>
+           (case findEnclosingTheorem false text b of
+                SOME (span, {terminationOf = NONE, ...}) => SOME span
+              | _ => NONE))
       handle Empty => NONE
   fun proofBodyAt text off = Option.map #1 (proofBodySpan text off)
 

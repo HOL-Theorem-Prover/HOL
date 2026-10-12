@@ -367,6 +367,75 @@ in
   ()
 end
 
+(* ----------------------------------------------------------------------
+    HOLSourceParser: the shape of a `Termination ... End' block
+
+    TacticParse is not involved, but this is the only harness that drives
+    the source parser, and the LSP's goal-state handler rests on two
+    properties of it that nothing else pins:
+
+      - the quote body ends at `Termination', so the slice between the
+        colon and that keyword is exactly the equations `Hol_defn' is
+        given; and
+      - an *empty* body parses to `ExpEmpty' positioned between the two
+        keywords, rather than swallowing `End' as a tactic.  That is
+        what makes an empty block answer with the initial termination
+        goal instead of with nothing.
+   ---------------------------------------------------------------------- *)
+
+local
+  open HOLSourceAST
+  (* `testutils.assert' takes a predicate; the two blocks above each
+     define this shorthand for a plain bool, and so does this one. *)
+  fun assert msg true = OK ()
+    | assert msg false = die msg
+  fun decsOf text = let
+    val consumed = ref false
+    fun read _ = if !consumed then "" else (consumed := true; text)
+    fun errSink _ _ _ = ()
+    val {parseDec, ...} =
+        HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
+    fun loop acc = case parseDec () of
+                       NONE => List.rev acc
+                     | SOME d => loop (d :: acc)
+    in loop [] end
+  fun theDefinition text =
+      case List.filter (fn HOLDefinition _ => true | _ => false)
+                       (decsOf text) of
+          [d] => d
+        | ds => raise Fail ("expected one Definition, got " ^
+                            Int.toString (List.length ds))
+  val withTac =
+      "Definition f_def:\n  f x = x + 1\nTermination\n  tac\nEnd\n"
+  val empty = "Definition f_def:\n  f x = x + 1\nTermination\nEnd\n"
+in
+  val _ = tprint "HOLSourceParser ends a Definition quote at Termination"
+  val _ = assert "the equations are the slice colon+1 .. Termination"
+    (case theDefinition withTac of
+         HOLDefinition {colon = SOME c, termination = SOME {termination_, ...},
+                        ...} =>
+         String.substring (withTac, c + 1, termination_ - c - 1)
+         = "\n  f x = x + 1\n"
+       | _ => false)
+  val _ = tprint "HOLSourceParser gives an empty Termination body ExpEmpty"
+  val _ = assert "the empty body sits between Termination and End"
+    (case theDefinition empty of
+         HOLDefinition {termination = SOME {termination_, tac = ExpEmpty p},
+                        end_ = SOME e, stop, ...} =>
+         termination_ < p andalso p <= e andalso stop = e + 3
+       | _ => false)
+  val _ = tprint "HOLSourceParser spans a written Termination body"
+  val _ = assert "the tactic's span is the text between the keywords"
+    (case theDefinition withTac of
+         HOLDefinition {termination = SOME {termination_, tac},
+                        end_ = SOME e, ...} => let
+           val (s, stop) = expSpan tac
+         in termination_ < s andalso stop <= e
+            andalso String.substring (withTac, s, stop - s) = "tac"
+         end
+       | _ => false)
+end
+
 val () = OS.Process.exit
            (if !failcount = 0 then OS.Process.success
             else OS.Process.failure)

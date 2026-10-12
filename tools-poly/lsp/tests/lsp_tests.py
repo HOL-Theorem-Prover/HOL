@@ -2747,6 +2747,64 @@ def test_a_resume_proof_has_no_ordinal():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_no_cheat_proof_that_fails_is_still_cheated():
+    """Asking for a `Resume`'s subgoal puts its parent in the no-cheat
+    set, so the next pass runs that proof for real instead of standing
+    an oracle in for it.  If the user then breaks the parent's tactic
+    -- which is the ordinary next thing to happen while a proof is
+    being written -- the replay raises.
+
+    It must not take the declaration with it.  Elaboration's contract
+    with the rest of the file is that a proof is cheated: the name is
+    bound whatever the tactic does, and everything below is elaborated
+    against it.  A raise there leaves `willsplit` undeclared and every
+    later reference to it broken, which is a far worse report than the
+    one failing proof.
+
+    So the replay falls back to the placeholder and reports `failed`,
+    which is exactly what the pool would have said had the proof been
+    deferred.  That verdict arriving at all is the discriminator: a
+    raise never reaches `enqueueDeferred`, so nothing is ever reported
+    for the name."""
+    d = tempfile.mkdtemp(prefix="lsp_nocheat_")
+    try:
+        src = _SUSP_PREAMBLE % "nocheat" + _SUSP_RESUME_SRC
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _request(c, 1440, "$/setConfig", {"checkProofs": True})
+            uri = f"file://{d}/nocheatScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            # Forces `willsplit` into the no-cheat set and runs it.
+            col = len("Resume willsplit[p]:")
+            r = _susp_goal(c, uri, 1450, _SUSP_COLON_LINE, col)
+            assert_true(r is not None and r.get("status") == "ok",
+                        f"the parent has been run for real ({r!r})")
+
+            # Break it.  `NO_TAC` compiles and fails at run time, which
+            # is a failing proof rather than a failing compile.
+            at = src.index("  strip_tac >> conj_tac")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at,
+                             at + len("  strip_tac >> conj_tac"),
+                             "  NO_TAC", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 120, idx),
+                        "a pass completes on the broken tactic")
+
+            def failed(cl):
+                return (_proof_states(cl, uri).get("willsplit", ("", None))[0]
+                        == "failed")
+            assert_true(c.wait_until(failed, 120),
+                        f"the broken proof is reported, not raised "
+                        f"({_proof_states(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_documentSymbol_names_a_resume_by_its_label():
     """Eighteen Resume blocks of one theorem gave eighteen outline
     entries all called `type_e_subst`.  The label is the only thing
@@ -3301,6 +3359,378 @@ def test_goalState_incomplete_proof_body():
         goal0 = result["goals"][0]["goal"]
         assert_true("!" in goal0 or "∀" in goal0,
                     f"pre-tactic goal still has quantifier ({goal0!r})")
+    finally:
+        c.close()
+
+
+# ---------------------------------------------------------------------
+# `Definition … Termination tac End'
+#
+# A termination proof is a tactic proof like any other, but its goal is
+# written nowhere in the file: it is the obligation `Defn' derives from
+# the equations.  The server rebuilds the defn and asks it, which is
+# what lets an *empty* Termination block show the initial goal -- that
+# block does not elaborate, so there is nothing to have captured.
+# ---------------------------------------------------------------------
+
+_TC_SRC = ("Theory %s\n"
+           "Ancestors arithmetic\n\n"
+           "Definition count_def:\n"
+           "  count n = if n = 0 then 0 else 1 + count (n - 1)\n"
+           "Termination\n"
+           "  WF_REL_TAC `measure I` >> simp[]\n"
+           "End\n")
+# 0 Theory / 1 Ancestors / 2 blank / 3 Definition / 4 eqn
+# 5 Termination / 6 tactic / 7 End
+_TC_TERM_LINE, _TC_TAC_LINE = 5, 6
+
+
+def _tc_goal(c, uri, rid, line, char, tries=10):
+    """Ask for goal state, waiting out a `null` that only means the
+    walk could not have the compile state yet.
+
+    `goalStateAtPos' refuses outright while a compile owns the process
+    -- a rewind under a running pass would empty the theory graph --
+    and a `didOpen' plus a goals pane are concurrent by construction.
+    So poll, rather than read the refusal as "no goal here"."""
+    for i in range(tries):
+        m = _send_goalstate(c, rid + i, uri, line, char)
+        r = (m or {}).get("result")
+        if r is not None:
+            return r
+        time.sleep(0.2)
+    return None
+
+
+def test_goalState_at_an_empty_termination_body():
+    """The ask: `Termination' with nothing between it and `End' shows
+    the initial termination goal, exactly as an empty `Proof ... QED'
+    shows the initial goal of its theorem.
+
+    Neither declaration compiles -- the expander builds `SOME ()' here
+    and `fn g => () g' there -- so this cannot be served by anything
+    the elaboration saw.  The goal is rebuilt from the equations."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_empty.sml"
+        src = (_TC_SRC % "tc_empty").replace(
+            "  WF_REL_TAC `measure I` >> simp[]\n", "")
+        # The block has to be genuinely empty, or this test quietly
+        # becomes a second copy of the step-0 case above.
+        assert_true("WF_REL_TAC" not in src, "the body was removed")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted (even with the block unfinished)")
+        # Just past the `Termination' keyword, where a reader asking
+        # "what am I proving?" puts the cursor.
+        r = _tc_goal(c, uri, 1200, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None, "goalState answered")
+        assert_eq(r.get("status"), "ok", f"a settled answer ({r!r})")
+        assert_eq(r.get("theorem"), "count_def_termination",
+                  f"named as Defn names the obligation ({r!r})")
+        assert_eq(r.get("step"), 0, "step 0, no tactic having run")
+        goals = r.get("goals") or []
+        assert_eq(len(goals), 1, f"one goal ({goals!r})")
+        text = goals[0].get("goal", "")
+        assert_true("WF" in text,
+                    f"the termination obligation ({text!r})")
+        assert_eq(goals[0].get("asms"), [], "with no assumptions")
+    finally:
+        c.close()
+
+
+def test_goalState_steps_through_a_termination_body():
+    """The body is walked like any other tactic body: before the
+    tactics the whole obligation, after them nothing left."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_steps.sml"
+        src = _TC_SRC % "tc_steps"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        before = _tc_goal(c, uri, 1220, _TC_TAC_LINE, 2)
+        assert_true(before is not None, "goalState before the first tactic")
+        assert_eq(len(before.get("goals") or []), 1,
+                  f"the obligation, unreduced ({before!r})")
+        assert_true("WF" in before["goals"][0].get("goal", ""),
+                    f"still existentially quantified ({before!r})")
+        # Past `simp[]', which discharges what `WF_REL_TAC' left.
+        after = _tc_goal(c, uri, 1240, _TC_TAC_LINE,
+                         len("  WF_REL_TAC `measure I` >> simp[]"))
+        assert_true(after is not None, "goalState after the last tactic")
+        assert_eq(after.get("error"), None,
+                  f"no complaint about the proof ({after!r})")
+        assert_eq(len(after.get("goals") or []), 0,
+                  f"the obligation is discharged ({after!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_termination_survives_a_later_declaration():
+    """The positive control for the snapshot rewind.
+
+    Building the obligation mints `count', so it has to run in a
+    context where `count' does not exist -- which the *current* one
+    does not, the compile having long since defined it.  It works
+    because the handler restores the snapshot taken before the
+    declaration.  Without that rewind this answers an error about a
+    constant already in the signature."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_rewind.sml"
+        src = (_TC_SRC % "tc_rewind"
+               + "\nDefinition twice_def:\n  twice n = 2 * count n\nEnd\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted: `count' is in the signature now")
+        r = _tc_goal(c, uri, 1260, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None, "goalState answered")
+        assert_eq(r.get("status"), "ok", f"a settled answer ({r!r})")
+        assert_eq(len(r.get("goals") or []), 1,
+                  f"the obligation, rebuilt in the rewound context ({r!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_in_a_definition_quote_is_null():
+    """The window is `Termination' to `End', the keyword standing in
+    for `Proof'.  A cursor in the equations is not in a proof body and
+    gets the same `null' a cursor between two theorems gets."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_outside.sml"
+        _did_open(c, uri, _TC_SRC % "tc_outside", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        m = _send_goalstate(c, 1280, uri, 4, 4)   # inside `count n = ...'
+        assert_true(m is not None, "reply arrived")
+        assert_eq(m.get("result"), None,
+                  f"no goal state in the equations ({m!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_definition_without_termination_is_null():
+    """No `Termination' clause, no block to be inside."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_none.sml"
+        src = ("Theory tc_none\n"
+               "Ancestors arithmetic\n\n"
+               "Definition double_def:\n"
+               "  double n = 2 * n\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        m = _send_goalstate(c, 1300, uri, 4, 4)
+        assert_true(m is not None, "reply arrived")
+        assert_eq(m.get("result"), None, f"null ({m!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_termination_not_needed_says_so():
+    """A definition that is not recursive has no obligation, and HOL
+    ignores the tactic beside it.  The block is still there and the
+    cursor is still in it, so `null' would read as a fault in a proof
+    that is not even being asked for.  Answer with the reason instead,
+    in `note' -- the line above the goals -- rather than in `error',
+    which is reserved for a walk that failed."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_trivial.sml"
+        src = ("Theory tc_trivial\n"
+               "Ancestors arithmetic\n\n"
+               "Definition double_def:\n"
+               "  double n = 2 * n\n"
+               "Termination\n"
+               "  WF_REL_TAC `measure I`\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        r = _tc_goal(c, uri, 1320, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None, "goalState answered rather than null")
+        assert_eq(r.get("status"), "ok", f"nothing is pending ({r!r})")
+        assert_eq(len(r.get("goals") or []), 0, f"no goals ({r!r})")
+        assert_eq(r.get("error"), None, f"not reported as a failure ({r!r})")
+        assert_true("automatically" in (r.get("note") or ""),
+                    f"the note says why there is nothing ({r!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_termination_goal_follows_a_quote_edit():
+    """The obligation is derived from the equations, so editing them
+    has to change it -- the walker's cache is addressed by the goal
+    text as well as the tactics, and `quote' is what addresses this
+    one."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_edit.sml"
+        src = _TC_SRC % "tc_edit"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        first = _tc_goal(c, uri, 1340, _TC_TERM_LINE, len("Termination"))
+        assert_true(first is not None, "goalState before the edit")
+        assert_eq(len(first.get("goals") or []), 1, f"one goal ({first!r})")
+        was = first["goals"][0]["goal"]
+
+        # `n - 1' becomes `n - 2': a different recursive call, so a
+        # different termination condition.
+        at = src.index("count (n - 1)") + len("count (n - ")
+        idx = c.total_msgs()
+        _did_change_incr(c, uri, src, at, at + 1, "2", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the edit")
+        again = _tc_goal(c, uri, 1360, _TC_TERM_LINE, len("Termination"))
+        assert_true(again is not None, "goalState after the edit")
+        assert_eq(len(again.get("goals") or []), 1, f"one goal ({again!r})")
+        now = again["goals"][0]["goal"]
+        assert_true(was != now,
+                    f"the obligation followed the equations "
+                    f"({was!r} vs {now!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_unparseable_definition_is_pending_not_null():
+    """A definition halfway through being typed cannot be built, so
+    there is no obligation to show.  The block is there and the cursor
+    is in it, so say what is missing rather than answering `null',
+    which reads as a fault in the proof."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_broken.sml"
+        src = ("Theory tc_broken\n"
+               "Ancestors arithmetic\n\n"
+               "Definition oops_def:\n"
+               "  oops n = n +\n"
+               "Termination\n"
+               "  WF_REL_TAC `measure I`\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted (with the definition broken)")
+        r = _tc_goal(c, uri, 1380, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None,
+                    "an answer, not `null', inside the block")
+        assert_eq(r.get("status"), "pending", f"pending ({r!r})")
+        assert_true((r.get("error") or "") != "",
+                    f"with a reason ({r!r})")
+        assert_eq(r.get("failedRange"), None,
+                  f"and nothing squiggled for it ({r!r})")
+    finally:
+        c.close()
+
+
+def test_documentSymbol_names_a_termination_obligation():
+    """The outline carries the obligation as a child of the
+    `Definition', which is also how the census comes to have it: the
+    pool names that proof `<stem>_termination', and without a symbol
+    of that name every verdict it reaches is dropped on the floor.
+
+    A child rather than a sibling -- its range sits inside the
+    declaration's, and `DocumentSymbol' siblings may not overlap."""
+    d = tempfile.mkdtemp(prefix="lsp_tcsym_")
+    try:
+        c = Client(d)
+        try:
+            _init_hierarchical(c, d)
+            uri = f"file://{d}/tc_symScript.sml"
+            _did_open(c, uri, _TC_SRC % "tc_sym")
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            r = _request(c, 1400, "textDocument/documentSymbol",
+                         {"textDocument": {"uri": uri}})
+            syms = r["result"]
+            top = [x["name"] for x in syms]
+            assert_true("count_def" in top, f"the definition ({top})")
+            assert_true("count_def_termination" not in top,
+                        f"not a top-level sibling ({top})")
+            defn = [x for x in syms if x["name"] == "count_def"][0]
+            kids = [x["name"] for x in defn.get("children", [])]
+            assert_true("count_def_termination" in kids,
+                        f"a child of the definition ({kids})")
+            tc = [x for x in defn["children"]
+                  if x["name"] == "count_def_termination"][0]
+            assert_eq(tc["selectionRange"]["start"]["line"], _TC_TERM_LINE,
+                      f"selected on the `Termination' keyword ({tc!r})")
+            assert_true(
+                defn["range"]["start"]["line"] <= tc["range"]["start"]["line"]
+                and tc["range"]["end"]["line"] <= defn["range"]["end"]["line"],
+                f"contained in the declaration ({defn!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_failing_termination_proof_is_reported_but_not_fatal():
+    """Two things at once, and they are the same thing twice.
+
+    The pool runs the termination proof under `<stem>_termination', so
+    with the census carrying that name its verdict reaches the file:
+    a tactic that cannot discharge the obligation is reported.
+
+    And elaboration cheats it regardless, so the definition is still
+    defined and the theorem below it -- which uses `count' -- still
+    goes through.  That is the contract the rest of the file is
+    elaborated against, and a failing termination proof must not take
+    it away."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp", timeout=60)
+        _request(c, 1420, "$/setConfig", {"checkProofs": True})
+        uri = "file:///tmp/tc_failing.sml"
+        src = (_TC_SRC % "tc_failing").replace(
+            "  WF_REL_TAC `measure I` >> simp[]\n",
+            "  WF_REL_TAC `measure (\\n. 0)`\n")
+        # `Once', because rewriting with a recursive equation and no
+        # bound unfolds it forever -- which would make this test hang
+        # on its own fixture rather than on anything under test.
+        src += ("\nTheorem count_zero:\n"
+                "  count 0 = 0\n"
+                "Proof\n"
+                "  simp[Once count_def]\n"
+                "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 300),
+                    "compileCompleted")
+
+        got = _census(c, uri)
+        assert_true(got is not None, "a census was published")
+        assert_true("count_def_termination" in got[1],
+                    f"the obligation is a declared proof site ({got!r})")
+
+        def settled(cl):
+            t = _proof_states(cl, uri)
+            return ("count_def_termination" in t
+                    and t["count_def_termination"][0] not in ("checking",))
+        assert_true(c.wait_until(settled, 240),
+                    f"the pool settles on it ({_proof_states(c, uri)!r})")
+        states = _proof_states(c, uri)
+        assert_eq(states["count_def_termination"][0], "failed",
+                  f"and says it failed ({states!r})")
+
+        # The point of cheating it: everything below still elaborates.
+        def proved(cl):
+            t = _proof_states(cl, uri)
+            return t.get("count_zero", ("", None))[0] == "proved"
+        assert_true(c.wait_until(proved, 240),
+                    f"the theorem below is proved anyway "
+                    f"({_proof_states(c, uri)!r})")
     finally:
         c.close()
 
@@ -10963,6 +11393,28 @@ TESTS = [
                                      test_lsp_holproject_preload_project_dirs),
     ("goalState_incomplete_proof_body",
                                      test_goalState_incomplete_proof_body),
+    ("a_no_cheat_proof_that_fails_is_still_cheated",
+                                     test_a_no_cheat_proof_that_fails_is_still_cheated),
+    ("goalState_at_an_empty_termination_body",
+                                      test_goalState_at_an_empty_termination_body),
+    ("goalState_steps_through_a_termination_body",
+                                      test_goalState_steps_through_a_termination_body),
+    ("goalState_termination_survives_a_later_declaration",
+                                      test_goalState_termination_survives_a_later_declaration),
+    ("goalState_in_a_definition_quote_is_null",
+                                      test_goalState_in_a_definition_quote_is_null),
+    ("goalState_definition_without_termination_is_null",
+                                      test_goalState_definition_without_termination_is_null),
+    ("goalState_termination_not_needed_says_so",
+                                      test_goalState_termination_not_needed_says_so),
+    ("goalState_termination_goal_follows_a_quote_edit",
+                                      test_goalState_termination_goal_follows_a_quote_edit),
+    ("goalState_unparseable_definition_is_pending_not_null",
+                                      test_goalState_unparseable_definition_is_pending_not_null),
+    ("documentSymbol_names_a_termination_obligation",
+                                      test_documentSymbol_names_a_termination_obligation),
+    ("failing_termination_proof_is_reported_but_not_fatal",
+                                      test_failing_termination_proof_is_reported_but_not_fatal),
     ("goalState_cache_invalidates_on_tactic_edit",
                                      test_goalState_cache_invalidates_on_tactic_edit),
     ("goalState_cache_invalidates_on_upstream_change",

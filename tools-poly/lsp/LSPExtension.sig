@@ -211,7 +211,22 @@ type theorem_context = {
      Strings only, like the rest of this signature: the structure is
      compiled into `bin/hol' by polyc, below the kernel, and cannot
      name a term. *)
-  resumeOf: {suspension: string, label: string} option
+  resumeOf: {suspension: string, label: string} option,
+  (* SOME for a cursor in the `Termination … End' region of a
+     `Definition'.  Like a `Resume', the goal such a body discharges is
+     written nowhere in the file: it is the termination obligation the
+     definition principle derives from the equations.  So `quote' holds
+     those equations rather than a statement, and the hook builds the
+     defn and asks it for its obligation instead of parsing a term.
+
+     `stem' is the Definition's name, which the parser already hands
+     over without its attribute block, and is what `Hol_defn' is given.
+     `quoteStart' is the `Definition' keyword rather than the quote, so
+     that the snapshot restored before the walk is one in which the
+     constant the defn is about to mint does not yet exist.
+
+     Strings only, for the reason given above. *)
+  terminationOf: {stem: string} option
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref

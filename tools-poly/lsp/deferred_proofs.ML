@@ -162,10 +162,30 @@ end
    the reported state does not vanish the moment we stop cheating it.
    `asReplay` so a nested `prove` takes the replaying branch below rather
    than coming back through here under the same name. *)
+(* A proof that raises here must not take its declaration with it.
+   Elaboration's contract with the rest of the file is that a proof is
+   cheated: `Theorem foo' binds `foo' whatever its tactic does, and a
+   `Definition' with a `Termination' block defines its constant whether
+   or not the termination proof goes through, so every declaration
+   below is elaborated against something.  Letting the exception out
+   would break that for exactly the proofs this path handles -- and it
+   is reached by the proof the user is working on, which is the one
+   most likely to be failing.
+
+   So fall back to the placeholder and report the failure as a verdict,
+   which is what the pool would have said had the proof been deferred
+   instead.  The diagnostic is the same; what changes is that the rest
+   of the file still elaborates.  Interrupts are re-raised: they are
+   cancellation, not a failing proof. *)
 fun proveForReal ctxt site (g, tac) =
     let
-      val th = asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac))
-      val st = verdict g th
+      val (th, st) =
+          let val th = asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac))
+          in (th, verdict g th) end
+          handle e =>
+                 if Exn.is_interrupt e then Exn.reraise e
+                 else (Thm.mk_oracle_thm "lsp_failed_proof" g,
+                       LSPExtension.Failed (Feedback.exn_to_string e))
     in
       (* No longer suspends -- the user has changed the proof, so stop
          paying to run it during elaboration. *)

@@ -853,6 +853,50 @@ a discovered suspension takes.  Once per parent: the name already
 being in the no-cheat set is what stops a cursor-following goals pane
 scheduling a compile per keystroke.
 
+A `Definition foo: <eqns> Termination tac End` block is the third, and
+the same again with the goal coming from a third place.  It is written
+nowhere in the file: it is the termination obligation the definition
+principle derives from `<eqns>`, so the server builds the defn —
+`Defn.Hol_defn` then `Defn.tc_obligation`, which is what
+`TotalDefn.located_tDefine` does — and shows the goal the tactic is
+handed, `∃R. WF R ∧ …`.  `tgoal` answers the same question by parking a
+goalstack in the proof manager, which a request thread must not touch.
+The window runs from `Termination` to `End`, that keyword standing in
+for `Proof`; a cursor in the equations above it is not in a proof body
+and gets `null`.  `theorem` comes back as `foo_termination`, which is
+what `Defn` calls the obligation and what the proof pool calls the
+proof.
+
+An *empty* `Termination … End` answers with the initial obligation, as
+an empty `Proof … QED` answers with the theorem's own statement.
+Neither declaration compiles, so neither answer can come from anything
+the elaboration saw — which is why the obligation is rebuilt rather
+than captured as the compile goes past.
+
+Two answers are particular to this block.  A definition that needs no
+termination proof — `Defn.triv_defn`, the case HOL reports as
+"Termination argument ignored" — has no goal and is not waiting for
+one, so it answers `status: "ok"` with no goals and the reason in
+`note`; `error` is for a walk that failed, which this is not.  A
+definition that will not build yet answers `status: "pending"` with the
+reason in `error` and no `failedRange`, so nothing is squiggled: the
+block is there and the cursor is in it, and `null` would read as a
+fault in the proof.
+
+Building the obligation mints the function constant, so it has to run
+where that constant does not already exist.  It does, for the same
+reason the `Resume` lookup works: the handler restores the per-dec
+snapshot taken just before the declaration.
+
+The pool runs this proof too, under `foo_termination`, and the census
+carries that name — the outline has it as a `Termination` child of the
+`Definition` — so a termination tactic that does not discharge its
+obligation is reported like any other failing proof, narrowed to the
+step inside the block where the walk stopped.  Elaboration cheats it
+either way: the constant is defined and every declaration below is
+elaborated against it, which is the contract the rest of the file
+depends on.
+
 A snapshot is a state the statement and some prefix of the tactics
 reached together, so an entry is addressed by both: editing either the
 statement or the tactics past that prefix discards the snapshots it
@@ -876,8 +920,9 @@ outright, there being nothing below the edit worth keeping.
 
 ### Response
 
-`result` is `null` when the cursor isn't inside a `Proof … QED` (or
-when the theorem statement can't be parsed).  Otherwise:
+`result` is `null` when the cursor isn't inside a `Proof … QED`, a
+`Resume … QED` or a `Termination … End` (or when a `Theorem`'s
+statement can't be parsed).  Otherwise:
 
 ```json
 {

@@ -19,6 +19,32 @@ structure LSPSuspendedGoal = struct
                (Term.term list * Term.term) option) ref = ref (fn _ => NONE)
 end
 
+(* The goal a `Definition foo: <eqns> Termination tac End' body
+   discharges -- the termination obligation the definition principle
+   derives from `<eqns>'.
+
+   Filled in from `tools-poly/hol.ML' for the same reason as the
+   suspension lookup above: building it needs `Defn', which `hol.state0'
+   does not have, and naming it here would take the whole goal-state
+   hook down in every directory up to `src/boss'.  Unlike that one this
+   file may still name `Term.term' -- it is loaded against a heap, and
+   the kernel is in every heap; only `LSPExtension' is below it.
+
+   Three answers rather than an option, because the two reasons for
+   having no goal call for different things to be said: a definition
+   that needs no termination proof is fine and its tactic is dead, and
+   a definition that will not build has nothing to say yet. *)
+structure LSPTerminationGoal = struct
+  datatype result =
+      Obligation of Term.term list * Term.term
+    | NoObligation of string
+    | Unavailable of string
+  val lookup: ({stem: string, quote: string} -> result) ref =
+      ref (fn _ => Unavailable
+             "termination goals need `Defn', which this directory's heap \
+             \does not have")
+end
+
 local
   open TacticParse
 
@@ -225,7 +251,7 @@ in
 val () = LSPExtension.goalStateAtPos :=
   (fn ({plugins, width, ...}: LSPExtension.hover_context,
        {name, quote, quoteStart, tacText, tacStart, cursor, compileDone,
-        resumeOf}
+        resumeOf, terminationOf}
          : LSPExtension.theorem_context) => let
     (* The budget covers the whole answer, not just the walk.
 
@@ -252,20 +278,37 @@ val () = LSPExtension.goalStateAtPos :=
             failedRange = NONE, failedCloseRange = NONE,
             segments = []}
     fun answer () = let
+    (* A Termination block's obligation, when that is what the cursor
+       is in.  No budget of its own: `Hol_defn' on a body halfway
+       through being typed can run a long way, and so can parsing a
+       statement, which is why the budget above covers the whole
+       answer rather than the walk alone. *)
+    val tcResult =
+      case terminationOf of
+          NONE => NONE
+        | SOME {stem} =>
+          SOME (!LSPTerminationGoal.lookup {stem = stem, quote = quote})
     (* A Theorem carries its goal in the file and it is parsed; a
-       Resume's is in the suspension store and it is looked up.  Both
-       answer with a whole goal, assumptions included: the suspended
-       one routinely has them, `resumption_to_goal' having folded the
-       `suspendimp' chain back into an assumption list. *)
+       Resume's is in the suspension store and it is looked up; a
+       Termination's is derived from the equations beside it.  All
+       three answer with a whole goal, assumptions included: the
+       suspended one routinely has them, `resumption_to_goal' having
+       folded the `suspendimp' chain back into an assumption list. *)
     val startGoal: (Term.term list * Term.term) option =
-      case resumeOf of
-          NONE => Option.map (fn tm => ([], tm))
-                             (Lib.total Parse.Term [QUOTE quote])
-        | SOME r => !LSPSuspendedGoal.lookup r
+      case (terminationOf, resumeOf) of
+          (SOME _, _) =>
+          (case tcResult of
+               SOME (LSPTerminationGoal.Obligation g) => SOME g
+             | _ => NONE)
+        | (NONE, SOME r) => !LSPSuspendedGoal.lookup r
+        | (NONE, NONE) => Option.map (fn tm => ([], tm))
+                                     (Lib.total Parse.Term [QUOTE quote])
     (* What the walker's cache addresses an entry by, beside the
        tactic text.  A Resume's `quote' is empty, so the parse is no
        use as a validator; the goal it opens on is the thing that
-       would have to change. *)
+       would have to change.  A Termination's `quote' is the equations,
+       which is exactly what would have to change for the obligation to
+       be a different one. *)
     val goalText =
       case (resumeOf, startGoal) of
           (NONE, _) => quote
@@ -334,18 +377,36 @@ val () = LSPExtension.goalStateAtPos :=
           simply not available yet, which is what `pending' says.  No
           `failedRange' with it, so nothing is squiggled: the server
           only makes a diagnostic when a range and a message arrive
-          together. *)
-       | (NONE, _) =>
-         (case resumeOf of
-              NONE => NONE
-            | SOME {suspension, label} => SOME
-                {theorem = name, step = 0, goals = [], pretty = "",
-                 context = [], note = NONE, status = "pending",
-                 error = SOME ("no subgoal suspended under `" ^ label ^
-                               "' by " ^ suspension ^ " (yet): its proof \
-                               \has to run before the subgoal exists"),
-                 failedRange = NONE, failedCloseRange = NONE,
-                 segments = []})
+          together.
+
+          A Termination block is the Resume case again, with one extra
+          answer: a definition that needs no termination proof is not
+          waiting for anything, and its tactic is simply dead code.
+          That goes in `note', the line above the goals, rather than in
+          `error', which this signature reserves for a walk that gave
+          up or a tactic that failed. *)
+       | (NONE, _) => let
+           fun blank {status, note, error} =
+             SOME {theorem = name, step = 0, goals = [], pretty = "",
+                   context = [], note = note, status = status,
+                   error = error, failedRange = NONE,
+                   failedCloseRange = NONE, segments = []}
+         in case (tcResult, resumeOf) of
+                (SOME (LSPTerminationGoal.NoObligation m), _) =>
+                blank {status = "ok", note = SOME m, error = NONE}
+              | (SOME (LSPTerminationGoal.Unavailable m), _) =>
+                blank {status = "pending", note = NONE, error = SOME m}
+                (* `Obligation' cannot reach here: it is what makes
+                   `startGoal' a `SOME'. *)
+              | (SOME (LSPTerminationGoal.Obligation _), _) => NONE
+              | (NONE, NONE) => NONE
+              | (NONE, SOME {suspension, label}) =>
+                blank {status = "pending", note = NONE,
+                       error = SOME ("no subgoal suspended under `" ^ label ^
+                                     "' by " ^ suspension ^ " (yet): its \
+                                     \proof has to run before the subgoal \
+                                     \exists")}
+         end
     end
     in case withTimeout hookBudgetMs answer of
            NONE => timedOutResponse ()

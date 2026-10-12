@@ -248,7 +248,8 @@ type goal_state_response = {
 type theorem_context = {
   name: string, quote: string, quoteStart: int,
   tacText: string, tacStart: int, cursor: int, compileDone: bool,
-  resumeOf: {suspension: string, label: string} option}
+  resumeOf: {suspension: string, label: string} option,
+  terminationOf: {stem: string} option}
 
 val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])
