@@ -62,7 +62,17 @@ structure TacticWalker :> sig
        having been taken from a walk that stops early. *)
     stopAtFail: bool
   } -> { state: goalFrag.goalstate,
-         failedAt: (TacticParse.tac_frag * failkind) option }
+         failedAt: (TacticParse.tac_frag * failkind) option,
+         (* The first failure the walk stood `cheat' in for and ran
+            past, when there was one.  Separate from `failedAt', which
+            is where the walk came to rest: those differ when the walk
+            recovered from a real failure and later could not get
+            through some piece of structure, and then it is this one
+            that is about the proof.  Deciding between them needs to
+            know which messages describe the proof and which describe
+            the walk, which is the caller's knowledge, not this
+            module's. *)
+         recovered: (TacticParse.tac_frag * failkind) option }
 end = struct
 
 open TacticParse
@@ -962,10 +972,12 @@ fun walkTo {plugins, theoremName, theoremStart, goalText, tacText,
     else outcome
   (* A walk that ran on past a branch still reports what that branch
      owed; a walk that stopped reports where it stopped, which is the
-     later news of the two. *)
+     later news of the two.  Both travel: see `recovered' in the
+     signature for why the caller may want the earlier one. *)
+  val recoveredAt = !recoveredFail
   val (finalState, allSnaps, failedAt) = case outcome of
-      Done r    => (#state r, #snaps r, !recoveredFail)
-    | Halted r  => (#state r, #snaps r, !recoveredFail)
+      Done r    => (#state r, #snaps r, recoveredAt)
+    | Halted r  => (#state r, #snaps r, recoveredAt)
     | Failed r  => (#state r, #snaps r, SOME (#at r, #why r))
   val _ = case (cacheRefOpt, allSnaps) of
       (SOME cacheRef, _ :: _) => let
@@ -979,6 +991,6 @@ fun walkTo {plugins, theoremName, theoremStart, goalText, tacText,
                            snapshots = deduped})
         end
     | _ => ()
-  in {state = finalState, failedAt = failedAt} end
+  in {state = finalState, failedAt = failedAt, recovered = recoveredAt} end
 
 end;

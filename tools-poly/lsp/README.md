@@ -1115,6 +1115,19 @@ end, and anything in the same flow above them goes out of sight.
   asking about that exact spot has nothing else to show, but a mark
   that depended on where the cursor was would otherwise sit in the
   file afterwards claiming to be a property of the text.
+  An empty focus is not a proved goal when the walk had to stand
+  `cheat` in for a branch that failed.  `pp_goals_only` renders one as
+  "Initial goal proved.", which for a proof that demonstrably does not
+  go through is false, and it is the first thing a reader sees — so a
+  reply carrying a failure *and* no goals says that instead, and sends
+  no `segments`, there being no state worth taking apart.
+
+  Where the walk came to rest is the news, unless coming to rest is all
+  it describes.  A walk that recovered from a real failure and then
+  could not get through some piece of structure would report the
+  structure, burying the thing a reader can act on; the real failure
+  wins instead.
+
 - `failedRange` — where in the file the `error` belongs, when the walk
   stopped somewhere with a natural extent.  For a combinator that
   obliged what it brackets to prove a goal — `>-`, `by`,

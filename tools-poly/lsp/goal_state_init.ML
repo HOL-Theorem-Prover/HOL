@@ -177,11 +177,17 @@ local
            the surface call from TacticParse's inverse printer. *)
       | NONE => (case printTacAsSML tacText te of
             SOME src => "Tactic `" ^ src ^ "` failed to apply"
-          | NONE => "Structural leaf failed"))
-    | FFOpen _  => "Combinator open failed"
-    | FFMid _   => "Combinator branch-advance failed"
-    | FFClose _ => "Combinator close failed"
-    | FGroup _  => "Group failed"
+          | NONE => "This step failed to apply"))
+      (* These four are the walk reporting on itself: it could not get
+         into, through, or out of a piece of structure.  They used to
+         name the walker's own vocabulary -- "Combinator open failed"
+         -- at a reader with no way to know what a combinator open is,
+         and no action to take if they did.  What a reader can act on
+         is which goals the step had to work with, so say that. *)
+    | FFOpen _  => "No goal here for this step to act on"
+    | FFMid _   => "No goal left for the next branch of this step"
+    | FFClose _ => "This step did not finish with the goals it was given"
+    | FGroup _  => "The tactics in this group left the goal unfinished"
       (* A bracket reported as a whole is one whose close would not go
          through.  Three of them say something: each obliged what it
          brackets to prove a goal, and it did not. *)
@@ -191,8 +197,10 @@ local
         "`by` assertion was not proved by its tactic"
     | FBracket (FOpenSufficesBy _, _, _, _) =>
         "`suffices_by` reduction was not proved by its tactic"
-    | FBracket _  => "Bracket failed"
-    | FMBracket _ => "Bracket failed"
+    | FBracket _  => "The tactics in these brackets left the goal \
+                     \unfinished"
+    | FMBracket _ => "The tactics in these brackets left the goal \
+                     \unfinished"
 
   (* A leaf whose SML source didn't compile says nothing about the
      proof.  Either the file's compile hasn't run the `open's yet, in
@@ -365,7 +373,23 @@ val () = LSPExtension.goalStateAtPos :=
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
                    failedRange = NONE, failedCloseRange = NONE,
                    segments = []}
-              | SOME {state, failedAt} => let
+              | SOME {state, failedAt, recovered} => let
+                  (* Where the walk came to rest is the news, unless
+                     coming to rest is all it describes.  A walk that
+                     recovered from a real failure and then could not
+                     get through some piece of structure reports the
+                     structure, which says nothing about the proof and
+                     buries the thing that does: on cakeml's
+                     `lex_aux_sexp_to_list' that replaced the failing
+                     `drule_all' with a combinator the reader has no
+                     quarrel with. *)
+                  val failedAt = case failedAt of
+                      SOME (frag, _) =>
+                        if aboutTheProof frag then failedAt
+                        else (case recovered of
+                                  SOME f => SOME f
+                                | NONE => failedAt)
+                    | NONE => NONE
                   val silent = case failedAt of
                       SOME f => sourceFailure f
                     | NONE => false
@@ -376,10 +400,24 @@ val () = LSPExtension.goalStateAtPos :=
                       if aboutTheProof frag
                       then failRanges tacText tacStart frag
                       else (NONE, NONE)
+                  (* Every goal discharged -- but by `cheat', standing
+                     in for the branch that failed, so the walk is past
+                     the point where anything it says is established.
+                     `pp_goals_only' renders an empty focus as "Initial
+                     goal proved.", which for a proof that demonstrably
+                     does not go through is simply false, and it is the
+                     first thing a reader sees. *)
+                  val onlyCheats =
+                    isSome reported andalso
+                    null (goalFrag.top_goals state)
                   in SOME
                   {theorem = name, step = step,
                    goals = List.map (ppGoal width) (goalFrag.top_goals state),
-                   pretty = ppState width state,
+                   pretty = if onlyCheats
+                            then "No goals remain, but only because `cheat' \
+                                 \stood in for the branch that failed: \
+                                 \the proof does not close."
+                            else ppState width state,
                    context = goalFrag.context_lines state,
                    note = goalFrag.focus_note state,
                    status = if silent andalso not compileDone
@@ -387,7 +425,8 @@ val () = LSPExtension.goalStateAtPos :=
                    error = Option.map (failMsg tacText o #1) reported,
                    failedRange = #1 ranges,
                    failedCloseRange = #2 ranges,
-                   segments = ppSegments width state}
+                   segments = if onlyCheats then []
+                              else ppSegments width state}
                   end
            end
        | (SOME goal, NONE) => let

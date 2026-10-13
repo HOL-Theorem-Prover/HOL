@@ -11064,9 +11064,8 @@ def test_a_structural_walk_failure_draws_no_squiggle():
 
     One names a tactic that would not apply, or a branch obliged to
     prove its goal that did not: a reader can go and look at that.  The
-    other -- "Combinator open failed", "Group failed", "Bracket
-    failed" -- says the walk could not get through a piece of
-    structure, which is a statement about the walker's progress from
+    other says the walk could not get into, through, or out of a piece
+    of structure, which is a statement about the walker's progress from
     wherever the cursor put it.
 
     That distinction stopped being cosmetic once located failures began
@@ -11105,7 +11104,7 @@ def test_a_structural_walk_failure_draws_no_squiggle():
             r = (_await_reply(c, 960, 60) or {}).get("result") or {}
             # Positive control: without this the fixture has stopped
             # producing a structural failure and the test proves nothing.
-            assert_true("Combinator" in (r.get("error") or ""),
+            assert_true("No goal here for this step" in (r.get("error") or ""),
                         f"the walk really did fail structurally ({r!r})")
             assert_true(r.get("failedRange") is None,
                         f"and it earns no range ({r!r})")
