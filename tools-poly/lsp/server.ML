@@ -3118,8 +3118,19 @@ fun start {diag, dbg, warnings} = let
           not block behind a walk.  The reset is housekeeping for a
           pass that is not going to run, so a walk holding the state
           means skip it, not wait for it. *)
+       (* Released on the raise path too.  `resetForCompile' is
+          `Context.restore', `Meta.snapshotLoaded''s thunk and
+          `clearFileLayer', any of which can raise; leaving the claim
+          behind would not lose this reset but the process.  Nothing
+          ever sets the owner back, so every later walk answers
+          `pending' for ever and every later pass logs "still held
+          after 30s" and reschedules itself, for ever -- a wedge whose
+          only symptom is a log line every thirty seconds.  The other
+          two claim sites already put theirs back on both paths. *)
        if claimCompileState ByCompile
-       then (!LSPExtension.resetForCompile (); releaseCompileState ())
+       then (let val () = !LSPExtension.resetForCompile ()
+                          handle e => (releaseCompileState (); raise e)
+             in releaseCompileState () end)
        else logMessage "compile state held; skipped the reset";
        ())
     else let
@@ -5989,7 +6000,11 @@ fun start {diag, dbg, warnings} = let
               NONE => (NONE, NONE)
             | SOME v =>
               (SOME v,
-               goalStateAtPos uri v
+               (* Not a locating walk: the anchor is a place the caller
+                  named, and reaching it means carrying on past a
+                  branch that is not finished yet, exactly as a cursor
+                  request does. *)
+               goalStateAtPos false uri v
                  (pos, width, step,
                   fn (c, t) =>
                      !LSPExtension.tryTacticAt
