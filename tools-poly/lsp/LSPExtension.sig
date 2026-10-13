@@ -226,7 +226,24 @@ type theorem_context = {
      constant the defn is about to mint does not yet exist.
 
      Strings only, for the reason given above. *)
-  terminationOf: {stem: string} option
+  terminationOf: {stem: string} option,
+  (* Ask where the proof first goes wrong, rather than what the state
+     is at `cursor'.
+
+     A cursor walk stands `cheat' in for a `>-' branch that has not
+     discharged its goal and carries on, because an unfinished branch
+     is the ordinary condition of a proof being written and the reader
+     still wants the state further down.  That makes it useless as a
+     source of diagnostics: what it reports is the last branch it
+     walked past, not the first thing that failed, and whether it
+     reports anything at all depends on how much of the proof this
+     particular walk replayed rather than on the proof.
+
+     A locating walk stops at the first failure and consults no cache,
+     so its answer is a property of the text.  `cursor' is ignored.
+     Set by the server for the walk that places a failed proof's
+     diagnostic; false for anything serving a goals pane. *)
+  locate: bool
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref

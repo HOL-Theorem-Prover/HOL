@@ -203,6 +203,33 @@ local
   fun sourceFailure (_, TacticWalker.CompileFailed) = true
     | sourceFailure _ = false
 
+  (* Does this failure say something about the *proof*, or about the
+     walk?
+
+     `failMsg' above has two kinds of answer.  One names a tactic that
+     would not apply, or a branch that was obliged to prove its goal
+     and did not: a reader can go and look at that.  The other --
+     "Combinator open failed", "Group failed", "Bracket failed" -- says
+     the walk could not get through a piece of structure, which is a
+     statement about the walker's own progress from wherever the cursor
+     put it.  Parking the cursor just past a `>-' is enough to produce
+     one.
+
+     Only the first kind earns a range, and so a squiggle.  The second
+     still travels as `error', because a goals pane asking about that
+     exact spot has nothing else to show, but it is not recorded
+     against the file: the server accumulates located failures until
+     the next compile, and a mark that depends on where the cursor was
+     would sit there afterwards claiming to be a property of the
+     text. *)
+  fun aboutTheProof frag =
+    case frag of
+        FAtom _                            => true
+      | FBracket (FOpenThen1 _, _, _, _)   => true
+      | FBracket (FOpenBy _, _, _, _)      => true
+      | FBracket (FOpenSufficesBy _, _, _, _) => true
+      | _ => false
+
   (* Where in the file to point at what failed, as a pair: the range
      the message belongs on, and a second one closing it off.
 
@@ -251,7 +278,7 @@ in
 val () = LSPExtension.goalStateAtPos :=
   (fn ({plugins, width, ...}: LSPExtension.hover_context,
        {name, quote, quoteStart, tacText, tacStart, cursor, compileDone,
-        resumeOf, terminationOf}
+        resumeOf, terminationOf, locate}
          : LSPExtension.theorem_context) => let
     (* The budget covers the whole answer, not just the walk.
 
@@ -328,7 +355,8 @@ val () = LSPExtension.goalStateAtPos :=
                       plugins = plugins, theoremName = name,
                       theoremStart = quoteStart, goalText = goalText,
                       tacText = tacText, startState = startState,
-                      frags = fs, cursor = tacCursor}) of
+                      frags = fs, cursor = tacCursor,
+                      stopAtFail = locate}) of
                 NONE => SOME
                   {theorem = name, step = step,
                    goals = [], pretty = "", context = [],
@@ -344,7 +372,10 @@ val () = LSPExtension.goalStateAtPos :=
                   val reported = if silent then NONE else failedAt
                   val ranges = case reported of
                       NONE => (NONE, NONE)
-                    | SOME (frag, _) => failRanges tacText tacStart frag
+                    | SOME (frag, _) =>
+                      if aboutTheProof frag
+                      then failRanges tacText tacStart frag
+                      else (NONE, NONE)
                   in SOME
                   {theorem = name, step = step,
                    goals = List.map (ppGoal width) (goalFrag.top_goals state),

@@ -244,7 +244,7 @@ fun theoremDeclStart text nm = let
   in loop () end
   handle _ => NONE
 
-fun findEnclosingTheorem compileDone text cursor = let
+fun findEnclosingTheorem locate compileDone text cursor = let
   val parseDec = bufferDecs text
   fun loop () =
     case parseDec () of
@@ -277,7 +277,8 @@ fun findEnclosingTheorem compileDone text cursor = let
                   cursor = cursor,
                   compileDone = compileDone,
                   resumeOf = NONE,
-                  terminationOf = NONE})
+                  terminationOf = NONE,
+                  locate = locate})
         end
         else loop ()
         end
@@ -321,7 +322,8 @@ fun findEnclosingTheorem compileDone text cursor = let
                       cursor = cursor,
                       compileDone = compileDone,
                       resumeOf = SOME {suspension = nm, label = label},
-                      terminationOf = NONE})
+                      terminationOf = NONE,
+                      locate = locate})
           else loop ()
         end
     (* `Definition foo: <eqns> Termination tac End'.  A third body
@@ -370,7 +372,8 @@ fun findEnclosingTheorem compileDone text cursor = let
                       cursor = cursor,
                       compileDone = compileDone,
                       resumeOf = NONE,
-                      terminationOf = SOME {stem = stem}})
+                      terminationOf = SOME {stem = stem},
+                      locate = locate})
           else loop ()
         end
     | SOME _ => loop ()
@@ -2547,7 +2550,7 @@ fun start {diag, dbg, warnings} = let
       (case off of
            NONE => NONE
          | SOME b =>
-           (case findEnclosingTheorem false text b of
+           (case findEnclosingTheorem false false text b of
                 SOME (span, {terminationOf = NONE, ...}) => SOME span
               | _ => NONE))
       handle Empty => NONE
@@ -4721,8 +4724,12 @@ fun start {diag, dbg, warnings} = let
       (case !depsBlocked of DepsUnchecked => true | _ => false)
       orelse compileUsingState ()
 
-  fun goalStateAtPos uri (v as {lastTrees, depsBlocked, minEditOffset,
-                                ...}:file_data)
+  (* `locate` asks where the proof first goes wrong instead of what the
+     state at `target` is; see `locate` in `LSPExtension.theorem_context`
+     for why the two cannot be the same walk.  A locating walk ignores
+     `target` beyond using it to find the enclosing theorem. *)
+  fun goalStateAtPos locate uri (v as {lastTrees, depsBlocked,
+                                       minEditOffset, ...}:file_data)
                      (target, width) =
     (* Nothing to walk against unless the ancestors are known to be
        loaded.  `DepsBlocked' is the case that used to be checked here:
@@ -4807,7 +4814,7 @@ fun start {diag, dbg, warnings} = let
                   | SOME off => (bumpMinEdit minEditOffset off;
                                  scheduleCompile uri v))
         | _ => ()
-    in case findEnclosingTheorem (#done parse) (#text text) offset of
+    in case findEnclosingTheorem locate (#done parse) (#text text) offset of
          NONE => NONE
        | SOME (_, thm as {quoteStart, resumeOf, ...}) =>
          (* One at a time.  Everything between the capture and the
@@ -4977,7 +4984,8 @@ fun start {diag, dbg, warnings} = let
        case theoremTacEnd text offset of
            NONE => ()
          | SOME tacEnd =>
-           (case goalStateAtPos uri v (getLineCol lines tacEnd, !hoverWidth) of
+           (case goalStateAtPos true uri v
+                   (getLineCol lines tacEnd, !hoverWidth) of
                 SOME {failedRange = SOME pos, failedCloseRange, ...} =>
                   (* Written *beside* the entry `updateProofDiag' made
                      under the same key, not over it.  The two say the
@@ -5638,7 +5646,7 @@ fun start {diag, dbg, warnings} = let
         val (v_opt, resp) = case withFileInfo (fn fileInfo =>
               (fileInfo, Binarymap.peek (fileInfo, uri))) of
             NONE => (NONE, NONE)
-          | SOME v => (SOME v, goalStateAtPos uri v (pos, width))
+          | SOME v => (SOME v, goalStateAtPos false uri v (pos, width))
         (* Fold the walker's failure/success into per-file walker
            diagnostics keyed by theorem name so a user-fix removes
            the squiggle without waiting for the next compile.  Emit

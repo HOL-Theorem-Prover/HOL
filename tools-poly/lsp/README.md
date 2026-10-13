@@ -654,6 +654,20 @@ of the snapshot is the loaded-module set and the file's namespace
 layer, and a worker needs neither: its tactic was elaborated during
 the pass, and only compiling tactic *text* wants the layer.
 
+The walk that locates stops at the first failure, and consults no
+snapshot cache.  Both differ from the walk that serves a goals pane,
+and deliberately.  That one stands `cheat` in for a `>-` branch which
+has not discharged its goal and carries on — an unfinished branch is
+the ordinary condition of a proof being written, and the reader still
+wants the state further down.  Used to place a diagnostic, that is
+exactly wrong: it sails past the tactic that failed and runs aground
+later, on whatever structure it cannot get through, and the proof's
+verdict is then pinned to a `>-` that had nothing to do with it.  On
+cakeml's `lex_aux_sexp_to_list` that put the squiggle on the third
+`>-` rather than on the `drule_all` in the first branch.  Resuming
+from the cache has the same effect by a different route: it starts the
+walk past the very failure it is looking for.
+
 The located squiggle is kept *beside* the one on the theorem's name
 rather than replacing it, because the two are not equally certain.
 The verdict is a fact about the theorem: the replay ran the whole
@@ -1088,6 +1102,19 @@ end, and anything in the same flow above them goes out of sight.
   What withdraws them is an edit: every edit goes through
   `startCompile`, which clears the map wholesale, and fixing a tactic
   is an edit.
+
+  Which also decides what may be accumulated.  `failMsg` has two kinds
+  of answer.  One names a tactic that would not apply, or a branch
+  obliged to prove its goal that did not: a reader can go and look at
+  that.  The other — "Combinator open failed", "Group failed",
+  "Bracket failed" — says the walk could not get through a piece of
+  structure, which is a statement about the walker's progress from
+  wherever the cursor put it, and parking the cursor just past a `>-`
+  is enough to produce one.  Only the first kind earns a
+  `failedRange`.  The second still travels as `error`, because a pane
+  asking about that exact spot has nothing else to show, but a mark
+  that depended on where the cursor was would otherwise sit in the
+  file afterwards claiming to be a property of the text.
 - `failedRange` — where in the file the `error` belongs, when the walk
   stopped somewhere with a natural extent.  For a combinator that
   obliged what it brackets to prove a goal — `>-`, `by`,

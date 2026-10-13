@@ -41,7 +41,26 @@ structure TacticWalker :> sig
     tacText: string,
     startState: goalFrag.goalstate,
     frags: TacticParse.tac_frag list,
-    cursor: int
+    cursor: int,
+    (* Stop at the first failure rather than standing `cheat' in for
+       what a `>-' branch owed and walking on.
+
+       The two modes answer different questions.  A cursor asks "what
+       is the state here", and getting there means carrying on past a
+       branch that has not been finished yet -- which is the ordinary
+       condition of a proof being written.  A diagnostic asks "where
+       does this proof first go wrong", and for that the recovery is
+       exactly wrong: it reports the *last* branch walked past rather
+       than the first thing that failed, and on a proof with several
+       unfinished branches those are far apart.
+
+       A locating walk also ignores the snapshot cache, in both
+       directions.  Resuming would start it past the very failure it
+       is looking for -- which is why the same cursor position can
+       report a failure on one visit and nothing on the next -- and
+       its snapshots are not interchangeable with a cursor walk's,
+       having been taken from a walk that stops early. *)
+    stopAtFail: bool
   } -> { state: goalFrag.goalstate,
          failedAt: (TacticParse.tac_frag * failkind) option }
 end = struct
@@ -498,7 +517,7 @@ datatype walkOut =
    express: it gave up at the first nested fragment, so any `rpt' or
    `>-' before the cursor cost a full re-walk of the proof. *)
 type walkenv = {tacText: string, cursor: int, resumeIdx: int,
-                cheatLT: bool}
+                cheatLT: bool, stopAtFail: bool}
 
 (* Set when a THENL branch was skipped.  Unlike `>-', a THENL branch
    need not discharge its goal, and closing the frame concatenates
@@ -521,7 +540,8 @@ val recoveredFail : (tac_frag * failkind) option ref = ref NONE
 fun noteRecovered f =
   if isSome (!recoveredFail) then () else recoveredFail := SOME f
 
-fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
+fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT, stopAtFail})
+             state snaps
              stepIdx frag =
   let
     val replaying = stepIdx < resumeIdx
@@ -665,7 +685,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                to a different step.  Same reason the THENL skip below
                advances by `countSteps'. *)
             fun recover st snps fail =
-              if not demandsDischarge then NONE
+              if not demandsDischarge orelse stopAtFail then NONE
               else (case cheatUntilClosed st of
                       NONE => NONE
                     | SOME st' =>
@@ -901,8 +921,14 @@ and walkFrags (env as {tacText, cursor, resumeIdx, ...}) state snaps
        | out => out)
 
 fun walkTo {plugins, theoremName, theoremStart, goalText, tacText,
-            startState, frags, cursor} = let
-  val cacheRefOpt = LSPExtension.getPluginData (plugins, cacheTag)
+            startState, frags, cursor, stopAtFail} = let
+  (* No cache either way when locating: see `stopAtFail' in the
+     signature.  `NONE' here turns off the resume below and the write
+     at the end together, which is what keeps the two walks' snapshots
+     from being mistaken for one another. *)
+  val cacheRefOpt =
+    if stopAtFail then NONE
+    else LSPExtension.getPluginData (plugins, cacheTag)
   val (resumeIdx, resumeState, priorSnaps) =
     resumeFrom cacheRefOpt
       {theoremName = theoremName, goalText = goalText, tacText = tacText,
@@ -912,7 +938,7 @@ fun walkTo {plugins, theoremName, theoremStart, goalText, tacText,
     (cheatedLT := false;
      recoveredFail := NONE;
      walkFrags {tacText = tacText, cursor = cursor, resumeIdx = idx,
-                cheatLT = cheatLT}
+                cheatLT = cheatLT, stopAtFail = stopAtFail}
                state priorSnaps 0 frags
      handle Portable.Interrupt =>
        Halted {state = state, snaps = priorSnaps, stepIdx = idx})

@@ -10973,6 +10973,151 @@ def test_failed_proof_is_located_despite_a_hung_neighbour():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_failed_proof_is_located_at_its_first_failure():
+    """The diagnostic walk stops at the first failure; the cursor walk
+    does not, and must not.
+
+    A walk serving a goals pane stands `cheat' in for a `>-' branch
+    that has not discharged its goal and carries on -- an unfinished
+    branch is the ordinary condition of a proof being written, and the
+    reader still wants the state further down.  Used to place a
+    diagnostic, that is exactly wrong: it sails past the tactic that
+    actually failed and runs aground later, on whatever structure it
+    cannot get through, and the proof's verdict is then pinned to a
+    `>-' that had nothing to do with it.  On cakeml's
+    `lex_aux_sexp_to_list' that put the squiggle on the third `>-'
+    instead of the `drule_all' in the first branch.
+
+    So the locating walk declines the recovery, and consults no
+    snapshot cache -- resuming would start it past the very failure it
+    is looking for.
+
+    What this pins is the invariant: the located squiggle sits on the
+    tactic that failed, and the theorem keeps its own verdict beside
+    it.  It does **not** discriminate the two walks -- with the
+    recovery put back, this fixture still reports line 9, because a
+    `>-' branch whose body is `ALL_TAC' either side of the failure
+    does not leave the walk anywhere to run aground afterwards.  Every
+    synthetic shape tried had that property.  The case that does
+    discriminate is cakeml's `lex_aux_sexp_to_list', where the
+    recovering walk reports the third `>-' and this one reports the
+    `drule_all'; reproducing it needs that tree built, so it is not
+    reachable from here."""
+    d = tempfile.mkdtemp(prefix="lsp_locfirst_")
+    try:
+        src = ("Theory locfirst\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem multi:\n"
+               "  (1 = 1) /\\ (2 = 2) /\\ (3 = 3)\n"
+               "Proof\n"
+               "  rpt conj_tac\n"
+               "  >-\n"
+               "   (ALL_TAC\n"
+               "    \\\\ ACCEPT_TAC TRUTH\n"
+               "    \\\\ ALL_TAC)\n"
+               "  >-\n"
+               "   (ALL_TAC)\n"
+               "  >-\n"
+               "   (ALL_TAC)\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/locfirstScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # 3 is `Theorem multi:'; 9 is the `ACCEPT_TAC TRUTH' that
+            # fails; 11 and 13 are the later `>-'s a cheating walk
+            # would have run aground on.  Nothing here sends
+            # `$/hol/goalState': the point of this squiggle is to say
+            # where to put the cursor, so it has to be there first.
+            def located(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "proof failed" in x.get("message", "")]
+                return ds if {x["range"]["start"]["line"] for x in ds} - {3} \
+                       else None
+
+            ds = c.wait_until(located, 60)
+            assert_true(ds is not None,
+                        f"the failure is located inside the proof "
+                        f"({_proof_states(c, uri)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+            inside = sorted(x["range"]["start"]["line"] for x in ds
+                            if x["range"]["start"]["line"] != 3)
+            assert_eq(inside, [9],
+                      f"on the tactic that failed, not a later `>-` "
+                      f"({ds!r})")
+            assert_true(any(x["range"]["start"]["line"] == 3 for x in ds),
+                        f"and the theorem keeps its own verdict ({ds!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_structural_walk_failure_draws_no_squiggle():
+    """`failMsg' has two kinds of answer, and only one of them is about
+    the proof.
+
+    One names a tactic that would not apply, or a branch obliged to
+    prove its goal that did not: a reader can go and look at that.  The
+    other -- "Combinator open failed", "Group failed", "Bracket
+    failed" -- says the walk could not get through a piece of
+    structure, which is a statement about the walker's progress from
+    wherever the cursor put it.
+
+    That distinction stopped being cosmetic once located failures began
+    accumulating until the next compile: a mark that depends on where
+    the cursor was would sit there afterwards claiming to be a property
+    of the text.  Here the first two branches discharge both goals, so
+    the third `>-' has nothing to open on; the message still travels,
+    for a pane asking about that exact spot, but it earns no range and
+    so no squiggle."""
+    d = tempfile.mkdtemp(prefix="lsp_struct_")
+    try:
+        src = ("Theory structwalk\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem two:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >- ACCEPT_TAC TRUTH\n"
+               "  >- ACCEPT_TAC TRUTH\n"
+               "  >- ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/structwalkScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # 9 is the third `>-', the one with no goal left to open on.
+            _send_request(c, 960, "$/hol/goalState",
+                          {"textDocument": {"uri": uri},
+                           "position": {"line": 9, "character": 10},
+                           "width": 100})
+            r = (_await_reply(c, 960, 60) or {}).get("result") or {}
+            # Positive control: without this the fixture has stopped
+            # producing a structural failure and the test proves nothing.
+            assert_true("Combinator" in (r.get("error") or ""),
+                        f"the walk really did fail structurally ({r!r})")
+            assert_true(r.get("failedRange") is None,
+                        f"and it earns no range ({r!r})")
+            time.sleep(1)
+            assert_eq(_diag_count(c, uri), [],
+                      "so nothing is squiggled, and nothing accumulates")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_walker_squiggles_accumulate_across_a_proof():
     """A proof can have more than one failing tactic, and a reader
     finds them by moving around.  Each one the walker reports is kept.
@@ -11534,6 +11679,10 @@ TESTS = [
      test_hung_proof_that_eats_its_interrupt_still_settles),
     ("failed_proof_is_located_despite_a_hung_neighbour",
      test_failed_proof_is_located_despite_a_hung_neighbour),
+    ("failed_proof_is_located_at_its_first_failure",
+     test_failed_proof_is_located_at_its_first_failure),
+    ("a_structural_walk_failure_draws_no_squiggle",
+     test_a_structural_walk_failure_draws_no_squiggle),
     ("walker_squiggles_accumulate_across_a_proof",
      test_walker_squiggles_accumulate_across_a_proof),
     ("goalState_above_a_failure_keeps_its_squiggle",
