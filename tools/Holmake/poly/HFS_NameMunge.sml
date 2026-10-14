@@ -59,7 +59,17 @@ fun absolute p =
       (if OS.Path.isAbsolute p then p
        else OS.Path.mkAbsolute {path = p, relativeTo = OS.FileSys.getDir()})
 
-fun canonical p = OS.FileSys.fullPath p handle OS.SysErr _ => absolute p
+(* fullPath of the longest existing prefix of the absolute path p *)
+fun physical p =
+    OS.FileSys.fullPath p
+    handle OS.SysErr _ =>
+           let val {dir, file} = OS.Path.splitDirFile p
+           in
+             if dir = p orelse dir = "" then p
+             else OS.Path.concat (physical dir, file)
+           end
+
+fun canonical p = physical (absolute p)
 
 fun join d "" = d
   | join d r = OS.Path.concat (d, r)
@@ -90,7 +100,7 @@ fun realdir d =
           SOME (_, r) => r
         | NONE =>
           let
-            val r = OS.FileSys.fullPath d handle OS.SysErr _ => d
+            val r = physical d
           in
             Array.update (realdirs, i, (d, r) :: Array.sub (realdirs, i));
             r
@@ -204,10 +214,18 @@ fun holobjdir_var_for d =
     if owned_by_layout d then objdir_for d else HOLOBJDIR
 
 fun artifact_dirs_for d =
-    if owned_by_layout d then
-      map (fn f => f d)
-          [objdir_for, depdir_for, logdir_for, lockdir_for, docsdir_for]
-    else []
+    case current_layout () of
+        NONE => []
+      | SOME (l as {srcroot, objroot}) =>
+        case classify l (absolute d) of
+            Mapped rel =>
+            map (fn f => f d)
+                [objdir_for, depdir_for, logdir_for, lockdir_for,
+                 docsdir_for] @
+            (* the root's cleanAll also drops the project's cost cache,
+               as removing <root>/.hol does in the legacy layout *)
+            (if rel = "" then [objroot ++ "build-logs"] else [])
+          | _ => []
 
 fun FStoHOL p =
     let

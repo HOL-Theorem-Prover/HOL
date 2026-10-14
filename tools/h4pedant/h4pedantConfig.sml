@@ -107,9 +107,19 @@ fun load { start : string } : config option =
                               includes = [], excludes = [],
                               overrides = [] }
                   | SOME tbl => parse_h4pedant_block proj_path root tbl
+            (* a separate artifact root inside the tree holds build
+               products, never sources *)
+            val objroot =
+                HMProject.tag_path proj_path
+                  (fn () => Option.map (HMProject.abs_relative_to root)
+                                       (HMProject.lookup_string ptbl
+                                                                ["objroot"]))
           in
             SOME { root = root, default = default,
-                   includes = includes, excludes = excludes,
+                   includes = includes,
+                   excludes = excludes @ Option.getOpt
+                                           (Option.map (fn p => [p]) objroot,
+                                            []),
                    overrides = overrides }
           end
 

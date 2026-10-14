@@ -104,7 +104,13 @@ fun getcline args =
    the child's own cline parse handles -C the normal way (one
    chdir, via set_cwd).  If we don't exec-switch, control falls
    through to the regular getcline/apply_updates flow below, which
-   sees the same argv and chdirs at its usual point. *)
+   sees the same argv and chdirs at its usual point.
+
+   The artifact layout is settled here too, from the same peek: the
+   lastmaker file lives in the layout's depdir, and the layout must be
+   in place before any project discovery.  Relative --objroot and
+   --srcroot values, and the search for holproject.toml, start from
+   the -C directory when there is one. *)
 local
   val rawargs = CommandLine.arguments()
   fun peek_chdir [] = NONE
@@ -114,11 +120,33 @@ local
         if String.isPrefix "--directory=" a then
           SOME (String.extract (a, size "--directory=", NONE))
         else peek_chdir rest
+  fun peek_long nm args =
+      case args of
+          [] => NONE
+        | a :: rest =>
+          if a = "--" ^ nm then
+            (case rest of d :: _ => SOME d | [] => NONE)
+          else if String.isPrefix ("--" ^ nm ^ "=") a then
+            SOME (String.extract (a, size nm + 3, NONE))
+          else peek_long nm rest
+  val target_dir = peek_chdir rawargs
+  val start =
+      case target_dir of
+          NONE => OS.FileSys.getDir()
+        | SOME d => OS.Path.mkAbsolute {path = d,
+                                        relativeTo = OS.FileSys.getDir()}
+  val layout =
+      HMProject.resolve_layout
+        {start = start, cli_objroot = peek_long "objroot" rawargs,
+         cli_srcroot = peek_long "srcroot" rawargs,
+         no_project = List.exists (fn s => s = "--no-project") rawargs}
+      handle Fail s => die ("Artifact layout: " ^ s)
 in
+val _ = HFS_NameMunge.configure layout
 val _ = do_lastmade_checks default_ofns
           {no_lastmakercheck =
              List.exists (fn s => s = "--nolmbc") rawargs,
-           target_dir = peek_chdir rawargs}
+           target_dir = target_dir}
 end
 
 val (master_cline_options, cline_vars, targets) =
@@ -795,6 +823,14 @@ val (outputfns as {warn,tgtfatal,diag,info,chatty,info_inline,info_inline_end})=
     output_functions {chattiness = chattiness_level coption_value,
                       debug = #debug coption_value,
                       usepfx = usepfx}
+(* The layout was fixed at startup from the command line alone, before
+   any Holmakefile was read. *)
+val () = if HM_Cline.layout_options option_value <>
+            HM_Cline.layout_options master_cline_nohmf
+         then
+           warn ("--objroot/--srcroot in CLINE_OPTIONS ignored; use the \
+                 \command line, holproject.toml or HOLOBJROOT")
+         else ()
 val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value

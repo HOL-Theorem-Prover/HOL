@@ -40,7 +40,8 @@ sig
   (* value of $(HOLOBJDIR) in a Holmakefile in the given directory *)
   val artifact_dirs_for : string -> string list
   (* the per-directory artifact directories when the directory is
-     mapped by the layout; [] otherwise *)
+     mapped by the layout (plus <objroot>/build-logs for srcroot
+     itself); [] otherwise *)
   val FStoHOL : string -> string option
   (* physical product path (either layout) -> logical path *)
 

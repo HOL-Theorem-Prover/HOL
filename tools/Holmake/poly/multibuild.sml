@@ -290,10 +290,21 @@ fun graphbuild optinfo g =
 
 
 
+    (* children work in the same artifact layout; an inherited setting
+       is replaced, not shadowed *)
+    val (layout_env, inherited_env) =
+        case HFS_NameMunge.current_layout () of
+            NONE => ([], Posix.ProcEnv.environ())
+          | SOME {objroot, srcroot} =>
+            (["HOLOBJROOT=" ^ objroot, "HOLSRCROOT=" ^ srcroot],
+             List.filter
+               (fn s => not (String.isPrefix "HOLOBJROOT=" s orelse
+                             String.isPrefix "HOLSRCROOT=" s))
+               (Posix.ProcEnv.environ()))
     val env =
         (if relocbuild then [Systeml.build_after_reloc_envvar^"=1"] else []) @
         (case thmsrc of SOME s => ["HOL_THMSRC="^s] | NONE => []) @
-        Posix.ProcEnv.environ()
+        layout_env @ inherited_env
     fun cline_to_command (s, args) = {executable = s, nm_args = args, env = env}
     fun shell_command s =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
