@@ -788,9 +788,29 @@ fun mutual_induction ops ind =
           in
             MP inst (LIST_CONJ (ListPair.map prove (goals, opPartsFor opty)))
           end
+      (* The order the clauses mention the levels in is not that order:
+         one constructor can mention an operator on its own before
+         another mentions it inside a second, as `tree option` and
+         `tree option list` are mentioned by
+            tree = Tip | Link (tree option) | Fork (tree option list)
+         So settle them in the order the levels say they collect each
+         other. *)
+      fun collects opty =
+          List.filter (fn t => List.exists (equal t) (#optys info))
+                      (List.map #elemty (#waysFor info opty))
+      fun reaches x y =
+          let
+            fun go _ [] = false
+              | go seen (t :: ts) =
+                  t = x orelse
+                  (if List.exists (equal t) seen then go seen ts
+                   else go (t :: seen) (collects t @ ts))
+          in
+            go [] (collects y)
+          end
       val allQs =
           List.foldl (fn (opty, done) => (opty, allQfor done opty) :: done)
-                     [] (List.rev (#optys info))
+                     [] (Lib.topsort reaches (#optys info))
       fun allQof opty =
           case List.find (fn (t, _) => t = opty) allQs of
               SOME (_, th) => th
