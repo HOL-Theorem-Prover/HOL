@@ -9,7 +9,7 @@ sig
 
   (* Locate a parent theory's .dat file by name, searching
      [search_dirs] for either the Poly-munged
-     <dir>/.hol/objs/<thy>Theory.dat or the plain
+     (HFS_NameMunge.objdir_for <dir>)/<thy>Theory.dat or the plain
      <dir>/<thy>Theory.dat, then falling back to sigobj and the
      symlink target of sigobj/<thy>Theory.uo.  Returns NONE if not
      found. *)

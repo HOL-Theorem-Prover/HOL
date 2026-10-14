@@ -138,7 +138,7 @@ fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_function
     let
         val {info, warn, ...} = ofns
         val _ = mkDir base_url handle OS.SysErr _ => ()
-        val obj_dir = OS.Path.concat(dir, OS.Path.concat(".hol", "objs"))
+        val obj_dir = HFS_NameMunge.objdir_for dir
         fun find_file f =
             let val in_objs = OS.Path.concat(obj_dir, f)
                 val in_dir = OS.Path.concat(dir, f)

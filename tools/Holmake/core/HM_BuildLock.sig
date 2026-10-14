@@ -7,7 +7,8 @@ sig
   val nolock : lockhandle
 
   (* acquire {dir, key, warn, diag} - acquire an exclusive lock for the
-     given build target. Creates dir/.hol/locks/key.lock if necessary.
+     given build target. Creates key.lock in the directory's lock
+     directory (HFS_NameMunge.lockdir_for dir) if necessary.
      Blocks until the lock is available. On failure (e.g., unsupported
      filesystem), warns and returns a dummy handle.
 

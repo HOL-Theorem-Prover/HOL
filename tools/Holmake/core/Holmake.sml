@@ -56,8 +56,7 @@ fun in_src () = is_src_dir (hmdir.curdir())
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
-val DEPDIR = Systeml.DEPDIR
-val LOGDIR = Systeml.LOGDIR
+fun cwd_abs () = hmdir.toAbsPath (hmdir.curdir())
 
 local
   val sigobj = OS.Path.concat(HOLDIR0, "sigobj")
@@ -257,6 +256,24 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 type patrules = Holmake_types.patrules
 val empty_patrules : patrules = Holmake_types.empty_patrules
+
+(* Where the current directory's products go, for Holmakefile recipes:
+   $(HOLOBJDIR) is the products directory (relative in the legacy
+   layout), $(HOLOBJROOT) and $(HOLSRCROOT) the layout's roots (empty in
+   the legacy layout).  Applied before the command-line variables, which
+   may override them. *)
+fun extend_with_layout_vars env =
+    let
+      val (objroot, srcroot) =
+          case HFS_NameMunge.current_layout () of
+              NONE => ("", "")
+            | SOME {objroot, srcroot} => (objroot, srcroot)
+    in
+      env |> env_extend ("HOLOBJDIR",
+                         [LIT (HFS_NameMunge.holobjdir_var_for (cwd_abs()))])
+          |> env_extend ("HOLOBJROOT", [LIT objroot])
+          |> env_extend ("HOLSRCROOT", [LIT srcroot])
+    end
 
 (* Extend the base environment with vars passed at commandline (foldl below),
    as well as environment variables "magically" derived from other options,
@@ -590,7 +607,9 @@ local
           val (env, rdb, prs, tgt0) =
               ReadHMF.diagread hmf_diags
                                "Holmakefile"
-                               (extend_with_cline_vars (read_holpathdb()))
+                               (extend_with_cline_vars
+                                  (extend_with_layout_vars
+                                     (read_holpathdb())))
               handle internal_functions.HolmakeError s => die_raw s
                    | Fail s =>
                      (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
@@ -1299,7 +1318,7 @@ end
    file-system; it always looks the same.  However, additional
    dependencies depend on what holdep tells us.  This function that
    runs holdep, and puts the output into specified file, which will live
-   in DEPDIR somewhere. *)
+   in the directory's depdir (HFS_NameMunge.depdir_for). *)
 
 fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
   val {preincludes,includes} = incinfo
@@ -1307,7 +1326,8 @@ fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
       get_direct_dependencies {incinfo = incinfo,
                                extra_targets = extra_targets(),
                                output_functions = outputfns,
-                               DEPDIR = DEPDIR} f
+                               depdir = HFS_NameMunge.depdir_for (cwd_abs())}
+                              f
   val diag = diag "impdeps"
   val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
                         "directdeps = " ^ pdlist file_dependencies0)
@@ -1330,7 +1350,9 @@ in
          (meaning the transitive closure of the direct dependency
          relation) in their .UO form, not just .UI *)
       val get_direct_dependencies =
-          get_direct_dependencies {incinfo = incinfo, DEPDIR = DEPDIR,
+          get_direct_dependencies {incinfo = incinfo,
+                                   depdir =
+                                     HFS_NameMunge.depdir_for (cwd_abs()),
                                    output_functions = outputfns,
                                    extra_targets = extra_targets()}
       val starters = get_direct_dependencies f
@@ -1455,32 +1477,13 @@ fun read_foreign_depfile tgt =
                 | SOME {fullfile, ...} => fullfile
           val real_objpath = OS.FileSys.realPath fs_path
                              handle OS.SysErr _ => fs_path
-          val objdir_arcs_rev =
-              List.rev (#arcs (OS.Path.fromString HFS_NameMunge.HOLOBJDIR))
-          fun stripPrefix [] xs = SOME xs
-            | stripPrefix _ [] = NONE
-            | stripPrefix (p::ps) (x::xs) =
-                if p = x then stripPrefix ps xs else NONE
-          fun strip_hol_objs p =
-              let val {isAbs, vol, arcs} = OS.Path.fromString p
-                  val rev_arcs = List.rev arcs
-              in case rev_arcs of
-                     [] => NONE
-                   | _ :: rest =>
-                     Option.map
-                       (fn rest' =>
-                           OS.Path.toString
-                             {isAbs=isAbs, vol=vol,
-                              arcs=List.rev rest'})
-                       (stripPrefix objdir_arcs_rev rest)
-              end
         in
-          case strip_hol_objs real_objpath of
+          case HFS_NameMunge.FStoHOL real_objpath of
               NONE => []
-            | SOME real_srcdir =>
+            | SOME logical_path =>
               let
-                val foreign_depdir =
-                    OS.Path.concat (real_srcdir, DEPDIR)
+                val real_srcdir = OS.Path.dir logical_path
+                val foreign_depdir = HFS_NameMunge.depdir_for real_srcdir
                 val depfile = mk_depfile_name foreign_depdir
                                               (fromFile arg)
                 val foreign_hmdir =
@@ -1968,14 +1971,21 @@ fun create_complete_graph cline_incs idm =
     end)
 
 fun clean_deps() =
-  ( Holmake_tools.clean_depdir {depdirname = DEPDIR}
-  ; Holmake_tools.clean_depdir {depdirname = LOGDIR} )
+  ( Holmake_tools.clean_depdir
+      {depdirname = HFS_NameMunge.depdir_for (cwd_abs())}
+  ; Holmake_tools.clean_depdir
+      {depdirname = HFS_NameMunge.logdir_for (cwd_abs())} )
 
 fun do_clean_target x = let
   fun clean_action () =
       Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans()}
   fun cleanAll () =
-      Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans() @ [".hol/"]}
+      case HFS_NameMunge.artifact_dirs_for (cwd_abs()) of
+          [] => Holmake_tools.clean_dir
+                  outputfns {extra_cleans = extra_cleans() @ [".hol/"]}
+        | dirs =>
+          (clean_action ();
+           Holmake_tools.clean_artifact_dirs outputfns dirs)
 in
   if originally_in_src orelse not (in_src()) then
     case x of

@@ -64,7 +64,7 @@ sig
                    unit
   val read_files_with_objs :
       {dirname: string} -> (string -> bool) ->
-      ({fakearcs:string list,base:string} -> 'a -> 'a) ->
+      ({physdir:string,base:string} -> 'a -> 'a) ->
       'a -> 'a
 
 end

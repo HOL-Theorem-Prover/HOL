@@ -126,7 +126,7 @@ sig
        getting in the way of the later cline-parse chdir. *)
 
   val write_lastmaker_in_cwd : output_functions -> unit
-    (* Records DEPDIR/lastmaker in the current working directory,
+    (* Records the lastmaker file of the current working directory,
        using the path captured by do_lastmade_checks.  No-op if
        do_lastmade_checks has not yet run, or if Holmake started
        under any HOLDIR (HOLDIR-relative resolution handles those
@@ -168,6 +168,9 @@ sig
   val createDirIfNecessary : string -> unit
   val clean_dir : output_functions -> {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
+  val clean_artifact_dirs : output_functions -> string list -> unit
+    (* removes the files directly inside each directory, then the
+       directory if it is then empty; for a separate artifact root *)
   val clean_forReloc : {holheap : string option} -> unit
   val pushdir : string -> ('a -> 'b) -> ('a -> 'b)
 
@@ -264,7 +267,7 @@ sig
 
 
   val get_direct_dependencies :
-      {incinfo : include_info, DEPDIR : string,
+      {incinfo : include_info, depdir : string,
        output_functions : output_functions,
        extra_targets : dep list } ->
       File -> dep list

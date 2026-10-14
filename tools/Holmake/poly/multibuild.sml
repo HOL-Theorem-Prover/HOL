@@ -26,7 +26,6 @@ fun fupdkey m f k dflt =
 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
-val loggingdir = ".hol/logs"
 fun K x y = x
 
 fun graph_dirinfo g =
@@ -129,7 +128,7 @@ fun graphbuild optinfo g =
         String.map (fn #"/" => #"-" | c => c) (dropthySuffix t)
     fun genLF {tag, dir} =
         let
-          val ldir = dir ++ loggingdir
+          val ldir = HFS_NameMunge.logdir_for dir
           val _ = Holmake_tools.createDirIfNecessary ldir
         in
           ldir ++ safetag dir tag
