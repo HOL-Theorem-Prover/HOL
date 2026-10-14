@@ -3434,21 +3434,30 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
 
-        # Whether the canary wins is a race, so try a few times; but
-        # every single one must answer -- a miss here is the wedge.
+        # Whether the canary wins is a race -- it sleeps the budget and
+        # then has to be scheduled, while the walk runs -- so try until
+        # it does; but every single try must answer, because a miss
+        # here is the wedge.  Each try extends the candidate, so the
+        # candidate walk is fresh text rather than a cached resume: a
+        # repeat at the same anchor costs nothing to walk and so would
+        # never run out of budget.
         fired = None
-        for attempt in range(4):
-            r = _send_trytactic(c, 7360 + attempt, uri, 6, END, CAND,
+        last = None
+        for attempt in range(10):
+            cand = CAND[:-1] + (", ADD_0" * attempt) + "]"
+            r = _send_trytactic(c, 7360 + attempt, uri, 6, END, cand,
                                 budget_ms=1)
             assert_true(r is not None,
                         f"probe {attempt} answered at all; no reply is the "
                         f"wedge this test exists for")
             res = r.get("result") or {}
+            last = res
             if "budget" in (res.get("error") or ""):
                 fired = res["error"]
                 break
         assert_true(fired is not None,
-                    "a 1ms budget stopped a walk in four tries")
+                    f"a 1ms budget stopped a walk in ten tries "
+                    f"(last reply {last!r})")
 
         # Whichever walk it stopped, it must blame that walk's own
         # text -- the two index different strings, and either can be
@@ -3457,7 +3466,7 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
         # holds the report to naming something that exists.
         if "`" in fired:
             step = fired.split("`")[1]
-            assert_true(step in src or step in CAND,
+            assert_true(step in src or step in cand,
                         f"the named step comes from one of the two texts "
                         f"the walks index ({step!r} in {fired!r})")
 
@@ -3833,12 +3842,16 @@ def test_goalState_budget_timeout_names_the_step():
     END = 40   # past `metis_tac[...]', so the walk runs it
 
     # Whether the canary wins is a race: it sleeps the budget and then
-    # has to be scheduled, while the walk runs.  A slow last step makes
-    # the window wide, and three tries make one scheduling fluke
-    # harmless -- a server that stopped attributing would fail all of
-    # them.
+    # has to be scheduled, while the walk runs.  Measured under eight
+    # busy cores it wins about half the tries -- `rw[]' discharges this
+    # goal, so the walk is over in a millisecond or two however hard
+    # the goal is made, and the race is decided inside the first step.
+    # Hence ten tries rather than a slower proof: the walk cannot be
+    # stretched, so the provocation is repeated instead.  A server that
+    # stopped attributing would fail all ten.
     timed_out = None
-    for attempt in range(3):
+    last = None
+    for attempt in range(10):
         c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
         try:
             _init(c, "/tmp")
@@ -3848,6 +3861,7 @@ def test_goalState_budget_timeout_names_the_step():
             r = _send_goalstate(c, 7101 + attempt, uri, 6, END)
             res = (r or {}).get("result")
             assert_true(res is not None, f"a result came back ({r!r})")
+            last = res
             if res.get("error"):
                 timed_out = res
                 break
@@ -3855,7 +3869,8 @@ def test_goalState_budget_timeout_names_the_step():
             c.close()
 
     assert_true(timed_out is not None,
-                "a 1ms budget stopped the walk in three tries")
+                f"a 1ms budget stopped the walk in ten tries "
+                f"(last reply {last!r})")
     err = timed_out.get("error") or ""
     assert_contains(err, "budget", "the report names the budget")
     assert_contains(err, "step(s) completed",

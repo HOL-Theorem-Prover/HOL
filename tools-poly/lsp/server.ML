@@ -1839,6 +1839,11 @@ fun start {diag, dbg, warnings} = let
      `test_walk_and_compile_do_not_share_the_context`. *)
   val compileState : unit Sref.t = Sref.new ()
   datatype state_owner = Free | ByCompile | ByWalk
+  (* One concept, two mechanisms, and they answer different questions:
+     the `Sref' says only one walk is inside the state, the owner
+     below says who is allowed to take it at all.  `withWalkState' is
+     where the pair is used together, and the only place a walk should
+     reach for either of them. *)
   (* `Synchronized` rather than `Sref` for this one: a compile that
      finds the state held has to wait for it, and a condition variable
      waits without a poll loop -- `releaseCompileState` broadcasts, so
@@ -1884,6 +1889,42 @@ fun start {diag, dbg, warnings} = let
   fun holdForTests () =
       if walkHoldMs <= 0 then ()
       else OS.Process.sleep (Time.fromMilliseconds (IntInf.fromInt walkHoldMs))
+
+  (* Hold the compile state for a walk: `body' runs with it claimed,
+     and `busy ()' answers instead when a compile or another walk
+     already holds it.
+
+     Three steps have to happen together, and this is the one place
+     that spells them out:
+
+       - the `Sref' serialises walks against each other, where the
+         owner excludes compiles.  Both are needed, and they say
+         different things: the owner says who may take the state, the
+         `Sref' says only one walk is inside it;
+       - `captureCompileSnap` records the state the walk found, and
+         putting that back must happen *before* the claim is dropped.
+         A compile taking the state in between would have its own
+         `restoreSnap` undone by it;
+       - the restore and the release belong on the raise path too.  A
+         walk that leaves by exception has still rewound the process
+         to its theorem's snapshot, and dropping the claim without
+         putting that back hands the next compile a Context belonging
+         to somebody else's declaration.  That is the one case easy to
+         arrange and hard to see afterwards, since the symptom lands
+         on whoever takes the state next rather than on the walk.
+
+     `cleanup' is whatever else the caller must undo on both paths.
+     It runs first, while the walk's own state is still installed. *)
+  fun withWalkState {busy, cleanup} body =
+      Sref.gen_update compileState (fn held =>
+        (held,
+         if not (claimCompileState ByWalk) then busy ()
+         else let
+           val restoreLater = !LSPExtension.captureCompileSnap ()
+           fun finish () =
+               (cleanup (); restoreLater (); releaseCompileState ())
+         in (body () handle e => (finish (); raise e)) before finish ()
+         end))
 
   (* Test hook: stretch the gap between a compile finishing and it
      installing its trees, so a test can land a `didChange` in the
@@ -3172,8 +3213,10 @@ fun start {diag, dbg, warnings} = let
           ever sets the owner back, so every later walk answers
           `pending' for ever and every later pass logs "still held
           after 30s" and reschedules itself, for ever -- a wedge whose
-          only symptom is a log line every thirty seconds.  The other
-          two claim sites already put theirs back on both paths. *)
+          only symptom is a log line every thirty seconds.  The walks
+          get this from `withWalkState'; this is the one claim that
+          cannot, since it takes no snapshot and claims for a
+          compile. *)
        if claimCompileState ByCompile
        then (let val () = !LSPExtension.resetForCompile ()
                           handle e => (releaseCompileState (); raise e)
@@ -5171,45 +5214,23 @@ fun start {diag, dbg, warnings} = let
             stalls, or deadlocks against the compile it just asked
             for. *)
          let val resp =
-         Sref.gen_update compileState (fn held =>
-           (held,
-            if not (claimCompileState ByWalk) then NONE
-            else
-            (* Both exits run `finish`, and only one of them is
-               taken.  The restore belongs on the raise path too: a
-               walk that leaves by exception has still rewound the
-               process to its theorem's snapshot, and dropping the
-               claim without putting that back hands the next compile a
-               Context belonging to somebody else's declaration.  The
-               raising walk is the one case where that is easy to
-               arrange and hard to see afterwards, since the symptom
-               lands on whoever takes the state next. *)
-            let val restoreLater = !LSPExtension.captureCompileSnap ()
-                (* `restoreLater` puts back the state this walk
-                   found, so it must run before the claim is
-                   dropped: a compile taking the state in between
-                   would have its own `restoreSnap` undone by it. *)
-                fun finish () = (restoreLater (); releaseCompileState ())
-            in
-              (let
-                 val () = case snapBefore quoteStart of
-                     NONE => ()
-                   | SOME s =>
-                     !LSPExtension.restoreCompileSnap (#compileSnap s)
-                 (* A step the caller named wins over the position
-                    it came in with; the position only had to pick out
-                    the theorem. *)
-                 val thm = case stepReq of
+         withWalkState {busy = fn () => NONE, cleanup = fn () => ()}
+           (fn () => let
+              val () = case snapBefore quoteStart of
+                  NONE => ()
+                | SOME s =>
+                  !LSPExtension.restoreCompileSnap (#compileSnap s)
+              (* A step the caller named wins over the position it came
+                 in with; the position only had to pick out the
+                 theorem. *)
+              val thm = case stepReq of
+                  NONE => thm
+                | SOME k =>
+                  (case !LSPExtension.stepCursor (thm, k) of
                      NONE => thm
-                   | SOME k =>
-                     (case !LSPExtension.stepCursor (thm, k) of
-                        NONE => thm
-                      | SOME c => atCursor thm c)
-                 val r = run (ctx, thm)
-                 val () = holdForTests ()
-               in finish (); r end
-               handle e => (finish (); raise e))
-            end))
+                   | SOME c => atCursor thm c)
+              val r = run (ctx, thm)
+            in holdForTests (); r end)
          in demandParentProof resumeOf resp; resp end
     end handle Empty => NONE
 
@@ -5716,33 +5737,24 @@ fun start {diag, dbg, warnings} = let
               NONE declSnapshots
             in (s, (!nsGen, case s of SOME s => #endByte s | NONE => ~1)) end
       in
-        Sref.gen_update compileState (fn held => (held,
-          if not (claimCompileState ByWalk) then busy ()
-          else let
-            val restoreLater = !LSPExtension.captureCompileSnap ()
-            (* Both exits run this, and only one of them is taken. *)
-            fun finish () = (HOL_IDE.printBindings := false;
-                             restoreLater (); releaseCompileState ())
-          in
-            (let
-               val () = case snap of
-                   NONE => ()
-                 | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
-               val () = if !evalLayerAt = key then
-                          (case !evalLayer of
-                               SOME install => install ()
-                             | NONE => ())
-                        else ()
-               (* What a chunk bound is the answer here, where in a
-                  buffer elaboration it would be noise; see `codeFn'. *)
-               val () = HOL_IDE.printBindings := true
-               val () = run ()
-               val () = (evalLayer := SOME (LSPNameSpace.snapshotLayer ());
-                         evalLayerAt := key)
-             in () end
-             handle e => (finish (); raise e))
-            before finish ()
-          end))
+        withWalkState
+          {busy = busy, cleanup = fn () => HOL_IDE.printBindings := false}
+          (fn () => let
+             val () = case snap of
+                 NONE => ()
+               | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+             val () = if !evalLayerAt = key then
+                        (case !evalLayer of
+                             SOME install => install ()
+                           | NONE => ())
+                      else ()
+             (* What a chunk bound is the answer here, where in a
+                buffer elaboration it would be noise; see `codeFn'. *)
+             val () = HOL_IDE.printBindings := true
+             val () = run ()
+           in evalLayer := SOME (LSPNameSpace.snapshotLayer ());
+              evalLayerAt := key
+           end)
       end
     in
       case incr of
