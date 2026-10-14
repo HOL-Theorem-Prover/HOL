@@ -1526,6 +1526,14 @@ fun splitOn c s = let
 val walkedDirs : string Binaryset.set ref =
   ref (Binaryset.empty String.compare)
 
+(* The chdir is process-wide, and so visible to a compile running on
+   another thread for as long as the INCLUDES closure takes to walk.
+   It cannot simply be dropped: `extend_path_with_includes' seeds its
+   worklist from `getDir()', and the Holmakefile parse below it chdirs
+   per directory anyway, because INCLUDES may use `$(wildcard ...)',
+   which globs the process cwd.  In practice this runs once per
+   server, at the first didOpen, before any compile has started: one
+   server serves one script. *)
 fun walkIncludesFrom dir = let
   val abs = OS.Path.mkAbsolute {path = dir, relativeTo = OS.FileSys.getDir()}
              handle _ => dir
@@ -1777,6 +1785,12 @@ fun start {diag, dbg, warnings} = let
         (fn () => let val j = !jobs in jobs := f j; j end)
     in modify end
 
+  (* The fork comes before the registration, which looks like a window
+     a `$/cancelRequest' could fall into and be dropped.  It is not:
+     `main' is one thread, and it both spawns jobs and handles
+     cancels, so the registration is finished before the next message
+     is even read.  Anything that moves dispatch onto more than one
+     thread has to close this. *)
   fun spawnJobCore id job = let
     val jobThread = Thread.fork (job, [])
     in jobs (fn js => (id, jobThread) :: js); () end
@@ -1801,10 +1815,18 @@ fun start {diag, dbg, warnings} = let
 
   (* Server-initiated request ids and progress tokens for
      window/workDoneProgress. *)
-  val nextRequestId = ref 100000
-  fun allocRequestId () =
-      !nextRequestId before nextRequestId := !nextRequestId + 1
-  val progressIdCounter = ref 0
+  (* Read and bumped in one step.  Both are handed out at the start of
+     a compile pass, and two passes can be starting at once -- a
+     debounce thread whose epoch still matches, and the compile thread
+     retrying for the state.  As two steps they can issue the same
+     number twice, which for a request id means the client matches a
+     response to the wrong request, and for a progress token means one
+     `end' closes both spinners. *)
+  val nextRequestId : int Sref.t = Sref.new 100000
+  fun allocRequestId () = Sref.gen_update nextRequestId (fn n => (n + 1, n))
+  val progressIdCounter : int Sref.t = Sref.new 0
+  fun allocProgressToken () =
+      Int.toString (Sref.gen_update progressIdCounter (fn n => (n + 1, n)))
   (* Exclusive use of the process's compile state -- the Context, the
      loaded-module set and the file's namespace layer that
      `captureCompileSnap` bundles.  Whoever restores a snapshot holds
@@ -3849,8 +3871,7 @@ fun start {diag, dbg, warnings} = let
       (* Token is a bare integer; some clients (eglot) concatenate
          title and token when reporting, so we keep the token free of
          label-like text. *)
-      val progressToken = Int.toString (!progressIdCounter)
-        before progressIdCounter := !progressIdCounter + 1
+      val progressToken = allocProgressToken ()
       (* Not sent until we know a compile is actually going to run: a
          file whose dependencies did not load never starts one, and a
          begin without work behind it just flickers the client's

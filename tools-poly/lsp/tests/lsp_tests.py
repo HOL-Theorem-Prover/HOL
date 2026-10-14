@@ -11987,7 +11987,40 @@ def test_goalState_above_a_failure_keeps_its_squiggle():
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
+def test_startup_reports_no_warnings():
+    """The four init files the LSP `QUse.use's at startup each end in
+    a load-time selftest that raises `Fail' on regression -- and
+    `initStep' catches it, warns, and carries on, so the server comes
+    up with that file's declarations only partly bound.  Nothing in
+    the suite read the warning, so those selftests were not a gate:
+    a deliberately broken coverage case was introduced and every test
+    still passed.
+
+    This is that gate.  A startup warning is sent to the client as a
+    `window/showMessage' before any document is opened, so a boot and
+    a pause is the whole test.  Two directories, because the heap a
+    directory asks for is one of the things that can warn."""
+    for cwd in ("/tmp", os.path.join(REPO, "tools-poly/lsp/tests/sorting")):
+        c = Client(cwd)
+        try:
+            _init(c, cwd)
+            # Nothing to wait *for*: the assertion is an absence, so
+            # it has to be given time to show up.
+            time.sleep(2.0)
+            msgs, _ = c.messages_since(0)
+            warned = [m["params"].get("message", "")
+                      for m in msgs
+                      if m.get("method") == "window/showMessage"]
+            assert_true(not warned,
+                        f"{cwd} booted clean; startup warnings mean an "
+                        f"init file did not load, and what it provides "
+                        f"is silently missing ({warned!r})")
+        finally:
+            c.close()
+
+
 TESTS = [
+    ("startup_reports_no_warnings", test_startup_reports_no_warnings),
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
     ("walk_and_compile_do_not_share_the_context",
