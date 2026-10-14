@@ -238,6 +238,27 @@ New features
     the earlier commands of a multi-command rule, only the last of which
     is expected to have produced the target.
 
+-   `Holmake` (under Poly/ML) can keep a project's build products
+    out of its source tree.  A `holproject.toml` key `objroot`, the
+    option `--objroot`, or the environment variable `HOLOBJROOT`
+    names an *artifact root*, below which the source structure is
+    mirrored: `src/sub/fooTheory.dat` is kept as
+    `<objroot>/objs/src/sub/fooTheory.dat`, with dependency files,
+    logs, locks and HTML docs in sibling `make-deps`, `logs`,
+    `locks` and `docs` trees.  Building, `load`ing in `hol` and
+    cleaning all follow it, so a read-only checkout can be built;
+    for instance
+
+           name = "myproj"
+           objroot = "/scratch/myproj-build"
+
+    The command line beats `holproject.toml`, which beats the
+    environment.  The source root defaults to the project root and
+    can be given with `--srcroot` or `HOLSRCROOT`.  Without a
+    setting nothing changes.
+    See *Artifact layout* in the *Project files* sub-section of the
+    Description manual.
+
 Bugs fixed
 ----------
 

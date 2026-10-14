@@ -298,7 +298,8 @@ coverage:
   - **A missing prerequisite is a `SKIP`,** counted and named, never a
     pass — and `--requires <tag>` that selects nothing exits 2, since
     that means the wiring is broken rather than the tests are fine.
-  - **Holmake keeps objects under `.hol/objs/`** and presents them as
+  - **Holmake keeps objects under `.hol/objs/`** (or a project's
+    artifact root, `<objroot>/objs/`) and presents them as
     if they sat in the directory.  A prerequisite check that looks only
     at the plain path reports every built directory as unbuilt, which
     shows up as a whole group quietly skipping.
