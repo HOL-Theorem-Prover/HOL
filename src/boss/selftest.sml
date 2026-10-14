@@ -372,6 +372,19 @@ val _ = require_msg
           (testtac (gvs[arithmeticTheory.SUB_CANCEL]))
           gstest_goal
 
+(* CASE_TAC keeps its simpset between calls; a datatype defined after a
+   call must still have its case and distinctness theorems applied. *)
+val _ = let
+  val _ = testtac CASE_TAC ([], “(case l of [] => 0 | h::t => h:num) = 0”)
+  val _ = Datatype‘casetac_ty = CT1 | CT2 num’
+  val _ = tprint "CASE_TAC on a datatype defined after a CASE_TAC call"
+in
+  require_msg (check_result (goals_eq [([], “n = 0”)]))
+              goalpp
+              (testtac CASE_TAC)
+              ([], “(case x of CT1 => 0 | CT2 n => n) = 0 ∨ x = CT1”)
+end
+
 fun test_tac_Case nm ok_case_arg tq tac = let
   val t = Parse.typed_parse_in_context bool [] tq
   val _ = tprint (nm^" on `"^term_to_string t^"`")

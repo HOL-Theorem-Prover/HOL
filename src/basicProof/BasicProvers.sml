@@ -708,26 +708,38 @@ fun case_rws tyi =
     |> map BODY_CONJUNCTS
     |> List.concat
 
-val cache = ref (List.concat (map case_rws (TypeBase.elts ())))
+fun case_ss_of rws = boolSimps.bool_ss++simpLib.rewrites rws
+
+(* The simpset is a function of the rewrite list, so it lives in the same
+ * value as the list it is built from: an update replaces both at once,
+ * and no read can pair a simpset with a list it was not built from.  It
+ * is a suspension so that declaring a datatype does not pay for a
+ * simpset no CASE_TAC may ask for. *)
+type case_state = {rws : thm list, ss : simpset Susp.susp}
+
+fun mk_case_state rws : case_state =
+    {rws = rws, ss = Susp.delay (fn () => case_ss_of rws)}
+
+val cache =
+    ref (mk_case_state (List.concat (map case_rws (TypeBase.elts ()))))
 
 fun update_cache tyinfo =
    let val thms = (case_rws tyinfo)
    in
-     cache := List.revAppend (thms,!cache)
+     cache := mk_case_state (List.revAppend (thms, #rws (!cache)))
    end
 in
 
 val _ = TypeBase.register_update_fn (fn tyinfo => (update_cache tyinfo;tyinfo))
 
-fun case_rwlist () = !cache
+fun case_rwlist () = #rws (!cache)
 
-(* Add the rewrites into a simpset to avoid re-processing them when
- * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
- * has an order of magnitude speedup on developments with large datatypes *)
-fun PURE_CASE_SIMP_CONV rws =
-    simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
+(* The simpset is built when PURE_CASE_SIMP_CONV is applied to rws, so a
+ * caller that keeps (PURE_CASE_SIMP_CONV rws) and applies it to many terms
+ * builds it only once. *)
+fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (case_ss_of rws) []
 
-fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
+fun CASE_SIMP_CONV tm = simpLib.SIMP_CONV (Susp.force (#ss (!cache))) [] tm
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -804,7 +816,7 @@ fun TOP_CASE_TAC gl =
 
 fun FULL_CASE_TAC goal =
  let val rws = case_rwlist()
-     val case_conv = PURE_CASE_SIMP_CONV rws
+     val case_conv = CASE_SIMP_CONV
      val asm_rule = Rewrite.REWRITE_RULE rws
  in PURE_FULL_CASE_TAC THEN use_new_assum goal
     THEN RULE_ASSUM_TAC asm_rule
@@ -819,7 +831,7 @@ fun FULL_CASE_TAC goal =
 
 fun EVERY_CASE_TAC goal =
  let val rws = case_rwlist()
-     val case_conv = PURE_CASE_SIMP_CONV rws
+     val case_conv = CASE_SIMP_CONV
      val asm_rule = BETA_RULE o Rewrite.REWRITE_RULE rws
      fun tac a = (PURE_FULL_CASE_TAC THEN use_new_assum a THEN
                   RULE_ASSUM_TAC asm_rule THEN
