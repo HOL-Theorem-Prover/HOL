@@ -4242,22 +4242,26 @@ fun defineSize {tyname, sizes = sizenames, mapIDs} axiom =
     have to be connected, and as a *termination* simplification: TFL's
     prover keeps its own set and does not read the ambient one.
 
-    No induction is needed.  `\x. T_size (\x. x) (TMAP f x)` satisfies
-    the very clauses the size was defined by — the constructor case by
-    the map equation, the size equation and the component's own
-    composition law — so the axiom's uniqueness says it *is* the size at
-    those functions.
+    It is proved by the type's own induction principle: at each
+    constructor both sides reduce to the same normal form once the map
+    equation, the size equation and the component's own composition law
+    have said what they do there, with the induction hypothesis standing
+    for the recursive arguments.
    ---------------------------------------------------------------------- *)
 
-fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
+fun sizeMapLemma {induction, sizedef, mapeqn, sizes} =
     let
-      val (uvars, ubody) = strip_forall (concl unique)
-      val (params, hvar) =
-          (List.take (uvars, length uvars - 1), List.last uvars)
       (* the map, at the numbers the sizes give *)
       val mapapp = lhs (#2 (strip_forall (hd (strip_conj (concl mapeqn)))))
       val (mtm, margs) = strip_comb mapapp
       val mfs = List.take (margs, length margs - 1)
+      (* one measure per argument the map moves, which is what the
+         identity instance reads the size of the map at *)
+      val params =
+          Lib.mapi (fn i => fn f =>
+                       mk_var ("f" ^ Int.toString i,
+                               #1 (dom_rng (type_of f)) --> numSyntax.num))
+                   mfs
       val theta = List.map (fn f => #2 (dom_rng (type_of f)) |->
                                     numSyntax.num)
                            mfs
@@ -4282,25 +4286,19 @@ fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
           in
             Term.inst (match_type (type_of sizetm) wanted) sizetm
           end
-      val S = mk_abs (x, list_mk_comb (sizeAtNum,
-                                       idfns @ [mk_comb (mapAt, x)]))
-      (* what it has to satisfy is the clause set the size was defined
-         by, and both sides of each clause reach the same normal form *)
-      val spec = SPECL (gs @ [S]) unique
-      val (ant, _) = dest_imp (concl spec)
-      val rws = [mapeqn, SPEC_ALL sizedef, combinTheory.o_DEF,
-                 combinTheory.I_THM]
-      fun proveClause cl =
-          let val (vs, eq) = strip_forall cl
-          in
-            GENL vs (normEqWith rws (lhs eq, rhs eq))
-          end
-      val clauses = LIST_CONJ (List.map proveClause (strip_conj ant))
-      val isSize = MP spec clauses
-      val y = mk_var ("y", type_of x)
+      (* the measures stay free while the induction runs, and are
+         quantified once it has *)
+      val goal =
+          mk_forall
+            (x, mk_eq (list_mk_comb (sizeAtNum, idfns @ [mk_comb (mapAt, x)]),
+                       mk_comb (list_mk_comb (sizetm, gs), x)))
+      val rws = normRWs @ [mapeqn, SPEC_ALL sizedef, combinTheory.o_DEF,
+                           combinTheory.I_THM]
     in
-      GENL (gs @ [y])
-           (CONV_RULE (LAND_CONV BETA_CONV) (AP_THM isSize y))
+      GENL gs (TAC_PROOF (([], goal),
+                          HO_MATCH_MP_TAC induction THEN
+                          REPEAT CONJ_TAC THEN
+                          simpLib.ASM_SIMP_TAC (set_ss()) rws))
     end
 
 
@@ -4324,8 +4322,8 @@ fun sizeMapLemma {unique, sizedef, mapeqn, sizes} =
 fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
     let
       val names : names list = names
-      (* TypeBase reads the existence half; the size's own lemma wants
-         the uniqueness, so an axiom that carries it is welcome here *)
+      (* TypeBase reads the existence half, so an axiom that carries
+         its uniqueness as well is welcome here *)
       val (fvars, body) = strip_forall (concl axiom)
       val existence = if is_exists1 body then
                         GENL fvars (EXISTENCE (SPECL fvars axiom))
@@ -4348,14 +4346,13 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
                                mapIDs = mapIDs}
                               axiom of
                   NONE => NONE
-                | SOME {sizes, definition, unique} =>
-                  SOME (sizes, definition, unique,
-                        TypeBasePure.ty_name_of ti)
+                | SOME {sizes, definition, ...} =>
+                  SOME (sizes, definition, TypeBasePure.ty_name_of ti)
       (* and what a termination proof over this type needs to know
          about its size, proved and exported where the size is made *)
       val _ =
           case sized of
-              SOME (szs, def, SOME uq, (_, tyname)) =>
+              SOME (szs, def, (_, tyname)) =>
               let
                 fun aboutTy th =
                     let val l = lhs (#2 (strip_forall
@@ -4368,18 +4365,25 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
                     NONE => ()
                   | SOME mapeqn =>
                     let val nm = tyname ^ "_size_MAP"
-                        val lem = sizeMapLemma {unique = uq, sizedef = def,
-                                                mapeqn = mapeqn, sizes = szs}
                     in
-                      ignore (save_thm (nm, lem))
-                    ; TotalDefn.export_termsimp nm
+                      (* a type the law cannot be proved of keeps its
+                         entry; what it loses is the law *)
+                      case Lib.total
+                             (fn () =>
+                                 sizeMapLemma {induction = induction,
+                                               sizedef = def,
+                                               mapeqn = mapeqn,
+                                               sizes = szs}) () of
+                          NONE => ()
+                        | SOME lem => (ignore (save_thm (nm, lem))
+                                     ; TotalDefn.export_termsimp nm)
                     end
               end
             | _ => ()
       fun withSize (i, tyi) =
           case sized of
               NONE => tyi
-            | SOME (szs, def, _, orig) =>
+            | SOME (szs, def, orig) =>
               let val {convs, rewrs} = TypeBasePure.simpls_of tyi
               in
                 (* put_size adds the equation to the entry's
