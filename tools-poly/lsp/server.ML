@@ -1913,6 +1913,19 @@ fun start {diag, dbg, warnings} = let
   | Completed
   | Interrupted
 
+  (* One diagnostic, at the line counter of whatever text it belongs
+     to.  Both senders -- the compile as it goes and
+     `publishAllDiagnostics' when anything changes -- want the same
+     JSON and differ only in which `lines' they have in hand, so this
+     takes that and nothing else.  The other report kinds never reach
+     a client: they are the compile's own channel.  *)
+  fun encDiagAt lines (Error {hard, pos, msg}) print = (
+      print "{\"range\":"; encRangeLC lines pos print;
+      print ",\"severity\":";
+      encInt (if hard then ErrorSeverity else WarnSeverity) print;
+      print ",\"message\":"; msg print; print "}")
+    | encDiagAt _ _ _ = raise Fail "unexpected report kind"
+
   (* Per-dec snapshot; see `parse_data.declSnapshots` below.  A resume
      to `endByte` seeds the new compile with `builtTrees` and `plugins`
      from this snapshot, restores HOL state via `compileSnap`, and
@@ -2912,12 +2925,7 @@ fun start {diag, dbg, warnings} = let
     val _ = pushReports (snapshot, wd)
     val _ = pushReports (snapshot, pd)
     val snapshot = dedupReports snapshot
-    fun encDiag (Error {hard, pos, msg}) print = (
-        print "{\"range\":"; encRangeLC lines pos print;
-        print ",\"severity\":";
-        encInt (if hard then ErrorSeverity else WarnSeverity) print;
-        print ",\"message\":"; msg print; print "}")
-      | encDiag _ _ = raise Fail "unexpected report kind"
+    val encDiag = encDiagAt lines
   in
     send (mkNotif "textDocument/publishDiagnostics" (fn print => (
       print "{\"uri\":"; encString uri print;
@@ -3576,11 +3584,7 @@ fun start {diag, dbg, warnings} = let
 
     fun compileThread () = ((if not (awaitState ()) then () else let
       val () = restoreSnap ()
-      fun encDiag (Error {hard, pos, msg}) print = (
-          print "{\"range\":"; encRangeLC lines pos print;
-          print ",\"severity\":"; encInt (if hard then ErrorSeverity else WarnSeverity) print;
-          print ",\"message\":"; msg print; print "}")
-        | encDiag _ _ = raise Fail "unexpected report kind"
+      val encDiag = encDiagAt lines
 
       val holdepMode = !holdepMode
       val mods = case holdepMode of HoldepNone => [] | _ => getHoldep (#text text)
@@ -4020,6 +4024,42 @@ fun start {diag, dbg, warnings} = let
          Force a merge past end-of-file so those errors reach the
          client. *)
       fun flushDiags () = (updateDiags (size (#text text)); sendDiags ())
+      (* What every completed pass records about itself: the trees it
+         built, the text they describe, and the proof generation they
+         were built against.  What differs between the two ways a pass
+         can complete is only how much of the tail is reusable, which
+         each of them sets for itself afterwards. *)
+      fun commitCompletedPass () = (
+        commitTrees lastTrees
+          {text = text, parse = setParseDone (size (#text text)) (!trees)};
+        compiledText := #text text;
+        lastProofGen := !LSPExtension.proofGeneration)
+      (* How every block lands: commit what this pass parsed, hand the
+         compile state back, publish, and latch the reason so the next
+         keystroke does not pay to rediscover it.
+
+         Fenced on `cancelled' because a `didChange' arriving during
+         the load has already started a pass that owns `lastTrees';
+         blocking on the text it replaced would stop that pass from
+         ever running.  The three callers below all need that fence
+         and all used to carry their own copy of it. *)
+      fun latchBlock message =
+        if !cancelled then () else (
+          commitTrees lastTrees
+            {text = text, parse = setParsePos 0 (!trees)};
+          releaseState ();
+          publishAllDiagnostics uri v;
+          markDepsBlocked uri v {mods = declaredNames, message = message})
+      (* A block that editing the header does not undo: sealing lives
+         in `KernelSig', outside the Context, and nothing in the
+         session takes it back.  Said once, against a position, with
+         the only thing that does help. *)
+      fun latchUntilRestart (pos, message) = (
+        DArray.push (#diags (!trees), Error {
+          hard = true, pos = pos,
+          msg = encString (message ^
+            "\n\nrestart the language server to compile this file")});
+        latchBlock message)
       (* Report the load failures themselves, against the header text
          that names them, in place of the compile: everything the file
          takes from a failed ancestor is absent, so elaborating would
@@ -4036,23 +4076,12 @@ fun start {diag, dbg, warnings} = let
                        msg = encString (blockedText (m, e))})) fails
         val message = String.concatWith "; " (map (fn (m, _, e) =>
                         describe (m, e)) fails)
-        in
-          (* Same fence as the completion path below: a `didChange'
-             during the load has already started a fresh compile that
-             owns `lastTrees', and blocking on the text it replaced
-             would stop that one from ever running. *)
-          if !cancelled then () else (
-            commitTrees lastTrees
-              {text = text, parse = setParsePos 0 (!trees)};
-            (* Before the block goes out, for the reason `finishPass'
-               gives: what a client does with the news is ask, and
-               this pass holds the process until it says otherwise.
-               No progress to end -- `sendProgressBegin' is inside
-               `runCompile', which this path does not reach. *)
-            releaseState ();
-            publishAllDiagnostics uri v;
-            markDepsBlocked uri v {mods = declaredNames, message = message})
-        end
+        (* The state goes back before the block goes out, for the
+           reason `finishPass' gives: what a client does with the news
+           is ask, and this pass holds the process until it says
+           otherwise.  No progress to end -- `sendProgressBegin' is
+           inside `runCompile', which this path does not reach. *)
+        in latchBlock message end
       (* The preload has brought in the theory this file exists to
          build.  Nothing below the header can work: `new_theory'
          refuses to enter a sealed theory, so there is no current
@@ -4067,28 +4096,13 @@ fun start {diag, dbg, warnings} = let
          `DepsBlocked' latch is still where it belongs, being what
          stops the next keystroke paying to discover it again. *)
       fun blockOnSealed (nm, pos, loaded) = let
-        val diags = #diags (!trees)
         val via = if null loaded then ""
                   else " (loaded " ^ String.concatWith ", " loaded ^ ")"
         val message =
             "theory \"" ^ nm ^
             "\" is already loaded in this session" ^ via ^
             ", so this file cannot create it"
-        val () = DArray.push (diags, Error {
-                   hard = true, pos = pos,
-                   msg = encString (message ^
-                     "\n\nrestart the language server to compile this file")})
-        in
-          (* The same fence as `blockOnDeps': a `didChange' during the
-             load owns `lastTrees' now, and blocking on the text it
-             replaced would stop that pass from ever running. *)
-          if !cancelled then () else (
-            commitTrees lastTrees
-              {text = text, parse = setParsePos 0 (!trees)};
-            releaseState ();
-            publishAllDiagnostics uri v;
-            markDepsBlocked uri v {mods = declaredNames, message = message})
-        end
+        in latchUntilRestart (pos, message) end
       (* The preload re-read a theory the session already holds;
          `sealedReloads' says why that cannot work.  The restore that
          got us here has already put `Meta.loadedMods' back to its boot
@@ -4099,7 +4113,6 @@ fun start {diag, dbg, warnings} = let
          the cause once, against the name that asked for the theory,
          and latch it like any other block. *)
       fun blockOnReload reloads = let
-        val diags = #diags (!trees)
         val nms = map #1 reloads
         val pos =
             case List.mapPartial
@@ -4114,18 +4127,7 @@ fun start {diag, dbg, warnings} = let
             String.concatWith ", "
               (map (fn nm => "theory \"" ^ nm ^ "\"") nms) ^
             ", which this session had already loaded and sealed"
-        val () = DArray.push (diags, Error {
-                   hard = true, pos = pos,
-                   msg = encString (message ^
-                     "\n\nrestart the language server to compile this file")})
-        in
-          if !cancelled then () else (
-            commitTrees lastTrees
-              {text = text, parse = setParsePos 0 (!trees)};
-            releaseState ();
-            publishAllDiagnostics uri v;
-            markDepsBlocked uri v {mods = declaredNames, message = message})
-        end
+        in latchUntilRestart (pos, message) end
       (* Which of the modules the header declares are not available?
          That question, and not "did some load function raise", is what
          decides the file's fate: every name here is `open'ed by the
@@ -4481,10 +4483,7 @@ fun start {diag, dbg, warnings} = let
                    declSnapshots = carried @ #declSnapshots fresh};
                  !LSPExtension.restoreCompileSnap (#compileSnap prev)
                end);
-          commitTrees lastTrees
-            {text = text, parse = setParseDone (size (#text text)) (!trees)};
-          compiledText := #text text;
-          lastProofGen := !LSPExtension.proofGeneration;
+          commitCompletedPass ();
           (* One past the last diagnostic this pass reported, or 0 if
              it reported none; a report that could not be placed bounds
              everything, since we cannot say what it describes. *)
@@ -4568,10 +4567,7 @@ fun start {diag, dbg, warnings} = let
               !lastPos <= headerEnd andalso not (null declaredNames)
         in
           flushDiags ();
-          commitTrees lastTrees
-            {text = text, parse = setParseDone (size (#text text)) (!trees)};
-          compiledText := #text text;
-          lastProofGen := !LSPExtension.proofGeneration;
+          commitCompletedPass ();
           (* Whatever this pass captured, it stopped at the header, so
              there is no tail to carry forward from it. *)
           reusableFrom := ~1;
@@ -4969,6 +4965,29 @@ fun start {diag, dbg, warnings} = let
   fun stateNotReady ({depsBlocked, ...}:file_data) =
       (case !depsBlocked of DepsUnchecked => true | _ => false)
       orelse compileUsingState ()
+
+  (* The reply both goal-state requests send.  `$/hol/goalState' and
+     `$/hol/tryTactic' differ in what they ask the walk to do and not
+     at all in how the answer travels, so this is the whole of what
+     they share.
+
+     `null' says "no goal state at this position", which sends a
+     reader looking for the fault in their proof.  When the walk was
+     refused only because the state is not ready yet, say so in the
+     one word the clients already act on: `pending' is what a silent
+     failure mid-compile reports, and both mean the same thing to a
+     reader -- wait for the compile.  No goals with it, there being
+     none to give. *)
+  fun goalStateReply (v_opt, resp) = let
+    val lines = case v_opt of
+                    NONE => mkLineCounter ""
+                  | SOME v => #lines (#text (Sref.value (#lastTrees v)))
+    val notReady = case (resp, v_opt) of
+                       (NONE, SOME v) => stateNotReady v
+                     | _ => false
+    in Ok (if notReady then (fn print => print "{\"status\":\"pending\"}")
+           else encOrNull (encGoalStateResponse (encRangeLC lines)) resp)
+    end
 
   (* `theorem_context' with its cursor moved.  A step-addressed
      request names a step rather than a position, and which byte that
@@ -5976,22 +5995,7 @@ fun start {diag, dbg, warnings} = let
                       end)
             in if changed then publishAllDiagnostics uri v else () end
           | _ => ()
-        val lines = case v_opt of
-                        NONE => mkLineCounter ""
-                      | SOME v => #lines (#text (Sref.value (#lastTrees v)))
-        (* `null' says "no goal state at this position", which sends a
-           reader looking for the fault in their proof.  When the walk
-           was refused only because the state is not ready yet, say so
-           in the one word the clients already act on: `pending' is what
-           a silent failure mid-compile reports, and both mean the same
-           thing to a reader -- wait for the compile.  No goals with it,
-           there being none to give. *)
-        val notReady = case (resp, v_opt) of
-                           (NONE, SOME v) => stateNotReady v
-                         | _ => false
-        in Ok (if notReady then (fn print => print "{\"status\":\"pending\"}")
-               else encOrNull (encGoalStateResponse (encRangeLC lines)) resp)
-        end)
+        in goalStateReply (v_opt, resp) end)
     | Request {method = "$/hol/tryTactic", id, params} =>
       spawnJob id params tryTacticParams
         (fn {uri, pos, width, step, tactic, budgetMs} => let
@@ -6013,15 +6017,7 @@ fun start {diag, dbg, warnings} = let
            The candidate is not in the file, so a failure of it is not a
            fault in what the user wrote and must not squiggle anything;
            the probe's answer is the whole report. *)
-        val lines = case v_opt of
-                        NONE => mkLineCounter ""
-                      | SOME v => #lines (#text (Sref.value (#lastTrees v)))
-        val notReady = case (resp, v_opt) of
-                           (NONE, SOME v) => stateNotReady v
-                         | _ => false
-        in Ok (if notReady then (fn print => print "{\"status\":\"pending\"}")
-               else encOrNull (encGoalStateResponse (encRangeLC lines)) resp)
-        end)
+        in goalStateReply (v_opt, resp) end)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
     | Notification {method = "$/cancelRequest", params} => let

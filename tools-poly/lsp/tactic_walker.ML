@@ -609,6 +609,20 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT, stopAtFail})
   let
     val replaying = stepIdx < resumeIdx
     fun keep idx = Done {state = state, snaps = snaps, stepIdx = idx}
+    (* Run the combinator's opening and hand the state on, or report
+       that it would not apply.  A replay has already been past here,
+       so it opens nothing and just continues.
+
+       Shared by the two bracket forms below, which differ only in
+       which `ok' they carry: they had a copy each, and a copy each is
+       how one of them quietly acquires a fix the other does not. *)
+    fun openedAt ok k =
+      if replaying then k state
+      else (case applyOpen tacText ok state of
+              NONE => Failed {state = state, snaps = snaps,
+                              stepIdx = stepIdx, at = FFOpen ok,
+                              why = ApplyFailed}
+            | SOME state' => k state')
   in case frag of
     FAtom te => (case atomEndByte te of
         SOME endB =>
@@ -702,13 +716,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT, stopAtFail})
                                    (fn () => firstFragStart inner)) then
             Halted {state = state, snaps = snaps, stepIdx = stepIdx}
           else let
-            fun opened k =
-              if replaying then k state
-              else (case applyOpen tacText ok state of
-                      NONE => Failed {state = state, snaps = snaps,
-                                      stepIdx = stepIdx, at = FFOpen ok,
-                                       why = ApplyFailed}
-                    | SOME state' => k state')
+            val opened = openedAt ok
             (* Only these three oblige what they bracket to prove a
                goal, so only under these three is `cheat' a faithful
                stand-in for what the branch owed.  A plain paren
@@ -903,13 +911,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT, stopAtFail})
                                  (stepIdx + countSteps sec) rest)))
                     else walkIt ()
                   end
-            fun opened k =
-              if replaying then k state
-              else (case applyOpen tacText ok state of
-                      NONE => Failed {state = state, snaps = snaps,
-                                      stepIdx = stepIdx, at = FFOpen ok,
-                                       why = ApplyFailed}
-                    | SOME state' => k state')
+            val opened = openedAt ok
             fun closed r =
               if #stepIdx r < resumeIdx then Done r
               else (case applyClose cc (#state r) of
