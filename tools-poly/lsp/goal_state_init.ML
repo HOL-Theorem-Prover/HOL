@@ -74,6 +74,10 @@ local
   fun logStderr s =
     (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
+  (* Bounds one walk, and exactly one: the canary fires at most once,
+     so a caller with two walks to do needs two of these.  See
+     `tryTacticAt', where both used to run under a single canary and
+     the second therefore ran unbounded. *)
   fun withTimeout ms f = let
     val here = Thread.self ()
     val done = ref false
@@ -596,45 +600,43 @@ val () = LSPExtension.tryTacticAt :=
          (SOME goal, SOME fs, SOME cfs) => let
            val startState = goalFrag.new_goal goal
            val step = stepIndex (fs, tacCursor)
-           in case withTimeout budget (fn () => let
-                    val anchor = TacticWalker.walkTo {
-                          plugins = plugins, theoremName = name,
-                          theoremStart = quoteStart, goalText = goalText,
-                          tacText = tacText, startState = startState,
-                          frags = fs, cursor = tacCursor,
-                          (* A cursor walk, not a locating one: the
-                             anchor is a place in the proof, and
-                             getting to it means carrying on past a
-                             branch that is not finished yet. *)
-                          stopAtFail = false}
-                    (* A proof that is already broken above the anchor
-                       makes the probe meaningless: the candidate would
-                       be answered against an earlier state than the
-                       caller believes it is asking about.  Report the
-                       anchor's own failure instead.  A source-level
-                       one is the ordinary half-written case and is not
-                       that. *)
-                    val anchorBad = case #failedAt anchor of
-                        SOME f => not (sourceFailure f)
-                      | NONE => false
-                  in if anchorBad then (true, anchor)
-                     else (false,
-                           TacticWalker.walkTo {
-                             plugins = LSPExtension.emptyPluginData,
-                             theoremName = name, theoremStart = quoteStart,
-                             goalText = goalText, tacText = tactic,
-                             startState = #state anchor, frags = cfs,
-                             cursor = String.size tactic,
-                             stopAtFail = false})
-                  end) of
-                NONE => SOME
-                  {theorem = name, step = step,
-                   goals = [], pretty = "", context = [],
-                   note = NONE, status = "ok",
-                   error = SOME (budgetReport (budget, tactic)),
-                   failedRange = NONE, failedCloseRange = NONE,
-                   segments = []}
-              | SOME (anchorBad, {state, failedAt, ...}) => let
+           (* A budget apiece, because `withTimeout's canary is one
+              shot.  Both walks used to run under a single one, and
+              once it had fired on the anchor the candidate ran with
+              no budget at all: an interrupted anchor hands on a
+              half-walked state, which is exactly the sort a candidate
+              diverges on, and the walk then held the process's
+              compile state until something killed the server.  Two
+              canaries also mean a timeout knows which walk it
+              stopped, so it can blame the right text -- the two index
+              different strings. *)
+           fun timedOut blameText = SOME
+                 {theorem = name, step = step,
+                  goals = [], pretty = "", context = [],
+                  note = NONE, status = "ok",
+                  error = SOME (budgetReport (budget, blameText)),
+                  failedRange = NONE, failedCloseRange = NONE,
+                  segments = []}
+           fun walkAnchor () =
+                 TacticWalker.walkTo {
+                   plugins = plugins, theoremName = name,
+                   theoremStart = quoteStart, goalText = goalText,
+                   tacText = tacText, startState = startState,
+                   frags = fs, cursor = tacCursor,
+                   (* A cursor walk, not a locating one: the anchor is
+                      a place in the proof, and getting to it means
+                      carrying on past a branch that is not finished
+                      yet. *)
+                   stopAtFail = false}
+           fun walkCandidate anchor =
+                 TacticWalker.walkTo {
+                   plugins = LSPExtension.emptyPluginData,
+                   theoremName = name, theoremStart = quoteStart,
+                   goalText = goalText, tacText = tactic,
+                   startState = #state anchor, frags = cfs,
+                   cursor = String.size tactic,
+                   stopAtFail = false}
+           fun report (anchorBad, {state, failedAt, ...}) = let
                   val srcFail = case failedAt of
                       SOME f => sourceFailure f
                     | NONE => false
@@ -683,6 +685,23 @@ val () = LSPExtension.tryTacticAt :=
                    failedCloseRange = #2 ranges,
                    segments = ppSegments width state}
                   end
+           in case withTimeout budget walkAnchor of
+                  NONE => timedOut tacText
+                | SOME anchor =>
+                  (* A proof already broken above the anchor makes the
+                     probe meaningless: the candidate would be
+                     answered against an earlier state than the caller
+                     believes it is asking about.  Report the anchor's
+                     own failure instead.  A source-level one is the
+                     ordinary half-written case and is not that. *)
+                  if (case #failedAt anchor of
+                          SOME f => not (sourceFailure f)
+                        | NONE => false)
+                  then report (true, anchor)
+                  else (case withTimeout budget
+                                (fn () => walkCandidate anchor) of
+                            NONE => timedOut tactic
+                          | SOME r => report (false, r))
            end
        (* The anchor is walkable and only the candidate would not
           parse.  Answering NONE here would say "no goal state at this

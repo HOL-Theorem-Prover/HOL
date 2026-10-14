@@ -3399,6 +3399,74 @@ def test_tryTactic_honours_a_step_anchor():
         c.close()
 
 
+def test_tryTactic_budget_bounds_both_of_its_walks():
+    """`tryTactic' walks twice -- the body up to the anchor, then the
+    candidate from there -- and `withTimeout's canary fires at most
+    once.  Under a single canary the first walk absorbed it and the
+    second ran with no budget at all, on the half-walked state an
+    interrupted walk leaves, which is exactly what a candidate
+    diverges on.  The walk then held the process's compile state
+    until someone killed the server: the probe never answered, and
+    nor did anything else.
+
+    So the assertions are the two halves of that.  Every probe has to
+    come back, and the server has to still be there afterwards.
+
+    Deliberately all on ONE client.  The neighbouring budget test
+    retries with a fresh `Client' per attempt, which is why it could
+    never have caught this: a wedged server is abandoned rather than
+    noticed."""
+    src = ("Theory gs_twobudget\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem slow_anchor:\n"
+           "  !a b c d:num. a + (b + (c + d)) = d + (c + (b + a))\n"
+           "Proof\n"
+           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC, ADD_SYM]\n"
+           "QED\n")
+    uri = "file:///tmp/gs_twobudget.sml"
+    END = 46     # past the metis call, so the anchor walk runs it
+    CAND = "simp[ADD_COMM, ADD_ASSOC, ADD_SYM, ADD_0, ADD_SUC]"
+
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        # Whether the canary wins is a race, so try a few times; but
+        # every single one must answer -- a miss here is the wedge.
+        fired = None
+        for attempt in range(4):
+            r = _send_trytactic(c, 7360 + attempt, uri, 6, END, CAND,
+                                budget_ms=1)
+            assert_true(r is not None,
+                        f"probe {attempt} answered at all; no reply is the "
+                        f"wedge this test exists for")
+            res = r.get("result") or {}
+            if "budget" in (res.get("error") or ""):
+                fired = res["error"]
+                break
+        assert_true(fired is not None,
+                    "a 1ms budget stopped a walk in four tries")
+
+        # Whichever walk it stopped, it must blame that walk's own
+        # text.  Here it is the anchor's, which is in the file.
+        if "`" in fired:
+            step = fired.split("`")[1]
+            assert_true(step in src,
+                        f"the named step comes from the walk that ran "
+                        f"({step!r} in {fired!r})")
+
+        # And the server is still usable -- the half of this the
+        # single-canary version failed.
+        after = _send_goalstate(c, 7369, uri, 6, END)
+        assert_true(after is not None,
+                    "the server still answers after a probe timed out")
+    finally:
+        c.close()
+
+
 def test_tryTactic_says_when_a_candidate_will_not_compile():
     """A candidate whose SML does not compile is told so.
 
@@ -12052,6 +12120,8 @@ TESTS = [
                     test_tryTactic_honours_a_step_anchor),
     ("tryTactic_says_when_a_candidate_will_not_compile",
                     test_tryTactic_says_when_a_candidate_will_not_compile),
+    ("tryTactic_budget_bounds_both_of_its_walks",
+                    test_tryTactic_budget_bounds_both_of_its_walks),
     ("stale_ancestor_draws_a_warning",
                     test_stale_ancestor_draws_a_warning),
     ("eval_runs_in_a_world_that_is_thrown_away",
