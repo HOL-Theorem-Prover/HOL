@@ -471,10 +471,11 @@ end;
     it.  Events are stored in an `events` record alongside the initial
     filename, in a DArray for binary search.  A `cursor` is a stateful
     pointer that walks the event sequence; newCursor / updateCursor
-    advance it.  mkFileline body evts memoises a cursor and returns a
-    function (int -> fileline) that callers can use to translate an
-    arbitrary offset back to {file, line, col} -- amortised cheap when
-    queries arrive in roughly increasing offset order.
+    advance it.  mkFileline body evts memoises four cursors and returns
+    a function (int -> fileline) that callers can use to translate an
+    arbitrary offset back to {file, line, col}; each query moves the
+    nearest cursor, so it is amortised cheap when queries stay near a
+    few positions that each advance through the input.
 
     isOnlyComments tests whether a substring of the source consists
     entirely of whitespace and (possibly nested) (* ... *) comments.
