@@ -12532,6 +12532,14 @@ def main():
                                       max(1.0, jobs / 4.0)))
 
     wanted = set(argv)
+    # A name nobody answers to is a typo, not a selection.  Left to
+    # itself it runs nothing and prints `0 passed, 0 failed', which
+    # reads exactly like a clean run -- and `-j8' for `-j 8' lands
+    # here, so it is easy to do by accident.
+    unknown = sorted(wanted - {name for name, _ in TESTS})
+    if unknown:
+        print("no such test(s): " + ", ".join(unknown))
+        sys.exit(2)
     selected = []
     for name, fn in TESTS:
         if wanted and name not in wanted: continue
