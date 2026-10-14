@@ -33,8 +33,7 @@ Proof
   simp[cardeq_def] >>
   qexists_tac `\s. case s of INL n => n + 1 | INR () => 0` >>
   simp[BIJ_DEF, INJ_DEF, SURJ_DEF, EXISTS_SUM, FORALL_SUM] >>
-  Cases >> simp[arithmeticTheory.ADD1] >>
-  qexists_tac `()` >> simp[]
+  Cases >> simp[arithmeticTheory.ADD1]
 QED
 
 Theorem cord_countable_preds:
