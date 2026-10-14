@@ -672,7 +672,13 @@ fun updateCursorSimple ({body, evts, file, pos, line, col, idx}: cursor, p) = le
   in {body = body, evts = evts, file = file, pos = p, line = line, col = col, idx = idx} end
 
 fun updateCursor (cur: cursor as {body, evts, pos, line, col, idx, ...}, p): cursor =
-  if p < pos then
+  if (eventPos (DArray.sub (#evts evts, idx)) < pos handle Subscript => false)
+  then
+    (* An event before pos was pushed after the cursor passed it: the parser
+       can be asked about text it has read ahead of a pragma it has not yet
+       parsed. Reset, so that the event is applied. *)
+    updateCursor (newCursor body evts, p)
+  else if p < pos then
     (* Backward seek. Falls back to reset only when events (e.g. #line pragmas)
        were applied in (p, pos] and would need to be undone. *)
     let val eventsCrossed =
@@ -692,8 +698,15 @@ fun updateCursor (cur: cursor as {body, evts, pos, line, col, idx, ...}, p): cur
                  if i >= p then scan (i-1) (nls+1) else (nls, i+1)
                else scan (i-1) nls
              val (nls, lineStart) = scan (pos-1) 0
-         in {body = body, evts = evts, file = #file cur,
-             pos = p, line = line - nls, col = p - lineStart, idx = idx}
+         in if idx > 0 andalso
+               eventPos (DArray.sub (#evts evts, idx - 1)) >= lineStart
+            then
+              (* An event on p's line may have set the column, which the
+                 line start then does not give. *)
+              updateCursor (newCursor body evts, p)
+            else
+              {body = body, evts = evts, file = #file cur,
+               pos = p, line = line - nls, col = p - lineStart, idx = idx}
          end
     end
   else let
@@ -712,9 +725,20 @@ fun updateCursor (cur: cursor as {body, evts, pos, line, col, idx, ...}, p): cur
         in readEvts cur end
     in readEvts cur end
 
-fun mkFileline body evts =
-  case ref (newCursor body evts) of cur => fn p =>
-  case updateCursor (!cur, p) of cur' as {file, line, col, ...} =>
-  (cur := cur'; {file = file, line = line, col = col})
+(* Callers alternate between a few positions: the start of an enclosing span,
+   the current token, and the end of the input. With one cursor every switch
+   rescans the text between them, so keep four (one spare) and move the one
+   nearest to p, in either direction. *)
+fun mkFileline body evts = let
+  val curs = Array.tabulate (4, fn _ => newCursor body evts)
+  in fn p => let
+    fun dist i = abs (#pos (Array.sub (curs, i)) - p)
+    fun nearest i best =
+      if i = Array.length curs then best
+      else nearest (i+1) (if dist i < dist best then i else best)
+    val i = nearest 1 0
+    val cur' as {file, line, col, ...} = updateCursor (Array.sub (curs, i), p)
+    in Array.update (curs, i, cur'); {file = file, line = line, col = col} end
+  end
 
 end

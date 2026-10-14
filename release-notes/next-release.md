@@ -288,6 +288,11 @@ Bugs fixed
     Repeats of one goal still search slightly differently, because HOL's CNF names skolem constants from a genvar counter and model interpretations are md5-derived from those names; that residual is in the naming rather than in metis.
     `developers/bench-metis-order.sml` measures what is left.
 
+-   Translating a source offset to a file, line and column (`HOLSourceAST.mkFileline`, used whenever a script or theory file is read through the quotation filter) kept a single cursor that its callers moved back and forth between an enclosing span's start, the current token and the end of the input, rescanning the text in between each time.
+    Reading a file was therefore quadratic in its length: compiling the 49 generated theory files under `integrationTheory` scanned 1,017 million characters and took 8.0s.
+    `mkFileline` now keeps four cursors and moves the nearest, which brings this down to 3.1 million characters and 2.1s.
+    Two latent errors in cursor movement are fixed along the way: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a cursor that had passed the position of a pragma before the parser recorded it could raise `Subscript` when next moved forward.
+
 New theories
 ------------
 
