@@ -1996,6 +1996,36 @@ fun start {diag, dbg, warnings} = let
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
                        thread: Thread.thread, cancelled: bool ref}
+  (* Everything one open document has, and the rule for which of it
+     is synchronised.  The map itself is behind `withFileInfo's mutex;
+     this is about the fields, which that mutex does not cover -- a
+     holder of a `file_data' keeps using it long after letting the map
+     go.
+
+     Five threads reach in here: the reader thread running the message
+     loop, a compile thread, the debounce threads `scheduleCompile'
+     forks, one request thread per `spawnJob', and the proof pool's
+     workers.
+
+     `Sref.t' is for a field that **more than one thread writes**, or
+     one where a read and the write that depends on it have to be a
+     single step.  `lastTrees' (the reader thread and a finishing
+     compile), `minEditOffset' (two lower it, one consumes it) and
+     `debounce' (four bump it) are those; `publishLock' is an Sref
+     used only for its lock.
+
+     A plain `ref' is for a field **one thread writes** and others
+     read as a cache, where reading a value one pass out of date is
+     harmless.  The compile thread owns `compile', `compiledText',
+     `reusableFrom', `lastProofGen', `depsBlocked', `nsLayer' and
+     `nsGen'; the reader thread owns `closed'; `symbols' and
+     `nsNames' are memos a request thread fills, where two requests
+     racing compute the same answer.
+
+     So the obligation on anyone adding to this: a second writing
+     thread, or a check-then-act, means `Sref.t'.  Both have been got
+     wrong here before, and neither announces itself -- a lost bump
+     looks like a compile that did not happen. *)
   type file_data = {
     compile: compile_data option ref,
     (* Synchronised, and not a plain `ref', because two threads write
@@ -2013,8 +2043,17 @@ fun start {diag, dbg, warnings} = let
        entry.  scheduleCompile's forked thread captures the epoch and
        only fires startCompile if its epoch still matches when it
        wakes up.  Rapid-fire edits fork many threads but only the
-       last (whose epoch survives to wake time) actually compiles. *)
-    debounce: int ref,
+       last (whose epoch survives to wake time) actually compiles.
+
+       Synchronised, because bumping it is a read and a write and four
+       threads do it: the reader thread on `didChange', the compile
+       thread retrying for the state, a pool worker retracting a
+       cheat, and a request thread demanding a parent proof.  Two that
+       interleave take the same epoch and both survive to wake time,
+       so two compiles run where one was wanted -- and a bump made to
+       *invalidate* a pending compile, which is what `closeFile' and
+       `startCompile' use it for, can be the one that is lost. *)
+    debounce: int Sref.t,
     (* Rolling minimum edit offset across `applyEdit` batches, and
        across a pool worker's retractions, since the last compile took
        it.  `startCompile` takes it -- one atomic step, since two
@@ -2163,7 +2202,7 @@ fun start {diag, dbg, warnings} = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE,
         lastTrees = Sref.new {parse = emptyParseData 0, text = text},
-        debounce = ref 0, minEditOffset = Sref.new NONE,
+        debounce = Sref.new 0, minEditOffset = Sref.new NONE,
         publishLock = Sref.new (),
         walkerDiags = Sref.new (Binarymap.mkDict String.compare),
         proofDiags = Sref.new (Binarymap.mkDict String.compare),
@@ -2222,7 +2261,7 @@ fun start {diag, dbg, warnings} = let
     (* A `scheduleCompile' thread forked before the close is still
        asleep holding the old epoch.  Without this, it wakes and
        compiles a buffer the client has let go. *)
-    debounce := !debounce + 1;
+    Sref.update debounce (fn n => n + 1);
     closed := true)
 
   (* Push `off` into the rolling min-edit tracker; a later `startCompile`
@@ -3048,7 +3087,7 @@ fun start {diag, dbg, warnings} = let
     else (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
-    debounce := !debounce + 1;
+    Sref.update debounce (fn n => n + 1);
     (* Runtime squiggles from the walker are always stale w.r.t. the
        new compile -- clear them so a fix removes squiggles even
        before the user visits the theorem to re-run the walker. *)
@@ -4619,12 +4658,14 @@ fun start {diag, dbg, warnings} = let
   (* Fire a compile after a debounce delay: rapid didChange bursts
      collapse to one compile. *)
   and scheduleCompile uri (v as {debounce, ...}: file_data) = let
-    val () = debounce := !debounce + 1
-    val myEpoch = !debounce
+    (* Bump and read in one step.  As two, two schedulers racing take
+       the same epoch, both still match at wake time, and both
+       compile. *)
+    val myEpoch = Sref.gen_update debounce (fn n => (n + 1, n + 1))
     val debounce_ms = Time.fromMilliseconds 300
     in Thread.fork (fn () =>
         ((OS.Process.sleep debounce_ms;
-          if !debounce = myEpoch then startCompile uri v else ())
+          if Sref.value debounce = myEpoch then startCompile uri v else ())
          handle _ => ()),
         []); ()
     end
