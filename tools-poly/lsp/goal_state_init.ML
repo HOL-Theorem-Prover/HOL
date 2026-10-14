@@ -74,10 +74,35 @@ local
   fun logStderr s =
     (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
-  (* Bounds one walk, and exactly one: the canary fires at most once,
+  (* Bounds one walk, and exactly one: the timer fires at most once,
      so a caller with two walks to do needs two of these.  See
-     `tryTacticAt', where both used to run under a single canary and
-     the second therefore ran unbounded. *)
+     `tryTacticAt', where both used to run under a single one and the
+     second therefore ran unbounded.
+
+     Two mechanisms, chosen by how long the budget is, because they
+     are good at opposite things.
+
+     A thread that sleeps is accurate to the millisecond.  The walk
+     budget needs that: the tests drive it down to 1ms to make a
+     timeout happen on demand, and a walk is some five of those, so
+     anything coarser cannot be aimed at one.
+
+     But a thread per request that sleeps out its whole budget is what
+     accumulates, and it accumulates in proportion to the budget.
+     Measured: forty goal-state requests took the server from 16
+     threads to 84.  Five seconds later 56 were still there -- the
+     1.5s walk canaries had drained, as fast as a user can type, and
+     what remained were the thirty-second backstops, one per request,
+     which did not go until their full thirty seconds were up.
+
+     So the long budgets go on `Event_Timer', which has one manager
+     thread for the whole process and which the proof pool and
+     `Timeout.apply' are on already.  Its event runs on that one
+     thread holding the timer's own lock, so it has to finish at once
+     -- hence a flag and an interrupt, with the logging left to
+     whoever wakes up.  `mtx' is held only by `markDone', which is
+     three instructions. *)
+  val sharedTimerFromMs = 5000
   fun withTimeout ms f = let
     val here = Thread.self ()
     val done = ref false
@@ -85,16 +110,21 @@ local
     val mtx = Mutex.mutex ()
     fun markDone () =
       (Mutex.lock mtx; done := true; Mutex.unlock mtx)
-    fun canary () = (
-      OS.Process.sleep (Time.fromMilliseconds ms);
+    fun fire () = (
       Mutex.lock mtx;
       (if !done then ()
-       else (logStderr ("goal-state walker exceeded " ^
-                        LargeInt.toString ms ^ "ms budget; interrupting\n");
-             timedOut := true;
-             Thread.interrupt here));
+       else (timedOut := true; Thread.interrupt here));
       Mutex.unlock mtx)
-    val _ = Thread.fork (canary, [])
+    val disarm =
+      if ms >= sharedTimerFromMs
+      then let
+        val t = Event_Timer.request
+                  (Time.now () + Time.fromMilliseconds ms) fire
+        in fn () => ignore (Event_Timer.cancel t) end
+      else (Thread.fork
+              (fn () => (OS.Process.sleep (Time.fromMilliseconds ms);
+                         fire ()), []);
+            fn () => ())
     (* Captured, not allowed to propagate.  The canary's interrupt
        arrives as an exception inside `f', and whether anything catches
        it on the way out is not ours to decide: a tactic walk swallows
@@ -109,8 +139,16 @@ local
     val r = Exn.capture (fn () =>
               Thread_Attributes.with_attributes
                 Thread_Attributes.private_interrupts (fn _ => f ())) ()
+    (* `markDone' first, so a timeout already running finds the flag
+       set and does nothing; disarming then stops one that has not. *)
     val () = markDone ()
-  in if !timedOut then NONE else SOME (Exn.release r) end
+    val () = disarm ()
+  in if !timedOut
+     then (logStderr ("goal-state walker exceeded " ^
+                      LargeInt.toString ms ^ "ms budget; interrupted\n");
+           NONE)
+     else SOME (Exn.release r)
+  end
 
   (* A timeout that names only the budget tells the reader the walk was
      slow and nothing they can act on -- which is the shape of report
@@ -596,7 +634,20 @@ val () = LSPExtension.tryTacticAt :=
     val tacCursor = cursor - tacStart
     val budget = if budgetMs > 0 then Int.toLarge budgetMs
                  else walkerBudgetMs
-    in case (startGoal, frags, candidate) of
+    (* The same backstop `goalStateAtPos' puts around its answer, and
+       for the same reason: the budgets below bound the two walks, but
+       not parsing the statement or rendering the goals, and both of
+       those run user-supplied code -- a custom parser, a pretty
+       printer -- that can loop.  This hook holds the process's
+       compile state for as long as it runs, so a request that never
+       returns owns it for ever and every later one queues behind. *)
+    fun hookTimedOut () =
+      SOME {theorem = name, step = 0, goals = [], pretty = "",
+            context = [], note = NONE, status = "ok",
+            error = SOME ("try_tactic timed out (>"
+                          ^ LargeInt.toString hookBudgetMs ^ "ms)"),
+            failedRange = NONE, failedCloseRange = NONE, segments = []}
+    fun answer () = case (startGoal, frags, candidate) of
          (SOME goal, SOME fs, SOME cfs) => let
            val startState = goalFrag.new_goal goal
            val step = stepIndex (fs, tacCursor)
@@ -715,6 +766,9 @@ val () = LSPExtension.tryTacticAt :=
                           \a tactic, so nothing was applied to the goal"),
             failedRange = NONE, failedCloseRange = NONE, segments = []}
        | _ => NONE
+    in case withTimeout hookBudgetMs answer of
+           NONE => hookTimedOut ()
+         | SOME r => r
     end)
 
 (* The inverse of the `step' a response reports: which cursor offset

@@ -3451,12 +3451,15 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
                     "a 1ms budget stopped a walk in four tries")
 
         # Whichever walk it stopped, it must blame that walk's own
-        # text.  Here it is the anchor's, which is in the file.
+        # text -- the two index different strings, and either can be
+        # the one that ran out.  The sharp assertions here are the
+        # reply and the survival either side of this; this one only
+        # holds the report to naming something that exists.
         if "`" in fired:
             step = fired.split("`")[1]
-            assert_true(step in src,
-                        f"the named step comes from the walk that ran "
-                        f"({step!r} in {fired!r})")
+            assert_true(step in src or step in CAND,
+                        f"the named step comes from one of the two texts "
+                        f"the walks index ({step!r} in {fired!r})")
 
         # And the server is still usable -- the half of this the
         # single-canary version failed.
