@@ -355,13 +355,6 @@ type events = {
   initFile: string,
   evts: event DArray.darray }
 
-type cursor = {
-  body: DString.dstring, evts: events,
-  file: string, pos: int, line: int, col: int, idx: int }
-
-val newCursor: DString.dstring -> events -> cursor
-val updateCursor: cursor * int -> cursor
-
 val mkFileline: DString.dstring -> events -> int -> fileline
 
 end;
@@ -464,18 +457,16 @@ end;
     tySpan, expStart / expStop / expSpan, decStart / decStop /
     decSpan).  These walk only as far as needed to find the extent.
 
-    Source position tracking.  The lexer emits a stream of events
-    (FileEvent, LineEvent, LineColEvent) capturing changes in the
-    file/line/col cursor as the input is consumed.  Each event carries
-    the character offset at which it takes effect; eventPos extracts
-    it.  Events are stored in an `events` record alongside the initial
-    filename, in a DArray for binary search.  A `cursor` is a stateful
-    pointer that walks the event sequence; newCursor / updateCursor
-    advance it.  mkFileline body evts memoises four cursors and returns
-    a function (int -> fileline) that callers can use to translate an
-    arbitrary offset back to {file, line, col}; each query moves the
-    nearest cursor, so it is amortised cheap when queries stay near a
-    few positions that each advance through the input.
+    Source position tracking.  The parser records an event (FileEvent,
+    LineEvent, LineColEvent) at each #(FILE=...) or #(LINE=...)
+    pragma, in text order.  Each event carries the character offset at
+    which it takes effect; eventPos extracts it.  Events are stored in
+    an `events` record alongside the initial filename, in a DArray for
+    binary search.  mkFileline body evts
+    returns a function (int -> fileline) that callers can use to
+    translate an arbitrary offset back to {file, line, col}.  It reads
+    the body once, keeping the offsets of its newlines and the position
+    after each event, and answers each query by binary search in both.
 
     isOnlyComments tests whether a substring of the source consists
     entirely of whitespace and (possibly nested) (* ... *) comments.
