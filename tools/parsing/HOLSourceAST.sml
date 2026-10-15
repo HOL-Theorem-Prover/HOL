@@ -676,7 +676,7 @@ fun mkFileline body (evts: events) = let
   fun nlsBefore p =
     countUpTo (fn i => DArray.sub (nls, i)) (DArray.size nls) (p - 1)
   (* the position at b, given the position {file, line, col} at a <= b *)
-  fun advance ({file, line, col}: fileline, a, b) = let
+  fun advance (({file, line, col}: fileline, a), b) = let
     val () = scanTo b
     val (na, nb) = (nlsBefore a, nlsBefore b)
     in
@@ -685,28 +685,26 @@ fun mkFileline body (evts: events) = let
             col = b - DArray.sub (nls, nb - 1) - 1}
     end
   fun evt i = DArray.sub (#evts evts, i)
-  (* after i: the position just after event i is applied *)
+  (* resolved[i] is the position just after event i is applied *)
   val resolved = DArray.new (16, start)
-  fun after i =
-    if i < DArray.size resolved then DArray.sub (resolved, i) else let
-      val k = DArray.size resolved
-      val {file, line, col} =
-        if k = 0 then advance (start, 0, eventPos (evt 0))
-        else advance (DArray.sub (resolved, k - 1), eventPos (evt (k - 1)),
-                      eventPos (evt k))
-      val () = DArray.push (resolved,
-        case evt k of
+  (* the position after the first k events, and the offset it holds at;
+     needs the first k in resolved *)
+  fun base k =
+    if k = 0 then (start, 0)
+    else (DArray.sub (resolved, k - 1), eventPos (evt (k - 1)))
+  fun resolveTo k =
+    if DArray.size resolved >= k then () else let
+      val i = DArray.size resolved
+      val {file, line, col} = advance (base i, eventPos (evt i))
+      val pos = case evt i of
           FileEvent (_, file) => {file = file, line = line, col = col}
         | LineEvent (_, line) => {file = file, line = line, col = col}
-        | LineColEvent (_, line, col) => {file = file, line = line, col = col})
-      in after i end
+        | LineColEvent (_, line, col) => {file = file, line = line, col = col}
+      in DArray.push (resolved, pos); resolveTo k end
   in fn p => let
     val p = Int.min (p, DString.size body)
     val k = countUpTo (eventPos o evt) (DArray.size (#evts evts)) p
-    in
-      if k = 0 then advance (start, 0, p)
-      else advance (after (k - 1), eventPos (evt (k - 1)), p)
-    end
+    in resolveTo k; advance (base k, p) end
   end
 
 end
