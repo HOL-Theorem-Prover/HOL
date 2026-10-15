@@ -232,7 +232,48 @@ in
     colCheck "column after LINE=n,c on a line queried backwards"
              (HOLSourceAST.LineColEvent (7, 9, 19)) 22;
     colCheck "column after LINE=n on a line queried backwards"
-             (HOLSourceAST.LineEvent (7, 9)) 5
+             (HOLSourceAST.LineEvent (7, 9)) 5;
+    (* Events at one offset apply in the order recorded, and a query sees
+       events recorded after an earlier query, on text read after it. *)
+    let
+      val name = "several events at one offset"
+      fun show {file, line, col} =
+          file ^ ":" ^ Int.toString line ^ ":" ^ Int.toString col
+      val body = dstringOf "aaaa\nbbbb"
+      val evts = DArray.new (1, HOLSourceAST.LineEvent (0, 0))
+      val fileline =
+          HOLSourceAST.mkFileline body {initFile = "f", evts = evts}
+      val first = fileline 3
+      val () = List.app (fn e => DArray.push (evts, e))
+                        [HOLSourceAST.FileEvent (7, "g"),
+                         HOLSourceAST.LineColEvent (7, 9, 19),
+                         HOLSourceAST.LineEvent (7, 4)]
+      val () = DString.appendStr (body, "bbbb\ncc")
+      val got = first :: map fileline [15, 10, 7, 6]
+      val want = [{file = "f", line = 0, col = 3},
+                  {file = "g", line = 5, col = 1},
+                  {file = "g", line = 4, col = 22},
+                  {file = "g", line = 4, col = 19},
+                  {file = "f", line = 1, col = 1}]
+    in
+      if got = want then print ("OK    " ^ name ^ "\n")
+      else fail name ["expected " ^ String.concatWith ", " (map show want),
+                      "got      " ^ String.concatWith ", " (map show got)]
+    end
+  end;
+
+  (* Emacs sends each region behind #(FILE="...");#(LINE=r,c);, and the
+     errors in it must name that file and count lines from r. *)
+  let val name = "FILE and LINE pragmas of an editor region"
+      val input = "val x = 1\n#(FILE=\"foo.sml\");#(LINE=10,4);\n" ^
+                  "val y = 2 2 )\n"
+  in
+    case SOME (translate input) handle e => (fail name [exnMessage e]; NONE)
+     of NONE => ()
+      | SOME (_, errs) =>
+          if isSubstring "foo.sml:11:13" errs
+          then print ("OK    " ^ name ^ "\n")
+          else fail name ["expected an error at foo.sml:11:13, got = " ^ errs]
   end;
 
   OS.Process.exit
