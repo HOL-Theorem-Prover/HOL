@@ -1,0 +1,6 @@
+CLINE_OPTIONS = --no_prereqs
+INCLUDES = ../.. ../../../..
+
+all: refutePersistChangedTheory.uo changed_consumer.uo
+	$(HOLDIR)/bin/hol --gcthreads=1 run changed_consumer
+.PHONY: all
