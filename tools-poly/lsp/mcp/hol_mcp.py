@@ -14,7 +14,7 @@ document model, the incremental-resume logic, the global-state locking
 and the diagnostics publishing -- the hard parts.  Encoding JSON twice
 is much the cheaper of the two.
 
-Three things this layer owns, because the server cannot:
+Four things this layer owns, because the server cannot:
 
   * Addressing.  Every server hook takes a URI and a position, because
     it was built for a human with a cursor.  A model has a *name*.
@@ -31,6 +31,18 @@ Three things this layer owns, because the server cannot:
     worth sending, and the thing that gets cut must never be the
     diagnosis.  `_budget` keeps head and tail; every caller puts its
     diagnosis in the footer, which is appended after the cut.
+
+  * Convention.  The server's other clients are editor panes, where
+    the proof is on screen beside the answer and the reader can see
+    what it is about.  Two of its conventions rely on that and mislead
+    without it: goals are listed in HOL's goalstack order, current one
+    LAST, and a goal-state walk reports where it came to rest rather
+    than where the proof failed -- it cheats past a failed `>-` branch
+    by design, because a cursor asks what the state *here* is.  A
+    model has no pane, so `_render_goal_state` numbers the goals from
+    the structured array instead, and `_state_at_failure` asks again
+    at the failure's own position.  Nothing changes in the server:
+    both conventions are right for the clients they were built for.
 """
 import argparse
 import json
@@ -413,7 +425,66 @@ class Hol:
         if step is not None:
             params["step"] = step
         result = session.request("$/hol/goalState", params)
-        return _render_goal_state(result, theorem, step)
+        at_failure = None
+        if step is None:
+            at_failure = self._state_at_failure(session, path, result, width)
+        return _render_goal_state(result, theorem, step, at_failure)
+
+    def _state_at_failure(self, session, path, result, width):
+        """Ask a second time, anchored where the first walk said the
+        proof failed.
+
+        The walk a goal-state request runs does not stop at a failure.
+        It cannot: a cursor asks "what is the state *here*", and
+        getting there means carrying on past the branches that are not
+        finished yet, which is the ordinary condition of a proof being
+        written.  So it stands `cheat' in for what a failed `>-` branch
+        owed and walks on to the cursor -- which, for a request that
+        names only a theorem, is the `QED`.
+
+        The consequence is that the step it reports is the END of the
+        walk and the goals it reports are the leftovers there, while
+        the failure it reports in `failedRange` is somewhere else
+        entirely.  On cakeml's `reachable_refs_UPDATE1` that was step
+        57 with three goals, against a `metis_tac[]` at line 3848 whose
+        real goal was none of the three.  Both halves of the answer
+        were correct and they were about different places, which is the
+        shape of answer most likely to be acted on wrongly.
+
+        `failedRange` is in the proof body, so it is a cursor like any
+        other: asking for it stops the walk just before the step that
+        failed, and the state that comes back is the one that step was
+        given.  One extra walk, and only when the first reported a
+        failure.
+
+        Returns None when there is nothing better to show, in which
+        case the caller says what the reported step is and is not.
+        """
+        if not isinstance(result, dict):
+            return None
+        start = (result.get("failedRange") or {}).get("start")
+        if not start:
+            return None
+        try:
+            again = session.request("$/hol/goalState", {
+                "textDocument": {"uri": path_to_uri(path)},
+                "position": start, "width": width})
+        except (LspError, SessionDead):
+            # A diagnosis that cost an answer is a bad trade: the
+            # first reply is still a true report of where the walk
+            # ended, so fall back to it rather than fail the call.
+            return None
+        if not isinstance(again, dict):
+            return None
+        if again.get("status") == "pending":
+            return None
+        # Nothing to add: the first reply already showed this state.
+        if again.get("step") == result.get("step"):
+            return None
+        if not (again.get("goals")
+                or plain(again.get("pretty") or "").strip()):
+            return None
+        return again
 
     def try_tactic(self, file, theorem, tactic, step=None, occurrence=1,
                    width=100, budget_ms=0, timeout=180):
@@ -483,8 +554,87 @@ class Hol:
                 % os.path.relpath(path, self.repo))
 
 
-def _render_goal_state(result, theorem, step):
-    """One goal-state reply, with its diagnosis in the footer."""
+# The rule HOL draws between a goal's assumptions and its conclusion.
+# Reproduced rather than referred to: each goal below is laid out the
+# way a goals pane lays out a single goal, so the only thing new to a
+# reader is the heading that says which goal it is.
+_RULE = "-" * 36
+
+# Said above a multi-goal listing, not in the footer: the footer is
+# appended after `_budget`'s cut, but the head of the body survives it,
+# and this has to be read *before* the goals it describes.
+_ORDER_NOTE = (
+    "%d goals, in the order the proof has them. Goal 1 is the one the "
+    "next tactic -- and the next `>-` branch -- is applied to. (HOL's "
+    "own goals display prints the current goal LAST; this listing does "
+    "not, so the two read in opposite directions.)")
+
+
+def _indent_lines(text, prefix, first=None):
+    """`text` with `prefix` on every line, continuations included.
+
+    A term rendered at the client's width breaks across lines, and a
+    continuation left at column zero sits flush under the *next*
+    goal's heading -- which is the same "which goal is this" ambiguity
+    the numbering below exists to remove.
+    """
+    lines = plain(text).split("\n")
+    out = [(prefix if first is None else first) + lines[0]]
+    out.extend(prefix + line for line in lines[1:])
+    return "\n".join(out)
+
+
+def _render_goals(goals):
+    """The structured goals, numbered, in the order the server sent.
+
+    The server sends the same state twice: a `goals` array and a
+    `pretty` rendering.  They do not agree on order.  `pretty` comes
+    from HOL's goalstack printer, whose convention is that the
+    *current* goal is printed last, under the others -- right for the
+    editor panes the server's other clients put it in, where the proof
+    is on screen beside it, and wrong here, where a model reading a
+    transcript has nothing to anchor it.  Printing `pretty` verbatim
+    therefore listed the goals bottom-to-top with nothing saying so,
+    and the goal `>-` was about to attack looked like the last one.
+
+    That is not a cosmetic complaint: on cakeml's
+    `evaluate_handle_adj_vars_lemma` the four branches of a `>-` chain
+    were reordered to match the display, and the reordered proof then
+    reported as solved while the real elaboration still failed.
+
+    So print the array, which is in the proof's own order, and number
+    every goal against the total.  Numbered rather than merely
+    reordered, because a reader given neither numbers nor a convention
+    cannot tell a listing that was reordered from one that was not.
+
+    Assumptions are numbered as HOL numbers them: 0 is the *oldest*,
+    which is the last element of `asms`, `top_goals` handing them back
+    newest-first.  Numbering them the other way up would make `0.`
+    here and `0.` in a goals pane two different assumptions, which is
+    the first defect again at one level down.
+    """
+    out = []
+    total = len(goals)
+    for i, goal in enumerate(goals, 1):
+        out.append("goal %d of %d:" % (i, total))
+        asms = list(goal.get("asms") or [])
+        for n, asm in enumerate(reversed(asms)):
+            out.append(_indent_lines(asm, "     ", " %d.  " % n))
+        if asms:
+            out.append(_RULE)
+        out.append(_indent_lines(goal.get("goal", ""), "     "))
+        out.append("")
+    return "\n".join(out).rstrip("\n")
+
+
+def _render_goal_state(result, theorem, step, at_failure=None):
+    """One goal-state reply, with its diagnosis in the footer.
+
+    `at_failure` is a *second* reply, anchored at the step this one
+    blamed (see `Hol._state_at_failure`).  When there is one it is
+    what the body shows: it is the state the failing tactic was
+    actually given, and therefore the state the reader came for.
+    """
     if result is None:
         return ("no goal state for %s%s -- the position is not inside a "
                 "proof the server can walk." % (theorem, _step_suffix(step)))
@@ -493,25 +643,45 @@ def _render_goal_state(result, theorem, step):
         return ("the state for %s is not ready yet (a compile is still "
                 "running). Retry." % theorem)
 
-    goals = result.get("goals", [])
-    pretty = plain(result.get("pretty") or "").strip("\n")
-    if pretty.strip():
+    shown = at_failure if at_failure is not None else result
+    goals = shown.get("goals") or []
+    pretty = plain(shown.get("pretty") or "").strip("\n")
+    if len(goals) > 1:
+        # Deliberately not `pretty`, which is reversed; see
+        # `_render_goals`.  One goal and no goals are left to it: with
+        # nothing to order there is no ambiguity to remove, and
+        # `pretty` is where the server puts the sentences that are not
+        # goals at all ("Initial goal proved.", and the warning that
+        # the only reason none remain is `cheat').
+        body = [_ORDER_NOTE % len(goals), "", _render_goals(goals)]
+    elif pretty.strip():
         body = [pretty]
+    elif goals:
+        body = [_render_goals(goals)]
     else:
-        # No rendered form: fall back to the structured goals.
         body = []
-        for i, goal in enumerate(goals, 1):
-            body.append("goal %d:" % i)
-            for asm in goal.get("asms", []):
-                body.append("    [%s]" % plain(asm))
-            body.append("  %s" % plain(goal.get("goal", "")))
 
-    context = [plain(c) for c in (result.get("context") or [])]
-    note = plain(result.get("note") or "") or None
+    context = [plain(c) for c in (shown.get("context") or [])]
+    note = plain(shown.get("note") or "") or None
 
-    footer_bits = ["\n\nSTATUS: %s at step %s of %s; %d goal(s)."
-                   % (status, result.get("step"),
-                      result.get("theorem", theorem), len(goals))]
+    walk_step = result.get("step")
+    name = result.get("theorem", theorem)
+    if at_failure is None:
+        footer_bits = ["\n\nSTATUS: %s at step %s of %s; %d goal(s)."
+                       % (status, walk_step, name, len(goals))]
+    else:
+        fail_step = at_failure.get("step")
+        footer_bits = [
+            "\n\nSTATUS: %s at step %s of %s; %d goal(s) -- but that is "
+            "where the walk ENDED, not where the proof failed."
+            % (status, walk_step, name, len(result.get("goals") or [])),
+            "SHOWING: the state at step %s instead (%d goal(s)), which is "
+            "the step that failed. A `>-` branch that fails does not stop "
+            "the walk: `cheat' stands in for what the branch owed and the "
+            "walk carries on to the end, so the goals it ends with are "
+            "downstream of the failure and are not the ones that went "
+            "wrong. Ask again with step=%s for the end-of-walk state."
+            % (fail_step, len(goals), walk_step)]
     if context:
         footer_bits.append("OPEN: " + "; ".join(context))
     if note:
@@ -521,9 +691,21 @@ def _render_goal_state(result, theorem, step):
     rng = result.get("failedRange")
     if rng:
         start = rng.get("start", {})
-        footer_bits.append("FAILED AT: line %s col %s"
+        at_step = ("" if at_failure is None
+                   else " (step %s)" % at_failure.get("step"))
+        footer_bits.append("FAILED AT: line %s col %s%s"
                            % (start.get("line", 0) + 1,
-                              start.get("character", 0) + 1))
+                              start.get("character", 0) + 1, at_step))
+        if at_failure is None:
+            # The re-anchored walk is what normally answers this, so
+            # reaching here means it was not run (the caller named a
+            # step) or it declined.  Say the limit rather than leave
+            # the step reading as the failure's own.
+            footer_bits.append(
+                "CAVEAT: the step above is where the walk came to rest, "
+                "which need not be where the proof went wrong -- the "
+                "walk cheats past a failed branch and carries on. The "
+                "line and column are the failure; the goals may not be.")
     return _budget("\n".join(body), footer="\n".join(footer_bits))
 
 
@@ -561,7 +743,10 @@ def tool_schemas():
                 "for the end of the proof, or give a 0-based step index to "
                 "see the state before that tactic ran. Reports which "
                 "combinators are still open, and where the proof failed if "
-                "it did.",
+                "it did -- and when it did fail, shows the state at the "
+                "failing step rather than at the end of the walk, which are "
+                "not the same place. Goals are listed in the proof's own "
+                "order: goal 1 is what the next `>-` branch acts on.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

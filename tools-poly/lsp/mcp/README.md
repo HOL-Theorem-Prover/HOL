@@ -38,7 +38,7 @@ talking to somebody else's HOL would be free to skew.
 | Tool | What it answers |
 |---|---|
 | `hol_check_file` | Does this script compile, and did every proof in it go through? |
-| `hol_goal_state` | What is the goal inside *theorem*, at the end or at step *n*? |
+| `hol_goal_state` | What is the goal inside *theorem* — at the end, at step *n*, or where it fails? |
 | `hol_try_tactic` | What would *tactic* do here — without editing the file? |
 | `hol_search` | Which theorems match this name, theory or term pattern? |
 | `hol_sessions` | Which servers are running? |
@@ -100,6 +100,23 @@ that needed it.
 ANSI stripping lives here too: the server renders through a
 pretty-printer whose default backend emits VT100 colour, which is
 right for its other two clients and is literal noise to a model.
+
+**Convention.**  The server's other clients are editor panes, and two
+of its conventions assume one.  Goals are listed in HOL's goalstack
+order, which puts the *current* goal last — unambiguous beside a
+cursor, and bottom-to-top in a transcript, which is how four `>-`
+branches of a cakeml lemma came to be reordered to match a display.
+And a goal-state walk does not stop at a failure: a cursor asks what
+the state *here* is, so the walk stands `cheat` in for what a failed
+`>-` branch owed and carries on, and the step it reports is where it
+ended rather than where the proof went wrong.
+
+So the adapter prints the structured `goals` array, numbered `goal i
+of n`, rather than the pre-rendered `pretty` string; and when a reply
+blames a position, it asks again anchored there and shows the state
+that step was actually given, saying in the footer which step is
+which.  The server is unchanged — both conventions are right for the
+clients they were built for.
 
 ## One process per script
 
