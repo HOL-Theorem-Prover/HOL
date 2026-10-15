@@ -385,6 +385,20 @@ in
               ([], “(case x of CT1 => 0 | CT2 n => n) = 0 ∨ x = CT1”)
 end
 
+val _ = tprint "FULL_CASE_TAC on an assumption over a datatype defined later"
+val _ = require_msg
+          (check_result (goals_eq [([“0 = m”], “P (m:num) : bool”),
+                                   ([“1 = m”], “P (m:num) : bool”)]))
+          goalpp
+          (testtac BasicProvers.FULL_CASE_TAC)
+          ([“(case x of CT1 => 0 | CT2 n => 1) = m”], “P (m:num) : bool”)
+
+val _ = tprint "EVERY_CASE_TAC on a datatype defined later"
+val _ = require_msg (check_result (goals_eq [([], “n = 0”)]))
+                    goalpp
+                    (testtac BasicProvers.EVERY_CASE_TAC)
+                    ([], “(case x of CT1 => 0 | CT2 n => n) = 0 ∨ x = CT1”)
+
 fun test_tac_Case nm ok_case_arg tq tac = let
   val t = Parse.typed_parse_in_context bool [] tq
   val _ = tprint (nm^" on `"^term_to_string t^"`")
