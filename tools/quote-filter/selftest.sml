@@ -193,6 +193,48 @@ in
     else print ("OK    nameless header: one diagnostic, no new_theory\n")
   end;
 
+  (* A malformed #(LINE=...) makes the parser ask for a position after the
+     pragma's start before it records the pragma's event, which on develop
+     raised Subscript.  The errors reported later must still see the event:
+     line 3 of the input is line 7 after #(LINE=5,...). *)
+  let val name = "malformed LINE pragma still sets the line"
+      val input = "#(LINE=5,abc)\nval x = 1\nval y = 2 2 )\nval z = 3\n"
+  in
+    case SOME (translate input) handle e => (fail name [exnMessage e]; NONE)
+     of NONE => ()
+      | SOME (_, errs) =>
+          if isSubstring "7:13" errs then print ("OK    " ^ name ^ "\n")
+          else fail name ["expected an error at 7:13, got = " ^ errs]
+  end;
+
+  (* On the line of a #(LINE=n,c) the column counts from the pragma, not
+     from the line start, also when an offset further on was asked about
+     first. *)
+  let
+    fun dstringOf s = let
+      val d = DString.new (size s)
+      in CharVector.app (fn c => DString.push (d, c)) s; d end
+    val body = dstringOf "aaaa\nbbbbbbbb\ncc"
+    fun colAfter evt = let
+      val evts = DArray.new (1, HOLSourceAST.LineEvent (0, 0))
+      val () = DArray.push (evts, evt)
+      val fileline =
+          HOLSourceAST.mkFileline body {initFile = "f", evts = evts}
+      in ignore (fileline 15); #col (fileline 10) end
+    fun colCheck name evt expected = let
+      val col = colAfter evt
+      in
+        if col = expected then print ("OK    " ^ name ^ "\n")
+        else fail name ["expected col " ^ Int.toString expected ^
+                        ", got " ^ Int.toString col]
+      end
+  in
+    colCheck "column after LINE=n,c on a line queried backwards"
+             (HOLSourceAST.LineColEvent (7, 9, 19)) 22;
+    colCheck "column after LINE=n on a line queried backwards"
+             (HOLSourceAST.LineEvent (7, 9)) 5
+  end;
+
   OS.Process.exit
     (if !failures = 0 then OS.Process.success else OS.Process.failure)
 end
