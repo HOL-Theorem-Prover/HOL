@@ -124,6 +124,57 @@ def _position_at(text, offset):
             "character": offset - (head.rfind(b"\n") + 1)}
 
 
+
+def _verdict(num_diags, by_status, settled, proof_timeout):
+    """The SUMMARY line for a tally.
+
+    Pulled out of `check_file` because the two statuses that must not
+    read as clean are reached only by timing -- a replay budget running
+    out, or a pool that has not caught up -- and a rule that cannot be
+    exercised is a rule that rots.
+
+    `broken` is `failed` and `diverged` only.  The other two are not
+    verdicts on a proof, but they are not clean bills either, and the
+    one answer this adapter must never give is a confident "nothing is
+    broken" about proofs nobody checked.
+    """
+    broken = sum(len(by_status.get(s, [])) for s in ("failed", "diverged"))
+    if not settled:
+        # Never claim a clean file from an unsettled tally: that is a
+        # confident "nothing is broken" about a file nobody has
+        # finished checking.
+        still = len(by_status.get("checking", []))
+        return ("\n\nSUMMARY: INCOMPLETE -- %d proof(s) still being "
+                "checked after %ss. %d diagnostic(s) and %d broken "
+                "proof(s) SO FAR; call again for the rest."
+                % (still, proof_timeout, num_diags, broken))
+    verdict = ("\n\nSUMMARY: %d diagnostic(s), %d broken proof(s)."
+               % (num_diags, broken))
+    # "Not a verdict on the proof: a report that we stopped asking"
+    # (LSPExtension.sig).
+    unchecked = len(by_status.get("timedout", []))
+    if unchecked:
+        verdict += (" %d proof(s) NOT CHECKED -- the replay budget ran out "
+                    "before they finished, so this is not a clean bill of "
+                    "health; raise the budget (HOL_LSP_PROOF_TIMEOUT_MS) to "
+                    "settle them." % unchecked)
+    # `cheated` is the same kind of non-verdict.  Per the state model in
+    # server.ML a proof the compile has reached but the pool has not
+    # replayed "is taken on trust", and an edit re-announces the proofs
+    # it invalidates as `cheated` before they are enqueued again.  So a
+    # tally sampled in that window has nothing `checking', settles at
+    # once, and carries the verdicts from *before* the edit -- which is
+    # how a deleted theorem came back `cheated'.
+    untried = len(by_status.get("cheated", []))
+    if untried:
+        verdict += (" %d proof(s) NOT CHECKED -- taken on trust and never "
+                    "replayed, so this is not a clean bill of health. Right "
+                    "after an edit this is the pool still catching up and "
+                    "the other verdicts may predate the edit too; call "
+                    "hol_restart and ask again." % untried)
+    return verdict
+
+
 def _last_token(text, token, start, stop):
     """Byte offset of the last `token` in [start, stop), on word
     boundaries, or None.
@@ -348,25 +399,7 @@ class Hol:
         # But it is equally not clean, and a bare "0 broken proof(s)"
         # over a pile of unchecked proofs reads as a pass.  So it gets
         # its own clause in the verdict rather than a bucket.
-        unchecked = len(by_status.get("timedout", []))
-        if settled:
-            verdict = ("\n\nSUMMARY: %d diagnostic(s), %d broken proof(s)."
-                       % (len(diags), broken))
-            if unchecked:
-                verdict += (" %d proof(s) NOT CHECKED -- the replay budget "
-                            "ran out before they finished, so this is not a "
-                            "clean bill of health; raise the budget "
-                            "(HOL_LSP_PROOF_TIMEOUT_MS) to settle them."
-                            % unchecked)
-        else:
-            # Never claim a clean file from an unsettled tally: that is
-            # a confident "nothing is broken" about a file nobody has
-            # finished checking.
-            still = len(by_status.get("checking", []))
-            verdict = ("\n\nSUMMARY: INCOMPLETE -- %d proof(s) still being "
-                       "checked after %ss. %d diagnostic(s) and %d broken "
-                       "proof(s) SO FAR; call again for the rest."
-                       % (still, proof_timeout, len(diags), broken))
+        verdict = _verdict(len(diags), by_status, settled, proof_timeout)
         return _budget("\n".join(lines), footer=verdict)
 
     def goal_state(self, file, theorem, step=None, occurrence=1, width=100,

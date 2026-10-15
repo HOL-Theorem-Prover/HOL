@@ -24,6 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "mcp"))
 
 from mcp_cli import Adapter  # noqa: E402
+import hol_mcp  # noqa: E402
 
 REPO = os.path.normpath(os.path.join(HERE, "..", "..", ".."))
 
@@ -234,10 +235,46 @@ def test_termination_block_is_addressable():
         restore(d, saved)
 
 
+def test_unverified_proofs_are_not_a_clean_bill():
+    """`cheated` and `timedout` are states, not verdicts, and a SUMMARY
+    that counts neither reads as a pass over proofs nobody checked.
+
+    No server here: both states are reached only by timing -- a replay
+    budget running out, or the pool not having caught up with an edit --
+    so an end-to-end fixture for them would be a flaky test of a clock.
+    The rule itself is what must not rot.
+    """
+    clean = hol_mcp._verdict(0, {"proved": ["a"]}, True, 600)
+    check("0 broken proof(s)" in clean and "NOT CHECKED" not in clean,
+          "a genuinely clean tally still reads clean (got %r)" % clean)
+
+    for status in ("cheated", "timedout"):
+        text = hol_mcp._verdict(0, {status: ["a", "b"], "proved": ["c"]},
+                                True, 600)
+        check("NOT CHECKED" in text,
+              "%s refuses to read as clean (got %r)" % (status, text))
+        check("2 proof(s)" in text,
+              "%s says how many went unchecked (got %r)" % (status, text))
+
+    # ...and still not counted as broken: they are not failures.
+    both = hol_mcp._verdict(0, {"cheated": ["a"], "timedout": ["b"]},
+                            True, 600)
+    check("0 broken proof(s)" in both,
+          "neither is miscounted as broken (got %r)" % both)
+    check(both.count("NOT CHECKED") == 2,
+          "both are reported, not just the first (got %r)" % both)
+
+    # An unsettled tally was already refused; keep it that way.
+    unsettled = hol_mcp._verdict(0, {"checking": ["a"]}, False, 600)
+    check("INCOMPLETE" in unsettled,
+          "an unsettled tally is still INCOMPLETE (got %r)" % unsettled)
+
+
 TESTS = [test_blocked_file_is_reported_not_waited_out,
          test_blocked_goal_state_explains_itself,
          test_timedout_proof_is_not_a_clean_bill,
-         test_termination_block_is_addressable]
+         test_termination_block_is_addressable,
+         test_unverified_proofs_are_not_a_clean_bill]
 
 
 def main(argv):
