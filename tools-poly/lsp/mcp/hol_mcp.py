@@ -175,15 +175,50 @@ class Hol:
         Re-reads the file every call rather than trusting a cache: the
         model edits scripts with its own tools between calls, and a
         stale buffer answers questions about a file nobody has.
+
+        The fourth element is the `$/compileBlocked` params, or None.
+        A blocked file compiled *nothing*, so every tool that reads a
+        compile result has to say so rather than answer from an empty
+        session -- which is how a missing ancestor used to come back as
+        "no proofs" or "not inside a proof the server can walk".
         """
         path = self._resolve(file)
         with open(path, "r", encoding="utf-8") as handle:
             text = handle.read()
         session = self.pool.get(path)
         mark = session.open_or_sync(path, text)
+        blocked = None
         if mark is not None:
             session.await_compile(path, mark, timeout)
-        return session, path, text
+            blocked = session.deps_blocked(path, since=mark)
+        else:
+            blocked = session.deps_blocked(path)
+        return session, path, text, blocked
+
+    def _blocked_report(self, path, blocked, session=None):
+        """What to say when the server would not compile the file.
+
+        Names the modules, because the action is to build them, and
+        appends any `window/showMessage` -- that is where a heap the
+        server could not load gets explained, and without it a session
+        silently answering from `bin/hol.state` looks like a bad file.
+        """
+        mods = blocked.get("modules") or []
+        lines = ["file: %s" % os.path.relpath(path, self.repo),
+                 "BLOCKED: the server did not compile this file.",
+                 "reason: %s" % plain(blocked.get("message", "")).strip()]
+        if mods:
+            lines.append("unavailable module(s): %s" % ", ".join(mods))
+        notes = session.show_messages() if session is not None else []
+        for note in notes:
+            lines.append("server note: %s" % plain(note).strip())
+        lines.append("")
+        lines.append("Nothing was elaborated, so there is no proof tally "
+                     "and no goal state for any theorem here. Build the "
+                     "module(s) above with Holmake, then call hol_restart "
+                     "on this file -- a running server is pinned to the "
+                     "artifacts it loaded at startup.")
+        return "\n".join(lines)
 
     def _diagnostics(self, session, path):
         uri = path_to_uri(path)
@@ -246,7 +281,9 @@ class Hol:
 
     # -- tools -----------------------------------------------------
     def check_file(self, file, timeout=180, proof_timeout=600):
-        session, path, _ = self._ready(file, timeout)
+        session, path, _, blocked = self._ready(file, timeout)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
         diags = self._diagnostics(session, path)
         proofs, settled = session.await_proofs(path, proof_timeout)
 
@@ -256,8 +293,14 @@ class Hol:
                 state.get("name"))
 
         lines = ["file: %s" % os.path.relpath(path, self.repo)]
-        order = ["failed", "diverged", "suspended", "cheated", "checking",
-                 "proved", "unseen"]
+        # Every status the server can send (`sendProofStates`,
+        # server.ML).  `timedout` used to be missing, which dropped it
+        # from the tally, from the detail listing and from the verdict
+        # -- so a file whose proofs were too slow to check came back as
+        # "0 broken proof(s)", the one answer this adapter must never
+        # give.  Keep this list exhaustive.
+        order = ["failed", "diverged", "suspended", "timedout", "cheated",
+                 "checking", "proved", "unseen"]
         if proofs:
             lines.append("proofs: " + ", ".join(
                 "%s=%d" % (k, len(by_status[k]))
@@ -265,7 +308,8 @@ class Hol:
         else:
             lines.append("proofs: (none reported)")
 
-        for status in ("failed", "diverged", "suspended", "cheated"):
+        for status in ("failed", "diverged", "suspended", "timedout",
+                       "cheated"):
             for name in by_status.get(status, []):
                 # Flattened: HOL's exception text is multi-line, and a
                 # newline here breaks the one-per-proof listing into
@@ -289,9 +333,21 @@ class Hol:
 
         broken = sum(len(by_status.get(s, []))
                      for s in ("failed", "diverged"))
+        # `timedout` is deliberately *not* broken: "Not a verdict on the
+        # proof: a report that we stopped asking" (LSPExtension.sig).
+        # But it is equally not clean, and a bare "0 broken proof(s)"
+        # over a pile of unchecked proofs reads as a pass.  So it gets
+        # its own clause in the verdict rather than a bucket.
+        unchecked = len(by_status.get("timedout", []))
         if settled:
             verdict = ("\n\nSUMMARY: %d diagnostic(s), %d broken proof(s)."
                        % (len(diags), broken))
+            if unchecked:
+                verdict += (" %d proof(s) NOT CHECKED -- the replay budget "
+                            "ran out before they finished, so this is not a "
+                            "clean bill of health; raise the budget "
+                            "(HOL_LSP_PROOF_TIMEOUT_MS) to settle them."
+                            % unchecked)
         else:
             # Never claim a clean file from an unsettled tally: that is
             # a confident "nothing is broken" about a file nobody has
@@ -305,7 +361,9 @@ class Hol:
 
     def goal_state(self, file, theorem, step=None, occurrence=1, width=100,
                    timeout=180):
-        session, path, text = self._ready(file, timeout)
+        session, path, text, blocked = self._ready(file, timeout)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
         pos = self._position_of(session, path, text, theorem, occurrence)
         params = {"textDocument": {"uri": path_to_uri(path)},
                   "position": pos, "width": width}
@@ -316,7 +374,9 @@ class Hol:
 
     def try_tactic(self, file, theorem, tactic, step=None, occurrence=1,
                    width=100, budget_ms=0, timeout=180):
-        session, path, text = self._ready(file, timeout)
+        session, path, text, blocked = self._ready(file, timeout)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
         pos = self._position_of(session, path, text, theorem, occurrence)
         params = {"textDocument": {"uri": path_to_uri(path)},
                   "position": pos, "width": width,
@@ -332,11 +392,22 @@ class Hol:
         # A session, not a bare process: patterns are parsed with the
         # file's own grammar, so `f (g x)` means in the search what it
         # would mean in that script.
-        session, _, _ = self._ready(file, timeout)
+        session, _, _, blocked = self._ready(file, timeout)
+        # Search still answers when the file is blocked -- the session
+        # has base HOL loaded -- but only over what did load, so an
+        # empty result is not evidence a theorem does not exist.  Say
+        # which case this is rather than let absence read as proof.
+        caveat = ""
+        if blocked is not None:
+            mods = ", ".join(blocked.get("modules") or []) or "its ancestors"
+            caveat = ("\n\nNOTE: %s could not be loaded, so this searched "
+                      "only the theories that did. A theorem defined in "
+                      "those modules will not appear here."
+                      % mods)
         results = session.request("$/hol/search",
                                   {"query": query, "limit": limit})
         if not results:
-            return "no results for: %s" % query
+            return "no results for: %s%s" % (query, caveat)
         lines = []
         for item in results:
             where = item.get("theory") or ""
@@ -346,7 +417,8 @@ class Hol:
             statement = plain(item.get("statement") or "").strip()
             if statement:
                 lines.append("    " + statement.replace("\n", "\n    "))
-        footer = "\n\nSUMMARY: %d result(s) for %r." % (len(results), query)
+        footer = ("\n\nSUMMARY: %d result(s) for %r.%s"
+                  % (len(results), query, caveat))
         return _budget("\n".join(lines), footer=footer)
 
     def sessions(self):
@@ -430,8 +502,9 @@ def tool_schemas():
             "description":
                 "Compile a HOL script and report its diagnostics and the "
                 "status of every proof in it (proved / failed / diverged / "
-                "suspended / cheated). Call this first: it is what makes a "
-                "file's state current, and every other tool here implies it.",
+                "suspended / timedout / cheated). Call this first: it is "
+                "what makes a file's state current, and every other tool "
+                "here implies it.",
             "inputSchema": {
                 "type": "object",
                 "properties": {"file": _FILE},

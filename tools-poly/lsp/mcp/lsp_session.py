@@ -229,22 +229,71 @@ class Session:
             "contentChanges": [{"text": text}]})
         return mark
 
+    #: The three ways a pass can stop.  All of them must be waited on:
+    #: a pass that ends on an edge nobody waits for spends the whole
+    #: timeout and then answers from a half-finished state, which is
+    #: worse than answering slowly.
+    COMPILE_EDGES = ("$/compileCompleted", "$/compileInterrupted",
+                     "$/compileBlocked")
+
     def await_compile(self, path, since, timeout=180):
         """Wait for the pass triggered at `since` to finish.
 
         `$/compileCompleted` is the success edge; `$/compileInterrupted`
         is the give-up edge and must be waited on too, or an abandoned
         pass spends the whole timeout.
+
+        `$/compileBlocked` is the third edge, and the easiest to miss:
+        when a declared dependency cannot be loaded the server never
+        enters `runCompile`, so it sends *neither* of the other two --
+        "No progress to end -- `sendProgressBegin' is inside
+        `runCompile', which this path does not reach" (server.ML).
+        Waiting only for the first two turns the commonest state of a
+        half-built tree into a silent stall for the full timeout,
+        after which every tool answers from a session that never
+        compiled anything.
         """
         uri = path_to_uri(path)
 
         def done(msg):
-            if msg.get("method") not in ("$/compileCompleted",
-                                         "$/compileInterrupted"):
+            if msg.get("method") not in self.COMPILE_EDGES:
                 return False
             return (msg.get("params") or {}).get("uri") == uri
 
         return self.wait_for(done, timeout, since=since)
+
+    def deps_blocked(self, path, since=0):
+        """The last `$/compileBlocked` for `path`, or None.
+
+        The server re-sends this on every edit that leaves the declared
+        dependencies unchanged, so the latest one is always current:
+        there is no "unblocked" message to pair it with, because a pass
+        that gets past the block ends on `$/compileCompleted` instead.
+        Callers therefore read it `since` the mark of the pass they are
+        asking about, not from the start of the session.
+        """
+        uri = path_to_uri(path)
+        latest = None
+        for msg in self.notifications("$/compileBlocked", since=since):
+            params = msg.get("params") or {}
+            if params.get("uri") == uri:
+                latest = params
+        return latest
+
+    def show_messages(self, since=0):
+        """`window/showMessage` texts, oldest first.
+
+        The server explains a heap it could not load exactly once, and
+        only here -- it falls back to `bin/hol.state` and says so in a
+        `window/showMessage`.  Dropping these loses the one account of
+        why a session is answering from the wrong heap.
+        """
+        out = []
+        for msg in self.notifications("window/showMessage", since=since):
+            text = (msg.get("params") or {}).get("message")
+            if text:
+                out.append(text)
+        return out
 
     def proof_states(self, path):
         """Fold the `$/proofStates` transition stream into a state.
