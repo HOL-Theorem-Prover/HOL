@@ -278,6 +278,26 @@ val tp_it_def = function "tp_it"
     (tp_acc (x::xs) a b = tp_acc xs (tp_it x a b) (b + 1))`;
 
 (*---------------------------------------------------------------------------
+   The leaves of the domain need not take their parameters the same way:
+   these differ in arity, and what one carries as a pair the other
+   carries as two arguments, so neither can be measured by the other's
+   columns.  A leaf no condition compares with itself is measured by
+   what the calls that reach it descend into.
+ ---------------------------------------------------------------------------*)
+
+Datatype:
+  dtree = DNode num (dtree list)
+End
+
+val walk_def = function "walk"
+   `(walk (rs:num # num) (blocks:num list) (DNode label children) =
+       walk_children (FST rs + 1) (SND rs) (label::blocks) children) /\
+    (walk_children counters stacks blocks [] = (counters, blocks)) /\
+    (walk_children counters stacks blocks (child::rest) =
+       let (counters', blocks') = walk (counters, stacks) blocks child in
+       walk_children counters' stacks blocks' rest)`;
+
+(*---------------------------------------------------------------------------
    And the same over an operator of the user's own rather than a built-in
    one.  The measure is there either way; what a user-declared operator
    had no counterpart of is the law relating a size of its map to a size
