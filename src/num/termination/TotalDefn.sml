@@ -416,9 +416,9 @@ fun flat_type_size ty =
 (*                                                                           *)
 (* A leaf is measured the way a flat domain is -- a column that never        *)
 (* shrinks weighs nothing -- so an argument a function merely carries, an    *)
-(* accumulator say, need not shrink for the call to.  Only the conditions    *)
-(* with both sides at the same leaf say anything about that leaf's columns;  *)
-(* a leaf none of them mention is measured whole.                           *)
+(* accumulator say, need not shrink for the call to.  A leaf's columns are   *)
+(* read off the conditions with both sides at that leaf, and failing those,  *)
+(* off the conditions that reach it from another leaf.                       *)
 (*---------------------------------------------------------------------------*)
 
 fun sum_leaves ty =
@@ -458,23 +458,46 @@ fun leaf_measures domty tcs =
                      (pairSyntax.spine_pair px)
              else NONE)
          sided
-     fun mask i =
-       let val rws = rows i
-       in if null rws then NONE
-          else
-            let val chf = projects (map (map (uncurry proper_subterm)) rws)
-            in if exists I chf then SOME chf else NONE
-            end
-       end
+     (* A leaf no condition compares with itself is still reached from
+        the others.  A column a call descended into is a proper subterm
+        of a column of the argument the call was made from; which column
+        that was does not matter, and need not even exist, because the
+        leaves need not take their parameters the same way. *)
+     fun reached i =
+       List.mapPartial
+         (fn ((ix,px),(iy,py)) =>
+             if iy = i andalso ix <> i then
+               let val src = pairSyntax.spine_pair px
+               in SOME (map (fn c => List.exists (proper_subterm c) src)
+                            (pairSyntax.spine_pair py))
+               end
+             else NONE)
+         sided
+     fun from_rows [] = NONE
+       | from_rows rws =
+           let val chf = projects rws
+           in if exists I chf then SOME chf else NONE
+           end
+     fun mask i = from_rows (map (map (uncurry proper_subterm)) (rows i))
      val leaves = sum_leaves domty
-     val masks = map mask (Lib.upto 0 (length leaves - 1))
+     val indices = Lib.upto 0 (length leaves - 1)
+     val masks = map mask indices
+     val reaching = map (from_rows o reached) indices
      val known = List.mapPartial I masks
      fun sized chf ty = list_mk_prod_tyl (strip_prod_ty chf ty)
+     fun By chf ty = (sized chf ty handle HOL_ERR _ => tysize ty)
      fun whole _ ty = tysize ty
      fun own i ty =
        case List.nth(masks,i)
-        of SOME chf => (sized chf ty handle HOL_ERR _ => tysize ty)
+        of SOME chf => By chf ty
          | NONE => tysize ty
+     fun reach i ty =
+       case List.nth(masks,i)
+        of SOME chf => By chf ty
+         | NONE =>
+           case List.nth(reaching,i)
+            of SOME chf => By chf ty
+             | NONE => tysize ty
      (* a leaf no condition compares with itself still shares the other
         functions' parameters, so borrow a mask that fits it *)
      fun shared i ty =
@@ -494,7 +517,7 @@ fun leaf_measures domty tcs =
              end
  in
    if Lib.can sumSyntax.dest_sum domty
-   then mapfilter (fn lm => fst (build lm domty 0)) [own, shared, whole]
+   then mapfilter (fn lm => fst (build lm domty 0)) [reach, own, shared, whole]
    else []
  end
  handle HOL_ERR _ => [];
