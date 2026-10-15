@@ -399,6 +399,22 @@ val _ = require_msg (check_result (goals_eq [([], “n = 0”)]))
                     (testtac BasicProvers.EVERY_CASE_TAC)
                     ([], “(case x of CT1 => 0 | CT2 n => n) = 0 ∨ x = CT1”)
 
+(* FULL_CASE_TAC rewrites assumptions with the implicit rewrites of the
+   context it is given, not those of the live cell. *)
+val _ = let
+  val plain = Context.snapshot ()
+  val _ = Rewrite.add_implicit_rewrites [arithmeticTheory.ADD_0]
+  val extra = Context.snapshot ()
+  val _ = Context.restore plain
+  val w = “P (k:num) : bool”
+  val _ = tprint "FULL_CASE_TAC reads the context it is given"
+in
+  require_msg (check_result (goals_eq [([“m = k:num”], w), ([“1 = k:num”], w)]))
+              goalpp
+              (fn g => fst (BasicProvers.FULL_CASE_TAC g extra))
+              ([“(case x of CT1 => m + 0 | CT2 n => 1) = k”], w)
+end
+
 fun test_tac_Case nm ok_case_arg tq tac = let
   val t = Parse.typed_parse_in_context bool [] tq
   val _ = tprint (nm^" on `"^term_to_string t^"`")
