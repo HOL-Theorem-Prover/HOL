@@ -250,6 +250,15 @@ class Hol:
         `step` given, any position in the body would do and this one
         still does.
 
+        A `Definition ... Termination ... End` has no `QED`, and its
+        obligation is not written in the file at all.  The server
+        derives it, and answers `$/hol/goalState` for a cursor between
+        `Termination` and `End`; the block's `End` closes that range
+        the way `QED` closes a proof body, so it is the same rule
+        applied to the other bracket.  This matters more than it
+        looks: most of what a datatype change breaks is in termination
+        blocks, so refusing them refused the goals most worth seeing.
+
         Occurrence matters: proof identity in this server is name plus
         occurrence precisely because a script may declare the same
         name twice, and positions move under edits.
@@ -270,14 +279,15 @@ class Hol:
         rng = hits[occurrence - 1]["location"]["range"]
         start = _offset_of(text, rng["start"])
         stop = _offset_of(text, rng["end"])
-        qed = _last_token(text, "QED", start, stop)
-        if qed is None:
+        closer = _last_token(text, "QED", start, stop)
+        if closer is None:
+            closer = _last_token(text, "End", start, stop)
+        if closer is None:
             raise ValueError(
-                "%r in %s has no `Proof ... QED' body, so there is no "
-                "goal state to walk. Only `Theorem'/`Resume' proofs "
-                "written that way can be stepped through."
-                % (theorem, os.path.basename(path)))
-        return _position_at(text, qed)
+                "%r in %s has neither a `Proof ... QED' body nor a "
+                "`Termination ... End' block, so there is no goal "
+                "state to walk." % (theorem, os.path.basename(path)))
+        return _position_at(text, closer)
 
     # -- tools -----------------------------------------------------
     def check_file(self, file, timeout=180, proof_timeout=600):

@@ -62,6 +62,18 @@ SLOW_SRC = ("Theory mcpslow\n"
             + HANGING_TACTIC +
             "QED\n")
 
+# A definition whose termination is not automatic, so the server has an
+# obligation to derive.  Nothing about the goal is written in the file,
+# which is the point: it cannot be found by reading the text.
+TERMINATION_SRC = ("Theory mcptermination\n"
+                   "Ancestors arithmetic\n"
+                   "\n"
+                   "Definition cdown_def:\n"
+                   "  cdown n = if n = 0 then 0n else 1 + cdown (n - 1)\n"
+                   "Termination\n"
+                   "  WF_REL_TAC `measure I` >> simp []\n"
+                   "End\n")
+
 FAILURES = []
 RUN = 0
 
@@ -182,9 +194,50 @@ def test_timedout_proof_is_not_a_clean_bill():
         restore(d, saved)
 
 
+def test_termination_block_is_addressable():
+    """A `Termination` block has no `QED`, and the adapter used to aim
+    only at that token and refuse -- "has no `Proof ... QED' body" --
+    for every definition in the tree.
+
+    Since 802af30e4 the server answers `$/hol/goalState` for a cursor
+    between `Termination` and `End`, so the refusal was the adapter
+    declining to ask.  It matters because most of what a datatype
+    change breaks is in termination blocks: the tool that reports the
+    obligation broken could not show it.
+    """
+    d, path, saved = with_fixture("mcptermination", TERMINATION_SRC)
+    adapter = Adapter()
+    try:
+        text, _ = adapter.call("hol_goal_state",
+                               {"file": path, "theorem": "cdown_def_termination"})
+        check("has no `Proof" not in text,
+              "does not refuse for want of a QED (got %r)" % text[:160])
+        check("STATUS:" in text,
+              "answers with a goal state (got %r)" % text[:160])
+        # Step 0 is before the measure is chosen, so the obligation
+        # itself is on show -- the thing that was unreachable.
+        text, _ = adapter.call("hol_try_tactic",
+                               {"file": path,
+                                "theorem": "cdown_def_termination",
+                                "step": 0,
+                                "tactic": "WF_REL_TAC `measure I`"})
+        check("WF" in text or "R " in text,
+              "the derived obligation is visible (got %r)" % text[:200])
+        # Positive control: naming something that really has no body
+        # still explains itself rather than answering nonsense.
+        text, _ = adapter.call("hol_goal_state",
+                               {"file": path, "theorem": "nosuchdecl"})
+        check("no declaration named" in text,
+              "an unknown name is still reported (got %r)" % text[:160])
+    finally:
+        adapter.close()
+        restore(d, saved)
+
+
 TESTS = [test_blocked_file_is_reported_not_waited_out,
          test_blocked_goal_state_explains_itself,
-         test_timedout_proof_is_not_a_clean_bill]
+         test_timedout_proof_is_not_a_clean_bill,
+         test_termination_block_is_addressable]
 
 
 def main(argv):
