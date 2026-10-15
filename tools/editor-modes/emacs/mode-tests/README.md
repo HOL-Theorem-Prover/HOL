@@ -1,10 +1,11 @@
 # Emacs mode tests
 
-ERT tests for the two Emacs modes that ship with HOL:
+ERT tests for the Emacs modes that ship with HOL:
 
 - `holscript-mode` — SMIE-based, older.  Tests in `holscript-tests.el`.
 - `holscript-ts-mode` — tree-sitter based, newer.  Tests in
   `holscript-ts-tests.el`.
+- the eglot LSP client in `hol-mode`.  Tests in `hol-lsp-tests.el`.
 
 **Neither suite is wired into `bin/build`.**  They require Emacs 29+
 (with tree-sitter support for the ts-mode suite) and a compiled parser
@@ -43,6 +44,17 @@ The SMIE mode is plain elisp — no parser to build:
     HOLDIR=$(git rev-parse --show-toplevel)/ \
         emacs -batch -l ert \
         -l tools/editor-modes/emacs/mode-tests/holscript-tests.el \
+        -f ert-run-tests-batch-and-exit
+
+## Running the LSP client suite
+
+Also plain elisp, but it loads the **generated** `hol-mode.el`, so
+regenerate that from `hol-mode.src` (the configure step does it)
+before expecting a source change to show up:
+
+    HOLDIR=$(git rev-parse --show-toplevel) \
+        emacs -batch -l ert \
+        -l tools/editor-modes/emacs/mode-tests/hol-lsp-tests.el \
         -f ert-run-tests-batch-and-exit
 
 ## Adding tests

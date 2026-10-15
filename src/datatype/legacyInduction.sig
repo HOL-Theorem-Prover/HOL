@@ -43,8 +43,19 @@ sig
   val operators_of : thm -> operator list
 
   val mutual_induction : operator list -> thm -> thm
+  val mutual_ind_from_ops : thm -> thm (* composition of two above *)
 
   (* what that will prove, for a caller who would rather see it first *)
   val mutual_induction_goal : operator list -> thm -> term
+
+
+  (* An induction principle as the rest of HOL expects to read one: the
+     variables an argument is quantified over pushed past the hypothesis
+     that mentions them, and the bound variables named for their types --
+     `!P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l` rather than
+     `!P. P [] /\ (!a0 a1. P a1 ==> P (a0::a1)) ==> !l. P l`.  INDUCT_THEN
+     wants the first, and so do developments that name the variables an
+     induction leaves them. *)
+  val munge_ind_thm : thm -> thm
 
 end

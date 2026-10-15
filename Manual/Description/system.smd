@@ -494,7 +494,7 @@ to use HOL effectively. One can examine the current grammar used by
 the parser with the functions `type_grammar` and
 `term_grammar`.
 
-For example, in the following session, we see that the type grammar used in the startup context of HOL has the type operators `fun`, `sum`, `prod`, `list`, `recspace`, `num`, `option`, `one`, `cv`, `ind`, and `bool`:
+For example, in the following session, we see that the type grammar used in the startup context of HOL has the type operators `fun`, `sum`, `prod`, `list`, `num`, `option`, `one`, `cv`, `ind`, and `bool`:
 
 ```repl
 >>__ pushLineWidth 65;

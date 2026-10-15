@@ -236,3 +236,93 @@ Termination
   rw [foo_def]
 End
 *)
+
+(*---------------------------------------------------------------------------
+   A mutual recursion over a type that recurses under an operator.  The
+   package states such a type's recursion axiom with the operator's map,
+   so these are no longer primitive recursive and have to be measured.
+   Each wants the measure to say something different about a leaf of the
+   domain's sum: the first that the list shrinks while the accumulator is
+   merely carried, the second that an entry's method is smaller than the
+   entry, the third that two parameters both functions share weigh
+   nothing.
+ ---------------------------------------------------------------------------*)
+
+Datatype:
+  rlp = RLPB num | RLPL (rlp list)
+End
+
+val rlp_acc_def = function "rlp_acc"
+   `(rlp_it (RLPB n) = 2n ** n) /\
+    (rlp_it (RLPL rps) = rlp_acc [] rps) /\
+    (rlp_acc acc [] = FOLDL $- 0 acc) /\
+    (rlp_acc acc (x::xs) = rlp_acc (rlp_it x :: acc) xs)`;
+
+Datatype:
+  obj = OVAR num | OBJ ((num # meth) list) ;
+  meth = SIGMA num obj
+End
+
+val height_obj_def = function "height_obj"
+   `(height_obj (OVAR x) = 1n) /\
+    (height_obj (OBJ d) = SUC (height_dict d)) /\
+    (height_dict [] = 0n) /\
+    (height_dict (e::d) = MAX (height_entry e) (height_dict d)) /\
+    (height_entry (l, m) = SUC (height_meth m)) /\
+    (height_meth (SIGMA x a) = SUC (height_obj a))`;
+
+val tp_it_def = function "tp_it"
+   `(tp_it (RLPB n) a b = a + b + n) /\
+    (tp_it (RLPL rps) a b = tp_acc rps a b) /\
+    (tp_acc [] a b = a * b) /\
+    (tp_acc (x::xs) a b = tp_acc xs (tp_it x a b) (b + 1))`;
+
+(*---------------------------------------------------------------------------
+   The leaves of the domain need not take their parameters the same way:
+   these differ in arity, and what one carries as a pair the other
+   carries as two arguments, so neither can be measured by the other's
+   columns.  A leaf no condition compares with itself is measured by
+   what the calls that reach it descend into.
+ ---------------------------------------------------------------------------*)
+
+Datatype:
+  dtree = DNode num (dtree list)
+End
+
+val walk_def = function "walk"
+   `(walk (rs:num # num) (blocks:num list) (DNode label children) =
+       walk_children (FST rs + 1) (SND rs) (label::blocks) children) /\
+    (walk_children counters stacks blocks [] = (counters, blocks)) /\
+    (walk_children counters stacks blocks (child::rest) =
+       let (counters', blocks') = walk (counters, stacks) blocks child in
+       walk_children counters' stacks blocks' rest)`;
+
+(*---------------------------------------------------------------------------
+   And the same over an operator of the user's own rather than a built-in
+   one.  The measure is there either way; what a user-declared operator
+   had no counterpart of is the law relating a size of its map to a size
+   at the identity, which the package now states of every type it
+   declares a map for.
+ ---------------------------------------------------------------------------*)
+
+Datatype:
+  mylist = MNil | MCons 'a mylist
+End
+
+Datatype:
+  nst = NB num | NL (nst mylist)
+End
+
+val nsz_def = function "nsz"
+   `(nsz (NB n) = n) /\
+    (nsz (NL m) = nsz1 m) /\
+    (nsz1 MNil = 0n) /\
+    (nsz1 (MCons r m) = nsz r + nsz1 m)`;
+
+(* the law itself, which is what made the definition above go through *)
+val _ =
+    let val th = DB.fetch "-" "mylist_size_MAP"
+    in
+      if null (hyp th) then ()
+      else raise ERR "mylist_size_MAP" "not proved outright"
+    end

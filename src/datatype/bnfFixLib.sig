@@ -501,7 +501,7 @@ sig
 
   (* and what connects a nested size's two shapes, which a termination
      proof over the operator recursed under needs *)
-  val sizeMapLemma : {unique : thm, sizedef : thm, mapeqn : thm,
+  val sizeMapLemma : {induction : thm, sizedef : thm, mapeqn : thm,
                       sizes : term list} -> thm
 
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,

@@ -86,8 +86,17 @@ fun parseSML file read parseError: scope -> result = let
   fun colZero start = start = 0 orelse DString.sub (body, start - 1) = #"\n"
   val _ = ws ()
 
+  (* A raw newline ends the literal, and is left for the caller.  SML
+     admits a newline inside a string or character literal only within
+     a `\ ... \' gap, which the `#"\\"' branch below consumes; so one
+     reached here says the closing quote is missing.  Running on to
+     `\000' instead would take the rest of the file into the literal --
+     every declaration after it, and the `QED' closing the proof it
+     sits in, which is how a cursor in a later theorem came to be
+     answered with the broken theorem's goal. *)
   fun finishString p = case cur () of
     #"\000" => parseError (p, !pos) "unclosed string literal"
+  | #"\n" => parseError (p, !pos) "unclosed string literal"
   | #"\"" => next ()
   | #"\\" => (next ();
     if Char.isSpace (cur ()) then

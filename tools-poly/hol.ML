@@ -698,11 +698,24 @@ in
            SML rather than an evalString, so it is type-checked at load
            and can be read; see the file for why the replay guard is
            per-thread. *)
-        (* Future (Isabelle's task framework).  `src/proofman' bakes it
-           into `hol.state0', which every later heap is built on, so
-           this load costs nothing on any of them.  Kept for a heap
-           built some other way. *)
+        (* Future (Isabelle's task framework), and `Timeout', which
+           bounds how long a replay may run.  `src/proofman' bakes
+           `Future' into `hol.state0', which every later heap is built
+           on, so that load costs nothing on any of them; the loads are
+           kept for a heap built some other way.
+
+           `Timeout' is in `sigobj' but in no heap's namespace, and a
+           structure the init names and cannot find takes the whole LSP
+           runtime down -- silently, since this runs before there is a
+           client to tell.  What that looks like from the outside is a
+           server that works except that no proof is ever checked,
+           `set_prover' never having been installed.  `Event_Timer' is
+           what `Timeout' schedules on, and is named directly from
+           `deferred_proofs.ML', so it is loaded rather than left to
+           arrive as a dependency. *)
         initStep "Future" (fn () => Meta.load "Future");
+        initStep "Event_Timer" (fn () => Meta.load "Event_Timer");
+        initStep "Timeout" (fn () => Meta.load "Timeout");
         useInit "tools-poly/lsp/deferred_proofs.ML";
         (* Pretty printers for thm/term/hol_type, so hover can print a
            value of one of those types instead of `?'.  Installed
@@ -803,6 +816,67 @@ in
           \            (markerLib.extract_suspended_goal (th :: sths) \
           \                                              label)) () \
           \       end)";
+        (* And inside a `Definition foo: <eqns> Termination tac End'
+           body, whose goal is likewise not written in the file: it is
+           the termination obligation `Defn' derives from `<eqns>'.
+           Built the way `TotalDefn.located_tDefine' builds it --
+           `Hol_defn' then `tc_obligation' -- so the goal the cursor
+           shows is the goal the tactic is handed.  `tgoal' answers the
+           same question by parking a goalstack in the proof manager,
+           which a request thread must not touch.
+
+           Guarded on `TotalDefn' rather than `Defn': a directory whose
+           heap has neither cannot hold a working `Termination' block
+           at all, so the hook keeping its default -- which says so --
+           is the truth there.
+
+           `deferProofs' off for the duration: `Hol_defn' runs tactic
+           proofs of its own, and with deferral on the pool would take
+           them under whatever name the restored context happened to
+           carry, inventing entries the buffer has no declaration for.
+           `def_suffix'/`ind_suffix' empty mirrors `located_qDefine's
+           own `fmod', since they name the auxiliary constants a nested
+           or mutual recursion puts in the obligation.
+
+           `triv_defn' is asked first, as `located_tDefine' asks it,
+           and under `Lib.total': `tcs_of' raises outright on a
+           tail-recursive defn, which this route cannot reach but has
+           no business relying on. *)
+        if not (isSome (#lookupStruct PolyML.globalNameSpace "TotalDefn"))
+        then ()
+        else evalString "the termination-goal builder"
+          "LSPTerminationGoal.lookup := \
+          \  (fn {stem, quote} => \
+          \     let \
+          \       fun build () = \
+          \         Lib.with_flag (LSPExtension.deferProofs, false) \
+          \           (Lib.with_flag (Defn.def_suffix, \"\") \
+          \             (Lib.with_flag (Defn.ind_suffix, \"\") \
+          \               (fn () => \
+          \                   Defn.Hol_defn stem [HOLPP.QUOTE quote]))) () \
+          \       fun nothingToProve d = \
+          \           Defn.triv_defn d orelse List.null (Defn.tcs_of d) \
+          \       val broken = \
+          \         LSPTerminationGoal.Unavailable \
+          \           (\"no termination goal yet: \" ^ \
+          \            \"the definition does not build\") \
+          \       val automatic = \
+          \         LSPTerminationGoal.NoObligation \
+          \           (\"termination was proved automatically, \" ^ \
+          \            \"so this tactic is ignored\") \
+          \     in \
+          \       case Lib.total build () of \
+          \         NONE => broken \
+          \       | SOME d => \
+          \         case Lib.total nothingToProve d of \
+          \           NONE => broken \
+          \         | SOME true => automatic \
+          \         | SOME false => \
+          \           case Lib.total Defn.tc_obligation d of \
+          \             NONE => broken \
+          \           | SOME (_, ((asl, g), _)) => \
+          \             LSPTerminationGoal.Obligation (asl, g) \
+          \     end)";
         (* Stored-theorem names for workspace/symbol and completion,
            from DB and from built Theory.dat files. *)
         useInit "tools-poly/lsp/db_symbols_init.ML";

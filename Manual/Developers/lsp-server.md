@@ -34,7 +34,8 @@ What follows from that:
   there, and putting back what it found — so it no longer perturbs the
   file's compiles.  What it cannot do is run while a compile holds the
   state: it reports that and leaves the client to ask again, rather
-  than waiting out a whole pass.
+  than waiting out a whole pass.  It also turns away the three things
+  that bracket cannot undo; see its entry below.
 
 To start a server, use `hol lsp`. This should be run in the project root (containing the files you are editing).
 
@@ -73,6 +74,43 @@ In addition to the usual LSP commands, the server supports the following extensi
     This controls whether elaboration/compilation should be triggered after every modification to the file, on save, or not at all.
 
 * Request `$/eval`: This runs a chunk of HOL text, to allow for a similar behavior as `hol repl`.
+
+  **The chunk runs in a world that is thrown away.**  The Context, the
+  loaded-module set and the namespace layer are captured before it runs
+  and put back after, so whatever it defined, proved or rebound is gone
+  by the time the answer is sent.  The caller gets a transient session
+  to ask questions in; the server keeps the one it had.
+
+  That is a *semantic* guarantee where a list of forbidden constructs
+  would only be a syntactic one — a definition reached through an alias
+  rolls back just the same.  The bracket is taken under the state lock
+  a goal-state walk uses, which also settles the older hazard that
+  `$/eval` could perturb the file's own compiles.  A compile already
+  holding the state is reported (`the HOL state is busy with a
+  compile; ask again`) rather than waited for: a chunk may run for as
+  long as the user likes, and queueing one would hold the state that
+  long too.
+
+  **The discard is announced.**  A cheap fingerprint of the HOL state
+  is compared across the bracket, and a chunk that changed something
+  it could see comes back with a non-fatal report saying so.  Silently
+  undoing what someone just typed would be the same invisibility the
+  bracket exists to prevent.  The fingerprint counts what a chunk
+  usually adds — theorems, constants, types, parents — so it will miss
+  a change that leaves those alone, such as a fixity or an overload;
+  the rollback is the guarantee, the fingerprint only decides whether
+  to mention it.
+
+  **What is still refused** is what a snapshot cannot undo: `load` and
+  `use`, because loading a theory *seals* it in `KernelSig`, outside
+  the Context, so restoring would leave it sealed while marking it
+  unloaded; and `export_theory`, which writes files.  Those come back
+  as an `InvalidParams` error naming the call.  The holdep preload
+  named by the `holdep` parameter happens *outside* the bracket and
+  persists, that being the point of it.
+
+  Every accepted chunk is also sent to `window/logMessage`, so the
+  client's log is the record a transient prompt is not.
 
   Parameters:
   * `uri: URI` - The file (or virtual path) associated to this chunk
@@ -117,6 +155,14 @@ In addition to the usual LSP commands, the server supports the following extensi
     * If `incr = Stream` then each report is sent as soon as possible in a `$/eval/1` notification:
       * `id: integer | string` - the current request
       * `out: Report` - the report
+
+      A `toplevelOut`/`compilerOut` body here is whole lines: the
+      server holds a partial line back until its newline arrives.
+      Poly's pretty printer emits a value one item at a time (`val`,
+      ` `, `it`, ` `, `=`, …), so without that a client appending a
+      line per report renders `val it = 39: int` as ten lines.  Append
+      the bodies as text; they carry their own newlines, and only the
+      last report of a run may lack one.
 
   The `Report` object is a possible output of the compiler:
   ```ts

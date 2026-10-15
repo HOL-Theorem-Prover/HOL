@@ -412,6 +412,23 @@ end);
 <string>"\\"({ws}|{newline}) => (YYBEGIN stringlbrk; continue());
 <string>"\"" => (StringEnd yyend);
 <string>[^\\""\n\015]{1,10} => (continue());
+<string>{newline} => (let
+  (* A raw newline cannot appear in an SML string or character
+     literal: only a `\ ... \' gap spans lines, and that is the
+     `stringlbrk' state below.  So the literal was never closed.  End
+     it here and unread the newline, which belongs to the code that
+     follows.
+
+     Without this the newline falls through to the catch-all at the
+     foot of this file, the literal runs to EOF, and every declaration
+     after it is swallowed -- the `QED' closing the enclosing proof
+     included, which left the LSP answering a cursor in a later
+     theorem with the broken theorem's goal and no error at all. *)
+  val _ = yybufpos := !yybufpos - size yytext (* unread newline *)
+  (* Reported over the newline, so the mark sits at the end of the
+     line the quote should have closed on. *)
+  val _ = parseError (yypos, yyend) "unterminated string"
+  in StringEnd yypos end);
 
 <stringlbrk>"\\" => (YYBEGIN string; continue());
 

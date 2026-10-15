@@ -211,10 +211,85 @@ type theorem_context = {
      Strings only, like the rest of this signature: the structure is
      compiled into `bin/hol' by polyc, below the kernel, and cannot
      name a term. *)
-  resumeOf: {suspension: string, label: string} option
+  resumeOf: {suspension: string, label: string} option,
+  (* SOME for a cursor in the `Termination … End' region of a
+     `Definition'.  Like a `Resume', the goal such a body discharges is
+     written nowhere in the file: it is the termination obligation the
+     definition principle derives from the equations.  So `quote' holds
+     those equations rather than a statement, and the hook builds the
+     defn and asks it for its obligation instead of parsing a term.
+
+     `stem' is the Definition's name, which the parser already hands
+     over without its attribute block, and is what `Hol_defn' is given.
+     `quoteStart' is the `Definition' keyword rather than the quote, so
+     that the snapshot restored before the walk is one in which the
+     constant the defn is about to mint does not yet exist.
+
+     Strings only, for the reason given above. *)
+  terminationOf: {stem: string} option,
+  (* Ask where the proof first goes wrong, rather than what the state
+     is at `cursor'.
+
+     A cursor walk stands `cheat' in for a `>-' branch that has not
+     discharged its goal and carries on, because an unfinished branch
+     is the ordinary condition of a proof being written and the reader
+     still wants the state further down.  That makes it useless as a
+     source of diagnostics: what it reports is the last branch it
+     walked past, not the first thing that failed, and whether it
+     reports anything at all depends on how much of the proof this
+     particular walk replayed rather than on the proof.
+
+     A locating walk stops at the first failure and consults no cache,
+     so its answer is a property of the text.  `cursor' is ignored.
+     Set by the server for the walk that places a failed proof's
+     diagnostic; false for anything serving a goals pane. *)
+  locate: bool
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref
+
+(* The cursor offset that puts a walk at a given step of this body --
+   the inverse of the `step' a `goal_state_response' comes back with.
+
+   A caller holding a cursor does not need this; a caller that has no
+   cursor does.  An agent driving the server asks for "the state after
+   step 7 of this proof", or for the frontier, and cannot work the
+   offset out for itself: steps are counted over `TacticParse's
+   fragments, so mapping one to a byte means parsing the tactic body,
+   which is exactly the work the server already did.  `documentSymbol'
+   already answers the easier half, which theorem a name denotes.
+
+   The int is the step index, as `goal_state_response.step' reports it;
+   a negative one asks for the last step in the body.  NONE when the
+   body has no such step.  Offsets are file coordinates, matching
+   `theorem_context.cursor'.  Default no-op; installed by
+   `lsp/goal_state_init.ML'. *)
+val stepCursor: (theorem_context * int -> int option) ref
+
+(* Apply a candidate tactic to the state a walk reaches, and report
+   what it did -- without committing it anywhere.
+
+   The candidate is never spliced into the body.  Text splicing needs a
+   separator that depends on whether the prefix ends mid-chain, and a
+   cursor inside a tactic makes nonsense of it; the walker works on
+   goal *states*, so the candidate is simply walked from the state the
+   anchor reached.  Nor is the goal passed in: a goal round-tripped
+   through its printed form is not reliably the same goal, since
+   printing omits types that were inferred and what a numeral denotes
+   depends on what is loaded.  The anchor is the only honest way to
+   name a goal.
+
+   `budgetMs' is per request, 0 meaning the server's own: a model's
+   candidate can loop, and what a speculative probe may spend is not
+   what a goals pane following a cursor may spend.
+
+   `failedRange' always comes back NONE for a failure in the candidate
+   -- it is not in the file, so there is no range to point at, and
+   `error' names the step instead.  A failure in the *anchor* is a
+   different thing and is reported against the file as usual. *)
+val tryTacticAt:
+  (hover_context * theorem_context * {tactic: string, budgetMs: int} ->
+   goal_state_response option) ref
 
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->
@@ -386,7 +461,7 @@ val theorySealed: (string -> bool) ref
               dropped, which is right, because an edit above it means its
               recorded position is about to be stale.
 
-   The remaining three are the pool's own:
+   The rest are the pool's own:
 
      Checking  a worker is on it
      Proved    the replay went through
@@ -400,6 +475,13 @@ val theorySealed: (string -> bool) ref
      Diverged  the replay went through but produced extra hypotheses for
                some other reason.  Everything elaborated below this
                declaration is suspect.
+     TimedOut  the replay was still running when its budget ran out, so
+               nobody knows whether the proof goes through.  Not a
+               verdict on the proof: a report that we stopped asking.
+               It exists because the alternative -- leaving the entry
+               `Checking' -- reads exactly like a proof that is merely
+               slow, and a pool that never settles holds up everything
+               downstream that waits for it to.
 
    Suspended and Failed want opposite treatment downstream, which is why
    they are separate states rather than one "did not match" bucket.
@@ -420,17 +502,33 @@ val theorySealed: (string -> bool) ref
    cheating it, since its result is not predictable from its statement.
 
    So a caller assembling a display walks its own list of declarations
-   and consults the pool: an entry gives one of the last five, and
+   and consults the pool: an entry gives one of the pool's own, and
    absence means Unseen or Cheated according to whether elaboration has
    reached that declaration.
    ---------------------------------------------------------------------- *)
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string
+       | TimedOut of Time.time
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs: bool ref
+(* How long a replay may run before the pool stops waiting on it and
+   reports `TimedOut'.  `Time.zeroTime' means no limit, which is the
+   behaviour this had before there was a budget at all.
+
+   A budget is not an optimisation.  A replay that never returns leaves
+   its entry `Checking' for the life of the process, and `poolBusy'
+   then answers yes for ever -- which stops the server localising *any*
+   failed proof in the file onto the tactic that failed, since that walk
+   restores process-global state and may not run while a worker might
+   be reading it.  One wedged proof otherwise silences the diagnostics
+   for every other proof beside it.
+
+   Set from `$/setConfig`'s `proofTimeoutMs`, or from
+   `HOL_LSP_PROOF_TIMEOUT_MS` in the environment. *)
+val proofTimeout: Time.time ref
 (* Set by the compile driver while it retries a declaration whose tactic
    would not compile, with the proof body replaced by `cheat`.  Such a
    proof must not be enqueued: replaying `cheat` would report `Proved`
