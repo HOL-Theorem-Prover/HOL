@@ -708,26 +708,59 @@ fun case_rws tyi =
     |> map BODY_CONJUNCTS
     |> List.concat
 
-val cache = ref (List.concat (map case_rws (TypeBase.elts ())))
+fun case_ss_of rws = boolSimps.bool_ss++simpLib.rewrites rws
 
-fun update_cache tyinfo =
-   let val thms = (case_rws tyinfo)
-   in
-     cache := List.revAppend (thms,!cache)
-   end
+(* The case rewrites live in the context, beside the TypeBase they come
+ * from, so a restore rewinds both together and a datatype declared under a
+ * pin stays in the pin.  The slot only grows: set_parents replaces the
+ * TypeBase without running the update hook, so the slot can keep the
+ * rewrites of a type the TypeBase no longer has.  Those name constants the
+ * context has retired, so they cannot match its terms and cost only
+ * simpset size.  The simpset is a suspension over the rewrites in the same
+ * value, so it cannot disagree with them, and declaring a datatype does
+ * not pay for a simpset no case tactic may ask for. *)
+type case_state = {rws : thm list, ss : simpset Susp.susp}
+
+fun mk_case_state rws : case_state =
+    {rws = rws, ss = Susp.delay (fn () => case_ss_of rws)}
+
+val case_slot : case_state Context.Data.slot =
+    Context.Data.new
+      {name = "BasicProvers.case_rewrites",
+       empty = mk_case_state (List.concat (map case_rws (TypeBase.elts ()))),
+       pp = fn _ => "<BasicProvers.case_rewrites>"}
+
+(* An update that adds no rewrites, such as a non-datatype's, keeps the
+ * simpset already built. *)
+fun update_case_state tyinfo =
+   case case_rws tyinfo of
+       [] => ()
+     | thms => Context.Data.modify case_slot
+                 (fn {rws, ...} => mk_case_state (List.revAppend (thms, rws)))
 in
 
-val _ = TypeBase.register_update_fn (fn tyinfo => (update_cache tyinfo;tyinfo))
+val _ = TypeBase.register_update_fn
+          (fn tyinfo => (update_case_state tyinfo; tyinfo))
 
-fun case_rwlist () = !cache
+(* The simpset is built when PURE_CASE_SIMP_CONV is applied to rws, so a
+ * caller that keeps (PURE_CASE_SIMP_CONV rws) and applies it to many terms
+ * builds it only once. *)
+fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (case_ss_of rws) []
 
-(* Add the rewrites into a simpset to avoid re-processing them when
- * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
- * has an order of magnitude speedup on developments with large datatypes *)
-fun PURE_CASE_SIMP_CONV rws =
-    simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
+fun case_conv_of ctxt =
+    simpLib.SIMP_CONV (Susp.force (#ss (Context.Data.get case_slot ctxt))) []
 
-fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
+fun CASE_SIMP_CONV tm = case_conv_of (Context.snapshot()) tm
+
+(* The assumption rewriter is built per call rather than kept with the
+ * simpset: half of its net is the context's implicit rewrites, which
+ * change independently of the TypeBase. *)
+fun case_tools ctxt =
+   let val {rws, ss} = Context.Data.get case_slot ctxt
+   in {conv = simpLib.SIMP_CONV (Susp.force ss) [],
+       asm_rule = Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV
+                    (Rewrite.implicit_rewrites_of ctxt) rws}
+   end
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -773,14 +806,16 @@ fun mset_diff l2 l1 =  (* important to maintain the order of elements in l2 *)
 (* of the assumptions by the new ones.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun simp_old_assums (orig as (asl1,_):goal) (gl as (asl2,_)) =
+fun simp_old_assums (orig as (asl1,_):goal) (gl as (asl2,_)) c =
  let val new = mset_diff asl2 asl1
  in if null new then ALL_TAC
     else let val thms = map ASSUME new
+             val rule = Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV
+                          (Rewrite.implicit_rewrites_of c) thms
          in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
-            RULE_ASSUM_TAC (REWRITE_RULE thms) THEN
+            RULE_ASSUM_TAC rule THEN
             MAP_EVERY ASSUME_TAC thms end
- end gl;
+ end gl c;
 
 fun use_new_assum orig_goal cgoal =
  (TRY (WEAKEN_TAC is_refl) THEN
@@ -792,24 +827,22 @@ fun use_new_assum orig_goal cgoal =
 (* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
 (*---------------------------------------------------------------------------*)
 
-fun CASE_TAC gl =
- (PURE_CASE_TAC THEN use_new_assum gl THEN CONV_TAC CASE_SIMP_CONV) gl;
+fun CASE_TAC gl c =
+ (PURE_CASE_TAC THEN use_new_assum gl THEN CONV_TAC (case_conv_of c)) gl c;
 
-fun TOP_CASE_TAC gl =
- (PURE_TOP_CASE_TAC THEN use_new_assum gl THEN CONV_TAC CASE_SIMP_CONV) gl;
+fun TOP_CASE_TAC gl c =
+ (PURE_TOP_CASE_TAC THEN use_new_assum gl THEN CONV_TAC (case_conv_of c)) gl c;
 
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis anywhere in the goal, then simplify a bit.             *)
 (*---------------------------------------------------------------------------*)
 
-fun FULL_CASE_TAC goal =
- let val rws = case_rwlist()
-     val case_conv = PURE_CASE_SIMP_CONV rws
-     val asm_rule = Rewrite.REWRITE_RULE rws
+fun FULL_CASE_TAC goal c =
+ let val {conv, asm_rule} = case_tools c
  in PURE_FULL_CASE_TAC THEN use_new_assum goal
     THEN RULE_ASSUM_TAC asm_rule
-    THEN CONV_TAC case_conv
- end goal
+    THEN CONV_TAC conv
+ end goal c
 
 (*---------------------------------------------------------------------------*)
 (* Repeatedly do a case analysis anywhere in the goal. Avoids re-computing   *)
@@ -817,15 +850,13 @@ fun FULL_CASE_TAC goal =
 (* than REPEAT FULL_CASE_TAC.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun EVERY_CASE_TAC goal =
- let val rws = case_rwlist()
-     val case_conv = PURE_CASE_SIMP_CONV rws
-     val asm_rule = BETA_RULE o Rewrite.REWRITE_RULE rws
+fun EVERY_CASE_TAC goal c =
+ let val {conv, asm_rule} = case_tools c
      fun tac a = (PURE_FULL_CASE_TAC THEN use_new_assum a THEN
-                  RULE_ASSUM_TAC asm_rule THEN
-                  CONV_TAC case_conv) a
+                  RULE_ASSUM_TAC (BETA_RULE o asm_rule) THEN
+                  CONV_TAC conv) a
  in REPEAT tac
- end goal;
+ end goal c;
 
 val case_tac = CASE_TAC
 val top_case_tac = TOP_CASE_TAC
