@@ -397,6 +397,8 @@ val _ =
     FileSys.chDir "..";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sig";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sml";
+    compile [] "TheoryDat.sig";
+    compile ["-I", "mosml"] "TheoryDat.sml";
     FileSys.chDir "../../tools/Holmake";
     FileSys.chDir "mosml";
     compile ["-I", "..", "-I", "../core", "-I", "../hfs", "-I", "../hmf", "-I", "../../parsing",
@@ -423,7 +425,7 @@ val _ =
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sml";
     FileSys.chDir "../core";
     compile ["-I", "..", "-I", "../hfs"] "HM_TheoryDat.sig";
-    compile ["-I", "..", "-I", "../hfs"] "HM_TheoryDat.sml";
+    compile ["-I", "..", "-I", "../hfs", "-I", "../../../src/portableML"] "HM_TheoryDat.sml";
     compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sig";
     compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sml";
     compile ["-I", ".."] "HM_BuildLock.sig";
