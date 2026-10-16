@@ -238,26 +238,24 @@ New features
     the earlier commands of a multi-command rule, only the last of which
     is expected to have produced the target.
 
--   `Holmake` (under Poly/ML) can keep a project's build products
-    out of its source tree.  A `holproject.toml` key `objroot`, the
-    option `--objroot`, or the environment variable `HOLOBJROOT`
-    names an *artifact root*, below which the source structure is
-    mirrored: `src/sub/fooTheory.dat` is kept as
-    `<objroot>/objs/src/sub/fooTheory.dat`, with dependency files,
-    logs, locks and HTML docs in sibling `make-deps`, `logs`,
-    `locks` and `docs` trees.  Building, `load`ing in `hol` and
-    cleaning all follow it, so a read-only checkout can be built;
-    for instance
+-   Under Poly/ML, `Holmake` can keep a project's standard build
+    products in a separate *artifact root*.  Set `objroot` in
+    `holproject.toml`, pass `--objroot`, or set `HOLOBJROOT`:
 
            name = "myproj"
            objroot = "/scratch/myproj-build"
 
-    The command line beats `holproject.toml`, which beats the
-    environment.  The source root defaults to the project root and
-    can be given with `--srcroot` or `HOLSRCROOT`.  Without a
-    setting nothing changes.
-    See *Artifact layout* in the *Project files* sub-section of the
-    Description manual.
+    The source directory structure is preserved: `src/sub/fooTheory.dat`
+    is stored at `<objroot>/objs/src/sub/fooTheory.dat`.  Dependency
+    files, logs, locks and HTML documentation also use the artifact
+    root.  Building, loading in `hol` and cleaning share this layout.
+    Custom rules and named heaps retain their existing output paths.
+
+    The command line takes precedence over `holproject.toml`, which
+    takes precedence over the environment.  The source root defaults
+    to the project root; use `--srcroot` to set it explicitly.
+    The default artifact layout is unchanged.
+    See *Artifact layout* in the Description manual.
 
 Bugs fixed
 ----------

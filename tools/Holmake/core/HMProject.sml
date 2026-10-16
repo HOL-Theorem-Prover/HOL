@@ -421,15 +421,13 @@ fun build_times_files root =
       build_times_file h :: (if r = h then [] else [build_times_file r])
     end
 
-(* ----------------------------------------------------------------------
-   resolve_layout: the separate artifact root, if any.  objroot comes
-   from the command line, else the governing holproject.toml, else
-   HOLOBJROOT.  The environment ranks last because Holmake exports it
-   to every child, and a Holmake started by a recipe in another project
-   must still obey that project's own manifest.
-   ---------------------------------------------------------------------- *)
-(* fullPath of the longest existing prefix of the absolute path p, so
-   that an objroot yet to be created compares like an existing one *)
+(* ---------------------------------------------------------------------
+   Select the artifact root: command line, project file, then environment.
+   Project settings override the environment inherited from a parent
+   Holmake, so recipes can build another project with its own layout.
+   --------------------------------------------------------------------- *)
+(* Resolve symlinks in the existing prefix of p, an absolute path.
+   The artifact root need not exist yet. *)
 fun physical p =
     OS.FileSys.fullPath p
     handle OS.SysErr _ =>
@@ -462,8 +460,8 @@ fun resolve_layout {start, cli_objroot, cli_srcroot, no_project} =
             | (NONE, SOME p) => (SOME p, true)
             | (NONE, NONE) =>
               (Option.map (abs_relative_to start) (env "HOLOBJROOT"), false)
-      (* the root of the HOL distribution carries a holproject.toml, so
-         defaulting to it would claim every $(HOLDIR)/src directory *)
+      (* Do not infer HOLDIR as the source root: that would redirect products
+         throughout the HOL installation. *)
       fun not_holdir r =
           if physical r = physical Systeml.HOLDIR then NONE else SOME r
       fun srcroot objroot =
@@ -530,10 +528,9 @@ fun discover_under objroots start excludes =
       val excl_set = Binaryset.addList
                        (Binaryset.empty String.compare, excludes)
       fun hasProjFile p = access(OS.Path.concat(p, "holproject.toml"), [A_READ])
-      (* An objroot inside the tree holds products, not sources.  The
-         layout's paths are physical while the walk's are lexical (macOS
-         /var is /private/var), so also prune the objroot as seen from
-         start; fullPath is only consulted when there is one to prune. *)
+      (* Exclude artifact roots from the source scan.  Test both physical
+         paths and paths relative to start, which may contain symlinks
+         (e.g. /var on macOS).  Resolve start only when needed. *)
       val pruned =
           case objroots of
               [] => (fn _ => false)

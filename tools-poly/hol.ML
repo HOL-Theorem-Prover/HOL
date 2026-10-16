@@ -438,11 +438,9 @@ fun main() = let
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val cwd_incs = ReadHMF.find_includes (OS.FileSys.getDir())
-  (* The artifact layout.  Configured on every path through here, so a
-     layout saved in a heap never leaks into a later session: once now,
-     before the project scan below (so an objroot inside the project is
-     not taken for sources), and again after loadState, which restores
-     HFS_NameMunge's reference to its value at save time. *)
+  (* Configure before project discovery so it skips the artifact root.
+     Reapply after loadState, which restores saved references and may
+     replace the layout with one from an earlier session. *)
   val layout =
       HMProject.resolve_layout
         {start = OS.FileSys.getDir(), cli_objroot = #objroot options,

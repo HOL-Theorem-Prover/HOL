@@ -107,8 +107,7 @@ fun load { start : string } : config option =
                               includes = [], excludes = [],
                               overrides = [] }
                   | SOME tbl => parse_h4pedant_block proj_path root tbl
-            (* a separate artifact root inside the tree holds build
-               products, never sources *)
+            (* Exclude the artifact root from source checks. *)
             val objroot =
                 HMProject.tag_path proj_path
                   (fn () => Option.map (HMProject.abs_relative_to root)

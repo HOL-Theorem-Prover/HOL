@@ -826,11 +826,9 @@ handle OS.SysErr(s, erropt) =>
 
 val theorygraph_dir = fullPath [HOLDIR, "help", "theorygraph"]
 
-(* Scan sigobj/ for the production theories — anything matching *Theory.sig
-   except "FinalTheory.sig" and *_emitTheory.sig.  Each entry is a symlink
-   to the physical <thy>Theory.sig (in <src>/.hol/objs in the legacy
-   layout); its logical name with the extension rewritten gives us the
-   .dat file paths to feed theorytool via --paths-from. *)
+(* Find production theories in sigobj: *Theory.sig except FinalTheory.sig
+   and *_emitTheory.sig.  Convert each symlink target to a logical .dat
+   path for theorytool's --paths-from option. *)
 fun list_sigobj_dats () =
   let
     val sigobj = fullPath [HOLDIR, "sigobj"]
@@ -845,9 +843,8 @@ fun list_sigobj_dats () =
           end
         else false
     fun dat_of_link sigobj_path =
-        (* sigobj/<thy>Theory.sig → physical <thy>Theory.sig.  Return the
-           *logical* "<src>/<thy>Theory.dat" path; HFS_NameMunge routes
-           that back to the products directory at access time. *)
+        (* Convert the physical symlink target to a logical path before
+           changing its extension.  HFS_NameMunge maps it back on access. *)
         let val tgt =
                 if OS.FileSys.isLink sigobj_path
                 then SOME (OS.FileSys.readLink sigobj_path)

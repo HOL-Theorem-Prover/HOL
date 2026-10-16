@@ -290,8 +290,7 @@ fun graphbuild optinfo g =
 
 
 
-    (* children work in the same artifact layout; an inherited setting
-       is replaced, not shadowed *)
+    (* Pass the layout to children, replacing inherited root variables. *)
     val (layout_env, inherited_env) =
         case HFS_NameMunge.current_layout () of
             NONE => ([], Posix.ProcEnv.environ())

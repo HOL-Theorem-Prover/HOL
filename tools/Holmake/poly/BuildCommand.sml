@@ -236,9 +236,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                         SOME "1" => true
                       | _ => false)
   val thmsrc = #thmsrc (#core optv)
-  (* The artifact layout, passed on to the hol processes run below: as
-     options, because the -j1 builder runs scripts with
-     Systeml.systeml, which cannot add environment entries *)
+  (* Pass the layout to hol as command-line options.  The -j1 builder
+     uses Systeml.systeml, which cannot add environment entries. *)
   val layout_args =
       case HFS_NameMunge.current_layout () of
           NONE => []

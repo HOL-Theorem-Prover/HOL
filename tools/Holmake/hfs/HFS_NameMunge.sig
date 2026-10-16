@@ -8,27 +8,29 @@ sig
   (* applies HFS-specific "cleaning" to the current directory, assuming
      all normal cleaning has been done *)
 
-  (* Artifact layout.  With no layout, products live in <dir>/.hol/objs,
-     depfiles in <dir>/.hol/make-deps, and so on (the legacy layout).
-     With a layout, every directory under srcroot keeps its products
-     under objroot instead: <objroot>/objs/<rel>, <objroot>/make-deps/<rel>
-     etc., where <rel> is the directory relative to srcroot.  Both
-     fields are absolute and canonical. *)
+  (* Poly/ML artifact layout.  The legacy layout uses <dir>/.hol/objs
+     for products, <dir>/.hol/make-deps for dependencies, etc.
+     A configured layout maps source directories under srcroot to
+     <objroot>/<kind>/<rel>, where rel is relative to srcroot.
+     Directories outside srcroot retain the legacy layout.
+     Both roots must be absolute and canonical.  Moscow ML retains
+     its flat layout. *)
   type layout = {srcroot : string, objroot : string}
   val configure : layout option -> unit
-  (* always assigns; NONE selects the legacy layout *)
+  (* Replace the current layout; NONE selects the legacy layout. *)
   val current_layout : unit -> layout option
-  (* the configured layout; if configure has never been called, the
-     result of layout_from_env, computed once *)
+  (* Return the configured layout.  If configure has not been called,
+     read and cache layout_from_env. *)
   val layout_from_env : unit -> layout option
-  (* from HOLOBJROOT and HOLSRCROOT; NONE (with a warning) if only one
-     is set *)
+  (* Read HOLOBJROOT and HOLSRCROOT.  Return NONE if neither is set;
+     warn and return NONE if only one is set or the roots coincide. *)
   val owned_by_layout : string -> bool
-  (* absolute path under srcroot but not under objroot *)
+  (* True for a path under srcroot and outside objroot.
+     Relative paths are resolved against the current directory. *)
 
-  (* Each takes a source directory (absolutised if relative) and returns
-     the directory holding that kind of artifact for it.  A directory
-     already under objroot is returned unchanged. *)
+  (* Locate artifacts for a source directory.  Relative inputs produce
+     relative legacy paths, or absolute paths in the configured layout.
+     Directories already under objroot are returned unchanged. *)
   val objdir_for : string -> string
   val depdir_for : string -> string
   val logdir_for : string -> string
@@ -39,11 +41,12 @@ sig
   val holobjdir_var_for : string -> string
   (* value of $(HOLOBJDIR) in a Holmakefile in the given directory *)
   val artifact_dirs_for : string -> string list
-  (* the per-directory artifact directories when the directory is
-     mapped by the layout (plus <objroot>/build-logs for srcroot
-     itself); [] otherwise *)
+  (* List the artifact directories for a mapped source directory.
+     For srcroot, also include <objroot>/build-logs.  Return [] for
+     directories outside the mapping or when no layout is configured. *)
   val FStoHOL : string -> string option
-  (* physical product path (either layout) -> logical path *)
+  (* Convert a physical product path from either layout to a logical
+     path; return NONE if it does not match either layout. *)
 
   type dirstream
   exception DirNotFound
@@ -56,10 +59,8 @@ sig
       ({physdir:string,base:string} -> 'a -> 'a) ->
       'a ->
       'a
-  (* test is on bare name; action/reducer can take side effects and is
-     passed base name (which matches the predicate) as well as the
-     directory the file physically lives in.  For files in a separate
-     products directory, the action runs with that directory as the
-     current directory. *)
+  (* Test each bare filename with the predicate, then call action with
+     its name and physical directory.  For separate product directories,
+     action runs with that directory as the current directory. *)
 
 end

@@ -1,10 +1,6 @@
-(* Regression tests for a separate artifact root (objroot).
-
-   With `objroot` set (holproject.toml, --objroot or HOLOBJROOT), the
-   products of every directory under the source root go to
-   <objroot>/objs/<rel>, depfiles to <objroot>/make-deps/<rel>, and so
-   on, leaving the source tree untouched.  The fixtures live in a
-   temporary directory; theories are [bare] so hol.state0 suffices. *)
+(* Test artifact-root configuration, building, loading and cleaning.
+   Fixtures use temporary directories and [bare] theories, so they need
+   only hol.state0. *)
 
 open testutils
 
@@ -30,7 +26,7 @@ fun capture dir cmd =
       (r, output)
     end
 
-(* `env` is a list of NAME=value shell prefixes *)
+(* env contains shell-quoted NAME=value assignments. *)
 fun holmake_env env dir args =
     capture dir (String.concatWith " "
                    (env @ map Systeml.protect
@@ -54,7 +50,7 @@ fun rm_rf p =
 fun exists p = OS.FileSys.access (p, [])
 fun isdir p = OS.FileSys.isDir p handle OS.SysErr _ => false
 
-(* every regular file under p *)
+(* List files recursively under p. *)
 fun files_under p =
     if isdir p then
       let val ds = OS.FileSys.openDir p
@@ -82,8 +78,8 @@ val _ = OS.Process.atExit
 fun holheap_decl () =
     "ifdef POLY\nHOLHEAP = " ^ hol_state0 ^ "\nendif\n"
 
-(* The project fixture: dirA/sub depends on dirA, dirB on both, and
-   dirA has a custom rule writing into $(HOLOBJDIR). *)
+(* C in dirA/sub depends on A in dirA; B in dirB depends on both.
+   A custom rule in dirA writes a marker to $(HOLOBJDIR). *)
 fun mk_fixture {name, toml} =
     let
       val root = T ++ name
@@ -126,9 +122,7 @@ fun thy_dats out =
 
 fun modtimes ps = map OS.FileSys.modTime ps
 
-(* ----------------------------------------------------------------------
-   12. The mapping itself, in this process
-   ---------------------------------------------------------------------- *)
+(* Path mapping and directory listings. *)
 val _ = tprint "Pure mapping: HOLtoFS, FStoHOL, objdir_for, owned_by_layout"
 val R = T ++ "r12"
 val O = T ++ "o12"
@@ -198,10 +192,8 @@ val _ = check "legacy restored"
                HFS_NameMunge.objdir_for (R ++ "a") = R ++ "a/.hol/objs")
 val _ = OK ()
 
-(* ----------------------------------------------------------------------
-   1. External objroot from holproject.toml, built from the root, with
-      the parallel and the -j1 builders
-   ---------------------------------------------------------------------- *)
+(* Build from the project root with an external objroot from the manifest.
+   Exercise both parallel and -j1 builds. *)
 val out = T ++ "out"
 val root = mk_fixture {name = "p1", toml = SOME ("objroot = \"" ^ out ^ "\"\n")}
 val dirA = root ++ "dirA"
@@ -241,7 +233,7 @@ val _ = check "logical view of BTheory.dat"
 val _ = HFS_NameMunge.configure NONE
 val _ = OK ()
 
-(* 2. Nothing to do on a second run *)
+(* An unchanged project does not rebuild. *)
 val _ = tprint "Rerun leaves the products alone"
 val before_times = modtimes (thy_dats out)
 val (r2, o2) = holmake root []
@@ -250,7 +242,7 @@ val _ = check "theories rebuilt" (modtimes (thy_dats out) = before_times)
 val _ = check "rerun built theories" (not (contains "Building" o2))
 val _ = OK ()
 
-(* 3. bin/hol loads the products: options, environment, toml *)
+(* Load products with layout settings from options or the project file. *)
 fun write_check dir =
     write_file (dir ++ "check.ML")
                "val _ = load \"BTheory\";\n\
@@ -276,14 +268,14 @@ val _ = check_build "cleanAll" (holmake root ["-r", "cleanAll"])
 val _ = check_products ["-j", "1"]
 val _ = OK ()
 
-(* 4. Building from a subdirectory builds its INCLUDES into objroot *)
+(* A subdirectory build uses objroot for its included dependencies. *)
 val _ = tprint "Holmake in dirB builds A and C into the objroot"
 val _ = check_build "cleanAll" (holmake root ["-r", "cleanAll"])
 val _ = check_build "build in dirB" (holmake dirB [])
 val _ = check "A, C, B built" (List.all exists (thy_dats out))
 val _ = OK ()
 
-(* 5. Cleaning is per directory *)
+(* Cleaning preserves artifacts belonging to other source directories. *)
 val _ = tprint "clean and cleanAll in dirA leave other directories alone"
 val _ = check_build "build" (holmake root [])
 val _ = check_build "clean in dirA" (holmake dirA ["clean"])
@@ -303,7 +295,7 @@ val _ = check_build "-r cleanAll" (holmake root ["-r", "cleanAll"])
 val _ = check "files left in objroot" (null (files_under out))
 val _ = OK ()
 
-(* 6. Precedence: command line, then holproject.toml, then environment *)
+(* Configuration precedence: command line, project file, environment. *)
 val out2 = T ++ "out2"
 val out3 = T ++ "out3"
 fun has_products d = exists (d ++ "objs/dirA/ATheory.dat")
@@ -353,8 +345,8 @@ val _ = check "products in root/relout"
                not (exists (T ++ "relout")))
 val _ = OK ()
 
-(* 7. Without a project, srcroot must be given; duplicate basenames in
-      two directories get two products *)
+(* Require an explicit source root outside a project.  Preserve separate
+   products for modules with the same basename in different directories. *)
 val rootN = T ++ "p7"
 val _ = app OS.FileSys.mkDir [rootN, rootN ++ "dirA", rootN ++ "dirB"]
 val _ = write_file (rootN ++ "Holmakefile")
@@ -388,7 +380,7 @@ val _ = check ("message does not name --srcroot:\n" ^ o7h)
               (contains "--srcroot" o7h)
 val _ = OK ()
 
-(* 8. An objroot inside the project is not mistaken for sources *)
+(* Project discovery skips an artifact root inside the source tree. *)
 val _ = tprint "In-tree objroot is pruned from project discovery"
 val root8 = mk_fixture {name = "p8",
                         toml = SOME "objroot = \"build\"\nholmake = true\n"}
@@ -404,20 +396,20 @@ val _ = check_build "rerun" (holmake root8 [])
 val _ = check "rerun rebuilt" (modtimes (thy_dats (root8 ++ "build")) = times8)
 val _ = OK ()
 
-(* 9. A read-only source tree builds into a writable objroot *)
+(* Build read-only sources into a writable artifact root. *)
 val _ = tprint "Read-only sources build into an external objroot"
 val _ = check_build "cleanAll" (holmake root ["-r", "cleanAll"])
 val _ = OS.Process.system ("chmod -R a-w " ^ Systeml.protect root)
 val r9 = holmake root []
 val _ = OS.Process.system ("chmod -R u+w " ^ Systeml.protect root)
 val _ = if Posix.ProcEnv.uidToWord (Posix.ProcEnv.getuid ()) = 0w0 then
-          (* root ignores permissions; the build ran, nothing to show *)
+          (* Root bypasses the source permissions restriction. *)
           ()
         else (check_build "read-only build" r9;
               check "products" (List.all exists (thy_dats out)))
 val _ = OK ()
 
-(* 10. Cachekey mode stamps into the objroot *)
+(* Cachekey builds store stamps in objroot and reuse unchanged products. *)
 val _ = tprint "--rebuild=cachekey uses objroot stamps"
 val _ = check_build "cleanAll" (holmake root ["-r", "cleanAll"])
 val _ = check_build "first" (holmake root ["--rebuild=cachekey"])
@@ -427,7 +419,7 @@ val _ = check_build "second" (holmake root ["--rebuild=cachekey"])
 val _ = check "second run rebuilt" (modtimes (thy_dats out) = times10)
 val _ = OK ()
 
-(* 11. No objroot anywhere: the legacy layout *)
+(* Without an artifact root, retain the legacy layout. *)
 val _ = tprint "Without objroot products stay in .hol/objs"
 val root11 = mk_fixture {name = "p11", toml = NONE}
 val out11 = T ++ "out11"

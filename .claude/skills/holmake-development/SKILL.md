@@ -227,22 +227,25 @@ Implications:
 
 ### Two layouts
 
-`HFS_NameMunge` is also the single authority for *where* every
-artifact goes.  Under the default (legacy) layout a directory's
-products, depfiles/`lastmaker`, logs, locks and docs live in
-`<dir>/.hol/{objs,make-deps,logs,locks,docs}`.  With an artifact
-root configured (`objroot` in `holproject.toml`, `--objroot`,
-`HOLOBJROOT`; see `HMProject.resolve_layout`) every directory under
-`srcroot` maps to `<objroot>/<kind>/<rel>` instead.  Ask
-`objdir_for`, `depdir_for`, `logdir_for`, `lockdir_for`,
-`docsdir_for`, `HOLtoFS` / `FStoHOL` rather than spelling `.hol/...`.
-The layout is chosen at run time (`configure`), never frozen into a
-heap: `tools-poly/hol.ML` reconfigures after `loadState`.  Holmake
-hands it to children via `HOLOBJROOT`/`HOLSRCROOT` and
-`--objroot`/`--srcroot`.  The regression test is
-`tools/Holmake/tests/objroot`.  Some HOLDIR-only tooling
-(`help/src-sml`, `tools/check-builds`, `developers/Holmake/*.py`)
-still assumes the legacy layout.
+Use `HFS_NameMunge` to locate standard build artifacts.  The default
+Poly/ML layout stores products, dependency files, logs, locks and
+documentation in `<dir>/.hol/{objs,make-deps,logs,locks,docs}`.
+With an artifact root configured, directories under `srcroot` map to
+`<objroot>/<kind>/<rel>`, preserving source-relative paths.
+`HMProject.resolve_layout` selects this layout from the command line,
+`holproject.toml` or the environment, in that order.
+
+Use `objdir_for`, `depdir_for`, `logdir_for`, `lockdir_for` and
+`docsdir_for` for directories, and `HOLtoFS` / `FStoHOL` to convert
+product paths.  `configure` sets the layout at run time;
+`tools-poly/hol.ML` reapplies it after `loadState` restores saved
+references.  Holmake passes the layout to children through
+`HOLOBJROOT`/`HOLSRCROOT` and `--objroot`/`--srcroot`.
+Tests are in `tools/Holmake/tests/objroot`.
+
+Custom-rule outputs and named heaps keep their existing output paths.
+Some tools used to build HOL itself (`help/src-sml`, `tools/check-builds`,
+`developers/Holmake/*.py`) still assume the default layout.
 
 ## Rebuild semantics: mtime vs cachekey
 

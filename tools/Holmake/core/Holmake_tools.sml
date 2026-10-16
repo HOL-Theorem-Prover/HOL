@@ -688,11 +688,9 @@ end handle OS.SysErr (mesg, _) => let
            end
          | FileSys.DirNotFound => true
 
-(* cleanAll for a directory whose artifacts live under a separate
-   objroot: remove the files and links directly inside each artifact
-   directory, then the directory itself if that empties it.  Never
-   recursive: <objroot>/objs/a/sub belongs to the source directory a/sub,
-   not to a. *)
+(* Remove files and symlinks directly inside each artifact directory,
+   then remove the directory if empty.  Preserve subdirectories: for
+   example, <objroot>/objs/a/sub belongs to source directory a/sub. *)
 fun clean_artifact_dirs ofns dirs =
     let
       fun entries d =
@@ -1081,11 +1079,9 @@ val tgt_toString = hm_target.toString
    "probe each candidate dir with `access' per file" pattern into a
    per-directory set-membership test.  The set is what
    `access(_,[A_READ])' would succeed on under [absdir] -- entries of
-   the directory itself UNION entries of its products directory
-   (HFS_NameMunge.objdir_for: .hol/objs in the legacy layout).
-   Building it through read_files_with_objs makes membership mirror
-   `access' exactly and
-   reuses mosml's flat-listing flavour without ifdefs.
+   the source directory and its products directory, located by
+   HFS_NameMunge.objdir_for.  read_files_with_objs supplies the combined
+   listing and handles Moscow ML's flat layout.
 
    Lifetime: scan-only.  The build phase creates files
    (.uo/.ui/Theory.dat, ...) that would falsify a cached listing;

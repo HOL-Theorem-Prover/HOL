@@ -1025,8 +1025,8 @@ fun add_anonymous_thm th = let
   val () = anonymous_thms := (n+1,th::ls)
 in n end
 
-(* A .tr.gz side file sits with the theory's products.  In the legacy
-   layout the name stays relative: later traces record it. *)
+(* Store proof traces beside theory products.  Preserve relative paths
+   in the legacy layout because later traces record these names. *)
 fun products_file f =
     if HFS_NameMunge.owned_by_layout "." then
       OS.Path.concat (HFS_NameMunge.objdir_for ".", f)

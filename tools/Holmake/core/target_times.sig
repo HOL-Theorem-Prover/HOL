@@ -9,10 +9,9 @@ sig
 
      Two sources, presented as one map:
 
-       * build-logs/target-times under the project's state directory
-         (<root>/.hol, or the objroot of a separate artifact layout:
-         HFS_NameMunge.project_state_dir), the project's own cache,
-         rewritten by every parallel Holmake run in that project;
+       * the project's cache, build-logs/target-times under
+         HFS_NameMunge.project_state_dir root (<root>/.hol by default,
+         or objroot when root is srcroot), updated by parallel builds;
        * zero or more committed *seed* files, which a project ships so
          that a fresh checkout -- where no cache exists yet -- still
          schedules well.  `HMProject.build_times_files' finds them.

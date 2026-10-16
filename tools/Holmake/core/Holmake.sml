@@ -94,23 +94,16 @@ fun getcline args =
     (opts, vars, targets)
   end
 
-(* Run the lastmaker / "am I in the right HOLDIR?" checks BEFORE
-   the full cline parse and any chdir.  We peek at -C/--directory
-   and --nolmbc directly out of argv so do_lastmade_checks can
-   target the user's intended working directory (where its
-   .HOLMK/lastmaker file lives), but the running process stays in
-   its original cwd.  If lastmaker exec-switches to a different
-   Holmake binary, the spawned shell inherits the original cwd and
-   the child's own cline parse handles -C the normal way (one
-   chdir, via set_cwd).  If we don't exec-switch, control falls
-   through to the regular getcline/apply_updates flow below, which
-   sees the same argv and chdirs at its usual point.
+(* Check which Holmake binary to use before parsing options or changing
+   directory.  Read -C/--directory and --nolmbc from argv so the checks
+   use the intended directory.  If they switch binaries, the child
+   inherits the original cwd and handles -C itself.  Otherwise, the
+   normal option parser changes directory below.
 
-   The artifact layout is settled here too, from the same peek: the
-   lastmaker file lives in the layout's depdir, and the layout must be
-   in place before any project discovery.  Relative --objroot and
-   --srcroot values, and the search for holproject.toml, start from
-   the -C directory when there is one. *)
+   Configure the layout first: lastmaker is stored in its dependency
+   directory, and project discovery must skip the artifact root.
+   Resolve relative layout paths and look for holproject.toml from
+   the directory selected by -C, if present. *)
 local
   val rawargs = CommandLine.arguments()
   fun peek_chdir [] = NONE
@@ -285,11 +278,10 @@ val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 type patrules = Holmake_types.patrules
 val empty_patrules : patrules = Holmake_types.empty_patrules
 
-(* Where the current directory's products go, for Holmakefile recipes:
-   $(HOLOBJDIR) is the products directory (relative in the legacy
-   layout), $(HOLOBJROOT) and $(HOLSRCROOT) the layout's roots (empty in
-   the legacy layout).  Applied before the command-line variables, which
-   may override them. *)
+(* Set the recipe variables for this directory: HOLOBJDIR holds its
+   products directory; HOLOBJROOT and HOLSRCROOT hold the layout roots,
+   or are empty in the legacy layout.  Command-line variables may
+   override these values. *)
 fun extend_with_layout_vars env =
     let
       val (objroot, srcroot) =
@@ -823,8 +815,8 @@ val (outputfns as {warn,tgtfatal,diag,info,chatty,info_inline,info_inline_end})=
     output_functions {chattiness = chattiness_level coption_value,
                       debug = #debug coption_value,
                       usepfx = usepfx}
-(* The layout was fixed at startup from the command line alone, before
-   any Holmakefile was read. *)
+(* Use the layout selected at startup.  Layout options in a
+   Holmakefile's CLINE_OPTIONS have no effect. *)
 val () = if HM_Cline.layout_options option_value <>
             HM_Cline.layout_options master_cline_nohmf
          then
@@ -1350,11 +1342,9 @@ end
    were themselves out of date.
 *)
 
-(* The primary dependency chain does not depend on anything in the
-   file-system; it always looks the same.  However, additional
-   dependencies depend on what holdep tells us.  This function that
-   runs holdep, and puts the output into specified file, which will live
-   in the directory's depdir (HFS_NameMunge.depdir_for). *)
+(* Primary dependencies are fixed by file type.  Use holdep to find
+   additional dependencies and cache them in this directory's dependency
+   directory (HFS_NameMunge.depdir_for). *)
 
 fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
   val {preincludes,includes} = incinfo

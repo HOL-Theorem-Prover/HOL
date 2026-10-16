@@ -298,10 +298,11 @@ coverage:
   - **A missing prerequisite is a `SKIP`,** counted and named, never a
     pass — and `--requires <tag>` that selects nothing exits 2, since
     that means the wiring is broken rather than the tests are fine.
-  - **Holmake keeps objects under `.hol/objs/`** (or a project's
-    artifact root, `<objroot>/objs/`) and presents them as
-    if they sat in the directory.  A prerequisite check that looks only
-    at the plain path reports every built directory as unbuilt, which
+  - **Use `HOLFileSys` to check for Holmake products.**  Objects live
+    under `.hol/objs/`, or `<objroot>/objs/<rel>/` with an artifact
+    root, but are accessed through their source-relative names.
+    A prerequisite check that looks only at the plain path reports
+    every built directory as unbuilt, which
     shows up as a whole group quietly skipping.
 
 `sortingTheory` is built by `src/sort`'s own Holmake run and stays

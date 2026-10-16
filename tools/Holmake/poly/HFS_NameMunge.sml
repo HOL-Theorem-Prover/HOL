@@ -59,7 +59,7 @@ fun absolute p =
       (if OS.Path.isAbsolute p then p
        else OS.Path.mkAbsolute {path = p, relativeTo = OS.FileSys.getDir()})
 
-(* fullPath of the longest existing prefix of the absolute path p *)
+(* Resolve symlinks in the existing prefix of p, an absolute path. *)
 fun physical p =
     OS.FileSys.fullPath p
     handle OS.SysErr _ =>
@@ -74,17 +74,17 @@ fun canonical p = physical (absolute p)
 fun join d "" = d
   | join d r = OS.Path.concat (d, r)
 
-(* SOME rel when p is root or below it *)
+(* Return the relative path if p is under root, or "" if they coincide. *)
 fun rel_under root p =
     if p = root then SOME ""
     else if String.isPrefix (root ^ "/") p then
       SOME (String.extract (p, size root + 1, NONE))
     else NONE
 
-(* fullPath of directories whose lexical position fails to match the
-   layout (symlinked trees, macOS /var), memoised because the dependency
-   scan asks about every product of every INCLUDES directory.  Races
-   between threads only lose entries. *)
+(* Cache physical directory paths when lexical paths do not match the
+   layout, as with symlinked trees or /var on macOS.  The dependency scan
+   checks each directory repeatedly.  Concurrent updates may lose cache
+   entries; subsequent lookups recompute them. *)
 val nbuckets = 509
 fun shash s =
     CharVector.foldl (fn (c, h) => (h * 31 + Char.ord c) mod nbuckets) 0 s
@@ -107,9 +107,9 @@ fun realdir d =
           end
     end
 
-(* NONE: never configured, so consult the environment (once).  A saved
-   heap can carry the value of this reference, which is safe only
-   because every bin/hol entry point calls configure after loadState. *)
+(* NONE means configure has not been called: read the environment once.
+   Saved heaps may retain this reference, so bin/hol must call configure
+   after loadState. *)
 val the_layout : layout option option ref = ref NONE
 val stale_warned = ref false
 
@@ -222,8 +222,8 @@ fun artifact_dirs_for d =
             map (fn f => f d)
                 [objdir_for, depdir_for, logdir_for, lockdir_for,
                  docsdir_for] @
-            (* the root's cleanAll also drops the project's cost cache,
-               as removing <root>/.hol does in the legacy layout *)
+            (* Also remove the project's timing cache when cleaning srcroot,
+               as deleting <root>/.hol does in the legacy layout. *)
             (if rel = "" then [objroot ++ "build-logs"] else [])
           | _ => []
 
@@ -250,8 +250,8 @@ fun FStoHOL p =
              | NONE => legacy ())
     end
 
-(* Products left in <dir>/.hol/objs by a legacy build are ignored once a
-   layout maps dir elsewhere; say so, once. *)
+(* Warn once if a mapped directory has legacy products that this layout
+   will ignore. *)
 fun check_stale absd objdir =
     if !stale_warned then ()
     else
@@ -333,12 +333,10 @@ fun toFSfn writep f nm =
           else f nm'
     end
 
-(* How a directory listing presents products:
-     Splice: legacy; the .hol entry is replaced by the entries of
-             .hol/objs (in place, so listing order is as it always was)
-     Plain: a directory inside objroot; listed as is
-     Chain d: products live in d; a stray .hol entry is hidden and d's
-              entries follow the directory's own *)
+(* Directory listings include products according to the layout:
+     Splice: replace .hol with .hol/objs entries, preserving legacy order.
+     Plain: list a directory inside objroot without rewriting it.
+     Chain d: hide .hol and append the products from d. *)
 datatype listing = Splice | Plain | Chain of string
 
 fun listing_for s =

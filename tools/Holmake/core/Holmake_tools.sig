@@ -169,8 +169,8 @@ sig
   val clean_dir : output_functions -> {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
   val clean_artifact_dirs : output_functions -> string list -> unit
-    (* removes the files directly inside each directory, then the
-       directory if it is then empty; for a separate artifact root *)
+    (* Remove files and symlinks directly inside each artifact directory,
+       then remove it if empty.  Preserve subdirectories. *)
   val clean_forReloc : {holheap : string option} -> unit
   val pushdir : string -> ('a -> 'b) -> ('a -> 'b)
 
