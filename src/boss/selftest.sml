@@ -399,20 +399,53 @@ val _ = require_msg (check_result (goals_eq [([], “n = 0”)]))
                     (testtac BasicProvers.EVERY_CASE_TAC)
                     ([], “(case x of CT1 => 0 | CT2 n => n) = 0 ∨ x = CT1”)
 
-(* FULL_CASE_TAC rewrites assumptions with the implicit rewrites of the
-   context it is given, not those of the live cell. *)
+(* The case tactics rewrite with the implicit rewrites of the context they
+   are given, not those of the live cell: FULL_CASE_TAC on every
+   assumption, CASE_TAC on the old assumptions after a split on a
+   non-variable. *)
 val _ = let
   val plain = Context.snapshot ()
   val _ = Rewrite.add_implicit_rewrites [arithmeticTheory.ADD_0]
   val extra = Context.snapshot ()
   val _ = Context.restore plain
+  fun testtac_in c tac g = fst (VALID tac g c)
   val w = “P (k:num) : bool”
+  val q = “Q (m:num) : bool”
   val _ = tprint "FULL_CASE_TAC reads the context it is given"
+  val _ = require_msg
+            (check_result (goals_eq [([“m = k:num”], w), ([“1 = k:num”], w)]))
+            goalpp
+            (testtac_in extra BasicProvers.FULL_CASE_TAC)
+            ([“(case x of CT1 => m + 0 | CT2 n => 1) = k”], w)
+  val _ = tprint "CASE_TAC rewrites old assumptions in the context it is given"
 in
-  require_msg (check_result (goals_eq [([“m = k:num”], w), ([“1 = k:num”], w)]))
-              goalpp
-              (fn g => fst (BasicProvers.FULL_CASE_TAC g extra))
-              ([“(case x of CT1 => m + 0 | CT2 n => 1) = k”], w)
+  require_msg
+    (check_result (goals_eq [([“f (y:num) = CT1”, q], “a = c:num”),
+                             ([“f (y:num) = CT2 n”, q], “b = c:num”)]))
+    goalpp
+    (testtac_in extra CASE_TAC)
+    ([“Q (m + 0:num) : bool”],
+     “(case f (y:num) of CT1 => a | CT2 n => b) = c:num”)
+end
+
+(* A datatype declared under a pin has its case rewrites in the pin.  The
+   tactics run inside it: TypeBase.dest_case checks constants against the
+   live signature, which lacks the pin's. *)
+val _ = let
+  val expected = [([], “0 = k:num”), ([], “n = k:num”)]
+  fun run_pinned (name, tac) = let
+    val _ = tprint (name ^ " on a datatype declared under a pin")
+    val _ = Datatype‘casetac_pin = CP1 | CP2 num’
+    val c = Context.snapshot ()
+  in
+    require_msg (check_result (goals_eq expected)) goalpp
+                (fn g => fst (VALID tac g c))
+                ([], “(case z of CP1 => 0 | CP2 n => n) = k:num”)
+  end
+in
+  List.app (fn nt => Context.with_context (Context.snapshot ()) run_pinned nt)
+           [("CASE_TAC", CASE_TAC),
+            ("TOP_CASE_TAC", BasicProvers.TOP_CASE_TAC)]
 end
 
 fun test_tac_Case nm ok_case_arg tq tac = let

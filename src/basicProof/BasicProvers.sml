@@ -712,9 +712,13 @@ fun case_ss_of rws = boolSimps.bool_ss++simpLib.rewrites rws
 
 (* The case rewrites live in the context, beside the TypeBase they come
  * from, so a restore rewinds both together and a datatype declared under a
- * pin stays in the pin.  The simpset is a suspension over the rewrites in
- * the same value, so it cannot disagree with them, and declaring a
- * datatype does not pay for a simpset no case tactic may ask for. *)
+ * pin stays in the pin.  The slot only grows: set_parents replaces the
+ * TypeBase without running the update hook, so the slot can keep the
+ * rewrites of a type the TypeBase no longer has.  Those name constants the
+ * context has retired, so they cannot match its terms and cost only
+ * simpset size.  The simpset is a suspension over the rewrites in the same
+ * value, so it cannot disagree with them, and declaring a datatype does
+ * not pay for a simpset no case tactic may ask for. *)
 type case_state = {rws : thm list, ss : simpset Susp.susp}
 
 fun mk_case_state rws : case_state =
@@ -802,14 +806,16 @@ fun mset_diff l2 l1 =  (* important to maintain the order of elements in l2 *)
 (* of the assumptions by the new ones.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun simp_old_assums (orig as (asl1,_):goal) (gl as (asl2,_)) =
+fun simp_old_assums (orig as (asl1,_):goal) (gl as (asl2,_)) c =
  let val new = mset_diff asl2 asl1
  in if null new then ALL_TAC
     else let val thms = map ASSUME new
+             val rule = Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV
+                          (Rewrite.implicit_rewrites_of c) thms
          in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
-            RULE_ASSUM_TAC (REWRITE_RULE thms) THEN
+            RULE_ASSUM_TAC rule THEN
             MAP_EVERY ASSUME_TAC thms end
- end gl;
+ end gl c;
 
 fun use_new_assum orig_goal cgoal =
  (TRY (WEAKEN_TAC is_refl) THEN
