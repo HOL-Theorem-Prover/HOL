@@ -56,8 +56,7 @@ fun in_src () = is_src_dir (hmdir.curdir())
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
-val DEPDIR = Systeml.DEPDIR
-val LOGDIR = Systeml.LOGDIR
+fun cwd_abs () = hmdir.toAbsPath (hmdir.curdir())
 
 local
   val sigobj = OS.Path.concat(HOLDIR0, "sigobj")
@@ -95,17 +94,16 @@ fun getcline args =
     (opts, vars, targets)
   end
 
-(* Run the lastmaker / "am I in the right HOLDIR?" checks BEFORE
-   the full cline parse and any chdir.  We peek at -C/--directory
-   and --nolmbc directly out of argv so do_lastmade_checks can
-   target the user's intended working directory (where its
-   .HOLMK/lastmaker file lives), but the running process stays in
-   its original cwd.  If lastmaker exec-switches to a different
-   Holmake binary, the spawned shell inherits the original cwd and
-   the child's own cline parse handles -C the normal way (one
-   chdir, via set_cwd).  If we don't exec-switch, control falls
-   through to the regular getcline/apply_updates flow below, which
-   sees the same argv and chdirs at its usual point. *)
+(* Check which Holmake binary to use before parsing options or changing
+   directory.  Read -C/--directory and --nolmbc from argv so the checks
+   use the intended directory.  If they switch binaries, the child
+   inherits the original cwd and handles -C itself.  Otherwise, the
+   normal option parser changes directory below.
+
+   Configure the layout first: lastmaker is stored in its dependency
+   directory, and project discovery must skip the artifact root.
+   Resolve relative layout paths and look for holproject.toml from
+   the directory selected by -C, if present. *)
 local
   val rawargs = CommandLine.arguments()
   fun peek_chdir [] = NONE
@@ -115,11 +113,33 @@ local
         if String.isPrefix "--directory=" a then
           SOME (String.extract (a, size "--directory=", NONE))
         else peek_chdir rest
+  fun peek_long nm args =
+      case args of
+          [] => NONE
+        | a :: rest =>
+          if a = "--" ^ nm then
+            (case rest of d :: _ => SOME d | [] => NONE)
+          else if String.isPrefix ("--" ^ nm ^ "=") a then
+            SOME (String.extract (a, size nm + 3, NONE))
+          else peek_long nm rest
+  val target_dir = peek_chdir rawargs
+  val start =
+      case target_dir of
+          NONE => OS.FileSys.getDir()
+        | SOME d => OS.Path.mkAbsolute {path = d,
+                                        relativeTo = OS.FileSys.getDir()}
+  val layout =
+      HMProject.resolve_layout
+        {start = start, cli_objroot = peek_long "objroot" rawargs,
+         cli_srcroot = peek_long "srcroot" rawargs,
+         no_project = List.exists (fn s => s = "--no-project") rawargs}
+      handle Fail s => die ("Artifact layout: " ^ s)
 in
+val _ = HFS_NameMunge.configure layout
 val _ = do_lastmade_checks default_ofns
           {no_lastmakercheck =
              List.exists (fn s => s = "--nolmbc") rawargs,
-           target_dir = peek_chdir rawargs}
+           target_dir = target_dir}
 end
 
 val (master_cline_options, cline_vars, targets) =
@@ -257,6 +277,23 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 type patrules = Holmake_types.patrules
 val empty_patrules : patrules = Holmake_types.empty_patrules
+
+(* Set the recipe variables for this directory: HOLOBJDIR holds its
+   products directory; HOLOBJROOT and HOLSRCROOT hold the layout roots,
+   or are empty in the legacy layout.  Command-line variables may
+   override these values. *)
+fun extend_with_layout_vars env =
+    let
+      val (objroot, srcroot) =
+          case HFS_NameMunge.current_layout () of
+              NONE => ("", "")
+            | SOME {objroot, srcroot} => (objroot, srcroot)
+    in
+      env |> env_extend ("HOLOBJDIR",
+                         [LIT (HFS_NameMunge.holobjdir_var_for (cwd_abs()))])
+          |> env_extend ("HOLOBJROOT", [LIT objroot])
+          |> env_extend ("HOLSRCROOT", [LIT srcroot])
+    end
 
 (* Extend the base environment with vars passed at commandline (foldl below),
    as well as environment variables "magically" derived from other options,
@@ -590,7 +627,9 @@ local
           val (env, rdb, prs, tgt0) =
               ReadHMF.diagread hmf_diags
                                "Holmakefile"
-                               (extend_with_cline_vars (read_holpathdb()))
+                               (extend_with_cline_vars
+                                  (extend_with_layout_vars
+                                     (read_holpathdb())))
               handle internal_functions.HolmakeError s => die_raw s
                    | Fail s =>
                      (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
@@ -776,6 +815,14 @@ val (outputfns as {warn,tgtfatal,diag,info,chatty,info_inline,info_inline_end})=
     output_functions {chattiness = chattiness_level coption_value,
                       debug = #debug coption_value,
                       usepfx = usepfx}
+(* Use the layout selected at startup.  Layout options in a
+   Holmakefile's CLINE_OPTIONS have no effect. *)
+val () = if HM_Cline.layout_options option_value <>
+            HM_Cline.layout_options master_cline_nohmf
+         then
+           warn ("--objroot/--srcroot in CLINE_OPTIONS ignored; use the \
+                 \command line, holproject.toml or HOLOBJROOT")
+         else ()
 val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
@@ -1295,11 +1342,9 @@ end
    were themselves out of date.
 *)
 
-(* The primary dependency chain does not depend on anything in the
-   file-system; it always looks the same.  However, additional
-   dependencies depend on what holdep tells us.  This function that
-   runs holdep, and puts the output into specified file, which will live
-   in DEPDIR somewhere. *)
+(* Primary dependencies are fixed by file type.  Use holdep to find
+   additional dependencies and cache them in this directory's dependency
+   directory (HFS_NameMunge.depdir_for). *)
 
 fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
   val {preincludes,includes} = incinfo
@@ -1307,7 +1352,8 @@ fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
       get_direct_dependencies {incinfo = incinfo,
                                extra_targets = extra_targets(),
                                output_functions = outputfns,
-                               DEPDIR = DEPDIR} f
+                               depdir = HFS_NameMunge.depdir_for (cwd_abs())}
+                              f
   val diag = diag "impdeps"
   val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
                         "directdeps = " ^ pdlist file_dependencies0)
@@ -1330,7 +1376,9 @@ in
          (meaning the transitive closure of the direct dependency
          relation) in their .UO form, not just .UI *)
       val get_direct_dependencies =
-          get_direct_dependencies {incinfo = incinfo, DEPDIR = DEPDIR,
+          get_direct_dependencies {incinfo = incinfo,
+                                   depdir =
+                                     HFS_NameMunge.depdir_for (cwd_abs()),
                                    output_functions = outputfns,
                                    extra_targets = extra_targets()}
       val starters = get_direct_dependencies f
@@ -1455,32 +1503,13 @@ fun read_foreign_depfile tgt =
                 | SOME {fullfile, ...} => fullfile
           val real_objpath = OS.FileSys.realPath fs_path
                              handle OS.SysErr _ => fs_path
-          val objdir_arcs_rev =
-              List.rev (#arcs (OS.Path.fromString HFS_NameMunge.HOLOBJDIR))
-          fun stripPrefix [] xs = SOME xs
-            | stripPrefix _ [] = NONE
-            | stripPrefix (p::ps) (x::xs) =
-                if p = x then stripPrefix ps xs else NONE
-          fun strip_hol_objs p =
-              let val {isAbs, vol, arcs} = OS.Path.fromString p
-                  val rev_arcs = List.rev arcs
-              in case rev_arcs of
-                     [] => NONE
-                   | _ :: rest =>
-                     Option.map
-                       (fn rest' =>
-                           OS.Path.toString
-                             {isAbs=isAbs, vol=vol,
-                              arcs=List.rev rest'})
-                       (stripPrefix objdir_arcs_rev rest)
-              end
         in
-          case strip_hol_objs real_objpath of
+          case HFS_NameMunge.FStoHOL real_objpath of
               NONE => []
-            | SOME real_srcdir =>
+            | SOME logical_path =>
               let
-                val foreign_depdir =
-                    OS.Path.concat (real_srcdir, DEPDIR)
+                val real_srcdir = OS.Path.dir logical_path
+                val foreign_depdir = HFS_NameMunge.depdir_for real_srcdir
                 val depfile = mk_depfile_name foreign_depdir
                                               (fromFile arg)
                 val foreign_hmdir =
@@ -1968,14 +1997,21 @@ fun create_complete_graph cline_incs idm =
     end)
 
 fun clean_deps() =
-  ( Holmake_tools.clean_depdir {depdirname = DEPDIR}
-  ; Holmake_tools.clean_depdir {depdirname = LOGDIR} )
+  ( Holmake_tools.clean_depdir
+      {depdirname = HFS_NameMunge.depdir_for (cwd_abs())}
+  ; Holmake_tools.clean_depdir
+      {depdirname = HFS_NameMunge.logdir_for (cwd_abs())} )
 
 fun do_clean_target x = let
   fun clean_action () =
       Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans()}
   fun cleanAll () =
-      Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans() @ [".hol/"]}
+      case HFS_NameMunge.artifact_dirs_for (cwd_abs()) of
+          [] => Holmake_tools.clean_dir
+                  outputfns {extra_cleans = extra_cleans() @ [".hol/"]}
+        | dirs =>
+          (clean_action ();
+           Holmake_tools.clean_artifact_dirs outputfns dirs)
 in
   if originally_in_src orelse not (in_src()) then
     case x of

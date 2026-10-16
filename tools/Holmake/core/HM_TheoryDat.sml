@@ -54,9 +54,7 @@ fun find_parent_dat search_dirs thy =
       fun access p = OS.FileSys.access (p, [OS.FileSys.A_READ])
                      handle _ => false
       fun in_dir d =
-          let val munged = OS.Path.concat
-                             (d, OS.Path.concat
-                                   (HFS_NameMunge.HOLOBJDIR, datname))
+          let val munged = OS.Path.concat (HFS_NameMunge.objdir_for d, datname)
               val plain = OS.Path.concat (d, datname)
           in
             if access munged then SOME munged
