@@ -72,6 +72,29 @@ val f4_def = require (check_result (K true)) (quietly Define)`
   f5 (SUC n) (x, y) = f4 n x
 `;
 
+fun rhs_abstractions n th =
+  let val cs = strip_conj (concl th)
+  in length cs = n andalso List.all (is_abs o rhs o snd o strip_forall) cs
+  end
+
+val _ = tprint "Testing mutual recursion with lambda-valued equations"
+
+val f6_def = require (check_result (rhs_abstractions 4)) (quietly Define)`
+  f6 0 = (\b. b) /\
+  f6 (SUC n) = (\b. f7 n b) /\
+  f7 0 = (\b. ~b) /\
+  f7 (SUC n) = (\b. f6 n b)
+`;
+
+val _ = tprint "Testing 2-arg mutual recursion with lambda-valued equations"
+
+val h1_def = require (check_result (rhs_abstractions 4)) (quietly Define)`
+  h1 0 m = (\b. if b then m else 0n) /\
+  h1 (SUC n) m = (\b. h2 n b m) /\
+  h2 0 b = (\m. m:num) /\
+  h2 (SUC n) b = (\m. h1 n m b)
+`;
+
 fun tdefoutput_pp(th,thopt) =
     "(" ^ thm_to_string th ^ ", " ^
     (case thopt of NONE => "NONE"
