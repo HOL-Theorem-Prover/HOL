@@ -14,6 +14,12 @@ flags byte (the flags byte of a 64-bit header occupies byte 7 and is always `00`
 The 64-bit variant is a PolyML memory dump; the 32-bit variant recodes each word
 from 8 bytes to 4 bytes but preserves the same logical structure.
 
+The object layout follows the producing HOL kernel and PolyML ABI. This
+parser supports the current immutable `KernelSig.kernelid` record, not the
+older reference-based identifier layout. Rebuild raw traces with the same
+kernel source as the converter; the narrow-format magic describes word
+width, not a kernel ABI version.
+
 ## 64-bit file structure: bit level
 
 The outer structure of the dump is a sequence of objects, followed by a root pointer:
@@ -155,7 +161,9 @@ Now we will describe how SML datatypes are encoded as elements of `tagptr`.
 
 Now that we can encode arbitrary datatypes inside the file, it suffices to give the type of the root pointer. This is more or less a copy of the sources, but we have re-sorted the constructors according to the above sort criteria where applicable. A `clos` means the value in this position is a function type.
 ```sml
-type id = {Thy: string, Name: string}
+type kernelname = {Thy: string, Name: string}
+type id = {name: kernelname, epoch: int}
+(* Record slots are [name, epoch]; kernelname slots are [Thy, Name]. *)
 
 datatype hol_type
   = Tyapp of (id * int) * hol_type list

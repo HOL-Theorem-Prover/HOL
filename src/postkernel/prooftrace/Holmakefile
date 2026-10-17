@@ -11,7 +11,7 @@ ifneq ($(HAVE_MLTON),)
 # keep the all target at "head" of file so it remains the default
 # target
 ifdef HAVE_WORD64
-all: pft-replay-test replay-test
+all: pft-replay-test replay-test PFTCLI.uo
 else
 all: pft-replay-test
 endif
@@ -33,8 +33,25 @@ pft-replay-test: pft-replay-test.mlb pft-replay-test.sml $(PFT_REPLAY_SRCS)
 
 else
 
-$(info *** Doing nothing when no mlton)
+ifdef HAVE_WORD64
+all: PFTCLI.uo
+else
 all:
+endif
 endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
+
+all: selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: pft-selftest.log
+
+pft-selftest.log: selftest.exe selftest-pftreader.sml selftest-pftmerge.sml
+	$(tee ./$<, $@)
+endif
+
+EXTRA_CLEANS += selftest.exe pft-selftest.log
