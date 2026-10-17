@@ -1,4 +1,4 @@
-# HOL PFT Format Specification (Draft)
+# HOL PFT version 1
 
 ## Overview
 
@@ -7,6 +7,25 @@ kernel to construct a set of theorems.
 
 Commands are topologically ordered — every object is constructed before it is
 used.
+
+## Supported implementations
+
+The supported interchange is binary version **1**, with the `hol4` and
+`candle` rulesets. The HOL replayer accepts only `hol4`; the Candle replayer
+accepts only `candle`. Readers check the header before executing commands.
+The experimental string-version `0.1.0` format (three namespaces and ambient
+compute state) is incompatible and is rejected.
+
+`PFTWriter` can also emit JSON Lines for inspection. Neither reader nor
+`PFTMerge` accepts JSON Lines; the JSON schema below describes diagnostic
+output, not an alternate supported replay route. The converter accepts the
+pinned current producer's TR32 or unreduced 64-bit heap encoding; raw heap
+layouts are producer-specific, unlike this PFT contract.
+
+See [conversion and merge commands](pft-cli.md). SAVE/LOAD resolves proof
+dependencies; an absent proof is an error. AXIOM remains a supported command,
+so replay alone is not an allowed-axiom policy or an exact-result certificate.
+Callers must check the desired conclusion and hypotheses explicitly.
 
 ## Object Namespaces
 
@@ -57,9 +76,11 @@ The header specifies:
 
 ### Footer
 
-The footer declares the peak number of simultaneously live objects per
-namespace: four counts for types, terms, theorems, and compute contexts
-respectively.
+The footer declares array bounds: one plus the largest assigned ID in each
+namespace, or zero for an unused namespace. It contains four counts for types,
+terms, theorems, and compute contexts respectively. These bounds can exceed
+the peak number of live objects: the current emitter and merger allocate IDs
+monotonically.
 
 A replayer can use these to pre-allocate fixed-size arrays. The footer is
 placed at the end so that a producer can emit commands in a single pass

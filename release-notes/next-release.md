@@ -302,6 +302,12 @@ New theories
 
 New tools
 ---------
+-   The `src/postkernel/prooftrace/pft` driver converts current proof dumps
+    and merges named targets using binary PFT version 1, with HOL4 and Candle
+    rulesets and explicit compute contexts. See `prooftrace/pft-cli.md` for
+    commands and supported input layouts. Readers reject unsupported headers
+    before replay; side-file exported proofs remain unsupported.
+
 
 New examples
 ------------

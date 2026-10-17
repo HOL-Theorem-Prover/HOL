@@ -5,8 +5,8 @@ open Lib ProofTraceParser
 fun update_at (tab, k, f) =
     Symtab.update (k, f (Symtab.lookup tab k)) tab
 
-fun walk {heap, thyname, named_thms, anon_thms,
-          incr, on_def_thm} = let
+fun walk_with_fv {heap, thyname, named_thms, anon_thms,
+          incr, on_def_thm, on_fv} = let
 
   (* ID cache for constant/type operator identifiers *)
   val id_cache : (string * string) PIntMap.t ref = ref PIntMap.empty
@@ -94,7 +94,7 @@ fun walk {heap, thyname, named_thms, anon_thms,
       Abs (t1, t2) => (walk_term t1; walk_term t2)
     | Comb (t1, t2) => (walk_term t1; walk_term t2)
     | Const (_, typ) => ty typ
-    | Fv (_, typ) => ty typ
+    | Fv (name, typ) => (on_fv name; ty typ)
     | Bv _ => ()
     | Clos (sbp, tmp) => (walk_subs sbp; walk_term tmp)
   and walk_subs sbp =
@@ -215,5 +215,9 @@ in
     get_const_id = get_const_id,
     get_type_id = get_type_id }
 end
+
+fun walk {heap, thyname, named_thms, anon_thms, incr, on_def_thm} =
+  walk_with_fv {heap=heap, thyname=thyname, named_thms=named_thms,
+    anon_thms=anon_thms, incr=incr, on_def_thm=on_def_thm, on_fv=K ()}
 
 end
