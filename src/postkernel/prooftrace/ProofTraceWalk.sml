@@ -9,7 +9,7 @@ fun walk {heap, thyname, named_thms, anon_thms,
           incr, on_def_thm} = let
 
   (* ID cache for constant/type operator identifiers *)
-  val id_cache : (string * string) PIntMap.t ref = ref PIntMap.empty
+  val id_cache : (string * string * int) PIntMap.t ref = ref PIntMap.empty
   fun cache_id f p =
     let val key = ptr p
         val idc = !id_cache
@@ -19,10 +19,10 @@ fun walk {heap, thyname, named_thms, anon_thms,
          in (id_cache := PIntMap.add key x idc; x)
          end
     end
-  val get_const_id = cache_id (fn tm_ptr =>
+  val cid = cache_id (fn tm_ptr =>
     case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
     | _ => raise Fail "get_const_id")
-  val get_type_id = cache_id (fn ty_ptr =>
+  val tid = cache_id (fn ty_ptr =>
     case shType heap ty_ptr of Tyapp (idp,_) => ident heap idp
     | _ => raise Fail "get_type_id")
 
@@ -69,8 +69,8 @@ fun walk {heap, thyname, named_thms, anon_thms,
   fun is_closed tm_ptr = isPtr tm_ptr andalso compute_closedness tm_ptr < 0
 
   (* Walk state *)
-  val tm_defs : thm ptr list Symtab.table ref = ref Symtab.empty
-  val ty_defs : thm ptr list Symtab.table ref = ref Symtab.empty
+  val tm_defs0 : (int * thm ptr) list Symtab.table ref = ref Symtab.empty
+  val ty_defs0 : (int * thm ptr) list Symtab.table ref = ref Symtab.empty
   val seen = BoolArray.array(heapSize heap, false)
 
   fun first_seen p =
@@ -110,18 +110,18 @@ fun walk {heap, thyname, named_thms, anon_thms,
     else let
       val () = BoolArray.update(seen, ptr thm_ptr, true)
       val (_, _, proof_ptr) = shThm heap thm_ptr
-      fun add_thm_ptr nm prev =
-            (on_def_thm thm_ptr;
-             case prev of NONE => [thm_ptr]
-               | SOME ls => (print("WARNING: multiple defs for "^nm^"\n");
-                             thm_ptr::ls))
       fun check_thy defthy =
         if defthy = thyname then () else raise Fail "add_def thy"
-      fun add_const nm = tm_defs := update_at (!tm_defs, nm, add_thm_ptr nm)
+      fun add_gen tab (nm, ep) =
+        (on_def_thm thm_ptr;
+         tab := update_at (!tab, nm, fn NONE => [(ep, thm_ptr)]
+                                      | SOME l => (ep, thm_ptr) :: l))
+      fun add_const x = add_gen tm_defs0 x
+      fun add_type x = add_gen ty_defs0 x
       fun add_def_const p = let
-        val (thy,nm) = get_const_id p
+        val (thy,nm,ep) = cid p
         val () = check_thy thy
-      in add_const nm end
+      in add_const (nm, ep) end
     in case shProof heap proof_ptr of
         ABS_prf (a, b) => (tm a; th b)
       | ALPHA_prf (a, b) => (tm a; tm b)
@@ -142,19 +142,21 @@ fun walk {heap, thyname, named_thms, anon_thms,
       | DISJ_CASES_prf (a, b, c) => (th a; th b; th c)
       | Def_const_list_prf (a, b) => let
           val () = th a
-          val ids = list heap get_const_id b
-        in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
+          val ids = list heap cid b
+        in List.app (fn (thy,nm,ep) => (check_thy thy; add_const (nm,ep))) ids
+        end
       | Def_const_prf (a, b) => (tm a; add_def_const b)
       | Def_spec_prf (a, b) => let
           val () = th a
-          val ids = list heap get_const_id b
-        in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
+          val ids = list heap cid b
+        in List.app (fn (thy,nm,ep) => (check_thy thy; add_const (nm,ep))) ids
+        end
       | Def_tyop_prf (a, b, c) => let
           val () = appList heap ty a
           val () = th b
-          val (thy,tyop) = get_type_id c
+          val (thy,tyop,ep) = tid c
           val () = check_thy thy
-        in ty_defs := update_at (!ty_defs, tyop, add_thm_ptr tyop) end
+        in add_type (tyop, ep) end
       | Disk_prf _ => ()
       | EQ_IMP_RULE1_prf a => th a
       | EQ_IMP_RULE2_prf a => th a
@@ -208,9 +210,26 @@ fun walk {heap, thyname, named_thms, anon_thms,
   fun is_closed tm_ptr = isPtr tm_ptr andalso
     BoolArray.sub(is_closed_bits, ptr tm_ptr)
 
+  (* cf. KernelSig.display_name_of_id *)
+  fun fix defs0 (thy, nm, ep) =
+    if thy = thyname andalso
+       (case Symtab.lookup (!defs0) nm of
+          SOME l => ep < List.foldl (fn ((e,_),m) => Int.max(e,m)) ep l
+        | NONE => false)
+    then Globals.oldify ep nm else nm
+  fun rekey defs0 fixnm =
+    List.foldl (fn ((nm, l), t) =>
+        List.foldl (fn ((ep,p), t) =>
+            update_at (t, fixnm (thyname,nm,ep),
+                       fn NONE => [p] | SOME ls => p::ls)) t l)
+      Symtab.empty (Symtab.dest (!defs0))
+  val fix_const = fix tm_defs0
+  val fix_type = fix ty_defs0
+  fun get_const_id p = case cid p of (t,n,e) => (t, fix_const (t,n,e))
+  fun get_type_id p = case tid p of (t,n,e) => (t, fix_type (t,n,e))
 in
-  { tm_defs = !tm_defs,
-    ty_defs = !ty_defs,
+  { tm_defs = rekey tm_defs0 fix_const,
+    ty_defs = rekey ty_defs0 fix_type,
     is_closed = is_closed,
     get_const_id = get_const_id,
     get_type_id = get_type_id }
