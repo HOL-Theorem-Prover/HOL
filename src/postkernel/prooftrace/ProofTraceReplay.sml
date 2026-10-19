@@ -90,7 +90,7 @@ let
     ProofTraceWalk.walk
       {heap = heap, thyname = thyname,
        named_thms = all_thms, anon_thms = anon_thms,
-       incr = incr, on_def_thm = on_def_thm}
+       incr = incr, on_def_thm = on_def_thm, on_fv = fn _ => ()}
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
