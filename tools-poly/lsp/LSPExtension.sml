@@ -248,13 +248,21 @@ type goal_state_response = {
 type theorem_context = {
   name: string, quote: string, quoteStart: int,
   tacText: string, tacStart: int, cursor: int, compileDone: bool,
-  resumeOf: {suspension: string, label: string} option}
+  resumeOf: {suspension: string, label: string} option,
+  terminationOf: {stem: string} option,
+  locate: bool}
 
 val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])
 val hoverQuotation = ref (fn _ => [])
 val goalStateAtPos :
     (hover_context * theorem_context -> goal_state_response option) ref =
+  ref (fn _ => NONE)
+val stepCursor : (theorem_context * int -> int option) ref =
+  ref (fn _ => NONE)
+val tryTacticAt :
+    (hover_context * theorem_context * {tactic: string, budgetMs: int} ->
+     goal_state_response option) ref =
   ref (fn _ => NONE)
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
@@ -289,10 +297,12 @@ val theorySealed : (string -> bool) ref = ref (fn _ => false)
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string
+       | TimedOut of Time.time
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs = ref false
+val proofTimeout = ref (Time.fromSeconds 120)
 val cheatSubstituted = ref false
 
 local

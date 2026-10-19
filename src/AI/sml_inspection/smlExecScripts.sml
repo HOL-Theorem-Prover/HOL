@@ -50,7 +50,7 @@ fun find_heapname_in_dir dir file =
 fun find_heapname file = find_heapname_in_dir (script_dir file) file
 
 val core_scripts = map (fn x => x ^ "Script_ttt")
-  ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
+  ["ConseqConv", "quantHeuristics", "patternMatches", "while",
    "one", "sum", "option", "pair", "combin", "sat", "normalForms",
    "relation", "min", "bool", "marker", "num", "prim_rec", "arithmetic",
    "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",

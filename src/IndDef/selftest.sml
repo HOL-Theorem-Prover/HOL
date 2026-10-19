@@ -87,6 +87,89 @@ val _ = tprint "Can still look at rule_induction data"
 val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
+(* ----------------------------------------------------------------------
+    Keyed theorem sets: [rule_induction] and [coinduction]
+   ---------------------------------------------------------------------- *)
+
+fun keyed_set_error {origin, settype, expected} testfn =
+  (testfn (); false)
+  handle HOL_ERR error =>
+    top_structure_of error = "KeyedThmSet" andalso
+    top_function_of error = origin andalso
+    List.all (fn text => String.isSubstring text (message_of error))
+      (("[" ^ settype ^ "]") :: expected)
+
+(* coinductions key on the clause conclusion, rule inductions on the
+   clause hypothesis, so each rejects a variable in a different place *)
+val wellformed_coinduction =
+  ASSUME ``!P : num -> bool. T ==> (!x. P x ==> even x)``
+val malformed_coinduction =
+  ASSUME ``!P : num -> bool. T ==> (!x. T ==> P x)``
+val malformed_rule_induction =
+  ASSUME ``!P : num -> bool. T ==> (!x. P x ==> T)``
+val shapeless_coinduction = ASSUME ``!P : num -> bool. P Z``
+
+fun local_attribute_of settype thm_name thm () =
+  ThmAttribute.local_attribute
+    {name = thm_name, attrname = settype, args = [], thm = thm}
+
+val _ = tprint "Malformed [coinduction] theorem has a useful diagnostic"
+val _ = if keyed_set_error
+    {origin = "apply_delta", settype = "coinduction",
+     expected = ["conclusion headed by a constant", "P x"]}
+    (local_attribute_of "coinduction" "malformed_coinduction"
+       malformed_coinduction) then OK ()
+  else die "malformed coinduction theorem was accepted or poorly diagnosed"
+
+val _ = tprint "Malformed [rule_induction] diagnostic names the hypothesis"
+val _ = if keyed_set_error
+    {origin = "apply_delta", settype = "rule_induction",
+     expected = ["hypothesis headed by a constant", "P x"]}
+    (local_attribute_of "rule_induction" "malformed_rule_induction"
+       malformed_rule_induction) then OK ()
+  else die "malformed rule induction was accepted or poorly diagnosed"
+
+val _ = tprint "Non-implicational [coinduction] theorem is diagnosed"
+val _ = if keyed_set_error
+    {origin = "apply_delta", settype = "coinduction",
+     expected = ["premises ==> clauses"]}
+    (local_attribute_of "coinduction" "shapeless_coinduction"
+       shapeless_coinduction) then OK ()
+  else die "shapeless coinduction theorem was accepted or poorly diagnosed"
+
+fun coinduction_count () =
+  length (CoIndDefLib.thy_coinductions (current_theory ()))
+
+val wellformed_coinduction_name = "wellformed_coinduction_export"
+val _ = save_thm (wellformed_coinduction_name, wellformed_coinduction)
+val coinductions_before_export = coinduction_count ()
+val _ = tprint "Well-formed coinduction export is persisted"
+val _ = (CoIndDefLib.export_coinduction wellformed_coinduction_name;
+         if coinduction_count () = coinductions_before_export + 1 then OK ()
+         else die "coinduction export was not recorded")
+
+val malformed_coinduction_name = "malformed_coinduction_export"
+val _ = save_thm (malformed_coinduction_name, malformed_coinduction)
+val coinductions_before_failure = coinduction_count ()
+
+val _ = tprint "Malformed coinduction export is not persisted"
+val _ = if keyed_set_error
+    {origin = "export_thm", settype = "coinduction",
+     expected = ["conclusion headed by a constant"]}
+    (fn () => CoIndDefLib.export_coinduction malformed_coinduction_name)
+    andalso coinduction_count () = coinductions_before_failure then OK ()
+  else die "malformed coinduction export changed persistent data"
+
+val _ = tprint "Malformed stored [coinduction] attribute is not persisted"
+val _ = if keyed_set_error
+    {origin = "apply_delta", settype = "coinduction",
+     expected = ["conclusion headed by a constant"]}
+    (fn () => ThmAttribute.store_at_attribute
+       {name = malformed_coinduction_name, attrname = "coinduction",
+        args = [], thm = malformed_coinduction})
+    andalso coinduction_count () = coinductions_before_failure then OK ()
+  else die "malformed stored coinduction attribute changed persistent data"
+
 (* a theorem the rule_induction set type rejects (its clause hypothesis is
    headed by a variable) must leave no delta in the theory segment; an
    accepted one must, which also shows the delta count below is live *)

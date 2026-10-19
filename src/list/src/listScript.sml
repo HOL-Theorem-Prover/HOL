@@ -23,12 +23,6 @@ Libs
   boolSimps pred_setLib TotalDefn metisLib quotientLib
   Datatype[qualified] OpenTheoryMap[qualified]
 
-(* the bound is a cardinality, and cardinalityCoreTheory makes no
-   grammar of its own; this is kept to itself so that a theory
-   declaring a datatype does not inherit the notation *)
-Overload "<<="[local] = “cardleq”
-
-
 val ERR = mk_HOL_ERR "listScript"
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss

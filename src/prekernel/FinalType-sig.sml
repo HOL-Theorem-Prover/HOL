@@ -65,6 +65,10 @@ sig
 
  (* accessing and manipulating theory information for types *)
  val prim_new_type : {Thy:string, Tyop:string} -> int -> unit
+ (* declare and return the mint, rather than declaring and then
+    fetching it back by name; see Type.prim_mk_new_type *)
+ val prim_mk_new_type : {Thy:string, Tyop:string} -> hol_type list ->
+                        hol_type
  val prim_delete_type : {Thy:string, Tyop:string} -> unit
  val thy_types : string -> (string * int) list
  val del_segment : string -> unit

@@ -112,11 +112,16 @@ struct
        its own. *)
     val pending : bool ThreadLocal.t = ThreadLocal.new ()
     (* A context installed for one thread's benefit.  While it is set,
-       the ambient reads below answer from it rather than from the live
-       cell, so a proof replaying on a worker cannot see another thread
-       swap that cell out from under it -- which it otherwise can, since
+       the reads below answer from it rather than from the live cell,
+       so a proof replaying on a worker cannot see another thread swap
+       that cell out from under it -- which it otherwise can, since
        `mk_const` and `mk_type` resolve names against the live signature
-       and no amount of context-passing removes that (see `live`).
+       and no amount of context-passing removes that (see `live`).  The
+       writes answer from it too, which is why it is a `ref`: a thread
+       that cannot read the live cell has no business writing to it,
+       and one that writes to its pin can read back what it wrote.
+       Nothing outside the owning thread can reach the `ref`, so
+       updating it needs no lock.
 
        `overrides` counts the threads holding one.  It is zero in every
        process that is not replaying proofs, and zero in that one
@@ -125,7 +130,7 @@ struct
        bare read, 1.5ns with the test, 5.6ns going to `getLocal` every
        time.  An `Sref` because a worker installing one and another
        releasing one are concurrent; the read is a plain deref. *)
-    val override : t option ThreadLocal.t = ThreadLocal.new ()
+    val override : t ref option ThreadLocal.t = ThreadLocal.new ()
     val overrides : int Sref.t = Sref.new 0
     (* `ThreadLocal.get` is doubly optional here -- NONE for a thread
        that has never held a pin, `SOME NONE` for one that has released
@@ -136,7 +141,7 @@ struct
     fun current_pin () =
         if Sref.value overrides = 0 then NONE else pinned ()
     fun ambient () =
-        case current_pin () of SOME c => c | NONE => Sref.value ctx
+        case current_pin () of SOME r => !r | NONE => Sref.value ctx
     fun thyname () =
         case #current_thy (Sref.value ctx) of
             NONE => "<no current theory>"
@@ -205,14 +210,22 @@ struct
        out -- an ancient context is indistinguishable from a current
        one, and answers just as confidently.
 
-       Writes are deliberately not redirected: `Data.write` and
-       `Data.modify` go to the live cell, which is what a write means.
-       See the warning on `restore`. *)
+       Writes are redirected as well: `update`, `gen_update`,
+       `restore`, `Data.write` and `Data.modify` all land in the pin,
+       so a pinned thread reads back what it wrote and nothing it
+       writes escapes to the threads that did not ask for it.  They
+       went to the live cell once, and the split was a soundness bug
+       rather than a wrinkle: a caller that declared a name and then
+       looked that name up again had the declaration answered by one
+       context and the lookup by another, which is how
+       `Thm.prim_type_definition` was made to report the type it had
+       just replaced.  `Data.new` is the one write still aimed at the
+       live cell -- see the note there. *)
     fun with_context c f x =
         let
           fun install () =
               Sref.update overrides
-                (fn n => (ThreadLocal.set (override, SOME c); n + 1))
+                (fn n => (ThreadLocal.set (override, SOME (ref c)); n + 1))
           fun uninstall () =
               Sref.update overrides
                 (fn n => (ThreadLocal.set (override, NONE); n - 1))
@@ -220,6 +233,13 @@ struct
           install (); Portable.finally uninstall f x
         end
     fun is_pinned () = Option.isSome (current_pin ())
+    (* For the writers outside this block: each of them has to ask
+       whether it is writing to a pin or to the live cell, and
+       `with_slot_value` has to read the same place it writes.  Not in
+       the signature; `ambient` in particular must stay out of reach,
+       being the one read that does not report to the census. *)
+    val current_pin = current_pin
+    val ambient = ambient
     (* consumed by Data.get, which is the only thing that can name the
        slot an ambient read was after *)
     fun claim_pending () =
@@ -228,13 +248,22 @@ struct
           | _ => false
   end
 
-  fun restore  c  =
-      RWLock.write_locked ctx_rwlock (fn () => Sref.update ctx (fn _ => c))
+  fun restore c =
+      case current_pin () of
+          SOME r => r := c
+        | NONE => RWLock.write_locked ctx_rwlock
+                    (fn () => Sref.update ctx (fn _ => c))
 
   fun update f =
-      RWLock.read_locked ctx_rwlock (fn () => Sref.update ctx f)
+      case current_pin () of
+          SOME r => r := f (!r)
+        | NONE => RWLock.read_locked ctx_rwlock
+                    (fn () => Sref.update ctx f)
   fun gen_update f =
-      RWLock.read_locked ctx_rwlock (fn () => Sref.gen_update ctx f)
+      case current_pin () of
+          SOME r => let val (c, a) = f (!r) in r := c; a end
+        | NONE => RWLock.read_locked ctx_rwlock
+                    (fn () => Sref.gen_update ctx f)
 
   structure Data =
   struct
@@ -255,7 +284,14 @@ struct
     (* Registration installs the empty seed into session_data under
        `name`, so duplicate `new` calls with the same name fail loudly
        instead of silently minting a shadow slot whose reads would
-       later crash (valOf on a NONE unwrap from a foreign embed pair). *)
+       later crash (valOf on a NONE unwrap from a foreign embed pair).
+
+       The one write that still goes to the live cell under a pin, and
+       deliberately: slots are minted once, at module load, by a
+       process that is not replaying anything, and the seed is what
+       `get` falls back to anyway for a context older than the
+       registration.  A slot registered into a pin would be a slot the
+       rest of the process never heard of. *)
     fun new {name, empty, pp} =
         let val (wrap, unwrap) = UniversalType.embed ()
             val () = Sref.update ctx (fn c =>
@@ -287,17 +323,35 @@ struct
         put slot (f (get slot c)) c
 
     fun write slot v =
-        RWLock.read_locked ctx_rwlock (fn () =>
-          Sref.update ctx (put slot v))
+        case current_pin () of
+            SOME r => r := put slot v (!r)
+          | NONE => RWLock.read_locked ctx_rwlock (fn () =>
+                      Sref.update ctx (put slot v))
 
+    (* The per-slot lock serialises writers to the shared cell, so a
+       pinned write skips it: it has no competitors, and taking a
+       process-wide lock on every write a replaying proof makes would
+       serialise a pool of workers against each other for nothing.
+
+       `f` is called first and the pin re-read afterwards, so that a
+       write `f` makes to another slot survives this one -- the
+       cross-slot callbacks the signature allows. *)
     fun modify slot f =
-        RWLock.read_locked ctx_rwlock (fn () =>
-          Lock.synchronized (#lock slot) (fn () =>
-            let val new = f (get slot (Sref.value ctx))
-            in Sref.update ctx (put slot new) end))
+        case current_pin () of
+            SOME r => let val new = f (get slot (!r))
+                      in r := put slot new (!r) end
+          | NONE =>
+            RWLock.read_locked ctx_rwlock (fn () =>
+              Lock.synchronized (#lock slot) (fn () =>
+                let val new = f (get slot (Sref.value ctx))
+                in Sref.update ctx (put slot new) end))
 
+    (* Reads where it writes, so the bracket closes over the value the
+       body actually saw.  Through `ambient` rather than `snapshot`
+       because the census counts tactic-level reads and this one has
+       never been reported. *)
     fun with_slot_value slot v f x =
-        let val old = get slot (Sref.value ctx)
+        let val old = get slot (ambient ())
             val () = write slot v
             val r = f x handle e => (write slot old; raise e)
             val () = write slot old

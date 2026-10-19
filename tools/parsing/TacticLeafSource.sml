@@ -8,7 +8,12 @@ datatype source = Verbatim of string | Synthesised of string
 fun sourceText (Verbatim s) = s
   | sourceText (Synthesised s) = s
 
-fun textAt text (s, e) = String.substring (text, s, e - s)
+(* Clamped, as in the LSP walker: an out-of-range span must not raise. *)
+fun textAt text (s, e) = let
+  val n = String.size text
+  val s' = Int.max (0, Int.min (s, n))
+  val e' = Int.max (s', Int.min (e, n))
+  in String.substring (text, s', e' - s') end
 
 (* ProofStepPlan keeps these wrappers; linearize removes them. *)
 fun stripGroup (Group (_, _, e)) = stripGroup e

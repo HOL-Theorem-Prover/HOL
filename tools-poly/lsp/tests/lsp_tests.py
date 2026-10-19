@@ -11,6 +11,8 @@ Run:  python3 tools-poly/lsp/tests/lsp_tests.py [test_name ...]
 Exit code: 0 if all passed, 1 if any failed.
 """
 import subprocess, threading, time, json, os, sys, re, tempfile, shutil
+import functools
+from concurrent.futures import ThreadPoolExecutor
 
 # The tree under test.  Default: the one this script lives in, four
 # levels up from <HOLDIR>/tools-poly/lsp/tests/lsp_tests.py -- so a
@@ -49,12 +51,50 @@ LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 EXIT_GRACE = int(os.environ.get("HOL_LSP_EXIT_GRACE", "30"))
 
 CLOSE_FAILURES = []
-CURRENT_TEST = "<none>"
+_CLOSE_LOCK = threading.Lock()
+
+# Which test the calling thread is running.  Under `-j' there is no one
+# answer, so a thread local rather than a module global: there is
+# nothing to serialise, the value is per-thread by construction.
+_tls = threading.local()
+
+
+def _current_test():
+    return getattr(_tls, "name", "<none>")
+
+
+def _close_failure(owner, why, err):
+    """File a teardown failure against the test that spawned the server.
+
+    `list.append' is atomic under the GIL, but nothing here should
+    depend on that -- a free-threaded build has no GIL -- and saying so
+    costs one lock."""
+    with _CLOSE_LOCK:
+        CLOSE_FAILURES.append((owner, why, err))
+
+
+# Every timeout below is a budget measured against one server booting on
+# an idle machine.  Under `-j N' there are N of them, contending for
+# exactly what those budgets were sized against: mapping an 18.7MB heap
+# and QUse-ing ten .ML files.  Scale them together rather than raising
+# each by hand -- the ratios between them are deliberate, and the
+# negative waits (`assert_true(not wait_for_method(...))') must widen
+# too, or under load they quietly weaken into vacuous passes.
+TIME_SCALE = 1.0
+
+
+def _budget(t):
+    return t * TIME_SCALE
 
 
 class Client:
     def __init__(self, cwd, args=None, env=None):
         self.spawn_started = time.time()
+        # The test that spawned this server, captured now rather than
+        # read in `close': what a leak wants attributed is who started
+        # it.  It also keeps `close' correct when called from a thread
+        # other than the test's own.
+        self.owner = _current_test()
         self.p = subprocess.Popen(
             [HOL_BIN, "lsp", *(args if args is not None else LSP_ARGS)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -73,7 +113,8 @@ class Client:
         try:
             self._reader_loop()
         except Exception as e:
-            sys.stderr.write(f"[client reader died] {type(e).__name__}: {e}\n")
+            sys.stderr.write(f"[client reader died] {self.owner}: "
+                             f"{type(e).__name__}: {e}\n")
 
     def _reader_loop(self):
         while not self._stop:
@@ -130,7 +171,7 @@ class Client:
         """Return the first message m with m.method == method arriving at
         index >= since.  Efficient for large message volumes: scans only
         the new tail on each poll, no whole-list copy."""
-        deadline = time.time() + timeout
+        deadline = time.time() + _budget(timeout)
         idx = since
         while time.time() < deadline:
             # Snapshot end-index under lock, then scan msgs[idx:end]
@@ -150,7 +191,7 @@ class Client:
 
     def wait_until(self, pred, timeout):
         """Wait until pred(client) is truthy. `pred` takes the client."""
-        deadline = time.time() + timeout
+        deadline = time.time() + _budget(timeout)
         while time.time() < deadline:
             r = pred(self)
             if r: return r
@@ -179,19 +220,19 @@ class Client:
                                for m in cl.messages_since(0)[0]), EXIT_GRACE)
             self.send({"jsonrpc":"2.0","method":"exit","params":None})
             if expect_exit and not _wait_for_exit(self.p, EXIT_GRACE):
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST, "server did not exit after shutdown+exit",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner, "server did not exit after shutdown+exit",
+                    self.stderr_text()[-2000:])
             elif expect_exit and self.p.returncode not in (0, None):
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST,
-                     f"server exited with code {self.p.returncode}",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner,
+                    f"server exited with code {self.p.returncode}",
+                    self.stderr_text()[-2000:])
         except Exception as e:
             if expect_exit:
-                CLOSE_FAILURES.append(
-                    (CURRENT_TEST, f"teardown raised {type(e).__name__}: {e}",
-                     self.stderr_text()[-2000:]))
+                _close_failure(
+                    self.owner, f"teardown raised {type(e).__name__}: {e}",
+                    self.stderr_text()[-2000:])
         finally:
             try:
                 if self.p.poll() is None:
@@ -369,15 +410,35 @@ def requires(tag):
     where, d, obj = _REQUIREMENTS[tag]
 
     def deco(fn):
+        # `functools.wraps' rather than copying __name__/__doc__ by
+        # hand: it also carries __dict__ across, so a tag an inner
+        # decorator set survives being wrapped and decorator order
+        # stops mattering.
+        @functools.wraps(fn)
         def wrapper():
             if not _built(d, obj):
                 raise Skipped(f"{where} is not built in this tree")
             return fn()
-        wrapper.__name__ = fn.__name__
-        wrapper.__doc__ = fn.__doc__
         wrapper.requires = tag
         return wrapper
     return deco
+
+
+def serial(fn):
+    """Mark a test as one to run alone, after the pool has drained.
+
+    For a test that asserts how *long* something took: those bounds
+    were measured on a machine running one server, and `-j' makes that
+    false.  Not for tests that share a place on disk -- there are
+    none: every fixture is its own `tempfile.mkdtemp', which gets the
+    `bin/Holmake' shell-outs their own `.hol/locks' too.
+
+    A final sequential pass rather than a lock, because a lock still
+    leaves the other N-1 tests running, which is exactly what a
+    latency bound cannot tolerate.
+    """
+    fn.serial = True
+    return fn
 
 
 def assert_le(actual, expected, label):
@@ -505,6 +566,7 @@ def test_small_recompile_type_error_inserted():
 
 
 @requires("integer")
+@serial
 def test_integer_first_compile():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -525,6 +587,7 @@ def test_integer_first_compile():
 
 
 @requires("integer")
+@serial
 def test_integer_recompile_blank_lines():
     src = f"{REPO}/src/integer/integerScript.sml"
     c = Client(os.path.dirname(src))
@@ -629,6 +692,7 @@ def test_small_recompile_bare_val():
 
 
 @requires("integer")
+@serial
 def test_integer_didChange_interrupts_stale_compile():
     """didChange mid-compile must interrupt the stale compile and start a
     fresh one.  Otherwise we get two compiles running against the same
@@ -672,6 +736,7 @@ def test_integer_didChange_interrupts_stale_compile():
 
 
 @requires("integer")
+@serial
 def test_hover_responsive_during_compile():
     """A didChange kicks off a compile; while it's running, hover
     requests must still be answered promptly (recv thread must not
@@ -1647,7 +1712,7 @@ def test_hover_inside_inductive_body():
 
 
 def _wait_for_exit(p, timeout=10):
-    deadline = time.time() + timeout
+    deadline = time.time() + _budget(timeout)
     while time.time() < deadline:
         if p.poll() is not None: return True
         time.sleep(0.1)
@@ -2303,7 +2368,7 @@ _SUSP_COLON_LINE = 11      # `Resume willsplit[p]:`
 _SUSP_BODY_LINE = 12       # `  first_assum ACCEPT_TAC`
 
 
-def _susp_goal(c, uri, rid, line, char, tries=25):
+def _susp_goal(c, uri, rid, line, char, timeout=50):
     """Ask for goal state and wait out the `pending` that the first
     request provokes.
 
@@ -2311,14 +2376,32 @@ def _susp_goal(c, uri, rid, line, char, tries=25):
     actually run, which elaboration does not do on its own.  The first
     request answers `pending` and asks for the parent to be run; the
     recompile that follows is what makes the subgoal available.  So a
-    test polls rather than asking once."""
-    for i in range(tries):
-        m = _send_goalstate(c, rid + i, uri, line, char)
-        r = (m or {}).get("result")
+    test polls rather than asking once.
+
+    A deadline rather than a fixed number of tries, and a wait on that
+    recompile rather than a flat two seconds.  A loop count is the one
+    budget in this file that `TIME_SCALE' cannot reach, so under `-j'
+    it would quietly become tighter than it was sized to be -- while
+    also costing 2s a round when the answer had already arrived.
+    """
+    deadline = time.time() + _budget(timeout)
+    n, r = 0, None
+    while True:
+        since = c.total_msgs()
+        r = (_send_goalstate(c, rid + n, uri, line, char) or {}).get("result")
         if r and r.get("status") == "ok":
             return r
-        time.sleep(2)
-    return (m or {}).get("result")
+        n += 1
+        # `deadline' is already scaled, so poll here rather than going
+        # through `wait_for_method' and scaling a second time.
+        saw = False
+        while time.time() < deadline and not saw:
+            saw = any(m.get("method") == "$/compileCompleted"
+                      for m in c.messages_since(since)[0])
+            if not saw:
+                time.sleep(0.05)
+        if not saw:
+            return r
 
 
 def _proof_states(c, uri, since=0):
@@ -2614,7 +2697,9 @@ def test_goalState_resume_unknown_label_is_not_null():
                         "compileCompleted")
             col = len("Resume willsplit[typo]:")
             # Never settles to `ok`; take whatever the last answer is.
-            r = _susp_goal(c, uri, 980, _SUSP_COLON_LINE, col, tries=4)
+            # Short budget on purpose: this one never settles, so the
+            # default would mean waiting out the whole deadline.
+            r = _susp_goal(c, uri, 980, _SUSP_COLON_LINE, col, timeout=6)
             assert_true(r is not None,
                         "a response rather than null for a Resume block")
             assert_eq(r["status"], "pending", f"reported pending ({r!r})")
@@ -2656,6 +2741,64 @@ def test_a_resume_proof_has_no_ordinal():
                         f"names ({_proof_states(c, uri)!r})")
             bogus = [n for n in seen if "#" in n]
             assert_eq(bogus, [], f"no ordinals anywhere ({seen!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_no_cheat_proof_that_fails_is_still_cheated():
+    """Asking for a `Resume`'s subgoal puts its parent in the no-cheat
+    set, so the next pass runs that proof for real instead of standing
+    an oracle in for it.  If the user then breaks the parent's tactic
+    -- which is the ordinary next thing to happen while a proof is
+    being written -- the replay raises.
+
+    It must not take the declaration with it.  Elaboration's contract
+    with the rest of the file is that a proof is cheated: the name is
+    bound whatever the tactic does, and everything below is elaborated
+    against it.  A raise there leaves `willsplit` undeclared and every
+    later reference to it broken, which is a far worse report than the
+    one failing proof.
+
+    So the replay falls back to the placeholder and reports `failed`,
+    which is exactly what the pool would have said had the proof been
+    deferred.  That verdict arriving at all is the discriminator: a
+    raise never reaches `enqueueDeferred`, so nothing is ever reported
+    for the name."""
+    d = tempfile.mkdtemp(prefix="lsp_nocheat_")
+    try:
+        src = _SUSP_PREAMBLE % "nocheat" + _SUSP_RESUME_SRC
+        c = Client(d)
+        try:
+            _init(c, d, timeout=60)
+            _request(c, 1440, "$/setConfig", {"checkProofs": True})
+            uri = f"file://{d}/nocheatScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            # Forces `willsplit` into the no-cheat set and runs it.
+            col = len("Resume willsplit[p]:")
+            r = _susp_goal(c, uri, 1450, _SUSP_COLON_LINE, col)
+            assert_true(r is not None and r.get("status") == "ok",
+                        f"the parent has been run for real ({r!r})")
+
+            # Break it.  `NO_TAC` compiles and fails at run time, which
+            # is a failing proof rather than a failing compile.
+            at = src.index("  strip_tac >> conj_tac")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at,
+                             at + len("  strip_tac >> conj_tac"),
+                             "  NO_TAC", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 120, idx),
+                        "a pass completes on the broken tactic")
+
+            def failed(cl):
+                return (_proof_states(cl, uri).get("willsplit", ("", None))[0]
+                        == "failed")
+            assert_true(c.wait_until(failed, 120),
+                        f"the broken proof is reported, not raised "
+                        f"({_proof_states(c, uri)!r})")
         finally:
             c.close()
     finally:
@@ -2901,11 +3044,14 @@ def test_statement_edit_still_clears_later_proofs():
         shutil.rmtree(d, ignore_errors=True)
 
 
-def _send_goalstate(c, req_id, uri, line, char):
+def _send_goalstate(c, req_id, uri, line, char, step=None):
+    params = {"textDocument":{"uri":uri},
+              "position":{"line":line,"character":char}}
+    if step is not None:
+        params["step"] = step
     c.send({"jsonrpc":"2.0","id":req_id,
             "method":"$/hol/goalState",
-            "params":{"textDocument":{"uri":uri},
-                      "position":{"line":line,"character":char}}})
+            "params":params})
     def got(cl):
         with cl.msgs_lock:
             for m in cl.msgs:
@@ -2915,6 +3061,7 @@ def _send_goalstate(c, req_id, uri, line, char):
 
 
 @requires("integer")
+@serial
 def test_full_replace_resumes_from_the_common_prefix():
     """A whole-document replace is usually a revert or a reformat, so
     the old and new texts agree for most of their length.  Resume from
@@ -3062,6 +3209,695 @@ def test_goalState_inside_proof():
         goal_text = goals[0].get("goal", "")
         assert_true("n + 0 = n" in goal_text or "n + 0" in goal_text,
                     f"goal renders the theorem statement ({goal_text!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_with_an_unterminated_quotation():
+    """A body still being typed can hold an unterminated quotation.  The
+    lexer then runs past the end of the tactic, so the spans downstream
+    code slices `tacText' with are the ones most likely to escape it.
+    Two things have to hold: the half-typed proof still answers, and the
+    *next* theorem is still identified as itself rather than swallowed
+    into the broken block above it.
+
+    The second half is the one with teeth.  An unterminated *string* or
+    character literal used to swallow the rest of the file: the block's
+    `QED' went with it, `findEnclosingTheorem' fell back to the dec's
+    `stop', and a cursor in a later theorem was answered with the broken
+    theorem's goal, status "ok" and no error.  SML admits a newline in a
+    literal only inside a `\\ ... \\' gap, so HolLex now ends an
+    unterminated one at the newline and the damage stops at that line.
+    All three forms are checked here."""
+    for tag, body in [("quote", "  rw[] >> `n < 10"),
+                      ("string", '  rw[] >> simp["abc]'),
+                      ("char", '  rw[] >> simp[#"a]')]:
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            uri = "file:///tmp/goalstate_untermd_%s.sml" % tag
+            src = ("Theory goalstate_untermd_%s\n" % tag +
+                   "Ancestors arithmetic\n\n"
+                   "Theorem half_typed:\n"
+                   "  !n:num. n + 0 = n\n"
+                   "Proof\n"
+                   + body + "\n"
+                   "QED\n\n"
+                   "Theorem healthy:\n"
+                   "  !m:num. m + 0 = m\n"
+                   "Proof\n"
+                   "  rw[]\n"
+                   "QED\n")
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted (%s)" % tag)
+
+            # Line 6 is the half-typed body itself.
+            broken = _send_goalstate(c, 1101, uri, 6, len(body))
+            assert_true(broken is not None,
+                        "half-typed proof got a reply (%s)" % tag)
+            assert_true(broken.get("error") is None,
+                        f"no protocol error ({tag}, {broken!r})")
+
+            # Line 12 is `healthy's body.  Asked three times: a budget
+            # canary left armed by a walk that raised would interrupt a
+            # later request, not the one that armed it.
+            for attempt in range(3):
+                ok = _send_goalstate(c, 1102 + attempt, uri, 12, 3)
+                assert_true(ok is not None,
+                            "healthy proof got a reply (%s)" % tag)
+                res = ok.get("result")
+                assert_true(res is not None,
+                            f"healthy proof has a result ({tag}, {ok!r})")
+                assert_eq(res.get("theorem"), "healthy",
+                          "theorem name (%s)" % tag)
+                goals = res.get("goals")
+                assert_true(isinstance(goals, list) and len(goals) == 1,
+                            f"one goal ({tag}, {goals!r})")
+                assert_true("m + 0" in goals[0].get("goal", ""),
+                            f"goal renders the statement ({tag}, {goals!r})")
+        finally:
+            c.close()
+
+
+def _send_trytactic(c, req_id, uri, line, char, tactic,
+                    step=None, budget_ms=None):
+    params = {"textDocument":{"uri":uri},
+              "position":{"line":line,"character":char},
+              "tactic":tactic}
+    if step is not None:
+        params["step"] = step
+    if budget_ms is not None:
+        params["budgetMs"] = budget_ms
+    c.send({"jsonrpc":"2.0","id":req_id,
+            "method":"$/hol/tryTactic","params":params})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    return c.wait_until(got, 15)
+
+
+def test_tryTactic_probes_without_committing():
+    """A candidate tactic applied at the anchor, committing nothing.
+
+    The three things that matter: it answers about the state the anchor
+    reached (not the goal re-parsed from a string, and not a splice of
+    the body); a candidate that fails does not squiggle the file,
+    because the user never wrote it; and the probe leaves the walker's
+    per-theorem cache alone, so the real goal state at the same place
+    is unchanged afterwards."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_try.sml"
+        src = ("Theory gs_try\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_me:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        # The state the real proof reaches after `strip_tac'.
+        before = _send_goalstate(c, 7301, uri, 6, 12)
+        base = (before or {}).get("result")
+        assert_true(base is not None, f"anchor has a state ({before!r})")
+        assert_true(len(base["goals"]) == 1,
+                    f"one goal at the anchor ({base['goals']!r})")
+
+        # A candidate that closes it.
+        good = _send_trytactic(c, 7302, uri, 6, 12, "simp[]")
+        gres = (good or {}).get("result")
+        assert_true(gres is not None, f"probe answered ({good!r})")
+        assert_eq(gres.get("error"), None,
+                  f"a candidate that works reports no error ({gres!r})")
+        assert_eq(len(gres["goals"]), 0,
+                  f"`simp[]' closes the goal ({gres['goals']!r})")
+
+        # A candidate that cannot apply.  It must not be squiggled: the
+        # user never wrote it, so there is nothing in the file to mark.
+        bad = _send_trytactic(c, 7303, uri, 6, 12, "Cases_on `zzz`")
+        bres = (bad or {}).get("result")
+        assert_true(bres is not None, f"failing probe answered ({bad!r})")
+        assert_eq(bres.get("failedRange"), None,
+                  f"a candidate failure has no file range ({bres!r})")
+        # Give any stray publish a moment to arrive before looking.
+        c.wait_for_method("textDocument/publishDiagnostics", 2)
+        assert_eq(_diag_count(c, uri), [],
+                  "a failed probe publishes no diagnostics")
+
+        # And the real state at the anchor is exactly as it was: the
+        # probe did not write the per-theorem snapshot cache.
+        after = _send_goalstate(c, 7304, uri, 6, 12)
+        ares = (after or {}).get("result")
+        assert_true(ares is not None, f"anchor still answers ({after!r})")
+        assert_eq(ares.get("goals"), base.get("goals"),
+                  "the probe left the real goal state alone")
+        assert_eq(ares.get("step"), base.get("step"), "same step")
+    finally:
+        c.close()
+
+
+def test_tryTactic_honours_a_step_anchor():
+    """The anchor may be named by step rather than position, so a
+    caller with no cursor can probe.  Both probes below send the same
+    position and differ only in `step', and `simp[]' closes the goal
+    only after `strip_tac' has run."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_try_step.sml"
+        src = ("Theory gs_try_step\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_step:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        at1 = _send_trytactic(c, 7311, uri, 6, 12, "simp[]", step=1)
+        r1 = (at1 or {}).get("result")
+        assert_true(r1 is not None, f"step-1 probe answered ({at1!r})")
+        assert_eq(len(r1["goals"]), 0,
+                  f"after strip_tac, simp[] closes it ({r1['goals']!r})")
+
+        at0 = _send_trytactic(c, 7312, uri, 6, 12, "strip_tac", step=0)
+        r0 = (at0 or {}).get("result")
+        assert_true(r0 is not None, f"step-0 probe answered ({at0!r})")
+        assert_eq(r0.get("step"), 0, "the step anchor was honoured")
+        assert_eq(len(r0["goals"]), 1,
+                  f"strip_tac at step 0 leaves one goal ({r0['goals']!r})")
+    finally:
+        c.close()
+
+
+def test_tryTactic_budget_bounds_both_of_its_walks():
+    """`tryTactic' walks twice -- the body up to the anchor, then the
+    candidate from there -- and `withTimeout's canary fires at most
+    once.  Under a single canary the first walk absorbed it and the
+    second ran with no budget at all, on the half-walked state an
+    interrupted walk leaves, which is exactly what a candidate
+    diverges on.  The walk then held the process's compile state
+    until someone killed the server: the probe never answered, and
+    nor did anything else.
+
+    So the assertions are the two halves of that.  Every probe has to
+    come back, and the server has to still be there afterwards.
+
+    Deliberately all on ONE client.  The neighbouring budget test
+    retries with a fresh `Client' per attempt, which is why it could
+    never have caught this: a wedged server is abandoned rather than
+    noticed."""
+    src = ("Theory gs_twobudget\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem slow_anchor:\n"
+           "  !a b c d:num. a + (b + (c + d)) = d + (c + (b + a))\n"
+           "Proof\n"
+           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC, ADD_SYM]\n"
+           "QED\n")
+    uri = "file:///tmp/gs_twobudget.sml"
+    END = 46     # past the metis call, so the anchor walk runs it
+    CAND = "simp[ADD_COMM, ADD_ASSOC, ADD_SYM, ADD_0, ADD_SUC]"
+
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        # Whether the canary wins is a race -- it sleeps the budget and
+        # then has to be scheduled, while the walk runs -- so try until
+        # it does; but every single try must answer, because a miss
+        # here is the wedge.  Each try extends the candidate, so the
+        # candidate walk is fresh text rather than a cached resume: a
+        # repeat at the same anchor costs nothing to walk and so would
+        # never run out of budget.
+        fired = None
+        last = None
+        for attempt in range(10):
+            cand = CAND[:-1] + (", ADD_0" * attempt) + "]"
+            r = _send_trytactic(c, 7360 + attempt, uri, 6, END, cand,
+                                budget_ms=1)
+            assert_true(r is not None,
+                        f"probe {attempt} answered at all; no reply is the "
+                        f"wedge this test exists for")
+            res = r.get("result") or {}
+            last = res
+            if "budget" in (res.get("error") or ""):
+                fired = res["error"]
+                break
+        assert_true(fired is not None,
+                    f"a 1ms budget stopped a walk in ten tries "
+                    f"(last reply {last!r})")
+
+        # Whichever walk it stopped, it must blame that walk's own
+        # text -- the two index different strings, and either can be
+        # the one that ran out.  The sharp assertions here are the
+        # reply and the survival either side of this; this one only
+        # holds the report to naming something that exists.
+        if "`" in fired:
+            step = fired.split("`")[1]
+            assert_true(step in src or step in cand,
+                        f"the named step comes from one of the two texts "
+                        f"the walks index ({step!r} in {fired!r})")
+
+        # And the server is still usable -- the half of this the
+        # single-canary version failed.
+        after = _send_goalstate(c, 7369, uri, 6, END)
+        assert_true(after is not None,
+                    "the server still answers after a probe timed out")
+    finally:
+        c.close()
+
+
+def test_tryTactic_says_when_a_candidate_will_not_compile():
+    """A candidate whose SML does not compile is told so.
+
+    `sourceFailure' silences a leaf that would not compile, and for the
+    file's own text that is right: either the compile has not run the
+    `open's yet, so the answer is provisional, or it has and already
+    published the real message against that very text.  Neither holds
+    for a candidate -- it is not in the file and no compile has ever
+    seen it -- so silencing it returned the anchor's goal unchanged and
+    no error, which is exactly what a tactic that compiled and made no
+    progress returns.  A typo was indistinguishable from a useless
+    tactic.
+
+    Three candidates, which must give three different answers, and the
+    first is the control: without it a server that reported an error
+    for everything would pass."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_trycompile.sml"
+        src = ("Theory gs_trycompile\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_me:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def probe(req_id, tactic):
+            r = (_send_trytactic(c, req_id, uri, 6, 12, tactic) or {})
+            res = r.get("result")
+            assert_true(res is not None,
+                        f"probe {tactic!r} answered ({r!r})")
+            return res
+
+        works = probe(7321, "simp[]")
+        assert_eq(works.get("error"), None,
+                  f"control: a candidate that works has no error "
+                  f"({works!r})")
+        assert_eq(len(works["goals"]), 0,
+                  f"control: `simp[]' closes the goal ({works!r})")
+
+        applies = probe(7322, "Cases_on `zzz`")
+        msg = applies.get("error") or ""
+        assert_true("failed to apply" in msg,
+                    f"a tactic that compiled but could not apply says so "
+                    f"({msg!r})")
+
+        for req_id, tactic in ((7323, "NO_SUCH_TAC_HERE"), (7324, "simp[[")):
+            res = probe(req_id, tactic)
+            msg = res.get("error") or ""
+            assert_true("did not compile" in msg or "did not parse" in msg,
+                        f"{tactic!r} is reported as not compiling, not as "
+                        f"silence ({msg!r})")
+            # The whole point: not mistaken for a tactic that ran.
+            assert_true("failed to apply" not in msg,
+                        f"{tactic!r} is not described as having applied "
+                        f"({msg!r})")
+
+        # Still the caller's text, not the file's: nothing is squiggled.
+        c.wait_for_method("textDocument/publishDiagnostics", 2)
+        assert_eq(_diag_count(c, uri), [],
+                  "an uncompilable probe publishes no diagnostics")
+    finally:
+        c.close()
+
+
+def _send_eval(c, req_id, uri, code):
+    """`$/eval` with holdep off, so nothing is preloaded as a side
+    effect and the reply is only about the chunk."""
+    c.send({"jsonrpc":"2.0","id":req_id,
+            "method":"$/eval",
+            "params":{"uri":uri,"code":code,"holdep":0}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    return c.wait_until(got, 30)
+
+
+def _eval_text(reply):
+    """Every string the reports carry, in one blob: `body` for output,
+    `msg` for an error or a note."""
+    res = (reply or {}).get("result") or []
+    out = []
+    for r in res:
+        for k in ("body", "msg"):
+            v = r.get(k)
+            if isinstance(v, str):
+                out.append(v)
+    return "\n".join(out)
+
+
+def _search_names(c, req_id, fragment):
+    """`$/hol/search` for a theorem-name fragment; the double quotes
+    are the selector syntax, not JSON."""
+    c.send({"jsonrpc":"2.0","id":req_id,"method":"$/hol/search",
+            "params":{"selectors":['"%s"' % fragment],"limit":10}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    r = c.wait_until(got, 20)
+    return [x.get("name") for x in ((r or {}).get("result") or [])]
+
+
+def test_stale_ancestor_draws_a_warning():
+    """A dependency is read once per process, so a theory whose script
+    has been edited since it was built goes on answering from the
+    version that was built -- with nothing about it looking wrong.
+    The server gives that a symptom: a warning on the header entry
+    that named the theory.
+
+    Built here rather than borrowed from the tree, so the test owns
+    both halves of the comparison and touches nothing it does not own.
+    The artifacts land in `.hol/objs/', which is the indirection the
+    sibling-script lookup has to see through, so that is exercised too.
+
+    The first half is the control: a freshly built ancestor draws
+    nothing.  Without it a server that warned about everything would
+    read exactly like one that warned correctly."""
+    import subprocess, tempfile, shutil
+    d = tempfile.mkdtemp(prefix="hol-stale-")
+    try:
+        up = os.path.join(d, "zzupScript.sml")
+        with open(up, "w") as f:
+            f.write("Theory zzup\nAncestors bool\n\n"
+                    "Theorem zzup_triv:\n  T\nProof\n  REWRITE_TAC[]\nQED\n")
+        with open(os.path.join(d, "Holmakefile"), "w") as f:
+            f.write("")
+        r = subprocess.run([f"{REPO}/bin/Holmake"], cwd=d,
+                           capture_output=True, text=True, timeout=300)
+        assert_true(os.path.exists(os.path.join(d, ".hol", "objs",
+                                                "zzupTheory.uo")),
+                    f"the scratch theory built ({r.stdout[-400:]!r})")
+
+        uri = "file://" + os.path.join(d, "zzdownScript.sml")
+        src = ("Theory zzdown\n"
+               "Ancestors zzup\n\n"
+               "Theorem zzdown_triv:\n  T\nProof\n  REWRITE_TAC[]\nQED\n")
+
+        c = Client(d)
+        try:
+            _init(c, d)
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            fresh = [x.get("message", "") for x in _diag_count(c, uri)]
+            assert_true(not any("older than" in m for m in fresh),
+                        f"a freshly built ancestor draws nothing ({fresh!r})")
+
+            # Now the script is newer than what the server loaded.
+            future = time.time() + 10
+            os.utime(up, (future, future))
+
+            _did_change_full(c, uri, src + "\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, since=0),
+                        "second compileCompleted")
+
+            def warned(cl):
+                msgs = [x.get("message", "") for x in _diag_count(cl, uri)]
+                return msgs if any("older than" in m for m in msgs) else None
+            got = c.wait_until(warned, 30)
+            seen = [x.get("message", "") for x in _diag_count(c, uri)]
+            assert_true(got is not None,
+                        f"the stale ancestor is reported ({seen!r})")
+            joined = "\n".join(got)
+            assert_contains(joined, "zzupTheory", "it names the theory")
+            assert_contains(joined, "restart",
+                            "it says a rebuild alone is not enough")
+            sev = [x.get("severity") for x in _diag_count(c, uri)
+                   if "older than" in x.get("message", "")]
+            assert_eq(sev, [2], "a warning, not an error")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_eval_runs_in_a_world_that_is_thrown_away():
+    """`$/eval` gives the caller a transient session: the chunk runs,
+    and then the Context, the loaded-module set and the namespace layer
+    are all put back.  So a `Definition` works -- and is gone.
+
+    Proved against the database rather than against anything the server
+    says about itself: the theorem is absent before, the chunk runs
+    without being refused, and it is still absent after.  `ADD_COMM' is
+    the control for the probe itself -- without it an always-empty
+    search would read exactly like a clean rollback."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/eval_scratch.sml"
+        # A chunk that defines anything needs a current theory, which
+        # the server only has once it has compiled a script.
+        _did_open(c, uri, "Theory eval_scratch\nAncestors arithmetic\n", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        assert_true("ADD_COMM" in _search_names(c, 7400, "ADD_COMM"),
+                    "the search probe works at all")
+        assert_eq(_search_names(c, 7401, "zzdef_def"), [],
+                  "the theorem is not there to begin with")
+
+        defn = _send_eval(c, 7402, uri,
+                          "Definition zzdef_def:\n  zzdef = T\nEnd\n")
+        assert_true(defn is not None, "the Definition got a reply")
+        assert_eq(defn.get("error"), None,
+                  f"it ran rather than being refused ({defn!r})")
+        assert_eq(_search_names(c, 7403, "zzdef_def"), [],
+                  "and the definition did not outlive the request")
+
+        q = _send_eval(c, 7404, uri, "1 + 1;")
+        assert_eq(q.get("error"), None, "a question is not refused")
+    finally:
+        c.close()
+
+
+def test_eval_refuses_what_it_cannot_throw_away():
+    """A snapshot puts the Context back, but loading a theory *seals*
+    it -- that lives in `KernelSig`, outside the Context -- and
+    `export_theory` writes files.  Neither can be undone, so those are
+    turned away rather than run.
+
+    The last case is the control for the blanking: a name inside a
+    comment or a string is not a call."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/eval_irrev.sml"
+
+        def err_of(rid, code):
+            r = _send_eval(c, rid, uri, code)
+            assert_true(r is not None, f"a reply came back for {code!r}")
+            e = r.get("error")
+            return (e or {}).get("message", "") if e else None
+
+        msg = err_of(7411, 'val _ = load "pairTheory";')
+        assert_true(msg is not None, "load is refused")
+        assert_contains(msg, "load", "the refusal names the call")
+        assert_contains(msg, "thrown away", "the refusal says why")
+
+        assert_true(err_of(7412, "val _ = export_theory();") is not None,
+                    "export_theory is refused")
+
+        assert_eq(err_of(7413, '(* load *) val s = "use"; 1+1;'), None,
+                  "a name in a comment or string is not a call")
+    finally:
+        c.close()
+
+
+def test_eval_is_logged():
+    """The prompt a chunk is typed into need not keep a transcript --
+    that is half the reason for holding `$/eval` to questions -- but a
+    reader still deserves to see what was asked, so an accepted chunk
+    goes to the client's log."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/eval_logged.sml"
+        probe = "4 + 38;"
+        r = _send_eval(c, 7411, uri, probe)
+        assert_true(r is not None, "a reply came back")
+        assert_eq(r.get("error"), None, "the probe was accepted")
+        msgs, _ = c.messages_since(0)
+        logged = [m for m in msgs
+                  if m.get("method") == "window/logMessage"
+                  and probe in (m.get("params") or {}).get("message", "")]
+        assert_true(len(logged) > 0,
+                    "the chunk appears in window/logMessage")
+    finally:
+        c.close()
+
+
+def test_goalState_addresses_a_step_directly():
+    """A caller with no cursor names the step it wants.  The position
+    then only has to land in the right `Proof … QED' -- which is why
+    every request below sends the *end* of the body and still gets the
+    step it asked for: without the override they would all answer the
+    last one.
+
+    Index 0 is the body's start, k is the end of the k'th step, and a
+    negative index is the last.  An index past the end leaves the
+    position's own cursor alone, so a caller walking forward stops
+    seeing new states rather than starting to see errors."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_stepaddr.sml"
+        src = ("Theory gs_stepaddr\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem stepaddr:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  rpt strip_tac >> simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        END = 25   # end of "  rpt strip_tac >> simp[]"
+
+        def ask(rid, step):
+            r = _send_goalstate(c, rid, uri, 6, END, step=step)
+            assert_true(r is not None, f"reply for step={step}")
+            res = r.get("result")
+            assert_true(res is not None, f"result for step={step} ({r!r})")
+            return res
+
+        # The control: no `step', so the cursor at the body's end wins.
+        last = ask(7201, None)
+        nsteps = last["step"]
+        assert_true(nsteps >= 2,
+                    f"the body has at least two steps ({nsteps})")
+
+        at0 = ask(7202, 0)
+        assert_eq(at0["step"], 0, "step 0 overrides the cursor")
+        assert_true(len(at0["goals"]) == 1,
+                    f"step 0 has the opening goal ({at0['goals']!r})")
+
+        at1 = ask(7203, 1)
+        assert_eq(at1["step"], 1, "step 1 overrides the cursor")
+        assert_true(at0["goals"] != at1["goals"],
+                    f"step 1 is not step 0 ({at1['goals']!r})")
+
+        atlast = ask(7204, -1)
+        assert_eq(atlast["step"], nsteps,
+                  "a negative index asks for the last step")
+
+        # Past the end: the position's own cursor stands.
+        beyond = ask(7205, 99)
+        assert_eq(beyond["step"], nsteps,
+                  "an index past the end falls back to the position")
+    finally:
+        c.close()
+
+
+def test_goalState_budget_timeout_names_the_step():
+    """A walk that outruns its budget has to say what it was running.
+    Naming only the budget leaves a looping tactic to be found by
+    bisection, which is the expensive way round.  `HOL_LSP_WALK_BUDGET_MS'
+    shrinks the budget so the timeout is deterministic rather than a
+    race; the report must then name the step in flight, give its range,
+    and count what finished before it.
+
+    The second half is the control: the same walk under the shipped
+    budget says nothing at all, so the attribution cannot become noise
+    on a healthy proof."""
+    src = ("Theory gs_budget\n"
+           "Ancestors arithmetic\n\n"
+           "Theorem slow_one:\n"
+           "  !a b c:num. a + (b + c) = c + (b + a)\n"
+           "Proof\n"
+           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC]\n"
+           "QED\n")
+    uri = "file:///tmp/gs_budget.sml"
+    END = 40   # past `metis_tac[...]', so the walk runs it
+
+    # Whether the canary wins is a race: it sleeps the budget and then
+    # has to be scheduled, while the walk runs.  Measured under eight
+    # busy cores it wins about half the tries -- `rw[]' discharges this
+    # goal, so the walk is over in a millisecond or two however hard
+    # the goal is made, and the race is decided inside the first step.
+    # Hence ten tries rather than a slower proof: the walk cannot be
+    # stretched, so the provocation is repeated instead.  A server that
+    # stopped attributing would fail all ten.
+    timed_out = None
+    last = None
+    for attempt in range(10):
+        c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted")
+            r = _send_goalstate(c, 7101 + attempt, uri, 6, END)
+            res = (r or {}).get("result")
+            assert_true(res is not None, f"a result came back ({r!r})")
+            last = res
+            if res.get("error"):
+                timed_out = res
+                break
+        finally:
+            c.close()
+
+    assert_true(timed_out is not None,
+                f"a 1ms budget stopped the walk in ten tries "
+                f"(last reply {last!r})")
+    err = timed_out.get("error") or ""
+    assert_contains(err, "budget", "the report names the budget")
+    assert_contains(err, "step(s) completed",
+                    "the report counts what finished")
+    assert_true("`" in err,
+                f"the report names a step in backticks ({err!r})")
+    rng = timed_out.get("failedRange")
+    assert_true(rng is not None,
+                f"the in-flight step is ranged ({timed_out!r})")
+    assert_eq(rng["start"]["line"], 6, "range sits on the tactic line")
+    assert_true(rng["end"]["character"] > rng["start"]["character"],
+                f"range is not empty ({rng!r})")
+
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted (default budget)")
+        # Stopping before `metis_tac' keeps this half cheap by
+        # construction rather than by luck, so it tests what it says:
+        # a walk inside its budget says nothing about cost.
+        r = _send_goalstate(c, 7110, uri, 6, 6)
+        res = (r or {}).get("result")
+        assert_true(res is not None, f"a result came back ({r!r})")
+        assert_eq(res.get("error"), None,
+                  "a walk that fits its budget reports no cost")
     finally:
         c.close()
 
@@ -3215,6 +4051,378 @@ def test_goalState_incomplete_proof_body():
         goal0 = result["goals"][0]["goal"]
         assert_true("!" in goal0 or "∀" in goal0,
                     f"pre-tactic goal still has quantifier ({goal0!r})")
+    finally:
+        c.close()
+
+
+# ---------------------------------------------------------------------
+# `Definition … Termination tac End'
+#
+# A termination proof is a tactic proof like any other, but its goal is
+# written nowhere in the file: it is the obligation `Defn' derives from
+# the equations.  The server rebuilds the defn and asks it, which is
+# what lets an *empty* Termination block show the initial goal -- that
+# block does not elaborate, so there is nothing to have captured.
+# ---------------------------------------------------------------------
+
+_TC_SRC = ("Theory %s\n"
+           "Ancestors arithmetic\n\n"
+           "Definition count_def:\n"
+           "  count n = if n = 0 then 0 else 1 + count (n - 1)\n"
+           "Termination\n"
+           "  WF_REL_TAC `measure I` >> simp[]\n"
+           "End\n")
+# 0 Theory / 1 Ancestors / 2 blank / 3 Definition / 4 eqn
+# 5 Termination / 6 tactic / 7 End
+_TC_TERM_LINE, _TC_TAC_LINE = 5, 6
+
+
+def _tc_goal(c, uri, rid, line, char, tries=10):
+    """Ask for goal state, waiting out a `null` that only means the
+    walk could not have the compile state yet.
+
+    `goalStateAtPos' refuses outright while a compile owns the process
+    -- a rewind under a running pass would empty the theory graph --
+    and a `didOpen' plus a goals pane are concurrent by construction.
+    So poll, rather than read the refusal as "no goal here"."""
+    for i in range(tries):
+        m = _send_goalstate(c, rid + i, uri, line, char)
+        r = (m or {}).get("result")
+        if r is not None:
+            return r
+        time.sleep(0.2)
+    return None
+
+
+def test_goalState_at_an_empty_termination_body():
+    """The ask: `Termination' with nothing between it and `End' shows
+    the initial termination goal, exactly as an empty `Proof ... QED'
+    shows the initial goal of its theorem.
+
+    Neither declaration compiles -- the expander builds `SOME ()' here
+    and `fn g => () g' there -- so this cannot be served by anything
+    the elaboration saw.  The goal is rebuilt from the equations."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_empty.sml"
+        src = (_TC_SRC % "tc_empty").replace(
+            "  WF_REL_TAC `measure I` >> simp[]\n", "")
+        # The block has to be genuinely empty, or this test quietly
+        # becomes a second copy of the step-0 case above.
+        assert_true("WF_REL_TAC" not in src, "the body was removed")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted (even with the block unfinished)")
+        # Just past the `Termination' keyword, where a reader asking
+        # "what am I proving?" puts the cursor.
+        r = _tc_goal(c, uri, 1200, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None, "goalState answered")
+        assert_eq(r.get("status"), "ok", f"a settled answer ({r!r})")
+        assert_eq(r.get("theorem"), "count_def_termination",
+                  f"named as Defn names the obligation ({r!r})")
+        assert_eq(r.get("step"), 0, "step 0, no tactic having run")
+        goals = r.get("goals") or []
+        assert_eq(len(goals), 1, f"one goal ({goals!r})")
+        text = goals[0].get("goal", "")
+        assert_true("WF" in text,
+                    f"the termination obligation ({text!r})")
+        assert_eq(goals[0].get("asms"), [], "with no assumptions")
+    finally:
+        c.close()
+
+
+def test_goalState_steps_through_a_termination_body():
+    """The body is walked like any other tactic body: before the
+    tactics the whole obligation, after them nothing left."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_steps.sml"
+        src = _TC_SRC % "tc_steps"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        before = _tc_goal(c, uri, 1220, _TC_TAC_LINE, 2)
+        assert_true(before is not None, "goalState before the first tactic")
+        assert_eq(len(before.get("goals") or []), 1,
+                  f"the obligation, unreduced ({before!r})")
+        assert_true("WF" in before["goals"][0].get("goal", ""),
+                    f"still existentially quantified ({before!r})")
+        # Past `simp[]', which discharges what `WF_REL_TAC' left.
+        after = _tc_goal(c, uri, 1240, _TC_TAC_LINE,
+                         len("  WF_REL_TAC `measure I` >> simp[]"))
+        assert_true(after is not None, "goalState after the last tactic")
+        assert_eq(after.get("error"), None,
+                  f"no complaint about the proof ({after!r})")
+        assert_eq(len(after.get("goals") or []), 0,
+                  f"the obligation is discharged ({after!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_termination_survives_a_later_declaration():
+    """The positive control for the snapshot rewind.
+
+    Building the obligation mints `count', so it has to run in a
+    context where `count' does not exist -- which the *current* one
+    does not, the compile having long since defined it.  It works
+    because the handler restores the snapshot taken before the
+    declaration.  Without that rewind this answers an error about a
+    constant already in the signature."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_rewind.sml"
+        src = (_TC_SRC % "tc_rewind"
+               + "\nDefinition twice_def:\n  twice n = 2 * count n\nEnd\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted: `count' is in the signature now")
+        r = _tc_goal(c, uri, 1260, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None, "goalState answered")
+        assert_eq(r.get("status"), "ok", f"a settled answer ({r!r})")
+        assert_eq(len(r.get("goals") or []), 1,
+                  f"the obligation, rebuilt in the rewound context ({r!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_in_a_definition_quote_is_null():
+    """The window is `Termination' to `End', the keyword standing in
+    for `Proof'.  A cursor in the equations is not in a proof body and
+    gets the same `null' a cursor between two theorems gets."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_outside.sml"
+        _did_open(c, uri, _TC_SRC % "tc_outside", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        m = _send_goalstate(c, 1280, uri, 4, 4)   # inside `count n = ...'
+        assert_true(m is not None, "reply arrived")
+        assert_eq(m.get("result"), None,
+                  f"no goal state in the equations ({m!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_definition_without_termination_is_null():
+    """No `Termination' clause, no block to be inside."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_none.sml"
+        src = ("Theory tc_none\n"
+               "Ancestors arithmetic\n\n"
+               "Definition double_def:\n"
+               "  double n = 2 * n\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        m = _send_goalstate(c, 1300, uri, 4, 4)
+        assert_true(m is not None, "reply arrived")
+        assert_eq(m.get("result"), None, f"null ({m!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_termination_not_needed_says_so():
+    """A definition that is not recursive has no obligation, and HOL
+    ignores the tactic beside it.  The block is still there and the
+    cursor is still in it, so `null' would read as a fault in a proof
+    that is not even being asked for.  Answer with the reason instead,
+    in `note' -- the line above the goals -- rather than in `error',
+    which is reserved for a walk that failed."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_trivial.sml"
+        src = ("Theory tc_trivial\n"
+               "Ancestors arithmetic\n\n"
+               "Definition double_def:\n"
+               "  double n = 2 * n\n"
+               "Termination\n"
+               "  WF_REL_TAC `measure I`\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        r = _tc_goal(c, uri, 1320, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None, "goalState answered rather than null")
+        assert_eq(r.get("status"), "ok", f"nothing is pending ({r!r})")
+        assert_eq(len(r.get("goals") or []), 0, f"no goals ({r!r})")
+        assert_eq(r.get("error"), None, f"not reported as a failure ({r!r})")
+        assert_true("automatically" in (r.get("note") or ""),
+                    f"the note says why there is nothing ({r!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_termination_goal_follows_a_quote_edit():
+    """The obligation is derived from the equations, so editing them
+    has to change it -- the walker's cache is addressed by the goal
+    text as well as the tactics, and `quote' is what addresses this
+    one."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_edit.sml"
+        src = _TC_SRC % "tc_edit"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        first = _tc_goal(c, uri, 1340, _TC_TERM_LINE, len("Termination"))
+        assert_true(first is not None, "goalState before the edit")
+        assert_eq(len(first.get("goals") or []), 1, f"one goal ({first!r})")
+        was = first["goals"][0]["goal"]
+
+        # `n - 1' becomes `n - 2': a different recursive call, so a
+        # different termination condition.
+        at = src.index("count (n - 1)") + len("count (n - ")
+        idx = c.total_msgs()
+        _did_change_incr(c, uri, src, at, at + 1, "2", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the edit")
+        again = _tc_goal(c, uri, 1360, _TC_TERM_LINE, len("Termination"))
+        assert_true(again is not None, "goalState after the edit")
+        assert_eq(len(again.get("goals") or []), 1, f"one goal ({again!r})")
+        now = again["goals"][0]["goal"]
+        assert_true(was != now,
+                    f"the obligation followed the equations "
+                    f"({was!r} vs {now!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_unparseable_definition_is_pending_not_null():
+    """A definition halfway through being typed cannot be built, so
+    there is no obligation to show.  The block is there and the cursor
+    is in it, so say what is missing rather than answering `null',
+    which reads as a fault in the proof."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/tc_broken.sml"
+        src = ("Theory tc_broken\n"
+               "Ancestors arithmetic\n\n"
+               "Definition oops_def:\n"
+               "  oops n = n +\n"
+               "Termination\n"
+               "  WF_REL_TAC `measure I`\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted (with the definition broken)")
+        r = _tc_goal(c, uri, 1380, _TC_TERM_LINE, len("Termination"))
+        assert_true(r is not None,
+                    "an answer, not `null', inside the block")
+        assert_eq(r.get("status"), "pending", f"pending ({r!r})")
+        assert_true((r.get("error") or "") != "",
+                    f"with a reason ({r!r})")
+        assert_eq(r.get("failedRange"), None,
+                  f"and nothing squiggled for it ({r!r})")
+    finally:
+        c.close()
+
+
+def test_documentSymbol_names_a_termination_obligation():
+    """The outline carries the obligation as a child of the
+    `Definition', which is also how the census comes to have it: the
+    pool names that proof `<stem>_termination', and without a symbol
+    of that name every verdict it reaches is dropped on the floor.
+
+    A child rather than a sibling -- its range sits inside the
+    declaration's, and `DocumentSymbol' siblings may not overlap."""
+    d = tempfile.mkdtemp(prefix="lsp_tcsym_")
+    try:
+        c = Client(d)
+        try:
+            _init_hierarchical(c, d)
+            uri = f"file://{d}/tc_symScript.sml"
+            _did_open(c, uri, _TC_SRC % "tc_sym")
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            r = _request(c, 1400, "textDocument/documentSymbol",
+                         {"textDocument": {"uri": uri}})
+            syms = r["result"]
+            top = [x["name"] for x in syms]
+            assert_true("count_def" in top, f"the definition ({top})")
+            assert_true("count_def_termination" not in top,
+                        f"not a top-level sibling ({top})")
+            defn = [x for x in syms if x["name"] == "count_def"][0]
+            kids = [x["name"] for x in defn.get("children", [])]
+            assert_true("count_def_termination" in kids,
+                        f"a child of the definition ({kids})")
+            tc = [x for x in defn["children"]
+                  if x["name"] == "count_def_termination"][0]
+            assert_eq(tc["selectionRange"]["start"]["line"], _TC_TERM_LINE,
+                      f"selected on the `Termination' keyword ({tc!r})")
+            assert_true(
+                defn["range"]["start"]["line"] <= tc["range"]["start"]["line"]
+                and tc["range"]["end"]["line"] <= defn["range"]["end"]["line"],
+                f"contained in the declaration ({defn!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_failing_termination_proof_is_reported_but_not_fatal():
+    """Two things at once, and they are the same thing twice.
+
+    The pool runs the termination proof under `<stem>_termination', so
+    with the census carrying that name its verdict reaches the file:
+    a tactic that cannot discharge the obligation is reported.
+
+    And elaboration cheats it regardless, so the definition is still
+    defined and the theorem below it -- which uses `count' -- still
+    goes through.  That is the contract the rest of the file is
+    elaborated against, and a failing termination proof must not take
+    it away."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp", timeout=60)
+        _request(c, 1420, "$/setConfig", {"checkProofs": True})
+        uri = "file:///tmp/tc_failing.sml"
+        src = (_TC_SRC % "tc_failing").replace(
+            "  WF_REL_TAC `measure I` >> simp[]\n",
+            "  WF_REL_TAC `measure (\\n. 0)`\n")
+        # `Once', because rewriting with a recursive equation and no
+        # bound unfolds it forever -- which would make this test hang
+        # on its own fixture rather than on anything under test.
+        src += ("\nTheorem count_zero:\n"
+                "  count 0 = 0\n"
+                "Proof\n"
+                "  simp[Once count_def]\n"
+                "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 300),
+                    "compileCompleted")
+
+        got = _census(c, uri)
+        assert_true(got is not None, "a census was published")
+        assert_true("count_def_termination" in got[1],
+                    f"the obligation is a declared proof site ({got!r})")
+
+        def settled(cl):
+            t = _proof_states(cl, uri)
+            return ("count_def_termination" in t
+                    and t["count_def_termination"][0] not in ("checking",))
+        assert_true(c.wait_until(settled, 240),
+                    f"the pool settles on it ({_proof_states(c, uri)!r})")
+        states = _proof_states(c, uri)
+        assert_eq(states["count_def_termination"][0], "failed",
+                  f"and says it failed ({states!r})")
+
+        # The point of cheating it: everything below still elaborates.
+        def proved(cl):
+            t = _proof_states(cl, uri)
+            return t.get("count_zero", ("", None))[0] == "proved"
+        assert_true(c.wait_until(proved, 240),
+                    f"the theorem below is proved anyway "
+                    f"({_proof_states(c, uri)!r})")
     finally:
         c.close()
 
@@ -6460,10 +7668,16 @@ def test_failed_proof_becomes_a_diagnostic():
     out of `store_thm_at'.
 
     It arrives against the theorem's name, which is all the pool knows,
-    and settles onto the step that failed once the proof has been walked
-    for it.  The walk waits for the pool and the compile to be done
-    with, so the test waits for the settled answer rather than the
-    first one."""
+    and once the proof has been walked a second one appears on the step
+    the walk stops at.  Both are kept, because they are not equally
+    certain: the verdict is a fact about the theorem, while the
+    position is the walker's, and the walker cheats past a branch that
+    fails so it can carry on -- so where it stops need not be where the
+    replay raised.  The located one used to replace the other, which
+    traded the certain claim for the uncertain one.
+
+    The walk waits for the pool and the compile to be done with, so the
+    test waits for the settled answer rather than the first one."""
     d = tempfile.mkdtemp(prefix="lsp_pdiag_")
     try:
         src = ("Theory pdiagfail\n"
@@ -6488,23 +7702,26 @@ def test_failed_proof_becomes_a_diagnostic():
             assert_true(c.wait_for_method("$/compileCompleted", 60),
                         "compileCompleted")
 
-            # 12 is `DECIDE_TAC', the step it stops at; 9 is
-            # `Theorem wrong:', where it lands before the walk.
+            # 9 is `Theorem wrong:', where the verdict lands at once;
+            # 12 is `DECIDE_TAC', the step the walk stops at.
             def located(cl):
                 ds = [x for x in _diag_count(cl, uri)
                       if "proof failed" in x.get("message", "")]
-                return (ds if ds and ds[0]["range"]["start"]["line"] == 12
-                        else None)
+                lines = {x["range"]["start"]["line"] for x in ds}
+                return ds if 12 in lines else None
 
             ds = c.wait_until(located, 60)
             assert_true(ds is not None,
                         f"a diagnostic for the failed proof, on the step "
                         f"it fails at ({_proof_states(c, uri)!r}, "
                         f"{_diag_count(c, uri)!r})")
-            assert_eq(len(ds), 1, f"exactly one ({ds!r})")
-            assert_eq(ds[0]["severity"], 1, "reported as an error")
-            got = src.split("\n")[ds[0]["range"]["start"]["line"]]
-            assert_true("DECIDE_TAC" in got, f"which is {got!r}")
+            lines = sorted(x["range"]["start"]["line"] for x in ds)
+            assert_eq(lines, [9, 12],
+                      f"on the theorem's name and on the step, both ({ds!r})")
+            assert_true(all(x["severity"] == 1 for x in ds),
+                        f"both reported as errors ({ds!r})")
+            got = src.split("\n")[12]
+            assert_true("DECIDE_TAC" in got, f"the step is {got!r}")
             assert_true(all("fine" not in x.get("message", "") for x in ds),
                         "the good proof gets no diagnostic")
         finally:
@@ -8791,6 +10008,7 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
         for old, new in [("  simp[]", "  alL_tac"), ("  alL_tac", "  simp[]"),
                          ("  simp[]", "  all_tac"), ("  all_tac", "  simp[]")]:
             ver += 1
+            since = c.total_msgs()
             _did_change_incr(c, uri, cur, at, at + len(old), "", ver)
             cur = cur[:at] + cur[at + len(old):]
             built = ""
@@ -8801,7 +10019,15 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
                                  at + len(built), ch, ver)
                 cur = cur[:at + len(built)] + ch + cur[at + len(built):]
                 built += ch
-            time.sleep(3)
+            # Let this burst's pass get going before the next one, so
+            # that there is something for the next burst to interrupt.
+            # Waiting on the pass saying so rather than three flat
+            # seconds: under `-j' three seconds may not be enough to
+            # start one, and then the next burst abandons nothing and
+            # the test goes inert while still reporting PASS.  This
+            # waits longer when the machine is busy and returns at once
+            # when it is not.
+            c.wait_for_method("$/proofStates", 10, since=since)
 
         deadline = time.time() + 90
         while time.time() < deadline:
@@ -8997,10 +10223,26 @@ def test_a_burst_of_edits_leaves_diagnostics_matching_the_text():
     final = src.replace(old, "all_tac >>", 1)
     uri = "file:///tmp/burst_probe.sml"
 
-    def settled(c, seconds):
-        deadline = time.time() + seconds
+    def settled(c, seconds, quiet=5.0):
+        """Wait for the server to stop talking, then read the diagnostics.
+
+        The quiet window *is* the test, not an optimisation: what used
+        to stick was a **late** publish from a pass that had already
+        been abandoned, so reading the moment the expected text arrives
+        would pass for the wrong reason.  `seconds' stays exactly the
+        cap it always was -- this only stops idling once the server has
+        gone silent for `quiet', rather than always sleeping the whole
+        budget.
+        """
+        deadline = time.time() + _budget(seconds)
+        last, quiet_since = c.total_msgs(), time.time()
         while time.time() < deadline:
-            time.sleep(2)
+            time.sleep(0.2)
+            now = c.total_msgs()
+            if now != last:
+                last, quiet_since = now, time.time()
+            elif time.time() - quiet_since >= quiet:
+                break
         return sorted((d["range"]["start"]["line"] + 1,
                        d.get("message", "").split("\n")[0][:40])
                       for d in _diag_count(c, uri))
@@ -9102,6 +10344,16 @@ def test_abrupt_disconnect_during_compile_exits():
                     "server exited with a compile in flight\n" +
                     c.stderr_text()[-2000:])
         assert_eq(c.p.returncode, 0, "exit code with a compile in flight")
+        # This is the server's own exit, not the file's.  The notice
+        # that explains a file-driven exit (see
+        # `toplevel_exit_says_why') is armed right now, and fires only
+        # on the thread that armed it -- without that test, closing an
+        # editor window mid-compile would tell the user their file
+        # called `OS.Process.exit'.
+        blamed = [m["params"]["message"] for m in c.messages_since(0)[0]
+                  if m.get("method") == "window/showMessage"
+                  and "OS.Process.exit" in m["params"]["message"]]
+        assert_eq(blamed, [], "the file was not blamed for our own exit")
     finally:
         c.close(expect_exit=False)
 
@@ -9167,6 +10419,68 @@ def test_disconnect_before_handshake_exits_cleanly():
                   c.stderr_text()[-2000:])
     finally:
         c.close(expect_exit=False)
+
+
+def test_toplevel_exit_says_why_before_it_goes():
+    """A file whose top level calls `OS.Process.exit' takes the server
+    with it (gh #2077): compilation is execution, and an exit is not an
+    exception, so none of the compile's handlers see it.
+
+    The server does not promise to survive it.  Staying alive would
+    mean shadowing `OS' beneath the file's own compile, and that guards
+    the buffer's source text only -- the library code it calls keeps
+    the real `exit' (`testutils.die' is the common one).  What it
+    promises is to say why it went.  Without that the client gets EOF
+    with nothing anywhere, and an auto-restarting one reloads a whole
+    heap to die the same way again.
+
+    The notice has to be flushed before the process goes, which is what
+    the connection's `drain' is for: the writer thread would otherwise
+    still be holding the frame when the exit lands."""
+    d = tempfile.mkdtemp(prefix="lsp_exit_")
+    try:
+        uri = f"file://{d}/exittopScript.sml"
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri,
+                      "Theory exittop\nAncestors bool\n\n"
+                      "fun f x = x + 1\n"
+                      "val g = f 1\n"
+                      "val () = OS.Process.exit OS.Process.success\n")
+
+            # Wait for the death first, not for the message: once the
+            # process is gone nothing further can arrive, so the short
+            # waits below are instant when the notice is there and
+            # bounded when it is not.  Waiting on the message first
+            # costs its whole timeout on every regression.
+            assert_true(_wait_for_exit(c.p, 120),
+                        "the file's exit took the server down\n"
+                        + c.stderr_text()[-2000:])
+
+            def told_why(cl):
+                ws = [m["params"]["message"]
+                      for m in cl.messages_since(0)[0]
+                      if m.get("method") == "window/showMessage"]
+                return ws if any("OS.Process.exit" in w for w in ws) else None
+
+            warns = c.wait_until(told_why, 10)
+            seen = [m["params"]["message"] for m in c.messages_since(0)[0]
+                    if m.get("method") == "window/showMessage"]
+            assert_true(warns,
+                        f"the server named the exit before going "
+                        f"(showMessage seen: {seen!r}; stderr: "
+                        f"{c.stderr_text()[-1000:]!r})")
+            assert_true(any("exittopScript.sml" in w for w in warns),
+                        f"and named the file ({warns!r})")
+            # `$/compileCompleted' is never coming, so a client that
+            # waits for one waits for ever.  Close the pass off.
+            assert_true(c.wait_for_method("$/compileInterrupted", 10),
+                        "the pass was closed off")
+        finally:
+            c.close(expect_exit=False)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def test_goal_state_segments_rebuild_pretty_with_annotations():
@@ -9617,7 +10931,7 @@ def test_interrupted_passes_do_not_leave_stale_proofs():
 def _wait_for_log(c, needle, timeout, since=0):
     """Index just past the first window/logMessage containing NEEDLE at
     or after SINCE, or None."""
-    deadline = time.time() + timeout
+    deadline = time.time() + _budget(timeout)
     idx = since
     while time.time() < deadline:
         msgs, total = c.messages_since(idx)
@@ -10141,7 +11455,572 @@ def test_eval_does_not_disturb_the_next_compile():
         shutil.rmtree(d, ignore_errors=True)
 
 
+
+# A tactic that never returns.  It sleeps rather than spins so that a
+# budget the tactic manages to swallow costs the test nothing but time:
+# an interrupt-eating spin would still be burning a core when the suite
+# moved on.
+_HANGING_TACTIC = (
+    "  (fn g => let fun f () = (OS.Process.sleep "
+    "(Time.fromMilliseconds 50); f ()) in f () end)\n")
+
+
+def test_hung_proof_settles_as_timed_out():
+    """A replay that never returns used to leave its pool entry
+    `checking' for the life of the process.  Nothing distinguished that
+    from a proof that was merely slow, so a client's tally sat one
+    short for ever and the proof was never reported on at all.
+
+    It settles as `timedout' instead: not a verdict on the proof, which
+    nobody has established anything about, but a report that the server
+    stopped waiting.  The diagnostic says so, and is a warning rather
+    than an error for the same reason."""
+    d = tempfile.mkdtemp(prefix="lsp_phang_")
+    try:
+        src = ("Theory phangto\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem fine:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n"
+               "\n"
+               "Theorem hangs:\n"
+               "  T\n"
+               "Proof\n"
+               + _HANGING_TACTIC +
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"],
+                   env={"HOL_LSP_PROOF_TIMEOUT_MS": "2000"})
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/phangtoScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                seen = _proof_states(cl, uri)
+                st = seen.get("hangs")
+                return seen if st and st[0] != "checking" else None
+
+            seen = c.wait_until(settled, 60)
+            assert_true(seen is not None,
+                        f"the hung proof settles ({_proof_states(c, uri)!r})")
+            status, detail = seen["hangs"]
+            assert_eq(status, "timedout",
+                      f"reported as `timedout` (got {status!r})")
+            assert_true(detail is not None, f"with a detail ({detail!r})")
+            # Positive control: the budget has not simply failed every
+            # proof in the file.
+            assert_eq(seen["fine"][0], "proved",
+                      f"the proof beside it is unaffected ({seen!r})")
+
+            def warned(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "not checked" in x.get("message", "")]
+                return ds or None
+
+            ds = c.wait_until(warned, 60)
+            assert_true(ds is not None,
+                        f"a diagnostic saying so ({_diag_count(c, uri)!r})")
+            assert_eq(len(ds), 1, f"exactly one ({ds!r})")
+            assert_eq(ds[0]["severity"], 2,
+                      "a warning, not an error: the proof is unchecked, "
+                      "not known wrong")
+            assert_eq(ds[0]["range"]["start"]["line"], 9,
+                      f"on the theorem's name ({ds[0]['range']!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_hung_proof_that_eats_its_interrupt_still_settles():
+    """The budget interrupts the tactic, and Poly delivers an interrupt
+    as an exception -- so a tactic that catches broadly absorbs it and
+    carries on.  HOL tactics do that; it is why the compile thread
+    polls a flag instead of relying on `Thread.interrupt' at all.
+
+    The pool must therefore not depend on the worker noticing.  The
+    entry settles on a timer of its own, whether or not the thread it
+    is waiting on ever stops.
+
+    The tactic here catches everything and goes back round, so nothing
+    the server can send it will make it return.  It runs until the
+    server is closed at the end of the test."""
+    d = tempfile.mkdtemp(prefix="lsp_pdeaf_")
+    try:
+        src = ("Theory pdeaf\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem deaf:\n"
+               "  T\n"
+               "Proof\n"
+               "  (fn g => let fun f () = (OS.Process.sleep "
+               "(Time.fromMilliseconds 50); f ())\n"
+               "                          handle _ => f ()\n"
+               "           in f () end)\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"],
+                   env={"HOL_LSP_PROOF_TIMEOUT_MS": "1000"})
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/pdeafScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                seen = _proof_states(cl, uri)
+                st = seen.get("deaf")
+                return seen if st and st[0] != "checking" else None
+
+            # The budget plus the watchdog's grace, with room to spare.
+            seen = c.wait_until(settled, 60)
+            assert_true(seen is not None,
+                        f"it settles anyway ({_proof_states(c, uri)!r})")
+            assert_eq(seen["deaf"][0], "timedout",
+                      f"as `timedout` (got {seen['deaf']!r})")
+            # Positive control: the tactic really did ignore the
+            # interrupt.  Had it taken it, `Timeout.apply` inside the
+            # replay would have reported, and this would be testing the
+            # path the previous test already covers.
+            assert_true(c.p.poll() is None,
+                        "and the server is still alive to say so")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_failed_proof_is_located_despite_a_hung_neighbour():
+    """Moving a failed proof's diagnostic from the theorem's name down
+    onto the tactic that failed means walking the proof, and a walk
+    rewinds process-global state, so it may not run while any worker
+    might still be reading it.  One wedged proof therefore used to
+    silence the localisation of *every* failure in the file -- the
+    squiggle stayed on the `Theorem' line and nothing moved it, with no
+    indication that anything was waiting.
+
+    The walk is no longer gated on the pool at all -- only on the
+    compile, which is the exclusion that was ever shown to matter.  So
+    the budget here is set far beyond the run: if the failure is
+    located, it was located while the hung proof was still being
+    replayed, not after it was given up on.  Nothing in this test
+    sends `$/hol/goalState'."""
+    d = tempfile.mkdtemp(prefix="lsp_phangloc_")
+    try:
+        src = ("Theory phanglocn\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem hangs:\n"
+               "  T\n"
+               "Proof\n"
+               + _HANGING_TACTIC +
+               "QED\n"
+               "\n"
+               "Theorem wrong:\n"
+               "  1 = 2\n"
+               "Proof\n"
+               "  DECIDE_TAC\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"],
+                   env={"HOL_LSP_PROOF_TIMEOUT_MS": "600000"})
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/phanglocnScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # 12 is `DECIDE_TAC'; 9 is `Theorem wrong:', where the
+            # verdict lands at once.  Both are kept -- see
+            # `failed_proof_becomes_a_diagnostic' -- so this waits for
+            # the located one to join the other.
+            def located(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "proof failed" in x.get("message", "")]
+                lines = {x["range"]["start"]["line"] for x in ds}
+                return ds if 12 in lines else None
+
+            ds = c.wait_until(located, 90)
+            assert_true(ds is not None,
+                        f"the failure is located on its tactic "
+                        f"({_proof_states(c, uri)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+            got = src.split("\n")[12]
+            assert_true("DECIDE_TAC" in got, f"which is {got!r}")
+            # Positive control: the hang was real and is *still*
+            # unsettled.  Were it `timedout' the budget would have
+            # fired after all, and this would be testing the budget
+            # rather than the gate it is here for.
+            assert_eq(_proof_states(c, uri)["hangs"][0], "checking",
+                      "the neighbour is still hung, so the walk did not "
+                      "wait for it")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_failed_proof_is_located_at_its_first_failure():
+    """The diagnostic walk stops at the first failure; the cursor walk
+    does not, and must not.
+
+    A walk serving a goals pane stands `cheat' in for a `>-' branch
+    that has not discharged its goal and carries on -- an unfinished
+    branch is the ordinary condition of a proof being written, and the
+    reader still wants the state further down.  Used to place a
+    diagnostic, that is exactly wrong: it sails past the tactic that
+    actually failed and runs aground later, on whatever structure it
+    cannot get through, and the proof's verdict is then pinned to a
+    `>-' that had nothing to do with it.  On cakeml's
+    `lex_aux_sexp_to_list' that put the squiggle on the third `>-'
+    instead of the `drule_all' in the first branch.
+
+    So the locating walk declines the recovery, and consults no
+    snapshot cache -- resuming would start it past the very failure it
+    is looking for.
+
+    What this pins is the invariant: the located squiggle sits on the
+    tactic that failed, and the theorem keeps its own verdict beside
+    it.  It does **not** discriminate the two walks -- with the
+    recovery put back, this fixture still reports line 9, because a
+    `>-' branch whose body is `ALL_TAC' either side of the failure
+    does not leave the walk anywhere to run aground afterwards.  Every
+    synthetic shape tried had that property.  The case that does
+    discriminate is cakeml's `lex_aux_sexp_to_list', where the
+    recovering walk reports the third `>-' and this one reports the
+    `drule_all'; reproducing it needs that tree built, so it is not
+    reachable from here."""
+    d = tempfile.mkdtemp(prefix="lsp_locfirst_")
+    try:
+        src = ("Theory locfirst\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem multi:\n"
+               "  (1 = 1) /\\ (2 = 2) /\\ (3 = 3)\n"
+               "Proof\n"
+               "  rpt conj_tac\n"
+               "  >-\n"
+               "   (ALL_TAC\n"
+               "    \\\\ ACCEPT_TAC TRUTH\n"
+               "    \\\\ ALL_TAC)\n"
+               "  >-\n"
+               "   (ALL_TAC)\n"
+               "  >-\n"
+               "   (ALL_TAC)\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/locfirstScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # 3 is `Theorem multi:'; 9 is the `ACCEPT_TAC TRUTH' that
+            # fails; 11 and 13 are the later `>-'s a cheating walk
+            # would have run aground on.  Nothing here sends
+            # `$/hol/goalState': the point of this squiggle is to say
+            # where to put the cursor, so it has to be there first.
+            def located(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "proof failed" in x.get("message", "")]
+                return ds if {x["range"]["start"]["line"] for x in ds} - {3} \
+                       else None
+
+            ds = c.wait_until(located, 60)
+            assert_true(ds is not None,
+                        f"the failure is located inside the proof "
+                        f"({_proof_states(c, uri)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+            inside = sorted(x["range"]["start"]["line"] for x in ds
+                            if x["range"]["start"]["line"] != 3)
+            assert_eq(inside, [9],
+                      f"on the tactic that failed, not a later `>-` "
+                      f"({ds!r})")
+            assert_true(any(x["range"]["start"]["line"] == 3 for x in ds),
+                        f"and the theorem keeps its own verdict ({ds!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_structural_walk_failure_draws_no_squiggle():
+    """`failMsg' has two kinds of answer, and only one of them is about
+    the proof.
+
+    One names a tactic that would not apply, or a branch obliged to
+    prove its goal that did not: a reader can go and look at that.  The
+    other says the walk could not get into, through, or out of a piece
+    of structure, which is a statement about the walker's progress from
+    wherever the cursor put it.
+
+    That distinction stopped being cosmetic once located failures began
+    accumulating until the next compile: a mark that depends on where
+    the cursor was would sit there afterwards claiming to be a property
+    of the text.  Here the first two branches discharge both goals, so
+    the third `>-' has nothing to open on; the message still travels,
+    for a pane asking about that exact spot, but it earns no range and
+    so no squiggle."""
+    d = tempfile.mkdtemp(prefix="lsp_struct_")
+    try:
+        src = ("Theory structwalk\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem two:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >- ACCEPT_TAC TRUTH\n"
+               "  >- ACCEPT_TAC TRUTH\n"
+               "  >- ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/structwalkScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # 9 is the third `>-', the one with no goal left to open on.
+            _send_request(c, 960, "$/hol/goalState",
+                          {"textDocument": {"uri": uri},
+                           "position": {"line": 9, "character": 10},
+                           "width": 100})
+            r = (_await_reply(c, 960, 60) or {}).get("result") or {}
+            # Positive control: without this the fixture has stopped
+            # producing a structural failure and the test proves nothing.
+            assert_true("No goal here for this step" in (r.get("error") or ""),
+                        f"the walk really did fail structurally ({r!r})")
+            assert_true(r.get("failedRange") is None,
+                        f"and it earns no range ({r!r})")
+            time.sleep(1)
+            assert_eq(_diag_count(c, uri), [],
+                      "so nothing is squiggled, and nothing accumulates")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_walker_squiggles_accumulate_across_a_proof():
+    """A proof can have more than one failing tactic, and a reader
+    finds them by moving around.  Each one the walker reports is kept.
+
+    Keeping them is not tidiness, it is correctness: the walk that
+    serves a goals pane answers from wherever it happens to start and
+    stops wherever the cursor is.  It stands `cheat' in for a `>-'
+    branch that has not discharged its goal and carries on, so for a
+    proof full of unfinished branches it routinely reports nothing;
+    and it resumes from a snapshot cache, so whether it sees a failure
+    depends on how much of the proof that walk replayed.  A squiggle
+    withdrawn whenever such a walk comes back quiet is a squiggle that
+    vanishes as the cursor moves over a buffer nobody has edited.
+
+    So: visiting a second failure must not drop the first, and
+    returning to quiet ground must not drop either.  Ranges are
+    discovered rather than hard-coded -- what is being pinned is that
+    the set only grows."""
+    d = tempfile.mkdtemp(prefix="lsp_accum_")
+    try:
+        src = ("Theory accum\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem multi:\n"
+               "  (1 = 1) /\\ (2 = 2)\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >-\n"
+               "   (ACCEPT_TAC TRUTH\n"
+               "    \\\\ simp [])\n"
+               "  >-\n"
+               "   (ACCEPT_TAC TRUTH)\n"
+               "QED\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/accumScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            # The end of each `ACCEPT_TAC TRUTH': a cursor sitting on
+            # the `>-' that joins a tactic is *before* it, and the walk
+            # stops short.
+            tac = "ACCEPT_TAC TRUTH"
+            at1 = src.index(tac) + len(tac)
+            at2 = src.index(tac, at1) + len(tac)
+
+            def ask(rid, off):
+                line, ch = _line_col_at(src, off)
+                _send_request(c, rid, "$/hol/goalState",
+                              {"textDocument": {"uri": uri},
+                               "position": {"line": line, "character": ch},
+                               "width": 100})
+                return (_await_reply(c, rid, 60) or {}).get("result")
+
+            def marks():
+                return {(x["range"]["start"]["line"],
+                         x["range"]["start"]["character"])
+                        for x in _diag_count(c, uri)}
+
+            # Inside the first branch.
+            ask(840, at1)
+            time.sleep(1)
+            first = marks()
+            assert_true(first,
+                        f"the first failure is marked ({_diag_count(c, uri)!r})")
+
+            # Past the second branch.
+            ask(841, at2)
+            time.sleep(1)
+            second = marks()
+            assert_true(first <= second,
+                        f"the first mark survives visiting the second "
+                        f"({sorted(first)} -> {sorted(second)})")
+            assert_true(second - first,
+                        f"and the second is marked too "
+                        f"({sorted(second)})")
+
+            # Back to the opening tactic, which fails nowhere.
+            r = ask(842, src.index("conj_tac") + len("conj_tac"))
+            assert_true(r is None or r.get("failedRange") is None,
+                        f"a quiet walk reports no failure of its own ({r!r})")
+            time.sleep(1)
+            assert_true(second <= marks(),
+                        f"and withdraws neither mark "
+                        f"({sorted(second)} -> {sorted(marks())})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_goalState_above_a_failure_keeps_its_squiggle():
+    """A goals pane follows the cursor, so every cursor movement inside
+    a proof asks for a goal state.  The walker's squiggle used to be
+    dropped whenever a walk reported no failure -- which a walk that
+    stops short of the failing tactic always does, having never run it.
+
+    So moving the cursor up one line erased the squiggle for a tactic
+    that still fails, over a buffer with no edit in it.  Removing the
+    squiggle now needs the walk to have reached at least as far as the
+    failure it is removing.
+
+    Proof checking is off, which is the point: the only thing that can
+    put a squiggle on that tactic here is the walker, so nothing else
+    can mask the regression."""
+    d = tempfile.mkdtemp(prefix="lsp_walkkeep_")
+    try:
+        src = ("Theory walkkeep\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem wrong:\n"
+               "  !n:num. n < n + 1\n"
+               "Proof\n"
+               "  rpt strip_tac\n"
+               "  >> ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/walkkeepScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            assert_eq(_diag_count(c, uri), [],
+                      "the file compiles clean -- the tactic only fails "
+                      "when something runs it")
+
+            def ask(rid, after):
+                # The end of a tactic's text, not the start of its
+                # line: a cursor sitting on the `>>` is *before* the
+                # tactic it joins, and the walk stops short of it.
+                line, ch = _line_col_at(src, src.index(after) + len(after))
+                _send_request(c, rid, "$/hol/goalState",
+                              {"textDocument": {"uri": uri},
+                               "position": {"line": line, "character": ch},
+                               "width": 100})
+                return (_await_reply(c, rid, 60) or {}).get("result")
+
+            at_fail = ask(820, "ACCEPT_TAC TRUTH")
+            assert_true(at_fail is not None, "a reply from the failing step")
+            assert_true(at_fail.get("failedRange") is not None,
+                        f"which does report the failure ({at_fail!r})")
+
+            def squiggled(cl):
+                ds = [x for x in _diag_count(cl, uri)
+                      if "ACCEPT_TAC" in x.get("message", "")]
+                return ds or None
+
+            ds = c.wait_until(squiggled, 30)
+            assert_true(ds is not None,
+                        f"the failing tactic is squiggled "
+                        f"({at_fail!r}, {_diag_count(c, uri)!r})")
+
+            # One tactic above it: the walk stops before the failure
+            # and so has nothing to say about it.
+            above = ask(821, "rpt strip_tac")
+            assert_true(above is not None, "a reply from the step above")
+            assert_true(above.get("failedRange") is None,
+                        f"which reports no failure of its own ({above!r})")
+            # Positive control: the second walk really did stop short.
+            # Were the two the same step, the server would be right to
+            # clear, and the test would be pinning nothing.
+            assert_true(above["step"] < at_fail["step"],
+                        f"and really did stop short of it "
+                        f"({above['step']} < {at_fail['step']})")
+            time.sleep(1)
+            still = [x for x in _diag_count(c, uri)
+                     if "ACCEPT_TAC" in x.get("message", "")]
+            assert_true(still,
+                        f"and the squiggle survives the cursor moving "
+                        f"above it ({_diag_count(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+def test_startup_reports_no_warnings():
+    """The four init files the LSP `QUse.use's at startup each end in
+    a load-time selftest that raises `Fail' on regression -- and
+    `initStep' catches it, warns, and carries on, so the server comes
+    up with that file's declarations only partly bound.  Nothing in
+    the suite read the warning, so those selftests were not a gate:
+    a deliberately broken coverage case was introduced and every test
+    still passed.
+
+    This is that gate.  A startup warning is sent to the client as a
+    `window/showMessage' before any document is opened, so a boot and
+    a pause is the whole test.  Two directories, because the heap a
+    directory asks for is one of the things that can warn."""
+    for cwd in ("/tmp", os.path.join(REPO, "tools-poly/lsp/tests/sorting")):
+        c = Client(cwd)
+        try:
+            _init(c, cwd)
+            # Nothing to wait *for*: the assertion is an absence, so
+            # it has to be given time to show up.
+            time.sleep(2.0)
+            msgs, _ = c.messages_since(0)
+            warned = [m["params"].get("message", "")
+                      for m in msgs
+                      if m.get("method") == "window/showMessage"]
+            assert_true(not warned,
+                        f"{cwd} booted clean; startup warnings mean an "
+                        f"init file did not load, and what it provides "
+                        f"is silently missing ({warned!r})")
+        finally:
+            c.close()
+
+
 TESTS = [
+    ("startup_reports_no_warnings", test_startup_reports_no_warnings),
     ("interrupted_passes_do_not_leave_stale_proofs",
                           test_interrupted_passes_do_not_leave_stale_proofs),
     ("walk_and_compile_do_not_share_the_context",
@@ -10280,6 +12159,27 @@ TESTS = [
     ("statement_edit_still_clears_later_proofs",
                                      test_statement_edit_still_clears_later_proofs),
     ("goalState_inside_proof",       test_goalState_inside_proof),
+    ("goalState_with_an_unterminated_quotation",
+                    test_goalState_with_an_unterminated_quotation),
+    ("goalState_budget_timeout_names_the_step",
+                    test_goalState_budget_timeout_names_the_step),
+    ("goalState_addresses_a_step_directly",
+                    test_goalState_addresses_a_step_directly),
+    ("tryTactic_probes_without_committing",
+                    test_tryTactic_probes_without_committing),
+    ("tryTactic_honours_a_step_anchor",
+                    test_tryTactic_honours_a_step_anchor),
+    ("tryTactic_says_when_a_candidate_will_not_compile",
+                    test_tryTactic_says_when_a_candidate_will_not_compile),
+    ("tryTactic_budget_bounds_both_of_its_walks",
+                    test_tryTactic_budget_bounds_both_of_its_walks),
+    ("stale_ancestor_draws_a_warning",
+                    test_stale_ancestor_draws_a_warning),
+    ("eval_runs_in_a_world_that_is_thrown_away",
+                    test_eval_runs_in_a_world_that_is_thrown_away),
+    ("eval_refuses_what_it_cannot_throw_away",
+                    test_eval_refuses_what_it_cannot_throw_away),
+    ("eval_is_logged", test_eval_is_logged),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
     ("goalState_outside_proof",      test_goalState_outside_proof),
@@ -10383,6 +12283,28 @@ TESTS = [
                                      test_lsp_holproject_preload_project_dirs),
     ("goalState_incomplete_proof_body",
                                      test_goalState_incomplete_proof_body),
+    ("a_no_cheat_proof_that_fails_is_still_cheated",
+                                     test_a_no_cheat_proof_that_fails_is_still_cheated),
+    ("goalState_at_an_empty_termination_body",
+                                      test_goalState_at_an_empty_termination_body),
+    ("goalState_steps_through_a_termination_body",
+                                      test_goalState_steps_through_a_termination_body),
+    ("goalState_termination_survives_a_later_declaration",
+                                      test_goalState_termination_survives_a_later_declaration),
+    ("goalState_in_a_definition_quote_is_null",
+                                      test_goalState_in_a_definition_quote_is_null),
+    ("goalState_definition_without_termination_is_null",
+                                      test_goalState_definition_without_termination_is_null),
+    ("goalState_termination_not_needed_says_so",
+                                      test_goalState_termination_not_needed_says_so),
+    ("goalState_termination_goal_follows_a_quote_edit",
+                                      test_goalState_termination_goal_follows_a_quote_edit),
+    ("goalState_unparseable_definition_is_pending_not_null",
+                                      test_goalState_unparseable_definition_is_pending_not_null),
+    ("documentSymbol_names_a_termination_obligation",
+                                      test_documentSymbol_names_a_termination_obligation),
+    ("failing_termination_proof_is_reported_but_not_fatal",
+                                      test_failing_termination_proof_is_reported_but_not_fatal),
     ("goalState_cache_invalidates_on_tactic_edit",
                                      test_goalState_cache_invalidates_on_tactic_edit),
     ("goalState_cache_invalidates_on_upstream_change",
@@ -10494,6 +12416,22 @@ TESTS = [
     ("malformed_frame_does_not_wedge", test_malformed_frame_does_not_wedge),
     ("disconnect_before_handshake_exits_cleanly",
      test_disconnect_before_handshake_exits_cleanly),
+    ("toplevel_exit_says_why",
+     test_toplevel_exit_says_why_before_it_goes),
+    ("hung_proof_settles_as_timed_out",
+     test_hung_proof_settles_as_timed_out),
+    ("hung_proof_that_eats_its_interrupt_still_settles",
+     test_hung_proof_that_eats_its_interrupt_still_settles),
+    ("failed_proof_is_located_despite_a_hung_neighbour",
+     test_failed_proof_is_located_despite_a_hung_neighbour),
+    ("failed_proof_is_located_at_its_first_failure",
+     test_failed_proof_is_located_at_its_first_failure),
+    ("a_structural_walk_failure_draws_no_squiggle",
+     test_a_structural_walk_failure_draws_no_squiggle),
+    ("walker_squiggles_accumulate_across_a_proof",
+     test_walker_squiggles_accumulate_across_a_proof),
+    ("goalState_above_a_failure_keeps_its_squiggle",
+     test_goalState_above_a_failure_keeps_its_squiggle),
     ("a_burst_of_edits_leaves_diagnostics_matching_the_text",
      test_a_burst_of_edits_leaves_diagnostics_matching_the_text),
     ("goalState_note_at_end_of_an_unparenthesised_branch",
@@ -10540,8 +12478,58 @@ def _check_all_registered():
         sys.exit(2)
 
 
+def _default_jobs():
+    """Workers for a run that did not say.
+
+    Capped at 8 whatever the machine has.  Past that the suite stops
+    scaling for a reason that is not the machine's: every server's
+    stdout is framed and JSON-parsed in *this* process, one reader
+    thread each, under the GIL.
+    """
+    return min(8, os.cpu_count() or 1)
+
+
+def _run_one(item):
+    """Run one test and return a record; never raises.
+
+    The verdict comes back as a value rather than being printed here,
+    so the thread that computed it is not the thread that reports it.
+    That is what keeps the log in TESTS order under `-j'.
+    """
+    name, fn = item
+    _tls.name = name
+    t0 = time.time()
+    try:
+        fn()
+        return (name, "PASS", time.time() - t0, None)
+    except Skipped as e:
+        return (name, "SKIP", time.time() - t0, str(e))
+    except Failed as e:
+        return (name, "FAIL", time.time() - t0, str(e))
+    except Exception as e:
+        return (name, "ERROR", time.time() - t0, f"{type(e).__name__}: {e}")
+    finally:
+        _tls.name = "<none>"
+
+
+def _report(rec, counts):
+    """Print one record in the format this log has always had."""
+    name, verdict, dt, msg = rec
+    if verdict == "PASS":
+        print(f"  PASS  {name}  ({dt:.1f}s)", flush=True)
+        counts["passed"] += 1
+    elif verdict == "SKIP":
+        print(f"  SKIP  {name}: {msg}", flush=True)
+        counts["skipped"].append(name)
+    elif verdict == "FAIL":
+        print(f"  FAIL  {name}  ({dt:.1f}s): {msg}", flush=True)
+        counts["failed"] += 1
+    else:
+        print(f"  ERROR {name}  ({dt:.1f}s): {msg}", flush=True)
+        counts["failed"] += 1
+
+
 def main():
-    global CURRENT_TEST
     _check_all_registered()
     argv = sys.argv[1:]
     # `--requires none' selects the tests with no prerequisite beyond a
@@ -10559,35 +12547,79 @@ def main():
         print(f"unknown --requires tag {req!r} (one of: none, "
               + ", ".join(sorted(_REQUIREMENTS)) + ")")
         sys.exit(2)
+    # `-j' before the positional sweep below, so a worker count can
+    # never be mistaken for a test name.
+    jobs = None
+    while "-j" in argv:
+        i = argv.index("-j")
+        if i + 1 >= len(argv) or not argv[i + 1].isdigit() \
+           or int(argv[i + 1]) < 1:
+            print("-j needs a positive integer")
+            sys.exit(2)
+        jobs = int(argv[i + 1])
+        del argv[i:i + 2]
+    if jobs is None:
+        jobs = int(os.environ.get("HOL_LSP_TEST_JOBS", "0")) or _default_jobs()
+    global TIME_SCALE
+    TIME_SCALE = float(os.environ.get("HOL_LSP_TIME_SCALE",
+                                      max(1.0, jobs / 4.0)))
+
     wanted = set(argv)
-    passed = failed = 0
-    skipped = []
+    # A name nobody answers to is a typo, not a selection.  Left to
+    # itself it runs nothing and prints `0 passed, 0 failed', which
+    # reads exactly like a clean run -- and `-j8' for `-j 8' lands
+    # here, so it is easy to do by accident.
+    unknown = sorted(wanted - {name for name, _ in TESTS})
+    if unknown:
+        print("no such test(s): " + ", ".join(unknown))
+        sys.exit(2)
+    selected = []
     for name, fn in TESTS:
         if wanted and name not in wanted: continue
         tag = getattr(fn, "requires", None)
         if req == "none" and tag is not None: continue
         if req not in (None, "none") and tag != req: continue
-        CURRENT_TEST = name
-        t0 = time.time()
+        selected.append((name, fn))
+
+    # Tests marked `@serial' run alone, after the pool has drained, so
+    # that whatever they measure is measured on a quiet machine.  A
+    # lock would not do: it still leaves the other N-1 running.
+    par = [it for it in selected if not getattr(it[1], "serial", False)]
+    ser = [it for it in selected if getattr(it[1], "serial", False)]
+
+    counts = {"passed": 0, "failed": 0, "skipped": []}
+    print(f"running {len(selected)} test(s), {jobs} worker(s), "
+          f"timeouts x{TIME_SCALE:g}", flush=True)
+    # `map' yields in submission order while running out of order, so
+    # the log stays in TESTS order and diffs cleanly between runs and
+    # between machines.  The cost is head-of-line blocking: nothing
+    # past position k prints until test k finishes.
+    if jobs > 1 and len(par) > 1:
+        ex = ThreadPoolExecutor(max_workers=jobs)
         try:
-            fn()
-            dt = time.time() - t0
-            print(f"  PASS  {name}  ({dt:.1f}s)")
-            passed += 1
-        except Skipped as e:
-            print(f"  SKIP  {name}: {e}")
-            skipped.append(name)
-        except Failed as e:
-            dt = time.time() - t0
-            print(f"  FAIL  {name}  ({dt:.1f}s): {e}")
-            failed += 1
-        except Exception as e:
-            dt = time.time() - t0
-            print(f"  ERROR {name}  ({dt:.1f}s): {type(e).__name__}: {e}")
-            failed += 1
+            for rec in ex.map(_run_one, par):
+                _report(rec, counts)
+        except KeyboardInterrupt:
+            # Without this, Ctrl-C waits out every queued test.
+            ex.shutdown(wait=False, cancel_futures=True)
+            raise
+        finally:
+            ex.shutdown(wait=True)
+    else:
+        for it in par:
+            _report(_run_one(it), counts)
+    for it in ser:
+        _report(_run_one(it), counts)
+    passed, failed, skipped = (counts["passed"], counts["failed"],
+                               counts["skipped"])
     if CLOSE_FAILURES:
+        # Sorted into TESTS order: workers appended in whatever order
+        # they finished, and a log that reorders itself between runs
+        # cannot be diffed.
+        _order = {nm: i for i, (nm, _) in enumerate(TESTS)}
         print(f"\n{len(CLOSE_FAILURES)} session(s) did not shut down cleanly:")
-        for name, why, err in CLOSE_FAILURES:
+        for name, why, err in sorted(
+                CLOSE_FAILURES, key=lambda t: (_order.get(t[0], -1), t[1])):
             print(f"  LEAK  {name}: {why}")
             if err.strip():
                 print("        stderr tail: " + err.strip()[-500:])
