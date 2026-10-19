@@ -852,9 +852,15 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
 
 (*---------------------------------------------------------------------------
       Performs tupling and also eta-expansion.
+
+      A call can supply more arguments than the function's equations take
+      when its range is a function type (f x = \y. ...). With over_apply,
+      the surplus arguments are applied to the tupled call; without it,
+      such a call fails with "incompatible types", which pairf catches in
+      order to move the abstraction into the arguments instead.
  ---------------------------------------------------------------------------*)
 
-fun tuple_args alist =
+fun tuple_args {over_apply} alist =
  let val find = Lib.C (op_assoc1 aconv) alist
      fun tupelo tm =
       case dest_term tm
@@ -872,6 +878,11 @@ fun tuple_args alist =
                  val comb' = mk_comb(stem', list_mk_pair(args' @ nvs'))
              in
                list_mk_abs(nvs', comb')
+             end
+          else if over_apply then
+             let val (targs, rest) = split_after (length argtys) args'
+             in
+               list_mk_comb (mk_comb (stem', list_mk_pair targs), rest)
              end
           else mk_comb(stem', list_mk_pair args')
         end
@@ -935,7 +946,7 @@ fun mutrec thy bindstem eqns =
             then (f, (mk_var(s^"_TUPLED",list_mk_prod_type doml --> rng),doml))
             else (f, (f,doml))
          end
-      val eqns' = tuple_args (map inform lhs_info1) eqns
+      val eqns' = tuple_args {over_apply = true} (map inform lhs_info1) eqns
       val eqnl' = strip_conj eqns'
       val (L,R) = unzip (map dest_eq eqnl')
       val fnl' = op_mk_set aconv (map (fst o strip_comb o lhs) eqnl')
@@ -1097,7 +1108,7 @@ fun pairf (stem, eqs0) =
    val argtys = map type_of args
  in
    if argslen = 1   (* not curried ... do eta-expansion *)
-     then (tuple_args [(f, (f, argtys))] eqs0, stem, I)
+     then (tuple_args {over_apply = false} [(f, (f, argtys))] eqs0, stem, I)
    else
      let
        val stem'name = stem ^ DefnBase.tupled_suffix
@@ -1135,7 +1146,8 @@ fun pairf (stem, eqs0) =
            (rules', induction')
          end
      in
-       (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)
+       (tuple_args {over_apply = false} [(f, (stem', argtys))] eqs0, stem'name,
+        untuple_args)
      end
  end
  handle e as HOL_ERR herr =>
@@ -2047,7 +2059,7 @@ fun build_eqns_from_term eqns =
             then (f, (mk_var(s^"_TUPLED",list_mk_prod_type doml --> rng),doml))
             else (f, (f,doml))
          end
-      val eqns' = tuple_args (map inform lhs_info1) eqns
+      val eqns' = tuple_args {over_apply = true} (map inform lhs_info1) eqns
       val eqnl' = strip_conj eqns'
       val (L,R) = unzip (map dest_eq eqnl')
       val fnl' = op_mk_set aconv (map (fst o strip_comb o lhs) eqnl')
