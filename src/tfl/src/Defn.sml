@@ -854,13 +854,12 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
       Performs tupling and also eta-expansion.
 
       A call can supply more arguments than the function's equations take
-      when its range is a function type (f x = \y. ...). With over_apply,
-      the surplus arguments are applied to the tupled call; without it,
-      such a call fails with "incompatible types", which pairf catches in
-      order to move the abstraction into the arguments instead.
+      when its range is a function type (f x = \y. ...).  Only as many
+      arguments as the equations take are tupled; the surplus is applied
+      to the tupled call.
  ---------------------------------------------------------------------------*)
 
-fun tuple_args {over_apply} alist =
+fun tuple_args alist =
  let val find = Lib.C (op_assoc1 aconv) alist
      fun tupelo tm =
       case dest_term tm
@@ -879,12 +878,11 @@ fun tuple_args {over_apply} alist =
              in
                list_mk_abs(nvs', comb')
              end
-          else if over_apply then
+          else
              let val (targs, rest) = split_after (length argtys) args'
              in
                list_mk_comb (mk_comb (stem', list_mk_pair targs), rest)
              end
-          else mk_comb(stem', list_mk_pair args')
         end
  in
    tupelo
@@ -946,7 +944,7 @@ fun mutrec thy bindstem eqns =
             then (f, (mk_var(s^"_TUPLED",list_mk_prod_type doml --> rng),doml))
             else (f, (f,doml))
          end
-      val eqns' = tuple_args {over_apply = true} (map inform lhs_info1) eqns
+      val eqns' = tuple_args (map inform lhs_info1) eqns
       val eqnl' = strip_conj eqns'
       val (L,R) = unzip (map dest_eq eqnl')
       val fnl' = op_mk_set aconv (map (fst o strip_comb o lhs) eqnl')
@@ -1101,14 +1099,39 @@ fun move_arg tm =
     (fn (f, (v, b)) => boolSyntax.mk_eq (Term.mk_comb (f, v), b))
     (Lib.total ((Lib.I ## Term.dest_abs) o boolSyntax.dest_eq) tm)
 
+(*---------------------------------------------------------------------------
+      True when some call of f in tm supplies more than arity arguments.
+      Such a definition recurses through the range of f, so where the
+      equations are a single clause the abstraction is moved into the
+      arguments before f is tupled.
+ ---------------------------------------------------------------------------*)
+
+fun over_applied f arity tm =
+  let
+    fun chk tm =
+      if is_abs tm then chk (body tm)
+      else if is_comb tm then
+        let val (g, args) = strip_comb tm
+        in
+          (aconv g f andalso length args > arity) orelse List.exists chk args
+        end
+      else false
+  in
+    chk tm
+  end
+
 fun pairf (stem, eqs0) =
  let
    val ((f, args), rhs) = dest_hd_eqn eqs0
    val argslen = length args
    val argtys = map type_of args
+   val moved = if over_applied f argslen eqs0 then move_arg eqs0 else NONE
  in
+   case moved of
+     SOME tm => pairf (stem, tm)
+   | NONE =>
    if argslen = 1   (* not curried ... do eta-expansion *)
-     then (tuple_args {over_apply = false} [(f, (f, argtys))] eqs0, stem, I)
+     then (tuple_args [(f, (f, argtys))] eqs0, stem, I)
    else
      let
        val stem'name = stem ^ DefnBase.tupled_suffix
@@ -1146,16 +1169,9 @@ fun pairf (stem, eqs0) =
            (rules', induction')
          end
      in
-       (tuple_args {over_apply = false} [(f, (stem', argtys))] eqs0, stem'name,
-        untuple_args)
+       (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)
      end
  end
- handle e as HOL_ERR herr =>
-   if message_of herr = "incompatible types" then
-      (case move_arg eqs0
-        of SOME tm => pairf (stem, tm)
-         | NONE => raise e)
-   else raise e
 
 (*---------------------------------------------------------------------------*)
 (* Abbreviation or prim. rec. definitions.                                   *)
@@ -2059,7 +2075,7 @@ fun build_eqns_from_term eqns =
             then (f, (mk_var(s^"_TUPLED",list_mk_prod_type doml --> rng),doml))
             else (f, (f,doml))
          end
-      val eqns' = tuple_args {over_apply = true} (map inform lhs_info1) eqns
+      val eqns' = tuple_args (map inform lhs_info1) eqns
       val eqnl' = strip_conj eqns'
       val (L,R) = unzip (map dest_eq eqnl')
       val fnl' = op_mk_set aconv (map (fst o strip_comb o lhs) eqnl')

@@ -95,6 +95,13 @@ val h1_def = require (check_result (rhs_abstractions 4)) (quietly Define)`
   h2 (SUC n) b = (\m. h1 n m b)
 `;
 
+val _ = tprint "Testing multi-clause recursion with lambda-valued equations"
+
+val g_def = require (check_result (rhs_abstractions 2)) (quietly Define)`
+  g 0 = (\x. x) /\
+  g (SUC n) = (\x. g (n DIV 2) x)
+`;
+
 fun tdefoutput_pp(th,thopt) =
     "(" ^ thm_to_string th ^ ", " ^
     (case thopt of NONE => "NONE"
