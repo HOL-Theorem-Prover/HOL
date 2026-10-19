@@ -50,7 +50,7 @@ selftest.exe: selftest.uo
 ifdef HOLSELFTESTLEVEL
 all: pft-selftest.log
 
-pft-selftest.log: selftest.exe selftest-pftreader.sml selftest-pftmerge.sml
+pft-selftest.log: selftest.exe
 	$(tee ./$<, $@)
 endif
 
