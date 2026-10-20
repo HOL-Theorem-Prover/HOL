@@ -437,6 +437,10 @@ sig
                      {abs : term, rep : term, absrep : thm, repabs : thm} ->
                      bnfLib.derived_bnfn -> copied_bnf
 
+  (* a copy's map and set functions restated at its _CONS, the shape a
+     fixed point's come in and constructorEqns reads *)
+  val copyMemberBNF : copy -> copied_bnf -> fixpoint_bnf
+
   val collapsedConstructors :
       names -> (string * int) list list -> collapsed ->
       {constructors : term list, defs : thm list} list

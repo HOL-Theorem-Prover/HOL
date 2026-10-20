@@ -662,6 +662,41 @@ val _ =
     end
 end
 
+(* ----------------------------------------------------------------------
+    a type that does not recur says what its map and set functions do at
+    its constructors, as a recursive one does: the induction principle
+    of a type nested through it is stated with its set function
+   ---------------------------------------------------------------------- *)
+
+val _ = Datatype ‘cbox = CBox 'a bool’
+val _ = Datatype ‘cboxr = <| cfld : 'a ; ctag : bool |>’
+val _ = Datatype ‘cbare = CBare 'a’
+
+local
+  fun eqn nm tm =
+      (tprint ("constructor equation " ^ nm);
+       case Lib.total (DB.fetch "-") nm of
+           NONE => die "not saved"
+         | SOME th =>
+           if can (simpLib.SIMP_PROVE (BasicProvers.srw_ss()) [th]) tm
+           then OK()
+           else die ("does not prove " ^ term_to_string tm))
+in
+val _ = eqn "cboxSET_thm" “cboxSET (CBox (x:'a) b) = {x}”
+val _ = eqn "cboxMAP_thm" “cboxMAP (f:'a -> 'b) (CBox x b) = CBox (f x) b”
+val _ = eqn "cboxrSET_thm" “cboxrSET (cboxr (x:'a) b) = {x}”
+val _ = eqn "cboxrMAP_thm"
+            “cboxrMAP (f:'a -> 'b) (cboxr x b) = cboxr (f x) b”
+val _ = tprint "a bare parameter's set equation in set notation"
+val _ =
+    let val th = DB.fetch "-" "cbareSET_thm"
+        fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+    in
+      if same (concl (Drule.SPEC_ALL th)) “cbareSET (CBare (x:'a)) = {x}”
+      then OK() else die (thm_to_string th)
+    end
+end
+
 val _ = OK ()
 
 val _ = Process.exit Process.success;

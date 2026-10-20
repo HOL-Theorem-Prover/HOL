@@ -302,7 +302,9 @@ fun oneType db (spec : spec) =
               end
             | SOME c =>
               (* nothing recurses, so the functor is the type's own,
-                 conjugated by the bijection.  A type with no arguments
+                 conjugated by the bijection; restated at the copy's
+                 _CONS, as a family's copy members' are, it gives the
+                 equations at the constructors.  A type with no arguments
                  at all is not a functor and needs no entry. *)
               if null params then []
               else
@@ -310,9 +312,10 @@ fun oneType db (spec : spec) =
                     val res = transportBNF nms {abs = #abs c, rep = #rep c,
                                                 absrep = #absrep c,
                                                 repabs = #repabs c} fbnf
+                    val e = constructorEqns cs (copyMemberBNF c res)
                 in
                   registerBNF {tyname = tyname} (#key res, #info res)
-                ; []
+                ; List.map wr ([#map_eqns e] @ #set_eqns e)
                 end
       val tyinfos =
           typeBaseInfo {axiom = axiom, induction = induction,

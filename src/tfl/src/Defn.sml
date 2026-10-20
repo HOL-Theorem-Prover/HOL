@@ -852,6 +852,11 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
 
 (*---------------------------------------------------------------------------
       Performs tupling and also eta-expansion.
+
+      A call can supply more arguments than the function's equations take
+      when its range is a function type (f x = \y. ...).  Only as many
+      arguments as the equations take are tupled; the surplus is applied
+      to the tupled call.
  ---------------------------------------------------------------------------*)
 
 fun tuple_args alist =
@@ -873,7 +878,11 @@ fun tuple_args alist =
              in
                list_mk_abs(nvs', comb')
              end
-          else mk_comb(stem', list_mk_pair args')
+          else
+             let val (targs, rest) = split_after (length argtys) args'
+             in
+               list_mk_comb (mk_comb (stem', list_mk_pair targs), rest)
+             end
         end
  in
    tupelo
@@ -1090,12 +1099,37 @@ fun move_arg tm =
     (fn (f, (v, b)) => boolSyntax.mk_eq (Term.mk_comb (f, v), b))
     (Lib.total ((Lib.I ## Term.dest_abs) o boolSyntax.dest_eq) tm)
 
+(*---------------------------------------------------------------------------
+      True when some call of f in tm supplies more than arity arguments.
+      Such a definition recurses through the range of f, so where the
+      equations are a single clause the abstraction is moved into the
+      arguments before f is tupled.
+ ---------------------------------------------------------------------------*)
+
+fun over_applied f arity tm =
+  let
+    fun chk tm =
+      if is_abs tm then chk (body tm)
+      else if is_comb tm then
+        let val (g, args) = strip_comb tm
+        in
+          (aconv g f andalso length args > arity) orelse List.exists chk args
+        end
+      else false
+  in
+    chk tm
+  end
+
 fun pairf (stem, eqs0) =
  let
    val ((f, args), rhs) = dest_hd_eqn eqs0
    val argslen = length args
    val argtys = map type_of args
+   val moved = if over_applied f argslen eqs0 then move_arg eqs0 else NONE
  in
+   case moved of
+     SOME tm => pairf (stem, tm)
+   | NONE =>
    if argslen = 1   (* not curried ... do eta-expansion *)
      then (tuple_args [(f, (f, argtys))] eqs0, stem, I)
    else
@@ -1138,12 +1172,6 @@ fun pairf (stem, eqs0) =
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)
      end
  end
- handle e as HOL_ERR herr =>
-   if message_of herr = "incompatible types" then
-      (case move_arg eqs0
-        of SOME tm => pairf (stem, tm)
-         | NONE => raise e)
-   else raise e
 
 (*---------------------------------------------------------------------------*)
 (* Abbreviation or prim. rec. definitions.                                   *)

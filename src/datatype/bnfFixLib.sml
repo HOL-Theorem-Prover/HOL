@@ -2218,10 +2218,17 @@ fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
           REWRITE_RULE (folds @ tgtfolds)
             (unfold boolSimps.bool_ss shapeRWs
                     (SPECL (fvars @ [injOf def]) (#map_thm res)))
+      (* a copy whose functor is a bare parameter has (=) for its set
+         function, so its equation's whole right-hand side is `(=) a`,
+         which is {a}; only that side, and only at its top, since `(=) a`
+         is also the head of any equation *)
+      val tidy =
+          CONV_RULE
+            (RAND_CONV (TRY_CONV (REWR_CONV bnfFixBNFTheory.EQUAL_SING)))
       fun setEqn i def =
           REWRITE_RULE folds
-            (unfold (set_ss()) setRWs
-                    (SPEC (injOf def) (List.nth (#set_thms res, i))))
+            (tidy (unfold (set_ss()) setRWs
+                          (SPEC (injOf def) (List.nth (#set_thms res, i)))))
     in
       {map_eqns = LIST_CONJ (List.map mapEqn defs),
        set_eqns = List.tabulate
