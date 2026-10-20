@@ -397,8 +397,8 @@ val _ =
     FileSys.chDir "..";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sig";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sml";
-    compile [] "TheoryDat.sig";
-    compile ["-I", "mosml"] "TheoryDat.sml";
+    compile [] "DatHeader.sig";
+    compile ["-I", "mosml"] "DatHeader.sml";
     FileSys.chDir "../../tools/Holmake";
     FileSys.chDir "mosml";
     compile ["-I", "..", "-I", "../core", "-I", "../hfs", "-I", "../hmf", "-I", "../../parsing",

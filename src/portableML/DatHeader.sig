@@ -1,6 +1,6 @@
 (* Read-only parent compatibility checks, independent of build layouts.
    Only the parent header is checked, not the remaining theory data. *)
-signature TheoryDat =
+signature DatHeader =
 sig
   type parent = {thy : string, hash : string}
   datatype 'a result = Success of 'a | Failure of string

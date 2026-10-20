@@ -3,7 +3,7 @@ sig
 
   (* Compatibility wrapper for cachekey ancestry discovery. Returns []
      on failure, conservatively retaining hash inputs. For validation
-     use TheoryDat, which distinguishes failure from empty parentage. *)
+     use DatHeader, which distinguishes failure from empty parentage. *)
   val extract_parents : string -> (string * string) list
 
   (* Locate a parent theory's .dat file by name, searching

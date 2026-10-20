@@ -3,6 +3,6 @@
    already exist (as they do after a normal HOL build). This does not call
    DatPrinter.main or compile an executable. *)
 use "mkdatprinter.ML";
-use "../TheoryDat.sig";
-use "../TheoryDat.sml";
+use "../DatHeader.sig";
+use "../DatHeader.sml";
 use "parent-benchmark.ML";

@@ -14,15 +14,15 @@ val root = OS.FileSys.fullPath "../../..";
 use "parent-benchmark-load.ML";
 
 (* Benchmark policy only: use this installation's sigobj links.
-   TheoryDat itself contains no artifact-search policy. *)
+   DatHeader itself contains no artifact-search policy. *)
 fun resolve thy =
     let
       val uo = OS.Path.concat
                  (OS.Path.concat (root, "sigobj"), thy ^ "Theory.uo")
       val dir = OS.Path.dir (OS.FileSys.realPath uo)
       val dat = OS.Path.concat (dir, thy ^ "Theory.dat")
-    in TheoryDat.Artifact dat end
-    handle OS.SysErr _ => TheoryDat.Missing;
+    in DatHeader.Artifact dat end
+    handle OS.SysErr _ => DatHeader.Missing;
 
 ParentBenchmark.run {
   paths = [OS.Path.concat (root, "src/bool/.hol/objs/boolTheory.dat")],

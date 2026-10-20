@@ -3,7 +3,7 @@
 structure ParentBenchmark =
 struct
 
-(* The pre-TheoryDat Holmake scanner, retained verbatim for comparison. *)
+(* The pre-DatHeader Holmake scanner, retained verbatim for comparison. *)
 fun old_parents dat_path =
     let
       val ins = TextIO.openIn dat_path
@@ -51,9 +51,9 @@ fun old_parents dat_path =
     handle _ => []
 
 fun new_parents path =
-    case TheoryDat.read_parents path of
-        TheoryDat.Success ps => map (fn {thy, hash} => (thy, hash)) ps
-      | TheoryDat.Failure s => raise Fail (path ^ ": " ^ s)
+    case DatHeader.read_parents path of
+        DatHeader.Success ps => map (fn {thy, hash} => (thy, hash)) ps
+      | DatHeader.Failure s => raise Fail (path ^ ": " ^ s)
 
 (* load_raw_thydata uses HOLFileSys name munging. Read a physical path
    through a stream, then use exactly the same parser and decoder. *)
@@ -110,14 +110,14 @@ fun run {paths, resolve, iterations, rounds} =
                        canonical (new_parents path) = ps
                     then () else raise Fail ("Reader disagreement: " ^ path)
             val _ =
-                if null (TheoryDat.validate {path = path, resolve = resolve})
+                if null (DatHeader.validate {path = path, resolve = resolve})
                 then () else raise Fail ("Parent validation failed: " ^ path)
             val artifacts =
                 List.mapPartial
                   (fn (thy, _) =>
                       if thy = "min" then NONE
                       else case resolve thy of
-                               TheoryDat.Artifact p => SOME p
+                               DatHeader.Artifact p => SOME p
                              | _ => raise Fail ("Unresolved parent: " ^ thy))
                   ps
             fun hash () =
@@ -129,7 +129,7 @@ fun run {paths, resolve, iterations, rounds} =
                  ("full", fn () => ignore (full_parents path)),
                  ("parent-sha1", hash),
                  ("validation", fn () =>
-                    if null (TheoryDat.validate
+                    if null (DatHeader.validate
                                {path = path, resolve = resolve}) then ()
                     else raise Fail "Parent changed during benchmark")]
             fun round n jobs =
