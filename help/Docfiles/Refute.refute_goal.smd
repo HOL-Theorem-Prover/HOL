@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `refute_goal`
+
+``` hol4
+Refute.refute_goal : config -> goal -> outcome
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample to a goal.
+
+`refute_goal cfg (asms, tm)` is `refute cfg tm` with `asms` as
+assumptions, which the `no_assms` field makes it ignore.
+`refute_goal_with updates` is `refute_goal (current_config updates)`,
+and `refute_top ()` applies `refute_goal_with []` to the goal stack's
+current goal.
+
+`try_refute cfg g`, for use by automation, runs `refute_goal` on `g`
+sequentially and quietly, with seed 42 and no expectation.  It returns
+`SOME (backend, outcome)` for a counterexample, `backend` naming the
+backend that found the first one, and `NONE` otherwise.
+
+### Failure
+
+As for `Refute.refute`.  `try_refute` never fails.
+
+### Example
+
+>>__ load "Refute";
+>> Option.map #1
+     (Refute.try_refute
+        (Refute.default_config
+           |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+           |> Refute.upd_size 4)
+        ([``n < 5``], ``(n : num) < 3``));
+
+### See also
+
+[`Refute.refute`](#Refute.refute),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
+[`Refute.find_unused_assms`](#Refute.find_unused_assms),
+[`Refute.config`](#Refute.config).

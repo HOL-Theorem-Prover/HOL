@@ -20,3 +20,15 @@ Event_Timer.uo: Event_Timer.sml Event_Timer.ui $(PORT_DEPS) $(CD_DEPS) $(ETDD_DE
 
 Task_Queue.uo: Task_Queue.sml Task_Queue.ui $(PORT_DEPS) $(TQDD_DEPS)
 	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Table.ui) $<
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe parlist-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: parlist-selftest.log
+
+parlist-selftest.log: selftest.exe
+	$(tee ./$<,$@)
+endif

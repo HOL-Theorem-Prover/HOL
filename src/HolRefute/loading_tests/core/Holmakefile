@@ -1,0 +1,20 @@
+CLINE_OPTIONS = --no_prereqs
+INCLUDES = ../..
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	@printf '%s\n' '#!/bin/sh' 'set -e' \
+	  '$(HOLDIR)/bin/hol --gcthreads=1 run selftest' \
+	  'exit 0' > $@
+	@chmod +x $@
+
+ifdef HOLSELFTESTLEVEL
+all: loading-selftest.log
+.PHONY: loading-selftest.log
+loading-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+EXTRA_CLEANS = selftest.exe loading-selftest.log

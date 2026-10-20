@@ -1,0 +1,50 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `find_unused_assms`
+
+``` hol4
+Refute.find_unused_assms :
+  config option -> string -> (string * int list list option) list
+```
+
+------------------------------------------------------------------------
+
+Searches a theory's theorems for premises that may be unnecessary.
+
+`find_unused_assms cfgopt thy` checks each theorem of `DB.thms thy`,
+in name order.  A theorem's premises are the antecedents under its
+outer universal quantifiers, indexed from zero; a conjunctive
+antecedent is one premise.  A set of premises is droppable when the
+theorem without them gets `NoCounterexample`.  A theorem's result is
+`NONE` if it has no premises, and otherwise `SOME` of its maximal
+droppable sets.
+
+`NONE` for `cfgopt` is the stored configuration with
+`upd_search QuickcheckBackends`; `SOME cfg` keeps `cfg`'s backends.
+Each probe is sequential and quiet, has no expectation, and stops at
+its first counterexample.
+
+`check_unused_assms cfgopt (name, th)` checks one theorem, and
+`print_unused_assms cfgopt thyopt` prints the result for a theory, or
+for the current theory given `NONE`, with one-based indexes.
+
+### Failure
+
+Never fails.  An unknown theory has no theorems.
+
+### Example
+
+>>__ load "Refute";
+>> Refute.check_unused_assms NONE
+     ("demo", prove (``!p q. p ==> q ==> q``, simp []));
+
+### Comments
+
+A probe that neither finds a counterexample nor covers its space runs
+until the `timeout` field expires, so sweeping a large theory is slow
+unless `cfg` has a short timeout.
+
+### See also
+
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.config`](#Refute.config),
+[`DB.thms`](#DB.thms).

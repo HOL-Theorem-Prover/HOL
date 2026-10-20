@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_quotient`
+
+``` hol4
+Refute.register_quotient :
+  {qty : hol_type, rty : hol_type, abs : term, rep : term,
+   equiv_thm : thm} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a quotient type with the model finder.
+
+`abs : rty -> qty` and `rep : qty -> rty` must be constants.
+`equiv_thm` is a hypothesis-free `QUOTIENT R abs rep`, encoded as a
+partial quotient, or a total equivalence `!x y. R x y <=> (R x = R y)`.
+
+The model finder registers a quotient by itself when a `QUOTIENT`
+theorem for it is stored in a theory.  Registrations last for the
+session.
+
+### Failure
+
+Fails for ill-typed arguments, a theorem of another shape or with
+hypotheses, a `QUOTIENT` theorem naming other constants, or a `qty`
+already registered as a different kind of type.
+
+### See also
+
+[`Refute.register_typedef`](#Refute.register_typedef),
+[`Refute.register_codatatype`](#Refute.register_codatatype).
