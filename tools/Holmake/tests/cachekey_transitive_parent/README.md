@@ -32,7 +32,7 @@ The deliberately long theory name `wrapping_child` is chosen so that
 the .dat header's sexp pretty-printer wraps `(theory ...)` onto a new
 line (i.e. emits `(theory\n("wrapping_child" ...)` rather than
 `(theory ("...")`).  This exercises the newline case in
-`TheoryDat.read_parents`.
+`DatHeader.read_parents`.
 
 The harness:
 

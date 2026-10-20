@@ -1,4 +1,4 @@
-structure TheoryDat :> TheoryDat =
+structure DatHeader :> DatHeader =
 struct
 
 type parent = {thy : string, hash : string}

@@ -130,7 +130,7 @@ val _ = testf "PIntMap size after missing remove"
               2
 
 local
-  open TheoryDat
+  open DatHeader
   fun with_file text f =
       let val path = OS.FileSys.tmpName ()
           val out = TextIO.openOut path
@@ -145,23 +145,23 @@ local
       with_file text (fn p => case read_parents p of
                                  Failure _ => true | _ => false)
 in
-  val _ = assert ("TheoryDat empty parent header", fn () =>
+  val _ = assert ("DatHeader empty parent header", fn () =>
     with_file (header "") (fn p => read_parents p = Success []))
-  val _ = assert ("TheoryDat bootstrap identity", fn () =>
+  val _ = assert ("DatHeader bootstrap identity", fn () =>
     with_file (header (pair "min" "")) (fn p =>
       null (validate {path = p, resolve = fn _ => raise Fail "resolved min"})))
-  val _ = assert ("TheoryDat wrong bootstrap identity", fn () =>
+  val _ = assert ("DatHeader wrong bootstrap identity", fn () =>
     with_file (header (pair "min" "wrong")) (fn p =>
       case validate {path = p, resolve = fn _ => Missing} of
           [HashMismatch _] => true | _ => false))
-  val _ = assert ("TheoryDat strict header parsing", fn () =>
+  val _ = assert ("DatHeader strict header parsing", fn () =>
     List.all rejects
       ["", "junk " ^ header "", "(theory (\"child\"",
        "(theory (\"child\" (\"min\" . \"\"))",
        header (pair "parent" "bad"),
        header (pair "min" "" ^ pair "min" ""),
        "(theory (\"child\") (core-data-bogus "])
-  val _ = assert ("TheoryDat comments and escaped names", fn () =>
+  val _ = assert ("DatHeader comments and escaped names", fn () =>
     let val hash = String.implode (List.tabulate (40, fn _ => #"a"))
         val text = "; prefix\n(theory ; tag\n(\"child\"\n" ^
                    "(\"pa\\\"rent\\\\name\\110\" ; name\n. \"" ^ hash ^
@@ -169,26 +169,26 @@ in
     in with_file text (fn p =>
          read_parents p =
          Success [{thy = "pa\"rent\\namen", hash = hash}]) end)
-  val _ = assert ("TheoryDat rejects each truncated header prefix", fn () =>
+  val _ = assert ("DatHeader rejects each truncated header prefix", fn () =>
     let val text = header (pair "min" "")
     in List.all (fn n => rejects (String.substring (text, 0, n)))
                 (List.tabulate (size text, fn n => n)) end)
-  val _ = assert ("TheoryDat rejects malformed string escapes", fn () =>
+  val _ = assert ("DatHeader rejects malformed string escapes", fn () =>
     List.all rejects
       [header (pair "mi\\q" ""), header (pair "mi\\999" ""),
        header (pair "mi\\12" ""), header (pair "mi\\^a" "")])
-  val _ = assert ("TheoryDat deliberately ignores malformed body", fn () =>
+  val _ = assert ("DatHeader deliberately ignores malformed body", fn () =>
     with_file (header (pair "min" "") ^ "BROKEN ((\"unterminated")
       (fn p => read_parents p = Success [{thy = "min", hash = ""}] andalso
                null (validate {path = p, resolve = fn _ => Missing})))
-  val _ = assert ("TheoryDat parent-like body text is not parentage", fn () =>
+  val _ = assert ("DatHeader parent-like body text is not parentage", fn () =>
     with_file (header "" ^ pair "min" "wrong")
       (fn p => read_parents p = Success []))
-  val _ = assert ("TheoryDat missing header file is a failure", fn () =>
+  val _ = assert ("DatHeader missing header file is a failure", fn () =>
     let val path = OS.FileSys.tmpName ()
         val _ = OS.FileSys.remove path handle OS.SysErr _ => ()
     in case read_parents path of Failure _ => true | _ => false end)
-  val _ = assert ("TheoryDat normal parent chain", fn () =>
+  val _ = assert ("DatHeader normal parent chain", fn () =>
     with_file (header (pair "min" "")) (fn base =>
       let val baseHash = SHA1.sha1_file {filename = base}
       in with_file (header (pair "base" baseHash)) (fn middle =>
@@ -200,7 +200,7 @@ in
           null (validate {path = leaf,
                           resolve = fn "middle" => Artifact middle
                                      | _ => Missing})) end) end))
-  val _ = assert ("TheoryDat parent byte identity and failures", fn () =>
+  val _ = assert ("DatHeader parent byte identity and failures", fn () =>
     with_file "parent artifact bytes" (fn parent =>
       let val hash = SHA1.sha1_file {filename = parent}
       in with_file (header (pair "parent" hash)) (fn child =>

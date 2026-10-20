@@ -2,11 +2,11 @@ structure HM_TheoryDat :> HM_TheoryDat =
 struct
 
 (* Cachekey ancestry discovery retains its conservative failure fallback.
-   Cache acceptance uses TheoryDat.validate directly instead. *)
+   Cache acceptance uses DatHeader.validate directly instead. *)
 fun extract_parents dat_path =
-    case TheoryDat.read_parents dat_path of
-        TheoryDat.Success ps => map (fn {thy, hash} => (thy, hash)) ps
-      | TheoryDat.Failure _ => []
+    case DatHeader.read_parents dat_path of
+        DatHeader.Success ps => map (fn {thy, hash} => (thy, hash)) ps
+      | DatHeader.Failure _ => []
 
 fun find_parent_dat search_dirs thy =
     let

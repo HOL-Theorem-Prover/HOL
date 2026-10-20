@@ -106,7 +106,7 @@ fun is_theory_output f =
    no longer match the current on-disk parents.  Loading that .dat
    would fail link_parents.  Detect and treat as a cache miss.
 
-   TheoryDat checks the parent header; HM_TheoryDat supplies the
+   DatHeader checks the parent header; HM_TheoryDat supplies the
    Holmake-specific artifact search policy. *)
 
 (* Validate before exposing staged outputs. This checks compatibility,
@@ -115,10 +115,10 @@ fun validate_dat search_dirs dat_path =
     let
       fun resolve thy =
           case HM_TheoryDat.find_parent_dat search_dirs thy of
-              NONE => TheoryDat.Missing
-            | SOME path => TheoryDat.Artifact path
+              NONE => DatHeader.Missing
+            | SOME path => DatHeader.Artifact path
     in
-      List.null (TheoryDat.validate {path = dat_path, resolve = resolve})
+      List.null (DatHeader.validate {path = dat_path, resolve = resolve})
     end
 
 fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_functions) =
