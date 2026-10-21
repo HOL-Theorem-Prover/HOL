@@ -1277,16 +1277,19 @@ fun defineConstructors (nms : names) cspecs bnf (fix:fixpoint) : constructors =
                                  RAND_CONV (renameConj cs)
         (* The answer type is a type variable of the construction's
            choosing, and what reads the axiom expects the one a datatype
-           axiom conventionally has: the first of 'b, 'c, ... the type's
+           axiom conventionally has: the first of 'a, 'b, ... the type's
            own arguments leave free.  ACCEPT_TAC and the like match up to
-           the names of type variables, so this is not cosmetic. *)
+           the names of type variables, so this is not cosmetic.  A type
+           with no arguments leaves 'a free and so is answered in 'a, as
+           num and the enumerations are; a type over 'a is answered in
+           'b, as before. *)
         val answerTy =
             let val avoid = Type.type_vars (functorAt bnf newty)
                 fun go [] = cty
                   | go (c::rest) = let val v = mk_vartype c
                                    in if Lib.mem v avoid then go rest else v end
             in
-              go ["'b", "'c", "'d", "'e", "'f", "'g"]
+              go ["'a", "'b", "'c", "'d", "'e", "'f", "'g"]
             end
         val named = if answerTy = cty then Lib.I
                     else INST_TYPE [cty |-> answerTy]

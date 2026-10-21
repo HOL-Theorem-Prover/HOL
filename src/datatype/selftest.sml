@@ -658,6 +658,37 @@ val _ =
     end
 end
 
+(* ------------------------------------------------------------------- *)
+(* GH #2096: which type variable answers a case constant.  The          *)
+(* convention is the first of 'a, 'b, ... that the type's own arguments *)
+(* leave free, so a type with no arguments is answered in 'a, as num    *)
+(* and the enumerations are, and a type over 'a is answered in 'b.      *)
+(* ACCEPT_TAC and the like match up to the names of type variables, so  *)
+(* the choice is observable rather than cosmetic.                       *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2096shape = Gh2096Circle num | Gh2096Square num`
+val _ = Datatype`gh2096par = Gh2096P 'a | Gh2096Q num`
+val _ = Datatype`gh2096enum = Gh2096Red | Gh2096Green`
+
+local
+  fun answerTy ty =
+      #2 (boolSyntax.strip_fun (type_of (TypeBase.case_const_of ty)))
+  fun test nm ty expected =
+      (tprint nm;
+       if Type.compare (answerTy ty, expected) = EQUAL then OK()
+       else die ("answered in " ^ type_to_string (answerTy ty)))
+in
+val _ = test "GH2096: a type with no arguments is answered in 'a"
+             “:gh2096shape” alpha
+val _ = test "GH2096: a type over 'a is still answered in 'b"
+             “:'a gh2096par” beta
+val _ = test "GH2096: an enumeration is answered in 'a, as before"
+             “:gh2096enum” alpha
+val _ = test "GH2096: num is answered in 'a, as it always was"
+             “:num” alpha
+end
+
 val _ = OK ()
 
 val _ = Process.exit Process.success;
