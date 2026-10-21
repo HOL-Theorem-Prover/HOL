@@ -710,45 +710,40 @@ fun case_rws tyi =
 
 fun case_ss_of rws = boolSimps.bool_ss++simpLib.rewrites rws
 
-(* The case rewrites live in the context, beside the TypeBase they come
- * from, so a restore rewinds both together and a datatype declared under a
- * pin stays in the pin.  The slot only grows: set_parents replaces the
- * TypeBase without running the update hook, so the slot can keep the
- * rewrites of a type the TypeBase no longer has.  Those name constants the
- * context has retired, so they cannot match its terms and cost only
- * simpset size.  The simpset is a suspension over the rewrites in the same
- * value, so it cannot disagree with them, and declaring a datatype does
- * not pay for a simpset no case tactic may ask for. *)
-type case_state = {rws : thm list, ss : simpset Susp.susp}
+(* The case rewrites and their simpset are a function of the TypeBase,
+ * which AncestryData owns and replaces on paths no hook sees, so they are
+ * cached on the identity of the TypeBase they were derived from, as
+ * init_memo is for srw: a script hands the same TypeBase over and over,
+ * and a context holding another one gets its own. *)
+type case_state = {rws : thm list, ss : simpset}
 
-fun mk_case_state rws : case_state =
-    {rws = rws, ss = Susp.delay (fn () => case_ss_of rws)}
+val case_memo : (TypeBasePure.typeBase * case_state) option Sref.t =
+    Sref.new NONE
 
-val case_slot : case_state Context.Data.slot =
-    Context.Data.new
-      {name = "BasicProvers.case_rewrites",
-       empty = mk_case_state (List.concat (map case_rws (TypeBase.elts ()))),
-       pp = fn _ => "<BasicProvers.case_rewrites>"}
-
-(* An update that adds no rewrites, such as a non-datatype's, keeps the
- * simpset already built. *)
-fun update_case_state tyinfo =
-   case case_rws tyinfo of
-       [] => ()
-     | thms => Context.Data.modify case_slot
-                 (fn {rws, ...} => mk_case_state (List.revAppend (thms, rws)))
+fun case_state_of ctxt : case_state =
+    let
+      val tyb = TypeBase.theTypeBase_of ctxt
+      fun derive () =
+          let
+            val rws = List.concat (map case_rws (TypeBasePure.listItems tyb))
+            val st = {rws = rws, ss = case_ss_of rws}
+          in
+            Sref.update case_memo (fn _ => SOME (tyb, st)); st
+          end
+    in
+      case Sref.value case_memo of
+          SOME (tyb', st) =>
+            if Portable.pointer_eq (tyb', tyb) then st else derive ()
+        | NONE => derive ()
+    end
 in
-
-val _ = TypeBase.register_update_fn
-          (fn tyinfo => (update_case_state tyinfo; tyinfo))
 
 (* The simpset is built when PURE_CASE_SIMP_CONV is applied to rws, so a
  * caller that keeps (PURE_CASE_SIMP_CONV rws) and applies it to many terms
  * builds it only once. *)
 fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (case_ss_of rws) []
 
-fun case_conv_of ctxt =
-    simpLib.SIMP_CONV (Susp.force (#ss (Context.Data.get case_slot ctxt))) []
+fun case_conv_of ctxt = simpLib.SIMP_CONV (#ss (case_state_of ctxt)) []
 
 fun CASE_SIMP_CONV tm = case_conv_of (Context.snapshot()) tm
 
@@ -756,8 +751,8 @@ fun CASE_SIMP_CONV tm = case_conv_of (Context.snapshot()) tm
  * simpset: half of its net is the context's implicit rewrites, which
  * change independently of the TypeBase. *)
 fun case_tools ctxt =
-   let val {rws, ss} = Context.Data.get case_slot ctxt
-   in {conv = simpLib.SIMP_CONV (Susp.force ss) [],
+   let val {rws, ss} = case_state_of ctxt
+   in {conv = simpLib.SIMP_CONV ss [],
        asm_rule = Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV
                     (Rewrite.implicit_rewrites_of ctxt) rws}
    end
