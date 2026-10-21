@@ -258,6 +258,24 @@ val prove_rec_fn_exists = prove_recursive_functions_exist
 
 fun new_recursive_definition0 ax name tm =
  let val eth = prove_recursive_functions_exist ax tm
+     (* The existence theorem is derived by instantiating the axiom, so
+        a clause the axiom cannot be made to say is left assumed rather
+        than reported.  Saying so here is the difference between naming
+        the restriction and new_specification complaining, several
+        layers down, that a theorem it was handed has assumptions. *)
+     val _ =
+         null (hyp eth) orelse
+         raise ERR "new_recursive_definition"
+           ("The recursion axiom does not justify the definition of " ^
+            name ^ ".  Where a type recurses under an operator the \
+            \axiom hands the recursion that operator's map of the \
+            \function being defined, so a recursive call under the \
+            \map has to be the function itself: a call written \
+            \eta-expanded, or one given arguments ahead of the \
+            \recursive one, is not of that form and cannot be \
+            \matched.  Such a definition can still be made with \
+            \Definition, which goes through TFL and asks for a \
+            \termination proof instead.")
      val (evs,bod) = strip_exists(concl eth)
  in
   Rsyntax.new_specification
