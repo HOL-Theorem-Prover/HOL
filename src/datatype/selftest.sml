@@ -728,6 +728,36 @@ val _ = test "GH2096: num is answered in 'a, as it always was"
              “:num” alpha
 end
 
+(* A type with more arguments than the conventional names used to run
+   to was answered in a generated variable, which prints as
+   %%gen_tyvar%%NNN and whose number depends on how much generating had
+   happened earlier -- so two declarations of the same shape got
+   different names, and a name nobody can rely on is no use to the
+   ACCEPT_TAC matching the convention exists for. *)
+
+val _ = Datatype`
+  gh2096big = GH2096Big 'a 'b 'c 'd 'e 'f 'g 'h num
+`
+
+local
+  fun generated ty = String.isSubstring "gen_tyvar" (dest_vartype ty)
+  fun badvars th = List.filter generated (type_vars_in_term (concl th))
+in
+val _ = tprint "GH2096: more arguments than letters still names them"
+val _ =
+    let
+      val nms = List.map (fn s => "gh2096big" ^ s)
+                         ["_Axiom", "_case_cong", "_case_eq", "_nchotomy",
+                          "_induction", "_case_def"]
+      val ths = List.mapPartial (Lib.total (DB.fetch "-")) nms
+      val bad = List.concat (List.map badvars ths)
+    in
+      if null ths then die "no theorems saved for gh2096big"
+      else if null bad then OK()
+      else die (String.concatWith ", " (List.map type_to_string bad))
+    end
+end
+
 val _ = OK ()
 
 val _ = Process.exit Process.success;
