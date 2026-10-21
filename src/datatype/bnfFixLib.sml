@@ -4177,9 +4177,17 @@ fun defineSize {tyname, sizes = sizenames, mapIDs} axiom =
           end
       val clauses =
           list_mk_conj (List.map (clauseOf 0) (strip_conj body))
+      (* The equation the recursion gives is a step on the way to the
+         tidied one saved below, which is what the entry holds, what
+         the auto-termination prover is used to, and what anyone
+         citing a type's size means.  Nothing wants the raw form, so
+         its binding is temporary: it does not reach the exported
+         theory, and -- a temporary binding being passed over by
+         new_specification's attribute handling -- it does not claim
+         the size constant's userdef either. *)
       val {definition = def, unique = uq} =
-          defineRecursion {name = tyname ^ "_size_def", axiom = ax,
-                           def = clauses}
+          defineRecursion {name = Theory.temp_binding (tyname ^ "_size_def"),
+                           axiom = ax, def = clauses}
       (* what the entry keeps is the constant the definition made, not
          the variable the clauses were written with *)
       val consts =
@@ -4233,6 +4241,17 @@ fun defineSize {tyname, sizes = sizenames, mapIDs} axiom =
           in
             LIST_CONJ (List.map reshape (CONJUNCTS specd))
           end
+      (* What the entry holds, what the theory binds, and what the
+         userdef query answers with are now all the same equation. *)
+      val _ = save_thm (tyname ^ "_size_def[userdef]", perClause)
+      (* The equation still defines the size constant, so it stays one
+         of the segment's definitions, as the one the recursion gave
+         was: `definition "<ty>_size_def"` is how a development asks
+         for it, and saving a theorem would have made that ask fail. *)
+      val _ = Theory.upd_binding (tyname ^ "_size_def")
+                (fn {private, loc, ...} =>
+                    {private = private, loc = loc,
+                     class = DB_dtype.Def})
     in
       SOME {sizes = List.map constFor sizes, definition = perClause,
             unique = uq}

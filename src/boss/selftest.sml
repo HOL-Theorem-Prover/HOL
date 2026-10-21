@@ -515,3 +515,63 @@ val _ = require_msg
 (*
 val _ = convtest("Original again", SIMP_CONV (srw_ss()) [], “p ∧ T”, “p:bool”)
 *)
+
+(* ------------------------------------------------------------------- *)
+(* GH #2095: a type nested through list has two size equations.  The    *)
+(* package tidies the one the recursion gives -- list_size (\x. x)      *)
+(* (MAP sz l) -- into the fold list_size sz l, puts that in the         *)
+(* TypeBase, and uses it; <ty>_size_def used to bind the raw one, so    *)
+(* citing it in a termination proof shadowed the tidied equation with   *)
+(* a form that matches neither goals nor lemmas.                        *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2095tree = Gh2095Node (gh2095tree list)`
+
+local
+  fun through_MAP th =
+      can (find_term (fn t => is_const t andalso fst (dest_const t) = "MAP"))
+          (concl th)
+in
+val _ = tprint "GH2095: <ty>_size_def is the equation TypeBase holds"
+val _ =
+    let val named = DB.fetch "-" "gh2095tree_size_def"
+        val tidied = #2 (TypeBase.size_of “:gh2095tree”)
+    in
+      if aconv (concl named) (concl tidied) then OK()
+      else die ("bound: " ^ thm_to_string named)
+    end
+
+val _ = tprint "GH2095: <ty>_size_def does not go through MAP"
+val _ =
+    let val named = DB.fetch "-" "gh2095tree_size_def"
+    in
+      if through_MAP named then die (thm_to_string named) else OK()
+    end
+
+val _ = tprint "GH2095: no raw size equation is left behind"
+val _ =
+    case Lib.total (DB.fetch "-") "gh2095tree_size_orig_def" of
+        NONE => OK()
+      | SOME th => die ("still bound: " ^ thm_to_string th)
+
+val _ = tprint "GH2095: <ty>_size_def is still one of the definitions"
+val _ =
+    case Lib.total definition "gh2095tree_size_def" of
+        NONE => die "not a definition of the segment"
+      | SOME _ => OK()
+
+val _ = tprint "GH2095: the userdef query gives the tidied equation"
+val _ =
+    let
+      fun eqn (DefnBase.STDEQNS th) = th
+        | eqn (DefnBase.OTHER th) = th
+    in
+      case DefnBase.lookup_userdef (#1 (TypeBase.size_of “:gh2095tree”)) of
+          NONE => die "no userdef registered for the size constant"
+        | SOME p =>
+          let val th = eqn (#thm p)
+          in
+            if through_MAP th then die (thm_to_string th) else OK()
+          end
+    end
+end
