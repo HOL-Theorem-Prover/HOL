@@ -710,32 +710,43 @@ fun case_rws tyi =
 
 fun case_ss_of rws = boolSimps.bool_ss++simpLib.rewrites rws
 
-(* The case rewrites and their simpset are a function of the TypeBase,
- * which AncestryData owns and replaces on paths no hook sees, so they are
- * cached on the identity of the TypeBase they were derived from, as
- * init_memo is for srw: a script hands the same TypeBase over and over,
- * and a context holding another one gets its own. *)
+(* Remembers f's result for the last argument, compared by `same'. *)
+fun memo_last same f =
+    let
+      val memo = Sref.new NONE
+      fun derive x =
+          let val y = f x in Sref.update memo (fn _ => SOME (x, y)); y end
+    in
+      fn x => case Sref.value memo of
+                  SOME (x', y) => if same (x', x) then y else derive x
+                | NONE => derive x
+    end
+
+(* The case rewrites and their simpset are a function of the TypeBase, and
+ * the assumption rewriter of the TypeBase and the implicit rewrites.
+ * AncestryData owns the TypeBase and replaces it on paths no hook sees, so
+ * each is cached on the identities of its inputs, as init_memo is for srw:
+ * a script hands the same inputs over and over, and a context holding
+ * others gets its own. *)
 type case_state = {rws : thm list, ss : simpset}
 
-val case_memo : (TypeBasePure.typeBase * case_state) option Sref.t =
-    Sref.new NONE
+val case_state_of_tyb : TypeBasePure.typeBase -> case_state =
+    memo_last Portable.pointer_eq
+      (fn tyb =>
+          let val rws = List.concat (map case_rws (TypeBasePure.listItems tyb))
+          in {rws = rws, ss = case_ss_of rws} end)
 
-fun case_state_of ctxt : case_state =
-    let
-      val tyb = TypeBase.theTypeBase_of ctxt
-      fun derive () =
-          let
-            val rws = List.concat (map case_rws (TypeBasePure.listItems tyb))
-            val st = {rws = rws, ss = case_ss_of rws}
-          in
-            Sref.update case_memo (fn _ => SOME (tyb, st)); st
-          end
-    in
-      case Sref.value case_memo of
-          SOME (tyb', st) =>
-            if Portable.pointer_eq (tyb', tyb) then st else derive ()
-        | NONE => derive ()
-    end
+fun case_state_of ctxt = case_state_of_tyb (TypeBase.theTypeBase_of ctxt)
+
+val asm_rule_of_inputs
+    : TypeBasePure.typeBase * Rewrite.rewrites -> thm -> thm =
+    memo_last
+      (fn ((tyb, imp), (tyb', imp')) =>
+          Portable.pointer_eq (tyb, tyb') andalso
+          Portable.pointer_eq (imp, imp'))
+      (fn (tyb, imp) =>
+          Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV imp
+            (#rws (case_state_of_tyb tyb)))
 in
 
 (* The simpset is built when PURE_CASE_SIMP_CONV is applied to rws, so a
@@ -747,15 +758,10 @@ fun case_conv_of ctxt = simpLib.SIMP_CONV (#ss (case_state_of ctxt)) []
 
 fun CASE_SIMP_CONV tm = case_conv_of (Context.snapshot()) tm
 
-(* The assumption rewriter is built per call rather than kept with the
- * simpset: half of its net is the context's implicit rewrites, which
- * change independently of the TypeBase. *)
 fun case_tools ctxt =
-   let val {rws, ss} = case_state_of ctxt
-   in {conv = simpLib.SIMP_CONV ss [],
-       asm_rule = Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV
-                    (Rewrite.implicit_rewrites_of ctxt) rws}
-   end
+   {conv = case_conv_of ctxt,
+    asm_rule = asm_rule_of_inputs (TypeBase.theTypeBase_of ctxt,
+                                   Rewrite.implicit_rewrites_of ctxt)}
 end;
 
 (*---------------------------------------------------------------------------*)

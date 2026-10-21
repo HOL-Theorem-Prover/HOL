@@ -372,10 +372,14 @@ val _ = require_msg
           (testtac (gvs[arithmeticTheory.SUB_CANCEL]))
           gstest_goal
 
-(* CASE_TAC keeps its simpset between calls; a datatype defined after a
-   call must still have its case and distinctness theorems applied. *)
+(* The case tactics keep their simpset and assumption rewriter between
+   calls; a datatype defined after a call must still have its case and
+   distinctness theorems applied. *)
 val _ = let
   val _ = testtac CASE_TAC ([], “(case l of [] => 0 | h::t => h:num) = 0”)
+  val _ = testtac BasicProvers.FULL_CASE_TAC
+                  ([“(case l of [] => 0 | h::t => h:num) = m”],
+                   “P (m:num) : bool”)
   val _ = Datatype‘casetac_ty = CT1 | CT2 num’
   val _ = tprint "CASE_TAC on a datatype defined after a CASE_TAC call"
 in
@@ -385,7 +389,7 @@ in
               ([], “(case x of CT1 => 0 | CT2 n => n) = 0 ∨ x = CT1”)
 end
 
-val _ = tprint "FULL_CASE_TAC on an assumption over a datatype defined later"
+val _ = tprint "FULL_CASE_TAC on a datatype defined after a FULL_CASE_TAC call"
 val _ = require_msg
           (check_result (goals_eq [([“0 = m”], “P (m:num) : bool”),
                                    ([“1 = m”], “P (m:num) : bool”)]))
