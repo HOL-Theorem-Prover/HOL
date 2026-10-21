@@ -575,3 +575,36 @@ val _ =
           end
     end
 end
+
+(* ------------------------------------------------------------------- *)
+(* A type that recurses under an operator has its recursion axiom       *)
+(* stated with that operator's map, so new_recursive_definition can     *)
+(* only match a recursive call that is the function itself.  A call     *)
+(* given arguments ahead of the recursive one cannot be put in that     *)
+(* form -- canonising it moves them under the map.  The clause it       *)
+(* could not match used to be left assumed, and the complaint came      *)
+(* from new_specification, several layers down, that a theorem it was   *)
+(* handed had assumptions.                                              *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`prtree = PRLeaf | PRNode (prtree list)`
+
+local
+  fun attempt def =
+      Prim_rec.new_recursive_definition
+        {name = "prbad_def", rec_axiom = TypeBase.axiom_of “:prtree”,
+         def = def}
+  fun outcome def = (ignore (attempt def); NONE)
+                    handle Feedback.HOL_ERR e => SOME e
+in
+val _ = tprint "a recursive call under a map that is not the function"
+val _ =
+    case outcome “(prbad (f:num -> num) PRLeaf = 0) /\
+                  (prbad f (PRNode l) = SUM (MAP (prbad f) l))” of
+        NONE => die "the definition was accepted"
+      | SOME e =>
+        if Feedback.top_function_of e = "new_recursive_definition" andalso
+           String.isSubstring "recursion axiom" (Feedback.message_of e)
+        then OK()
+        else die (Feedback.message_of e)
+end
