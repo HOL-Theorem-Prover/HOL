@@ -209,14 +209,14 @@ fun asWritten (spec : spec) =
       (* The construction chose its own answer type, avoiding the names
          it was working with rather than the ones the specification
          wrote: `('a,'b,'c) ty` gets an axiom over 'b, and renaming the
-         parameters back would then say 'b for two different things. *)
+         parameters back would then say 'b for two different things.
+         The names run 'a, 'b, ... 'z, 'a0, ..., so a type with more
+         arguments than there are letters is still answered in a name
+         someone can read rather than in a generated variable. *)
       fun freshFor avoid =
-          let fun go [] = Type.gen_tyvar()
-                | go (c::cs) = let val v = mk_vartype c
-                               in if Lib.mem v avoid then go cs else v end
-          in
-            go ["'a", "'b", "'c", "'d", "'e", "'f", "'g", "'h"]
-          end
+          mk_vartype
+            (Lexis.gen_variant Lexis.tyvar_vary
+               (List.mapPartial (Lib.total dest_vartype) avoid) "'a")
       fun rename th =
           let
             val vs = Term.type_vars_in_term (concl th)

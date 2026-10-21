@@ -38,12 +38,9 @@ fun asBuilt (nms : names) =
    list -> 'b list` — which is the first names its own arguments leave
    free, in the order the arguments come. *)
 fun conventional avoid =
-    let fun go [] = Type.gen_tyvar ()
-          | go (c::cs) = let val v = mk_vartype c
-                         in if Lib.mem v avoid then go cs else v end
-    in
-      go ["'a", "'b", "'c", "'d", "'e", "'f", "'g", "'h"]
-    end
+    mk_vartype
+      (Lexis.gen_variant Lexis.tyvar_vary
+         (List.mapPartial (Lib.total dest_vartype) avoid) "'a")
 fun renameTyvars (nms : names) tyvars =
     let
       val wrote = asSpecWrote nms
