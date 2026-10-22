@@ -1,4 +1,4 @@
-Theory fieldLib
+Theory fieldRing
 Ancestors
   field ringLib
 
