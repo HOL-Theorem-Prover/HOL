@@ -1,6 +1,6 @@
 Theory fieldProjective
 Ancestors
-  field ringLib fieldLib
+  field ringLib fieldRing
 Libs
   ringLib
 
