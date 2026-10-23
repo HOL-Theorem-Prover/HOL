@@ -2361,7 +2361,7 @@ Proof
   FULL_SIMP_TAC (srw_ss()) [DROP_def, ADD_CLAUSES]
 QED
 
-Theorem MEM_DROP_SUBSET:
+Theorem MEM_DROP_imp:
   MEM x (DROP n ls) ⇒ MEM x ls
 Proof
   map_every qid_spec_tac [‘n’,‘x’,‘ls’]>>
@@ -3736,16 +3736,6 @@ Proof
   simp[ZIP_def]
 QED
 
-Theorem ZIP_GENLIST2:
-  ∀l f n. LENGTH l = n ⇒ ZIP (GENLIST f n,l) = GENLIST (λx. (f x, EL x l)) n
-Proof
-  ho_match_mp_tac SNOC_INDUCT>>rw[]>- simp[ZIP_def]>>
-  simp[GENLIST,ZIP_SNOC]>>
-  simp[EL_LENGTH_SNOC]>>
-  irule GENLIST_CONG>>rw[]>>
-  metis_tac[EL_SNOC]
-QED
-
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
@@ -5084,13 +5074,6 @@ Proof
    >> SRW_TAC [ETA_ss] [arithmeticTheory.ADD_ASSOC]
 QED
 
-Theorem GENLIST_APPEND_rev:
-  GENLIST f n ++ ls = GENLIST (λi. if i < n then f i else EL (i - n) ls) (n + LENGTH ls)
-Proof
-  irule LIST_EQ>>simp[]>>rw[]>>
-  fs[EL_APPEND_EQN]
-QED
-
 Theorem GENLIST_APPEND1:
   x = f n ⇒ GENLIST f n ++ [x] = GENLIST f (SUC n)
 Proof
@@ -5503,18 +5486,6 @@ Theorem OPT_MMAP_MAP_o:
 Proof
   simp[Once OPT_MMAP_MAP,MAP_MAP_o]>>
   simp[Once OPT_MMAP_MAP,SimpRHS]
-QED
-
-Theorem OPT_MMAP_APPEND:
-  ∀xs ys.
-    OPT_MMAP f (xs ++ ys) =
-    OPTION_BIND (OPT_MMAP f xs) (λh. OPTION_BIND (OPT_MMAP f ys) (λt. SOME (h ++ t)))
-Proof
-  Induct >> rw[ETA_THM]>-
-   simp[optionTheory.OPTION_BIND_SOME]>>
-  Cases_on ‘f h’>>fs[]>>
-  Cases_on ‘OPT_MMAP f xs’>>fs[]>>
-  Cases_on ‘OPT_MMAP f ys’>>fs[]
 QED
 
 Theorem LAST_compute:
