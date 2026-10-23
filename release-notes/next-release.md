@@ -132,6 +132,11 @@ Bugs fixed
     Repeats of one goal still search slightly differently, because HOL's CNF names skolem constants from a genvar counter and model interpretations are md5-derived from those names; that residual is in the naming rather than in metis.
     `developers/bench-metis-order.sml` measures what is left.
 
+-   Translating a source offset to a file, line and column (`HOLSourceAST.mkFileline`, used whenever a script or theory file is read through the quotation filter) kept a single cursor that its callers moved back and forth between an enclosing span's start, the current token and the end of the input, rescanning the text in between each time.
+    Reading a file was therefore quadratic in its length: compiling the 49 generated theory files under `integrationTheory` scanned 1,017 million characters and took 7.8s.
+    `mkFileline` now reads the text once, keeping the offsets of its newlines and the position after each `#(FILE=…)` / `#(LINE=…)` pragma, and answers each query by binary search; the same files now scan 0.9 million characters and take 2.2s.
+    Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
+
 New theories
 ------------
 
@@ -154,6 +159,8 @@ Incompatibilities
 
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.
+
+-   `HOLSourceAST` no longer exports the `cursor` type, `newCursor` or `updateCursor`; `mkFileline` is the way to translate a source offset.
 
 -   `Preterm.eq` has been replaced with `Preterm.veq` which returns `true` if and only if the two arguments are variables with the same names and types.
 
