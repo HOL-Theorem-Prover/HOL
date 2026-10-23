@@ -97,6 +97,25 @@ New features
     Without the flag such a rule draws a warning instead, which is the default for now.
     Exempt are phony targets, which name no file; commands whose errors the Holmakefile has already said to ignore with a leading `-`; and the earlier commands of a multi-command rule, only the last of which is expected to have produced the target.
 
+-   Under Poly/ML, `Holmake` can keep a project's standard build
+    products in a separate *artifact root*.  Set `objroot` in
+    `holproject.toml`, pass `--objroot`, or set `HOLOBJROOT`:
+
+           name = "myproj"
+           objroot = "/scratch/myproj-build"
+
+    The source directory structure is preserved: `src/sub/fooTheory.dat`
+    is stored at `<objroot>/objs/src/sub/fooTheory.dat`.  Dependency
+    files, logs, locks and HTML documentation also use the artifact
+    root.  Building, loading in `hol` and cleaning share this layout.
+    Custom rules and named heaps retain their existing output paths.
+
+    The command line takes precedence over `holproject.toml`, which
+    takes precedence over the environment.  The source root defaults
+    to the project root; use `--srcroot` to set it explicitly.
+    The default artifact layout is unchanged.
+    See *Artifact layout* in the Description manual.
+
 Bugs fixed
 ----------
 

@@ -1025,9 +1025,16 @@ fun add_anonymous_thm th = let
   val () = anonymous_thms := (n+1,th::ls)
 in n end
 
+(* Store proof traces beside theory products.  Preserve relative paths
+   in the legacy layout because later traces record these names. *)
+fun products_file f =
+    if HFS_NameMunge.owned_by_layout "." then
+      OS.Path.concat (HFS_NameMunge.objdir_for ".", f)
+    else ".hol/objs/" ^ f
+
 fun export_proof (name, th) = let
   val thyname = current_theory ()
-  val file = concat [".hol/objs/", thyname, "Theory.", name, ".tr.gz"]
+  val file = products_file (concat [thyname, "Theory.", name, ".tr.gz"])
 in
   Tracing.export_proof {file = file, tag = Thm.SavedName name} th
 end
@@ -1036,7 +1043,8 @@ fun export_proof_anon th = let
   val n = !export_proof_counter
   val () = export_proof_counter := n + 1
   val thyname = current_theory ()
-  val file = concat [".hol/objs/", thyname, "Theory._anon", Int.toString n, ".tr.gz"]
+  val file = products_file
+               (concat [thyname, "Theory._anon", Int.toString n, ".tr.gz"])
 in
   Tracing.export_proof {file = file, tag = Thm.SavedAnon n} th
 end
@@ -1059,11 +1067,10 @@ fun export_theory_return_hash () = let
         | SOME {path = parent_dat, ...} =>
           let val parent_src = OS.Path.dir parent_dat
               val target =
-                  OS.Path.concat(
-                    parent_src,
-                    OS.Path.concat(".hol/docs", pname ^ "Theory.html"))
+                  OS.Path.concat(HFS_NameMunge.docsdir_for parent_src,
+                                 pname ^ "Theory.html")
               val curr_docs =
-                  OS.Path.concat(OS.FileSys.getDir(), ".hol/docs")
+                  HFS_NameMunge.docsdir_for (OS.FileSys.getDir())
           in
               SOME (OS.Path.mkRelative {path = target, relativeTo = curr_docs})
               handle OS.Path.Path => SOME (pname ^ "Theory.html")
@@ -1130,7 +1137,8 @@ fun export_theory_return_hash () = let
            theory_out (TheoryPP.pp_sig sigthry) (#ostrm sigfile_t);
            theory_out (TheoryPP.pp_struct hash structthry) (#ostrm smlfile_t);
            if Feedback.get_tracefn "TheoryPP.include_html_docs" () = 1 then
-             let val docsdir = ".hol/docs"
+             let val docsdir =
+                     HFS_NameMunge.docsdir_for (OS.FileSys.getDir())
                  val () = HOLFS_dtype.createDirIfNecessary docsdir
                  val sigdoc_strm =
                      Portable.open_out

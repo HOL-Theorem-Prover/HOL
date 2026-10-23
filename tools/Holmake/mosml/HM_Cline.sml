@@ -34,6 +34,8 @@ val default_options = {
   core = HM_Core_Cline.fupd_jobs (fn _ => 1) HM_Core_Cline.default_core_options
 }
 fun fupd_core f t = updateT t (U #core (f (#core t))) $$
+fun layout_options (_ : t) = {objroot = NONE : string option,
+                              srcroot = NONE : string option}
 
 (* this fupdcore function is used internally to build command-line options *)
 fun fupdcore f x =

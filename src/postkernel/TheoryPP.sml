@@ -138,7 +138,7 @@ fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
   val axioms''      = filter_visible axioms'
   val definitions'' = filter_visible definitions'
   val theorems''    = filter_visible theorems'
-  val curr_docs_dir = OS.Path.concat (OS.FileSys.getDir(), ".hol/docs")
+  val curr_docs_dir = HFS_NameMunge.docsdir_for (OS.FileSys.getDir())
   fun src_url loc =
       case loc of
           DB_dtype.Unknown => NONE
@@ -148,8 +148,7 @@ fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
             val {dir, file} = OS.Path.splitDirFile abs_sml
             val {base, ...} = OS.Path.splitBaseExt file
             val abs_html =
-                OS.Path.concat (dir,
-                  OS.Path.concat (".hol/docs", base ^ ".html"))
+                OS.Path.concat (HFS_NameMunge.docsdir_for dir, base ^ ".html")
             val rel =
                 OS.Path.mkRelative {path = abs_html, relativeTo = curr_docs_dir}
                 handle OS.Path.Path => base ^ ".html"

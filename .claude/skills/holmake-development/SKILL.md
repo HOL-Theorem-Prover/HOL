@@ -27,11 +27,11 @@ this one when:
 
 | Subdir | What lives there |
 |--------|------------------|
-| `core/` | Implementation shared between Poly/ML and Moscow ML. Includes the main `Holmake.sml`, the cline parser (`HM_Core_Cline.sml`), the dep-graph data structure (`HM_DepGraph.sml`), `HFS_NameMunge.sml`, and the cachekey machinery (`HM_Cachekey*`). |
+| `core/` | Implementation shared between Poly/ML and Moscow ML. Includes the main `Holmake.sml`, the cline parser (`HM_Core_Cline.sml`), the dep-graph data structure (`HM_DepGraph.sml`), and the cachekey machinery (`HM_Cachekey*`). |
 | `poly/` | Poly/ML-specific bits: `BuildCommand.sml` (executes a node), `multibuild.sml` (parallel scheduler), `GraphExtra.sml` (heap-dep selection), `HM_Cline.sml` (poly's superset of cline options), `HM_BuildLock.sml`. |
 | `mosml/` | Moscow ML-specific bits with the *same module names* as poly/. `mosml/GraphExtra.sml` is a stub (`type t = unit`) — no heap dep concept. `mosml/HM_Cline.sml` lacks the poly-only options. |
 | `hmf/` | Holmakefile parser: `ReadHMF.sml`, `Holmake_types.sml`. Use these when you need to understand how a Holmakefile becomes an environment + rules. |
-| `hfs/` | `HOLFileSys.sml` — the `OS.FileSys` wrapper that applies `HFS_NameMunge` for `.hol/objs/` rewriting. |
+| `hfs/` | `HOLFileSys.sml` — the `OS.FileSys` wrapper that applies `HFS_NameMunge` for `.hol/objs/` rewriting — and `HFS_NameMunge.sig`; the implementations are `poly/HFS_NameMunge.sml` and the identity-layout `mosml/HFS_NameMunge.sml`. |
 | `deps/` | `HM_DepGraph.{sml,sig}` — the graph type used everywhere. |
 | `tests/` | One subdir per regression test, each with its own `Holmakefile` + `selftest.sml`. See "Writing tests" below. |
 | `util/` | `GetOpt`, lock helpers, host name, etc. Mostly stable utility code. |
@@ -206,8 +206,9 @@ human-readable "what would build" report from that JSON.
 ## `HFS_NameMunge`: the `.hol/objs/` rewrite
 
 Theory products live under `<dir>/.hol/objs/`, but the rest of the
-build pretends they're at `<dir>/`. `HFS_NameMunge` (in
-`tools/Holmake/core/HFS_NameMunge.sml`) implements the rewrite:
+build pretends they're at `<dir>/`. `HFS_NameMunge` (signature in
+`tools/Holmake/hfs/`, implementation in
+`tools/Holmake/poly/HFS_NameMunge.sml`) implements the rewrite:
 when `HOLFileSys.openIn "foo.uo"` is called from a Holmake-rooted
 context, the underlying open is on `<dir>/.hol/objs/foo.uo`.
 
@@ -223,6 +224,28 @@ Implications:
 - `make_deps/lastmaker` and the dep cache live under `.hol/`. Tools
   like `hmntest.py` that need to discover the last `bin/Holmake`
   used should look there.
+
+### Two layouts
+
+Use `HFS_NameMunge` to locate standard build artifacts.  The default
+Poly/ML layout stores products, dependency files, logs, locks and
+documentation in `<dir>/.hol/{objs,make-deps,logs,locks,docs}`.
+With an artifact root configured, directories under `srcroot` map to
+`<objroot>/<kind>/<rel>`, preserving source-relative paths.
+`HMProject.resolve_layout` selects this layout from the command line,
+`holproject.toml` or the environment, in that order.
+
+Use `objdir_for`, `depdir_for`, `logdir_for`, `lockdir_for` and
+`docsdir_for` for directories, and `HOLtoFS` / `FStoHOL` to convert
+product paths.  `configure` sets the layout at run time;
+`tools-poly/hol.ML` reapplies it after `loadState` restores saved
+references.  Holmake passes the layout to children through
+`HOLOBJROOT`/`HOLSRCROOT` and `--objroot`/`--srcroot`.
+Tests are in `tools/Holmake/tests/objroot`.
+
+Custom-rule outputs and named heaps keep their existing output paths.
+Some tools used to build HOL itself (`help/src-sml`, `tools/check-builds`,
+`developers/Holmake/*.py`) still assume the default layout.
 
 ## Rebuild semantics: mtime vs cachekey
 

@@ -11,6 +11,7 @@ type config = {
   externals : external_project list,
   external_includes : string list,
   holmake : bool,
+  objroot : string option,
   dead_keys : string list,
   unknown_keys : string list
 }
@@ -25,7 +26,7 @@ type config = {
    strangers into `unknown_keys` rather than discarding them. *)
 val recognised_keys =
     ["name", "holpath", "exclude", "external_includes", "holmake",
-     "projects", "h4pedant", "build_times"]
+     "projects", "h4pedant", "build_times", "objroot"]
 
 (* holproject.local.toml is the per-developer override file; only
    [projects.<id>] means anything in it. *)
@@ -297,6 +298,11 @@ fun load { root } =
       val exclude = if holmake then List.map (abs_relative_to root) exclude_rel
                     else []
 
+      val objroot =
+          tag_path proj_path
+            (fn () => Option.map (abs_relative_to root o expand_holdir)
+                                 (lookup_string ptbl ["objroot"]))
+
       (* externals can be declared in either file; local overrides project.
          Skipped entirely under holmake = false: [projects.<id>] tables
          carry no meaning outside project mode, so we don't read them or
@@ -383,6 +389,7 @@ fun load { root } =
         externals = externals,
         external_includes = external_includes,
         holmake = holmake,
+        objroot = objroot,
         dead_keys = dead_keys,
         unknown_keys = unknown_keys }
     end
@@ -414,6 +421,80 @@ fun build_times_files root =
       build_times_file h :: (if r = h then [] else [build_times_file r])
     end
 
+(* ---------------------------------------------------------------------
+   Select the artifact root: command line, project file, then environment.
+   Project settings override the environment inherited from a parent
+   Holmake, so recipes can build another project with its own layout.
+   --------------------------------------------------------------------- *)
+(* Resolve symlinks in the existing prefix of p, an absolute path.
+   The artifact root need not exist yet. *)
+fun physical p =
+    OS.FileSys.fullPath p
+    handle OS.SysErr _ =>
+           let val {dir, file} = OS.Path.splitDirFile p
+           in
+             if dir = p orelse dir = "" then p
+             else OS.Path.concat (physical dir, file)
+           end
+
+fun resolve_layout {start, cli_objroot, cli_srcroot, no_project} =
+    let
+      val start = canonical_abs start
+      fun env v = case OS.Process.getEnv v of
+                      SOME "" => NONE
+                    | x => x
+      val root = if no_project then NONE else find_root {start = start}
+      val toml_objroot =
+          case root of
+              NONE => NONE
+            | SOME r =>
+              let val (pf, tbl) = read_external_decls r
+              in
+                tag_path pf
+                  (fn () => Option.map (abs_relative_to r o expand_holdir)
+                                       (lookup_string tbl ["objroot"]))
+              end
+      val (objroot, from_toml) =
+          case (cli_objroot, toml_objroot) of
+              (SOME p, _) => (SOME (abs_relative_to start p), false)
+            | (NONE, SOME p) => (SOME p, true)
+            | (NONE, NONE) =>
+              (Option.map (abs_relative_to start) (env "HOLOBJROOT"), false)
+      (* Do not infer HOLDIR as the source root: that would redirect products
+         throughout the HOL installation. *)
+      fun not_holdir r =
+          if physical r = physical Systeml.HOLDIR then NONE else SOME r
+      fun srcroot objroot =
+          case cli_srcroot of
+              SOME p => SOME (abs_relative_to start p)
+            | NONE =>
+              if from_toml then root
+              else
+                case env "HOLSRCROOT" of
+                    SOME p => SOME (abs_relative_to start p)
+                  | NONE => Option.mapPartial not_holdir root
+    in
+      case objroot of
+          NONE => NONE
+        | SOME obj0 =>
+          case srcroot obj0 of
+              NONE =>
+              raise Fail ("cannot tell which source tree objroot " ^ obj0 ^
+                          " is for: give --srcroot (or HOLSRCROOT), or \
+                          \use a holproject.toml")
+            | SOME src0 =>
+              let
+                val obj = physical obj0 and src = physical src0
+              in
+                if obj = src then
+                  raise Fail ("objroot and srcroot are the same directory (" ^
+                              obj ^ ")")
+                else if is_path_under obj src then
+                  raise Fail ("srcroot " ^ src ^ " lies inside objroot " ^ obj)
+                else SOME {srcroot = src, objroot = obj}
+              end
+    end
+
 (* ----------------------------------------------------------------------
    discover_dirs: DFS preorder under root and each external project,
    collecting absolute paths of directories.
@@ -440,13 +521,36 @@ fun list_subdirs dir =
    decides whether to adopt them (see `discover`).  A nested root
    underneath an [exclude]d subtree is not reported: `excluded` is
    tested on pop, before that directory's children are ever listed. *)
-fun discover_under start excludes =
+fun discover_under objroots start excludes =
     let
       open OS.FileSys
+      val start = OS.Path.mkCanonical start
       val excl_set = Binaryset.addList
                        (Binaryset.empty String.compare, excludes)
       fun hasProjFile p = access(OS.Path.concat(p, "holproject.toml"), [A_READ])
-      fun excluded p = Binaryset.member (excl_set, p)
+      (* Exclude artifact roots from the source scan.  Test both physical
+         paths and paths relative to start, which may contain symlinks
+         (e.g. /var on macOS).  Resolve start only when needed. *)
+      val pruned =
+          case objroots of
+              [] => (fn _ => false)
+            | _ =>
+              let
+                val real_start = physical start
+                fun lexical obj =
+                    if is_path_under real_start obj then
+                      OS.Path.mkCanonical
+                        (OS.Path.concat
+                           (start,
+                            OS.Path.mkRelative {path = obj,
+                                                relativeTo = real_start}))
+                    else obj
+                val tests = List.map is_path_under
+                                     (objroots @ List.map lexical objroots)
+              in
+                fn p => List.exists (fn t => t p) tests
+              end
+      fun excluded p = Binaryset.member (excl_set, p) orelse pruned p
       fun walk acc nested worklist =
           case worklist of
               [] => (acc, nested)
@@ -464,7 +568,7 @@ fun discover_under start excludes =
                     walk (d :: acc) (sub @ nested) (own @ ds)
                   end
     in
-      walk [] [] [OS.Path.mkCanonical start]
+      walk [] [] [start]
     end
 
 fun discover (cfg : config) =
@@ -472,7 +576,14 @@ fun discover (cfg : config) =
       val roots =
           (#root cfg, #exclude cfg) ::
           List.map (fn e => (#path e, #exclude e)) (#externals cfg)
-      val walked = List.map (fn (r, excl) => discover_under r excl) roots
+      val objroots =
+          sorted_dedup
+            (Option.getOpt (Option.map (fn p => [p]) (#objroot cfg), []) @
+             (case HFS_NameMunge.current_layout () of
+                  NONE => []
+                | SOME {objroot, ...} => [objroot]))
+      val walked =
+          List.map (fn (r, excl) => discover_under objroots r excl) roots
     in
       { dirs = sorted_dedup (List.concat (List.map #1 walked)),
         nested = sorted_dedup (List.concat (List.map #2 walked)) }

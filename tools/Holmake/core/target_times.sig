@@ -9,8 +9,9 @@ sig
 
      Two sources, presented as one map:
 
-       * <root>/.hol/build-logs/target-times, the project's own cache,
-         rewritten by every parallel Holmake run in that project;
+       * the project's cache, build-logs/target-times under
+         HFS_NameMunge.project_state_dir root (<root>/.hol by default,
+         or objroot when root is srcroot), updated by parallel builds;
        * zero or more committed *seed* files, which a project ships so
          that a fresh checkout -- where no cache exists yet -- still
          schedules well.  `HMProject.build_times_files' finds them.
@@ -48,7 +49,7 @@ sig
      `find_best_runnable_pred' ties on node id. *)
   val cost : map -> string -> real
 
-  (* Merge `entries` into <root>/.hol/build-logs/target-times,
+  (* Merge `entries` into the project's build-logs/target-times,
      last-observed wins, preserving entries this run did not touch.
      Creates the directory if needed.  I/O errors are swallowed with a
      note on stdErr; a failed merge never derails the build.
