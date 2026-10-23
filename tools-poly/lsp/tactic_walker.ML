@@ -200,60 +200,8 @@ fun textAt tacText (s, e) = let
   val e' = Int.max (s', Int.min (e, n))
   in String.substring (tacText, s', e' - s') end
 
-(* The source to compile for a leaf, or NONE for one that is a
-   no-op.  The four sugars name their entry point in full because
-   their spans cover a quotation rather than a tactic, and because
-   `TacticParse's rendering of them is surface syntax needing
-   particular opens: `sg' from bossLib, `SELECT_GOAL_LT' and
-   `RENAME_TAC' from Q.  Leaves carrying a whole-expression span use
-   that source verbatim.  Anything left goes back through
-   `TacticParse's inverse printer, which is what keeps `applyAtom'
-   total -- a leaf kind nobody anticipated still applies rather than
-   halting the walk at the previous step.  Every name reachable that
-   way (MAP_EVERY, NO_TAC, TACS_TO_LT, REVERSE_LT, ...) lives in
-   Tactical, so it needs no opens.
-
-   A list_tactic leaf is compiled and applied as one -- see
-   `compileAndApplyLT'. *)
-(* Source we made up, versus source the user wrote.  Only the
-   second may fail to compile innocently -- that is the file's own
-   compile reporting a typo, or its `open's not having run yet.  Ours
-   failing to compile is a bug in this file and has to be seen. *)
-datatype src = Synthesised of string | Verbatim of string
-
-fun atomSrc tacText te = let
-  val txt = textAt tacText
-  (* `tr pat' spans the whole right operand of `>~', brackets and
-     all -- as `Rename' also assumes -- so it is passed through, not
-     wrapped again: wrapping produced `>~ [[pat]]', which never
-     compiled.  And a selector is a list_tactic, wanted whole: run as
-     `ALL_TAC >~ pats' through `expand' it saw each goal on its own
-     and so could never pick one out.  Name the list_tactic itself
-     and let `expand_list' hand it the focus. *)
-  in case te of
-      Subgoal span      => SOME (Synthesised
-                                   ("BasicProvers.subgoal " ^ txt span))
-    | LSelectGoal span  => SOME (Synthesised
-                                   ("Q.SELECT_GOAL_LT " ^ txt span))
-    | LSelectGoals span => SOME (Synthesised
-                                   ("Q.SELECT_GOALS_LT " ^ txt span))
-    | Rename span       => SOME (Synthesised ("Q.RENAME_TAC " ^ txt span))
-    | _ => case topSpan te of
-        SOME span => SOME (Verbatim (txt span))
-      | NONE => Option.map Synthesised (printTacAsSML tacText te)
-  end
-
-(* Which leaves denote list_tactics.  Enumerated rather than read off
-   `TacticParse.isTac', which also answers false for OOpaque -- a
-   tactic sitting in a tactic list -- and so would misroute it. *)
-fun isListTactic te = case te of
-    LReverse => true
-  | LSelectGoal _ => true
-  | LSelectGoals _ => true
-  | LFirst [] => true
-  | LTacsToLT _ => true
-  | LOpaque _ => true
-  | _ => false
+(* Shared lowering keeps the LSP and ProofStepPlan consumers consistent. *)
+open TacticLeafSource
 
 (* Where the wall clock went.  The budget canary in `goal_state_init'
    interrupts the walk, which tells its caller the walk was too slow
@@ -275,7 +223,7 @@ val inFlightRef : (int * int) option ref = ref NONE
 fun lastCosts () = List.rev (!costsRef)
 fun inFlight () = !inFlightRef
 
-fun applyAtom tacText te state = case atomSrc tacText te of
+fun applyAtom tacText te state = case leafSource tacText te of
     NONE => Applied state
   | SOME s => let
       val (src, ours) = case s of
@@ -287,8 +235,9 @@ fun applyAtom tacText te state = case atomSrc tacText te of
       val nBefore = length (goalFrag.top_goals state)
       val timer = Timer.startRealTimer ()
       val () = inFlightRef := span
-      val r = if isListTactic te then compileAndApplyLT src state
-              else compileAndApply src state
+      val r = case fragmentLeafKind te of
+                  ProofStepPlan.ListTacticLeaf => compileAndApplyLT src state
+                | ProofStepPlan.TacticLeaf => compileAndApply src state
       val () = inFlightRef := NONE
       val ms = Int.fromLarge (Time.toMilliseconds (Timer.checkRealTimer timer))
       val nAfter = case r of
@@ -297,8 +246,7 @@ fun applyAtom tacText te state = case atomSrc tacText te of
       val () = costsRef := {span = span, ms = ms, goalsBefore = nBefore,
                             goalsAfter = nAfter} :: !costsRef
       in case r of
-           (* Our own source not compiling is not the user's problem
-              to hide; report it like any other failure. *)
+           (* Failure in synthesised source is an internal lowering error. *)
            Rejected CompileFailed => if ours then Rejected ApplyFailed else r
          | _ => r
       end
