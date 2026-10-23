@@ -100,6 +100,14 @@ New features
 Bugs fixed
 ----------
 
+-   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
+    Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
+    Recursions through `MAP` and `EVERY` with a substitution-like extra parameter have exactly this shape.
+
+    TFL eta-expands such a call on the way in, because a partial application has no other form while the function's arguments are being tupled.
+    The expansion is now undone before the equations and the induction principle are saved, so both say what was written.
+    A definition whose value genuinely is an abstraction, and a lambda written over a tuple, are left alone.
+
 -   `bin/hol` reading a script on its standard input, *e.g.*, something like `$(HOLDIR)/bin/hol < build.ML`, reported success however badly the script went.
     A failing run now properly exits with failure.
 

@@ -608,3 +608,55 @@ val _ =
         then OK()
         else die (Feedback.message_of e)
 end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2098: TFL eta-expands a call that supplies a function too few    *)
+(* arguments, and that expansion used to survive into the saved         *)
+(* equation.  Unfolding a definition recursing through MAP or EVERY     *)
+(* then gave MAP (\a. g n a) ts where MAP (g n) ts was written, which   *)
+(* matches neither goals nor lemmas stated the way they were written.   *)
+(* The primitive-recursive case must be left exactly as it was.         *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`etatree = Nd (etatree list) | Lf`;
+
+local
+  (* an abstraction \x. t x with x not free in t says nothing that t
+     does not; the defect is that extraction leaves these behind *)
+  fun eta_redex tm =
+      case Lib.total dest_abs tm of
+          NONE => false
+        | SOME (v, bdy) =>
+          (case Lib.total dest_comb bdy of
+               NONE => false
+             | SOME (rator, rand) =>
+               aconv rand v andalso not (free_in v rator))
+  fun eta_free th = not (can (find_term eta_redex) (concl th))
+  fun mentions pat th = can (find_term (aconv pat)) (concl th)
+  fun check (pat, th) = eta_free th andalso mentions pat th
+  fun show (pat, th) =
+      "expected " ^ term_to_string pat ^ " in " ^ thm_to_string th
+in
+val _ = quietly Define`etaf (Nd ts) = Nd (MAP etaf ts) /\ etaf Lf = Lf`;
+val _ = quietly Define`
+  etag (n:num) (Nd ts) = Nd (MAP (etag n) ts) /\ etag n Lf = Lf`;
+val _ = quietly Define`etap (Nd ts) = EVERY etap ts /\ etap Lf = T`;
+val _ = quietly Define`
+  etaq (n:num) (Nd ts) = EVERY (etaq n) ts /\ etaq n Lf = T`;
+
+val _ = tprint "GH2098: primitive recursion through MAP (unchanged)"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“MAP etaf”, DB.fetch "-" "etaf_def")
+
+val _ = tprint "GH2098: TFL recursion through MAP, partially applied"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“MAP (etag n)”, DB.fetch "-" "etag_def")
+
+val _ = tprint "GH2098: TFL recursion through EVERY, bare call"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“EVERY etap”, DB.fetch "-" "etap_def")
+
+val _ = tprint "GH2098: TFL recursion through EVERY, partially applied"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“EVERY (etaq n)”, DB.fetch "-" "etaq_def")
+end
