@@ -232,7 +232,7 @@ in
   fun tuple4 c (p1,p2,p3,p4) = tuple c (p1 <> p2 <> p3 <> t1 p4)
 end
 
-fun option _ _ 0w0 = NONE
+fun option _ _ 0w1 = NONE
   | option c p w = SOME (p (arg c w 0))
 
 fun list c go w = let
@@ -264,7 +264,17 @@ fun str h w = let
   in Byte.bytesToString (vector (slice (vec, start + data_off + 8, SOME n))) end
 
 type ident = string * string
-fun ident c w = tuple2 c (str c, str c) (arg c (arg c w 0) 0)
+fun ident c w = let
+  val (_, n) = obj c w
+  val f = arg c w
+  val () = if n = 2 andalso not (isPtr (f 1)) then () else
+    raise Fail ("ProofTraceParser: unsupported kernel identifier layout; " ^
+                "expected {name, epoch}")
+  val name = f 0
+  val (_, n) = obj c name
+  val () = if n = 2 then () else
+    raise Fail "ProofTraceParser: invalid kernel name layout"
+in tuple2 c (str c, str c) name end
 
 fun thmId c w = case arg c w of f =>
   case f 0 of

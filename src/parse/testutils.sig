@@ -2,7 +2,7 @@ signature testutils =
 sig
 
 datatype testresult = datatype Exn.result
-datatype die_mode = ProcessExit | FailException | Remember of int ref
+datatype die_mode = datatype testutilsBase.die_mode
 
 val is_result : 'a testresult -> bool
 
