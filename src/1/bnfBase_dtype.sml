@@ -37,8 +37,9 @@ This is the "canonical" type.
 As user gets to choose names for them, there is no fixed naming scheme
 for the constants.
 
-Though the tyop is written below as if the αᵢ all come first, followed by the βⱼ,
-this is not required and they can be intermingled as arguments to the operator.
+Though the tyop is written below as if the αᵢ all come first, followed by the
+βⱼ, this is not required and they can be intermingled as arguments to the
+operator.
 
 map for (α₁, ... αₙ, β₁ ... βₙ) tyop is of form
 
@@ -71,7 +72,7 @@ gsetmap has form
 gsetIMAGE has form
 
    |- IMAGE (f : γ -> δ)
-      (gset (g₁ : α₁ -> γ set) ... (gₙ : αₙ -> γ set) (x:(α₁,...,αₙ,β₁,...,βₘ)F)) =
+      (gset (g₁ : α₁ -> γ set)...(gₙ : αₙ -> γ set)(x:(α₁,...,αₙ,β₁,...,βₘ)F)) =
       gset (IMAGE f ∘ g₁) ... (IMAGE f ∘ gₙ) x
 
 Nonemptiness witnesses (the wits field) come in (term,theorem) pairs.  The

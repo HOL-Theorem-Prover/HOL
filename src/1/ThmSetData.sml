@@ -292,7 +292,8 @@ fun export_with_ancestry
           (* as this is local, the name is not going to be a valid binding,
              and "cooking" a raw ADD delta will just throw an exception *)
           if null args then
-            #update_global_value fullresult(apply_to_global (ADD(lift name, thm)))
+            #update_global_value fullresult
+                                 (apply_to_global (ADD(lift name, thm)))
           else
             raise ERR "local_attrfun"
                   ("Arguments not allowed for attribute " ^ attrname)

@@ -108,7 +108,7 @@ sig
    val fetch           : typeBase -> hol_type -> tyinfo option
    val prim_get        : typeBase -> string * string -> tyinfo option
    val get             : typeBase -> string -> tyinfo list
-                       (* get returns list of tyinfos for types with that tyop *)
+                    (* get returns list of tyinfos for types with that tyop *)
 
    val listItems       : typeBase -> tyinfo list
    val toPmatchThry    : typeBase -> {Thy:string,Tyop:string} ->
@@ -123,7 +123,8 @@ sig
                          (hol_type -> term option) *
                          (hol_type -> term) -> hol_type -> term
 
-   val type_size_pre   : (hol_type -> term option) -> typeBase -> hol_type -> term
+   val type_size_pre   : (hol_type -> term option) -> typeBase -> hol_type ->
+                         term
    val type_size       : typeBase -> hol_type -> term
    val type_encode     : typeBase -> hol_type -> term
    val type_lift       : typeBase -> hol_type -> term

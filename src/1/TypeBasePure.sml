@@ -95,16 +95,17 @@ fun update_DTY z = let
             case_eq case_def case_const case_cong axiom accessors =
     {accessors = accessors, axiom = axiom, case_cong = case_cong,
      case_const = case_const, case_def = case_def, case_eq = case_eq,
-     case_elim = case_elim, constructors = constructors, destructors = destructors,
-     distinct = distinct, encode = encode, extra = extra, fields = fields,
+     case_elim = case_elim, constructors = constructors,
+     destructors = destructors, distinct = distinct, encode = encode,
+     extra = extra, fields = fields,
      induction = induction, lift = lift, nchotomy = nchotomy,
      one_one = one_one, recognizers = recognizers, simpls = simpls,
      size = size, ty = ty, updates = updates}
   (* first order *)
   fun to f {accessors, axiom, case_cong, case_const, case_def, case_eq,
-            case_elim, constructors, destructors, distinct, encode, extra, fields,
-            induction, lift, nchotomy, one_one, recognizers, simpls, size, ty,
-            updates} =
+            case_elim, constructors, destructors, distinct, encode, extra,
+            fields, induction, lift, nchotomy, one_one, recognizers, simpls,
+            size, ty, updates} =
     f accessors axiom case_cong case_const case_def case_eq case_elim
       constructors destructors distinct encode extra fields induction lift
       nchotomy one_one recognizers simpls size ty updates
@@ -196,7 +197,8 @@ fun induction_of0 (DFACTS {induction,...}) = induction
 fun induction_of (DFACTS {induction,...}) = thm_of induction
   | induction_of (NFACTS(_,{induction=SOME th,...})) = th
   | induction_of (NFACTS(ty,{induction=NONE,...})) =
-        raise ERR "induction_of" (dollarty ty^" no induction theorem available");
+        raise ERR "induction_of"
+              (dollarty ty^" no induction theorem available");
 
 fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
   | nchotomy_of (NFACTS(_,{nchotomy=SOME th,...})) = th
@@ -416,7 +418,7 @@ local fun mk_ti (n,ax,ind)
                       case_eq =
                         prove_case_eq_thm {case_def = cdef, nchotomy = nch},
                       case_elim =
-                        prove_case_ho_elim_thm {case_def = cdef, nchotomy = nch},
+                        prove_case_ho_elim_thm {case_def=cdef, nchotomy=nch},
                       one_one=oo, distinct=d,size=NONE, encode=NONE,
                       lift=NONE, fields=[], accessors=[],updates=[],
                       recognizers=[],destructors=[]}
@@ -479,8 +481,8 @@ fun pp_tyinfo tyi =
         let
           val {ty,constructors, case_const, case_def, case_cong, induction,
                nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, case_eq,
-               case_elim, fields, accessors, updates,recognizers,destructors,extra}
-              = recd
+               case_elim, fields, accessors, updates,recognizers,destructors,
+               extra} = recd
           val ty_namestring = name_pair (ty_name_of d)
         in
           block CONSISTENT 0 (
@@ -787,8 +789,9 @@ fun typeValue (theta,gamma,undef) =
                       val csizefns = map tyValue args
                       val (tys,rng) = strip_fun (type_of f)
                       val (gen_sizefn_tys,vty) = front_last tys
-                      val tyinst = match_type (list_mk_fun(gen_sizefn_tys,bool))
-                                              (list_mk_fun(map type_of csizefns,bool))
+                      val tyinst = match_type
+                                     (list_mk_fun(gen_sizefn_tys,bool))
+                                     (list_mk_fun(map type_of csizefns,bool))
                   in list_mk_comb(inst tyinst f, csizefns)
                   end handle HOL_ERR _
                       => (WARN "typeValue"
