@@ -54,7 +54,7 @@ Theorem tsubst_absent[simp]:
   v ∉ tFV t ⇒ tsubst v t' t = t
 Proof
   Induct_on ‘t’ >> simp[] >> rpt strip_tac >>
-  ‘MAP (λa. tsubst v t' a) ts = MAP I ts’ suffices_by simp[] >>
+  ‘MAP (tsubst v t') ts = MAP I ts’ suffices_by simp[] >>
   irule MAP_CONG' >> simp[] >> metis_tac[]
 QED
 

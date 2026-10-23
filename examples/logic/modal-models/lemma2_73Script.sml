@@ -439,10 +439,10 @@ Theorem shift_FVT:
 Proof
 completeInduct_on `term_size t` >> Cases_on `t` >> rw[FVT_def,shift_term_def] >>
 rw[SUBSET_DEF] >> fs[MEM_MAP] >> rw[] >> fs[PULL_FORALL] >>
-first_x_assum (qspec_then `a` assume_tac) >> drule term_size_lemma >>
+first_x_assum (qspec_then `y'` assume_tac) >> drule term_size_lemma >>
 strip_tac >> first_x_assum (qspec_then `n` assume_tac) >> fs[ADD_CLAUSES] >>
 fs[PULL_EXISTS] >>
-`FVT (shift_term (CARD A) a) DIFF (count (CARD A)) ⊆ {x + CARD A| x IN s}`
+`FVT (shift_term (CARD A) y') DIFF (count (CARD A)) ⊆ {x + CARD A| x IN s}`
   suffices_by rw[DIFF_DEF,SUBSET_DEF] >>
 first_x_assum irule >> rw[] (* 3 *)
 >- (fs[SUBSET_DEF,PULL_EXISTS,PULL_FORALL,MEM_MAP] >> metis_tac[])
