@@ -859,9 +859,10 @@ Definition a2sexp_def:
 Termination
  WF_REL_TAC `measure logic_appeal_size` \\ bossLib.rw[]
  \\ Cases_on `subproofs_extras` \\ gvs[]
+ \\ rename [‘MEM la (FST p)’]
  (* the clause's own bound variable is x, so the option's content is
     the primed one *)
- \\ Cases_on `x'` \\ gvs[]
+ \\ Cases_on `p` \\ gvs[]
  \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC
 End
 
