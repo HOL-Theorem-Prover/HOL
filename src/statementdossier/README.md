@@ -126,18 +126,18 @@ Use `Thy$Name` to qualify pinning references; ambiguous unqualified names
 are errors. Duplicate selected theorems and pinning names are errors too.
 This checks that the references exist, not that they prove the English.
 
-Missing, extra or duplicate sections are errors. Single names in code
-spans must name something HOL knows: a constant, overload, theorem,
-type, theory or free or outer quantified variable of the selected theorem. Unknown pinning
-facts, fenced code blocks and misplaced `Pinned by` paragraphs are also
+Missing, extra or duplicate sections are errors. Single names (including
+`Thy$Name` references) in code spans must name something HOL knows: a constant, overload, theorem,
+type, theory or free or outer quantified variable of the selected theorem.
+Unknown pinning facts, fenced code blocks and misplaced `Pinned by` paragraphs are also
 errors. Prose remains caller supplied; treat it as trusted content.
 
 Markdown output preserves the prose and needs no external tools. HTML
 output **with assumption prose** invokes `pandoc` from `PATH` to render
 GFM; other HTML reports do not. No HOL build or default selftest invokes
 pandoc. A failed conversion raises an error. Code spans are formatted
-and linked using HOL where they parse in the theorem's free and outer quantified variable
-context.
+and linked using HOL where they parse in the theorem's free and outer
+quantified variable context.
 
 For a runnable example using `arithmetic$LESS_EQ_IMP_LESS_SUC` and
 `example-assumptions.md`, with pandoc installed:

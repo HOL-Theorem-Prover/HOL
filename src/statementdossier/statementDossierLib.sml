@@ -1001,6 +1001,16 @@ fun is_name s =
   s <> "" andalso Char.isAlpha (String.sub (s, 0)) andalso
   CharVector.all (fn c => Char.isAlphaNum c orelse c = #"_" orelse c = #"'") s
 
+fun qualified_name s =
+  case String.fields (fn c => c = #"$") s of
+    [thy, n] =>
+      if is_name thy andalso n <> "" andalso
+         CharVector.all (not o Char.isSpace) n
+      then SOME {Thy = thy, Name = n} else NONE
+  | _ => NONE
+
+fun is_reference_name s = is_name s orelse isSome (qualified_name s)
+
 fun theorem_of_snippet text =
   let
     val ss = Substring.dropl Char.isSpace (Substring.full text)
@@ -1178,10 +1188,16 @@ fun overloaded_consts s =
 (* Whether a single name in the prose names something HOL knows: a
    constant, a stored theorem, a type, a theory, or a variable of vars. *)
 fun known_name vars s =
-  List.exists (fn v => fst (dest_var v) = s) vars orelse
-  not (null (Term.decls s)) orelse not (null (overloaded_consts s)) orelse
-  isSome (stored_theorem s) orelse
-  not (null (Type.decls s)) orelse mem s (loaded_theories ())
+  case qualified_name s of
+    SOME (n as {Thy, Name}) =>
+      can prim_mk_const n orelse isSome (stored_theorem s) orelse
+      List.exists (fn {Thy = thy, ...} => thy = Thy) (Type.decls Name)
+  | NONE =>
+      List.exists (fn v => fst (dest_var v) = s) vars orelse
+      not (null (Term.decls s)) orelse
+      not (null (overloaded_consts s)) orelse
+      isSome (stored_theorem s) orelse
+      not (null (Type.decls s)) orelse mem s (loaded_theories ())
 
 (* Markdown to HTML, by pandoc *)
 fun pandoc_html md =
@@ -1429,7 +1445,8 @@ fun render (cfg : config) =
           val pinned = map (fn (k, t) => (k, split_pinned t)) sections
           val unknown =
             dedup (fn s => s)
-              (List.filter (fn s => is_name s andalso not (known_name vars s))
+              (List.filter (fn s =>
+                 is_reference_name s andalso not (known_name vars s))
                  (List.concat (map code_spans (intro :: map #2 sections))))
           val unstored =
             List.concat (map (fn (_, (_, ns)) =>

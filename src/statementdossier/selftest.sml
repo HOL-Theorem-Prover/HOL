@@ -229,6 +229,18 @@ val _ = bad_prose "Extra prose sections are rejected" "head of no hypothesis"
   (good_prose ^ "\n## absent\nExtra.\n")
 val _ = bad_prose "Unknown formal names are rejected" "HOL does not know"
   "## admissible\n`not_a_HOL_name_28471`\n"
+val _ = bad_prose "Unknown qualified prose names are rejected"
+  "HOL does not know"
+  "## admissible\n`noSuchTheory$noSuchConstant`\n"
+val _ = bad_prose "Unknown qualified names in a loaded theory are rejected"
+  "HOL does not know"
+  "## admissible\n`dossierTest$not_a_HOL_name_28471`\n"
+val _ = write prose_path
+  "## admissible\n`dossierTest$first`, `list$list`, `arithmetic$<=`, \
+  \and `dossierTest$root` are known.\n"
+val _ = run (with_prose (named "root"))
+val _ = check "Qualified constants, types and theorems are accepted"
+  (contains (read markdown_path) "are known")
 val _ = bad_prose "Unknown pinning theorems are rejected" "no stored theorem"
   "## admissible\nAn input.\n\nPinned by: `not_a_theorem_28471`.\n"
 val _ = bad_prose "Duplicate pinning names are rejected" "duplicate pinning"
