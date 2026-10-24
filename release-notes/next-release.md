@@ -142,6 +142,13 @@ New theories
 New tools
 ---------
 
+-   `statementDossierLib` generates Markdown and standalone HTML reports
+    of stored theorem statements, their trust tags, assumptions, defining
+    equations, datatypes and expansion boundaries. HTML terms use HOL's
+    printer annotations for highlighting, types and links. Optional prose
+    sections are checked against the theorem's hypotheses and database.
+    See `src/statementdossier/README.md` for an example.
+
 New examples
 ------------
 
