@@ -11,14 +11,25 @@ val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj", "NOT_LT_ZERO_EQ_ZERO"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-val rw = ref (tl [TRUTH]);
-fun store{name,attrname,args,thm} = (rw := thm::(!rw))
+(* The [rw] set lives in the Context, not in an SML ref: `SS`/`FS`/`SR`
+   below are read when a proof *runs*, and under the LSP that is after
+   the whole file has elaborated, so a ref would hand every proof the
+   end-of-file set instead of the one its own declaration sees.  A
+   Context.Data slot is read from the context the proof is run against
+   and so answers the same in both.  Not ThmSetData: this set is local
+   to the script and is never exported. *)
+val rw_slot = Context.Data.new {
+  name = "milawa_proofp.rw", empty = ([] : thm list),
+  pp = fn ths => Int.toString (length ths) ^ " rewrites"}
+fun rws_of ctxt = Context.Data.get rw_slot ctxt
+fun store{name,attrname,args,thm} =
+    Context.Data.modify rw_slot (fn ths => thm::ths)
 val _ = ThmAttribute.register_attribute (
   "rw", {localf = store, storedf = store}
   )
 
-fun add_rw th = (rw := th::(!rw); th);
-fun add_rws thms = (rw := thms @ (!rw));
+fun add_rw th = (Context.Data.modify rw_slot (fn ths => th::ths); th);
+fun add_rws thms = Context.Data.modify rw_slot (fn ths => thms @ ths);
 
 Theorem LISP_TEST_THM[local]:
   !b. (isTrue (LISP_TEST b) = b) /\
@@ -35,9 +46,9 @@ val _ = add_rws [isTrue_CLAUSES,
   THIRD_def,FOURTH_def,
   FIFTH_def,NOT_CONS_NIL]
 
-fun SS thms = SIMP_TAC std_ss (thms @ !rw)
-fun FS thms = FULL_SIMP_TAC std_ss (thms @ !rw)
-fun SR thms = SIMP_RULE std_ss (thms @ !rw)
+fun SS thms g ctxt = SIMP_TAC std_ss (thms @ rws_of ctxt) g ctxt
+fun FS thms g ctxt = FULL_SIMP_TAC std_ss (thms @ rws_of ctxt) g ctxt
+fun SR thms = SIMP_RULE std_ss (thms @ rws_of (Context.snapshot ()))
 
 
 (* various auxilliary functions *)
