@@ -5324,6 +5324,22 @@ Proof
   \\ simp[]
 QED
 
+Theorem dropWhile_const_split:
+  ls = GENLIST (K a) (LENGTH ls - LENGTH (list$dropWhile ((=)a) ls)) ++ list$dropWhile ((=)a) ls
+Proof
+  Induct_on ‘ls’>>rw[]>>
+  simp[arithmeticTheory.SUB]>>
+  IF_CASES_TAC>>
+  fs[LENGTH_dropWhile_LESS_EQ,GSYM arithmeticTheory.NOT_LESS_EQUAL]>>
+  simp[GENLIST_CONS]
+QED
+
+Theorem EVERY_const_GENLIST:
+  EVERY ((=)a) ls ⇔ (ls = GENLIST (K a) (LENGTH ls))
+Proof
+  Induct_on ‘ls’>>rw[EQ_IMP_THM]>>fs[GENLIST_CONS]
+QED
+
 Theorem IMP_EVERY_LUPDATE:
    !xs h i. P h /\ EVERY P xs ==> EVERY P (LUPDATE h i xs)
 Proof
