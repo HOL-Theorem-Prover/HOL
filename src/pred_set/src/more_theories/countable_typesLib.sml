@@ -43,7 +43,9 @@ fun mk_countable_lemma ty = let
        type.  The BNF construction defines the type's own and nothing
        else, so the family is what legacyInduction makes of the type's
        principle, and each member's size is composed rather than named. *)
-    val ind0 = TypeBase.induction_of ty
+    (* the set form: operators_of reads the set functions, which a
+       development's datatype_simp theorems may have rewritten away *)
+    val ind0 = TypeBase.set_induction_of ty
     val ind = legacyInduction.mutual_induction
                 (legacyInduction.operators_of ind0) ind0
               handle HOL_ERR _ => ind0

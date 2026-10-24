@@ -75,6 +75,16 @@ sig
    val lift_of         : tyinfo -> term option
    val extra_of        : tyinfo -> ThyDataSexp.t list
 
+   (* The induction principle as the construction states it, with a
+      nested type's hypotheses phrased through the operators' set
+      functions.  induction_of gives the principle a reader is meant
+      to see, which a development may have normalised out of all
+      recognition; this is the one code reads, and its shape is the
+      package's own.  NONE for a type that was not built with one. *)
+   val set_induction_tag : string
+   val set_induction_of : tyinfo -> thm option
+   val put_set_induction : thm -> tyinfo -> tyinfo
+
    val axiom_of0       : tyinfo -> shared_thm
    val induction_of0   : tyinfo -> shared_thm
    val size_of0        : tyinfo -> (term * shared_thm) option

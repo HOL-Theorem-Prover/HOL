@@ -157,6 +157,13 @@ fun pfetch s ty =
 
 fun axiom_of ty        = TypeBasePure.axiom_of (pfetch "axiom_of" ty)
 fun induction_of ty    = TypeBasePure.induction_of (pfetch "induction_of" ty)
+fun set_induction_of ty =
+    let val tyi = pfetch "set_induction_of" ty
+    in
+      case TypeBasePure.set_induction_of tyi of
+          SOME th => th
+        | NONE => TypeBasePure.induction_of tyi
+    end
 fun constructors_of ty =
     TypeBasePure.constructors_of (pfetch "constructors_of" ty)
 fun destructors_of ty  =

@@ -591,6 +591,18 @@ Definition optSET_def[simp]:
   optSET (SOME x) = {x}
 End
 
+(* optSET_def is stated at the constructors, so it says nothing about
+   an option the induction principle has only as a variable.  This is
+   the law that does, and the one to tag with datatype_simp to get an
+   option's induction hypothesis phrased as an equation.  It is not
+   tagged here: what normalises a principle is a decision a
+   development makes, not one this file makes for it. *)
+Theorem IN_optSET:
+  ∀e opt. e ∈ optSET opt ⇔ opt = SOME e
+Proof
+  Cases_on ‘opt’ >> simp[optSET_def] >> metis_tac[]
+QED
+
 Theorem optMapIMAGE1:
   ∀(f : 'a1 -> 'c1) (x : 'a1 option).
     optSET (OPTION_MAP f x) = IMAGE f (optSET x)

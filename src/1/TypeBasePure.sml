@@ -190,6 +190,21 @@ fun case_elim_of (DFACTS {case_elim, ...}) = case_elim
 fun extra_of (DFACTS{extra,...}) = extra
   | extra_of (NFACTS(_, {extra,...})) = extra
 
+(* Carried in `extra` rather than as a field of its own: the record is
+   built positionally and serialised that way, and this is what the
+   extension point is for. *)
+val set_induction_tag = "set_induction"
+fun set_induction_of tyi =
+    let
+      fun look [] = NONE
+        | look (ThyDataSexp.List [ThyDataSexp.Sym t, ThyDataSexp.Thm th]
+                :: rest) =
+            if t = set_induction_tag then SOME th else look rest
+        | look (_ :: rest) = look rest
+    in
+      look (extra_of tyi)
+    end
+
 fun induction_of0 (DFACTS {induction,...}) = induction
   | induction_of0 (NFACTS (ty,{induction,...}))
      = raise ERR "induction_of0" "not a mutrec. datatype";
@@ -313,6 +328,9 @@ fun add_extra e tyi =
       DFACTS dty => DFACTS (update_DTY dty (U #extra (#extra dty @ e)) $$)
     | NFACTS (ty, ntyr) =>
         NFACTS (ty, update_NTY ntyr (U #extra (#extra ntyr @ e)) $$)
+fun put_set_induction th tyi =
+    add_extra [ThyDataSexp.List [ThyDataSexp.Sym set_induction_tag,
+                                 ThyDataSexp.Thm th]] tyi
 
 fun put_lift lift_tm (DFACTS dty) =
       DFACTS (update_DTY dty (U #lift (SOME lift_tm)) $$)

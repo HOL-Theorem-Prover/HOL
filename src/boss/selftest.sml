@@ -660,3 +660,52 @@ val _ = tprint "GH2098: TFL recursion through EVERY, partially applied"
 val _ = require_msg (check_result check) show (fn x => x)
                     (“EVERY (etaq n)”, DB.fetch "-" "etaq_def")
 end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2097: a nested type's induction hypotheses.  With nothing tagged *)
+(* to datatype_simp the principle is rephrased only -- the existentials *)
+(* the chain leaves are pulled out and the equalities that leaves are   *)
+(* unwound.  A development says what more it wants by tagging theorems. *)
+(* The principle as the construction stated it stays available, because *)
+(* code reads that one and a development may tag anything.             *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2097exp = G7Var num
+                           | G7Rec ((num # gh2097exp) list) gh2097exp
+                           | G7Raise (gh2097exp option)`
+
+local
+  fun hasEx th = can (find_term is_exists) (concl th)
+in
+val _ = tprint "GH2097: the chain's existentials are pulled out"
+val _ =
+    let val th = DB.fetch "-" "gh2097exp_induction"
+    in if hasEx th then die (thm_to_string th) else OK() end
+
+val _ = tprint "GH2097: the stated principle is kept beside it"
+val _ =
+    let val th = TypeBase.set_induction_of “:gh2097exp”
+    in
+      if hasEx th then OK() else die ("no existential: " ^ thm_to_string th)
+    end
+
+end
+
+val _ = tprint "GH2097: a tagged theorem reaches a later declaration"
+val _ =
+    let
+      val before_ = length (datatypeSimpLib.datatype_simps())
+      val _ = List.app datatypeSimpLib.add_datatype_simp
+                ["pair.setSND_def", "pred_set.IN_ABS", "pair.FORALL_PROD",
+                 "pair.SND", "bnfPrelims.IN_optSET"]
+      val _ = Datatype`gh2097b = G7bNil | G7bRec ((num # gh2097b) list)`
+      val th = DB.fetch "-" "gh2097b_induction"
+      val after = length (datatypeSimpLib.datatype_simps())
+    in
+      if after <= before_ then die "nothing was tagged"
+      else if can (find_term (fn t => is_const t andalso
+                                      #1 (dest_const t) = "setSND"))
+                  (concl th)
+      then die ("setSND survived: " ^ thm_to_string th)
+      else OK()
+    end

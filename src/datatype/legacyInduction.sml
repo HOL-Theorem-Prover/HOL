@@ -482,7 +482,9 @@ fun operators_of ind =
     let val {levels, optys, ...} = readPrinciple (splitWays ind)
     in
       List.map (fn opty =>
-                   {induction = TypeBase.induction_of opty,
+                   (* the operator's stated principle too: what it
+                      is read for is its set functions *)
+                   {induction = TypeBase.set_induction_of opty,
                     sets = List.concat
                              (List.map (fn w => setEqnsOf (#setfn w) opty)
                                        (waysOfType levels opty))})

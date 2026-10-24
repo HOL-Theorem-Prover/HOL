@@ -254,6 +254,35 @@ fun asOldQuantified th =
                 th
     end
 
+(* The entry is built from the principle as the construction states
+   it, because what builds it -- the case analysis, the size-of-map
+   lemma -- is written against that shape.  The normalised principle
+   replaces it afterwards, and the stated one is kept beside it: a
+   development may tag what it likes to datatype_simp, so code that
+   has to read a principle reads the stated one.
+
+   A family's members share one principle, the first holding it and
+   the rest naming that one, so the replacement keeps whichever of
+   the two a member had. *)
+fun withNormalisedInduction raw tyinfos =
+    let
+      val normalised = datatypeSimpLib.normalise_induction raw
+      fun shared tyi =
+          case Lib.total TypeBasePure.induction_of0 tyi of
+              SOME (TypeBasePure.COPY (nm, _)) =>
+                SOME (TypeBasePure.COPY (nm, normalised))
+            | SOME (TypeBasePure.ORIG _) => SOME (TypeBasePure.ORIG normalised)
+            | NONE => NONE
+      fun upd tyi =
+          case shared tyi of
+              NONE => tyi
+            | SOME sh => tyi |> TypeBasePure.put_set_induction raw
+                             |> TypeBasePure.put_induction sh
+    in
+      if aconv (concl normalised) (concl raw) then (raw, tyinfos)
+      else (normalised, List.map upd tyinfos)
+    end
+
 fun oneType db (spec : spec) =
     let
       val tyname = hd (#tynames spec)
@@ -329,8 +358,9 @@ fun oneType db (spec : spec) =
               NONE => tyinfos
             | SOME flds =>
               [RecordType.prove_recordtype_thms (hd tyinfos, flds)]
+      val (normalised, tyinfos) = withNormalisedInduction induction tyinfos
     in
-      List.app (saveEqn (SOME induction) nms) eqns
+      List.app (saveEqn (SOME normalised) nms) eqns
     ; datatype_presentation spec
     ; persist (#nocompute nms) tyinfos
     ; (* only the recursive construction builds an ambient to discard;
@@ -540,6 +570,7 @@ fun manyTypes db (spec : spec) =
               | (SOME flds, tyi) =>
                   RecordType.prove_recordtype_thms (tyi, flds))
             (#fields spec, tyinfos)
+      val (_, tyinfos) = withNormalisedInduction induction tyinfos
     in
       List.app (saveEqn NONE (unionNames (#names spec)))
                (List.concat rewrites)

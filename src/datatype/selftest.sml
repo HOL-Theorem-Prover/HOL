@@ -652,8 +652,11 @@ local
 in
 val _ = tprint "the principle in the shape the older construction gave"
 val _ =
+    (* set_induction_of, not induction_of: what a reader sees may have
+       been reshaped by a development's datatype_simp theorems, and
+       this is the shape legacyInduction reads *)
     let val th = legacyInduction.mutual_induction [optOp]
-                                                  (TypeBase.induction_of “:zo”)
+                   (TypeBase.set_induction_of “:zo”)
     in
       if same (concl th)
            “∀P Q. (∀n. P (ZOA n)) ∧ (∀v. Q v ⇒ P (ZOB v)) ∧ Q NONE ∧
@@ -680,8 +683,9 @@ local
   fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
   fun shape nm ty tm =
       (tprint ("the older shape where " ^ nm);
+       (* the stated principle: legacyInduction reads the set functions *)
        let val th = legacyInduction.mutual_ind_from_ops
-                      (TypeBase.induction_of ty)
+                      (TypeBase.set_induction_of ty)
        in
          if same (concl th) tm then OK()
          else die ("not the older shape: " ^ thm_to_string th)
