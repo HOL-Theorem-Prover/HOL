@@ -12019,6 +12019,117 @@ def test_startup_reports_no_warnings():
             c.close()
 
 
+def test_a_context_slot_answers_from_its_declaration():
+    """Script-level state a tactic expression reads has to live in the
+    `Context`, not in an SML `ref`.
+
+    A deferred proof is replayed with its declaration's `Context`
+    restored and nothing else, and `Theorem ... Proof tac QED` expands
+    to `(name, quote, fn g => tac g)`, so the tactic *expression* is
+    evaluated when the proof runs -- which, with checking on, is after
+    the whole file has elaborated.  A helper that dereferences a plain
+    `ref` therefore reads it as of end-of-elaboration, including every
+    later declaration's additions; that is how
+    examples/theorem-prover/milawa-prover/milawa_proofpScript.sml came
+    to report failures under the LSP for proofs its build accepts.
+
+    `Context.Data` does not have the problem: read against the context
+    the proof is run against, it answers from the pin
+    `Context.with_context` installs, which is the declaration's own
+    snapshot.  Each proof below asserts the slot's size as of its own
+    position, so a regression that handed either of them the
+    end-of-file value fails here rather than in a 6000-line example.
+
+    The edit at the end re-elaborates from above the slot declaration,
+    which runs `Context.Data.new` a second time: it raises on a name
+    already in the live context, so the pass would die were the reset
+    not taking the registration back with everything else."""
+    d = tempfile.mkdtemp(prefix="lsp_ctxtslot_")
+    try:
+        head = ("Theory ctxtslot\n"
+                "Ancestors arithmetic\n"
+                "\n")
+        body = ("val rws = Context.Data.new {\n"
+                "      name = \"lsptest.ctxtslot\", empty = ([] : thm list),\n"
+                "      pp = fn l => Int.toString (length l)}\n"
+                "fun add_rw th =\n"
+                "    Context.Data.modify rws (fn ths => th :: ths)\n"
+                "fun EXPECT n = fn g => fn c =>\n"
+                "    let val k = length (Context.Data.get rws c)\n"
+                "    in if k = n then ACCEPT_TAC TRUTH g c\n"
+                "       else FAIL_TAC (\"saw \" ^ Int.toString k) g c end\n"
+                "\n"
+                "val _ = add_rw TRUTH\n"
+                "\n"
+                "Theorem one_above:\n"
+                "  T\n"
+                "Proof\n"
+                "  EXPECT 1\n"
+                "QED\n"
+                "\n"
+                "val _ = add_rw TRUTH\n"
+                "val _ = add_rw TRUTH\n"
+                "\n"
+                "Theorem three_above:\n"
+                "  T\n"
+                "Proof\n"
+                "  EXPECT 3\n"
+                "QED\n")
+        src = head + body
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/ctxtslotScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def both(cl):
+                seen = _proof_states(cl, uri)
+                got = {k: v[0] for k, v in seen.items()}
+                return seen if got.get("one_above") in ("proved", "failed") \
+                    and got.get("three_above") in ("proved", "failed") \
+                    else None
+
+            seen = c.wait_until(both, 90)
+            assert_true(seen is not None,
+                        f"both proofs settled ({_proof_states(c, uri)!r})")
+            assert_eq(seen["one_above"][0], "proved",
+                      f"the first proof saw one rewrite, not the "
+                      f"end-of-file set ({seen['one_above']!r})")
+            assert_eq(seen["three_above"][0], "proved",
+                      f"the second proof saw three ({seen['three_above']!r})")
+            errs = [x for x in _diag_count(c, uri)
+                    if x.get("severity") == 1]
+            assert_true(not errs, f"no errors ({errs!r})")
+
+            # Re-elaborate from above the slot declaration.
+            since = c.total_msgs()
+            src2 = head + "(* touched *)\n" + body
+            _did_change_full(c, uri, src2, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=since),
+                        "compileCompleted after the edit")
+
+            def both2(cl):
+                got = {k: v[0] for k, v in _proof_states(cl, uri,
+                                                         since=since).items()}
+                return got if got.get("one_above") == "proved" \
+                    and got.get("three_above") == "proved" else None
+
+            got = c.wait_until(both2, 90)
+            assert_true(got is not None,
+                        f"both proofs settled again, so Context.Data.new "
+                        f"did not trip over its own earlier registration "
+                        f"({_proof_states(c, uri, since=since)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+
 TESTS = [
     ("startup_reports_no_warnings", test_startup_reports_no_warnings),
     ("interrupted_passes_do_not_leave_stale_proofs",
@@ -12455,6 +12566,8 @@ TESTS = [
      test_eval_bindings_outlive_the_request),
     ("eval_does_not_disturb_the_next_compile",
      test_eval_does_not_disturb_the_next_compile),
+    ("a_context_slot_answers_from_its_declaration",
+     test_a_context_slot_answers_from_its_declaration),
 ]
 
 
