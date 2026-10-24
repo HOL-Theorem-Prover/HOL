@@ -301,6 +301,8 @@ val _ = check "Snippets use stored statements and definition links"
    contains snippet_json "admissible")
 
 val source_dir = OS.FileSys.tmpName ()
+(* tmpName creates a file in Poly/ML, but only returns a path in Moscow ML. *)
+val _ = write source_dir ""
 val _ = OS.FileSys.remove source_dir
 val _ = OS.FileSys.mkDir source_dir
 val source_script = OS.Path.concat (source_dir, "arithmeticScript.sml")
