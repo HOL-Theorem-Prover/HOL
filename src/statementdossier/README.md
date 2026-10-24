@@ -11,7 +11,10 @@ and links to definitions, datatypes, overloads and unexpanded constants.
 The annotated printer has the same layout as the plain printer. Both
 formats include free variable types, kernel assumptions, implication
 antecedents, the conclusion and trust tags. `DISK_THM` is reported as a
-load-from-disk tag; absence of other tags is not a separate proof audit.
+load-from-disk tag. HOL's disk tags preserve oracle tags but omit axiom
+dependencies, so the report cannot rule out axioms in loaded theorems.
+The report discloses this limitation beside each disk tag. Absence of
+recorded problems is not a separate proof audit.
 
 ## Example
 

@@ -853,10 +853,13 @@ fun tag_text th =
       (if null axioms then []
        else [Text "axiom(s) " :: commas ", " (map (fn s => [Code s]) axioms)])
   in
-    if null problems then
-      [Text "clean: no oracle tag besides `DISK_THM` (loaded from disk), \
-            \no axiom, no assumption"]
-    else Text "NOT CLEAN: " :: commas "; " problems
+    (if null problems then
+       [Text "No recorded oracle, axiom dependency or assumption."]
+     else Text "NOT CLEAN: " :: commas "; " problems) @
+    (if List.exists (fn s => s = "DISK_THM") oracles then
+       [Text " DISK_THM: loaded from disk; axiom dependencies are not \
+             \retained in disk tags."]
+     else [])
   end
 
 (* The overloads under which the constants met print: the constants that

@@ -24,6 +24,9 @@ val _ = run {
 }
 val _ = check "Stored reports need no current theory"
   (contains (read boot_output) "REVERSE_APPEND")
+val _ = check "Disk tags disclose missing axiom dependency metadata"
+  (contains (read boot_output)
+    "axiom dependencies are not retained in disk tags")
 val _ = OS.FileSys.remove boot_output
 
 val _ = new_theory "dossierTest"
