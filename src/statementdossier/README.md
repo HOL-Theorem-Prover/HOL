@@ -19,7 +19,7 @@ In a configured, built HOL tree, from its root:
 
 ```sh
 (cd src/statementdossier && ../../bin/Holmake -j2)
-bin/hol run src/statementdossier/example.sml
+bin/hol run src/statementdossier/example.uo
 ```
 
 Open `list-dossier.html` or read `list-dossier.md`. The example reports
@@ -28,9 +28,10 @@ Open `list-dossier.html` or read `list-dossier.md`. The example reports
 list theory. The example and the selftests need no external programs.
 Remove the two generated files when finished; they are not source files.
 
-Load `statementDossierLib` after loading the theories to report. In a
-normal HOL build the library is on the load path; the example also adds
-its source directory so it works after just the local build above.
+The examples use ordinary `open` declarations. Holmake records their
+dependencies in the `.uo` files, which `hol run` loads before the example.
+In an interactive HOL session, open the theories to report and
+`statementDossierLib` before calling `run`.
 `run : config -> unit` is the report entry point. See `example.sml` for a
 complete configuration.
 
@@ -143,7 +144,7 @@ For a runnable example using `arithmetic$LESS_EQ_IMP_LESS_SUC` and
 `example-assumptions.md`, with pandoc installed:
 
 ```sh
-bin/hol run src/statementdossier/proseExample.sml
+bin/hol run src/statementdossier/proseExample.uo
 ```
 
 This writes `arithmetic-dossier.md` and `arithmetic-dossier.html` in the

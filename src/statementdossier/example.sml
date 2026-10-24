@@ -1,8 +1,5 @@
-(* Run from the HOL root: bin/hol run src/statementdossier/example.sml *)
-val _ = loadPath :=
-  OS.Path.concat (Globals.HOLDIR, "src/statementdossier") :: !loadPath;
-val _ = load "statementDossierLib";
-val _ = load "listTheory";
+(* Run from the HOL root: bin/hol run src/statementdossier/example.uo *)
+open listTheory statementDossierLib;
 
 val _ = statementDossierLib.run {
   title = "List reversal and append",

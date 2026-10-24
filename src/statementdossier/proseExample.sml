@@ -1,9 +1,6 @@
 (* Requires pandoc. Run from the HOL root:
-   bin/hol run src/statementdossier/proseExample.sml *)
-val _ = loadPath :=
-  OS.Path.concat (Globals.HOLDIR, "src/statementdossier") :: !loadPath;
-val _ = load "statementDossierLib";
-val _ = load "arithmeticTheory";
+   bin/hol run src/statementdossier/proseExample.uo *)
+open arithmeticTheory statementDossierLib;
 
 val _ = statementDossierLib.run {
   title = "A natural-number inequality",
