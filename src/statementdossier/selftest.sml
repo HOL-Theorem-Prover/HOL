@@ -306,9 +306,9 @@ val _ = write source_dir ""
 val _ = OS.FileSys.remove source_dir
 val _ = OS.FileSys.mkDir source_dir
 val source_script = OS.Path.concat (source_dir, "arithmeticScript.sml")
-fun source_config () : config = {
+fun source_config theorem : config = {
   title = "Source locations", preamble = "",
-  theorems = [{Thy = "arithmetic", Name = "LESS_EQ_IMP_LESS_SUC"}],
+  theorems = [theorem],
   expand_theories = [], expand_consts = [], stop_theories = [],
   stop_consts = [], equation_lemmas = [],
   source_dirs = [("sources", source_dir)],
@@ -316,13 +316,24 @@ fun source_config () : config = {
   supporting = [], snippets = NONE
 }
 val _ = write source_script "Theorem LESS_EQ_IMP_LESS_SUC:\n"
-val _ = run (source_config ())
+val _ = run (source_config
+  {Thy = "arithmetic", Name = "LESS_EQ_IMP_LESS_SUC"})
 val _ = check "Source declarations override recorded line numbers"
   (contains (read markdown_path) "sources/arithmeticScript.sml:1")
 val _ = write source_script "\n\nTheorem LESS_EQ_IMP_LESS_SUC:\n"
-val _ = run (source_config ())
+val _ = run (source_config
+  {Thy = "arithmetic", Name = "LESS_EQ_IMP_LESS_SUC"})
 val _ = check "Repeated runs see source edits"
   (contains (read markdown_path) "sources/arithmeticScript.sml:3")
+val _ = save_thm_at
+  (DB.Located {scriptpath = "dossierTestScript.sml0", linenum = 900,
+               exact = true}) ("source_alias", root)
+val alias_script = OS.Path.concat (source_dir, "dossierTestScript.sml")
+val _ = write alias_script "Theorem source_alias:\n"
+val _ = run (source_config (named "source_alias"))
+val _ = check "Renamed sources fall back to the theory script"
+  (contains (read markdown_path) "sources/dossierTestScript.sml:1")
+val _ = OS.FileSys.remove alias_script
 val _ = OS.FileSys.remove source_script
 val _ = OS.FileSys.rmDir source_dir
 

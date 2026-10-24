@@ -100,7 +100,9 @@ provenance or independence of assumptions.
 
 When `source_dirs` are supplied, the tool locates declarations in the
 original scripts, which helps when source preprocessing changed recorded
-line numbers. This is a textual lookup, not a parser or source map.
+line numbers. If the recorded file is absent, it tries `<theory>Script.sml`,
+which also handles renamed compiler inputs. This is a textual lookup,
+not a parser or source map.
 
 ## Assumption prose
 

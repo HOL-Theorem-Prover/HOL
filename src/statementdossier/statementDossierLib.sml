@@ -294,17 +294,20 @@ fun declaration_line lines name =
   end
 
 (* Where a stored theorem is declared, as a path to show and a line, if
-   its script is under the source directories.  A theorem without a
-   recorded location (e.g. the rules of an inductive relation) is looked
-   up in its theory's script. *)
+   its script is under the source directories. If the recorded file is
+   absent (e.g. a renamed compiler input), try the theory's script. *)
 fun source_location index (n as {Thy, Name}) =
   let
     val file =
       case location_of n of
         SOME (scriptpath, _) => OS.Path.file scriptpath
       | NONE => Thy ^ "Script.sml"
+    val source =
+      case List.find (fn (f, _) => f = file) index of
+        SOME entry => SOME entry
+      | NONE => List.find (fn (f, _) => f = Thy ^ "Script.sml") index
   in
-    case List.find (fn (f, _) => f = file) index of
+    case source of
       NONE => if isSome (location_of n) then SOME (file, NONE) else NONE
     | SOME (_, (path, shown)) =>
         SOME (shown, declaration_line (lines_of path) Name)
