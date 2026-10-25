@@ -1187,6 +1187,19 @@ in
 end
 val write_raw = pp_raw_term
 
+datatype raw_view =
+    RAtom
+  | RBv of int
+  | RComb of term * term
+  | RAbs of term * term
+fun raw_view t =
+    case t of
+        App(f, x) => RComb (f, x)
+      | Abs(v, b) => RAbs (v, b)
+      | _ => RAtom
+fun norm_clos t = t
+val raw_view_supported = false
+
 local
 datatype tok = lam | id of int | app of int
 open StringCvt

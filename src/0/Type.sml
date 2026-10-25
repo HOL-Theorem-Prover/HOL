@@ -60,9 +60,15 @@ fun del_segment s =
     else
       upd_typesig (KernelSig.del_segment s)
 
-fun uptodate_type (Tyv s) = true
-  | uptodate_type (Tyapp((info,_), args)) =
-    KernelSig.uptodate_id (typesig()) info andalso List.all uptodate_type args
+fun uptodate_type ty =
+  let
+    val tsig = typesig ()    (* one snapshot for the whole traversal *)
+    fun recurse (Tyv _) = true
+      | recurse (Tyapp((info,_), args)) =
+        KernelSig.uptodate_id tsig info andalso List.all recurse args
+  in
+    recurse ty
+  end
 
 (*---------------------------------------------------------------------------*
  * Builtin type operators (fun, bool, ind). These are in every HOL           *

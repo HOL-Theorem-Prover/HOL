@@ -1111,6 +1111,20 @@ in
   pp [] [ppTM tm]
 end
 
+datatype raw_view =
+    RAtom
+  | RBv of int
+  | RComb of term * term
+  | RAbs of term * term
+fun raw_view t =
+    case t of
+        Comb(f, x) => RComb (f, x)
+      | Abs(v, b) => RAbs (v, b)
+      | Bv i => RBv i
+      | Clos _ => raw_view (norm_clos t)
+      | _ => RAtom
+val raw_view_supported = true
+
 fun write_raw index tm = pp_raw_term index (norm_clos tm)
 
 (*---------------------------------------------------------------------------*
@@ -1226,6 +1240,12 @@ end (* local *)
 
 fun uptodate_term t = let
   open Type
+  val tsig = termsig ()    (* one snapshot for the whole traversal *)
+  (* constants (with their types) already found up to date during this
+     traversal, in a direct-mapped cache indexed by the id's epoch, so that
+     the repeated constants of a large term cost two pointer comparisons *)
+  val csize = 1024
+  val cache = Array.array (csize, NONE)
   fun recurse tmlist =
       case tmlist of
         [] => true
@@ -1233,9 +1253,22 @@ fun uptodate_term t = let
         in
           case t of
             Fv(_, ty) => Type.uptodate_type ty andalso recurse rest
-          | Const(info, ty) => KernelSig.uptodate_id (termsig()) info andalso
-                               uptodate_type (to_hol_type ty) andalso
-                               recurse rest
+          | Const(info, ty) =>
+            let
+              val slot = KernelSig.epoch_of info mod csize
+              val hit = case Array.sub (cache, slot) of
+                            SOME (info', ty') =>
+                              Portable.pointer_eq (info', info) andalso
+                              Portable.pointer_eq (ty', ty)
+                          | NONE => false
+            in
+              if hit then recurse rest
+              else if KernelSig.uptodate_id tsig info andalso
+                      uptodate_type (to_hol_type ty)
+              then (Array.update (cache, slot, SOME (info, ty));
+                    recurse rest)
+              else false
+            end
           | Comb(f,x) => recurse (f::x::rest)
           | Abs(v,bod) => recurse (v::bod::rest)
           | Bv _ => recurse rest

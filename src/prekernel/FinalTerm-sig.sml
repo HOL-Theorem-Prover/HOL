@@ -105,6 +105,19 @@ sig
   val read_raw : term vector -> string -> term
   val write_raw : (term -> int) -> term -> string
 
+  (* One level of a term in the form write_raw works from (bound variables
+     are de Bruijn indices, closures are normalised first), for writers that
+     walk the term themselves.  raw_view_supported is false for kernels whose
+     raw syntax differs from that of write_raw in this one. *)
+  datatype raw_view =
+      RAtom
+    | RBv of int
+    | RComb of term * term
+    | RAbs of term * term
+  val raw_view : term -> raw_view
+  val norm_clos : term -> term
+  val raw_view_supported : bool
+
   datatype lambda =
           VAR of string * hol_type
         | CONST of {Name : string, Thy : string, Ty : hol_type}
