@@ -263,6 +263,27 @@ fun levelsOf {P = _, z, levels, hyp = _} =
       go levels
     end
 
+(* A hypothesis about an argument that collects the type more than one
+   way — a pair of two of them — is stated once, with a disjunction
+   where the ways part:
+     ∀z. (∃x. (z ∈ setFST x ∨ z ∈ setSND x) ∧ x ∈ optSET l) ⇒ P z
+   This states it once per way, so that each is a chain `chainAt` reads,
+   and leaves each clause's hypotheses one flat conjunction, as
+   `clauseFor` puts them back.  Everything below reads a principle in
+   that form. *)
+val splitWays =
+    CONV_RULE
+      (STRIP_QUANT_CONV
+         (RATOR_CONV
+            (RAND_CONV
+               (simpLib.SIMP_CONV pureSimps.pure_ss
+                  [boolTheory.RIGHT_AND_OVER_OR,
+                   boolTheory.LEFT_AND_OVER_OR,
+                   GSYM boolTheory.LEFT_EXISTS_AND_THM,
+                   GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+                   boolTheory.EXISTS_OR_THM, boolTheory.DISJ_IMP_THM,
+                   boolTheory.FORALL_AND_THM, GSYM boolTheory.CONJ_ASSOC]))))
+
 (* A declaration whose members reach each other gets a predicate
    apiece, and a clause's hypothesis may be about any of them. *)
 fun readPrinciple ind =
@@ -401,7 +422,7 @@ fun assemble (ops : operator list) ind =
        chains = chains, levels = levels, predOf = predOf}
     end
 
-fun mutual_induction_goal ops ind = #goal (assemble ops ind)
+fun mutual_induction_goal ops ind = #goal (assemble ops (splitWays ind))
 
 (* ----------------------------------------------------------------------
     Finding the operators the principle recurses under.
@@ -458,7 +479,7 @@ fun setEqnsOf setfn opty =
     end
 
 fun operators_of ind =
-    let val {levels, optys, ...} = readPrinciple ind
+    let val {levels, optys, ...} = readPrinciple (splitWays ind)
     in
       List.map (fn opty =>
                    {induction = TypeBase.induction_of opty,
@@ -470,6 +491,7 @@ fun operators_of ind =
 
 fun mutual_induction ops ind =
     let
+      val ind = splitWays ind
       val info = assemble ops ind
       val Ps = #Ps info and tys = #tys info
       val A = ASSUME (#hypterm info)
@@ -631,14 +653,15 @@ fun mutual_induction ops ind =
             (* A hypothesis reaching the contents through several
                operators says what it says of the innermost values
                only.  The operator's predicate at each level follows
-               from that level's bridge, given the next level's
-               predicate of everything the level collects — so the
-               walk goes down to the values the chain is about, and
-               the bridges come back up. *)
+               from that level's bridge, given a predicate of what the
+               level collects each way: the type's, where the way ends
+               at the values a chain is about, and the next level's
+               where it goes on.  So the walk goes down every way to
+               the values the chains are about, and the bridges come
+               back up. *)
             (* the clause's hypotheses that walk the same argument:
-               where a declaration's members reach each other, one
-               hypothesis per member walks it, and the innermost
-               bridge wants what all of them say *)
+               one per way the argument collects the type, and one per
+               member where a declaration's members reach each other *)
             fun sameArg h1 h2 =
                 case (chainAt Ps h1, chainAt Ps h2) of
                     (SOME c1, SOME c2) =>
@@ -651,43 +674,19 @@ fun mutual_induction ops ind =
                   | SOME base =>
                     let
                       val group = List.map (valOf o chainAt Ps) (groupFor h)
-                      val lvls = #levels base
-                      val depth = length lvls
-                      val _ = List.all (fn c => length (#levels c) = depth)
-                                       group orelse
-                              raise ERR "mutual_induction"
-                                    "one argument walked to two depths"
-                      (* The walk introduces a value per level.  A
-                         chain names those after the principle's own
-                         bound variables, which the clause may have
-                         used for an argument of its own, so the walk
-                         takes names the clause has not. *)
-                      val walked =
-                          let
-                            fun go i acc =
-                                if i >= depth then List.rev acc
-                                else
-                                  let
-                                    (* the clause's own names are
-                                       bound in it, so the walk must
-                                       avoid those too *)
-                                    val v = variant (all_vars c @ acc)
-                                                    (#arg (List.nth (lvls, i)))
-                                  in go (i + 1) (v :: acc) end
-                          in go 1 [] end
-                      fun argAt 0 = #arg (hd lvls)
-                        | argAt i = List.nth (walked, i - 1)
-                      fun theta c =
+                      (* the values the walk has reached, outermost
+                         first, stand for the chain's own *)
+                      fun theta path c =
                           List.tabulate
-                            (depth - 1,
+                            (length path - 1,
                              fn i => #arg (List.nth (#levels c, i + 1)) |->
-                                     argAt (i + 1))
+                                     List.nth (path, i + 1))
                       (* what one member's hypothesis says of the values
                          the innermost set collects *)
-                      fun saysOf c =
+                      fun saysOf path c =
                           let
                             val h = #hyp c
-                            val sub = theta c
+                            val sub = theta path c
                             val (ante, _) = dest_imp (#2 (dest_forall h))
                             val (evs, conjs) = strip_exists ante
                             val z = #z c
@@ -700,41 +699,59 @@ fun mutual_induction ops ind =
                           in
                             GEN z (DISCH (inThm z inner) pz)
                           end
-                      (* in the order the level's bridge states them *)
-                      fun inWayOrder v =
+                      (* the predicate of the operator at the end of the
+                         walk, one way at a time, in the order the
+                         operator's bridge states them *)
+                      fun down path chs =
                           let
+                            val i = length path - 1
+                            val v = List.last path
+                            fun onWay w =
+                                let
+                                  fun setAt ch = #set (List.nth (#levels ch, i))
+                                  val here =
+                                      List.filter
+                                        (fn ch => aconv (rator (setAt ch))
+                                                        (#setfn w))
+                                        chs
+                                in
+                                  case List.partition
+                                         (fn ch => length (#levels ch) = i + 1)
+                                         here of
+                                      (ch :: _, _) => saysOf path ch
+                                    | ([], goOn as ch :: _) =>
+                                      let
+                                        (* The walk introduces a value
+                                           per level.  A chain names
+                                           those after the principle's
+                                           own bound variables, which
+                                           the clause may have used for
+                                           an argument of its own, so
+                                           the walk takes names the
+                                           clause has not, bound ones
+                                           included. *)
+                                        val x =
+                                            variant (all_vars c @ path)
+                                                    (#arg (List.nth
+                                                             (#levels ch,
+                                                              i + 1)))
+                                        val memtm =
+                                            inThm x (mk_comb (#setfn w, v))
+                                      in
+                                        GEN x (DISCH memtm
+                                                     (down (path @ [x]) goOn))
+                                      end
+                                    | ([], []) =>
+                                      raise ERR "mutual_induction"
+                                            "a way no hypothesis walks"
+                                end
                             val ways = #waysFor info (type_of v)
-                            fun forWay w =
-                                case List.find
-                                       (fn c =>
-                                           aconv (rator (Term.subst (theta c)
-                                                    (#set (List.last
-                                                             (#levels c)))))
-                                                 (#setfn w))
-                                       group of
-                                    SOME c => saysOf c
-                                  | NONE => raise ERR "mutual_induction"
-                                              "a way no hypothesis walks"
                           in
-                            LIST_CONJ (List.map forWay ways)
-                          end
-                      fun down i v =
-                          let val bridge = SPEC v (bridgeOf (type_of v))
-                          in
-                            if i = depth - 1 then MP bridge (inWayOrder v)
-                            else
-                              let
-                                val lvl = List.nth (lvls, i)
-                                val x = argAt (i + 1)
-                                val setfn = rator (#set lvl)
-                                val memtm = inThm x (mk_comb (setfn, v))
-                              in
-                                MP bridge (GEN x (DISCH memtm
-                                                        (down (i + 1) x)))
-                              end
+                            MP (SPEC v (bridgeOf (type_of v)))
+                               (LIST_CONJ (List.map onWay ways))
                           end
                     in
-                      down 0 (argAt 0)
+                      down [#arg (hd (#levels base))] group
                     end
             fun distinct [] = []
               | distinct (th :: ths) =
