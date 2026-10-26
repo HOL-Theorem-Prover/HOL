@@ -663,6 +663,69 @@ val _ =
 end
 
 (* ----------------------------------------------------------------------
+    and where an argument reaches the type more than one way: twice at
+    the same depth, where the package states the hypothesis with a
+    disjunction, at two depths, parting below the top, and beside
+    another hypothesis of the clause's
+   ---------------------------------------------------------------------- *)
+
+val _ = Datatype ‘zp = ZPA | ZPB ((zp # zp) option)’
+val _ = Datatype ‘zq = ZQA (zq option) | ZQB ((zq # zq) option)’
+val _ = Datatype ‘zr = ZRA ((zr # zs # num) option) ; zs = ZSA num | ZSB zr’
+val _ = Datatype ‘zt = ZTA | ZTB ((num # zt # zt # num) option)’
+val _ = Datatype ‘zu = ZUA | ZUB ((zu # zu) option) zu’
+val _ = Datatype ‘zx = ZXA | ZXB (((zx # num) # (zx # num)) option)’
+
+local
+  fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+  fun shape nm ty tm =
+      (tprint ("the older shape where " ^ nm);
+       let val th = legacyInduction.mutual_ind_from_ops
+                      (TypeBase.induction_of ty)
+       in
+         if same (concl th) tm then OK()
+         else die ("not the older shape: " ^ thm_to_string th)
+       end)
+in
+val _ = shape "a pair holds the type twice" “:zp”
+          “∀P Q0 Q1. P ZPA ∧ (∀v. Q0 v ⇒ P (ZPB v)) ∧ Q0 NONE ∧
+                     (∀a. Q1 a ⇒ Q0 (SOME a)) ∧
+                     (∀p1 p2. P p1 ∧ P p2 ⇒ Q1 (p1,p2)) ⇒
+                     (∀v. P v) ∧ (∀v. Q0 v) ∧ ∀v. Q1 v”
+val _ = shape "that pair is beside another operator" “:zq”
+          “∀P Q0 Q1 Q2. (∀v. Q0 v ⇒ P (ZQA v)) ∧ (∀v. Q1 v ⇒ P (ZQB v)) ∧
+                        Q0 NONE ∧ (∀a. P a ⇒ Q0 (SOME a)) ∧
+                        Q1 NONE ∧ (∀a. Q2 a ⇒ Q1 (SOME a)) ∧
+                        (∀p1 p2. P p1 ∧ P p2 ⇒ Q2 (p1,p2)) ⇒
+                        (∀v. P v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ ∀v. Q2 v”
+val _ = shape "members are reached at two depths" “:zr”
+          “∀P0 P1 Q0 Q1 Q2.
+             (∀v. Q0 v ⇒ P0 (ZRA v)) ∧ (∀n. P1 (ZSA n)) ∧
+             (∀r. P0 r ⇒ P1 (ZSB r)) ∧ Q0 NONE ∧ (∀a. Q1 a ⇒ Q0 (SOME a)) ∧
+             (∀p1 p2. P0 p1 ∧ Q2 p2 ⇒ Q1 (p1,p2)) ∧
+             (∀p1 p2. P1 p1 ⇒ Q2 (p1,p2)) ⇒
+             (∀v. P0 v) ∧ (∀v. P1 v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ ∀v. Q2 v”
+val _ = shape "the type is held twice, at two depths" “:zt”
+          “∀P Q0 Q1 Q2 Q3.
+             P ZTA ∧ (∀v. Q0 v ⇒ P (ZTB v)) ∧ Q0 NONE ∧
+             (∀a. Q1 a ⇒ Q0 (SOME a)) ∧ (∀p1 p2. Q2 p2 ⇒ Q1 (p1,p2)) ∧
+             (∀p1 p2. P p1 ∧ Q3 p2 ⇒ Q2 (p1,p2)) ∧
+             (∀p1 p2. P p1 ⇒ Q3 (p1,p2)) ⇒
+             (∀v. P v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ (∀v. Q2 v) ∧ ∀v. Q3 v”
+val _ = shape "the pair's clause has another hypothesis" “:zu”
+          “∀P Q0 Q1. P ZUA ∧ (∀v z. Q0 v ∧ P z ⇒ P (ZUB v z)) ∧ Q0 NONE ∧
+                     (∀a. Q1 a ⇒ Q0 (SOME a)) ∧
+                     (∀p1 p2. P p1 ∧ P p2 ⇒ Q1 (p1,p2)) ⇒
+                     (∀v. P v) ∧ (∀v. Q0 v) ∧ ∀v. Q1 v”
+val _ = shape "the ways part below the top" “:zx”
+          “∀P Q0 Q1 Q2.
+             P ZXA ∧ (∀v. Q0 v ⇒ P (ZXB v)) ∧ Q0 NONE ∧
+             (∀a. Q1 a ⇒ Q0 (SOME a)) ∧ (∀p1 p2. Q2 p1 ∧ Q2 p2 ⇒ Q1 (p1,p2)) ∧
+             (∀p1 p2. P p1 ⇒ Q2 (p1,p2)) ⇒
+             (∀v. P v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ ∀v. Q2 v”
+end
+
+(* ----------------------------------------------------------------------
     a type that does not recur says what its map and set functions do at
     its constructors, as a recursive one does: the induction principle
     of a type nested through it is stated with its set function
