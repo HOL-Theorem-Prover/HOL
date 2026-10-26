@@ -557,6 +557,9 @@ val _ =
     NONE => OK()
   | _ => die "FAILED!";
 
+val _ = tprint "Record whose cases variable is a constant name"
+val _ = Parse.temp_overload_on ("RR", boolSyntax.T)
+val _ = doesnt_fail Datatype.Datatype ‘Rrcd = <| rrfld : num |>’
 
 val _ = tprint "Testing overriding calls in mutual recursive style";
 val _ = quiet_warnings (fn () =>
