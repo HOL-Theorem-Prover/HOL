@@ -1561,7 +1561,67 @@ fun instantiate_ready_format s = let
   val th = INST [mk_var("imm8",``:word8``)|->``(n2w ^n):word8``] th
   val tm = find_term (can (match_term ``SIGN_EXTEND x y z MOD 256``)) (concl th)
   val th = RW [EVAL tm] th
-  in (th,i,j) end handle Subsript => fail()
+  in (th,i,j) end handle Subscript => fail()
+end;
+
+(* The code emitted for each bytecode instruction is wrapped with
+   `sub r2,<l>' and `add QWORD [r7-96],<l>', where <l> is that
+   instruction's length.  Deriving those afresh for every distinct
+   length used to dominate this file: a single `add QWORD [r7-96],n'
+   spec costs around twenty seconds.  Both carry their immediate in
+   the trailing bytes, so -- exactly as ready_formats does for
+   `mov BYTE [r2+i],_' -- one derivation per encoding form (imm8 below
+   128, imm32 at or above) covers every length.  The three `mov'
+   instructions in the same wrapper are the same for every bytecode
+   instruction, so x64_spec's own cache already handles them. *)
+
+local
+fun wrapper_format nbytes asm = let
+  val e = x64_encodeLib.x64_encode asm
+  val e = String.substring(e,0,size e - 2 * nbytes)
+  val (x,_) = x64_spec e
+  in (e,(nbytes,x)) end
+val wrapper_formats =
+  [wrapper_format 1 "sub r2,1",
+   wrapper_format 4 "sub r2,200",
+   wrapper_format 1 "add QWORD [r7-96],1",
+   wrapper_format 4 "add QWORD [r7-96],200"]
+fun little_endian nbytes hex =
+  foldr (fn (k,acc) =>
+           Arbnum.+(Arbnum.*(acc,Arbnum.fromInt 256),
+                    Arbnum.fromHexString (String.substring(hex,2*k,2))))
+        Arbnum.zero (List.tabulate(nbytes,fn k => k))
+(* Ground arithmetic the symbolic form leaves behind once the
+   immediate is concrete.  Deriving the spec directly would have
+   discharged the MOD through x64_prove_specs' own w2n_MOD rewrite. *)
+fun eval_ground th = let
+  fun eval_matching pat ok th = let
+    fun wanted t = can (match_term pat) t andalso ok t
+    val tms = find_terms wanted (concl th)
+    in foldl (fn (tm,t) => RW [EVAL tm] t) th tms end
+  val th = eval_matching ``SIGN_EXTEND a b c`` (fn _ => true) th
+  (* the imm32 forms spell their code bytes as w2w of the immediate and
+     of its shifts; those must come out as literals or the code is no
+     longer a list of numerals and export_codeLib cannot extract it *)
+  val th = eval_matching ``w2w (x:'a word):'b word`` (null o free_vars) th
+  fun ground_mod tm =
+    numSyntax.is_numeral (rand tm) andalso
+    numSyntax.is_numeral ((rand o rator) tm)
+  in eval_matching ``(m:num) MOD n`` ground_mod th end
+in
+fun instantiate_wrapper_format s = let
+  fun attempt (e,(nbytes,(th,i,j))) = let
+    val _ = if size s = size e + 2 * nbytes then () else fail()
+    val _ = if String.substring(s,0,size e) = e then () else fail()
+    val n = numSyntax.mk_numeral
+              (little_endian nbytes (String.substring(s,size e,2 * nbytes)))
+    val th = if nbytes = 1
+               then INST [mk_var("imm8",``:word8``)|->``(n2w ^n):word8``] th
+               else INST [mk_var("imm32",``:word32``)|->``(n2w ^n):word32``] th
+    in (eval_ground th,i,j) end
+  fun first [] = fail()
+    | first (x::xs) = attempt x handle HOL_ERR _ => first xs
+  in first wrapper_formats end handle Subscript => fail()
 end;
 
 fun get_code_for_bc_inst inst = let
@@ -1587,7 +1647,9 @@ fun get_code_for_bc_inst inst = let
 fun straight_line_decompile func_name code in_out_vars = let
   val _ = print "\nStraight-line decompile, "
   val (spec,_,sts,pc) = x64_tools
-  fun my_spec s = (instantiate_ready_format s,NONE) handle HOL_ERR _ => spec s
+  fun my_spec s =
+    (instantiate_ready_format s,NONE) handle HOL_ERR _ =>
+    ((instantiate_wrapper_format s,NONE) handle HOL_ERR _ => spec s)
   fun simple_spec s = let val ((th,_,_),_) = my_spec s in HIDE_STATUS_RULE true sts th end;
   val counter = ref 0
   val total = length code
