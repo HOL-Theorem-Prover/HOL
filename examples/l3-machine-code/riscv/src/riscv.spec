@@ -912,7 +912,7 @@ bool is_CSR_defined(csr::creg) =
  or  csr == 0x701 or (csr == 0x741 and in32BitMode())
  or (csr >= 0x340 and csr <= 0x344)
  or (csr >= 0x380 and csr <= 0x385)
- or  csr >= 0xB01 or (csr == 0xB81 and in32BitMode())
+ or  csr == 0xB01 or (csr == 0xB81 and in32BitMode())
  or (csr >= 0x780 and csr <= 0x783 and csr != 0x782)
 
 --- XXX: the CSRMap below is broken in 32-bit mode, since we need to
