@@ -361,9 +361,9 @@ local
             end
           | Literal FldName => apfst (addann "FieldName") (smapper s)
           | Literal NumLit => (addann "NumLit" s, unmapped_sz)
-          | Literal CharList => (addann "CharLit"
-                                        (String.substring(s, 2, size s - 3)),
-                                 unmapped_sz)
+          | Literal CharLit => (addann "CharLit"
+                                       (String.substring(s, 2, size s - 3)),
+                                unmapped_sz)
           | _ => smapper s
   in
     smpp.add_stringsz (dollarpfx ^ string_to_print ^ dollarsfx, sz + szdelta)
