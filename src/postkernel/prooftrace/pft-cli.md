@@ -91,3 +91,22 @@ Debug EXPECT records are accepted by Candle but not by the HOL reader or
 merger. The CLI emits the supported binary stream without these records.
 The portable version-1 format is separate from the producer-specific raw heap
 format; changing a raw producer pin requires rechecking its layout.
+
+### Large computation numerals
+
+The tracing regression covers computation results at the cached-translation
+boundary and beyond machine integers, through 2^256. It requires a tracing HOL
+with `cv_computeLib` and the `exportSmallToFD` Poly/ML support. From an empty
+scratch directory containing `.hol/objs`, run:
+
+```sh
+/path/to/tracing/bin/hol run \
+  /path/to/HOL/src/postkernel/prooftrace/numeral-produce.sml
+HOL_PFT_SOURCE_ROOT=/path/to/HOL /path/to/tracing/bin/hol run \
+  /path/to/HOL/src/postkernel/prooftrace/numeral-selftest.sml
+```
+
+The producer checks each computation's exact equation before export. The
+selftest converts the same trace to both rulesets and emits `EXPECT` checks
+for Candle replay with its dependency traces. The source directory may differ
+from the producer directory, so the same input can test a converter change.

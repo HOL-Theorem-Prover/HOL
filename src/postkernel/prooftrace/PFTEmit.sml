@@ -1841,7 +1841,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   (* Extract numeric value from HOL4 numeral bits (inside NUMERAL wrapper)
      Returns NONE if not a valid numeral bit pattern *)
-  and numeral_value_of_bits tm_ptr : int option =
+  and numeral_value_of_bits tm_ptr : IntInf.int option =
     case shTerm heap tm_ptr of
       Const (id_ptr, _) =>
         let val (thy, name) = ident heap id_ptr
@@ -1867,7 +1867,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | _ => NONE
 
   (* Check if a number needs translation (contains BIT2 in HOL4 form) *)
-  and needs_numeral_translation 0 = false
+  and needs_numeral_translation (0 : IntInf.int) = false
     | needs_numeral_translation n =
         if n mod 2 = 1 then needs_numeral_translation ((n - 1) div 2)
         else true  (* even > 0 means BIT2 *)
@@ -1885,7 +1885,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
              else if n < 256 then
                (* Use cached translation theorem *)
                let
-                 val xlate_th = candle_load_pth ("candle$NUM_XLATE_" ^ Int.toString n)
+                 val xlate_th = candle_load_pth
+                   ("candle$NUM_XLATE_" ^ IntInf.toString n)
                  (* xlate_th: hol4_bits = candle_bits (without NUMERAL wrapper)
                     We need: NUMERAL hol4_bits = NUMERAL candle_bits
                     Use AP_TERM NUMERAL xlate_th *)
@@ -1897,7 +1898,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
                       id
                    end
                  (* Build the Candle numeral term *)
-                 val candle_bits_id = emit_candle_numeral_bits n
+                 val candle_bits_id = emit_candle_numeral_bits (IntInf.toInt n)
                  val candle_tm_id = emit_comb numeral_const_id candle_bits_id
                in (candle_tm_id, wrapped_th) end
              else
