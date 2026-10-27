@@ -25,6 +25,27 @@ then load `oracle-check-results.ml`. It independently checks all eight
 hypothesis sets and conclusions with `check_oracle_results ()` and
 `check_deduct_results ()`.
 
+## Compute binders
+
+```sh
+/path/to/HOL/src/postkernel/prooftrace/compute-binder-tests.sh \
+  /path/to/tracing/bin/hol /scratch/compute-binders
+```
+
+The producer must have `cv_computeLib` available. The runner exports three
+computed equalities for a simple let, nested lets, and two binders with the
+same printed name whose body uses both variables. It checks the source
+sequents, conversion, three computation commands and a capture-safe fresh
+binder. It introduces no new constants or oracle assumptions.
+
+For exact Candle replay, convert the exported theory's ancestors in dependency
+order, with the preamble first and compute-preamble immediately after `cv`.
+Replay those files followed by `compute-binders.pft.bin`, or merge the
+`pft_compute_binders$SIMPLE`, `NESTED` and `CAPTURE` exports and replay only
+the merged file. Then load `compute-binder-check.ml`; it checks all three
+exact conclusions and empty hypothesis sets and prints
+`COMPUTE_BINDER_ALL_EXACT_PASS`.
+
 ## Specifications
 
 For each `CASE` in `vacuous`, `shadow`, and `overlap`, run in a separate
