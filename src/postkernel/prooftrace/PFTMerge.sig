@@ -27,8 +27,9 @@ signature PFTMerge = sig
      - Writes the footer with namespace bounds
 
      Inputs use version 1 and a single supported ruleset. Input IDs must
-     never be reused, even after deletion. Output IDs are monotonic;
-     Candle type-definition results occupy consecutive theorem IDs.
+     never be reused, even after deletion. Output IDs are reused after last
+     use, and footer bounds record their high-water counts. Candle type-definition
+     results occupy consecutive theorem IDs.
      Malformed headers and unsupported dependency order fail before the
      output is opened. Named and anonymous cross-file references are
      resolved by their SAVE/LOAD names (e.g. thy$name and thy#0). *)

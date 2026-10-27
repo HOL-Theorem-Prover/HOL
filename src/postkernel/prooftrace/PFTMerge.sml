@@ -83,8 +83,115 @@ type cmd_meta = {
   ref_name : string option     (* name referenced by CONST/TYOP *)
 }
 
-val empty_meta : cmd_meta =
-  {produced=[], consumed=[], kind=CmdNormal, opcode=0, ref_name=NONE}
+(* Only the descriptor decoder builds lists. Retained metadata uses flat
+   slices, with full-width IDs/offsets and bytes only for small enum fields. *)
+structure Metadata = struct
+  type t = {
+    kinds: DString.dstring, opcodes: DString.dstring,
+    prod_start: int DArray.darray, cons_start: int DArray.darray,
+    prod_ns: DString.dstring, prod_id: int DArray.darray,
+    cons_ns: DString.dstring, cons_id: int DArray.darray,
+    name_idx: int DArray.darray, names: string DArray.darray
+  }
+
+  fun new () : t =
+    let val ps = DArray.new(1024, 0)
+        val cs = DArray.new(1024, 0)
+    in DArray.push(ps, 0); DArray.push(cs, 0);
+       {kinds=DString.new 1024, opcodes=DString.new 1024,
+        prod_start=ps, cons_start=cs,
+        prod_ns=DString.new 1024, prod_id=DArray.new(1024, 0),
+        cons_ns=DString.new 1024, cons_id=DArray.new(1024, 0),
+        name_idx=DArray.new(1024, ~1), names=DArray.new(16, "")}
+    end
+
+  fun size ({kinds, ...}: t) = DString.size kinds
+  fun opcode ({opcodes, ...}: t) ci = Char.ord (DString.sub(opcodes, ci))
+  fun name ({name_idx, names, ...}: t) ci =
+    DArray.sub(names, DArray.sub(name_idx, ci))
+  fun kind (m as {kinds, ...}: t) ci =
+    case Char.ord (DString.sub(kinds, ci)) of
+      0 => CmdNormal
+    | 1 => CmdSave "" (* The global SAVE index owns export names. *)
+    | 2 => CmdLoad (name m ci)
+    | 3 => CmdDel
+    | 4 => CmdDef
+    | 5 => CmdNewConst
+    | 6 => CmdNewType
+    | _ => CmdAxiom
+  fun ref_name (m: t) ci =
+    if opcode m ci = 0x02 orelse opcode m ci = 0x04
+    then SOME (name m ci) else NONE
+
+  fun push (m: t) (meta: cmd_meta) =
+    let
+      val (k, n) = case #kind meta of
+          CmdNormal => (0, #ref_name meta)
+        | CmdSave _ => (1, NONE)
+        | CmdLoad name => (2, SOME name)
+        | CmdDel => (3, NONE)
+        | CmdDef => (4, NONE)
+        | CmdNewConst => (5, NONE)
+        | CmdNewType => (6, NONE)
+        | CmdAxiom => (7, NONE)
+      fun edges nsbuf ids pairs = List.app (fn (ns, id) =>
+        (DString.push(nsbuf, Char.chr ns); DArray.push(ids, id))) pairs
+      val ni = case n of NONE => ~1 | SOME name =>
+        let val i = DArray.size (#names m)
+        in DArray.push(#names m, name); i end
+    in DString.push(#kinds m, Char.chr k);
+       DString.push(#opcodes m, Char.chr (#opcode meta));
+       DArray.push(#name_idx m, ni);
+       edges (#prod_ns m) (#prod_id m) (#produced meta);
+       edges (#cons_ns m) (#cons_id m) (#consumed meta);
+       DArray.push(#prod_start m, DArray.size (#prod_id m));
+       DArray.push(#cons_start m, DArray.size (#cons_id m))
+    end
+
+  fun app_slice starts nsbuf ids ci f =
+    let val stop = DArray.sub(starts, ci + 1)
+        fun loop i = if i = stop then () else
+          (f (Char.ord (DString.sub(nsbuf, i)), DArray.sub(ids, i));
+           loop (i + 1))
+    in loop (DArray.sub(starts, ci)) end
+  fun app_produced (m: t) =
+    app_slice (#prod_start m) (#prod_ns m) (#prod_id m)
+  fun app_consumed (m: t) =
+    app_slice (#cons_start m) (#cons_ns m) (#cons_id m)
+  fun prod_count ({prod_start, ...}: t) ci =
+    DArray.sub(prod_start, ci + 1) - DArray.sub(prod_start, ci)
+  fun first_prod_ns ({prod_start, prod_ns, ...}: t) ci =
+    Char.ord (DString.sub(prod_ns, DArray.sub(prod_start, ci)))
+  fun appi f m =
+    let val n = size m
+        fun loop ci = if ci = n then () else (f ci; loop (ci + 1))
+    in loop 0 end
+end
+
+(* Common producer IDs are dense. A bounded sparse fallback preserves valid
+   nonmonotonic inputs without allocating up to an arbitrary source ID. *)
+structure Producers = struct
+  type space = {dense: int DArray.darray,
+                sparse: (int, int) Redblackmap.dict ref}
+  type t = space vector
+  fun new () : t = Vector.tabulate(NUM_NS, fn _ =>
+    {dense=DArray.new(1024, ~1),
+     sparse=ref (Redblackmap.mkDict Int.compare)})
+  fun peek (p: t) (ns, id) =
+    let val {dense, sparse} = Vector.sub(p, ns)
+        val ci = if id < DArray.size dense then DArray.sub(dense, id)
+                 else ~1
+    in if ci >= 0 then SOME ci else Redblackmap.peek(!sparse, id) end
+  fun insert (p: t) (ns, id) ci =
+    let val {dense, sparse} = Vector.sub(p, ns)
+    in if id < DArray.size dense orelse id < 1024 orelse id div 2 <= ci
+       then
+         let fun grow () = if DArray.size dense > id then () else
+               (DArray.push(dense, ~1); grow ())
+         in grow (); DArray.update(dense, id, ci) end
+       else sparse := Redblackmap.insert(!sparse, id, ci)
+    end
+end
 
 (* Consume arguments from stream according to descriptors, collecting
    the (ns_idx, id) pairs of all referenced IDs and any introduced
@@ -124,8 +231,8 @@ fun collect_consumed (sr: PFTReader.stream_reader) (specs: arg_spec list)
 (* Per-file state *)
 type file_state = {
   file_idx : int,
-  cmds : cmd_meta DArray.darray,
-  producers : (int * int, int) Redblackmap.dict ref
+  cmds : Metadata.t,
+  producers : Producers.t
 }
 
 fun pair_compare ((a1:int,b1:int), (a2,b2)) =
@@ -133,35 +240,36 @@ fun pair_compare ((a1:int,b1:int), (a2,b2)) =
 
 fun new_file_state fi : file_state = {
   file_idx = fi,
-  cmds = DArray.new(1024, empty_meta),
-  producers = ref (Redblackmap.mkDict pair_compare)
+  cmds = Metadata.new (),
+  producers = Producers.new ()
 }
 
 fun record_producers file_idx producers ci (meta: cmd_meta) =
   let
     fun check_input (ns, id) =
-      if isSome (Redblackmap.peek (!producers, (ns, id))) then ()
+      if isSome (Producers.peek producers (ns, id)) then ()
       else raise Fail ("PFTMerge: missing or forward reference to " ^
                        ns_name ns ^ "#" ^ Int.toString id ^ " in file " ^
                        Int.toString file_idx)
     fun add_output (ns, id) =
-      if isSome (Redblackmap.peek (!producers, (ns, id))) then
+      if isSome (Producers.peek producers (ns, id)) then
         raise Fail ("PFTMerge: reused input ID " ^ ns_name ns ^ "#" ^
                     Int.toString id ^ " in file " ^
                     Int.toString file_idx)
-      else producers := Redblackmap.insert(!producers, (ns, id), ci)
+      else Producers.insert producers (ns, id) ci
   in List.app check_input (#consumed meta);
      List.app add_output (#produced meta)
   end
 
 fun add_cmd (fs: file_state) (meta: cmd_meta) =
-  let val ci = DArray.size (#cmds fs)
+  let val ci = Metadata.size (#cmds fs)
       val () = record_producers (#file_idx fs) (#producers fs) ci meta
-  in DArray.push(#cmds fs, meta); ci end
+  in Metadata.push (#cmds fs) meta; ci end
 
 fun find_producer (fs: file_state) (ns, id) =
-  Redblackmap.find(!(#producers fs), (ns, id))
-  handle Redblackmap.NotFound =>
+  case Producers.peek (#producers fs) (ns, id) of
+    SOME ci => ci
+  | NONE =>
     raise Fail ("PFTMerge: no producer for " ^ ns_name ns ^ "#" ^
                 Int.toString id ^ " in file " ^ Int.toString (#file_idx fs))
 
@@ -246,7 +354,7 @@ fun scan_index_file descs_ref file_idx file
   let
     val ci_ref = ref 0
     (* Validate even unselected files without retaining command metadata. *)
-    val producers = ref (Redblackmap.mkDict pair_compare)
+    val producers = Producers.new ()
     fun add meta =
       let val ci = !ci_ref
           val () = record_producers file_idx producers ci meta
@@ -305,7 +413,7 @@ fun compute_reachable ruleset
       case !(Vector.sub(visited, fi)) of
         SOME a => a
       | NONE => let val fs = ensure_file_state fi
-                    val a = Array.array(DArray.size (#cmds fs), false)
+                    val a = Array.array(Metadata.size (#cmds fs), false)
                 in Vector.sub(visited, fi) := SOME a; a end
     val worklist = ref [] : (int * int) list ref
 
@@ -358,14 +466,13 @@ fun compute_reachable ruleset
       | (fi, ci) :: rest =>
         let val () = worklist := rest
             val fs = ensure_file_state fi
-            val meta = DArray.sub(#cmds fs, ci)
+            val cmds = #cmds fs
         in
           (* Follow ID-level dependencies *)
-          List.app (fn (ns, id) =>
-            enqueue (fi, find_producer fs (ns, id)))
-            (#consumed meta);
+          Metadata.app_consumed cmds ci (fn (ns, id) =>
+            enqueue (fi, find_producer fs (ns, id)));
           (* Follow cross-file LOAD dependencies *)
-          (case #kind meta of
+          (case Metadata.kind cmds ci of
              CmdLoad name =>
                (case Redblackmap.peek(save_table, name) of
                   NONE => raise Fail ("PFTMerge: unknown LOAD: " ^ name)
@@ -388,11 +495,11 @@ fun compute_reachable ruleset
                   enqueue (ifi, ici)
                 else raise Fail
                   ("PFTMerge: implicit constant used before introduction: " ^
-                   name)) (implicit_consts (#opcode meta));
+                   name)) (implicit_consts (Metadata.opcode cmds ci));
           (* Follow name-level dependencies: CONST/TYOP → introducer *)
-          (case #ref_name meta of
+          (case Metadata.ref_name cmds ci of
              SOME name =>
-               let val table = if #opcode meta = 0x04
+               let val table = if Metadata.opcode cmds ci = 0x04
                                then const_introducer
                                else type_introducer
                in case Redblackmap.peek(table, name) of
@@ -451,11 +558,10 @@ fun pass2_emit (file_states: file_state option ref vector)
                     fn _ => Array.array(0, NONE : int option))
         | SOME fs =>
         let val maxes = Array.array(NUM_NS, 0)
-            val () = DArray.appi (fn (_, meta) =>
-              List.app (fn (ns, id) =>
+            val () = Metadata.appi (fn ci =>
+              Metadata.app_produced (#cmds fs) ci (fn (ns, id) =>
                 if id >= Array.sub(maxes, ns)
-                then Array.update(maxes, ns, id + 1) else ())
-                (#produced meta)) (#cmds fs)
+                then Array.update(maxes, ns, id + 1) else ())) (#cmds fs)
         in Vector.tabulate(NUM_NS, fn ns =>
              Array.array(Array.sub(maxes, ns), NONE : int option))
         end)
@@ -474,15 +580,15 @@ fun pass2_emit (file_states: file_state option ref vector)
              SOME (sfi, sid) => (sfi, ns, sid)
            | NONE => (fi, ns, id)
     val () = app_included (fn (fi, fs, vis) =>
-      DArray.appi (fn (ci, meta) =>
+      Metadata.appi (fn ci =>
         if not (Array.sub(vis, ci)) then ()
-        else case #kind meta of
+        else case Metadata.kind (#cmds fs) ci of
           CmdLoad name =>
             let val {file_idx, th_id, ...} = lookup_save name
                 val (sfi, _, sid) = canonical file_idx NS_TH th_id
-            in List.app (fn (_, id) =>
+            in Metadata.app_produced (#cmds fs) ci (fn (_, id) =>
                  aliases := Redblackmap.insert(!aliases, (fi, id),
-                                               (sfi, sid))) (#produced meta)
+                                               (sfi, sid)))
             end
         | _ => ()) (#cmds fs))
 
@@ -499,19 +605,22 @@ fun pass2_emit (file_states: file_state option ref vector)
                                 Int.toString fi)
       end
 
-    fun allocate fi (meta: cmd_meta) =
-      let val produced = #produced meta
-      in if length produced > 1 andalso
-            List.all (fn (ns,_) => ns = #1 (hd produced)) produced
-         then
-           let val ns = #1 (hd produced)
-               val base = IdAlloc.alloc_consecutive
-                            (Vector.sub(allocators, ns)) (length produced)
-           in ignore (List.foldl (fn ((ns, id), i) =>
-                (set_rename fi ns id (base + i); i + 1)) 0 produced)
+    fun allocate fi ci =
+      let val cmds = #cmds (loaded_file fi)
+          val n = Metadata.prod_count cmds ci
+          val same_ns = ref true
+          val ns = if n = 0 then NS_TY else Metadata.first_prod_ns cmds ci
+          val () = Metadata.app_produced cmds ci (fn (ns', _) =>
+            if ns' = ns then () else same_ns := false)
+      in if n > 1 andalso !same_ns then
+           let val base = IdAlloc.alloc_consecutive
+                            (Vector.sub(allocators, ns)) n
+               val i = ref 0
+           in Metadata.app_produced cmds ci (fn (_, id) =>
+                (set_rename fi ns id (base + !i); i := !i + 1))
            end
-         else List.app (fn (ns, id) =>
-                set_rename fi ns id (alloc_id ns)) produced
+         else Metadata.app_produced cmds ci (fn (ns, id) =>
+                set_rename fi ns id (alloc_id ns))
       end
 
     (* Counts belong to old identities, including uses through LOAD aliases. *)
@@ -522,25 +631,24 @@ fun pass2_emit (file_states: file_state option ref vector)
       let val (fi, ns, id) = canonical fi ns id
           val a = count_array fi ns
       in Array.update(a, id, Array.sub(a, id) + 1) end
-    fun real_command (meta: cmd_meta) =
-      case #kind meta of CmdDel => false | CmdSave _ => false
-                        | CmdLoad _ => false | _ => true
+    fun real_command cmds ci =
+      case Metadata.kind cmds ci of CmdDel => false | CmdSave _ => false
+                                 | CmdLoad _ => false | _ => true
     val () = app_included (fn (fi, fs, vis) =>
-      DArray.appi (fn (ci, meta) =>
-        if Array.sub(vis, ci) andalso real_command meta then
-          List.app (fn (ns, id) => inc_ref fi ns id) (#consumed meta)
+      Metadata.appi (fn ci =>
+        if Array.sub(vis, ci) andalso real_command (#cmds fs) ci then
+          Metadata.app_consumed (#cmds fs) ci (fn (ns, id) => inc_ref fi ns id)
         else ()) (#cmds fs))
 
     val def_saves =
       if not (List.exists #2 target_saves) then []
       else let val acc = ref [] : (int * int) list ref
       in app_included (fn (fi, fs, vis) =>
-           DArray.appi (fn (ci, meta) =>
+           Metadata.appi (fn ci =>
              if Array.sub(vis, ci) then
-               case #kind meta of
-                 CmdDef => List.app (fn (ns, id) =>
+               case Metadata.kind (#cmds fs) ci of
+                 CmdDef => Metadata.app_produced (#cmds fs) ci (fn (ns, id) =>
                    if ns = NS_TH then acc := (fi, id) :: !acc else ())
-                   (#produced meta)
                | _ => ()
              else ()) (#cmds fs));
          List.rev (!acc)
@@ -574,12 +682,13 @@ fun pass2_emit (file_states: file_state option ref vector)
         SOME vis => Array.sub(vis, ci)
       | NONE => false
     fun ren ns id = get_rename (!current_fi) ns id
-    fun finish_command (meta: cmd_meta) =
+    fun finish_command ci =
       let val fi = !current_fi
-      in List.app (fn (ns, id) => dec_ref fi ns id) (#consumed meta);
-         List.app (fn (ns, id) =>
+          val cmds = #cmds (loaded_file fi)
+      in Metadata.app_consumed cmds ci (fn (ns, id) => dec_ref fi ns id);
+         Metadata.app_produced cmds ci (fn (ns, id) =>
            if Array.sub(count_array fi ns, id) = 0 then release fi ns id
-           else ()) (#produced meta)
+           else ())
       end
 
     (* Handlers for pass 2 re-read. Format and ruleset handlers share
@@ -591,8 +700,7 @@ fun pass2_emit (file_states: file_state option ref vector)
 
         fun when_included ci f =
           if is_included ci then
-            let val meta = DArray.sub(#cmds (loaded_file (!current_fi)), ci)
-            in allocate (!current_fi) meta; f meta; finish_command meta end
+            (allocate (!current_fi) ci; f (); finish_command ci)
           else ()
 
         val fh : PFTReader.format_handler = {
@@ -650,14 +758,12 @@ fun pass2_emit (file_states: file_state option ref vector)
             val args = PFTReader.read_raw_args desc sr
           in if is_included ci then
                let
-                 val meta = DArray.sub
-                   (#cmds (loaded_file (!current_fi)), ci)
-                 val () = allocate (!current_fi) meta
+                 val () = allocate (!current_fi) ci
                  val result = ren (ns_idx (hd (#results desc))) id
                  val args = ListPair.map rename_arg (#args desc, args)
                in PFTWriter.write_raw out
                     {opcode=opc, desc=desc, result=result, args=args};
-                  finish_command meta
+                  finish_command ci
                end
              else ()
           end

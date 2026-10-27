@@ -621,4 +621,73 @@ val () = run_test "merge retains implicitly used conjunction declaration"
   (fn () => !implicit_names = ["bool$/\\"] andalso
             #dels (monitor implicit_merged) > 0)
 
+(* The first producer starts in sparse storage. Later dense growth covers
+   its ID with a hole: lookup must still find it, and reject a duplicate. *)
+fun sparse_prefix out =
+  (PFTWriter.tyvar out 2048 "'a";
+   List.app (fn id => PFTWriter.tyvar out id "'unused")
+     (List.tabulate(1025, fn i => i));
+   PFTWriter.tyvar out 2049 "'unused")
+val (sparse_file,out) = output "candle"
+val () = sparse_prefix out
+val () = PFTWriter.var out 0 "p" 2048
+val () = PFTWriter.Candle.assume out 0 0
+val () = PFTWriter.save out "sparse$RESULT" 0
+val () = PFTWriter.closeOut out {n_ty=2050,n_tm=1,n_th=1,n_ci=0}
+val (dense_file,out) = output "candle"
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.var out 0 "p" 0
+val () = PFTWriter.Candle.assume out 0 0
+val () = PFTWriter.save out "sparse$RESULT" 0
+val () = finish out
+fun merge_sparse file =
+  let val merged = temp ()
+  in PFTMerge.merge {inputs=[file],
+       targets=[PFTMerge.ThyAll("sparse",false)],output=merged,binary=true};
+     merged
+  end
+val () = run_test "merge preserves sparse producers covered by dense growth"
+  (fn () => reader_bytes (merge_sparse sparse_file) =
+            reader_bytes (merge_sparse dense_file))
+fun reject_sparse prefix file =
+  let val before_bytes = reader_bytes file
+  in reject_unused prefix file andalso reader_bytes file = before_bytes end
+val (sparse_duplicate,out) = output "candle"
+val () = sparse_prefix out
+val () = PFTWriter.tyvar out 2048 "'duplicate"
+val () = PFTWriter.closeOut out {n_ty=2050,n_tm=0,n_th=0,n_ci=0}
+val () = run_test "merge rejects sparse duplicates after dense growth"
+  (fn () => reject_sparse "PFTMerge: reused input ID ty#2048" sparse_duplicate)
+
+(* Full-width sparse IDs in an unselected file must not size a dense array.
+   Leave room for its footer bound even on Moscow ML's narrower int type. *)
+val huge_id = valOf Int.maxInt - 1
+fun huge_file mode =
+  let val (file,out) = output "candle"
+  in (if mode = 3 then PFTWriter.var out 0 "forward" huge_id else ());
+     PFTWriter.tyvar out huge_id "'huge";
+     (if mode = 2 then PFTWriter.del out "ty" huge_id else ());
+     (if mode = 1 orelse mode = 2 then
+        PFTWriter.tyvar out huge_id "'duplicate" else ());
+     PFTWriter.closeOut out {n_ty=huge_id+1,n_tm=1,n_th=0,n_ci=0};
+     file
+  end
+val huge_unused = huge_file 0
+val () = run_test "merge preserves huge sparse IDs in unselected files"
+  (fn () => let val merged_huge = temp ()
+                val before_bytes = reader_bytes huge_unused
+                val () = PFTMerge.merge
+                  {inputs=[types_file,uses_file,huge_unused],
+                   targets=[PFTMerge.ThyAll("uses",false)],
+                   output=merged_huge,binary=true}
+            in reader_bytes merged_huge = reader_bytes merged andalso
+               reader_bytes huge_unused = before_bytes
+            end)
+val () = run_test "merge rejects huge sparse duplicates in unselected files"
+  (fn () => reject_sparse "PFTMerge: reused input ID" (huge_file 1))
+val () = run_test "merge rejects huge sparse reuse after DEL in unselected files"
+  (fn () => reject_sparse "PFTMerge: reused input ID" (huge_file 2))
+val () = run_test "merge rejects huge sparse forward IDs in unselected files"
+  (fn () => reject_sparse "PFTMerge: missing or forward reference" (huge_file 3))
+
 val () = cleanup ()
