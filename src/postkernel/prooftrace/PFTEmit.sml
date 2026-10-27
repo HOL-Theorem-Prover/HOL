@@ -2142,6 +2142,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | _ => false
 
   (* Translate all numerals in a term from HOL4 to Candle form.
+     Use emitted child IDs: heap children may contain bound indices whose
+     environment was resolved when their enclosing term was emitted.
      Returns (candle_tm_id, xlate_th_id) where xlate_th proves: original = candle_tm
      If no translation needed, returns (original_tm_id, ~1) *)
   and translate_term_numerals_hol4_to_candle tm_ptr tm_id : int * int =
@@ -2154,8 +2156,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         Comb (rator_ptr, rand_ptr) =>
           if is_cv_num rator_ptr then
             let
-              val rator_id = emit_term rator_ptr
-              val rand_id = emit_term rand_ptr
+              val (rator_id, rand_id) = pft_dest_comb tm_id
               val (rand_c, rand_th) = translate_term_numerals_hol4_to_candle rand_ptr rand_id
             in
               if is_numeral_term rand_ptr then
@@ -2191,8 +2192,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
             end
           else
             let
-              val rator_id = emit_term rator_ptr
-              val rand_id = emit_term rand_ptr
+              val (rator_id, rand_id) = pft_dest_comb tm_id
               val (rator_c, rator_th) = translate_term_numerals_hol4_to_candle rator_ptr rator_id
               val (rand_c, rand_th) = translate_term_numerals_hol4_to_candle rand_ptr rand_id
             in
@@ -2212,8 +2212,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
             end
       | Abs (var_ptr, body_ptr) =>
           let
-            val var_id = emit_term var_ptr
-            val body_id = emit_term body_ptr
+            val (var_id, body_id) = pft_dest_abs tm_id
             val (body_c, body_th) = translate_term_numerals_hol4_to_candle body_ptr body_id
           in
             if body_th < 0 then (tm_id, ~1)
