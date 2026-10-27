@@ -281,6 +281,8 @@ local
       HolKernel.syntax_fns1 "riscv" (mkselnm "MachineCSR" "mcpuid")
   val (_, mk_ArchBase, _, _) =
       HolKernel.syntax_fns1 "riscv" (mkselnm "mcpuid" "ArchBase")
+  val (_, mk_C, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "mcpuid" "C")
   val pre = progSyntax.strip_star o temporal_stateSyntax.dest_pre' o Thm.concl
 
 
@@ -293,13 +295,14 @@ val SOME tm = List.find is_riscv_ID (pre th)
          let
            val (id, mcsr) = dest_riscv_ID tm
            val archbase = boolSyntax.mk_eq (mk_ArchBase (mk_mcpuid mcsr), rv64)
+           val config = boolSyntax.mk_conj (archbase, mk_C (mk_mcpuid mcsr))
          in
            th |> Thm.INST [id |-> id0]
               |> rv64_rule
-              |> PURE_REWRITE_RULE [ASSUME archbase]
+              |> PURE_REWRITE_RULE (Drule.CONJUNCTS (ASSUME config))
               |> Conv.CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
               |> REWRITE_RULE []
-              |> Thm.DISCH archbase
+              |> Thm.DISCH config
               |> Conv.CONV_RULE stateLib.MOVE_COND_CONV
               |> helperLib.MERGE_CONDS_RULE
               |> stateLib.introduce_triple_definition
