@@ -6,4 +6,5 @@ sig
    val riscv_step: Term.term -> Thm.thm
    val riscv_step_hex: string -> Thm.thm
    val riscv_dict: (string * Term.term) list
+   val riscv_rvc_rule: bool -> Thm.thm -> Thm.thm
 end

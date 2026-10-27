@@ -27,21 +27,29 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
 
 Definition Fetch_def:
   Fetch s =
-  let (w, s) = translateAddr (PC s, Instruction, Read) s in
-    (rawReadInst (THE w) s)
+  let pc = PC s in
+  if word_bit 0 pc \/ word_bit 1 pc /\ ~haveRVC () s then
+    raise'exception (UNDEFINED "fetch misaligned") s
+  else
+    let (w, s) = translateAddr (pc, Instruction, Read) s in
+      rawReadInst (THE w) s
 End
 
 Definition update_pc_def:   update_pc v s = SOME (write'PC v s)
 End
 
 Definition DecodeAny_def:
-  DecodeAny f = case f of Half h => DecodeRVC h | Word w => Decode w
+  DecodeAny rvc f =
+  case f of
+     Half h => if rvc then DecodeRVC h else UnknownInstruction
+   | Word w => Decode w
 End
 
 Definition NextRISCV_def:
   NextRISCV s =
+  let rvc = haveRVC () s in
   let (f, s) = Fetch s in
-  let s = Run (DecodeAny f) s in
+  let s = Run (DecodeAny rvc f) s in
   if s.exception <> NoException then
     NONE
   else
@@ -58,18 +66,19 @@ End
 
 Theorem NextRISCV:
    (Fetch s = (w, s')) /\
-   (DecodeAny w = i) /\
+   (DecodeAny ((s.c_MCSR s.procID).mcpuid.C) w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = NONE) ==>
    (NextRISCV s = update_pc (nxt.c_PC nxt.procID + Skip nxt) nxt)
 Proof
-  lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
+  lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def,
+       haveRVC_def, MCSR_def]
 QED
 
 Theorem NextRISCV_branch:
    (Fetch s = (w, s')) /\
-   (DecodeAny w = i) /\
+   (DecodeAny ((s.c_MCSR s.procID).mcpuid.C) w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = SOME (BranchTo a)) ==>
@@ -77,14 +86,13 @@ Theorem NextRISCV_branch:
       update_pc a
         (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))
 Proof
-  lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
-  \\ Cases_on `Run (Decode w) s'`
-  \\ fs []
+  lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def,
+       haveRVC_def, MCSR_def]
 QED
 
 Theorem NextRISCV_cond_branch:
    (Fetch s = (w, s')) /\
-   (DecodeAny w = i) /\
+   (DecodeAny ((s.c_MCSR s.procID).mcpuid.C) w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = if b then SOME (BranchTo a) else NONE) ==>
@@ -92,10 +100,21 @@ Theorem NextRISCV_cond_branch:
       update_pc (if b then a else nxt.c_PC nxt.procID + Skip nxt)
         (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))
 Proof
-  lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
-  \\ Cases_on `Run (DecodeAny w) s'`
+  lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def,
+       haveRVC_def, MCSR_def]
   \\ fs [update_pc_def, write'PC_def, riscv_state_component_equality,
          combinTheory.UPDATE_APPLY_IMP_ID]
+QED
+
+Theorem NextRISCV_Half_noC:
+   (Fetch s = (Half h, s')) /\ ~(s.c_MCSR s.procID).mcpuid.C ==>
+   (NextRISCV s = NONE)
+Proof
+  rw [NextRISCV_def, DecodeAny_def, haveRVC_def, MCSR_def, Run_def,
+      dfn'UnknownInstruction_def, signalException_def, setTrap_def,
+      write'NextFetch_def, NextFetch_def]
+  \\ rpt (pairarg_tac \\ fs [])
+  \\ fs [combinTheory.UPDATE_def]
 QED
 
 (* ------------------------------------------------------------------------
@@ -539,13 +558,13 @@ val jalr = uprove
   )
 
 Theorem Decode_IMP_DecodeAny:
-    (Decode w = i) ==> (DecodeAny (Word w) = i)
+    (Decode w = i) ==> (DecodeAny rvc (Word w) = i)
 Proof
   fs [DecodeAny_def]
 QED
 
 Theorem DecodeRVC_IMP_DecodeAny:
-    (DecodeRVC h = i) ==> (DecodeAny (Half h) = i)
+    (DecodeRVC h = i) ==> rvc ==> (DecodeAny rvc (Half h) = i)
 Proof
   fs [DecodeAny_def]
 QED
@@ -572,7 +591,9 @@ val bare = ``(^s.c_MCSR ^s.procID).mstatus.VM = 0w``
 val archbase = ``(^s.c_MCSR ^s.procID).mcpuid.ArchBase``
 val rvc = ``(^s.c_MCSR ^s.procID).mcpuid.C``
 val shift = ``~((^archbase = 0w) /\ word_bit 5n (imm: word6))``
-val aligned = ``aligned 2 (^s.c_PC ^s.procID)``
+fun ialign_ok a = ``~(word_bit 1 (^a: word64) /\ ~^rvc)``
+val pc_ok =
+  [``~word_bit 0 (^s.c_PC ^s.procID)``, ialign_ok ``^s.c_PC ^s.procID``]
 val aligned_d =
   ``aligned 3 (if rs1 = 0w then sw2sw offs
                else ^s.c_gpr ^s.procID rs1 + sw2sw (offs:word12))``
@@ -666,8 +687,8 @@ val update_pc = Theory.save_thm("update_pc",
   EV [update_pc_def, write'PC_def] [] [] ``update_pc v``)
 
 val Fetch =
-  EV [Fetch_def, PC, translateAddr, rawReadInst, boolify8_def,
-      write'Skip_def] [[aligned]] []
+  EV [Fetch_def, PC, haveRVC, translateAddr, rawReadInst, boolify8_def,
+      write'Skip_def] [pc_ok] []
     ``Fetch``
 
 Theorem Fetch32:
@@ -676,6 +697,8 @@ Theorem Fetch32:
        (xs = [y0; y1; y2; y3; y4; y5; y6; y7; y8; y9; yA; yB; yC; yD; yE; yF;
               x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
        ((s.c_MCSR s.procID).mstatus.VM = 0w) ∧
+       ~word_bit 0 (s.c_PC s.procID) ∧
+       (~word_bit 1 (s.c_PC s.procID) ∨ (s.c_MCSR s.procID).mcpuid.C) ∧
        (s.MEM8 (s.c_PC s.procID + 3w) = v2w [y0; y1; y2; y3; y4; y5; y6; y7]) ∧
        (s.MEM8 (s.c_PC s.procID + 2w) = v2w [y8; y9; yA; yB; yC; yD; yE; yF]) ∧
        (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0; x1; x2; x3; x4; x5; x6; x7]) ∧
@@ -691,6 +714,8 @@ Theorem Fetch16:
     !xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF.
        (xs = [x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
        ((s.c_MCSR s.procID).mstatus.VM = 0w) ∧
+       ~word_bit 0 (s.c_PC s.procID) ∧
+       (~word_bit 1 (s.c_PC s.procID) ∨ (s.c_MCSR s.procID).mcpuid.C) ∧
        (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0; x1; x2; x3; x4; x5; x6; x7]) ∧
        (s.MEM8 (s.c_PC s.procID) = v2w [x8; x9; xA; xB; xC; xD; xE; xF]) ∧
        ~(xE ∧ xF) ⇒
@@ -806,6 +831,7 @@ local
      rawReadData, rawWriteData8, rawWriteData4, rawWriteData2, rawWriteData1]
   val hyp_eq_rule =
     utilsLib.ALL_HYP_CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
+  val is_sae = Term.same_const ``signalAddressException``
 in
   fun class args avoid n =
     let
@@ -819,7 +845,9 @@ in
       val thms = DB.fetch "riscv" (name ^ "_def") :: write @ read
     in
       case ev (thms @ l) avoid [] (Parse.Term ([QUOTE name] @ args)) of
-         [th] => utilsLib.save_thms n [hyp_eq_rule th]
+         [th] => if Lib.can (HolKernel.find_term is_sae) (Thm.concl th)
+                   then raise ERR "class" ("signalAddressException in " ^ n)
+                 else utilsLib.save_thms n [hyp_eq_rule th]
        | _ => raise ERR "class" ("more than one theorem" ^ n)
     end
 end
@@ -888,10 +916,15 @@ val REMW   = arithr [[``^archbase <> 0w``]] "REMW"
 val DIVUW  = arithr [[``^archbase <> 0w``]] "DIVUW"
 val REMUW  = arithr [[``^archbase <> 0w``]] "REMUW"
 
-val JAL  = class_rd0 `(rd, imm)` [[rvc]] "JAL"
-val JALR = class_rd0 `(rd, rs1, imm)` [[rvc]] "JALR"
+val JAL  = class_rd0 `(rd, imm)`
+  [[ialign_ok ``^s.c_PC ^s.procID + sw2sw (imm: word20) << 1``]] "JAL"
+val JALR = class_rd0 `(rd, rs1, imm)`
+  [[ialign_ok ``if rs1 = 0w then sw2sw (imm: word12) && 0xFFFFFFFFFFFFFFFEw
+              else ^s.c_gpr ^s.procID rs1 + sw2sw imm && 0xFFFFFFFFFFFFFFFEw``]]
+  "JALR"
 
-val cbranch = class `(rs1, rs2, offs)` [[rvc]]
+val cbranch = class `(rs1, rs2, offs)`
+  [[ialign_ok ``^s.c_PC ^s.procID + sw2sw (offs: word12) << 1``]]
 
 val BEQ  = cbranch "BEQ"
 val BNE  = cbranch "BNE"

@@ -97,7 +97,7 @@ in
     in
       if length l < 32 then
         DecodeRVC |> Thm.INST (fst (Term.match_term v16 tm)) |> REWRITE_RULE []
-                  |> MATCH_MP DecodeRVC_IMP_DecodeAny
+                  |> MATCH_MP DecodeRVC_IMP_DecodeAny |> UNDISCH
       else
         Decode |> Thm.INST (fst (Term.match_term v32 tm)) |> REWRITE_RULE []
                |> MATCH_MP Decode_IMP_DecodeAny
@@ -286,6 +286,45 @@ in
 end
 
 (* -------------------------------------------------------------------------
+   C extension
+   ------------------------------------------------------------------------- *)
+
+val rvc_tm = ``(^s.c_MCSR ^s.procID).mcpuid.C``
+
+local
+  val st = Term.mk_var ("st", ``:riscv_state``)
+  val rvc_pat = ``(^st.c_MCSR ^st.procID).mcpuid.C``
+  fun rvc_terms th =
+    Lib.op_mk_set aconv
+      (List.concat
+         (List.map (HolKernel.find_terms (Lib.can (Term.match_term rvc_pat)))
+            (Thm.hyp th)))
+  fun hyp_rule msg cs rwts th =
+    List.foldl
+      (fn (h, th) =>
+         if List.exists (fn c => Term.free_in c h) cs then
+           let
+             val eq = Conv.QCONV (REWRITE_CONV rwts) h
+             val h' = utilsLib.rhsc eq
+           in
+             if Feq h' then raise ERR "riscv_rvc_rule" msg
+             else if Teq h' then PROVE_HYP (EQ_MP (SYM eq) TRUTH) th
+             else PROVE_HYP (EQ_MP (SYM eq) (ASSUME h')) th
+           end
+         else th) th (Thm.hyp th)
+in
+  fun riscv_rvc_rule b th =
+    let
+      val cs = rvc_terms th
+      val rwts = List.map (fn c => ASSUME (if b then c else mk_neg c)) cs
+      val msg = if b then "requires the C extension to be disabled"
+                else "requires the C extension"
+    in
+      hyp_rule msg cs rwts th
+    end
+end
+
+(* -------------------------------------------------------------------------
    Evaluator
    ------------------------------------------------------------------------- *)
 
@@ -310,6 +349,9 @@ local
   val MP_Next_c = next riscv_stepTheory.NextRISCV_cond_branch
   val MP_Next_b = next riscv_stepTheory.NextRISCV_branch
   val Run_CONV = utilsLib.Run_CONV ("riscv", s) o utilsLib.rhsc
+  val inst_rvc = Thm.INST [Term.mk_var ("rvc", Type.bool) |-> rvc_tm]
+  fun tidy_up_rvc th =
+    if tmem rvc_tm (Thm.hyp th) then riscv_rvc_rule true th else th
   fun tidy_up_signalAddressException th =
     let
       val rw = UNDISCH avoid_signalAddressException
@@ -326,7 +368,7 @@ in
   fun riscv_step v =
     let
       val thm1 = fetch v
-      val thm2 = riscv_decode v |> SIMP_RULE std_ss []
+      val thm2 = riscv_decode v |> SIMP_RULE std_ss [] |> inst_rvc
       val new_s = thm1 |> concl |> rand |> rand
       val thm3 = fetch_inst (Drule.SPEC_ALL (Run_CONV thm2)) |> INST [s |-> new_s]
       val tm = utilsLib.rhsc thm3
@@ -338,11 +380,12 @@ in
       val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
       val tm = utilsLib.rhsc thm6
     in
-      if optionSyntax.is_none tm
-        then MP_Next_n thm
-      else if boolSyntax.is_cond tm
-        then MP_Next_c thm
-      else MP_Next_b thm
+      tidy_up_rvc
+        (if optionSyntax.is_none tm
+           then MP_Next_n thm
+         else if boolSyntax.is_cond tm
+           then MP_Next_c thm
+         else MP_Next_b thm)
     end
 end
 
