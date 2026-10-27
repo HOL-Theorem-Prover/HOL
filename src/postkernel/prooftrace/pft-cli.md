@@ -110,3 +110,15 @@ The producer checks each computation's exact equation before export. The
 selftest converts the same trace to both rulesets and emits `EXPECT` checks
 for Candle replay with its dependency traces. The source directory may differ
 from the producer directory, so the same input can test a converter change.
+
+The raw-parser regression is a separate executable:
+
+```sh
+bin/Holmake --poly_not_hol -C src/postkernel/prooftrace parser-selftest.exe
+```
+
+It uses `PolyML.exportSmall` to generate its inputs and the de Bruijn
+kernel layout, so automatic execution requires a tracing-kernel build
+with the exportSmall runtime. Stock Poly/ML does not provide that API.
+The portable reader/merger suite is `pft-selftest.exe` and continues to run
+for every supported kernel and ML implementation.

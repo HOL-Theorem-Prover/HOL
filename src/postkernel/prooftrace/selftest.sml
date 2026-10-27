@@ -1,243 +1,246 @@
-open testutilsBase
+local open ProofTraceParser in end
+structure P = ProofTraceParser
 
-val reader_files = ref ([] : string list)
-fun reader_temp () =
-  let val base = OS.FileSys.tmpName ()
-      val file = base ^ ".pft"
-      val () = if OS.FileSys.access(base, []) then
-                 OS.FileSys.remove base else ()
-  in reader_files := file :: !reader_files; file end
+fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
+fun tprint s = print (StringCvt.padRight #" " 60 s)
 
-fun reader_bytes file =
-  let val ins = BinIO.openIn file
-  in BinIO.inputAll ins before BinIO.closeIn ins end
+fun chk msg b = if b then () else raise Fail msg
+fun ieq msg n m =
+  chk (msg ^ ": expected " ^ Int.toString n ^ ", got " ^ Int.toString m)
+      (n = m)
+fun seq msg a b = chk (msg ^ ": expected " ^ a ^ ", got " ^ b) (a = b)
 
-fun reader_file bytes =
-  let val file = reader_temp ()
-      val out = BinIO.openOut file
-  in BinIO.output(out, bytes); BinIO.closeOut out; file end
+fun check name v f =
+  (tprint name;
+   let val (root, h) = P.parseVector (PolyML.exportSmall v)
+   in f h (P.castPtr root); print "OK\n" end
+   handle Fail s => die ("FAILED: " ^ s)
+        | e => die ("FAILED (exn): " ^ General.exnMessage e))
 
-fun reader_fail f = (f (); false) handle Fail _ => true
-fun reader_test name f =
-  (tprint name; if f () then OK () else die "unexpected reader result")
+fun view h w = P.any h (fn w => w) (P.castPtr w)
+fun vint msg n h w =
+  case view h w of
+    P.Int m => ieq msg n m
+  | _ => raise Fail (msg ^ ": not an Int")
 
-val dispatches = ref 0
-fun dispatched _ = dispatches := !dispatches + 1
-val reader_fh : PFTReader.format_handler =
-  {tyvar=dispatched, tyop=dispatched, var=dispatched,
-   const=dispatched, comb=dispatched, abs=dispatched,
-   new_const=dispatched, new_type=dispatched, axiom=dispatched,
-   save=dispatched, load=dispatched, del=dispatched, del_range=dispatched}
-val reader_rh : PFTReader.ruleset_handler = fn _ => dispatched
+(* ---------------------------------------------------------------------
+   Primitive encodings
+   --------------------------------------------------------------------- *)
 
-fun no_dispatch file =
-  (dispatches := 0;
-   reader_fail (fn () => ignore (PFTReader.read
-     {file=file, binary=true,
-      format_handler=reader_fh, ruleset_handler=reader_rh}))
-   andalso !dispatches = 0)
+val () = check "int 0" 0 (fn h => vint "v" 0 h)
+val () = check "int 1" 1 (fn h => vint "v" 1 h)
+val () = check "int ~1" ~1 (fn h => vint "v" ~1 h)
+val () = check "int 2^29" 536870912 (fn h => vint "v" 536870912 h)
+val () = check "int ~2^29" ~536870912 (fn h => vint "v" ~536870912 h)
+val () = check "bool false" false (fn h => vint "v" 0 h)
+val () = check "bool true" true (fn h => vint "v" 1 h)
+val () = check "unit" () (fn h => vint "v" 0 h)
+val () = check "char" #"A" (fn h => vint "v" 65 h)
 
-val reader_valid = reader_temp ()
-val reader_out = PFTWriter.openOut
-  {file=reader_valid, binary=true, version=1, ruleset="hol4"}
-val () = PFTWriter.new_type reader_out "pft_reader_contract$unused" 0
-val () = PFTWriter.closeOut reader_out {n_ty=0, n_tm=0, n_th=0, n_ci=0}
-val reader_data = reader_bytes reader_valid
+val () = List.app
+  (fn s => check ("string (len " ^ Int.toString (size s) ^ ")") s
+     (fn h => fn r => seq "v" s (P.str h (P.castPtr r))))
+  ["", "a", "1234567", "12345678", "123456789",
+   CharVector.tabulate (300, fn i => chr (ord #"a" + i mod 26))]
 
-fun reader_change index value = reader_file
-  (Word8Vector.tabulate(Word8Vector.length reader_data,
-     fn i => if i = index then value else Word8Vector.sub(reader_data,i)))
+val () = check "tuple2" (11, "ab") (fn h => fn r => let
+  val (a, b) = P.tuple2 h (P.int, P.str h) (P.castPtr r)
+  in ieq "fst" 11 a; seq "snd" "ab" b end)
 
-fun rejects_header file =
-  reader_fail (fn () => ignore (PFTReader.read_header
-    {file=file, binary=true})) andalso no_dispatch file
+val () = check "tuple3" (1, "x", 2) (fn h => fn r => let
+  val (a, (b, c)) = P.tuple3 h (P.int, P.str h, P.int) (P.castPtr r)
+  in ieq "1" 1 a; seq "2" "x" b; ieq "3" 2 c end)
 
-val () = reader_test "reader rejects bad magic before dispatch"
-  (fn () => rejects_header (reader_change 0 0w88))
-val () = reader_test "reader rejects version 0 before dispatch"
-  (fn () => rejects_header (reader_change 4 0w0))
-val () = reader_test "reader rejects version 2 before dispatch"
-  (fn () => rejects_header (reader_change 4 0w2))
-val () = reader_test "reader rejects unknown ruleset before dispatch"
-  (fn () => rejects_header (reader_change 6 0w120))
+val () = check "record field order" {B = 10, A = 20, AA = 30, a = 40}
+  (fn h => fn r => let
+    val (x1, (x2, (x3, x4))) =
+      P.tuple4 h (P.int, P.int, P.int, P.int) (P.castPtr r)
+  in ieq "A" 20 x1; ieq "B" 10 x2; ieq "a" 40 x3; ieq "AA" 30 x4 end)
 
-(* String-version headers belong to a different wire format. *)
-val semver_file = reader_file (Word8Vector.concat
-  [Byte.stringToBytes "PFT\000\0050.0.3\004hol4",
-   Word8VectorSlice.vector (Word8VectorSlice.slice(reader_data,10,NONE))])
-val () = reader_test "reader rejects string versions before dispatch"
-  (fn () => rejects_header semver_file)
+val () = check "list []" ([] : int list) (fn h => fn r =>
+  ieq "len" 0 (length (P.list h P.int (P.castPtr r))))
 
-val reader_size = Word8Vector.length reader_data
-val () = reader_test "reader rejects incorrect footer length before dispatch"
-  (fn () => no_dispatch (reader_change (reader_size-2) 0w4))
-val three_ns_file = reader_file (Word8Vector.concat
-  [Word8VectorSlice.vector
-     (Word8VectorSlice.slice(reader_data,0,SOME (reader_size-3))),
-   Word8Vector.fromList [0w4,0w0]])
-val () = reader_test "reader rejects three-namespace footer before dispatch"
-  (fn () => no_dispatch three_ns_file)
+val () = check "list [1,2,3]" [1, 2, 3] (fn h => fn r =>
+  chk "v" (P.list h P.int (P.castPtr r) = [1, 2, 3]))
 
-val candle_file = reader_temp ()
-val candle_out = PFTWriter.openOut
-  {file=candle_file, binary=true, version=1, ruleset="candle"}
-val rejected_type = {Thy="pft_reader_contract", Tyop="must_not_exist"}
-val () = PFTWriter.new_type candle_out
-  "pft_reader_contract$must_not_exist" 0
-val () = PFTWriter.closeOut candle_out {n_ty=0, n_tm=0, n_th=0, n_ci=0}
-val () = reader_test "HOL4 replay rejects Candle before kernel effects"
-  (fn () => Type.op_arity rejected_type = NONE andalso
-    reader_fail (fn () => ignore
-      (PFTReplay.replay PFTReplay.empty_trDB candle_file)) andalso
-    Type.op_arity rejected_type = NONE)
+val () = check "appList" [4, 5, 6] (fn h => fn r => let
+  val acc = ref 0
+  val () = P.appList h (fn w => acc := !acc + P.int w) (P.castPtr r)
+  in ieq "sum" 15 (!acc) end)
 
-val () = List.app OS.FileSys.remove (!reader_files)
+val () = check "option NONE" (NONE : int option) (fn h => fn r =>
+  chk "v" (not (isSome (P.option h P.int (P.castPtr r)))))
 
-val files = ref ([] : string list)
-fun temp () =
-  let val file = OS.FileSys.tmpName ()
-  in files := file :: !files; file end
+val () = check "option SOME" (SOME 5) (fn h => fn r =>
+  chk "v" (P.option h P.int (P.castPtr r) = SOME 5))
 
-fun cleanup () = List.app OS.FileSys.remove (!files)
+val () = check "HOLset empty" (HOLset.empty Int.compare) (fn h => fn r => let
+  val cnt = ref 0
+  val () = P.appSet h (fn _ => cnt := !cnt + 1) (P.castPtr r)
+  in ieq "count" 0 (!cnt) end)
 
-fun finish out = PFTWriter.closeOut out
-  {n_ty=4, n_tm=4, n_th=16, n_ci=4}
+val () = check "HOLset elements"
+  (HOLset.addList (HOLset.empty Int.compare, [5, 1, 9, 3, 7, 2, 8]))
+  (fn h => fn r => let
+    val sum = ref 0 and cnt = ref 0
+    val () = P.appSet h
+      (fn w => (sum := !sum + P.int w; cnt := !cnt + 1)) (P.castPtr r)
+  in ieq "sum" 35 (!sum); ieq "count" 7 (!cnt) end)
 
-fun output ruleset =
-  let val file = temp ()
-      val out = PFTWriter.openOut
-        {file=file, binary=true, version=1, ruleset=ruleset}
-  in (file, out) end
+(* ---------------------------------------------------------------------
+   Kernel types
+   --------------------------------------------------------------------- *)
 
-fun run_test name f =
-  (tprint name; if f () then OK () else die "unexpected result")
+(* Type.hol_type and Term.term are opaque under the Overlay, so the test
+   values are built directly from the underlying Type_dtype/KernelTypes
+   constructors; ids live behind opaque KernelSig and are cast. *)
+local
+  open Type_dtype KernelTypes
+  fun mkid thy nm e : id =
+    RunCall.unsafeCast {name = {Thy = thy, Name = nm}, epoch = e}
+  val alpha = Tyv "'a"
+  val bool = Tyapp ((mkid "min" "bool" 3, 0), [])
+in
+  val ty_alpha = alpha
+  val ty_bool = bool
+  val ty_fun = Tyapp ((mkid "min" "fun" 4, 2), [alpha, bool])
+  val va = Fv ("a", alpha)
+  val vb = Fv ("b", alpha)
+  val abs_tm = Abs (va, Bv 0)
+  val comb_tm = Comb (Abs (va, Bv 0), vb)
+  val const_tm = Const (mkid "min" "=" 7, POLY ty_fun)
+  val subs_id : term Subst.subs = Subst.id
+  val subs1 = Subst.cons (Subst.lift (2, Subst.shift (1, Subst.id)), va)
+  val clos_tm = Clos (subs1, va)
+end
 
-fun fails f = (f (); false) handle Fail _ => true
+fun chkty h msg thy nm ep nargs w =
+  case P.shType h (P.castPtr w) of
+    P.Tyapp (idp, args) => let
+      val (t, n, e) = P.ident h idp
+      in seq (msg ^ " Thy") thy t; seq (msg ^ " Name") nm n;
+         ieq (msg ^ " epoch") ep e;
+         ieq (msg ^ " args") nargs (length (P.list h (fn w => w) args))
+      end
+  | P.Tyv _ => raise Fail (msg ^ ": unexpected Tyv")
 
-(* Both implicit results must be retained when the second is referenced.
-   Anonymous exports are ordinary names for cross-file resolution. *)
-val (types_file, out) = output "candle"
-val () = PFTWriter.tyvar out 0 "'a"
-val () = PFTWriter.var out 0 "p" 0
-val () = PFTWriter.Candle.assume out 0 0
-val () = PFTWriter.Candle.new_type_definition out 1 0
-  "test_type" "test_abs" "test_rep"
-val () = PFTWriter.save out "types$FIRST" 1
-val () = PFTWriter.save out "types#0" 2
-val () = finish out
-val (uses_file, out) = output "candle"
-val () = PFTWriter.load out 0 "types$FIRST"
-val () = PFTWriter.load out 1 "types#0"
-val () = PFTWriter.Candle.trans out 2 0 1
-val () = PFTWriter.save out "uses$RESULT" 2
-val () = finish out
-val merged = temp ()
-val () = PFTMerge.merge
-  {inputs=[types_file, uses_file],
-   targets=[PFTMerge.ThyThm("uses", "RESULT", false)],
-   output=merged, binary=true}
+val () = check "shType Tyv" ty_alpha (fn h => fn r =>
+  case P.shType h (P.castPtr r) of
+    P.Tyv s => seq "name" "'a" s
+  | _ => raise Fail "not Tyv")
 
-val produced = ref ([] : int list)
-val consumed = ref ([] : int list)
-val loads = ref 0
-val saves = ref ([] : string list)
-val fh : PFTReader.format_handler =
-  {tyvar=fn _ => (), tyop=fn _ => (), var=fn _ => (),
-   const=fn _ => (), comb=fn _ => (), abs=fn _ => (),
-   new_const=fn _ => (), new_type=fn _ => (), axiom=fn _ => (),
-   save=fn (name,_) => saves := name :: !saves,
-   load=fn _ => loads := !loads + 1,
-   del=fn _ => (), del_range=fn _ => ()}
-val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
-  let val desc = PFTOpcodes.lookup_desc PFTOpcodes.candle_descs opc
-      val id = #readVarint sr ()
-      val args = PFTReader.read_raw_args desc sr
-  in if opc = 0x31 then produced := [id, id+1]
-     else if opc = 0x11 then
-       consumed := map (fn PFTOpcodes.VId n => n
-                         | _ => raise Fail "unexpected TRANS argument") args
-     else ()
-  end
-val _ = PFTReader.read {file=merged, binary=true,
-                        format_handler=fh, ruleset_handler=rh}
-val () = run_test "merge preserves both Candle type-definition results"
-  (fn () => length (!produced) = 2 andalso !produced = !consumed)
-val () = run_test "merge resolves named and anonymous LOADs"
-  (fn () => !loads = 0 andalso !saves = ["uses$RESULT"])
+val () = check "shType Tyapp/ident" ty_bool (fn h => fn r =>
+  chkty h "bool" "min" "bool" 3 0 r)
 
-val (wrong_ruleset, out) = output "hol4"
-val () = finish out
-val unchanged = temp ()
-val () = let val out = TextIO.openOut unchanged
-         in TextIO.output(out, "unchanged"); TextIO.closeOut out end
-fun unchanged_output () =
-  let val ins = TextIO.openIn unchanged
-  in TextIO.inputAll ins = "unchanged" before TextIO.closeIn ins end
-fun reject inputs =
-  fails (fn () => PFTMerge.merge
-    {inputs=inputs, targets=[PFTMerge.ThyThm("uses", "RESULT", false)],
-     output=unchanged, binary=true}) andalso unchanged_output ()
-val () = run_test "merge rejects mixed rulesets before opening output"
-  (fn () => reject [types_file, wrong_ruleset])
-val () = run_test "merge rejects incorrect dependency order before output"
-  (fn () => reject [uses_file, types_file])
+val () = check "shType fun" ty_fun
+  (fn h => fn r =>
+    case P.shType h (P.castPtr r) of
+      P.Tyapp (idp, args) => let
+        val (thy, nm, e) = P.ident h idp
+        val () = seq "Thy" "min" thy
+        val () = seq "Name" "fun" nm
+        val () = ieq "epoch" 4 e
+      in
+        case P.list h (fn w => w) args of
+          [_, rng] => chkty h "rng" "min" "bool" 3 0 rng
+        | _ => raise Fail "fun arity"
+      end
+    | _ => raise Fail "not Tyapp")
 
-val bad_version = temp ()
-val () = let
-  val ins = BinIO.openIn types_file
-  val bytes = BinIO.inputAll ins before BinIO.closeIn ins
-  val bytes = Word8Vector.tabulate(Word8Vector.length bytes,
-    fn i => if i = 4 then 0w2 else Word8Vector.sub(bytes, i))
-  val out = BinIO.openOut bad_version
-  in BinIO.output(out, bytes); BinIO.closeOut out end
-val () = run_test "merge rejects unsupported version before opening output"
-  (fn () => reject [bad_version])
+fun fvname h w =
+  case P.shTerm h (P.castPtr w) of
+    P.Fv (s, _) => s
+  | _ => raise Fail "not Fv"
 
-val (reused_file, out) = output "hol4"
-val () = PFTWriter.tyvar out 0 "'a"
-val () = PFTWriter.del out "ty" 0
-val () = PFTWriter.tyvar out 0 "'b"
-val () = finish out
-val () = run_test "merge explicitly rejects reused input IDs"
-  (fn () => reject [reused_file])
+val () = check "shTerm Fv" va (fn h => fn r =>
+  case P.shTerm h (P.castPtr r) of
+    P.Fv (s, ty) =>
+      (seq "name" "a" s;
+       case P.shType h ty of
+         P.Tyv v => seq "ty" "'a" v
+       | _ => raise Fail "Fv type")
+  | _ => raise Fail "not Fv")
 
-fun compute_file thy =
-  let val (file, out) = output "candle"
-  in PFTWriter.tyvar out 0 "'a";
-     PFTWriter.var out 0 "p" 0;
-     PFTWriter.Candle.assume out 0 0;
-     PFTWriter.Candle.compute_init out 0 [0];
-     PFTWriter.Candle.compute out 1 0 0 [];
-     PFTWriter.save out (thy ^ "$COMPUTED") 1;
-     finish out;
-     file
-  end
-val compute_a = compute_file "compute_a"
-val compute_b = compute_file "compute_b"
-val compute_merged = temp ()
-val () = PFTMerge.merge
-  {inputs=[compute_a, compute_b],
-   targets=[PFTMerge.ThyAll("compute_a", false),
-            PFTMerge.ThyAll("compute_b", false)],
-   output=compute_merged, binary=true}
-val init_ids = ref ([] : int list)
-val compute_ids = ref ([] : int list)
-val compute_rh : PFTReader.ruleset_handler = fn opc => fn sr =>
-  let val desc = PFTOpcodes.lookup_desc PFTOpcodes.candle_descs opc
-      val id = #readVarint sr ()
-      val args = PFTReader.read_raw_args desc sr
-  in if opc = 0x40 then init_ids := id :: !init_ids
-     else if opc = 0x41 then
-       (case args of PFTOpcodes.VId ci :: _ =>
-          compute_ids := ci :: !compute_ids
-        | _ => raise Fail "unexpected COMPUTE argument")
-     else ()
-  end
-val compute_limits = PFTReader.read
-  {file=compute_merged, binary=true,
-   format_handler=fh, ruleset_handler=compute_rh}
-val () = run_test "merge preserves distinct explicit compute contexts"
-  (fn () => !init_ids = [1,0] andalso !compute_ids = !init_ids andalso
-            #n_ci compute_limits = 2)
+val () = check "shTerm Abs/Bv" abs_tm (fn h => fn r =>
+  case P.shTerm h (P.castPtr r) of
+    P.Abs (bv, body) =>
+      (seq "bvar" "a" (fvname h bv);
+       case P.shTerm h body of
+         P.Bv i => ieq "body" 0 i
+       | _ => raise Fail "body not Bv")
+  | _ => raise Fail "not Abs")
 
-val () = cleanup ()
+val () = check "shTerm Comb" comb_tm
+  (fn h => fn r =>
+    case P.shTerm h (P.castPtr r) of
+      P.Comb (f, x) =>
+        ((case P.shTerm h f of P.Abs _ => ()
+                             | _ => raise Fail "rator not Abs");
+         seq "rand" "b" (fvname h x))
+    | _ => raise Fail "not Comb")
+
+val () = check "shTerm Const/ident" const_tm (fn h => fn r =>
+  case P.shTerm h (P.castPtr r) of
+    P.Const (idp, ty) => let
+      val (thy, nm, e) = P.ident h idp
+      in seq "Thy" "min" thy; seq "Name" "=" nm; ieq "epoch" 7 e;
+         chkty h "const ty" "min" "fun" 4 2 ty
+      end
+  | _ => raise Fail "not Const")
+
+val () = check "shSubs Id" subs_id
+  (fn h => fn r =>
+    case P.shSubs h (P.castPtr r) of
+      P.Id => ()
+    | _ => raise Fail "not Id")
+
+val () = check "shSubs Cons/Lift/Shift" subs1 (fn h => fn r =>
+  case P.shSubs h (P.castPtr r) of
+    P.Cons (sp, elt) =>
+      (seq "elt" "a" (fvname h elt);
+       case P.shSubs h sp of
+         P.Lift (n, sp2) =>
+           (ieq "Lift" 2 n;
+            case P.shSubs h sp2 of
+              P.Shift (m, sp3) =>
+                (ieq "Shift" 1 m;
+                 case P.shSubs h sp3 of
+                   P.Id => ()
+                 | _ => raise Fail "not Id")
+            | _ => raise Fail "not Shift")
+       | _ => raise Fail "not Lift")
+  | _ => raise Fail "not Cons")
+
+val () = check "shTerm Clos" clos_tm (fn h => fn r =>
+  case P.shTerm h (P.castPtr r) of
+    P.Clos (sp, tp) =>
+      (seq "body" "a" (fvname h tp);
+       case P.shSubs h sp of
+         P.Cons _ => ()
+       | _ => raise Fail "subs not Cons")
+  | _ => raise Fail "not Clos")
+
+val () = check "thmId SavedAnon" (Thm.SavedAnon 42) (fn h => fn r =>
+  chk "v" (P.thmId h (P.castPtr r) = Thm.SavedAnon 42))
+val () = check "thmId SavedName" (Thm.SavedName "foo") (fn h => fn r =>
+  chk "v" (P.thmId h (P.castPtr r) = Thm.SavedName "foo"))
+
+(* ---------------------------------------------------------------------
+   thminfo
+   --------------------------------------------------------------------- *)
+
+val () = check "thminfo private=true"
+  ({private = true, loc = RawTheory_dtype.Unknown,
+    class = RawTheory_dtype.Thm} : RawTheory_dtype.thminfo)
+  (fn h => fn r => chk "private" (#private (P.shThmInfo h (P.castPtr r))))
+
+val () = check "thminfo private=false"
+  ({private = false,
+    loc = RawTheory_dtype.Located
+            {scriptpath = "p", linenum = 3, exact = true},
+    class = RawTheory_dtype.Def} : RawTheory_dtype.thminfo)
+  (fn h => fn r =>
+    chk "private" (not (#private (P.shThmInfo h (P.castPtr r)))))
+
+
+val () = print "All prooftrace parser selftests passed\n"

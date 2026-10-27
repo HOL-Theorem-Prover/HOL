@@ -127,7 +127,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
                 else ()
 
   val {tm_defs, ty_defs, is_closed, get_const_id, get_type_id} =
-    ProofTraceWalk.walk_with_fv
+    ProofTraceWalk.walk
       {heap = heap, thyname = thyname,
        named_thms = all_thms, anon_thms = anon_thms,
        incr = K (), on_def_thm = K (),
@@ -551,8 +551,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
               id
            end
       end
-    | Tyapp (idp, args_ptr) => let
-        val (Thy, Tyop) = ident heap idp
+    | Tyapp (_, args_ptr) => let
+        val (Thy, Tyop) = get_type_id ty_ptr
         val () = check_def ty_defs Thy Tyop
         val arg_ids = list heap emit_type args_ptr
         val name = tr_name (Thy ^ "$" ^ Tyop)
@@ -642,8 +642,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
               id
            end
       end
-    | Const (idp, typ) => let
-        val (Thy, Name) = ident heap idp
+    | Const (_, typ) => let
+        val (Thy, Name) = get_const_id tm_ptr
         val () = check_def tm_defs Thy Name
         val ty_id = emit_type typ
         val qname = tr_name (Thy ^ "$" ^ Name)
@@ -1833,8 +1833,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
     case shTerm heap tm_ptr of
       Comb (rator_ptr, _) =>
         (case shTerm heap rator_ptr of
-           Const (id_ptr, _) =>
-             let val (thy, name) = ident heap id_ptr
+           Const _ =>
+             let val (thy, name) = get_const_id rator_ptr
              in thy = "arithmetic" andalso name = "NUMERAL" end
          | _ => false)
     | _ => false
@@ -1843,8 +1843,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
      Returns NONE if not a valid numeral bit pattern *)
   and numeral_value_of_bits tm_ptr : IntInf.int option =
     case shTerm heap tm_ptr of
-      Const (id_ptr, _) =>
-        let val (thy, name) = ident heap id_ptr
+      Const _ =>
+        let val (thy, name) = get_const_id tm_ptr
         in if (thy = "arithmetic" andalso name = "ZERO") orelse
               (thy = "num" andalso name = "0")
            then SOME 0
@@ -1852,8 +1852,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         end
     | Comb (rator_ptr, arg_ptr) =>
         (case shTerm heap rator_ptr of
-           Const (id_ptr, _) =>
-             let val (thy, name) = ident heap id_ptr
+           Const _ =>
+             let val (thy, name) = get_const_id rator_ptr
              in if thy = "arithmetic" then
                   case numeral_value_of_bits arg_ptr of
                     SOME n =>
@@ -1926,8 +1926,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
      Returns (candle_bits_id, xlate_th) where xlate_th: hol4_bits = candle_bits *)
   and translate_hol4_bits_to_candle bits_ptr : int * int =
     case shTerm heap bits_ptr of
-      Const (id_ptr, _) =>
-        let val (thy, name) = ident heap id_ptr
+      Const _ =>
+        let val (thy, name) = get_const_id bits_ptr
         in if (thy = "arithmetic" andalso name = "ZERO") orelse
               (thy = "num" andalso name = "0")
            then
@@ -1940,8 +1940,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         end
     | Comb (rator_ptr, arg_ptr) =>
         (case shTerm heap rator_ptr of
-           Const (id_ptr, _) =>
-             let val (thy, name) = ident heap id_ptr
+           Const _ =>
+             let val (thy, name) = get_const_id rator_ptr
              in if thy <> "arithmetic" then
                   raise Fail "translate_hol4_bits: unexpected rator"
                 else if name = "BIT1" then
@@ -2110,8 +2110,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
   (* Check if a heap term pointer is cv$Num (emitted as Cexp_num) *)
   and is_cv_num tm_ptr =
     case shTerm heap tm_ptr of
-      Const (id_ptr, _) =>
-        let val (thy, name) = ident heap id_ptr
+      Const _ =>
+        let val (thy, name) = get_const_id tm_ptr
         in thy = "cv" andalso name = "Num" end
     | _ => false
 
@@ -2119,15 +2119,15 @@ fun emit_theory {trace, output, binary, ruleset} = let
      without a NUMERAL wrapper.  These need BIT2→BIT0/BIT1 translation. *)
   and is_bare_bits_term tm_ptr =
     case shTerm heap tm_ptr of
-      Const (id_ptr, _) =>
-        let val (thy, name) = ident heap id_ptr
+      Const _ =>
+        let val (thy, name) = get_const_id tm_ptr
         in (thy = "arithmetic" andalso name = "ZERO") orelse
            (thy = "num" andalso name = "0")
         end
     | Comb (rator_ptr, _) =>
         (case shTerm heap rator_ptr of
-           Const (id_ptr, _) =>
-             let val (thy, name) = ident heap id_ptr
+           Const _ =>
+             let val (thy, name) = get_const_id rator_ptr
              in thy = "arithmetic" andalso
                   (name = "BIT1" orelse name = "BIT2")
              end

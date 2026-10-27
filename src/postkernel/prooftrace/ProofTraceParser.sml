@@ -66,9 +66,7 @@ fun is_32bit_magic raw =
 (* Parse: detects the magic byte, builds a ptrs vector with the right word
    size, and returns the appropriate heap variant. Both variants share the
    same public API — sh* functions dispatch internally. *)
-fun parse filename = let
-  val raw = decompressGzip filename
-in
+fun parseVector raw =
   if is_32bit_magic raw then let
     val vec = raw
     val root = Word8Vector.length vec - 4   (* last 4 bytes = root tagptr *)
@@ -91,7 +89,8 @@ in
     val () = process 0
     val rootPtr = get64 vec root
   in (rootPtr, Heap64 (vec, DArray.vector out)) end
-end
+
+fun parse filename = parseVector (decompressGzip filename)
 
 datatype flags = FBytes of int | FObj of int | FOther
 
@@ -263,7 +262,7 @@ fun str h w = let
   open Word8VectorSlice
   in Byte.bytesToString (vector (slice (vec, start + data_off + 8, SOME n))) end
 
-type ident = string * string
+type ident = string * string * int
 fun ident c w = let
   val (_, n) = obj c w
   val f = arg c w
@@ -274,7 +273,9 @@ fun ident c w = let
   val (_, n) = obj c name
   val () = if n = 2 then () else
     raise Fail "ProofTraceParser: invalid kernel name layout"
-in tuple2 c (str c, str c) name end
+in case tuple2 c (str c, str c) name of
+     (thy, nm) => (thy, nm, int (f 1))
+end
 
 fun thmId c w = case arg c w of f =>
   case f 0 of
