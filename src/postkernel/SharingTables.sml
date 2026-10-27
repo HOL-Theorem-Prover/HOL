@@ -354,10 +354,9 @@ fun add_types tys (SDI{strtable,idtable,tytable,tmtable,exp}) =
    All per-node storage is in byte arrays (32-bit entries), which the garbage
    collector does not scan. *)
 val share_subterms =
-    Term.raw_view_supported andalso
-    (case OS.Process.getEnv "HOL_SHARE_SUBTERMS" of
-         SOME "0" => false
-       | _ => true)
+    case OS.Process.getEnv "HOL_SHARE_SUBTERMS" of
+        SOME "0" => false
+      | _ => true
 
 val ref_len = 4        (* "%123" *)
 val entry_len = 13     (* "(ap 123 456)" and a separator *)
@@ -486,8 +485,8 @@ val lastty = ref (NONE : (hol_type * int) option)
 val tbl = PA.new ()        (* table index + 1, 0 = none *)
 val pids = PA.new () and psize = PA.new ()
 val top = ref 0
-(* original, normalised, base position *)
-val roots = ref ([] : (term * term * int) list)
+(* root and its base position *)
+val roots = ref ([] : (term * int) list)
 
 val abuckets = ref (Array.array (65536, [] : (term * int) list))
 
@@ -557,39 +556,27 @@ fun combid a b =
 fun absid tyi bi =
     hfind 1 tyi bi (fn () => newnode 3 tyi bi true)
 
-fun walkp t p =
-    case raw_view t of
-        RAtom => let val id = atomid t
-                 in PA.set pids p id; PA.set psize p 1; id end
-      | RBv j => let val id = bvid j
-                 in PA.set pids p id; PA.set psize p 1; id end
-      | RComb (f, x) =>
-        let
-          val a = walkp f (p + 1)
-          val sa = PA.get psize (p + 1)
-          val b = walkp x (p + 1 + sa)
-          val sb = PA.get psize (p + 1 + sa)
-          val id = combid a b
-        in PA.set pids p id; PA.set psize p (1 + sa + sb); id end
-      | RAbs (v, body) =>
-        let
-          val vid = atomid v   (* bound variables are atoms too *)
-          val _ = PA.set pids (p + 1) vid
-          val _ = PA.set psize (p + 1) 1
-          val tyi = typeid (type_of v)
-          val bi = walkp body (p + 2)
-          val sb = PA.get psize (p + 2)
-          val id = absid tyi bi
-        in PA.set pids p id; PA.set psize p (2 + sb); id end
+(* the callbacks of Term.raw_fold: each node records its id and the size of
+   its subtree at its position *)
+fun setp p id sz = (PA.set pids p id; PA.set psize p sz; id)
+val callbacks =
+    {atom = fn p => fn t => setp p (atomid t) 1,
+     bv = fn p => fn j => setp p (bvid j) 1,
+     comb = fn p => fn a => fn b =>
+               let val sa = PA.get psize (p + 1)
+                   val sb = PA.get psize (p + 1 + sa)
+               in setp p (combid a b) (1 + sa + sb) end,
+     abs = fn p => fn v => fn bi =>
+              setp p (absid (typeid (type_of v)) bi)
+                   (2 + PA.get psize (p + 2))}
 
 fun walk_root t =
     let
-      val nt = norm_clos t
       val base = !top
-      val id = walkp nt base
+      val id = Term.raw_fold callbacks base t
       val sz = PA.get psize base
     in
-      top := base + sz; roots := (t, nt, base) :: !roots; id
+      top := base + sz; roots := (t, base) :: !roots; id
     end
 
 fun add_terms tms sdi =
@@ -689,75 +676,19 @@ fun tblidx i = PA.get tbl i - 1
 fun pid p = PA.get pids p
 fun psz p = PA.get psize p
 
-datatype pptask = T of term * int | LAM | APP of int | S of string
-fun mkAPP [] = [APP 1]
-  | mkAPP (APP k :: rest) = APP (k + 1) :: rest
-  | mkAPP rest = APP 1 :: rest
-
-fun atomix p =
-    let val x = tblidx (pid p)
-    in if x < 0 then raise Fail "HC.write: atom not in table" else x end
-
-fun strip t p acc =
-    case raw_view t of
-        RComb (f, x) => strip f (p + 1) ((x, p + 1 + psz (p + 1)) :: acc)
-      | _ => (t, p, acc)
-
-fun pp acc tasks =
-    case tasks of
-        [] => String.concat (List.rev acc)
-      | T (t, p) :: rest =>
-        (case raw_view t of
-             RAbs (v, body) =>
-             pp acc (T (v, p + 1) :: T (body, p + 2) :: LAM :: rest)
-           | RBv i => pp ("$" ^ Int.toString i :: acc) rest
-           | RAtom => pp ("%" ^ Int.toString (atomix p) :: acc) rest
-           | RComb (rator, rand) =>
-             let val sh = tblidx (pid p)
-             in
-               if sh >= 0 then pp ("%" ^ Int.toString sh :: acc) rest
-               else
-                 let
-                   val rp = p + 1
-                   val xp = p + 1 + psz (p + 1)
-                   val (h, hp, args) = strip t p []
-                 in
-                   case raw_view h of
-                       RAbs _ =>
-                       pp acc (T (rator, rp) :: T (rand, xp) :: mkAPP rest)
-                     | hv =>
-                       let val (l1, l2, i) =
-                               case hv of RBv i => ("u", "b", i)
-                                        | _ => ("U", "B", atomix hp)
-                       in
-                         case args of
-                             [(x, q)] =>
-                             pp acc (T (x, q) ::
-                                     S (l1 ^ Int.toString i) :: rest)
-                           | [(x, q), (y, r)] =>
-                             pp acc (T (x, q) :: T (y, r) ::
-                                     S (l2 ^ Int.toString i) :: rest)
-                           | _ => pp acc (T (rator, rp) :: T (rand, xp) ::
-                                          mkAPP rest)
-                       end
-                 end
-             end)
-      | LAM :: rest => pp ("|" :: acc) rest
-      | APP k :: rest =>
-        pp ("@" ^ (if k = 1 then "" else Int.toString k) :: acc) rest
-      | S s :: rest => pp (s :: acc) rest
-
 fun write tm =
     let
-      val (nt, base) =
-          case List.find (fn (o', _, _) => Portable.pointer_eq (o', tm))
+      val base =
+          case List.find (fn (o', _) => Portable.pointer_eq (o', tm))
                          (!roots) of
-              SOME (_, nt, base) => (nt, base)
+              SOME (_, base) => base
             | NONE => (* not a root of any add_terms call: walk it now *)
               let val _ = walk_root tm
-                  val (_, nt, base) = hd (!roots)
-              in (nt, base) end
-    in pp [] [T (nt, base)] end
+                  val (_, base) = hd (!roots)
+              in base end
+      fun shared p = let val x = tblidx (pid p)
+                     in if x >= 0 then SOME x else NONE end
+    in Term.write_raw_at {shared = shared, size = psz} base tm end
 
 
 end (* HashCons *)
