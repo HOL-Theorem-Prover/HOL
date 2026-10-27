@@ -79,8 +79,9 @@ The header specifies:
 The footer declares array bounds: one plus the largest assigned ID in each
 namespace, or zero for an unused namespace. It contains four counts for types,
 terms, theorems, and compute contexts respectively. These bounds can exceed
-the peak number of live objects: the current emitter and merger allocate IDs
-monotonically.
+the peak number of live objects: the emitter allocates IDs monotonically,
+and the merger's reusable slots may be fragmented when a command needs
+consecutive result IDs.
 
 A replayer can use these to pre-allocate fixed-size arrays. The footer is
 placed at the end so that a producer can emit commands in a single pass

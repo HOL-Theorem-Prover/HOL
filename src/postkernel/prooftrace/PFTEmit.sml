@@ -1377,7 +1377,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
               (rev acc_v, rev acc_body, body)
           | strip_exists k tm_id acc_v acc_body =
               let val (_, pred) = pft_dest_comb tm_id
-                  val (v, body) = pft_dest_abs pred
+                  val (old_v, old_body) = pft_dest_abs pred
+                  (* Distinguish each removed binder from shadowing binders
+                     still inside the body and from the other existentials. *)
+                  val v = emit_binder "w" (pft_type_of old_v)
+                  val body = pft_rename_free old_v v old_body
               in strip_exists (k-1) body (v::acc_v) (body::acc_body) end
         val (vs, bodies, body_raw) =
               strip_exists n input_concl_id [] []
@@ -1397,7 +1401,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         (* Phase 1a: build each W_i by substituting earlier W_j's into body_i. *)
         fun mk_witness (v_id, v_ty, body_i, prev_vw) = let
               val body_c =
-                List.foldl (fn ((vj, wj), t) => pft_subst_tm vj wj t)
+                List.foldl (fn ((vj, wj), t) => pft_rename_free vj wj t)
                            body_i prev_vw
               val pred_c = emit_abs v_id body_c
               val Ab = emit_tyop "fun" [v_ty, bool_tyid]
@@ -1444,7 +1448,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
                                 [v_ty, emit_tyop "fun" [v_ty, bool_tyid]]
                   val eq_tm = emit_comb
                                 (emit_comb (emit_const "=" eq_ty) c_var) w_i
-                in (v_id, c_sym (c_assume eq_tm)) end)
+                in (v_id, eq_tm, c_sym (c_assume eq_tm)) end)
             (ListPair.zipEq (wdata, cvt))
 
         (* Phase 3: congruence walk over body_raw.
@@ -1453,39 +1457,29 @@ fun emit_theory {trace, output, binary, ruleset} = let
            we recurse structurally.  No memoization: bodies are small
            in practice; if profiling shows it matters, memoize on tm_id. *)
         fun cong tm_id =
-          case List.find (fn (v, _) => v = tm_id) v_eqs of
-            SOME (_, eq_i) => eq_i
+          case List.find (fn (v, _, _) => v = tm_id) v_eqs of
+            SOME (_, _, eq_i) => eq_i
           | NONE => let
               val f = tm_part1_of tm_id
             in if f < 0 then c_refl tm_id  (* VAR or CONST, not a v_i *)
                else let val x = tm_part2_of tm_id
                in if isSome (IntPairTable.lookup comb_ht (f, x))
                   then c_mk_comb (cong f) (cong x)
-                  else c_abs f (cong x)   (* ABS f x *)
+                  else let
+                    (* The constant-named variables are free in the
+                       defining hypotheses, even beneath a source binder
+                       with the same name. Freshen before ABS_THM. *)
+                    val v = emit_binder "v" (pft_type_of f)
+                  in c_abs v (cong (pft_rename_free f v x)) end
                end
             end
 
-        (* Sanity: every v_i must occur free in body_raw, else the
-           corresponding hypothesis would be missing from final_th and
-           new_specification would reject (or accept a malformed input). *)
-        fun occurs_free v_id tm_id =
-            tm_id = v_id orelse
-            (let val f = tm_part1_of tm_id
-             in f >= 0 andalso
-                  let val x = tm_part2_of tm_id
-                  in if isSome (IntPairTable.lookup comb_ht (f, x))
-                     then occurs_free v_id f orelse occurs_free v_id x
-                     else f <> v_id andalso occurs_free v_id x
-                  end
-             end)
-        val () = List.app
-          (fn (v_id, _) =>
-             if occurs_free v_id body_raw then ()
-             else raise Fail ("Def_spec_prf: some v_i does not appear "
-                    ^ "free in body; cannot form required hypothesis"))
-          v_eqs
-
-        val final_th = c_eq_mp (cong body_raw) th_closed
+        val body_th = c_eq_mp (cong body_raw) th_closed
+        (* A vacuous existential still introduces its constant. Keep its
+           defining hypothesis even if congruence never used that variable. *)
+        val final_th = List.foldl (fn ((_, eq_tm, _), th) => let
+          val assumption = c_assume eq_tm
+        in c_eq_mp (c_deduct assumption th) assumption end) body_th v_eqs
       in PFTWriter.Candle.new_specification out result_id final_th cnames;
          result_id
       end
@@ -2223,6 +2217,49 @@ fun emit_theory {trace, output, binary, ruleset} = let
   (* Theorem emission                                                        *)
   (* ======================================================================= *)
 
+  and emit_axiom id hyps_ptr concl_ptr name = let
+    val hyps = ref []
+    val () = appSet heap (fn p => hyps := emit_term p :: !hyps) hyps_ptr
+    val concl = emit_term concl_ptr
+    val () = case !hyps of
+       [] => PFTWriter.axiom out id concl name
+     | hs => let
+         (* AXIOM carries a closed proposition. Discharge the oracle's
+            hypotheses there, then restore them with assumptions and MP. *)
+         val bool_ty = emit_tyop (tr_name "min$bool") []
+         val bool_fun = emit_tyop fun_tyname [bool_ty, bool_ty]
+         val imp = emit_const (tr_name "min$==>")
+                     (emit_tyop fun_tyname [bool_ty, bool_fun])
+         val (closed, steps) = List.foldr
+           (fn (h, (c, steps)) =>
+             (emit_comb (emit_comb imp h) c, (h, c) :: steps))
+           (concl, []) hs
+         val ax = alloc_th ()
+         val () = PFTWriter.axiom out ax closed name
+         fun apply [] th = ()
+           | apply ((h, c) :: rest) th = let
+               val result = if null rest then id else alloc_th ()
+               val asm = alloc_th ()
+               val () = if is_candle then let
+                   val p = emit_var "p" bool_ty
+                   val q = emit_var "q" bool_ty
+                   val mp = alloc_th ()
+                   val tmp = alloc_th ()
+                   val pth = candle_load_pth "candle$MP_HYP"
+                 in
+                   PFTWriter.Candle.assume out asm h;
+                   PFTWriter.Candle.inst out mp pth [(p, h), (q, c)];
+                   PFTWriter.Candle.prove_hyp out tmp th mp;
+                   PFTWriter.Candle.prove_hyp out result asm tmp
+                 end
+                 else (PFTWriter.HOL4.assume out asm h;
+                       PFTWriter.HOL4.mp out result th asm)
+             in apply rest result end
+       in apply steps ax end
+  in
+    if !emit_expect then PFTWriter.expect out id (!hyps) concl else ()
+  end
+
   and emit_thm (thm_ptr : Thm.thm ptr) : int =
     if not (isPtr thm_ptr) then raise Fail "emit_thm: not a ptr"
     else let val k = ptr thm_ptr
@@ -2258,9 +2295,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
            Axiom_prf => let
              val name = (SOME (PIntMap.find k axiom_name_map))
                         handle PIntMap.NotFound => NONE
+             val has_hyps = ref false
+             val () = appSet heap (fn _ => has_hyps := true) hyps_ptr
              (* In boolTheory, some axioms are already in the preamble *)
              val preamble_name =
-               if thyname = "bool" then
+               if thyname = "bool" andalso not (!has_hyps) then
                  case name of
                    SOME n => List.find (fn (k,_) => k = n)
                                candle_preamble_axiom
@@ -2269,9 +2308,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
            in case preamble_name of
                 SOME (_, load_name) =>
                   (PFTWriter.load out id load_name; id)
-              | NONE => let
-                  val c = emit_term concl_ptr
-                in PFTWriter.axiom out id c name; id end
+              | NONE => (emit_axiom id hyps_ptr concl_ptr name; id)
            end
          | Disk_prf (dep_thy, b) => let
              val dep_id = thmId heap b
@@ -2296,10 +2333,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
        in
          case proof of
            Axiom_prf => let
-             val c = emit_term concl_ptr
              val name = (SOME (PIntMap.find k axiom_name_map))
                         handle PIntMap.NotFound => NONE
-           in PFTWriter.axiom out id c name end
+           in emit_axiom id hyps_ptr concl_ptr name end
          | Disk_prf (dep_thy, b) => let
              val dep_id = thmId heap b
              val save_name = disk_save_name dep_thy dep_id
@@ -2425,9 +2461,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
           | TRANS_prf (a, b) => let val a = emit_thm a val b = emit_thm b
               in PFTWriter.HOL4.trans out id a b end
           | compute_prf (a, b) => emit_compute id (tuple2 heap (I, I) a, b)
-          | deductAntisym_prf (a, b) => let
-              val a = emit_thm a val b = emit_thm b
-            in PFTWriter.HOL4.deductAntisym out id a b end
+          | deductAntisym_prf _ =>
+              raise Fail "PFTEmit: HOL4 deductAntisym replay unsupported"
           | deleted_prf => raise Fail "emit_thm: deleted"
           | Mark_prf _ => raise Fail "unreachable"
           | Exported_prf _ =>
@@ -2533,41 +2568,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
          id
       end
 
-  (* Substitute old_id -> new_id in a PFT term, rebuilding via emit_comb/
-     emit_abs.  Distinguishes COMB from ABS by checking comb_ht: all COMBs
-     (heap and synthesised) are registered there; ABSs never are. *)
-  and pft_subst_tm old_id new_id tm_id =
-    let
-      (* Local memo for this substitution only.  old_id and new_id are fixed
-         throughout the call, so tm_id alone is a complete key.  PFT terms are
-         DAGs; without memoization, shared subterms can be revisited
-         catastrophically even though emit_comb/emit_abs hash-cons the rebuilt
-         result.  The table is discarded when this substitution finishes, so
-         memory is bounded by the number of distinct reachable PFT nodes. *)
-      val memo : int PIntMap.t ref = ref PIntMap.empty
-      fun go t =
-        case (SOME (PIntMap.find t (!memo)) handle PIntMap.NotFound => NONE) of
-          SOME r => r
-        | NONE => let
-            val r =
-              if t = old_id then new_id
-              else let val f = tm_part1_of t
-              in if f < 0 then t (* VAR or CONST — no children *)
-                 else let val x = tm_part2_of t
-                          val f' = go f
-                          val x' = go x
-                      in if f' = f andalso x' = x then t
-                         else case IntPairTable.lookup comb_ht (f, x) of
-                                SOME _ => emit_comb f' x'
-                              | NONE   => emit_abs f' x'
-                      end
-              end
-            val () = memo := PIntMap.add t r (!memo)
-          in r end
-    in go tm_id end
-
-  (* Like pft_subst_tm but only substitutes free occurrences of old_id.
-     Tracks shadowing when entering ABS nodes. *)
+  (* Substitute free occurrences only. The replacement is fresh or closed,
+     so it cannot be captured by a binder in the original term. *)
   and pft_rename_free old_id new_id tm_id = let
     (* Local memos for this rename only.  The result depends on tm_id and on
        whether old_id is shadowed by an enclosing binder, so keep separate

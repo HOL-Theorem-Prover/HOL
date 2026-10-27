@@ -309,6 +309,10 @@ New tools
     before replay; side-file exported proofs remain unsupported.
     Target merging indexes all inputs but loads full command metadata only
     for reached files, while retaining validation of unselected inputs.
+    It reuses output IDs after their final use and rejects output paths
+    aliasing an input. Conversion preserves oracle hypotheses through
+    conditional axioms and checked inference steps. HOL conversion explicitly
+    rejects `deductAntisym`, which its portable replayer does not support.
 
 
 New examples

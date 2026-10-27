@@ -69,10 +69,12 @@ Single quotes around `theory$THEOREM` prevent shell variable expansion.
 Repeated `--input FILE` arguments supply the order directly. `--order`
 expands at its position among those arguments. The merger discards exports
 and proof steps unreachable from the selected targets, eliminates
-cross-file SAVE/LOAD pairs, and writes a new trace with monotonic IDs and
-fresh deletion commands. It preserves the two consecutive results of a
-Candle type definition. Input files that reuse an ID after deletion are
-rejected; live-ID allocation and compaction are separate work.
+cross-file SAVE/LOAD pairs, and reuses output IDs after their final use,
+with fresh deletion commands. Exports remain live until their final SAVE,
+including uses through imported aliases. It preserves the two consecutive
+results of a Candle type definition. Input files that reuse an ID after
+deletion are rejected. An output that aliases an input is rejected before
+opening it.
 
 ## Limits
 
@@ -81,11 +83,19 @@ constructor layouts, in either TR32 or 64-bit heap encoding. The historical
 reference-based kernel identifier layout is rejected. The theory name comes
 from the dump's metadata, not its filename.
 
+HOL4 conversion rejects `deductAntisym`: the portable HOL replayer lacks
+that rule. Candle conversion supports it.
+
 `Exported` side-file proofs and deleted proofs (including tracing gaps) are
 unsupported and fail conversion. No missing proof is replaced by an axiom.
 The AXIOM instruction is nevertheless part of both rulesets; callers must
 state their axiom policy and check target hypotheses and conclusions. This
 command is not a strict certificate-policy checker.
+
+For an oracle with hypotheses, conversion asserts the corresponding
+conditional proposition and restores the hypotheses with checked inference
+steps. It does not assert the conclusion unconditionally. Axiom policies
+must account for these conditional oracle obligations.
 
 Debug EXPECT records are accepted by Candle but not by the HOL reader or
 merger. The CLI emits the supported binary stream without these records.

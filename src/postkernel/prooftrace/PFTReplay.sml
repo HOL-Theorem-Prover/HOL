@@ -244,7 +244,7 @@ fun replay (db: trDB) file = let
       set_th (id, CCONTR (get_tm tm) (get_th th)),
 
     deductAntisym = fn _ =>
-      raise Fail "PFTReplay: deductAntisym not implemented",
+      raise Fail "PFTReplay: deductAntisym unsupported",
 
     conj = fn (id, a, b) =>
       set_th (id, CONJ (get_th a) (get_th b)),
