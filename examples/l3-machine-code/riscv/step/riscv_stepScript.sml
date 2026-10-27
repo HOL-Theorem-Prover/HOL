@@ -570,6 +570,7 @@ val s = ``s:riscv_state``
 val rd0 = ``rd = 0w: word5``
 val bare = ``(^s.c_MCSR ^s.procID).mstatus.VM = 0w``
 val archbase = ``(^s.c_MCSR ^s.procID).mcpuid.ArchBase``
+val rvc = ``(^s.c_MCSR ^s.procID).mcpuid.C``
 val shift = ``~((^archbase = 0w) /\ word_bit 5n (imm: word6))``
 val aligned = ``aligned 2 (^s.c_PC ^s.procID)``
 val aligned_d =
@@ -631,6 +632,8 @@ val translateAddr = EV
 val in32BitMode = EV
   [in32BitMode_def, curArch_def, MCSR_def, architecture_def, not1] [] []
   ``in32BitMode()``
+
+val haveRVC = EV [haveRVC_def, MCSR_def] [] [] ``haveRVC()``
 
 val PC = EV [PC_def] [] [] ``PC``
 
@@ -795,7 +798,7 @@ val rawWriteData1 = REWRITE_RULE [thm] rawWriteData1
 
 local
   val l =
-    [GPR, in32BitMode, PC, wordsTheory.word_len_def,
+    [GPR, in32BitMode, haveRVC, PC, wordsTheory.word_len_def,
      branchTo, translateAddr, jal, jalr, aligned2,
      aligned_select_word_s, aligned_select_word_z, select_word,
      aligned_select_half_s, aligned_select_half_z, select_half,
@@ -885,10 +888,10 @@ val REMW   = arithr [[``^archbase <> 0w``]] "REMW"
 val DIVUW  = arithr [[``^archbase <> 0w``]] "DIVUW"
 val REMUW  = arithr [[``^archbase <> 0w``]] "REMUW"
 
-val JAL  = class_rd0 `(rd, imm)` [] "JAL"
-val JALR = class_rd0 `(rd, rs1, imm)` [] "JALR"
+val JAL  = class_rd0 `(rd, imm)` [[rvc]] "JAL"
+val JALR = class_rd0 `(rd, rs1, imm)` [[rvc]] "JALR"
 
-val cbranch = class `(rs1, rs2, offs)` []
+val cbranch = class `(rs1, rs2, offs)` [[rvc]]
 
 val BEQ  = cbranch "BEQ"
 val BNE  = cbranch "BNE"

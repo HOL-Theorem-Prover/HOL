@@ -59,11 +59,12 @@ Definition riscv_ID_PC_def:
 End
 
 (* ------------------------------------------------------------------------
-   Specialize to RV64I, core 0
+   Specialize to RV64I with the C extension, core 0
    ------------------------------------------------------------------------ *)
 
 Definition riscv_RV64I_def:
-  riscv_RV64I mcsr = cond (mcsr.mcpuid.ArchBase = 2w) * riscv_ID 0w mcsr
+  riscv_RV64I mcsr =
+  cond (mcsr.mcpuid.ArchBase = 2w) * cond mcsr.mcpuid.C * riscv_ID 0w mcsr
 End
 
 Definition riscv_REG_def:  riscv_REG  = riscv_c_gpr 0w
