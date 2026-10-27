@@ -236,9 +236,9 @@ val compute_rh : PFTReader.ruleset_handler = fn opc => fn sr =>
 val compute_limits = PFTReader.read
   {file=compute_merged, binary=true,
    format_handler=fh, ruleset_handler=compute_rh}
-val () = run_test "merge preserves distinct explicit compute contexts"
-  (fn () => !init_ids = [1,0] andalso !compute_ids = !init_ids andalso
-            #n_ci compute_limits = 2)
+val () = run_test "merge reuses sequential explicit compute contexts"
+  (fn () => !init_ids = [0,0] andalso !compute_ids = !init_ids andalso
+            #n_ci compute_limits = 1)
 
 val (unused_file, out) = output "candle"
 val () = PFTWriter.tyvar out 0 "'a"
@@ -313,5 +313,277 @@ val () = run_test
   "merge validates compute context references in unselected files"
   (fn () => reject_unused "PFTMerge: missing or forward reference to ci#1"
                          unused_compute)
+
+(* Every reference in merged output must name a live slot. A write over a
+   live object or a second DEL is as invalid as a read after DEL. *)
+fun monitor file =
+  let
+    fun compare ((ns, id), (ns', id')) =
+      case String.compare(ns, ns') of
+        EQUAL => Int.compare(id, id') | ord => ord
+    val live = ref (Redblackmap.mkDict compare)
+    val seen = ref (Redblackmap.mkDict compare)
+    val dels = ref 0
+    val reuses = ref 0
+    fun read ns id =
+      if isSome (Redblackmap.peek(!live, (ns, id))) then ()
+      else raise Fail ("read dead " ^ ns ^ "#" ^ Int.toString id)
+    fun write ns id =
+      if isSome (Redblackmap.peek(!live, (ns, id))) then
+        raise Fail ("overwrite live " ^ ns ^ "#" ^ Int.toString id)
+      else (if isSome (Redblackmap.peek(!seen, (ns, id))) then
+              reuses := !reuses + 1 else ();
+            seen := Redblackmap.insert(!seen, (ns, id), ());
+            live := Redblackmap.insert(!live, (ns, id), ()))
+    fun del (ns, id) =
+      (read ns id; live := #1 (Redblackmap.remove(!live, (ns, id)));
+       dels := !dels + 1)
+    val fh : PFTReader.format_handler =
+      {tyvar=fn (id,_) => write "ty" id,
+       tyop=fn (id,_,args) =>
+         (List.app (read "ty") args; write "ty" id),
+       var=fn (id,_,ty) => (read "ty" ty; write "tm" id),
+       const=fn (id,_,ty) => (read "ty" ty; write "tm" id),
+       comb=fn (id,a,b) =>
+         (read "tm" a; read "tm" b; write "tm" id),
+       abs=fn (id,a,b) =>
+         (read "tm" a; read "tm" b; write "tm" id),
+       new_const=fn (_,ty) => read "ty" ty,
+       new_type=fn _ => (),
+       axiom=fn (id,tm,_) => (read "tm" tm; write "th" id),
+       save=fn (_,id) => read "th" id,
+       load=fn _ => raise Fail "LOAD in merged output",
+       del=del,
+       del_range=fn _ => raise Fail "source DEL_RANGE in merged output"}
+    val {ruleset,...} = PFTReader.read_header {file=file,binary=true}
+    val descs = PFTOpcodes.descs_for_ruleset ruleset
+    fun arg ({shape,...}: PFTOpcodes.arg_spec, value) =
+      let open PFTOpcodes
+      in case (shape,value) of
+           (AId ns,VId id) => read ns id
+         | (AIdList ns,VIdList ids) => List.app (read ns) ids
+         | (AIdPairs (ns,ns'),VIdPairs ids) =>
+             List.app (fn (a,b) => (read ns a; read ns' b)) ids
+         | (AStrIdPairs ns,VStrIdPairs ids) =>
+             List.app (fn (_,id) => read ns id) ids
+         | _ => ()
+      end
+    val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
+      let val desc = PFTOpcodes.lookup_desc descs opc
+          val id = #readVarint sr ()
+          val args = PFTReader.read_raw_args desc sr
+      in ListPair.app arg (#args desc, args);
+         ignore (List.foldl (fn (ns,i) => (write ns (id+i); i+1))
+                   0 (#results desc))
+      end
+    val limits = PFTReader.read
+      {file=file,binary=true,format_handler=fh,ruleset_handler=rh}
+  in if Redblackmap.isEmpty (!live) then
+       {limits=limits, dels= !dels, reuses= !reuses}
+     else raise Fail "merged slots still live after tail SAVEs"
+  end
+
+val () = run_test "merge releases all four namespaces after final uses"
+  (fn () => let val {limits,reuses,...} = monitor compute_merged
+            in #n_ty limits = 1 andalso #n_tm limits = 1 andalso
+               #n_ci limits = 1 andalso reuses > 0 andalso
+               #dels (monitor merged) > 0
+            end)
+
+val (concurrent_compute,out) = output "candle"
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.var out 0 "p" 0
+val () = PFTWriter.Candle.assume out 0 0
+val () = PFTWriter.Candle.compute_init out 0 [0]
+val () = PFTWriter.Candle.compute_init out 1 [0]
+val () = PFTWriter.Candle.compute out 1 0 0 []
+val () = PFTWriter.Candle.compute out 2 1 0 []
+val () = PFTWriter.save out "concurrent$FIRST" 1
+val () = PFTWriter.save out "concurrent$SECOND" 2
+val () = finish out
+val concurrent_merged = temp ()
+val () = PFTMerge.merge
+  {inputs=[concurrent_compute],targets=[PFTMerge.ThyAll("concurrent",false)],
+   output=concurrent_merged,binary=true}
+val () = init_ids := []
+val () = compute_ids := []
+val _ = PFTReader.read {file=concurrent_merged,binary=true,
+  format_handler=fh,ruleset_handler=compute_rh}
+val () = run_test "merge keeps concurrently live compute contexts distinct"
+  (fn () => !init_ids = [1,0] andalso !compute_ids = !init_ids andalso
+            #n_ci (#limits (monitor concurrent_merged)) = 2)
+
+fun replay_temp () =
+  let val file = temp () ^ ".pft"
+  in files := file :: !files; file end
+fun replay_output () =
+  let val file = replay_temp ()
+  in (file, PFTWriter.openOut
+       {file=file,binary=true,version=1,ruleset="hol4"})
+  end
+fun exact_export left right key =
+  case (PFTReplay.lookup left key, PFTReplay.lookup right key) of
+    (SOME a, SOME b) =>
+      Term.aconv (Thm.concl a) (Thm.concl b) andalso
+      ListPair.allEq (fn (x,y) => Term.aconv x y) (Thm.hyp a, Thm.hyp b)
+  | _ => false
+fun replay_files inputs =
+  List.foldl (fn (file, db) => PFTReplay.replay db file)
+             PFTReplay.empty_trDB inputs
+
+fun chain n =
+  let val (file, out) = replay_output ()
+      val () = PFTWriter.tyvar out 0 "'a"
+      val () = PFTWriter.var out 0 "x" 0
+      val () = PFTWriter.HOL4.refl out 0 0
+      fun go i = if i > n then () else
+        (PFTWriter.HOL4.sym out i (i-1); go (i+1))
+      val () = go 1
+      val () = PFTWriter.save out "chain$RESULT" n
+      val () = PFTWriter.closeOut out
+        {n_ty=1,n_tm=1,n_th=n+1,n_ci=0}
+      val merged = replay_temp ()
+      val () = PFTMerge.merge
+        {inputs=[file],targets=[PFTMerge.ThyAll("chain",false)],
+         output=merged,binary=true}
+      val {limits,dels,reuses} = monitor merged
+  in #n_th limits = 2 andalso dels = n+3 andalso reuses = n-1 andalso
+     exact_export (replay_files [file]) (replay_files [merged])
+                  "chain$RESULT"
+  end
+val () = run_test "merge theorem highwater plateaus along retained chains"
+  (fn () => chain 8 andalso chain 128)
+
+val (alias_a, out) = replay_output ()
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.var out 0 "x" 0
+val () = PFTWriter.HOL4.refl out 0 0
+val () = PFTWriter.save out "alias_a$SOURCE" 0
+val () = finish out
+val (alias_b, out) = replay_output ()
+val () = PFTWriter.load out 0 "alias_a$SOURCE"
+val () = PFTWriter.load out 1 "alias_a$SOURCE"
+val () = PFTWriter.HOL4.trans out 2 0 0
+val () = PFTWriter.HOL4.sym out 3 2
+val () = PFTWriter.HOL4.trans out 4 1 3
+val () = PFTWriter.HOL4.trans out 5 0 4
+val () = PFTWriter.HOL4.trans out 6 1 5
+val () = PFTWriter.save out "alias_b$RESULT" 6
+val () = finish out
+val (alias_c, out) = replay_output ()
+val () = PFTWriter.load out 0 "alias_b$RESULT"
+val () = PFTWriter.save out "alias_c$RESULT" 0
+val () = finish out
+val (alias_d, out) = replay_output ()
+val () = PFTWriter.load out 0 "alias_c$RESULT"
+val () = PFTWriter.HOL4.sym out 1 0
+val () = PFTWriter.save out "alias_d$RESULT" 1
+val () = finish out
+val alias_inputs = [alias_a,alias_b,alias_c,alias_d]
+val alias_db = replay_files alias_inputs
+fun alias_merge pin =
+  let val merged = replay_temp ()
+      val targets = PFTMerge.ThyAll("alias_d",false) ::
+        (if pin then [PFTMerge.ThyAll("alias_a",false)] else [])
+      val () = PFTMerge.merge
+        {inputs=alias_inputs,targets=targets,output=merged,binary=true}
+      val {reuses,...} = monitor merged
+      val db = replay_files [merged]
+  in reuses > 0 andalso exact_export alias_db db "alias_d$RESULT" andalso
+     (not pin orelse exact_export alias_db db "alias_a$SOURCE")
+  end
+val () = run_test "merge aliases share lifetime across repeated uses and files"
+  (fn () => alias_merge false andalso alias_merge true)
+
+val (deduct_file,out) = replay_output ()
+val () = PFTWriter.tyop out 0 "min$bool" []
+val () = PFTWriter.var out 0 "p" 0
+val () = PFTWriter.var out 1 "q" 0
+val () = PFTWriter.HOL4.assume out 0 0
+val () = PFTWriter.HOL4.assume out 1 1
+val () = PFTWriter.save out "deduct$EARLIER" 0
+val () = PFTWriter.HOL4.deductAntisym out 2 0 1
+val () = PFTWriter.save out "deduct$UNSUPPORTED" 2
+val () = finish out
+val () = run_test "HOL4 replay explicitly rejects unsupported deductAntisym"
+  (fn () =>
+    let val rejected =
+          ((ignore (PFTReplay.replay alias_db deduct_file); false)
+           handle Fail message =>
+             message = "PFTReplay: deductAntisym unsupported")
+    in rejected andalso
+       exact_export alias_db (replay_files alias_inputs) "alias_d$RESULT" andalso
+       not (isSome (PFTReplay.lookup alias_db "deduct$EARLIER")) andalso
+       not (isSome (PFTReplay.lookup alias_db "deduct$UNSUPPORTED"))
+    end)
+
+(* Descriptor-only fixture: alternating first/second retained results leaves
+   unused siblings to DEL. Real definition witnesses are checked in replay. *)
+fun implicit_chain save_defs =
+  let val (file,out) = output "candle"
+      val () = PFTWriter.tyvar out 0 "'a"
+      val () = PFTWriter.var out 0 "witness" 0
+      val () = PFTWriter.Candle.assume out 0 0
+      fun go i = if i = 8 then () else
+        let val base = 1 + 2*i
+            val witness = if i = 0 then 0
+                          else 1 + 2*(i-1) + ((i-1) mod 2)
+        in PFTWriter.Candle.new_type_definition out base witness
+             ("reuse_type" ^ Int.toString i)
+             ("reuse_abs" ^ Int.toString i)
+             ("reuse_rep" ^ Int.toString i);
+           go (i+1)
+        end
+      val () = go 0
+      val () = PFTWriter.save out "implicit$RESULT" 16
+      val () = PFTWriter.closeOut out
+        {n_ty=1,n_tm=1,n_th=17,n_ci=0}
+      val merged = temp ()
+      val () = PFTMerge.merge
+        {inputs=[file],targets=[PFTMerge.ThyAll("implicit",save_defs)],
+         output=merged,binary=true}
+      val {limits,reuses,...} = monitor merged
+      val exported = ref ([] : string list)
+      val fh : PFTReader.format_handler =
+        {tyvar=fn _ => (),tyop=fn _ => (),var=fn _ => (),
+         const=fn _ => (),comb=fn _ => (),abs=fn _ => (),
+         new_const=fn _ => (),new_type=fn _ => (),axiom=fn _ => (),
+         save=fn (name,_) => exported := name :: !exported,
+         load=fn _ => (),del=fn _ => (),del_range=fn _ => ()}
+      val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
+        (ignore (#readVarint sr ());
+         ignore (PFTReader.read_raw_args
+           (PFTOpcodes.lookup_desc PFTOpcodes.candle_descs opc) sr))
+      val _ = PFTReader.read
+        {file=merged,binary=true,format_handler=fh,ruleset_handler=rh}
+  in if save_defs then
+       length (!exported) = 17 andalso #n_th limits = 17 andalso
+       List.all (fn name => length (List.filter (fn n => n = name)
+                                                (!exported)) = 1) (!exported)
+     else #n_th limits <= 5 andalso reuses > 8
+  end
+val () = run_test
+  "merge reuses consecutive implicit results and deletes siblings"
+  (fn () => implicit_chain false)
+val () = run_test "merge pins definition results until their tail SAVEs"
+  (fn () => implicit_chain true)
+
+fun preserves_linked_input options =
+  let val alias = temp ()
+      val original = reader_bytes types_file
+      val () = if OS.FileSys.access(alias, []) then
+                 OS.FileSys.remove alias else ()
+      val () = if OS.Process.isSuccess
+           (Systeml.systeml (["ln"] @ options @ [types_file, alias]))
+        then () else raise Fail "could not create input alias"
+  in fails (fn () => PFTMerge.merge
+       {inputs=[types_file],targets=[PFTMerge.ThyAll("types",false)],
+        output=alias,binary=true}) andalso
+     reader_bytes types_file = original andalso reader_bytes alias = original
+  end
+val () = run_test "merge preserves input aliased by an output symlink"
+  (fn () => preserves_linked_input ["-s"])
+val () = run_test "merge preserves input aliased by an output hard link"
+  (fn () => preserves_linked_input [])
 
 val () = cleanup ()

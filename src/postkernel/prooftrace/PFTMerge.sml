@@ -25,17 +25,40 @@ fun ns_name i = Vector.sub(ns_names, i)
 (* ========================================================================= *)
 
 structure IdAlloc = struct
-  type t = int ref
+  type t = {next: int ref, free: (int, unit) Redblackmap.dict ref}
 
-  fun new () : t = ref 0
+  fun new () : t = {next=ref 0, free=ref (Redblackmap.mkDict Int.compare)}
 
-  fun alloc_consecutive (next: t) n =
+  fun fresh ({next, ...}: t) n =
     let val id = !next
     in next := id + n; id end
 
-  fun alloc next = alloc_consecutive next 1
+  fun alloc (a as {free, ...}: t) =
+    case Redblackmap.firsti (!free) of
+      SOME (id, _) => (free := #1 (Redblackmap.remove(!free, id)); id)
+    | NONE => fresh a 1
 
-  fun peakCount (next: t) = !next
+  fun release ({free, ...}: t) id =
+    free := Redblackmap.insert(!free, id, ())
+
+  fun alloc_consecutive (a as {free, ...}: t) n =
+    let
+      fun block [] _ _ = NONE
+        | block (id::ids) start count =
+            let val (start, count) =
+                  if id = start + count then (start, count + 1)
+                  else (id, 1)
+            in if count = n then SOME start else block ids start count end
+    in case block (Redblackmap.listKeys (!free)) 0 0 of
+         NONE => fresh a n
+       | SOME base =>
+           (List.app (fn i =>
+              free := #1 (Redblackmap.remove(!free, base + i)))
+              (List.tabulate(n, fn i => i));
+            base)
+    end
+
+  fun peakCount ({next, ...}: t) = !next
 end
 
 (* ========================================================================= *)
@@ -402,146 +425,127 @@ fun pass2_emit (file_states: file_state option ref vector)
              Array.array(Array.sub(maxes, ns), NONE : int option))
         end)
 
-    fun set_rename fi ns old_id new_id =
-      Array.update(Vector.sub(Vector.sub(rename_tables, fi), ns),
-                   old_id, SOME new_id)
-
-    fun get_rename fi ns old_id =
-      case Array.sub(Vector.sub(Vector.sub(rename_tables, fi), ns),
-                     old_id) of
-        SOME nid => nid
-      | NONE => raise Fail ("PFTMerge: unmapped " ^ ns_name ns ^ "#" ^
-                             Int.toString old_id ^ " in file " ^
-                             Int.toString fi)
-
     fun lookup_save name =
       case Redblackmap.peek(save_table, name) of
         SOME e => e
       | NONE => raise Fail ("PFTMerge: unknown SAVE: " ^ name)
 
-    (* Step 1: Allocate new IDs for all included commands *)
+    (* LOADs own no slot. Store their canonical source before metadata is
+       released, so later uses never reload an already emitted file. *)
+    val aliases = ref (Redblackmap.mkDict pair_compare)
+    fun canonical fi ns id =
+      if ns <> NS_TH then (fi, ns, id)
+      else case Redblackmap.peek(!aliases, (fi, id)) of
+             SOME (sfi, sid) => (sfi, ns, sid)
+           | NONE => (fi, ns, id)
     val () = app_included (fn (fi, fs, vis) =>
-      let val n = DArray.size (#cmds fs)
-          fun go ci = if ci >= n then () else
-            (if Array.sub(vis, ci) then
-               let val meta = DArray.sub(#cmds fs, ci)
-               in case #kind meta of
-                    CmdLoad name =>
-                      let val {file_idx=sfi, th_id=sth, ...} = lookup_save name
-                      in List.app (fn (ns, id) =>
-                           set_rename fi ns id (get_rename sfi NS_TH sth))
-                           (#produced meta)
-                      end
-                  | CmdSave _ => ()
-                  | CmdDel => ()
-                  | _ =>
-                      let val produced = #produced meta
-                          val n_produced = length produced
-                      in if n_produced > 1 andalso
-                            List.all (fn (ns,_) => ns = #1 (hd produced))
-                                     produced
-                         then (* consecutive allocation required *)
-                           let val ns = #1 (hd produced)
-                               val base = IdAlloc.alloc_consecutive
-                                            (Vector.sub(allocators, ns))
-                                            n_produced
-                           in List.foldl (fn ((ns, id), i) =>
-                                (set_rename fi ns id (base + i); i + 1))
-                              0 produced; ()
-                           end
-                         else
-                           List.app (fn (ns, id) =>
-                             set_rename fi ns id (alloc_id ns))
-                             produced
-                      end
-               end
-             else ();
-             go (ci + 1))
-      in go 0 end
-    )
+      DArray.appi (fn (ci, meta) =>
+        if not (Array.sub(vis, ci)) then ()
+        else case #kind meta of
+          CmdLoad name =>
+            let val {file_idx, th_id, ...} = lookup_save name
+                val (sfi, _, sid) = canonical file_idx NS_TH th_id
+            in List.app (fn (_, id) =>
+                 aliases := Redblackmap.insert(!aliases, (fi, id),
+                                               (sfi, sid))) (#produced meta)
+            end
+        | _ => ()) (#cmds fs))
 
-    (* Collect definition SAVEs early (before refcount computation) *)
-    val def_saves =
-      if not (List.exists #2 target_saves) then []
-      else let val acc = ref [] : (string * int) list ref
-      in app_included (fn (fi, fs, vis) =>
-             DArray.appi (fn (ci, meta) =>
-                if Array.sub(vis, ci) then
-                  case #kind meta of
-                    CmdDef =>
-                      List.app (fn (ns, id) =>
-                        if ns = NS_TH then
-                          let val nid = get_rename fi ns id
-                          in acc := ("def:" ^ Int.toString nid, nid) :: !acc
-                          end
-                        else ()) (#produced meta)
-                  | _ => ()
-                else ()) (#cmds fs));
-         List.rev (!acc)
+    fun rename_array fi ns =
+      Vector.sub(Vector.sub(rename_tables, fi), ns)
+    fun set_rename fi ns old_id new_id =
+      Array.update(rename_array fi ns, old_id, SOME new_id)
+    fun get_rename fi ns old_id =
+      let val (fi, ns, old_id) = canonical fi ns old_id
+      in case Array.sub(rename_array fi ns, old_id) of
+           SOME nid => nid
+         | NONE => raise Fail ("PFTMerge: unmapped " ^ ns_name ns ^ "#" ^
+                                Int.toString old_id ^ " in file " ^
+                                Int.toString fi)
       end
 
-    (* Step 2: Compute refcounts for DEL insertion *)
-    val refcounts = Vector.tabulate(NUM_NS, fn ns =>
-      Array.array(IdAlloc.peakCount (Vector.sub(allocators, ns)), 0))
+    fun allocate fi (meta: cmd_meta) =
+      let val produced = #produced meta
+      in if length produced > 1 andalso
+            List.all (fn (ns,_) => ns = #1 (hd produced)) produced
+         then
+           let val ns = #1 (hd produced)
+               val base = IdAlloc.alloc_consecutive
+                            (Vector.sub(allocators, ns)) (length produced)
+           in ignore (List.foldl (fn ((ns, id), i) =>
+                (set_rename fi ns id (base + i); i + 1)) 0 produced)
+           end
+         else List.app (fn (ns, id) =>
+                set_rename fi ns id (alloc_id ns)) produced
+      end
 
-    fun inc_ref ns nid =
-      let val a = Vector.sub(refcounts, ns)
-      in Array.update(a, nid, Array.sub(a, nid) + 1) end
-
-    fun count_consumed fi meta =
-      case #kind meta of
-        CmdDel => ()
-      | CmdSave _ => ()
-      | CmdLoad name =>
-          inc_ref NS_TH (get_rename (#file_idx (lookup_save name))
-                                    NS_TH (#th_id (lookup_save name)))
-      | _ =>
-          List.app (fn (ns, id) =>
-            inc_ref ns (get_rename fi ns id)) (#consumed meta)
-
+    (* Counts belong to old identities, including uses through LOAD aliases. *)
+    val refcounts = Vector.map (Vector.map
+      (fn a => Array.array(Array.length a, 0))) rename_tables
+    fun count_array fi ns = Vector.sub(Vector.sub(refcounts, fi), ns)
+    fun inc_ref fi ns id =
+      let val (fi, ns, id) = canonical fi ns id
+          val a = count_array fi ns
+      in Array.update(a, id, Array.sub(a, id) + 1) end
+    fun real_command (meta: cmd_meta) =
+      case #kind meta of CmdDel => false | CmdSave _ => false
+                        | CmdLoad _ => false | _ => true
     val () = app_included (fn (fi, fs, vis) =>
-          DArray.appi (fn (ci, meta) =>
-           if Array.sub(vis, ci) then count_consumed fi meta else ())
-           (#cmds fs))
+      DArray.appi (fn (ci, meta) =>
+        if Array.sub(vis, ci) andalso real_command meta then
+          List.app (fn (ns, id) => inc_ref fi ns id) (#consumed meta)
+        else ()) (#cmds fs))
 
-    (* Refcounts for target SAVEs *)
+    val def_saves =
+      if not (List.exists #2 target_saves) then []
+      else let val acc = ref [] : (int * int) list ref
+      in app_included (fn (fi, fs, vis) =>
+           DArray.appi (fn (ci, meta) =>
+             if Array.sub(vis, ci) then
+               case #kind meta of
+                 CmdDef => List.app (fn (ns, id) =>
+                   if ns = NS_TH then acc := (fi, id) :: !acc else ())
+                   (#produced meta)
+               | _ => ()
+             else ()) (#cmds fs));
+         List.rev (!acc)
+      end
     val () = List.app (fn (name, _) =>
       let val {file_idx, th_id, ...} = lookup_save name
-      in inc_ref NS_TH (get_rename file_idx NS_TH th_id) end)
-      target_saves
-
-    (* Refcounts for definition SAVEs *)
-    val () = List.app (fn (_, nid) => inc_ref NS_TH nid) def_saves
+      in inc_ref file_idx NS_TH th_id end) target_saves
+    val () = List.app (fn (fi, id) => inc_ref fi NS_TH id) def_saves
 
     (* Step 3: Emit *)
     val out = PFTWriter.openOut {file=output, binary=true,
                                  version=version, ruleset=ruleset}
 
-    fun dec_ref ns nid =
-      let val a = Vector.sub(refcounts, ns)
-          val rc = Array.sub(a, nid) - 1
-      in Array.update(a, nid, rc);
-         if rc = 0 then PFTWriter.del out (ns_name ns) nid
-         else ()
+    fun release fi ns id =
+      let val nid = get_rename fi ns id
+      in PFTWriter.del out (ns_name ns) nid;
+         IdAlloc.release (Vector.sub(allocators, ns)) nid;
+         Array.update(rename_array fi ns, id, NONE)
+      end
+    fun dec_ref fi ns id =
+      let val (fi, ns, id) = canonical fi ns id
+          val a = count_array fi ns
+          val rc = Array.sub(a, id) - 1
+      in Array.update(a, id, rc);
+         if rc = 0 then release fi ns id else ()
       end
 
     val current_fi = ref 0
-
     fun is_included ci =
       case !(Vector.sub(included, !current_fi)) of
         SOME vis => Array.sub(vis, ci)
       | NONE => false
     fun ren ns id = get_rename (!current_fi) ns id
-
-    fun dec_consumed meta =
-      case #kind meta of
-        CmdDel => ()
-      | CmdSave _ => ()
-      | CmdLoad name =>
-          let val {file_idx=sfi, th_id=sth, ...} = lookup_save name
-          in dec_ref NS_TH (get_rename sfi NS_TH sth) end
-      | _ =>
-          List.app (fn (ns, id) => dec_ref ns (ren ns id)) (#consumed meta)
+    fun finish_command (meta: cmd_meta) =
+      let val fi = !current_fi
+      in List.app (fn (ns, id) => dec_ref fi ns id) (#consumed meta);
+         List.app (fn (ns, id) =>
+           if Array.sub(count_array fi ns, id) = 0 then release fi ns id
+           else ()) (#produced meta)
+      end
 
     (* Handlers for pass 2 re-read. Format and ruleset handlers share
        a command counter so they stay synchronised with pass 1 metadata. *)
@@ -553,7 +557,7 @@ fun pass2_emit (file_states: file_state option ref vector)
         fun when_included ci f =
           if is_included ci then
             let val meta = DArray.sub(#cmds (loaded_file (!current_fi)), ci)
-            in f meta; dec_consumed meta end
+            in allocate (!current_fi) meta; f meta; finish_command meta end
           else ()
 
         val fh : PFTReader.format_handler = {
@@ -586,12 +590,7 @@ fun pass2_emit (file_states: file_state option ref vector)
             when_included (next_ci ()) (fn _ =>
               PFTWriter.axiom out (ren NS_TH id) (ren NS_TM tm) nameOpt),
           save = fn _ => ignore (next_ci ()),
-          load = fn _ =>
-            let val ci = next_ci ()
-            in if is_included ci then
-                 dec_consumed
-                   (DArray.sub(#cmds (loaded_file (!current_fi)), ci))
-               else () end,
+          load = fn _ => ignore (next_ci ()),
           del = fn _ => ignore (next_ci ()),
           del_range = fn _ => ignore (next_ci ())
         }
@@ -618,11 +617,12 @@ fun pass2_emit (file_states: file_state option ref vector)
                let
                  val meta = DArray.sub
                    (#cmds (loaded_file (!current_fi)), ci)
+                 val () = allocate (!current_fi) meta
                  val result = ren (ns_idx (hd (#results desc))) id
                  val args = ListPair.map rename_arg (#args desc, args)
                in PFTWriter.write_raw out
                     {opcode=opc, desc=desc, result=result, args=args};
-                  dec_consumed meta
+                  finish_command meta
                end
              else ()
           end
@@ -639,19 +639,24 @@ fun pass2_emit (file_states: file_state option ref vector)
         | SOME _ =>
             (current_fi := fi; reset_ci ();
              ignore (PFTReader.read {file=file, binary=true,
-                                    format_handler=fh, ruleset_handler=rh})));
+                                    format_handler=fh, ruleset_handler=rh});
+             Vector.sub(file_states, fi) := NONE;
+             Vector.sub(included, fi) := NONE));
        fi + 1)) 0 inputs)
 
     (* Emit target SAVEs *)
     val () = List.app (fn (name, _) =>
       let val {file_idx, th_id, ...} = lookup_save name
           val nid = get_rename file_idx NS_TH th_id
-      in PFTWriter.save out name nid; dec_ref NS_TH nid end)
+      in PFTWriter.save out name nid; dec_ref file_idx NS_TH th_id end)
       target_saves
 
     (* Emit definition SAVEs *)
-    val () = List.app (fn (name, nid) =>
-      (PFTWriter.save out name nid; dec_ref NS_TH nid)) def_saves
+    val () = List.app (fn (fi, id) =>
+      let val nid = get_rename fi NS_TH id
+      in PFTWriter.save out ("def:" ^ Int.toString nid) nid;
+         dec_ref fi NS_TH id
+      end) def_saves
 
     (* Footer *)
     val () = PFTWriter.closeOut out {
@@ -675,11 +680,9 @@ fun merge {inputs, targets, output, binary} =
              else ()
 
     val () = if null targets then raise Fail "PFTMerge: no targets" else ()
-    val () = if List.exists
-                  (fn file => OS.Path.mkAbsolute
-                    {path=file, relativeTo=OS.FileSys.getDir ()} =
-                    OS.Path.mkAbsolute
-                    {path=output, relativeTo=OS.FileSys.getDir ()}) inputs
+    val () = if OS.FileSys.access(output, []) andalso
+                List.exists (fn file => OS.FileSys.fileId file =
+                                        OS.FileSys.fileId output) inputs
              then raise Fail "PFTMerge: output is an input file" else ()
 
     val {version = the_version, ruleset = the_ruleset} =
