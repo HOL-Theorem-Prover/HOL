@@ -194,6 +194,10 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 | CCONTR | id, tm, th |
 | deductAntisym | id, th1, th2 |
 
+The current portable HOL replayer explicitly rejects `deductAntisym`, and
+HOL4 conversion rejects source proofs using it. The command remains part of
+the wire format; Candle conversion and replay support the corresponding rule.
+
 ### Conjunction
 
 | Command | Arguments |

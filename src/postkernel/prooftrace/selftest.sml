@@ -243,4 +243,82 @@ val () = check "thminfo private=false"
     chk "private" (not (#private (P.shThmInfo h (P.castPtr r)))))
 
 
+(* The outer tuple keeps test references outside an otherwise valid raw root. *)
+fun identity_root thy parents =
+  {theory=thy, parents=parents, types=[] : (string * int) list,
+   constants=[] : (string * Type.hol_type) list,
+   all_thms=[] : (string * Thm.thm * RawTheory_dtype.thminfo) list,
+   anon_thms=[] : Thm.thm list, mldeps=[] : string list}
+fun identity_id thy nm epoch : KernelSig.kernelid =
+  RunCall.unsafeCast {name={Thy=thy,Name=nm},epoch=epoch}
+fun identity_case label thy (live: KernelSig.kernelid list) refs origins
+                  parents expect =
+  check label
+    ((1, live, [] : KernelSig.kernelid list,
+      origins, [] : (KernelSig.kernelid * (string * string)) list,
+      identity_root thy parents), refs : KernelSig.kernelid list)
+    (fn h => fn r =>
+      let val (raw, references) = P.tuple2 h
+            (fn p => p, fn p => p) (P.castPtr r)
+          val {const_name,...} = P.names h (P.castPtr raw)
+          val references = P.list h (fn p => p) references
+      in expect (fn () => map const_name references) end)
+fun expect_identity wanted resolve =
+  chk "resolved identities" (resolve () = wanted)
+fun expect_identity_failure prefix action =
+  chk ("expected rejection: " ^ prefix)
+    ((ignore (action ()); false)
+     handle Fail message => String.isPrefix prefix message)
+
+val identity_old = identity_id "identities" "item" 7
+val identity_new = identity_id "identities" "item" 8
+val identity_private = Globals.oldify 7 "item"
+val () = identity_case "live exported identity survives a later epoch"
+  "identities" [identity_old] [identity_old,identity_new] [] []
+  (expect_identity [("identities","item"),
+                    ("identities",Globals.oldify 8 "item")])
+val () = identity_case "deleted identity without replacement stays private"
+  "identities" [] [identity_old] [] []
+  (expect_identity [("identities",identity_private)])
+val () = identity_case "unused replacement still reserves its public name"
+  "identities" [identity_new] [identity_old] [] []
+  (expect_identity [("identities",identity_private)])
+val identity_collision = identity_id "identities" identity_private 9
+val () = identity_case "private identity avoids a live generated-name collision"
+  "identities" [identity_collision] [identity_old,identity_old] [] []
+  (expect_identity [("identities",identity_private ^ "'"),
+                    ("identities",identity_private ^ "'")])
+val identity_import = identity_id "parent" "item" 31
+val () = identity_case "import provenance accepts a process-local epoch"
+  "child" [identity_import] [identity_import]
+  [(identity_import,("parent","parent-hash"))] [("parent","parent-hash")]
+  (expect_identity [("parent","item")])
+val () = identity_case "import origin is bound to the parent hash"
+  "child" [identity_import] [identity_import]
+  [(identity_import,("parent","wrong-hash"))] [("parent","parent-hash")]
+  (expect_identity_failure "ProofTraceParser: imported identity hash mismatch")
+val () = identity_case "live foreign identity requires import provenance"
+  "child" [identity_import] [identity_import] [] []
+  (expect_identity_failure "ProofTraceParser: unrecorded imported symbol")
+val () = identity_case "retired imported identities remain unsupported"
+  "child" [] [identity_import]
+  [(identity_import,("parent","parent-hash"))] []
+  (expect_identity_failure "ProofTraceParser: retired imported symbol")
+val identity_conj = identity_id "bool" "/\\" 10
+val () = identity_case "retired registered logical identities fail explicitly"
+  "bool" [] [identity_conj] [] []
+  (expect_identity_failure "ProofTraceParser: retired registered bool constant")
+
+val () = check "legacy raw roots require regeneration"
+  (identity_root "identities" [])
+  (fn h => fn r => expect_identity_failure
+    "ProofTraceParser: expected six-field identity-aware raw trace version 1"
+    (fn () => P.shRoot h (P.castPtr r)))
+val () = check "historical four-field raw v1 roots require regeneration"
+  (1, [identity_old], [] : KernelSig.kernelid list,
+   identity_root "identities" [])
+  (fn h => fn r => expect_identity_failure
+    "ProofTraceParser: expected six-field identity-aware raw trace version 1"
+    (fn () => P.shRoot h (P.castPtr r)))
+
 val () = print "All prooftrace parser selftests passed\n"

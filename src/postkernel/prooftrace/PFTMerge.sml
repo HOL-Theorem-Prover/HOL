@@ -291,7 +291,7 @@ fun resolve_targets (targets: target list)
   in List.concat (map resolve targets) end
 
 (* DFS backward from targets to find all reachable commands. *)
-fun compute_reachable
+fun compute_reachable ruleset
       n_files (ensure_file_state: int -> file_state)
       (save_table: (string, save_entry) Redblackmap.dict)
       (const_introducer: (string, int * int) Redblackmap.dict)
@@ -326,6 +326,32 @@ fun compute_reachable
                                 (NS_TH, th_id)))
     val () = List.app seed target_saves
 
+    (* These rules construct registered connectives without a CONST operand. *)
+    fun implicit_consts opcode =
+      if ruleset <> "hol4" then [] else
+      case List.find (fn (op', _) => op' = opcode) hol4_descs of
+        NONE => []
+      | SOME (_, {tag, ...}) =>
+          case tag of
+            "CONJ" => ["bool$/\\"]
+          | "CONJUNCT1" => ["bool$/\\"]
+          | "CONJUNCT2" => ["bool$/\\"]
+          | "DISJ1" => ["bool$\\/"]
+          | "DISJ2" => ["bool$\\/"]
+          | "DISJ_CASES" => ["bool$\\/"]
+          | "GEN" => ["bool$!"]
+          | "GENL" => ["bool$!"]
+          | "SPEC" => ["bool$!"]
+          | "Specialize" => ["bool$!"]
+          | "EXISTS" => ["bool$?"]
+          | "CHOOSE" => ["bool$?"]
+          | "DEF_SPEC" => ["bool$?"]
+          | "DEF_TYOP" => ["bool$TYPE_DEFINITION", "bool$?"]
+          | "NOT_INTRO" => ["bool$~", "bool$F"]
+          | "NOT_ELIM" => ["bool$~", "bool$F"]
+          | "CCONTR" => ["bool$~", "bool$F"]
+          | _ => []
+
     fun process () =
       case !worklist of
         [] => ()
@@ -354,6 +380,15 @@ fun compute_reachable
                      enqueue (sfi, find_producer sfs (NS_TH, sth))
                   end)
            | _ => ());
+          List.app (fn name =>
+            case Redblackmap.peek(const_introducer, name) of
+              NONE => () (* Supplied by the replay environment. *)
+            | SOME (ifi, ici) =>
+                if ifi < fi orelse (ifi = fi andalso ici < ci) then
+                  enqueue (ifi, ici)
+                else raise Fail
+                  ("PFTMerge: implicit constant used before introduction: " ^
+                   name)) (implicit_consts (#opcode meta));
           (* Follow name-level dependencies: CONST/TYOP → introducer *)
           (case #ref_name meta of
              SOME name =>
@@ -392,7 +427,7 @@ fun pass2_emit (file_states: file_state option ref vector)
                (descs: (int * opcode_desc) list) =
   let
     val n_files = Vector.length file_states
-    val included = compute_reachable n_files ensure_file_state save_table
+    val included = compute_reachable ruleset n_files ensure_file_state save_table
                      const_introducer type_introducer target_saves
     fun app_included f =
       Vector.appi (fn (fi, fs_ref) =>

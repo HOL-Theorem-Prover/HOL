@@ -49,3 +49,32 @@ preamble. Select `pftExport_shadow$SHADOW`, `pftExport_overlap$OVERLAP`,
 After separate or merged Candle replay, load `export-check-candle.ml`.
 It checks the four exact conclusions and requires empty hypothesis sets,
 then prints `EXPORTS_REPLAYED_EXACT`.
+
+## Exported identities
+
+```sh
+/path/to/HOL/src/postkernel/prooftrace/identity-tests.sh \
+  /path/to/tracing/bin/hol /scratch/identity
+```
+
+The producer must be genuinely rebuilt with the export/import hooks; loading
+another `Tracing` structure into an existing heap does not change the instance
+used by `Theory.export_theory`.
+
+The runner exports deletion, unused replacement, context restoration,
+private-name collision and restored-type fixtures through `export_theory`.
+Separate parent and child processes test imports with different allocation
+epochs. It checks seven exact sequents and private/public identity inventories
+through raw HOL and separate/merged HOL PFT replay. The merged case may omit
+unused public declarations.
+
+Three additional actual exports must fail explicitly: an unrecorded foreign
+identity, a retired foreign identity, and a retained foreign definition whose
+parent exported only reflexivity. The latter remains unsupported even when
+its public constant name can be resolved.
+
+The retired and custom logical-role tests are supplemental low-level tracing
+fixtures, not successful theory-export tests. They require explicit rejection
+in raw replay and both portable conversion modes. Noncanonical logical roles
+and nonconstant implicit-role shapes remain unsupported; the tests do not
+establish complete logical-role replay coverage.

@@ -20,6 +20,17 @@ older reference-based identifier layout. Rebuild raw traces with the same
 kernel source as the converter; the narrow-format magic describes word
 width, not a kernel ABI version.
 
+The root contains identity metadata as well as the theory payload. Allocation
+epochs are process-local and cannot identify a public name after a context
+restore. The producer therefore captures the live signature at export and
+records each imported identity's originating theory and hash after successful
+theory loading. Successful exports record the same provenance for subsequent
+theories built in that process; these records survive context restores.
+
+The six-field version-1 envelope below is required. Earlier raw traces,
+including the experimental four-field envelope, must be regenerated. This
+raw envelope version is independent of the portable PFT version.
+
 ## 64-bit file structure: bit level
 
 The outer structure of the dump is a sequence of objects, followed by a root pointer:
@@ -271,7 +282,7 @@ datatype thm_src_location (* option-like *)
 
 type thminfo = {loc: thm_src_location, class: class, private: bool}
 
-type trace_file =
+type theory_trace =
   { types     : (string * int) list,
     mldeps    : string list,
     theory    : string,
@@ -279,4 +290,10 @@ type trace_file =
     all_thms  : (string * thm * thminfo) list,
     anon_thms : thm list,
     constants : (string * hol_type) list }
+
+type identity_origin = id * (string * string) (* owner theory, hash *)
+type trace_file = int * id list * id list *
+                 identity_origin list * identity_origin list * theory_trace
+(* (1, live constant IDs, live type IDs, constant origins, type origins,
+    theory payload) *)
 ```

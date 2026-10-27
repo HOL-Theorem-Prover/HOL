@@ -18,10 +18,12 @@ signature PFTEmit = sig
 
      IDs are allocated monotonically in each namespace and are never reused.
      The footer gives the resulting array bounds. PFTMerge can select the
-     target dependency closure and insert deletion commands, but does not
-     compact IDs to the live set.
+     target dependency closure and reuse slots after their final uses. Its
+     footer gives allocation high-water marks, including consecutive result
+     blocks required by implicit multi-result commands.
 
-     The raw producer must use the current kernel identifier layout.
+     The raw producer must use the current kernel identifier layout and the
+     six-field identity-aware envelope; older raw traces must be regenerated.
      Exported side-file proofs and deleted/NoTrace proofs are unsupported.
      Candle compute consumers need the standalone compute preamble first.
 

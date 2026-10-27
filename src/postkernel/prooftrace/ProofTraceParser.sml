@@ -328,14 +328,98 @@ fun shSubs c w = case arg c w of f =>
 type proof = unit
 fun shThm c w = case arg c w of f => (f 1, f 2, arg c (f 3) 0)
 
-fun shRoot c w = case arg c w of f =>
-  { types = f 0,
+fun shRoot c w = let
+  val (_, n) = obj c w
+  val envelope = arg c w
+  val () = if n = 6 andalso envelope 0 = 0w3 then () else
+    raise Fail ("ProofTraceParser: expected six-field identity-aware raw " ^
+                "trace version 1; regenerate raw traces with this producer")
+  val f = arg c (envelope 5)
+in
+  { const_ids = envelope 1,
+    type_ids = envelope 2,
+    const_origins = envelope 3,
+    type_origins = envelope 4,
+    types = f 0,
     mldeps = f 1,
     theory = str c (f 2),
     parents = f 3,
     all_thms = f 4,
     anon_thms = f 5,
     constants = f 6 }
+end
+
+fun names heap root = let
+  val {theory, const_ids, type_ids, const_origins, type_origins, parents, ...} =
+    shRoot heap root
+  val parents = Redblackmap.fromList String.compare
+    (list heap (tuple2 heap (str heap, str heap)) parents)
+  fun id_compare ((t,n,e), (t',n',e')) =
+    case KernelSig.name_compare ({Thy=t,Name=n}, {Thy=t',Name=n'}) of
+      EQUAL => Int.compare(e,e') | ord => ord
+  fun resolver is_const ids origins = let
+    val live = ref (Redblackmap.mkDict KernelSig.name_compare)
+    val imported = ref (Redblackmap.mkDict id_compare)
+    val used = ref (Redblackmap.mkDict KernelSig.name_compare)
+    fun add_live p = let
+      val (thy,nm,epoch) = ident heap p
+      val name = {Thy=thy,Name=nm}
+      val () = case Redblackmap.peek(!live, name) of
+          NONE => ()
+        | SOME old => if old = epoch then () else
+            raise Fail "ProofTraceParser: conflicting live identities"
+    in live := Redblackmap.insert(!live, name, epoch) end
+    val () = appList heap add_live ids
+    fun add_origin p = let
+      val (id as (thy,_,_), origin as (owner,hash)) = tuple2 heap
+        (ident heap, tuple2 heap (str heap, str heap)) p
+      val () = if owner = thy andalso hash <> "" then () else
+        raise Fail "ProofTraceParser: invalid imported identity origin"
+      val () = case Redblackmap.peek(!imported, id) of
+          NONE => ()
+        | SOME old => if old = origin then () else
+            raise Fail "ProofTraceParser: conflicting identity origins"
+    in imported := Redblackmap.insert(!imported, id, origin) end
+    val () = appList heap add_origin origins
+    fun resolve p = let
+      val id as (thy,nm,epoch) = ident heap p
+      val name = {Thy=thy,Name=nm}
+      val current = Redblackmap.peek(!live, name) = SOME epoch
+      val foreign = thy <> theory andalso thy <> "min"
+      val () = if not foreign then () else
+        if not current then raise Fail
+          ("ProofTraceParser: retired imported symbol " ^ thy ^ "$" ^ nm)
+        else case Redblackmap.peek(!imported, id) of
+          NONE => raise Fail ("ProofTraceParser: unrecorded imported symbol " ^
+                              thy ^ "$" ^ nm)
+        | SOME (owner,hash) =>
+            (case Redblackmap.peek(parents, owner) of
+               NONE => () (* The origin may be a transitive ancestor. *)
+             | SOME expected => if hash = expected then () else raise Fail
+                 ("ProofTraceParser: imported identity hash mismatch for " ^
+                  owner ^ "; expected " ^ expected ^ ", got " ^ hash))
+      val public = current orelse foreign orelse thy = "min"
+      val () = if public orelse not is_const orelse thy <> "bool" orelse
+                   not (List.exists (fn s => s = nm)
+                     ["T", "!", "?", "F", "~", "/\\", "\\/",
+                      "TYPE_DEFINITION"]) then ()
+        else raise Fail ("ProofTraceParser: retired registered bool constant " ^
+                         thy ^ "$" ^ nm ^ " unsupported")
+      fun available candidate = let
+        val out = {Thy=thy,Name=candidate}
+      in if not public andalso Redblackmap.inDomain(!live, out) then
+           available (candidate ^ "'")
+         else case Redblackmap.peek(!used, out) of
+           NONE => (used := Redblackmap.insert(!used, out, id); candidate)
+         | SOME old => if old = id then candidate
+                       else if public then raise Fail
+                         "ProofTraceParser: public identity collision"
+                       else available (candidate ^ "'")
+      end
+    in (thy, available (if public then nm else Globals.oldify epoch nm)) end
+  in resolve end
+in {const_name=resolver true const_ids const_origins,
+    type_name=resolver false type_ids type_origins} end
 
 fun shThmInfo c w = {private = arg c w 2 = 0w3}
 

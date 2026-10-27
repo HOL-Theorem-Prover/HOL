@@ -586,4 +586,36 @@ val () = run_test "merge preserves input aliased by an output symlink"
 val () = run_test "merge preserves input aliased by an output hard link"
   (fn () => preserves_linked_input [])
 
+(* CONJ names its connective through the kernel cache, not a term ID. *)
+val (implicit_file,out) = output "hol4"
+val () = PFTWriter.tyop out 0 "min$bool" []
+val () = PFTWriter.tyop out 1 "min$fun" [0,0]
+val () = PFTWriter.tyop out 2 "min$fun" [0,1]
+val () = PFTWriter.new_const out "bool$/\\" 2
+val () = PFTWriter.var out 0 "p" 0
+val () = PFTWriter.HOL4.assume out 0 0
+val () = PFTWriter.HOL4.conj out 1 0 0
+val () = PFTWriter.save out "implicit$RESULT" 1
+val () = finish out
+val implicit_merged = temp ()
+val () = PFTMerge.merge
+  {inputs=[implicit_file],targets=[PFTMerge.ThyAll("implicit",false)],
+   output=implicit_merged,binary=true}
+val implicit_names = ref ([] : string list)
+val implicit_fh : PFTReader.format_handler =
+  {tyvar=fn _ => (),tyop=fn _ => (),var=fn _ => (),const=fn _ => (),
+   comb=fn _ => (),abs=fn _ => (),new_type=fn _ => (),
+   new_const=fn (name,_) => implicit_names := name :: !implicit_names,
+   axiom=fn _ => (),save=fn _ => (),load=fn _ => (),del=fn _ => (),
+   del_range=fn _ => ()}
+val implicit_rh : PFTReader.ruleset_handler = fn opc => fn sr =>
+  (ignore (#readVarint sr ());
+   ignore (PFTReader.read_raw_args
+     (PFTOpcodes.lookup_desc PFTOpcodes.hol4_descs opc) sr))
+val _ = PFTReader.read {file=implicit_merged,binary=true,
+  format_handler=implicit_fh,ruleset_handler=implicit_rh}
+val () = run_test "merge retains implicitly used conjunction declaration"
+  (fn () => !implicit_names = ["bool$/\\"] andalso
+            #dels (monitor implicit_merged) > 0)
+
 val () = cleanup ()

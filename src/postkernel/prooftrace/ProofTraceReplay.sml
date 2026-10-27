@@ -71,7 +71,8 @@ fun replay path =
   then msg_print("skip ")
   else
 let
-  val (root_ptr, heap) = parse path;
+  val (root_ptr, heap) = parse path
+  val {const_name, type_name} = names heap root_ptr
   val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr;
 
   val register_def = if thyname = "bool" then register_bool_def
@@ -89,6 +90,7 @@ let
   val {tm_defs, ty_defs, is_closed, get_const_id, get_type_id} =
     ProofTraceWalk.walk
       {heap = heap, thyname = thyname,
+       const_name=const_name, type_name=type_name,
        named_thms = all_thms, anon_thms = anon_thms,
        incr = incr, on_def_thm = on_def_thm, on_fv = fn _ => ()}
 
@@ -134,6 +136,10 @@ let
         val (Thy,Tyop) = get_type_id ty_ptr
         val Args = list heap replay_type args_ptr
         val () = check_def ty_defs Thy Tyop
+        val () = if Thy = thyname andalso
+                    not (isSome (op_arity {Thy=Thy, Tyop=Tyop})) then
+                   prim_new_type {Thy=Thy, Tyop=Tyop} (length Args)
+                 else ()
         in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
   ) ty_ptr
 
@@ -221,7 +227,21 @@ let
                  else raise Fail "Def_const_list thy"
         val () = if Thm.getCT () = SOME thyname then ()
                  else Thm.setCT thyname
-      in #2 (gen_prim_specification (th a)) end
+        val input = th a
+        fun rename cp = case shTerm heap cp of
+            Const (idp, typ) => let
+              val old = #2 (ident heap idp)
+              val (_, name) = const_name idp
+              val typ = ty typ
+              val target = mk_var (name, typ)
+              val () = if old = name orelse
+                  not (List.exists (free_in target) (concl input :: hyp input))
+                then () else raise Fail
+                  ("Def_const_list_prf: variable capture at " ^ name)
+            in mk_var (old, typ) |-> target end
+          | _ => raise Fail "Def_const_list_prf: not a const"
+        val subs = list heap rename b
+      in #2 (gen_prim_specification (INST subs input)) end
     | Def_const_prf (a, b) => let
         val (Thy,Name) = get_const_id b
         val rhs = tm a

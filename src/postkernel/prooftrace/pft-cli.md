@@ -5,6 +5,12 @@ and merges selected exports from a dependency-ordered set of those files.
 It supports the `hol4` and `candle` rulesets. It needs the original proof
 dumps; loading a theory without a dump does not reconstruct its proof.
 
+Regenerate raw traces with the identity-aware producer. Its export-time
+signature determines which identities retain public names. Retired local
+identities receive distinct private names, avoiding collisions with live
+declarations. Imported public identities are recognized from recorded origin
+metadata rather than their process-local epochs. Portable PFT remains version 1.
+
 Build the modules from the HOL root before using the driver:
 
 ```sh
@@ -85,6 +91,11 @@ from the dump's metadata, not its filename.
 
 HOL4 conversion rejects `deductAntisym`: the portable HOL replayer lacks
 that rule. Candle conversion supports it.
+
+Retired imported identities, retired or noncanonical registered logical
+roles, and unsupported foreign-definition proofs are rejected explicitly. Naming an
+identity does not recover a missing defining proof or reproduce a retired
+logical registration; this converter does not yet cover all such exports.
 
 `Exported` side-file proofs and deleted proofs (including tracing gaps) are
 unsupported and fail conversion. No missing proof is replaced by an axiom.

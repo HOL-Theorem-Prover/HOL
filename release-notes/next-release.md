@@ -313,6 +313,9 @@ New tools
     aliasing an input. Conversion preserves oracle hypotheses through
     conditional axioms and checked inference steps. HOL conversion explicitly
     rejects `deductAntisym`, which its portable replayer does not support.
+    Raw traces now record the live export signature and imported identity
+    origins, so restored public identities no longer depend on epoch order.
+    Earlier raw traces must be regenerated; portable PFT remains version 1.
 
 
 New examples

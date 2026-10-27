@@ -112,6 +112,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
   val tr_name = if is_candle then candle_translate_name else I
   val fun_tyname = tr_name "min$fun"
   val (root_ptr, heap) = parse trace
+  val {const_name, type_name} = names heap root_ptr
   val {theory = thyname, all_thms, anon_thms, constants, types, ...} =
     shRoot heap root_ptr
 
@@ -129,6 +130,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
   val {tm_defs, ty_defs, is_closed, get_const_id, get_type_id} =
     ProofTraceWalk.walk
       {heap = heap, thyname = thyname,
+       const_name=const_name, type_name=type_name,
        named_thms = all_thms, anon_thms = anon_thms,
        incr = K (), on_def_thm = K (),
        on_fv = on_fv}
@@ -1331,7 +1333,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
                      | _ => raise Fail "Def_const_list_prf: not a const"
                    val cname = tr_name (Thy ^ "$" ^ Name)
                    val v_ty  = emit_type ty_ptr
-                   val v_old = emit_var Name  v_ty
+                   val old_name = case shTerm heap cp of
+                       Const (idp, _) => #2 (ident heap idp)
+                     | _ => raise Fail "Def_const_list_prf: not a const"
+                   val (hyps, concl, _) = shThm heap a
+                   fun check tm =
+                     if old_name = cname orelse
+                        not (would_capture (cname, v_ty) Subst.id tm) then ()
+                     else raise Fail
+                       ("Def_const_list_prf: variable capture at " ^ cname)
+                   val () = appSet heap check hyps
+                   val () = check concl
+                   val v_old = emit_var old_name v_ty
                    val v_new = emit_var cname v_ty
                    val ()    = mark_const cname
                  in (cname, v_old, v_new) end
@@ -2377,10 +2390,29 @@ fun emit_theory {trace, output, binary, ruleset} = let
               val a = emit_thm a val b = emit_thm b val c = emit_thm c
               in PFTWriter.HOL4.disj_cases out id a b c end
           | Def_const_list_prf (a, b) => let
+              val (hyps, concl, _) = shThm heap a
               val a = emit_thm a
-              val ids = list heap get_const_id b
-              val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
-              val () = List.app (fn (Thy,nm) => mark_const (tr_name (Thy ^ "$" ^ nm))) ids
+              val cps = list heap I b
+              val ids = List.map get_const_id cps
+              fun rename cp = case shTerm heap cp of
+                  Const (idp, typ) => let
+                    val old = #2 (ident heap idp)
+                    val (_, name) = const_name idp
+                    val ty = emit_type typ
+                    fun check tm =
+                      if old = name orelse
+                         not (would_capture (name, ty) Subst.id tm) then ()
+                      else raise Fail
+                        ("Def_const_list_prf: variable capture at " ^ name)
+                    val () = appSet heap check hyps
+                    val () = check concl
+                  in (emit_var old ty, emit_var name ty) end
+                | _ => raise Fail "Def_const_list_prf: not a const"
+              val subs = List.filter (fn (x,y) => x <> y) (List.map rename cps)
+              val a = if null subs then a else let val a' = alloc_th ()
+                in PFTWriter.HOL4.inst out a' a subs; a' end
+              val names = List.map (fn (Thy,nm) => Thy ^ "$" ^ nm) ids
+              val () = List.app mark_const names
             in PFTWriter.HOL4.def_spec_gen out id a names end
           | Def_const_prf (a, b) => emit_def_const id (a, b)
           | Def_spec_prf (a, b) => let
