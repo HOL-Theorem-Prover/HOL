@@ -1473,7 +1473,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
               val f = tm_part1_of tm_id
             in if f < 0 then c_refl tm_id  (* VAR or CONST, not a v_i *)
                else let val x = tm_part2_of tm_id
-               in if isSome (IntPairTable.lookup comb_ht (f, x))
+               in if pft_is_comb tm_id
                   then c_mk_comb (cong f) (cong x)
                   else let
                     (* The constant-named variables are free in the
@@ -2567,7 +2567,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
             else let val f = tm_part1_of t
             in if f < 0 then t (* VAR or CONST *)
                else let val x = tm_part2_of t
-               in if isSome (IntPairTable.lookup comb_ht (f, x)) then
+               in if pft_is_comb t then
                     (* COMB: recurse into both children *)
                     let val f' = go shadowed f
                         val x' = go shadowed x

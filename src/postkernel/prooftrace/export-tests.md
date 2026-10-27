@@ -105,3 +105,25 @@ fixtures, not successful theory-export tests. They require explicit rejection
 in raw replay and both portable conversion modes. Noncanonical logical roles
 and nonconstant implicit-role shapes remain unsupported; the tests do not
 establish complete logical-role replay coverage.
+
+## Term kind discrimination
+
+```sh
+/path/to/HOL/src/postkernel/prooftrace/term-kind-tests.sh \
+  /path/to/tracing/bin/hol /scratch/term-kind
+```
+
+This runner genuinely exports `pft_term_kinds`, checks its native sequents and
+raw SUBST/specification proof constructors, then writes
+`term-kinds.candle.pft.bin` and `term-kinds.hol4.pft.bin`. Both cases retain a
+COMB proof whose child pair also belongs to an ABS. One exercises substitution
+under coincident nested binders; the other uses the existing specification
+primitive to introduce an unused test constant from a vacuous existential.
+
+For Candle, replay the preamble and `bool` before this file, then load
+`term-kind-check.ml`. For HOL, replay `bool` and this file using the minimal
+heap, load `term-kind-check.sml`, and call `term_kind_check db` with the replay
+database. For either merged check, select all of `pft_term_kinds`. Both
+checkers require the two exact conclusions, empty hypothesis sets, and the
+declared unused constant. They print `TERM_KIND_CANDLE_ALL_EXACT_PASS` or
+`TERM_KIND_HOL_ALL_EXACT_PASS`.
