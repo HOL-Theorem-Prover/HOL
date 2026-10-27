@@ -105,18 +105,25 @@ sig
   val read_raw : term vector -> string -> term
   val write_raw : (term -> int) -> term -> string
 
-  (* One level of a term in the form write_raw works from (bound variables
-     are de Bruijn indices, closures are normalised first), for writers that
-     walk the term themselves.  raw_view_supported is false for kernels whose
-     raw syntax differs from that of write_raw in this one. *)
-  datatype raw_view =
-      RAtom
-    | RBv of int
-    | RComb of term * term
-    | RAbs of term * term
-  val raw_view : term -> raw_view
-  val norm_clos : term -> term
-  val raw_view_supported : bool
+  (* Hooks for writers that share repeated subterms.  They work on the term
+     as write_raw sees it (closures normalised; an abstraction is its bound
+     variable followed by its body).  Nodes are numbered in pre-order from
+     base, so a node at position p has its children at p + 1 and
+     p + 1 + (size of the first child's subtree).
+
+     raw_fold visits the nodes bottom-up, giving each callback its position
+     (an abstraction's bound variable is visited as an atom, then its body).
+
+     write_raw_at writes a term like write_raw, except that a node at
+     position p is written as a reference to table entry i when shared p is
+     SOME i (shared must be SOME on atoms); size p is the number of nodes
+     below position p, itself included. *)
+  val raw_fold : {atom : int -> term -> 'a,
+                  bv : int -> int -> 'a,
+                  comb : int -> 'a -> 'a -> 'a,
+                  abs : int -> term -> 'a -> 'a} -> int -> term -> 'a
+  val write_raw_at : {shared : int -> int option, size : int -> int} ->
+                     int -> term -> string
 
   datatype lambda =
           VAR of string * hol_type

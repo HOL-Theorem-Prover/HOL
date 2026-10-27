@@ -1187,18 +1187,49 @@ in
 end
 val write_raw = pp_raw_term
 
-datatype raw_view =
-    RAtom
-  | RBv of int
-  | RComb of term * term
-  | RAbs of term * term
-fun raw_view t =
-    case t of
-        App(f, x) => RComb (f, x)
-      | Abs(v, b) => RAbs (v, b)
-      | _ => RAtom
-fun norm_clos t = t
-val raw_view_supported = false
+fun raw_fold {atom, bv, comb, abs} base tm = let
+  fun go p t =
+      case t of
+          App(f, x) =>
+          let
+            val (a, sa) = go (p + 1) f
+            val (b, sb) = go (p + 1 + sa) x
+          in (comb p a b, 1 + sa + sb) end
+        | Abs(v, body) =>
+          let
+            val _ = atom (p + 1) v
+            val (b, sb) = go (p + 2) body
+          in (abs p v b, 2 + sb) end
+        | _ => (atom p t, 1)
+in
+  #1 (go base tm)
+end
+
+datatype pospptask = PT of term * int | PLAM | PAPP of int
+fun write_raw_at {shared, size} base tm = let
+  fun mkAPP (PAPP n :: rest) = PAPP (n + 1) :: rest
+    | mkAPP rest = PAPP 1 :: rest
+  fun index p = case shared p of
+                    SOME i => i
+                  | NONE => raise ERR "write_raw_at" "atom not in table"
+  fun pp acc tasklist =
+      case tasklist of
+          [] => String.concat (List.rev acc)
+        | PT (Abs(Bvar, Body), p) :: rest =>
+            pp acc (PT (Bvar, p + 1) :: PT (Body, p + 2) :: PLAM :: rest)
+        | PT (App(Rator, Rand), p) :: rest =>
+          (case shared p of
+               SOME i => pp (percent ^ Int.toString i :: acc) rest
+             | NONE => pp acc (PT (Rator, p + 1) ::
+                               PT (Rand, p + 1 + size (p + 1)) ::
+                               mkAPP rest))
+        | PT (_, p) :: rest => pp (percent ^ Int.toString (index p) :: acc) rest
+        | PLAM :: rest => pp ("|" :: acc) rest
+        | PAPP n :: rest =>
+            pp ("@" ^ (if n = 1 then "" else Int.toString n) :: acc) rest
+in
+  pp [] [PT (tm, base)]
+end
 
 local
 datatype tok = lam | id of int | app of int
