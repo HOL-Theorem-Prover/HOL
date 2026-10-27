@@ -1,6 +1,7 @@
 open HolKernel boolLib bossLib Parse
 open EmitTeX combinSyntax PP
 open testutils
+local open stringTheory in end
 
 val _ = new_theory "scratch"
 
@@ -145,11 +146,25 @@ val _ = require_msg (check_result (equal "\\alpha{} \\HOLTokenMap{} \\beta{}"))
                     String.toString
                     (pp_to_string 70 pp_type_as_tex) (alpha --> beta)
 
-val _ = tprint "Testing printing of fn update syntax"
-val expected =
-  "\\HOLFreeVar{f}\\HOLTokenLLens{}\\HOLFreeVar{k} \\HOLTokenMapto{}\
-  \ \\HOLFreeVar{v}\\HOLTokenRLens{}"
-val _ = require_msg (check_result (equal expected)) String.toString
-                    (pp_to_string 70 pp_term_as_tex)
-                    “f (| k |-> v |)”
+fun textmtest (nm, t, expected) = (
+  tprint ("Testring printing of " ^ nm);
+  require_msg (check_result (equal expected)) (fn s => s)
+              (pp_to_string 70 pp_term_as_tex) t
+);
+
+val _ = app textmtest [
+      ("fn update syntax", “f (| k |-> v |)”,
+       "\\HOLFreeVar{f}\\HOLTokenLLens{}\\HOLFreeVar{k} \\HOLTokenMapto{}\
+       \ \\HOLFreeVar{v}\\HOLTokenRLens{}"),
+      ("\" in CharLit", “#"\""”, "\\HOLCharLit{\"}"),
+      ("\" in StringLit", “"\""”, "\\HOLStringLit{\"}"),
+      ("{ in CharLit", “#"{"”, "\\HOLCharLit{\{}"),
+      ("{ in StringLit", “"{"”, "\\HOLStringLit{\{}"),
+      ("} in CharLit", “#"}"”, "\\HOLCharLit{\}}"),
+      ("} in StringLit", “"}"”, "\\HOLStringLit{\}}"),
+      ("\\n in StringLit", “"\n"”, "\\HOLStringLit{\\HOLTokenBackslash{}n}")
+    ]
+
+
+
 val _ = exit_count0 errcount
