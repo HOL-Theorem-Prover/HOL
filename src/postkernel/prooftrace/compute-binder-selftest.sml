@@ -21,9 +21,24 @@ val inner_body = cvSyntax.mk_cv_add (x,y);
 val inner_abs = Term.rename_bvar "x" (mk_abs(y,inner_body));
 val inner = mk_comb(mk_comb(cv_let,inner_abs),cv_num 4);
 val capture = mk_comb(mk_comb(cv_let,mk_abs(x,inner)),cv_num 2);
+val z = mk_var("z",cvSyntax.cv);
+fun delayed body value = rhs (concl
+  (Thm.Beta (REFL (mk_comb(mk_abs(z,body),value)))));
+val closure = delayed (cvSyntax.mk_cv_add(z,cv_num 2)) (cv_num 4);
+val nested_body = mk_comb(mk_comb(cv_let,
+  mk_abs(x,cvSyntax.mk_cv_add(z,x))),cv_num 2);
+val closure_nested = delayed nested_body (cv_num 4);
+val closure_capture = delayed capture (cv_num 0);
+fun cv_decimal s = cvSyntax.mk_cv_num
+  (numSyntax.mk_numeral (Arbnum.fromString s));
+val boundaries = ["255","256","257","18446744073709551616"];
 val compute_cases =
   [("SIMPLE",simple,cv_num 0),("NESTED",nested,cv_num 6),
-   ("CAPTURE",capture,cv_num 6)];
+   ("CAPTURE",capture,cv_num 6),("CLOSURE",closure,cv_num 6),
+   ("CLOSURE_NESTED",closure_nested,cv_num 6),
+   ("CLOSURE_CAPTURE",closure_capture,cv_num 6)] @
+  map (fn n => let val value = cv_decimal n
+              in ("NUM_" ^ n,delayed value (cv_num 0),value) end) boundaries;
 fun save_compute (name,input,expected) =
   let val result = cv_computeLib.cv_compute [] input
       val () = compute_require (name ^ ": wrong producer sequent")
@@ -94,7 +109,7 @@ val () = let
         | _ => raise Fail (name ^ ": expected a raw closure"))
      else () end) all_thms
 in compute_require "missing raw compute closures"
-     (!closures = 0 andalso !kind_closure) end;
+     (!closures = 7 andalso !kind_closure) end;
 val () = PFTEmit.emit_theory
   {trace=".hol/objs/pft_compute_bindersTheory.tr.gz",
    output="compute-binders.pft.bin",binary=true,ruleset=PFTEmit.Candle};

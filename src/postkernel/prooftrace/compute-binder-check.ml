@@ -31,6 +31,13 @@ let _ =
   check_compute "SIMPLE" simple (cvnum 0);
   check_compute "NESTED" nested (cvnum 6);
   check_compute "CAPTURE" nested (cvnum 6);
+  check_compute "CLOSURE" (add (cvnum 4) (cvnum 2)) (cvnum 6);
+  check_compute "CLOSURE_NESTED"
+    (let_tm x (add (cvnum 4) x) (cvnum 2)) (cvnum 6);
+  check_compute "CLOSURE_CAPTURE" nested (cvnum 6);
+  List.iter (fun (name,n) -> check_compute name (cvnum n) (cvnum n))
+    [("NUM_255",255);("NUM_256",256);("NUM_257",257);
+     ("NUM_18446744073709551616",18446744073709551616)];
   let b = mk_type("bool",[]) in
   let f = mk_var("f",mk_fun_ty b b) in
   let v = mk_var("kind_x",b) in

@@ -32,26 +32,25 @@ hypothesis sets and conclusions with `check_oracle_results ()` and
   /path/to/tracing/bin/hol /scratch/compute-binder
 ```
 
-The runner genuinely exports three kernel compute theorems and two term-kind
-regressions, then converts them
-into `compute-binders.pft.bin`. It checks a simple LET, nested LETs using both
-bound variables, and coincident binder names requiring capture avoidance.
-Native results are checked exactly, and the converted file must contain all
-three compute steps and a fresh capture-safe binder.
+The producer must have `cv_computeLib` available. The runner genuinely exports ten kernel compute theorems and two term-kind
+regressions into `compute-binders.pft.bin`. Compute cases cover a simple LET,
+nested LETs using both bound variables, coincident binder names requiring
+capture avoidance, delayed substitutions, and numerals 255, 256, 257 and
+18446744073709551616. It checks native compute results exactly and verifies
+that the delayed-substitution cases retain raw closures in the exported trace.
+The converted file must contain all ten compute steps and a fresh capture-safe
+binder.
 
 The term-kind cases use well-typed COMB and ABS nodes with identical children.
 They check SUBST through the abstraction and prevent its bound variable from
 being counted free during closure capture analysis.
 
 For Candle replay, convert the traced ancestors through `cv` and load them
-with the Candle preamble and compute preamble before this file. For merged
+with the Candle preamble first and compute preamble immediately after `cv`. For merged
 replay, select all exported theorems in `pft_compute_binders`. After either
-separate or merged replay, load `compute-binder-check.ml`. It requires the exact
-five conclusions and empty
-hypothesis sets, then prints `COMPUTE_BINDER_ALL_EXACT_PASS`.
-
-These cases cover bound indices under ordinary COMB/ABS nodes. They do not
-establish numeral translation through every delayed-substitution form.
+separate or merged replay, load `compute-binder-check.ml`. It requires all
+twelve exact conclusions and empty hypothesis sets, then prints
+`COMPUTE_BINDER_ALL_EXACT_PASS`.
 
 ## Specifications
 
