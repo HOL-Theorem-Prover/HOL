@@ -414,7 +414,10 @@ val () = run_test "merge keeps concurrently live compute contexts distinct"
             #n_ci (#limits (monitor concurrent_merged)) = 2)
 
 fun replay_temp () =
-  let val file = temp () ^ ".pft"
+  let val base = OS.FileSys.tmpName ()
+      val file = base ^ ".pft"
+      val () = if OS.FileSys.access(base, []) then
+                 OS.FileSys.remove base else ()
   in files := file :: !files; file end
 fun replay_output () =
   let val file = replay_temp ()
