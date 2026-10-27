@@ -363,11 +363,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   fun pft_dest_abs id = pft_dest_comb id  (* same layout: (var, body) *)
 
-  (* Discriminates COMB from ABS: COMBs are registered in comb_ht by
-     emit_comb; ABSs never are.  Only needed by callers that genuinely
-     need to tell the two apart (e.g. SUBST_prf's rconv); all other
-     call sites know the kind from the surrounding proof-rule invariant
-     and can use pft_dest_comb / pft_dest_abs directly. *)
+  (* COMB and ABS can share a child pair. The lookup must identify this
+     node, not merely another COMB with the same children. *)
   fun tm_part1_of id =
     if id < DArray.size tm_part1 then DArray.sub(tm_part1, id) else ~1
   fun tm_part2_of id =
@@ -376,7 +373,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
   fun pft_is_comb id =
     let val f = tm_part1_of id
         val x = tm_part2_of id
-    in f >= 0 andalso isSome (IntPairTable.lookup comb_ht (f, x))
+    in f >= 0 andalso IntPairTable.lookup comb_ht (f, x) = SOME id
     end
 
   (* Reverse lookup: PFT term ID -> PFT type ID.
@@ -469,7 +466,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
          in if name = "" then empty_fv_set  (* CONST *)
             else Redblackset.singleton name_ty_pft_cmp (name, pft_type_of id)
          end
-       else if isSome (IntPairTable.lookup comb_ht (p1, p2)) then
+       else if pft_is_comb id then
          (* COMB *)
          Redblackset.union(pft_free_vars p1, pft_free_vars p2)
        else

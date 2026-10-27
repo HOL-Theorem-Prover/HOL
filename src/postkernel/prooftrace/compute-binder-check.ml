@@ -11,20 +11,31 @@ let _ =
   let nn = mk_fun_ty num num in
   let zero = mk_mconst ("_0",num) in
   let bit name tm = mk_comb (mk_mconst(name,nn),tm) in
-  let numeral tm = mk_comb (mk_mconst("NUMERAL",nn),tm) in
-  let two = numeral (bit "BIT2" zero) in
-  let four = numeral (bit "BIT2" (bit "BIT1" zero)) in
-  let six = numeral (bit "BIT2" (bit "BIT2" zero)) in
-  let cvnum tm = mk_comb (mk_mconst("Cexp_num",mk_fun_ty num cv),tm) in
+  let rec bits n =
+    if n = 0 then zero
+    else if n mod 2 = 1 then bit "BIT1" (bits (n / 2))
+    else bit "BIT2" (bits ((n - 2) / 2)) in
+  let numeral n =
+    if n = 0 then zero else
+    mk_comb (mk_mconst("NUMERAL",nn),bits n) in
+  let cvnum n = mk_comb
+    (mk_mconst("Cexp_num",mk_fun_ty num cv),numeral n) in
   let letc = mk_mconst("LET",mk_fun_ty (mk_fun_ty cv cv) (mk_fun_ty cv cv)) in
   let let_tm v body arg = mk_comb (mk_comb (letc,mk_abs(v,body)),arg) in
   let x = mk_var("x",cv) in
   let y = mk_var("y",cv) in
-  let add = mk_mconst("Cexp_add",mk_fun_ty cv (mk_fun_ty cv cv)) in
-  let simple = let_tm x x (cvnum zero) in
-  let nested = let_tm x
-    (let_tm y (mk_comb(mk_comb(add,x),y)) (cvnum four)) (cvnum two) in
-  check_compute "SIMPLE" simple (cvnum zero);
-  check_compute "NESTED" nested (cvnum six);
-  check_compute "CAPTURE" nested (cvnum six);
+  let addc = mk_mconst("Cexp_add",mk_fun_ty cv (mk_fun_ty cv cv)) in
+  let add a b = mk_comb(mk_comb(addc,a),b) in
+  let simple = let_tm x x (cvnum 0) in
+  let nested = let_tm x (let_tm y (add x y) (cvnum 4)) (cvnum 2) in
+  check_compute "SIMPLE" simple (cvnum 0);
+  check_compute "NESTED" nested (cvnum 6);
+  check_compute "CAPTURE" nested (cvnum 6);
+  let b = mk_type("bool",[]) in
+  let f = mk_var("f",mk_fun_ty b b) in
+  let v = mk_var("kind_x",b) in
+  let abstraction = mk_abs(f,v) in
+  check_compute "KIND_COLLISION" abstraction abstraction;
+  let capture = mk_abs(f,abstraction) in
+  check_compute "KIND_CAPTURE" capture capture;
   print_endline "COMPUTE_BINDER_ALL_EXACT_PASS";;

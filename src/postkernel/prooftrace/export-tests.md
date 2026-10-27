@@ -29,22 +29,29 @@ hypothesis sets and conclusions with `check_oracle_results ()` and
 
 ```sh
 /path/to/HOL/src/postkernel/prooftrace/compute-binder-tests.sh \
-  /path/to/tracing/bin/hol /scratch/compute-binders
+  /path/to/tracing/bin/hol /scratch/compute-binder
 ```
 
-The producer must have `cv_computeLib` available. The runner exports three
-computed equalities for a simple let, nested lets, and two binders with the
-same printed name whose body uses both variables. It checks the source
-sequents, conversion, three computation commands and a capture-safe fresh
-binder. It introduces no new constants or oracle assumptions.
+The runner genuinely exports three kernel compute theorems and two term-kind
+regressions, then converts them
+into `compute-binders.pft.bin`. It checks a simple LET, nested LETs using both
+bound variables, and coincident binder names requiring capture avoidance.
+Native results are checked exactly, and the converted file must contain all
+three compute steps and a fresh capture-safe binder.
 
-For exact Candle replay, convert the exported theory's ancestors in dependency
-order, with the preamble first and compute-preamble immediately after `cv`.
-Replay those files followed by `compute-binders.pft.bin`, or merge the
-`pft_compute_binders$SIMPLE`, `NESTED` and `CAPTURE` exports and replay only
-the merged file. Then load `compute-binder-check.ml`; it checks all three
-exact conclusions and empty hypothesis sets and prints
-`COMPUTE_BINDER_ALL_EXACT_PASS`.
+The term-kind cases use well-typed COMB and ABS nodes with identical children.
+They check SUBST through the abstraction and prevent its bound variable from
+being counted free during closure capture analysis.
+
+For Candle replay, convert the traced ancestors through `cv` and load them
+with the Candle preamble and compute preamble before this file. For merged
+replay, select all exported theorems in `pft_compute_binders`. After either
+separate or merged replay, load `compute-binder-check.ml`. It requires the exact
+five conclusions and empty
+hypothesis sets, then prints `COMPUTE_BINDER_ALL_EXACT_PASS`.
+
+These cases cover bound indices under ordinary COMB/ABS nodes. They do not
+establish numeral translation through every delayed-substitution form.
 
 ## Specifications
 
