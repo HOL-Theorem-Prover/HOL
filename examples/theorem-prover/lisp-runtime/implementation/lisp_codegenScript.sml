@@ -1107,8 +1107,8 @@ val mc_write_num_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,GSYM ADD_ASSOC]
   \\ IMP_RES_TAC write_lemma \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1187,8 +1187,8 @@ val mc_write_sym_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,GSYM ADD_ASSOC]
   \\ IMP_RES_TAC write_lemma \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1368,8 +1368,8 @@ fun iJUMP_TAC inst =
     \\ blastLib.BBLAST_TAC)
   \\ ASM_SIMP_TAC std_ss [WORD_SUB_PLUS,WORD_ADD_SUB]
   \\ `code_length bs = code_ptr code` by METIS_TAC [WRITE_CODE_IMP_code_length,ADD_0]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1591,8 +1591,8 @@ fun iPOPS_TAC inst =
       \\ FULL_SIMP_TAC wstd_ss [w2w_def,w2n_n2w,n2w_11])
   \\ ASM_SIMP_TAC std_ss []
   \\ `code_length bs = code_ptr code` by METIS_TAC [WRITE_CODE_IMP_code_length,ADD_0]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1809,8 +1809,8 @@ set_goal([],goal)
   \\ IMP_RES_TAC write_lemma \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC (GEN_ALL write_list_th) \\ ASM_SIMP_TAC std_ss [])
