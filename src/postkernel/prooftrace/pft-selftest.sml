@@ -240,4 +240,78 @@ val () = run_test "merge preserves distinct explicit compute contexts"
   (fn () => !init_ids = [1,0] andalso !compute_ids = !init_ids andalso
             #n_ci compute_limits = 2)
 
+val (unused_file, out) = output "candle"
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.var out 0 "unused" 0
+val () = PFTWriter.Candle.assume out 0 0
+val () = PFTWriter.save out "unused$RESULT" 0
+val () = finish out
+val with_unused = temp ()
+val () = PFTMerge.merge
+  {inputs=[unused_file, types_file, uses_file],
+   targets=[PFTMerge.ThyThm("uses", "RESULT", false)],
+   output=with_unused, binary=true}
+val () = run_test "merge ignores unrelated exports without changing output"
+  (fn () => reader_bytes with_unused = reader_bytes merged)
+
+fun reject_unused prefix file =
+  ((PFTMerge.merge
+      {inputs=[types_file, uses_file, file],
+       targets=[PFTMerge.ThyThm("uses", "RESULT", false)],
+       output=unchanged, binary=true}; false)
+   handle Fail message => String.isPrefix prefix message)
+  andalso unchanged_output ()
+
+val (missing_file, out) = output "candle"
+val () = PFTWriter.var out 0 "missing" 3
+val () = finish out
+val () = run_test "merge rejects missing IDs in unselected files"
+  (fn () => reject_unused "PFTMerge: missing or forward reference" missing_file)
+
+val (forward_file, out) = output "candle"
+val () = PFTWriter.var out 0 "forward" 1
+val () = PFTWriter.tyvar out 1 "'a"
+val () = finish out
+val () = run_test "merge rejects forward IDs in unselected files"
+  (fn () => reject_unused "PFTMerge: missing or forward reference" forward_file)
+
+val (unused_reuse, out) = output "candle"
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.del out "ty" 0
+val () = PFTWriter.tyvar out 0 "'b"
+val () = finish out
+val () = run_test "merge rejects reused IDs after DEL in unselected files"
+  (fn () => reject_unused "PFTMerge: reused input ID" unused_reuse)
+
+val (unused_save, out) = output "candle"
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.var out 0 "duplicate" 0
+val () = PFTWriter.Candle.assume out 0 0
+val () = PFTWriter.save out "uses$RESULT" 0
+val () = finish out
+val () = run_test "merge rejects duplicate SAVEs in unselected files"
+  (fn () => reject_unused "PFTMerge: duplicate SAVE" unused_save)
+
+val (unused_implicit, out) = output "candle"
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.var out 0 "witness" 0
+val () = PFTWriter.Candle.assume out 0 0
+val () = PFTWriter.Candle.new_type_definition out 1 0
+  "unused_type" "unused_abs" "unused_rep"
+val () = PFTWriter.Candle.assume out 2 0
+val () = finish out
+val () = run_test "merge validates both implicit results in unselected files"
+  (fn () => reject_unused "PFTMerge: reused input ID th#2" unused_implicit)
+
+val (unused_compute, out) = output "candle"
+val () = PFTWriter.tyvar out 0 "'a"
+val () = PFTWriter.var out 0 "compute" 0
+val () = PFTWriter.Candle.compute out 0 1 0 []
+val () = PFTWriter.Candle.compute_init out 1 []
+val () = finish out
+val () = run_test
+  "merge validates compute context references in unselected files"
+  (fn () => reject_unused "PFTMerge: missing or forward reference to ci#1"
+                         unused_compute)
+
 val () = cleanup ()

@@ -307,6 +307,8 @@ New tools
     rulesets and explicit compute contexts. See `prooftrace/pft-cli.md` for
     commands and supported input layouts. Readers reject unsupported headers
     before replay; side-file exported proofs remain unsupported.
+    Target merging indexes all inputs but loads full command metadata only
+    for reached files, while retaining validation of unselected inputs.
 
 
 New examples
