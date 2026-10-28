@@ -3525,7 +3525,20 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
         # holds the report to naming something that exists.
         if "`" in fired:
             step = fired.split("`")[1]
-            assert_true(step in src or step in cand,
+            # As the server renders it: every whitespace character
+            # becomes a space (runs are *not* collapsed, so offsets
+            # still line up), and anything past 60 characters is cut
+            # to 57 plus an ellipsis -- `goal_state_init.ML:160-168'.
+            # Compare on the same terms.  Without this the assertion
+            # could only hold while the candidate stayed under the
+            # cut: `CAND' is 51 characters and each attempt adds 7, so
+            # from the third attempt on a fired canary always named a
+            # step that matched neither text, and whether this test
+            # passed came down to which attempt the 1ms canary won.
+            flat = lambda t: "".join(" " if ch.isspace() else ch
+                                     for ch in t)
+            needle = step[:-3] if step.endswith("...") else step
+            assert_true(any(needle in flat(h) for h in (src, cand)),
                         f"the named step comes from one of the two texts "
                         f"the walks index ({step!r} in {fired!r})")
 
