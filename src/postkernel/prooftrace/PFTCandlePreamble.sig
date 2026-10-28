@@ -54,6 +54,6 @@ signature PFTCandlePreamble = sig
 
      All theorems and definition equations are SAVEd under "candle$<name>".
   *)
-  val emit : {output: string, binary: bool} -> unit
+  val emit : {output: string} -> unit
 
 end

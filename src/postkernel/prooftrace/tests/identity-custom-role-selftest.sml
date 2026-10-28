@@ -49,11 +49,9 @@ local
     then () else raise Fail "custom registered role was accepted"
 in
   val () = rejects (fn () => PFTEmit.emit_theory
-    {trace=trace,output="custom-role-hol.pft.bin",binary=true,
-     ruleset=PFTEmit.HOL4})
+    {trace=trace,output="custom-role-hol.pft.bin",ruleset=PFTEmit.HOL4})
   val () = rejects (fn () => PFTEmit.emit_theory
-    {trace=trace,output="custom-role-candle.pft.bin",binary=true,
-     ruleset=PFTEmit.Candle})
+    {trace=trace,output="custom-role-candle.pft.bin",ruleset=PFTEmit.Candle})
   val () = rejects (fn () => ProofTraceReplay.replay trace)
   val () = print "IDENTITY_CUSTOM_ROLE_EXPLICIT_REJECTION_PASS\n"
 end;

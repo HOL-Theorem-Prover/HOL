@@ -46,7 +46,8 @@ signature PFTReader = sig
      Format-level commands are dispatched via format_handler.
      Ruleset-specific opcodes (0x10-0x4F) are dispatched via
      ruleset_handler.
-     Returns the header info and footer (peak namespace counts). *)
+     Returns the header info and footer (peak namespace counts).
+     All reader entry points require binary = true. *)
   val read : {file: string, binary: bool,
               format_handler: format_handler,
               ruleset_handler: ruleset_handler}

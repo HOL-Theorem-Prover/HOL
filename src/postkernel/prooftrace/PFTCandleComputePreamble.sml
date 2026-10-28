@@ -1513,22 +1513,11 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
       else ()
   in List.app cache_one (List.tabulate (256, fn i => i)) end
 
-  (* For reverse translation (Candle -> HOL4), we just use SYM of forward.
-     The same numbers need translation in both directions. *)
-  val () = let
-    fun cache_reverse n =
-      if needs_translation n then
-        let val (_, _, th) = translate_bits n
-            val th_rev = SYM th
-        in save ("candle$NUM_XLATE_REV_" ^ Int.toString n) th_rev end
-      else ()
-  in List.app cache_reverse (List.tabulate (256, fn i => i)) end
-
 in () end
 
-fun emit_file {output, binary} = let
+fun emit_file {output} = let
   val out = PFTWriter.openOut
-    {file = output, binary = binary, version = 1, ruleset = "candle"}
+    {file = output, version = 1, ruleset = "candle"}
 
   val next_ty = ref 0
   val next_tm = ref 0

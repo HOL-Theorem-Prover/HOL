@@ -107,7 +107,7 @@ val candle_preamble_axiom : (string * string) list = [
 (* emit_theory                                                               *)
 (* ========================================================================= *)
 
-fun emit_theory {trace, output, binary, ruleset} = let
+fun emit_theory {trace, output, ruleset} = let
   val is_candle = case ruleset of Candle => true | HOL4 => false
   val tr_name = if is_candle then candle_translate_name else I
   val fun_tyname = tr_name "min$fun"
@@ -272,7 +272,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   val ruleset_str = case ruleset of HOL4 => "hol4" | Candle => "candle"
   val out = PFTWriter.openOut
-    {file = output, binary = binary, version = 1, ruleset = ruleset_str}
+    {file = output, version = 1, ruleset = ruleset_str}
 
   (* --- Emit pass state --------------------------------------------------- *)
 

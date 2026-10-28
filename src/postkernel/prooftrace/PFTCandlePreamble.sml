@@ -1,8 +1,8 @@
 structure PFTCandlePreamble :> PFTCandlePreamble = struct
 
-fun emit {output, binary} = let
+fun emit {output} = let
   val out = PFTWriter.openOut
-    {file = output, binary = binary, version = 1, ruleset = "candle"}
+    {file = output, version = 1, ruleset = "candle"}
 
   (* ================================================================ *)
   (* ID allocators                                                    *)

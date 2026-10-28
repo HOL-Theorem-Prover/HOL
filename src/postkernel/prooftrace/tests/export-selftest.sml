@@ -47,3 +47,13 @@ val () = case case_name of
   | _ => raise Fail ("unknown export test case: " ^ case_name);
 val () = Theory.export_theory ();
 val () = print ("EXPORT_FIXTURE_PRODUCED " ^ case_name ^ "\n");
+
+val () = load_pft [];
+val name = valOf (OS.Process.getEnv "HOL_PFT_EXPORT_CASE");
+fun convert (label,ruleset) =
+  PFTEmit.emit_theory
+    {trace=".hol/objs/pftExport_" ^ name ^ "Theory.tr.gz",
+     output=name ^ "." ^ label ^ ".pft",ruleset=ruleset};
+val () = List.app (fn target =>
+  (convert target; print ("EXPORT_CONVERTED " ^ #1 target ^ "\n")))
+  [("hol4",PFTEmit.HOL4),("candle",PFTEmit.Candle)];

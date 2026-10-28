@@ -22,3 +22,12 @@ val () = List.app check
      "269984665640564039457584007913129639936")];
 val () = Theory.export_theory ();
 val () = print "COMPUTE_NUMERALS_PRODUCED\n";
+
+val () = load_pft [];
+val () = PFTEmit.emit_expect := true;
+val () = List.app (fn (name,ruleset) => (
+  PFTEmit.emit_theory
+    {trace=".hol/objs/compute_numeralsTheory.tr.gz",
+     output="compute_numerals." ^ name ^ ".pft",ruleset=ruleset};
+  print ("PASS arbitrary-precision compute numerals convert to " ^ name ^
+         "\n"))) [("hol4",PFTEmit.HOL4),("candle",PFTEmit.Candle)];

@@ -1,4 +1,4 @@
-val () = use (identity_source ^ "identity-check.sml");
+val () = use (test_source ^ "identity-check.sml");
 val identity_order = "identity_parent" :: identity_cases @ ["identity_child"];
 val identity_bootstrap = Systeml.HOLDIR ^
   "/src/bool/.hol/objs/boolTheory.tr.gz";
@@ -16,7 +16,7 @@ val () =
   if identity_phase = "convert" then
     let
       fun convert thy raw = PFTEmit.emit_theory
-        {trace=raw,output=identity_out thy,binary=true,ruleset=PFTEmit.HOL4}
+        {trace=raw,output=identity_out thy,ruleset=PFTEmit.HOL4}
       val () = convert "bool" identity_bootstrap
       val () = List.app (fn thy => convert thy (identity_raw thy)) identity_order
       val targets = PFTMerge.ThyThm("identity_parent","ROOT",false) ::

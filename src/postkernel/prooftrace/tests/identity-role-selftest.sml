@@ -63,7 +63,7 @@ local
             class=RawTheory_dtype.Thm})],
          anon_thms=[], mldeps=[]}
       fun convert ruleset = PFTEmit.emit_theory
-        {trace=trace, output=name ^ ".pft", binary=true, ruleset=ruleset}
+        {trace=trace, output=name ^ ".pft", ruleset=ruleset}
       val () = rejects (name ^ " HOL4")
         (fn () => convert PFTEmit.HOL4)
       val () = rejects (name ^ " Candle")

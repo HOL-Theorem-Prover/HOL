@@ -1,7 +1,4 @@
 open HolKernel boolSyntax;
-val term_kind_source = case OS.Process.getEnv "HOL_PFT_SOURCE_ROOT" of
-    SOME root => root ^ "/src/postkernel/prooftrace/"
-  | NONE => raise Fail "run term-kind-tests.sh";
 val () = Theory.new_theory "pft_term_kinds";
 val f = mk_var("f",bool --> bool);
 val x = mk_var("x",bool);
@@ -27,13 +24,7 @@ val () = save_exact "SPEC" (mk_eq(closed_abs,closed_abs)) specified;
 val () = Theory.export_theory ();
 val () = print "TERM_KIND_ACTUAL_EXPORT_PASS\n";
 
-val () = List.app load ["DArray","PIntMap","RawTheory_dtype"];
-fun term_kind_module name =
-  (use (term_kind_source ^ name ^ ".sig");
-   use (term_kind_source ^ name ^ ".sml"));
-val () = List.app term_kind_module
-  ["ProofTraceParser","ProofTraceWalk","PFTOpcodes","PFTWriter",
-   "IntPairTable","PFTCandleComputePreamble","PFTEmit"];
+val () = load_pft [];
 val term_kind_trace = ".hol/objs/pft_term_kindsTheory.tr.gz";
 val () = let
   open ProofTraceParser
@@ -56,6 +47,6 @@ in if List.all (fn name => List.exists (fn s => s = name) (!seen))
 end;
 val () = List.app (fn (name,ruleset) => PFTEmit.emit_theory
   {trace=term_kind_trace,output="term-kinds." ^ name ^ ".pft.bin",
-   binary=true,ruleset=ruleset})
+   ruleset=ruleset})
   [("candle",PFTEmit.Candle),("hol4",PFTEmit.HOL4)];
 val () = print "TERM_KIND_FOCUSED_TESTS_PASS\n";

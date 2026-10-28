@@ -2,7 +2,7 @@
 
 This document defines the `candle` ruleset for the
 [PFT format](pft-format.md). It specifies the theorem commands available
-in traces with `"ruleset":"candle"`, their binary opcodes, JSON encodings,
+in traces with ruleset `candle`, their binary opcodes,
 and logical semantics.
 
 The `candle` ruleset corresponds to the kernel of
@@ -135,44 +135,6 @@ Note: In `new_type_definition`, the three names are encoded as strings.
 Note: The `(redex residue)` ordering for pairs in substitutions (only
 observable in the binary format), differs from what is found in HOL Light.
 A replayer should take care to swap them when reading if necessary.
-
-## JSON Lines Encoding
-
-### Core inference rules
-
-```json
-{"cmd":"REFL","id":0,"tm":1}
-{"cmd":"TRANS","id":0,"th1":1,"th2":2}
-{"cmd":"MK_COMB","id":0,"th1":1,"th2":2}
-{"cmd":"ABS_THM","id":0,"tm":1,"th":2}
-{"cmd":"BETA","id":0,"tm":1}
-{"cmd":"ASSUME","id":0,"tm":1}
-{"cmd":"EQ_MP","id":0,"eq":1,"th":2}
-{"cmd":"DEDUCT_ANTISYM_RULE","id":0,"th1":1,"th2":2}
-{"cmd":"INST","id":0,"th":1,"subst":[{"redex":2,"residue":3}]}
-{"cmd":"INST_TYPE","id":0,"th":1,"subst":[{"redex":2,"residue":3}]}
-```
-
-### Derived rules
-
-```json
-{"cmd":"SYM","id":0,"th":1}
-{"cmd":"PROVE_HYP","id":0,"th1":1,"th2":2}
-```
-
-### Definitions
-
-```json
-{"cmd":"new_specification","id":0,"th":1,"names":["foo","bar"]}
-{"cmd":"new_type_definition","id":0,"th":1,"tyname":"mid","absname":"mid_ABS","repname":"mid_REP"}
-```
-
-### Computation
-
-```json
-{"cmd":"COMPUTE_INIT","id":0,"ths":[1,2,3]}
-{"cmd":"COMPUTE","id":0,"ci":1,"tm":2,"ths":[3,4,5]}
-```
 
 ## Specification of the Theorem Commands
 

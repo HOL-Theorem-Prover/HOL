@@ -39,7 +39,7 @@ fun no_dispatch file =
 
 val reader_valid = reader_temp ()
 val reader_out = PFTWriter.openOut
-  {file=reader_valid, binary=true, version=1, ruleset="hol4"}
+  {file=reader_valid, version=1, ruleset="hol4"}
 val () = PFTWriter.new_type reader_out "pft_reader_contract$unused" 0
 val () = PFTWriter.closeOut reader_out {n_ty=0, n_tm=0, n_th=0, n_ci=0}
 val reader_data = reader_bytes reader_valid
@@ -80,7 +80,7 @@ val () = reader_test "reader rejects three-namespace footer before dispatch"
 
 val candle_file = reader_temp ()
 val candle_out = PFTWriter.openOut
-  {file=candle_file, binary=true, version=1, ruleset="candle"}
+  {file=candle_file, version=1, ruleset="candle"}
 val rejected_type = {Thy="pft_reader_contract", Tyop="must_not_exist"}
 val () = PFTWriter.new_type candle_out
   "pft_reader_contract$must_not_exist" 0
@@ -106,7 +106,7 @@ fun finish out = PFTWriter.closeOut out
 fun output ruleset =
   let val file = temp ()
       val out = PFTWriter.openOut
-        {file=file, binary=true, version=1, ruleset=ruleset}
+        {file=file, version=1, ruleset=ruleset}
   in (file, out) end
 
 fun run_test name f =
@@ -422,7 +422,7 @@ fun replay_temp () =
 fun replay_output () =
   let val file = replay_temp ()
   in (file, PFTWriter.openOut
-       {file=file,binary=true,version=1,ruleset="hol4"})
+       {file=file,version=1,ruleset="hol4"})
   end
 fun exact_export left right key =
   case (PFTReplay.lookup left key, PFTReplay.lookup right key) of

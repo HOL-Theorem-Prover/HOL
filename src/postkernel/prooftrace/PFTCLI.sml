@@ -81,15 +81,15 @@ fun emit args =
     val output = required "--output" (!output)
   in PFTEmit.emit_expect := false;
      PFTEmit.emit_theory
-       {trace=trace, output=output, binary=true, ruleset=rs}
+       {trace=trace, output=output, ruleset=rs}
   end
 
 fun preamble ["--output", output] =
-      PFTCandlePreamble.emit {output=output, binary=true}
+      PFTCandlePreamble.emit {output=output}
   | preamble _ = fail "preamble requires --output FILE"
 
 fun compute_preamble ["--output", output] =
-      PFTCandleComputePreamble.emit_file {output=output, binary=true}
+      PFTCandleComputePreamble.emit_file {output=output}
   | compute_preamble _ = fail "compute-preamble requires --output FILE"
 
 fun merge args =

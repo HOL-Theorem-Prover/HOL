@@ -126,50 +126,11 @@ fun read_footer_raw file = let
 in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci,
     footer_len = footer_len, file_size = file_size} end
 
-(* ========================================================================= *)
-(* JSONL limits reader: scan backwards from EOF for last line                *)
-(* ========================================================================= *)
-
-fun read_limits_jsonl file = let
-  val file_size = Position.toInt (OS.FileSys.fileSize file)
-  val inp = BinIO.openIn file
-  (* Read last 1KB — limits line is short *)
-  val chunk_size = Int.min(file_size, 1024)
-  val _ = BinIO.inputN(inp, file_size - chunk_size)
-  val chunk = Byte.bytesToString (BinIO.inputN(inp, chunk_size))
-  val () = BinIO.closeIn inp
-  (* Find last newline-delimited line *)
-  val len = String.size chunk
-  fun find_nl i =
-    if i < 0 then 0
-    else if String.sub(chunk, i) = #"\n" andalso i < len - 1 then i + 1
-    else find_nl (i - 1)
-  val last_line = String.extract(chunk, find_nl (len - 2), NONE)
-  (* Extract integer field from JSON object via Substring.position *)
-  fun getField s field = let
-    val key = "\"" ^ field ^ "\":"
-    val (_, rest) = Substring.position key (Substring.full s)
-  in if Substring.size rest = 0
-     then raise Fail ("PFTReader: no " ^ field ^ " in limits line")
-     else let
-       val after = Substring.dropl Char.isSpace
-                     (Substring.triml (String.size key) rest)
-       val digits = Substring.takel Char.isDigit after
-     in case Int.fromString (Substring.string digits) of
-          SOME n => n
-        | NONE => raise Fail ("PFTReader: bad " ^ field ^ " in limits line")
-     end
-  end
-in {n_ty = getField last_line "n_ty",
-    n_tm = getField last_line "n_tm",
-    n_th = getField last_line "n_th",
-    n_ci = getField last_line "n_ci"} end
-
 fun read_limits {file, binary} =
   if binary then let
     val {n_ty, n_tm, n_th, n_ci, ...} = read_footer_raw file
   in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end
-  else read_limits_jsonl file
+  else raise Fail "PFTReader: JSONL input unsupported"
 
 fun header (r: bin_reader) = let
   val magic = Byte.bytesToString (#readBytes r 4)

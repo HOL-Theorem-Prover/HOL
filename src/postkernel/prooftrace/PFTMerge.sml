@@ -659,7 +659,7 @@ fun pass2_emit (file_states: file_state option ref vector)
     val () = List.app (fn (fi, id) => inc_ref fi NS_TH id) def_saves
 
     (* Step 3: Emit *)
-    val out = PFTWriter.openOut {file=output, binary=true,
+    val out = PFTWriter.openOut {file=output,
                                  version=version, ruleset=ruleset}
 
     fun release fi ns id =

@@ -33,7 +33,6 @@ signature PFTEmit = sig
                 translates names for core boolean constants/types) *)
   val emit_theory : { trace : string,       (* input .tr.gz file *)
                       output : string,       (* output .pft file *)
-                      binary : bool,
                       ruleset : ruleset } -> unit
 
 end

@@ -1,9 +1,6 @@
 val () = load "cv_computeLib";
 open HolKernel boolSyntax;
 
-val compute_source = case OS.Process.getEnv "HOL_PFT_SOURCE_ROOT" of
-    SOME root => root ^ "/src/postkernel/prooftrace/"
-  | NONE => raise Fail "run compute-binder-tests.sh";
 fun compute_require message condition =
   if condition then () else raise Fail message;
 
@@ -71,13 +68,7 @@ val () = ignore (Theory.save_thm("KIND_CAPTURE",kind_capture_result));
 val () = Theory.export_theory ();
 val () = print "COMPUTE_BINDER_ACTUAL_EXPORT_PASS\n";
 
-val () = List.app load ["DArray","PIntMap","RawTheory_dtype"];
-fun compute_module name =
-  (use (compute_source ^ name ^ ".sig");
-   use (compute_source ^ name ^ ".sml"));
-val () = List.app compute_module
-  ["ProofTraceParser","ProofTraceWalk","PFTOpcodes","PFTWriter",
-   "IntPairTable","PFTCandleComputePreamble","PFTEmit","PFTReader"];
+val () = load_pft ["PFTReader"];
 val () = let
   open ProofTraceParser
   val (root,heap) = parse ".hol/objs/pft_compute_bindersTheory.tr.gz"
@@ -112,7 +103,7 @@ in compute_require "missing raw compute closures"
      (!closures = 7 andalso !kind_closure) end;
 val () = PFTEmit.emit_theory
   {trace=".hol/objs/pft_compute_bindersTheory.tr.gz",
-   output="compute-binders.pft.bin",binary=true,ruleset=PFTEmit.Candle};
+   output="compute-binders.pft.bin",ruleset=PFTEmit.Candle};
 
 val compute_calls = ref 0;
 val compute_capture = ref false;
