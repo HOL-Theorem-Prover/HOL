@@ -105,8 +105,8 @@ directly in the kernel for efficiency.
 
 | Command | Arguments |
 |---------|-----------|
-| COMPUTE_INIT | id, ths: thm-id list |
-| COMPUTE | id, ci: compute-id, tm, ths: thm-id list |
+| COMPUTE_INIT | ths: thm-id list |
+| COMPUTE | id, tm, ths: thm-id list |
 
 ## Binary Opcodes
 
@@ -126,8 +126,8 @@ directly in the kernel for efficiency.
 | 0x21   | PROVE_HYP                  | id th1 th2                             |
 | 0x30   | new_specification          | id th n_names name...                  |
 | 0x31   | new_type_definition        | id th tyname absname repname           |
-| 0x40   | COMPUTE_INIT               | id n_ths th...                         |
-| 0x41   | COMPUTE                    | id ci tm n_ths th...                   |
+| 0x40   | COMPUTE_INIT               | n_ths th...                            |
+| 0x41   | COMPUTE                    | id tm n_ths th...                      |
 
 
 Note: In `new_type_definition`, the three names are encoded as strings.
@@ -182,9 +182,12 @@ replayer must reserve both IDs.
 
 #### COMPUTE_INIT
 
-Initialises a compute context from a fixed list of characteristic equation
-theorems, provided in a specific order. Each theorem must have no
-hypotheses.
+Initialises the ambient compute context from a fixed list of characteristic
+equation theorems, provided in a specific order. It produces no object. The
+context stays in effect for later files in the same replay until the next
+`COMPUTE_INIT` replaces it, so a trace containing `COMPUTE` needs no
+`COMPUTE_INIT` of its own when an earlier file initialized the context. Each
+theorem must have no hypotheses.
 
 The characteristic equations use BIT0/BIT1 numeral encoding, with `_0` as
 the zero constant and `NUMERAL` as the numeral wrapper. The compute value
@@ -259,7 +262,7 @@ The required equations (in order):
 
 #### COMPUTE
 
-Takes a compute context `ci`, a list of code equation theorems
+Takes a list of code equation theorems
 `[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
 is the normal form of `t` under evaluation.
 
