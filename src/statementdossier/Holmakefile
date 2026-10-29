@@ -1,4 +1,8 @@
+# Moscow ML's parser is already in sigobj; rebuilding it would invalidate
+# the datatype identities used by bootstrap modules such as holpathdb.
+ifdef POLY
 INCLUDES = $(HOLDIR)/tools/Holmake/toml
+endif
 
 .PHONY: all
 all: statementDossierLib.uo statementDossierConfig.uo selftest.exe \
