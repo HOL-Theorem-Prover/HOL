@@ -29,20 +29,19 @@ fun bOpcode out opc = bByte out (Word8.fromInt opc)
 fun openOut {file, version, ruleset} = let
   val out = BinIO.openOut file
 in bBytes out (Byte.stringToBytes "PFT\000");
-   bVarint out version;
+   bString out version;
    bString out ruleset;
    out
 end
 
-fun closeOut out {n_ty, n_tm, n_th, n_ci} = let
+fun closeOut out {n_ty, n_tm, n_th} = let
   fun varint_size n = if n < 128 then 1 else 1 + varint_size (n div 128)
   val footer_len = 1 + varint_size n_ty + varint_size n_tm
-                     + varint_size n_th + varint_size n_ci
+                     + varint_size n_th
   val () = bOpcode out 0xFF
   val () = bVarint out n_ty
   val () = bVarint out n_tm
   val () = bVarint out n_th
-  val () = bVarint out n_ci
   val lo = Word8.fromInt (footer_len mod 256)
   val hi = Word8.fromInt (footer_len div 256)
 in bByte out lo; bByte out hi;
@@ -194,15 +193,15 @@ fun def_spec_gen out id th names =
 
 (* --- Computation --------------------------------------------------------- *)
 
-fun compute_init out id ty1 ty2 char_eqns cval_terms =
-    (bOpcode out 0x43; bVarint out id; bVarint out ty1; bVarint out ty2;
+fun compute_init out ty1 ty2 char_eqns cval_terms =
+    (bOpcode out 0x43; bVarint out ty1; bVarint out ty2;
      bVarint out (length char_eqns);
      List.app (fn (n,th) => (bString out n; bVarint out th)) char_eqns;
      bVarint out (length cval_terms);
      List.app (fn (n,tm) => (bString out n; bVarint out tm)) cval_terms)
 
-fun compute out id ci tm ths =
-    (bOpcode out 0x44; bVarint out id; bVarint out ci; bVarint out tm;
+fun compute out id tm ths =
+    (bOpcode out 0x44; bVarint out id; bVarint out tm;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
@@ -248,15 +247,15 @@ fun new_type_definition out id th tyname absname repname =
     (bOpcode out 0x31; bVarint out id; bVarint out th;
      bString out tyname; bString out absname; bString out repname)
 
-(* COMPUTE id ci tm ths *)
-fun compute out id ci tm ths =
-    (bOpcode out 0x41; bVarint out id; bVarint out ci; bVarint out tm;
+(* COMPUTE id tm ths *)
+fun compute out id tm ths =
+    (bOpcode out 0x41; bVarint out id; bVarint out tm;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
-(* COMPUTE_INIT id ths *)
-fun compute_init out id ths =
-    (bOpcode out 0x40; bVarint out id;
+(* COMPUTE_INIT ths *)
+fun compute_init out ths =
+    (bOpcode out 0x40;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
@@ -264,8 +263,8 @@ end (* structure Candle *)
 
 (* --- Deletion ------------------------------------------------------------ *)
 
-val del_opcodes = [("ty",0xE0),("tm",0xE1),("th",0xE2),("ci",0xE3)]
-val del_range_opcodes = [("ty",0xF0),("tm",0xF1),("th",0xF2),("ci",0xF3)]
+val del_opcodes = [("ty",0xE0),("tm",0xE1),("th",0xE2)]
+val del_range_opcodes = [("ty",0xF0),("tm",0xF1),("th",0xF2)]
 
 fun lookup_opc table ns =
   case List.find (fn (k,_) => k = ns) table of
@@ -310,7 +309,7 @@ fun write_raw out {opcode, desc: PFTOpcodes.opcode_desc, result, args} =
                          #tag desc ^ "." ^ #label s))
         (#args desc, args)
     val () = bOpcode out opcode
-    val () = bVarint out result
+    val () = if null (#results desc) then () else bVarint out result
     fun emit v =
       case v of
         VId n         => bVarint out n

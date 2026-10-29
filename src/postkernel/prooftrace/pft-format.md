@@ -1,4 +1,4 @@
-# HOL PFT version 1
+# HOL PFT version 0.1.0
 
 ## Overview
 
@@ -10,11 +10,11 @@ used.
 
 ## Supported implementations
 
-The supported interchange is binary version **1**, with the `hol4` and
+The supported interchange is binary version **0.1.0**, with the `hol4` and
 `candle` rulesets. The HOL replayer accepts only `hol4`; the Candle replayer
 accepts only `candle`. Readers check the header before executing commands.
-The experimental string-version `0.1.0` format (three namespaces and ambient
-compute state) is incompatible and is rejected.
+The earlier integer-version `1` format with explicit compute objects is
+incompatible and is rejected.
 
 The converter accepts the current producer's TR32 or unreduced 64-bit
 heap encoding; raw heap layouts are producer-specific, unlike this PFT
@@ -27,17 +27,16 @@ conclusion and hypotheses explicitly.
 
 ## Object Namespaces
 
-There are four namespaces, each with independently numbered IDs:
+There are three namespaces, each with independently numbered IDs:
 
 | Namespace        | Identifier |
 |------------------|------------|
 | Types            | `ty`       |
 | Terms            | `tm`       |
 | Theorems         | `th`       |
-| Compute contexts | `ci`       |
 
 IDs are reused: when an object is no longer needed, its ID may be assigned to
-a new object in the same namespace. Each command assigns an ID in the
+a new object in the same namespace. Each object-producing command assigns an ID in the
 appropriate namespace (determined by the command type). A command may assign
 an ID that it also references as an argument; the replayer reads all arguments
 before writing the result.
@@ -46,9 +45,10 @@ Since every command is typed, the assigned ID does not need a namespace
 qualifier — it is unambiguously in the namespace of the command's result type.
 DEL commands do require a namespace qualifier.
 
-A compute context is a cached collection of types/terms/theorems used by
-the fast computation mechanism of kernels that support such a mechanism.
-See the specific ruleset specifications for details on what they contain.
+COMPUTE_INIT installs the types, terms and theorems used by fast computation
+as replayer state; it produces no object or ID. COMPUTE uses the most recent
+initialization, including one from a previously replayed file. A subsequent
+COMPUTE_INIT replaces that state. See the ruleset for its contents.
 
 ## Header and Footer
 
@@ -58,7 +58,7 @@ Every trace begins with a header and ends with a footer.
 
 The header specifies:
 
-- **version**: the format version number (currently `1`). Covers the encoding
+- **version**: the format version string (currently `0.1.0`). Covers the encoding
   and syntax of the format.
 - **ruleset**: the name of the ruleset that defines the theorem commands
   available in the trace. The ruleset is specified separately (e.g.,
@@ -67,8 +67,8 @@ The header specifies:
 ### Footer
 
 The footer declares array bounds: one plus the largest assigned ID in each
-namespace, or zero for an unused namespace. It contains four counts for types,
-terms, theorems, and compute contexts respectively. These bounds can exceed
+namespace, or zero for an unused namespace. It contains three counts for types,
+terms and theorems respectively. These bounds can exceed
 the peak number of live objects when IDs are not reused or a command needs
 consecutive result IDs.
 
@@ -214,21 +214,21 @@ commands, and ends with a footer.
 ### Header
 
 ```
-PFT\0 <version:varint> <ruleset:string>
+PFT\0 <version:string> <ruleset:string>
 ```
 
 ### Footer
 
 ```
-<0xFF> <n_ty:varint> <n_tm:varint> <n_th:varint> <n_ci:varint> <footer_len:uint16le>
+<0xFF> <n_ty:varint> <n_tm:varint> <n_th:varint> <footer_len:uint16le>
 ```
 
 The footer begins with a single-byte opcode `0xFF` (LIMITS), followed by
-four varint counts, followed by a 2-byte little-endian unsigned integer
+three varint counts, followed by a 2-byte little-endian unsigned integer
 giving the byte length of the footer excluding the 2-byte length field
-itself (i.e., the opcode byte plus the four varints). A reader seeks to
+itself (i.e., the opcode byte plus the three varints). A reader seeks to
 the last 2 bytes of the file to read the length, then seeks back that
-many bytes to read the opcode and the four counts.
+many bytes to read the opcode and the three counts.
 
 ### Command encoding
 
@@ -253,12 +253,10 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0xE0   | DEL ty        | id                                     |
 | 0xE1   | DEL tm        | id                                     |
 | 0xE2   | DEL th        | id                                     |
-| 0xE3   | DEL ci        | id                                     |
 | 0xF0   | DEL ty range  | id_lo id_upto                          |
 | 0xF1   | DEL tm range  | id_lo id_upto                          |
 | 0xF2   | DEL th range  | id_lo id_upto                          |
-| 0xF3   | DEL ci range  | id_lo id_upto                          |
-| 0xFF   | LIMITS        | n_ty n_tm n_th n_ci                    |
+| 0xFF   | LIMITS        | n_ty n_tm n_th                    |
 
 Opcodes in the range 0x10–0x4F are reserved for theorem commands defined by
 the ruleset.
