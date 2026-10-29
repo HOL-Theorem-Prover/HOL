@@ -31,14 +31,18 @@ from collections import defaultdict
 # --------------------------------------------------------------------
 # graph loading
 
-def load_graph(path: str):
-    """Load Holmake --json output.  Works around HM_DepGraph.sml:242
+def parse_graph(text: str):
+    """Parse Holmake --json output.  Works around HM_DepGraph.sml:242
     failing to escape " inside command strings by redacting the
     command field before JSON parsing."""
-    with open(path) as f:
-        text = f.read()
     text = re.sub(r'"command" : ".*",\n', '"command" : "",\n', text)
     return json.loads(text)
+
+
+def load_graph(path: str):
+    """parse_graph on a file."""
+    with open(path) as f:
+        return parse_graph(f.read())
 
 
 # --------------------------------------------------------------------
