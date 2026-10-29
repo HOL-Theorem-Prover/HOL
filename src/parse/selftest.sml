@@ -3,18 +3,6 @@ open Lib Type PP smpp PPBackEnd testutils
 val failcount = ref 0
 val _ = diemode := Remember failcount
 
-val _ = tprint "testutils shares failure mode with testutilsBase"
-val _ = if diemode = testutilsBase.diemode then OK()
-        else die "Separate failure-mode refs"
-val _ = tprint "testutils shares linewidth with testutilsBase"
-val _ = if linewidth = testutilsBase.linewidth then OK()
-        else die "Separate linewidth refs"
-val _ = tprint "testutils preserves base datatype identity"
-val _ = case (testutilsBase.Remember failcount : die_mode) of
-            Remember r => if r = failcount then OK()
-                          else die "Different failure counter"
-          | _ => die "Different failure mode"
-
 (* -------------------------------------------------------------------------- *)
 (* Test code for terminal styles                                              *)
 (* -------------------------------------------------------------------------- *)

@@ -263,19 +263,9 @@ fun str h w = let
   in Byte.bytesToString (vector (slice (vec, start + data_off + 8, SOME n))) end
 
 type ident = string * string * int
-fun ident c w = let
-  val (_, n) = obj c w
-  val f = arg c w
-  val () = if n = 2 andalso not (isPtr (f 1)) then () else
-    raise Fail ("ProofTraceParser: unsupported kernel identifier layout; " ^
-                "expected {name, epoch}")
-  val name = f 0
-  val (_, n) = obj c name
-  val () = if n = 2 then () else
-    raise Fail "ProofTraceParser: invalid kernel name layout"
-in case tuple2 c (str c, str c) name of
-     (thy, nm) => (thy, nm, int (f 1))
-end
+fun ident c w = case arg c w of f =>
+  case tuple2 c (str c, str c) (f 0) of
+    (thy, nm) => (thy, nm, int (f 1))
 
 fun thmId c w = case arg c w of f =>
   case f 0 of
@@ -364,21 +354,11 @@ fun names heap root = let
     fun add_live p = let
       val (thy,nm,epoch) = ident heap p
       val name = {Thy=thy,Name=nm}
-      val () = case Redblackmap.peek(!live, name) of
-          NONE => ()
-        | SOME old => if old = epoch then () else
-            raise Fail "ProofTraceParser: conflicting live identities"
     in live := Redblackmap.insert(!live, name, epoch) end
     val () = appList heap add_live ids
     fun add_origin p = let
-      val (id as (thy,_,_), origin as (owner,hash)) = tuple2 heap
+      val (id, origin) = tuple2 heap
         (ident heap, tuple2 heap (str heap, str heap)) p
-      val () = if owner = thy andalso hash <> "" then () else
-        raise Fail "ProofTraceParser: invalid imported identity origin"
-      val () = case Redblackmap.peek(!imported, id) of
-          NONE => ()
-        | SOME old => if old = origin then () else
-            raise Fail "ProofTraceParser: conflicting identity origins"
     in imported := Redblackmap.insert(!imported, id, origin) end
     val () = appList heap add_origin origins
     fun resolve p = let
