@@ -372,6 +372,10 @@ module.exports = grammar({
         // tokens for `Proof'/`QED'/`Theorem' break ties by forcing
         // block delimiters to sit at column 0.
         [$.hol_theorem_with_proof],
+        // `some x. P x' (binder) and `some x' (the plain name `some'
+        // applied to `x') share a prefix; which one it is isn't known
+        // until the `.' shows up or doesn't.  GLR keeps both alive.
+        [$._hol_word_binder_ident, $.hol_binder],
     ],
 
     // HACK Causes problem when we add HOL things
@@ -1433,12 +1437,31 @@ module.exports = grammar({
         hol_fn_spec: $ => alias($._hol_term, $.hol_term),
 
         hol_identifier: $ => choice(
+            $._hol_word_binder_ident,
             $._hol_alphanumeric,
             $._hol_symbolic,
             $._hol_dollared,
             $._hol_op_with_sup,
             $._hol_unicode_op,
             $._hol_bracket_ident,
+        ),
+
+        // The alphanumeric binders of `hol_binder', spelled as plain
+        // names.  Tree-sitter prefers a string literal over a regex of
+        // the same length, so wherever `hol_binder' is a legal
+        // continuation — i.e. at the head of a term — `some' can only
+        // lex as the binder keyword and never as `_hol_alphanumeric'.
+        // HOL itself has no such restriction: these are ordinary
+        // constants that happen to carry a binder fixity, and `some'
+        // or `LEAST' with no following `.' is just a name.  Listing
+        // them here as an alternative spelling of `hol_identifier'
+        // keeps the plain-name reading available for GLR to pick.
+        // `univ' rides along for the same reason, against
+        // `hol_universe'.
+        _hol_word_binder_ident: $ => choice(
+            'OLEAST', 'oleast', 'LEAST', 'LEAST_INT', 'some',
+            'EXISTS_AT_MOST_ONE', 'FCP', 'AE', 'POSTv', 'SEP_EXISTS',
+            'asl_exists', 'asl_forall', 'COND_PROP___EXISTS', 'univ',
         ),
 
         // Bracket-like tokens registered as user-defined mixfix
