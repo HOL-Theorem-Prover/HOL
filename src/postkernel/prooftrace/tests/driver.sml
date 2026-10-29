@@ -12,6 +12,6 @@ val () =
        (use (source ^ name ^ ".sig"); use (source ^ name ^ ".sml")))
        ["ProofTraceParser","ProofTraceWalk","ProofTraceReplay"];
      if identity_phase = "role" orelse identity_phase = "custom-role" then
-       use (test_source ^ "identity-" ^ identity_phase ^ "-selftest.sml")
+       use (test_source ^ "identity-role-selftest.sml")
      else use (test_source ^ "identity-selftest.sml"));
 val () = print "PFT_TEST_PHASE_PASS\n";
