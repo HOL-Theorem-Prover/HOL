@@ -1,33 +1,31 @@
-.PHONY: all
-all: statementDossierLib.uo selftest.exe
+INCLUDES = $(HOLDIR)/tools/Holmake/toml
 
-# HOL's JSON library is built only with Poly/ML.
+.PHONY: all
+all: statementDossierLib.uo statementDossierConfig.uo selftest.exe \
+     configSelftest.exe
+
 ifdef POLY
-all: statement-dossier jsonSelftest.exe
+all: statement-dossier
 
 statement-dossier: statementDossierTool.uo $(dprot $(HOLDIR)/bin/hol.state)
 	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap $< -o $@ --exe main
-
-jsonSelftest.exe: jsonSelftest.uo
-	$(HOLMOSMLC) -o $@ $<
-
-ifdef HOLSELFTESTLEVEL
-all: statementdossier-json-selftest.log
-
-statementdossier-json-selftest.log: jsonSelftest.exe
-	$(tee ./jsonSelftest.exe 2>&1,$@)
-endif
 endif
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
+configSelftest.exe: configSelftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
 ifdef HOLSELFTESTLEVEL
-all: statementdossier-selftest.log
+all: statementdossier-selftest.log statementdossier-config-selftest.log
 
 statementdossier-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1,$@)
+
+statementdossier-config-selftest.log: configSelftest.exe
+	$(tee ./configSelftest.exe 2>&1,$@)
 endif
 
-EXTRA_CLEANS = selftest.exe jsonSelftest.exe statement-dossier \
-               statementdossier-selftest.log statementdossier-json-selftest.log
+EXTRA_CLEANS = selftest.exe configSelftest.exe statement-dossier \
+               statementdossier-selftest.log statementdossier-config-selftest.log

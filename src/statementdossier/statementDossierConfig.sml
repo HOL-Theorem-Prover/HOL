@@ -5,28 +5,21 @@ open HolKernel statementDossierLib
 
 fun bad field message = raise Fail (field ^ ": " ^ message)
 
-fun object field (JSON.OBJECT fields) =
-      let
-        fun unique [] = ()
-          | unique ((k, _) :: rest) =
-              if List.exists (fn (k', _) => k = k') rest then
-                bad field ("duplicate field " ^ k)
-              else unique rest
-      in unique fields; fields end
-  | object field _ = bad field "expected an object"
+fun table _ (TOML.TABLE fields) = fields
+  | table field _ = bad field "expected a table"
 
 fun fields field allowed value =
   let
-    val fs = object field value
+    val fs = table field value
     val _ = List.app
       (fn (k, _) => if List.exists (fn a => k = a) allowed then ()
                     else bad field ("unknown field " ^ k)) fs
   in fs end
 
-fun string _ (JSON.STRING s) = s
+fun string _ (TOML.STRING s) = s
   | string field _ = bad field "expected a string"
 
-fun array decode field (JSON.ARRAY xs) = map (decode field) xs
+fun array decode field (TOML.ARRAY xs) = map (decode field) xs
   | array _ field _ = bad field "expected an array"
 
 fun required fs decode k =
@@ -66,20 +59,20 @@ fun configuration path value =
         else OS.Path.mkAbsolute {path = s, relativeTo = OS.Path.dir path}
       end
     fun source_dirs field v =
-      map (fn (label, dir) => (label, file field dir)) (object field v)
+      map (fn (label, dir) => (label, file field dir)) (table field v)
     fun outputs field v =
       let
         fun output ("markdown", p) = (Markdown, file field p)
           | output ("html", p) = (Html, file field p)
           | output (k, _) = bad field ("unknown format " ^ k)
-        val result = map output (object field v)
+        val result = map output (table field v)
       in
         if null result then bad field "expected at least one output"
         else result
       end
     fun equations field v =
-      map (fn (k, vs) => (name field (JSON.STRING k), array name field vs))
-          (object field v)
+      map (fn (k, vs) => (name field (TOML.STRING k), array name field vs))
+          (table field v)
     fun snippets field v =
       let val fs = fields field ["input", "output"] v
       in (required fs file "input", required fs file "output") end
@@ -120,7 +113,10 @@ fun configuration path value =
 fun run path =
   let
     val path = OS.FileSys.fullPath path
-    val (cfg, paths, theories) = configuration path (JSONParser.parseFile path)
+    val (cfg, paths, theories) = configuration path
+      (TOML.TABLE (TOML.fromFile path)
+       handle TOMLerror.ParseError e =>
+         bad "configuration" (TOMLerror.toString e))
     fun report () =
       (List.app (fn thy => Meta.load (thy ^ "Theory")) theories;
        statementDossierLib.run cfg)

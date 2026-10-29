@@ -3,7 +3,7 @@ open statementDossierConfig
 fun main () =
   (case CommandLine.arguments () of
      [path] => statementDossierConfig.run path
-   | _ => raise Fail "usage: statement-dossier CONFIG.json")
+   | _ => raise Fail "usage: statement-dossier CONFIG.toml")
   handle e =>
     (TextIO.output (TextIO.stdErr,
        "statement-dossier: " ^ General.exnMessage e ^ "\n");

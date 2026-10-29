@@ -22,7 +22,7 @@ In a configured, built Poly/ML HOL tree, from its root:
 
 ```sh
 (cd src/statementdossier && ../../bin/Holmake -j2)
-src/statementdossier/statement-dossier src/statementdossier/example.json
+src/statementdossier/statement-dossier src/statementdossier/example.toml
 ```
 
 Open `src/statementdossier/list-dossier.html` or read the accompanying
@@ -31,13 +31,14 @@ Markdown file. The example reports `list$REVERSE_APPEND`, expands
 theorem. The command loads the theories itself. The configuration is
 data; it does not contain SML expressions:
 
-```json
-{
-  "title": "List reversal and append",
-  "theorems": ["list$REVERSE_APPEND"],
-  "expand_consts": ["list$REVERSE", "list$APPEND"],
-  "outputs": {"markdown": "list-dossier.md", "html": "list-dossier.html"}
-}
+```toml
+title = "List reversal and append"
+theorems = ["list$REVERSE_APPEND"]
+expand_consts = ["list$REVERSE", "list$APPEND"]
+
+[outputs]
+markdown = "list-dossier.md"
+html = "list-dossier.html"
 ```
 
 All file paths, including outputs and load paths, are relative to the
@@ -47,37 +48,38 @@ Remove generated reports when finished; they are not source files.
 
 The command uses the same HOL runtime as `polyscripter`: its executable
 contains a base heap and can load further theory modules. The report
-library also works in Moscow ML. The JSON reader and standalone command
-use HOL's Poly/ML JSON library and are built only with Poly/ML.
+library and TOML reader also work in Moscow ML. The standalone command
+is built with Poly/ML. The TOML reader reuses HOL's existing parser.
 
 ## Configuration
 
 `theorems` and `outputs` are required and nonempty. Names are strings of
 the form `Theory$Name`; selection does not depend on which theory is
-open. Unknown or duplicate object fields, malformed names and wrong
-value types are errors. Optional fields are omitted rather than null.
+open. In table keys, quote these names: `"list$APPEND" = [...]`.
+Unknown or duplicate table fields, malformed names and wrong value types
+are errors. Omit optional fields to use their defaults.
 
-| Field | JSON value and meaning |
+| Field | TOML value and meaning |
 |-------|------------------------|
 | `title`, `preamble` | Strings. Default title: `Stored theorem dossier`; default preamble: empty. |
 | `theorems` | Array of stored theorem names, in report order. |
 | `expand_theories`, `expand_consts` | Arrays of theory or qualified constant names whose definitions are followed. Naming a constant does not automatically expand constants in its definition. |
 | `stop_theories`, `stop_consts` | Arrays of boundaries, overriding expansion. |
-| `equation_lemmas` | Object mapping qualified constants to arrays of theorem names, added to discovered equation lemmas. |
-| `source_dirs` | Object mapping display labels to directories containing theory scripts. An empty object uses recorded source filenames. |
-| `outputs` | Object with `markdown` and/or `html` paths. HTML includes its CSS and navigation script. |
+| `equation_lemmas` | Table mapping qualified constants to arrays of theorem names, added to discovered equation lemmas. |
+| `source_dirs` | Table mapping display labels to directories containing theory scripts. An empty table uses recorded source filenames. |
+| `outputs` | Table with `markdown` and/or `html` paths. HTML includes its CSS and navigation script. |
 | `supporting` | Array of additional stored theorem names, shown without further expansion. |
-| `assumptions` | Object with `theorem` and `prose`. The theorem must be among `theorems`; `prose` is a Markdown file as described below. |
-| `snippets` | Object with `input` and `output` paths, for the document snippets described below. |
+| `assumptions` | Table with `theorem` and `prose`. The theorem must be among `theorems`; `prose` is a Markdown file as described below. |
+| `snippets` | Table with `input` and `output` paths, for the document snippets described below. |
 | `load_path` | Array of directories containing built HOL modules; searched before the normal HOL load path. |
 | `theories` | Array of extra theories to load, for example for names used only in prose. Theories named elsewhere in the configuration load automatically. |
 
 Unspecified collections are empty; omitting `assumptions` or `snippets`
 disables that feature. Misspelled theorems, constants and expansion/stop
-theories are errors. The JSON reader needs no external programs. Pandoc
+theories are errors. The TOML reader needs no external programs. Pandoc
 is only required for HTML output with assumption prose.
 
-For interactive use, `statementDossierConfig.run "dossier.json"` reads the
+For interactive use, `statementDossierConfig.run "dossier.toml"` reads the
 same file. `statementDossierLib.run : config -> unit` accepts an SML record
 for callers that already have their theories loaded; its signature
 documents the corresponding record fields. Each call takes a fresh
@@ -164,7 +166,7 @@ For a runnable example using `arithmetic$LESS_EQ_IMP_LESS_SUC` and
 `example-assumptions.md`, with pandoc installed:
 
 ```sh
-src/statementdossier/statement-dossier src/statementdossier/proseExample.json
+src/statementdossier/statement-dossier src/statementdossier/proseExample.toml
 ```
 
 This writes `arithmetic-dossier.md` and `arithmetic-dossier.html` in the
@@ -193,10 +195,10 @@ optional formatting aid; it does not validate an entire document.
 ```
 
 The native build runs these tests when `HOLSELFTESTLEVEL` is set. The
-report tests run under both compilers; the JSON tests run under Poly/ML.
+report and configuration tests run under both compilers.
 They exercise stored statement fidelity, kernel assumptions, recursive and
 cyclic expansion, boundaries, records, HTML escaping and fragment links,
 trust tags, repeated database snapshots, snippets, positive and negative
-assumption prose validation, JSON configuration errors, theory loading
+assumption prose validation, TOML configuration errors, theory loading
 and paths relative to the configuration file. Oracle and axiom fixtures exist
 only in the test process; no theory or axiom is exported by this library.
