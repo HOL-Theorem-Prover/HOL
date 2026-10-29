@@ -46,14 +46,15 @@ signature PFTReader = sig
      Format-level commands are dispatched via format_handler.
      Ruleset-specific opcodes (0x10-0x4F) are dispatched via
      ruleset_handler.
-     Returns the header info and footer (peak namespace counts). *)
+     Returns the header info and footer (namespace array bounds).
+     All reader entry points require binary = true. *)
   val read : {file: string, binary: bool,
               format_handler: format_handler,
               ruleset_handler: ruleset_handler}
              -> {version: int, ruleset: string,
                  n_ty: int, n_tm: int, n_th: int, n_ci: int}
 
-  (* Read just the limits (peak namespace counts) from a PFT file
+  (* Read just the limits (namespace array bounds) from a PFT file
      without processing commands. Useful for pre-allocating arrays
      before a full read. Seeks to end of file to find the footer. *)
   val read_limits : {file: string, binary: bool}

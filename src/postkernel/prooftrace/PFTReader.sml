@@ -119,67 +119,39 @@ fun read_footer_raw file = let
            else raise Fail "PFTReader: bad footer opcode"
   val vi = mk_readVarint r
   val n_ty = vi () val n_tm = vi () val n_th = vi () val n_ci = vi ()
+  val pos = #pos r ()
   val () = #close r ()
+  val () = if pos = file_size - 2 then ()
+           else raise Fail "PFTReader: invalid four-namespace footer length"
 in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci,
     footer_len = footer_len, file_size = file_size} end
-
-(* ========================================================================= *)
-(* JSONL limits reader: scan backwards from EOF for last line                *)
-(* ========================================================================= *)
-
-fun read_limits_jsonl file = let
-  val file_size = Position.toInt (OS.FileSys.fileSize file)
-  val inp = BinIO.openIn file
-  (* Read last 1KB — limits line is short *)
-  val chunk_size = Int.min(file_size, 1024)
-  val _ = BinIO.inputN(inp, file_size - chunk_size)
-  val chunk = Byte.bytesToString (BinIO.inputN(inp, chunk_size))
-  val () = BinIO.closeIn inp
-  (* Find last newline-delimited line *)
-  val len = String.size chunk
-  fun find_nl i =
-    if i < 0 then 0
-    else if String.sub(chunk, i) = #"\n" andalso i < len - 1 then i + 1
-    else find_nl (i - 1)
-  val last_line = String.extract(chunk, find_nl (len - 2), NONE)
-  (* Extract integer field from JSON object via Substring.position *)
-  fun getField s field = let
-    val key = "\"" ^ field ^ "\":"
-    val (_, rest) = Substring.position key (Substring.full s)
-  in if Substring.size rest = 0
-     then raise Fail ("PFTReader: no " ^ field ^ " in limits line")
-     else let
-       val after = Substring.dropl Char.isSpace
-                     (Substring.triml (String.size key) rest)
-       val digits = Substring.takel Char.isDigit after
-     in case Int.fromString (Substring.string digits) of
-          SOME n => n
-        | NONE => raise Fail ("PFTReader: bad " ^ field ^ " in limits line")
-     end
-  end
-in {n_ty = getField last_line "n_ty",
-    n_tm = getField last_line "n_tm",
-    n_th = getField last_line "n_th",
-    n_ci = getField last_line "n_ci"} end
 
 fun read_limits {file, binary} =
   if binary then let
     val {n_ty, n_tm, n_th, n_ci, ...} = read_footer_raw file
   in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end
-  else read_limits_jsonl file
+  else raise Fail "PFTReader: JSONL input unsupported"
+
+fun header (r: bin_reader) = let
+  val magic = Byte.bytesToString (#readBytes r 4)
+  val () = if magic = "PFT\000" then ()
+           else raise Fail "PFTReader: expected PFT magic"
+  val version = mk_readVarint r ()
+  val () = if version = 1 then () else
+    raise Fail ("PFTReader: unsupported version " ^ Int.toString version ^
+                "; expected 1")
+  val ruleset = mk_readString r ()
+  val () = if ruleset = "hol4" orelse ruleset = "candle" then () else
+    raise Fail ("PFTReader: unsupported ruleset " ^ ruleset)
+in {version = version, ruleset = ruleset} end
 
 fun read_header {file, binary} =
-  if not binary
-  then raise Fail "PFTReader: read_header not supported for JSONL"
+  if not binary then raise Fail "PFTReader: JSONL input unsupported"
   else let
     val r = open_bin_reader file
-    val _ = #readBytes r 4   (* magic "PFT\0" *)
-    val vi = mk_readVarint r
-    val vs = mk_readString r
-    val version = vi ()
-    val ruleset = vs ()
+    val result = header r handle e => (#close r (); raise e)
     val () = #close r ()
-  in {version = version, ruleset = ruleset} end
+  in result end
 
 (* ========================================================================= *)
 (* Binary command reader                                                     *)
@@ -194,10 +166,7 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
   val vs = mk_readString r
   val sr = mk_stream_reader r
 
-  (* Skip header, but capture version and ruleset *)
-  val _ = #readBytes r 4   (* magic "PFT\0" *)
-  val version = vi ()
-  val ruleset = vs ()
+  val {version, ruleset} = header r
 
   fun dispatch opc =
     if opc >= 0x10 andalso opc <= 0x4F then
@@ -244,10 +213,12 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
                         Int.fmt StringCvt.HEX opc)
 
   fun cmd_loop () =
-    if #pos r () >= cmd_end then ()
+    if #pos r () = cmd_end then ()
+    else if #pos r () > cmd_end then
+      raise Fail "PFTReader: command overlaps footer"
     else (dispatch (#readByte r ()); cmd_loop ())
 
-  val () = cmd_loop ()
+  val () = cmd_loop () handle e => (#close r (); raise e)
   val () = #close r ()
 in {version = version, ruleset = ruleset,
     n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end

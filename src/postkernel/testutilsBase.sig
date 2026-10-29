@@ -1,0 +1,55 @@
+signature testutilsBase =
+sig
+
+datatype testresult = datatype Exn.result
+datatype die_mode = ProcessExit | FailException | Remember of int ref
+
+val is_result : 'a testresult -> bool
+
+val linewidth : int ref
+val diemode : die_mode ref
+val OK : unit -> unit
+val exit_count0 : int ref -> unit
+(* Shared failure reporting for parser-independent and parsing tests. *)
+val pretty_die : HOLPP.pretty -> unit
+val die : string -> unit
+val tprint : string -> unit
+val timed_tprint : string -> unit
+val tadd : string -> unit
+val standard_tpp_message : string -> string
+val unicode_off : ('a -> 'b) -> 'a -> 'b
+val quietly : ('a -> 'b) -> ('a -> 'b)
+
+(* Run a tactic (or list-tactic) against the ambient context: tactics
+   take the context to prove against, and a test wants whatever
+   context is live where it is written. *)
+val runtac : ('a -> Context.t -> 'b) -> 'a -> 'b
+val timed : ('a -> 'b) -> ('b testresult -> unit) -> 'a -> unit
+val exncheck : ('a -> unit) -> 'a testresult -> unit
+val shouldfail : {testfn: 'a -> 'b, printresult: 'b -> string,
+                  printarg : 'a -> string,
+                  checkexn: exn -> bool} -> 'a -> unit
+
+val in_repl_mode      : ('a -> 'b) -> 'a -> 'b
+val in_batch_mode     : ('a -> 'b) -> 'a -> 'b
+val is_struct_HOL_ERR : string -> exn -> bool
+val check_HOL_ERRexn : (string * string * string -> bool) -> exn -> bool
+val check_HOL_ERR : (string * string * string -> bool) -> 'a testresult ->
+                    bool
+val check_result : ('a -> bool) -> ('a testresult -> bool)
+val require : ('b testresult -> bool) -> ('a -> 'b) -> 'a -> unit
+val require_msg : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
+                  'a -> unit
+val require_pretty_msg : ('b testresult -> bool) -> 'b HOLPP.pprinter ->
+                         ('a -> 'b) -> 'a -> unit
+val require_msgk : ('b testresult -> bool) -> 'b HOLPP.pprinter -> ('a -> 'b) ->
+                   ('b testresult -> unit) -> 'a -> unit
+
+val bold : string -> string
+val boldred : string -> string
+val boldgreen : string -> string
+val red : string -> string
+val dim : string -> string
+val clear : string -> string
+
+end

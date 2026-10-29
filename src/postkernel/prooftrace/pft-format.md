@@ -1,4 +1,4 @@
-# HOL PFT Format Specification (Draft)
+# HOL PFT version 1
 
 ## Overview
 
@@ -7,6 +7,18 @@ kernel to construct a set of theorems.
 
 Commands are topologically ordered — every object is constructed before it is
 used.
+
+## Supported implementations
+
+The supported interchange is binary version **1**, with the `hol4` and
+`candle` rulesets. The HOL replayer accepts only `hol4`; the Candle replayer
+accepts only `candle`. Readers check the header before executing commands.
+The experimental string-version `0.1.0` format (three namespaces and ambient
+compute state) is incompatible and is rejected.
+
+AXIOM remains a supported command, so replay alone is not an allowed-axiom
+policy or an exact-result certificate. Callers must check the desired
+conclusion and hypotheses explicitly.
 
 ## Object Namespaces
 
@@ -33,14 +45,6 @@ A compute context is a cached collection of types/terms/theorems used by
 the fast computation mechanism of kernels that support such a mechanism.
 See the specific ruleset specifications for details on what they contain.
 
-## Encodings
-
-The format has two encodings: **binary** (primary, for production use) and
-**JSON Lines** (for human inspection and interoperability). Both encode the
-same abstract command stream. Producers and consumers SHOULD use the binary
-encoding; the JSON Lines encoding is provided for debugging, testing, and
-integration with tools that consume JSON.
-
 ## Header and Footer
 
 Every trace begins with a header and ends with a footer.
@@ -57,9 +61,11 @@ The header specifies:
 
 ### Footer
 
-The footer declares the peak number of simultaneously live objects per
-namespace: four counts for types, terms, theorems, and compute contexts
-respectively.
+The footer declares array bounds: one plus the largest assigned ID in each
+namespace, or zero for an unused namespace. It contains four counts for types,
+terms, theorems, and compute contexts respectively. These bounds can exceed
+the peak number of live objects when IDs are not reused or a command needs
+consecutive result IDs.
 
 A replayer can use these to pre-allocate fixed-size arrays. The footer is
 placed at the end so that a producer can emit commands in a single pass
@@ -189,7 +195,7 @@ will produce correct results either way.
 
 ## Binary Encoding
 
-The binary format is the primary encoding. A binary trace starts with the
+A binary trace starts with the
 magic bytes `PFT\0` followed by the header, then a sequence of encoded
 commands, and ends with a footer.
 
@@ -254,77 +260,3 @@ the ruleset.
 
 Note: In the binary format, variable-length lists are preceded by a varint
 count, since there are no delimiters.
-
-## JSON Lines Encoding
-
-The JSON Lines encoding represents the same abstract command stream as the
-binary format. Each line of the file is a single JSON object. Empty lines
-are ignored.
-
-The file extension SHOULD be `.jsonl`.
-
-### Header and footer
-
-```json
-{"cmd":"PFT","version":1,"ruleset":"hol4"}
-```
-
-```json
-{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
-```
-
-The footer is the last non-empty line. A reader can seek to the end of the
-file and scan backwards for the last newline to read the footer.
-
-### Type commands
-
-```json
-{"cmd":"TYVAR","id":0,"name":"'a"}
-{"cmd":"TYOP","id":1,"name":"min$fun","args":[0,0]}
-```
-
-For TYOP, `args` is an array of type IDs (empty array for nullary operators).
-
-### Term commands
-
-```json
-{"cmd":"VAR","id":0,"name":"x","ty":0}
-{"cmd":"CONST","id":1,"name":"bool$T","ty":0}
-{"cmd":"COMB","id":2,"rator":0,"rand":1}
-{"cmd":"ABS","id":3,"var":0,"body":1}
-```
-
-### Kernel commands
-
-```json
-{"cmd":"NEW_CONST","name":"bool$ARB","ty":3}
-{"cmd":"NEW_TYPE","name":"bool$ind","arity":0}
-{"cmd":"AXIOM","id":0,"tm":1,"name":"MY_AXIOM"}
-{"cmd":"AXIOM","id":0,"tm":1}
-```
-
-For AXIOM, the `name` key is omitted when no name is provided. In the binary
-encoding, the name is always present; an empty string indicates no name.
-
-### Control commands
-
-```json
-{"cmd":"DEL","ns":"tm","id":2}
-{"cmd":"DEL","ns":"tm","id":2,"upto":5}
-{"cmd":"SAVE","name":"bool$TRUTH","th":1}
-{"cmd":"LOAD","id":0,"name":"bool$TRUTH"}
-```
-
-For DEL, `ns` is one of `"ty"`, `"tm"`, `"th"`, `"ci"`. When `upto` is
-present, all IDs from `id` to `upto` inclusive are deleted.
-
-### Theorem commands
-
-The JSON encoding of theorem commands is defined by the ruleset. Each theorem
-command is a JSON object with a `"cmd"` key identifying the command and an
-`"id"` key for the assigned theorem ID (or other namespace ID as appropriate).
-
-### Example
-
-See the ruleset specification for a complete example including theorem
-commands.

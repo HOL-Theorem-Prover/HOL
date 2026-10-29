@@ -59,6 +59,9 @@ in find 0 end
 fun replay (db: trDB) file = let
   val db_ref = ref db
   val (thyname, binary) = parse_filename file
+  val {ruleset, ...} = PFTReader.read_header {file=file, binary=binary}
+  val () = if ruleset = "hol4" then () else
+    raise Fail ("PFTReplay: expected hol4 ruleset, got " ^ ruleset)
   val {n_ty, n_tm, n_th, n_ci} =
     PFTReader.read_limits {file = file, binary = binary}
 
@@ -241,7 +244,7 @@ fun replay (db: trDB) file = let
       set_th (id, CCONTR (get_tm tm) (get_th th)),
 
     deductAntisym = fn _ =>
-      raise Fail "PFTReplay: deductAntisym not implemented",
+      raise Fail "PFTReplay: deductAntisym unsupported",
 
     conj = fn (id, a, b) =>
       set_th (id, CONJ (get_th a) (get_th b)),
