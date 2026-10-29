@@ -35,10 +35,10 @@ signature PFTReader = sig
 
   type ruleset_handler = int -> stream_reader -> unit
 
-  (* Decode the arguments of a ruleset command whose opcode has
-     already been consumed and whose result-id varint has already
-     been consumed. Returns one arg_val per entry of desc.args in
-     the same order. *)
+  (* Decode the arguments of a ruleset command whose opcode has already been
+     consumed. If desc.results is non-empty, the result-id varint must also
+     already have been consumed; if desc.results is empty, there is no result
+     varint. Returns one arg_val per entry of desc.args in the same order. *)
   val read_raw_args : PFTOpcodes.opcode_desc -> stream_reader
                       -> PFTOpcodes.arg_val list
 
@@ -51,19 +51,19 @@ signature PFTReader = sig
   val read : {file: string, binary: bool,
               format_handler: format_handler,
               ruleset_handler: ruleset_handler}
-             -> {version: int, ruleset: string,
-                 n_ty: int, n_tm: int, n_th: int, n_ci: int}
+             -> {version: string, ruleset: string,
+                 n_ty: int, n_tm: int, n_th: int}
 
   (* Read just the limits (namespace array bounds) from a PFT file
      without processing commands. Useful for pre-allocating arrays
      before a full read. Seeks to end of file to find the footer. *)
   val read_limits : {file: string, binary: bool}
-                    -> {n_ty: int, n_tm: int, n_th: int, n_ci: int}
+                    -> {n_ty: int, n_tm: int, n_th: int}
 
   (* Read just the header (version and ruleset) from a PFT file
      without processing commands. *)
   val read_header : {file: string, binary: bool}
-                    -> {version: int, ruleset: string}
+                    -> {version: string, ruleset: string}
 
   (* Construct a ruleset_handler for the HOL4 ruleset *)
   structure HOL4 : sig
@@ -110,9 +110,9 @@ signature PFTReader = sig
       def_tyop      : int * int * string -> unit,
       def_spec      : int * int * string list -> unit,
       def_spec_gen  : int * int * string list -> unit,
-      compute_init  : int * int * int
+      compute_init  : int * int
                       * (string * int) list * (string * int) list -> unit,
-      compute       : int * int * int * int list -> unit
+      compute       : int * int * int list -> unit
     }
 
     val make_handler : handler -> ruleset_handler
