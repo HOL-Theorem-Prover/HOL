@@ -20,10 +20,6 @@ Contents
 
 New features
 ------------
--   `PFTWriter` writes binary proof traces using the version 1 format.
-    `PFTReader` checks the magic, version, ruleset and four-namespace footer;
-    the HOL replayer rejects Candle traces before executing commands.
-
 
 -   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
 
@@ -165,10 +161,6 @@ New examples
 
 Incompatibilities
 -----------------
-
--   Raw proof traces now record the live signature and imported identity
-    provenance. Regenerate earlier raw traces before replaying them; deleted
-    local identities receive private names instead of reusing a live name.
 
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.
