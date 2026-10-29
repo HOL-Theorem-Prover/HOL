@@ -167,6 +167,7 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
   val sr = mk_stream_reader r
 
   val {version, ruleset} = header r
+    handle e => (#close r (); raise e)
 
   fun dispatch opc =
     if opc >= 0x10 andalso opc <= 0x4F then

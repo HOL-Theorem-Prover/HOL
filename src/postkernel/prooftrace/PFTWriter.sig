@@ -43,7 +43,8 @@ signature PFTWriter = sig
 
   (* Debug command: record the expected hypset (as term ids,
      set semantics under alpha) and conclusion term id for
-     the theorem just produced at id [th]. *)
+     the theorem just produced at id [th]. This is a Candle debugging
+     extension (opcode 0xEF); PFTReader and HOL replay reject these records. *)
   val expect    : pft_out -> int -> int list -> int -> unit
 
   (* HOL4 ruleset theorem commands *)

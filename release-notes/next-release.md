@@ -20,10 +20,6 @@ Contents
 
 New features
 ------------
--   `PFTWriter` writes binary proof traces using the version 1 format.
-    `PFTReader` checks the magic, version, ruleset and four-namespace footer;
-    the HOL replayer rejects Candle traces before executing commands.
-
 
 -   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
 
