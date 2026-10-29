@@ -55,7 +55,7 @@ endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
 
-all: pft-selftest.exe
+all: pft-selftest.exe PFTCandlePreamble.uo PFTCandleComputePreamble.uo
 
 pft-selftest.exe: pft-selftest.uo
 	$(HOLMOSMLC) -o $@ $<
