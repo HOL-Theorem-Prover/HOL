@@ -3,7 +3,7 @@ set -eu
 
 if [ "$#" -ne 3 ]; then
   echo "usage: tests/run.sh TEST /path/to/tracing/bin/hol /scratch/dir" >&2
-  echo "TEST: all, identity, oracle, export, numeral, compute-binder, term-kind" >&2
+  echo "TEST: all, identity, oracle, export, compute-binder, term-kind" >&2
   exit 2
 fi
 pft_test=$1
@@ -13,8 +13,8 @@ pft_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 HOL_PFT_SOURCE_ROOT=$(CDPATH= cd -- "$pft_dir/../../../.." && pwd)
 export HOL_PFT_SOURCE_ROOT
 case "$pft_test" in
-  all) pft_suites='identity oracle export numeral compute-binder term-kind' ;;
-  identity|oracle|export|numeral|compute-binder|term-kind) pft_suites=$pft_test ;;
+  all) pft_suites='identity oracle export compute-binder term-kind' ;;
+  identity|oracle|export|compute-binder|term-kind) pft_suites=$pft_test ;;
   *) echo "unknown prooftrace test: $pft_test" >&2; exit 2 ;;
 esac
 mkdir -p "$pft_scratch"

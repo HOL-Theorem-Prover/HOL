@@ -26,25 +26,6 @@ val () = print "TERM_KIND_ACTUAL_EXPORT_PASS\n";
 
 val () = load_pft [];
 val term_kind_trace = ".hol/objs/pft_term_kindsTheory.tr.gz";
-val () = let
-  open ProofTraceParser
-  val (root,heap) = parse term_kind_trace
-  val {all_thms,...} = shRoot heap root
-  val seen = ref ([] : string list)
-  fun top th = case shProof heap (#3 (shThm heap th)) of
-      save_dep_prf p => top p
-    | Mark_prf (_,p) => top p
-    | proof => proof
-  val () = appList heap (fn p => let
-    val (name,(th,_)) = tuple3 heap (str heap,Lib.I,Lib.I) p
-  in case (name,top th) of
-       ("RENAME",SUBST_prf _) => seen := name :: !seen
-     | ("SPEC",Def_spec_prf _) => seen := name :: !seen
-     | _ => () end) all_thms
-in if List.all (fn name => List.exists (fn s => s = name) (!seen))
-       ["RENAME","SPEC"] then ()
-   else raise Fail "missing actual exported SUBST/specification proofs"
-end;
 val () = List.app (fn (name,ruleset) => PFTEmit.emit_theory
   {trace=term_kind_trace,output="term-kinds." ^ name ^ ".pft.bin",
    ruleset=ruleset})

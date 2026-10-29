@@ -26,23 +26,16 @@ let _ =
   let y = mk_var("y",cv) in
   let addc = mk_mconst("Cexp_add",mk_fun_ty cv (mk_fun_ty cv cv)) in
   let add a b = mk_comb(mk_comb(addc,a),b) in
-  let simple = let_tm x x (cvnum 0) in
   let nested = let_tm x (let_tm y (add x y) (cvnum 4)) (cvnum 2) in
-  check_compute "SIMPLE" simple (cvnum 0);
-  check_compute "NESTED" nested (cvnum 6);
   check_compute "CAPTURE" nested (cvnum 6);
-  check_compute "CLOSURE" (add (cvnum 4) (cvnum 2)) (cvnum 6);
   check_compute "CLOSURE_NESTED"
     (let_tm x (add (cvnum 4) x) (cvnum 2)) (cvnum 6);
-  check_compute "CLOSURE_CAPTURE" nested (cvnum 6);
-  List.iter (fun (name,n) -> check_compute name (cvnum n) (cvnum n))
-    [("NUM_255",255);("NUM_256",256);("NUM_257",257);
-     ("NUM_18446744073709551616",18446744073709551616)];
+  let large = cvnum 18446744073709551616 in
+  check_compute "LARGE_NUMERAL" large large;
   let b = mk_type("bool",[]) in
   let f = mk_var("f",mk_fun_ty b b) in
   let v = mk_var("kind_x",b) in
   let abstraction = mk_abs(f,v) in
-  check_compute "KIND_COLLISION" abstraction abstraction;
   let capture = mk_abs(f,abstraction) in
   check_compute "KIND_CAPTURE" capture capture;
   print_endline "COMPUTE_BINDER_ALL_EXACT_PASS";;

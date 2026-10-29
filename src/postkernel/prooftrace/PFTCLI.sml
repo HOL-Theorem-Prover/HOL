@@ -10,11 +10,6 @@ fun fail msg = raise Fail ("pft: " ^ msg)
 fun required name NONE = fail ("missing " ^ name)
   | required _ (SOME value) = value
 
-fun set_once name dst value =
-  case !dst of
-    NONE => dst := SOME value
-  | SOME _ => fail ("repeated " ^ name)
-
 fun ruleset "hol4" = PFTEmit.HOL4
   | ruleset "candle" = PFTEmit.Candle
   | ruleset s = fail ("unsupported ruleset " ^ s ^ "; expected hol4|candle")
@@ -26,11 +21,11 @@ fun emit args =
     val rs = ref NONE
     fun parse [] = ()
       | parse ("--trace" :: value :: rest) =
-          (set_once "--trace" trace value; parse rest)
+          (trace := SOME value; parse rest)
       | parse ("--output" :: value :: rest) =
-          (set_once "--output" output value; parse rest)
+          (output := SOME value; parse rest)
       | parse ("--ruleset" :: value :: rest) =
-          (set_once "--ruleset" rs value; parse rest)
+          (rs := SOME value; parse rest)
       | parse (arg :: _) = fail ("unknown or incomplete emit option " ^ arg)
     val () = parse args
     val rs = ruleset (required "--ruleset" (!rs))
