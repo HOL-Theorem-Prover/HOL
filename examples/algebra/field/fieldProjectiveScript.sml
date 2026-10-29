@@ -37,7 +37,7 @@ Proof
     rewrite_tac [ring_div_def] >>
     (* RING_TAC finds its ring among free variables; its input equations
        must be equations of ring elements, not of rings. *)
-    qmatch_goalsub_abbrev_tac `ring_pow s` >>
-    qpat_x_assum `Abbrev (s = _)` kall_tac >>
+    qmatch_goalsub_abbrev_tac ‘ring_pow s’ >>
+    qpat_x_assum ‘Abbrev (s = _)’ kall_tac >>
     eq_tac >> strip_tac >> ringLib.RING_TAC
 QED
