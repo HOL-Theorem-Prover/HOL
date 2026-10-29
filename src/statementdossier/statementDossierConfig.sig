@@ -1,9 +1,10 @@
 signature statementDossierConfig =
 sig
 
-(* Read a TOML configuration, load its theories, and write the report.
+(* Read a TOML configuration without loading theories or writing reports.
    File paths are relative to the configuration file's directory.
    Raises Fail on invalid configuration. *)
-val run : string -> unit
+val read : string -> {config : statementDossierLib.config,
+                      load_path : string list, theories : string list}
 
 end

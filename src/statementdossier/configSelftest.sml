@@ -22,21 +22,25 @@ val config_report = OS.Path.concat (source_dir, "report.md")
 val config_prose = OS.Path.concat (source_dir, "inputs.md")
 val config_snippets = OS.Path.concat (source_dir, "snippets.txt")
 val config_printed = OS.Path.concat (source_dir, "snippets.json")
-fun report text = (write config_path text; run config_path)
-val paths_before = !Meta.loadPath
+fun parse text =
+  (write config_path text; statementDossierConfig.read config_path)
+fun report text = statementDossierLib.run (#config (parse text))
 val unloaded = not (isSome (DB.lookup {Thy = "numposrep", Name = "l2n_def"}))
-val _ = report
+val {config, load_path, theories} = parse
   "# Comments and multiline arrays are accepted.\n\
   \theorems = [\n  \"numposrep$l2n_def\",\n]\nload_path = [\".\"]\n\
+  \supporting = [\"bool$TRUTH\"]\ntheories = [\"arithmetic\"]\n\
+  \expand_consts = [\"list$APPEND\"]\nstop_theories = [\"pair\"]\n\
   \[outputs]\nmarkdown = \"report.md\"\n"
-val _ = check "TOML loads selected theories without an SML configuration"
+val _ = check "TOML parsing preserves names without loading theories"
   (unloaded andalso
-   isSome (DB.lookup {Thy = "numposrep", Name = "l2n_def"}) andalso
-   contains (read config_report) "Theorem `l2n_def`")
+   not (isSome (DB.lookup {Thy = "numposrep", Name = "l2n_def"})) andalso
+   #theorems config = [{Thy = "numposrep", Name = "l2n_def"}])
 val _ = check "TOML paths are relative to the configuration file"
-  (OS.FileSys.access (config_report, []))
-val _ = check "TOML loading restores the caller's load path"
-  (!Meta.loadPath = paths_before)
+  (#outputs config = [(statementDossierLib.Markdown, config_report)] andalso
+   load_path = [source_dir])
+val _ = check "TOML identifies theories for the command to load"
+  (Lib.set_eq theories ["numposrep", "bool", "arithmetic", "list", "pair"])
 
 val _ = write config_prose
   "## <=\nThe input `n` is at most `m`.\n\n\
@@ -54,7 +58,7 @@ val _ = check "TOML prose and snippet paths reach the report library"
    contains (read config_printed) "LESS_EQ_IMP_LESS_SUC")
 
 fun bad_toml label message text =
-  check label ((report text; false) handle Fail s => contains s message)
+  check label ((parse text; false) handle Fail s => contains s message)
 val _ = bad_toml "TOML outputs must be a table" "expected a table"
   "theorems = [\"bool$TRUTH\"]\noutputs = []\n"
 val _ = bad_toml "Unknown TOML configuration fields are rejected"

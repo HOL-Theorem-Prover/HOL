@@ -1,7 +1,7 @@
 structure statementDossierConfig :> statementDossierConfig =
 struct
 
-open HolKernel statementDossierLib
+open statementDossierLib
 
 fun bad field message = raise Fail (field ^ ": " ^ message)
 
@@ -107,21 +107,18 @@ fun configuration path value =
        map (fn {Thy, ...} => Thy) names @
        #expand_theories cfg @ #stop_theories cfg)
   in
-    (cfg, default fs (array file) "load_path" [], theories)
+    {config = cfg, load_path = default fs (array file) "load_path" [],
+     theories = theories}
   end
 
-fun run path =
+fun read path =
   let
     val path = OS.FileSys.fullPath path
-    val (cfg, paths, theories) = configuration path
+  in
+    configuration path
       (TOML.TABLE (TOML.fromFile path)
        handle TOMLerror.ParseError e =>
          bad "configuration" (TOMLerror.toString e))
-    fun report () =
-      (List.app (fn thy => Meta.load (thy ^ "Theory")) theories;
-       statementDossierLib.run cfg)
-  in
-    Lib.with_flag (Meta.loadPath, paths @ !Meta.loadPath) report ()
   end
 
 end

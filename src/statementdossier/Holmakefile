@@ -5,10 +5,13 @@ all: statementDossierLib.uo statementDossierConfig.uo selftest.exe \
      configSelftest.exe
 
 ifdef POLY
-all: statement-dossier
+all: statement-dossier toolSelftest.exe
 
 statement-dossier: statementDossierTool.uo $(dprot $(HOLDIR)/bin/hol.state)
 	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap $< -o $@ --exe main
+
+toolSelftest.exe: toolSelftest.uo
+	$(HOLMOSMLC) -o $@ $<
 endif
 
 selftest.exe: selftest.uo
@@ -25,7 +28,16 @@ statementdossier-selftest.log: selftest.exe
 
 statementdossier-config-selftest.log: configSelftest.exe
 	$(tee ./configSelftest.exe 2>&1,$@)
+
+ifdef POLY
+all: statementdossier-tool-selftest.log
+
+statementdossier-tool-selftest.log: toolSelftest.exe statement-dossier
+	$(tee ./toolSelftest.exe 2>&1,$@)
+endif
 endif
 
-EXTRA_CLEANS = selftest.exe configSelftest.exe statement-dossier \
-               statementdossier-selftest.log statementdossier-config-selftest.log
+EXTRA_CLEANS = selftest.exe configSelftest.exe toolSelftest.exe \
+               statement-dossier statementdossier-selftest.log \
+               statementdossier-config-selftest.log \
+               statementdossier-tool-selftest.log

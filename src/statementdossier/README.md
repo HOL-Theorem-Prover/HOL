@@ -48,8 +48,9 @@ Remove generated reports when finished; they are not source files.
 
 The command uses the same HOL runtime as `polyscripter`: its executable
 contains a base heap and can load further theory modules. The report
-library and TOML reader also work in Moscow ML. The standalone command
-is built with Poly/ML. The TOML reader reuses HOL's existing parser.
+library and TOML reader also work in Moscow ML. The standalone command,
+including automatic theory loading, requires Poly/ML. The TOML reader
+reuses HOL's existing parser and only reads configuration data.
 
 ## Configuration
 
@@ -79,11 +80,14 @@ disables that feature. Misspelled theorems, constants and expansion/stop
 theories are errors. The TOML reader needs no external programs. Pandoc
 is only required for HTML output with assumption prose.
 
-For interactive use, `statementDossierConfig.run "dossier.toml"` reads the
-same file. `statementDossierLib.run : config -> unit` accepts an SML record
-for callers that already have their theories loaded; its signature
-documents the corresponding record fields. Each call takes a fresh
-snapshot of the theorem database and sources.
+For ML callers, `statementDossierConfig.read "dossier.toml"` returns
+`{config, load_path, theories}` without loading theories or writing
+reports. Load the listed theories first, then call
+`statementDossierLib.run config`. Moscow ML callers can do this in an
+interactive HOL session; its loader is unavailable in compiled programs.
+`statementDossierLib.run : config -> unit` also accepts an SML record
+directly; its signature documents the corresponding record fields. Each
+report takes a fresh snapshot of the theorem database and sources.
 
 `statementDossierLib.script_theories : string list -> string list` lists
 the theories whose `*Script.sml` files occur below supplied directories.
@@ -195,10 +199,12 @@ optional formatting aid; it does not validate an entire document.
 ```
 
 The native build runs these tests when `HOLSELFTESTLEVEL` is set. The
-report and configuration tests run under both compilers.
+report and configuration tests run under both compilers; command tests
+run under Poly/ML.
 They exercise stored statement fidelity, kernel assumptions, recursive and
 cyclic expansion, boundaries, records, HTML escaping and fragment links,
 trust tags, repeated database snapshots, snippets, positive and negative
-assumption prose validation, TOML configuration errors, theory loading
-and paths relative to the configuration file. Oracle and axiom fixtures exist
-only in the test process; no theory or axiom is exported by this library.
+assumption prose validation, TOML configuration errors and paths relative
+to the configuration file. Command tests exercise automatic theory
+loading and failure exits. Oracle and axiom fixtures exist only in the
+test process; no theory or axiom is exported by this library.
