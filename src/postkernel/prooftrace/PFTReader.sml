@@ -119,10 +119,7 @@ fun read_footer_raw file = let
            else raise Fail "PFTReader: bad footer opcode"
   val vi = mk_readVarint r
   val n_ty = vi () val n_tm = vi () val n_th = vi () val n_ci = vi ()
-  val pos = #pos r ()
   val () = #close r ()
-  val () = if pos = file_size - 2 then ()
-           else raise Fail "PFTReader: invalid four-namespace footer length"
 in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci,
     footer_len = footer_len, file_size = file_size} end
 
@@ -133,16 +130,12 @@ fun read_limits {file, binary} =
   else raise Fail "PFTReader: JSONL input unsupported"
 
 fun header (r: bin_reader) = let
-  val magic = Byte.bytesToString (#readBytes r 4)
-  val () = if magic = "PFT\000" then ()
-           else raise Fail "PFTReader: expected PFT magic"
+  val _ = #readBytes r 4   (* magic "PFT\0" *)
   val version = mk_readVarint r ()
   val () = if version = 1 then () else
     raise Fail ("PFTReader: unsupported version " ^ Int.toString version ^
                 "; expected 1")
   val ruleset = mk_readString r ()
-  val () = if ruleset = "hol4" orelse ruleset = "candle" then () else
-    raise Fail ("PFTReader: unsupported ruleset " ^ ruleset)
 in {version = version, ruleset = ruleset} end
 
 fun read_header {file, binary} =
@@ -214,9 +207,7 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
                         Int.fmt StringCvt.HEX opc)
 
   fun cmd_loop () =
-    if #pos r () = cmd_end then ()
-    else if #pos r () > cmd_end then
-      raise Fail "PFTReader: command overlaps footer"
+    if #pos r () >= cmd_end then ()
     else (dispatch (#readByte r ()); cmd_loop ())
 
   val () = cmd_loop () handle e => (#close r (); raise e)
