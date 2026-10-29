@@ -4,10 +4,10 @@ signature PFTWriter = sig
 
   (* Open a binary PFT output stream. Writes the header (version + ruleset)
      immediately. *)
-  val openOut : {file: string, version: int, ruleset: string} -> pft_out
+  val openOut : {file: string, version: string, ruleset: string} -> pft_out
 
   (* Close the stream. Writes the footer (namespace array bounds). *)
-  val closeOut : pft_out -> {n_ty: int, n_tm: int, n_th: int, n_ci: int} -> unit
+  val closeOut : pft_out -> {n_ty: int, n_tm: int, n_th: int} -> unit
 
   (* Type commands *)
   val tyvar : pft_out -> int -> string -> unit
@@ -31,9 +31,10 @@ signature PFTWriter = sig
   val load      : pft_out -> int -> string -> unit
 
   (* Generic ruleset-command write, driven by the opcode descriptor.
-     The args list length and per-element shape must match desc.args;
-     result is the primary result ID (Candle new_type_definition's
-     second result ID is implicitly result + 1).
+     The args list length and per-element shape must match desc.args.
+     If desc.results is non-empty, result is the primary result ID
+     (Candle new_type_definition's second result ID is implicitly result + 1).
+     If desc.results is empty, no result ID is written and result is ignored.
 
      Shared across rulesets. *)
   val write_raw : pft_out
@@ -91,9 +92,9 @@ signature PFTWriter = sig
     val def_tyop      : pft_out -> int -> int -> string -> unit
     val def_spec      : pft_out -> int -> int -> string list -> unit
     val def_spec_gen  : pft_out -> int -> int -> string list -> unit
-    val compute_init  : pft_out -> int -> int -> int
+    val compute_init  : pft_out -> int -> int
                         -> (string * int) list -> (string * int) list -> unit
-    val compute       : pft_out -> int -> int -> int -> int list -> unit
+    val compute       : pft_out -> int -> int -> int list -> unit
   end
 
   (* Candle ruleset theorem commands *)
@@ -113,8 +114,8 @@ signature PFTWriter = sig
     val new_specification   : pft_out -> int -> int -> string list -> unit
     val new_type_definition : pft_out -> int -> int -> string -> string
                               -> string -> unit
-    val compute             : pft_out -> int -> int -> int -> int list -> unit
-    val compute_init        : pft_out -> int -> int list -> unit
+    val compute             : pft_out -> int -> int -> int list -> unit
+    val compute_init        : pft_out -> int list -> unit
   end
 
 end
