@@ -214,7 +214,7 @@ fun testty ((tyname, lives, ty, cnames), (db, seen)) =
               else die "the derived laws are not the map's"
       (* the same map and set functions, read one constructor at a time *)
       val cs = defineConstructors noNames cnames bnf fix
-      val eqns = constructorEqns cs res
+      val eqns = constructorEqns (eqnsOf (#components bnf)) cs res
       val _ = tprint (tyname ^ "'s equations per constructor")
       val _ = if List.all (eqnsOK (#constructors cs))
                           (#map_eqns eqns :: #set_eqns eqns)

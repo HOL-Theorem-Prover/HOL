@@ -218,6 +218,16 @@ In addition to the usual LSP commands, the server supports the following extensi
   already ran cheated its proofs and enqueued nothing; switching it off
   cancels the pool and clears its diagnostics.
 
+  A replayed proof is run with its declaration's `Context` restored and
+  nothing else, and `Theorem ... Proof tac QED` evaluates its tactic
+  *expression* when the proof runs -- which, with checking on, is after
+  the whole file has elaborated.  So a script whose tactics read an SML
+  `ref` sees it as of end-of-elaboration rather than as of the proof's
+  own position, and can report failures a batch build does not.  Script
+  state that tactics read belongs in a `Context.Data` slot, read from
+  the context the tactic is given; see the "Proof checking" section of
+  `tools-poly/lsp/README.md`.
+
 * On startup the server loads the heap named by the working directory's
   `Holmakefile` (`HOLHEAP`), else `bin/hol.state`.  If that heap cannot
   be loaded -- missing, or exported from a different executable, which

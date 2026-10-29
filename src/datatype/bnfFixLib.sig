@@ -170,6 +170,13 @@ sig
   val defineCopy : {tyname : string, ABS : string, REP : string} ->
                    bnfLib.derived_bnfn -> copy
 
+  (* What a set of component functors says its maps and set functions do
+     at its own constructors: the leaves of a set-term reduction, which
+     the driver takes from the components' database entries rather than
+     naming.  A composite's components are #components of the derived
+     BNF; a family's are those of each specification's own functor. *)
+  val eqnsOf : bnfLib.info HOLset.set -> thm list
+
   (* ----------------------------------------------------------------------
       The datatype's own constructors, and its axiom in the shape the
       rest of HOL expects:
@@ -244,8 +251,12 @@ sig
       definition or a TypeBase entry is written with.  One theorem for the
       map and one per argument for the sets, each a conjunction over the
       constructors.
+
+      The equations the components say at their own constructors are
+      what a set term is reduced by; a caller that has the composite has
+      them as eqnsOf (#components bnf).
      ---------------------------------------------------------------------- *)
-  val constructorEqns : constructors -> fixpoint_bnf ->
+  val constructorEqns : thm list -> constructors -> fixpoint_bnf ->
                         {map_eqns : thm, set_eqns : thm list}
 
   (* ----------------------------------------------------------------------
@@ -376,7 +387,7 @@ sig
      on: the constructors' definitions, and the types and constructors
      themselves, rather than the record the construction produced *)
   val familyAxiomOf : thm list list -> thm -> thm
-  val familyInductionOf : thm list list -> thm -> thm
+  val familyInductionOf : thm list -> thm list list -> thm -> thm
   val familySetInductionOf : family -> hol_type list * term list -> thm -> thm
 
   (* and the same principle one clause per constructor, which is the
@@ -506,11 +517,11 @@ sig
   (* and what connects a nested size's two shapes, which a termination
      proof over the operator recursed under needs *)
   val sizeMapLemma : {induction : thm, sizedef : thm, mapeqn : thm,
-                      sizes : term list} -> thm
+                      sizes : term list, eqns : thm list} -> thm
 
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
                       rewrites : thm list list, names : names list,
-                      mapIDs : thm list} ->
+                      mapIDs : thm list, eqns : thm list} ->
                      TypeBasePure.tyinfo list
 
 end

@@ -314,7 +314,8 @@ fun get_induction_for_def def = let
   (* this builds a predicate per member, which is what the older
      construction's principle had; the package proves the one-predicate
      form and legacyInduction puts it back *)
-  val ind0 = TypeBase.induction_of ty
+  (* the stated principle: legacyInduction reads the set functions *)
+  val ind0 = TypeBase.set_induction_of ty
   val raw_ind = legacyInduction.mutual_induction
                   (legacyInduction.operators_of ind0) ind0
   fun my_mk_var ty = mk_var("pat_var", ty)

@@ -1130,8 +1130,16 @@ fun pairf (stem, eqs0) =
    case moved of
      SOME tm => pairf (stem, tm)
    | NONE =>
-   if argslen = 1   (* not curried ... do eta-expansion *)
-     then (tuple_args [(f, (f, argtys))] eqs0, stem, I)
+   if argslen = 1 then
+     (* One argument needs no tupling, so tuple_args would do nothing
+        here but eta-expand the calls that supply f too few arguments.
+        That expansion survives into the saved equation, which is why
+        a definition recursing through MAP or EVERY was stored as
+        MAP (\a. f a) l rather than the MAP f l that was written.
+        Extraction fills a congruence's function variable from the
+        call's own head when the left-hand side is not an abstraction,
+        so nothing downstream needs the expansion. *)
+     (eqs0, stem, I)
    else
      let
        val stem'name = stem ^ DefnBase.tupled_suffix
@@ -1153,7 +1161,64 @@ fun pairf (stem, eqs0) =
            val def  = new_definition (argMunge stem,
                         mk_eq (list_mk_comb (fvar, def_args),
                                list_mk_comb (tuplecSV, [list_mk_pair defvars])))
-           val rules' = map (Rewrite.PURE_REWRITE_RULE [GSYM def]) rules
+           (* Tupling a curried function has to eta-expand a call that
+              supplies it too few arguments: g n becomes
+              \a. g_tupled (n,a), the partial application having no
+              other form.  GSYM def has just turned that back into
+              \a. g n a, which is the g n that was written, so
+              contracting it here keeps the saved equation in the
+              shape it was given.  Only calls of the function being
+              defined are contracted, and only below the top of a
+              right-hand side, so an equation whose value genuinely is
+              an abstraction keeps it. *)
+           val defc =
+               #1 (strip_comb
+                     (boolSyntax.lhs (snd (strip_forall (concl def)))))
+           (* tuple_args names the variables it invents "a", and both
+              it and extraction vary that name by priming, so an
+              abstraction over such a name is one this pass put there.
+              A binder the specification wrote -- a case branch's
+              arguments, a lambda over a tuple -- is part of the shape
+              the equation was given in, and contracting it changes
+              that shape rather than restoring it. *)
+           fun invented v =
+             let val nm = #1 (dest_var v)
+             in
+               String.sub (nm, 0) = #"a" andalso
+               CharVector.all (fn c => c = #"'" orelse Char.isDigit c)
+                              (String.extract (nm, 1, NONE))
+             end handle HOL_ERR _ => false
+           fun ETA_CALL_CONV tm =
+             let val (v, bdy) = dest_abs tm
+             in
+               if invented v andalso aconv (#1 (strip_comb bdy)) defc then
+                 ETA_CONV tm
+               else raise ERR "ETA_CALL_CONV" "not a call this pass made"
+             end
+           (* Naming is the whole criterion: a binder the specification
+              wrote is left alone wherever it sits, including inside a
+              paired abstraction, and one this pass invented is
+              contracted wherever it sits.  Excluding paired
+              abstractions as well would leave the equations and the
+              induction contracted in different places, which is a
+              worse state than either. *)
+           fun contractConv tm =
+             if is_abs tm then
+               (ABS_CONV contractConv THENC TRY_CONV ETA_CALL_CONV) tm
+             else if is_comb tm then
+               (RATOR_CONV contractConv THENC RAND_CONV contractConv) tm
+             else ALL_CONV tm
+           val contract_etas =
+             CONV_RULE
+               (TRY_CONV (STRIP_QUANT_CONV (RHS_CONV (SUB_CONV contractConv))))
+           (* The equations and the induction principle describe the
+              same recursion, so they have to agree: contracting only
+              the equations left <fn>_def saying MAP f and <fn>_ind
+              saying MAP (\a. f a), and a proof that unfolded one and
+              inducted with the other no longer matched itself. *)
+           val contract_all = CONV_RULE (TRY_CONV contractConv)
+           val rules' =
+             map (contract_etas o Rewrite.PURE_REWRITE_RULE [GSYM def]) rules
            val induction' =
              let
                val P = fst (dest_var (fst (dest_forall (concl induction))))
@@ -1166,7 +1231,7 @@ fun pairf (stem, eqs0) =
                    (SPEC tm (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)))
              end
          in
-           (rules', induction')
+           (rules', contract_all induction')
          end
      in
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)

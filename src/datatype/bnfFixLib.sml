@@ -1123,33 +1123,37 @@ val setElimRWs =
      pred_setTheory.IMAGE_UNION, pred_setTheory.BIGUNION_EMPTY,
      pred_setTheory.BIGUNION_INSERT, pred_setTheory.BIGUNION_UNION,
      pred_setTheory.UNION_EMPTY, pred_setTheory.EMPTY_UNION,
-     (* and the leaves themselves: the components' own set functions,
-        at the components' own constructors.  sumTheory's SUM_MAP_SET is
-        deliberately absent: it is about the same term as the database's
-        own naturality for the sum, and says it in predicate form, so
-        having both makes which one fires an accident of rule order. *)
-     sumTheory.setL_def, sumTheory.setR_def, bnfPrelimsTheory.optSET_def,
+     (* projection and composition plumbing, wanted wherever one of
+        these appears and not statements about any set function *)
      pairTheory.FST, pairTheory.SND,
      combinTheory.I_THM, combinTheory.K_THM, combinTheory.o_THM]
 
-(* The list is built by this package, so src/list comes after this file
-   and listTheory cannot be named in it.  Its few set rewrites are
-   looked up when a set term is actually reduced, which is always in a
-   theory that has the list — and a declaration made before there is one
-   simply does not need them. *)
-fun lateRWs () =
-    List.mapPartial (fn (thy,nm) => Lib.total (DB.fetch thy) nm)
-                    [("list", "MEM"), ("list", "IN_LIST_TO_SET"),
-                     ("list", "LIST_TO_SET"), ("list", "MAP")]
+(* The leaves themselves — what a component functor's map and set
+   functions do at that functor's own constructors — are not named here.
+   Each component's database entry carries them, so a functor this file
+   cannot name contributes them just as a built-in one does: the list,
+   which the package itself builds, and anything a user has registered.
+   They are taken from the components the composite being built is made
+   of rather than from the whole database, so that what a derivation
+   proves does not depend on which functors happen to be in scope.
 
-fun set_ss () =
+   sumTheory's SUM_MAP_SET stays out of the database for the reason it
+   was never in this list: it is about the same term as the sum's own
+   naturality and says it in predicate form, so having both makes which
+   one fires an accident of rule order. *)
+fun eqnsOf comps =
+    List.concat (List.map (fn bnfBase.bI i => #eqns i)
+                          (HOLset.listItems comps))
+
+fun set_ss eqns =
     simpLib.&& (simpLib.++ (simpLib.++ (boolSimps.bool_ss, boolSimps.ETA_ss),
                             boolSimps.UNWIND_ss),
-                setElimRWs @ lateRWs ())
+                setElimRWs @ eqns)
 
 
 fun defineConstructors (nms : names) cspecs bnf (fix:fixpoint) : constructors =
-    let val wrote = asSpecWrote nms and built = asBuilt nms
+    let val eqns = eqnsOf (#components bnf)
+        val wrote = asSpecWrote nms and built = asBuilt nms
         val newty = #newty fix
         val cons = #cons fix
         val prim = #prim_recursion fix
@@ -1336,7 +1340,7 @@ fun defineConstructors (nms : names) cspecs bnf (fix:fixpoint) : constructors =
             (* every clause reduces with the same simpset, and building
                one re-fetches and re-merges its rewrites: once, not once
                per constructor *)
-            val ss = set_ss()
+            val ss = set_ss eqns
             val clauses =
                 map (fn c =>
                         (length (#args c),
@@ -1749,6 +1753,9 @@ fun transportBNF (nms : names) {abs, rep, absrep, repabs}
 
          relator = cinst (lhs (concl relator_def)),
          set = List.map (cinst o setTm) (upto n),
+         (* the constructors are not split yet, so what the map and set
+            do at them is not known here; registerBNF fills it in *)
+         eqns = [],
 
          wits = List.map ((fn (t,th) => (cinst t, cthm th)) o witOf)
                          (#wits bnf),
@@ -2179,6 +2186,9 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
 
          relator = cinst relator,
          set = List.map (cinst o setTm) (upto n),
+         (* the constructors are not split yet, so what the map and set
+            do at them is not known here; registerBNF fills it in *)
+         eqns = [],
 
          wits = List.map ((fn (t,th) => (cinst t, cthm th)) o witOf) fwits,
          inhabits = List.map ((fn (t,th) => (cinst t, cthm th)) o inhOf)
@@ -2199,7 +2209,7 @@ fun fixpointBNF (nms : names) bnf (fix : fixpoint) : fixpoint_bnf =
     each constructor says what to instantiate at.
    ---------------------------------------------------------------------- *)
 
-fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
+fun constructorEqns eqns (cs : constructors) (res : fixpoint_bnf) =
     let
       val defs = #defs cs
       val (mvars, _) = strip_forall (concl (#map_thm res))
@@ -2227,7 +2237,7 @@ fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
             (RAND_CONV (TRY_CONV (REWR_CONV bnfFixBNFTheory.EQUAL_SING)))
       fun setEqn i def =
           REWRITE_RULE folds
-            (tidy (unfold (set_ss()) setRWs
+            (tidy (unfold (set_ss eqns) setRWs
                           (SPEC (injOf def) (List.nth (#set_thms res, i)))))
     in
       {map_eqns = LIST_CONJ (List.map mapEqn defs),
@@ -2320,8 +2330,8 @@ type mutual = {
    algebra of BIMG and the lifted union; normalising both is how a driver
    sees that without running a tactic. *)
 val normRWs = setRWs @ [BIGUNION_IMAGE_UNION, BIGUNION_IMAGE_BIGUNION]
-fun normEqWith rws (t1,t2) =
-    let val cnv = QCONV (simpLib.SIMP_CONV (set_ss()) (normRWs @ rws))
+fun normEqWith eqns rws (t1,t2) =
+    let val cnv = QCONV (simpLib.SIMP_CONV (set_ss eqns) (normRWs @ rws))
         val (e1,e2) = (cnv t1, cnv t2)
     in
       if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
@@ -2330,15 +2340,7 @@ fun normEqWith rws (t1,t2) =
                   " and " ^ term_to_string (rhs (concl e2)))
     end
 
-fun normEq (t1,t2) =
-    let val cnv = QCONV (simpLib.SIMP_CONV (set_ss()) normRWs)
-        val (e1,e2) = (cnv t1, cnv t2)
-    in
-      if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
-      else raise ERR "normEq"
-                 ("no common normal form: " ^ term_to_string (rhs (concl e1)) ^
-                  " and " ^ term_to_string (rhs (concl e2)))
-    end
+fun normEq eqns = normEqWith eqns []
 
 (* the element variable and  |- map gs (map fs af) = map (gs o fs) af, at
    the instance the functions say: one instance of the composition law,
@@ -2589,7 +2591,9 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
                      (pred_setSyntax.mk_image (S21, mk_comb (sa1, af))))
           in
             byDefn NESTSET_def [stn1, sb1, sa1, S21]
-                   (GEN af (normEq (mk_comb (stn1, af), nested)))
+                   (GEN af (normEq (eqnsOf (#components bnf1) @
+                                    eqnsOf (#components bnf2))
+                                   (mk_comb (stn1, af), nested)))
           end
       val induction =
           MATCH_MP MUTUAL_INDUCTION
@@ -2626,7 +2630,9 @@ fun mutualInduction (cs1 : constructors, cs2 : constructors)
       val expand =
           QCONV (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
                                     combinTheory.I_o_ID]) THENC
-          QCONV (simpLib.SIMP_CONV (set_ss())
+          QCONV (simpLib.SIMP_CONV
+                   (set_ss (eqnsOf (#components (#bnf1 mt)) @
+                            eqnsOf (#components (#bnf2 mt))))
                    (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
                               oneTheory.FORALL_ONE]))
       (* expanding the quantifier names each constructor's arguments after
@@ -2690,6 +2696,12 @@ type family = {
   params : hol_type list,            (* the arguments they all keep *)
   db : bnfBase.t                     (* the database, extended with them *)
 }
+
+(* what the family's components say at their own constructors: each
+   member's specification was derived in every member's slot, so the
+   functors between them name every component any of them is built from *)
+fun famEqns (fam : family) =
+    List.concat (List.map (eqnsOf o #components) (#functors fam))
 
 fun defineFamily {tynames} db params specs : family =
     let
@@ -3689,7 +3701,7 @@ fun familySetInductionOf (fam : family) (types, conss) principle =
     arguments instead, which is the form a proof is written against.
    ---------------------------------------------------------------------- *)
 
-fun familyInductionOf (defs : thm list list) induction =
+fun familyInductionOf eqns (defs : thm list list) induction =
     let
       (* one binder per constructor argument here too: the simplifier
          would split an argument that is itself a product, and the
@@ -3700,7 +3712,7 @@ fun familyInductionOf (defs : thm list list) induction =
          apart before it could fire *)
       val reduce =
           QCONV (PURE_REWRITE_CONV setRWs) THENC
-          QCONV (simpLib.SIMP_CONV (set_ss())
+          QCONV (simpLib.SIMP_CONV (set_ss eqns)
                    (setRWs @ [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
                               sumTheory.OUTL, sumTheory.OUTR,
                               pairTheory.PAIR_MAP, pairTheory.FST,
@@ -4275,7 +4287,7 @@ fun defineSize {tyname, sizes = sizenames, mapIDs} axiom =
     for the recursive arguments.
    ---------------------------------------------------------------------- *)
 
-fun sizeMapLemma {induction, sizedef, mapeqn, sizes} =
+fun sizeMapLemma {induction, sizedef, mapeqn, sizes, eqns} =
     let
       (* the map, at the numbers the sizes give *)
       val mapapp = lhs (#2 (strip_forall (hd (strip_conj (concl mapeqn)))))
@@ -4324,7 +4336,7 @@ fun sizeMapLemma {induction, sizedef, mapeqn, sizes} =
       GENL gs (TAC_PROOF (([], goal),
                           HO_MATCH_MP_TAC induction THEN
                           REPEAT CONJ_TAC THEN
-                          simpLib.ASM_SIMP_TAC (set_ss()) rws))
+                          simpLib.ASM_SIMP_TAC (set_ss eqns) rws))
     end
 
 
@@ -4345,7 +4357,8 @@ fun sizeMapLemma {induction, sizedef, mapeqn, sizes} =
     the order the case definitions come.
    ---------------------------------------------------------------------- *)
 
-fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
+fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs,
+                  eqns} =
     let
       val names : names list = names
       (* TypeBase reads the existence half, so an axiom that carries
@@ -4396,7 +4409,8 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites, names, mapIDs} =
                          entry; what it loses is the law *)
                       case Lib.total
                              (fn () =>
-                                 sizeMapLemma {induction = induction,
+                                 sizeMapLemma {eqns = eqns,
+                                               induction = induction,
                                                sizedef = def,
                                                mapeqn = mapeqn,
                                                sizes = szs}) () of
@@ -4609,7 +4623,7 @@ fun parseSpec q =
 fun familyAxiom css fam recursion =
     familyAxiomOf (familyDefs css fam) recursion
 fun familyInduction css fam induction =
-    familyInductionOf (familyDefs css fam) induction
+    familyInductionOf (famEqns fam) (familyDefs css fam) induction
 fun familySetInduction (fam : family) principle =
     familySetInductionOf fam (#types fam, #cons fam) principle
 
@@ -5016,12 +5030,13 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
          what an argument's own set function is *)
       val db = List.foldl (fn (r, d) => bnfBase.insert (#key r, #info r) d)
                           (#db fam) cbnfs
+      val eqns = famEqns fam
       fun norm tm =
-          rhs (concl (QCONV (simpLib.SIMP_CONV (set_ss())
+          rhs (concl (QCONV (simpLib.SIMP_CONV (set_ss eqns)
                                (setRWs @ shapeRWs @ unfoldRWs))
                             tm))
       fun normth tm =
-          QCONV (simpLib.SIMP_CONV (set_ss())
+          QCONV (simpLib.SIMP_CONV (set_ss eqns)
                    (setRWs @ shapeRWs @ unfoldRWs)) tm
       (* what the representation does to a mapped value: this is what
          puts a member's own map back together underneath a
@@ -5096,7 +5111,8 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
                      otherwise rewrite the equation itself *)
                   GENL as_
                        (CONV_RULE (RAND_CONV (QCONV (PURE_REWRITE_CONV tidy)))
-                          (normEqWith acRWs (mk_comb (setj, capp def), rhs)))
+                          (normEqWith eqns acRWs
+                                      (mk_comb (setj, capp def), rhs)))
                 end
           in
             {map_eqns = LIST_CONJ (List.map mapEqn defs),

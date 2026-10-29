@@ -233,7 +233,8 @@ val prove_recursive_functions_exist =
           val lpats = map (strip_comb o lhand) spcls
           val ufns = itlist (op_insert aconv o fst) lpats []
           val uxargs = map (C (op_assoc aconv) lpats) ufns
-          val oxargs = map (uncurry (C (curry op@)) o Lib.partition is_var) uxargs
+          val oxargs =
+              map (uncurry (C (curry op@)) o Lib.partition is_var) uxargs
           val trths = itlist2 reshuffle ufns uxargs []
           val tth = QCONV
                       (REPEATC (CHANGED_CONV

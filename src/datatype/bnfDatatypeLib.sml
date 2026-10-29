@@ -26,10 +26,14 @@ fun numberedNames nm k =
     if k = 1 then [nm]
     else List.tabulate (k, fn i => nm ^ Int.toString (i + 1))
 
-fun registerBNF {tyname} (key, bnfBase.bI info) =
+(* The equations arrive named because the caller has them and the
+   database wants names; saving them here rather than later keeps one
+   constant's theorem saved in one place, and means the name recorded is
+   a name that exists by the time updateDB resolves it. *)
+fun registerBNF {tyname, eqns} (key, bnfBase.bI info) =
     let
       val {bnd, bndthms, canontype, map, mapID, mapO, mapIMAGE, mapCONG,
-           relator, set, wits, inhabits} = info
+           relator, set, wits, inhabits, ...} = info
       fun each nm ths =
           ListPair.mapEq (fn (n, th) => saveAs n th)
                          (numberedNames (tyname ^ nm) (length ths), ths)
@@ -47,6 +51,7 @@ fun registerBNF {tyname} (key, bnfBase.bI info) =
            mapIMAGE = each "_MAP_IMAGE" mapIMAGE,
            mapCONG = saveAs (tyname ^ "_MAP_CONG") mapCONG,
            relator = relator,
+           eqns = List.map (fn (nm, th) => saveAs nm th) eqns,
            wits = eachP "_wit" wits,
            inhabits = eachP "_inh" inhabits})
     end
@@ -254,6 +259,35 @@ fun asOldQuantified th =
                 th
     end
 
+(* The entry is built from the principle as the construction states
+   it, because what builds it -- the case analysis, the size-of-map
+   lemma -- is written against that shape.  The normalised principle
+   replaces it afterwards, and the stated one is kept beside it: a
+   development may tag what it likes to datatype_simp, so code that
+   has to read a principle reads the stated one.
+
+   A family's members share one principle, the first holding it and
+   the rest naming that one, so the replacement keeps whichever of
+   the two a member had. *)
+fun withNormalisedInduction raw tyinfos =
+    let
+      val normalised = datatypeSimpLib.normalise_induction raw
+      fun shared tyi =
+          case Lib.total TypeBasePure.induction_of0 tyi of
+              SOME (TypeBasePure.COPY (nm, _)) =>
+                SOME (TypeBasePure.COPY (nm, normalised))
+            | SOME (TypeBasePure.ORIG _) => SOME (TypeBasePure.ORIG normalised)
+            | NONE => NONE
+      fun upd tyi =
+          case shared tyi of
+              NONE => tyi
+            | SOME sh => tyi |> TypeBasePure.put_set_induction raw
+                             |> TypeBasePure.put_induction sh
+    in
+      if aconv (concl normalised) (concl raw) then (raw, tyinfos)
+      else (normalised, List.map upd tyinfos)
+    end
+
 fun oneType db (spec : spec) =
     let
       val tyname = hd (#tynames spec)
@@ -295,10 +329,14 @@ fun oneType db (spec : spec) =
               if null params then []
               else
               let val res = fixpointBNF nms bnf fix
-                  val e = constructorEqns cs res
+                  val e = constructorEqns (eqnsOf (#components bnf)) cs res
+                  val eqs = List.map wr ([#map_eqns e] @ #set_eqns e)
               in
-                registerBNF {tyname = tyname} (#key res, #info res)
-              ; List.map wr ([#map_eqns e] @ #set_eqns e)
+                registerBNF {tyname = tyname,
+                             eqns = List.map (fn th => (name_of_eqn th, th))
+                                             eqs}
+                            (#key res, #info res)
+              ; eqs
               end
             | SOME c =>
               (* nothing recurses, so the functor is the type's own,
@@ -312,16 +350,25 @@ fun oneType db (spec : spec) =
                     val res = transportBNF nms {abs = #abs c, rep = #rep c,
                                                 absrep = #absrep c,
                                                 repabs = #repabs c} fbnf
-                    val e = constructorEqns cs (copyMemberBNF c res)
+                    val e = constructorEqns (eqnsOf (#components bnf)) cs
+                                            (copyMemberBNF c res)
+                    val eqs = List.map wr ([#map_eqns e] @ #set_eqns e)
                 in
-                  registerBNF {tyname = tyname} (#key res, #info res)
-                ; List.map wr ([#map_eqns e] @ #set_eqns e)
+                  (* restated at the copy's _CONS, these are equations at
+                     its constructors, so its entry carries them as a
+                     recursive type's does *)
+                  registerBNF {tyname = tyname,
+                               eqns = List.map
+                                        (fn th => (name_of_eqn th, th)) eqs}
+                              (#key res, #info res)
+                ; eqs
                 end
       val tyinfos =
           typeBaseInfo {axiom = axiom, induction = induction,
                         case_defs = defineCases axiom,
                         rewrites = [eqns], names = #names spec,
-                        mapIDs = mapIDsOf (#components bnf)}
+                        mapIDs = mapIDsOf (#components bnf),
+                        eqns = eqnsOf (#components bnf)}
       (* a record's accessors, update functions and literal syntax are
          the existing apparatus's, over the entry just made *)
       val tyinfos =
@@ -329,8 +376,9 @@ fun oneType db (spec : spec) =
               NONE => tyinfos
             | SOME flds =>
               [RecordType.prove_recordtype_thms (hd tyinfos, flds)]
+      val (normalised, tyinfos) = withNormalisedInduction induction tyinfos
     in
-      List.app (saveEqn (SOME induction) nms) eqns
+      List.app (saveEqn (SOME normalised) nms) eqns
     ; datatype_presentation spec
     ; persist (#nocompute nms) tyinfos
     ; (* only the recursive construction builds an ambient to discard;
@@ -454,8 +502,8 @@ and saveEqn ind nms th =
           ; DefnBase.register_indn (ith, [knm])
           end
     in
-      ignore (save_thm (nm, th))
-    ; DefnBase.register_defn {tag = "user", thmname = nm}
+      (* registerBNF saved it; what is left is to say what it is *)
+      DefnBase.register_defn {tag = "user", thmname = nm}
     ; if Lib.mem c (#nocompute nms) then ()
       else computeLib.add_persistent_funs [nm]
     ; if Lib.mem c (#simp nms) then BasicProvers.export_rewrites [nm] else ()
@@ -489,6 +537,10 @@ fun manyTypes db (spec : spec) =
       val params = liveParams db spec
       val fam = defineFamily {tynames = List.map (fn s => s ^ "_raw") tynames}
                              db params (#functors spec)
+      (* what the members' components say at their own constructors, which
+         is what reduces a set term anywhere in the family's derivation *)
+      val fameqns = List.concat (List.map (eqnsOf o #components)
+                                          (#functors fam))
       val principle = familyPrinciple fam
       val coll = collapseFamily {tynames = tynames} fam principle
       val ccs = collapsedConstructors (hd (#names spec))
@@ -499,7 +551,7 @@ fun manyTypes db (spec : spec) =
       val induction =
           legacyInduction.munge_ind_thm
             (asOldQuantified
-               (wr (familyInductionOf cdefs
+               (wr (familyInductionOf fameqns cdefs
                       (familySetInductionOf fam (#types coll, #cons coll)
                                             (#principle coll)))))
       (* each member as a functor of its own: the copy of a composite
@@ -516,14 +568,23 @@ fun manyTypes db (spec : spec) =
                      repabs = List.nth (#repabs coll, j)}
                     (bnfLib.deriveBNFn (#db fam) params
                                        (List.nth (#types fam, j))))
-      val _ = List.app (fn (nm, r : copied_bnf) =>
-                           registerBNF {tyname = nm} (#key r, #info r))
-                       (ListPair.zip (tynames, cbnfs))
+      (* what the members' maps and sets do at their constructors is
+         worked out before they are registered, so that each entry can
+         carry its own: collapsedEqns reads a database it builds itself
+         out of the family's and the copies', not the one registration
+         writes to, so nothing here depends on that having happened *)
       val eqns = if null params then [] else collapsedEqns coll fam cbnfs ccs
       val rewrites = if null params then List.map (fn _ => []) tynames
                      else List.map (fn e => List.map wr
                                               (#map_eqns e :: #set_eqns e))
                                    eqns
+      val _ = ListPair.app
+                (fn ((nm, r : copied_bnf), eqs) =>
+                    registerBNF {tyname = nm,
+                                 eqns = List.map
+                                          (fn th => (name_of_eqn th, th)) eqs}
+                                (#key r, #info r))
+                (ListPair.zip (tynames, cbnfs), rewrites)
       val tyinfos =
           typeBaseInfo {axiom = axiom, induction = induction,
                         case_defs = defineCases axiom,
@@ -531,7 +592,8 @@ fun manyTypes db (spec : spec) =
                         mapIDs =
                           List.concat
                             (List.map (mapIDsOf o #components)
-                                      (#functors fam))}
+                                      (#functors fam)),
+                        eqns = fameqns}
       (* a member written as a record gets the record apparatus, as a
          type of its own would *)
       val tyinfos =
@@ -540,6 +602,7 @@ fun manyTypes db (spec : spec) =
               | (SOME flds, tyi) =>
                   RecordType.prove_recordtype_thms (tyi, flds))
             (#fields spec, tyinfos)
+      val (_, tyinfos) = withNormalisedInduction induction tyinfos
     in
       List.app (saveEqn NONE (unionNames (#names spec)))
                (List.concat rewrites)

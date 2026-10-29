@@ -21,6 +21,16 @@ Contents
 New features
 ------------
 
+-   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
+
+    A type that recurses under an operator gets induction hypotheses stated through that operator's set function, which is correct but is not how a development states its own lemmas, so proofs normalise them by hand at every induction.
+    Theorems tagged `datatype_simp` are now used to normalise the principle of every type declared after them.
+    With nothing tagged the hypotheses are rephrased only, by pulling out the existentials the operators leave and unwinding the resulting equalities; tagging the set functions' own laws takes `(∀e0. (∃p. e0 ∈ setSND p ∧ MEM p l) ⇒ P e0)` to `(∀x e0. MEM (x,e0) l ⇒ P e0)`.
+    What a principle says is therefore a development's decision rather than the package's.
+
+    The principle as the construction stated it is kept alongside, and `TypeBase.set_induction_of` returns it.
+    Code that reads a principle should use that: `TypeBase.induction_of` now gives whatever the ambient `datatype_simp` theorems have made of it.
+
 -   HOL4’s algebraic datatype definition machinery now implements the *Bounded Natural Functors* idea due to Traytel *et al.*, which has underpinned Isabelle type definitions for a decade or more.
     This allows easy definition of types that recurse under type oprerators such as finite sets, finite maps, and on the right of function arrows.
     The package now automatically defines map, set and relator constants for those types that are themselves functors (*e.g.*, lists), and the user can specify what names they want for those new constants.
@@ -102,6 +112,14 @@ New features
 
 Bugs fixed
 ----------
+
+-   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
+    Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
+    Recursions through `MAP` and `EVERY` with a substitution-like extra parameter have exactly this shape.
+
+    TFL eta-expands such a call on the way in, because a partial application has no other form while the function's arguments are being tupled.
+    The expansion is now undone before the equations and the induction principle are saved, so both say what was written.
+    A definition whose value genuinely is an abstraction, and a lambda written over a tuple, are left alone.
 
 -   `bin/hol` reading a script on its standard input, *e.g.*, something like `$(HOLDIR)/bin/hol < build.ML`, reported success however badly the script went.
     A failing run now properly exits with failure.

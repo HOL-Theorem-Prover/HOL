@@ -1887,11 +1887,18 @@ in
           | _ => (g0, node)
       end
     | NONE =>
+      (* A path outside the current directory gets a placeholder, completed
+         when its own directory is scanned, unless a rule usable from here
+         claims it.  A rule without commands (from whichever Holmakefile
+         supplies it) for a target with a primary dependency is not usable
+         from here: `buildNodeInfo' would then work out the dependencies
+         relative to the current directory, looking up both the source
+         for holdep and the explicit dependencies by the target's file
+         part alone, and so record the wrong ones. *)
       if not (hmdir.eqdir dir actual_dir) andalso
-         no_extra_rule (SOME tgt) andalso
+         (no_extra_rule (SOME tgt) orelse
+          isSome pdep andalso no_full_extra_rule (SOME tgt)) andalso
          not (isSome (pattern_rule_info tgt))
-         (* path outside of current directory and no local rule (pattern or otherwise)
-            claims it *)
       then (
         diag (fn _ => hm_target.toString tgt ^ " appears foreign; adding placeholdir NoCmd");
         add_node {target = tgt, seqnum = 0, phony = false,

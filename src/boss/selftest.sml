@@ -608,3 +608,104 @@ val _ =
         then OK()
         else die (Feedback.message_of e)
 end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2098: TFL eta-expands a call that supplies a function too few    *)
+(* arguments, and that expansion used to survive into the saved         *)
+(* equation.  Unfolding a definition recursing through MAP or EVERY     *)
+(* then gave MAP (\a. g n a) ts where MAP (g n) ts was written, which   *)
+(* matches neither goals nor lemmas stated the way they were written.   *)
+(* The primitive-recursive case must be left exactly as it was.         *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`etatree = Nd (etatree list) | Lf`;
+
+local
+  (* an abstraction \x. t x with x not free in t says nothing that t
+     does not; the defect is that extraction leaves these behind *)
+  fun eta_redex tm =
+      case Lib.total dest_abs tm of
+          NONE => false
+        | SOME (v, bdy) =>
+          (case Lib.total dest_comb bdy of
+               NONE => false
+             | SOME (rator, rand) =>
+               aconv rand v andalso not (free_in v rator))
+  fun eta_free th = not (can (find_term eta_redex) (concl th))
+  fun mentions pat th = can (find_term (aconv pat)) (concl th)
+  fun check (pat, th) = eta_free th andalso mentions pat th
+  fun show (pat, th) =
+      "expected " ^ term_to_string pat ^ " in " ^ thm_to_string th
+in
+val _ = quietly Define`etaf (Nd ts) = Nd (MAP etaf ts) /\ etaf Lf = Lf`;
+val _ = quietly Define`
+  etag (n:num) (Nd ts) = Nd (MAP (etag n) ts) /\ etag n Lf = Lf`;
+val _ = quietly Define`etap (Nd ts) = EVERY etap ts /\ etap Lf = T`;
+val _ = quietly Define`
+  etaq (n:num) (Nd ts) = EVERY (etaq n) ts /\ etaq n Lf = T`;
+
+val _ = tprint "GH2098: primitive recursion through MAP (unchanged)"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“MAP etaf”, DB.fetch "-" "etaf_def")
+
+val _ = tprint "GH2098: TFL recursion through MAP, partially applied"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“MAP (etag n)”, DB.fetch "-" "etag_def")
+
+val _ = tprint "GH2098: TFL recursion through EVERY, bare call"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“EVERY etap”, DB.fetch "-" "etap_def")
+
+val _ = tprint "GH2098: TFL recursion through EVERY, partially applied"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“EVERY (etaq n)”, DB.fetch "-" "etaq_def")
+end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2097: a nested type's induction hypotheses.  With nothing tagged *)
+(* to datatype_simp the principle is rephrased only -- the existentials *)
+(* the chain leaves are pulled out and the equalities that leaves are   *)
+(* unwound.  A development says what more it wants by tagging theorems. *)
+(* The principle as the construction stated it stays available, because *)
+(* code reads that one and a development may tag anything.             *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2097exp = G7Var num
+                           | G7Rec ((num # gh2097exp) list) gh2097exp
+                           | G7Raise (gh2097exp option)`
+
+local
+  fun hasEx th = can (find_term is_exists) (concl th)
+in
+val _ = tprint "GH2097: the chain's existentials are pulled out"
+val _ =
+    let val th = DB.fetch "-" "gh2097exp_induction"
+    in if hasEx th then die (thm_to_string th) else OK() end
+
+val _ = tprint "GH2097: the stated principle is kept beside it"
+val _ =
+    let val th = TypeBase.set_induction_of “:gh2097exp”
+    in
+      if hasEx th then OK() else die ("no existential: " ^ thm_to_string th)
+    end
+
+end
+
+val _ = tprint "GH2097: a tagged theorem reaches a later declaration"
+val _ =
+    let
+      val before_ = length (datatypeSimpLib.datatype_simps())
+      val _ = List.app datatypeSimpLib.add_datatype_simp
+                ["pair.setSND_def", "pred_set.IN_ABS", "pair.FORALL_PROD",
+                 "pair.SND", "bnfPrelims.IN_optSET"]
+      val _ = Datatype`gh2097b = G7bNil | G7bRec ((num # gh2097b) list)`
+      val th = DB.fetch "-" "gh2097b_induction"
+      val after = length (datatypeSimpLib.datatype_simps())
+    in
+      if after <= before_ then die "nothing was tagged"
+      else if can (find_term (fn t => is_const t andalso
+                                      #1 (dest_const t) = "setSND"))
+                  (concl th)
+      then die ("setSND survived: " ^ thm_to_string th)
+      else OK()
+    end

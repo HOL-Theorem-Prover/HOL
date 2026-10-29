@@ -27,6 +27,13 @@ sig
 
    val axiom_of           : hol_type -> thm
    val induction_of       : hol_type -> thm
+
+   (* The principle as the construction stated it, through the
+      operators' set functions.  induction_of gives what a reader is
+      meant to see, which a development's datatype_simp theorems may
+      have reshaped; this gives the shape code can rely on, falling
+      back to induction_of for a type that has no separate one. *)
+   val set_induction_of   : hol_type -> thm
    val constructors_of    : hol_type -> term list
    val destructors_of     : hol_type -> thm list
    val recognizers_of     : hol_type -> thm list

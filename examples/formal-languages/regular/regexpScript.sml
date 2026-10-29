@@ -138,7 +138,8 @@ Theorem regexp_induction[allow_rebind] :
 Proof
   rpt gen_tac >> strip_tac >>
   ho_match_mp_tac
-    (let val ind = TypeBase.induction_of “:regexp”
+    (* the stated principle: legacyInduction reads the set functions *)
+    (let val ind = TypeBase.set_induction_of “:regexp”
      in legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
      end) >>
   metis_tac []
