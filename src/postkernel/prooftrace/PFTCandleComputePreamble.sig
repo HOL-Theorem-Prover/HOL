@@ -169,6 +169,8 @@ signature PFTCandleComputePreamble = sig
        candle$SUC_BIT1          ⊢ SUC (BIT1 n) = BIT0 (SUC n)
        candle$NUM_XLATE_n       ⊢ <HOL4 bits for n> = <Candle bits for n>
                                 for n in 2..255 whose HOL4 form contains BIT2
+
+     It then emits COMPUTE_INIT with COMPUTE_EQ_1..62, in order.
   *)
 
   val emit : { out : PFTWriter.pft_out,
@@ -179,8 +181,9 @@ signature PFTCandleComputePreamble = sig
              } -> unit
 
   (* Emit a standalone Candle compute preamble PFT.  The file LOADs all
-     prerequisites by name, and derives and SAVEs the compute helper theorems.
-     Per-theory files create explicit COMPUTE_INIT objects. Place this file in
+     prerequisites by name, derives and SAVEs the compute helper theorems,
+     and initializes the compute context with COMPUTE_EQ_1..62, which later
+     theory files use without their own COMPUTE_INIT. Place this file in
      replay/merge order after its prerequisite theories, but it can be
      generated independently. *)
   val emit_file : {output: string} -> unit

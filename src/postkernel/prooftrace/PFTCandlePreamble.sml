@@ -2,7 +2,7 @@ structure PFTCandlePreamble :> PFTCandlePreamble = struct
 
 fun emit {output} = let
   val out = PFTWriter.openOut
-    {file = output, version = 1, ruleset = "candle"}
+    {file = output, version = "0.1.0", ruleset = "candle"}
 
   (* ================================================================ *)
   (* ID allocators                                                    *)
@@ -1622,7 +1622,7 @@ fun emit {output} = let
   (* ================================================================ *)
 
   val () = PFTWriter.closeOut out
-    {n_ty = !next_ty, n_tm = !next_tm, n_th = !next_th, n_ci = 0}
+    {n_ty = !next_ty, n_tm = !next_tm, n_th = !next_th}
 in () end
 
 end

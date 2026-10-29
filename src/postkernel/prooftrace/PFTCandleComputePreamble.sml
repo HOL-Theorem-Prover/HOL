@@ -1243,6 +1243,16 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val eq62 = INST LET_cv_free [(var_x_let, var_p1)]
   val () = save "candle$COMPUTE_EQ_62" eq62
 
+  (* Initialize the ambient compute context for the theory files replayed
+     after this preamble. *)
+  val () = PFTWriter.Candle.compute_init out
+       [eq1, eq2, eq3, eq4, eq5, bit0_unfold, BIT1_candle, eq8, eq9, eq10,
+        eq11, eq12, eq13, eq14, eq15, eq16, eq17, eq18, eq19, eq20, eq21,
+        eq22, eq23, eq24, eq25, eq26, eq27, eq28, eq29, eq30, eq31, eq32,
+        eq33, eq34, eq35, eq36, eq37, eq38, eq39, eq40, eq41, eq42, eq43,
+        eq44, eq45, eq46, eq47, eq48, eq49, eq50, eq51, eq52, eq53, eq54,
+        eq55, eq56, eq57, eq58, eq59, eq60, eq61, eq62]
+
   (* ================================================================ *)
   (* Numeral translation: HOL4 (BIT1/BIT2) <-> Candle (BIT0/BIT1)     *)
   (*                                                                  *)
@@ -1517,7 +1527,7 @@ in () end
 
 fun emit_file {output} = let
   val out = PFTWriter.openOut
-    {file = output, version = 1, ruleset = "candle"}
+    {file = output, version = "0.1.0", ruleset = "candle"}
 
   val next_ty = ref 0
   val next_tm = ref 0
@@ -1537,7 +1547,7 @@ fun emit_file {output} = let
                  load_theorem = load_theorem}
 
   val () = PFTWriter.closeOut out
-    {n_ty = !next_ty, n_tm = !next_tm, n_th = !next_th, n_ci = 0}
+    {n_ty = !next_ty, n_tm = !next_tm, n_th = !next_th}
 in () end
 
 end (* struct *)

@@ -272,7 +272,7 @@ fun emit_theory {trace, output, ruleset} = let
 
   val ruleset_str = case ruleset of HOL4 => "hol4" | Candle => "candle"
   val out = PFTWriter.openOut
-    {file = output, version = 1, ruleset = ruleset_str}
+    {file = output, version = "0.1.0", ruleset = ruleset_str}
 
   (* --- Emit pass state --------------------------------------------------- *)
 
@@ -280,11 +280,9 @@ fun emit_theory {trace, output, ruleset} = let
   val next_ty = ref 0
   val next_tm = ref 0
   val next_th = ref 0
-  val next_ci = ref 0
 
   fun alloc_ty () = let val id = !next_ty in next_ty := id + 1; id end
   fun alloc_tm () = let val id = !next_tm in next_tm := id + 1; id end
-  fun alloc_ci () = let val id = !next_ci in next_ci := id + 1; id end
   fun alloc_th () = let val id = !next_th in next_th := id + 1; id end
 
   (* --- Pointer memos ----------------------------------------------------- *)
@@ -293,8 +291,7 @@ fun emit_theory {trace, output, ruleset} = let
                 (* heap ptr -> PFT term ID; hot path, flat array *)
   val ty_memo : int PIntMap.t ref = ref PIntMap.empty
   val th_memo : int PIntMap.t ref = ref PIntMap.empty
-  val ci_memo : int PIntMap.t ref = ref PIntMap.empty
-  val candle_compute_init_id = ref ~1
+  val hol4_compute_init_key = ref ~1
 
   fun ty_memo_get k = PIntMap.find k (!ty_memo)
                       handle PIntMap.NotFound => ~1
@@ -302,13 +299,6 @@ fun emit_theory {trace, output, ruleset} = let
   fun th_memo_get k = PIntMap.find k (!th_memo)
                       handle PIntMap.NotFound => ~1
   fun th_memo_set k v = th_memo := PIntMap.add k v (!th_memo)
-
-  fun ci_memo_get k = PIntMap.find k (!ci_memo)
-                      handle PIntMap.NotFound => ~1
-  fun ci_memo_set k v = ci_memo := PIntMap.add k v (!ci_memo)
-
-  (* Candle compute context: initialized once after preamble, reused for all COMPUTE calls *)
-
 
   (* --- Structural hash-cons tables -------------------------------------- *)
 
@@ -1716,13 +1706,7 @@ fun emit_theory {trace, output, ruleset} = let
 
     | compute_prf (a, b) =>
         let
-          (* Ensure COMPUTE_INIT is emitted (once after preamble) *)
-          val ci_id =
-            if !candle_compute_init_id >= 0 then !candle_compute_init_id
-            else let
-              val cid = emit_candle_compute_init ()
-            in candle_compute_init_id := cid; cid end
-
+          (* The compute preamble installs Candle initialization. *)
           (* Parse compute_prf arguments *)
           val (compute_args_ptr, ths_ptr) = tuple2 heap (I, I) a
 
@@ -1771,7 +1755,7 @@ fun emit_theory {trace, output, ruleset} = let
           (* Call COMPUTE: candle_input_tm, code_eqn_ths
              Returns theorem: candle_input_tm = candle_result *)
           val compute_th_id = alloc_th ()
-          val () = PFTWriter.Candle.compute out compute_th_id ci_id
+          val () = PFTWriter.Candle.compute out compute_th_id
                      candle_input_tm code_eqn_ths
           (* compute_th_id: candle_input_tm = candle_result *)
 
@@ -1821,15 +1805,6 @@ fun emit_theory {trace, output, ruleset} = let
   (* ======================================================================= *)
   (* Candle COMPUTE helpers                                                  *)
   (* ======================================================================= *)
-
-  (* Emit COMPUTE_INIT with the 62 characteristic equations from preamble *)
-  and emit_candle_compute_init () : int = let
-    (* Load all 62 characteristic equations from preamble *)
-    val eq_ids = List.tabulate (62, fn i =>
-      candle_load_pth ("candle$COMPUTE_EQ_" ^ Int.toString (i + 1)))
-    val ci_id = alloc_ci ()
-    val () = PFTWriter.Candle.compute_init out ci_id eq_ids
-  in ci_id end
 
   (* Match the emitted constant's full resolved name and type, rather than
      a raw heap spelling that may denote a private or retired identity. *)
@@ -2587,26 +2562,25 @@ fun emit_theory {trace, output, ruleset} = let
   (* ======================================================================= *)
 
   and emit_compute thm_id ((compute_args_ptr, ths_ptr), tm_p) = let
-    val ci_id = emit_compute_init compute_args_ptr
     val th_id_list = list heap emit_thm ths_ptr
     val tm_id = emit_term tm_p
-  in PFTWriter.HOL4.compute out thm_id ci_id tm_id th_id_list end
+    (* Dependencies may themselves compute with another initialization. *)
+    val () = emit_compute_init compute_args_ptr
+  in PFTWriter.HOL4.compute out thm_id tm_id th_id_list end
 
-  and emit_compute_init (args_ptr : compute_args ptr) : int = let
+  and emit_compute_init (args_ptr : compute_args ptr) : unit = let
     val k = ptr args_ptr
-    val cached = ci_memo_get k
-  in if cached >= 0 then cached
+  in if !hol4_compute_init_key = k then ()
      else let
        val {num_type, char_eqns, cval_type, cval_terms} = shComputeArgs heap args_ptr
        val num_ty = emit_type num_type
        val cval_ty = emit_type cval_type
        val char_eqns = list heap (tuple2 heap (str heap, emit_thm)) char_eqns
        val cval_terms = list heap (tuple2 heap (str heap, emit_term)) cval_terms
-       val ci_id = alloc_ci ()
-       val () = PFTWriter.HOL4.compute_init out ci_id num_ty cval_ty
+       val () = PFTWriter.HOL4.compute_init out num_ty cval_ty
            char_eqns cval_terms
-       val () = ci_memo_set k ci_id
-     in ci_id end
+       val () = hol4_compute_init_key := k
+     in () end
   end
 
   (* ======================================================================= *)
@@ -2655,7 +2629,7 @@ fun emit_theory {trace, output, ruleset} = let
 
 in
   PFTWriter.closeOut out
-    {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = !next_ci}
+    {n_ty = n_ty, n_tm = n_tm, n_th = n_th}
 end
 
 end
