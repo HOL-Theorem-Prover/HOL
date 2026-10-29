@@ -47,6 +47,11 @@ val isPtr: 'a ptr -> bool
 type ident
 val ident: heap -> (ident, string * string * int) gparser
 
+(* Resolve public live identities and collision-free private local names. *)
+val names: heap -> root ptr ->
+  {const_name: ident ptr -> string * string,
+   type_name: ident ptr -> string * string}
+
 val thmId: heap -> thm_id parser
 
 datatype sh_type =
@@ -132,7 +137,11 @@ val shComputeArgs: heap -> compute_args ptr ->
     char_eqns  : (string * thm) list ptr }
 
 val shRoot: heap -> root ptr ->
-  { theory: string,
+  { const_ids: ident list ptr,
+    type_ids: ident list ptr,
+    const_origins: (ident * (string * string)) list ptr,
+    type_origins: (ident * (string * string)) list ptr,
+    theory: string,
     parents: (string * string) list ptr,
     types: (string * int) list ptr,
     constants: (string * hol_type) list ptr,

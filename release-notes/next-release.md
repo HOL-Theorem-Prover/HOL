@@ -166,6 +166,10 @@ New examples
 Incompatibilities
 -----------------
 
+-   Raw proof traces now record the live signature and imported identity
+    provenance. Regenerate earlier raw traces before replaying them; deleted
+    local identities receive private names instead of reusing a live name.
+
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.
 
