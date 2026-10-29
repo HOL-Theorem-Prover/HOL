@@ -20,6 +20,10 @@ Contents
 
 New features
 ------------
+-   `PFTEmit` and the `pft emit` driver convert raw theory proof dumps to
+    HOL4 or Candle binary PFT. Conversion preserves oracle hypotheses and
+    live/retired symbol identities, and rejects unsupported proof nodes.
+
 -   `PFTWriter` writes binary proof traces using the version 1 format.
     `PFTReader` checks the magic, version, ruleset and four-namespace footer;
     the HOL replayer rejects Candle traces before executing commands.

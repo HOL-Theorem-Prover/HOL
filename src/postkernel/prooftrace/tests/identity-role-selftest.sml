@@ -62,9 +62,15 @@ local
            {private=false, loc=RawTheory_dtype.Unknown,
             class=RawTheory_dtype.Thm})],
          anon_thms=[], mldeps=[]}
+      fun convert ruleset = PFTEmit.emit_theory
+        {trace=trace, output=name ^ ".pft", ruleset=ruleset}
+      val () = rejects (name ^ " HOL4")
+        (fn () => convert PFTEmit.HOL4)
+      val () = rejects (name ^ " Candle")
+        (fn () => convert PFTEmit.Candle)
       val () = rejects (name ^ " raw")
         (fn () => ProofTraceReplay.replay trace)
-    in print ("PASS " ^ name ^ ": raw rejection\n") end
+    in print ("PASS " ^ name ^ ": HOL4, Candle, raw rejection\n") end
 in
   val () = List.app check
     [("epoch_bool_retired_definition",retained),

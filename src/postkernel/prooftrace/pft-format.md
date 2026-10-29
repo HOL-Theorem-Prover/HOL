@@ -16,6 +16,11 @@ accepts only `candle`. Readers check the header before executing commands.
 The experimental string-version `0.1.0` format (three namespaces and ambient
 compute state) is incompatible and is rejected.
 
+The converter accepts the current producer's TR32 or unreduced 64-bit
+heap encoding; raw heap layouts are producer-specific, unlike this PFT
+contract. See the [conversion commands](pft-cli.md). Cross-theory LOADs
+require their saved dependencies to be replayed first.
+
 AXIOM remains a supported command, so replay alone is not an allowed-axiom
 policy or an exact-result certificate. Callers must check the desired
 conclusion and hypotheses explicitly.
