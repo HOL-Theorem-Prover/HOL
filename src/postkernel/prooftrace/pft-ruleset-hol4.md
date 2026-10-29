@@ -253,8 +253,8 @@ The command remains part of the wire format.
 
 | Command | Arguments |
 |---------|-----------|
-| COMPUTE_INIT | id, num_ty: type-id, cval_ty: type-id, char_eqns: {name: thm-id}, cval_terms: {name: term-id} |
-| COMPUTE | id, ci: compute-id, tm, ths: thm-id list |
+| COMPUTE_INIT | num_ty: type-id, cval_ty: type-id, char_eqns: {name: thm-id}, cval_terms: {name: term-id} |
+| COMPUTE | id, tm, ths: thm-id list |
 
 ## Binary Opcodes
 
@@ -302,8 +302,8 @@ The command remains part of the wire format.
 | 0x40   | DEF_TYOP      | id th name                             |
 | 0x41   | DEF_SPEC      | id th n_names name...                  |
 | 0x42   | DEF_SPEC_GEN  | id th n_names name...                   |
-| 0x43   | COMPUTE_INIT  | id ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
-| 0x44   | COMPUTE       | id ci tm n_ths th...                   |
+| 0x43   | COMPUTE_INIT  | ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
+| 0x44   | COMPUTE       | id tm n_ths th...                   |
 
 ## Specification of the Theorem Commands
 
@@ -423,11 +423,11 @@ all arguments are provided directly.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| COMPUTE | ci, `[th1,...,thn]`, `t` | `⊢ t = v` | See below |
+| COMPUTE | `[th1,...,thn]`, `t` | `⊢ t = v` | See below |
 
 #### COMPUTE_INIT
 
-Creates a compute context from four components:
+Initializes computation from four components, without producing an object:
 
 - **`num_ty`**: the type of natural numbers (`:num`)
 - **`cval_ty`**: the type of computed values (`:cv`)
@@ -525,11 +525,12 @@ Creates a compute context from four components:
   | `cv_eq` | `⊢ cv_eq p q = cv_num (COND (p = q) (SUC 0) 0)` |
   | `let` | `⊢ LET f x = f x` |
 
-The context is created once and reused across multiple COMPUTE calls.
+The initialization remains in effect across COMPUTE calls and replayed files
+until a later COMPUTE_INIT replaces it. COMPUTE before initialization fails.
 
 #### COMPUTE
 
-Takes a compute context `ci`, a list of code equation theorems
+Uses the current initialization, a list of code equation theorems
 `[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
 is the normal form of `t` under evaluation.
 

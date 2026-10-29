@@ -13,7 +13,9 @@ signature PFTReplay = sig
        foo.pft       -> binary, thyname = "foo"
      JSONL input is unsupported.
      Ancestor theories must already be in the trDB.
-     Replayed theorems are inserted into the trDB as they are saved. *)
+     Replayed theorems are inserted into the trDB as they are saved.
+     COMPUTE_INIT replaces the ambient compute state, which persists
+     across replay calls. COMPUTE requires a preceding initialization. *)
   val replay : trDB -> string -> trDB
 
   (* Look up a theorem by key: "Thy$name" or "Thy#n" *)
