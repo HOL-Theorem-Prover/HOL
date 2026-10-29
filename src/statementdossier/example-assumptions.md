@@ -1,7 +1,7 @@
 # Input condition
 
 This example explains the input to a stored arithmetic theorem.
-See the [configuration documentation](src/statementdossier/README.md).
+See the [configuration documentation](README.md).
 
 ## <=
 

@@ -18,59 +18,74 @@ recorded problems is not a separate proof audit.
 
 ## Example
 
-In a configured, built HOL tree, from its root:
+In a configured, built Poly/ML HOL tree, from its root:
 
 ```sh
 (cd src/statementdossier && ../../bin/Holmake -j2)
-bin/hol run src/statementdossier/example.uo
+src/statementdossier/statement-dossier src/statementdossier/example.json
 ```
 
-Open `list-dossier.html` or read `list-dossier.md`. The example reports
-`list$REVERSE_APPEND`, expands `REVERSE` and `APPEND`, and states
-`REVERSE_REVERSE` as a supporting theorem. It uses only HOL's basic
-list theory. The example and the selftests need no external programs.
-Remove the two generated files when finished; they are not source files.
+Open `src/statementdossier/list-dossier.html` or read the accompanying
+Markdown file. The example reports `list$REVERSE_APPEND`, expands
+`REVERSE` and `APPEND`, and states `REVERSE_REVERSE` as a supporting
+theorem. The command loads the theories itself. The configuration is
+data; it does not contain SML expressions:
 
-The examples use ordinary `open` declarations. Holmake records their
-dependencies in the `.uo` files, which `hol run` loads before the example.
-In an interactive HOL session, open the theories to report and
-`statementDossierLib` before calling `run`.
-`run : config -> unit` is the report entry point. See `example.sml` for a
-complete configuration.
+```json
+{
+  "title": "List reversal and append",
+  "theorems": ["list$REVERSE_APPEND"],
+  "expand_consts": ["list$REVERSE", "list$APPEND"],
+  "outputs": {"markdown": "list-dossier.md", "html": "list-dossier.html"}
+}
+```
+
+All file paths, including outputs and load paths, are relative to the
+configuration file's directory. Absolute paths work too. Parent output
+directories must exist. The command can be run from any working directory.
+Remove generated reports when finished; they are not source files.
+
+The command uses the same HOL runtime as `polyscripter`: its executable
+contains a base heap and can load further theory modules. The report
+library and JSON reader also work in Moscow ML; the standalone command
+is built with Poly/ML.
 
 ## Configuration
 
-Names are `{Thy : string, Name : string}` records, so theorem and constant
-selection does not depend on which theory is open.
+`theorems` and `outputs` are required and nonempty. Names are strings of
+the form `Theory$Name`; selection does not depend on which theory is
+open. Unknown or duplicate object fields, malformed names and wrong
+value types are errors. Optional fields are omitted rather than null.
 
-- `title`, `preamble`: document heading and opening text.
-- `theorems`: stored theorems to report, in order.
-- `expand_theories`, `expand_consts`: theories and individual constants
-  whose definitions are followed. A constant named individually does
-  not automatically expand the constants in its definition.
-- `stop_theories`, `stop_consts`: boundaries, overriding expansion.
-- `equation_lemmas`: `(constant, theorem list)` pairs to show beside its
-  definition, in addition to automatically discovered equation lemmas.
-- `source_dirs`: `(label, directory)` pairs containing theory scripts.
-  Source paths in the report use the label as a prefix. An empty list
-  uses only the file names recorded in the theorem database.
-- `outputs`: `(Markdown | Html, output path)` pairs. Parent directories
-  must already exist. HTML includes its CSS and small navigation script.
-- `supporting`: extra stored theorems, shown without expanding their
-  constants beyond the main report's entries.
-- `assumptions`: `NONE`, or `SOME {theorem, prose}` for the checked prose
-  described below. The theorem must be among `theorems`.
-- `snippets`: `NONE`, or `SOME (input path, output path)` for the optional
-  document snippets described below.
+| Field | JSON value and meaning |
+|-------|------------------------|
+| `title`, `preamble` | Strings. Default title: `Stored theorem dossier`; default preamble: empty. |
+| `theorems` | Array of stored theorem names, in report order. |
+| `expand_theories`, `expand_consts` | Arrays of theory or qualified constant names whose definitions are followed. Naming a constant does not automatically expand constants in its definition. |
+| `stop_theories`, `stop_consts` | Arrays of boundaries, overriding expansion. |
+| `equation_lemmas` | Object mapping qualified constants to arrays of theorem names, added to discovered equation lemmas. |
+| `source_dirs` | Object mapping display labels to directories containing theory scripts. An empty object uses recorded source filenames. |
+| `outputs` | Object with `markdown` and/or `html` paths. HTML includes its CSS and navigation script. |
+| `supporting` | Array of additional stored theorem names, shown without further expansion. |
+| `assumptions` | Object with `theorem` and `prose`. The theorem must be among `theorems`; `prose` is a Markdown file as described below. |
+| `snippets` | Object with `input` and `output` paths, for the document snippets described below. |
+| `load_path` | Array of directories containing built HOL modules; searched before the normal HOL load path. |
+| `theories` | Array of extra theories to load, for example for names used only in prose. Theories named elsewhere in the configuration load automatically. |
 
-`script_theories : string list -> string list` lists the theories whose
-`*Script.sml` files occur below the supplied directories. Source scanning
-skips hidden directories and directory symlinks.
+Unspecified collections are empty; omitting `assumptions` or `snippets`
+disables that feature. Misspelled theorems, constants and expansion/stop
+theories are errors. The JSON reader needs no external programs. Pandoc
+is only required for HTML output with assumption prose.
 
-Misspelled theorems, constants and expansion/stop theories are errors.
-Load the required theories before calling `run`. Each call takes a fresh
-snapshot of the theorem database and sources, so newly stored facts in an
-interactive session appear in the next report.
+For interactive use, `statementDossierConfig.run "dossier.json"` reads the
+same file. `statementDossierLib.run : config -> unit` accepts an SML record
+for callers that already have their theories loaded; its signature
+documents the corresponding record fields. Each call takes a fresh
+snapshot of the theorem database and sources.
+
+`statementDossierLib.script_theories : string list -> string list` lists
+the theories whose `*Script.sml` files occur below supplied directories.
+Source scanning skips hidden directories and directory symlinks.
 
 ## Definition traversal
 
@@ -149,12 +164,13 @@ For a runnable example using `arithmetic$LESS_EQ_IMP_LESS_SUC` and
 `example-assumptions.md`, with pandoc installed:
 
 ```sh
-bin/hol run src/statementdossier/proseExample.uo
+src/statementdossier/statement-dossier src/statementdossier/proseExample.json
 ```
 
 This writes `arithmetic-dossier.md` and `arithmetic-dossier.html` in the
-HOL root. Its Markdown links keep their original destinations in HTML;
-there is no assumption that a linked document has an HTML counterpart.
+configuration directory. Its Markdown links keep their original
+destinations in HTML; there is no assumption that a linked document has
+an HTML counterpart.
 
 ## Document snippets
 
@@ -179,6 +195,7 @@ optional formatting aid; it does not validate an entire document.
 The native build runs these tests when `HOLSELFTESTLEVEL` is set. They
 exercise stored statement fidelity, kernel assumptions, recursive and
 cyclic expansion, boundaries, records, HTML escaping and fragment links,
-trust tags, repeated database snapshots, snippets, and positive and
-negative assumption prose validation. Oracle and axiom fixtures exist
+trust tags, repeated database snapshots, snippets, positive and negative
+assumption prose validation, JSON configuration errors, theory loading
+and paths relative to the configuration file. Oracle and axiom fixtures exist
 only in the test process; no theory or axiom is exported by this library.

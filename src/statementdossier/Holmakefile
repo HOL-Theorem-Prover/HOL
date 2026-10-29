@@ -1,6 +1,13 @@
 .PHONY: all
 all: $(DEFAULT_TARGETS) selftest.exe
 
+ifdef POLY
+all: statement-dossier
+
+statement-dossier: statementDossierTool.uo $(dprot $(HOLDIR)/bin/hol.state)
+	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap $< -o $@ --exe main
+endif
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
@@ -11,4 +18,4 @@ statementdossier-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1,$@)
 endif
 
-EXTRA_CLEANS = selftest.exe statementdossier-selftest.log
+EXTRA_CLEANS = selftest.exe statementdossier-selftest.log statement-dossier

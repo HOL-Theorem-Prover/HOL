@@ -1,0 +1,21 @@
+{
+  "title": "List reversal and append",
+  "preamble": "Stored statements and the definitions they use.",
+  "theorems": [
+    "list$REVERSE_APPEND"
+  ],
+  "expand_consts": [
+    "list$REVERSE",
+    "list$APPEND"
+  ],
+  "source_dirs": {
+    "src/list/src": "../list/src"
+  },
+  "outputs": {
+    "markdown": "list-dossier.md",
+    "html": "list-dossier.html"
+  },
+  "supporting": [
+    "list$REVERSE_REVERSE"
+  ]
+}

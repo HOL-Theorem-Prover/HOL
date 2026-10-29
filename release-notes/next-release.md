@@ -147,7 +147,9 @@ New tools
     equations, datatypes and expansion boundaries. HTML terms use HOL's
     printer annotations for highlighting, types and links. Optional prose
     sections are checked against the theorem's hypotheses and database.
-    See `src/statementdossier/README.md` for an example.
+    The Poly/ML `statement-dossier` command reads a JSON configuration
+    and loads the selected theories. See `src/statementdossier/README.md`
+    for examples.
 
 New examples
 ------------
