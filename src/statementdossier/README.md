@@ -47,8 +47,8 @@ Remove generated reports when finished; they are not source files.
 
 The command uses the same HOL runtime as `polyscripter`: its executable
 contains a base heap and can load further theory modules. The report
-library and JSON reader also work in Moscow ML; the standalone command
-is built with Poly/ML.
+library also works in Moscow ML. The JSON reader and standalone command
+use HOL's Poly/ML JSON library and are built only with Poly/ML.
 
 ## Configuration
 
@@ -189,11 +189,12 @@ optional formatting aid; it does not validate an entire document.
 ## Tests
 
 ```sh
-(cd src/statementdossier && ../../bin/Holmake -j2 && ./selftest.exe)
+(cd src/statementdossier && ../../bin/Holmake -j2 HOLSELFTESTLEVEL=1)
 ```
 
-The native build runs these tests when `HOLSELFTESTLEVEL` is set. They
-exercise stored statement fidelity, kernel assumptions, recursive and
+The native build runs these tests when `HOLSELFTESTLEVEL` is set. The
+report tests run under both compilers; the JSON tests run under Poly/ML.
+They exercise stored statement fidelity, kernel assumptions, recursive and
 cyclic expansion, boundaries, records, HTML escaping and fragment links,
 trust tags, repeated database snapshots, snippets, positive and negative
 assumption prose validation, JSON configuration errors, theory loading

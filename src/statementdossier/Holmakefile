@@ -1,11 +1,22 @@
 .PHONY: all
-all: $(DEFAULT_TARGETS) selftest.exe
+all: statementDossierLib.uo selftest.exe
 
+# HOL's JSON library is built only with Poly/ML.
 ifdef POLY
-all: statement-dossier
+all: statement-dossier jsonSelftest.exe
 
 statement-dossier: statementDossierTool.uo $(dprot $(HOLDIR)/bin/hol.state)
 	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap $< -o $@ --exe main
+
+jsonSelftest.exe: jsonSelftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: statementdossier-json-selftest.log
+
+statementdossier-json-selftest.log: jsonSelftest.exe
+	$(tee ./jsonSelftest.exe 2>&1,$@)
+endif
 endif
 
 selftest.exe: selftest.uo
@@ -18,4 +29,5 @@ statementdossier-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1,$@)
 endif
 
-EXTRA_CLEANS = selftest.exe statementdossier-selftest.log statement-dossier
+EXTRA_CLEANS = selftest.exe jsonSelftest.exe statement-dossier \
+               statementdossier-selftest.log statementdossier-json-selftest.log
