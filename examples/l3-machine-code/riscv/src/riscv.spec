@@ -733,6 +733,13 @@ Privilege curPrivilege() =
 unit setPrivilege(p::Privilege) =
     c_privilege(procID) <- privLevel(p)
 
+-- Explicit loads and stores use the privilege in mstatus.MPP while
+-- mstatus.MPRV is set (P §3.1.6.4 p.35, [D22]); instruction fetches do
+-- not.  Only an M-mode write of mstatus sets MPRV, and an xRET that leaves
+-- M-mode clears it, so below M-mode it is 0 in every reachable state.
+Privilege effectivePrivilege() =
+    if MCSR.mstatus.MPRV then privilege(MCSR.mstatus.MPP) else curPrivilege()
+
 -- mip as read (P §3.1.9 p.43-45): MSIP and MTIP come from the CLINT
 -- (MTIP is pending while mtime >= mtimecmp, unsigned, P §3.2.1 p.59), MEIP
 -- from the platform, and SEIP is the stored bit or the platform's line.
@@ -763,6 +770,26 @@ pmpcfg pmpcfg_ent(i::bits(4)) =
 { r = if i<3> then MCSR.pmpcfg2 else MCSR.pmpcfg0
 ; pmpcfg((r >>+ (8 * ([i<2:0>]::nat)))<7:0>)
 }
+
+regType pmpaddr(i::bits(4)) =
+    match i
+    { case 0  => MCSR.pmpaddr0
+      case 1  => MCSR.pmpaddr1
+      case 2  => MCSR.pmpaddr2
+      case 3  => MCSR.pmpaddr3
+      case 4  => MCSR.pmpaddr4
+      case 5  => MCSR.pmpaddr5
+      case 6  => MCSR.pmpaddr6
+      case 7  => MCSR.pmpaddr7
+      case 8  => MCSR.pmpaddr8
+      case 9  => MCSR.pmpaddr9
+      case 10 => MCSR.pmpaddr10
+      case 11 => MCSR.pmpaddr11
+      case 12 => MCSR.pmpaddr12
+      case 13 => MCSR.pmpaddr13
+      case 14 => MCSR.pmpaddr14
+      case 15 => MCSR.pmpaddr15
+    }
 
 -- pmpaddr<i> holds bits 55:2 of a physical address, so bits 63:54 are
 -- read-only zero (Figure 33 p.71).  A write is ignored while entry i is
@@ -1687,6 +1714,128 @@ pAddr option translateAddr(vAddr::regType, ft::fetchType, ac::accessType) =
     Some(vAddr)
 
 ---------------------------------------------------------------------------
+-- Physical Memory Protection
+---------------------------------------------------------------------------
+
+-- PMP (P §3.7 p.70-74) checks every instruction fetch and explicit data
+-- access, by physical address.  The hart has 16 entries and the grain G
+-- is 0, so pmpaddr is read as stored and every region is a multiple of 4
+-- bytes (P §3.7.1.1 p.73, [D47], [D48]).
+
+-- What an access needs from the entry that matches it (P §3.7.1 p.72): R
+-- for a load or LR, W for a store or SC, both for an AMO, X for a fetch.
+construct pmpAccess { PMP_Read, PMP_Write, PMP_ReadWrite, PMP_Execute }
+
+bool pmpPermits(cfg::pmpcfg, kind::pmpAccess) =
+    match kind
+    { case PMP_Read      => cfg.R
+      case PMP_Write     => cfg.W
+      case PMP_ReadWrite => cfg.R and cfg.W
+      case PMP_Execute   => cfg.X
+    }
+
+-- The bytes lo to hi - 1 that entry i matches, or None (P §3.7.1.1
+-- p.72-73).  OFF matches nothing.  TOR matches pmpaddr(i-1) <= y <
+-- pmpaddr(i), from 0 for entry 0 and whatever the A field of entry i-1,
+-- and nothing if the bounds do not increase.  NA4 matches 4 bytes.  NAPOT
+-- matches 2^(t+3) naturally aligned bytes when pmpaddr(i) ends in t ones
+-- (Table 24 p.72); m has the t+1 lowest bits set.
+(pAddr * pAddr) option pmpRegion(i::bits(4)) =
+{ y = pmpaddr(i)
+; match pmpcfg_ent(i).A
+  { case 0 => None
+    case 1 => { lo = if i == 0 then 0 else pmpaddr(i - 1) << 2
+              ; hi = y << 2
+              ; if lo <+ hi then Some(lo, hi) else None
+              }
+    case 2 => Some(y << 2, (y << 2) + 4)
+    case 3 => { m  = y ?? (y + 1)
+              ; lo = (y && ~m) << 2
+              ; Some(lo, lo + ((m + 1) << 2))
+              }
+  }
+}
+
+-- The verdict of entry i on an access to the bytes a to last, or None if
+-- the entry matches none of them.  It must match all of them, or the
+-- access fails, also in M-mode; if it does, M-mode is allowed unless the
+-- entry is locked (P §3.7.1.2-3.7.1.3 p.73).
+bool option pmpEntryCheck(i::bits(4), a::pAddr, last::pAddr, kind::pmpAccess,
+                          p::Privilege) =
+    match pmpRegion(i)
+    { case None         => None
+      case Some(lo, hi) =>
+        if last <+ lo or hi <=+ a then None
+        else if lo <=+ a and last <+ hi
+        then { cfg = pmpcfg_ent(i)
+             ; Some((p == Machine and not cfg.L) or pmpPermits(cfg, kind))
+             }
+        else Some(false)
+    }
+
+-- Whether PMP allows an access of n bytes at a by privilege p (P
+-- §3.7.1.3 p.73): the lowest-numbered entry that matches any of its bytes
+-- decides, and if none does, only M-mode is allowed.  The access is
+-- naturally aligned, so a + (n - 1) does not wrap.  The caller raises the
+-- access fault ([D53]).
+bool pmpCheck(a::pAddr, n::nat, kind::pmpAccess, p::Privilege) =
+{ last = a + [n - 1]
+; e0  = pmpEntryCheck(0,  a, last, kind, p)
+; e1  = pmpEntryCheck(1,  a, last, kind, p)
+; e2  = pmpEntryCheck(2,  a, last, kind, p)
+; e3  = pmpEntryCheck(3,  a, last, kind, p)
+; e4  = pmpEntryCheck(4,  a, last, kind, p)
+; e5  = pmpEntryCheck(5,  a, last, kind, p)
+; e6  = pmpEntryCheck(6,  a, last, kind, p)
+; e7  = pmpEntryCheck(7,  a, last, kind, p)
+; e8  = pmpEntryCheck(8,  a, last, kind, p)
+; e9  = pmpEntryCheck(9,  a, last, kind, p)
+; e10 = pmpEntryCheck(10, a, last, kind, p)
+; e11 = pmpEntryCheck(11, a, last, kind, p)
+; e12 = pmpEntryCheck(12, a, last, kind, p)
+; e13 = pmpEntryCheck(13, a, last, kind, p)
+; e14 = pmpEntryCheck(14, a, last, kind, p)
+; e15 = pmpEntryCheck(15, a, last, kind, p)
+; if      IsSome(e0)  then ValOf(e0)
+  else if IsSome(e1)  then ValOf(e1)
+  else if IsSome(e2)  then ValOf(e2)
+  else if IsSome(e3)  then ValOf(e3)
+  else if IsSome(e4)  then ValOf(e4)
+  else if IsSome(e5)  then ValOf(e5)
+  else if IsSome(e6)  then ValOf(e6)
+  else if IsSome(e7)  then ValOf(e7)
+  else if IsSome(e8)  then ValOf(e8)
+  else if IsSome(e9)  then ValOf(e9)
+  else if IsSome(e10) then ValOf(e10)
+  else if IsSome(e11) then ValOf(e11)
+  else if IsSome(e12) then ValOf(e12)
+  else if IsSome(e13) then ValOf(e13)
+  else if IsSome(e14) then ValOf(e14)
+  else if IsSome(e15) then ValOf(e15)
+  else p == Machine
+}
+
+-- The physical address of the 2-byte instruction parcel at vAddr, if the
+-- PMP allows its execution with the current privilege; MPRV does not
+-- apply to fetches (P §3.1.6.4 p.35).
+pAddr option fetchAddr(vAddr::vAddr) =
+    match translateAddr(vAddr, Instruction, Read)
+    { case Some(pAddr) => if pmpCheck(pAddr, 2, PMP_Execute, curPrivilege())
+                          then Some(pAddr) else None
+      case None        => None
+    }
+
+-- The physical address of an explicit, naturally aligned data access of n
+-- bytes at vAddr, if the PMP allows it with the effective privilege (P
+-- §3.7 p.70).
+pAddr option dataAddr(vAddr::vAddr, n::nat, kind::pmpAccess) =
+    match translateAddr(vAddr, Data, if kind == PMP_Read then Read else Write)
+    { case Some(pAddr) => if pmpCheck(pAddr, n, kind, effectivePrivilege())
+                          then Some(pAddr) else None
+      case None        => None
+    }
+
+---------------------------------------------------------------------------
 -- Load Reservation
 ---------------------------------------------------------------------------
 
@@ -2212,9 +2361,10 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 
 -- A load or store that is not naturally aligned raises an
 -- address-misaligned exception (U §2.1.6 p.37, [D55]) before any other
--- check (P §3.1.15 Table 17 p.51), so no access is ever split.  The trap
--- value is the address (P §3.1.16 p.52).  The same holds for the
--- floating-point loads and stores, LR/SC and the AMOs.
+-- check (P §3.1.15 Table 17 p.51), so no access is ever split.  An
+-- aligned access needs the permission of the PMP (dataAddr), or raises an
+-- access fault.  The trap value is the address (P §3.1.16 p.52).  The
+-- same holds for the floating-point loads and stores, LR/SC and the AMOs.
 
 -----------------------------------
 -- LW    rd, rs1, offs
@@ -2223,7 +2373,7 @@ define Load > LW(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; if vAddr<1:0> != 0
   then signalAddressException(Load_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Read)
+  else match dataAddr(vAddr, 4, PMP_Read)
        { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<31:0>)
                              ; GPR(rd)  <- val
                              ; recordLoad(vAddr, val)
@@ -2241,7 +2391,7 @@ define Load > LWU(rd::reg, rs1::reg, offs::imm12) =
   else { vAddr = GPR(rs1) + SignExtend(offs)
        ; if vAddr<1:0> != 0
          then signalAddressException(Load_Misaligned, vAddr)
-         else match translateAddr(vAddr, Data, Read)
+         else match dataAddr(vAddr, 4, PMP_Read)
               { case Some(pAddr) => { val        = ZeroExtend(rawReadData(pAddr)<31:0>)
                                     ; GPR(rd)   <- val
                                     ; recordLoad(vAddr, val)
@@ -2258,7 +2408,7 @@ define Load > LH(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; if vAddr<0>
   then signalAddressException(Load_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Read)
+  else match dataAddr(vAddr, 2, PMP_Read)
        { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<15:0>)
                              ; GPR(rd)  <- val
                              ; recordLoad(vAddr, val)
@@ -2274,7 +2424,7 @@ define Load > LHU(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; if vAddr<0>
   then signalAddressException(Load_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Read)
+  else match dataAddr(vAddr, 2, PMP_Read)
        { case Some(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<15:0>)
                              ; GPR(rd)  <- val
                              ; recordLoad(vAddr, val)
@@ -2288,7 +2438,7 @@ define Load > LHU(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LB(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
+; match dataAddr(vAddr, 1, PMP_Read)
   { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<7:0>)
                         ; GPR(rd)  <- val
                         ; recordLoad(vAddr, val)
@@ -2302,7 +2452,7 @@ define Load > LB(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LBU(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
+; match dataAddr(vAddr, 1, PMP_Read)
   { case Some(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<7:0>)
                         ; GPR(rd)  <- val
                         ; recordLoad(vAddr, val)
@@ -2320,7 +2470,7 @@ define Load > LD(rd::reg, rs1::reg, offs::imm12) =
     else { vAddr = GPR(rs1) + SignExtend(offs)
          ; if vAddr<2:0> != 0
            then signalAddressException(Load_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Read)
+           else match dataAddr(vAddr, 8, PMP_Read)
                 { case Some(pAddr) => { val      = rawReadData(pAddr)
                                       ; GPR(rd) <- val
                                       ; recordLoad(vAddr, val)
@@ -2336,7 +2486,7 @@ define Store > SW(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_Write)
        { case Some(pAddr) => { data = GPR(rs2)
                              ; rawWriteData(pAddr, data, 4)
                              ; recordStore(vAddr, data, 4)
@@ -2352,7 +2502,7 @@ define Store > SH(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; if vAddr<0>
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 2, PMP_Write)
        { case Some(pAddr) => { data = GPR(rs2)
                              ; rawWriteData(pAddr, data, 2)
                              ; recordStore(vAddr, data, 2)
@@ -2366,7 +2516,7 @@ define Store > SH(rs1::reg, rs2::reg, offs::imm12) =
 -----------------------------------
 define Store > SB(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
+; match dataAddr(vAddr, 1, PMP_Write)
   { case Some(pAddr) => { data = GPR(rs2)
                         ; rawWriteData(pAddr, data, 1)
                         ; recordStore(vAddr, data, 1)
@@ -2384,7 +2534,7 @@ define Store > SD(rs1::reg, rs2::reg, offs::imm12) =
     else { vAddr = GPR(rs1) + SignExtend(offs)
          ; if vAddr<2:0> != 0
            then signalAddressException(Store_AMO_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Write)
+           else match dataAddr(vAddr, 8, PMP_Write)
                 { case Some(pAddr) => { data = GPR(rs2)
                                       ; rawWriteData(pAddr, data, 8)
                                       ; recordStore(vAddr, data, 8)
@@ -2417,7 +2567,7 @@ define AMO > LR_W(aq::amo, rl::amo, rd::reg, rs1::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Load_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Read)
+  else match dataAddr(vAddr, 4, PMP_Read)
        { case Some(pAddr) => { writeRD(rd, SignExtend(rawReadData(pAddr)<31:0>))
                              ; ReserveLoad  <- Some(vAddr)
                              }
@@ -2434,7 +2584,7 @@ define AMO > LR_D(aq::amo, rl::amo, rd::reg, rs1::reg) =
     else { vAddr = GPR(rs1)
          ; if vAddr<2:0> != 0
            then signalAddressException(Load_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Read)
+           else match dataAddr(vAddr, 8, PMP_Read)
                 { case Some(pAddr) => { writeRD(rd, rawReadData(pAddr))
                                       ; ReserveLoad <- Some(vAddr)
                                       }
@@ -2445,21 +2595,24 @@ define AMO > LR_D(aq::amo, rl::amo, rd::reg, rs1::reg) =
 -----------------------------------
 -- SC.W [aq,rl] rd, rs1, rs2
 -----------------------------------
+-- An SC needs the PMP's write permission also when it fails for want of
+-- a reservation (P §3.7.1 p.72, [D60]).
 define AMO > SC_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else if not matchLoadReservation(vAddr)
-       then writeRD(rd, 1)
-       else match translateAddr(vAddr, Data, Read)
-            { case Some(pAddr) => { data = GPR(rs2)
-                                  ; rawWriteData(pAddr, data, 4)
-                                  ; recordStore(vAddr, data, 4)
-                                  ; writeRD(rd, 0)
-                                  ; ReserveLoad  <- None
-                                  }
-              case None        => signalAddressException(Store_AMO_Fault, vAddr)
-            }
+  else match dataAddr(vAddr, 4, PMP_Write)
+       { case Some(pAddr) =>
+           if not matchLoadReservation(vAddr)
+           then writeRD(rd, 1)
+           else { data = GPR(rs2)
+                ; rawWriteData(pAddr, data, 4)
+                ; recordStore(vAddr, data, 4)
+                ; writeRD(rd, 0)
+                ; ReserveLoad  <- None
+                }
+         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2471,17 +2624,18 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
     else { vAddr = GPR(rs1)
          ; if vAddr<2:0> != 0
            then signalAddressException(Store_AMO_Misaligned, vAddr)
-           else if not matchLoadReservation(vAddr)
-                then writeRD(rd, 1)
-                else match translateAddr(vAddr, Data, Read)
-                     { case Some(pAddr) => { data = GPR(rs2)
-                                           ; rawWriteData(pAddr, data, 8)
-                                           ; recordStore(vAddr, data, 8)
-                                           ; writeRD(rd, 0)
-                                           ; ReserveLoad  <- None
-                                           }
-                       case None        => signalAddressException(Store_AMO_Fault, vAddr)
-                     }
+           else match dataAddr(vAddr, 8, PMP_Write)
+                { case Some(pAddr) =>
+                    if not matchLoadReservation(vAddr)
+                    then writeRD(rd, 1)
+                    else { data = GPR(rs2)
+                         ; rawWriteData(pAddr, data, 8)
+                         ; recordStore(vAddr, data, 8)
+                         ; writeRD(rd, 0)
+                         ; ReserveLoad  <- None
+                         }
+                  case None        => signalAddressException(Store_AMO_Fault, vAddr)
+                }
          }
 
 -----------------------------------
@@ -2491,7 +2645,7 @@ define AMO > AMOSWAP_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2510,7 +2664,7 @@ define AMO > AMOSWAP_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2529,7 +2683,7 @@ define AMO > AMOADD_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2549,7 +2703,7 @@ define AMO > AMOADD_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2569,7 +2723,7 @@ define AMO > AMOXOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2589,7 +2743,7 @@ define AMO > AMOXOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2609,7 +2763,7 @@ define AMO > AMOAND_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2629,7 +2783,7 @@ define AMO > AMOAND_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2649,7 +2803,7 @@ define AMO > AMOOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2669,7 +2823,7 @@ define AMO > AMOOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2689,7 +2843,7 @@ define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2709,7 +2863,7 @@ define AMO > AMOMIN_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2729,7 +2883,7 @@ define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2749,7 +2903,7 @@ define AMO > AMOMAX_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2769,7 +2923,7 @@ define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2789,7 +2943,7 @@ define AMO > AMOMINU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2809,7 +2963,7 @@ define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2829,7 +2983,7 @@ define AMO > AMOMAXU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
   then signalAddressException(Store_AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
                              ; GPR(rd) <- memv
@@ -2858,7 +3012,7 @@ define FPLoad > FLW(rd::reg, rs1::reg, offs::imm12) =
     else { vAddr = GPR(rs1) + SignExtend(offs)
          ; if vAddr<1:0> != 0
            then signalAddressException(Load_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Read)
+           else match dataAddr(vAddr, 4, PMP_Read)
                 { case Some(pAddr) => { val       = rawReadData(pAddr)<31:0>
                                       ; FPRS(rd) <- val
                                       ; recordLoad(vAddr, ZeroExtend(val))
@@ -2876,7 +3030,7 @@ define FPStore > FSW(rs1::reg, rs2::reg, offs::imm12) =
     else { vAddr = GPR(rs1) + SignExtend(offs)
          ; if vAddr<1:0> != 0
            then signalAddressException(Store_AMO_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Write)
+           else match dataAddr(vAddr, 4, PMP_Write)
                 { case Some(pAddr) => { data = FPRS(rs2)
                                       ; rawWriteData(pAddr, ZeroExtend(data), 4)
                                       ; recordStore(vAddr, ZeroExtend(data), 4)
@@ -3341,7 +3495,7 @@ define FPLoad > FLD(rd::reg, rs1::reg, offs::imm12) =
     else { vAddr = GPR(rs1) + SignExtend(offs)
          ; if vAddr<2:0> != 0
            then signalAddressException(Load_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Read)
+           else match dataAddr(vAddr, 8, PMP_Read)
                 { case Some(pAddr) => { val       = rawReadData(pAddr)
                                       ; FPRD(rd) <- val
                                       ; recordLoad(vAddr, val)
@@ -3359,7 +3513,7 @@ define FPStore > FSD(rs1::reg, rs2::reg, offs::imm12) =
     else { vAddr = GPR(rs1) + SignExtend(offs)
          ; if vAddr<2:0> != 0
            then signalAddressException(Store_AMO_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Write)
+           else match dataAddr(vAddr, 8, PMP_Write)
                 { case Some(pAddr) => { data = FPRD(rs2)
                                       ; rawWriteData(pAddr, data, 8)
                                       ; recordStore(vAddr, data, 8)
@@ -4002,20 +4156,23 @@ construct FetchResult
 , F_Result  :: rawInstType
 }
 
+-- An instruction is fetched in 2-byte parcels, each translated and
+-- checked by the PMP, the upper half of a 32-bit instruction only after
+-- the lower one, since it can lie in another page or PMP region ([D59]).
+-- A parcel that fails raises an instruction access fault with its own
+-- address as the trap value (P §3.1.16 p.52).
 FetchResult Fetch() =
 { vPC = PC
 ; if vPC<0> or (vPC<1> and not haveRVC())
   then F_Error(Internal(FETCH_MISALIGNED(vPC)))
-  else match translateAddr(vPC, Instruction, Read)
+  else match fetchAddr(vPC)
        { case Some(pPC) =>
            match rawReadInst(pPC)
            { case Half(h) => { setupDelta(vPC, Half(h))
                              ; F_Result(Half(h))
                              }
-             -- With IALIGN = 16 a 32-bit instruction can straddle a page
-             -- boundary, so its upper half is translated separately.
              case Word(w) =>
-               match translateAddr(vPC + 2, Instruction, Read)
+               match fetchAddr(vPC + 2)
                { case Some(pPC2) => { instw = Word(MEM8(pPC2 + 1) : MEM8(pPC2) : w<15:0>)
                                     ; setupDelta(vPC, instw)
                                     ; F_Result(instw)
