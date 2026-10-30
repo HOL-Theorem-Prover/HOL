@@ -4075,8 +4075,17 @@ define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
 
 define FConv > FCVT_D_L(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => { i = [GPR(rs)]::int
-                    ; v = FP64_FromInt(r, i)
+  { case Some(r) => { x = GPR(rs)
+                    ; i = [x]::int
+                    -- FP64.fromInt of L3's SML runtime (Poly/ML's
+                    -- Real.fromLargeInt) rounds a value below -2^62 towards
+                    -- the wrong infinity in RDN and RUP.  The SML export
+                    -- therefore converts such an x as -(|x|/2, rounded to
+                    -- odd) times 2.0 (exact), as in FCVT.S.LU; the HOL export
+                    -- converts x directly.
+                    ; v = if PROVER_EXPORT or x<63:62> != 0b10 then FP64_FromInt(r, i)
+                          else FP64_Mul(r, FP64_FromInt(r, -([((-x) >>+ 1) || ((-x) && 1)]::int)),
+                                        0x4000000000000000)
                     -- ISA manual 6.1.7: NX when the result is not exact
                     ; when FP64_ToInt(roundTowardZero, v) != Some(i)
                       do setFP_Inexact()
