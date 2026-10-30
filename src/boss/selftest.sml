@@ -662,6 +662,58 @@ val _ = require_msg (check_result check) show (fn x => x)
 end
 
 (* ------------------------------------------------------------------- *)
+(* GH #2108: an operator-wise principle where the operator is one a     *)
+(* declaration defined, and collects what it holds through operators    *)
+(* of its own.  `envSET` says                                           *)
+(*                                                                      *)
+(*   envSET (env a0 a1) = BIGUNION (IMAGE setSND (set a0))              *)
+(*                                                                      *)
+(* so the values are reached through a list and then a pair, and the    *)
+(* stated principle mentions neither -- `env` is an operator in its own *)
+(* right and its contents are what `envSET` collects.  The older        *)
+(* construction gave the list and the pair a predicate apiece, and this *)
+(* is that principle.  (A real list is wanted, so this cannot live in   *)
+(* src/datatype, which has a list of its own.)                          *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2108env = <| ve : (num # 'a) list ; vn : num |>`
+val _ = Datatype`gh2108v = G8C (gh2108v gh2108env) | G8N num`
+
+val _ = tprint "GH2108: the older shape through an operator's own operators"
+val _ =
+    let
+      fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+      val th = legacyInduction.mutual_ind_from_ops
+                 (TypeBase.set_induction_of “:gh2108v”)
+    in
+      if same (concl th)
+           “∀P Q0 Q1 Q2.
+              (∀e. Q0 e ⇒ P (G8C e)) ∧ (∀n. P (G8N n)) ∧
+              (∀l n. Q1 l ⇒ Q0 (gh2108env l n)) ∧ Q1 [] ∧
+              (∀t h. Q2 h ∧ Q1 t ⇒ Q1 (h::t)) ∧
+              (∀p_1 p_2. P p_2 ⇒ Q2 (p_1,p_2)) ⇒
+              (∀v. P v) ∧ (∀e. Q0 e) ∧ (∀l. Q1 l) ∧ ∀p. Q2 p”
+      then OK() else die ("not the older shape: " ^ thm_to_string th)
+    end
+
+(* and the commonest case of all, which comes by the same route *)
+val _ = Datatype`gh2108lt = G8LNil | G8LRec (gh2108lt list)`
+
+val _ = tprint "GH2108: a plain list operator still comes out right"
+val _ =
+    let
+      fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+      val th = legacyInduction.mutual_ind_from_ops
+                 (TypeBase.set_induction_of “:gh2108lt”)
+    in
+      if same (concl th)
+           “∀P Q0. P G8LNil ∧ (∀l. Q0 l ⇒ P (G8LRec l)) ∧ Q0 [] ∧
+                   (∀t h. P h ∧ Q0 t ⇒ Q0 (h::t)) ⇒
+                   (∀l. P l) ∧ ∀l. Q0 l”
+      then OK() else die ("not the older shape: " ^ thm_to_string th)
+    end
+
+(* ------------------------------------------------------------------- *)
 (* GH #2097: a nested type's induction hypotheses.  With nothing tagged *)
 (* to datatype_simp the principle is rephrased only -- the existentials *)
 (* the chain leaves are pulled out and the equalities that leaves are   *)

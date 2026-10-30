@@ -28,18 +28,29 @@ sig
 
       in whatever form the operator's theory writes them.
 
+      An operator may collect what it holds through operators of its
+      own, and then the principle mentions only the outermost: a record
+
+        env = <| ve : (num # 'a) list ; vn : num |>
+
+      has one set function, and `envSET (env a0 a1)` is a union over a
+      list of pairs.  The older construction gave the list and the pair
+      a predicate apiece as well, and so does this — the set equation
+      says which operators they are, and at what types.
+
       There is one predicate per operator recursed under, and they come
-      in the order the principle's clauses first mention them — which
-      fixes both their names and the order of the conclusion's
-      conjuncts, since a caller matches against those.
+      in the order the principle's clauses first mention them, those
+      reached only through another operator after the one that reaches
+      them — which fixes both their names and the order of the
+      conclusion's conjuncts, since a caller matches against those.
      ---------------------------------------------------------------------- *)
   type operator = {induction : thm, sets : thm list}
 
   (* A caller who has only the principle need not know which operators
      it means: the principle names them, their own induction principles
      are in the TypeBase, and what their set functions say at their
-     constructors follows by simplification.  Supply the operators to
-     say something the TypeBase and the simplifier cannot. *)
+     constructors is recorded with the operators themselves.  Supply
+     the operators to say something those cannot. *)
   val operators_of : thm -> operator list
 
   val mutual_induction : operator list -> thm -> thm

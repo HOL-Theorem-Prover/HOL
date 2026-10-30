@@ -284,27 +284,122 @@ val splitWays =
                    boolTheory.EXISTS_OR_THM, boolTheory.DISJ_IMP_THM,
                    boolTheory.FORALL_AND_THM, GSYM boolTheory.CONJ_ASSOC]))))
 
-(* A declaration whose members reach each other gets a predicate
-   apiece, and a clause's hypothesis may be about any of them. *)
-fun readPrinciple ind =
+(* ----------------------------------------------------------------------
+    What an operator says at its own constructors, and what that in
+    turn says about the operators it collects through.
+
+    A caller who has only the principle has enough: it names each
+    operator and the set function that collects the operator's contents,
+    the operator's own induction principle is in the TypeBase, and what
+    its set function says at each of its constructors is recorded with
+    the operator itself.
+   ---------------------------------------------------------------------- *)
+
+(* An operator's theory may write a set as the predicate it is —
+   `sumTheory.setL_def` says `setL (INL a) = (λx. x = a)` — and a
+   simplification with it leaves that lambda standing.  These put such
+   a set back in the notation whose parts can be read off.  The package
+   states them for its own construction's sake, and what is wanted here
+   is the same three facts. *)
+val setNotation = [bnfFixBNFTheory.LAM_EQ_SING, bnfFixBNFTheory.LAM_F_EMPTY,
+                   bnfFixBNFTheory.EQUAL_SING]
+
+(* The database that records an operator records its equations beside
+   it, so the answer comes from the operator's own theory: a
+   hand-written operator's equations and a declaration's generated ones
+   are reached the same way, and an operator declared a moment ago is
+   reached at all.
+
+   It has to be this database and not the TypeBase, which has the
+   generated equations but not the hand-written operators' — `setFST`
+   and `setL` are stated nowhere near their types' entries, and
+   `optSET` is not even in optionTheory.
+
+   The question is a closed one — what this set function says at this
+   operator's constructors is settled by the theory that defined it —
+   so it is not one to put to srw_ss(), an open simpset that any
+   development in the tree may add to.  What was derived here would
+   otherwise depend on what happened to be in scope. *)
+fun eqnsOf opty =
+    case Lib.total dest_thy_type opty of
+        NONE => []
+      | SOME {Thy, Tyop, ...} =>
+        case bnfBase.pure_lookup (bnfBase.fullDB())
+                                 {Thy = Thy, Name = Tyop} of
+            SOME (bnfBase.bI {eqns, ...}) => eqns
+          | NONE => []
+
+(* and what a set term is built out of, which is all the simplification
+   needs besides the equations themselves.  bnfFixLib's setElimRWs is
+   this list with the laws that take a membership apart in front of it;
+   those are no use here, where what is being simplified is a set and
+   has no membership in it to take apart. *)
+val setShape =
+    [pred_setTheory.IMAGE_EMPTY, pred_setTheory.IMAGE_INSERT,
+     pred_setTheory.IMAGE_SING, pred_setTheory.IMAGE_I,
+     pred_setTheory.IMAGE_UNION, pred_setTheory.BIGUNION_EMPTY,
+     pred_setTheory.BIGUNION_INSERT, pred_setTheory.BIGUNION_UNION,
+     pred_setTheory.UNION_EMPTY,
+     (* projection and composition plumbing, wanted wherever one of
+        these appears and not statements about any set function *)
+     pairTheory.FST, pairTheory.SND,
+     combinTheory.I_THM, combinTheory.K_THM, combinTheory.o_THM]
+
+fun setEqnsOf setfn opty =
     let
-      val (Ps, body) = strip_forall (concl ind)
-      val tys = List.map (#1 o dom_rng o type_of) Ps
-      val (hypsTm, _) = dest_imp body
-      val clauses = strip_conj hypsTm
-      val chains = List.concat (List.map (chainsOf Ps) clauses)
-      val _ = not (null chains) orelse
-              raise ERR "mutual_induction"
-                    "the principle recurses under no operator"
-      val levels = List.concat (List.map levelsOf chains)
-      fun firstOccs [] = []
-        | firstOccs (t :: ts) =
-            t :: firstOccs (List.filter (not o equal t) ts)
+      val cnv = simpLib.SIMP_CONV boolSimps.bool_ss
+                                  (setNotation @ setShape @ eqnsOf opty)
+      fun atCons c =
+          let
+            val c = Term.inst (match_type (#2 (strip_fun (type_of c))) opty) c
+            val args = #1 (strip_fun (type_of c))
+            val vs = List.tabulate
+                       (length args,
+                        fn i => mk_var ("a" ^ Int.toString i,
+                                        List.nth (args, i)))
+            val tm = mk_comb (setfn, list_mk_comb (c, vs))
+          in
+            (* an operator whose set function does not simplify at its
+               own constructors is one the caller has to say something
+               about: left to itself the equation would come back
+               reflexive, and the principle built on it would be wrong *)
+            cnv tm
+            handle Conv.UNCHANGED =>
+                   raise ERR "operators_of"
+                         ("nothing simplifies " ^ term_to_string tm ^
+                          "; supply the operator instead")
+          end
     in
-      {Ps = Ps, tys = tys, clauses = clauses,
-       chains = chains, levels = levels,
-       optys = firstOccs (List.map (type_of o #arg) levels)}
+      List.map atCons (TypeBase.constructors_of opty)
     end
+
+(* and the laws that take a membership apart, which is the half of
+   bnfFixLib's setElimRWs the simplification above leaves out.  Here
+   they are the point: a set an operator builds out of another
+   operator's says the same thing as a chain of memberships, and this
+   is what turns the one into the other. *)
+val setMembership =
+    [GSYM boolTheory.LEFT_EXISTS_AND_THM,
+     GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+     pred_setTheory.IN_BIGUNION, pred_setTheory.IN_IMAGE,
+     pred_setTheory.IN_SING]
+
+val memberwise =
+    simpLib.SIMP_CONV
+      (simpLib.++ (simpLib.++ (boolSimps.bool_ss, boolSimps.ETA_ss),
+                   boolSimps.UNWIND_ss))
+      setMembership
+
+(* the set terms a union is built from, as `contents` takes a
+   membership of one apart: everything that is not a union, an
+   insertion or the empty set is a leaf. *)
+fun setLeaves tm =
+    case Lib.total pred_setSyntax.dest_union tm of
+        SOME (a, b) => setLeaves a @ setLeaves b
+      | NONE =>
+        case Lib.total pred_setSyntax.dest_insert tm of
+            SOME (_, s) => setLeaves s
+          | NONE => if pred_setSyntax.is_empty tm then [] else [tm]
 
 (* the set function the principle collects a level's contents with, and
    the type of what it collects *)
@@ -327,6 +422,100 @@ fun waysOfType (levels : auglevel list) opty =
           end
     in
       List.foldl add [] here
+    end
+
+(* The levels a leaf of a set equation walks, where the set collects
+   through another operator.  A set function applied to a value walks
+   one level and is a level the principle already has, so it adds
+   nothing; `BIGUNION (IMAGE setSND (set a0))` walks two, and names
+   both the operators and the types they are at. *)
+fun routeOf S =
+    let
+      val elemty = #1 (dom_rng (type_of S))
+      val avoid = all_vars S
+      val z = variant avoid (mk_var ("z", elemty))
+      val Pv = variant (z :: avoid) (mk_var ("P", elemty --> bool))
+      val ante = rhs (concl (memberwise (inThm z S)))
+      val hyp = mk_forall (z, mk_imp (ante, mk_comb (Pv, z)))
+    in
+      case chainAt [Pv] hyp of
+          SOME ch => levelsOf ch
+        | NONE => []
+    end handle HOL_ERR _ => [] | Conv.UNCHANGED => []
+
+fun firstOccs [] = []
+  | firstOccs (t :: ts) = t :: firstOccs (List.filter (not o equal t) ts)
+
+fun optysOf (ls : auglevel list) = firstOccs (List.map (type_of o #arg) ls)
+
+(* The levels an operator's own equations walk that the principle does
+   not state.  A record holding a list of pairs collects its values
+   with one set function of its own —
+
+     envSET (env a0 a1) = BIGUNION (IMAGE setSND (set a0))
+
+   — and the principle says only that, because `env` is an operator in
+   its own right and its contents are what `envSET` collects.  The
+   older construction gave the list and the pair a predicate apiece,
+   and reading each equation's membership as the chain it is says
+   which operators those are, and at what types. *)
+fun routedOf ls opty =
+    let
+      fun forWay w =
+          case Lib.total (setEqnsOf (#setfn w)) opty of
+              NONE => []
+            | SOME eqs =>
+              let
+                fun ofEqn e =
+                    List.concat
+                      (List.map routeOf
+                         (setLeaves (rhs (#2 (strip_forall (concl e))))))
+              in
+                List.concat (List.map ofEqn eqs)
+              end
+    in
+      List.concat (List.map forWay (waysOfType ls opty))
+    end
+
+(* and so the levels of the whole principle: an operator reached that
+   way may route through one further still, so the levels are taken
+   again of whatever the last round added, until a round adds no type
+   that is not already a level's. *)
+fun routedLevels levels =
+    let
+      fun go ls =
+          let
+            val here = optysOf ls
+            val found = List.concat (List.map (routedOf ls) here)
+            val fresh =
+                List.filter
+                  (fn l => not (List.exists (equal (type_of (#arg l))) here))
+                  found
+          in
+            if null fresh then ls else go (ls @ fresh)
+          end
+    in
+      go levels
+    end
+
+(* A declaration whose members reach each other gets a predicate
+   apiece, and a clause's hypothesis may be about any of them. *)
+fun readPrinciple ind =
+    let
+      val (Ps, body) = strip_forall (concl ind)
+      val tys = List.map (#1 o dom_rng o type_of) Ps
+      val (hypsTm, _) = dest_imp body
+      val clauses = strip_conj hypsTm
+      val chains = List.concat (List.map (chainsOf Ps) clauses)
+      val _ = not (null chains) orelse
+              raise ERR "mutual_induction"
+                    "the principle recurses under no operator"
+      (* what the clauses walk, and then what the operators' own
+         equations walk below that, which the clauses do not say *)
+      val levels = routedLevels (List.concat (List.map levelsOf chains))
+    in
+      {Ps = Ps, tys = tys, clauses = clauses,
+       chains = chains, levels = levels, optys = optysOf levels}
     end
 
 fun assemble (ops : operator list) ind =
@@ -425,70 +614,135 @@ fun assemble (ops : operator list) ind =
 fun mutual_induction_goal ops ind = #goal (assemble ops (splitWays ind))
 
 (* ----------------------------------------------------------------------
-    Finding the operators the principle recurses under.
-
-    A caller who has only the principle has enough: it names each
-    operator and the set function that collects the operator's contents,
-    the operator's own induction principle is in the TypeBase, and what
-    its set function says at each of its constructors is a simplification
-    away.
+    Finding the operators the principle recurses under — and the ones
+    it reaches only through those, which it does not mention at all.
    ---------------------------------------------------------------------- *)
 
-(* An operator's theory may write a set as the predicate it is —
-   `sumTheory.setL_def` says `setL (INL a) = (λx. x = a)` — and a
-   simplification with it leaves that lambda standing.  These put such
-   a set back in the notation whose parts can be read off. *)
-val setNotation =
-    let
-      val ss = simpLib.++ (BasicProvers.srw_ss(), pred_setLib.PRED_SET_ss)
-      val x = mk_var ("x", alpha) and a = mk_var ("a", alpha)
-      fun proved tm = simpLib.SIMP_PROVE ss [pred_setTheory.EXTENSION,
-                                             pred_setTheory.IN_ABS] tm
-      val mt = pred_setSyntax.mk_empty alpha
-    in
-      [proved (mk_eq (mk_abs (x, mk_eq (x, a)),
-                      pred_setSyntax.mk_insert (a, mt))),
-       proved (mk_eq (mk_abs (x, boolSyntax.F), mt))]
-    end
-
-fun setEqnsOf setfn opty =
-    let
-      val cnv = simpLib.SIMP_CONV (BasicProvers.srw_ss()) setNotation
-      fun atCons c =
-          let
-            val c = Term.inst (match_type (#2 (strip_fun (type_of c))) opty) c
-            val args = #1 (strip_fun (type_of c))
-            val vs = List.tabulate
-                       (length args,
-                        fn i => mk_var ("a" ^ Int.toString i,
-                                        List.nth (args, i)))
-            val tm = mk_comb (setfn, list_mk_comb (c, vs))
-          in
-            (* an operator whose set function does not simplify at its
-               own constructors is one the caller has to say something
-               about: left to itself the equation would come back
-               reflexive, and the principle built on it would be wrong *)
-            cnv tm
-            handle Conv.UNCHANGED =>
-                   raise ERR "operators_of"
-                         ("nothing simplifies " ^ term_to_string tm ^
-                          "; supply the operator instead")
-          end
-    in
-      List.map atCons (TypeBase.constructors_of opty)
-    end
-
 fun operators_of ind =
-    let val {levels, optys, ...} = readPrinciple (splitWays ind)
+    let
+      val {levels, optys, ...} = readPrinciple (splitWays ind)
+      (* every set function the principle walks, the ones its
+         operators' own equations brought in included *)
+      val walked =
+          List.map #setfn (List.concat (List.map (waysOfType levels) optys))
+      (* A leaf of an equation is one of those set functions applied to
+         a value, or a set built out of them that reads as a chain.
+         Anything else is beyond this, and saying so is the point: the
+         type it collects would get no predicate, and the clause about
+         it would come out with no hypothesis — valid, and useless to
+         the proof it was asked for. *)
+      fun readable S =
+          (case Lib.total rator S of
+               SOME f => List.exists (aconv f) walked
+             | NONE => false) orelse
+          not (null (routeOf S))
+      fun checked eqn =
+          let
+            val body = #2 (strip_forall (concl eqn))
+          in
+            List.app
+              (fn S =>
+                  if readable S then ()
+                  else raise ERR "operators_of"
+                             (term_to_string (lhs body) ^ " collects through " ^
+                              term_to_string S ^ ", which the principle does " ^
+                              "not reach; supply the operator instead"))
+              (setLeaves (rhs body))
+          ; eqn
+          end
     in
       List.map (fn opty =>
                    (* the operator's stated principle too: what it
                       is read for is its set functions *)
                    {induction = TypeBase.set_induction_of opty,
                     sets = List.concat
-                             (List.map (fn w => setEqnsOf (#setfn w) opty)
-                                       (waysOfType levels opty))})
+                             (List.map
+                                (fn w => List.map checked
+                                                  (setEqnsOf (#setfn w) opty))
+                                (waysOfType levels opty))})
                optys
+    end
+
+(* ----------------------------------------------------------------------
+    Walking a chain down, and the operators' bridges back up.
+
+    A chain says what it says of the innermost values only, and what a
+    proof wants is the predicate of the operator at the top.  So the
+    walk goes down every way to the values the chain is about, and each
+    operator's bridge carries the answer back up.
+
+    Two places want this.  A clause's own hypothesis is a chain, and
+    `clauseFor` walks it; and an operator whose set equation collects
+    through another operator states a chain too, which the bridge for
+    that operator walks.  All that differs is which theorem states the
+    chain, so that is the parameter.
+   ---------------------------------------------------------------------- *)
+
+fun walkDown {bridgeOf, waysFor, thmOf, avoid} =
+    let
+      (* the values the walk has reached, outermost first, stand for
+         the chain's own *)
+      fun theta path c =
+          List.tabulate
+            (length path - 1,
+             fn i => #arg (List.nth (#levels c, i + 1)) |->
+                     List.nth (path, i + 1))
+      (* what one chain says of the values the innermost set collects *)
+      fun saysOf path c =
+          let
+            val h = #hyp c
+            val sub = theta path c
+            val (ante, _) = dest_imp (#2 (dest_forall h))
+            val (evs, conjs) = strip_exists ante
+            val z = #z c
+            val inner = Term.subst sub (#set (List.last (#levels c)))
+            val ex = existsIntro ante (List.map (Term.subst sub) evs)
+                                 (assumeConj (Term.subst sub conjs))
+            val pz = MP (SPEC z (thmOf c)) ex
+          in
+            GEN z (DISCH (inThm z inner) pz)
+          end
+      fun down path chs =
+          let
+            val i = length path - 1
+            val v = List.last path
+            fun onWay w =
+                let
+                  fun setAt ch = #set (List.nth (#levels ch, i))
+                  val here =
+                      List.filter
+                        (fn ch => aconv (rator (setAt ch)) (#setfn w))
+                        chs
+                in
+                  case List.partition
+                         (fn ch => length (#levels ch) = i + 1)
+                         here of
+                      (ch :: _, _) => saysOf path ch
+                    | ([], goOn as ch :: _) =>
+                      let
+                        (* The walk introduces a value per level.  A
+                           chain names those after the principle's own
+                           bound variables, which the clause may have
+                           used for an argument of its own, so the walk
+                           takes names the clause has not, bound ones
+                           included. *)
+                        val x =
+                            variant (avoid @ path)
+                                    (#arg (List.nth (#levels ch, i + 1)))
+                        val memtm = inThm x (mk_comb (#setfn w, v))
+                      in
+                        GEN x (DISCH memtm (down (path @ [x]) goOn))
+                      end
+                    | ([], []) =>
+                      raise ERR "mutual_induction"
+                            "a way no hypothesis walks"
+                end
+          in
+            MP (SPEC v (bridgeOf (type_of v)))
+               (LIST_CONJ (List.map onWay (waysFor (type_of v))))
+          end
+    in
+      down
     end
 
 fun mutual_induction ops ind =
@@ -525,8 +779,38 @@ fun mutual_induction ops ind =
           what the operator's predicate says of a value, from what the
           type's says of its contents
          ------------------------------------------------------------ *)
-      fun bridgeFor opty =
+      (* The order the clauses mention the levels in is not the order
+         they settle in: one constructor can mention an operator on its
+         own before another mentions it inside a second, as `tree
+         option` and `tree option list` are mentioned by
+            tree = Tip | Link (tree option) | Fork (tree option list)
+         and an operator whose equation routes through another settles
+         after it.  So go by what the levels say they collect. *)
+      fun collects opty =
+          List.filter (fn t => List.exists (equal t) (#optys info))
+                      (List.map #elemty (#waysFor info opty) @
+                           optysOf (routedOf (#levels info) opty))
+      fun reaches x y =
           let
+            fun go _ [] = false
+              | go seen (t :: ts) =
+                  t = x orelse
+                  (if List.exists (equal t) seen then go seen ts
+                   else go (t :: seen) (collects t @ ts))
+          in
+            go [] (collects y)
+          end
+      val settleOrder = Lib.topsort reaches (#optys info)
+      fun bridgeFor done opty =
+          let
+            (* the operators this one routes through have settled
+               already, and their bridges are what carry a chain's
+               answer back up *)
+            fun bridgeOfDone t =
+                case List.find (fn (t', _) => t' = t) done of
+                    SOME (_, th) => th
+                  | NONE => raise ERR "mutual_induction"
+                                  ("no bridge yet for " ^ type_to_string t)
             val Q = #Qfor info opty
             (* what this level collects is the next level's values, and
                the predicate to say of them is that level's own — once
@@ -622,13 +906,53 @@ fun mutual_induction ops ind =
                   val (avs, ahyps, _) = openClause (concl ass)
                   val theta = ListPair.map (fn (a, v) => a |-> v) (avs, vs)
                   val wanted = List.map (Term.subst theta) ahyps
+                  (* An operator whose equation collects through
+                     another operator says nothing of that operator's
+                     value directly — `envSET (env a0 a1)` is a union
+                     over a list of pairs, not anything about the list.
+                     What the equation states is a chain all the same,
+                     so the walk down it and the bridges of the
+                     operators it routes through give the predicate. *)
+                  fun routed w =
+                      let
+                        val v = rand w
+                        fun viaFact th =
+                            let
+                              val th' =
+                                  CONV_RULE
+                                    (STRIP_QUANT_CONV (LAND_CONV memberwise))
+                                    th
+                              val body = #2 (dest_forall (concl th'))
+                              val P = rator (#2 (dest_imp body))
+                              val ch = valOf (chainAt [P] (concl th'))
+                              val _ = aconv (#arg (hd (#levels ch))) v orelse
+                                      raise ERR "mutual_induction"
+                                            "about another value"
+                              val down =
+                                  walkDown {bridgeOf = bridgeOfDone,
+                                            waysFor = #waysFor info,
+                                            thmOf = K th',
+                                            avoid = all_vars (concl th')}
+                            in
+                              SOME (down [v] [ch])
+                            end handle HOL_ERR _ => NONE
+                                     | Conv.UNCHANGED => NONE
+                                     | Option.Option => NONE
+                      in
+                        case List.mapPartial viaFact facts of
+                            th :: _ => SOME th
+                          | [] => NONE
+                      end
                   fun supply w =
                       case List.find (fn th => aconv (concl th) w)
                                      (facts @ gots) of
                           SOME th => th
-                        | NONE => raise ERR "mutual_induction"
-                                        ("nothing gives " ^
-                                         term_to_string w)
+                        | NONE =>
+                          case routed w of
+                              SOME th => th
+                            | NONE => raise ERR "mutual_induction"
+                                            ("nothing gives " ^
+                                             term_to_string w)
                   val res = case wanted of
                                 [] => SPECL vs ass
                               | _ => MP (SPECL vs ass)
@@ -641,7 +965,12 @@ fun mutual_induction ops ind =
             CONV_RULE (STRIP_QUANT_CONV (QCONV (DEPTH_CONV BETA_CONV)))
                       (MP inst (LIST_CONJ proved))
           end
-      val bridges = List.map (fn opty => (opty, bridgeFor opty)) (#optys info)
+      (* An operator whose equation routes through another is proved
+         from that one's bridge, so the bridges settle in the same
+         order the predicates do. *)
+      val bridges =
+          List.foldl (fn (opty, done) => (opty, bridgeFor done opty) :: done)
+                     [] settleOrder
       fun bridgeOf opty =
           case List.find (fn (t, _) => t = opty) bridges of
               SOME (_, th) => th
@@ -676,82 +1005,10 @@ fun mutual_induction ops ind =
                   | SOME base =>
                     let
                       val group = List.map (valOf o chainAt Ps) (groupFor h)
-                      (* the values the walk has reached, outermost
-                         first, stand for the chain's own *)
-                      fun theta path c =
-                          List.tabulate
-                            (length path - 1,
-                             fn i => #arg (List.nth (#levels c, i + 1)) |->
-                                     List.nth (path, i + 1))
-                      (* what one member's hypothesis says of the values
-                         the innermost set collects *)
-                      fun saysOf path c =
-                          let
-                            val h = #hyp c
-                            val sub = theta path c
-                            val (ante, _) = dest_imp (#2 (dest_forall h))
-                            val (evs, conjs) = strip_exists ante
-                            val z = #z c
-                            val inner = Term.subst sub
-                                          (#set (List.last (#levels c)))
-                            val ex = existsIntro
-                                       ante (List.map (Term.subst sub) evs)
-                                       (assumeConj (Term.subst sub conjs))
-                            val pz = MP (SPEC z (ASSUME h)) ex
-                          in
-                            GEN z (DISCH (inThm z inner) pz)
-                          end
-                      (* the predicate of the operator at the end of the
-                         walk, one way at a time, in the order the
-                         operator's bridge states them *)
-                      fun down path chs =
-                          let
-                            val i = length path - 1
-                            val v = List.last path
-                            fun onWay w =
-                                let
-                                  fun setAt ch = #set (List.nth (#levels ch, i))
-                                  val here =
-                                      List.filter
-                                        (fn ch => aconv (rator (setAt ch))
-                                                        (#setfn w))
-                                        chs
-                                in
-                                  case List.partition
-                                         (fn ch => length (#levels ch) = i + 1)
-                                         here of
-                                      (ch :: _, _) => saysOf path ch
-                                    | ([], goOn as ch :: _) =>
-                                      let
-                                        (* The walk introduces a value
-                                           per level.  A chain names
-                                           those after the principle's
-                                           own bound variables, which
-                                           the clause may have used for
-                                           an argument of its own, so
-                                           the walk takes names the
-                                           clause has not, bound ones
-                                           included. *)
-                                        val x =
-                                            variant (all_vars c @ path)
-                                                    (#arg (List.nth
-                                                             (#levels ch,
-                                                              i + 1)))
-                                        val memtm =
-                                            inThm x (mk_comb (#setfn w, v))
-                                      in
-                                        GEN x (DISCH memtm
-                                                     (down (path @ [x]) goOn))
-                                      end
-                                    | ([], []) =>
-                                      raise ERR "mutual_induction"
-                                            "a way no hypothesis walks"
-                                end
-                            val ways = #waysFor info (type_of v)
-                          in
-                            MP (SPEC v (bridgeOf (type_of v)))
-                               (LIST_CONJ (List.map onWay ways))
-                          end
+                      val down = walkDown {bridgeOf = bridgeOf,
+                                           waysFor = #waysFor info,
+                                           thmOf = ASSUME o #hyp,
+                                           avoid = all_vars c}
                     in
                       down [#arg (hd (#levels base))] group
                     end
@@ -814,22 +1071,9 @@ fun mutual_induction ops ind =
             tree = Tip | Link (tree option) | Fork (tree option list)
          So settle them in the order the levels say they collect each
          other. *)
-      fun collects opty =
-          List.filter (fn t => List.exists (equal t) (#optys info))
-                      (List.map #elemty (#waysFor info opty))
-      fun reaches x y =
-          let
-            fun go _ [] = false
-              | go seen (t :: ts) =
-                  t = x orelse
-                  (if List.exists (equal t) seen then go seen ts
-                   else go (t :: seen) (collects t @ ts))
-          in
-            go [] (collects y)
-          end
       val allQs =
           List.foldl (fn (opty, done) => (opty, allQfor done opty) :: done)
-                     [] (Lib.topsort reaches (#optys info))
+                     [] settleOrder
       fun allQof opty =
           case List.find (fn (t, _) => t = opty) allQs of
               SOME (_, th) => th
