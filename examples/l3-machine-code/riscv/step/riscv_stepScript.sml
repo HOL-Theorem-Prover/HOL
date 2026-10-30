@@ -64,6 +64,11 @@ Definition DecodeAny_def:
    | Word w => Decode w
 End
 
+(* One step of the spec's Next, for an instruction that neither traps nor
+   returns from a trap (MRET, SRET); NONE otherwise.  NextRISCV does not
+   model what Next does besides running the instruction: it takes no
+   interrupts (see H6 below), keeps no logs (log, c_update) and does not
+   count (c_cycles, c_instret, c_minstret_written). *)
 Definition NextRISCV_def:
   NextRISCV s =
   let rvc = haveRVC () s in
