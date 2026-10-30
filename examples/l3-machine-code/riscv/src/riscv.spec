@@ -3015,7 +3015,7 @@ define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
+                             ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
                              ; GPR(rd) <- memv
                              ; val  = SignedMin(data, memv)
                              ; rawWriteData(pAddr, val, 4)
@@ -3055,7 +3055,7 @@ define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
+                             ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
                              ; GPR(rd) <- memv
                              ; val  = SignedMax(data, memv)
                              ; rawWriteData(pAddr, val, 4)
@@ -3095,7 +3095,7 @@ define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
+                             ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
                              ; GPR(rd) <- memv
                              ; val  = Min(data, memv)
                              ; rawWriteData(pAddr, val, 4)
@@ -3135,7 +3135,7 @@ define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
+                             ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
                              ; GPR(rd) <- memv
                              ; val  = Max(data, memv)
                              ; rawWriteData(pAddr, val, 4)
