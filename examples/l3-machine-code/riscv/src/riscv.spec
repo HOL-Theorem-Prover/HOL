@@ -1620,9 +1620,13 @@ component GPR(n::reg) :: regType
                     }
 }
 
+-- val is bound once, before the write: it may read GPR(rd), and the SML
+-- export would otherwise re-evaluate it for Delta.data1 after the write
+-- (e.g. DIV x2,x1,x2, which must not raise an exception: ISA manual 4.5.2)
 inline unit writeRD(rd::reg, val::regType) =
-{ GPR(rd)       <- val
-; when not PROVER_EXPORT do Delta.data1   <- Some(val)
+{ v = val
+; GPR(rd)       <- v
+; when not PROVER_EXPORT do Delta.data1   <- Some(v)
 }
 
 component FPRS(n::reg) :: word
