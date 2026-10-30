@@ -379,7 +379,6 @@ record MachineCSR
   pmpaddr13     :: regType
   pmpaddr14     :: regType
   pmpaddr15     :: regType
-
 }
 
 -- Supervisor-Level CSRs (P §12.1).  sstatus, sie and sip are views of
@@ -416,8 +415,9 @@ record UserCSR
 { fpcsr         :: FPCSR
 }
 
--- Write legalisation of the CSRs whose legal values depend only on the
--- old value (P §2.3 p.24-25: WARL fields never raise exceptions)
+-- Write legalisation (P §2.3 p.24-25): a write of a WARL field never
+-- raises an exception, and stores a legal value.  The PMP address
+-- registers, mie, mip and the views are legalised in CSRMap.
 
 -- misa (P §3.1.1 p.27-29)
 
@@ -747,7 +747,7 @@ regType read_mip() =
 
 -- cycle, time and instret are readable below M-mode only when enabled in
 -- mcounteren, and in U-mode also in scounteren (P §3.1.11 p.47, §12.1.5
--- p.119).  i < 3: hpmcounter3-31 do not exist ([D25]).
+-- p.119).  hpmcounter3-31 do not exist ([D25]), so i is 0, 1 or 2.
 bool counterReadAllowed(csr::creg, p::Privilege) =
 { i = [csr<4:0>]::nat
 ; match p
@@ -760,7 +760,9 @@ bool counterReadAllowed(csr::creg, p::Privilege) =
 -- PMP entry i (P §3.7.1 p.70-73)
 
 pmpcfg pmpcfg_ent(i::bits(4)) =
-    pmpcfg(((if i<3> then MCSR.pmpcfg2 else MCSR.pmpcfg0) >>+ (8 * ([i<2:0>]::nat)))<7:0>)
+{ r = if i<3> then MCSR.pmpcfg2 else MCSR.pmpcfg0
+; pmpcfg((r >>+ (8 * ([i<2:0>]::nat)))<7:0>)
+}
 
 -- pmpaddr<i> holds bits 55:2 of a physical address, so bits 63:54 are
 -- read-only zero (Figure 33 p.71).  A write is ignored while entry i is
