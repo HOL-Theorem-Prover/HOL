@@ -128,6 +128,9 @@ Bugs fixed
 
 -   `Holmake -r` now overrides `--no_prereqs`, as the documentation has always said it does.
 
+-   TacticToe recording now finds modules outside `sigobj` and the script directory's `Holmakefile` `INCLUDES` (for example, AI and TacticToe libraries built into a project rather than into the HOL installation).
+    `genscriptdep` now reads the include directories in `HOL_GENSCRIPTDEP_INCLUDES`, which TacticToe already set but nothing read, and points at a module's object when it is not beside its source.
+
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
 
