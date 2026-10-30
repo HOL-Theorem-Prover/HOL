@@ -388,9 +388,6 @@ record MachineCSR
   pmpaddr14     :: regType
   pmpaddr15     :: regType
 
-                   -- host-target interface (berkeley extensions)
-  mtohost       :: regType      -- output register to host
-  mfromhost     :: regType      -- input register from host
 }
 
 -- Supervisor-Level CSRs (P §12.1).  sstatus, sie and sip are views of
@@ -566,10 +563,9 @@ construct TransferControl
 type RegFile    = reg  -> regType
 
 declare
-{ clock         :: regType                      -- global clock and counters
-
-  c_instret     :: id -> regType                -- per-core counters
-  c_cycles      :: id -> regType
+{ c_instret     :: id -> regType                -- minstret
+  c_cycles      :: id -> regType                -- mcycle
+  c_minstret_written :: id -> bool              -- minstret written in this step
 
   c_gpr         :: id -> RegFile                -- general purpose registers
   c_fpr         :: id -> RegFile                -- floating-point registers
@@ -589,7 +585,7 @@ declare
   -- interpreter execution context
   c_NextFetch   :: id -> TransferControl option
   c_ReserveLoad :: id -> vAddr option           -- load reservation for LL/SC
-  c_ExitCode    :: id -> regType                -- derived from Berkeley HTIF
+  c_ExitCode    :: id -> regType                -- set by the emulator
 }
 
 -- Number of cores
@@ -1116,8 +1112,12 @@ component CSRMap(csr::creg) :: regType
         case 0x3BF  => write_pmpaddr(15, value)
 
         -- machine counters
+        -- a write of minstret is done instead of the increment for the
+        -- writing instruction (U §4.2.1 p.64; incrInstret)
         case 0xB00  => c_cycles(procID)                 <- value
-        case 0xB02  => c_instret(procID)                <- value
+        case 0xB02  => { c_instret(procID)              <- value
+                       ; c_minstret_written(procID)     <- true
+                       }
 
         case _      => when not is_mhpm_CSR(csr)
                        do #INTERNAL_ERROR("unexpected CSR write to " : [csr])
@@ -1382,9 +1382,6 @@ string log_r_mem(pAddrIdx::pAddrIdx, vAddr::vAddr, data::regType) =
 
 string log_exc(e::ExceptionType) =
     " Exception " : excName(e) : " raised!"
-
-string log_tohost(tohost::regType) =
-    "-> host: " : [[tohost<7:0>]::char]
 
 inline nat LOG_IO      = 0
 inline nat LOG_INSN    = 1
@@ -5233,24 +5230,21 @@ string log_instruction(w::word, inst::instruction) =
     "instr " : [procID] : " " : [[c_instret(procID)]::nat] :
     " 0x" : hex64(PC) : " : " : hex32(w) : "   " : instructionToString(inst)
 
+-- Termination for an emulator.  Nothing in the model sets these: the
+-- host-target interface (HTIF) belongs to the emulator ([D13]).
 declare done :: bool   -- Flag to request termination
 
 nat exitCode() =
     [ExitCode]::nat
 
--- The clock/timer factor here is arbitrary, except it that if it is
--- >= approx 200, some 32-bit -pt- tests unexpectedly pass.
-
-nat CYCLES_PER_TIMER_TICK = 200
-
-unit tickClock() =
-{ cycles             = c_cycles(procID) + 1
-; c_cycles(procID)  <- cycles
-; clock             <- cycles div [CYCLES_PER_TIMER_TICK]
-}
-
-unit incrInstret() =
-    c_instret(procID) <- c_instret(procID) + 1
+-- minstret counts the instructions that retire (P §3.1.10 p.46): not
+-- those that raise an exception (U §4.3 p.67), nor a step that takes an
+-- interrupt ([D64]).  It does not count while mcountinhibit.IR is set,
+-- sampled before the step (P §3.1.12 p.47), nor for an instruction that
+-- writes minstret itself (U §4.2.1 p.64, [D65]).
+unit incrInstret(incIR::bool) =
+    when incIR and not c_minstret_written(procID)
+    do c_instret(procID) <- c_instret(procID) + 1
 
 -- Fetch and run one instruction.  The result is the trap value of an
 -- illegal instruction: the instruction bits, zero-extended (P §3.1.16
@@ -5278,19 +5272,8 @@ regType fetchAndExecute() =
 
 unit Next =
 { clear_logs()
-
--- Handle the char i/o section of the Berkeley HTIF protocol
--- following cissrStandalone.c.
-; when MCSR.mtohost <> 0x0
-  do   { mark_log(LOG_IO, log_tohost(MCSR.mtohost))
-       -- The HTIF protocol sets bit 0 to indicate exit, with actual
-       -- exit code left-shifted by 1 bit.
-       ; if MCSR.mtohost<0>
-         then { done <- true
-              ; ExitCode <- MCSR.mtohost >> 1
-              }
-         else MCSR.mtohost <- 0x0   -- TODO: rest of relevant HTIF protocol
-       }
+; c_minstret_written(procID) <- false
+; incIR = not MCSR.mcountinhibit<2>
 
 -- An interrupt is taken between instructions, at the start of a step:
 -- the step does not fetch, and mepc is the instruction not executed
@@ -5303,21 +5286,21 @@ unit Next =
     -- A trapping instruction does not retire (P §3.3.1 p.61).
     ; match NextFetch
       { case None =>
-                 { incrInstret()
+                 { incrInstret(incIR)
                  ; PC <- PC + Skip
                  }
         case Some(BranchTo(addr)) =>
-                 { incrInstret()
+                 { incrInstret(incIR)
                  ; NextFetch    <- None
                  ; PC           <- addr
                  }
         case Some(Mret) =>
-                 { incrInstret()
+                 { incrInstret(incIR)
                  ; NextFetch    <- None
                  ; mret()
                  }
         case Some(Sret) =>
-                 { incrInstret()
+                 { incrInstret(incIR)
                  ; NextFetch    <- None
                  ; sret()
                  }
@@ -5331,26 +5314,68 @@ unit Next =
     }
   }
 
-; tickClock()
+-- mcycle counts every step, unless mcountinhibit.CY is set after it
+-- (P §3.1.10 p.46, §3.1.12 p.47, [D63], [D66]).  An emulator advances
+-- mtime by one after each step, so mtime counts steps too ([D67]).
+; when not MCSR.mcountinhibit<0>
+  do c_cycles(procID) <- c_cycles(procID) + 1
 }
 
+-- Reset (P §3.4 p.63): M-mode, mstatus.MIE = mstatus.MPRV = 0, misa
+-- with every extension, mcause = 0 and every PMP entry OFF and unlocked.
+-- What the reset leaves unspecified is zero ([D62], [D70], [D71]): the
+-- read value of mstatus is 0x0000000A00000000 (FS Off, MPP U), mtvec and
+-- stvec are Direct at address 0, and the counters are zero.  The
+-- emulator sets the pc and the CLINT memory.
+
 unit initIdent(arch::Architecture) =
-{ MCSR.misa     <- misa(MISA_RESET)
-; MCSR.misa.MXL <- archBase(arch)
+{ when arch != RV64I do #UNDEFINED("only RV64I is implemented")
+; MCSR.misa <- misa(MISA_RESET)
 }
 
 unit initMachine(hartid::id) =
-{ -- Start in machine mode, with interrupts disabled.
-  setPrivilege(Machine)
-; MCSR.mstatus.MIE  <- false
-  -- initialize extension context state
-; MCSR.mstatus.FS   <- ext_status(Initial)
+{ setPrivilege(Machine)
+; MCSR.mhartid       <- ZeroExtend(hartid)
+; MCSR.mstatus       <- mstatus(0)
+; MCSR.medeleg       <- 0
+; MCSR.mideleg       <- 0
+; MCSR.mie           <- mie(0)
+; MCSR.mtvec         <- 0
+; MCSR.mcounteren    <- 0
+; MCSR.menvcfg       <- 0
+; MCSR.mcountinhibit <- 0
+; MCSR.mscratch      <- 0
+; MCSR.mepc          <- 0
+; MCSR.mcause        <- mcause(0)
+; MCSR.mtval         <- 0
+; MCSR.mip           <- mip(0)
+; MCSR.pmpcfg0       <- 0
+; MCSR.pmpcfg2       <- 0
+; MCSR.pmpaddr0  <- 0; MCSR.pmpaddr1  <- 0; MCSR.pmpaddr2  <- 0; MCSR.pmpaddr3  <- 0
+; MCSR.pmpaddr4  <- 0; MCSR.pmpaddr5  <- 0; MCSR.pmpaddr6  <- 0; MCSR.pmpaddr7  <- 0
+; MCSR.pmpaddr8  <- 0; MCSR.pmpaddr9  <- 0; MCSR.pmpaddr10 <- 0; MCSR.pmpaddr11 <- 0
+; MCSR.pmpaddr12 <- 0; MCSR.pmpaddr13 <- 0; MCSR.pmpaddr14 <- 0; MCSR.pmpaddr15 <- 0
 
-  -- Setup hartid
-; MCSR.mhartid      <- ZeroExtend(hartid)
-  -- Initialize mtvec to lower address (other option is 0xF...FFE00)
-; MCSR.mtvec        <- ZeroExtend(0x100`16)
+; SCSR.stvec         <- 0
+; SCSR.scounteren    <- 0
+; SCSR.senvcfg       <- 0
+; SCSR.sscratch      <- 0
+; SCSR.sepc          <- 0
+; SCSR.scause        <- mcause(0)
+; SCSR.stval         <- 0
+; SCSR.satp          <- 0
+
+; UCSR.fpcsr         <- FPCSR(0)
+
+; c_cycles(procID)           <- 0
+; c_instret(procID)          <- 0
+; c_minstret_written(procID) <- false
+; c_extMEIP(procID)          <- false
+; c_extSEIP(procID)          <- false
+; ReserveLoad        <- None
+; ExitCode           <- 0
 }
+
 -- This initializes each core (via setting procID appropriately) on
 -- startup before execution begins.
 unit initRegs(pc::nat) =
