@@ -3337,9 +3337,13 @@ define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
 -- FMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, canonS(FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
+  { case Some(r) => { (f, v) = FP32_MulAdd_(r, FPRS(rs1), FPRS(rs2), FPRS(rs3))
+                    ; accrueFlags(f)
+                    ; writeFPRS(rd, canonS(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3348,9 +3352,13 @@ define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, canonS(FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
+  { case Some(r) => { (f, v) = FP32_MulAdd_(r, FPRS(rs1), FPRS(rs2), FP32_Neg(FPRS(rs3)))
+                    ; accrueFlags(f)
+                    ; writeFPRS(rd, canonS(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3359,9 +3367,14 @@ define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, canonS(FP32_Neg(FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))))
+  { case Some(r) => { (f, v) = FP32_MulAdd_(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FP32_Neg(FPRS(rs3)))
+                    ; accrueFlags(f)
+                    ; writeFPRS(rd, canonS(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3370,9 +3383,14 @@ define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, canonS(FP32_Neg(FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))))
+  { case Some(r) => { (f, v) = FP32_MulAdd_(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FPRS(rs3))
+                    ; accrueFlags(f)
+                    ; writeFPRS(rd, canonS(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3854,9 +3872,13 @@ define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
 -- FMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, canonD(FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
+  { case Some(r) => { (f, v) = FP64_MulAdd_(r, FPRD(rs1), FPRD(rs2), FPRD(rs3))
+                    ; accrueFlags(f)
+                    ; writeFPRD(rd, canonD(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3865,9 +3887,13 @@ define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, canonD(FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
+  { case Some(r) => { (f, v) = FP64_MulAdd_(r, FPRD(rs1), FPRD(rs2), FP64_Neg(FPRD(rs3)))
+                    ; accrueFlags(f)
+                    ; writeFPRD(rd, canonD(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3876,9 +3902,14 @@ define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, canonD(FP64_Neg(FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))))
+  { case Some(r) => { (f, v) = FP64_MulAdd_(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FP64_Neg(FPRD(rs3)))
+                    ; accrueFlags(f)
+                    ; writeFPRD(rd, canonD(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3887,9 +3918,14 @@ define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- ISA manual 6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, canonD(FP64_Neg(FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))))
+  { case Some(r) => { (f, v) = FP64_MulAdd_(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FPRD(rs3))
+                    ; accrueFlags(f)
+                    ; writeFPRD(rd, canonD(v))
+                    }
     case None    => signalException(Illegal_Instr)
   }
 }
