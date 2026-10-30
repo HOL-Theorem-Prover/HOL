@@ -458,9 +458,39 @@ in
       [dword, word5]
       EXTRA_TAC STATE_TAC
   val intro_spec = riscv_introduction o spec
+  (* No specs for the F and D instructions, LR and SC.  The F and D step
+     theorems assume mstatus.FS <> Off, but riscv_RV64I hides the MCSR, and
+     most of them read or write fcsr, in the hidden c_UCSR; LR and SC use
+     the load reservation, the hidden c_ReserveLoad.  riscv_spec rejects
+     them by the state they use (each F and D instruction reads or writes an
+     FPR), rather than give a spec that does not compose (for FSD, one whose
+     precondition is not ~riscv_RV64I but an existential over the MCSR with
+     mstatus.FS <> Off) or fail inside stateLib. *)
+  local
+    fun names f =
+      let
+        val r = {tyname = "riscv_state", fieldname = f}
+      in
+        [TypeBasePure.mk_recordtype_fieldsel r,
+         TypeBasePure.mk_recordtype_fieldfupd r]
+      end
+    val unsupported =
+      List.concat (List.map names ["c_fpr", "c_UCSR", "c_ReserveLoad"])
+    fun is_unsupported tm =
+      case Lib.total Term.dest_thy_const tm of
+         SOME {Thy = "riscv", Name, ...} => Lib.mem Name unsupported
+       | _ => false
+  in
+    fun check_supported thm =
+      if List.exists (Lib.can (HolKernel.find_term is_unsupported))
+           (Thm.concl thm :: Thm.hyp thm)
+        then raise ERR "riscv_spec"
+               "F, D, LR and SC instructions are not supported"
+      else thm
+  end
   fun riscv_spec tm =
     let
-       val thm = riscv_stepLib.riscv_step tm
+       val thm = check_supported (riscv_stepLib.riscv_step tm)
        val thm = config_rule thm
        val thm = eval_Skip thm
        val t = riscv_mk_pre_post thm
