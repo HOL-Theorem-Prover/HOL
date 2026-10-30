@@ -73,10 +73,23 @@ local
            andalso can (match_term ``^st.MEM8 _``) l
       | NONE => false
   fun hide_with_genvar (x: term) = x |-> Term.genvar (Term.type_of x)
+  (* A step theorem's state may update the hidden logs c_update (as
+     writeCSR, writeFPRS and writeFPRD do) and log.  hide_hidden replaces
+     the new values by variables, so that the postcondition reads no hidden
+     component.  The update functions are named by TypeBasePure, as in
+     riscv_write_footprint below: literal names such as
+     riscv_state_c_update_fupd no longer match HOL's record constants. *)
+  val hidden_fupds =
+    List.map
+      (fn f => "riscv$" ^
+               TypeBasePure.mk_recordtype_fieldfupd
+                 {tyname = "riscv_state", fieldname = f})
+      ["c_update", "log"]
   fun to_hide tm =
     case boolSyntax.dest_strip_comb tm of
-       ("riscv$riscv_state_c_update_fupd", [t, _]) => combinSyntax.dest_K_1 t
-     | ("riscv$riscv_state_log_fupd", [t, _]) => combinSyntax.dest_K_1 t
+       (c, [t, _]) =>
+         if Lib.mem c hidden_fupds then combinSyntax.dest_K_1 t
+         else raise ERR "" ""
      | _ => raise ERR "" ""
   fun hide_hidden tm =
     let
