@@ -3206,7 +3206,7 @@ define FPLoad > FLW(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; match translateAddr(vAddr, Data, Read)
   { case Some(pAddr) => { val       = rawReadData(pAddr)<31:0>
-                        ; FPRS(rd) <- val
+                        ; writeFPRS(rd, val)  -- sets FS to Dirty (privileged manual 3.1.6.7)
                         ; recordLoad(vAddr, ZeroExtend(val))
                         }
     case None        => signalAddressException(Load_Fault, vAddr)
@@ -3745,7 +3745,7 @@ define FPLoad > FLD(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; match translateAddr(vAddr, Data, Read)
   { case Some(pAddr) => { val       = rawReadData(pAddr)
-                        ; FPRD(rd) <- val
+                        ; writeFPRD(rd, val)  -- sets FS to Dirty (privileged manual 3.1.6.7)
                         ; recordLoad(vAddr, val)
                         }
     case None        => signalAddressException(Load_Fault, vAddr)
