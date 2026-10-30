@@ -85,7 +85,7 @@ format; changing a raw producer pin requires rechecking its layout.
 ### Regression tests
 
 The [export regressions](tests/README.md) cover oracle hypotheses, binder
-capture, term kinds, identity reuse/imports and large computation numerals.
+capture, term kinds, identity restoration/collisions and large computation numerals.
 Run them with an exporter-capable tracing HOL:
 
 ```sh
@@ -101,5 +101,3 @@ bin/Holmake --poly_not_hol -C src/postkernel/prooftrace parser-selftest.exe
 It uses `PolyML.exportSmall` to generate its inputs and the de Bruijn
 kernel layout, so automatic execution requires a tracing-kernel build
 with the exportSmall runtime. Stock Poly/ML does not provide that API.
-The portable writer/reader suite is `pft-selftest.exe` and continues to run
-for every supported kernel and ML implementation.
