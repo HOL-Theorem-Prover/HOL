@@ -3453,7 +3453,12 @@ define FConv > FCVT_S_WU(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP32_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
                             then [0n2 ** 31 - 1]
                             else if inp == FP32_NegInf
@@ -3482,7 +3487,12 @@ define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP32_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
                             then [0n2 ** 32 - 1]
                             else if inp == FP32_NegInf
@@ -3545,7 +3555,12 @@ define FConv > FCVT_S_LU(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP32_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
                             then [0n2 ** 63 - 1]
                             else if inp == FP32_NegInf
@@ -3574,7 +3589,12 @@ define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP32_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
                             then [0n2 ** 64 - 1]
                             else if inp == FP32_NegInf
@@ -3980,7 +4000,12 @@ define FConv > FCVT_D_WU(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP64_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
                             then [0n2 ** 31 - 1]
                             else if inp == FP64_NegInf
@@ -4009,7 +4034,12 @@ define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP64_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
                             then [0n2 ** 32 - 1]
                             else if inp == FP64_NegInf
@@ -4072,7 +4102,12 @@ define FConv > FCVT_D_LU(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP64_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
                             then [0n2 ** 63 - 1]
                             else if inp == FP64_NegInf
@@ -4101,7 +4136,12 @@ define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
+                    -- None for a NaN or an infinity, which saturate below
+                    -- (ISA manual 6.1.7, Table 29) before val is used
+                    ; val = match FP64_ToInt(r, inp)
+                            { case Some(i) => i
+                              case None    => 0
+                            }
                     ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
                             then [0n2 ** 64 - 1]
                             else if inp == FP64_NegInf
