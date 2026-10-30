@@ -3727,7 +3727,7 @@ define FConv > FCLASS_S(rd::reg, rs::reg) =
 ; ret<6> <- !FP32_Sign(val) and FP32_IsNormal(val)
 ; ret<7> <- val == FP32_PosInf
 ; ret<8> <- FP32_IsSignalingNan(val)
-; ret<9> <- val == RV32_CanonicalNan
+; ret<9> <- FP32_IsNan(val) and not FP32_IsSignalingNan(val)  -- any quiet NaN (ISA manual 6.1.9)
 ; writeRD(rd, ZeroExtend(ret))
 }
 
@@ -4283,7 +4283,7 @@ define FConv > FCLASS_D(rd::reg, rs::reg) =
 ; ret<6> <- !FP64_Sign(val) and FP64_IsNormal(val)
 ; ret<7> <- val == FP64_PosInf
 ; ret<8> <- FP64_IsSignalingNan(val)
-; ret<9> <- val == RV64_CanonicalNan
+; ret<9> <- FP64_IsNan(val) and not FP64_IsSignalingNan(val)  -- any quiet NaN (ISA manual 6.1.9)
 ; writeRD(rd, ZeroExtend(ret))
 }
 
