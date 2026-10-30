@@ -444,21 +444,43 @@ end
 (* A hypothesis without free variables, such as the alignment of an address
    given by x0 and an offset, is decided: it is removed if true, and if it
    is false the instruction traps (here, on a misaligned access) and there
-   is no step theorem. *)
-fun ground_hyp_rule th =
-  List.foldl
-    (fn (h, th) =>
-       if List.null (Term.free_vars h) then
-         let
-           val eq = EVAL h
-         in
-           if Teq (utilsLib.rhsc eq) then PROVE_HYP (EQT_ELIM eq) th
-           else if Feq (utilsLib.rhsc eq) then
-             raise ERR "riscv_step"
-               ("instruction traps: " ^ Parse.term_to_string h ^ " is false")
-           else th
-         end
-       else th) th (Thm.hyp th)
+   is no step theorem.  So is a disjunct without free variables, such as
+   the test of bit 1 of a jump target given by x0 and an offset in
+   ~word_bit 1 target \/ misa.C: the hypothesis becomes misa.C if the
+   test is false, and is removed if it is true. *)
+local
+  fun closed tm = List.null (Term.free_vars tm)
+  fun decide tm =
+    let
+      val eq = EVAL tm
+    in
+      if Teq (utilsLib.rhsc eq) orelse Feq (utilsLib.rhsc eq) then eq
+      else raise Conv.UNCHANGED
+    end
+  fun disj_conv tm =
+    if closed tm then decide tm
+    else if boolSyntax.is_disj tm then Conv.BINOP_CONV disj_conv tm
+    else raise Conv.UNCHANGED
+  val or_clauses = Conv.QCONV (PURE_REWRITE_CONV [boolTheory.OR_CLAUSES])
+  fun hyp_conv tm = Conv.RIGHT_CONV_RULE or_clauses (disj_conv tm)
+in
+  fun ground_hyp_rule th =
+    List.foldl
+      (fn (h, th) =>
+         case Lib.total hyp_conv h of
+            NONE => th
+          | SOME eq =>
+              let
+                val h' = utilsLib.rhsc eq
+              in
+                if Teq h' then PROVE_HYP (EQ_MP (SYM eq) TRUTH) th
+                else if Feq h' then
+                  raise ERR "riscv_step"
+                    ("instruction traps: " ^ Parse.term_to_string h ^
+                     " is false")
+                else PROVE_HYP (EQ_MP (SYM eq) (ASSUME h')) th
+              end) th (Thm.hyp th)
+end
 
 local
   val st = Term.mk_var ("st", ``:riscv_state``)
@@ -559,8 +581,12 @@ in
       (* H6: NextRISCV takes no interrupt, so its step is one of the spec's
          Next only if no interrupt can be taken; in M-mode that holds when
          mstatus.MIE is clear (riscv_stepTheory.checkInterrupts_Machine).
-         The equation itself does not depend on it. *)
-      (Drule.ADD_ASSUM no_interrupt o ground_hyp_rule o canonical_contract_rule)
+         The equation itself does not depend on it.  tidy_up_rvc runs again
+         after ground_hyp_rule, which can leave misa.C as a hypothesis (a
+         jump to a constant target with bit 1 set), to drop the hypotheses
+         that misa.C implies. *)
+      (Drule.ADD_ASSUM no_interrupt o tidy_up_rvc o ground_hyp_rule o
+       canonical_contract_rule)
         (tidy_up_rvc
            (if optionSyntax.is_none tm
               then MP_Next_n thm
