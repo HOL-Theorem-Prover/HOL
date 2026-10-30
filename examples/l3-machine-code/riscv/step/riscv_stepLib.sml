@@ -196,8 +196,52 @@ val riscv_decodes =
    ("LHU",    "_________________TFT_____FFFFFTT"),
    ("LWU",    "_________________TTF_____FFFFFTT")
   ]
+     (* Atomics and floating-point instructions that write rd *)
+     val l2 =
+  [
+   ("LR_W",      "FFFTF__FFFFF_____FTF_____FTFTTTT"),
+   ("LR_D",      "FFFTF__FFFFF_____FTT_____FTFTTTT"),
+   ("SC_W",      "FFFTT____________FTF_____FTFTTTT"),
+   ("SC_D",      "FFFTT____________FTT_____FTFTTTT"),
+   ("AMOSWAP_W", "FFFFT____________FTF_____FTFTTTT"),
+   ("AMOADD_W",  "FFFFF____________FTF_____FTFTTTT"),
+   ("AMOXOR_W",  "FFTFF____________FTF_____FTFTTTT"),
+   ("AMOAND_W",  "FTTFF____________FTF_____FTFTTTT"),
+   ("AMOOR_W",   "FTFFF____________FTF_____FTFTTTT"),
+   ("AMOMIN_W",  "TFFFF____________FTF_____FTFTTTT"),
+   ("AMOMAX_W",  "TFTFF____________FTF_____FTFTTTT"),
+   ("AMOMINU_W", "TTFFF____________FTF_____FTFTTTT"),
+   ("AMOMAXU_W", "TTTFF____________FTF_____FTFTTTT"),
+   ("AMOSWAP_D", "FFFFT____________FTT_____FTFTTTT"),
+   ("AMOADD_D",  "FFFFF____________FTT_____FTFTTTT"),
+   ("AMOXOR_D",  "FFTFF____________FTT_____FTFTTTT"),
+   ("AMOAND_D",  "FTTFF____________FTT_____FTFTTTT"),
+   ("AMOOR_D",   "FTFFF____________FTT_____FTFTTTT"),
+   ("AMOMIN_D",  "TFFFF____________FTT_____FTFTTTT"),
+   ("AMOMAX_D",  "TFTFF____________FTT_____FTFTTTT"),
+   ("AMOMINU_D", "TTFFF____________FTT_____FTFTTTT"),
+   ("AMOMAXU_D", "TTTFF____________FTT_____FTFTTTT"),
+   ("FEQ_S",     "TFTFFFF__________FTF_____TFTFFTT"),
+   ("FLT_S",     "TFTFFFF__________FFT_____TFTFFTT"),
+   ("FLE_S",     "TFTFFFF__________FFF_____TFTFFTT"),
+   ("FEQ_D",     "TFTFFFT__________FTF_____TFTFFTT"),
+   ("FLT_D",     "TFTFFFT__________FFT_____TFTFFTT"),
+   ("FLE_D",     "TFTFFFT__________FFF_____TFTFFTT"),
+   ("FMV_X_S",   "TTTFFFFFFFFF_____FFF_____TFTFFTT"),
+   ("FCLASS_S",  "TTTFFFFFFFFF_____FFT_____TFTFFTT"),
+   ("FMV_X_D",   "TTTFFFTFFFFF_____FFF_____TFTFFTT"),
+   ("FCLASS_D",  "TTTFFFTFFFFF_____FFT_____TFTFFTT"),
+   ("FCVT_W_S",  "TTFFFFFFFFFF_____________TFTFFTT"),
+   ("FCVT_WU_S", "TTFFFFFFFFFT_____________TFTFFTT"),
+   ("FCVT_L_S",  "TTFFFFFFFFTF_____________TFTFFTT"),
+   ("FCVT_LU_S", "TTFFFFFFFFTT_____________TFTFFTT"),
+   ("FCVT_W_D",  "TTFFFFTFFFFF_____________TFTFFTT"),
+   ("FCVT_WU_D", "TTFFFFTFFFFT_____________TFTFFTT"),
+   ("FCVT_L_D",  "TTFFFFTFFFTF_____________TFTFFTT"),
+   ("FCVT_LU_D", "TTFFFFTFFFTT_____________TFTFFTT")
+  ]
    in
-      l @ List.map make_nop l @
+      l @ List.map make_nop l @ l2 @ List.map make_nop l2 @
   [
    ("SB",     "_________________FFF_____FTFFFTT"),
    ("SH",     "_________________FFT_____FTFFFTT"),
@@ -208,7 +252,55 @@ val riscv_decodes =
    ("BLT",    "_________________TFF_____TTFFFTT"),
    ("BGE",    "_________________TFT_____TTFFFTT"),
    ("BLTU",   "_________________TTF_____TTFFFTT"),
-   ("BGEU",   "_________________TTT_____TTFFFTT")
+   ("BGEU",   "_________________TTT_____TTFFFTT"),
+   ("FENCE",      "_________________FFF_____FFFTTTT"),
+   ("FENCE_I",    "_________________FFT_____FFFTTTT"),
+   ("WFI",        "FFFTFFFFFTFTFFFFFFFFFFFFFTTTFFTT"),
+   ("SFENCE_VMA", "FFFTFFT__________FFFFFFFFTTTFFTT"),
+   ("FLW",        "_________________FTF_____FFFFTTT"),
+   ("FLD",        "_________________FTT_____FFFFTTT"),
+   ("FSW",        "_________________FTF_____FTFFTTT"),
+   ("FSD",        "_________________FTT_____FTFFTTT"),
+   ("FMADD_S",    "_____FF__________________TFFFFTT"),
+   ("FMSUB_S",    "_____FF__________________TFFFTTT"),
+   ("FNMSUB_S",   "_____FF__________________TFFTFTT"),
+   ("FNMADD_S",   "_____FF__________________TFFTTTT"),
+   ("FMADD_D",    "_____FT__________________TFFFFTT"),
+   ("FMSUB_D",    "_____FT__________________TFFFTTT"),
+   ("FNMSUB_D",   "_____FT__________________TFFTFTT"),
+   ("FNMADD_D",   "_____FT__________________TFFTTTT"),
+   ("FADD_S",     "FFFFFFF__________________TFTFFTT"),
+   ("FSUB_S",     "FFFFTFF__________________TFTFFTT"),
+   ("FMUL_S",     "FFFTFFF__________________TFTFFTT"),
+   ("FDIV_S",     "FFFTTFF__________________TFTFFTT"),
+   ("FSQRT_S",    "FTFTTFFFFFFF_____________TFTFFTT"),
+   ("FMIN_S",     "FFTFTFF__________FFF_____TFTFFTT"),
+   ("FMAX_S",     "FFTFTFF__________FFT_____TFTFFTT"),
+   ("FSGNJ_S",    "FFTFFFF__________FFF_____TFTFFTT"),
+   ("FSGNJN_S",   "FFTFFFF__________FFT_____TFTFFTT"),
+   ("FSGNJX_S",   "FFTFFFF__________FTF_____TFTFFTT"),
+   ("FCVT_S_W",   "TTFTFFFFFFFF_____________TFTFFTT"),
+   ("FCVT_S_WU",  "TTFTFFFFFFFT_____________TFTFFTT"),
+   ("FCVT_S_L",   "TTFTFFFFFFTF_____________TFTFFTT"),
+   ("FCVT_S_LU",  "TTFTFFFFFFTT_____________TFTFFTT"),
+   ("FMV_S_X",    "TTTTFFFFFFFF_____FFF_____TFTFFTT"),
+   ("FADD_D",     "FFFFFFT__________________TFTFFTT"),
+   ("FSUB_D",     "FFFFTFT__________________TFTFFTT"),
+   ("FMUL_D",     "FFFTFFT__________________TFTFFTT"),
+   ("FDIV_D",     "FFFTTFT__________________TFTFFTT"),
+   ("FSQRT_D",    "FTFTTFTFFFFF_____________TFTFFTT"),
+   ("FMIN_D",     "FFTFTFT__________FFF_____TFTFFTT"),
+   ("FMAX_D",     "FFTFTFT__________FFT_____TFTFFTT"),
+   ("FSGNJ_D",    "FFTFFFT__________FFF_____TFTFFTT"),
+   ("FSGNJN_D",   "FFTFFFT__________FFT_____TFTFFTT"),
+   ("FSGNJX_D",   "FFTFFFT__________FTF_____TFTFFTT"),
+   ("FCVT_D_W",   "TTFTFFTFFFFF_____________TFTFFTT"),
+   ("FCVT_D_WU",  "TTFTFFTFFFFT_____________TFTFFTT"),
+   ("FCVT_D_L",   "TTFTFFTFFFTF_____________TFTFFTT"),
+   ("FCVT_D_LU",  "TTFTFFTFFFTT_____________TFTFFTT"),
+   ("FMV_D_X",    "TTTTFFTFFFFF_____FFF_____TFTFFTT"),
+   ("FCVT_S_D",   "FTFFFFFFFFFT_____________TFTFFTT"),
+   ("FCVT_D_S",   "FTFFFFTFFFFF_____________TFTFFTT")
   ]
   end)
 
@@ -259,8 +351,29 @@ local
   val rwts = List.map (full_state_rule o fetch_inst o DB.fetch "riscv_step")
                (valOf (utilsLib.get_rewrites{thyname="riscv_step"}))
   val fnd = utilsLib.find_rw (utilsLib.mk_rw_net utilsLib.lhsc rwts)
-  val rule = Conv.DEPTH_CONV wordsLib.word_EQ_CONV
-             THENC REWRITE_CONV [riscv_stepTheory.v2w_0_rwts]
+  (* Decide the tests on instruction fields that the instantiation has made
+     ground: v2w l = n2w m (the rounding-mode field), and word_bit n (v2w l)
+     (bit 5 of a shift amount). *)
+  fun is_ground_v2w tm =
+    bitstringSyntax.is_v2w tm andalso List.null (Term.free_vars tm)
+  fun field_conv tm =
+    case Lib.total boolSyntax.dest_eq tm of
+       SOME (l, r) =>
+         if is_ground_v2w l andalso wordsSyntax.is_n2w r then
+           (Conv.LAND_CONV bitstringLib.v2w_n2w_CONV
+            THENC wordsLib.word_EQ_CONV) tm
+         else raise ERR "field_conv" ""
+     | NONE =>
+         (case Lib.total wordsSyntax.dest_word_bit tm of
+             SOME (n, w) =>
+               if is_ground_v2w w andalso numSyntax.is_numeral n then
+                 (Conv.RAND_CONV bitstringLib.v2w_n2w_CONV
+                  THENC wordsLib.WORD_EVAL_CONV) tm
+               else raise ERR "field_conv" ""
+           | NONE => raise ERR "field_conv" "")
+  val rule = Conv.DEPTH_CONV (wordsLib.word_EQ_CONV ORELSEC field_conv)
+             THENC REWRITE_CONV [riscv_stepTheory.v2w_0_rwts,
+                                 riscv_stepTheory.frm_rounding_v2w]
   val eval_simp_rule =
     utilsLib.ALL_HYP_CONV_RULE rule o Conv.CONV_RULE (Conv.RHS_CONV rule)
   fun eval tm rwt =
@@ -289,11 +402,48 @@ end
    C extension
    ------------------------------------------------------------------------- *)
 
-val rvc_tm = ``(^s.c_MCSR ^s.procID).mcpuid.C``
+val rvc_tm = ``(^s.c_MCSR ^s.procID).misa.C``
+
+(* H6 *)
+val no_interrupt = ``~(^s.c_MCSR ^s.procID).mstatus.MIE``
+
+(* The M-mode contract H1-H4 and H6 (riscv_stepTheory), as the word-level
+   conjuncts that the step theorems carry. *)
+val contract_hyps =
+  let
+    val mcsr = ``^s.c_MCSR ^s.procID``
+    fun conjs th = boolSyntax.strip_conj (utilsLib.rhsc (Thm.SPEC mcsr th))
+  in
+    [``^s.c_privilege ^s.procID = 3w``, ``~^mcsr.mstatus.MPRV``,
+     no_interrupt] @
+    conjs riscv_stepTheory.pmp_unlocked_def @
+    conjs riscv_stepTheory.pmp_off_or_napot_def
+  end
+
+(* tidy_up_signalAddressException simplifies the hypotheses of the
+   instruction theorem with srw_ss, which reorders the operands of the PMP
+   conjuncts; the fetch theorem has them as written.  Put them back, so
+   that each conjunct is a hypothesis once and in the form above. *)
+local
+  fun norm c =
+    let
+      val eq = Conv.QCONV (SIMP_CONV (srw_ss()) []) c
+    in
+      if Term.aconv (utilsLib.rhsc eq) c then NONE
+      else SOME (utilsLib.rhsc eq, EQ_MP eq (Thm.ASSUME c))
+    end
+  val normal_forms = List.mapPartial norm contract_hyps
+in
+  fun canonical_contract_rule th =
+    List.foldl
+      (fn ((c', th'), th) =>
+         if HOLset.member (Thm.hypset th, c') then PROVE_HYP th' th else th)
+      th normal_forms
+end
 
 local
   val st = Term.mk_var ("st", ``:riscv_state``)
-  val rvc_pat = ``(^st.c_MCSR ^st.procID).mcpuid.C``
+  val rvc_pat = ``(^st.c_MCSR ^st.procID).misa.C``
   fun rvc_terms th =
     Lib.op_mk_set aconv
       (List.concat
@@ -372,20 +522,31 @@ in
       val new_s = thm1 |> concl |> rand |> rand
       val thm3 = fetch_inst (Drule.SPEC_ALL (Run_CONV thm2)) |> INST [s |-> new_s]
       val tm = utilsLib.rhsc thm3
-      val ethm = run tm
-      val ethm = tidy_up_signalAddressException ethm
-      val thm4 = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
+      val thm4 =
+        if Term.aconv tm new_s then
+          thm3 (* FENCE and FENCE.I: Run does nothing *)
+        else
+          let
+            val ethm = run tm
+            val ethm = tidy_up_signalAddressException ethm
+          in
+            Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
+          end
       val thm5 = proj_exception thm4
       val thm6 = proj_NextFetch_procID thm4
-      val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
+      (* H6: the step is one of the spec's Next only if no interrupt can be
+         taken (riscv_stepTheory.checkInterrupts_Machine) *)
+      val thm = Drule.LIST_CONJ [Thm.ASSUME no_interrupt, thm1, thm2, thm4,
+                                 thm5, thm6]
       val tm = utilsLib.rhsc thm6
     in
-      tidy_up_rvc
-        (if optionSyntax.is_none tm
-           then MP_Next_n thm
-         else if boolSyntax.is_cond tm
-           then MP_Next_c thm
-         else MP_Next_b thm)
+      canonical_contract_rule
+        (tidy_up_rvc
+           (if optionSyntax.is_none tm
+              then MP_Next_n thm
+            else if boolSyntax.is_cond tm
+              then MP_Next_c thm
+            else MP_Next_b thm))
     end
 end
 
