@@ -1739,18 +1739,6 @@ unit rawWriteData(pAddr::pAddr, data::regType, nbytes::nat) =
        }
 }
 
-half rawReadHalf(pAddr::pAddr) =
-{ pAddrIdx = pAddr<63:3>
-; data     = MEM(pAddrIdx)
-; mark_log(LOG_MEM, log_r_mem(pAddrIdx, pAddr, data))
-; match pAddr<2:1>
-  { case '00' => data<63:48>
-    case '01' => data<47:32>
-    case '10' => data<31:16>
-    case '11' => data<15:0>
-  }
-}
-
 rawInstType rawReadInst(pAddr::pAddr) =
 { h = MEM8 (pAddr)
 ; match h
