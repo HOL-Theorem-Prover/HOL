@@ -3303,16 +3303,15 @@ define FArith > FSQRT_S(rd::reg, rs::reg, fprnd::fprnd) =
 define FArith > FMIN_S(rd::reg, rs1::reg, rs2::reg) =
 { f1  = FPRS(rs1)
 ; f2  = FPRS(rs2)
-; res = match FP32_Compare(f1, f2)
-        { case FP_LT   => f1
-          case FP_EQ   => f1
-          case FP_GT   => f2
-          case FP_UN   => if (   (FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2))
-                              or (f1 == RV32_CanonicalNan and f2 == RV32_CanonicalNan))
-                          then RV32_CanonicalNan
-                          else -- either f1 or f2 should be a quiet NaN
-                              if f1 == RV32_CanonicalNan then f2 else f1
-        }
+-- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+-- canonical NaN if both are NaNs), and a signalling NaN raises NV
+; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
+; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
+        else if FP32_IsNan(f1) then f2
+        else if FP32_IsNan(f2) then f1
+        else if FP32_IsZero(f1) and FP32_IsZero(f2)
+        then (if FP32_Sign(f1) then f1 else f2)
+        else if FP32_LessThan(f1, f2) then f1 else f2
 ; writeFPRS(rd, res)
 }
 
@@ -3322,16 +3321,15 @@ define FArith > FMIN_S(rd::reg, rs1::reg, rs2::reg) =
 define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
 { f1  = FPRS(rs1)
 ; f2  = FPRS(rs2)
-; res = match FP32_Compare(f1, f2)
-        { case FP_LT   => f2
-          case FP_EQ   => f2
-          case FP_GT   => f1
-          case FP_UN   => if (   (FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2))
-                              or (f1 == RV32_CanonicalNan and f2 == RV32_CanonicalNan))
-                          then RV32_CanonicalNan
-                          else -- either f1 or f2 should be a quiet NaN
-                              if f1 == RV32_CanonicalNan then f2 else f1
-        }
+-- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+-- canonical NaN if both are NaNs), and a signalling NaN raises NV
+; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
+; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
+        else if FP32_IsNan(f1) then f2
+        else if FP32_IsNan(f2) then f1
+        else if FP32_IsZero(f1) and FP32_IsZero(f2)
+        then (if FP32_Sign(f1) then f2 else f1)
+        else if FP32_LessThan(f1, f2) then f2 else f1
 ; writeFPRS(rd, res)
 }
 
@@ -3822,17 +3820,15 @@ define FArith > FSQRT_D(rd::reg, rs::reg, fprnd::fprnd) =
 define FArith > FMIN_D(rd::reg, rs1::reg, rs2::reg) =
 { f1 = FPRD(rs1)
 ; f2 = FPRD(rs2)
-; res = match FP64_Compare(f1, f2)
-        { case FP_LT => f1
-          case FP_EQ => f1
-          case FP_GT => f2
-          case FP_UN => if (   (FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2))
-                            or (f1 == RV64_CanonicalNan and f2 == RV64_CanonicalNan))
-                        then RV64_CanonicalNan
-                        else -- either f1 or f2 should be a quiet NaN
-                            if f1 == RV64_CanonicalNan then f2 else f1
-
-        }
+-- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+-- canonical NaN if both are NaNs), and a signalling NaN raises NV
+; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
+; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
+        else if FP64_IsNan(f1) then f2
+        else if FP64_IsNan(f2) then f1
+        else if FP64_IsZero(f1) and FP64_IsZero(f2)
+        then (if FP64_Sign(f1) then f1 else f2)
+        else if FP64_LessThan(f1, f2) then f1 else f2
 ; writeFPRD(rd, res)
 }
 
@@ -3842,16 +3838,15 @@ define FArith > FMIN_D(rd::reg, rs1::reg, rs2::reg) =
 define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
 { f1 = FPRD(rs1)
 ; f2 = FPRD(rs2)
-; res = match FP64_Compare(f1, f2)
-        { case FP_LT => f2
-          case FP_EQ => f2
-          case FP_GT => f1
-          case FP_UN => if (   (FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2))
-                            or (f1 == RV64_CanonicalNan and f2 == RV64_CanonicalNan))
-                        then RV64_CanonicalNan
-                        else -- either f1 or f2 should be a quiet NaN
-                            if f1 == RV64_CanonicalNan then f2 else f1
-  }
+-- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+-- canonical NaN if both are NaNs), and a signalling NaN raises NV
+; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
+; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
+        else if FP64_IsNan(f1) then f2
+        else if FP64_IsNan(f2) then f1
+        else if FP64_IsZero(f1) and FP64_IsZero(f2)
+        then (if FP64_Sign(f1) then f2 else f1)
+        else if FP64_LessThan(f1, f2) then f2 else f1
 ; writeFPRD(rd, res)
 }
 
