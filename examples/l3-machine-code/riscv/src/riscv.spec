@@ -317,100 +317,97 @@ register mstatus :: regType
 ,     1 : SIE       -- S-mode interrupt enable
 }
 
-register mtdeleg :: regType
-{ 63-16 : Intr_deleg
-, 15-0  : Exc_deleg
-}
-
+-- Interrupt pending and enable bits (P §3.1.9 Figures 15-16 p.43-44): bit
+-- i is for interrupt code i.  Of mip only SSIP, STIP and the software
+-- SEIP bit are stored; read_mip adds the others.
 register mip :: regType
-{           -- pending timer interrupts (read-only)
-      7 : MTIP
-,     6 : HTIP
-,     5 : STIP
-            -- pending software interrupts (read/write)
-,     3 : MSIP
-,     2 : HSIP
-,     1 : SSIP
+{    11 : MEIP      -- machine external
+,     9 : SEIP      -- supervisor external
+,     7 : MTIP      -- machine timer
+,     5 : STIP      -- supervisor timer
+,     3 : MSIP      -- machine software
+,     1 : SSIP      -- supervisor software
 }
 
 register mie :: regType
-{           -- enable timer interrupts (read-only)
-      7 : MTIE
-,     6 : HTIE
+{    11 : MEIE
+,     9 : SEIE
+,     7 : MTIE
 ,     5 : STIE
-            -- enable software interrupts (read/write)
 ,     3 : MSIE
-,     2 : HSIE
 ,     1 : SSIE
 }
 
+-- mcause and scause (P §3.1.15 Figure 22 p.49)
 register mcause :: regType
-{    63 : Int   -- Interrupt
-    3-0 : EC    -- Exception Code
+{    63 : Int       -- interrupt
+,  62-0 : EC        -- exception code
 }
 
--- Timers and counters are stored as deltas from their system-values
--- at each privilege level; the hardware motivation is explained in
--- the specification.
+-- Machine-level CSRs (P §3.1).  medeleg, mideleg, mtvec, mcounteren,
+-- menvcfg, mcountinhibit and the PMP CSRs are stored as raw values
+-- (legalised on write).  mvendorid, marchid, mimpid, mconfigptr and the
+-- hardware performance-monitoring CSRs are constant zero, and mcycle and
+-- minstret are c_cycles and c_instret.
 
 record MachineCSR
 { misa          :: misa         -- information registers
   mhartid       :: regType
 
   mstatus       :: mstatus      -- trap setup
-  mtvec         :: regType
-  mtdeleg       :: mtdeleg
+  medeleg       :: regType
+  mideleg       :: regType
   mie           :: mie
-  mtimecmp      :: regType
+  mtvec         :: regType
+  mcounteren    :: regType
+  menvcfg       :: regType
 
-  mtime_delta   :: regType      -- time wrt global clock
+  mcountinhibit :: regType      -- counter setup
 
   mscratch      :: regType      -- trap handling
   mepc          :: regType
   mcause        :: mcause
-  mbadaddr      :: regType
+  mtval         :: regType
   mip           :: mip
 
-  mbase         :: regType      -- protection and translation
-  mbound        :: regType
-  mibase        :: regType
-  mibound       :: regType
-  mdbase        :: regType
-  mdbound       :: regType
+  pmpcfg0       :: regType      -- physical memory protection
+  pmpcfg2       :: regType
+  pmpaddr0      :: regType
+  pmpaddr1      :: regType
+  pmpaddr2      :: regType
+  pmpaddr3      :: regType
+  pmpaddr4      :: regType
+  pmpaddr5      :: regType
+  pmpaddr6      :: regType
+  pmpaddr7      :: regType
+  pmpaddr8      :: regType
+  pmpaddr9      :: regType
+  pmpaddr10     :: regType
+  pmpaddr11     :: regType
+  pmpaddr12     :: regType
+  pmpaddr13     :: regType
+  pmpaddr14     :: regType
+  pmpaddr15     :: regType
 
                    -- host-target interface (berkeley extensions)
   mtohost       :: regType      -- output register to host
   mfromhost     :: regType      -- input register from host
 }
 
--- Supervisor-Level CSRs
-
-register sip :: regType
-{     5 : STIP      -- pending timer interrupt
-,     1 : SSIP      -- pending software interrupt
-}
-
-register sie :: regType
-{     5 : STIE      -- enable timer interrupt
-,     1 : SSIE      -- enable software interrupt
-}
+-- Supervisor-Level CSRs (P §12.1).  sstatus, sie and sip are views of
+-- mstatus, mie and mip.
 
 record SupervisorCSR
-{ -- sstatus :: sstatus is a projection of mstatus :: mstatus
-  stvec         :: regType      -- trap setup
-  -- sie :: sie is a projection of mie :: mie
-  stimecmp      :: regType
-
-  stime_delta   :: regType      -- time wrt global clock
+{ stvec         :: regType      -- trap setup
+  scounteren    :: regType
+  senvcfg       :: regType
 
   sscratch      :: regType      -- trap handling
   sepc          :: regType
   scause        :: mcause
-  sbadaddr      :: regType
-  -- sip :: sip is a projection of mip :: mip
+  stval         :: regType
 
-  sptbr         :: regType      -- memory protection and translation
-  sasid         :: regType
+  satp          :: regType      -- address translation and protection
 }
 
 -- User-Level CSRs
@@ -428,41 +425,11 @@ register FPCSR :: word          -- 32-bit control register
 }
 
 record UserCSR
-{ cycle_delta   :: regType      -- timers and counters wrt base values
-  time_delta    :: regType
-  instret_delta :: regType
-  fpcsr         :: FPCSR
+{ fpcsr         :: FPCSR
 }
 
--- Machine state projections
-
-sip lift_mip_sip(mip::mip) =
-{ var sip = sip(0)
-; sip.STIP  <- mip.STIP
-; sip.SSIP  <- mip.SSIP
-; sip
-}
-
-sie lift_mie_sie(mie::mie) =
-{ var sie = sie(0)
-; sie.STIE  <- mie.STIE
-; sie.SSIE  <- mie.SSIE
-; sie
-}
-
-mip lower_sip_mip(sip::sip, mip::mip) =
-{ var m = mip
-; m.STIP    <- sip.STIP
-; m.SSIP    <- sip.SSIP
-; m
-}
-
-mie lower_sie_mie(sie::sie, mie::mie) =
-{ var m = mie
-; m.STIE    <- sie.STIE
-; m.SSIE    <- sie.SSIE
-; m
-}
+-- Write legalisation of the CSRs whose legal values depend only on the
+-- old value (P §2.3 p.24-25: WARL fields never raise exceptions)
 
 -- misa (P §3.1.1 p.27-29)
 
@@ -514,6 +481,67 @@ regType read_sstatus(m::mstatus) = read_mstatus(m) && SSTATUS_MASK
 mstatus legalize_sstatus(v::regType, m::mstatus) =
     legalize_mstatus((&m && ~SSTATUS_MASK) || (v && SSTATUS_MASK))
 
+-- mtvec and stvec (P §3.1.7 p.41-42, §12.1.2 p.116): MODE is Direct (0) or
+-- Vectored (1), with a 4-byte aligned BASE in both.  A write of a reserved
+-- MODE keeps the old MODE and still writes BASE ([D39]).
+regType legalize_xtvec(v::regType, old::regType) =
+    if v<1> then v<63:2> : old<1:0> else v
+
+-- mepc and sepc (P §3.1.14 p.48, §12.1.7 p.119): bit 0 is always zero.
+-- Bit 1 stays writable when IALIGN = 32 but is then masked when read, by
+-- read_xepc ([D44]).
+regType legalize_xepc(v::regType) = v && ~0x1
+
+-- mcause and scause (P §3.1.15 p.49-50, §12.1.8 p.120): the exception
+-- code is WLRL.  A write of a code this hart does not have leaves the
+-- register unchanged; the legal codes are those of sail-riscv's
+-- legalize_cause ([D33]).  scause holds any code from 0 to 31.
+mcause legalize_mcause(v::regType, old::mcause) =
+{ c = v<62:0>
+; if (if v<63> then c == 1 or c == 3 or c == 5 or c == 7 or c == 9 or c == 11
+      else (c <+ 16 and c != 10 and c != 14) or c == 19)
+  then mcause(v) else old
+}
+
+mcause legalize_scause(v::regType, old::mcause) =
+    if v<62:0> <=+ 31 then mcause(v) else legalize_mcause(v, old)
+
+-- satp (P §12.1.11 p.124-126): only MODE = Bare is implemented, and for
+-- any other MODE "the entire write has no effect" (p.126, [D32]).
+regType legalize_satp(v::regType, old::regType) =
+    if v<63:60> == 0 then v else old
+
+-- PMP configuration (P §3.7.1 Figures 31 and 34 p.71-72): one byte per
+-- entry; pmpcfg0 holds entries 0-7 and pmpcfg2 entries 8-15.
+register pmpcfg :: bits(8)
+{     7 : L         -- locked
+,   4-3 : A         -- 0 OFF, 1 TOR, 2 NA4, 3 NAPOT
+,     2 : X
+,     1 : W
+,     0 : R
+}
+
+-- A locked entry ignores writes until reset (P §3.7.1.2 p.73).  Bits 6:5
+-- are read-only zero.  R = 0 with W = 1 is reserved and is stored as
+-- R = W = X = 0 ([D49]).  With grain G = 0 every A mode can be selected.
+pmpcfg legalize_pmpcfg_byte(b::bits(8), old::pmpcfg) =
+    if old.L then old
+    else { var n = pmpcfg(b && 0x9F)
+         ; when not n.R and n.W do { n.W <- false; n.X <- false }
+         ; n
+         }
+
+-- The 8 entries of pmpcfg0 or pmpcfg2 are legalised separately.
+regType legalize_pmpcfg(v::regType, old::regType) =
+    &legalize_pmpcfg_byte(v<63:56>, pmpcfg(old<63:56>)) :
+    &legalize_pmpcfg_byte(v<55:48>, pmpcfg(old<55:48>)) :
+    &legalize_pmpcfg_byte(v<47:40>, pmpcfg(old<47:40>)) :
+    &legalize_pmpcfg_byte(v<39:32>, pmpcfg(old<39:32>)) :
+    &legalize_pmpcfg_byte(v<31:24>, pmpcfg(old<31:24>)) :
+    &legalize_pmpcfg_byte(v<23:16>, pmpcfg(old<23:16>)) :
+    &legalize_pmpcfg_byte(v<15:8>,  pmpcfg(old<15:8>))  :
+    &legalize_pmpcfg_byte(v<7:0>,   pmpcfg(old<7:0>))
+
 ---------------------------------------------------------------------------
 -- Instruction fetch control
 ---------------------------------------------------------------------------
@@ -555,6 +583,9 @@ declare
   c_UCSR        :: id -> UserCSR                -- user-level CSRs
   c_SCSR        :: id -> SupervisorCSR          -- supervisor-level CSRs
   c_MCSR        :: id -> MachineCSR             -- machine-level CSRs
+
+  c_extMEIP     :: id -> bool                   -- platform interrupt lines:
+  c_extSEIP     :: id -> bool                   --   MEIP and external SEIP
 
   -- interpreter execution context
   c_NextFetch   :: id -> TransferControl option
@@ -640,6 +671,53 @@ component ExitCode :: regType
   assign value = c_ExitCode(procID) <- value
 }
 
+-- physical memory
+
+{- Original memory replaced by byte memory when exporting to HOL
+declare MEM :: pAddrIdx -> regType -- raw memory, laid out in blocks
+                                   -- of (|pAddr|-|pAddrIdx|) bits
+
+unit initMem(val::regType) =
+    MEM <- InitMap(val)
+-}
+
+declare MEM8 :: pAddr -> byte
+
+component MEM (a::pAddrIdx) :: regType
+{
+  value =
+    { b = [a] << 3
+    ; ( MEM8 (b + 7) : MEM8 (b + 6) : MEM8 (b + 5) : MEM8 (b + 4) :
+        MEM8 (b + 3) : MEM8 (b + 2) : MEM8 (b + 1) : MEM8 (b) )
+    }
+  assign val =
+    { b = [a] << 3
+    ; MEM8 (b + 7) <- val<63:56>
+    ; MEM8 (b + 6) <- val<55:48>
+    ; MEM8 (b + 5) <- val<47:40>
+    ; MEM8 (b + 4) <- val<39:32>
+    ; MEM8 (b + 3) <- val<31:24>
+    ; MEM8 (b + 2) <- val<23:16>
+    ; MEM8 (b + 1) <- val<15:8 >
+    ; MEM8 (b    ) <- val<7 :0 >
+    }
+}
+
+-- The core-local interruptor (CLINT) of sail-riscv's platform.  mtime,
+-- mtimecmp and msip are memory-mapped registers (P §3.2.1 p.59, §3.1.9
+-- p.44), so here they are words of memory ([D67]).  Nothing in the model
+-- advances mtime: the emulator does that after every step ([D63]).
+
+pAddr CLINT_BASE = 0x2000000
+
+-- shared by all harts
+regType mtime() = MEM((CLINT_BASE + 0xBFF8)<63:3>)
+
+regType mtimecmp(h::id) = MEM((CLINT_BASE + 0x4000 + 8 * ZeroExtend(h))<63:3>)
+
+-- bit 0 of the 32-bit msip register of hart h
+bool msip(h::id) = MEM8(CLINT_BASE + 4 * ZeroExtend(h))<0>
+
 -- machine state utilities
 
 -- misa.MXL is read-only 2, so this is always false ([D4]).
@@ -655,8 +733,10 @@ bool haveRVC() =
 bool fpEnabled() =
     MCSR.mstatus.FS != ext_status(Off)
 
-regType legalizeEPC(v::regType) =
-    if haveRVC() then v && SignExtend('10') else v && SignExtend('100')
+-- mepc and sepc as read, also by MRET and SRET: bit 1 reads as zero when
+-- IALIGN = 32 (P §3.1.14 p.48, [D44]).
+regType read_xepc(epc::regType) =
+    if haveRVC() then epc else epc && ~0x3
 
 -- The current privilege level (P §1.2 p.11) is not held in a CSR.  It is
 -- written only by setPrivilege, so the reserved encoding 10 never occurs.
@@ -669,15 +749,65 @@ unit setPrivilege(p::Privilege) =
 regType curEPC() =
     match curPrivilege()
     { case User         => #INTERNAL_ERROR("No EPC in U-mode")
-      case Supervisor   => SCSR.sepc
-      case Machine      => MCSR.mepc
+      case Supervisor   => read_xepc(SCSR.sepc)
+      case Machine      => read_xepc(MCSR.mepc)
     }
 
-unit sendIPI(core::regType) =
-{ id = [core]::id
-; when [id]::nat < totalCore
-  do c_MCSR(id).mip.MSIP <- true
+-- mip as read (P §3.1.9 p.43-45): MSIP and MTIP come from the CLINT
+-- (MTIP is pending while mtime >= mtimecmp, unsigned, P §3.2.1 p.59), MEIP
+-- from the platform, and SEIP is the stored bit or the platform's line.
+regType read_mip() =
+{ var ip = mip(MCSR.&mip && 0x222)
+; ip.MSIP <- msip(procID)
+; ip.MTIP <- mtimecmp(procID) <=+ mtime()
+; ip.SEIP <- MCSR.mip.SEIP or c_extSEIP(procID)
+; ip.MEIP <- c_extMEIP(procID)
+; &ip
 }
+
+-- cycle, time and instret are readable below M-mode only when enabled in
+-- mcounteren, and in U-mode also in scounteren (P §3.1.11 p.47, §12.1.5
+-- p.119).  i < 3: hpmcounter3-31 do not exist ([D25]).
+bool counterReadAllowed(csr::creg, p::Privilege) =
+{ i = [csr<4:0>]::nat
+; match p
+  { case Machine    => true
+    case Supervisor => MCSR.mcounteren<i>
+    case User       => MCSR.mcounteren<i> and SCSR.scounteren<i>
+  }
+}
+
+-- PMP entry i (P §3.7.1 p.70-73)
+
+pmpcfg pmpcfg_ent(i::bits(4)) =
+    pmpcfg(((if i<3> then MCSR.pmpcfg2 else MCSR.pmpcfg0) >>+ (8 * ([i<2:0>]::nat)))<7:0>)
+
+-- pmpaddr<i> holds bits 55:2 of a physical address, so bits 63:54 are
+-- read-only zero (Figure 33 p.71).  A write is ignored while entry i is
+-- locked, or while entry i+1 is locked and TOR (P §3.7.1.2 p.73).
+unit write_pmpaddr(i::bits(4), v::regType) =
+    when not (pmpcfg_ent(i).L or
+              (i != 15 and pmpcfg_ent(i + 1).L and pmpcfg_ent(i + 1).A == 1))
+    do { a = v && 0x3FFFFFFFFFFFFF
+       ; match i
+         { case 0  => MCSR.pmpaddr0  <- a
+           case 1  => MCSR.pmpaddr1  <- a
+           case 2  => MCSR.pmpaddr2  <- a
+           case 3  => MCSR.pmpaddr3  <- a
+           case 4  => MCSR.pmpaddr4  <- a
+           case 5  => MCSR.pmpaddr5  <- a
+           case 6  => MCSR.pmpaddr6  <- a
+           case 7  => MCSR.pmpaddr7  <- a
+           case 8  => MCSR.pmpaddr8  <- a
+           case 9  => MCSR.pmpaddr9  <- a
+           case 10 => MCSR.pmpaddr10 <- a
+           case 11 => MCSR.pmpaddr11 <- a
+           case 12 => MCSR.pmpaddr12 <- a
+           case 13 => MCSR.pmpaddr13 <- a
+           case 14 => MCSR.pmpaddr14 <- a
+           case 15 => MCSR.pmpaddr15 <- a
+         }
+       }
 
 ---------------------------------------------------------------------------
 -- Floating Point
@@ -771,7 +901,8 @@ unit setFP_Inexact() =
 -- CSR Register address map
 ---------------------------------------------------------------------------
 
--- CSR access control
+-- CSR access control (P §2.1 p.13): csr<11:10> = 11 is read-only and
+-- csr<9:8> is the lowest privilege level that can access the CSR.
 
 type csrRW    = bits(2)         -- read/write check
 type csrPR    = bits(2)         -- privilege check
@@ -784,295 +915,293 @@ csrPR csrPR(csr::creg)  = csr<9:8>
 bool check_CSR_access(rw::csrRW, pr::csrPR, p::Privilege, a::accessType) =
     (a == Read or rw != 0b11) and (privLevel(p) >=+ pr)
 
--- XXX: Revise this to handle absence of counter regs in RV32E.
+-- The CSRs of this hart (P §2.2 Tables 3-8 p.14-23).  Every other address
+-- is reserved, and accessing it is an illegal instruction (P §2.1 p.13,
+-- [D24]).  This includes the RV32-only halves, hpmcounter3-31 ([D25]),
+-- the odd pmpcfg registers and those of PMP entries 16-63.
 bool is_CSR_defined(csr::creg) =
-    -- user-mode
-    (csr >= 0x001 and csr <= 0x003)
- or (csr >= 0xC00 and csr <= 0xC02)
- or (csr >= 0xC80 and csr <= 0xC82 and in32BitMode())
+    -- unprivileged: floating point, counters and timer
+    (csr >=+ 0x001 and csr <=+ 0x003)
+ or (csr >=+ 0xC00 and csr <=+ 0xC02)
 
-    -- supervisor-mode
- or (csr >= 0x100 and csr <= 0x101)
- or  csr == 0x104 or  csr == 0x121
+    -- supervisor-level
+ or  csr == 0x100 or (csr >=+ 0x104 and csr <=+ 0x106) or csr == 0x10A
+ or (csr >=+ 0x140 and csr <=+ 0x144) or csr == 0x180
 
- or  csr == 0xD01 or (csr == 0xD81 and in32BitMode())
+    -- machine-level
+ or (csr >=+ 0xF11 and csr <=+ 0xF15)
+ or (csr >=+ 0x300 and csr <=+ 0x306) or csr == 0x30A
+ or  csr == 0x320 or (csr >=+ 0x323 and csr <=+ 0x33F)
+ or (csr >=+ 0x340 and csr <=+ 0x344)
+ or  csr == 0x3A0 or csr == 0x3A2 or (csr >=+ 0x3B0 and csr <=+ 0x3BF)
+ or  csr == 0xB00 or (csr >=+ 0xB02 and csr <=+ 0xB1F)
 
- or (csr >= 0x140 and csr <= 0x141) or csr == 0x144
- or (csr >= 0xD42 and csr <= 0xD43)
+-- mhpmevent3-31 and mhpmcounter3-31: read-only zero, writes are ignored
+-- (P §3.1.10 p.46, [D26])
+bool is_mhpm_CSR(csr::creg) =
+    (csr >=+ 0x323 and csr <=+ 0x33F) or (csr >=+ 0xB03 and csr <=+ 0xB1F)
 
- or (csr >= 0x180 and csr <= 0x181)
+-- Further conditions on CSR access ([D9])
+bool check_CSR_conditions(csr::creg, p::Privilege) =
+    -- fflags, frm, fcsr need mstatus.FS != Off (P §3.1.6.7 p.38)
+    if csr >=+ 0x001 and csr <=+ 0x003 then fpEnabled()
+    -- cycle, time, instret
+    else if csr >=+ 0xC00 and csr <=+ 0xC02 then counterReadAllowed(csr, p)
+    -- satp is illegal in S-mode while mstatus.TVM is set (P §3.1.6.6 p.37)
+    else if csr == 0x180 then not (p == Supervisor and MCSR.mstatus.TVM)
+    else true
 
- or (csr >= 0x900 and csr <= 0x902)
- or (csr >= 0x980 and csr <= 0x982 and in32BitMode())
-
-    -- machine-mode
- or (csr >= 0xF00 and csr <= 0xF01) or csr == 0xF10
- or (csr >= 0x300 and csr <= 0x302) or csr == 0x304 or csr == 0x321
- or  csr == 0x701 or (csr == 0x741 and in32BitMode())
- or (csr >= 0x340 and csr <= 0x344)
- or (csr >= 0x380 and csr <= 0x385)
- or (csr >= 0x780 and csr <= 0x783 and csr != 0x782)
-
---- XXX: the CSRMap below is broken in 32-bit mode, since we need to
---- convert from 64-bit regType to 32-bit XLEN.
+-- The read values and write legalisation of the CSRs (P §3.1, §3.7.1,
+-- §12.1; U §4.3, §6.1.2).  Writes never trap: those that checkCSROp
+-- rejects do not get here.
 component CSRMap(csr::creg) :: regType
 {
   value =
       match csr
-      { -- user floating-point context
+      { -- floating-point control and status (U §6.1.2 p.130-131)
         case 0x001  => ZeroExtend(c_UCSR(procID).&fpcsr<4:0>)
         case 0x002  => ZeroExtend(c_UCSR(procID).fpcsr.FRM)
         case 0x003  => ZeroExtend(c_UCSR(procID).&fpcsr<7:0>)
 
-        -- user counter/timers
-        case 0xC00  => c_cycles(procID)  + c_UCSR(procID).cycle_delta
-        case 0xC01  => clock             + c_UCSR(procID).time_delta
-        case 0xC02  => c_instret(procID) + c_UCSR(procID).instret_delta
-        case 0xC80  => SignExtend((c_cycles(procID)  + c_UCSR(procID).cycle_delta)<63:32>)
-        case 0xC81  => SignExtend((clock             + c_UCSR(procID).time_delta)<63:32>)
-        case 0xC82  => SignExtend((c_instret(procID) + c_UCSR(procID).instret_delta)<63:32>)
+        -- counters and timer: mcycle, mtime, minstret (U §4.3 p.65-66)
+        case 0xC00  => c_cycles(procID)
+        case 0xC01  => mtime()
+        case 0xC02  => c_instret(procID)
 
         -- supervisor trap setup
         case 0x100  => read_sstatus(c_MCSR(procID).mstatus)
-        case 0x101  => c_SCSR(procID).stvec
-        case 0x104  => &lift_mie_sie(c_MCSR(procID).mie)
-        case 0x121  => c_SCSR(procID).stimecmp
-
-        -- supervisor timer
-        case 0xD01  => clock + c_SCSR(procID).stime_delta
-        case 0xD81  => SignExtend((clock + c_SCSR(procID).stime_delta)<63:32>)
+        case 0x104  => c_MCSR(procID).&mie && c_MCSR(procID).mideleg
+        case 0x105  => c_SCSR(procID).stvec
+        case 0x106  => c_SCSR(procID).scounteren
+        case 0x10A  => c_SCSR(procID).senvcfg
 
         -- supervisor trap handling
         case 0x140  => c_SCSR(procID).sscratch
-        case 0x141  => c_SCSR(procID).sepc
-        case 0xD42  => c_SCSR(procID).&scause
-        case 0xD43  => c_SCSR(procID).sbadaddr
-        case 0x144  => &lift_mip_sip(c_MCSR(procID).mip)
+        case 0x141  => read_xepc(c_SCSR(procID).sepc)
+        case 0x142  => c_SCSR(procID).&scause
+        case 0x143  => c_SCSR(procID).stval
+        case 0x144  => read_mip() && c_MCSR(procID).mideleg
 
         -- supervisor protection and translation
-        case 0x180  => c_SCSR(procID).sptbr
-        case 0x181  => c_SCSR(procID).sasid
+        case 0x180  => c_SCSR(procID).satp
 
-        -- supervisor read/write shadow of user read-only registers
-        case 0x900  => c_cycles(procID)  + c_UCSR(procID).cycle_delta
-        case 0x901  => clock             + c_UCSR(procID).time_delta
-        case 0x902  => c_instret(procID) + c_UCSR(procID).instret_delta
-        case 0x980  => SignExtend((c_cycles(procID)  + c_UCSR(procID).cycle_delta)<63:32>)
-        case 0x981  => SignExtend((clock             + c_UCSR(procID).time_delta)<63:32>)
-        case 0x982  => SignExtend((c_instret(procID) + c_UCSR(procID).instret_delta)<63:32>)
-
-        -- machine information registers
-        case 0xF00  => c_MCSR(procID).&misa
-        case 0xF01  => 0
-        case 0xF10  => c_MCSR(procID).mhartid
+        -- machine information registers: mvendorid, marchid, mimpid and
+        -- mconfigptr are zero (P §3.1.2-3.1.4 p.29-31, §3.1.17 p.53, [D31])
+        case 0xF11  => 0
+        case 0xF12  => 0
+        case 0xF13  => 0
+        case 0xF14  => c_MCSR(procID).mhartid
+        case 0xF15  => 0
 
         -- machine trap setup
         case 0x300  => read_mstatus(c_MCSR(procID).mstatus)
-        case 0x301  => c_MCSR(procID).mtvec
-        case 0x302  => c_MCSR(procID).&mtdeleg
+        case 0x301  => c_MCSR(procID).&misa
+        case 0x302  => c_MCSR(procID).medeleg
+        case 0x303  => c_MCSR(procID).mideleg
         case 0x304  => c_MCSR(procID).&mie
-        case 0x321  => c_MCSR(procID).mtimecmp
+        case 0x305  => c_MCSR(procID).mtvec
+        case 0x306  => c_MCSR(procID).mcounteren
+        case 0x30A  => c_MCSR(procID).menvcfg
 
-        -- machine timers and counters
-        case 0x701  => clock + c_MCSR(procID).mtime_delta
-        case 0x741  => SignExtend((clock + c_MCSR(procID).mtime_delta)<63:32>)
+        -- machine counter setup
+        case 0x320  => c_MCSR(procID).mcountinhibit
 
         -- machine trap handling
         case 0x340  => c_MCSR(procID).mscratch
-        case 0x341  => c_MCSR(procID).mepc
+        case 0x341  => read_xepc(c_MCSR(procID).mepc)
         case 0x342  => c_MCSR(procID).&mcause
-        case 0x343  => c_MCSR(procID).mbadaddr
-        case 0x344  => c_MCSR(procID).&mip
+        case 0x343  => c_MCSR(procID).mtval
+        case 0x344  => read_mip()
 
-        -- machine protection and translation
-        case 0x380  => c_MCSR(procID).mbase
-        case 0x381  => c_MCSR(procID).mbound
-        case 0x382  => c_MCSR(procID).mibase
-        case 0x383  => c_MCSR(procID).mibound
-        case 0x384  => c_MCSR(procID).mdbase
-        case 0x385  => c_MCSR(procID).mdbound
+        -- machine memory protection
+        case 0x3A0  => c_MCSR(procID).pmpcfg0
+        case 0x3A2  => c_MCSR(procID).pmpcfg2
+        case 0x3B0  => c_MCSR(procID).pmpaddr0
+        case 0x3B1  => c_MCSR(procID).pmpaddr1
+        case 0x3B2  => c_MCSR(procID).pmpaddr2
+        case 0x3B3  => c_MCSR(procID).pmpaddr3
+        case 0x3B4  => c_MCSR(procID).pmpaddr4
+        case 0x3B5  => c_MCSR(procID).pmpaddr5
+        case 0x3B6  => c_MCSR(procID).pmpaddr6
+        case 0x3B7  => c_MCSR(procID).pmpaddr7
+        case 0x3B8  => c_MCSR(procID).pmpaddr8
+        case 0x3B9  => c_MCSR(procID).pmpaddr9
+        case 0x3BA  => c_MCSR(procID).pmpaddr10
+        case 0x3BB  => c_MCSR(procID).pmpaddr11
+        case 0x3BC  => c_MCSR(procID).pmpaddr12
+        case 0x3BD  => c_MCSR(procID).pmpaddr13
+        case 0x3BE  => c_MCSR(procID).pmpaddr14
+        case 0x3BF  => c_MCSR(procID).pmpaddr15
 
-        -- machine host-target interface (berkeley extension)
-        case 0x780  => c_MCSR(procID).mtohost
-        case 0x781  => c_MCSR(procID).mfromhost
-        case 0x783  => 0
+        -- machine counters
+        case 0xB00  => c_cycles(procID)
+        case 0xB02  => c_instret(procID)
 
-        case _      => #UNDEFINED("unexpected CSR read at " : [csr])
+        case _      => if is_mhpm_CSR(csr) then 0
+                       else #UNDEFINED("unexpected CSR read at " : [csr])
       }
 
   assign value =
       match csr
-      { -- user floating-point context
+      { -- floating-point control and status (U §6.1.2 p.130-131); a write
+        -- makes the floating-point state Dirty (P §3.1.6.7 p.39)
         case 0x001  => { c_UCSR(procID).&fpcsr<4:0>     <- value<4:0>
                        ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
         case 0x002  => { c_UCSR(procID).fpcsr.FRM       <- value<2:0>
                        ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
-        case 0x003  => { c_UCSR(procID).&fpcsr          <- value<31:0>
+        case 0x003  => { c_UCSR(procID).&fpcsr          <- ZeroExtend(value<7:0>)
                        ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
-        -- user counters/timers are URO
 
-        -- supervisor trap setup
+        -- supervisor trap setup; sie is mie restricted to the interrupts
+        -- delegated in mideleg (P §12.1.3 p.117)
         case 0x100  => c_MCSR(procID).mstatus           <- legalize_sstatus(value, c_MCSR(procID).mstatus)
+        case 0x104  => c_MCSR(procID).mie               <- mie((c_MCSR(procID).&mie && ~c_MCSR(procID).mideleg)
+                                                               || (value && c_MCSR(procID).mideleg))
+        case 0x105  => c_SCSR(procID).stvec             <- legalize_xtvec(value, c_SCSR(procID).stvec)
+        -- CY, TM, IR (P §12.1.5 p.119, [D27])
+        case 0x106  => c_SCSR(procID).scounteren        <- value && 0x7
+        -- only FIOM (P §12.1.10 p.122, [D29])
+        case 0x10A  => c_SCSR(procID).senvcfg           <- value && 0x1
 
-        case 0x101  => c_SCSR(procID).stvec             <- value
-        -- sie back-projects to mie
-        case 0x104  => c_MCSR(procID).mie               <- lower_sie_mie(sie(value), c_MCSR(procID).mie)
-        case 0x121  =>
-        { c_SCSR(procID).stimecmp <- value
-        ; c_MCSR(procID).mip.STIP <- false
-        }
-
-        -- supervisor trap handling
+        -- supervisor trap handling; of sip only SSIP is writable, and only
+        -- when delegated (P §12.1.3 p.117-118)
         case 0x140  => c_SCSR(procID).sscratch          <- value
-        case 0x141  => c_SCSR(procID).sepc              <- legalizeEPC(value)  -- only bit 0 is zero if C is enabled
-        -- scause, sbadaddr are SRO
-        -- sip back-projects to mip
-        case 0x144  => c_MCSR(procID).mip               <- lower_sip_mip(sip(value), c_MCSR(procID).mip)
+        case 0x141  => c_SCSR(procID).sepc              <- legalize_xepc(value)
+        case 0x142  => c_SCSR(procID).scause            <- legalize_scause(value, c_SCSR(procID).scause)
+        case 0x143  => c_SCSR(procID).stval             <- value
+        case 0x144  => when c_MCSR(procID).mideleg<1>
+                       do c_MCSR(procID).mip.SSIP       <- value<1>
 
         -- supervisor protection and translation
-        case 0x180  => c_SCSR(procID).sptbr             <- value
-        case 0x181  => c_SCSR(procID).sasid             <- value
+        case 0x180  => c_SCSR(procID).satp              <- legalize_satp(value, c_SCSR(procID).satp)
 
-        -- supervisor read/write shadow of user read-only registers
-        case 0x900  => c_UCSR(procID).cycle_delta       <- value - c_cycles(procID)
-        case 0x901  => c_UCSR(procID).time_delta        <- value - clock
-        case 0x902  => c_UCSR(procID).instret_delta     <- value - c_instret(procID)
-
-        case 0x980  => c_UCSR(procID).cycle_delta<63:32>    <- (value<31:0> - c_cycles(procID)<63:32>)  << 32
-        case 0x981  => c_UCSR(procID).time_delta<63:32>     <- (value<31:0> - clock<63:32>)             << 32
-        case 0x982  => c_UCSR(procID).instret_delta<63:32>  <- (value<31:0> - c_instret(procID)<63:32>) << 32
-
-        -- TODO: hypervisor register write support
-
-        -- machine information registers are MRO
-
-        -- machine trap setup
+        -- machine trap setup.  medeleg: exceptions 0-9, 12, 13 and 15 can
+        -- be delegated ([D40]; 11 and 16 are read-only zero, P §3.1.8 p.43);
+        -- mideleg: SSI, STI, SEI ([D41]); mie: the six interrupts.
         case 0x300  => c_MCSR(procID).mstatus           <- legalize_mstatus(value)
-        case 0x301  => c_MCSR(procID).mtvec             <- value
-        case 0x302  => c_MCSR(procID).mtdeleg           <- mtdeleg(value)
-        case 0x304  => c_MCSR(procID).mie               <- mie(value)
-        case 0x321  =>
-        { c_MCSR(procID).mtimecmp <- value
-        ; c_MCSR(procID).mip.MTIP <- false
-        }
+        case 0x301  => c_MCSR(procID).misa              <- legalize_misa(value, c_MCSR(procID).misa, c_PC(procID))
+        case 0x302  => c_MCSR(procID).medeleg           <- value && 0xB3FF
+        case 0x303  => c_MCSR(procID).mideleg           <- value && 0x222
+        case 0x304  => c_MCSR(procID).mie               <- mie(value && 0xAAA)
+        case 0x305  => c_MCSR(procID).mtvec             <- legalize_xtvec(value, c_MCSR(procID).mtvec)
+        -- CY, TM, IR (P §3.1.11 p.46-47, [D27])
+        case 0x306  => c_MCSR(procID).mcounteren        <- value && 0x7
+        -- only FIOM (P §3.1.18 p.54, [D29])
+        case 0x30A  => c_MCSR(procID).menvcfg           <- value && 0x1
 
-        -- machine timers and counters
-        case 0x701  => c_MCSR(procID).mtime_delta           <- value - clock
-        case 0x741  => c_MCSR(procID).mtime_delta<63:32>    <- (value<31:0> - clock<63:32>) << 32
+        -- machine counter setup: CY and IR (P §3.1.12 p.47, [D28])
+        case 0x320  => c_MCSR(procID).mcountinhibit     <- value && 0x5
 
-        -- machine trap handling
+        -- machine trap handling; of mip only SSIP, STIP and SEIP are
+        -- writable (P §3.1.9 p.44-45)
         case 0x340  => c_MCSR(procID).mscratch          <- value
-        case 0x341  => c_MCSR(procID).mepc              <- legalizeEPC(value)  -- only bit 0 is zero if C is enabled
-        case 0x342  => c_MCSR(procID).mcause            <- mcause(value)
-        case 0x343  => c_MCSR(procID).mbadaddr          <- value
-        case 0x344  => c_MCSR(procID).mip               <- mip(value)
+        case 0x341  => c_MCSR(procID).mepc              <- legalize_xepc(value)
+        case 0x342  => c_MCSR(procID).mcause            <- legalize_mcause(value, c_MCSR(procID).mcause)
+        case 0x343  => c_MCSR(procID).mtval             <- value
+        case 0x344  => c_MCSR(procID).mip               <- mip(value && 0x222)
 
-        -- machine protection and translation
-        case 0x380  => c_MCSR(procID).mbase             <- value
-        case 0x381  => c_MCSR(procID).mbound            <- value
-        case 0x382  => c_MCSR(procID).mibase            <- value
-        case 0x383  => c_MCSR(procID).mibound           <- value
-        case 0x384  => c_MCSR(procID).mdbase            <- value
-        case 0x385  => c_MCSR(procID).mdbound           <- value
+        -- machine memory protection
+        case 0x3A0  => c_MCSR(procID).pmpcfg0           <- legalize_pmpcfg(value, c_MCSR(procID).pmpcfg0)
+        case 0x3A2  => c_MCSR(procID).pmpcfg2           <- legalize_pmpcfg(value, c_MCSR(procID).pmpcfg2)
+        case 0x3B0  => write_pmpaddr(0, value)
+        case 0x3B1  => write_pmpaddr(1, value)
+        case 0x3B2  => write_pmpaddr(2, value)
+        case 0x3B3  => write_pmpaddr(3, value)
+        case 0x3B4  => write_pmpaddr(4, value)
+        case 0x3B5  => write_pmpaddr(5, value)
+        case 0x3B6  => write_pmpaddr(6, value)
+        case 0x3B7  => write_pmpaddr(7, value)
+        case 0x3B8  => write_pmpaddr(8, value)
+        case 0x3B9  => write_pmpaddr(9, value)
+        case 0x3BA  => write_pmpaddr(10, value)
+        case 0x3BB  => write_pmpaddr(11, value)
+        case 0x3BC  => write_pmpaddr(12, value)
+        case 0x3BD  => write_pmpaddr(13, value)
+        case 0x3BE  => write_pmpaddr(14, value)
+        case 0x3BF  => write_pmpaddr(15, value)
 
-        -- machine host-target interface (berkeley extension)
-        -- TODO: XXX: set I/O pending bit
-        case 0x780  =>
-        { c_MCSR(procID).mtohost    <- value }
-        case 0x781  =>
-        { c_MCSR(procID).mfromhost  <- value }
-        case 0x783  =>
-        { sendIPI(value) }
+        -- machine counters
+        case 0xB00  => c_cycles(procID)                 <- value
+        case 0xB02  => c_instret(procID)                <- value
 
-        case _      => #INTERNAL_ERROR("unexpected CSR write to " : [csr])
+        case _      => when not is_mhpm_CSR(csr)
+                       do #INTERNAL_ERROR("unexpected CSR write to " : [csr])
       }
 }
 
 string csrName(csr::creg) =
     match csr
-    { -- user floating-point context
+    { -- floating-point control and status
       case 0x001  => "fflags"
       case 0x002  => "frm"
       case 0x003  => "fcsr"
 
-      -- user counter/timers
+      -- counters and timer
       case 0xC00  => "cycle"
       case 0xC01  => "time"
       case 0xC02  => "instret"
-      case 0xC80  => "cycleh"
-      case 0xC81  => "timeh"
-      case 0xC82  => "instreth"
 
       -- supervisor trap setup
       case 0x100  => "sstatus"
-      case 0x101  => "stvec"
       case 0x104  => "sie"
-      case 0x121  => "stimecmp"
-
-      -- supervisor timer
-      case 0xD01  => "stime"
-      case 0xD81  => "stimeh"
+      case 0x105  => "stvec"
+      case 0x106  => "scounteren"
+      case 0x10A  => "senvcfg"
 
       -- supervisor trap handling
       case 0x140  => "sscratch"
       case 0x141  => "sepc"
-      case 0xD42  => "scause"
-      case 0xD43  => "sbadaddr"
-      case 0x144  => "mip"
+      case 0x142  => "scause"
+      case 0x143  => "stval"
+      case 0x144  => "sip"
 
       -- supervisor protection and translation
-      case 0x180  => "sptbr"
-      case 0x181  => "sasid"
-
-      -- supervisor read/write shadow of user read-only registers
-      case 0x900  => "cycle"
-      case 0x901  => "time"
-      case 0x902  => "instret"
-      case 0x980  => "cycleh"
-      case 0x981  => "timeh"
-      case 0x982  => "instreth"
+      case 0x180  => "satp"
 
       -- machine information registers
-      case 0xF00  => "misa"
-      case 0xF01  => "mimpid"
-      case 0xF10  => "mhartid"
+      case 0xF11  => "mvendorid"
+      case 0xF12  => "marchid"
+      case 0xF13  => "mimpid"
+      case 0xF14  => "mhartid"
+      case 0xF15  => "mconfigptr"
 
       -- machine trap setup
       case 0x300  => "mstatus"
-      case 0x301  => "mtvec"
-      case 0x302  => "mtdeleg"
+      case 0x301  => "misa"
+      case 0x302  => "medeleg"
+      case 0x303  => "mideleg"
       case 0x304  => "mie"
-      case 0x321  => "mtimecmp"
+      case 0x305  => "mtvec"
+      case 0x306  => "mcounteren"
+      case 0x30A  => "menvcfg"
 
-      -- machine timers and counters
-      case 0x701  => "mtime"
-      case 0x741  => "mtimeh"
+      -- machine counter setup
+      case 0x320  => "mcountinhibit"
 
       -- machine trap handling
       case 0x340  => "mscratch"
       case 0x341  => "mepc"
       case 0x342  => "mcause"
-      case 0x343  => "mbadaddr"
+      case 0x343  => "mtval"
       case 0x344  => "mip"
 
-      -- machine protection and translation
-      case 0x380  => "mbase"
-      case 0x381  => "mbound"
-      case 0x382  => "mibase"
-      case 0x383  => "mibound"
-      case 0x384  => "mdbase"
-      case 0x385  => "mdbound"
+      -- machine memory protection
+      case 0x3A0  => "pmpcfg0"
+      case 0x3A2  => "pmpcfg2"
 
-      -- machine host-target interface (berkeley extension)
-      case 0x780  => "mtohost"
-      case 0x781  => "mfromhost"
+      -- machine counters
+      case 0xB00  => "mcycle"
+      case 0xB02  => "minstret"
 
-      case 0x783  => "send_ipi"
-
-      case _      => "UNKNOWN"
+      -- numbered CSRs, and the hexadecimal address of any other
+      case _      =>
+        if csr >=+ 0x3B0 and csr <=+ 0x3BF then "pmpaddr" : [[csr<3:0>]::nat]
+        else if csr >=+ 0x323 and csr <=+ 0x33F then "mhpmevent" : [[csr<4:0>]::nat]
+        else if csr >=+ 0xB03 and csr <=+ 0xB1F then "mhpmcounter" : [[csr<4:0>]::nat]
+        else "0x" : PadLeft(#"0", 3, [csr])
     }
 
 ---------------------------------------------------------------------------
@@ -1316,7 +1445,7 @@ unit signalEnvCall() =
 -- software interrupt.  We treat timer interrupts at higher priority.
 
 (Interrupt * Privilege) option checkPrivInterrupt(curPriv::Privilege) =
-{ ip = MCSR.mip
+{ ip = mip(read_mip())
 ; ie = MCSR.mie
 ; match curPriv
   { case User       => #INTERNAL_ERROR("No user-level interrupts!")
@@ -1368,10 +1497,10 @@ unit takeTrap(intr::bool, ec::exc_code, epc::regType, badaddr::vAddr option, toP
   { case User       => #INTERNAL_ERROR("Illegal trap to U-mode")
     case Supervisor =>
     { SCSR.scause.Int   <- intr
-    ; SCSR.scause.EC    <- ec
+    ; SCSR.scause.EC    <- ZeroExtend(ec)
     ; SCSR.sepc         <- epc
     ; when IsSome(badaddr)
-      do SCSR.sbadaddr  <- ValOf(badaddr)
+      do SCSR.stval     <- ValOf(badaddr)
     ; MCSR.mstatus.SPIE <- MCSR.mstatus.SIE
     ; MCSR.mstatus.SIE  <- false
     ; MCSR.mstatus.SPP  <- fromP != User
@@ -1381,10 +1510,10 @@ unit takeTrap(intr::bool, ec::exc_code, epc::regType, badaddr::vAddr option, toP
     }
     case Machine    =>
     { MCSR.mcause.Int   <- intr
-    ; MCSR.mcause.EC    <- ec
+    ; MCSR.mcause.EC    <- ZeroExtend(ec)
     ; MCSR.mepc         <- epc
     ; when IsSome(badaddr)
-      do MCSR.mbadaddr  <- ValOf(badaddr)
+      do MCSR.mtval     <- ValOf(badaddr)
     ; MCSR.mstatus.MPIE <- MCSR.mstatus.MIE
     ; MCSR.mstatus.MIE  <- false
     ; MCSR.mstatus.MPP  <- privLevel(fromP)
@@ -1461,36 +1590,6 @@ unit writeFPRD(rd::reg, val::regType) =
 ---------------------------------------------------------------------------
 -- Raw memory access
 ---------------------------------------------------------------------------
-
-{- Original memory replaced by byte memory when exporting to HOL
-declare MEM :: pAddrIdx -> regType -- raw memory, laid out in blocks
-                                   -- of (|pAddr|-|pAddrIdx|) bits
-
-unit initMem(val::regType) =
-    MEM <- InitMap(val)
--}
-
-declare MEM8 :: pAddr -> byte
-
-component MEM (a::pAddrIdx) :: regType
-{
-  value =
-    { b = [a] << 3
-    ; ( MEM8 (b + 7) : MEM8 (b + 6) : MEM8 (b + 5) : MEM8 (b + 4) :
-        MEM8 (b + 3) : MEM8 (b + 2) : MEM8 (b + 1) : MEM8 (b) )
-    }
-  assign val =
-    { b = [a] << 3
-    ; MEM8 (b + 7) <- val<63:56>
-    ; MEM8 (b + 6) <- val<55:48>
-    ; MEM8 (b + 5) <- val<47:40>
-    ; MEM8 (b + 4) <- val<39:32>
-    ; MEM8 (b + 3) <- val<31:24>
-    ; MEM8 (b + 2) <- val<23:16>
-    ; MEM8 (b + 1) <- val<15:8 >
-    ; MEM8 (b    ) <- val<7 :0 >
-    }
-}
 
 regType rawReadData(pAddr::pAddr) =
 { pAddrIdx = pAddr<63:3>
@@ -1683,7 +1782,7 @@ register SV_Vaddr :: regType
 -- can write back the PTE when its dirty bit needs to be updated.
 
 asidType curASID() =
-    SCSR.sasid<ASID_SIZE-1:0>
+    SCSR.satp<49:44>
 
 record TLBEntry
 { asid          :: asidType
@@ -1803,7 +1902,7 @@ pAddr option translate64(vAddr::regType, ft::fetchType, ac::accessType, priv::Pr
     }
     case None =>
     { mark_log(LOG_ADDRTR, "TLB miss!")
-    ; match walk64(vAddr, ft, ac, priv, SCSR.sptbr, level)
+    ; match walk64(vAddr, ft, ac, priv, ZeroExtend(SCSR.satp<43:0>) << PAGESIZE_BITS, level)
       { case Some(pAddr, pte, i, global, pteAddr)  =>
         { TLB <- addToTLB(asid, vAddr, pAddr, pte, pteAddr, i, global, TLB)
         ; Some(pAddr)
@@ -3963,7 +4062,7 @@ define System > ERET   =
 -----------------------------------
 define System > MRTS   =
 { SCSR.scause       <- MCSR.mcause
-; SCSR.sbadaddr     <- MCSR.mbadaddr
+; SCSR.stval        <- MCSR.mtval
 ; SCSR.sepc         <- MCSR.mepc
 
 ; setPrivilege(Supervisor)
@@ -3979,78 +4078,72 @@ define System > WFI    = nothing
 -- Control and Status Registers
 
 bool checkCSROp(csr::imm12, rs1::reg, a::accessType) =
-    is_CSR_defined(csr) and check_CSR_access(csrRW(csr), csrPR(csr), curPrivilege(), a)
+    is_CSR_defined(csr) and
+    check_CSR_access(csrRW(csr), csrPR(csr), curPrivilege(), a) and
+    check_CSR_conditions(csr, curPrivilege())
+
+construct csrOp { CSR_Write, CSR_Set, CSR_Clear }
+
+-- The six Zicsr instructions (U §4.2.1 p.62-63, Table 21).  f is the rs1
+-- or uimm field and src the value it stands for.  CSRRW and CSRRWI always
+-- write; the others write iff f is not 0, whatever the value of src, and
+-- only a write needs a writable CSR.  Standard CSRs have no side effects
+-- on reads (P §2.1 p.13), so the CSR is read also when rd = 0 ([D36]).
+-- The CSRRS and CSRRC of mip see SEIP without the platform's line (P
+-- §3.1.9 p.45).
+unit accessCSR(op::csrOp, rd::reg, f::reg, src::regType, csr::creg) =
+{ isWrite = op == CSR_Write or f != 0
+; if checkCSROp(csr, f, if isWrite then Write else Read)
+  then { old = CSR(csr)
+       ; when isWrite
+         do { base = if csr == 0x344 then (old && ~0x200) || (MCSR.&mip && 0x200)
+                     else old
+            ; writeCSR(csr, match op
+                            { case CSR_Write => src
+                              case CSR_Set   => base || src
+                              case CSR_Clear => base && ~src
+                            })
+            }
+       ; writeRD(rd, old)
+       }
+  else signalException(Illegal_Instr)
+}
 
 -----------------------------------
--- CSRRW  rd, rs1, imm
+-- CSRRW  rd, rs1, csr
 -----------------------------------
 define System > CSRRW(rd::reg, rs1::reg, csr::imm12) =
-    if checkCSROp(csr, rs1, Write)
-    then { val = CSR(csr)
-         ; writeCSR(csr, GPR(rs1))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Write, rd, rs1, GPR(rs1), csr)
 
 -----------------------------------
--- CSRRS  rd, rs1, imm
+-- CSRRS  rd, rs1, csr
 -----------------------------------
 define System > CSRRS(rd::reg, rs1::reg, csr::imm12) =
-    if checkCSROp(csr, rs1, if rs1 == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when rs1 != 0
-           do writeCSR(csr, val || GPR(rs1))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Set, rd, rs1, GPR(rs1), csr)
 
 -----------------------------------
--- CSRRC  rd, rs1, imm
+-- CSRRC  rd, rs1, csr
 -----------------------------------
 define System > CSRRC(rd::reg, rs1::reg, csr::imm12) =
-    if checkCSROp(csr, rs1, if rs1 == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when rs1 != 0
-           do writeCSR(csr, val && ~GPR(rs1))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Clear, rd, rs1, GPR(rs1), csr)
 
 -----------------------------------
--- CSRRWI rd, rs1, imm
+-- CSRRWI rd, uimm, csr
 -----------------------------------
 define System > CSRRWI(rd::reg, zimm::reg, csr::imm12) =
-    if checkCSROp(csr, zimm, if zimm == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when zimm != 0
-           do writeCSR(csr, ZeroExtend(zimm))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Write, rd, zimm, ZeroExtend(zimm), csr)
 
 -----------------------------------
--- CSRRSI rd, rs1, imm
+-- CSRRSI rd, uimm, csr
 -----------------------------------
 define System > CSRRSI(rd::reg, zimm::reg, csr::imm12) =
-    if checkCSROp(csr, zimm, if zimm == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when zimm != 0
-           do writeCSR(csr, val || ZeroExtend(zimm))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Set, rd, zimm, ZeroExtend(zimm), csr)
 
 -----------------------------------
--- CSRRCI rd, rs1, imm
+-- CSRRCI rd, uimm, csr
 -----------------------------------
 define System > CSRRCI(rd::reg, zimm::reg, csr::imm12) =
-    if checkCSROp(csr, zimm, if zimm == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when zimm != 0
-           do writeCSR(csr, val && ~ZeroExtend(zimm))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Clear, rd, zimm, ZeroExtend(zimm), csr)
 
 -- Address translation cache flush
 
@@ -5123,13 +5216,6 @@ unit tickClock() =
 unit incrInstret() =
     c_instret(procID) <- c_instret(procID) + 1
 
-unit checkTimers() =
-{ when (clock >+ MCSR.mtimecmp + MCSR.mtime_delta)
-  do MCSR.mip.MTIP <- true
-; when (clock >+ SCSR.stimecmp + SCSR.stime_delta)
-  do MCSR.mip.STIP <- true
-}
-
 unit Next =
 { clear_logs()
 
@@ -5162,8 +5248,6 @@ unit Next =
     ; Run(inst)
     }
   }
-
-; checkTimers()     -- this can trigger timer interrupts
 
 ; match NextFetch, checkInterrupts()
   { case None, None =>
