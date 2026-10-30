@@ -398,7 +398,6 @@ in
     let
       val (l, r) = dest_eqn ct th
       val (f, vs) = dest_lhs ct l
-      val fns = HOLset.addList (empty_tmset, fns)
       val vars = HOLset.addList (empty_varset, vs)
       val _ =
         length vs = HOLset.numItems vars orelse
@@ -622,7 +621,8 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
     fn code_eqs =>
       let
         (* all function constants from the left-hand sides of code equations *)
-        val fns = List.map (fst o strip_comb o fst o dest_eq) code_eqs
+        val fns = HOLset.addList (empty_tmset,
+                    List.map (fst o strip_comb o fst o dest_eq) code_eqs)
         (* vector with (const * (variables * rhs)) *)
         val eqs = Vector.map (dest_code_eqn ct fns) (Vector.fromList code_eqs)
         (* replace functions and variables with indices, with dest_cexp: *)

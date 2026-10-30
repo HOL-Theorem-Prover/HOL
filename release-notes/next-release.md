@@ -20,6 +20,21 @@ Contents
 
 New features
 ------------
+
+-   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
+
+    A type that recurses under an operator gets induction hypotheses stated through that operator's set function, which is correct but is not how a development states its own lemmas, so proofs normalise them by hand at every induction.
+    Theorems tagged `datatype_simp` are now used to normalise the principle of every type declared after them.
+    With nothing tagged the hypotheses are rephrased only, by pulling out the existentials the operators leave and unwinding the resulting equalities; tagging the set functions' own laws takes `(∀e0. (∃p. e0 ∈ setSND p ∧ MEM p l) ⇒ P e0)` to `(∀x e0. MEM (x,e0) l ⇒ P e0)`.
+    What a principle says is therefore a development's decision rather than the package's.
+
+    The principle as the construction stated it is kept alongside, and `TypeBase.set_induction_of` returns it.
+    Code that reads a principle should use that: `TypeBase.induction_of` now gives whatever the ambient `datatype_simp` theorems have made of it.
+
+-   HOL4’s algebraic datatype definition machinery now implements the *Bounded Natural Functors* idea due to Traytel *et al.*, which has underpinned Isabelle type definitions for a decade or more.
+    This allows easy definition of types that recurse under type oprerators such as finite sets, finite maps, and on the right of function arrows.
+    The package now automatically defines map, set and relator constants for those types that are themselves functors (*e.g.*, lists), and the user can specify what names they want for those new constants.
+
 -   `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
     Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
     (Indeed, see below, that trace doesn’t exist with that name anymore.)
@@ -37,244 +52,86 @@ New features
 
     The old `M-h C-u` binding which toggles Unicode pretty-printing in the output `*HOL*` buffer has now moved to `M-h u p`.
 
--   The emacs LSP client now shares keys with the older `*HOL*`-process mode rather than avoiding them.
-    A script is driven one way or the other, never both at once, so `M-h M-r`, `M-h s`, `M-h m`, `M-h M`, `M-h p`, `M-h g` and `M-h i` each run the LSP command when a server is serving the buffer, and the `*HOL*`-process command when none is.
-    `M-h M-M` and `M-h M-E` (which existed only to dodge the older bindings) and `M-h M-g` are gone; `M-h M-C` stays LSP-only, and `M-h M-m` stays `holmake` in both.
+-   There is now an LSP client (invoked under the hood by `hol lsp`, though this is unlikely to be something that users will invoke directly).
+    The Visual Studio extension (available on the [Microsoft](https://marketplace.visualstudio.com/items?itemName=HOL4Developers.hol4-vscode) and [open source](https://open-vsx.org/extension/HOL4Developers/hol4-vscode/) marketplaces) will start the server appropriately.
+    For `emacs`, the following is required in users’ `.emacs` or `init.el` files:
 
-    `M-h s` under the LSP is a new command, `hol-lsp-eval-string`: it prompts for an expression and evaluates it at point in the server's session, which is what `interactive-send-string-to-hol` does for the `*HOL*` process.
+           (hol-lsp-enable)                       ; does everything
+           (setq hol-lsp-goals-follow-cursor t)   ; *HOL Goals* follows point
 
--   `bin/build` has two new flags that control how per-entry HTML
-    pages for `help/Docfiles/*.smd` are produced.  By default, if
-    `mdbook` is on the user's PATH, `build_help` now invokes the
-    Manual/Reference mdbook target so that the generated
-    `help/src-sml/htmlsigs/<struct>.html` pages link straight into
-    the rendered reference book.  When `mdbook` is absent, the
-    fallback runs a single-shot `pandoc` pass to emit
-    `help/Docfiles/HTML/<entry>.html` (one pandoc invocation total,
-    not one per entry).  `bin/build --no-mdbook` forces the fallback
-    even when mdbook is present, and `bin/build --no-helpdocs` skips
-    the entire help-documentation build (no docfile processing, no
-    mdbook, no help DB) -- useful for partial build sequences that
-    don't compile every HOL library and so can't successfully
-    evaluate every polyscripter `>>` directive.
+    The emacs LSP client shares keys with the older `*HOL*`-process mode so commands like `M-h M-r`, `M-h s`, `M-h m`, `M-h M`, `M-h p`, `M-h g` and `M-h i` do LSP-analogues of what happens in the emacs REPL-mode.
 
--   A project can now commit a *seed* of build times for `Holmake`'s
-    parallel scheduler, so that a fresh checkout schedules well
-    before it has measured anything itself.
-    `Holmake` picks the ready job with the largest
-    sum-of-costs-to-a-sink; the costs come from
-    `.hol/build-logs/target-times`, which is per-checkout and
-    gitignored, so a clone previously scheduled blind through the
-    longest build it would ever run.
-    A seed at `build-times` beside `holproject.toml` (or wherever a
-    new `build_times` key in that file points) fills the gap.
-    It is read-only and any locally measured value overrides it, so
-    it matters only until a target has been built once locally.
-    Generate one with `developers/gen-build-times`, which refuses to
-    write a seed whose coverage it cannot verify against a
-    dependency graph: a seed that omits an expensive target
-    schedules *worse* than no seed at all.
+-   `bin/build` has two new flags that control how per-entry HTML pages for `help/Docfiles/*.smd` are produced.
+    By default, if `mdbook` is on the user's PATH, `build_help` now invokes the Manual/Reference mdbook target so that the generated `help/src-sml/htmlsigs/<struct>.html` pages link straight into the rendered reference book.
+    When `mdbook` is absent, the fallback runs a single-shot `pandoc` pass to emit `help/Docfiles/HTML/<entry>.html` (one pandoc invocation total, not one per entry).
+    `bin/build --no-mdbook` forces the fallback even when mdbook is present, and `bin/build --no-helpdocs` skips the entire help-documentation build (no docfile processing, no mdbook, no help DB) -- useful for partial build sequences that don't compile every HOL library and so can't successfully evaluate every polyscripter `>>` directive.
 
-    Cost keys are now relative to the enclosing project root, with
-    HOL's own targets spelled `$(HOLDIR)/…`, which is what lets a
-    project outside `HOLDIR` ship a seed at all — such entries were
-    previously keyed by absolute path and so were meaningless in
-    anyone else's checkout.
-    `Holmake` also now records the time for *every* job it runs,
-    theories included, rather than relying on `bin/build` to fold in
-    what `Theory.sml` logged; a plain `Holmake` in a directory
-    therefore contributes cost data where before it contributed
-    none.
-    Existing caches stay valid for HOL itself; entries for other
-    projects are simply re-measured on the next build.
+-   `Holmake` recognises a project-root marker file `holproject.toml`: dropping one at the top of a multi-directory development tells `Holmake` that every directory below is part of the same project, and the usual sub-directory `INCLUDES = ../sibling` lines tying them together can be dropped.
+    Cross-directory rule and source resolution (`open Foo` from one dir reaching a `Foo.sml` in a sibling, `Ancestors X` in a theory script reaching a sibling's theory products) then works automatically across the project.
+    The file is a small TOML document declaring at minimum the project name; optionally also an `[exclude]` list, an `external_includes` list (for dirs outside the project tree that act as implicit `INCLUDES` of every project dir), and `[projects.<id>]` tables for dependencies on other projects.
+    A sibling `holproject.local.toml` is gitignored and lets individual developers override `[projects.<id>].path` values.
+    Project mode activates only when `Holmake` is invoked from inside a project (or at its root); a `--no-project` flag suppresses it altogether.
+    Duplicate source names across project directories (which would make `open Foo` ambiguous) abort the build with a pointer at `[exclude]` as the remedy.
+    The `name` key also registers the project's directory in `holpathdb`, replacing the old `.holpath` marker file (whose only content was a single line naming the directory); any in-tree or downstream `.holpath` files must be migrated to a `holproject.toml` containing `name = "<the-old-content>"`.
+    An optional top-level `holmake = false` key turns project mode off for that file while keeping `holpathdb` registration and `external_includes` inheritance live (used in the HOL repository itself).
+    An optional `[h4pedant]` section configures the style-check tool with a global line-length limit, a `unicode_ok` toggle, an `exclude` list of skipped subdirectories, and a `[[h4pedant.dir]]` array of per-subdirectory overrides; `h4pedant` with no positional arguments walks up to find the project root and scans the whole tree.
 
--   `Holmake` has a new flag `--dirs` that re-interprets the
-    positional command-line arguments as *root directories* to
-    operate on, rather than build targets.
-    `Holmake --dirs d1 d2 …` is semantically similar to running
-    `Holmake` in each of `d1`, `d2`, … in turn, but fuses the
-    work into a single dependency graph dispatched under one
-    parallel scheduler.
-    Each root contributes its own “must build” targets (the
-    first target of its `Holmakefile`, with the same
-    plausible-targets fallback as a bare `Holmake`).
-    Each root's `INCLUDES` traversal starts from its own
-    ancestor chain, so mutual references between sibling roots
-    no longer trip the `INCLUDES`-loop detector — a workaround
-    users previously approximated with multiple `-I` flags but
-    that could fail.
-    Genuine cycles within a single root's `INCLUDES` chain are
-    still reported.
+    Projects nest: a sub-directory carrying its own `holproject.toml` heads a separate project, governed by its own file rather than the enclosing one's, and `Holmake -r` and `--dirs` account for that.
+    Two diagnostics guard the nesting: a project that points into an enclosing project it has not declared with `[projects.<id>]` is warned about, and any key `holproject.toml` does not recognise is reported rather than quietly discarded — a `[project.<id>]` typo for `[projects.<id>]` otherwise reads as correct and behaves as absent.
 
--   The directory column in `Holmake`'s per-target completion lines
-    (Poly/ML, `-j n` with `n` greater than one) now names the source
-    tree a target came from when the build spans more than one of
-    them, writing the path with its `holpathdb` registration:
-    `$(CAKEMLDIR)/compiler/parsing` rather than just
-    `compiler/parsing`.  Builds confined to a single tree are
-    unchanged, the prefix being the same on every line there.
-    A path too long for the column now has whole interior components
-    replaced by `...` (`$(CAKEMLDIR)/.../parsing`) instead of being
-    truncated from the left, the tree name being the last part given
-    up; in a very narrow terminal the column is left blank rather
-    than displacing the time and verdict columns.
-    Relatedly, a directory that *is* a registered `holpathdb`
-    directory now abbreviates to a bare `$(NAME)` wherever `Holmake`
-    prints a directory, where it previously printed the unabbreviated
-    path.
+    See the *Project files* sub-section of *Maintaining HOL Formalizations with Holmake* in the DESCRIPTION manual.
 
--   The closing `*** Holmake aborted` report (Poly/ML, `-j n` with
-    `n` greater than one) now spends a fixed budget of about fifty
-    lines of log content, however many targets failed.  A single
-    failure still gets the whole of the retained tail of its log, as
-    before; with `-k` and several failures the budget is divided
-    between them, and each says how much of its log it is showing
-    (`Last 16 lines of output. Full log: ...`).  Beyond five failures a
-    target's share would be under ten lines, too few to hold an error
-    message, so the report drops log content altogether and just names
-    the failed targets and where their full logs are.  Previously
-    every failure contributed its entire retained tail, so a
-    keep-going build with ten failures closed with five hundred lines
-    of report.  The per-failure notice `-k` prints inline as each
-    target fails is unchanged.
+-   Holmake now uses recorded build times to do its parallel scheduling of build tasks.
+    This can make a big difference to wall clock times when building big projects.
+    Further, a project can now commit a *seed* of build times for this purpose, so that a fresh checkout schedules well before it has measured anything itself.
+    A seed should appear in a `build-times` file beside `holproject.toml` (or wherever a new `build_times` key in that file points).
+    The seed file is read-only and any locally measured value overrides it, so it matters only until a target has been built once locally.
+    Generate one with `developers/gen-build-times`.
 
--   `Holmake` (under Poly/ML) understands a new per-directory
-    `Holmakefile` variable, `LOCAL_PARALLELISM_LIMIT = n`, which
-    caps the total number of concurrent jobs the parallel
-    scheduler will allow whenever a target from that directory
-    is dispatched.  `n = 1` gives a directory's targets
-    exclusive access — useful for memory-heavy theory builds
-    that would otherwise OOM when run alongside other jobs
-    under `-j N`.  `n = 2` allows at most two concurrent jobs
-    total while any of this directory's targets is running,
-    and so on.  An invalid right-hand side (non-integer, zero,
-    negative, multiple tokens) is reported with a warning and
-    the declaration is then ignored.  The variable has no
-    effect under Moscow ML (whose `Holmake` is always
-    sequential) or under Poly/ML `Holmake -j 1`.
+-   `Holmake` has a new flag `--dirs` that re-interprets the positional command-line arguments as *root directories* to operate on, rather than build targets.
+    `Holmake --dirs d1 d2 …` is semantically similar to running `Holmake` in each of `d1`, `d2`, … in turn, but fuses the work into a single dependency graph dispatched under one parallel scheduler.
+    Each root contributes its own “must build” targets (the first target of its `Holmakefile`, with the same plausible-targets fallback as a bare `Holmake`).
 
--   `Holmake` (under Poly/ML) takes a new option `--retry-oos=n`,
-    which allows each target up to `n` further attempts when its
-    build fails with the Poly/ML runtime reporting that it has run
-    out of store.  That message means the runtime could not grow
-    the ML heap; because the shortage is a property of the machine
-    at that moment rather than of the target, running the same
-    build again will often succeed.  A failure that does not carry
-    the message is never retried, and the default of zero leaves
-    the previous behaviour unchanged.  An attempt that is going to
-    be retried is reported as `RETRY` rather than as a failure, and
-    the number of re-runs performed is reported when the build
-    finishes.  Recognising the message means reading the log
-    `Holmake` keeps for each job, so the option has no effect under
-    `Holmake -j 1`, which writes a command's output straight to the
-    terminal.
+-   `Holmake` (under Poly/ML) understands a new per-directory `Holmakefile` variable, `LOCAL_PARALLELISM_LIMIT = n`, which caps the total number of concurrent jobs the parallel scheduler will allow whenever a target from that directory is dispatched.
+    `n = 1` gives a directory's targets exclusive access — useful for memory-heavy theory builds that would otherwise OOM when run alongside other jobs under `-j N`.
+    `n = 2` allows at most two concurrent jobs total while any of this directory's targets is running, and so on.
 
--   `Holmake` recognises a project-root marker file
-    `holproject.toml`: dropping one at the top of a multi-directory
-    development tells `Holmake` that every `Holmakefile`-bearing
-    directory below is part of the same project, and the usual
-    sub-directory `INCLUDES = ../sibling` lines tying them together
-    can be dropped.  Cross-directory rule and source resolution
-    (`open Foo` from one dir reaching a `Foo.sml` in a sibling,
-    `Ancestors X` in a theory script reaching a sibling's theory
-    products) then works automatically across the project.  The
-    file is a small TOML document declaring at minimum the project
-    name; optionally also an `[exclude]` list, an
-    `external_includes` list (for dirs outside the project tree
-    that act as implicit `INCLUDES` of every project dir), and
-    `[projects.<id>]` tables for dependencies on other projects.
-    A sibling `holproject.local.toml` is gitignored and lets
-    individual developers override `[projects.<id>].path` values.
-    Project mode activates only when `Holmake` is invoked from
-    inside a project (or at its root); a `--no-project` flag
-    suppresses it altogether.  Duplicate source names across
-    project directories (which would make `open Foo` ambiguous,
-    HOL having no per-project namespaces) abort the build with a
-    pointer at `[exclude]` as the remedy.  The `name` key also
-    registers the project's directory in `holpathdb`, replacing
-    the old `.holpath` marker file (whose only content was a
-    single line naming the directory); any in-tree or downstream
-    `.holpath` files must be migrated to a `holproject.toml`
-    containing `name = "<the-old-content>"`.  An optional top-level
-    `holmake = false` key turns project mode off for that file
-    while keeping `holpathdb` registration and `external_includes`
-    inheritance live — a lightweight shim suitable for the root of
-    a multi-project tree (the HOL repository itself now ships such
-    a file).  An optional `[h4pedant]` section configures the
-    style-check tool with a global line-length limit, a
-    `unicode_ok` toggle, an `exclude` list of skipped subdirectories,
-    and a `[[h4pedant.dir]]` array of per-subdirectory overrides;
-    `h4pedant` with no positional arguments walks up to find the
-    project root and scans the whole tree.  Projects nest: a
-    sub-directory carrying its own `holproject.toml` heads a
-    separate project, governed by its own file rather than the
-    enclosing one's, and `Holmake -r` and `--dirs` account for that.
-    Two diagnostics guard the nesting: a project that points into an
-    enclosing project it has not declared with `[projects.<id>]` is
-    warned about, with the stanza to add spelled out, and any key
-    `holproject.toml` does not recognise is reported rather than
-    quietly discarded — a `[project.<id>]` typo for
-    `[projects.<id>]` otherwise reads as correct and behaves as
-    absent.
-    See the *Project files* sub-section of *Maintaining HOL
-    Formalizations with Holmake* in the Description manual.
+-   `Holmake` (under Poly/ML) takes a new option `--retry-oos=n`, which allows each target up to `n` further attempts when its build fails with the Poly/ML runtime reporting that it has run out of store.
 
 -   `bossLib` provides three new short names for common tactics:
-    `have ‘t’` states an intermediate result, leaving it as the
-    first subgoal and adding it (stripped) to the assumptions of
-    the other; it is the tactic already available as `sg`.
-    `suff ‘t’` replaces the goal with a sufficient condition,
-    leaving `t ==> goal` as the first subgoal; it is already
-    available as `qsuff_tac`; `contr` starts a proof by
-    contradiction, and is an abbreviation for
-    `SPOSE_NOT_THEN STRIP_ASSUME_TAC`.
+    * `have ‘t’` states an intermediate result, leaving it as the first subgoal and adding it (stripped) to the assumptions of the other; it is the tactic already available as `sg`.
+    * `suff ‘t’` replaces the goal with a sufficient condition, leaving `t ==> goal` as the first subgoal; it is already available as `qsuff_tac`;
+    * `contr` starts a proof by contradiction, and is an abbreviation for `SPOSE_NOT_THEN STRIP_ASSUME_TAC`.
 
--   `Holmake --strict-outputs` fails a rule whose command exits
-    successfully without creating the target it was supposed to create.
-    Without the flag such a rule draws a warning instead, which is the
-    default for now.
-    Exempt are phony targets, which name no file; commands whose errors
-    the Holmakefile has already said to ignore with a leading `-`; and
-    the earlier commands of a multi-command rule, only the last of which
-    is expected to have produced the target.
+-   `Holmake --strict-outputs` fails a rule whose command exits successfully without creating the target it was supposed to create.
+    Without the flag such a rule draws a warning instead, which is the default for now.
+    Exempt are phony targets, which name no file; commands whose errors the Holmakefile has already said to ignore with a leading `-`; and the earlier commands of a multi-command rule, only the last of which is expected to have produced the target.
+
+-   `goalStack` has `expandf_in` and `expand_listf_in`, which run a tactic in a given `Context.t` rather than in a snapshot of the live context; `expandf` and `expand_listf` are now these applied to `Context.snapshot()`.
+    A prover installed with `Tactical.set_prover` can use them to run its steps in the context it is passed.
 
 Bugs fixed
 ----------
 
--   `bin/hol` reading a script on its standard input — the shape a
-    Holmakefile rule uses when it writes `$(HOLDIR)/bin/hol < build.ML`
-    — reported success however badly the script went.
-    The REPL recovers from a compile error by discarding buffered input,
-    which is what someone at a terminal wants; but on a redirected file
-    everything as far as end-of-file is buffered, so the run stopped at
-    the error and still exited 0, and a rule driving HOL this way could
-    produce nothing at all and be recorded as having built it.
-    Such a run now exits with failure.
+-   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
+    Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
+    Recursions through `MAP` and `EVERY` with a substitution-like extra parameter have exactly this shape.
 
-    An uncaught exception is deliberately not treated the same way: the
-    declarations after it still run and the run still succeeds, because
-    the script did reach its end.
+    TFL eta-expands such a call on the way in, because a partial application has no other form while the function's arguments are being tupled.
+    The expansion is now undone before the equations and the induction principle are saved, so both say what was written.
+    A definition whose value genuinely is an abstraction, and a lambda written over a tuple, are left alone.
 
--   `Holmake -r` now overrides `--no_prereqs`, as the documentation
-    has always said it does.  Previously the two fought: `-r` seeded
-    the targets of every `INCLUDES` directory and `--no_prereqs`
-    then demoted every node outside the current directory.
+-   `bin/hol` reading a script on its standard input, *e.g.*, something like `$(HOLDIR)/bin/hol < build.ML`, reported success however badly the script went.
+    A failing run now properly exits with failure.
 
--   Searching the manual site for an entry whose name is an English stop word (`by`, `THEN`, `EVERY`, `IF`, `I`, `all`, `can`, `for`, `say`) or punctuation (`&&`, `$`, `==`, `++`, `-->`) returned nothing, in every manual.
-    The search index's stop-word and stemming pipeline is applied to the query as well as to the indexed text, so those names were dropped on both sides and the query produced no terms at all.
-    Each book now emits a generated table of its entry names, which the site consults first: exact and prefix name matches are shown above the full-text results.
-    An exact entry-name match is thereby also prioritised — searching for `subgoal` puts `bossLib.subgoal` at the top rather than somewhere among the pages that merely mention it.
+    An uncaught exception is deliberately not treated the same way: the declarations after it still run and the run still succeeds, because the script did reach its end.
+
+-   `Holmake -r` now overrides `--no_prereqs`, as the documentation has always said it does.
 
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
 
 -   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
-
--   `help/Docfiles/*.smd` entries had embedded polyscripter `>>` ML transcript directives (`>>`, `>>__`, `##eval`, etc.) but the pipeline that derived `help/Docfiles/*.txt` for the in-HOL `help` command, and the one that produced `entries.tex` for `Manual/Reference/reference.pdf`, both fed the raw markdown through pandoc without evaluating the directives.
-    The plain-text and PDF reference manuals therefore showed literal `>>` blockquote-mangled source instead of evaluated examples.
-    Both pipelines now consume a polyscripter-evaluated mirror of the Docfiles directory (produced at `Manual/build/Docfiles-processed/` during `build_help`); the mdbook Reference manual is also routed through the same mirror to share the single polyscripter pass.
-    The new pipeline invokes `pandoc` once per output format (rather than once per file) by concatenating the processed entries with sentinels and splitting the result, dropping the per-`help/Docfiles` build-step wall time from tens of seconds to a couple.
-    See `help/src-sml/process_docfiles.sml`; closes [#1834](https://github.com/HOL-Theorem-Prover/HOL/issues/1834).
 
 -   The contextual decision-procedure cache used by the arithmetic simpset fragments (`numSimps.ARITH_ss`, `realSimps.REAL_ARITH_ss`, `intSimps.OMEGA_ss`/`COOPER_ss`, and `bagSimps.SBAG_SOLVE_ss`) was unbounded.
     In long-running sessions the cache accumulated entries — both in number of cached goals and in the per-key list of `(context, result)` pairs under each goal — and `simp` invocations slowed down approximately linearly with session length, dominated by linear scans of the per-key list under `boolSyntax.F`.
@@ -288,37 +145,44 @@ Bugs fixed
     Repeats of one goal still search slightly differently, because HOL's CNF names skolem constants from a genvar counter and model interpretations are md5-derived from those names; that residual is in the naming rather than in metis.
     `developers/bench-metis-order.sml` measures what is left.
 
+-   Translating a source offset to a file, line and column (`HOLSourceAST.mkFileline`, used whenever a script or theory file is read through the quotation filter) kept a single cursor that its callers moved back and forth between an enclosing span's start, the current token and the end of the input, rescanning the text in between each time.
+    Reading a file was therefore quadratic in its length: compiling the 49 generated theory files under `integrationTheory` scanned 1,017 million characters and took 7.8s.
+    `mkFileline` now reads the text once, keeping the offsets of its newlines and the position after each `#(FILE=…)` / `#(LINE=…)` pragma, and answers each query by binary search; the same files now scan 0.9 million characters and take 2.2s.
+    Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
+
 New theories
 ------------
 
 -  `lebesgue_measure`: The equivalence of Lebesgue and Gauge integration.
-   A (measurable) function is Lebesgue integrable iff it is Gauge absolutely
-   integrable. Theorems in this theory (e.g., lebesgue_eq_gauge_integral,
-   lebesgue_eq_gauge_integral_alt, etc.) can be used to calculate concrete
-   Lebesgue integrals found in Probability applications, etc. (in form of
-  `integral lborel (Normal o f)` where `f IN borel_measurable borel`) by
-   Fundamental Theorem of Calculus (FTC) from `integration` theory, if the
-   anti-derivative of `f` is known (or computable by external CAS software).
+   A (measurable) function is Lebesgue integrable iff it is Gauge absolutely integrable.
+   Theorems in this theory (*e.g.*, `lebesgue_eq_gauge_integral`, `lebesgue_eq_gauge_integral_alt`, *etc.*) can be used to calculate concrete Lebesgue integrals found in Probability applications, etc. (in form of `integral lborel (Normal o f)` where `f IN borel_measurable borel`) by Fundamental Theorem of Calculus (FTC) from `integration` theory, if the anti-derivative of `f` is known (or computable by external CAS software).
 
 New tools
 ---------
+
+-   `statementDossierLib` generates Markdown and standalone HTML reports
+    of stored theorem statements, their trust tags, assumptions, defining
+    equations, datatypes and expansion boundaries. HTML terms use HOL's
+    printer annotations for highlighting, types and links. Optional prose
+    sections are checked against the theorem's hypotheses and database.
+    The Poly/ML `statement-dossier` command reads a TOML configuration
+    and loads the selected theories. See `src/statementdossier/README.md`
+    for examples.
 
 New examples
 ------------
 
 -   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 
--  `examples/lambda/barendregt`: new theories (`solvable`, `boehm`,
-   `lameta_complete`, `separability`, etc.) containing a formalisation
-   of Böhm trees, Böhm's separation theorem for untyped λ-calculus,
-   completeness of λη-equational theory, Wadsworth's theorem (solvable
-   iff has hnf), Takahashi's modern proofs about η-reduction, etc.
+-  `examples/lambda/barendregt`: new theories (`solvable`, `boehm`, `lameta_complete`, `separability`, etc.) containing a formalisation of Böhm trees, Böhm's separation theorem for untyped λ-calculus, completeness of λη-equational theory, Wadsworth's theorem (solvable iff has hnf), Takahashi's modern proofs about η-reduction, etc.
 
 Incompatibilities
 -----------------
 
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.
+
+-   `HOLSourceAST` no longer exports the `cursor` type, `newCursor` or `updateCursor`; `mkFileline` is the way to translate a source offset.
 
 -   `Preterm.eq` has been replaced with `Preterm.veq` which returns `true` if and only if the two arguments are variables with the same names and types.
 
@@ -340,17 +204,17 @@ Incompatibilities
     theory for constructing real numbers), in which all useful theorems should be also covered by
    `realTheory` (under same or different theorem names).
 
-|  Old name       | New name           | Statements                                    |
-| --------------- | ------------------ | --------------------------------------------- |
-| `REAL_LE_SUP'`  | `REAL_LE_SUP2`     | `!s a b y. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s` |
-| `REAL_LE_MUL'`  | `REAL_LE_MUL_NEG`  | `!x y. x <= 0 /\ y <= 0 ==> 0 <= x * y`       |
-| `REAL_LT_MUL'`  | `REAL_LT_MUL_NEG`  | `!x y. x < 0 /\ y < 0 ==> 0 < x * y`          |
-| `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` |
-| `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
+    |  Old name       | New name           | Statements                                    |
+    | --------------- | ------------------ | --------------------------------------------- |
+    | `REAL_LE_SUP'`  | `REAL_LE_SUP2`     | `!s a b y. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s` |
+    | `REAL_LE_MUL'`  | `REAL_LE_MUL_NEG`  | `!x y. x <= 0 /\ y <= 0 ==> 0 <= x * y`       |
+    | `REAL_LT_MUL'`  | `REAL_LT_MUL_NEG`  | `!x y. x < 0 /\ y < 0 ==> 0 < x * y`          |
+    | `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` |
+    | `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
 
 -   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.
 
--   `Cache.CACHE` and `Cache.RCACHE` (used to build cached versions of contextual decision procedures) now take a `{capacity:int, per_key_cap:int}` record argument as their first parameter.
+-   As above, `Cache.CACHE` and `Cache.RCACHE` (used to build cached versions of contextual decision procedures) now take a `{capacity:int, per_key_cap:int}` record argument as their first parameter.
     `capacity` bounds the number of distinct goal terms held in the cache (LRU-evicted when exceeded); `per_key_cap` bounds the list of `(context, result)` pairs stored under each goal (oldest pair dropped when exceeded).
     Direct callers must update their constructor invocations; in-tree callers (`numSimps`, `realSimps`, `intSimps`, `bagSimps`) have been updated to pass `{capacity=2000, per_key_cap=32}`.
 
@@ -369,22 +233,12 @@ Incompatibilities
     Note that the now-preferred way to have documentation omitted is to add the `[no_sig_docs]` annotation to the `Theory` declaration at the head of a `..Script.sml` file.
 
 -   The `ind_type` theory and the `ind_types` structure have been removed.
-    They implemented the original (Harrison) datatype construction, which
-    carved every declared type out of a universal `:α recspace`.  The BNF
-    package now builds everything `Datatype`/`Hol_datatype` accepts, and
-    builds it faster, so nothing was left for the older construction to do.
-    `recspace` and its constants (`CONSTR`, `FCONS`, `FNIL`, `BOTTOM`) are
-    gone, as is the `ind-type` OpenTheory package.
+    They implemented the original (Harrison) datatype construction, which carved every declared type out of a universal `:α recspace`.
+    The BNF package now builds everything `Datatype`/`Hol_datatype` accepts, and builds it faster, so nothing was left for the older construction to do. `recspace` and its constants (`CONSTR`, `FCONS`, `FNIL`, `BOTTOM`) are gone, as is the `ind-type` OpenTheory package.
 
--   A datatype declaration that recurses through an operator holding none of
-    its argument — `t = C of 'a => t itself` — is now rejected rather than
-    built.  Such a declaration never said anything: `τ itself` has exactly one
-    inhabitant whatever `τ` is, so the argument carries no information and the
-    type it would pin is already fixed by the constructor's result; `t = C of
-    'a => t itself` is isomorphic to `t = C of 'a`.  An `itself` argument over
-    a *parameter* rather than over the type being declared — a field of type
-    `'a itself` pinning a type variable that occurs nowhere else — does not
-    recurse and is unaffected.
+-   A datatype declaration that recurses through an operator holding none of its argument — `t = C of 'a => t itself` — is now rejected rather than built.
+    Such a declaration never said anything: `τ itself` has exactly one inhabitant whatever `τ` is, so the argument carries no information and the type it would pin is already fixed by the constructor's result; `t = C of 'a => t itself` is isomorphic to `t = C of 'a`.
+    An `itself` argument over a *parameter* rather than over the type being declared — a field of type `'a itself` pinning a type variable that occurs nowhere else — does not recurse and is unaffected.
 
 -   `ind_types.munge_ind_thm` is now `legacyInduction.munge_ind_thm`.
 

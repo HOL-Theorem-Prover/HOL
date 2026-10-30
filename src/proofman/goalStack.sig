@@ -10,6 +10,10 @@ sig
    val expandf      : tactic -> gstk -> gstk
    val expand_list  : list_tactic -> gstk -> gstk
    val expand_listf : list_tactic -> gstk -> gstk
+   (* As expandf and expand_listf, but the tactic runs in the given
+      context rather than in a snapshot of the live one. *)
+   val expandf_in      : Context.t -> tactic -> gstk -> gstk
+   val expand_listf_in : Context.t -> list_tactic -> gstk -> gstk
    val print_tac    : string -> tactic
    val note_tac     : string -> tactic
    val extract_thm  : gstk -> thm

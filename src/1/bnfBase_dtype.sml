@@ -22,6 +22,16 @@ datatype 'a info = bI of {
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
   relator : term,           (* type's rel term *)
   set : term list,          (* type's set terms *)
+  eqns : 'a list,           (* what reduces this operator's map and set
+                               terms at its own constructors, for the
+                               construction's own simplification.  Not
+                               one per set function: an operator may say
+                               it in one theorem over all constructors
+                               (sum's setL_def) or in one per
+                               constructor (fmap's FRANGE_FEMPTY and
+                               FRANGE_FUPDATE).  Empty where there are
+                               no constructors to speak of, as for the
+                               function type. *)
 
   wits : (term * 'a) list,  (* nonemptiness witnesses; see below *)
   inhabits : (term * 'a) list (* set₁ is inhabited, ...; see below *)
@@ -37,8 +47,9 @@ This is the "canonical" type.
 As user gets to choose names for them, there is no fixed naming scheme
 for the constants.
 
-Though the tyop is written below as if the αᵢ all come first, followed by the βⱼ,
-this is not required and they can be intermingled as arguments to the operator.
+Though the tyop is written below as if the αᵢ all come first, followed by the
+βⱼ, this is not required and they can be intermingled as arguments to the
+operator.
 
 map for (α₁, ... αₙ, β₁ ... βₙ) tyop is of form
 
@@ -71,7 +82,7 @@ gsetmap has form
 gsetIMAGE has form
 
    |- IMAGE (f : γ -> δ)
-      (gset (g₁ : α₁ -> γ set) ... (gₙ : αₙ -> γ set) (x:(α₁,...,αₙ,β₁,...,βₘ)F)) =
+      (gset (g₁ : α₁ -> γ set)...(gₙ : αₙ -> γ set)(x:(α₁,...,αₙ,β₁,...,βₘ)F)) =
       gset (IMAGE f ∘ g₁) ... (IMAGE f ∘ gₙ) x
 
 Nonemptiness witnesses (the wits field) come in (term,theorem) pairs.  The

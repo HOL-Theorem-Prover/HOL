@@ -83,9 +83,10 @@ tacticparse-selftest.log: tacticparse-tests.ML $(dprot $(HOLDIR)/bin/hol)
 # job count for this node, so any value would stop the suite running
 # alongside the rest of the build, which is the whole reason it is
 # reached from `src/parallel_builds/core'.
-PROTOCOL_JOBS =
 ifdef HOL_NUMJOBS
 PROTOCOL_JOBS = -j $(HOL_NUMJOBS)
+else
+PROTOCOL_JOBS =
 endif
 
 PROTOCOL_CMD = if command -v python3 > /dev/null 2>&1 ; \

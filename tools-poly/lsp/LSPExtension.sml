@@ -327,23 +327,6 @@ val currentProofOffset = ref 0
 val currentProofOrd = ref 1
 fun qualifyProof nm ord =
     if nm = "" orelse ord <= 1 then nm else nm ^ "#" ^ Int.toString ord
-local
-  (* Enqueued in reverse; the drain takes the whole queue in one step.
-
-     An `Sref` rather than a plain ref: the deferring branch of the
-     prover hook is reached from elaboration, and while that is one
-     thread at a time, a superseded pass can still be draining this
-     queue as its replacement fills it -- and any thread that runs a
-     tactic reaches the hook, including the ones the server forks per
-     goal-state request.  A dropped enqueue is a proof that is never
-     checked and never reported, which is indistinguishable from one
-     that passed. *)
-  val q : deferred list Sref.t = Sref.new []
-in
-  fun enqueueDeferred d = Sref.update q (fn ds => d :: ds)
-  fun takeDeferred () = List.rev (Sref.gen_update q (fn ds => ([], ds)))
-end
-
 type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
 val checkDeferred : (check_scope -> unit) ref = ref (fn _ => ())
 val poolBusy : (unit -> bool) ref = ref (fn () => false)

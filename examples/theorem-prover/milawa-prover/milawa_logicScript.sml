@@ -1279,13 +1279,13 @@ val EvalTerm_FUPDATE = prove(
            (a,ctxt) exp``,
   HO_MATCH_MP_TAC (fetch "-" "EvalTerm_ind") \\ SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [EvalTerm_def] \\ REVERSE (REPEAT STRIP_TAC) THEN1
-   (sg `MAP (\a''. EvalTerm (a,ctxt |+ (fname,params,body,sem)) a'') ys =
-     MAP (\a''. EvalTerm (a,ctxt) a'') ys`
+   (sg `MAP (EvalTerm (a,ctxt |+ (fname,params,body,sem))) ys =
+     MAP (EvalTerm (a,ctxt)) ys`
     \\ FULL_SIMP_TAC std_ss [LET_DEF,term_ok_def]
     \\ MATCH_MP_TAC IMP_MAP_EQ_MAP \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [term_ok_def] \\ METIS_TAC [EVERY_MEM])
-  \\ `MAP (\a''. EvalTerm (a,ctxt |+ (fname,params,body,sem)) a'') args =
-      MAP (\a''. EvalTerm (a,ctxt) a'') args` by
+  \\ `MAP (EvalTerm (a,ctxt |+ (fname,params,body,sem))) args =
+      MAP (EvalTerm (a,ctxt)) args` by
       (FULL_SIMP_TAC std_ss [LET_DEF,term_ok_def]
        \\ MATCH_MP_TAC (GEN_ALL IMP_MAP_EQ_MAP) \\ REPEAT STRIP_TAC
        \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM,markerTheory.Abbrev_def])

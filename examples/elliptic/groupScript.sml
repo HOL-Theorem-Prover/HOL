@@ -2,21 +2,6 @@
 (* Create "groupTheory" setting up the theory of groups                      *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* Load and open relevant theories.                                          *)
-(* (Comment out "load"s and "quietdec"s for compilation.)                    *)
-(* ------------------------------------------------------------------------- *)
-(*
-val () = loadPath := [] @ !loadPath;
-val () = app load
-  ["Algebra",
-   "bossLib", "metisLib", "res_quanTools",
-   "optionTheory", "listTheory",
-   "arithmeticTheory", "dividesTheory", "gcdTheory",
-   "pred_setTheory", "pred_setSyntax",
-   "primalityTools"];
-val () = quietdec := true;
-*)
 Theory group
 Ancestors
   option list arithmetic divides gcd pred_set
@@ -57,21 +42,13 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 (* Helper proof tools.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-infixr 0 <<
-infixr 1 ++ || THENC ORELSEC
-infix 2 >>
-
-val op ++ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-val op || = op ORELSE;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
 val lemma = Tactical.prove;
 
 val norm_rule =
-    SIMP_RULE (simpLib.++ (pureSimps.pure_ss, resq_SS))
+    SIMP_RULE (pureSimps.pure_ss ++ resq_SS)
       [GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
        AND_IMP_INTRO, GSYM CONJ_ASSOC];
 
@@ -91,57 +68,55 @@ Theorem FUNPOW_ADD:
      !f p q x. FUNPOW f (p + q) x = FUNPOW f p (FUNPOW f q x)
 Proof
    Induct_on `q`
-   ++ RW_TAC arith_ss [FUNPOW, ADD_CLAUSES]
+   >> RW_TAC arith_ss [FUNPOW, ADD_CLAUSES]
 QED
 
 Theorem FUNPOW_MULT:
      !f p q x. FUNPOW f (p * q) x = FUNPOW (\x. FUNPOW f p x) q x
 Proof
    Induct_on `q`
-   ++ RW_TAC arith_ss [FUNPOW, MULT_CLAUSES]
-   ++ ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_ADD]
-   ++ RW_TAC std_ss []
+   >> RW_TAC arith_ss [FUNPOW, MULT_CLAUSES]
+   >> ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_ADD]
+   >> RW_TAC std_ss []
 QED
 
 Theorem DELETE_INSERT:
      !e s. ~(e IN s) ==> ((e INSERT s) DELETE e = s)
 Proof
    RW_TAC std_ss [EXTENSION, IN_DELETE, IN_INSERT]
-   ++ METIS_TAC []
+   >> METIS_TAC []
 QED
 
 Theorem finite_image_card:
      !f s. FINITE s ==> CARD (IMAGE f s) <= CARD s
 Proof
    RW_TAC std_ss []
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`s`,`s`)
-   ++ HO_MATCH_MP_TAC FINITE_INDUCT
-   ++ RW_TAC std_ss
+   >> POP_ASSUM MP_TAC
+   >> Q.SPEC_TAC (`s`,`s`)
+   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss
         [INJ_DEF, CARD_INSERT, NOT_IN_EMPTY, SUBSET_DEF, IN_IMAGE,
          IMAGE_EMPTY, CARD_EMPTY, IN_INSERT, IMAGE_INSERT, IMAGE_FINITE]
-   ++ RW_TAC arith_ss []
+   >> RW_TAC arith_ss []
 QED
 
 Theorem finite_inj_card:
      !f s t.
        FINITE s ==>
-       (INJ f s t = IMAGE f s SUBSET t /\ (CARD s = CARD (IMAGE f s)))
+       (INJ f s t ⇔ IMAGE f s SUBSET t /\ (CARD s = CARD (IMAGE f s)))
 Proof
-   RW_TAC std_ss []
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`s`,`s`)
-   ++ HO_MATCH_MP_TAC FINITE_INDUCT
-   ++ RW_TAC std_ss
-        [INJ_DEF, CARD_INSERT, NOT_IN_EMPTY, SUBSET_DEF, IN_IMAGE,
-         IMAGE_EMPTY, CARD_EMPTY, IN_INSERT, IMAGE_INSERT, IMAGE_FINITE]
-   ++ REVERSE CASE_TAC >> PROVE_TAC []
-   ++ MATCH_MP_TAC (PROVE [] ``~a /\ ~b ==> (a = b)``)
-   ++ CONJ_TAC >> METIS_TAC []
-   ++ RW_TAC std_ss []
-   ++ DISJ2_TAC
-   ++ MATCH_MP_TAC (DECIDE ``b <= a ==> ~(SUC a = b)``)
-   ++ RW_TAC arith_ss [finite_image_card]
+  gen_tac >> Induct_on ‘FINITE’ >>
+  rw[INJ_IFF, CARD_INSERT, NOT_IN_EMPTY, SUBSET_DEF, IN_IMAGE, PULL_EXISTS,
+     IMAGE_EMPTY, CARD_EMPTY, IN_INSERT, IMAGE_INSERT, IMAGE_FINITE,
+     DISJ_IMP_THM, FORALL_AND_THM] >>
+  Cases_on ‘f e ∈ t’ >> simp[] >>
+  iff_tac
+  >- (strip_tac >>
+      simp[SF CONJ_ss] >> first_x_assum (irule o cj 2 o iffLR) >> metis_tac[])>>
+  rw[] >> gvs[SF CONJ_ss] >>~-
+  ([‘SUC (CARD A) = CARD (IMAGE _ _)’],
+   drule_then (qspec_then ‘f’ assume_tac) finite_image_card >> gvs[]) >>
+  metis_tac[]
 QED
 
 Theorem finite_inj_surj_imp:
@@ -154,8 +129,8 @@ Theorem finite_inj_surj_imp':
      !f s. FINITE s /\ INJ f s s ==> SURJ f s s
 Proof
    RW_TAC std_ss [IMAGE_SURJ]
-   ++ POP_ASSUM MP_TAC
-   ++ RW_TAC std_ss [finite_inj_card, IMAGE_FINITE, SUBSET_EQ_CARD]
+   >> POP_ASSUM MP_TAC
+   >> RW_TAC std_ss [finite_inj_card, IMAGE_FINITE, SUBSET_EQ_CARD]
 QED
 
 Theorem finite_inj_surj:
@@ -168,7 +143,7 @@ Theorem delete_absent:
      !s e. ~(e IN s) ==> (s DELETE e = s)
 Proof
    RW_TAC std_ss [EXTENSION, IN_DELETE]
-   ++ METIS_TAC []
+   >> METIS_TAC []
 QED
 
 Theorem commuting_itset:
@@ -179,44 +154,44 @@ Theorem commuting_itset:
          (ITSET f (e INSERT s) b = f e (ITSET f s b))
 Proof
    RW_TAC std_ss []
-   ++ Know `s DELETE e = s` >> METIS_TAC [delete_absent]
-   ++ MP_TAC (Q.SPECL [`f`,`e`,`s`,`b`] COMMUTING_ITSET_RECURSES)
-   ++ RW_TAC std_ss []
+   >> Know `s DELETE e = s` >- METIS_TAC [delete_absent]
+   >> MP_TAC (Q.SPECL [`f`,`e`,`s`,`b`] COMMUTING_ITSET_RECURSES)
+   >> RW_TAC std_ss []
 QED
 
 Theorem finite_num:
      !s. FINITE s = ?n : num. !m. m IN s ==> m < n
 Proof
    RW_TAC std_ss []
-   ++ EQ_TAC
-   >> (Q.SPEC_TAC (`s`,`s`)
-       ++ HO_MATCH_MP_TAC FINITE_INDUCT
-       ++ RW_TAC arith_ss [NOT_IN_EMPTY, IN_INSERT]
-       ++ Q.EXISTS_TAC `MAX n (SUC e)`
-       ++ RW_TAC arith_ss []
-       ++ RES_TAC
-       ++ DECIDE_TAC)
-   ++ STRIP_TAC
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`s`,`s`)
-   ++ Induct_on `n`
-   >> (RW_TAC arith_ss []
-       ++ Suff `s = {}` >> RW_TAC std_ss [FINITE_EMPTY]
-       ++ ONCE_REWRITE_TAC [EXTENSION]
-       ++ RW_TAC std_ss [NOT_IN_EMPTY])
-   ++ RW_TAC std_ss []
-   ++ MATCH_MP_TAC
+   >> EQ_TAC
+   >- (Q.SPEC_TAC (`s`,`s`)
+       >> HO_MATCH_MP_TAC FINITE_INDUCT
+       >> RW_TAC arith_ss [NOT_IN_EMPTY, IN_INSERT]
+       >> Q.EXISTS_TAC `MAX n (SUC e)`
+       >> RW_TAC arith_ss []
+       >> RES_TAC
+       >> DECIDE_TAC)
+   >> STRIP_TAC
+   >> POP_ASSUM MP_TAC
+   >> Q.SPEC_TAC (`s`,`s`)
+   >> Induct_on `n`
+   >- (RW_TAC arith_ss []
+       >> Suff `s = {}` >- RW_TAC std_ss [FINITE_EMPTY]
+       >> ONCE_REWRITE_TAC [EXTENSION]
+       >> RW_TAC std_ss [NOT_IN_EMPTY])
+   >> RW_TAC std_ss []
+   >> MATCH_MP_TAC
         (SIMP_RULE std_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
          SUBSET_FINITE)
-   ++ Q.EXISTS_TAC `n INSERT (s DELETE n)`
-   ++ REVERSE CONJ_TAC
-   >> (ONCE_REWRITE_TAC [EXTENSION]
-       ++ RW_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_DELETE])
-   ++ RW_TAC std_ss [FINITE_INSERT]
-   ++ FIRST_ASSUM MATCH_MP_TAC
-   ++ RW_TAC arith_ss [IN_DELETE]
-   ++ RES_TAC
-   ++ DECIDE_TAC
+   >> Q.EXISTS_TAC `n INSERT (s DELETE n)`
+   >> REVERSE CONJ_TAC
+   >- (ONCE_REWRITE_TAC [EXTENSION]
+       >> RW_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_DELETE])
+   >> RW_TAC std_ss [FINITE_INSERT]
+   >> FIRST_ASSUM MATCH_MP_TAC
+   >> RW_TAC arith_ss [IN_DELETE]
+   >> RES_TAC
+   >> DECIDE_TAC
 QED
 
 Theorem DIVIDES_ONE:
@@ -229,8 +204,8 @@ Theorem prime_one_lt:
      !p. prime p ==> 1 < p
 Proof
    RW_TAC std_ss []
-   ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
-   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
+   >> Suff `~(p = 0) /\ ~(p = 1)` >- DECIDE_TAC
+   >> METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
 QED
 
 (* ========================================================================= *)
@@ -255,23 +230,23 @@ Theorem mult_lcancel_gcd_imp:
        (b MOD n = c MOD n)
 Proof
    RW_TAC std_ss []
-   ++ Cases_on `n = 1` >> METIS_TAC [MOD_1]
-   ++ Cases_on `a = 0` >> METIS_TAC [GCD_0R]
-   ++ MP_TAC (Q.SPECL [`a`,`n`] LINEAR_GCD)
-   ++ RW_TAC std_ss []
-   ++ Know
+   >> Cases_on `n = 1` >- METIS_TAC [MOD_1]
+   >> Cases_on `a = 0` >- METIS_TAC [GCD_0R]
+   >> MP_TAC (Q.SPECL [`a`,`n`] LINEAR_GCD)
+   >> RW_TAC std_ss []
+   >> Know
       `(p MOD n * (a MOD n * b MOD n)) MOD n =
        (p MOD n * (a MOD n * c MOD n)) MOD n`
-   >> METIS_TAC [MOD_TIMES2, MOD_MOD]
-   ++ REWRITE_TAC [MULT_ASSOC]
-   ++ Suff `((p MOD n * a MOD n) MOD n) MOD n = 1`
-   >> METIS_TAC [MOD_TIMES2, MOD_MOD, MULT_CLAUSES]
-   ++ RW_TAC arith_ss [MOD_TIMES2]
-   ++ MP_TAC (Q.SPEC `n` MOD_PLUS)
-   ++ ASM_REWRITE_TAC []
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ RW_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
-   ++ RW_TAC arith_ss [MOD_MOD]
+   >- METIS_TAC [MOD_TIMES2, MOD_MOD]
+   >> REWRITE_TAC [MULT_ASSOC]
+   >> Suff `((p MOD n * a MOD n) MOD n) MOD n = 1`
+   >- (simp[] >> METIS_TAC [MOD_TIMES2, MOD_MOD, MULT_CLAUSES]
+   >> RW_TAC arith_ss [MOD_TIMES2]
+   >> MP_TAC (Q.SPEC `n` MOD_PLUS)
+   >> ASM_REWRITE_TAC []
+   >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+   >> RW_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
+   >> RW_TAC arith_ss [MOD_MOD]
 QED
 
 Theorem mult_lcancel_gcd:
@@ -297,26 +272,26 @@ QED
 Theorem divides_gcd:
      !a b. divides (gcd a b) a /\ divides (gcd a b) b
 Proof
-   Suff `!a b. divides (gcd a b) a` >> METIS_TAC [GCD_SYM]
-   ++ RW_TAC std_ss []
-   ++ Know `is_gcd a b (gcd a b)` >> METIS_TAC [GCD_IS_GCD]
-   ++ RW_TAC std_ss [is_gcd_def]
+   Suff `!a b. divides (gcd a b) a` >- METIS_TAC [GCD_SYM]
+   >> RW_TAC std_ss []
+   >> Know `is_gcd a b (gcd a b)` >- METIS_TAC [GCD_IS_GCD]
+   >> RW_TAC std_ss [is_gcd_def]
 QED
 
 Theorem is_gcd_1_mult_imp:
      !n a b. is_gcd n a 1 /\ is_gcd n b 1 ==> is_gcd n (a * b) 1
 Proof
    RW_TAC std_ss [is_gcd_def, ONE_DIVIDES_ALL]
-   ++ Cases_on `gcd a d = 1`
-   >> (MP_TAC (Q.SPECL [`a`,`d`,`b`] L_EUCLIDES)
-       ++ RW_TAC std_ss [])
-   ++ FULL_SIMP_TAC std_ss [DIVIDES_ONE]
-   ++ Suff `F` >> METIS_TAC []
-   ++ POP_ASSUM MP_TAC
-   ++ RW_TAC std_ss []
-   ++ Q.PAT_X_ASSUM `!i. P i` (K ALL_TAC)
-   ++ Q.PAT_X_ASSUM `!i. P i` MATCH_MP_TAC
-   ++ METIS_TAC [DIVIDES_TRANS,  divides_gcd]
+   >> Cases_on `gcd a d = 1`
+   >- (MP_TAC (Q.SPECL [`a`,`d`,`b`] L_EUCLIDES)
+       >> RW_TAC std_ss [])
+   >> FULL_SIMP_TAC std_ss [DIVIDES_ONE]
+   >> Suff `F` >- METIS_TAC []
+   >> POP_ASSUM MP_TAC
+   >> RW_TAC std_ss []
+   >> Q.PAT_X_ASSUM `!i. P i` (K ALL_TAC)
+   >> Q.PAT_X_ASSUM `!i. P i` MATCH_MP_TAC
+   >> METIS_TAC [DIVIDES_TRANS,  divides_gcd]
 QED
 
 Theorem gcd_1_mult_imp:
@@ -335,119 +310,119 @@ Theorem euler_totient:
      !n a. (gcd n a = 1) ==> (a ** totient n MOD n = 1 MOD n)
 Proof
    RW_TAC std_ss []
-   ++ Cases_on `n = 0`
-   >> RW_TAC bool_ss
+   >> Cases_on `n = 0`
+   >- RW_TAC bool_ss
         [totient_def, prim_recTheory.NOT_LESS_0, GSPEC_F,
          CARD_EMPTY, EXP]
-   ++ Cases_on `n = 1` >> RW_TAC bool_ss [MOD_1]
-   ++ Know `0 < n` >> DECIDE_TAC
-   ++ STRIP_TAC
-   ++ MATCH_MP_TAC mult_lcancel_gcd_imp
-   ++ Q.EXISTS_TAC
+   >> Cases_on `n = 1` >- RW_TAC bool_ss [MOD_1]
+   >> Know `0 < n` >- DECIDE_TAC
+   >> STRIP_TAC
+   >> MATCH_MP_TAC mult_lcancel_gcd_imp
+   >> Q.EXISTS_TAC
       `ITSET (\y z. y * z) { i | 0 < i /\ i < n /\ (gcd n i = 1) } 1`
-   ++ Know `FINITE { i | 0 < i /\ i < n /\ (gcd n i = 1) }`
-   >> (RW_TAC std_ss [finite_num, GSPECIFICATION]
-       ++ METIS_TAC [])
-   ++ RW_TAC arith_ss []
-   >> (Suff
+   >> Know `FINITE { i | 0 < i /\ i < n /\ (gcd n i = 1) }`
+   >- (RW_TAC std_ss [finite_num, GSPECIFICATION]
+       >> METIS_TAC [])
+   >> RW_TAC arith_ss []
+   >- (Suff
        `!s b.
           FINITE s /\ (!i. i IN s ==> (gcd n i = 1)) /\ (gcd n b = 1) ==>
           (gcd n (ITSET (\y z. y * z) s b) = 1)`
-       >> (DISCH_THEN MATCH_MP_TAC
-           ++ RW_TAC std_ss [GSPECIFICATION, gcd_1])
-       ++ HO_MATCH_MP_TAC (GEN_ALL ITSET_IND)
-       ++ Q.EXISTS_TAC `\y z. y * z`
-       ++ RW_TAC std_ss []
-       ++ RW_TAC std_ss [ITSET_THM]
-       ++ FIRST_ASSUM (MATCH_MP_TAC o CONV_RULE (REWR_CONV AND_IMP_INTRO))
-       ++ RW_TAC std_ss [REST_DEF, FINITE_DELETE, IN_DELETE]
-       ++ MATCH_MP_TAC gcd_1_mult_imp
-       ++ METIS_TAC [CHOICE_DEF])
-   ++ Know `INJ (\i. (i * a) MOD n) {i | 0 < i /\ i < n /\ (gcd n i = 1)} UNIV`
-   >> (RW_TAC std_ss [INJ_DEF, IN_UNIV]
-       ++ Know `i MOD n = i' MOD n`
-       >> METIS_TAC [mult_lcancel_gcd_imp, MULT_COMM]
-       ++ FULL_SIMP_TAC std_ss [GSPECIFICATION]
-       ++ METIS_TAC [LESS_MOD])
-   ++ STRIP_TAC
-   ++ Know
+       >- (DISCH_THEN MATCH_MP_TAC
+           >> RW_TAC std_ss [GSPECIFICATION, gcd_1])
+       >> HO_MATCH_MP_TAC (GEN_ALL ITSET_IND)
+       >> Q.EXISTS_TAC `\y z. y * z`
+       >> RW_TAC std_ss []
+       >> RW_TAC std_ss [ITSET_THM]
+       >> FIRST_ASSUM (MATCH_MP_TAC o CONV_RULE (REWR_CONV AND_IMP_INTRO))
+       >> RW_TAC std_ss [REST_DEF, FINITE_DELETE, IN_DELETE]
+       >> MATCH_MP_TAC gcd_1_mult_imp
+       >> METIS_TAC [CHOICE_DEF])
+   >> Know `INJ (\i. (i * a) MOD n) {i | 0 < i /\ i < n /\ (gcd n i = 1)} UNIV`
+   >- (RW_TAC std_ss [INJ_DEF, IN_UNIV]
+       >> Know `i MOD n = i' MOD n`
+       >- METIS_TAC [mult_lcancel_gcd_imp, MULT_COMM]
+       >> FULL_SIMP_TAC std_ss [GSPECIFICATION]
+       >> METIS_TAC [LESS_MOD])
+   >> STRIP_TAC
+   >> Know
       `IMAGE (\i. (i * a) MOD n) {i | 0 < i /\ i < n /\ (gcd n i = 1)} =
        {i | 0 < i /\ i < n /\ (gcd n i = 1)}`
-   >> (RW_TAC std_ss [GSYM IMAGE_SURJ, GSYM finite_inj_surj]
-       ++ POP_ASSUM MP_TAC
-       ++ RW_TAC bool_ss [INJ_DEF, IN_UNIV]
-       ++ Q.PAT_X_ASSUM `!i i'. P i i'` (K ALL_TAC)
-       ++ FULL_SIMP_TAC std_ss [GSPECIFICATION, DIVISION]
-       ++ MATCH_MP_TAC (PROVE [] ``(~a ==> ~b) /\ b ==> a /\ b``)
-       ++ CONJ_TAC
-       >> (Cases_on `(i * a) MOD n`
-           ++ RW_TAC arith_ss [GCD_0R])
-       ++ RW_TAC std_ss [gcd_modr]
-       ++ METIS_TAC [gcd_1_mult_imp])
-   ++ DISCH_THEN (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
-   ++ RW_TAC std_ss [totient_def]
-   ++ POP_ASSUM MP_TAC
-   ++ POP_ASSUM MP_TAC
-   ++ Suff
+   >- (RW_TAC std_ss [GSYM IMAGE_SURJ, GSYM finite_inj_surj]
+       >> POP_ASSUM MP_TAC
+       >> RW_TAC bool_ss [INJ_DEF, IN_UNIV]
+       >> Q.PAT_X_ASSUM `!i i'. P i i'` (K ALL_TAC)
+       >> FULL_SIMP_TAC std_ss [GSPECIFICATION, DIVISION]
+       >> MATCH_MP_TAC (PROVE [] ``(~a ==> ~b) /\ b ==> a /\ b``)
+       >> CONJ_TAC
+       >- (Cases_on `(i * a) MOD n`
+           >> RW_TAC arith_ss [GCD_0R])
+       >> RW_TAC std_ss [gcd_modr]
+       >> METIS_TAC [gcd_1_mult_imp])
+   >> DISCH_THEN (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
+   >> RW_TAC std_ss [totient_def]
+   >> POP_ASSUM MP_TAC
+   >> POP_ASSUM MP_TAC
+   >> Suff
       `!s.
          FINITE s ==>
          INJ (\i. (i * a) MOD n) s UNIV ==>
          ((ITSET (\y z. y * z) s 1 * a ** CARD s) MOD n =
           ITSET (\y z. y * z) (IMAGE (\i. (i * a) MOD n) s) 1 MOD n)`
-   >> RW_TAC arith_ss []
-   ++ HO_MATCH_MP_TAC FINITE_INDUCT
-   ++ RW_TAC std_ss
+   >- RW_TAC arith_ss []
+   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss
         [CARD_EMPTY, ITSET_EMPTY, IMAGE_EMPTY, EXP, MULT_CLAUSES,
          CARD_INSERT, IMAGE_INSERT]
-   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
-   ++ POP_ASSUM MP_TAC
-   ++ SIMP_TAC bool_ss [INJ_DEF, IN_UNIV]
-   ++ STRIP_TAC
-   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-   ++ CONJ_TAC >> METIS_TAC [IN_INSERT]
-   ++ STRIP_TAC
-   ++ MP_TAC (Q.ISPEC `\y z : num. y * z` commuting_itset)
-   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-   ++ SIMP_TAC std_ss []
-   ++ CONJ_TAC >> METIS_TAC [MULT_ASSOC, MULT_COMM]
-   ++ DISCH_THEN
+   >> Q.PAT_X_ASSUM `X ==> Y` MP_TAC
+   >> POP_ASSUM MP_TAC
+   >> SIMP_TAC bool_ss [INJ_DEF, IN_UNIV]
+   >> STRIP_TAC
+   >> MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   >> CONJ_TAC >- METIS_TAC [IN_INSERT]
+   >> STRIP_TAC
+   >> MP_TAC (Q.ISPEC `\y z : num. y * z` commuting_itset)
+   >> MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   >> SIMP_TAC std_ss []
+   >> CONJ_TAC >- METIS_TAC [MULT_ASSOC, MULT_COMM]
+   >> DISCH_THEN
       (fn th =>
        MP_TAC (Q.SPECL [`(e * a) MOD n`,`IMAGE (\i. (i * a) MOD n) s`,`1`] th)
-       ++ MP_TAC (Q.SPECL [`e`,`s`,`1`] th))
-   ++ RW_TAC std_ss [IMAGE_FINITE]
-   ++ POP_ASSUM MP_TAC
-   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-   ++ CONJ_TAC
-   >> (Q.PAT_X_ASSUM `!i i'. P i i'` (MP_TAC o Q.SPEC `e`)
-       ++ RW_TAC std_ss [IN_IMAGE, IN_INSERT]
-       ++ METIS_TAC [])
-   ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
-   ++ POP_ASSUM (K ALL_TAC)
-   ++ Q.PAT_X_ASSUM `!i i'. P i i'` (K ALL_TAC)
-   ++ MATCH_MP_TAC
+       >> MP_TAC (Q.SPECL [`e`,`s`,`1`] th))
+   >> RW_TAC std_ss [IMAGE_FINITE]
+   >> POP_ASSUM MP_TAC
+   >> MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   >> CONJ_TAC
+   >- (Q.PAT_X_ASSUM `!i i'. P i i'` (MP_TAC o Q.SPEC `e`)
+       >> RW_TAC std_ss [IN_IMAGE, IN_INSERT]
+       >> METIS_TAC [])
+   >> DISCH_THEN (fn th => RW_TAC std_ss [th])
+   >> POP_ASSUM (K ALL_TAC)
+   >> Q.PAT_X_ASSUM `!i i'. P i i'` (K ALL_TAC)
+   >> MATCH_MP_TAC
       (METIS_PROVE [MULT_ASSOC, MULT_COMM]
        ``(((a * c) * (b * d)) MOD n = X) ==> ((a * b * (c * d)) MOD n = X)``)
-   ++ MP_TAC (Q.SPEC `n` MOD_TIMES2)
-   ++ ASM_SIMP_TAC std_ss []
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ RW_TAC std_ss [MOD_MOD]
+   >> MP_TAC (Q.SPEC `n` MOD_TIMES2)
+   >> ASM_SIMP_TAC std_ss []
+   >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+   >> RW_TAC std_ss [MOD_MOD]
 QED
 
 Theorem prime_is_gcd_1:
      !p a. prime p ==> (is_gcd p a 1 = ~divides p a)
 Proof
    RW_TAC std_ss [is_gcd_def, DIVIDES_ONE, ONE_DIVIDES_ALL]
-   ++ EQ_TAC
-   >> (DISCH_THEN (MP_TAC o Q.SPEC `p`)
-       ++ METIS_TAC [DIVIDES_REFL, NOT_PRIME_1])
-   ++ RW_TAC std_ss []
-   ++ MP_TAC (Q.SPEC `p` prime_def)
-   ++ RW_TAC std_ss []
-   ++ POP_ASSUM (MP_TAC o Q.SPEC `d`)
-   ++ ASM_REWRITE_TAC []
-   ++ STRIP_TAC
-   ++ RW_TAC std_ss []
-   ++ METIS_TAC []
+   >> EQ_TAC
+   >- (DISCH_THEN (MP_TAC o Q.SPEC `p`)
+       >> METIS_TAC [DIVIDES_REFL, NOT_PRIME_1])
+   >> RW_TAC std_ss []
+   >> MP_TAC (Q.SPEC `p` prime_def)
+   >> RW_TAC std_ss []
+   >> POP_ASSUM (MP_TAC o Q.SPEC `d`)
+   >> ASM_REWRITE_TAC []
+   >> STRIP_TAC
+   >> RW_TAC std_ss []
+   >> METIS_TAC []
 QED
 
 Theorem prime_gcd_1:
@@ -460,28 +435,28 @@ Theorem prime_totient:
      !p. prime p ==> (totient p = p - 1)
 Proof
    RW_TAC std_ss [totient_def, prime_gcd_1]
-   ++ Suff `{i | 0 < i /\ i < p /\ ~divides p i} = count p DELETE 0`
-   >> (RW_TAC std_ss [CARD_DELETE, FINITE_COUNT, CARD_COUNT]
-       ++ Suff `F` >> METIS_TAC []
-       ++ POP_ASSUM (K ALL_TAC)
-       ++ POP_ASSUM MP_TAC
-       ++ RW_TAC std_ss [count_def, GSPECIFICATION]
-       ++ METIS_TAC [NOT_PRIME_0, DECIDE ``0 < p = ~(p = 0)``])
-   ++ RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_DELETE, count_def]
-   ++ Suff `0 < x /\ x < p ==> ~divides p x`
-   >> METIS_TAC [DECIDE ``0 < p = ~(p = 0)``]
-   ++ METIS_TAC [DIVIDES_LE, DECIDE ``~(a : num < b) = b <= a``]
+   >> Suff `{i | 0 < i /\ i < p /\ ~divides p i} = count p DELETE 0`
+   >- (RW_TAC std_ss [CARD_DELETE, FINITE_COUNT, CARD_COUNT]
+       >> Suff `F` >- METIS_TAC []
+       >> POP_ASSUM (K ALL_TAC)
+       >> POP_ASSUM MP_TAC
+       >> RW_TAC std_ss [count_def, GSPECIFICATION]
+       >> METIS_TAC [NOT_PRIME_0, DECIDE ``0 < p = ~(p = 0)``])
+   >> RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_DELETE, count_def]
+   >> Suff `0 < x /\ x < p ==> ~divides p x`
+   >- METIS_TAC [DECIDE ``0 < p = ~(p = 0)``]
+   >> METIS_TAC [DIVIDES_LE, DECIDE ``~(a : num < b) = b <= a``]
 QED
 
 Theorem fermat_little:
      !p a. prime p /\ ~divides p a ==> (a ** (p - 1) MOD p = 1)
 Proof
    RW_TAC std_ss []
-   ++ MP_TAC (Q.SPECL [`p`,`a`] euler_totient)
-   ++ RW_TAC std_ss [prime_gcd_1, prime_totient]
-   ++ Suff `0 < p /\ 1 < p` >> METIS_TAC [X_MOD_Y_EQ_X]
-   ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
-   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
+   >> MP_TAC (Q.SPECL [`p`,`a`] euler_totient)
+   >> RW_TAC std_ss [prime_gcd_1, prime_totient]
+   >> Suff `0 < p /\ 1 < p` >- METIS_TAC [X_MOD_Y_EQ_X]
+   >> Suff `~(p = 0) /\ ~(p = 1)` >- DECIDE_TAC
+   >> METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
 QED
 
 (* ========================================================================= *)
@@ -624,7 +599,7 @@ Proof
    RW_TAC std_ss
      [FiniteAbelianGroup_def, FiniteGroup_def, AbelianGroup_def,
       EXTENSION, GSPECIFICATION]
-   ++ METIS_TAC []
+   >> METIS_TAC []
 QED
 
 Theorem group_id_carrier:
@@ -693,53 +668,53 @@ Theorem group_comm':
         g.mult x (g.mult y z) = g.mult y (g.mult x z)
 Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss [GSYM group_assoc]
-   ++ METIS_TAC [group_comm]
+   >> RW_TAC alg_ss [GSYM group_assoc]
+   >> METIS_TAC [group_comm]
 QED
 
 Theorem group_rinv:
      !g :: Group. !x :: (g.carrier). g.mult x (g.inv x) = g.id
 Proof
    RW_TAC resq_ss []
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult g.id (g.mult x (g.inv x))`
-   ++ CONJ_TAC
-   >> (match_tac (GSYM group_lid)
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult g.id (g.mult x (g.inv x))`
+   >> CONJ_TAC
+   >- (match_tac (GSYM group_lid)
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC
         `g.mult (g.mult (g.inv (g.inv x)) (g.inv x)) (g.mult x (g.inv x))`
-   ++ CONJ_TAC
-   >> (REPEAT (AP_TERM_TAC || AP_THM_TAC)
-       ++ match_tac (GSYM group_linv)
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC
+   >> CONJ_TAC
+   >- (REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC)
+       >> match_tac (GSYM group_linv)
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC
         `g.mult (g.inv (g.inv x)) (g.mult (g.inv x) (g.mult x (g.inv x)))`
-   ++ CONJ_TAC
-   >> (match_tac group_assoc
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC
+   >> CONJ_TAC
+   >- (match_tac group_assoc
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC
         `g.mult (g.inv (g.inv x)) (g.mult (g.mult (g.inv x) x) (g.inv x))`
-   ++ CONJ_TAC
-   >> (AP_TERM_TAC
-       ++ match_tac (GSYM group_assoc)
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.inv (g.inv x)) (g.mult g.id (g.inv x))`
-   ++ CONJ_TAC
-   >> (REPEAT (AP_TERM_TAC || AP_THM_TAC)
-       ++ match_tac group_linv
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.inv (g.inv x)) (g.inv x)`
-   ++ CONJ_TAC
-   >> (REPEAT (AP_TERM_TAC || AP_THM_TAC)
-       ++ match_tac group_lid
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ match_tac group_linv
-   ++ METIS_TAC [group_inv_carrier, group_mult_carrier]
+   >> CONJ_TAC
+   >- (AP_TERM_TAC
+       >> match_tac (GSYM group_assoc)
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.inv (g.inv x)) (g.mult g.id (g.inv x))`
+   >> CONJ_TAC
+   >- (REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC)
+       >> match_tac group_linv
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.inv (g.inv x)) (g.inv x)`
+   >> CONJ_TAC
+   >- (REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC)
+       >> match_tac group_lid
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> match_tac group_linv
+   >> METIS_TAC [group_inv_carrier, group_mult_carrier]
 QED
 
 val context = subtypeTools.add_rewrite2 group_rinv context;
@@ -749,25 +724,25 @@ Theorem group_rid:
      !g :: Group. !x :: (g.carrier). g.mult x g.id = x
 Proof
    RW_TAC resq_ss []
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult x (g.mult (g.inv x) x)`
-   ++ CONJ_TAC
-   >> (REPEAT (AP_TERM_TAC || AP_THM_TAC)
-       ++ match_tac (GSYM group_linv)
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.mult x (g.inv x)) x`
-   ++ CONJ_TAC
-   >> (match_tac (GSYM group_assoc)
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult g.id x`
-   ++ CONJ_TAC
-   >> (REPEAT (AP_TERM_TAC || AP_THM_TAC)
-       ++ match_tac group_rinv
-       ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
-   ++ match_tac group_lid
-   ++ METIS_TAC [group_inv_carrier, group_mult_carrier]
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult x (g.mult (g.inv x) x)`
+   >> CONJ_TAC
+   >- (REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC)
+       >> match_tac (GSYM group_linv)
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.mult x (g.inv x)) x`
+   >> CONJ_TAC
+   >- (match_tac (GSYM group_assoc)
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult g.id x`
+   >> CONJ_TAC
+   >- (REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC)
+       >> match_tac group_rinv
+       >> METIS_TAC [group_inv_carrier, group_mult_carrier])
+   >> match_tac group_lid
+   >> METIS_TAC [group_inv_carrier, group_mult_carrier]
 QED
 
 val context = subtypeTools.add_rewrite2 group_rid context;
@@ -777,21 +752,21 @@ Theorem group_lcancel:
      !g :: Group. !x y z :: (g.carrier). (g.mult x y = g.mult x z) = (y = z)
 Proof
    RW_TAC resq_ss []
-   ++ REVERSE EQ_TAC >> RW_TAC std_ss []
-   ++ RW_TAC std_ss []
-   ++ Suff `g.mult g.id y = g.mult g.id z`
-   >> METIS_TAC [group_lid]
-   ++ Suff `g.mult (g.mult (g.inv x) x) y = g.mult (g.mult (g.inv x) x) z`
-   >> METIS_TAC [group_linv]
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.inv x) (g.mult x y)`
-   ++ CONJ_TAC
-   >> (match_tac group_assoc ++ METIS_TAC [group_inv_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.inv x) (g.mult x z)`
-   ++ REVERSE CONJ_TAC
-   >> (match_tac (GSYM group_assoc) ++ METIS_TAC [group_inv_carrier])
-   ++ RW_TAC std_ss []
+   >> REVERSE EQ_TAC >- RW_TAC std_ss []
+   >> RW_TAC std_ss []
+   >> Suff `g.mult g.id y = g.mult g.id z`
+   >- METIS_TAC [group_lid]
+   >> Suff `g.mult (g.mult (g.inv x) x) y = g.mult (g.mult (g.inv x) x) z`
+   >- METIS_TAC [group_linv]
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.inv x) (g.mult x y)`
+   >> CONJ_TAC
+   >- (match_tac group_assoc >> METIS_TAC [group_inv_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.inv x) (g.mult x z)`
+   >> REVERSE CONJ_TAC
+   >- (match_tac (GSYM group_assoc) >> METIS_TAC [group_inv_carrier])
+   >> RW_TAC std_ss []
 QED
 
 val context = subtypeTools.add_rewrite2' group_lcancel context;
@@ -808,12 +783,12 @@ Theorem group_lcancel_id:
      !g :: Group. !x y :: (g.carrier). (g.mult x y = x) = (y = g.id)
 Proof
    RW_TAC resq_ss []
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult x y = g.mult x g.id`
-   ++ CONJ_TAC
-   >> RW_TAC std_ss [group_rid]
-   ++ match_tac group_lcancel
-   ++ RW_TAC std_ss [group_id_carrier]
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult x y = g.mult x g.id`
+   >> CONJ_TAC
+   >- RW_TAC std_ss [group_rid]
+   >> match_tac group_lcancel
+   >> RW_TAC std_ss [group_id_carrier]
 QED
 
 val context = subtypeTools.add_rewrite2' group_lcancel_id context;
@@ -835,21 +810,21 @@ Theorem group_rcancel:
      !g :: Group. !x y z :: (g.carrier). (g.mult y x = g.mult z x) = (y = z)
 Proof
    RW_TAC resq_ss []
-   ++ REVERSE EQ_TAC >> RW_TAC std_ss []
-   ++ RW_TAC std_ss []
-   ++ Suff `g.mult y g.id = g.mult z g.id`
-   >> METIS_TAC [group_rid]
-   ++ Suff `g.mult y (g.mult x (g.inv x)) = g.mult z (g.mult x (g.inv x))`
-   >> METIS_TAC [group_rinv]
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.mult y x) (g.inv x)`
-   ++ CONJ_TAC
-   >> (match_tac (GSYM group_assoc) ++ METIS_TAC [group_inv_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.mult z x) (g.inv x)`
-   ++ REVERSE CONJ_TAC
-   >> (match_tac group_assoc ++ METIS_TAC [group_inv_carrier])
-   ++ RW_TAC std_ss []
+   >> REVERSE EQ_TAC >- RW_TAC std_ss []
+   >> RW_TAC std_ss []
+   >> Suff `g.mult y g.id = g.mult z g.id`
+   >- METIS_TAC [group_rid]
+   >> Suff `g.mult y (g.mult x (g.inv x)) = g.mult z (g.mult x (g.inv x))`
+   >- METIS_TAC [group_rinv]
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.mult y x) (g.inv x)`
+   >> CONJ_TAC
+   >- (match_tac (GSYM group_assoc) >> METIS_TAC [group_inv_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.mult z x) (g.inv x)`
+   >> REVERSE CONJ_TAC
+   >- (match_tac group_assoc >> METIS_TAC [group_inv_carrier])
+   >> RW_TAC std_ss []
 QED
 
 val context = subtypeTools.add_rewrite2' group_rcancel context;
@@ -866,12 +841,12 @@ Theorem group_rcancel_id:
      !g :: Group. !x y :: (g.carrier). (g.mult y x = x) = (y = g.id)
 Proof
    RW_TAC resq_ss []
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult y x = g.mult g.id x`
-   ++ CONJ_TAC
-   >> RW_TAC std_ss [group_lid]
-   ++ match_tac group_rcancel
-   ++ RW_TAC std_ss [group_id_carrier]
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult y x = g.mult g.id x`
+   >> CONJ_TAC
+   >- RW_TAC std_ss [group_lid]
+   >> match_tac group_rcancel
+   >> RW_TAC std_ss [group_id_carrier]
 QED
 
 val context = subtypeTools.add_rewrite2' group_rcancel_id context;
@@ -893,11 +868,11 @@ Theorem group_inv_cancel_imp:
      !g :: Group. !x y :: (g.carrier). (g.inv x = g.inv y) ==> (x = y)
 Proof
    RW_TAC resq_ss []
-   ++ match_tac group_lcancel_imp
-   ++ Q.EXISTS_TAC `g`
-   ++ Q.EXISTS_TAC `g.inv x`
-   ++ RW_TAC std_ss [group_inv_carrier]
-   ++ METIS_TAC [group_linv]
+   >> match_tac group_lcancel_imp
+   >> Q.EXISTS_TAC `g`
+   >> Q.EXISTS_TAC `g.inv x`
+   >> RW_TAC std_ss [group_inv_carrier]
+   >> METIS_TAC [group_linv]
 QED
 
 Theorem group_inv_cancel:
@@ -913,11 +888,11 @@ Theorem group_inv_inv:
      !g :: Group. !x :: (g.carrier). g.inv (g.inv x) = x
 Proof
    RW_TAC resq_ss []
-   ++ match_tac group_lcancel_imp
-   ++ Q.EXISTS_TAC `g`
-   ++ Q.EXISTS_TAC `g.inv x`
-   ++ RW_TAC std_ss [group_inv_carrier]
-   ++ METIS_TAC [group_inv_carrier, group_linv, group_rinv]
+   >> match_tac group_lcancel_imp
+   >> Q.EXISTS_TAC `g`
+   >> Q.EXISTS_TAC `g.inv x`
+   >> RW_TAC std_ss [group_inv_carrier]
+   >> METIS_TAC [group_inv_carrier, group_linv, group_rinv]
 QED
 
 val context = subtypeTools.add_rewrite2 group_inv_inv context;
@@ -945,11 +920,11 @@ Theorem group_inv_id:
      !g :: Group. g.inv g.id = g.id
 Proof
    RW_TAC resq_ss []
-   ++ match_tac group_lcancel_imp
-   ++ Q.EXISTS_TAC `g`
-   ++ Q.EXISTS_TAC `g.id`
-   ++ RW_TAC std_ss [group_inv_carrier, group_id_carrier, group_rinv]
-   ++ RW_TAC std_ss [group_lid, group_id_carrier]
+   >> match_tac group_lcancel_imp
+   >> Q.EXISTS_TAC `g`
+   >> Q.EXISTS_TAC `g.id`
+   >> RW_TAC std_ss [group_inv_carrier, group_id_carrier, group_rinv]
+   >> RW_TAC std_ss [group_lid, group_id_carrier]
 QED
 
 val context = subtypeTools.add_rewrite2 group_inv_id context;
@@ -965,10 +940,10 @@ Theorem group_inv_eq_imp':
      !g :: Group. !x y :: (g.carrier). (g.mult x y = g.id) ==> (g.inv x = y)
 Proof
    RW_TAC resq_ss []
-   ++ match_tac group_lcancel_imp
-   ++ Q.EXISTS_TAC `g`
-   ++ Q.EXISTS_TAC `x`
-   ++ RW_TAC std_ss [group_inv_carrier, group_rinv]
+   >> match_tac group_lcancel_imp
+   >> Q.EXISTS_TAC `g`
+   >> Q.EXISTS_TAC `x`
+   >> RW_TAC std_ss [group_inv_carrier, group_rinv]
 QED
 
 Theorem group_inv_eq:
@@ -982,20 +957,20 @@ Theorem group_inv_mult:
        g.inv (g.mult x y) = g.mult (g.inv y) (g.inv x)
 Proof
    RW_TAC resq_ss []
-   ++ match_tac group_inv_eq_imp'
-   ++ RW_TAC std_ss [group_mult_carrier, group_inv_carrier]
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult x (g.mult y (g.mult (g.inv y) (g.inv x)))`
-   ++ CONJ_TAC
-   >> (match_tac group_assoc
-       ++ METIS_TAC [group_mult_carrier, group_inv_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult x (g.mult (g.mult y (g.inv y)) (g.inv x))`
-   ++ CONJ_TAC
-   >> (AP_TERM_TAC
-       ++ match_tac (GSYM group_assoc)
-       ++ METIS_TAC [group_mult_carrier, group_inv_carrier])
-   ++ RW_TAC std_ss [group_rinv, group_lid, group_inv_carrier]
+   >> match_tac group_inv_eq_imp'
+   >> RW_TAC std_ss [group_mult_carrier, group_inv_carrier]
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult x (g.mult y (g.mult (g.inv y) (g.inv x)))`
+   >> CONJ_TAC
+   >- (match_tac group_assoc
+       >> METIS_TAC [group_mult_carrier, group_inv_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult x (g.mult (g.mult y (g.inv y)) (g.inv x))`
+   >> CONJ_TAC
+   >- (AP_TERM_TAC
+       >> match_tac (GSYM group_assoc)
+       >> METIS_TAC [group_mult_carrier, group_inv_carrier])
+   >> RW_TAC std_ss [group_rinv, group_lid, group_inv_carrier]
 QED
 
 val context = subtypeTools.add_rewrite2'' group_inv_mult context;
@@ -1005,9 +980,9 @@ Theorem group_exp_carrier:
      !g :: Group. !x :: (g.carrier). !n. group_exp g x n IN g.carrier
 Proof
    RW_TAC resq_ss []
-   ++ Induct_on `n`
-   ++ RW_TAC std_ss [group_exp_def]
-   ++ METIS_TAC [group_id_carrier, group_mult_carrier]
+   >> Induct_on `n`
+   >> RW_TAC std_ss [group_exp_def]
+   >> METIS_TAC [group_id_carrier, group_mult_carrier]
 QED
 
 val context = subtypeTools.add_reduction2 group_exp_carrier context;
@@ -1017,8 +992,8 @@ Theorem group_id_exp:
      !g :: Group. !n. group_exp g g.id n = g.id
 Proof
    RW_TAC resq_ss []
-   ++ Induct_on `n`
-   ++ RW_TAC std_ss [group_exp_def, group_lid, group_id_carrier]
+   >> Induct_on `n`
+   >> RW_TAC std_ss [group_exp_def, group_lid, group_id_carrier]
 QED
 
 val context = subtypeTools.add_rewrite2 group_id_exp context;
@@ -1030,25 +1005,25 @@ Theorem group_comm_exp:
         (g.mult (group_exp g x n) y = g.mult y (group_exp g x n))
 Proof
    RW_TAC resq_ss []
-   ++ Induct_on `n`
-   ++ RW_TAC std_ss [group_exp_def, group_lid, group_rid]
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult x (g.mult (group_exp g x n) y)`
-   ++ CONJ_TAC
-   >> (match_tac group_assoc
-       ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ RW_TAC std_ss []
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.mult x y) (group_exp g x n)`
-   ++ CONJ_TAC
-   >> (match_tac (GSYM group_assoc)
-       ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.mult y x) (group_exp g x n)`
-   ++ REVERSE CONJ_TAC
-   >> (match_tac group_assoc
-       ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ ASM_REWRITE_TAC []
+   >> Induct_on `n`
+   >> RW_TAC std_ss [group_exp_def, group_lid, group_rid]
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult x (g.mult (group_exp g x n) y)`
+   >> CONJ_TAC
+   >- (match_tac group_assoc
+       >> METIS_TAC [group_mult_carrier, group_exp_carrier])
+   >> RW_TAC std_ss []
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.mult x y) (group_exp g x n)`
+   >> CONJ_TAC
+   >- (match_tac (GSYM group_assoc)
+       >> METIS_TAC [group_mult_carrier, group_exp_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.mult y x) (group_exp g x n)`
+   >> REVERSE CONJ_TAC
+   >- (match_tac group_assoc
+       >> METIS_TAC [group_mult_carrier, group_exp_carrier])
+   >> ASM_REWRITE_TAC []
 QED
 
 Theorem group_exp_comm:
@@ -1056,8 +1031,8 @@ Theorem group_exp_comm:
         g.mult (group_exp g x n) x = g.mult x (group_exp g x n)
 Proof
    RW_TAC resq_ss []
-   ++ match_tac group_comm_exp
-   ++ RW_TAC std_ss []
+   >> match_tac group_comm_exp
+   >> RW_TAC std_ss []
 QED
 
 Theorem group_mult_exp:
@@ -1067,36 +1042,36 @@ Theorem group_mult_exp:
          g.mult (group_exp g x n) (group_exp g y n))
 Proof
    RW_TAC resq_ss []
-   ++ Induct_on `n`
-   ++ RW_TAC std_ss
+   >> Induct_on `n`
+   >> RW_TAC std_ss
         [group_exp_def, group_exp_carrier, group_lid, group_id_carrier]
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC
         `g.mult x (g.mult y (g.mult (group_exp g x n) (group_exp g y n)))`
-   ++ CONJ_TAC
-   >> (match_tac group_assoc
-       ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC
+   >> CONJ_TAC
+   >- (match_tac group_assoc
+       >> METIS_TAC [group_mult_carrier, group_exp_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC
         `g.mult x (g.mult (group_exp g x n) (g.mult y (group_exp g y n)))`
-   ++ REVERSE CONJ_TAC
-   >> (match_tac (GSYM group_assoc)
-       ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ AP_TERM_TAC
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.mult y (group_exp g x n)) (group_exp g y n)`
-   ++ CONJ_TAC
-   >> (match_tac (GSYM group_assoc)
-       ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC `g.mult (g.mult (group_exp g x n) y) (group_exp g y n)`
-   ++ REVERSE CONJ_TAC
-   >> (match_tac group_assoc
-       ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ AP_THM_TAC
-   ++ AP_TERM_TAC
-   ++ match_tac (GSYM group_comm_exp)
-   ++ METIS_TAC []
+   >> REVERSE CONJ_TAC
+   >- (match_tac (GSYM group_assoc)
+       >> METIS_TAC [group_mult_carrier, group_exp_carrier])
+   >> AP_TERM_TAC
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.mult y (group_exp g x n)) (group_exp g y n)`
+   >> CONJ_TAC
+   >- (match_tac (GSYM group_assoc)
+       >> METIS_TAC [group_mult_carrier, group_exp_carrier])
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC `g.mult (g.mult (group_exp g x n) y) (group_exp g y n)`
+   >> REVERSE CONJ_TAC
+   >- (match_tac group_assoc
+       >> METIS_TAC [group_mult_carrier, group_exp_carrier])
+   >> AP_THM_TAC
+   >> AP_TERM_TAC
+   >> match_tac (GSYM group_comm_exp)
+   >> METIS_TAC []
 QED
 
 Theorem group_exp_add:
@@ -1104,10 +1079,10 @@ Theorem group_exp_add:
         group_exp g x (m + n) = g.mult (group_exp g x m) (group_exp g x n)
 Proof
    RW_TAC resq_ss []
-   ++ Induct_on `m`
-   ++ RW_TAC std_ss [group_exp_def, group_lid, group_exp_carrier, ADD]
-   ++ match_tac (GSYM group_assoc)
-   ++ RW_TAC std_ss [group_exp_carrier]
+   >> Induct_on `m`
+   >> RW_TAC std_ss [group_exp_def, group_lid, group_exp_carrier, ADD]
+   >> match_tac (GSYM group_assoc)
+   >> RW_TAC std_ss [group_exp_carrier]
 QED
 
 Theorem group_exp_mult:
@@ -1115,15 +1090,15 @@ Theorem group_exp_mult:
         group_exp g x (m * n) = group_exp g (group_exp g x m) n
 Proof
    RW_TAC resq_ss []
-   ++ Induct_on `m`
-   ++ RW_TAC std_ss [group_exp_def, group_id_exp, group_exp_carrier, MULT]
-   ++ ONCE_REWRITE_TAC [ADD_COMM]
-   ++ RW_TAC std_ss [group_exp_carrier, group_exp_add]
-   ++ MATCH_MP_TAC EQ_SYM
-   ++ match_tac group_mult_exp
-   ++ RW_TAC std_ss [group_exp_carrier]
-   ++ match_tac (GSYM group_exp_comm)
-   ++ METIS_TAC []
+   >> Induct_on `m`
+   >> RW_TAC std_ss [group_exp_def, group_id_exp, group_exp_carrier, MULT]
+   >> ONCE_REWRITE_TAC [ADD_COMM]
+   >> RW_TAC std_ss [group_exp_carrier, group_exp_add]
+   >> MATCH_MP_TAC EQ_SYM
+   >> match_tac group_mult_exp
+   >> RW_TAC std_ss [group_exp_carrier]
+   >> match_tac (GSYM group_exp_comm)
+   >> METIS_TAC []
 QED
 
 Theorem group_id_alt:
@@ -1161,14 +1136,14 @@ Theorem group_exp_eval:
          if EVEN n then group_exp g x' n' else g.mult x (group_exp g x' n')
 Proof
    RW_TAC resq_ss [LET_DEF]
-   ++ RW_TAC alg_ss [group_exp_def, group_mult_exp, GSYM group_exp_add]
-   ++ RW_TAC alg_ss [GSYM group_exp_def]
-   ++ REPEAT AP_TERM_TAC
-   ++ MP_TAC (Q.SPEC `2` DIVISION)
-   ++ SIMP_TAC alg_ss [MOD_2]
-   ++ DISCH_THEN (MP_TAC o Q.SPEC `n`)
-   ++ RW_TAC std_ss []
-   ++ DECIDE_TAC
+   >> RW_TAC alg_ss [group_exp_def, group_mult_exp, GSYM group_exp_add]
+   >> RW_TAC alg_ss [GSYM group_exp_def]
+   >> REPEAT AP_TERM_TAC
+   >> MP_TAC (Q.SPEC `2` DIVISION)
+   >> SIMP_TAC alg_ss [MOD_2]
+   >> DISCH_THEN (MP_TAC o Q.SPEC `n`)
+   >> RW_TAC std_ss []
+   >> DECIDE_TAC
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -1251,143 +1226,143 @@ Theorem cyclic_group_alt:
           FUNPOW f ((i + j) MOD n) e)
 Proof
    REPEAT GEN_TAC
-   ++ SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
-   ++ Q.SPEC_TAC (`LEAST k. ~(k = 0) /\ (FUNPOW f k e = e)`,`k`)
-   ++ GEN_TAC
-   ++ STRIP_TAC
-   ++ Know `0 < k` >> DECIDE_TAC
-   ++ STRIP_TAC
-   ++ Know `!p q. (FUNPOW f p e = FUNPOW f q e) = (p MOD k = q MOD k)`
-   >> (REPEAT STRIP_TAC
-       ++ MP_TAC (Q.SPEC `k` DIVISION)
-       ++ ASM_SIMP_TAC std_ss []
-       ++ DISCH_THEN (fn th => MP_TAC (Q.SPEC `p` th) ++ MP_TAC (Q.SPEC `q` th))
-       ++ DISCH_THEN (fn th1 => DISCH_THEN (fn th2 =>
+   >> SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
+   >> Q.SPEC_TAC (`LEAST k. ~(k = 0) /\ (FUNPOW f k e = e)`,`k`)
+   >> GEN_TAC
+   >> STRIP_TAC
+   >> Know `0 < k` >- DECIDE_TAC
+   >> STRIP_TAC
+   >> Know `!p q. (FUNPOW f p e = FUNPOW f q e) = (p MOD k = q MOD k)`
+   >- (REPEAT STRIP_TAC
+       >> MP_TAC (Q.SPEC `k` DIVISION)
+       >> ASM_SIMP_TAC std_ss []
+       >> DISCH_THEN (fn th => MP_TAC (Q.SPEC `p` th) >> MP_TAC (Q.SPEC `q` th))
+       >> DISCH_THEN (fn th1 => DISCH_THEN (fn th2 =>
             CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th1,th2]))))
-       ++ ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_ADD]
-       ++ ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [MULT_COMM] FUNPOW_MULT]
-       ++ Know `!n. FUNPOW (\x. FUNPOW f k x) n e = e`
-       >> (Induct ++ RW_TAC std_ss [FUNPOW])
-       ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
-       ++ REVERSE EQ_TAC >> RW_TAC std_ss []
-       ++ STRIP_TAC
-       ++ Know `!m n : num. ~(m < n) /\ ~(n < m) ==> (m = n)` >> DECIDE_TAC
-       ++ DISCH_THEN MATCH_MP_TAC
-       ++ POP_ASSUM MP_TAC
-       ++ MATCH_MP_TAC
+       >> ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_ADD]
+       >> ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [MULT_COMM] FUNPOW_MULT]
+       >> Know `!n. FUNPOW (\x. FUNPOW f k x) n e = e`
+       >- (Induct >> RW_TAC std_ss [FUNPOW])
+       >> DISCH_THEN (fn th => RW_TAC std_ss [th])
+       >> REVERSE EQ_TAC >- RW_TAC std_ss []
+       >> STRIP_TAC
+       >> Know `!m n : num. ~(m < n) /\ ~(n < m) ==> (m = n)` >- DECIDE_TAC
+       >> DISCH_THEN MATCH_MP_TAC
+       >> POP_ASSUM MP_TAC
+       >> MATCH_MP_TAC
            (PROVE []
             ``((a = b) ==> ~c) /\ ((b = a) ==> ~d) ==> ((a = b) ==> ~c /\ ~d)``)
-       ++ Q.SPEC_TAC (`q`,`q`)
-       ++ Q.SPEC_TAC (`p`,`p`)
-       ++ SIMP_TAC std_ss [FORALL_AND_THM]
-       ++ MATCH_MP_TAC (PROVE [] ``(a ==> b) /\ a ==> a /\ b``)
-       ++ CONJ_TAC >> METIS_TAC []
-       ++ RW_TAC std_ss []
-       ++ STRIP_TAC
-       ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `(k - q MOD k) + p MOD k`)
-       ++ ASM_SIMP_TAC std_ss [FUNPOW_ADD]
-       ++ SIMP_TAC std_ss [GSYM FUNPOW_ADD]
-       ++ MP_TAC (Q.SPEC `k` DIVISION)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (ASSUME_TAC o CONJUNCT2 o Q.SPEC `q`)
-       ++ ASM_SIMP_TAC arith_ss [])
-   ++ RW_TAC resq_ss
+       >> Q.SPEC_TAC (`q`,`q`)
+       >> Q.SPEC_TAC (`p`,`p`)
+       >> SIMP_TAC std_ss [FORALL_AND_THM]
+       >> MATCH_MP_TAC (PROVE [] ``(a ==> b) /\ a ==> a /\ b``)
+       >> CONJ_TAC >- METIS_TAC []
+       >> RW_TAC std_ss []
+       >> STRIP_TAC
+       >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `(k - q MOD k) + p MOD k`)
+       >> ASM_SIMP_TAC std_ss [FUNPOW_ADD]
+       >> SIMP_TAC std_ss [GSYM FUNPOW_ADD]
+       >> MP_TAC (Q.SPEC `k` DIVISION)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (ASSUME_TAC o CONJUNCT2 o Q.SPEC `q`)
+       >> ASM_SIMP_TAC arith_ss [])
+   >> RW_TAC resq_ss
         [cyclic_group_def, combinTheory.K_THM, GSPECIFICATION, EXTENSION]
-   << [REVERSE EQ_TAC >> METIS_TAC []
-       ++ RW_TAC std_ss []
-       ++ Q.EXISTS_TAC `n MOD k`
-       ++ METIS_TAC [DIVISION, MOD_MOD],
+   >| [REVERSE EQ_TAC >- METIS_TAC []
+       >> RW_TAC std_ss []
+       >> Q.EXISTS_TAC `n MOD k`
+       >> METIS_TAC [DIVISION, MOD_MOD],
        normalForms.SELECT_TAC
-       ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-       ++ CONJ_TAC
-       >> (Q.EXISTS_TAC `FUNPOW f (k - i MOD k) e`
-           ++ Q.EXISTS_TAC `k - i MOD k`
-           ++ RW_TAC std_ss []
-           ++ Know `e = FUNPOW f 0 e` >> RW_TAC std_ss [FUNPOW]
-           ++ DISCH_THEN
+       >> MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+       >> CONJ_TAC
+       >- (Q.EXISTS_TAC `FUNPOW f (k - i MOD k) e`
+           >> Q.EXISTS_TAC `k - i MOD k`
+           >> RW_TAC std_ss []
+           >> Know `e = FUNPOW f 0 e` >- RW_TAC std_ss [FUNPOW]
+           >> DISCH_THEN
                 (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [th])))
-           ++ RW_TAC std_ss []
-           ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-           ++ ASM_REWRITE_TAC []
-           ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-           ++ RW_TAC std_ss []
-           ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-           ++ ASM_REWRITE_TAC []
-           ++ DISCH_THEN (fn th =>
+           >> RW_TAC std_ss []
+           >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+           >> ASM_REWRITE_TAC []
+           >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+           >> RW_TAC std_ss []
+           >> MP_TAC (Q.SPEC `k` MOD_MOD)
+           >> ASM_REWRITE_TAC []
+           >> DISCH_THEN (fn th =>
                 CONV_TAC
                   (LAND_CONV
                      (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))))
-           ++ ASM_SIMP_TAC std_ss [MOD_PLUS]
-           ++ Know `i MOD k < k` >> METIS_TAC [DIVISION]
-           ++ STRIP_TAC
-           ++ RW_TAC arith_ss [])
-       ++ RW_TAC std_ss []
-       ++ POP_ASSUM (MP_TAC o Q.SPEC `i`)
-       ++ RW_TAC std_ss []
-       ++ RW_TAC std_ss []
-       ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN
+           >> ASM_SIMP_TAC std_ss [MOD_PLUS]
+           >> Know `i MOD k < k` >- METIS_TAC [DIVISION]
+           >> STRIP_TAC
+           >> RW_TAC arith_ss [])
+       >> RW_TAC std_ss []
+       >> POP_ASSUM (MP_TAC o Q.SPEC `i`)
+       >> RW_TAC std_ss []
+       >> RW_TAC std_ss []
+       >> MP_TAC (Q.SPEC `k` MOD_MOD)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN
             (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
-       ++ Know `!a. a = 0 MOD k + a` >> RW_TAC arith_ss [ZERO_MOD]
-       ++ DISCH_THEN
+       >> Know `!a. a = 0 MOD k + a` >- RW_TAC arith_ss [ZERO_MOD]
+       >> DISCH_THEN
             (fn th =>
                CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [th]))))
-       ++ POP_ASSUM MP_TAC
-       ++ Know `FUNPOW f 0 e = e` >> RW_TAC std_ss [FUNPOW]
-       ++ DISCH_THEN
+       >> POP_ASSUM MP_TAC
+       >> Know `FUNPOW f 0 e = e` >- RW_TAC std_ss [FUNPOW]
+       >> DISCH_THEN
             (fn th =>
                CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV [GSYM th]))))
-       ++ ASM_REWRITE_TAC []
-       ++ Q.UNDISCH_TAC `0 < k`
-       ++ POP_ASSUM_LIST (K ALL_TAC)
-       ++ STRIP_TAC
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN
+       >> ASM_REWRITE_TAC []
+       >> Q.UNDISCH_TAC `0 < k`
+       >> POP_ASSUM_LIST (K ALL_TAC)
+       >> STRIP_TAC
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN
             (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
-       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-       ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th =>
+       >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+       >> MP_TAC (Q.SPEC `k` MOD_MOD)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th =>
             CONV_TAC
               (RAND_CONV
                  (LAND_CONV
                     (LAND_CONV
                       (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))))))
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [GSYM th]))
-       ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => CONV_TAC (REWRITE_CONV [th]))
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
-       ++ Know `i MOD k < k` >> METIS_TAC [DIVISION]
-       ++ STRIP_TAC
-       ++ RW_TAC arith_ss []
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [GSYM th]))
-       ++ RW_TAC arith_ss [DIVMOD_ID],
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [GSYM th]))
+       >> MP_TAC (Q.SPEC `k` MOD_MOD)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => CONV_TAC (REWRITE_CONV [th]))
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
+       >> Know `i MOD k < k` >- METIS_TAC [DIVISION]
+       >> STRIP_TAC
+       >> RW_TAC arith_ss []
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [GSYM th]))
+       >> RW_TAC arith_ss [DIVMOD_ID],
        normalForms.SELECT_TAC
-       ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-       ++ CONJ_TAC
-       >> (Q.EXISTS_TAC `FUNPOW f (i + j) e`
-           ++ RW_TAC std_ss []
-           ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-           ++ ASM_REWRITE_TAC []
-           ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-           ++ RW_TAC std_ss [])
-       ++ RW_TAC std_ss []
-       ++ POP_ASSUM (MP_TAC o Q.SPECL [`i`,`j`])
-       ++ RW_TAC std_ss []
-       ++ RW_TAC std_ss []
-       ++ METIS_TAC [DIVISION]]
+       >> MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+       >> CONJ_TAC
+       >- (Q.EXISTS_TAC `FUNPOW f (i + j) e`
+           >> RW_TAC std_ss []
+           >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+           >> ASM_REWRITE_TAC []
+           >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+           >> RW_TAC std_ss [])
+       >> RW_TAC std_ss []
+       >> POP_ASSUM (MP_TAC o Q.SPECL [`i`,`j`])
+       >> RW_TAC std_ss []
+       >> RW_TAC std_ss []
+       >> METIS_TAC [DIVISION]]
 QED
 
 Theorem cyclic_group:
@@ -1396,74 +1371,74 @@ Theorem cyclic_group:
        cyclic_group e f IN FiniteAbelianGroup
 Proof
    REPEAT GEN_TAC
-   ++ DISCH_THEN ASSUME_TAC
-   ++ MP_TAC (Q.SPECL [`e`,`f`,`LEAST n. ~(n = 0) /\ (FUNPOW f n e = e)`]
+   >> DISCH_THEN ASSUME_TAC
+   >> MP_TAC (Q.SPECL [`e`,`f`,`LEAST n. ~(n = 0) /\ (FUNPOW f n e = e)`]
                 cyclic_group_alt)
-   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-   ++ CONJ_TAC >> (RW_TAC std_ss [] ++ METIS_TAC [])
-   ++ POP_ASSUM MP_TAC
-   ++ SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
-   ++ Q.SPEC_TAC (`LEAST n. ~(n = 0) /\ (FUNPOW f n e = e)`,`k`)
-   ++ REPEAT GEN_TAC
-   ++ STRIP_TAC
-   ++ Know `0 < k` >> DECIDE_TAC
-   ++ STRIP_TAC
-   ++ (RW_TAC resq_ss [FiniteAbelianGroup_alt, Group_def, GSPECIFICATION]
-       ++ RW_TAC std_ss [])
-   << [Q.EXISTS_TAC `0`
-       ++ RW_TAC arith_ss [FUNPOW],
+   >> MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   >> CONJ_TAC >- (RW_TAC std_ss [] >> METIS_TAC [])
+   >> POP_ASSUM MP_TAC
+   >> SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
+   >> Q.SPEC_TAC (`LEAST n. ~(n = 0) /\ (FUNPOW f n e = e)`,`k`)
+   >> REPEAT GEN_TAC
+   >> STRIP_TAC
+   >> Know `0 < k` >- DECIDE_TAC
+   >> STRIP_TAC
+   >> (RW_TAC resq_ss [FiniteAbelianGroup_alt, Group_def, GSPECIFICATION]
+       >> RW_TAC std_ss [])
+   >| [Q.EXISTS_TAC `0`
+       >> RW_TAC arith_ss [FUNPOW],
        METIS_TAC [DIVISION],
        Q.EXISTS_TAC `(k - k' MOD k) MOD k`
-       ++ RW_TAC arith_ss [FUNPOW]
-       ++ METIS_TAC [DIVISION],
-       Know `FUNPOW f 0 e = e` >> RW_TAC std_ss [FUNPOW]
-       ++ DISCH_THEN (fn th =>
+       >> RW_TAC arith_ss [FUNPOW]
+       >> METIS_TAC [DIVISION],
+       Know `FUNPOW f 0 e = e` >- RW_TAC std_ss [FUNPOW]
+       >> DISCH_THEN (fn th =>
             CONV_TAC (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM th]))))
-       ++ RW_TAC std_ss []
-       ++ RW_TAC arith_ss [],
+       >> RW_TAC std_ss []
+       >> RW_TAC arith_ss [],
        Suff `((k - k' MOD k) MOD k + k') MOD k = 0 MOD k`
-       >> RW_TAC std_ss [ZERO_MOD, FUNPOW]
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN
+       >- RW_TAC std_ss [ZERO_MOD, FUNPOW]
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN
             (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [GSYM th]
                                            THENC ONCE_REWRITE_CONV [GSYM th])))
-       ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th =>
+       >> MP_TAC (Q.SPEC `k` MOD_MOD)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th =>
             CONV_TAC (LAND_CONV (LAND_CONV (LAND_CONV (REWRITE_CONV [th])))))
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
-       ++ Know `k' MOD k < k` >> METIS_TAC [DIVISION]
-       ++ RW_TAC arith_ss [],
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
+       >> Know `k' MOD k < k` >- METIS_TAC [DIVISION]
+       >> RW_TAC arith_ss [],
        AP_THM_TAC
-       ++ AP_TERM_TAC
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN
+       >> AP_TERM_TAC
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN
             (fn th => CONV_TAC (BINOP_CONV
                         (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])
                          THENC ONCE_REWRITE_CONV [GSYM th])))
-       ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th =>
+       >> MP_TAC (Q.SPEC `k` MOD_MOD)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th =>
             CONV_TAC
               (LAND_CONV (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
                THENC
                RAND_CONV (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))))
-       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ METIS_TAC [ADD_ASSOC],
+       >> MP_TAC (Q.SPEC `k` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> METIS_TAC [ADD_ASSOC],
        METIS_TAC [ADD_COMM],
        Know `{FUNPOW f k' e | k' < k} =
              IMAGE (\k'. FUNPOW f k' e) {k' | k' < k}`
-       >> RW_TAC std_ss [IMAGE_DEF, GSPECIFICATION]
-       ++ RW_TAC std_ss []
-       ++ MATCH_MP_TAC IMAGE_FINITE
-       ++ RW_TAC std_ss [finite_num]
-       ++ Q.EXISTS_TAC `k`
-       ++ RW_TAC std_ss [GSPECIFICATION]]
+       >- RW_TAC std_ss [IMAGE_DEF, GSPECIFICATION]
+       >> RW_TAC std_ss []
+       >> MATCH_MP_TAC IMAGE_FINITE
+       >> RW_TAC std_ss [finite_num]
+       >> Q.EXISTS_TAC `k`
+       >> RW_TAC std_ss [GSPECIFICATION]]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -1486,23 +1461,23 @@ Theorem group_add_mod:
 Proof
    RW_TAC resq_ss
      [Group_def,GSPECIFICATION,add_mod_def,combinTheory.K_THM,Nonzero_def]
-   ++ Know `0 < n /\ !m. m < n = (m MOD n = m)` >> RW_TAC arith_ss []
-   ++ RW_TAC bool_ss [ZERO_MOD, MOD_MOD, ADD_CLAUSES]
-   << [METIS_TAC [],
+   >> Know `0 < n /\ !m. m < n = (m MOD n = m)` >- RW_TAC arith_ss []
+   >> RW_TAC bool_ss [ZERO_MOD, MOD_MOD, ADD_CLAUSES]
+   >| [METIS_TAC [],
        Suff `((n - x) MOD n + x MOD n) MOD n = 0`
-       >> METIS_TAC []
-       ++ MP_TAC (Q.SPEC `n` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
-       ++ POP_ASSUM (K ALL_TAC)
-       ++ RW_TAC arith_ss [],
+       >- METIS_TAC []
+       >> MP_TAC (Q.SPEC `n` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => REWRITE_TAC [th])
+       >> POP_ASSUM (K ALL_TAC)
+       >> RW_TAC arith_ss [],
        Suff `((x + y) MOD n + z MOD n) MOD n = (x MOD n + (y + z) MOD n) MOD n`
-       >> METIS_TAC []
-       ++ MP_TAC (Q.SPEC `n` MOD_PLUS)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
-       ++ POP_ASSUM (K ALL_TAC)
-       ++ RW_TAC arith_ss []]
+       >- METIS_TAC []
+       >> MP_TAC (Q.SPEC `n` MOD_PLUS)
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => REWRITE_TAC [th])
+       >> POP_ASSUM (K ALL_TAC)
+       >> RW_TAC arith_ss []]
 QED
 
 Theorem add_mod:
@@ -1511,9 +1486,9 @@ Proof
    RW_TAC resq_ss
      [group_add_mod,FiniteAbelianGroup_def,AbelianGroup_def,
       GSPECIFICATION,combinTheory.K_THM,FiniteGroup_def,Nonzero_def]
-   ++ REPEAT (POP_ASSUM MP_TAC)
-   ++ RW_TAC arith_ss [add_mod_def, finite_num, GSPECIFICATION]
-   ++ METIS_TAC []
+   >> REPEAT (POP_ASSUM MP_TAC)
+   >> RW_TAC arith_ss [add_mod_def, finite_num, GSPECIFICATION]
+   >> METIS_TAC []
 QED
 
 val context = subtypeTools.add_reduction2 add_mod context;
@@ -1538,7 +1513,7 @@ Theorem Prime_Nonzero:
      !p. p IN Prime ==> p IN Nonzero
 Proof
    RW_TAC std_ss [Prime_def, Nonzero_def, GSPECIFICATION]
-   ++ METIS_TAC [NOT_PRIME_0]
+   >> METIS_TAC [NOT_PRIME_0]
 QED
 
 val context = subtypeTools.add_judgement2 Prime_Nonzero context;
@@ -1549,53 +1524,53 @@ Theorem group_mult_mod:
 Proof
    RW_TAC resq_ss
      [Group_def,GSPECIFICATION,mult_mod_def,combinTheory.K_THM,Prime_def]
-   ++ RW_TAC arith_ss [prime_one_lt]
-   ++ Cases_on `p = 0` >> METIS_TAC [NOT_PRIME_0]
-   ++ Know `0 < p` >> DECIDE_TAC ++ STRIP_TAC
-   ++ RW_TAC std_ss [DIVISION, GSYM primalityTheory.divides_mod_zero]
-   << [STRIP_TAC
-       ++ MP_TAC (Q.SPECL [`p`,`x`,`y`] P_EUCLIDES)
-       ++ RW_TAC std_ss []
-       ++ Know `0 < x` >> DECIDE_TAC ++ STRIP_TAC
-       ++ Know `0 < y` >> DECIDE_TAC ++ STRIP_TAC
-       ++ METIS_TAC [DIVIDES_LE, NOT_LESS],
-       Know `0 < x` >> DECIDE_TAC ++ STRIP_TAC
-       ++ Q.SPEC_TAC (`p - 2`, `k`)
-       ++ Induct
-       >> (RW_TAC std_ss [EXP]
-           ++ STRIP_TAC
-           ++ Know `p <= 1` >> METIS_TAC [DIVIDES_LE, DECIDE ``0 < 1``]
-           ++ METIS_TAC [NOT_LESS, prime_one_lt])
-       ++ RW_TAC std_ss [EXP]
-       ++ STRIP_TAC
-       ++ MP_TAC (Q.SPECL [`p`,`x`,` x ** k`] P_EUCLIDES)
-       ++ RW_TAC std_ss []
-       ++ STRIP_TAC
-       ++ Know `p <= x` >> METIS_TAC [DIVIDES_LE]
-       ++ METIS_TAC [NOT_LESS],
+   >> RW_TAC arith_ss [prime_one_lt]
+   >> Cases_on `p = 0` >- METIS_TAC [NOT_PRIME_0]
+   >> Know `0 < p` >- DECIDE_TAC >> STRIP_TAC
+   >> RW_TAC std_ss [DIVISION, GSYM primalityTheory.divides_mod_zero]
+   >| [STRIP_TAC
+       >> MP_TAC (Q.SPECL [`p`,`x`,`y`] P_EUCLIDES)
+       >> RW_TAC std_ss []
+       >> Know `0 < x` >- DECIDE_TAC >> STRIP_TAC
+       >> Know `0 < y` >- DECIDE_TAC >> STRIP_TAC
+       >> METIS_TAC [DIVIDES_LE, NOT_LESS],
+       Know `0 < x` >- DECIDE_TAC >> STRIP_TAC
+       >> Q.SPEC_TAC (`p - 2`, `k`)
+       >> Induct
+       >- (RW_TAC std_ss [EXP]
+           >> STRIP_TAC
+           >> Know `p <= 1` >- METIS_TAC [DIVIDES_LE, DECIDE ``0 < 1``]
+           >> METIS_TAC [NOT_LESS, prime_one_lt])
+       >> RW_TAC std_ss [EXP]
+       >> STRIP_TAC
+       >> MP_TAC (Q.SPECL [`p`,`x`,` x ** k`] P_EUCLIDES)
+       >> RW_TAC std_ss []
+       >> STRIP_TAC
+       >> Know `p <= x` >- METIS_TAC [DIVIDES_LE]
+       >> METIS_TAC [NOT_LESS],
        MP_TAC (Q.SPEC `p` MOD_TIMES2)
-       ++ ASM_REWRITE_TAC []
-       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-       ++ RW_TAC bool_ss [MOD_MOD]
-       ++ RW_TAC bool_ss [MOD_TIMES2]
-       ++ REWRITE_TAC [GSYM EXP]
-       ++ Know `SUC (p - 2) = p - 1`
-       >> (Suff `1 <= p` >> DECIDE_TAC
-           ++ DECIDE_TAC)
-       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
-       ++ RW_TAC std_ss [EXP]
-       ++ Suff `~divides p x` >> METIS_TAC [fermat_little]
-       ++ METIS_TAC
+       >> ASM_REWRITE_TAC []
+       >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+       >> RW_TAC bool_ss [MOD_MOD]
+       >> RW_TAC bool_ss [MOD_TIMES2]
+       >> REWRITE_TAC [GSYM EXP]
+       >> Know `SUC (p - 2) = p - 1`
+       >- (Suff `1 <= p` >- DECIDE_TAC
+           >> DECIDE_TAC)
+       >> DISCH_THEN (fn th => REWRITE_TAC [th])
+       >> RW_TAC std_ss [EXP]
+       >> Suff `~divides p x` >- METIS_TAC [fermat_little]
+       >> METIS_TAC
             [DIVIDES_LE, DECIDE ``~(x : num = 0) = 0 < x``,
              DECIDE ``~(a : num < b) = b <= a``],
        MP_TAC (Q.SPEC `p` MOD_MOD)
-       ++ MP_TAC (Q.SPEC `p` MOD_TIMES2)
-       ++ ASM_REWRITE_TAC []
-       ++ POP_ASSUM_LIST (K ALL_TAC)
-       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th] ++ ASSUME_TAC th)
-       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
-       ++ ASM_REWRITE_TAC []
-       ++ METIS_TAC [MULT_ASSOC, MULT_COMM]]
+       >> MP_TAC (Q.SPEC `p` MOD_TIMES2)
+       >> ASM_REWRITE_TAC []
+       >> POP_ASSUM_LIST (K ALL_TAC)
+       >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th] >> ASSUME_TAC th)
+       >> DISCH_THEN (fn th => REWRITE_TAC [th])
+       >> ASM_REWRITE_TAC []
+       >> METIS_TAC [MULT_ASSOC, MULT_COMM]]
 QED
 
 Theorem mult_mod:
@@ -1604,9 +1579,9 @@ Proof
    RW_TAC resq_ss
      [group_mult_mod,FiniteAbelianGroup_def,AbelianGroup_def,
       GSPECIFICATION,combinTheory.K_THM,FiniteGroup_def,Nonzero_def]
-   ++ REPEAT (POP_ASSUM MP_TAC)
-   ++ RW_TAC arith_ss [mult_mod_def, finite_num, GSPECIFICATION]
-   ++ METIS_TAC [MULT_COMM]
+   >> REPEAT (POP_ASSUM MP_TAC)
+   >> RW_TAC arith_ss [mult_mod_def, finite_num, GSPECIFICATION]
+   >> METIS_TAC [MULT_COMM]
 QED
 
 val context = subtypeTools.add_reduction2 mult_mod context;
@@ -1635,16 +1610,16 @@ Theorem elgamal_correctness:
        (elgamal_decrypt G x (elgamal_encrypt G g h m k) = m)
 Proof
    RW_TAC resq_ss [elgamal_encrypt_def, elgamal_decrypt_def]
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC
+   >> MATCH_MP_TAC EQ_TRANS
+   >> Q.EXISTS_TAC
       `G.mult (G.mult (G.inv (group_exp G (group_exp G g k) x))
                  (group_exp G (group_exp G g x) k)) m`
-   ++ CONJ_TAC
-   >> RW_TAC alg_ss' []
-   ++ RW_TAC alg_ss [GSYM group_exp_mult]
-   ++ MP_TAC (Q.SPECL [`x`,`k`] MULT_COMM)
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   ++ RW_TAC alg_ss []
+   >> CONJ_TAC
+   >- RW_TAC alg_ss' []
+   >> RW_TAC alg_ss [GSYM group_exp_mult]
+   >> MP_TAC (Q.SPECL [`x`,`k`] MULT_COMM)
+   >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   >> RW_TAC alg_ss []
 QED
 
 val _ = html_theory "group";

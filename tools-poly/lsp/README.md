@@ -634,6 +634,32 @@ With checking on, the server instead *queues* each proof and a worker
 pool (`lsp/deferred_proofs.ML`, on HOL's `Future`) replays them, one
 cancellable group per proof, one worker per processor capped at eight.
 
+**A replay restores the `Context`, and nothing else.**  Each proof runs
+under `Context.with_context` on the snapshot its own declaration took, so
+theory state -- the signature, `TypeBase`, the grammars, `temp_delsimps`,
+registered attributes -- is as that declaration left it.  SML-level state
+is not, and cannot be: a `ref` has no snapshot.  That matters because
+`Theorem ... Proof tac QED` expands to `(name, quote, fn g => tac g)`
+(`wrapTac` in `tools/parsing/HOLSourceExpand.sml`), so the tactic
+*expression* is evaluated when the proof runs -- which, with checking on,
+is after the whole file has elaborated.  A script whose tactics read a
+`ref` therefore reads it as of end-of-elaboration, with every later
+declaration's additions already in it.  The shape that bites is an
+accumulating rewrite list fed by a custom attribute and spliced into
+every simplifier call: proofs the build accepts then start failing from
+wherever the larger set first changes a goal, and the first failure is
+nowhere near the declaration that caused it.
+
+The fix is on the script's side, and it is not a workaround: keep such
+state in a `Context.Data` slot (`src/prekernel/Context.sig`) and read it
+from the context the tactic is handed, the way `BasicProvers.Induct_on`
+reads the rule-induction map.  `Context.Data.get` against that context
+answers from the pin, which *is* the declaration's own snapshot, so the
+server and the build agree by construction.  `Context.Data` is also the
+right tool rather than `ThmSetData`, which exists to persist a set past
+the script boundary.  `lsp_tests.py`'s
+`a_context_slot_answers_from_its_declaration` pins this.
+
 The server starts with it off and both shipped clients switch it on:
 
 ```json
