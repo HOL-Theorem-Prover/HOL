@@ -2770,7 +2770,9 @@ define AMO > SC_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 ; if vAddr<1:0> != 0
   then signalAddressException(AMO_Misaligned, vAddr)
   else if not matchLoadReservation(vAddr)
-       then writeRD(rd, 1)
+       then { writeRD(rd, 1)
+            ; ReserveLoad <- None   -- ISA manual 5.2: a failed SC also invalidates it
+            }
        else match translateAddr(vAddr, Data, Read)
             { case Some(pAddr) => { data = GPR(rs2)
                                   ; rawWriteData(pAddr, data, 4)
@@ -2792,7 +2794,9 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
          ; if vAddr<2:0> != 0
            then signalAddressException(AMO_Misaligned, vAddr)
            else if not matchLoadReservation(vAddr)
-                then writeRD(rd, 1)
+                then { writeRD(rd, 1)
+                     ; ReserveLoad <- None   -- ISA manual 5.2: a failed SC also invalidates it
+                     }
                 else match translateAddr(vAddr, Data, Read)
                      { case Some(pAddr) => { data = GPR(rs2)
                                            ; rawWriteData(pAddr, data, 8)
