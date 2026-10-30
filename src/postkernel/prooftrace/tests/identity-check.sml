@@ -12,7 +12,9 @@ fun identity_const_exists name =
   in List.exists (fn tm => #Thy (Term.dest_thy_const tm) = thy)
        (Term.decls nm)
   end;
-val identity_cases = ["identity_restore","identity_collision"];
+val identity_cases = ["identity_restore", "identity_collision",
+  "identity_closure", "identity_reexport", "identity_reexport_child",
+  "identity_trace_loader"];
 fun identity_check lookup merged =
   let
     fun theorem thy name = case lookup thy name of

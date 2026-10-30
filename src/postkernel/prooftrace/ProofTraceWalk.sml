@@ -53,10 +53,35 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
 
   fun role_error () =
     raise Fail "ProofTraceWalk: unsupported implicit logical-role shape"
-  fun bare p = case shTerm heap p of Clos (_,t) => bare t | _ => p
-  fun head p = case shTerm heap (bare p) of
-      Comb (f,_) => head f
-    | Const (id,_) => const_name id
+
+  datatype role_term = Raw of term ptr
+                     | Delayed of role_term Subst.subs * role_term
+  datatype role_view = RConst of ident ptr
+                     | RComb of role_term * role_term
+                     | RAbs of role_term | RBv of int | ROther
+  fun role_subs p = case shSubs heap p of
+      Id => Subst.id
+    | Cons (s,t) => Subst.cons (role_subs s, Raw t)
+    | Lift (n,s) => Subst.lift (n, role_subs s)
+    | Shift (n,s) => Subst.shift (n, role_subs s)
+  fun role_view (Raw p) = (case shTerm heap p of
+        Const (id,_) => RConst id
+      | Comb (f,x) => RComb (Raw f, Raw x)
+      | Abs (_,b) => RAbs (Raw b)
+      | Bv n => RBv n
+      | Clos (s,t) => role_view (Delayed (role_subs s, Raw t))
+      | Fv _ => ROther)
+    | role_view (Delayed (s,t)) = (case role_view t of
+        RBv n => (case Subst.exp_rel (s,n) of
+            (n,NONE) => RBv n
+          | (0,SOME t) => role_view t
+          | (n,SOME t) => role_view (Delayed (Subst.shift (n,Subst.id),t)))
+      | RComb (f,x) => RComb (Delayed (s,f), Delayed (s,x))
+      | RAbs b => RAbs (Delayed (Subst.lift (1,s),b))
+      | atom => atom)
+  fun head t = case role_view t of
+      RComb (f,_) => head f
+    | RConst id => const_name id
     | _ => role_error ()
   fun require_role name p =
     let val (thy,nm) = head p
@@ -64,12 +89,12 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
          ("ProofTraceWalk: noncanonical logical role " ^ thy ^ "$" ^ nm ^
           "; expected bool$" ^ name ^ "; unsupported")
     end
-  fun rand p = case shTerm heap (bare p) of
-      Comb (_,a) => a | _ => role_error ()
-  fun body p = case shTerm heap (bare p) of
-      Abs (_,b) => b | _ => role_error ()
-  fun conclusion p = #2 (shThm heap p)
-  fun check_roles thm_ptr proof concl =
+  fun rand t = case role_view t of
+      RComb (_,a) => a | _ => role_error ()
+  fun body t = case role_view t of
+      RAbs b => b | _ => role_error ()
+  fun conclusion p = Raw (#2 (shThm heap p))
+  fun check_roles thm_ptr proof concl = let val concl = Raw concl in
     case proof of
       CONJ_prf _ => require_role "/\\" concl
     | CONJUNCT1_prf a => require_role "/\\" (conclusion a)
@@ -100,9 +125,10 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
         val retained = ref []
         val () = appSet heap (fn p => retained := p :: !retained) target_hyps
         fun removed p = if List.exists (fn q => ptr p = ptr q) (!retained) then ()
-                        else require_role "~" p
+                        else require_role "~" (Raw p)
       in require_role "F" (conclusion a); appSet heap removed source_hyps end
     | _ => ()
+  end
 
   (* Closedness pre-pass: compute max free Bv index for each term pointer.
      ~1 means closed (no free Bv's), n >= 0 means max free Bv index.

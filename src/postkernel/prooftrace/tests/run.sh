@@ -12,12 +12,12 @@ HOL_PFT_SOURCE_ROOT=$(CDPATH= cd -- "$pft_dir/../../../.." && pwd)
 export HOL_PFT_SOURCE_ROOT
 mkdir -p "$pft_scratch/identity/.hol/objs"
 cd "$pft_scratch/identity"
-pft_phases="produce raw"
+pft_phases="produce loader-parent loader-child raw"
 for HOL_PFT_IDENTITY_PHASE in $pft_phases; do
   export HOL_PFT_IDENTITY_PHASE
   case "$HOL_PFT_IDENTITY_PHASE" in
-    raw) set -- --min ;;
-    *) set -- ;;
+    produce) set -- ;;
+    *) set -- --min ;;
   esac
   pft_log=$HOL_PFT_IDENTITY_PHASE.log
   if ! "$pft_hol" run "$@" "$pft_dir/driver.sml" > "$pft_log" 2>&1 ||

@@ -359,7 +359,9 @@ fun names heap root = let
     fun add_origin p = let
       val (id, origin) = tuple2 heap
         (ident heap, tuple2 heap (str heap, str heap)) p
-    in imported := Redblackmap.insert(!imported, id, origin) end
+      val versions = case Redblackmap.peek(!imported, id) of
+          NONE => [] | SOME xs => xs
+    in imported := Redblackmap.insert(!imported, id, origin :: versions) end
     val () = appList heap add_origin origins
     fun resolve p = let
       val id as (thy,nm,epoch) = ident heap p
@@ -372,12 +374,14 @@ fun names heap root = let
         else case Redblackmap.peek(!imported, id) of
           NONE => raise Fail ("ProofTraceParser: unrecorded imported symbol " ^
                               thy ^ "$" ^ nm)
-        | SOME (owner,hash) =>
-            (case Redblackmap.peek(parents, owner) of
+        | SOME versions =>
+            (case Redblackmap.peek(parents, thy) of
                NONE => () (* The origin may be a transitive ancestor. *)
-             | SOME expected => if hash = expected then () else raise Fail
+             | SOME expected =>
+                 if List.exists (fn origin => origin = (thy,expected)) versions
+                 then () else raise Fail
                  ("ProofTraceParser: imported identity hash mismatch for " ^
-                  owner ^ "; expected " ^ expected ^ ", got " ^ hash))
+                  thy ^ "; expected " ^ expected))
       val public = current orelse foreign orelse thy = "min"
       val () = if public orelse not is_const orelse thy <> "bool" orelse
                    not (List.exists (fn s => s = nm)

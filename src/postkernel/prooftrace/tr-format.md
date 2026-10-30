@@ -26,6 +26,8 @@ restore. The producer therefore captures the live signature at export and
 records each imported identity's originating theory and hash after successful
 theory loading. Successful exports record the same provenance for subsequent
 theories built in that process; these records survive context restores.
+An identity can have several origin entries when its theory is re-exported
+with additional theorems. Each observed hash remains valid for that identity.
 
 The six-field version-1 envelope below is required. Earlier raw traces,
 including the experimental four-field envelope, must be regenerated. This
@@ -310,4 +312,6 @@ tests/run.sh identity /path/to/tracing/bin/hol /path/to/scratch
 
 It exports real theories and replays them in a separate process, checking
 exact sequents and declarations for context restoration and generated-name
-collisions. Logs are written under the scratch directory.
+collisions, closure substitutions in logical rules, changed theory hashes
+after re-export, and imports through the trace loader. Logs are written under
+the scratch directory.

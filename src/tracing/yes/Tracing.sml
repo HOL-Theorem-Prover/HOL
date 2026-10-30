@@ -55,12 +55,18 @@ val type_origins = ref (Redblackmap.mkDict KernelSig.id_compare)
 
 fun record_signature {theory, hash} = let
   val (const_ids, type_ids) = signature_ids (Context.snapshot ())
-  (* The first successful export/import owns this identity, even after a
-     restore. A same-named declaration with another epoch is a different key. *)
+  (* Re-exporting can change the theorem hash without changing an identity.
+     Keep each observed hash, including ones a context restore can revive. *)
   fun record origins id =
-    if #Thy (KernelSig.name_of_id id) <> theory orelse
-       Redblackmap.inDomain (!origins, id) then ()
-    else origins := Redblackmap.insert (!origins, id, (theory, hash))
+    if #Thy (KernelSig.name_of_id id) <> theory then ()
+    else let
+      val versions = case Redblackmap.peek (!origins, id) of
+          NONE => [] | SOME xs => xs
+      val origin = (theory, hash)
+    in
+      if List.exists (fn x => x = origin) versions then () else
+        origins := Redblackmap.insert (!origins, id, origin :: versions)
+    end
 in
   List.app (record const_origins) const_ids;
   List.app (record type_origins) type_ids
@@ -68,11 +74,13 @@ end
 
 fun trace_theory name args = let
   val (const_ids, type_ids) = signature_ids (Context.snapshot ())
+  fun entries origins = List.concat
+    (map (fn (id, versions) => map (fn origin => (id, origin)) versions)
+      (Redblackmap.listItems (!origins)))
 in
   export (concat[".hol/objs/",name,".tr.gz"],
           (1, const_ids, type_ids,
-           Redblackmap.listItems (!const_origins),
-           Redblackmap.listItems (!type_origins), args))
+           entries const_origins, entries type_origins, args))
 end
 
 fun export_proof {file, tag} th =

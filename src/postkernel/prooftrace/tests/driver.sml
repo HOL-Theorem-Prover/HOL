@@ -10,5 +10,6 @@ val () =
      List.app (fn name =>
        (use (source ^ name ^ ".sig"); use (source ^ name ^ ".sml")))
        ["ProofTraceParser","ProofTraceWalk","ProofTraceReplay"];
-     use (test_source ^ "identity-selftest.sml"));
+     use (test_source ^ (if identity_phase = "raw" then
+       "identity-selftest.sml" else "identity-loader.sml")));
 val () = print "PFT_TEST_PHASE_PASS\n";

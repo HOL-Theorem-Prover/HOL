@@ -51,4 +51,21 @@ val () = identity_export (identity_keep dependency (REFL T))
   ["private_const identity_collision$" ^ collision ^ "'",
    "decl_const identity_collision$" ^ collision, "final_const bool$T"];
 
+val () = identity_start "identity_closure";
+val connective = mk_var ("c", bool --> bool --> bool);
+val quantified = mk_forall (connective, list_mk_comb (connective,[T,T]));
+val projected = CONJUNCT1 (Thm.Specialize conjunction (ASSUME quantified));
+val () = identity_export
+  (identity_keep (DISCH quantified projected) (REFL T))
+  ["final_const bool$T"];
+
+val () = identity_start "identity_reexport";
+val item = Term.prim_new_const {Thy="identity_reexport",Name="item"} bool;
+val () = identity_export (REFL item)
+  ["final_const identity_reexport$item"];
+val _ = save_thm ("EXTRA", REFL T);
+val () = new_theory "identity_reexport_child";
+val () = identity_export (REFL item)
+  ["final_const identity_reexport$item"];
+
 val () = print "IDENTITY_ACTUAL_EXPORT_FIXTURES_PRODUCED\n";
