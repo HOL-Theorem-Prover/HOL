@@ -1205,9 +1205,13 @@ val curPrivilege = uprove
 val fpEnabled = EV [fpEnabled_def, MCSR_def, ext_status_def] [] []
   ``fpEnabled ()``
 
-(* The reservation test of SC, kept in its step theorem. *)
-val matchLoadReservation = EV [matchLoadReservation_def, ReserveLoad_def]
-  [] [] ``matchLoadReservation a``
+(* The reservation test of SC, kept in its step theorem, as one equation:
+   the reservation is set, at the address of the SC. *)
+val matchLoadReservation = Q.prove(
+  `matchLoadReservation a s = (s.c_ReserveLoad s.procID = SOME a)`,
+  rw [matchLoadReservation_def, ReserveLoad_def]
+  \\ Cases_on `s.c_ReserveLoad s.procID`
+  \\ simp [])
 
 (* A 32-bit load into an FPR: as aligned_select_word_s, without the
    extension. *)
