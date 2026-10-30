@@ -115,6 +115,8 @@ Definition pmp_off_or_napot_def:
     ((mcsr.pmpcfg2 >>> 1 ?? mcsr.pmpcfg2) && 0x0808080808080808w = 0w)
 End
 
+(* H3 and H4 say the same of the configuration byte of each entry, which
+   pmpcfg_ent selects from pmpcfg0 or pmpcfg2. *)
 Theorem pmpcfg_ent_unlocked:
   pmp_unlocked (s.c_MCSR s.procID) ==> ~(pmpcfg_ent i s).L
 Proof
@@ -183,6 +185,8 @@ Proof
         COND_RAND]
 QED
 
+(* An entry that is OFF matches nothing; with H4 the only other mode is
+   NAPOT, whose bounds pmpRegion_aligned makes multiples of 8. *)
 Theorem pmpRegion_OFF:
   ((pmpcfg_ent i s).A = 0w) ==> (pmpRegion i s = NONE)
 Proof
@@ -1005,6 +1009,8 @@ val Fetch =
       write'Skip_def] [pc_ok] []
     ``Fetch``
 
+(* The second parcel of a 32-bit instruction, at pc + 2, is as aligned as
+   the first. *)
 val word_bit_0_add2 = blastLib.BBLAST_PROVE
   ``word_bit 0 ((a: word64) + 2w) = word_bit 0 a``
 
@@ -1180,9 +1186,11 @@ val curPrivilege = uprove
   `^h1 ==> (curPrivilege () s = Machine)`
   (rw [curPrivilege_def, privilege_def])
 
+(* mstatus.FS <> Off; the F and D step theorems assume it (fp_on). *)
 val fpEnabled = EV [fpEnabled_def, MCSR_def, ext_status_def] [] []
   ``fpEnabled ()``
 
+(* The reservation test of SC, kept in its step theorem. *)
 val matchLoadReservation = EV [matchLoadReservation_def, ReserveLoad_def]
   [] [] ``matchLoadReservation a``
 
