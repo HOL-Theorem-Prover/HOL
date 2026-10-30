@@ -857,7 +857,7 @@ bool FP64_IsSignalingNan(x::bits(64)) =
 bool FP32_Sign(x::bits(32)) = x<31>
 bool FP64_Sign(x::bits(64)) = x<63>
 
--- setting exception flags
+-- setting exception flags (fcsr bits 4-0: NV DZ OF UF NX, ISA manual 6.1.2)
 
 unit setFP_Invalid() =
     fcsr.NV <- true
@@ -869,10 +869,10 @@ unit setFP_Overflow() =
     fcsr.OF <- true
 
 unit setFP_Underflow() =
-    fcsr.OF <- true
+    fcsr.UF <- true
 
 unit setFP_Inexact() =
-    fcsr.OF <- true
+    fcsr.NX <- true
 
 ---------------------------------------------------------------------------
 -- CSR Register address map
