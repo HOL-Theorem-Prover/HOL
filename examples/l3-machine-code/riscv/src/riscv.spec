@@ -4997,6 +4997,7 @@ instruction DecodeRVC(h::half) =
      case '000 0 00000 00000 01' => ArithI(ADDI(0, 0, 0))
 
      case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi))
+     case '001 i5`1 00000 imi`5                01' => UnknownInstruction  -- ISA manual 7.1.4.2: C.ADDIW rd=x0 is reserved
      case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi))
      case '010 i5`1 rd    imi`5                01' => ArithI( ADDI(rd, 0, i5 ^ 7 : imi))
      case '011 0    00010 00000                01' => UnknownInstruction
