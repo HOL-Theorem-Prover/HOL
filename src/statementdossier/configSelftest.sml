@@ -16,6 +16,12 @@ val source_dir = OS.FileSys.tmpName ()
 val _ = write source_dir ""
 val _ = OS.FileSys.remove source_dir
 val _ = OS.FileSys.mkDir source_dir
+(* statementDossierConfig.read resolves the configuration path with
+   OS.FileSys.fullPath, so every path it reports has its symbolic links
+   expanded.  Wherever the temporary directory is reached through a link
+   -- /tmp and /var are both links on macOS -- the name tmpName returned
+   is not the one the reader will produce. *)
+val source_dir = OS.FileSys.fullPath source_dir
 
 val config_path = OS.Path.concat (source_dir, "dossier.toml")
 val config_report = OS.Path.concat (source_dir, "report.md")
