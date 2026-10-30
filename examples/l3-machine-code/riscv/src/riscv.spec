@@ -97,16 +97,19 @@ construct Architecture
   RV32I, RV64I, RV128I
 }
 
+-- The misa.MXL encoding (P §3.1.1 Table 11 p.27).  Only RV64I is
+-- implemented: XLEN is 64 in every mode.
+
 arch_base archBase(a::Architecture) =
     match a
-    { case RV32I      => 0
+    { case RV32I      => 1
       case RV64I      => 2
       case RV128I     => 3
     }
 
 Architecture architecture(ab::arch_base) =
     match ab
-    { case 0          => RV32I
+    { case 1          => RV32I
       case 2          => RV64I
       case 3          => RV128I
       case _          => #UNDEFINED("Unknown architecture: " : [[ab] :: nat])
@@ -123,12 +126,14 @@ string archName(a::Architecture) =
 -- Privilege levels
 ---------------------------------------------------------------------------
 
+-- Privilege levels and their encoding (P §1.2 Table 1 p.11).  This hart
+-- has M, S and U; the encoding 10 is reserved.
+
 type priv_level = bits(2)
 
 construct Privilege
 { User
 , Supervisor
-, Hypervisor
 , Machine
 }
 
@@ -136,84 +141,23 @@ priv_level privLevel(p::Privilege) =
     match p
     { case User       => 0
       case Supervisor => 1
-      case Hypervisor => 2
       case Machine    => 3
     }
 
+-- Total: the reserved 10 decodes as User, which is also what
+-- legalize_mstatus stores for an mstatus.MPP write of 10 ([D2]).
 Privilege privilege(p::priv_level) =
     match p
-    { case 0          => User
-      case 1          => Supervisor
-      case 2          => Hypervisor
+    { case 1          => Supervisor
       case 3          => Machine
+      case _          => User
     }
 
 string privName(p::Privilege) =
     match p
     { case User       => "U"
       case Supervisor => "S"
-      case Hypervisor => "H"
       case Machine    => "M"
-    }
-
----------------------------------------------------------------------------
--- Memory management and virtualization
----------------------------------------------------------------------------
-
-type vm_mode    = bits(5)
-
-construct VM_Mode
-{ Mbare
-, Mbb
-, Mbbid
-, Sv32
-, Sv39
-, Sv48
-, Sv57
-, Sv64
-}
-
-VM_Mode vmType(vm::vm_mode) =
-    match vm
-    { case  0     => Mbare
-      case  1     => Mbb
-      case  2     => Mbbid
-      case  8     => Sv32
-      case  9     => Sv39
-      case 10     => Sv48
-      case 11     => Sv57
-      case 12     => Sv64
-      case  _     => #UNDEFINED("Unknown address translation mode: " : [[vm]::nat])
-    }
-
-bool isValidVM(vm::vm_mode) =
-    match vm
-    { case 0 or 1 or 2 or 8 or 9 or 10 or 11 or 12 => true
-      case _                                       => false
-    }
-
-vm_mode vmMode(vm::VM_Mode) =
-    match vm
-    { case Mbare  => 0
-      case Mbb    => 1
-      case Mbbid  => 2
-      case Sv32   => 8
-      case Sv39   => 9
-      case Sv48   => 10
-      case Sv57   => 11
-      case Sv64   => 12
-    }
-
-string vmModeName(vm::VM_Mode) =
-    match vm
-    { case Mbare  => "Mbare"
-      case Mbb    => "Mbb"
-      case Mbbid  => "Mbbid"
-      case Sv32   => "Sv32"
-      case Sv39   => "Sv39"
-      case Sv48   => "Sv48"
-      case Sv57   => "Sv57"
-      case Sv64   => "Sv64"
     }
 
 ---------------------------------------------------------------------------
@@ -341,35 +285,36 @@ string excName(e::ExceptionType) =
 
 -- Machine-Level CSRs
 
-register mcpuid :: regType
-{ 63-62 : ArchBase  -- base architecture, machine mode on reset
-,    20 : U         -- user-mode support
-,    18 : S         -- supervisor-mode support
-,    12 : M         -- integer multiply/divide support
-,     8 : I         -- integer base ISA support (XXX: this seems unnecessary)
-,     2 : C         -- compressed instruction support (IALIGN = 16)
+-- Machine ISA (P §3.1.1 Figure 2 p.27, Table 12 p.28).  The hart is
+-- RV64 I M A F D C with S and U; only C is writable ([D14]).
+register misa :: regType
+{ 63-62 : MXL       -- machine XLEN: 1 = 32, 2 = 64, 3 = 128 (Table 11)
+,    20 : U         -- user mode
+,    18 : S         -- supervisor mode
+,    12 : M         -- integer multiply/divide
+,     8 : I         -- base integer ISA
+,     5 : F         -- single-precision floating point
+,     3 : D         -- double-precision floating point
+,     2 : C         -- compressed instructions (IALIGN = 16)
+,     0 : A         -- atomics
 }
 
-register mimpid :: regType
-{ 63-16 : RVImpl
-,  15-0 : RVSource
-}
-
+-- Machine status (P §3.1.6 Figure 8 p.32).  Only the writable fields are
+-- stored: UXL, SXL and SD are produced when mstatus is read
+-- (read_mstatus, [D20]) and every other field is read-only zero.
 register mstatus :: regType
-{    63 : MSD       -- extended context dirty status
-, 21-17 : VM        -- memory management and virtualization
-,    16 : MMPRV     -- load/store memory privilege
-, 15-14 : MXS       -- extension context status
-, 13-12 : MFS       -- floating-point context status
-            -- privilege and global interrupt-enable stack
-, 11-10 : MPRV3
-,     9 : MIE3
-,   8-7 : MPRV2
-,     6 : MIE2
-,   5-4 : MPRV1
-,     3 : MIE1
-,   2-1 : MPRV
-,     0 : MIE
+{    22 : TSR       -- trap SRET (P §3.1.6.6 p.37)
+,    21 : TW        -- timeout wait
+,    20 : TVM       -- trap virtual memory
+,    19 : MXR       -- make executable readable (P §3.1.6.4 p.35)
+,    17 : MPRV      -- modify privilege of loads and stores
+, 14-13 : FS        -- floating-point context status (P §3.1.6.7 p.38)
+, 12-11 : MPP       -- privilege before the last trap into M-mode
+,     8 : SPP       -- privilege before the last trap into S-mode
+,     7 : MPIE      -- MIE before the last trap into M-mode
+,     5 : SPIE      -- SIE before the last trap into S-mode
+,     3 : MIE       -- M-mode interrupt enable (P §3.1.6.1 p.32)
+,     1 : SIE       -- S-mode interrupt enable
 }
 
 register mtdeleg :: regType
@@ -409,8 +354,7 @@ register mcause :: regType
 -- the specification.
 
 record MachineCSR
-{ mcpuid        :: mcpuid       -- information registers
-  mimpid        :: mimpid
+{ misa          :: misa         -- information registers
   mhartid       :: regType
 
   mstatus       :: mstatus      -- trap setup
@@ -439,33 +383,7 @@ record MachineCSR
   mfromhost     :: regType      -- input register from host
 }
 
--- Hypervisor-Level CSRs
-
-record HypervisorCSR
-{ hstatus       :: mstatus      -- trap setup
-  htvec         :: regType
-  htdeleg       :: mtdeleg
-  htimecmp      :: regType
-
-  htime_delta   :: regType      -- time wrt to global clock
-
-  hscratch      :: regType      -- trap handling
-  hepc          :: regType
-  hcause        :: mcause
-  hbadaddr      :: regType
-}
-
 -- Supervisor-Level CSRs
-
-register sstatus :: regType
-{    63 : SSD       -- extended context dirty status
-,    16 : SMPRV     -- load/store memory privilege
-, 15-14 : SXS       -- extension context status
-, 13-12 : SFS       -- floating-point context status
-,     4 : SPS       -- previous privilege level before entering supervisor mode
-,     3 : SPIE      -- interrupt-enable before entering supervisor mode
-,     0 : SIE       -- supervisor-level interrupt-enable
-}
 
 register sip :: regType
 {     5 : STIP      -- pending timer interrupt
@@ -546,84 +464,55 @@ mie lower_sie_mie(sie::sie, mie::mie) =
 ; m
 }
 
-mstatus update_mstatus(orig::mstatus, v::mstatus) =
-{ var mt = orig
--- update privilege stack
-; mt.MIE   <- v.MIE
-; mt.MPRV  <- v.MPRV
-; mt.MIE1  <- v.MIE1
-; mt.MPRV1 <- v.MPRV1
-; mt.MIE2  <- v.MIE2
-; mt.MPRV2 <- v.MPRV2
-; mt.MIE3  <- v.MIE3
-; mt.MPRV3 <- v.MPRV3
+-- misa (P §3.1.1 p.27-29)
 
--- ensure a valid address translation mode
-; when isValidVM(v.VM)
-  do mt.VM <- v.VM
-; mt.MMPRV <- v.MMPRV
+regType MISA_RESET = 0x800000000014112D -- MXL = 2; A C D F I M S U (P §3.4 p.63)
 
--- update extension context status
-; mt.MFS   <- v.MFS
-; mt.MXS   <- v.MXS
-; mt.MSD   <- extStatus(v.MXS) == Dirty or extStatus(v.MFS) == Dirty
+-- Only C is writable ([D14]).  "If an instruction that would write misa
+-- increases IALIGN, and the subsequent instruction's address is not
+-- IALIGN-bit aligned, the write to misa is suppressed" (p.29): clearing C
+-- is ignored when bit 1 of the next pc is set.  pc is the address of the
+-- CSR instruction, which is 32 bits long, so (pc + 4)<1> = pc<1>.
+misa legalize_misa(v::regType, m::misa, pc::regType) =
+    if not v<2> and m.C and pc<1> then m
+    else { var n = m
+         ; n.C <- v<2>
+         ; n
+         }
 
-; mt
+-- mstatus (P §3.1.6 p.31-41)
+
+regType MSTATUS_WMASK = 0x7A79AA           -- the fields of register mstatus
+regType MSTATUS_CONST = 0xA00000000        -- UXL = SXL = 2 (P §3.1.6.3 p.34)
+regType MSTATUS_SD    = 0x8000000000000000
+
+-- An explicit write.  Read-only and WPRI fields are dropped (P §2.3.1
+-- p.24).  MPP is WARL and holds U, S or M (P §3.1.6.2 p.33); the reserved
+-- 10 is stored as U ([D15]).
+mstatus legalize_mstatus(v::regType) =
+{ var m = mstatus(v && MSTATUS_WMASK)
+; when m.MPP == 2 do m.MPP <- 0
+; m
 }
 
-sstatus lift_mstatus_sstatus(mst::mstatus) =
-{ var st = sstatus(0)
-; st.SMPRV  <- mst.MMPRV
+-- The value read.  XS and VS are read-only zero, so SD is set iff FS is
+-- Dirty (P §3.1.6.7 p.40).
+regType read_mstatus(m::mstatus) =
+    (&m && MSTATUS_WMASK) || MSTATUS_CONST ||
+    (if m.FS == ext_status(Dirty) then MSTATUS_SD else 0)
 
--- shared state
-; st.SXS    <- mst.MXS
-; st.SFS    <- mst.MFS
-; st.SSD    <- extStatus(mst.MXS) == Dirty or extStatus(mst.MFS) == Dirty
+-- sstatus is a view of mstatus (P §12.1.1 p.113-114): its fields are the
+-- homonymous fields of mstatus.  Of these, SIE SPIE SPP FS MXR are
+-- writable here; SUM is read-only zero because satp.MODE is (P §3.1.6.4
+-- p.35).
 
--- projected state
-; st.SPS    <- not (privilege(mst.MPRV1) == User)
-; st.SPIE   <- mst.MIE1
-; st.SIE    <- mst.MIE
+regType SSTATUS_MASK = 0x80000003018DE762  -- SD UXL SDT SPELP MXR SUM XS FS
+                                           -- VS SPP UBE SPIE SIE
 
-; st
-}
+regType read_sstatus(m::mstatus) = read_mstatus(m) && SSTATUS_MASK
 
-mstatus lower_sstatus_mstatus(sst::sstatus, mst::mstatus) =
-{ var mt = mstatus(&mst)
-
-; mt.MMPRV  <- sst.SMPRV
-; mt.MXS    <- sst.SXS
-; mt.MFS    <- sst.SFS
-
-; mt.MPRV1  <- privLevel(if sst.SPS then Supervisor else User)
-; mt.MIE1   <- sst.SPIE
-; mt.MIE    <- sst.SIE
-
-; update_mstatus(mst, mt)
-}
-
--- pop the privilege stack for ERET
-mstatus popPrivilegeStack(mst::mstatus) =
-{ var st = mst
-; st.MIE    <- mst.MIE1
-; st.MPRV   <- mst.MPRV1
-; st.MIE1   <- mst.MIE2
-; st.MPRV1  <- mst.MPRV2
-; st.MIE2   <- true
-; st.MPRV2  <- privLevel(User)
-; st
-}
-
-mstatus pushPrivilegeStack(mst::mstatus, p::Privilege) =
-{ var st = mst
-; st.MIE2   <- mst.MIE1
-; st.MPRV2  <- mst.MPRV1
-; st.MIE1   <- mst.MIE
-; st.MPRV1  <- mst.MPRV
-; st.MIE    <- false
-; st.MPRV   <- privLevel(p)
-; st
-}
+mstatus legalize_sstatus(v::regType, m::mstatus) =
+    legalize_mstatus((&m && ~SSTATUS_MASK) || (v && SSTATUS_MASK))
 
 ---------------------------------------------------------------------------
 -- Instruction fetch control
@@ -661,9 +550,10 @@ declare
   c_PC          :: id -> regType                -- program counter
   c_Skip        :: id -> regType                -- bytes to next instruction
 
+  c_privilege   :: id -> priv_level             -- current privilege level
+
   c_UCSR        :: id -> UserCSR                -- user-level CSRs
   c_SCSR        :: id -> SupervisorCSR          -- supervisor-level CSRs
-  c_HCSR        :: id -> HypervisorCSR          -- hypervisor-level CSRs
   c_MCSR        :: id -> MachineCSR             -- machine-level CSRs
 
   -- interpreter execution context
@@ -694,11 +584,11 @@ component gpr(n::reg) :: regType
                  }
 }
 
+-- Writing fcsr makes the floating-point state Dirty (P §3.1.6.7 Table 14).
 component fcsr :: FPCSR
 { value        = c_UCSR(procID).fpcsr
-  assign value = { c_UCSR(procID).fpcsr       <- value
-                 ; c_MCSR(procID).mstatus.MFS <- ext_status(Dirty)
-                 ; c_MCSR(procID).mstatus.MSD <- true
+  assign value = { c_UCSR(procID).fpcsr      <- value
+                 ; c_MCSR(procID).mstatus.FS <- ext_status(Dirty)
                  }
 }
 
@@ -730,11 +620,6 @@ component SCSR :: SupervisorCSR
   assign value = c_SCSR(procID) <- value
 }
 
-component HCSR :: HypervisorCSR
-{ value        = c_HCSR(procID)
-  assign value = c_HCSR(procID) <- value
-}
-
 component MCSR :: MachineCSR
 { value        = c_MCSR(procID)
   assign value = c_MCSR(procID) <- value
@@ -757,26 +642,28 @@ component ExitCode :: regType
 
 -- machine state utilities
 
-Architecture curArch() =
-    architecture(MCSR.mcpuid.ArchBase)
-
+-- misa.MXL is read-only 2, so this is always false ([D4]).
 bool in32BitMode() =
-    curArch() == RV32I
+    MCSR.misa.MXL == 1
 
 bool haveRVC() =
-    MCSR.mcpuid.C
+    MCSR.misa.C
 
 regType legalizeEPC(v::regType) =
     if haveRVC() then v && SignExtend('10') else v && SignExtend('100')
 
+-- The current privilege level (P §1.2 p.11) is not held in a CSR.  It is
+-- written only by setPrivilege, so the reserved encoding 10 never occurs.
 Privilege curPrivilege() =
-    privilege(MCSR.mstatus.MPRV)
+    privilege(c_privilege(procID))
+
+unit setPrivilege(p::Privilege) =
+    c_privilege(procID) <- privLevel(p)
 
 regType curEPC() =
     match curPrivilege()
     { case User         => #INTERNAL_ERROR("No EPC in U-mode")
       case Supervisor   => SCSR.sepc
-      case Hypervisor   => HCSR.hepc
       case Machine      => MCSR.mepc
     }
 
@@ -918,7 +805,6 @@ bool is_CSR_defined(csr::creg) =
  or  csr == 0x701 or (csr == 0x741 and in32BitMode())
  or (csr >= 0x340 and csr <= 0x344)
  or (csr >= 0x380 and csr <= 0x385)
- or  csr == 0xB01 or (csr == 0xB81 and in32BitMode())
  or (csr >= 0x780 and csr <= 0x783 and csr != 0x782)
 
 --- XXX: the CSRMap below is broken in 32-bit mode, since we need to
@@ -941,7 +827,7 @@ component CSRMap(csr::creg) :: regType
         case 0xC82  => SignExtend((c_instret(procID) + c_UCSR(procID).instret_delta)<63:32>)
 
         -- supervisor trap setup
-        case 0x100  => &lift_mstatus_sstatus(c_MCSR(procID).mstatus)
+        case 0x100  => read_sstatus(c_MCSR(procID).mstatus)
         case 0x101  => c_SCSR(procID).stvec
         case 0x104  => &lift_mie_sie(c_MCSR(procID).mie)
         case 0x121  => c_SCSR(procID).stimecmp
@@ -969,33 +855,13 @@ component CSRMap(csr::creg) :: regType
         case 0x981  => SignExtend((clock             + c_UCSR(procID).time_delta)<63:32>)
         case 0x982  => SignExtend((c_instret(procID) + c_UCSR(procID).instret_delta)<63:32>)
 
-        -- hypervisor trap setup
-        case 0x200  => c_HCSR(procID).&hstatus
-        case 0x201  => c_HCSR(procID).htvec
-        case 0x202  => c_HCSR(procID).&htdeleg
-        case 0x221  => c_HCSR(procID).htimecmp
-
-        -- hypervisor timer
-        case 0xE01  => clock + c_HCSR(procID).htime_delta
-        case 0xE81  => SignExtend((clock + c_HCSR(procID).htime_delta)<63:32>)
-
-        -- hypervisor trap handling
-        case 0x240  => c_HCSR(procID).hscratch
-        case 0x241  => c_HCSR(procID).hepc
-        case 0x242  => c_HCSR(procID).&hcause
-        case 0x243  => c_HCSR(procID).hbadaddr
-
-        -- hypervisor read/write shadow of supervisor read-only registers
-        case 0xA01  => clock + c_SCSR(procID).stime_delta
-        case 0xA81  => SignExtend((clock + c_SCSR(procID).stime_delta)<63:32>)
-
         -- machine information registers
-        case 0xF00  => c_MCSR(procID).&mcpuid
-        case 0xF01  => c_MCSR(procID).&mimpid
+        case 0xF00  => c_MCSR(procID).&misa
+        case 0xF01  => 0
         case 0xF10  => c_MCSR(procID).mhartid
 
         -- machine trap setup
-        case 0x300  => c_MCSR(procID).&mstatus
+        case 0x300  => read_mstatus(c_MCSR(procID).mstatus)
         case 0x301  => c_MCSR(procID).mtvec
         case 0x302  => c_MCSR(procID).&mtdeleg
         case 0x304  => c_MCSR(procID).&mie
@@ -1020,10 +886,6 @@ component CSRMap(csr::creg) :: regType
         case 0x384  => c_MCSR(procID).mdbase
         case 0x385  => c_MCSR(procID).mdbound
 
-        -- machine read-write shadow of hypervisor read-only registers
-        case 0xB01  => clock + c_HCSR(procID).htime_delta
-        case 0xB81  => SignExtend((clock + c_HCSR(procID).htime_delta)<63:32>)
-
         -- machine host-target interface (berkeley extension)
         case 0x780  => c_MCSR(procID).mtohost
         case 0x781  => c_MCSR(procID).mfromhost
@@ -1036,22 +898,18 @@ component CSRMap(csr::creg) :: regType
       match csr
       { -- user floating-point context
         case 0x001  => { c_UCSR(procID).&fpcsr<4:0>     <- value<4:0>
-                       ; c_MCSR(procID).mstatus.MFS     <- ext_status(Dirty)
-                       ; c_MCSR(procID).mstatus.MSD     <- true
+                       ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
         case 0x002  => { c_UCSR(procID).fpcsr.FRM       <- value<2:0>
-                       ; c_MCSR(procID).mstatus.MFS     <- ext_status(Dirty)
-                       ; c_MCSR(procID).mstatus.MSD     <- true
+                       ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
         case 0x003  => { c_UCSR(procID).&fpcsr          <- value<31:0>
-                       ; c_MCSR(procID).mstatus.MFS     <- ext_status(Dirty)
-                       ; c_MCSR(procID).mstatus.MSD     <- true
+                       ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
         -- user counters/timers are URO
 
         -- supervisor trap setup
-        case 0x100  => c_MCSR(procID).mstatus           <- lower_sstatus_mstatus(sstatus(value),
-                                                                                 c_MCSR(procID).mstatus)
+        case 0x100  => c_MCSR(procID).mstatus           <- legalize_sstatus(value, c_MCSR(procID).mstatus)
 
         case 0x101  => c_SCSR(procID).stvec             <- value
         -- sie back-projects to mie
@@ -1086,7 +944,7 @@ component CSRMap(csr::creg) :: regType
         -- machine information registers are MRO
 
         -- machine trap setup
-        case 0x300  => c_MCSR(procID).mstatus           <- update_mstatus(c_MCSR(procID).mstatus, mstatus(value))
+        case 0x300  => c_MCSR(procID).mstatus           <- legalize_mstatus(value)
         case 0x301  => c_MCSR(procID).mtvec             <- value
         case 0x302  => c_MCSR(procID).mtdeleg           <- mtdeleg(value)
         case 0x304  => c_MCSR(procID).mie               <- mie(value)
@@ -1113,10 +971,6 @@ component CSRMap(csr::creg) :: regType
         case 0x383  => c_MCSR(procID).mibound           <- value
         case 0x384  => c_MCSR(procID).mdbase            <- value
         case 0x385  => c_MCSR(procID).mdbound           <- value
-
-        -- machine read-write shadow of hypervisor read-only registers
-        case 0xB01  => c_HCSR(procID).htime_delta           <- value - clock
-        case 0xB81  => c_HCSR(procID).htime_delta<63:32>    <- (value<31:0> - clock<63:32>) << 32
 
         -- machine host-target interface (berkeley extension)
         -- TODO: XXX: set I/O pending bit
@@ -1175,28 +1029,8 @@ string csrName(csr::creg) =
       case 0x981  => "timeh"
       case 0x982  => "instreth"
 
-      -- hypervisor trap setup
-      case 0x200  => "hstatus"
-      case 0x201  => "htvec"
-      case 0x202  => "htdeleg"
-      case 0x221  => "htimecmp"
-
-      -- hypervisor timer
-      case 0xE01  => "htime"
-      case 0xE81  => "htimeh"
-
-      -- hypervisor trap handling
-      case 0x240  => "hscratch"
-      case 0x241  => "hepc"
-      case 0x242  => "hcause"
-      case 0x243  => "hbadaddr"
-
-      -- hypervisor read/write shadow of supervisor read-only registers
-      case 0xA01  => "stime"
-      case 0xA81  => "stimeh"
-
       -- machine information registers
-      case 0xF00  => "mcpuid"
+      case 0xF00  => "misa"
       case 0xF01  => "mimpid"
       case 0xF10  => "mhartid"
 
@@ -1225,10 +1059,6 @@ string csrName(csr::creg) =
       case 0x383  => "mibound"
       case 0x384  => "mdbase"
       case 0x385  => "mdbound"
-
-      -- machine read-write shadow of hypervisor read-only registers
-      case 0xB01  => "htime"
-      case 0xB81  => "htimeh"
 
       -- machine host-target interface (berkeley extension)
       case 0x780  => "mtohost"
@@ -1468,32 +1298,12 @@ unit signalAddressException(e::ExceptionType, vAddr::vAddr) =
 }
 
 unit signalEnvCall() =
-{ e = match privilege(MCSR.mstatus.MPRV)
+{ e = match curPrivilege()
       { case User       => UMode_Env_Call
         case Supervisor => SMode_Env_Call
-        case Hypervisor => HMode_Env_Call
         case Machine    => MMode_Env_Call
       }
 ; signalException(e)
-}
-
--- Delegation logic.
-
-Privilege checkDelegation(curPriv::Privilege, intr::bool, ec::exc_code)
-          HOL "checkDelegation.sml" measure [curPriv] =
-{ e = [ec]::nat
-; match curPriv
-  { case User       => #INTERNAL_ERROR("No user-level delegation!")
-    case Supervisor => #INTERNAL_ERROR("No supervisor-level delegation!")
-    case Hypervisor =>
-         if ((intr and HCSR.htdeleg.Intr_deleg<e>)
-             or (!intr and HCSR.htdeleg.Exc_deleg<e>))
-         then Supervisor else curPriv
-    case Machine    =>
-         if ((intr and MCSR.mtdeleg.Intr_deleg<e>)
-             or (!intr and MCSR.mtdeleg.Exc_deleg<e>))
-         then checkDelegation(Hypervisor, intr, ec) else curPriv
-  }
 }
 
 -- The spec doesn't define a priority between a timer interrupt and a
@@ -1506,9 +1316,6 @@ Privilege checkDelegation(curPriv::Privilege, intr::bool, ec::exc_code)
   { case User       => #INTERNAL_ERROR("No user-level interrupts!")
     case Supervisor => if ip.STIP and ie.STIE then Some(Timer, curPriv)
                        else if ip.SSIP and ie.SSIE then Some(Software, curPriv)
-                       else None
-    case Hypervisor => if ip.HTIP and ie.HTIE then Some(Timer, curPriv)
-                       else if ip.HSIP and ie.HSIE then Some(Software, curPriv)
                        else None
     case Machine    => if ip.MTIP and ie.MTIE then Some(Timer, curPriv)
                        else if ip.MSIP and ie.MSIE then Some(Software, curPriv)
@@ -1534,19 +1341,9 @@ Privilege checkDelegation(curPriv::Privilege, intr::bool, ec::exc_code)
 ; match p
   { case User or Supervisor =>
          match checkPrivInterrupt(Machine)
-         { case None =>
-           { match checkPrivInterrupt(Hypervisor)
-             { case None => -- Always check S-mode interrupts in U-mode
-                            if p == User or curIE
-                            then checkPrivInterrupt(Supervisor) else None
-               case i    => i
-             }
-           }
-           case i    => i
-         }
-    case Hypervisor =>
-         match checkPrivInterrupt(Machine)
-         { case None => if curIE then checkPrivInterrupt(Hypervisor) else None
+         { case None => -- Always check S-mode interrupts in U-mode
+                        if p == User or curIE
+                        then checkPrivInterrupt(Supervisor) else None
            case i    => i
          }
     case Machine =>
@@ -1560,9 +1357,6 @@ unit takeTrap(intr::bool, ec::exc_code, epc::regType, badaddr::vAddr option, toP
                       " at pc " : [epc] : (if intr then " [intr] " else " [exc] ") : [[ec]::nat]])
 
 ; ReserveLoad        <- None        -- cancel any load reservation
-; MCSR.mstatus.MMPRV <- false       -- unset MPRV in each privilege level
-
-; MCSR.mstatus       <- pushPrivilegeStack(MCSR.mstatus, toPriv)
 
 ; match toPriv
   { case User       => #INTERNAL_ERROR("Illegal trap to U-mode")
@@ -1572,16 +1366,23 @@ unit takeTrap(intr::bool, ec::exc_code, epc::regType, badaddr::vAddr option, toP
     ; SCSR.sepc         <- epc
     ; when IsSome(badaddr)
       do SCSR.sbadaddr  <- ValOf(badaddr)
+    ; MCSR.mstatus.SPIE <- MCSR.mstatus.SIE
+    ; MCSR.mstatus.SIE  <- false
+    ; MCSR.mstatus.SPP  <- fromP != User
+    ; setPrivilege(Supervisor)
 
     ; PC    <- SCSR.stvec
     }
-    case Hypervisor => #INTERNAL_ERROR("Unsupported trap to H-mode")
     case Machine    =>
     { MCSR.mcause.Int   <- intr
     ; MCSR.mcause.EC    <- ec
     ; MCSR.mepc         <- epc
     ; when IsSome(badaddr)
       do MCSR.mbadaddr  <- ValOf(badaddr)
+    ; MCSR.mstatus.MPIE <- MCSR.mstatus.MIE
+    ; MCSR.mstatus.MIE  <- false
+    ; MCSR.mstatus.MPP  <- privLevel(fromP)
+    ; setPrivilege(Machine)
 
     ; PC    <- MCSR.mtvec + ([privLevel(fromP)]::regType) * 0x40
     }
@@ -1641,15 +1442,13 @@ component FPRD(n::reg) :: regType
 
 unit writeFPRS(rd::reg, val::word) =
 { FPRS(rd)          <- val
-; MCSR.mstatus.MFS  <- ext_status(Dirty)
-; MCSR.mstatus.MSD  <- true
+; MCSR.mstatus.FS   <- ext_status(Dirty)
 ; Delta.data1       <- Some(ZeroExtend(val))
 }
 
 unit writeFPRD(rd::reg, val::regType) =
 { FPRD(rd)          <- val
-; MCSR.mstatus.MFS  <- ext_status(Dirty)
-; MCSR.mstatus.MSD  <- true
+; MCSR.mstatus.FS   <- ext_status(Dirty)
 ; Delta.data1       <- Some(val)
 }
 
@@ -2009,25 +1808,10 @@ pAddr option translate64(vAddr::regType, ft::fetchType, ac::accessType, priv::Pr
   }
 }
 
+-- satp.MODE is read-only Bare (P §12.1.11 p.125), so every address is
+-- physical ([D5]).  This is the single hook where address translation goes.
 pAddr option translateAddr(vAddr::regType, ft::fetchType, ac::accessType) =
-{ priv = privilege(if MCSR.mstatus.MMPRV and ft == Data
-                   then MCSR.mstatus.MPRV1 else MCSR.mstatus.MPRV)
-; match vmType(MCSR.mstatus.VM), priv
-  { case Mbare,          _
-    or       _,    Machine  => Some(vAddr)  -- no translation
-    case Sv39,           _  => translate64(vAddr, ft, ac, priv, 2)
-    case Sv48,           _  => translate64(vAddr, ft, ac, priv, 3)
-
-    {- Comment out base/bound modes since there are no tests for them.
-
-    case Mbb,   Machine
-    or   Mbbid, Machine     => Some(vAddr)
-
-     -}
-
-    case     _,          _  => None
-  }
-}
+    Some(vAddr)
 
 ---------------------------------------------------------------------------
 -- Load Reservation
@@ -4115,7 +3899,7 @@ define System > MRTS   =
 ; SCSR.sbadaddr     <- MCSR.mbadaddr
 ; SCSR.sepc         <- MCSR.mepc
 
-; MCSR.mstatus.MPRV <- privLevel(Supervisor)
+; setPrivilege(Supervisor)
 
 ; NextFetch         <- Some(Mrts)
 }
@@ -5334,11 +5118,23 @@ unit Next =
              ; PC           <- curEPC()
 
              ; from = curPrivilege()
-             ; MCSR.mstatus <- popPrivilegeStack(MCSR.mstatus)
-             ; to   = curPrivilege()
+             ; if from == Machine
+               then { to = privilege(MCSR.mstatus.MPP)
+                    ; MCSR.mstatus.MIE  <- MCSR.mstatus.MPIE
+                    ; MCSR.mstatus.MPIE <- true
+                    ; MCSR.mstatus.MPP  <- privLevel(User)
+                    ; when to != Machine do MCSR.mstatus.MPRV <- false
+                    ; setPrivilege(to)
+                    }
+               else { MCSR.mstatus.SIE  <- MCSR.mstatus.SPIE
+                    ; MCSR.mstatus.SPIE <- true
+                    ; setPrivilege(if MCSR.mstatus.SPP then Supervisor else User)
+                    ; MCSR.mstatus.SPP  <- false
+                    ; MCSR.mstatus.MPRV <- false
+                    }
 
              ; mark_log(LOG_INSN, ["exception return from " : privName(from)
-                                   : " to " : privName(to)])
+                                   : " to " : privName(curPrivilege())])
              }
     case Some(Trap(t)), _ =>
              { NextFetch    <- None
@@ -5356,28 +5152,16 @@ unit Next =
 }
 
 unit initIdent(arch::Architecture) =
-{ MCSR.mcpuid.ArchBase <- archBase(arch)
-; MCSR.mcpuid.U        <- true
-; MCSR.mcpuid.S        <- true
-; MCSR.mcpuid.M        <- true
-; MCSR.mcpuid.I        <- true
-; MCSR.mcpuid.C        <- true
-
-; MCSR.mimpid.RVSource <- 0x8000 -- anonymous source
-; MCSR.mimpid.RVImpl   <- 0x0
+{ MCSR.misa     <- misa(MISA_RESET)
+; MCSR.misa.MXL <- archBase(arch)
 }
 
 unit initMachine(hartid::id) =
-{ -- Startup in Mbare machine mode, with interrupts disabled.
-  MCSR.mstatus.VM   <- vmMode(Mbare)
-; MCSR.mstatus.MPRV <- privLevel(Machine)
+{ -- Start in machine mode, with interrupts disabled.
+  setPrivilege(Machine)
 ; MCSR.mstatus.MIE  <- false
   -- initialize extension context state
-; MCSR.mstatus.MFS  <- ext_status(Initial)
-; MCSR.mstatus.MXS  <- ext_status(Off)
-; MCSR.mstatus.MSD  <- false
-
-  -- MPRV1/MIE1 and MPRV2/MIE2 are unspecified.
+; MCSR.mstatus.FS   <- ext_status(Initial)
 
   -- Setup hartid
 ; MCSR.mhartid      <- ZeroExtend(hartid)

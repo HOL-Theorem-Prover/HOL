@@ -8,9 +8,7 @@ generated:
 | `riscvScript.sml`, `riscvLib.sml`, `riscvLib.sig` | `HolExport.spec ("riscv.spec", "riscv")` | HOL4 (`riscvTheory`, the step, prog and decompiler libraries) |
 | `riscv.sml`, `riscv.sig` | `SMLExport.spec ("riscv.spec", "riscv nointinf")` | the standalone SML emulator |
 
-`checkDelegation.sml` is a hand-written HOL termination proof that the export
-splices in for the `measure`-recursive function `checkDelegation`; L3 reads it
-from the current directory, so both exports must run from here.
+Both exports must run from this directory.
 
 ## Regenerating
 

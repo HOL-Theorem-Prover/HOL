@@ -17,7 +17,6 @@
 SHELL    := /bin/bash
 L3       ?= l3
 SPEC      = riscv.spec
-HELPERS   = checkDelegation.sml
 HOLFILES  = riscvScript.sml riscvLib.sml riscvLib.sig
 SMLFILES  = riscv.sml riscv.sig
 MODEL     = ../model
@@ -30,7 +29,7 @@ PATCHSML  = sed -i -e '$$a\' $(SMLFILES)
 all: hol sml
 .PHONY: all hol sml check
 
-hol: $(SPEC) $(HELPERS)
+hol: $(SPEC)
 	$(HOLEXPORT)
 	$(PATCHHOL)
 	mv $(HOLFILES) $(MODEL)/
@@ -40,8 +39,8 @@ sml: $(SPEC)
 	$(PATCHSML)
 	mv $(SMLFILES) $(MODEL)/
 
-check: $(SPEC) $(HELPERS)
-	@tmp=$$(mktemp -d) && cp $(SPEC) $(HELPERS) $$tmp && cd $$tmp && \
+check: $(SPEC)
+	@tmp=$$(mktemp -d) && cp $(SPEC) $$tmp && cd $$tmp && \
 	$(HOLEXPORT) > hol.log 2>&1 && $(SMLEXPORT) > sml.log 2>&1 && \
 	$(PATCHHOL) && $(PATCHSML) && status=0 && \
 	for f in $(HOLFILES) $(SMLFILES); do \
