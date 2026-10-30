@@ -347,3 +347,40 @@ End
               (hol_identifier))
             (hol_atomic_type))
           (hol_identifier))))))
+
+================================================================================
+Definition Survives A Word-Binder-Headed Theorem After It
+================================================================================
+
+Definition foo_def:
+  foo x = x
+End
+
+Theorem bar:
+  some statement
+Proof
+  tac
+QED
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_identifier)))))
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_application
+        (hol_identifier)
+        (hol_identifier)))
+    (tactic
+      (vid_exp
+        (longvid
+          (vid))))))
