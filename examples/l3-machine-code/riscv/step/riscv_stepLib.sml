@@ -553,13 +553,14 @@ in
           end
       val thm5 = proj_exception thm4
       val thm6 = proj_NextFetch_procID thm4
-      (* H6: the step is one of the spec's Next only if no interrupt can be
-         taken (riscv_stepTheory.checkInterrupts_Machine) *)
-      val thm = Drule.LIST_CONJ [Thm.ASSUME no_interrupt, thm1, thm2, thm4,
-                                 thm5, thm6]
+      val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
       val tm = utilsLib.rhsc thm6
     in
-      (ground_hyp_rule o canonical_contract_rule)
+      (* H6: NextRISCV takes no interrupt, so its step is one of the spec's
+         Next only if no interrupt can be taken; in M-mode that holds when
+         mstatus.MIE is clear (riscv_stepTheory.checkInterrupts_Machine).
+         The equation itself does not depend on it. *)
+      (Drule.ADD_ASSUM no_interrupt o ground_hyp_rule o canonical_contract_rule)
         (tidy_up_rvc
            (if optionSyntax.is_none tm
               then MP_Next_n thm

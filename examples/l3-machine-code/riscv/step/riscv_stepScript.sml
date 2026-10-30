@@ -67,8 +67,10 @@ End
 (* One step of the spec's Next, for an instruction that neither traps nor
    returns from a trap (MRET, SRET); NONE otherwise.  NextRISCV does not
    model what Next does besides running the instruction: it takes no
-   interrupts (see H6 below), keeps no logs (log, c_update) and does not
-   count (c_cycles, c_instret, c_minstret_written). *)
+   interrupts (see H6 below), leaves out the setupDelta and clear_logs of
+   Next (although an instruction may still write c_update, as writeFPRS
+   and writeFPRD do), and does not count (c_cycles, c_instret,
+   c_minstret_written). *)
 Definition NextRISCV_def:
   NextRISCV s =
   let rvc = haveRVC () s in
@@ -333,11 +335,13 @@ QED
 (* ------------------------------------------------------------------------
    Evaluation theorems
 
-   Each has H6 as its first hypothesis: see checkInterrupts_Machine.
+   As before the priv-1.13 model, these are equations about NextRISCV
+   only, which does not depend on mstatus.MIE.  riscv_stepLib adds H6 to
+   every step theorem that it builds from them, because NextRISCV refines
+   Next only when no interrupt can be taken (checkInterrupts_Machine).
    ------------------------------------------------------------------------ *)
 
 Theorem NextRISCV:
-   ~(s.c_MCSR s.procID).mstatus.MIE /\
    (Fetch s = (w, s')) /\
    (DecodeAny ((s.c_MCSR s.procID).misa.C) w = i) /\
    (Run i s' = nxt) /\
@@ -350,7 +354,6 @@ Proof
 QED
 
 Theorem NextRISCV_branch:
-   ~(s.c_MCSR s.procID).mstatus.MIE /\
    (Fetch s = (w, s')) /\
    (DecodeAny ((s.c_MCSR s.procID).misa.C) w = i) /\
    (Run i s' = nxt) /\
@@ -365,7 +368,6 @@ Proof
 QED
 
 Theorem NextRISCV_cond_branch:
-   ~(s.c_MCSR s.procID).mstatus.MIE /\
    (Fetch s = (w, s')) /\
    (DecodeAny ((s.c_MCSR s.procID).misa.C) w = i) /\
    (Run i s' = nxt) /\
