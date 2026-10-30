@@ -63,6 +63,7 @@ fun load_thydata_from_dat (r as {thyname,path,hash}) =
           )
           (#thydata rawthy)
         )
+    val _ = Tracing.record_signature {theory=thyname, hash=hash}
   in
     thmdict
   end handle Interrupt => raise Interrupt

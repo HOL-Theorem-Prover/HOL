@@ -5,15 +5,20 @@ HAVE_MLTON = $(if $(NO_MLTON),,$(which mlton))
 ifdef POLY
 CLINE_OPTIONS = --poly_not_hol
 
+# The fixture needs exportSmall and the de Bruijn kernel layout.
+ifeq ($(KERNELID),trknl)
+ifdef HAVE_WORD64
 all: selftest.exe
 selftest.exe: selftest.uo ProofTraceParser.uo
-	$(MOSMLC) -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 
 ifdef HOLSELFTESTLEVEL
 all: prooftrace-selftest.log
 
 prooftrace-selftest.log: selftest.exe
 	@$(tee ./$<,$@)
+endif
+endif
 endif
 endif
 

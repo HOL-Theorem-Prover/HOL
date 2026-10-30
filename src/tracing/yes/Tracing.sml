@@ -38,7 +38,42 @@ fun export (file, x: 'a) = let
   val () = IO.close pipeWrite
 in app (fn pid => ignore (Process.waitpid (Process.W_CHILD pid, []))) pids end
 
-fun trace_theory name args = export(concat[".hol/objs/",name,".tr.gz"], args)
+fun signature_ids ctxt = let
+  val types = Context.typesig ctxt
+  fun current_type (Type_dtype.Tyv _) = true
+    | current_type (Type_dtype.Tyapp ((id,_), args)) =
+        KernelSig.uptodate_id types id andalso List.all current_type args
+  val const_ids = KernelSig.foldl (fn (_, (id, ty), ids) =>
+    if current_type (Type_dtype.to_hol_type ty) then id :: ids else ids)
+    [] (Context.termsig ctxt)
+  val type_ids = KernelSig.foldl (fn (_, (id, _), ids) => id :: ids)
+    [] types
+in (const_ids, type_ids) end
+
+val const_origins = ref (Redblackmap.mkDict KernelSig.id_compare)
+val type_origins = ref (Redblackmap.mkDict KernelSig.id_compare)
+
+fun record_signature {theory, hash} = let
+  val (const_ids, type_ids) = signature_ids (Context.snapshot ())
+  (* The first successful export/import owns this identity, even after a
+     restore. A same-named declaration with another epoch is a different key. *)
+  fun record origins id =
+    if #Thy (KernelSig.name_of_id id) <> theory orelse
+       Redblackmap.inDomain (!origins, id) then ()
+    else origins := Redblackmap.insert (!origins, id, (theory, hash))
+in
+  List.app (record const_origins) const_ids;
+  List.app (record type_origins) type_ids
+end
+
+fun trace_theory name args = let
+  val (const_ids, type_ids) = signature_ids (Context.snapshot ())
+in
+  export (concat[".hol/objs/",name,".tr.gz"],
+          (1, const_ids, type_ids,
+           Redblackmap.listItems (!const_origins),
+           Redblackmap.listItems (!type_origins), args))
+end
 
 fun export_proof {file, tag} th =
   case !TraceMode.mode of

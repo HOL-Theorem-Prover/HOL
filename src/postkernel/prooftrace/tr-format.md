@@ -14,6 +14,23 @@ flags byte (the flags byte of a 64-bit header occupies byte 7 and is always `00`
 The 64-bit variant is a PolyML memory dump; the 32-bit variant recodes each word
 from 8 bytes to 4 bytes but preserves the same logical structure.
 
+The object layout follows the producing HOL kernel and PolyML ABI. This
+parser supports the current immutable `KernelSig.kernelid` record, not the
+older reference-based identifier layout. Rebuild raw traces with the same
+kernel source as the converter; the narrow-format magic describes word
+width, not a kernel ABI version.
+
+The root contains identity metadata as well as the theory payload. Allocation
+epochs are process-local and cannot identify a public name after a context
+restore. The producer therefore captures the live signature at export and
+records each imported identity's originating theory and hash after successful
+theory loading. Successful exports record the same provenance for subsequent
+theories built in that process; these records survive context restores.
+
+The six-field version-1 envelope below is required. Earlier raw traces,
+including the experimental four-field envelope, must be regenerated. This
+raw envelope version is independent of the portable PFT version.
+
 ## 64-bit file structure: bit level
 
 The outer structure of the dump is a sequence of objects, followed by a root pointer:
@@ -155,7 +172,9 @@ Now we will describe how SML datatypes are encoded as elements of `tagptr`.
 
 Now that we can encode arbitrary datatypes inside the file, it suffices to give the type of the root pointer. This is more or less a copy of the sources, but we have re-sorted the constructors according to the above sort criteria where applicable. A `clos` means the value in this position is a function type.
 ```sml
-type id = {name: {Thy: string, Name: string}, epoch: int}
+type kernelname = {Thy: string, Name: string}
+type id = {name: kernelname, epoch: int}
+(* Record slots are [name, epoch]; kernelname slots are [Thy, Name]. *)
 
 datatype hol_type
   = Tyapp of (id * int) * hol_type list
@@ -263,7 +282,7 @@ datatype thm_src_location (* option-like *)
 
 type thminfo = {loc: thm_src_location, class: class, private: bool}
 
-type trace_file =
+type theory_trace =
   { types     : (string * int) list,
     mldeps    : string list,
     theory    : string,
@@ -271,4 +290,24 @@ type trace_file =
     all_thms  : (string * thm * thminfo) list,
     anon_thms : thm list,
     constants : (string * hol_type) list }
+
+type identity_origin = id * (string * string) (* owner theory, hash *)
+type trace_file = int * id list * id list *
+                 identity_origin list * identity_origin list * theory_trace
+(* (1, live constant IDs, live type IDs, constant origins, type origins,
+    theory payload) *)
 ```
+
+## Checking identity capture and replay
+
+The parser selftest target, `selftest.exe`, runs with the tracing
+kernel and a Poly/ML runtime providing `exportSmall`. The separate-process
+identity regression uses a tracing HOL built from these sources:
+
+```sh
+tests/run.sh identity /path/to/tracing/bin/hol /path/to/scratch
+```
+
+It exports real theories and replays them in a separate process, checking
+exact sequents and declarations for context restoration and generated-name
+collisions. Logs are written under the scratch directory.
