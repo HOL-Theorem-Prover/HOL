@@ -143,7 +143,8 @@ val state_id =
        ["c_NextFetch", "c_PC", "c_Skip"],
        ["c_NextFetch", "c_PC", "c_Skip", "c_gpr"],
        ["MEM8", "c_PC"],
-       ["MEM8", "c_PC", "c_Skip"]
+       ["MEM8", "c_PC", "c_Skip"],
+       ["MEM8", "c_PC", "c_Skip", "c_gpr"]  (* AMOs write memory and rd *)
       ]
 
 val riscv_frame = riscv_progTheory.riscv_frame
