@@ -441,6 +441,25 @@ in
       th normal_forms
 end
 
+(* A hypothesis without free variables, such as the alignment of an address
+   given by x0 and an offset, is decided: it is removed if true, and if it
+   is false the instruction traps (here, on a misaligned access) and there
+   is no step theorem. *)
+fun ground_hyp_rule th =
+  List.foldl
+    (fn (h, th) =>
+       if List.null (Term.free_vars h) then
+         let
+           val eq = EVAL h
+         in
+           if Teq (utilsLib.rhsc eq) then PROVE_HYP (EQT_ELIM eq) th
+           else if Feq (utilsLib.rhsc eq) then
+             raise ERR "riscv_step"
+               ("instruction traps: " ^ Parse.term_to_string h ^ " is false")
+           else th
+         end
+       else th) th (Thm.hyp th)
+
 local
   val st = Term.mk_var ("st", ``:riscv_state``)
   val rvc_pat = ``(^st.c_MCSR ^st.procID).misa.C``
@@ -540,7 +559,7 @@ in
                                  thm5, thm6]
       val tm = utilsLib.rhsc thm6
     in
-      canonical_contract_rule
+      (ground_hyp_rule o canonical_contract_rule)
         (tidy_up_rvc
            (if optionSyntax.is_none tm
               then MP_Next_n thm
