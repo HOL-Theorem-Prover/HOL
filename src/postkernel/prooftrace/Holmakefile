@@ -37,17 +37,3 @@ all:
 endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
-
-all: pft-selftest.exe
-
-pft-selftest.exe: pft-selftest.uo
-	$(HOLMOSMLC) -o $@ $<
-
-ifdef HOLSELFTESTLEVEL
-all: pft-selftest.log
-
-pft-selftest.log: pft-selftest.exe
-	$(tee ./$<, $@)
-endif
-
-EXTRA_CLEANS += pft-selftest.exe pft-selftest.log
