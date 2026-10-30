@@ -36,14 +36,7 @@ The `.ml` checkers run in Candle; their producer programs run in HOL.
 loading a new `Tracing` structure does not change the instance already used
 by `Theory.export_theory`.
 
-It exports deletion, unused replacement, context restoration, private-name
-collision and restored-type fixtures. Separate parent and child processes test
-imports with different allocation epochs. Seven exact sequents and identity
-inventories are checked through raw HOL and separate HOL PFT replay.
-
-Three actual exports must fail explicitly: an unrecorded foreign identity, a
-retired foreign identity, and a retained foreign definition whose parent
-exported only reflexivity. The last remains unsupported even when the public
-constant name can be resolved. Supplemental retired/custom logical-role
-fixtures require rejection in raw replay and both conversion modes; they do
-not establish complete logical-role replay coverage.
+The two actual exports reproduce a restored constant being replayed as its
+retired replacement and a generated private name colliding with a live
+constant. The checker compares the exact exported sequents and symbol names
+through raw HOL and separate HOL PFT replay.
