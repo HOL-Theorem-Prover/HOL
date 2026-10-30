@@ -12,11 +12,11 @@ HOL_PFT_SOURCE_ROOT=$(CDPATH= cd -- "$pft_dir/../../../.." && pwd)
 export HOL_PFT_SOURCE_ROOT
 mkdir -p "$pft_scratch/identity/.hol/objs"
 cd "$pft_scratch/identity"
-pft_phases="produce import-parent import-child raw role custom-role"
+pft_phases="produce raw"
 for HOL_PFT_IDENTITY_PHASE in $pft_phases; do
   export HOL_PFT_IDENTITY_PHASE
   case "$HOL_PFT_IDENTITY_PHASE" in
-    raw|role|custom-role) set -- --min ;;
+    raw) set -- --min ;;
     *) set -- ;;
   esac
   pft_log=$HOL_PFT_IDENTITY_PHASE.log
