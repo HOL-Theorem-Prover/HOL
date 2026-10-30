@@ -3597,14 +3597,15 @@ define FArith > FLT_S(rd::reg, rs1::reg, rs2::reg) =
                         }
                 ; writeRD(rd, res)
                 }
-           }
+         }
 
-         -----------------------------------
-         -- FLE.S   rd, rs
-         -----------------------------------
+-----------------------------------
+-- FLE.S   rd, rs
+-----------------------------------
 
-         define FArith > FLE_S(rd::reg, rs1::reg, rs2::reg) =
-         { f1  = FPRS(rs1)
+define FArith > FLE_S(rd::reg, rs1::reg, rs2::reg) =
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRS(rs1)
          ; f2  = FPRS(rs2)
          ; if   FP32_IsNan(f1) or FP32_IsNan(f2)
            then { writeRD(rd, 0x0)
