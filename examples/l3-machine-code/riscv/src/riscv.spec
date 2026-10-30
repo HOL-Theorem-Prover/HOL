@@ -3498,7 +3498,7 @@ define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
                            or val > 2 ** 32 - 1 or val < 0
                       then setFP_Invalid()
                       else when not FP32_IsIntegral(inp) do setFP_Inexact()
-                    ; writeRD(rd, res)
+                    ; writeRD(rd, SignExtend(res::word))  -- sign-extended (ISA manual 6.1.7)
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -4025,7 +4025,7 @@ define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
                            or val > 2 ** 32 - 1 or val < 0
                       then setFP_Invalid()
                       else when not FP64_IsIntegral(inp) do setFP_Inexact()
-                    ; writeRD(rd, res)
+                    ; writeRD(rd, SignExtend(res::word))  -- sign-extended (ISA manual 6.1.7)
                     }
     case None    => signalException(Illegal_Instr)
   }
