@@ -158,7 +158,8 @@ local
        | "riscv_prog$riscv_procID" => 1
        | "riscv_prog$riscv_c_NextFetch" => 16
        | "riscv_prog$riscv_c_MCSR" => 17
-       | "riscv_prog$riscv_c_PC" => 18
+       | "riscv_prog$riscv_c_privilege" => 18
+       | "riscv_prog$riscv_c_PC" => 19
        | _ => ~1)
       handle HOL_ERR r => (print_term tm; raise HOL_ERR r)
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
@@ -281,12 +282,12 @@ local
     PURE_REWRITE_RULE
       [GSYM riscv_progTheory.riscv_REG_def, GSYM riscv_progTheory.riscv_PC_def,
        GSYM riscv_progTheory.riscv_PC_noC_def]
-  val (_, mk_mcpuid, _, _) =
-      HolKernel.syntax_fns1 "riscv" (mkselnm "MachineCSR" "mcpuid")
-  val (_, mk_ArchBase, _, _) =
-      HolKernel.syntax_fns1 "riscv" (mkselnm "mcpuid" "ArchBase")
+  val (_, mk_misa, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "MachineCSR" "misa")
+  val (_, mk_MXL, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "misa" "MXL")
   val (_, mk_C, _, _) =
-      HolKernel.syntax_fns1 "riscv" (mkselnm "mcpuid" "C")
+      HolKernel.syntax_fns1 "riscv" (mkselnm "misa" "C")
   val pre = progSyntax.strip_star o temporal_stateSyntax.dest_pre' o Thm.concl
 
 
@@ -298,10 +299,10 @@ val SOME tm = List.find is_riscv_ID (pre th)
        SOME tm =>
          let
            val (id, mcsr) = dest_riscv_ID tm
-           val archbase = boolSyntax.mk_eq (mk_ArchBase (mk_mcpuid mcsr), rv64)
-           val c = mk_C (mk_mcpuid mcsr)
+           val mxl = boolSyntax.mk_eq (mk_MXL (mk_misa mcsr), rv64)
+           val c = mk_C (mk_misa mcsr)
            val config =
-             boolSyntax.mk_conj (archbase, if !rvc then c else mk_neg c)
+             boolSyntax.mk_conj (mxl, if !rvc then c else mk_neg c)
          in
            th |> Thm.INST [id |-> id0]
               |> rv64_rule
@@ -408,19 +409,41 @@ local
                        [riscvTheory.Skip_def,combinTheory.APPLY_UPDATE_THM]
     in REWRITE_RULE (map Skip_conv tms) thm end
   val pc_assum_noC = ``aligned 2 (s.c_PC s.procID)``
-  val rvc_tm = ``(s.c_MCSR s.procID).mcpuid.C``
+  val rvc_tm = ``(s.c_MCSR s.procID).misa.C``
   val aligned_rwts =
     Drule.CONJUNCTS
       (UNDISCH (Q.INST [`pc` |-> `s.c_PC s.procID`] word_bit_aligned_noC))
+  (* The M-mode contract as riscv_ID (riscv_progTheory.riscv_ID_def) states
+     it: H3 and H4, which the step theorem has as word-level conjuncts,
+     become pmp_unlocked and pmp_off_or_napot of the MCSR, and the parts of
+     the contract that the instruction does not need (H2 unless it accesses
+     data, H4 unless it accesses 8 bytes) are added, as misa.C is below, so
+     that every spec has the same riscv_ID. *)
+  val mcsr_tm = ``s.c_MCSR s.procID``
+  fun fold_rule def th =
+    let
+      val eq = Thm.SPEC mcsr_tm def
+      val p = boolSyntax.lhs (Thm.concl eq)
+    in
+      List.foldl (Lib.uncurry PROVE_HYP) (ADD_ASSUM p th)
+        (Drule.CONJUNCTS (Thm.EQ_MP eq (Thm.ASSUME p)))
+    end
+  val contract_rule =
+    ADD_ASSUM ``~^mcsr_tm.mstatus.MPRV`` o
+    ADD_ASSUM ``~^mcsr_tm.mstatus.MIE`` o
+    fold_rule riscv_stepTheory.pmp_unlocked_def o
+    fold_rule riscv_stepTheory.pmp_off_or_napot_def
   fun config_rule thm =
     if !rvc then
       thm |> riscv_stepLib.riscv_rvc_rule true
           |> ADD_ASSUM rvc_tm
+          |> contract_rule
     else
       thm |> riscv_stepLib.riscv_rvc_rule false
           |> ADD_ASSUM (boolSyntax.mk_neg rvc_tm)
           |> ADD_ASSUM pc_assum_noC
           |> utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV aligned_rwts)
+          |> contract_rule
 in
   val spec =
     stateLib.spec

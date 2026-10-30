@@ -7,11 +7,20 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
+(* The components of the specs are those of riscv_state except the hidden
+   ones (doc/design-privileged.md §1.4.1): the logging (c_update, log;
+   loads and stores write c_update, see riscv_frame_hidden below), the
+   counters (c_instret, c_cycles, c_minstret_written), the platform
+   interrupt lines (c_extMEIP, c_extSEIP), the harness (done, c_ExitCode),
+   totalCore, the S-mode CSRs (c_SCSR), and c_UCSR (fcsr) and
+   c_ReserveLoad, which only the step theorems of the F and D instructions
+   and of LR and SC read.  The current privilege, c_privilege, is visible:
+   every step theorem reads it (H1, riscv_ID below). *)
 val _ = stateLib.sep_definitions "riscv" []
           (List.map Lib.list_of_singleton
-             ["c_update", "log", "totalCore", "done", "clock", "c_tlb",
-              "c_instret", "c_cycles", "c_UCSR", "c_SCSR", "c_ReserveLoad",
-              "c_HCSR", "c_ExitCode"])
+             ["c_update", "log", "totalCore", "done", "c_instret",
+              "c_cycles", "c_minstret_written", "c_extMEIP", "c_extSEIP",
+              "c_UCSR", "c_SCSR", "c_ReserveLoad", "c_ExitCode"])
           riscv_stepTheory.NextRISCV_def
 
 Definition riscv_mem_def:
@@ -48,10 +57,21 @@ val RISCV_IMP_TEMPORAL = Theory.save_thm ("RISCV_IMP_TEMPORAL",
 
 (* ------------------------------------------------------------------------ *)
 
+(* The M-mode contract of the step theorems (riscv_stepTheory;
+   doc/design-privileged.md §1.5, [D11]), the same for every instruction:
+   the hart is in M-mode (H1), loads and stores use M-mode (H2: mstatus.MPRV
+   is clear), no PMP entry is locked (H3), every PMP entry is OFF or NAPOT
+   (H4) and no interrupt can be taken (H6: mstatus.MIE is clear).  A step
+   theorem has only the conjuncts that its instruction needs (H2 for a data
+   access, H4 for an 8-byte one); riscv_progLib adds the others, so that
+   every spec has riscv_ID.  H5, the alignment of a data address, depends on
+   the instruction and stays a condition of its spec. *)
 Definition riscv_ID_def:
    riscv_ID id mcsr =
    riscv_exception NoException * riscv_procID id * riscv_c_NextFetch id NONE *
-   riscv_c_MCSR id mcsr * cond (mcsr.mstatus.VM = 0w)
+   riscv_c_MCSR id mcsr * riscv_c_privilege id 3w *
+   cond ~mcsr.mstatus.MPRV * cond (pmp_unlocked mcsr) *
+   cond (pmp_off_or_napot mcsr) * cond ~mcsr.mstatus.MIE
 End
 
 Definition riscv_ID_PC_def:
@@ -64,17 +84,18 @@ Definition riscv_ID_PC_noC_def:
 End
 
 (* ------------------------------------------------------------------------
-   Specialize to RV64I, core 0
+   Specialize to RV64I, core 0: misa.MXL = 2 (64 bits), and misa.C set or
+   clear, as riscv_progLib.riscv_rvc_config selects
    ------------------------------------------------------------------------ *)
 
 Definition riscv_RV64I_def:
   riscv_RV64I mcsr =
-  cond (mcsr.mcpuid.ArchBase = 2w) * cond mcsr.mcpuid.C * riscv_ID 0w mcsr
+  cond (mcsr.misa.MXL = 2w) * cond mcsr.misa.C * riscv_ID 0w mcsr
 End
 
 Definition riscv_RV64I_noC_def:
   riscv_RV64I_noC mcsr =
-  cond (mcsr.mcpuid.ArchBase = 2w) * cond ~mcsr.mcpuid.C * riscv_ID 0w mcsr
+  cond (mcsr.misa.MXL = 2w) * cond ~mcsr.misa.C * riscv_ID 0w mcsr
 End
 
 Definition riscv_REG_def:  riscv_REG  = riscv_c_gpr 0w
