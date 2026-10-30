@@ -862,6 +862,17 @@ bool FP64_IsSignalingNan(x::bits(64)) =
 bool FP32_Sign(x::bits(32)) = x<31>
 bool FP64_Sign(x::bits(64)) = x<63>
 
+-- multiplicands of an FMA that must raise NV even when the addend is a quiet
+-- NaN (ISA manual 6.1.6); IEEE 754-2008 leaves that case open, and neither
+-- export's MulAdd raises it
+bool FP32_InfTimesZero(a::bits(32), b::bits(32)) =
+    (FP32_IsZero(a) and (b == FP32_PosInf or b == FP32_NegInf)) or
+    (FP32_IsZero(b) and (a == FP32_PosInf or a == FP32_NegInf))
+
+bool FP64_InfTimesZero(a::bits(64), b::bits(64)) =
+    (FP64_IsZero(a) and (b == FP64_PosInf or b == FP64_NegInf)) or
+    (FP64_IsZero(b) and (a == FP64_PosInf or a == FP64_NegInf))
+
 -- setting exception flags (fcsr bits 4-0: NV DZ OF UF NX, ISA manual 6.1.2)
 
 unit setFP_Invalid() =
@@ -3342,6 +3353,7 @@ define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_MulAdd_(r, FPRS(rs1), FPRS(rs2), FPRS(rs3))
                     ; accrueFlags(f)
+                    ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                     ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
@@ -3357,6 +3369,7 @@ define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_MulAdd_(r, FPRS(rs1), FPRS(rs2), FP32_Neg(FPRS(rs3)))
                     ; accrueFlags(f)
+                    ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                     ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
@@ -3373,6 +3386,7 @@ define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_MulAdd_(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FP32_Neg(FPRS(rs3)))
                     ; accrueFlags(f)
+                    ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                     ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
@@ -3389,6 +3403,7 @@ define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_MulAdd_(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FPRS(rs3))
                     ; accrueFlags(f)
+                    ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                     ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
@@ -3877,6 +3892,7 @@ define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_MulAdd_(r, FPRD(rs1), FPRD(rs2), FPRD(rs3))
                     ; accrueFlags(f)
+                    ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                     ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
@@ -3892,6 +3908,7 @@ define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_MulAdd_(r, FPRD(rs1), FPRD(rs2), FP64_Neg(FPRD(rs3)))
                     ; accrueFlags(f)
+                    ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                     ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
@@ -3908,6 +3925,7 @@ define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_MulAdd_(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FP64_Neg(FPRD(rs3)))
                     ; accrueFlags(f)
+                    ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                     ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
@@ -3924,6 +3942,7 @@ define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_MulAdd_(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FPRD(rs3))
                     ; accrueFlags(f)
+                    ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                     ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
