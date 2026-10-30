@@ -846,6 +846,11 @@ ieee_rounding option round(rnd::fprnd) =
 bits(32) RV32_CanonicalNan = 0x7fc00000
 bits(64) RV64_CanonicalNan = 0x7ff8000000000000
 
+-- a NaN result of an arithmetic or conversion instruction is the canonical
+-- NaN (ISA manual 6.1.3 and 6.2)
+bits(32) canonS(x::bits(32)) = if FP32_IsNan(x) then RV32_CanonicalNan else x
+bits(64) canonD(x::bits(64)) = if FP64_IsNan(x) then RV64_CanonicalNan else x
+
 -- Classification
 
 bool FP32_IsSignalingNan(x::bits(32)) =
@@ -3226,7 +3231,7 @@ define FArith > FADD_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_Add_(r, FPRS(rs1), FPRS(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRS(rd, v)
+                    ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3240,7 +3245,7 @@ define FArith > FSUB_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_Sub_(r, FPRS(rs1), FPRS(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRS(rd, v)
+                    ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3254,7 +3259,7 @@ define FArith > FMUL_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_Mul_(r, FPRS(rs1), FPRS(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRS(rd, v)
+                    ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3268,7 +3273,7 @@ define FArith > FDIV_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP32_Div_(r, FPRS(rs1), FPRS(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRS(rd, v)
+                    ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3286,7 +3291,7 @@ define FArith > FSQRT_S(rd::reg, rs::reg, fprnd::fprnd) =
                     -- float_sqrt raises NV for a negative one
                     ; when not FP32_IsNan(a) or FP32_IsSignalingNan(a)
                       do accrueFlags(f)
-                    ; writeFPRS(rd, v)
+                    ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3336,7 +3341,7 @@ define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
 
 define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))
+  { case Some(r) => writeFPRS(rd, canonS(FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3347,7 +3352,7 @@ define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))
+  { case Some(r) => writeFPRS(rd, canonS(FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3358,7 +3363,7 @@ define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Neg(FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
+  { case Some(r) => writeFPRS(rd, canonS(FP32_Neg(FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3369,7 +3374,7 @@ define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Neg(FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
+  { case Some(r) => writeFPRS(rd, canonS(FP32_Neg(FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3745,7 +3750,7 @@ define FArith > FADD_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_Add_(r, FPRD(rs1), FPRD(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRD(rd, v)
+                    ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3759,7 +3764,7 @@ define FArith > FSUB_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_Sub_(r, FPRD(rs1), FPRD(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRD(rd, v)
+                    ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3773,7 +3778,7 @@ define FArith > FMUL_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_Mul_(r, FPRD(rs1), FPRD(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRD(rd, v)
+                    ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3787,7 +3792,7 @@ define FArith > FDIV_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_Div_(r, FPRD(rs1), FPRD(rs2))
                     ; accrueFlags(f)
-                    ; writeFPRD(rd, v)
+                    ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3805,7 +3810,7 @@ define FArith > FSQRT_D(rd::reg, rs::reg, fprnd::fprnd) =
                     -- float_sqrt raises NV for a negative one
                     ; when not FP64_IsNan(a) or FP64_IsSignalingNan(a)
                       do accrueFlags(f)
-                    ; writeFPRD(rd, v)
+                    ; writeFPRD(rd, canonD(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -3856,7 +3861,7 @@ define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
 
 define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))
+  { case Some(r) => writeFPRD(rd, canonD(FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3867,7 +3872,7 @@ define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))
+  { case Some(r) => writeFPRD(rd, canonD(FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3878,7 +3883,7 @@ define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Neg(FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
+  { case Some(r) => writeFPRD(rd, canonD(FP64_Neg(FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -3889,7 +3894,7 @@ define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Neg(FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
+  { case Some(r) => writeFPRD(rd, canonD(FP64_Neg(FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))))
     case None    => signalException(Illegal_Instr)
   }
 }
@@ -4076,7 +4081,7 @@ define FConv > FCVT_S_D(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
   { case Some(r) => { (f, v) = FP64_ToFP32_(r, FPRD(rs))
                     ; accrueFlags(f)
-                    ; writeFPRS(rd, v)
+                    ; writeFPRS(rd, canonS(v))
                     }
     case None    => signalException(Illegal_Instr)
   }
@@ -4091,7 +4096,7 @@ define FConv > FCVT_D_S(rd::reg, rs::reg, fprnd::fprnd) =
   { case Some(r) => { a = FPRS(rs)
                     -- exact: only a signalling NaN raises a flag (NV)
                     ; when FP32_IsSignalingNan(a) do setFP_Invalid()
-                    ; writeFPRD(rd, FP32_ToFP64(a))
+                    ; writeFPRD(rd, canonD(FP32_ToFP64(a)))
                     }
     case None    => signalException(Illegal_Instr)
   }
