@@ -12,10 +12,9 @@ The suites are `identity`, `oracle`, `export`, `compute-binder`, and
 with separate processes for fresh kernel state and logs in the scratch dir.
 `compute-binder` also needs `cv_computeLib`.
 
-* `oracle` reproduces hypothesis loss and unsupported HOL `deductAntisym`.
-  The HOL checker compares the complete oracle sequent. After Candle replay,
-  load `oracle-check-results.ml` and call `check_oracle_results ()` and
-  `check_deduct_results ()` for the two exact sequents.
+* `oracle` reproduces lost hypotheses. The HOL checker compares the complete
+  oracle sequent. After Candle replay, load `oracle-check-results.ml` and
+  call `check_oracle_results ()` for the same exact sequent.
 * `export` checks specification binders: an unused existential, shadowing,
   and an inner binder named like the introduced constant. Run
   `export-check-candle.ml` after Candle replay to compare all four exports.
