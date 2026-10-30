@@ -2210,18 +2210,26 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 -- Load and Store Instructions
 ---------------------------------------------------------------------------
 
+-- A load or store that is not naturally aligned raises an
+-- address-misaligned exception (U §2.1.6 p.37, [D55]) before any other
+-- check (P §3.1.15 Table 17 p.51), so no access is ever split.  The trap
+-- value is the address (P §3.1.16 p.52).  The same holds for the
+-- floating-point loads and stores, LR/SC and the AMOs.
+
 -----------------------------------
 -- LW    rd, rs1, offs
 -----------------------------------
 define Load > LW(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<31:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
+; if vAddr<1:0> != 0
+  then signalAddressException(Load_Misaligned, vAddr)
+  else match translateAddr(vAddr, Data, Read)
+       { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<31:0>)
+                             ; GPR(rd)  <- val
+                             ; recordLoad(vAddr, val)
+                             }
+         case None        => signalAddressException(Load_Fault, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2231,13 +2239,15 @@ define Load > LWU(rd::reg, rs1::reg, offs::imm12) =
 { if in32BitMode()
   then signalException(Illegal_Instr)
   else { vAddr = GPR(rs1) + SignExtend(offs)
-       ; match translateAddr(vAddr, Data, Read)
-         { case Some(pAddr) => { val        = ZeroExtend(rawReadData(pAddr)<31:0>)
-                               ; GPR(rd)   <- val
-                               ; recordLoad(vAddr, val)
-                               }
-           case None        => signalAddressException(Load_Fault, vAddr)
-         }
+       ; if vAddr<1:0> != 0
+         then signalAddressException(Load_Misaligned, vAddr)
+         else match translateAddr(vAddr, Data, Read)
+              { case Some(pAddr) => { val        = ZeroExtend(rawReadData(pAddr)<31:0>)
+                                    ; GPR(rd)   <- val
+                                    ; recordLoad(vAddr, val)
+                                    }
+                case None        => signalAddressException(Load_Fault, vAddr)
+              }
        }
 }
 
@@ -2246,13 +2256,15 @@ define Load > LWU(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LH(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<15:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
+; if vAddr<0>
+  then signalAddressException(Load_Misaligned, vAddr)
+  else match translateAddr(vAddr, Data, Read)
+       { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<15:0>)
+                             ; GPR(rd)  <- val
+                             ; recordLoad(vAddr, val)
+                             }
+         case None        => signalAddressException(Load_Fault, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2260,13 +2272,15 @@ define Load > LH(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LHU(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<15:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
+; if vAddr<0>
+  then signalAddressException(Load_Misaligned, vAddr)
+  else match translateAddr(vAddr, Data, Read)
+       { case Some(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<15:0>)
+                             ; GPR(rd)  <- val
+                             ; recordLoad(vAddr, val)
+                             }
+         case None        => signalAddressException(Load_Fault, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2304,13 +2318,15 @@ define Load > LD(rd::reg, rs1::reg, offs::imm12) =
     if in32BitMode()
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Read)
-           { case Some(pAddr) => { val      = rawReadData(pAddr)
-                                 ; GPR(rd) <- val
-                                 ; recordLoad(vAddr, val)
-                                 }
-             case None        => signalAddressException(Load_Fault, vAddr)
-           }
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Load_Misaligned, vAddr)
+           else match translateAddr(vAddr, Data, Read)
+                { case Some(pAddr) => { val      = rawReadData(pAddr)
+                                      ; GPR(rd) <- val
+                                      ; recordLoad(vAddr, val)
+                                      }
+                  case None        => signalAddressException(Load_Fault, vAddr)
+                }
          }
 
 -----------------------------------
@@ -2318,13 +2334,15 @@ define Load > LD(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Store > SW(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = GPR(rs2)
-                        ; rawWriteData(pAddr, data, 4)
-                        ; recordStore(vAddr, data, 4)
-                        }
-    case None        => signalAddressException(Store_AMO_Fault, vAddr)
-  }
+; if vAddr<1:0> != 0
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match translateAddr(vAddr, Data, Write)
+       { case Some(pAddr) => { data = GPR(rs2)
+                             ; rawWriteData(pAddr, data, 4)
+                             ; recordStore(vAddr, data, 4)
+                             }
+         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2332,13 +2350,15 @@ define Store > SW(rs1::reg, rs2::reg, offs::imm12) =
 -----------------------------------
 define Store > SH(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = GPR(rs2)
-                        ; rawWriteData(pAddr, data, 2)
-                        ; recordStore(vAddr, data, 2)
-                        }
-    case None        => signalAddressException(Store_AMO_Fault, vAddr)
-  }
+; if vAddr<0>
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match translateAddr(vAddr, Data, Write)
+       { case Some(pAddr) => { data = GPR(rs2)
+                             ; rawWriteData(pAddr, data, 2)
+                             ; recordStore(vAddr, data, 2)
+                             }
+         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2362,13 +2382,15 @@ define Store > SD(rs1::reg, rs2::reg, offs::imm12) =
     if in32BitMode()
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Write)
-           { case Some(pAddr) => { data = GPR(rs2)
-                                 ; rawWriteData(pAddr, data, 8)
-                                 ; recordStore(vAddr, data, 8)
-                                 }
-             case None        => signalAddressException(Store_AMO_Fault, vAddr)
-           }
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
+           else match translateAddr(vAddr, Data, Write)
+                { case Some(pAddr) => { data = GPR(rs2)
+                                      ; rawWriteData(pAddr, data, 8)
+                                      ; recordStore(vAddr, data, 8)
+                                      }
+                  case None        => signalAddressException(Store_AMO_Fault, vAddr)
+                }
          }
 
 ---------------------------------------------------------------------------
@@ -2834,13 +2856,15 @@ define AMO > AMOMAXU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define FPLoad > FLW(rd::reg, rs1::reg, offs::imm12) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Read)
-           { case Some(pAddr) => { val       = rawReadData(pAddr)<31:0>
-                                 ; FPRS(rd) <- val
-                                 ; recordLoad(vAddr, ZeroExtend(val))
-                                 }
-             case None        => signalAddressException(Load_Fault, vAddr)
-           }
+         ; if vAddr<1:0> != 0
+           then signalAddressException(Load_Misaligned, vAddr)
+           else match translateAddr(vAddr, Data, Read)
+                { case Some(pAddr) => { val       = rawReadData(pAddr)<31:0>
+                                      ; FPRS(rd) <- val
+                                      ; recordLoad(vAddr, ZeroExtend(val))
+                                      }
+                  case None        => signalAddressException(Load_Fault, vAddr)
+                }
          }
 
 -----------------------------------
@@ -2850,13 +2874,15 @@ define FPLoad > FLW(rd::reg, rs1::reg, offs::imm12) =
 define FPStore > FSW(rs1::reg, rs2::reg, offs::imm12) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Write)
-           { case Some(pAddr) => { data = FPRS(rs2)
-                                 ; rawWriteData(pAddr, ZeroExtend(data), 4)
-                                 ; recordStore(vAddr, ZeroExtend(data), 4)
-                                 }
-             case None        => signalAddressException(Store_AMO_Fault, vAddr)
-           }
+         ; if vAddr<1:0> != 0
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
+           else match translateAddr(vAddr, Data, Write)
+                { case Some(pAddr) => { data = FPRS(rs2)
+                                      ; rawWriteData(pAddr, ZeroExtend(data), 4)
+                                      ; recordStore(vAddr, ZeroExtend(data), 4)
+                                      }
+                  case None        => signalAddressException(Store_AMO_Fault, vAddr)
+                }
          }
 
 -- Computational
@@ -3313,13 +3339,15 @@ define FConv > FCLASS_S(rd::reg, rs::reg) =
 define FPLoad > FLD(rd::reg, rs1::reg, offs::imm12) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Read)
-           { case Some(pAddr) => { val       = rawReadData(pAddr)
-                                 ; FPRD(rd) <- val
-                                 ; recordLoad(vAddr, val)
-                                 }
-             case None        => signalAddressException(Load_Fault, vAddr)
-           }
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Load_Misaligned, vAddr)
+           else match translateAddr(vAddr, Data, Read)
+                { case Some(pAddr) => { val       = rawReadData(pAddr)
+                                      ; FPRD(rd) <- val
+                                      ; recordLoad(vAddr, val)
+                                      }
+                  case None        => signalAddressException(Load_Fault, vAddr)
+                }
          }
 
 -----------------------------------
@@ -3329,13 +3357,15 @@ define FPLoad > FLD(rd::reg, rs1::reg, offs::imm12) =
 define FPStore > FSD(rs1::reg, rs2::reg, offs::imm12) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Write)
-           { case Some(pAddr) => { data = FPRD(rs2)
-                                 ; rawWriteData(pAddr, data, 8)
-                                 ; recordStore(vAddr, data, 8)
-                                 }
-             case None        => signalAddressException(Store_AMO_Fault, vAddr)
-           }
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
+           else match translateAddr(vAddr, Data, Write)
+                { case Some(pAddr) => { data = FPRD(rs2)
+                                      ; rawWriteData(pAddr, data, 8)
+                                      ; recordStore(vAddr, data, 8)
+                                      }
+                  case None        => signalAddressException(Store_AMO_Fault, vAddr)
+                }
          }
 
 -- Computational
