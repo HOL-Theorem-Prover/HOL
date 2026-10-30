@@ -50,9 +50,15 @@ fun rm_f p = OS.FileSys.remove p handle OS.SysErr _ => ()
 
 fun mkdir_p p = OS.FileSys.mkDir p handle OS.SysErr _ => ()
 
+(* The physical path.  Holmake renders a target under its directory's
+   `absdir', which comes from FileSys.getDir() and so has every symlink
+   resolved.  `tmpName' hands back a path under /tmp, which on macOS is
+   a link to /private/tmp; a root left as it came would then be spelt
+   one way here and another in the graph, and no path built from it
+   would match a target. *)
 fun fresh_dir () =
     let val nm = OS.FileSys.tmpName ()
-    in rm_f nm; OS.FileSys.mkDir nm; nm end
+    in rm_f nm; OS.FileSys.mkDir nm; OS.FileSys.fullPath nm end
 
 fun in_dir d f =
     let
@@ -63,13 +69,17 @@ fun in_dir d f =
       OS.FileSys.chDir saved; result
     end
 
-fun hm_ok dir args =
+(* SOME of the run's output when it fails, so that a failure says why
+   in the build log; NONE when it succeeds. *)
+fun hm_failure dir args =
     let
       val out = OS.FileSys.tmpName ()
       val st = in_dir dir (fn () =>
                   Systeml.systeml_out {outfile = out} (Holmake :: args))
+      val txt = read_file out
     in
-      rm_f out; OS.Process.isSuccess st
+      rm_f out;
+      if OS.Process.isSuccess st then NONE else SOME txt
     end
 
 (* --json goes to stdout, so it needs its own redirect rather than
@@ -159,10 +169,13 @@ val Bc_uo = root ++ "B" ++ "Bc.uo"
 
 val _ = tprint "Clean build of the project, A scanned first"
 val _ =
-    if hm_ok root (plainopts @ ["--dirs", "B", "A"]) andalso
-       isSome (mtime_of (root ++ "A" ++ "Aa.uo")) andalso
-       isSome (mtime_of Bb_uo)
-    then OK() else fatal "clean build of A and B failed"
+    case hm_failure root (plainopts @ ["--dirs", "B", "A"]) of
+        SOME txt => fatal ("clean build of A and B failed:\n" ^ txt)
+      | NONE =>
+        if isSome (mtime_of (root ++ "A" ++ "Aa.uo")) andalso
+           isSome (mtime_of Bb_uo)
+        then OK()
+        else fatal "clean build of A and B compiled nothing"
 
 (* Post-order: the first root named is scanned last. *)
 fun check_deps order =
@@ -170,10 +183,13 @@ fun check_deps order =
       val _ = tprint ("B/Bb.uo depends on stamp.txt and Bc.uo (--dirs " ^
                       String.concatWith " " order ^ ")")
       val jsonf = hm_json root (plainopts @ ("--dirs" :: order))
+      val nodes = read_deps jsonf
       val deps =
-          case List.find (fn (t, _) => t = Bb_uo) (read_deps jsonf) of
+          case List.find (fn (t, _) => t = Bb_uo) nodes of
               SOME (_, ds) => ds
-            | NONE => fatal "no node for B/Bb.uo in the graph"
+            | NONE => fatal ("no node for " ^ Bb_uo ^ " in the graph; it \
+                             \holds: " ^
+                             String.concatWith ", " (map #1 nodes))
       val missing =
           List.filter (fn d => not (List.exists (fn d' => d' = d) deps))
                       [stamp, Bc_uo]
@@ -194,8 +210,9 @@ fun check_rebuilt what change =
       val old_mtime = mtime_of Bb_uo
       val _ = sleep_for_mtime ()
       val _ = change ()
-      val _ = if hm_ok root (plainopts @ ["--dirs", "B", "A"]) then ()
-              else fatal "rebuild failed"
+      val _ = case hm_failure root (plainopts @ ["--dirs", "B", "A"]) of
+                  NONE => ()
+                | SOME txt => fatal ("rebuild failed:\n" ^ txt)
     in
       case (old_mtime, mtime_of Bb_uo) of
           (SOME b, SOME a) =>
