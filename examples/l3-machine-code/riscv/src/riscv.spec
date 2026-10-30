@@ -826,7 +826,8 @@ ieee_rounding option l3round(rnd::Rounding) =
       case RTZ        => Some(roundTowardZero)
       case RDN        => Some(roundTowardNegative)
       case RUP        => Some(roundTowardPositive)
-      case RMM        => None  -- roundTiesToMaxMagnitude not in L3
+      case RMM        => None  -- roundTiesToMaxMagnitude is neither in L3 nor
+                               -- in HOL's binary_ieee (see validRounding)
       case RDYN       => None  -- invalid
     }
 
@@ -839,6 +840,16 @@ ieee_rounding option round(rnd::fprnd) =
                          }
       case Some(frm)  => l3round(frm)
       case None       => None
+    }
+
+-- rm of an instruction whose result is exact (FCVT.D.S, FCVT.D.W, FCVT.D.WU):
+-- it is decoded as usual, so RMM is legal, but it is never used to round
+-- (ISA manual 6.1.2)
+bool validRounding(rnd::fprnd) =
+    match rnd_mode_static(rnd)
+    { case Some(RDYN) => IsSome(rnd_mode_dynamic(fcsr.FRM))
+      case Some(_)    => true
+      case None       => false
     }
 
 -- NaNs
@@ -3984,22 +3995,18 @@ define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -----------------------------------
 
 define FConv > FCVT_D_W(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_FromInt(r, [GPR(rs)<31:0>]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if validRounding(fprnd)  -- exact (ISA manual 6.2.5)
+    then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [GPR(rs)<31:0>]::int))
+    else signalException(Illegal_Instr)
 
 -----------------------------------
 -- FCVT.D.WU  rd, rs
 -----------------------------------
 
 define FConv > FCVT_D_WU(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_FromInt(r, [0`1 : GPR(rs)<31:0>]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if validRounding(fprnd)  -- exact (ISA manual 6.2.5)
+    then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [0`1 : GPR(rs)<31:0>]::int))
+    else signalException(Illegal_Instr)
 
 -----------------------------------
 -- FCVT.W.D   rd, rs
@@ -4199,15 +4206,13 @@ define FConv > FCVT_S_D(rd::reg, rs::reg, fprnd::fprnd) =
 -----------------------------------
 
 define FConv > FCVT_D_S(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { a = FPRS(rs)
-                    -- exact: only a signalling NaN raises a flag (NV)
-                    ; when FP32_IsSignalingNan(a) do setFP_Invalid()
-                    ; writeFPRD(rd, canonD(FP32_ToFP64(a)))
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if validRounding(fprnd)  -- exact (ISA manual 6.2.5)
+    then { a = FPRS(rs)
+         -- only a signalling NaN raises a flag (NV)
+         ; when FP32_IsSignalingNan(a) do setFP_Invalid()
+         ; writeFPRD(rd, canonD(FP32_ToFP64(a)))
+         }
+    else signalException(Illegal_Instr)
 
 -- Sign injection
 
