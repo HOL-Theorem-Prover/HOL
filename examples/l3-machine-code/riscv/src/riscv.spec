@@ -707,7 +707,11 @@ bool msip(h::id) = MEM8(CLINT_BASE + 4 * ZeroExtend(h))<0>
 
 -- machine state utilities
 
--- misa.MXL is read-only 2, so this is always false ([D4]).
+-- misa.MXL is read-only 2 ([D4]): initIdent accepts only RV64I, and
+-- legalize_misa changes only C.  So this is false in every reachable
+-- state, and the RV32 cases of the instructions are dead code.  They do not
+-- make a complete RV32 (for one, addresses and the pc are not truncated
+-- to 32 bits, and AMO*.D are not illegal): RV32 is not supported.
 bool in32BitMode() =
     MCSR.misa.MXL == 1
 
@@ -1500,7 +1504,8 @@ regType trapVector(tvec::regType, intr::bool, ec::exc_code) =
 
 -- Trap entry (P §3.1.6.1 p.32, §3.1.14-3.1.16 p.48-53; §12.1.1 p.113,
 -- §12.1.7-12.1.9 p.119-121).  mstatus.MPRV and the load reservation are
--- unchanged ([D45]).
+-- unchanged ([D45]).  A trap goes to M-mode or S-mode, as excDest or
+-- checkInterrupts gives, never to U-mode.
 unit takeTrap(intr::bool, ec::exc_code, epc::regType, tval::regType, toPriv::Privilege) =
 { fromP = curPrivilege()
 ; mark_log(LOG_INSN, ["trapping from " : privName(fromP) : " to " : privName(toPriv) :
@@ -1663,7 +1668,8 @@ unit rawWriteData(pAddr::pAddr, data::regType, nbytes::nat) =
               ; MEM(pAddrIdx) <- new
               ; mark_log(LOG_MEM, log_w_mem_mask_misaligned(pAddrIdx, pAddr, mask, data, align, old, new))
               }
-         -- write touching adjacent regType-sized blocks
+         -- write touching adjacent regType-sized blocks; not reached,
+         -- since every store is naturally aligned ([D55])
          else { dw_old  = MEM(pAddrIdx+1) : old
               ; dw_data = ZeroExtend(data) << (align*8)
               ; dw_mask = ZeroExtend(mask) << (align*8)
@@ -5318,12 +5324,11 @@ unit initMachine(hartid::id) =
 }
 
 -- This initializes each core (via setting procID appropriately) on
--- startup before execution begins.
+-- startup before execution begins.  The registers are UNSPECIFIED after
+-- reset (P §3.4 p.63) and zero here ([D71]); an emulator then sets a0 and
+-- a1 as its boot convention requires ([D72]).
 unit initRegs(pc::nat) =
-{ -- TODO: Check if the specs specify the initial values of the registers
-  -- on startup.  Initializing to an arbitrary value causes issues with
-  -- the verifier, which assumes 0-valued initialization.
-  for i in 0 .. 31 do
+{ for i in 0 .. 31 do
     gpr([i])   <- 0x0
 ; for i in 0 .. 31 do
     fpr([i])   <- 0x0
