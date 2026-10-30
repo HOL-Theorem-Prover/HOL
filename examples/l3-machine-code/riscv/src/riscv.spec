@@ -201,82 +201,81 @@ string extStatusName(e::ExtStatus) =
 -- Exceptions and Interrupts
 ---------------------------------------------------------------------------
 
+-- Interrupts and their codes (P §3.1.15 Table 16 p.50): supervisor and
+-- machine software, timer and external interrupts.
 construct Interrupt
-{ Software
-, Timer
+{ SSI, MSI, STI, MTI, SEI, MEI
 }
 
 exc_code interruptIndex(i::Interrupt) =
     match i
-    { case Software     => 0
-      case Timer        => 1
+    { case SSI          => 1
+      case MSI          => 3
+      case STI          => 5
+      case MTI          => 7
+      case SEI          => 9
+      case MEI          => 11
     }
 
+-- Exceptions and their codes (P §3.1.15 Table 16 p.50).  The page faults
+-- are never raised, since there is no address translation.
 construct ExceptionType
 { Fetch_Misaligned
 , Fetch_Fault
 , Illegal_Instr
 , Breakpoint
+, Load_Misaligned
 , Load_Fault
-, AMO_Misaligned
+, Store_AMO_Misaligned
 , Store_AMO_Fault
 , UMode_Env_Call
 , SMode_Env_Call
-, HMode_Env_Call
 , MMode_Env_Call
+, Fetch_PageFault
+, Load_PageFault
+, Store_AMO_PageFault
 }
 
 exc_code excCode(e::ExceptionType) =
     match e
-    { case Fetch_Misaligned   => 0x0
-      case Fetch_Fault        => 0x1
-      case Illegal_Instr      => 0x2
-      case Breakpoint         => 0x3
+    { case Fetch_Misaligned     => 0x0
+      case Fetch_Fault          => 0x1
+      case Illegal_Instr        => 0x2
+      case Breakpoint           => 0x3
 
-      case Load_Fault         => 0x5
-      case AMO_Misaligned     => 0x6
-      case Store_AMO_Fault    => 0x7
+      case Load_Misaligned      => 0x4
+      case Load_Fault           => 0x5
+      case Store_AMO_Misaligned => 0x6
+      case Store_AMO_Fault      => 0x7
 
-      case UMode_Env_Call     => 0x8
-      case SMode_Env_Call     => 0x9
-      case HMode_Env_Call     => 0xA
-      case MMode_Env_Call     => 0xB
-    }
+      case UMode_Env_Call       => 0x8
+      case SMode_Env_Call       => 0x9
+      case MMode_Env_Call       => 0xB
 
-ExceptionType excType(e::exc_code) =
-    match e
-    { case 0x0 => Fetch_Misaligned
-      case 0x1 => Fetch_Fault
-      case 0x2 => Illegal_Instr
-      case 0x3 => Breakpoint
-
-      case 0x5 => Load_Fault
-      case 0x6 => AMO_Misaligned
-      case 0x7 => Store_AMO_Fault
-
-      case 0x8 => UMode_Env_Call
-      case 0x9 => SMode_Env_Call
-      case 0xA => HMode_Env_Call
-      case 0xB => MMode_Env_Call
-
-      case _   => #UNDEFINED("Unknown exception: " : [[e]::nat])
+      case Fetch_PageFault      => 0xC
+      case Load_PageFault       => 0xD
+      case Store_AMO_PageFault  => 0xF
     }
 
 string excName(e::ExceptionType) =
     match e
-    { case Fetch_Misaligned   => "MISALIGNED_FETCH"
-      case Fetch_Fault        => "FAULT_FETCH"
-      case Illegal_Instr      => "ILLEGAL_INSTRUCTION"
-      case Breakpoint         => "BREAKPOINT"
+    { case Fetch_Misaligned     => "MISALIGNED_FETCH"
+      case Fetch_Fault          => "FAULT_FETCH"
+      case Illegal_Instr        => "ILLEGAL_INSTRUCTION"
+      case Breakpoint           => "BREAKPOINT"
 
-      case Load_Fault         => "FAULT_LOAD"
-      case AMO_Misaligned     => "MISALIGNED_AMO"
-      case Store_AMO_Fault    => "FAULT_STORE_AMO"
+      case Load_Misaligned      => "MISALIGNED_LOAD"
+      case Load_Fault           => "FAULT_LOAD"
+      case Store_AMO_Misaligned => "MISALIGNED_STORE_AMO"
+      case Store_AMO_Fault      => "FAULT_STORE_AMO"
 
-      case UMode_Env_Call     => "U-EnvCall"
-      case SMode_Env_Call     => "S-EnvCall"
-      case HMode_Env_Call     => "H-EnvCall"
-      case MMode_Env_Call     => "M-EnvCall"
+      case UMode_Env_Call       => "U-EnvCall"
+      case SMode_Env_Call       => "S-EnvCall"
+      case MMode_Env_Call       => "M-EnvCall"
+
+      case Fetch_PageFault      => "PAGEFAULT_FETCH"
+      case Load_PageFault       => "PAGEFAULT_LOAD"
+      case Store_AMO_PageFault  => "PAGEFAULT_STORE_AMO"
     }
 
 ---------------------------------------------------------------------------
@@ -548,14 +547,14 @@ regType legalize_pmpcfg(v::regType, old::regType) =
 
 record SynchronousTrap
 { trap            :: ExceptionType
-  badaddr         :: vAddr option
+  tval            :: regType        -- for mtval or stval (P §3.1.16 p.52-53)
 }
 
 construct TransferControl
 { Trap            :: SynchronousTrap
 , BranchTo        :: regType
-, Ereturn
-, Mrts
+, Mret
+, Sret
 }
 
 ---------------------------------------------------------------------------
@@ -745,13 +744,6 @@ Privilege curPrivilege() =
 
 unit setPrivilege(p::Privilege) =
     c_privilege(procID) <- privLevel(p)
-
-regType curEPC() =
-    match curPrivilege()
-    { case User         => #INTERNAL_ERROR("No EPC in U-mode")
-      case Supervisor   => read_xepc(SCSR.sepc)
-      case Machine      => read_xepc(MCSR.mepc)
-    }
 
 -- mip as read (P §3.1.9 p.43-45): MSIP and MTIP come from the CLINT
 -- (MTIP is pending while mtime >= mtimecmp, unsigned, P §3.2.1 p.59), MEIP
@@ -1411,27 +1403,30 @@ unit clear_logs()                   = log <- Nil
 -- Exception and Interrupt processing
 ---------------------------------------------------------------------------
 
--- Signalled exceptions are recorded as traps.
+-- Signalled exceptions are recorded as traps.  The trap value is the
+-- faulting address, or zero; Next replaces it by the instruction bits for
+-- an illegal instruction (P §3.1.16 p.52-53, [D43]).
 
-unit setTrap(e::ExceptionType, badaddr::vAddr option) =
+unit setTrap(e::ExceptionType, tval::regType) =
 { var trap
 ; trap.trap        <- e
-; trap.badaddr     <- badaddr
+; trap.tval        <- tval
 ; NextFetch        <- Some(Trap(trap))
 }
 
 unit signalException(e::ExceptionType) =
 { mark_log(LOG_INSN, "signalling exception " : excName(e))
-; setTrap(e, None)
+; setTrap(e, 0)
 ; recordException()
 }
 
 unit signalAddressException(e::ExceptionType, vAddr::vAddr) =
 { mark_log(LOG_INSN, "signalling address exception " : excName(e) : " at " : [vAddr])
-; setTrap(e, Some(vAddr))
+; setTrap(e, vAddr)
 ; recordException()
 }
 
+-- ECALL (P §3.3.1 p.60-61)
 unit signalEnvCall() =
 { e = match curPrivilege()
       { case User       => UMode_Env_Call
@@ -1441,87 +1436,109 @@ unit signalEnvCall() =
 ; signalException(e)
 }
 
--- The spec doesn't define a priority between a timer interrupt and a
--- software interrupt.  We treat timer interrupts at higher priority.
+-- An exception goes to M-mode unless it is raised below M-mode and
+-- delegated in medeleg: traps never go to a less privileged mode (P
+-- §3.1.8 p.42-43).
+Privilege excDest(ec::exc_code, p::Privilege) =
+    if p != Machine and MCSR.medeleg<[ec]::nat> then Supervisor else Machine
 
-(Interrupt * Privilege) option checkPrivInterrupt(curPriv::Privilege) =
-{ ip = mip(read_mip())
-; ie = MCSR.mie
-; match curPriv
-  { case User       => #INTERNAL_ERROR("No user-level interrupts!")
-    case Supervisor => if ip.STIP and ie.STIE then Some(Timer, curPriv)
-                       else if ip.SSIP and ie.SSIE then Some(Software, curPriv)
-                       else None
-    case Machine    => if ip.MTIP and ie.MTIE then Some(Timer, curPriv)
-                       else if ip.MSIP and ie.MSIE then Some(Software, curPriv)
-                       else None
-  }
+-- The pending interrupt of highest priority among those in p: MEI, MSI,
+-- MTI, SEI, SSI, STI (P §3.1.9 p.45).
+Interrupt option highestInterrupt(p::regType) =
+{ if      p<11> then Some(MEI)
+  else if p<3>  then Some(MSI)
+  else if p<7>  then Some(MTI)
+  else if p<9>  then Some(SEI)
+  else if p<1>  then Some(SSI)
+  else if p<5>  then Some(STI)
+  else None
 }
 
--- The spec says:
---
---    When a hart is running in a given privileged mode, interrupts
---    for higher privileged modes are always enabled while interrupts
---    for lower privileged modes are always disabled.
---    Higher-privilege-level code can use separate per-interrupt
---    enable bits to disable selected interrupts before ceding control
---    to a lower privilege level.
---
--- This is critical to ensuring the monotonically non-decreasing
--- privilege levels in the privilege stack.
-
+-- The interrupt to take and the mode it goes to (P §3.1.9 p.43-45, §12.1.3
+-- p.117).  An interrupt goes to M-mode unless delegated in mideleg.
+-- Interrupts to M-mode are enabled below M-mode, and in M-mode when
+-- mstatus.MIE is set; interrupts to S-mode are enabled in U-mode, and in
+-- S-mode when mstatus.SIE is set (P §3.1.6.1 p.32).
 (Interrupt * Privilege) option checkInterrupts() =
-{ curIE = MCSR.mstatus.MIE  -- if interrupts are enabled at curPrivilege
-; p     = curPrivilege()
-; match p
-  { case User or Supervisor =>
-         match checkPrivInterrupt(Machine)
-         { case None => -- Always check S-mode interrupts in U-mode
-                        if p == User or curIE
-                        then checkPrivInterrupt(Supervisor) else None
-           case i    => i
-         }
-    case Machine =>
-         if curIE then checkPrivInterrupt(Machine) else None
+{ p    = curPrivilege()
+; pend = read_mip() && MCSR.&mie
+; m = if p != Machine or MCSR.mstatus.MIE
+      then highestInterrupt(pend && ~MCSR.mideleg) else None
+; s = if p == User or (p == Supervisor and MCSR.mstatus.SIE)
+      then highestInterrupt(pend && MCSR.mideleg) else None
+; match m, s
+  { case Some(i), _    => Some(i, Machine)
+    case None, Some(i) => Some(i, Supervisor)
+    case None, None    => None
   }
 }
 
-unit takeTrap(intr::bool, ec::exc_code, epc::regType, badaddr::vAddr option, toPriv::Privilege) =
+-- The trap handler address (P §3.1.7 p.41-42): BASE, plus 4 times the
+-- cause for an interrupt in Vectored mode.
+regType trapVector(tvec::regType, intr::bool, ec::exc_code) =
+{ base = tvec<63:2> : '00'
+; if intr and tvec<1:0> == 1 then base + 4 * ZeroExtend(ec) else base
+}
+
+-- Trap entry (P §3.1.6.1 p.32, §3.1.14-3.1.16 p.48-53; §12.1.1 p.113,
+-- §12.1.7-12.1.9 p.119-121).  mstatus.MPRV and the load reservation are
+-- unchanged ([D45]).
+unit takeTrap(intr::bool, ec::exc_code, epc::regType, tval::regType, toPriv::Privilege) =
 { fromP = curPrivilege()
 ; mark_log(LOG_INSN, ["trapping from " : privName(fromP) : " to " : privName(toPriv) :
                       " at pc " : [epc] : (if intr then " [intr] " else " [exc] ") : [[ec]::nat]])
-
-; ReserveLoad        <- None        -- cancel any load reservation
-
 ; match toPriv
   { case User       => #INTERNAL_ERROR("Illegal trap to U-mode")
     case Supervisor =>
     { SCSR.scause.Int   <- intr
     ; SCSR.scause.EC    <- ZeroExtend(ec)
     ; SCSR.sepc         <- epc
-    ; when IsSome(badaddr)
-      do SCSR.stval     <- ValOf(badaddr)
+    ; SCSR.stval        <- tval
     ; MCSR.mstatus.SPIE <- MCSR.mstatus.SIE
     ; MCSR.mstatus.SIE  <- false
     ; MCSR.mstatus.SPP  <- fromP != User
     ; setPrivilege(Supervisor)
-
-    ; PC    <- SCSR.stvec
+    ; PC                <- trapVector(SCSR.stvec, intr, ec)
     }
     case Machine    =>
     { MCSR.mcause.Int   <- intr
     ; MCSR.mcause.EC    <- ZeroExtend(ec)
     ; MCSR.mepc         <- epc
-    ; when IsSome(badaddr)
-      do MCSR.mtval     <- ValOf(badaddr)
+    ; MCSR.mtval        <- tval
     ; MCSR.mstatus.MPIE <- MCSR.mstatus.MIE
     ; MCSR.mstatus.MIE  <- false
     ; MCSR.mstatus.MPP  <- privLevel(fromP)
     ; setPrivilege(Machine)
-
-    ; PC    <- MCSR.mtvec + ([privLevel(fromP)]::regType) * 0x40
+    ; PC                <- trapVector(MCSR.mtvec, intr, ec)
     }
   }
+}
+
+-- MRET returns to the mode in mstatus.MPP and SRET to the mode in
+-- mstatus.SPP (P §3.3.2 p.61, §3.1.6.1 p.32-33); both clear MPRV when
+-- they leave M-mode (P §3.1.6.4 p.35).  The load reservation is kept
+-- ([D45]).
+
+unit mret() =
+{ p = privilege(MCSR.mstatus.MPP)
+; mark_log(LOG_INSN, "ret-ing from M to " : privName(p))
+; MCSR.mstatus.MIE  <- MCSR.mstatus.MPIE
+; MCSR.mstatus.MPIE <- true
+; MCSR.mstatus.MPP  <- privLevel(User)
+; when p != Machine do MCSR.mstatus.MPRV <- false
+; setPrivilege(p)
+; PC                <- read_xepc(MCSR.mepc)
+}
+
+unit sret() =
+{ p = if MCSR.mstatus.SPP then Supervisor else User
+; mark_log(LOG_INSN, "ret-ing from " : privName(curPrivilege()) : " to " : privName(p))
+; MCSR.mstatus.SIE  <- MCSR.mstatus.SPIE
+; MCSR.mstatus.SPIE <- true
+; MCSR.mstatus.SPP  <- false
+; MCSR.mstatus.MPRV <- false
+; setPrivilege(p)
+; PC                <- read_xepc(SCSR.sepc)
 }
 
 ---------------------------------------------------------------------------
@@ -2622,10 +2639,11 @@ define FENCE_I(rd::reg, rs1::reg, imm::imm12) = nothing
 -----------------------------------
 -- LR.W [aq,rl] rd, rs1
 -----------------------------------
+-- LR is a load, so a misaligned LR raises a load exception ([D57]).
 define AMO > LR_W(aq::amo, rl::amo, rd::reg, rs1::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Load_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Read)
        { case Some(pAddr) => { writeRD(rd, SignExtend(rawReadData(pAddr)<31:0>))
                              ; ReserveLoad  <- Some(vAddr)
@@ -2642,7 +2660,7 @@ define AMO > LR_D(aq::amo, rl::amo, rd::reg, rs1::reg) =
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1)
          ; if vAddr<2:0> != 0
-           then signalAddressException(AMO_Misaligned, vAddr)
+           then signalAddressException(Load_Misaligned, vAddr)
            else match translateAddr(vAddr, Data, Read)
                 { case Some(pAddr) => { writeRD(rd, rawReadData(pAddr))
                                       ; ReserveLoad <- Some(vAddr)
@@ -2657,7 +2675,7 @@ define AMO > LR_D(aq::amo, rl::amo, rd::reg, rs1::reg) =
 define AMO > SC_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else if not matchLoadReservation(vAddr)
        then writeRD(rd, 1)
        else match translateAddr(vAddr, Data, Read)
@@ -2679,7 +2697,7 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1)
          ; if vAddr<2:0> != 0
-           then signalAddressException(AMO_Misaligned, vAddr)
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
            else if not matchLoadReservation(vAddr)
                 then writeRD(rd, 1)
                 else match translateAddr(vAddr, Data, Read)
@@ -2699,7 +2717,7 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOSWAP_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2718,7 +2736,7 @@ define AMO > AMOSWAP_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOSWAP_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -2737,7 +2755,7 @@ define AMO > AMOSWAP_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOADD_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2757,7 +2775,7 @@ define AMO > AMOADD_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOADD_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -2777,7 +2795,7 @@ define AMO > AMOADD_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOXOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2797,7 +2815,7 @@ define AMO > AMOXOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOXOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -2817,7 +2835,7 @@ define AMO > AMOXOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOAND_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2837,7 +2855,7 @@ define AMO > AMOAND_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOAND_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -2857,7 +2875,7 @@ define AMO > AMOAND_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2877,7 +2895,7 @@ define AMO > AMOOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -2897,7 +2915,7 @@ define AMO > AMOOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2917,7 +2935,7 @@ define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMIN_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -2937,7 +2955,7 @@ define AMO > AMOMIN_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2957,7 +2975,7 @@ define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAX_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -2977,7 +2995,7 @@ define AMO > AMOMAX_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -2997,7 +3015,7 @@ define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMINU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -3017,7 +3035,7 @@ define AMO > AMOMINU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
                              ; data = GPR(rs2)
@@ -3037,7 +3055,7 @@ define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAXU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match translateAddr(vAddr, Data, Write)
        { case Some(pAddr) => { memv = rawReadData(pAddr)
                              ; data = GPR(rs2)
@@ -4048,32 +4066,42 @@ define System > ECALL  = signalEnvCall()
 -----------------------------------
 -- EBREAK
 -----------------------------------
-
-define System > EBREAK = signalException(Breakpoint)
-
------------------------------------
--- ERET
------------------------------------
-define System > ERET   =
-    NextFetch <- Some(Ereturn)
+-- The trap value is the address of the EBREAK (P §3.1.16 p.52, [D43]).
+define System > EBREAK = signalAddressException(Breakpoint, PC)
 
 -----------------------------------
--- MRTS
+-- MRET
 -----------------------------------
-define System > MRTS   =
-{ SCSR.scause       <- MCSR.mcause
-; SCSR.stval        <- MCSR.mtval
-; SCSR.sepc         <- MCSR.mepc
+-- MRET is legal only in M-mode (P §3.3.2 p.61).  Next does the return.
+define System > MRET   =
+    if curPrivilege() == Machine then NextFetch <- Some(Mret)
+    else signalException(Illegal_Instr)
 
-; setPrivilege(Supervisor)
-
-; NextFetch         <- Some(Mrts)
-}
+-----------------------------------
+-- SRET
+-----------------------------------
+-- SRET is illegal in U-mode, and in S-mode while mstatus.TSR is set; it is
+-- legal in M-mode whatever TSR is (P §3.3.2 p.61, §3.1.6.6 p.37).
+define System > SRET   =
+    match curPrivilege()
+    { case User       => signalException(Illegal_Instr)
+      case Supervisor => if MCSR.mstatus.TSR then signalException(Illegal_Instr)
+                         else NextFetch <- Some(Sret)
+      case Machine    => NextFetch <- Some(Sret)
+    }
 
 -----------------------------------
 -- WFI
 -----------------------------------
-define System > WFI    = nothing
+-- WFI does not wait (P §3.3.3 p.62 allows a no-op, [D23]).  With S-mode
+-- implemented it is illegal in U-mode, and in S-mode when mstatus.TW is
+-- set, the time limit being zero (P §3.1.6.6 p.37).
+define System > WFI    =
+    match curPrivilege()
+    { case User       => signalException(Illegal_Instr)
+      case Supervisor => when MCSR.mstatus.TW do signalException(Illegal_Instr)
+      case Machine    => nothing
+    }
 
 -- Control and Status Registers
 
@@ -4148,12 +4176,17 @@ define System > CSRRCI(rd::reg, zimm::reg, csr::imm12) =
 -- Address translation cache flush
 
 -----------------------------------
--- SFENCE.VM
+-- SFENCE.VMA rs1, rs2
 -----------------------------------
-define System > SFENCE_VM(rs1::reg) =
-{ addr = if rs1 == 0 then None else Some(GPR(rs1))
-; TLB <- flushTLB(curASID(), addr, TLB)
-}
+-- Nothing is cached, since there is no address translation.  SFENCE.VMA
+-- is illegal in U-mode, and in S-mode while mstatus.TVM is set (P §12.2.1
+-- p.127, §3.1.6.6 p.37, [D46]).
+define System > SFENCE_VMA(rs1::reg, rs2::reg) =
+    match curPrivilege()
+    { case User       => signalException(Illegal_Instr)
+      case Supervisor => when MCSR.mstatus.TVM do signalException(Illegal_Instr)
+      case Machine    => nothing
+    }
 
 -----------------------------------
 -- Unsupported instructions
@@ -4414,11 +4447,11 @@ instruction Decode(w::word) =
 
      case '000000000000  00000 000 00000 11100 11' => System( ECALL)
      case '000000000001  00000 000 00000 11100 11' => System(EBREAK)
-     case '000100000000  00000 000 00000 11100 11' => System(  ERET)
-     case '001100000101  00000 000 00000 11100 11' => System( MRTS)
-     case '000100000010  00000 000 00000 11100 11' => System(  WFI)
+     case '000100000010  00000 000 00000 11100 11' => System(  SRET)
+     case '001100000010  00000 000 00000 11100 11' => System(  MRET)
+     case '000100000101  00000 000 00000 11100 11' => System(   WFI)
 
-     case '000100000001    rs1 000 00000 11100 11' => System(SFENCE_VM(rs1))
+     case '0001001  rs2  rs1 000 00000 11100 11' => System(SFENCE_VMA(rs1, rs2))
 
      -- unsupported instructions
      case _                                        => UnknownInstruction
@@ -4472,6 +4505,9 @@ string pN0type(o::string) =
 
 string pN1type(o::string, r::reg) =
     instr(o) : " " : reg(r)
+
+string pN2type(o::string, r1::reg, r2::reg) =
+    instr(o) : " " : reg(r1) : ", " : reg(r2)
 
 string pFRtype(o::string, rd::reg, rs1::reg, rs2::reg) =
     instr(o) : " " : fpreg(rd) : ", " : fpreg(rs1) : ", " : fpreg(rs2)
@@ -4675,8 +4711,8 @@ string instructionToString(i::instruction) =
 
      case System( ECALL)                    => pN0type("ECALL")
      case System(EBREAK)                    => pN0type("EBREAK")
-     case System(  ERET)                    => pN0type("ERET")
-     case System(  MRTS)                    => pN0type("MRTS")
+     case System(  MRET)                    => pN0type("MRET")
+     case System(  SRET)                    => pN0type("SRET")
      case System(   WFI)                    => pN0type("WFI")
 
      case System( CSRRW(rd, rs1, csr))      => pCSRtype("CSRRW",  rd, rs1, csr)
@@ -4686,7 +4722,7 @@ string instructionToString(i::instruction) =
      case System(CSRRSI(rd, imm, csr))      => pCSRItype("CSRRSI", rd, imm, csr)
      case System(CSRRCI(rd, imm, csr))      => pCSRItype("CSRRCI", rd, imm, csr)
 
-     case System(SFENCE_VM(rs1))            => pN1type("SFENCE.VM", rs1)
+     case System(SFENCE_VMA(rs1, rs2))      => pN2type("SFENCE.VMA", rs1, rs2)
 
      case UnknownInstruction                => pN0type("UNKNOWN")
 
@@ -4898,11 +4934,11 @@ word Encode(i::instruction) =
 
      case System( ECALL)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x000)
      case System(EBREAK)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x001)
-     case System(  ERET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x100)
-     case System(  MRTS)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x305)
-     case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
+     case System(  MRET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x302)
+     case System(  SRET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
+     case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x105)
 
-     case System(SFENCE_VM(rs1))            =>  Itype(opc(0x1C), 0, 0, rs1, 0x101)
+     case System(SFENCE_VMA(rs1, rs2))      =>  Rtype(opc(0x1C), 0, 0, rs1, rs2, '0001001')
 
      case System( CSRRW(rd, rs1, csr))      =>  Itype(opc(0x1C), 1, rd, rs1, csr)
      case System( CSRRS(rd, rs1, csr))      =>  Itype(opc(0x1C), 2, rd, rs1, csr)
@@ -5169,11 +5205,11 @@ rvc EncodeRVC(i::instruction) =
 
      -- case System( ECALL)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x000)
      -- case System(EBREAK)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x001)
-     -- case System(  ERET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x100)
-     -- case System(  MRTS)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x305)
-     -- case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
+     -- case System(  MRET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x302)
+     -- case System(  SRET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
+     -- case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x105)
 
-     -- case System(SFENCE_VM(rs1))            =>  Itype(opc(0x1C), 0, 0, rs1, 0x101)
+     -- case System(SFENCE_VMA(rs1, rs2))      =>  Rtype(opc(0x1C), 0, 0, rs1, rs2, '0001001')
 
      -- case System( CSRRW(rd, rs1, csr))      =>  Itype(opc(0x1C), 1, rd, rs1, csr)
      -- case System( CSRRS(rd, rs1, csr))      =>  Itype(opc(0x1C), 2, rd, rs1, csr)
@@ -5216,6 +5252,30 @@ unit tickClock() =
 unit incrInstret() =
     c_instret(procID) <- c_instret(procID) + 1
 
+-- Fetch and run one instruction.  The result is the trap value of an
+-- illegal instruction: the instruction bits, zero-extended (P §3.1.16
+-- p.52-53, [D43]).
+regType fetchAndExecute() =
+    match Fetch()
+    { case F_Result(Half(h)) =>
+      { inst = if haveRVC() then DecodeRVC(h) else UnknownInstruction
+      ; mark_log(LOG_INSN, log_instruction(ZeroExtend(h), inst))
+      ; Run(inst)
+      ; ZeroExtend(h)
+      }
+      case F_Result(Word(w)) =>
+      { inst = Decode(w)
+      ; mark_log(LOG_INSN, log_instruction(w, inst))
+      ; Run(inst)
+      ; ZeroExtend(w)
+      }
+      case F_Error(inst)  =>
+      { mark_log(LOG_INSN, log_instruction([0::word], inst))
+      ; Run(inst)
+      ; 0
+      }
+    }
+
 unit Next =
 { clear_logs()
 
@@ -5232,71 +5292,43 @@ unit Next =
          else MCSR.mtohost <- 0x0   -- TODO: rest of relevant HTIF protocol
        }
 
-; match Fetch()
-  { case F_Result(Half(h)) =>
-    { inst = if haveRVC() then DecodeRVC(h) else UnknownInstruction
-    ; mark_log(LOG_INSN, log_instruction(ZeroExtend(h), inst))
-    ; Run(inst)
-    }
-    case F_Result(Word(w)) =>
-    { inst = Decode(w)
-    ; mark_log(LOG_INSN, log_instruction(w, inst))
-    ; Run(inst)
-    }
-    case F_Error(inst)  =>
-    { mark_log(LOG_INSN, log_instruction([0::word], inst))
-    ; Run(inst)
-    }
-  }
+-- An interrupt is taken between instructions, at the start of a step:
+-- the step does not fetch, and mepc is the instruction not executed
+-- (P §3.1.14 p.49, [D38]).
+; match checkInterrupts()
+  { case Some(i, p) => takeTrap(true, interruptIndex(i), PC, 0, p)
+    case None =>
+    { ibits = fetchAndExecute()
 
-; match NextFetch, checkInterrupts()
-  { case None, None =>
-             { incrInstret()
-             ; PC <- PC + Skip
-             }
-    case None, Some(i, p) =>
-             { incrInstret()
-             ; takeTrap(true, interruptIndex(i), PC + Skip, None, p)
-             }
-    case Some(BranchTo(addr)), _ =>
-             { incrInstret()
-             ; NextFetch    <- None
-             ; PC           <- addr
-             }
-    case Some(Ereturn), _ =>
-             { incrInstret()
-             ; NextFetch    <- None
-             ; PC           <- curEPC()
-
-             ; from = curPrivilege()
-             ; if from == Machine
-               then { to = privilege(MCSR.mstatus.MPP)
-                    ; MCSR.mstatus.MIE  <- MCSR.mstatus.MPIE
-                    ; MCSR.mstatus.MPIE <- true
-                    ; MCSR.mstatus.MPP  <- privLevel(User)
-                    ; when to != Machine do MCSR.mstatus.MPRV <- false
-                    ; setPrivilege(to)
-                    }
-               else { MCSR.mstatus.SIE  <- MCSR.mstatus.SPIE
-                    ; MCSR.mstatus.SPIE <- true
-                    ; setPrivilege(if MCSR.mstatus.SPP then Supervisor else User)
-                    ; MCSR.mstatus.SPP  <- false
-                    ; MCSR.mstatus.MPRV <- false
-                    }
-
-             ; mark_log(LOG_INSN, ["exception return from " : privName(from)
-                                   : " to " : privName(curPrivilege())])
-             }
-    case Some(Trap(t)), _ =>
-             { NextFetch    <- None
-             -- We currently don't implement delegation, so always trap to M-mode.
-             ; takeTrap(false, excCode(t.trap), PC, t.badaddr, Machine)
-             }
-    case Some(Mrts), _ =>
-             { incrInstret()
-             ; NextFetch    <- None
-             ; PC           <- SCSR.stvec
-             }
+    -- A trapping instruction does not retire (P §3.3.1 p.61).
+    ; match NextFetch
+      { case None =>
+                 { incrInstret()
+                 ; PC <- PC + Skip
+                 }
+        case Some(BranchTo(addr)) =>
+                 { incrInstret()
+                 ; NextFetch    <- None
+                 ; PC           <- addr
+                 }
+        case Some(Mret) =>
+                 { incrInstret()
+                 ; NextFetch    <- None
+                 ; mret()
+                 }
+        case Some(Sret) =>
+                 { incrInstret()
+                 ; NextFetch    <- None
+                 ; sret()
+                 }
+        case Some(Trap(t)) =>
+                 { NextFetch    <- None
+                 ; ec   = excCode(t.trap)
+                 ; tval = if t.trap == Illegal_Instr then ibits else t.tval
+                 ; takeTrap(false, ec, PC, tval, excDest(ec, curPrivilege()))
+                 }
+      }
+    }
   }
 
 ; tickClock()
