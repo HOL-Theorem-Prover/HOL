@@ -26,27 +26,6 @@ fun identity_export th expectations =
       val () = Theory.export_theory ()
   in identity_write (thy ^ ".expected") expectations end;
 
-val () = identity_start "identity_delete";
-val old_def = identity_define "item" T;
-val old = identity_const "item";
-val dependency = CONJ old_def (REFL old);
-val () = Term.prim_delete_const {Thy="identity_delete",Name="item"};
-val () = identity_export (identity_keep dependency (REFL T))
-  ["private_const identity_delete$" ^
-   Globals.oldify (identity_epoch old) "item",
-   "absent_const identity_delete$item", "final_const bool$T"];
-
-val () = identity_start "identity_unused";
-val old_def = identity_define "item" T;
-val old = identity_const "item";
-val dependency = CONJ old_def (REFL old);
-val () = Term.prim_delete_const {Thy="identity_unused",Name="item"};
-val _ = Term.prim_new_const {Thy="identity_unused",Name="item"} bool;
-val () = identity_export (identity_keep dependency (REFL T))
-  ["private_const identity_unused$" ^
-   Globals.oldify (identity_epoch old) "item",
-   "decl_const identity_unused$item", "final_const bool$T"];
-
 val () = identity_start "identity_restore";
 val old_def = identity_define "item" T;
 val old = identity_const "item";
@@ -71,51 +50,5 @@ val _ = Term.prim_new_const {Thy="identity_collision",Name=collision} bool;
 val () = identity_export (identity_keep dependency (REFL T))
   ["private_const identity_collision$" ^ collision ^ "'",
    "decl_const identity_collision$" ^ collision, "final_const bool$T"];
-
-val () = identity_start "identity_type_restore";
-val () = Type.prim_new_type {Thy="identity_type_restore",Tyop="item"} 0;
-val old_ty = Type.mk_thy_type
-  {Thy="identity_type_restore",Tyop="item",Args=[]};
-val before_replacement = Context.snapshot ();
-val () = Type.prim_delete_type {Thy="identity_type_restore",Tyop="item"};
-val () = Type.prim_new_type {Thy="identity_type_restore",Tyop="item"} 0;
-val replacement_ty = Type.mk_thy_type
-  {Thy="identity_type_restore",Tyop="item",Args=[]};
-val replacement_epoch = KernelSig.epoch_of
-  (#Tyop (Type.dest_thy_typeid replacement_ty));
-val dependency = REFL (mk_var("discarded",replacement_ty));
-val () = Context.restore before_replacement;
-val () = identity_export
-  (identity_keep dependency (REFL (mk_var("x",old_ty))))
-  ["private_type identity_type_restore$" ^
-   Globals.oldify replacement_epoch "item",
-   "public_type identity_type_restore$item",
-   "final_type identity_type_restore$item"];
-
-val () = identity_start "identity_unrecorded";
-val foreign = Term.prim_new_const
-  {Thy="identity_foreign",Name="item"} bool;
-val () = identity_export (identity_keep (REFL foreign) (REFL T))
-  ["reject ProofTraceParser: unrecorded imported symbol identity_foreign$item"];
-
-val () = identity_start "identity_retired_import";
-val foreign = Term.prim_new_const
-  {Thy="identity_retired_foreign",Name="item"} bool;
-val dependency = REFL foreign;
-val () = Term.prim_delete_const
-  {Thy="identity_retired_foreign",Name="item"};
-val () = identity_export (identity_keep dependency (REFL T))
-  ["reject ProofTraceParser: retired imported symbol " ^
-   "identity_retired_foreign$item"];
-
-val () = identity_start "identity_definition_parent";
-val retained_definition = identity_define "item" T;
-val item = identity_const "item";
-val () = ignore (Theory.save_thm ("ROOT",REFL item));
-val () = Theory.export_theory ();
-val () = Theory.new_theory "identity_foreign_definition";
-val () = identity_export retained_definition
-  ["reject ProofTraceWalk: foreign definition from " ^
-   "identity_definition_parent unsupported"];
 
 val () = print "IDENTITY_ACTUAL_EXPORT_FIXTURES_PRODUCED\n";

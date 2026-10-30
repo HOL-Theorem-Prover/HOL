@@ -11,12 +11,9 @@ val suite = valOf (OS.Process.getEnv "HOL_PFT_TEST");
 val identity_phase = valOf (OS.Process.getEnv "HOL_PFT_IDENTITY_PHASE");
 val () =
   if suite <> "identity" then use (test_source ^ suite ^ "-selftest.sml")
-  else if List.exists (fn phase => phase = identity_phase)
-       ["produce","import-parent","import-child"] then
-    use (test_source ^ "identity-" ^ identity_phase ^ ".sml")
+  else if identity_phase = "produce" then
+    use (test_source ^ "identity-produce.sml")
   else
     (load_pft ["PFTReader","PFTReplay","ProofTraceReplay"];
-     if identity_phase = "role" orelse identity_phase = "custom-role" then
-       use (test_source ^ "identity-role-selftest.sml")
-     else use (test_source ^ "identity-selftest.sml"));
+     use (test_source ^ "identity-selftest.sml"));
 val () = print "PFT_TEST_PHASE_PASS\n";

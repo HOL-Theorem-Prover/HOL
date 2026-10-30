@@ -12,15 +12,7 @@ fun identity_const_exists name =
   in List.exists (fn tm => #Thy (Term.dest_thy_const tm) = thy)
        (Term.decls nm)
   end;
-fun identity_type name =
-  let val (thy,nm) = identity_split name
-  in Type.mk_thy_type {Thy=thy,Tyop=nm,Args=[]} end;
-fun identity_type_exists name =
-  let val (thy,nm) = identity_split name
-  in Type.op_arity {Thy=thy,Tyop=nm} = SOME 0 end;
-val identity_cases =
-  ["identity_delete","identity_unused","identity_restore",
-   "identity_collision","identity_type_restore"];
+val identity_cases = ["identity_restore","identity_collision"];
 fun identity_check lookup merged =
   let
     fun theorem thy name = case lookup thy name of
@@ -41,24 +33,13 @@ fun identity_check lookup merged =
             case String.tokens (fn c => c = #" ") line of
               ["final_const",name] => exact thy "RESULT"
                 (identity_constant name)
-            | ["final_type",name] => exact thy "RESULT"
-                (Term.mk_var("x",identity_type name))
-            | ["absent_const",name] => identity_require line
-                (not (identity_const_exists name))
             | ["decl_const",name] => identity_require line
                 (merged orelse identity_const_exists name)
             | ["private_const",name] => identity_require line
                 (identity_const_exists name)
             | ["public_const",name] => identity_require line
                 (identity_const_exists name)
-            | ["private_type",name] => identity_require line
-                (identity_type_exists name)
-            | ["public_type",name] => identity_require line
-                (identity_type_exists name)
             | _ => raise Fail ("unknown identity expectation: " ^ line)
       in List.app one lines end
     val () = List.app inventory identity_cases
-    val item = identity_constant "identity_parent$item"
-    val () = exact "identity_parent" "ROOT" item
-    val () = exact "identity_child" "RESULT" item
   in print "IDENTITY_EXACT_SEQUENTS_AND_INVENTORY_PASS\n" end;

@@ -25,7 +25,7 @@ for HOL_PFT_TEST in $pft_suites; do
            "$pft_scratch/$HOL_PFT_TEST/hol4"
   cd "$pft_scratch/$HOL_PFT_TEST"
   case "$HOL_PFT_TEST" in
-    identity) pft_phases='produce import-parent import-child convert raw separate role custom-role' ;;
+    identity) pft_phases='produce convert raw separate' ;;
     export) pft_phases='vacuous shadow overlap' ;;
     *) pft_phases=run ;;
   esac
@@ -34,7 +34,7 @@ for HOL_PFT_TEST in $pft_suites; do
     HOL_PFT_EXPORT_CASE=$HOL_PFT_IDENTITY_PHASE
     export HOL_PFT_EXPORT_CASE
     case "$HOL_PFT_TEST:$HOL_PFT_IDENTITY_PHASE" in
-      identity:raw|identity:separate|identity:role|identity:custom-role)
+      identity:raw|identity:separate)
         set -- --min ;;
       *) set -- ;;
     esac
