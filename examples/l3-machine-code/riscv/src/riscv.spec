@@ -1638,12 +1638,20 @@ inline unit writeRD(rd::reg, val::regType) =
 ; when not PROVER_EXPORT do Delta.data1   <- Some(v)
 }
 
+-- Single-precision values are NaN-boxed (ISA manual 6.2.2): a write sets
+-- bits 63:32 to all 1s, and a read of a register that does not hold a
+-- NaN-boxed value gives the canonical NaN.  The transfers out of a register
+-- (FSW, FMV.X.W) use FPRS_raw, which ignores bits 63:32.
 component FPRS(n::reg) :: word
-{ value        = fpr(n)<31:0>
-  assign value = { fpr(n)<31:0> <- value
+{ value        = { v = fpr(n)
+                 ; if v<63:32> == 0xFFFFFFFF then v<31:0> else RV32_CanonicalNan
+                 }
+  assign value = { fpr(n) <- 0xFFFFFFFF`32 : value
                  ; mark_log(LOG_REG, log_w_fprs(n, value))
                  }
 }
+
+word FPRS_raw(n::reg) = fpr(n)<31:0>
 
 component FPRD(n::reg) :: regType
 { value        = fpr(n)
@@ -1656,7 +1664,7 @@ unit writeFPRS(rd::reg, val::word) =
 { FPRS(rd)          <- val
 ; MCSR.mstatus.MFS  <- ext_status(Dirty)
 ; MCSR.mstatus.MSD  <- true
-; Delta.data1       <- Some(ZeroExtend(val))
+; Delta.data1       <- Some(0xFFFFFFFF`32 : val)
 }
 
 unit writeFPRD(rd::reg, val::regType) =
@@ -3196,7 +3204,7 @@ define FPLoad > FLW(rd::reg, rs1::reg, offs::imm12) =
 define FPStore > FSW(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
 ; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = FPRS(rs2)
+  { case Some(pAddr) => { data = FPRS_raw(rs2)
                         ; rawWriteData(pAddr, ZeroExtend(data), 4)
                         ; recordStore(vAddr, ZeroExtend(data), 4)
                         }
@@ -3591,7 +3599,7 @@ define FConv > FSGNJX_S(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 
 define FConv > FMV_X_S(rd::reg, rs::reg) =
-    GPR(rd) <- SignExtend(FPRS(rs))
+    GPR(rd) <- SignExtend(FPRS_raw(rs))
 
 -----------------------------------
 -- FMV.S.X   rd, rs
