@@ -909,12 +909,27 @@ val h4 =
 val fp_on = ``(^s.c_MCSR ^s.procID).mstatus.FS <> 0w``
 
 local
-  val cond_updates = utilsLib.mk_cond_update_thms [``:riscv_state``]
+  (* The CSR records inside the state.  An F or D instruction can set an
+     fcsr flag, and so mstatus.FS, under a condition; the conditional record
+     that this gives is pushed into its fields, and the updates of one field
+     are merged, so that the step theorem updates each field once.  (Not
+     datatype_rewrites, whose literal rewrites loop on UserCSR, a record of
+     one field.) *)
+  val cond_updates =
+    utilsLib.mk_cond_update_thms
+      [``:riscv_state``, ``:MachineCSR``, ``:mstatus``, ``:UserCSR``,
+       ``:FPCSR``]
+  val csr_record_rwts =
+    [MachineCSR_accfupds, MachineCSR_fupdfupds, MachineCSR_fupdcanon,
+     mstatus_accfupds, mstatus_fupdfupds, mstatus_fupdcanon,
+     UserCSR_accfupds, UserCSR_fupdfupds,
+     FPCSR_accfupds, FPCSR_fupdfupds, FPCSR_fupdcanon,
+     combinTheory.UPDATE_EQ]
   val datatype_rwts =
     utilsLib.datatype_rewrites true "riscv"
       ["riscv_state", "Architecture", "Privilege", "pmpAccess", "ExtStatus"]
   fun riscv_thms thms =
-    thms @ cond_updates @ datatype_rwts @
+    thms @ cond_updates @ csr_record_rwts @ datatype_rwts @
     [wordsTheory.WORD_EXTRACT_ZERO2, wordsTheory.ZERO_SHIFT,
      wordsTheory.WORD_ADD_0, wordsTheory.WORD_MULT_CLAUSES,
      wordsTheory.WORD_AND_CLAUSES, wordsTheory.WORD_OR_CLAUSES,
@@ -1249,8 +1264,11 @@ val read_word32 = uprove
    ------------------------------------------------------------------------ *)
 
 (* The rounding modes that L3 implements, by their rm encoding: RNE, RTZ,
-   RDN and RUP.  An instruction with rm = 4 (RMM, not implemented in L3), 5
-   or 6, or with rm = 7 and fcsr.frm not one of these, is illegal. *)
+   RDN and RUP.  An instruction that rounds is illegal with rm = 4 (RMM,
+   which neither L3 nor HOL's binary_ieee implements), 5 or 6, and with
+   rm = 7 (dynamic) when fcsr.frm is not one of the four.  So its step
+   theorem for a static rm needs nothing more, and the one for rm = 7 needs
+   ~word_bit 2 fcsr.frm. *)
 Definition frm_rounding_def:
   frm_rounding (frm: word3) =
     if frm = 0w then roundTiesToEven
@@ -1278,6 +1296,27 @@ Proof
   \\ fs [rnd_mode_dynamic_def, l3round_def, frm_rounding_def]
 QED
 
+(* FCVT.D.W, FCVT.D.WU and FCVT.D.S are exact: they never round, and only
+   test that their rm field is a valid encoding (validRounding).  So RMM
+   (4) is legal for them, as a static mode and as fcsr.frm, and the step
+   theorem for rm = 7 needs fcsr.frm <+ 5w, which is exactly the legality
+   of the dynamic mode (riscv.spec, validRounding). *)
+Theorem validRounding_static:
+  fprnd <> 5w /\ fprnd <> 6w /\ fprnd <> 7w ==> validRounding fprnd s
+Proof
+  wordsLib.Cases_on_word_value `fprnd`
+  \\ simp [validRounding_def, rnd_mode_static_def]
+QED
+
+Theorem validRounding_dynamic:
+  (fprnd = 7w) /\ (s.c_UCSR s.procID).fpcsr.FRM <+ 5w ==>
+  validRounding fprnd s
+Proof
+  rw [validRounding_def, rnd_mode_static_def, fcsr_def]
+  \\ wordsLib.Cases_on_word_value `(s.c_UCSR s.procID).fpcsr.FRM`
+  \\ fs [rnd_mode_dynamic_def]
+QED
+
 (* Used by riscv_stepLib once the rm field of a static theorem is known. *)
 Theorem frm_rounding_v2w:
   (frm_rounding (v2w [F; F; F]) = roundTiesToEven) /\
@@ -1286,6 +1325,109 @@ Theorem frm_rounding_v2w:
   (frm_rounding (v2w [F; T; T]) = roundTowardPositive)
 Proof
   EVAL_TAC
+QED
+
+(* ------------------------------------------------------------------------
+   Floating-point exception flags
+   ------------------------------------------------------------------------ *)
+
+(* accrueFlags sets the fflags bits that an IEEE operation raised, one
+   flag at a time, each with a write of fcsr that also makes mstatus.FS
+   Dirty.  Evaluated as it stands, each of the five steps reads fcsr from
+   the state of the step before, under its condition, and the state grows
+   exponentially with the steps.  accrueFlags_update states the effect as
+   one update of each field: a flag is set if it was set or is raised, and
+   FS is Dirty if any flag is raised.  It is proved one flag at a time,
+   each intermediate state being simplified before the next step reads
+   it. *)
+
+local
+  (* srw_ss writes an update of UserCSR, a record of one field, as a
+     literal *)
+  val UserCSR_literal = Q.prove(
+    `<| fpcsr := u.fpcsr |> = u: UserCSR`,
+    simp [UserCSR_component_equality])
+  (* if b then setFP_X () s else s, for the flag X of setFP_X *)
+  fun flag_thm (f, x) =
+    let
+      val fpcsr = "(s.c_UCSR s.procID).fpcsr"
+      val mstatus = "(s.c_MCSR s.procID).mstatus"
+    in
+      Q.prove(
+        [QUOTE ("(if b then " ^ f ^ " () s else s) = \
+                \s with <| c_UCSR := (s.procID =+ s.c_UCSR s.procID with \
+                \fpcsr := " ^ fpcsr ^ " with " ^ x ^ " := (" ^ fpcsr ^
+                "." ^ x ^ " \\/ b)) s.c_UCSR; c_MCSR := (s.procID =+ \
+                \s.c_MCSR s.procID with mstatus := " ^ mstatus ^ " with \
+                \FS := if b then 3w else " ^ mstatus ^ ".FS) s.c_MCSR |>")],
+        Cases_on `b`
+        \\ simp_tac (srw_ss())
+             [setFP_Invalid_def, setFP_DivZero_def, setFP_Overflow_def,
+              setFP_Underflow_def, setFP_Inexact_def, write'fcsr_def,
+              fcsr_def, ext_status_def, LET_THM, UserCSR_literal,
+              riscv_state_fupdselfid, MachineCSR_fupdselfid,
+              mstatus_fupdselfid, UserCSR_fupdselfid, FPCSR_fupdselfid,
+              combinTheory.APPLY_UPDATE_ID, combinTheory.UPDATE_EQ])
+    end
+  val flag_thms =
+    List.map flag_thm
+      [("setFP_Invalid", "NV"), ("setFP_DivZero", "DZ"),
+       ("setFP_Overflow", "OF"), ("setFP_Underflow", "UF"),
+       ("setFP_Inexact", "NX")]
+  val cond_or = Q.prove(
+    `(if a then x else if b then x else y) = (if a \/ b then x else y)`,
+    Cases_on `a` \\ Cases_on `b` \\ rewrite_tac [])
+  val simp_state =
+    SIMP_CONV std_ss
+      (cond_or :: flag_thms @
+       [riscv_state_accfupds, riscv_state_fupdfupds, riscv_state_fupdcanon,
+        UserCSR_accfupds, UserCSR_fupdfupds,
+        FPCSR_accfupds, FPCSR_fupdfupds, FPCSR_fupdcanon,
+        MachineCSR_accfupds, MachineCSR_fupdfupds,
+        mstatus_accfupds, mstatus_fupdfupds,
+        combinTheory.K_o_THM, combinTheory.UPDATE_EQ,
+        combinTheory.APPLY_UPDATE_THM])
+  (* let s = v in t: simplify v, then substitute it *)
+  fun let_conv tm =
+    if boolSyntax.is_let tm then
+      (Conv.RAND_CONV simp_state THENC Conv.REWR_CONV LET_THM
+       THENC Thm.BETA_CONV THENC let_conv) tm
+    else simp_state tm
+in
+  val accrueFlags_steps =
+    (Conv.RATOR_CONV (Conv.REWR_CONV accrueFlags_def) THENC Thm.BETA_CONV
+     THENC let_conv) ``accrueFlags f s``
+end
+
+Theorem accrueFlags_update:
+  accrueFlags f s =
+  s with
+  <| c_UCSR :=
+       (s.procID =+
+          s.c_UCSR s.procID with
+          fpcsr :=
+            (s.c_UCSR s.procID).fpcsr with
+            <| NV := ((s.c_UCSR s.procID).fpcsr.NV \/ f.InvalidOp);
+               DZ := ((s.c_UCSR s.procID).fpcsr.DZ \/ f.DivideByZero);
+               OF := ((s.c_UCSR s.procID).fpcsr.OF \/ f.Overflow);
+               UF := ((s.c_UCSR s.procID).fpcsr.UF \/
+                      f.Underflow_AfterRounding);
+               NX := ((s.c_UCSR s.procID).fpcsr.NX \/ f.Precision) |>)
+         s.c_UCSR;
+     c_MCSR :=
+       (s.procID =+
+          s.c_MCSR s.procID with
+          mstatus :=
+            (s.c_MCSR s.procID).mstatus with
+            FS := if f.InvalidOp \/ f.DivideByZero \/ f.Overflow \/
+                     f.Underflow_AfterRounding \/ f.Precision
+                  then 3w
+                  else (s.c_MCSR s.procID).mstatus.FS)
+         s.c_MCSR |>
+Proof
+  rewrite_tac [accrueFlags_steps]
+  \\ simp_tac std_ss
+       [riscv_state_fupdcanon, FPCSR_fupdcanon, AC DISJ_ASSOC DISJ_COMM]
 QED
 
 (* ------------------------------------------------------------------------
@@ -1307,21 +1449,60 @@ local
      write'FPRS_def, write'FPRD_def, write'fpr_def,
      writeFPRS_def, writeFPRD_def, MCSR_def, write'MCSR_def,
      Delta_def, write'Delta_def, fcsr_def, write'fcsr_def,
-     setFP_Invalid_def]
+     FPRS_raw_def, accrueFlags_update, setFP_Invalid_def, setFP_DivZero_def,
+     setFP_Overflow_def, setFP_Underflow_def, setFP_Inexact_def] @
+    (* Record and pair reductions for the call-by-value pass of the
+       evaluation, which otherwise leaves a field of an updated state, or
+       a component of a pair, unreduced.  An F or D instruction passes the
+       state through several updates (accrueFlags, a conditional flag,
+       writeFPRS), each reading the state before it; unreduced, each read
+       copies that whole state. *)
+    [riscv_state_accfupds, pairTheory.FST, pairTheory.SND,
+     MachineCSR_accfupds, MachineCSR_fupdfupds,
+     mstatus_accfupds, mstatus_fupdfupds,
+     UserCSR_accfupds, UserCSR_fupdfupds,
+     FPCSR_accfupds, FPCSR_fupdfupds,
+     combinTheory.K_o_THM, combinTheory.UPDATE_EQ]
   val hyp_eq_rule =
     utilsLib.ALL_HYP_CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
   (* No trap branch, and no PMP check or rounding mode left. *)
   val bad =
     List.map Term.same_const
       [``signalAddressException``, ``signalException``, ``raise'exception``,
-       ``dataAddr``, ``fetchAddr``, ``round``]
+       ``dataAddr``, ``fetchAddr``, ``round``, ``validRounding``]
+  (* Nor any other function of the model that reads or writes the state:
+     the result must be s with field updates only.  Skip is the exception:
+     NextRISCV adds it to the pc, and as before the priv-1.13 model the
+     step theorems keep it, applied to the state after the fetch, whose
+     c_Skip the fetch sets (consumers rewrite it with Skip_def, e.g.
+     HolBA's lifter). *)
+  val state_ty = ``:riscv_state``
+  (* the prefix of the names of the field selectors and updates *)
+  val field =
+    TypeBasePure.mk_recordtype_fieldsel {tyname = "riscv_state", fieldname = ""}
+  fun unevaluated tm =
+    Term.is_const tm andalso
+    let
+      val {Thy, Name, Ty} = Term.dest_thy_const tm
+    in
+      Thy = "riscv" andalso not (String.isPrefix field Name) andalso
+      Name <> "Skip" andalso
+      List.exists (fn ty => ty = state_ty) (fst (HolKernel.strip_fun Ty))
+    end
   fun check n th =
     case List.find (fn p => Lib.can (HolKernel.find_term p) (Thm.concl th))
            bad of
        SOME _ =>
          ( print_thm th; print "\n"
          ; raise ERR "class" ("trap or check left in " ^ n))
-     | NONE => th
+     | NONE =>
+         case Lib.total (HolKernel.find_term unevaluated)
+                (boolSyntax.rhs (Thm.concl th)) of
+            SOME c =>
+              ( print_thm th; print "\n"
+              ; raise ERR "class"
+                  (Parse.term_to_string c ^ " left in " ^ n))
+          | NONE => th
   (* 8-byte loads read one aligned double-word *)
   val reads8 = ["LD", "FLD", "LR_D"] @
     List.map (fn s => "AMO" ^ s ^ "_D")
@@ -1493,7 +1674,9 @@ val lr = class_rd0 `(aq, rl, rd, rs1)`
 val LR_W = lr [[aligned_amo_w]] "LR_W"
 val LR_D = lr [[rv64, aligned_amo_d]] "LR_D"
 
-(* Floating-point loads and stores *)
+(* Floating-point loads and stores.  FLW and FLD write the FPR with
+   writeFPRS and writeFPRD, which NaN-box a single and make mstatus.FS
+   Dirty; FSW stores the low word of the FPR as it is (FPRS_raw). *)
 
 val FLW = class `(rd, rs1, offs)` [[fp_on, aligned_w]] "FLW"
 val FLD = class `(rd, rs1, offs)` [[fp_on, aligned_d]] "FLD"
@@ -1502,15 +1685,23 @@ val FSD = class `(rs1, rs2, offs)` [[fp_on, aligned_d]] "FSD"
 
 (* Floating-point instructions.  Those with an rm field get two step
    theorems: one for a static rounding mode, and one, named _DYN, for the
-   dynamic one, which has the legality of fcsr.frm as hypothesis. *)
+   dynamic one, which has the legality of fcsr.frm as hypothesis
+   (round_dynamic, or validRounding_dynamic for the exact conversions).  A
+   single operand is read through its NaN-boxing test, and the fflags that
+   the operation raises are accrued in fcsr (accrueFlags_update). *)
 
 local
   val static = [utilsLib.STRIP_UNDISCH round_static]
   val dynamic = [utilsLib.STRIP_UNDISCH round_dynamic]
+  val exact_static = [utilsLib.STRIP_UNDISCH validRounding_static]
+  val exact_dynamic = [utilsLib.STRIP_UNDISCH validRounding_dynamic]
 in
   fun fp_rnd args n =
     (class_with static "" args [[fp_on]] n,
      class_with dynamic "_DYN" args [[fp_on]] n)
+  fun fp_exact args n =
+    (class_with exact_static "" args [[fp_on]] n,
+     class_with exact_dynamic "_DYN" args [[fp_on]] n)
   fun fp_rnd_rd0 args n =
     (class_with static "" args [[fp_on]] n,
      class_with static "" args [[rd0, fp_on]] n,
@@ -1572,8 +1763,8 @@ val FLE_D    = fp_rd0 "FLE_D"
 val FMV_X_D  = fp1_rd0 "FMV_X_D"
 val FMV_D_X  = fp1 "FMV_D_X"
 val FCLASS_D = fp1_rd0 "FCLASS_D"
-val FCVT_D_W  = fp_rnd `(rd, rs, fprnd)` "FCVT_D_W"
-val FCVT_D_WU = fp_rnd `(rd, rs, fprnd)` "FCVT_D_WU"
+val FCVT_D_W  = fp_exact `(rd, rs, fprnd)` "FCVT_D_W"
+val FCVT_D_WU = fp_exact `(rd, rs, fprnd)` "FCVT_D_WU"
 val FCVT_D_L  = fp_rnd `(rd, rs, fprnd)` "FCVT_D_L"
 val FCVT_D_LU = fp_rnd `(rd, rs, fprnd)` "FCVT_D_LU"
 val FCVT_W_D  = fp_rnd_rd0 `(rd, rs, fprnd)` "FCVT_W_D"
@@ -1581,7 +1772,7 @@ val FCVT_WU_D = fp_rnd_rd0 `(rd, rs, fprnd)` "FCVT_WU_D"
 val FCVT_L_D  = fp_rnd_rd0 `(rd, rs, fprnd)` "FCVT_L_D"
 val FCVT_LU_D = fp_rnd_rd0 `(rd, rs, fprnd)` "FCVT_LU_D"
 val FCVT_S_D  = fp_rnd `(rd, rs, fprnd)` "FCVT_S_D"
-val FCVT_D_S  = fp_rnd `(rd, rs, fprnd)` "FCVT_D_S"
+val FCVT_D_S  = fp_exact `(rd, rs, fprnd)` "FCVT_D_S"
 
 (* WFI and SFENCE.VMA do nothing in M-mode.  FENCE and FENCE.I do nothing
    at all: Run rewrites them to the identity, so they need no theorem. *)
