@@ -3537,8 +3537,16 @@ define FConv > FCVT_S_L(rd::reg, rs::reg, fprnd::fprnd) =
 
 define FConv > FCVT_S_LU(rd::reg, rs::reg, fprnd::fprnd) =
 { match round(fprnd)
-  { case Some(r) => { i = [0`1 : GPR(rs)]::int
-                    ; v = FP32_FromInt(r, i)
+  { case Some(r) => { x = GPR(rs)
+                    ; i = [0`1 : x]::int
+                    -- FP32.fromInt of L3's SML runtime takes only signed 64-bit
+                    -- values (above 2^63-1 it raises Fail).  The SML export
+                    -- therefore converts x >= 2^63 as x/2, rounded to odd so
+                    -- that every rounding mode gives the same result, times
+                    -- 2.0 (exact); the HOL export converts x directly.
+                    ; v = if PROVER_EXPORT or not x<63> then FP32_FromInt(r, i)
+                          else FP32_Mul(r, FP32_FromInt(r, [(x >>+ 1) || (x && 1)]::int),
+                                        0x40000000)
                     -- ISA manual 6.1.7: NX when the result is not exact
                     ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                       do setFP_Inexact()
