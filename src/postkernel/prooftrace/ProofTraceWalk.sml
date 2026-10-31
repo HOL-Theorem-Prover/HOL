@@ -5,8 +5,8 @@ open Lib ProofTraceParser
 fun update_at (tab, k, f) =
     Symtab.update (k, f (Symtab.lookup tab k)) tab
 
-fun walk {heap, thyname, named_thms, anon_thms,
-          incr, on_def_thm} = let
+fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
+          incr, on_def_thm, on_fv} = let
 
   (* ID cache for constant/type operator identifiers *)
   val id_cache : (string * string) PIntMap.t ref = ref PIntMap.empty
@@ -19,12 +19,116 @@ fun walk {heap, thyname, named_thms, anon_thms,
          in (id_cache := PIntMap.add key x idc; x)
          end
     end
-  val get_const_id = cache_id (fn tm_ptr =>
-    case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
+  val cid = cache_id (fn tm_ptr =>
+    case shTerm heap tm_ptr of Const (idp,_) => const_name idp
     | _ => raise Fail "get_const_id")
-  val get_type_id = cache_id (fn ty_ptr =>
-    case shType heap ty_ptr of Tyapp (idp,_) => ident heap idp
+  val tid = cache_id (fn ty_ptr =>
+    case shType heap ty_ptr of Tyapp (idp,_) => type_name idp
     | _ => raise Fail "get_type_id")
+
+  (* Implicit HOL rules can retain a retired logical role only in an
+     intermediate sequent, without any explicit proof argument naming it. *)
+  val check_symbols = let
+    val checked = BoolArray.array(heapSize heap, false)
+    fun visit p f =
+      if not (isPtr p) orelse BoolArray.sub(checked, ptr p) then () else
+        (BoolArray.update(checked, ptr p, true); f p)
+    fun typ p = visit p (fn p => case shType heap p of
+        Tyv _ => ()
+      | Tyapp (id,args) =>
+          (ignore (type_name id); appList heap typ args))
+    fun tm p = visit p (fn p => case shTerm heap p of
+        Const (id,ty) => (ignore (const_name id); typ ty)
+      | Fv (_,ty) => typ ty
+      | Comb (a,b) => (tm a; tm b)
+      | Abs (a,b) => (tm a; tm b)
+      | Clos (s,t) => (subs s; tm t)
+      | Bv _ => ())
+    and subs p = case shSubs heap p of
+        Id => ()
+      | Cons (s,t) => (subs s; tm t)
+      | Lift (_,s) => subs s
+      | Shift (_,s) => subs s
+  in tm end
+
+  fun role_error () =
+    raise Fail "ProofTraceWalk: unsupported implicit logical-role shape"
+
+  datatype role_term = Raw of term ptr
+                     | Delayed of role_term Subst.subs * role_term
+  datatype role_view = RConst of ident ptr
+                     | RComb of role_term * role_term
+                     | RAbs of role_term | RBv of int | ROther
+  fun role_subs p = case shSubs heap p of
+      Id => Subst.id
+    | Cons (s,t) => Subst.cons (role_subs s, Raw t)
+    | Lift (n,s) => Subst.lift (n, role_subs s)
+    | Shift (n,s) => Subst.shift (n, role_subs s)
+  fun role_view (Raw p) = (case shTerm heap p of
+        Const (id,_) => RConst id
+      | Comb (f,x) => RComb (Raw f, Raw x)
+      | Abs (_,b) => RAbs (Raw b)
+      | Bv n => RBv n
+      | Clos (s,t) => role_view (Delayed (role_subs s, Raw t))
+      | Fv _ => ROther)
+    | role_view (Delayed (s,t)) = (case role_view t of
+        RBv n => (case Subst.exp_rel (s,n) of
+            (n,NONE) => RBv n
+          | (0,SOME t) => role_view t
+          | (n,SOME t) => role_view (Delayed (Subst.shift (n,Subst.id),t)))
+      | RComb (f,x) => RComb (Delayed (s,f), Delayed (s,x))
+      | RAbs b => RAbs (Delayed (Subst.lift (1,s),b))
+      | atom => atom)
+  fun head t = case role_view t of
+      RComb (f,_) => head f
+    | RConst id => const_name id
+    | _ => role_error ()
+  fun require_role name p =
+    let val (thy,nm) = head p
+    in if (thy,nm) = ("bool",name) then () else raise Fail
+         ("ProofTraceWalk: noncanonical logical role " ^ thy ^ "$" ^ nm ^
+          "; expected bool$" ^ name ^ "; unsupported")
+    end
+  fun rand t = case role_view t of
+      RComb (_,a) => a | _ => role_error ()
+  fun body t = case role_view t of
+      RAbs b => b | _ => role_error ()
+  fun conclusion p = Raw (#2 (shThm heap p))
+  fun check_roles thm_ptr proof concl = let val concl = Raw concl in
+    case proof of
+      CONJ_prf _ => require_role "/\\" concl
+    | CONJUNCT1_prf a => require_role "/\\" (conclusion a)
+    | CONJUNCT2_prf a => require_role "/\\" (conclusion a)
+    | DISJ1_prf _ => require_role "\\/" concl
+    | DISJ2_prf _ => require_role "\\/" concl
+    | DISJ_CASES_prf (a,_,_) => require_role "\\/" (conclusion a)
+    | GEN_prf _ => require_role "!" concl
+    | GENL_prf (vs,_) =>
+        if null (list heap I vs) then () else require_role "!" concl
+    | SPEC_prf (_,a) => require_role "!" (conclusion a)
+    | Specialize_prf (_,a) => require_role "!" (conclusion a)
+    | EXISTS_prf _ => require_role "?" concl
+    | CHOOSE_prf (_,a,_) => require_role "?" (conclusion a)
+    | Def_spec_prf (a,cs) =>
+        if null (list heap I cs) then ()
+        else require_role "?" (conclusion a)
+    | Def_tyop_prf (_,a,_) =>
+        (require_role "?" (conclusion a); require_role "?" concl;
+         require_role "TYPE_DEFINITION" (body (rand concl)))
+    | NOT_INTRO_prf a =>
+        (require_role "~" concl; require_role "F" (rand (conclusion a)))
+    | NOT_ELIM_prf a =>
+        (require_role "~" (conclusion a); require_role "F" (rand concl))
+    | CCONTR_prf (_,a) => let
+        val (source_hyps,_,_) = shThm heap a
+        val (target_hyps,_,_) = shThm heap thm_ptr
+        val retained = ref []
+        val () = appSet heap (fn p => retained := p :: !retained) target_hyps
+        fun removed p = if List.exists (fn q => ptr p = ptr q) (!retained) then ()
+                        else require_role "~" (Raw p)
+      in require_role "F" (conclusion a); appSet heap removed source_hyps end
+    | _ => ()
+  end
 
   (* Closedness pre-pass: compute max free Bv index for each term pointer.
      ~1 means closed (no free Bv's), n >= 0 means max free Bv index.
@@ -94,7 +198,7 @@ fun walk {heap, thyname, named_thms, anon_thms,
       Abs (t1, t2) => (walk_term t1; walk_term t2)
     | Comb (t1, t2) => (walk_term t1; walk_term t2)
     | Const (_, typ) => ty typ
-    | Fv (_, typ) => ty typ
+    | Fv (s, typ) => (on_fv s; ty typ)
     | Bv _ => ()
     | Clos (sbp, tmp) => (walk_subs sbp; walk_term tmp)
   and walk_subs sbp =
@@ -109,20 +213,25 @@ fun walk {heap, thyname, named_thms, anon_thms,
     else if BoolArray.sub(seen, ptr thm_ptr) then ()
     else let
       val () = BoolArray.update(seen, ptr thm_ptr, true)
-      val (_, _, proof_ptr) = shThm heap thm_ptr
-      fun add_thm_ptr nm prev =
-            (on_def_thm thm_ptr;
-             case prev of NONE => [thm_ptr]
-               | SOME ls => (print("WARNING: multiple defs for "^nm^"\n");
-                             thm_ptr::ls))
+      val (hyps, concl, proof_ptr) = shThm heap thm_ptr
+      val () = check_symbols concl
+      val () = appSet heap check_symbols hyps
+      val proof = shProof heap proof_ptr
+      val () = check_roles thm_ptr proof concl
       fun check_thy defthy =
-        if defthy = thyname then () else raise Fail "add_def thy"
-      fun add_const nm = tm_defs := update_at (!tm_defs, nm, add_thm_ptr nm)
+        if defthy = thyname then () else raise Fail
+          ("ProofTraceWalk: foreign definition from " ^ defthy ^ " unsupported")
+      fun add_gen tab nm =
+        (on_def_thm thm_ptr;
+         tab := update_at (!tab, nm, fn NONE => [thm_ptr]
+                                      | SOME l => thm_ptr :: l))
+      fun add_const x = add_gen tm_defs x
+      fun add_type x = add_gen ty_defs x
       fun add_def_const p = let
-        val (thy,nm) = get_const_id p
+        val (thy,nm) = cid p
         val () = check_thy thy
       in add_const nm end
-    in case shProof heap proof_ptr of
+    in case proof of
         ABS_prf (a, b) => (tm a; th b)
       | ALPHA_prf (a, b) => (tm a; tm b)
       | AP_TERM_prf (a, b) => (tm a; th b)
@@ -142,19 +251,21 @@ fun walk {heap, thyname, named_thms, anon_thms,
       | DISJ_CASES_prf (a, b, c) => (th a; th b; th c)
       | Def_const_list_prf (a, b) => let
           val () = th a
-          val ids = list heap get_const_id b
-        in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
+          val ids = list heap cid b
+        in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids
+        end
       | Def_const_prf (a, b) => (tm a; add_def_const b)
       | Def_spec_prf (a, b) => let
           val () = th a
-          val ids = list heap get_const_id b
-        in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
+          val ids = list heap cid b
+        in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids
+        end
       | Def_tyop_prf (a, b, c) => let
           val () = appList heap ty a
           val () = th b
-          val (thy,tyop) = get_type_id c
+          val (thy,tyop) = tid c
           val () = check_thy thy
-        in ty_defs := update_at (!ty_defs, tyop, add_thm_ptr tyop) end
+        in add_type tyop end
       | Disk_prf _ => ()
       | EQ_IMP_RULE1_prf a => th a
       | EQ_IMP_RULE2_prf a => th a
@@ -212,8 +323,8 @@ in
   { tm_defs = !tm_defs,
     ty_defs = !ty_defs,
     is_closed = is_closed,
-    get_const_id = get_const_id,
-    get_type_id = get_type_id }
+    get_const_id = cid,
+    get_type_id = tid }
 end
 
 end
