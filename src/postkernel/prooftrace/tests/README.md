@@ -8,8 +8,9 @@ Run a fixture with a tracing HOL built using exporter-capable Poly/ML:
 ```
 
 The suites are `identity`, `oracle`, `export`, `compute-binder`, and
-`term-kind`; `all` runs them together. Sources load from this checkout,
-with separate processes for fresh kernel state and logs in the scratch dir.
+`term-kind`, and `mk-abs`; `all` runs them together. Sources load from this
+checkout, with separate processes for fresh kernel state and logs in the
+scratch dir.
 `compute-binder` also needs `cv_computeLib`.
 
 * `oracle` reproduces lost hypotheses. The HOL checker compares the complete
@@ -26,6 +27,10 @@ with separate processes for fresh kernel state and logs in the scratch dir.
   substitution and specification. After replay of `bool` and the fixture,
   run `term-kind-check.ml` in Candle, or call `term_kind_check db` from
   `term-kind-check.sml` in a minimal HOL session.
+* `mk-abs` reproduces a clashing cosmetic abstraction binder whose converted
+  name differs from the raw proof's opened binder. It checks the exact sequent
+  in a fresh minimal heap. The converter emits `ABS` and `TRANS` for the
+  mismatch; matching binders still use `Mk_abs`.
 
 The `.ml` checkers run in Candle; their producer programs run in HOL.
 

@@ -2384,10 +2384,21 @@ fun emit_theory {trace, output, ruleset} = let
               in PFTWriter.HOL4.mk_comb out id a b end
           | MP_prf (a, b) => let val a = emit_thm a val b = emit_thm b
               in PFTWriter.HOL4.mp out id a b end
-          | Mk_abs_prf (a, _, c) => let
-              val a = emit_thm a
-              val c = emit_thm c
-            in PFTWriter.HOL4.mk_abs_thm out id a c end
+          | Mk_abs_prf (a, b, c) => let
+              val a_th = emit_thm a
+              val c_th = emit_thm c
+              val (_, rhs) = pft_dest_comb (emit_term (heap_concl a))
+              val (binder, _) = pft_dest_abs rhs
+              val bv = emit_term b
+            in if binder = bv then
+                 PFTWriter.HOL4.mk_abs_thm out id a_th c_th
+               else let
+                 (* The child uses the recorded binder, not the name chosen
+                    by capture-avoiding emission of the first RHS. *)
+                 val abs = alloc_th ()
+                 val () = PFTWriter.HOL4.abs_thm out abs bv c_th
+               in PFTWriter.HOL4.trans out id a_th abs end
+            end
           | Mk_comb_prf (a, b, c) => let
               val a = emit_thm a val b = emit_thm b val c = emit_thm c
             in PFTWriter.HOL4.mk_comb_thm out id a b c end
