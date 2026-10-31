@@ -479,6 +479,12 @@ in
      FPR), rather than give a spec that does not compose (for FSD, one whose
      precondition is not ~riscv_RV64I but an existential over the MCSR with
      mstatus.FS <> Off) or fail inside stateLib. *)
+  (* Nor for the CSR instructions, ECALL, EBREAK and MRET.  riscv_step
+     steps a CSR instruction only for a known CSR number, which an opcode
+     pattern of riscv_dict does not give; and the others write the MCSR and
+     the privilege (the trap entry, the return from it), which riscv_ID
+     fixes. *)
+  val system_msg = "CSR instructions, ECALL, EBREAK and MRET are not supported"
   local
     fun names f =
       let
@@ -489,21 +495,34 @@ in
       end
     val unsupported =
       List.concat (List.map names ["c_fpr", "c_UCSR", "c_ReserveLoad"])
-    fun is_unsupported tm =
+    val fixed =
+      List.map
+        (fn f => TypeBasePure.mk_recordtype_fieldfupd
+                   {tyname = "riscv_state", fieldname = f})
+        ["c_MCSR", "c_privilege"]
+    fun is_in l tm =
       case Lib.total Term.dest_thy_const tm of
-         SOME {Thy = "riscv", Name, ...} => Lib.mem Name unsupported
+         SOME {Thy = "riscv", Name, ...} => Lib.mem Name l
        | _ => false
   in
     fun check_supported thm =
-      if List.exists (Lib.can (HolKernel.find_term is_unsupported))
+      if List.exists (Lib.can (HolKernel.find_term (is_in unsupported)))
            (Thm.concl thm :: Thm.hyp thm)
         then raise ERR "riscv_spec"
                "F, D, LR and SC instructions are not supported"
+      else if Lib.can (HolKernel.find_term (is_in fixed)) (Thm.concl thm)
+        then raise ERR "riscv_spec" system_msg
       else thm
   end
+  fun step tm =
+    riscv_stepLib.riscv_step tm
+    handle e as HOL_ERR herr =>
+      if String.isPrefix "the CSR number" (Feedback.message_of herr)
+        then raise ERR "riscv_spec" system_msg
+      else raise e
   fun riscv_spec tm =
     let
-       val thm = check_supported (riscv_stepLib.riscv_step tm)
+       val thm = check_supported (step tm)
        val thm = config_rule thm
        val thm = eval_Skip thm
        val t = riscv_mk_pre_post thm
