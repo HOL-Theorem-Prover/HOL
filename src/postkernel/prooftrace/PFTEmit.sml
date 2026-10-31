@@ -2384,10 +2384,25 @@ fun emit_theory {trace, output, ruleset} = let
               in PFTWriter.HOL4.mk_comb out id a b end
           | MP_prf (a, b) => let val a = emit_thm a val b = emit_thm b
               in PFTWriter.HOL4.mp out id a b end
-          | Mk_abs_prf (a, _, c) => let
-              val a = emit_thm a
-              val c = emit_thm c
-            in PFTWriter.HOL4.mk_abs_thm out id a c end
+          | Mk_abs_prf (a, b, c) => let
+              val a_th = emit_thm a
+              val c_th = emit_thm c
+              val (_, rhs) = pft_dest_comb (emit_term (heap_concl a))
+              val (binder, _) = pft_dest_abs rhs
+              val bv = emit_term b
+              val aligned = if binder = bv then a_th else let
+                (* Mk_abs opens the first RHS, so restore the raw proof's
+                   binder after capture-avoiding term emission renamed it. *)
+                val (eq_lhs, _) =
+                  pft_dest_comb (emit_term (heap_concl c))
+                val (_, lhs) = pft_dest_comb eq_lhs
+                val rhs' = emit_abs bv lhs
+                val alpha = alloc_th ()
+                val () = PFTWriter.HOL4.alpha out alpha rhs rhs'
+                val trans = alloc_th ()
+                val () = PFTWriter.HOL4.trans out trans a_th alpha
+              in trans end
+            in PFTWriter.HOL4.mk_abs_thm out id aligned c_th end
           | Mk_comb_prf (a, b, c) => let
               val a = emit_thm a val b = emit_thm b val c = emit_thm c
             in PFTWriter.HOL4.mk_comb_thm out id a b c end

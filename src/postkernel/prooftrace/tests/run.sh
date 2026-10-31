@@ -3,7 +3,7 @@ set -eu
 
 if [ "$#" -ne 3 ]; then
   echo "usage: tests/run.sh TEST /path/to/tracing/bin/hol /scratch/dir" >&2
-  echo "TEST: all, identity, oracle, export, compute-binder, term-kind" >&2
+  echo "TEST: all, identity, oracle, export, compute-binder, term-kind, mk-abs" >&2
   exit 2
 fi
 pft_test=$1
@@ -13,8 +13,9 @@ pft_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 HOL_PFT_SOURCE_ROOT=$(CDPATH= cd -- "$pft_dir/../../../.." && pwd)
 export HOL_PFT_SOURCE_ROOT
 case "$pft_test" in
-  all) pft_suites='identity oracle export compute-binder term-kind' ;;
-  identity|oracle|export|compute-binder|term-kind) pft_suites=$pft_test ;;
+  all) pft_suites='identity oracle export compute-binder term-kind mk-abs' ;;
+  identity|oracle|export|compute-binder|term-kind|mk-abs)
+    pft_suites=$pft_test ;;
   *) echo "unknown prooftrace test: $pft_test" >&2; exit 2 ;;
 esac
 mkdir -p "$pft_scratch"
@@ -26,6 +27,7 @@ for HOL_PFT_TEST in $pft_suites; do
   cd "$pft_scratch/$HOL_PFT_TEST"
   case "$HOL_PFT_TEST" in
     identity) pft_phases='produce convert raw separate' ;;
+    mk-abs) pft_phases='produce replay' ;;
     export) pft_phases='vacuous shadow overlap' ;;
     *) pft_phases=run ;;
   esac
@@ -34,7 +36,7 @@ for HOL_PFT_TEST in $pft_suites; do
     HOL_PFT_EXPORT_CASE=$HOL_PFT_IDENTITY_PHASE
     export HOL_PFT_EXPORT_CASE
     case "$HOL_PFT_TEST:$HOL_PFT_IDENTITY_PHASE" in
-      identity:raw|identity:separate)
+      identity:raw|identity:separate|mk-abs:replay)
         set -- --min ;;
       *) set -- ;;
     esac
