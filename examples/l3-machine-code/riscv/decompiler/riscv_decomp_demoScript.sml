@@ -30,6 +30,24 @@ val (text2_cert, test2_def) = riscv_decompile_code "test2"
    ``Branch (BEQ (1w, 0w, -2w))``
   ]
 
+fun riscv_decompile_code_noC s = riscv_decompLib.riscv_decompile_noC s o assemble
+
+val (text3_cert, test3_def) = riscv_decompile_code_noC "test3"
+  [
+   ``ArithI (ADDI (1w, 1w, -1w))``,
+   ``Branch (BEQ (1w, 0w, -2w))``
+  ]
+
+val (text4_cert, test4_def) = riscv_decompile_code_noC "test4"
+  [
+   ``ArithI (ADDI (1w, 1w, 1w))``,
+   ``Branch (BEQ (0w, 0w, 4w))``,
+   ``ArithI (ADDI (1w, 1w, 1w))``,
+   ``Branch (JAL (0w, 4w))``,
+   ``ArithI (ADDI (1w, 1w, 1w))``,
+   ``ArithI (ADDI (2w, 1w, 0w))``
+  ]
+
 val () = computeLib.add_funs [test1_def, test2_def]
 
 val run1 = Theory.save_thm ("run1",
