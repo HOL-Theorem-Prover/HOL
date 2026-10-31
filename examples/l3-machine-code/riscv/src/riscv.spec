@@ -1541,7 +1541,8 @@ regType trapVector(tvec::regType, intr::bool, ec::exc_code) =
 -- Trap entry (P §3.1.6.1 p.32, §3.1.14-3.1.16 p.48-53; §12.1.1 p.113,
 -- §12.1.7-12.1.9 p.119-121).  mstatus.MPRV and the load reservation are
 -- unchanged ([D45]).  A trap goes to M-mode or S-mode, as excDest or
--- checkInterrupts gives, never to U-mode.
+-- checkInterrupts gives, never to U-mode.  Traps into S-mode are
+-- validated like those into M-mode (design-smode.md §2.7-2.9).
 unit takeTrap(intr::bool, ec::exc_code, epc::regType, tval::regType, toPriv::Privilege) =
 { fromP = curPrivilege()
 ; mark_log(LOG_INSN, ["trapping from " : privName(fromP) : " to " : privName(toPriv) :
@@ -4299,13 +4300,18 @@ define System > SRET   =
 -----------------------------------
 -- WFI
 -----------------------------------
--- WFI does not wait (P §3.3.3 p.62 allows a no-op, [D23]).  With S-mode
--- implemented it is illegal in U-mode, and in S-mode when mstatus.TW is
--- set, the time limit being zero (P §3.1.6.6 p.37).
+-- WFI does not wait (P §3.3.3 p.62 allows a no-op).  In S-mode with
+-- mstatus.TW set it is illegal unless it completes within the time limit
+-- (P §3.1.6.6 p.37), which is zero here: it completes at once iff an
+-- interrupt is pending and enabled in mie, whatever mstatus.MIE,
+-- mstatus.SIE and mideleg are (P §3.3.3 p.62, [S20]).  In U-mode it is
+-- always illegal: with S-mode implemented, WFI is not available to U-mode
+-- (P §3.1.6.6 p.37, §3.3.3 p.61, [D23]).
 define System > WFI    =
     match curPrivilege()
     { case User       => signalException(Illegal_Instr)
-      case Supervisor => when MCSR.mstatus.TW do signalException(Illegal_Instr)
+      case Supervisor => when MCSR.mstatus.TW and (read_mip() && MCSR.&mie) == 0
+                         do signalException(Illegal_Instr)
       case Machine    => nothing
     }
 
@@ -4324,7 +4330,9 @@ construct csrOp { CSR_Write, CSR_Set, CSR_Clear }
 -- only a write needs a writable CSR.  Standard CSRs have no side effects
 -- on reads (P §2.1 p.13), so the CSR is read also when rd = 0 ([D36]).
 -- The CSRRS and CSRRC of mip see SEIP without the platform's line (P
--- §3.1.9 p.45).
+-- §3.1.9 p.45).  Those of sip see the value read, line included, but
+-- SEIP is read-only in sip (P §12.1.3 p.118), so the line never reaches
+-- mip ([S21]).
 unit accessCSR(op::csrOp, rd::reg, f::reg, src::regType, csr::creg) =
 { isWrite = op == CSR_Write or f != 0
 ; if checkCSROp(csr, f, if isWrite then Write else Read)
@@ -4384,9 +4392,11 @@ define System > CSRRCI(rd::reg, zimm::reg, csr::imm12) =
 -----------------------------------
 -- SFENCE.VMA rs1, rs2
 -----------------------------------
--- Nothing is cached, since there is no address translation.  SFENCE.VMA
--- is illegal in U-mode, and in S-mode while mstatus.TVM is set (P §12.2.1
--- p.127, §3.1.6.6 p.37, [D46]).
+-- The hart has no address-translation cache, so the fence has nothing to
+-- do: every access uses the translation current when it is made, which is
+-- always one that the fence allows (P §12.2.1 p.128, [S4]).
+-- SFENCE.VMA is illegal in U-mode, and in S-mode while mstatus.TVM is set
+-- (P §12.2.1 p.127, §3.1.6.6 p.37, [D46]).
 define System > SFENCE_VMA(rs1::reg, rs2::reg) =
     match curPrivilege()
     { case User       => signalException(Illegal_Instr)
@@ -5278,6 +5288,8 @@ regType fetchAndExecute() =
       }
     }
 
+-- One step of the hart, in M-, S- or U-mode; all three are validated
+-- (design-smode.md §2).
 unit Next =
 { clear_logs()
 ; c_minstret_written(procID) <- false

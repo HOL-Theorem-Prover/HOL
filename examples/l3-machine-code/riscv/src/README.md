@@ -10,6 +10,11 @@ generated:
 
 Both exports must run from this directory.
 
+Comments in `riscv.spec` cite the privileged specification (version
+20260120) as `P §x p.N` and the unprivileged one as `U §x p.N`, by printed
+page, and the design decisions as `[Dn]` (`../doc/design-privileged.md` §7)
+and `[Sn]` (`../doc/design-smode.md` §5).
+
 ## Regenerating
 
 Install L3-2018-02-09 (https://acjf3.github.io/l3/, `l3.tar.bz2`; `make` with
