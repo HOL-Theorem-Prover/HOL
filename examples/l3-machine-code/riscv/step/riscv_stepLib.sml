@@ -194,7 +194,14 @@ val riscv_decodes =
    ("LD",     "_________________FTT_____FFFFFTT"),
    ("LBU",    "_________________TFF_____FFFFFTT"),
    ("LHU",    "_________________TFT_____FFFFFTT"),
-   ("LWU",    "_________________TTF_____FFFFFTT")
+   ("LWU",    "_________________TTF_____FFFFFTT"),
+   (* CSR instructions: csr, rs1 or uimm, funct3, rd *)
+   ("CSRRW",  "_________________FFT_____TTTFFTT"),
+   ("CSRRS",  "_________________FTF_____TTTFFTT"),
+   ("CSRRC",  "_________________FTT_____TTTFFTT"),
+   ("CSRRWI", "_________________TFT_____TTTFFTT"),
+   ("CSRRSI", "_________________TTF_____TTTFFTT"),
+   ("CSRRCI", "_________________TTT_____TTTFFTT")
   ]
      (* Atomics and floating-point instructions that write rd *)
      val l2 =
@@ -255,6 +262,9 @@ val riscv_decodes =
    ("BGEU",   "_________________TTT_____TTFFFTT"),
    ("FENCE",      "_________________FFF_____FFFTTTT"),
    ("FENCE_I",    "_________________FFT_____FFFTTTT"),
+   ("ECALL",      "FFFFFFFFFFFFFFFFFFFFFFFFFTTTFFTT"),
+   ("EBREAK",     "FFFFFFFFFFFTFFFFFFFFFFFFFTTTFFTT"),
+   ("MRET",       "FFTTFFFFFFTFFFFFFFFFFFFFFTTTFFTT"),
    ("WFI",        "FFFTFFFFFTFTFFFFFFFFFFFFFTTTFFTT"),
    ("SFENCE_VMA", "FFFTFFT__________FFFFFFFFTTTFFTT"),
    ("FLW",        "_________________FTF_____FFFFTTT"),
@@ -516,6 +526,195 @@ in
 end
 
 (* -------------------------------------------------------------------------
+   CSR instructions
+
+   The step theorems of the CSR instructions (riscv_stepTheory) are for any
+   CSR number; csr_rule evaluates them for the CSR number of the
+   instruction: the read (CSRMap), the write (writeCSR, with the
+   legalisation of the written value in write'CSRMap, and the log of the
+   value read back), and the access conditions, which are hypotheses:
+   is_CSR_defined and, for a write, that the CSR is not read-only are
+   decided (an instruction that fails them is illegal and has no step
+   theorem here), and check_CSR_conditions becomes mstatus.FS <> Off for
+   fflags, frm and fcsr and is true for every other CSR in M-mode.  The
+   locks of the PMP entries (pmpcfg0/2, pmpaddr0-15) are decided by H3, a
+   hypothesis of every step theorem: no entry is locked, so a write of
+   pmpaddr<i> is never ignored, and the legalised value of pmpcfg0/2 does
+   not depend on the old one (riscv_stepTheory.legalize_pmpcfg_unlocked).
+   ------------------------------------------------------------------------- *)
+
+local
+  val csr_ty = wordsSyntax.mk_int_word_type 12
+  fun closed tm = List.null (Term.free_vars tm)
+  val csr_number_conv =
+    Conv.DEPTH_CONV
+      (fn tm =>
+         if bitstringSyntax.is_v2w tm andalso Term.type_of tm = csr_ty andalso
+            closed tm
+           then bitstringLib.v2w_n2w_CONV tm
+         else raise Conv.UNCHANGED)
+  (* the closed hypotheses of a CSR step theorem: existence and
+     writability of the CSR *)
+  val is_CSR_defined_tm = ``riscv$is_CSR_defined``
+  fun is_access_hyp h =
+    case Lib.total Term.dest_comb h of
+       SOME (f, _) => Term.same_const f is_CSR_defined_tm
+     | NONE => false
+  val writable_pat = ``~((11 >< 10) (c: word12) = 3w: word2)``
+  fun is_writable_hyp h = Lib.can (Term.match_term writable_pat) h
+  (* the CSR number of an instruction must be known *)
+  fun csr_number_of th =
+    case List.find (fn h => is_access_hyp h orelse is_writable_hyp h)
+           (Thm.hyp th) of
+       SOME h =>
+         if closed h then ()
+         else raise ERR "riscv_step"
+                "the CSR number of a CSR instruction must be a constant"
+     | NONE => raise ERR "riscv_step" "not a CSR step theorem"
+  fun decide_access_rule th =
+    List.foldl
+      (fn (h, th) =>
+         if (is_access_hyp h orelse is_writable_hyp h) andalso closed h then
+           let
+             val eq =
+               (csr_number_conv
+                THENC PURE_REWRITE_CONV [is_CSR_defined_def]
+                THENC EVAL) h
+             val r = utilsLib.rhsc eq
+           in
+             if Teq r then PROVE_HYP (EQT_ELIM eq) th
+             else if Feq r then
+               raise ERR "riscv_step"
+                 ("instruction traps: " ^ Parse.term_to_string h ^ " is false")
+             else raise ERR "riscv_step"
+                    ("cannot decide " ^ Parse.term_to_string h)
+           end
+         else th) th (Thm.hyp th)
+  val record_rwts =
+    utilsLib.datatype_rewrites true "riscv"
+      ["riscv_state", "MachineCSR", "SupervisorCSR", "UserCSR",
+       "StateDelta", "mstatus", "misa", "mie", "mip", "mcause", "FPCSR",
+       "Privilege", "ExtStatus"] @
+    [combinTheory.UPDATE_EQ, combinTheory.APPLY_UPDATE_THM]
+  val word_eq_ss =
+    simpLib.std_conv_ss
+      {name = "word_eq", conv = wordsLib.word_EQ_CONV,
+       pats = [``n2w a = n2w b: 'a word``]}
+  (* a conditional update, such as the write of sip when mideleg delegates
+     SSI, as an update with a conditional value *)
+  val cond_updates =
+    utilsLib.mk_cond_update_thms
+      [``:riscv_state``, ``:MachineCSR``, ``:SupervisorCSR``, ``:UserCSR``,
+       ``:mstatus``, ``:mip``, ``:StateDelta``]
+  val csr_ss =
+    std_ss ++ simpLib.rewrites (record_rwts @ cond_updates) ++ word_eq_ss
+  (* H3, by which no PMP entry is locked *)
+  val h3 =
+    List.map Thm.ASSUME
+      (boolSyntax.strip_conj
+         (utilsLib.rhsc (Thm.SPEC ``^s.c_MCSR ^s.procID``
+                           riscv_stepTheory.pmp_unlocked_def)))
+  val pmpcfg_ent_unlocked =
+    REWRITE_RULE [riscv_stepTheory.pmp_unlocked_def]
+      riscv_stepTheory.pmpcfg_ent_unlocked
+  (* CSRMap and write'CSRMap for one CSR number k: the case of their
+     definitions reduced to the branch of k, computed once for each k.  The
+     compset has only these and the equality of word literals, so that the
+     branch is left as it is (the words compset would, for one, expand the
+     bit_field_insert of a write of fflags). *)
+  val csr_cmp =
+    computeLib.add_conv
+      (``$= : 'a word -> 'a word -> bool``, 2, bitstringLib.word_eq_CONV)
+      (computeLib.add_thms [CSRMap_def, write'CSRMap_def]
+         (computeLib.copy computeLib.bool_compset))
+  val instances = ref (Redblackmap.mkDict Arbnum.compare)
+  fun csr_instances k =
+    case Redblackmap.peek (!instances, k) of
+       SOME thms => thms
+     | NONE =>
+         let
+           val c = wordsSyntax.mk_n2w (numSyntax.mk_numeral k, ``:12``)
+           val v = Term.mk_var ("v", ``:word64``)
+           fun inst tm =
+             Drule.GEN_ALL (computeLib.CBV_CONV csr_cmp (Term.mk_comb (tm, s)))
+           val thms =
+             [inst ``riscv$CSRMap ^c``, inst ``riscv$write'CSRMap (^v, ^c)``]
+         in
+           instances := Redblackmap.insert (!instances, k, thms)
+           ; thms
+         end
+  fun csr_numbers tm =
+    List.map (wordsSyntax.dest_mod_word_literal)
+      (HolKernel.find_terms
+         (fn t => wordsSyntax.is_word_literal t andalso
+                  Term.type_of t = csr_ty) tm)
+  val csr_defs =
+    [CSR_def, write'CSR_def, writeCSR_def,
+     Delta_def, write'Delta_def, MCSR_def, write'MCSR_def, SCSR_def,
+     write'SCSR_def, check_CSR_conditions_def, fpEnabled_def,
+     counterReadAllowed_def, ext_status_def, is_mhpm_CSR_def,
+     legalize_mstatus_def, legalize_sstatus_def, legalize_misa_def,
+     legalize_xtvec_def, legalize_xepc_def, legalize_mcause_def,
+     legalize_scause_def, legalize_satp_def, write_pmpaddr_def,
+     read_mstatus_def, read_sstatus_def, read_xepc_def, haveRVC_def,
+     riscv_stepTheory.read_mip_eval, mtime_def, mtimecmp_def, msip_def,
+     MEM_def,
+     CLINT_BASE_def, MSTATUS_WMASK_def, MSTATUS_CONST_def, MSTATUS_SD_def,
+     SSTATUS_MASK_def, write'reg'FPCSR_def, boolTheory.literal_case_THM,
+     boolTheory.LET_THM, pairTheory.UNCURRY_DEF,
+     riscv_stepTheory.legalize_pmpcfg_unlocked, pmpcfg_ent_unlocked,
+     riscv_stepTheory.reg_rec_id, riscv_stepTheory.reg'mip_updates,
+     riscv_stepTheory.fflags_insert, riscv_stepTheory.mtimecmp_address] @ h3
+  (* again after the ground terms are evaluated, which can make them apply:
+     the address of mtimecmp is known only then *)
+  val csr_values =
+    [riscv_stepTheory.reg_rec_id, riscv_stepTheory.reg'mip_updates,
+     riscv_stepTheory.mtimecmp_address]
+  (* Ground words and booleans are evaluated, to numerals, but not the
+     register numbers (v2w), which stay as in the other step theorems. *)
+  val v2w_conv = Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV
+  fun ground_conv tm =
+    if closed tm then
+      if bitstringSyntax.is_v2w tm then raise Conv.UNCHANGED
+      else
+        let
+          val ty = Term.type_of tm
+        in
+          if wordsSyntax.is_word_type ty orelse ty = Type.bool then
+            let
+              val th = Conv.QCONV (v2w_conv THENC EVAL) tm
+            in
+              if Term.aconv (utilsLib.rhsc th) tm then raise Conv.UNCHANGED
+              else th
+            end
+          else Conv.SUB_CONV ground_conv tm
+        end
+    else Conv.SUB_CONV ground_conv tm
+  fun csr_conv tm =
+    let
+      val th1 = Conv.QCONV csr_number_conv tm
+      val tm1 = utilsLib.rhsc th1
+      val ks = Lib.mk_set (List.map fst (csr_numbers tm1))
+      val rwts = List.concat (List.map csr_instances ks)
+    in
+      Thm.TRANS th1
+        (Conv.QCONV
+           (SIMP_CONV csr_ss (rwts @ csr_defs)
+            THENC Conv.TRY_CONV ground_conv
+            THENC SIMP_CONV csr_ss csr_values) tm1)
+    end
+in
+  val csr_inst_names =
+    ["CSRRW", "CSRRS", "CSRRC", "CSRRWI", "CSRRSI", "CSRRCI"]
+  (* The left-hand side, the instruction as riscv_step built it, is kept. *)
+  fun csr_rule th =
+    ( csr_number_of th
+    ; th |> decide_access_rule
+         |> utilsLib.ALL_HYP_CONV_RULE csr_conv
+         |> Conv.RIGHT_CONV_RULE csr_conv )
+end
+
+(* -------------------------------------------------------------------------
    Evaluator
    ------------------------------------------------------------------------- *)
 
@@ -539,6 +738,64 @@ local
   val MP_Next_n = next riscv_stepTheory.NextRISCV
   val MP_Next_c = next riscv_stepTheory.NextRISCV_cond_branch
   val MP_Next_b = next riscv_stepTheory.NextRISCV_branch
+  val MP_Next_mret = next riscv_stepTheory.NextRISCV_mret
+  (* NextRISCV_trap with its last antecedent, that the trap is not
+     delegated, apart: in M-mode (H1) it holds whatever medeleg is. *)
+  val NextRISCV_trap =
+    let
+      val th = Drule.SPEC_ALL riscv_stepTheory.NextRISCV_trap
+      val cs = boolSyntax.strip_conj (fst (boolSyntax.dest_imp (Thm.concl th)))
+      val a5 = boolSyntax.list_mk_conj (List.take (cs, 5))
+      val a6 = List.last cs
+    in
+      Thm.DISCH a5
+        (Thm.DISCH a6
+           (Thm.MP th (Drule.LIST_CONJ
+                         (Drule.CONJUNCTS (Thm.ASSUME a5) @ [Thm.ASSUME a6]))))
+    end
+  val h1 = ``^s.c_privilege ^s.procID = 3w``
+  val not_delegated_conv =
+    STATE_CONV THENC REWRITE_CONV [Thm.ASSUME h1]
+  (* The cause, the trap value and the privilege that the trap is taken
+     from (MPP), for the trap of the instruction: M-mode by H1. *)
+  val trap_conv =
+    let
+      val rwts =
+        utilsLib.datatype_rewrites true "riscv"
+          ["riscv_state", "SynchronousTrap", "ExceptionType"]
+      val word_eq_ss =
+        simpLib.std_conv_ss
+          {name = "word_eq", conv = wordsLib.word_EQ_CONV,
+           pats = [``n2w a = n2w b: 'a word``]}
+    in
+      SIMP_CONV (std_ss ++ simpLib.rewrites rwts ++ word_eq_ss)
+        [Thm.ASSUME h1, excCode_def, riscv_stepTheory.rawInstBits_def]
+      THENC Conv.DEPTH_CONV
+              (fn tm => if wordsSyntax.is_w2w tm andalso
+                           List.null (Term.free_vars tm)
+                          then wordsLib.WORD_GROUND_CONV tm
+                        else raise Conv.UNCHANGED)
+    end
+  fun MP_Next_trap thm =
+    let
+      val th = Drule.MATCH_MP NextRISCV_trap thm
+      val not_delegated =
+        EQT_ELIM (not_delegated_conv (fst (boolSyntax.dest_imp (Thm.concl th))))
+    in
+      Thm.MP th not_delegated
+      |> state_rule
+      |> Conv.RIGHT_CONV_RULE trap_conv
+    end
+  val Mret_tm = ``riscv$Mret``
+  val Trap_tm = ``riscv$Trap``
+  fun is_csr_inst thm2 =
+    case boolSyntax.strip_comb (utilsLib.rhsc thm2) of
+       (c, [a]) =>
+         Term.is_const c andalso fst (Term.dest_const c) = "System" andalso
+         (case Lib.total (Term.dest_const o fst o boolSyntax.strip_comb) a of
+             SOME (n, _) => Lib.mem n csr_inst_names
+           | NONE => false)
+     | _ => false
   val Run_CONV = utilsLib.Run_CONV ("riscv", s) o utilsLib.rhsc
   val inst_rvc = Thm.INST [Term.mk_var ("rvc", Type.bool) |-> rvc_tm]
   fun tidy_up_rvc th =
@@ -569,6 +826,7 @@ in
         else
           let
             val ethm = run tm
+            val ethm = if is_csr_inst thm2 then csr_rule ethm else ethm
             val ethm = tidy_up_signalAddressException ethm
           in
             Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
@@ -588,11 +846,22 @@ in
       (Drule.ADD_ASSUM no_interrupt o tidy_up_rvc o ground_hyp_rule o
        canonical_contract_rule)
         (tidy_up_rvc
+           (* by NextFetch after the instruction: it falls through (NONE),
+              branches (BranchTo, or a test of it), returns from a trap
+              (Mret, NextRISCV_mret) or raises one (Trap, NextRISCV_trap) *)
            (if optionSyntax.is_none tm
               then MP_Next_n thm
             else if boolSyntax.is_cond tm
               then MP_Next_c thm
-            else MP_Next_b thm))
+            else
+              let
+                val nf = optionSyntax.dest_some tm
+              in
+                if Term.aconv nf Mret_tm then MP_Next_mret thm
+                else if Term.same_const Trap_tm (fst (boolSyntax.strip_comb nf))
+                  then MP_Next_trap thm
+                else MP_Next_b thm
+              end))
     end
 end
 

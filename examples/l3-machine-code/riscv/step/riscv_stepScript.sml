@@ -64,13 +64,27 @@ Definition DecodeAny_def:
    | Word w => Decode w
 End
 
-(* One step of the spec's Next, for an instruction that neither traps nor
-   returns from a trap (MRET, SRET); NONE otherwise.  NextRISCV does not
-   model what Next does besides running the instruction: it takes no
-   interrupts (see H6 below), leaves out the setupDelta and clear_logs of
-   Next (although an instruction may still write c_update, as writeFPRS
-   and writeFPRD do), and does not count (c_cycles, c_instret,
-   c_minstret_written). *)
+(* The fetched instruction bits, zero-extended: the trap value (mtval) of
+   an illegal instruction, which the spec's Next takes from fetchAndExecute
+   (P §3.1.16 p.52-53, [D43]). *)
+Definition rawInstBits_def:
+  (rawInstBits (Half h) = w2w h : word64) /\
+  (rawInstBits (Word w) = w2w w : word64)
+End
+
+(* One step of the spec's Next: the instruction at the pc runs, and then,
+   as in Next, the pc moves on, branches, returns from a trap (MRET) or
+   takes the trap that the instruction raised (an ECALL, an EBREAK or an
+   illegal instruction; excDest, takeTrap, and the instruction bits as the
+   trap value of an illegal instruction).  NONE when Next would trap in the
+   fetch (Fetch above raises UNDEFINED instead), when the instruction raises
+   an UNDEFINED, and for SRET, which returns to S-mode or U-mode through
+   sepc: S-mode is outside the validated scope (doc/design-privileged.md
+   Scope).  NextRISCV does not model what Next does besides running the
+   instruction: it takes no interrupts (see H6 below), leaves out the
+   setupDelta and clear_logs of Next (although an instruction may still
+   write c_update, as writeCSR, writeFPRS and writeFPRD do), and does not
+   count (c_cycles, c_instret, c_minstret_written). *)
 Definition NextRISCV_def:
   NextRISCV s =
   let rvc = haveRVC () s in
@@ -83,7 +97,14 @@ Definition NextRISCV_def:
     case NextFetch s of
        NONE => update_pc (pc + Skip s) s
      | SOME (BranchTo a) => update_pc a (write'NextFetch NONE s)
-     | _ => NONE
+     | SOME Mret => SOME (mret () (write'NextFetch NONE s))
+     | SOME (Trap t) =>
+         let ec = excCode t.trap in
+         let tval = if t.trap = Illegal_Instr then rawInstBits f else t.tval
+         in
+           SOME (takeTrap (F, ec, pc, tval, excDest (ec, curPrivilege () s) s)
+                   (write'NextFetch NONE s))
+     | SOME Sret => NONE
 End
 
 (* ------------------------------------------------------------------------
@@ -136,6 +157,49 @@ Proof
   \\ wordsLib.Cases_on_word_value `(2 >< 0) i : word3`
   \\ simp []
   \\ blastLib.FULL_BBLAST_TAC
+QED
+
+(* The legalised value of a write of pmpcfg0 or pmpcfg2 (P §3.7.1 p.71-72,
+   doc/design-privileged.md §5.2.3), for the step theorems of the CSR
+   instructions: each byte keeps its L, A, X, W and R bits (bits 6 and 5 are
+   read-only zero), except that W and X are cleared when W is set without R
+   (R = 0 and W = 1 is reserved).  A locked entry would keep its old byte;
+   with H3 none is locked, so the value does not depend on the old one. *)
+
+val legalize_pmpcfg_byte_unlocked = Q.prove(
+  `~c.L ==>
+   (reg'pmpcfg (legalize_pmpcfg_byte (b, c)) =
+    b && 0x9Fw && ~((b >>> 1 && ~b && 1w) << 1) &&
+    ~((b >>> 1 && ~b && 1w) << 2))`,
+  rw [legalize_pmpcfg_byte_def]
+  \\ fs ([rec'pmpcfg_def, reg'pmpcfg_def] @
+         TypeBase.updates_of ``:pmpcfg`` @ TypeBase.accessors_of ``:pmpcfg``)
+  \\ blastLib.FULL_BBLAST_TAC)
+
+val pmpcfg_bytes_unlocked = Q.prove(
+  `((x: word64) && 0x8080808080808080w = 0w) ==>
+   ~(rec'pmpcfg ((63 >< 56) x)).L /\ ~(rec'pmpcfg ((55 >< 48) x)).L /\
+   ~(rec'pmpcfg ((47 >< 40) x)).L /\ ~(rec'pmpcfg ((39 >< 32) x)).L /\
+   ~(rec'pmpcfg ((31 >< 24) x)).L /\ ~(rec'pmpcfg ((23 >< 16) x)).L /\
+   ~(rec'pmpcfg ((15 >< 8) x)).L /\ ~(rec'pmpcfg ((7 >< 0) x)).L`,
+  simp_tac (srw_ss()) (rec'pmpcfg_def :: TypeBase.accessors_of ``:pmpcfg``)
+  \\ blastLib.BBLAST_TAC)
+
+(* For one byte b, c = b >>> 1 && ~b && 1w is 1 when W is set and R is
+   clear, and c << 1 and c << 2 are then the W and X bits; for all eight
+   bytes at once, c has bit 8k set when byte k has W set and R clear. *)
+Theorem legalize_pmpcfg_unlocked:
+  (old && 0x8080808080808080w = 0w) ==>
+  (legalize_pmpcfg (v, old) =
+   v && 0x9F9F9F9F9F9F9F9Fw &&
+   ~((v >>> 1 && ~v && 0x0101010101010101w) << 1) &&
+   ~((v >>> 1 && ~v && 0x0101010101010101w) << 2))
+Proof
+  strip_tac
+  \\ imp_res_tac pmpcfg_bytes_unlocked
+  \\ asm_simp_tac std_ss [legalize_pmpcfg_def, legalize_pmpcfg_byte_unlocked]
+  \\ rpt (pop_assum kall_tac)
+  \\ blastLib.BBLAST_TAC
 QED
 
 (* With grain 0 every region bound is a multiple of 4, and a NAPOT region
@@ -383,15 +447,178 @@ Proof
          combinTheory.UPDATE_APPLY_IMP_ID]
 QED
 
+(* MRET (P §3.3.2 p.61, §3.1.6.1 p.32-33, §3.1.6.4 p.35): the privilege
+   becomes mstatus.MPP (privilege maps the reserved 2 to U-mode, and
+   privLevel back to 0), MIE becomes MPIE, MPIE becomes 1, MPP becomes U,
+   MPRV is cleared unless MPP is M, and the pc becomes mepc, with bit 1
+   masked when misa.C is clear (read_xepc). *)
+Theorem mret_eval:
+  mret () s =
+  s with
+  <| c_MCSR :=
+       (s.procID =+
+          s.c_MCSR s.procID with
+          mstatus :=
+            (s.c_MCSR s.procID).mstatus with
+            <| MIE := (s.c_MCSR s.procID).mstatus.MPIE;
+               MPIE := T;
+               MPP := 0w;
+               MPRV := ((s.c_MCSR s.procID).mstatus.MPRV /\
+                        ((s.c_MCSR s.procID).mstatus.MPP = 3w)) |>)
+       s.c_MCSR;
+     c_privilege :=
+       (s.procID =+
+          if (s.c_MCSR s.procID).mstatus.MPP = 2w then 0w
+          else (s.c_MCSR s.procID).mstatus.MPP) s.c_privilege;
+     c_PC :=
+       (s.procID =+
+          if (s.c_MCSR s.procID).misa.C then (s.c_MCSR s.procID).mepc
+          else (s.c_MCSR s.procID).mepc && ~3w) s.c_PC |>
+Proof
+  simp [mret_def, write'MCSR_def, MCSR_def, setPrivilege_def, read_xepc_def,
+        haveRVC_def, write'PC_def]
+  \\ wordsLib.Cases_on_word_value `(s.c_MCSR s.procID).mstatus.MPP`
+  \\ simp [privilege_def, privLevel_def, riscv_state_component_equality,
+           combinTheory.UPDATE_EQ]
+QED
+
+(* Trap entry to M-mode (P §3.1.6.1 p.32, §3.1.14-3.1.16 p.48-53): mcause,
+   mepc and mtval are set, MPIE becomes MIE, MIE becomes 0, MPP becomes the
+   privilege that the trap is taken from, the privilege becomes M, and the
+   pc becomes the trap vector of mtvec. *)
+Theorem takeTrap_Machine:
+  takeTrap (intr, ec, epc, tval, Machine) s =
+  s with
+  <| c_MCSR :=
+       (s.procID =+
+          s.c_MCSR s.procID with
+          <| mcause := <| EC := w2w ec; Int := intr |>;
+             mepc := epc;
+             mtval := tval;
+             mstatus :=
+               (s.c_MCSR s.procID).mstatus with
+               <| MIE := F;
+                  MPIE := (s.c_MCSR s.procID).mstatus.MIE;
+                  MPP := if s.c_privilege s.procID = 2w then 0w
+                         else s.c_privilege s.procID |> |>)
+       s.c_MCSR;
+     c_privilege := (s.procID =+ 3w) s.c_privilege;
+     c_PC :=
+       (s.procID =+ trapVector ((s.c_MCSR s.procID).mtvec, intr, ec)) s.c_PC |>
+Proof
+  simp [takeTrap_def, write'MCSR_def, MCSR_def, setPrivilege_def,
+        curPrivilege_def, write'PC_def, privLevel_def]
+  \\ wordsLib.Cases_on_word_value `s.c_privilege s.procID`
+  \\ simp [privilege_def, privLevel_def, riscv_state_component_equality,
+           combinTheory.UPDATE_EQ, MachineCSR_component_equality,
+           mcause_component_equality]
+QED
+
+(* An exception is not an interrupt, so it goes to the base of mtvec, in
+   Direct and in Vectored mode (P §3.1.7 p.41-42). *)
+val trapVector_exception = Q.prove(
+  `trapVector (tvec, F, ec) = tvec && ~3w`,
+  simp [trapVector_def] \\ blastLib.BBLAST_TAC)
+
+Theorem NextRISCV_mret:
+   (Fetch s = (w, s')) /\
+   (DecodeAny ((s.c_MCSR s.procID).misa.C) w = i) /\
+   (Run i s' = nxt) /\
+   (nxt.exception = NoException) /\
+   (nxt.c_NextFetch nxt.procID = SOME Mret) ==>
+   (NextRISCV s =
+      SOME
+        (nxt with
+         <| c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch;
+            c_MCSR :=
+              (nxt.procID =+
+                 nxt.c_MCSR nxt.procID with
+                 mstatus :=
+                   (nxt.c_MCSR nxt.procID).mstatus with
+                   <| MIE := (nxt.c_MCSR nxt.procID).mstatus.MPIE;
+                      MPIE := T;
+                      MPP := 0w;
+                      MPRV := ((nxt.c_MCSR nxt.procID).mstatus.MPRV /\
+                               ((nxt.c_MCSR nxt.procID).mstatus.MPP = 3w)) |>)
+              nxt.c_MCSR;
+            c_privilege :=
+              (nxt.procID =+
+                 if (nxt.c_MCSR nxt.procID).mstatus.MPP = 2w then 0w
+                 else (nxt.c_MCSR nxt.procID).mstatus.MPP) nxt.c_privilege;
+            c_PC :=
+              (nxt.procID =+
+                 if (nxt.c_MCSR nxt.procID).misa.C then
+                   (nxt.c_MCSR nxt.procID).mepc
+                 else (nxt.c_MCSR nxt.procID).mepc && ~3w) nxt.c_PC |>))
+Proof
+  lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def,
+       haveRVC_def, MCSR_def, mret_eval]
+  \\ simp [riscv_state_component_equality]
+QED
+
+(* A trap that the instruction raised, taken to M-mode, with the cause of
+   the exception (Int = 0), the pc of the instruction in mepc, the trap
+   value in mtval (the instruction bits for an illegal instruction) and the
+   base of mtvec as the new pc.  The trap goes to M-mode, whatever medeleg
+   holds, when it is taken from M-mode, and from a lower mode when medeleg
+   does not delegate its cause (excDest; P §3.1.8 p.42-43).  riscv_stepLib
+   uses it for ECALL, EBREAK and C.EBREAK; it has no step theorems for
+   illegal instructions, which NextRISCV takes as traps too. *)
+Theorem NextRISCV_trap:
+   (Fetch s = (w, s')) /\
+   (DecodeAny ((s.c_MCSR s.procID).misa.C) w = i) /\
+   (Run i s' = nxt) /\
+   (nxt.exception = NoException) /\
+   (nxt.c_NextFetch nxt.procID = SOME (Trap t)) /\
+   ((nxt.c_privilege nxt.procID = 3w) \/
+    ~word_bit (w2n (excCode t.trap)) (nxt.c_MCSR nxt.procID).medeleg) ==>
+   (NextRISCV s =
+      SOME
+        (nxt with
+         <| c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch;
+            c_MCSR :=
+              (nxt.procID =+
+                 nxt.c_MCSR nxt.procID with
+                 <| mcause := <| EC := w2w (excCode t.trap); Int := F |>;
+                    mepc := nxt.c_PC nxt.procID;
+                    mtval :=
+                      (if t.trap = Illegal_Instr then rawInstBits w
+                       else t.tval);
+                    mstatus :=
+                      (nxt.c_MCSR nxt.procID).mstatus with
+                      <| MIE := F;
+                         MPIE := (nxt.c_MCSR nxt.procID).mstatus.MIE;
+                         MPP := if nxt.c_privilege nxt.procID = 2w then 0w
+                                else nxt.c_privilege nxt.procID |> |>)
+              nxt.c_MCSR;
+            c_privilege := (nxt.procID =+ 3w) nxt.c_privilege;
+            c_PC :=
+              (nxt.procID =+ (nxt.c_MCSR nxt.procID).mtvec && ~3w) nxt.c_PC
+         |>))
+Proof
+  strip_tac
+  \\ `excDest (excCode t.trap, curPrivilege () nxt) nxt = Machine`
+     by fs [excDest_def, curPrivilege_def, privilege_def, MCSR_def]
+  \\ lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def,
+          haveRVC_def, MCSR_def, takeTrap_Machine, trapVector_exception]
+  \\ fs [riscv_state_component_equality]
+QED
+
+(* With misa.C clear a 16-bit instruction is illegal: NextRISCV takes the
+   trap, with the parcel as the trap value (before the priv-1.13 model,
+   NextRISCV gave NONE). *)
 Theorem NextRISCV_Half_noC:
-   (Fetch s = (Half h, s')) /\ ~(s.c_MCSR s.procID).misa.C ==>
-   (NextRISCV s = NONE)
+   (Fetch s = (Half h, s')) /\ ~(s.c_MCSR s.procID).misa.C /\
+   (s'.exception = NoException) ==>
+   (NextRISCV s =
+      SOME (takeTrap (F, 2w, s'.c_PC s'.procID, w2w h,
+                      excDest (2w, curPrivilege () s') s')
+              (s' with c_NextFetch := (s'.procID =+ NONE) s'.c_NextFetch)))
 Proof
   rw [NextRISCV_def, DecodeAny_def, haveRVC_def, MCSR_def, Run_def,
       dfn'UnknownInstruction_def, signalException_def, setTrap_def,
-      write'NextFetch_def, NextFetch_def]
-  \\ rpt (pairarg_tac \\ fs [])
-  \\ fs [combinTheory.UPDATE_def]
+      write'NextFetch_def, NextFetch_def, PC_def, excCode_def,
+      rawInstBits_def, excDest_def, curPrivilege_def, combinTheory.UPDATE_EQ]
 QED
 
 (* ------------------------------------------------------------------------
@@ -1486,23 +1713,23 @@ local
   (* the prefix of the names of the field selectors and updates *)
   val field =
     TypeBasePure.mk_recordtype_fieldsel {tyname = "riscv_state", fieldname = ""}
-  fun unevaluated tm =
+  fun unevaluated allowed tm =
     Term.is_const tm andalso
     let
       val {Thy, Name, Ty} = Term.dest_thy_const tm
     in
       Thy = "riscv" andalso not (String.isPrefix field Name) andalso
-      Name <> "Skip" andalso
+      not (Lib.mem Name ("Skip" :: allowed)) andalso
       List.exists (fn ty => ty = state_ty) (fst (HolKernel.strip_fun Ty))
     end
-  fun check n th =
+  fun check allowed n th =
     case List.find (fn p => Lib.can (HolKernel.find_term p) (Thm.concl th))
            bad of
        SOME _ =>
          ( print_thm th; print "\n"
          ; raise ERR "class" ("trap or check left in " ^ n))
      | NONE =>
-         case Lib.total (HolKernel.find_term unevaluated)
+         case Lib.total (HolKernel.find_term (unevaluated allowed))
                 (boolSyntax.rhs (Thm.concl th)) of
             SOME c =>
               ( print_thm th; print "\n"
@@ -1524,7 +1751,9 @@ local
     read_word32 ::
     List.filter (fn th => not (aconv (Thm.concl th) (Thm.concl rawReadData))) l
 in
-  fun class_with extra suffix args avoid n =
+  (* allowed: the functions of the model, besides Skip, that may stay in
+     the conclusion; only the CSR instructions have any (see below) *)
+  fun class_gen allowed extra suffix args avoid n =
     let
       val name = "dfn'" ^ n
       val read = if Lib.mem n reads8 then [address_aligned3] else []
@@ -1538,9 +1767,11 @@ in
       val thms = DB.fetch "riscv" (name ^ "_def") :: write @ read @ align @ extra
     in
       case ev (thms @ l) avoid [] (Parse.Term ([QUOTE name] @ args)) of
-         [th] => utilsLib.save_thms (n ^ suffix) [check n (hyp_eq_rule th)]
+         [th] =>
+           utilsLib.save_thms (n ^ suffix) [check allowed n (hyp_eq_rule th)]
        | _ => raise ERR "class" ("more than one theorem" ^ n)
     end
+  val class_with = class_gen []
   val class = class_with [] ""
 end
 
@@ -1785,6 +2016,160 @@ val FCVT_D_S  = fp_exact `(rd, rs, fprnd)` "FCVT_D_S"
 
 val WFI = class [] [] "WFI"
 val SFENCE_VMA = class `(rs1, rs2)` [] "SFENCE_VMA"
+
+(* ECALL and EBREAK raise their exception, which NextRISCV takes
+   (NextRISCV_trap): ECALL the environment call from the current privilege,
+   M-mode by H1 (P §3.3.1 p.60-61), and EBREAK a breakpoint, with its own
+   address as the trap value (P §3.1.16 p.52, [D43]).  MRET is legal in
+   M-mode (H1) and leaves the return to NextRISCV (NextRISCV_mret). *)
+
+local
+  val trap_thms =
+    [signalEnvCall_def, signalException_def, signalAddressException_def,
+     setTrap_def, write'NextFetch_def]
+in
+  val ECALL = class_with trap_thms "" [] [] "ECALL"
+  val EBREAK = class_with trap_thms "" [] [] "EBREAK"
+  val MRET = class_with trap_thms "" [] [] "MRET"
+end
+
+(* ------------------------------------------------------------------------
+   CSR instructions (doc/design-privileged.md §3.2)
+
+   The step theorems of the six Zicsr instructions below are for any CSR
+   number csr: the CSR is read with CSRMap csr and written with writeCSR,
+   both left as they are, and riscv_stepLib evaluates them for the CSR
+   number of the instruction.  They assume what checkCSROp checks in M-mode
+   (H1, by which every CSR is accessible: privLevel Machine = 3w), which
+   riscv_stepLib also decides for the CSR number: that the CSR exists
+   (is_CSR_defined), for a write that it is not read-only (bits 11:10 of
+   its number are not 3), and the further conditions of the CSR
+   (check_CSR_conditions: mstatus.FS <> Off for fflags, frm and fcsr).
+   CSRRW and CSRRWI always write the CSR; CSRRS, CSRRC, CSRRSI and CSRRCI
+   write it unless their rs1 or uimm field is 0, which the theorems named
+   _READ assume (U §4.2.1 p.62-63, Table 21).  The _NOP theorems have
+   rd = 0, as for the other instructions.
+   ------------------------------------------------------------------------ *)
+
+(* For the CSR step theorems, which riscv_stepLib evaluates for one CSR
+   number: rewrites that keep a CSR value a word expression.  A register
+   type of the spec (mstatus, misa, mie, mip, mcause, fcsr) keeps every bit
+   of the word that it is made from, so reading back a value written with
+   rec' gives the word. *)
+Theorem reg_rec_id:
+  (reg'FPCSR (rec'FPCSR x1) = x1) /\ (reg'mstatus (rec'mstatus x2) = x2) /\
+  (reg'misa (rec'misa x3) = x3) /\ (reg'mie (rec'mie x4) = x4) /\
+  (reg'mip (rec'mip x5) = x5) /\ (reg'mcause (rec'mcause x6) = x6)
+Proof
+  simp [reg'FPCSR_def, rec'FPCSR_def, reg'mstatus_def, rec'mstatus_def,
+        reg'misa_def, rec'misa_def, reg'mie_def, rec'mie_def, reg'mip_def,
+        rec'mip_def, reg'mcause_def, rec'mcause_def]
+  \\ blastLib.BBLAST_TAC
+QED
+
+(* The word of mip with one of the bits set that read_mip sets from the
+   platform and the CLINT (for read_mip_eval). *)
+Theorem reg'mip_updates:
+  (reg'mip (m with MEIP := b) =
+   reg'mip m && ~0x800w || (if b then 0x800w else 0w)) /\
+  (reg'mip (m with SEIP := b) =
+   reg'mip m && ~0x200w || (if b then 0x200w else 0w)) /\
+  (reg'mip (m with MTIP := b) =
+   reg'mip m && ~0x80w || (if b then 0x80w else 0w)) /\
+  (reg'mip (m with MSIP := b) =
+   reg'mip m && ~0x8w || (if b then 0x8w else 0w))
+Proof
+  Cases_on `m` \\ Cases_on `b`
+  \\ simp_tac (srw_ss()) (reg'mip_def :: TypeBase.updates_of ``:mip``)
+  \\ blastLib.BBLAST_TAC
+QED
+
+(* mip as read (P §3.1.9 p.43-45, design-privileged.md §4.1.3): the stored
+   SSIP and STIP, MSIP and MTIP from the CLINT, SEIP as stored or from the
+   platform, and MEIP from the platform. *)
+Theorem read_mip_eval:
+  read_mip () s =
+  reg'mip (s.c_MCSR s.procID).mip && 0x22w ||
+  (if msip s.procID s then 0x8w else 0w) ||
+  (if mtimecmp s.procID s <=+ mtime () s then 0x80w else 0w) ||
+  (if (s.c_MCSR s.procID).mip.SEIP \/ s.c_extSEIP s.procID then 0x200w
+   else 0w) ||
+  (if s.c_extMEIP s.procID then 0x800w else 0w)
+Proof
+  simp [read_mip_def, MCSR_def, reg'mip_updates, reg_rec_id]
+  \\ Cases_on `(s.c_MCSR s.procID).mip`
+  \\ simp [reg'mip_def]
+  \\ rw []
+  \\ blastLib.BBLAST_TAC
+QED
+
+(* A write of fflags replaces bits 4:0 of fcsr. *)
+Theorem fflags_insert:
+  bit_field_insert 4 0 (x: word5) (w: word32) = w && 0xFFFFFFE0w || w2w x
+Proof
+  simp [wordsTheory.bit_field_insert_def] \\ blastLib.BBLAST_TAC
+QED
+
+(* The address of mtimecmp is a multiple of 8, so the double-word of MEM
+   that holds it starts at the address itself. *)
+Theorem mtimecmp_address:
+  w2w ((63 >< 3) (0x2004000w + 8w * w2w (h: word8) : word64) : 61 word) << 3 =
+  0x2004000w + 8w * w2w h : word64
+Proof
+  blastLib.BBLAST_TAC
+QED
+
+(* A read of a CSR that exists leaves the state as it is: CSRMap raises an
+   exception only at an address that is_CSR_defined rejects. *)
+val CSR_defined = uprove
+  `is_CSR_defined csr ==> (CSR csr s = (FST (CSRMap csr s), s))`
+  (
+  strip_tac
+  \\ `SND (CSRMap csr s) = s`
+     by (pop_assum mp_tac
+         \\ simp_tac std_ss [CSRMap_def, boolTheory.literal_case_DEF]
+         \\ rpt (IF_CASES_TAC \\ simp_tac std_ss [])
+         \\ fs [is_CSR_defined_def, is_mhpm_CSR_def]
+         \\ blastLib.FULL_BBLAST_TAC)
+  \\ simp [CSR_def]
+  \\ metis_tac [pairTheory.PAIR]
+  )
+
+(* Every CSR is accessible in M-mode, whose level is the highest. *)
+val privLevel_Machine_hs = blastLib.BBLAST_PROVE ``(3w: word2) >=+ pr``
+
+local
+  val defined = ``is_CSR_defined csr``
+  val writable = ``(11 >< 10) (csr: word12) <> 3w``
+  val conditions = ``check_CSR_conditions (csr, Machine) ^s``
+  val csr_thms =
+    [accessCSR_def, checkCSROp_def, check_CSR_access_def, csrRW_def,
+     csrPR_def, privLevel_def, privLevel_Machine_hs, CSR_defined] @
+    utilsLib.datatype_rewrites true "riscv" ["csrOp", "accessType"]
+  val csr_class = class_gen ["CSRMap", "writeCSR"] csr_thms
+  (* CSRRW and CSRRWI: always a write *)
+  fun write_class args n =
+    (csr_class "" args [[defined, writable, conditions]] n,
+     csr_class "" args [[rd0, defined, writable, conditions]] n)
+  (* CSRRS, CSRRC, CSRRSI and CSRRCI: a write unless the field f is 0 *)
+  fun set_class args f n =
+    let
+      val f0 = ``^f = 0w: word5``
+      val f1 = ``^f <> 0w: word5``
+    in
+      (csr_class "" args [[f1, defined, writable, conditions]] n,
+       csr_class "" args [[rd0, f1, defined, writable, conditions]] n,
+       csr_class "_READ" args [[f0, defined, conditions]] n,
+       csr_class "_READ" args [[rd0, f0, defined, conditions]] n)
+    end
+in
+  val CSRRW = write_class `(rd, rs1, csr)` "CSRRW"
+  val CSRRS = set_class `(rd, rs1, csr)` ``rs1: word5`` "CSRRS"
+  val CSRRC = set_class `(rd, rs1, csr)` ``rs1: word5`` "CSRRC"
+  val CSRRWI = write_class `(rd, uimm, csr)` "CSRRWI"
+  val CSRRSI = set_class `(rd, uimm, csr)` ``uimm: word5`` "CSRRSI"
+  val CSRRCI = set_class `(rd, uimm, csr)` ``uimm: word5`` "CSRRCI"
+end
 
 (* ------------------------------------------------------------------------ *)
 
