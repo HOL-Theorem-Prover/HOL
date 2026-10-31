@@ -302,9 +302,8 @@ type trace_file = int * id list * id list *
 
 ## Checking identity capture and replay
 
-The parser selftest target, `selftest.exe`, runs with the tracing
-kernel and a Poly/ML runtime providing `exportSmall`. The separate-process
-identity regression uses a tracing HOL built from these sources:
+The separate-process identity regression uses a tracing HOL built from
+these sources with a Poly/ML runtime providing `exportSmall`:
 
 ```sh
 tests/run.sh identity /path/to/tracing/bin/hol /path/to/scratch

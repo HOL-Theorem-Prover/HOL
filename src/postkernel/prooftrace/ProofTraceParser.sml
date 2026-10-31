@@ -66,7 +66,9 @@ fun is_32bit_magic raw =
 (* Parse: detects the magic byte, builds a ptrs vector with the right word
    size, and returns the appropriate heap variant. Both variants share the
    same public API — sh* functions dispatch internally. *)
-fun parseVector raw =
+fun parse filename = let
+  val raw = decompressGzip filename
+in
   if is_32bit_magic raw then let
     val vec = raw
     val root = Word8Vector.length vec - 4   (* last 4 bytes = root tagptr *)
@@ -90,7 +92,7 @@ fun parseVector raw =
     val rootPtr = get64 vec root
   in (rootPtr, Heap64 (vec, DArray.vector out)) end
 
-fun parse filename = parseVector (decompressGzip filename)
+end
 
 datatype flags = FBytes of int | FObj of int | FOther
 

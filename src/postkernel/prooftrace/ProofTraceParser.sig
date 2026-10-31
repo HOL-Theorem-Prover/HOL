@@ -13,7 +13,6 @@ type ('a,'A) gparser = 'a ptr -> 'A
 type 'a parser = ('a,'a) gparser
 type root
 val parse: string -> root ptr * heap
-val parseVector: Word8Vector.vector -> root ptr * heap
 
 val heapSize: heap -> int
 
