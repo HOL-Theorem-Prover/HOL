@@ -2412,11 +2412,26 @@ Theorem HD_DROP:
 Proof   Induct_on ‘l’ >> asm_simp_tac (srw_ss() ++ DNF_ss) [LT_SUC]
 QED
 
+Theorem DROP_LAST:
+  ls ≠ [] ⇒ DROP (LENGTH ls - 1) ls = [LAST ls]
+Proof
+  Induct_on ‘ls’>>rw[]>>
+  Cases_on ‘ls’>>fs[]
+QED
+
 Theorem EL_DROP:
   !m n l. m + n < LENGTH l ==> (EL m (DROP n l) = EL (m + n) l)
 Proof
   Induct_on ‘l’ >> SIMP_TAC (srw_ss()) [] >> Cases_on ‘n’ >>
   FULL_SIMP_TAC (srw_ss()) [DROP_def, ADD_CLAUSES]
+QED
+
+Theorem MEM_DROP_imp:
+  MEM x (DROP n ls) ⇒ MEM x ls
+Proof
+  map_every qid_spec_tac [‘n’,‘x’,‘ls’]>>
+  Induct>>fs[]>>rw[]>>
+  Cases_on ‘n’>>fs[]>>res_tac>>simp[]
 QED
 
 Theorem MAP_DROP:
@@ -3771,6 +3786,21 @@ Proof
 Induct THEN SRW_TAC [] [MAP, ZIP]
 QED
 
+Theorem FLAT_GENLIST_single:
+  FLAT (GENLIST (K [x]) n) = GENLIST (K x) n
+Proof
+  Induct_on ‘n’>>rw[GENLIST_CONS]
+QED
+
+Theorem ZIP_SNOC:
+  ∀l l' x y.
+    LENGTH l = LENGTH l' ⇒ ZIP (SNOC x l, SNOC y l') = SNOC (x,y) (ZIP (l,l'))
+Proof
+  Induct>>rw[]>- simp[ZIP_def]>>
+  Cases_on ‘l'’>>fs[]>>
+  simp[ZIP_def]
+QED
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
@@ -5109,6 +5139,12 @@ Proof
    >> SRW_TAC [ETA_ss] [arithmeticTheory.ADD_ASSOC]
 QED
 
+Theorem GENLIST_APPEND1:
+  x = f n ⇒ GENLIST f n ++ [x] = GENLIST f (SUC n)
+Proof
+  simp[GENLIST,SNOC_APPEND]
+QED
+
 Theorem LIST_TO_SET_GENLIST:
     !f n. LIST_TO_SET (GENLIST f n) = IMAGE f (count n)
 Proof
@@ -5353,6 +5389,22 @@ Proof
   \\ simp[]
 QED
 
+Theorem dropWhile_const_split:
+  ls = GENLIST (K a) (LENGTH ls - LENGTH (list$dropWhile ((=)a) ls)) ++ list$dropWhile ((=)a) ls
+Proof
+  Induct_on ‘ls’>>rw[]>>
+  simp[arithmeticTheory.SUB]>>
+  IF_CASES_TAC>>
+  fs[LENGTH_dropWhile_LESS_EQ,GSYM arithmeticTheory.NOT_LESS_EQUAL]>>
+  simp[GENLIST_CONS]
+QED
+
+Theorem EVERY_const_GENLIST:
+  EVERY ((=)a) ls ⇔ (ls = GENLIST (K a) (LENGTH ls))
+Proof
+  Induct_on ‘ls’>>rw[EQ_IMP_THM]>>fs[GENLIST_CONS]
+QED
+
 Theorem IMP_EVERY_LUPDATE:
    !xs h i. P h /\ EVERY P xs ==> EVERY P (LUPDATE h i xs)
 Proof
@@ -5488,6 +5540,33 @@ Proof
   \\ Q.MATCH_GOALSUB_RENAME_TAC`IS_SOME (f x)`
   \\ Cases_on`f x` \\ rw[]
   \\ Cases_on`OPT_MMAP f ls` \\ fs[]
+QED
+
+Theorem OPT_MMAP_LENGTH:
+  ∀ls x. OPT_MMAP f ls = SOME x ⇒ LENGTH x = LENGTH ls
+Proof
+  Induct >> rw[]>>
+  simp[ADD1]
+QED
+
+Theorem OPT_MMAP_SOME:
+  OPT_MMAP SOME ls = SOME ls
+Proof
+  Induct_on ‘ls’>>simp[]
+QED
+
+Theorem OPT_MMAP_MAP:
+  OPT_MMAP f ls = OPT_MMAP I (MAP f ls)
+Proof
+  map_every qid_spec_tac [‘f’,‘ls’]>>
+  Induct>>fs[]
+QED
+
+Theorem OPT_MMAP_MAP_o:
+  OPT_MMAP g (MAP f ls) = OPT_MMAP (g o f) ls
+Proof
+  simp[Once OPT_MMAP_MAP,MAP_MAP_o]>>
+  simp[Once OPT_MMAP_MAP,SimpRHS]
 QED
 
 Theorem LAST_compute:
