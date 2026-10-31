@@ -7,9 +7,9 @@ sig
   val extract_parents : string -> (string * string) list
 
   (* Locate a parent theory's .dat file by name, searching
-     [search_dirs] for either the Poly-munged
-     <dir>/.hol/objs/<thy>Theory.dat or the plain
-     <dir>/<thy>Theory.dat, then falling back to sigobj and the
+     [search_dirs] for <thy>Theory.dat, first in each directory's
+     products directory (HFS_NameMunge.objdir_for), then directly in
+     that directory.  Falls back to sigobj and the
      symlink target of sigobj/<thy>Theory.uo.  Returns NONE if not
      found. *)
   val find_parent_dat : string list -> string -> string option

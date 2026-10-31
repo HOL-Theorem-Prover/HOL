@@ -5,11 +5,13 @@ type t = {
   holstate : string option,
   maxheap : int option,
   multithread : int option,
+  objroot : string option,
   poly : string option,
   polymllibdir : string option,
   poly_not_hol : bool,
   relocbuild : bool,
   retry_oos : int,
+  srcroot : string option,
   time_limit : Time.time option,
   core : HM_Core_Cline.t
 }
@@ -17,5 +19,6 @@ type t = {
 val option_descriptions : t HM_Core_Cline.cline_result GetOpt.opt_descr list
 val fupd_core : (HM_Core_Cline.t -> HM_Core_Cline.t) -> (t -> t)
 val default_options : t
+val layout_options : t -> {objroot : string option, srcroot : string option}
 
 end

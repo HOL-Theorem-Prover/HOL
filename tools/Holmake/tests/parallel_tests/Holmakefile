@@ -82,6 +82,7 @@ DIRNAMES += cache_reflink \
             issue1903 \
             json-strings \
             local_parallelism_limit \
+            objroot \
             placeholder_regroup \
             projfile_cross_dir_deps \
             projfile_module \
