@@ -215,6 +215,33 @@ def _last_token(text, token, start, stop):
 
 
 # ---------------------------------------------------------------- #
+def find_hol_tree(path, fallback=None):
+    """The HOL checkout that owns `path`, or `fallback`.
+
+    `$(HOLDIR)` is baked into `bin/hol` when the tree is built
+    (`Holmake_types.sml`), so a session can only answer about a script
+    whose dependencies were built against that same tree.  The adapter
+    is normally registered once, against the governing checkout, while
+    the work happens in a git worktree beside it -- and the governing
+    checkout may not even be built.  So prefer the tree the script
+    actually lives in: walk up for a directory holding both `bin/hol`
+    and `sigobj`, which together mean "a configured HOL checkout".
+
+    A script outside any such tree (CakeML, a user's own project)
+    legitimately falls back: its heap was built against some HOL tree
+    and only the caller knows which.
+    """
+    cur = os.path.dirname(os.path.abspath(path))
+    while True:
+        if (os.path.exists(os.path.join(cur, "bin", "hol"))
+                and os.path.isdir(os.path.join(cur, "sigobj"))):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return fallback
+        cur = parent
+
+
 # HOL-side operations
 # ---------------------------------------------------------------- #
 class Hol:
@@ -231,6 +258,24 @@ class Hol:
         if not os.path.exists(path):
             raise ValueError("no such file: %s" % path)
         return path
+
+    def _set_walk_budget(self, session, budget_ms):
+        """Raise what a walk, and the answer around it, may spend.
+
+        Every tool here that reaches a step reaches it by replaying
+        every step before it, so the cursor-sized default (1500ms) is
+        wrong for all of them -- and when it bites, the answer
+        describes the budget rather than the proof.  The server's
+        30s backstop on the whole answer follows this one, so setting
+        it here covers both.
+        """
+        if not budget_ms:
+            return
+        try:
+            session.request("$/setConfig", {"walkBudgetMs": int(budget_ms)},
+                            timeout=30)
+        except Exception as exc:                      # pragma: no cover
+            log("could not raise walkBudgetMs: %s" % exc)
 
     def _ready(self, file, timeout=180):
         """Session with `file` open, compiled, and current with disk.
@@ -354,7 +399,25 @@ class Hol:
 
     # -- tools -----------------------------------------------------
     def check_file(self, file, timeout=180, proof_timeout=600):
+        # Both budgets are caller-settable because the defaults encode
+        # an assumption -- that no single proof runs for minutes --
+        # which some files break honestly.  When the caller raises the
+        # proof wait, raise the *server's* per-proof budget to match:
+        # otherwise the adapter waits patiently while the server has
+        # already given up at its own 120s default and reported
+        # `timedout`, which reads as a broken file rather than a slow
+        # one.
         session, path, _, blocked = self._ready(file, timeout)
+        if proof_timeout != 600:
+            try:
+                # A request, not a notification: the server dispatches
+                # `$/setConfig` as a Request, so a notification with the
+                # same method is simply dropped.
+                session.request("$/setConfig",
+                                {"proofTimeoutMs": int(proof_timeout * 1000)},
+                                timeout=30)
+            except Exception as exc:          # pragma: no cover
+                log("could not raise proofTimeoutMs: %s" % exc)
         if blocked is not None:
             return self._blocked_report(path, blocked, session)
         diags = self._diagnostics(session, path)
@@ -392,6 +455,29 @@ class Hol:
                 tail = " -- " + detail if detail else ""
                 lines.append("  %s: %s%s" % (status, name, tail))
 
+        # The cost table.  A verdict says whether the file is healthy;
+        # this says where its build time went, which is the other
+        # question asked of a script that takes minutes.  Only proofs
+        # that actually ran have a time, so a short table under a long
+        # proof list means most of them were cheated or unseen, not
+        # that they were free.
+        timed = sorted(
+            ((state["elapsedMs"], name)
+             for name, state in proofs.items()
+             if isinstance(state.get("elapsedMs"), int)),
+            reverse=True)
+        if timed:
+            total = sum(ms for ms, _ in timed)
+            lines.append("")
+            lines.append("slowest proofs (%d timed, %.1fs total):"
+                         % (len(timed), total / 1000.0))
+            for ms, name in timed[:15]:
+                share = (100.0 * ms / total) if total else 0.0
+                lines.append("  %8.2fs  %4.1f%%  %s"
+                             % (ms / 1000.0, share, name))
+            if len(timed) > 15:
+                lines.append("  ... %d more" % (len(timed) - 15))
+
         if diags:
             lines.append("")
             lines.append("diagnostics (%d):" % len(diags))
@@ -415,10 +501,11 @@ class Hol:
         return _budget("\n".join(lines), footer=verdict)
 
     def goal_state(self, file, theorem, step=None, occurrence=1, width=100,
-                   timeout=180):
+                   budget_ms=0, timeout=180):
         session, path, text, blocked = self._ready(file, timeout)
         if blocked is not None:
             return self._blocked_report(path, blocked, session)
+        self._set_walk_budget(session, budget_ms)
         pos = self._position_of(session, path, text, theorem, occurrence)
         params = {"textDocument": {"uri": path_to_uri(path)},
                   "position": pos, "width": width}
@@ -429,6 +516,73 @@ class Hol:
         if step is None:
             at_failure = self._state_at_failure(session, path, result, width)
         return _render_goal_state(result, theorem, step, at_failure)
+
+    def proof_profile(self, file, theorem, occurrence=1, top=25,
+                      budget_ms=600000, timeout=180):
+        """Per-tactic cost of one proof.
+
+        The walker has always timed every step it applies; until now
+        nothing carried the numbers out, so the question a slow proof
+        actually raises -- *which tactic* -- could only be answered by
+        hand-instrumenting the script.  This walks the proof to its
+        `QED` and reports what each step cost.
+
+        `goals` is the other half of the diagnosis.  A step that is
+        slow with the goal count flat is slow in itself; a step that is
+        slow just after the count jumped was handed an exploded state,
+        and the step to fix is the one that exploded it.
+        """
+        session, path, text, blocked = self._ready(file, timeout)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
+        # The walk budget defaults to a keystroke's worth, because the
+        # server's other clients follow a cursor.  Profiling replays a
+        # whole proof, which is the case the default is wrong for: a
+        # proof with minute-long steps would otherwise report only that
+        # the budget blew.
+        self._set_walk_budget(session, budget_ms)
+        pos = self._position_of(session, path, text, theorem, occurrence)
+        result = session.request(
+            "$/hol/goalState",
+            {"textDocument": {"uri": path_to_uri(path)},
+             "position": pos, "width": 100},
+            timeout=max(timeout, budget_ms / 1000.0 + 60))
+        costs = (result or {}).get("stepCosts") or []
+        # A walk that did not finish reports only the steps before it
+        # stopped, which looks exactly like a cheap proof.  Say so, or
+        # the table is a quiet lie.
+        err = (result or {}).get("error")
+        if not costs:
+            return ("no step costs for %r -- the walk ran no steps. "
+                    "A proof whose body is a single atom, or a walk the "
+                    "server refused, both look like this; check "
+                    "hol_goal_state for which." % theorem)
+
+        total = sum(c.get("ms", 0) for c in costs)
+        lines = ["proof: %s   steps: %d   walked: %.1fs"
+                 % (theorem, len(costs), total / 1000.0),
+                 "",
+                 "%8s %6s  %-7s  %s" % ("ms", "share", "goals", "line")]
+        ranked = sorted(enumerate(costs), key=lambda p: -p[1].get("ms", 0))
+        for idx, c in ranked[:top]:
+            ms = c.get("ms", 0)
+            span = c.get("span")
+            where = ("%d" % (_position_at(text, span[0])["line"] + 1)
+                     if span else "-")
+            lines.append("%8d %5.1f%%  %3d->%-3d  %s  (step %d)"
+                         % (ms, (100.0 * ms / total) if total else 0.0,
+                            c.get("goalsBefore", 0), c.get("goalsAfter", 0),
+                            where, idx))
+        if len(costs) > top:
+            rest = sum(c.get("ms", 0) for _, c in ranked[top:])
+            lines.append("  ... %d more steps, %.1fs total"
+                         % (len(costs) - top, rest / 1000.0))
+        footer = None
+        if err:
+            footer = ("INCOMPLETE: the walk stopped early, so the steps "
+                      "below are only those it reached and the total is "
+                      "a lower bound -- %s" % plain(err).strip())
+        return _budget("\n".join(lines), footer=footer)
 
     def _state_at_failure(self, session, path, result, width):
         """Ask a second time, anchored where the first walk said the
@@ -491,13 +645,19 @@ class Hol:
         session, path, text, blocked = self._ready(file, timeout)
         if blocked is not None:
             return self._blocked_report(path, blocked, session)
+        # `budgetMs` below is what the *candidate* may spend; the walk
+        # to the anchor is a separate budget, and without raising it a
+        # probe deep in a long proof never reaches its own step.
+        self._set_walk_budget(session, budget_ms)
         pos = self._position_of(session, path, text, theorem, occurrence)
         params = {"textDocument": {"uri": path_to_uri(path)},
                   "position": pos, "width": width,
                   "tactic": tactic, "budgetMs": budget_ms}
         if step is not None:
             params["step"] = step
-        result = session.request("$/hol/tryTactic", params)
+        result = session.request(
+            "$/hol/tryTactic", params,
+            timeout=max(timeout, budget_ms / 1000.0 + 60))
         rendered = _render_goal_state(result, theorem, step)
         return ("candidate: %s\n(probe only -- the file is unchanged)\n\n%s"
                 % (tactic, rendered))
@@ -732,8 +892,57 @@ def tool_schemas():
                 "here implies it.",
             "inputSchema": {
                 "type": "object",
-                "properties": {"file": _FILE},
+                "properties": {
+                    "file": _FILE,
+                    "timeout": {
+                        "type": "integer",
+                        "description":
+                            "Seconds to wait for elaboration. Default 180. "
+                            "Raise it for a very large script."},
+                    "proof_timeout": {
+                        "type": "integer",
+                        "description":
+                            "Seconds to wait for the proofs to settle, and "
+                            "the per-proof budget the server is given. "
+                            "Default 600. A file with a proof that honestly "
+                            "runs for minutes needs this raised, or every "
+                            "such proof comes back `timedout`."},
+                },
                 "required": ["file"],
+            },
+        },
+        {
+            "name": "hol_proof_profile",
+            "description":
+                "What each tactic step of a proof cost, slowest first. "
+                "Use this when a proof is slow and you need to know "
+                "WHICH tactic -- the per-proof total from "
+                "hol_check_file says a proof is expensive, this says "
+                "where inside it the time went. The goals column "
+                "(before->after) separates a tactic that is slow in "
+                "itself from one that was handed a state some earlier "
+                "step exploded.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "file": _FILE,
+                    "theorem": {"type": "string",
+                                "description": "Name as declared."},
+                    "occurrence": {"type": "integer"},
+                    "top": {"type": "integer",
+                            "description": "How many steps to list. "
+                                           "Default 25."},
+                    "budget_ms": {
+                        "type": "integer",
+                        "description":
+                            "Wall-clock the whole walk may spend. "
+                            "Default 600000 (10 min) -- profiling "
+                            "replays the entire proof, so this is far "
+                            "above the server's cursor-following "
+                            "default of 1500ms."},
+                    "timeout": {"type": "integer"},
+                },
+                "required": ["file", "theorem"],
             },
         },
         {
@@ -762,6 +971,13 @@ def tool_schemas():
                             "Only needed when a script declares it twice."},
                     "width": {"type": "integer",
                               "description": "Render width, default 100."},
+                    "budget_ms": {
+                        "type": "integer",
+                        "description":
+                            "Wall-clock the walk to this step may "
+                            "spend. 0 uses the server default of "
+                            "1500ms, which suits a cursor but not a "
+                            "walk deep into a long proof."},
                 },
                 "required": ["file", "theorem"],
             },
@@ -845,11 +1061,19 @@ def tool_schemas():
 
 def dispatch(hol, name, args):
     if name == "hol_check_file":
-        return hol.check_file(args["file"])
+        return hol.check_file(args["file"],
+                              args.get("timeout", 180),
+                              args.get("proof_timeout", 600))
+    if name == "hol_proof_profile":
+        return hol.proof_profile(
+            args["file"], args["theorem"], args.get("occurrence", 1),
+            args.get("top", 25), args.get("budget_ms", 600000),
+            args.get("timeout", 180))
     if name == "hol_goal_state":
         return hol.goal_state(
             args["file"], args["theorem"], args.get("step"),
-            args.get("occurrence", 1), args.get("width", 100))
+            args.get("occurrence", 1), args.get("width", 100),
+            args.get("budget_ms", 0), args.get("timeout", 180))
     if name == "hol_try_tactic":
         return hol.try_tactic(
             args["file"], args["theorem"], args["tactic"], args.get("step"),
@@ -964,10 +1188,16 @@ def main(argv=None):
     here = os.path.dirname(os.path.abspath(__file__))
     default_repo = os.path.normpath(os.path.join(here, "..", "..", ".."))
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--hol", default=None,
-                        help="path to bin/hol (default: <tree>/bin/hol)")
-    parser.add_argument("--repo", default=default_repo,
-                        help="HOL tree relative paths resolve against")
+    # Env vars as well as flags: the adapter is usually registered in a
+    # checked-in `.mcp.json` that names no arguments, so a flag is not
+    # reachable from the session that needs to redirect it.
+    parser.add_argument("--hol", default=os.environ.get("HOL_MCP_HOL"),
+                        help="path to bin/hol (default: <tree>/bin/hol, "
+                             "or $HOL_MCP_HOL)")
+    parser.add_argument("--repo",
+                        default=os.environ.get("HOL_MCP_REPO", default_repo),
+                        help="HOL tree relative paths resolve against "
+                             "(or $HOL_MCP_REPO)")
     opts = parser.parse_args(argv)
 
     repo = os.path.abspath(opts.repo)
@@ -976,9 +1206,14 @@ def main(argv=None):
         log("no such hol binary: %s" % hol_bin)
         return 2
 
-    pool = SessionPool(hol_bin)
+    def hol_for(path):
+        tree = find_hol_tree(path)
+        return os.path.join(tree, "bin", "hol") if tree else None
+
+    pool = SessionPool(hol_bin, hol_resolver=hol_for)
     server = McpServer(Hol(pool, repo))
-    log("serving MCP %s from %s" % (PROTOCOL_VERSION, hol_bin))
+    log("serving MCP %s from %s (per-file tree resolution on)"
+        % (PROTOCOL_VERSION, hol_bin))
     try:
         server.serve()
     except KeyboardInterrupt:
