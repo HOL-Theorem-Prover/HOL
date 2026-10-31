@@ -80,6 +80,14 @@ def _close_failure(owner, why, err):
 # each by hand -- the ratios between them are deliberate, and the
 # negative waits (`assert_true(not wait_for_method(...))') must widen
 # too, or under load they quietly weaken into vacuous passes.
+#
+# The divisor is 2 rather than N's own 1 (see `main').  N servers are
+# not N servers' worth of contention: as this directory's Holmakefile
+# records, "the suite sits idle about three quarters of the time and N
+# concurrent tests cost well under N cores", nearly all of a test being
+# a server booting.  Half of N is the compromise -- enough that `-j 4',
+# which is what CI runs, is no longer scaled by exactly 1.0, without
+# quadrupling every negative wait on a developer's `-j 8'.
 TIME_SCALE = 1.0
 
 
@@ -2404,6 +2412,57 @@ def _susp_goal(c, uri, rid, line, char, timeout=50):
             return r
 
 
+def _duplicate_proof_sites(c, uri, since=0):
+    """Proof names that `$/proofStates` ever reported twice in one
+    message, which is the server holding two pool entries for one
+    proof.
+
+    `DeferredProofs` identifies an entry by its site alone, so two
+    entries for one site are two replays of the same proof racing to
+    announce last -- and whichever lands last is the verdict the file
+    keeps.  The duplicate is worth asserting on directly because it is
+    the *cause*, visible whether or not the race happens to come out
+    the right way; the verdict alone is a coin toss that hides it."""
+    msgs, _ = c.messages_since(since)
+    dups = set()
+    for m in msgs:
+        if m.get("method") != "$/proofStates":
+            continue
+        if m["params"]["uri"] != uri:
+            continue
+        seen = set()
+        for st in m["params"]["states"]:
+            nm = st.get("name")
+            if nm in seen:
+                dups.add(nm)
+            seen.add(nm)
+    return sorted(dups)
+
+
+def _unsettled_report(st, expected):
+    """Why a wait for every proof to settle ran out, in words.
+
+    Separates the three ways it can end, which the old `sorted(v for v
+    in st.values() if v != "proved")` ran together into one list: a
+    proof that never arrived at all, one still `checking` when the
+    budget expired -- a timeout, not a verdict -- and one that really
+    did settle on something other than `proved`, whose `detail` says
+    what."""
+    missing = [n for n in expected if n not in st]
+    checking = sorted(n for n, (v, _) in st.items() if v == "checking")
+    verdicts = sorted((n, v, d) for n, (v, d) in st.items()
+                      if v not in ("proved", "checking"))
+    parts = []
+    if missing:
+        parts.append(f"never announced: {', '.join(missing)}")
+    if checking:
+        parts.append("still checking when the budget ran out (a timeout, "
+                     f"not a verdict): {', '.join(checking)}")
+    for n, v, d in verdicts:
+        parts.append(f"{n} settled as {v}" + (f" ({d.strip()})" if d else ""))
+    return "; ".join(parts) or "nothing outstanding"
+
+
 def _proof_states(c, uri, since=0):
     """Accumulate the $/proofStates transition stream for `uri` into
     {name: (status, detail)}."""
@@ -3466,7 +3525,20 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
         # holds the report to naming something that exists.
         if "`" in fired:
             step = fired.split("`")[1]
-            assert_true(step in src or step in cand,
+            # As the server renders it: every whitespace character
+            # becomes a space (runs are *not* collapsed, so offsets
+            # still line up), and anything past 60 characters is cut
+            # to 57 plus an ellipsis -- `goal_state_init.ML:160-168'.
+            # Compare on the same terms.  Without this the assertion
+            # could only hold while the candidate stayed under the
+            # cut: `CAND' is 51 characters and each attempt adds 7, so
+            # from the third attempt on a fired canary always named a
+            # step that matched neither text, and whether this test
+            # passed came down to which attempt the 1ms canary won.
+            flat = lambda t: "".join(" " if ch.isspace() else ch
+                                     for ch in t)
+            needle = step[:-3] if step.endswith("...") else step
+            assert_true(any(needle in flat(h) for h in (src, cand)),
                         f"the named step comes from one of the two texts "
                         f"the walks index ({step!r} in {fired!r})")
 
@@ -3636,7 +3708,13 @@ def test_stale_ancestor_draws_a_warning():
                         f"a freshly built ancestor draws nothing ({fresh!r})")
 
             # Now the script is newer than what the server loaded.
-            future = time.time() + 10
+            # Through `_budget' like every other number here: this is a
+            # clock offset rather than a wait, but it has to outlast
+            # the compile that reads it, and under `-j' that compile
+            # takes longer.  A stamp that expires first leaves the
+            # ancestor reading as *not* newer, and the assertion below
+            # then fails for a reason that has nothing to do with it.
+            future = time.time() + _budget(10)
             os.utime(up, (future, future))
 
             _did_change_full(c, uri, src + "\n", 2)
@@ -9976,14 +10054,19 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
     uri = "file:///tmp/verdicts_probe.sml"
     at = src.index("  simp[]", src.index("Theorem thm2:"))
 
+    names = [f"thm{i}" for i in range(n)]
+
     def tally(c):
-        st = {}
-        with c.msgs_lock:
-            for m in c.msgs:
-                if m.get("method") == "$/proofStates":
-                    for p in m["params"]["states"]:
-                        st[p.get("name")] = p.get("status")
-        return st
+        """{name: (status, detail)} for this file.
+
+        `_proof_states` rather than a local fold: it filters by uri and
+        it keeps `detail`, which is the cheapest discriminator there is
+        when this test fails -- "unsolved goals" names a tactic that
+        really ran, anything else points at the pool's catch-all."""
+        return _proof_states(c, uri)
+
+    def all_proved(st):
+        return len(st) == n and all(v[0] == "proved" for v in st.values())
 
     c = Client("/tmp")
     try:
@@ -9992,14 +10075,15 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
         _did_open(c, uri, src, 1)
         assert_true(c.wait_for_method("$/compileCompleted", 120),
                     "compiled")
-        deadline = time.time() + 60
+        deadline = time.time() + _budget(60)
         while time.time() < deadline:
-            st = tally(c)
-            if len(st) == n and all(v == "proved" for v in st.values()):
+            if all_proved(tally(c)):
                 break
             time.sleep(1)
-        assert_eq(sorted(tally(c).values()), ["proved"] * n,
-                  f"every proof was checked to begin with ({tally(c)!r})")
+        st = tally(c)
+        assert_true(all_proved(st),
+                    "every proof was checked to begin with -- "
+                    + _unsettled_report(st, names))
 
         # type over the tactic a character at a time, twice: once
         # through a name that does not compile, once through one that
@@ -10029,16 +10113,142 @@ def test_typing_a_tactic_leaves_every_proof_with_a_verdict():
             # when it is not.
             c.wait_for_method("$/proofStates", 10, since=since)
 
-        deadline = time.time() + 90
+        deadline = time.time() + _budget(90)
         while time.time() < deadline:
-            st = tally(c)
-            if len(st) == n and all(v == "proved" for v in st.values()):
+            if all_proved(tally(c)):
                 break
             time.sleep(2)
         st = tally(c)
-        assert_eq(len(st), n, f"the file still has {n} proofs ({st!r})")
-        assert_eq(sorted(v for v in st.values() if v != "proved"), [],
-                  f"and every one of them settled ({st!r})")
+        # Before the verdicts, because it explains them: a proof the
+        # pool is checking twice has two verdicts racing, and the one
+        # that lands last is as likely to be an abandoned pass's
+        # tactic as the one the buffer now holds.
+        dups = _duplicate_proof_sites(c, uri)
+        assert_eq(dups, [],
+                  "no proof was forked twice (two pool entries for one "
+                  f"site, so two verdicts racing): {dups!r}")
+        assert_true(all_proved(st),
+                    f"the typing left all {n} proofs with a verdict -- "
+                    + _unsettled_report(st, names))
+    finally:
+        c.close()
+
+
+def test_an_abandoned_pass_does_not_leave_its_proofs_behind():
+    """A superseded pass must not get its proofs replayed by the pass
+    that replaced it.
+
+    The deferral queue is process-wide and nothing purges it when a
+    pass is abandoned, so a pass that enqueues a proof and is then
+    superseded before it reaches `DeferredProofs.check` leaves its item
+    in the queue.  The next pass drains that item beside its own for
+    the same declaration, and the filter that stops a running proof
+    being forked twice compares items against *entries* only -- never
+    against each other.  Both get forked: two entries, one site, two
+    replays racing to announce last.  Whichever lands last is the
+    file's verdict, and half the time that is the tactic the user has
+    already replaced.
+
+    Deterministic rather than timed.  `$/compileProgress` fires once
+    per completed outer declaration, so waiting for the first pass to
+    report past the edited theorem puts the superseding edit exactly
+    inside the window -- after the item is enqueued, with the rest of
+    the file still to elaborate -- on a busy machine as on an idle
+    one.  That wait is also the positive control: without it the test
+    would pass by never opening the window at all.
+
+    The stale tactic sleeps before failing, so that when the bug is
+    present the wrong verdict is announced *after* the right one and
+    the proof is left reading `failed` with the buffer saying
+    `simp[]`.  With the queue deduplicated the stale item is dropped
+    and the tactic never runs, so the sleep costs nothing."""
+    n, edit, slow_ms = 24, 2, 1500
+    uri = "file:///tmp/abandoned_pass_probe.sml"
+    stale = (f"(fn g => (OS.Process.sleep "
+             f"(Time.fromMilliseconds {slow_ms}); all_tac g))")
+
+    def build(pad, tac):
+        out = [f"Theory verdicts\nAncestors arithmetic\n\n"
+               f"(* pad {pad} *)\n\n"]
+        for i in range(n):
+            out.append(f"Theorem thm{i}:\n  {i} + 1 = 1 + {i}\n"
+                       f"Proof\n  {tac if i == edit else 'simp[]'}\nQED\n\n")
+        return "".join(out)
+
+    v0, v1, v2 = build(0, "simp[]"), build(1, stale), build(2, "simp[]")
+    names = [f"thm{i}" for i in range(n)]
+    # The line the edited theorem's `QED' sits on: progress past it is
+    # the pass having finished -- and so enqueued -- that declaration.
+    _qed = v1.index("QED", v1.index(f"Theorem thm{edit}:"))
+    edit_line = v1.count("\n", 0, _qed)
+
+    def all_proved(c):
+        st = _proof_states(c, uri)
+        return len(st) == n and all(v[0] == "proved" for v in st.values())
+
+    def settle(c, budget):
+        deadline = time.time() + _budget(budget)
+        while time.time() < deadline:
+            if all_proved(c):
+                return True
+            time.sleep(0.25)
+        return False
+
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _request(c, 985, "$/setConfig", {"checkProofs": True})
+        _did_open(c, uri, v0, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 120), "compiled")
+        assert_true(settle(c, 90),
+                    "every proof was checked to begin with -- "
+                    + _unsettled_report(_proof_states(c, uri), names))
+
+        # The first pass.  Bumping the padding comment as well as the
+        # tactic is what makes it a whole-file pass: an edit confined
+        # to a tactic stops after the declaration it is in, and then
+        # enqueue and check are microseconds apart with no window
+        # between them to supersede.
+        since = c.total_msgs()
+        _did_change_full(c, uri, v1, 2)
+        got_past = False
+        deadline = time.time() + _budget(60)
+        while time.time() < deadline and not got_past:
+            for m in c.messages_since(since)[0]:
+                if (m.get("method") == "$/compileProgress"
+                        and m["params"].get("uri") == uri
+                        and m["params"]["pos"]["line"] >= edit_line):
+                    got_past = True
+                    break
+            if not got_past:
+                time.sleep(0.005)
+        assert_true(got_past,
+                    "the first pass reported progress past the edited "
+                    "theorem, so it had enqueued its proof before being "
+                    "superseded (without this the test proves nothing)")
+
+        # ... and the pass that supersedes it, putting the text back.
+        _did_change_full(c, uri, v2, 3)
+
+        assert_true(settle(c, 120),
+                    "the file settled after the superseding edit -- "
+                    + _unsettled_report(_proof_states(c, uri), names))
+        # Settling is not the end: a stale replay that sleeps announces
+        # after the fresh one proves, so the wrong verdict lands on top
+        # of the right one.  Wait it out.
+        # The replay's own sleep is a fixed cost that no amount of
+        # load changes, so only the slack around it is scaled.
+        time.sleep(slow_ms / 1000.0 + _budget(1.5))
+
+        dups = _duplicate_proof_sites(c, uri)
+        assert_eq(dups, [],
+                  "no proof was forked twice (two pool entries for one "
+                  f"site, so two verdicts racing): {dups!r}")
+        st = _proof_states(c, uri)
+        assert_true(len(st) == n and all(v[0] == "proved"
+                                         for v in st.values()),
+                    "the abandoned pass left no verdict behind -- "
+                    + _unsettled_report(st, names))
     finally:
         c.close()
 
@@ -10073,7 +10283,7 @@ def test_a_failed_proof_is_located_without_being_asked():
                     "compiled")
 
         # No hover, no goalState, no further edits: just wait.
-        located, head, deadline = None, None, time.time() + 90
+        located, head, deadline = None, None, time.time() + _budget(90)
         while time.time() < deadline:
             ds = _diag_count(c, uri)
             located = [d for d in ds
@@ -12019,6 +12229,117 @@ def test_startup_reports_no_warnings():
             c.close()
 
 
+def test_a_context_slot_answers_from_its_declaration():
+    """Script-level state a tactic expression reads has to live in the
+    `Context`, not in an SML `ref`.
+
+    A deferred proof is replayed with its declaration's `Context`
+    restored and nothing else, and `Theorem ... Proof tac QED` expands
+    to `(name, quote, fn g => tac g)`, so the tactic *expression* is
+    evaluated when the proof runs -- which, with checking on, is after
+    the whole file has elaborated.  A helper that dereferences a plain
+    `ref` therefore reads it as of end-of-elaboration, including every
+    later declaration's additions; that is how
+    examples/theorem-prover/milawa-prover/milawa_proofpScript.sml came
+    to report failures under the LSP for proofs its build accepts.
+
+    `Context.Data` does not have the problem: read against the context
+    the proof is run against, it answers from the pin
+    `Context.with_context` installs, which is the declaration's own
+    snapshot.  Each proof below asserts the slot's size as of its own
+    position, so a regression that handed either of them the
+    end-of-file value fails here rather than in a 6000-line example.
+
+    The edit at the end re-elaborates from above the slot declaration,
+    which runs `Context.Data.new` a second time: it raises on a name
+    already in the live context, so the pass would die were the reset
+    not taking the registration back with everything else."""
+    d = tempfile.mkdtemp(prefix="lsp_ctxtslot_")
+    try:
+        head = ("Theory ctxtslot\n"
+                "Ancestors arithmetic\n"
+                "\n")
+        body = ("val rws = Context.Data.new {\n"
+                "      name = \"lsptest.ctxtslot\", empty = ([] : thm list),\n"
+                "      pp = fn l => Int.toString (length l)}\n"
+                "fun add_rw th =\n"
+                "    Context.Data.modify rws (fn ths => th :: ths)\n"
+                "fun EXPECT n = fn g => fn c =>\n"
+                "    let val k = length (Context.Data.get rws c)\n"
+                "    in if k = n then ACCEPT_TAC TRUTH g c\n"
+                "       else FAIL_TAC (\"saw \" ^ Int.toString k) g c end\n"
+                "\n"
+                "val _ = add_rw TRUTH\n"
+                "\n"
+                "Theorem one_above:\n"
+                "  T\n"
+                "Proof\n"
+                "  EXPECT 1\n"
+                "QED\n"
+                "\n"
+                "val _ = add_rw TRUTH\n"
+                "val _ = add_rw TRUTH\n"
+                "\n"
+                "Theorem three_above:\n"
+                "  T\n"
+                "Proof\n"
+                "  EXPECT 3\n"
+                "QED\n")
+        src = head + body
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/ctxtslotScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def both(cl):
+                seen = _proof_states(cl, uri)
+                got = {k: v[0] for k, v in seen.items()}
+                return seen if got.get("one_above") in ("proved", "failed") \
+                    and got.get("three_above") in ("proved", "failed") \
+                    else None
+
+            seen = c.wait_until(both, 90)
+            assert_true(seen is not None,
+                        f"both proofs settled ({_proof_states(c, uri)!r})")
+            assert_eq(seen["one_above"][0], "proved",
+                      f"the first proof saw one rewrite, not the "
+                      f"end-of-file set ({seen['one_above']!r})")
+            assert_eq(seen["three_above"][0], "proved",
+                      f"the second proof saw three ({seen['three_above']!r})")
+            errs = [x for x in _diag_count(c, uri)
+                    if x.get("severity") == 1]
+            assert_true(not errs, f"no errors ({errs!r})")
+
+            # Re-elaborate from above the slot declaration.
+            since = c.total_msgs()
+            src2 = head + "(* touched *)\n" + body
+            _did_change_full(c, uri, src2, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60,
+                                          since=since),
+                        "compileCompleted after the edit")
+
+            def both2(cl):
+                got = {k: v[0] for k, v in _proof_states(cl, uri,
+                                                         since=since).items()}
+                return got if got.get("one_above") == "proved" \
+                    and got.get("three_above") == "proved" else None
+
+            got = c.wait_until(both2, 90)
+            assert_true(got is not None,
+                        f"both proofs settled again, so Context.Data.new "
+                        f"did not trip over its own earlier registration "
+                        f"({_proof_states(c, uri, since=since)!r}, "
+                        f"{_diag_count(c, uri)!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+
 TESTS = [
     ("startup_reports_no_warnings", test_startup_reports_no_warnings),
     ("interrupted_passes_do_not_leave_stale_proofs",
@@ -12400,6 +12721,8 @@ TESTS = [
      test_a_diagnostic_below_the_edit_is_not_dropped_by_a_reused_tail),
     ("typing_a_tactic_leaves_every_proof_with_a_verdict",
      test_typing_a_tactic_leaves_every_proof_with_a_verdict),
+    ("an_abandoned_pass_does_not_leave_its_proofs_behind",
+     test_an_abandoned_pass_does_not_leave_its_proofs_behind),
     ("a_failed_proof_is_located_without_being_asked",
      test_a_failed_proof_is_located_without_being_asked),
     ("a_tail_reused_after_a_typo_matches_a_full_compile",
@@ -12455,6 +12778,8 @@ TESTS = [
      test_eval_bindings_outlive_the_request),
     ("eval_does_not_disturb_the_next_compile",
      test_eval_does_not_disturb_the_next_compile),
+    ("a_context_slot_answers_from_its_declaration",
+     test_a_context_slot_answers_from_its_declaration),
 ]
 
 
@@ -12524,9 +12849,11 @@ def _report(rec, counts):
     elif verdict == "FAIL":
         print(f"  FAIL  {name}  ({dt:.1f}s): {msg}", flush=True)
         counts["failed"] += 1
+        counts["failures"].append((name, verdict))
     else:
         print(f"  ERROR {name}  ({dt:.1f}s): {msg}", flush=True)
         counts["failed"] += 1
+        counts["failures"].append((name, verdict))
 
 
 def main():
@@ -12562,7 +12889,7 @@ def main():
         jobs = int(os.environ.get("HOL_LSP_TEST_JOBS", "0")) or _default_jobs()
     global TIME_SCALE
     TIME_SCALE = float(os.environ.get("HOL_LSP_TIME_SCALE",
-                                      max(1.0, jobs / 4.0)))
+                                      max(1.0, jobs / 2.0)))
 
     wanted = set(argv)
     # A name nobody answers to is a typo, not a selection.  Left to
@@ -12587,7 +12914,7 @@ def main():
     par = [it for it in selected if not getattr(it[1], "serial", False)]
     ser = [it for it in selected if getattr(it[1], "serial", False)]
 
-    counts = {"passed": 0, "failed": 0, "skipped": []}
+    counts = {"passed": 0, "failed": 0, "skipped": [], "failures": []}
     print(f"running {len(selected)} test(s), {jobs} worker(s), "
           f"timeouts x{TIME_SCALE:g}", flush=True)
     # `map' yields in submission order while running out of order, so
@@ -12612,6 +12939,18 @@ def main():
         _report(_run_one(it), counts)
     passed, failed, skipped = (counts["passed"], counts["failed"],
                                counts["skipped"])
+    # The names again, at the end.  A verdict is printed where the test
+    # sits in TESTS order, and Holmake quotes only the last 50 lines of
+    # a failed target's log, so a failure much above the end of a
+    # 238-test run is reported to CI as a count and nothing else -- the
+    # log says which test, and nobody reading the build output can see
+    # the log.  Index-independent by construction: this is the end.
+    if counts["failures"]:
+        _order = {nm: i for i, (nm, _) in enumerate(TESTS)}
+        print(f"\n{len(counts['failures'])} failed:")
+        for name, verdict in sorted(counts["failures"],
+                                    key=lambda t: _order.get(t[0], -1)):
+            print(f"  {verdict}  {name}")
     if CLOSE_FAILURES:
         # Sorted into TESTS order: workers appended in whatever order
         # they finished, and a log that reorders itself between runs

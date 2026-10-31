@@ -4050,6 +4050,8 @@ val _ = bnfBase.updateDB (
 
     map = “$o_f : ('a1 -> 'c1) -> ('b1 |-> 'a1) -> ('b1 |-> 'c1)”,
     set = [“FRANGE : ('b1 |-> 'a1) -> 'a1 set”],
+    eqns = [bnm "o_f_FEMPTY", bnm "o_f_FUPDATE",
+            bnm "FRANGE_FEMPTY", bnm "FRANGE_FUPDATE"],
     mapID = bnm "fmapMap_ID",
     mapO = bnm "fmapMap_O",
     mapIMAGE = [bnm "fmapMapIMAGE1"],

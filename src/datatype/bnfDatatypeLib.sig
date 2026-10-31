@@ -48,8 +48,13 @@ sig
       records a theorem's name rather than the theorem, so each law is
       saved in the current theory first.  The names are the type's, with
       the law's own suffix.
+
+      What the map and the set functions do at the type's constructors
+      is saved here too, under the names the caller gives, since the
+      caller is what knows them and the database wants a name that
+      already exists.
      ---------------------------------------------------------------------- *)
-  val registerBNF : {tyname : string} ->
+  val registerBNF : {tyname : string, eqns : (string * thm) list} ->
                     KernelSig.kernelname * thm bnfBase_dtype.info -> unit
 
 end

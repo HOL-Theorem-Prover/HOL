@@ -985,12 +985,9 @@ fun planInhabits lives bs i plan =
    ---------------------------------------------------------------------- *)
 
 fun fresh_tyvar avoid =
-    let val cands = List.map mk_vartype ["'b","'c","'d","'e","'f","'g"]
-    in
-      case List.find (fn t => not (mem t avoid)) cands of
-          SOME t => t
-        | NONE => Type.gen_tyvar()
-    end
+    mk_vartype
+      (Lexis.gen_variant Lexis.tyvar_vary
+         (List.mapPartial (Lib.total dest_vartype) avoid) "'b")
 
 type derived_bnf = {
   bnd : term,

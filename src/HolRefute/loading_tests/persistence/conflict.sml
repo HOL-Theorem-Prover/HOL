@@ -1,0 +1,6 @@
+val _ = load "refutePersistOldTheory"
+val _ = load "Refute"
+val _ = use "conflict-setup.sml"
+val _ = load "refutePersistWrapperTheory"
+val _ = load "testutils"
+val _ = use "conflict-checks.sml"

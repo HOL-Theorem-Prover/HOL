@@ -807,7 +807,8 @@ QED
    gave.  `Induct` reaches for it by itself when the TypeBase holds it;
    here it is what the package's principle makes of itself. *)
 val com_mutual_induction =
-    let val ind = TypeBase.induction_of “:com”
+    (* the stated principle: legacyInduction reads the set functions *)
+    let val ind = TypeBase.set_induction_of “:com”
     in legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
     end
 

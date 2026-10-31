@@ -427,6 +427,13 @@ val theorySealed: (string -> bool) ref
    enqueues a self-contained item and returns an oracle-tagged theorem,
    so elaboration stays fast and something else runs the proofs later.
 
+   The queue itself is not here.  It belongs to the pool in
+   `deferred_proofs.ML`, which is both what fills it and what drains
+   it, and which tags each item with the compile pass that produced it
+   -- a notion this structure, sitting below the kernel, does not
+   have.  What is here is the shape of an item, which is all a reader
+   of `proof_status` needs.
+
    An item's `run` is opaque — it reports a `proof_status` and nothing
    about the theorem — because this structure sits below the kernel and
    cannot name `Context.t`, `goal` or `tactic`.  The hook closes over all
@@ -563,10 +570,6 @@ val cheatSubstituted: bool ref
 val addNoCheatSite: string -> bool
 val dropNoCheatSite: string -> unit
 val isNoCheatSite: string -> bool
-val enqueueDeferred: deferred -> unit
-(* Empties the queue and hands back what was in it: the worker pool
-   runs the items itself. *)
-val takeDeferred: unit -> deferred list
 
 (* The byte offset of the declaration currently being elaborated, set by
    the compile driver before each one.  The prover hook reads it when

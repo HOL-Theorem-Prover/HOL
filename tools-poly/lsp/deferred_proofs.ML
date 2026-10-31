@@ -152,6 +152,36 @@ in
          else LSPExtension.Failed (Feedback.exn_to_string e)
 end
 
+(* The deferral queue.
+
+   It lives here rather than in `LSPExtension` because this structure
+   is its only user -- the prover hook below fills it, `check` drains
+   it -- and because what has to be recorded alongside an item is the
+   compile pass that produced it, which `LSPExtension` has no notion
+   of.  The pass is its thread: the server forks one per compile
+   (`server.ML`'s `compileThread`), elaboration runs on it, and so
+   does the `check` that follows, so both ends of this already agree
+   on an identity without anyone having to mint one.
+
+   An `Sref` rather than a plain ref: the deferring branch of the
+   prover hook is reached from elaboration, and while that is one
+   thread at a time, a superseded pass can still be draining this
+   queue as its replacement fills it -- and any thread that runs a
+   tactic reaches the hook, including the ones the server forks per
+   goal-state request.  A dropped enqueue is a proof that is never
+   checked and never reported, which is indistinguishable from one
+   that passed.
+
+   Enqueued in reverse; the drain takes the whole queue in one step. *)
+type queued = {item : LSPExtension.deferred, by : Thread.thread}
+local
+  val q : queued list Sref.t = Sref.new []
+in
+  fun enqueue (d : LSPExtension.deferred) =
+      Sref.update q (fn ds => {item = d, by = Thread.self ()} :: ds)
+  fun takeQueued () = List.rev (Sref.gen_update q (fn ds => ([], ds)))
+end
+
 (* The checker found this proof suspends, so elaboration cannot stand in
    `mk_oracle_thm g` for it and still be right about what the
    declarations below see: a real build stashes such a theorem rather
@@ -192,7 +222,7 @@ fun proveForReal ctxt site (g, tac) =
       (case st of
            LSPExtension.Proved => LSPExtension.dropNoCheatSite site
          | _ => ());
-      LSPExtension.enqueueDeferred
+      enqueue
         {site = site,
          offset = !LSPExtension.currentProofOffset,
          run = fn () => st};
@@ -239,7 +269,7 @@ in
            thread, and it is set immediately before the proof -- and a
            replaying worker must not consult it, which is why it is
            read now and carried in the item. *)
-        (LSPExtension.enqueueDeferred
+        (enqueue
            {site = site,
             offset = !LSPExtension.currentProofOffset,
             run = fn () => replay ctxt g tac};
@@ -476,15 +506,74 @@ fun statusNow (es : entry list) =
     List.map (fn e => {site = #site e, offset = #offset e,
                        status = statusOf e}) es
 
+(* One item per site: this pass's, when this pass enqueued one.
+
+   Identification rather than inference.  "The newest item" is what is
+   wanted and enqueue order does not reliably give it: `stopCompile`
+   only sets a flag, so a superseded pass runs on until its next
+   declaration boundary, and one descheduled mid-declaration under
+   load can enqueue after the pass that replaced it already has.  The
+   thread says outright which items are ours, and `check` runs on the
+   same thread that elaborated them.
+
+   A site nothing of ours enqueued falls back to the last item for it,
+   which is what any thread but a compile pass gets -- the goal-state
+   and walk threads run tactics too, and their items are nobody's
+   pass.  Survivors stay in enqueue order: `foldr` visits from the
+   right, so the first sighting of a site is its last item, and
+   prepending the keepers restores the original order among them. *)
+fun thisPassPerSite (qs : queued list) =
+    let
+      val me = Thread.self ()
+      fun site ({item, ...} : queued) = itemSite item
+      fun ours ({by, ...} : queued) = Thread.equal (by, me)
+      val oursSites =
+          List.foldl (fn (q, st) => if ours q then Binaryset.add (st, site q)
+                                    else st)
+                     (Binaryset.empty String.compare) qs
+      (* Where we have a say, only ours is eligible. *)
+      fun eligible q =
+          not (Binaryset.member (oursSites, site q)) orelse ours q
+      fun step (q, (keep, seen)) =
+          if not (eligible q) orelse Binaryset.member (seen, site q)
+          then (keep, seen)
+          else (#item q :: keep, Binaryset.add (seen, site q))
+    in
+      #1 (List.foldr step ([], Binaryset.empty String.compare) qs)
+    end
+
 fun check {resumeFrom, keptFrom, bytes} =
     let
-      (* takeDeferred empties the queue in one step, so a second call
+      (* `takeQueued' empties the queue in one step, so a second call
          cannot fork the same proof twice.  A worker never adds to it --
          it takes `prover`'s replaying branch -- but the server's
          goal-state and walk threads run tactics too, and they are not
          replaying, so the queue is synchronised rather than relying on
-         a single writer. *)
-      val items = LSPExtension.takeDeferred ()
+         a single writer.
+
+         Draining it is not the same as having filled it.  The queue is
+         process-wide and outlives the pass that enqueued into it:
+         nothing purges it when a pass is abandoned, so a pass
+         superseded between its `cancelled' check and its call here
+         leaves its items for whoever drains next -- and that is this
+         batch, beside our own items for the very same declarations.
+
+         Hence `thisPassPerSite'.  The filter that keeps a running
+         proof from being forked twice (`fresh', below) compares each
+         item against the existing *entries* and never against the
+         other items, and an entry is identified by its site alone, so
+         two items for one site become two entries: two replays of one
+         proof racing to announce last.  No later pass replaces that
+         pair -- `classify' keeps both -- so until an edit cancels
+         them, whichever replay finished last is the file's last word
+         on the proof, and that is as likely to be the abandoned
+         pass's tactic as the one the buffer now holds.
+
+         Taking ours by identity rather than keeping whichever was
+         enqueued last also makes `itemOffset' below agree with the
+         fork set by construction: a site is now represented in this
+         batch exactly once. *)
+      val items = thisPassPerSite (takeQueued ())
       (* Built before the lock is taken, since it touches nothing
          shared: an item and an entry match on site and nothing else, so a
          dictionary answers in one lookup what a scan of every item, per

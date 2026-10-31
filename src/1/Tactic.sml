@@ -894,14 +894,16 @@ in
           fn (A,g) => fn _ (* ctxt *) =>
              let
                  val (ant, conseq) =
-                     with_exn dest_imp imp (ERR "MATCH_MP_TAC" "Not an implication")
+                     with_exn dest_imp imp
+                              (ERR "MATCH_MP_TAC" "Not an implication")
                  val (cvs, con) = strip_forall conseq
                  val th1 = SPECL cvs (UNDISCH (SPECL gvs thm))
                  val (vs, evs) = partition (C Term.free_in con) gvs
                  val th2 = uncurry DISCH (itlist efn evs (ant, th1))
                  val (vs, gl) = strip_forall g
                  val ins = match_terml hyptyvars lconsts con gl
-                           handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
+                           handle HOL_ERR _ =>
+                                  raise ERR "MATCH_MP_TAC" "No match"
                  val ith = INST_TY_TERM ins th2
                  val gth = GENL vs (UNDISCH ith)
                            handle HOL_ERR _ => raise ERR "MATCH_MP_TAC"

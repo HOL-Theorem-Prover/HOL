@@ -515,3 +515,249 @@ val _ = require_msg
 (*
 val _ = convtest("Original again", SIMP_CONV (srw_ss()) [], “p ∧ T”, “p:bool”)
 *)
+
+(* ------------------------------------------------------------------- *)
+(* GH #2095: a type nested through list has two size equations.  The    *)
+(* package tidies the one the recursion gives -- list_size (\x. x)      *)
+(* (MAP sz l) -- into the fold list_size sz l, puts that in the         *)
+(* TypeBase, and uses it; <ty>_size_def used to bind the raw one, so    *)
+(* citing it in a termination proof shadowed the tidied equation with   *)
+(* a form that matches neither goals nor lemmas.                        *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2095tree = Gh2095Node (gh2095tree list)`
+
+local
+  fun through_MAP th =
+      can (find_term (fn t => is_const t andalso fst (dest_const t) = "MAP"))
+          (concl th)
+in
+val _ = tprint "GH2095: <ty>_size_def is the equation TypeBase holds"
+val _ =
+    let val named = DB.fetch "-" "gh2095tree_size_def"
+        val tidied = #2 (TypeBase.size_of “:gh2095tree”)
+    in
+      if aconv (concl named) (concl tidied) then OK()
+      else die ("bound: " ^ thm_to_string named)
+    end
+
+val _ = tprint "GH2095: <ty>_size_def does not go through MAP"
+val _ =
+    let val named = DB.fetch "-" "gh2095tree_size_def"
+    in
+      if through_MAP named then die (thm_to_string named) else OK()
+    end
+
+val _ = tprint "GH2095: no raw size equation is left behind"
+val _ =
+    case Lib.total (DB.fetch "-") "gh2095tree_size_orig_def" of
+        NONE => OK()
+      | SOME th => die ("still bound: " ^ thm_to_string th)
+
+val _ = tprint "GH2095: <ty>_size_def is still one of the definitions"
+val _ =
+    case Lib.total definition "gh2095tree_size_def" of
+        NONE => die "not a definition of the segment"
+      | SOME _ => OK()
+
+val _ = tprint "GH2095: the userdef query gives the tidied equation"
+val _ =
+    let
+      fun eqn (DefnBase.STDEQNS th) = th
+        | eqn (DefnBase.OTHER th) = th
+    in
+      case DefnBase.lookup_userdef (#1 (TypeBase.size_of “:gh2095tree”)) of
+          NONE => die "no userdef registered for the size constant"
+        | SOME p =>
+          let val th = eqn (#thm p)
+          in
+            if through_MAP th then die (thm_to_string th) else OK()
+          end
+    end
+end
+
+(* ------------------------------------------------------------------- *)
+(* A type that recurses under an operator has its recursion axiom       *)
+(* stated with that operator's map, so new_recursive_definition can     *)
+(* only match a recursive call that is the function itself.  A call     *)
+(* given arguments ahead of the recursive one cannot be put in that     *)
+(* form -- canonising it moves them under the map.  The clause it       *)
+(* could not match used to be left assumed, and the complaint came      *)
+(* from new_specification, several layers down, that a theorem it was   *)
+(* handed had assumptions.                                              *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`prtree = PRLeaf | PRNode (prtree list)`
+
+local
+  fun attempt def =
+      Prim_rec.new_recursive_definition
+        {name = "prbad_def", rec_axiom = TypeBase.axiom_of “:prtree”,
+         def = def}
+  fun outcome def = (ignore (attempt def); NONE)
+                    handle Feedback.HOL_ERR e => SOME e
+in
+val _ = tprint "a recursive call under a map that is not the function"
+val _ =
+    case outcome “(prbad (f:num -> num) PRLeaf = 0) /\
+                  (prbad f (PRNode l) = SUM (MAP (prbad f) l))” of
+        NONE => die "the definition was accepted"
+      | SOME e =>
+        if Feedback.top_function_of e = "new_recursive_definition" andalso
+           String.isSubstring "recursion axiom" (Feedback.message_of e)
+        then OK()
+        else die (Feedback.message_of e)
+end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2098: TFL eta-expands a call that supplies a function too few    *)
+(* arguments, and that expansion used to survive into the saved         *)
+(* equation.  Unfolding a definition recursing through MAP or EVERY     *)
+(* then gave MAP (\a. g n a) ts where MAP (g n) ts was written, which   *)
+(* matches neither goals nor lemmas stated the way they were written.   *)
+(* The primitive-recursive case must be left exactly as it was.         *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`etatree = Nd (etatree list) | Lf`;
+
+local
+  (* an abstraction \x. t x with x not free in t says nothing that t
+     does not; the defect is that extraction leaves these behind *)
+  fun eta_redex tm =
+      case Lib.total dest_abs tm of
+          NONE => false
+        | SOME (v, bdy) =>
+          (case Lib.total dest_comb bdy of
+               NONE => false
+             | SOME (rator, rand) =>
+               aconv rand v andalso not (free_in v rator))
+  fun eta_free th = not (can (find_term eta_redex) (concl th))
+  fun mentions pat th = can (find_term (aconv pat)) (concl th)
+  fun check (pat, th) = eta_free th andalso mentions pat th
+  fun show (pat, th) =
+      "expected " ^ term_to_string pat ^ " in " ^ thm_to_string th
+in
+val _ = quietly Define`etaf (Nd ts) = Nd (MAP etaf ts) /\ etaf Lf = Lf`;
+val _ = quietly Define`
+  etag (n:num) (Nd ts) = Nd (MAP (etag n) ts) /\ etag n Lf = Lf`;
+val _ = quietly Define`etap (Nd ts) = EVERY etap ts /\ etap Lf = T`;
+val _ = quietly Define`
+  etaq (n:num) (Nd ts) = EVERY (etaq n) ts /\ etaq n Lf = T`;
+
+val _ = tprint "GH2098: primitive recursion through MAP (unchanged)"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“MAP etaf”, DB.fetch "-" "etaf_def")
+
+val _ = tprint "GH2098: TFL recursion through MAP, partially applied"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“MAP (etag n)”, DB.fetch "-" "etag_def")
+
+val _ = tprint "GH2098: TFL recursion through EVERY, bare call"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“EVERY etap”, DB.fetch "-" "etap_def")
+
+val _ = tprint "GH2098: TFL recursion through EVERY, partially applied"
+val _ = require_msg (check_result check) show (fn x => x)
+                    (“EVERY (etaq n)”, DB.fetch "-" "etaq_def")
+end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2108: an operator-wise principle where the operator is one a     *)
+(* declaration defined, and collects what it holds through operators    *)
+(* of its own.  `envSET` says                                           *)
+(*                                                                      *)
+(*   envSET (env a0 a1) = BIGUNION (IMAGE setSND (set a0))              *)
+(*                                                                      *)
+(* so the values are reached through a list and then a pair, and the    *)
+(* stated principle mentions neither -- `env` is an operator in its own *)
+(* right and its contents are what `envSET` collects.  The older        *)
+(* construction gave the list and the pair a predicate apiece, and this *)
+(* is that principle.  (A real list is wanted, so this cannot live in   *)
+(* src/datatype, which has a list of its own.)                          *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2108env = <| ve : (num # 'a) list ; vn : num |>`
+val _ = Datatype`gh2108v = G8C (gh2108v gh2108env) | G8N num`
+
+val _ = tprint "GH2108: the older shape through an operator's own operators"
+val _ =
+    let
+      fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+      val th = legacyInduction.mutual_ind_from_ops
+                 (TypeBase.set_induction_of “:gh2108v”)
+    in
+      if same (concl th)
+           “∀P Q0 Q1 Q2.
+              (∀e. Q0 e ⇒ P (G8C e)) ∧ (∀n. P (G8N n)) ∧
+              (∀l n. Q1 l ⇒ Q0 (gh2108env l n)) ∧ Q1 [] ∧
+              (∀t h. Q2 h ∧ Q1 t ⇒ Q1 (h::t)) ∧
+              (∀p_1 p_2. P p_2 ⇒ Q2 (p_1,p_2)) ⇒
+              (∀v. P v) ∧ (∀e. Q0 e) ∧ (∀l. Q1 l) ∧ ∀p. Q2 p”
+      then OK() else die ("not the older shape: " ^ thm_to_string th)
+    end
+
+(* and the commonest case of all, which comes by the same route *)
+val _ = Datatype`gh2108lt = G8LNil | G8LRec (gh2108lt list)`
+
+val _ = tprint "GH2108: a plain list operator still comes out right"
+val _ =
+    let
+      fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+      val th = legacyInduction.mutual_ind_from_ops
+                 (TypeBase.set_induction_of “:gh2108lt”)
+    in
+      if same (concl th)
+           “∀P Q0. P G8LNil ∧ (∀l. Q0 l ⇒ P (G8LRec l)) ∧ Q0 [] ∧
+                   (∀t h. P h ∧ Q0 t ⇒ Q0 (h::t)) ⇒
+                   (∀l. P l) ∧ ∀l. Q0 l”
+      then OK() else die ("not the older shape: " ^ thm_to_string th)
+    end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2097: a nested type's induction hypotheses.  With nothing tagged *)
+(* to datatype_simp the principle is rephrased only -- the existentials *)
+(* the chain leaves are pulled out and the equalities that leaves are   *)
+(* unwound.  A development says what more it wants by tagging theorems. *)
+(* The principle as the construction stated it stays available, because *)
+(* code reads that one and a development may tag anything.             *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2097exp = G7Var num
+                           | G7Rec ((num # gh2097exp) list) gh2097exp
+                           | G7Raise (gh2097exp option)`
+
+local
+  fun hasEx th = can (find_term is_exists) (concl th)
+in
+val _ = tprint "GH2097: the chain's existentials are pulled out"
+val _ =
+    let val th = DB.fetch "-" "gh2097exp_induction"
+    in if hasEx th then die (thm_to_string th) else OK() end
+
+val _ = tprint "GH2097: the stated principle is kept beside it"
+val _ =
+    let val th = TypeBase.set_induction_of “:gh2097exp”
+    in
+      if hasEx th then OK() else die ("no existential: " ^ thm_to_string th)
+    end
+
+end
+
+val _ = tprint "GH2097: a tagged theorem reaches a later declaration"
+val _ =
+    let
+      val before_ = length (datatypeSimpLib.datatype_simps())
+      val _ = List.app datatypeSimpLib.add_datatype_simp
+                ["pair.setSND_def", "pred_set.IN_ABS", "pair.FORALL_PROD",
+                 "pair.SND", "bnfPrelims.IN_optSET"]
+      val _ = Datatype`gh2097b = G7bNil | G7bRec ((num # gh2097b) list)`
+      val th = DB.fetch "-" "gh2097b_induction"
+      val after = length (datatypeSimpLib.datatype_simps())
+    in
+      if after <= before_ then die "nothing was tagged"
+      else if can (find_term (fn t => is_const t andalso
+                                      #1 (dest_const t) = "setSND"))
+                  (concl th)
+      then die ("setSND survived: " ^ thm_to_string th)
+      else OK()
+    end

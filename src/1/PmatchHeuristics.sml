@@ -23,17 +23,33 @@ fun type_names ty =
       Various heuristics for pattern compilation
  ----------------------------------------------------------------------------*)
 
-type pmatch_heuristic = {skip_rows : bool, collapse_cases : bool, col_fun : thry -> term list list -> int}
+type pmatch_heuristic = {
+  skip_rows : bool,
+  collapse_cases : bool,
+  col_fun : thry -> term list list -> int
+}
 
 (* the old heuristic used by HOL 4 *)
-val pheu_classic : pmatch_heuristic = { skip_rows = false, collapse_cases = false, col_fun = (fn _ => fn _ => 0) }
+val pheu_classic : pmatch_heuristic = {
+  skip_rows = false,
+  collapse_cases = false,
+  col_fun = (fn _ => fn _ => 0)
+}
 
 (* one that uses always the first column, but quits early and collapses *)
-val pheu_first_col : pmatch_heuristic = { skip_rows = true, collapse_cases = true, col_fun = (fn _ => fn _ => 0) }
+val pheu_first_col : pmatch_heuristic = {
+  skip_rows = true,
+  collapse_cases = true,
+  col_fun = (fn _ => fn _ => 0)
+}
 
 (* one that uses always the last column, but quits early and collapses *)
-val pheu_last_col : pmatch_heuristic = { skip_rows = true, collapse_cases = true, col_fun = (fn _ => fn rowL =>
-case rowL of [] => 0 | (r::_) => length r - 1) }
+val pheu_last_col : pmatch_heuristic = {
+  skip_rows = true,
+  collapse_cases = true,
+  col_fun = (fn _ => fn rowL =>
+                case rowL of [] => 0 | (r::_) => length r - 1)
+}
 
 (* A heuristic based on ranking functions *)
 fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true,
@@ -50,7 +66,9 @@ fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true,
    val ncolL = Lib.enumerate 0 colL
    fun step rank ncolL = let
      val ranked_cols = List.map (fn (i, pL) => ((i, pL), rank ty_info pL)) ncolL
-     val max = List.foldl (fn ((_, r), m) => if r > m then r else m) (snd (hd ranked_cols)) (tl ranked_cols)
+     val max = List.foldl (fn ((_, r), m) => if r > m then r else m)
+                          (snd (hd ranked_cols))
+                          (tl ranked_cols)
      val ranked_cols' = List.filter (fn (_, r) => r = max) ranked_cols
      val ncolL' = List.map fst ranked_cols'
    in
@@ -73,9 +91,13 @@ fun prheu_first_row _ [] = 0
 
 fun prheu_first_row_constr tybase [] = 0
   | prheu_first_row_constr tybase (p :: _) = if (is_var p) then 0 else
-    let val (_,ty) = strip_fun (type_of p) in
-     case tybase (type_names ty) of NONE => 1 | SOME tyinfo =>
-     (if (length (constructors_of tyinfo) = 1) then 0 else 1) end handle HOL_ERR _ => 0;
+    let val (_,ty) = strip_fun (type_of p)
+    in
+      case tybase (type_names ty) of
+          NONE => 1
+        | SOME tyinfo =>
+          (if (length (constructors_of tyinfo) = 1) then 0 else 1)
+    end handle HOL_ERR _ => 0;
 
 val prheu_constr_prefix : (thry -> term list -> int) =
   let fun aux n [] = n
@@ -121,11 +143,15 @@ fun prheu_arity ty_info pL =
 (* heuristics defined using ranking functions *)
 val pheu_first_row = pheu_rank [prheu_first_row]
 val pheu_constr_prefix = pheu_rank [prheu_constr_prefix]
-val pheu_qba = pheu_rank [prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
-val pheu_cqba = pheu_rank [prheu_first_row_constr, prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
+val pheu_qba =
+    pheu_rank [prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
+val pheu_cqba =
+    pheu_rank [prheu_first_row_constr, prheu_constr_prefix,
+               prheu_small_branching_factor, prheu_arity]
 
 (* A list of all the standard heuristics *)
-val default_heuristic_list = [pheu_qba, pheu_cqba, pheu_first_row, pheu_last_col, pheu_first_col]
+val default_heuristic_list =
+    [pheu_qba, pheu_cqba, pheu_first_row, pheu_last_col, pheu_first_col]
 
 
 (*----------------------------------------------------------------------------
@@ -134,7 +160,8 @@ val default_heuristic_list = [pheu_qba, pheu_cqba, pheu_first_row, pheu_last_col
 
 (* run multiple heuristics and take the best result *)
 type pmatch_heuristic_res_compare = (term list list * term) Lib.cmp
-type pmatch_heuristic_fun = unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)
+type pmatch_heuristic_fun =
+     unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)
 
 
 (*----------------------
@@ -162,7 +189,8 @@ fun lex_order (ord1 : 'a cmp) (ord2 : 'a cmp) xy =
   handle Unordered => (ord2 xy handle Unordered => EQUAL)
 
 val pmatch_heuristic_cases_base_cmp : pmatch_heuristic_res_compare =
-  fn ((patts1, case_tm1), (patts2, case_tm2)) => Int.compare (length patts1, length patts2)
+  fn ((patts1, case_tm1), (patts2, case_tm2)) =>
+     Int.compare (length patts1, length patts2)
 
 fun pmatch_heuristic_size_base_cmp ((patts1, case_tm1), (patts2, case_tm2)) =
   Int.compare (term_size case_tm1, term_size case_tm2)
@@ -182,15 +210,20 @@ fun pmatch_heuristic_size_cmp xy = lex_order pmatch_heuristic_size_base_cmp
   try a list of heuristics
  --------------------------*)
 
-fun pmatch_heuristic_list min_fun l () : (pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)) = let
-  val hL_ref = ref l
-  fun aux () = case (!hL_ref) of
-     [] => NONE
-   | h::hL => (hL_ref := hL; SOME h)
-in (min_fun, aux) end
+fun pmatch_heuristic_list min_fun l () :
+    (pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)) =
+    let
+      val hL_ref = ref l
+      fun aux () = case (!hL_ref) of
+                       [] => NONE
+                     | h::hL => (hL_ref := hL; SOME h)
+    in (min_fun, aux)
+    end
 
-val default_heuristic_fun = (pmatch_heuristic_list pmatch_heuristic_cases_cmp default_heuristic_list);
-val classic_heuristic_fun = (pmatch_heuristic_list pmatch_heuristic_cases_cmp [pheu_classic]);
+val default_heuristic_fun =
+    pmatch_heuristic_list pmatch_heuristic_cases_cmp default_heuristic_list
+val classic_heuristic_fun =
+    pmatch_heuristic_list pmatch_heuristic_cases_cmp [pheu_classic]
 
 
 (*-----------------------------------
@@ -227,7 +260,11 @@ let
                  end
                | NONE => let
                    val l = List.length (hd rowL)
-                   val _ = Lib.appi (fn i => fn _ =>  add_heu (heu ((!current_prefix) @ [(true, i+1, l)]))) (tl (hd rowL))
+                   val _ =
+                       Lib.appi
+                         (fn i => fn _ =>
+                             add_heu(heu ((!current_prefix) @ [(true,i+1,l)])))
+                         (tl (hd rowL))
                    val _ = current_prefix := (!current_prefix) @ [(true, 0, l)]
                  in
                    (true, 0, l)
@@ -236,7 +273,12 @@ let
 
      fun colfun thry rowL = let
        val (do_it, r, l) = colfun_print thry rowL
-       val _ = if do_it then (print (int_to_string (r+1)); print "/"; print (int_to_string l); print " ") else ()
+       val _ = if do_it then (
+                 print (int_to_string (r+1));
+                 print "/";
+                 print (int_to_string l);
+                 print " "
+               ) else ()
      in
        r
      end
@@ -333,8 +375,10 @@ val classic = ref false
 fun is_classic () = !classic
 
 fun set_heuristic_fun heu_fun = set_pmatch_heuristic heu_fun
-fun set_heuristic_list_size heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_size_cmp heuL)
-fun set_heuristic_list_cases heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_cases_cmp heuL)
+fun set_heuristic_list_size heuL =
+    set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_size_cmp heuL)
+fun set_heuristic_list_cases heuL =
+    set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_cases_cmp heuL)
 fun set_heuristic heu = set_heuristic_list_cases [heu]
 
 fun set_default_heuristic () =

@@ -476,8 +476,11 @@ val _ =
     own equation.
    ---------------------------------------------------------------------- *)
 
+val fameqns = List.concat (List.map (eqnsOf o #components) (#functors fam))
+
 fun memberEqns j =
-    constructorEqns (List.nth (fcss, j)) (valOf (List.nth (#maps fam, j)))
+    constructorEqns fameqns (List.nth (fcss, j))
+                    (valOf (List.nth (#maps fam, j)))
 val fam_eqns = List.tabulate (3, memberEqns)
 
 (* conjunct by conjunct: a theorem's conjuncts may name their arguments
@@ -586,7 +589,7 @@ val cdefs = List.map #defs ccs
 val caxiom = familyAxiomOf cdefs (familyExistence (#principle coll))
 val csetind = familySetInductionOf fam (#types coll, #cons coll)
                                    (#principle coll)
-val cinduction = familyInductionOf cdefs csetind
+val cinduction = familyInductionOf fameqns cdefs csetind
 val ccases = defineCases caxiom
 (* ----------------------------------------------------------------------
     and the collapsed types as functors of their own.
@@ -677,6 +680,7 @@ val _ = checkeqn "and they are mutually recursive too"
 
 val ctyinfos = typeBaseInfo {axiom = caxiom, induction = cinduction,
                              case_defs = ccases, mapIDs = [],
+                             eqns = fameqns,
                              rewrites = List.map (fn e => #map_eqns e ::
                                                            #set_eqns e)
                                                  ceqns,

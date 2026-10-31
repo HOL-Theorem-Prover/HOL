@@ -576,11 +576,11 @@ val mc_sexp2sexp_loop_lemma = prove(
         (mc_sexp2sexp_loop_pre (Sym "LIST",x1,list2sexp zs,
            push_list_fun (REVERSE (sexp2list x3)) ++ Sym "CONSP"::x::xs) =
          mc_sexp2sexp_loop_pre (Sym "T",Sym "NIL",
-           list2sexp (x::MAP (\a. sexp2sexp a) (sexp2list x3) ++ zs),xs)) /\
+           list2sexp (x::MAP sexp2sexp (sexp2list x3) ++ zs),xs)) /\
         (mc_sexp2sexp_loop (Sym "LIST",x1,list2sexp zs,
            push_list_fun (REVERSE (sexp2list x3)) ++ Sym "CONSP"::x::xs) =
          mc_sexp2sexp_loop (Sym "T",Sym "NIL",
-           list2sexp (x::MAP (\a. sexp2sexp a) (sexp2list x3) ++ zs),xs))` by
+           list2sexp (x::MAP sexp2sexp (sexp2list x3) ++ zs),xs))` by
      (REPEAT STRIP_TAC
       \\ `EVERY (\x. LSIZE x < LSIZE x2) (sexp2list x3)` by METIS_TAC [LSIZE_EVERY_sexp2list]
       \\ POP_ASSUM MP_TAC
@@ -3978,7 +3978,7 @@ val mc_loop_lemma = prove(
     \\ Q.PAT_ABBREV_TAC `lambda = Dot (Dot (Sym "LAMBDA") xx) yy`
     \\ Q.PAT_X_ASSUM `!x.bbb` MP_TAC
     \\ Q.PAT_X_ASSUM `!x.bbb` (STRIP_ASSUME_TAC o RW [] o Q.SPECL [`^COMPILE_LAM1::lambda::bool2sexp ret::a2sexp a::xs'`,`code`])
-    \\ `(\a. term2sexp a) = term2sexp` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
+    \\ `term2sexp = term2sexp` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
     \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [bool2sexp_def]
     \\ UNROLL_TAC

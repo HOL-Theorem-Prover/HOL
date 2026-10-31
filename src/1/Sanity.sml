@@ -111,7 +111,10 @@ end;
 (******************************************************************************)
 
 val check_thm_name_flag = ref true;
-val _ = Feedback.register_btrace ("Sanity Check Thm-Name Clash", check_thm_name_flag);
+val _ = Feedback.register_btrace (
+      "Sanity Check Thm-Name Clash",
+      check_thm_name_flag
+    );
 
 fun check_thm_name ((thy, name), thm) =
 if (!check_thm_name_flag) then
@@ -144,7 +147,10 @@ end;
 
 
 val check_var_names___const_flag = ref true;
-val _ = Feedback.register_btrace ("Sanity Check Var-Const Clash", check_var_names___const_flag);
+val _ = Feedback.register_btrace (
+      "Sanity Check Var-Const Clash",
+      check_var_names___const_flag
+    );
 
 fun check_var_names___const ((thy, name), thm) =
 if (!check_var_names___const_flag) then
@@ -168,7 +174,8 @@ end else false;
 (******************************************************************************)
 
 val check_free_vars_ref = ref 1;
-val _ = Feedback.register_trace ("Sanity Check Free Vars", check_free_vars_ref, 1);
+val _ =
+    Feedback.register_trace ("Sanity Check Free Vars", check_free_vars_ref, 1);
 
 fun varlist_to_string vL =
   concat (commafy (map (fn v => "'"^(ppstring pp_term v)^"'") vL))
@@ -268,7 +275,8 @@ fun sanity_check_exn_thm (name, thm) =
       (print "\n\n";raise sanity_exn);
 
 fun sanity_prove (t, tac) = sanity_check_exn_thm ("-", Tactical.prove (t, tac));
-fun save_thm (name, thm) = Theory.save_thm (name, sanity_check_exn_thm (name, thm));
+fun save_thm (name, thm) =
+    Theory.save_thm (name, sanity_check_exn_thm (name, thm));
 fun store_thm (name, t, tac) =
    sanity_check_exn_thm (name, Tactical.store_thm (name, t, tac));
 
