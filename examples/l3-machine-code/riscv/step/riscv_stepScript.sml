@@ -26,14 +26,17 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
    ------------------------------------------------------------------------ *)
 
 (* Fetch() of riscv.spec without its logging (setupDelta).  Where the spec
-   returns F_Error (a misaligned pc, or a parcel that the PMP does not let
-   the current privilege execute), which makes Next take a trap, this one
-   raises UNDEFINED, which makes NextRISCV return NONE.  As in the spec, an
-   instruction is fetched in 2-byte parcels: the PMP must allow the parcel
-   at the pc and, for a 32-bit instruction, the one at pc + 2, whose bytes
-   are read from the address that fetchAddr gives for it.  NextRISCV only
-   refines Next if it fetches exactly what Next would, so this must mirror
-   the spec (doc/design-privileged.md §1.1 F1, §5.6.3). *)
+   returns F_Error (a misaligned pc, or a parcel for which fetchAddr gives
+   TR_Fault: its translation raises an instruction page fault or access
+   fault, or the PMP does not let the current privilege execute it), which
+   makes Next take a trap, this one raises UNDEFINED, which makes NextRISCV
+   return NONE.  As in the spec, an instruction is fetched in 2-byte
+   parcels, each translated and checked by the PMP: the parcel at the pc
+   and, for a 32-bit instruction, the one at pc + 2, whose bytes are read
+   from the physical address that fetchAddr gives for it ([D59], [S16]).
+   NextRISCV only refines Next if it fetches exactly what Next would, so
+   this must mirror the spec (doc/design-privileged.md §1.1 F1, §5.6.3;
+   doc/design-smode.md §1.4). *)
 
 Definition Fetch_def:
   Fetch s =
@@ -42,15 +45,15 @@ Definition Fetch_def:
     raise'exception (UNDEFINED "fetch misaligned") s
   else
     case fetchAddr pc s of
-       NONE => raise'exception (UNDEFINED "fetch fault") s
-     | SOME ppc =>
+       TR_Fault _ => raise'exception (UNDEFINED "fetch fault") s
+     | TR_Address ppc =>
          let (w, s) = rawReadInst ppc s in
          case w of
             Half h => (Half h, s)
           | Word i =>
               case fetchAddr (pc + 2w) s of
-                 NONE => raise'exception (UNDEFINED "fetch fault") s
-               | SOME ppc2 =>
+                 TR_Fault _ => raise'exception (UNDEFINED "fetch fault") s
+               | TR_Address ppc2 =>
                    (Word (s.MEM8 (ppc2 + 1w) @@ s.MEM8 ppc2 @@ (15 >< 0) i), s)
 End
 
@@ -79,12 +82,14 @@ End
    trap value of an illegal instruction).  NONE when Next would trap in the
    fetch (Fetch above raises UNDEFINED instead), when the instruction raises
    an UNDEFINED, and for SRET, which returns to S-mode or U-mode through
-   sepc: S-mode is outside the validated scope (doc/design-privileged.md
-   Scope).  NextRISCV does not model what Next does besides running the
-   instruction: it takes no interrupts (see H6 below), leaves out the
-   setupDelta and clear_logs of Next (although an instruction may still
-   write c_update, as writeCSR, writeFPRS and writeFPRD do), and does not
-   count (c_cycles, c_instret, c_minstret_written). *)
+   sepc: the step theorems are for code that runs in M-mode (H1 below), and
+   S-mode and U-mode code stay outside them by design, although the model
+   executes both (doc/design-smode.md §1.4, §1.9).  NextRISCV does not
+   model what Next does besides running the instruction: it takes no
+   interrupts (see H6 below), leaves out the setupDelta and clear_logs of
+   Next (although an instruction may still write c_update, as writeCSR,
+   writeFPRS and writeFPRD do), and does not count (c_cycles, c_instret,
+   c_minstret_written). *)
 Definition NextRISCV_def:
   NextRISCV s =
   let rvc = haveRVC () s in
@@ -116,6 +121,13 @@ End
    H4  pmp_off_or_napot (s.c_MCSR s.procID)   every PMP entry is OFF or NAPOT
    H5  the data address is naturally aligned
    H6  ~(s.c_MCSR s.procID).mstatus.MIE       no interrupt can be taken
+
+   Address translation is off in M-mode (P §12.1.11 p.126, §3.1.6.4 p.35):
+   a fetch is translated with the current privilege and a load or store
+   with the effective one, so H1 (fetch) and H1 and H2 (data) make it the
+   identity, whatever satp holds (translateAddr_Machine below,
+   doc/design-smode.md §1.1-1.3).  So no step theorem has a hypothesis on
+   satp, or on any other field of c_SCSR.
 
    The step theorems carry H3 and H4 as their word-level conjuncts, so that
    a lifter can turn each one into an assertion on a word; the definitions
@@ -338,30 +350,70 @@ Proof
   \\ asm_simp_tac std_ss []
 QED
 
-(* Fetches use the current privilege (H1); translateAddr is the identity. *)
-Theorem fetchAddr_Machine:
-  (s.c_privilege s.procID = 3w) /\ pmp_unlocked (s.c_MCSR s.procID) /\
-  aligned 1 a ==>
-  (fetchAddr a s = SOME a)
+(* satp is active, and an address translated, only when the privilege of
+   the access is S or U (P §12.1.11 p.126, §12.3.2 step 1 p.134).
+   translateAddr tests that privilege before it reads anything else, so in
+   M-mode it is the identity with no hypothesis, whatever satp, mstatus
+   and the page tables hold (doc/design-smode.md §1.2-1.3, [S1]). *)
+Theorem translateAddr_Machine:
+  translateAddr (a, ft, ac, Machine) s = TR_Address a
 Proof
-  rw [fetchAddr_def, translateAddr_def, curPrivilege_def, privilege_def]
-  \\ match_mp_tac pmpCheck_Machine
-  \\ simp []
+  rw [translateAddr_def]
 QED
 
 (* Loads and stores use the effective privilege, which is the current one
-   unless mstatus.MPRV is set (H2). *)
+   unless mstatus.MPRV is set (P §3.1.6.4 p.35, [D22]): M-mode by H1 and
+   H2. *)
+Theorem effectivePrivilege_Machine:
+  (s.c_privilege s.procID = 3w) /\ ~(s.c_MCSR s.procID).mstatus.MPRV ==>
+  (effectivePrivilege () s = Machine)
+Proof
+  rw [effectivePrivilege_def, MCSR_def, curPrivilege_def, privilege_def]
+QED
+
+(* With satp.MODE Bare (0), translation is the identity at every privilege
+   (P §12.1.11 Table 40 p.126).  The M-mode step theorems do not use this:
+   they need no hypothesis on satp (translateAddr_Machine).  It is the
+   lemma that step theorems for S-mode or U-mode code would use, with
+   satp.MODE = 0 as their hypothesis (doc/design-smode.md §1.3, §1.9). *)
+Theorem translateAddr_Bare:
+  ((63 >< 60) (s.c_SCSR s.procID).satp = (0w: word4)) ==>
+  (translateAddr (a, ft, ac, p) s = TR_Address a)
+Proof
+  rw [translateAddr_def, SCSR_def]
+QED
+
+(* Fetches use the current privilege, M-mode by H1, so translateAddr is the
+   identity (translateAddr_Machine), and the PMP allows the 2-byte parcel
+   (H3, pmpCheck_Machine). *)
+Theorem fetchAddr_Machine:
+  (s.c_privilege s.procID = 3w) /\ pmp_unlocked (s.c_MCSR s.procID) /\
+  aligned 1 a ==>
+  (fetchAddr a s = TR_Address a)
+Proof
+  strip_tac
+  \\ `pmpCheck (a, 2, PMP_Execute, Machine) s`
+     by (match_mp_tac pmpCheck_Machine \\ simp [])
+  \\ simp [fetchAddr_def, translateAddr_Machine, curPrivilege_def,
+           privilege_def]
+QED
+
+(* Loads and stores use the effective privilege, M-mode by H1 and H2
+   (effectivePrivilege_Machine), so translateAddr is the identity, and the
+   PMP allows the access (H3, and H4 for 8 bytes; pmpCheck_Machine). *)
 Theorem dataAddr_Machine:
   (s.c_privilege s.procID = 3w) /\ ~(s.c_MCSR s.procID).mstatus.MPRV /\
   pmp_unlocked (s.c_MCSR s.procID) /\
   ((n = 1) \/ (n = 2) /\ aligned 1 a \/ (n = 4) /\ aligned 2 a \/
    (n = 8) /\ aligned 3 a /\ pmp_off_or_napot (s.c_MCSR s.procID)) ==>
-  (dataAddr (a, n, kind) s = SOME a)
+  (dataAddr (a, n, kind) s = TR_Address a)
 Proof
-  rw [dataAddr_def, translateAddr_def, effectivePrivilege_def, MCSR_def,
-      curPrivilege_def, privilege_def]
-  \\ match_mp_tac pmpCheck_Machine
-  \\ simp []
+  DISCH_TAC
+  \\ `pmpCheck (a, n, kind, Machine) s`
+     by (match_mp_tac pmpCheck_Machine \\ fs [])
+  \\ `effectivePrivilege () s = Machine`
+     by (match_mp_tac effectivePrivilege_Machine \\ fs [])
+  \\ simp [dataAddr_def, translateAddr_Machine]
 QED
 
 (* H6.  NextRISCV takes no interrupts: it always fetches and runs the
@@ -1156,7 +1208,8 @@ local
      combinTheory.UPDATE_EQ]
   val datatype_rwts =
     utilsLib.datatype_rewrites true "riscv"
-      ["riscv_state", "Architecture", "Privilege", "pmpAccess", "ExtStatus"]
+      ["riscv_state", "Architecture", "Privilege", "pmpAccess", "ExtStatus",
+       "TransResult"]
   fun riscv_thms thms =
     thms @ cond_updates @ csr_record_rwts @ datatype_rwts @
     [wordsTheory.WORD_EXTRACT_ZERO2, wordsTheory.ZERO_SHIFT,
@@ -1199,10 +1252,6 @@ end
 
 val () = step_conv false
 
-(* Address translation is the identity: satp.MODE is Bare. *)
-val translateAddr = EV [translateAddr_def] [] []
-  ``translateAddr (vPC, ft, ac)``
-
 (* misa.MXL is 2 in every reachable state, so this is false; the RV32 cases
    stay in the step theorems as before. *)
 val in32BitMode = EV [in32BitMode_def, MCSR_def] [] [] ``in32BitMode()``
@@ -1239,10 +1288,11 @@ val write'GPR =
 val update_pc = Theory.save_thm("update_pc",
   EV [update_pc_def, write'PC_def] [] [] ``update_pc v``)
 
-(* The PMP check of a fetch parcel in M-mode, from H1 and H3. *)
+(* The translation and PMP check of a fetch parcel in M-mode, from H1 and
+   H3 (fetchAddr_Machine). *)
 val fetchAddr = uprove
   `^h1 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ ~word_bit 0 a ==>
-   (fetchAddr a s = SOME a)`
+   (fetchAddr a s = TR_Address a)`
   (
   rw [] \\ match_mp_tac fetchAddr_Machine
   \\ fs [pmp_unlocked_def, aligned1]
@@ -1397,29 +1447,30 @@ val rawWriteData1 = REWRITE_RULE [thm] rawWriteData1
    Data access and privilege rewrites
    ------------------------------------------------------------------------ *)
 
-(* The PMP check of a naturally aligned data access in M-mode (H1, H2, H3,
-   and H4 for 8 bytes).  The alignment is the hypothesis H5 of the step
-   theorem, which has already eliminated the misaligned-access trap. *)
+(* The translation and PMP check of a naturally aligned data access in
+   M-mode (H1, H2, H3, and H4 for 8 bytes; dataAddr_Machine).  The
+   alignment is the hypothesis H5 of the step theorem, which has already
+   eliminated the misaligned-access trap. *)
 
 val dataAddr1 = uprove
   `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) ==>
-   (dataAddr (a, 1, k) s = SOME a)`
+   (dataAddr (a, 1, k) s = TR_Address a)`
   (rw [] \\ match_mp_tac dataAddr_Machine \\ fs [pmp_unlocked_def])
 
 val dataAddr2 = uprove
   `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ aligned 1 a ==>
-   (dataAddr (a, 2, k) s = SOME a)`
+   (dataAddr (a, 2, k) s = TR_Address a)`
   (rw [] \\ match_mp_tac dataAddr_Machine \\ fs [pmp_unlocked_def])
 
 val dataAddr4 = uprove
   `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ aligned 2 a ==>
-   (dataAddr (a, 4, k) s = SOME a)`
+   (dataAddr (a, 4, k) s = TR_Address a)`
   (rw [] \\ match_mp_tac dataAddr_Machine \\ fs [pmp_unlocked_def])
 
 val dataAddr8 = uprove
   `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ ^(hd h4) /\ ^(hd (tl h4)) /\
    aligned 3 a ==>
-   (dataAddr (a, 8, k) s = SOME a)`
+   (dataAddr (a, 8, k) s = TR_Address a)`
   (
   rw [] \\ match_mp_tac dataAddr_Machine
   \\ fs [pmp_unlocked_def, pmp_off_or_napot_def]
@@ -1670,7 +1721,7 @@ QED
 local
   val l =
     [GPR, in32BitMode, haveRVC, PC, wordsTheory.word_len_def,
-     branchTo, translateAddr, jal, jalr, aligned2, aligned3w,
+     branchTo, translateAddr_Machine, jal, jalr, aligned2, aligned3w,
      dataAddr1, dataAddr2, dataAddr4, dataAddr8, curPrivilege,
      matchLoadReservation, write'ReserveLoad_def,
      aligned_select_word_s, aligned_select_word_z, aligned_select_word,
@@ -1698,11 +1749,23 @@ local
      combinTheory.K_o_THM, combinTheory.UPDATE_EQ]
   val hyp_eq_rule =
     utilsLib.ALL_HYP_CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
-  (* No trap branch, and no PMP check or rounding mode left. *)
+  (* No trap branch, and no address translation, PMP check or rounding mode
+     left. *)
   val bad =
     List.map Term.same_const
       [``signalAddressException``, ``signalException``, ``raise'exception``,
-       ``dataAddr``, ``fetchAddr``, ``round``, ``validRounding``]
+       ``dataAddr``, ``fetchAddr``, ``translateAddr``, ``effectivePrivilege``,
+       ``ptwLevel``, ``ptwStep``, ``ptePermits``, ``round``,
+       ``validRounding``]
+  (* Nor a hypothesis on the S-mode CSRs, satp among them: translation is
+     off in M-mode (translateAddr_Machine), so the M-mode contract needs
+     none (doc/design-smode.md §1.1, [S28]). *)
+  val scsr =
+    [Term.rator ``^s.c_SCSR``,
+     fst (boolSyntax.strip_comb ``^s with c_SCSR := f``)]
+  fun on_scsr tm =
+    List.exists (fn c => Lib.can (HolKernel.find_term (Term.same_const c)) tm)
+      scsr
   (* Nor any other function of the model that reads or writes the state:
      the result must be s with field updates only.  Skip is the exception:
      NextRISCV adds it to the pc, and as before the priv-1.13 model the
@@ -1729,13 +1792,17 @@ local
          ( print_thm th; print "\n"
          ; raise ERR "class" ("trap or check left in " ^ n))
      | NONE =>
-         case Lib.total (HolKernel.find_term (unevaluated allowed))
-                (boolSyntax.rhs (Thm.concl th)) of
-            SOME c =>
-              ( print_thm th; print "\n"
-              ; raise ERR "class"
-                  (Parse.term_to_string c ^ " left in " ^ n))
-          | NONE => th
+         if List.exists on_scsr (Thm.hyp th) then
+           ( print_thm th; print "\n"
+           ; raise ERR "class" ("hypothesis on c_SCSR in " ^ n))
+         else
+           case Lib.total (HolKernel.find_term (unevaluated allowed))
+                  (boolSyntax.rhs (Thm.concl th)) of
+              SOME c =>
+                ( print_thm th; print "\n"
+                ; raise ERR "class"
+                    (Parse.term_to_string c ^ " left in " ^ n))
+            | NONE => th
   (* 8-byte loads read one aligned double-word *)
   val reads8 = ["LD", "FLD", "LR_D"] @
     List.map (fn s => "AMO" ^ s ^ "_D")
