@@ -33,7 +33,6 @@ pft-replay-test: pft-replay-test.mlb pft-replay-test.sml $(PFT_REPLAY_SRCS)
 
 else
 
-$(info *** Doing nothing when no mlton)
 all:
 endif
 

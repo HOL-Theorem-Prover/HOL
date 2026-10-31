@@ -118,75 +118,40 @@ fun read_footer_raw file = let
   val () = if opc = 0xFF then ()
            else raise Fail "PFTReader: bad footer opcode"
   val vi = mk_readVarint r
-  val n_ty = vi () val n_tm = vi () val n_th = vi () val n_ci = vi ()
+  val n_ty = vi () val n_tm = vi () val n_th = vi ()
   val () = #close r ()
-in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci,
+in {n_ty = n_ty, n_tm = n_tm, n_th = n_th,
     footer_len = footer_len, file_size = file_size} end
-
-(* ========================================================================= *)
-(* JSONL limits reader: scan backwards from EOF for last line                *)
-(* ========================================================================= *)
-
-fun read_limits_jsonl file = let
-  val file_size = Position.toInt (OS.FileSys.fileSize file)
-  val inp = BinIO.openIn file
-  (* Read last 1KB — limits line is short *)
-  val chunk_size = Int.min(file_size, 1024)
-  val _ = BinIO.inputN(inp, file_size - chunk_size)
-  val chunk = Byte.bytesToString (BinIO.inputN(inp, chunk_size))
-  val () = BinIO.closeIn inp
-  (* Find last newline-delimited line *)
-  val len = String.size chunk
-  fun find_nl i =
-    if i < 0 then 0
-    else if String.sub(chunk, i) = #"\n" andalso i < len - 1 then i + 1
-    else find_nl (i - 1)
-  val last_line = String.extract(chunk, find_nl (len - 2), NONE)
-  (* Extract integer field from JSON object via Substring.position *)
-  fun getField s field = let
-    val key = "\"" ^ field ^ "\":"
-    val (_, rest) = Substring.position key (Substring.full s)
-  in if Substring.size rest = 0
-     then raise Fail ("PFTReader: no " ^ field ^ " in limits line")
-     else let
-       val after = Substring.dropl Char.isSpace
-                     (Substring.triml (String.size key) rest)
-       val digits = Substring.takel Char.isDigit after
-     in case Int.fromString (Substring.string digits) of
-          SOME n => n
-        | NONE => raise Fail ("PFTReader: bad " ^ field ^ " in limits line")
-     end
-  end
-in {n_ty = getField last_line "n_ty",
-    n_tm = getField last_line "n_tm",
-    n_th = getField last_line "n_th",
-    n_ci = getField last_line "n_ci"} end
 
 fun read_limits {file, binary} =
   if binary then let
-    val {n_ty, n_tm, n_th, n_ci, ...} = read_footer_raw file
-  in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end
-  else read_limits_jsonl file
+    val {n_ty, n_tm, n_th, ...} = read_footer_raw file
+  in {n_ty = n_ty, n_tm = n_tm, n_th = n_th} end
+  else raise Fail "PFTReader: JSONL input unsupported"
+
+fun header (r: bin_reader) = let
+  val _ = #readBytes r 4   (* magic "PFT\0" *)
+  val version = mk_readString r ()
+  val () = if version = "0.1.0" then () else
+    raise Fail ("PFTReader: unsupported version " ^ version ^
+                "; expected 0.1.0")
+  val ruleset = mk_readString r ()
+in {version = version, ruleset = ruleset} end
 
 fun read_header {file, binary} =
-  if not binary
-  then raise Fail "PFTReader: read_header not supported for JSONL"
+  if not binary then raise Fail "PFTReader: JSONL input unsupported"
   else let
     val r = open_bin_reader file
-    val _ = #readBytes r 4   (* magic "PFT\0" *)
-    val vi = mk_readVarint r
-    val vs = mk_readString r
-    val version = vi ()
-    val ruleset = vs ()
+    val result = header r handle e => (#close r (); raise e)
     val () = #close r ()
-  in {version = version, ruleset = ruleset} end
+  in result end
 
 (* ========================================================================= *)
 (* Binary command reader                                                     *)
 (* ========================================================================= *)
 
 fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
-  val {n_ty, n_tm, n_th, n_ci, footer_len, file_size} =
+  val {n_ty, n_tm, n_th, footer_len, file_size} =
     read_footer_raw file
   val cmd_end = file_size - footer_len - 2
   val r = open_bin_reader file
@@ -194,10 +159,8 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
   val vs = mk_readString r
   val sr = mk_stream_reader r
 
-  (* Skip header, but capture version and ruleset *)
-  val _ = #readBytes r 4   (* magic "PFT\0" *)
-  val version = vi ()
-  val ruleset = vs ()
+  val {version, ruleset} = header r
+    handle e => (#close r (); raise e)
 
   fun dispatch opc =
     if opc >= 0x10 andalso opc <= 0x4F then
@@ -235,11 +198,9 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
     | 0xE0 => #del fh ("ty", vi())
     | 0xE1 => #del fh ("tm", vi())
     | 0xE2 => #del fh ("th", vi())
-    | 0xE3 => #del fh ("ci", vi())
     | 0xF0 => let val a = vi() val b = vi() in #del_range fh ("ty",a,b) end
     | 0xF1 => let val a = vi() val b = vi() in #del_range fh ("tm",a,b) end
     | 0xF2 => let val a = vi() val b = vi() in #del_range fh ("th",a,b) end
-    | 0xF3 => let val a = vi() val b = vi() in #del_range fh ("ci",a,b) end
     | _ => raise Fail ("PFTReader: unknown opcode 0x" ^
                         Int.fmt StringCvt.HEX opc)
 
@@ -247,10 +208,10 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
     if #pos r () >= cmd_end then ()
     else (dispatch (#readByte r ()); cmd_loop ())
 
-  val () = cmd_loop ()
+  val () = cmd_loop () handle e => (#close r (); raise e)
   val () = #close r ()
 in {version = version, ruleset = ruleset,
-    n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end
+    n_ty = n_ty, n_tm = n_tm, n_th = n_th} end
 
 (* ========================================================================= *)
 (* HOL4 ruleset handler                                                      *)
@@ -289,9 +250,9 @@ type handler = {
   def_tyop: int * int * string -> unit,
   def_spec: int * int * string list -> unit,
   def_spec_gen: int * int * string list -> unit,
-  compute_init: int * int * int
+  compute_init: int * int
                 * (string * int) list * (string * int) list -> unit,
-  compute: int * int * int * int list -> unit
+  compute: int * int * int list -> unit
 }
 
 fun make_handler (h: handler) : ruleset_handler = fn opc => fn sr => let
@@ -354,12 +315,12 @@ in case opc of
             in #def_spec h (id, th, #readStringList sr ()) end
   | 0x42 => let val id = vi() val th = vi()
             in #def_spec_gen h (id, th, #readStringList sr ()) end
-  | 0x43 => let val id = vi() val ty1 = vi() val ty2 = vi()
+  | 0x43 => let val ty1 = vi() val ty2 = vi()
                 val eqns = #readStringVarintPairs sr ()
                 val terms = #readStringVarintPairs sr ()
-            in #compute_init h (id, ty1, ty2, eqns, terms) end
-  | 0x44 => let val id = vi() val ci = vi() val tm = vi()
-            in #compute h (id, ci, tm, #readVarintList sr ()) end
+            in #compute_init h (ty1, ty2, eqns, terms) end
+  | 0x44 => let val id = vi() val tm = vi()
+            in #compute h (id, tm, #readVarintList sr ()) end
   | _ => raise Fail ("PFTReader.HOL4: unknown opcode 0x" ^
                       Int.fmt StringCvt.HEX opc)
 end

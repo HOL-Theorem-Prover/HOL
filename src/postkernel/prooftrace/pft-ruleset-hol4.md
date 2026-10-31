@@ -2,7 +2,7 @@
 
 This document defines the `hol4` ruleset for the
 [PFT format](pft-format.md). It specifies the theorem commands available
-in traces with `"ruleset":"hol4"`, their binary opcodes, JSON encodings,
+in traces with ruleset `hol4`, their binary opcodes,
 and logical semantics.
 
 ## Primitive Constants and Types
@@ -194,6 +194,9 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 | CCONTR | id, tm, th |
 | deductAntisym | id, th1, th2 |
 
+The current portable HOL replayer explicitly rejects `deductAntisym`.
+The command remains part of the wire format.
+
 ### Conjunction
 
 | Command | Arguments |
@@ -250,8 +253,8 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 
 | Command | Arguments |
 |---------|-----------|
-| COMPUTE_INIT | id, num_ty: type-id, cval_ty: type-id, char_eqns: {name: thm-id}, cval_terms: {name: term-id} |
-| COMPUTE | id, ci: compute-id, tm, ths: thm-id list |
+| COMPUTE_INIT | num_ty: type-id, cval_ty: type-id, char_eqns: {name: thm-id}, cval_terms: {name: term-id} |
+| COMPUTE | id, tm, ths: thm-id list |
 
 ## Binary Opcodes
 
@@ -299,114 +302,8 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 | 0x40   | DEF_TYOP      | id th name                             |
 | 0x41   | DEF_SPEC      | id th n_names name...                  |
 | 0x42   | DEF_SPEC_GEN  | id th n_names name...                   |
-| 0x43   | COMPUTE_INIT  | id ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
-| 0x44   | COMPUTE       | id ci tm n_ths th...                   |
-
-## JSON Lines Encoding
-
-### Simple commands
-
-```json
-{"cmd":"REFL","id":0,"tm":1}
-{"cmd":"ALPHA","id":0,"tm1":1,"tm2":2}
-{"cmd":"ASSUME","id":0,"tm":1}
-{"cmd":"BETA_CONV","id":0,"tm":1}
-{"cmd":"SYM","id":0,"th":1}
-{"cmd":"TRANS","id":0,"th1":1,"th2":2}
-{"cmd":"MK_COMB","id":0,"th1":1,"th2":2}
-{"cmd":"ABS_THM","id":0,"tm":1,"th":2}
-{"cmd":"AP_TERM","id":0,"tm":1,"th":2}
-{"cmd":"AP_THM","id":0,"th":1,"tm":2}
-{"cmd":"Beta","id":0,"th":1}
-{"cmd":"DISCH","id":0,"tm":1,"th":2}
-{"cmd":"NOT_INTRO","id":0,"th":1}
-{"cmd":"NOT_ELIM","id":0,"th":1}
-{"cmd":"CCONTR","id":0,"tm":1,"th":2}
-{"cmd":"deductAntisym","id":0,"th1":1,"th2":2}
-{"cmd":"CONJ","id":0,"th1":1,"th2":2}
-{"cmd":"CONJUNCT1","id":0,"th":1}
-{"cmd":"CONJUNCT2","id":0,"th":1}
-{"cmd":"DISJ1","id":0,"th":1,"tm":2}
-{"cmd":"DISJ2","id":0,"tm":1,"th":2}
-{"cmd":"GEN","id":0,"tm":1,"th":2}
-{"cmd":"SPEC","id":0,"tm":1,"th":2}
-{"cmd":"Specialize","id":0,"tm":1,"th":2}
-{"cmd":"EXISTS","id":0,"tm1":1,"tm2":2,"th":3}
-{"cmd":"EQ_IMP_RULE1","id":0,"th":1}
-{"cmd":"EQ_IMP_RULE2","id":0,"th":1}
-```
-
-### Commands with descriptive keys
-
-```json
-{"cmd":"EQ_MP","id":0,"eq":1,"th":2}
-{"cmd":"MP","id":0,"imp":1,"ant":2}
-{"cmd":"DISJ_CASES","id":0,"disj":1,"left":2,"right":3}
-{"cmd":"CHOOSE","id":0,"var":1,"existence":2,"body":3}
-{"cmd":"Mk_comb","id":0,"eq":1,"rator":2,"rand":3}
-{"cmd":"Mk_abs","id":0,"eq":1,"body":2}
-```
-
-### Commands with lists
-
-```json
-{"cmd":"GENL","id":0,"th":1,"tms":[2,3]}
-{"cmd":"ABSL","id":0,"th":1,"tms":[2,3]}
-{"cmd":"GEN_ABS","id":0,"th":1,"tm":2,"tms":[3,4]}
-```
-
-### Substitution commands
-
-Substitution lists use `redex` and `residue` keys:
-
-```json
-{"cmd":"INST","id":0,"th":1,"subst":[{"redex":2,"residue":3}]}
-{"cmd":"INST_TYPE","id":0,"th":1,"subst":[{"redex":2,"residue":3}]}
-{"cmd":"SUBST","id":0,"template":1,"th":2,"subst":[{"redex":3,"residue":4}]}
-```
-
-For INST and INST_TYPE, `redex` and `residue` are term IDs and type IDs
-respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
-
-### Definitions
-
-```json
-{"cmd":"DEF_SPEC","id":0,"th":1,"names":["foo$c1","foo$c2"]}
-{"cmd":"DEF_SPEC_GEN","id":0,"th":1,"names":["mytheory$c1","mytheory$c2"]}
-{"cmd":"DEF_TYOP","id":0,"th":1,"name":"mytype"}
-```
-
-### Computation
-
-```json
-{"cmd":"COMPUTE_INIT","id":0,"num_ty":1,"cval_ty":2,
- "char_eqns":{"alt_zero":10,"cond_T":11,"cond_F":12},
- "cval_terms":{"truth":20,"false":21}}
-{"cmd":"COMPUTE","id":0,"ci":1,"tm":2,"ths":[3,4,5]}
-```
-
-`char_eqns` is an object mapping equation names to theorem IDs.
-`cval_terms` is an object mapping operator names to term IDs.
-
-## Example
-
-```json
-{"cmd":"PFT","version":1,"ruleset":"hol4"}
-{"cmd":"TYOP","id":0,"name":"bool$bool","args":[]}
-{"cmd":"TYOP","id":1,"name":"min$fun","args":[0,0]}
-{"cmd":"CONST","id":0,"name":"bool$=","ty":1}
-{"cmd":"CONST","id":1,"name":"bool$T","ty":0}
-{"cmd":"COMB","id":2,"rator":0,"rand":1}
-{"cmd":"COMB","id":3,"rator":2,"rand":1}
-{"cmd":"DEL","ns":"tm","id":2}
-{"cmd":"REFL","id":0,"tm":1}
-{"cmd":"AP_TERM","id":1,"tm":3,"th":0}
-{"cmd":"DEL","ns":"th","id":0}
-{"cmd":"DEL","ns":"tm","id":0,"upto":1}
-{"cmd":"DEL","ns":"tm","id":3}
-{"cmd":"SAVE","name":"bool$TRUTH","th":1}
-{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
-```
+| 0x43   | COMPUTE_INIT  | ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
+| 0x44   | COMPUTE       | id tm n_ths th...                   |
 
 ## Specification of the Theorem Commands
 
@@ -526,11 +423,11 @@ all arguments are provided directly.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| COMPUTE | ci, `[th1,...,thn]`, `t` | `⊢ t = v` | See below |
+| COMPUTE | `[th1,...,thn]`, `t` | `⊢ t = v` | See below |
 
 #### COMPUTE_INIT
 
-Creates a compute context from four components:
+Initializes computation from four components, without producing an object:
 
 - **`num_ty`**: the type of natural numbers (`:num`)
 - **`cval_ty`**: the type of computed values (`:cv`)
@@ -628,11 +525,12 @@ Creates a compute context from four components:
   | `cv_eq` | `⊢ cv_eq p q = cv_num (COND (p = q) (SUC 0) 0)` |
   | `let` | `⊢ LET f x = f x` |
 
-The context is created once and reused across multiple COMPUTE calls.
+The initialization remains in effect across COMPUTE calls and replayed files
+until a later COMPUTE_INIT replaces it. COMPUTE before initialization fails.
 
 #### COMPUTE
 
-Takes a compute context `ci`, a list of code equation theorems
+Uses the current initialization, a list of code equation theorems
 `[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
 is the normal form of `t` under evaluation.
 

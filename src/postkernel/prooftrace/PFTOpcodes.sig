@@ -1,14 +1,12 @@
 signature PFTOpcodes = sig
 
-  (* The wire / JSON shape of one argument of a ruleset command. *)
+  (* The wire shape of one argument of a ruleset command. *)
   datatype arg_shape =
       AId of string               (* varint ID in given namespace *)
     | AVal                        (* varint, no namespace meaning *)
     | AIdList of string           (* count-prefixed ID list *)
-    | AIdPairs of string * string (* count-prefixed ID pairs, rendered as
-                                     {"redex":..,"residue":..} in JSON *)
-    | AStrIdPairs of string       (* count-prefixed (string, id) pairs,
-                                     rendered as a named map in JSON *)
+    | AIdPairs of string * string (* count-prefixed ID pairs *)
+    | AStrIdPairs of string       (* count-prefixed (string, id) pairs *)
     | AName                       (* single string argument *)
     | ANameList                   (* count-prefixed list of strings *)
 
@@ -20,13 +18,13 @@ signature PFTOpcodes = sig
     | RNewConsts                  (* strings that introduce constants *)
 
   type arg_spec = {
-    label : string,               (* JSON key for this argument *)
+    label : string,               (* argument name for diagnostics *)
     shape : arg_shape,
     role  : arg_role
   }
 
   type opcode_desc = {
-    tag     : string,             (* JSON "cmd" tag, e.g. "REFL" *)
+    tag     : string,             (* command name, e.g. "REFL" *)
     results : string list,        (* namespaces of the result IDs
                                      (all but COMPUTE_INIT have one;
                                      Candle new_type_definition has two) *)
