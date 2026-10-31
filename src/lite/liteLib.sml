@@ -283,10 +283,7 @@ fun MK_BINOP oper (lth,rth) = MK_COMB(AP_TERM oper lth,rth);
 val LAND_CONV   = Conv.LAND_CONV
 val BINDER_CONV = Conv.BINDER_CONV
 
-fun COMB2_CONV lconv rconv tm =
- let val (Rator,Rand) = Term.dest_comb tm
- in MK_COMB(lconv Rator, rconv Rand)
- end;
+val COMB2_CONV = Lib.curry Conv.COMB2_CONV
 
 val COMB_CONV = Lib.W COMB2_CONV;;
 
