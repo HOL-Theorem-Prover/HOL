@@ -7192,7 +7192,7 @@ QED
 
 Theorem MAX_SET_BIGUNION:
   FINITE P ∧ (∀s. s ∈ P ==> FINITE s) ∧ P ≠ ∅ ∧ P ≠ {∅}
-    ==> ∃s. s ∈ P ∧ MAX_SET s = MAX_SET (BIGUNION P) ∧
+    ==> ∃s. s ∈ P ∧ MAX_SET (BIGUNION P) = MAX_SET s ∧
         ∀s'. s' ∈ P ==> MAX_SET s' ≤ MAX_SET s
 Proof
   rw[] >> `MAX_SET (BIGUNION P) ∈ BIGUNION P` by (
@@ -7201,13 +7201,14 @@ Proof
   )
   >> fs[BIGUNION] >> fs[GSYM BIGUNION]
   >> qexists_tac `s` >> simp[] >> conj_asm1_tac >- (
-    dep_rewrite.DEP_REWRITE_TAC[MAX_SET_TEST_IFF] >> rw[]
+    once_rewrite_tac[EQ_SYM_EQ]
+    >> dep_rewrite.DEP_REWRITE_TAC[MAX_SET_TEST_IFF] >> rw[]
     >- (rw[EXTENSION] >> metis_tac[])
     >> irule X_LE_MAX_SET >> rw[]
     >> metis_tac[]
   )
-  >> rw[]
-  >> Cases_on `s' = ∅` >> rw[]
+  >> pop_assum (assume_tac o SYM) >> Q.X_GEN_TAC `t` >> rw[]
+  >> Cases_on `t = ∅` >> rw[]
   >> irule X_LE_MAX_SET >> rw[]
   >> metis_tac[MAX_SET_IN_SET]
 QED
