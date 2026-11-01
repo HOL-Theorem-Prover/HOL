@@ -678,7 +678,11 @@ fun operators_of ind =
     chain, so that is the parameter.
    ---------------------------------------------------------------------- *)
 
-fun walkDown {bridgeOf, waysFor, thmOf, avoid} =
+fun walkDown {bridgeOf,
+              waysFor : hol_type -> {setfn : term, elemty : hol_type} list,
+              thmOf : {P : term, z : term, levels : level list, hyp : term}
+                      -> thm,
+              avoid} =
     let
       (* the values the walk has reached, outermost first, stand for
          the chain's own *)
