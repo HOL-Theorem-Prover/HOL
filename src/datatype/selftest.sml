@@ -733,6 +733,39 @@ val _ = shape "the ways part below the top" “:zx”
 end
 
 (* ----------------------------------------------------------------------
+    and where the operator is one a declaration defined rather than one
+    the library wrote.  What a set function says at its constructors is
+    saved with the operator either way, so there is no separate path
+    for a user's own: the principle is read as any other is.
+   ---------------------------------------------------------------------- *)
+
+val _ = Datatype ‘bx = BX 'a bool’
+val _ = Datatype ‘ub = UB (ub bx) | UN’
+val _ = Datatype ‘rl = RN | RC 'a rl’
+val _ = Datatype ‘ur = UR (ur rl) | URN’
+
+local
+  fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+  fun shape nm ty tm =
+      (tprint ("the older shape where " ^ nm);
+       let val th = legacyInduction.mutual_ind_from_ops
+                      (TypeBase.set_induction_of ty)
+       in
+         if same (concl th) tm then OK()
+         else die ("not the older shape: " ^ thm_to_string th)
+       end)
+in
+val _ = shape "the operator is a declaration's own" “:ub”
+          “∀P Q0. (∀b. Q0 b ⇒ P (UB b)) ∧ P UN ∧
+                  (∀a b. P a ⇒ Q0 (BX a b)) ⇒
+                  (∀u. P u) ∧ ∀b. Q0 b”
+val _ = shape "that operator recurses itself" “:ur”
+          “∀P Q0. (∀r. Q0 r ⇒ P (UR r)) ∧ P URN ∧ Q0 RN ∧
+                  (∀r a. P a ∧ Q0 r ⇒ Q0 (RC a r)) ⇒
+                  (∀u. P u) ∧ ∀r. Q0 r”
+end
+
+(* ----------------------------------------------------------------------
     a type that does not recur says what its map and set functions do at
     its constructors, as a recursive one does: the induction principle
     of a type nested through it is stated with its set function
