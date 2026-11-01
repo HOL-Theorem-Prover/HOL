@@ -155,7 +155,7 @@ Now we will describe how SML datatypes are encoded as elements of `tagptr`.
 
 Now that we can encode arbitrary datatypes inside the file, it suffices to give the type of the root pointer. This is more or less a copy of the sources, but we have re-sorted the constructors according to the above sort criteria where applicable. A `clos` means the value in this position is a function type.
 ```sml
-type id = {Thy: string, Name: string}
+type id = {name: {Thy: string, Name: string}, epoch: int}
 
 datatype hol_type
   = Tyapp of (id * int) * hol_type list

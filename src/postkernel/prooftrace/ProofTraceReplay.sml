@@ -90,7 +90,7 @@ let
     ProofTraceWalk.walk
       {heap = heap, thyname = thyname,
        named_thms = all_thms, anon_thms = anon_thms,
-       incr = incr, on_def_thm = on_def_thm}
+       incr = incr, on_def_thm = on_def_thm, on_fv = fn _ => ()}
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
@@ -130,8 +130,8 @@ let
   cache (Ty,destTy) (fn ty_ptr =>
     case shType heap ty_ptr of
       Tyv s => mk_vartype s
-    | Tyapp (idp, args_ptr) => let
-        val (Thy,Tyop) = ident heap idp
+    | Tyapp (_, args_ptr) => let
+        val (Thy,Tyop) = get_type_id ty_ptr
         val Args = list heap replay_type args_ptr
         val () = check_def ty_defs Thy Tyop
         in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
@@ -162,8 +162,8 @@ let
         val f = replay_term_sub env t1
         val x = replay_term_sub env t2
       in mk_comb(f,x) end
-    | Const (idp,typ) => let
-        val (Thy,Name) = ident heap idp
+    | Const (_,typ) => let
+        val (Thy,Name) = get_const_id tm_ptr
         val () = check_def tm_defs Thy Name
         val ty = replay_type typ
       in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}

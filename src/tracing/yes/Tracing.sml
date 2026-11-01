@@ -21,7 +21,7 @@ fun export (file, x: 'a) = let
       let open FileSys.S in flags [irusr, iwusr, irgrp, iwgrp, iroth] end)
     val () = IO.dup2 {old = fd, new = FileSys.stdout}
     val () = app IO.close (read::fd::fds)
-    in Process.exec ("/usr/bin/gzip", []) end
+    in Process.exec ("/usr/bin/gzip", ["gzip"]) end
   val pids = if recode_32bit then let
     val {infd = recRead, outfd = recWrite} = IO.pipe ()
     val gzipPid = gzip recRead [pipeRead, pipeWrite, recWrite]
@@ -29,7 +29,7 @@ fun export (file, x: 'a) = let
       val () = IO.dup2 {old = pipeRead, new = FileSys.stdin}
       val () = IO.dup2 {old = recWrite, new = FileSys.stdout}
       val () = app IO.close [pipeRead, pipeWrite, recRead, recWrite]
-      in Process.exec (recode32_path, []) end
+      in Process.exec (recode32_path, ["recode32"]) end
     val () = app IO.close [recRead, recWrite]
     in [recPid, gzipPid] end
   else [gzip pipeRead [pipeWrite]]

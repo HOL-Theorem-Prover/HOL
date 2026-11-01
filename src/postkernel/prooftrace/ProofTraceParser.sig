@@ -13,6 +13,7 @@ type ('a,'A) gparser = 'a ptr -> 'A
 type 'a parser = ('a,'a) gparser
 type root
 val parse: string -> root ptr * heap
+val parseVector: Word8Vector.vector -> root ptr * heap
 
 val heapSize: heap -> int
 
@@ -44,7 +45,7 @@ val castPtr: 'a ptr -> 'b ptr
 val isPtr: 'a ptr -> bool
 
 type ident
-val ident: heap -> (ident, string * string) gparser
+val ident: heap -> (ident, string * string * int) gparser
 
 val thmId: heap -> thm_id parser
 

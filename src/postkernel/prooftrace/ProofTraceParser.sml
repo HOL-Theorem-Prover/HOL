@@ -66,9 +66,7 @@ fun is_32bit_magic raw =
 (* Parse: detects the magic byte, builds a ptrs vector with the right word
    size, and returns the appropriate heap variant. Both variants share the
    same public API — sh* functions dispatch internally. *)
-fun parse filename = let
-  val raw = decompressGzip filename
-in
+fun parseVector raw =
   if is_32bit_magic raw then let
     val vec = raw
     val root = Word8Vector.length vec - 4   (* last 4 bytes = root tagptr *)
@@ -91,7 +89,8 @@ in
     val () = process 0
     val rootPtr = get64 vec root
   in (rootPtr, Heap64 (vec, DArray.vector out)) end
-end
+
+fun parse filename = parseVector (decompressGzip filename)
 
 datatype flags = FBytes of int | FObj of int | FOther
 
@@ -232,7 +231,7 @@ in
   fun tuple4 c (p1,p2,p3,p4) = tuple c (p1 <> p2 <> p3 <> t1 p4)
 end
 
-fun option _ _ 0w0 = NONE
+fun option _ _ 0w1 = NONE
   | option c p w = SOME (p (arg c w 0))
 
 fun list c go w = let
@@ -263,8 +262,10 @@ fun str h w = let
   open Word8VectorSlice
   in Byte.bytesToString (vector (slice (vec, start + data_off + 8, SOME n))) end
 
-type ident = string * string
-fun ident c w = tuple2 c (str c, str c) (arg c (arg c w 0) 0)
+type ident = string * string * int
+fun ident c w = case arg c w of f =>
+  case tuple2 c (str c, str c) (f 0) of
+    (thy, nm) => (thy, nm, int (f 1))
 
 fun thmId c w = case arg c w of f =>
   case f 0 of
