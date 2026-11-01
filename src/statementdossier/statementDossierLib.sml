@@ -25,6 +25,8 @@ type config = {
   supporting : name list
 }
 
+type presentation = {about : string, omit_types : name list}
+
 fun key ({Thy, Name} : name) = Thy ^ "$" ^ Name
 
 fun name_of_const c =
@@ -739,6 +741,20 @@ fun markdown blocks =
     String.concat (map (fn l => l ^ "\n") (List.concat (map one blocks)))
   end
 
+(* Preserve blank-line paragraph breaks in plain opening text. *)
+fun paragraphs text =
+  let
+    fun finish [] acc = acc
+      | finish lines acc = String.concatWith "\n" (rev lines) :: acc
+    fun go [] lines acc = rev (finish lines acc)
+      | go (line :: rest) lines acc =
+          if List.all Char.isSpace (String.explode line) then
+            go rest [] (finish lines acc)
+          else go rest (line :: lines) acc
+  in
+    go (String.fields (fn c => c = #"\n") text) [] []
+  end
+
 (* Text with `...` spans as inline code *)
 fun html_text s =
   let
@@ -857,12 +873,8 @@ fun tag_text th =
        else [Text "axiom(s) " :: commas ", " (map (fn s => [Code s]) axioms)])
   in
     (if null problems then
-       [Text "No recorded oracle, axiom dependency or assumption."]
-     else Text "NOT CLEAN: " :: commas "; " problems) @
-    (if List.exists (fn s => s = "DISK_THM") oracles then
-       [Text " DISK_THM: loaded from disk; axiom dependencies are not \
-             \retained in disk tags."]
-     else [])
+       []
+     else Text "NOT CLEAN: " :: commas "; " problems)
   end
 
 (* The overloads under which the constants met print: the constants that
@@ -1262,7 +1274,8 @@ fun prose_html code_html text =
 
 (* The dossier described by cfg: its title, its blocks, and the anchor
    of each constant that has one, for links from printed text. *)
-fun render (cfg : config) =
+fun render ({about = extra_about, omit_types} : presentation)
+           (cfg : config) =
   let
     val theorems =
       map (fn n => (n, DB.fetch (#Thy n) (#Name n))) (#theorems cfg)
@@ -1273,8 +1286,9 @@ fun render (cfg : config) =
     fun location n =
       case source_location index n of
         SOME (shown, SOME line) => [Code (shown ^ ":" ^ Int.toString line)]
-      | SOME (shown, NONE) => [Code shown]
-      | NONE => [Text "no source location recorded"]
+      | SOME (shown, NONE) =>
+          if shown = "Unknown" then [] else [Code shown]
+      | NONE => []
     val (entries, met) = closure cfg tyidx theorems
     val bucket_maps = map (fn (n, th) => (n, buckets cfg entries th)) theorems
     fun bucket_in m c =
@@ -1323,9 +1337,22 @@ fun render (cfg : config) =
       List.foldl (fn (c, m) => Redblackmap.insert (m, key (name_of_const c),
                                                    const_anchor c))
         (Redblackmap.mkDict String.compare) met
-    fun href s = Redblackmap.peek (met_anchors, s)
+    fun omitted_type ty = mem_name ty omit_types
+    fun generated_record c =
+      String.isPrefix "recordtype." (#Name (name_of_const c))
+    fun omitted_const c =
+      case role_of cfg tyidx c of
+        TypeConst ty => omitted_type ty
+      | _ => false
+    fun href s =
+      case Redblackmap.peek (tyidx, s) of
+        SOME (ty, _) => if omitted_type ty then NONE
+                        else Redblackmap.peek (met_anchors, s)
+      | NONE => Redblackmap.peek (met_anchors, s)
     fun use_links cs =
       let
+        val cs = List.filter
+          (fn c => not (generated_record c orelse omitted_const c)) cs
         val (expanded, others) =
           List.partition (fn c => role_of cfg tyidx c = Expanded) cs
         val (typed, boundary) =
@@ -1357,10 +1384,19 @@ fun render (cfg : config) =
         line "Datatype constants: " typed @
         line "Not expanded: " (List.filter (not o is_logical) boundary)
       end
+    fun tag_blocks th =
+      case tag_text th of
+        [] => []
+      | xs => [Para (Text "Tag status: " :: xs @ [Text "."])]
+    fun theory_location n =
+      Para ([Text "Theory ", Code (#Thy n)] @
+            (case location n of [] => [] | xs => Text ", " :: xs) @
+            [Text "."])
     fun thm_block (n, th) =
-      [Para ([Code (#Name n), Text " ("] @ location n @ [Text ")"]),
-       Para (Text "Tag status: " :: tag_text th @ [Text "."]),
-       Pre (hol_thm th)]
+      [Para ([Code (#Name n)] @
+             (case location n of [] => []
+                               | xs => Text " (" :: xs @ [Text ")"]))] @
+      tag_blocks th @ [Pre (hol_thm th)]
 
     fun theorem_section (n, th) =
       let
@@ -1375,25 +1411,21 @@ fun render (cfg : config) =
           end
       in
         [Heading (2, SOME (anchor "thm" n), [Text "Theorem ", Code (#Name n)]),
-         Para ([Text "Theory ", Code (#Thy n), Text ", "] @ location n @
-               [Text "."]),
-         Para (Text "Tag status: " :: tag_text th @ [Text "."]),
-         Para [Text "As stored:"],
-         Pre (hol_thm th)] @
-        (if null vars then []
-         else [Para [Text "Free variables:"],
-               Pre (fn t => String.concatWith "\n"
-                              (map (fn v => var_line v t) vars))]) @
+         theory_location n] @ tag_blocks th @
         (if null hyps then
            [Para [Text "No assumptions or implication antecedents."]]
          else [Para [Text ("Assumptions and implication antecedents (" ^
                            Int.toString (length hyps) ^ "):")],
-               Pre (numbered hyps),
-               Para [Text "Conclusion:"],
-               Pre (hol_term goal)]) @
+               Pre (numbered hyps)]) @
+        [Para [Text "Conclusion:"], Pre (hol_term goal),
+         Fold ("As stored", [Pre (hol_thm th)])] @
+        (if null vars then []
+         else [Fold ("Free variable types",
+                 [Para [Text "Free variables:"],
+                  Pre (fn t => String.concatWith "\n"
+                                 (map (fn v => var_line v t) vars))])]) @
         use_links (theorem_consts th)
       end
-
 
     (* Code spans of the prose: a variable of the theorems as written; a
        constant or a theorem with an entry linked to it; other code printed
@@ -1515,9 +1547,10 @@ fun render (cfg : config) =
                         [Hol (hol_term h)])] @
               definition h @ [prose_block text] @
               (if null names then []
-               else Para [Text "Pinned by:"] ::
-                    List.concat
-                      (map (thm_block o valOf o stored_theorem) names))
+               else [Fold
+                     ("Internal equivalence theorems and supporting facts",
+                      List.concat
+                        (map (thm_block o valOf o stored_theorem) names))])
             end
         in
           [Heading (2, SOME "assumptions",
@@ -1534,10 +1567,7 @@ fun render (cfg : config) =
        entry are listed. *)
     fun supporting_section (n, th) =
       [Heading (3, SOME (anchor "thm" n), [Code (#Name n)]),
-       Para ([Text "Theory ", Code (#Thy n), Text ", "] @ location n @
-             [Text "."]),
-       Para (Text "Tag status: " :: tag_text th @ [Text "."]),
-       Pre (hol_thm th)] @
+       theory_location n] @ tag_blocks th @ [Pre (hol_thm th)] @
       use_links (List.filter (fn c => isSome (href (key (name_of_const c))))
                    (theorem_consts th))
     val supporting_blocks =
@@ -1606,12 +1636,18 @@ fun render (cfg : config) =
       List.exists (fn t => t = thy) (#expand_theories cfg) andalso
       not (List.exists (fn t => t = thy) (#stop_theories cfg))
     val shown_types =
-      dedup key (type_consts @ List.filter (expanded_theory o #Thy) tyops)
+      List.filter (not o omitted_type)
+        (dedup key (type_consts @ List.filter (expanded_theory o #Thy) tyops))
     fun info_of ({Thy, Name} : name) = TypeBase.read {Thy = Thy, Tyop = Name}
-    val (described, plain) =
+    val (described0, plain) =
       List.partition (fn ty => isSome (info_of ty)) shown_types
+    val (records, datatypes) = List.partition
+      (fn ty => not (null (TypeBasePure.fields_of (valOf (info_of ty)))))
+      described0
+    val described = records @ datatypes
     val unshown_types =
-      List.filter (fn ty => not (mem_name ty shown_types)) tyops
+      List.filter (fn ty => not (omitted_type ty orelse
+                                mem_name ty shown_types)) tyops
     fun type_section ty =
       let
         val info = valOf (info_of ty)
@@ -1652,7 +1688,8 @@ fun render (cfg : config) =
     fun is_type_const c =
       case role_of cfg tyidx c of TypeConst _ => true | _ => false
     val (overloads, overload_names) =
-      overload_items is_type_const href met shown_terms
+      overload_items (fn c => is_type_const c orelse generated_record c)
+        href met shown_terms
     val described_keys =
       HOLset.addList (HOLset.empty String.compare, map key described)
     (* Links from printed text: besides the constants met, the
@@ -1751,7 +1788,14 @@ fun render (cfg : config) =
                    Int.toString (length plumbing) ^ " plumbing.")]] @
       List.concat (Lib.mapi theorem_audit bucket_maps)
     val about =
-      [Heading (2, SOME "about", [Text "About this dossier"]),
+      [Heading (2, SOME "about", [Text "About this dossier"])] @
+      (if extra_about = "" then [] else [prose_block extra_about]) @
+      [Para [Text "Routine disk-load tags are omitted. HOL's disk tags preserve \
+                  \oracle tags, but axiom dependencies are not retained in \
+                  \disk tags. \
+                  \Absence of a displayed tag is not a separate proof audit; \
+                  \recorded oracles, axiom dependencies and kernel assumptions \
+                  \are shown beside each statement."],
        Para [Text "Generated by `statementDossierLib` from the theorem \
                   \database: every statement, definition and type below is \
                   \printed by HOL.  Constants are expanded breadth-first, in \
@@ -1790,24 +1834,26 @@ fun render (cfg : config) =
              [Text "."])]
     val blocks =
       [Heading (1, NONE, [Text (#title cfg)]),
-       Para [Text (#preamble cfg)]] @
+       Raw (fn PlainText => #preamble cfg
+             | Linked _ => String.concat
+                 (map (fn p => "<p>" ^ html_text p ^ "</p>\n")
+                    (paragraphs (#preamble cfg))))] @
       List.concat (map (fn (n, th) =>
                           theorem_section (n, th) @
                           (if is_assumptions_theorem n then assumption_blocks
                            else []))
                      theorems) @
       supporting_blocks @
-      audit_list @
-      [Heading (2, NONE, [Text "Definitions"]),
-       Para [Text "The definitions to audit; the plumbing follows at the \
-                  \end."]] @
-      List.concat (map entry_section audited) @
       [Heading (2, NONE, [Text "Types"])] @
       List.concat (map type_section described) @
       (if null plain then []
        else [Para (Text "Types without TypeBase information: " ::
                    commas ", " (map (fn ty => [Code (key ty)]) plain) @
                    [Text "."])]) @
+      [Heading (2, NONE, [Text "Definitions"]),
+       Para [Text "The definitions to audit; the plumbing follows at the \
+                  \end."]] @
+      List.concat (map entry_section audited) @
       [Heading (2, NONE, [Text "Overloads"]),
        Para [Text "Where the constants above print other than by their \
                   \names: on the left as HOL prints it, on the right what \
@@ -1815,12 +1861,12 @@ fun render (cfg : config) =
        if null overloads then Para [Text "None."] else Items overloads,
        Heading (2, SOME "not-expanded", [Text "Not expanded"]),
        Para [Text "Constants, by theory:"],
-       Items (by_theory
+       Fold ("Unexpanded constants", [Items (by_theory
                 (map (fn c => let val n = name_of_const c in
                                 (#Thy n, [Target (anchor "nx" n,
                                                   [Code (const_label c)])])
                               end)
-                   boundary)),
+                   boundary))]),
        Para [Text "Types, by theory:"],
        Items (by_theory (map (fn ty => (#Thy ty, [Code (#Name ty)]))
                            unshown_types)),
@@ -1830,7 +1876,7 @@ fun render (cfg : config) =
        HtmlFold ("Plumbing definitions (" ^
                  Int.toString (length plumbing) ^ ")",
                  List.concat (map entry_section plumbing))] @
-      about
+      about @ [Fold ("Definition dependency index", audit_list)]
   in
     (#title cfg, blocks, printed_href)
   end
@@ -1903,7 +1949,7 @@ fun write_snippets (cfg : config) href (input, output) =
   end
 
 (* Write the dossier described by cfg to each of #outputs cfg. *)
-fun run (cfg : config) =
+fun run_with_presentation presentation (cfg : config) =
   let
     val () = check_config cfg
     val () = theory_cache := Redblackmap.mkDict String.compare
@@ -1921,10 +1967,12 @@ fun run (cfg : config) =
       end
   in
     Feedback.trace ("Unicode", 1)
-      (fn () => let val doc as (_, _, href) = render cfg in
+      (fn () => let val doc as (_, _, href) = render presentation cfg in
                   List.app (write doc) (#outputs cfg);
                   Option.app (write_snippets cfg href) (#snippets cfg)
                 end) ()
   end
+
+fun run cfg = run_with_presentation {about = "", omit_types = []} cfg
 
 end

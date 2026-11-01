@@ -66,7 +66,7 @@ fun named s = {Thy = "dossierTest", Name = s}
 
 fun config {theorems, expand_theories, expand_consts, stop_theories,
             stop_consts, assumptions, supporting, snippets} : config = {
-  title = "Statements <&\" >", preamble = "Public selftest",
+  title = "Statements <&\" >", preamble = "First paragraph.\n\nSecond paragraph.",
   theorems = theorems, expand_theories = expand_theories,
   expand_consts = expand_consts, stop_theories = stop_theories,
   stop_consts = stop_consts, equation_lemmas = [], source_dirs = [],
@@ -103,6 +103,14 @@ val _ = check "Free variable types are printed"
 val _ = check "HTML title and text are escaped"
   (contains html "Statements &lt;&amp;&quot; &gt;" andalso
    not (contains html "Statements <&\" >"))
+val _ = check "Opening paragraph breaks survive HTML rendering"
+  (contains html "<p>First paragraph.</p>" andalso
+   contains html "<p>Second paragraph.</p>")
+val _ = check "Structured statement precedes the folded stored statement"
+  (contains html "</pre>\n<details><summary>As stored</summary>")
+val _ = check "Routine tag and missing-location noise is omitted"
+  (not (contains html "Tag status:") andalso
+   not (contains html "no source location recorded"))
 val _ = check "Printed constants have type tooltips and definition links"
   (contains html "href=\"#def-dossierTest-second\" title=\"" andalso
    contains html "dossierTest$second : num -&gt; num")
@@ -178,6 +186,15 @@ val (_, record_html) = generate (basic ["record_result"])
 val _ = check "Record selectors link to their field descriptions"
   (contains record_html "id=\"type-dossierTest-sample\"" andalso
    contains record_html "contents" andalso contains record_html "label")
+val _ = run_with_presentation {
+  about = "", omit_types = [{Thy = "num", Name = "num"}]
+} (basic ["record_result"])
+val compact_html = read html_path
+val _ = check "Omitting a built-in type keeps record fields and valid links"
+  (not (contains compact_html "id=\"type-num-num\"") andalso
+   not (contains compact_html "href=\"#type-num-num\"") andalso
+   contains compact_html "id=\"type-dossierTest-sample\"" andalso
+   contains compact_html "contents" andalso contains compact_html "label")
 val (recursive_md, _) = generate (config {
   theorems = [named "recursive_result"], expand_theories = ["list"],
   expand_consts = [], stop_theories = [], stop_consts = [],

@@ -9,12 +9,13 @@ proofs, change statements, or infer that a theorem proves a prose claim.
 HTML uses HOL's printer annotations for syntax colours, type tooltips
 and links to definitions, datatypes, overloads and unexpanded constants.
 The annotated printer has the same layout as the plain printer. Both
-formats include free variable types, kernel assumptions, implication
-antecedents, the conclusion and trust tags. `DISK_THM` is reported as a
-load-from-disk tag. HOL's disk tags preserve oracle tags but omit axiom
-dependencies, so the report cannot rule out axioms in loaded theorems.
-The report discloses this limitation beside each disk tag. Absence of
-recorded problems is not a separate proof audit.
+formats lead with numbered antecedents and the conclusion; the stored
+statement and free variable types are folded below them. Recorded kernel
+assumptions, oracles and axiom dependencies remain visible. Routine clean
+tags and `DISK_THM` load markers are omitted. About discloses that HOL's
+disk tags preserve oracle tags but omit axiom dependencies: absence of a
+displayed tag cannot rule out axioms in loaded theorems and is not a
+separate proof audit. Opening text preserves blank-line paragraph breaks.
 
 ## Example
 
@@ -89,6 +90,17 @@ interactive HOL session; its loader is unavailable in compiled programs.
 directly; its signature documents the corresponding record fields. Each
 report takes a fresh snapshot of the theorem database and sources.
 
+ML callers can use `run_with_presentation {about, omit_types} config` to
+put additional Markdown prose in About and omit selected built-in type
+layouts, for example `[{Thy="num", Name="num"}]`. Omission affects type
+sections and their links, not formulas or record fields. Record layouts
+precede other datatypes, and types precede definitions. Generated record
+operations remain in formulas and the folded boundary index, but are
+omitted from per-item reference lists and overload explanations. These
+presentation options do not change the definition expansion policy.
+HTML About prose, like assumption prose, requires pandoc. The ordinary
+`run config` entry point uses empty About prose and omits no types.
+
 `statementDossierLib.script_theories : string list -> string list` lists
 the theories whose `*Script.sml` files occur below supplied directories.
 Source scanning skips hidden directories and directory symlinks.
@@ -148,7 +160,7 @@ Pinned by: `P_def`.
 ```
 
 A final paragraph starting exactly `Pinned by:` lists stored theorem
-names in code spans; the report prints those theorems beside the prose.
+names in code spans; the report retains those theorems in a folded section beside the prose.
 Use `Thy$Name` to qualify pinning references; ambiguous unqualified names
 are errors. Duplicate selected theorems and pinning names are errors too.
 This checks that the references exist, not that they prove the English.

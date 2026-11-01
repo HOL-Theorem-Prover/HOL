@@ -51,4 +51,10 @@ val script_theories : string list -> string list
    Raises Fail on invalid configuration or assumption prose. *)
 val run : config -> unit
 
+(* Additional prose belongs in About, away from the opening explanation.
+   Omitted types are not described or linked; their uses remain in formulas.
+   About prose uses the same Markdown renderer as assumptions. *)
+type presentation = {about : string, omit_types : name list}
+val run_with_presentation : presentation -> config -> unit
+
 end
