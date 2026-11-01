@@ -21,10 +21,6 @@ Contents
 New features
 ------------
 
--   `sptree` now provides `domain_list` to enumerate keys without constructing
-    key/value pairs, with `set_domain_list` proving its set is `domain` and
-    a standard CV translation in `cv_std`.
-
 -   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
 
     A type that recurses under an operator gets induction hypotheses stated through that operator's set function, which is correct but is not how a development states its own lemmas, so proofs normalise them by hand at every induction.
@@ -113,6 +109,15 @@ New features
 
 -   `goalStack` has `expandf_in` and `expand_listf_in`, which run a tactic in a given `Context.t` rather than in a snapshot of the live context; `expandf` and `expand_listf` are now these applied to `Context.snapshot()`.
     A prover installed with `Tactical.set_prover` can use them to run its steps in the context it is passed.
+
+-   `sptree` now provides `domain_list` to enumerate keys without constructing
+    key/value pairs, with `set_domain_list` proving its set is `domain` and
+    a standard CV translation in `cv_std`.
+
+-   CV evaluation now supports `fCARD` on finite sets of natural numbers.
+
+-   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
+    list by a strict upper bound on its sum.
 
 Bugs fixed
 ----------
