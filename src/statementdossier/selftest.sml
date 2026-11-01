@@ -24,9 +24,9 @@ val _ = run {
 }
 val _ = check "Stored reports need no current theory"
   (contains (read boot_output) "REVERSE_APPEND")
-val _ = check "Disk tags disclose missing axiom dependency metadata"
+val _ = check "Report tags do not claim an independent proof audit"
   (contains (read boot_output)
-    "axiom dependencies are not retained in disk tags")
+    "alone is not an independent proof audit")
 val _ = OS.FileSys.remove boot_output
 
 val _ = new_theory "dossierTest"
@@ -187,9 +187,17 @@ val _ = check "Record selectors link to their field descriptions"
   (contains record_html "id=\"type-dossierTest-sample\"" andalso
    contains record_html "contents" andalso contains record_html "label")
 val _ = run_with_presentation {
-  about = "", omit_types = [{Thy = "num", Name = "num"}]
+  about = "Verification\n\n```sh\nholbuild -j1 buildhol\n```",
+  omit_types = [{Thy = "num", Name = "num"}]
 } (basic ["record_result"])
 val compact_html = read html_path
+val about_html = Substring.string (#1 (Substring.position
+  "Recorded oracle tags" (#2 (Substring.position "Verification"
+                                  (Substring.full compact_html)))))
+val _ = check "About preserves executable fenced commands"
+  (contains about_html "<pre" andalso contains about_html "holbuild" andalso
+   contains about_html "-j1" andalso contains about_html "buildhol" andalso
+   contains (read markdown_path) "```sh\nholbuild -j1 buildhol\n```")
 val _ = check "Omitting a built-in type keeps record fields and valid links"
   (not (contains compact_html "id=\"type-num-num\"") andalso
    not (contains compact_html "href=\"#type-num-num\"") andalso

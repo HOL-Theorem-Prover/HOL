@@ -12,10 +12,12 @@ The annotated printer has the same layout as the plain printer. Both
 formats lead with numbered antecedents and the conclusion; the stored
 statement and free variable types are folded below them. Recorded kernel
 assumptions, oracles and axiom dependencies remain visible. Routine clean
-tags and `DISK_THM` load markers are omitted. About discloses that HOL's
-disk tags preserve oracle tags but omit axiom dependencies: absence of a
-displayed tag cannot rule out axioms in loaded theorems and is not a
-separate proof audit. Opening text preserves blank-line paragraph breaks.
+tags and `DISK_THM` load markers are omitted. About explains that the
+absence of displayed tags is not an independent proof audit. HOL's disk
+tags omit axiom dependencies, so a consumer requiring an axiom audit must
+check the original in-memory theorem values before serialization. Opening
+text preserves blank-line paragraph breaks. About accepts Markdown,
+including fenced command blocks.
 
 ## Example
 
