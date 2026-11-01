@@ -27,4 +27,8 @@ signature PFTReplay = sig
   (* All entries as (key, thm) pairs *)
   val listItems : trDB -> (string * Thm.thm) list
 
+  (* All replayed AXIOM commands, in encounter order across files, including
+     unused axioms and repeated names. Unnamed axioms use UNNAMED_AXIOM. *)
+  val replayed_axioms : trDB -> (string * Term.term) list
+
 end

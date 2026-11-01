@@ -20,6 +20,12 @@ AXIOM remains a supported command, so replay alone is not an allowed-axiom
 policy or an exact-result certificate. Callers must check the desired
 conclusion and hypotheses explicitly.
 
+`PFTReplay.replayed_axioms db` returns the names and statements of all
+AXIOM commands accumulated by `db`, in encounter order across files.
+It includes repeated names and axioms unused by saved theorems; unnamed
+axioms have the name `UNNAMED_AXIOM`. A caller can inspect this list to
+apply its own axiom policy. The list is local to the returned database.
+
 ## Object Namespaces
 
 There are three namespaces, each with independently numbered IDs:

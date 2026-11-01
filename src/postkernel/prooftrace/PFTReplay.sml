@@ -8,15 +8,17 @@ infix |->
 (* trDB: theorem database keyed by "Thy$name" / "Thy#n"                      *)
 (* ========================================================================= *)
 
-type trDB = thm Symtab.table
+type trDB = {theorems: thm Symtab.table, axioms: (string * term) list}
 
-val empty_trDB : trDB = Symtab.empty
+val empty_trDB : trDB = {theorems = Symtab.empty, axioms = []}
 
-fun lookup (db: trDB) key = Symtab.lookup db key
+fun lookup (db: trDB) key = Symtab.lookup (#theorems db) key
 
-fun size (db: trDB) = Symtab.size db
+fun size (db: trDB) = Symtab.size (#theorems db)
 
-fun listItems (db: trDB) = Symtab.dest db
+fun listItems (db: trDB) = Symtab.dest (#theorems db)
+
+fun replayed_axioms (db: trDB) = List.rev (#axioms db)
 
 (* Ambient compute state persists across replay calls, so a file may omit
    COMPUTE_INIT after an earlier file initialized it. *)
@@ -61,7 +63,8 @@ in find 0 end
 (* ========================================================================= *)
 
 fun replay (db: trDB) file = let
-  val db_ref = ref db
+  val db_ref = ref (#theorems db)
+  val axioms = ref (#axioms db)
   val (thyname, binary) = parse_filename file
   val {ruleset, ...} = PFTReader.read_header {file=file, binary=binary}
   val () = if ruleset = "hol4" then () else
@@ -155,7 +158,10 @@ fun replay (db: trDB) file = let
           SOME n => n
         | NONE => (print "WARNING: PFTReplay: axiom without name\n";
                    "UNNAMED_AXIOM")
-    in set_th (id, mk_axiom_thm(Nonce.mk ax_name, c)) end,
+    in
+      set_th (id, mk_axiom_thm(Nonce.mk ax_name, c));
+      axioms := (ax_name, c) :: !axioms
+    end,
 
     save = fn (name, th) =>
       db_ref := Symtab.update (name, get_th th) (!db_ref),
@@ -366,6 +372,6 @@ fun replay (db: trDB) file = let
     format_handler = format_handler,
     ruleset_handler = PFTReader.HOL4.make_handler hol4_handler
   }
-in !db_ref end
+in {theorems = !db_ref, axioms = !axioms} end
 
 end
