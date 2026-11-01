@@ -122,8 +122,29 @@ val holmake_exns = [
   "Systeml.sig", "Systeml.ui", "Systeml.uo"
 ]
 
+(* tools/parsing is compiled by configure and has no Holmakefile, so
+   nothing here can rebuild it; upload_holmake_files would just ship an
+   empty directory to sigobj and the first sign of trouble would be a
+   missing HOLSource.uo when mosml links src/parse/selftest.exe, many
+   directories later.  Say it now instead.  Poly/ML doesn't care: it
+   gets these modules from bin/hol, not from sigobj. *)
+fun check_configure_built () =
+    let
+      val f = fullPath [HOLDIR, "tools", "parsing", "HOLSource.uo"]
+    in
+      if Systeml.ML_SYSNAME = "poly" orelse
+         OS.FileSys.access (f, [OS.FileSys.A_READ])
+      then ()
+      else die ("Missing " ^ f ^ "\n" ^
+                "tools/parsing is compiled by configure, not by the " ^
+                "build sequence.\nRe-run\n\n    " ^
+                Systeml.ML_SYSNAME ^ " < tools/smart-configure.sml\n\n" ^
+                "before building.")
+    end
+
 fun build_hol symlink = let
 in
+  check_configure_built();
   remove_all_holmkdirs();
   clean_sigobj();
   setup_logfile();
