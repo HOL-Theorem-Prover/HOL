@@ -60,8 +60,11 @@ in {readByte = rb, readBytes = rbs,
     pos = fn () => !p, close = fn () => BinIO.closeIn inp} end
 
 fun skip_to (r: bin_reader) target = let
-  val n = target - #pos r ()
-in if n > 0 then (ignore (#readBytes r n)) else () end
+  fun loop n =
+    if n <= 0 then ()
+    else let val chunk = Int.min (n, 65536)
+         in ignore (#readBytes r chunk); loop (n - chunk) end
+in loop (target - #pos r ()) end
 
 fun mk_readVarint (r: bin_reader) () = let
   val rb = #readByte r

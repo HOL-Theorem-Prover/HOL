@@ -401,6 +401,19 @@ support doing that.
 In the kernel API, `Mk_comb` and `Mk_abs` return continuations. In the trace,
 all arguments are provided directly.
 
+`Mk_abs` does not encode a binder. The HOL replayer first tries the variable
+returned by `dest_abs` on the first theorem's RHS. A variable `v` is legal
+when `λv. lhs(concl body)` is alpha-equivalent to that RHS and `v` is not
+free in the body's hypotheses. If the first variable is not legal, the
+replayer requires exactly one legal variable among the free variables of
+`lhs(concl body)`; zero or multiple candidates are rejected. It derives the
+result with `TRANS eq (ABS v body)`, retaining both kernel checks.
+
+This recovers older output in which the converter changed the abstraction's
+alpha variant but omitted the raw proof's explicit continuation binder.
+It does not recover a binder encoded in the PFT command. New converters
+should emit explicit `ABS_THM` followed by `TRANS` when the binder changes.
+
 ### Instantiation and substitution
 
 | Rule | Inputs | Result | Side Conditions |

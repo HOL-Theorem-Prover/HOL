@@ -225,8 +225,20 @@ fun replay (db: trDB) file = let
     in set_th (id, mkc (get_th th2) (get_th th3)) end,
 
     mk_abs_thm = fn (id, th1, th3) => let
-      val (_, _, mka) = Mk_abs (get_th th1)
-    in set_th (id, mka (get_th th3)) end,
+      val first = get_th th1
+      val child = get_th th3
+      val (_, rhs) = dest_eq (concl first)
+      val (lhs, _) = dest_eq (concl child)
+      val (original, _) = dest_abs rhs
+      fun legal v = aconv (mk_abs (v, lhs)) rhs andalso
+                    not (List.exists (free_in v) (hyp child))
+      (* Older converters omitted the continuation binder even when
+         emitting the abstraction changed its alpha variant. *)
+      val binder = if legal original then original else
+        (case List.filter legal (free_vars lhs) of
+           [v] => v
+         | _ => raise Fail "PFTReplay: no unique legal Mk_abs binder")
+    in set_th (id, TRANS first (ABS binder child)) end,
 
     assume = fn (id, tm) =>
       set_th (id, ASSUME (get_tm tm)),
