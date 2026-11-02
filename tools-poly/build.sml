@@ -103,10 +103,6 @@ fun link b s1 s2 =
            die ("Unable to link old file "^quote s1^" to new file "
                 ^quote s2^": "^s)
 
-fun symlink_check() =
-    if OS = "winNT" then
-      die "Sorry; symbolic linking isn't available under Windows NT"
-    else link
 val default_link = if OS = "winNT" then cp else link
 
 (*---------------------------------------------------------------------------
