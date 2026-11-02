@@ -167,6 +167,11 @@ in
     end
 end
 
+(* i counts bytes, not characters: until the first substitution the
+   untouched prefix is carried over as String.extract(s,0,SOME i), which
+   indexes s by byte.  Advancing by String.size c rather than by 1 is what
+   keeps the two in step when c is multi-byte -- note that the bare `size'
+   in scope here is UTF8.size, which counts characters, not bytes. *)
 fun translate f s = let
   fun recurse i changed acc ustr =
       case getChar ustr of
@@ -176,7 +181,7 @@ fun translate f s = let
           val c' = f c
         in
           if c' = c andalso not changed then
-            recurse (i + 1) changed acc rest
+            recurse (i + String.size c) changed acc rest
           else if not changed then
             recurse i true (c' :: String.extract(s,0,SOME i)::acc) rest
           else
