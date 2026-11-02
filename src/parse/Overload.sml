@@ -201,17 +201,6 @@ fun info_for_name (overloads:overload_info) s =
 fun is_overloaded (overloads:overload_info) s =
   isSome (info_for_name overloads s)
 
-fun type_compare (ty1, ty2) = let
-  val ty1_gte_ty2 = Lib.can (Type.match_type ty1) ty2
-  val ty2_gte_ty1 = Lib.can (Type.match_type ty2) ty1
-in
-  case (ty1_gte_ty2, ty2_gte_ty1) of
-    (true, true) => SOME EQUAL
-  | (true, false) => SOME GREATER
-  | (false, true) => SOME LESS
-  | (false, false) => NONE
-end
-
 fun remove_overloaded_form s (oinfo:overload_info) = let
   val (op2cnst, cnst2op) = oinfo
   val (okopc, badopc0) =
@@ -260,14 +249,6 @@ in
        new_c2op_map)
     end
 end
-
-(* a predicate on pairs of operations and types that returns true if
-   they're equal, given that two types are equal if they can match
-   each other *)
-fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
-               {Ty = ty2, Name = n2, Thy = thy2} =
-  type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2 andalso thy1 = thy2
-
 
 (* put a new overloading resolution into the database, not objecting if it's already
    there for a given string.  If provided, use inserter function to place the mapping from
