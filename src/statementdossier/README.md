@@ -92,7 +92,8 @@ interactive HOL session; its loader is unavailable in compiled programs.
 directly; its signature documents the corresponding record fields. Each
 report takes a fresh snapshot of the theorem database and sources.
 
-ML callers can use `run_with_presentation {about, omit_types} config` to
+ML callers can use `run_with_presentation
+{about, omit_types, reader_view, theory_sources} config` to
 put additional Markdown prose in About and omit selected built-in type
 layouts, for example `[{Thy="num", Name="num"}]`. Omission affects type
 sections and their links, not formulas or record fields. Record layouts
@@ -100,8 +101,19 @@ precede other datatypes, and types precede definitions. Generated record
 operations remain in formulas and the folded boundary index, but are
 omitted from per-item reference lists and overload explanations. These
 presentation options do not change the definition expansion policy.
+With `reader_view = true`, numbered assumptions/conclusions replace duplicate
+raw statements; definition equations omit empty hypothesis lists and outer
+universal quantifiers, and defining conjunctions become separate clauses.
+Conjunctions and quantifiers within an equation remain intact. Clauses are
+obtained by kernel specialization and conjunction elimination. Real kernel
+hypotheses remain explicit. Traversal bookkeeping and pinning formulas are
+hidden, but the assumption-prose checks still run. Theory-qualified definition
+headings retain identity, and formula tokens retain their type tooltips.
+`theory_sources` maps theory names to source URLs for unexpanded constants;
+links appear in the boundary index in both output formats.
 HTML About prose, like assumption prose, requires pandoc. The ordinary
-`run config` entry point uses empty About prose and omits no types.
+`run config` entry point uses empty About prose, omits no types, disables reader view and supplies no
+external source links.
 
 `statementDossierLib.script_theories : string list -> string list` lists
 the theories whose `*Script.sml` files occur below supplied directories.

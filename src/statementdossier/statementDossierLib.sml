@@ -25,7 +25,9 @@ type config = {
   supporting : name list
 }
 
-type presentation = {about : string, omit_types : name list}
+type presentation = {about : string, omit_types : name list,
+                     reader_view : bool,
+                     theory_sources : (string * string) list}
 
 fun key ({Thy, Name} : name) = Thy ^ "$" ^ Name
 
@@ -608,6 +610,7 @@ datatype inline =
   | Code of string
   | Hol of printed                    (* inline code printed by HOL *)
   | Link of string * inline list      (* to an anchor of the document *)
+  | ExternalLink of string * inline list
   | HtmlLink of string * inline list  (* a link in HTML only *)
   | Target of string * inline list    (* an anchor in HTML only *)
 
@@ -715,6 +718,8 @@ fun md_inline xs =
       | one (Code s) = "`" ^ collapse s ^ "`"
       | one (Hol p) = "`" ^ collapse (p PlainText) ^ "`"
       | one (Link (h, xs)) = "[" ^ md_inline xs ^ "](#" ^ h ^ ")"
+      | one (ExternalLink (url, xs)) =
+          "[" ^ md_inline xs ^ "](" ^ url ^ ")"
       | one (HtmlLink (h, xs)) = one (Link (h, xs))
       | one (Target (i, xs)) =
           "<a id=\"" ^ i ^ "\"></a>" ^ md_inline xs
@@ -773,6 +778,9 @@ fun html_inline href xs =
       | one (Hol p) = "<code>" ^ p (Linked href) ^ "</code>"
       | one (Link (h, xs)) =
           "<a href=\"#" ^ h ^ "\">" ^ html_inline href xs ^ "</a>"
+      | one (ExternalLink (url, xs)) =
+          "<a href=\"" ^ escape url ^ "\">" ^
+          html_inline href xs ^ "</a>"
       | one (HtmlLink (h, xs)) = one (Link (h, xs))
       | one (Target (i, xs)) =
           "<span id=\"" ^ i ^ "\">" ^ html_inline href xs ^ "</span>"
@@ -1274,7 +1282,8 @@ fun prose_html code_html text =
 
 (* The dossier described by cfg: its title, its blocks, and the anchor
    of each constant that has one, for links from printed text. *)
-fun render ({about = extra_about, omit_types} : presentation)
+fun render ({about = extra_about, omit_types, reader_view,
+             theory_sources} : presentation)
            (cfg : config) =
   let
     val theorems =
@@ -1350,7 +1359,7 @@ fun render ({about = extra_about, omit_types} : presentation)
                         else Redblackmap.peek (met_anchors, s)
       | NONE => Redblackmap.peek (met_anchors, s)
     fun use_links cs =
-      let
+      if reader_view then [] else let
         val cs = List.filter
           (fn c => not (generated_record c orelse omitted_const c)) cs
         val (expanded, others) =
@@ -1398,6 +1407,23 @@ fun render ({about = extra_about, omit_types} : presentation)
                                | xs => Text " (" :: xs @ [Text ")"]))] @
       tag_blocks th @ [Pre (hol_thm th)]
 
+    (* SPEC_ALL avoids capture when a quantified name is also free. Each
+       displayed clause is obtained through kernel inference; a conjunction
+       inside an equation's right-hand side is not a defining conjunction. *)
+    fun definition_blocks (n, th) =
+      if not reader_view then thm_block (n, th) else let
+        fun clauses th = let val th = Drule.SPEC_ALL th in
+          if is_conj (concl th) then
+            clauses (CONJUNCT1 th) @ clauses (CONJUNCT2 th)
+          else [th]
+        end
+      in
+        tag_blocks th @
+        (if null (hyp th) then []
+         else [Para [Text "Kernel hypotheses:"], Pre (numbered (hyp th))]) @
+        map (fn clause => Pre (hol_term (concl clause))) (clauses th)
+      end
+
     fun theorem_section (n, th) =
       let
         val (hyps, goal) = hyps_and_goal th
@@ -1410,15 +1436,16 @@ fun render ({about = extra_about, omit_types} : presentation)
             " : " ^ hol_type ty target
           end
       in
-        [Heading (2, SOME (anchor "thm" n), [Text "Theorem ", Code (#Name n)]),
-         theory_location n] @ tag_blocks th @
+        [Heading (2, SOME (anchor "thm" n), [Text "Theorem ", Code (#Name n)])] @ (if reader_view then [] else [theory_location n]) @
+        tag_blocks th @
         (if null hyps then
            [Para [Text "No assumptions or implication antecedents."]]
          else [Para [Text ("Assumptions and implication antecedents (" ^
                            Int.toString (length hyps) ^ "):")],
                Pre (numbered hyps)]) @
-        [Para [Text "Conclusion:"], Pre (hol_term goal),
-         Fold ("As stored", [Pre (hol_thm th)])] @
+        [Para [Text "Conclusion:"], Pre (hol_term goal)] @
+        (if reader_view then []
+         else [Fold ("As stored", [Pre (hol_thm th)])]) @
         (if null vars then []
          else [Fold ("Free variable types",
                  [Para [Text "Free variables:"],
@@ -1535,7 +1562,7 @@ fun render ({about = extra_about, omit_types} : presentation)
                 case List.find
                        (fn (e : entry) => same_const (#const e) f) entries of
                   SOME e => Para [Text "Definition:"] ::
-                            List.concat (map thm_block (#defs e))
+                            List.concat (map definition_blocks (#defs e))
                 | NONE => []
             end
           fun section (k, h) =
@@ -1546,7 +1573,7 @@ fun render ({about = extra_about, omit_types} : presentation)
               [Heading (3, SOME (anchor "hyp" {Thy = "", Name = k}),
                         [Hol (hol_term h)])] @
               definition h @ [prose_block text] @
-              (if null names then []
+              (if reader_view orelse null names then []
                else [Fold
                      ("Internal equivalence theorems and supporting facts",
                       List.concat
@@ -1565,11 +1592,13 @@ fun render ({about = extra_about, omit_types} : presentation)
 
     (* Supporting theorems: stated, not expanded; only the constants with an
        entry are listed. *)
-    fun supporting_section (n, th) =
+    fun supporting_section pair =
+      if reader_view then theorem_section pair else let val (n, th) = pair in
       [Heading (3, SOME (anchor "thm" n), [Code (#Name n)]),
        theory_location n] @ tag_blocks th @ [Pre (hol_thm th)] @
       use_links (List.filter (fn c => isSome (href (key (name_of_const c))))
                    (theorem_consts th))
+      end
     val supporting_blocks =
       if null supporting then []
       else
@@ -1600,25 +1629,25 @@ fun render ({about = extra_about, omit_types} : presentation)
                        : entry) =
       let val n = name_of_const const in
         [Heading (3, SOME (anchor "def" n),
-                  Code (const_label const) ::
+                  Code (if reader_view then key n else const_label const) ::
                   (case Overload.overloading_of_term oinfo const of
                      SOME s => if s = #Name n then []
                                else [Text " (printed as ", Code s, Text ")"]
-                   | NONE => [])),
-         bucket_tag const,
+                   | NONE => []))] @
+        (if reader_view then [] else [bucket_tag const,
          Para ([Text "Theory ", Code (#Thy n)] @ printed_as const @
                [Text "; type ", Hol (hol_type (type_of const)),
                 Text "; first reached from ", ref_link reached_from,
-                Text "."])] @
+                Text "."])]) @
         (if null defs then
            [Para [Text "No definition found in the theorem database."]]
-         else if defines then List.concat (map thm_block defs)
+         else if defines then List.concat (map definition_blocks defs)
          else Para [Text ("No stored definition defines it; " ^
                           "these mention it:")] ::
-              List.concat (map thm_block defs)) @
+              List.concat (map definition_blocks defs)) @
         (if null lemmas then []
          else Para [Text "Equation lemmas:"] ::
-              List.concat (map thm_block lemmas)) @
+              List.concat (map definition_blocks lemmas)) @
         use_links uses
       end
 
@@ -1794,8 +1823,14 @@ fun render ({about = extra_about, omit_types} : presentation)
                 | Linked _ => pandoc_html extra_about)]) @
       [Para [Text "Recorded oracle tags, axiom dependencies and kernel \
                   \assumptions are shown beside each statement. Their absence \
-                  \alone is not an independent proof audit."],
-       Para [Text "Generated by `statementDossierLib` from the theorem \
+                  \alone is not an independent proof audit."]] @
+      (if reader_view then
+         [Para [Text ("Contents: " ^
+           Int.toString (length theorems + length supporting) ^
+           " theorem statements, " ^ Int.toString (length entries) ^
+           " definitions and " ^ Int.toString (length described) ^
+           " type layouts. Unexpanded constants link to their source when supplied.")]]
+       else [Para [Text "Generated by `statementDossierLib` from the theorem \
                   \database: every statement, definition and type below is \
                   \printed by HOL.  Constants are expanded breadth-first, in \
                   \order of first appearance; each appears once, and later \
@@ -1830,7 +1865,7 @@ fun render ({about = extra_about, omit_types} : presentation)
               else commas ", "
                      (map (fn t => [Code t]) (#stop_theories cfg) @
                       map (fn n => [Code (key n)]) (#stop_consts cfg))) @
-             [Text "."])]
+             [Text "."])])
     val blocks =
       [Heading (1, NONE, [Text (#title cfg)]),
        Raw (fn PlainText => #preamble cfg
@@ -1850,9 +1885,11 @@ fun render ({about = extra_about, omit_types} : presentation)
                    commas ", " (map (fn ty => [Code (key ty)]) plain) @
                    [Text "."])]) @
       [Heading (2, NONE, [Text "Definitions"]),
-       Para [Text "The definitions to audit; the plumbing follows at the \
-                  \end."]] @
-      List.concat (map entry_section audited) @
+       Para [Text (if reader_view then
+         "Defining equations and clauses."
+         else "The definitions to audit; the plumbing follows at the end.")]] @
+      List.concat (map entry_section
+                      (if reader_view then entries else audited)) @
       [Heading (2, NONE, [Text "Overloads"]),
        Para [Text "Where the constants above print other than by their \
                   \names: on the left as HOL prints it, on the right what \
@@ -1863,19 +1900,24 @@ fun render ({about = extra_about, omit_types} : presentation)
        Fold ("Unexpanded constants", [Items (by_theory
                 (map (fn c => let val n = name_of_const c in
                                 (#Thy n, [Target (anchor "nx" n,
-                                                  [Code (const_label c)])])
+                                  case List.find (fn (thy, _) => thy = #Thy n)
+                                                 theory_sources of
+                                    SOME (_, url) =>
+                                      [ExternalLink (url, [Code (key n)])]
+                                  | NONE => [Code (const_label c)])])
                               end)
                    boundary))]),
        Para [Text "Types, by theory:"],
        Items (by_theory (map (fn ty => (#Thy ty, [Code (#Name ty)]))
-                           unshown_types)),
-       Heading (2, SOME "plumbing", [Text "Plumbing"]),
+                           unshown_types))] @
+      (if reader_view then [] else [Heading (2, SOME "plumbing", [Text "Plumbing"]),
        Para [Text "The definitions in no theorem's conclusion or hypothesis \
                   \bucket, in the same order as above."],
        HtmlFold ("Plumbing definitions (" ^
                  Int.toString (length plumbing) ^ ")",
-                 List.concat (map entry_section plumbing))] @
-      about @ [Fold ("Definition dependency index", audit_list)]
+                 List.concat (map entry_section plumbing))]) @
+      about @ (if reader_view then []
+               else [Fold ("Definition dependency index", audit_list)])
   in
     (#title cfg, blocks, printed_href)
   end
@@ -1972,6 +2014,7 @@ fun run_with_presentation presentation (cfg : config) =
                 end) ()
   end
 
-fun run cfg = run_with_presentation {about = "", omit_types = []} cfg
+fun run cfg = run_with_presentation
+  {about = "", omit_types = [], reader_view = false, theory_sources = []} cfg
 
 end

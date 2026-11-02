@@ -188,7 +188,8 @@ val _ = check "Record selectors link to their field descriptions"
    contains record_html "contents" andalso contains record_html "label")
 val _ = run_with_presentation {
   about = "Verification\n\n```sh\nholbuild -j1 buildhol\n```",
-  omit_types = [{Thy = "num", Name = "num"}]
+  omit_types = [{Thy = "num", Name = "num"}],
+  reader_view = false, theory_sources = []
 } (basic ["record_result"])
 val compact_html = read html_path
 val about_html = Substring.string (#1 (Substring.position
@@ -362,6 +363,42 @@ val _ = OS.FileSys.remove alias_script
 val _ = OS.FileSys.remove source_script
 
 val _ = OS.FileSys.rmDir source_dir
+
+(* Reader presentation must preserve the logic while removing duplicate
+   formula and traversal noise observed in generated reports. *)
+val _ = Define `(claused ([]:bool list) = T) /\
+                (claused (h::t) = (h /\ claused t))`
+val _ = save_thm ("claused_result", REFL ``claused xs``)
+val reader_options = {about = "", omit_types = [], reader_view = true,
+  theory_sources = [("dossierTest", "https://example.org/dossierTestScript.sml")]}
+val _ = run_with_presentation reader_options (basic ["claused_result"])
+val reader_md = read markdown_path
+val reader_html = read html_path
+val _ = check "Reader clauses retain RHS logic and implicit variables"
+  (contains reader_md "claused []" andalso contains reader_md "claused (h::t)"
+   andalso contains reader_md "h ∧ claused t" andalso
+   not (contains reader_md "[] ⊢") andalso
+   not (contains reader_md "Bucket:") andalso
+   not (contains reader_md "first reached from") andalso
+   not (contains reader_md "As stored"))
+val _ = run_with_presentation reader_options (config {
+  theorems = [named "root"], expand_theories = [], expand_consts = [],
+  stop_theories = [], stop_consts = [], assumptions = NONE,
+  supporting = [], snippets = NONE
+})
+val _ = check "Boundary sources retain URLs in both formats"
+  (contains (read markdown_path) "](https://example.org/dossierTestScript.sml)"
+   andalso contains (read html_path)
+     "href=\"https://example.org/dossierTestScript.sml\"")
+val _ = write prose_path good_prose
+val _ = run_with_presentation reader_options (with_prose (named "root"))
+val _ = check "Reader prose omits pinning formulas"
+  (contains (read markdown_path) "The input" andalso
+   not (contains (read markdown_path) "Internal equivalence"))
+val _ = run_with_presentation reader_options (basic ["kernel_hypothesis"])
+val _ = check "Reader view retains genuine kernel assumptions"
+  (contains (read markdown_path) "hidden" andalso
+   contains (read markdown_path) "1 assumption(s)")
 
 val _ = List.app OS.FileSys.remove
   [markdown_path, html_path, prose_path, snippets_in, snippets_out]

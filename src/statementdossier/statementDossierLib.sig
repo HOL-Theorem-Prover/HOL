@@ -53,8 +53,13 @@ val run : config -> unit
 
 (* Additional prose belongs in About, away from the opening explanation.
    Omitted types are not described or linked; their uses remain in formulas.
-   About prose uses the same Markdown renderer as assumptions. *)
-type presentation = {about : string, omit_types : name list}
+   Reader view hides traversal metadata, raw duplicate statements and pinning
+   formulas, and displays definitions as implicitly quantified clauses.
+   Pinning names are still validated. Theory sources link boundary constants
+   to caller-supplied source URLs. About prose is Markdown. *)
+type presentation = {about : string, omit_types : name list,
+                     reader_view : bool,
+                     theory_sources : (string * string) list}
 val run_with_presentation : presentation -> config -> unit
 
 end
