@@ -332,13 +332,6 @@ local
             (Conv.FORK_CONV (Conv.REWR_CONV rx2_thm, Conv.REWR_CONV u_thm))
           THENC EVAL)
       |> Drule.EQT_ELIM
-   structure TwmTab = Table(struct
-     type key = (hol_type * hol_type) * term
-     val ord = Lib.pair_compare
-                 (Lib.pair_compare (Type.compare, Type.compare),
-                  Term.compare)
-     fun pp _ = HOLPP.add_string "<twm-key>"
-   end)
    val twm_map : ((term -> float) * conv) TwmTab.table ref =
        ref TwmTab.empty
    fun lookup (x as (tw as (t, w), mode)) =

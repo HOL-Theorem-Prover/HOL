@@ -7,12 +7,6 @@ val ERR = mk_HOL_ERR "flookupLib"
 
 (* ------------------------------------------------------------------------- *)
 
-structure Typetab = Table(struct
-  type key = hol_type
-  val ord = Type.compare
-  fun pp _ = HOLPP.add_string "<type>"
-end)
-
 fun memoize size f =
    let
       val d : 'b Typetab.table ref = ref Typetab.empty
