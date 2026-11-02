@@ -83,6 +83,7 @@ DIRNAMES += cache_reflink \
             json-strings \
             local_parallelism_limit \
             placeholder_regroup \
+            projfile_cross_dir_deps \
             projfile_module \
             retry_oos \
             scan_order_staleness \

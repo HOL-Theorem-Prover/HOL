@@ -165,29 +165,34 @@ local
                end
     | expand_msg _ _ = imp_err "3" ;
 in
-fun expandf _ (GSTK{prop=PROVED _, ...}) =
-       raise ERR "expandf" "goal has already been proved"
-  | expandf tac (GSTK{prop as POSED g, stack,final}) =
+fun expandf_in _ _ (GSTK{prop=PROVED _, ...}) =
+       raise ERR "expandf_in" "goal has already been proved"
+  | expandf_in ctxt tac (GSTK{prop as POSED g, stack,final}) =
      let val arg = (case stack of [] => g | tr::_ => hd (#goals tr))
-         val (glist,vf) = tac arg (Context.snapshot())
+         val (glist,vf) = tac arg ctxt
          val dpth = length stack
          val gs = return(GSTK{prop=prop,final=final,
                               stack={goals=glist, validation=vf} :: stack})
      in expand_msg dpth gs ; gs end
 
-(* note - expand_listf, unlike expandf, replaces the top member of the stack *)
-fun expand_listf ltac (GSTK{prop=PROVED _, ...}) =
-        raise ERR "expand_listf" "goal has already been proved"
-  | expand_listf ltac (GSTK{prop as POSED g, stack = [], final}) =
-    expand_listf ltac (GSTK{prop = POSED g,
+(* note - expand_listf_in, unlike expandf_in, replaces the top member of
+   the stack *)
+fun expand_listf_in _ _ (GSTK{prop=PROVED _, ...}) =
+        raise ERR "expand_listf_in" "goal has already been proved"
+  | expand_listf_in ctxt ltac (GSTK{prop as POSED g, stack = [], final}) =
+    expand_listf_in ctxt ltac (GSTK{prop = POSED g,
       stack = [{goals = [g], validation = hd}], final = final})
-  | expand_listf ltac (GSTK{prop, stack as {goals,validation}::rst, final}) =
-    let val (new_goals, new_vf) = ltac goals (Context.snapshot())
+  | expand_listf_in ctxt ltac
+                    (GSTK{prop, stack as {goals,validation}::rst, final}) =
+    let val (new_goals, new_vf) = ltac goals ctxt
       val dpth = length stack - 1 (* because we don't augment the stack *)
       val new_gs = return (GSTK{prop=prop, final=final,
         stack={goals=new_goals, validation=validation o new_vf} :: rst})
     in expand_msg dpth new_gs ; new_gs end ;
 end ;
+
+fun expandf tac gs = expandf_in (Context.snapshot()) tac gs
+fun expand_listf ltac gs = expand_listf_in (Context.snapshot()) ltac gs
 
 fun expand tac gs = expandf (Tactical.VALID tac) gs;
 fun expand_list ltac gs = expand_listf (Tactical.VALID_LT ltac) gs;

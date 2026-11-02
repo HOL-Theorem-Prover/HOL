@@ -20,9 +20,6 @@ fi
 
 holmake=$1
 shift
-# The caller's extra flags (--holstate=... under Poly).  Held in a
-# variable because run_case's own "$@" shadows the script's.
-hmopts=("$@")
 
 cd testd
 
@@ -32,7 +29,7 @@ run_case() {
     shift 2
 
     /bin/rm -f multi
-    "$holmake" "${hmopts[@]}" "$@" --no_overlay >stdout.txt 2>stderr.txt
+    "$holmake" "$@" --no_overlay >stdout.txt 2>stderr.txt
     rc=$?
 
     if [ "$expect" = ok ] && [ $rc -ne 0 ] ; then
@@ -54,7 +51,8 @@ run_case() {
 
     # none of these promises a file, so none may be reported
     for t in phony_ok multi ignored ; do
-        if grep -q "did not create.*\b$t\b" stdout.txt stderr.txt ; then
+        if grep -Eq "did not create.*[^[:alnum:]_]$t([^[:alnum:]_]|\$)" \
+                stdout.txt stderr.txt ; then
             echo "FAIL ($label): $t was wrongly reported as missing" 1>&2
             cat stdout.txt stderr.txt 1>&2
             exit 1
@@ -62,9 +60,13 @@ run_case() {
     done
 }
 
-run_case "warn/-j1"     ok   -j1
-run_case "warn/-jN"     ok
-run_case "strict/-j1"   fail -j1 --strict-outputs
-run_case "strict/-jN"   fail --strict-outputs
+# run_case's own "$@" shadows the script's, so the caller's extra flags
+# (--holstate=... under Poly; none under Moscow ML) are threaded through
+# each call site rather than held in an array: an empty array's [@]
+# expansion is an error under `set -u' in bash before 4.4.
+run_case "warn/-j1"     ok   "$@" -j1
+run_case "warn/-jN"     ok   "$@"
+run_case "strict/-j1"   fail "$@" -j1 --strict-outputs
+run_case "strict/-jN"   fail "$@" --strict-outputs
 
 exit 0

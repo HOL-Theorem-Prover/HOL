@@ -1342,6 +1342,7 @@ val _ = bnfBase.updateDB (
 
     map = “finite_set$fIMAGE : ('a1 -> 'c1) -> 'a1 fset -> 'c1 fset”,
     set = [“finite_set$toSet : 'a1 fset -> 'a1 set”],
+    eqns = [bnm "fIMAGE_thm", bnm "toSet_fEMPTY", bnm "toSet_fINSERT"],
     mapID = bnm "fsetMap_ID",
     mapO = bnm "fsetMap_O",
     mapIMAGE = [bnm "fsetMapIMAGE1"],

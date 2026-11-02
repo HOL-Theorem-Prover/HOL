@@ -318,7 +318,7 @@ Proof
   ONCE_REWRITE_TAC [ParseFGX_def] >> rpt strip_tac >> rw[] >>
   rename [‘parseFGX _ _ s’] >>
   ‘∀t. STRLEN t ≤ STRLEN s ⇒
-       parseFGX (λa. ParseFGX t1 a) t1 t = parseFGX (λa. ParseFGX t2 a) t2 t’
+       parseFGX (ParseFGX t1) t1 t = parseFGX (ParseFGX t2) t2 t’
     suffices_by metis_tac[DECIDE “x:num ≤ x”] >> gen_tac >>
   completeInduct_on ‘STRLEN t’ >> fs[PULL_FORALL] >> rw[] >>
   irule parseFGX_CONG >> simp[] >> rpt strip_tac >>

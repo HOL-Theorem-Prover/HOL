@@ -581,3 +581,33 @@ val _ =
          andalso has "0." bare
       then OK() else die ("\nfull:\n" ^ full ^ "bare:\n" ^ bare)
     end
+
+local
+  val slot = Context.Data.new {name = "proofman-selftest.marker",
+                               empty = "ambient", pp = fn s => s}
+  val ctxt = Context.Data.put slot "explicit" (Context.snapshot())
+  val seen = ref ""
+  fun record_tac g c = (seen := Context.Data.get slot c; ALL_TAC g c)
+  fun record_ltac gs c = (seen := Context.Data.get slot c; ALL_LT gs c)
+  val gstk0 = with_flag (goalStack.chatting, false)
+                        (new_goal ([], “p ⇒ p”)) Lib.I
+  (* The step runs with the live slot set to "live", after `f` has been
+     applied to everything but the goalstack, so a context read any
+     earlier than the step itself shows up as "ambient". *)
+  fun check nm expected f =
+      (tprint nm;
+       seen := "";
+       ignore (with_flag (goalStack.chatting, false)
+                 (Context.Data.with_slot_value slot "live" f) gstk0);
+       if !seen = expected then OK()
+       else die ("saw " ^ String.toString (!seen)))
+in
+val _ = check "expandf_in runs the tactic in the given context"
+              "explicit" (expandf_in ctxt record_tac)
+val _ = check "expand_listf_in runs the tactic in the given context"
+              "explicit" (expand_listf_in ctxt record_ltac)
+val _ = check "expandf runs the tactic in the live context"
+              "live" (expandf record_tac)
+val _ = check "expand_listf runs the tactic in the live context"
+              "live" (expand_listf record_ltac)
+end

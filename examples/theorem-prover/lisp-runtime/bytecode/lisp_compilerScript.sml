@@ -409,7 +409,7 @@ val IMP_BC_evl_EXISTS = prove(
   \\ METIS_TAC []);
 
 val MEM_SUM_MAP = prove(
-  ``!xs x. MEM x xs ==> term_depth x <= SUM (MAP (\a. term_depth a) xs)``,
+  ``!xs x. MEM x xs ==> term_depth x <= SUM (MAP term_depth xs)``,
   Induct \\ SIMP_TAC std_ss [MEM] \\ REPEAT STRIP_TAC
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss [SUM_def,MAP] \\ DECIDE_TAC);
 
@@ -460,13 +460,13 @@ val BC_ev_TOTAL_LEMMA = prove(
            \\ IMP_RES_TAC MEM_SUM_MAP \\ DECIDE_TAC)
          \\ ONCE_REWRITE_TAC [BC_ev_cases] \\ SIMP_TAC (srw_ss()) []
          \\ FULL_SIMP_TAC std_ss [term_depth_def,PULL_EXISTS_CONJ]
-         \\ `term_depth t' < 1 + term_depth t' + SUM (MAP (\a. term_depth a) l)` by DECIDE_TAC
+         \\ `term_depth t' < 1 + term_depth t' + SUM (MAP term_depth l)` by DECIDE_TAC
          \\ RES_TAC \\ METIS_TAC [PAIR])
   THEN1 (ONCE_REWRITE_TAC [BC_ev_cases] \\ SIMP_TAC (srw_ss()) []
          \\ FULL_SIMP_TAC std_ss [EXISTS_PROD] \\ Q.PAT_X_ASSUM `!tt.bbb` MATCH_MP_TAC
          \\ FULL_SIMP_TAC std_ss [term_depth_def,MAP,SUM_def]
          \\ `!l. (MAP (\(x':string,y). term_depth y) l) =
-                 (MAP (\a. term_depth a) (MAP SND l))` by
+                 (MAP term_depth (MAP SND l))` by
           (Induct \\ FULL_SIMP_TAC std_ss [MAP]
            \\ Cases \\ FULL_SIMP_TAC std_ss [MAP])
          \\ FULL_SIMP_TAC std_ss [])
@@ -492,12 +492,12 @@ val BC_ev_TOTAL_LEMMA = prove(
       \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC)
     \\ ONCE_REWRITE_TAC [BC_ev_cases] \\ SIMP_TAC (srw_ss()) []
     \\ FULL_SIMP_TAC std_ss [term_depth_def,MAP,SUM_def]
-    \\ `term_depth h < 10 + (term_depth h + SUM (MAP (\a. term_depth a) t))` by DECIDE_TAC
+    \\ `term_depth h < 10 + (term_depth h + SUM (MAP term_depth t))` by DECIDE_TAC
     \\ RES_TAC \\ FULL_SIMP_TAC std_ss [EXISTS_PROD,PULL_EXISTS_CONJ]
     \\ FULL_SIMP_TAC std_ss [iLENGTH_def,iLENGTH_APPEND]
     \\ Q.PAT_X_ASSUM `BC_JUMPS_OK bc` (fn th => ASSUME_TAC th THEN ASSUME_TAC (RW [BC_JUMPS_OK_def] th))
     \\ FULL_SIMP_TAC std_ss []
-    \\ `term_depth (Or t) < 10 + (term_depth h + SUM (MAP (\a. term_depth a) t))` by
+    \\ `term_depth (Or t) < 10 + (term_depth h + SUM (MAP term_depth t))` by
           (FULL_SIMP_TAC std_ss [term_depth_def,ZERO_LT_term_depth])
     \\ RES_TAC \\ METIS_TAC [])
   THEN1
@@ -3093,8 +3093,8 @@ Proof
     \\ FULL_SIMP_TAC std_ss [LSIZE_def]
     \\ REPEAT (MATCH_MP_TAC LSIZE_CAR_LESS ORELSE MATCH_MP_TAC LSIZE_CDR_LESS)
     \\ DECIDE_TAC)
-  \\ `MAP (\a. sexp2sexp a) (sexp2list b) =
-      MAP (\a. term2sexp a) (MAP (\a. sexp2term a) (sexp2list b))` by
+  \\ `MAP sexp2sexp (sexp2list b) =
+      MAP term2sexp (MAP sexp2term (sexp2list b))` by
    (FULL_SIMP_TAC std_ss [LSIZE_def] \\ Q.PAT_X_ASSUM `!x.bb` MP_TAC
     \\ Q.SPEC_TAC (`b`,`b`) \\ REVERSE Induct
     THEN1 (EVAL_TAC \\ SIMP_TAC std_ss [])

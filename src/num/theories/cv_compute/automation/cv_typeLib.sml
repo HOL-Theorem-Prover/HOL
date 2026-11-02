@@ -409,10 +409,13 @@ fun define_from_to_aux ignore_tyvars ty =
      so gave a conjunct for it; the BNF package proves one principle per
      type, and legacyInduction puts it back. *)
   val ind =
-      let val ind = TypeBase.induction_of ty
+      let val ind = TypeBase.set_induction_of ty
       in
         (* a type that recurses under no operator has nothing to put
            back, and is the principle it already has *)
+        (* the set form, not induction_of: operators_of reads the set
+           functions, and a development's datatype_simp theorems may
+           have rewritten them out of the principle a reader sees *)
         case Lib.total legacyInduction.operators_of ind of
             NONE => ind
           | SOME ops =>

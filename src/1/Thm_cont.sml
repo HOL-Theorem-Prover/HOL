@@ -110,7 +110,7 @@ val CONJUNCTS_THEN: thm_tactical = fn ttac => CONJUNCTS_THEN2 ttac ttac
 (*  set_goal ([], "F");;                                                    *)
 (*  expandf (STRIP_ASSUME_TAC th);;                                         *)
 (*  OK..                                                                    *)
-(*  "F"                                                                             *)
+(*  "F"                                                                     *)
 (*     [ "n = SUC 0" ] (n.b. should be n')                                  *)
 (*     [ "n = 0" ]                                                          *)
 (*                                                                          *)
@@ -305,23 +305,23 @@ val CHOOSE_ALL_THEN: thm_tactical =
    fn ttac => fn xth =>
       let
          val (hyp,conc) = dest_thm xth
-         val _ = if is_exists conc then () else raise ERR "CHOOSE_THEN" "not a exists"
+         val _ = is_exists conc orelse raise ERR "CHOOSE_THEN" "not a exists"
          val (vars,_) = strip_exists1 conc
          val len = List.length vars
          val arr = Array.array (len,false)
          fun name_eq x y = (fst (dest_var x) = fst (dest_var y))
          fun check_for_dupes i [] = ([],[])
-           | check_for_dupes i (x::xs) = (if op_mem name_eq x xs
-                                          then
-                                          let val _ = Array.update (arr,i,true)
-                                              val (dupl,notdup) = check_for_dupes (i + 1) xs
-                                          in
-                                            (x::dupl,notdup)
-                                          end
-                                          else
-                                          let val (dupl,notdup) = check_for_dupes (i + 1) xs
-                                          in (dupl,x::notdup)
-                                          end)
+           | check_for_dupes i (x::xs) =
+             (if op_mem name_eq x xs then
+                let val _ = Array.update (arr,i,true)
+                    val (dupl,notdup) = check_for_dupes (i + 1) xs
+                in
+                  (x::dupl,notdup)
+                end
+              else
+                let val (dupl,notdup) = check_for_dupes (i + 1) xs
+                in (dupl,x::notdup)
+                end)
          val (dups,vars) = check_for_dupes 0 vars
          val vec = Array.vector arr
 
@@ -333,11 +333,12 @@ val CHOOSE_ALL_THEN: thm_tactical =
                 List.rev (snd (rev_itlist
                                  (varyAcc (Parse.get_is_constname ctxt))
                                  vars (fvs,[])))
-            fun merge i dups vars = if i < Vector.length vec
-                                    then if Vector.sub (vec,i)
-                                         then (hd dups :: merge (i + 1) (tl dups) vars)
-                                         else (hd vars :: merge (i + 1) dups (tl vars))
-                                    else []
+            fun merge i dups vars =
+                if i < Vector.length vec then
+                  if Vector.sub (vec,i) then (
+                    hd dups :: merge (i + 1) (tl dups) vars)
+                  else (hd vars :: merge (i + 1) dups (tl vars))
+                else []
             val vars = merge 0 dups vars
          in
             X_CHOOSE_THENL vars ttac xth g ctxt
@@ -383,7 +384,8 @@ fun CASES_THENL ttacl = DISJ_CASES_THENL (map (CHOOSE_ALL_THEN) ttacl)
 val STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_THEN]
 
 (* Same as REPEAT_TCL STRIP_ALL_THEN but slightly faster *)
-val STRIP_ALL_THEN = REPEAT_TCL (FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_ALL_THEN])
+val STRIP_ALL_THEN =
+    REPEAT_TCL (FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_ALL_THEN])
 
 
 (* ---------------------------------------------------------------------*)
@@ -405,7 +407,7 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (*                                                                      *)
 (* let OLD_IMP_RES_THEN ttac impth =                                    *)
 (*  ASSUM_LIST                                                          *)
-(*     (\asl. EVERY (mapfilter (RESOLVE_THEN asl ttac)                          *)
+(*     (\asl. EVERY (mapfilter (RESOLVE_THEN asl ttac)                  *)
 (*                            (IMP_CANON impth)));                      *)
 (*                                                                      *)
 (* let OLD_RES_THEN ttac =                                              *)
@@ -413,25 +415,25 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (* ---------------------------------------------------------------------*)
 
 
-(* --------------------------------------------------------------------- *)
+(* ---------------------------------------------------------------------*)
 (* Definitions of the primitive:                                        *)
 (*                                                                      *)
 (* IMP_RES_THEN: Resolve all assumptions against an implication.        *)
 (*                                                                      *)
 (* The definition uses two auxiliary (local)  functions:                *)
 (*                                                                      *)
-(*     MATCH_MP     : like the built-in version, but doesn't use GSPEC.         *)
-(*     RESOLVE_THEN : repeatedly resolve an implication                         *)
+(*     MATCH_MP     : like the built-in version, but doesn't use GSPEC. *)
+(*     RESOLVE_THEN : repeatedly resolve an implication                 *)
 (*                                                                      *)
-(* This version deleted for HOL version 1.12                     [TFM 91.01.17]         *)
+(* This version deleted for HOL version 1.12     [TFM 91.01.17]         *)
 (*                                                                      *)
 (* begin_section IMP_RES_THEN;                                          *)
 (*                                                                      *)
-(* let MATCH_MP impth =                                                         *)
+(* let MATCH_MP impth =                                                 *)
 (*     let sth = SPEC_ALL impth in                                      *)
 (*     let pat = fst(dest_imp(concl sth)) in                            *)
 (*     let matchfn = match pat in                                       *)
-(*        (\th. MP (INST_TY_TERM (matchfn (concl th)) sth) th);                 *)
+(*        (\th. MP (INST_TY_TERM (matchfn (concl th)) sth) th);         *)
 (*                                                                      *)
 (* letrec RESOLVE_THEN antel ttac impth : tactic =                      *)
 (*        let answers = mapfilter (MATCH_MP impth) antel in             *)
@@ -440,8 +442,8 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (*                                                                      *)
 (* let IMP_RES_THEN ttac impth =                                        *)
 (*     ASSUM_LIST (\asl.                                                *)
-(*      EVERY (mapfilter (RESOLVE_THEN asl ttac) (RES_CANON impth))) ?          *)
-(*     failwith `IMP_RES_THEN`;                                                 *)
+(*      EVERY (mapfilter (RESOLVE_THEN asl ttac) (RES_CANON impth))) ?  *)
+(*     failwith `IMP_RES_THEN`;                                         *)
 (*                                                                      *)
 (* IMP_RES_THEN;                                                        *)
 (*                                                                      *)
@@ -451,7 +453,7 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (* ---------------------------------------------------------------------*)
 
 (* ---------------------------------------------------------------------*)
-(* Definition of the primitive:                                                 *)
+(* Definition of the primitive:                                         *)
 (*                                                                      *)
 (* IMP_RES_THEN: Resolve all assumptions against an implication.        *)
 (*                                                                      *)
@@ -459,7 +461,7 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (* just like the built-in version, but doesn't use GSPEC.               *)
 (*                                                                      *)
 (* New implementation for version 1.12: fails if no MP-consequences can *)
-(* be drawn, and does only one-step resolution.                 [TFM 90.12.07]  *)
+(* be drawn, and does only one-step resolution.         [TFM 90.12.07]  *)
 (* ---------------------------------------------------------------------*)
 
 local
@@ -476,7 +478,7 @@ local
       end
 
 (* ---------------------------------------------------------------------*)
-(* check ex l : Fail with ex if l is empty, otherwise return l.                 *)
+(* check ex l : Fail with ex if l is empty, otherwise return l.         *)
 (* ---------------------------------------------------------------------*)
 
    fun check ex [] = raise ex
@@ -534,10 +536,12 @@ end
 
 local
  fun occurs_check [] tm = ()
-   | occurs_check (v::vs) tm = if free_in v tm then raise (ERR "PROVEHYP_THEN" "") else occurs_check vs tm
+   | occurs_check (v::vs) tm =
+     if free_in v tm then raise (ERR "PROVEHYP_THEN" "") else occurs_check vs tm
  val IMP_CLAUSES1 = boolTheory.IMP_CLAUSES |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL
- fun lth_mp th lth = CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (K (EQT_INTRO lth)) THENC
-                                                  REWR_CONV IMP_CLAUSES1)) th
+ fun lth_mp th lth =
+     CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (K (EQT_INTRO lth)) THENC
+                                  REWR_CONV IMP_CLAUSES1)) th
 in
  fun PROVEHYP_THEN t2tac th g = let
   val (vs, tm) = strip_forall (concl th)

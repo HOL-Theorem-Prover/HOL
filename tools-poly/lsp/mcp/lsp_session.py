@@ -375,8 +375,17 @@ class SessionPool:
     like them to.
     """
 
-    def __init__(self, hol_bin, args=(), env=None, init_timeout=120):
+    def __init__(self, hol_bin, args=(), env=None, init_timeout=120,
+                 hol_resolver=None):
         self.hol_bin = hol_bin
+        # `$(HOLDIR)` is baked into a `bin/hol` at build time, so a
+        # session can only answer about scripts whose dependencies were
+        # built against that same tree.  One binary for every file is
+        # therefore wrong as soon as the caller names a script in a
+        # second checkout -- a git worktree, a sibling clone.  The
+        # resolver maps a script to the tree that owns it; returning
+        # None means "use `hol_bin`", which is the old behaviour.
+        self.hol_resolver = hol_resolver
         self.args = tuple(args)
         self.env = env
         self.init_timeout = init_timeout
@@ -404,9 +413,14 @@ class SessionPool:
             self._sessions[path] = session
             return session
 
+    def _hol_for(self, path):
+        if self.hol_resolver is None:
+            return self.hol_bin
+        return self.hol_resolver(path) or self.hol_bin
+
     def _spawn(self, path):
         cwd = os.path.dirname(path) or "."
-        session = Session(self.hol_bin, cwd, self.args, self.env)
+        session = Session(self._hol_for(path), cwd, self.args, self.env)
         # utf-8 position encoding: every offset the adapter computes is
         # a byte offset, and a HOL script with `.."` quotations is
         # full of multibyte characters, so negotiating utf-16 here

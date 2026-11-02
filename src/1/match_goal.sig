@@ -45,7 +45,8 @@ semantics of pattern variables:
 semantics of matcher list with a tactic (match_case):
 Iterate over matchers, all must match:
 1. Parse quotation in context of goal (and check no free vars ending with _)
-2. Attempt to match the appropriate part of the goal with the pattern (keep track which match)
+2. Attempt to match the appropriate part of the goal with the pattern (keep
+   track which match)
    - if failed, backtrack within current matcher;
    - if no assumptions match, backtrack to previous matcher
 3. Go to the next matcher

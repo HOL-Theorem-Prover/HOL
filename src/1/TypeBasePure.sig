@@ -75,6 +75,16 @@ sig
    val lift_of         : tyinfo -> term option
    val extra_of        : tyinfo -> ThyDataSexp.t list
 
+   (* The induction principle as the construction states it, with a
+      nested type's hypotheses phrased through the operators' set
+      functions.  induction_of gives the principle a reader is meant
+      to see, which a development may have normalised out of all
+      recognition; this is the one code reads, and its shape is the
+      package's own.  NONE for a type that was not built with one. *)
+   val set_induction_tag : string
+   val set_induction_of : tyinfo -> thm option
+   val put_set_induction : thm -> tyinfo -> tyinfo
+
    val axiom_of0       : tyinfo -> shared_thm
    val induction_of0   : tyinfo -> shared_thm
    val size_of0        : tyinfo -> (term * shared_thm) option
@@ -108,7 +118,7 @@ sig
    val fetch           : typeBase -> hol_type -> tyinfo option
    val prim_get        : typeBase -> string * string -> tyinfo option
    val get             : typeBase -> string -> tyinfo list
-                       (* get returns list of tyinfos for types with that tyop *)
+                    (* get returns list of tyinfos for types with that tyop *)
 
    val listItems       : typeBase -> tyinfo list
    val toPmatchThry    : typeBase -> {Thy:string,Tyop:string} ->
@@ -123,7 +133,8 @@ sig
                          (hol_type -> term option) *
                          (hol_type -> term) -> hol_type -> term
 
-   val type_size_pre   : (hol_type -> term option) -> typeBase -> hol_type -> term
+   val type_size_pre   : (hol_type -> term option) -> typeBase -> hol_type ->
+                         term
    val type_size       : typeBase -> hol_type -> term
    val type_encode     : typeBase -> hol_type -> term
    val type_lift       : typeBase -> hol_type -> term

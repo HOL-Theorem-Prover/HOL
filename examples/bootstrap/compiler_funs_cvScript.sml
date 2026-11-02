@@ -67,7 +67,7 @@ Proof
 QED
 
 Definition vs2pretty_def:
-  vs2pretty vs = MAP (λx. v2pretty x) vs
+  vs2pretty vs = MAP v2pretty vs
 End
 
 Theorem vs2pretty_thm[local]:

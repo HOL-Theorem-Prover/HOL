@@ -361,7 +361,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                                mk_forall(var,(mk_comb (pred_r,lhs))))))
      in
         prove(new_body,
-             rpt STRIP_TAC THEN
+             X_GEN_TAC pred_r THEN DISCH_TAC THEN X_GEN_TAC var THEN
              STRUCT_CASES_TAC (SPEC var cases_thm) THEN
              ASM_REWRITE_TAC[])
      end

@@ -1,0 +1,30 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_term_postprocessor`
+
+``` hol4
+Refute.register_term_postprocessor :
+  hol_type -> (term -> term) -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a display transformation for reported values.
+
+`register_term_postprocessor pat f` applies `f` bottom-up to every
+subterm of a reported value whose type matches `pat`.  Callbacks for
+more general patterns run first, and otherwise in registration order.
+A callback that raises or changes the type is skipped.  Testing and
+certification use the unprocessed value.
+
+Built-in patterns are `:'a -> 'b` (update chains), `:'a |-> 'b`
+(finite-map notation), `:rat` and `:real`.  The registration replaces
+the pattern's previous callback, built-in or not, and lasts for the
+session.
+
+### Failure
+
+Never fails.
+
+### See also
+
+[`Refute.refute`](#Refute.refute).

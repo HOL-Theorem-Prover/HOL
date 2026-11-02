@@ -14,7 +14,7 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
    let
      val {bnd,bndthms,canontype,
           map,mapID,mapO,mapIMAGE,mapCONG,
-          relator,set,wits,inhabits} =
+          relator,set,eqns,wits,inhabits} =
          fields
      val convertN = DB.fetch_knm
      fun convertP (t,knm) = (t, convertN knm)
@@ -32,6 +32,7 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
 
        relator = relator,
        set = set,
+       eqns = List.map convertN eqns,
 
        wits = List.map convertP wits,
        inhabits = List.map convertP inhabits
@@ -43,28 +44,29 @@ local
   exception OptionExn = Option.Option
   val termdef_ed = pair_ed (term_ed, kname_ed)
 in
-  fun tup2rec ((map,set),
+  fun tup2rec ((map,set,eqns),
                (relator,bnd,bndthms),
                (mapO,mapID,mapIMAGE,mapCONG),
                (canontype,wits,inhabits)
               ) =
-      bI {map = map, set = set,
+      bI {map = map, set = set, eqns = eqns,
           relator = relator, bnd = bnd, bndthms = bndthms,
           mapO = mapO, mapID = mapID, mapIMAGE = mapIMAGE, mapCONG = mapCONG,
           canontype = canontype, wits = wits, inhabits = inhabits}
-  fun rec2tup (bI {map, set,
+  fun rec2tup (bI {map, set, eqns,
                    relator, bnd, bndthms,
                    mapO, mapID, mapIMAGE, mapCONG,
                    canontype, wits, inhabits}) =
-      ((map,set),
+      ((map,set,eqns),
        (relator,bnd,bndthms),
        (mapO,mapID,mapIMAGE,mapCONG),
        (canontype,wits,inhabits))
 
 
   val ed0 = pair4_ed (
-        pair_ed (add_label "map" $ term_ed,
-                 add_label "set" $ list_ed term_ed),
+        pair3_ed (add_label "map" $ term_ed,
+                  add_label "set" $ list_ed term_ed,
+                  add_label "eqns" $ list_ed kname_ed),
         pair3_ed (add_label "relator" $ term_ed,
                   add_label "bnd" term_ed,
                   add_label "bndthms" $ list_ed kname_ed),

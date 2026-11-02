@@ -50,7 +50,10 @@ val method1_case_cong = theorem "method1_case_cong";
    inducts over an object wants it, here and in the theories built on
    this one. *)
 Theorem obj1_induction[allow_rebind] =
-  let val ind = TypeBase.induction_of “:obj1”
+  (* the stated principle: legacyInduction reads the operators' set
+     functions, which datatype_simp theorems may have rewritten out
+     of the principle a reader sees *)
+  let val ind = TypeBase.set_induction_of “:obj1”
   in legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
   end
 

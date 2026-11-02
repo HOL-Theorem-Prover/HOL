@@ -112,6 +112,51 @@ construct (an open declaration, val declaration, or Theorem)."
        (forward-sexp)
        (should (> (point) before))))))
 
+(defun holscript-ts-tests--string-fixture (text body)
+  "Insert TEXT into a fresh holscript-ts-mode buffer, point at min, call BODY."
+  (with-temp-buffer
+    (insert text)
+    (holscript-ts-mode)
+    (set-buffer-modified-p nil)
+    (goto-char (point-min))
+    (funcall body)))
+
+(ert-deftest holscript-ts-word-binder-head-keeps-neighbour-intact ()
+  "A Theorem whose statement begins with a word binder spelled as a
+plain name (`some') must not damage the Definition above it.
+
+`some' is registered as a HOL binder, and tree-sitter prefers a
+string literal to a same-length regex, so at the head of a term
+`some' could only lex as the binder keyword.  The binder then wanted
+a `.', didn't get one, and error recovery grew the failure backwards
+until the preceding -- perfectly good -- Definition was inside the
+same ERROR node.  Font-lock and `forward-sexp' both key off node
+types, so the Definition stopped colouring as HOL and `C-M-f' over it
+went nowhere."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--string-fixture
+   (concat "Definition eval_def:\n"
+           "  eval d x = x\n"
+           "End\n"
+           "\n"
+           "Theorem foo:\n"
+           "  some statement\n"
+           "Proof\n"
+           "  tac\n"
+           "QED\n")
+   (lambda ()
+     (let* ((root (treesit-buffer-root-node))
+            (kinds (mapcar #'treesit-node-type
+                           (treesit-node-children root t))))
+       (should (equal '("hol_definition" "hol_theorem_with_proof") kinds)))
+     ;; ... and motion over the Definition reaches its `End'.
+     (let ((end-of-End (save-excursion
+                         (goto-char (point-min))
+                         (search-forward "End")
+                         (point))))
+       (forward-sexp)
+       (should (>= (point) end-of-End))))))
+
 ;; --- Indent -----------------------------------------------------------------
 
 (defun holscript-ts-tests--indent-line ()

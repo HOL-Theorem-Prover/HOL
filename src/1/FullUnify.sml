@@ -150,8 +150,8 @@ fun collapse_map (freeset,empty,dosub) subst =
     let
       fun find_used_leaf subst =
           let
-            val with_frees = map (fn i as {redex,residue} => (i,freeset residue))
-                                 subst
+            val with_frees =
+                map (fn i as {redex,residue} => (i,freeset residue)) subst
             val (used_vars, keys) =
                 List.foldl (fn (({redex,residue},fvs), (uvA, kA)) =>
                                (HOLset.union(uvA, fvs), HOLset.add(kA, redex)))
@@ -170,16 +170,16 @@ fun collapse_map (freeset,empty,dosub) subst =
           end
 
       fun recurse subst =
-            case find_used_leaf subst of
-                NONE => subst
-              | SOME (i as {redex,residue}, rest) =>
-                let
-                  val rest' = map (fn {redex,residue} =>
-                                      {redex=redex, residue = dosub [i] residue})
-                                  rest
-                in
-                  i :: recurse rest'
-                end
+          case find_used_leaf subst of
+              NONE => subst
+            | SOME (i as {redex,residue}, rest) =>
+              let
+                val rest' = map (fn {redex,residue} =>
+                                    {redex=redex, residue = dosub [i] residue})
+                                rest
+              in
+                i :: recurse rest'
+              end
     in
       recurse subst
     end
@@ -204,7 +204,9 @@ fun collapse0 E =
                           (Env.triTM E) [])
     in
       (tymap,
-       collapse_map (fn t => FVL [t] empty_tmset, empty_tmset, Term.subst) tmmap0
+       collapse_map
+         (fn t => FVL [t] empty_tmset, empty_tmset, Term.subst)
+         tmmap0
       )
     end
 

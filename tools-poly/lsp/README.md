@@ -634,6 +634,32 @@ With checking on, the server instead *queues* each proof and a worker
 pool (`lsp/deferred_proofs.ML`, on HOL's `Future`) replays them, one
 cancellable group per proof, one worker per processor capped at eight.
 
+**A replay restores the `Context`, and nothing else.**  Each proof runs
+under `Context.with_context` on the snapshot its own declaration took, so
+theory state -- the signature, `TypeBase`, the grammars, `temp_delsimps`,
+registered attributes -- is as that declaration left it.  SML-level state
+is not, and cannot be: a `ref` has no snapshot.  That matters because
+`Theorem ... Proof tac QED` expands to `(name, quote, fn g => tac g)`
+(`wrapTac` in `tools/parsing/HOLSourceExpand.sml`), so the tactic
+*expression* is evaluated when the proof runs -- which, with checking on,
+is after the whole file has elaborated.  A script whose tactics read a
+`ref` therefore reads it as of end-of-elaboration, with every later
+declaration's additions already in it.  The shape that bites is an
+accumulating rewrite list fed by a custom attribute and spliced into
+every simplifier call: proofs the build accepts then start failing from
+wherever the larger set first changes a goal, and the first failure is
+nowhere near the declaration that caused it.
+
+The fix is on the script's side, and it is not a workaround: keep such
+state in a `Context.Data` slot (`src/prekernel/Context.sig`) and read it
+from the context the tactic is handed, the way `BasicProvers.Induct_on`
+reads the rule-induction map.  `Context.Data.get` against that context
+answers from the pin, which *is* the declaration's own snapshot, so the
+server and the build agree by construction.  `Context.Data` is also the
+right tool rather than `ThmSetData`, which exists to persist a set past
+the script boundary.  `lsp_tests.py`'s
+`a_context_slot_answers_from_its_declaration` pins this.
+
 The server starts with it off and both shipped clients switch it on:
 
 ```json
@@ -1699,3 +1725,17 @@ their own.
   skips `tac`.  The pending proof-state work adds a background
   walker that evaluates tactics for `$/getState`; until it lands,
   tactic-level checking still requires a real `Holmake` build.
+- **Go-to-definition on a Basis Library identifier finds nothing** —
+  Poly/ML records a Basis declaration as a path relative to the tree it
+  was *built* in: `OS.Process.isSuccess` comes back as
+  `./basis/OS.sml`, line 98.  An installed compiler need not ship those
+  sources at all (Homebrew's does not), so there is nothing for the
+  client to open, and the server answers nothing rather than a target
+  the editor declines in silence.  Point `HOL_LSP_POLYML_SRC` at a
+  Poly/ML checkout and those jumps resolve, landing in the signature
+  the declaration is written in.  Use the release the server runs on
+  (`poly -v`): the line number is Poly's own, and another tag's copy of
+  the file resolves just as well to the wrong line.  A checkout that is
+  not there, that has no `basis/`, or whose `configure.ac` names
+  another version, is named once in a `window/showMessage` at startup
+  — the unset case stays silent, since that is the default.

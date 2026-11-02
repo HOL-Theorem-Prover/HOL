@@ -1,0 +1,35 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REFUTE_TAC_WITH`
+
+``` hol4
+Refute.REFUTE_TAC_WITH : config_update list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample under per-call configuration updates.
+
+`REFUTE_TAC_WITH updates` is `REFUTE_CONFIG_TAC cfg`, where `cfg` is
+the stored configuration of the context the tactic is applied in, with
+`updates` applied from left to right.  The stored configuration is
+unchanged.
+
+### Failure
+
+Fails if an update fails or the resulting `expect` field is not met.
+
+### Example
+
+>>__ load "Refute";
+>> g `!xs : num list. LENGTH xs < 3`;
+
+>> e (Refute.REFUTE_TAC_WITH
+        [Refute.upd_search (Refute.Only [Refute.Exhaustive]),
+         Refute.upd_size 5]);
+>>__ drop();
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
+[`Refute.config`](#Refute.config).

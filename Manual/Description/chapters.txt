@@ -61,6 +61,7 @@ libraries
   HolSat
   HolQbf
   HolSmt
+  Refute
   QuantHeuristics
   enumfset
 modern-syntax

@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REFUTE_TAC`
+
+``` hol4
+Refute.REFUTE_TAC : tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample to the current goal.
+
+`REFUTE_TAC` runs the backends the stored configuration selects,
+prints the outcome, and then behaves as `ALL_TAC`.  A counterexample
+assigns values to the goal's free variables that make every assumption
+true and the conclusion false.  `REFUTE_TAC` is `REFUTE_TAC_WITH []`.
+
+### Failure
+
+Fails only if the configuration's `expect` field is not met.  A
+counterexample is not a failure.
+
+### Example
+
+>>__ load "Refute";
+>> g `(n : num) < 3`;
+
+>> e Refute.REFUTE_TAC;
+>>__ drop();
+
+### Comments
+
+The HolRefute library is described in the DESCRIPTION manual.
+
+### See also
+
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.REFUTE_CONFIG_TAC`](#Refute.REFUTE_CONFIG_TAC),
+[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
+[`Refute.refute`](#Refute.refute),
+[`Refute.config`](#Refute.config).
