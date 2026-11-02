@@ -663,6 +663,37 @@ local
   fun sufA t = mk_comb(mk_var("sufA", b2b), t)
   fun sufB t = mk_comb(mk_var("sufB", b2b), t)
 in
+(* term_pp keys its printing rules by term name, keeping the list for each
+   name newest-first, and picks the first entry that suits the term being
+   printed.  Three rules on one name, with the newest not applicable, is
+   what distinguishes a sorted insert from one that only looks at the
+   head: the head is right either way, so the mistake only shows once the
+   head has been filtered out.  boolLib's own grammar has four rules on
+   `case_arg'. *)
+local
+  open term_grammar term_grammar_dtype
+  fun mrule_infix prec tok =
+      add_rule {term_name = "mrule", fixity = Infix(LEFT, prec),
+                pp_elements = [mTOK tok], paren_style = OnlyIfNecessary,
+                block_style = (AroundEachPhrase, (HOLPP.CONSISTENT, 0))}
+  fun mrule_suffix prec tok =
+      add_rule {term_name = "mrule", fixity = Suffix prec,
+                pp_elements = [mTOK tok], paren_style = OnlyIfNecessary,
+                block_style = (AroundEachPhrase, (HOLPP.CONSISTENT, 0))}
+  (* added oldest first, so the timestamps ascend as the precedences
+     descend and the three arrive newest-first *)
+  val m_g = g0 |> mrule_infix 700 "<A>"
+               |> mrule_infix 600 "<B>"
+               |> mrule_suffix 500 "<C>"
+  val b2b2b = bool --> bool --> bool
+  val mv = mk_var("mrule", b2b2b)
+  val applied2 = mk_comb(mk_comb(mv, mk_var("x", bool)), mk_var("y", bool))
+in
+(* the suffix rule is newest but takes one argument, so it is filtered
+   out; of the two infix rules left, <B> is the newer and must win *)
+val _ = tpp "term_pp: newest *applicable* rule wins" "x<B>y" m_g applied2
+end
+
 val _ = tpp "ParoundPrec: lone suffix is unparenthesised at top"
             "x@" pp_g (sufA xt)
 val _ = tpp "ParoundPrec: stacked same-name suffix parenthesises inner"
