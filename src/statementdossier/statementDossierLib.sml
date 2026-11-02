@@ -459,7 +459,7 @@ fun lemmas_for (cfg : config) c =
    constants met, in the same order.  The constants of equation lemmas are
    followed like those of definitions, since a reader may read the lemma
    instead. *)
-fun closure (cfg : config) tyidx theorems =
+fun closure include_lemmas (cfg : config) tyidx theorems =
   let
     fun visit [] _ entries met = (List.rev entries, List.rev met)
       | visit ((c, from) :: queue) seen entries met =
@@ -472,7 +472,7 @@ fun closure (cfg : config) tyidx theorems =
                     let
                       val n = name_of_const c
                       val (defs, defines) = definitions_of c
-                      val lemmas = lemmas_for cfg c
+                      val lemmas = if include_lemmas then lemmas_for cfg c else []
                       val uses =
                         List.filter (not o same_const c)
                           (dedup (key o name_of_const)
@@ -1298,7 +1298,7 @@ fun render ({about = extra_about, omit_types, reader_view,
       | SOME (shown, NONE) =>
           if shown = "Unknown" then [] else [Code shown]
       | NONE => []
-    val (entries, met) = closure cfg tyidx theorems
+    val (entries, met) = closure (not reader_view) cfg tyidx theorems
     val bucket_maps = map (fn (n, th) => (n, buckets cfg entries th)) theorems
     fun bucket_in m c =
       getOpt (Redblackmap.peek (m, key (name_of_const c)), Plumbing)

@@ -107,7 +107,8 @@ universal quantifiers, and defining conjunctions become separate clauses.
 Conjunctions and quantifiers within an equation remain intact. Clauses are
 obtained by kernel specialization and conjunction elimination. Real kernel
 hypotheses remain explicit. Traversal bookkeeping and pinning formulas are
-hidden, but the assumption-prose checks still run. Theory-qualified definition
+hidden, but the assumption-prose checks still run. Equation lemmas are not
+printed or followed in reader view; its closure follows definitions only. Theory-qualified definition
 headings retain identity, and formula tokens retain their type tooltips.
 `theory_sources` maps theory names to source URLs for unexpanded constants;
 links appear in the boundary index in both output formats.
