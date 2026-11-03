@@ -150,6 +150,10 @@ Bugs fixed
     `mkFileline` now reads the text once, keeping the offsets of its newlines and the position after each `#(FILE=…)` / `#(LINE=…)` pragma, and answers each query by binary search; the same files now scan 0.9 million characters and take 2.2s.
     Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
 
+-   Loading a theory merged its parents' simpsets, grammars and other ancestry-based data by walking each parent's whole ancestry again, once per kind of data, so loading n theories took time quadratic in n.
+    Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors went from about 70s to 32s of CPU time.
+    What is merged, and in what order, is unchanged.
+
 New theories
 ------------
 
