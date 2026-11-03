@@ -7,31 +7,36 @@
    where the fset type operator is that of finite sets.
 
    Because there is just one constructor, there is a total inverse to
-   fromSet, called toSet
+   fromSet, called tofSet
 
-     toSet : hfs -> hfs set
+     tofSet : hfs -> hfs set
 
    where we have
 
-     fromSet (toSet h) = h
+     fromSet (tofSet h) = h
 
    Future work:
    - define other operations such as intersection, union and cardinality
-   - prove induction principle
-   - prove recursion principle
 
-   The type is defined via a cute bijection (due to Ackermann
-   according to Wikipedia) with the natural numbers.
+   The type can be defined via a cute bijection (due to Ackermann according to
+   Wikipedia) with the natural numbers.
 
    Inspired to do this by Larry Paulson's talk about using h.f. sets
    as part of a mechanisation of automata theory at CADE 2015. There (in
    Isabelle/HOL), the type definition mechanism can create the type
-   directly so the Ackermann bijection is not required.
+   directly so the Ackermann bijection is not required. HOL4 has the same
+   BNF technology too, but I also define the Ackermann function, which
+   ends up having type :hfs -> num, via the mk below, which takes a finite
+   set of numbers and maps that set to a single number.
 *)
 Theory hfs
 Ancestors
   pred_set finite_set
 
+
+Datatype:
+  hfs = fromSet (hfs fset)
+End
 
 Overload mk[local] = “fSUM_IMAGE ((EXP) 2)”
 
@@ -231,50 +236,23 @@ Proof
   simp[BIJ_DEF, INJ_DEF, SURJ_DEF, mk_11, mk_onto]
 QED
 
-val hfs = new_type_definition(
-  "hfs",
-  prove(``?x:num. (\x. T) x``, simp[]))
-
-val HFS_TYBIJ =
-    define_new_type_bijections { ABS = "mkHFS", REP = "destHFS",
-                                 name = "HFS_TYBIJ", tyax = hfs}
-                               |> SIMP_RULE (srw_ss()) []
-
-Theorem mkHFS_11[simp]: mkHFS n1 = mkHFS n2 ⇔ n1 = n2
-Proof metis_tac[HFS_TYBIJ]
-QED
-
-Theorem destHFS_11[simp]: destHFS h1 = destHFS h2 ⇔ h1 = h2
-Proof metis_tac[HFS_TYBIJ]
-QED
-
-Definition toSet_def:
-  toSet hfs = fIMAGE mkHFS (LINV mk UNIV (destHFS hfs))
+Definition ackermann_def[simp]:
+  ackermann (fromSet s : hfs) = mk (fIMAGE ackermann s) : num
 End
 
-Theorem LINV_mk_11[simp]:
-  LINV mk UNIV x = LINV mk UNIV y ⇔ x = y
-Proof
-  `BIJ (LINV mk UNIV) univ(:num) UNIV`
-    by simp[BIJ_LINV_BIJ, mk_BIJ] >>
-  fs[BIJ_DEF, INJ_DEF, EQ_IMP_THM]
-QED
-
-Theorem toSet_11[simp]: toSet h1 = toSet h2 ⇔ h1 = h2
-Proof
-  simp[toSet_def, fIMAGE_11]
-QED
-
-Definition fromSet_def:
-  fromSet s = mkHFS (mk (fIMAGE destHFS s))
+Definition tofSet_def[simp]:
+  tofSet (fromSet s) = s
 End
 
-Theorem fromSet_toSet[simp]:
-  fromSet (toSet h) = h
+Theorem tofSet_11[simp]: tofSet h1 = tofSet h2 ⇔ h1 = h2
 Proof
-  simp[fromSet_def, toSet_def] >> simp[GSYM fIMAGE_COMPOSE] >>
-  simp[combinTheory.o_DEF, HFS_TYBIJ] >>
-  strip_assume_tac (MATCH_MP BIJ_LINV_INV mk_BIJ) >> fs[HFS_TYBIJ]
+  Cases_on ‘h1’ >> Cases_on ‘h2’ >> simp[]
+QED
+
+Theorem fromSet_tofSet[simp]:
+  fromSet (tofSet h) = h
+Proof
+  Cases_on ‘h’ >> simp[]
 QED
 
 Theorem LINV_mk[local]:
@@ -284,20 +262,7 @@ Proof
   qexists_tac `UNIV` >> simp[]
 QED
 
-Theorem toSet_fromSet[simp]:
-  ∀hs. toSet (fromSet hs) = hs
-Proof
-  csimp[toSet_def, fromSet_def, HFS_TYBIJ, LINV_mk, GSYM fIMAGE_COMPOSE] >>
-  simp[combinTheory.o_DEF, HFS_TYBIJ]
-QED
-
-Theorem fromSet_11[simp]:
-  fromSet s1 = fromSet s2 ⇔ s1 = s2
-Proof
-  metis_tac[toSet_fromSet]
-QED
-
-Definition hINSERT_def: hINSERT h1 h2 = fromSet (fINSERT h1 $ toSet h2)
+Definition hINSERT_def: hINSERT h1 h2 = fromSet (fINSERT h1 $ tofSet h2)
 End
 
 Definition hEMPTY_def: hEMPTY = fromSet fEMPTY
@@ -308,9 +273,9 @@ Theorem hf_CASES:
 Proof
   gen_tac >>
   simp_tac bool_ss [GSYM toSet_11, hEMPTY_def, hINSERT_def, toSet_fromSet] >>
-  `toSet h = fEMPTY ∨ ∃e s. toSet h = fINSERT e s ∧ ~fIN e s`
-                            by (Cases_on ‘toSet h’ >> metis_tac[]) >>
-  simp[] >> qexistsl [`e`, `fromSet s`] >> simp[]
+  Cases_on ‘h’ >> simp[] >> qspec_then ‘f’ strip_assume_tac fset_cases >>
+  simp[] >> rename [‘f = fINSERT e s’] >>
+  qexistsl [‘e’, ‘fromSet s’] >> simp[]
 QED
 
 Theorem hINSERT_NEQ_hEMPTY[simp]: hINSERT h hs ≠ hEMPTY
@@ -334,14 +299,10 @@ Definition hIN_def:
   hIN h hs ⇔ (hINSERT h hs = hs)
 End
 
-Theorem hIN_toSet:
-  hIN h hs ⇔ fIN h $ toSet hs
+Theorem hIN_tofSet:
+  hIN h hs ⇔ fIN h $ tofSet hs
 Proof
-  simp[hIN_def, hINSERT_def] >> eq_tac
-  >- (disch_then (mp_tac o Q.AP_TERM `toSet`) >>
-      simp_tac bool_ss [toSet_fromSet] >>
-      simp[fABSORPTION]) >>
-  simp[fABSORPTION]
+  Cases_on ‘hs’ >> simp[hIN_def, hINSERT_def] >> metis_tac[fABSORPTION]
 QED
 
 Theorem hIN_hEMPTY[simp]: ¬(hIN h hEMPTY)
@@ -351,7 +312,7 @@ QED
 Theorem hIN_hINSERT[simp]:
   hIN h1 (hINSERT h2 hs) ⇔ h1 = h2 ∨ hIN h1 hs
 Proof
-  simp[hIN_toSet, hINSERT_def]
+  simp[hIN_tofSet, hINSERT_def]
 QED
 
 Theorem EXP_LT[local,simp]:
@@ -360,21 +321,47 @@ Proof
   Induct >> simp[arithmeticTheory.EXP]
 QED
 
-Theorem hIN_reduces[local]:
-  hIN h0 h ⇒ destHFS h0 < destHFS h
+Theorem ackermann_11[simp]:
+  ∀s1 s2. ackermann s1 = ackermann s2 ⇔ s1 = s2
 Proof
-  simp[hIN_toSet, toSet_def, PULL_EXISTS, HFS_TYBIJ] >> rpt strip_tac >>
-  drule mk_minimum >> simp[MATCH_MP BIJ_LINV_INV mk_BIJ] >> strip_tac >>
-  irule arithmeticTheory.LESS_LESS_EQ_TRANS >> first_assum $ irule_at Any >>
-  simp[]
+  simp[EQ_IMP_THM] >> Induct >> Cases >> simp[ackermann_def, mk_11] >>
+  contr >> qpat_x_assum ‘fIMAGE _ _ = fIMAGE _ _’ mp_tac >>
+  simp[] >> rename [‘f1 ≠ f2 (* a *)’] >>
+  ‘toSet f1 ≠ toSet f2’ by simp[finite_setTheory.toSet_11] >>
+  ‘(∃h. h ∈ toSet f1 ∧ h ∉ toSet f2) ∨ (∃h. h ∈ toSet f2 ∧ h ∉ toSet f1)’
+    by ASM_SET_TAC[] >>
+  simp[finite_setTheory.EXTENSION] >> metis_tac[fIN_IN]
 QED
 
+Theorem fSUM_IMAGE_fIMAGE:
+  (∀x y. g x = g y ⇔ x = y) ⇒
+  ∀s. fSUM_IMAGE f (fIMAGE g s) = fSUM_IMAGE (f o g) s
+Proof
+  strip_tac >> Induct_on ‘s’ >> simp[]
+QED
+
+Theorem fIN_LT_fSUM_IMAGE:
+ (∀x. x < f x) ⇒ ∀a A. fIN a A ⇒ a < fSUM_IMAGE f A
+Proof
+  strip_tac >> Induct_on ‘A’ >> simp[DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >~
+  [‘e < f e + _’]
+  >- (‘e < f e’ by simp[] >> simp[]) >>
+  first_x_assum drule >> simp[]
+QED
+
+Theorem hIN_reduces[local]:
+  ∀h0 h. hIN h0 h ⇒ ackermann h0 < ackermann h
+Proof
+  Induct_on ‘h’ >> simp[hIN_tofSet] >> rw[] >>
+  irule fIN_LT_fSUM_IMAGE >> simp[]
+QED
+
+(* alternative induction principle using the hIN predicate rather than
+   the constructor and the finite_set$toSet function.
+*)
 Theorem hf_induction:
   ∀P. (∀h. (∀h0. hIN h0 h ⇒ P h0) ⇒ P h) ⇒ (∀h. P h)
 Proof
-  rpt strip_tac >>
-  completeInduct_on ‘destHFS h’ >> gs[PULL_FORALL] >> rw[] >>
-  last_x_assum irule >> rw[] >> last_x_assum irule >>
-  simp[hIN_reduces]
+  gen_tac >> strip_tac >> Induct_on ‘h’ >>
+  last_x_assum irule >> simp[hIN_tofSet, fIN_IN]
 QED
-

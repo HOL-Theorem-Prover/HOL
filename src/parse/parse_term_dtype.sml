@@ -35,4 +35,8 @@ datatype mx_order = PM_LESS of mx_src
                   | PM_EQUAL
                   | PM_LG of {pfx:order,ifx:order}
 
+type prec_matrix =
+     {lookup : (stack_terminal * bool) * stack_terminal -> mx_order option,
+      ambiguity : string option}
+
 end

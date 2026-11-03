@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_codatatype`
+
+``` hol4
+Refute.register_codatatype :
+  {tyop : {Thy : string, Tyop : string},
+   case_const : term,
+   constructors : term list,
+   witness : thm option} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a codatatype with the model finder.
+
+`tyop`'s parameters must be distinct type variables.  `constructors`
+lists its constructor constants in cases-theorem order, each with a
+`tyop` result at its declared type, and `case_const` is its case
+constant.  If the datatype database knows `tyop`, the constructors must
+be its database constructors.
+
+`witness = SOME th` confirms that the type has cyclic values: `th` is
+a hypothesis-free `?x. x = C ... x ...` (either orientation, outer `!`s
+allowed), with `C` a registered constructor and `x` reached through
+registered constructors.  `witness = NONE` registers on trust; a wrong
+registration drops the type's acyclicity constraints and can produce a
+wrong model.
+
+`llist`, `ltree`, `itree`, `itreeTau`, `lbtree` and `path` are
+registered already.  Registrations last for the session.
+
+### Failure
+
+Fails if the constructors, case constant or witness have the wrong
+shape, or `tyop` is already registered as a different kind of type.
+
+### See also
+
+[`Refute.register_typedef`](#Refute.register_typedef),
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC).

@@ -3,6 +3,9 @@ Ancestors
   relation pair combin pred_set cardinal ordinal ordinalBasic
   finite_map[qualified]
 
+(* cardinalTheory keeps the sets' own exponent to itself, since the
+   datatype package makes it everyone's ancestor *)
+Overload "**"[local] = “set_exp”
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
 Type F[pp] = “:(num |-> β) + num # (α # β) list”

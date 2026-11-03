@@ -16,6 +16,26 @@ enum TokenType {
 // whitespace on the line) and (b) the word matches the keyword text
 // exactly.  This anchors block delimiters at BOL so a greedy term or
 // tactic parse can't silently absorb them as identifiers.
+//
+// Note the limit of that guarantee: tree-sitter only consults the
+// external scanner for tokens valid in the *current* parse state.
+// While a declaration body is mid-construct -- a binder still waiting
+// for its `.', an unterminated `let' -- no block delimiter is valid
+// lookahead, `valid_symbols' has none of these set, and the term goes
+// on to swallow a column-0 `End' / `Theorem' / `Proof' / `QED' as an
+// ordinary name.  Error recovery then blames the whole region, so one
+// truncated declaration can cost its well-formed neighbours their
+// node types (and with them their font-lock and `forward-sexp').
+//
+// Closing that hole means the scanner has to own `_hol_alphanumeric'
+// outright, since an external token that declines falls back to its
+// internal rule.  That was tried and abandoned: an external token
+// outranks every internal one, so owning identifiers means declining
+// every keyword, and HOL code genuinely uses `op', `as', `rec', `fn',
+// `type', `raise', `val' and `T' as term variables -- re-admitting
+// them at parser level conflicts with the very constructs they open.
+// tree-sitter's `reserved' words (CLI 0.24+) are the clean fix; the
+// generated parser here is from 0.20.8, which ignores the key.
 static const struct { const char* text; int len; enum TokenType tok; } BOL_KEYWORDS[] = {
   {"Proof", 5, BOL_PROOF},
   {"QED",   3, BOL_QED},
@@ -136,13 +156,20 @@ bool tree_sitter_holscript_external_scanner_finish_block_comment(TSLexer *lexer,
   }
 }
 
-bool tree_sitter_holscript_external_scanner_scan_comment(TSLexer *lexer, bool block_comment, bool line_comment) {
+// Sets *consumed once the leading `(' has been eaten.  The lexer
+// cannot be rewound, so after that point a failure must abort the
+// whole external scan: any sub-scanner that ran next would have its
+// token silently extended backwards over the stray `('.  Harmless
+// while comments are the only thing scanned here, but it is a trap
+// for anything added later.
+bool tree_sitter_holscript_external_scanner_scan_comment(TSLexer *lexer, bool block_comment, bool line_comment, bool *consumed) {
   while (!lexer->eof(lexer) && iswspace(lexer->lookahead)) {
     lexer->advance(lexer, true);
   }
   if (lexer->eof(lexer)) return false;
   if (lexer->lookahead == '(') {
     lexer->advance(lexer, false);
+    *consumed = true;
     if (lexer->eof(lexer)) return false;
     if (lexer->lookahead == '*') {
       lexer->advance(lexer, false);
@@ -174,10 +201,16 @@ bool tree_sitter_holscript_external_scanner_scan_comment(TSLexer *lexer, bool bl
 }
 
 bool tree_sitter_holscript_external_scanner_scan(__attribute__ ((unused)) void *payload, TSLexer *lexer, const bool *valid_symbols) {
+  bool consumed = false;
   if (valid_symbols[BLOCK_COMMENT] || valid_symbols[LINE_COMMENT]) {
-    if (tree_sitter_holscript_external_scanner_scan_comment(lexer, valid_symbols[BLOCK_COMMENT], valid_symbols[LINE_COMMENT])) {
+    if (tree_sitter_holscript_external_scanner_scan_comment(
+            lexer, valid_symbols[BLOCK_COMMENT], valid_symbols[LINE_COMMENT],
+            &consumed)) {
       return true;
     }
+    // An unrewindable `(' that turned out not to open a comment: give
+    // up here so tree-sitter re-lexes it internally.
+    if (consumed) return false;
   }
   return scan_bol_keyword(lexer, valid_symbols);
 }

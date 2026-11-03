@@ -112,13 +112,19 @@ Datatype: v =
 End
 
 val v_induction = theorem"v_induction"
-val v_ind =
-  v_induction
-  |> Q.SPECL[`P`,`EVERY (P o SND)`,`P o SND`]
-  |> SIMP_RULE (srw_ss()) []
-  |> UNDISCH |> CONJUNCT1 |> DISCH_ALL
-  |> GEN_ALL
-  |> curry save_thm "v_ind"
+(* the environment used to get a predicate of its own; the principle now
+   says what each of its entries satisfies, which is the same thing *)
+Theorem v_ind:
+  !P. (!l. P (Litv l)) /\
+      (!l. EVERY (P o SND) l ==> !e s. P (Clos l s e)) /\
+      (!l. EVERY (P o SND) l ==> !e s s0. P (Closrec l s0 s e)) /\
+      (!n. P (Loc n)) /\ (!n. P (Exn n)) ==>
+      !v. P v
+Proof
+  gen_tac >> strip_tac >> ho_match_mp_tac (TypeBase.induction_of ``:v``) >>
+  gs[listTheory.EVERY_MEM, pairTheory.setSND_thm, PULL_EXISTS,
+     pairTheory.FORALL_PROD] >> metis_tac[]
+QED
 val v_size_def = definition"v_size_def"
 
 val _ = type_abbrev("env",``:(string,v) alist``)
@@ -583,12 +589,10 @@ End
 val t_size_def = definition"t_size_def"
 val t_induction = theorem"t_induction"
 
+(* likewise the list of argument types *)
 val t_ind =
   t_induction
-  |> Q.SPECL[`P`,`EVERY P`]
-  |> SIMP_RULE (srw_ss()) []
-  |> UNDISCH |> CONJUNCT1 |> DISCH_ALL
-  |> GEN_ALL
+  |> SIMP_RULE (srw_ss()) [GSYM listTheory.EVERY_MEM]
   |> curry save_thm "t_ind"
 
 val _ = overload_on("Tint",``Tapp [] TC_int``)

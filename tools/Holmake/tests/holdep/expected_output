@@ -1,5 +1,6 @@
 #$
 ++
+Datatype
 OS
 Opopen
 bar
@@ -7,6 +8,7 @@ base_lexer
 baz
 data1
 data2
+early
 foo
 functortest
 included1
@@ -16,12 +18,14 @@ included4
 included5
 included_module'
 inf
+keepme
 m31
 manic1
 manic2
 module
 module'
 module_2
+nested
 openfoo
 qidcolon
 qux

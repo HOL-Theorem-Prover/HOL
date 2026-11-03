@@ -432,17 +432,19 @@ Proof
 QED
 
 Theorem shift_FVT:
-!t x. (FVT t ⊆ s /\
-       (∀c. c ∈ term_functions t ⇒ FST c ∈ count (CARD A) ∧ SND c = 0)
-      ) ==>
-         (FVT (shift_term (CARD A) t)) DIFF (count (CARD A)) ⊆ {x + CARD A| x IN s}
+  ∀t x.
+    FVT t ⊆ s /\
+    (∀c. c ∈ term_functions t ⇒ FST c ∈ count (CARD A) ∧ SND c = 0)
+       ⇒
+    (FVT (shift_term (CARD A) t)) DIFF (count (CARD A)) ⊆ {x + CARD A| x IN s}
 Proof
 completeInduct_on `term_size t` >> Cases_on `t` >> rw[FVT_def,shift_term_def] >>
 rw[SUBSET_DEF] >> fs[MEM_MAP] >> rw[] >> fs[PULL_FORALL] >>
-first_x_assum (qspec_then `a` assume_tac) >> drule term_size_lemma >>
+rename [‘x ∈ FVT (shift_term (CARD A) t)’] >>
+first_x_assum (qspec_then ‘t’ assume_tac) >> drule term_size_lemma >>
 strip_tac >> first_x_assum (qspec_then `n` assume_tac) >> fs[ADD_CLAUSES] >>
 fs[PULL_EXISTS] >>
-`FVT (shift_term (CARD A) a) DIFF (count (CARD A)) ⊆ {x + CARD A| x IN s}`
+`FVT (shift_term (CARD A) t) DIFF (count (CARD A)) ⊆ {x + CARD A| x IN s}`
   suffices_by rw[DIFF_DEF,SUBSET_DEF] >>
 first_x_assum irule >> rw[] (* 3 *)
 >- (fs[SUBSET_DEF,PULL_EXISTS,PULL_FORALL,MEM_MAP] >> metis_tac[])
@@ -924,8 +926,8 @@ Theorem FCT_term_functions:
 Proof
 completeInduct_on `term_size t` >> Cases_on `t` >> rw[FCT_def,term_functions_def]>>
 rw[SUBSET_DEF] >> fs[MEM_MAP,PULL_FORALL] >>
-first_x_assum (qspec_then `a` assume_tac) >> drule term_size_lemma >>
-strip_tac >> `term_size a < n + (list_size term_size l + 1)` by fs[ADD_CLAUSES] >> fs[] >>
+first_x_assum (qspec_then `y` assume_tac) >> drule term_size_lemma >>
+strip_tac >> `term_size y < n + (list_size term_size l + 1)` by fs[ADD_CLAUSES] >> fs[] >>
 rw[] >> fs[SUBSET_DEF] >> first_x_assum drule >> rw[PULL_EXISTS] >>
 qexists_tac `c` >> rw[] >> metis_tac[]
 QED

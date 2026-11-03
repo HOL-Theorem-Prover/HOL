@@ -3,7 +3,7 @@ Ancestors
   combin list arithmetic num prim_rec pair pred_set more_list
   more_set variable
 Libs
-  pairLib dep_rewrite Mutual tactics
+  pairLib dep_rewrite Mutual tactics legacyInduction
 
 (* --------------------------------------------------------------------- *)
 (* Embedding objects as a foundational layer, according to               *)
@@ -43,6 +43,19 @@ val method1_one_one = theorem "method1_11";
 val method1_cases = theorem "method1_nchotomy";
 val method1_case_cong = theorem "method1_case_cong";
 
+
+(* These proofs are written against the principle with a predicate for
+   each of the types a method dictionary is built over, which is what
+   the older construction saved under this name.  Everything that
+   inducts over an object wants it, here and in the theories built on
+   this one. *)
+Theorem obj1_induction[allow_rebind] =
+  (* the stated principle: legacyInduction reads the operators' set
+     functions, which datatype_simp theorems may have rewritten out
+     of the principle a reader sees *)
+  let val ind = TypeBase.set_induction_of “:obj1”
+  in legacyInduction.mutual_induction (legacyInduction.operators_of ind) ind
+  end
 
 val object1_induct = theorem "obj1_induction";
 val object1_Axiom = theorem "obj1_Axiom";

@@ -396,6 +396,13 @@ Proof
   simp[FORALL_SUM, FUN_EQ_THM]
 QED
 
+Theorem SUM_MAP_EQ:
+  ((f ++ g) v = INL x' <=> ∃x. v = INL x ∧ f x = x') ∧
+  ((f ++ g) v = INR y' <=> ∃y. v = INR y ∧ g y = y')
+Proof
+  Cases_on `v` >> simp[]
+QED
+
 Theorem SUM_MAP_o:
   (f ++ g) o (h ++ k) = (f o h) ++ (g o k)
 Proof
@@ -710,5 +717,19 @@ Theorem SUM_MAP_RSP[quotient_rsp]:
 Proof
   simp[FUN_REL, FORALL_SUM]
 QED
+
+(* A rearranged version of sum_CASE to allow for point free theorems *)
+
+val old_sum_case_def = new_definition(
+  "old_sum_case_def",
+  ``sum_case f g = λx. sum_CASE x f g``
+);
+
+Theorem old_sum_case_thm[simp]:
+  sum_case f g x = case x of INL l => f l | INR r => g r
+Proof
+  CASE_TAC >> simp[old_sum_case_def]
+QED
+
 
 val _ = temp_remove_termtok {term_name = "SUM_MAP", tok = "++"}

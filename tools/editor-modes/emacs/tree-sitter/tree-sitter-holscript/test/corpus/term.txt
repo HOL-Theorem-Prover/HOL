@@ -1816,3 +1816,71 @@ End
               (hol_identifier)
               (hol_identifier))
             (hol_identifier)))))))
+
+================================================================================
+Word Binder As Plain Identifier
+================================================================================
+
+Definition foo:
+  foo x = some y
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_application
+            (hol_identifier)
+            (hol_identifier)))))))
+
+================================================================================
+Word Binder Still Binds When Dotted
+================================================================================
+
+Definition foo:
+  foo x = some y. P y
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_binder
+            (hol_bvar
+              (hol_alphanumeric))
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))))))))
+
+================================================================================
+Bare Word Binder As Whole Rhs
+================================================================================
+
+Definition foo:
+  foo = LEAST
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_identifier))))))

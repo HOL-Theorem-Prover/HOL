@@ -135,9 +135,26 @@ fun encSegment ({text, kind, name, ty}: LSPExtension.pp_segment) print = (
   if ty = "" then () else (print ",\"ty\":"; encString ty print);
   print "}")
 
+(* A step's measured cost.  `span` is a file byte range, so a client
+   can put the number on the line that earned it; `goalsBefore` and
+   `goalsAfter` say whether a slow step was slow in itself or was
+   handed an exploded state. *)
+fun encStepCost ({span, ms, goalsBefore, goalsAfter}
+                   : LSPExtension.step_cost) print = (
+  print "{\"ms\":"; encInt ms print;
+  print ",\"goalsBefore\":"; encInt goalsBefore print;
+  print ",\"goalsAfter\":"; encInt goalsAfter print;
+  print ",\"span\":";
+  (case span of
+       NONE => print "null"
+     | SOME (a, b) => (print "["; encInt a print; print ","; encInt b print;
+                       print "]"));
+  print "}")
+
 fun encGoalStateResponse encRng
                          ({theorem, step, goals, pretty, context, note,
-                           status, error, failedRange, segments}
+                           status, error, failedRange, failedCloseRange,
+                           segments}
                             : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
@@ -150,7 +167,15 @@ fun encGoalStateResponse encRng
   (* Where the walk stopped, so a client can point at it rather than
      make the reader find it from the message. *)
   print ",\"failedRange\":"; encOrNull encRng failedRange print;
+  (* And the paren closing what it points at, when there is one, so a
+     client marks both ends of a branch rather than all of it. *)
+  print ",\"failedCloseRange\":"; encOrNull encRng failedCloseRange print;
   print ",\"segments\":"; encArray encSegment segments print;
+  (* What each step of this walk cost.  `costsRef` accumulates newest
+     first, so reverse to proof order -- the same order `lastCosts`
+     hands to the walker's other readers. *)
+  print ",\"stepCosts\":";
+  encArray encStepCost (List.rev (!LSPExtension.lastStepCosts)) print;
   print "}")
 
 (* Stream an in-memory buffer's declarations.  The parser pulls its
@@ -164,6 +189,179 @@ fun bufferDecs text = let
   val {parseDec, ...} =
     HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
   in parseDec end
+
+(* ----------------------------------------------------------------
+   What `$/eval' will not run.
+
+   `inEvalContext' below brackets a chunk: the Context, the loaded
+   module set and the namespace layer are captured before it runs and
+   put back after, with the SML bindings deliberately carried forward
+   so the thing still behaves like a REPL.  So a `Definition' typed
+   into the prompt is undone, and that is a *semantic* guarantee where
+   a list of forbidden constructs would be only a syntactic one -- a
+   definition reached through an alias rolls back just the same.
+
+   This list is for what the bracket cannot undo.  `load' and `use'
+   bring in a theory, and loading one *seals* it -- that lives in
+   `KernelSig', outside the Context, so restoring leaves the theory
+   sealed while marking it unloaded, which is worse than not having
+   rolled back at all.  `export_theory' writes files.  Those three are
+   turned away; everything else runs and is rolled back.
+   ---------------------------------------------------------------- *)
+
+(* Comments and string literals blanked, length preserved.  Non-nested,
+   so `(* (* load *) *)' leaves the inner text visible -- a refusal too
+   many rather than one too few, and the message says what it matched. *)
+fun blankNonCode s = let
+  val n = String.size s
+  val buf = CharArray.array (n, #" ")
+  fun code i =
+    if i >= n then ()
+    else if i + 1 < n andalso String.sub (s, i) = #"(" andalso
+            String.sub (s, i + 1) = #"*" then comment (i + 2)
+    else if String.sub (s, i) = #"\"" then quoted (i + 1)
+    else (CharArray.update (buf, i, String.sub (s, i)); code (i + 1))
+  and comment i =
+    if i >= n then ()
+    else if i + 1 < n andalso String.sub (s, i) = #"*" andalso
+            String.sub (s, i + 1) = #")" then code (i + 2)
+    else comment (i + 1)
+  and quoted i =
+    if i >= n then ()
+    else if String.sub (s, i) = #"\\" then quoted (i + 2)
+    else if String.sub (s, i) = #"\"" then code (i + 1)
+    else quoted (i + 1)
+  in code 0; CharArray.vector buf end
+
+(* The entry points whose effects outlive a Context restore. *)
+val evalIrreversible = ["load", "use", "export_theory"]
+
+fun irreversibleIn s = let
+  val t = blankNonCode s
+  val n = String.size t
+  fun isIdChar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+  fun go i =
+    if i >= n then NONE
+    else if isIdChar (String.sub (t, i)) then let
+      fun endOf j = if j < n andalso isIdChar (String.sub (t, j))
+                    then endOf (j + 1) else j
+      val j = endOf i
+      val w = String.substring (t, i, j - i)
+      in if List.exists (fn m => m = w) evalIrreversible then SOME w
+         else go j
+      end
+    else go (i + 1)
+  in go 0 end
+
+fun evalRefusal code =
+  Option.map
+    (fn nm =>
+       "`$/eval' runs its chunk in a world that is thrown away, and a \
+       \call to `" ^ nm ^ "' is not something that world can throw: \
+       \loading a theory seals it, and writing one leaves a file \
+       \behind.  Name the dependency in the script -- `Ancestors', or \
+       \a top-level `open' -- and the server will load it for the \
+       \file.")
+    (irreversibleIn code)
+
+(* ----------------------------------------------------------------
+   Stale ancestors.
+
+   A dependency is consumed as a built artifact and loaded at most once
+   per process, so a theory whose script has been edited since it was
+   built goes on answering from the version that *was* built.  Nothing
+   about that looks wrong -- names resolve, goals compute, proofs check
+   -- they are simply about an older theory.  Having no symptom of its
+   own is the whole hazard, so the point of this is to give it one.
+
+   Reported rather than blocked, unlike a missing ancestor.  A missing
+   one leaves nothing to elaborate against; a stale one elaborates
+   perfectly well, and taking the editor away over an upstream edit the
+   reader may not have finished making would cost more than it saves.
+
+   The artifact's path is the one the loader actually used, recorded as
+   the plan runs, so nothing here searches the load path or guesses at
+   the `.hol/objs' indirection.  The script is its sibling; where there
+   is none -- a core theory loaded from `sigobj' -- nothing is claimed,
+   which leaves this looking at the files someone is likely to be
+   editing.
+   ---------------------------------------------------------------- *)
+val loadedFrom : (string, string) Binarymap.dict ref =
+  ref (Binarymap.mkDict String.compare)
+
+(* Every file the loader uses, keyed by the module it belongs to.  The
+   plan covers transitive dependencies too, so this ends up knowing
+   where more theories came from than the header names. *)
+fun noteLoadedFrom path =
+  (loadedFrom :=
+     Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path))
+  handle _ => ()
+
+(* Holmake writes `d/fooTheory.uo' as `d/.hol/objs/fooTheory.uo' and
+   presents it as if it were the former; the script is beside the
+   former.  NONE for anything that is not a theory artifact. *)
+fun scriptBeside path = let
+  val dir = OS.Path.dir path
+  val dir = if OS.Path.file dir = "objs" andalso
+               OS.Path.file (OS.Path.dir dir) = ".hol"
+            then OS.Path.dir (OS.Path.dir dir)
+            else dir
+  val stem = OS.Path.base (OS.Path.file path)
+  in
+    if String.isSuffix "Theory" stem andalso size stem > 6 then
+      SOME (OS.Path.concat
+              (dir, String.substring (stem, 0, size stem - 6) ^ "Script.sml"))
+    else NONE
+  end handle _ => NONE
+
+(* Where a logical object path really is.  Holmake keeps a directory's
+   objects in `.hol/objs' and presents them as if they sat beside the
+   source, so the path the loader reports is the presented one and
+   stat-ing it answers "absent" for every built directory.  Try the
+   path as given -- an unmunged tree, or sigobj -- then the munged
+   one. *)
+fun physicalArtifact path =
+  (if OS.FileSys.access (path, []) then SOME path
+   else let
+     val p = OS.Path.concat
+               (OS.Path.concat (OS.Path.dir path, ".hol"),
+                OS.Path.concat ("objs", OS.Path.file path))
+     in if OS.FileSys.access (p, []) then SOME p else NONE end)
+  handle _ => NONE
+
+(* Of the modules named, those whose script is newer than the artifact
+   in use, with the script that says so.  Silent about anything it
+   cannot see both halves of. *)
+fun staleAncestors names = let
+  fun newer (a, b) =
+    Time.compare (OS.FileSys.modTime a, OS.FileSys.modTime b) = GREATER
+  fun stale m =
+    (case Binarymap.peek (!loadedFrom, m) of
+       NONE => NONE
+     | SOME logical =>
+       (case (scriptBeside logical, physicalArtifact logical) of
+          (SOME src, SOME art) =>
+            if OS.FileSys.access (src, []) andalso newer (src, art)
+            then SOME (m, src) else NONE
+        | _ => NONE))
+    handle _ => NONE
+  in List.mapPartial stale names end
+
+(* The label of a `Resume thm[label, smlname=x]' block.  The expander
+   takes the first attribute carrying no `=' as the label and leaves
+   the rest as proof kvals (`HOLSourceExpand.expandDec', the
+   `HOLResume' case); an attribute list that opens with `smlname=x',
+   or none at all, leaves the label empty -- and "" is a label like
+   any other, which is why `resumeOf' is an option rather than a
+   string that could be blank.
+
+   Kept in step with the expander by hand, there being no export to
+   share.  A disagreement names the subgoal the pool never reports
+   under that name, and the goal looked up would be somebody else's. *)
+fun resumeLabel (attrs: HOLSourceAST.kvals HOLSourceAST.attrs) =
+  case (case attrs of NONE => [] | SOME v => #args (#attrs v)) of
+      {key = (_, k), bind = NONE} :: _ => k
+    | _ => ""
 
 (* Given the buffer text and a cursor byte offset, return the enclosing
    `Theorem NAME[attrs]: … Proof … QED` block (also `Triviality`) as a
@@ -189,11 +387,42 @@ fun theoremTacEnd text decStart = let
         if #1 (HOLSourceAST.decSpan dec) = decStart
         then SOME (#2 (HOLSourceAST.expSpan tac))
         else loop ()
+      (* A `Resume' body is a tactic proof like any other, and the
+         pool reports it failing like any other, so it gets the same
+         narrowing: without this the message stays on the whole
+         declaration. *)
+      | SOME (dec as HOLSourceAST.HOLResume {tac, ...}) =>
+        if #1 (HOLSourceAST.decSpan dec) = decStart
+        then SOME (#2 (HOLSourceAST.expSpan tac))
+        else loop ()
+      (* And a `Termination' body, which the pool reports under
+         `<stem>_termination' at the declaration's own offset -- so
+         `decStart' identifies the Definition and the tactic to walk is
+         the one between `Termination' and `End'. *)
+      | SOME (dec as HOLSourceAST.HOLDefinition {
+                termination = SOME {tac, ...}, ...}) =>
+        if #1 (HOLSourceAST.decSpan dec) = decStart
+        then SOME (#2 (HOLSourceAST.expSpan tac))
+        else loop ()
       | SOME _ => loop ()
   in loop () end
   handle _ => NONE
 
-fun findEnclosingTheorem compileDone text cursor = let
+(* Where `Theorem nm' is declared in the buffer, if it is.  Only the
+   first occurrence: that is the one whose proof-pool site is the bare
+   name, which is the name a `Resume' of it refers to. *)
+fun theoremDeclStart text nm = let
+  val parseDec = bufferDecs text
+  fun loop () =
+    case parseDec () of
+        NONE => NONE
+      | SOME (dec as HOLSourceAST.HOLTheoremDecl {id = (_, n), ...}) =>
+        if n = nm then SOME (#1 (HOLSourceAST.decSpan dec)) else loop ()
+      | SOME _ => loop ()
+  in loop () end
+  handle _ => NONE
+
+fun findEnclosingTheorem locate compileDone text cursor = let
   val parseDec = bufferDecs text
   fun loop () =
     case parseDec () of
@@ -224,17 +453,129 @@ fun findEnclosingTheorem compileDone text cursor = let
                                               Int.max (0, tacEnd - tacStart)),
                   tacStart = tacStart,
                   cursor = cursor,
-                  compileDone = compileDone})
+                  compileDone = compileDone,
+                  resumeOf = NONE,
+                  terminationOf = NONE,
+                  locate = locate})
         end
         else loop ()
+        end
+    (* `Resume thm[label]: tac QED'.  The same thing as the block
+       above with the statement taken away: the goal this body
+       discharges is the subgoal `thm' suspended under `label', which
+       is recorded in the suspension store rather than written in the
+       file.  `resumeOf' is what tells the hook to look it up. *)
+    | SOME (dec as HOLSourceAST.HOLResume {
+              resume_, id = (_, nm), attrs, colon, tac, qed_, stop}) =>
+        let
+          val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
+          (* There is no `Proof' keyword to open the body, so the
+             colon does it.  Starting at the colon rather than at the
+             first tactic is what makes a cursor parked just after it
+             -- which is where a reader looks to ask "what am I
+             proving?" -- land inside the block. *)
+          val lower = case colon of SOME c => c | NONE => tacStart
+          val upperBound = case qed_ of SOME q => q | NONE => stop
+          val label = resumeLabel attrs
+        in
+          if lower <= cursor andalso cursor <= upperBound
+          then SOME (HOLSourceAST.decSpan dec,
+                     {(* The name `markerLib.resume' gives the proof
+                         (`prove_named', markerLib.sml), so the walker
+                         cache, the walker's diagnostics and the
+                         pool's own entry all agree -- and none of
+                         them collides with `Theorem thm'. *)
+                      name = nm ^ "[" ^ label ^ "]",
+                      quote = "",
+                      (* The declaration's own start: `goalStateAtPos'
+                         restores the last per-dec snapshot before
+                         this byte, which is the Context the compile
+                         had when it reached this `Resume' -- the
+                         parent stashed, and any `Finalise' below not
+                         yet run. *)
+                      quoteStart = resume_,
+                      tacText = String.substring (text, tacStart,
+                                            Int.max (0, tacEnd - tacStart)),
+                      tacStart = tacStart,
+                      cursor = cursor,
+                      compileDone = compileDone,
+                      resumeOf = SOME {suspension = nm, label = label},
+                      terminationOf = NONE,
+                      locate = locate})
+          else loop ()
+        end
+    (* `Definition foo: <eqns> Termination tac End'.  A third body
+       whose goal is not written in the file: it is the termination
+       obligation the definition principle derives from `<eqns>', which
+       is what `terminationOf' tells the hook to go and build.
+
+       The window opens at `Termination', the keyword standing in for
+       `Proof', and closes at `End' -- or at the declaration's `stop'
+       when the user has not typed `End' yet, exactly as a missing
+       `QED' is handled above. *)
+    | SOME (dec as HOLSourceAST.HOLDefinition {
+              definition_, id = (_, stem), colon = SOME colon,
+              termination = SOME {termination_, tac}, end_, stop, ...}) =>
+        let
+          val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
+          val upperBound = case end_ of SOME e => e | NONE => stop
+        in
+          if termination_ <= cursor andalso cursor <= upperBound
+          then SOME (HOLSourceAST.decSpan dec,
+                     {(* What `Defn.tc_obligation' calls the proof, and
+                         therefore what the pool's site is and what the
+                         census publishes.  No `Theorem' can collide
+                         with it: a theorem of that name would have to
+                         be declared, and then it is the same proof
+                         under the same name twice, which `declOrds'
+                         numbers. *)
+                      name = stem ^ "_termination",
+                      (* The equations: colon to `Termination', which is
+                         precisely the slice the expander hands to
+                         `located_qDefine' -- `parseQuoteBody' ends the
+                         quote at that keyword. *)
+                      quote = String.substring
+                                (text, colon + 1,
+                                 Int.max (0, termination_ - colon - 1)),
+                      (* The declaration's own start, not the quote's:
+                         `goalStateAtPos' restores the last snapshot
+                         before this byte, and building the defn mints
+                         the constant, which must not already be
+                         there. *)
+                      quoteStart = definition_,
+                      tacText = String.substring
+                                  (text, tacStart,
+                                   Int.max (0, tacEnd - tacStart)),
+                      tacStart = tacStart,
+                      cursor = cursor,
+                      compileDone = compileDone,
+                      resumeOf = NONE,
+                      terminationOf = SOME {stem = stem},
+                      locate = locate})
+          else loop ()
         end
     | SOME _ => loop ()
   in loop () end
 
-(* SML identifier characters, for the two places that scan raw text:
-   the `Datatype:' name scrape and completion's prefix.  Not
-   `HOLSourceParser''s own `isIdRest', which it does not export. *)
+(* SML identifier characters, for the three places that scan raw text:
+   the `Datatype:' name scrape, completion's prefix, and
+   `tacticBodyDecl'.  Not `HOLSourceParser''s own `isIdRest', which it
+   does not export. *)
 fun isIdentChar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+
+(* The identifiers `HOLSourceParser' treats as HOL keywords when they
+   open a line (`identKind', and `colZero' for the position).  Kept in
+   step with that list by hand, there being no export to share: a name
+   missing here is a barrier `tacticBodyDecl' fails to see, which is
+   how a scan runs past a declaration and pairs up a `Proof' that is
+   not the one the edit is in.  `Datatype' is the one name the parser
+   qualifies further -- it is a keyword only before a `:' -- and
+   treating it as a barrier unconditionally is the safe direction. *)
+val holKeywords =
+    ["Datatype", "Type", "Overload", "Definition", "Theorem",
+     "Triviality", "Quote", "Inductive", "CoInductive", "Proof", "QED",
+     "Termination", "End", "Theory", "Ancestors", "Libs", "Resume",
+     "Finalise"]
 
 (* The declarations of a buffer, for `textDocument/documentSymbol'.
 
@@ -253,6 +594,15 @@ datatype symbol = Sym of {
   kind: int,
   span: int * int,
   selSpan: int * int,
+  (* Set on a *child* that names a proof in its own right, which is
+     how `declOrds' knows to count it.  Every top-level symbol is
+     counted whether or not this is set -- a declaration's proof is
+     named after the declaration -- so the flag exists for the one
+     symbol that is neither: a `Definition's termination obligation,
+     which sits among the labelled conjuncts, which are not proofs.
+     A flag rather than a test on `detail', which is a human-facing
+     string nobody should be parsing. *)
+  proofSite: bool,
   children: symbol list }
 
 (* LSP SymbolKind, the few we use. *)
@@ -270,11 +620,20 @@ fun bufferSymbols text = let
   val count = ref 0
   fun bump () = (count := !count + 1; !count <= maxSymbols)
   open HOLSourceAST
+  (* `selSpan' given outright, for the one symbol whose name is not
+     the source text at the ident's offset. *)
+  fun mkSymSel {name, selSpan, detail, kind, span, proofSite, children} =
+      if name = "" then NONE
+      else SOME (Sym {name = name, detail = detail, kind = kind,
+                      span = span, selSpan = selSpan,
+                      proofSite = proofSite, children = children})
+  (* `false' because `mkSym' builds top-level declaration symbols,
+     which `declOrds' counts regardless; see the field's comment. *)
   fun mkSym {name = (p, nm), detail, kind, span, children} =
       if nm = "" then NONE   (* parse repair invents empty idents *)
-      else SOME (Sym {name = nm, detail = detail, kind = kind,
-                      span = span, selSpan = (p, p + size nm),
-                      children = children})
+      else mkSymSel {name = nm, selSpan = (p, p + size nm),
+                     detail = detail, kind = kind, span = span,
+                     proofSite = false, children = children}
   (* `[simp]', `[local]' and friends.  LSP's SymbolTag has only
      Deprecated, so an attribute cannot be structural; it goes in the
      detail line where a client will show it beside the name. *)
@@ -315,7 +674,7 @@ fun bufferSymbols text = let
     | Infix {id, ...} => SOME id
     | _ => NONE
   (* `Datatype:' carries no parsed identifier -- the names live in the
-     quotation, which the expander hands to bossLib.Datatype unread.
+     quotation, which the expander hands to Datatype.Datatype unread.
      A QuoteLiteral is (file offset, raw slice), so scan the text for
      the identifier before each top-level `=' and keep its offset. *)
   fun quoteTypeNames qs = let
@@ -377,10 +736,36 @@ fun bufferSymbols text = let
       | HOLTheoremDecl {triv, id, attrs, quote, ...} =>
           thmSym triv attrs id (childrenOf quote)
       | HOLSimpleThm {triv, id, attrs, ...} => thmSym triv attrs id []
-      | HOLDefinition {id, attrs, quote, ...} =>
+      (* A `Termination' block is a proof, and the pool reports it under
+         `<stem>_termination' -- the name `Defn.tc_obligation' gives
+         it.  Without a symbol of that name the census does not have
+         it, `proofStillDeclared' is false for it, and every verdict
+         the pool reaches about it is dropped on the floor.
+
+         A child rather than a sibling: the server emits `syms' without
+         nesting them, so a top-level symbol whose range sits inside
+         the `Definition's would be an overlapping sibling, which
+         `DocumentSymbol' does not allow.  A child whose range is
+         contained is exactly the shape it asks for, and the flat form
+         names the parent in `containerName' anyway. *)
+      | HOLDefinition {id = id as (_, stem), attrs, quote,
+                       termination, stop, ...} => let
+          val tcSym = case termination of
+              NONE => []
+            | SOME {termination_, ...} =>
+              (case mkSymSel {
+                      name = if stem = "" then "" else stem ^ "_termination",
+                      selSpan = (termination_,
+                                 termination_ + size "Termination"),
+                      detail = SOME "Termination", kind = symConstant,
+                      span = (termination_, stop), proofSite = true,
+                      children = []} of
+                 NONE => [] | SOME sym => [sym])
+        in
           mklist {name = id, detail = kw "Definition" attrs,
                   kind = symFunction, span = span,
-                  children = childrenOf quote}
+                  children = childrenOf quote @ tcSym}
+        end
       | HOLInductiveDecl {co, id, quote, ...} =>
           mklist {name = id,
                   detail = SOME (if co then "CoInductive" else "Inductive"),
@@ -399,7 +784,33 @@ fun bufferSymbols text = let
                      kind = if overload then symOperator else symStruct,
                      span = span, children = []}
           end
-      | HOLResume {id, ...} => simple "Resume" symConstant id
+      (* `thm[label]', not the bare `thm'.  Every `Resume' of one
+         theorem shares its name, so the bare form gave an outline of
+         identically-named entries -- eighteen of them in CakeML's
+         `type_e_subst' -- with no way to tell which subgoal each
+         one discharges.
+
+         It also decides what the pool calls the proof.  `decOrds'
+         counts occurrences of a symbol's name to disambiguate a
+         rebound one, so under the bare name each `Resume' read as
+         another occurrence of the parent and the proof came back as
+         `thm[label]#2'.  There is exactly one `thm[label]'.
+
+         The name is synthesised, so `selSpan' has to be given: it
+         runs from the identifier to the end of the attribute block,
+         which is the `thm[label]' the reader sees.  `Resume thm [l]'
+         with a space is legal, hence the attributes' own `stop'
+         rather than the length of the name. *)
+      | HOLResume {id = (p, nm), attrs, ...} =>
+          (case mkSymSel {
+                  name = if nm = "" then ""
+                         else nm ^ "[" ^ resumeLabel attrs ^ "]",
+                  selSpan = (p, case attrs of
+                                    SOME {stop, ...} => stop
+                                  | NONE => p + size nm),
+                  detail = SOME "Resume", kind = symConstant,
+                  span = span, proofSite = false, children = []} of
+             NONE => [] | SOME sym => [sym])
       | HOLFinalise {id, ...} => simple "Finalise" symConstant id
       | DecVal {elems = {args, ...}, ...} =>
           List.concat (map (fn {pat, ...} =>
@@ -469,6 +880,39 @@ fun bufferSymbols text = let
            | SOME dec => loop (List.revAppend (symsOf dec, acc))
   in loop [] handle _ => [] end
 
+(* The outline's declarations, each paired with the occurrence number
+   of its name: the first `Theorem foo' is 1, a later rebound one is 2.
+
+   One walk, two readers.  `compileForReport' wants the number, to tell
+   the pool which occurrence a proof it is enqueuing belongs to;
+   `finishPass' wants the qualified name, to tell the client which
+   names the buffer still has.  The two lists are compared against each
+   other, entry by entry, so they must be counted the same way -- hence
+   one function rather than two that agree today. *)
+(* Children count too, but only the ones marked `proofSite': a
+   `Definition's termination obligation is a proof the pool reports on
+   and the labelled conjuncts beside it are not.  Visited after their
+   parent, which is where they are in the file -- the obligation starts
+   at `Termination', inside the declaration whose name came first. *)
+fun declOrds syms = let
+  fun go [] _ acc = rev acc
+    | go (Sym {name, span = (start, _), children, ...} :: rest)
+         seen acc =
+      let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
+          val seen = Binarymap.insert (seen, name, n)
+          val acc = (start, name, n) :: acc
+          val sites = List.filter (fn Sym {proofSite, ...} => proofSite)
+                                  children
+          val (seen, acc) = countSites sites seen acc
+      in go rest seen acc end
+  and countSites [] seen acc = (seen, acc)
+    | countSites (Sym {name, span = (start, _), ...} :: rest) seen acc =
+      let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
+      in countSites rest (Binarymap.insert (seen, name, n))
+                    ((start, name, n) :: acc)
+      end
+  in go syms (Binarymap.mkDict String.compare) [] end
+
 (* The modules a script names as its dependencies: the theories and
    libraries of its `Theory ... Ancestors ... Libs ...' header, plus the
    identifiers of any top-level `open' preceding the first real
@@ -477,27 +921,68 @@ fun bufferSymbols text = let
    can be reported against the text that asked for it.  `Ancestors foo'
    loads the module `fooTheory'; `Libs bar' loads `bar'.
 
+   Order is significant, and so are two further facts about the scope
+   each name is resolved in, because one entry can be what makes the
+   next one resolve (see `missingDeps'):
+
+     - `opens' says whether the header brings the name into scope
+       unqualified.  A `[qualified]' entry -- on the element or on its
+       `Ancestors' / `Libs' keyword -- expands to `local open X in end'
+       (`HOLSourceExpand.sml:635-642') and so contributes nothing to
+       what follows it.
+     - `bare' is the `Theory foo[bare]' attribute, which suppresses the
+       implicit `open Parse bossLib boolLib HolKernel holTheory' that
+       otherwise runs ahead of the declared list
+       (`HOLSourceExpand.sml:681').  `header' distinguishes "not bare"
+       from "no `Theory' header at all", where no such prefix exists
+       either.
+
    `parseDec' streams, and we stop at the first declaration that is
    neither the header nor an `open', so this reads no further than the
-   top of the file. *)
+   top of the file.
+
+   `theory' is the name the header gives, with the byte range of the
+   name as written: the one declaration whose failure the compile
+   wants to be able to explain by itself. *)
 fun headerModules text = let
   val parseDec = bufferDecs text
-  fun named suffix ((p, nm): HOLSourceAST.ident) =
-      (nm ^ suffix, (p, p + size nm))
-  fun elems suffix es = map (fn {id, ...} => named suffix id) es
-  fun header (HOLSourceAST.HOLAncestors {elems = es, ...}) = elems "Theory" es
-    | header (HOLSourceAST.HOLLibs {elems = es, ...}) = elems "" es
+  val bare = ref false
+  val sawHeader = ref false
+  val theory = ref (NONE : (string * (int * int)) option)
+  fun attrArgs (NONE: HOLSourceAST.kvals HOLSourceAST.attrs) = []
+    | attrArgs (SOME v) = #args (#attrs v)
+  fun hasKey k a =
+      List.exists (fn ({key = (_, s), ...}: HOLSourceAST.kvals) => s = k)
+                  (attrArgs a)
+  fun named suffix opens ((p, nm): HOLSourceAST.ident) =
+      {name = nm ^ suffix, pos = (p, p + size nm), opens = opens}
+  fun entries suffix q es =
+      map (fn {id, attrs} =>
+              named suffix (not (q orelse hasKey "qualified" attrs)) id) es
+  fun header (HOLSourceAST.HOLAncestors {elems, attrs, ...}) =
+        entries "Theory" (hasKey "qualified" attrs) elems
+    | header (HOLSourceAST.HOLLibs {elems, attrs, ...}) =
+        entries "" (hasKey "qualified" attrs) elems
   fun loop acc =
     case parseDec () of
       NONE => rev acc
-    | SOME (HOLSourceAST.HOLTheory {elems, ...}) =>
-        loop (List.revAppend (List.concat (map header elems), acc))
+    | SOME (HOLSourceAST.HOLTheory {id = (p, nm), elems, attrs, ...}) => (
+        sawHeader := true;
+        bare := (!bare orelse hasKey "bare" attrs);
+        if isSome (!theory) then () else theory := SOME (nm, (p, p + size nm));
+        loop (List.revAppend (List.concat (map header elems), acc)))
     | SOME (HOLSourceAST.DecOpen {elems, ...}) =>
-        loop (List.revAppend (map (named "") elems, acc))
+        loop (List.revAppend (map (named "" true) elems, acc))
     | SOME (HOLSourceAST.HOLLinePragmaWith _) => loop acc
     | SOME (HOLSourceAST.HOLFilePragmaWith _) => loop acc
     | SOME _ => rev acc
-  in loop [] handle _ => [] end
+  val mods = loop [] handle _ => []
+  in {bare = !bare, header = !sawHeader, theory = !theory, mods = mods} end
+
+(* The structures a non-`bare' `Theory' header opens before anything the
+   file declares; `HOLSourceExpand.sml:681' is the authority. *)
+val implicitHeaderOpens =
+    ["Parse", "bossLib", "boolLib", "HolKernel", "holTheory"]
 
 (* `Meta.load' reports a module it cannot find or read by raising
    `Fail msg'; unwrap that, so a diagnostic reads as the message rather
@@ -595,9 +1080,24 @@ val textDocumentPositionParams =
    render the goal state at.  Absent means `defaultGoalWidth', so a
    client that does not measure its pane gets what it always got. *)
 val goalStateParams =
-  map3 (fn (uri, pos, width) => {uri = uri, pos = pos, width = width})
+  map4 (fn (uri, pos, width, step) =>
+           {uri = uri, pos = pos, width = width, step = step})
     (field "textDocument" (field "uri" string), field "position" position,
-     fieldD "width" int defaultGoalWidth)
+     fieldD "width" int defaultGoalWidth, fieldO "step" int)
+
+(* `$/hol/tryTactic': the goal-state request plus a candidate to apply
+   at it, and what that probe may spend.  `budgetMs' 0 means the
+   server's own: a model's candidate can loop, and what a speculative
+   probe may cost is not what a goals pane following a cursor may. *)
+val tryTacticParams =
+  map2 (fn ((uri, pos, width, step), (tactic, budgetMs)) =>
+           {uri = uri, pos = pos, width = width, step = step,
+            tactic = tactic, budgetMs = budgetMs})
+    (tuple4 (field "textDocument" (field "uri" string),
+             field "position" position,
+             fieldD "width" int defaultGoalWidth,
+             fieldO "step" int),
+     tuple2 (field "tactic" string, fieldD "budgetMs" int 0))
 
 val workspaceSymbolParams = field "query" string
 
@@ -644,10 +1144,15 @@ val searchParams = map3 (fn (sels, query, limit) =>
 
 val cancelParams = field "id" req_id
 
-val evalParams = map4 (fn (uri, code, incr, holdep) =>
-    {uri = uri, code = code, incr = incr, holdep = holdep})
+(* `position' is where in the file to evaluate: absent means after the
+   file's last compiled declaration, which is all a client that does
+   not track a cursor can mean. *)
+val evalParams = map4 (fn (uri, code, incr, (holdep, position)) =>
+    {uri = uri, code = code, incr = incr, holdep = holdep,
+     position = position})
   (field "uri" string, field "code" string, fieldD "incr" incr IncrNone,
-    fieldD "holdep" holdepKind HoldepQuiet)
+    tuple2 (fieldD "holdep" holdepKind HoldepQuiet,
+            fieldO "position" position))
 
 val textDocumentParams = field "textDocument" (
   map3 (fn (uri, version, text) => {uri = uri, version = version, text = text})
@@ -762,7 +1267,9 @@ fun recv (cvar, mutex, r) =
 
 end
 
-type connection = {recv: unit -> JSON.value message, send: encode message -> unit}
+type connection = {recv: unit -> JSON.value message,
+                   send: encode message -> unit,
+                   drain: unit -> unit}
 
 (* Hijack the real stdOut for our JSON-RPC frames, and re-point
    TextIO.stdOut at TextIO.stdErr so anything that writes via
@@ -819,9 +1326,44 @@ fun stdioConnection (): connection = let
     in fn () => Channel.recv recv end
 
   val lspOut = claimStdout ()
+  (* Frames go out on a thread of their own, so a `send' that returns
+     says only that the writer has been handed the message -- not that
+     any of it has reached the client.  Everywhere but one place that
+     is exactly right.  The exception is a process about to die: a
+     frame still held by a thread that will never run again is the same
+     as a frame never sent, and the `atExit' notice below is worth
+     nothing if it goes that way.  `drain' is how that one caller waits
+     for the writer to finish what it has been given.
+
+     `owed' is what the writer has taken on and not yet flushed.  It is
+     bumped by `send' before the handoff and dropped by the writer
+     after the flush -- on the failure arm too, or a message the
+     encoder choked on would be owed for ever.  It floors at zero so
+     that a drop with no matching bump (a `recv' that raised, which the
+     same handler covers) cannot leave `drain' waiting on a debt that
+     will never be paid. *)
+  val wlock = Mutex.mutex ()
+  val wcond = ConditionVar.conditionVar ()
+  val owed = ref 0
+  fun owe d = Multithreading.synchronized "Conn.owed" wlock (fn () => (
+        owed := Int.max (0, !owed + d); ConditionVar.broadcast wcond))
+  (* Bounded, and deliberately: a client that has stopped reading
+     wedges the writer, and an exit must not become a hang because of
+     it.  The deadline is tested here rather than read off
+     `waitUntil's result, which keeps this correct whichever way that
+     flag runs. *)
+  fun drain () = Multithreading.synchronized "Conn.drain" wlock (fn () => let
+    val deadline = Time.+ (Time.now (), Time.fromMilliseconds 2000)
+    fun loop () =
+      if !owed <= 0 then ()
+      else if Time.>= (Time.now (), deadline) then ()
+      else (ConditionVar.waitUntil (wcond, wlock, deadline); loop ())
+    in loop () end)
   val send = let
     val (send, recv) = Channel.channel ()
-    fun writerThread () = let
+    (* The recursive call sits outside the handler, so the loop is a
+       tail call and does not stack a handler frame per message. *)
+    fun writerThread () = ((let
       val msg: encode message = Channel.recv recv
       val buf = ref []
       val () = encMessage msg (fn s => buf := s :: !buf)
@@ -829,18 +1371,18 @@ fun stdioConnection (): connection = let
         | write (n, [], acc) =
           TextIO.StreamIO.output (lspOut,
             String.concat ("Content-Length: " :: Int.toString n :: "\r\n\r\n" :: acc))
-      in write (0, !buf, []); TextIO.StreamIO.flushOut lspOut;
-         writerThread () end
+      in write (0, !buf, []); TextIO.StreamIO.flushOut lspOut; owe ~1 end
        (* An encode-time exception must not kill the writer: the
           channel would stay Full and every send would hang. *)
        handle e => (
          TextIO.output (TextIO.stdErr,
            "[LSP-writer] dropping message; encode raised: " ^ exnMessage e ^ "\n");
          TextIO.flushOut TextIO.stdErr;
-         writerThread ())
+         owe ~1));
+      writerThread ())
     val _ = Thread.fork (writerThread, [])
-    in Channel.send send end
-  in {send = send, recv = recv} end
+    in fn v => (owe 1; Channel.send send v) end
+  in {send = send, recv = recv, drain = drain} end
 
 exception ProtocolError
 
@@ -895,7 +1437,7 @@ in
   print "}"
 end
 
-fun initialize ({send, recv}:connection) capabilitiesFor = let
+fun initialize ({send, recv, ...}:connection) capabilitiesFor = let
   fun init () =
     case recv () of
       Request {method = "initialize", id, params} => (id, params)
@@ -924,7 +1466,7 @@ fun locToRange ({startPosition,endPosition,...}:PolyML.location) =
 (* DocumentSymbol: hierarchical, with `children' and `detail' omitted
    when empty so the wire form stays the shape clients expect. *)
 fun encDocumentSymbol lines (Sym {name, detail, kind, span, selSpan,
-                                  children}) print = (
+                                  children, ...}) print = (
     print "{\"name\":"; encString name print;
     (case detail of
        NONE => ()
@@ -1005,6 +1547,14 @@ fun splitOn c s = let
 val walkedDirs : string Binaryset.set ref =
   ref (Binaryset.empty String.compare)
 
+(* The chdir is process-wide, and so visible to a compile running on
+   another thread for as long as the INCLUDES closure takes to walk.
+   It cannot simply be dropped: `extend_path_with_includes' seeds its
+   worklist from `getDir()', and the Holmakefile parse below it chdirs
+   per directory anyway, because INCLUDES may use `$(wildcard ...)',
+   which globs the process cwd.  In practice this runs once per
+   server, at the first didOpen, before any compile has started: one
+   server serves one script. *)
 fun walkIncludesFrom dir = let
   val abs = OS.Path.mkAbsolute {path = dir, relativeTo = OS.FileSys.getDir()}
              handle _ => dir
@@ -1027,12 +1577,107 @@ fun uriToPath uri =
   if String.isPrefix "file://" uri
   then SOME (String.extract (uri, 7, NONE)) else NONE
 
-(* The other direction, for a location that came out of HOL rather than
-   off the wire: `PDeclaredAt` and the DB both name a file by its path,
-   and a client handed one of those as a `targetUri` has been handed
-   something that is not a URI. *)
+(* Optional Poly/ML source checkout for resolving Basis declarations.
+   This must be read at server startup, not frozen into `bin/hol'. *)
+fun polymlSrc () =
+    case OS.Process.getEnv "HOL_LSP_POLYML_SRC" of
+        NONE => NONE
+      | SOME "" => NONE
+      | SOME d =>
+        SOME (OS.Path.mkCanonical
+                (OS.Path.mkAbsolute {path = d,
+                                     relativeTo = OS.FileSys.getDir ()}))
+        handle _ => NONE
+
+(* The `basis/<file>' tail of a path that has one. *)
+fun basisTail path = let
+  val (_, tail) = Substring.position "basis/" (Substring.full path)
+  in if Substring.isEmpty tail then NONE
+     else SOME (Substring.string tail) end
+
+(* Poly/ML records source paths relative to their compilation roots.
+   Resolve HOL paths against the installation and Basis paths against
+   the optional Poly/ML checkout. *)
+fun absolutePath path =
+  if OS.Path.isAbsolute path then SOME path
+  else
+    let
+      fun under base p =
+        let
+          val q = OS.Path.mkCanonical
+                    (OS.Path.mkAbsolute {path = p, relativeTo = base})
+        in
+          if OS.FileSys.access (q, []) then SOME q else NONE
+        end
+        handle _ => NONE
+      fun first [] = NONE
+        | first ((b, p) :: bs) =
+          (case under b p of SOME q => SOME q | NONE => first bs)
+      val holBases = [OS.Path.concat (Systeml.HOLDIR, "tools-poly"),
+                      Systeml.HOLDIR,
+                      OS.FileSys.getDir ()]
+      (* Poly/ML paths may be relative to the checkout or a build directory. *)
+      val polyBases =
+        case polymlSrc () of
+          NONE => []
+        | SOME d =>
+          (d, path) ::
+          (case basisTail path of NONE => [] | SOME t => [(d, t)])
+    in
+      first (map (fn b => (b, path)) holBases @ polyBases)
+    end
+
 fun pathToUri path =
-  if String.isPrefix "file://" path then path else "file://" ^ path
+  if String.isPrefix "file://" path then SOME path
+  else Option.map (fn p => "file://" ^ p) (absolutePath path)
+
+(* Warn about unusable or version-mismatched Poly/ML sources. *)
+local
+  (* Extract the first dotted version number from an AC_INIT line. *)
+  fun dottedNumber s = let
+    fun part c = Char.isDigit c orelse c = #"."
+    fun ok t = Char.isDigit (String.sub (t, 0)) andalso
+               String.isSubstring "." t
+    in List.find ok (String.tokens (not o part) s) end
+  fun acInitVersion dir = let
+    val f = TextIO.openIn (OS.Path.concat (dir, "configure.ac"))
+    fun look 0 = NONE
+      | look n =
+        case TextIO.inputLine f of
+            NONE => NONE
+          | SOME l => if String.isSubstring "AC_INIT" l
+                      then dottedNumber l else look (n - 1)
+    val out = look 100 handle _ => NONE
+    in TextIO.closeIn f; out end
+    handle _ => NONE
+  fun runningVersion () =
+    case String.tokens Char.isSpace PolyML.Compiler.compilerVersion of
+        v :: _ => SOME v
+      | [] => NONE
+in
+fun polymlSrcComplaint () =
+    case polymlSrc () of
+        NONE => NONE
+      | SOME d => let
+          val what = "HOL_LSP_POLYML_SRC=" ^ d
+          val stays = "; Basis declarations keep answering no definition"
+          fun isDir p = OS.FileSys.isDir p handle _ => false
+        in
+          if not (isDir d) then SOME (what ^ ": not a directory" ^ stays)
+          else if not (isDir (OS.Path.concat (d, "basis"))) then
+            SOME (what ^ ": no `basis' subdirectory, so this is not a \
+                  \Poly/ML source tree" ^ stays)
+          else
+            case (acInitVersion d, runningVersion ()) of
+                (SOME src, SOME running) =>
+                if src = running then NONE
+                else SOME (what ^ ": Poly/ML " ^ src ^ ", but this \
+                           \server runs on " ^ running ^ "; a Basis \
+                           \jump will land on the right file at the \
+                           \wrong line")
+              | _ => NONE
+        end
+end
 
 (* `hol.ML` at boot preloads project_dirs / external_includes from
    cwd's `holproject.toml`; this handler catches files whose
@@ -1044,7 +1689,7 @@ fun augmentLoadPathForUri uri = case uriToPath uri of
 
 fun start {diag, dbg, warnings} = let
   val _ = PolyML.print_depth 100
-  val conn as {send, recv} = stdioConnection ()
+  val conn as {send, recv, drain} = stdioConnection ()
   (* LSP 3.17 position encoding.  Server-side buffers and offsets count
      bytes, so utf-8 is what this server would rather speak: it costs
      nothing and an edit crossing a multi-byte character (`⇒`, `∧`)
@@ -1130,6 +1775,49 @@ fun start {diag, dbg, warnings} = let
   (* Held until after the handshake: `window/showMessage' before the
      client is initialized has nowhere to go. *)
   val _ = List.app (fn w => (logMessage w; warnUser w)) warnings
+  val _ = case polymlSrcComplaint () of
+              NONE => ()
+            | SOME w => (logMessage w; warnUser w)
+
+  (* A file the server compiles can end the process under it: compiling
+     a file runs it, and `OS.Process.exit' is not an exception, so
+     nothing in the compile's handlers ever sees one.  `compileThread'
+     arms the notice below for exactly as long as it is compiling, so
+     `NONE' means no pass was running and there is nothing to say.
+
+     `atExit' runs on the thread that called `exit', and other threads
+     are still scheduled while it runs, so the notice can go out and
+     `drain' can wait for the writer to put it on the wire before the
+     process goes.  See gh #2077.
+
+     Which thread that is decides whether there is anything to say.
+     The file's exit runs on the compile thread, so the notice is
+     armed with the thread that armed it and fires only there.  The
+     server's own exit -- a `shutdown'/`exit' pair, a client that
+     dropped the pipe -- comes off the main thread, and it can perfectly
+     well arrive with a pass still running: without the test, every
+     editor window closed mid-compile would be told its file called
+     `OS.Process.exit'.
+
+     The pass's `cancelled' ref comes along as its identity.
+     `stopCompile' does not wait for the thread it supersedes, so a
+     pass on its way out would otherwise disarm the notice of the pass
+     that replaced it, and that loss would show up as exactly the
+     silence this is here to remove. *)
+  val onUnexpectedExit
+        : (bool ref * Thread.thread * (unit -> unit)) option ref = ref NONE
+  val reportingExit = ref false
+  val _ = OS.Process.atExit (fn () =>
+    case !onUnexpectedExit of
+        NONE => ()
+      | SOME (_, owner, report) =>
+        (* An exit raised from inside the notice must not re-enter it,
+           and a notice that raises must not make the shutdown worse
+           than the one it was explaining. *)
+        if !reportingExit orelse not (Thread.equal (Thread.self (), owner))
+        then ()
+        else (reportingExit := true;
+              (report (); drain ()) handle _ => ()))
 
   (* A server process is bound to the first file it opens.  A second
      file cannot be served correctly: its ancestors have to be in the
@@ -1145,9 +1833,11 @@ fun start {diag, dbg, warnings} = let
      nonsense.
 
      Only `*Script.sml' takes the binding.  A `.sig' or an ordinary
-     `.sml' declares no theory of its own, and editors routinely open
-     them alongside a script -- the hol4-vscode selector matches the
-     whole language, so it sends every one of them.  Letting those
+     `.sml' declares no theory of its own, and a client can sync them
+     alongside a script: the shipped ones attach only to scripts
+     (hol4-vscode gates on `isHolScript', and `holscript-mode' claims
+     only `*Script.sml'), but a generic SML client -- or the scripted one
+     the protocol suite uses -- syncs whatever is open.  Letting those
      claim the process would hand it to whichever file the client
      happened to sync first and then report the user's actual script
      as the offender.
@@ -1214,6 +1904,12 @@ fun start {diag, dbg, warnings} = let
         (fn () => let val j = !jobs in jobs := f j; j end)
     in modify end
 
+  (* The fork comes before the registration, which looks like a window
+     a `$/cancelRequest' could fall into and be dropped.  It is not:
+     `main' is one thread, and it both spawns jobs and handles
+     cancels, so the registration is finished before the next message
+     is even read.  Anything that moves dispatch onto more than one
+     thread has to close this. *)
   fun spawnJobCore id job = let
     val jobThread = Thread.fork (job, [])
     in jobs (fn js => (id, jobThread) :: js); () end
@@ -1238,17 +1934,158 @@ fun start {diag, dbg, warnings} = let
 
   (* Server-initiated request ids and progress tokens for
      window/workDoneProgress. *)
-  val nextRequestId = ref 100000
-  fun allocRequestId () =
-      !nextRequestId before nextRequestId := !nextRequestId + 1
-  val progressIdCounter = ref 0
+  (* Read and bumped in one step.  Both are handed out at the start of
+     a compile pass, and two passes can be starting at once -- a
+     debounce thread whose epoch still matches, and the compile thread
+     retrying for the state.  As two steps they can issue the same
+     number twice, which for a request id means the client matches a
+     response to the wrong request, and for a progress token means one
+     `end' closes both spinners. *)
+  val nextRequestId : int Sref.t = Sref.new 100000
+  fun allocRequestId () = Sref.gen_update nextRequestId (fn n => (n + 1, n))
+  val progressIdCounter : int Sref.t = Sref.new 0
+  fun allocProgressToken () =
+      Int.toString (Sref.gen_update progressIdCounter (fn n => (n + 1, n)))
   (* Exclusive use of the process's compile state -- the Context, the
      loaded-module set and the file's namespace layer that
      `captureCompileSnap` bundles.  Whoever restores a snapshot holds
-     this: a goal-state request (one thread per request) and the walk a
-     failed proof is localised by.  Process-global because the state
-     is. *)
+     this: a compile pass, a goal-state request (one thread per
+     request) and the walk a failed proof is localised by.
+     Process-global because the state is.
+
+     Two locks, because there are two different questions.
+     `compileState` queues walks behind one another, so a second
+     goal-state request waits for the one ahead of it rather than
+     being turned away.  `compileStateOwner` says who is *actually*
+     rewinding the process right now, and is what a compile and a walk
+     exclude each other with.
+
+     A single sampled check used to stand in for the second: a walk
+     asked whether a compile was in flight and, seeing none, went
+     ahead.  That is not an exclusion.  `stopCompile` drops the
+     compile record before its replacement is registered, so a walk
+     could enter in that gap; and even outside it, a compile starting
+     while a walk was running was excluded by nothing at all.  Either
+     way the walk's closing `restoreLater ()` -- which puts back the
+     state the process was in when the walk *started* -- lands after
+     the compile's `restoreSnap ()` and silently hands the compile the
+     previous pass's end-of-file Context.  The compile then
+     re-elaborates the file's tail against a state that already holds
+     everything the tail declares, and every declaration that mints a
+     constant fails: `Term.list_mk_binder: expected list of variables`
+     from a `new_recursive_definition` whose function is already a
+     constant, `No rule for [MOD]` from a `?MOD. ...` whose name has
+     already been given a fixity further down the file, and an SML
+     cascade below each of them.  See `tests/lsp_tests.py`'s
+     `test_walk_and_compile_do_not_share_the_context`. *)
   val compileState : unit Sref.t = Sref.new ()
+  datatype state_owner = Free | ByCompile | ByWalk
+  (* One concept, two mechanisms, and they answer different questions:
+     the `Sref' says only one walk is inside the state, the owner
+     below says who is allowed to take it at all.  `withWalkState' is
+     where the pair is used together, and the only place a walk should
+     reach for either of them. *)
+  (* `Synchronized` rather than `Sref` for this one: a compile that
+     finds the state held has to wait for it, and a condition variable
+     waits without a poll loop -- `releaseCompileState` broadcasts, so
+     a waiter wakes when the state is actually free rather than at the
+     next tick of its own clock. *)
+  val compileStateOwner = Synchronized.var "lsp.compileState" Free
+  (* Claim it, or find it already claimed -- in one step; see
+     `claimDrain` for why that has to be atomic.  Never waits: the
+     walk wants an answer, not a turn. *)
+  fun claimCompileState who =
+      Synchronized.change_result compileStateOwner
+        (fn Free => (true, who) | held => (false, held))
+  fun releaseCompileState () =
+      Synchronized.change compileStateOwner (fn _ => Free)
+  (* Is a *compile* rewinding the process?  This is the question
+     `stateNotReady` asks -- a walk holding the state is not a reason
+     to turn a goal-state request away, since it will queue on
+     `compileState` and get its turn.
+
+     Read from the state's own side rather than from the compile
+     record, which answers a question about the pass: `stopCompile`
+     clears it while the thread it belonged to is still elaborating.
+
+     Whatever the answer, it has to be asked before rewinding and not
+     after.  The theory graph is a slot in the Context
+     (`Theory.Graph`), so a restore takes back every theory the pass
+     has loaded since the snapshot, and the pass's next `link_parents`
+     reports a parent that "should already be in the theory graph (but
+     isn't)". *)
+  fun compileUsingState () =
+      case Synchronized.value compileStateOwner of
+          ByCompile => true
+        | _ => false
+  (* Test hook: stretch a walk by this long, just before it puts the
+     state back, so a test can place a walk's closing `restoreLater ()`
+     after a compile's `restoreSnap ()` without depending on how long a
+     real walk happens to take.  That is the order that used to hand
+     the compile the previous pass's end-of-file Context.  Unset (the
+     default) means no hold. *)
+  val walkHoldMs =
+      getOpt (Option.mapPartial Int.fromString
+                (OS.Process.getEnv "HOL_LSP_WALK_HOLD_MS"), 0)
+  fun holdForTests () =
+      if walkHoldMs <= 0 then ()
+      else OS.Process.sleep (Time.fromMilliseconds (IntInf.fromInt walkHoldMs))
+
+  (* Hold the compile state for a walk: `body' runs with it claimed,
+     and `busy ()' answers instead when a compile or another walk
+     already holds it.
+
+     Three steps have to happen together, and this is the one place
+     that spells them out:
+
+       - the `Sref' serialises walks against each other, where the
+         owner excludes compiles.  Both are needed, and they say
+         different things: the owner says who may take the state, the
+         `Sref' says only one walk is inside it;
+       - `captureCompileSnap` records the state the walk found, and
+         putting that back must happen *before* the claim is dropped.
+         A compile taking the state in between would have its own
+         `restoreSnap` undone by it;
+       - the restore and the release belong on the raise path too.  A
+         walk that leaves by exception has still rewound the process
+         to its theorem's snapshot, and dropping the claim without
+         putting that back hands the next compile a Context belonging
+         to somebody else's declaration.  That is the one case easy to
+         arrange and hard to see afterwards, since the symptom lands
+         on whoever takes the state next rather than on the walk.
+
+     `cleanup' is whatever else the caller must undo on both paths.
+     It runs first, while the walk's own state is still installed. *)
+  fun withWalkState {busy, cleanup} body =
+      Sref.gen_update compileState (fn held =>
+        (held,
+         if not (claimCompileState ByWalk) then busy ()
+         else let
+           val restoreLater = !LSPExtension.captureCompileSnap ()
+           fun finish () =
+               (cleanup (); restoreLater (); releaseCompileState ())
+         in (body () handle e => (finish (); raise e)) before finish ()
+         end))
+
+  (* Test hook: stretch the gap between a compile finishing and it
+     installing its trees, so a test can land a `didChange` in the
+     window that used to lose it.  The loss needs no help to happen in
+     real use -- a user typing while a half-second compile finishes is
+     enough, and two recorded sessions show it -- but it needs help to
+     happen on demand.  Unset (the default) means no hold. *)
+  val commitHoldMs =
+      getOpt (Option.mapPartial Int.fromString
+                (OS.Process.getEnv "HOL_LSP_COMMIT_HOLD_MS"), 0)
+  fun holdBeforeCommit () =
+      if commitHoldMs <= 0 then ()
+      else (
+        (* Announced at both ends so a test can send its edit *inside*
+           the window rather than guessing at a sleep.  A race test that
+           quietly missed its window would report the same "passed" as
+           one that hit it. *)
+        logMessage "commit hold: begin";
+        OS.Process.sleep (Time.fromMilliseconds (IntInf.fromInt commitHoldMs));
+        logMessage "commit hold: end")
 
   datatype report =
     Error of {hard: bool, pos: range, msg: encode}
@@ -1257,6 +2094,19 @@ fun start {diag, dbg, warnings} = let
   | Progress of int
   | Completed
   | Interrupted
+
+  (* One diagnostic, at the line counter of whatever text it belongs
+     to.  Both senders -- the compile as it goes and
+     `publishAllDiagnostics' when anything changes -- want the same
+     JSON and differ only in which `lines' they have in hand, so this
+     takes that and nothing else.  The other report kinds never reach
+     a client: they are the compile's own channel.  *)
+  fun encDiagAt lines (Error {hard, pos, msg}) print = (
+      print "{\"range\":"; encRangeLC lines pos print;
+      print ",\"severity\":";
+      encInt (if hard then ErrorSeverity else WarnSeverity) print;
+      print ",\"message\":"; msg print; print "}")
+    | encDiagAt _ _ _ = raise Fail "unexpected report kind"
 
   (* Per-dec snapshot; see `parse_data.declSnapshots` below.  A resume
      to `endByte` seeds the new compile with `builtTrees` and `plugins`
@@ -1327,23 +2177,65 @@ fun start {diag, dbg, warnings} = let
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
-                       thread: Thread.thread, cancelled: bool ref,
-                       (* Whether the pass is still using the compile
-                          state.  Distinct from the thread being alive:
-                          the pass clears this before its last act,
-                          which is to look for work that had to wait
-                          for it -- work it cannot see itself doing if
-                          it asks whether its own thread is running. *)
-                       elaborating: bool ref}
+                       thread: Thread.thread, cancelled: bool ref}
+  (* Everything one open document has, and the rule for which of it
+     is synchronised.  The map itself is behind `withFileInfo's mutex;
+     this is about the fields, which that mutex does not cover -- a
+     holder of a `file_data' keeps using it long after letting the map
+     go.
+
+     Five threads reach in here: the reader thread running the message
+     loop, a compile thread, the debounce threads `scheduleCompile'
+     forks, one request thread per `spawnJob', and the proof pool's
+     workers.
+
+     `Sref.t' is for a field that **more than one thread writes**, or
+     one where a read and the write that depends on it have to be a
+     single step.  `lastTrees' (the reader thread and a finishing
+     compile), `minEditOffset' (two lower it, one consumes it) and
+     `debounce' (four bump it) are those; `publishLock' is an Sref
+     used only for its lock.
+
+     A plain `ref' is for a field **one thread writes** and others
+     read as a cache, where reading a value one pass out of date is
+     harmless.  The compile thread owns `compile', `compiledText',
+     `reusableFrom', `lastProofGen', `depsBlocked', `nsLayer' and
+     `nsGen'; the reader thread owns `closed'; `symbols' and
+     `nsNames' are memos a request thread fills, where two requests
+     racing compute the same answer.
+
+     So the obligation on anyone adding to this: a second writing
+     thread, or a check-then-act, means `Sref.t'.  Both have been got
+     wrong here before, and neither announces itself -- a lost bump
+     looks like a compile that did not happen. *)
   type file_data = {
     compile: compile_data option ref,
-    lastTrees: {parse: parse_data, text: text_data} ref,
+    (* Synchronised, and not a plain `ref', because two threads write
+       it: the reader thread through `applyEdit', which is the only
+       thing that knows what the buffer says, and a finishing compile
+       installing the trees it built.  `stopCompile' used to be the
+       whole defence -- it sets `cancelled', and a pass tests that
+       before writing -- but a test and a write are two steps, and an
+       edit that lands between them is overwritten by the text the
+       pass started from.  That edit is then gone for good: the client
+       never resends it, so our copy of the document is permanently a
+       few bytes short of the buffer.  See `commitTrees'. *)
+    lastTrees: {parse: parse_data, text: text_data} Sref.t,
     (* debounce epoch: incremented on didChange and at startCompile
        entry.  scheduleCompile's forked thread captures the epoch and
        only fires startCompile if its epoch still matches when it
        wakes up.  Rapid-fire edits fork many threads but only the
-       last (whose epoch survives to wake time) actually compiles. *)
-    debounce: int ref,
+       last (whose epoch survives to wake time) actually compiles.
+
+       Synchronised, because bumping it is a read and a write and four
+       threads do it: the reader thread on `didChange', the compile
+       thread retrying for the state, a pool worker retracting a
+       cheat, and a request thread demanding a parent proof.  Two that
+       interleave take the same epoch and both survive to wake time,
+       so two compiles run where one was wanted -- and a bump made to
+       *invalidate* a pending compile, which is what `closeFile' and
+       `startCompile' use it for, can be the one that is lost. *)
+    debounce: int Sref.t,
     (* Rolling minimum edit offset across `applyEdit` batches, and
        across a pool worker's retractions, since the last compile took
        it.  `startCompile` takes it -- one atomic step, since two
@@ -1354,11 +2246,13 @@ fun start {diag, dbg, warnings} = let
        previous compile took it) — treated as 0, a full restart. *)
     minEditOffset: int option Sref.t,
     (* Runtime-diagnostic squiggles the walker has observed since
-       the last compile: keyed by theorem name, value is the
-       Error report for the failed leaf.  Fresh compiles clear
+       the last compile: keyed by theorem name, value is the Error
+       reports for the failed leaf -- more than one when the failure
+       is a combinator marked at both ends.  Fresh compiles clear
        these; a successful walker query for a theorem removes its
        entry so a user-fix removes the squiggle without waiting
-       for the next compile. *)
+       for the next compile.  A theorem with nothing to say has no
+       entry; an entry is never the empty list. *)
     (* Held across taking a diagnostic snapshot and sending it, by both
        publishers.  Each of them reads the compile's list and the two
        maps, dedups, encodes and sends; without this two threads can
@@ -1371,7 +2265,30 @@ fun start {diag, dbg, warnings} = let
        delays only other publishes -- which would have blocked on the
        same channel regardless. *)
     publishLock: unit Sref.t,
-    walkerDiags: (string, report) Binarymap.dict Sref.t,
+    (* Squiggles the walker drew, keyed by theorem name.  Every failure
+       a walk of that theorem has reported, accumulated.
+
+       Accumulated, and never withdrawn by a walk that saw nothing,
+       because a walk that sees nothing is not evidence of anything.
+       A goals pane asks for a state on every cursor movement, and
+       such a walk answers from wherever it happens to start and stops
+       wherever the cursor is: it stands `cheat' in for a `>-' branch
+       that has not discharged its goal and carries on, so it routinely
+       reports no failure for a proof full of them; and it resumes from
+       a snapshot cache, so whether it notices a failure at all depends
+       on how much of the proof that particular walk replayed.  The
+       same cursor position would report a failure on one visit and
+       nothing on the next.
+
+       Holding one failure per theorem and clearing it on a quiet walk
+       therefore made squiggles appear and disappear as the cursor
+       moved over an unedited buffer, and a proof with several failing
+       tactics could never show more than one of them.
+
+       What does withdraw them is `startCompile', which clears this map
+       wholesale -- and every edit goes through `startCompile'.  Fixing
+       a tactic is an edit, so that is the event that matters. *)
+    walkerDiags: (string, report list) Binarymap.dict Sref.t,
     (* Squiggles for the proofs the pool has an opinion about, keyed by
        theorem name.  Deliberately *not* cleared by a fresh compile,
        unlike `walkerDiags': the pool owns these entries' lifetime and
@@ -1379,7 +2296,7 @@ fun start {diag, dbg, warnings} = let
        drops one.  A compile that re-enqueues an unchanged proof reuses
        its entry rather than re-announcing it, so clearing here would
        lose a squiggle with nothing left to restore it. *)
-    proofDiags: (string, report) Binarymap.dict Sref.t,
+    proofDiags: (string, report list) Binarymap.dict Sref.t,
     (* The text the last compile elaborated, or "" before there has
        been one.  Comparing it with the buffer says exactly which
        bytes have changed since -- one region, however many
@@ -1408,11 +2325,32 @@ fun start {diag, dbg, warnings} = let
        about; below one of its diagnostics, the squiggle would vanish
        while the error was still in the file. *)
     reusableFrom: int ref,
+    (* `LSPExtension.proofGeneration` as the last completed pass left
+       it.  Reusing a tail keeps that pass's proofs instead of
+       re-enqueueing them, so it is only sound while they are still
+       there; a pass abandoned in between can have cancelled every
+       proof below the edit, and leaves nothing else behind to say
+       so. *)
+    lastProofGen: int ref,
     (* Set when a compile was abandoned because the file's declared
        dependencies -- the modules of `headerModules' -- could not be
        loaded; it carries that module list.  See `startCompile' for what
        lifts the block. *)
     depsBlocked: deps_state ref,
+    (* Set while the client holds no buffer for this uri.  The record
+       outlives the close, which is the whole point of the flag: a
+       buffer revert reaches us as `didClose' followed at once by
+       `didOpen', and dropping the record in between left the reopen
+       with no `declSnapshots' -- which is what sends `startCompile'
+       down the from-boot path, fatal for the reason `baseSnap' gives.
+       Kept, the reopen is just the full-text `applyEdit' that the
+       `didChange' spelling of the same gesture performs, and resumes
+       from a snapshot like any other edit.
+
+       What the flag itself gates is the two walks over the whole map:
+       a buffer that is not on screen is not one `workspace/symbol'
+       should quote from, nor one `$/setConfig' should set compiling. *)
+    closed: bool ref,
     (* The outline for this buffer, with the text version it was parsed
        from.  documentSymbol is asked on every edit and
        `workspace/symbol' re-asks for every open buffer on every
@@ -1444,14 +2382,17 @@ fun start {diag, dbg, warnings} = let
 
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
-    in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
-        debounce = ref 0, minEditOffset = Sref.new NONE,
+    in {compile = ref NONE,
+        lastTrees = Sref.new {parse = emptyParseData 0, text = text},
+        debounce = Sref.new 0, minEditOffset = Sref.new NONE,
         publishLock = Sref.new (),
         walkerDiags = Sref.new (Binarymap.mkDict String.compare),
         proofDiags = Sref.new (Binarymap.mkDict String.compare),
         pendingFailures = Sref.new [],
         compiledText = ref "", reusableFrom = ref ~1,
-        depsBlocked = ref DepsUnchecked, symbols = ref NONE,
+        lastProofGen = ref 0,
+        depsBlocked = ref DepsUnchecked, closed = ref false,
+        symbols = ref NONE,
         nsLayer = ref NONE, nsGen = ref 0, nsNames = ref NONE} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
@@ -1466,37 +2407,44 @@ fun start {diag, dbg, warnings} = let
      (e.g., HOL's parser recovering from an unterminated `Theorem`)
      would otherwise block recv, freezing hover requests and further
      didChanges.  The `cancelled` flag doubles as a "no longer
-     current" marker: the compile thread checks it before writing
-     lastTrees so a stale finish can't clobber the new state. *)
-  (* Alive and not superseded.  Three places asked this and two spelled
-     it out; the third also wants `elaborating`, which is a different
-     question and is asked separately where it matters. *)
+     current" marker, which is enough for deciding not to publish but
+     was never enough for `lastTrees`: testing a flag and writing the
+     trees are two steps, and an edit landing between them was lost.
+     `commitTrees` does the deciding and the writing together. *)
+  (* Alive and not superseded.  Not the same question as "is a pass
+     using the compile state", which `compileUsingState ()` answers
+     from the state's own side. *)
   fun compileRunning r =
       case !r of
           NONE => false
         | SOME {thread, cancelled, ...} =>
           Thread.isActive thread andalso not (!cancelled)
 
-  (* Is a pass still *using* the process's compile state?  Not
-     `compileRunning': that asks whether a pass is alive, and this asks
-     whether one is still using the state, which it stops doing before
-     its thread exits -- see `elaborating'.
-
-     Anything that rewinds the Context has to ask this first.  The
-     theory graph is a slot in the Context (`Theory.Graph'), so a
-     restore takes back every theory the pass has loaded since the
-     snapshot, and the pass's next `link_parents' reports a parent that
-     "should already be in the theory graph (but isn't)". *)
-  fun usingCompileState r =
-      case !r of
-          NONE => false
-        | SOME {thread, cancelled, elaborating, ...} =>
-          !elaborating andalso Thread.isActive thread
-          andalso not (!cancelled)
-
   fun stopCompile r = case !r of
     NONE => ()
   | SOME {cancelled, ...} => (r := NONE; cancelled := true)
+
+  (* Retire a buffer the client has closed, without losing what a
+     reopen needs.  The record stays in `fileInfo' and keeps its text,
+     its snapshots and its last pass's record; all that changes is that
+     no compile is running, none that was scheduled will fire, and the
+     two walks over the whole map pass it by.
+
+     It stays because a close is not always the end of a buffer: a
+     version-control revert, or anything else that re-runs the major
+     mode, reaches us as `didClose' immediately followed by `didOpen',
+     and `didOpen' on a record that is still there is the full-text
+     `applyEdit' that the `didChange' spelling of the same gesture
+     performs.  Removing the record made the reopen build a fresh one,
+     whose empty `declSnapshots' is precisely the from-boot case
+     `baseSnap' exists to avoid. *)
+  fun closeFile ({compile, debounce, closed, ...}: file_data) = (
+    stopCompile compile;
+    (* A `scheduleCompile' thread forked before the close is still
+       asleep holding the old epoch.  Without this, it wakes and
+       compiles a buffer the client has let go. *)
+    Sref.update debounce (fn n => n + 1);
+    closed := true)
 
   (* Push `off` into the rolling min-edit tracker; a later `startCompile`
      consults this to decide whether to resume from a snapshot.  An edit
@@ -1528,11 +2476,99 @@ fun start {diag, dbg, warnings} = let
                else go (i + 1)
     in go 0 end
 
-  fun applyEdit ({compile, lastTrees, minEditOffset, ...}:file_data) version changes = let
+  (* Said out loud once per server run.  The client resyncs on the
+     notification without the user doing anything, but a condition that
+     should never arise correcting itself in silence is how it goes
+     unnoticed for a release. *)
+  val desyncAnnounced = ref false
+
+  (* Our copy of a document no longer matches the buffer.  Tell the
+     client, which answers by sending the whole text back (`$/hol/desync'
+     in the README); `applyEdit's `range = NONE' case takes it from
+     there, keeping the declaration snapshots and re-elaborating from
+     the first byte that actually differs rather than from scratch. *)
+  fun reportDesync uri version msgs =
+      if null msgs then () else let
+        val detail = String.concatWith "; " msgs
+        val what = "copy of the document is out of step with the client \
+                   \at version " ^ Int.toString version ^ ": " ^ detail
+      in
+        logMessage (uri ^ ": " ^ what);
+        send (mkNotif "$/hol/desync" (fn print => (
+          print "{\"uri\":"; encString uri print;
+          print ",\"version\":"; print (Int.toString version);
+          print ",\"message\":"; encString detail print;
+          print "}")));
+        if !desyncAnnounced then ()
+        else (desyncAnnounced := true;
+              warnUser ("HOL LSP: " ^ what ^ " -- resynchronising"))
+      end
+
+  (* Install the trees a finishing compile built -- but only if the text
+     they describe is not older than the one already in place.
+     `applyEdit' is the authority on what the buffer says; a pass that
+     started before an edit carries a text that predates it, and
+     installing that text drops the edit.  Nothing resends it, so from
+     then on our copy of the document is a few bytes short of the
+     buffer's, which is how a position the client computed honestly
+     ends up naming the wrong byte here.
+
+     `stopCompile' setting `cancelled' was meant to be the defence, and
+     cannot be: reading the flag and writing the trees are two steps,
+     and an edit that lands between them is overwritten anyway.  The
+     test and the write happen together here instead. *)
+  fun commitTrees lastTrees (new as {text, parse = _}) = (
+    (* Outside the lock on purpose: holding it would make `applyEdit'
+       wait, and waiting is the one thing that would hide the race the
+       hold is there to expose. *)
+    holdBeforeCommit ();
+    Sref.update lastTrees (fn cur =>
+      if #version text < #version (#text cur) then cur else new))
+
+  (* Newlines in `s[i..j)'. *)
+  fun newlinesIn (s, i, j) = let
+    fun go (k, n) =
+      if k >= j then n
+      else go (k + 1, if String.sub (s, k) = #"\n" then n + 1 else n)
+    in go (Int.max (i, 0), 0) end
+
+  fun applyEdit uri ({compile, lastTrees, minEditOffset, ...}:file_data)
+                version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
     val bumpMin = bumpMinEdit minEditOffset
+    (* The client computed its range from its own buffer, so what the
+       range says about the text it replaces is a fact we can check
+       against ours: a span from line `l1' to line `l2' crosses exactly
+       `l2 - l1' newlines.  It is not a malformed request when it
+       doesn't -- it is proof that the two texts have drifted apart,
+       and this is the last moment at which saying so is cheap.  Left
+       unsaid, the drift is only discovered later, as a declaration
+       that lost its `Proof' or a goal state that stopped answering,
+       with nothing left to point at the edit that caused it. *)
+    fun overshot lines what (p as (l, c)) =
+        if not (posOvershoots lines p) then NONE
+        else SOME ("its " ^ what ^ " names column " ^ Int.toString c ^
+                   " of line " ^ Int.toString l ^ ", past the end of the \
+                   \line we hold")
+    fun checkSpan lines base (f as (fl, _)) (t as (tl, _)) (from, to) =
+        (* Asked of the positions first, because `fromLineCol' has
+           already clamped an overshooting column back to its line end
+           by the time the span exists -- which is what stops the
+           splice from eating the newline, and also what would hide the
+           disagreement from the newline count below. *)
+        case List.mapPartial (fn x => x)
+               [overshot lines "start" f, overshot lines "end" t] of
+          m :: _ => SOME m
+        | [] =>
+          if from > to then SOME "the range ends before it starts"
+          else let val n = newlinesIn (base, from, to) in
+            if n = tl - fl then NONE
+            else SOME ("the text it spans holds " ^ Int.toString n ^
+                       " newline(s), not the " ^ Int.toString (tl - fl) ^
+                       " the range claims")
+          end
     (* The old `parse` value is carried through the fold so we can
        preserve its `declSnapshots` on each step (via
        `carryOverSnapshots`).
@@ -1557,22 +2593,42 @@ fun start {diag, dbg, warnings} = let
        a buffer has Emacs report one change spanning the entire
        document, whose `from' is 0 like any other. *)
     fun applyText [] data = data
-      | applyText ({range = NONE, text}::cs) (parse, base, _) =
+      | applyText ({range = NONE, text}::cs) (parse, base, _, bad) =
         (bumpMin (commonPrefixLen (base, text));
-         applyText cs (carryOverSnapshots parse, text, NONE))
-      | applyText ({range = SOME (from, to), text}::cs) (parse, base, lines) = let
+         applyText cs (carryOverSnapshots parse, text, NONE, bad))
+      | applyText ({range = SOME (f, t), text}::cs)
+                  (parse, base, lines, bad) = let
         val lines = getLines base lines
-        val (from, to) = (fromLineCol lines from, fromLineCol lines to)
+        (* A line we do not have is the same disagreement, one size
+           larger; `Subscript' from `bolOf' is how it arrives.  Treat
+           the position as the end of our text: the splice then still
+           produces something, and the resync below replaces it. *)
+        fun conv p = SOME (fromLineCol lines p) handle Subscript => NONE
+        val (from, to, bad) =
+            case (conv f, conv t) of
+              (SOME a, SOME b) =>
+                (a, Int.max (a, b),
+                 case checkSpan lines base f t (a, b) of
+                   NONE => bad | SOME m => m :: bad)
+            | _ => (size base, size base,
+                    "it names a line the server's copy does not have" :: bad)
         val text = Substring.concat [
           Substring.substring (base, 0, from),
           Substring.full text,
           Substring.substring (base, to, size base - to)]
         val _ = bumpMin (commonPrefixLen (base, text))
-        in applyText cs (carryOverSnapshots parse, text, NONE) end
-    val {parse, text = {text, lines, version = _}} = !lastTrees
-    val (parse, text, lines) = applyText changes (parse, text, SOME lines)
-    val text = {text = text, lines = getLines text lines, version = version}
-    in lastTrees := {parse = parse, text = text} end
+        in applyText cs (carryOverSnapshots parse, text, NONE, bad) end
+    (* The whole fold runs under the lock.  Splicing a buffer-sized
+       string is microseconds, and doing it outside would put the read
+       and the write back on either side of a window a didChange can
+       land in -- the bug this is here to close. *)
+    val bad = Sref.gen_update lastTrees (
+      fn {parse, text = {text, lines, ...}} => let
+      val (parse, text, lines, bad) =
+          applyText changes (parse, text, SOME lines, [])
+      val text = {text = text, lines = getLines text lines, version = version}
+      in ({parse = parse, text = text}, rev bad) end)
+    in reportDesync uri version bad end
 
   fun exceptionMessage (exn: exn) =
     PolyML.PrettyBlock(0, false, [], [
@@ -1605,6 +2661,55 @@ fun start {diag, dbg, warnings} = let
       else DArray.push (buf, msg)
     | _ => DArray.push (buf, msg)
 
+  (* The same coalescing as `mergeInto', for a stream that cannot wait
+     for the end.
+
+     Poly's pretty printer calls the output function once per item --
+     "val", " ", "it", " ", "=", ... -- and a stream that forwarded
+     each report as it arrived left a client no way to tell those
+     apart from successive lines: `val it = 39 : int' reached the
+     transcript as ten of them.  So text is held here until its
+     newline comes, and what goes out is always whole lines.
+
+     `flush' is what makes a chunk that printed without a trailing
+     newline arrive at all, and every other kind of report runs it
+     first: an error sent while output was pending would otherwise
+     overtake the output that preceded it. *)
+  fun lineBuffer send = let
+    (* Toplevel output or compiler output, where it came from, and the
+       part of it that has no newline yet. *)
+    val pending: (bool * int * string) option ref = ref NONE
+    fun emit (_, _, "") = ()
+      | emit (true, pos, s) = send (ToplevelOut (pos, [s]))
+      | emit (false, pos, s) = send (CompilerOut (pos, [s]))
+    fun flush () = case !pending of
+        NONE => ()
+      | SOME p => (pending := NONE; emit p)
+    (* One past the last newline; 0 when there is none. *)
+    fun afterLastNL s = let
+      fun go i = if i < 0 then 0
+                 else if String.sub (s, i) = #"\n" then i + 1
+                 else go (i - 1)
+      in go (size s - 1) end
+    fun add (k, pos, s) = let
+      val s = case !pending of
+          SOME (k', pos', prev) =>
+          if k' = k andalso pos' = pos then (pending := NONE; prev ^ s)
+          else (flush (); s)
+        | NONE => s
+      val i = afterLastNL s
+      in
+        if i = 0 then pending := SOME (k, pos, s)
+        else (emit (k, pos, String.substring (s, 0, i));
+              pending :=
+                (if i < size s then SOME (k, pos, String.extract (s, i, NONE))
+                 else NONE))
+      end
+    fun msg (ToplevelOut (pos, ss)) = add (true, pos, concat (rev ss))
+      | msg (CompilerOut (pos, ss)) = add (false, pos, concat (rev ss))
+      | msg m = (flush (); send m)
+    in {msg = msg, flush = flush} end
+
   fun getHoldep text = let
     val {read, ...} = HOLSource.stringToReader {quietOpen = false, print = fn _ => ()} text
     in
@@ -1613,7 +2718,7 @@ fun start {diag, dbg, warnings} = let
     end
 
   fun compileForReport uri code startByte stopAfter lastPos builtTree
-                       onDecCompleted report = let
+                       onDecStarted' onDecCompleted report = let
     (* A deferred proof belongs to the declaration being compiled when it
        is enqueued, so record that declaration's start as each one
        begins.  Elaboration is single-threaded, so a plain ref is
@@ -1633,17 +2738,12 @@ fun start {diag, dbg, warnings} = let
        which on a resumed compile re-elaborating one declaration is the
        dominant cost of the pass. *)
     val decOrds = let
-      fun go [] _ acc = acc
-        | go (Sym {name, span = (start, _), ...} :: rest) seen acc =
-          let val n = 1 + getOpt (Binarymap.peek (seen, name), 0)
-          in go rest (Binarymap.insert (seen, name, n))
-                (Binarymap.insert (acc, start, n))
-          end
+      fun add ((start, _, n), acc) = Binarymap.insert (acc, start, n)
+      val empty = Binarymap.mkDict Int.compare
       in
-        if not (!LSPExtension.deferProofs) then Binarymap.mkDict Int.compare
-        else go (bufferSymbols code) (Binarymap.mkDict String.compare)
-                (Binarymap.mkDict Int.compare)
-             handle _ => Binarymap.mkDict Int.compare
+        if not (!LSPExtension.deferProofs) then empty
+        else List.foldl add empty (declOrds (bufferSymbols code))
+             handle _ => empty
       end
     (* The compile driver's notion of where a declaration begins and
        the outline's normally agree, so the exact hit is the usual
@@ -1659,15 +2759,20 @@ fun start {diag, dbg, warnings} = let
                           1 decOrds
     fun onDecStarted off = (
       LSPExtension.currentProofOffset := off;
-      LSPExtension.currentProofOrd := ordAt off)
+      LSPExtension.currentProofOrd := ordAt off;
+      onDecStarted' off)
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
       (* `unclosed quotation` / `expected ...` almost always mean an
-         in-progress edit; surface those as Warning, not Error. *)
+         in-progress edit; surface those as Warning, not Error.  So does
+         a theory name disagreeing with the file name: the header
+         recompiles on every keystroke, so the name a user is part-way
+         through typing disagrees at each one. *)
       parseError = fn pos => fn s => let
         val soft = String.isSubstring "unclosed quotation" s
                    orelse String.isSubstring "expected" s
+                   orelse String.isSubstring "does not match file" s
       in report (Error {hard = not soft, pos = pos, msg = encString s}) end,
       compilerOut = fn s => report (CompilerOut (!lastPos, [s])),
       toplevelOut = fn s => report (ToplevelOut (!lastPos, [s])),
@@ -1696,20 +2801,35 @@ fun start {diag, dbg, warnings} = let
      passes each emitting the same "expected 'QED'" / "expected an
      expression" pair -- users don't need to see them twice.  Non-
      Error reports pass through unchanged. *)
+  (* What makes two reports the same report: where they point and what
+     they say.  Shared with the walker's accumulation below, so that
+     revisiting a failing tactic adds nothing and a second failure
+     elsewhere in the same proof adds an entry of its own. *)
+  fun reportKey (Error {pos = (s, e), msg, ...}) =
+        SOME (Int.toString s ^ ":" ^ Int.toString e ^ ":"
+              ^ encodeToString msg)
+    | reportKey _ = NONE
+
   fun dedupReports d = let
     val seen = ref (Binaryset.empty String.compare)
     val out = DArray.new (DArray.size d, Completed)
-    fun step r = case r of
-        Error {pos = (s, e), msg, ...} =>
-          let val k = Int.toString s ^ ":" ^ Int.toString e ^ ":"
-                      ^ encodeToString msg
-          in if Binaryset.member (!seen, k) then ()
-             else (seen := Binaryset.add (!seen, k);
-                   DArray.push (out, r))
-          end
-      | _ => DArray.push (out, r)
+    fun step r = case reportKey r of
+        SOME k =>
+          if Binaryset.member (!seen, k) then ()
+          else (seen := Binaryset.add (!seen, k);
+                DArray.push (out, r))
+      | NONE => DArray.push (out, r)
     val () = DArray.app step d
     in out end
+
+  (* A per-theorem diagnostic map holds a *list*: one failure can be
+     marked in more than one place.  Counting entries would count
+     theorems, and the count is what decides whether anything moved
+     since the last publish -- so a theorem that grows a second
+     squiggle would never ship it. *)
+  fun nReports m = Binarymap.foldl (fn (_, l, n) => n + length l) 0 m
+  fun pushReports (d, m) =
+      Binarymap.app (fn (_, l) => List.app (fn r => DArray.push (d, r)) l) m
 
   (* Emit `$/proofStates` for `uri`: one change in what the
      proof-checking pool is doing.
@@ -1718,10 +2838,11 @@ fun start {diag, dbg, warnings} = let
                                 "name": "foo",
                                 "status": "checking" | "proved" | "failed"
                                         | "suspended" | "diverged"
-                                        | "cheated",
+                                        | "cheated" | "timedout",
                                 "detail": "..."}, ...]}
 
-     `detail` is present only for `failed`, `suspended` and `diverged`.
+     `detail` is present only for `failed`, `suspended`, `diverged` and
+     `timedout`.
 
      A transition stream, not a snapshot: merge each state in, keyed by
      `pos`.  The pool announces every change from the thread that causes
@@ -1763,16 +2884,31 @@ fun start {diag, dbg, warnings} = let
           | LSPExtension.Failed _ => "failed"
           | LSPExtension.Suspended _ => "suspended"
           | LSPExtension.Diverged _ => "diverged"
+          | LSPExtension.TimedOut _ => "timedout"
+    (* The budget that was hit, not how long the replay actually ran:
+       the latter is not known -- the point of the state is that nobody
+       waited to find out -- and the former is the number a reader can
+       act on, raising it being the response. *)
     fun detailOf st =
         case st of
             LSPExtension.Failed m => SOME m
           | LSPExtension.Suspended m => SOME m
           | LSPExtension.Diverged m => SOME m
+          | LSPExtension.TimedOut t => SOME (Time.fmt 0 t ^ "s")
           | _ => NONE
+    (* Milliseconds, and only when the proof actually ran.  A client
+       folding this stream is usually asking "is the file healthy",
+       but the other question it gets asked -- "which proof is slow" --
+       had no answer at all before, because `proof_status` carries a
+       verdict and no cost. *)
     fun encState ({site, offset, status} : LSPExtension.proof_state) print = (
         print "{\"pos\":"; encPosLC lines offset print;
         print ",\"name\":"; encString site print;
         print ",\"status\":"; encString (statusName status) print;
+        (case LSPExtension.proofElapsed site of
+             NONE => ()
+           | SOME t => (print ",\"elapsedMs\":";
+                        print (IntInf.toString (Time.toMilliseconds t))));
         (case detailOf status of
              NONE => ()
            | SOME m => (print ",\"detail\":"; encString m print));
@@ -1818,12 +2954,20 @@ fun start {diag, dbg, warnings} = let
      the same walk the goal-state handler does.  Its `compileDone`
      argument only reaches the `theorem_context` it builds, which we
      discard, so anything will do here. *)
+  (* A `Termination' body is a tactic body and `findEnclosingTheorem'
+     now answers for it, but it is deliberately not one of these.  The
+     fast path's warrant is that re-elaborating the edited declaration
+     leaves every later one alone, and a `Definition' declares a
+     constant: that warrant has not been established here, so the
+     conservative branch is kept rather than silently widened.  Nothing
+     stops it being claimed later, with a test of its own. *)
   fun proofBodySpan text off =
       (case off of
            NONE => NONE
-         | SOME b => (case findEnclosingTheorem false text b of
-                          SOME (span, _) => SOME span
-                        | NONE => NONE))
+         | SOME b =>
+           (case findEnclosingTheorem false false text b of
+                SOME (span, {terminationOf = NONE, ...}) => SOME span
+              | _ => NONE))
       handle Empty => NONE
   fun proofBodyAt text off = Option.map #1 (proofBodySpan text off)
 
@@ -1860,8 +3004,7 @@ fun start {diag, dbg, warnings} = let
   (* The buffer's outline, parsed at most once per text version: the
      outline is asked for on every edit, and `workspace/symbol' asks
      every open buffer on every keystroke of the search box. *)
-  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
-    val {text = {text, version, ...}, ...} = !lastTrees
+  fun symbolsOfText symbols (text, version) = let
     fun parse () = let val syms = bufferSymbols text
                    in symbols := SOME (version, syms); syms end
     in
@@ -1869,6 +3012,57 @@ fun start {diag, dbg, warnings} = let
         SOME (v, syms) => if v = version then syms else parse ()
       | NONE => parse ()
     end
+
+  fun symbolsOf ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = Sref.value lastTrees
+    in symbolsOfText symbols (text, version) end
+
+  (* What the buffer declares, under the names a proof there would be
+     given, and the text version it was read from.
+
+     This is what lets a client forget a proof whose `Theorem' block
+     has been deleted.  The pool cannot tell it: an entry it drops is
+     announced `cheated' whether an edit merely reached the proof or
+     whether the declaration is gone, and a client that forgot every
+     `cheated' would under-count the proofs still waiting to be
+     re-checked.  The buffer's outline can tell it, and does.
+
+     Every declaration, not only the ones that can carry a proof: the
+     `Theory' header and each `val' and `fun' are in here too.  The
+     question a client asks is "is the name I am holding still
+     declared?", and for that a superset is not merely harmless but
+     safer.  Narrowing it means filtering on declaration kind, and a
+     filter that is wrong errs by dropping a name that *is* declared --
+     which silently deletes a live proof from the tally, the failure
+     this is here to fix.  Erring the other way keeps a name a moment
+     longer, and the next pass settles it.
+
+     Names, not verdicts.  A snapshot of what the pool *thinks* cannot
+     be sent correctly -- it would have to be sampled and only then
+     put on the wire, so a worker settling in between would have its
+     newer verdict overwritten by the older sample.  Nothing a worker
+     does can add or remove a declaration from the buffer, so this
+     list has no such race; it says which names are legitimate, and
+     leaves every verdict to `$/proofStates'.
+
+     Read from one snapshot of `lastTrees' so that the version and the
+     names cannot come from different texts. *)
+  fun proofCensus ({lastTrees, symbols, ...}: file_data) = let
+    val {text = {text, version, ...}, ...} = Sref.value lastTrees
+    val syms = symbolsOfText symbols (text, version)
+    in
+      (version,
+       map (fn (_, nm, n) => LSPExtension.qualifyProof nm n) (declOrds syms))
+    end
+
+  (* Is this proof site still one the buffer declares?  A failed proof
+     waits in `pendingFailures' for a compile to finish before its
+     diagnostic can be placed, and the user can delete the theorem in
+     between -- and placing it is precisely putting an entry *back*
+     into `proofDiags', under a key no later transition will remove,
+     pointing into text that has gone. *)
+  fun proofStillDeclared v site =
+      List.exists (fn s => s = site) (#2 (proofCensus v))
 
   (* The range to squiggle for a proof: the theorem's own name, via
      the outline symbol whose span covers the declaration's start byte.
@@ -1892,11 +3086,15 @@ fun start {diag, dbg, warnings} = let
 
   (* What a verdict means for the file, as a diagnostic.
      `Failed' is an error: the real build would have raised out of
-     `store_thm_at', so nothing below it is trustworthy.  The other two
-     are warnings about our *model* of the file rather than about the
-     file -- the proof itself went through -- so they say what is
-     actually wrong.  The remaining states are not diagnostics: they
-     say the pool has no complaint, or none yet. *)
+     `store_thm_at', so nothing below it is trustworthy.  `Diverged' is
+     a warning about our *model* of the file rather than about the
+     file -- the proof itself went through -- so it says what is
+     actually wrong.  `TimedOut' is a warning for a third reason again:
+     nothing is known to be wrong with anything.  It says only that the
+     server stopped waiting, which a reader needs to see, because the
+     alternative is a theorem that silently never gets checked.  The
+     remaining states are not diagnostics: they say the pool has no
+     complaint, or none yet. *)
   (* `exn_to_string' comes with a leading newline and wraps, which in
      a diagnostic reads as a blank first line.  One line is what a
      gutter tooltip and a `flymake' echo want. *)
@@ -1907,18 +3105,39 @@ fun start {diag, dbg, warnings} = let
     case status of
         LSPExtension.Failed msg =>
         SOME (true, "proof failed: " ^ oneLine msg)
-      | LSPExtension.Suspended names =>
-        SOME (false,
-              "proof suspends subgoals (" ^ names ^
-              "), so a real build stashes this theorem instead of \
-              \saving it; the declarations below were elaborated as \
-              \though it had been saved")
+      (* Not a diagnostic.  Suspending is how a long proof is meant
+         to be split up, and the verdict is not a report that our
+         model is wrong but the thing that *corrects* it: it puts the
+         proof in the no-cheat set, and the pass that follows stashes
+         the theorem exactly as a build would.  By the time a reader
+         saw the warning its claim had stopped being true, and what it
+         marked was a file doing the right thing.  The subgoal names
+         still travel, on the pool's `suspended' status. *)
+      | LSPExtension.Suspended _ => NONE
       | LSPExtension.Diverged detail =>
         SOME (false,
               "proof produced " ^ detail ^
               ", so what elaboration stood in for this theorem was \
               \not what the proof gives")
+      | LSPExtension.TimedOut t =>
+        SOME (false,
+              "proof not checked: still running after " ^ Time.fmt 0 t ^
+              "s, so the server stopped waiting for it")
       | _ => NONE
+
+  (* The squiggles for one located failure.  A walk that stops at a
+     combinator reports the combinator and, separately, the paren
+     closing what it brackets -- so the branch is marked at its two
+     ends and the text between them, which is what is being written,
+     is left clean.  The closing marker carries a message of its own:
+     a client shows it on its own, away from the first. *)
+  fun failReports (pos, close, msg) =
+      Error {hard = true, pos = pos, msg = encString msg} ::
+      (case close of
+           NONE => []
+         | SOME p =>
+           [Error {hard = true, pos = p,
+                   msg = encString "end of the failing branch"}])
 
   (* Emit publishDiagnostics for `uri` combining the last-completed
      compile's diagnostics and any walker-observed runtime squiggles. *)
@@ -1926,23 +3145,17 @@ fun start {diag, dbg, warnings} = let
                             ({lastTrees, walkerDiags, proofDiags,
                               publishLock, ...}:file_data) =
     Sref.update publishLock (fn held => let
-    val {text, parse} = !lastTrees
+    val {text, parse} = Sref.value lastTrees
     val {lines, version, ...} = text
     val compileDiags = #diags parse
     val wd = Sref.value walkerDiags
     val pd = Sref.value proofDiags
-    val total = DArray.size compileDiags + Binarymap.numItems wd +
-                Binarymap.numItems pd
+    val total = DArray.size compileDiags + nReports wd + nReports pd
     val snapshot = DArray.clone (compileDiags, total)
-    val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) wd
-    val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) pd
+    val _ = pushReports (snapshot, wd)
+    val _ = pushReports (snapshot, pd)
     val snapshot = dedupReports snapshot
-    fun encDiag (Error {hard, pos, msg}) print = (
-        print "{\"range\":"; encRangeLC lines pos print;
-        print ",\"severity\":";
-        encInt (if hard then ErrorSeverity else WarnSeverity) print;
-        print ",\"message\":"; msg print; print "}")
-      | encDiag _ _ = raise Fail "unexpected report kind"
+    val encDiag = encDiagAt lines
   in
     send (mkNotif "textDocument/publishDiagnostics" (fn print => (
       print "{\"uri\":"; encString uri print;
@@ -1969,7 +3182,7 @@ fun start {diag, dbg, warnings} = let
   fun updateProofDiag uri (v as {proofDiags, lastTrees, compile,
                                  ...}: file_data)
                       {site, offset, status} = let
-    val {text = {text, ...}, ...} = !lastTrees
+    val {text = {text, ...}, ...} = Sref.value lastTrees
     (* Publishing from here while a compile is running would undo that
        compile's own publishDiagnostics: it sends its in-progress list,
        this one sends the frozen `lastTrees' prefix -- and during a
@@ -2012,15 +3225,48 @@ fun start {diag, dbg, warnings} = let
                 | (SOME _, NONE) => (#1 (Binarymap.remove (pd, site)), true)
                 (* Re-published even when the entry looks the same: the
                    text it points into may have moved under it. *)
-                | (_, SOME d) => (Binarymap.insert (pd, site, d), true))
+                | (_, SOME d) => (Binarymap.insert (pd, site, [d]), true))
     in
       if changed then republish () else ()
+    end
+
+  (* Drop the proof diagnostics of declarations the buffer no longer
+     has, given the census of the ones it does.
+
+     `proofDiags' is deliberately not cleared by a compile -- the pool
+     owns each entry's lifetime and announces every change, the
+     `Cheated' of a dropped proof included, so a compile that reuses
+     its entries would wipe squiggles with nothing left to restore
+     them.  That argument holds for a proof that still exists.  For one
+     whose `Theorem' block has been deleted there is no transition left
+     to come: a pass that stops early never reaches it to announce
+     anything, and the entry would outlive the text it points into.
+     The census is what distinguishes the two.
+
+     Called from `finishPass', where `lastTrees' is current, so the
+     publish is the catch-up one that `updateProofDiag' defers to. *)
+  fun dropDeadProofDiags uri (v as {proofDiags, ...}: file_data) sites = let
+    val live = Binaryset.addList (Binaryset.empty String.compare, sites)
+    val changed =
+        Sref.gen_update proofDiags
+          (fn pd => let
+             val dead = Binarymap.foldl
+                          (fn (site, _, acc) =>
+                              if Binaryset.member (live, site) then acc
+                              else site :: acc)
+                          [] pd
+             in (List.foldl (fn (site, m) => #1 (Binarymap.remove (m, site)))
+                            pd dead,
+                 not (null dead))
+             end)
+    in
+      if changed then publishAllDiagnostics uri v else ()
     end
 
   fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
                               walkerDiags, proofDiags, depsBlocked,
                               publishLock,
-                              compiledText, reusableFrom,
+                              compiledText, reusableFrom, lastProofGen,
                               nsLayer, nsGen, ...}:file_data) =
     (* Every route to a compile comes through here -- didOpen,
        didChange's debounce, didSave, `$/hol/retryCompile', and the
@@ -2032,7 +3278,7 @@ fun start {diag, dbg, warnings} = let
     else (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
-    debounce := !debounce + 1;
+    Sref.update debounce (fn n => n + 1);
     (* Runtime squiggles from the walker are always stale w.r.t. the
        new compile -- clear them so a fix removes squiggles even
        before the user visits the theorem to re-run the walker. *)
@@ -2041,11 +3287,16 @@ fun start {diag, dbg, warnings} = let
     (* The dependencies the file declares, and where it names them.
        A failure to load one of these is fatal to the whole file, so
        it is tracked apart from the rest: `getHoldep' reports every
-       module the text mentions, including basis structures and ones
-       the file declares itself, and "Cannot find file" for those is
-       routine and harmless. *)
-    val declared = headerModules (#text (#text (!lastTrees)))
-    val declaredNames = map #1 declared
+       module the text mentions, basis structures included, and
+       "Cannot find file" for one of those is routine and harmless.
+       A module the file itself defines is not among them --
+       `Holdep_tokens' drops a `structure M = ...' whose every mention
+       follows it -- because loading the real one in its place is how
+       `bossLib' came to seal `list' out from under `listScript.sml'. *)
+    val {bare = hdrBare, header = hdrSeen, theory = hdrTheory,
+         mods = declared} =
+        headerModules (#text (#text (Sref.value lastTrees)))
+    val declaredNames = map #name declared
     (* A file whose declared dependencies did not load gets no compile
        at all until that list changes.  The check is the list itself
        rather than a general "has the file changed": nothing the user
@@ -2096,14 +3347,126 @@ fun start {diag, dbg, warnings} = let
        `carryOverSnapshots`, which clears `done`, so the second condition
        is what lets a *non*-edit ask for a recompile of unchanged text --
        which is how discovering that a proof suspends gets acted on. *)
-    if #done (#parse (!lastTrees)) andalso not (isSome editOff) then
+    if #done (#parse (Sref.value lastTrees)) andalso not (isSome editOff) then
       (!LSPExtension.notifyCompileStart editOff;
        invalidateProofs {resumeStart = NONE, inProofBody = NONE};
-       !LSPExtension.resetForCompile (); ())
+       (* A rewind like any other, so it needs the claim -- but this
+          branch runs inline on the message loop (`didOpen`, `didSave`
+          and `$/hol/retryCompile` are dispatched there), which must
+          not block behind a walk.  The reset is housekeeping for a
+          pass that is not going to run, so a walk holding the state
+          means skip it, not wait for it. *)
+       (* Released on the raise path too.  `resetForCompile' is
+          `Context.restore', `Meta.snapshotLoaded''s thunk and
+          `clearFileLayer', any of which can raise; leaving the claim
+          behind would not lose this reset but the process.  Nothing
+          ever sets the owner back, so every later walk answers
+          `pending' for ever and every later pass logs "still held
+          after 30s" and reschedules itself, for ever -- a wedge whose
+          only symptom is a log line every thirty seconds.  The walks
+          get this from `withWalkState'; this is the one claim that
+          cannot, since it takes no snapshot and claims for a
+          compile. *)
+       if claimCompileState ByCompile
+       then (let val () = !LSPExtension.resetForCompile ()
+                          handle e => (releaseCompileState (); raise e)
+             in releaseCompileState () end)
+       else logMessage "compile state held; skipped the reset";
+       ())
     else let
     val _ = stopCompile compile
-    val {text as {lines, ...}, parse = lastParse} = !lastTrees
+    (* Before `invalidateProofs` below, which for an edit outside any
+       proof body is itself a wide cancellation. *)
+    val proofGenAtEntry = !LSPExtension.proofGeneration
+    val {text as {lines, ...}, parse = lastParse} = Sref.value lastTrees
     val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
+    (* Which declaration's proof body the edit is in, for deciding how
+       much of the pool to invalidate.
+
+       Asked of the parser first.  While a tactic is being edited the
+       answer is very often NONE for a cursor that is plainly inside a
+       `Proof ... QED`: a `;` in the body leaves `parseHolKeyword` with
+       no column-0 `QED` to close the declaration on, so the whole
+       declaration fails to parse.  `invalidateProofs` then takes its
+       wide branch and cancels every proof below the edit, which is
+       why a half-typed tactic greyed out the rest of the file until
+       some pass ran to the end of it.
+
+       So fall back to the column-0 keywords, which is the same thing
+       the parser anchors on (`HOLSourceParser`'s `colZero`) and the
+       one piece of structure a broken tactic body cannot disturb:
+       whatever the user has typed between `Proof` and `QED`, those
+       two are still in column 0 and still say where the declaration
+       begins and ends.  The `Theorem` line that opens it is the
+       offset the pool keys the proof on -- `onDecStarted` reports
+       `decSpan`'s start, and that is the keyword itself.
+
+       Deliberately conservative: any column-0 keyword found out of
+       order gives up and lets the wide branch run.  Getting it wrong
+       the other way keeps verdicts that are out of date rather than
+       blanking ones that are right, and the next pass to reach the
+       end of the file re-enqueues them all anyway.  `tacticOnlyEdit`
+       does not use this -- the tail is reused on the strength of what
+       the parser says, not of what the keywords suggest. *)
+    fun tacticBodyDecl off = let
+      val str = #text text
+      val n = size str
+      (* Walked rather than read off `lines`, the buffer's line table.
+         The table is indexed by line and answers in one lookup, but
+         it has no answer for a position past the last line, and this
+         scans until it runs out of file -- where the walk simply
+         stops.  Bounded by line length either way, and the whole
+         scan costs under a millisecond on a 180KB file, once per
+         compile pass behind a 300 ms debounce. *)
+      fun lineStart i = let
+        fun go j = if j <= 0 then 0
+                   else if String.sub (str, j - 1) = #"\n" then j
+                   else go (j - 1)
+        in go (Int.min (i, n)) end
+      fun nextLine i = let
+        fun go j = if j >= n then n
+                   else if String.sub (str, j) = #"\n" then j + 1
+                   else go (j + 1)
+        in go i end
+      (* A HOL keyword opening the line at `i`, if any.  Compared
+         without copying: the same test per candidate, one substring
+         view instead of eleven fresh strings per line scanned. *)
+      fun keywordAt i = let
+        val rest = Substring.extract (str, i, NONE)
+        fun match s = Substring.isPrefix s rest
+                      andalso (i + size s >= n
+                               orelse not (isIdentChar
+                                             (String.sub (str, i + size s))))
+        in List.find match holKeywords end
+      (* Walk `step` from `i` until a column-0 keyword turns up; NONE
+         at the end of the walk.  Every keyword that is not the one
+         being looked for is a barrier: the scan stops there and the
+         caller falls back to the wide branch, so the list needs to be
+         complete rather than short. *)
+      fun scan step i =
+          if i < 0 orelse i >= n then NONE
+          else case keywordAt i of
+                   SOME k => SOME (i, k)
+                 | NONE => scan step (step i)
+      fun back i = if i <= 0 then ~1 else lineStart (i - 1)
+      fun up i = scan back (back i)
+      fun down i = scan nextLine (nextLine i)
+      val here = lineStart off
+      in
+        (* `QED` must come next going down, `Proof` going up, and a
+           `Theorem` or `Triviality` above that. *)
+        case (down here, up here) of
+            (SOME (_, "QED"), SOME (p, "Proof")) =>
+            (case up p of
+                 SOME (t, "Theorem") => SOME t
+               | SOME (t, "Triviality") => SOME t
+               | _ => NONE)
+          | _ => NONE
+      end
+    fun editedProofBody () =
+        case proofBodyAt (#text text) editOff of
+            SOME d => SOME d
+          | NONE => Option.mapPartial tacticBodyDecl editOff
     (* Resume decision: pick the largest snapshot with `endByte <=
        the edit mark.  If none, recompile the whole file. *)
     val resumeSnap =
@@ -2153,19 +3516,20 @@ fun start {diag, dbg, warnings} = let
        *this* thread and leave the compile with an empty layer, so the
        recompile could not see `ACCEPT_TAC`.
 
-       Only the boot-state path needs no such care, because there the
-       compile thread re-executes the `Theory` dec, opens and all --
-       and that is now the rare case, taken only when the header drew a
-       diagnostic and so was never captured. *)
+       The boot-state path is a thunk for the same reason and one
+       more: `resetForCompile` ends in `LSPNameSpace.clearFileLayer`,
+       and the layer is thread-local, so run here it would clear this
+       thread's and leave the compile's standing.  It is the rare
+       case, taken only when the header drew a diagnostic and so was
+       never captured. *)
     val (restoreSnap, initialTrees, resumeStart, oldDiags) =
       case resumeSnap of
         NONE => (
           !LSPExtension.notifyCompileStart editOff;
           invalidateProofs {resumeStart = NONE,
-                            inProofBody = proofBodyAt (#text text)
-                                                      editOff};
+                            inProofBody = editedProofBody ()};
           ((case baseSnap of
-              NONE => (!LSPExtension.resetForCompile (); (fn () => ()))
+              NONE => (fn () => !LSPExtension.resetForCompile ())
             | SOME s =>
               (fn () => !LSPExtension.restoreCompileSnap (#compileSnap s))),
            emptyParseData 8, 0, oldDiags))
@@ -2173,7 +3537,7 @@ fun start {diag, dbg, warnings} = let
           val _ = !LSPExtension.notifyCompileStart editOff
           val _ = invalidateProofs
                     {resumeStart = SOME (#endByte snap),
-                     inProofBody = proofBodyAt (#text text) editOff}
+                     inProofBody = editedProofBody ()}
           val {endByte, builtTrees, diags = snapDiags, plugins,
                ...} = snap
           (* Seed `diags` with the frozen snapshot; leave `oldDiags`
@@ -2203,11 +3567,31 @@ fun start {diag, dbg, warnings} = let
        Bracketed from both ends against the text the last compile
        elaborated, so it does not matter how many `didChange`s
        delivered the edit or what each one claimed to touch. *)
-    val tacticOnlyEdit = let
+    (* Paired with why it was not available, for `$/compileScope`:
+       with `tacticOnly` false and nothing else said, the only way to
+       tell these apart was to instrument the server. *)
+    val (tacticOnlyWhy, tacticOnlyEdit) = let
       val prev = !compiledText
       val cur = #text text
       in
-        if prev = "" orelse prev = cur then NONE
+        if prev = "" then ("no previous pass", NONE)
+        else if prev = cur then
+          (* The buffer is back on the text the last pass compiled: an
+             undo of everything typed since, a revert, a reformat that
+             changed nothing.  Something still asked for a compile --
+             the edits that cancelled the pass in between left their
+             mark -- but the file below the mark elaborates to exactly
+             what the last pass recorded, so this is the fast path's
+             case with a width of zero, not a reason to re-elaborate
+             the rest of the file.
+
+             That it was not is how a stray keystroke and its undo
+             came to re-elaborate everything below them. *)
+          (case proofBodySpan cur editOff of
+               SOME (a, aEnd) =>
+                 ("taken",
+                  SOME {decStart = a, decEnd = aEnd, delta = 0, lines = 0})
+             | NONE => ("text unchanged, mark outside a proof body", NONE))
         else let
           val pre = commonPrefixLen (prev, cur)
           val suf = commonSuffixLen (prev, cur, pre)
@@ -2222,13 +3606,14 @@ fun start {diag, dbg, warnings} = let
                   proofBodySpan cur (SOME lastChanged)) of
                 (SOME (a, aEnd), SOME (b, _)) =>
                   if a = b
-                  then SOME {decStart = a,
-                             decEnd = aEnd,
-                             delta = size cur - size prev,
-                             lines = newlines (cur, pre, size cur - suf)
-                                     - newlines (prev, pre, size prev - suf)}
-                  else NONE
-              | _ => NONE
+                  then ("taken",
+                        SOME {decStart = a,
+                              decEnd = aEnd,
+                              delta = size cur - size prev,
+                              lines = newlines (cur, pre, size cur - suf)
+                                      - newlines (prev, pre, size prev - suf)})
+                  else ("edit spans two declarations", NONE)
+              | _ => ("edit is not inside one Proof-QED body", NONE)
           end
       end
     (* Take the fast path only when all of: the change is confined to
@@ -2252,19 +3637,44 @@ fun start {diag, dbg, warnings} = let
        diagnostic-free made most keystrokes in a proof re-elaborate
        every declaration below it.
 
+       What *is* disqualifying is the tail's proofs having been
+       cancelled since.  Reusing the tail keeps them rather than
+       re-enqueueing them, so it assumes they are still there -- and
+       while the declaration is mid-edit its `Proof … QED` often does
+       not parse at all, which sends `invalidateProofs` down the wide
+       branch and takes every proof below the edit with it.  Those
+       passes are abandoned by the next keystroke, so they update
+       neither `compiledText` nor `reusableFrom`, and the generation
+       count is the only mark they leave.  Reuse the tail then and the
+       file keeps the verdicts of a buffer that no longer exists: the
+       ones that were cancelled never come back, and stale items left
+       in the deferred queue are forked in their place and fail on
+       names the edit had removed.
+
        Anything else, and the whole file is re-elaborated as before. *)
-    val reuseTail =
+    (* Reported beside `why` in `$/compileScope`: with the edit
+       confined to one proof body and the tail still declined, the two
+       answers are about different questions and only one of them was
+       visible. *)
+    val (tailWhy, reuseTail) =
       case (tacticOnlyEdit, resumeSnap, lastSnaps) of
           (SOME {decStart, decEnd, delta, lines}, SOME rs, prev :: _) =>
             let val oldDecEnd = decEnd - delta in
-              if !reusableFrom >= 0 andalso oldDecEnd >= !reusableFrom
-                 andalso #endByte rs <= decStart
-                 andalso #endByte prev >= oldDecEnd
-              then SOME {decStart = decStart, delta = delta, lines = lines,
-                         prev = prev}
-              else NONE
+              if !reusableFrom < 0
+              then ("last pass left no usable record", NONE)
+              else if oldDecEnd < !reusableFrom
+              then ("last pass reported below the declaration", NONE)
+              else if proofGenAtEntry <> !lastProofGen
+              then ("proofs cancelled since the last completed pass", NONE)
+              else if #endByte rs > decStart
+              then ("resuming below the declaration", NONE)
+              else if #endByte prev < oldDecEnd
+              then ("no snapshot covering the tail", NONE)
+              else ("taken",
+                    SOME {decStart = decStart, delta = delta, lines = lines,
+                          prev = prev})
             end
-        | _ => NONE
+        | _ => ("no tactic-only edit to reuse a tail for", NONE)
     val stopAfter = Option.map (fn {decStart, ...} => decStart + 1) reuseTail
     val _ = if dbg then
               send (mkNotif "$/compileScope" (fn print => (
@@ -2273,6 +3683,8 @@ fun start {diag, dbg, warnings} = let
                 print (case tacticOnlyEdit of NONE => "false" | _ => "true");
                 print ",\"reuseTail\":";
                 print (case reuseTail of NONE => "false" | _ => "true");
+                print ",\"why\":"; encString tacticOnlyWhy print;
+                print ",\"tailWhy\":"; encString tailWhy print;
                 (case tacticOnlyEdit of
                      NONE => ()
                    | SOME {decStart, decEnd, delta, lines} => (
@@ -2296,16 +3708,115 @@ fun start {diag, dbg, warnings} = let
        captured, so `captureSnap` can tell which are the current
        declaration's own.  Starts at whatever the resume seeded. *)
     val diagsAtLastSnap = ref (DArray.size (#diags initialTrees))
-    val cancelled = ref false
-    val elaborating = ref true
+    (* Drop the resume seed's claims about the declaration this pass is
+       about to re-elaborate.
 
-    fun compileThread () = ((let
+       A resumed pass skips *compiling* everything below its resume
+       point, but it re-parses the whole file, so the first declaration
+       it does compile can straddle that point.  Completing a
+       `Definition ... End` at the end of the file is the case that
+       bites: the snapshot resumed from is the one the synthesised
+       end-of-theory declaration took at the old EOF, and the
+       diagnostics frozen into it include the `unclosed quotation' that
+       the half-written body drew.  Appending puts the edit exactly at
+       that snapshot's `endByte', so it is chosen, and the warning is
+       seeded into a pass whose text no longer deserves it.  Nothing
+       else removes a seeded entry, so it stood for the rest of the
+       session.
+
+       This pass derives that declaration's diagnostics afresh, so a
+       seeded entry anchored inside it is either about to be reported
+       again or is no longer true; either way the frozen copy has
+       nothing left to say.  Done once, at the first declaration
+       compiled: a seed that survives that one starts above it, and so
+       above every declaration after it too.
+
+       Seeds are picked out by index and not by position alone.
+       `fetchDec' reports a declaration's parse errors before
+       `onDecStarted' fires, so by the time this runs the fresh copy is
+       already in the array -- and a filter that went by position would
+       take it down with the stale one, leaving a quotation that is
+       still open with no squiggle at all.  The seed is exactly the
+       prefix the resume cloned in; everything this pass reports lands
+       after it.
+
+       `diagsAtLastSnap' goes back to the seeds that were kept, not to
+       the new total, so `captureSnap' still reads anything reported
+       from here on as the current declaration's own.  Counting the
+       total instead would let a `Definition' that is *still*
+       unterminated capture a snapshot -- its own warning would read as
+       something that stood before it -- which is the bug again. *)
+    val seedSize = DArray.size (#diags initialTrees)
+    val seedPruned = ref (seedSize = 0)
+    fun pruneSeedAt decStart =
+      if !seedPruned then () else let
+        val () = seedPruned := true
+        val diags = #diags (!trees)
+        val out = DArray.new (DArray.size diags, Completed)
+        val kept = ref 0
+        fun step (i, r) =
+            if i >= seedSize then DArray.push (out, r)
+            else case r of
+                     Error {pos = (s, _), ...} =>
+                       if s >= decStart then ()
+                       else (kept := !kept + 1; DArray.push (out, r))
+                   | _ => (kept := !kept + 1; DArray.push (out, r))
+      in
+        DArray.appi step diags;
+        DArray.replace (diags, out);
+        diagsAtLastSnap := !kept
+      end
+    val cancelled = ref false
+
+    (* This pass's hold on `compileStateOwner`, released exactly once
+       -- see the walk in `goalStateAtPos` for why that matters. *)
+    val ownsState = ref false
+    fun releaseState () =
+        if !ownsState then (ownsState := false; releaseCompileState ())
+        else ()
+    (* Wait for whatever is rewinding the process to finish before
+       rewinding it ourselves.  A walk is short and a predecessor pass
+       ends at its next declaration, so this waits rather than gives
+       up -- but only while this pass is still the current one, which
+       is why `cancelled` is read before `Free` and not after: a
+       superseded pass has nothing left to do, and the pass that
+       replaced it is waiting on the same variable.
+
+       The deadline is for neither of those.  A request thread is
+       interruptible (`$/cancelRequest` calls `Thread.interrupt`), so
+       a walk killed between claiming the state and installing its
+       handler leaves the claim behind, and an unbounded wait would
+       make that the end of compiling in this process.  Timing out
+       puts the edit mark back and reschedules, so the pass returns
+       rather than is dropped: a genuinely slow predecessor is
+       retried, and a leaked claim shows up as a log line every 30s
+       instead of as silence.
+
+       `sync_interrupts` keeps this thread's `InterruptDefer` while it
+       waits, so waiting here does not make a compile interruptible
+       where running one is not. *)
+    fun awaitState () = let
+      (* Once, not per wake: `timed_access` re-evaluates the limit
+         each time round, so a fresh `Time.now ()` here would start
+         the thirty seconds again on every release it loses. *)
+      val deadline = Time.now () + Time.fromSeconds 30
+      in
+        case Synchronized.timed_access compileStateOwner
+               (fn _ => SOME deadline)
+               (fn owner =>
+                   if !cancelled then SOME (false, owner)
+                   else case owner of
+                            Free => SOME (true, ByCompile)
+                          | _ => NONE) of
+            SOME got => (if got then ownsState := true else (); got)
+          | NONE => (
+              logMessage "compile state still held after 30s; retrying";
+              putBack (); scheduleCompile uri v; false)
+      end
+
+    fun compileThread () = ((if not (awaitState ()) then () else let
       val () = restoreSnap ()
-      fun encDiag (Error {hard, pos, msg}) print = (
-          print "{\"range\":"; encRangeLC lines pos print;
-          print ",\"severity\":"; encInt (if hard then ErrorSeverity else WarnSeverity) print;
-          print ",\"message\":"; msg print; print "}")
-        | encDiag _ _ = raise Fail "unexpected report kind"
+      val encDiag = encDiagAt lines
 
       val holdepMode = !holdepMode
       val mods = case holdepMode of HoldepNone => [] | _ => getHoldep (#text text)
@@ -2317,19 +3828,69 @@ fun start {diag, dbg, warnings} = let
       (* The last byte the header claims, i.e. the end of the last name
          it declares. *)
       val headerEnd =
-          foldl (fn ((_, (_, e)), m) => Int.max (e, m)) 0 declared
+          foldl (fn ({pos = (_, e), ...}, m) => Int.max (e, m)) 0 declared
       val depFails = ref ([]: (string * (int * int) * exn) list)
+      (* The theory this file declares, when the session has not
+         already got it.  Sampled before the preload so that a seal
+         found afterwards is this pass's own doing: a file recompiled
+         in a process that was poisoned earlier must not be told the
+         same news twice, and a theory sealed for some other reason is
+         not what this is about. *)
+      val thyAtRisk =
+          case hdrTheory of
+              NONE => NONE
+            | SOME (nm, pos) =>
+              if !LSPExtension.theorySealed nm then NONE else SOME (nm, pos)
       fun noteFail m e = (
         DArray.push (errors, e);
-        case List.find (fn (n, _) => n = m) declared of
+        case List.find (fn {name, ...} => name = m) declared of
           NONE => ()
-        | SOME (_, pos) => depFails := (m, pos, e) :: !depFails)
+        | SOME {pos, ...} => depFails := (m, pos, e) :: !depFails)
       val _ = app (fn m =>
-        loadPlan (fn f => DArray.push (files, (f, m))) m
+        loadPlan (fn f => (noteLoadedFrom f;
+                           DArray.push (files, (f, m)))) m
         handle e => noteFail m e) mods
       fun useFiles () = DArray.app (fn (f, m) =>
         qquse f handle e => noteFail m e) files
-      val _ = if DArray.isEmpty files andalso DArray.isEmpty errors then () else (
+      (* Theories the plan proposes to read that this session has
+         already got, with the module that asked for each.  Reading one
+         cannot work: `Theory.load_complete' sealed it in
+         `KernelSig.sealed_ref', which is outside `Context' -- a
+         soundness gate, not a cache -- so no snapshot restore takes it
+         back, `TheoryReader' refuses, and the theory ends up neither
+         loaded nor in the graph.  Every ancestor behind it then fails
+         "not in ancestry", and nothing the user can type undoes any of
+         it.
+
+         Only the from-boot restore puts an already-loaded theory back
+         within `loadPlan's reach -- it rewinds `Meta.loadedMods', and
+         `loadPlan' skips what is marked there -- so a non-empty list
+         here says, in the one place that can see it, that the restore
+         `baseSnap' exists to avoid has been taken anyway.
+
+         Collected from the plan rather than from the exceptions the
+         preload raises, for the reason `missingDeps' gives about its
+         own question: a module left marked in `loadedMods' by a failed
+         use raises nothing on the next attempt. *)
+      val sealedReloads = let
+        fun theoryOf f = let val b = OS.Path.file f in
+            if String.isSuffix "Theory.sml" b
+            then SOME (String.substring (b, 0, size b - size "Theory.sml"))
+            else NONE
+          end
+        in
+          DArray.foldr
+            (fn ((f, m), acc) =>
+                case theoryOf f of
+                    SOME nm =>
+                      if !LSPExtension.theorySealed nm andalso
+                         not (List.exists (fn (x, _) => x = nm) acc)
+                      then (nm, m) :: acc else acc
+                  | NONE => acc)
+            [] files
+        end
+      val _ = if DArray.isEmpty files andalso DArray.isEmpty errors
+              then () else (
         case holdepMode of
           HoldepList => send (mkNotif "$/holdep" (fn print => (
             print "{\"uri\":"; encString uri print;
@@ -2350,6 +3911,21 @@ fun start {diag, dbg, warnings} = let
             print "}")))
         | _ => ())
 
+      (* Whether the preload has just sealed the theory the header is
+         about to create, and the modules it loaded on the way.  Asked
+         after the loads have run, not after the plan was built: a
+         module already resident seals nothing. *)
+      fun sealedByPreload () =
+          case thyAtRisk of
+              NONE => NONE
+            | SOME (nm, pos) =>
+              if not (!LSPExtension.theorySealed nm) then NONE
+              else SOME (nm, pos,
+                         DArray.foldr (fn ((_, m), acc) =>
+                                          if List.exists (fn x => x = m) acc
+                                          then acc else m :: acc)
+                                      [] files)
+
       fun beforeCompile () = let
         val ls = getPlugins ()
         in app (fn t => #beforeCompile t ()) ls; ls end
@@ -2368,14 +3944,25 @@ fun start {diag, dbg, warnings} = let
           in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
         in loop 0; DArray.replace (oldDiags, newDiags) end
 
-      (* Only emit publishDiagnostics when the accumulated list has
-         actually changed size since the last emit -- Progress events
-         far past the point where an error was found still update
-         `oldDiags` (by re-merging), but if the size didn't change,
-         re-sending is pure noise for the client's log.  Both compile
-         diagnostics AND walker-detected runtime squiggles contribute
-         to the size we compare against. *)
-      val lastSentSize = ref ~1
+      (* Only emit publishDiagnostics when what would be published has
+         actually changed since the last emit -- Progress events far
+         past the point where an error was found still update
+         `oldDiags` (by re-merging), and re-sending an identical list
+         is pure noise for the client's log.
+
+         Compared by content, not by count.  A count told these apart
+         only when their lengths differed: `updateDiags' drops the
+         previous pass's entries above the progress point as it adds
+         this pass's, so one error giving way to a different error at a
+         different place left the total where it was, the send was
+         skipped, and the client kept pointing at the old place for the
+         rest of the pass.  The list has to be built to compare it
+         anyway -- `dedupReports` is what decides what goes out, so it
+         is what has to be keyed on -- and it already runs every
+         message through `encodeToString', so the key costs a concat
+         per diagnostic and no extra formatting.  Walker-detected
+         runtime squiggles and proof verdicts go into it too. *)
+      val lastSentKey : string list option ref = ref NONE
       (* Snapshot oldDiags for the writer thread.  A live reference
          races updateDiags on the next Progress event: DArray.replace
          mid-encode makes encDArray raise Subscript, which kills the
@@ -2384,22 +3971,25 @@ fun start {diag, dbg, warnings} = let
         val n = DArray.size oldDiags
         val wd = Sref.value walkerDiags
         val pd = Sref.value proofDiags
-        val ws = Binarymap.numItems wd + Binarymap.numItems pd
-        val total = n + ws
-        in if total = !lastSentSize then () else (
-          lastSentSize := total;
-          let val snapshot = DArray.clone (oldDiags, total)
-              val _ = Binarymap.app
-                        (fn (_, r) => DArray.push (snapshot, r)) wd
-              val _ = Binarymap.app
-                        (fn (_, r) => DArray.push (snapshot, r)) pd
-              val snapshot = dedupReports snapshot
-          in
+        val ws = nReports wd + nReports pd
+        val snapshot = DArray.clone (oldDiags, n + ws)
+        val _ = pushReports (snapshot, wd)
+        val _ = pushReports (snapshot, pd)
+        val snapshot = dedupReports snapshot
+        val key =
+            DArray.foldl
+              (fn (Error {hard, pos = (s, e), msg}, acc) =>
+                  (if hard then "!" else "?") :: Int.toString s :: ":" ::
+                  Int.toString e :: ":" :: encodeToString msg :: "\n" :: acc
+                | (_, acc) => acc)
+              [] snapshot
+        in if SOME key = !lastSentKey then () else (
+          lastSentKey := SOME key;
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"version\":"; encInt (#version text) print;
             print ",\"diagnostics\":"; encDArray encDiag snapshot print;
-            print "}"))) end);
+            print "}"))));
           held
         end)
 
@@ -2409,8 +3999,7 @@ fun start {diag, dbg, warnings} = let
       (* Token is a bare integer; some clients (eglot) concatenate
          title and token when reporting, so we keep the token free of
          label-like text. *)
-      val progressToken = Int.toString (!progressIdCounter)
-        before progressIdCounter := !progressIdCounter + 1
+      val progressToken = allocProgressToken ()
       (* Not sent until we know a compile is actually going to run: a
          file whose dependencies did not load never starts one, and a
          begin without work behind it just flickers the client's
@@ -2442,6 +4031,64 @@ fun start {diag, dbg, warnings} = let
         send (mkNotif "$/progress" (fn print => (
           print "{\"token\":"; encString progressToken print;
           print ",\"value\":{\"kind\":\"end\"}}")))
+      (* The pass is over, and the state goes back before anyone is
+         told so.  A client acts on `$/compileCompleted' by asking --
+         the goals pane refreshes on it precisely because there was no
+         answer before it -- and a request landing while this pass
+         still holds the state is refused by `stateNotReady' with
+         "pending".  On a file whose tail is worth splicing that is a
+         window of hundreds of milliseconds, so the refresh the
+         notification provoked was reliably the one refused, and the
+         pane had nothing further to wait for.
+
+         Releasing and announcing are one step so that an edit cannot
+         separate them again; the bare `releaseState' at the end of
+         the thread is the backstop for the ways out that announce
+         nothing. *)
+      (* `declared' is the census: what the buffer still declares, under
+         the names a proof there would be given, with the `version' of
+         the text it was read from.  A client keeping a tally of proofs
+         drops any name the list does not mention -- that is how a
+         deleted or renamed `Theorem' leaves the count.
+
+         Sent only when proofs are being deferred, because only then is
+         there a pool whose entries a client could be holding, and
+         because reading the census parses the whole file.  The field
+         is then *absent*, which is not the same as present-and-empty:
+         absent means this server is not saying, and a client must
+         leave its tally alone; empty means the buffer declares nothing
+         at all and every entry goes.  An older client that knows
+         neither field ignores both and behaves as it did. *)
+      fun finishPass () = let
+        val census = if !LSPExtension.deferProofs then SOME (proofCensus v)
+                     else NONE
+        val () = case census of
+                     SOME (_, sites) => dropDeadProofDiags uri v sites
+                   | NONE => ()
+        fun encCensus print =
+            case census of
+                NONE => ()
+              | SOME (version, sites) => (
+                  print ",\"version\":"; encInt version print;
+                  print ",\"declared\":"; encArray encString sites print)
+        in
+          releaseState ();
+          sendProgressEnd ();
+          send (mkNotif "$/compileCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            encCensus print;
+            print "}")))
+        end
+      (* The pass gave up instead, and the same order applies for the
+         same reason.  No client subscribes to this today, so nothing
+         asks on hearing it -- but that is a fact about the clients,
+         not about when the notification is true, and the obvious next
+         thing a client does with it is stop its spinner and refresh. *)
+      fun abandonPass () = (
+        releaseState ();
+        sendProgressEnd ();
+        send (mkNotif "$/compileInterrupted" (fn print => (
+          print "{\"uri\":"; encString uri print; print "}"))))
 
       val ls = ref (beforeCompile ())
       (* Where the last declaration this pass compiled ended.  With
@@ -2449,6 +4096,47 @@ fun start {diag, dbg, warnings} = let
          reused tail is found in the previous pass's records. *)
       val lastDecEnd = ref ~1
       val lastPos = ref resumeStart
+      (* Armed for as long as this pass runs, and read only if the pass
+         never finishes because the file ended the process.  What the
+         user would otherwise get is EOF and nothing else -- and from a
+         client that restarts on close, another heap loaded to die the
+         same way, several times over, still silently.
+
+         Not a promise to survive the exit.  Surviving would mean
+         shadowing `OS' beneath the file's own compile, and that covers
+         the buffer's source text only: the library code it calls keeps
+         the real `exit' either way -- `testutils.die' is one, and
+         `Theory' is another when it cannot read the keywords file.
+         Saying what happened covers all of them. *)
+      fun exitNotice () = let
+        (* `lastPos' is where the last declaration that *finished*
+           ended, so it lands at the start of the one that exited:
+           "from line N onwards", not "after line N", which would point
+           past the culprit. *)
+        val (ln, _) = getLineCol lines (!lastPos)
+        val msg = String.concat [
+          "hol lsp is exiting: ", uri, " called OS.Process.exit -- ",
+          "directly, or through something that does -- while the ",
+          "server was compiling it, somewhere from line ",
+          Int.toString (ln + 1), " onwards",
+          ".  Compiling a file runs it, and a process exit is not ",
+          "something the compile can catch.  Comment the top-level ",
+          "exit out while you edit this file."]
+        in
+          (* stderr first, and unconditionally: it needs no wire and no
+             drain, so it survives a client that has already gone. *)
+          TextIO.output (TextIO.stdErr, "[hol lsp] " ^ msg ^ "\n");
+          TextIO.flushOut TextIO.stdErr;
+          logMessage msg;
+          warnUser msg;
+          (* `$/compileCompleted' is never coming.  Close the pass off
+             so a client waiting on one stops waiting. *)
+          sendProgressEnd ();
+          send (mkNotif "$/compileInterrupted" (fn print => (
+            print "{\"uri\":"; encString uri print; print "}")))
+        end
+      val () = onUnexpectedExit :=
+                 SOME (cancelled, Thread.self (), exitNotice)
       (* Abort a doomed dec: if the file's `Libs` / `Ancestors`
          `open`s fail (e.g., a dependency of an external HOL project
          hasn't been built yet, so `open jrhUtils` fails at the top),
@@ -2567,6 +4255,42 @@ fun start {diag, dbg, warnings} = let
          Force a merge past end-of-file so those errors reach the
          client. *)
       fun flushDiags () = (updateDiags (size (#text text)); sendDiags ())
+      (* What every completed pass records about itself: the trees it
+         built, the text they describe, and the proof generation they
+         were built against.  What differs between the two ways a pass
+         can complete is only how much of the tail is reusable, which
+         each of them sets for itself afterwards. *)
+      fun commitCompletedPass () = (
+        commitTrees lastTrees
+          {text = text, parse = setParseDone (size (#text text)) (!trees)};
+        compiledText := #text text;
+        lastProofGen := !LSPExtension.proofGeneration)
+      (* How every block lands: commit what this pass parsed, hand the
+         compile state back, publish, and latch the reason so the next
+         keystroke does not pay to rediscover it.
+
+         Fenced on `cancelled' because a `didChange' arriving during
+         the load has already started a pass that owns `lastTrees';
+         blocking on the text it replaced would stop that pass from
+         ever running.  The three callers below all need that fence
+         and all used to carry their own copy of it. *)
+      fun latchBlock message =
+        if !cancelled then () else (
+          commitTrees lastTrees
+            {text = text, parse = setParsePos 0 (!trees)};
+          releaseState ();
+          publishAllDiagnostics uri v;
+          markDepsBlocked uri v {mods = declaredNames, message = message})
+      (* A block that editing the header does not undo: sealing lives
+         in `KernelSig', outside the Context, and nothing in the
+         session takes it back.  Said once, against a position, with
+         the only thing that does help. *)
+      fun latchUntilRestart (pos, message) = (
+        DArray.push (#diags (!trees), Error {
+          hard = true, pos = pos,
+          msg = encString (message ^
+            "\n\nrestart the language server to compile this file")});
+        latchBlock message)
       (* Report the load failures themselves, against the header text
          that names them, in place of the compile: everything the file
          takes from a failed ancestor is absent, so elaborating would
@@ -2583,16 +4307,58 @@ fun start {diag, dbg, warnings} = let
                        msg = encString (blockedText (m, e))})) fails
         val message = String.concatWith "; " (map (fn (m, _, e) =>
                         describe (m, e)) fails)
-        in
-          (* Same fence as the completion path below: a `didChange'
-             during the load has already started a fresh compile that
-             owns `lastTrees', and blocking on the text it replaced
-             would stop that one from ever running. *)
-          if !cancelled then () else (
-            lastTrees := {text = text, parse = setParsePos 0 (!trees)};
-            publishAllDiagnostics uri v;
-            markDepsBlocked uri v {mods = declaredNames, message = message})
-        end
+        (* The state goes back before the block goes out, for the
+           reason `finishPass' gives: what a client does with the news
+           is ask, and this pass holds the process until it says
+           otherwise.  No progress to end -- `sendProgressBegin' is
+           inside `runCompile', which this path does not reach. *)
+        in latchBlock message end
+      (* The preload has brought in the theory this file exists to
+         build.  Nothing below the header can work: `new_theory'
+         refuses to enter a sealed theory, so there is no current
+         theory for any declaration to extend, and elaborating anyway
+         buys a "no current theory" diagnostic per declaration -- some
+         three thousand of them for `listScript.sml' -- for one cause.
+         Say the cause once, against the name in the header.
+
+         Unlike a failed load this is not something editing the header
+         undoes: sealing is a soundness gate in `KernelSig', outside
+         the Context, and nothing in the session takes it back.  The
+         `DepsBlocked' latch is still where it belongs, being what
+         stops the next keystroke paying to discover it again. *)
+      fun blockOnSealed (nm, pos, loaded) = let
+        val via = if null loaded then ""
+                  else " (loaded " ^ String.concatWith ", " loaded ^ ")"
+        val message =
+            "theory \"" ^ nm ^
+            "\" is already loaded in this session" ^ via ^
+            ", so this file cannot create it"
+        in latchUntilRestart (pos, message) end
+      (* The preload re-read a theory the session already holds;
+         `sealedReloads' says why that cannot work.  The restore that
+         got us here has already put `Meta.loadedMods' back to its boot
+         value and only a snapshot can undo that, so this file is past
+         helping in this process: elaborating on top of what the
+         preload left buys a diagnostic per declaration -- some three
+         thousand of them for `listScript.sml' -- for one cause.  Say
+         the cause once, against the name that asked for the theory,
+         and latch it like any other block. *)
+      fun blockOnReload reloads = let
+        val nms = map #1 reloads
+        val pos =
+            case List.mapPartial
+                   (fn (_, m) =>
+                       Option.map #pos
+                         (List.find (fn {name, ...} => name = m) declared))
+                   reloads of
+                p :: _ => p
+              | [] => (case hdrTheory of SOME (_, p) => p | NONE => (0, 0))
+        val message =
+            "the preload had to re-read " ^
+            String.concatWith ", "
+              (map (fn nm => "theory \"" ^ nm ^ "\"") nms) ^
+            ", which this session had already loaded and sealed"
+        in latchUntilRestart (pos, message) end
       (* Which of the modules the header declares are not available?
          That question, and not "did some load function raise", is what
          decides the file's fate: every name here is `open'ed by the
@@ -2618,6 +4384,63 @@ fun start {diag, dbg, warnings} = let
          The recorded exception supplies the message when there is one,
          since "Cannot find file X.ui" or the TheoryReader complaint
          from a stale object is the useful thing to say. *)
+      (* On the header entry that named it, because that is the line
+         the reader has to change something about.  A warning, not an
+         error: the file still elaborates, just against an older
+         theory.
+
+         Rebuilding is only half the remedy and the other half is not
+         discoverable, so the message says it: a dependency is read
+         once per process, and `$/hol/retryCompile' re-reads only ones
+         that were *missing*.  An already-loaded theory needs the
+         server restarted. *)
+      fun warnStaleDeps () = let
+        val diags = #diags (!trees)
+        fun posOf m =
+          Option.map #pos (List.find (fn {name, ...} => name = m) declared)
+        fun warn (m, src) =
+          case posOf m of
+            NONE => ()
+          | SOME pos =>
+            DArray.push (diags, Error {
+              hard = false, pos = pos,
+              msg = encString
+                (m ^ " is older than " ^ src ^ ", so this file is being \
+                 \elaborated against the theory as it was built.  \
+                 \Rebuild it *and restart this server*: a dependency is \
+                 \read once per process, so a rebuild on its own does \
+                 \not reach the session you are talking to.")})
+        val stale = staleAncestors declaredNames
+        (* Beside `$/compileScope', and for the same reason: when this
+           says nothing the question is which half was empty -- the
+           names, the recorded paths, or the comparison. *)
+        val () = if not dbg then () else
+          send (mkNotif "$/staleCheck" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            print ",\"declared\":"; encArray encString declaredNames print;
+            print ",\"recorded\":";
+            encInt (Binarymap.numItems (!loadedFrom)) print;
+            print ",\"paths\":";
+            encArray encString
+              (map (fn m =>
+                      case Binarymap.peek (!loadedFrom, m) of
+                        NONE => m ^ " => (not recorded)"
+                      | SOME a =>
+                        m ^ " => " ^
+                        (case physicalArtifact a of
+                           NONE => a ^ " [no artifact]"
+                         | SOME art => art) ^ " | script " ^
+                        (case scriptBeside a of
+                           NONE => "(none)"
+                         | SOME src =>
+                           src ^ (if OS.FileSys.access (src, [])
+                                  then " [exists]" else " [absent]")))
+                   declaredNames) print;
+            print ",\"stale\":"; encArray encString (map #1 stale) print;
+            print "}")))
+        in app warn stale end
+        handle _ => ()
+
       fun missingDeps () = let
         val failed = rev (!depFails)
         fun failure m = List.find (fn (n, _, _) => n = m) failed
@@ -2625,19 +4448,58 @@ fun start {diag, dbg, warnings} = let
           if List.exists (fn n => n = m) mods
           then Fail "the load produced no structure of that name"
           else Fail "nothing to load, and no structure of that name"
-        in
-          List.mapPartial
-            (fn (m, pos) =>
-                if isSome (#lookupStruct LSPNameSpace.fileNS m) then NONE
-                else case failure m of
-                       SOME f => SOME f
-                     | NONE => SOME (m, pos, why m))
-            declared
-        end
+        (* A name the header `open's need not be a module of its own.
+           `open Unicode' after `Libs ... Parse ...' means
+           `Parse.Unicode' (`src/parse/Parse.sig:299'): there is no
+           `Unicode.ui' for the load to find and `globalNameSpace' has
+           never heard of the name, yet the file compiles, because by
+           the time that `open' runs the structure containing it is in
+           scope.  Asking a flat `lookupStruct' for it answers "is
+           there a top-level structure called this?", which is not the
+           question that decides the file.
+
+           So walk the declared list in the order it is written,
+           carrying the structures each entry actually brings into
+           scope, and look an unresolved name up in those as well --
+           the same walk hover's `lookupDotted' and qualified
+           completion do.  A genuinely absent module still has nothing
+           to be found in and blocks the file exactly as before. *)
+        fun subLookup st m =
+            #lookupStruct (PolyML.NameSpace.Structures.contents st) m
+            handle _ => NONE
+        fun inScope [] _ = NONE
+          | inScope (st :: sts) m =
+            (case subLookup st m of NONE => inScope sts m | found => found)
+        fun resolve scope m =
+            case #lookupStruct LSPNameSpace.fileNS m of
+                NONE => inScope scope m
+              | found => found
+        fun scan _ acc [] = rev acc
+          | scan scope acc ({name, pos, opens} :: rest) =
+            case resolve scope name of
+                SOME st => scan (if opens then st :: scope else scope)
+                                acc rest
+              | NONE =>
+                scan scope
+                     ((case failure name of
+                           SOME f => f
+                         | NONE => (name, pos, why name)) :: acc)
+                     rest
+        (* The prefix a non-`bare' header opens ahead of the declared
+           list.  Absent names are dropped rather than reported: they
+           are not what the file asked for, and on a heap without
+           `bossLib' -- every directory below `src/boss' -- one of them
+           is always missing. *)
+        val scope0 =
+            if hdrSeen andalso not hdrBare
+            then List.mapPartial (#lookupStruct LSPNameSpace.fileNS)
+                                 implicitHeaderOpens
+            else []
+        in scan scope0 [] declared end
       fun runCompile () = (
         sendProgressBegin ();
         compileForReport uri (#text text) resumeStart stopAfter lastPos
-                         processBuiltTree captureSnap process;
+                         processBuiltTree pruneSeedAt captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
            we might land here on a stale thread whose applyEdit has
@@ -2747,20 +4609,12 @@ fun start {diag, dbg, warnings} = let
              `lastTrees` commit below hands the next pass a base it had
              already moved past.  Leave all of it to the pass that now
              owns the buffer. *)
-          if !cancelled then (
-            sendProgressEnd ();
-            send (mkNotif "$/compileInterrupted" (fn print => (
-              print "{\"uri\":"; encString uri print; print "}"))))
+          if !cancelled then abandonPass ()
           else (
-          (* The file compiled, so whatever it was blocked on is
-             resolved -- and, either way, the ancestors are now known to
-             be in the graph, which is what `DepsLoaded' says and
-             `DepsUnchecked' did not. *)
-          depsBlocked := DepsLoaded;
           flushDiags ();
-          sendProgressEnd ();
-          send (mkNotif "$/compileCompleted" (fn print => (
-            print "{\"uri\":"; encString uri print; print "}")));
+          (* Completion is announced at the end of this branch, not
+             here: everything from this point down is state the answer
+             it provokes reads. *)
           (* This pass stopped after the edited declaration, so put the
              rest of the file back: what the previous pass recorded
              about it is still true, only moved.  The trees and the
@@ -2777,14 +4631,63 @@ fun start {diag, dbg, warnings} = let
                               lines = lines}
                  fun spanStart (HOL_IDE.Built ((a, _), _, _)) =
                      FixedInt.toInt a
-                 (* cumulative and newest-first, so the declarations
-                    after the edited one are a prefix *)
-                 fun tailOf [] = []
-                   | tailOf (t :: ts) =
-                     if spanStart t >= oldDecEnd
-                     then HOL_IDE.shiftBuilt delta t :: tailOf ts
-                     else []
                  val fresh = !trees
+                 (* How many trees at the head of a cumulative list
+                    are below the edit.  `#builtTrees' is cumulative
+                    and newest-first, so they are a prefix. *)
+                 fun tailLen [] = 0
+                   | tailLen (t :: ts) =
+                     if spanStart t >= oldDecEnd then 1 + tailLen ts else 0
+                 (* The shifted tail of a cumulative list, ending in
+                    the trees this pass built -- which is what every
+                    record below the edit wants in front of them.
+
+                    Shared between the records that want the same
+                    trees, and that is the point.  Every snapshot
+                    below the edit carries every declaration below the
+                    edit, so shifting each one's tail on its own
+                    copies the whole tail once per snapshot in it, and
+                    `shiftBuilt' is a deep copy of a declaration's
+                    AST.  Sharing makes it one shift per declaration.
+
+                    Measured on a file of trivial theorems, a space
+                    typed into the second one, `didChange' to
+                    `$/compileCompleted' -- which is what the user
+                    waits for, the pass holding the state until it is
+                    done.  With declarations below the edit numbering
+                    60 / 120 / 240 / 480: 358 / 461 / 783 / 3172ms
+                    before, 315 / 312 / 361 / 367ms after, i.e. flat
+                    in the size of the tail rather than quadratic.
+
+                    Keyed on the count: two lists with the same
+                    count have the same trees below the edit,
+                    cumulative lists agreeing on a suffix.  Not on the
+                    tree the list starts at, which is the obvious
+                    cheaper key and is wrong -- `Theory foo' expands
+                    to several SML declarations sharing one source
+                    position, so two different lists can start at the
+                    same span, and the collision would hand one of
+                    them the other's tail.  Counting costs a walk per
+                    record, which is the whole of what this is still
+                    quadratic in: 14ms at 1920 declarations below the
+                    edit against a 424ms pass, 57ms at 3840.  The
+                    longest script in the tree has about 1700
+                    declarations in total. *)
+                 val tails = ref (Binarymap.mkDict Int.compare)
+                 fun sharedTail (0, _) = #builtTrees fresh
+                   (* Unreachable -- `tailOf' is the only caller and
+                      counts the list it passes -- but the match has
+                      to be exhaustive, and the answer is the one the
+                      clause above would give. *)
+                   | sharedTail (_, []) = #builtTrees fresh
+                   | sharedTail (n, t :: ts) =
+                     (case Binarymap.peek (!tails, n) of
+                          SOME l => l
+                        | NONE => let
+                            val l = HOL_IDE.shiftBuilt delta t
+                                    :: sharedTail (n - 1, ts)
+                          in tails := Binarymap.insert (!tails, n, l); l end)
+                 fun tailOf ts = sharedTail (tailLen ts, ts)
                  (* Frozen, and from this pass: a snapshot below the
                     edit is preceded by exactly the diagnostics this
                     pass reported, there being none between the edited
@@ -2793,7 +4696,7 @@ fun start {diag, dbg, warnings} = let
                                                 DArray.size (#diags fresh))
                  fun carry (s : declSnapshot) : declSnapshot = {
                    endByte = #endByte s + delta,
-                   builtTrees = tailOf (#builtTrees s) @ #builtTrees fresh,
+                   builtTrees = tailOf (#builtTrees s),
                    diags = freshDiags,
                    plugins = LSPExtension.reusePluginData
                                reuse (#plugins s) (#plugins fresh),
@@ -2804,16 +4707,14 @@ fun start {diag, dbg, warnings} = let
                in
                  trees := {
                    done = #done fresh, pos = #pos fresh,
-                   builtTrees = tailOf (#builtTrees prev) @ #builtTrees fresh,
+                   builtTrees = tailOf (#builtTrees prev),
                    diags = #diags fresh,
                    plugins = LSPExtension.reusePluginData
                                reuse (#plugins prev) (#plugins fresh),
                    declSnapshots = carried @ #declSnapshots fresh};
                  !LSPExtension.restoreCompileSnap (#compileSnap prev)
                end);
-          lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)};
-          compiledText := #text text;
+          commitCompletedPass ();
           (* One past the last diagnostic this pass reported, or 0 if
              it reported none; a report that could not be placed bounds
              everything, since we cannot say what it describes. *)
@@ -2837,29 +4738,55 @@ fun start {diag, dbg, warnings} = let
              stays queued with nothing left to trigger it.  What
              localised it in the end was the user happening to ask for
              a goal state. *)
-          elaborating := false;
+          (* And the state itself goes back before draining, for the
+             same reason: the walk the drain forks claims it, and
+             `drainFailures` refuses while a compile holds it -- which
+             would be this one asking about itself.  `finishPass'
+             releases before it announces. *)
+          finishPass ();
           (!drainFailures uri v handle _ => ()))))
       in (
-        case missingDeps () of
+        (* `missingDeps ()' empty *is* `DepsLoaded': it asks whether
+           every module the header declares resolves in the namespace,
+           which is the whole of what the flag claims.  Said here, once,
+           rather than by each way out of the pass that happens to know
+           it -- and the ways out that did not say it left a file at
+           `DepsUnchecked' for the life of the process, which
+           `stateNotReady' answers "pending" to for ever.  A header
+           that turns out not to compile is still put back to
+           `DepsBlocked' by `markDepsBlocked'. *)
+        (case missingDeps () of
           fails as (_::_) => blockOnDeps fails
-        | [] => runCompile ()
+        | [] =>
+          (* Asked after `missingDeps', which is the more informative
+             answer when both hold: a module that failed to load names
+             itself, where a sealed theory can only name what the
+             preload got through. *)
+          (case sealedByPreload () of
+               SOME sealed => blockOnSealed sealed
+             | NONE =>
+               (* Last of the three, because it is the least specific:
+                  it reports the state the session is in rather than
+                  anything about this file, and both questions above
+                  name something the user can act on.  A stale ancestor
+                  whose own parent the previous attempt loaded and
+                  sealed answers both, and "your ancestor is stale" is
+                  the one worth printing. *)
+               (case sealedReloads of
+                    reloads as (_::_) => blockOnReload reloads
+                  (* Nothing blocks, so the last thing to say is the
+                     one that does not: an ancestor older than its
+                     own script elaborates perfectly well and is
+                     simply about an older theory. *)
+                  | [] => (depsBlocked := DepsLoaded; warnStaleDeps ();
+                           runCompile ()))))
       ) handle Thread.Interrupt => (
-        sendProgressEnd ();
         (* When the compile aborted because a single dec produced a
            runaway cascade of errors, the diagnostics are complete
            (up to the abort) and clients should treat the compile as
            done, not interrupted.  A user-initiated cancel or a
            didChange-driven stop remain compileInterrupted. *)
-        if !abortedByRunOfErrors then (
-          flushDiags ();
-          send (mkNotif "$/compileCompleted" (fn print => (
-            print "{\"uri\":"; encString uri print; print "}")));
-          lastTrees := {text = text,
-                        parse = setParseDone (size (#text text)) (!trees)};
-          compiledText := #text text;
-          (* Whatever this pass captured, it stopped at the header, so
-             there is no tail to carry forward from it. *)
-          reusableFrom := ~1;
+        if !abortedByRunOfErrors then let
           (* Elaboration never got past the header: an ancestor that
              loads but whose `open' fails is the case holdep cannot
              see, so treat it exactly like a load failure and stop
@@ -2867,26 +4794,55 @@ fun start {diag, dbg, warnings} = let
              of the last dec that completed, and the header dec runs
              past the last name it declares, so it not having reached
              `headerEnd' is precisely "the header did not compile". *)
-          if !lastPos <= headerEnd andalso not (null declaredNames) then
-            markDepsBlocked uri v
-              {mods = declaredNames,
-               message = "the theory header did not compile"}
-          else ())
-        else send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}"))))
+          val headerFailed =
+              !lastPos <= headerEnd andalso not (null declaredNames)
+        in
+          flushDiags ();
+          commitCompletedPass ();
+          (* Whatever this pass captured, it stopped at the header, so
+             there is no tail to carry forward from it. *)
+          reusableFrom := ~1;
+          (* The block goes out after the completion, not before it: a
+             client clears whatever it was blocked on when it hears a
+             compile finished, so a block announced first is a block
+             thrown away. *)
+          if headerFailed then
+            (finishPass ();
+             markDepsBlocked uri v
+               {mods = declaredNames,
+                message = "the theory header did not compile"})
+          else finishPass ()
+        end
+        else abandonPass ())
            | e => (
         logMessage ("compile aborted: " ^ exnMessage e);
-        sendProgressEnd ();
-        send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}"))))
-      end);
+        abandonPass ())
+      end)
+      (* The block above has its own catch-all, so this one is for
+         what raises out of the declarations before it -- `restoreSnap`
+         and the holdep preload.  Reported rather than swallowed: it
+         would otherwise be a compile that produced nothing and said
+         nothing. *)
+      handle e => logMessage ("compile thread died: " ^ exnMessage e);
+      (* Reached however the pass ended, so the exit notice is disarmed
+         on every path a pass can leave by -- and an exit after this
+         point is the server's own.  Only if the notice is still this
+         pass's: see where it is armed. *)
+      (case !onUnexpectedExit of
+           SOME (pass, _, _) =>
+             if pass = cancelled then onUnexpectedExit := NONE else ()
+         | NONE => ());
+      (* Whatever happened, this pass is no longer rewinding the
+         process.  Ordinarily released before the drain above; this is
+         the backstop for every other way out. *)
+      releaseState ();
       (* Don't clobber `compile` here — stopCompile may have moved on
          and started another compile that installed a fresh SOME.
          The `cancelled` flag already fences correctness. *)
       ())
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread,
-                        cancelled = cancelled, elaborating = elaborating} end
+                        cancelled = cancelled} end
     ) handle e => (putBack (); raise e)
     end
     end)
@@ -2894,12 +4850,14 @@ fun start {diag, dbg, warnings} = let
   (* Fire a compile after a debounce delay: rapid didChange bursts
      collapse to one compile. *)
   and scheduleCompile uri (v as {debounce, ...}: file_data) = let
-    val () = debounce := !debounce + 1
-    val myEpoch = !debounce
+    (* Bump and read in one step.  As two, two schedulers racing take
+       the same epoch, both still match at wake time, and both
+       compile. *)
+    val myEpoch = Sref.gen_update debounce (fn n => (n + 1, n + 1))
     val debounce_ms = Time.fromMilliseconds 300
     in Thread.fork (fn () =>
         ((OS.Process.sleep debounce_ms;
-          if !debounce = myEpoch then startCompile uri v else ())
+          if Sref.value debounce = myEpoch then startCompile uri v else ())
          handle _ => ()),
         []); ()
     end
@@ -2913,7 +4871,10 @@ fun start {diag, dbg, warnings} = let
     val state = case !compile of
       SOME {parse, text, ...} => getIfValid {parse = !parse, text = text}
     | NONE => NONE
-    in case state of NONE => getIfValid (!lastTrees) | state => state end
+    in case state of
+         NONE => getIfValid (Sref.value lastTrees)
+       | state => state
+    end
 
   fun hover uri v (startTarget, endTarget) = let
     val ({plugins, builtTrees, ...}, text, endOffset) =
@@ -3176,7 +5137,11 @@ fun start {diag, dbg, warnings} = let
   fun gotoDefinition uri v target = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
-      in {origin = origin, uri = SOME (pathToUri file),
+      (* NONE means the current document below, so discard unresolved paths. *)
+      val uri = case pathToUri file of
+          NONE => raise Empty
+        | SOME u => u
+      in {origin = origin, uri = SOME uri,
           range = range, selRange = range} end
     val ({plugins, builtTrees, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
@@ -3226,13 +5191,66 @@ fun start {diag, dbg, warnings} = let
      being no theorem at the position, which is an answer, and from
      `DepsBlocked', which will not change until the header does.  The
      caller needs the difference to say "pending" rather than "no goal
-     state here", which reads as a fault in the proof. *)
-  fun stateNotReady ({depsBlocked, compile, ...}:file_data) =
-      (case !depsBlocked of DepsUnchecked => true | _ => false)
-      orelse usingCompileState compile
+     state here", which reads as a fault in the proof.
 
-  fun goalStateAtPos uri (v as {lastTrees, depsBlocked, ...}:file_data)
-                     (target, width) =
+     Asked of the state rather than of this file's compile record --
+     not because a second file's compile could be the one running
+     (`mayCompile' binds the process to one script), but because the
+     record goes false too early for its own pass: `stopCompile'
+     clears it on every `didChange', while the thread it belonged to
+     is still elaborating. *)
+  fun stateNotReady ({depsBlocked, ...}:file_data) =
+      (case !depsBlocked of DepsUnchecked => true | _ => false)
+      orelse compileUsingState ()
+
+  (* The reply both goal-state requests send.  `$/hol/goalState' and
+     `$/hol/tryTactic' differ in what they ask the walk to do and not
+     at all in how the answer travels, so this is the whole of what
+     they share.
+
+     `null' says "no goal state at this position", which sends a
+     reader looking for the fault in their proof.  When the walk was
+     refused only because the state is not ready yet, say so in the
+     one word the clients already act on: `pending' is what a silent
+     failure mid-compile reports, and both mean the same thing to a
+     reader -- wait for the compile.  No goals with it, there being
+     none to give. *)
+  fun goalStateReply (v_opt, resp) = let
+    val lines = case v_opt of
+                    NONE => mkLineCounter ""
+                  | SOME v => #lines (#text (Sref.value (#lastTrees v)))
+    val notReady = case (resp, v_opt) of
+                       (NONE, SOME v) => stateNotReady v
+                     | _ => false
+    in Ok (if notReady then (fn print => print "{\"status\":\"pending\"}")
+           else encOrNull (encGoalStateResponse (encRangeLC lines)) resp)
+    end
+
+  (* `theorem_context' with its cursor moved.  A step-addressed
+     request names a step rather than a position, and which byte that
+     step ends at is only knowable once the body has been parsed --
+     so the move happens after `findEnclosingTheorem', not before. *)
+  fun atCursor ({name, quote, quoteStart, tacText, tacStart, compileDone,
+                 resumeOf, terminationOf, locate, ...}
+                  : LSPExtension.theorem_context) cursor =
+    {name = name, quote = quote, quoteStart = quoteStart,
+     tacText = tacText, tacStart = tacStart, cursor = cursor,
+     compileDone = compileDone, resumeOf = resumeOf,
+     terminationOf = terminationOf, locate = locate}
+      : LSPExtension.theorem_context
+
+  (* `locate` asks where the proof first goes wrong instead of what the
+     state at `target` is; see `locate` in `LSPExtension.theorem_context`
+     for why the two cannot be the same walk.  A locating walk ignores
+     `target` beyond using it to find the enclosing theorem.
+
+     `run` is what to do once the context and the theorem are in hand:
+     the plain goal-state hook, or a probe that applies a candidate at
+     the same anchor.  Passed in rather than chosen here so that both
+     share this function's snapshot and locking exactly. *)
+  fun goalStateAtPos locate uri (v as {lastTrees, depsBlocked,
+                                       minEditOffset, ...}:file_data)
+                     (target, width, stepReq, run) =
     (* Nothing to walk against unless the ancestors are known to be
        loaded.  `DepsBlocked' is the case that used to be checked here:
        the walker would compile each tactic against a namespace missing
@@ -3250,7 +5268,7 @@ fun start {diag, dbg, warnings} = let
     if stateNotReady v then NONE
     else if (case !depsBlocked of DepsLoaded => false | _ => true)
     then NONE else let
-    val {parse, text} = !lastTrees
+    val {parse, text} = Sref.value lastTrees
     val {plugins, declSnapshots, ...} = parse
     val offset = fromLineCol (#lines text) target
     fun ppToString pp = let
@@ -3282,9 +5300,43 @@ fun start {diag, dbg, warnings} = let
        and the release depended on the client going on to ask about
        somewhere else.  One duplicated replay, in a bounded pool that
        can cancel it, is the cheaper of the two. *)
-    in case findEnclosingTheorem (#done parse) (#text text) offset of
+    (* A `Resume' body's goal is whatever its parent suspended, and
+       the parent suspends nothing until its tactic has actually run.
+       With proof checking off -- the default -- the elaboration stands
+       an oracle in for every proof, so the suspension store stays
+       empty and the subgoal never exists: `markerLib.resume' takes
+       its `fast_shortcut' and hands back `|- T'.  The goal pane would
+       then say `pending' for the rest of the session.
+
+       So when the cursor asks for a subgoal that is not there, ask
+       for the parent to be run.  This is the route
+       `$/proofStates' already takes for a suspension it discovers
+       (`retract', in `startCompile'): put the proof in the no-cheat
+       set and recompile from its declaration, which makes the next
+       pass run it instead of cheating it.
+
+       `addNoCheatSite' answering false -- the name was already there
+       -- is what stops this repeating.  A goals pane that follows the
+       cursor asks on every keystroke, and without the guard every one
+       of them would schedule a compile.
+
+       A parent that is not declared in this buffer is a cross-file
+       suspension: its store entry came in with the ancestor and is
+       already there, so there is nothing to re-run. *)
+    fun demandParentProof (resumeOf: {suspension: string,
+                                      label: string} option)
+                          (resp: LSPExtension.goal_state_response option) =
+      case (resumeOf, resp) of
+          (SOME {suspension, ...}, SOME {status = "pending", ...}) =>
+          if not (LSPExtension.addNoCheatSite suspension) then ()
+          else (case theoremDeclStart (#text text) suspension of
+                    NONE => ()
+                  | SOME off => (bumpMinEdit minEditOffset off;
+                                 scheduleCompile uri v))
+        | _ => ()
+    in case findEnclosingTheorem locate (#done parse) (#text text) offset of
          NONE => NONE
-       | SOME (_, thm as {quoteStart, ...}) =>
+       | SOME (_, thm as {quoteStart, resumeOf, ...}) =>
          (* One at a time.  Everything between the capture and the
             restore below runs against the process's single compile
             state, and a second walker in that window sees a Context
@@ -3298,17 +5350,41 @@ fun start {diag, dbg, warnings} = let
             Serialising costs a queued request the length of the one
             ahead of it.  A walk is measured in tens of milliseconds;
             replaying a long tactic is slower, but the alternative was
-            a wrong answer. *)
-         Sref.gen_update compileState (fn held =>
-           (held,
-            let val restoreLater = !LSPExtension.captureCompileSnap ()
-                val () = case snapBefore quoteStart of
+            a wrong answer.
+
+            A compile is excluded separately, and not by queueing:
+            `compileStateOwner` is claimed here and waited for there,
+            so a request that reaches the front of this queue while a
+            compile holds the process answers "pending" rather than
+            blocking a request thread for the length of a compile.
+            `stateNotReady` says the same thing earlier and more
+            cheaply; this is the check that is actually atomic with
+            the rewind below. *)
+         (* `demandParentProof' runs on the result, deliberately
+            *outside* the `Sref.gen_update' below: that is a held
+            mutex, and `scheduleCompile' forks a thread that goes for
+            the compile state.  Asking for it from under the lock
+            stalls, or deadlocks against the compile it just asked
+            for. *)
+         let val resp =
+         withWalkState {busy = fn () => NONE, cleanup = fn () => ()}
+           (fn () => let
+              val () = case snapBefore quoteStart of
                   NONE => ()
-                | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
-                val r = !LSPExtension.goalStateAtPos (ctx, thm)
-                        handle e => (restoreLater (); raise e)
-                val () = restoreLater ()
-            in r end))
+                | SOME s =>
+                  !LSPExtension.restoreCompileSnap (#compileSnap s)
+              (* A step the caller named wins over the position it came
+                 in with; the position only had to pick out the
+                 theorem. *)
+              val thm = case stepReq of
+                  NONE => thm
+                | SOME k =>
+                  (case !LSPExtension.stepCursor (thm, k) of
+                     NONE => thm
+                   | SOME c => atCursor thm c)
+              val r = run (ctx, thm)
+            in holdForTests (); r end)
+         in demandParentProof resumeOf resp; resp end
     end handle Empty => NONE
 
   (* Walk a failed proof to the end of its tactic and record the pool's
@@ -3343,19 +5419,37 @@ fun start {diag, dbg, warnings} = let
   fun claimDrain () = Sref.gen_update draining (fn d => (true, not d))
   fun releaseDrain () = Sref.update draining (fn _ => false)
   val () = drainFailures :=
-    (fn uri => fn (v as {pendingFailures, compile, ...}: file_data) => let
-        (* Nothing else may be using the compile state: not a worker
-           still replaying a proof, and not the compile itself, which
-           is elaborating and enqueueing them.  Missing the second was
-           enough on its own -- a dozen sound proofs reported failures
-           that varied from run to run. *)
-        (* See `usingCompileState': not `compileRunning', which asks a
-           different question. *)
-        fun compiling () = usingCompileState compile
-        fun proving () = !LSPExtension.poolBusy ()
+    (fn uri => fn (v as {pendingFailures, ...}: file_data) => let
+        (* The compile may not be using the compile state.  That is
+           the exclusion that was shown to matter: missing it had a
+           dozen sound proofs reporting failures that varied from run
+           to run, because a pass elaborating and enqueueing proofs
+           rewinds the very cell this walk restores.
+
+           A worker still replaying is *not* excluded, and used to be.
+           Waiting for the pool to go idle means waiting for its
+           slowest proof, so one proof that never returns held up the
+           localisation of every failure in the file -- for as long as
+           the process lived, before there was a budget, and for the
+           length of the budget after.  A failure the pool has already
+           reported is a fact, and placing it should not be hostage to
+           an unrelated proof somewhere else in the file.
+
+           What makes that safe is that a replaying worker does not
+           read what this walk rewinds.  `replay' pins its own
+           `Context' for the whole replay precisely so a pass resuming
+           part-way down the file is invisible to it, and that pin
+           covers this walk's rewind for the same reason.  The rest of
+           the snapshot is the loaded-module set and the file's
+           namespace layer, and a worker needs neither: its tactic was
+           elaborated during the pass, and only compiling tactic *text*
+           wants the layer. *)
+        (* See `compileStateOwner': not `compileRunning', which asks a
+           different question.  This is a cheap early-out; the walk it
+           forks claims the state itself and gives up if refused. *)
+        fun compiling () = compileUsingState ()
      in
-        if null (Sref.value pendingFailures)
-           orelse compiling () orelse proving ()
+        if null (Sref.value pendingFailures) orelse compiling ()
         then ()
         else if not (claimDrain ()) then ()
         else let
@@ -3391,18 +5485,35 @@ fun start {diag, dbg, warnings} = let
   val () = localiseFailure :=
     (fn uri => fn (v as {lastTrees, proofDiags, ...}: file_data) =>
      fn {site, offset, msg} => let
-       val {text = {text, lines, ...}, ...} = !lastTrees
+       val {text = {text, lines, ...}, ...} = Sref.value lastTrees
      in
+       if not (proofStillDeclared v site) then () else
        case theoremTacEnd text offset of
            NONE => ()
          | SOME tacEnd =>
-           (case goalStateAtPos uri v (getLineCol lines tacEnd, !hoverWidth) of
-                SOME {failedRange = SOME pos, ...} =>
-                  (* Replaces the entry `updateProofDiag' made under the
-                     same key, rather than adding a second one beside
-                     it: this is that verdict, better placed.  Cleared
-                     when the proof comes good by the machinery that
-                     already does that.
+           (case goalStateAtPos true uri v
+                   (getLineCol lines tacEnd, !hoverWidth, NONE,
+                    !LSPExtension.goalStateAtPos) of
+                SOME {failedRange = SOME pos, failedCloseRange, ...} =>
+                  (* Written *beside* the entry `updateProofDiag' made
+                     under the same key, not over it.  The two say the
+                     same thing in two places, and both are worth
+                     having, because they are not equally certain.  The
+                     pool's verdict is a fact about the theorem: its
+                     replay ran the whole tactic and raised.  The
+                     position is the walker's, and the walker is a
+                     different execution -- it cheats past a branch
+                     that fails so it can carry on, so where it stops
+                     need not be where the replay raised.  Dropping the
+                     theorem's own squiggle for the located one traded
+                     the certain claim for the uncertain one.
+
+                     Both rebuilt here rather than appended to what is
+                     there, so that running twice for one proof leaves
+                     one of each.  The theorem's is reconstructed
+                     exactly as `updateProofDiag' writes it -- `msg'
+                     arrives already carrying its "proof failed: "
+                     prefix, which is why the two agree.
 
                      Not written at all once proof checking is off.
                      This runs on a thread of its own and takes as long
@@ -3419,8 +5530,12 @@ fun start {diag, dbg, warnings} = let
                             if !LSPExtension.deferProofs then
                               (Binarymap.insert
                                  (pd, site,
-                                  Error {hard = true, pos = pos,
-                                         msg = encString msg}), true)
+                                  Error {hard = true,
+                                         pos = proofRange v (size text)
+                                                         offset,
+                                         msg = encString msg} ::
+                                  failReports
+                                    (pos, failedCloseRange, msg)), true)
                             else (pd, false))
                    then publishAllDiagnostics uri v
                    else ())
@@ -3462,10 +5577,13 @@ fun start {diag, dbg, warnings} = let
                        line = Int.max (0, line - 1)}
       val fromHol = List.mapPartial located hits
       (* The open buffers, by their own text rather than by anything
-         built. *)
-      val open_ = withFileInfo (fn fi => (fi, Binarymap.listItems fi))
+         built.  A record whose buffer has been closed is still in the
+         map -- see `closeFile' -- and its text is no longer on screen,
+         so it does not answer "this file". *)
+      val open_ = List.filter (fn (_, v: file_data) => not (!(#closed v)))
+                    (withFileInfo (fn fi => (fi, Binarymap.listItems fi)))
       fun ofBuffer (uri, v) = let
-        val {text = {lines, ...}, ...} = !(#lastTrees (v: file_data))
+        val {text = {lines, ...}, ...} = Sref.value (#lastTrees (v: file_data))
         fun keep (Sym {name, span, ...}) =
             if String.isSubstring q (CharVector.map Char.toLower name)
             then SOME {name = name, container = "this file",
@@ -3493,9 +5611,9 @@ fun start {diag, dbg, warnings} = let
       print ",\"theory\":"; encString theory print;
       print ",\"class\":"; encString class print;
       print ",\"statement\":"; encPretty width statement print;
-      (case file of
+      (case Option.mapPartial pathToUri file of
          NONE => ()
-       | SOME f => (print ",\"uri\":"; encString (pathToUri f) print));
+       | SOME u => (print ",\"uri\":"; encString u print));
       print ",\"line\":"; encInt line print;
       print "}")
 
@@ -3530,7 +5648,7 @@ fun start {diag, dbg, warnings} = let
         val qs = back (st - 1)
         in SOME (String.substring (text, qs, st - 1 - qs)) end
       else NONE
-    in {prefix = prefix, qual = qual} end
+    in {prefix = prefix, qual = qual, start = st} end
 
   (* Every name in scope for the file, with its CompletionItemKind,
      computed once per `nsLayer' generation.  `#allVal' and friends
@@ -3554,9 +5672,9 @@ fun start {diag, dbg, warnings} = let
     end
 
   fun completionsAt uri (v as {lastTrees, nsLayer, ...}: file_data) pos = let
-    val {text = {text, lines, ...}, ...} = !lastTrees
+    val {text = {text, lines, ...}, ...} = Sref.value lastTrees
     val offset = fromLineCol lines pos
-    val {prefix, qual} = identPrefixAt text offset
+    val {prefix, qual, start} = identPrefixAt text offset
     in
       (* Nothing typed yet: the answer would be the whole namespace, and
          the client re-asks as soon as there is a character. *)
@@ -3564,6 +5682,7 @@ fun start {diag, dbg, warnings} = let
       else let
         val () = case !nsLayer of SOME restore => restore () | NONE => ()
         val items = ref ([]: {label: string, kind: int,
+                              sortText: string option,
                               detail: string option} list)
         val count = ref 0
         fun add it = if !count >= maxCompletions then ()
@@ -3571,14 +5690,38 @@ fun start {diag, dbg, warnings} = let
         fun addNames kind names =
             app (fn (nm, _) => if String.isPrefix prefix nm
                                then add {label = nm, kind = kind,
-                                         detail = NONE}
+                                         sortText = NONE, detail = NONE}
                                else ()) names
+        (* HOL's block keywords open a line and nothing else -- that is
+           what `colZero' means in `HOLSourceParser', and what
+           `tacticBodyDecl' leans on when it reads the structure of a
+           file it cannot parse.  The namespace has no binding for any
+           of them, so until now the only candidate for a half-typed
+           `Proof' was whatever structure happened to share the prefix:
+           `ProofStepPlan', which `poly-init2.ML' bakes into every heap,
+           and which the client would then accept on the Enter that
+           always follows a `Proof' line.
+
+           First, so the `maxCompletions' cap -- which `add' applies
+           first-come -- cannot starve them; they cost at most as many
+           slots as there are keywords. *)
+        val atColZero = start = 0 orelse String.sub (text, start - 1) = #"\n"
+        val () =
+          if qual = NONE andalso atColZero then
+            app (fn k =>
+                    if String.isPrefix prefix k
+                    then add {label = k, kind = 14,
+                              sortText = SOME ("0" ^ k), detail = NONE}
+                    else ())
+                holKeywords
+          else ()
         val ns = LSPNameSpace.fileNS
         val () = case qual of
             NONE =>
             app (fn (nm, kind) =>
                     if String.isPrefix prefix nm
-                    then add {label = nm, kind = kind, detail = NONE}
+                    then add {label = nm, kind = kind,
+                              sortText = NONE, detail = NONE}
                     else ())
                 (scopeNames v)
           | SOME q =>
@@ -3599,7 +5742,7 @@ fun start {diag, dbg, warnings} = let
           if prefix = "" then ()
           else app (fn ({name, theory, class, visible, ...}
                           : LSPExtension.ide_symbol) =>
-                       add {label = name, kind = 21,
+                       add {label = name, kind = 21, sortText = NONE,
                             detail = SOME (theory ^ "Theory" ^
                                            (if visible then ""
                                             else " (not an ancestor)"))})
@@ -3609,9 +5752,18 @@ fun start {diag, dbg, warnings} = let
         end
     end handle _ => {items = [], incomplete = true}
 
-  fun encCompletionItem {label, kind, detail} print = (
+  (* `sortText' is sent only where it has to be.  Absent, the client
+     sorts on `label', and "0" sorts ahead of any letter -- so the one
+     on a keyword is enough to float `Proof' above `ProofStepPlan'
+     without rearranging the thousands of namespace and theorem
+     entries, whose order would otherwise go from the order they were
+     collected in to alphabetical. *)
+  fun encCompletionItem {label, kind, sortText, detail} print = (
       print "{\"label\":"; encString label print;
       print ",\"kind\":"; encInt kind print;
+      (case sortText of
+         NONE => ()
+       | SOME s => (print ",\"sortText\":"; encString s print));
       (case detail of
          NONE => ()
        | SOME d => (print ",\"detail\":"; encString d print));
@@ -3622,7 +5774,36 @@ fun start {diag, dbg, warnings} = let
       print ",\"items\":"; encArray encCompletionItem items print;
       print "}")
 
-  fun eval id {uri, code, incr, holdep} = let
+  (* What a previous `$/eval' left bound, and where it was bound: the
+     file's `nsGen' and the `endByte' of the snapshot it was layered
+     on.  Keeping those bindings is most of what makes this a REPL --
+     a `val x = ...' that is gone by the next request is not one --
+     but they only mean anything over the state they were built
+     against, so they are carried when the generation and the snapshot
+     both match and dropped otherwise.  A `thm' whose theory a rewind
+     has taken back is the case that argument is about.
+
+     Not kept in `file_data': `nsLayer' there is reassigned after every
+     declaration of every compile (`captureSnap'), so bindings written
+     into it would not outlive the next keystroke. *)
+  val evalLayer : (unit -> unit) option ref = ref NONE
+  val evalLayerAt : (int * int) ref = ref (~1, ~1)
+
+  val busyReport = Error {
+    hard = true, pos = (0, 0),
+    msg = encString "$/eval: a compile holds the state; try again"}
+
+  fun eval id args =
+    case evalRefusal (#code args) of
+      SOME why => mkErr InvalidParams why
+    | NONE => evalChunk id args
+
+  (* Logged whole, to the client's own log.  The prompt a chunk is
+     typed into need not keep a transcript -- the point of holding
+     `$/eval' to questions is that none of them has to be recoverable
+     afterwards, but a reader still deserves to see what was asked. *)
+  and evalChunk id {uri, code, incr, holdep, position} = let
+    val () = logMessage ("eval: " ^ code)
     val lines = mkLineCounter code
 
     val mods = case holdep of HoldepNone => [] | _ => getHoldep code
@@ -3664,13 +5845,79 @@ fun start {diag, dbg, warnings} = let
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
     val compile = compileForReport uri code 0 NONE (ref 0) (fn _ => ())
-                                   (fn _ => ())
+                                   (fn _ => ()) (fn _ => ())
+
+    (* Evaluate where the cursor is, not where the last compile
+       stopped.  A file's declarations run in order, so a name is in
+       scope from the point the pass reached it and not before: an
+       eval that ignored the position would answer about the end of
+       the file, where a theorem proved *below* the cursor is in scope
+       and the answer is quietly wrong.  Hovering a `val' typed into
+       blank space -- the trick this request is meant to replace --
+       gets that right for free, because the compiler runs that text
+       where it sits.
+
+       The bracket is the walk's in `goalStateAtPos', for its reasons.
+       `restoreCompileSnap' carries the file's namespace layer as well
+       as its `Context', and that layer is thread-local, so this has to
+       run on the thread that compiles: inside the fork for the
+       streaming modes, not around them.
+
+       A claim that fails is reported rather than waited for, again as
+       in the walk.  A compile holds the state for a whole pass, and a
+       REPL that blocks for one is worse than a REPL that says to ask
+       again -- the pass it loses to being the 300ms-debounced one
+       behind the user's own last keystroke. *)
+    fun inEvalContext run busy = let
+      val v = withFileInfo (fn fi => (fi, Binarymap.peek (fi, uri)))
+      val (snap, key) = case v of
+          NONE => (NONE, (~1, ~1))
+        | SOME ({lastTrees, nsGen, ...}: file_data) => let
+            val {parse, text} = Sref.value lastTrees
+            val {declSnapshots, ...} = parse
+            val at = case position of
+                SOME p => fromLineCol (#lines text) p
+              | NONE => size (#text text) + 1
+            (* Largest snapshot strictly before the cursor; the same
+               fold as `snapBefore' there. *)
+            val s = List.foldl
+              (fn (s, best) =>
+                if #endByte s >= at then best
+                else case best of
+                       NONE => SOME s
+                     | SOME b => if #endByte s > #endByte b then SOME s
+                                 else best)
+              NONE declSnapshots
+            in (s, (!nsGen, case s of SOME s => #endByte s | NONE => ~1)) end
+      in
+        withWalkState
+          {busy = busy, cleanup = fn () => HOL_IDE.printBindings := false}
+          (fn () => let
+             val () = case snap of
+                 NONE => ()
+               | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+             val () = if !evalLayerAt = key then
+                        (case !evalLayer of
+                             SOME install => install ()
+                           | NONE => ())
+                      else ()
+             (* What a chunk bound is the answer here, where in a
+                buffer elaboration it would be noise; see `codeFn'. *)
+             val () = HOL_IDE.printBindings := true
+             val () = run ()
+           in evalLayer := SOME (LSPNameSpace.snapshotLayer ());
+              evalLayerAt := key
+           end)
+      end
     in
       case incr of
         IncrNone => let
         val buf = DArray.new (8, Completed)
-        val _ = compile (fn Progress _ => () | msg => mergeInto msg buf) handle
-          Thread.Interrupt => DArray.push (buf, Interrupted)
+        val _ = inEvalContext
+          (fn () =>
+            compile (fn Progress _ => () | msg => mergeInto msg buf) handle
+              Thread.Interrupt => DArray.push (buf, Interrupted))
+          (fn () => DArray.push (buf, busyReport))
         in Ok (encDArray encReport buf) end
       | IncrChunk => (
         spawnJobCore id (fn () => let
@@ -3683,18 +5930,28 @@ fun start {diag, dbg, warnings} = let
               print ",\"out\":"; encDArray encReport buf print;
               if complete then print ",\"complete\":true" else (); print "}")
             in send (mkNotif "$/eval/P" params); DArray.clear buf end
-          val _ = compile (fn Progress i => clearBuf false i | msg => mergeInto msg buf)
-            handle Thread.Interrupt => DArray.push (buf, Interrupted)
+          val _ = inEvalContext
+            (fn () =>
+              compile (fn Progress i => clearBuf false i
+                        | msg => mergeInto msg buf)
+                handle Thread.Interrupt => DArray.push (buf, Interrupted))
+            (fn () => DArray.push (buf, busyReport))
           in clearBuf true (size code) end);
         Ok encNull)
       | IncrStream => (
         spawnJobCore id (fn () => let
-          fun sendMsg msg = send (mkNotif "$/eval/1" (fn print => (
+          fun send1 msg = send (mkNotif "$/eval/1" (fn print => (
             print "{\"id\":"; encReqId id print;
             print ",\"out\":"; encReport msg print; print "}")))
-          val ok = (compile sendMsg; true) handle
-            Thread.Interrupt => (sendMsg Interrupted; false)
-          in if ok then sendMsg Completed else () end);
+          (* Whole lines, not the pretty printer's own tokens; see
+             `lineBuffer'. *)
+          val {msg = sendMsg, flush} = lineBuffer send1
+          val ok = ref false
+          val _ = inEvalContext
+            (fn () => (compile sendMsg; ok := true) handle
+              Thread.Interrupt => (sendMsg Interrupted; ok := false))
+            (fn () => sendMsg busyReport)
+          in flush (); if !ok then sendMsg Completed else () end);
         Ok encNull)
     end
 
@@ -3755,7 +6012,8 @@ fun start {diag, dbg, warnings} = let
                (fileInfo, Binarymap.peek (fileInfo, uri))) of
           NONE => Ok (fn print => print "[]")
         | SOME v => let
-            val {text = {lines, ...}, ...} = !(#lastTrees (v: file_data))
+            val {text = {lines, ...}, ...} =
+                Sref.value (#lastTrees (v: file_data))
             val syms = symbolsOf v
           in
             Ok (if !hierarchicalSymbols
@@ -3796,6 +6054,38 @@ fun start {diag, dbg, warnings} = let
                  ignored. *)
               logMessage ("hoverWidth = " ^ Int.toString w))
         else logMessage ("ignoring hoverWidth " ^ Int.toString w);
+      (* How long a deferred proof may run before the pool settles it as
+         `timedout' and stops waiting.  Takes effect for proofs forked
+         after this arrives; one already running keeps the budget it was
+         forked under, there being no way to move a deadline a sleeping
+         watchdog is already holding.  `0' asks for no limit.
+
+         Negative is nonsense rather than a shorthand, and is ignored:
+         read as a duration it is a deadline already past, which would
+         time out every proof the instant it started. *)
+      case JSONDecode.decode
+             (JSONDecode.fieldO "proofTimeoutMs" JSONDecode.int) params of
+        NONE => ()
+      | SOME ms =>
+        if ms < 0 then logMessage ("ignoring proofTimeoutMs " ^
+                                   Int.toString ms)
+        else (LSPExtension.proofTimeout :=
+                Time.fromMilliseconds (IntInf.fromInt ms);
+              logMessage ("proofTimeoutMs = " ^ Int.toString ms));
+      (* What one goal-state walk may spend.  The default is a
+         keystroke's worth, because the shipped clients follow a
+         cursor; a caller replaying a whole proof to measure it needs
+         orders of magnitude more, and before this was settable could
+         only be told that the budget blew -- a fact about the budget,
+         not about the proof. *)
+      case JSONDecode.decode
+             (JSONDecode.fieldO "walkBudgetMs" JSONDecode.int) params of
+        NONE => ()
+      | SOME ms =>
+        if ms <= 0 then logMessage ("ignoring walkBudgetMs " ^
+                                    Int.toString ms)
+        else (LSPExtension.walkBudgetMs := Int.toLarge ms;
+              logMessage ("walkBudgetMs = " ^ Int.toString ms));
       (* Proof checking, switchable without a restart -- the CLI flag
          `--lsp-check-proofs' only sets the initial value.  Turning it
          on recompiles, because the proofs of a pass that has already
@@ -3839,17 +6129,22 @@ fun start {diag, dbg, warnings} = let
                theories. *)
             List.app
               (fn (uri, v as {compile, lastTrees, minEditOffset,
-                              ...}: file_data) =>
+                              closed, ...}: file_data) =>
                   let
-                    val running = compileRunning compile
+                    (* A closed buffer is not re-elaborated: the setting
+                       applies to what the user is looking at, and
+                       compiling takes the process-global HOL state
+                       away from the file that is. *)
+                    val skip = !closed orelse compileRunning compile
                     (* `declSnapshots' is newest-first, so the last one
                        is the header's. *)
                     val headerEnd =
-                        case rev (#declSnapshots (#parse (!lastTrees))) of
+                        case rev (#declSnapshots
+                                    (#parse (Sref.value lastTrees))) of
                             [] => NONE
                           | snap :: _ => SOME (#endByte snap)
                   in
-                    case (running, headerEnd) of
+                    case (skip, headerEnd) of
                         (true, _) => ()
                       | (_, NONE) => ()
                       | (_, SOME off) => (bumpMinEdit minEditOffset off;
@@ -3870,21 +6165,31 @@ fun start {diag, dbg, warnings} = let
     | Request {method = "$/eval", id, params} =>
       spawnJob id params evalParams (eval id)
     | Request {method = "$/hol/goalState", id, params} =>
-      spawnJob id params goalStateParams (fn {uri, pos, width} => let
+      spawnJob id params goalStateParams (fn {uri, pos, width, step} => let
         val (v_opt, resp) = case withFileInfo (fn fileInfo =>
               (fileInfo, Binarymap.peek (fileInfo, uri))) of
             NONE => (NONE, NONE)
-          | SOME v => (SOME v, goalStateAtPos uri v (pos, width))
+          | SOME v => (SOME v, goalStateAtPos false uri v
+                                 (pos, width, step,
+                                  !LSPExtension.goalStateAtPos))
         (* Fold the walker's failure/success into per-file walker
            diagnostics keyed by theorem name so a user-fix removes
            the squiggle without waiting for the next compile.  Emit
-           publishDiagnostics whenever the walker's slot changes. *)
+           publishDiagnostics whenever the walker's slot changes.
+
+           Only ever added to.  A walk reporting no failure withdraws
+           nothing, for the reasons at `walkerDiags': such a walk is
+           the ordinary outcome for a proof whose branches are
+           unfinished, and says nothing about the tactics it cheated
+           past or never replayed.  The event that withdraws these is
+           an edit, by way of `startCompile'. *)
         val () = case (v_opt, resp) of
-            (SOME (v: file_data), SOME {theorem, failedRange, error, ...}) => let
+            (SOME (v: file_data),
+             SOME {theorem, failedRange, failedCloseRange, error, ...}) => let
               val next = case (failedRange, error) of
-                  (SOME (s, e), SOME msg) => SOME (Error {
-                    hard = true, pos = (s, e), msg = encString msg })
-                | _ => NONE
+                  (SOME pos, SOME msg) =>
+                    failReports (pos, failedCloseRange, msg)
+                | _ => []
               (* Decide and write in one step.  A request thread is
                  forked per `$/hol/goalState`, so two can be here at
                  once, and `startCompile` clears this map from a third:
@@ -3892,34 +6197,47 @@ fun start {diag, dbg, warnings} = let
                  entry, or writes a stale map back over the clear and
                  leaves a squiggle no recompile removes. *)
               val changed =
+                  if null next then false
+                  else
                   Sref.gen_update (#walkerDiags v)
-                    (fn wd =>
-                        case (Binarymap.peek (wd, theorem), next) of
-                            (NONE, NONE) => (wd, false)
-                          | (_, NONE) =>
-                            (#1 (Binarymap.remove (wd, theorem)), true)
-                            (* re-emitted even for the same theorem:
-                               the text it points into may have moved *)
-                          | (_, SOME r) =>
-                            (Binarymap.insert (wd, theorem, r), true))
+                    (fn wd => let
+                        val had = getOpt (Binarymap.peek (wd, theorem), [])
+                        val keys = List.mapPartial reportKey had
+                        fun known r =
+                            case reportKey r of
+                                NONE => false
+                              | SOME k => List.exists (fn k' => k' = k) keys
+                        val fresh = List.filter (not o known) next
+                      in
+                        if null fresh then (wd, false)
+                        else (Binarymap.insert (wd, theorem, had @ fresh),
+                              true)
+                      end)
             in if changed then publishAllDiagnostics uri v else () end
           | _ => ()
-        val lines = case v_opt of
-                        NONE => mkLineCounter ""
-                      | SOME v => #lines (#text (!(#lastTrees v)))
-        (* `null' says "no goal state at this position", which sends a
-           reader looking for the fault in their proof.  When the walk
-           was refused only because the state is not ready yet, say so
-           in the one word the clients already act on: `pending' is what
-           a silent failure mid-compile reports, and both mean the same
-           thing to a reader -- wait for the compile.  No goals with it,
-           there being none to give. *)
-        val notReady = case (resp, v_opt) of
-                           (NONE, SOME v) => stateNotReady v
-                         | _ => false
-        in Ok (if notReady then (fn print => print "{\"status\":\"pending\"}")
-               else encOrNull (encGoalStateResponse (encRangeLC lines)) resp)
-        end)
+        in goalStateReply (v_opt, resp) end)
+    | Request {method = "$/hol/tryTactic", id, params} =>
+      spawnJob id params tryTacticParams
+        (fn {uri, pos, width, step, tactic, budgetMs} => let
+          val (v_opt, resp) = case withFileInfo (fn fileInfo =>
+                (fileInfo, Binarymap.peek (fileInfo, uri))) of
+              NONE => (NONE, NONE)
+            | SOME v =>
+              (SOME v,
+               (* Not a locating walk: the anchor is a place the caller
+                  named, and reaching it means carrying on past a
+                  branch that is not finished yet, exactly as a cursor
+                  request does. *)
+               goalStateAtPos false uri v
+                 (pos, width, step,
+                  fn (c, t) =>
+                     !LSPExtension.tryTacticAt
+                       (c, t, {tactic = tactic, budgetMs = budgetMs})))
+        (* Deliberately no `walkerDiags' fold, unlike `$/hol/goalState'.
+           The candidate is not in the file, so a failure of it is not a
+           fault in what the user wrote and must not squiggle anything;
+           the probe's answer is the whole report. *)
+        in goalStateReply (v_opt, resp) end)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
     | Notification {method = "$/cancelRequest", params} => let
@@ -3933,7 +6251,10 @@ fun start {diag, dbg, warnings} = let
           SOME v => (fileInfo, (v, true))
         | NONE => let val v = newFile text version
                   in (Binarymap.insert (fileInfo, uri, v), (v, false)) end)
-      val () = if existed then applyEdit v version [{range = NONE, text = text}]
+      val () = #closed v := false
+      val () = if existed
+               then applyEdit uri v version
+                              [{range = NONE, text = text}]
                else augmentLoadPathForUri uri
       in if !elabOnRef = ElabOnChange then startCompile uri v else () end
     | Notification {method = "textDocument/didChange", params} => let
@@ -3941,7 +6262,7 @@ fun start {diag, dbg, warnings} = let
       val _ = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
         NONE => ()
       | SOME v => (
-        applyEdit v version changes;
+        applyEdit uri v version changes;
         (* Debounce so keystroke bursts don't kick off a compile per
            character; only the last edit in a 300 ms window fires. *)
         if !elabOnRef = ElabOnChange then scheduleCompile uri v else ())
@@ -3962,8 +6283,7 @@ fun start {diag, dbg, warnings} = let
       val _ = withFileInfo (fn fileInfo => (
         case Binarymap.peek (fileInfo, uri) of
           NONE => (fileInfo, ())
-        | SOME {compile, ...} =>
-          (stopCompile compile; (#1 (Binarymap.remove (fileInfo, uri)), ()))))
+        | SOME v => (closeFile v; (fileInfo, ()))))
       in () end
     | Notification {method = "textDocument/didSave", params} =>
       if !elabOnRef <> ElabOnSave then () else let

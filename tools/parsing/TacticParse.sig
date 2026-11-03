@@ -5,8 +5,8 @@ datatype 'a tac_expr
   = Then of 'a tac_expr list
   | ThenLT of 'a tac_expr * 'a tac_expr list
   | Subgoal of 'a
-  | By of 'a * 'a tac_expr
-  | SufficesBy of 'a * 'a tac_expr
+  | By of 'a * 'a * 'a tac_expr
+  | SufficesBy of 'a * 'a * 'a tac_expr
   | First of 'a tac_expr list
   | FirstProve of 'a tac_expr list
   | Try of 'a tac_expr
@@ -18,7 +18,7 @@ datatype 'a tac_expr
 
   | LThen of 'a tac_expr * 'a tac_expr list
   | LThenLT of 'a tac_expr list
-  | LThen1 of 'a tac_expr
+  | LThen1 of 'a * 'a tac_expr
   | LTacsToLT of 'a tac_expr
   | LNullOk of 'a tac_expr
   | LFirst of 'a tac_expr list
@@ -57,9 +57,9 @@ val printTacAsSML: string -> (int * int) tac_expr -> string option
 
 datatype tac_frag_open
   = FOpen
-  | FOpenThen1
-  | FOpenBy of int * int
-  | FOpenSufficesBy of int * int
+  | FOpenThen1 of int * int
+  | FOpenBy of (int * int) * (int * int)
+  | FOpenSufficesBy of (int * int) * (int * int)
   | FOpenFirst
   | FOpenRepeat
   | FOpenTacsToLT
@@ -138,6 +138,17 @@ end
         with a tactic-vs-list_tactic flag), RepairEmpty / RepairGroup
         (synthetic nodes inserted where the source was empty or had an
         unclosed bracket), and OOpaque (an opaque list element).
+
+    Three nodes carry the span of the combinator token that introduced
+    them, separately from the span of what it applies to: LThen1 (`>-',
+    `THEN1', `>>-'), By and SufficesBy (whose other annotation is the
+    assertion quotation).  It survives into the linearised form as the
+    payload of FOpenThen1 / FOpenBy / FOpenSufficesBy, so a caller with
+    a failure to report can point at the combinator that made the
+    demand rather than at the whole of what was demanded.  It is
+    deliberately *not* what topSpan answers with: the walk takes a
+    `>-''s extent from its body, and giving the wrapper a span of its
+    own would change what it measures.
 
     isTac classifies a tac_expr as a tactic (true) or a list_tactic
     (false).  topSpan pulls the source span out of the meta nodes that

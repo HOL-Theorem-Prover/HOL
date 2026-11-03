@@ -86,8 +86,17 @@ fun parseSML file read parseError: scope -> result = let
   fun colZero start = start = 0 orelse DString.sub (body, start - 1) = #"\n"
   val _ = ws ()
 
+  (* A raw newline ends the literal, and is left for the caller.  SML
+     admits a newline inside a string or character literal only within
+     a `\ ... \' gap, which the `#"\\"' branch below consumes; so one
+     reached here says the closing quote is missing.  Running on to
+     `\000' instead would take the rest of the file into the literal --
+     every declaration after it, and the `QED' closing the proof it
+     sits in, which is how a cursor in a later theorem came to be
+     answered with the broken theorem's goal. *)
   fun finishString p = case cur () of
     #"\000" => parseError (p, !pos) "unclosed string literal"
+  | #"\n" => parseError (p, !pos) "unclosed string literal"
   | #"\"" => next ()
   | #"\\" => (next ();
     if Char.isSpace (cur ()) then
@@ -195,7 +204,7 @@ fun parseSML file read parseError: scope -> result = let
     fun holKw () = if colZero start then HolKeyword else Regular
     (* `Datatype' at column zero introduces a `Datatype: ... End'
        declaration only when a colon follows (after non-newline whitespace);
-       otherwise it is the ordinary bossLib.Datatype function applied to a
+       otherwise it is the ordinary Datatype.Datatype function applied to a
        quotation -- e.g. an old-style `Datatype `...`` -- and must stay
        Regular so it parses as an expression. *)
     fun holKwColon () =
@@ -307,7 +316,13 @@ fun parseSML file read parseError: scope -> result = let
         parseError (#1 tk, !pos) "unexpected delimiter";
         parseSeparated (e :: args) (NONE :: seps) NONE getStop f)
       | NONE => let
-        val stop = case stop of SOME stop => stop | _ => getStop e handle List.Empty => #1 tk
+        (* Include the last element in the separated declaration's span. *)
+        val eStop = SOME (getStop e) handle List.Empty => NONE
+        val stop = case (eStop, stop) of
+                       (SOME a, SOME b) => Int.max (a, b)
+                     | (SOME a, NONE) => a
+                     | (NONE, SOME b) => b
+                     | (NONE, NONE) => #1 tk
         in unread tk; {args = rev (e :: args), seps = rev seps, stop = stop} end
 
   fun isKeyword kw = fn (s, IdentTk) => if ident s = kw then SOME true else NONE | _ => NONE
@@ -813,7 +828,19 @@ fun parseSML file read parseError: scope -> result = let
           end
         else (next (); qtoken cm)
 
-    fun expected () = "expected [" ^ String.concatWith ", " s ^ "]"
+    (* The only quotation that ends at `Proof' is a theorem's
+       statement, so name the keyword and say where it has to be.
+       Reaching here means some other column-0 keyword turned up
+       first, and the position this message gets is that keyword --
+       typically the `QED', which on its own tells the reader
+       nothing.  A `Proof' indented by even one space is the case
+       worth spelling out: it is not in column 0, so it reads as part
+       of the statement and the scan runs straight past it. *)
+    fun expected () =
+        case s of
+          ["Proof"] => "expected [Proof]: a theorem's statement ends at \
+                       \a `Proof' starting in column 0"
+        | _ => "expected [" ^ String.concatWith ", " s ^ "]"
 
     fun mismatch_msg mismatches =
       case rev mismatches of

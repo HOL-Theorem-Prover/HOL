@@ -66,13 +66,11 @@ in
 
       Marks, rather than pins.  `Context.with_context` would make those
       reads answer from `ctxt` and the census would fall silent, which
-      is the opposite of what the census is for -- and two further
-      reasons it does not belong here: a proof that writes context state
-      would stop seeing its own write, since writes still go to the live
-      cell; and a pin held for every proof in a batch build would cost
-      `mk_const` the fast path `with_context` documents.  The LSP's
-      proof pool pins, because there the cell really is being rewound
-      underneath a running proof. *)
+      is the opposite of what the census is for -- and a pin held for
+      every proof in a batch build would cost `mk_const` the fast path
+      `with_context` documents.  The LSP's proof pool pins, because
+      there the cell really is being rewound underneath a running
+      proof. *)
    fun TAC_PROOF_in ctxt (g, tac) =
       (check_current_thy ctxt g;
        case Context.in_proof (fn () => tac g ctxt) () of
@@ -423,6 +421,18 @@ fun tac1 THEN1 tac2 = tac1 THEN_LT REVERSE_LT THEN_LT
 val ALL_TAC: tactic = fn (g: goal) => fn _ (* ctxt *) => ([g], hd)
 val ALL_LT: list_tactic = fn (gl: goal list) => fn _ => (gl, Lib.I)
 val all_tac = ALL_TAC
+
+(*---------------------------------------------------------------------------
+ * Tactic that proves any goal, by oracle rather than by proof.  Lives here
+ * rather than in bossLib because the tools that stand it in for a proof --
+ * the LSP walker skipping a THENL branch, the LSP's retry of a declaration
+ * whose tactic did not compile -- run in every heap, and bossLib is in none
+ * of those below src/boss.  The tag is what Theory reads to mark a theory
+ * CHEAT, so it has to stay "cheat".
+ *---------------------------------------------------------------------------*)
+
+val cheat: tactic =
+    fn g => fn _ (* ctxt *) => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 fun TRY tac = tac ORELSE ALL_TAC
 fun TRY_LT ltac = ltac ORELSE_LT ALL_LT

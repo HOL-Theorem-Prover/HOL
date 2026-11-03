@@ -146,9 +146,16 @@ in
 end;
 
 
+<<<<<<< HEAD
 val {get = check_var_const_clash,...} = HOLFlags.create_btrace(
       {group = "Sanity", name = "check_var-const_clash"},
       true
+=======
+val check_var_names___const_flag = ref true;
+val _ = Feedback.register_btrace (
+      "Sanity Check Var-Const Clash",
+      check_var_names___const_flag
+>>>>>>> develop
     );
 
 fun check_var_names___const ((thy, name), thm) =
@@ -172,10 +179,16 @@ end else false;
 (* Check for free top-level variables                                         *)
 (******************************************************************************)
 
+<<<<<<< HEAD
 val {get = check_free_vars_flag, ...} = HOLFlags.create_btrace(
       {group = "Sanity", name = "check_free_vars"},
       true
     );
+=======
+val check_free_vars_ref = ref 1;
+val _ =
+    Feedback.register_trace ("Sanity Check Free Vars", check_free_vars_ref, 1);
+>>>>>>> develop
 
 fun varlist_to_string vL =
   concat (commafy (map (fn v => "'"^(ppstring pp_term v)^"'") vL))
@@ -277,7 +290,8 @@ fun sanity_check_exn_thm (name, thm) =
       (print "\n\n";raise sanity_exn);
 
 fun sanity_prove (t, tac) = sanity_check_exn_thm ("-", Tactical.prove (t, tac));
-fun save_thm (name, thm) = Theory.save_thm (name, sanity_check_exn_thm (name, thm));
+fun save_thm (name, thm) =
+    Theory.save_thm (name, sanity_check_exn_thm (name, thm));
 fun store_thm (name, t, tac) =
    sanity_check_exn_thm (name, Tactical.store_thm (name, t, tac));
 

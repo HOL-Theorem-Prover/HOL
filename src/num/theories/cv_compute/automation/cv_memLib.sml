@@ -37,7 +37,10 @@ fun cv_time f x =
   end
 end
 
-fun indent_print_aux f verbosity prefix suffix x = let
+(* The check comes first so that f x, which can pretty-print a large
+   theorem, is not computed when nothing would be printed. *)
+fun indent_print_aux f verbosity prefix suffix x =
+  if not (verbosity_leq verbosity (!verbosity_level)) then () else let
   val m = !max_print_depth
   fun change #"\n" = "\n  "
     | change c = implode [c]

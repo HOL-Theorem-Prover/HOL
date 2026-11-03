@@ -1,0 +1,72 @@
+signature legacyInduction =
+sig
+  include Abbrev
+
+  (* ----------------------------------------------------------------------
+      The induction principle the older construction produced.
+
+      A datatype that recurses under an operator gets a principle saying,
+      of a constructor's argument, what the operator's own set function
+      says of it:
+
+        ∀P. .. ∧ (∀l. (∀z. z ∈ setL l ⇒ P z) ⇒ ∀e. P (Clos l e)) ⇒ ∀v. P v
+
+      The older construction said the same with a predicate for the
+      operator as well, and clauses for the operator's own constructors:
+
+        ∀P0 P1. .. ∧ (∀l. P1 l ⇒ ∀e. P0 (Clos l e)) ∧
+                P1 [] ∧ (∀y l. P0 y ∧ P1 l ⇒ P1 (y::l)) ⇒
+                (∀v. P0 v) ∧ ∀l. P1 l
+
+      A proof written against the second shape can have it back.  Two
+      things are wanted per operator recursed under, and the caller
+      supplies them, since only the caller knows which operator it
+      means: the operator's own induction principle, and what its set
+      function says at each of the operator's constructors —
+
+        setL [] = ∅        setL (h::t) = {h} ∪ setL t
+
+      in whatever form the operator's theory writes them.
+
+      An operator may collect what it holds through operators of its
+      own, and then the principle mentions only the outermost: a record
+
+        env = <| ve : (num # 'a) list ; vn : num |>
+
+      has one set function, and `envSET (env a0 a1)` is a union over a
+      list of pairs.  The older construction gave the list and the pair
+      a predicate apiece as well, and so does this — the set equation
+      says which operators they are, and at what types.
+
+      There is one predicate per operator recursed under, and they come
+      in the order the principle's clauses first mention them, those
+      reached only through another operator after the one that reaches
+      them — which fixes both their names and the order of the
+      conclusion's conjuncts, since a caller matches against those.
+     ---------------------------------------------------------------------- *)
+  type operator = {induction : thm, sets : thm list}
+
+  (* A caller who has only the principle need not know which operators
+     it means: the principle names them, their own induction principles
+     are in the TypeBase, and what their set functions say at their
+     constructors is recorded with the operators themselves.  Supply
+     the operators to say something those cannot. *)
+  val operators_of : thm -> operator list
+
+  val mutual_induction : operator list -> thm -> thm
+  val mutual_ind_from_ops : thm -> thm (* composition of two above *)
+
+  (* what that will prove, for a caller who would rather see it first *)
+  val mutual_induction_goal : operator list -> thm -> term
+
+
+  (* An induction principle as the rest of HOL expects to read one: the
+     variables an argument is quantified over pushed past the hypothesis
+     that mentions them, and the bound variables named for their types --
+     `!P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l` rather than
+     `!P. P [] /\ (!a0 a1. P a1 ==> P (a0::a1)) ==> !l. P l`.  INDUCT_THEN
+     wants the first, and so do developments that name the variables an
+     induction leaves them. *)
+  val munge_ind_thm : thm -> thm
+
+end

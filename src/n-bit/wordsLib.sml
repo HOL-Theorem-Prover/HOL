@@ -578,11 +578,6 @@ end
 val SYM_WORD_NEG_1 = SYM WORD_NEG_1
 
 local
-  structure Numtab = Table(struct
-    type key = Arbnum.num
-    val ord = Arbnum.compare
-    val pp = HOLPP.add_string o Arbnum.toString
-  end)
   val d : thm Numtab.table ref = ref Numtab.empty
   val mk_th = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV SYM_WORD_NEG_1) o GSYM o
               (Conv.REWR_CONV word_T_def THENC Conv.RAND_CONV SIZES_CONV) o

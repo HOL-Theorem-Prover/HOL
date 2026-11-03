@@ -83,12 +83,12 @@ and planTactic tactic =
     | ThenLT (_, [LReverse]) => [tacticLeaf tactic]
     | ThenLT (first, rest) =>
         planTactic first @ List.concat (map planListTactic rest)
-    | By (quotation, body) =>
-        [tacticLeaf (By (quotation, Then [])),
+    | By (quotation, kw, body) =>
+        [tacticLeaf (By (quotation, kw, Then [])),
          Select {selector = SelectFirst, mode = SelectSolve,
                  body = planTactic body}]
-    | SufficesBy (quotation, body) =>
-        [tacticLeaf (SufficesBy (quotation, Then [])),
+    | SufficesBy (quotation, kw, body) =>
+        [tacticLeaf (SufficesBy (quotation, kw, Then [])),
          Select {selector = SelectFirst, mode = SelectSolve,
                  body = planTactic body}]
     | First alternatives =>
@@ -124,7 +124,7 @@ and planListTactic tactic =
       LThenLT tactics => List.concat (map planListTactic tactics)
     | LThen (first, rest) =>
         planListTactic first @ List.concat (map suffix rest)
-    | LThen1 body =>
+    | LThen1 (_, body) =>
         [Select {selector = SelectFirst, mode = SelectSolve,
                  body = planTactic body}]
     | LNullOk inner =>

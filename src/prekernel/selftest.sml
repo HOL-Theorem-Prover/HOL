@@ -10,7 +10,8 @@ val expected = List.tabulate(10, fn i => "foo" ^ Int.toString (i + 1))
 val _ = (l = expected before print "OK\n") orelse die "FAILED"
 
 (* Context.with_context answers this thread's ambient reads from the
-   pinned context rather than from the live cell.
+   pinned context rather than from the live cell, and takes that
+   thread's writes there as well.
 
    Deterministic and single-threaded on purpose.  The property is about
    where a read is answered from, not about timing, so rewinding the
@@ -56,3 +57,69 @@ val _ =
     handle Boom =>
            if readSlot () = 2 then print "OK\n"
            else die "FAILED: pin outlived the exception"
+
+(* The writes.  A pin that answered reads from one context and sent
+   writes to another let a caller that declared a name and looked it up
+   again see two different answers, which is how a theorem could be
+   made to describe the type its own declaration had just replaced. *)
+
+val _ = tprint "a pinned write answers the pinned thread's own reads"
+
+val pinnedAfterWrite =
+    Context.with_context pinnedCtx
+      (fn () => (Context.Data.write slot 3; readSlot ())) ()
+
+val _ =
+    if pinnedAfterWrite = 3 then print "OK\n"
+    else die ("FAILED: read back " ^ Int.toString pinnedAfterWrite ^
+              " (want 3)")
+
+val _ = tprint "a pinned write does not reach the live cell"
+
+val _ =
+    if readSlot () = 2 then print "OK\n"
+    else die ("FAILED: live cell holds " ^ Int.toString (readSlot ()) ^
+              " (want 2)")
+
+val _ = tprint "a pinned write is discarded with the pin"
+
+val _ =
+    if Context.with_context pinnedCtx readSlot () = 1 then print "OK\n"
+    else die "FAILED: a write outlived the pin that took it"
+
+val _ = tprint "with_slot_value brackets a pinned write"
+
+val (inWindow, afterWindow) =
+    Context.with_context pinnedCtx
+      (fn () =>
+          let val inWindow = Context.Data.with_slot_value slot 7 readSlot ()
+          in (inWindow, readSlot ()) end) ()
+
+val _ =
+    if inWindow = 7 andalso afterWindow = 1 then print "OK\n"
+    else die ("FAILED: inside the window " ^ Int.toString inWindow ^
+              " (want 7), after it " ^ Int.toString afterWindow ^
+              " (want 1)")
+
+val _ = tprint "with_slot_value in a pin leaves the live cell alone"
+
+val _ =
+    if readSlot () = 2 then print "OK\n"
+    else die ("FAILED: live cell holds " ^ Int.toString (readSlot ()) ^
+              " (want 2)")
+
+val _ = tprint "restore inside a pin replaces the pin, not the cell"
+
+val () = Context.Data.write slot 5
+val fiveCtx = Context.snapshot ()
+val () = Context.Data.write slot 2
+
+val restoredInPin =
+    Context.with_context pinnedCtx
+      (fn () => (Context.restore fiveCtx; readSlot ())) ()
+
+val _ =
+    if restoredInPin = 5 andalso readSlot () = 2 then print "OK\n"
+    else die ("FAILED: pinned read " ^ Int.toString restoredInPin ^
+              " (want 5), live cell " ^ Int.toString (readSlot ()) ^
+              " (want 2)")

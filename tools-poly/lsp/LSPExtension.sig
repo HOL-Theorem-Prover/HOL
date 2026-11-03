@@ -19,6 +19,12 @@ val fromLineCol: lines -> posLC -> int
    Mixing the two silently works under utf-8, where they agree, and
    skews every position in a line containing a non-ASCII character
    under utf-16. *)
+(* Whether a client-sent position names a column past the end of its
+   line, in the negotiated units.  `fromLineCol' clamps such a position
+   rather than running into the next line; this is how a caller finds
+   out that it had to. *)
+val posOvershoots: lines -> posLC -> bool
+
 val getLineColBytes: lines -> int -> posLC
 val fromLineColBytes: lines -> posLC -> int
 
@@ -155,8 +161,19 @@ type goal_state_response = {
      failed — the file byte range the client should surface as a
      runtime diagnostic (LSP squiggle).  NONE when there is no
      failure or the failure has no natural byte range (e.g. a
-     structural marker, or a timeout). *)
+     structural marker, or a timeout).
+
+     For a combinator that obliged what it brackets to prove a goal —
+     `>-`, `by`, `suffices_by` — this is the combinator itself, not
+     the branch under it: the branch is usually the text being
+     written, and marking all of it says nothing the reader doesn't
+     already know. *)
   failedRange: (int * int) option,
+  (* The paren closing the branch `failedRange` points at, when the
+     branch is parenthesised, so a client can mark both ends of it and
+     leave the middle alone.  NONE otherwise, and for every failure
+     that is not one of the three combinators above. *)
+  failedCloseRange: (int * int) option,
   (* `pretty` again, but taken apart: consecutive pieces whose texts
      concatenate to exactly what `pretty` prints once its colour
      escapes are removed.  Each piece carries what the pretty-printer
@@ -182,10 +199,97 @@ type theorem_context = {
   tacText: string,        (* raw text between `Proof` and `QED` *)
   tacStart: int,          (* file byte offset of `tacText` start *)
   cursor: int,            (* cursor byte offset (file coords) *)
-  compileDone: bool       (* has the file's own compile finished? *)
+  compileDone: bool,      (* has the file's own compile finished? *)
+  (* SOME for a `Resume thm[label]: tac QED' block.  The goal such a
+     body discharges is written nowhere in the file -- it is whatever
+     the parent proof suspended under `label' -- so `quote' is empty
+     and the hook looks the goal up in the suspension store instead of
+     parsing it.  NONE for Theorem and Triviality.
+
+     An option rather than an empty `suspension', because "" is a
+     legal label: `Resume foo:' with no attribute list defaults to it.
+     Strings only, like the rest of this signature: the structure is
+     compiled into `bin/hol' by polyc, below the kernel, and cannot
+     name a term. *)
+  resumeOf: {suspension: string, label: string} option,
+  (* SOME for a cursor in the `Termination … End' region of a
+     `Definition'.  Like a `Resume', the goal such a body discharges is
+     written nowhere in the file: it is the termination obligation the
+     definition principle derives from the equations.  So `quote' holds
+     those equations rather than a statement, and the hook builds the
+     defn and asks it for its obligation instead of parsing a term.
+
+     `stem' is the Definition's name, which the parser already hands
+     over without its attribute block, and is what `Hol_defn' is given.
+     `quoteStart' is the `Definition' keyword rather than the quote, so
+     that the snapshot restored before the walk is one in which the
+     constant the defn is about to mint does not yet exist.
+
+     Strings only, for the reason given above. *)
+  terminationOf: {stem: string} option,
+  (* Ask where the proof first goes wrong, rather than what the state
+     is at `cursor'.
+
+     A cursor walk stands `cheat' in for a `>-' branch that has not
+     discharged its goal and carries on, because an unfinished branch
+     is the ordinary condition of a proof being written and the reader
+     still wants the state further down.  That makes it useless as a
+     source of diagnostics: what it reports is the last branch it
+     walked past, not the first thing that failed, and whether it
+     reports anything at all depends on how much of the proof this
+     particular walk replayed rather than on the proof.
+
+     A locating walk stops at the first failure and consults no cache,
+     so its answer is a property of the text.  `cursor' is ignored.
+     Set by the server for the walk that places a failed proof's
+     diagnostic; false for anything serving a goals pane. *)
+  locate: bool
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref
+
+(* The cursor offset that puts a walk at a given step of this body --
+   the inverse of the `step' a `goal_state_response' comes back with.
+
+   A caller holding a cursor does not need this; a caller that has no
+   cursor does.  An agent driving the server asks for "the state after
+   step 7 of this proof", or for the frontier, and cannot work the
+   offset out for itself: steps are counted over `TacticParse's
+   fragments, so mapping one to a byte means parsing the tactic body,
+   which is exactly the work the server already did.  `documentSymbol'
+   already answers the easier half, which theorem a name denotes.
+
+   The int is the step index, as `goal_state_response.step' reports it;
+   a negative one asks for the last step in the body.  NONE when the
+   body has no such step.  Offsets are file coordinates, matching
+   `theorem_context.cursor'.  Default no-op; installed by
+   `lsp/goal_state_init.ML'. *)
+val stepCursor: (theorem_context * int -> int option) ref
+
+(* Apply a candidate tactic to the state a walk reaches, and report
+   what it did -- without committing it anywhere.
+
+   The candidate is never spliced into the body.  Text splicing needs a
+   separator that depends on whether the prefix ends mid-chain, and a
+   cursor inside a tactic makes nonsense of it; the walker works on
+   goal *states*, so the candidate is simply walked from the state the
+   anchor reached.  Nor is the goal passed in: a goal round-tripped
+   through its printed form is not reliably the same goal, since
+   printing omits types that were inferred and what a numeral denotes
+   depends on what is loaded.  The anchor is the only honest way to
+   name a goal.
+
+   `budgetMs' is per request, 0 meaning the server's own: a model's
+   candidate can loop, and what a speculative probe may spend is not
+   what a goals pane following a cursor may spend.
+
+   `failedRange' always comes back NONE for a failure in the candidate
+   -- it is not in the file, so there is no range to point at, and
+   `error' names the step instead.  A failure in the *anchor* is a
+   different thing and is reported against the file as usual. *)
+val tryTacticAt:
+  (hover_context * theorem_context * {tactic: string, budgetMs: int} ->
+   goal_state_response option) ref
 
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->
@@ -303,12 +407,32 @@ type compileSnap = unit -> unit
 val captureCompileSnap: (unit -> compileSnap) ref
 val restoreCompileSnap: (compileSnap -> unit) ref
 
+(* Whether the kernel considers a theory sealed, i.e. already loaded
+   from disk or exported in this session, so that `new_theory' on that
+   name must fail.  Sealing is process-global and deliberately outside
+   the Context (`KernelSig.sealed_ref'), so no snapshot restores it.
+
+   The compile uses this to notice that its own preload has sealed the
+   theory the file is about to create -- which `bossLib' does to
+   `list', by way of `listTheory' -- and say so once, rather than
+   elaborate a file in which nothing below the header can work.
+   Default answers "no"; installed by the LSP runtime init in
+   tools-poly/hol.ML. *)
+val theorySealed: (string -> bool) ref
+
 (* ----------------------------------------------------------------------
    Deferred proofs — Phase A of the LSP's proof replay.
 
    Instead of running a tactic during elaboration, the prover hook
    enqueues a self-contained item and returns an oracle-tagged theorem,
    so elaboration stays fast and something else runs the proofs later.
+
+   The queue itself is not here.  It belongs to the pool in
+   `deferred_proofs.ML`, which is both what fills it and what drains
+   it, and which tags each item with the compile pass that produced it
+   -- a notion this structure, sitting below the kernel, does not
+   have.  What is here is the shape of an item, which is all a reader
+   of `proof_status` needs.
 
    An item's `run` is opaque — it reports a `proof_status` and nothing
    about the theorem — because this structure sits below the kernel and
@@ -344,7 +468,7 @@ val restoreCompileSnap: (compileSnap -> unit) ref
               dropped, which is right, because an edit above it means its
               recorded position is about to be stale.
 
-   The remaining three are the pool's own:
+   The rest are the pool's own:
 
      Checking  a worker is on it
      Proved    the replay went through
@@ -358,6 +482,13 @@ val restoreCompileSnap: (compileSnap -> unit) ref
      Diverged  the replay went through but produced extra hypotheses for
                some other reason.  Everything elaborated below this
                declaration is suspect.
+     TimedOut  the replay was still running when its budget ran out, so
+               nobody knows whether the proof goes through.  Not a
+               verdict on the proof: a report that we stopped asking.
+               It exists because the alternative -- leaving the entry
+               `Checking' -- reads exactly like a proof that is merely
+               slow, and a pool that never settles holds up everything
+               downstream that waits for it to.
 
    Suspended and Failed want opposite treatment downstream, which is why
    they are separate states rather than one "did not match" bucket.
@@ -378,17 +509,45 @@ val restoreCompileSnap: (compileSnap -> unit) ref
    cheating it, since its result is not predictable from its statement.
 
    So a caller assembling a display walks its own list of declarations
-   and consults the pool: an entry gives one of the last five, and
+   and consults the pool: an entry gives one of the pool's own, and
    absence means Unseen or Cheated according to whether elaboration has
    reached that declaration.
    ---------------------------------------------------------------------- *)
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string
+       | TimedOut of Time.time
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs: bool ref
+(* How long a replay may run before the pool stops waiting on it and
+   reports `TimedOut'.  `Time.zeroTime' means no limit, which is the
+   behaviour this had before there was a budget at all.
+
+   A budget is not an optimisation.  A replay that never returns leaves
+   its entry `Checking' for the life of the process, and `poolBusy'
+   then answers yes for ever -- which stops the server localising *any*
+   failed proof in the file onto the tactic that failed, since that walk
+   restores process-global state and may not run while a worker might
+   be reading it.  One wedged proof otherwise silences the diagnostics
+   for every other proof beside it.
+
+   Set from `$/setConfig`'s `proofTimeoutMs`, or from
+   `HOL_LSP_PROOF_TIMEOUT_MS` in the environment. *)
+val proofTimeout: Time.time ref
+(* What a goal-state walk may spend before the canary interrupts it.
+
+   The default suits the shipped clients, which follow a cursor and so
+   want a keystroke's worth.  A caller replaying a whole proof to
+   measure it wants orders of magnitude more -- and until this was
+   settable, could not ask: a proof whose steps take minutes reported
+   only that the budget blew, which is a fact about the budget rather
+   than about the proof.
+
+   Set from `$/setConfig`'s `walkBudgetMs`, or from
+   `HOL_LSP_WALK_BUDGET_MS` in the environment. *)
+val walkBudgetMs: LargeInt.int ref
 (* Set by the compile driver while it retries a declaration whose tactic
    would not compile, with the proof body replaced by `cheat`.  Such a
    proof must not be enqueued: replaying `cheat` would report `Proved`
@@ -423,10 +582,57 @@ val cheatSubstituted: bool ref
 val addNoCheatSite: string -> bool
 val dropNoCheatSite: string -> unit
 val isNoCheatSite: string -> bool
-val enqueueDeferred: deferred -> unit
-(* Empties the queue and hands back what was in it: the worker pool
-   runs the items itself. *)
-val takeDeferred: unit -> deferred list
+
+(* How long a proof took, keyed by proof name.
+
+   The pool knows this and nothing else did: `proof_status` says whether
+   a proof worked, never what it cost, so a client could report a file's
+   verdict but not which of its proofs was the slow one.  That is the
+   first question anyone asks of a script that takes ten minutes to
+   build, and answering it meant instrumenting the script by hand.
+
+   Keyed by name rather than carried in `proof_state` because the state
+   is constructed in a dozen places, several of them describing proofs
+   that never ran (`Unseen`, a dropped entry announced `Cheated`) and so
+   having no time to offer.  Names are already unique per occurrence --
+   `qualifyProof` appends `#n` -- so the key is as precise as the state
+   it belongs to.
+
+   Recorded by whichever path actually ran the tactic: the deferred
+   replay, and the run-for-real one that elaboration performs itself.
+   An entry is overwritten by the next run of the same proof and
+   otherwise kept, so a stale time belongs to a proof that has not been
+   re-run rather than to a different proof. *)
+val recordProofElapsed: string * Time.time -> unit
+val proofElapsed: string -> Time.time option
+
+(* What each tactic step of the last walk cost.
+
+   The walker has always measured this -- it times every atom it
+   applies -- but kept it to itself, so the one question asked of a
+   proof that takes three minutes, *which tactic*, had no answer short
+   of hand-instrumenting the script.  `proofElapsed` above answers it
+   per proof; this answers it per step.
+
+   `span` is the step's byte range in the file, so a cost maps back to
+   a line.  `goalsBefore`/`goalsAfter` is the other half of the
+   diagnosis: it separates "this tactic is slow" from "this tactic is
+   ordinary but the state it was handed had exploded".
+
+   Published rather than returned because `goal_state_response` is
+   built in nine places, several of them describing walks that ran no
+   steps at all.  Valid for the walk that has just finished; a second
+   concurrent walk overwrites it, which is the exposure the walker's
+   own counter already had. *)
+type step_cost = {span: (int * int) option, ms: int,
+                  goalsBefore: int, goalsAfter: int}
+val lastStepCosts: step_cost list ref
+(* Shift the spans of the walk just finished from tactic-text offsets
+   to file offsets.  The walker measures inside `tacText`, as every
+   other span it produces does; `failedRange` is rebased the same way
+   before it leaves `goal_state_init`.  Call once per walk -- `walkTo`
+   clears the list on entry, so there is nothing to double-shift. *)
+val rebaseStepCosts: int -> unit
 
 (* The byte offset of the declaration currently being elaborated, set by
    the compile driver before each one.  The prover hook reads it when
@@ -443,6 +649,18 @@ val currentProofOffset: int ref
    occurrences from pool state instead invented a second `Real_thm' for
    a file that has one. *)
 val currentProofOrd: int ref
+(* How a proof is named, here and on the wire: the declaration's name
+   paired with that occurrence number, the first occurrence left
+   unadorned -- `foo' and `foo#2'.
+
+   Lives here, rather than in the pool that coined it, because two
+   baked-in callers need it and the pool is loaded later: the pool
+   names the proofs it is running, and the server names the
+   declarations the buffer still *has*, so that a client can compare
+   the two and forget a proof whose `Theorem' block has gone.  A
+   second definition of the rule would be a second thing to keep in
+   step with the first. *)
+val qualifyProof: string -> int -> string
 
 
 (* Hooks installed by the LSP runtime (tools-poly/lsp/deferred_proofs.ML);
@@ -471,6 +689,15 @@ type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
 val checkDeferred: (check_scope -> unit) ref
 val poolBusy: (unit -> bool) ref
 val cancelProofsAtOrAfter: (int -> unit) ref
+(* Bumped by the two cancellations that take proofs away wholesale --
+   `cancelProofsAtOrAfter` and `cancelAllProofs`, not `cancelProofAt`.
+   A pass that reuses the tail of an earlier one keeps that pass's
+   proofs rather than re-enqueueing them, which is only sound while
+   they are still there: an abandoned pass in between can have
+   cancelled the lot, and an abandoned pass leaves no other trace for
+   the next one to read.  Compare the value at the start of a pass
+   with the value the last completed pass recorded. *)
+val proofGeneration: int ref
 (* Give up on just this declaration's proofs, for an edit inside a
    `Proof ... QED` body: a tactic contributes nothing to the elaboration
    context, so every later declaration's obligation is unchanged and the

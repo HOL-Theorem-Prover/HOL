@@ -1164,6 +1164,10 @@ Proof
   \\ gs[EVERY_MEM,MEM_MAP,PULL_EXISTS, MAP_MAP_o, combinTheory.o_ABS_R,
         Cong MAP_CONG]
   \\ simp[SF ETA_ss]
+  (* both maps agree on the list's members, which is what the
+     hypothesis says; they are no longer the same term up to eta *)
+  \\ AP_TERM_TAC \\ AP_TERM_TAC \\ irule listTheory.MAP_CONG
+  \\ simp[] \\ rpt strip_tac \\ first_x_assum drule \\ simp[]
 QED
 
 Theorem peg_eval_print_sexp:

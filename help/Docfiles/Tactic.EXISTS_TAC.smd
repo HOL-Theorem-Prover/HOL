@@ -17,7 +17,7 @@ capture).
 
 ``` hol4
     A ?- ?x. t
-   =============  EXISTS_TAC "u"
+   =============  EXISTS_TAC “u”
     A ?- t[u/x]
 ```
 
@@ -31,13 +31,13 @@ term supplied has the same type as the quantified variable in the goal.
 The goal:
 
 ``` hol4
-   ?- ?x. x=T
+   ?- ∃x. x=T
 ```
 
 can be solved by:
 
 ``` hol4
-   EXISTS_TAC ``T`` THEN REFL_TAC
+   EXISTS_TAC “T” THEN REFL_TAC
 ```
 
 ### See also

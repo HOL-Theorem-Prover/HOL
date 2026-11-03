@@ -130,6 +130,7 @@ datatype grammar = GCONS of
    absyn_postprocessors : (string * postprocessor) list,
    preterm_processors : ptmprocessor SI_Tab.table,
    user_state : UniversalType.t Symtab.table,
+   prec_matrix : parse_term_dtype.prec_matrix option ref,
    next_timestamp : int
    }
 and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
@@ -165,32 +166,33 @@ fun preterm_processor (GCONS g) k =
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate10 z
+fun gcons_mkUp z = makeUpdate11 z
 fun update_G z = let
   fun from rules specials numeral_info overload_info user_printers
            absyn_postprocessors preterm_processors user_state next_timestamp
-           strlit_map =
+           strlit_map prec_matrix =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
      preterm_processors = preterm_processors, user_state = user_state,
-     next_timestamp = next_timestamp}
+     prec_matrix = prec_matrix, next_timestamp = next_timestamp}
   (* fields in reverse order to above *)
-  fun from' strlit_map next_timestamp user_state preterm_processors
+  fun from' prec_matrix strlit_map next_timestamp user_state preterm_processors
             absyn_postprocessors user_printers
             overload_info numeral_info specials rules =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
      preterm_processors = preterm_processors, user_state = user_state,
-     next_timestamp = next_timestamp }
+     prec_matrix = prec_matrix, next_timestamp = next_timestamp }
   (* first order *)
   fun to f {rules, specials, numeral_info,
             overload_info, user_printers, absyn_postprocessors,
-            preterm_processors, user_state, next_timestamp, strlit_map} =
+            preterm_processors, user_state, next_timestamp, strlit_map,
+            prec_matrix} =
     f rules specials numeral_info overload_info user_printers
       absyn_postprocessors preterm_processors user_state next_timestamp
-      strlit_map
+      strlit_map prec_matrix
 in
   gcons_mkUp (from, from', to)
 end z
@@ -278,10 +280,14 @@ fun upd_user_state (key as {name, inj, ...} : 'a state_key) f G =
     fupdate_user_state
       (Symtab.update (name, inj (f (get_user_state key G)))) G
 
+fun prec_matrix (GCONS g) = #prec_matrix g
+
 fun fupdate_rules f (GCONS g) =
-    GCONS (update_G g (U #rules (f (#rules g))) $$)
+    GCONS (update_G g (U #rules (f (#rules g)))
+                      (U #prec_matrix (ref NONE)) $$)
 fun fupdate_specials f (GCONS g) =
-  GCONS (update_G g (U #specials (f (#specials g))) $$)
+  GCONS (update_G g (U #specials (f (#specials g)))
+                    (U #prec_matrix (ref NONE)) $$)
 fun fupdate_numinfo f (GCONS g) =
   GCONS (update_G g (U #numeral_info (f (#numeral_info g))) $$)
 fun fupdate_strlit_map f (GCONS g) =
@@ -587,6 +593,7 @@ val stdhol : grammar =
    absyn_postprocessors = [],
    preterm_processors = SI_Tab.empty,
    user_state = Symtab.empty,
+   prec_matrix = ref NONE,
    next_timestamp = 1
    }
 
@@ -1286,6 +1293,7 @@ in
             dictionary -- so this has to combine the values, not pick
             one.  How is the registrant's business; see new_state_key. *)
          user_state = merge_user_state (#user_state g1, #user_state g2),
+         prec_matrix = ref NONE,
          next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2),
          strlit_map = Symtab.join (fn _ => fn (_,v2) => v2)
                                   (#strlit_map g1, #strlit_map g2)

@@ -183,42 +183,101 @@ val _ = Hol_datatype`
       | trpW of (num ** num) ** bool ** trprime
 `;
 
-(* can see it "more directly" with
-val spec =
-    [(``:'trp``,
-      [("trpSkip", []),
-       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
-       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
-       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
-val result = ind_types.define_type spec handle e => Raise e;
-
-- note also that switching the order of the trpSeq and trpIf entries in the
-  list above makes it work again.  I.e.,
-
-val spec' =
-    [(``:'trp``,
-      [("trpSkip", []),
-       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
-       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
-       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
-val result = ind_types.define_type spec' handle e => Raise e;
-
-- works.
-
-*)
-
 (* Ramana Kumar's example from 2010/08/19 *)
 val _ = Hol_datatype`pointer = pnil | pref of 'a`
 val _ = Hol_datatype`failure = <| head : 'a pointer; tail : failure pointer |>`
 
-(* Ramana Kumar's examples from 2010/08/25 *)
-val _ = Hol_datatype `t1 = c1 of 'a => t1 itself `;
-val _ = Hol_datatype `t2 = c2 of t2 t1 itself ` ;
+(* Ramana Kumar's examples from 2010/08/25.  A type that recurses through
+   an operator holding none of its argument is not something a fixed
+   point can be taken of: `t1 itself` has exactly one inhabitant whatever
+   t1 is, so such an argument says nothing, and the type it would pin is
+   already fixed by the constructor's result.  These are rejected rather
+   than built.  (in_repl_mode, because a declaration that fails outside
+   the REPL exits the process rather than raising.) *)
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype.Hol_datatype,
+      printarg = (fn _ => "reject t1 = c1 of 'a => t1 itself"),
+      printresult = (fn _ => "<type defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `t1 = c1 of 'a => t1 itself `
 
+(* An `itself` argument over a parameter, rather than over the type being
+   declared, pins a type variable that occurs nowhere else.  That is the
+   useful idiom, it does not recurse, and it is unaffected. *)
 val _ = Hol_datatype `u1 = d1 of 'a itself`;
 val _ = Hol_datatype `u2 = d2 of 'a u1 `;
-val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
-                      u4 = d4 of u3 u1 `;
+
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype.Hol_datatype,
+      printarg = (fn _ => "reject u3/u4, mutually recursive through u1"),
+      printresult = (fn _ => "<types defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `u3 = d3 of u4 u2 u1 ;
+       u4 = d4 of u3 u1 `
+
+(* A type being defined has no parameters of its own to be applied to:
+   it is written as a bare name, and the arguments it ends up taking
+   are whatever type variables the declaration turns out to mention.
+   Arguments written on a recursive occurrence had nowhere to be
+   recorded and were dropped in silence, so this gave Nd the type
+   `'a sa -> 'a sa` rather than the `('a # 'a) sa -> 'a sa` the
+   notation suggests.  The notation misleads, so it is rejected. *)
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype,
+      printarg = (fn _ => "reject sa = Lf 'a | Nd (('a # 'a) sa)"),
+      printresult = (fn _ => "<type defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `sa = Lf 'a | Nd (('a # 'a) sa)`
+
+(* the same name qualified with the theory being built names the type
+   being defined, so it is held to the same rule *)
+val _ = shouldfail {
+      testfn = in_repl_mode Datatype,
+      printarg = (fn _ => "reject a qualified self-application"),
+      printresult = (fn _ => "<type defined>"),
+      checkexn = is_struct_HOL_ERR "Datatype"
+    } `sa = Lf 'a | Nd (('a # 'a) scratch$sa)`
+
+(* and the spelling that does work: the recursive occurrence bare, with
+   the parameter coming from the type variables that are mentioned *)
+val _ = tprint "recursive occurrence without arguments"
+val _ = let
+  val _ = testutils.quietly Datatype `sa = Lf 'a | Nd sa sa`
+  val ndty = type_of (Parse.Term `Nd`)
+  (* both of Nd's arguments are the type being declared, and so is its
+     result; which type variable that type carries is not the point *)
+  val (arg1, rest) = dom_rng ndty
+  val (arg2, res) = dom_rng rest
+in
+  if arg1 = res andalso arg2 = res andalso #1 (dest_type res) = "sa" then
+    OK()
+  else die ("FAILED: Nd : " ^ Parse.type_to_string ndty)
+end
+
+(* An AST list built by hand, rather than parsed from a quotation, can
+   name a type an earlier call defined and leave it unqualified:
+   Import.CTy in examples/l3-machine-code does exactly that, and armScript
+   declares CP15 with fields of types declared a few lines earlier.  A
+   quotation would have been parsed against the grammar with only the
+   declaration's own names hidden, so the package takes an unqualified
+   name to be one of the types being defined; astHol_datatype has to
+   resolve the others before handing them over. *)
+val _ = tprint "astHol_datatype resolves an unqualified earlier type"
+val _ = let
+  open ParseDatatype
+  fun bare s = dTyop {Thy = NONE, Tyop = s, Args = []}
+  val build = testutils.quietly (fn () =>
+      (Datatype.astHol_datatype
+         [("l3likeA", Constructors [("L3A", [bare "num"])])];
+       (* a record field naming the type declared just above *)
+       Datatype.astHol_datatype
+         [("l3likeB", Record [("l3fld", bare "l3likeA")])];
+       (* and a constructor argument naming it *)
+       Datatype.astHol_datatype
+         [("l3likeC", Constructors [("L3C", [bare "l3likeB"])])]))
+in
+  require (check_result (fn _ => true)) build ()
+end
 
 (* Ramana Kumar's TypeNet bug from 2010/08/25 *)
 val _ = Hol_datatype `foo = fooC of 'a`
@@ -498,6 +557,9 @@ val _ =
     NONE => OK()
   | _ => die "FAILED!";
 
+val _ = tprint "Record whose cases variable is a constant name"
+val _ = Parse.temp_overload_on ("RR", boolSyntax.T)
+val _ = doesnt_fail Datatype.Datatype ‘Rrcd = <| rrfld : num |>’
 
 val _ = tprint "Testing overriding calls in mutual recursive style";
 val _ = quiet_warnings (fn () =>
@@ -575,6 +637,228 @@ in
 val _ = tprint "case-printer keeps bound vars bound (#1086)"
 val _ = require_msg (check_result (aconv orig)) term_to_string
                     roundtrip orig
+end
+
+(* ----------------------------------------------------------------------
+    the principle the older construction produced, from the one this
+    package proves.  This theory has a list of its own, so the operator
+    tested here is the option; the list is exercised where one is
+    normally in scope.
+   ---------------------------------------------------------------------- *)
+
+val _ = Hol_datatype `zo = ZOA of num | ZOB of zo option`
+
+local
+  fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+  val optOp = {induction = TypeBase.induction_of “:'a option”,
+               sets = Drule.CONJUNCTS bnfPrelimsTheory.optSET_def}
+in
+val _ = tprint "the principle in the shape the older construction gave"
+val _ =
+    (* set_induction_of, not induction_of: what a reader sees may have
+       been reshaped by a development's datatype_simp theorems, and
+       this is the shape legacyInduction reads *)
+    let val th = legacyInduction.mutual_induction [optOp]
+                   (TypeBase.set_induction_of “:zo”)
+    in
+      if same (concl th)
+           “∀P Q. (∀n. P (ZOA n)) ∧ (∀v. Q v ⇒ P (ZOB v)) ∧ Q NONE ∧
+                  (∀a. P a ⇒ Q (SOME a)) ⇒ (∀v. P v) ∧ ∀v. Q v”
+      then OK() else die "not the shape the older construction gave"
+    end
+end
+
+(* ----------------------------------------------------------------------
+    and where an argument reaches the type more than one way: twice at
+    the same depth, where the package states the hypothesis with a
+    disjunction, at two depths, parting below the top, and beside
+    another hypothesis of the clause's
+   ---------------------------------------------------------------------- *)
+
+val _ = Datatype ‘zp = ZPA | ZPB ((zp # zp) option)’
+val _ = Datatype ‘zq = ZQA (zq option) | ZQB ((zq # zq) option)’
+val _ = Datatype ‘zr = ZRA ((zr # zs # num) option) ; zs = ZSA num | ZSB zr’
+val _ = Datatype ‘zt = ZTA | ZTB ((num # zt # zt # num) option)’
+val _ = Datatype ‘zu = ZUA | ZUB ((zu # zu) option) zu’
+val _ = Datatype ‘zx = ZXA | ZXB (((zx # num) # (zx # num)) option)’
+
+local
+  fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+  fun shape nm ty tm =
+      (tprint ("the older shape where " ^ nm);
+       (* the stated principle: legacyInduction reads the set functions *)
+       let val th = legacyInduction.mutual_ind_from_ops
+                      (TypeBase.set_induction_of ty)
+       in
+         if same (concl th) tm then OK()
+         else die ("not the older shape: " ^ thm_to_string th)
+       end)
+in
+val _ = shape "a pair holds the type twice" “:zp”
+          “∀P Q0 Q1. P ZPA ∧ (∀v. Q0 v ⇒ P (ZPB v)) ∧ Q0 NONE ∧
+                     (∀a. Q1 a ⇒ Q0 (SOME a)) ∧
+                     (∀p1 p2. P p1 ∧ P p2 ⇒ Q1 (p1,p2)) ⇒
+                     (∀v. P v) ∧ (∀v. Q0 v) ∧ ∀v. Q1 v”
+val _ = shape "that pair is beside another operator" “:zq”
+          “∀P Q0 Q1 Q2. (∀v. Q0 v ⇒ P (ZQA v)) ∧ (∀v. Q1 v ⇒ P (ZQB v)) ∧
+                        Q0 NONE ∧ (∀a. P a ⇒ Q0 (SOME a)) ∧
+                        Q1 NONE ∧ (∀a. Q2 a ⇒ Q1 (SOME a)) ∧
+                        (∀p1 p2. P p1 ∧ P p2 ⇒ Q2 (p1,p2)) ⇒
+                        (∀v. P v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ ∀v. Q2 v”
+val _ = shape "members are reached at two depths" “:zr”
+          “∀P0 P1 Q0 Q1 Q2.
+             (∀v. Q0 v ⇒ P0 (ZRA v)) ∧ (∀n. P1 (ZSA n)) ∧
+             (∀r. P0 r ⇒ P1 (ZSB r)) ∧ Q0 NONE ∧ (∀a. Q1 a ⇒ Q0 (SOME a)) ∧
+             (∀p1 p2. P0 p1 ∧ Q2 p2 ⇒ Q1 (p1,p2)) ∧
+             (∀p1 p2. P1 p1 ⇒ Q2 (p1,p2)) ⇒
+             (∀v. P0 v) ∧ (∀v. P1 v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ ∀v. Q2 v”
+val _ = shape "the type is held twice, at two depths" “:zt”
+          “∀P Q0 Q1 Q2 Q3.
+             P ZTA ∧ (∀v. Q0 v ⇒ P (ZTB v)) ∧ Q0 NONE ∧
+             (∀a. Q1 a ⇒ Q0 (SOME a)) ∧ (∀p1 p2. Q2 p2 ⇒ Q1 (p1,p2)) ∧
+             (∀p1 p2. P p1 ∧ Q3 p2 ⇒ Q2 (p1,p2)) ∧
+             (∀p1 p2. P p1 ⇒ Q3 (p1,p2)) ⇒
+             (∀v. P v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ (∀v. Q2 v) ∧ ∀v. Q3 v”
+val _ = shape "the pair's clause has another hypothesis" “:zu”
+          “∀P Q0 Q1. P ZUA ∧ (∀v z. Q0 v ∧ P z ⇒ P (ZUB v z)) ∧ Q0 NONE ∧
+                     (∀a. Q1 a ⇒ Q0 (SOME a)) ∧
+                     (∀p1 p2. P p1 ∧ P p2 ⇒ Q1 (p1,p2)) ⇒
+                     (∀v. P v) ∧ (∀v. Q0 v) ∧ ∀v. Q1 v”
+val _ = shape "the ways part below the top" “:zx”
+          “∀P Q0 Q1 Q2.
+             P ZXA ∧ (∀v. Q0 v ⇒ P (ZXB v)) ∧ Q0 NONE ∧
+             (∀a. Q1 a ⇒ Q0 (SOME a)) ∧ (∀p1 p2. Q2 p1 ∧ Q2 p2 ⇒ Q1 (p1,p2)) ∧
+             (∀p1 p2. P p1 ⇒ Q2 (p1,p2)) ⇒
+             (∀v. P v) ∧ (∀v. Q0 v) ∧ (∀v. Q1 v) ∧ ∀v. Q2 v”
+end
+
+(* ----------------------------------------------------------------------
+    and where the operator is one a declaration defined rather than one
+    the library wrote.  What a set function says at its constructors is
+    saved with the operator either way, so there is no separate path
+    for a user's own: the principle is read as any other is.
+   ---------------------------------------------------------------------- *)
+
+val _ = Datatype ‘bx = BX 'a bool’
+val _ = Datatype ‘ub = UB (ub bx) | UN’
+val _ = Datatype ‘rl = RN | RC 'a rl’
+val _ = Datatype ‘ur = UR (ur rl) | URN’
+
+local
+  fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+  fun shape nm ty tm =
+      (tprint ("the older shape where " ^ nm);
+       let val th = legacyInduction.mutual_ind_from_ops
+                      (TypeBase.set_induction_of ty)
+       in
+         if same (concl th) tm then OK()
+         else die ("not the older shape: " ^ thm_to_string th)
+       end)
+in
+val _ = shape "the operator is a declaration's own" “:ub”
+          “∀P Q0. (∀b. Q0 b ⇒ P (UB b)) ∧ P UN ∧
+                  (∀a b. P a ⇒ Q0 (BX a b)) ⇒
+                  (∀u. P u) ∧ ∀b. Q0 b”
+val _ = shape "that operator recurses itself" “:ur”
+          “∀P Q0. (∀r. Q0 r ⇒ P (UR r)) ∧ P URN ∧ Q0 RN ∧
+                  (∀r a. P a ∧ Q0 r ⇒ Q0 (RC a r)) ⇒
+                  (∀u. P u) ∧ ∀r. Q0 r”
+end
+
+(* ----------------------------------------------------------------------
+    a type that does not recur says what its map and set functions do at
+    its constructors, as a recursive one does: the induction principle
+    of a type nested through it is stated with its set function
+   ---------------------------------------------------------------------- *)
+
+val _ = Datatype ‘cbox = CBox 'a bool’
+val _ = Datatype ‘cboxr = <| cfld : 'a ; ctag : bool |>’
+val _ = Datatype ‘cbare = CBare 'a’
+
+local
+  fun eqn nm tm =
+      (tprint ("constructor equation " ^ nm);
+       case Lib.total (DB.fetch "-") nm of
+           NONE => die "not saved"
+         | SOME th =>
+           if can (simpLib.SIMP_PROVE (BasicProvers.srw_ss()) [th]) tm
+           then OK()
+           else die ("does not prove " ^ term_to_string tm))
+in
+val _ = eqn "cboxSET_thm" “cboxSET (CBox (x:'a) b) = {x}”
+val _ = eqn "cboxMAP_thm" “cboxMAP (f:'a -> 'b) (CBox x b) = CBox (f x) b”
+val _ = eqn "cboxrSET_thm" “cboxrSET (cboxr (x:'a) b) = {x}”
+val _ = eqn "cboxrMAP_thm"
+            “cboxrMAP (f:'a -> 'b) (cboxr x b) = cboxr (f x) b”
+val _ = tprint "a bare parameter's set equation in set notation"
+val _ =
+    let val th = DB.fetch "-" "cbareSET_thm"
+        fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+    in
+      if same (concl (Drule.SPEC_ALL th)) “cbareSET (CBare (x:'a)) = {x}”
+      then OK() else die (thm_to_string th)
+    end
+end
+
+(* ------------------------------------------------------------------- *)
+(* GH #2096: which type variable answers a case constant.  The          *)
+(* convention is the first of 'a, 'b, ... that the type's own arguments *)
+(* leave free, so a type with no arguments is answered in 'a, as num    *)
+(* and the enumerations are, and a type over 'a is answered in 'b.      *)
+(* ACCEPT_TAC and the like match up to the names of type variables, so  *)
+(* the choice is observable rather than cosmetic.                       *)
+(* ------------------------------------------------------------------- *)
+
+val _ = Datatype`gh2096shape = Gh2096Circle num | Gh2096Square num`
+val _ = Datatype`gh2096par = Gh2096P 'a | Gh2096Q num`
+val _ = Datatype`gh2096enum = Gh2096Red | Gh2096Green`
+
+local
+  fun answerTy ty =
+      #2 (boolSyntax.strip_fun (type_of (TypeBase.case_const_of ty)))
+  fun test nm ty expected =
+      (tprint nm;
+       if Type.compare (answerTy ty, expected) = EQUAL then OK()
+       else die ("answered in " ^ type_to_string (answerTy ty)))
+in
+val _ = test "GH2096: a type with no arguments is answered in 'a"
+             “:gh2096shape” alpha
+val _ = test "GH2096: a type over 'a is still answered in 'b"
+             “:'a gh2096par” beta
+val _ = test "GH2096: an enumeration is answered in 'a, as before"
+             “:gh2096enum” alpha
+val _ = test "GH2096: num is answered in 'a, as it always was"
+             “:num” alpha
+end
+
+(* A type with more arguments than the conventional names used to run
+   to was answered in a generated variable, which prints as
+   %%gen_tyvar%%NNN and whose number depends on how much generating had
+   happened earlier -- so two declarations of the same shape got
+   different names, and a name nobody can rely on is no use to the
+   ACCEPT_TAC matching the convention exists for. *)
+
+val _ = Datatype`
+  gh2096big = GH2096Big 'a 'b 'c 'd 'e 'f 'g 'h num
+`
+
+local
+  fun generated ty = String.isSubstring "gen_tyvar" (dest_vartype ty)
+  fun badvars th = List.filter generated (type_vars_in_term (concl th))
+in
+val _ = tprint "GH2096: more arguments than letters still names them"
+val _ =
+    let
+      val nms = List.map (fn s => "gh2096big" ^ s)
+                         ["_Axiom", "_case_cong", "_case_eq", "_nchotomy",
+                          "_induction", "_case_def"]
+      val ths = List.mapPartial (Lib.total (DB.fetch "-")) nms
+      val bad = List.concat (List.map badvars ths)
+    in
+      if null ths then die "no theorems saved for gh2096big"
+      else if null bad then OK()
+      else die (String.concatWith ", " (List.map type_to_string bad))
+    end
 end
 
 val _ = OK ()

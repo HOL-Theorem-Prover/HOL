@@ -33,8 +33,27 @@ pft-replay-test: pft-replay-test.mlb pft-replay-test.sml $(PFT_REPLAY_SRCS)
 
 else
 
-$(info *** Doing nothing when no mlton)
 all:
 endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
+
+all: selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef POLY
+PFT_TEST = $(HOLDIR)/bin/hol --maxheap 64 --gcthreads=1 run --poly selftest
+else
+PFT_TEST = ./selftest.exe
+endif
+
+EXTRA_CLEANS += selftest.exe pft-reader-regression.pft.bin pft-regression.log
+
+ifdef HOLSELFTESTLEVEL
+all: pft-regression.log
+
+pft-regression.log: selftest.exe
+	$(tee $(PFT_TEST) 2>&1, $@)
+endif

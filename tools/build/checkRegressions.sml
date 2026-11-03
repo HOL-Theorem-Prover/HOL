@@ -64,14 +64,20 @@ fun same_path (p, q) =
   in canon p = canon q end
 
 (* Up to N most-recently-modified ordinary files in `logdir` whose names
-   end in `-{kernel}`, excluding `latest`.  Returned newest-first as
-   (path, mtime) pairs.  The kernel suffix ensures baselines are only
-   drawn from logs produced by the same kernel as the current run;
-   timings across kernels are not comparable. *)
-fun prior_logs {logdir, latest, kernel, n} =
+   end in `logsuffix`, excluding `latest`.  Returned newest-first as
+   (path, mtime) pairs.
+
+   `logsuffix` is the whole tail that `finish_logging` appends to a log
+   name - kernel and selftest level together, e.g. "-stdknl-t3" - and
+   the caller passes exactly what it wrote, rather than a part a reader
+   has to reassemble.  Both halves have to match: timings are not
+   comparable across kernels, and the selftest level decides which
+   directories a run builds at all, so a `-t3' run and a `-t1' run
+   neither cover the same theories nor load the machine the same way. *)
+fun prior_logs {logdir, latest, logsuffix, n} =
   let
     open OS.FileSys
-    val suffix = "-" ^ kernel
+    val suffix = logsuffix
     val dstrm = openDir logdir
     fun harvest acc =
       case readDir dstrm of
@@ -207,14 +213,14 @@ fun report_regressions regs =
 
 fun report_total NONE = ()
   | report_total (SOME (sum_old, sum_new, delta, ratio)) =
-      print ("  Total wall time: " ^ fmt2 sum_old ^ "s -> " ^
+      print ("  Total theory CPU: " ^ fmt2 sum_old ^ "s -> " ^
              fmt2 sum_new ^ "s (+" ^ fmt2 delta ^ "s, +" ^
              fmt_pct ratio ^ ")\n")
 
-fun run {logdir, latest, kernel} =
+fun run {logdir, latest, logsuffix} =
   let
     val priors = prior_logs {logdir = logdir, latest = latest,
-                             kernel = kernel, n = baseline_window}
+                             logsuffix = logsuffix, n = baseline_window}
   in
     if null priors then ()
     else

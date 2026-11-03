@@ -1,10 +1,23 @@
 Theory ordinalBasic[bare]
 
 Ancestors
-  wellorder pred_set set_relation pair option cardinal
+  wellorder pred_set set_relation pair option cardinalityCore
 Libs
   HolKernel Parse boolLib boolSimps simpLib BasicProvers QLib metisLib
   TotalDefn pred_setLib pureSimps TypeBase tautLib[qualified]
+
+(* cardinalityCoreTheory makes no grammar of its own -- it is every
+   theory's ancestor through the datatype package, and the ASCII
+   forms are tokens wherever they reach.  What this theory writes
+   it sets up for itself. *)
+Overload "<<="[local] = “cardleq”
+Overload cardlt[local] = “λs1 s2. ¬cardleq s2 s1”
+val _ = temp_set_fixity "<</=" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+Overload "<</="[local] = “cardlt”
+val _ = temp_set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.temp_unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+Overload "=~"[local] = “cardeq”
 
 fun bossify stac ths g ctxt =
     stac (srw_ss_of ctxt ++ numSimps.ARITH_ss) ths g ctxt
@@ -58,8 +71,8 @@ Theorem ordlt_WF0 = ordlt_WF0
 Theorem ordlt_WF =
   REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0
 
-Overload "<" = ``ordlt``
-Overload "<=" = ``\a b. ~(b < a)``
+Overload "<"[local] = ``ordlt``
+Overload "<="[local] = ``\a b. ~(b < a)``
 
 Theorem ordlt_trichotomy = ordlt_trichotomy
 
@@ -251,7 +264,7 @@ QED
 Definition ordSUC_def:
   ordSUC a = oleast b. a < b
 End
-Overload TC = ``ordSUC``
+Overload TC[local] = ``ordSUC``
 
 Definition fromNat_def:
   (fromNat 0 = oleast a. T) /\
@@ -259,7 +272,15 @@ Definition fromNat_def:
 End
 Theorem fromNat_SUC[simp] = fromNat_def |> CONJUNCT2
 
-val _ = add_numeral_form (#"o", SOME "fromNat")
+(* The numerals — 0o, 1o, and an unsuffixed numeral wherever the type
+   says ordinal — are available here and exported by ordinalTheory
+   rather than by this theory, as the notation above is.  Everything
+   that declares a datatype loads this theory, because the datatype
+   package's construction counts in ordinals, and this theory's notation
+   would otherwise be everybody's: `+` would be ordinal addition, `<`
+   ordinal comparison, `TC` a successor rather than a transitive
+   closure, and a numeral whose type is not pinned an ordinal. *)
+val _ = temp_add_numeral_form (#"o", SOME "fromNat")
 
 (* recursion principles *)
 Theorem restrict_away[local]:
@@ -418,7 +439,7 @@ Theorem omax_preds_SUC[simp]: omax (preds a^+) = SOME a
 Proof metis_tac [preds_omax_SOME_SUC]
 QED
 
-Overload islimit = ``\a:'a ordinal. omax (preds a) = NONE``
+Overload islimit[local] = ``\a:'a ordinal. omax (preds a) = NONE``
 
 Theorem ord_RECURSION:
   !(z:'b) (sf:'a ordinal -> 'b -> 'b) (lf:'a ordinal -> 'b set -> 'b).
@@ -531,7 +552,7 @@ val ordADD_def = new_specification(
                 |> Q.GEN `b`
                 |> CONV_RULE SKOLEM_CONV)
 val _ = export_rewrites ["ordADD_def"]
-Overload "+" = ``ordADD``
+Overload "+"[local] = ``ordADD``
 
 Theorem sup_preds_omax_NONE:
     (omax (preds a) = NONE) <=> (sup (preds a) = a)
@@ -872,7 +893,7 @@ QED
 Definition omega_def:
   omega = sup { fromNat i | T }
 End
-Overload "ω" = ``omega``
+Overload "ω"[local] = ``omega``
 
 Definition csuc_def:
   csuc (a : 'a ordinal) =

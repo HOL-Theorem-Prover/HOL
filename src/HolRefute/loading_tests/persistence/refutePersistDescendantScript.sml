@@ -1,0 +1,3 @@
+Theory refutePersistDescendant
+Ancestors
+  refutePersistWrapper refutePersist

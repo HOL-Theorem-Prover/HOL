@@ -5,11 +5,17 @@ endif
 
 all: $(DEFAULT_TARGETS)
 
+theoryfiles.ui: theoryfiles.sig $(dprot $(SIGOBJ)/Table.ui)
+	$(HOLMOSMLC) -c Table.ui $<
+
+theoryfiles.uo: theoryfiles.sml theoryfiles.ui $(dprot $(SIGOBJ)/Table.ui)
+	$(HOLMOSMLC) -c Table.ui $<
+
 theorystats.ui: theorystats.sig $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/Table.ui)
 	$(HOLMOSMLC) -c Table.ui Graph.ui $<
 
-theorystats.uo: theorystats.sml theorystats.ui $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SHA1.uo)
-	$(HOLMOSMLC) -c Graph.ui $<
+theorystats.uo: theorystats.sml theorystats.ui theoryfiles.uo $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SHA1.uo)
+	$(HOLMOSMLC) -c Graph.ui theoryfiles.ui $<
 
 HAVE_MLTON = $(if $(NO_MLTON),,$(which mlton))
 ifneq ($(HAVE_MLTON),)
@@ -20,7 +26,7 @@ GETOPT = ../../../tools/util/GetOpt.sig ../../../tools/util/GetOpt.sml
 dat-printer: dat-printer.mlb RawTermPP.sml RawTheoryReader.sig RawTheoryReader.sml mlton-datprinter.ML DatPrinterTool.ML $(GETOPT)
 	mlton -default-type intinf $<
 
-theorytool: theorytool.mlb theorystats.sml theorytool.ML mlton-theorytool.ML $(GETOPT)
+theorytool: theorytool.mlb theoryfiles.sml theorystats.sml theorytool.ML mlton-theorytool.ML $(GETOPT)
 	mlton -default-type intinf $<
 
 else ifdef POLY
@@ -29,7 +35,7 @@ all: dat-printer theorytool
 dat-printer: mkdatprinter.ML DatPrinterTool.ML RawTermPP.uo
 	$(POLYC) -o $@ $<
 
-theorytool: mktool.ML theorytool.ML theorystats.uo
+theorytool: mktool.ML theorytool.ML theorystats.uo theoryfiles.uo
 	$(POLYC) -o $@ $<
 
 endif

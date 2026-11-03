@@ -32,6 +32,9 @@ Symtab.uo: Symtab.sml Table.ui
 Chartab.uo: Chartab.sml Table.ui
 	$(MOSMLC) Table.ui -c $<
 
+Numtab.uo: Numtab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
+
 SymGraph.uo: SymGraph.sml Graph.ui
 	$(MOSMLC) Graph.ui -c $<
 

@@ -19,11 +19,10 @@ Theorem term_induct:
   ∀P. (∀v. P (Var v)) ∧ (∀n ts. (∀t. MEM t ts ⇒ P t) ⇒ P (Fn n ts)) ⇒
       ∀t. P t
 Proof
-  rpt strip_tac >>
-  qspecl_then [‘P’, ‘λts. ∀t. MEM t ts ⇒ P t’]
-    (assume_tac o SIMP_RULE bool_ss [])
-    (TypeBase.induction_of “:term”) >> rfs[] >>
-  fs[DISJ_IMP_THM, FORALL_AND_THM]
+  (* the package proves this shape itself, and quantifies a
+     constructor's other arguments inside the implication *)
+  gen_tac >> strip_tac >> ho_match_mp_tac (TypeBase.induction_of “:term”) >>
+  simp[]
 QED
 val _ = TypeBase.update_induction term_induct
 
@@ -55,7 +54,7 @@ Theorem tsubst_absent[simp]:
   v ∉ tFV t ⇒ tsubst v t' t = t
 Proof
   Induct_on ‘t’ >> simp[] >> rpt strip_tac >>
-  ‘MAP (λa. tsubst v t' a) ts = MAP I ts’ suffices_by simp[] >>
+  ‘MAP (tsubst v t') ts = MAP I ts’ suffices_by simp[] >>
   irule MAP_CONG' >> simp[] >> metis_tac[]
 QED
 

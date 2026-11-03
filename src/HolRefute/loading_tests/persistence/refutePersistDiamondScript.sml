@@ -1,0 +1,3 @@
+Theory refutePersistDiamond
+Ancestors
+  refutePersistLeft refutePersistRight

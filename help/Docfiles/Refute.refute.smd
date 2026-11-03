@@ -1,0 +1,58 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `refute`
+
+``` hol4
+Refute.refute : config -> term -> outcome
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample to a term.
+
+`refute cfg tm` closes `tm` universally, runs the backends `cfg`
+selects, prints the outcome unless `cfg` is quiet, checks its `expect`
+field, and returns the outcome:
+
+``` hol4
+datatype outcome =
+    Counterexample of counterexample list
+  | NoCounterexample
+  | Model of counterexample list
+  | NoModel
+  | Unknown of string list
+```
+
+`NoCounterexample` means the whole relevant space was covered;
+`Unknown` lists why the search was inconclusive.  `Model` and
+`NoModel` answer a model-finder search with the `falsify` field false.
+A counterexample's `certainty` is `Genuine`, `QuasiGenuine` or
+`Potential`; its `cert` field, when `SOME th`, is a theorem refuting
+`tm`.
+
+`refute_with updates tm` is `refute (current_config updates) tm`, and
+`refute_def tm` is `refute_with [] tm`.  `quickcheck` and
+`model_refute` are `refute_with [upd_search QuickcheckBackends]` and
+`refute_with [upd_search (Only [ModelFinder])]`.
+
+### Failure
+
+Fails only if the `expect` field is not met.  Backend failures and
+timeouts become `Unknown`.
+
+### Example
+
+>>__ load "Refute";
+>> case Refute.refute
+          (Refute.default_config
+             |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+             |> Refute.upd_size 4
+             |> Refute.upd_quiet true)
+          ``(n : num) < 3`` of
+       Refute.Counterexample (cex :: _) => SOME (#bindings cex)
+     | _ => NONE;
+
+### See also
+
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.config`](#Refute.config).

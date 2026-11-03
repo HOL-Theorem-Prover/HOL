@@ -88,6 +88,51 @@ Proof
   PROVE_TAC [pairTheory.ABS_PAIR_THM, llistTheory.llist_CASES]
 QED
 
+Definition path_case_def[nocompute]:
+  path_case p f g =
+    case fromPath p of
+      (x, rest) =>
+        case rest of
+          [||] => f x
+        | (r,y):::t => g x r (toPath (y,t))
+End
+
+Theorem path_case_compute[simp,compute]:
+  (path_case (stopped_at x) f g = f x) /\
+  (path_case (pcons x r p) f g = g x r p)
+Proof
+  rw [path_case_def, stopped_at_def, pcons_def, first_def,
+      path_rep_bijections_thm]
+QED
+
+Theorem path_case_cong:
+  !M M' f g f' g'.
+    M = M' /\
+    (!x. M' = stopped_at x ==> f x = f' x) /\
+    (!x r p. M' = pcons x r p ==> g x r p = g' x r p) ==>
+    path_case M f g = path_case M' f' g'
+Proof
+  rw [] >> qspec_then `M` strip_assume_tac path_cases >> rw []
+QED
+
+Theorem path_case_eq:
+  path_case p f g = v <=>
+  (?x. p = stopped_at x /\ f x = v) \/
+  ?x r q. p = pcons x r q /\ g x r q = v
+Proof
+  qspec_then `p` strip_assume_tac path_cases >> rw []
+QED
+
+Theorem path_case_elim:
+  !h. h (path_case p f g) <=>
+      (?x. p = stopped_at x /\ h (f x)) \/
+      ?x r q. p = pcons x r q /\ h (g x r q)
+Proof
+  qspec_then `p` strip_assume_tac path_cases >> rw []
+QED
+
+Theorem path_11[local] = CONJ stopped_at_11 pcons_11
+
 Theorem FORALL_path:
   !P. (!p. P p) <=> (!x. P (stopped_at x)) /\ (!x r p. P (pcons x r p))
 Proof
@@ -441,6 +486,32 @@ Proof
     ASM_SIMP_TAC (srw_ss()) [first_def]
   ]
 QED
+
+Theorem path_bisimulation_I =
+  path_bisimulation |> SPEC_ALL |> PURE_ONCE_REWRITE_RULE [EQ_IMP_THM]
+                     |> CONJUNCT2 |> Q.GEN `p1` |> Q.GEN `p2`
+
+Overload "case" = “path_case”
+
+val _ = TypeBase.export
+  [TypeBasePure.mk_datatype_info
+    { ax = TypeBasePure.ORIG path_Axiom,
+      induction = TypeBasePure.ORIG path_bisimulation_I,
+      case_def = path_case_compute,
+      case_cong = path_case_cong,
+      case_eq = path_case_eq,
+      case_elim = path_case_elim,
+      nchotomy = path_cases,
+      size = NONE,
+      encode = NONE,
+      lift = NONE,
+      one_one = SOME path_11,
+      distinct = SOME stopped_at_not_pcons,
+      fields = [],
+      accessors = [],
+      updates = [],
+      destructors = [],
+      recognizers = [] } ]
 
 
 Definition pconcat_def:

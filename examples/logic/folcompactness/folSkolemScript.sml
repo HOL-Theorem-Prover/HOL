@@ -60,7 +60,7 @@ Theorem form_functions_Skolem1:
 Proof
   simp[Skolem1_def] >> Cases_on ‘x ∈ FV p’
   >- (simp[form_functions_formsubst1, MAP_MAP_o, combinTheory.o_ABS_L,
-           SET_TO_LIST_CARD] >>
+           SET_TO_LIST_CARD, Cong MAP_CONG] >>
       simp[SUBSET_DEF]) >>
   simp[SUBSET_DEF]
 QED

@@ -647,74 +647,64 @@ type events = {
   initFile: string,
   evts: event DArray.darray }
 
-type cursor = {
-  body: DString.dstring, evts: events,
-  file: string, pos: int, line: int, col: int, idx: int }
-
-fun newCursor body evts: cursor =
-  {body = body, evts = evts, file = #initFile evts, pos = 0, line = 0, col = 0, idx = 0}
-
 fun eventPos (FileEvent (p, _)) = p
   | eventPos (LineEvent (p, _)) = p
   | eventPos (LineColEvent (p, _, _)) = p
 
-fun updateCursorSimple ({body, evts, file, pos, line, col, idx}: cursor, p) = let
-  val p = Int.min (p, DString.size body)
-  fun countLines i line last =
-    if i = p then (line, p - last) else
-    if DString.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
-    countLines (i+1) line last
-  fun firstLine i =
-    if i = p then (line, col + p - pos) else
-    if DString.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
-    firstLine (i+1)
-  val (line, col) = firstLine pos
-  in {body = body, evts = evts, file = file, pos = p, line = line, col = col, idx = idx} end
-
-fun updateCursor (cur: cursor as {body, evts, pos, line, col, idx, ...}, p): cursor =
-  if p < pos then
-    (* Backward seek. Falls back to reset only when events (e.g. #line pragmas)
-       were applied in (p, pos] and would need to be undone. *)
-    let val eventsCrossed =
-          idx > 0 andalso
-          eventPos (DArray.sub (#evts evts, idx - 1)) > p
-    in if eventsCrossed then updateCursor (newCursor body evts, p)
-       else if p >= pos - col then
-         (* p is on the same line as pos: pos - col is the line start *)
-         {body = body, evts = evts, file = #file cur,
-          pos = p, line = line, col = col - (pos - p), idx = idx}
-       else
-         (* p is on an earlier line: one backward scan finds both the newline
-            count (for line) and the line start (for col) *)
-         let fun scan i nls =
-               if i < 0 then (nls, 0)
-               else if DString.sub (body, i) = #"\n" then
-                 if i >= p then scan (i-1) (nls+1) else (nls, i+1)
-               else scan (i-1) nls
-             val (nls, lineStart) = scan (pos-1) 0
-         in {body = body, evts = evts, file = #file cur,
-             pos = p, line = line - nls, col = p - lineStart, idx = idx}
-         end
+(* Each query is answered from two ordered indexes, both built lazily: the
+   offsets of the newlines read so far, and the position each event leaves
+   behind.  Callers ask about offsets in any order while the parser is still
+   reading the body and recording events, and the parser records events in
+   text order, so both indexes only ever grow at the end. *)
+fun mkFileline body (evts: events) = let
+  val start = {file = #initFile evts, line = 0, col = 0}
+  (* the number of i < n with key i <= x, for key nondecreasing in i *)
+  fun countUpTo key n x = let
+    fun go lo hi =
+      if lo >= hi then lo else let
+        val mid = (lo + hi) div 2
+        in if key mid <= x then go (mid + 1) hi else go lo mid end
+    in go 0 n end
+  val nls = DArray.new (1024, 0)
+  val scanned = ref 0
+  fun scanTo p =
+    if !scanned >= p then () else (
+      if DString.sub (body, !scanned) = #"\n"
+      then DArray.push (nls, !scanned) else ();
+      scanned := !scanned + 1;
+      scanTo p)
+  fun nlsBefore p =
+    countUpTo (fn i => DArray.sub (nls, i)) (DArray.size nls) (p - 1)
+  (* the position at b, given the position {file, line, col} at a <= b *)
+  fun advance (({file, line, col}: fileline, a), b) = let
+    val () = scanTo b
+    val (na, nb) = (nlsBefore a, nlsBefore b)
+    in
+      if na = nb then {file = file, line = line, col = col + (b - a)}
+      else {file = file, line = line + (nb - na),
+            col = b - DArray.sub (nls, nb - 1) - 1}
     end
-  else let
-    fun readEvts (cur as {evts, idx, ...}) =
-      case SOME (DArray.sub (#evts evts, idx)) handle Subscript => NONE of
-        NONE => updateCursorSimple (cur, p)
-      | SOME e => if p < eventPos e then updateCursorSimple (cur, p) else let
-        val {body, evts, file, pos, line, col, idx} = updateCursorSimple (cur, eventPos e)
-        val cur = case e of
-          FileEvent (_, file) =>
-          {body = body, evts = evts, file = file, pos = pos, line = line, col = col, idx = idx+1}
-        | LineEvent (_, line) =>
-          {body = body, evts = evts, file = file, pos = pos, line = line, col = col, idx = idx+1}
-        | LineColEvent (_, line, col) =>
-          {body = body, evts = evts, file = file, pos = pos, line = line, col = col, idx = idx+1}
-        in readEvts cur end
-    in readEvts cur end
-
-fun mkFileline body evts =
-  case ref (newCursor body evts) of cur => fn p =>
-  case updateCursor (!cur, p) of cur' as {file, line, col, ...} =>
-  (cur := cur'; {file = file, line = line, col = col})
+  fun evt i = DArray.sub (#evts evts, i)
+  (* resolved[i] is the position just after event i is applied *)
+  val resolved = DArray.new (16, start)
+  (* the position after the first k events, and the offset it holds at;
+     needs the first k in resolved *)
+  fun base k =
+    if k = 0 then (start, 0)
+    else (DArray.sub (resolved, k - 1), eventPos (evt (k - 1)))
+  fun resolveTo k =
+    if DArray.size resolved >= k then () else let
+      val i = DArray.size resolved
+      val {file, line, col} = advance (base i, eventPos (evt i))
+      val pos = case evt i of
+          FileEvent (_, file) => {file = file, line = line, col = col}
+        | LineEvent (_, line) => {file = file, line = line, col = col}
+        | LineColEvent (_, line, col) => {file = file, line = line, col = col}
+      in DArray.push (resolved, pos); resolveTo k end
+  in fn p => let
+    val p = Int.min (p, DString.size body)
+    val k = countUpTo (eventPos o evt) (DArray.size (#evts evts)) p
+    in resolveTo k; advance (base k, p) end
+  end
 
 end

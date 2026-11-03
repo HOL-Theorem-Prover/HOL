@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `QUICKCHECK_TAC`
+
+``` hol4
+Refute.QUICKCHECK_TAC : tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample by testing.
+
+`QUICKCHECK_TAC` is `REFUTE_TAC_WITH [upd_search QuickcheckBackends]`,
+which runs the `exhaustive`, `random` and `narrowing` backends.
+
+### Failure
+
+Fails only if the configuration's `expect` field is not met.
+
+### Example
+
+>>__ load "Refute";
+>> g `!xs ys : num list. REVERSE (xs ++ ys) = REVERSE xs ++ REVERSE ys`;
+
+>> e Refute.QUICKCHECK_TAC;
+>>__ drop();
+
+### See also
+
+[`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.refute`](#Refute.refute).

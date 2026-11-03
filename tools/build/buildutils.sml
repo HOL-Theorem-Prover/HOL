@@ -580,17 +580,30 @@ fun cleanAll HOLDIR dirname =
 fun cleanForReloc HOLDIR dirname =
     moveTo dirname (maybe_gmakeclean dirname (fn () => cleanForReloc0 HOLDIR))
 
-(* Holmake and its supporting tech under tools/Holmake are built by
-   configure, not by the build sequence, so `clean` must leave them
-   alone: stripping e.g. tools/Holmake/core/Holmake_tools.uo makes the
-   next Moscow ML build fail (nothing in the sequence can remake it,
-   and src/parse/testutils.sml needs it via sigobj).  The tests subtree
-   is ordinary buildable material and is still cleaned.
+(* Some directories are compiled by configure rather than by the build
+   sequence, and have no Holmakefile of their own, so nothing can put
+   their objects back once they are gone.  `clean` must leave them
+   alone.
+
+   tools/Holmake: stripping e.g. tools/Holmake/core/Holmake_tools.uo
+   makes the next Moscow ML build fail (nothing in the sequence can
+   remake it, and src/parse/testutils.sml needs it via sigobj).  The
+   tests subtree is ordinary buildable material and is still cleaned.
+
+   tools/parsing: configure compiles HolLex, AttributeSyntax and the
+   HOLSource* modules there, and build.sml uploads them to sigobj.
+   clean_dirs reaches the directory because tools/quote-filter is in
+   the kernel sequence and, under Moscow ML only, names it in INCLUDES.
+   Losing tools/parsing/HOLSource.uo leaves sigobj without it, and the
+   mosml link of src/parse/selftest.exe -- which walks the transitive
+   .uo closure -- then fails.  Poly/ML hides this twice over: that
+   INCLUDES line sits in the Holmakefile's non-POLY branch, and
+   poly-init2 compiles the modules into bin/hol regardless.
 
    Paths are canonicalised (.. and symlinks resolved) and compared by
    arc so the check is robust to however a Holmakefile spelled its
    INCLUDES; moveTo only lexically absolutises them. *)
-fun is_holmake_infra HOLDIR d =
+fun is_configure_built HOLDIR d =
     let
       fun canonical p = OS.FileSys.fullPath p handle OS.SysErr _ => normPath p
       fun arcs_of p = #arcs (Path.fromString (canonical p))
@@ -598,10 +611,11 @@ fun is_holmake_infra HOLDIR d =
         | is_prefix _ [] = false
         | is_prefix (x::xs) (y::ys) = x = y andalso is_prefix xs ys
       val darcs = arcs_of d
-      val infra = arcs_of (fullPath [HOLDIR, "tools", "Holmake"])
-      val infra_tests = arcs_of (fullPath [HOLDIR, "tools", "Holmake", "tests"])
+      fun under ps = is_prefix (arcs_of (fullPath (HOLDIR :: ps))) darcs
     in
-      is_prefix infra darcs andalso not (is_prefix infra_tests darcs)
+      (under ["tools", "Holmake"] andalso
+       not (under ["tools", "Holmake", "tests"])) orelse
+      under ["tools", "parsing"]
     end
 
 fun clean_dirs {HOLDIR,action} dirs = let
@@ -611,7 +625,9 @@ fun clean_dirs {HOLDIR,action} dirs = let
         [] => ()
       | d::ds => let
         in
-          if Binaryset.member(sofar, d) orelse is_holmake_infra HOLDIR d then
+          if Binaryset.member(sofar, d) orelse
+             is_configure_built HOLDIR d
+          then
             recurse sofar ds
           else let
               val newincludes = action HOLDIR d
@@ -1470,11 +1486,13 @@ in
         val knl = read_kernelid ()
         val knl_suffix = if knl = "" then "" else "-" ^ knl
         val stlvl_suffix = "-t" ^ Int.toString selftest_level
-        val newname = hostname^timestamp^knl_suffix^stlvl_suffix
+        val logsuffix = knl_suffix^stlvl_suffix
+        val newname = hostname^timestamp^logsuffix
         val newpath = fullPath [logdir, newname]
       in
         HOLFileSys.rename {old = logfilename, new = newpath};
-        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
+        checkRegressions.run {logdir = logdir, latest = newpath,
+                              logsuffix = logsuffix}
       end
     else abort_logging ()
   else ()

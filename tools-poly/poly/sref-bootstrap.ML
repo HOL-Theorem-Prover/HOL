@@ -17,14 +17,20 @@
 
    The chain closes quickly -- Sref -> Multithreading -> {Thread_Data,
    Exn}, Thread_Data -> {Exn, Thread_Attributes}, Exn -> nothing -- and
-   each file carries its own signature.
+   each file carries its own signature.  `Synchronized` extends the
+   chain by one step, for the one thing `Sref` cannot express: waiting
+   for a value to change.  `server.ML` has a compile wait for the
+   goal-state walk that holds the process's Context, and a condition
+   variable is how that waits without a poll loop.  It brings
+   `Unsynchronized` with it, which wants only `Thread_Attributes`.
 
    `ConcIsaLib` is the rebinding `Multithreading` is written against,
    and the same four files in the same order are how
    `src/portableML/rawtheory/mktool.ML` bootstraps them.  Only
-   `Multithreading` wants it: `Exn`, `Thread_Attributes` and
-   `Thread_Data` all want the outer `Thread`, which is why it brackets
-   one file rather than the group.  It is undone afterwards, because
+   `Multithreading` and `Synchronized` want it: `Exn`,
+   `Thread_Attributes`, `Unsynchronized` and `Thread_Data` all want the
+   outer `Thread`, which is why it brackets those two rather than the
+   group.  It is undone afterwards, because
    `lsp/server.ML` opens `Thread` and expects the structure Poly/ML
    provides -- `ConcIsaLib` does not put it back.
 
@@ -38,12 +44,14 @@
 val _ = use "../src/portableML/poly/Exn.sig";
 val _ = use "../src/portableML/poly/Exn.sml";
 val _ = use "../src/portableML/poly/Thread_Attributes.sml";
+val _ = use "../src/portableML/poly/Unsynchronized.sml";
 val _ = use "../src/portableML/poly/Thread_Data.sml";
 
 structure PolyThread = Thread;
 val _ = use "../src/portableML/poly/ConcIsaLib.sml";
 
 val _ = use "../src/portableML/poly/Multithreading.sml";
+val _ = use "../src/portableML/poly/Synchronized.sml";
 
 structure Thread = PolyThread;
 

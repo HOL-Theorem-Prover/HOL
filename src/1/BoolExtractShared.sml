@@ -91,7 +91,8 @@ quietdec := false;
 
 
   (*get_impl_terms returns a list of terms that imply the whole term and
-    a list of terms that are implied. Thus if get_impl_terms t = (disjL,conjL) then
+    a list of terms that are implied. Thus if get_impl_terms t = (disjL,conjL)
+    then
 
     forall x in disjL. x implies t and
     forall x in conjL. t implies x holds.
@@ -110,7 +111,8 @@ quietdec := false;
                val (l11,l12)= get_impl_terms___multiple t1;
                val (l21,l22)= get_impl_terms___multiple t2;
            in
-              ((t,false)::(l11 @ l21), (t,false)::findMatches___multiple (l12, l22))
+              ((t,false)::(l11 @ l21),
+               (t,false)::findMatches___multiple (l12, l22))
            end)
       else
       if is_conj t then
@@ -118,12 +120,15 @@ quietdec := false;
                val (l11,l12)= get_impl_terms___multiple t1;
                val (l21,l22)= get_impl_terms___multiple t2;
            in
-              ((t,false)::findMatches___multiple (l11, l21), (t,false)::(l12 @ l22))
+              ((t,false)::findMatches___multiple (l11, l21),
+               (t,false)::(l12 @ l22))
            end)
       else
       if is_neg t then
-          (let val (l1,l2) = get_impl_terms___multiple (dest_neg t) in
-              (map (fn (t,b) => (mk_neg___idempot t, b)) l2, map (fn (t,b) => (mk_neg___idempot t, b)) l1)
+          (let val (l1,l2) = get_impl_terms___multiple (dest_neg t)
+           in
+             (map (fn (t,b) => (mk_neg___idempot t, b)) l2,
+              map (fn (t,b) => (mk_neg___idempot t, b)) l1)
           end)
       else
       if is_imp t then
@@ -133,7 +138,8 @@ quietdec := false;
                                  map (fn (t,b) => (mk_neg___idempot t, b)) l11')
                val (l21,l22)= get_impl_terms___multiple t2;
            in
-              ((t,false)::(l11 @ l21), (t,false)::findMatches___multiple (l12, l22))
+              ((t,false)::(l11 @ l21),
+               (t,false)::findMatches___multiple (l12, l22))
            end)
       else
       if is_quant t then
@@ -300,14 +306,15 @@ fun clean_conj_matches [] acc = acc
 
 
 
-(*---------------------------------------------------------------------------
- * Given a equation with boolean expressions on both sides (b1 = b2),
- * this conversion tries to extract common parts of b1 and b2 into a precondition.
- *
- * e.g.          (A \/ B \/ C) = (A \/ D) is converted to
- *       ~A ==> ((     B \/ C) =       D )
- *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Given a equation with boolean expressions on both sides (b1 = b2),
+    this conversion tries to extract common parts of b1 and b2 into a
+    precondition.
+
+    e.g.          (A \/ B \/ C) = (A \/ D) is converted to
+          ~A ==> ((     B \/ C) =       D )
+
+   ---------------------------------------------------------------------- *)
 
 fun BOOL_EQ_IMP_CONV t =
    let
@@ -343,7 +350,8 @@ fun BOOL_EQ_IMP_CONV t =
 
 fun BOOL_NEG_PAIR_CONV t =
    let
-      val _ = if (type_of t = bool) then () else raise mk_HOL_ERR "Conv" "bool_negation_pair_CONV" "";
+      val _ = if (type_of t = bool) then ()
+              else raise mk_HOL_ERR "Conv" "bool_negation_pair_CONV" "";
       val (disj_t, conj_t) = get_impl_terms t;
       val solving_case_split = find_negation_pair disj_t;
       val disj = isSome solving_case_split;
@@ -353,7 +361,8 @@ fun BOOL_NEG_PAIR_CONV t =
       val _ = if (isSome solving_case_split) then () else raise UNCHANGED;
 
       val thm_term = mk_eq (t, if disj then T else F);
-      val thm = EQT_ELIM (case_split_REWRITE_CONV [valOf solving_case_split] thm_term)
+      val thm =
+          EQT_ELIM (case_split_REWRITE_CONV [valOf solving_case_split] thm_term)
    in
       thm
    end;
@@ -369,12 +378,13 @@ fun BOOL_NEG_PAIR_CONV t =
  *---------------------------------------------------------------------------*)
 fun BOOL_EXTRACT_SHARED_CONV t =
    let
-      val _ = if (type_of t = bool) then () else raise mk_HOL_ERR "Conv" "bool_imp_extract_CONV" "";
-      val (disj_t___multiple,conj_t___multiple) = get_impl_terms___multiple t;
-      val disj_t___multiple = clean_term_multiple_list disj_t___multiple;
-      val conj_t___multiple = clean_term_multiple_list conj_t___multiple;
-      val disj_t = clean_disj_matches (map fst (filter snd disj_t___multiple)) [];
-      val conj_t = clean_conj_matches (map fst (filter snd conj_t___multiple)) [];
+      val _ = if (type_of t = bool) then ()
+              else raise mk_HOL_ERR "Conv" "bool_imp_extract_CONV" ""
+      val (disj_t___multiple,conj_t___multiple) = get_impl_terms___multiple t
+      val disj_t___multiple = clean_term_multiple_list disj_t___multiple
+      val conj_t___multiple = clean_term_multiple_list conj_t___multiple
+      val disj_t = clean_disj_matches (map fst (filter snd disj_t___multiple))[]
+      val conj_t = clean_conj_matches (map fst (filter snd conj_t___multiple))[]
    in
       if (not (null disj_t)) then
          bool_extract_common_terms_internal_CONV true disj_t t

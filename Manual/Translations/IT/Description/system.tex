@@ -594,7 +594,7 @@ dal parser con le funzioni \verb+type_grammar+ e
 
 Per esempio, nella seguente sessione, vediamo che la grammatica dei tipi
 usata nel contesto di avvio di \HOL{} ha gli operatori di tipo
-\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+,
+\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+,
 \verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
 \verb+bool+.
 
@@ -607,7 +607,7 @@ usata nel contesto di avvio di \HOL{} ha gli operatori di tipo
     (50)   TY  ::=  TY -> TY [fun] (R-associative)
     (60)   TY  ::=  TY + TY [sum] (R-associative)
     (70)   TY  ::=  TY # TY [prod] (R-associative)
-    (100)  TY  ::=  TY list | TY recspace | num | (TY, TY)prod | TY option |
+    (100)  TY  ::=  TY list | num | (TY, TY)prod | TY option |
                     one | (TY, TY)sum | label | (TY, TY)fun | ind | bool
      : grammar
 \end{verbatim}
@@ -1559,7 +1559,7 @@ nella gerarchia delle teorie.
    > val it =
       ["num", "prim_rec", "normalForms", "relation", "pair",
         "arithmetic", "while", "numeral", "label", "combin", "sum", "min",
-        "bool", "marker", "one", "option", "ind_type", "list"] : string list
+        "bool", "marker", "one", "option", "list"] : string list
 \end{verbatim}
 }
 \end{holboxed}

@@ -66,7 +66,31 @@ val _ = List.app assert [
                                                         | e => false),
     ("UTF8.substring(\"ab\", 1, 1)", fn () => UTF8.substring("ab", 1, 1) = "b"),
     ("UTF8.substring(\"«ab»\", 1, 2)",
-     fn () => UTF8.substring("«ab»", 1, 2) = "ab")
+     fn () => UTF8.substring("«ab»", 1, 2) = "ab"),
+
+    (* UTF8.translate rebuilds the string only from the first changed
+       character onwards; everything before that is carried over wholesale
+       from the input.  That prefix is taken by *byte* offset, so the cases
+       that matter are the ones with a multi-byte character sitting ahead of
+       the first substitution.  The first three below are controls that hold
+       regardless. *)
+    ("UTF8.translate identity on ASCII",
+     fn () => UTF8.translate (fn c => c) "abc" = "abc"),
+    ("UTF8.translate identity on ∀∀",
+     fn () => UTF8.translate (fn c => c) "∀∀" = "∀∀"),
+    ("UTF8.translate with ASCII-only prefix",
+     fn () => UTF8.translate (fn "_" => "!" | c => c) "ab_" = "ab!"),
+    ("UTF8.translate changing the first character",
+     fn () => UTF8.translate (fn "∀" => "A" | c => c) "∀b" = "Ab"),
+    ("UTF8.translate with 2-byte prefix",
+     fn () => UTF8.translate (fn "_" => "!" | c => c) "αβ_" = "αβ!"),
+    ("UTF8.translate with 3-byte prefix",
+     fn () => UTF8.translate (fn "_" => "!" | c => c) "∀_" = "∀!"),
+    ("UTF8.translate with multi-byte either side",
+     fn () => UTF8.translate (fn "a" => "X" | c => c) "∀a∀" = "∀X∀"),
+    ("UTF8.translate on EmitTeX's underscore mapping",
+     fn () => UTF8.translate (fn "_" => "\\HOLTokenUnderscore{}" | c => c)
+                             "α_β" = "α\\HOLTokenUnderscore{}β")
     ]
 
 val _ = tprint "mapFilter executes L-to-R"
@@ -128,5 +152,99 @@ val _ = testf "PIntMap size after missing remove"
                end)
               Int.toString
               2
+
+local
+  open DatHeader
+  fun with_file text f =
+      let val path = OS.FileSys.tmpName ()
+          val out = TextIO.openOut path
+          val _ = TextIO.output (out, text)
+          val _ = TextIO.closeOut out
+          fun cleanup () = OS.FileSys.remove path
+          val r = f path handle e => (cleanup (); raise e)
+      in cleanup (); r end
+  fun header ps = "(theory (\"child\" " ^ ps ^ ") (core-data "
+  fun pair thy hash = "(\"" ^ thy ^ "\" . \"" ^ hash ^ "\")"
+  fun rejects text =
+      with_file text (fn p => case read_parents p of
+                                 Failure _ => true | _ => false)
+in
+  val _ = assert ("DatHeader empty parent header", fn () =>
+    with_file (header "") (fn p => read_parents p = Success []))
+  val _ = assert ("DatHeader bootstrap identity", fn () =>
+    with_file (header (pair "min" "")) (fn p =>
+      null (validate {path = p, resolve = fn _ => raise Fail "resolved min"})))
+  val _ = assert ("DatHeader wrong bootstrap identity", fn () =>
+    with_file (header (pair "min" "wrong")) (fn p =>
+      case validate {path = p, resolve = fn _ => Missing} of
+          [HashMismatch _] => true | _ => false))
+  val _ = assert ("DatHeader strict header parsing", fn () =>
+    List.all rejects
+      ["", "junk " ^ header "", "(theory (\"child\"",
+       "(theory (\"child\" (\"min\" . \"\"))",
+       header (pair "parent" "bad"),
+       header (pair "min" "" ^ pair "min" ""),
+       "(theory (\"child\") (core-data-bogus "])
+  val _ = assert ("DatHeader comments and escaped names", fn () =>
+    let val hash = String.implode (List.tabulate (40, fn _ => #"a"))
+        val text = "; prefix\n(theory ; tag\n(\"child\"\n" ^
+                   "(\"pa\\\"rent\\\\name\\110\" ; name\n. \"" ^ hash ^
+                   "\")) ; parentage\n(core-data "
+    in with_file text (fn p =>
+         read_parents p =
+         Success [{thy = "pa\"rent\\namen", hash = hash}]) end)
+  val _ = assert ("DatHeader rejects each truncated header prefix", fn () =>
+    let val text = header (pair "min" "")
+    in List.all (fn n => rejects (String.substring (text, 0, n)))
+                (List.tabulate (size text, fn n => n)) end)
+  val _ = assert ("DatHeader rejects malformed string escapes", fn () =>
+    List.all rejects
+      [header (pair "mi\\q" ""), header (pair "mi\\999" ""),
+       header (pair "mi\\12" ""), header (pair "mi\\^a" "")])
+  val _ = assert ("DatHeader deliberately ignores malformed body", fn () =>
+    with_file (header (pair "min" "") ^ "BROKEN ((\"unterminated")
+      (fn p => read_parents p = Success [{thy = "min", hash = ""}] andalso
+               null (validate {path = p, resolve = fn _ => Missing})))
+  val _ = assert ("DatHeader parent-like body text is not parentage", fn () =>
+    with_file (header "" ^ pair "min" "wrong")
+      (fn p => read_parents p = Success []))
+  val _ = assert ("DatHeader missing header file is a failure", fn () =>
+    let val path = OS.FileSys.tmpName ()
+        val _ = OS.FileSys.remove path handle OS.SysErr _ => ()
+    in case read_parents path of Failure _ => true | _ => false end)
+  val _ = assert ("DatHeader normal parent chain", fn () =>
+    with_file (header (pair "min" "")) (fn base =>
+      let val baseHash = SHA1.sha1_file {filename = base}
+      in with_file (header (pair "base" baseHash)) (fn middle =>
+        let val middleHash = SHA1.sha1_file {filename = middle}
+        in with_file (header (pair "middle" middleHash)) (fn leaf =>
+          null (validate {path = middle,
+                          resolve = fn "base" => Artifact base
+                                     | _ => Missing}) andalso
+          null (validate {path = leaf,
+                          resolve = fn "middle" => Artifact middle
+                                     | _ => Missing})) end) end))
+  val _ = assert ("DatHeader parent byte identity and failures", fn () =>
+    with_file "parent artifact bytes" (fn parent =>
+      let val hash = SHA1.sha1_file {filename = parent}
+      in with_file (header (pair "parent" hash)) (fn child =>
+        null (validate {path = child,
+                        resolve = fn _ => Artifact parent}) andalso
+        (case validate {path = child, resolve = fn _ => Missing} of
+             [MissingParent _] => true | _ => false) andalso
+        (case validate {path = child,
+                        resolve = fn _ => Ambiguous [parent, parent]} of
+             [AmbiguousParent _] => true | _ => false) andalso
+        (case validate {path = child,
+                        resolve = fn _ => raise Fail "resolver failed"} of
+             [ResolverError _] => true | _ => false) andalso
+        let val absent = OS.FileSys.tmpName ()
+            val _ = OS.FileSys.remove absent handle OS.SysErr _ => ()
+        in case validate {path = child, resolve = fn _ => Artifact absent} of
+               [UnreadableParent _] => true | _ => false end andalso
+        with_file "different bytes" (fn other =>
+          case validate {path = child, resolve = fn _ => Artifact other} of
+              [HashMismatch _] => true | _ => false)) end))
+end
 
 val _ = OS.Process.exit OS.Process.success

@@ -30,6 +30,14 @@ val _ = Datatype ‘
 
 val res = define_from_to “:tree”
 
+(* an operator inside another, mentioned on its own first: the encoder
+   for `ztree option list` needs the one for `ztree option` *)
+val _ = Datatype ‘
+  ztree = ZTip | ZLink (ztree option) | ZFork (ztree option list)
+’
+
+val res = from_to_thm_for “:ztree”
+
 val _ = Datatype ‘
   t1 = T1 num (t1 list)
 ’
@@ -323,7 +331,10 @@ val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 /\
   exp_sizes_alt [] = 0 /\
   exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
- ALL_TAC
+ (WF_REL_TAC ‘measure $ λx. case x of
+                              INL e => c_exp_size e
+                            | INR es => list_size c_exp_size es’
+  \\ simp [])
 
 val pre =
   cv_auto_trans_pre_rec "" exp_size_alt_def

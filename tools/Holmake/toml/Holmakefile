@@ -9,7 +9,7 @@ all: $(DEFAULT_TARGETS)
 parseTOMLFunctor.uo parseTOMLFunctor.ui: parseTOMLFunctor.sml parseTOMLUtil.uo
 	$(MOSMLC) -toplevel -c $<
 
-parseTOML.uo parseTOML.ui: parseTOML.sml parseTOMLFunctor.ui TOMLvalue.ui
+parseTOML.uo parseTOML.ui: parseTOML.sml parseTOMLFunctor.ui TOMLvalue.uo
 	$(MOSMLC) -toplevel -c parseTOMLFunctor.ui $<
 
 TOML.uo: TOML.sml parseTOML.ui TOML.ui

@@ -310,10 +310,21 @@ local
           (core_s, digitstr ^ prime_str)
         end
 
-  val stringmunge =
-    UTF8.translate (fn "\\" => "\\HOLTokenBackslash{}"
-                     | "~" => "\\HOLTokenTilde{}"
-                     | s => s)
+  fun stringmunge s =
+      let
+        fun removebsdq [] = []
+          | removebsdq [c] = [c]
+          | removebsdq (#"\\" :: #"\"" :: rest) = #"\"" :: removebsdq rest
+          | removebsdq (c::cs) = c::removebsdq cs
+        val s = implode (removebsdq (explode s))
+      in
+        UTF8.translate (fn "\\" => "\\HOLTokenBackslash{}"
+                       | "~" => "\\HOLTokenTilde{}"
+                       | "{" => "\\{"
+                       | "}" => "\\}"
+                       | s => s) s
+      end
+
 
   fun ann_string overrides (s,sz_opt,ann) = let
     open PPBackEnd
@@ -361,9 +372,10 @@ local
             end
           | Literal FldName => apfst (addann "FieldName") (smapper s)
           | Literal NumLit => (addann "NumLit" s, unmapped_sz)
-          | Literal CharList => (addann "CharLit"
-                                        (String.substring(s, 2, size s - 3)),
-                                 unmapped_sz)
+          | Literal CharLit => (addann "CharLit"
+                                       (stringmunge
+                                          (String.substring(s, 2, size s - 3))),
+                                unmapped_sz)
           | _ => smapper s
   in
     smpp.add_stringsz (dollarpfx ^ string_to_print ^ dollarsfx, sz + szdelta)

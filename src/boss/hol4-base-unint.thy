@@ -24,13 +24,21 @@ main {
   import: while
   import: divides
   import: numpair
-  import: ind-type
   import: gcd
   import: pred-set
   import: list
   import: rich-list
   import: logroot
   import: set-relation
+  import: permutes
+  import: wellorder
+  import: cardinality-core
+  import: cardinal
+  import: ordinal-basic
+  import: bnf-prelims
+  import: bnf-initial
+  import: bnf-fix-bnf
+  import: bnf-mutual
   import: indexed-lists
   import: bit
   import: numeral-bit
@@ -239,11 +247,109 @@ set-relation {
   import: relation
   article: "../pred_set/src/set_relation.ot.art"
 }
-ind-type {
+permutes {
   import: bool
+  import: marker
+  import: pair
+  import: prim-rec
   import: arithmetic
+  import: numeral
+  import: pred-set
+  article: "../pred_set/src/permutes.ot.art"
+}
+wellorder {
+  import: bool
+  import: marker
+  import: relation
+  import: pair
+  import: option
+  import: prim-rec
+  import: arithmetic
+  import: numeral
+  import: while
+  import: pred-set
+  import: set-relation
+  article: "../pred_set/src/wellorder.ot.art"
+}
+cardinality-core {
+  import: bool
+  import: marker
+  import: combin
+  import: relation
+  import: pair
+  import: sum
+  import: option
+  import: prim-rec
+  import: arithmetic
+  import: numeral
   import: numpair
-  article: "../datatype/ind_type.ot.art"
+  import: pred-set
+  import: set-relation
+  import: permutes
+  import: wellorder
+  article: "../pred_set/src/cardinalityCore.ot.art"
+}
+cardinal {
+  import: bool
+  import: combin
+  import: relation
+  import: pair
+  import: arithmetic
+  import: pred-set
+  import: permutes
+  import: wellorder
+  import: cardinality-core
+  article: "../pred_set/src/cardinal.ot.art"
+}
+ordinal-basic {
+  import: bool
+  import: marker
+  import: quotient
+  import: relation
+  import: pair
+  import: option
+  import: prim-rec
+  import: arithmetic
+  import: numeral
+  import: pred-set
+  import: set-relation
+  import: wellorder
+  import: cardinality-core
+  article: "../pred_set/src/ordinalBasic.ot.art"
+}
+bnf-prelims {
+  import: bool
+  import: combin
+  import: pair
+  import: sum
+  import: basic-size
+  import: pred-set
+  import: cardinality-core
+  article: "../datatype/bnfPrelims.ot.art"
+}
+bnf-initial {
+  import: bool
+  import: normal-forms
+  import: marker
+  import: pair
+  import: option
+  import: pred-set
+  import: cardinality-core
+  import: ordinal-basic
+  article: "../datatype/bnfInitial.ot.art"
+}
+bnf-fix-bnf {
+  import: bool
+  import: pred-set
+  import: cardinality-core
+  import: bnf-initial
+  article: "../datatype/bnfFixBNF.ot.art"
+}
+bnf-mutual {
+  import: bool
+  import: pred-set
+  import: bnf-fix-bnf
+  article: "../datatype/bnfMutual.ot.art"
 }
 list {
   import: bool
@@ -258,6 +364,12 @@ list {
   import: combin
   import: quotient
   import: basic-size
+  import: sum
+  import: prim-rec
+  import: cardinality-core
+  import: ordinal-basic
+  import: bnf-initial
+  import: bnf-fix-bnf
   article: "../list/src/list.ot.art"
 }
 rich-list {

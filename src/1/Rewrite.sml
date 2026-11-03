@@ -90,7 +90,8 @@ with
 fun add_rewrites (RW{thms,net}) thl =
  let val rewrites = itlist (append o local_mk_rewrites) thl []
      fun appconv (c,UNBOUNDED) tm     = c tm
-       | appconv (c,BOUNDED r) tm     = if !r = 0 then failwith "exceeded bound" else c tm before Portable.dec r
+       | appconv (c,BOUNDED r) tm     = if !r = 0 then failwith "exceeded bound"
+                                        else c tm before Portable.dec r
  in
    RW{thms = thms@thl,
        net = itlist Net.insert
@@ -198,7 +199,8 @@ and ONCE_REWRITE_TAC thl g c =
     GEN_REWRITE_TAC Conv.ONCE_DEPTH_CONV (implicit_rewrites_of c) thl g c;
 
 val rewrite_tac = REWRITE_TAC and once_rewrite_tac = ONCE_REWRITE_TAC
-val pure_rewrite_tac = PURE_REWRITE_TAC and pure_once_rewrite_tac = PURE_ONCE_REWRITE_TAC
+val pure_rewrite_tac = PURE_REWRITE_TAC
+val pure_once_rewrite_tac = PURE_ONCE_REWRITE_TAC
 
 
 (* Rewrite a goal with the help of its assumptions *)
@@ -280,7 +282,8 @@ fun pp_rewrites rws =
                 )
              ) >>
              add_newline >>
-             add_string("Number of rewrite rules = "^Lib.int_to_string how_many) >>
+             add_string
+               ("Number of rewrite rules = "^Lib.int_to_string how_many) >>
              add_newline
            )
     in

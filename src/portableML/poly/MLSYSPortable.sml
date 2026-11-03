@@ -81,6 +81,12 @@ fun syncref init =
 fun unique_tmp_suffix () =
   SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
 
-fun save_heap file = PolyML.SaveState.saveChild (file, 1)
+(* The depth must be the current hierarchy's length, so that the new state
+   becomes a child of the heap we are running on.  Asking for a shallower
+   one is not an error: Poly/ML demotes every level at or beyond it, which
+   silently breaks identity for anything living there. *)
+fun save_heap file =
+    PolyML.SaveState.saveChild
+      (file, length (PolyML.SaveState.showHierarchy ()))
 
 end

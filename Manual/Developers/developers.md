@@ -300,12 +300,14 @@ Unless otherwise noted, they are built by the configuration process.
     Regenerate it with `developers/gen-build-times`, never by hand:
 
     ~~~~
-    cd src/parallel_builds/core
-    HOLSELFTESTLEVEL=3 Holmake --json > /tmp/g.json
-    cd $HOLDIR
-    developers/gen-build-times --graph /tmp/g.json --level 3 \
-        --exempt src/real/prove_real_assums > build-times
+    developers/gen-build-times --exempt src/real/prove_real_assums > build-times
     ~~~~
+
+    It captures its own dependency graph, by running `Holmake --json` in `src/parallel_builds/core` at `--level` (default 3), which is also the level recorded in the seed's header.
+    The tree must have been built at least once: `KERNELID` is read from `.kernelidstr` rather than from the environment, and without that file `examples/bootstrap` drops out of the graph and so out of the coverage check below.
+    The generator refuses to capture in that state rather than quietly checking less.
+    Whether individual targets are currently up to date makes no difference --- every theory target is in the graph either way, and the generator ignores which of them need rebuilding.
+    `--graph` supplies a pre-captured graph instead, and `--save-graph` keeps the captured one for working out why the gate rejected it.
 
     A target the build never builds has to be named: `prove_real_assums` is
     excluded from `src/real`'s `TARGETS` and exists only for the OpenTheory

@@ -95,15 +95,48 @@ fun getLineCol {starts, text} index = let
   val bol = bolOf starts line
   in (line, if !utf16 then utf16Col (text, bol, index) else index - bol) end
 
+(* Byte offset of the newline that ends `line', or the end of the text
+   for a last line that has none.  `starts' holds the offset just past
+   each newline, so the newline closing line `n' sits at
+   `starts[n] - 1'. *)
+fun eolOf (starts, text) line =
+    if line < Vector.length starts then Vector.sub (starts, line) - 1
+    else String.size text
+
+(* Both directions stop at the end of the line, `utf16Byte' by walking
+   and the byte case by `eolOf'.  A column past the line's last byte
+   means the client's text and ours have already diverged, and without
+   the stop that divergence turns structural: `applyEdit' splices
+   `[from, to)' out, so a `to' that has run into the next line takes
+   the newline with it and our copy loses a line the buffer still has.
+   Every position below is then off by one, for good -- there is no
+   resync in the protocol.  Landing at the line end instead keeps the
+   damage inside the line it started in, where `applyEdit's own check
+   can see it and ask the client to resend. *)
 fun fromLineCol {starts, text} (line, col) = let
   val bol = bolOf starts line
-  in if !utf16 then utf16Byte (text, bol, col) else bol + col end
+  in if !utf16 then utf16Byte (text, bol, col)
+     else Int.min (bol + col, eolOf (starts, text) line) end
+
+(* Does `col' name a position past the end of its line?  Asked of a
+   position the client sent, this is the cheapest evidence there is
+   that the two texts have stopped agreeing -- the client counted
+   columns in a line longer than the one we hold.  `fromLineCol' clamps
+   such a position to the line end, which keeps the damage contained
+   but also hides it, so the question has to be asked separately.
+   Counted in whatever unit the client negotiated: a column is a column
+   in the units the wire speaks. *)
+fun posOvershoots {starts, text} (line, col) = let
+  val bol = bolOf starts line
+  val eol = eolOf (starts, text) line
+  in if !utf16 then utf16Col (text, bol, eol) < col else eol - bol < col end
 
 fun getLineColBytes {starts, text} index = let
   val line = lineOf starts index
   in (line, index - bolOf starts line) end
 
-fun fromLineColBytes {starts, text} (line, col) = bolOf starts line + col
+fun fromLineColBytes {starts, text} (line, col) =
+    Int.min (bolOf starts line + col, eolOf (starts, text) line)
 
 (* Binarymap (rather than Symtab/Table) here because LSPExtension is
    `use`d directly by tools-poly/poly/poly-init2.ML at bootstrap, before
@@ -210,16 +243,26 @@ type goal_state_response = {
   theorem: string, step: int, goals: goal_state list, pretty: string,
   context: string list, note: string option, status: string,
   error: string option, failedRange: (int * int) option,
+  failedCloseRange: (int * int) option,
   segments: pp_segment list}
 type theorem_context = {
   name: string, quote: string, quoteStart: int,
-  tacText: string, tacStart: int, cursor: int, compileDone: bool}
+  tacText: string, tacStart: int, cursor: int, compileDone: bool,
+  resumeOf: {suspension: string, label: string} option,
+  terminationOf: {stem: string} option,
+  locate: bool}
 
 val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])
 val hoverQuotation = ref (fn _ => [])
 val goalStateAtPos :
     (hover_context * theorem_context -> goal_state_response option) ref =
+  ref (fn _ => NONE)
+val stepCursor : (theorem_context * int -> int option) ref =
+  ref (fn _ => NONE)
+val tryTacticAt :
+    (hover_context * theorem_context * {tactic: string, budgetMs: int} ->
+     goal_state_response option) ref =
   ref (fn _ => NONE)
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
@@ -249,13 +292,22 @@ type compileSnap = unit -> unit
 val captureCompileSnap : (unit -> compileSnap) ref = ref (fn () => (fn () => ()))
 val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
 
+val theorySealed : (string -> bool) ref = ref (fn _ => false)
+
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
        | Failed of string | Suspended of string | Diverged of string
+       | TimedOut of Time.time
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs = ref false
+val proofTimeout = ref (Time.fromSeconds 120)
+(* Just the default.  This structure is polyc'd into `bin/hol`, so a
+   `getEnv` here would run when the executable was built, not when the
+   server starts -- `goal_state_init`, which is loaded at startup,
+   applies `HOL_LSP_WALK_BUDGET_MS` to this ref. *)
+val walkBudgetMs : LargeInt.int ref = ref 1500
 val cheatSubstituted = ref false
 
 local
@@ -276,29 +328,38 @@ in
   fun dropNoCheatSite s =
       Sref.update sites (List.filter (fn s' => s' <> s))
 end
-val currentProofOffset = ref 0
-val currentProofOrd = ref 1
-local
-  (* Enqueued in reverse; the drain takes the whole queue in one step.
 
-     An `Sref` rather than a plain ref: the deferring branch of the
-     prover hook is reached from elaboration, and while that is one
-     thread at a time, a superseded pass can still be draining this
-     queue as its replacement fills it -- and any thread that runs a
-     tactic reaches the hook, including the ones the server forks per
-     goal-state request.  A dropped enqueue is a proof that is never
-     checked and never reported, which is indistinguishable from one
-     that passed. *)
-  val q : deferred list Sref.t = Sref.new []
+local
+  (* An `Sref` for the same reason the set above is one: the writers are
+     pool workers, one per proof, running at the same time. *)
+  val times : (string, Time.time) Binarymap.dict Sref.t =
+      Sref.new (Binarymap.mkDict String.compare)
 in
-  fun enqueueDeferred d = Sref.update q (fn ds => d :: ds)
-  fun takeDeferred () = List.rev (Sref.gen_update q (fn ds => ([], ds)))
+  fun recordProofElapsed (s, t) =
+      Sref.update times (fn d => Binarymap.insert (d, s, t))
+  fun proofElapsed s = Binarymap.peek (Sref.value times, s)
 end
 
+type step_cost = {span: (int * int) option, ms: int,
+                  goalsBefore: int, goalsAfter: int}
+val lastStepCosts : step_cost list ref = ref []
+fun rebaseStepCosts base =
+    lastStepCosts :=
+      List.map (fn {span, ms, goalsBefore, goalsAfter} =>
+                   {span = Option.map (fn (s, e) => (base + s, base + e))
+                                      span,
+                    ms = ms, goalsBefore = goalsBefore,
+                    goalsAfter = goalsAfter})
+               (!lastStepCosts)
+val currentProofOffset = ref 0
+val currentProofOrd = ref 1
+fun qualifyProof nm ord =
+    if nm = "" orelse ord <= 1 then nm else nm ^ "#" ^ Int.toString ord
 type check_scope = {resumeFrom: int, keptFrom: int option, bytes: int}
 val checkDeferred : (check_scope -> unit) ref = ref (fn _ => ())
 val poolBusy : (unit -> bool) ref = ref (fn () => false)
 val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
+val proofGeneration : int ref = ref 0
 val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
 val cancelAllProofs : (unit -> unit) ref = ref (fn () => ())
 val proofStateChanged : (proof_state list -> unit) ref = ref (fn _ => ())

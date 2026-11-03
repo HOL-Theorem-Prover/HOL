@@ -19,6 +19,11 @@ Libs
 val _ = deprecate_int ();
 val INT_ARITH = intLib.ARITH_PROVE;
 
+(* cardinalTheory keeps this to itself now — the datatype package needs
+   that theory, so what it exports reaches everywhere, and ** is the
+   exponent of the numbers, the words and the rationals too *)
+Overload "**"[local] = “set_exp”
+
 val std_ss' = std_ss ++ PRED_SET_ss;
 
 (* NOTE: HOL4's ‘trivial_ring’ is HOL-Light's ‘singleton_ring’ (also here).
@@ -135,18 +140,29 @@ Proof
  >> REWRITE_TAC [ring_exp_0, ring_exp_SUC]
 QED
 
-(* NOTE: not used, only to make sure ‘ring_inv’ is not treated as variables
-
-   |- !r. ring_inv r = Inv (fromRing r)
- *)
 Definition ring_inv_def :
     ring_inv (r :'a Ring) = (Invertibles ((fromRing r).prod)).inv
 End
 
-(* NOTE: not used *)
 Definition ring_div_def :
     ring_div r (a :'a) b = ring_mul r a (ring_inv r b)
 End
+
+(* Operation agreement with the original ring record. *)
+Theorem toRing_operations:
+    Ring r ==>
+    ring_carrier (toRing r) = r.carrier /\
+    ring_0 (toRing r) = r.sum.id /\
+    ring_1 (toRing r) = r.prod.id /\
+    ring_add (toRing r) = r.sum.op /\
+    ring_mul (toRing r) = r.prod.op /\
+    ring_pow (toRing r) = r.prod.exp /\
+    ring_inv (toRing r) = (Invertibles r.prod).inv
+Proof
+    simp [ring_carrier_def, ring_0_def, ring_1_def,
+          ring_add_def, ring_mul_def, ring_pow_def,
+          ring_inv_def, from_toRing]
+QED
 
 (* NOTE: Now the following theorems have exactly the same statements with their
          corresponding theorems in HOL-Light.

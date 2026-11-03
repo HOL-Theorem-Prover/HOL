@@ -401,7 +401,32 @@ fun define_from_to_aux ignore_tyvars ty =
   else let
   (* extract target structure from induction theorem *)
   val mutrec_count = length (find_mutrec_types ty)
-  val ind = TypeBase.induction_of ty
+  (* The naming below reads the family off the induction principle's
+     conjuncts, and a type recursing under an operator needs one
+     function per collection it recurses under: `d = D 'a (d list)`
+     wants an encoder for `d list` as well.  The older datatype
+     construction presented that as a mutually recursive auxiliary and
+     so gave a conjunct for it; the BNF package proves one principle per
+     type, and legacyInduction puts it back. *)
+  val ind =
+      let val ind = TypeBase.set_induction_of ty
+      in
+        (* a type that recurses under no operator has nothing to put
+           back, and is the principle it already has *)
+        (* the set form, not induction_of: operators_of reads the set
+           functions, and a development's datatype_simp theorems may
+           have rewritten them out of the principle a reader sees *)
+        case Lib.total legacyInduction.operators_of ind of
+            NONE => ind
+          | SOME ops =>
+            legacyInduction.mutual_induction ops ind
+            handle HOL_ERR _ =>
+                   (HOL_WARNING "cv_typeLib" "define_from_to"
+                      ("no operator-wise induction for " ^
+                       type_to_string ty ^
+                       "; what it collects gets no encoder of its own");
+                    ind)
+      end
   val inputs = ind |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCTS
                    |> map (fst o dest_forall o concl)
   val tyvars = dest_type (type_of (hd inputs)) |> snd
@@ -511,8 +536,75 @@ fun define_from_to_aux ignore_tyvars ty =
     in if null ignore_tyvars andalso not (null unused) then
          raise UnusedTypeVars (map (fst o dest_fun_type o type_of) unused)
        else () end
+  (* A type recursing under an operator is encoded by one function per
+     collection it recurses under, and those call each other.  The
+     older datatype construction presented the whole nest as a mutually
+     recursive family, so its recursion axiom matched these equations
+     and no termination argument was wanted.  The BNF construction's
+     axiom is about the type alone, so the same equations are a
+     well-founded recursion, and this is the measure that settles it:
+     each function's own argument, under its type's own size. *)
+  fun size_for ty =
+      let
+        val zero = mk_abs (mk_var ("v", ty), numSyntax.zero_tm)
+      in
+        if is_vartype ty then zero
+        else
+          let
+            val (_, args) = dest_type ty
+            val sz = #1 (TypeBase.size_of ty)
+          in
+            if null args then sz
+            else list_mk_icomb (sz, map size_for args)
+          end
+          handle HOL_ERR _ => zero
+      end
+  fun size_thms_for ty =
+      let
+        val ths =
+            if is_vartype ty then []
+            else
+              (#2 (TypeBase.size_of ty) ::
+               List.concat (map size_thms_for (#2 (dest_type ty))))
+              handle HOL_ERR _ => []
+      in ths end
+  val from_tys = map (fn f => #1 (dom_rng (type_of f))) from_names
+  fun from_args ty =
+      pairSyntax.list_mk_pair (tyvar_encoders @ [mk_var ("v", ty)])
+  fun from_branch ty =
+      pairSyntax.mk_pabs (from_args ty,
+                          mk_comb (size_for ty, mk_var ("v", ty)))
+  fun from_input_ty [ty] = type_of (from_args ty)
+    | from_input_ty (ty :: tys) =
+        mk_sum_type (type_of (from_args ty)) (from_input_ty tys)
+    | from_input_ty [] = fail()
+  fun from_cases [ty] = from_branch ty
+    | from_cases (tys as ty :: rest) =
+        let val x = mk_var ("x", from_input_ty tys)
+        in mk_abs (x, mk_sum_case x (from_branch ty) (from_cases rest)) end
+    | from_cases [] = fail()
+  val from_measure_tm =
+      ISPEC (from_cases from_tys) prim_recTheory.WF_measure |> concl |> rand
+  val from_size_thms =
+      List.concat (map size_thms_for from_tys) |> op_mk_set (fn t1 => fn t2 =>
+          aconv (concl t1) (concl t2))
+  val from_def_name = (from_names |> hd |> repeat rator |> dest_var |> fst)
+  (* `Define` cannot be asked to try and then be caught: where it
+     cannot find a termination argument it leaves a goal in the proof
+     manager and, in a batch session, takes the process down with it.
+     So the definition is built first and asked whether it wants one. *)
+  val from_defn =
+      Feedback.trace ("Theory.allow_rebinds", 1)
+                     (Hol_defn from_def_name) [ANTIQUOTE tm]
   val from_def =
-      Feedback.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
+      if null (Defn.tcs_of from_defn) then
+        Feedback.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
+      else
+        #1 (Defn.tprove
+              (from_defn,
+               WF_REL_TAC [ANTIQUOTE from_measure_tm]
+               \\ rpt strip_tac
+               \\ simp_tac (srw_ss()) from_size_thms))
   (* define decoding from cv type, i.e. "to function" *)
   val to_names = names |>
     map (fn (fname,ty) =>
@@ -787,37 +879,55 @@ fun define_from_to ty = define_from_to_aux [] ty;
 
 fun get_type_name ty = dest_type ty |> fst
 
+(* A type whose definition is interrupted is defined again once what it
+   needed exists, so what has been defined on its behalf has to be
+   remembered.  Asking for one of those again says defining it did not
+   answer the ask — because the type is its own ancestor, or because
+   what was defined is not what the ask wanted — and asking a third time
+   would not answer it either. *)
 fun rec_define_from_to ty = let
-  fun loop acc ty =
+  fun loop seen acc ty =
     let
-      val (to_def,from_def,thms) = define_from_to ty
+      val (from_def,to_def,thms) = define_from_to ty
       val _ = cv_print Verbose
                      ("Finished to/from for " ^ get_type_name ty ^ "\n\n")
       val _ = cv_print_thm Verbose to_def
       val _ = cv_print Verbose "\n\n"
     in thms @ acc end
     handle Missing_from_to needs_ty =>
+    if List.exists (equal needs_ty) seen then
+      raise ERR "rec_define_from_to"
+            (type_to_string ty ^ " still needs " ^ type_to_string needs_ty ^
+             ", which has been defined for it already")
+    else
     let
+      val seen = needs_ty :: seen
       val _ = cv_print Verbose
                      ("Interrupting " ^ get_type_name ty ^
                       " since " ^ get_type_name needs_ty ^ " needed.\n")
-      val acc = loop acc needs_ty
+      val acc = loop seen acc needs_ty
       val _ = cv_print Verbose
                      ("Continuing " ^ get_type_name ty ^
                       " since " ^ get_type_name needs_ty ^ " exists.\n")
-    in loop acc ty end
-  in loop [] ty end
+    in loop seen acc ty end
+  in loop [] [] ty end
 
 (* --------------------------------------------------- *
     Smart functions for retrieving/creating from_to
  * --------------------------------------------------- *)
 
-fun from_to_thm_for ty =
-  from_to_for [] ty
-  handle Missing_from_to needs_ty =>
-  let
-    val th = rec_define_from_to needs_ty
-  in from_to_thm_for ty end
+(* Defining what the type needed is meant to make the next ask succeed,
+   so an ask that comes back is one that defining cannot answer. *)
+fun from_to_thm_for ty = let
+  fun go asked ty =
+    from_to_for [] ty
+    handle Missing_from_to needs_ty =>
+    if List.exists (equal needs_ty) asked then
+      raise ERR "from_to_thm_for"
+            ("defining " ^ type_to_string needs_ty ^
+             " did not give it a representation")
+    else (rec_define_from_to needs_ty; go (needs_ty :: asked) ty)
+  in go [] ty end
 
 fun from_term_for ty = from_to_thm_for ty |> concl |> rator |> rand;
 fun to_term_for ty = from_to_thm_for ty |> concl |> rand;

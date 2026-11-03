@@ -16,13 +16,12 @@ local
          ; if !Globals.dumpheap_on_failure andalso
               not (!Globals.interactive)
            then
-             let val file =
-                   boolLib.dump_failure_state
-                     (boolLib.current_thm_name ctxt, g)
-             in
-               HOL_MESG ("Heap saved to " ^ file ^
-                         "; resume with: bin/hol --holstate=" ^ file)
-             end
+             (case boolLib.dump_failure_state
+                     (boolLib.current_thm_name ctxt, g) of
+                  NONE => ()
+                | SOME file =>
+                  HOL_MESG ("Heap saved to " ^ file ^
+                            "; resume with: bin/hol --holstate=" ^ file))
            else ()
          ; Thm.mk_oracle_thm holmake_tag g)
 in

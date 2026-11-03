@@ -29,6 +29,7 @@ fun fromFile path =
         val res = TextIO.scanStream parseTOML.scan istrm
                   handle e => (TextIO.closeIn istrm; raise e)
     in
+      TextIO.closeIn istrm;
       valOf res
     end
 

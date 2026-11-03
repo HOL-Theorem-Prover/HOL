@@ -7,7 +7,7 @@ EXTRA_CLEANS = selftest.exe datatype-selftest.log
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-selftest.exe: selftest.uo ind_types.uo Datatype.uo $(dprot $(SIGOBJ)/ParseDatatype.uo) $(dprot $(SIGOBJ)/RecordType.uo)
+selftest.exe: selftest.uo Datatype.uo $(dprot $(SIGOBJ)/ParseDatatype.uo) $(dprot $(SIGOBJ)/RecordType.uo)
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)

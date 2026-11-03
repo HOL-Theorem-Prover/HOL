@@ -138,8 +138,7 @@ fun ZAP_TAC ss thl =
           ORELSE BasicProvers.GEN_PROVE_TAC 0 12 1 thl);
 
 fun kall_tac x = Tactical.all_tac
-val cheat:tactic =
-    fn g => fn _ (* ctxt *) => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
+val cheat = Tactical.cheat
 
 (*---------------------------------------------------------------------------
     Single step interactive proof operations

@@ -14,7 +14,11 @@ End
 
 val tree_11 = DB.fetch "-" "tree_11";
 val tree_distinct = DB.fetch "-" "tree_distinct";
-val tree_size_def = DB.fetch "-" "tree_size_def";
+(* The size definition stored in the theory says what the
+   construction's axiom handed over -- `list_size (\x. x)
+   (MAP tree_size l)` -- where the TypeBase holds the same equation
+   with the fold stated, which is what the proofs below reason with. *)
+val tree_size_def = #2 (TypeBase.size_of “:'a tree”);
 
 
 Definition IS_LEAF_def:   (IS_LEAF leaf = T) /\

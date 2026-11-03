@@ -451,12 +451,6 @@ local
 
    val FCP_EQ_CONV = Conv.REWR_CONV FCP_EQ_EVERY THENC EVAL_CONV
 
-   structure Numtab = Table(struct
-     type key = Arbnum.num
-     val ord = Arbnum.compare
-     val pp = HOLPP.add_string o Arbnum.toString
-   end)
-
    val fcp_map : Thm.thm Numtab.table ref = ref Numtab.empty
 in
    fun fcp_eq_thm ty =

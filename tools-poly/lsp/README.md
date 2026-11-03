@@ -12,24 +12,79 @@ practical guide to trying it out; the protocol details live in
   `PolyML.compiler`.  Compilation is execution: every SML top-level
   declaration is type-checked, run, and its HOL side-effects (theory
   segment, DB, TypeBase, simpsets, grammars) applied to live state.
+- **A file that exits takes the server with it, and is told so.**
+  Because compiling is running, a top-level `OS.Process.exit` in the
+  opened file ends the server process: an exit is not an exception, so
+  nothing in the compile's handlers can catch it.  The server does not
+  try to survive that -- shadowing `OS` beneath the compile would cover
+  the buffer's own source text and not the library code it calls, and
+  `testutils.die` exits too.  What it does instead is say why before it
+  goes: a line on stderr, a `window/showMessage` naming the file and
+  roughly where it got to, and a `$/compileInterrupted` so a client is
+  not left waiting on a `$/compileCompleted` that will never come.
+  Without that the client sees only EOF, and one that restarts on close
+  loads another heap to die the same way.  The workaround while editing
+  such a file is to comment the exit out.  (gh #2077.  `$/eval` is not
+  covered: an exit there is one the user just typed.)
 - **Fast-oracle prover swap.**  `holide.ML` replaces `Tactical.set_prover`
   with `fn (t, _) => mk_oracle_thm "fast_proof" t`.  `prove(term, tac)`
   never actually calls `tac`; the theorem is minted with a
   `fast_proof` oracle tag.  Compilation is therefore near-batch-build
   speed even for files heavy in tactic proofs, at the cost of not
   detecting tactic errors.
-- Server capabilities advertised: `textDocumentSync`, `hoverProvider`,
-  `definitionProvider`, `referencesProvider`.  Plus LSP extensions:
+- Server capabilities advertised: `textDocumentSync`,
+  `positionEncoding`, `hoverProvider`, `definitionProvider`,
+  `documentSymbolProvider`, `workspaceSymbolProvider` and
+  `completionProvider`.  Not `referencesProvider`: see
+  `Manual/Developers/lsp-server.md` for why there is no
+  `textDocument/references`.  Plus LSP extensions:
   `$/setConfig` (elabOn mode, holdep behaviour, hover width),
-  `$/eval` (streamed
-  arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
-  below), `$/cancelRequest`, `$/compileProgress` /
+  `$/eval` (SML at a position, restricted to questions — see below),
+  `$/hol/goalState` (goal-state at cursor — see
+  below), `$/hol/tryTactic` (a candidate tactic at a point in a proof),
+  `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted` /
-  `$/compileBlocked`, `$/hol/retryCompile`.
+  `$/compileBlocked`, `$/hol/retryCompile`, `$/hol/desync`.
+- **`$/eval` runs its chunk in a world that is thrown away.**  The
+  Context, the loaded-module set and the namespace layer are captured
+  before it runs and restored after, so a `Definition` works, the
+  caller sees it work, and it is gone by the time the answer is sent.
+  A *semantic* guarantee rather than a syntactic one: a definition
+  reached through an alias rolls back the same as a plain one.  What
+  is deliberately carried across is the SML bindings a chunk made —
+  a `val x = ...` that vanished by the next request would not be a
+  REPL — so the thing that rolls back is the *HOL* state, not the
+  prompt's own scratch names.  The bracket is taken under the state
+  lock a walk uses, which is also what stops an eval perturbing the
+  file's own compile; a compile already holding the state is reported
+  rather than waited for.  Still refused, being what a snapshot
+  cannot undo: `load` and `use` (loading a theory seals it, in
+  `KernelSig`, outside the Context) and `export_theory` (it writes
+  files).  Every accepted chunk goes to `window/logMessage`, which is
+  the record a transient prompt is not.
 - Server capabilities also cover `documentSymbolProvider`,
   `workspaceSymbolProvider` and `completionProvider`, so an editor's
   outline, symbol search and completion work with no client-side code
   — see "Symbols, completion and their scope".
+- **A stale ancestor draws a warning, not a block.**  A dependency is
+  consumed as a built artifact and loaded at most once per process, so
+  a theory whose script has been edited since it was built goes on
+  answering from the version that *was* built — names resolve, goals
+  compute, proofs check, and they are all about an older theory.
+  Having no symptom of its own is the whole hazard, so the server
+  gives it one: a warning on the header entry that named the theory,
+  saying which script is newer.  A warning rather than a block because
+  a stale ancestor still elaborates, unlike a missing one, and because
+  the upstream edit may not be finished.  The message says **rebuild
+  and restart**: a dependency is read once per process, and
+  `$/hol/retryCompile` re-reads only the ones that were *missing*, so
+  a rebuild alone never reaches the running session.  The artifact's
+  path is the one the loader used, recorded as the plan runs, so
+  nothing searches the load path or guesses at `.hol/objs/`; the
+  script is its sibling, and a theory loaded from `sigobj` has none,
+  which leaves this looking at the files someone is likely to be
+  editing.  Direct ancestors only — a theory built before *its* own
+  ancestors is the transitive case and is not checked.
 - **Unavailable ancestors stop the file.**  A script that names an
   ancestor or library the server cannot get — not built yet, raising
   on load, or stale against a HOL that has moved on — gets no compile
@@ -51,6 +106,70 @@ practical guide to trying it out; the protocol details live in
   the editor and the header is already right — `M-h M-C` in the
   shipped eglot client, "HOL: Compile the active script again" in
   hol4-vscode.
+- **The server says when its copy has drifted (`$/hol/desync`).**  The
+  server holds the document by applying the incremental ranges a
+  client sends, and there is nothing in LSP that resends one: if the
+  two texts ever stop being identical, every position the server
+  reports is wrong from the drift down, for the rest of the session.
+  So each change is checked against the text it lands on — a range
+  from line `l1` to line `l2` has to span exactly `l2 - l1` newlines,
+  and a line the server does not have is the same disagreement one
+  size larger.  On a mismatch the server applies the change clamped to
+  the line the client named, so its copy at least stays structurally
+  sound, and sends
+
+  ```json
+  {"uri": "file:///…", "version": 17, "message": "<what did not fit>"}
+  ```
+
+  A client answers by sending the whole buffer as a single
+  full-document `didChange`.  That is cheap: `applyEdit`'s
+  whole-document case keeps the declaration snapshots and takes the
+  edit offset from the first byte at which the two texts actually
+  differ, so a document that drifted by a few bytes re-elaborates from
+  there rather than from the top.  The shipped eglot client does this
+  automatically; `M-x hol-lsp-resync` forces it by hand.  A client
+  that ignores the notification keeps working, badly — the whole point
+  of the message is that it is not supposed to be ignorable.
+- **A blamed operand, not a blamed chain.**  A tactic is one long
+  left-associative chain of `>>` and `>-`, and Poly/ML blames a failed
+  application on the application node — which for the root of that
+  chain is the whole tactic, so a `simp` left without its `thm list`
+  on the last line used to paint every line of the proof red.  Poly/ML
+  reports the *innermost* application that failed to unify, so the
+  blamed node's left operand has already typechecked — but that on its
+  own does not clear it, because `Q.SPEC ‘x’` typechecks too and is
+  not a tactic.  What clears it is the two operators, each asked its
+  own question: the blamed one has to take a tactic on its *left*, and
+  the left operand's own has to *give* one back.  Together those say
+  the left operand already has the type its slot wants, so the operand
+  at fault is the right one.  `narrowBlame` in `holide.ML` moves the
+  report there, taking associativity from the parser's own infix
+  table.  The two questions are two lists, and they differ at the
+  edges: `by` takes a term quotation on its left and so answers only
+  the second, while `>>-` takes a tactic but makes `A >>- 3` a
+  *function* and so answers only the first.  Asking one question of
+  both used to make `>~` opaque — its right operand is a `tmquote
+  list`, so a chain that renamed a subgoal on its way past narrowed
+  nowhere, though what `>~` gives back is a perfectly good tactic.
+  Where both operands are leaves the failure could be either and
+  nothing is claimed — the range is a token or two wide anyway.  A
+  combinator left without an operand at all, `>-` at the end of a
+  half-written proof, has nothing to point at and draws a complaint
+  about the `()` the expansion stood in with; that one is reported on
+  the combinator, with a message of our own — `` `>-` has no
+  right-hand argument ``.
+- **Hover survives a tactic that will not compile.**  A `Theorem`
+  whose proof fails to compile is quietly recompiled with the body
+  replaced by `cheat`, so the name still binds and the rest of the
+  file carries on.  That retry's parse tree is not the one hover and
+  go-to-definition read, though: the substituted `cheat` carries the
+  whole proof's span, so every identifier the user wrote inside the
+  tactic would answer with a single node named after the source text
+  it covered.  Poly/ML types a declaration that failed to typecheck —
+  which is why a proof block still missing its `QED`, where the retry
+  does not fire, keeps its hovers — so the failed compile's tree is
+  the one kept and the retry does nothing but bind.
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so
@@ -64,7 +183,8 @@ loop).  Send a full initialize / shutdown / exit handshake through
 That sends the full initialize / initialized / shutdown / exit
 handshake in one go.  You should see the `initialize` response
 advertising `textDocumentSync`, `hoverProvider`,
-`definitionProvider`, `referencesProvider`; a
+`definitionProvider`, `documentSymbolProvider`,
+`workspaceSymbolProvider` and `completionProvider`; a
 `window/logMessage "started"` notification; the `shutdown` response
 (`{"id":2,"result":null}`); and a clean exit 0.
 
@@ -117,7 +237,7 @@ of them by hand means run the tests.
     `bin/hol` because the module is compiled into the executable by
     `poly-init2.ML` and a `selftest.exe`, which links sigobj, cannot
     see it.
-  - `lsp-protocol-selftest.log` — the 148 scenarios in `lsp_tests.py`
+  - `lsp-protocol-selftest.log` — the 154 scenarios in `lsp_tests.py`
     that need nothing beyond that heap, driving `bin/hol lsp` as a
     scripted LSP client.
 
@@ -148,6 +268,27 @@ Run the suite by hand with
     python3 tools-poly/lsp/tests/lsp_tests.py --requires integer
 
 It tests the tree it lives in; `HOL_LSP_TEST_REPO` overrides that.
+
+Two switches exist for the tests rather than for users:
+
+  - `bin/hol lsp --dbg` adds `$/compileResumedAt` (where a resumed
+    pass starts), `$/compileScope` (whether the edit was confined
+    to one proof body, whether the tail was reused, and — as `why` —
+    what ruled the fast path out when it was not), and `$/staleCheck`
+    (the ancestors the header declared, how many artifact paths have
+    been recorded, the artifact and script the check compared for
+    each, and which came out stale).  A test that cares which path a
+    compile took asserts on these rather than inferring it from
+    timing.  `$/staleCheck` earned its place immediately: when the
+    stale check reported nothing, the question was which half was
+    empty, and it showed the loader hands out the *presented* object
+    path rather than the one under `.hol/objs/`.
+  - `HOL_LSP_WALK_HOLD_MS` stretches a goal-state walk just before it
+    puts the process state back.  A walk and a compile must not rewind
+    the process at the same time, and the order that used to corrupt
+    one needs the walk to still be running when the compile starts;
+    holding the walk puts the two in that window without depending on
+    how long a real walk happens to take.
 
 Three things are worth knowing before reading a green run as full
 coverage:
@@ -196,6 +337,19 @@ has to be there: `getHoldep` works out which modules it needs,
 `loadPlan` walks the `.uo` graph for the files that implies, and
 `useFiles` `quse`s them.  `link_parents` runs here, so this is where a
 missing ancestor surfaces.
+
+A module the file *defines* is not among them.  `Holdep_tokens` drops
+a top-level `structure M = …` whose every mention of `M` follows it,
+so a `[bare]` script can supply a stand-in for something its heap
+lacks — `structure bossLib = struct val Datatype = Datatype.Datatype
+end` is how `listScript.sml` once reached the `Datatype:` block —
+without the real module being loaded behind its back.  That mattered
+rather than merely wasting time: `bossLib` brings `listTheory`,
+`Theory.load_complete` seals `list` in `KernelSig`, and `new_theory`
+cannot then enter the theory the file exists to build.  Should a
+preload seal the header's own theory anyway, the compile says so once
+against the theory name and blocks, rather than reporting "no current
+theory" for every declaration below it.
 
 **Elaboration** — compiling the declarations with the fast-oracle prover
 in place.  No tactic is run; see *Proof checking*.
@@ -480,6 +634,32 @@ With checking on, the server instead *queues* each proof and a worker
 pool (`lsp/deferred_proofs.ML`, on HOL's `Future`) replays them, one
 cancellable group per proof, one worker per processor capped at eight.
 
+**A replay restores the `Context`, and nothing else.**  Each proof runs
+under `Context.with_context` on the snapshot its own declaration took, so
+theory state -- the signature, `TypeBase`, the grammars, `temp_delsimps`,
+registered attributes -- is as that declaration left it.  SML-level state
+is not, and cannot be: a `ref` has no snapshot.  That matters because
+`Theorem ... Proof tac QED` expands to `(name, quote, fn g => tac g)`
+(`wrapTac` in `tools/parsing/HOLSourceExpand.sml`), so the tactic
+*expression* is evaluated when the proof runs -- which, with checking on,
+is after the whole file has elaborated.  A script whose tactics read a
+`ref` therefore reads it as of end-of-elaboration, with every later
+declaration's additions already in it.  The shape that bites is an
+accumulating rewrite list fed by a custom attribute and spliced into
+every simplifier call: proofs the build accepts then start failing from
+wherever the larger set first changes a goal, and the first failure is
+nowhere near the declaration that caused it.
+
+The fix is on the script's side, and it is not a workaround: keep such
+state in a `Context.Data` slot (`src/prekernel/Context.sig`) and read it
+from the context the tactic is handed, the way `BasicProvers.Induct_on`
+reads the rule-induction map.  `Context.Data.get` against that context
+answers from the pin, which *is* the declaration's own snapshot, so the
+server and the build agree by construction.  `Context.Data` is also the
+right tool rather than `ThmSetData`, which exists to persist a set past
+the script boundary.  `lsp_tests.py`'s
+`a_context_slot_answers_from_its_declaration` pins this.
+
 The server starts with it off and both shipped clients switch it on:
 
 ```json
@@ -501,16 +681,84 @@ for the running server.  Turn it off on a machine you would rather
 keep for yourself: the pool runs the proofs for real.
 
 Three of the pool's verdicts are diagnostics, keyed by theorem name
-and squiggled on the theorem's own name:
+and squiggled on the theorem's own name.  A `Failed` gains a second
+squiggle once the walk finds the step it stops at, on that step (see
+`failedRange` under `$/hol/goalState`):
 
 | verdict | severity | means |
 |---|---|---|
 | `Failed` | error | the replay did not go through.  A real build would have raised out of `store_thm_at`, so nothing below it is trustworthy. |
-| `Suspended` | warning | the proof is *correct*; our model of the file was wrong.  A real build stashes such a theorem instead of saving it, so the declarations below were elaborated as though it had been saved.  Names the subgoals. |
 | `Diverged` | warning | the proof went through but produced extra hypotheses, so what elaboration stood in for was not what the proof gives. |
+| `TimedOut` | warning | the replay was still running when its budget ran out.  Nothing is known to be wrong; the server stopped waiting. |
+
+The three have three different relationships to the file, which is
+why they are separate rather than one "something is up" bucket.
+`Failed` says the file is wrong.  `Diverged` says our model of it is.
+`TimedOut` says neither — only that nobody found out, which a reader
+still needs told, the alternative being a theorem that silently never
+gets checked.
+
+### Locating a failure
+
+The walk that places a failed proof's diagnostic restores a compile
+snapshot, which is process-global, so it has to exclude whatever else
+might be rewinding the process.  That is the compile, and only the
+compile: a pass elaborating and enqueueing proofs rewinds the very
+cell the walk restores, and missing that exclusion had a dozen sound
+proofs reporting failures that varied from run to run.
+
+A worker still replaying a proof is deliberately *not* excluded.  It
+was, and the cost was that the walk waited for the pool to go idle --
+which means waiting for the file's slowest proof.  One proof that
+never returns then held up the localisation of every failure in the
+file, so a file with a hanging proof showed its other failures only
+on the `Theorem` line and never on the tactic, with nothing to say
+anything was being waited for.
+
+What makes that safe is that a replaying worker does not read what the
+walk rewinds.  `replay` pins its own `Context` for the whole replay --
+it has to, so that a pass resuming part-way down the file is invisible
+to it — and that pin covers this walk for the same reason.  The rest
+of the snapshot is the loaded-module set and the file's namespace
+layer, and a worker needs neither: its tactic was elaborated during
+the pass, and only compiling tactic *text* wants the layer.
+
+The walk that locates stops at the first failure, and consults no
+snapshot cache.  Both differ from the walk that serves a goals pane,
+and deliberately.  That one stands `cheat` in for a `>-` branch which
+has not discharged its goal and carries on — an unfinished branch is
+the ordinary condition of a proof being written, and the reader still
+wants the state further down.  Used to place a diagnostic, that is
+exactly wrong: it sails past the tactic that failed and runs aground
+later, on whatever structure it cannot get through, and the proof's
+verdict is then pinned to a `>-` that had nothing to do with it.  On
+cakeml's `lex_aux_sexp_to_list` that put the squiggle on the third
+`>-` rather than on the `drule_all` in the first branch.  Resuming
+from the cache has the same effect by a different route: it starts the
+walk past the very failure it is looking for.
+
+The located squiggle is kept *beside* the one on the theorem's name
+rather than replacing it, because the two are not equally certain.
+The verdict is a fact about the theorem: the replay ran the whole
+tactic and raised.  The position is the walker's, and the walker is a
+different execution — it cheats past a branch that fails so it can
+carry on, so where it stops need not be where the replay raised, and
+on a proof with several failing branches it is the last one walked
+rather than the first.  Replacing the one with the other traded a
+certain claim for an uncertain one.
 
 The other states are not diagnostics: `Proved` and `Cheated` are not
 complaints, and `Checking` is not one yet.
+
+`Suspended` is not one either, though it used to be.  Splitting a long
+proof with `suspend` and resuming it below is how the feature is meant
+to be used, and the verdict is not a report that the model is wrong so
+much as the thing that *corrects* it: it puts the proof in the
+no-cheat set, and the pass after that stashes the theorem exactly as a
+build would.  The warning therefore marked a file doing the right
+thing, with a claim that had already stopped being true by the time
+anyone read it.  The subgoal names still travel, on the `suspended`
+status.
 
 These entries are **not** cleared by a fresh compile, unlike the
 walker's.  The pool owns their lifetime and announces every change,
@@ -520,12 +768,73 @@ left to restore it.  A proof that gets fixed therefore clears in two
 steps: the edit drops the entry (`cheated`), and the re-elaborated
 proof settles as `proved`.
 
+The exception is a declaration that is no longer there.  A proof whose
+`Theorem` block has been deleted gets no further transition -- a pass
+that stops early never reaches it to announce one -- so its entry
+would outlive the text it points into.  `finishPass` drops those
+against the census below, and a failure still queued for localisation
+is dropped the same way, rather than being placed into a buffer that
+no longer has anywhere to put it.
+
 Every change is also announced on `$/proofStates` as a transition --
 `checking`, then a verdict, `cheated` when an entry is dropped.
 
-Both shipped clients consume it as a **tally**, shown in the mode line
-(`HOL[12/37]`, `HOL[37 ok]`, `HOL[35/37 2!]`) and in the VS Code
-status bar (`HOL LSP — proofs 12/37`).  A count rather than a bar,
+A client sorting those seven statuses wants three buckets, and should
+decide each one rather than take a default:
+
+| bucket | statuses | |
+|---|---|---|
+| settled | `proved`, `suspended` | nothing to do.  A proof that suspends *ran*, and did what it said; the subgoals it stashed are proved by the `Resume` blocks, which are entries in their own right. |
+| outstanding | `checking`, `cheated` | not checked yet.  `cheated` especially: it means the pool is **not** working on this one. |
+| wrong | `failed`, `diverged`, `timedout` | worth going to look at. |
+
+`timedout` belongs with the other two rather than with `cheated`,
+even though nothing is known to be wrong with the proof, because the
+buckets are about what happens next.  A `cheated` proof is waiting for
+a pass that is coming; a timed-out one has had its pass, and the next
+one re-uses its entry rather than forking a second attempt, so nothing
+is on its way to settle it.  It is retried when an edit reaches it --
+the same point at which a `failed` proof is -- which is also the point
+at which raising `proofTimeoutMs` takes effect for it.  Counting it as
+outstanding would leave the tally short with nothing coming to fill
+it.
+
+Deciding by exclusion is the trap -- a catch-all that counts
+everything which is not `proved`/`checking`/`cheated` as wrong put
+`suspended` in the "to look at" column in both clients, so a file
+finished off with suspensions reported work the reader did not have.
+
+### The budget
+
+A replay runs under a wall-clock budget, after which the pool settles
+the entry as `timedout` and stops waiting on it.  Default 120s;
+`$/setConfig`'s `proofTimeoutMs` sets it, `HOL_LSP_PROOF_TIMEOUT_MS`
+in the environment is the default it starts from, and `0` means no
+limit.
+
+The budget is about saying so.  An entry that stays `checking` for
+ever is indistinguishable from a proof that is merely slow, so a
+client's tally sits one short with nothing on its way to fill it and
+no account of why.
+
+It is *not* what keeps a wedged proof from holding up the rest of the
+file.  Nothing waits for the pool any more: see "Locating a failure"
+below.
+
+Two things enforce it, because the first can be defeated.  The replay
+runs under `Timeout.apply`, which interrupts the tactic; a tactic that
+catches broadly can swallow that interrupt and carry on, which is why
+the compile thread polls a flag rather than relying on
+`Thread.interrupt` at all.  So the entry also settles on an
+`Event_Timer` request a few seconds behind the budget, whether or not
+the worker ever notices.  A runaway thread then costs a core, but
+the server is not wedged behind it.
+
+Both shipped clients consume this as a **tally**, shown in the emacs
+mode line (`⊢12/37`, with `!2` appended when something is wrong, and
+nothing at all once everything is checked) and in the VS Code status
+bar (`HOL LSP — proofs 12/37`, or `HOL LSP — 37 proofs checked`).  A
+count rather than a bar,
 because the states regress: a proof that suspends makes the server
 re-elaborate and drops the entries below it, so a bar would run
 backwards while a count falling from 30 to 12 reads as what it is.
@@ -540,12 +849,142 @@ deliberately no full-state message: the state would have to be
 sampled and only then sent, so a worker settling in between would have
 its newer verdict overwritten by the older sample.
 
+### The census, on `$/compileCompleted`
+
+What a client cannot accumulate its way to is a *deletion*.  The pool
+announces a dropped entry as `cheated` whether an edit merely reached
+the proof or its declaration is gone, and those want opposite
+treatment: the first is outstanding work, the second is nothing at
+all.  A client that forgot every `cheated` would under-count the
+proofs still waiting; a client that keeps them reports a theorem the
+user deleted, for the life of the session, with a line number that now
+belongs to something else.
+
+So `$/compileCompleted` carries a census -- what the buffer still
+declares, under the names a proof there would be given:
+
+```json
+{"uri": "file:///…/fooScript.sml", "version": 7,
+ "declared": ["fooScript", "thm_a", "helper", "thm_b", "thm_b#2",
+              "thm_c[sub1]"]}
+```
+
+A client drops any proof the list does not mention, and keeps every one
+it does, `cheated` included.
+
+It names *every* declaration, not only the ones that can carry a
+proof -- the `Theory` header and each `val` and `fun` are in there too.
+The question a client asks is "is the name I am holding still
+declared?", and for that a superset is not merely harmless but safer.
+Narrowing it means filtering on declaration kind, and a filter that is
+wrong errs by dropping a name that *is* declared -- which silently
+deletes a live proof from the tally, the failure this exists to fix.
+Erring the other way keeps a name one pass longer.
+
+Names, not verdicts -- which is why this is not the full-state message
+refused just above.  A snapshot of what the pool *thinks* has to be
+sampled and only then sent, so a worker settling in between loses its
+newer verdict to the older sample.  Nothing a worker does can add or
+remove a declaration from the buffer, so a list of names has no such
+race.
+
+The names are the pool's own: `LSPExtension.qualifyProof` applied to
+the outline's declarations, which is the same rule, from the same
+walk, that gives a proof its `foo#2` in the first place.  A `Resume`
+block appears as `thm[label]`, as it does on `$/proofStates`.
+
+Both fields are **absent** unless the server is checking proofs.
+Absent is not the same as present-and-empty: absent means the server
+is not saying, and a client must leave its tally alone; `[]` means the
+buffer declares nothing at all and every entry goes.  A client that
+knows neither field ignores both, which is what makes this additive.
+
+`version` is the text the census was read from.  A client that has
+edited since can skip the prune -- that edit starts a pass of its own,
+whose census will apply -- but need not: a name wrongly dropped is
+re-announced by the next pass, where a name wrongly kept is kept
+forever.
+
 ## Goal-state at cursor (`$/hol/goalState`)
 
 Custom LSP request that returns the goal-state for a cursor position
 inside a `Proof … QED` block.  The server walks the tactic body via
 `goalFrag` up to the step under the cursor, snapshotting states in a
 per-theorem cache so subsequent queries at nearby cursors reuse work.
+
+A `Resume thm[label]: … QED` block answers too, and the same way: the
+only difference is where the walk starts from.  A `Theorem` parses its
+statement out of the buffer; a `Resume` has none to parse, so the
+subgoal `thm` suspended under `label` is read out of markerLib's
+suspension store — the same lookup `markerLib.resume` itself does, so
+the goal shown is the goal the body will be handed.  A cursor placed
+just past the opening `:`, before any tactic, is step 0 and shows that
+subgoal.  `theorem` comes back as `thm[label]`, which is also what the
+proof pool calls the body.
+
+Reading the store works because the handler restores the per-dec
+compile snapshot taken just before the declaration (`snapBefore`): the
+store is a `Context.Data` slot, so that rewind puts back the parent's
+suspension *and* undoes a `Finalise` lower down the file, which would
+otherwise have removed it.
+
+The subgoal only exists once the parent's proof has actually run,
+which elaboration does not do by default.  So a Resume cursor that
+finds nothing answers `pending` and asks for the parent to be run —
+`addNoCheatSite` plus a recompile from its declaration, the same route
+a discovered suspension takes.  Once per parent: the name already
+being in the no-cheat set is what stops a cursor-following goals pane
+scheduling a compile per keystroke.
+
+A `Definition foo: <eqns> Termination tac End` block is the third, and
+the same again with the goal coming from a third place.  It is written
+nowhere in the file: it is the termination obligation the definition
+principle derives from `<eqns>`, so the server builds the defn —
+`Defn.Hol_defn` then `Defn.tc_obligation`, which is what
+`TotalDefn.located_tDefine` does — and shows the goal the tactic is
+handed, `∃R. WF R ∧ …`.  `tgoal` answers the same question by parking a
+goalstack in the proof manager, which a request thread must not touch.
+The window runs from `Termination` to `End`, that keyword standing in
+for `Proof`; a cursor in the equations above it is not in a proof body
+and gets `null`.  `theorem` comes back as `foo_termination`, which is
+what `Defn` calls the obligation and what the proof pool calls the
+proof.
+
+An *empty* `Termination … End` answers with the initial obligation, as
+an empty `Proof … QED` answers with the theorem's own statement.
+Neither declaration compiles, so neither answer can come from anything
+the elaboration saw — which is why the obligation is rebuilt rather
+than captured as the compile goes past.
+
+Two answers are particular to this block.  A definition that needs no
+termination proof — `Defn.triv_defn`, the case HOL reports as
+"Termination argument ignored" — has no goal and is not waiting for
+one, so it answers `status: "ok"` with no goals and the reason in
+`note`; `error` is for a walk that failed, which this is not.  A
+definition that will not build yet answers `status: "pending"` with the
+reason in `error` and no `failedRange`, so nothing is squiggled: the
+block is there and the cursor is in it, and `null` would read as a
+fault in the proof.
+
+Building the obligation mints the function constant, so it has to run
+where that constant does not already exist.  It does, for the same
+reason the `Resume` lookup works: the handler restores the per-dec
+snapshot taken just before the declaration.
+
+The pool runs this proof too, under `foo_termination`, and the census
+carries that name — the outline has it as a `Termination` child of the
+`Definition` — so a termination tactic that does not discharge its
+obligation is reported like any other failing proof, narrowed to the
+step inside the block where the walk stopped.  Elaboration cheats it
+either way: the constant is defined and every declaration below is
+elaborated against it, which is the contract the rest of the file
+depends on.
+
+A snapshot is a state the statement and some prefix of the tactics
+reached together, so an entry is addressed by both: editing either the
+statement or the tactics past that prefix discards the snapshots it
+invalidates.  An edit at or above the declaration drops the entry
+outright, there being nothing below the edit worth keeping.
 
 ### Request
 
@@ -557,15 +996,34 @@ per-theorem cache so subsequent queries at nearby cursors reuse work.
     "textDocument": {"uri": "file:///path/to/Script.sml"},
     "position": {"line": <0-based>, "character": <0-based, in the
                  negotiated encoding>},
-    "width": <optional: column width to render `pretty` at; default 75>
+    "width": <optional: column width to render `pretty` at; default 75>,
+    "step": <optional: a step index within the theorem the position
+             picked out; negative means the last step>
   }
 }
 ```
 
+`step` is for a caller that has no cursor.  An editor has one and
+should keep sending `position` alone; a program driving the server
+knows which *step* it wants — the frontier, or the one before the
+tactic it is about to change — and cannot work out the offset for
+itself, because steps are counted over the parsed tactic body.  With
+`step` given, the position only has to land somewhere in the right
+`Proof … QED`; `documentSymbol` already says where each theorem is, so
+the two together address a step by name.
+
+It is the index the response reports: `0` is the body's start, before
+any tactic has run, and `k` is the end of the k'th step, so the state
+that comes back is the one that step produced.  A negative index asks
+for the last.  An index past the end of the body leaves the position's
+own cursor in place rather than failing, so a caller walking forward
+stops seeing new states rather than starting to see errors.
+
 ### Response
 
-`result` is `null` when the cursor isn't inside a `Proof … QED` (or
-when the theorem statement can't be parsed).  Otherwise:
+`result` is `null` when the cursor isn't inside a `Proof … QED`, a
+`Resume … QED` or a `Termination … End` (or when a `Theorem`'s
+statement can't be parsed).  Otherwise:
 
 ```json
 {
@@ -576,7 +1034,9 @@ when the theorem statement can't be parsed).  Otherwise:
   "context": ["<combinator tag>", ...],
   "note": <string or null>,
   "status": "ok" | "pending",
-  "error": <string or null>
+  "error": <string or null>,
+  "failedRange": <range or null>,
+  "failedCloseRange": <range or null>
 }
 ```
 
@@ -638,21 +1098,221 @@ end, and anything in the same flow above them goes out of sight.
   which reads as a fault in the proof rather than a server that is not
   ready.
 
+  The refusal is the one a client has to have something to do about,
+  and `$/compileCompleted` is what it waits for: **that notification
+  is sent only once a request made on hearing it will be answered.**
+  It goes out from `finishPass`, after the pass has put the reused
+  tail back, committed what it elaborated and let go of the process.
+  A client is therefore right to refresh on it and right to expect
+  nothing further, which is why a refusal announced before it left a
+  pane empty with nothing coming to fill it.  State a pass sets
+  belongs before that call; a *notification* the completion would
+  undo belongs after it, which is where the block on a failed header
+  goes — a client clears what it was blocked on when it hears a
+  compile finished.
+
   A tactic whose source doesn't compile never produces an `error`
   either way: the file's compile reports the real message against that
   very text, and the walker would only duplicate and misdescribe it.
-- `error` — non-null when the walker gave up (e.g. wall-clock budget
-  exceeded); `goals` / `pretty` are empty and clients should render
-  the message in place of the state.  A mid-walk partial state is
-  complete for its own step but wrong for the cursor's step, so the
-  server refuses to send it and returns `error` instead.  A stderr
-  line `goal-state walker exceeded Nms budget; interrupting` is
-  also emitted for visibility.
+
+  Nor does a branch the user has not written.  `>-` with nothing after
+  it parses to a repair that `linearize` drops, so the bracket arrives
+  with an empty body and no end byte to walk to; the walk used to bail
+  there and report a close that never ran as a branch that failed to
+  prove its goal, handing back the goals *unfocused* into the bargain.
+  It now opens the bracket and stops, which is the same answer every
+  written branch gets at that cursor: the goal the branch was handed,
+  and no complaint.  Opening waits on the cursor reaching the
+  combinator, as it does for a branch that *is* written — before the
+  `>-` the goals it is about to act on are what the reader wants, and
+  those are all of them.  The boundary is the combinator token here
+  and the branch's first token everywhere else, there being no branch
+  to take one from.
+- `error` — non-null either when the walker gave up (e.g. wall-clock
+  budget exceeded), in which case `goals` / `pretty` are empty and the
+  message is all there is to render; or when a step the walk ran did
+  not do what it promised, in which case a state comes *with* it and a
+  client should show both.  Rendering the message in place of the
+  state loses exactly the thing the reader wanted.
+
+  Which state, for a branch that proves nothing, is the cursor's to
+  say.  `>- b` obliges `b` to discharge the goal it is handed, and
+  that discharge is `b`'s whole effect on the rest of the proof — so
+  once the cursor is past the branch, `cheat` stands in for what `b`
+  owed and the walk carries on, and the goals after the branch are
+  what comes back.  Before then, and anywhere inside the branch, the
+  goal `b` owes is what comes back.  Both carry the same `error`.
+  Only the three combinators that make the demand — `>-`, `by`,
+  `suffices_by` — are stood in for; a plain paren demands nothing, so
+  a failure under one stops the walk where it happened.  A branch that
+  will not compile is the ordinary case of this while a proof is being
+  written: `>- ()` as a placeholder reports nothing of its own (the
+  file's compile has already said what is wrong with `()`) and the
+  proof after it stays readable.
+
+  A mid-walk partial state is complete for its own
+  step but wrong for the cursor's step, so the server refuses to send
+  it and returns `error` instead.  A stderr line `goal-state walker
+  exceeded Nms budget; interrupting` is also emitted for visibility.
+
+  There are two budgets.  The walk's own is 1.5s, and is about keeping
+  a goals pane that follows the cursor responsive.  Around the whole
+  answer -- parsing the statement, stepping the tactics, rendering the
+  goals -- there is a much looser 30s, which is about something else:
+  the caller holds the process's compile state for all of it, so a
+  request that never returns stops every compile and every other
+  goal-state request in the process.  That one should never fire on
+  work that is merely slow; a first request against a cold walker
+  cache has tactic leaves to compile and takes seconds.
+
+  A blown **walk** budget says what it was running, not just that it
+  ran out:
+
+  ```
+  walker exceeded its 1500ms budget in `metis_tac [foo, bar]`, which
+  had not finished (4 step(s) completed; slowest completed `simp[]`
+  at 180ms)
+  ```
+
+  and `failedRange` points at that step, so it can be squiggled like
+  any other failure.  The two halves answer different questions, which
+  is why both are there: a step that blows up eventually reports a
+  time among the completed ones, while a step that loops only ever
+  appears as the one in flight.  No context size predicts either —
+  `metis_tac` and the normalisers can run away on a small goal — so an
+  empirical per-step time is the only thing that separates them.
+
+  The walk budget is overridable with **`HOL_LSP_WALK_BUDGET_MS`**;
+  the 1.5s default is what a keystroke can afford, because the shipped
+  clients follow the cursor, and a client replaying whole proofs
+  rather than painting a pane should raise it.  A walk that fits its
+  budget reports no cost at all — the attribution is a failure report,
+  not telemetry, and a healthy proof stays silent.
+
+  The outer budget has no step to name — nothing got far enough to
+  count one — so it reports an `error` with no `failedRange`, and a
+  client should read that as "this walk learned nothing" rather than
+  "there is nothing wrong here".  In particular it is not grounds for
+  withdrawing a squiggle the walker drew earlier.
+
+  The server keeps squiggles of its own from these replies, one per
+  distinct failure per theorem, and **only ever adds to them**.  A
+  reply that reports no failure withdraws nothing.
+
+  That is not caution, it is what the replies mean.  This walk answers
+  from wherever it happens to start and stops wherever the cursor is:
+  it stands `cheat` in for a `>-` branch that has not discharged its
+  goal and carries on, so for a proof full of unfinished branches it
+  routinely reports nothing; and it resumes from a snapshot cache, so
+  whether it notices a failure depends on how much of the proof that
+  particular walk replayed.  The same cursor position can report a
+  failure on one visit and nothing on the next.  Withdrawing a
+  squiggle on a quiet reply therefore made them appear and disappear
+  as the cursor moved over a buffer nobody had edited, and a proof
+  with several failing tactics could never show more than one.
+
+  What withdraws them is an edit: every edit goes through
+  `startCompile`, which clears the map wholesale, and fixing a tactic
+  is an edit.
+
+  Which also decides what may be accumulated.  `failMsg` has two kinds
+  of answer.  One names a tactic that would not apply, or a branch
+  obliged to prove its goal that did not: a reader can go and look at
+  that.  The other — "Combinator open failed", "Group failed",
+  "Bracket failed" — says the walk could not get through a piece of
+  structure, which is a statement about the walker's progress from
+  wherever the cursor put it, and parking the cursor just past a `>-`
+  is enough to produce one.  Only the first kind earns a
+  `failedRange`.  The second still travels as `error`, because a pane
+  asking about that exact spot has nothing else to show, but a mark
+  that depended on where the cursor was would otherwise sit in the
+  file afterwards claiming to be a property of the text.
+  An empty focus is not a proved goal when the walk had to stand
+  `cheat` in for a branch that failed.  `pp_goals_only` renders one as
+  "Initial goal proved.", which for a proof that demonstrably does not
+  go through is false, and it is the first thing a reader sees — so a
+  reply carrying a failure *and* no goals says that instead, and sends
+  no `segments`, there being no state worth taking apart.
+
+  Where the walk came to rest is the news, unless coming to rest is all
+  it describes.  A walk that recovered from a real failure and then
+  could not get through some piece of structure would report the
+  structure, burying the thing a reader can act on; the real failure
+  wins instead.
+
+- `failedRange` — where in the file the `error` belongs, when the walk
+  stopped somewhere with a natural extent.  For a combinator that
+  obliged what it brackets to prove a goal — `>-`, `by`,
+  `suffices_by` — it is the combinator, **not** the branch under it: a
+  branch that proves nothing yet is usually the text being written,
+  and marking all of it says nothing the reader doesn't know.
+- `failedCloseRange` — the paren closing that branch, when it has one,
+  so a client marks the branch at its two ends and leaves the middle
+  alone.  `null` for a branch written without parens, and for any
+  failure that is not one of those three combinators.  The server
+  publishes both as ordinary diagnostics; a client reading
+  `textDocument/publishDiagnostics` needs no work for this.
+
+## Trying a tactic (`$/hol/tryTactic`)
+
+What a candidate tactic would do at a point in a proof, committing
+nothing:
+
+```json
+{
+  "jsonrpc": "2.0", "id": <n>,
+  "method": "$/hol/tryTactic",
+  "params": {
+    "textDocument": {"uri": "file:///path/to/Script.sml"},
+    "position": {"line": <0-based>, "character": <0-based>},
+    "step": <optional, as for $/hol/goalState>,
+    "tactic": "rw[] >> metis_tac[FOO]",
+    "width": <optional>,
+    "budgetMs": <optional; 0 or absent = the server's own budget>
+  }
+}
+```
+
+The reply is a `$/hol/goalState` response, so a client that renders one
+renders this.  Empty `goals` means the candidate closed what was in
+front of it.
+
+**The candidate is never spliced into the body.** Splicing needs a
+separator that depends on whether the prefix ends mid-chain, and a
+cursor inside a tactic makes nonsense of it.  The walker works on goal
+*states*, so the server walks the body to the anchor — the ordinary
+cached path — and then walks the candidate from the state that
+reached.  A chain is therefore as good as a leaf: `tactic` goes
+through the same fragment parser the file does, so `>>`, `>-`, `>~`
+and the rest behave as they would in the proof.
+
+**Nor is a goal accepted in place of an anchor**, which is the other
+shape this could have had.  A goal handed back as text is not reliably
+the same goal: printing omits types that were inferred from context,
+and what a numeral denotes depends on which theories are loaded.  A
+probe against a goal that is subtly not the one on screen is worse
+than no probe, so the anchor is required — and `step` means a caller
+without a cursor can still name one.
+
+Nothing persists.  The walk is already bracketed by a Context snapshot
+under the state lock, a goalstate is a value, and the speculative walk
+is passed no plugin data so it cannot write the walker's per-theorem
+cache — which is keyed by theorem name and would otherwise leave the
+next real request re-walking from the top.
+
+`failedRange` is `null` when the *candidate* fails: it is not in the
+file, so there is nothing to point at, and `error` names the step
+instead.  A failure in the body above the anchor is a different thing
+— the probe would be answering about a state the caller does not
+think it is asking about — so that is reported against the file,
+ranges and all, and the candidate is not run.
 
 ### Client cookbook
 
-- **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` bound
-  to `M-h M-g`.  The *HOL Goals* window is scrolled to the buffer's
+- **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` on
+  `M-h p`, shared with `hol-print-goal` (see [Keys, shared with the
+  REPL mode](#keys-shared-with-the-repl-mode)); `M-h g` reaches it
+  too.  The *HOL Goals* window is scrolled to the buffer's
   end, the current goal being last and the subgoal count printed
   after them, with `theorem`, `step`, `context` and `error` in the
   window's `header-line-format` so they stay visible.  An empty
@@ -693,7 +1353,101 @@ Note for a client built on `vscode-languageclient`: it advertises only
 `utf-16` and throws on any other answer, so it gets `utf-16` and must
 not translate positions itself.
 
+## Evaluating a chunk (`$/eval`)
+
+`$/eval` compiles a string of HOL/SML source in the server's own
+session and reports what it printed, which is the protocol's answer to
+"send a string, get its value back".  LSP has no evaluate request —
+it is a document protocol — so this is a custom method, which is what
+every language server that wants one does.
+
+The request takes `uri`, `code`, and optionally `incr`, `holdep` and
+`position`; `Manual/Developers/lsp-server.md` is the reference.  The
+reports come back as a list (`incr = None`), per chunk
+(`$/eval/P`), or one at a time as they happen (`$/eval/1`).  A
+`toplevelOut` report carries what Poly printed — `val it = … : …` —
+which for a `thm` is the theorem, via the pretty-printers installed in
+`pretty_printers_init.ML`.
+
+**Send the cursor.**  `position` decides what is in scope.  A file's
+declarations run in order, so a name is in scope from the point the
+compile reached it; evaluating with no position evaluates after the
+file's last declaration, where everything later in the file is in
+scope too.  For a scratch buffer that is what you want and for a
+script it is a quietly wrong answer.
+
+This is the supported form of a trick that works by accident
+otherwise: typing `val x = <expr>` into blank space and hovering `x`.
+That reads the right thing because the compiler runs the inserted text
+where it sits — which is exactly what `position` reproduces, without
+editing the buffer.
+
+**A report body is text, not a line.**  Poly's pretty printer calls
+its output function once per item — `val`, ` `, `it`, ` `, `=`, … —
+so a report is not a unit of layout.  The batch modes coalesce
+adjacent reports (`mergeInto`); the stream, which cannot wait for the
+end, holds a partial line until its newline arrives (`lineBuffer`).
+Either way a client should append what it gets and let the newlines in
+it do the breaking.  Appending a *line* per report is what rendered
+`val it = 39: int` down the left margin, a lone space to a line.
+
+**Bindings persist** for the next chunk evaluated at the same
+position, and are dropped anywhere else; see the protocol reference
+for why.
+
+**It can be refused.**  A chunk runs on the compile state, and a
+compile may hold it — the 300 ms-debounced one behind the user's last
+keystroke, most often.  `$/eval` does not wait: it answers with an
+`error` report saying the state is held.  A client should show that as
+what it is and let the user ask again.
+
+### Client cookbook
+
+- **eglot (shipped in this repo)** — `hol-lsp-eval-region` on
+  `M-h M-r`, shared with `copy-region-as-hol-definition`, with the
+  region (or, with no region, the top-level phrase around point) sent
+  as `code` and the region's start sent as `position`.
+  `hol-lsp-eval-string` on `M-h s`, shared with
+  `interactive-send-string-to-hol`, prompts for an expression and
+  sends point as `position`.  Output is appended to `*HOL LSP Eval*`.
+- **VS Code (`hol4-vscode`)** — `HOL: Evaluate selection`, bound to
+  `Ctrl+H Ctrl+E`, writing to the `HOL4 LSP Eval` output channel.  With
+  nothing selected it prompts for an expression (also `HOL: Evaluate
+  expression…`) and sends the cursor, which is what emacs's `M-h s`
+  does: there is then nothing to type into the script and delete
+  again.
+
 ## Emacs
+
+### Keys, shared with the REPL mode
+
+A script is driven from the `*HOL*` process or from a server, never
+from both at once, so the key for a thing means that one thing and the
+buffer decides who answers it.  Each of these runs the LSP command
+where a server is serving the buffer, and the `*HOL*`-process command
+where none is:
+
+| key | LSP | `*HOL*` process |
+|---|---|---|
+| `M-h M-r` | `hol-lsp-eval-region` | `copy-region-as-hol-definition` |
+| `M-h s` | `hol-lsp-eval-string` | `interactive-send-string-to-hol` |
+| `M-h m` | `hol-lsp-search` | `hol-db-match` |
+| `M-h M` | `hol-lsp-search` | `hol-db-select` |
+| `M-h p` | `hol-lsp-show-goal-state` | `hol-print-goal` |
+| `M-h g` | `hol-lsp-show-goal-state` | `hol-do-goal` |
+| `M-h i` | hover, via `eldoc-doc-buffer` | `hol-type-info` |
+
+`M-h M-C` (`hol-lsp-retry-compile`) is LSP-only — it has no
+`*HOL*`-process counterpart.  `M-h M-m` is `holmake` in both: a server
+is pinned to the artifacts it first loaded, so rebuilding a stale
+ancestor and then `M-h M-C` is the way out, which makes Holmake more
+wanted in a served buffer rather than less.
+
+Every other `M-h` key still addresses the `*HOL*` process whatever the
+buffer — `M-h e` and `M-h M-e` (applying a tactic; under the server
+the goals follow the cursor instead), `M-h b`, `M-h d`, `M-h r`,
+`M-h R`, `M-h ,`, `M-h f` and `M-h c`.  `M-h f`'s question is
+reachable through `M-h m` as a `"name"` selector.
 
 The repo ships `holscript-mode` (`tools/editor-modes/emacs/`), which
 does the syntax highlighting and structural editing but is not itself
@@ -917,7 +1671,10 @@ endif
 
 ## VS Code
 
-There is no first-party HOL extension for VS Code.  Two paths:
+There is a first-party extension, `hol4-vscode`, and `vscode-setup.md`
+in this directory is the walkthrough for installing it.  Prefer that to
+anything below; what follows is kept for someone building a client of
+their own.
 
 1. **Write a minimal client extension.**  Yeoman scaffold + a few
    lines of `LanguageClient` glue.  Marketplace has several LSP
@@ -968,3 +1725,17 @@ There is no first-party HOL extension for VS Code.  Two paths:
   skips `tac`.  The pending proof-state work adds a background
   walker that evaluates tactics for `$/getState`; until it lands,
   tactic-level checking still requires a real `Holmake` build.
+- **Go-to-definition on a Basis Library identifier finds nothing** —
+  Poly/ML records a Basis declaration as a path relative to the tree it
+  was *built* in: `OS.Process.isSuccess` comes back as
+  `./basis/OS.sml`, line 98.  An installed compiler need not ship those
+  sources at all (Homebrew's does not), so there is nothing for the
+  client to open, and the server answers nothing rather than a target
+  the editor declines in silence.  Point `HOL_LSP_POLYML_SRC` at a
+  Poly/ML checkout and those jumps resolve, landing in the signature
+  the declaration is written in.  Use the release the server runs on
+  (`poly -v`): the line number is Poly's own, and another tag's copy of
+  the file resolves just as well to the wrong line.  A checkout that is
+  not there, that has no `basis/`, or whose `configure.ac` names
+  another version, is named once in a `window/showMessage` at startup
+  — the unset case stays silent, since that is the default.

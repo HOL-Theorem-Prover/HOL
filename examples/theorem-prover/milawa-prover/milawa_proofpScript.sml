@@ -11,14 +11,25 @@ val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj", "NOT_LT_ZERO_EQ_ZERO"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-val rw = ref (tl [TRUTH]);
-fun store{name,attrname,args,thm} = (rw := thm::(!rw))
+(* The [rw] set lives in the Context, not in an SML ref: `SS`/`FS`/`SR`
+   below are read when a proof *runs*, and under the LSP that is after
+   the whole file has elaborated, so a ref would hand every proof the
+   end-of-file set instead of the one its own declaration sees.  A
+   Context.Data slot is read from the context the proof is run against
+   and so answers the same in both.  Not ThmSetData: this set is local
+   to the script and is never exported. *)
+val rw_slot = Context.Data.new {
+  name = "milawa_proofp.rw", empty = ([] : thm list),
+  pp = fn ths => Int.toString (length ths) ^ " rewrites"}
+fun rws_of ctxt = Context.Data.get rw_slot ctxt
+fun store{name,attrname,args,thm} =
+    Context.Data.modify rw_slot (fn ths => thm::ths)
 val _ = ThmAttribute.register_attribute (
   "rw", {localf = store, storedf = store}
   )
 
-fun add_rw th = (rw := th::(!rw); th);
-fun add_rws thms = (rw := thms @ (!rw));
+fun add_rw th = (Context.Data.modify rw_slot (fn ths => th::ths); th);
+fun add_rws thms = Context.Data.modify rw_slot (fn ths => thms @ ths);
 
 Theorem LISP_TEST_THM[local]:
   !b. (isTrue (LISP_TEST b) = b) /\
@@ -35,9 +46,9 @@ val _ = add_rws [isTrue_CLAUSES,
   THIRD_def,FOURTH_def,
   FIFTH_def,NOT_CONS_NIL]
 
-fun SS thms = SIMP_TAC std_ss (thms @ !rw)
-fun FS thms = FULL_SIMP_TAC std_ss (thms @ !rw)
-fun SR thms = SIMP_RULE std_ss (thms @ !rw)
+fun SS thms g ctxt = SIMP_TAC std_ss (thms @ rws_of ctxt) g ctxt
+fun FS thms g ctxt = FULL_SIMP_TAC std_ss (thms @ rws_of ctxt) g ctxt
+fun SR thms = SIMP_RULE std_ss (thms @ rws_of (Context.snapshot ()))
 
 
 (* various auxilliary functions *)
@@ -428,7 +439,7 @@ val logic_flag_term_vars_thm = prove(
     \\ `logic_term1_size l <
       1 + (1 + (logic_func_size l0 + logic_term1_size l) + logic_term1_size t)`
          by DECIDE_TAC
-    \\ `(\a. term_vars_ok a) = term_vars_ok` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
+    \\ `term_vars_ok = term_vars_ok` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
     \\ `(\a. t2sexp a) = t2sexp` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
     \\ FS [] \\ RES_TAC \\ FS [GSYM MAP_APPEND] \\ FS [APPEND_ASSOC])
   THEN1
@@ -437,7 +448,7 @@ val logic_flag_term_vars_thm = prove(
          REVERSE_DEF,logic_variablep_def,APPEND,term_vars_ok_def,MAP,
          logic_flag_term_vars_Dot,logic_flag_term_vars_Sym,REVERSE_APPEND,
          APPEND_ASSOC] \\ FS [LISP_EQUAL_def]
-    \\ `(\a. term_vars_ok a) = term_vars_ok` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
+    \\ `term_vars_ok = term_vars_ok` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
     \\ `(\a. t2sexp a) = t2sexp` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
     \\ `logic_term1_size l0 < logic_term1_size (mLamApp l1 l l0::t)` by
           (FS [logic_term_size_def] \\ DECIDE_TAC)
@@ -824,7 +835,10 @@ Datatype:
     Appeal string formula ((logic_appeal list # (SExp option)) option)
 End
 
-val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
+(* the theory's own equation states a map under a list_size, which does
+   not compare with the fold the rest of this file reasons with; the
+   TypeBase states the fold *)
+val logic_appeal_size_def = #2 (TypeBase.size_of ``:logic_appeal``)
 
 val _ = computeLib.add_funs [logic_appeal_size_def];
 
@@ -856,7 +870,10 @@ Definition a2sexp_def:
 Termination
  WF_REL_TAC `measure logic_appeal_size` \\ bossLib.rw[]
  \\ Cases_on `subproofs_extras` \\ gvs[]
- \\ Cases_on `x` \\ gvs[]
+ \\ rename [‘MEM la (FST p)’]
+ (* the clause's own bound variable is x, so the option's content is
+    the primed one *)
+ \\ Cases_on `p` \\ gvs[]
  \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC
 End
 
@@ -868,7 +885,9 @@ Definition appeal_syntax_ok_def:
 Termination
  WF_REL_TAC `measure logic_appeal_size` \\ bossLib.rw[]
  \\ Cases_on `subproofs_extras` \\ gvs[]
- \\ Cases_on `x` \\ gvs[option_size_def, pair_size_def]
+ (* the clause's own bound variable is x, so the option's content is
+    the primed one *)
+ \\ Cases_on `x'` \\ gvs[option_size_def, pair_size_def]
  \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC
 End
 
@@ -1824,12 +1843,17 @@ Theorem logic_flag_proofp_thm[local]:
                                 (list2sexp (MAP f2sexp thms)) atbl) ==>
       EVERY (MilawaTrue ctxt o CONCL) al
 Proof
-  STRIP_TAC \\ completeInduct_on `logic_appeal3_size al` \\ NTAC 3 STRIP_TAC
+  STRIP_TAC \\ completeInduct_on `list_size logic_appeal_size al`
+  \\ NTAC 3 STRIP_TAC
   \\ FS [PULL_FORALL_IMP] \\ Cases_on `al` \\ FS [EVERY_DEF]
   \\ ONCE_REWRITE_TAC [logic_flag_proofp_def]
   \\ FS [] \\ FULL_SIMP_TAC (srw_ss()) [] \\ FS [MAP] \\ SRW_TAC [] [] \\ FS []
-  \\ `logic_appeal3_size t < logic_appeal3_size (h::t)` by (EVAL_TAC \\ DECIDE_TAC)
-  \\ FS [] \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
+  (* the size of a list of appeals is a fold now, so the step down to
+     the tail is stated in the form the induction hypothesis asks for *)
+  \\ `list_size logic_appeal_size t <
+      1 + (logic_appeal_size h + list_size logic_appeal_size t)` by DECIDE_TAC
+  \\ FS []
+  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
   \\ ONCE_REWRITE_TAC [logic_flag_proofp_def] \\ FS [a2sexp_HYPS]
   \\ SRW_TAC [] [] \\ FS []
   \\ MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] logic_appeal_step_okp_thm)
@@ -1837,7 +1861,9 @@ Proof
   \\ Q.PAT_X_ASSUM `!xx.bbb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss []
   \\ Cases_on `h` \\ Cases_on `o'` \\ FULL_SIMP_TAC std_ss [HYPS_def,EVERY_DEF]
-  THEN1 (EVAL_TAC \\ DECIDE_TAC)
+  (* whichever of the two the numeric one is: the case split no longer
+     puts it first *)
+  \\ TRY (EVAL_TAC \\ DECIDE_TAC)
   \\ Cases_on `x` \\ FULL_SIMP_TAC std_ss [HYPS_def,EVERY_DEF,appeal_syntax_ok_def]
   \\ FS [EVERY_MEM] \\ EVAL_TAC \\ DECIDE_TAC
 QED
@@ -2884,6 +2910,22 @@ Proof
   \\ REPEAT STRIP_TAC \\ Cases_on `var_ok h` \\ FS []
 QED
 
+(* The recursion through the list is structural, so TFL leaves no
+   t2sexp_ind; the type's own principle says the same thing, and the
+   proofs below name its arguments, so it is stated with their names. *)
+val t2sexp_ind =
+    let
+      fun ren ns = Conv.RENAME_VARS_CONV ns
+      val c3 = ren ["vs"] THENC QUANT_CONV (RAND_CONV (ren ["fc"]))
+      val c4 = ren ["b", "ys"] THENC
+               QUANT_CONV (QUANT_CONV (RAND_CONV (ren ["xs"])))
+    in
+      CONV_RULE
+        (QUANT_CONV (LAND_CONV
+           (RAND_CONV (RAND_CONV (LAND_CONV c3 THENC RAND_CONV c4)))))
+        (TypeBase.induction_of ``:logic_term``)
+    end
+
 Theorem term_syntax_ok_lemma[local]:
   !t. term_syntax_ok t ==>
         isTrue (logic_flag_termp (Sym "TERM") (t2sexp t))
@@ -3861,9 +3903,9 @@ Theorem sexp3term_And_lemma[local]:
   !xs.
       (EVERY (term_ok ctxt) (MAP (term2t o sexp3term) xs) ==>
        EVERY (\x. term2t (sexp3term x) = term2t (sexp2term x)) xs) ==>
-      term_ok ctxt (term2t (And (MAP (\a. sexp3term a) xs))) ==>
-      (term2t (And (MAP (\a. sexp3term a) xs)) =
-       term2t (And (MAP (\a. sexp2term a) xs)))
+      term_ok ctxt (term2t (And (MAP sexp3term xs))) ==>
+      (term2t (And (MAP sexp3term xs)) =
+       term2t (And (MAP sexp2term xs)))
 Proof
   Induct \\ SIMP_TAC std_ss [MAP,term2t_def,EVERY_DEF]
   \\ Cases_on `xs` \\ FULL_SIMP_TAC (srw_ss()) [MAP,term2t_def,EVERY_DEF,term_ok_def]
@@ -3884,9 +3926,9 @@ QED
 Theorem sexp3term_List_lemma[local]:
   (EVERY (term_ok ctxt) (MAP (term2t o sexp3term) xs) ==>
      EVERY (\x. term2t (sexp3term x) = term2t (sexp2term x)) xs) ==>
-    term_ok ctxt (term2t (List (MAP (\a. sexp3term a) xs))) ==>
-    (term2t (List (MAP (\a. sexp3term a) xs)) =
-     term2t (List (MAP (\a. sexp2term a) xs)))
+    term_ok ctxt (term2t (List (MAP sexp3term xs))) ==>
+    (term2t (List (MAP sexp3term xs)) =
+     term2t (List (MAP sexp2term xs)))
 Proof
   Induct_on `xs` \\ SIMP_TAC std_ss [MAP,term2t_def,EVERY_DEF]
   \\ Cases_on `xs` \\ FULL_SIMP_TAC (srw_ss()) [MAP,term2t_def,EVERY_DEF,term_ok_def]
@@ -3923,11 +3965,11 @@ Theorem term2t_LamApp_lemma[local]:
   (term2t
       (LamApp (MAP getSym (sexp2list xs))
         (sexp3term y)
-        (MAP (\a. sexp3term a) ys)) =
+        (MAP sexp3term ys)) =
      term2t
       (LamApp (MAP getSym (sexp2list xs))
         (sexp2term y)
-        (MAP (\a. sexp2term a) ys))) =
+        (MAP sexp2term ys))) =
     EVERY (\x. term2t (sexp3term x) = term2t (sexp2term x)) ys /\
     (term2t (sexp3term y) = term2t (sexp2term y))
 Proof
@@ -3936,7 +3978,7 @@ QED
 
 Theorem term_ok_LamApp_lemma[local]:
   term_ok ctxt (term2t (LamApp (MAP getSym (sexp2list xs)) (sexp3term y)
-      (MAP (\a. sexp3term a) ys))) ==>
+      (MAP sexp3term ys))) ==>
     EVERY (\x. term_ok ctxt (term2t (sexp3term x))) ys /\
     term_ok ctxt (term2t (sexp3term y))
 Proof
@@ -3965,7 +4007,7 @@ Proof
 QED
 
 Theorem term_ok_or2t[local]:
-  !xs. term_ok ctxt (or2t (MAP (\a. term2t a) (MAP (\a. sexp3term a) xs))) ==>
+  !xs. term_ok ctxt (or2t (MAP term2t (MAP sexp3term xs))) ==>
          EVERY (\x. term_ok ctxt (term2t (sexp3term x))) xs
 Proof
   Cases THEN1 SIMP_TAC std_ss [or2t_def,MAP,term_ok_def,EVERY_DEF]
@@ -3979,7 +4021,7 @@ Proof
        (free_vars
           (or2t
              (term2t (sexp3term h)::
-                  MAP (\a. term2t a) (MAP (\a. sexp3term a) t))))` \\ FS []
+                  MAP term2t (MAP sexp3term t))))` \\ FS []
   THEN1
    (FULL_SIMP_TAC std_ss [term_ok_def,EVERY_DEF,MAP] \\ REPEAT STRIP_TAC \\ RES_TAC)
   \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_DEF,MAP] \\ STRIP_TAC
@@ -4748,7 +4790,7 @@ Proof
            \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [term2t_def]
            \\ Q.PAT_X_ASSUM `term2t (sexp3term raw_body) = xx` MP_TAC
            \\ SIMP_TAC std_ss []
-           \\ Q.PAT_X_ASSUM `term_ok ctxt2 (mApp (func2f Error) (MAP (\a. term2t a) xs'))` MP_TAC
+           \\ Q.PAT_X_ASSUM `term_ok ctxt2 (mApp (func2f Error) (MAP term2t xs'))` MP_TAC
            \\ ASM_SIMP_TAC std_ss [term_ok_def,func2f_def,func_arity_def])
          \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [MilawaTrueFun_def]
          \\ MATCH_MP_TAC (GEN_ALL MilawaTrue_TRANS)

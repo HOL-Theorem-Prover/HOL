@@ -80,47 +80,13 @@ fun readThy p (g,links) =
                          General.exnMessage e)
 
 
-(* ----------------------------------------------------------------------
-    Depth-first, preorder
-   ---------------------------------------------------------------------- *)
-fun recurse_toDirs action A worklist =
-    case worklist of
-        [] => A
-      | d::ds =>
-        let
-          val A' = action d A
-          val ds' = Portable.listDir d
-                                     |> map (fn f => d ++ f)
-                                     |> List.filter OS.FileSys.isDir
-        in
-          recurse_toDirs action A' (ds' @ ds)
-        end
-
-fun find_theory_files_action dir A =
-  let
-    open OS.FileSys
-    val objsdirname = dir ++ ".hol/objs"
-  in
-    if access (objsdirname, [A_READ, A_EXEC])
-       andalso isDir objsdirname then
-      let
-        val thys =
-          Portable.listDir objsdirname
-          |> List.filter (String.isSuffix "Theory.dat")
-        fun collect (thyfile, acc) =
-          let
-            val thydat = dir ++ thyfile
-            val {base, ...} = OS.Path.splitBaseExt thyfile
-            val thy_name =
-              String.substring (base, 0, size base - 6)
-          in
-            Symtab.cons_list (thy_name, thydat) acc
-          end
-      in
-        List.foldl collect A thys
-      end
-    else A
-  end
+(* The directory scan lives in `theoryfiles', which names no graph, so
+   that a consumer wanting only these does not elaborate the two
+   `Graph' instantiations this structure's signature exposes.
+   Re-exported here because `theorytool' opens this structure for
+   them. *)
+val recurse_toDirs = theoryfiles.recurse_toDirs
+val find_theory_files_action = theoryfiles.find_theory_files_action
 
 fun find_theory_action dir A =
     let

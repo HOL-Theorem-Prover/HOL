@@ -1,3 +1,5 @@
+INCLUDES = ../string
+
 EXE = mkmunge.exe
 TARGET = $(protect $(HOLDIR)/bin/$(EXE))
 

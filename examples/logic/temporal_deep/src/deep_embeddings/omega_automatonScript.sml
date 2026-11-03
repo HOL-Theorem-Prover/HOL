@@ -25,18 +25,10 @@ End
 val explicit_acceptance_condition_induct =
  save_thm
   ("explicit_acceptance_condition_induct",
-   Q.GEN
-    `P`
-    (MATCH_MP
-     (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
-     (SIMP_RULE
-       std_ss
-       [pairTheory.FORALL_PROD,
-        PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
-        PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
-       (Q.SPECL
-         [`P`,`\(f1,f2). P f1 /\ P f2`]
-         (TypeBase.induction_of ``:('a, 'b) explicit_acceptance_condition``)))));
+   SIMP_RULE (srw_ss())
+     [pairTheory.FORALL_PROD, pairTheory.setFST_thm,
+      pairTheory.setSND_thm]
+     (TypeBase.induction_of ``:('a, 'b) explicit_acceptance_condition``));
 
 
 

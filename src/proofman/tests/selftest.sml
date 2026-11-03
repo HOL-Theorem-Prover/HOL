@@ -122,6 +122,27 @@ fun test nm pred s =
 val _ = test "Stack printing; small stack" goalstr "abcde"
 val _ = test "Stack printing; big stack" rawstr "abcdefg"
 
+(* Goalstack.howmany_printed_subgoals is registered with a maximum but no
+   minimum, so 0 is a value a user can set.  It reads as "print the count
+   and none of the goals"; what it must not do is make a goalstack
+   impossible to display at all. *)
+val _ = tprint "Stack printing; howmany_printed_subgoals = 0"
+val _ =
+    let
+      val t = boolSyntax.list_mk_conj
+                (map (fn s => mk_var(s,bool)) ["a","b","c"])
+      val gstk = with_flag (goalStack.chatting, false) mkstk t
+      fun pr g = trace ("Goalstack.howmany_printed_subgoals", 0)
+                       (HOLPP.pp_to_string 70 goalStack.pp_gstk) g
+    in
+      case Exn.capture pr gstk of
+          Exn.Exn Interrupt => raise Interrupt
+        | Exn.Exn e => die ("\nRaised " ^ General.exnMessage e)
+        | Exn.Res s =>
+          if String.isSubstring "3 subgoals elided" s then OK()
+          else die ("\nGot: " ^ String.toString s)
+    end
+
 fun narrow_uni_off f =
   HOLPP.pp_to_string 50
        (f |> with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
@@ -584,3 +605,33 @@ val _ =
          andalso has "0." bare
       then OK() else die ("\nfull:\n" ^ full ^ "bare:\n" ^ bare)
     end
+
+local
+  val slot = Context.Data.new {name = "proofman-selftest.marker",
+                               empty = "ambient", pp = fn s => s}
+  val ctxt = Context.Data.put slot "explicit" (Context.snapshot())
+  val seen = ref ""
+  fun record_tac g c = (seen := Context.Data.get slot c; ALL_TAC g c)
+  fun record_ltac gs c = (seen := Context.Data.get slot c; ALL_LT gs c)
+  val gstk0 = with_flag (goalStack.chatting, false)
+                        (new_goal ([], “p ⇒ p”)) Lib.I
+  (* The step runs with the live slot set to "live", after `f` has been
+     applied to everything but the goalstack, so a context read any
+     earlier than the step itself shows up as "ambient". *)
+  fun check nm expected f =
+      (tprint nm;
+       seen := "";
+       ignore (with_flag (goalStack.chatting, false)
+                 (Context.Data.with_slot_value slot "live" f) gstk0);
+       if !seen = expected then OK()
+       else die ("saw " ^ String.toString (!seen)))
+in
+val _ = check "expandf_in runs the tactic in the given context"
+              "explicit" (expandf_in ctxt record_tac)
+val _ = check "expand_listf_in runs the tactic in the given context"
+              "explicit" (expand_listf_in ctxt record_ltac)
+val _ = check "expandf runs the tactic in the live context"
+              "live" (expandf record_tac)
+val _ = check "expand_listf runs the tactic in the live context"
+              "live" (expand_listf record_ltac)
+end

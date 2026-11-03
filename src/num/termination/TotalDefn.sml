@@ -247,22 +247,30 @@ val base_ss =
 (* where n and m need not be equal.                                          *)
 (*---------------------------------------------------------------------------*)
 
-local
-fun foo [] _  = raise ERR "foo" "empty arg."
-  | foo _ []  = raise ERR "foo" "empty arg."
-  | foo [x] Y = [(x,pairSyntax.list_mk_pair Y)]
-  | foo X [y] = [(pairSyntax.list_mk_pair X, y)]
-  | foo (x::rst) (y::rst1) = (x,y)::foo rst rst1
-in
-fun dest tm =
+fun pair_up [] _  = raise ERR "pair_up" "empty arg."
+  | pair_up _ []  = raise ERR "pair_up" "empty arg."
+  | pair_up [x] Y = [(x,pairSyntax.list_mk_pair Y)]
+  | pair_up X [y] = [(pairSyntax.list_mk_pair X, y)]
+  | pair_up (x::rst) (y::rst1) = (x,y)::pair_up rst rst1;
+
+(*---------------------------------------------------------------------------*)
+(* The two values a termination condition compares: the argument of the      *)
+(* recursive call, and the argument the call was made from.                  *)
+(*---------------------------------------------------------------------------*)
+
+fun dest_tc tm =
   let val Ryx = (snd o strip_imp o snd o strip_forall) tm
       val (Ry, x) = dest_comb Ryx
-      val y = rand Ry
+  in
+     (rand Ry, x)
+  end;
+
+fun dest tm =
+  let val (y,x) = dest_tc tm
       open pairSyntax
   in
-     foo (spine_pair y) (spine_pair x)
-  end
-end;
+     pair_up (spine_pair y) (spine_pair x)
+  end;
 
 (*---------------------------------------------------------------------------*)
 (* Is a list-of-lists rectangular, filling in with false on short rows       *)
@@ -401,6 +409,120 @@ fun flat_type_size ty =
     | _ => TypeBasePure.type_size (TypeBase.theTypeBase()) ty end
 
 (*---------------------------------------------------------------------------*)
+(* A mutual recursion's domain is a sum, with one leaf per function.  Give   *)
+(* each leaf a measure of its own and add them up, without counting the sum  *)
+(* constructors that brought the functions into one domain: those say which  *)
+(* function a call is to, not how big its argument is.                       *)
+(*                                                                           *)
+(* A leaf is measured the way a flat domain is -- a column that never        *)
+(* shrinks weighs nothing -- so an argument a function merely carries, an    *)
+(* accumulator say, need not shrink for the call to.  A leaf's columns are   *)
+(* read off the conditions with both sides at that leaf, and failing those,  *)
+(* off the conditions that reach it from another leaf.                       *)
+(*---------------------------------------------------------------------------*)
+
+fun sum_leaves ty =
+  case total sumSyntax.dest_sum ty
+   of NONE => [ty]
+    | SOME (lty,rty) => sum_leaves lty @ sum_leaves rty;
+
+(*---------------------------------------------------------------------------*)
+(* The leaf a value was injected at, and the value injected.                 *)
+(*---------------------------------------------------------------------------*)
+
+fun leaf_of ty tm =
+  case total sumSyntax.dest_sum ty
+   of NONE => (0,tm)
+    | SOME (lty,rty) =>
+      case total sumSyntax.dest_inl tm
+       of SOME (t,_) => leaf_of lty t
+        | NONE =>
+          case total sumSyntax.dest_inr tm
+           of SOME (t,_) =>
+                let val (i,u) = leaf_of rty t
+                in (length (sum_leaves lty) + i, u)
+                end
+            | NONE => raise ERR "leaf_of" "not an injection";
+
+fun leaf_measures domty tcs =
+ let val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
+     val sided = mapfilter (fn tc =>
+            let val (y,x) = dest_tc tc
+            in (leaf_of domty x, leaf_of domty y)
+            end) tcs
+     fun rows i =
+       List.mapPartial
+         (fn ((ix,px),(iy,py)) =>
+             if ix = i andalso iy = i then
+               total (pair_up (pairSyntax.spine_pair py))
+                     (pairSyntax.spine_pair px)
+             else NONE)
+         sided
+     (* A leaf no condition compares with itself is still reached from
+        the others.  A column a call descended into is a proper subterm
+        of a column of the argument the call was made from; which column
+        that was does not matter, and need not even exist, because the
+        leaves need not take their parameters the same way. *)
+     fun reached i =
+       List.mapPartial
+         (fn ((ix,px),(iy,py)) =>
+             if iy = i andalso ix <> i then
+               let val src = pairSyntax.spine_pair px
+               in SOME (map (fn c => List.exists (proper_subterm c) src)
+                            (pairSyntax.spine_pair py))
+               end
+             else NONE)
+         sided
+     fun from_rows [] = NONE
+       | from_rows rws =
+           let val chf = projects rws
+           in if exists I chf then SOME chf else NONE
+           end
+     fun mask i = from_rows (map (map (uncurry proper_subterm)) (rows i))
+     val leaves = sum_leaves domty
+     val indices = Lib.upto 0 (length leaves - 1)
+     val masks = map mask indices
+     val reaching = map (from_rows o reached) indices
+     val known = List.mapPartial I masks
+     fun sized chf ty = list_mk_prod_tyl (strip_prod_ty chf ty)
+     fun By chf ty = (sized chf ty handle HOL_ERR _ => tysize ty)
+     fun whole _ ty = tysize ty
+     fun own i ty =
+       case List.nth(masks,i)
+        of SOME chf => By chf ty
+         | NONE => tysize ty
+     fun reach i ty =
+       case List.nth(masks,i)
+        of SOME chf => By chf ty
+         | NONE =>
+           case List.nth(reaching,i)
+            of SOME chf => By chf ty
+             | NONE => tysize ty
+     (* a leaf no condition compares with itself still shares the other
+        functions' parameters, so borrow a mask that fits it *)
+     fun shared i ty =
+       case List.nth(masks,i)
+        of SOME _ => own i ty
+         | NONE =>
+           case List.find (fn chf => Lib.can (sized chf) ty) known
+            of SOME chf => sized chf ty
+             | NONE => tysize ty
+     fun build leafm ty i =
+       case total sumSyntax.dest_sum ty
+        of NONE => (leafm i ty, i+1)
+         | SOME (lty,rty) =>
+             let val (ml,i1) = build leafm lty i
+                 val (mr,i2) = build leafm rty i1
+             in (basicSizeSyntax.mk_sum_size2(ml,mr), i2)
+             end
+ in
+   if Lib.can sumSyntax.dest_sum domty
+   then mapfilter (fn lm => fst (build lm domty 0)) [reach, own, shared, whole]
+   else []
+ end
+ handle HOL_ERR _ => [];
+
+(*---------------------------------------------------------------------------*)
 (* Among the termination_simps() are theorems of the form                    *)
 (*                                                                           *)
 (*   constraints ==> f t1 < f t2                                             *)
@@ -498,6 +620,7 @@ fun guessR defn =
            val lex_combs = mk_sized_subsets argvars subset
            val allrels = [mk_cmeasure domty0, mk_cmeasure (tysize domty),
                           mk_cmeasure (flat_type_size domty)]
+                         @ map mk_cmeasure (leaf_measures domty tcs)
                          @ it_prim_rec @ lex_combs
            val allrels' = mk_term_set (map simplifyR allrels)
            val () = report_num_guesses(length allrels')
