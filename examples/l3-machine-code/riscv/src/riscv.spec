@@ -347,6 +347,7 @@ register mcpuid :: regType
 ,    18 : S         -- supervisor-mode support
 ,    12 : M         -- integer multiply/divide support
 ,     8 : I         -- integer base ISA support (XXX: this seems unnecessary)
+,     2 : C         -- compressed instruction support (IALIGN = 16)
 }
 
 register mimpid :: regType
@@ -762,6 +763,12 @@ Architecture curArch() =
 bool in32BitMode() =
     curArch() == RV32I
 
+bool haveRVC() =
+    MCSR.mcpuid.C
+
+regType legalizeEPC(v::regType) =
+    if haveRVC() then v && SignExtend('10') else v && SignExtend('100')
+
 Privilege curPrivilege() =
     privilege(MCSR.mstatus.MPRV)
 
@@ -911,7 +918,7 @@ bool is_CSR_defined(csr::creg) =
  or  csr == 0x701 or (csr == 0x741 and in32BitMode())
  or (csr >= 0x340 and csr <= 0x344)
  or (csr >= 0x380 and csr <= 0x385)
- or  csr >= 0xB01 or (csr == 0xB81 and in32BitMode())
+ or  csr == 0xB01 or (csr == 0xB81 and in32BitMode())
  or (csr >= 0x780 and csr <= 0x783 and csr != 0x782)
 
 --- XXX: the CSRMap below is broken in 32-bit mode, since we need to
@@ -1056,7 +1063,7 @@ component CSRMap(csr::creg) :: regType
 
         -- supervisor trap handling
         case 0x140  => c_SCSR(procID).sscratch          <- value
-        case 0x141  => c_SCSR(procID).sepc              <- (value && SignExtend(0b100`3))  -- no 16-bit instr support
+        case 0x141  => c_SCSR(procID).sepc              <- legalizeEPC(value)  -- only bit 0 is zero if C is enabled
         -- scause, sbadaddr are SRO
         -- sip back-projects to mip
         case 0x144  => c_MCSR(procID).mip               <- lower_sip_mip(sip(value), c_MCSR(procID).mip)
@@ -1094,7 +1101,7 @@ component CSRMap(csr::creg) :: regType
 
         -- machine trap handling
         case 0x340  => c_MCSR(procID).mscratch          <- value
-        case 0x341  => c_MCSR(procID).mepc              <- (value && SignExtend(0b100`3))  -- no 16-bit instr support
+        case 0x341  => c_MCSR(procID).mepc              <- legalizeEPC(value)  -- only bit 0 is zero if C is enabled
         case 0x342  => c_MCSR(procID).mcause            <- mcause(value)
         case 0x343  => c_MCSR(procID).mbadaddr          <- value
         case 0x344  => c_MCSR(procID).mip               <- mip(value)
@@ -2422,13 +2429,16 @@ define MulDiv > REMUW(rd::reg, rs1::reg, rs2::reg) =
 ---------------------------------------------------------------------------
 
 -- Unconditional jumps
+--
+-- If the C extension is enabled, IALIGN = 16,
+-- meaning JAL and JALR never raise instruction-address-misaligned exceptions.
 
 -----------------------------------
 -- JAL   rd, offs
 -----------------------------------
 define Branch > JAL(rd::reg, imm::imm20) =
 { addr = PC + SignExtend(imm) << 1
-; if addr<1>
+; if addr<1> and not haveRVC()
   then signalAddressException(Fetch_Misaligned, addr)
   else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
@@ -2440,7 +2450,7 @@ define Branch > JAL(rd::reg, imm::imm20) =
 -----------------------------------
 define Branch > JALR(rd::reg, rs1::reg, imm::imm12) =
 { addr = (GPR(rs1) + SignExtend(imm)) && SignExtend('10')
-; if addr<1>
+; if addr<1> and not haveRVC()
   then signalAddressException(Fetch_Misaligned, addr)
   else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
@@ -2456,7 +2466,11 @@ define Branch > BEQ(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 == v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2467,7 +2481,11 @@ define Branch > BNE(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <> v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2478,7 +2496,11 @@ define Branch > BLT(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 < v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2489,7 +2511,11 @@ define Branch > BLTU(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <+ v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2500,7 +2526,11 @@ define Branch > BGE(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >= v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2511,7 +2541,11 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >=+ v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -4212,13 +4246,25 @@ construct FetchResult
 
 FetchResult Fetch() =
 { vPC = PC
-; if vPC<0>
+; if vPC<0> or (vPC<1> and not haveRVC())
   then F_Error(Internal(FETCH_MISALIGNED(vPC)))
   else match translateAddr(vPC, Instruction, Read)
-       { case Some(pPC) => { instw = rawReadInst(pPC)
-                           ; setupDelta(vPC, instw)
-                           ; F_Result(instw)
-                           }
+       { case Some(pPC) =>
+           match rawReadInst(pPC)
+           { case Half(h) => { setupDelta(vPC, Half(h))
+                             ; F_Result(Half(h))
+                             }
+             -- With IALIGN = 16 a 32-bit instruction can straddle a page
+             -- boundary, so its upper half is translated separately.
+             case Word(w) =>
+               match translateAddr(vPC + 2, Instruction, Read)
+               { case Some(pPC2) => { instw = Word(MEM8(pPC2 + 1) : MEM8(pPC2) : w<15:0>)
+                                    ; setupDelta(vPC, instw)
+                                    ; F_Result(instw)
+                                    }
+                 case None       => F_Error(Internal(FETCH_FAULT(vPC + 2)))
+               }
+           }
          case None      => F_Error(Internal(FETCH_FAULT(vPC)))
        }
 }
@@ -5251,7 +5297,7 @@ unit Next =
 
 ; match Fetch()
   { case F_Result(Half(h)) =>
-    { inst = DecodeRVC(h)
+    { inst = if haveRVC() then DecodeRVC(h) else UnknownInstruction
     ; mark_log(LOG_INSN, log_instruction(ZeroExtend(h), inst))
     ; Run(inst)
     }
@@ -5315,6 +5361,7 @@ unit initIdent(arch::Architecture) =
 ; MCSR.mcpuid.S        <- true
 ; MCSR.mcpuid.M        <- true
 ; MCSR.mcpuid.I        <- true
+; MCSR.mcpuid.C        <- true
 
 ; MCSR.mimpid.RVSource <- 0x8000 -- anonymous source
 ; MCSR.mimpid.RVImpl   <- 0x0
