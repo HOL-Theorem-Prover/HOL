@@ -20,7 +20,7 @@ for HOL_PFT_IDENTITY_PHASE in $pft_phases; do
     *) set -- --min ;;
   esac
   pft_log=$HOL_PFT_IDENTITY_PHASE.log
-  if ! "$pft_hol" run "$@" "$pft_dir/driver.sml" > "$pft_log" 2>&1 ||
+  if ! "$pft_hol" run "$@" "$pft_dir/identity-selftest.sml" > "$pft_log" 2>&1 ||
      ! grep -q '^PFT_TEST_PHASE_PASS$' "$pft_log"; then
     tail -40 "$pft_log" >&2
     exit 1
