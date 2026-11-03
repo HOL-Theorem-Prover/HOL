@@ -21,8 +21,8 @@ Contents
 New features
 ------------
 
-- Generated theories expose a same-named initializer functor taking the theory
-  data path. On Poly/ML runtimes with dependent modules,
+- Poly/ML-generated theories expose a same-named initializer functor taking the
+  theory data path. On Poly/ML runtimes with dependent modules,
   `Meta.configureTheoryModuleCache` can cache the compiled initializer while
   retaining normal theory registration, load hooks and kernel identities.
   Missing or incompatible modules fall back to source loading.

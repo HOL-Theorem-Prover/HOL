@@ -634,16 +634,19 @@ fun pp_struct hash (info_record : struct_info_record) = let
                 (add_newline >> add_newline)
                 l
       )
-  val m =
-      block CONSISTENT 0 (
-       pblock (add_string,
-         Listsort.sort String.compare parents1 @ mldeps) >>
-       add_newline >>
-       add_string "(* HOL theory initializer v1 *)" >> add_newline >>
-       add_string ("functor " ^ Thry name ^
-                   "(val path : String.string) :>") >>
-       add_newline >>
-       block CONSISTENT 2 (
+  (* Moscow ML compiles generated theories as structure units, whose grammar
+     does not admit a top-level functor. *)
+  val factory = Systeml.ML_SYSNAME = "poly"
+  val dependencies = pblock (add_string,
+                            Listsort.sort String.compare parents1 @ mldeps)
+  val structure_header =
+    add_string ("structure " ^ Thry name ^ " :> " ^ ThrySig name ^ " =")
+  val factory_header =
+    dependencies >> add_newline >>
+    add_string "(* HOL theory initializer v1 *)" >> add_newline >>
+    add_string ("functor " ^ Thry name ^ "(val path : String.string) :>") >>
+    add_newline >>
+    block CONSISTENT 2 (
          add_string "sig" >> add_newline >>
          add_string "type thm = Thm.thm" >> add_newline >>
          pr_list
@@ -651,7 +654,10 @@ fun pp_struct hash (info_record : struct_info_record) = let
               if is_temp_binding s orelse private then nothing
               else add_string ("val " ^ s ^ " : thm"))
            add_newline all_thms >>
-         add_newline >> add_string "end =") >>
+         add_newline >> add_string "end =")
+  val m =
+      block CONSISTENT 0 (
+       (if factory then factory_header else structure_header) >>
        add_newline >>
        block CONSISTENT 2 (
           add_string "struct" >> jump >>
@@ -663,11 +669,14 @@ fun pp_struct hash (info_record : struct_info_record) = let
                ("then TextIO.print \"Loading "^ Thry name ^ " ... \"") >>
              add_break (1,2) >>
              add_string "else ()") >> jump >>
-             add_string "type thm = Thm.thm" >> add_newline >>
+             (if factory then add_string "type thm = Thm.thm"
+              else add_string "open Type Term Thm" >> add_newline >>
+                   dependencies) >> add_newline >>
              block CONSISTENT 0 (
               add_string "structure TDB = struct" >> add_break(1,2) >>
               add_string "val path =" >> add_break(1,4) >>
-                add_string "path" >>
+                add_string (if factory then "path"
+                            else "OS.Path.base (#(FILE)) ^ \".dat\"") >>
                 add_break(1,2) >>
               add_string "val timestamp = HOLFileSys.modTime path" >> add_break(1,2) >>
               add_string "val thydata = " >> add_break(1,4) >>
@@ -704,12 +713,13 @@ fun pp_struct hash (info_record : struct_info_record) = let
                    \\"done\\n\" else ()" >> add_newline >>
         add_string ("val _ = Theory.load_complete "^ stringify name) >>
         jump >>
-        add_string "end;" >> add_newline >>
-        add_string "(* HOL theory initializer end *)" >> add_newline >>
-        add_string ("structure " ^ Thry name ^ " :> " ^ ThrySig name ^ " =") >>
-        add_newline >>
-        add_string (Thry name ^ "(val path = ") >>
-        add_string "OS.Path.base (#(FILE)) ^ \".dat\")" >> add_newline)
+        (if not factory then add_string "end" >> add_newline
+         else
+           add_string "end;" >> add_newline >>
+           add_string "(* HOL theory initializer end *)" >> add_newline >>
+           structure_header >> add_newline >>
+           add_string (Thry name ^ "(val path = ") >>
+           add_string "OS.Path.base (#(FILE)) ^ \".dat\")" >> add_newline))
 in
   mlower ": struct" m
 end

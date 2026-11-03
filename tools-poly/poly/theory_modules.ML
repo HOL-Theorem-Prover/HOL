@@ -230,6 +230,8 @@ fun configure {directory, base_state} =
   let
     val _ = Meta.moduleSourceLoader := (fn use => use)
     val _ = Meta.moduleProducer := (fn _ => ())
+    val directory = OS.Path.mkAbsolute
+                      {path = directory, relativeTo = OS.FileSys.getDir ()}
     fun same_state (_, path) =
       OS.FileSys.fullPath path = OS.FileSys.fullPath base_state
   in

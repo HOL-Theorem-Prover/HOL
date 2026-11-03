@@ -72,6 +72,13 @@ val _ = if not supported then () else
     val _ = probe ()
     val _ = if outputs () = cold andalso misses () > 0 then OK ()
             else die "corrupt-module fallback changed results"
+    val _ = tprint "changed theory source ignores the old compiled initializer"
+    val output = HOLFileSys.openAppend "moduleATheory.sml"
+    val _ = TextIO.output (output, "\n(* changed source *)\n")
+              before TextIO.closeOut output
+    val _ = probe ()
+    val _ = if outputs () = cold andalso misses () = 1 then OK ()
+            else die "stale-module fallback changed results"
     val _ = tprint "changed core ML binding forces source initialization"
     val _ = command ["env", "HOL_MODULE_TEST_SHADOW=1", hol,
                      "run", "--noconfig", "probe.sml"]

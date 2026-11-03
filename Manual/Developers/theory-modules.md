@@ -8,11 +8,12 @@ each consumer.
 
 ## Generated source
 
-Each generated `FooTheory.sml` declares a functor named `FooTheory`, then
-applies it to produce the existing `FooTheory` structure. Functor and structure
-names occupy separate ML namespaces. The functor takes the current `.dat`
+On Poly/ML, each generated `FooTheory.sml` declares a functor named `FooTheory`,
+then applies it to produce the existing `FooTheory` structure. Functor and
+structure names occupy separate ML namespaces. The functor takes the current `.dat`
 path and reads the theory data when applied. Its result contains the same
 public theorem bindings as the existing generated signature.
+Moscow ML retains its existing generated structure format.
 
 Dependency opens remain outside the functor, so dependency discovery and
 loading retain their ordinary order. The marked initializer body uses

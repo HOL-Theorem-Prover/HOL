@@ -1,8 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 val base = OS.Path.concat (Systeml.HOLDIR, "bin/hol.state");
 val enabled = Meta.configureTheoryModuleCache
-                {directory = OS.Path.concat (OS.FileSys.getDir (), "modules"),
-                 base_state = base};
+                {directory = "modules", base_state = base};
 val save_namespace = PolyML.NameSpace.Structures.contents
   (valOf (#lookupStruct
     (PolyML.NameSpace.Structures.contents
@@ -58,7 +57,6 @@ val _ = save_thm ("probe", moduleDTheory.from_b);
 val _ = export_theory ();
 val _ = if enabled then
   (ignore (Meta.configureTheoryModuleCache
-    {directory = OS.Path.concat (OS.FileSys.getDir (), "producer-modules"),
-     base_state = base});
+    {directory = "producer-modules", base_state = base});
    Meta.produceTheoryModule "moduleProbeTheory.sml")
   else ();
