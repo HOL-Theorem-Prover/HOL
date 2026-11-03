@@ -19,7 +19,8 @@ Libs
    possible representation for any given finite-map.
 
    It is tricky to traverse the array and extract a list of elements.
-   There are three array->list operations defined:
+   There are four array->list operations defined:
+   - domain_list: produces a list of keys without inspecting values.
    - toSortedAList: produces an assocation list in index order.
    - toAList: produces an association list in a mixed-up order. Defined via
      foldi, and related to foldi and mapi by theorems. Slowest to EVAL.
@@ -480,6 +481,26 @@ Definition domain_def[simp,nocompute]:
      {0} UNION IMAGE (\n. 2 * n + 2) (domain t1) UNION
      IMAGE (\n. 2 * n + 1) (domain t2)
 End
+
+(* Enumerate keys directly, without constructing key/value pairs. *)
+Definition domain_list_def:
+  domain_list LN = [] ∧
+  domain_list (LS _) = [0n] ∧
+  domain_list (BN t1 t2) =
+     MAP (λn. 2 * n + 2) (domain_list t1) ++
+     MAP (λn. 2 * n + 1) (domain_list t2) ∧
+  domain_list (BS t1 v t2) =
+     0::
+     MAP (λn. 2 * n + 2) (domain_list t1) ++
+     MAP (λn. 2 * n + 1) (domain_list t2)
+End
+
+Theorem set_domain_list:
+  set (domain_list t) = domain t
+Proof
+  Induct_on`t` \\ rw[domain_list_def, LIST_TO_SET_MAP]
+  \\ rw[pred_setTheory.EXTENSION] \\ metis_tac[]
+QED
 
 Theorem FINITE_domain[simp]: FINITE (domain t)
 Proof Induct_on `t` >> simp[]
