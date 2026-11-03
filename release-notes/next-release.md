@@ -177,9 +177,9 @@ New examples
     denominator-clearing example checked by `ringLib.RING_TAC`.
 
 -   `examples/algebra/primality` provides kernel-checked Lucas primality
-    certificates and binary modular exponentiation, with examples for
-    elliptic-curve primes. Decimal certificate keys are normalized before
-    lookup, including keys with leading zeros.
+    certificates, using the shared `expMod` implementation and its `cv_std`
+    translations, with examples for elliptic-curve primes. Decimal certificate
+    keys are normalized before lookup, including keys with leading zeros.
 
 -   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 

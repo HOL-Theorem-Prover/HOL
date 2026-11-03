@@ -11,6 +11,20 @@ struct
 
 open HolKernel boolLib bossLib Conv
 
+open cv_stdTheory
+
+(* Normalize certificate arithmetic without changing Boolean structure. *)
+val nat_step = FIRST_CONV
+  [Arithconv.DIV_CONV, Arithconv.LT_CONV, Arithconv.MUL_CONV,
+   Arithconv.NEQ_CONV, Arithconv.SBC_CONV]
+
+fun nat_conv tm =
+  if numSyntax.is_numeral tm then REFL tm
+  else (SUB_CONV nat_conv THENC TRY_CONV nat_step) tm
+
+val modpow_conv =
+  REWR_CONV (GSYM expModTheory.exp_mod_binary_eqn) THENC cv_transLib.cv_eval
+
 type certificate = string * string * (string * int) list
 val prime_tm = prim_mk_const {Thy = "divides", Name = "prime"}
 val ERR = mk_HOL_ERR "primeCertificateLib"
@@ -58,9 +72,9 @@ fun PRIME_CERT_CONV certificates =
               (fn tm =>
                 if numSyntax.is_mod tm andalso
                    numSyntax.is_exp (fst (numSyntax.dest_mod tm))
-                then modExpLib.MODPOW_CONV tm
+                then modpow_conv tm
                 else raise UNCHANGED)
-              THENC modExpLib.NAT_CONV) THEN
+              THENC nat_conv) THEN
             REWRITE_TAC [])
           val th = MP rule checked
           val _ = cache := (n,th) :: !cache

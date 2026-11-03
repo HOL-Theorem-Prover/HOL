@@ -1,6 +1,6 @@
 INCLUDES = $(HOLDIR)/src/algebra \
-           $(HOLDIR)/src/num/theories/cv_compute \
-           $(HOLDIR)/examples/algebra/field
+           $(HOLDIR)/src/num/extra_theories \
+           $(HOLDIR)/src/num/theories/cv_compute/automation
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
