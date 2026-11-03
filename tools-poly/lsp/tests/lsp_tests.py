@@ -3458,6 +3458,37 @@ def test_tryTactic_honours_a_step_anchor():
         c.close()
 
 
+def test_tryTactic_inside_rpt():
+    """The anchor inside `rpt's argument is inside an open `Repeat'
+    frame, and a candidate applied there becomes part of the loop body.
+    One that solves the goal leaves the frame over no goals, and
+    rendering that state runs `finish', whose `close_paren' re-ran the
+    body until it failed -- which over no goals it never does.  The
+    probe never answered."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_try_rpt.sml"
+        src = ("Theory gs_try_rpt\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_rpt:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  rpt strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 6 = "  rpt strip_tac": 6 is `strip_tac's first byte.
+        r = _send_trytactic(c, 7321, uri, 6, 6, "simp[]")
+        res = (r or {}).get("result")
+        assert_true(res is not None, f"probe answered ({r!r})")
+        assert_eq(res.get("error"), None, f"no error ({res!r})")
+        assert_eq(res.get("goals"), [], "`simp[]' closes the goal")
+    finally:
+        c.close()
+
+
 def test_tryTactic_budget_bounds_both_of_its_walks():
     """`tryTactic' walks twice -- the body up to the anchor, then the
     candidate from there -- and `withTimeout's canary fires at most
@@ -12771,6 +12802,7 @@ TESTS = [
                     test_tryTactic_probes_without_committing),
     ("tryTactic_honours_a_step_anchor",
                     test_tryTactic_honours_a_step_anchor),
+    ("tryTactic_inside_rpt", test_tryTactic_inside_rpt),
     ("tryTactic_says_when_a_candidate_will_not_compile",
                     test_tryTactic_says_when_a_candidate_will_not_compile),
     ("tryTactic_budget_bounds_both_of_its_walks",
