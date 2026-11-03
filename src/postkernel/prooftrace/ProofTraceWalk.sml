@@ -116,7 +116,10 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
         (require_role "?" (conclusion a); require_role "?" concl;
          require_role "TYPE_DEFINITION" (body (rand concl)))
     | NOT_INTRO_prf a =>
-        (require_role "~" concl; require_role "F" (rand (conclusion a)))
+        (require_role "~" concl;
+         (* Kernel dest_imp also accepts an already-negated conclusion. *)
+         if head (conclusion a) = ("bool","~") then ()
+         else require_role "F" (rand (conclusion a)))
     | NOT_ELIM_prf a =>
         (require_role "~" (conclusion a); require_role "F" (rand concl))
     | CCONTR_prf (_,a) => let

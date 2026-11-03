@@ -20,6 +20,7 @@ val () =
 val () = if phase <> "raw" then () else let
   val cases = [("identity_restore", "identity_restore", "item"),
     ("identity_collision", "bool", "T"), ("identity_closure", "bool", "T"),
+    ("identity_negation", "bool", "T"),
     ("identity_reexport", "identity_reexport", "item"),
     ("identity_reexport_child", "identity_reexport", "item"),
     ("identity_trace_loader", "bool", "T")]
@@ -116,6 +117,12 @@ val quantified = mk_forall (connective, list_mk_comb (connective,[T,T]));
 val projected = CONJUNCT1 (Thm.Specialize conjunction (ASSUME quantified));
 val () = identity_export
   (identity_keep (DISCH quantified projected) (REFL T));
+
+(* NOT_INTRO accepts a negation as well as an explicit implication to F. *)
+val () = identity_start "identity_negation";
+val n = mk_neg T;
+val () = identity_export
+  (identity_keep (DISCH n (NOT_INTRO (ASSUME n))) (REFL T));
 
 (* Adding a theorem after export changes the hash recorded by the child. *)
 val () = identity_start "identity_reexport";
