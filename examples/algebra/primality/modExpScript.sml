@@ -18,7 +18,6 @@ Theory modExp
 Ancestors
   arithmetic cv
 
-(* These identities are independent of primality, including at modulus zero. *)
 Theorem modExp_pow_even[local]:
   !a k n. a ** (2 * k) MOD n =
     ((a ** k MOD n) * (a ** k MOD n)) MOD n
@@ -80,7 +79,8 @@ Theorem modExp_cv_if_nat[local]:
   !e p q. cv_if e p q = if cv$c2n e = 0 then q else p
 Proof
   rpt gen_tac >> Cases_on `e` >-
-    (Cases_on `m` >> simp [cv_if_def, c2n_def]) >>
+    (rename1 `cv_if (cv$Num payload) p q` >>
+     Cases_on `payload` >> simp [cv_if_def, c2n_def]) >>
   simp [cv_if_def, c2n_def]
 QED
 

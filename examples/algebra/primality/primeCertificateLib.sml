@@ -18,6 +18,11 @@ val numeral = numSyntax.mk_numeral o Arbnum.fromString
 
 fun PRIME_CERT_CONV certificates =
   let
+    val canonical = Arbnum.toString o Arbnum.fromString
+    val certificates = map
+      (fn (n,a,fs) =>
+        (canonical n,a,map (fn (q,e) => (canonical q,e)) fs))
+      certificates
     val cache = ref [("2",dividesTheory.PRIME_2),
                      ("3",dividesTheory.PRIME_3)]
     fun find n [] = raise ERR "PRIME_CERT_CONV"
