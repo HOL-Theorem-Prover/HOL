@@ -272,6 +272,15 @@ fun reset_traces () =
 
 val current_trace = get_ttrace o str2name
 
+fun with_flags flags f x =
+    let
+      val base = global_tmap()
+      fun foldthis ((nm,v), m) = gen_set_value nm v m
+      val tempv = List.foldl foldthis base flags
+    in
+      Context.Data.with_slot_value tmap_slot tempv f x
+    end
+
 fun with_traces flags f x =
     let
       val base = global_tmap()

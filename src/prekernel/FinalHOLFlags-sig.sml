@@ -48,6 +48,7 @@ sig
     val trace             : string * int -> ('a -> 'b) -> 'a -> 'b
     val with_traces       : (string * int) list -> ('a -> 'b) -> 'a -> 'b
     val with_bflags       : (bflag * bool) list -> ('a -> 'b) -> 'a -> 'b
+    val with_flags        : (flag * int) list -> ('a -> 'b) -> 'a -> 'b
 
     val show_tags         : bflag
     val linewidth         : unit -> int

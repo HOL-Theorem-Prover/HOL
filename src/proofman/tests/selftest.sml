@@ -129,11 +129,12 @@ val _ = test "Stack printing; big stack" rawstr "abcdefg"
 val _ = tprint "Stack printing; howmany_printed_subgoals = 0"
 val _ =
     let
+      open HOLFlags
       val t = boolSyntax.list_mk_conj
                 (map (fn s => mk_var(s,bool)) ["a","b","c"])
-      val gstk = with_flag (goalStack.chatting, false) mkstk t
-      fun pr g = trace ("Goalstack.howmany_printed_subgoals", 0)
-                       (HOLPP.pp_to_string 70 goalStack.pp_gstk) g
+      val gstk = with_bflags [(goalStack.chatting, false)] mkstk t
+      fun pr g = with_flags [(goalStack.subgoal_print_count, 0)]
+                            (HOLPP.pp_to_string 70 goalStack.pp_gstk) g
     in
       case Exn.capture pr gstk of
           Exn.Exn Interrupt => raise Interrupt
@@ -607,21 +608,22 @@ val _ =
     end
 
 local
+  open HOLFlags
   val slot = Context.Data.new {name = "proofman-selftest.marker",
                                empty = "ambient", pp = fn s => s}
   val ctxt = Context.Data.put slot "explicit" (Context.snapshot())
   val seen = ref ""
   fun record_tac g c = (seen := Context.Data.get slot c; ALL_TAC g c)
   fun record_ltac gs c = (seen := Context.Data.get slot c; ALL_LT gs c)
-  val gstk0 = with_flag (goalStack.chatting, false)
-                        (new_goal ([], “p ⇒ p”)) Lib.I
+  val gstk0 = with_bflags [(goalStack.chatting, false)]
+                          (new_goal ([], “p ⇒ p”)) Lib.I
   (* The step runs with the live slot set to "live", after `f` has been
      applied to everything but the goalstack, so a context read any
      earlier than the step itself shows up as "ambient". *)
   fun check nm expected f =
       (tprint nm;
        seen := "";
-       ignore (with_flag (goalStack.chatting, false)
+       ignore (with_bflags [(goalStack.chatting, false)]
                  (Context.Data.with_slot_value slot "live" f) gstk0);
        if !seen = expected then OK()
        else die ("saw " ^ String.toString (!seen)))

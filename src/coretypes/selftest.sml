@@ -4,7 +4,7 @@ open simpLib BasicProvers boolSimps
 
 val _ = new_theory "scratch"
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 (* testing for sums *)
 val _ = tpp "case s of INL b => b | INR c => ~c"

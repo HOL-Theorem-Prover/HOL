@@ -1207,7 +1207,7 @@ local
   fun ambiguous tok =
       g0 |> add_rule (infixrule (tok ^ "1") tok 500)
          |> add_rule (infixrule (tok ^ "2") tok 400)
-  fun at_level n = Feedback.set_trace "ambiguous grammar warning" n
+  fun at_level n = HOLFlags.set_trace "Parse.ambiguous_grammar" n
   fun raises g = (ignore (mx g); false) handle Feedback.HOL_ERR _ => true
   (* run f with Globals.interactive set to i, warnings silenced, and the
      trace put back to its default of 1 afterwards *)

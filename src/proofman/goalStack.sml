@@ -12,7 +12,11 @@ infix 0 before;
 val ERR = mk_HOL_ERR "goalStack";
 
 fun ct nm mxinit =
-    #get (HOLFlags.create_trace({group = "Goalstack", name = nm}, mxinit))
+    let val finfo =
+            HOLFlags.create_trace({group = "Goalstack", name = nm}, mxinit)
+    in
+      (#get finfo, #flag finfo)
+    end
 fun cbt nm i =
     let val finfo =
             HOLFlags.create_btrace({group = "Goalstack", name = nm}, i)
@@ -21,10 +25,11 @@ fun cbt nm i =
     end
 
 
-val show_nsubgoals = ct "howmany_printed_subgoals" {max = 10000, initial = 10}
-val print_number_assums =
+val (show_nsubgoals, subgoal_print_count) =
+    ct "howmany_printed_subgoals" {max = 10000, initial = 10}
+val (print_number_assums, _) =
     ct "howmany_printed_assums" {max = 1000000, initial = 1000000}
-val other_subgoals_pretty_limit =
+val (other_subgoals_pretty_limit, _) =
     ct "other_subgoals_pretty_limit" {max = 100000, initial = 100}
 
 val (get_chatting, chatting) = cbt "chatting" true

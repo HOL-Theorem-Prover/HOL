@@ -511,9 +511,9 @@ fun report_ambiguity ({ambiguity, ...} : prec_matrix) =
       NONE => complained_already := false
     | SOME msg =>
         if not (!complained_already) andalso
-           (!Globals.interactive orelse !ambigrm = 2)
+           (!Globals.interactive orelse ambigrm() = 2)
         then
-          case !ambigrm of
+          case ambigrm() of
             0 => ()
           | 1 => (Feedback.HOL_WARNING "Parse" "Term" msg;
                   complained_already := true)
