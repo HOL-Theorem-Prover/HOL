@@ -1,4 +1,4 @@
-(* efficient checked Modular exponentiation and arithmetic conversions; 
+(* efficient checked Modular exponentiation and arithmetic conversions;
    NAT_CONV normalizes natural arithmetic without rewriting Boolean structure.
    MODPOW_CONV checks closed a ** e MOD n by the proved CV binary program,
 *)
@@ -26,7 +26,7 @@ val normalise_modpow =
 
 val evaluate_modpow =
   REWR_CONV modExpTheory.modExp_modpow_to_cv THENC
-  RAND_CONV eval_modpow THENC REWR_CONV CONJUNCT1 cvTheory.c2n_def
+  RAND_CONV eval_modpow THENC REWR_CONV (CONJUNCT1 cvTheory.c2n_def)
 
 fun MODPOW_CONV tm =
   let
