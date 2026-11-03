@@ -1,0 +1,12 @@
+ifdef POLY
+TEST_INPUTS = testdir/probe.sml $(wildcard testdir/*Script.sml) \
+              $(HOLDIR)/tools-poly/poly/theory_modules.ML
+
+theory-modules-selftest.log: selftest.exe $(TEST_INPUTS)
+	$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = theory-modules-selftest.log selftest.exe
+endif
