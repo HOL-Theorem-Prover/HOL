@@ -40,7 +40,3 @@ The recursive algebra build also includes the libraries and all four examples:
 cd "$HOLDIR/examples/algebra"
 "$HOLDIR/bin/Holmake"
 ```
-
-`primeCertificateLib.PRIME_CERT_CONV` accepts decimal certificate keys with
-leading zeros: keys are normalized before lookup, so `"00017"` and `"17"`
-identify the same prime.
