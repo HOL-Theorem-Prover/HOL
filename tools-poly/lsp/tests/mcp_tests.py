@@ -117,6 +117,41 @@ FAILING_BRANCH_SRC = (
     "  >- ACCEPT_TAC TRUTH\n"
     "QED\n")
 
+# A cheap proof and a deliberately dearer one, so the cost table has
+# something to order.  `EVAL` over a few thousand numerals is slow
+# enough to be measurable and far too fast to be flaky.
+TIMED_SRC = (
+    "Theory mcpcost\n"
+    "Ancestors arithmetic list rich_list\n"
+    "\n"
+    "Theorem slowish:\n"
+    "  LENGTH (GENLIST (\\n. n * n) 4000) = 4000\n"
+    "Proof\n"
+    "  EVAL_TAC\n"
+    "QED\n"
+    "\n"
+    "Theorem quick:\n"
+    "  1 + 1 = 2\n"
+    "Proof\n"
+    "  DECIDE_TAC\n"
+    "QED\n")
+
+# A proof with one deliberately dear step among cheap ones, so the
+# per-step table has something to rank.  `EVAL_TAC` over a few thousand
+# numerals is slow enough to measure and far too fast to be flaky.
+PROFILE_SRC = (
+    "Theory mcpprof\n"
+    "Ancestors arithmetic list rich_list\n"
+    "\n"
+    "Theorem stepped:\n"
+    "  !n. n + 0 = n /\\ LENGTH (GENLIST (\\m. m * m) 3000) = 3000\n"
+    "Proof\n"
+    "  gen_tac\n"
+    "  >> conj_tac\n"
+    "  >- DECIDE_TAC\n"
+    "  >> EVAL_TAC\n"
+    "QED\n")
+
 FAILURES = []
 RUN = 0
 
@@ -446,6 +481,187 @@ def test_goal_listing_ignores_the_reversed_pretty():
           "(got %r)" % unanchored)
 
 
+def test_tree_is_resolved_per_file():
+    """A script in a worktree must be served by that worktree's binary.
+
+    `$(HOLDIR)` is baked into `bin/hol`, so a session started from the
+    governing checkout cannot see a theory built only inside a
+    worktree.  The adapter is registered once, against the governing
+    checkout, and every piece of work happens in a worktree beside it,
+    so resolving the tree from the *script* rather than from the
+    registration is what makes the registered server usable at all.
+
+    Pure path logic, so this costs no HOL process.
+    """
+    d = tempfile.mkdtemp(prefix="mcp_tree_")
+    try:
+        tree = os.path.join(d, "treelike")
+        os.makedirs(os.path.join(tree, "bin"))
+        os.makedirs(os.path.join(tree, "sigobj"))
+        with open(os.path.join(tree, "bin", "hol"), "w") as fh:
+            fh.write("#!/bin/sh\n")
+        deep = os.path.join(tree, "examples", "sub")
+        os.makedirs(deep)
+        script = os.path.join(deep, "deepScript.sml")
+        with open(script, "w") as fh:
+            fh.write("")
+        check(hol_mcp.find_hol_tree(script) == tree,
+              "a script resolves to the enclosing tree, not the "
+              "adapter's own")
+
+        # A tree needs BOTH markers: `bin/hol` alone is any directory
+        # with a stray binary in it.
+        half = os.path.join(d, "halflike")
+        os.makedirs(os.path.join(half, "bin"))
+        with open(os.path.join(half, "bin", "hol"), "w") as fh:
+            fh.write("#!/bin/sh\n")
+        stray = os.path.join(half, "s.sml")
+        with open(stray, "w") as fh:
+            fh.write("")
+        check(hol_mcp.find_hol_tree(stray, fallback="FB") == "FB",
+              "bin/hol without sigobj is not a tree")
+
+        outside = os.path.join(d, "loose.sml")
+        with open(outside, "w") as fh:
+            fh.write("")
+        check(hol_mcp.find_hol_tree(outside, fallback="FB") == "FB",
+              "a script outside any tree falls back to the caller's "
+              "binary")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_check_file_budgets_are_settable():
+    """`hol_check_file` must expose the two waits it imposes.
+
+    The defaults assume no single proof runs for minutes.  Some files
+    break that honestly, and with the budgets hard-coded the only
+    answer available about such a file was `timedout` -- which reads
+    as broken rather than slow.
+    """
+    schema = None
+    for tool in hol_mcp.tool_schemas():
+        if tool["name"] == "hol_check_file":
+            schema = tool["inputSchema"]["properties"]
+    check(schema is not None, "hol_check_file is still a declared tool")
+    check("timeout" in (schema or {}),
+          "hol_check_file exposes `timeout`")
+    check("proof_timeout" in (schema or {}),
+          "hol_check_file exposes `proof_timeout`")
+
+    # Declaring the parameter is not the same as it reaching the
+    # server, and the difference is invisible from the schema: both
+    # `$/setConfig` calls were originally sent as notifications, which
+    # the server -- which dispatches it as a *Request* -- dropped on
+    # the floor.  So exercise the effect.  A walk budget of 1ms must
+    # make even a trivial proof report that it blew, and the number in
+    # the message must be the one asked for.
+    def steps_at(adapter, path, budget):
+        text, _ = adapter.call("hol_proof_profile",
+                               {"file": path, "theorem": "stepped",
+                                "budget_ms": budget})
+        m = re.search(r"steps: (\d+)", text)
+        if m:
+            return int(m.group(1))
+        # A budget too small to finish even one step is reported as
+        # "no step costs", which is zero steps, not a parse failure.
+        return 0 if "no step costs" in text else -1
+
+    d, path, saved = with_fixture("mcpprof", PROFILE_SRC)
+    adapter = Adapter()
+    try:
+        generous = steps_at(adapter, path, 90000)
+        stingy = steps_at(adapter, path, 1)
+        check(generous > stingy >= 0,
+              "the budget the client sends changes how far the walk "
+              "gets (%r steps generous vs %r stingy)" % (generous, stingy))
+    finally:
+        adapter.close()
+        restore(d, saved)
+
+
+def test_check_file_reports_what_each_proof_cost():
+    """`proof_status` says whether a proof worked, never what it cost.
+
+    So the first question anyone asks of a script that takes ten
+    minutes to build -- which of its proofs is the slow one -- had no
+    answer here, and had to be chased by hand-instrumenting the script
+    with a timing prover.  `hol_check_file` now carries a cost table.
+
+    A positive control matters more than usual: an adapter that simply
+    never printed the table would pass a test that only checked the
+    numbers were sane.  So require the table to appear AND to account
+    for the proof we know ran.
+    """
+    d, path, saved = with_fixture("mcpcost", TIMED_SRC)
+    adapter = Adapter()
+    try:
+        text, _ = adapter.call("hol_check_file", {"file": path})
+        check("proved=2" in text,
+              "positive control: both proofs ran (got %r)" % text[:200])
+        check("slowest proofs" in text,
+              "a cost table is reported (got %r)" % text[:400])
+        check(re.search(r"slowest proofs \(2 timed", text) is not None,
+              "both proofs are timed, not just one (got %r)" % text[:400])
+        rows = re.findall(r"^\s+([0-9.]+)s\s+[0-9.]+%\s+(\S+)$",
+                          text, re.M)
+        check(len(rows) == 2, "one row per timed proof (got %r)" % rows)
+        names = [n for _, n in rows]
+        check(set(names) == {"slowish", "quick"},
+              "rows are named by proof (got %r)" % names)
+        # Descending, which is the whole point of the table.
+        secs = [float(v) for v, _ in rows]
+        check(secs == sorted(secs, reverse=True),
+              "rows are ordered slowest first (got %r)" % secs)
+        check(names[0] == "slowish",
+              "the expensive proof is on top (got %r)" % names)
+    finally:
+        adapter.close()
+        restore(d, saved)
+
+
+def test_proof_profile_attributes_cost_to_steps():
+    """The walker always timed each step; nothing carried it out.
+
+    Without this, "which tactic is slow" could only be answered by
+    hand-instrumenting the script with a timing prover.  The positive
+    control matters: a tool that printed an empty table would pass a
+    test that only checked the numbers were plausible, so require the
+    cheap steps to be listed too, and the dear one to be on top.
+    """
+    d, path, saved = with_fixture("mcpprof", PROFILE_SRC)
+    adapter = Adapter()
+    try:
+        text, err = adapter.call("hol_proof_profile",
+                                 {"file": path, "theorem": "stepped"})
+        check(not err, "the profile tool answers (got %r)" % text[:200])
+        check("steps:" in text and "walked:" in text,
+              "a header with step count and total (got %r)" % text[:200])
+        rows = re.findall(r"^\s*(\d+)\s+([0-9.]+)%\s+(\d+)->(\d+)\s+(\S+)"
+                          r"\s+\(step (\d+)\)$", text, re.M)
+        check(len(rows) >= 2,
+              "more than one step is listed, not just the dear one "
+              "(got %d rows from %r)" % (len(rows), text[:300]))
+        ms = [int(r[0]) for r in rows]
+        check(ms == sorted(ms, reverse=True),
+              "rows are ordered slowest first (got %r)" % ms)
+        check(ms[0] > 0, "the dearest step has a non-zero cost (got %r)" % ms)
+        check("INCOMPLETE" not in text,
+              "the walk finished, so no incompleteness caveat (got %r)"
+              % text[-200:])
+        # goalsBefore/goalsAfter must be real, not placeholder zeros:
+        # `conj_tac` turns one goal into two.
+        check(any(int(r[2]) != int(r[3]) for r in rows),
+              "goal counts move across at least one step, so the column "
+              "is measured rather than stubbed (got %r)"
+              % [(r[2], r[3]) for r in rows])
+        check(all(r[4].isdigit() for r in rows),
+              "every row names a source line (got %r)" % [r[4] for r in rows])
+    finally:
+        adapter.close()
+        restore(d, saved)
+
+
 TESTS = [test_blocked_file_is_reported_not_waited_out,
          test_blocked_goal_state_explains_itself,
          test_timedout_proof_is_not_a_clean_bill,
@@ -453,7 +669,11 @@ TESTS = [test_blocked_file_is_reported_not_waited_out,
          test_unverified_proofs_are_not_a_clean_bill,
          test_goals_are_listed_in_the_proof_s_own_order,
          test_failing_proof_shows_the_state_that_failed,
-         test_goal_listing_ignores_the_reversed_pretty]
+         test_goal_listing_ignores_the_reversed_pretty,
+         test_tree_is_resolved_per_file,
+         test_check_file_budgets_are_settable,
+         test_check_file_reports_what_each_proof_cost,
+         test_proof_profile_attributes_cost_to_steps]
 
 
 def main(argv):

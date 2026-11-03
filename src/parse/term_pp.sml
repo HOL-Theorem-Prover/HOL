@@ -559,13 +559,7 @@ fun pp_term (G : grammar) TyG backend = let
       | val_insert (tstamp,r) (SOME l) = sortinsert (tstamp,r) l
     fun myinsert ((k, (tstamp, r)), acc) = let
       val existing = Symtab.lookup acc k
-      val newvalue =
-        case existing of
-          NONE => [(n,tstamp,r)]
-        | SOME [] => [(n,tstamp,r)]
-        | SOME ((old as (_,t',_))::rest) =>
-          if tstamp > t' then (n,tstamp,r)::old::rest
-          else old::(n,tstamp,r)::rest
+      val newvalue = val_insert (tstamp,r) existing
     in
       Symtab.update (k, newvalue) acc
     end

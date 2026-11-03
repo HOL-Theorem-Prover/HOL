@@ -66,7 +66,31 @@ val _ = List.app assert [
                                                         | e => false),
     ("UTF8.substring(\"ab\", 1, 1)", fn () => UTF8.substring("ab", 1, 1) = "b"),
     ("UTF8.substring(\"«ab»\", 1, 2)",
-     fn () => UTF8.substring("«ab»", 1, 2) = "ab")
+     fn () => UTF8.substring("«ab»", 1, 2) = "ab"),
+
+    (* UTF8.translate rebuilds the string only from the first changed
+       character onwards; everything before that is carried over wholesale
+       from the input.  That prefix is taken by *byte* offset, so the cases
+       that matter are the ones with a multi-byte character sitting ahead of
+       the first substitution.  The first three below are controls that hold
+       regardless. *)
+    ("UTF8.translate identity on ASCII",
+     fn () => UTF8.translate (fn c => c) "abc" = "abc"),
+    ("UTF8.translate identity on ∀∀",
+     fn () => UTF8.translate (fn c => c) "∀∀" = "∀∀"),
+    ("UTF8.translate with ASCII-only prefix",
+     fn () => UTF8.translate (fn "_" => "!" | c => c) "ab_" = "ab!"),
+    ("UTF8.translate changing the first character",
+     fn () => UTF8.translate (fn "∀" => "A" | c => c) "∀b" = "Ab"),
+    ("UTF8.translate with 2-byte prefix",
+     fn () => UTF8.translate (fn "_" => "!" | c => c) "αβ_" = "αβ!"),
+    ("UTF8.translate with 3-byte prefix",
+     fn () => UTF8.translate (fn "_" => "!" | c => c) "∀_" = "∀!"),
+    ("UTF8.translate with multi-byte either side",
+     fn () => UTF8.translate (fn "a" => "X" | c => c) "∀a∀" = "∀X∀"),
+    ("UTF8.translate on EmitTeX's underscore mapping",
+     fn () => UTF8.translate (fn "_" => "\\HOLTokenUnderscore{}" | c => c)
+                             "α_β" = "α\\HOLTokenUnderscore{}β")
     ]
 
 val _ = tprint "mapFilter executes L-to-R"

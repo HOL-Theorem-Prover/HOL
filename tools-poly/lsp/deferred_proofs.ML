@@ -210,8 +210,11 @@ end
 fun proveForReal ctxt site (g, tac) =
     let
       val (th, st) =
-          let val th = asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac))
-          in (th, verdict g th) end
+          let val timer = Timer.startRealTimer ()
+              val th = asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac))
+          in LSPExtension.recordProofElapsed
+               (site, Timer.checkRealTimer timer);
+             (th, verdict g th) end
           handle e =>
                  if Exn.is_interrupt e then Exn.reraise e
                  else (Thm.mk_oracle_thm "lsp_failed_proof" g,
@@ -272,7 +275,16 @@ in
         (enqueue
            {site = site,
             offset = !LSPExtension.currentProofOffset,
-            run = fn () => replay ctxt g tac};
+            run = fn () => let
+              (* Wall clock, not CPU: the question this answers is "how
+                 long did I wait", and a replay can block. *)
+              val timer = Timer.startRealTimer ()
+              val st = replay ctxt g tac
+            in
+              LSPExtension.recordProofElapsed
+                (site, Timer.checkRealTimer timer);
+              st
+            end};
          Thm.mk_oracle_thm "lsp_deferred" g)
     else
       Thm.mk_oracle_thm "lsp_compile_skip" g

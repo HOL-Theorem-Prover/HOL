@@ -663,6 +663,37 @@ local
   fun sufA t = mk_comb(mk_var("sufA", b2b), t)
   fun sufB t = mk_comb(mk_var("sufB", b2b), t)
 in
+(* term_pp keys its printing rules by term name, keeping the list for each
+   name newest-first, and picks the first entry that suits the term being
+   printed.  Three rules on one name, with the newest not applicable, is
+   what distinguishes a sorted insert from one that only looks at the
+   head: the head is right either way, so the mistake only shows once the
+   head has been filtered out.  boolLib's own grammar has four rules on
+   `case_arg'. *)
+local
+  open term_grammar term_grammar_dtype
+  fun mrule_infix prec tok =
+      add_rule {term_name = "mrule", fixity = Infix(LEFT, prec),
+                pp_elements = [mTOK tok], paren_style = OnlyIfNecessary,
+                block_style = (AroundEachPhrase, (HOLPP.CONSISTENT, 0))}
+  fun mrule_suffix prec tok =
+      add_rule {term_name = "mrule", fixity = Suffix prec,
+                pp_elements = [mTOK tok], paren_style = OnlyIfNecessary,
+                block_style = (AroundEachPhrase, (HOLPP.CONSISTENT, 0))}
+  (* added oldest first, so the timestamps ascend as the precedences
+     descend and the three arrive newest-first *)
+  val m_g = g0 |> mrule_infix 700 "<A>"
+               |> mrule_infix 600 "<B>"
+               |> mrule_suffix 500 "<C>"
+  val b2b2b = bool --> bool --> bool
+  val mv = mk_var("mrule", b2b2b)
+  val applied2 = mk_comb(mk_comb(mv, mk_var("x", bool)), mk_var("y", bool))
+in
+(* the suffix rule is newest but takes one argument, so it is filtered
+   out; of the two infix rules left, <B> is the newer and must win *)
+val _ = tpp "term_pp: newest *applicable* rule wins" "x<B>y" m_g applied2
+end
+
 val _ = tpp "ParoundPrec: lone suffix is unparenthesised at top"
             "x@" pp_g (sufA xt)
 val _ = tpp "ParoundPrec: stacked same-name suffix parenthesises inner"
@@ -694,6 +725,60 @@ val lfcono_g =
 
 val _ = tpp "Printing nil (const, double-overload)" "[x]" lfcono_g
             (cmk_list "x")
+
+(* Overload.strip_comb stamps, into the fake constant it builds, the
+   "original" constant that a print-map pattern stands for.  That is only
+   meaningful when the pattern is its head constant applied to exactly its
+   own bound variables -- an eta-expansion of that constant.  The test for
+   it compared the bound variables against the arguments with
+   ListPair.all, which stops at the shorter list, so a pattern carrying an
+   argument that is not one of its bound variables passed too, and the
+   fake constant claimed to stand for a constant it does not.
+   FCNet.label_of indexes the term net on that field. *)
+local
+  val fone_t = Term.prim_new_const {Thy = "parseSelftest", Name = "fone"}
+                                   (bool --> bool)
+  val ftwo_t = Term.prim_new_const {Thy = "parseSelftest", Name = "ftwo"}
+                                   (bool --> bool --> bool)
+  val xv = mk_var("x", bool)
+  val yv = mk_var("y", bool)
+  fun oi_for term = Overload.add_overloading ("fakeOne", term)
+                                             Overload.null_oinfo
+  (* add_overloading keys the print map on the body after strip_abs, so
+     the lookup term is that body.  Rendered as a string because
+     testutils.die returns unit rather than raising, and so cannot stand
+     as a branch producing a value. *)
+  fun original_of term =
+      case Overload.oi_strip_comb (oi_for term)
+                                  (#2 (Term.strip_abs term)) of
+          NONE => "no match"
+        | SOME (f, _) =>
+          case GrammarSpecials.dest_fakeconst_name (#1 (Term.dest_var f)) of
+              NONE => "not a fake constant"
+            | SOME {original = NONE, fake = _} => "NONE"
+            | SOME {original = SOME {Thy,Name}, fake = _} =>
+              "SOME " ^ Thy ^ "$" ^ Name
+in
+(* control: \x. fone x really is fone eta-expanded, so fone is its origin *)
+val _ = tprint "Overload: eta pattern keeps its original"
+val _ =
+    let val r = original_of (Term.mk_abs(xv, mk_comb(fone_t, xv)))
+    in
+      if r = "SOME parseSelftest$fone" then OK()
+      else die ("\nExpected SOME parseSelftest$fone, got " ^ r)
+    end
+
+(* \x. ftwo x y applies ftwo to a free y as well as to its bound x, so
+   it does not stand for ftwo.  bvs is [x] and the arguments are [x,y];
+   ListPair.all stops after x and calls them equal. *)
+val _ = tprint "Overload: over-applied pattern claims no original"
+val _ =
+    let val r = original_of
+                  (Term.mk_abs(xv, mk_comb(mk_comb(ftwo_t, xv), yv)))
+    in
+      if r = "NONE" then OK() else die ("\nExpected NONE, got " ^ r)
+    end
+end
 
 val cINS_t = Term.prim_new_const{Thy = "parseSelftest", Name = "INS"}
                        (alpha --> (alpha --> bool) --> (alpha --> bool))

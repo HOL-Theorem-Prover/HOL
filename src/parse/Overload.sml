@@ -450,7 +450,12 @@ fun strip_comb ((_, prmap): overload_info) namePred t = let
     val origopt = let
       val (hd, args) = HolKernel.strip_comb basepat
     in
-      if ListPair.all (uncurry aconv) (bvs, args) then
+      (* ListPair.all stops at the shorter list, so the lengths have to be
+         compared too: basepat stands for hd only when it applies hd to
+         exactly the bound variables, no fewer and no more. *)
+      if length bvs = length args andalso
+         ListPair.all (uncurry aconv) (bvs, args)
+      then
         let
           val {Name,Thy,...} = dest_thy_const hd
         in

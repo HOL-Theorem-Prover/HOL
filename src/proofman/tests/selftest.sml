@@ -122,6 +122,27 @@ fun test nm pred s =
 val _ = test "Stack printing; small stack" goalstr "abcde"
 val _ = test "Stack printing; big stack" rawstr "abcdefg"
 
+(* Goalstack.howmany_printed_subgoals is registered with a maximum but no
+   minimum, so 0 is a value a user can set.  It reads as "print the count
+   and none of the goals"; what it must not do is make a goalstack
+   impossible to display at all. *)
+val _ = tprint "Stack printing; howmany_printed_subgoals = 0"
+val _ =
+    let
+      val t = boolSyntax.list_mk_conj
+                (map (fn s => mk_var(s,bool)) ["a","b","c"])
+      val gstk = with_flag (goalStack.chatting, false) mkstk t
+      fun pr g = trace ("Goalstack.howmany_printed_subgoals", 0)
+                       (HOLPP.pp_to_string 70 goalStack.pp_gstk) g
+    in
+      case Exn.capture pr gstk of
+          Exn.Exn Interrupt => raise Interrupt
+        | Exn.Exn e => die ("\nRaised " ^ General.exnMessage e)
+        | Exn.Res s =>
+          if String.isSubstring "3 subgoals elided" s then OK()
+          else die ("\nGot: " ^ String.toString s)
+    end
+
 fun narrow_uni_off f =
   HOLPP.pp_to_string 50
        (f |> with_flag (Parse.current_backend, PPBackEnd.raw_terminal)

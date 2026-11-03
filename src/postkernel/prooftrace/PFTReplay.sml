@@ -8,15 +8,21 @@ infix |->
 (* trDB: theorem database keyed by "Thy$name" / "Thy#n"                      *)
 (* ========================================================================= *)
 
-type trDB = thm Symtab.table
+type trDB = {theorems: thm Symtab.table, axioms: (string * term) list}
 
-val empty_trDB : trDB = Symtab.empty
+val empty_trDB : trDB = {theorems = Symtab.empty, axioms = []}
 
-fun lookup (db: trDB) key = Symtab.lookup db key
+fun lookup (db: trDB) key = Symtab.lookup (#theorems db) key
 
-fun size (db: trDB) = Symtab.size db
+fun size (db: trDB) = Symtab.size (#theorems db)
 
-fun listItems (db: trDB) = Symtab.dest db
+fun listItems (db: trDB) = Symtab.dest (#theorems db)
+
+fun replayed_axioms (db: trDB) = List.rev (#axioms db)
+
+(* Ambient compute state persists across replay calls, so a file may omit
+   COMPUTE_INIT after an earlier file initialized it. *)
+val ambient_compute_state : (thm list -> term -> thm) option ref = ref NONE
 
 (* ========================================================================= *)
 (* Filename parsing                                                          *)
@@ -57,16 +63,18 @@ in find 0 end
 (* ========================================================================= *)
 
 fun replay (db: trDB) file = let
-  val db_ref = ref db
+  val db_ref = ref (#theorems db)
+  val axioms = ref (#axioms db)
   val (thyname, binary) = parse_filename file
-  val {n_ty, n_tm, n_th, n_ci} =
+  val {ruleset, ...} = PFTReader.read_header {file=file, binary=binary}
+  val () = if ruleset = "hol4" then () else
+    raise Fail ("PFTReplay: expected hol4 ruleset, got " ^ ruleset)
+  val {n_ty, n_tm, n_th} =
     PFTReader.read_limits {file = file, binary = binary}
 
   val tys : hol_type option array = Array.array(n_ty, NONE)
   val tms : term option array     = Array.array(n_tm, NONE)
   val ths : thm option array      = Array.array(n_th, NONE)
-  val cis : (thm list -> term -> thm) option array =
-    Array.array(n_ci, NONE)
 
   fun get msg arr i = case Array.sub(arr, i) of
       SOME x => x
@@ -74,17 +82,18 @@ fun replay (db: trDB) file = let
   val get_ty = get "ty" tys
   val get_tm = get "tm" tms
   val get_th = get "th" ths
-  val get_ci = get "ci" cis
+  fun get_compute () = case !ambient_compute_state of
+      SOME f => f
+    | NONE => raise Fail "PFTReplay: COMPUTE before COMPUTE_INIT"
 
   fun set_ty (i, v) = Array.update(tys, i, SOME v)
   fun set_tm (i, v) = Array.update(tms, i, SOME v)
   fun set_th (i, v) = Array.update(ths, i, SOME v)
-  fun set_ci (i, v) = Array.update(cis, i, SOME v)
+  fun set_compute v = ambient_compute_state := SOME v
 
   fun del_ns ("ty", i) = Array.update(tys, i, NONE)
     | del_ns ("tm", i) = Array.update(tms, i, NONE)
     | del_ns ("th", i) = Array.update(ths, i, NONE)
-    | del_ns ("ci", i) = Array.update(cis, i, NONE)
     | del_ns (ns, _) = raise Fail ("PFTReplay: unknown ns " ^ ns)
 
   fun del_range_ns (ns, lo, hi) = let
@@ -149,7 +158,10 @@ fun replay (db: trDB) file = let
           SOME n => n
         | NONE => (print "WARNING: PFTReplay: axiom without name\n";
                    "UNNAMED_AXIOM")
-    in set_th (id, mk_axiom_thm(Nonce.mk ax_name, c)) end,
+    in
+      set_th (id, mk_axiom_thm(Nonce.mk ax_name, c));
+      axioms := (ax_name, c) :: !axioms
+    end,
 
     save = fn (name, th) =>
       db_ref := Symtab.update (name, get_th th) (!db_ref),
@@ -219,8 +231,20 @@ fun replay (db: trDB) file = let
     in set_th (id, mkc (get_th th2) (get_th th3)) end,
 
     mk_abs_thm = fn (id, th1, th3) => let
-      val (_, _, mka) = Mk_abs (get_th th1)
-    in set_th (id, mka (get_th th3)) end,
+      val first = get_th th1
+      val child = get_th th3
+      val (_, rhs) = dest_eq (concl first)
+      val (lhs, _) = dest_eq (concl child)
+      val (original, _) = dest_abs rhs
+      fun legal v = aconv (mk_abs (v, lhs)) rhs andalso
+                    not (List.exists (free_in v) (hyp child))
+      (* Older converters omitted the continuation binder even when
+         emitting the abstraction changed its alpha variant. *)
+      val binder = if legal original then original else
+        (case List.filter legal (free_vars lhs) of
+           [v] => v
+         | _ => raise Fail "PFTReplay: no unique legal Mk_abs binder")
+    in set_th (id, TRANS first (ABS binder child)) end,
 
     assume = fn (id, tm) =>
       set_th (id, ASSUME (get_tm tm)),
@@ -241,7 +265,7 @@ fun replay (db: trDB) file = let
       set_th (id, CCONTR (get_tm tm) (get_th th)),
 
     deductAntisym = fn _ =>
-      raise Fail "PFTReplay: deductAntisym not implemented",
+      raise Fail "PFTReplay: deductAntisym unsupported",
 
     conj = fn (id, a, b) =>
       set_th (id, CONJ (get_th a) (get_th b)),
@@ -326,17 +350,17 @@ fun replay (db: trDB) file = let
                else ()
     in set_th (id, thm) end,
 
-    compute_init = fn (id, ty1, ty2, eqns, terms) => let
+    compute_init = fn (ty1, ty2, eqns, terms) => let
       val num_type = get_ty ty1
       val cval_type = get_ty ty2
       val char_eqns = List.map (fn (s, t) => (s, get_th t)) eqns
       val cval_terms = List.map (fn (s, t) => (s, get_tm t)) terms
-    in set_ci (id, compute {num_type = num_type, char_eqns = char_eqns,
-                            cval_type = cval_type,
-                            cval_terms = cval_terms}) end,
+    in set_compute (compute {num_type = num_type, char_eqns = char_eqns,
+                             cval_type = cval_type,
+                             cval_terms = cval_terms}) end,
 
-    compute = fn (id, ci, tm, ths) => let
-      val f = get_ci ci
+    compute = fn (id, tm, ths) => let
+      val f = get_compute ()
       val t = get_tm tm
       val thms = List.map get_th ths
     in set_th (id, f thms t) end
@@ -348,6 +372,6 @@ fun replay (db: trDB) file = let
     format_handler = format_handler,
     ruleset_handler = PFTReader.HOL4.make_handler hol4_handler
   }
-in !db_ref end
+in {theorems = !db_ref, axioms = !axioms} end
 
 end

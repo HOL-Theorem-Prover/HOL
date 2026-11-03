@@ -2,6 +2,17 @@ INCLUDES = ../real ../integer ../n-bit
 
 WORDS_SYNTAX = $(HOLDIR)/src/n-bit/wordsSyntax.uo
 
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
+
+# TwmTab.sml instantiates the Table functor for binary_ieeeLib; mosml
+# needs Table.ui passed explicitly because its dep auto-detection
+# misses functor applications.  A custom rule bypasses Holmake's quote
+# filter, so the table lives here rather than in binary_ieeeLib.sml,
+# which contains HOL quotations.
+
+TwmTab.uo: TwmTab.sml $(TABLE_UID) $(dprot $(SIGOBJ)/HolKernel.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
 all: $(DEFAULT_TARGETS)
 .PHONY: all
 
