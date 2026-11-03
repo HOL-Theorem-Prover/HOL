@@ -1317,6 +1317,8 @@ val _ = List.app (ignore o substtest) tests
 val _ = print "Testing cond-printer after set_grammar_ancestry\n"
 val _ = set_trace "PP.avoid_unicode" 1
 val _ = set_grammar_ancestry ["bool"]
+val _ = tprint "set_grammar_ancestry naming the current theory"
+val _ = require is_result set_grammar_ancestry [current_theory(), "bool"]
 val _ = app condprinter_test condprinter_tests
 
 val _ = let

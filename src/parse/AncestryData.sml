@@ -50,16 +50,21 @@ fun bits_single i =
                           fn j => if j = i div 8 then bit i else 0w0)
 fun bits_add bv i = bits_union (bv, bits_single i)
 
-fun ancestor_bits sets n ps =
+fun ancestor_bits (sets : (int * Word8Vector.vector) Symtab.table) n ps =
     foldl (fn (p, bv) => bits_union (bv, #2 (valOf (Symtab.lookup sets p))))
           (bits_single n) ps
+
+(* A parent list may name the theory itself (e.g., after set_parents
+   [current_theory()]); that edge adds nothing to its ancestry *)
+fun proper_parents parents thy =
+    List.filter (fn p => p <> thy) (parents {thyname = thy})
 
 (* Add thy and its ancestors to the memo *)
 fun extend_memo parents (thy, memo as {sets, ...} : ancestor_memo) =
     if Symtab.defined sets thy then memo
     else
       let
-        val ps = parents {thyname = thy}
+        val ps = proper_parents parents thy
         val memo' as {next, sets} = foldl (extend_memo parents) memo ps
       in
         if Thm.getCT() = SOME thy then memo'
@@ -86,7 +91,7 @@ fun ancestor_sets slot parents thys =
       fn thy =>
          case Symtab.lookup sets thy of
              SOME e => e
-           | NONE => (0, ancestor_bits sets 0 (parents {thyname = thy}))
+           | NONE => (0, ancestor_bits sets 0 (proper_parents parents thy))
     end
 
 type ('d,'v) info =
