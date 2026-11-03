@@ -3272,6 +3272,42 @@ def test_goalState_inside_proof():
         c.close()
 
 
+def test_goalState_after_rpt_shows_every_iteration():
+    """In the gap between a bracket's last tactic and the next token,
+    the walker reports the bracket as run but not closed.  For `rpt'
+    that is wrong: `open_repeat' applies the body once and
+    `close_repeat' does the rest, so `rpt strip_tac‸ >> simp[]' showed
+    one strip.  Two quantifiers, so that one strip and the fixpoint
+    differ; the cursor on `>>' itself was always right, and is the
+    reference."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_rpt_gap.sml"
+        src = ("Theory goalstate_rpt_gap\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem two_vars:\n"
+               "  !n m. n + m = m + n /\\ n * 1 = n\n"
+               "Proof\n"
+               "  rpt strip_tac >> simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 6 = "  rpt strip_tac >> simp[]": 15 is the space before
+        # `>>', 16 the `>>'.
+        on = (_send_goalstate(c, 111, uri, 6, 16) or {}).get("result")
+        assert_true(on is not None, "state on `>>'")
+        goals = [g.get("goal", "") for g in on.get("goals", [])]
+        assert_eq(len(goals), 2, f"both conjuncts on `>>' ({goals!r})")
+        gap = (_send_goalstate(c, 112, uri, 6, 15) or {}).get("result")
+        assert_true(gap is not None, "state in the gap")
+        assert_eq(gap.get("goals"), on.get("goals"),
+                  "the gap shows `rpt' run to its fixpoint")
+    finally:
+        c.close()
+
+
 def test_goalState_with_an_unterminated_quotation():
     """A body still being typed can hold an unterminated quotation.  The
     lexer then runs past the end of the tactic, so the spans downstream
@@ -12761,6 +12797,8 @@ TESTS = [
     ("statement_edit_still_clears_later_proofs",
                                      test_statement_edit_still_clears_later_proofs),
     ("goalState_inside_proof",       test_goalState_inside_proof),
+    ("goalState_after_rpt_shows_every_iteration",
+                    test_goalState_after_rpt_shows_every_iteration),
     ("goalState_with_an_unterminated_quotation",
                     test_goalState_with_an_unterminated_quotation),
     ("goalState_budget_timeout_names_the_step",

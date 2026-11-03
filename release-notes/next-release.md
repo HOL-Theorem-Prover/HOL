@@ -133,6 +133,8 @@ Bugs fixed
 
 -   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
 
+-   The language server's goal state just after a `rpt`/`REPEAT` tactic, before the next token (*e.g.*, at the space in `rpt strip_tac >> simp[]`), showed the state after a single iteration rather than after the repetition had finished.
+
 -   The contextual decision-procedure cache used by the arithmetic simpset fragments (`numSimps.ARITH_ss`, `realSimps.REAL_ARITH_ss`, `intSimps.OMEGA_ss`/`COOPER_ss`, and `bagSimps.SBAG_SOLVE_ss`) was unbounded.
     In long-running sessions the cache accumulated entries — both in number of cached goals and in the per-key list of `(context, result)` pairs under each goal — and `simp` invocations slowed down approximately linearly with session length, dominated by linear scans of the per-key list under `boolSyntax.F`.
     The cache now uses LRU eviction on the keyspace and a per-key list cap, with both bounds set at cache-creation time.
