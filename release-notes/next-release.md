@@ -150,6 +150,10 @@ Bugs fixed
     `mkFileline` now reads the text once, keeping the offsets of its newlines and the position after each `#(FILE=…)` / `#(LINE=…)` pragma, and answers each query by binary search; the same files now scan 0.9 million characters and take 2.2s.
     Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
 
+-   The language server's 30-second backstop on a goal-state or try-tactic answer could fail to fire, leaving the server unresponsive to every later request.
+    Its single interrupt was caught by the pretty-printing of the answer, which renders as empty on any error, so a rendering that looped ran on unbounded.
+    The pretty-printer now lets the interrupt through, and the request answers with a timeout instead.
+
 New theories
 ------------
 
