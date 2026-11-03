@@ -268,9 +268,11 @@ fun isListTactic te = case te of
    Together they separate the two pathologies: a step that blew up
    eventually reports an `ms', a step that loops only ever appears in
    `inFlight'. *)
-type step_cost = {span: (int * int) option, ms: int,
-                  goalsBefore: int, goalsAfter: int}
-val costsRef : step_cost list ref = ref []
+type step_cost = LSPExtension.step_cost
+(* The published cell, not a copy of it: a copy is a thing that can
+   drift, and the client reads this immediately after the walk that
+   fills it. *)
+val costsRef : step_cost list ref = LSPExtension.lastStepCosts
 val inFlightRef : (int * int) option ref = ref NONE
 fun lastCosts () = List.rev (!costsRef)
 fun inFlight () = !inFlightRef

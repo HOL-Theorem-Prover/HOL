@@ -367,7 +367,14 @@ fun pp_gstk gstk =
                    end
                  else
                    (add_newline, rev goals)
-               val (pfx,lastg) = front_last goals_to_print
+               (* goals_to_print is empty exactly when the trace is 0,
+                  which asks for the subgoal count and none of the goals.
+                  front_last would raise Empty on that. *)
+               val (pfx,lastg) =
+                   case goals_to_print of
+                       [] => ([], NONE)
+                     | _ => let val (p,l) = front_last goals_to_print
+                            in (p, SOME l) end
                fun start() =
                  (ellipsis_action >>
                   pr_list pr_goal (add_newline >> add_newline) pfx)
@@ -381,7 +388,7 @@ fun pp_gstk gstk =
                 else start()) >>
                (if not (null pfx) then add_newline >> add_newline
                 else nothing) >>
-               pr_goal lastg >>
+               (case lastg of NONE => nothing | SOME g => pr_goal g) >>
               (if length goals > 1 andalso !show_stack_subgoal_count then
                  add_string ("\n\n" ^ Int.toString (length goals) ^
                              " subgoals")>>

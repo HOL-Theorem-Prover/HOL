@@ -1,12 +1,14 @@
 [poly]tools/check-builds
 !tools/Holmake/tests/recursiveclean
 !tools/Holmake/tests/dashn_works
-!tools/quote-filter
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
 src/portableML
+# the quote filter's INCLUDES reach src/portableML, so it has to
+# follow it rather than lead the sequence
+!tools/quote-filter
 src/portableML/monads
 src/portableML/rawtheory
 [poly]src/portableML/json

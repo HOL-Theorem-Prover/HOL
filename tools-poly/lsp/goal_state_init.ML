@@ -52,11 +52,20 @@ local
      default is what a keystroke can afford, since the shipped clients
      follow the cursor; a caller replaying whole proofs rather than
      painting a pane wants more, and sets it. *)
-  val walkerBudgetMs =
+  (* Applied here rather than where the ref lives: `LSPExtension` is
+     polyc'd into `bin/hol`, so a `getEnv` there would be read when the
+     executable was built.  This file is loaded when the server starts,
+     which is when the environment means something.  `$/setConfig`'s
+     `walkBudgetMs` overrides it later. *)
+  val () =
     case Option.mapPartial LargeInt.fromString
            (OS.Process.getEnv "HOL_LSP_WALK_BUDGET_MS") of
-      SOME n => if n > 0 then n else 1500
-    | NONE => 1500
+        SOME n => if n > 0 then LSPExtension.walkBudgetMs := n else ()
+      | NONE => ()
+
+  (* A function, not a value: the budget is settable at run time, so
+     reading it once here would pin every walk to the startup value. *)
+  fun walkerBudgetMs () = !LSPExtension.walkBudgetMs
 
   (* The backstop on the whole answer, as against `walkerBudgetMs` on
      the walk alone.  Deliberately loose: it is not there to keep the
@@ -69,7 +78,11 @@ local
      where the work was merely slow: a first request against a cold
      walker cache, which has to compile the tactic's leaves, is
      seconds. *)
-  val hookBudgetMs = 30000
+  (* Follows the walk budget: a caller who raised that is replaying a
+     whole proof, and an answer backstop below it would cut the walk
+     off at the knees and report a timeout about itself. *)
+  fun hookBudgetMs () = let val w = !LSPExtension.walkBudgetMs
+                        in if w + 5000 > 30000 then w + 5000 else 30000 end
 
   fun logStderr s =
     (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
@@ -455,7 +468,7 @@ val () = LSPExtension.goalStateAtPos :=
             goals = [], pretty = "", context = [],
             note = NONE, status = "ok",
             error = SOME ("goal state timed out (>"
-                          ^ LargeInt.toString hookBudgetMs ^ "ms)"),
+                          ^ LargeInt.toString (hookBudgetMs ()) ^ "ms)"),
             failedRange = NONE, failedCloseRange = NONE,
             segments = []}
     fun answer () = let
@@ -473,18 +486,23 @@ val () = LSPExtension.goalStateAtPos :=
          (SOME goal, SOME fs) => let
            val startState = goalFrag.new_goal goal
            val step = stepIndex (fs, tacCursor)
-           in case withTimeout walkerBudgetMs (fn () =>
+           val walked = withTimeout (walkerBudgetMs ()) (fn () =>
                     TacticWalker.walkTo {
                       plugins = plugins, theoremName = name,
                       theoremStart = quoteStart, goalText = goalText,
                       tacText = tacText, startState = startState,
                       frags = fs, cursor = tacCursor,
-                      stopAtFail = locate}) of
+                      stopAtFail = locate})
+           (* Outside the timeout, so the spans are file offsets even
+              when the walk was cut short -- a partial profile that
+              points at the wrong lines is worse than none. *)
+           val () = LSPExtension.rebaseStepCosts tacStart
+           in case walked of
                 NONE => SOME
                   {theorem = name, step = step,
                    goals = [], pretty = "", context = [],
                    note = NONE, status = "ok",
-                   error = SOME (budgetReport (walkerBudgetMs, tacText)),
+                   error = SOME (budgetReport (walkerBudgetMs (), tacText)),
                    failedRange =
                      Option.map (fn (s, e) => (tacStart + s, tacStart + e))
                                 (TacticWalker.inFlight ()),
@@ -595,7 +613,7 @@ val () = LSPExtension.goalStateAtPos :=
                                      \exists")}
          end
     end
-    in case withTimeout hookBudgetMs answer of
+    in case withTimeout (hookBudgetMs ()) answer of
            NONE => timedOutResponse ()
          | SOME r => r
     end)
@@ -633,7 +651,7 @@ val () = LSPExtension.tryTacticAt :=
                       {label = "try_tactic", tacText = tactic}
     val tacCursor = cursor - tacStart
     val budget = if budgetMs > 0 then Int.toLarge budgetMs
-                 else walkerBudgetMs
+                 else walkerBudgetMs ()
     (* The same backstop `goalStateAtPos' puts around its answer, and
        for the same reason: the budgets below bound the two walks, but
        not parsing the statement or rendering the goals, and both of
@@ -645,7 +663,7 @@ val () = LSPExtension.tryTacticAt :=
       SOME {theorem = name, step = 0, goals = [], pretty = "",
             context = [], note = NONE, status = "ok",
             error = SOME ("try_tactic timed out (>"
-                          ^ LargeInt.toString hookBudgetMs ^ "ms)"),
+                          ^ LargeInt.toString (hookBudgetMs ()) ^ "ms)"),
             failedRange = NONE, failedCloseRange = NONE, segments = []}
     fun answer () = case (startGoal, frags, candidate) of
          (SOME goal, SOME fs, SOME cfs) => let
@@ -766,7 +784,7 @@ val () = LSPExtension.tryTacticAt :=
                           \a tactic, so nothing was applied to the goal"),
             failedRange = NONE, failedCloseRange = NONE, segments = []}
        | _ => NONE
-    in case withTimeout hookBudgetMs answer of
+    in case withTimeout (hookBudgetMs ()) answer of
            NONE => hookTimedOut ()
          | SOME r => r
     end)

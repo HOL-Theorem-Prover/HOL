@@ -135,6 +135,22 @@ fun encSegment ({text, kind, name, ty}: LSPExtension.pp_segment) print = (
   if ty = "" then () else (print ",\"ty\":"; encString ty print);
   print "}")
 
+(* A step's measured cost.  `span` is a file byte range, so a client
+   can put the number on the line that earned it; `goalsBefore` and
+   `goalsAfter` say whether a slow step was slow in itself or was
+   handed an exploded state. *)
+fun encStepCost ({span, ms, goalsBefore, goalsAfter}
+                   : LSPExtension.step_cost) print = (
+  print "{\"ms\":"; encInt ms print;
+  print ",\"goalsBefore\":"; encInt goalsBefore print;
+  print ",\"goalsAfter\":"; encInt goalsAfter print;
+  print ",\"span\":";
+  (case span of
+       NONE => print "null"
+     | SOME (a, b) => (print "["; encInt a print; print ","; encInt b print;
+                       print "]"));
+  print "}")
+
 fun encGoalStateResponse encRng
                          ({theorem, step, goals, pretty, context, note,
                            status, error, failedRange, failedCloseRange,
@@ -155,6 +171,11 @@ fun encGoalStateResponse encRng
      client marks both ends of a branch rather than all of it. *)
   print ",\"failedCloseRange\":"; encOrNull encRng failedCloseRange print;
   print ",\"segments\":"; encArray encSegment segments print;
+  (* What each step of this walk cost.  `costsRef` accumulates newest
+     first, so reverse to proof order -- the same order `lastCosts`
+     hands to the walker's other readers. *)
+  print ",\"stepCosts\":";
+  encArray encStepCost (List.rev (!LSPExtension.lastStepCosts)) print;
   print "}")
 
 (* Stream an in-memory buffer's declarations.  The parser pulls its
@@ -2875,10 +2896,19 @@ fun start {diag, dbg, warnings} = let
           | LSPExtension.Diverged m => SOME m
           | LSPExtension.TimedOut t => SOME (Time.fmt 0 t ^ "s")
           | _ => NONE
+    (* Milliseconds, and only when the proof actually ran.  A client
+       folding this stream is usually asking "is the file healthy",
+       but the other question it gets asked -- "which proof is slow" --
+       had no answer at all before, because `proof_status` carries a
+       verdict and no cost. *)
     fun encState ({site, offset, status} : LSPExtension.proof_state) print = (
         print "{\"pos\":"; encPosLC lines offset print;
         print ",\"name\":"; encString site print;
         print ",\"status\":"; encString (statusName status) print;
+        (case LSPExtension.proofElapsed site of
+             NONE => ()
+           | SOME t => (print ",\"elapsedMs\":";
+                        print (IntInf.toString (Time.toMilliseconds t))));
         (case detailOf status of
              NONE => ()
            | SOME m => (print ",\"detail\":"; encString m print));
@@ -6042,6 +6072,20 @@ fun start {diag, dbg, warnings} = let
         else (LSPExtension.proofTimeout :=
                 Time.fromMilliseconds (IntInf.fromInt ms);
               logMessage ("proofTimeoutMs = " ^ Int.toString ms));
+      (* What one goal-state walk may spend.  The default is a
+         keystroke's worth, because the shipped clients follow a
+         cursor; a caller replaying a whole proof to measure it needs
+         orders of magnitude more, and before this was settable could
+         only be told that the budget blew -- a fact about the budget,
+         not about the proof. *)
+      case JSONDecode.decode
+             (JSONDecode.fieldO "walkBudgetMs" JSONDecode.int) params of
+        NONE => ()
+      | SOME ms =>
+        if ms <= 0 then logMessage ("ignoring walkBudgetMs " ^
+                                    Int.toString ms)
+        else (LSPExtension.walkBudgetMs := Int.toLarge ms;
+              logMessage ("walkBudgetMs = " ^ Int.toString ms));
       (* Proof checking, switchable without a restart -- the CLI flag
          `--lsp-check-proofs' only sets the initial value.  Turning it
          on recompiles, because the proofs of a pass that has already

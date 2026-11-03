@@ -303,6 +303,11 @@ type proof_state = {site: string, offset: int, status: proof_status}
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs = ref false
 val proofTimeout = ref (Time.fromSeconds 120)
+(* Just the default.  This structure is polyc'd into `bin/hol`, so a
+   `getEnv` here would run when the executable was built, not when the
+   server starts -- `goal_state_init`, which is loaded at startup,
+   applies `HOL_LSP_WALK_BUDGET_MS` to this ref. *)
+val walkBudgetMs : LargeInt.int ref = ref 1500
 val cheatSubstituted = ref false
 
 local
@@ -323,6 +328,29 @@ in
   fun dropNoCheatSite s =
       Sref.update sites (List.filter (fn s' => s' <> s))
 end
+
+local
+  (* An `Sref` for the same reason the set above is one: the writers are
+     pool workers, one per proof, running at the same time. *)
+  val times : (string, Time.time) Binarymap.dict Sref.t =
+      Sref.new (Binarymap.mkDict String.compare)
+in
+  fun recordProofElapsed (s, t) =
+      Sref.update times (fn d => Binarymap.insert (d, s, t))
+  fun proofElapsed s = Binarymap.peek (Sref.value times, s)
+end
+
+type step_cost = {span: (int * int) option, ms: int,
+                  goalsBefore: int, goalsAfter: int}
+val lastStepCosts : step_cost list ref = ref []
+fun rebaseStepCosts base =
+    lastStepCosts :=
+      List.map (fn {span, ms, goalsBefore, goalsAfter} =>
+                   {span = Option.map (fn (s, e) => (base + s, base + e))
+                                      span,
+                    ms = ms, goalsBefore = goalsBefore,
+                    goalsAfter = goalsAfter})
+               (!lastStepCosts)
 val currentProofOffset = ref 0
 val currentProofOrd = ref 1
 fun qualifyProof nm ord =

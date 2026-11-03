@@ -427,16 +427,52 @@ val hl_dups_lemma = prove
 val fun_eq_lem6 = METIS_PROVE []
   ``!x a b P Q. (x = a) \/ ~ (x = b) /\ P <=> (a = b) /\ ((x = a) \/ P) \/ ~(x = b) /\ ((x = a) \/ P)``;
 
+(* Every state name in this development is "coin", "pays" or
+   "announces" followed by a number, or the bare "result".  Left to
+   itself, automation answers a question about two of them by taking
+   both apart into CHR character lists and comparing numeral by
+   numeral -- and inside the case splits `dc_dup_conv` performs, it
+   does so once per combination, so the cost is combinatorial rather
+   than linear.  These lemmas answer the same questions in one
+   rewrite, which kills a branch before it expands.  Both orientations
+   are listed because the simplifier turns `~(a = b)` into the rewrite
+   `a = b |-> F` and will not derive the symmetric rule for itself. *)
+Theorem dc_name_distinct[local]:
+  (!x y. STRCAT "coin" x <> STRCAT "pays" y) /\
+  (!x y. STRCAT "pays" x <> STRCAT "coin" y) /\
+  (!x y. STRCAT "coin" x <> STRCAT "announces" y) /\
+  (!x y. STRCAT "announces" x <> STRCAT "coin" y) /\
+  (!x y. STRCAT "pays" x <> STRCAT "announces" y) /\
+  (!x y. STRCAT "announces" x <> STRCAT "pays" y) /\
+  (!x. STRCAT "coin" x <> "result") /\ (!x. "result" <> STRCAT "coin" x) /\
+  (!x. STRCAT "pays" x <> "result") /\ (!x. "result" <> STRCAT "pays" x) /\
+  (!x. STRCAT "announces" x <> "result") /\
+  (!x. "result" <> STRCAT "announces" x)
+Proof
+  rpt conj_tac >> EVAL_TAC >> simp[]
+QED
+
+val dc_names = CONJUNCTS dc_name_distinct;
+
+(* STRCAT_11 and the injectivity of toString let a `STRCAT p (toString
+   i) = STRCAT p (toString j)` question reduce to `i = j` without the
+   prefix being looked at either. *)
+val dc_str = [STRCAT_11, STRCAT_toString_inj, toString_inj] @ dc_names;
+
 val dc_dup_conv =
-  SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
+  SIMP_CONV arith_ss ([FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM,
+                       FORALL_AND_THM, DISJ_IMP_THM] @ dc_str)
   THENC EVAL
-  THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
+  THENC SIMP_CONV bool_ss ([COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM,
+                            DISJ_IMP_THM] @ dc_str)
   THENC EVAL
-  THENC (REPEATC (T_F_UNCHANGED_CONV
-                  (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
+  THENC (REPEATC (CHANGED_CONV
+                  (SIMP_CONV bool_ss ([fun_eq_lem6, GSYM LEFT_AND_OVER_OR,
+                                       FORALL_AND_THM] @ dc_str)
                    THENC EVAL)));
 
-val dc_hl_dup_conv = SIMP_CONV arith_ss [hl_dups_lemma, STRCAT_toString_inj];
+val dc_hl_dup_conv =
+  SIMP_CONV arith_ss ([hl_dups_lemma, STRCAT_toString_inj] @ dc_str);
 
 fun dc_input_unroll (remove_dups_conv:Abbrev.term->Abbrev.thm) =
    (REPEATC (SIMP_CONV bool_ss [dc_high_states_set_def, dc_low_states_def, dc_random_states_def,
@@ -1927,16 +1963,9 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val hl_dups_lemma = prove
-   (``!(s1:string)(s2:string). ((\x. x = s1) = (\x. x = s2)) = (s1=s2)``,
-    METIS_TAC []);
-
 val hl_dups_lemma2 = prove
    (``!(s:string). ~((\x. x = s) = (\x. F))``,
     METIS_TAC []);
-
-val fun_eq_lem6 = METIS_PROVE []
-  ``!x a b P Q. (x = a) \/ ~ (x = b) /\ P <=> (a = b) /\ ((x = a) \/ P) \/ ~(x = b) /\ ((x = a) \/ P)``;
 
 fun insider_input_unroll (remove_dups_conv:Abbrev.term->Abbrev.thm) =
    (REPEATC (SIMP_CONV bool_ss [insider_high_states_set_def,
@@ -1948,16 +1977,8 @@ fun insider_input_unroll (remove_dups_conv:Abbrev.term->Abbrev.thm) =
           THENC SIMP_CONV bool_ss [])
    THENC SIMP_CONV arith_ss []));
 
-val dc_dup_conv =
-    SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-    THENC EVAL
-    THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-    THENC EVAL
-    THENC (REPEATC (T_F_UNCHANGED_CONV
-                    (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                     THENC EVAL)));
-
-val insider_hl_dup_conv = SIMP_CONV arith_ss [hl_dups_lemma, hl_dups_lemma2, STRCAT_toString_inj];
+val insider_hl_dup_conv =
+  SIMP_CONV arith_ss [hl_dups_lemma, hl_dups_lemma2, STRCAT_toString_inj];
 
 Theorem insider_dc3_leakage_result:
      leakage (insider_dc_prog_space (SUC (SUC (SUC 0))) F) (insider_dcprog (SUC(SUC(SUC 0)))) = 0
@@ -2025,6 +2046,26 @@ Definition biased_dc_prog_space_def:
          POW (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n)))),
          (\s. SIGMA (biased_dist (biased_high_states (SUC(SUC n))) biased_low_states (biased_random_states (SUC (SUC n)))) s))
 End
+
+(* The cardinality of the biased state space.  The same computation
+   was written out four times, once per place that needed the number,
+   and each copy re-ran the whole set expansion.  It is a closed term:
+   computing it once is the whole of the saving. *)
+val card_biased_hlr3 =
+  (COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
+    biased_random_states (SUC (SUC 0)))``
+             (SIMP_CONV bool_ss [biased_high_states_def, biased_low_states_def,
+    biased_random_states_def, insider_high_states_set_def] THENC
+    SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
+    THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
+        THENC (TRY_CONV insider_hl_dup_conv)
+        THENC (TRY_CONV insider_hl_dup_conv))))
+    THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
+    THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
+        THENC (TRY_CONV insider_hl_dup_conv)
+        THENC (TRY_CONV insider_hl_dup_conv)
+        THENC (TRY_CONV dc_dup_conv)))))
+    dc_dup_conv);
 
 Theorem prob_space_biased_dc_prog_space3:
      prob_space (biased_dc_prog_space (SUC(SUC 0)))
@@ -2215,20 +2256,7 @@ Proof
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV dc_dup_conv)))))
                 dc_dup_conv),
-                (COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
-                                biased_random_states (SUC (SUC 0)))``
-                              (SIMP_CONV bool_ss [biased_high_states_def, biased_low_states_def,
-                                biased_random_states_def, insider_high_states_set_def] THENC
-                                SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-                                THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv))))
-                THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-         THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV dc_dup_conv)))))
-                dc_dup_conv),
+                card_biased_hlr3,
         (COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS {(\s. F)} CROSS
                         biased_random_states (SUC (SUC 0)))``
                               (SIMP_CONV bool_ss [biased_high_states_def, biased_low_states_def,
@@ -2274,20 +2302,7 @@ Proof
                       REWRITE_RULE [prob_space_def] prob_space_biased_dc_prog_space3]
    >> POP_ASSUM (K ALL_TAC)
    >> RW_TAC bool_ss [biased_dist_def, unif_prog_dist_def,
-        (COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
-                                biased_random_states (SUC (SUC 0)))``
-                              (SIMP_CONV bool_ss [biased_high_states_def, biased_low_states_def,
-                                biased_random_states_def, insider_high_states_set_def] THENC
-                                SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-                                THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv))))
-                THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-         THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV dc_dup_conv)))))
-                dc_dup_conv)]
+        card_biased_hlr3]
    >> Q.ABBREV_TAC `foo = (SUC (SUC 0))`
    >> RW_TAC std_ss [joint_distribution_def, low_state_def, high_state_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
    >> `IMAGE L
@@ -3443,13 +3458,7 @@ Proof
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                          THENC ((ONCE_FIND_CONV ``x DELETE y``
-                                (DELETE_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))
+                                (DELETE_CONV (dc_dup_conv))))
                          THENC SIMP_CONV arith_ss []))
    >> Q.UNABBREV_TAC `s2` >> Q.UNABBREV_TAC `s1`
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
@@ -3470,31 +3479,13 @@ Proof
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))))
+                                                     THENC (TRY_CONV (dc_dup_conv))))))
   >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                          THENC ((ONCE_FIND_CONV ``x DELETE y``
-                                (DELETE_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))
+                                (DELETE_CONV (dc_dup_conv))))
                          THENC SIMP_CONV arith_ss []))
    >> CONV_TAC (ONCE_FIND_CONV ``if (x=y) then (1:real) else 0`` (RATOR_CONV (RATOR_CONV (RAND_CONV
-        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-         THENC EVAL
-         THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-         THENC EVAL
-         THENC (REPEATC (T_F_UNCHANGED_CONV
-         (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-         THENC EVAL))))))
+        (dc_dup_conv)))
                                                                   THENC SIMP_CONV bool_ss []))
    >> RW_TAC real_ss []
    >> Q.UNABBREV_TAC `c4` >> Q.UNABBREV_TAC `c3` >> Q.UNABBREV_TAC `c2` >> Q.UNABBREV_TAC `c1`
@@ -3804,20 +3795,7 @@ Proof
                  >> METIS_TAC [])
              >> ONCE_REWRITE_TAC [FUN_EQ_THM] >> RW_TAC std_ss [IN_INTER,GSPECIFICATION])
    >> POP_ORW
-   >> RW_TAC bool_ss [          (COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
-                                biased_random_states (SUC (SUC 0)))``
-                              (SIMP_CONV bool_ss [biased_high_states_def, biased_low_states_def,
-                                biased_random_states_def, insider_high_states_set_def] THENC
-                                SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-                                THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv))))
-                THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-         THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV dc_dup_conv)))))
-                dc_dup_conv)]
+   >> RW_TAC bool_ss [          card_biased_hlr3]
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
                       high_state_def, low_state_def, random_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
@@ -3836,22 +3814,10 @@ Proof
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))))
+                                                     THENC (TRY_CONV (dc_dup_conv))))))
   >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                          THENC ((ONCE_FIND_CONV ``x DELETE y``
-                                (DELETE_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))
+                                (DELETE_CONV (dc_dup_conv))))
                          THENC SIMP_CONV arith_ss []))
    >> RW_TAC real_ss [STRCAT_toString_inj]
 QED
@@ -3885,20 +3851,7 @@ Proof
                       REWRITE_RULE [prob_space_def] prob_space_biased_dc_prog_space23]
    >> POP_ASSUM (K ALL_TAC)
    >> RW_TAC bool_ss [biased_dist2_def, unif_prog_dist_def,
-        (COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
-                                biased_random_states (SUC (SUC 0)))``
-                              (SIMP_CONV bool_ss [biased_high_states_def, biased_low_states_def,
-                                biased_random_states_def, insider_high_states_set_def] THENC
-                                SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-                                THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv))))
-                THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-         THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV dc_dup_conv)))))
-                dc_dup_conv)]
+        card_biased_hlr3]
    >> Q.ABBREV_TAC `foo = (SUC (SUC 0))`
    >> RW_TAC std_ss [joint_distribution_def, low_state_def, high_state_def, random_state_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
    >> `IMAGE L
@@ -4940,22 +4893,10 @@ Proof
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))))
+                                                     THENC (TRY_CONV (dc_dup_conv))))))
             >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                          THENC ((ONCE_FIND_CONV ``x DELETE y``
-                                (DELETE_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))
+                                (DELETE_CONV (dc_dup_conv))))
                          THENC SIMP_CONV arith_ss []))
             >> RW_TAC real_ss [STRCAT_toString_inj])
    >> POP_ORW
@@ -5014,22 +4955,10 @@ Proof
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))))
+                                                     THENC (TRY_CONV (dc_dup_conv))))))
             >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                          THENC ((ONCE_FIND_CONV ``x DELETE y``
-                                (DELETE_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))
+                                (DELETE_CONV (dc_dup_conv))))
                          THENC SIMP_CONV arith_ss []))
             >> RW_TAC real_ss [STRCAT_toString_inj])
    >> POP_ORW
@@ -5397,13 +5326,7 @@ Proof
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                          THENC ((ONCE_FIND_CONV ``x DELETE y``
-                                (DELETE_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))
+                                (DELETE_CONV (dc_dup_conv))))
                          THENC SIMP_CONV arith_ss []))
    >> RW_TAC real_ss [STRCAT_toString_inj]
    >> Q.UNABBREV_TAC `s3` >> Q.UNABBREV_TAC `s2` >> Q.UNABBREV_TAC `s1`
@@ -5426,33 +5349,15 @@ Proof
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
-                                                     THENC (TRY_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))))
+                                                     THENC (TRY_CONV (dc_dup_conv))))))
    >> RW_TAC real_ss [STRCAT_toString_inj]
   >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                          THENC ((ONCE_FIND_CONV ``x DELETE y``
-                                (DELETE_CONV (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                              THENC EVAL
-                                              THENC (REPEATC (T_F_UNCHANGED_CONV
-                                                        (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-                                                         THENC EVAL)))))))
+                                (DELETE_CONV (dc_dup_conv))))
                          THENC SIMP_CONV arith_ss []))
    >> SIMP_TAC real_ss [STRCAT_toString_inj]
    >> CONV_TAC (ONCE_FIND_CONV ``if (x=y) then (1:real) else 0`` (RATOR_CONV (RATOR_CONV (RAND_CONV
-        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
-         THENC EVAL
-         THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-         THENC EVAL
-         THENC (REPEATC (T_F_UNCHANGED_CONV
-         (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
-         THENC EVAL))))))
+        (dc_dup_conv)))
                                                                   THENC SIMP_CONV bool_ss []))
    >> RW_TAC real_ss []
    >> Q.UNABBREV_TAC `c2` >> Q.UNABBREV_TAC `c1`

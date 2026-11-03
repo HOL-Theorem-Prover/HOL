@@ -379,6 +379,7 @@ val res = cv_trans sptreeTheory.union_def;
 val res = cv_trans sptreeTheory.inter_def;
 val res = cv_trans sptreeTheory.difference_def;
 
+val res = cv_auto_trans sptreeTheory.domain_list_def;
 val res = cv_auto_trans sptreeTheory.toList_def;
 val res = cv_auto_trans sptreeTheory.mk_wf_def;
 val res = cv_auto_trans sptreeTheory.size_def;

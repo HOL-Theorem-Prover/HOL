@@ -26,6 +26,10 @@ New features
 -   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
     list by a strict upper bound on its sum.
 
+-   `sptree` now provides `domain_list` to enumerate keys without constructing
+    key/value pairs, with `set_domain_list` proving its set is `domain` and
+    a standard CV translation in `cv_std`.
+
 -   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
 
     A type that recurses under an operator gets induction hypotheses stated through that operator's set function, which is correct but is not how a development states its own lemmas, so proofs normalise them by hand at every induction.

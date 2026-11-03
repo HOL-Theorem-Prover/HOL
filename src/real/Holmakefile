@@ -3,6 +3,24 @@ INCLUDES = ../integer ../hol88 ../pred_set/src/more_theories \
 
 TARGETS = $(subst prove_real_assumsTheory.uo,,$(DEFAULT_TARGETS))
 
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
+
+# These files instantiate the Table functor for SOSLib; mosml needs
+# Table.ui passed explicitly because its dep auto-detection misses
+# functor applications.  A custom rule bypasses Holmake's quote
+# filter, so the tables live here rather than in SOSLib.sml, which
+# contains HOL quotations.
+
+MonoTab.uo: MonoTab.sml $(TABLE_UID) $(dprot $(SIGOBJ)/Termtab.ui) \
+            $(dprot $(SIGOBJ)/HolKernel.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+IntPairTab.uo: IntPairTab.sml $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+IntTripleTab.uo: IntTripleTab.sml $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
 all:  selftest.exe $(TARGETS)
 .PHONY: all
 
