@@ -176,6 +176,11 @@ New examples
     ring interface, with inverse laws and a homogeneous-coordinate
     denominator-clearing example checked by `ringLib.RING_TAC`.
 
+-   `examples/algebra/primality` provides kernel-checked Lucas primality
+    certificates and binary modular exponentiation, with examples for
+    elliptic-curve primes. Decimal certificate keys are normalized before
+    lookup, including keys with leading zeros.
+
 -   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 
 -  `examples/lambda/barendregt`: new theories (`solvable`, `boehm`, `lameta_complete`, `separability`, etc.) containing a formalisation of Böhm trees, Böhm's separation theorem for untyped λ-calculus, completeness of λη-equational theory, Wadsworth's theorem (solvable iff has hnf), Takahashi's modern proofs about η-reduction, etc.
