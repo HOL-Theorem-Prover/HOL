@@ -11,9 +11,6 @@ type ('delta,'value) adata_info = {
 
 val ERR = mk_HOL_ERR "AncestryData"
 
-fun smem s e = HOLset.member(s,e)
-fun sadd e s = HOLset.add(s,e)
-
 val tdebug = get_tracefn "Theory.debug"
 
 fun DPRINT s = if tdebug() > 0 then print ("* " ^s^"\n") else ()
@@ -26,50 +23,109 @@ fun tts_ancestry s : string list =
       List.rev (SymGraph.topological_order G)
     end
 
-fun ancestry parents {thyname} =
-    ImplicitGraph.bfs parents String.compare (fn _ => sadd) thyname
-                      (HOLset.empty String.compare)
+(* Ancestor sets, each a theory's ancestry (the theory included) as a bit
+   vector indexed by numbers given to theories as they are first met.  A
+   loaded theory's parents never change, so its set is computed once per
+   tag and kept in a context slot.  The current theory's parents can still
+   change, so its set is computed afresh on each use, with number 0. *)
+type ancestor_memo =
+     {next : int, sets : (int * Word8Vector.vector) Symtab.table}
+val empty_ancestor_memo = {next = 1, sets = Symtab.empty}
+
+fun bit i = Word8.<< (0w1, Word.fromInt (i mod 8))
+fun bits_member bv i =
+    i div 8 < Word8Vector.length bv andalso
+    Word8.andb (Word8Vector.sub (bv, i div 8), bit i) <> 0w0
+fun bits_union (bv1, bv2) =
+    let
+      fun byte bv j =
+          if j < Word8Vector.length bv then Word8Vector.sub (bv, j) else 0w0
+    in
+      Word8Vector.tabulate
+        (Int.max (Word8Vector.length bv1, Word8Vector.length bv2),
+         fn j => Word8.orb (byte bv1 j, byte bv2 j))
+    end
+fun bits_single i =
+    Word8Vector.tabulate (i div 8 + 1,
+                          fn j => if j = i div 8 then bit i else 0w0)
+fun bits_add bv i = bits_union (bv, bits_single i)
+
+fun ancestor_bits sets n ps =
+    foldl (fn (p, bv) => bits_union (bv, #2 (valOf (Symtab.lookup sets p))))
+          (bits_single n) ps
+
+(* Add thy and its ancestors to the memo *)
+fun extend_memo parents (thy, memo as {sets, ...} : ancestor_memo) =
+    if Symtab.defined sets thy then memo
+    else
+      let
+        val ps = parents {thyname = thy}
+        val memo' as {next, sets} = foldl (extend_memo parents) memo ps
+      in
+        if Thm.getCT() = SOME thy then memo'
+        else
+          {next = next + 1,
+           sets = Symtab.update (thy, (next, ancestor_bits sets next ps))
+                                sets}
+      end
+
+(* A function giving the number and ancestor set of each theory in thys
+   and in their ancestries *)
+fun ancestor_sets slot parents thys =
+    let
+      val result = ref Symtab.empty
+      fun extend memo =
+          let
+            val memo' = foldl (extend_memo parents) memo thys
+          in
+            result := #sets memo'; memo'
+          end
+      val _ = Context.Data.modify slot extend
+      val sets = !result
+    in
+      fn thy =>
+         case Symtab.lookup sets thy of
+             SOME e => e
+           | NONE => (0, ancestor_bits sets 0 (parents {thyname = thy}))
+    end
 
 type ('d,'v) info =
      {get_deltas : {thyname: string} -> 'd list,
       dblookup : {thyname : string} -> 'v option,
       apply_delta : 'd -> 'v -> 'v, tag : string,
-      parents : {thyname : string} -> string list}
+      parents : {thyname : string} -> string list,
+      ancestors : ancestor_memo Context.Data.slot}
 
 fun fpluck _ [] = NONE
   | fpluck f (h::t) = case f h of
                           NONE => Option.map (fn (v,r) => (v,h::r)) (fpluck f t)
                         | SOME v => SOME ((h,v),t)
 
-fun purge_redundants pfn thynames =
-    let
-      fun getAncs thy = HOLset.delete(ancestry pfn {thyname=thy}, thy)
-      val ancs = map (fn thy => (thy, getAncs thy)) thynames
-        fun isRedundant thy =
-            List.exists (fn (_, set) => smem set thy) ancs
-    in
-      List.mapPartial (fn n => if isRedundant n then NONE else SOME n) thynames
-    end
-
 fun merge (info : ('d,'v) info) thys : 'v option =
     let
       val _ = DPRINT ("Calling " ^ #tag info ^ ":merge[" ^
                       String.concatWith ", " thys ^ "]")
-      val {parents,get_deltas,apply_delta,...} = info
-      fun par_g s = #parents info {thyname = s}
-      val thys = purge_redundants par_g thys
+      val {parents,get_deltas,apply_delta,ancestors,...} = info
+      val entry = ancestor_sets ancestors parents thys
+      fun number thy = #1 (entry thy)
+      (* drop the theories that are ancestors of others in the list *)
+      fun redundant thy =
+          List.exists (fn t => t <> thy andalso
+                               bits_member (#2 (entry t)) (number thy))
+                      thys
+      val thys = List.filter (not o redundant) thys
       fun recurse (A, aset) worklist =
           case worklist of
               [] => SOME A
             | Visit thy :: rest =>
-              if smem aset thy then recurse (A, aset) rest
+              if bits_member aset (number thy) then recurse (A, aset) rest
               else
                 let
                   val ps0 = parents {thyname = thy}
-                  val ps = List.filter (not o smem aset) ps0
+                  val ps = List.filter (not o bits_member aset o number) ps0
                   val deltas = get_deltas {thyname = thy}
                 in
-                  recurse (A, sadd thy aset)
+                  recurse (A, bits_add aset (number thy))
                           (map Visit ps @ (Apply deltas :: rest))
                 end
             | Apply ds :: rest =>
@@ -81,8 +137,7 @@ fun merge (info : ('d,'v) info) thys : 'v option =
           case fpluck (fn thy => #dblookup info {thyname=thy}) thys of
               NONE => NONE
             | SOME ((h,v0),rest) =>
-                recurse (v0, sadd h (ancestry par_g {thyname=h}))
-                        (map Visit rest)
+                recurse (v0, #2 (entry h)) (map Visit rest)
         )
     end
 
@@ -170,10 +225,15 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
           case parent_segment_data thyname of
               NONE => Theory.parents (#thyname thyname)
             | SOME t => valOf (list_decode string_decode t)
+      val ancestors : ancestor_memo Context.Data.slot =
+          Context.Data.new
+            {name = "ancestry." ^ tag ^ ".ancestors",
+             empty = empty_ancestor_memo,
+             pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
       val info = {get_deltas = get_deltas, tag = tag,
                   dblookup = valueDB,
                   apply_delta = apply_delta,
-                  parents = parents}
+                  parents = parents, ancestors = ancestors}
       val _ = apply_delta_hook := merge info
       fun set_ancestry sl =
           let
@@ -312,9 +372,15 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
               NONE => Theory.parents thyname
             | SOME t => valOf (list_decode string_decode t)
 
+      val ancestors : ancestor_memo Context.Data.slot =
+          Context.Data.new
+            {name = "ancestry." ^ tag ^ ".ancestors",
+             empty = empty_ancestor_memo,
+             pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
       val info =
           {get_deltas = get_deltas, dblookup = valueDB,
-           apply_delta = apply_delta, tag = tag, parents = get_parents}
+           apply_delta = apply_delta, tag = tag, parents = get_parents,
+           ancestors = ancestors}
       val _ = apply_delta_hook := merge info
       fun set_ancestry sl =
           let
