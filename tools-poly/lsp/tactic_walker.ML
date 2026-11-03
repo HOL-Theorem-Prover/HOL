@@ -793,9 +793,18 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT, stopAtFail})
 
                Deferring is conditional on the close *succeeding*: a
                `>- tac' that proved nothing must still report where the
-               proof stops, which is what closing it says. *)
+               proof stops, which is what closing it says.
+
+               And only a plain `FClose' defers, because only it is a
+               regrouping: the goals it hands back are the ones the
+               branch set aside.  The others do work the reader expects
+               to have happened by the time the body has run --
+               `close_repeat' runs every iteration after the first,
+               `close_first_lt' puts back the goals the tactic was not
+               kept on -- so the state before them is one that never
+               exists.  Under `rpt strip_tac' it showed a single strip. *)
             val deferring =
-              borrowed andalso cursor >= be
+              cc = FClose andalso borrowed andalso cursor >= be
               andalso cursor < nextTokenFrom tacText be
             fun heldOrClosed r =
               if deferring andalso isSome (applyClose cc (#state r))
