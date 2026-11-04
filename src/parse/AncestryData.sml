@@ -28,8 +28,10 @@ fun sadd e s = HOLset.add(s,e)
 
 (* Each theory's ancestry, the theory included.  A loaded theory's parents
    never change, so its ancestry is computed once per tag and kept in a
-   context slot.  The current theory's parents can still change, so its
-   ancestry is computed afresh on each use. *)
+   context slot.  The current theory's parents can still change, as can
+   those of "-" (the fringe of the theory graph), so their ancestries, and
+   those of theories whose parents name them, are computed afresh on each
+   use. *)
 type ancestor_memo = string HOLset.set Symtab.table
 
 (* A parent list may name the theory itself (e.g., after set_parents
@@ -41,17 +43,34 @@ fun ancestor_set (memo : ancestor_memo) thy ps =
     foldl (fn (p, s) => HOLset.union (s, valOf (Symtab.lookup memo p)))
           (HOLset.singleton String.compare thy) ps
 
-(* Add thy and its ancestors to the memo *)
+(* Add thy and its ancestors to the memo, except those described above.
+   "-" is not visited: the fringe can include a theory whose parents name
+   "-" *)
 fun extend_memo parents (thy, memo) =
-    if Symtab.defined memo thy then memo
+    if Symtab.defined memo thy orelse thy = "-" then memo
     else
       let
         val ps = proper_parents parents thy
         val memo' = foldl (extend_memo parents) memo ps
       in
-        if Thm.getCT() = SOME thy then memo'
+        if Thm.getCT() = SOME thy orelse
+           not (List.all (Symtab.defined memo') ps)
+        then memo'
         else Symtab.update (thy, ancestor_set memo' thy ps) memo'
       end
+
+(* The ancestry of a theory not in the memo *)
+fun fresh_ancestry (memo : ancestor_memo) parents thy =
+    let
+      fun visit (t, acc) =
+          if smem acc t then acc
+          else
+            case Symtab.lookup memo t of
+                SOME s => HOLset.union (acc, s)
+              | NONE => foldl visit (sadd t acc) (parents {thyname = t})
+    in
+      visit (thy, HOLset.empty String.compare)
+    end
 
 (* A function giving the ancestry of each theory in thys and in their
    ancestries *)
@@ -70,7 +89,7 @@ fun ancestor_sets slot parents thys =
       fn thy =>
          case Symtab.lookup memo thy of
              SOME s => s
-           | NONE => ancestor_set memo thy (proper_parents parents thy)
+           | NONE => fresh_ancestry memo parents thy
     end
 
 type ('d,'v) info =
