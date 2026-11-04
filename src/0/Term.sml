@@ -1111,6 +1111,80 @@ in
   pp [] [ppTM tm]
 end
 
+fun raw_fold {atom, bv, comb, abs} base tm = let
+  fun go p t =
+      case t of
+          Comb(f, x) =>
+          let
+            val (a, sa) = go (p + 1) f
+            val (b, sb) = go (p + 1 + sa) x
+          in (comb p a b, 1 + sa + sb) end
+        | Abs(v, body) =>
+          let
+            val _ = atom (p + 1) v
+            val (b, sb) = go (p + 2) body
+          in (abs p v b, 2 + sb) end
+        | Bv i => (bv p i, 1)
+        | Clos _ => go p (norm_clos t)
+        | _ => (atom p t, 1)
+in
+  #1 (go base tm)
+end
+
+datatype pospptask = PT of term * int | PLAM | PAPP of int | PS of string
+fun write_raw_at {shared, size} base tm = let
+  fun index p = case shared p of
+                    SOME i => i
+                  | NONE => raise ERR "write_raw_at" "atom not in table"
+  fun strip t p acc =
+      case t of
+          Comb(f, x) => strip f (p + 1) ((x, p + 1 + size (p + 1)) :: acc)
+        | _ => (t, p, acc)
+  fun mkAPP [] = [PAPP 1]
+    | mkAPP (PAPP n :: rest) = PAPP (n + 1) :: rest
+    | mkAPP rest = PAPP 1 :: rest
+  fun pp acc tasklist =
+      case tasklist of
+          [] => String.concat (List.rev acc)
+        | PT (Abs(Bvar, Body), p) :: rest =>
+            pp acc (PT (Bvar, p + 1) :: PT (Body, p + 2) :: PLAM :: rest)
+        | PT (t as Comb(Rator, Rand), p) :: rest =>
+          (case shared p of
+               SOME i => pp (percent ^ Int.toString i :: acc) rest
+             | NONE =>
+               let
+                 val rp = p + 1
+                 val xp = p + 1 + size rp
+                 val (f, fp, args) = strip t p []
+                 fun generic () =
+                     pp acc (PT (Rator, rp) :: PT (Rand, xp) :: mkAPP rest)
+               in
+                 if is_abs f then generic ()
+                 else
+                   let
+                     val (letter1,letter2,i) =
+                         case f of Bv i => ("u", "b", i)
+                                 | _ => ("U", "B", index fp)
+                   in
+                     case args of
+                         [(x, q)] =>
+                         pp acc (PT (x, q) :: PS (letter1 ^ Int.toString i) ::
+                                 rest)
+                       | [(x, q), (y, r)] =>
+                         pp acc (PT (x, q) :: PT (y, r) ::
+                                 PS (letter2 ^ Int.toString i) :: rest)
+                       | _ => generic ()
+                   end
+               end)
+        | PT (Bv i, _) :: rest => pp (dollar ^ Int.toString i :: acc) rest
+        | PT (_, p) :: rest => pp (percent ^ Int.toString (index p) :: acc) rest
+        | PLAM :: rest => pp (lam :: acc) rest
+        | PAPP n :: rest =>
+            pp (app ^ (if n = 1 then "" else Int.toString n) :: acc) rest
+        | PS s :: rest => pp (s :: acc) rest
+in
+  pp [] [PT (norm_clos tm, base)]
+end
 fun write_raw index tm = pp_raw_term index (norm_clos tm)
 
 (*---------------------------------------------------------------------------*
@@ -1226,6 +1300,12 @@ end (* local *)
 
 fun uptodate_term t = let
   open Type
+  val tsig = termsig ()    (* one snapshot for the whole traversal *)
+  (* constants (with their types) already found up to date during this
+     traversal, in a direct-mapped cache indexed by the id's epoch, so that
+     the repeated constants of a large term cost two pointer comparisons *)
+  val csize = 1024
+  val cache = Array.array (csize, NONE)
   fun recurse tmlist =
       case tmlist of
         [] => true
@@ -1233,9 +1313,22 @@ fun uptodate_term t = let
         in
           case t of
             Fv(_, ty) => Type.uptodate_type ty andalso recurse rest
-          | Const(info, ty) => KernelSig.uptodate_id (termsig()) info andalso
-                               uptodate_type (to_hol_type ty) andalso
-                               recurse rest
+          | Const(info, ty) =>
+            let
+              val slot = KernelSig.epoch_of info mod csize
+              val hit = case Array.sub (cache, slot) of
+                            SOME (info', ty') =>
+                              Portable.pointer_eq (info', info) andalso
+                              Portable.pointer_eq (ty', ty)
+                          | NONE => false
+            in
+              if hit then recurse rest
+              else if KernelSig.uptodate_id tsig info andalso
+                      uptodate_type (to_hol_type ty)
+              then (Array.update (cache, slot, SOME (info, ty));
+                    recurse rest)
+              else false
+            end
           | Comb(f,x) => recurse (f::x::rest)
           | Abs(v,bod) => recurse (v::bod::rest)
           | Bv _ => recurse rest
