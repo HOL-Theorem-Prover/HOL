@@ -194,8 +194,8 @@ end
          seeded by the first listed theory's value.
 
     Steps 2 and 3 test membership in theories' ancestries.  Each
-    instance keeps every loaded theory's ancestry as a bit vector in
-    a context slot, computed once from its parents' when the theory
+    instance keeps every loaded theory's ancestry as a set of names
+    in a context slot, computed once from its parents' when the theory
     is first met, so a merge does not walk the ancestry graph again.
     The current theory's parents can still change, so its ancestry
     is computed afresh each time.

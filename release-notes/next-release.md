@@ -157,7 +157,7 @@ Bugs fixed
     Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
 
 -   Loading a theory merged its parents' simpsets, grammars and other ancestry-based data by walking each parent's whole ancestry again, once per kind of data, so loading n theories took time quadratic in n.
-    Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors went from about 70s to 32s of CPU time.
+    Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors now takes about half the CPU time it did.
     What is merged, and in what order, is unchanged.
 
 New theories
