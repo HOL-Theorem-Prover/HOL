@@ -163,6 +163,7 @@ sig
    val strcat : string -> string -> string
    val string_to_int : string -> int
    val subst_assoc : ('a -> bool) -> ('a, 'b)subst -> 'b option
+   val subst_keep_last : ('a -> 'a -> bool) -> ('a,'b) subst -> ('a,'b) subst
    val subst_eq : 'a eqf -> 'b eqf -> ('a,'b) subst eqf
    val subtract : ''a list -> ''a list -> ''a list
    val swap : 'a * 'b -> 'b * 'a

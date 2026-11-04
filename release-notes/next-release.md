@@ -189,6 +189,10 @@ New examples
 Incompatibilities
 -----------------
 
+-   `Term.subst` now fails if the same redex occurs more than once in its theta-list, whether or not the repeats map it to the same residue.
+    Previously such a theta-list was silently resolved by letting the last entry win, which did not agree with the first-match lookup used while terms are being matched.
+    Code that builds a substitution by hand and relies on the old behaviour can call the new `Lib.subst_keep_last`, which drops all but the last maplet for each redex.
+
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.
 

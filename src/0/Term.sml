@@ -608,19 +608,31 @@ val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
   fun addb [] A = A
-    | addb ({redex,residue}::t) (A,b,redset) =
-      addb t (if type_of redex = type_of residue then
-                if HOLset.member(redset, redex) then
-                  raise ERR "subst" "redex occurs twice in subst"
-                else
-                  (insert(A,redex,residue),
-                   is_var redex andalso b,
-                   HOLset.add(redset, redex))
+    | addb ({redex,residue}::t) (A,b) =
+      addb t (if type_of redex = type_of residue
+              then (insert(A,redex,residue), is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")
+  (* a duplicated redex makes the map smaller than the theta-list; only
+     then is it worth a second pass to say which redex it was. *)
+  fun dup_redex theta =
+      let fun recurse seen [] = NONE
+            | recurse seen ({redex,residue=_}::t) =
+                if HOLset.member(seen, redex) then SOME redex
+                else recurse (HOLset.add(seen, redex)) t
+      in recurse empty_tmset theta
+      end
+  fun dupERR theta =
+      ERR "subst"
+          (case dup_redex theta of
+               SOME (Fv(n,_)) => "redex "^Lib.quote n^" occurs twice in subst"
+             | _ => "redex occurs twice in subst")
 in
 fun subst [] = I
   | subst theta =
-    let val (fmap,b,_) = addb theta (emptysubst, true, empty_tmset)
+    let val (fmap,b) = addb theta (emptysubst, true)
+        (* the map is keyed modulo alpha, so it is smaller than the
+           theta-list exactly when a redex is repeated *)
+        val _ = numItems fmap = length theta orelse raise dupERR theta
         fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
           | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)

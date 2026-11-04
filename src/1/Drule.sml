@@ -174,7 +174,9 @@ in
       let
          val ls = map (lhs o concl) ths
          val vars = map (genvar o type_of) ls
-         val w = substfn (combine ls vars) (concl th)
+         (* two theorems with the same LHS used to give a repeated redex,
+            resolved by letting the later one win; preserve that *)
+         val w = substfn (subst_keep_last aconv (combine ls vars)) (concl th)
       in
          SUBST (combine vars ths) w th
       end
