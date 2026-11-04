@@ -51,6 +51,11 @@ val script_theories : string list -> string list
    Raises Fail on invalid configuration or assumption prose. *)
 val run : config -> unit
 
+(* Original stored statements selected for the theorem and definition sections.
+   Definition sections identify their constant and retain whole sequents. *)
+val statement_sections : config ->
+  (string * (name * Thm.thm) list) list
+
 (* Additional prose belongs in About, away from the opening explanation.
    Omitted types are not described or linked; their uses remain in formulas.
    Reader view hides traversal metadata, raw duplicate statements and pinning

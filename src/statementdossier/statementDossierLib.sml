@@ -1990,6 +1990,18 @@ fun write_snippets (cfg : config) href (input, output) =
   end
 
 (* Write the dossier described by cfg to each of #outputs cfg. *)
+fun statement_sections (cfg : config) =
+  let
+    fun fetch n = (n, DB.fetch (#Thy n) (#Name n))
+    val theorems = map fetch (#theorems cfg)
+    val (entries, _) = closure false cfg (type_index ()) theorems
+  in
+    map (fn pair as (n, _) => (anchor "thm" n, [pair]))
+        (theorems @ map fetch (#supporting cfg)) @
+    map (fn (e : entry) =>
+      (anchor "def" (name_of_const (#const e)), #defs e)) entries
+  end
+
 fun run_with_presentation presentation (cfg : config) =
   let
     val () = check_config cfg
