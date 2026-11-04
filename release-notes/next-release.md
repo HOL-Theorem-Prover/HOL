@@ -21,11 +21,6 @@ Contents
 New features
 ------------
 
--   CV evaluation now supports `fCARD` on finite sets of natural numbers.
-
--   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
-    list by a strict upper bound on its sum.
-
 -   `sptree` now provides `domain_list` to enumerate keys without constructing
     key/value pairs, with `set_domain_list` proving its set is `domain` and
     a standard CV translation in `cv_std`.
