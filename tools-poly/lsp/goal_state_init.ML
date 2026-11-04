@@ -211,11 +211,17 @@ local
   (* `pp_goals_only', not `pp_goalstate': the combinator tags and the
      note about a solved focus go in `context' and `note', so a client
      can keep them where the goals scrolling does not take them with
-     it.  Rendering them here too would show them twice. *)
+     it.  Rendering them here too would show them twice.
+
+     `Interrupt' goes through: it is `withTimeout's canary, which
+     fires once.  Rendering a solved state runs `finish', which can
+     loop (a `Repeat' frame closed over no goals), and a canary
+     swallowed here left the `focus_note' and `ppSegments' after it
+     to run the same loop with no budget at all. *)
   fun ppState width st =
     Lib.with_flag (Parse.current_backend, PPBackEnd.vt100_terminal)
       (HOLPP.pp_to_string width goalFrag.pp_goals_only) st
-    handle _ => ""
+    handle Interrupt => raise Interrupt | _ => ""
 
   (* The same state, rendered again through the back end that says in
      data what `vt100_terminal` says in colour, then taken apart.  Two
@@ -233,7 +239,7 @@ local
     PPBackEnd.lsp_segments
       (Lib.with_flag (Parse.current_backend, PPBackEnd.lsp_terminal)
          (HOLPP.pp_to_string width goalFrag.pp_goals_only) st)
-    handle _ => []
+    handle Interrupt => raise Interrupt | _ => []
 
   val fragEndByte = TacticSteps.atomEndByte
 
