@@ -608,15 +608,19 @@ val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
   fun addb [] A = A
-    | addb ({redex,residue}::t) (A,b) =
-      addb t (if type_of redex = type_of residue
-              then (insert(A,redex,residue),
-                    is_var redex andalso b)
+    | addb ({redex,residue}::t) (A,b,redset) =
+      addb t (if type_of redex = type_of residue then
+                if HOLset.member(redset, redex) then
+                  raise ERR "subst" "redex occurs twice in subst"
+                else
+                  (insert(A,redex,residue),
+                   is_var redex andalso b,
+                   HOLset.add(redset, redex))
               else raise ERR "subst" "redex has different type than residue")
 in
 fun subst [] = I
   | subst theta =
-    let val (fmap,b) = addb theta (emptysubst, true)
+    let val (fmap,b,_) = addb theta (emptysubst, true, empty_tmset)
         fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
           | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
