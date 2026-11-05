@@ -191,6 +191,13 @@ fun abs_relative_to base p =
       (if OS.Path.isAbsolute p then p
        else OS.Path.mkAbsolute { path = p, relativeTo = base })
 
+(* Like abs_relative_to, but keeps "..": a root from the command line
+   or the environment is resolved physically below, as HFS_NameMunge
+   resolves the environment's, and a symlink before ".." must be
+   resolved first. *)
+fun raw_relative_to base p =
+    if OS.Path.isAbsolute p then p else OS.Path.concat (base, p)
+
 (* Reads the holproject.toml *at* `root' --- the at-root file of a
    referenced external project.  A [projects.<id>] reference is a
    positive claim that the directory is itself a project, so a missing
@@ -452,14 +459,14 @@ fun build_times_files root =
    Holmake, so recipes can build another project with its own layout.
    --------------------------------------------------------------------- *)
 (* Resolve symlinks in the existing prefix of p, an absolute path.
-   The artifact root need not exist yet. *)
+   The artifact root need not exist yet; collapse the rest of the path. *)
 fun physical p =
     OS.FileSys.fullPath p
     handle OS.SysErr _ =>
            let val {dir, file} = OS.Path.splitDirFile p
            in
-             if dir = p orelse dir = "" then p
-             else OS.Path.concat (physical dir, file)
+             if dir = p orelse dir = "" then OS.Path.mkCanonical p
+             else OS.Path.mkCanonical (OS.Path.concat (physical dir, file))
            end
 
 fun resolve_layout {start, cli_objroot, cli_srcroot, no_project} =
@@ -472,22 +479,22 @@ fun resolve_layout {start, cli_objroot, cli_srcroot, no_project} =
       val toml_objroot = Option.mapPartial objroot_declared_at root
       val (objroot, from_toml) =
           case (cli_objroot, toml_objroot) of
-              (SOME p, _) => (SOME (abs_relative_to start p), false)
+              (SOME p, _) => (SOME (raw_relative_to start p), false)
             | (NONE, SOME p) => (SOME p, true)
             | (NONE, NONE) =>
-              (Option.map (abs_relative_to start) (env "HOLOBJROOT"), false)
+              (Option.map (raw_relative_to start) (env "HOLOBJROOT"), false)
       (* Do not infer HOLDIR as the source root: that would redirect products
          throughout the HOL installation. *)
       fun not_holdir r =
           if physical r = physical Systeml.HOLDIR then NONE else SOME r
       fun srcroot objroot =
           case cli_srcroot of
-              SOME p => SOME (abs_relative_to start p)
+              SOME p => SOME (raw_relative_to start p)
             | NONE =>
               if from_toml then root
               else
                 case env "HOLSRCROOT" of
-                    SOME p => SOME (abs_relative_to start p)
+                    SOME p => SOME (raw_relative_to start p)
                   | NONE => Option.mapPartial not_holdir root
     in
       case objroot of
@@ -595,6 +602,8 @@ fun discover (cfg : config) =
       val objroots =
           sorted_dedup
             (Option.getOpt (Option.map (fn p => [p]) (#objroot cfg), []) @
+             List.mapPartial (fn e => objroot_declared_at (#path e))
+                             (#externals cfg) @
              (case HFS_NameMunge.current_layout () of
                   NONE => []
                 | SOME {objroot, ...} => [objroot]))

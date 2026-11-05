@@ -153,7 +153,8 @@ val _ =
             (fullfile (E ++ "x.uo") = SOME (E ++ ".hol/objs/x.uo"));
       check "relative name" (relative = SOME (O ++ "objs/a/x.uo"));
       check "symlink before .."
-            (fullfile (E ++ "link/../x.uo") = SOME (O ++ "objs/x.uo"));
+            (fullfile (E ++ "link/../x.uo") = SOME (O ++ "objs/x.uo") andalso
+             objdir_for (E ++ "link/..") = O ++ "objs");
       check "in_objroot" (in_objroot (O ++ "objs/a") andalso
                           not (in_objroot (R ++ "a")) andalso
                           not (in_objroot E));

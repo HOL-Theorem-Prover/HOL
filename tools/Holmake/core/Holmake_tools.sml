@@ -525,11 +525,17 @@ fun write_lastmaker_in_cwd (ofns : output_functions) =
    write_lastmaker_in_cwd does for INCLUDES-visited dirs that
    live under a HOLDIR. *)
 fun layout_exports () =
-    case (Systeml.isUnix, HFS_NameMunge.current_layout ()) of
-        (true, SOME {objroot, srcroot}) =>
-        "export HOLOBJROOT=" ^ Systeml.protect objroot ^
-        " HOLSRCROOT=" ^ Systeml.protect srcroot ^ "; "
-      | _ => ""
+    let
+      (* Single quotes keep every character but ' itself literal. *)
+      fun quote s =
+          "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
+    in
+      case (Systeml.isUnix, HFS_NameMunge.current_layout ()) of
+          (true, SOME {objroot, srcroot}) =>
+          "export HOLOBJROOT=" ^ quote objroot ^
+          " HOLSRCROOT=" ^ quote srcroot ^ "; "
+        | _ => ""
+    end
 
 fun do_lastmade_checks (ofns : output_functions)
                        {no_lastmakercheck, target_dir} = let

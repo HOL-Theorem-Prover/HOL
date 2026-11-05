@@ -199,7 +199,7 @@ fun kind_dir kind legacy d =
         NONE => d ++ legacy
       | SOME (l as {objroot, ...}) =>
         case classify l d of
-            InObjroot => absolute d
+            InObjroot => canonical d
           | Mapped rel => join (objroot ++ kind) rel
           | Legacy => d ++ legacy
 
@@ -238,6 +238,14 @@ fun artifact_dirs_for d =
             [project_state_dir d ++ "build-logs"]
           | _ => []
 
+(* p absolute, with symlinks resolved in its directory but not in the
+   final component: a product may be a link. *)
+fun physical_dir p =
+    let val {dir, file} = OS.Path.splitDirFile (absolute_raw p)
+    in
+      realdir dir ++ file
+    end
+
 fun FStoHOL p =
     let
       fun legacy () =
@@ -255,7 +263,7 @@ fun FStoHOL p =
       case current_layout () of
           NONE => legacy ()
         | SOME {srcroot, objroot} =>
-          (case rel_under (objroot ++ "objs") (absolute p) of
+          (case rel_under (realdir (objroot ++ "objs")) (physical_dir p) of
                SOME "" => NONE
              | SOME rel => SOME (join srcroot rel)
              | NONE => legacy ())
@@ -353,15 +361,15 @@ datatype listing = Splice | Plain | Chain of string
 fun listing_for s =
     case current_layout () of
         NONE => Splice
-      | SOME _ =>
-        let
-          val absd = absolute s
-          val objdir = objdir_for absd
-        in
-          if objdir = (absd ++ HOLOBJDIR) then Splice
-          else if objdir = absd then Plain
-          else (check_stale absd objdir; Chain objdir)
-        end
+      | SOME l =>
+        case classify l s of
+            Legacy => Splice
+          | InObjroot => Plain
+          | Mapped _ =>
+            let val objdir = objdir_for s
+            in
+              check_stale (absolute s) objdir; Chain objdir
+            end
 
 type dirstream = {dirname : string, listing : listing,
                   main : OS.FileSys.dirstream,
