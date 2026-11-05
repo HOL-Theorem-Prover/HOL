@@ -275,6 +275,7 @@ Unless otherwise noted, they are built by the configuration process.
 `theorytool`
 :   A dependency and definition analysis tool. 
     Running it allows you to dynamically dump `.dat` keys, or output a full hierarchical ancestry graph of the theories using `dot` format *via* the `--thygraph` option.
+    It finds theories kept under a separate artifact root only through `HOLOBJROOT` and `HOLSRCROOT` in the environment, not through `objroot` in the project files.
     The source files are located in `src/portableML/rawtheory/`.
 
 `unquote`

@@ -94,7 +94,15 @@ val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 
-fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
+(* Pass the artifact layout as bin/build resolved it, so that children
+   in other directories agree on relative roots. *)
+fun SYSTEML clist =
+    Process.isSuccess
+      (case Holmake_tools.layout_exports () of
+           "" => Systeml.systeml clist
+         | exports =>
+           Systeml.system_ps
+             (exports ^ String.concatWith " " (map Systeml.protect clist)))
 
 val dfltbuildseq = fullPath [HOLDIR, "tools", "build", "build-sequence"]
 val dfltjobnum = 4
