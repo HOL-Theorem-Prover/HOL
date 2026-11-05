@@ -30,6 +30,7 @@ fun lockdir_for d = d ++ ".hol/locks"
 fun docsdir_for d = d ++ ".hol/docs"
 fun project_state_dir r = r ++ ".hol"
 fun holobjdir_var_for _ = HOLOBJDIR
+fun product_file f = ".hol/objs/" ^ f
 fun artifact_dirs_for _ = [] : string list
 fun FStoHOL p = SOME p
 

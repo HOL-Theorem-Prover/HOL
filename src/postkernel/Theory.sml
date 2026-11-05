@@ -1025,16 +1025,10 @@ fun add_anonymous_thm th = let
   val () = anonymous_thms := (n+1,th::ls)
 in n end
 
-(* Store proof traces beside theory products.  Preserve relative paths
-   in the legacy layout because later traces record these names. *)
-fun products_file f =
-    if HFS_NameMunge.owned_by_layout "." then
-      OS.Path.concat (HFS_NameMunge.objdir_for ".", f)
-    else ".hol/objs/" ^ f
-
 fun export_proof (name, th) = let
   val thyname = current_theory ()
-  val file = products_file (concat [thyname, "Theory.", name, ".tr.gz"])
+  val file = HFS_NameMunge.product_file
+               (concat [thyname, "Theory.", name, ".tr.gz"])
 in
   Tracing.export_proof {file = file, tag = Thm.SavedName name} th
 end
@@ -1043,7 +1037,7 @@ fun export_proof_anon th = let
   val n = !export_proof_counter
   val () = export_proof_counter := n + 1
   val thyname = current_theory ()
-  val file = products_file
+  val file = HFS_NameMunge.product_file
                (concat [thyname, "Theory._anon", Int.toString n, ".tr.gz"])
 in
   Tracing.export_proof {file = file, tag = Thm.SavedAnon n} th

@@ -213,6 +213,9 @@ fun project_state_dir root =
 fun holobjdir_var_for d =
     if owned_by_layout d then objdir_for d else HOLOBJDIR
 
+fun product_file f =
+    if owned_by_layout "." then objdir_for "." ++ f else HOLOBJDIR ++ f
+
 fun artifact_dirs_for d =
     case current_layout () of
         NONE => []

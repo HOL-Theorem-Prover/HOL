@@ -40,6 +40,10 @@ sig
   (* project root -> <root>/.hol, or objroot when root is srcroot *)
   val holobjdir_var_for : string -> string
   (* value of $(HOLOBJDIR) in a Holmakefile in the given directory *)
+  val product_file : string -> string
+  (* Path for a product file of the current directory: under objdir_for "."
+     if the layout owns it, else the relative .hol/objs/<file>, which
+     proof traces record. *)
   val artifact_dirs_for : string -> string list
   (* List the artifact directories for a mapped source directory.
      For srcroot, also include <objroot>/build-logs.  Return [] for
