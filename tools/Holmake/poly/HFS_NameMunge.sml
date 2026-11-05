@@ -59,17 +59,24 @@ fun absolute p =
       (if OS.Path.isAbsolute p then p
        else OS.Path.mkAbsolute {path = p, relativeTo = OS.FileSys.getDir()})
 
-(* Resolve symlinks in the existing prefix of p, an absolute path. *)
+(* p made absolute without collapsing "..": a symlink before ".." must
+   be resolved first. *)
+fun absolute_raw p =
+    if OS.Path.isAbsolute p then p
+    else OS.Path.concat (OS.FileSys.getDir(), p)
+
+(* Resolve symlinks in the existing prefix of p, an absolute path, and
+   collapse the rest. *)
 fun physical p =
     OS.FileSys.fullPath p
     handle OS.SysErr _ =>
            let val {dir, file} = OS.Path.splitDirFile p
            in
-             if dir = p orelse dir = "" then p
-             else OS.Path.concat (physical dir, file)
+             if dir = p orelse dir = "" then OS.Path.mkCanonical p
+             else OS.Path.mkCanonical (OS.Path.concat (physical dir, file))
            end
 
-fun canonical p = physical (absolute p)
+fun canonical p = physical (absolute_raw p)
 
 fun join d "" = d
   | join d r = OS.Path.concat (d, r)
@@ -162,11 +169,11 @@ fun current_layout () =
 
 datatype place = Legacy | InObjroot | Mapped of string
 
-(* d is absolute and canonical.  Compare physical paths, so that a
-   directory reached through a symlink is classified as its target is. *)
+(* Compare physical paths, so that a directory reached through a
+   symlink is classified as its target is. *)
 fun classify ({srcroot, objroot} : layout) d =
     let
-      val d = realdir d
+      val d = realdir (absolute_raw d)
     in
       case rel_under (realdir objroot) d of
           SOME _ => InObjroot
@@ -178,21 +185,23 @@ fun classify ({srcroot, objroot} : layout) d =
 fun owned_by_layout p =
     case current_layout () of
         NONE => false
-      | SOME l => (case classify l (absolute p) of
+      | SOME l => (case classify l p of
                        Mapped _ => true
                      | _ => false)
+
+fun in_objroot p =
+    case current_layout () of
+        NONE => false
+      | SOME l => classify l p = InObjroot
 
 fun kind_dir kind legacy d =
     case current_layout () of
         NONE => d ++ legacy
       | SOME (l as {objroot, ...}) =>
-        let val absd = absolute d
-        in
-          case classify l absd of
-              InObjroot => absd
-            | Mapped rel => join (objroot ++ kind) rel
-            | Legacy => d ++ legacy
-        end
+        case classify l d of
+            InObjroot => absolute d
+          | Mapped rel => join (objroot ++ kind) rel
+          | Legacy => d ++ legacy
 
 val objdir_for = kind_dir "objs" HOLOBJDIR
 val depdir_for = kind_dir "make-deps" legacy_depdir
@@ -204,7 +213,7 @@ fun project_state_dir root =
     case current_layout () of
         NONE => root ++ ".hol"
       | SOME (l as {objroot, ...}) =>
-        (case classify l (absolute root) of
+        (case classify l root of
              Mapped "" => objroot
            | Mapped rel => objroot ++ "projects" ++ rel
            | _ => root ++ ".hol")
@@ -218,15 +227,15 @@ fun product_file f =
 fun artifact_dirs_for d =
     case current_layout () of
         NONE => []
-      | SOME (l as {srcroot, objroot}) =>
-        case classify l (absolute d) of
-            Mapped rel =>
+      | SOME l =>
+        case classify l d of
+            Mapped _ =>
             map (fn f => f d)
                 [objdir_for, depdir_for, logdir_for, lockdir_for,
                  docsdir_for] @
-            (* Also remove the project's timing cache when cleaning srcroot,
-               as deleting <root>/.hol does in the legacy layout. *)
-            (if rel = "" then [objroot ++ "build-logs"] else [])
+            (* Also the timing cache of a project rooted at d, which
+               deleting <root>/.hol removes in the legacy layout. *)
+            [project_state_dir d ++ "build-logs"]
           | _ => []
 
 fun FStoHOL p =
@@ -302,7 +311,7 @@ fun HOLtoFS nm =
             NONE => legacy ()
           | SOME (l as {objroot, ...}) =>
             let
-              val {dir, file} = OS.Path.splitDirFile (absolute nm)
+              val {dir, file} = OS.Path.splitDirFile (absolute_raw nm)
             in
               case classify l dir of
                   InObjroot => NONE (* never munge twice *)

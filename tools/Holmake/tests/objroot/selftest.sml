@@ -130,6 +130,8 @@ val R = T ++ "r12"
 val O = T ++ "o12"
 val E = T ++ "elsewhere"
 val _ = app OS.FileSys.mkDir [R, R ++ "a", E]
+(* E/link/.. is R physically, but E lexically *)
+val _ = Posix.FileSys.symlink {old = R ++ "a", new = E ++ "link"}
 val _ = HFS_NameMunge.configure (SOME {srcroot = R, objroot = O})
 fun fullfile p = Option.map #fullfile (HFS_NameMunge.HOLtoFS p)
 val _ =
@@ -150,6 +152,11 @@ val _ =
       check "outside srcroot"
             (fullfile (E ++ "x.uo") = SOME (E ++ ".hol/objs/x.uo"));
       check "relative name" (relative = SOME (O ++ "objs/a/x.uo"));
+      check "symlink before .."
+            (fullfile (E ++ "link/../x.uo") = SOME (O ++ "objs/x.uo"));
+      check "in_objroot" (in_objroot (O ++ "objs/a") andalso
+                          not (in_objroot (R ++ "a")) andalso
+                          not (in_objroot E));
       check "FStoHOL objroot"
             (FStoHOL (O ++ "objs/a/x.uo") = SOME (R ++ "a/x.uo"));
       check "FStoHOL legacy"

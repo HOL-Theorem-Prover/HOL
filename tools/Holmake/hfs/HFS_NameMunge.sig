@@ -27,6 +27,8 @@ sig
   val owned_by_layout : string -> bool
   (* True for a path under srcroot and outside objroot.
      Relative paths are resolved against the current directory. *)
+  val in_objroot : string -> bool
+  (* True for a path under objroot, which holds products, not sources. *)
 
   (* Locate artifacts for a source directory.  Relative inputs produce
      relative legacy paths, or absolute paths in the configured layout.
@@ -46,8 +48,8 @@ sig
      if the layout owns it, else the relative .hol/objs/<file>, which
      proof traces record. *)
   val artifact_dirs_for : string -> string list
-  (* List the artifact directories for a mapped source directory.
-     For srcroot, also include <objroot>/build-logs.  Return [] for
+  (* List the artifact directories for a mapped source directory,
+     with the timing cache of a project rooted there.  Return [] for
      directories outside the mapping or when no layout is configured. *)
   val FStoHOL : string -> string option
   (* Convert a physical product path from either layout to a logical

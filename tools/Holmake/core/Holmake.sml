@@ -238,6 +238,7 @@ val _ =
             let
               open Substring
               val c =
+                  layout_exports () ^
                   (if Systeml.OS = "winNT" then ""
                    else "HOLORIG="^esc (hmdir.toAbsPath original_dir) ^ " ") ^
                   string (dropr Char.isSpace (full c0))

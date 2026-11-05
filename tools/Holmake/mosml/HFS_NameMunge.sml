@@ -23,6 +23,7 @@ fun configure NONE = ()
 fun current_layout () = NONE : layout option
 fun layout_from_env () = NONE : layout option
 fun owned_by_layout _ = false
+fun in_objroot _ = false
 fun objdir_for d = d
 fun depdir_for d = d ++ ".hol/make-deps"
 fun logdir_for d = d ++ ".hol/logs"

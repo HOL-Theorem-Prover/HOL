@@ -1404,16 +1404,16 @@ fun dirchildren d =
     handle e => die ("build.dirchildren(" ^ d ^ "): " ^ General.exnMessage e)
 end
 
+(* f d says whether to descend into d. *)
 fun preorder_directory_recurse f d =
     let
       fun recurse worklist =
           case worklist of
               [] => ()
             | []::ds => recurse ds
-            | (d::ds)::ds' => (
-                f d;
-                recurse (dirchildren d :: ds :: ds')
-              )
+            | (d::ds)::ds' =>
+              if f d then recurse (dirchildren d :: ds :: ds')
+              else recurse (ds :: ds')
     in
       recurse [[d]]
     end handle e => die ("build.preorder_directory_recurse: " ^
@@ -1443,8 +1443,13 @@ fun remove_holmkdir parent =
     end handle e => die ("build.remove_holmkdir(" ^ parent ^ "): " ^
                          General.exnMessage e)
 
+(* Skip an artifact root inside HOLDIR: it holds products, not sources,
+   and its dependency directories are removed through their sources. *)
 fun remove_all_holmkdirs () =
-    preorder_directory_recurse remove_holmkdir HOLDIR
+    preorder_directory_recurse
+      (fn d => if HFS_NameMunge.in_objroot d then false
+               else (remove_holmkdir d; true))
+      HOLDIR
 
 
 val logdir = Systeml.build_log_dir

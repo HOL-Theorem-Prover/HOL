@@ -110,6 +110,12 @@ sig
   val die_with : string -> 'a
 
 
+  val layout_exports : unit -> string
+    (* Shell commands exporting HOLOBJROOT and HOLSRCROOT for the
+       current artifact layout, to put before a command run through
+       the shell; "" with no layout, or where the shell is not a Unix
+       one. *)
+
   val check_distrib : string -> string option
     (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->

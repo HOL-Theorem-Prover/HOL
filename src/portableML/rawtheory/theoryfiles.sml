@@ -31,13 +31,9 @@ fun find_theory_files_action dir A =
   let
     open OS.FileSys
     val objsdirname = HFS_NameMunge.objdir_for dir
-    val in_objroot =
-        isSome (HFS_NameMunge.current_layout ()) andalso
-        objsdirname = OS.Path.mkCanonical
-                        (OS.Path.mkAbsolute {path = dir,
-                                             relativeTo = getDir()})
   in
-    if not in_objroot andalso access (objsdirname, [A_READ, A_EXEC])
+    if not (HFS_NameMunge.in_objroot dir) andalso
+       access (objsdirname, [A_READ, A_EXEC])
        andalso isDir objsdirname then
       let
         val thys =
