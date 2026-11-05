@@ -568,7 +568,8 @@ A second file `holproject.local.toml`, intended to be gitignored,
 can sit alongside `holproject.toml` and carry the same
 `[projects.<id>]` tables.  Entries with the same `id` in the local
 file override entries in the committed file, letting individual
-developers point externals at their own local paths.
+developers point externals at their own local paths.  The local file
+may also set `objroot` (Section \ref{sec:holmake-objroot}).
 
 #### Committed build times
 
@@ -604,7 +605,7 @@ exactly `name`, `holpath`, `exclude`, `external_includes`,
 `holmake`, `projects`, `h4pedant`, `build_times` and `objroot`.
 Inside a `[projects.<id>]`
 table they are `path` and `exclude`, and `holproject.local.toml`
-recognises `projects` alone.  A TOML lookup cannot tell a
+recognises `projects` and `objroot`.  A TOML lookup cannot tell a
 misspelled key from an absent one, so anything outside those sets
 would otherwise be discarded in silence -- `[project.cakeml]` for
 `[projects.cakeml]` reads as correct and behaves as if the external
@@ -883,6 +884,11 @@ name = "myproj"
 objroot = "/scratch/myproj-build"
 ```
 
+`holproject.local.toml` may set `objroot` too, and its setting
+overrides the one in `holproject.toml`.  A developer can so opt into
+an artifact root for their own checkout without committing it or
+giving `--objroot` on every run.
+
 A relative `objroot` is resolved against the directory holding
 `holproject.toml`; `objroot = ".hol"` collects standard build
 artifacts in a single `.hol` directory at the project root.  Files
@@ -908,14 +914,14 @@ locations.
 
 The artifact root can also be given with `--objroot` (to `Holmake`
 or to `hol`) or with the environment variable `HOLOBJROOT`.  The
-command line takes precedence over `holproject.toml`, which takes
+command line takes precedence over the project files, which take
 precedence over the environment.  `Holmake` passes the layout to
 child programs through `HOLOBJROOT` and `HOLSRCROOT`.  Giving the
 project file precedence lets a child `Holmake` use its own project's
 settings.
 
 `--srcroot` sets the source root explicitly.  Otherwise, an
-`objroot` selected from `holproject.toml` uses that project's root.
+`objroot` selected from the project files uses that project's root.
 For an artifact root selected through the command line or
 environment, the source root is `HOLSRCROOT`, if set, or the
 governing project root.  `HOLDIR` is excluded from this default:
@@ -942,6 +948,13 @@ Heaps named by `HOLHEAP`, `.art` files, `selftest.exe` programs
 and custom-rule outputs retain their existing output paths.
 Custom rules can use `$(HOLOBJDIR)` to write beside theory products.
 Under Moscow ML, the `objroot` key is ignored.
+
+HOL's own `bin/build` takes an artifact root only from the
+environment, with `HOLSRCROOT` set to `HOLDIR` and `HOLOBJROOT` to
+the artifact root; it does not read `objroot` from the project files.
+`sigobj` and the heaps in `bin` stay in `HOLDIR` and are written
+during the build: `sigobj` holds links to the products under the
+artifact root.
 
 #### `-r` and `--dirs` inside a project
 
@@ -1157,7 +1170,8 @@ in `Script` and `Theory`.  This option implies `--no_overlay`.
 **`--objroot <directory>`** (Poly/ML only) Put build products
 under the given artifact root rather than beside their sources;
 see Section \ref{sec:holmake-objroot}.  Overrides any `objroot`
-in `holproject.toml` and the `HOLOBJROOT` environment variable.
+in `holproject.toml` or `holproject.local.toml` and the
+`HOLOBJROOT` environment variable.
 
 **`--overlay <file>`** Use the given file as the overlay rather
 than the default.
@@ -1250,11 +1264,12 @@ exception”.  Such behaviour is a bug, please report it!
 \index{Holmake@\holmake!lastmaker file}
 \index{lastmaker file@\texttt{lastmaker} file}
 
-When a machine has more than one HOL installation, the
-`lastmaker` file (in `.hol/make-deps`, or in
+A directory's `lastmaker` file (in `.hol/make-deps`, or in
 `<objroot>/make-deps/<rel>` under an artifact root) records the
 absolute path of the `Holmake` binary that most recently processed
-each directory.  The file is a single line of text and has two
+the directory.  `Holmake` writes it whether or not the machine has
+other HOL installations, but it matters only when it does: it tells
+them apart.  The file is a single line of text and has two
 consumers.
 
 `Holmake` itself consults `lastmaker` at the start of every run.
