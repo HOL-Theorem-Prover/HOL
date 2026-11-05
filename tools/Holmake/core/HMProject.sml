@@ -29,8 +29,8 @@ val recognised_keys =
      "projects", "h4pedant", "build_times", "objroot"]
 
 (* holproject.local.toml is the per-developer override file; only
-   [projects.<id>] means anything in it. *)
-val recognised_local_keys = ["projects"]
+   [projects.<id>] and objroot mean anything in it. *)
+val recognised_local_keys = ["projects", "objroot"]
 
 (* Keys of a [projects.<id>] sub-table.  A typo here (`paths = ".."`)
    drops the external as quietly as a top-level one drops its key. *)
@@ -208,6 +208,30 @@ fun read_external_decls root =
                                  General.exnMessage e))
     end
 
+(* The objroot a project file sets, resolved against root. *)
+fun objroot_in root (path, tbl) =
+    tag_path path
+      (fn () => Option.map (abs_relative_to root o expand_holdir)
+                           (lookup_string tbl ["objroot"]))
+
+(* holproject.local.toml's objroot overrides holproject.toml's. *)
+fun objroot_declared_at root =
+    let
+      val local_path = OS.Path.concat (root, LOCAL_FILE)
+      val local_objroot =
+          if file_exists local_path then
+            objroot_in root
+              (local_path,
+               TOML.fromFile local_path
+               handle e => raise Fail ("Failed to parse " ^ local_path ^
+                                       ": " ^ General.exnMessage e))
+          else NONE
+    in
+      case local_objroot of
+          NONE => objroot_in root (read_external_decls root)
+        | some => some
+    end
+
 fun excludes_declared_at root =
     let
       val (pf, tbl) = read_external_decls root
@@ -299,9 +323,10 @@ fun load { root } =
                     else []
 
       val objroot =
-          tag_path proj_path
-            (fn () => Option.map (abs_relative_to root o expand_holdir)
-                                 (lookup_string ptbl ["objroot"]))
+          case Option.mapPartial (fn t => objroot_in root (local_path, t))
+                                 ltbl_opt of
+              NONE => objroot_in root (proj_path, ptbl)
+            | some => some
 
       (* externals can be declared in either file; local overrides project.
          Skipped entirely under holmake = false: [projects.<id>] tables
@@ -444,16 +469,7 @@ fun resolve_layout {start, cli_objroot, cli_srcroot, no_project} =
                       SOME "" => NONE
                     | x => x
       val root = if no_project then NONE else find_root {start = start}
-      val toml_objroot =
-          case root of
-              NONE => NONE
-            | SOME r =>
-              let val (pf, tbl) = read_external_decls r
-              in
-                tag_path pf
-                  (fn () => Option.map (abs_relative_to r o expand_holdir)
-                                       (lookup_string tbl ["objroot"]))
-              end
+      val toml_objroot = Option.mapPartial objroot_declared_at root
       val (objroot, from_toml) =
           case (cli_objroot, toml_objroot) of
               (SOME p, _) => (SOME (abs_relative_to start p), false)

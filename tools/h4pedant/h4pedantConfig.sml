@@ -108,11 +108,7 @@ fun load { start : string } : config option =
                               overrides = [] }
                   | SOME tbl => parse_h4pedant_block proj_path root tbl
             (* Exclude the artifact root from source checks. *)
-            val objroot =
-                HMProject.tag_path proj_path
-                  (fn () => Option.map (HMProject.abs_relative_to root)
-                                       (HMProject.lookup_string ptbl
-                                                                ["objroot"]))
+            val objroot = HMProject.objroot_declared_at root
           in
             SOME { root = root, default = default,
                    includes = includes,

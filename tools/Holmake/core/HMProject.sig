@@ -33,8 +33,10 @@ sig
      `[projects.<id>]` are skipped during parsing and listed in
      `dead_keys` so the caller can warn the user.
 
-     `objroot` is the optional artifact root, resolved against `root`.
-     See `resolve_layout` for command-line and environment overrides.
+     `objroot` is the optional artifact root, resolved against `root`;
+     `holproject.local.toml` may set it too, overriding
+     `holproject.toml`.  See `resolve_layout` for command-line and
+     environment overrides.
 
      `unknown_keys` has the same shape as `dead_keys` -- human-readable
      key labels for the caller to warn about -- but a different cause:
@@ -77,15 +79,21 @@ sig
      already absolute.  Raises Fail on parse errors. *)
   val load : { root : string } -> config
 
+  (* objroot_declared_at root - the objroot set by root's
+     holproject.local.toml, else by its holproject.toml, resolved against
+     root.  Raises Fail if root has no holproject.toml or a file does not
+     parse. *)
+  val objroot_declared_at : string -> string option
+
   (* resolve_layout {start, cli_objroot, cli_srcroot, no_project}
      selects the artifact layout for a run in `start`.
 
-     Artifact root: cli_objroot, then the governing holproject.toml's
-     objroot, then HOLOBJROOT.  With none set, returns NONE (legacy).
-     no_project disables project-file lookup.
+     Artifact root: cli_objroot, then the governing project's objroot
+     (objroot_declared_at), then HOLOBJROOT.  With none set, returns
+     NONE (legacy).  no_project disables project-file lookup.
 
      Source root: cli_srcroot, then the project root if objroot was
-     selected from that file, then HOLSRCROOT, then the governing
+     selected from its project files, then HOLSRCROOT, then the governing
      project root unless it is HOLDIR.
 
      Relative command-line and environment paths are resolved against

@@ -312,6 +312,18 @@ val _ = check "products in out, not out3"
               (has_products out andalso not (has_products out3))
 val _ = check_build "cleanAll" (holmake root ["-r", "cleanAll"])
 val _ = OK ()
+val _ = tprint "holproject.local.toml's objroot beats holproject.toml's"
+val _ = write_file (root ++ "holproject.local.toml") "objroot = \"../out2\"\n"
+val (r_local, o_local) = holmake root []
+val _ = check_build "build" (r_local, o_local)
+val _ = check "products in out2, not out"
+              (has_products out2 andalso not (has_products out))
+val _ = check ("warned about the local objroot:\n" ^ o_local)
+              (not (contains "unrecognised key" o_local))
+val _ = check_build "cleanAll" (holmake root ["-r", "cleanAll"])
+val _ = OS.FileSys.remove (root ++ "holproject.local.toml")
+val _ = rm_rf out2
+val _ = OK ()
 val rootE = mk_fixture {name = "p6", toml = SOME ""}
 val _ = tprint "HOLOBJROOT applies when holproject.toml has no objroot"
 val _ = check_build "build"

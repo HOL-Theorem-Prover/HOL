@@ -536,7 +536,7 @@ val _ =
                        "holmake", "projects", "h4pedant",
                        "build_times", "objroot"] andalso
        rk "[projects.x].paths" = ["path", "exclude"] andalso
-       rk "bogus (local)" = ["projects"]
+       rk "bogus (local)" = ["projects", "objroot"]
     then OK ()
     else die "recognised_keys_for answered with the wrong set"
   end
