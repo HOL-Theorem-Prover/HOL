@@ -920,7 +920,9 @@ command line takes precedence over the project files, which take
 precedence over the environment.  `Holmake` passes the layout to
 child programs through `HOLOBJROOT` and `HOLSRCROOT`.  Giving the
 project file precedence lets a child `Holmake` use its own project's
-settings.
+settings.  So `--objroot` applies to the directories that `Holmake`
+run builds, `INCLUDES` included, but not to a `Holmake` that a recipe
+starts in a project whose files set `objroot`.
 
 `--srcroot` sets the source root explicitly.  Otherwise, an
 `objroot` selected from the project files uses that project's root.

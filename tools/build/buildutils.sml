@@ -943,6 +943,7 @@ fun write_theory_graph () =
           val () = write_lines (pathsfile, list_sigobj_dats ())
           val protect = Systeml.protect
           val cmd =
+              Holmake_tools.layout_exports () ^
               String.concatWith " " [
                 "cd", protect HOLDIR, "&&",
                 protect theorytool, "--quiet", "--thygraph",
