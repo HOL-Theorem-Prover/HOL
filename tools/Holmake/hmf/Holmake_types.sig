@@ -20,6 +20,9 @@ val base_environment : unit -> env
 val lookup : env -> string -> quotation
 val env_keys : env -> string list
 val env_extend : string * quotation -> env -> env
+val extend_with_layout_vars : string -> env -> env
+  (* Set HOLOBJDIR for the given directory, and HOLOBJROOT and HOLSRCROOT
+     to the layout roots (empty in the legacy layout). *)
 val env_fold : (string -> quotation -> 'b -> 'b) -> env -> 'b -> 'b
 
 val to_token : env -> pretoken -> token

@@ -112,16 +112,26 @@ local
     | peek_chdir (a :: rest) =
         if String.isPrefix "--directory=" a then
           SOME (String.extract (a, size "--directory=", NONE))
+        else if String.isPrefix "-C" a andalso size a > 2 then
+          SOME (String.extract (a, 2, NONE))
         else peek_chdir rest
+  (* The last occurrence wins, as in the option parser. *)
   fun peek_long nm args =
-      case args of
-          [] => NONE
-        | a :: rest =>
-          if a = "--" ^ nm then
-            (case rest of d :: _ => SOME d | [] => NONE)
-          else if String.isPrefix ("--" ^ nm ^ "=") a then
-            SOME (String.extract (a, size nm + 3, NONE))
-          else peek_long nm rest
+      let
+        fun recur found args =
+            case args of
+                [] => found
+              | a :: rest =>
+                if a = "--" ^ nm then
+                  (case rest of
+                       d :: rest' => recur (SOME d) rest'
+                     | [] => found)
+                else if String.isPrefix ("--" ^ nm ^ "=") a then
+                  recur (SOME (String.extract (a, size nm + 3, NONE))) rest
+                else recur found rest
+      in
+        recur NONE args
+      end
   val target_dir = peek_chdir rawargs
   val start =
       case target_dir of
@@ -278,22 +288,10 @@ val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 type patrules = Holmake_types.patrules
 val empty_patrules : patrules = Holmake_types.empty_patrules
 
-(* Set the recipe variables for this directory: HOLOBJDIR holds its
-   products directory; HOLOBJROOT and HOLSRCROOT hold the layout roots,
-   or are empty in the legacy layout.  Command-line variables may
-   override these values. *)
+(* Set the recipe variables for this directory.  Command-line variables
+   may override these values. *)
 fun extend_with_layout_vars env =
-    let
-      val (objroot, srcroot) =
-          case HFS_NameMunge.current_layout () of
-              NONE => ("", "")
-            | SOME {objroot, srcroot} => (objroot, srcroot)
-    in
-      env |> env_extend ("HOLOBJDIR",
-                         [LIT (HFS_NameMunge.holobjdir_var_for (cwd_abs()))])
-          |> env_extend ("HOLOBJROOT", [LIT objroot])
-          |> env_extend ("HOLSRCROOT", [LIT srcroot])
-    end
+    Holmake_types.extend_with_layout_vars (cwd_abs()) env
 
 (* Extend the base environment with vars passed at commandline (foldl below),
    as well as environment variables "magically" derived from other options,

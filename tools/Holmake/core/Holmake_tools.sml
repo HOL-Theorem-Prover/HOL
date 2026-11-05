@@ -674,12 +674,16 @@ fun clean_forReloc {holheap} =
     case holheap of SOME s => quiet_remove s | _ => ()
   else ()
 
+(* Under an artifact root, a dependency directory also holds those of
+   its source directory's children: keep them. *)
 fun clean_depdir {depdirname} = let
+  fun isdir s = FileSys.isDir (fullPath [depdirname, s])
+                handle OS.SysErr _ => false
 in
   read_files {dirname = depdirname}
-             (fn _ => true)
+             (not o isdir)
              (fn s => FileSys.remove (fullPath [depdirname, s]));
-  FileSys.rmDir depdirname;
+  FileSys.rmDir depdirname handle OS.SysErr _ => ();
   true
 end handle OS.SysErr (mesg, _) => let
            in

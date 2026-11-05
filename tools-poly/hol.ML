@@ -98,7 +98,9 @@ fun get_heap_name () =
                    skip = holpathdb.db_dirs()}
             val _ = List.app holpathdb.extend_db holpathdb_extensions
             fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
-            val env0 = holpathdb.fold foldthis (base_environment())
+            val env0 =
+                extend_with_layout_vars (OS.FileSys.getDir())
+                  (holpathdb.fold foldthis (base_environment()))
             val (env, _, _, _) = ReadHMF.read "Holmakefile" env0
             val heap_v = Holmake_types.envlist
                            internal_functions.default_diags env "HOLHEAP"
@@ -406,6 +408,19 @@ fun main() = let
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs,
        bare, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
+  (* Configure before choosing the heap, whose Holmakefile name may use
+     the layout's variables, and before project discovery, which skips
+     the artifact root.  Reapply after loadState, which restores saved
+     references and may replace the layout with one from an earlier
+     session. *)
+  val layout =
+      HMProject.resolve_layout
+        {start = OS.FileSys.getDir(), cli_objroot = #objroot options,
+         cli_srcroot = #srcroot options, no_project = false}
+      handle Fail msg =>
+             ((if qp then () else warn ("Artifact layout ignored: " ^ msg));
+              NONE)
+  val _ = HFS_NameMunge.configure layout
   (* Determine base_state:
      - --bare: use hol.state0
      - --poly/--poly_not_hol: use no state (NONE)
@@ -438,15 +453,6 @@ fun main() = let
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val cwd_incs = ReadHMF.find_includes (OS.FileSys.getDir())
-  (* Configure before project discovery so it skips the artifact root.
-     Reapply after loadState, which restores saved references and may
-     replace the layout with one from an earlier session. *)
-  val layout =
-      HMProject.resolve_layout
-        {start = OS.FileSys.getDir(), cli_objroot = #objroot options,
-         cli_srcroot = #srcroot options, no_project = false}
-      handle Fail msg => (warn ("Artifact layout ignored: " ^ msg); NONE)
-  val _ = HFS_NameMunge.configure layout
   (* Under a `holproject.toml holmake = true` project, every
      project_dir and every `external_includes` entry counts as
      an implicit INCLUDES for the whole project.  buildheap's

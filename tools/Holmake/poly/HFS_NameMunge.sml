@@ -76,15 +76,18 @@ fun join d "" = d
 
 (* Return the relative path if p is under root, or "" if they coincide. *)
 fun rel_under root p =
-    if p = root then SOME ""
-    else if String.isPrefix (root ^ "/") p then
-      SOME (String.extract (p, size root + 1, NONE))
-    else NONE
+    let val prefix = if String.isSuffix "/" root then root else root ^ "/"
+    in
+      if p = root then SOME ""
+      else if String.isPrefix prefix p then
+        SOME (String.extract (p, size prefix, NONE))
+      else NONE
+    end
 
-(* Cache physical directory paths when lexical paths do not match the
-   layout, as with symlinked trees or /var on macOS.  The dependency scan
-   checks each directory repeatedly.  Concurrent updates may lose cache
-   entries; subsequent lookups recompute them. *)
+(* Cache physical directory paths: the layout classifies directories by
+   them, as the current directory is physical after a chDir.  The
+   dependency scan checks each directory repeatedly.  Concurrent updates
+   may lose cache entries; subsequent lookups recompute them. *)
 val nbuckets = 509
 fun shash s =
     CharVector.foldl (fn (c, h) => (h * 31 + Char.ord c) mod nbuckets) 0 s
@@ -159,22 +162,17 @@ fun current_layout () =
 
 datatype place = Legacy | InObjroot | Mapped of string
 
-(* d is absolute and canonical *)
+(* d is absolute and canonical.  Compare physical paths, so that a
+   directory reached through a symlink is classified as its target is. *)
 fun classify ({srcroot, objroot} : layout) d =
     let
-      fun lexical d =
-          case rel_under objroot d of
-              SOME _ => SOME InObjroot
-            | NONE => Option.map Mapped (rel_under srcroot d)
+      val d = realdir d
     in
-      case lexical d of
-          SOME p => p
-        | NONE =>
-          let val d' = realdir d
-          in
-            if d' = d then Legacy
-            else getOpt (lexical d', Legacy)
-          end
+      case rel_under (realdir objroot) d of
+          SOME _ => InObjroot
+        | NONE => (case rel_under (realdir srcroot) d of
+                       SOME rel => Mapped rel
+                     | NONE => Legacy)
     end
 
 fun owned_by_layout p =

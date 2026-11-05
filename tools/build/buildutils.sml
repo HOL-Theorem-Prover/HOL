@@ -513,19 +513,11 @@ fun hmakefile_data HOLDIR =
         open Holmake_types
         fun quietly s = ()
         val qdiags = {info = quietly, die = quietly, warn = quietly}
-        val (objroot, srcroot) =
-            case HFS_NameMunge.current_layout () of
-                NONE => ("", "")
-              | SOME {objroot, srcroot} => (objroot, srcroot)
-        val holobjdir =
-            HFS_NameMunge.holobjdir_var_for (HOLFileSys.getDir())
         val env0 =
             base_environment()
               |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
               |> env_extend ("KERNELID", [LIT "stdknl"])
-              |> env_extend ("HOLOBJDIR", [LIT holobjdir])
-              |> env_extend ("HOLOBJROOT", [LIT objroot])
-              |> env_extend ("HOLSRCROOT", [LIT srcroot])
+              |> extend_with_layout_vars (HOLFileSys.getDir())
         val (env, _, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
         val envlist = Holmake_types.envlist qdiags env
       in
@@ -1430,12 +1422,18 @@ fun preorder_directory_recurse f d =
 fun remove_holmkdir parent =
     let
       open OS.FileSys
+      (* Under an artifact root, a dependency directory holds those of
+         its source directory's children, which are removed when the
+         recursion reaches them; keep the directory while they remain. *)
       fun remove dir =
           if access (dir, [A_READ, A_EXEC]) andalso not (isLink dir) andalso
              isDir dir
           then
-            (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) dir;
-             HOLFileSys.rmDir dir)
+            (map_dir (fn (d,f) => let val p = OS.Path.concat(d,f)
+                                  in
+                                    if isDir p then () else rem_file p
+                                  end) dir;
+             HOLFileSys.rmDir dir handle OS.SysErr _ => ())
           else ()
       val legacy = parent ++ ".hol" ++ "make-deps"
       val depdir = HFS_NameMunge.depdir_for parent

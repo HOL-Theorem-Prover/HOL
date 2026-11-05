@@ -28,6 +28,13 @@ fun sanitize_key key =
       key
 
 fun acquire {dir, key, warn, diag} =
+  let
+    fun no_lock e =
+      (warn ("Failed to acquire build lock for " ^ key ^ " in " ^
+             dir ^ ": " ^ General.exnMessage e ^
+             " (proceeding without lock)");
+       DummyLock)
+  in
     if not Systeml.isUnix then DummyLock
     else
       let
@@ -57,9 +64,8 @@ fun acquire {dir, key, warn, diag} =
          end handle _ => ());
         RealLock {fd = fd, lockpath = lockpath, diag = diag}
       end
-      handle OS.SysErr (msg, _) =>
-             (warn ("Failed to acquire build lock for " ^ key ^ " in " ^
-                    dir ^ ": " ^ msg ^ " (proceeding without lock)");
-              DummyLock)
+      handle e as OS.SysErr _ => no_lock e
+           | e as Fail _ => no_lock e
+  end
 
 end

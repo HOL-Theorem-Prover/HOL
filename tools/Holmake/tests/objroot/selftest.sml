@@ -13,11 +13,13 @@ val hol_state0 = HOLDIR ++ "bin" ++ "hol.state0"
 
 val common_args = ["--nolmbc", "--no-cache"]
 
+(* Fixtures set their own layout; ignore any inherited from the build. *)
 fun capture dir cmd =
     let
       val outfile = OS.FileSys.tmpName()
       val r = OS.Process.system
-                ("cd " ^ Systeml.protect dir ^ " && " ^ cmd ^ " > " ^
+                ("cd " ^ Systeml.protect dir ^
+                 " && unset HOLOBJROOT HOLSRCROOT && " ^ cmd ^ " > " ^
                  outfile ^ " 2>&1")
       val istrm = TextIO.openIn outfile
       val output = TextIO.inputAll istrm before TextIO.closeIn istrm
@@ -276,8 +278,13 @@ val _ = check "A, C, B built" (List.all exists (thy_dats out))
 val _ = OK ()
 
 (* Cleaning preserves artifacts belonging to other source directories. *)
-val _ = tprint "clean and cleanAll in dirA leave other directories alone"
+val _ = tprint "cleanDeps, clean and cleanAll in dirA leave other dirs alone"
 val _ = check_build "build" (holmake root [])
+val _ = check_build "cleanDeps in dirA" (holmake dirA ["cleanDeps"])
+val _ = check "A's depfiles removed, C's kept"
+              (List.all (String.isPrefix (out ++ "make-deps/dirA/sub/"))
+                        (files_under (out ++ "make-deps/dirA")) andalso
+               exists (out ++ "make-deps/dirA/sub/CScript.sml.d"))
 val _ = check_build "clean in dirA" (holmake dirA ["clean"])
 val _ = check "A's products removed"
               (not (exists (out ++ "objs/dirA/ATheory.dat")) andalso

@@ -25,12 +25,19 @@ fun recurse_toDirs action A worklist =
           recurse_toDirs action A' (ds' @ ds)
         end
 
+(* A directory inside an artifact root is its own products directory;
+   its theories are found through their source directories. *)
 fun find_theory_files_action dir A =
   let
     open OS.FileSys
     val objsdirname = HFS_NameMunge.objdir_for dir
+    val in_objroot =
+        isSome (HFS_NameMunge.current_layout ()) andalso
+        objsdirname = OS.Path.mkCanonical
+                        (OS.Path.mkAbsolute {path = dir,
+                                             relativeTo = getDir()})
   in
-    if access (objsdirname, [A_READ, A_EXEC])
+    if not in_objroot andalso access (objsdirname, [A_READ, A_EXEC])
        andalso isDir objsdirname then
       let
         val thys =
