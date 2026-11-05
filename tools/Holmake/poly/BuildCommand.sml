@@ -599,17 +599,20 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | BR_Failed => false
 
 
+  (* Export the layout rather than prefix it, so that every command of
+     a compound recipe (cd sub && $(HOLMAKE)) sees it. *)
   fun system s =
-    let val pfx = (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 "
+    let val layout =
+            case (Systeml.isUnix, HFS_NameMunge.current_layout ()) of
+                (true, SOME {objroot, srcroot}) =>
+                "export HOLOBJROOT=" ^ protect objroot ^
+                " HOLSRCROOT=" ^ protect srcroot ^ "; "
+              | _ => ""
+        val pfx = (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 "
                    else "") ^
                   (case thmsrc of SOME v => "HOL_THMSRC=" ^ v ^ " "
-                                | NONE => "") ^
-                  (case HFS_NameMunge.current_layout () of
-                       SOME {objroot, srcroot} =>
-                       "HOLOBJROOT=" ^ protect objroot ^
-                       " HOLSRCROOT=" ^ protect srcroot ^ " "
-                     | NONE => "")
-    in Systeml.system_ps (pfx ^ s)
+                                | NONE => "")
+    in Systeml.system_ps (layout ^ pfx ^ s)
     end
 
   (* The single-job builder runs each command with its output going

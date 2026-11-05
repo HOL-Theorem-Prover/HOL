@@ -202,11 +202,12 @@ val docsdir_for = kind_dir "docs" legacy_docsdir
 
 fun project_state_dir root =
     case current_layout () of
-        SOME {srcroot, objroot} =>
-          if absolute root = srcroot orelse canonical root = srcroot then
-            objroot
-          else root ++ ".hol"
-      | NONE => root ++ ".hol"
+        NONE => root ++ ".hol"
+      | SOME (l as {objroot, ...}) =>
+        (case classify l (absolute root) of
+             Mapped "" => objroot
+           | Mapped rel => objroot ++ "projects" ++ rel
+           | _ => root ++ ".hol")
 
 fun holobjdir_var_for d =
     if owned_by_layout d then objdir_for d else HOLOBJDIR

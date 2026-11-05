@@ -94,6 +94,7 @@ fun merge_with root add =
   handle IO.Io _ => warn ("could not update " ^ file_for root)
        | OS.SysErr (msg, _) =>
            warn ("could not update " ^ file_for root ^ ": " ^ msg)
+       | Fail msg => warn ("could not update " ^ file_for root ^ ": " ^ msg)
 
 fun merge_entries {root, entries} =
     if null entries then ()

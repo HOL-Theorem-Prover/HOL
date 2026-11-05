@@ -10,8 +10,10 @@ sig
      Two sources, presented as one map:
 
        * the project's cache, build-logs/target-times under
-         HFS_NameMunge.project_state_dir root (<root>/.hol by default,
-         or objroot when root is srcroot), updated by parallel builds;
+         HFS_NameMunge.project_state_dir root (<root>/.hol by default;
+         under a layout, objroot when root is srcroot and
+         objroot/projects/<rel> for a project below it), updated by
+         parallel builds;
        * zero or more committed *seed* files, which a project ships so
          that a fresh checkout -- where no cache exists yet -- still
          schedules well.  `HMProject.build_times_files' finds them.

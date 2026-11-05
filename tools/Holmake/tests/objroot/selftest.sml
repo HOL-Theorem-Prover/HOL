@@ -363,6 +363,11 @@ val _ = check "products in root/relout"
               (has_products (rootE ++ "relout") andalso
                not (exists (T ++ "relout")))
 val _ = OK ()
+val _ = tprint "Repeated -C and abbreviated --objroo, as the parser reads them"
+val _ = check_build "build"
+          (holmake T ["-C.", "-Cp6", "--objroo=relout2"])
+val _ = check "products in root/relout2" (has_products (rootE ++ "relout2"))
+val _ = OK ()
 
 (* Require an explicit source root outside a project.  Preserve separate
    products for modules with the same basename in different directories. *)

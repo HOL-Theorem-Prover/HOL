@@ -902,6 +902,8 @@ within each group:
 <objroot>/locks/<rel>/      build locks
 <objroot>/docs/<rel>/       HTML theory documentation
 <objroot>/build-logs/       the project's target-times cache
+<objroot>/projects/<rel>/build-logs/
+                            a nested project's target-times cache
 ```
 
 where `<rel>` is the directory relative to the *source root*, by

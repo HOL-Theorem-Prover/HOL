@@ -37,7 +37,8 @@ sig
   val lockdir_for : string -> string
   val docsdir_for : string -> string
   val project_state_dir : string -> string
-  (* project root -> <root>/.hol, or objroot when root is srcroot *)
+  (* project root -> <root>/.hol; under a layout, objroot when root is
+     srcroot, objroot/projects/<rel> when it is below srcroot *)
   val holobjdir_var_for : string -> string
   (* value of $(HOLOBJDIR) in a Holmakefile in the given directory *)
   val product_file : string -> string

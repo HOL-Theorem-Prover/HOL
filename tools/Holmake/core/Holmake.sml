@@ -94,62 +94,40 @@ fun getcline args =
     (opts, vars, targets)
   end
 
-(* Check which Holmake binary to use before parsing options or changing
-   directory.  Read -C/--directory and --nolmbc from argv so the checks
-   use the intended directory.  If they switch binaries, the child
-   inherits the original cwd and handles -C itself.  Otherwise, the
-   normal option parser changes directory below.
+(* Check which Holmake binary to use before changing directory for
+   good.  Parse the command line here with warnings and errors off (it
+   is parsed again below), to find the layout options and the directory -C
+   selects; -C changes directory as it does there, so return to the
+   original one afterwards.  If the checks switch binaries, the child
+   inherits the original cwd and handles -C itself.
 
    Configure the layout first: lastmaker is stored in its dependency
    directory, and project discovery must skip the artifact root.
    Resolve relative layout paths and look for holproject.toml from
    the directory selected by -C, if present. *)
 local
-  val rawargs = CommandLine.arguments()
-  fun peek_chdir [] = NONE
-    | peek_chdir ("-C" :: d :: _) = SOME d
-    | peek_chdir ("--directory" :: d :: _) = SOME d
-    | peek_chdir (a :: rest) =
-        if String.isPrefix "--directory=" a then
-          SOME (String.extract (a, size "--directory=", NONE))
-        else if String.isPrefix "-C" a andalso size a > 2 then
-          SOME (String.extract (a, 2, NONE))
-        else peek_chdir rest
-  (* The last occurrence wins, as in the option parser. *)
-  fun peek_long nm args =
-      let
-        fun recur found args =
-            case args of
-                [] => found
-              | a :: rest =>
-                if a = "--" ^ nm then
-                  (case rest of
-                       d :: rest' => recur (SOME d) rest'
-                     | [] => found)
-                else if String.isPrefix ("--" ^ nm ^ "=") a then
-                  recur (SOME (String.extract (a, size nm + 3, NONE))) rest
-                else recur found rest
-      in
-        recur NONE args
-      end
-  val target_dir = peek_chdir rawargs
-  val start =
-      case target_dir of
-          NONE => OS.FileSys.getDir()
-        | SOME d => OS.Path.mkAbsolute {path = d,
-                                        relativeTo = OS.FileSys.getDir()}
+  val cwd = OS.FileSys.getDir()
+  val (opts, _) =
+      GetOpt.getOpt {argOrder = GetOpt.Permute,
+                     options = HM_Cline.option_descriptions,
+                     errFn = fn _ => ()}
+                    (CommandLine.arguments())
+  val early =
+      List.foldl (fn (f, v) => #update f (fn _ => (), v))
+                 HM_Cline.default_options opts
+  val start = OS.FileSys.getDir()
+  val () = OS.FileSys.chDir cwd
+  val {objroot, srcroot} = HM_Cline.layout_options early
   val layout =
       HMProject.resolve_layout
-        {start = start, cli_objroot = peek_long "objroot" rawargs,
-         cli_srcroot = peek_long "srcroot" rawargs,
-         no_project = List.exists (fn s => s = "--no-project") rawargs}
+        {start = start, cli_objroot = objroot, cli_srcroot = srcroot,
+         no_project = #no_project (#core early)}
       handle Fail s => die ("Artifact layout: " ^ s)
 in
 val _ = HFS_NameMunge.configure layout
 val _ = do_lastmade_checks default_ofns
-          {no_lastmakercheck =
-             List.exists (fn s => s = "--nolmbc") rawargs,
-           target_dir = target_dir}
+          {no_lastmakercheck = #no_lastmaker_check (#core early),
+           target_dir = if start = cwd then NONE else SOME start}
 end
 
 val (master_cline_options, cline_vars, targets) =
