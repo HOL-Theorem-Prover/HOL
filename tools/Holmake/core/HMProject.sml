@@ -553,7 +553,9 @@ fun discover_under objroots start excludes =
       fun hasProjFile p = access(OS.Path.concat(p, "holproject.toml"), [A_READ])
       (* Exclude artifact roots from the source scan.  Test both physical
          paths and paths relative to start, which may contain symlinks
-         (e.g. /var on macOS).  Resolve start only when needed. *)
+         (e.g. /var on macOS).  Resolve start only when needed, and a
+         directory only when it is a symlink, which may lead into an
+         artifact root. *)
       val pruned =
           case objroots of
               [] => (fn _ => false)
@@ -570,8 +572,12 @@ fun discover_under objroots start excludes =
                     else obj
                 val tests = List.map is_path_under
                                      (objroots @ List.map lexical objroots)
+                val real_tests = List.map (is_path_under o physical) objroots
+                fun is_link p = OS.FileSys.isLink p handle OS.SysErr _ => false
               in
-                fn p => List.exists (fn t => t p) tests
+                fn p => List.exists (fn t => t p) tests orelse
+                        (is_link p andalso
+                         List.exists (fn t => t (physical p)) real_tests)
               end
       fun excluded p = Binaryset.member (excl_set, p) orelse pruned p
       fun walk acc nested worklist =
