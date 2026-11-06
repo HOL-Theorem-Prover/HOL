@@ -23,23 +23,42 @@ if len(sys.argv) != 3:
 HOLDIR = Path(sys.argv[1])
 BOOK = Path(sys.argv[2])
 
-# `..[/...]*/.hol/docs/<base>.html` -> `<base>.html`.  Used inside theory
-# HTML pages where parent-theory URLs were computed relative to
-# `<src>/.hol/docs/`; under the lander all theory pages are siblings in
-# book/theories/ so the prefix collapses away.
+# A relative `<path>/<thy>Theory.html` -> `<thy>Theory.html`.  Used
+# inside theory HTML pages where parent-theory URLs were computed
+# relative to the theory's docs directory (`<src>/.hol/docs/`, or
+# `<objroot>/docs/<rel>/` under an artifact root); under the lander all
+# theory pages are siblings in book/theories/ so the prefix collapses
+# away.
 THEORY_PARENT_RE = re.compile(
-    rb'href="[^"]*?/\.hol/docs/([^"/]+?\.html)"'
+    rb'href="(?![A-Za-z][A-Za-z0-9+.-]*:)[^"]*/([^"/]+?Theory\.html)"'
 )
 
 # Same pattern in the theory-graph SVG, but the SVG itself lives at
 # book/theory-graph/theories.svg, so theory URLs need to go up one level
 # and into book/theories/.  Handles both `href` and `xlink:href`.
 SVG_THEORY_RE = re.compile(
-    rb'((?:xlink:)?href)="[^"]*?/\.hol/docs/([^"/]+?\.html)"'
+    rb'((?:xlink:)?href)="(?![A-Za-z][A-Za-z0-9+.-]*:)[^"]*/'
+    rb'([^"/]+?Theory\.html)"'
 )
 
-def canonical_thy_sources():
-    """Yield (thy_name, src_dir) for each theory installed in sigobj/.
+
+def docs_dir(sig_target, thy_name):
+    """The docs directory beside the products directory that sigobj's
+    <thy>Theory.sig links into: <src>/.hol/docs for <src>/.hol/objs, or
+    <objroot>/docs/<rel> for <objroot>/objs/<rel>.  Prefer one holding
+    the theory's page, since a source directory may itself be named
+    objs; otherwise the one for the innermost objs."""
+    parts = sig_target.parent.parts
+    candidates = [Path(*parts[:i], "docs", *parts[i + 1:])
+                  for i in reversed(range(len(parts))) if parts[i] == "objs"]
+    for d in candidates:
+        if (d / f"{thy_name}Theory.html").is_file():
+            return d
+    return candidates[0] if candidates else None
+
+
+def canonical_thy_docs():
+    """Yield (thy_name, docs_dir) for each theory installed in sigobj/.
 
     Sigobj is the canonical "production theory" set; walking HOLDIR
     generally would shadow a production theory's page whenever an
@@ -54,9 +73,9 @@ def canonical_thy_sources():
             continue
         if not entry.is_symlink():
             continue
-        # readlink() yields <src>/.hol/objs/<thy>Theory.sig; want <src>
-        src_dir = Path(os.readlink(entry)).parents[2]
-        yield (thy_name, src_dir)
+        docs = docs_dir(Path(os.readlink(entry)), thy_name)
+        if docs is not None:
+            yield (thy_name, docs)
 
 
 def stage_theory_pages():
@@ -70,8 +89,7 @@ def stage_theory_pages():
         shutil.rmtree(target)
     target.mkdir(parents=True)
 
-    for thy_name, src_dir in canonical_thy_sources():
-        docs = src_dir / ".hol" / "docs"
+    for thy_name, docs in canonical_thy_docs():
         theory_html = docs / f"{thy_name}Theory.html"
         if theory_html.is_file():
             content = theory_html.read_bytes()
