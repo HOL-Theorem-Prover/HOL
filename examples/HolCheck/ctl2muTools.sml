@@ -60,9 +60,9 @@ fun ctl2mu f =
 
 end
 
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
 val ctl2mu_tm = ``ctl2mu$CTL2MU``
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true);
 
 (* convert ctl formula to mu formula *)
 fun ctl2mu_CONV f =

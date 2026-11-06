@@ -34,4 +34,6 @@ sig
 
  val relaxed_dest_numeral : term -> Arbnum.num
  val relaxed_dest_string_lit : term -> String.string
+
+ val paranoid_string_literals : HOLFlags.bflag
 end

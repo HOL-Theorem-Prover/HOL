@@ -232,7 +232,7 @@ Proof
   \\ goal_assum drule
 QED
 
-val _ = HOLFlags.set_trace "Definition.TC_extraction" 3;
+val _ = HOLFlags.set_flag (Extract.TC_extraction, 3);
 
 Definition evaluate_def:
   eval_stmt cx (AugAssign t e) = do

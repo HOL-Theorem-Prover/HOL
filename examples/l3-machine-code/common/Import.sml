@@ -143,7 +143,7 @@ val myDatatype =
           fn s => (log_type
                      (String.extract (s, w, SOME (String.size s - w - 1)))
                    ; s ^ "\n")) o
-       HOLFlags.trace ("Theory.save_thm_reporting", 0))
+       HOLFlags.with_flags [(Theory.save_thm_reporting, 0)])
        Datatype.astHol_datatype
    end
 
@@ -440,7 +440,7 @@ fun Rupd (f, tm) =
 (* Boolify constructor *)
 
 val bit_bool =
-   HOLFlags.trace ("Theory.save_thm_reporting", 0) bitstringLib.bitify_boolify
+   HOLFlags.with_flags [(Theory.save_thm_reporting, 0)] bitstringLib.bitify_boolify
 
 fun BL (i, tm) =
    let
@@ -1233,11 +1233,11 @@ end
 fun new_def s x = Definition.new_definition (s ^ "_def", boolSyntax.mk_eq x)
 
 fun z_def def =
-   HOLFlags.trace ("Definition.storage_message", 0)
+   HOLFlags.with_bflags [(Defn.storage_message, false)]
    bossLib.zDefine [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)]
 
 fun t_def s def m tac =
-   HOLFlags.trace ("Definition.storage_message", 0)
+   HOLFlags.with_bflags [(Defn.storage_message, false)]
    (TotalDefn.qDefine (s ^ !Defn.def_suffix)
                       [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
    (SOME (MEASURE_TAC m THEN tac))

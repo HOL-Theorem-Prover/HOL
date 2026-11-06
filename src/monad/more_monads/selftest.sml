@@ -15,7 +15,7 @@ fun udie () = die "FAILED!"
 val _ = tprint "Testing parsing of parmonadsyntax"
 val bind_t = prim_mk_const{Thy = "state_transformer", Name = "BIND"}
 val _ = overload_on ("monad_bind", bind_t)
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false)
 val t = Term`do x <- f y ; g x od`
 val _ = if same_const bind_t (#1 (strip_comb t)) then OK()
         else udie()
@@ -94,7 +94,7 @@ val _ = temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
 val _ = monadsyntax.enable_monad "option"
 
 val _ = unicode_off
-          (raw_backend (HOLFlags.trace ("PP.types", 1) testutils.tpp))
+          (raw_backend (HOLFlags.with_bflags [(Parse.show_types, true)] testutils.tpp))
                     "do (x :num) <- (s :num option); SOME (x + (1 :num)) od"
 
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND"

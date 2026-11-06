@@ -164,7 +164,7 @@ fun goal_of_sml s =
    Apply tactic string
    ------------------------------------------------------------------------- *)
 
-val TC_OFF = HOLFlags.trace ("Parse.show_typecheck_errors", 0)
+val TC_OFF = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
 
 (* A tactic does its work once it has both the goal and the context, so
    both the trace setting and the timeout have to span that application,

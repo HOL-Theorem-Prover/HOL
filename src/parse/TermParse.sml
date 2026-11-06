@@ -348,7 +348,7 @@ in
                                      Locn = locn.Loc_None}
     in
       errormonad.with_Modifier
-        (HOLFlags.trace ("Parse.notify_on_tyvar_guess",0))
+        (HOLFlags.with_bflags [(Preterm.notify_on_tyvar_guess, false)])
         (parse_preterm_in_context0 pprinters FVs ptm)
     end
 

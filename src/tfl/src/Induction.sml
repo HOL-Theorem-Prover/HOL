@@ -162,9 +162,9 @@ in
 end handle HOL_ERR _ => 0
 
 val quiet_metis =
-    HOLFlags.trace ("metis.trace", 0) (metisLib.METIS_PROVE [])
+    HOLFlags.with_flags [(metisTools.metis_trace, 0)] (metisLib.METIS_PROVE [])
 val quiet_meson =
-    HOLFlags.trace ("meson.chatting", 0) (BasicProvers.PROVE [])
+    HOLFlags.with_flags [(mesonLib.chatting, 0)] (BasicProvers.PROVE [])
 
 fun mk_case ty_info FV thy =
  let open boolSyntax

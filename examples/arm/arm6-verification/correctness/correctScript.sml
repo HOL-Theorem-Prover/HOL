@@ -21,10 +21,10 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["ABBREV"]
-val _ = HOLFlags.set_trace "BasicProvers.var_eq_old" 1
+val _ = HOLFlags.set_bflag (BasicProvers.veq_old, true)
 (* ------------------------------------------------------------------------- *)
 
-val () = HOLFlags.set_trace "markerLib.PAT_ABBREV_TAC_match_var_const" 0
+val () = HOLFlags.set_bflag (markerLib.PAT_ABBREV_TAC_match_var_const, false)
 
 val Abbr = BasicProvers.Abbr;
 val PRED_SET_ss = pred_setSimps.PRED_SET_ss;

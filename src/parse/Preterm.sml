@@ -269,12 +269,14 @@ val {get = get_notify_on_tyvar_guess, flag = notify_on_tyvar_guess, ...} =
       true
     )
 
-val {get = guessing_overloads, ...} = HOLFlags.create_btrace(
+val {get = guessing_overloads, flag = guess_overloads, ...} =
+    HOLFlags.create_btrace(
       {group = "Parse", name = "guess_overloads"},
       true
     )
 
-val {get = guessing_tyvars, ...} = HOLFlags.create_btrace(
+val {get = guessing_tyvars, flag = guess_tyvars, ...} =
+    HOLFlags.create_btrace(
       {group = "Parse", name = "guess_tyvars"},
       true
     )

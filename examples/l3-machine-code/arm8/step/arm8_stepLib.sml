@@ -116,7 +116,7 @@ fun EV l = utilsLib.STEP (datatype_thms, st) (l @ thms)
 
 (* ========================================================================= *)
 
-val () = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0
+val () = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false)
 val () = setEvConv (Conv.DEPTH_CONV wordsLib.SIZES_CONV)
 
 (* instruction semantics *)
@@ -390,7 +390,7 @@ in
               (sf,memop,acctype,signed,wback,postindex,offset,n,t,t2)``
 end
 
-val () = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1
+val () = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true)
 val () = setEvConv (Conv.DEPTH_CONV wordsLib.SIZES_CONV)
 
 (* ========================================================================= *)

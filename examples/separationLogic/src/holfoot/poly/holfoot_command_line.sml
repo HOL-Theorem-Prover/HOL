@@ -178,10 +178,10 @@ fun web_interface_print_goals gL =
 
 
 fun holfoot_web_interface () = let
-   val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 0
+   val _ = HOLFlags.set_bflag (PPBackEnd.use_annotations, false)
    val _ = Parse.current_backend := PPBackEnd.html_terminal;
    val _ = HOLFlags.set_bflag (Parse.avoid_unicode, false)
-   val _ = HOLFlags.set_trace "Goalstack.chatting" 0
+   val _ = HOLFlags.set_bflag (goalStack.chatting, false)
    val args = CommandLine.arguments ();
    val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args))
       handle _ => (true, args);
@@ -225,10 +225,10 @@ end
 
 
 fun holfoot_run (full, filemode_command) = let
-   val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 0
-   val _ = HOLFlags.set_trace "HolSmtLib.trace" 0
-   val _ = HOLFlags.set_trace "meson.chatting" 0
-   val _ = HOLFlags.set_trace "metis.trace" 0
+   val _ = HOLFlags.set_bflag (PPBackEnd.use_annotations, false)
+   val _ = HOLFlags.set_flag (Library.trace_flag, 0)
+   val _ = HOLFlags.set_flag (mesonLib.chatting, 0)
+   val _ = HOLFlags.set_flag (metisTools.metis_trace, 0)
    val _ = Globals.interactive := false;
 
    fun pluck_num_arg a =

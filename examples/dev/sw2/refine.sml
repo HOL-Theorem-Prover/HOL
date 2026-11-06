@@ -43,7 +43,7 @@ fun type_to_name t =
  String.extract(Hol_pp.type_to_string t, 1, NONE);
 
 fun numeric_type_to_num t =
- HOLFlags.trace ("PP.num_types", 1)
+ HOLFlags.with_bflags [(type_pp.num_types, true)]
   Arbnum.fromString (type_to_name t);
 
 fun pad s i =

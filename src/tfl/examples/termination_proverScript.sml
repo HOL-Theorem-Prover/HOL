@@ -11,8 +11,8 @@ Libs
 
 
 (* get a view of what's happening
-val _ = HOLFlags.set_trace "Definition.TC_extraction" 3;
-val _ = HOLFlags.set_trace "Definition.termination_candidates" 2;
+val _ = HOLFlags.set_flag (Extract.TC_extraction, 3);
+val _ = HOLFlags.set_flag (TotalDefn.termination_candidates, 2);
 *)
 
 Definition encode_num_def:

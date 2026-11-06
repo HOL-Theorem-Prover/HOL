@@ -186,7 +186,7 @@ type translations = (hol_type,((functions ref * theorems ref) * translation_sche
 (* Level 3 : Output most intermediate results and function calls             *)
 (*****************************************************************************)
 
-val {get = Trace, ...} =
+val {get = Trace, flag = Trace_flag, ...} =
     HOLFlags.create_trace ({group = "polytypicLib", name = "Trace"},
                            {initial = 1, max = 3});
 

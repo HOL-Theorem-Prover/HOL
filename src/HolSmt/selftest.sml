@@ -17,10 +17,10 @@ val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val _ = HOLFlags.set_bflag (Parse.show_types, true)
 val _ = wordsLib.add_word_cast_printer ()
 *)
-val _ = HOLFlags.set_trace "PP.avoid_unicode" 1
-val _ = HOLFlags.set_trace "HolSmtLib.trace" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
+val _ = HOLFlags.set_flag (Library.trace_flag, 0)
 (*
-val _ = HOLFlags.set_trace "HolSmtLib.trace" 4
+val _ = HOLFlags.set_flag (Library.trace_flag, 4)
 *)
 
 (*****************************************************************************)

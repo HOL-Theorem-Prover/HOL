@@ -16,12 +16,12 @@ val _ = wordsLib.prefer_word();
 
 val ERR = Feedback.mk_HOL_ERR "armLib";
 
-val {get = trace_progress, ...} =
+val {get = trace_progress, flag = steps, ...} =
     HOLFlags.create_trace ({group = "arm", name = "steps"},
                            {initial = 1, max = 3});
-val {get = label_step_theorems, ...} =
+val {get = label_step_theorems, flag = label_steps, ...} =
     HOLFlags.create_btrace ({group = "arm", name = "label_steps"}, true);
-val {get = disassemble, ...} =
+val {get = disassemble, flag = disassembler_comments, ...} =
     HOLFlags.create_btrace ({group = "arm", name = "disassembler_comments"},
                             true);
 

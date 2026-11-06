@@ -1328,7 +1328,7 @@ val pretty_printer_list =
      frame split (imp:holfoot_a_proposition -> num) pred``, holfoot_frame_split_printer)
  ]:(string * Parse.term * term_grammar.userprinter) list;
 
-val {get = use_holfoot_pp, ...} =
+val {get = use_holfoot_pp, flag = use_pp, ...} =
     HOLFlags.create_btrace ({group = "holfoot", name = "use_pp"}, true);
 
 fun trace_user_printer (up:term_grammar.userprinter) =
@@ -1385,7 +1385,7 @@ temp_remove_holfoot_pp ();temp_add_holfoot_pp ();t
 temp_remove_holfoot_pp ();t
 *)
 
-val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 0
+val _ = HOLFlags.set_bflag (PPBackEnd.use_annotations, false)
 val _ = add_holfoot_pp_quiet();
 
 end

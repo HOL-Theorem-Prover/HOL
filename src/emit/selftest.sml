@@ -21,4 +21,4 @@ in
          else OK()
 end
 
-val _ = HOLFlags.trace ("Definition.storage_message", 0) gh157 ()
+val _ = HOLFlags.with_bflags [(Defn.storage_message, false)] gh157 ()

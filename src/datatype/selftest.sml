@@ -5,8 +5,8 @@ open testutils
 
 val _ = new_theory "scratch"
 
-val _ = HOLFlags.set_trace "Theory.save_thm_reporting" 0;
-val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1;
+val _ = HOLFlags.set_flag (Theory.save_thm_reporting, 0);
+val _ = HOLFlags.set_bflag (Theory.allow_rebinds, true);
 
 fun Hol_datatype q = let
   open TextIO Feedback
@@ -120,7 +120,7 @@ val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
 val _ = Datatype.Datatype`parentest1 = C (('a,'b)fun)`
 
 val _ = tprint "Parse polymorphic record literal"
-val r = HOLFlags.trace ("Parse.guess_tyvars", 0) Parse.Term
+val r = HOLFlags.with_bflags [(Preterm.guess_tyvars, false)] Parse.Term
                        `<| fld1 := SUC |>`
 val rnd = repeat rand r
 val fupd_t = repeat rator r

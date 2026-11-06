@@ -23,8 +23,8 @@ val {get = prf, flag = prf_flag, ...} =
    setting HolCheck.prf directly. *)
 fun set_prf n =
     let val _ = HOLFlags.set_bflag (prf_flag, not (n=0))
-    in if prf() then (HOLFlags.set_trace "HolCheck.dbg" 0;
-                      HOLFlags.set_trace "HolCheck.dbg_lazy" 0)
+    in if prf() then (HOLFlags.set_flag (dbgTools.dbg_flag, 0);
+                      HOLFlags.set_bflag (lazyTools.dbg_lazy, false))
        else () end
         handle _ => ()(* handle is for when dbgTools is unloaded *)
 

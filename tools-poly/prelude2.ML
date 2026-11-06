@@ -47,8 +47,8 @@ in
             (TextIO.stdOut, "[In non-standard heap: " ^ hnm ^ "]\n")
         end
       else ()
-    ; HOLFlags.set_trace "metis.trace" 1
-    ; HOLFlags.set_trace "meson.chatting" 1
+    ; HOLFlags.set_flag (metisTools.metis_trace, 1)
+    ; HOLFlags.set_flag (mesonLib.chatting, 1)
     ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_ssfrag)
     ; PolyML.addPrettyPrinter (pp2polypp DefnBase.pp_defn)
     ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_simpset)

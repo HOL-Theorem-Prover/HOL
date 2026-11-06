@@ -11,7 +11,7 @@ struct
 end
 
 val tailrec_definitions = ref ([]:thm list);
-fun allow_rebinds f x = HOLFlags.trace ("Theory.allow_rebinds", 1) f x
+fun allow_rebinds f x = HOLFlags.with_bflags [(Theory.allow_rebinds, true)] f x
 val new_definition = allow_rebinds new_definition
 val save_thm = allow_rebinds save_thm
 

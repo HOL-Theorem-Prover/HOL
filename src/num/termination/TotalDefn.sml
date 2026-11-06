@@ -33,11 +33,11 @@ val WARN   = HOL_WARNING "TotalDefn";
 (* Set up traces                                                             *)
 (*---------------------------------------------------------------------------*)
 
+val {get = monitoring, flag = termination_candidates, ...} =
+    HOLFlags.create_trace ({group = "Definition",
+                            name = "termination_candidates"},
+                           {initial = 0, max = 4})
 local
-  val {get = monitoring, ...} =
-      HOLFlags.create_trace ({group = "Definition",
-                              name = "termination_candidates"},
-                             {initial = 0, max = 4})
 in
 fun lztrace(i,title,msgf) =
   if i <= monitoring() then
@@ -49,7 +49,7 @@ val {get = get_allow_schema_definition, flag = allow_schema_definition, ...} =
     HOLFlags.create_btrace ({group = "Definition",
                              name = "allow_schema_definition"}, false)
 
-val {get = auto_tgoal, ...} =
+val {get = get_auto_tgoal, flag = auto_tgoal, ...} =
     HOLFlags.create_btrace ({group = "Definition",
                              name = "auto_tgoal"}, true)
 
@@ -814,7 +814,7 @@ local open Defn
          val goalstring =  (* grab this in any case *)
              PP.pp_to_string (!Globals.linewidth)
                  proofManagerLib.std_goal_pp (proofManagerLib.top_goal())
-         val _ = if not (auto_tgoal()) then
+         val _ = if not (get_auto_tgoal()) then
                     ignore $ proofManagerLib.drop ()
                  else ()
      in
@@ -999,15 +999,17 @@ fun located_qDefine loc stem q tacopt (_ : Context.t) =
                      String.concatWith ", " (map #1 unknown))
       fun fmod f =
           f |> (if nocomp then
-                  HOLFlags.trace ("computeLib.auto_import_definitions", 0)
+                  HOLFlags.with_bflags
+                    [(computeLib.auto_import_definitions, false)]
                 else (fn f => f))
             |> (if svarsok then
-                  HOLFlags.trace ("Definition.allow_schema_definition", 1)
+                  HOLFlags.with_bflags [(allow_schema_definition, true)]
                 else (fn f => f))
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
-            |> (if rebindok then HOLFlags.trace ("Theory.allow_rebinds", 1)
+            |> (if rebindok then
+                  HOLFlags.with_bflags [(Theory.allow_rebinds, true)]
                 else (fn f => f))
       val (thm,indopt) =
           case (tailrecp, tacopt) of

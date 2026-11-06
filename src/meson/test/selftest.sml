@@ -26,7 +26,7 @@ fun Mfail nm tm =
  * is to give explicit constraints.
  *---------------------------------------------------------------------------*)
 
-val _ = HOLFlags.set_trace "Parse.guess_tyvars" 0;
+val _ = HOLFlags.set_bflag (Preterm.guess_tyvars, false);
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 val _ = temp_remove_termtok {term_name = "O", tok = "O"};
 val _ = app (ignore o hide) ["irreflexive", "transitive", "one"];
@@ -623,7 +623,7 @@ val COL075_2 =
 
 
 val COM001_1 =
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Goal_state Start_state.
         follows(Goal_state,Start_state)
@@ -647,7 +647,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
    (~succeeds(p3,p3)) ==> F`;
 
 val COM002_1 = M "COM002_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Goal_state Start_state. follows(Goal_state,Start_state) ==> succeeds(Goal_state,Start_state)) /\
    (!Goal_state Intermediate_state Start_state. succeeds(Goal_state,Intermediate_state) /\ succeeds(Intermediate_state,Start_state) ==> succeeds(Goal_state,Start_state)) /\
@@ -671,7 +671,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val COM002_2 = M "COM002_2" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Goal_state Start_state. ~(fails(Goal_state,Start_state) /\ follows(Goal_state,Start_state))) /\
    (!Goal_state Intermediate_state Start_state. fails(Goal_state,Start_state) ==> fails(Goal_state,Intermediate_state) \/ fails(Intermediate_state,Start_state)) /\
@@ -695,7 +695,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val COM003_2 = M "COM003_2" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X Y Z. program_decides(X) /\ program(Y) ==> decides(X,Y,Z)) /\
    (!X. program_decides(X) \/ program(f2(X))) /\
@@ -743,7 +743,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val COM004_1 = M "COM004_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
@@ -1032,7 +1032,7 @@ val GEO058_2 = M "GEO058_2" $
 
 
 val GEO079_1 = M "GEO079_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!U V W X Y Z. right_angle(U,V,W) /\ right_angle(X,Y,Z) ==> eq(U,V,W,X,Y,Z)) /\
    (!U V W X Y Z. congruent(U,V,W,X,Y,Z) ==> eq(U,V,W,X,Y,Z)) /\
@@ -1491,7 +1491,7 @@ val LDA003_1 = M "LDA003_1"
 
 
 val MSC002_1 = M "MSC002_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(at(something,here,now)) /\
    (!Place Situation. hand_at(Place,Situation) ==> hand_at(Place,let_go(Situation))) /\
@@ -1509,7 +1509,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
    (!Situation. ~answer(Situation)) ==> F`;
 
 val MSC003_1 = M "MSC003_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Number_of_small_parts Small_part Big_part Number_of_mid_parts Mid_part. has_parts(Big_part,Number_of_mid_parts,Mid_part) ==> in'(object_in(Big_part,Mid_part,Small_part,Number_of_mid_parts,Number_of_small_parts),Mid_part) \/ has_parts(Big_part,times(Number_of_mid_parts,Number_of_small_parts),Small_part)) /\
    (!Big_part Mid_part Number_of_mid_parts Number_of_small_parts Small_part. has_parts(Big_part,Number_of_mid_parts,Mid_part) /\ has_parts(object_in(Big_part,Mid_part,Small_part,Number_of_mid_parts,Number_of_small_parts),Number_of_small_parts,Small_part) ==> has_parts(Big_part,times(Number_of_mid_parts,Number_of_small_parts),Small_part)) /\
@@ -1522,7 +1522,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val MSC004_1 = M "MSC004_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Number_of_small_parts Small_part Big_part Number_of_mid_parts Mid_part. has_parts(Big_part,Number_of_mid_parts,Mid_part) ==> in'(object_in(Big_part,Mid_part,Small_part,Number_of_mid_parts,Number_of_small_parts),Mid_part) \/ has_parts(Big_part,times(Number_of_mid_parts,Number_of_small_parts),Small_part)) /\
    (!Big_part Mid_part Number_of_mid_parts Number_of_small_parts Small_part. has_parts(Big_part,Number_of_mid_parts,Mid_part) /\ has_parts(object_in(Big_part,Mid_part,Small_part,Number_of_mid_parts,Number_of_small_parts),Number_of_small_parts,Small_part) ==> has_parts(Big_part,times(Number_of_mid_parts,Number_of_small_parts),Small_part)) /\
@@ -1535,7 +1535,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val MSC005_1 = M "MSC005_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(value(truth,truth)) /\
  (value(falsity,falsity)) /\
@@ -1615,7 +1615,7 @@ val NUM024_1 = M "NUM024_1" $
 val _ = hide "flip"
 
 val NUM180_1 = M "NUM180_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
@@ -1885,7 +1885,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val NUM228_1 = M "NUM228_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 0)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, false)]
  Term
 `(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
@@ -2176,7 +2176,7 @@ val PLA002_1 = M "PLA002_1"
 
 
 val PLA006_1 = M "PLA006_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X Y State. holds(X,State) /\ holds(Y,State) ==> holds(and'(X,Y),State)) /\
    (!State X. holds(empty,State) /\ holds(clear(X),State) /\ differ(X,table) ==> holds(holding(X),do(pickup(X),State))) /\
@@ -2212,7 +2212,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val PLA017_1 = M "PLA017_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X Y State. holds(X,State) /\ holds(Y,State) ==> holds(and'(X,Y),State)) /\
    (!State X. holds(empty,State) /\ holds(clear(X),State) /\ differ(X,table) ==> holds(holding(X),do(pickup(X),State))) /\
@@ -2248,7 +2248,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val PLA022_1 = M "PLA022_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X Y State. holds(X,State) /\ holds(Y,State) ==> holds(and'(X,Y),State)) /\
    (!State X. holds(empty,State) /\ holds(clear(X),State) /\ differ(X,table) ==> holds(holding(X),do(pickup(X),State))) /\
@@ -2284,7 +2284,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val PLA022_2 = M "PLA022_2" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X Y State. holds(X,State) /\ holds(Y,State) ==> holds(and'(X,Y),State)) /\
    (!State X. holds(empty,State) /\ holds(clear(X),State) /\ differ(X,table) ==> holds(holding(X),do(pickup(X),State))) /\
@@ -2320,7 +2320,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val PRV001_1 = M "PRV001_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X Y Z. q1(X,Y,Z) /\ less_or_equal(X,Y) ==> q2(X,Y,Z)) /\
  (!X Y Z. q1(X,Y,Z) ==> less_or_equal(X,Y) \/ q3(X,Y,Z)) /\
@@ -2430,7 +2430,7 @@ val PRV006_1 = M "PRV006_1"
 
 
 val PRV009_1 = M"PRV009_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Y X. less_or_equal(X,Y) \/ less(Y,X)) /\
    (less(j,i)) /\
@@ -2444,7 +2444,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val PUZ012_1 = M"PUZ012_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X. equal_fruits(X,X)) /\
    (!X. equal_boxes(X,X)) /\
@@ -2499,7 +2499,7 @@ Term`(!X:'a. equal(X,X)) /\
 
 
 val PUZ025_1 = M "PUZ025_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X. a_truth(truthteller(X)) \/ a_truth(liar(X))) /\
    (!X. ~(a_truth(truthteller(X)) /\ a_truth(liar(X)))) /\
@@ -2546,7 +2546,7 @@ val PUZ029_1 = M "PUZ029_1"
 
 
 val RNG001_3 = M "RNG001_3" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X. sum(additive_identity,X,X)) /\
    (!X. sum(additive_inverse(X),X,additive_identity)) /\
@@ -2885,7 +2885,7 @@ val ROB021_1 = M "ROB021_1" $
 
 
 val SET005_1 = Mfail "SET005_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Subset Element Superset. member(Element,Subset) /\ subset(Subset,Superset) ==> member(Element,Superset)) /\
    (!Superset Subset. subset(Subset,Superset) \/ member(member_of_1_not_of_2(Subset,Superset),Subset)) /\
@@ -2906,7 +2906,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val SET009_1 = M "SET009_1" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Subset Element Superset. member(Element,Subset) /\ subset(Subset,Superset) ==> member(Element,Superset)) /\
    (!Superset Subset. subset(Subset,Superset) \/ member(member_of_1_not_of_2(Subset,Superset),Subset)) /\
@@ -3204,7 +3204,7 @@ val SET046_5 = M "SET046_5" $
 
 
 val SET047_5 = M "SET047_5" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!X Z Y. set_equal(X,Y) /\ element(Z,X) ==> element(Z,Y)) /\
    (!Y Z X. set_equal(X,Y) /\ element(Z,Y) ==> element(Z,X)) /\
@@ -3254,7 +3254,7 @@ val SYN352_1 = M "SYN352_1" $
 
 
 val TOP001_2 = M "TOP001_2" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Vf U. element_of_set(U,union_of_members(Vf)) ==> element_of_set(U,f1(Vf,U))) /\
    (!U Vf. element_of_set(U,union_of_members(Vf)) ==> element_of_collection(f1(Vf,U),Vf)) /\
@@ -3272,7 +3272,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val TOP002_2 = M "TOP002_2" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Vf U. element_of_collection(U,top_of_basis(Vf)) \/ element_of_set(f11(Vf,U),U)) /\
    (!X. ~element_of_set(X,empty_set)) /\
@@ -3398,7 +3398,7 @@ val TOP004_1 = M "TOP004_1" $
 
 
 val TOP004_2 = M "TOP004_2" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!U Uu1 Vf. element_of_set(U,Uu1) /\ element_of_collection(Uu1,Vf) ==> element_of_set(U,union_of_members(Vf))) /\
    (!Vf X. basis(X,Vf) ==> equal_sets(union_of_members(Vf),X)) /\
@@ -3425,7 +3425,7 @@ HOLFlags.trace ("Parse.guess_tyvars", 1)
 
 
 val TOP005_2 = Mfail "TOP005_2" $
-HOLFlags.trace ("Parse.guess_tyvars", 1)
+HOLFlags.with_bflags [(Preterm.guess_tyvars, true)]
  Term
 `(!Vf U. element_of_set(U,union_of_members(Vf)) ==> element_of_set(U,f1(Vf,U))) /\
    (!U Vf. element_of_set(U,union_of_members(Vf)) ==> element_of_collection(f1(Vf,U),Vf)) /\

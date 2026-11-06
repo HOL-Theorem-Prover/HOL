@@ -56,7 +56,7 @@ fun REWR_CONV0 (part_matcher, fn_name) th =
                    wrap_exn "Conv"
                       (String.concat
                          [fn_name, ": bad theorem argument: ",
-                          HOLFlags.trace ("PP.avoid_unicode", 1)
+                          HOLFlags.with_bflags [(Parse.avoid_unicode, true)]
                                          term_to_string (concl th)]) e
    in fn tm =>
          let

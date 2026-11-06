@@ -21,7 +21,7 @@ val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
 
 (* Some proofs here are large with too many assumptions *)
-val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_bflag (goalStack.goal_at_top, false);
 
 (* "The theory of martingales as we know it now goes back to Doob and most of
     the material of this and the following chapter can be found in his seminal

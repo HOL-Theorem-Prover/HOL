@@ -14,4 +14,6 @@ sig
   val add_holfoot_pp_quiet    : unit -> unit
   val remove_holfoot_pp_quiet : unit -> unit
 
+  val use_pp : HOLFlags.bflag
+
 end

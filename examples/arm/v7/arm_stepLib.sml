@@ -45,10 +45,10 @@ val op \\ = op Tactical.THEN;
 
 val ERR = Feedback.mk_HOL_ERR "arm_stepLib";
 
-val {get = arm_step_trace, ...} =
+val {get = arm_step_trace, flag = step, ...} =
     HOLFlags.create_trace ({group = "arm", name = "step"},
                            {initial = 0, max = 3});
-val {get = arm_step_check, ...} =
+val {get = arm_step_check, flag = step_check, ...} =
     HOLFlags.create_btrace ({group = "arm", name = "step_check"}, false);
 
 (* ------------------------------------------------------------------------- *)

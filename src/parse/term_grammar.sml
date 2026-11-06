@@ -1464,7 +1464,8 @@ fun prettyprint_grammar tmprint (G :grammar) = let
               if overloaded_op0 = "" then "  <won't print>  "
               else overloaded_op0
           fun pr_name t =
-            HOLFlags.trace ("PP.types", 1) (tmprint (strip_overload_info G)) t
+            HOLFlags.with_bflags [(HOLFlags.show_types, true)]
+                                 (tmprint (strip_overload_info G)) t
         in
           block INCONSISTENT (max + 5) (
             add_string (overloaded_op^

@@ -1323,7 +1323,7 @@ end
 (* Initialisation: run the above functions, checking for errors.             *)
 (*****************************************************************************)
 
-val _ = HOLFlags.set_trace "functionEncodeLib.Trace" 1;
+val _ = HOLFlags.set_flag (functionEncodeLib.Trace_flag, 1);
 
 val _ = (initialise_sexp() handle e =>
         Raise (mkStandardExn "initialise_sexp"

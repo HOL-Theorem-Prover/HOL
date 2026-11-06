@@ -184,7 +184,7 @@ end;
 val (array_bound_DECIDE___YICES, _) =
   Cache.CACHE {capacity=2000, per_key_cap=32} ((K true), array_bound_DECIDE___YICES)
 
-val {get = holfoot_use_yices, ...} =
+val {get = holfoot_use_yices, flag = use_yices, ...} =
     HOLFlags.create_trace ({group = "holfoot", name = "use_yices"},
                            {initial = 0, max = 4});
 
@@ -1381,7 +1381,7 @@ end;
 (******************************************************************************)
 
 (*
-HOLFlags.set_trace "holfoot.use_pp" 0
+HOLFlags.set_bflag (holfoot_pp_print.use_pp, false)
 use_holfoot_pp := false
    val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 *)
@@ -2808,7 +2808,7 @@ fun print_width left i s =
     print s;
     if left then (print_space (i - size s)) else ());
 
-val {get = print_file, ...} =
+val {get = print_file, flag = print_file_flag, ...} =
     HOLFlags.create_btrace ({group = "holfoot", name = "print_file"}, true);
 
 
@@ -3050,12 +3050,12 @@ holfoot_set_goal_procedures file ["array_frame_7"]
 holfoot_set_goal_procedures file ["array_lookup_1"]
 holfoot_set_goal_procedures file ["array_assign_1"]
 
-HOLFlags.set_trace "holfoot.use_pp" 1
+HOLFlags.set_bflag (holfoot_pp_print.use_pp, true)
 holfoot_interactive_verify_spec true (true,true,true) ([],[],[]) file
 HF_SOLVE_TAC THEN
 
 HF_STEP_TAC 10
-HOLFlags.set_trace "holfoot.use_pp" 0
+HOLFlags.set_bflag (holfoot_pp_print.use_pp, false)
 REPEAT STRIP_TAC THEN
 Cases_on `n_const = LENGTH data1` THEN
 HF_CONTINUE_TAC
@@ -3078,7 +3078,7 @@ SIMP_TAC std_ss [GSYM EL]
 
 holfoot_set_remaining_goal thm_imp
 
-val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 0
+val _ = HOLFlags.set_bflag (PPBackEnd.use_annotations, false)
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 val t = parse_holfoot_file file

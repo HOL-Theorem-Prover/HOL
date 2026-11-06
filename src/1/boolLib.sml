@@ -202,8 +202,9 @@ fun save_thm_attrs loc (attrblock:ThmAttribute.attrblock, th) = let
         fn (n,th) => Theory.gen_save_thm{name=n,private=privp,thm=th,loc=loc}
   val attrf = if localp then ThmAttribute.local_attribute
               else ThmAttribute.store_at_attribute
-  val storemod = if rebindok then HOLFlags.trace("Theory.allow_rebinds", 1)
-                 else (fn f => f)
+  val storemod =
+      if rebindok then HOLFlags.with_bflags [(Theory.allow_rebinds, true)]
+      else (fn f => f)
   fun do_attr (k,vs) = attrf {thm = th, name = n, attrname = k, args = vs}
   val slabs_with_labels =
       HOLset.foldl

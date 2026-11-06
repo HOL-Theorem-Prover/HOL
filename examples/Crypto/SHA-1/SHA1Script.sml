@@ -332,8 +332,8 @@ val _ = computeLib.add_persistent_funs
           "pBits_def",
           "digest_def"];
 
-val _ = HOLFlags.set_trace "PP.num_types" 0;
-val _ = HOLFlags.set_trace "PP.array_types" 0;
+val _ = HOLFlags.set_bflag (type_pp.num_types, false);
+val _ = HOLFlags.set_bflag (type_pp.array_types, false);
 
 (*
 val _ =

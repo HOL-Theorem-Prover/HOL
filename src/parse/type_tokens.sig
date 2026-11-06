@@ -7,6 +7,8 @@ sig
 
   val lextest : string -> unit type_token list
 
+  val greek_tyvars : HOLFlags.bflag
+
   val token_string : ('a -> string) -> 'a type_token -> string
   val dest_aq : 'a type_token -> 'a
 

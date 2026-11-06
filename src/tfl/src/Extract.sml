@@ -15,7 +15,7 @@ exception EXTRACTION_ERROR of term list * term
 
 val max_trace_val = 5;
 val no_trace = max_trace_val + 1;
-val {get = monitoring, ...} =
+val {get = monitoring, flag = TC_extraction, ...} =
     HOLFlags.create_trace ({group = "Definition", name = "TC_extraction"},
                            {initial = 0, max = max_trace_val});
 

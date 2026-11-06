@@ -317,7 +317,7 @@ fun overload_info_for s = let
                         (Overload.remove_overloaded_form s)
                         (term_grammar())
   val (_,ppfn0) = print_from_grammars (type_grammar(),g)
-  val ppfn = ppfn0 |> HOLFlags.trace ("PP.types", 1)
+  val ppfn = ppfn0 |> HOLFlags.with_bflags [(HOLFlags.show_types, true)]
   val ppaction = let
     open smpp
   in
@@ -1106,7 +1106,7 @@ val _ = let
   val rawpp_thm =
       pp_thm
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-        |> HOLFlags.trace ("PP.paranoid_string_literals", 1)
+        |> HOLFlags.with_bflags [(Literal.paranoid_string_literals, true)]
   val rawpp_type =
       pp_type
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)

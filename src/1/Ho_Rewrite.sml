@@ -279,7 +279,8 @@ fun num_matches th t =
       length (find_terms match t)
     end
 
-val thm_to_string = HOLFlags.trace ("PP.avoid_unicode", 1) Parse.thm_to_string
+val thm_to_string =
+    HOLFlags.with_bflags [(Parse.avoid_unicode, true)] Parse.thm_to_string
 fun REQUIRE0_TAC th =
     check_delta (ERR "REQUIRE0_TAC"
                      ("LHS of " ^ thm_to_string th ^ " remains in goal"))

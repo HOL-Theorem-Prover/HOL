@@ -12,7 +12,7 @@ Libs
 
 
 (* some proofs here are large with too many assumptions *)
-val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_bflag (goalStack.goal_at_top, false);
 
 (* NOTE: The type 'a is reserved for TRANS_bvc_gen_ind *)
 Type transition[pp] = “:pi -> residual -> bool”

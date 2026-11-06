@@ -1779,8 +1779,8 @@ QED
 
 (*
 
-HOLFlags.set_trace "Goalstack.print_goal_at_top" 1
-HOLFlags.set_trace "Goalstack.print_goal_at_top" 0
+HOLFlags.set_bflag (goalStack.goal_at_top, true)
+HOLFlags.set_bflag (goalStack.goal_at_top, false)
 
 *)
 

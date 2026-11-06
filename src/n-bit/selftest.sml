@@ -8,8 +8,8 @@ val _ = new_theory "scratch"
 *)
 
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
-val _ = HOLFlags.set_trace "blastLib.print_counterexamples" 0
-val _ = HOLFlags.set_trace "blastLib.trace" 0
+val _ = HOLFlags.set_bflag (blastLib.print_counterexamples, false)
+val _ = HOLFlags.set_flag (blastLib.trace, 0)
 
 val ERR = mk_HOL_ERR "selftest"
 
@@ -149,8 +149,8 @@ val _ = qtest_conv "simp+WORD_CANCEL" c
 val _ = let
   val _ = tprint "Word factorial termination with good simp"
   val fact_defn =
-      HOLFlags.trace ("Definition.auto_tgoal", 0) $
-      HOLFlags.trace ("Theory.allow_rebinds", 1) $
+      HOLFlags.with_bflags [(TotalDefn.auto_tgoal, false)] $
+      HOLFlags.with_bflags [(Theory.allow_rebinds, true)] $
       quietly $
       Lib.with_flag(Globals.interactive, true)
         (TotalDefn.qDefine "wfact"

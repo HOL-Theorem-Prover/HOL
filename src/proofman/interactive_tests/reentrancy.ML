@@ -7,7 +7,7 @@ val _ = List.app load ["testutils", "Standard_Thread", "Synchronized"];
 
 open HolKernel boolLib testutils proofManagerLib;
 
-val _ = HOLFlags.set_trace "Goalstack.chatting" 0
+val _ = HOLFlags.set_bflag (goalStack.chatting, false)
 
 val finished = Synchronized.var "reentrancy.finished" false;
 val _ =

@@ -53,7 +53,7 @@ val tpp_cases = [
 
 val _ = app testutils.tpp tpp_cases
 
-val _ = (HOLFlags.trace ("pred_set.univ_printing", 0) testutils.tpp)
+val _ = (HOLFlags.with_bflags [(pred_setpp.univ_printing, false)] testutils.tpp)
           "UNIV"
 
 val _ = temp_add_rule {
@@ -118,7 +118,7 @@ val _ = testutils.tpp "equiv_class (feq f) s x"
 
 val _ = set_grammar_ancestry ["pred_set"]
 val _ = print "Setting grammar ancestry to be [\"pred_set\"]\n"
-val _ = HOLFlags.set_trace "PP.avoid_unicode" 1
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 val _ = List.app testutils.tpp tpp_cases
 
 

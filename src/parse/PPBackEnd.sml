@@ -126,22 +126,26 @@ fun user_push_styleL b style_stack styL =
 (* Traces                           *)
 (* -------------------------------- *)
 
-val {get = add_type_information, ...} = HOLFlags.create_btrace(
+val {get = add_type_information, flag = show_types, ...} =
+    HOLFlags.create_btrace(
       {group = "PPBackEnd", name = "show_types"},
       true
     )
 
-val {get = backend_use_annotations,...} = HOLFlags.create_btrace(
+val {get = backend_use_annotations, flag = use_annotations, ...} =
+    HOLFlags.create_btrace(
       {group = "PPBackEnd", name = "use_annotations"},
       true
     )
 
-val {get = backend_use_styles,...} = HOLFlags.create_btrace(
+val {get = backend_use_styles, flag = use_styles, ...} =
+    HOLFlags.create_btrace(
       {group = "PPBackEnd", name = "use_styles"},
       true
     )
 
-val {get = backend_use_css,...} = HOLFlags.create_btrace(
+val {get = backend_use_css, flag = use_css, ...} =
+    HOLFlags.create_btrace(
       {group = "PPBackEnd", name = "use_css"},
       true
     )

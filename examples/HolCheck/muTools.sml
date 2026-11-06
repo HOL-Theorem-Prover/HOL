@@ -18,9 +18,9 @@ open setLemmasTheory muSyntax muSyntaxTheory muTheory reachTheory
 
 in
 
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
 val IS_PROP_tm = ``muSyntax$IS_PROP``; (* FIXME: this should be in muSyntax? *)
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
 
 fun mk_tysimps sel p_ty =
 (fn _ => ((List.hd(CONJUNCTS(List.last(tsimps ``:'a mu``))))

@@ -108,4 +108,8 @@ sig
 
    ------------------------------------------------------------------------ *)
 
+  val steps                 : HOLFlags.flag
+  val label_steps           : HOLFlags.bflag
+  val disassembler_comments : HOLFlags.bflag
+
 end

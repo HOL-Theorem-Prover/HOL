@@ -688,7 +688,7 @@ val x64_decode_aux_thm = let
   in pre_evaluated_thm end;
 
 fun permanently_add_to_compset name thm = let
-  val _ = HOLFlags.trace ("Theory.allow_rebinds", 1) save_thm(name,thm)
+  val _ = HOLFlags.with_bflags [(Theory.allow_rebinds, true)] save_thm(name,thm)
   val _ = computeLib.add_persistent_funs [name]
   in print ("Permanently added to compset: "^name^"\n") end;
 

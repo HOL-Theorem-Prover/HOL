@@ -20,13 +20,13 @@ fun SRW_TAC xs ys = PRIM_SRW_TAC (arith_ss ++ WORD_ss) xs ys
 
 val ERR = Feedback.mk_HOL_ERR "blastLib"
 
-val {get = blast_trace, ...} =
+val {get = blast_trace, flag = trace, ...} =
     HOLFlags.create_trace ({group = "blastLib", name = "trace"},
                            {initial = 0, max = 3})
-val {get = blast_counter, ...} =
+val {get = blast_counter, flag = print_counterexamples, ...} =
     HOLFlags.create_btrace
       ({group = "blastLib", name = "print_counterexamples"}, true)
-val {get = blast_multiply_limit, ...} =
+val {get = blast_multiply_limit, flag = multiply_limit, ...} =
     HOLFlags.create_trace ({group = "blastLib", name = "multiply_limit"},
                            {initial = 8, max = 32})
 

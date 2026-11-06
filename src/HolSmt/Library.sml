@@ -25,7 +25,7 @@ struct
          models, proofs)
      4 - moreover, temporary files (for communication with the SMT solver) are
          not removed after solver invocation *)
-  val {get = trace, ...} =
+  val {get = trace, flag = trace_flag, ...} =
       HOLFlags.create_trace ({group = "HolSmtLib", name = "trace"},
                              {initial = 2, max = 4})
 

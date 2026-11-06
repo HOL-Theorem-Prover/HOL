@@ -224,10 +224,10 @@ open var_res_param.var_res_base;
 fun do_profile_ref () = ref (Profile.profile_with_exn)
 
 
-val {get = verbose_level, ...} =
+val {get = verbose_level, flag = verbose_level_flag, ...} =
     HOLFlags.create_trace ({group = "holfoot", name = "verbose_level"},
                            {initial = 0, max = 6})
-val {get = verbose_level_try, ...} =
+val {get = verbose_level_try, flag = verbose_level_try_flag, ...} =
     HOLFlags.create_trace ({group = "holfoot", name = "verbose_level_try"},
                            {initial = 0, max = 6})
 

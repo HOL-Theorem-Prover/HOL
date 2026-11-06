@@ -271,4 +271,6 @@ sig
      from each other *)
   val mk_new_label_gen : string -> (unit -> string)
 
+  val use_pp : HOLFlags.bflag
+
 end

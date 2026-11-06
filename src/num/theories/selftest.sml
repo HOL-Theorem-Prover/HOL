@@ -32,7 +32,7 @@ val _ = let
             in
               unicode_off (raw_backend testutils.tpp)
             end
-  val firstbar_tpp = HOLFlags.trace ("PP.print_firstcasebar", 1) tpp
+  val firstbar_tpp = HOLFlags.with_bflags [(term_pp.print_firstcasebar, true)] tpp
 in
   List.app tpp [
     "case e1 of 0 => (case e2 of 0 => 1 | SUC n => n + 1) | SUC m => m * 2",

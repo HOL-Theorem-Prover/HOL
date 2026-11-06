@@ -5,7 +5,7 @@ val _ = new_theory "scratch"
 
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
-val _ = HOLFlags.set_trace "Goalstack.chatting" 0
+val _ = HOLFlags.set_bflag (goalStack.chatting, false)
 
 val _ = tprint "Itself case-eq properly polymorphic"
 val _ =
@@ -82,7 +82,7 @@ fun mkstk0 t tacopt =
 
 fun mkstk t = mkstk0 t (SOME (rpt strip_tac))
 
-val _ = HOLFlags.set_trace "Goalstack.other_subgoals_pretty_limit" 5
+val _ = HOLFlags.set_flag (goalStack.other_subgoals_limit, 5)
 
 val _ = current_backend := PPBackEnd.vt100_terminal;
 
@@ -185,7 +185,7 @@ val _ = List.app testf [
  ``(P a b ==> !x y z. Q a x /\ R b y (f z) ==> R2 (ggg a b x y)) /\
    P (f a) (hhhh b) ==>
      R2 (ggg (hhhh a) b c dd)``,
- HOLFlags.trace ("Goalstack.print_goal_at_top", 1) mkgstkstr,
+ HOLFlags.with_bflags [(goalStack.goal_at_top, true)] mkgstkstr,
  "\n\
  \     R2 (ggg (hhhh a) b c dd)\n\
  \------------------------------------\n\
@@ -195,7 +195,7 @@ val _ = List.app testf [
  \ 1.  P (f a) (hhhh b)\n"),
 ("Stack printing; more than 10 assumptions",
  ``p1 /\ p2 /\ p3 /\ p4 /\ p5 /\ p6 /\ p7 /\ p8 /\ p9 /\ p10 /\ p11 ==> q``,
- HOLFlags.trace ("Goalstack.print_goal_at_top", 1) mkgstkstr,
+ HOLFlags.with_bflags [(goalStack.goal_at_top, true)] mkgstkstr,
  "\n\
  \     q\n\
  \------------------------------------\n\
@@ -252,7 +252,7 @@ val _ = List.app tpp ["$var$(*\\))", "$var$((*\\z)"]
 val _ = let
   open boolSyntax
   fun parse s =
-      HOLFlags.trace("Parse.notify_on_tyvar_guess", 0) Parse.Term [QUOTE s]
+      HOLFlags.with_bflags [(Parse.notify_on_tyvar_guess, false)] Parse.Term [QUOTE s]
   fun tts t = HOLFlags.with_bflags [(show_types, true)] term_to_string t
   fun roundtrip t =
     (tprint ("Round-tripping "^term_to_string t);
@@ -306,8 +306,8 @@ val _ = let
    different linewidth than the invocation of tpp_expected *)
 (*  fun test (wdth, s, t) =
       with_flag(Globals.linewidth,wdth)
-               (HOLFlags.trace ("PP.types", 1) tpp_expected)
-               {input = HOLFlags.trace ("PP.types", 1) term_to_string t,
+               (HOLFlags.with_bflags [(Parse.show_types, true)] tpp_expected)
+               {input = HOLFlags.with_bflags [(Parse.show_types, true)] term_to_string t,
                 output = s,
                 testf = fn s =>
                            "Width=" ^ Int.toString wdth ^

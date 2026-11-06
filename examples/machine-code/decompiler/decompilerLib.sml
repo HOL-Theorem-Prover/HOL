@@ -13,7 +13,7 @@ struct
    val (Type, Term) = parse_from_grammars $ valOf $ grammarDB {thyname="address"}
 end
 
-fun allow_rebinds f x = HOLFlags.trace ("Theory.allow_rebinds", 1) f x
+fun allow_rebinds f x = HOLFlags.with_bflags [(Theory.allow_rebinds, true)] f x
 val new_definition =
     allow_rebinds Definition.new_definition (* not boolSyntax! *)
 val save_thm = allow_rebinds save_thm

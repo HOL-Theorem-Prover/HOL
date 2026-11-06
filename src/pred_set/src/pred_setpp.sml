@@ -3,9 +3,9 @@ struct
 
 open HolKernel smpp term_pp_types term_pp_utils
 
-val {get = univ_printing, ...} =
+val {get = get_univ_printing, flag = univ_printing, ...} =
     HOLFlags.create_btrace ({group = "pred_set", name = "univ_printing"}, true)
-val {get = unicode_univ, ...} =
+val {get = get_unicode_univ, flag = unicode_univ, ...} =
     HOLFlags.create_btrace ({group = "pred_set", name = "unicode_univ"}, true)
           (* because the current unicode symbol for the universal set is
              beyond the BMP, it may not be common in installed fonts.
@@ -15,13 +15,13 @@ fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm =
   let
     val {add_string, ...} = ppfns : term_pp_types.ppstream_funs
   in
-    if univ_printing() then
+    if get_univ_printing() then
       let
         val (elty, _) = dom_rng (type_of tm)
         val itself_t = Term.inst [{redex=alpha,residue=elty}]
                                  boolSyntax.the_value
         val U = if not (HOLFlags.get_bflag Parse.avoid_unicode) andalso
-                   unicode_univ()
+                   get_unicode_univ()
                 then
                   UnicodeChars.universal_set
                 else "univ"
@@ -42,7 +42,7 @@ val _ = term_grammar.userSyntaxFns.register_userPP
     A flag controlling printing of set comprehensions
    ---------------------------------------------------------------------- *)
 
-val {get = get_unamb_comp, ...} =
+val {get = get_unamb_comp, flag = unambiguous_comprehensions, ...} =
     HOLFlags.create_trace ({group = "pred_set",
                             name = "unambiguous_comprehensions"},
                            {initial = 0, max = 2})

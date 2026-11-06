@@ -1,6 +1,6 @@
 (*
 HOLFlags.set_bflag (Parse.avoid_unicode, true);
-HOLFlags.set_trace "PP.annotations" 0;
+HOLFlags.set_bflag (type_pp.annotations, false);
 *)
 
 use (HOLDIR^"/src/pfl/defchoose");

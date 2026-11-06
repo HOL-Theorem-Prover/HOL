@@ -10,7 +10,7 @@ open writerLib cond_cleanLib;
 val _ = max_print_depth := ~1;
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 
-val new_definition = HOLFlags.trace ("Theory.allow_rebinds", 1) new_definition
+val new_definition = HOLFlags.with_bflags [(Theory.allow_rebinds, true)] new_definition
 
 local
   val export_fails = ref ([]:string list)

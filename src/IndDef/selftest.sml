@@ -4,7 +4,7 @@ open testutils
 
 val _ = new_theory "scratch"
 
-val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1
+val _ = HOLFlags.set_bflag (Theory.allow_rebinds, true)
 
 fun checkhyps th = if null (hyp th) then ()
                    else die "FAILED - Hyps in theorem!"

@@ -31,7 +31,7 @@ val _ = hide "W";
 val _ = hide "Y";
 
 (* some proofs here are large with too many assumptions *)
-val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_bflag (goalStack.goal_at_top, false);
 
 val PRINT_TAC = goalStack.note_tac;
 

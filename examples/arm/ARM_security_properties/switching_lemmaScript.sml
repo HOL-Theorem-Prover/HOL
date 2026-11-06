@@ -17,7 +17,7 @@ val _ = ParseExtras.temp_loose_equality()
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss];
 
-val _ = HOLFlags.set_trace "Goalstack.show_proved_subtheorems" 0;
+val _ = HOLFlags.set_bflag (goalStack.chatting, false);
 
 Definition tautology_fun_def:   tautology_fun (g:word32)
                                             (s1:arm_state) (s2:arm_state) =

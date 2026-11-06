@@ -22,10 +22,10 @@ val dpfx = "crt_"
 
 in
 
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
 val abs_ks_tm = ``cear$ABS_KS``
 val is_abs_fun_tm = ``cear$IS_ABS_FUN``
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true);
 
 fun get_astate_ty hname = (snd o pairSyntax.dest_prod o hd o snd o dest_type o type_of) hname
 

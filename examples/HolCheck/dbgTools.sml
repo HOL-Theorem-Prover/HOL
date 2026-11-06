@@ -4,7 +4,7 @@ local
 
 open Globals HolKernel Parse PrimitiveBddRules DerivedBddRules Binaryset
 
-val {get = dbg, ...} =
+val {get = dbg, flag = dbg_flag, ...} =
     HOLFlags.create_trace ({group = "HolCheck", name = "dbg"},
                            {initial = 0, max = 3})
 

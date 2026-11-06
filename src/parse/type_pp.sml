@@ -44,12 +44,13 @@ fun term_pp_suffix() =
 fun thm_pp_prefix () =
     if get_avoid_unicode() then "|- " else UnicodeChars.turnstile ^ " "
 
-val {get = pp_num_types,...} = HOLFlags.create_btrace(
+val {get = pp_num_types, flag = num_types, ...} = HOLFlags.create_btrace(
       {group = "PP", name = "num_types"},
       true
     )
 
-val {get = pp_annotations,...} = HOLFlags.create_btrace(
+val {get = pp_annotations, flag = annotations, ...} =
+    HOLFlags.create_btrace(
       {group = "PP", name = "annotations"},
       !Globals.interactive
     )
@@ -109,7 +110,8 @@ in
   recurse false st
 end
 
-val {get = pp_array_types,...} = HOLFlags.create_btrace(
+val {get = pp_array_types, flag = array_types, ...} =
+    HOLFlags.create_btrace(
       {group = "PP", name = "array_types"},
       true
     )

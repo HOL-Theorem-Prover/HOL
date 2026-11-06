@@ -1375,7 +1375,7 @@ val (pb_sem_t_size_reln_rules,pb_sem_t_size_reln_ind,pb_sem_t_size_reln_cases) =
   ⇒
   pb_sem_t_size_reln 0 s (Trm (If e t1 t2)) (Ter (r, s1)))`;
 
-val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_bflag (goalStack.goal_at_top, false);
 
 val pbrsem_tac = simp[Once pb_sem_t_size_reln_cases]
 

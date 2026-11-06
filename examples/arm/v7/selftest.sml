@@ -8,11 +8,11 @@ val ERR = mk_HOL_ERR "selftest"
 val _ = wordsLib.guess_lengths();
 
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
-val _ = HOLFlags.set_trace "arm.steps" 3;
-val _ = HOLFlags.set_trace "arm.step" 2;
-val _ = HOLFlags.set_trace "arm.step_check" 1;
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
-val _ = HOLFlags.set_trace "words.notify_length_guesses" 0;
+val _ = HOLFlags.set_flag (armLib.steps, 3);
+val _ = HOLFlags.set_flag (arm_stepLib.step, 2);
+val _ = HOLFlags.set_bflag (arm_stepLib.step_check, true);
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
+val _ = HOLFlags.set_bflag (wordsLib.notify_on_word_length_guess, false);
 
 fun die() = ()
 fun die() = OS.Process.exit OS.Process.failure
@@ -35,7 +35,7 @@ local
         val delta = Redblackset.listItems o Redblackset.difference
         val d1 = delta (s1, s2)
         val d2 = delta (s2, s1)
-        val t2s = HOLFlags.trace ("PP.types",1) term_to_string
+        val t2s = HOLFlags.with_bflags [(Parse.show_types, true)] term_to_string
         fun update (l,r) = "[" ^ t2s l ^ " <- " ^ t2s r ^ "]\n"
       in
         print "Expecting:\n";

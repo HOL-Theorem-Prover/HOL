@@ -74,7 +74,7 @@ structure HolSmtLib :> HolSmtLib = struct
           NONE => ()
         | SOME _ =>
             (
-              HOLFlags.set_trace "HolSmtLib.trace" 0;
+              HOLFlags.set_flag (Library.trace_flag, 0);
               if CVC.is_configured () then (
                 check_available CVC_ORACLE_PROVE "cvc5 (oracle)";
                 check_available CVC_PROVE "cvc5 (with proofs)"
@@ -89,7 +89,7 @@ structure HolSmtLib :> HolSmtLib = struct
                 check_available Z3_PROVE "Z3 (with proofs)"
               ) else
                 provoke_err Z3_ORACLE_PROVE;
-              HOLFlags.reset_trace "HolSmtLib.trace"
+              HOLFlags.set_flag (Library.trace_flag, 2)
             )
     end
 

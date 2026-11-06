@@ -48,4 +48,6 @@ val LINE_LENGTH : int ref
 val verilog_dfa :
   {name : string, alphabet : Term.term list, regexp : Term.term} -> string
 
+  val trace : HOLFlags.flag
+
 end

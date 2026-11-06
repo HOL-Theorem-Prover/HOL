@@ -73,6 +73,8 @@ sig
   val typecheck_listener : (preterm * Pretype.Env.t) Listener.t
   val last_tcerror : (tcheck_error * locn.locn) option ref
   val notify_on_tyvar_guess : HOLFlags.bflag
+  val guess_tyvars          : HOLFlags.bflag
+  val guess_overloads       : HOLFlags.bflag
   val show_typecheck_errors : HOLFlags.bflag
 
 end

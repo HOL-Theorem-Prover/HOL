@@ -32,7 +32,7 @@ val _ = hide "W";
 val _ = hide "Y";
 
 (* some proofs here are large with too many assumptions *)
-val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_bflag (goalStack.goal_at_top, false);
 
 (* Disable some conflicting overloads from labelledTermsTheory *)
 Overload FV  = “supp term_pmact”

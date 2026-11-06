@@ -18,7 +18,7 @@ local
                 then ""
              else mesg_to_string s
 in
-   val () = HOLFlags.set_trace "Theory.save_thm_reporting" 0
+   val () = HOLFlags.set_flag (Theory.save_thm_reporting, 0)
    val () = Feedback.MESG_to_string := f
 end
 
@@ -822,7 +822,7 @@ End
    Some arithmetic theorems
    ------------------------------------------------------------------------ *)
 
-val () = HOLFlags.set_trace "Theory.save_thm_reporting" 1
+val () = HOLFlags.set_flag (Theory.save_thm_reporting, 1)
 
 val rrw = SRW_TAC [boolSimps.LET_ss, realSimps.REAL_ARITH_ss]
 

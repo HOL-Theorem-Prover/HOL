@@ -13,10 +13,10 @@
 (* usage example (start hol including the HolCheck/examples directory, using the -I command line option)
 
 val _ = app load ["holCheckLib","ttt"];
-(*val _ = HOLFlags.set_trace "HolCheck.dbg_lazy" 0;
-val _ = HOLFlags.set_trace "HolCheck.dbg" 0;
+(*val _ = HOLFlags.set_bflag (lazyTools.dbg_lazy, false);
+val _ = HOLFlags.set_flag (dbgTools.dbg_flag, 0);
 val _ = profTools.set_prf 0;
-val _ = HOLFlags.set_trace "HolCheck.lazy" 1; *)
+val _ = HOLFlags.set_bflag (lazyTools.lazy, true); *)
 val ttt1 = ttt.makeTTT 1; (* n=1 gives more interesting results. Most props fail for n=3 and can't get traces *)
 val ttt2 = holCheckLib.holCheck ttt1 handle ex => Raise ex;
 val ttt3 = holCheckLib.prove_model ttt2;

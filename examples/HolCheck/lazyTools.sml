@@ -2,6 +2,12 @@ structure lazyTools :> lazyTools =
 
 struct
 
+val {get = lzmode, flag = lazy, ...} =
+    HOLFlags.create_btrace ({group = "HolCheck", name = "lazy"}, true)
+val {get = dbglz, flag = dbg_lazy, ...} =
+    HOLFlags.create_btrace ({group = "HolCheck", name = "dbg_lazy"},
+                            false)
+
 local
 
     open Globals HolKernel Parse Splaymap PrimitiveBddRules DerivedBddRules
@@ -9,10 +15,6 @@ local
     datatype lazy_thm = LazyThm of (term HOLset.set) * (term list) * (unit -> thm) | Thm of thm
 
     val lthms = ref (Splaymap.mkDict (Term.compare) : (term,lazy_thm)Splaymap.dict)
-    val {get = lzmode, ...} =
-        HOLFlags.create_btrace ({group = "HolCheck", name = "lazy"}, true)
-    val {get = dbglz, ...} =
-        HOLFlags.create_btrace ({group = "HolCheck", name = "dbg_lazy"}, false)
 
     fun SPECL tml th = rev_itlist Specialize tml th handle HOL_ERR _ => raise ERR"lzSPECL" ""
 

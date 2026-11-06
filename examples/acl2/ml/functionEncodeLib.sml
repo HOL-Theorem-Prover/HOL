@@ -79,11 +79,11 @@ quietdec := true;
 clear_traces();
 
 load "encodeLib";
-HOLFlags.set_trace "polytypicLib.Trace" 0;
+HOLFlags.set_flag (polytypicLib.Trace_flag, 0);
 
 use "functionEncodeLib.sml";
 reset_traces();
-HOLFlags.set_trace "polytypicLib.Trace" 1;
+HOLFlags.set_flag (polytypicLib.Trace_flag, 1);
 
 *)
 
@@ -101,7 +101,7 @@ open polytypicLib encodeLib Feedback;
 (*     the level registered.                                                 *)
 (*                                                                           *)
 (*****************************************************************************)
-val {get = Trace, ...} =
+val {get = Trace, flag = Trace_flag, ...} =
     HOLFlags.create_trace ({group = "functionEncodeLib", name = "Trace"},
                            {initial = 0, max = 4});
 

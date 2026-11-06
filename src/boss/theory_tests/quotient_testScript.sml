@@ -24,7 +24,7 @@ in
   {def_name = s ^ "_def", fixity = NONE, fname = s, func = t}
 end
 
-val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1
+val _ = HOLFlags.set_bflag (Theory.allow_rebinds, true)
 val thms = define_equivalence_type {
              defs = map mk_def [``C1``, ``C2``],
              equiv = identity_equiv ``:foo``,

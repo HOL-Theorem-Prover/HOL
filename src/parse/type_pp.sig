@@ -12,5 +12,8 @@ sig
  val term_pp_suffix : unit -> string
  val thm_pp_prefix : unit -> string
  val avoid_unicode : HOLFlags.bflag
+ val num_types     : HOLFlags.bflag
+ val annotations   : HOLFlags.bflag
+ val array_types   : HOLFlags.bflag
 
 end

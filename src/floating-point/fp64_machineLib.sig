@@ -18,5 +18,7 @@ sig
   val gt_CONV: Conv.conv ref
   val ge_CONV: Conv.conv ref
 
+  val native_IEEE : HOLFlags.bflag
+
 
 end

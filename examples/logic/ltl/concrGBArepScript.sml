@@ -3,7 +3,7 @@ Ancestors
   gfg list option pred_set rich_list arithmetic sorting relation
   sptree ltl generalHelpers concrRep concrltl2waa buechiA
 
-val _ = HOLFlags.set_trace "BasicProvers.var_eq_old" 1
+val _ = HOLFlags.set_bflag (BasicProvers.veq_old, true)
 val _ = diminish_srw_ss ["ABBREV"]
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);

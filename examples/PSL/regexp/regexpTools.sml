@@ -29,7 +29,7 @@ open regexpTheory matcherTheory;
 * 4: internal state of the automata
 ******************************************************************************)
 
-val {get = trace_level, ...} =
+val {get = trace_level, flag = trace, ...} =
     HOLFlags.create_trace ({group = "regexpTools", name = "trace"},
                            {initial = 1, max = 4});
 fun chatting n = n <= trace_level();

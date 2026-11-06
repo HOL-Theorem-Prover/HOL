@@ -193,8 +193,7 @@ fun raw_read_article input
     | f "pop"    (st as {stack=OList[OList hl,OTerm c]::OThm th::os,line_num,...}) = let
       val hl = unOTermls "pop" hl
       val h = HOLset.addList(empty_tmset,hl)
-      val _ = if aconv c (concl th) then () else HOLFlags.trace
-       ("PP.types",1) (fn () => (
+      val _ = if aconv c (concl th) then () else HOLFlags.with_bflags [(Parse.show_types, true)] (fn () => (
          Feedback.HOL_MESG(Parse.term_to_backend_string(c));
          Feedback.HOL_MESG(Parse.term_to_backend_string(concl th));
          raise ERR ("proved wrong theorem (c) line: "^(Int.toString line_num))

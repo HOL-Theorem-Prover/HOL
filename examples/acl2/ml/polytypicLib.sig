@@ -244,4 +244,6 @@ type proof = proofManagerLib.proof;
         val add_rule_coding_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> thm) -> hol_type -> unit
         val add_rule_source_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> thm) -> unit
 
+  val Trace_flag : HOLFlags.flag
+
 end

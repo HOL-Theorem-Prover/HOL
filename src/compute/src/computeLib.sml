@@ -12,7 +12,8 @@ open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
      https://doi.org/10.1007/3-540-44659-1_2
 *)
 
-val {get = auto_import_definitions,...} = HOLFlags.create_btrace(
+val {get = get_auto_import_definitions, flag = auto_import_definitions,
+     ...} = HOLFlags.create_btrace(
       {group = "computeLib", name = "auto_import_definitions"},
       true
     );

@@ -195,17 +195,17 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 fun token_string s = String.concat ["\\", !texPrefix, "Token", s, "{}"];
-val {get = KRrecordtypes, ...} =
+val {get = KRrecordtypes, flag = KR_record_type_defns, ...} =
     HOLFlags.create_btrace
       ({group = "EmitTeX", name = "KR_record_type_defns"}, true)
+
+val {get = dollar_parens, flag = dollar_parens_flag, ...} =
+    HOLFlags.create_btrace
+      ({group = "EmitTeX", name = "dollar_parens"}, true)
 
 local
   fun greek s = "\\ensuremath{\\" ^ s ^ "}"
   fun subn i  = "\\ensuremath{\\sb{" ^ Int.toString i ^ "}}"
-
-  val {get = dollar_parens, ...} =
-      HOLFlags.create_btrace
-        ({group = "EmitTeX", name = "dollar_parens"}, true)
 
   fun char_map c =
     case c
@@ -408,11 +408,13 @@ end;
 (* Pretty-printer for datatype theorems                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val {get = print_datatype_names_as_types, ...} =
+val {get = get_print_datatype_names_as_types,
+     flag = print_datatype_names_as_types, ...} =
     HOLFlags.create_btrace
       ({group = "EmitTeX", name = "print_datatype_names_as_types"}, false)
 
-val {get = print_datatypes_compactly, ...} =
+val {get = get_print_datatypes_compactly,
+     flag = print_datatypes_compactly, ...} =
     HOLFlags.create_btrace
       ({group = "EmitTeX", name = "print_datatypes_compactly"}, false)
 
@@ -428,7 +430,7 @@ let open smpp
     fun PT0 tm =
         term_pp.pp_term (Parse.term_grammar()) (Parse.type_grammar())
                         backend tm
-    val PT = Parse.mlower o (PT0 |> HOLFlags.trace ("PP.types", 0))
+    val PT = Parse.mlower o (PT0 |> HOLFlags.with_bflags [(Parse.show_types, false)])
     val TP0 = type_pp.pp_type (Parse.type_grammar()) backend
     val adest_type = type_grammar.abb_dest_type (Parse.type_grammar())
     fun TP ty =
@@ -474,7 +476,7 @@ let open smpp
       end
 
     fun pp_constructor_spec (n, l) = let
-      val PT0 = if print_datatype_names_as_types() then pp_type_name else lift PT
+      val PT0 = if get_print_datatype_names_as_types() then pp_type_name else lift PT
       val tylen = n |> dest_var |> #1 |> size
     in
       if enumerated_type n then
@@ -486,7 +488,7 @@ let open smpp
          )
         )
       else
-        BB (if print_datatypes_compactly() then PP.INCONSISTENT
+        BB (if get_print_datatypes_compactly() then PP.INCONSISTENT
             else PP.CONSISTENT) 2 (
           PT0 n >> S " " >> S "=" >> BR(1,2) >>
           pr_list pp_clause (BR(1,0) >> S"|" >> S " ") l
@@ -508,7 +510,7 @@ let open smpp
         in
           if KRrecordtypes() then (
             BB PP.CONSISTENT 3 (
-              (if print_datatype_names_as_types() then TP0 (snd(dest_var(hd l)))
+              (if get_print_datatype_names_as_types() then TP0 (snd(dest_var(hd l)))
                else lift PT (hd l)) >>
               S " = " >>
               S "<|" >> BR(1,0) >>
@@ -517,7 +519,7 @@ let open smpp
             )
           ) else (
             BB PP.CONSISTENT 0 (
-              (if print_datatype_names_as_types() then TP0 (snd(dest_var(hd l)))
+              (if get_print_datatype_names_as_types() then TP0 (snd(dest_var(hd l)))
                else lift PT (hd l)) >>
               S " =" >> BR(1,2) >>
               BB PP.CONSISTENT 2 (
@@ -578,7 +580,7 @@ fun raw_pp_type_as_tex overrides ty md =
 
 fun pp_type_as_tex ty = UnicodeOff (raw_pp_type_as_tex (K NONE) ty)
 
-val {get = print_thm_turnstile, ...} =
+val {get = print_thm_turnstile, flag = print_thm_turnstiles, ...} =
     HOLFlags.create_btrace
       ({group = "EmitTeX", name = "print_thm_turnstiles"}, true)
 
@@ -603,8 +605,7 @@ fun raw_pp_theorem_as_tex overrides thm =
 
 fun pp_theorem_as_tex ostrm =
     raw_pp_theorem_as_tex (K NONE) ostrm |> UnicodeOff
-                                         |> HOLFlags.trace
-                                              ("PP.dollar_escapes", 0)
+                                         |> HOLFlags.with_bflags [(term_pp.dollar_escapes, false)]
 
 fun pprint f = PP.prettyPrint (Feedback.HOL_INFO, !Globals.linewidth) o f
 val pp_type_as_tex = fn ty => Parse.mlower (pp_type_as_tex ty)

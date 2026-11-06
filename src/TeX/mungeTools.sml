@@ -347,7 +347,7 @@ end
 
 local
   open EmitTeX PP
-  val _ = HOLFlags.set_trace "EmitTeX.print_datatype_names_as_types" 1
+  val _ = HOLFlags.set_bflag (EmitTeX.print_datatype_names_as_types, true)
   exception BadSpec
   fun getThm spec = let
     val (theory,theorem) =
@@ -414,7 +414,7 @@ in
 
     fun optprintermod f =
         f |> (case optset_showtypes opts of
-                NONE => HOLFlags.trace ("PP.types", 0)
+                NONE => HOLFlags.with_bflags [(Parse.show_types, false)]
               (* PP.types is a boolean flag now; the old trace's
                  verbose level 2 collapses onto 1 *)
               | SOME i => HOLFlags.trace ("PP.types", Int.min(i,1)))
@@ -422,14 +422,14 @@ in
                 NONE => (fn f => f)
               | SOME i => Lib.with_flag (Globals.max_print_depth, i))
           |> (if OptSet.has NoDollarParens opts then
-                HOLFlags.trace ("EmitTeX.dollar_parens", 0)
+                HOLFlags.with_bflags [(EmitTeX.dollar_parens_flag, false)]
               else
-                HOLFlags.trace ("EmitTeX.dollar_parens", 1))
+                HOLFlags.with_bflags [(EmitTeX.dollar_parens_flag, true)])
           |> (if OptSet.has NoMerge opts then
-                HOLFlags.trace ("PP.avoid_symbol_merges", 0)
+                HOLFlags.with_bflags [(term_pp.avoid_symbol_merges, false)]
               else (fn f => f))
           |> (if OptSet.has Merge opts then
-                HOLFlags.trace ("PP.avoid_symbol_merges", 1)
+                HOLFlags.with_bflags [(term_pp.avoid_symbol_merges, true)]
               else (fn f => f))
           |> (case optset_unoverloads opts of
                   [] => (fn f => f)
@@ -521,7 +521,8 @@ in
               val printer = optprintermod base
               val printer =
                   if OptSet.has NoTurnstile opts then
-                    HOLFlags.trace ("EmitTeX.print_thm_turnstiles", 0) printer
+                    HOLFlags.with_bflags
+                      [(EmitTeX.print_thm_turnstiles, false)] printer
                   else printer
             in
               ind_bl (printer thm)

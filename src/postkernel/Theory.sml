@@ -53,12 +53,12 @@ open Feedback Lib Type Term Thm ;
 
 open TheoryPP
 
-val {get = debug, ...} = HOLFlags.create_btrace(
+val {get = get_debug, flag = debug, ...} = HOLFlags.create_btrace(
       {name = "debug", group = "Theory"},
       false
     )
 
-fun DPRINT f = if debug() then print ("Theory.DEBUG: " ^ f ()) else ()
+fun DPRINT f = if get_debug() then print ("Theory.DEBUG: " ^ f ()) else ()
 
 structure PP = HOLPP
 type num = Arbnum.num
@@ -355,7 +355,8 @@ fun empty_segment ({facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
-val {get = allow_rebinds, ...} = HOLFlags.create_btrace(
+val {get = get_allow_rebinds, flag = allow_rebinds, ...} =
+    HOLFlags.create_btrace(
       {group = "Theory", name = "allow_rebinds"},
       false
     )
@@ -368,7 +369,7 @@ fun add_term {name,theory,htype} thy =
 
 fun add_fact th (seg : segment) =
     let val updator =
-            if !Globals.interactive orelse allow_rebinds() orelse
+            if !Globals.interactive orelse get_allow_rebinds() orelse
                is_temp_binding (#1 th)
             then
               Symtab.update
@@ -625,6 +626,11 @@ fun oracle_string_of th  =
       else SOME "ORACLE thm"
   end
 
+val {get = get_save_thm_reporting, flag = save_thm_reporting, ...} =
+    HOLFlags.create_trace(
+      {group = "Theory", name = "save_thm_reporting"},
+      {max = 2, initial = 1}
+    )
 local
   fun check_name tempok (fname,s) =
     if Lexis.ok_sml_identifier s andalso
@@ -634,17 +640,13 @@ local
     else raise ERR fname ("Can't use name " ^ Lib.mlquote s ^
                           " as a theory-binding")
   fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
-  val {get = save_thm_reporting, ...} = HOLFlags.create_trace(
-        {group = "Theory", name = "save_thm_reporting"},
-        {max = 2, initial = 1}
-      )
   fun mesg_str th =
     case oracle_string_of th
      of NONE => "theorem"
       | SOME str => str
   val msgOut = with_flag(MESG_to_string,Lib.I) HOL_MESG
   fun save_mesg s name =
-      let val str = save_thm_reporting()
+      let val str = get_save_thm_reporting()
       in
         if str = 0 orelse !Globals.interactive andalso str < 2 then ()
         else if !Globals.interactive then
@@ -958,7 +960,8 @@ fun theory_out p ostrm =
 fun total_cpu {usr,sys} = Time.+(usr,sys)
 val new_theory_time = ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock))
 
-val {get = report_times, ...} = HOLFlags.create_btrace(
+val {get = report_times, flag = report_thy_times, ...} =
+    HOLFlags.create_btrace(
       {group = "Theory", name = "report_thy_times"},
       true
     )
@@ -1040,7 +1043,8 @@ in
   Tracing.export_proof {file = file, tag = Thm.SavedName name} th
 end
 
-val {get = inc_html,...} = HOLFlags.create_btrace (
+val {get = inc_html, flag = include_html_docs, ...} =
+    HOLFlags.create_btrace (
       {group = "TheoryPP", name = "include_html_docs"},
       true
     )

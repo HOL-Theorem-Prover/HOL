@@ -921,7 +921,7 @@ val arm_spec = Count.apply arm_spec
 val arm_spec_hex = Count.apply arm_spec_hex
 val arm_spec_code = Count.apply arm_spec_code
 
-HOLFlags.set_trace "stateLib.spec" 1
+HOLFlags.set_bflag (stateLib.spec_debug, true)
 
   arm_spec_code `mrs r1, cpsr`
   arm_spec_code `msr cpsr, r1` (* forces user mode *)

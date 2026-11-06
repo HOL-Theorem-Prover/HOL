@@ -7,6 +7,11 @@ sig
    val chatting     : HOLFlags.bflag
    val print_fvs    : HOLFlags.bflag
    val subgoal_print_count : HOLFlags.flag
+   val printed_assums_count : HOLFlags.flag
+   val other_subgoals_limit : HOLFlags.flag
+   val stack_subgoal_count  : HOLFlags.bflag
+   val goal_at_top          : HOLFlags.bflag
+   val assums_reversed      : HOLFlags.bflag
 
    val expand       : tactic -> gstk -> gstk
    val expandf      : tactic -> gstk -> gstk

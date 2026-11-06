@@ -5,7 +5,7 @@
 (*****************************************************************************)
 
 HOLFlags.set_bflag (Parse.avoid_unicode, true);
-HOLFlags.set_trace "PP.annotations" 0;
+HOLFlags.set_bflag (type_pp.annotations, false);
 
 app load ["acl2encodeLib", "stringLib", "finite_mapTheory", "intLib",
           "pred_setTheory","WhileTheory","optionTheory","unwindLib", "finite_mapTheory"];

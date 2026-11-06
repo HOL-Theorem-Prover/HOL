@@ -27,16 +27,18 @@ fun cbt nm i =
 
 val (show_nsubgoals, subgoal_print_count) =
     ct "howmany_printed_subgoals" {max = 10000, initial = 10}
-val (print_number_assums, _) =
+val (print_number_assums, printed_assums_count) =
     ct "howmany_printed_assums" {max = 1000000, initial = 1000000}
-val (other_subgoals_pretty_limit, _) =
+val (other_subgoals_pretty_limit, other_subgoals_limit) =
     ct "other_subgoals_pretty_limit" {max = 100000, initial = 100}
 
 val (get_chatting, chatting) = cbt "chatting" true
-val (show_stack_subgoal_count, _) = cbt "show_stack_subgoal_count" true
+val (show_stack_subgoal_count, stack_subgoal_count) =
+    cbt "show_stack_subgoal_count" true
 val (get_print_fvs, print_fvs) = cbt "print_goal_fvs" false
-val (print_goal_at_top, _) = cbt "print_goal_at_top" false
-val (reverse_assums, _) = cbt "print_assums_reversed" false
+val (print_goal_at_top, goal_at_top) = cbt "print_goal_at_top" false
+val (reverse_assums, assums_reversed) =
+    cbt "print_assums_reversed" false
 
 fun say s = if get_chatting() then Lib.say s else ();
 

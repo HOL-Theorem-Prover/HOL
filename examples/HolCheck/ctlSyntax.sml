@@ -35,7 +35,7 @@ open commonTools
 
 in
 
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
 val ksR_tm = ``ctl$kripke_structure_R``
 val ksS0_tm = ``ctl$kripke_structure_S0``
 
@@ -100,7 +100,7 @@ infix C_IFF;
 
 fun C_AP state p = ``C_BOOL (B_PROP ^(ksTools.mk_AP state p))``;
 
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true);
 
 fun get_ctl_prop_type f =  (hd o snd o dest_type o type_of) f
 

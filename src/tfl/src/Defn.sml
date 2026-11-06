@@ -425,7 +425,7 @@ in
 val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
 fun add_defs_to_EVAL l =
-  if not (computeLib.auto_import_definitions()) then () else
+  if not (computeLib.get_auto_import_definitions()) then () else
     let val has_lhs_SUC = List.exists
               (can (find_term is_suc) o lhs o #2 o strip_forall)
                                       o strip_conj o concl
@@ -449,10 +449,10 @@ end;
 
 val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 
+val {get = chatting, flag = storage_message, ...} =
+    HOLFlags.create_btrace ({group = "Definition",
+                             name = "storage_message"}, true)
 local
-  val {get = chatting, ...} =
-      HOLFlags.create_btrace ({group = "Definition",
-                               name = "storage_message"}, true)
 in
 fun been_stored (s,thm) =
   (add_defs_to_EVAL [(s,thm)];
@@ -495,7 +495,7 @@ fun store_at loc (stem,eqs,ind) =
       val ind_bind = indSuffix stem
       fun save x =
          case Theory.oracle_string_of (snd x)
-          of NONE => HOLFlags.trace ("Theory.save_thm_reporting", 0)
+          of NONE => HOLFlags.with_flags [(Theory.save_thm_reporting, 0)]
                                     (save_thm_at loc) x
            | SOME _ => save_thm_at loc x
       val   _  = save (ind_bind, ind)
@@ -2054,7 +2054,7 @@ fun tprove2 mk_obligation (arg,tactic) =
 fun tprove1 mk_obligation p =
   let
     val (eqns,ind) = tprove2 mk_obligation p
-    val () = if not (computeLib.auto_import_definitions()) then ()
+    val () = if not (computeLib.get_auto_import_definitions()) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
   in

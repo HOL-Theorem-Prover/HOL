@@ -682,13 +682,11 @@ in
   else if strictp() then
     if not (HOLset.numItems all_instances = 1) then let
         val instlist = HOLset.listItems all_instances
-        val t1_s = HOLFlags.trace
-                     ("PP.types", 1)
+        val t1_s = HOLFlags.with_bflags [(Parse.show_types, true)]
                      (indented_term_to_string 2)
                      (hd instlist)
         val t2_s =
-            HOLFlags.trace
-              ("PP.types", 1)
+            HOLFlags.with_bflags [(Parse.show_types, true)]
               (indented_term_to_string 2) (hd (tl instlist))
       in
         failwith ("Schematic variable(s) not used consistently - witness\n"^
@@ -770,7 +768,8 @@ fun check_definition schemevars clocs tm = let
                                       [] really_free
         val free_list = Lib.commafy free_list0
         val tmstring =
-            HOLFlags.trace ("PP.types", 1) (indented_term_to_string 2) c
+            HOLFlags.with_bflags [(Parse.show_types, true)]
+                                 (indented_term_to_string 2) c
         val loc = List.nth (clocs, n) handle Subscript => locn.Loc_None
       in
         raise mk_HOL_ERRloc
@@ -802,7 +801,8 @@ fun check_definition schemevars clocs tm = let
       in
         if strictp() then let
             val tmstring =
-                HOLFlags.trace ("PP.types", 1) (indented_term_to_string 2) c
+                HOLFlags.with_bflags [(Parse.show_types, true)]
+                                     (indented_term_to_string 2) c
           in
             raise mk_HOL_ERRloc
                       "InductiveDefinition"

@@ -2,7 +2,7 @@ Theory addDB[bare]
 Libs
   HolKernel Parse boolLib
 
-val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1
+val _ = HOLFlags.set_bflag (Theory.allow_rebinds, true)
 
 val foo_def = new_definition("foo_def", “foo x <=> ~x”);
 

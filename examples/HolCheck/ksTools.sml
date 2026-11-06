@@ -59,7 +59,7 @@ fun get_types ksname = let val (_,l) = dest_type (type_of ksname) in (hd l,last 
 
 val dotacn = ``"."``
 
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
 val ksS_tm = ``ks$KS_S``
 val ksS0_tm = ``ks$KS_S0``
 val ksT_tm = ``ks$KS_T``
@@ -71,7 +71,7 @@ val ksS0u_tm = ``ks$KS_S0_fupd``
 val ksTu_tm = ``ks$KS_T_fupd``
 val ksapu_tm = ``ks$KS_ap_fupd``
 val ksLu_tm = ``ks$KS_L_fupd``
-val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true);
 
 val getS = (rand o rand o rator)
 val getS0 = rand o rand o rator o rand

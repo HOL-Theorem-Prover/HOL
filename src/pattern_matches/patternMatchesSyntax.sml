@@ -747,7 +747,7 @@ fun is_PMATCH_IS_EXHAUSTIVE t = can dest_PMATCH_IS_EXHAUSTIVE t
 (* Pretty Printing                             *)
 (***********************************************)
 
-val {get = use_pmatch_pp, ...} =
+val {get = use_pmatch_pp, flag = use_pp, ...} =
     HOLFlags.create_btrace ({group = "patternMatches", name = "use_pp"}, true)
 
 fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let

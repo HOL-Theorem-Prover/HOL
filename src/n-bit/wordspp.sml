@@ -6,12 +6,12 @@ open fcpLib fcpSyntax
 
 val ERR = mk_HOL_ERR "wordsLib"
 
-val {get = word_pp_mode, ...} =
+val {get = word_pp_mode, flag = printing, ...} =
     HOLFlags.create_trace ({group = "words", name = "printing"},
                            {initial = 0, max = 6})
-val {get = word_cast_on, ...} =
+val {get = word_cast_on, flag = cast_printing, ...} =
     HOLFlags.create_btrace ({group = "words", name = "cast_printing"}, false)
-val {get = int_word_pp, ...} =
+val {get = int_word_pp, flag = pp_as_2s_comp, ...} =
     HOLFlags.create_btrace ({group = "words", name = "pp_as_2s_comp"}, false)
 
 local

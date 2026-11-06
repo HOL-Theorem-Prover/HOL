@@ -38,7 +38,7 @@ val add_state_monad_compset =
           |> Conv.CONV_RULE (Conv.RAND_CONV (Conv.UNBETA_CONV ``x:'a``))
           |> Drule.GEN_ALL
           |> Drule.EXT] o
-      HOLFlags.trace ("Parse.notify_on_tyvar_guess", 0) Parse.Term
+      HOLFlags.with_bflags [(Parse.notify_on_tyvar_guess, false)] Parse.Term
   in
     computeLib.add_thms
       (pairTheory.UNCURRY_DEF ::

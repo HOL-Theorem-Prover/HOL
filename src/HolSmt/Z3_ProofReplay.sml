@@ -1021,7 +1021,7 @@ local
         handle Feedback.HOL_ERR _ =>
 
         (profile "rewrite(10)(BBLAST)"
-                 (HOLFlags.trace("blastLib.print_counterexamples", 0)
+                 (HOLFlags.with_bflags [(blastLib.print_counterexamples, false)]
                                 blastLib.BBLAST_PROVE) t
 
         handle Feedback.HOL_ERR _ =>

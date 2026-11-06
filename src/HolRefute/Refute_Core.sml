@@ -1333,7 +1333,7 @@ structure Refute_Core :> Refute_Core = struct
       | _ => result
 
   structure Private = struct
-    val {get = trace_level, ...} =
+    val {get = trace_level, flag = trace, ...} =
       HOLFlags.create_trace ({group = "Refute", name = "trace"},
                              {initial = 1, max = 4})
 

@@ -29,7 +29,7 @@ in end
 
 val _ = Thm.setCT "scratch"
 val _ = numLib.prefer_num ()
-val _ = HOLFlags.set_trace "Refute.trace" 0
+val _ = HOLFlags.set_flag (Refute_Core.Private.trace, 0)
 
 val erc = ref 0
 val _ = diemode := Remember erc

@@ -3,7 +3,8 @@ sig
   include Abbrev
   type compset
 
-  val auto_import_definitions : unit -> bool
+  val auto_import_definitions : HOLFlags.bflag
+  val get_auto_import_definitions : unit -> bool
 
   val monitoring      : (term -> bool) option ref
   val stoppers        : (term -> bool) option ref

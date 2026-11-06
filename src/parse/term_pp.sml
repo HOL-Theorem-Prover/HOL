@@ -49,7 +49,7 @@ fun option_to_string p NONE = "NONE"
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
 
-fun show_types() = HOLFlags.current_trace "PP.types" = 1
+fun get_show_types() = HOLFlags.get_bflag HOLFlags.show_types
 
 fun ellist_size els =
   let
@@ -125,7 +125,7 @@ fun convert_case tm =
         (split_on, splits)
       end
 
-val {get = prettyprint_cases,...} = HOLFlags.create_btrace(
+val {get = prettyprint_cases, flag = cases, ...} = HOLFlags.create_btrace(
       {group="PP", name = "cases"},
       true
     )
@@ -148,7 +148,8 @@ val {get = read_qblock_smash, ...} = HOLFlags.create_trace (
    ---------------------------------------------------------------------- *)
 open HOLPP smpp term_pp_types term_pp_utils
 
-val {get = dollar_escapes,...} = HOLFlags.create_btrace(
+val {get = get_dollar_escapes, flag = dollar_escapes, ...} =
+    HOLFlags.create_btrace(
       {group = "PP", name = "dollar_escapes"},
       true
     )
@@ -161,7 +162,7 @@ val {get = dollar_escapes,...} = HOLFlags.create_btrace(
    In the dollar-branch, we're happy to have the dollar smashed up
    against what follows it. *)
 fun dollarise contentpfn parenpfn s =
-    if dollar_escapes() then contentpfn ("$" ^ s) >> return (UTF8.size s + 1)
+    if get_dollar_escapes() then contentpfn ("$" ^ s) >> return (UTF8.size s + 1)
     else parenpfn "(" >> contentpfn s >> parenpfn ")" >>
          return (UTF8.size s + 2)
 
@@ -200,7 +201,8 @@ end
    fast on its second argument.
 *)
 
-val {get = avoid_symbol_merges,...} = HOLFlags.create_btrace(
+val {get = get_avoid_symbol_merges, flag = avoid_symbol_merges, ...} =
+    HOLFlags.create_btrace(
       {group = "PP", name = "avoid_symbol_merges"},
       true
     )
@@ -234,7 +236,7 @@ fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
     case s of
       "" => nothing
     | _ => (if ls = " " orelse allspaces then f xstr
-            else if not (avoid_symbol_merges()) then f xstr
+            else if not (get_avoid_symbol_merges()) then f xstr
             else if mem (snd $ valOf $ UTF8.lastChar ls) rstr_quotes then f xstr
             (* special case the quotation because term_tokens relies on
                the base token technology (see base_lexer) to separate the
@@ -406,7 +408,7 @@ fun str_unicode_ok s = CharVector.all Char.isPrint s
 
 fun overloads_to_string_form G = term_grammar.strlit_map G
 
-fun avoid_unicode() = HOLFlags.current_trace "PP.avoid_unicode" = 1
+fun avoid_unicode() = HOLFlags.get_bflag type_pp.avoid_unicode
 
 fun oi_strip_comb' oinfo t =
     if not (avoid_unicode()) then
@@ -469,7 +471,8 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
     EQUAL => String.compare(thy1, thy2)
   | x => x
 
-val {get = pp_print_firstcasebar,...} = HOLFlags.create_btrace(
+val {get = pp_print_firstcasebar, flag = print_firstcasebar, ...} =
+    HOLFlags.create_btrace(
       {group = "PP", name = "print_firstcasebar"},
       false
     )
@@ -1076,7 +1079,7 @@ fun pp_term (G : grammar) TyG backend = let
       val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
       val sfx =
           if not is_a_real_numeral orelse
-             HOLFlags.current_trace "PP.show_numeral_types" = 1
+             HOLFlags.get_bflag HOLFlags.show_numeral_types
           then
             let
               val (k, _) =
@@ -2055,7 +2058,7 @@ in
     in
        ublock CONSISTENT 0 (
          pr_term false
-                 (show_types())
+                 (get_show_types())
                  false (* (!Globals.show_types_verbosely) *)
                  ppfns NoCP t RealTop RealTop RealTop
                  (!Globals.max_print_depth)

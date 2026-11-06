@@ -37,10 +37,10 @@ val (decomp_cert,decomp_def) = x64_decompLib.x64_decompile "decomp" `
 
 val _ = save_thm("decomp_cert",decomp_cert);
 
-val () = HOLFlags.set_trace "x64.spec" 2
+val () = HOLFlags.set_flag (x64_progLib.spec_trace, 2)
 
 val (decomp1_cert,decomp1_def) =
-  HOLFlags.trace ("Theory.allow_rebinds", 1)
+  HOLFlags.with_bflags [(Theory.allow_rebinds, true)]
      (x64_decompLib.x64_decompile "decomp1")
   ‘
   (*  0: *) 55              (* push   %rbp *)

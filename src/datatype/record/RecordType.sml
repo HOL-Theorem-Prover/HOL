@@ -166,7 +166,7 @@ fun mk_var_avds (nm, ty, avoids) =
 
 fun prove_recordtype_thms (tyinfo, fields) = let
   open TypeBasePure
-  val save_thm = HOLFlags.trace ("Theory.save_thm_reporting", 0) save_thm
+  val save_thm = HOLFlags.with_flags [(Theory.save_thm_reporting, 0)] save_thm
   fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
 
   val app2 = C (curry op^)

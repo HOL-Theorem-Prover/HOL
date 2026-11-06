@@ -2412,7 +2412,7 @@ fun mk_word_size n =
       val TYPE = mk_type ("cart", [bool, typ])
       val dimindex = fcpLib.DIMINDEX N
       val finite = fcpLib.FINITE N
-      fun save x = HOLFlags.trace ("Theory.save_thm_reporting", 0) save_thm x
+      fun save x = HOLFlags.with_flags [(Theory.save_thm_reporting, 0)] save_thm x
       val _ = save ("dimindex_" ^ SN, dimindex)
       val _ = save ("finite_" ^ SN, finite)
       val INT_MIN = save ("INT_MIN_" ^ SN,
@@ -2459,24 +2459,24 @@ val Induct_word =
 
 (* ------------------------------------------------------------------------- *)
 
-fun output_words_as_bin () = HOLFlags.set_trace "words.printing" 1
-fun output_words_as_dec () = HOLFlags.set_trace "words.printing" 3
-fun output_words_as_hex () = HOLFlags.set_trace "words.printing" 4
-fun output_words_as_padded_bin () = HOLFlags.set_trace "words.printing" 5
-fun output_words_as_padded_hex () = HOLFlags.set_trace "words.printing" 6
+fun output_words_as_bin () = HOLFlags.set_flag (wordspp.printing, 1)
+fun output_words_as_dec () = HOLFlags.set_flag (wordspp.printing, 3)
+fun output_words_as_hex () = HOLFlags.set_flag (wordspp.printing, 4)
+fun output_words_as_padded_bin () = HOLFlags.set_flag (wordspp.printing, 5)
+fun output_words_as_padded_hex () = HOLFlags.set_flag (wordspp.printing, 6)
 
 fun output_words_as_oct () =
-   (base_tokens.allow_octal_input := true; HOLFlags.set_trace "words.printing" 2)
+   (base_tokens.allow_octal_input := true; HOLFlags.set_flag (wordspp.printing, 2))
 
-fun remove_word_printer () = HOLFlags.set_trace "words.printing" 0;
+fun remove_word_printer () = HOLFlags.set_flag (wordspp.printing, 0);
 
 fun add_word_cast_printer () =
-   ( HOLFlags.set_trace "words.cast_printing" 1
+   ( HOLFlags.set_bflag (wordspp.cast_printing, true)
    ; Parse.add_user_printer ("wordspp.words_cast_printer", ``f:'b word``)
    )
 
 fun remove_word_cast_printer () =
-   ( HOLFlags.set_trace "words.cast_printing" 0
+   ( HOLFlags.set_bflag (wordspp.cast_printing, false)
    ; Parse.remove_user_printer ("wordspp.words_cast_printer", “f:'b word”)
    ; ()
    )

@@ -5,7 +5,7 @@ open intLib testutils;
 
 val _ = new_theory "scratch"
 
-fun noamb_parse s = HOLFlags.trace ("Parse.guess_overloads", 0) Parse.Term [QUOTE s]
+fun noamb_parse s = HOLFlags.with_bflags [(Preterm.guess_overloads, false)] Parse.Term [QUOTE s]
 fun okparse_exnstruct s = s = "Parse" orelse s = "Preterm"
 
 val _ =
@@ -41,7 +41,7 @@ val _ = tpp "¬p ∧ q"
 (* check that deprecation really deprecates *)
 val _ = intLib.deprecate_int()
 
-fun t2s t = HOLFlags.trace ("PP.types", 1) term_to_string t
+fun t2s t = HOLFlags.with_bflags [(Parse.show_types, true)] term_to_string t
 fun rma_p (t,s) =
     (tprint ("int-deprecated parse of "^s);
      require_msg (check_result (aconv t)) t2s (Parse.Term o single o QUOTE) s)

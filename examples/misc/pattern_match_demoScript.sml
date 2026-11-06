@@ -16,7 +16,7 @@ val Define_qba = Define_heu pheu_qba
 val Define_cqba = Define_heu pheu_cqba
 
 (* Turn of case-pretty printing in order to see the results properly *)
-val _ = HOLFlags.set_trace "PP.cases" 0
+val _ = HOLFlags.set_bflag (term_pp.cases, false)
 
 
 (* simple example from decideable_separation_logic *)

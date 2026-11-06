@@ -1707,7 +1707,7 @@ fun MIN_CNF ths =
 (* Quick testing
 val Term = Parse.Term;
 val Type = Parse.Type;
-HOLFlags.set_trace "Parse.guess_tyvars" 1; (* OK *)
+HOLFlags.set_bflag (Preterm.guess_tyvars, true); (* OK *)
 app load ["numLib", "arithmeticTheory", "pred_setTheory", "bossLib"];
 open numLib arithmeticTheory pred_setTheory bossLib;
 

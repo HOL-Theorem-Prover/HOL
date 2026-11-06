@@ -1059,7 +1059,7 @@ fun snippet_html (cfg : config) href context record =
           in SOME ("Theorem " ^ link ^ ":\n" ^ hol_thm th (Linked href)) end
       | NONE =>
           let
-            val tm = HOLFlags.trace ("Parse.show_typecheck_errors", 0)
+            val tm = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
                        (parse_in_context context) [QUOTE text]
           in
             if null (type_vars_in_term tm) andalso

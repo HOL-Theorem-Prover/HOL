@@ -1,7 +1,7 @@
 structure fp64_machineLib :> fp64_machineLib =
 struct
 
-  val {get = native_eval, ...} =
+  val {get = native_eval, flag = native_IEEE, ...} =
       HOLFlags.create_btrace
         ({group = "floating-point", name = "native_IEEE"}, false)
   val sqrt_CONV = ref Conv.NO_CONV

@@ -189,7 +189,8 @@ fun dest_string_lit tm =
 
 val is_string_lit = can dest_string_lit
 
-val {get = paranoid_stringlitpp, ...} = HOLFlags.create_btrace(
+val {get = paranoid_stringlitpp, flag = paranoid_string_literals, ...} =
+    HOLFlags.create_btrace(
       {group = "PP", name = "paranoid_string_literals"},
       false
     )

@@ -8,7 +8,7 @@ fun munger eatfirstNL () = let
              (fn s => (TextIO.output(TextIO.stdErr, s);
                        TextIO.flushOut TextIO.stdErr))
   val () = HOLFlags.set_bflag (Parse.avoid_unicode, false)
-  val () = HOLFlags.set_trace "PP.dollar_escapes" 1
+  val () = HOLFlags.set_bflag (term_pp.dollar_escapes, true)
   open TextIO
   val _ = if eatfirstNL then TextIO.inputLine stdIn else NONE
   val _ = let
@@ -54,10 +54,10 @@ fun munger eatfirstNL () = let
       | ["-index"] => mungeTools.usage()
       | ["-index", basename] => (holindex.holindex basename; run_lexer := false)
       | "--fail_on_ambiguities" :: rest =>
-           (HOLFlags.set_trace "Parse.ambiguous_grammar" 2;
+           (HOLFlags.set_flag (Parse.ambiguous_grammar_warning, 2);
             proc_args rest)
       | "--nomergeanalysis" :: rest =>
-          (HOLFlags.set_trace "PP.avoid_symbol_merges" 0;
+          (HOLFlags.set_bflag (term_pp.avoid_symbol_merges, false);
            proc_args rest)
       | s :: rest => let
         in

@@ -16,7 +16,7 @@ val _ = new_theory "scratch"
 * 3: transitions as they are calculated
 * 4: internal state of the automata
 ******************************************************************************)
-val _ = HOLFlags.set_trace "regexpTools.trace" 0;
+val _ = HOLFlags.set_flag (regexpTools.trace, 0);
 
 
 (*---------------------------------------------------------------------------*)

@@ -12,4 +12,9 @@ sig
      from inside the TypeBase *)
   val init_casesplit_munger : (term -> term * (term * term) list) -> unit
 
+  val cases                : HOLFlags.bflag
+  val dollar_escapes       : HOLFlags.bflag
+  val avoid_symbol_merges  : HOLFlags.bflag
+  val print_firstcasebar   : HOLFlags.bflag
+
 end

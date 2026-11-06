@@ -7,4 +7,8 @@ sig
     val BBLAST_TAC       : Tactic.tactic
     val FULL_BBLAST_TAC  : Tactic.tactic
     val MP_BLASTABLE_TAC : Tactic.tactic
+
+    val trace                 : HOLFlags.flag
+    val print_counterexamples : HOLFlags.bflag
+    val multiply_limit        : HOLFlags.flag
 end
