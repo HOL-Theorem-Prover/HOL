@@ -879,17 +879,15 @@ fun RESCONJ_PAIR th =
       th |> CONV_RULE elimrc_conv |> CONJ_PAIR
     else raise ERR "RESCONJ_PAIR" "not a resumption conjunction"
 
-fun RESCONJS th =
-    let fun recurse A ths =
-            case ths of
-                [] => A
-              | th::rest =>
-                case total RESCONJ_PAIR th of
-                    NONE => recurse (th::A) rest
-                  | SOME (th1, th2) =>
-                    recurse (th2::th1::A) rest
+(* Split only the right-associated spine built by resumption_to_goal:
+   an individual obligation may itself conclude a resconj. *)
+fun RESCONJS n th =
+    let fun recurse A 1 th = rev (th::A)
+          | recurse A n th =
+            let val (th1, th2) = RESCONJ_PAIR th
+            in recurse (th1::A) (n - 1) th2 end
     in
-      rev (recurse [] [th])
+      recurse [] n th
     end
 
 fun RESCONJS_TAC g =
@@ -948,7 +946,7 @@ fun prove_suspended nm ncts th tgt =
   case ncts of
       [(nc, s_t)] => prove_suspended0 nm nc s_t th tgt
     | _ =>
-      let val ths = RESCONJS th
+      let val ths = RESCONJS (length ncts) th
           fun foldthis ((nc, s_t), th, tgt) =
               prove_suspended0 nm nc s_t th tgt
       in
@@ -1282,7 +1280,7 @@ fun build_suspendlabel_thms label_nm (ncts, sub_th) =
       case ncts of
           [nct] => [mk_susp_thm nct sub_th]
         | _ =>
-            let val ths = RESCONJS sub_th
+            let val ths = RESCONJS (length ncts) sub_th
             in ListPair.map (fn (nct, th) => mk_susp_thm nct th)
                             (ncts, ths)
             end
