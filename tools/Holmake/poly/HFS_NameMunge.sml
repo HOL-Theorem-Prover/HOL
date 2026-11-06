@@ -409,30 +409,39 @@ fun splice_readDir (dirname, ds, r as ref subdsopt) =
                                   OS.FileSys.readDir ds)
                        | SOME s => SOME s)
 
-fun chain_readDir objdir (main, sub, chained) =
+(* objdir holds the artifact directories of dirname's subdirectories
+   too; skip them, as dirname lists those subdirectories itself. *)
+fun is_subdir dirname s =
+    OS.FileSys.isDir (OS.Path.concat (dirname, s))
+    handle OS.SysErr _ => false
+
+fun chain_readDir dirname objdir (main, sub, chained) =
     case !sub of
         SOME ds' =>
         (case OS.FileSys.readDir ds' of
              NONE => (sub := NONE; OS.FileSys.closeDir ds'; NONE)
-           | x => x)
+           | SOME s =>
+             if is_subdir dirname s then
+               chain_readDir dirname objdir (main, sub, chained)
+             else SOME s)
       | NONE =>
         if !chained then NONE
         else
           case OS.FileSys.readDir main of
-              SOME ".hol" => chain_readDir objdir (main, sub, chained)
+              SOME ".hol" => chain_readDir dirname objdir (main, sub, chained)
             | SOME s => SOME s
             | NONE =>
               (chained := true;
                if OS.FileSys.isDir objdir handle OS.SysErr _ => false then
                  (sub := SOME (OS.FileSys.openDir objdir);
-                  chain_readDir objdir (main, sub, chained))
+                  chain_readDir dirname objdir (main, sub, chained))
                else NONE)
 
 fun readDir ({dirname, listing, main, sub, chained} : dirstream) =
     case listing of
         Splice => splice_readDir (dirname, main, sub)
       | Plain => OS.FileSys.readDir main
-      | Chain objdir => chain_readDir objdir (main, sub, chained)
+      | Chain objdir => chain_readDir dirname objdir (main, sub, chained)
 
 fun closeDir ({main, sub, ...} : dirstream) =
     (OS.FileSys.closeDir main;
@@ -477,13 +486,16 @@ fun read_files_with_objs {dirname} P action a0 =
                  (fn s => action {physdir=dirname, base=s}) a0
       | Chain objdir =>
         let
+          val srcdir = OS.Path.mkAbsolute {path = dirname,
+                                           relativeTo = OS.FileSys.getDir()}
           val a1 = base_app {dirname=dirname}
                             (fn s => s <> ".hol" andalso P s)
                             (fn s => action {physdir=dirname, base=s})
                             a0
         in
           pushdir objdir
-                  (base_app {dirname="."} P
+                  (base_app {dirname="."}
+                            (fn s => not (is_subdir srcdir s) andalso P s)
                             (fn s => action {physdir=objdir, base=s}))
                   a1
         end

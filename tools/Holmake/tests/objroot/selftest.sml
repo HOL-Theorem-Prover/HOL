@@ -194,7 +194,17 @@ val _ =
       OS.FileSys.mkDir (R ++ "a/.hol");
       check "objroot dir listed once" (listing od = ["p.uo", "q.uo"]);
       check "source dir chains its products, hides .hol"
-            (listing (R ++ "a") = ["p.uo", "q.uo", "s.sml"])
+            (listing (R ++ "a") = ["p.uo", "q.uo", "s.sml"]);
+      (* A built subdirectory's artifact directory isn't listed again. *)
+      OS.FileSys.mkDir (R ++ "a/kid");
+      HOLFileSys.createDirIfNecessary (od ++ "kid");
+      check "subdirectory listed once"
+            (listing (R ++ "a") = ["kid", "p.uo", "q.uo", "s.sml"]);
+      check "subdirectory read once"
+            (sort (HFS_NameMunge.read_files_with_objs
+                     {dirname = R ++ "a"} (fn _ => true)
+                     (fn {base, ...} => fn A => base :: A) []) =
+             ["kid", "p.uo", "q.uo", "s.sml"])
     end
 val _ = HFS_NameMunge.configure NONE
 val _ = check "legacy restored"
