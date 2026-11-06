@@ -2,7 +2,7 @@
 ## `show_tags`
 
 ``` hol4
-Globals.show_tags : bool ref
+HOLFlags.show_tags : HOLFlags.bflag
 ```
 
 ------------------------------------------------------------------------

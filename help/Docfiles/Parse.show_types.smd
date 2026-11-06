@@ -2,7 +2,7 @@
 ## `show_types`
 
 ``` hol4
-Globals.show_types : bool ref
+Parse.show_types : HOLFlags.bflag
 ```
 
 ------------------------------------------------------------------------

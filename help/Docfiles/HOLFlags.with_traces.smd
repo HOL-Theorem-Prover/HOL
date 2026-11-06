@@ -2,7 +2,7 @@
 ## `with_traces`
 
 ``` hol4
-Feedback.with_traces : (string * int) list -> ('a -> 'b) -> 'a -> 'b
+HOLFlags.with_traces : (string * int) list -> ('a -> 'b) -> 'a -> 'b
 ```
 
 ------------------------------------------------------------------------
@@ -51,11 +51,11 @@ Now we examine a theorem with and without traces set to local values.
 
 ### See also
 
-[`Feedback`](#Feedback),
-[`Feedback.traces`](#Feedback.traces),
-[`Feedback.register_trace`](#Feedback.register_trace),
-[`Feedback.reset_trace`](#Feedback.reset_trace),
-[`Feedback.reset_traces`](#Feedback.reset_traces),
-[`Feedback.set_trace`](#Feedback.set_trace),
-[`Feedback.trace`](#Feedback.trace),
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.traces`](#HOLFlags.traces),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.trace`](#HOLFlags.trace),
 [`Lib.with_flag`](#Lib.with_flag)

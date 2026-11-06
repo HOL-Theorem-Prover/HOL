@@ -2,7 +2,7 @@
 ## `current_trace`
 
 ``` hol4
-Feedback.current_trace : string -> int
+HOLFlags.current_trace : string -> int
 ```
 
 ------------------------------------------------------------------------
@@ -16,8 +16,8 @@ variable.
 
 ### See also
 
-[`Feedback.register_trace`](#Feedback.register_trace),
-[`Feedback.reset_trace`](#Feedback.reset_trace),
-[`Feedback.reset_traces`](#Feedback.reset_traces),
-[`Feedback.trace`](#Feedback.trace),
-[`Feedback.traces`](#Feedback.traces)
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

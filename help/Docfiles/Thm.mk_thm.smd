@@ -60,6 +60,6 @@ with the aid of `mk_thm` is detectable by examining its tag.
 
 [`Theory.new_axiom`](#Theory.new_axiom),
 [`Thm.mk_oracle_thm`](#Thm.mk_oracle_thm), [`Thm.tag`](#Thm.tag),
-[`Globals.show_tags`](#Globals.show_tags)
+[`HOLFlags.show_tags`](#HOLFlags.show_tags)
 
 >>__ HOLFlags.set_bflag (HOLFlags.show_tags, false);

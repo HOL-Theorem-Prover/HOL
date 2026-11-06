@@ -37,7 +37,7 @@ Can help to disambiguate terms involving numerals.
 ### See also
 
 [`Parse.add_numeral_form`](#Parse.add_numeral_form),
-[`Globals.show_types`](#Globals.show_types)
+[`Parse.show_types`](#Parse.show_types)
 
 >>__ HOLFlags.set_bflag (HOLFlags.show_numeral_types, false)
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
