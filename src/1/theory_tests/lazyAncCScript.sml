@@ -9,8 +9,8 @@ Libs
 val _ = !lazy_applied = 0 orelse raise Fail "lazyAncL: values not lazy"
 
 fun same name (e, l) =
-    e = l orelse
-    raise Fail (name ^ ": eager and lazy values differ")
+    if e = l then ()
+    else raise Fail (name ^ ": eager and lazy values differ")
 val thys = ["lazyAncA", "lazyAncB1", "lazyAncB2"]
 val _ = List.app (fn thy => same thy (#DB eager {thyname = thy},
                                       #DB lazy {thyname = thy})) thys
