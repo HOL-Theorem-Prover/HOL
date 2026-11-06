@@ -1056,7 +1056,7 @@ val {record_delta = record_suspension_delta_raw,
      DB = susp_DB,
      merge = susp_merge, ...} :
     (susp_delta, susp_table) AncestryData.fullresult =
-    AncestryData.fullmake {
+    AncestryData.lazy_fullmake {
       adinfo = {tag = "suspension.theorems",
                 initial_values = [("min", empty_susp_table)],
                 apply_delta = apply_susp_delta},
@@ -1133,7 +1133,7 @@ val {record_delta = record_resumption_delta_raw,
      DB = res_DB,
      merge = res_merge, ...} :
     (res_delta, res_dict) AncestryData.fullresult =
-    AncestryData.fullmake {
+    AncestryData.lazy_fullmake {
       adinfo = {tag = "suspension.resumptions",
                 initial_values = [("min", empty_res_dict)],
                 apply_delta = apply_res_delta},

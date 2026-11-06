@@ -830,7 +830,7 @@ fun apply_to_ruledb (ADD (nmt as (n,t))) rdb =
   | apply_to_ruledb (DEL nm) rdb =
     fupd_atomic_terms (Net.filter (fn (n,t) => n <> nm)) rdb
 
-val adresult = AncestryData.fullmake {
+val adresult = AncestryData.lazy_fullmake {
       adinfo = atms_adinfo,
       uptodate_delta = uptodate_delta,
       sexps = {dec = dec_delta, enc = enc_delta},

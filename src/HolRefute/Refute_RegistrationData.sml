@@ -105,7 +105,7 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
              errors = #errors value}
           end
 
-  val store = AncestryData.fullmake
+  val store = AncestryData.lazy_fullmake
     {adinfo = {tag = "Refute.structural_registrations",
                initial_values = [("min", empty)], apply_delta = apply},
      (* Raw-sexp pruning already checks freshness; this states intent. *)

@@ -93,7 +93,7 @@ val full_result as {DB = thy_lookup,
                     get_global_value = fullDB,
                     record_delta = prim_updateDB,
                     update_global_value = update_globalDB, ...} =
-    AncestryData.fullmake {
+    AncestryData.lazy_fullmake {
       adinfo = adinfo,
       uptodate_delta = K true,
       sexps = { dec = #2 bnf_ed, enc = #1 bnf_ed},

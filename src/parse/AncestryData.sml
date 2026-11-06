@@ -173,12 +173,16 @@ fun fixed_ancestry slot thy ps =
 fun parent_onload extras {thyname,data = data_opt} =
     let
       open ThyDataSexp
-      val {tag,info,delta_side_effects,eager,value_table} = extras
-      val {apply_delta,get_deltas,ancestors,...} = info
+      val {tag,info_ref,delta_side_effects,eager,value_table} = extras
     in
-      if thyname = "min" then ()
-      else
+      (* info_ref is NONE while ThyDataSexp.new runs this hook over the
+         theories already loaded; the instance's own onload pass follows *)
+      case (thyname = "min", !info_ref) of
+          (true, _) => ()
+        | (_, NONE) => ()
+        | (false, SOME info) =>
         let
+          val {apply_delta,get_deltas,ancestors,...} = info
           val ps =
               case data_opt of
                   NONE =>
@@ -212,25 +216,20 @@ fun parent_onload extras {thyname,data = data_opt} =
           case merge_start info ps of
               NONE => ()
             | SOME start =>
-              if eager orelse not (fixed_ancestry ancestors thyname ps)
-              then
-                let
-                  val v0 = merge_from info start
-                  val uds = get_deltas {thyname = thyname}
-                  val _ = delta_side_effects thyname uds
-                in
-                  store (now (rev_itlist apply_delta uds v0))
-                end
-              else
-                let
-                  val _ = delta_side_effects thyname
-                                             (get_deltas {thyname = thyname})
-                in
-                  store (Susp.delay (fn () =>
-                           rev_itlist apply_delta
-                                      (get_deltas {thyname = thyname})
-                                      (merge_from info start)))
-                end
+              let
+                (* the deltas are read now, so that a later read of the
+                   value does not depend on the context it happens in *)
+                val uds = get_deltas {thyname = thyname}
+                fun value () = rev_itlist apply_delta uds
+                                          (merge_from info start)
+                val v =
+                    if eager orelse not (fixed_ancestry ancestors thyname ps)
+                    then now (value ())
+                    else Susp.delay value
+              in
+                delta_side_effects thyname uds;
+                store v
+              end
           end
     end
 
@@ -252,9 +251,19 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
 
       (* calculates merged values in the "onload" hook *)
       fun side_effects _ = List.app delta_side_effects
-      val parent_segment_data_ref = ref (fn _ => NONE)
+      val info_ref = ref NONE
+      val parent_extras =
+          {tag = tag, info_ref = info_ref, delta_side_effects = side_effects,
+           eager = true, value_table = value_table}
+
+      val {export = parent_export,
+           segment_data = parent_segment_data, ...} =
+          ThyDataSexp.new {
+            thydataty = tag, merge = #new,
+            load = parent_onload parent_extras, other_tds = fn (s,_) => SOME s
+          }
       fun parents thyname =
-          case !parent_segment_data_ref thyname of
+          case parent_segment_data thyname of
               NONE => Theory.parents (#thyname thyname)
             | SOME t => valOf (list_decode string_decode t)
       val ancestors : ancestor_memo Context.Data.slot =
@@ -266,17 +275,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
                   dblookup = dbsusp,
                   apply_delta = apply_delta,
                   parents = parents, ancestors = ancestors}
-      val parent_extras =
-          {tag = tag, info = info, delta_side_effects = side_effects,
-           eager = true, value_table = value_table}
-
-      val {export = parent_export,
-           segment_data = parent_segment_data, ...} =
-          ThyDataSexp.new {
-            thydataty = tag, merge = #new,
-            load = parent_onload parent_extras, other_tds = fn (s,_) => SOME s
-          }
-      val _ = parent_segment_data_ref := parent_segment_data
+      val _ = info_ref := SOME info
       fun set_ancestry sl =
           let
             val _ = parent_export (List $ map String sl)
@@ -403,9 +402,18 @@ fun gen_fullmake eager
           case thy_finaliser of
               NONE => List.app (update_global_value o apply_to_global) ds
             | SOME f => update_global_value (f {thyname=thyname} ds)
-      val get_raw_parents_ref = ref (fn _ => NONE)
+      val info_ref = ref NONE
+      val parent_extras =
+          {tag = tag, info_ref = info_ref,
+           delta_side_effects = delta_side_effects,
+           eager = eager, value_table = value_table}
+      val {export = export_raw_parents, segment_data = get_raw_parents, ...} =
+          ThyDataSexp.new {thydataty = tag ^ ".parents",
+                           merge = #new,
+                           load = parent_onload parent_extras,
+                           other_tds = (fn (t,_) => SOME t)}
       fun get_parents {thyname} =
-          case !get_raw_parents_ref {thyname=thyname} of
+          case get_raw_parents {thyname=thyname} of
               NONE => Theory.parents thyname
             | SOME t => valOf (list_decode string_decode t)
 
@@ -418,15 +426,7 @@ fun gen_fullmake eager
           {get_deltas = get_deltas, dblookup = dbsusp,
            apply_delta = apply_delta, tag = tag, parents = get_parents,
            ancestors = ancestors}
-      val parent_extras =
-          {tag = tag, info = info, delta_side_effects = delta_side_effects,
-           eager = eager, value_table = value_table}
-      val {export = export_raw_parents, segment_data = get_raw_parents, ...} =
-          ThyDataSexp.new {thydataty = tag ^ ".parents",
-                           merge = #new,
-                           load = parent_onload parent_extras,
-                           other_tds = (fn (t,_) => SOME t)}
-      val _ = get_raw_parents_ref := get_raw_parents
+      val _ = info_ref := SOME info
       fun set_ancestry sl =
           let
             val _ = set_raw_deltas (List [])

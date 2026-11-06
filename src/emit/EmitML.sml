@@ -268,7 +268,7 @@ local
   val emit_tag = "EmitML"
   val set_tag = "EmitML.pseudo_constructors"
   val {get_global_value = get_pcs, record_delta = record_pc, ...} =
-      AncestryData.fullmake (thml_fmake set_tag)
+      AncestryData.lazy_fullmake (thml_fmake set_tag)
 in
 fun pseudo_constr_rws() = map concl (get_pcs())
 fun reshape1 th =

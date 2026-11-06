@@ -252,7 +252,7 @@ val globinfo = {apply_to_global = register_indn_p,
 val AData as {get_global_value = the_istore,
               record_delta = record_istore_delta,
               update_global_value = istore_fupd, ...} =
-    AncestryData.fullmake {adinfo = adinfo,
+    AncestryData.lazy_fullmake {adinfo = adinfo,
                            uptodate_delta = K true,
                            sexps = {dec = decode, enc = encode},
                            globinfo = globinfo}
