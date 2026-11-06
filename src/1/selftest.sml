@@ -1697,6 +1697,28 @@ in
               (ho_match_term [] empty_tmset pat) obj
 end
 
+(* Instantiating a match's redexes can merge two of them: x:'a and x:'b
+   are distinct variables that raw_match keeps apart, and both become
+   x:bool once the match fixes the type variables.  The parser unifies
+   same-named frees, so such a pattern only arises from a term built by
+   hand -- automationLib in examples/bootstrap builds them, and the
+   repeated redex made Term.subst raise inside a matcher that swallows
+   HOL_ERR, silently discarding the rule. *)
+val _ = let
+  val P = mk_var("P", Type.alpha --> Type.beta --> Type.bool)
+  val pat = list_mk_comb(P, [mk_var("x", Type.alpha), mk_var("x", Type.beta)])
+  val Pb = mk_var("P", Type.bool --> Type.bool --> Type.bool)
+  val obj = list_mk_comb(Pb, [mk_var("a", Type.bool), mk_var("b", Type.bool)])
+  fun redexes (tmS, _) = map (fn {redex, residue} => redex) tmS
+  fun ok p = let val r = redexes p
+             in length (op_mk_set aconv r) = length r end
+in
+  tprint "match_term: type instantiation cannot repeat a redex";
+  require_msg (check_result ok)
+              (String.concatWith ", " o map term_to_string o redexes)
+              (Term.match_term pat) obj
+end
+
 val _ = let
   val a = mk_var("a", Type.alpha)
   val b = mk_var("b", Type.alpha)
