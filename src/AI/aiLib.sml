@@ -1224,22 +1224,12 @@ fun rpt_split_level s sl =
     if null b then [a] else a :: rpt_split_level s b
   end
 
-fun split_charl acc buf csm l1 l2 =
-  if csm = [] then (rev acc, l2) else
-  case l2 of
-    []     => raise ERR "split_charl" ""
-  | a :: m => if hd csm = a
-              then split_charl acc (a :: buf) (tl csm) l1 m
-              else split_charl (a :: (buf @ acc)) [] l1 l1 m
-
 fun split_string s1 s2 =
-  let
-    val (l1,l2) = (explode s1, explode s2)
-    val (rl1,rl2) = split_charl [] [] l1 l1 l2
-  in
-    (implode rl1, implode rl2)
+  let val (a,b) = Substring.position s1 (Substring.full s2) in
+    if Substring.isPrefix s1 b
+    then (Substring.string a, Substring.string (Substring.triml (size s1) b))
+    else raise ERR "split_string" (s1 ^ " " ^ s2)
   end
-  handle _ => raise ERR "split_string" (s1 ^ " " ^ s2)
 
 fun rm_prefix s2 s1 =
   let val (a,b) = split_string s1 s2 in
