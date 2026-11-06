@@ -165,6 +165,15 @@ struct
     fun report_sig () =
         report0 ("ambient signature", "live", !sig_action, sig_reported)
   in
+    (* These were traces until HOLFlags took the trace registry over.
+       HOLFlags keeps its map in a `Context.Data` slot, so it is built on
+       this module and cannot be called from it; a trace whose state lives
+       below HOLFlags can no longer be registered.  Plain setters instead:
+       the levels are a developer diagnostic, not something a proof script
+       is expected to bracket. *)
+    fun set_ambient_report_level i = action := i
+    fun set_ambient_sig_report_level i = sig_action := i
+
     fun in_proof f x =
         let val n = get ()
             val () = set (n + 1)

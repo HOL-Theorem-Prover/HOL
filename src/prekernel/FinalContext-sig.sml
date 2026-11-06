@@ -49,11 +49,21 @@ sig
   val restore  : t -> unit
 
   (* Runs `f x` as a parameterised proof: while it is running, an
-     ambient `snapshot` on this thread is reported under the trace
-     "ambient context inside proof" (0 silent, 1 one report per
-     theory, 2 every read, 3 error).
+     ambient `snapshot` on this thread is reported at the level
+     `set_ambient_report_level` last set (0 silent, 1 one report per
+     theory -- the default, 2 every read, 3 error).
      `TAC_PROOF` is the only sanctioned caller. *)
   val in_proof : ('a -> 'b) -> 'a -> 'b
+
+  (* The two report levels above and below.  These were traces until
+     HOLFlags took the trace registry over; HOLFlags keeps its map in a
+     `Context.Data` slot, so it is built on this module and a trace
+     whose state lives here can no longer be registered.  They are a
+     developer diagnostic -- turn one up to find the reads a context
+     parameter should have served -- rather than something a proof
+     script brackets, so plain setters are enough. *)
+  val set_ambient_report_level     : int -> unit
+  val set_ambient_sig_report_level : int -> unit
 
   (* The live context, for the kernel signatures alone: `mk_type` and
      `mk_const` resolve a name against the live signature rather than a
@@ -61,8 +71,8 @@ sig
      ambient read that no amount of tactic plumbing removes.  Do not use
      it for anything else.
 
-     It reports under its own trace, "ambient signature inside proof",
-     with the same levels but silent by default: a different population
+     It reports at its own level, `set_ambient_sig_report_level`, with
+     the same meanings but silent by default: a different population
      with a different fix, which would otherwise swamp the tactic-state
      census.  Turn it up to find which proofs construct terms by name. *)
   val live : unit -> t
