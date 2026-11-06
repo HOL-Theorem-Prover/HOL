@@ -393,7 +393,12 @@ in
         []
     val c = SIMP_CONV my_ss [sexp_lex_parse_SIMP,LET_DEF,APPEND,LENGTH,rws]
     fun c2 tm = let
-      val xs = find_fringe_terms (fn tm => type_of tm = ``:SExp``) tm
+      (* find_fringe_terms returns every occurrence, and two of them can
+         be the same term; pairing each with its own genvar would then
+         have subst see a repeated redex.  Dropping the repeats changes
+         nothing, as the INST below maps every genvar back again. *)
+      val xs = op_mk_set aconv
+                 (find_fringe_terms (fn tm => type_of tm = ``:SExp``) tm)
       val ys = map (fn x => (x,genvar(type_of x))) xs
       val tm2 = subst (map (fn (x,y) => x |-> y) ys) tm
       val tm3 = c tm2
