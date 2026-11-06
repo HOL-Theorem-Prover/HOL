@@ -157,7 +157,7 @@ fun ABB l r =
 
 fun ABBREV_TAC eq = let val (l,r) = dest_eq eq in ABB l r end;
 
-val {get = match_var_or_const, flag = PAT_ABBREV_TAC_match_var_const, ...} =
+val {flag = PAT_ABBREV_TAC_match_var_const, ...} =
     HOLFlags.create_btrace(
       {group = "markerLib", name = "PAT_ABBREV_TAC_match_var_const"},
       true
@@ -180,7 +180,8 @@ in
                SOME _ => NONE
              | NONE =>
                if (is_var t orelse is_const t) andalso
-                  not (match_var_or_const())
+                  not (HOLFlags.get_bflagC ctxt
+                                           PAT_ABBREV_TAC_match_var_const)
                then NONE
                else
                  case Lib.total matchr t of

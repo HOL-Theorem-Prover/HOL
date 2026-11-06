@@ -27,7 +27,7 @@ fun empty th [] = th
  * we should do this check in the hypotheses of the goal as well.
  *---------------------------------------------------------------------------*)
 
-val {get = proof_requires_CT, ...} = HOLFlags.create_btrace(
+val {flag = requires_CT, ...} = HOLFlags.create_btrace(
       {group = "Tactics", name = "TAC_PROOF-requires-CT"},
       true
     )
@@ -40,7 +40,7 @@ fun check_current_thy ctxt (_, t) =
             val msg = "no current theory when proving: " ^
                       (Parse.term_to_string t handle _ => "<unprintable goal>")
           in
-            if proof_requires_CT() then
+            if HOLFlags.get_bflagC ctxt requires_CT then
               raise ERR "TAC_PROOF" msg
             else
               Feedback.HOL_WARNING "Tactical" "TAC_PROOF"

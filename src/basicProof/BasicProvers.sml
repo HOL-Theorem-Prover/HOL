@@ -884,13 +884,12 @@ val {flag = veq_old,...} = HOLFlags.create_btrace(
       false
     )
 
-fun behaviour_value() = HOLFlags.get_bflag veq_old
-fun VAR_EQ_TAC (g as (asl,_)) =
+fun VAR_EQ_TAC (g as (asl,_)) ctxt =
     let
-      val tidy = if behaviour_value() then ALL_TAC
+      val tidy = if HOLFlags.get_bflagC ctxt veq_old then ALL_TAC
                  else markerLib.TIDY_ABBREVS
     in
-      (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g
+      (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g ctxt
     end
 val var_eq_tac = VAR_EQ_TAC
 
