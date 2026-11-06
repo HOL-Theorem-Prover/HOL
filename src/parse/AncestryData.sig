@@ -50,8 +50,9 @@ sig
                  ('delta,'value) fullresult
 
   (* as fullmake, but each theory's value is computed when first read rather
-     than when the theory is loaded; for instances whose apply_delta is a
-     pure function of its arguments *)
+     than when the theory is loaded, so apply_delta's effects may happen
+     late or not at all; apply_to_global and thy_finaliser still run as
+     each theory loads *)
   val lazy_fullmake : { adinfo : ('delta, 'value) adata_info,
                         uptodate_delta : 'delta -> bool,
                         sexps : { dec : 'delta ThyDataSexp.dec,
