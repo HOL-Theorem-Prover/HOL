@@ -425,7 +425,7 @@ let open smpp
     fun PT0 tm =
         term_pp.pp_term (Parse.term_grammar()) (Parse.type_grammar())
                         backend tm
-    val PT = Parse.mlower o (PT0 |> trace ("types", 0))
+    val PT = Parse.mlower o (PT0 |> HOLFlags.trace ("PP.types", 0))
     val TP0 = type_pp.pp_type (Parse.type_grammar()) backend
     val adest_type = type_grammar.abb_dest_type (Parse.type_grammar())
     fun TP ty =
@@ -557,7 +557,7 @@ fun print_datatypes s =
 
 type override_map = string -> (string * int) option
 
-fun UnicodeOff f = trace ("Unicode", 0) f
+fun UnicodeOff f = HOLFlags.with_bflags [(Parse.avoid_unicode, true)] f
   (* can't eta-convert because of value restriction *)
 
 fun raw_pp_term_as_tex overrides tm mdata =
@@ -599,7 +599,8 @@ fun raw_pp_theorem_as_tex overrides thm =
 
 fun pp_theorem_as_tex ostrm =
     raw_pp_theorem_as_tex (K NONE) ostrm |> UnicodeOff
-                                         |> trace ("pp_dollar_escapes", 0)
+                                         |> HOLFlags.trace
+                                              ("PP.dollar_escapes", 0)
 
 fun pprint f = PP.prettyPrint (Feedback.HOL_INFO, !Globals.linewidth) o f
 val pp_type_as_tex = fn ty => Parse.mlower (pp_type_as_tex ty)
@@ -690,11 +691,12 @@ fun pp_theory_as_tex name =
       val time = Date.fromTimeLocal $
                                     (Theory.mod_time name
                                      handle NotFound => Time.now())
-      val u = current_trace "Unicode"
-      val _ = set_trace "Unicode" 0
+      val u = HOLFlags.get_bflag Parse.avoid_unicode
+      val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
   in
     if null typs andalso null defns andalso null thms then
-      (set_trace "Unicode" u; raise Fail (name ^ "Theory is empty.\n"))
+      (HOLFlags.set_bflag (Parse.avoid_unicode, u);
+       raise Fail (name ^ "Theory is empty.\n"))
     else
       B [
         pp_newcommand (date_prefix()),
@@ -705,7 +707,8 @@ fun pp_theory_as_tex name =
         pp_datatypes_as_tex typs,
         pp_defnitions_as_tex defns,
         pp_theorems_as_tex thms
-      ] before (set_trace "Unicode" u; current_theory_name := "")
+      ] before (HOLFlags.set_bflag (Parse.avoid_unicode, u);
+                current_theory_name := "")
   end;
 
 fun print_theory_as_tex name =

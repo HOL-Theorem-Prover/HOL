@@ -224,7 +224,7 @@ Hol_datatype
    valbind_e = PLAINvalbind_e of pat_e => exp_e => valbind_e option
              | RECvalbind_e   of valbind_e`;;
 
-set_trace "EncodeLib.TypeEncoding" 1;
+HOLFlags.set_trace "EncodeLib.TypeEncoding" 1;
 
 val types = [``:('a,'b) test1``,``:('a,'b) test2``,``:('a,'b,'c) test2b``,``:('a,'b,'c) test2c``,``:('a,'b) test3``,``:labels``,``:noalpha``,``:('a,'b,'c) threecons``,
                 ``:test4``,``:test5``,``:test6``,``:test8``,``:'a test7``,``:test9l``,``:test9r``,``:'a rose_tree``,``:testBa``,``:('a,'b) mlistL``,``:tree``,
@@ -421,7 +421,7 @@ val basic_result = time EVAL ``run big_instr_list [] []``;
 
 ******************************************************************************)
 
-set_trace "EncodeLib.FunctionEncoding" 1;
+HOLFlags.set_trace "EncodeLib.FunctionEncoding" 1;
 
 (*****************************************************************************)
 (* Some simple arithmetic functions:                                         *)

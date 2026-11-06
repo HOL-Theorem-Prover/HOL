@@ -654,7 +654,7 @@ val MILLER_RABIN_LIST_ML =
 (* Converting the definitions to HOL/SEXP ... with tracing                   *)
 (* ------------------------------------------------------------------------- *)
 
-set_trace "EncodeLib.FunctionEncoding" 1;
+HOLFlags.set_trace "EncodeLib.FunctionEncoding" 1;
 
 val (list_natp_rewrite,list_natp_def) = get_recogniser ``:num list``;
 

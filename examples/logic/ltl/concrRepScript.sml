@@ -1968,7 +1968,7 @@ Proof
       )
 QED
 
-val _ = set_trace "BasicProvers.var_eq_old" 1
+val _ = HOLFlags.set_trace "BasicProvers.var_eq_old" 1
 val _ = diminish_srw_ss ["ABBREV"]
 val _ = augment_srw_ss [rewrites [SNOC_APPEND]]
 

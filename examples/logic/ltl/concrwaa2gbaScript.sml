@@ -5,7 +5,7 @@ Ancestors
   concrRep waa2ba buechiA gbaSimpl alterA ltl2waa waaSimpl
   concrltl2waa
 
-val _ = set_trace "BasicProvers.var_eq_old" 1
+val _ = HOLFlags.set_trace "BasicProvers.var_eq_old" 1
 val _ = temp_delsimps ["all_distinct_nub", "nub_NIL"]
 
 val _ = Cond_rewr.stack_limit := 2

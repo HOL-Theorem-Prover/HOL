@@ -1,6 +1,6 @@
 Theory theory1
 
-val _ = set_trace "Theory.allow_rebinds" 1
+val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1
 
 val _ = register_hook("magnus_bug",
                       (fn TheoryDelta.ExportTheory _ => delete_const "h"

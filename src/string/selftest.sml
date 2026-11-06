@@ -87,7 +87,7 @@ end
 
 val _ = app sectest sec_data
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 val _ = app tpp ["P \"a\" /\\ Q",
                  "P (STRCAT a \"b\") /\\ Q",
@@ -101,7 +101,7 @@ val _ = app tpp ["P \"a\" /\\ Q",
 
 val t = ``"*)"``
 val _ = tprint "Paranoid printing of ‘\"*)\"’"
-val s = trace ("paranoid string literal printing", 1) term_to_string t
+val s = trace ("paranoid_string_literals", 1) term_to_string t
 val _ = if s = "\"\\042)\"" then OK()
         else die "FAILED!"
 
@@ -134,7 +134,7 @@ val _ = app test [
    ---------------------------------------------------------------------- *)
 
 val ptpp (* "paranoid tpp" *) =
-    trace ("paranoid string literal printing", 1) tpp
+    trace ("paranoid_string_literals", 1) tpp
 val _ = quietly Datatype ‘newtype = strinj string | boring num’
 val _ = temp_add_strliteral_form {inj = “strinj”, ldelim = "«"}
 
@@ -165,7 +165,7 @@ fun test2 (Exn.Exn _) = raise Fail "impossible"
         printarg = (fn _ => "Checking subsequent parse of ‘boring3 4 \"foo\"’"),
         printresult = term_to_string,
         testfn = Parse.Term |> quietly
-                            |> trace ("show_typecheck_errors",0)
+                            |> HOLFlags.trace ("Parse.show_typecheck_errors",0)
       } ‘boring3 4 "foo"’
   )
 val _ = require_msgk (check_result (fn _ => true))

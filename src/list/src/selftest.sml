@@ -31,7 +31,7 @@ fun test0 nm cmp pr f (x, expected_opt) =
                             testfn = f} x
 fun test nm cmp pr f (x, e) = test0 nm cmp pr f (x, SOME e)
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 val _ = app tpp [
   "MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}",
@@ -220,7 +220,7 @@ val _ = let
   fun check1 sgs = list_eq aconv expected (map snd sgs)
   fun check1a sgs = List.all null (map fst sgs : term list list)
   fun check2 sgs = list_eq (list_eq aconv) expected2a (map fst sgs)
-  val ppgs = trace ("types", 1) (
+  val ppgs = HOLFlags.trace ("PP.types", 1) (
         HOLPP.block HOLPP.CONSISTENT 4 o
         HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
       )
@@ -306,7 +306,7 @@ val _ = List.app subst_parse_test [
        “list$EL i (list$LUPDATE T 2 (list$LUPDATE F 3 l))”)
     ]
 
-val _ = set_trace "PP.avoid_unicode" 0
+val _ = HOLFlags.set_trace "PP.avoid_unicode" 0
 val _ = List.app tpp [
       "l❲i❳", "l❲2 ↦ T; 3 ↦ F❳",
       "l❲2 ↦ T; 3 ↦ F❳❲i❳"

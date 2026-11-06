@@ -20,7 +20,7 @@ open stringLib complex_rationalTheory gcdTheory
      sexp sexpTheory hol_defaxiomsTheory
      acl2_packageTheory translateTheory extendTranslateTheory;
 Globals.checking_const_names := false;
-set_trace "Goalstack.howmany_printed_subgoals" 100;
+HOLFlags.set_trace "Goalstack.howmany_printed_subgoals" 100;
 quietdec := false;
 *)
 

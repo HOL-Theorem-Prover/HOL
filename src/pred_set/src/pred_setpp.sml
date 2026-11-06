@@ -3,11 +3,10 @@ struct
 
 open HolKernel smpp term_pp_types term_pp_utils
 
-val univ_printing = ref true
-val unicode_univ = ref true
-
-val _ = Feedback.register_btrace ("Univ pretty-printing", univ_printing)
-val _ = Feedback.register_btrace ("Unicode Univ printing", unicode_univ)
+val {get = univ_printing, ...} =
+    HOLFlags.create_btrace ({group = "pred_set", name = "univ_printing"}, true)
+val {get = unicode_univ, ...} =
+    HOLFlags.create_btrace ({group = "pred_set", name = "unicode_univ"}, true)
           (* because the current unicode symbol for the universal set is
              beyond the BMP, it may not be common in installed fonts.
              So we provide a flag specifically to turn just it off. *)
@@ -16,12 +15,14 @@ fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm =
   let
     val {add_string, ...} = ppfns : term_pp_types.ppstream_funs
   in
-    if !univ_printing then
+    if univ_printing() then
       let
         val (elty, _) = dom_rng (type_of tm)
         val itself_t = Term.inst [{redex=alpha,residue=elty}]
                                  boolSyntax.the_value
-        val U = if get_tracefn "Unicode" () = 1 andalso !unicode_univ then
+        val U = if not (HOLFlags.get_bflag Parse.avoid_unicode) andalso
+                   unicode_univ()
+                then
                   UnicodeChars.universal_set
                 else "univ"
       in
@@ -41,13 +42,15 @@ val _ = term_grammar.userSyntaxFns.register_userPP
     A flag controlling printing of set comprehensions
    ---------------------------------------------------------------------- *)
 
-val unamb_comp = ref 0
-val _ = Feedback.register_trace ("pp_unambiguous_comprehensions", unamb_comp, 2)
+val {get = get_unamb_comp, ...} =
+    HOLFlags.create_trace ({group = "pred_set",
+                            name = "unambiguous_comprehensions"},
+                           {initial = 0, max = 2})
 
 
 fun setcomprehension_printer (tyg,tmg) backend printer ppfns gravs depth tm =
     let
-      val unamb_comp = get_tracefn "pp_unambiguous_comprehensions" ()
+      val unamb_comp = get_unamb_comp ()
       val _ =
           case Overload.oi_strip_comb (term_grammar.overload_info tmg) tm of
               SOME(f, _) =>

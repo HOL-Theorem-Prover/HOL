@@ -8,9 +8,9 @@ open backgroundLib file_readerLib derive_specsLib graph_specsLib exportLib;
 open writerLib cond_cleanLib;
 
 val _ = max_print_depth := ~1;
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 
-val new_definition = Feedback.trace ("Theory.allow_rebinds", 1) new_definition
+val new_definition = HOLFlags.trace ("Theory.allow_rebinds", 1) new_definition
 
 local
   val export_fails = ref ([]:string list)

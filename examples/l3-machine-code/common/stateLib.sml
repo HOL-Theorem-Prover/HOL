@@ -1750,9 +1750,9 @@ end
    ------------------------------------------------------------------------ *)
 
 (*
-val () = set_trace "Goalstack.print_goal_at_top" 0
-val () = set_trace "Goalstack.print_goal_at_top" 1
-val () = set_trace "stateLib.spec" 1
+val () = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0
+val () = HOLFlags.set_trace "Goalstack.print_goal_at_top" 1
+val () = HOLFlags.set_trace "stateLib.spec" 1
 
 val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
      frame_thms, component_11, map_tys) =

@@ -3078,7 +3078,7 @@ SIMP_TAC std_ss [GSYM EL]
 holfoot_set_remaining_goal thm_imp
 
 val _ = Feedback.set_trace "PPBackEnd use annotations" 0
-val _ = Feedback.set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 val t = parse_holfoot_file file
 SIMP_TAC std_ss [tree_11]

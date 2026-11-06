@@ -11,7 +11,7 @@ in
                 output = UnicodeChars.universal_set ^ "(:num) 3"}
 end
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 val padr = StringCvt.padRight #" "
 val padl = StringCvt.padLeft #" "
 
@@ -53,7 +53,8 @@ val tpp_cases = [
 
 val _ = app testutils.tpp tpp_cases
 
-val _ = (trace ("Univ pretty-printing", 0) testutils.tpp) "UNIV"
+val _ = (HOLFlags.trace ("pred_set.univ_printing", 0) testutils.tpp)
+          "UNIV"
 
 val _ = temp_add_rule {
           fixity = Closefix,
@@ -117,7 +118,7 @@ val _ = testutils.tpp "equiv_class (feq f) s x"
 
 val _ = set_grammar_ancestry ["pred_set"]
 val _ = print "Setting grammar ancestry to be [\"pred_set\"]\n"
-val _ = set_trace "PP.avoid_unicode" 1
+val _ = HOLFlags.set_trace "PP.avoid_unicode" 1
 val _ = List.app testutils.tpp tpp_cases
 
 

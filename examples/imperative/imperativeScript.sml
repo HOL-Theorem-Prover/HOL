@@ -4,7 +4,7 @@ Ancestors
 Libs
   imperativeLib
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 
 val _ = show_types:=true;
 val _ = show_assums:=true;

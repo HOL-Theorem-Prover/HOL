@@ -8,7 +8,7 @@ val nested_function = LIST_CONJ o map #1 o #extracta o
                       Defn.wfrec_eqns (TypeBase.theTypeBase())
                       o Parse.Term;
 
-val _ = set_trace "Theory.allow_rebinds" 1
+val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1
 
 val fact_cond_def = function "fact_cond"
                              `fact x = if x = 0 then 1 else x * fact(x-1)`;

@@ -81,11 +81,11 @@ quietdec := true;
 clear_traces();
 
 load "encodeLib";
-Feedback.set_trace "polytypicLib.Trace" 0;
+HOLFlags.set_trace "polytypicLib.Trace" 0;
 
 use "functionEncodeLib.sml";
 reset_traces();
-Feedback.set_trace "polytypicLib.Trace" 1;
+HOLFlags.set_trace "polytypicLib.Trace" 1;
 
 *)
 

@@ -191,7 +191,7 @@ fun is_metis_stac token = case token of
     Stac s => s = "metisTools.METIS_TAC " ^ thmlarg_placeholder
   | _ => false
 
-val TC_OFF = trace ("show_typecheck_errors", 0)
+val TC_OFF = HOLFlags.trace ("Parse.show_typecheck_errors", 0)
 
 val stac_cache = ref (
   dempty (cpl_compare goal_compare (list_compare compare_token)))

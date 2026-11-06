@@ -190,7 +190,7 @@ sig
   val QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN   : thm list -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___QUANT               : bool -> quant_heuristic;
 
-  val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
+  val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : HOLFlags.flag
 
   (*use this to create sys for debugging own heuristics*)
   val qp_to_heuristic : quant_param -> quant_heuristic_cache ref option -> thm list -> term -> term -> guess_collection

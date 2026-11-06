@@ -33,7 +33,7 @@ val arith_ss = arith_ss ++ boolSimps.LET_ss;
 
 val WL = ``dimindex (:'a)``;
 
-val tt = set_trace "types";
+val tt = HOLFlags.set_trace "PP.types";
 
 (* ------------------------------------------------------------------------- *)
 

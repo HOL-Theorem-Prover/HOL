@@ -11,7 +11,7 @@ open tautLib ptopTheory imperativeLib imperativeTheory ;
 
 val _ = new_theory "scratch"
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 
 val OK = testutils.OK
 val die = testutils.die

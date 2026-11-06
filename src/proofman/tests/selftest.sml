@@ -306,8 +306,8 @@ val _ = let
    different linewidth than the invocation of tpp_expected *)
 (*  fun test (wdth, s, t) =
       with_flag(Globals.linewidth,wdth)
-               (trace ("types", 1) tpp_expected)
-               {input = trace ("types", 1) term_to_string t,
+               (HOLFlags.trace ("PP.types", 1) tpp_expected)
+               {input = HOLFlags.trace ("PP.types", 1) term_to_string t,
                 output = s,
                 testf = fn s =>
                            "Width=" ^ Int.toString wdth ^

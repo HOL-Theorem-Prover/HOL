@@ -880,7 +880,7 @@ fun adjust_tygram tygram =
  end;
 
 fun prim_pp_type_as_ML tygram ppstrm =
-   trace ("Greek tyvars",0)
+   HOLFlags.trace ("PP.Greek-tyvars",0)
       (type_pp.pp_type (adjust_tygram tygram) PPBackEnd.raw_terminal ppstrm)
 
 fun pp_type_as_ML ppstrm = prim_pp_type_as_ML (Parse.type_grammar()) ppstrm;
@@ -1524,7 +1524,7 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
 
 val emit_xML =
     (fn info => fn p => fn stuff =>
-                           Feedback.trace ("Unicode", 0)
+                           HOLFlags.with_bflags [(Parse.avoid_unicode, true)]
                                           (emit_xML info p)
                                           stuff)
 

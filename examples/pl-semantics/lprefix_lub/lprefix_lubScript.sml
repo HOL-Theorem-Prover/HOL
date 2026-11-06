@@ -4,7 +4,7 @@ Ancestors
 Libs
   BasicProvers
 
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
 val _ = ParseExtras.temp_tight_equality();
 
 Theorem IS_PREFIX_FILTER:

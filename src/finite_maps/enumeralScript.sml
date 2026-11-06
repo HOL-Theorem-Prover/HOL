@@ -10,7 +10,7 @@ Libs
 
 (* app load ["totoTheory", "res_quanLib"]; *)
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 Type cpn[local] = “:ordering”
 val _ = ParseExtras.temp_loose_equality()

@@ -798,33 +798,29 @@ fun only_concl x =
   end
 
 fun string_of_goal (asm,w) =
-  let
-    val mem = !show_types
-    val _   = show_types := false
-    val s   =
-      (if null asm
-         then "[]"
-         else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^
-              "``]")
-    val s1 = "(" ^ s ^ "," ^ "``" ^ (term_to_string w) ^ "``)"
-  in
-    show_types := mem;
-    s1
-  end
+  HOLFlags.with_bflags [(Parse.show_types, false)]
+    (fn () =>
+      let
+        val s =
+          (if null asm
+             then "[]"
+             else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^
+                  "``]")
+      in
+        "(" ^ s ^ "," ^ "``" ^ (term_to_string w) ^ "``)"
+      end) ()
 
 fun string_of_goal_noquote (asm,w) =
-  let
-    val mem = !show_types
-    val _   = show_types := false
-    val s   =
-      (if null asm
-         then "[]"
-         else "[" ^ String.concatWith "," (map term_to_string asm) ^ "]")
-    val s1 = "(" ^ s ^ "," ^ (term_to_string w) ^ ")"
-  in
-    show_types := mem;
-    s1
-  end
+  HOLFlags.with_bflags [(Parse.show_types, false)]
+    (fn () =>
+      let
+        val s =
+          (if null asm
+             then "[]"
+             else "[" ^ String.concatWith "," (map term_to_string asm) ^ "]")
+      in
+        "(" ^ s ^ "," ^ (term_to_string w) ^ ")"
+      end) ()
 
 fun trace_tacl tacl g = case tacl of
     tac :: m =>

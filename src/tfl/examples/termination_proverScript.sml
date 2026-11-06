@@ -11,8 +11,8 @@ Libs
 
 
 (* get a view of what's happening
-val _ = set_trace "Definition.TC extraction" 3;
-val _ = set_trace "Definition.termination candidates" 2;
+val _ = HOLFlags.set_trace "Definition.TC_extraction" 3;
+val _ = HOLFlags.set_trace "Definition.termination_candidates" 2;
 *)
 
 Definition encode_num_def:

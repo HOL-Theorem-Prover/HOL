@@ -170,7 +170,7 @@ sig
   (* A pretty printer is defined and added for PMATCH.
      Whether it is use can be controled via the trace
 
-     "use pmatch_pp"
+     "PP.use_pmatch_pp"
   *)
 
   (* Enable Parser *)

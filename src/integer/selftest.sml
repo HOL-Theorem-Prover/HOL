@@ -41,7 +41,7 @@ val _ = tpp "¬p ∧ q"
 (* check that deprecation really deprecates *)
 val _ = intLib.deprecate_int()
 
-fun t2s t = trace ("types", 1) term_to_string t
+fun t2s t = HOLFlags.trace ("PP.types", 1) term_to_string t
 fun rma_p (t,s) =
     (tprint ("int-deprecated parse of "^s);
      require_msg (check_result (aconv t)) t2s (Parse.Term o single o QUOTE) s)

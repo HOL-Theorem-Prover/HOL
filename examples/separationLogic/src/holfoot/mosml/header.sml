@@ -12,7 +12,7 @@ open holfootLib;
 
 val _ = Feedback.set_trace "PPBackEnd use styles" 1;
 val _ = Feedback.set_trace "PPBackEnd show types" 0;
-val _ = Feedback.set_trace "metis" 0
+val _ = HOLFlags.set_trace "metis.trace" 0
 
 val examplesDir =
     concat [Globals.HOLDIR,

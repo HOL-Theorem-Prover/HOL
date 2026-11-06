@@ -7,7 +7,7 @@ val ERR = mk_HOL_ERR "selftest"
 
 val _ = wordsLib.guess_lengths();
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 val _ = set_trace "arm steps" 3;
 val _ = set_trace "arm step" 2;
 val _ = set_trace "arm step check" 1;
@@ -35,7 +35,7 @@ local
         val delta = Redblackset.listItems o Redblackset.difference
         val d1 = delta (s1, s2)
         val d2 = delta (s2, s1)
-        val t2s = trace ("types",2) term_to_string
+        val t2s = HOLFlags.trace ("PP.types",1) term_to_string
         fun update (l,r) = "[" ^ t2s l ^ " <- " ^ t2s r ^ "]\n"
       in
         print "Expecting:\n";

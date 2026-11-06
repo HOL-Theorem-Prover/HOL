@@ -5,7 +5,7 @@ open state_monadLib
 val _ = temp_remove_absyn_postprocessor "monadsyntax.transform_absyn"
 val _ = temp_remove_user_printer ("monadsyntax.print_monads", “x:'a”)
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 (* interactive only:
 val _ = diemode := FailException
 *)
@@ -93,7 +93,8 @@ val _ = temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
 
 val _ = monadsyntax.enable_monad "option"
 
-val _ = unicode_off (raw_backend (trace ("types", 1) testutils.tpp))
+val _ = unicode_off
+          (raw_backend (HOLFlags.trace ("PP.types", 1) testutils.tpp))
                     "do (x :num) <- (s :num option); SOME (x + (1 :num)) od"
 
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND"

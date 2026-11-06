@@ -747,8 +747,8 @@ fun is_PMATCH_IS_EXHAUSTIVE t = can dest_PMATCH_IS_EXHAUSTIVE t
 (* Pretty Printing                             *)
 (***********************************************)
 
-val use_pmatch_pp = ref true
-val _ = Feedback.register_btrace ("use pmatch_pp", use_pmatch_pp);
+val {get = use_pmatch_pp, ...} =
+    HOLFlags.create_btrace ({group = "PP", name = "use_pmatch_pp"}, true)
 
 fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let
   val var_l = pairSyntax.strip_pair vars
@@ -787,7 +787,8 @@ fun pmatch_printer
   let
     open Portable term_pp_types smpp
     infix >>
-    val _ = if (!use_pmatch_pp) then () else raise term_pp_types.UserPP_Failed
+    val _ = if use_pmatch_pp() then ()
+            else raise term_pp_types.UserPP_Failed
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
     val (v,rows) = dest_PMATCH t;
     val rows' = map (pmatch_printer_fix_wildcards o dest_PMATCH_ROW_ABS) rows

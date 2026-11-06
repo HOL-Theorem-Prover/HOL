@@ -13,13 +13,14 @@ val ambient_grammars =
 (* For debugging extraction failures *)
 exception EXTRACTION_ERROR of term list * term
 
-val monitoring = ref 0;
 val max_trace_val = 5;
 val no_trace = max_trace_val + 1;
-val _ = register_trace ("Definition.TC extraction", monitoring, max_trace_val);
+val {get = monitoring, ...} =
+    HOLFlags.create_trace ({group = "Definition", name = "TC_extraction"},
+                           {initial = 0, max = max_trace_val});
 
 fun lztrace(i,title,msgf) =
-  if i <= !monitoring then
+  if i <= monitoring() then
      Lib.say (String.concat ["\n", title, msgf(), "\n"])
   else ()
 
@@ -137,12 +138,14 @@ fun RW_STEP {simpls as RW{rw_net,...},context,prover} tm =
         val cond_thm = prover context condition
         val ant_vars_fixed = not(can(find_term sys_var) condition)
         val th1 = (if ant_vars_fixed then MP else MATCH_MP) th cond_thm
-        val _ = if !monitoring <= 0 then ()
+        val _ = if monitoring() <= 0 then ()
                 else
-                 (set_trace "assumptions" 1;
-                  Lib.say (String.concat
-                    ["\nTC Capture:\n", Parse.thm_to_string th1, "\n\n"]);
-                  set_trace "assumptions" 0)
+                 HOLFlags.with_bflags [(Parse.show_assums, true)]
+                   (fn () =>
+                       Lib.say (String.concat
+                         ["\nTC Capture:\n", Parse.thm_to_string th1,
+                          "\n\n"]))
+                   ()
       in th1 end
    | otherwise => raise ERR "RW_STEP" ""
 end
@@ -542,7 +545,8 @@ fun SUB_QCONV cnv cps tm =
       in ABS Bvar Bth
          handle HOL_ERR _ =>
           let val _ = lztrace(6, "SUB_QCONV",
-                              trace ("assumptions", 1)
+                              HOLFlags.with_bflags
+                                [(Parse.show_assums, true)]
                               (fn () => "ABS failure: " ^
                                         ppstring pp_term Bvar ^ "  " ^
                                         ppstring pp_thm Bth))
@@ -550,7 +554,8 @@ fun SUB_QCONV cnv cps tm =
               val th1 = ALPHA_CONV v tm
               val call2 = cnv cps (body(rhs(concl th1)))
               val _ = lztrace(6, "SUB_QCONV",
-                              trace ("assumptions", 1)
+                              HOLFlags.with_bflags
+                                [(Parse.show_assums, true)]
                               (fn () => "ABS 2nd call: "^
                                         ppstring pp_thm call2))
               val eq_thm' = ABS v call2

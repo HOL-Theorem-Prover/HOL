@@ -134,13 +134,14 @@ val _ = checkhyps single_rules
 val _ = print "*** Overloading case constant (pairs)\n"
 val _ = overload_on ("foo", ``\p. case p of (x,y) => x /\ y``)
 val _ = tpp "foo z"
-val _ = set_trace "types" 1
-val _ = trace ("types", 1) tpp  "case (p :'a # 'b) of (x,y) => x"
+val _ = HOLFlags.set_bflag (Parse.show_types, true)
+val typed_tpp = HOLFlags.with_bflags [(Parse.show_types, true)] tpp
+val _ = typed_tpp "case (p :'a # 'b) of (x,y) => x"
 
 val _ = print "*** Overloading case constant (booleans)\n"
 val _ = overload_on ("bar", ``\b. if b then T else F``)
 val _ = tpp "bar T"
-val _ = trace ("types", 1) tpp "if (b :bool) then (x :'a) else (y :'a)"
+val _ = typed_tpp "if (b :bool) then (x :'a) else (y :'a)"
 
 (* pairLib conversions etc *)
 val _ = List.app convtest [
@@ -245,10 +246,11 @@ fun good_oneline th =
        length cs = 1 andalso is_eq (hd cs)
      end)
 
+val with_assums_print =
+    HOLFlags.with_bflags [(Parse.show_assums, true)] thm_to_string
 fun test msg th =
     (tprint ("one_line_ify on " ^ msg);
-     require_msg (check_result good_oneline)
-                 (trace("assumptions", 1) thm_to_string)
+     require_msg (check_result good_oneline) with_assums_print
                  (DefnBase.one_line_ify NONE) th)
 val _ = test "function over sum" fsumdef
 

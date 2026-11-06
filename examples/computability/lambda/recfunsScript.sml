@@ -9,7 +9,7 @@ val _ = enable_monad "option";
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val _ = set_trace "Unicode" 1
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, false)
 
 (* Phi lifts all possible lambda-terms into the space of num->num option,
    indexing into the lambda-terms with the enumeration.  The NONE result

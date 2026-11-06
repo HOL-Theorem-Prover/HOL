@@ -22,8 +22,7 @@ val _ = let
   val _ = tprint "Anthony's pattern-overloading bug"
   val b2n_def = new_definition("b2n_def", ``b2n b = if b then 1 else 0``)
   val _ = overload_on ("foo", ``\(x:num#'a),(y:num#'b). b2n (FST x = FST y)``)
-  val res = trace ("PP.catch_withpp_err", 0) term_to_string ``foo(x,y)``
-            handle Fail _ => ""
+  val res = term_to_string ``foo(x,y)`` handle Fail _ => ""
 in
   if res <> "" then OK() else fail()
 end
@@ -33,6 +32,7 @@ val _ = let
             in
               unicode_off (raw_backend testutils.tpp)
             end
+  val firstbar_tpp = HOLFlags.trace ("PP.print_firstcasebar", 1) tpp
 in
   List.app tpp [
     "case e1 of 0 => (case e2 of 0 => 1 | SUC n => n + 1) | SUC m => m * 2",
@@ -42,8 +42,8 @@ in
     \  foo' a b /\\ bar a c /\\ baz a c d /\\ qux f g /\\ foo' f g ==>\n\
     \  a + b * c = 10 * d + e + f + g"
   ] ;
-  trace ("PP.print_firstcasebar", 1) tpp "case e of | 0 => 1 | SUC n => n + 2";
-  trace ("PP.print_firstcasebar", 1) tpp
+  firstbar_tpp "case e of | 0 => 1 | SUC n => n + 2";
+  firstbar_tpp
     "case f e n longvarname of\n\
     \| 0 => superlongvarname * secondsuperlongname + 1\n\
     \| SUC n => n + 2"
@@ -101,7 +101,8 @@ fun good_oneline th =
 fun test msg th =
     (tprint ("one_line_ify on " ^ msg);
      require_msg (check_result good_oneline)
-                 (trace("assumptions", 1) thm_to_string)
+                 (HOLFlags.with_bflags [(Parse.show_assums, true)]
+                                       thm_to_string)
                  (DefnBase.one_line_ify NONE) th)
 val _ = test "cv_sub_def" cvTheory.cv_sub_def
 

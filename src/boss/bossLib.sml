@@ -48,7 +48,8 @@ val Datatype = Datatype.Datatype
 fun xDefine s q = TotalDefn.qDefine (s ^ !Defn.def_suffix) q NONE
 fun tDefine s q tac = TotalDefn.qDefine (s ^ !Defn.def_suffix) q (SOME tac)
 val Define     = TotalDefn.Define
-val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
+val zDefine    =
+    HOLFlags.trace ("computeLib.auto_import_definitions", 0) Define
 val Hol_defn   = Defn.Hol_defn
 val Hol_reln   = IndDefLib.Hol_reln
 val xHol_reln   = IndDefLib.xHol_reln

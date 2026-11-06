@@ -21,7 +21,7 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["ABBREV"]
-val _ = set_trace "BasicProvers.var_eq_old" 1
+val _ = HOLFlags.set_trace "BasicProvers.var_eq_old" 1
 (* ------------------------------------------------------------------------- *)
 
 val () = Feedback.set_trace "PAT_ABBREV_TAC: match var/const" 0
@@ -54,7 +54,7 @@ val numeral_funpow = numeralTheory.numeral_funpow;
 val POP_LAST_TAC = POP_ASSUM (K ALL_TAC);
 fun POP_LASTN_TAC n = NTAC n POP_LAST_TAC;
 
-val tt = set_trace "types";
+val tt = HOLFlags.set_trace "PP.types";
 val fvs = set_trace "goalstack fvs";
 
 (* ------------------------------------------------------------------------- *)

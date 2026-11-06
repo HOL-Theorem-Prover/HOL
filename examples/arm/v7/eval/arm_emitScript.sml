@@ -139,7 +139,9 @@ val _ = temp_clear_overloads_on "UInt"
 val _ = temp_clear_overloads_on "SInt"
 val _ = temp_overload_on("w2i", ``integer_word$w2i``);
 
-fun f x = [QUOTE (trace ("Unicode",0) EmitTeX.datatype_thm_to_string x)]
+fun f x =
+  [QUOTE (HOLFlags.with_bflags [(Parse.avoid_unicode, true)]
+                               EmitTeX.datatype_thm_to_string x)]
 
 val n2w_rule = Q.SPEC `n2w m`
 

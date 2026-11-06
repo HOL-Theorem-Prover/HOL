@@ -425,7 +425,7 @@ in
 val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
 fun add_defs_to_EVAL l =
-  if not (!computeLib.auto_import_definitions) then () else
+  if not (computeLib.auto_import_definitions()) then () else
     let val has_lhs_SUC = List.exists
               (can (find_term is_suc) o lhs o #2 o strip_forall)
                                       o strip_conj o concl
@@ -450,12 +450,13 @@ end;
 val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 
 local
-  val chatting = ref true
-  val _ = Feedback.register_btrace("Definition.storage_message", chatting)
+  val {get = chatting, ...} =
+      HOLFlags.create_btrace ({group = "Definition",
+                               name = "storage_message"}, true)
 in
 fun been_stored (s,thm) =
   (add_defs_to_EVAL [(s,thm)];
-   if !chatting then
+   if chatting() then
      mesg (if !Globals.interactive then
              "Definition has been stored under " ^ Lib.quote s ^ "\n"
            else
@@ -494,7 +495,7 @@ fun store_at loc (stem,eqs,ind) =
       val ind_bind = indSuffix stem
       fun save x =
          case Theory.oracle_string_of (snd x)
-          of NONE => Feedback.trace ("Theory.save_thm_reporting", 0)
+          of NONE => HOLFlags.trace ("Theory.save_thm_reporting", 0)
                                     (save_thm_at loc) x
            | SOME _ => save_thm_at loc x
       val   _  = save (ind_bind, ind)
@@ -502,7 +503,7 @@ fun store_at loc (stem,eqs,ind) =
       val _ = add_defs_to_EVAL [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
-    if !chatting then
+    if chatting() then
        mesg (if !Globals.interactive then
                String.concat ["Equations stored under ", Lib.quote eqs_bind,
                               ".\nInduction stored under ", Lib.quote ind_bind,
@@ -1872,7 +1873,7 @@ fun parse_absyn absyn0 = let
   val _ =
       app (ignore o Parse.hide) (nonconstructor_parameter_names @ fn_names)
   fun restore() = temp_set_grammars(type_grammar(), oldg)
-  val quiet = Feedback.trace ("show_typecheck_errors", 0)
+  val quiet = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
   val tm  = quiet defn_absyn_to_term absyn handle e => (restore(); raise e)
 in
   restore();
@@ -2002,7 +2003,8 @@ fun tgoal_no_defn0 (def,ind) =
     end) handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tgoal_no_defn (def,ind) =
-  Lib.with_flag (proofManagerLib.chatting,false) tgoal_no_defn0 (def,ind);
+  HOLFlags.with_bflags [(proofManagerLib.chatting, false)]
+                       tgoal_no_defn0 (def,ind);
 
 fun tgoal0 defn =
    (let val (_, (g,validation)) = tc_obligation defn
@@ -2010,7 +2012,8 @@ fun tgoal0 defn =
          (Manager.new_goalstack g Manager.id_tacm validation)
     end) handle HOL_ERR _ => raise ERR "tgoal" "";
 
-fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
+fun tgoal defn =
+    HOLFlags.with_bflags [(proofManagerLib.chatting, false)] tgoal0 defn;
 
 (*---------------------------------------------------------------------------
      The error handling here is pretty coarse.
@@ -2051,7 +2054,7 @@ fun tprove2 mk_obligation (arg,tactic) =
 fun tprove1 mk_obligation p =
   let
     val (eqns,ind) = tprove2 mk_obligation p
-    val () = if not (!computeLib.auto_import_definitions) then ()
+    val () = if not (computeLib.auto_import_definitions()) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
   in

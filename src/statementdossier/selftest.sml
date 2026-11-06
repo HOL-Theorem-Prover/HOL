@@ -90,9 +90,10 @@ fun count text part =
 
 val (md, html) = Lib.with_flag (Globals.max_print_depth, 0)
   generate (basic ["root"])
-val stored = Feedback.trace ("Unicode", 1)
+val stored = HOLFlags.with_bflags [(Parse.avoid_unicode, false)]
   (Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-    (Lib.with_flag (Globals.show_assums, true) (Lib.ppstring pp_thm))) root
+    (HOLFlags.with_bflags [(Parse.show_assums, true)]
+                          (Lib.ppstring pp_thm))) root
 val _ = check "Stored statement printed verbatim" (contains md stored)
 val _ = check "Cyclic equation-lemma closure visits each definition once"
   (count html "id=\"def-dossierTest-first\"" = 1 andalso

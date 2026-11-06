@@ -1106,7 +1106,7 @@ val _ = let
   val rawpp_thm =
       pp_thm
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-        |> HOLFlags.trace ("PP.paranoid string literal printing", 1)
+        |> HOLFlags.trace ("PP.paranoid_string_literals", 1)
   val rawpp_type =
       pp_type
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)

@@ -22,8 +22,8 @@ struct
 end
 open Parse
 
-val oldmeson = !mesonLib.chatting;
-val _ = mesonLib.chatting := 0
+val oldmeson = HOLFlags.get_flag mesonLib.chatting;
+val _ = HOLFlags.set_flag (mesonLib.chatting, 0)
 
 val std_ss   = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss  =
@@ -4054,6 +4054,6 @@ end handle HOL_ERR _ => init_pmatch_info
 
 end
 
-val _ = mesonLib.chatting := oldmeson;
+val _ = HOLFlags.set_flag (mesonLib.chatting, oldmeson);
 
 end

@@ -4,8 +4,8 @@
 (* definition to mark progress.                                              *)
 (*****************************************************************************)
 
-set_trace "Unicode" 0;
-set_trace "pp_annotations" 0;
+HOLFlags.set_bflag (Parse.avoid_unicode, true);
+HOLFlags.set_trace "PP.annotations" 0;
 
 app load ["acl2encodeLib", "stringLib", "finite_mapTheory", "intLib",
           "pred_setTheory","WhileTheory","optionTheory","unwindLib", "finite_mapTheory"];

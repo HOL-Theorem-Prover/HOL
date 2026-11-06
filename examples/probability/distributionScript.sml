@@ -32,7 +32,7 @@ val _ = intLib.deprecate_int();
 val _ = ratLib.deprecate_rat();
 
 (* some proofs here are large with too many assumptions *)
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
 
 (* ------------------------------------------------------------------------- *)
 (*  Properties of distribution_functions                                     *)

@@ -189,7 +189,7 @@ val (res_rel_e_rules, res_rel_e_ind, res_rel_e_cases) = Hol_reln `
   ⇒
   res_rel_e (Rfail, s) (s.store, e))`
 
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
 
 val step_t_strongind = (fetch "-" "step_t_strongind")
 val step_e_strongind = (fetch "-" "step_e_strongind")

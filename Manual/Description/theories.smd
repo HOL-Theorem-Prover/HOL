@@ -3674,10 +3674,10 @@ in many fonts.
 
 \index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!universal sets}
 One of these forms will be used to print `UNIV` by default.  The
-user trace (see Section \ref{sec:traces}) `"Univ pretty-printing"`
+user trace (see Section \ref{sec:traces}) `"pred_set.univ_printing"`
 can be set to zero to cancel this behaviour.  Additionally, the
-trace `"Unicode Univ printing"` can be used to stop the U+1D54C
-syntax from being used, even if the Unicode trace is set.
+trace `"pred_set.unicode_univ"` can be used to stop the U+1D54C
+syntax from being used, even if Unicode output is enabled.
 
 The symbols `univ` and `𝕌` are high-priority prefixes (see
 Section \ref{sec:parseprint:fixities}), and overloaded patterns
@@ -4006,7 +4006,7 @@ around pairs in the `vs` position can be omitted.)
 The unambiguous notation is printed by the pretty-printer
 whenever the set to be printed can not be expressed with the
 default notation, or if the trace variable with name
-`pp_unambiguous_comprehensions` is set to `1`.  (If the same
+`pred_set.unambiguous_comprehensions` is set to `1`.  (If the same
 trace is set to `2`, then the unambiguous notation will never be
 used.)
 \index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!set comprehensions}

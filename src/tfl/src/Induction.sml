@@ -161,8 +161,10 @@ in
   if col_i_ok then i else mk_case_choose_column (i+1) rows
 end handle HOL_ERR _ => 0
 
-val quiet_metis = Feedback.trace ("metis", 0) (metisLib.METIS_PROVE [])
-val quiet_meson = Feedback.trace ("meson", 0) (BasicProvers.PROVE [])
+val quiet_metis =
+    HOLFlags.trace ("metis.trace", 0) (metisLib.METIS_PROVE [])
+val quiet_meson =
+    HOLFlags.trace ("meson.chatting", 0) (BasicProvers.PROVE [])
 
 fun mk_case ty_info FV thy =
  let open boolSyntax
@@ -384,12 +386,12 @@ fun detuple newvar =
 (* theorem takes.                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val monitoring = ref false;
-
-val _ = Feedback.register_btrace("Definition.induction derivation",monitoring);
+val {get = monitoring, ...} =
+    HOLFlags.create_btrace ({group = "Definition",
+                             name = "induction_derivation"}, false);
 
 fun report_induction_measurements thunk =
-  if !monitoring then
+  if monitoring() then
      (Lib.say "Derivation of induction theorem:\n"; Count.apply thunk ())
   else thunk()
 

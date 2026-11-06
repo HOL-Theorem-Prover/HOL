@@ -971,7 +971,7 @@ Proof
   METIS_TAC [type_soundness,syntax_ok_def,compile_pres]
 QED
 
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
+val _ = HOLFlags.set_trace "Goalstack.print_goal_at_top" 0;
 
 (* Start re-verification of phase1 in relational big step semantics *)
 

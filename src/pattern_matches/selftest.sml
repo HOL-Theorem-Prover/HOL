@@ -15,7 +15,7 @@ val _ = Feedback.emit_MESG := false
 
 (* For manual
 
-set_trace "use pmatch_pp" 0
+HOLFlags.set_trace "PP.use_pmatch_pp" 0
 val hard_fail = false;
 val _ = testutils.diemode := FailException
 val quiet = false;
@@ -58,8 +58,8 @@ fun pel2string [] = ""
   | pel2string (pAbs::rest) = "A" ^ pel2string rest
 fun d2string (p,t1,t2) =
   "   " ^
-  trace ("types", 1) term_to_string t1 ^ " - " ^
-  trace ("types", 1) term_to_string t2 ^
+  HOLFlags.trace ("PP.types", 1) term_to_string t1 ^ " - " ^
+  HOLFlags.trace ("PP.types", 1) term_to_string t2 ^
   "  (" ^ pel2string p ^ ")\n"
 
 fun test(inp, expected) =
@@ -179,7 +179,9 @@ val parsefails =
     shouldfail {checkexn = isHE,
                 printarg = fn s => "Should NOT parse: " ^ s,
                 printresult = term_to_string,
-                testfn = fn s => trace ("show_typecheck_errors", 0) Parse.Term
+                testfn = fn s =>
+                   HOLFlags.trace ("Parse.show_typecheck_errors", 0)
+                                  Parse.Term
                                        [QUOTE s]};
 
 val _ = app parsefails [

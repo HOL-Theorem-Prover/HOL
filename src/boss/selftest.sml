@@ -24,7 +24,7 @@ in
   else die "FAILED!\n"
 end handle HOL_ERR _ => die "FAILED (not even an eqn)!"
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 val _ = app (test_CONV (EVAL,"EVAL")) [
       (``option_CASE (NONE : 'a option) (n:'b) f``, ``n:'b``),

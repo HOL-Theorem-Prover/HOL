@@ -34,29 +34,31 @@ val WARN   = HOL_WARNING "TotalDefn";
 (*---------------------------------------------------------------------------*)
 
 local
-  val monitoring = ref 0
-  val _ = register_trace
-             ("Definition.termination candidates", monitoring, 4)
+  val {get = monitoring, ...} =
+      HOLFlags.create_trace ({group = "Definition",
+                              name = "termination_candidates"},
+                             {initial = 0, max = 4})
 in
 fun lztrace(i,title,msgf) =
-  if i <= !monitoring then
+  if i <= monitoring() then
      Lib.say $ String.concat ["\n", title, msgf()]
   else ()
 end
 
-val allow_schema_definition = ref false
-val _ = Feedback.register_btrace
-         ("Definition.allow_schema_definition", allow_schema_definition)
+val {get = get_allow_schema_definition, flag = allow_schema_definition, ...} =
+    HOLFlags.create_btrace ({group = "Definition",
+                             name = "allow_schema_definition"}, false)
 
-val auto_tgoal = ref true
-val _ = Feedback.register_btrace("Definition.auto Defn.tgoal", auto_tgoal)
+val {get = auto_tgoal, ...} =
+    HOLFlags.create_btrace ({group = "Definition",
+                             name = "auto_tgoal"}, true)
 
-val deleting_support = ref true
-val _ = Feedback.register_btrace
-          ("Definition.delete support defs", deleting_support)
+val {get = deleting_support, ...} =
+    HOLFlags.create_btrace ({group = "Definition",
+                             name = "delete_support_defs"}, true)
 
 fun delete_support defn s2 s1 =
-   if !deleting_support then
+   if deleting_support() then
       DefnBase.delete_support defn s2 s1
    else ()
 
@@ -776,7 +778,7 @@ local open Defn
          null (op_intersect aconv (free_varsl tcs) rhs_frees)
       end
   fun fvs_on_rhs V =
-      if !allow_schema_definition then ()
+      if get_allow_schema_definition() then ()
       else complain_about_rhsfvs "defnDefine" V
 
   fun msg1 defName thm_src_loc =
@@ -812,7 +814,7 @@ local open Defn
          val goalstring =  (* grab this in any case *)
              PP.pp_to_string (!Globals.linewidth)
                  proofManagerLib.std_goal_pp (proofManagerLib.top_goal())
-         val _ = if not (!auto_tgoal) then
+         val _ = if not (auto_tgoal()) then
                     ignore $ proofManagerLib.drop ()
                  else ()
      in
@@ -923,7 +925,7 @@ fun located_tDefine loc stem q tac =
        let val snap1 = thy_consts (current_theory())
            val defn = Hol_defn stem q
            val ps = params_of defn
-           val _ = null ps orelse !allow_schema_definition orelse
+           val _ = null ps orelse get_allow_schema_definition() orelse
                    complain_about_rhsfvs "tDefine" ps
        in
         if triv_defn defn then
@@ -996,14 +998,16 @@ fun located_qDefine loc stem q tacopt (_ : Context.t) =
                     ("Unknown attributes: " ^
                      String.concatWith ", " (map #1 unknown))
       fun fmod f =
-          f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
+          f |> (if nocomp then
+                  HOLFlags.trace ("computeLib.auto_import_definitions", 0)
                 else (fn f => f))
-            |> (if svarsok then trace ("Definition.allow_schema_definition", 1)
+            |> (if svarsok then
+                  HOLFlags.trace ("Definition.allow_schema_definition", 1)
                 else (fn f => f))
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
-            |> (if rebindok then trace ("Theory.allow_rebinds", 1)
+            |> (if rebindok then HOLFlags.trace ("Theory.allow_rebinds", 1)
                 else (fn f => f))
       val (thm,indopt) =
           case (tailrecp, tacopt) of
@@ -1125,9 +1129,9 @@ val std_apiDefineq = apiDefineq guessR mk_term_tac;
  ---------------------------------------------------------------------------*)
 
 fun xDefineSchema stem =
-   with_flag(allow_schema_definition,true) (xDefine stem);
+   HOLFlags.with_bflags [(allow_schema_definition,true)] (xDefine stem);
 
 val DefineSchema =
-   with_flag(allow_schema_definition,true) Define;
+   HOLFlags.with_bflags [(allow_schema_definition,true)] Define;
 
 end

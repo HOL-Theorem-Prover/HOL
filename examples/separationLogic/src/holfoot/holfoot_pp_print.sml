@@ -22,7 +22,7 @@ quietdec := false;
 val holfoot_pretty_printer_block_indent = ref 3;
 
 fun unicode_choice snu su =
-  if (current_trace "Unicode" = 1) then su else snu
+  if HOLFlags.get_bflag Parse.avoid_unicode then snu else su
 
 val _ = register_UserStyle NONE "holfoot_comment" [FG LightGrey]
 val _ = register_UserStyle NONE "holfoot_spec"    [FG OrangeRed]

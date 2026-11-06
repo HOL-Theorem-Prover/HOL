@@ -594,11 +594,11 @@ fun define_from_to_aux ignore_tyvars ty =
      manager and, in a batch session, takes the process down with it.
      So the definition is built first and asked whether it wants one. *)
   val from_defn =
-      Feedback.trace ("Theory.allow_rebinds", 1)
+      HOLFlags.trace ("Theory.allow_rebinds", 1)
                      (Hol_defn from_def_name) [ANTIQUOTE tm]
   val from_def =
       if null (Defn.tcs_of from_defn) then
-        Feedback.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
+        HOLFlags.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
       else
         #1 (Defn.tprove
               (from_defn,
@@ -730,7 +730,7 @@ fun define_from_to_aux ignore_tyvars ty =
                    \\ simp_tac std_ss [cv_size_def, cv_snd_def, cv_fst_def]
                    \\ decide_tac)
     end
-  val (to_def, to_ind) = Feedback.trace ("Theory.allow_rebinds", 1) make_def ()
+  val (to_def, to_ind) = HOLFlags.trace ("Theory.allow_rebinds", 1) make_def ()
   (* from from_to theorems *)
   val assum = if null tyvar_assums then T else list_mk_conj tyvar_assums
   val to_cs = to_def |> CONJUNCTS
@@ -850,16 +850,16 @@ fun define_from_to_aux ignore_tyvars ty =
   val to_simps = map simp_one ts1
   val to_def = ts0 |> map SPEC_ALL |> LIST_CONJ |> REWRITE_RULE to_simps
   (* save all results *)
-  val th1 = Feedback.trace ("Theory.allow_rebinds", 1)
+  val th1 = HOLFlags.trace ("Theory.allow_rebinds", 1)
             save_thm ("from_" ^ name_prefix ^ first_name ^ "_def[compute]",
                       from_def)
-  val th2 = Feedback.trace ("Theory.allow_rebinds", 1)
+  val th2 = HOLFlags.trace ("Theory.allow_rebinds", 1)
             save_thm ("to_" ^ name_prefix ^ first_name ^ "_def[compute]",
                       to_def)
   fun save_from_to_thms th = let
     val to_name = th |> UNDISCH_ALL |> concl |> rand |> repeat rator
                      |> dest_const |> fst
-    val _ = Feedback.trace ("Theory.allow_rebinds", 1)
+    val _ = HOLFlags.trace ("Theory.allow_rebinds", 1)
             save_thm("from_" ^ name_prefix ^ to_name ^ "_thm[cv_from_to]", th)
     in () end
   val _ = List.app save_from_to_thms from_to_thms

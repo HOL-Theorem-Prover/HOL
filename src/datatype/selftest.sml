@@ -5,8 +5,8 @@ open testutils
 
 val _ = new_theory "scratch"
 
-val _ = Feedback.set_trace "Theory.save_thm_reporting" 0;
-val _ = Feedback.set_trace "Theory.allow_rebinds" 1;
+val _ = HOLFlags.set_trace "Theory.save_thm_reporting" 0;
+val _ = HOLFlags.set_trace "Theory.allow_rebinds" 1;
 
 fun Hol_datatype q = let
   open TextIO Feedback
@@ -120,8 +120,8 @@ val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
 val _ = Datatype.Datatype`parentest1 = C (('a,'b)fun)`
 
 val _ = tprint "Parse polymorphic record literal"
-val r = with_flag (Globals.guessing_tyvars, false) Parse.Term
-                  `<| fld1 := SUC |>`
+val r = HOLFlags.trace ("Parse.guess_tyvars", 0) Parse.Term
+                       `<| fld1 := SUC |>`
 val rnd = repeat rand r
 val fupd_t = repeat rator r
 val (args, _) = strip_fun (type_of fupd_t)
@@ -328,7 +328,7 @@ val t = Lib.total Parse.Term `case (x:valbind) of
 val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
                 | SOME _ => OK()
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 fun pptest (nm, t, expected) = let
   val _ = tprint ("Pretty-printing of "^nm)
@@ -550,7 +550,8 @@ val _ = doesnt_fail Parse.Term `polyrcd2_p2fld2_fupd :
 
 val _ = tprint "Records with polymorphic fields 4"
 val _ =
-  case Lib.total (trace("show_typecheck_errors", 0) Parse.Term)
+  case Lib.total (HOLFlags.with_bflags
+                    [(Parse.show_typecheck_errors, false)] Parse.Term)
        `polyrcd2_p2fld1_fupd :
              ('a ms -> 'b ms) -> ('a,'c) polyrcd2 -> ('b,'c)polyrcd2`
   of

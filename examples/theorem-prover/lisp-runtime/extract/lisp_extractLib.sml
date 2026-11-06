@@ -13,7 +13,7 @@ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
-fun allowing_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
+fun allowing_rebinds f x = HOLFlags.trace ("Theory.allow_rebinds", 1) f x
 
 (* definitions *)
 

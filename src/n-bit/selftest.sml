@@ -7,7 +7,7 @@ val _ = new_theory "scratch"
   fun die s = (print (s ^ "\n"); raise ERR "" "")
 *)
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 val _ = set_trace "print blast counterexamples" 0
 val _ = set_trace "bit blast" 0
 
@@ -149,8 +149,8 @@ val _ = qtest_conv "simp+WORD_CANCEL" c
 val _ = let
   val _ = tprint "Word factorial termination with good simp"
   val fact_defn =
-      trace ("Definition.auto Defn.tgoal", 0) $
-      trace ("Theory.allow_rebinds", 1) $
+      HOLFlags.trace ("Definition.auto_tgoal", 0) $
+      HOLFlags.trace ("Theory.allow_rebinds", 1) $
       quietly $
       Lib.with_flag(Globals.interactive, true)
         (TotalDefn.qDefine "wfact"

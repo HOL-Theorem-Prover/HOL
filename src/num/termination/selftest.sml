@@ -240,7 +240,7 @@ end
     by src/proofman/interactive_tests.
    ---------------------------------------------------------------------- *)
 
-val _ = proofManagerLib.chatting := false
+val _ = HOLFlags.set_bflag (proofManagerLib.chatting, false)
 val user_goal : goal = ([], mk_var ("user_goal", Type.bool))
 fun top_is (g : goal) =
     aconv (snd (proofManagerLib.top_goal ())) (snd g) handle _ => false

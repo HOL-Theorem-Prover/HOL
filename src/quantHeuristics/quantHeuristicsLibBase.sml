@@ -39,17 +39,19 @@ val std_ss = numLib.std_ss
  * Traces and other global parameters
  *******************************************************)
 
-val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth = ref 250;
-val _ = register_trace("QUANT_INST___REC_DEPTH", QUANT_INSTANTIATE_HEURISTIC___max_rec_depth, 20000);
+fun qh_trace (nm, init, max) =
+    HOLFlags.create_trace ({group = "quantHeuristics", name = nm},
+                           {initial = init, max = max})
 
-val QUANT_INSTANTIATE_HEURISTIC___debug = ref 0;
-val _ = register_trace("QUANT_INST_DEBUG", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
+val {get = qh_max_rec_depth, flag = QUANT_INSTANTIATE_HEURISTIC___max_rec_depth,
+     ...} = qh_trace ("rec_depth", 250, 20000)
 
-val QUANT_INSTANTIATE_HEURISTIC___debug_depth = ref 5;
-val _ = register_trace("QUANT_INST_DEBUG_DEPTH", QUANT_INSTANTIATE_HEURISTIC___debug_depth, 2000);
+val {get = qh_debug, ...} = qh_trace ("debug", 0, 3)
 
-val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 2000;
-val _ = register_trace("QUANT_INST___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 2000);
+val {get = qh_debug_depth, ...} = qh_trace ("debug_depth", 5, 2000)
+
+val {get = qh_print_term_length, ...} =
+    qh_trace ("print_term_length", 2000, 2000)
 
 
 (*******************************************************
@@ -577,7 +579,7 @@ val gc = hd (!gc_ref)
 *)
 
 fun correct_guess_collection v t (gc:guess_collection) =
-  if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) then
+  if (qh_debug() > 0) then
   let
      val gc =
      {rewrites     = #rewrites gc,
@@ -1451,14 +1453,14 @@ val fv = [v]
 val t = b
 
 
-QUANT_INSTANTIATE_HEURISTIC___debug :=
+HOLFlags.set_trace "quantHeuristics.debug"
 
 val t = ``~(uf (x:'a) = uf (SND s)) \/ (IS_SOME (e (FST s)) /\
    s IN var_res_prop___PROP f (wpb,rpb) sfb)``
 
 val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE empty_qp NONE
 val sys = heuristic;
-QUANT_INSTANTIATE_HEURISTIC___print_term_length := 2000
+HOLFlags.set_trace "quantHeuristics.print_term_length" 2000
 *)
 
 fun strip_comb_abs t =
@@ -1700,7 +1702,7 @@ val t = b
 val v = ``x:num``
 val t = ``if b x then ((x = 2) /\ Q x) else (Q2 x /\ (x = 2))``
 
-QUANT_INSTANTIATE_HEURISTIC___debug :=
+HOLFlags.set_trace "quantHeuristics.debug"
 
 val t = ``~(uf (x:'a) = uf (SND s)) \/ (IS_SOME (e (FST s)) /\
    s IN var_res_prop___PROP f (wpb,rpb) sfb)``
@@ -1716,7 +1718,7 @@ t b
 val t = ``Q2 2 /\ (x = 2)``
 sys v t
 
-QUANT_INSTANTIATE_HEURISTIC___print_term_length := 2000
+HOLFlags.set_trace "quantHeuristics.print_term_length" 2000
 *)
 
 local
@@ -2395,7 +2397,7 @@ fun quant_heuristic_cache___peek (cache:quant_heuristic_cache) (v:term) (t:term)
 
 fun cut_term_to_string t =
     let
-       val n = !QUANT_INSTANTIATE_HEURISTIC___print_term_length;
+       val n = qh_print_term_length();
        val st = term_to_string t;
        val st' = if (String.size st > n) then
                      (substring (st,0,n)^"...") else st
@@ -2465,7 +2467,7 @@ val heuristicL = hL
 
 fun BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE n tL
     filterL inst_filterL top_heuristicL heuristicL ctx_top_heuristicL ctx_heuristicL cache_ref_opt (ctx:thm list) (v:term) (t:term) =
-if (n >= !QUANT_INSTANTIATE_HEURISTIC___max_rec_depth) then
+if (n >= qh_max_rec_depth()) then
    ((say_HOL_WARNING "BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE" "Maximal recursion depth reached!");
    raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp)
 else let
@@ -2476,7 +2478,7 @@ else let
    val gc_opt = quant_heuristic_cache___peek (!cache_ref) v t
    val cache_found = isSome gc_opt;
 
-   val _ = if ((!QUANT_INSTANTIATE_HEURISTIC___debug > 0) andalso (n <= !QUANT_INSTANTIATE_HEURISTIC___debug_depth)) then
+   val _ = if ((qh_debug() > 0) andalso (n <= qh_debug_depth())) then
                say ((prefix_string n)^"searching guesses for ``"^
                    (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
            else ();
@@ -2505,7 +2507,7 @@ else let
    val gc  = correct_guess_collection v t (guess_collection_clean (guess_collection_append gc gc_context));
    val gc = filter_guess_collection inst_filterL v t gc;
 
-   val _ = if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) andalso (n <= !QUANT_INSTANTIATE_HEURISTIC___debug_depth) then
+   val _ = if (qh_debug() > 0) andalso (n <= qh_debug_depth()) then
                let
                   val gL = (snd (guess_collection2list gc));
                   val prefix = prefix_string n;
@@ -2513,7 +2515,7 @@ else let
                   val _ = say (prefix^guesses_found_string^" guesses found for ``"^
                    (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
 
-                  val show_thm = (!QUANT_INSTANTIATE_HEURISTIC___debug > 1);
+                  val show_thm = (qh_debug() > 1);
                   fun say_guess guess = say (prefix^" - "^
                    (guess_to_string show_thm guess)^"\n")
                   val _ = foldl (fn (guess,_) => say_guess guess) () (snd (guess_collection2list gc))

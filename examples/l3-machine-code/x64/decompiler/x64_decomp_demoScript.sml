@@ -40,7 +40,7 @@ val _ = save_thm("decomp_cert",decomp_cert);
 val () = Feedback.set_trace "x64 spec" 2
 
 val (decomp1_cert,decomp1_def) =
-  Feedback.trace ("Theory.allow_rebinds", 1)
+  HOLFlags.trace ("Theory.allow_rebinds", 1)
      (x64_decompLib.x64_decompile "decomp1")
   ‘
   (*  0: *) 55              (* push   %rbp *)

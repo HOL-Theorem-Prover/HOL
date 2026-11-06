@@ -15,8 +15,8 @@ val add_datatype_simp = temp_export_datatype_simp
 
 (* Off by default would make the attribute inert; this exists so that
    a shape change can be bisected without unpicking the theorem set. *)
-val normalising = ref true
-val _ = Feedback.register_btrace ("datatype_simp", normalising)
+val {get = normalising, ...} =
+    HOLFlags.create_btrace ({group = "datatype", name = "simp"}, true)
 
 (* The simpset is built per call: the theorem set grows as theories are
    loaded, and a set built once would freeze whatever was tagged first. *)
@@ -26,7 +26,7 @@ fun normalise_conv () =
       (boolTheory.PULL_EXISTS :: datatype_simps())
 
 fun normalise_induction ind =
-    if not (!normalising) then ind
+    if not (normalising()) then ind
     else
       case Lib.total
              (CONV_RULE (STRIP_QUANT_CONV

@@ -412,8 +412,10 @@ in
 
     fun optprintermod f =
         f |> (case optset_showtypes opts of
-                NONE => trace ("types", 0)
-              | SOME i => trace ("types", i))
+                NONE => HOLFlags.trace ("PP.types", 0)
+              (* PP.types is a boolean flag now; the old trace's
+                 verbose level 2 collapses onto 1 *)
+              | SOME i => HOLFlags.trace ("PP.types", Int.min(i,1)))
           |> (case optset_depth opts of
                 NONE => (fn f => f)
               | SOME i => Lib.with_flag (Globals.max_print_depth, i))
@@ -422,10 +424,10 @@ in
               else
                 trace ("EmitTeX: dollar parens", 1))
           |> (if OptSet.has NoMerge opts then
-                trace ("pp_avoids_symbol_merges", 0)
+                HOLFlags.trace ("PP.avoid_symbol_merges", 0)
               else (fn f => f))
           |> (if OptSet.has Merge opts then
-                trace ("pp_avoids_symbol_merges", 1)
+                HOLFlags.trace ("PP.avoid_symbol_merges", 1)
               else (fn f => f))
           |> (case optset_unoverloads opts of
                   [] => (fn f => f)

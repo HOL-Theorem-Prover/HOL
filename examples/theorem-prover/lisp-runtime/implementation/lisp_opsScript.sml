@@ -11,7 +11,7 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 (* --- *)
 
-fun allowing_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
+fun allowing_rebinds f x = HOLFlags.trace ("Theory.allow_rebinds", 1) f x
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

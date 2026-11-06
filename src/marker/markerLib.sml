@@ -159,7 +159,7 @@ fun ABBREV_TAC eq = let val (l,r) = dest_eq eq in ABB l r end;
 
 local
    val {get = match_var_or_const,...} = HOLFlags.create_btrace(
-         {group = "markerLib", name = "PAT_ABBREV_TAC-match var/const"},
+         {group = "markerLib", name = "PAT_ABBREV_TAC_match_var_const"},
          true
        )
 in
