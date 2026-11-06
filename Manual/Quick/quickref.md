@@ -268,27 +268,27 @@ type have no separate Reference entry.
 
 |  |  |
 |---|---|
-| \refentry{Feedback.traces}() | returns a list of registered tracing variables |
-| \refentry{Feedback.set_trace} *name* *int* | set a tracing level for a registered trace |
-| \refentry{Feedback.reset_trace} *name* | resets a tracing variable to its default value |
-| \refentry{Feedback.reset_traces}() | resets all registered tracing variables to their default values |
+| \refentry{HOLFlags.traces}() | returns a list of registered tracing variables |
+| \refentry{HOLFlags.set_trace} *name* *int* | set a tracing level for a registered trace |
+| \refentry{HOLFlags.reset_trace} *name* | resets a tracing variable to its default value |
+| \refentry{HOLFlags.reset_traces}() | resets all registered tracing variables to their default values |
 
 Some commonly-traced variables (with their value ranges):
 
 |  |  |
 |---|---|
-| `"Rewrite"` | tracing variable for term rewriting (0–1) |
-| `"Subgoal number"` | number of printed sub-goals (10–10000) |
-| `"meson"` | for the first-order prover (1–2) |
-| `"numeral types"` | show types of numerals (0–1) |
-| `"simplifier"` | for the simplifier (0–7) |
-| `"types"` | printing of types (0–2) |
+| `"Rewrite.monitoring"` | tracing variable for term rewriting (0–1) |
+| `"Goalstack.howmany_printed_subgoals"` | number of printed sub-goals (10–10000) |
+| `"meson.chatting"` | for the first-order prover (1–2) |
+| `"PP.show_numeral_types"` | show types of numerals (0–1) |
+| `"simplifier.trace"` | for the simplifier (0–7) |
+| `"PP.types"` | printing of types (0–1) |
 
 |  |  |
 |---|---|
-| \refentry{Globals.show_types} := *bool* | flag controlling printing of HOL types |
-| `Globals.show_assums` := *bool* | flag for controlling display of theorem assumptions |
-| \refentry{Globals.show_tags} := *bool* | flag for controlling display of tags in theorem pretty-printer |
+| \refentry{Parse.show_types} | flag controlling printing of HOL types |
+| `Parse.show_assums` | flag for controlling display of theorem assumptions |
+| \refentry{HOLFlags.show_tags} | flag for controlling display of tags in theorem pretty-printer |
 | \refentry{Lib.start_time}() | set a timer running |
 | \refentry{Lib.end_time} *name* | check a running timer, and print out how long it has been running |
 | \refentry{Lib.time} *function* | measure how long a function application takes |

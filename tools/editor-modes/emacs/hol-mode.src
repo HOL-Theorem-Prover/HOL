@@ -1546,11 +1546,11 @@ argument N, sets the trace to that value in particular."
                       fun findfn (HOLFlags.TraceElt r) = #name r = nm
                       fun level (HOLFlags.TraceElt r) = #trace_level r
                       val old =
-                            level (valOf (List.find findfn (traces())))
+                            level (valOf (List.find findfn (HOLFlags.traces())))
                   in
                       print (\"** \"^nm^\" trace now \");
-                      if 0 < old then (set_trace nm 0; print \"off\\n\")
-                      else (set_trace nm 1; print \"on\\n\")
+                      if 0 < old then (HOLFlags.set_trace nm 0; print \"off\\n\")
+                      else (HOLFlags.set_trace nm 1; print \"on\\n\")
                   end handle Option =>
                         print \"** No such trace var: \\\"%s\\\"\\n\"
                   end" s s)
@@ -1558,37 +1558,39 @@ argument N, sets the trace to that value in particular."
     (let ((n (prefix-numeric-value arg)))
       (message (format "Setting %s to %d" s n))
       (send-raw-string-to-hol
-       (format "val _ = (set_trace \"%s\" %d; print \"** %s trace now %d\\n\")
+       (format "val _ = (HOLFlags.set_trace \"%s\" %d; print \"** %s trace now %d\\n\")
                         handle HOL_ERR _ =>
                            print \"** No such trace var: \\\"%s\\\"\\n\""
                s n s n s)
        nil))))
 
 (defun hol-toggle-unicode ()
-  "Toggles the \"Unicode\" trace."
+  "Toggles the \"PP.avoid_unicode\" trace.
+Note the sense: the trace is *avoid* unicode, so turning it on turns
+unicode output off."
   (interactive)
-  (hol-toggle-trace "Unicode"))
+  (hol-toggle-trace "PP.avoid_unicode"))
 
 (defun hol-toggle-emacs-tooltips ()
   "Toggles whether HOL produces tooltip information while pretty-printing."
   (interactive)
-  (hol-toggle-trace "PPBackEnd show types"))
+  (hol-toggle-trace "PPBackEnd.show_types"))
 
 (defun hol-toggle-pp-styles ()
   "Toggles whether HOL produces style informations while pretty-printing."
   (interactive)
-  (hol-toggle-trace "PPBackEnd use styles"))
+  (hol-toggle-trace "PPBackEnd.use_styles"))
 
 (defun hol-toggle-pp-cases ()
   "Toggles the \"pp_cases\" trace."
   (interactive)
-  (hol-toggle-trace "pp_cases")
-  (hol-toggle-trace "use pmatch_pp"))
+  (hol-toggle-trace "PP.cases")
+  (hol-toggle-trace "patternMatches.use_pp"))
 
 (defun hol-toggle-pp-annotations ()
   "Toggles whether HOL produces annotations while pretty-printing."
   (interactive)
-  (hol-toggle-trace "PPBackEnd use annotations"))
+  (hol-toggle-trace "PPBackEnd.use_annotations"))
 
 (defun hol-toggle-goalstack-fvs ()
   "Toggles the trace \"Goalstack.print_goal_fvs\"."
@@ -1613,12 +1615,12 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-simplifier-trace (arg)
   "Toggles the trace \"simplifier\".  With ARG sets trace to this value."
   (interactive "P")
-  (hol-toggle-trace "simplifier" arg))
+  (hol-toggle-trace "simplifier.trace" arg))
 
 (defun hol-toggle-show-types (arg)
   "Toggles the global show_types variable. With prefix ARG sets trace to this value (setting trace to 2, is the same as setting the show_types_verbosely variable)."
   (interactive "P")
-  (hol-toggle-trace "types" arg))
+  (hol-toggle-trace "PP.types" arg))
 
 (defun hol-toggle-show-types-verbosely ()
   "Toggles the global show_types_verbosely variable."

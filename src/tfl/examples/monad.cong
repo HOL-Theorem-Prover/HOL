@@ -13,8 +13,8 @@
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-set_trace "Unicode" 0;
-set_trace "pp_annotations" 0;
+HOLFlags.set_bflag (Parse.avoid_unicode, true);
+HOLFlags.set_bflag (type_pp.annotations, false);
 
 open pairTheory optionTheory relationTheory;
 

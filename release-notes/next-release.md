@@ -36,7 +36,7 @@ New features
     The package now automatically defines map, set and relator constants for those types that are themselves functors (*e.g.*, lists), and the user can specify what names they want for those new constants.
 
 -   `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
-    Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
+    Files that use this feature do not need to mention `HOLFlags.set_trace "TheoryPP.include_html_docs" 0` anymore.
     (Indeed, see below, that trace doesn’t exist with that name anymore.)
 
 -   Lists and finite-map updates (previously achieved with `LUPDATE v i l` and `fm |+ (k,v)` syntax) can now be written with a syntax using the “maps to” arrow and special bracket delimiters.
