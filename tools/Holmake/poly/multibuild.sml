@@ -126,12 +126,16 @@ fun graphbuild optinfo g =
         else s
     fun safetag d t =
         String.map (fn #"/" => #"-" | c => c) (dropthySuffix t)
+    (* Under a layout, <objroot>/logs/<rel> also holds the log
+       directories of rel's subdirectories, so a target named after a
+       subdirectory would collide with it: add a suffix. *)
     fun genLF {tag, dir} =
         let
           val ldir = HFS_NameMunge.logdir_for dir
           val _ = Holmake_tools.createDirIfNecessary ldir
+          val sfx = if HFS_NameMunge.owned_by_layout dir then ".log" else ""
         in
-          ldir ++ safetag dir tag
+          ldir ++ (safetag dir tag ^ sfx)
         end
 
     (* --- retrying out-of-store failures -------------------------------

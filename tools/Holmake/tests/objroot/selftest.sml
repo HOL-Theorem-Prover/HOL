@@ -219,7 +219,7 @@ fun check_products jflags =
                "objs/dirA/ATheory.ui", "objs/dirA/sub/CTheory.dat",
                "objs/dirB/BTheory.dat", "objs/dirA/marker",
                "make-deps/dirA/AScript.sml.d", "make-deps/dirA/lastmaker"] @
-          (if null jflags then [out ++ "logs/dirB/BTheory"] else [])
+          (if null jflags then [out ++ "logs/dirB/BTheory.log"] else [])
       fun is_product f =
           let val {base, ext} = OS.Path.splitBaseExt (OS.Path.file f)
           in
@@ -449,6 +449,26 @@ val _ = check "cachekey stamp" (exists (out ++ "objs/dirA/ATheory.cachekey"))
 val times10 = modtimes (thy_dats out)
 val _ = check_build "second" (holmake root ["--rebuild=cachekey"])
 val _ = check "second run rebuilt" (modtimes (thy_dats out) = times10)
+val _ = OK ()
+
+(* A target's log file must not collide with the log directory of a
+   subdirectory of the same name. *)
+val _ = tprint "Target named after a subdirectory logs beside it"
+val root12 = T ++ "p12"
+val out12 = T ++ "out12"
+val _ = app OS.FileSys.mkDir [root12, root12 ++ "tests"]
+val _ = write_file (root12 ++ "holproject.toml")
+                   ("name = \"objroot_test\"\nobjroot = \"" ^ out12 ^ "\"\n")
+val _ = write_file (root12 ++ "Holmakefile")
+          (holheap_decl () ^
+           "CLINE_OPTIONS = -r\n\nall: tests\n.PHONY: all tests\n\n\
+           \tests: tests/ATheory.uo\n\techo done\n")
+val _ = write_file (root12 ++ "tests" ++ "Holmakefile") (holheap_decl ())
+val _ = write_file (root12 ++ "tests" ++ "AScript.sml")
+          "Theory A[bare]\nAncestors bool\nTheorem a_truth = TRUTH\n"
+val _ = check_build "build" (holmake root12 [])
+val _ = check "logs" (exists (out12 ++ "logs/tests.log") andalso
+                      exists (out12 ++ "logs/tests/ATheory.log"))
 val _ = OK ()
 
 (* Without an artifact root, retain the legacy layout. *)

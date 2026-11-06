@@ -898,7 +898,7 @@ within each group:
 ```
 <objroot>/objs/<rel>/       .uo, .ui, *Theory.{sml,sig,dat}, .cachekey
 <objroot>/make-deps/<rel>/  dependency files and lastmaker
-<objroot>/logs/<rel>/       per-target build logs
+<objroot>/logs/<rel>/       per-target build logs, <target>.log
 <objroot>/locks/<rel>/      build locks
 <objroot>/docs/<rel>/       HTML theory documentation
 <objroot>/build-logs/       the project's target-times cache
