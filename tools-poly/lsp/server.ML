@@ -294,18 +294,17 @@ fun scriptBeside path = let
   end handle _ => NONE
 
 (* Where a logical object path really is.  Holmake keeps a directory's
-   objects in `.hol/objs' and presents them as if they sat beside the
-   source, so the path the loader reports is the presented one and
-   stat-ing it answers "absent" for every built directory.  Try the
-   path as given -- an unmunged tree, or sigobj -- then the munged
-   one. *)
+   objects in `.hol/objs', or under an artifact root, and presents them
+   as if they sat beside the source, so the path the loader reports is
+   the presented one and stat-ing it answers "absent" for every built
+   directory.  Try the path as given -- an unmunged tree, or sigobj --
+   then the munged one. *)
 fun physicalArtifact path =
   (if OS.FileSys.access (path, []) then SOME path
-   else let
-     val p = OS.Path.concat
-               (OS.Path.concat (OS.Path.dir path, ".hol"),
-                OS.Path.concat ("objs", OS.Path.file path))
-     in if OS.FileSys.access (p, []) then SOME p else NONE end)
+   else case HFS_NameMunge.HOLtoFS path of
+          SOME {fullfile, ...} =>
+            if OS.FileSys.access (fullfile, []) then SOME fullfile else NONE
+        | NONE => NONE)
   handle _ => NONE
 
 (* Of the modules named, those whose script is newer than the artifact
