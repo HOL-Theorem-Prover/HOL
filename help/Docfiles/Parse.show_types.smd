@@ -1,4 +1,8 @@
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+aliases:
+  - HOLFlags.show_types
+---
 ## `show_types`
 
 ``` hol4
@@ -6,6 +10,12 @@ Parse.show_types : HOLFlags.bflag
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`HOLFlags.show_types`](#HOLFlags.show_types).*
+
+<!-- END aliases-block -->
 
 Flag controlling printing of HOL types (in terms).
 

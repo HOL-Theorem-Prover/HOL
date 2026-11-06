@@ -1,0 +1,26 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `get_bflag`
+
+``` hol4
+HOLFlags.get_bflag : bflag -> bool
+```
+
+------------------------------------------------------------------------
+
+Read a boolean flag.
+
+A call to `get_bflag f` returns the current value of `f` in the
+ambient context. `get_bflagC` reads it from a context the caller
+supplies instead, which is what code holding a `Context.t` --- a tactic,
+say --- should use.
+
+### Failure
+
+Fails if `f` does not name a trace.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.set_bflag`](#HOLFlags.set_bflag),
+[`HOLFlags.get_bflagC`](#HOLFlags.get_bflagC),
+[`HOLFlags.get_flag`](#HOLFlags.get_flag)

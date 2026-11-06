@@ -1,0 +1,33 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_bflagC`
+
+``` hol4
+HOLFlags.set_bflagC :
+  bflag * bool -> ctxt -> ctxt
+```
+
+------------------------------------------------------------------------
+
+Set a boolean flag in a given context.
+
+HOL's flags live in a slot of a `Context.t`, so they travel with a
+context: a `Context.snapshot` captures them and a `Context.restore`
+rewinds them along with everything else the context carries. The
+unsuffixed accessors read and write whichever context is ambient on the
+calling thread. These read and write one the caller names.
+
+A call to `set_bflagC (f, b) c` returns a context like `c` but with `f`
+set to `b`. It is a function on contexts, not a side effect: the
+ambient context is untouched, and the result is only seen by whatever
+goes on to use it.
+
+### Failure
+
+Fails if `f` does not name a trace.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.set_bflag`](#HOLFlags.set_bflag),
+[`HOLFlags.get_bflagC`](#HOLFlags.get_bflagC),
+[`HOLFlags.set_flagC`](#HOLFlags.set_flagC)

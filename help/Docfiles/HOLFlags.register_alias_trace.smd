@@ -1,0 +1,34 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_alias_trace`
+
+``` hol4
+HOLFlags.register_alias_trace :
+  {original : trace_name, alias : trace_name} -> unit
+```
+
+------------------------------------------------------------------------
+
+Give an existing trace a second name.
+
+A call to `register_alias_trace {original, alias}` makes `alias`
+another name for `original`: reading or setting either reaches the same
+setting, and `traces()` reports `alias` in `original`'s entry rather
+than as one of its own.
+
+The alias is a second *name*, not a second setting, and in particular
+not an inverted one. A trace that should read as the complement of
+another cannot be expressed this way, which is why the old `"Unicode"`
+trace --- the inverse of `"PP.avoid_unicode"` --- has no counterpart
+here.
+
+### Failure
+
+Fails if `original` does not name a trace, or if `alias` is already a
+trace in its own right. Aliasing a name to itself does nothing but
+warn, as does replacing an alias that already points elsewhere.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

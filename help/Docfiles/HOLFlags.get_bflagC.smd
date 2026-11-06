@@ -1,0 +1,34 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `get_bflagC`
+
+``` hol4
+HOLFlags.get_bflagC :
+  ctxt -> bflag -> bool
+```
+
+------------------------------------------------------------------------
+
+Read a boolean flag from a given context.
+
+HOL's flags live in a slot of a `Context.t`, so they travel with a
+context: a `Context.snapshot` captures them and a `Context.restore`
+rewinds them along with everything else the context carries. The
+unsuffixed accessors read and write whichever context is ambient on the
+calling thread. These read and write one the caller names.
+
+A call to `get_bflagC c f` returns `f`'s value in `c`. Code that has
+been handed a context --- a tactic is `goal -> Context.t -> …` --- should
+consult that one rather than the ambient one, so that its behaviour is a
+function of the context it was given rather than of whatever the session
+happens to be in.
+
+### Failure
+
+Fails if `f` does not name a trace.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.get_bflag`](#HOLFlags.get_bflag),
+[`HOLFlags.set_bflagC`](#HOLFlags.set_bflagC),
+[`HOLFlags.get_flagC`](#HOLFlags.get_flagC)

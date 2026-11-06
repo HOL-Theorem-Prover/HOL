@@ -98,6 +98,11 @@ New features
 
 -   `Holmake` (under Poly/ML) takes a new option `--retry-oos=n`, which allows each target up to `n` further attempts when its build fails with the Poly/ML runtime reporting that it has run out of store.
 
+-   Every trace that a library exposes to its users is now also available as a *value*, not only as a string.
+    `HOLFlags.create_trace` and `create_btrace` return a `flag` (or `bflag`) naming what they made, and the owning module exports it: `Parse.show_types`, `Theory.allow_rebinds`, `blastLib.trace`, `wordsLib.guessing_word_lengths` and so on.
+    Passing one to `set_flag`, `set_bflag`, `with_flags` or `with_bflags` is checked when the caller is compiled, where `set_trace "PP.typse" 1` fails only when that line is reached.
+    The string form still works and remains the right choice when the name is computed at run time.
+
 -   `bossLib` provides three new short names for common tactics:
     * `have ‘t’` states an intermediate result, leaving it as the first subgoal and adding it (stripped) to the assumptions of the other; it is the tactic already available as `sg`.
     * `suff ‘t’` replaces the goal with a sufficient condition, leaving `t ==> goal` as the first subgoal; it is already available as `qsuff_tac`;
@@ -245,6 +250,29 @@ Incompatibilities
     An `itself` argument over a *parameter* rather than over the type being declared — a field of type `'a itself` pinning a type variable that occurs nowhere else — does not recurse and is unaffected.
 
 -   `ind_types.munge_ind_thm` is now `legacyInduction.munge_ind_thm`.
+
+-   HOL's flags and traces have moved out of `Feedback` and `Globals` into a new structure, `HOLFlags`.
+    The settings now live in a slot of the prevailing `Context.t`, so they travel with a context across `Context.snapshot` and `Context.restore`, and the `C`-suffixed accessors (`get_flagC`, `set_bflagC`, …) read and write the flags of a context the caller supplies rather than the ambient one.
+
+    `set_trace`, `current_trace`, `reset_trace`, `reset_traces`, `trace`, `traces` and `with_traces` keep their types and behaviour; they are reached as `HOLFlags.…` rather than `Feedback.…`, and are no longer in scope unqualified through `open HolKernel`.
+
+-   `Feedback.register_trace` and `register_btrace` are replaced by `HOLFlags.create_trace` and `create_btrace`, which have a different shape: where the old pair adopted a reference the caller already held, the new pair creates the trace and returns `{get, set, flag}`.
+
+    `Feedback.register_ftrace`, which registered a trace over an arbitrary get/set pair, **has no replacement**.
+    One consequence is visible in the kernel: `Context`'s two ambient-read diagnostics could not be re-registered, because `HOLFlags` keeps its map in a `Context.Data` slot and so is built on `Context`.
+    They are now set with `Context.set_ambient_report_level` and `Context.set_ambient_sig_report_level` instead of with a trace.
+
+-   Trace names are now qualified by the library that owns them, and contain no spaces.
+    For example `"types"` is `"PP.types"`, `"assumptions"` is `"PP.show_assums"`, `"metis"` is `"metis.trace"`, `"simplifier"` is `"simplifier.trace"`, `"word printing"` is `"words.printing"`, `"bit blast"` is `"blastLib.trace"`, and `"Univ pretty-printing"` is `"pred_set.univ_printing"`.
+    `HOLFlags.traces()` lists what a session has.
+
+    The `"Unicode"` trace is gone.
+    It was registered as the *inverse* of `"PP.avoid_unicode"`, and the new machinery has no inverting alias, so uses of it should be written in terms of `Parse.avoid_unicode` with the sense flipped: `set_trace "Unicode" 0` becomes `HOLFlags.set_bflag (Parse.avoid_unicode, true)`.
+
+-   The printing and parsing flags that used to be references in `Globals` — `show_types`, `show_assums`, `show_tags`, `show_axioms`, `show_numeral_types`, `show_scrub`, `guessing_tyvars`, `guessing_overloads` and `notify_on_tyvar_guess` — are no longer references, so `:=`, `!` and `Lib.with_flag` do not apply to them.
+    They are values of type `HOLFlags.bflag`, set with `HOLFlags.set_bflag` and bracketed with `HOLFlags.with_bflags`.
+    `Parse` exports the common ones; `show_tags` and `show_axioms` come from `HOLFlags` itself.
+    `type_pp.pp_num_types` and `type_pp.pp_array_types` have gone the same way, as `type_pp.num_types` and `type_pp.array_types`.
 
 Deprecations
 ------------

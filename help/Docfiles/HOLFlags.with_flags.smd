@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `with_flags`
+
+``` hol4
+HOLFlags.with_flags : (flag * int) list -> ('a -> 'b) -> 'a -> 'b
+```
+
+------------------------------------------------------------------------
+
+Apply a function with integer flags temporarily set.
+
+A call to `with_flags [(f1,i1), ..., (fn,in)] f x` sets each flag `fi`
+to `ii`, evaluates `f x`, restores all of the flags to the values they
+had beforehand, and returns the result. The flags are restored whether
+`f x` returns or raises.
+
+`with_bflags` is the same for boolean flags, and `with_traces` takes the
+flags' names as strings rather than as values.
+
+### Failure
+
+Fails if `f x` fails, having first restored the flags. Fails if any
+`ii` is out of range for its flag, or if any `fi` does not name a
+trace.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.with_bflags`](#HOLFlags.with_bflags),
+[`HOLFlags.with_traces`](#HOLFlags.with_traces),
+[`HOLFlags.set_flag`](#HOLFlags.set_flag),
+[`Lib.with_flag`](#Lib.with_flag)

@@ -1,0 +1,30 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `get_flagC`
+
+``` hol4
+HOLFlags.get_flagC :
+  ctxt -> flag -> int
+```
+
+------------------------------------------------------------------------
+
+Read an integer-valued flag from a given context.
+
+HOL's flags live in a slot of a `Context.t`, so they travel with a
+context: a `Context.snapshot` captures them and a `Context.restore`
+rewinds them along with everything else the context carries. The
+unsuffixed accessors read and write whichever context is ambient on the
+calling thread. These read and write one the caller names.
+
+A call to `get_flagC c f` returns `f`'s value in `c`.
+
+### Failure
+
+Fails if `f` does not name a trace.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.get_flag`](#HOLFlags.get_flag),
+[`HOLFlags.set_flagC`](#HOLFlags.set_flagC),
+[`HOLFlags.get_bflagC`](#HOLFlags.get_bflagC)

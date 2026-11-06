@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_bflag`
+
+``` hol4
+HOLFlags.set_bflag : bflag * bool -> unit
+```
+
+------------------------------------------------------------------------
+
+Set a boolean flag.
+
+A call to `set_bflag (f, b)` sets the flag `f` to `b`, for the rest of
+the session or until something sets it again. To set one only for the
+duration of a call, use `with_bflags`.
+
+The flag is a value rather than a name, so a misspelling is a compile
+error rather than a failure when the line is reached; `set_trace` is the
+equivalent that takes the trace's name as a string.
+
+### Failure
+
+Fails if `f` does not name a trace, which can happen only if the flag
+was built by hand rather than obtained from `create_btrace`.
+
+### Example
+
+``` hol4
+>> HOLFlags.set_bflag (Parse.show_types, true);
+
+>> ``$=``;
+
+>>__ HOLFlags.set_bflag (Parse.show_types, false);
+```
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.get_bflag`](#HOLFlags.get_bflag),
+[`HOLFlags.set_flag`](#HOLFlags.set_flag),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.with_bflags`](#HOLFlags.with_bflags)
