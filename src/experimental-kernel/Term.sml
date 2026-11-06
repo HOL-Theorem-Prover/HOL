@@ -1086,7 +1086,14 @@ fun norm_subst ((tmS,_),(tyS,_)) =
          del (let val redex' = Theta(redex)
               in if residue=redex' then A else (redex' |-> residue)::A
               end) rst
- in (del [] tmS,tyS)
+     val tmS' = del [] tmS
+ in
+   (* Instantiating the redexes can merge two of them -- x:'a and x:'b
+      both become x:num -- and Term.subst rejects the repeated redex.
+      Keep the later maplet, which is the one subst acted on: del
+      reverses, so that is the earlier entry of tmS.  Only reachable
+      when tyS actually substitutes something. *)
+   (if null tyS then tmS' else Lib.subst_keep_last aconv tmS', tyS)
  end
 
 fun match_terml tyfixed tmfixed pat ob =
