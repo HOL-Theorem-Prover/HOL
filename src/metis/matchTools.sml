@@ -72,7 +72,11 @@ fun refine_subst ([], []) sub' = sub'
   | refine_subst sub ([], []) = sub
   | refine_subst (tmS, tyS) (tmS', tyS') =
   let fun f {redex, residue} = inst tyS' redex |-> pinst (tmS', tyS') residue
-  in (tmS' @ map f tmS, type_refine_subst tyS tyS')
+  (* as in hurdUtils.refine_subst: concatenation can repeat a redex, and
+     re-typing tmS's redexes can merge two of them.  Precautionary -- no
+     build has failed here, but this is a clone of the site that did. *)
+  in (Lib.subst_keep_last aconv (tmS' @ map f tmS),
+      type_refine_subst tyS tyS')
   end;
 
 (* ------------------------------------------------------------------------- *)
