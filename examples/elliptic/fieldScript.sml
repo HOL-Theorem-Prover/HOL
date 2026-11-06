@@ -19,7 +19,7 @@ val () = quietdec := true;
 *)
 Theory field
 Ancestors
-  option list arithmetic divides gcd pred_set group
+  option list arithmetic divides gcd pred_set group expMod
 Libs
   metisLib res_quanTools primalityTools groupTools
 
@@ -2669,62 +2669,12 @@ QED
 (* GF(p).                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-Definition modexp_def:
-    modexp a n m =
-    if n = 0 then 1
-    else if n MOD 2 = 0 then modexp ((a * a) MOD m) (n DIV 2) m
-    else (a * modexp ((a * a) MOD m) (n DIV 2) m) MOD m
-End
-
-val modexp_ind = fetch "-" "modexp_ind";
-
 Definition GF_def:
    GF p =
    <| carrier := { n | n < p };
       sum := add_mod p;
       prod := mult_mod p |>
 End
-
-Theorem modexp:
-     !a n m. 1 < m ==> (modexp a n m = (a ** n) MOD m)
-Proof
-   recInduct modexp_ind
-   ++ RW_TAC std_ss []
-   ++ ONCE_REWRITE_TAC [modexp_def]
-   ++ Cases_on `n = 0` >> RW_TAC arith_ss [EXP]
-   ++ ASM_SIMP_TAC bool_ss []
-   ++ REPEAT (Q.PAT_X_ASSUM `X ==> Y` (K ALL_TAC))
-   ++ Know `0 < m` >> DECIDE_TAC
-   ++ STRIP_TAC
-   ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
-   ++ ASM_REWRITE_TAC []
-   ++ DISCH_THEN (MP_TAC o Q.SPECL [`a`,`a`])
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ ASM_SIMP_TAC bool_ss [MOD_MOD, MOD_EXP]
-   ++ Know `a MOD m * a MOD m = (a MOD m) ** 2`
-   >> RW_TAC bool_ss [TWO, ONE, EXP, REWRITE_RULE [ONE] MULT_CLAUSES]
-   ++ DISCH_THEN (fn th => ASM_SIMP_TAC bool_ss [th])
-   ++ ASM_SIMP_TAC bool_ss [EXP_EXP]
-   ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
-   ++ ASM_REWRITE_TAC []
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ MP_TAC (Q.SPECL [`a`,`n`,`m`] MOD_EXP)
-   ++ ASM_REWRITE_TAC []
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ Q.SPEC_TAC (`a MOD m`,`a`)
-   ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
-   ++ ASM_REWRITE_TAC []
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ ASM_SIMP_TAC bool_ss [MOD_MOD]
-   ++ ASM_SIMP_TAC bool_ss [MOD_TIMES2, GSYM EXP]
-   ++ Know `(n MOD 2 = 0) \/ (n MOD 2 = 1)`
-   >> (Suff `n MOD 2 < 2` >> DECIDE_TAC
-       ++ RW_TAC std_ss [DIVISION])
-   ++ ASM_SIMP_TAC bool_ss [ADD1]
-   ++ Suff `n = 2 * (n DIV 2) + n MOD 2`
-   >> METIS_TAC [ADD_CLAUSES]
-   ++ METIS_TAC [DIVISION, DECIDE ``0 < 2``, MULT_COMM]
-QED
 
 Theorem GF_carrier:
      !p. (GF p).carrier = { n | n < p}
@@ -2775,24 +2725,18 @@ Theorem GF_sub:
      !p :: Prime. !x y. field_sub (GF p) x y = (x + (p - y)) MOD p
 Proof
    RW_TAC resq_ss [GF_add, GF_neg, field_sub_def, Prime_def, GSPECIFICATION]
-   ++ Know `~(p = 0)` >> METIS_TAC [NOT_PRIME_0]
-   ++ STRIP_TAC
-   ++ MP_TAC (Q.SPEC `p` MOD_PLUS)
-   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-   ++ CONJ_TAC >> DECIDE_TAC
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ RW_TAC arith_ss [MOD_MOD]
+   ++ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
+   ++ REWRITE_TAC [MOD_MOD]
+   ++ REWRITE_TAC [MOD_PLUS]
 QED
 
 Theorem GF_inv:
-     !p :: Prime. !x y. field_inv (GF p) x = modexp x (p - 2) p
+     !p :: Prime. !x y.
+       field_inv (GF p) x = exp_mod_binary x (p - 2) p
 Proof
   RW_TAC resq_ss
     [GF_def, field_accessors, field_inv_def, mult_mod_def,
-     combinTheory.K_THM, Prime_def, GSPECIFICATION]
-  ++ match_tac (GSYM modexp)
-  ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
-  ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
+     combinTheory.K_THM, Prime_def, GSPECIFICATION, exp_mod_binary_eqn]
 QED
 
 Theorem GF_mult:
@@ -2808,7 +2752,7 @@ Proof
 QED
 
 Theorem GF_exp:
-     !p :: Prime. !x n. field_exp (GF p) x n = modexp x n p
+     !p :: Prime. !x n. field_exp (GF p) x n = exp_mod_binary x n p
 Proof
    RW_TAC resq_ss [Prime_def, GSPECIFICATION]
    ++ Know `1 < p`
@@ -2817,7 +2761,7 @@ Proof
    ++ STRIP_TAC
    ++ Know `0 < p` >> DECIDE_TAC
    ++ STRIP_TAC
-   ++ RW_TAC bool_ss [modexp]
+   ++ RW_TAC bool_ss [exp_mod_binary_eqn]
    ++ (Induct_on `n`
        ++ RW_TAC bool_ss [field_exp_def, GF_one, GF_mult, EXP])
    >> METIS_TAC [LESS_MOD]
@@ -2849,10 +2793,10 @@ Theorem GF_alt:
        (field_neg (GF p) x = (p - x) MOD p) /\
        (field_add (GF p) x y = (x + y) MOD p) /\
        (field_sub (GF p) x y = (x + (p - y)) MOD p) /\
-       (field_inv (GF p) x = modexp x (p - 2) p) /\
+       (field_inv (GF p) x = exp_mod_binary x (p - 2) p) /\
        (field_mult (GF p) x y = (x * y) MOD p) /\
        (field_div (GF p) x y = field_mult (GF p) x (field_inv (GF p) y)) /\
-       (field_exp (GF p) x n = modexp x n p) /\
+       (field_exp (GF p) x n = exp_mod_binary x n p) /\
        (field_num (GF p) x = x MOD p)
 Proof
    RW_TAC std_ss

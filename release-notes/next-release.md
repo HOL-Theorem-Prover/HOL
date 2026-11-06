@@ -153,6 +153,10 @@ Bugs fixed
 New theories
 ------------
 
+-   `expMod` provides binary modular exponentiation and its accumulator
+    correctness equation. AKS numeric computations and elliptic prime-field
+    computations now share this implementation.
+
 -  `lebesgue_measure`: The equivalence of Lebesgue and Gauge integration.
    A (measurable) function is Lebesgue integrable iff it is Gauge absolutely integrable.
    Theorems in this theory (*e.g.*, `lebesgue_eq_gauge_integral`, `lebesgue_eq_gauge_integral_alt`, *etc.*) can be used to calculate concrete Lebesgue integrals found in Probability applications, etc. (in form of `integral lborel (Normal o f)` where `f IN borel_measurable borel`) by Fundamental Theorem of Calculus (FTC) from `integration` theory, if the anti-derivative of `f` is known (or computable by external CAS software).
@@ -182,6 +186,13 @@ New examples
 
 Incompatibilities
 -----------------
+
+-   AKS's `computeBasic` no longer defines numeric modular exponentiation;
+    use `expModTheory` for `exp_mod_binary`, `exp_mod_step`, their definitions,
+    and their correctness equations. The `exp_mod_compute` wrapper and its
+    theorems have been removed; use `exp_mod_binary` instead.
+    Elliptic's `field$modexp` has likewise been replaced by
+    `expMod$exp_mod_binary` in the prime-field computation theorems.
 
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.

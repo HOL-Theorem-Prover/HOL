@@ -7,7 +7,7 @@
 Theory computeOrder
 Ancestors
   pred_set list arithmetic number combinatorics divides gcd
-  logroot prime group ring fieldInstances computeBasic
+  logroot prime group ring fieldInstances computeBasic expMod
 Libs
   jcLib
 
@@ -69,7 +69,7 @@ val _ = intLib.deprecate_int ();
    Order Computation -- with optimisation:
    order_search_def      |- !n m k c. order_search m n c k =
                                            if c <= k then k
-                                      else if exp_mod_compute n k m = 1 then k
+                                     else if exp_mod_binary n k m = 1 then k
                                       else order_search m n c (k + 1)
    order_compute_def     |- !m n. order_compute m n =
                                        if n = 0 then ordz m 0
@@ -97,7 +97,7 @@ val _ = intLib.deprecate_int ();
    Efficient Order Computation:
    ordz_search_def       |- !n m k c. ordz_search m n c k =
                                            if c <= k then k
-                                      else if k divides c /\ (exp_mod_compute n k m = 1) then k
+                                     else if k divides c /\ (exp_mod_binary n k m = 1) then k
                                       else ordz_search m n c (k + 1)
    ordz_fast_def         |- !m n. ordz_fast m n =
                                        if n = 0 then ordz m 0
@@ -741,7 +741,7 @@ return 0  // unreachable, unless no initial coprime check.
 (* A method to compute ordz m n:
 Step 1: if (gcd m n <> 1) then 0
 Step 2: Just search from j = 1 to (phi m),
-        If exp_mod_compute n j m = 1, return j.
+        If exp_mod_binary n j m = 1, return j.
         Search is upwards for the first (least) index j.
 *)
 
@@ -751,15 +751,15 @@ Step 2: Just search from j = 1 to (phi m),
 Definition order_search_def:
   order_search m n c k =
   (* search is from k to maximum c *)
-  if c <= k then k (* when k reaches c, k = c, must divide c, and exp_mod_compute n c m = 1 always. *)
-  else if exp_mod_compute n k m = 1 then k (* that is, found k such that (n ** k) MOD m = 1 *)
+  if c <= k then k (* when k reaches c, k = c, must divide c, and exp_mod_binary n c m = 1 always. *)
+  else if exp_mod_binary n k m = 1 then k (* that is, found k such that (n ** k) MOD m = 1 *)
   else order_search m n c (k + 1) (* current k is not suitable, try k + 1 instead. *)
 Termination WF_REL_TAC `measure (λ(m,n,c,k). c - k)`
 End
 (*
 val order_search_def = |- !n m k c. order_search m n c k =
      if c <= k then k
-     else if exp_mod_compute n k m = 1 then k
+     else if exp_mod_binary n k m = 1 then k
      else order_search m n c (k + 1): thm
 *)
 
@@ -792,12 +792,12 @@ Since phi(10) = 4, ordz 10 n is a divisior of 4.
 
 (* Theorem: order_search m n c k = if c <= k then k
             else if (n ** k) MOD m = 1 then k else order_search m n c (k + 1) *)
-(* Proof: by order_search_def, exp_mod_compute_eqn *)
+(* Proof: by order_search_def, exp_mod_binary_eqn *)
 Theorem order_search_alt:
     !m n c k. order_search m n c k = if c <= k then k
              else if (n ** k) MOD m = 1 then k else order_search m n c (k + 1)
 Proof
-  rw[Once order_search_def, exp_mod_compute_eqn]
+  rw[Once order_search_def, exp_mod_binary_eqn]
 QED
 
 (* Theorem: order_compute m n = if n = 0 then ordz m 0
@@ -1122,7 +1122,7 @@ return 0  // unreachable, unless no initial coprime check.
 Step 1: if (gcd m n <> 1) then 0
 Step 2: By Euler-Fermat theorem, ordz m n = ordz m (n MOD m) is a divisor of (phi m).
         Just search from j = 1 to (phi m),
-        If exp_mod_compute n j m = 1, return j.
+        If exp_mod_binary n j m = 1, return j.
         Search is upwards for the first (least) index j.
 *)
 
@@ -1132,8 +1132,8 @@ Step 2: By Euler-Fermat theorem, ordz m n = ordz m (n MOD m) is a divisor of (ph
 Definition ordz_search_def:
   ordz_search m n c k =
   (* search is from k to maximum c *)
-  if c <= k then k (* when k reaches c, k = c, must divide c, and exp_mod_compute n c m = 1 always. *)
-  else if k divides c /\ (exp_mod_compute n k m = 1) then k (* that is, found k such that (n ** k) MOD m = 1 *)
+  if c <= k then k (* when k reaches c, k = c, must divide c, and exp_mod_binary n c m = 1 always. *)
+  else if k divides c /\ (exp_mod_binary n k m = 1) then k (* that is, found k such that (n ** k) MOD m = 1 *)
   else ordz_search m n c (k + 1) (* current k is not suitable, try k + 1 instead. *)
 Termination
   WF_REL_TAC `measure (λ(m,n,c,k). c - k)`
@@ -1141,7 +1141,7 @@ End
 (*
 val ordz_search_def = |- !n m k c. ordz_search m n c k =
      if c <= k then k
-     else if k divides c /\ (exp_mod_compute n k m = 1) then k
+     else if k divides c /\ (exp_mod_binary n k m = 1) then k
      else ordz_search m n c (k + 1): thm
 *)
 
@@ -1170,12 +1170,12 @@ Since phi(10) = 4, ordz 10 n is a divisior of 4.
 
 (* Theorem: ordz_search m n c k = if c <= k then k
             else if k divides c /\ ((n ** k) MOD m = 1) then k else ordz_search m n c (k + 1) *)
-(* Proof: by ordz_search_def, exp_mod_compute_eqn *)
+(* Proof: by ordz_search_def, exp_mod_binary_eqn *)
 Theorem ordz_search_alt:
     !m n c k. ordz_search m n c k = if c <= k then k
              else if k divides c /\ ((n ** k) MOD m = 1) then k else ordz_search m n c (k + 1)
 Proof
-  rw[Once ordz_search_def, exp_mod_compute_eqn]
+  rw[Once ordz_search_def, exp_mod_binary_eqn]
 QED
 
 (* Theorem: ordz_fast m n = if n = 0 then ordz m 0
