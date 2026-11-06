@@ -12,7 +12,7 @@
 ******************************************************************************)
 (*
 quietdec := true;
-(* show_assums := true; *)
+(* HOLFlags.set_bflag (Parse.show_assums, true); *)
 map load  ["metisLib","TotalDefn","jrhUtils"];
 open arithmeticTheory metisLib TotalDefn jrhUtils;
 quietdec := false;

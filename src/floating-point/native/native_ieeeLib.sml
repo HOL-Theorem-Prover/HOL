@@ -2,7 +2,7 @@
    Conversions for evaluating some 64-bit (double precision) IEEE-754
    operations. They can be enabled in EVAL with
 
-    > set_trace "native IEEE" 1;
+    > HOLFlags.set_trace "floating-point.native_IEEE" 1;
 
    Calculations are perfromed in hardware using SML's Real and Math
    structures and the theorems are produced using Thm.mk_oracle_thm.

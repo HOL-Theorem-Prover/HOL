@@ -39,7 +39,7 @@ open listSimps;
 open numLib;
 open computeLib;
 
-fun term_to_string2 t = with_flag (show_types,false) term_to_string t;
+fun term_to_string2 t = HOLFlags.with_bflags [(Parse.show_types, false)] term_to_string t;
 
 val ONCE_BETA_LET_CONV = (ONCE_DEPTH_CONV BETA_CONV) THENC (ONCE_DEPTH_CONV let_CONV);
 val no_beta_BOOL_ss = rewrites (frag_rewrites BOOL_ss) (* this is BOOL_ss w/o beta-reduction *)

@@ -38,15 +38,14 @@ fun derive_alist A i tm =
           derive_alist (derive_alist ((i,v)::A) (i + 2 * inc) lb) (i + inc) rb
         end
 
-val sptreepp_enabled = ref true
-val _ = register_btrace ("PP.sptreepp_enabled", sptreepp_enabled)
+val {get = sptreepp_enabled, ...} =
+    HOLFlags.create_btrace ({group = "PP", name = "sptreepp_enabled"}, true)
 
 fun sptree_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     let
       open term_pp_utils term_pp_types smpp
-      val _ = get_tracefn "PP.sptreepp_enabled" () = 1 orelse
-              raise UserPP_Failed
-      val unicodep = get_tracefn "PP.avoid_unicode" () = 0
+      val _ = sptreepp_enabled() orelse raise UserPP_Failed
+      val unicodep = not (HOLFlags.get_bflag Parse.avoid_unicode)
       val alist = derive_alist [] 0 tm handle HOL_ERR _ => raise UserPP_Failed
       val sorted = Listsort.sort (inv_img_cmp #1 Int.compare) alist
       val _ = if null alist then raise UserPP_Failed else ()

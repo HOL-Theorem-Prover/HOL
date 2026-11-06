@@ -1334,7 +1334,7 @@ Proof
             IN_INSERT]
 QED
 (*
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val rdb = global_ruledb()
 val cleftp = false
 val cfg = {force_imp = false, cleftp = cleftp,

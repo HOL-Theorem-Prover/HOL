@@ -1457,7 +1457,7 @@ val old_thms =
 (*   LIFT TYPES, CONSTANTS, AND THEOREMS BY QUOTIENTS   *)
 (* ==================================================== *)
 
-val _ = quotient.chatting := true;
+val _ = HOLFlags.set_bflag (quotient.chatting, true);
 
 val [HEIGHT,
      HEIGHT_LESS_EQ_ZERO,

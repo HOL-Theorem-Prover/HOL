@@ -94,7 +94,7 @@ QED
 (*
 val th = monoid_assoc
 
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val base = transfer_skeleton true (concl th)
 val th = base
 val rdb = global_ruledb()
@@ -245,7 +245,7 @@ Overload MPROD_SET = “λm s. MITSET m s (tmid m)”
 (* Interesting case where forward transfer breaks down
 val th = GPROD_SET_PROPERTY
 
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val base = transfer_skeleton true (concl th)
 val th = base
 val rdb = global_ruledb()
@@ -596,7 +596,7 @@ Theorem submonoid_order = xfer monoidTheory.submonoid_order
 
 
 (*
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val rdb = global_ruledb()
 val cleftp = true
 val cfg = {force_imp = true, cleftp = true,

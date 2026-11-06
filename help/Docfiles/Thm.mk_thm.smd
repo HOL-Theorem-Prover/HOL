@@ -32,7 +32,7 @@ The following shows how to create a simple contradiction:
 ``` hol4
    >> val falsity = mk_thm([],boolSyntax.F);
 
-   >> Globals.show_tags := true;
+   >> HOLFlags.set_bflag (HOLFlags.show_tags, true);
 
    >> falsity;
 ```
@@ -62,4 +62,4 @@ with the aid of `mk_thm` is detectable by examining its tag.
 [`Thm.mk_oracle_thm`](#Thm.mk_oracle_thm), [`Thm.tag`](#Thm.tag),
 [`Globals.show_tags`](#Globals.show_tags)
 
->>__ show_tags := false;
+>>__ HOLFlags.set_bflag (HOLFlags.show_tags, false);

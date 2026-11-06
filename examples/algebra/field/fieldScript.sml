@@ -570,7 +570,7 @@ QED
 
 
 (*
-- show_assums := true;
+- HOLFlags.set_bflag (Parse.show_assums, true);
 > val it = () : unit
 - ring_zero_element;
 > val it =  [] |- !r. Ring r ==> #0 IN R : thm
@@ -582,7 +582,7 @@ QED
 > val it =  [Field r] |- #0 IN R : thm
 - ring_zero_element |> SPEC_ALL |> UNDISCH |> PROVE_HYP (field_is_ring |> SPEC_ALL |> UNDISCH) |> DISCH_ALL |> GEN_ALL;
 > val it =  [] |- !r:'a field. Field r ==> #0 IN R : thm
-- show_assums := false;
+- HOLFlags.set_bflag (Parse.show_assums, false);
 > val it = () : unit
 *)
 
@@ -1630,7 +1630,7 @@ Proof
 QED
 
 (*
-- show_assums := true;
+- HOLFlags.set_bflag (Parse.show_assums, true);
 > val it = () : unit
 - group_inv_element;
 > val it =  [] |- !g. Group g ==> !x. x IN G ==> |/ x IN G : th
@@ -1656,7 +1656,7 @@ QED
 > val it =  [Field r] |- !x. x IN R+ ==> |/ x IN R+ : thm
 - group_inv_element |> SPEC ``f*`` |> UNDISCH |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH |> CONJUNCT1) |> REWRITE_RULE [field_mult_group |> SPEC_ALL |> UNDISCH |> CONJUNCT2 |> CONJUNCT1] |> DISCH_ALL |> GEN_ALL;
 > val it =  [] |- !r:'a field. Field r ==> !x. x IN R+ ==> |/ x IN R+ : thm
-- show_assums := false;
+- HOLFlags.set_bflag (Parse.show_assums, false);
 > val it = () : unit
 *)
 

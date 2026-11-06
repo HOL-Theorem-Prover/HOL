@@ -11,7 +11,7 @@ Libs
   numLib fcpLib wordsLib listLib hurdUtils realLib
 
 
-val _ = guessing_word_lengths := true;
+val _ = HOLFlags.set_bflag (guessing_word_lengths, true);
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 
 Theorem compl_IIP:

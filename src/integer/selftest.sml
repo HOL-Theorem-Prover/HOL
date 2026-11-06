@@ -5,7 +5,7 @@ open intLib testutils;
 
 val _ = new_theory "scratch"
 
-fun noamb_parse s = trace ("guess overloads", 0) Parse.Term [QUOTE s]
+fun noamb_parse s = HOLFlags.trace ("Parse.guess_overloads", 0) Parse.Term [QUOTE s]
 fun okparse_exnstruct s = s = "Parse" orelse s = "Preterm"
 
 val _ =

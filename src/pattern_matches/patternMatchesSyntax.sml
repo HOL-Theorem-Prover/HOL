@@ -748,7 +748,7 @@ fun is_PMATCH_IS_EXHAUSTIVE t = can dest_PMATCH_IS_EXHAUSTIVE t
 (***********************************************)
 
 val {get = use_pmatch_pp, ...} =
-    HOLFlags.create_btrace ({group = "PP", name = "use_pmatch_pp"}, true)
+    HOLFlags.create_btrace ({group = "patternMatches", name = "use_pp"}, true)
 
 fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let
   val var_l = pairSyntax.strip_pair vars

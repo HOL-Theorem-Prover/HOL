@@ -108,7 +108,7 @@ Theorem soc_walking = xfer walkstarTheory.oc_walking
 
 (*
 val th = GEN_ALL unifDefTheory.unify_def
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val base = transfer_skeleton true (concl th)
 val th = base
 

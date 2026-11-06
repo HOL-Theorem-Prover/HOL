@@ -17,7 +17,7 @@ val _ = temp_set_grammars $ valOf $ grammarDB {thyname="m0_step"}
 val ERR = Feedback.mk_HOL_ERR "m0_stepLib"
 val WARN = Feedback.HOL_WARNING "m0_stepLib"
 
-val () = show_assums := true
+val () = HOLFlags.set_bflag (Parse.show_assums, true)
 
 (* ========================================================================= *)
 

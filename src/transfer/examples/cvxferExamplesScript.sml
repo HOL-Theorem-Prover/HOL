@@ -77,7 +77,7 @@ Proof
 QED
 
         (*
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val rdb = global_ruledb()
 val cleftp = true
 val cfg = {force_imp=true, cleftp = true, hints = []}:config

@@ -39,13 +39,14 @@ First we define a convenience function.
 Now we examine a theorem with and without traces set to local values.
 
 ``` hol4
->> map current_trace ["assumptions", "types"] ;
+>> map HOLFlags.current_trace ["PP.show_assums", "PP.types"] ;
 
 >> pr_thm EQ_SYM_EQ;
 
->>+ with_traces [("assumptions",1), ("types",1)] pr_thm EQ_SYM_EQ;
+>>+ HOLFlags.with_traces [("PP.show_assums",1), ("PP.types",1)]
+      pr_thm EQ_SYM_EQ;
 
->> map current_trace ["assumptions", "types"] ;
+>> map HOLFlags.current_trace ["PP.show_assums", "PP.types"] ;
 ```
 
 ### See also

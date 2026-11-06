@@ -12,7 +12,7 @@ loadPath :=
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "rich_listTheory", "decidable_separationLogicTheory", "listLib",
    "decidable_separationLogicLibTheory", "optionLib", "stringLib"];
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory

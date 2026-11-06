@@ -2469,13 +2469,13 @@ Proof
   SRW_TAC [] []
 QED
 
-val aligned_concat = with_flag (wordsLib.guessing_word_lengths,true)
+val aligned_concat = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("aligned_concat",
   `!a:word8 b:word8 c:word8 d:word8.
      aligned ((a @@ b @@ c @@ d) : word32, 4) = aligned (d,4)`,
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_248, aligned_def, align_248]);
 
-val aligned_bx_concat = with_flag (wordsLib.guessing_word_lengths,true)
+val aligned_bx_concat = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("aligned_bx_concat",
   `!a:word8 b:word8 c:word8 d:word8.
      aligned_bx ((a @@ b @@ c @@ d) : word32) = aligned_bx d`,
@@ -2487,7 +2487,7 @@ Proof
   SRW_TAC [] [] \\ EVAL_TAC
 QED
 
-val it_mode_concat = with_flag (wordsLib.guessing_word_lengths,true)
+val it_mode_concat = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("it_mode_concat",
   `!a:word8 b:word8 c:word8 d:word8.
      ((4 >< 0) ((a @@ b @@ c @@ d) : word32) = (4 >< 0) d) /\
@@ -2497,7 +2497,7 @@ val it_mode_concat = with_flag (wordsLib.guessing_word_lengths,true)
 
 (* ------------------------------------------------------------------------- *)
 
-val extract_of_double_word = with_flag (wordsLib.guessing_word_lengths,true)
+val extract_of_double_word = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("extract_of_double_word",
   `!a:word32 b:word32.
       ((63 >< 32) (a @@ b) = a) /\ ((31 >< 0 ) (a @@ b) = b)`,
@@ -2679,12 +2679,12 @@ Proof
   SRW_TAC [] []
 QED
 
-val IT_concat = with_flag (wordsLib.guessing_word_lengths,true)
+val IT_concat = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("IT_concat",
   `!w:word8. (7 >< 2) w @@ (1 >< 0) w = w`,
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] []);
 
-val IT_concat0 = with_flag (wordsLib.guessing_word_lengths,true)
+val IT_concat0 = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("IT_concat0",
   `!a:word8 b:word8. ((7 >< 2) a @@ (2 >< 1) b = 0w) =
                      ((7 >< 2) a = 0w) /\ ((2 >< 1) b = 0w)`,
@@ -2696,13 +2696,13 @@ Proof
   SRW_TAC [] []
 QED
 
-val it_con_thm = with_flag (wordsLib.guessing_word_lengths,true)
+val it_con_thm = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("it_con_thm",
   `(!a:word8. (7 >< 2) (if (7 >< 2) a = 0w then a else 0w) = 0w) /\
    (!a:word8. (2 >< 1) (if (2 >< 1) a = 0w then a else 0w) = 0w)`,
   SRW_TAC [] []);
 
-val it_mode_imp_thm = with_flag (wordsLib.guessing_word_lengths,true)
+val it_mode_imp_thm = HOLFlags.with_bflags [(wordsLib.guessing_word_lengths, true)]
   Q.store_thm("it_mode_imp_thm",
   `(!a:word8 b:word8 c:word8 d:word8.
      GOOD_MODE ((4 >< 0) (a @@ b @@ c @@ d)) ==> GOOD_MODE ((4 >< 0) d)) /\

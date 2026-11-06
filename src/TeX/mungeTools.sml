@@ -244,7 +244,9 @@ val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
 
 fun optset_traces opts f =
-    OptSet.fold (fn (e, f) => case e of TraceSet p => trace p f | _ => f) f opts
+    OptSet.fold (fn (e, f) => case e of TraceSet p => HOLFlags.trace p f
+                                      | _ => f)
+                f opts
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides : (string * int) Symtab.table ref = ref Symtab.empty
@@ -345,7 +347,7 @@ end
 
 local
   open EmitTeX PP
-  val _ = set_trace "EmitTeX: print datatype names as types" 1
+  val _ = HOLFlags.set_trace "EmitTeX.print_datatype_names_as_types" 1
   exception BadSpec
   fun getThm spec = let
     val (theory,theorem) =
@@ -420,9 +422,9 @@ in
                 NONE => (fn f => f)
               | SOME i => Lib.with_flag (Globals.max_print_depth, i))
           |> (if OptSet.has NoDollarParens opts then
-                trace ("EmitTeX: dollar parens", 0)
+                HOLFlags.trace ("EmitTeX.dollar_parens", 0)
               else
-                trace ("EmitTeX: dollar parens", 1))
+                HOLFlags.trace ("EmitTeX.dollar_parens", 1))
           |> (if OptSet.has NoMerge opts then
                 HOLFlags.trace ("PP.avoid_symbol_merges", 0)
               else (fn f => f))
@@ -519,7 +521,7 @@ in
               val printer = optprintermod base
               val printer =
                   if OptSet.has NoTurnstile opts then
-                    trace ("EmitTeX: print thm turnstiles", 0) printer
+                    HOLFlags.trace ("EmitTeX.print_thm_turnstiles", 0) printer
                   else printer
             in
               ind_bl (printer thm)

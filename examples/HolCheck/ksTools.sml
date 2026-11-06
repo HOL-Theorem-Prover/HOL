@@ -48,7 +48,7 @@ if is_pair s then list_mk_pair(List.map mk_primed_state (spine_pair s))
 else mk_var((term_to_string2 s)^"'",type_of s)
 
 fun has_primed_vars t = List.exists (fn v => Char.compare(#"'",
-                                                          List.last(String.explode ((with_flag(show_types,false)
+                                                          List.last(String.explode ((HOLFlags.with_bflags [(Parse.show_types, false)]
                                                                                                term_to_string) v)))=EQUAL) (free_vars t)
 
 val ks_p_ty = ``:'prop``
@@ -59,7 +59,7 @@ fun get_types ksname = let val (_,l) = dest_type (type_of ksname) in (hd l,last 
 
 val dotacn = ``"."``
 
-val _ = set_trace "notify type variable guesses" 0;
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
 val ksS_tm = ``ks$KS_S``
 val ksS0_tm = ``ks$KS_S0``
 val ksT_tm = ``ks$KS_T``
@@ -71,7 +71,7 @@ val ksS0u_tm = ``ks$KS_S0_fupd``
 val ksTu_tm = ``ks$KS_T_fupd``
 val ksapu_tm = ``ks$KS_ap_fupd``
 val ksLu_tm = ``ks$KS_L_fupd``
-val _ = set_trace "notify type variable guesses" 1;
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1;
 
 val getS = (rand o rand o rator)
 val getS0 = rand o rand o rator o rand
@@ -122,7 +122,7 @@ fun get_APs tm = Binaryset.listItems(Binaryset.addList(Binaryset.empty Term.comp
 (* R is a term_bdd representing a transition relation. return totalised version *)
 fun totalise tbR S0 vm =
    let val sv = strip_pair(rand (lhs (concl(SPEC_ALL(S0)))))
-       val s = List.map (with_flag(show_types,false) term_to_string) sv
+       val s = List.map (HOLFlags.with_bflags [(Parse.show_types, false)] term_to_string) sv
        val sp =  List.map (fn v => mk_bool_var (v^"'")) s
        val s2sp = List.map (fn(v,v') => (BddVar true vm v,BddVar true vm v')) (ListPair.zip(sv,sp))
        val self = list_mk_conj(List.map (fn v => mk_eq(mk_bool_var (v^"'"),mk_bool_var v)) (List.map term_to_string sv))
@@ -377,9 +377,9 @@ fun mk_Lth ks_def =
         (* FIXME: get rid of the quotations *)
         val tm = mk_eq(ksL,list_mk_comb(``(\(x:(^(ty_antiq kt))) (y:(^(ty_antiq kt))). x)``,
                                        [getL (rhs(concl ks_def)),mk_comb(L,``ARB:(^(ty_antiq(type_of ksname)))``)]))
-        (*val _ = with_flag (show_types,true) (DMSG (TM tm)) dbgkt val _ = DMSG (ST "own term") dbgkt*)
+        (*val _ = HOLFlags.with_bflags [(Parse.show_types, true)] (DMSG (TM tm)) dbgkt val _ = DMSG (ST "own term") dbgkt*)
         (*val res =  (REWRITE_CONV [ks_def,KS_accfupds,combinTheory.K_DEF] ksL)
-        val _ = with_flag (show_types,true) (DMSG (TM (concl res))) dbgkt val _ = DMSG (ST "rw term") dbgkt
+        val _ = HOLFlags.with_bflags [(Parse.show_types, true)] (DMSG (TM (concl res))) dbgkt val _ = DMSG (ST "rw term") dbgkt
         val _ = if (Term.compare(concl res,tm)=EQUAL) then () else Raise Match*)
         val jf = (fn _ => REWRITE_CONV [ks_def,KS_accfupds,combinTheory.K_DEF] ksL)
         val res = BETA_RULE (mk_lthm (fn _ => (tm,jf)) jf)

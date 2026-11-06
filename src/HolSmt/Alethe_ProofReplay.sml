@@ -1010,7 +1010,7 @@ local
   let
     val {id, clause, rule, premises, args, discharge} = step
     val prems = lookup_premises s premises
-    val _ = if !Library.trace > 2 then
+    val _ = if Library.trace() > 2 then
               Feedback.HOL_MESG ("Alethe: replaying step '" ^ id ^
                 "' rule='" ^ rule ^ "' premises=[" ^
                 String.concatWith "," premises ^ "]")

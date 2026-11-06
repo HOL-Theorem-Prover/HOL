@@ -2528,12 +2528,12 @@ values in hexadecimal.  The function
 `output_words_as_oct` will automatically enable the
 parsing of octal numbers.
 
-The trace variable `"word printing"` provides an alternative
+The trace variable `"words.printing"` provides an alternative
 method for changing the output number base — it is particularly
 suited to temporarily selecting a number base, for example:
 
 ```repl
->> Feedback.trace ("word printing", 1) Parse.term_to_string ``32w``;
+>> HOLFlags.trace ("words.printing", 1) Parse.term_to_string ``32w``;
 ```
 
 The choices are as follows: 0 (default) — small numbers

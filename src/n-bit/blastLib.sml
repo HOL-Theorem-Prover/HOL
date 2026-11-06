@@ -20,14 +20,15 @@ fun SRW_TAC xs ys = PRIM_SRW_TAC (arith_ss ++ WORD_ss) xs ys
 
 val ERR = Feedback.mk_HOL_ERR "blastLib"
 
-val blast_trace = ref 0
-val blast_counter = ref true
-val blast_multiply_limit = ref 8
-
-val _ = Feedback.register_trace ("bit blast", blast_trace, 3)
-val _ = Feedback.register_btrace ("print blast counterexamples", blast_counter)
-val _ = Feedback.register_trace
-          ("blast multiply limit", blast_multiply_limit, 32)
+val {get = blast_trace, ...} =
+    HOLFlags.create_trace ({group = "blastLib", name = "trace"},
+                           {initial = 0, max = 3})
+val {get = blast_counter, ...} =
+    HOLFlags.create_btrace
+      ({group = "blastLib", name = "print_counterexamples"}, true)
+val {get = blast_multiply_limit, ...} =
+    HOLFlags.create_trace ({group = "blastLib", name = "multiply_limit"},
+                           {initial = 8, max = 32})
 
 val rhsc = boolSyntax.rhs o Thm.concl
 
@@ -259,7 +260,7 @@ fun mk_summation rwts (max, x, y, c) =
                       val n = numLib.mk_numeral p
                       val i = numLib.mk_numeral pp
                       val () =
-                         if !blast_trace > 2
+                         if blast_trace() > 2
                             then print ("Expanding bit... " ^
                                         Arbnum.toString pp ^ "\n")
                          else ()
@@ -319,7 +320,7 @@ fun mk_carry rwts (max, x, y, c) =
                       val n = numLib.mk_numeral p
                       val i = numLib.mk_numeral pp
                       val () =
-                         if !blast_trace > 2
+                         if blast_trace() > 2
                             then print ("Expanding bit... " ^
                                         Arbnum.toString pp ^ "\n")
                          else ()
@@ -394,14 +395,14 @@ in
                             (Int.compare o (Term.term_size ## Term.term_size))
                        |> List.map dest_sum
                        |> remove_redundant
-         val () = if !blast_trace > 0 andalso not (List.null tms)
+         val () = if blast_trace() > 0 andalso not (List.null tms)
                      then print ("Found " ^ Int.toString (List.length tms) ^
                                 " summation term(s)\n")
                   else ()
          val (_, rwts, c_outs) =
             List.foldl
                (fn ((b,nxyc), (i, rwts, c_outs)) =>
-                   (if !blast_trace > 0
+                   (if blast_trace() > 0
                        then print ("Expanding term... " ^ Int.toString i ^ "\n")
                     else ()
                     ; if b then (i + 1, rwts, mk_carry rwts nxyc :: c_outs)
@@ -734,7 +735,7 @@ in
       let
          val l = fst (wordsSyntax.dest_word_mul tm)
          val sz = fcpSyntax.dest_int_numeric_type (wordsSyntax.dim_of l)
-         val _ = sz <= !blast_multiply_limit orelse
+         val _ = sz <= blast_multiply_limit() orelse
                  raise ERR "BLAST_MUL_CONV" "bigger than multiply limit"
       in
          PURE_REWRITE_CONV (!mul_rwts) tm
@@ -867,7 +868,7 @@ fun BIT_TAUT_CONV tm =
       val theta = Lib.map2 (Lib.curry (op |->)) insts vars
       val tm' = Term.subst theta tm
       val sz = Term.term_size tm'
-      val f = if !blast_trace > 2
+      val f = if blast_trace() > 2
                  then (print ("Checking proposition of size: " ^
                               Int.toString sz ^ "\n")
                        ; real_time)
@@ -1021,7 +1022,7 @@ local
      let
         fun BIT_TAUT_CONV tm = (INDEX_CONV THENC conv) tm
                                handle Conv.UNCHANGED => dummy_thm
-        val tr = !blast_trace > 1
+        val tr = blast_trace() > 1
         val () = if tr then print ("Checking " ^ toString n ^ " bit word\n")
                  else ()
         fun bit_theorem i a =
@@ -1157,7 +1158,7 @@ in
                      if not (List.null counter) andalso
                         Lib.can (order_counter fvars) counter
                         then let
-                                val () = if !blast_counter
+                                val () = if blast_counter()
                                             then print_counterexample counter
                                          else ()
                                 val ctm =

@@ -64,7 +64,7 @@ then `` Q.PAT_ABBREV_TAC `X = a: num` `` will give
 However, if this is not desirable then setting
 
 ``` hol4
-Feedback.set_trace "PAT_ABBREV_TAC: match var/const" 0
+HOLFlags.set_trace "markerLib.PAT_ABBREV_TAC_match_var_const" 0
 ```
 
 and applying `` Q.PAT_ABBREV_TAC `X = a: num` `` will give

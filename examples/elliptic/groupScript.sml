@@ -29,7 +29,7 @@ val Bug = fn s => (print ("\n\nBUG: " ^ s ^ "\n\n"); Bug s);
 (* Show oracle tags.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val () = show_tags := true;
+val () = HOLFlags.set_bflag (HOLFlags.show_tags, true);
 
 (* ------------------------------------------------------------------------- *)
 (* The subtype context.                                                      *)

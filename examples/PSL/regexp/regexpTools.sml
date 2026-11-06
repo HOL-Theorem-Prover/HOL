@@ -29,9 +29,10 @@ open regexpTheory matcherTheory;
 * 4: internal state of the automata
 ******************************************************************************)
 
-val trace_level = ref 1;
-val () = register_trace ("regexpTools", trace_level, 4);
-fun chatting n = n <= !trace_level;
+val {get = trace_level, ...} =
+    HOLFlags.create_trace ({group = "regexpTools", name = "trace"},
+                           {initial = 1, max = 4});
+fun chatting n = n <= trace_level();
 fun chat n s = if chatting n then Lib.say s else ();
 
 fun ERR f s = mk_HOL_ERR "regexpTools" f s

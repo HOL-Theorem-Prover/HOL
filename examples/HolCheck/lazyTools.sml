@@ -9,10 +9,10 @@ local
     datatype lazy_thm = LazyThm of (term HOLset.set) * (term list) * (unit -> thm) | Thm of thm
 
     val lthms = ref (Splaymap.mkDict (Term.compare) : (term,lazy_thm)Splaymap.dict)
-    val lzmode = ref true
-    val _ = register_btrace("HolCheckLZ",lzmode);
-    val dbglz = ref false
-    val _ = Feedback.register_btrace("HolCheckDBGLZ",dbglz)
+    val {get = lzmode, ...} =
+        HOLFlags.create_btrace ({group = "HolCheck", name = "lazy"}, true)
+    val {get = dbglz, ...} =
+        HOLFlags.create_btrace ({group = "HolCheck", name = "dbg_lazy"}, false)
 
     fun SPECL tml th = rev_itlist Specialize tml th handle HOL_ERR _ => raise ERR"lzSPECL" ""
 
@@ -32,7 +32,7 @@ in
 (*FIXME: should I be using Susp to handle closures? No need, since a given jf fires at most once, but it might be cleaner to do so*)
 fun mk_lthm ljf ejf =
     let val _ = profTools.bgt "lt_ml"(*PRF*)
-        val res = if not (!lzmode)
+        val res = if not lzmode()
                   then let val _ = profTools.bgt "lt_ml_eager"(*PRF*)
                            val eres = ejf()
                            val _ = profTools.ent "lt_ml_eager"(*PRF*)
@@ -108,7 +108,7 @@ fun prove_ltb ltb =
 
 (* quick check that lazification works *)
 fun testlz s (jf:unit->Thm.thm) lt =
-    if (!dbglz)
+    if dbglz()
     then let val th = prove_lthm lt (* just calling jf may fail if jf uses tactics and lt has lazy lemmas *)
                  handle ex => (dbgTools.CBTH (s^"_lz") lt;dbgTools.DTH (s^"_lz") lt;
                                failwith("dbgTools.testlz failure 1:"^s))

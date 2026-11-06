@@ -25,9 +25,9 @@ struct
          models, proofs)
      4 - moreover, temporary files (for communication with the SMT solver) are
          not removed after solver invocation *)
-  val trace = ref 2
-
-  val _ = Feedback.register_trace ("HolSmtLib", trace, 4)
+  val {get = trace, ...} =
+      HOLFlags.create_trace ({group = "HolSmtLib", name = "trace"},
+                             {initial = 2, max = 4})
 
   (***************************************************************************)
   (* I/O, parsing                                                            *)
@@ -133,7 +133,7 @@ struct
             SOME token => (buffer := NONE; token)
           | NONE => aux [] (get_char ())
       in
-        if !trace > 3 then
+        if trace() > 3 then
           Feedback.HOL_MESG ("HolSmtLib: next token is '" ^ token ^ "'")
         else ();
         token
@@ -244,7 +244,7 @@ struct
     fun hyps_to_string hyps =
       String.concatWith ", " (List.map term_to_string hyps)
     val hyps_contents =
-      if !Globals.show_assums then
+      if HOLFlags.get_bflag Parse.show_assums then
         hyps_to_string (Thm.hyp thm)
       else
         "."
@@ -257,7 +257,7 @@ struct
      probes the solvers as it loads, before any segment is open *)
   fun check_oracle_tags srcname name thm =
     if Sanity.check_tags ((srcname, name), thm) then
-      raise Feedback.mk_HOL_ERR "HolSmtLib" "check_oracle_tags"
+      raise Feedback.mk_HOL_ERR "HolSmtLib.trace" "check_oracle_tags"
         ("solver '" ^ name ^ "' produced unexpected oracle/axiom tags: " ^
          thm_to_string thm)
     else

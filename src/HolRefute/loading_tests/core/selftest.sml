@@ -4,7 +4,7 @@ open HolKernel Parse boolLib testutils
 fun loaded name = Lib.mem name (Theory.ancestry "-")
 fun check name predicate = (tprint name; if predicate then OK () else die name)
 
-val _ = Feedback.set_trace "Refute" 0
+val _ = HOLFlags.set_trace "Refute.trace" 0
 val config = Refute.default_config
   |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
   |> Refute.upd_substrate Refute.Compute

@@ -1901,7 +1901,7 @@ EXT_CONTEXT_CONSEQ_REWRITE_CONV CONSEQ_CONV_FULL_CONTEXT [] [] ([],[],[]) CONSEQ
 EXT_CONTEXT_CONSEQ_REWRITE_CONV CONSEQ_CONV_FULL_CONTEXT [] [] ([],[],[]) CONSEQ_CONV_STRENGTHEN_direction
    ``A n ==> ?n. A n``
 
-show_assums := true
+HOLFlags.set_bflag (Parse.show_assums, true)
 EXT_CONTEXT_CONSEQ_REWRITE_CONV CONSEQ_CONV_FULL_CONTEXT [] [] ([],[],[]) CONSEQ_CONV_STRENGTHEN_direction
    ``A n ==> ?m. A n``
 

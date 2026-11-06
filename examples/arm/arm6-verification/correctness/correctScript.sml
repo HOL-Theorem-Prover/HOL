@@ -24,7 +24,7 @@ val _ = diminish_srw_ss ["ABBREV"]
 val _ = HOLFlags.set_trace "BasicProvers.var_eq_old" 1
 (* ------------------------------------------------------------------------- *)
 
-val () = Feedback.set_trace "PAT_ABBREV_TAC: match var/const" 0
+val () = HOLFlags.set_trace "markerLib.PAT_ABBREV_TAC_match_var_const" 0
 
 val Abbr = BasicProvers.Abbr;
 val PRED_SET_ss = pred_setSimps.PRED_SET_ss;
@@ -55,7 +55,7 @@ val POP_LAST_TAC = POP_ASSUM (K ALL_TAC);
 fun POP_LASTN_TAC n = NTAC n POP_LAST_TAC;
 
 val tt = HOLFlags.set_trace "PP.types";
-val fvs = set_trace "goalstack fvs";
+val fvs = HOLFlags.set_trace "Goalstack.print_goal_fvs";
 
 (* ------------------------------------------------------------------------- *)
 

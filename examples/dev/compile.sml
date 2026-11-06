@@ -643,7 +643,7 @@ fun CompileConvert defth = Compile(Convert defth);
 
 fun prove(t,tac) = Tactical.TAC_PROOF(([],t), tac)
 fun RecCompileConvert defth totalth =
- let val previousShowTypes = !show_types
+ let val previousShowTypes = HOLFlags.get_bflag Parse.show_types
      val (l,r) = dest_eq(concl(SPEC_ALL defth))
      val (func,args) = dest_comb l
      val impth =
@@ -655,12 +655,12 @@ fun RecCompileConvert defth totalth =
      val (fb,(f1,f2)) = (fst(dest_pair args),dest_pair(snd (dest_pair args)))
      val (fb',(f1',f2')) = (fst(dest_pair args'),dest_pair(snd (dest_pair args')))
      val h = fst(dest_imp(concl impth))
-     val _ = (show_types := true)
+     val _ = (HOLFlags.set_bflag (Parse.show_types, true))
      val hthm = prove (h,
               `(^fb = ^fb') /\ (^f1 = ^f1') /\ (^f2 = ^f2')`
                by RW_TAC std_ss [LAMBDA_PROD]
            THEN RW_TAC std_ss [totalth])
-     val _ = (show_types := previousShowTypes)
+     val _ = (HOLFlags.set_bflag (Parse.show_types, previousShowTypes))
  in
   SIMP_RULE std_ss [] (MP impth hthm)
  end;

@@ -366,11 +366,13 @@ struct
     val thm = DISCH_ALL (List.foldl foldthis (UNDISCH_ALL thm) deps)
 
       (* sanity checks *)
-      val _ = if !QbfTrace.trace < 1 orelse HOLset.isEmpty (Thm.hypset thm) then
+      val _ = if QbfTrace.trace() < 1 orelse
+                 HOLset.isEmpty (Thm.hypset thm)
+              then
           ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem has hyps"
-      val _ = if !QbfTrace.trace < 1 orelse Term.aconv (Thm.concl thm) t then
+      val _ = if QbfTrace.trace() < 1 orelse Term.aconv (Thm.concl thm) t then
           ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check"
@@ -448,13 +450,13 @@ struct
       val thm = #1 (Lib.snd (derive (clause_dict, cindex)))
 
       (* sanity checks *)
-      val _ = if !QbfTrace.trace < 1 orelse
+      val _ = if QbfTrace.trace() < 1 orelse
           (HOLset.numItems (Thm.hypset thm) = 1 andalso
             HOLset.member (Thm.hypset thm, t)) then
           ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem has hyps"
-      val _ = if !QbfTrace.trace < 1 orelse
+      val _ = if QbfTrace.trace() < 1 orelse
         Term.aconv (Thm.concl thm) boolSyntax.F then
           ()
         else

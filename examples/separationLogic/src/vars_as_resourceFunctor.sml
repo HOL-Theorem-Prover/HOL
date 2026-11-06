@@ -188,7 +188,7 @@ loadPath :=
             (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot") ::
             !loadPath;
 
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open HolKernel Parse boolLib bossLib;
@@ -221,13 +221,15 @@ open var_res_param.var_res_base;
 (******************************************************************************)
 (* Parameters                                                                 *)
 (******************************************************************************)
-val verbose_level = ref 0
-val verbose_level_try = ref 0
 fun do_profile_ref () = ref (Profile.profile_with_exn)
 
 
-val _ = Feedback.register_trace ("holfoot verbose level", verbose_level, 6)
-val _ = Feedback.register_trace ("holfoot verbose level try", verbose_level_try, 6)
+val {get = verbose_level, ...} =
+    HOLFlags.create_trace ({group = "holfoot", name = "verbose_level"},
+                           {initial = 0, max = 6})
+val {get = verbose_level_try, ...} =
+    HOLFlags.create_trace ({group = "holfoot", name = "verbose_level_try"},
+                           {initial = 0, max = 6})
 
 (******************************************************************************)
 (* COND_PROP___STRONG_EXIST                                                   *)
@@ -3774,12 +3776,12 @@ fun gen_step_conv_map_fun l s f =
      fun f1 x =
         (((!(do_profile_ref ())) s (fn () =>
          (f x))) ())
-     fun f2 x = if !verbose_level = 0 andalso !verbose_level_try = 0 then f1 x else
+     fun f2 x = if verbose_level() = 0 andalso verbose_level_try() = 0 then f1 x else
             let
-               val _ = if (l < !verbose_level_try) then
+               val _ = if (l < verbose_level_try()) then
                        print ("trying "^ s ^ "\n") else ()
                val y = f1 x;
-               val _ = if (l < !verbose_level orelse l < !verbose_level_try) then
+               val _ = if (l < verbose_level() orelse l < verbose_level_try()) then
                        print ("applying "^ s ^ "\n") else ()
               in y end
   in f2 end

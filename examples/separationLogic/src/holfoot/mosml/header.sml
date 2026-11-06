@@ -10,8 +10,8 @@ open holfootParser;
 open holfoot_pp_print;
 open holfootLib;
 
-val _ = Feedback.set_trace "PPBackEnd use styles" 1;
-val _ = Feedback.set_trace "PPBackEnd show types" 0;
+val _ = HOLFlags.set_trace "PPBackEnd.use_styles" 1;
+val _ = HOLFlags.set_trace "PPBackEnd.show_types" 0;
 val _ = HOLFlags.set_trace "metis.trace" 0
 
 val examplesDir =

@@ -11,8 +11,8 @@ struct
          models, proofs)
      4 - moreover, temporary files (for communication with the QBF solver) are
          not removed after solver invocation *)
-  val trace = ref 2
-
-  val _ = Feedback.register_trace ("HolQbfLib", trace, 4)
+  val {get = trace, ...} =
+      HOLFlags.create_trace ({group = "HolQbfLib", name = "trace"},
+                             {initial = 2, max = 4})
 
 end

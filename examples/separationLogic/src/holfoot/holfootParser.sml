@@ -13,7 +13,7 @@ map load ["finite_mapTheory", "holfootTheory",
 
 use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open HolKernel Parse boolLib finite_mapTheory

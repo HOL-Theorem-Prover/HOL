@@ -60,10 +60,10 @@ val _ = if s = "(\\HOLFreeVar{\\HOLKeyword{if}})" then OK() else gotdie s
 
 open Feedback
 val _ = tprint "Testing paren-less dollarised syntax /\\"
-val _ = set_trace "EmitTeX: dollar parens" 0
+val _ = HOLFlags.set_trace "EmitTeX.dollar_parens" 0
 val s = pp_to_string 70 pp_term_as_tex conjunction
 val _ = if s = "\\HOLSymConst{\\HOLTokenConj{}}" then OK() else gotdie s
-val _ = set_trace "EmitTeX: dollar parens" 1
+val _ = HOLFlags.set_trace "EmitTeX.dollar_parens" 1
 
 val _ = tprint "Testing UNIV printing (:'a)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ alpha)
@@ -106,7 +106,7 @@ val expected_inconsistent =
   \\\HOLTokenBar{} \\HOLConst{D} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha} (\\HOLTyOp{num} \\HOLTyOp{list})\n\
   \  \\HOLTokenBar{} \\HOLConst{Econ} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha}"
 val _ = tprint "Testing datatype printing (compact)"
-val s = trace ("EmitTeX: print datatypes compactly", 1)
+val s = HOLFlags.trace ("EmitTeX.print_datatypes_compactly", 1)
               (dtype_test 55) "foo"
 val _ = if s = expected_inconsistent then OK()
         else die("Expected\n" ^ expected_inconsistent ^ "\nGot:\n" ^ s)

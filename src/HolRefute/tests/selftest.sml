@@ -29,7 +29,7 @@ in end
 
 val _ = Thm.setCT "scratch"
 val _ = numLib.prefer_num ()
-val _ = Feedback.set_trace "Refute" 0
+val _ = HOLFlags.set_trace "Refute.trace" 0
 
 val erc = ref 0
 val _ = diemode := Remember erc
@@ -80,7 +80,7 @@ fun capture level action =
     fun output text = chunks := text :: !chunks
     val result = Lib.with_flag (Feedback.MESG_outstream, output)
       (Lib.with_flag (Feedback.WARNING_outstream, output)
-        (Feedback.with_traces [("Refute", level)] action)) ()
+        (HOLFlags.with_traces [("Refute.trace", level)] action)) ()
   in
     (result, String.concat (rev (!chunks)))
   end
@@ -760,9 +760,9 @@ val _ = test "quiet suppresses all output" (fn () =>
   end)
 
 val _ = test "quiet restores the output state after an exception" (fn () =>
-  Feedback.with_traces [("Refute", 4)] (fn () =>
+  HOLFlags.with_traces [("Refute.trace", 4)] (fn () =>
     ((ignore (refute (exhaustive |> upd_expect ExpectNone) arith); false)
-     handle HOL_ERR _ => Feedback.current_trace "Refute" = 4)) ())
+     handle HOL_ERR _ => HOLFlags.current_trace "Refute.trace" = 4)) ())
 
 val _ = test "polymorphic goals never get a QC-only NoCounterexample"
   (fn () =>
@@ -2081,10 +2081,10 @@ val _ = test "a theory bracket leaves the global message flags alone"
   (fn () =>
     let
       val saved_info = !Feedback.emit_INFO
-      val saved_tyvar = !Globals.notify_on_tyvar_guess
+      val saved_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
       fun restore () =
         (Feedback.emit_INFO := saved_info;
-         Globals.notify_on_tyvar_guess := saved_tyvar)
+         HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, saved_tyvar))
     in
       (* Compare against a baseline this test sets, never the ambient one.
          Every Refute call above has already used a quiet window, so a
@@ -2094,16 +2094,16 @@ val _ = test "a theory bracket leaves the global message flags alone"
       Portable.finally restore (fn () =>
         let
           val _ = Feedback.emit_INFO := true
-          val _ = Globals.notify_on_tyvar_guess := true
+          val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true)
           val held = Refute_EvalEnum.held_bracket (fn () => ())
           val _ = Refute_EvalEnum.start_held_bracket held (fn () => ())
           val held_info = !Feedback.emit_INFO
-          val held_tyvar = !Globals.notify_on_tyvar_guess
+          val held_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
           val _ = Refute_EvalEnum.close_held_bracket held
           val quiet =
             Refute_EvalEnum.quiet_theory_work (fn () => !Feedback.emit_INFO)
           val after_info = !Feedback.emit_INFO
-          val after_tyvar = !Globals.notify_on_tyvar_guess
+          val after_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
           val restored_after_raise =
             (Refute_EvalEnum.quiet_theory_work
                (fn () => raise Fail "quiet_theory_work"); false)

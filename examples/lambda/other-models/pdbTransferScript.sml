@@ -193,7 +193,7 @@ val _ = transferLib.add_atomic_term ("termFV", “FV : term -> string set”)
 Theorem dhreduce1_FV = xfer hreduce1_FV
 
 (*
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val th = hreduce1_APP
 val rdb = global_ruledb()
 val base = transfer_skeleton rdb {force_imp=true,cleftp=true,hints=[]}

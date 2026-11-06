@@ -805,7 +805,7 @@ Overload "**" = ``r.prod.exp``
 (* Problem: Should use lifting by incorporating ring_one_element. *)
 
 (*
-- show_assums := true;
+- HOLFlags.set_bflag (Parse.show_assums, true);
 > val it = () : unit
 
 - group_exp_element;
@@ -831,7 +831,7 @@ Overload "**" = ``r.prod.exp``
 - group_exp_element |> SPEC ``(r:'a ring).sum`` |> UNDISCH |> SPEC ``#1`` |> PROVE_HYP (ring_add_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> REWRITE_RULE [ring_add_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1, ring_one_element |> SPEC_ALL |> UNDISCH_ALL] |> DISCH_ALL |> GEN_ALL
 > val it =  [] |- !r. Ring r ==> !n. ##n IN R : thm
 
-- show_assums := false;
+- HOLFlags.set_bflag (Parse.show_assums, false);
 > val it = () : unit
 
 *)

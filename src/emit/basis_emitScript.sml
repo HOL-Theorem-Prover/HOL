@@ -1160,7 +1160,7 @@ val EXPi  = new_axiom("EXPi", ``EXPi (ITSELF a, ITSELF b) = ITSELF (a ** b)``);
 
 val dimindexi = new_axiom("dimindexi", ``dimindex (ITSELF a) = a``);
 
-val _ = type_pp.pp_array_types := false
+val _ = HOLFlags.set_trace "PP.array_types" 0
 
 val defs = [SUMi, MULi, EXPi, dimindexi, mk_fcp_def, index_comp, fcp_subst_comp]
 
@@ -1260,7 +1260,7 @@ fun mk_index ocaml i =
   let val n = Arbnum.fromInt i
       val x = Int.toString i
       val typ = fcpLib.index_type n
-      val s = String.extract(with_flag (type_pp.pp_num_types, false)
+      val s = String.extract(HOLFlags.trace ("PP.num_types", 0)
                  type_to_string typ, 1, NONE)
       val w = "type word" ^ x ^ " = " ^ s ^ " word"
       val numML = if ocaml then "numML." else "NumML."

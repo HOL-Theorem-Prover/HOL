@@ -10,7 +10,7 @@ Libs
   ho_proverTools listContext groupContext finite_groupContext
 
 (* interactive mode
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 loadPath := union ["..", "../finished"] (!loadPath);
 app load
 ["bossLib", "listTheory", "HurdUseful", "subtypeTools",

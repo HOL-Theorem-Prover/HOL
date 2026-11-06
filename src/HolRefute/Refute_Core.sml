@@ -1334,7 +1334,8 @@ structure Refute_Core :> Refute_Core = struct
 
   structure Private = struct
     val {get = trace_level, ...} =
-      Feedback.create_trace {name = "Refute", initial = 1, max = 4}
+      HOLFlags.create_trace ({group = "Refute", name = "trace"},
+                             {initial = 1, max = 4})
 
     fun enabled level = trace_level () >= level
 
@@ -1642,7 +1643,7 @@ structure Refute_Core :> Refute_Core = struct
   fun format_term term =
     let
       fun delimit value =
-        if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
+        if HOLFlags.get_bflag Parse.avoid_unicode then
           "<<" ^ value ^ ">>"
         else
           "«" ^ value ^ "»"
@@ -1661,7 +1662,7 @@ structure Refute_Core :> Refute_Core = struct
            term_grammar)
       (* Suppressing free-variable annotations also prevents line wrapping
          from splitting an annotation away from its marker. *)
-      val string = Lib.with_flag (Globals.show_types, false)
+      val string = HOLFlags.with_bflags [(Parse.show_types, false)]
         (Parse.term_to_string_by_grammar grammars) term
       val length = size string
       fun clean index parts =
@@ -2284,7 +2285,7 @@ structure Refute_Core :> Refute_Core = struct
       fun run () =
         if not (#quiet cfg) then refute_problem_unquiet cfg problem
         else
-          Feedback.with_traces [("Refute", 0)]
+          HOLFlags.with_traces [("Refute.trace", 0)]
             (Feedback.quiet_messages
               (Feedback.quiet_warnings
                 (refute_problem_unquiet cfg))) problem

@@ -52,13 +52,13 @@ val SKOLEM_CONV = Canon_Port.SKOLEM_CONV
 
 local
   open Int
-  val traceval = ref 0
-
   fun trace_pure s () = print s
-  fun check f = if !traceval > 0 then f() else ()
+  val {get = traceval, ...} =
+      HOLFlags.create_trace ({group = "RealArith", name = "dp"},
+                             {initial = 0, max = 1})
+  fun check f = if traceval() > 0 then f() else ()
   infix >>
   fun (f >> g) () = (f (); g ())
-  val _ = register_trace ("RealArith dp", traceval, 1)
   fun trace_line () = print "\n"
   local
     fun tl f [] = (fn () => ())

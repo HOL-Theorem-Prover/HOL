@@ -218,7 +218,7 @@ fun build_skeleton rdb ct =
                             else newify (n - 1) (#1 (Pretype.Env.new ptye))
         val ptyenv = newify i Pretype.Env.empty
         val tm =
-            trace ("notify type variable guesses", 0)
+            HOLFlags.trace ("Parse.notify_on_tyvar_guess", 0)
                   (Preterm.smash (Preterm.typecheck NONE pt))
                   ptyenv
         val tyvars = type_vars_in_term tm

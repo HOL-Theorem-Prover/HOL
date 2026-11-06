@@ -1020,7 +1020,9 @@ local
             handle Conv.UNCHANGED => raise ERR "" "") ()
         handle Feedback.HOL_ERR _ =>
 
-        (profile "rewrite(10)(BBLAST)" (Feedback.trace("print blast counterexamples", 0) blastLib.BBLAST_PROVE) t
+        (profile "rewrite(10)(BBLAST)"
+                 (HOLFlags.trace("blastLib.print_counterexamples", 0)
+                                blastLib.BBLAST_PROVE) t
 
         handle Feedback.HOL_ERR _ =>
 
@@ -1244,7 +1246,7 @@ local
     if Thm.concl thm !~ concl then
       raise ERR "check_thm" (name ^ ": conclusion is " ^ Library.term_to_string
         (Thm.concl thm) ^ ", expected: " ^ Library.term_to_string concl)
-    else if !Library.trace > 2 then
+    else if Library.trace() > 2 then
       Feedback.HOL_MESG
         ("HolSmtLib: " ^ name ^ " proved: " ^ Library.thm_to_string thm)
     else ()
@@ -1415,7 +1417,7 @@ local
           SOME (THEOREM thm) =>
             continuation ((state, proof), thm)
         | SOME pt => (
-            if !Library.trace > 2 then
+            if Library.trace() > 2 then
               Feedback.HOL_MESG ("HolSmtLib: replaying proof at ID " ^ Int.toString id)
             else
               ();
@@ -1424,7 +1426,7 @@ local
                  the theorem just derived *)
               (fn ((state, (steps, vars)), thm) =>
                 (
-                  if !Library.trace > 2 then
+                  if Library.trace() > 2 then
                     Feedback.HOL_MESG
                       ("HolSmtLib: updating proof at ID " ^ Int.toString id)
                   else ();
@@ -1625,7 +1627,7 @@ in
      subset of) those asserted in the proof *)
   fun check_proof (asl, g, proof) : Thm.thm =
   let
-    val _ = if !Library.trace > 1 then
+    val _ = if Library.trace() > 1 then
         Feedback.HOL_MESG "HolSmtLib: checking Z3 proof"
       else ()
 

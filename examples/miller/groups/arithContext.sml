@@ -5,13 +5,13 @@ struct
 open HolKernel Parse boolLib;
 
 (* interactive mode
-if !show_assums then () else
+if HOLFlags.get_bflag Parse.show_assums then () else
  (loadPath := ".."::"../../prob"::(!loadPath);
   load "bossLib";
   load "pred_setTheory";
   load "millerTools";
   load "miller_extraTheory";
-  show_assums := true);
+  HOLFlags.set_bflag (Parse.show_assums, true));
 *)
 
 open bossLib pairTheory pred_setTheory extra_pred_setTheory gcdTheory

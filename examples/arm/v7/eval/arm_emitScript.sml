@@ -127,8 +127,8 @@ Definition unsigned_sat_q_itself_def:
   unsigned_sat_q_itself (i,N,(:'a)) = (unsigned_sat_q (i,N)) : 'a word # bool
 End
 
-val _ = type_pp.pp_num_types := false;
-val _ = type_pp.pp_array_types := false;
+val _ = HOLFlags.set_trace "PP.num_types" 0;
+val _ = HOLFlags.set_trace "PP.array_types" 0;
 val _ = temp_disable_tyabbrev_printing "proc";
 val _ = temp_disable_tyabbrev_printing "FullAddress";
 val _ = temp_disable_tyabbrev_printing "cpid";

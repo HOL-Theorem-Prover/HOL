@@ -133,7 +133,7 @@ Proof
    lrw [NotWordValue0]
 QED
 
-val () = show_assums := true
+val () = HOLFlags.set_bflag (Parse.show_assums, true)
 
 Theorem isAligned:
    (!a. isAligned (a, 0w)) /\

@@ -23,7 +23,7 @@ val _ = temp_set_grammars
 
 val ERR = Feedback.mk_HOL_ERR "arm_stepLibSupport"
 
-val () = show_assums := true
+val () = HOLFlags.set_bflag (Parse.show_assums, true)
 
 (* ------------------------------------------------------------------------
    Setup mirroring arm_stepLib.sml (same st, datatype bundle, EV).

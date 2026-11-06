@@ -15,7 +15,7 @@ fun udie () = die "FAILED!"
 val _ = tprint "Testing parsing of parmonadsyntax"
 val bind_t = prim_mk_const{Thy = "state_transformer", Name = "BIND"}
 val _ = overload_on ("monad_bind", bind_t)
-val _ = set_trace "notify type variable guesses" 0
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0
 val t = Term`do x <- f y ; g x od`
 val _ = if same_const bind_t (#1 (strip_comb t)) then OK()
         else udie()

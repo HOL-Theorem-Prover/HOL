@@ -3,7 +3,7 @@ loadPath := (concat Globals.HOLDIR "/examples/dev/sw") ::
 
 use (concat Globals.HOLDIR "/examples/dev/sw/compiler");
 
-show_assums := true
+HOLFlags.set_bflag (Parse.show_assums, true)
 (*---------------------------------------------------------------------------*)
 (*   Simple examples involving function calls                                *)
 (*---------------------------------------------------------------------------*)

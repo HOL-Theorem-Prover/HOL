@@ -567,7 +567,7 @@ val thm = (el 2 new_thmL)
 val t =  (concl (el 2 new_thmL))
 PERM_REWR_CONV (el 2 new_thmL) (concl (el 2 new_thmL))
 
-show_assums := true
+HOLFlags.set_bflag (Parse.show_assums, true)
 PERM_REWR_CONV thm t
 *)
 

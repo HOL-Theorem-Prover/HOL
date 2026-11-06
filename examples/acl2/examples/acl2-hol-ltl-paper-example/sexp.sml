@@ -2325,7 +2325,7 @@ fun load_imported_acl2_theorems () =
   make_string_abbrevs acl2_package_strings;
   print(Int.toString(length(!string_abbrevs)-string_abbrev_count));
   print " new string abbreviations made\n";
-  show_tags := true;
+  HOLFlags.set_bflag (HOLFlags.show_tags, true);
   print "read "; print(Int.toString(length(!acl2_list_ref))); print " defs\n";
   imported_acl2_theorems :=
    map (install_and_print o mk_acl2def) (!acl2_list_ref);

@@ -59,17 +59,17 @@ in
         map (fn l => if l = "" then () else write_line ("    " ^ l)) lines;
         write_blank_line ()) end
   fun write_term th = let
-    val _ = set_trace "PPBackEnd use annotations" 0
+    val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 0
     val _ = write_indented_block (term_to_string th)
-    val _ = set_trace "PPBackEnd use annotations" 1
+    val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 1
     in () end
   fun write_thm th = let
-    val _ = set_trace "PPBackEnd use annotations" 0
-    val a = !Globals.show_assums
-    val _ = Globals.show_assums := false
+    val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 0
+    val a = HOLFlags.get_bflag Parse.show_assums
+    val _ = HOLFlags.set_bflag (Parse.show_assums, false)
     val _ = write_indented_block (thm_to_string th)
-    val _ = set_trace "PPBackEnd use annotations" 1
-    in Globals.show_assums := a end
+    val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 1
+    in HOLFlags.set_bflag (Parse.show_assums, a) end
 end
 
 end

@@ -45,11 +45,11 @@ val op \\ = op Tactical.THEN;
 
 val ERR = Feedback.mk_HOL_ERR "arm_stepLib";
 
-val arm_step_trace = ref 0;
-val arm_step_check = ref false;
-
-val _ = Feedback.register_trace ("arm step", arm_step_trace, 3);
-val _ = Feedback.register_btrace ("arm step check", arm_step_check);
+val {get = arm_step_trace, ...} =
+    HOLFlags.create_trace ({group = "arm", name = "step"},
+                           {initial = 0, max = 3});
+val {get = arm_step_check, ...} =
+    HOLFlags.create_btrace ({group = "arm", name = "step_check"}, false);
 
 (* ------------------------------------------------------------------------- *)
 (* Facilitate evaluation                                                     *)
@@ -695,7 +695,7 @@ end;
 fun get_valuestate s tm =
     armSyntax.dest_valuestate tm handle HOL_ERR _ =>
       (let val e = armSyntax.dest_error tm handle HOL_ERR _ =>
-        (if (!arm_step_trace div 2) mod 2 = 1 then Parse.print_term tm else ();
+        (if (arm_step_trace() div 2) mod 2 = 1 then Parse.print_term tm else ();
          raise ERR "eval_inst" ("Failed to fully evaluate " ^ s))
        in
          raise ERR "eval_inst" ("Error: " ^ stringSyntax.fromHOLstring e)
@@ -1152,7 +1152,7 @@ local
           | NONE => false
 in
   fun check_step thm =
-      if !arm_step_check andalso
+      if arm_step_check() andalso
          Lib.can (HolKernel.find_term is_fupd) (concl thm)
       then
         (Parse.print_thm thm;
@@ -1180,7 +1180,7 @@ local
           dropn_o (tm, 1)
         else
           SOME tm
-  fun print_progress s = if !arm_step_trace mod 2 = 1 then
+  fun print_progress s = if arm_step_trace() mod 2 = 1 then
                            TextIO.print s
                          else
                            ()

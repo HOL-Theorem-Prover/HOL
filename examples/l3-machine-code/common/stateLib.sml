@@ -1768,8 +1768,8 @@ val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
 *)
 
 local
-   val spec_debug = ref false
-   val () = Feedback.register_btrace ("stateLib.spec", spec_debug)
+   val {get = spec_debug, ...} =
+       HOLFlags.create_btrace ({group = "stateLib", name = "spec"}, false)
    (* Could use goalStack.print_tac "" instead for formatted goal output *)
    val PRINT_TAC =
       RULE_ASSUM_TAC (CONV_RULE PRINT_CONV) THEN CONV_TAC PRINT_CONV
@@ -1883,7 +1883,7 @@ val (thm,t) = hd thm_ts
                prove (t, tac (v, dthm))
             end
             handle e as HOL_ERR _ =>
-                   (if !spec_debug
+                   (if spec_debug()
                        then (proofManagerLib.set_goal ([], t); thm)
                     else raise e)
       end

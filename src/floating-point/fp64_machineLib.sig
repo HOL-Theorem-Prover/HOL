@@ -3,7 +3,7 @@ sig
 
   (* ----------------------------------------------------------------------
       Support 64-bit native evaluation
-      (Controlled by the trace "native IEEE". Off by default.)
+      (Controlled by the trace "floating-point.native_IEEE". Off by default.)
      ---------------------------------------------------------------------- *)
 
   val sqrt_CONV: Conv.conv ref

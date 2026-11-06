@@ -21,10 +21,10 @@ val _ = hide "S";
 val _ = hide "I";
 
 (*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
+HOLFlags.set_bflag (Parse.show_assums, false);
+HOLFlags.set_bflag (Parse.show_assums, true);
+HOLFlags.set_bflag (Parse.show_types, true);
+HOLFlags.set_bflag (Parse.show_types, false);
 quietdec := false;
 *)
 

@@ -584,10 +584,10 @@ fun mk_sc_spec___pre ir1_spec ir1_spec_name ir1_wf ir1_wf_name ir2_spec ir2_spec
         sc_SPEC_TAC ir1_spec ir2_spec ir1_wf ir2_wf post_p1 out_f1
                         )
 
-                val _ = show_types := true;
+                val _ = HOLFlags.set_bflag (Parse.show_types, true);
                 val post_p1_string = term_to_string post_p1;
                 val out_f1_string = term_to_string out_f1;
-                val _ = show_types := false;
+                val _ = HOLFlags.set_bflag (Parse.show_types, false);
                 val (f_th_name, f_th_proof) = make_proof_string f_spec
                                 ["sc_SPEC_TAC "^ir1_spec_name^" "^ir2_spec_name^" "
                                  ^ir1_wf_name^" "^ir2_wf_name^" (Term `"^post_p1_string^"`) (Term `"^out_f1_string^"`)"]
@@ -1051,14 +1051,14 @@ fun mk_tr_spec cond body_spec body_name proofs =
                          );
 
 
-                val _ = show_types := true
+                val _ = HOLFlags.set_bflag (Parse.show_types, true)
                 val (wf_th_name, wf_th_proof) = make_proof_string wf_t3
                                 ["tr_WF_TAC "^body_name^" (Type `"^
                                   (type_to_string (type_of initV))^"`) (Term `"^
                                   (term_to_string prj_f)^"`) (Term `"^
                                   (term_to_string f)^"`) (Term `"^
                                   (term_to_string cond_f_0)^"`)"]
-                val _ = show_types := false;
+                val _ = HOLFlags.set_bflag (Parse.show_types, false);
 
 
       (* the characteristic function *)

@@ -13,7 +13,7 @@ open boolSyntax pairSyntax pairTools PairRules bossLib muTheory
 
 (*fun mk_bool_var v = mk_var(v,``:bool``);
 fun mk_primed_bool_var v = mk_bool_var (v^"'");
-fun term_to_string2 t = with_flag (show_types,false) term_to_string t;
+fun term_to_string2 t = HOLFlags.with_bflags [(Parse.show_types, false)] term_to_string t;
 *)
 val dpfx = "c2m_"
 
@@ -60,9 +60,9 @@ fun ctl2mu f =
 
 end
 
-val _ = set_trace "notify type variable guesses" 0;
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
 val ctl2mu_tm = ``ctl2mu$CTL2MU``
-val _ = set_trace "notify type variable guesses" 1;
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1;
 
 (* convert ctl formula to mu formula *)
 fun ctl2mu_CONV f =

@@ -27,7 +27,7 @@ fun prop_prove q =
     time oracle tm
   end;
 
-show_tags := true;
+HOLFlags.set_bflag (HOLFlags.show_tags, true);
 *)
 
 val prop_prove = Count.apply (tautLib.TAUT_PROVE o Term);

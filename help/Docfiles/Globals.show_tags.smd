@@ -17,20 +17,20 @@ or absence of a tag will be displayed.
 ### Example
 
 ``` hol4
->> show_tags := false;
+>> HOLFlags.set_bflag (HOLFlags.show_tags, false);
 
 >> pairTheory.PAIR_MAP_THM;
 
 >> mk_thm ([],F);
 
->> show_tags := true;
+>> HOLFlags.set_bflag (HOLFlags.show_tags, true);
 
 >> pairTheory.PAIR_MAP_THM;
 
 >> mk_thm ([],F);
 ```
 
->>__ show_tags := false;
+>>__ HOLFlags.set_bflag (HOLFlags.show_tags, false);
 
 ### Comments
 

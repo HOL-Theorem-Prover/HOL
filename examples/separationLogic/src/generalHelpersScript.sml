@@ -14,7 +14,7 @@ loadPath :=
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "rich_listTheory", "operatorTheory", "containerTheory", "bagTheory"];
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 (*

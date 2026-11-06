@@ -27,7 +27,7 @@ Never fails, as it is just an SML value.
 ``` hol4
 >> Term`~3`;
 
->> show_numeral_types := true;
+>> HOLFlags.set_bflag (HOLFlags.show_numeral_types, true);
 
 >> Term`~3`;
 ```
@@ -39,5 +39,5 @@ Can help to disambiguate terms involving numerals.
 [`Parse.add_numeral_form`](#Parse.add_numeral_form),
 [`Globals.show_types`](#Globals.show_types)
 
->>__ show_numeral_types := false
+>>__ HOLFlags.set_bflag (HOLFlags.show_numeral_types, false)
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};

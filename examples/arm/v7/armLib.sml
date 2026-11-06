@@ -16,13 +16,14 @@ val _ = wordsLib.prefer_word();
 
 val ERR = Feedback.mk_HOL_ERR "armLib";
 
-val trace_progress = ref 1;
-val label_step_theorems = ref true;
-val disassemble = ref true;
-
-val _ = Feedback.register_trace  ("arm steps", trace_progress, 3);
-val _ = Feedback.register_btrace ("label arm steps", label_step_theorems);
-val _ = Feedback.register_btrace ("add disassembler comments", disassemble);
+val {get = trace_progress, ...} =
+    HOLFlags.create_trace ({group = "arm", name = "steps"},
+                           {initial = 1, max = 3});
+val {get = label_step_theorems, ...} =
+    HOLFlags.create_btrace ({group = "arm", name = "label_steps"}, true);
+val {get = disassemble, ...} =
+    HOLFlags.create_btrace ({group = "arm", name = "disassembler_comments"},
+                            true);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -84,16 +85,16 @@ local
         of NONE => arm_step opt opc
          | SOME ((m,a),e) =>
              let val label = spaces (List.filter (fn s => s <> "") [m,a,e,c])
-                 val _ = if !trace_progress mod 2 = 1 then
+                 val _ = if trace_progress() mod 2 = 1 then
                            print (spaces ["step:", label, "...\n"])
                          else
                            ()
-                 val thm = if (!trace_progress div 2) mod 2 = 1 then
+                 val thm = if (trace_progress() div 2) mod 2 = 1 then
                              Lib.real_time (arm_step opt) opc
                            else
                              arm_step opt opc
              in
-               if !label_step_theorems then
+               if label_step_theorems() then
                  markerLib.MK_LABEL(label,thm)
                else
                  thm
@@ -103,8 +104,8 @@ in
   let fun arm_step_from_code (itstate,instr as Instruction (enc,cond,tm)) =
             let val opc = arm_encoderLib.arm_encode instr
                 val pp = print_progress
-                           (if !trace_progress mod 2 = 1 orelse
-                               !label_step_theorems
+                           (if trace_progress() mod 2 = 1 orelse
+                               label_step_theorems()
                             then
                               SOME (arm_disassemble instr,encoding enc)
                             else
@@ -208,7 +209,7 @@ fun thumbee_decode i = decode_from_string (SOME (i,true));
 fun output_code ostrm line (c as Instruction _) =
       let val i = arm_encoderLib.arm_encode c
           val pad = StringCvt.padRight #" "
-          val comment = if !disassemble then
+          val comment = if disassemble() then
                           let val (m,a) = arm_disassemble c in
                             String.concat ["\t\t; ", pad 8 m, a]
                           end

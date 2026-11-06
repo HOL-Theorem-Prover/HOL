@@ -50,7 +50,7 @@ val () = Parse.add_infix ("/", 600, HOLgrammars.LEFT);
 (* Show oracle tags.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val () = show_tags := true;
+val () = HOLFlags.set_bflag (HOLFlags.show_tags, true);
 
 (* ------------------------------------------------------------------------- *)
 (* The subtype context.                                                      *)

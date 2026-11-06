@@ -15,7 +15,7 @@ val _ = intLib.deprecate_int()
 
 val _ = augment_srw_ss [rewrites [SNOC_APPEND]];
 
-val _ = Globals.show_assums := false;
+val _ = HOLFlags.set_bflag (Parse.show_assums, false);
 
 val _ = computeLib.add_convs [
           (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV)];

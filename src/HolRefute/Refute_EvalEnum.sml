@@ -540,7 +540,7 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
      Three channels carry that chatter.  The storage trace prints one line
      per scratch definition.  Parsing the scratch equations invents type
      variable names, announced once per quotation while
-     [Globals.notify_on_tyvar_guess] is set and the session is interactive.
+     [Parse.notify_on_tyvar_guess] is set and the session is interactive.
      And [Feedback.HOL_INFO] is where HOL's pretty-printers land
      ([Portable.pprint_outstream]), a channel no trace level gates, so it
      is switched off wholesale.  Refute's own reports and traces are
@@ -560,16 +560,17 @@ structure Refute_EvalEnum :> Refute_EvalEnum = struct
     Thread_Attributes.uninterruptible
       (fn restore_attributes => fn () =>
         let
-          val old_storage = Feedback.current_trace storage_trace
-          val old_tyvar_notice = !Globals.notify_on_tyvar_guess
+          val old_storage = HOLFlags.current_trace storage_trace
+          val old_tyvar_notice = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
           val old_info = !Feedback.emit_INFO
           val _ = if bracket_chatter () then ()
-                  else (Feedback.set_trace storage_trace 0;
-                        Globals.notify_on_tyvar_guess := false;
+                  else (HOLFlags.set_trace storage_trace 0;
+                        HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
                         Feedback.emit_INFO := false)
           val result = Exn.capture (restore_attributes work) ()
-          val _ = Feedback.set_trace storage_trace old_storage
-          val _ = Globals.notify_on_tyvar_guess := old_tyvar_notice
+          val _ = HOLFlags.set_trace storage_trace old_storage
+          val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess,
+                                      old_tyvar_notice)
           val _ = Feedback.emit_INFO := old_info
         in
           Exn.release result

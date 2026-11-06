@@ -28,7 +28,7 @@ val () = List.map Parse.reveal ["cond", "size"]
 val ERR = Feedback.mk_HOL_ERR "arm8_stepLib"
 val WARN = Feedback.HOL_WARNING "arm8_stepLib"
 
-val () = show_assums := true
+val () = HOLFlags.set_bflag (Parse.show_assums, true)
 
 (* ========================================================================= *)
 
@@ -116,7 +116,7 @@ fun EV l = utilsLib.STEP (datatype_thms, st) (l @ thms)
 
 (* ========================================================================= *)
 
-val () = Feedback.set_trace "notify type variable guesses" 0
+val () = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0
 val () = setEvConv (Conv.DEPTH_CONV wordsLib.SIZES_CONV)
 
 (* instruction semantics *)
@@ -390,7 +390,7 @@ in
               (sf,memop,acctype,signed,wback,postindex,offset,n,t,t2)``
 end
 
-val () = Feedback.set_trace "notify type variable guesses" 1
+val () = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1
 val () = setEvConv (Conv.DEPTH_CONV wordsLib.SIZES_CONV)
 
 (* ========================================================================= *)

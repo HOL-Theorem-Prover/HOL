@@ -37,7 +37,7 @@ val mu_ty = ``:'a mu``
 
 fun get_prop_type f = (hd o snd o dest_type o type_of) f
 
-val _ = set_trace "notify type variable guesses" 0;
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
 val mu_rv_tm = ``muSyntax$RV``
 val mu_neg_tm = ``muSyntax$Not``
 val mu_ap_tm = ``muSyntax$AP``
@@ -54,7 +54,7 @@ val mu_sub_tm = ``muSyntax$SUBFORMULA``
 val mu_nnf_tm = ``muSyntax$NNF``
 val mu_imf_tm = ``muSyntax$IMF``
 val mu_rvneg_tm = ``muSyntax$RVNEG``
-val _ = set_trace "notify type variable guesses" 1;
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 1;
 
 fun is_RV f = (is_comb f andalso is_const (rator f) andalso String.compare("RV",(fst o dest_const o rator) f)=EQUAL)
 fun is_mu mf = is_comb mf andalso  (Term.compare(fst(strip_comb mf),inst[alpha|->get_prop_type mf] mu_mu_tm)=EQUAL)

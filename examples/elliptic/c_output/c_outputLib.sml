@@ -11,7 +11,7 @@ loadPath :=
             (concat Globals.HOLDIR "/examples/elliptic/swsep") ::
             !loadPath;
 
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 map load ["wordsLib"];
 *)
 

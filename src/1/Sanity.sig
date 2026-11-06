@@ -65,7 +65,7 @@ sig
 
 
  (* versions of prove, store_thm and save_thm that perform checks,
-    see trace "Sanity Check Strict" *)
+    see trace "Sanity.strict" *)
  val sanity_prove : (term * tactic) -> thm
  val save_thm     : (string * thm) -> thm
  val store_thm    : (string * term * tactic) -> thm

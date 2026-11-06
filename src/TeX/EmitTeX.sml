@@ -195,15 +195,17 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 fun token_string s = String.concat ["\\", !texPrefix, "Token", s, "{}"];
-val KRrecordtypes = ref true
-val _ = register_btrace ("EmitTeX: K&R record type defns", KRrecordtypes)
+val {get = KRrecordtypes, ...} =
+    HOLFlags.create_btrace
+      ({group = "EmitTeX", name = "KR_record_type_defns"}, true)
 
 local
   fun greek s = "\\ensuremath{\\" ^ s ^ "}"
   fun subn i  = "\\ensuremath{\\sb{" ^ Int.toString i ^ "}}"
 
-  val dollar_parens = ref true
-  val _ = register_btrace ("EmitTeX: dollar parens", dollar_parens)
+  val {get = dollar_parens, ...} =
+      HOLFlags.create_btrace
+        ({group = "EmitTeX", name = "dollar_parens"}, true)
 
   fun char_map c =
     case c
@@ -330,7 +332,7 @@ local
     open PPBackEnd
     val (dollarpfx,dollarsfx,s,szdelta) =
         if String.sub(s,0) = #"$" andalso size s > 1 then
-          if !dollar_parens then ("(", ")", String.extract(s,1,NONE),2)
+          if dollar_parens() then ("(", ")", String.extract(s,1,NONE),2)
           else ("", "", String.extract(s,1,NONE),0)
         else ("", "", s,0)
     fun addann2 ty (s1,s2) =
@@ -406,12 +408,13 @@ end;
 (* Pretty-printer for datatype theorems                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val print_datatype_names_as_types = ref false
-val _ = register_btrace ("EmitTeX: print datatype names as types", print_datatype_names_as_types)
+val {get = print_datatype_names_as_types, ...} =
+    HOLFlags.create_btrace
+      ({group = "EmitTeX", name = "print_datatype_names_as_types"}, false)
 
-val print_datatypes_compactly = ref false
-val _ = register_btrace ("EmitTeX: print datatypes compactly",
-                         print_datatypes_compactly)
+val {get = print_datatypes_compactly, ...} =
+    HOLFlags.create_btrace
+      ({group = "EmitTeX", name = "print_datatypes_compactly"}, false)
 
 fun pp_datatype_theorem backend thm =
 let open smpp
@@ -421,7 +424,7 @@ let open smpp
     val BR = add_break
     val BB = ublock
     val NL = add_newline
-    val trace = Feedback.trace
+    val trace = HOLFlags.trace
     fun PT0 tm =
         term_pp.pp_term (Parse.term_grammar()) (Parse.type_grammar())
                         backend tm
@@ -471,7 +474,7 @@ let open smpp
       end
 
     fun pp_constructor_spec (n, l) = let
-      val PT0 = if !print_datatype_names_as_types then pp_type_name else lift PT
+      val PT0 = if print_datatype_names_as_types() then pp_type_name else lift PT
       val tylen = n |> dest_var |> #1 |> size
     in
       if enumerated_type n then
@@ -483,7 +486,7 @@ let open smpp
          )
         )
       else
-        BB (if !print_datatypes_compactly then PP.INCONSISTENT
+        BB (if print_datatypes_compactly() then PP.INCONSISTENT
             else PP.CONSISTENT) 2 (
           PT0 n >> S " " >> S "=" >> BR(1,2) >>
           pr_list pp_clause (BR(1,0) >> S"|" >> S " ") l
@@ -503,9 +506,9 @@ let open smpp
                 )
               end
         in
-          if !KRrecordtypes then (
+          if KRrecordtypes() then (
             BB PP.CONSISTENT 3 (
-              (if !print_datatype_names_as_types then TP0 (snd(dest_var(hd l)))
+              (if print_datatype_names_as_types() then TP0 (snd(dest_var(hd l)))
                else lift PT (hd l)) >>
               S " = " >>
               S "<|" >> BR(1,0) >>
@@ -514,7 +517,7 @@ let open smpp
             )
           ) else (
             BB PP.CONSISTENT 0 (
-              (if !print_datatype_names_as_types then TP0 (snd(dest_var(hd l)))
+              (if print_datatype_names_as_types() then TP0 (snd(dest_var(hd l)))
                else lift PT (hd l)) >>
               S " =" >> BR(1,2) >>
               BB PP.CONSISTENT 2 (
@@ -575,8 +578,9 @@ fun raw_pp_type_as_tex overrides ty md =
 
 fun pp_type_as_tex ty = UnicodeOff (raw_pp_type_as_tex (K NONE) ty)
 
-val print_thm_turnstile = ref true
-val _ = register_btrace ("EmitTeX: print thm turnstiles", print_thm_turnstile)
+val {get = print_thm_turnstile, ...} =
+    HOLFlags.create_btrace
+      ({group = "EmitTeX", name = "print_thm_turnstiles"}, true)
 
 fun raw_pp_theorem_as_tex overrides thm =
   if is_datatype_thm thm then
@@ -585,7 +589,7 @@ fun raw_pp_theorem_as_tex overrides thm =
     let
       open PP smpp
       val (turnstrs, width) =
-          if (!print_thm_turnstile) then
+          if (print_thm_turnstile()) then
             case overrides "$Turnstile$" of
                 NONE => ([(token_string "Turnstile", 2), (" ",1)], 3)
               | SOME p => ([p], snd p)

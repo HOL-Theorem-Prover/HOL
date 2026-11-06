@@ -101,7 +101,7 @@ val _ = app tpp ["P \"a\" /\\ Q",
 
 val t = ``"*)"``
 val _ = tprint "Paranoid printing of ‘\"*)\"’"
-val s = trace ("paranoid_string_literals", 1) term_to_string t
+val s = HOLFlags.trace ("PP.paranoid_string_literals", 1) term_to_string t
 val _ = if s = "\"\\042)\"" then OK()
         else die "FAILED!"
 
@@ -134,7 +134,7 @@ val _ = app test [
    ---------------------------------------------------------------------- *)
 
 val ptpp (* "paranoid tpp" *) =
-    trace ("paranoid_string_literals", 1) tpp
+    HOLFlags.trace ("PP.paranoid_string_literals", 1) tpp
 val _ = quietly Datatype ‘newtype = strinj string | boring num’
 val _ = temp_add_strliteral_form {inj = “strinj”, ldelim = "«"}
 

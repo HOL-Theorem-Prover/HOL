@@ -555,11 +555,11 @@ fun vector_matcher r =
 (* the empty charset. If w is the full charset then EMPTY is not returned.   *)
 (*---------------------------------------------------------------------------*)
 
-val tracing = ref true;
+val {get = tracing, ...} =
+    HOLFlags.create_btrace ({group = "regexp", name = "compiler"}, true);
 
-fun kprint s = if !tracing then print s else ();
+fun kprint s = if tracing() then print s else ();
 
-val _ = Feedback.register_btrace("regexp-compiler",tracing);
 
 fun drop w (Cat(a,b)) =
      (case regexp_compare w a
@@ -599,7 +599,7 @@ fun transitions r =
 fun dom_brzozo seen [] = seen
   | dom_brzozo seen (r::t) =
       (kprint ("Worklist length: "^Int.toString(length t + 1)^". Head:\n  ")
-       ; if !tracing then print_regexp r else ()
+       ; if tracing() then print_regexp r else ()
        ; kprint "\n"
        ;
         if mem_regexp r seen

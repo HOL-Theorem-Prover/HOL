@@ -432,7 +432,7 @@ in
 end
 handle e => raise wrap_exn "Induction" "mk_induction" e
 in
-  if !monitoring > 0 then Count.apply f () else f()
+  if monitoring() then Count.apply f () else f()
 end
 *)
 

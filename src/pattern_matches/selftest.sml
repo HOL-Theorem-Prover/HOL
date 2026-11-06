@@ -15,7 +15,7 @@ val _ = Feedback.emit_MESG := false
 
 (* For manual
 
-HOLFlags.set_trace "PP.use_pmatch_pp" 0
+HOLFlags.set_trace "patternMatches.use_pp" 0
 val hard_fail = false;
 val _ = testutils.diemode := FailException
 val quiet = false;

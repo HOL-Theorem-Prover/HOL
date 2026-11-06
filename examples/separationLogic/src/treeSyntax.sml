@@ -5,7 +5,7 @@ struct
 quietdec := true;
 loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
             !loadPath;
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open HolKernel Parse boolLib finite_mapTheory

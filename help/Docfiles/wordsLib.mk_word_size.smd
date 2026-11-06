@@ -25,7 +25,7 @@ words of length `n`. Theorems for `dimindex(:n)`, `dimword(:n)` and
 
 ### Comments
 
-The type abbreviation will only print when `type_pp.pp_array_types` is
+The type abbreviation will only print when `PP.array_types` is
 set to `false`.
 
 ### See also

@@ -334,6 +334,8 @@ val show_tags = mkflag "show_tags"
 val show_axioms = mkflag "show_axioms"
 val show_assums = mkflag "show_assums"
 val show_types = mkflag "types"
+val show_numeral_types = mkflag "show_numeral_types"
+val show_scrub = mkflag "show_scrub"
 
 
 end

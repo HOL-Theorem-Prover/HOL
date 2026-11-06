@@ -44,7 +44,7 @@ The following shows an attempt to use a bad pattern (the pattern term
 `t` has two variables called `x` at different types):
 
 ``` hol4
->> val _ = show_types := true;
+>> val _ = HOLFlags.set_bflag (Parse.show_types, true);
 
 >> val t = list_mk_comb(``f:'a -> 'b -> 'c``, [``x:'a``, ``x:'b``]);
 
@@ -65,4 +65,4 @@ For instantiating theorems `PART_MATCH` is usually easier to use.
 [`Type.match_type`](#Type.match_type),
 [`Drule.INST_TY_TERM`](#Drule.INST_TY_TERM),
 [`Drule.PART_MATCH`](#Drule.PART_MATCH)
->>__ show_types := false
+>>__ HOLFlags.set_bflag (Parse.show_types, false)

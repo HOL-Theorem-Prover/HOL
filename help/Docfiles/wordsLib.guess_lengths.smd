@@ -16,7 +16,7 @@ variables that are the return type of `word_concat` and `word_extract`.
 ### Example
 
 ``` hol4
->> show_types := true;
+>> HOLFlags.set_bflag (Parse.show_types, true);
 
 >> val t1 = “(7 >< 5) a @@ (4 >< 0) a”;
 
@@ -30,4 +30,4 @@ variables that are the return type of `word_concat` and `word_extract`.
 
 [`wordsLib.inst_word_lengths`](#wordsLib.inst_word_lengths),
 [`wordsLib.notify_on_word_length_guess`](#wordsLib.notify_on_word_length_guess)
->>__ show_types := false;
+>>__ HOLFlags.set_bflag (Parse.show_types, false);

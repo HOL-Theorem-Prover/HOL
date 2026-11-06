@@ -8,11 +8,11 @@ val ERR = mk_HOL_ERR "selftest"
 val _ = wordsLib.guess_lengths();
 
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
-val _ = set_trace "arm steps" 3;
-val _ = set_trace "arm step" 2;
-val _ = set_trace "arm step check" 1;
-val _ = set_trace "notify type variable guesses" 0;
-val _ = set_trace "notify word length guesses" 0;
+val _ = HOLFlags.set_trace "arm.steps" 3;
+val _ = HOLFlags.set_trace "arm.step" 2;
+val _ = HOLFlags.set_trace "arm.step_check" 1;
+val _ = HOLFlags.set_trace "Parse.notify_on_tyvar_guess" 0;
+val _ = HOLFlags.set_trace "words.notify_length_guesses" 0;
 
 fun die() = ()
 fun die() = OS.Process.exit OS.Process.failure

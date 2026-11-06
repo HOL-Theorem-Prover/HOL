@@ -114,7 +114,7 @@ val _ = run_tests tys default tests;
 
 (* Test two's complement printing printer *)
 val _ = tprint "Testing two's complement printing";
-val _ = set_trace "word pp as 2's comp" 1;
+val _ = HOLFlags.set_trace "words.pp_as_2s_comp" 1;
 val _ = run_tests tys_neg default_neg tests;
 
 val _ = output_words_as_dec();

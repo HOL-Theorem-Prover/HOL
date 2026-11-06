@@ -25,7 +25,7 @@ Never fails.
 ``` hol4
 >> BOOL_CASES_AX;;
 
->> show_types := true;
+>> HOLFlags.set_bflag (Parse.show_types, true);
 
 >> BOOL_CASES_AX;;
 ```
@@ -42,4 +42,4 @@ not printing of types is enabled.
 ### See also
 
 [`Parse.print_term`](#Parse.print_term)
->>__ show_types := false;
+>>__ HOLFlags.set_bflag (Parse.show_types, false);

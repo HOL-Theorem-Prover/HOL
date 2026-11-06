@@ -8,8 +8,8 @@ val _ = new_theory "scratch"
 *)
 
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
-val _ = set_trace "print blast counterexamples" 0
-val _ = set_trace "bit blast" 0
+val _ = HOLFlags.set_trace "blastLib.print_counterexamples" 0
+val _ = HOLFlags.set_trace "blastLib.trace" 0
 
 val ERR = mk_HOL_ERR "selftest"
 

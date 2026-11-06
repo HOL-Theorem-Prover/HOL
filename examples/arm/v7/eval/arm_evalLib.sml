@@ -140,8 +140,9 @@ in
   val arm_load_from_string = arm_load_from armLib.arm_assemble_from_string
 end;
 
-val arm_eval_trace = ref 6;
-val _ = Feedback.register_trace ("arm eval", arm_eval_trace, 6);
+val {get = arm_eval_trace, ...} =
+    HOLFlags.create_trace ({group = "arm", name = "eval"},
+                           {initial = 6, max = 6});
 
 fun rname i =
   case i
@@ -296,22 +297,22 @@ local
         end
 
   fun print_trace (instr,pc,cycle,s,s') =
-        (if !arm_eval_trace > 0 then print_cycle cycle else ();
-         if !arm_eval_trace > 1 then print_pc pc else ();
-         if !arm_eval_trace > 2 then print_instr instr else ();
-         if !arm_eval_trace > 3 andalso isSome s' then
+        (if arm_eval_trace() > 0 then print_cycle cycle else ();
+         if arm_eval_trace() > 1 then print_pc pc else ();
+         if arm_eval_trace() > 2 then print_instr instr else ();
+         if arm_eval_trace() > 3 andalso isSome s' then
             print_regs (s,valOf s')
          else
             ();
-         if !arm_eval_trace > 4 andalso isSome s' then
+         if arm_eval_trace() > 4 andalso isSome s' then
             print_psrs (s,valOf s')
          else
             ();
-         if !arm_eval_trace > 5 andalso isSome s' then
+         if arm_eval_trace() > 5 andalso isSome s' then
             print_mem (valOf s')
          else
             ();
-         if !arm_eval_trace > 1 then
+         if arm_eval_trace() > 1 then
            out [StringCvt.padLeft #"-" 40 ""]
          else
            ())

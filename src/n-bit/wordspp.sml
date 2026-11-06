@@ -6,13 +6,13 @@ open fcpLib fcpSyntax
 
 val ERR = mk_HOL_ERR "wordsLib"
 
-val word_pp_mode = ref 0
-val word_cast_on = ref false
-val int_word_pp  = ref false
-
-val _ = Feedback.register_btrace ("word cast printing", word_cast_on)
-val _ = Feedback.register_trace ("word printing", word_pp_mode, 6)
-val _ = Feedback.register_btrace ("word pp as 2's comp", int_word_pp)
+val {get = word_pp_mode, ...} =
+    HOLFlags.create_trace ({group = "words", name = "printing"},
+                           {initial = 0, max = 6})
+val {get = word_cast_on, ...} =
+    HOLFlags.create_btrace ({group = "words", name = "cast_printing"}, false)
+val {get = int_word_pp, ...} =
+    HOLFlags.create_btrace ({group = "words", name = "pp_as_2s_comp"}, false)
 
 local
    fun lsr (x, y) =
@@ -20,7 +20,7 @@ local
          then x
       else lsr (Arbnum.div2 x, Arbnum.less1 y)
    fun int_word (v, m) =
-      if !int_word_pp andalso m <> Arbnum.zero
+      if int_word_pp() andalso m <> Arbnum.zero
          then let
                  val top = lsr (v, Arbnum.less1 m)
                  val neg = top = Arbnum.one
@@ -32,13 +32,13 @@ local
       else (false, v)
    val hexsplit = Arbnum.fromHexString "10000"
    fun f (l, v) =
-        if !word_pp_mode = 0 andalso Arbnum.<= (hexsplit, v)
+        if word_pp_mode() = 0 andalso Arbnum.<= (hexsplit, v)
            then "0x" ^ Arbnum.toHexString v
-        else if !word_pp_mode = 0 orelse !word_pp_mode = 3
+        else if word_pp_mode() = 0 orelse word_pp_mode() = 3
            then Arbnum.toString v
-        else if !word_pp_mode = 1
+        else if word_pp_mode() = 1
            then "0b" ^ Arbnum.toBinString v
-        else if !word_pp_mode = 2
+        else if word_pp_mode() = 2
            then if !base_tokens.allow_octal_input
                    orelse Arbnum.< (v, Arbnum.fromInt 8)
                    then "0" ^ Arbnum.toOctString v
@@ -47,11 +47,11 @@ local
                          \base_tokens.allow_octal_input is true."
                      ; Arbnum.toString v
                      )
-        else if !word_pp_mode = 6 andalso l mod 4 = 0
+        else if word_pp_mode() = 6 andalso l mod 4 = 0
            then "0x" ^ StringCvt.padLeft #"0" (l div 4) (Arbnum.toHexString v)
-        else if !word_pp_mode = 4 orelse !word_pp_mode = 6
+        else if word_pp_mode() = 4 orelse word_pp_mode() = 6
            then "0x" ^ Arbnum.toHexString v
-        else if !word_pp_mode = 5
+        else if word_pp_mode() = 5
            then "0b" ^ StringCvt.padLeft #"0" l (Arbnum.toBinString v)
         else raise ERR "output_words_as" "invalid printing mode"
    fun dest_word_type ty =
@@ -76,12 +76,12 @@ in
          val v = numSyntax.dest_numeral n
          val (neg, v) = int_word (v, m)
       in
-         (if !Globals.show_types orelse !word_cast_on
+         (if HOLFlags.get_bflag Parse.show_types orelse word_cast_on()
              then str "("
           else nothing)
          >> (if neg then str "-" else nothing)
          >> str (f (Arbnum.toInt m, v) ^ "w")
-         >> (if !Globals.show_types orelse !word_cast_on
+         >> (if HOLFlags.get_bflag Parse.show_types orelse word_cast_on()
                 then brk (1, 2)
                      >> lift pp_type (type_of t)
                      >> str ")"

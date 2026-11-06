@@ -54,7 +54,7 @@ val _ = intLib.deprecate_int();
 * 3: transitions as they are calculated
 * 4: internal state of the automata
 ******************************************************************************)
-val _ = set_trace "regexpTools" 1;
+val _ = HOLFlags.set_trace "regexpTools.trace" 1;
 
 (******************************************************************************
 * Translate ML datatype bexp to HOL terms

@@ -593,12 +593,8 @@ fun term_to_ML openthys side =
   and pp_itself tm =
     let fun skip1 s = String.extract(s, 1, NONE)
         fun num_type typ =
-              let val pp_n = !type_pp.pp_num_types
-                  val _ = type_pp.pp_num_types := true
-              in
-                skip1 (Hol_pp.type_to_string typ) before
-                type_pp.pp_num_types := pp_n
-              end
+              skip1 (HOLFlags.trace ("PP.num_types", 1)
+                                    Hol_pp.type_to_string typ)
         fun itself x =
           block INCONSISTENT 2 (
             add_string "(" >>
@@ -1532,9 +1528,9 @@ val emitML = emit_xML (false,!sigSuffix,!structSuffix);
 
 val emitCAML = emit_xML (true,!sigCamlSuffix,!structCamlSuffix);
 
-fun eSML d l = with_flag (type_pp.pp_array_types, false)
+fun eSML d l = HOLFlags.trace ("PP.array_types", 0)
                  (emitML (!Globals.emitMLDir)) (d, l);
-fun eCAML d l = with_flag (type_pp.pp_array_types, false)
+fun eCAML d l = HOLFlags.trace ("PP.array_types", 0)
                  (emitCAML (!Globals.emitCAMLDir)) (d, l);
 
 fun MLSIGSTRUCT ll =

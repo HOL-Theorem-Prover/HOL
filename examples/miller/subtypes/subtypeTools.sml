@@ -16,11 +16,12 @@ val assert = simple_assert;
 (* Debugging.                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val trace_level = ref 0;
-val _ = Feedback.register_trace ("subtypeTools", trace_level, 10);
-fun trace l s = if l > !trace_level then () else say (s ^ "\n");
+val {get = trace_level, ...} =
+    HOLFlags.create_trace ({group = "subtypeTools", name = "trace"},
+                           {initial = 0, max = 10});
+fun trace l s = if l > trace_level() then () else say (s ^ "\n");
 fun trace_x l s f x =
-  if l > !trace_level then () else say (s ^ ":\n" ^ f x ^ "\n");
+  if l > trace_level() then () else say (s ^ ":\n" ^ f x ^ "\n");
 fun trace_CONV l s tm = (trace_x l s term_to_string tm; ALL_CONV tm);
 
 (* ------------------------------------------------------------------------- *)
@@ -830,7 +831,7 @@ fun precontext_mergel [] = empty_precontext
 (* ------------------------------------------------------------------------- *)
 
 (*
-set_trace "subtypeTools" 3;
+HOLFlags.set_trace "subtypeTools.trace" 3;
 
 val stc = tt4 SUBTYPE_CHECK true 3 (context_subtypes hol_c);
 

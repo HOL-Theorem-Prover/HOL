@@ -10,7 +10,7 @@ fun die s = ( printn s; raise ERR "" "" )
 val die = printn
 *)
 
-val () = show_tags := true
+val () = HOLFlags.set_bflag (HOLFlags.show_tags, true)
 
 (* ------------------------------------------------------------------------ *)
 
@@ -52,7 +52,7 @@ fun has_tags tags thm =
     | _ => false
 
 fun pr_term tm =
-   ( print "\n"; Lib.with_flag (show_types, true) print_term tm; print "\n" )
+   ( print "\n"; HOLFlags.with_bflags [(Parse.show_types, true)] print_term tm; print "\n" )
 
 fun ok_result1 tm =
    tm ~~ boolSyntax.T orelse

@@ -10,7 +10,7 @@ open blastLib cheriTheory cheri_stepTheory
 
 val ERR = Feedback.mk_HOL_ERR "cheri_stepLib"
 
-val () = show_assums := true
+val () = HOLFlags.set_bflag (Parse.show_assums, true)
 
 structure Parse =
 struct

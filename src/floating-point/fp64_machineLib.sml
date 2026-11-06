@@ -1,8 +1,9 @@
 structure fp64_machineLib :> fp64_machineLib =
 struct
 
-  val native_eval = ref false
-  val () = Feedback.register_btrace ("native IEEE", native_eval)
+  val {get = native_eval, ...} =
+      HOLFlags.create_btrace
+        ({group = "floating-point", name = "native_IEEE"}, false)
   val sqrt_CONV = ref Conv.NO_CONV
   val add_CONV = ref Conv.NO_CONV
   val sub_CONV = ref Conv.NO_CONV
@@ -20,7 +21,7 @@ struct
         Conv.QCHANGED_CONV
           (Rewrite.PURE_REWRITE_CONV [DB.fetch "machine_ieee" ("fp64_" ^  s)])
     in
-      fn tm => (if !native_eval then !cnv1 else cnv2) tm
+      fn tm => (if native_eval() then !cnv1 else cnv2) tm
     end
   fun mk s = Term.prim_mk_const {Name = "fp64_" ^ s, Thy = "machine_ieee"}
   val () = computeLib.add_convs

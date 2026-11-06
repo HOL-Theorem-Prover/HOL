@@ -50,7 +50,7 @@ val _ = save_thm("PID_ADA_cert",PID_ADA_cert);
 
 (* an attempt at proving them equivalent *)
 
-val _ = (guessing_word_lengths := true);
+val _ = HOLFlags.set_bflag (guessing_word_lengths, true);
 
 Definition word_read_def:
   word_read (m:word32 -> word8) a =

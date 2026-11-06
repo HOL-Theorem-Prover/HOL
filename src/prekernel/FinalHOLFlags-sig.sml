@@ -56,5 +56,7 @@ sig
     val show_axioms       : bflag
     val show_assums       : bflag
     val show_types        : bflag
+    val show_numeral_types : bflag
+    val show_scrub        : bflag
 
 end

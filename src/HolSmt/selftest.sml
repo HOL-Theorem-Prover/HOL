@@ -12,15 +12,15 @@ val _ = print "Testing HolSmtLib\n"
 (*****************************************************************************)
 
 (*
-val _ = Globals.show_tags := true
-val _ = Globals.show_assums := true
-val _ = Globals.show_types := true
+val _ = HOLFlags.set_bflag (HOLFlags.show_tags, true)
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
+val _ = HOLFlags.set_bflag (Parse.show_types, true)
 val _ = wordsLib.add_word_cast_printer ()
 *)
 val _ = HOLFlags.set_trace "PP.avoid_unicode" 1
-val _ = Feedback.set_trace "HolSmtLib" 0
+val _ = HOLFlags.set_trace "HolSmtLib.trace" 0
 (*
-val _ = Feedback.set_trace "HolSmtLib" 4
+val _ = HOLFlags.set_trace "HolSmtLib.trace" 4
 *)
 
 (*****************************************************************************)
@@ -44,7 +44,7 @@ local
 
 val die = Unittest.die
 
-fun term_with_types t = Lib.with_flag(show_types, true) Hol_pp.term_to_string t
+fun term_with_types t = HOLFlags.with_bflags [(Parse.show_types, true)] Hol_pp.term_to_string t
 
 (* provable terms: theorem expected *)
 fun expect_thm check_oracles name smt_tac t =
@@ -88,7 +88,7 @@ fun expect_sat name smt_tac t =
     die ("Test of solver '" ^ name ^ "' failed on term '" ^
       term_with_types t ^ "': exception expected")
   end handle Feedback.HOL_ERR holerr =>
-    if top_structure_of holerr = "HolSmtLib" andalso
+    if top_structure_of holerr = "HolSmtLib.trace" andalso
        top_function_of holerr = "GENERIC_SMT_TAC" andalso
        (message_of holerr = "solver reports negated term to be 'satisfiable'" orelse
         message_of holerr = "solver reports negated term to be 'satisfiable' (model returned)")

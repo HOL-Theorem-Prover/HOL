@@ -350,7 +350,7 @@ QED
 
 (* Manual Lifting:
 
-- show_assums := true;
+- HOLFlags.set_bflag (Parse.show_assums, true);
 > val it = () : unit
 
 - monoid_id_element;
@@ -372,7 +372,7 @@ or
 - group_is_monoid |> SPEC_ALL |> UNDISCH |> MP (monoid_id_element |> SPEC_ALL) |> DISCH_ALL |> GEN_ALL;
 > val it =  [] |- !g. Group g ==> #e IN G : thm
 
-- show_assums := false;
+- HOLFlags.set_bflag (Parse.show_assums, false);
 > val it = () : unit
 *)
 
@@ -6023,13 +6023,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (*
-> show_types := true; ITSET_def; show_types := false;
+> HOLFlags.set_bflag (Parse.show_types, true); ITSET_def; HOLFlags.set_bflag (Parse.show_types, false);
 val it = |- !(s :'a -> bool) (f :'a -> 'b -> 'b) (b :'b).
     ITSET f s b = if FINITE s then if s = ({} :'a -> bool) then b
                                    else ITSET f (REST s) (f (CHOICE s) b)
                   else (ARB :'b): thm
 
-> show_types := true; SUM_IMAGE_DEF; show_types := false;
+> HOLFlags.set_bflag (Parse.show_types, true); SUM_IMAGE_DEF; HOLFlags.set_bflag (Parse.show_types, false);
 val it = |- !(f :'a -> num) (s :'a -> bool).
     SIGMA f s = ITSET (\(e :'a) (acc :num). f e + acc) s (0 :num): thm
 

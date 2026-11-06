@@ -54,10 +54,9 @@ fun SIZE n =
 val FCP_ss =
   simpLib.rewrites [fcpTheory.FCP_BETA, fcpTheory.FCP_ETA, fcpTheory.CART_EQ]
 
-val notify_on_length_guess = ref true
-
-val () = Feedback.register_btrace
-            ("notify FCP length guesses", notify_on_length_guess)
+val {get = notify_on_length_guess, ...} =
+    HOLFlags.create_btrace
+      ({group = "fcpLib", name = "notify_length_guesses"}, true)
 
 local
    fun t2s t = String.extract (Hol_pp.type_to_string t, 1, NONE)
@@ -78,7 +77,7 @@ in
        | SOME subtm =>
           let
              val theinst as {redex, residue} = infer_fcp_type subtm
-             val _ = if !Globals.interactive andalso !notify_on_length_guess
+             val _ = if !Globals.interactive andalso notify_on_length_guess()
                         then Feedback.HOL_MESG
                                 (String.concat ["assigning FCP length: ",
                                                 t2s redex, " <- ", t2s residue])

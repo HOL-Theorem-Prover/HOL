@@ -1185,7 +1185,7 @@ end
     A grammar carries the precedence matrix built from its rules and its
     specials, so the matrix has to be shared exactly as far as those two
     fields are --- and a matrix that is reused rather than built must
-    still be complained about as the "ambiguous grammar warning" trace
+    still be complained about as the "Parse.ambiguous_grammar" trace
     asks, and still count as an unambiguous use when it is one.
    ---------------------------------------------------------------------- *)
 

@@ -17,7 +17,7 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "stringTheory", "vars_as_resourceTheory", "stringLib", "listLib",
     "holfootTheory"];
 
-show_assums := true; *)
+HOLFlags.set_bflag (Parse.show_assums, true); *)
 
 open HolKernel Parse boolLib bossLib;
 open listTheory rich_listTheory finite_mapTheory pred_setTheory
@@ -184,12 +184,13 @@ end;
 val (array_bound_DECIDE___YICES, _) =
   Cache.CACHE {capacity=2000, per_key_cap=32} ((K true), array_bound_DECIDE___YICES)
 
-val holfoot_use_yices = ref 0;
-val _ = Feedback.register_trace ("holfoot use Yices", holfoot_use_yices, 4);
+val {get = holfoot_use_yices, ...} =
+    HOLFlags.create_trace ({group = "holfoot", name = "use_yices"},
+                           {initial = 0, max = 4});
 
 fun array_bound_DECIDE context t =
-   if (!holfoot_use_yices = 1) then array_bound_DECIDE___YICES context t else
-   if (!holfoot_use_yices = 0) then array_bound_DECIDE___HOL context t else
+   if (holfoot_use_yices() = 1) then array_bound_DECIDE___YICES context t else
+   if (holfoot_use_yices() = 0) then array_bound_DECIDE___HOL context t else
    let
       fun run f context t =
         (let
@@ -216,7 +217,7 @@ fun array_bound_DECIDE context t =
                   val _ = print_thm_opt thm2_opt;
                   val _ = print "\n";
               in () end
-      val thm_opt = if (!holfoot_use_yices mod 2 = 1) then thm1_opt else thm2_opt
+      val thm_opt = if (holfoot_use_yices() mod 2 = 1) then thm1_opt else thm2_opt
    in
       if isSome thm_opt then valOf thm_opt else Feedback.fail()
    end;
@@ -1380,7 +1381,7 @@ end;
 (******************************************************************************)
 
 (*
-set_trace "use holfoot_pp" 0
+HOLFlags.set_trace "holfoot.use_pp" 0
 use_holfoot_pp := false
    val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 *)
@@ -2626,7 +2627,7 @@ struct
      | predicate_ssfrag _ = merge [predicate_ssfrag2, predicate_ssfrag_arith 3]
 
    fun final_decision_procedure context t =
-       if (!holfoot_use_yices mod 2 = 1) then
+       if (holfoot_use_yices() mod 2 = 1) then
          array_bound_DECIDE___YICES context t
        else Feedback.fail ();
 
@@ -2807,8 +2808,8 @@ fun print_width left i s =
     print s;
     if left then (print_space (i - size s)) else ());
 
-val print_file = ref true
-val _ = Feedback.register_btrace ("holfoot print file", print_file);
+val {get = print_file, ...} =
+    HOLFlags.create_btrace ({group = "holfoot", name = "print_file"}, true);
 
 
 fun CONJ_ASSUME [] = TRUTH
@@ -2867,7 +2868,7 @@ fun holfoot_verify_spec_internal verbose print_remaining
      val t_start = Time.now();
 
      val _ = start_timer ();
-     val _ = print (if !print_file then
+     val _ = print (if print_file() then
                       if verbose then "\nparsing file \""^file^"\" ... "
                       else "\n"^file^" ... "
                     else
@@ -2991,7 +2992,7 @@ fun holfoot_set_remaining_goal thm_imp =
 let
    val (a,p) = dest_imp (concl thm_imp);
    val _ = proofManagerLib.set_goal ([], p)
-   val _ = Lib.with_flag (proofManagerLib.chatting, false)
+   val _ = HOLFlags.with_bflags [(proofManagerLib.chatting, false)]
                          proofManagerLib.expand
                          (fn _ => fn _ =>
                             ([([],a)], fn thmL => (MP thm_imp (hd thmL))))
@@ -3049,12 +3050,12 @@ holfoot_set_goal_procedures file ["array_frame_7"]
 holfoot_set_goal_procedures file ["array_lookup_1"]
 holfoot_set_goal_procedures file ["array_assign_1"]
 
-set_trace "use holfoot_pp" 1
+HOLFlags.set_trace "holfoot.use_pp" 1
 holfoot_interactive_verify_spec true (true,true,true) ([],[],[]) file
 HF_SOLVE_TAC THEN
 
 HF_STEP_TAC 10
-set_trace "use holfoot_pp" 0
+HOLFlags.set_trace "holfoot.use_pp" 0
 REPEAT STRIP_TAC THEN
 Cases_on `n_const = LENGTH data1` THEN
 HF_CONTINUE_TAC
@@ -3077,7 +3078,7 @@ SIMP_TAC std_ss [GSYM EL]
 
 holfoot_set_remaining_goal thm_imp
 
-val _ = Feedback.set_trace "PPBackEnd use annotations" 0
+val _ = HOLFlags.set_trace "PPBackEnd.use_annotations" 0
 val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 val t = parse_holfoot_file file

@@ -54,7 +54,7 @@ fun munger eatfirstNL () = let
       | ["-index"] => mungeTools.usage()
       | ["-index", basename] => (holindex.holindex basename; run_lexer := false)
       | "--fail_on_ambiguities" :: rest =>
-           (set_trace "ambiguous grammar warning" 2;
+           (HOLFlags.set_trace "Parse.ambiguous_grammar" 2;
             proc_args rest)
       | "--nomergeanalysis" :: rest =>
           (HOLFlags.set_trace "PP.avoid_symbol_merges" 0;

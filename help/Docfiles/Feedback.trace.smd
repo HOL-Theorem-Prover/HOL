@@ -26,10 +26,10 @@ variable. Also fails if the function invocation fails.
 ``` hol4
 >> load "mesonLib";
 
->> trace ("meson",2) prove
+>> HOLFlags.trace ("meson.chatting",2) prove
      (concl SKOLEM_THM,mesonLib.MESON_TAC []);
 
->> traces();
+>> HOLFlags.traces();
 ```
 
 ### See also

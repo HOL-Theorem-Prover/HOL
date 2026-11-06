@@ -416,7 +416,7 @@ local
   (* returns an extended proof; 't' must encode a proofterm *)
   fun extend_proof (steps, vars) (id, t) =
   let
-    val _ = if !Library.trace > 0 andalso
+    val _ = if Library.trace() > 0 andalso
       Option.isSome (Redblackmap.peek (steps, id)) then
         WARNING "extend_proof"
           ("proofterm ID " ^ Int.toString id ^ " defined more than once")
@@ -606,14 +606,14 @@ in
     (* union of user-declared names and Z3's inference rule names *)
     val tmdict = Library.union_dict tmdict z3_builtin_dict
     (* parse the stream *)
-    val _ = if !Library.trace > 1 then
+    val _ = if Library.trace() > 1 then
         Feedback.HOL_MESG "HolSmtLib: parsing Z3 proof"
       else ()
     val get_token = Library.get_token (Library.get_buffered_char instream)
     val empty_proof = (Redblackmap.mkDict Int.compare, Term.empty_tmset)
     val proof = parse_proof get_token
       (tydict, tmdict, empty_proof)
-    val _ = if !Library.trace > 0 then
+    val _ = if Library.trace() > 0 then
         WARNING "parse_stream" ("ignoring token '" ^ get_token () ^
           "' (and perhaps others) after proof")
           handle Feedback.HOL_ERR _ => ()  (* end of stream, as expected *)

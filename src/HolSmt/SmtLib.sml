@@ -149,7 +149,7 @@ local
           val _ = if rngdim = Arbnum.+ (dim1, dim2) then
               ()
             else (
-              if !Library.trace > 0 then
+              if Library.trace() > 0 then
                 WARNING "translate_term" "word_concat: wrong result type"
               else
                 ();
@@ -168,7 +168,7 @@ local
           val _ = if Arbnum.<= (j, i) then
               ()
             else (
-              if !Library.trace > 0 then
+              if Library.trace() > 0 then
                 WARNING "translate_term"
                   "word_extract: second index larger than first"
               else
@@ -179,7 +179,7 @@ local
           val _ = if Arbnum.< (i, dim) then
               ()
             else (
-              if !Library.trace > 0 then
+              if Library.trace() > 0 then
                 WARNING "translate_term" "word_extract: first index too large"
               else
                 ();
@@ -193,7 +193,7 @@ local
           val _ = if rngdim = Arbnum.+ (Arbnum.- (i, j), Arbnum.one) then
               ()
             else (
-              if !Library.trace > 0 then
+              if Library.trace() > 0 then
                 WARNING "translate_term" "word_extract: wrong result type"
               else
                 ();
@@ -238,7 +238,7 @@ local
           val _ = if rngdim = Arbnum.* (n, dim) then
               ()
             else (
-              if !Library.trace > 0 then
+              if Library.trace() > 0 then
                 WARNING "translate_term" "word_replicate: wrong result type"
               else
                 ();
@@ -259,7 +259,7 @@ local
           val _ = if Arbnum.>= (rngdim, dim) then
               ()
             else (
-              if !Library.trace > 0 then
+              if Library.trace() > 0 then
                 WARNING "translate_term" "w2w: result type too short"
               else
                 ();
@@ -280,7 +280,7 @@ local
           val _ = if Arbnum.>= (rngdim, dim) then
               ()
             else (
-              if !Library.trace > 0 then
+              if Library.trace() > 0 then
                 WARNING "translate_term" "sw2sw: result type too short"
               else
                 ();
@@ -342,12 +342,12 @@ local
       val name = ty_prefix ^ Int.toString (Redblackmap.numItems tydict)
       val decl = "(declare-sort " ^ name ^ " 0)\n"
     in
-      if !Library.trace > 0 andalso Type.is_type ty then
+      if Library.trace() > 0 andalso Type.is_type ty then
         WARNING "translate_type"
           ("uninterpreted type " ^ Hol_pp.type_to_string ty)
       else
         ();
-      if !Library.trace > 2 then
+      if Library.trace() > 2 then
         Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^ name ^
           "' for HOL type '" ^ Hol_pp.type_to_string ty ^ "'")
       else
@@ -495,12 +495,12 @@ local
             val (tydict, (rngdecls, rngty)) = translate_type (tydict, rngty)
             (* invent new name for 'rator' *)
             val name = tm_prefix ^ Int.toString (Redblackmap.numItems tmdict)
-            val _ = if !Library.trace > 0 andalso Term.is_const rator then
+            val _ = if Library.trace() > 0 andalso Term.is_const rator then
               WARNING "translate_term"
                 ("uninterpreted constant " ^ Hol_pp.term_to_string rator)
               else
                 ();
-            val _ = if !Library.trace > 2 then
+            val _ = if Library.trace() > 2 then
                 Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^
                   name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^
                   "' (applied to " ^ Int.toString rands_count ^ " argument(s))")

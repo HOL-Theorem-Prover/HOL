@@ -7,7 +7,7 @@ Ancestors
 Libs
   mp_then wordsLib automationLib
 
-val _ = show_assums := true;
+val _ = HOLFlags.set_bflag (Parse.show_assums, true);
 
 val _ = attach_comment ‘
 # This file is generated from the HOL4 theorem prover.

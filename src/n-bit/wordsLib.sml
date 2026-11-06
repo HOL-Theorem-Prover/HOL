@@ -2296,8 +2296,9 @@ local
   val DECIDE_CONV = EQT_INTRO o DECIDE
   fun EQ_CONV t = (if term_eq T t orelse term_eq F t then
                      ALL_CONV else NO_CONV) t
-  val trace_word_decide = ref 0
-  val _ = Feedback.register_trace ("word decide", trace_word_decide, 1)
+  val {get = trace_word_decide, ...} =
+      HOLFlags.create_trace ({group = "words", name = "decide"},
+                             {initial = 0, max = 1})
 in
   val WORD_BIT_EQ_ss =
         simpLib.merge_ss
@@ -2329,7 +2330,7 @@ in
           val t1 = rhs (concl thm1)
           val bnds = mk_bounds_thms t1
           val t2 = mk_imp (concl bnds, t1)
-          val _ = if 0 < !trace_word_decide then
+          val _ = if 0 < trace_word_decide() then
                     (print ("Trying to prove:\n");
                      Parse.print_term t2;
                      print "\n")
@@ -2458,24 +2459,24 @@ val Induct_word =
 
 (* ------------------------------------------------------------------------- *)
 
-fun output_words_as_bin () = set_trace "word printing" 1
-fun output_words_as_dec () = set_trace "word printing" 3
-fun output_words_as_hex () = set_trace "word printing" 4
-fun output_words_as_padded_bin () = set_trace "word printing" 5
-fun output_words_as_padded_hex () = set_trace "word printing" 6
+fun output_words_as_bin () = HOLFlags.set_trace "words.printing" 1
+fun output_words_as_dec () = HOLFlags.set_trace "words.printing" 3
+fun output_words_as_hex () = HOLFlags.set_trace "words.printing" 4
+fun output_words_as_padded_bin () = HOLFlags.set_trace "words.printing" 5
+fun output_words_as_padded_hex () = HOLFlags.set_trace "words.printing" 6
 
 fun output_words_as_oct () =
-   (base_tokens.allow_octal_input := true; set_trace "word printing" 2)
+   (base_tokens.allow_octal_input := true; HOLFlags.set_trace "words.printing" 2)
 
-fun remove_word_printer () = set_trace "word printing" 0;
+fun remove_word_printer () = HOLFlags.set_trace "words.printing" 0;
 
 fun add_word_cast_printer () =
-   ( set_trace "word cast printing" 1
+   ( HOLFlags.set_trace "words.cast_printing" 1
    ; Parse.add_user_printer ("wordspp.words_cast_printer", ``f:'b word``)
    )
 
 fun remove_word_cast_printer () =
-   ( set_trace "word cast printing" 0
+   ( HOLFlags.set_trace "words.cast_printing" 0
    ; Parse.remove_user_printer ("wordspp.words_cast_printer", “f:'b word”)
    ; ()
    )
@@ -2485,17 +2486,16 @@ fun remove_word_cast_printer () =
    concatenate (@@), word_replicate and concat_word_list
    ------------------------------------------------------------------------- *)
 
-val notify_on_word_length_guess = ref true
-val guessing_word_lengths = ref false
+val {get = get_notify_on_word_length_guess,
+     flag = notify_on_word_length_guess, ...} =
+    HOLFlags.create_btrace
+      ({group = "words", name = "notify_length_guesses"}, true)
 
-val _ = Feedback.register_btrace ("notify word length guesses",
-                                  notify_on_word_length_guess)
+val {get = get_guessing_word_lengths, flag = guessing_word_lengths, ...} =
+    HOLFlags.create_btrace ({group = "words", name = "guess_lengths"}, false)
 
-val _ = Feedback.register_btrace ("guess word lengths",
-                                  guessing_word_lengths)
-
-fun guess_lengths ()      = set_trace "guess word lengths" 1
-fun dont_guess_lengths () = set_trace "guess word lengths" 0
+fun guess_lengths ()      = HOLFlags.set_bflag (guessing_word_lengths, true)
+fun dont_guess_lengths () = HOLFlags.set_bflag (guessing_word_lengths, false)
 
 fun t2s t = String.extract (Hol_pp.type_to_string t, 1, NONE)
 
@@ -2550,7 +2550,8 @@ fun inst_word_lengths tm =
     | SOME subtm =>
        let
           val (theinst as {redex, residue}) = LENGTH_INST subtm
-          val _ = if !Globals.interactive andalso !notify_on_word_length_guess
+          val _ = if !Globals.interactive andalso
+                     get_notify_on_word_length_guess()
                      then Feedback.HOL_MESG
                              (String.concat ["assigning word length: ",
                                              t2s redex, " <- ", t2s residue])
@@ -2560,7 +2561,7 @@ fun inst_word_lengths tm =
        end
 
 fun word_post_process_term t =
-   if !guessing_word_lengths
+   if get_guessing_word_lengths()
       then inst_word_lengths (fcpLib.inst_fcp_lengths t)
    else t
 

@@ -10,7 +10,7 @@ loadPath :=
 
 map load ["finite_mapTheory", "holfootTheory",
      "Parsetree", "AssembleHolfootParser"];
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open HolKernel Parse boolLib finite_mapTheory

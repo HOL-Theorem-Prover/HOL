@@ -1041,7 +1041,7 @@ in
 end
 
 val {get = inc_html,...} = HOLFlags.create_btrace (
-      {group = "TheeoryPP", name = "include_html_docs"},
+      {group = "TheoryPP", name = "include_html_docs"},
       true
     )
 

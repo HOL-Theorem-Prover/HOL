@@ -59,7 +59,7 @@ inference.
 
    >> val th1 = SPEC F th;
 
-   >> (show_tags := true; th1);
+   >> (HOLFlags.set_bflag (HOLFlags.show_tags, true); th1);
 ```
 
 Tags accumulate in a manner similar to logical hypotheses.
@@ -81,4 +81,4 @@ It is impossible to detach a tag from a theorem.
 [`Thm.add_tag`](#Thm.add_tag), [`Thm.mk_thm`](#Thm.mk_thm),
 [`Tag.read`](#Tag.read), [`Thm.tag`](#Thm.tag)
 
->>__ show_tags := false;
+>>__ HOLFlags.set_bflag (HOLFlags.show_tags, false);

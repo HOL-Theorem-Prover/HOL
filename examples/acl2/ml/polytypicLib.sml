@@ -186,11 +186,11 @@ type translations = (hol_type,((functions ref * theorems ref) * translation_sche
 (* Level 3 : Output most intermediate results and function calls             *)
 (*****************************************************************************)
 
-val Trace = ref 1;
+val {get = Trace, ...} =
+    HOLFlags.create_trace ({group = "polytypicLib", name = "Trace"},
+                           {initial = 1, max = 3});
 
-val _ = register_trace ("polytypicLib.Trace",Trace,3);
-
-fun type_trace level s = if level <= !Trace then print s else ();
+fun type_trace level s = if level <= Trace() then print s else ();
 
 (*****************************************************************************)
 (* Input testing functions:                                                  *)

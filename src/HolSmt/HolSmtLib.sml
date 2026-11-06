@@ -11,7 +11,7 @@ structure HolSmtLib :> HolSmtLib = struct
 
   fun GENERIC_SMT_TAC solver goal (_ : Context.t) =
   let
-    val ERR = Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
+    val ERR = Feedback.mk_HOL_ERR "HolSmtLib.trace" "GENERIC_SMT_TAC"
   in
     case solver goal of
       SolverSpec.SAT NONE =>
@@ -20,7 +20,7 @@ structure HolSmtLib :> HolSmtLib = struct
       raise ERR
         "solver reports negated term to be 'satisfiable' (model returned)"
     | SolverSpec.UNSAT NONE =>
-      ([], fn _ => Thm.mk_oracle_thm "HolSmtLib" goal)
+      ([], fn _ => Thm.mk_oracle_thm "HolSmtLib.trace" goal)
     | SolverSpec.UNSAT (SOME thm) =>
       (* 'thm' should be of the form "A' |- concl", where A' \subseteq A, and
          (A, concl) is the input goal (cf. SolverSpec.sml) *)
@@ -74,7 +74,7 @@ structure HolSmtLib :> HolSmtLib = struct
           NONE => ()
         | SOME _ =>
             (
-              Feedback.set_trace "HolSmtLib" 0;
+              HOLFlags.set_trace "HolSmtLib.trace" 0;
               if CVC.is_configured () then (
                 check_available CVC_ORACLE_PROVE "cvc5 (oracle)";
                 check_available CVC_PROVE "cvc5 (with proofs)"
@@ -89,7 +89,7 @@ structure HolSmtLib :> HolSmtLib = struct
                 check_available Z3_PROVE "Z3 (with proofs)"
               ) else
                 provoke_err Z3_ORACLE_PROVE;
-              Feedback.reset_trace "HolSmtLib"
+              HOLFlags.reset_trace "HolSmtLib.trace"
             )
     end
 
