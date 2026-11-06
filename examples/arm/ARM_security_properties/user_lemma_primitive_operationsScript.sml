@@ -11,7 +11,7 @@ Libs
   wordsLib
 
 
-val _ = goalStack.chatting := !Globals.interactive
+val _ = HOLFlags.set_bflag (goalStack.chatting, !Globals.interactive)
 val _ = temp_overload_on ("return", ``constT``);
 
 

@@ -1767,7 +1767,7 @@ val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
 
 *)
 
-val {get = spec_debug, flag = spec_debug, ...} =
+val {get = get_spec_debug, flag = spec_debug, ...} =
     HOLFlags.create_btrace ({group = "stateLib", name = "spec"}, false)
 local
    (* Could use goalStack.print_tac "" instead for formatted goal output *)
@@ -1883,7 +1883,7 @@ val (thm,t) = hd thm_ts
                prove (t, tac (v, dthm))
             end
             handle e as HOL_ERR _ =>
-                   (if spec_debug()
+                   (if get_spec_debug()
                        then (proofManagerLib.set_goal ([], t); thm)
                     else raise e)
       end

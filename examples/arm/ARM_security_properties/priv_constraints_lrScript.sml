@@ -11,7 +11,7 @@ Libs
 (****************************************************************)
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
-val _ = goalStack.chatting := !Globals.interactive
+val _ = HOLFlags.set_bflag (goalStack.chatting, !Globals.interactive)
 
 val prove_abs_LR_const_action =
  fn (a, thms, abody_thm, expr) =>
