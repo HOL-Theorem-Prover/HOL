@@ -28,6 +28,9 @@ sig
                                       'value -> 'value) option,
                      uptodate_delta : setdelta -> bool, initial_value : 'value,
                      apply_delta : setdelta -> 'value -> 'value}
+  (* Each theory's value is computed when first read (see
+     AncestryData.lazy_fullmake), so apply_delta must be a pure function
+     of its arguments; the global value is updated as theories load *)
   val export_with_ancestry:
       {settype : string, delta_ops : 'value ops} ->
       (setdelta,'value) AncestryData.fullresult

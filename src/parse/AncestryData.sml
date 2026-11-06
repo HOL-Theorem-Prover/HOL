@@ -94,7 +94,7 @@ fun ancestor_sets slot parents thys =
 
 type ('d,'v) info =
      {get_deltas : {thyname: string} -> 'd list,
-      dblookup : {thyname : string} -> 'v option,
+      dblookup : {thyname : string} -> 'v Susp.susp option,
       apply_delta : 'd -> 'v -> 'v, tag : string,
       parents : {thyname : string} -> string list,
       ancestors : ancestor_memo Context.Data.slot}
@@ -104,19 +104,31 @@ fun fpluck _ [] = NONE
                           NONE => Option.map (fn (v,r) => (v,h::r)) (fpluck f t)
                         | SOME v => SOME ((h,v),t)
 
-fun merge (info : ('d,'v) info) thys : 'v option =
+(* What a merge of thys starts from: the value of the first theory listed
+   that has one, its ancestry, and the other theories, less those that are
+   ancestors of theories listed.  NONE when no such theory has a value. *)
+fun merge_start (info : ('d,'v) info) thys =
     let
-      val _ = DPRINT ("Calling " ^ #tag info ^ ":merge[" ^
-                      String.concatWith ", " thys ^ "]")
-      val {parents,get_deltas,apply_delta,ancestors,...} = info
+      val {parents,ancestors,...} = info
       val ancs = ancestor_sets ancestors parents thys
       (* drop the theories that are ancestors of others in the list *)
       fun redundant thy =
           List.exists (fn t => t <> thy andalso smem (ancs t) thy) thys
       val thys = List.filter (not o redundant) thys
+    in
+      case fpluck (fn thy => #dblookup info {thyname=thy}) thys of
+          NONE => NONE
+        | SOME ((h,v0),rest) => SOME (v0, ancs h, rest)
+    end
+
+(* Apply, to the starting value, the deltas of the other theories and of
+   their ancestors, each theory once *)
+fun merge_from (info : ('d,'v) info) (v0, aset0, rest) : 'v =
+    let
+      val {parents,get_deltas,apply_delta,...} = info
       fun recurse (A, aset) worklist =
           case worklist of
-              [] => SOME A
+              [] => A
             | Visit thy :: rest =>
               if smem aset thy then recurse (A, aset) rest
               else
@@ -131,27 +143,43 @@ fun merge (info : ('d,'v) info) thys : 'v option =
             | Apply ds :: rest =>
               recurse (rev_itlist apply_delta ds A, aset) rest
     in
-      case thys of
-          [] => NONE
-        | _ => (
-          case fpluck (fn thy => #dblookup info {thyname=thy}) thys of
-              NONE => NONE
-            | SOME ((h,v0),rest) =>
-                recurse (v0, ancs h) (map Visit rest)
-        )
+      recurse (Susp.force v0, aset0) (map Visit rest)
+    end
+
+fun merge (info : ('d,'v) info) thys : 'v option =
+    let
+      val _ = DPRINT ("Calling " ^ #tag info ^ ":merge[" ^
+                      String.concatWith ", " thys ^ "]")
+    in
+      Option.map (merge_from info) (merge_start info thys)
+    end
+
+(* A theory's value is computed when first read, unless the instance's
+   merges have side effects (eager).  It is also computed at once when the
+   theory's ancestry is not fixed (its parents lead to the current theory
+   or to "-"), since it would then depend on when it is read. *)
+fun now v = Susp.delay (fn () => v)
+
+(* thy's ancestry is fixed when it is not the current theory and its parents
+   are in the memo, as extend_memo would then add it *)
+fun fixed_ancestry slot thy ps =
+    let
+      val memo = Context.Data.get slot (Context.snapshot())
+    in
+      Thm.getCT() <> SOME thy andalso
+      List.all (fn p => p = thy orelse Symtab.defined memo p) ps
     end
 
 fun parent_onload extras {thyname,data = data_opt} =
     let
       open ThyDataSexp
-      val {tag,apply_delta_hook,delta_side_effects,apply_delta,get_deltas,
-           value_table} =
-          extras
+      val {tag,info,delta_side_effects,eager,value_table} = extras
+      val {apply_delta,get_deltas,ancestors,...} = info
     in
       if thyname = "min" then ()
       else
         let
-          val v0_opt =
+          val ps =
               case data_opt of
                   NONE =>
                   let
@@ -161,7 +189,7 @@ fun parent_onload extras {thyname,data = data_opt} =
                                     "parents = [" ^
                                     String.concatWith ", " ps ^ "]\n")
                   in
-                    !apply_delta_hook ps
+                    ps
                   end
                 | SOME data => (
                   case list_decode string_decode data of
@@ -173,56 +201,60 @@ fun parent_onload extras {thyname,data = data_opt} =
                                         ",\nSOME [" ^
                                         String.concatWith ", " sl ^ "])\n")
                       in
-                        !apply_delta_hook sl
+                        sl
                       end
                 )
+          val _ = DPRINT ("Calling " ^ tag ^ ":merge[" ^
+                          String.concatWith ", " ps ^ "]")
+          fun store v =
+              Context.Data.modify value_table (Symtab.update (thyname,v))
         in
-            case v0_opt of
-                NONE => ()
-              | SOME v0 =>
+          case merge_start info ps of
+              NONE => ()
+            | SOME start =>
+              if eager orelse not (fixed_ancestry ancestors thyname ps)
+              then
                 let
+                  val v0 = merge_from info start
                   val uds = get_deltas {thyname = thyname}
                   val _ = delta_side_effects thyname uds
-                  val v = rev_itlist apply_delta uds v0
                 in
-                  Context.Data.modify value_table
-                    (Symtab.update (thyname,v))
+                  store (now (rev_itlist apply_delta uds v0))
+                end
+              else
+                let
+                  val _ = delta_side_effects thyname
+                                             (get_deltas {thyname = thyname})
+                in
+                  store (Susp.delay (fn () =>
+                           rev_itlist apply_delta
+                                      (get_deltas {thyname = thyname})
+                                      (merge_from info start)))
                 end
           end
     end
-
-
 
 fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
     let
       open ThyDataSexp
       val {tag, apply_delta, initial_values, ...} = info
-      val value_table : 'value Symtab.table Context.Data.slot =
+      val value_table : 'value Susp.susp Symtab.table Context.Data.slot =
           Context.Data.new
             {name = "ancestry." ^ tag ^ ".values",
-             empty = itlist Symtab.update initial_values Symtab.empty,
+             empty = itlist (fn (thy,v) => Symtab.update (thy, now v))
+                            initial_values Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".values>"}
-      fun valueDB_of ctxt {thyname} =
+      fun dbsusp_of ctxt {thyname} =
           Symtab.lookup (Context.Data.get value_table ctxt) thyname
+      fun dbsusp arg = dbsusp_of (Context.snapshot()) arg
+      fun valueDB_of ctxt arg = Option.map Susp.force (dbsusp_of ctxt arg)
       fun valueDB arg = valueDB_of (Context.snapshot()) arg
 
       (* calculates merged values in the "onload" hook *)
-      val apply_delta_hook = ref (fn _ => NONE)
       fun side_effects _ = List.app delta_side_effects
-      val parent_extras =
-          {tag = tag, apply_delta_hook = apply_delta_hook,
-           delta_side_effects = side_effects,
-           apply_delta = apply_delta, get_deltas = get_deltas,
-           value_table = value_table}
-
-      val {export = parent_export,
-           segment_data = parent_segment_data, ...} =
-          ThyDataSexp.new {
-            thydataty = tag, merge = #new,
-            load = parent_onload parent_extras, other_tds = fn (s,_) => SOME s
-          }
+      val parent_segment_data_ref = ref (fn _ => NONE)
       fun parents thyname =
-          case parent_segment_data thyname of
+          case !parent_segment_data_ref thyname of
               NONE => Theory.parents (#thyname thyname)
             | SOME t => valOf (list_decode string_decode t)
       val ancestors : ancestor_memo Context.Data.slot =
@@ -231,10 +263,20 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
              empty = Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
       val info = {get_deltas = get_deltas, tag = tag,
-                  dblookup = valueDB,
+                  dblookup = dbsusp,
                   apply_delta = apply_delta,
                   parents = parents, ancestors = ancestors}
-      val _ = apply_delta_hook := merge info
+      val parent_extras =
+          {tag = tag, info = info, delta_side_effects = side_effects,
+           eager = true, value_table = value_table}
+
+      val {export = parent_export,
+           segment_data = parent_segment_data, ...} =
+          ThyDataSexp.new {
+            thydataty = tag, merge = #new,
+            load = parent_onload parent_extras, other_tds = fn (s,_) => SOME s
+          }
+      val _ = parent_segment_data_ref := parent_segment_data
       fun set_ancestry sl =
           let
             val _ = parent_export (List $ map String sl)
@@ -243,7 +285,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
             (case vopt of
                 SOME v =>
                 Context.Data.modify value_table
-                                    (Symtab.update (current_theory(), v))
+                                    (Symtab.update (current_theory(), now v))
               | NONE => ());
             vopt
           end
@@ -303,7 +345,9 @@ type ('delta,'value) fullresult =
        update_global_value_of : ('value -> 'value) -> Context.t ->
                                 Context.t }
 
-fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta} =
+fun gen_fullmake eager
+                 {adinfo:('delta,'value)adata_info, sexps, globinfo,
+                  uptodate_delta} =
     let
       open ThyDataSexp
       val {dec,enc} = sexps
@@ -322,13 +366,16 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
       val update_global_value_of = Context.Data.update global_slot
 
       (* table of values per theory *)
-      val value_table : 'value Symtab.table Context.Data.slot =
+      val value_table : 'value Susp.susp Symtab.table Context.Data.slot =
           Context.Data.new
             {name = "ancestry." ^ tag ^ ".values",
-             empty = itlist Symtab.update initial_values Symtab.empty,
+             empty = itlist (fn (thy,v) => Symtab.update (thy, now v))
+                            initial_values Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".values>"}
-      fun valueDB_of ctxt {thyname} =
+      fun dbsusp_of ctxt {thyname} =
           Symtab.lookup (Context.Data.get value_table ctxt) thyname
+      fun dbsusp arg = dbsusp_of (Context.snapshot()) arg
+      fun valueDB_of ctxt arg = Option.map Susp.force (dbsusp_of ctxt arg)
       fun valueDB arg = valueDB_of (Context.snapshot()) arg
 
       (* store deltas *)
@@ -352,23 +399,13 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
             )
 
       (* store parentage *)
-      val apply_delta_hook = ref (fn _ => NONE)
       fun delta_side_effects thyname ds =
           case thy_finaliser of
               NONE => List.app (update_global_value o apply_to_global) ds
             | SOME f => update_global_value (f {thyname=thyname} ds)
-      val parent_extras =
-          {tag = tag, apply_delta_hook = apply_delta_hook,
-           delta_side_effects = delta_side_effects,
-           apply_delta = apply_delta, get_deltas = get_deltas,
-           value_table = value_table}
-      val {export = export_raw_parents, segment_data = get_raw_parents, ...} =
-          ThyDataSexp.new {thydataty = tag ^ ".parents",
-                           merge = #new,
-                           load = parent_onload parent_extras,
-                           other_tds = (fn (t,_) => SOME t)}
+      val get_raw_parents_ref = ref (fn _ => NONE)
       fun get_parents {thyname} =
-          case get_raw_parents {thyname=thyname} of
+          case !get_raw_parents_ref {thyname=thyname} of
               NONE => Theory.parents thyname
             | SOME t => valOf (list_decode string_decode t)
 
@@ -378,10 +415,18 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
              empty = Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
       val info =
-          {get_deltas = get_deltas, dblookup = valueDB,
+          {get_deltas = get_deltas, dblookup = dbsusp,
            apply_delta = apply_delta, tag = tag, parents = get_parents,
            ancestors = ancestors}
-      val _ = apply_delta_hook := merge info
+      val parent_extras =
+          {tag = tag, info = info, delta_side_effects = delta_side_effects,
+           eager = eager, value_table = value_table}
+      val {export = export_raw_parents, segment_data = get_raw_parents, ...} =
+          ThyDataSexp.new {thydataty = tag ^ ".parents",
+                           merge = #new,
+                           load = parent_onload parent_extras,
+                           other_tds = (fn (t,_) => SOME t)}
+      val _ = get_raw_parents_ref := get_raw_parents
       fun set_ancestry sl =
           let
             val _ = set_raw_deltas (List [])
@@ -391,7 +436,7 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
             case vopt of
                 SOME v =>
                 (Context.Data.modify value_table
-                                     (Symtab.update (current_theory(), v));
+                                     (Symtab.update (current_theory(), now v));
                  update_global_value (K v))
               | NONE => ();
             vopt
@@ -412,6 +457,9 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
        update_global_value = update_global_value,
        update_global_value_of = update_global_value_of}
     end
+
+fun fullmake x = gen_fullmake true x
+fun lazy_fullmake x = gen_fullmake false x
 
 fun with_temp_value (fr:('delta,'value)fullresult) v =
     Portable.genwith_flag ({ get = #get_global_value fr,

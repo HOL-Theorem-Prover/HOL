@@ -274,9 +274,9 @@ fun export_with_ancestry
                       initial_value = initial_value}
       fun uptodate rd = raw_uptodate rd andalso uptodate_delta (cook rd)
       val fullresult =
-          AncestryData.fullmake { adinfo = adinfo,
-                                  uptodate_delta = uptodate,
-                                  sexps = sexps, globinfo = globinfo}
+          AncestryData.lazy_fullmake { adinfo = adinfo,
+                                       uptodate_delta = uptodate,
+                                       sexps = sexps, globinfo = globinfo}
       fun store_attrfun {attrname,name,thm,args} =
           if null args then
             let val d = rADD(lift name)

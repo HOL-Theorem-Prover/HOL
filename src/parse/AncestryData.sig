@@ -49,6 +49,21 @@ sig
                  } ->
                  ('delta,'value) fullresult
 
+  (* as fullmake, but each theory's value is computed when first read rather
+     than when the theory is loaded; for instances whose apply_delta is a
+     pure function of its arguments *)
+  val lazy_fullmake : { adinfo : ('delta, 'value) adata_info,
+                        uptodate_delta : 'delta -> bool,
+                        sexps : { dec : 'delta ThyDataSexp.dec,
+                                  enc : 'delta ThyDataSexp.enc },
+                        globinfo : {
+                          apply_to_global : 'delta -> 'value -> 'value,
+                          thy_finaliser : ({thyname:string} -> 'delta list ->
+                                           'value -> 'value) option,
+                          initial_value : 'value}
+                      } ->
+                      ('delta,'value) fullresult
+
 end
 
 (* ----------------------------------------------------------------------
