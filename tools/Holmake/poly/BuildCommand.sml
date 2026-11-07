@@ -236,6 +236,13 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                         SOME "1" => true
                       | _ => false)
   val thmsrc = #thmsrc (#core optv)
+  (* Pass the layout to hol as command-line options.  The -j1 builder
+     uses Systeml.systeml, which cannot add environment entries. *)
+  val layout_args =
+      case HFS_NameMunge.current_layout () of
+          NONE => []
+        | SOME {objroot, srcroot} =>
+          ["--objroot=" ^ objroot, "--srcroot=" ^ srcroot]
   val interactive_flag = #interactive (#core optv)
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
@@ -267,6 +274,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p ("set -e");
     (* Poly/ML runtime options (--gcthreads) must come before subcommand *)
     p (protect(fullPath [HOLDIR, "bin", "hol"]) ^ " --gcthreads=1 run " ^
+       String.concat (map (fn s => protect s ^ " ") layout_args) ^
        (case #holheap extra of NONE => "--poly"
                              | SOME d => "--holstate="^tgt_toString d) ^ " " ^
        (if isSome debug then "--dbg " else "") ^
@@ -360,7 +368,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             (case maxheap of
                  NONE => []
                | SOME n => ["--maxheap", Int.toString n]) @
-            ["run"] @
+            ["run"] @ layout_args @
             (case #multithread optv of
                  NONE => []
                | SOME i => ["--mt=" ^ Int.toString i]) @
@@ -595,7 +603,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     let val pfx = (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 "
                    else "") ^
                   (case thmsrc of SOME v => "HOL_THMSRC=" ^ v ^ " "
-                                | NONE => "")
+                                | NONE => "") ^
+                  (case HFS_NameMunge.current_layout () of
+                       SOME {objroot, srcroot} =>
+                       "HOLOBJROOT=" ^ protect objroot ^
+                       " HOLSRCROOT=" ^ protect srcroot ^ " "
+                     | NONE => "")
     in Systeml.system_ps (pfx ^ s)
     end
 

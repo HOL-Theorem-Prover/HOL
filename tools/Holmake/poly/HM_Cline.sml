@@ -5,38 +5,40 @@ type t = {
   holstate : string option,
   maxheap : int option,
   multithread : int option,
+  objroot : string option,
   poly : string option,
   polymllibdir : string option,
   poly_not_hol : bool,
   time_limit : Time.time option,
   relocbuild : bool,
   retry_oos : int,
+  srcroot : string option,
   core : HM_Core_Cline.t
 }
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate10 z
+  fun makeUpdateT z = makeUpdate12 z
 in
 fun updateT z = let
-  fun from core holstate maxheap multithread poly polymllibdir poly_not_hol
-           relocbuild retry_oos time_limit =
+  fun from core holstate maxheap multithread objroot poly polymllibdir
+           poly_not_hol relocbuild retry_oos srcroot time_limit =
     {core = core, holstate = holstate, maxheap = maxheap,
-     multithread = multithread, poly = poly,
+     multithread = multithread, objroot = objroot, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
-     relocbuild = relocbuild, retry_oos = retry_oos,
+     relocbuild = relocbuild, retry_oos = retry_oos, srcroot = srcroot,
      time_limit = time_limit}
-  fun from' time_limit retry_oos relocbuild poly_not_hol polymllibdir poly
-            multithread maxheap holstate core =
+  fun from' time_limit srcroot retry_oos relocbuild poly_not_hol polymllibdir
+            poly objroot multithread maxheap holstate core =
     {core = core, holstate = holstate, maxheap = maxheap,
-     multithread = multithread, poly = poly,
+     multithread = multithread, objroot = objroot, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
-     relocbuild = relocbuild, retry_oos = retry_oos,
+     relocbuild = relocbuild, retry_oos = retry_oos, srcroot = srcroot,
      time_limit = time_limit}
-  fun to f {core, holstate, maxheap, multithread, poly, polymllibdir,
-            poly_not_hol, relocbuild, retry_oos, time_limit} =
-    f core holstate maxheap multithread poly polymllibdir poly_not_hol
-      relocbuild retry_oos time_limit
+  fun to f {core, holstate, maxheap, multithread, objroot, poly, polymllibdir,
+            poly_not_hol, relocbuild, retry_oos, srcroot, time_limit} =
+    f core holstate maxheap multithread objroot poly polymllibdir poly_not_hol
+      relocbuild retry_oos srcroot time_limit
 in
   makeUpdateT (from, from', to)
 end z
@@ -50,13 +52,17 @@ val default_options = {
   holstate = NONE,
   maxheap = NONE,
   multithread = NONE,
+  objroot = NONE,
   poly = NONE,
   polymllibdir = NONE,
   poly_not_hol = false,
   relocbuild = false,
   retry_oos = 0,
+  srcroot = NONE,
   time_limit = NONE
 }
+
+fun layout_options (t : t) = {objroot = #objroot t, srcroot = #srcroot t}
 
 fun fupdcore f x =
   let
@@ -92,6 +98,18 @@ fun set_holstate s =
                wn ("HOL state-file already set; ignoring earlier spec")
              else ();
              updateT t (U #holstate (SOME s)) $$))
+fun set_objroot s =
+  resfn (fn (wn, t : t) =>
+            (if isSome (#objroot t) then
+               wn ("Artifact root already set; ignoring earlier spec")
+             else ();
+             updateT t (U #objroot (SOME s)) $$))
+fun set_srcroot s =
+  resfn (fn (wn, t : t) =>
+            (if isSome (#srcroot t) then
+               wn ("Source root already set; ignoring earlier spec")
+             else ();
+             updateT t (U #srcroot (SOME s)) $$))
 fun set_time_limit s =
   resfn (fn (wn, t : t) =>
             case LargeInt.fromString s of
@@ -157,6 +175,9 @@ val poly_option_descriptions = [
    long = ["mt"], desc = OptArg (mt_optint, "c")},
   {help = "specify Poly executable", long = ["poly"], short = "",
    desc = ReqArg (set_poly, "executable")},
+  {help = "put build products under directory (see --srcroot)",
+   long = ["objroot"], short = "",
+   desc = ReqArg (set_objroot, "directory")},
   {help = "use poly rather than a HOL heap", long = ["poly_not_hol"],
    short = "",
    desc = NoArg (fn () =>
@@ -170,6 +191,9 @@ val poly_option_descriptions = [
   {help = "specify Poly/ML lib directory", long = ["polymllibdir"],
    short = "",
    desc = ReqArg (set_polymllibdir, "directory")},
+  {help = "source tree mapped to --objroot (default: project root)",
+   long = ["srcroot"], short = "",
+   desc = ReqArg (set_srcroot, "directory")},
   {help = "set time limit (in seconds)", long = ["time_limit"], short = "t",
    desc = ReqArg (set_time_limit, "delay")}
 ]

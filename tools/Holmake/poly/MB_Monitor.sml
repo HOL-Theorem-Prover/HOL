@@ -3,8 +3,6 @@ struct
 
 open terminal_primitives ProcessMultiplexor Holmake_tools
 
-val LOGDIR = Systeml.LOGDIR
-
 fun nstr_subhandler f nm n s =
     f n s
     handle e =>

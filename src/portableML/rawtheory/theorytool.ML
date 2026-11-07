@@ -48,7 +48,7 @@ val cline_options = [
   {short = "b", long = ["url-base"],
    desc = GetOpt.ReqArg (set_url_base, "dir"),
    help = "For --thygraph: emit per-node URLs as relative paths from dir \
-          \to each theory's .hol/docs/<thy>Theory.html"},
+          \to each theory's <thy>Theory.html docs page"},
   {short = "q", long = ["quiet"],
    desc = GetOpt.NoArg set_quiet,
    help = "Suppress file scanning output"},
@@ -103,7 +103,7 @@ fun do_thygraph url_base files (g, links) =
           in Redblackmap.insert(acc, thy, ps) end)
           (Redblackmap.mkDict String.compare) links
 
-      (* thy -> source directory (where its Script.sml / .hol/docs live) *)
+      (* thy -> source directory (where its Script.sml lives) *)
       val dir_map = List.foldl (fn ((key, _), acc) =>
           let val thy = #thy (#1 key)
               val dir = #2 key
@@ -147,8 +147,9 @@ fun do_thygraph url_base files (g, links) =
                       SOME (relativize {
                               base = absbase,
                               target = OS.Path.concat(
-                                absolutize thydir,
-                                ".hol/docs/" ^ thy ^ "Theory.html"
+                                HFS_NameMunge.docsdir_for
+                                  (absolutize thydir),
+                                thy ^ "Theory.html"
                               )
                             })
               end

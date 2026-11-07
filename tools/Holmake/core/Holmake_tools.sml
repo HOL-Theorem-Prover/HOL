@@ -363,11 +363,14 @@ val cached_mypath : string option ref = ref NONE
    every visited directory. *)
 val started_under_holdir : bool ref = ref false
 
-val lastmakerfilename = OS.Path.concat (DEPDIR, "lastmaker")
+(* The lastmaker file of the current working directory *)
+fun lastmakerfilename () =
+    OS.Path.concat (HFS_NameMunge.depdir_for (getDir()), "lastmaker")
 
 fun write_lastmaker_file_for mypath = let
-  val _ = createDirIfNecessary DEPDIR
-  val outstr = openOut lastmakerfilename
+  val lmfile = lastmakerfilename ()
+  val _ = createDirIfNecessary (OS.Path.dir lmfile)
+  val outstr = openOut lmfile
 in
   output(outstr, mypath ^ "\n");
   closeOut outstr
@@ -377,8 +380,8 @@ end handle IO.Io _ => ()
    names (trimmed of trailing whitespace), or NONE if the file is
    absent / unreadable / empty. *)
 fun read_existing_lastmaker () =
-    if FileSys.access (lastmakerfilename, [FileSys.A_READ]) then
-      let val istrm = openIn lastmakerfilename
+    if FileSys.access (lastmakerfilename (), [FileSys.A_READ]) then
+      let val istrm = openIn (lastmakerfilename ())
       in
         case inputLine istrm of
             NONE => (closeIn istrm; NONE)
@@ -420,7 +423,7 @@ fun prompt_lastmaker_conflict (ofns : output_functions) {existing, mine} =
     val sep = "*** =================================================="
   in
     warn sep;
-    warn ("*** WARNING: " ^ OS.Path.concat (dir, lastmakerfilename));
+    warn ("*** WARNING: " ^ lastmakerfilename ());
     warn ("*** points at a different Holmake binary:");
     warn ("***   existing: " ^ existing);
     warn ("***   current:  " ^ mine);
@@ -456,7 +459,7 @@ fun prompt_lastmaker_conflict (ofns : output_functions) {existing, mine} =
       end
   end
 
-(* Record DEPDIR/lastmaker in the current working directory, using the
+(* Record the lastmaker file of the current working directory, using the
    path captured by do_lastmade_checks.  Intended to be called from
    the INCLUDES-recursion in Holmake.sml, after chdir'ing into each
    visited directory, so the file ends up in every directory the
@@ -499,7 +502,7 @@ fun write_lastmaker_in_cwd (ofns : output_functions) =
 
 (* Caller passes target_dir = SOME d to peek at the lastmaker state of
    directory d without yet moving the running process there.  We
-   chdir into d for the lookups (so DEPDIR-relative path resolution
+   chdir into d for the lookups (so the lastmaker file lookup
    and check_distrib's parent walk both operate on d), call
    find_my_path *before* the chdir (it relies on the original cwd to
    resolve a `./bin/Holmake`-style invocation), and either:
@@ -539,10 +542,10 @@ fun do_lastmade_checks (ofns : output_functions)
 
   fun lmfile() =
       if not no_lastmakercheck andalso
-         FileSys.access (lastmakerfilename, [FileSys.A_READ])
+         FileSys.access (lastmakerfilename (), [FileSys.A_READ])
       then let
           val _ = diag (K "Found a lastmaker file to look at.")
-          val istrm = openIn lastmakerfilename
+          val istrm = openIn (lastmakerfilename ())
         in
           case inputLine istrm of
             NONE => (warn "Empty Last Maker file";
@@ -684,6 +687,32 @@ end handle OS.SysErr (mesg, _) => let
              false
            end
          | FileSys.DirNotFound => true
+
+(* Remove files and symlinks directly inside each artifact directory,
+   then remove the directory if empty.  Preserve subdirectories: for
+   example, <objroot>/objs/a/sub belongs to source directory a/sub. *)
+fun clean_artifact_dirs ofns dirs =
+    let
+      fun entries d =
+          let
+            val ds = OS.FileSys.openDir d
+            fun loop A =
+                case OS.FileSys.readDir ds of
+                    NONE => A
+                  | SOME f => loop (OS.Path.concat (d, f) :: A)
+          in
+            loop [] before OS.FileSys.closeDir ds
+          end
+      fun is_file f = OS.FileSys.isLink f orelse not (OS.FileSys.isDir f)
+      fun clean1 d =
+          if OS.FileSys.isDir d handle OS.SysErr _ => false then
+            (List.app (chatty_remove OS.FileSys.remove ofns)
+                      (List.filter is_file (entries d));
+             OS.FileSys.rmDir d handle OS.SysErr _ => ())
+          else ()
+    in
+      List.app clean1 dirs
+    end
 
 val nice_dir =
     case OS.Process.getEnv "HOME" of
@@ -1050,10 +1079,9 @@ val tgt_toString = hm_target.toString
    "probe each candidate dir with `access' per file" pattern into a
    per-directory set-membership test.  The set is what
    `access(_,[A_READ])' would succeed on under [absdir] -- entries of
-   the directory itself UNION entries of its .hol/objs/ subdirectory
-   (the HFS_NameMunge fakearc).  Building it through
-   read_files_with_objs makes membership mirror `access' exactly and
-   reuses mosml's flat-listing flavour without ifdefs.
+   the source directory and its products directory, located by
+   HFS_NameMunge.objdir_for.  read_files_with_objs supplies the combined
+   listing and handles Moscow ML's flat layout.
 
    Lifetime: scan-only.  The build phase creates files
    (.uo/.ui/Theory.dat, ...) that would falsify a cached listing;
@@ -1134,7 +1162,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
          | e => (warn ("Holdep exception on "^fromFile arg^": "^
                        General.exnMessage e);
                  raise HolDepFailed)
-  val _ = createDirIfNecessary DEPDIR
+  val _ = createDirIfNecessary (OS.Path.dir (normPath destination))
   val outstr = openOut (normPath destination)
 in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
@@ -1168,7 +1196,7 @@ fun holdep_arg (UO c) = SOME (SML c)
   | holdep_arg (ART (ProcessedArticle s)) = SOME (ART (RawArticle s))
   | holdep_arg _ = NONE
 
-fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
+fun mk_depfile_name depdir s = fullPath [depdir, s^".d"]
 
 
 fun get_dependencies_from_file_in_dir base depfile = let
@@ -1227,7 +1255,7 @@ fun (d1 cached_depforces_update_of d2) =
     tgt_toString d1 cached_forces_update_of tgt_toString d2
 
 
-fun get_direct_dependencies {incinfo,DEPDIR,output_functions,extra_targets} f =
+fun get_direct_dependencies {incinfo,depdir,output_functions,extra_targets} f =
 let
   open hm_target
   val fname = fromFile f
@@ -1237,7 +1265,7 @@ in
   if isSome arg then let
     val arg = valOf arg
     val argname = fromFile arg
-    val depfile = mk_depfile_name DEPDIR argname
+    val depfile = mk_depfile_name depdir argname
     val allincs = preincludes @ includes
     val _ =
       if argname cached_forces_update_of depfile then

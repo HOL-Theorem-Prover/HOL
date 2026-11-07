@@ -59,13 +59,12 @@ fun isInteresting s =
         | NONE => false
     end
 
-fun action {base,fakearcs} acc =
+fun action {base,physdir} acc =
     let
-      val d = OS.FileSys.getDir()
       val {base=b,ext} = OS.Path.splitBaseExt base
     in
-      link_it {basename = base,fullpath = d ++ base};
-      if ext = SOME "sig" then (d ++ b) :: acc else acc
+      link_it {basename = base,fullpath = physdir ++ base};
+      if ext = SOME "sig" then (physdir ++ b) :: acc else acc
     end
 
 fun main() =

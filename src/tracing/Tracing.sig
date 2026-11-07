@@ -12,7 +12,8 @@ val trace_theory : string ->
 
 (* Low-level proof export: serialize the theorem's proof tree to a .tr.gz
    side file, then flip the proof ref to Exported_prf.
-   - `file`: target path for the side file (e.g. ".hol/objs/foo.tr.gz")
+   - `file`: target path for the side file (e.g. ".hol/objs/foo.tr.gz" in the
+     legacy layout)
    - `tag`: identifier stored in the Exported_prf stub (e.g. SavedName "lemma")
    Theory.export_proof provides a higher-level wrapper with automatic naming. *)
 val export_proof : {file: string, tag: Thm.thm_id} -> Thm.thm -> unit

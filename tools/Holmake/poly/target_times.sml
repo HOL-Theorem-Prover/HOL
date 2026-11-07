@@ -8,12 +8,11 @@ type map = (string, real) Binarymap.dict
 
 val empty : map = Binarymap.mkDict String.compare
 
-val subdir_a  = ".hol"
-val subdir_b  = "build-logs"
+val subdir    = "build-logs"
 val filename  = "target-times"
 
-fun file_for root = root ++ subdir_a ++ subdir_b ++ filename
-fun dir_for  root = root ++ subdir_a ++ subdir_b
+fun dir_for  root = HFS_NameMunge.project_state_dir root ++ subdir
+fun file_for root = dir_for root ++ filename
 
 (* Keys are paths, so a leading `#' marks a comment.  Prose comments
    already fail the two-token match; the test is what stops "# 3"

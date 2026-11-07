@@ -111,6 +111,15 @@ There are two standard ways to the install a test that can be run by `build`:
     The various tests in that file can be used to insert regression test directories into the big parallel build of all the post-`bossLib` directories.
     Using a test-directory is necessary if the tests need to examine behaviours to do with theory export and loading.
 
+Holmake supports the default directory-local layout and a separate
+artifact root, selected by `objroot` in `holproject.toml`, `--objroot`
+or `HOLOBJROOT` under Poly/ML.  In the latter layout, artifacts live
+under `<objroot>/<kind>/<rel>`, where `<rel>` is the source directory
+relative to the source root.  Use `HFS_NameMunge` to locate artifacts:
+`objdir_for` and `depdir_for` return directories; `HOLtoFS` and `FStoHOL`
+convert between logical and filesystem product paths.
+The regression tests are in `tools/Holmake/tests/objroot`.
+
 ## Kernel Selection
 
 There are currently three kernels that can be built to underlie a HOL installation.

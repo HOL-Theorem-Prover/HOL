@@ -601,7 +601,8 @@ This key is read whatever `holmake` is set to.
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!unrecognised keys}
 The keys recognised at the top level of `holproject.toml` are
 exactly `name`, `holpath`, `exclude`, `external_includes`,
-`holmake`, `projects`, `h4pedant` and `build_times`.  Inside a `[projects.<id>]`
+`holmake`, `projects`, `h4pedant`, `build_times` and `objroot`.
+Inside a `[projects.<id>]`
 table they are `path` and `exclude`, and `holproject.local.toml`
 recognises `projects` alone.  A TOML lookup cannot tell a
 misspelled key from an absent one, so anything outside those sets
@@ -866,6 +867,82 @@ a warning rather than an error for the same reason: an
 enclosing-project directory whose `Holmakefile` is explicit about
 its include path builds correctly as it stands.
 
+#### Artifact layout: `objroot`
+\label{sec:holmake-objroot}
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!objroot@\texttt{objroot}}
+\index{Holmake@\holmake!artifact root}
+By default `Holmake` keeps a directory's products beside its
+sources: `.uo`, `.ui` and `*Theory.{sml,sig,dat}` files in
+`<dir>/.hol/objs`, dependency files and the `lastmaker` file in
+`<dir>/.hol/make-deps`, and so on.  Under Poly/ML a project can
+instead keep its standard build products in an *artifact root*:
+
+```
+name = "myproj"
+objroot = "/scratch/myproj-build"
+```
+
+A relative `objroot` is resolved against the directory holding
+`holproject.toml`; `objroot = ".hol"` collects standard build
+artifacts in a single `.hol` directory at the project root.  Files
+are grouped by kind, preserving the source directory structure
+within each group:
+
+```
+<objroot>/objs/<rel>/       .uo, .ui, *Theory.{sml,sig,dat}, .cachekey
+<objroot>/make-deps/<rel>/  dependency files and lastmaker
+<objroot>/logs/<rel>/       per-target build logs
+<objroot>/locks/<rel>/      build locks
+<objroot>/docs/<rel>/       HTML theory documentation
+<objroot>/build-logs/       the project's target-times cache
+```
+
+where `<rel>` is the directory relative to the *source root*, by
+default the project root, so `src/sub/fooTheory.dat` lands in
+`<objroot>/objs/src/sub/fooTheory.dat`.  Building, loading with
+`load` in `hol`, enumerating a directory and cleaning all use the
+same mapping.  This allows builds from read-only sources, provided
+custom rules and other outputs described below also use writable
+locations.
+
+The artifact root can also be given with `--objroot` (to `Holmake`
+or to `hol`) or with the environment variable `HOLOBJROOT`.  The
+command line takes precedence over `holproject.toml`, which takes
+precedence over the environment.  `Holmake` passes the layout to
+child programs through `HOLOBJROOT` and `HOLSRCROOT`.  Giving the
+project file precedence lets a child `Holmake` use its own project's
+settings.
+
+`--srcroot` sets the source root explicitly.  Otherwise, an
+`objroot` selected from `holproject.toml` uses that project's root.
+For an artifact root selected through the command line or
+environment, the source root is `HOLSRCROOT`, if set, or the
+governing project root.  `HOLDIR` is excluded from this default:
+to build a subtree of the HOL distribution, such as `examples/foo`,
+give its source root explicitly.  If no source root can be found,
+`Holmake` reports an error.  Relative command-line and environment
+paths are resolved against the working directory selected by `-C`,
+or the invocation directory when `-C` is absent.
+
+The mapping covers directories under the source root, including
+nested projects.  Paths outside it, including HOL libraries reached
+through `sigobj`, retain the default layout.  `Holmake` does not
+reuse products from the old layout when a directory is mapped to
+an artifact root.  Before switching layouts, run `Holmake cleanAll`
+with the old settings.  `Holmake` warns if it finds products left
+in `.hol/objs`.
+
+Cleaning applies to the current directory's artifacts; it preserves
+artifacts belonging to child directories unless recursive cleaning
+is requested.  Project discovery skips an artifact root inside the
+source tree.
+
+Heaps named by `HOLHEAP`, `.art` files, `selftest.exe` programs
+and custom-rule outputs retain their existing output paths.
+Custom rules can use `$(HOLOBJDIR)` to write beside theory products.
+Under Moscow ML, the `objroot` key is ignored.
+
 #### `-r` and `--dirs` inside a project
 
 \index{Holmake@\holmake!recursive invocation}
@@ -1003,7 +1080,7 @@ such theorems.  `Holmake`'s default is not to build in fast mode.
 (see above).
 
 **`--force-lastmaker`** Overwrite any existing
-`.hol/make-deps/lastmaker` file that conflicts with the running
+`lastmaker` file that conflicts with the running
 `Holmake`'s path, without prompting or aborting.  See
 Section \ref{sec:holmake-lastmaker} below for the full picture.
 
@@ -1076,6 +1153,11 @@ HOL system files.  Use of this option goes some way towards
 turning `Holmake` into a general SML `make` system.  However, it
 will still attempt to do “HOL things” with files whose names end
 in `Script` and `Theory`.  This option implies `--no_overlay`.
+
+**`--objroot <directory>`** (Poly/ML only) Put build products
+under the given artifact root rather than beside their sources;
+see Section \ref{sec:holmake-objroot}.  Overrides any `objroot`
+in `holproject.toml` and the `HOLOBJROOT` environment variable.
 
 **`--overlay <file>`** Use the given file as the overlay rather
 than the default.
@@ -1152,6 +1234,13 @@ warning.  It is a Poly/ML-only option: Moscow ML's `Holmake`
 rejects it, so a `CLINE_OPTIONS` line in a `Holmakefile` that uses
 it needs to be guarded with `ifdef POLY`.
 
+**`--srcroot <directory>`** (Poly/ML only) The source tree that an
+artifact root given with `--objroot` or `HOLOBJROOT` mirrors; by
+default the project root.  See Section \ref{sec:holmake-objroot}.
+Set `--objroot` and `--srcroot` on the command line; they have no
+effect in `CLINE_OPTIONS`, because the layout is selected before
+`Holmakefile` is read.
+
 `Holmake` should never exit with error messages such as “Uncaught
 exception”.  Such behaviour is a bug, please report it!
 
@@ -1161,10 +1250,12 @@ exception”.  Such behaviour is a bug, please report it!
 \index{Holmake@\holmake!lastmaker file}
 \index{lastmaker file@\texttt{lastmaker} file}
 
-When a machine has more than one HOL installation,
-`.hol/make-deps/lastmaker` records the absolute path of the
-`Holmake` binary that most recently processed each directory.  The
-file is a single line of text and has two consumers.
+When a machine has more than one HOL installation, the
+`lastmaker` file (in `.hol/make-deps`, or in
+`<objroot>/make-deps/<rel>` under an artifact root) records the
+absolute path of the `Holmake` binary that most recently processed
+each directory.  The file is a single line of text and has two
+consumers.
 
 `Holmake` itself consults `lastmaker` at the start of every run.
 If the working directory is not under any HOL installation's
@@ -1611,6 +1702,13 @@ reports the definition site instead.)
 sub-string of) `arg2`.  If it does so occur, the result is
 `arg1`, otherwise the result is the empty string.
 
+**`$(hol2fs arg)`** returns the filesystem path of a build product
+named by `arg`: a `.uo`, `.ui` or `*Theory.{sml,sig,dat}` file.
+For example, `$(hol2fs fooTheory.dat)` returns
+`.hol/objs/fooTheory.dat` in the default Poly/ML layout, or the
+corresponding path under the artifact root
+(Section \ref{sec:holmake-objroot}).  Other names are unchanged.
+
 **`$(if arg1,arg2,arg3)`** examines `arg1`.  If it is the empty
 string, then the value of the whole is equal to the value of
 `arg3`.  Otherwise, the value is that of `arg2`.
@@ -1786,6 +1884,16 @@ except that it finishes with a closing `-c` option (hence the
 name) followed by the name of the system's overlay file.  This is
 needed for compilation of HOL source files, but not for linking
 of HOL object code, which can be done with `HOLMOSMLC`.
+
+**`HOLOBJDIR`** The directory holding the current directory's
+products: `.hol/objs` (relative) under Poly/ML's default layout,
+the absolute `<objroot>/objs/<rel>` under an artifact root (see
+Section \ref{sec:holmake-objroot}), and `.` under Moscow ML.
+Use `$(HOLOBJDIR)` in rules that write beside theory products.
+To locate a specific product, use `$(hol2fs fooTheory.dat)`.
+
+**`HOLOBJROOT`**, **`HOLSRCROOT`** The artifact root and the
+source root in force, or empty under the default layout.
 
 **`HOL_NUMJOBS`** The value of the `-j` option (4 by default
 under Poly/ML, 1 under Moscow ML) controlling the number of

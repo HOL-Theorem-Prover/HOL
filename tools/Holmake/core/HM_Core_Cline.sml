@@ -296,7 +296,7 @@ val core_option_descriptions = [
     long = ["dirs"], short = "", desc = mkBoolT #dirs },
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
-  { help = "overwrite any conflicting .hol/make-deps/lastmaker without prompting",
+  { help = "overwrite any conflicting lastmaker file without prompting",
     long = ["force-lastmaker"], short = "",
     desc = mkBoolT #force_lastmaker },
   { help = "show this message", long = ["help"], short = "h",

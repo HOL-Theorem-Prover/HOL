@@ -19,11 +19,6 @@ fun release (RealLock {fd, lockpath, diag}) =
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 
-fun ensure_dir d =
-    if OS.FileSys.access(d, []) then ()
-    else OS.FileSys.mkDir d
-         handle OS.SysErr _ => () (* may race with another process *)
-
 fun sanitize_key key =
     String.translate
       (fn c => if Char.isAlphaNum c orelse c = #"_" orelse c = #"."
@@ -36,9 +31,8 @@ fun acquire {dir, key, warn, diag} =
     if not Systeml.isUnix then DummyLock
     else
       let
-        val _ = ensure_dir (dir ++ ".hol")
-        val lockdir = dir ++ ".hol" ++ "locks"
-        val _ = ensure_dir lockdir
+        val lockdir = HFS_NameMunge.lockdir_for dir
+        val _ = HOLFS_dtype.createDirIfNecessary lockdir
         val lockpath = lockdir ++ (sanitize_key key ^ ".lock")
         val _ = diag ("blocking on lock " ^ lockpath)
         open Posix.FileSys
