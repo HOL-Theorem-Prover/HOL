@@ -144,6 +144,11 @@ Bugs fixed
     The cache now uses LRU eviction on the keyspace and a per-key list cap, with both bounds set at cache-creation time.
     See the `Cache.sig` header for the new `{capacity, per_key_cap}` constructor argument.
 
+-   `goalFrag.close_paren`, which `goalFrag.finish` uses to close any frames left open, closed a `REPEAT` frame by applying its body to the whole goal list until that failed.
+    Over an empty list nothing fails, so finishing a state where a repeat had solved every goal looped for ever; this hung the language server's try-tactic request with the cursor inside `rpt`'s argument.
+    It also stopped at the first goal the body failed on, where `REPEAT` carries on with the others.
+    It now closes the frame exactly as `close_repeat` does.
+
 -   metis's finite-model heuristic, which weights clauses by how often they hold in a model of the axioms, sampled its valuations from a single random generator created when `mlibModel` was loaded and never reset, and numbered its models from a counter with the same lifetime — a number that is hashed into the model's interpretation.
     Every metis call therefore started from whatever state the previous one left behind, so what a goal cost depended on what had been proved before it in the same session: repeats of one identical relevant-logic proof in a single process ranged from 0.5s to 40s, and the theory containing it built in either 5.6s or 32s depending only on how far the generator had advanced.
     Each model now carries its own generator, and both that and the model's identity are seeded from the structure of the problem being refuted, so which models a call gets no longer depends on its predecessors.
