@@ -21,6 +21,11 @@ Contents
 New features
 ------------
 
+-   `TotalDefn` supports staged explicit termination proofs, with opaque
+    prepared definitions that can be completed after saving and restoring
+    a heap. A custom termination driver can retain the native `Definition`
+    syntax and completion behavior.
+
 -   `sptree` now provides `domain_list` to enumerate keys without constructing
     key/value pairs, with `set_domain_list` proving its set is `domain` and
     a standard CV translation in `cv_std`.

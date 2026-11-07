@@ -245,6 +245,147 @@ val user_goal : goal = ([], mk_var ("user_goal", Type.bool))
 fun top_is (g : goal) =
     aconv (snd (proofManagerLib.top_goal ())) (snd g) handle _ => false
 val _ = proofManagerLib.drop_all ()
+
+(* The staged path must complete from heap-reachable state, and must use
+   the same flag/attribute/storage boundaries as the native entry point. *)
+fun rejects f =
+  (f (); false) handle HOL_ERR _ => true
+
+fun assert b = if b then () else die "staged definition check failed"
+
+fun finish_with p tac =
+  let
+    val th = case termination_goal p of
+                 NONE => NONE
+               | SOME (name,g) =>
+                 SOME (with_prepared_definition p
+                         (boolLib.prove_named (Context.snapshot ()))
+                         {name = name, goal = g, tac = tac})
+  in finish_definition p th end
+
+val attribute_calls = ref ([] : string list)
+fun staged_attribute {name,attrname,args,thm} =
+  (assert (Feedback.current_trace "computeLib.auto_import_definitions" = 1);
+   attribute_calls := name :: !attribute_calls)
+val _ = ThmAttribute.register_attribute
+          ("staged_test", {localf = staged_attribute,
+                           storedf = staged_attribute})
+
+val _ = tprint "native/staged equations, induction, attributes and location"
+val staged_loc = DB_dtype.mkloc ("staged-test", 42, true)
+val native_fac = located_qDefine staged_loc
+  "native_fac_def[staged_test,induction=native_fac_steps]"
+  ‘native_fac n = if n < 2 then 1 else n * native_fac (n - 1)’
+  (SOME (WF_REL_TAC ‘$<’)) (Context.snapshot ())
+val fac_prepared = prepare_qDefine staged_loc
+  "staged_fac_def[staged_test,induction=staged_fac_steps]"
+  ‘staged_fac n = if n < 2 then 1 else n * staged_fac (n - 1)’
+val (staged_fac,staged_ind) = finish_with fac_prepared (WF_REL_TAC ‘$<’)
+fun rename_fac t = subst [{redex = “staged_fac”, residue = “native_fac”}] t
+val _ = assert (aconv (concl native_fac) (rename_fac (concl staged_fac)))
+val _ = assert (aconv (concl (theorem "native_fac_steps"))
+                     (rename_fac (concl (valOf staged_ind))))
+val _ = assert (!attribute_calls = ["staged_fac_def", "native_fac_def"])
+val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="staged_fac_def"})))
+                = staged_loc)
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “staged_fac”))
+val _ = assert (Option.isSome (DefnBase.lookup_indn “staged_fac”))
+val _ = assert (rejects (fn () => ignore (finish_definition fac_prepared NONE)))
+val _ = assert (rejects (fn () => abort_definition fac_prepared))
+val _ = OK ()
+val _ = convtest ("staged definition enters EVAL", EVAL, “staged_fac 5”, “120”)
+
+val _ = tprint "staged mutual recursion completes and registers induction"
+val mutual_prepared = prepare_qDefine staged_loc "staged_mutual_def"
+  ‘(staged_odd n = if n = 0 then F else staged_even (n - 1)) /\
+   (staged_even n = if n = 0 then T else staged_odd (n - 1))’
+val _ = finish_with mutual_prepared
+  (WF_REL_TAC ‘measure (\s. case s of INL n => n | INR n => n)’)
+val _ = assert (Option.isSome (DefnBase.lookup_indn “staged_odd”))
+val _ = OK ()
+val _ = convtest ("staged mutual recursion evaluates", EVAL,
+                 “staged_odd 5”, “T”)
+
+val _ = tprint "staged nested recursion completes and removes support"
+val nested_before = thy_consts (current_theory ())
+val nested_prepared = prepare_qDefine staged_loc "staged_nested_def"
+  ‘staged_nested n =
+     if n = 0 then 0n else staged_nested (staged_nested (n - 1) MOD n)’
+val _ = finish_with nested_prepared (WF_REL_TAC ‘$<’)
+val _ = assert (length (thy_consts (current_theory ())) =
+                length nested_before + 1)
+val _ = OK ()
+val _ = convtest ("staged nested recursion evaluates", EVAL,
+                 “staged_nested 3”, “0”)
+
+val _ = tprint "staged flags surround tactics and restore the ambient flags"
+val flag_prepared = prepare_qDefine staged_loc
+  "flag_def[nocompute,schematic,allow_rebind,induction=flag_steps,staged_test]"
+  ‘flag_fun n = if n = 0 then y else flag_fun (n - 1) * 2’
+fun check_flags () =
+  (assert (Feedback.current_trace "computeLib.auto_import_definitions" = 0);
+   assert (Feedback.current_trace "Definition.allow_schema_definition" = 1);
+   assert (Feedback.current_trace "Theory.allow_rebinds" = 1);
+   assert (!Defn.def_suffix = "" andalso !Defn.ind_suffix = " flag_steps"))
+val _ = with_prepared_definition flag_prepared check_flags ()
+val _ = assert (rejects (fn () => with_prepared_definition flag_prepared
+  (fn () => (check_flags (); raise mk_HOL_ERR "test" "flags" "")) ()))
+val _ = assert (Feedback.current_trace "computeLib.auto_import_definitions" = 1)
+val _ = finish_with flag_prepared (fn g =>
+  (check_flags (); WF_REL_TAC ‘$<’ g))
+val _ = OK ()
+val _ = convtest ("staged nocompute stays out of EVAL", EVAL,
+                 “flag_fun y 2”, “flag_fun y 2”)
+
+val _ = tprint "custom driver keeps native binding and ignores trivial tactics"
+val driver_calls = ref 0
+fun staged_driver p tac =
+  (driver_calls := !driver_calls + 1;
+   case termination_goal p of
+       NONE => NONE
+     | SOME (name,g) =>
+       SOME (boolLib.prove_named (Context.snapshot ())
+                                {name=name,goal=g,tac=tac}))
+val ignored_calls = ref 0
+fun ignored_tac g = (ignored_calls := !ignored_calls + 1; ALL_TAC g)
+val _ = with_termination_driver staged_driver
+  (qDefine "staged_abbrev_def" ‘staged_abbrev = 7n’) (SOME ignored_tac)
+val _ = with_termination_driver staged_driver
+  (qDefine "staged_prim_def"
+    ‘(staged_prim 0 = 0n) /\ (staged_prim (SUC n) = SUC (staged_prim n))’)
+  (SOME ignored_tac)
+val _ = assert (!driver_calls = 2 andalso !ignored_calls = 0)
+val _ = OK ()
+
+val _ = tprint "bad completion cannot register a theorem or reuse its handle"
+val bad_prepared = prepare_qDefine staged_loc "bad_staged_def"
+  ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’
+val _ = assert (rejects (fn () =>
+  ignore (finish_definition bad_prepared (SOME TRUTH))))
+val _ = assert (rejects (fn () => abort_definition bad_prepared))
+val _ = assert (not (Option.isSome (DB.lookup {Thy="-",Name="bad_staged_def"})))
+val _ = OK ()
+
+val _ = tprint "abort restores grammar and consumes the handle"
+val abort_prepared = prepare_qDefine staged_loc "abort_staged_def"
+  ‘abort_staged n = if n = 0 then 0n else abort_staged (n - 1) + 1’
+val _ = Parse.overload_on ("staged_abort_marker", “T”)
+val _ = abort_definition abort_prepared
+val _ = assert (not (Option.isSome (Overload.info_for_name
+  (term_grammar.overload_info (Parse.term_grammar ())) "staged_abort_marker")))
+val _ = assert (rejects (fn () => ignore (termination_goal abort_prepared)))
+val _ = assert (rejects (fn () => abort_definition abort_prepared))
+val _ = OK ()
+
+val _ = tprint "interleaved definitions cannot be deleted by staged cleanup"
+val exclusive_prepared = prepare_qDefine staged_loc "exclusive_staged_def"
+  ‘exclusive_staged n = if n = 0 then 0n else exclusive_staged (n - 1) + 1’
+val _ = qDefine "unrelated_staged_def" ‘unrelated_staged = 9n’ NONE
+val _ = assert (rejects (fn () =>
+  ignore (finish_with exclusive_prepared (WF_REL_TAC ‘$<’))))
+val _ = assert (Theory.uptodate_term “scratch$unrelated_staged”)
+val _ = abort_definition exclusive_prepared
+val _ = OK ()
 val _ = proofManagerLib.set_goal user_goal
 
 val _ = tprint "Define's failed termination goal reaches the goalstack"
@@ -257,3 +398,25 @@ val _ = if is_exists (snd (proofManagerLib.top_goal ())) andalso
            (proofManagerLib.drop (); top_is user_goal)
         then OK () else die "wrong proof state"
 val _ = proofManagerLib.drop_all ()
+
+val _ = if Systeml.ML_SYSNAME <> "poly" then () else let
+  val hol = OS.Path.concat (Systeml.HOLDIR, "bin/hol")
+  val heap = "staged-checkpoint.save"
+  val markers = "staged-checkpoint.markers"
+  fun remove f = OS.FileSys.remove f handle OS.SysErr _ => ()
+  fun run args = OS.Process.isSuccess (Systeml.systeml (hol :: args))
+  val _ = remove heap
+  val _ = remove markers
+  val _ = tprint "staged termination saves a prefix in an isolated process"
+  val _ = assert (run ["run", "--holstate=numheap", "staged-save.sml"])
+  val _ = assert (OS.FileSys.access (heap, []))
+  val _ = OK ()
+  val _ = tprint "a fresh process restores and completes without preparation"
+  val _ = assert (run ["run", "--holstate=" ^ heap, "staged-restore.sml"])
+  val input = TextIO.openIn markers
+  val contents = TextIO.inputAll input
+  val _ = TextIO.closeIn input
+  val _ = assert (contents = "prepared\nprefix\nfinished\n")
+  val _ = remove heap
+  val _ = remove markers
+in OK () end

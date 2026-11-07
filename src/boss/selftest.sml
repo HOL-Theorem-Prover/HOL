@@ -3,6 +3,12 @@ open testutils
 
 val _ = new_theory "scratch"
 
+val _ = if Systeml.ML_SYSNAME <> "poly" then () else
+  if OS.Process.isSuccess
+       (Systeml.systeml [OS.Path.concat (Systeml.HOLDIR, "bin/hol"),
+                         "run", "tests/staged-source.sml"])
+  then () else die "staged Definition source test failed"
+
 val _ = print "\n"
 
 val goal_compare = pair_compare(list_compare Term.compare, Term.compare)

@@ -46,6 +46,29 @@ sig
    val qDefine     : string -> term quotation -> tactic option -> thm
    val located_qDefine : DB.thm_src_location -> string -> term quotation ->
                          tactic option -> Context.t -> thm
+
+   (* Staged explicit termination proofs. The handle and proof state can
+      be saved in a heap; no source expansion or preparation is repeated.
+      The caller owns the theory until finish/abort: do not interleave
+      unrelated theory changes or another preparation in that context. *)
+   type prepared_definition
+   val prepare_tDefine : DB.thm_src_location -> string -> term quotation ->
+                         prepared_definition
+   val prepare_qDefine : DB.thm_src_location -> string -> term quotation ->
+                         prepared_definition
+   val termination_goal : prepared_definition -> (string * goal) option
+   val with_prepared_definition :
+       prepared_definition -> ('a -> 'b) -> 'a -> 'b
+   val finish_definition : prepared_definition -> thm option ->
+                           thm * thm option
+   val abort_definition : prepared_definition -> unit
+   (* Override explicit termination execution while retaining the native
+      definition entry point, quotation expansion and SML bindings. The
+      driver returns a proof of termination_goal (NONE for a trivial
+      definition); the entry point finishes the definition afterwards. *)
+   val with_termination_driver :
+       (prepared_definition -> tactic -> thm option) ->
+       ('a -> 'b) -> 'a -> 'b
    datatype phase
         = PARSE of term quotation
         | BUILD of term

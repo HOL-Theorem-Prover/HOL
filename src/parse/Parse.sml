@@ -645,14 +645,18 @@ fun temp_set_associativity (i,a) =
 (* Apply a function to its argument. If it fails, revert the grammars        *)
 (*---------------------------------------------------------------------------*)
 
-fun try_grammar_extension f x =
+fun grammar_rollback () =
  let val (tyG,tmG) = current_grammars()
      val updates = !grm_updates
  in
-    f x handle e
-    => (put_term_grammar tmG;
+    fn () => (put_term_grammar tmG;
         put_type_grammar tyG;
-        grm_updates := updates; raise e)
+        grm_updates := updates)
+ end;
+
+fun try_grammar_extension f x =
+ let val rollback = grammar_rollback ()
+ in f x handle e => (rollback (); Portable.reraise e)
  end;
 
 fun includes_unicode s = not (CharVector.all (fn c => Char.ord c < 128) s)
