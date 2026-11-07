@@ -21,13 +21,16 @@ type config = {
   source_dirs : (string * string) list,
   outputs : (output_format * string) list,
   snippets : (string * string) option,
-  assumptions : {theorem : name, prose : string} option,
+  assumptions : {theorem : name, prose : string} list,
   supporting : name list
 }
 
 type presentation = {about : string, omit_types : name list,
                      reader_view : bool,
                      theory_sources : (string * string) list}
+
+(* Supporting statements printed longer than this many lines are folded *)
+val supporting_fold_lines = 40
 
 fun key ({Thy, Name} : name) = Thy ^ "$" ^ Name
 
@@ -472,7 +475,8 @@ fun closure include_lemmas (cfg : config) tyidx theorems =
                     let
                       val n = name_of_const c
                       val (defs, defines) = definitions_of c
-                      val lemmas = if include_lemmas then lemmas_for cfg c else []
+                      val lemmas =
+                        if include_lemmas then lemmas_for cfg c else []
                       val uses =
                         List.filter (not o same_const c)
                           (dedup (key o name_of_const)
@@ -742,8 +746,12 @@ fun markdown blocks =
           List.concat (map one bs) @ ["</details>", ""]
       | one (HtmlFold (_, bs)) = List.concat (map one bs)
       | one (Raw p) = [p PlainText, ""]
+    val text = String.concat
+      (map (fn l => l ^ "\n") (List.concat (map one blocks)))
   in
-    String.concat (map (fn l => l ^ "\n") (List.concat (map one blocks)))
+    (* one newline at the end, no blank line *)
+    Substring.string (Substring.dropr Char.isSpace (Substring.full text)) ^
+    "\n"
   end
 
 (* Preserve blank-line paragraph breaks in plain opening text. *)
@@ -760,15 +768,45 @@ fun paragraphs text =
     go (String.fields (fn c => c = #"\n") text) [] []
   end
 
-(* Text with `...` spans as inline code *)
+(* Text with `...` spans as inline code and [label](url) as links *)
 fun html_text s =
   let
-    fun go [] _ = []
-      | go (p :: ps) in_code =
-          (if in_code then "<code>" ^ escape p ^ "</code>" else escape p) ::
-          go ps (not in_code)
+    val n = size s
+    fun find c i = if i >= n then NONE
+                   else if String.sub (s, i) = c then SOME i
+                   else find c (i + 1)
+    fun sub (i, j) = String.substring (s, i, j - i)
+    (* a link whose label starts at i: the end of its label and url *)
+    fun link i =
+      case find #"]" i of
+        SOME j =>
+          if j + 1 < n andalso String.sub (s, j + 1) = #"(" then
+            case find #")" (j + 2) of
+              SOME k =>
+                if CharVector.exists Char.isSpace (sub (j + 2, k)) then NONE
+                else SOME (j, k)
+            | NONE => NONE
+          else NONE
+      | NONE => NONE
+    fun go i acc =
+      if i >= n then String.concat (rev acc)
+      else
+        case String.sub (s, i) of
+          #"`" =>
+            let val j = getOpt (find #"`" (i + 1), n) in
+              go (j + 1)
+                 (("<code>" ^ escape (sub (i + 1, j)) ^ "</code>") :: acc)
+            end
+        | #"[" =>
+            (case link (i + 1) of
+               SOME (j, k) =>
+                 go (k + 1)
+                    (("<a href=\"" ^ escape (sub (j + 2, k)) ^ "\">" ^
+                      html_text (sub (i + 1, j)) ^ "</a>") :: acc)
+             | NONE => go (i + 1) ("[" :: acc))
+        | c => go (i + 1) (escape (String.str c) :: acc)
   in
-    String.concat (go (String.fields (fn c => c = #"`") s) false)
+    go 0 []
   end
 
 fun html_inline href xs =
@@ -859,7 +897,9 @@ fun anchor prefix ({Thy, Name} : name) =
       if Char.isAlphaNum ch orelse ch = #"_" then String.str ch
       else "-" ^ StringCvt.padLeft #"0" 2 (Int.fmt StringCvt.HEX (ord ch))
   in
-    prefix ^ "-" ^ String.translate safe Thy ^ "-" ^ String.translate safe Name
+    prefix ^ "-" ^
+    (if Thy = "" then "" else String.translate safe Thy ^ "-") ^
+    String.translate safe Name
   end
 
 (* inline lists joined by sep *)
@@ -1036,6 +1076,64 @@ fun qualified_name s =
   | _ => NONE
 
 fun is_reference_name s = is_name s orelse isSome (qualified_name s)
+
+(* What a hypothesis is about, and its key, which names its section in
+   assumption prose: the variable an equation v = t or t = v names; else
+   the subject of the body of a negation, the conclusion of an implication
+   or the body of a quantifier; else the application of a variable or a
+   named constant, whose name is the key; else the first operand of an
+   unnamed constant (=, <, +) that is no literal and has a subject.  A
+   record field selection keys as its field. *)
+local
+  fun const_key c =
+    let val n = #Name (name_of_const c) in
+      if is_name n then SOME n
+      else
+        case String.fields (fn c => c = #".") n of
+          ["recordtype", _, "seldef", field] =>
+            if is_name field then SOME field else NONE
+        | _ => NONE
+    end
+  fun literal t =
+    numSyntax.is_numeral t orelse
+    (is_comb t andalso is_const (rator t) andalso
+     numSyntax.is_numeral (rand t))
+  fun first _ [] = NONE
+    | first f (x :: xs) = case f x of NONE => first f xs | r => r
+  fun subject t =
+    if is_var t then SOME (t, fst (dest_var t))
+    else if is_abs t then subject (snd (dest_abs t))
+    else if literal t then NONE
+    else
+      let val (f, args) = strip_comb t in
+        if is_var f then SOME (t, fst (dest_var f))
+        else if not (is_const f) then NONE
+        else case const_key f of
+               SOME k => SOME (t, k)
+             | NONE => first subject args
+      end
+in
+fun hypothesis_subject h =
+  if is_neg h then hypothesis_subject (dest_neg h)
+  else if is_imp_only h then hypothesis_subject (snd (dest_imp h))
+  else if is_forall h orelse is_exists h then
+    hypothesis_subject (snd (dest_abs (rand h)))
+  else if is_eq h andalso is_var (lhs h) then (lhs h, fst (dest_var (lhs h)))
+  else if is_eq h andalso is_var (rhs h) andalso not (free_in (rhs h) (lhs h))
+  then (rhs h, fst (dest_var (rhs h)))
+  else
+    case subject h of
+      SOME s => s
+    | NONE => raise Fail ("statementDossierLib: no key for the hypothesis " ^
+                          term_to_string h)
+end
+
+fun hypothesis_key h = #2 (hypothesis_subject h)
+
+(* The keyed hypotheses grouped by key, in order of first appearance *)
+fun group_by_key keyed =
+  map (fn k => (k, map #2 (List.filter (fn (k', _) => k' = k) keyed)))
+    (dedup (fn k => k) (map #1 keyed))
 
 fun theorem_of_snippet text =
   let
@@ -1436,7 +1534,9 @@ fun render ({about = extra_about, omit_types, reader_view,
             " : " ^ hol_type ty target
           end
       in
-        [Heading (2, SOME (anchor "thm" n), [Text "Theorem ", Code (#Name n)])] @ (if reader_view then [] else [theory_location n]) @
+        [Heading (2, SOME (anchor "thm" n),
+                  [Text "Theorem ", Code (#Name n)])] @
+        (if reader_view then [] else [theory_location n]) @
         tag_blocks th @
         (if null hyps then
            [Para [Text "No assumptions or implication antecedents."]]
@@ -1484,27 +1584,22 @@ fun render ({about = extra_about, omit_types, reader_view,
     fun prose_block text =
       Raw (fn PlainText => text | Linked _ => prose_html code_html text)
 
-    (* The assumptions: for each hypothesis of the theorem, in order, the
-       hypothesis, the definition of its head, its prose and the theorems
-       that pin it. *)
-    val assumption_blocks =
-      case #assumptions cfg of
-        NONE => []
-      | SOME {theorem = tn, prose} =>
+    (* The assumptions of a theorem: for each key of its hypotheses, in
+       order of first appearance, the hypotheses, the definition of the
+       constant the key names, the prose and the theorems that pin it.
+       Ids carry the theorem's name when several theorems have prose. *)
+    fun assumptions_section {theorem = tn, prose} =
         let
+          val (heading_id, hyp_id) =
+            case #assumptions cfg of
+              [_] => ("assumptions",
+                      fn k => anchor "hyp" {Thy = "", Name = k})
+            | _ => (anchor "assumptions" {Thy = "", Name = #Name tn},
+                    fn k => anchor "hyp" {Thy = #Name tn, Name = k})
           val th = DB.fetch (#Thy tn) (#Name tn)
           val (hyps, _) = hyps_and_goal th
           val vars = statement_vars th
-          fun head h =
-            if is_eq h andalso is_var (lhs h) then fst (dest_var (lhs h))
-            else
-              let val (f, _) = strip_comb h in
-                if is_const f then #Name (name_of_const f)
-                else raise Fail ("statementDossierLib: " ^
-                                 "no head for the hypothesis " ^
-                                 term_to_string h)
-              end
-          val keyed = map (fn h => (head h, h)) hyps
+          val keyed = group_by_key (map (fn h => (hypothesis_key h, h)) hyps)
           val (intro, sections) = parse_prose (read_file prose)
           fun has k = List.exists (fn (k', _) => k' = k)
           val pinned = map (fn (k, t) => (k, split_pinned t)) sections
@@ -1531,8 +1626,6 @@ fun render ({about = extra_about, omit_types, reader_view,
                   (repeated (map (fn n =>
                     case stored_theorem n of
                       SOME (name, _) => key name | NONE => n) ns))) pinned) @
-            map (fn k => "two hypotheses with the head " ^ k)
-              (repeated (map #1 keyed)) @
             map (fn k => "two sections for " ^ k) (repeated (map #1 sections)) @
             map (fn (k, _) => "a fenced code block in the prose for " ^ k)
               (List.filter (fenced o #2)
@@ -1544,7 +1637,7 @@ fun render ({about = extra_about, omit_types, reader_view,
                  (("introduction", (intro, [])) :: pinned)) @
             map (fn (k, _) => "no prose for the hypothesis " ^ k)
               (List.filter (fn (k, _) => not (has k sections)) keyed) @
-            map (fn (k, _) => "prose for " ^ k ^ ", the head of no hypothesis")
+            map (fn (k, _) => "prose for " ^ k ^ ", the key of no hypothesis")
               (List.filter (fn (k, _) => not (has k keyed)) sections) @
             map (fn s => "the prose names " ^ s ^ ", which HOL does not know")
               unknown @
@@ -1556,8 +1649,8 @@ fun render ({about = extra_about, omit_types, reader_view,
             else raise Fail ("statementDossierLib: " ^ prose ^ ": " ^
                              String.concatWith "; " problems)
           fun definition h =
-            let val (f, _) = strip_comb h in
-              if is_eq h orelse not (is_const f) then []
+            let val (f, _) = strip_comb (#1 (hypothesis_subject h)) in
+              if not (is_const f) then []
               else
                 case List.find
                        (fn (e : entry) => same_const (#const e) f) entries of
@@ -1565,14 +1658,16 @@ fun render ({about = extra_about, omit_types, reader_view,
                             List.concat (map definition_blocks (#defs e))
                 | NONE => []
             end
-          fun section (k, h) =
+          fun section (k, hs) =
             let
               val (text, names) =
                 #2 (valOf (List.find (fn (k', _) => k' = k) pinned))
             in
-              [Heading (3, SOME (anchor "hyp" {Thy = "", Name = k}),
-                        [Hol (hol_term h)])] @
-              definition h @ [prose_block text] @
+              (case hs of
+                 [h] => [Heading (3, SOME (hyp_id k), [Hol (hol_term h)])]
+               | _ => [Heading (3, SOME (hyp_id k), [Code k]),
+                       Pre (numbered hs)]) @
+              definition (hd hs) @ [prose_block text] @
               (if reader_view orelse null names then []
                else [Fold
                      ("Internal equivalence theorems and supporting facts",
@@ -1580,22 +1675,33 @@ fun render ({about = extra_about, omit_types, reader_view,
                         (map (thm_block o valOf o stored_theorem) names))])
             end
         in
-          [Heading (2, SOME "assumptions",
+          [Heading (2, SOME heading_id,
                     [Text "Assumptions of ", Code (#Name tn)]),
            prose_block intro] @
           List.concat (map section keyed)
         end
-    fun is_assumptions_theorem n =
-      case #assumptions cfg of
-        SOME {theorem, ...} => key theorem = key n
-      | NONE => false
+    fun assumption_blocks n =
+      case List.find (fn {theorem, ...} => key theorem = key n)
+             (#assumptions cfg) of
+        SOME a => assumptions_section a
+      | NONE => []
 
     (* Supporting theorems: stated, not expanded; only the constants with an
-       entry are listed. *)
+       entry are listed.  A statement longer than supporting_fold_lines is
+       folded. *)
     fun supporting_section pair =
-      if reader_view then theorem_section pair else let val (n, th) = pair in
+      if reader_view then theorem_section pair else let
+        val (n, th) = pair
+        val lines = length (String.fields (fn c => c = #"\n")
+                                          (hol_thm th PlainText))
+        val statement =
+          if lines > supporting_fold_lines
+          then Fold ("Statement (" ^ Int.toString lines ^ " lines)",
+                     [Pre (hol_thm th)])
+          else Pre (hol_thm th)
+      in
       [Heading (3, SOME (anchor "thm" n), [Code (#Name n)]),
-       theory_location n] @ tag_blocks th @ [Pre (hol_thm th)] @
+       theory_location n] @ tag_blocks th @ [statement] @
       use_links (List.filter (fn c => isSome (href (key (name_of_const c))))
                    (theorem_consts th))
       end
@@ -1829,7 +1935,8 @@ fun render ({about = extra_about, omit_types, reader_view,
            Int.toString (length theorems + length supporting) ^
            " theorem statements, " ^ Int.toString (length entries) ^
            " definitions and " ^ Int.toString (length described) ^
-           " type layouts. Unexpanded constants link to their source when supplied.")]]
+           " type layouts. Unexpanded constants link to their source \
+           \when supplied.")]]
        else [Para [Text "Generated by `statementDossierLib` from the theorem \
                   \database: every statement, definition and type below is \
                   \printed by HOL.  Constants are expanded breadth-first, in \
@@ -1874,8 +1981,7 @@ fun render ({about = extra_about, omit_types, reader_view,
                     (paragraphs (#preamble cfg))))] @
       List.concat (map (fn (n, th) =>
                           theorem_section (n, th) @
-                          (if is_assumptions_theorem n then assumption_blocks
-                           else []))
+                          assumption_blocks n)
                      theorems) @
       supporting_blocks @
       [Heading (2, NONE, [Text "Types"])] @
@@ -1910,12 +2016,13 @@ fun render ({about = extra_about, omit_types, reader_view,
        Para [Text "Types, by theory:"],
        Items (by_theory (map (fn ty => (#Thy ty, [Code (#Name ty)]))
                            unshown_types))] @
-      (if reader_view then [] else [Heading (2, SOME "plumbing", [Text "Plumbing"]),
-       Para [Text "The definitions in no theorem's conclusion or hypothesis \
-                  \bucket, in the same order as above."],
-       HtmlFold ("Plumbing definitions (" ^
-                 Int.toString (length plumbing) ^ ")",
-                 List.concat (map entry_section plumbing))]) @
+      (if reader_view then []
+       else [Heading (2, SOME "plumbing", [Text "Plumbing"]),
+             Para [Text "The definitions in no theorem's conclusion or \
+                        \hypothesis bucket, in the same order as above."],
+             HtmlFold ("Plumbing definitions (" ^
+                       Int.toString (length plumbing) ^ ")",
+                       List.concat (map entry_section plumbing))]) @
       about @ (if reader_view then []
                else [Fold ("Definition dependency index", audit_list)])
   in
@@ -1935,21 +2042,21 @@ fun check_config (cfg : config) =
     val problems =
       map (fn k => "duplicate theorem " ^ k)
         (repeated (map key (#theorems cfg @ #supporting cfg))) @
-      (case #assumptions cfg of
-         SOME {theorem, ...} =>
-           if mem_name theorem (#theorems cfg) then []
-           else ["assumptions theorem is not in theorems: " ^ key theorem]
-       | NONE => []) @
+      map (fn {theorem, ...} =>
+             "assumptions theorem is not in theorems: " ^ key theorem)
+        (List.filter (fn {theorem, ...} =>
+                        not (mem_name theorem (#theorems cfg)))
+           (#assumptions cfg)) @
+      map (fn n => "more than one assumptions entry for a theorem named " ^ n)
+        (repeated (map (#Name o #theorem) (#assumptions cfg))) @
       missing "theorem" is_thm
         (#theorems cfg @ #supporting cfg @
          List.concat (map #2 (#equation_lemmas cfg)) @
-         (case #assumptions cfg of SOME {theorem, ...} => [theorem]
-                                 | NONE => [])) @
-      (case #assumptions cfg of
-         SOME {prose, ...} =>
-           if OS.FileSys.access (prose, [OS.FileSys.A_READ]) then []
-           else ["prose file " ^ prose]
-       | NONE => []) @
+         map #theorem (#assumptions cfg)) @
+      map (fn {prose, ...} => "prose file " ^ prose)
+        (List.filter (fn {prose, ...} =>
+                        not (OS.FileSys.access (prose, [OS.FileSys.A_READ])))
+           (#assumptions cfg)) @
       missing "constant" is_constant
         (#expand_consts cfg @ #stop_consts cfg @
          map #1 (#equation_lemmas cfg)) @
@@ -1989,7 +2096,8 @@ fun write_snippets (cfg : config) href (input, output) =
     TextIO.closeOut out
   end
 
-(* Write the dossier described by cfg to each of #outputs cfg. *)
+(* The stored statements of the theorem, supporting and definition
+   sections, by section anchor *)
 fun statement_sections (cfg : config) =
   let
     fun fetch n = (n, DB.fetch (#Thy n) (#Name n))
@@ -2002,6 +2110,7 @@ fun statement_sections (cfg : config) =
       (anchor "def" (name_of_const (#const e)), #defs e)) entries
   end
 
+(* Write the dossier described by cfg to each of #outputs cfg. *)
 fun run_with_presentation presentation (cfg : config) =
   let
     val () = check_config cfg

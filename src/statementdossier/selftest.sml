@@ -19,7 +19,7 @@ val _ = run {
   theorems = [{Thy = "list", Name = "REVERSE_APPEND"}],
   expand_theories = [], expand_consts = [], stop_theories = [],
   stop_consts = [], equation_lemmas = [], source_dirs = [],
-  outputs = [(Markdown, boot_output)], assumptions = NONE,
+  outputs = [(Markdown, boot_output)], assumptions = [],
   supporting = [], snippets = NONE
 }
 val _ = check "Stored reports need no current theory"
@@ -66,7 +66,9 @@ fun named s = {Thy = "dossierTest", Name = s}
 
 fun config {theorems, expand_theories, expand_consts, stop_theories,
             stop_consts, assumptions, supporting, snippets} : config = {
-  title = "Statements <&\" >", preamble = "First paragraph.\n\nSecond paragraph.",
+  title = "Statements <&\" >",
+  preamble =
+    "First paragraph.\n\nSee [the `list` notes](https://example.org/?a&b).",
   theorems = theorems, expand_theories = expand_theories,
   expand_consts = expand_consts, stop_theories = stop_theories,
   stop_consts = stop_consts, equation_lemmas = [], source_dirs = [],
@@ -76,7 +78,7 @@ fun config {theorems, expand_theories, expand_consts, stop_theories,
 fun basic ns = config {
   theorems = map named ns, expand_theories = ["dossierTest"],
   expand_consts = [], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [], snippets = NONE
+  assumptions = [], supporting = [], snippets = NONE
 }
 fun generate cfg = (run cfg; (read markdown_path, read html_path))
 fun count text part =
@@ -103,9 +105,12 @@ val _ = check "Free variable types are printed"
 val _ = check "HTML title and text are escaped"
   (contains html "Statements &lt;&amp;&quot; &gt;" andalso
    not (contains html "Statements <&\" >"))
-val _ = check "Opening paragraph breaks survive HTML rendering"
+val _ = check "Opening paragraph breaks and links survive HTML rendering"
   (contains html "<p>First paragraph.</p>" andalso
-   contains html "<p>Second paragraph.</p>")
+   contains html ("<p>See <a href=\"https://example.org/?a&amp;b\">the \
+                  \<code>list</code> notes</a>.</p>"))
+val _ = check "Markdown ends with one newline"
+  (String.isSuffix "\n" md andalso not (String.isSuffix "\n\n" md))
 val _ = check "Structured statement precedes the folded stored statement"
   (contains html "</pre>\n<details><summary>As stored</summary>")
 val _ = check "Routine tag and missing-location noise is omitted"
@@ -145,7 +150,7 @@ val _ = check "Markdown fragment links retain boundary anchors"
 val stopped = config {
   theorems = [named "root"], expand_theories = ["dossierTest"],
   expand_consts = [named "first"], stop_theories = [],
-  stop_consts = [named "first"], assumptions = NONE,
+  stop_consts = [named "first"], assumptions = [],
   supporting = [], snippets = NONE
 }
 val (_, boundary_html) = generate stopped
@@ -155,14 +160,14 @@ val _ = check "An explicit stop wins over expansion"
 val (_, theory_stop_html) = generate (config {
   theorems = [named "root"], expand_theories = ["dossierTest"],
   expand_consts = [named "second"], stop_theories = ["dossierTest"],
-  stop_consts = [], assumptions = NONE, supporting = [], snippets = NONE
+  stop_consts = [], assumptions = [], supporting = [], snippets = NONE
 })
 val _ = check "A theory stop wins over explicit constants"
   (not (contains theory_stop_html "id=\"def-dossierTest-second\""))
 val (_, explicit_html) = generate (config {
   theorems = [named "root"], expand_theories = [],
   expand_consts = [named "second"], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [], snippets = NONE
+  assumptions = [], supporting = [], snippets = NONE
 })
 val _ = check "Single-constant expansion stops at other definitions"
   (contains explicit_html "id=\"def-dossierTest-second\"" andalso
@@ -207,7 +212,7 @@ val _ = check "Omitting a built-in type keeps record fields and valid links"
 val (recursive_md, _) = generate (config {
   theorems = [named "recursive_result"], expand_theories = ["list"],
   expand_consts = [], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [], snippets = NONE
+  assumptions = [], supporting = [], snippets = NONE
 })
 val _ = check "Recursive equations are shown without primitive encoding"
   (contains recursive_md "LENGTH" andalso
@@ -219,7 +224,7 @@ fun with_prose theorem : config = {
   expand_theories = ["dossierTest"], expand_consts = [],
   stop_theories = [], stop_consts = [], equation_lemmas = [],
   source_dirs = [], outputs = [(Markdown, markdown_path)], snippets = NONE,
-  assumptions = SOME {theorem = theorem, prose = prose_path}, supporting = []
+  assumptions = [{theorem = theorem, prose = prose_path}], supporting = []
 }
 val good_prose = "# Inputs\nA condition on `n`.\n\n## admissible\n\n\
   \The input `n` satisfies `admissible`.\n\nPinned by: `root`.\n"
@@ -239,7 +244,7 @@ val _ = run {
   expand_consts = [], stop_theories = [], stop_consts = [],
   equation_lemmas = [], source_dirs = [],
   outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
-  assumptions = SOME {theorem = named "quantified", prose = prose_path}
+  assumptions = [{theorem = named "quantified", prose = prose_path}]
 }
 val _ = check "Prose can name outer quantified variables"
   (contains (read markdown_path) "The input")
@@ -254,7 +259,7 @@ val _ = bad_prose "Missing assumption prose is rejected" "no prose"
   "# Inputs\n"
 val _ = bad_prose "Duplicate prose sections are rejected" "two sections"
   (good_prose ^ "\n## admissible\nDuplicate.\n")
-val _ = bad_prose "Extra prose sections are rejected" "head of no hypothesis"
+val _ = bad_prose "Extra prose sections are rejected" "key of no hypothesis"
   (good_prose ^ "\n## absent\nExtra.\n")
 val _ = bad_prose "Unknown formal names are rejected" "HOL does not know"
   "## admissible\n`not_a_HOL_name_28471`\n"
@@ -289,13 +294,29 @@ val _ = rejects "Assumptions must belong to a selected theorem"
   "not in theorems" (with_prose (named "kernel_hypothesis"))
 val _ = rejects "Duplicate selected theorems are rejected" "duplicate theorem"
   (basic ["root", "root"])
-val _ = rejects "Repeated hypothesis heads are rejected" "two hypotheses"
+val _ = run
   {title = "Repeated heads", preamble = "",
    theorems = [named "repeated_head"], expand_theories = [],
    expand_consts = [], stop_theories = [], stop_consts = [],
    equation_lemmas = [], source_dirs = [],
    outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
-   assumptions = SOME {theorem = named "repeated_head", prose = prose_path}}
+   assumptions = [{theorem = named "repeated_head", prose = prose_path}]}
+val _ = check "Hypotheses with one key share a section"
+  (count (read markdown_path) "<a id=\"hyp-admissible\"></a>" = 1)
+val curried_prose = OS.FileSys.tmpName ()
+val _ = write curried_prose "## admissible\nAn input.\n\n## n\nIt is `m`.\n"
+val _ = run {
+  title = "Several", preamble = "", theorems = [named "root", named "curried"],
+  expand_theories = ["dossierTest"], expand_consts = [], stop_theories = [],
+  stop_consts = [], equation_lemmas = [], source_dirs = [],
+  outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
+  assumptions = [{theorem = named "root", prose = prose_path},
+                 {theorem = named "curried", prose = curried_prose}]}
+val _ = check "Several theorems' assumption ids carry the theorem name"
+  (List.all (contains (read markdown_path))
+     ["id=\"assumptions-root\"", "id=\"hyp-root-admissible\"",
+      "id=\"assumptions-curried\"", "id=\"hyp-curried-n\""])
+val _ = OS.FileSys.remove curried_prose
 val _ = save_thm ("TRUTH", boolTheory.TRUTH)
 val _ = bad_prose "Ambiguous pinning names are rejected" "ambiguous theorem"
   "## admissible\nInput.\n\nPinned by: `TRUTH`.\n"
@@ -304,7 +325,7 @@ val _ = rejects "Unknown selected theorems are rejected" "not found"
 val _ = rejects "Misspelled expansion theories are rejected" "not found"
   (config {theorems = [named "root"], expand_theories = ["dossierTset"],
            expand_consts = [], stop_theories = [], stop_consts = [],
-           assumptions = NONE, supporting = [], snippets = NONE})
+           assumptions = [], supporting = [], snippets = NONE})
 
 (* A later database addition must be visible in the same HOL session. *)
 val _ = save_thm ("first_new_equation",
@@ -317,7 +338,7 @@ val _ = write snippets_in "i(second (3:num))\000bTheorem root: ignored text"
 val (_, _) = generate (config {
   theorems = [named "root"], expand_theories = ["dossierTest"],
   expand_consts = [], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [],
+  assumptions = [], supporting = [],
   snippets = SOME (snippets_in, snippets_out)
 })
 val snippet_json = read snippets_out
@@ -338,7 +359,7 @@ fun source_config theorem : config = {
   expand_theories = [], expand_consts = [], stop_theories = [],
   stop_consts = [], equation_lemmas = [],
   source_dirs = [("sources", source_dir)],
-  outputs = [(Markdown, markdown_path)], assumptions = NONE,
+  outputs = [(Markdown, markdown_path)], assumptions = [],
   supporting = [], snippets = NONE
 }
 val _ = write source_script "Theorem LESS_EQ_IMP_LESS_SUC:\n"
@@ -370,7 +391,8 @@ val _ = Define `(claused ([]:bool list) = T) /\
                 (claused (h::t) = (h /\ claused t))`
 val _ = save_thm ("claused_result", REFL ``claused xs``)
 val reader_options = {about = "", omit_types = [], reader_view = true,
-  theory_sources = [("dossierTest", "https://example.org/dossierTestScript.sml")]}
+  theory_sources =
+    [("dossierTest", "https://example.org/dossierTestScript.sml")]}
 val _ = run_with_presentation reader_options (basic ["claused_result"])
 val reader_md = read markdown_path
 val reader_html = read html_path
@@ -383,7 +405,7 @@ val _ = check "Reader clauses retain RHS logic and implicit variables"
    not (contains reader_md "As stored"))
 val _ = run_with_presentation reader_options (config {
   theorems = [named "root"], expand_theories = [], expand_consts = [],
-  stop_theories = [], stop_consts = [], assumptions = NONE,
+  stop_theories = [], stop_consts = [], assumptions = [],
   supporting = [], snippets = NONE
 })
 val _ = check "Boundary sources retain URLs in both formats"

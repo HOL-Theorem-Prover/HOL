@@ -20,9 +20,9 @@ type name = {Thy : string, Name : string}
    snippets: optionally (input, output) files for pages that link into
      the HTML dossier: text read from the input is printed by HOL with
      the dossier's highlighting and links (see README.md).
-   assumptions: optionally a theorem and a markdown file explaining each
-     of its hypotheses (see README.md); the dossier shows each
-     hypothesis, its definition and its explanation after the theorem.
+   assumptions: some of the theorems, each with a markdown file explaining
+     its hypotheses (see README.md); the dossier shows each hypothesis,
+     its definition and its explanation after the theorem.
    supporting: stored theorems shown after the theorems, stated but not
      expanded. *)
 datatype output_format = Markdown | Html
@@ -39,7 +39,7 @@ type config = {
   source_dirs : (string * string) list,
   outputs : (output_format * string) list,
   snippets : (string * string) option,
-  assumptions : {theorem : name, prose : string} option,
+  assumptions : {theorem : name, prose : string} list,
   supporting : name list
 }
 
