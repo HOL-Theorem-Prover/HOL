@@ -52,7 +52,10 @@ sig
   (* as fullmake, but each theory's value is computed when first read rather
      than when the theory is loaded, so apply_delta's effects may happen
      late or not at all; apply_to_global and thy_finaliser still run as
-     each theory loads *)
+     each theory loads.  For instances whose apply_delta has no effects
+     and calls no inference that might draw on genvar's counter: drawing
+     on it later, or not at all, changes the names of the genvars made
+     after it, and so possibly a theory's output *)
   val lazy_fullmake : { adinfo : ('delta, 'value) adata_info,
                         uptodate_delta : 'delta -> bool,
                         sexps : { dec : 'delta ThyDataSexp.dec,

@@ -256,7 +256,7 @@ type 'value ops = {apply_to_global : setdelta -> 'value -> 'value,
 fun raw_uptodate (rADD knm) = can DB.fetch_knm knm
   | raw_uptodate _ = true
 
-fun export_with_ancestry
+fun gen_export_with_ancestry fullmake
       {settype,delta_ops:'value ops}:(setdelta,'value)AncestryData.fullresult =
     let
       val {apply_to_global, uptodate_delta, initial_value, apply_delta,
@@ -274,9 +274,8 @@ fun export_with_ancestry
                       initial_value = initial_value}
       fun uptodate rd = raw_uptodate rd andalso uptodate_delta (cook rd)
       val fullresult =
-          AncestryData.lazy_fullmake { adinfo = adinfo,
-                                       uptodate_delta = uptodate,
-                                       sexps = sexps, globinfo = globinfo}
+          fullmake { adinfo = adinfo, uptodate_delta = uptodate,
+                     sexps = sexps, globinfo = globinfo}
       fun store_attrfun {attrname,name,thm,args} =
           if null args then
             let val d = rADD(lift name)
@@ -321,6 +320,10 @@ fun export_with_ancestry
     end
 
 
+fun export_with_ancestry x = gen_export_with_ancestry AncestryData.fullmake x
+fun lazy_export_with_ancestry x =
+    gen_export_with_ancestry AncestryData.lazy_fullmake x
+
 (* ----------------------------------------------------------------------
     Some simple instances
    ---------------------------------------------------------------------- *)
@@ -339,7 +342,8 @@ fun export_simple_dictionary {settype,initial} =
           List.foldl (fn ((n,th), d) => Symtab.update (n, th) d)
                      Symtab.empty initial
       val ops as {apply_delta,...} = simple_dictionary_ops i
-      val res = export_with_ancestry {settype = settype, delta_ops = ops}
+      val res = lazy_export_with_ancestry {settype = settype,
+                                           delta_ops = ops}
       val updgv = #update_global_value res
       fun temp_exclude s = updgv (apply_delta (REMOVE s))
       fun temp_export s = updgv (apply_delta (mk_add s))
@@ -382,7 +386,8 @@ fun alist_ops i =
 fun export_alist {settype,initial} =
     let
       val ops as {apply_delta,...} = alist_ops initial
-      val res = export_with_ancestry {settype = settype, delta_ops = ops}
+      val res = lazy_export_with_ancestry {settype = settype,
+                                           delta_ops = ops}
       val updgv = #update_global_value res
       fun temp_exclude s = updgv (apply_delta (REMOVE s))
       fun temp_export s = updgv (apply_delta (mk_add s))
@@ -419,7 +424,8 @@ fun thm_eq th1 th2 = aconv (concl th1) (concl th2)
 fun export_list {settype,initial} =
     let
       val ops as {apply_delta,...} = list_ops initial
-      val res = export_with_ancestry {settype = settype, delta_ops = ops}
+      val res = lazy_export_with_ancestry {settype = settype,
+                                           delta_ops = ops}
       val updgv = #update_global_value res
       fun temp_exclude th = updgv (fn ths => op_set_diff thm_eq ths [th])
       fun temp_export s = updgv (apply_delta (mk_add s))

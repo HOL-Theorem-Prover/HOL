@@ -63,7 +63,7 @@ fun new {settype, key_part} =
       | apply_delta0 _ _ dict = dict
     val {update_global_value, record_delta, get_deltas, get_global_value,
          get_global_value_of, DB, ...} =
-      ThmSetData.export_with_ancestry {
+      ThmSetData.lazy_export_with_ancestry {
         settype = settype,
         delta_ops = {apply_to_global = apply_delta0 "apply_delta",
                      uptodate_delta = K true,

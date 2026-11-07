@@ -28,7 +28,7 @@ fun add_delta (ADD (_, th)) ths = ths @ CONJUNCTS th
   | add_delta (REMOVE _) ths =
     (HOL_WARNING "Diff" "add_delta" "Cannot remove diff thms"; ths)
 val {get_global_value, update_global_value, ...} =
-    ThmSetData.export_with_ancestry {
+    ThmSetData.lazy_export_with_ancestry {
       settype = "difftool",
       delta_ops = { apply_to_global = add_delta,
                     initial_value = [],

@@ -108,7 +108,7 @@ fun udef_apply (ThmSetData.ADD v) dstore = register_defn_p "user" v dstore
       remove_def (ThmSetData.toKName s) dstore
 val userdefs_db as
     {get_global_value = get_userdefs_db, get_deltas = thy_userdefs0,...} =
-    ThmSetData.export_with_ancestry {
+    ThmSetData.lazy_export_with_ancestry {
       settype = "userdef",
       delta_ops = {apply_to_global = udef_apply, thy_finaliser = NONE,
                    uptodate_delta = K true, initial_value = initial_dstore,
