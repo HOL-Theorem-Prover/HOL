@@ -94,7 +94,7 @@ val adr as {
   record_delta = export_nomtype0,
   update_global_value, ...
 } =
-    AncestryData.fullmake {
+    AncestryData.lazy_fullmake {
       adinfo = adata,
       globinfo = {
         apply_to_global = KNametab.update,

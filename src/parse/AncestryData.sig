@@ -188,14 +188,17 @@ end
         prunes out-of-date entries on load using uptodate_delta) and
         "<tag>.parents" (the AncestryData parent-list override).
 
-    On theory load, parent_onload reconstructs the theory's value by
-    asking the apply_delta_hook (which is bound to merge) to compute
-    the value at the parent boundary, then folds in the theory's
-    own deltas via apply_delta and stashes the result in
-    value_table.  In fullmake, each delta is also fed through
-    delta_side_effects, which either applies apply_to_global one
-    delta at a time (when no finaliser is supplied) or hands the
-    whole batch to thy_finaliser.
+    On theory load, parent_onload computes the theory's value by
+    merging its parents' values, then folds in the theory's own deltas
+    via apply_delta and stashes the result in value_table.  In
+    fullmake, each delta is also fed through delta_side_effects, which
+    either applies apply_to_global one delta at a time (when no
+    finaliser is supplied) or hands the whole batch to thy_finaliser.
+    lazy_fullmake does the same, except that it stores the value as a
+    suspension, forced when first read (by DB, DB_of, merge or
+    set_parents); delta_side_effects still runs at load.  Forcing reads
+    the ancestors' data from the ambient context, whatever context was
+    passed to DB_of.
 
     The merge walk.  AncestryData merges multiple ancestor theories
     by:
@@ -216,9 +219,8 @@ end
     The current theory's parents can still change, so its ancestry
     is computed afresh each time.
 
-    The merge function is itself bound as the apply_delta_hook used
-    during loading, so the same algorithm computes both the on-load
-    state and the value returned by user-visible queries.
+    The same merge computes both the on-load state and the value
+    returned by user-visible queries.
 
     with_temp_value : ('delta,'value)fullresult -> 'value ->
                       ('a -> 'b) -> ('a -> 'b)

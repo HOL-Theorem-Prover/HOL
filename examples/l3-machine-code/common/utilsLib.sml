@@ -315,7 +315,7 @@ fun ustore_thm (s, t, tac) = usave_as s (Q.prove (t, tac))
 
 local
 
-  val rwts_thmset_opns = AncestryData.fullmake {
+  val rwts_thmset_opns = AncestryData.lazy_fullmake {
         adinfo = {tag = "l3Utils_rwt",
                   initial_values = [("min", [])],
                   apply_delta = cons},

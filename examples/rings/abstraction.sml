@@ -239,7 +239,7 @@ local
                                thy_finaliser = NONE,
                                initial_value = [] }
                  }
-  val result = AncestryData.fullmake makeinfo
+  val result = AncestryData.lazy_fullmake makeinfo
 in
   fun thyTerms x = #get_deltas result x
   fun record_terms ts = List.app (#record_delta result) ts

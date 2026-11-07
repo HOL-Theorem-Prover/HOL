@@ -116,7 +116,7 @@ structure Refute_RegistrationData :> Refute_RegistrationData = struct
   (* Load-time side effects follow module loading order, which differs
      from ancestry merge order for siblings and late initialization, so
      republish the canonical merge plus the current theory's own deltas.
-     Registered after fullmake's hooks, so it runs after them.  Structural
+     Registered after lazy_fullmake's hooks, so it runs after them.  Structural
      bookkeeping only, never Refute validation. *)
   fun synchronise () =
     case #merge store (Theory.parents "-") of

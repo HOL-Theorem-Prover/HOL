@@ -1,7 +1,7 @@
 (* Two AncestryData instances over the same deltas: "lazyAncE" computes
    each theory's value when the theory is loaded, "lazyAncL" when the
    value is first read.  The lazyAnc* theories record each delta in
-   both, and lazyAncC checks that they agree. *)
+   both, and lazyAncC and lazyAncD check that they agree. *)
 structure lazyAncestryLib =
 struct
 

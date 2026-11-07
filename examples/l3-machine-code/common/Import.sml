@@ -25,7 +25,7 @@ fun adslist tagnm = {
     initial_value = []
   }
 }
-val boolify_opns = AncestryData.fullmake {
+val boolify_opns = AncestryData.lazy_fullmake {
       adinfo = {
         tag = "l3Import.boolify_vals",
         initial_values = [("min", Redblackset.empty Int.compare)],
@@ -39,8 +39,8 @@ val boolify_opns = AncestryData.fullmake {
         initial_value = Redblackset.empty Int.compare
       }
     }
-val type_opns = AncestryData.fullmake (adslist "l3Import.type_names")
-val const_opns = AncestryData.fullmake (adslist "l3Import.const_names")
+val type_opns = AncestryData.lazy_fullmake (adslist "l3Import.type_names")
+val const_opns = AncestryData.lazy_fullmake (adslist "l3Import.const_names")
 fun log_boolify n = (
    #record_delta boolify_opns n;
    #update_global_value boolify_opns (addint_s n)

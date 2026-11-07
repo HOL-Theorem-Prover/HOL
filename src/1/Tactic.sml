@@ -416,13 +416,14 @@ val ignore_fullresult as
               initial_values = [("min", HOLset.empty name_compare)],
               apply_delta = ignore_delta }
     in
-      fullmake { adinfo = ignore_adata_info,
-                 uptodate_delta = can prim_mk_const,
-                 sexps = { dec = kname_decode, enc = KName },
-                 globinfo = {apply_to_global = ignore_delta,
-                             thy_finaliser = NONE,
-                             initial_value = HOLset.empty name_compare}
-               }
+      lazy_fullmake {
+        adinfo = ignore_adata_info,
+        uptodate_delta = can prim_mk_const,
+        sexps = { dec = kname_decode, enc = KName },
+        globinfo = {apply_to_global = ignore_delta,
+                    thy_finaliser = NONE,
+                    initial_value = HOLset.empty name_compare}
+      }
     end
 
 (* Which constants a rule mapped over the assumptions should leave

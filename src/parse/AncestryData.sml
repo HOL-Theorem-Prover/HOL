@@ -217,18 +217,22 @@ fun parent_onload extras {thyname,data = data_opt} =
               NONE => ()
             | SOME start =>
               let
-                (* the deltas are read now, so that a later read of the
-                   value does not depend on the context it happens in *)
+                (* the theory's own deltas are read now *)
                 val uds = get_deltas {thyname = thyname}
-                fun value () = rev_itlist apply_delta uds
-                                          (merge_from info start)
-                val v =
-                    if eager orelse not (fixed_ancestry ancestors thyname ps)
-                    then now (value ())
-                    else Susp.delay value
+                fun apply_own v0 = rev_itlist apply_delta uds v0
               in
-                delta_side_effects thyname uds;
-                store v
+                if eager orelse not (fixed_ancestry ancestors thyname ps)
+                then
+                  let
+                    val v0 = merge_from info start
+                  in
+                    delta_side_effects thyname uds;
+                    store (now (apply_own v0))
+                  end
+                else
+                  (delta_side_effects thyname uds;
+                   store (Susp.delay (fn () =>
+                                         apply_own (merge_from info start))))
               end
           end
     end

@@ -3988,7 +3988,7 @@ val instructions =
 val _ = map save_thm instructions;
 val _ = computeLib.add_persistent_funs (map fst instructions);
 
-val instlist_storage = AncestryData.fullmake {
+val instlist_storage = AncestryData.lazy_fullmake {
   adinfo = {
     apply_delta = cons, initial_values = [("min", [])], tag = "armv7_insts"
   },
