@@ -270,11 +270,15 @@ val loadedFrom : (string, string) Binarymap.dict ref =
 
 (* Every file the loader uses, keyed by the module it belongs to.  The
    plan covers transitive dependencies too, so this ends up knowing
-   where more theories came from than the header names. *)
-fun noteLoadedFrom path =
-  (loadedFrom :=
-     Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path))
-  handle _ => ()
+   where more theories came from than the header names.  A plan names
+   files with path variables such as $(HOLDIR), or a project's own,
+   which only the loader expands. *)
+fun noteLoadedFrom path0 =
+  let val path = holpathdb.subst_pathvars path0
+  in
+    loadedFrom :=
+      Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path)
+  end handle _ => ()
 
 (* Holmake writes `d/fooTheory.uo' as `d/.hol/objs/fooTheory.uo' and
    presents it as if it were the former; the script is beside the
