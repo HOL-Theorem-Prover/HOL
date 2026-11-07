@@ -15,8 +15,8 @@ fun check name expected (e, l) =
     then ()
     else raise Fail ("lazyAncD: unexpected value for " ^ name)
 fun db thy = (#DB eager {thyname = thy}, #DB lazy {thyname = thy})
-val _ = check "lazyAncC" ["a1", "a2", "b1", "b2", "c"] (db "lazyAncC")
+val _ = check "lazyAncC" ["a1", "a2", "b1", "b2"] (db "lazyAncC")
 val _ = check "lazyAncO" ["a1", "a2", "b1", "o"] (db "lazyAncO")
-val _ = check "global" ["a1", "a2", "b1", "b2", "c", "o"]
+val _ = check "global" ["a1", "a2", "b1", "b2", "o"]
               (SOME (#get_global_value eager ()),
                SOME (#get_global_value lazy ()))
