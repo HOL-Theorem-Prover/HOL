@@ -1,0 +1,15 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+all: done.txt
+.PHONY: all
+
+# The recipe closes its stdout and stderr and then stays alive for a
+# while.  From the multiplexor's point of view both of the job's pipes
+# have hung up although the job has not finished, which is the state
+# that used to send the work loop into a busy-wait.
+done.txt:
+	echo starting ; exec 1>&- 2>&- ; sleep 3 ; echo done > done.txt
+
+EXTRA_CLEANS = done.txt

@@ -359,6 +359,51 @@ struct
 
   fun elapsed wj = Time.-(Time.now(), #starttime wj)
 
+  (* How long a single pass of the work loop is prepared to wait for a
+     child to say something. *)
+  val poll_interval = Time.fromMilliseconds 100
+
+  (* OS.IO.poll does not always wait for as long as it is asked to.  A
+     descriptor whose only pending event is a hang-up or an error is
+     ready immediately, and Poly/ML's binding reports only the
+     in/out/pri bits, so such a descriptor reaches ML as an empty
+     result from a call that returned at once; a channel already at
+     EOF behaves similarly, staying in the poll set and readable
+     forever while yielding nothing.  Either way the work loop can
+     come round again with nothing to do and no time elapsed, and if
+     it simply tried again it would busy-wait -- burning a core for as
+     long as the condition lasted, which under a CPU rlimit (see
+     tools/Holmake/tests/gh1353) is enough to get Holmake killed.
+
+     So a stretch of rounds that achieves nothing gets padded out --
+     but not immediately.  Every job ends with a brief idle stretch,
+     the gap between the child closing its pipes and the same child
+     becoming reapable, which on a healthy system is a millisecond or
+     two; padding that would add its cost to every target in the
+     build.  Once a stretch has outlasted idle_grace, though, it is no
+     longer the end of a job, and each further round waits for about
+     as long as the stretch has already run, up to the poll interval.
+     Sustained idling therefore settles at ten rounds a second, and a
+     recovery costs at most one extra pad. *)
+  val idle_grace = Time.fromMilliseconds 10
+
+  fun pad_round roundstart idlestart =
+      let
+        val now = Time.now()
+        val idled = Time.-(now, idlestart)
+      in
+        if Time.<(idled, idle_grace) then ()
+        else
+          let
+            val want = if Time.<(idled, poll_interval) then idled
+                       else poll_interval
+            val spent = Time.-(now, roundstart)
+          in
+            if Time.<(spent, want) then OS.Process.sleep (Time.-(want, spent))
+            else ()
+          end
+      end
+
   fun do_work (wl0 : 'a worklist, monitorfn) =
     let
       open Posix.Process
@@ -435,13 +480,17 @@ struct
                           (#current_jobs wl)
         end
 
-      fun loop (cmds, wl : 'a worklist) : 'a =
+      (* `idle' is SOME t when every round since t has achieved
+         nothing, NONE when the last round got somewhere; see
+         pad_round. *)
+      fun loop idle (cmds, wl : 'a worklist) : 'a =
         if Binarymap.numItems (#current_jobs wl) = 0 then #current_state wl
         else
           let
+            val njobs0 = Binarymap.numItems (#current_jobs wl)
+            val roundstart = Time.now()
             val polls = worklist_polls wl
-            val active =
-                OS.IO.poll(map #1 polls, SOME (Time.fromMilliseconds 100))
+            val active = OS.IO.poll(map #1 polls, SOME poll_interval)
             fun foldthis (pi, (acc as (cmds, wl),didio)) =
               let
                 val iod = OS.IO.pollToIODesc (OS.IO.infoToPollDesc pi)
@@ -449,8 +498,20 @@ struct
                 case List.find (fn (pd,_) => iod = OS.IO.pollToIODesc pd) polls
                  of
                     NONE => raise Fail "Couldn't find poll-data in List.find"
-                  | SOME (_, (chan, wj)) =>
+                  | SOME (_, (chan, wj0)) =>
                     let
+                      (* `polls' was built before this fold began, so wj0
+                         is as the job stood at the top of the round.  If
+                         the job's other channel has already been handled
+                         it has been written back since, and re-deriving
+                         from wj0 would undo that -- in particular it
+                         would clear an EOF just recorded, and the loop
+                         would keep rediscovering the same EOF instead of
+                         settling down and reaping the child. *)
+                      val wj = case Binarymap.peek (#current_jobs wl,
+                                                    wjkey wj0) of
+                                   SOME wj' => wj'
+                                 | NONE => wj0
                       val s = TextIO.input (wjstrm chan wj)
                       val didio' = wjkey wj :: didio
                     in
@@ -469,11 +530,19 @@ struct
                 List.foldl foldthis ((cmds,wl), []) active
             val (cmds, wl) = workloop didio (cmds, wl)
             val wl = execute_cmds monitorfn cmds wl
+            val progress = not (null didio) orelse
+                           Binarymap.numItems (#current_jobs wl) <> njobs0
+            val idle' =
+                if progress then NONE
+                else SOME (case idle of NONE => roundstart | SOME t => t)
+            val _ = case idle' of
+                        NONE => ()
+                      | SOME t => pad_round roundstart t
           in
-            loop (fill_workq monitorfn ([], wl))
+            loop idle' (fill_workq monitorfn ([], wl))
           end
     in
-      loop (cmds, wl1)
+      loop NONE (cmds, wl1)
     end
 
   fun fupdAlist k f [] = raise Fail "updAlist: No element with given key"
