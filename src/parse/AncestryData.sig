@@ -198,7 +198,10 @@ end
     suspension, forced when first read (by DB, DB_of, merge or
     set_parents); delta_side_effects still runs at load.  Forcing reads
     the ancestors' data from the ambient context, whatever context was
-    passed to DB_of.
+    passed to DB_of.  The value is right whenever that context has the
+    theory's ancestors loaded, as a loaded theory's data does not
+    change; when one is missing, forcing raises, and the value stays
+    unforced.
 
     The merge walk.  AncestryData merges multiple ancestor theories
     by:
