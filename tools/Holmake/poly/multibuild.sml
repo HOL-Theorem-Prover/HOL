@@ -26,7 +26,6 @@ fun fupdkey m f k dflt =
 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
-val loggingdir = ".hol/logs"
 fun K x y = x
 
 fun graph_dirinfo g =
@@ -127,12 +126,16 @@ fun graphbuild optinfo g =
         else s
     fun safetag d t =
         String.map (fn #"/" => #"-" | c => c) (dropthySuffix t)
+    (* Under a layout, <objroot>/logs/<rel> also holds the log
+       directories of rel's subdirectories, so a target named after a
+       subdirectory would collide with it: add a suffix. *)
     fun genLF {tag, dir} =
         let
-          val ldir = dir ++ loggingdir
+          val ldir = HFS_NameMunge.logdir_for dir
           val _ = Holmake_tools.createDirIfNecessary ldir
+          val sfx = if HFS_NameMunge.owned_by_layout dir then ".log" else ""
         in
-          ldir ++ safetag dir tag
+          ldir ++ (safetag dir tag ^ sfx)
         end
 
     (* --- retrying out-of-store failures -------------------------------
@@ -291,10 +294,20 @@ fun graphbuild optinfo g =
 
 
 
+    (* Pass the layout to children, replacing inherited root variables. *)
+    val (layout_env, inherited_env) =
+        case HFS_NameMunge.current_layout () of
+            NONE => ([], Posix.ProcEnv.environ())
+          | SOME {objroot, srcroot} =>
+            (["HOLOBJROOT=" ^ objroot, "HOLSRCROOT=" ^ srcroot],
+             List.filter
+               (fn s => not (String.isPrefix "HOLOBJROOT=" s orelse
+                             String.isPrefix "HOLSRCROOT=" s))
+               (Posix.ProcEnv.environ()))
     val env =
         (if relocbuild then [Systeml.build_after_reloc_envvar^"=1"] else []) @
         (case thmsrc of SOME s => ["HOL_THMSRC="^s] | NONE => []) @
-        Posix.ProcEnv.environ()
+        layout_env @ inherited_env
     fun cline_to_command (s, args) = {executable = s, nm_args = args, env = env}
     fun shell_command s =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}

@@ -26,20 +26,23 @@ val _ = use "lsp/server.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate17 z
+  fun makeUpdateT z = makeUpdate19 z
 in
 fun updateT z = let
   fun from all_forced bare base_state check_proofs checkerr checkfors debug
            defaultout exe
-           extra_data forced_objs help multithread output quietp thmsrc z_repl =
+           extra_data forced_objs help multithread objroot output quietp
+           srcroot thmsrc z_repl =
     {all_forced = all_forced, bare = bare, base_state = base_state,
      check_proofs = check_proofs,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
-     multithread = multithread,
-     output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
-  fun from' z_repl thmsrc quietp output multithread help forced_objs extra_data exe
+     multithread = multithread, objroot = objroot,
+     output = output, quietp = quietp, srcroot = srcroot, thmsrc = thmsrc,
+     z_repl = z_repl}
+  fun from' z_repl thmsrc srcroot quietp output objroot multithread help
+            forced_objs extra_data exe
             defaultout debug checkfors checkerr check_proofs base_state bare
             all_forced =
     {all_forced = all_forced, bare = bare, base_state = base_state,
@@ -47,16 +50,18 @@ fun updateT z = let
      checkfors = checkfors, checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
-     multithread = multithread,
-     output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
+     multithread = multithread, objroot = objroot,
+     output = output, quietp = quietp, srcroot = srcroot, thmsrc = thmsrc,
+     z_repl = z_repl}
   fun to f {all_forced, bare, base_state, check_proofs, checkerr, checkfors,
             debug, defaultout,
             exe, extra_data,
-            forced_objs, help, multithread, output, quietp, thmsrc, z_repl} =
+            forced_objs, help, multithread, objroot, output, quietp, srcroot,
+            thmsrc, z_repl} =
     f all_forced bare base_state check_proofs checkerr checkfors debug defaultout
       exe extra_data
-      forced_objs help multithread
-      output quietp thmsrc z_repl
+      forced_objs help multithread objroot
+      output quietp srcroot thmsrc z_repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -93,7 +98,9 @@ fun get_heap_name () =
                    skip = holpathdb.db_dirs()}
             val _ = List.app holpathdb.extend_db holpathdb_extensions
             fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
-            val env0 = holpathdb.fold foldthis (base_environment())
+            val env0 =
+                extend_with_layout_vars (OS.FileSys.getDir())
+                  (holpathdb.fold foldthis (base_environment()))
             val (env, _, _, _) = ReadHMF.read "Holmakefile" env0
             val heap_v = Holmake_types.envlist
                            internal_functions.default_diags env "HOLHEAP"
@@ -132,8 +139,10 @@ datatype option_record = OR of {
   forced_objs : string list,
   help : bool,
   multithread : int option,
+  objroot : string option,
   output : string option,
   quietp : bool,
+  srcroot : string option,
   thmsrc : string option,
   z_repl : bool
 }
@@ -216,12 +225,16 @@ val cline_opts = [
    desc = OptArg (set_threadcount, "c")},
   {help = "Don't use user config file in HOL repl", long = ["noconfig"], short = "",
    desc = NoArg (fn () => fn r => r)}, (* checked for and acted on by HOL repl *)
+  {help = "put build products under directory (see --srcroot)",
+   long = ["objroot"], short = "", desc = setStringOpt "directory" #objroot},
   {help = "output heap/munger name", long = [], short = "o",
    desc = setStringOpt "filename" #output},
   {help = "use poly as base (no HOL state)", long = ["poly"], short = "",
    desc = setBaseNone},
   {help = "reduce verbosity", long = ["quiet"], short = "q",
    desc = mkBoolT #quietp},
+  {help = "source tree mapped to --objroot (default: project root)",
+   long = ["srcroot"], short = "", desc = setStringOpt "directory" #srcroot},
   {help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",
    desc = setStringOpt "src" #thmsrc},
   {help = "use zero-terminated REPL style", long = ["zero"], short = "z",
@@ -240,8 +253,10 @@ val initial_cline = OR {all_forced = false,
                         forced_objs = [],
                         help = false,
                         multithread = NONE,
+                        objroot = NONE,
                         output = NONE,
                         quietp = false,
+                        srcroot = NONE,
                         thmsrc = NONE,
                         z_repl = false}
 end
@@ -393,6 +408,19 @@ fun main() = let
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs,
        bare, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
+  (* Configure before choosing the heap, whose Holmakefile name may use
+     the layout's variables, and before project discovery, which skips
+     the artifact root.  Reapply after loadState, which restores saved
+     references and may replace the layout with one from an earlier
+     session. *)
+  val layout =
+      HMProject.resolve_layout
+        {start = OS.FileSys.getDir(), cli_objroot = #objroot options,
+         cli_srcroot = #srcroot options, no_project = false}
+      handle Fail msg =>
+             ((if qp then () else warn ("Artifact layout ignored: " ^ msg));
+              NONE)
+  val _ = HFS_NameMunge.configure layout
   (* Determine base_state:
      - --bare: use hol.state0
      - --poly/--poly_not_hol: use no state (NONE)
@@ -500,6 +528,7 @@ fun main() = let
      Owns Meta.loadPath extension so prelude.ML doesn't have to,
      and every subcommand (REPL, LSP, BUILDHEAP, ...) sees the
      same paths. *)
+  val _ = HFS_NameMunge.configure layout
   val _ = ReadHMF.extend_path_with_includes
             {verbosity = 1 + (if debug then 1 else 0),
              lpref = Meta.loadPath}

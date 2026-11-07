@@ -41,32 +41,43 @@ fun escape s =
     end
 
 (* --------------------------------------------------------------------------
-   Resolve a theory's source-tree HTML doc and produce a URL relative to the
-   `theories/` directory that the lander Holmakefile populates with symlinks.
-
-   For each theory file <thy>Theory, sigobj/<thy>Theory.sig is a symlink
-   pointing into the source directory; from that we know the file's source
-   .hol/docs/ location.  We don't need to compute the absolute path here --
-   the symlink staging step handles that.  We just emit `theories/<file>.html`
-   when the file does have a per-theory doc, and fall back to the per-signature
-   HTML when it doesn't.  -------------------------------------------------- *)
-fun has_theory_doc HOLpath file =
-    let val sigobj_sig =
-            normPath [HOLpath, "sigobj", file ^ ".sig"]
+   The HTML page of a theory file <thy>Theory, found through the symlink
+   sigobj/<thy>Theory.sig into its products directory: the page is in the
+   docs directory beside it, <src>/.hol/docs for <src>/.hol/objs, or
+   <objroot>/docs/<rel> for <objroot>/objs/<rel> under an artifact root.
+   Prefer an existing page, since a source directory may itself be named
+   objs; otherwise give the page for the innermost objs.  NONE if the
+   signature is not a link into an objs directory.  ------------------- *)
+fun theory_doc_file HOLpath file =
+    let
+      val sigobj_sig = normPath [HOLpath, "sigobj", file ^ ".sig"]
+      val {isAbs, vol, arcs} =
+          OS.Path.fromString (OS.Path.dir (OS.FileSys.readLink sigobj_sig))
+      fun page pre post =
+          OS.Path.concat
+            (OS.Path.toString {isAbs = isAbs, vol = vol,
+                               arcs = List.revAppend (pre, "docs" :: post)},
+             file ^ ".html")
+      (* innermost first *)
+      fun pages _ [] A = A
+        | pages pre (a :: post) A =
+          pages (a :: pre) post (if a = "objs" then page pre post :: A else A)
+      val candidates = pages [] arcs []
+      fun readable p = OS.FileSys.access (p, [OS.FileSys.A_READ])
     in
-      OS.FileSys.isLink sigobj_sig andalso
-      let val tgt = OS.FileSys.readLink sigobj_sig
-          val {dir, ...} = OS.Path.splitDirFile tgt
-          (* dir = <src>/.hol/objs *)
-          val src = OS.Path.dir (OS.Path.dir dir)
-          val abs_doc =
-              OS.Path.concat (src,
-                OS.Path.concat (".hol/docs", file ^ ".html"))
-      in
-        OS.FileSys.access (abs_doc, [OS.FileSys.A_READ])
-      end
-    end handle OS.SysErr _ => false
-             | OS.Path.Path => false
+      case List.find readable candidates of
+          SOME p => SOME p
+        | NONE => (case candidates of p :: _ => SOME p | [] => NONE)
+    end handle OS.SysErr _ => NONE
+             | OS.Path.Path => NONE
+
+(* Whether a theory file has a per-theory page.  The lander links to
+   `theories/<file>.html`, where the staging step copies it, and falls
+   back to the per-signature HTML otherwise. *)
+fun has_theory_doc HOLpath file =
+    case theory_doc_file HOLpath file of
+        SOME p => OS.FileSys.access (p, [OS.FileSys.A_READ])
+      | NONE => false
 
 (* --------------------------------------------------------------------------
    Classification predicates.  Each takes a Database entry and returns
@@ -145,7 +156,7 @@ fun renderSection out (heading, headingExtra, entries) =
    The fragment is plain HTML body content (no <html>/<head>/<body>) intended
    to be embedded into Manual/book/index.html by gen_lander.  The lander's
    Holmakefile is responsible for staging `theories/` (symlinks to per-theory
-   <src>/.hol/docs/<thy>Theory.html), `htmlsigs/` (symlinks to
+   the per-theory pages), `htmlsigs/` (symlinks to
    help/src-sml/htmlsigs/<file>.html), and `theory-graph/` (symlink to
    help/theorygraph/) so the URLs we emit resolve.  ------------------- *)
 fun emitLanderFragment HOLpath (dbfile, outfile) =

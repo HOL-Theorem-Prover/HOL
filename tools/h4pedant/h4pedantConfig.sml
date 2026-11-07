@@ -107,9 +107,25 @@ fun load { start : string } : config option =
                               includes = [], excludes = [],
                               overrides = [] }
                   | SOME tbl => parse_h4pedant_block proj_path root tbl
+            (* Exclude the artifact root from source checks, also where
+               a symlink leads to it from inside the project. *)
+            fun real p = OS.FileSys.fullPath p handle OS.SysErr _ => p
+            val objroot_excludes =
+                case HMProject.objroot_declared_at root of
+                    NONE => []
+                  | SOME p =>
+                    let val rp = real p and rr = real root
+                    in
+                      if rp <> p andalso HMProject.is_path_under rr rp then
+                        [p, OS.Path.concat
+                              (root, OS.Path.mkRelative {path = rp,
+                                                         relativeTo = rr})]
+                      else [p]
+                    end
           in
             SOME { root = root, default = default,
-                   includes = includes, excludes = excludes,
+                   includes = includes,
+                   excludes = excludes @ objroot_excludes,
                    overrides = overrides }
           end
 

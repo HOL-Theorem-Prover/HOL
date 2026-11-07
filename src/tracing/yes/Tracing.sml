@@ -38,7 +38,8 @@ fun export (file, x: 'a) = let
   val () = IO.close pipeWrite
 in app (fn pid => ignore (Process.waitpid (Process.W_CHILD pid, []))) pids end
 
-fun trace_theory name args = export(concat[".hol/objs/",name,".tr.gz"], args)
+fun trace_theory name args =
+    export (HFS_NameMunge.product_file (name ^ ".tr.gz"), args)
 
 fun export_proof {file, tag} th =
   case !TraceMode.mode of

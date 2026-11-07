@@ -455,8 +455,8 @@ val _ =
     compile ["-I", "..", "-I", "../core"] "HostName.sml";
     compile ["-I", "../core"] "target_times.sml";
     FileSys.chDir "../core";
-    compile ["-I", "..", "-I", "../toml"] "HMProject.sig";
-    compile ["-I", "..", "-I", "../toml"] "HMProject.sml";
+    compile ["-I", "..", "-I", "../toml", "-I", "../hfs"] "HMProject.sig";
+    compile ["-I", "..", "-I", "../toml", "-I", "../hfs"] "HMProject.sml";
     compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf", "-I", "../toml", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "Holmake.sml";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "mosml_Holmake.sml";

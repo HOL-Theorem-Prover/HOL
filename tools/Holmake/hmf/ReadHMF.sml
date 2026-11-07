@@ -607,7 +607,7 @@ fun find_includes0 dirname =
   in
     if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
       let
-        val base = base_environment()
+        val base = extend_with_layout_vars dirname (base_environment())
         (* Under `dirname': INCLUDES may use $(wildcard ...), which
            globs the process cwd, and this parse services *other*
            directories' Holmakefiles from a fixed cwd. `dirname' is
@@ -675,7 +675,9 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
             fun foldthis ({vname,path}, env) =
                 env_extend (vname, [LIT path]) env
           in
-            List.foldl foldthis (base_environment()) extensions
+            List.foldl foldthis
+                       (extend_with_layout_vars dir (base_environment()))
+                       extensions
           end
           (* The cwd Holmakefile is not re-parsed through here -- it's
              read once via diagread in Holmake.sml's get_hmf0 with the

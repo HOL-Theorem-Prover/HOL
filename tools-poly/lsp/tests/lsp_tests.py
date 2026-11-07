@@ -3699,6 +3699,16 @@ def _search_names(c, req_id, fragment):
 
 
 def test_stale_ancestor_draws_a_warning():
+    _stale_ancestor_draws_a_warning(objroot=False)
+
+
+def test_stale_ancestor_draws_a_warning_under_objroot():
+    """As above, with the artifacts in an artifact root that
+    `holproject.toml' names, which the lookup has to see through."""
+    _stale_ancestor_draws_a_warning(objroot=True)
+
+
+def _stale_ancestor_draws_a_warning(objroot):
     """A dependency is read once per process, so a theory whose script
     has been edited since it was built goes on answering from the
     version that was built -- with nothing about it looking wrong.
@@ -3722,10 +3732,15 @@ def test_stale_ancestor_draws_a_warning():
                     "Theorem zzup_triv:\n  T\nProof\n  REWRITE_TAC[]\nQED\n")
         with open(os.path.join(d, "Holmakefile"), "w") as f:
             f.write("")
+        if objroot:
+            with open(os.path.join(d, "holproject.toml"), "w") as f:
+                f.write('name = "zzstale"\nobjroot = "build"\n')
+            objs = os.path.join(d, "build", "objs")
+        else:
+            objs = os.path.join(d, ".hol", "objs")
         r = subprocess.run([f"{REPO}/bin/Holmake"], cwd=d,
                            capture_output=True, text=True, timeout=300)
-        assert_true(os.path.exists(os.path.join(d, ".hol", "objs",
-                                                "zzupTheory.uo")),
+        assert_true(os.path.exists(os.path.join(objs, "zzupTheory.uo")),
                     f"the scratch theory built ({r.stdout[-400:]!r})")
 
         uri = "file://" + os.path.join(d, "zzdownScript.sml")
@@ -12815,6 +12830,8 @@ TESTS = [
                     test_tryTactic_budget_bounds_both_of_its_walks),
     ("stale_ancestor_draws_a_warning",
                     test_stale_ancestor_draws_a_warning),
+    ("stale_ancestor_draws_a_warning_under_objroot",
+                    test_stale_ancestor_draws_a_warning_under_objroot),
     ("eval_runs_in_a_world_that_is_thrown_away",
                     test_eval_runs_in_a_world_that_is_thrown_away),
     ("eval_refuses_what_it_cannot_throw_away",

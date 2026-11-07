@@ -21,8 +21,9 @@ val entry_url_base : string ref
 (* URL base for per-theory hyperlinks (the <thy>Theory.html links
    emitted by printHTMLBase into TheoryIndex.html).  When empty, the
    URL is computed by resolving sigobj/<thy>Theory.sig and pointing at
-   the source tree's `.hol/docs/<thy>Theory.html` -- correct for local
-   use but breaks once htmlsigs is staged outside that tree.  When set
+   the page in the docs directory beside the product (see
+   HOLPage.theory_doc_file) -- correct for local use but breaks once
+   htmlsigs is staged outside that tree.  When set
    (e.g. "../theories/" for the mdbook-staged layout), links are
    emitted as `<prefix><thy>Theory.html`.  Set by makebase.sml from
    its --theory-url-base CLI flag. *)
