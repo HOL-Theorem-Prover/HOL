@@ -584,6 +584,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun pr s = s
   fun interpret_graph (g,ok) =
       (if ok then OS.Process.success else OS.Process.failure, g)
+  (* Export the layout to a job's process, as the parallel builder
+     does, so that a Holmake it starts (from a script, say) keeps it. *)
+  fun run_job cl =
+      case layout_exports () of
+          "" => Systeml.systeml cl
+        | exports =>
+          Systeml.system_ps
+            (exports ^ String.concatWith " " (map Systeml.protect cl))
   fun interpret_bres bres =
     case bres of
         BR_OK => true
@@ -594,7 +602,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                             search_dirs outs
                             | NONE => false
         in if fetched then true
-           else (prep_for_build (); k warn (Systeml.systeml cl))
+           else (prep_for_build (); k warn (run_job cl))
         end
       | BR_Failed => false
 

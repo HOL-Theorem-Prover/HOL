@@ -413,6 +413,20 @@ val _ = check "both util.uo"
               (exists (out7 ++ "objs/dirA/util.uo") andalso
                exists (out7 ++ "objs/dirB/util.uo"))
 val _ = OK ()
+(* A theory's process passes the layout on, e.g. to a Holmake it runs. *)
+val _ = tprint "-j1 theory jobs see a command-line layout"
+val rootJ = T ++ "pJ"
+val outJ = T ++ "outJ"
+val _ = OS.FileSys.mkDir rootJ
+val _ = write_file (rootJ ++ "Holmakefile") (holheap_decl ())
+val _ = write_file (rootJ ++ "envScript.sml")
+          "Theory env[bare]\nAncestors bool\n\
+          \val _ = if isSome (OS.Process.getEnv \"HOLOBJROOT\") then ()\n\
+          \        else raise Fail \"no HOLOBJROOT\"\n"
+val _ = check_build "build" (holmake rootJ ["-j1", "--objroot=" ^ outJ,
+                                            "--srcroot=."])
+val _ = check "product" (exists (outJ ++ "objs/envTheory.dat"))
+val _ = OK ()
 val _ = tprint "Inside HOLDIR the srcroot is not defaulted"
 val (r7h, o7h) =
     holmake T ["-C", HOLDIR ++ "tools/Holmake/tests/objroot",
