@@ -128,6 +128,9 @@ sig
   val register_replayed_axiom : thm -> unit
   val scrub              : unit -> unit
 
+  (* Capture a check for changes to the current theory segment. *)
+  val theory_unchanged   : unit -> (unit -> bool)
+
   val try_theory_extension : ('a -> 'b) -> 'a -> 'b
 
 (* Changing internal bindings of ML-level names to theory objects *)

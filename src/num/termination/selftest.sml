@@ -386,6 +386,35 @@ val _ = assert (rejects (fn () =>
 val _ = assert (Theory.uptodate_term “scratch$unrelated_staged”)
 val _ = abort_definition exclusive_prepared
 val _ = OK ()
+val _ = tprint "staged completion rejects theory and grammar mutations"
+fun reject_interleaved name mutate =
+  let
+    val binding = name ^ "_def"
+    val p = prepare_qDefine staged_loc binding
+      [QUOTE (name ^ " n = if n = 0 then 0n else " ^
+              name ^ " (n - 1) + 1")]
+    val SOME (goalname,g) = termination_goal p
+    val th = with_prepared_definition p
+      (boolLib.prove_named (Context.snapshot ()))
+      {name=goalname, goal=g, tac=WF_REL_TAC ‘$<’}
+    val _ = mutate ()
+    val _ = assert (rejects (fn () =>
+      with_prepared_definition p (fn () => ()) ()))
+    val _ = assert (rejects (fn () =>
+      ignore (finish_definition p (SOME th))))
+    val _ = assert (rejects (fn () => abort_definition p))
+    val _ = assert (not (Option.isSome (DB.lookup {Thy="-",Name=binding})))
+  in () end
+val _ = reject_interleaved "theorem_guard_staged" (fn () =>
+  ignore (Theory.save_thm ("unrelated_staged_thm", TRUTH)))
+val _ = assert (Option.isSome (DB.lookup {Thy="-",Name="unrelated_staged_thm"}))
+val _ = reject_interleaved "type_guard_staged" (fn () =>
+  Theory.new_type ("unrelated_staged_type", 0))
+val _ = reject_interleaved "grammar_guard_staged" (fn () =>
+  Parse.overload_on ("unrelated_staged_overload", “T”))
+val _ = reject_interleaved "metadata_guard_staged" (fn () =>
+  Theory.set_MLname "unrelated_staged_thm" "unrelated_staged_alias")
+val _ = OK ()
 val _ = proofManagerLib.set_goal user_goal
 
 val _ = tprint "Define's failed termination goal reaches the goalstack"

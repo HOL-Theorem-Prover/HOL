@@ -278,10 +278,21 @@ local
       Context.Data.new {name = "theory.segment",
                         empty = fresh_segment,
                         pp = fn _ => "<segment>"}
+  val revision_slot : unit ref Context.Data.slot =
+      Context.Data.new {name = "theory.revision", empty = ref (),
+                        pp = fn _ => "<theory.revision>"}
 in
+  fun theory_unchanged () =
+      let val revision = Context.Data.get revision_slot (Context.snapshot ())
+      in fn () =>
+           revision = Context.Data.get revision_slot (Context.snapshot ())
+      end
   fun theCT_of ctxt = Context.Data.get segment_slot ctxt
   fun theCT() = theCT_of (Context.snapshot())
-  val makeCT = Context.Data.write segment_slot
+  fun makeCT seg =
+      Context.update (fn c =>
+        Context.Data.put revision_slot (ref ())
+          (Context.Data.put segment_slot seg c))
 end;
 
 fun current_theory () =

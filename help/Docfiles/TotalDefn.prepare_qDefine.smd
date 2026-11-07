@@ -38,8 +38,9 @@ finish nor abort may be repeated.
 
 The caller must own the theory context from preparation until completion
 or abort. Do not interleave unrelated theory mutations or a second
-preparation. Completion rejects changes to the theory's constant set or
-stale prepared constants. Abort restores grammars only: it does not undo
+preparation. Completion rejects changes to the theory segment, signature,
+grammars or pending grammar exports, and stale prepared constants.
+Abort restores grammars only: it does not undo
 definitions or arbitrary tactic effects. Discard the process when
 abandoning a prepared definition if those effects must be discarded.
 

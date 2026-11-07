@@ -1010,13 +1010,16 @@ fun prepare_definition flags post loc stem q =
         val snap1 = thy_consts thy
         val defn = Defn.Hol_defn stem q
         val snap2 = thy_consts thy
+        val theory_unchanged = Theory.theory_unchanged ()
+        val grammar_unchanged = Parse.grammar_unchanged ()
         val ps = Defn.params_of defn
         val _ = null ps orelse !allow_schema_definition orelse
                 complain_about_rhsfvs "tDefine" ps
         val obligation = if Defn.triv_defn defn then NONE
                          else SOME (Defn.tc_obligation defn)
         fun check () =
-          if current_theory () = thy andalso
+          if theory_unchanged () andalso grammar_unchanged () andalso
+             current_theory () = thy andalso
              List.all Theory.uptodate_term snap2 andalso
              List.all Theory.uptodate_thm (Defn.eqns_of defn) andalso
              HOLset.equal (HOLset.fromList Term.compare snap2,
