@@ -1294,7 +1294,9 @@ different installation.
 
 The second consumer is the editor modes (notably the `emacs` and
 `vim` modes), which read `lastmaker` to decide which `hol` binary
-to launch for an interactive session in that directory.
+to launch for an interactive session in that directory.  They look
+for it only in the source directory, not under an artifact root, so
+for a directory built into one they launch their default `hol`.
 
 \index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}
 A `lastmaker` file is written in *every* directory `Holmake`
