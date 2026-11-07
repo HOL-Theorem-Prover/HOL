@@ -1094,10 +1094,12 @@ local
             if is_name field then SOME field else NONE
         | _ => NONE
     end
+  (* A numeral, or a constant applied to one (&3, n2w 3); a predicate
+     applied to a numeral (P 3) is no literal *)
   fun literal t =
     numSyntax.is_numeral t orelse
     (is_comb t andalso is_const (rator t) andalso
-     numSyntax.is_numeral (rand t))
+     numSyntax.is_numeral (rand t) andalso type_of t <> bool)
   fun first _ [] = NONE
     | first f (x :: xs) = case f x of NONE => first f xs | r => r
   fun subject t =
@@ -2096,10 +2098,17 @@ fun write_snippets (cfg : config) href (input, output) =
     TextIO.closeOut out
   end
 
+(* Forget what earlier runs read, so theorems and definitions added to the
+   session since then are seen *)
+fun reset_caches () =
+  (theory_cache := Redblackmap.mkDict String.compare;
+   source_lines := Redblackmap.mkDict String.compare)
+
 (* The stored statements of the theorem, supporting and definition
    sections, by section anchor *)
 fun statement_sections (cfg : config) =
   let
+    val () = reset_caches ()
     fun fetch n = (n, DB.fetch (#Thy n) (#Name n))
     val theorems = map fetch (#theorems cfg)
     val (entries, _) = closure false cfg (type_index ()) theorems
@@ -2114,8 +2123,7 @@ fun statement_sections (cfg : config) =
 fun run_with_presentation presentation (cfg : config) =
   let
     val () = check_config cfg
-    val () = theory_cache := Redblackmap.mkDict String.compare
-    val () = source_lines := Redblackmap.mkDict String.compare
+    val () = reset_caches ()
     fun write (title, blocks, href) (format, path) =
       let
         val text =

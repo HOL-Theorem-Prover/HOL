@@ -46,6 +46,9 @@ val _ = save_thm ("curried",
   prove (``admissible n ==> n = m ==> second n = m``,
          REWRITE_TAC [definition "second_def", definition "first_def"]
          THEN PROVE_TAC []))
+val _ = save_thm ("literal_argument",
+  prove (``admissible 3 ==> second 3 = 3``,
+         REWRITE_TAC [definition "second_def", definition "first_def"]))
 val _ = save_thm ("kernel_hypothesis", ADD_ASSUM ``admissible hidden``
   (REFL ``second n``))
 val _ = save_thm ("oracle_result", Thm.mk_oracle_thm "dossier-test"
@@ -317,6 +320,18 @@ val _ = check "Several theorems' assumption ids carry the theorem name"
      ["id=\"assumptions-root\"", "id=\"hyp-root-admissible\"",
       "id=\"assumptions-curried\"", "id=\"hyp-curried-n\""])
 val _ = OS.FileSys.remove curried_prose
+val literal_prose = OS.FileSys.tmpName ()
+val _ = write literal_prose "## admissible\nThe input is admissible.\n"
+val _ = run {
+  title = "Literal", preamble = "", theorems = [named "literal_argument"],
+  expand_theories = ["dossierTest"], expand_consts = [], stop_theories = [],
+  stop_consts = [], equation_lemmas = [], source_dirs = [],
+  outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
+  assumptions = [{theorem = named "literal_argument",
+                  prose = literal_prose}]}
+val _ = check "A predicate applied to a numeral keys by the predicate"
+  (contains (read markdown_path) "<a id=\"hyp-admissible\"></a>")
+val _ = OS.FileSys.remove literal_prose
 val _ = save_thm ("TRUTH", boolTheory.TRUTH)
 val _ = bad_prose "Ambiguous pinning names are rejected" "ambiguous theorem"
   "## admissible\nInput.\n\nPinned by: `TRUTH`.\n"
