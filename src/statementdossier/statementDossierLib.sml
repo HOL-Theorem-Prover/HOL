@@ -1525,7 +1525,7 @@ fun render ({about = extra_about, omit_types, reader_view,
     fun theorem_section (n, th) =
       let
         val (hyps, goal) = hyps_and_goal th
-        val vars = theorem_vars th
+        val vars = statement_vars th
         fun var_line v target =
           let val (s, ty) = dest_var v in
             (case target of
@@ -1687,7 +1687,8 @@ fun render ({about = extra_about, omit_types, reader_view,
       | NONE => []
 
     (* Supporting theorems: stated, not expanded; only the constants with an
-       entry are listed.  A statement longer than supporting_fold_lines is
+       entry are listed.  Outside the reader view, which states them as
+       theorem sections, a statement longer than supporting_fold_lines is
        folded. *)
     fun supporting_section pair =
       if reader_view then theorem_section pair else let

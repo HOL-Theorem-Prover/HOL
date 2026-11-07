@@ -18,8 +18,8 @@ tags omit axiom dependencies, so a consumer requiring an axiom audit must
 check the original in-memory theorem values before serialization. Opening
 text preserves blank-line paragraph breaks and `[label](url)` links in
 both formats. About accepts Markdown, including fenced command blocks.
-Supporting theorems whose statements print longer than 40 lines are
-folded. Markdown output ends with a single newline.
+Outside the reader view, supporting theorems whose statements print
+longer than 40 lines are folded. Markdown output ends with a single newline.
 
 ## Example
 

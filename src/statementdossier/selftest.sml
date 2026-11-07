@@ -187,7 +187,8 @@ val _ = check "Curried implication antecedents are listed separately"
 
 val (shadowed_md, _) = generate (basic ["shadowed"])
 val _ = check "Bound variables are renamed away from hypothesis variables"
-  (contains shadowed_md "second n' = n'")
+  (contains shadowed_md "second n' = n'" andalso
+   contains shadowed_md "n' : num")
 
 val (hyp_md, hyp_html) = generate (basic ["kernel_hypothesis"])
 val _ = check "Kernel assumptions are shown and traversed"
