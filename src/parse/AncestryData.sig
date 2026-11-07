@@ -5,8 +5,9 @@ sig
     apply_delta : 'delta -> 'value -> 'value
   }
 
-  (* the `_of` fields read the supplied context; the others read the
-     ambient one and are defined in terms of them *)
+  (* the `_of` fields read the supplied context (except that lazy_fullmake's
+     DB_of computes a value not yet read from the ambient one); the others
+     read the ambient one and are defined in terms of them *)
   type ('delta,'value) fullresult =
        { merge : string list -> 'value option,
          DB : {thyname : string} -> 'value option,
@@ -150,7 +151,8 @@ end
             they compose into a single context transform instead of
             bracketing a mutation around a window.
 
-    Two constructor functions:
+    Two constructor functions (and lazy_fullmake, a variant of
+    fullmake described below):
 
       - make {info, get_deltas, delta_side_effects}
         The simpler of the two.  Used when the caller stores deltas
