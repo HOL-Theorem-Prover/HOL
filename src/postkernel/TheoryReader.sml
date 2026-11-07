@@ -75,6 +75,9 @@ val load_thydata_fn :
      (Thm.thm * DB_dtype.thminfo) Symtab.table) ref
     = ref load_thydata_from_dat
 
-fun load_thydata args = (!load_thydata_fn) args
+fun load_thydata (args as {thyname, hash, ...}) = let
+  val result = (!load_thydata_fn) args
+  val () = Tracing.record_signature {theory=thyname, hash=hash}
+in result end
 
 end;  (* TheoryReader *)
