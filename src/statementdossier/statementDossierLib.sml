@@ -141,8 +141,7 @@ fun theorem_consts th =
 fun theorem_vars th =
   op_mk_set aconv (List.concat (map free_vars_lr (theorem_terms th)))
 
-fun statement_vars th =
-  op_mk_set aconv (theorem_vars th @ fst (strip_forall (concl th)))
+fun statement_vars th = theorem_vars (Drule.SPEC_ALL th)
 
 fun atoms tm =
   let
@@ -515,7 +514,8 @@ fun closure include_lemmas (cfg : config) tyidx theorems =
 
 datatype bucket = Conclusion | Hypothesis | Plumbing
 
-(* The hypotheses and the conclusion of a theorem !xs. h1 /\ ... ==> c *)
+(* The hypotheses and the conclusion of a theorem !xs. h1 /\ ... ==> c,
+   with xs renamed away from the free variables of its hypotheses *)
 fun hyps_and_goal th =
   let
     fun split body =
@@ -527,7 +527,7 @@ fun hyps_and_goal th =
           (strip_conj ant @ hyps, goal)
         end
       else ([], body)
-    val (hyps, goal) = split (snd (strip_forall (concl th)))
+    val (hyps, goal) = split (concl (Drule.SPEC_ALL th))
   in
     (hyp th @ hyps, goal)
   end
@@ -1082,8 +1082,9 @@ fun is_reference_name s = is_name s orelse isSome (qualified_name s)
    the subject of the body of a negation, the conclusion of an implication
    or the body of a quantifier; else the application of a variable or a
    named constant, whose name is the key; else the first operand of an
-   unnamed constant (=, <, +) that is no literal and has a subject.  A
-   record field selection keys as its field. *)
+   unnamed constant (=, <, +) that has a subject, operands with free
+   variables first, so x keys n2w 3 < x.  A record field selection keys
+   as its field. *)
 local
   fun const_key c =
     let val n = #Name (name_of_const c) in
@@ -1094,25 +1095,22 @@ local
             if is_name field then SOME field else NONE
         | _ => NONE
     end
-  (* A numeral, or a constant applied to one (&3, n2w 3); a predicate
-     applied to a numeral (P 3) is no literal *)
-  fun literal t =
-    numSyntax.is_numeral t orelse
-    (is_comb t andalso is_const (rator t) andalso
-     numSyntax.is_numeral (rand t) andalso type_of t <> bool)
   fun first _ [] = NONE
     | first f (x :: xs) = case f x of NONE => first f xs | r => r
   fun subject t =
     if is_var t then SOME (t, fst (dest_var t))
     else if is_abs t then subject (snd (dest_abs t))
-    else if literal t then NONE
+    else if numSyntax.is_numeral t then NONE
     else
       let val (f, args) = strip_comb t in
         if is_var f then SOME (t, fst (dest_var f))
         else if not (is_const f) then NONE
         else case const_key f of
                SOME k => SOME (t, k)
-             | NONE => first subject args
+             | NONE =>
+                 let val (open_args, closed) =
+                       List.partition (not o null o free_vars) args
+                 in first subject (open_args @ closed) end
       end
 in
 fun hypothesis_subject h =

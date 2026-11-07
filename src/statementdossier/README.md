@@ -163,9 +163,10 @@ antecedents. A hypothesis's key is the variable an equation `v = t` or
 `t = v` names; else the key of the body of a negation, of a quantifier,
 or of the conclusion of an implication; else the name of the variable or
 constant a predicate applies; else the key of the first operand of an
-operator or relation (`=`, `<`, `+`) that is no numeral. A record field
-selection keys as its field. So `r.size = 3` keys as `size`, `0 < n` as
-`n`, and `~P x` as `P`. Hypotheses with the same key share one section,
+operator or relation (`=`, `<`, `+`) that has one, trying operands with
+free variables first. A record field selection keys as its field. So
+`r.size = 3` keys as `size`, `0 < n` as `n`, `f 3 = 4` as `f`, and `~P x`
+as `P`. Hypotheses with the same key share one section,
 which shows the definition of the constant the key names when the
 dossier expands it. For example, for a theorem with antecedent `P n`,
 where `P` is a defined constant:

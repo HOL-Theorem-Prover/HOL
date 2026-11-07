@@ -49,6 +49,11 @@ val _ = save_thm ("curried",
 val _ = save_thm ("literal_argument",
   prove (``admissible 3 ==> second 3 = 3``,
          REWRITE_TAC [definition "second_def", definition "first_def"]))
+val _ = Define `third (n:num) = n`
+val _ = save_thm ("closed_equation",
+  prove (``third 3 = 3 ==> second 3 = 3``,
+         REWRITE_TAC [definition "second_def", definition "first_def"]))
+val _ = save_thm ("shadowed", ADD_ASSUM ``admissible n`` (GEN_ALL root))
 val _ = save_thm ("kernel_hypothesis", ADD_ASSUM ``admissible hidden``
   (REFL ``second n``))
 val _ = save_thm ("oracle_result", Thm.mk_oracle_thm "dossier-test"
@@ -179,6 +184,10 @@ val _ = check "Single-constant expansion stops at other definitions"
 val (curried_md, _) = generate (basic ["curried"])
 val _ = check "Curried implication antecedents are listed separately"
   (contains curried_md "Assumptions and implication antecedents (2)")
+
+val (shadowed_md, _) = generate (basic ["shadowed"])
+val _ = check "Bound variables are renamed away from hypothesis variables"
+  (contains shadowed_md "second n' = n'")
 
 val (hyp_md, hyp_html) = generate (basic ["kernel_hypothesis"])
 val _ = check "Kernel assumptions are shown and traversed"
@@ -331,6 +340,16 @@ val _ = run {
                   prose = literal_prose}]}
 val _ = check "A predicate applied to a numeral keys by the predicate"
   (contains (read markdown_path) "<a id=\"hyp-admissible\"></a>")
+val _ = write literal_prose "## third\nThird is fixed.\n"
+val _ = run {
+  title = "Closed", preamble = "", theorems = [named "closed_equation"],
+  expand_theories = ["dossierTest"], expand_consts = [], stop_theories = [],
+  stop_consts = [], equation_lemmas = [], source_dirs = [],
+  outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
+  assumptions = [{theorem = named "closed_equation",
+                  prose = literal_prose}]}
+val _ = check "A function applied to a numeral keys by the function"
+  (contains (read markdown_path) "<a id=\"hyp-third\"></a>")
 val _ = OS.FileSys.remove literal_prose
 val _ = save_thm ("TRUTH", boolTheory.TRUTH)
 val _ = bad_prose "Ambiguous pinning names are rejected" "ambiguous theorem"
