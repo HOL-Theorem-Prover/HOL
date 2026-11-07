@@ -20,6 +20,7 @@ struct
       val _ = proofManagerLib.e (Q.EXISTS_TAC ‘$<’)
       val _ = prefixes := !prefixes + 1
       val _ = mark "prefix"
+      val _ = Feedback.set_trace "Definition.delete support defs" 0
       val _ = Portable.save_heap "staged-checkpoint.save"
     in OS.Process.exit OS.Process.success end
 end

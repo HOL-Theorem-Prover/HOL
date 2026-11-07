@@ -318,6 +318,48 @@ val _ = OK ()
 val _ = convtest ("staged nested recursion evaluates", EVAL,
                  “staged_nested 3”, “0”)
 
+val _ = tprint "tactic flag changes control native and staged support cleanup"
+val native_support_before = length (thy_consts (current_theory ()))
+val native_support_count = ref 0
+fun keep_support_tac g =
+  (Feedback.set_trace "Definition.delete support defs" 0;
+   native_support_count := length (thy_consts (current_theory ()));
+   WF_REL_TAC ‘$<’ g)
+val _ = qDefine "native_keep_support_def"
+  ‘native_keep_support n = if n = 0 then 0n
+     else native_keep_support (native_keep_support (n - 1) MOD n)’
+  (SOME keep_support_tac)
+val _ = assert (!native_support_count > native_support_before + 1)
+val _ = assert (length (thy_consts (current_theory ())) = !native_support_count)
+val _ = assert (Feedback.current_trace "Definition.delete support defs" = 0)
+val _ = Feedback.set_trace "Definition.delete support defs" 1
+val staged_support_before = length (thy_consts (current_theory ()))
+val keep_prepared = prepare_qDefine staged_loc "staged_keep_support_def"
+  ‘staged_keep_support n = if n = 0 then 0n
+     else staged_keep_support (staged_keep_support (n - 1) MOD n)’
+val staged_support_count = length (thy_consts (current_theory ()))
+val _ = assert (staged_support_count > staged_support_before + 1)
+val _ = assert (rejects (fn () => with_prepared_definition keep_prepared
+  (fn () => (Feedback.set_trace "Definition.delete support defs" 0;
+             raise mk_HOL_ERR "test" "keep_support" "")) ()))
+val _ = assert (Feedback.current_trace "Definition.delete support defs" = 1)
+val _ = finish_with keep_prepared (fn g =>
+  (assert (Feedback.current_trace "Definition.delete support defs" = 0);
+   WF_REL_TAC ‘$<’ g))
+val _ = assert (length (thy_consts (current_theory ())) = staged_support_count)
+val _ = assert (Feedback.current_trace "Definition.delete support defs" = 0)
+val _ = Feedback.set_trace "Definition.delete support defs" 1
+val saved_def_suffix = !Defn.def_suffix
+val _ = tDefine "native_changed_suffix"
+  ‘native_changed_suffix n =
+     if n = 0 then 0n else native_changed_suffix (n - 1) + 1’
+  (fn g => (Defn.def_suffix := "_from_tactic"; WF_REL_TAC ‘$<’ g))
+val _ = assert (Option.isSome
+  (DB.lookup {Thy="-",Name="native_changed_suffix_from_tactic"}))
+val _ = assert (!Defn.def_suffix = "_from_tactic")
+val _ = Defn.def_suffix := saved_def_suffix
+val _ = OK ()
+
 val _ = tprint "staged flags surround tactics and restore the ambient flags"
 val flag_prepared = prepare_qDefine staged_loc
   "flag_def[nocompute,schematic,allow_rebind,induction=flag_steps,staged_test]"

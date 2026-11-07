@@ -6,7 +6,8 @@ val _ = if length (proofManagerLib.top_goals ()) = 1 then ()
         else raise Fail "termination goalstack was not restored"
 val _ = TotalDefn.with_prepared_definition p
   (fn () =>
-     if Feedback.current_trace "computeLib.auto_import_definitions" = 0
+     if Feedback.current_trace "computeLib.auto_import_definitions" = 0 andalso
+        Feedback.current_trace "Definition.delete support defs" = 0
      then proofManagerLib.e
        (Tactic.CONJ_TAC THENL
           [TotalDefn.WF_TAC,
@@ -22,6 +23,9 @@ val _ = if null (Thm.hyp resume_def) andalso
         then () else raise Fail "restored definition was not completed"
 val _ = if Feedback.current_trace "computeLib.auto_import_definitions" = 1
         then () else raise Fail "termination flags leaked"
+val _ = if Feedback.current_trace "Definition.delete support defs" = 0
+        then () else raise Fail "tactic flag mutation was lost"
+val _ = Feedback.set_trace "Definition.delete support defs" 1
 val _ = (TotalDefn.finish_definition p NONE;
          raise Fail "definition completed twice")
         handle Feedback.HOL_ERR _ => ()

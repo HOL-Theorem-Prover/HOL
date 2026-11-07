@@ -22,8 +22,10 @@ other unsupported definition variants fail as they do with `tDefine`.
 
 Use `with_prepared_definition p f x` around tactics or interactive proof
 operations. It restores the definition's flag scope while `f x` runs and
-restores the caller's flags on return or exception. It does not abort a
-proof merely because an interactive tactic fails.
+restores the caller's flags on return or exception. Changes made by a
+tactic are retained for later proof operations and completion, including
+a heap saved inside the driver. It does not abort a proof merely because
+an interactive tactic fails.
 
 `finish_definition p (SOME th)` checks that `th` proves the saved goal,
 applies its validator and performs native cleanup, equation/induction
@@ -32,7 +34,9 @@ call `finish_definition p NONE`. The result is the equation theorem and
 an optional induction theorem, as with `TotalDefn.tDefine`.
 
 Completion consumes the handle before storage begins. A failed finish
-also consumes it. `abort_definition p` consumes an unfinished handle and
+also consumes it. Completion restores the native scoped flag overrides;
+unscoped changes made by tactics remain visible, as in native definitions.
+`abort_definition p` consumes an unfinished handle and
 restores the original grammars and their pending export updates. Neither
 finish nor abort may be repeated.
 

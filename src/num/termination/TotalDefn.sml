@@ -937,12 +937,37 @@ fun restore_definition_flags
   (List.app (fn (s,v) => Feedback.set_trace s v) traces;
    Defn.def_suffix := def_suffix; Defn.ind_suffix := ind_suffix)
 
+type flag_scope = {traces : string list, suffixes : bool}
+
+fun with_flag_scope ({traces = names,suffixes}:flag_scope)
+                    ({traces,def_suffix,ind_suffix}:definition_flags) f x =
+  let
+    val traces = filter (fn (s,_) => Lib.mem s names) traces
+    val f = if suffixes then
+              with_flag (Defn.def_suffix,def_suffix)
+                (with_flag (Defn.ind_suffix,ind_suffix) f)
+            else f
+  in Feedback.with_traces traces f x end
+
+fun restore_flag_scope ({traces = names,suffixes}:flag_scope)
+                       (flags:definition_flags)
+                       (ambient:definition_flags) =
+  (restore_definition_flags flags;
+   List.app (fn (s,v) => if Lib.mem s names then Feedback.set_trace s v
+                        else ()) (#traces ambient);
+   if suffixes then
+     (Defn.def_suffix := #def_suffix ambient;
+      Defn.ind_suffix := #ind_suffix ambient)
+   else ())
+
 datatype definition_state = Prepared | Finishing
                           | Finished | Failed | Aborted
 
 datatype prepared_definition = PD of
   {state : definition_state ref,
-   flags : definition_flags,
+   flags : definition_flags ref,
+   active : bool ref,
+   scope : flag_scope,
    ambient_flags : definition_flags,
    obligation : (string * (goal * (thm -> thm))) option,
    check : unit -> unit,
@@ -960,37 +985,59 @@ fun termination_goal (p as PD {obligation,...}) =
    Option.map (fn (name,(g,_)) => (name,g)) obligation)
 
 fun with_prepared_definition
-      (p as PD {state,flags,ambient_flags,check,...}) f x =
+      (p as PD {state,flags,active,scope,ambient_flags,check,...}) f x =
   let
-    fun cleanup () =
-      case !state of Prepared => ()
-                   | _ => restore_definition_flags ambient_flags
     val _ = require_prepared p
     val _ = check ()
-    val result = with_definition_flags flags f x
+    val was_active = !active
+    fun record () =
+      case !state of Prepared => flags := definition_flags () | _ => ()
+    fun run x =
+      let val result = f x handle e => (record (); Portable.reraise e)
+          val _ = record ()
+      in result end
+    fun cleanup () =
+      (if was_active andalso !state = Prepared then () else active := false;
+       case !state of Prepared => ()
+                    | _ => restore_flag_scope scope (!flags) ambient_flags)
+    val _ = active := true
+    val result = (if was_active then run x
+                  else with_definition_flags (!flags) run x)
                  handle e => (cleanup (); Portable.reraise e)
     val _ = cleanup ()
   in result end
 
-fun abort_definition (p as PD {state,rollback,ambient_flags,...}) =
-  (require_prepared p; state := Aborted; rollback ();
-   restore_definition_flags ambient_flags)
+fun abort_definition
+      (p as PD {state,flags,active,scope,rollback,ambient_flags,...}) =
+  (require_prepared p;
+   if !active then flags := definition_flags () else ();
+   state := Aborted; active := false; rollback ();
+   restore_flag_scope scope (!flags) ambient_flags)
 
 fun finish_definition0 report
-    (p as PD {state,flags,ambient_flags,check,complete,post,rollback,...}) th =
+    (p as PD {state,flags,active,scope,ambient_flags,check,
+              complete,post,rollback,...}) th =
   let
     val _ = require_prepared p
+    (* A restored heap can still be inside the native driver's flag scope. *)
+    val _ = if !active then flags := definition_flags () else ()
     (* Consume before validation or any completion side effect. *)
     val _ = state := Finishing
+    val _ = active := false
+    fun run th =
+      let
+        val result = complete th
+          handle e => (flags := definition_flags (); Portable.reraise e)
+        val _ = flags := definition_flags ()
+      in result end
     val result =
       (check ();
-       with_definition_flags flags complete th)
+       with_definition_flags (!flags) run th)
       handle e =>
-        (state := Failed; rollback (); restore_definition_flags ambient_flags;
+        (state := Failed; rollback ();
+         restore_flag_scope scope (!flags) ambient_flags;
          report (wrap_exn "TotalDefn" "tDefine" e))
-    (* A heap may have been saved inside the native driver's flag scope;
-       its stack-based flag restorers do not survive a process restart. *)
-    val _ = restore_definition_flags ambient_flags
+    val _ = restore_flag_scope scope (!flags) ambient_flags
     (* qDefine's attributes have always run outside the grammar and flag
        bracket of tDefine. A failing attribute must not roll that back. *)
     val _ = post result
@@ -1000,7 +1047,7 @@ fun finish_definition0 report
 
 fun finish_definition p th = finish_definition0 Portable.reraise p th
 
-fun prepare_definition flags post loc stem q =
+fun prepare_definition scope flags post loc stem q =
   let
     val ambient_flags = definition_flags ()
     val rollback = Parse.grammar_rollback ()
@@ -1055,18 +1102,20 @@ fun prepare_definition flags post loc stem q =
             | _ => raise ERR "finish_definition"
                              "expected a theorem exactly when there is a goal"
       in
-        PD {state = ref Prepared, flags = flags, ambient_flags = ambient_flags,
+        PD {state = ref Prepared, flags = ref (definition_flags ()),
+            active = ref false, scope = scope, ambient_flags = ambient_flags,
             obligation = obligation,
             check = check, complete = complete, post = post,
             rollback = rollback}
       end
   in
-    with_definition_flags flags prepare ()
+    with_flag_scope scope flags prepare ()
     handle e => (rollback (); raise wrap_exn "TotalDefn" "tDefine" e)
   end
 
 fun prepare_tDefine loc stem q =
-  prepare_definition (definition_flags ()) (K ()) loc stem q
+  prepare_definition {traces = [], suffixes = false}
+                     (definition_flags ()) (K ()) loc stem q
 
 fun default_termination_driver p tac =
   case termination_goal p of
@@ -1148,6 +1197,11 @@ fun qDefine_options stem =
         {traces = map flag (#traces (definition_flags ())),
          def_suffix = "", ind_suffix = getOpt (Option.map (fn s => " " ^ s)
                                                           indopt, "")}
+      val scope =
+        {traces = List.mapPartial (fn (b,s) => if b then SOME s else NONE)
+           [(nocomp,"computeLib.auto_import_definitions"),
+            (svarsok,"Definition.allow_schema_definition"),
+            (rebindok,"Theory.allow_rebinds")], suffixes = true}
       val attrs = if notuserdef then attrs else ("userdef",[]) :: attrs
       val gen_ind =
           if tailrecp then (fn th => raise ERR "Unseen" "")
@@ -1164,13 +1218,14 @@ fun qDefine_options stem =
                           | SOME p => DefnBase.register_indn p)
              | SOME ith =>
                DefnBase.register_indn (ith, DefnBase.constants_of_defn thm))
-    in {stem = corename, tailrec = tailrecp, flags = flags, post = post} end
+    in {stem = corename, tailrec = tailrecp, flags = flags,
+        scope = scope, post = post} end
 
-fun prepare_qDefinition {stem,tailrec,flags,post} loc q =
+fun prepare_qDefinition {stem,tailrec,flags,scope,post} loc q =
   if tailrec then
     raise ERR "qDefine"
               "Termination tactic for tail-recursive definition makes no sense"
-  else prepare_definition flags post loc stem q
+  else prepare_definition scope flags post loc stem q
 
 fun prepare_qDefine loc stem q =
   prepare_qDefinition (qDefine_options stem) loc q
@@ -1179,7 +1234,7 @@ fun prepare_qDefine loc stem q =
    and prepares in the ambient context. *)
 fun located_qDefine loc stem q tacopt (_ : Context.t) =
   let
-    val options as {stem,tailrec,flags,post} = qDefine_options stem
+    val options as {stem,tailrec,flags,scope,post} = qDefine_options stem
   in
     case tacopt of
         SOME tac =>
@@ -1189,8 +1244,8 @@ fun located_qDefine loc stem q tacopt (_ : Context.t) =
         let
           val result =
             if tailrec then
-              (with_definition_flags flags (tailrecDefine loc stem) q, NONE)
-            else with_definition_flags flags (located_xDefine loc stem) q
+              (with_flag_scope scope flags (tailrecDefine loc stem) q, NONE)
+            else with_flag_scope scope flags (located_xDefine loc stem) q
           val _ = post result
         in #1 result end
   end
