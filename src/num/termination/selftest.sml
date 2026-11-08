@@ -234,6 +234,31 @@ in
 end
 
 (* ----------------------------------------------------------------------
+    TFL registers the support definitions it makes on the way
+    (<stem>_tupled_primitive and the like) as user definitions, then
+    deletes their constants once the real definition is made.  Walking
+    the user definitions must skip those entries rather than fail.
+   ---------------------------------------------------------------------- *)
+
+val _ = tprint "current_userdefs/thy_userdefs after TFL deletes _tupled"
+val _ = quietly (fn q => TotalDefn.qDefine "udef_rec_def" q NONE)
+          ‘udef_rec x (y:num) = if y = 0 then x else udef_rec (x + 1) (y - 1)’
+val _ = let
+  fun defines_udef_rec (p : DefnBase.defn_presentation) =
+      same_const (#const p) “udef_rec”
+  fun support_entry (p : DefnBase.defn_presentation) =
+      String.isSubstring "_tupled" (#Name (#thmname p))
+  val cur = DefnBase.current_userdefs ()
+  val thy = DefnBase.thy_userdefs {thyname = current_theory ()}
+in
+  if List.exists defines_udef_rec cur andalso
+     List.exists defines_udef_rec thy andalso
+     not (List.exists support_entry thy)
+  then OK ()
+  else die "udef_rec missing, or a deleted support constant listed"
+end
+
+(* ----------------------------------------------------------------------
     A failed definition made from inside a goalstack tactic.  TotalDefn
     hands the termination goal to the proof manager, so expand must let
     the tactic re-enter the proof manager.  The deadlock itself is guarded
