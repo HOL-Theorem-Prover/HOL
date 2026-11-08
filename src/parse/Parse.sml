@@ -104,19 +104,9 @@ local
       rederive_tm
         (Context.Data.put ty_derived_slot
            (suspend_ty (Context.Data.get type_grammar_slot c)) c)
-  val revision_slot : unit ref Context.Data.slot =
-      Context.Data.new {name = "parse.grammar_revision", empty = ref (),
-                        pp = fn _ => "<grammar_revision>"}
-  fun changed c = Context.Data.put revision_slot (ref ()) c
-  fun adjusting_ty f = Context.update (fn c => changed (rederive_ty (f c)))
-  fun adjusting_tm f = Context.update (fn c => changed (rederive_tm (f c)))
+  fun adjusting_ty f = Context.update (fn c => rederive_ty (f c))
+  fun adjusting_tm f = Context.update (fn c => rederive_tm (f c))
 in
-  fun grammar_changed () = Context.update changed
-  fun grammar_unchanged () =
-      let val revision = Context.Data.get revision_slot (Context.snapshot ())
-      in fn () =>
-           revision = Context.Data.get revision_slot (Context.snapshot ())
-      end
   fun get_type_grammar ctxt = Context.Data.get type_grammar_slot ctxt
   fun type_grammar () = get_type_grammar (Context.snapshot())
   fun put_type_grammar g = adjusting_ty (Context.Data.put type_grammar_slot g)
@@ -543,10 +533,8 @@ fun typed_parse_in_context ty ctxt q =
 
 val grm_updates = ref [] : (string * string * term option) list ref;
 
-fun update_grms fname (x,y) =
-  (grammar_changed (); grm_updates := ((x,y,NONE) :: !grm_updates));
-fun full_update_grms (x,y,opt) =
-  (grammar_changed (); grm_updates := ((x,y,opt) :: !grm_updates))
+fun update_grms fname (x,y) = grm_updates := ((x,y,NONE) :: !grm_updates);
+fun full_update_grms (x,y,opt) = grm_updates := ((x,y,opt) :: !grm_updates)
 
 fun apply_udeltas uds =
   let
@@ -657,18 +645,14 @@ fun temp_set_associativity (i,a) =
 (* Apply a function to its argument. If it fails, revert the grammars        *)
 (*---------------------------------------------------------------------------*)
 
-fun grammar_rollback () =
+fun try_grammar_extension f x =
  let val (tyG,tmG) = current_grammars()
      val updates = !grm_updates
  in
-    fn () => (put_term_grammar tmG;
+    f x handle e
+    => (put_term_grammar tmG;
         put_type_grammar tyG;
-        grm_updates := updates)
- end;
-
-fun try_grammar_extension f x =
- let val rollback = grammar_rollback ()
- in f x handle e => (rollback (); Portable.reraise e)
+        grm_updates := updates; raise e)
  end;
 
 fun includes_unicode s = not (CharVector.all (fn c => Char.ord c < 128) s)

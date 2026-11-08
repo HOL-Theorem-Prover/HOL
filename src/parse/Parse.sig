@@ -212,10 +212,6 @@ signature Parse = sig
   val temp_remove_user_printer : string * term ->
                                  (term * term_grammar.userprinter) option
 
-  (* Capture a check for grammar changes, including pending export updates. *)
-  val grammar_unchanged : unit -> (unit -> bool)
-  (* Capture the grammars and their pending export updates for rollback. *)
-  val grammar_rollback : unit -> (unit -> unit)
   val try_grammar_extension : ('a -> 'b) -> 'a -> 'b
 
 

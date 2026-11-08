@@ -100,7 +100,7 @@ ifdef HOLSELFTESTLEVEL
 all: boss-selftest.log
 
 # The native source-expansion fixture starts hol in a fresh process.
-boss-selftest.log: selftest.exe $(TARGET)
+boss-selftest.log: selftest.exe $(TARGET) tests/staged-source.sml tests/stagedSourceScript.sml
 	$(tee ./$<, $@)
 
 endif

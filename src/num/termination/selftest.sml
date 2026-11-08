@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib
-open testutils TotalDefn
+open testutils TotalDefn numLib
 
 val _ = new_theory "scratch"
 
@@ -246,216 +246,111 @@ fun top_is (g : goal) =
     aconv (snd (proofManagerLib.top_goal ())) (snd g) handle _ => false
 val _ = proofManagerLib.drop_all ()
 
-(* The staged path must complete from heap-reachable state, and must use
-   the same flag/attribute/storage boundaries as the native entry point. *)
-fun rejects f =
-  (f (); false) handle HOL_ERR _ => true
-
-fun assert b = if b then () else die "staged definition check failed"
-
-fun finish_with p tac =
-  let
-    val th = case termination_goal p of
-                 NONE => NONE
-               | SOME (name,g) =>
-                 SOME (with_prepared_definition p
-                         (boolLib.prove_named (Context.snapshot ()))
-                         {name = name, goal = g, tac = tac})
-  in finish_definition p th end
+(* Completion is private to the proof context, and is consumed by both
+   native completion and failed direct completion. *)
+fun rejects f = (f (); false) handle HOL_ERR _ => true
+fun assert b = if b then () else die "termination finisher check failed"
+val pending : (thm -> thm) option ref = ref NONE
+fun capture g ctxt =
+  (pending := current_termination_finisher ctxt; ALL_TAC g ctxt)
+val _ = assert (not (Option.isSome
+  (current_termination_finisher (Context.snapshot ()))))
 
 val attribute_calls = ref ([] : string list)
-fun staged_attribute {name,attrname,args,thm} =
+fun finisher_attribute {name,attrname,args,thm} =
   (assert (Feedback.current_trace "computeLib.auto_import_definitions" = 1);
    attribute_calls := name :: !attribute_calls)
 val _ = ThmAttribute.register_attribute
-          ("staged_test", {localf = staged_attribute,
-                           storedf = staged_attribute})
+          ("finisher_test", {localf = finisher_attribute,
+                             storedf = finisher_attribute})
 
-val _ = tprint "native/staged equations, induction, attributes and location"
-val staged_loc = DB_dtype.mkloc ("staged-test", 42, true)
-val native_fac = located_qDefine staged_loc
-  "native_fac_def[staged_test,induction=native_fac_steps]"
+val _ = tprint "native completion consumes its context finisher"
+val finisher_loc = DB_dtype.mkloc ("finisher-test", 42, true)
+val native_fac = located_qDefine finisher_loc
+  "native_fac_def[finisher_test,induction=native_fac_steps]"
   ‘native_fac n = if n < 2 then 1 else n * native_fac (n - 1)’
-  (SOME (WF_REL_TAC ‘$<’)) (Context.snapshot ())
-val fac_prepared = prepare_qDefine staged_loc
-  "staged_fac_def[staged_test,induction=staged_fac_steps]"
-  ‘staged_fac n = if n < 2 then 1 else n * staged_fac (n - 1)’
-val (staged_fac,staged_ind) = finish_with fac_prepared (WF_REL_TAC ‘$<’)
-fun rename_fac t = subst [{redex = “staged_fac”, residue = “native_fac”}] t
-val _ = assert (aconv (concl native_fac) (rename_fac (concl staged_fac)))
-val _ = assert (aconv (concl (theorem "native_fac_steps"))
-                     (rename_fac (concl (valOf staged_ind))))
-val _ = assert (!attribute_calls = ["staged_fac_def", "native_fac_def"])
-val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="staged_fac_def"})))
-                = staged_loc)
-val _ = assert (Option.isSome (DefnBase.lookup_userdef “staged_fac”))
-val _ = assert (Option.isSome (DefnBase.lookup_indn “staged_fac”))
-val _ = assert (rejects (fn () => ignore (finish_definition fac_prepared NONE)))
-val _ = assert (rejects (fn () => abort_definition fac_prepared))
+  (SOME (capture THEN WF_REL_TAC ‘$<’)) (Context.snapshot ())
+val _ = assert (Option.isSome (!pending))
+val _ = assert (rejects (fn () => ignore (valOf (!pending) TRUTH)))
+val _ = assert (!attribute_calls = ["native_fac_def"])
+val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="native_fac_def"})))
+                = finisher_loc)
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “native_fac”))
+val _ = assert (Option.isSome (DefnBase.lookup_indn “native_fac”))
+val _ = assert (not (Option.isSome
+  (current_termination_finisher (Context.snapshot ()))))
 val _ = OK ()
-val _ = convtest ("staged definition enters EVAL", EVAL, “staged_fac 5”, “120”)
+val _ = convtest ("native definition enters EVAL", EVAL,
+                 “native_fac 5”, “120”)
 
-val _ = tprint "staged mutual recursion completes and registers induction"
-val mutual_prepared = prepare_qDefine staged_loc "staged_mutual_def"
-  ‘(staged_odd n = if n = 0 then F else staged_even (n - 1)) /\
-   (staged_even n = if n = 0 then T else staged_odd (n - 1))’
-val _ = finish_with mutual_prepared
-  (WF_REL_TAC ‘measure (\s. case s of INL n => n | INR n => n)’)
-val _ = assert (Option.isSome (DefnBase.lookup_indn “staged_odd”))
-val _ = OK ()
-val _ = convtest ("staged mutual recursion evaluates", EVAL,
-                 “staged_odd 5”, “T”)
-
-val _ = tprint "staged nested recursion completes and removes support"
-val nested_before = thy_consts (current_theory ())
-val nested_prepared = prepare_qDefine staged_loc "staged_nested_def"
-  ‘staged_nested n =
-     if n = 0 then 0n else staged_nested (staged_nested (n - 1) MOD n)’
-val _ = finish_with nested_prepared (WF_REL_TAC ‘$<’)
-val _ = assert (length (thy_consts (current_theory ())) =
-                length nested_before + 1)
-val _ = OK ()
-val _ = convtest ("staged nested recursion evaluates", EVAL,
-                 “staged_nested 3”, “0”)
-
-val _ = tprint "tactic flag changes control native and staged support cleanup"
-val native_support_before = length (thy_consts (current_theory ()))
-val native_support_count = ref 0
+val _ = tprint "tactic flag changes control native support cleanup"
+val support_before = length (thy_consts (current_theory ()))
+val support_count = ref 0
 fun keep_support_tac g =
   (Feedback.set_trace "Definition.delete support defs" 0;
-   native_support_count := length (thy_consts (current_theory ()));
+   support_count := length (thy_consts (current_theory ()));
    WF_REL_TAC ‘$<’ g)
 val _ = qDefine "native_keep_support_def"
   ‘native_keep_support n = if n = 0 then 0n
      else native_keep_support (native_keep_support (n - 1) MOD n)’
   (SOME keep_support_tac)
-val _ = assert (!native_support_count > native_support_before + 1)
-val _ = assert (length (thy_consts (current_theory ())) = !native_support_count)
-val _ = assert (Feedback.current_trace "Definition.delete support defs" = 0)
-val _ = Feedback.set_trace "Definition.delete support defs" 1
-val staged_support_before = length (thy_consts (current_theory ()))
-val keep_prepared = prepare_qDefine staged_loc "staged_keep_support_def"
-  ‘staged_keep_support n = if n = 0 then 0n
-     else staged_keep_support (staged_keep_support (n - 1) MOD n)’
-val staged_support_count = length (thy_consts (current_theory ()))
-val _ = assert (staged_support_count > staged_support_before + 1)
-val _ = assert (rejects (fn () => with_prepared_definition keep_prepared
-  (fn () => (Feedback.set_trace "Definition.delete support defs" 0;
-             raise mk_HOL_ERR "test" "keep_support" "")) ()))
-val _ = assert (Feedback.current_trace "Definition.delete support defs" = 1)
-val _ = finish_with keep_prepared (fn g =>
-  (assert (Feedback.current_trace "Definition.delete support defs" = 0);
-   WF_REL_TAC ‘$<’ g))
-val _ = assert (length (thy_consts (current_theory ())) = staged_support_count)
+val _ = assert (!support_count > support_before + 1)
+val _ = assert (length (thy_consts (current_theory ())) = !support_count)
 val _ = assert (Feedback.current_trace "Definition.delete support defs" = 0)
 val _ = Feedback.set_trace "Definition.delete support defs" 1
 val saved_def_suffix = !Defn.def_suffix
-val _ = tDefine "native_changed_suffix"
+val (_,direct_ind) = tDefine "native_changed_suffix"
   ‘native_changed_suffix n =
      if n = 0 then 0n else native_changed_suffix (n - 1) + 1’
-  (fn g => (Defn.def_suffix := "_from_tactic"; WF_REL_TAC ‘$<’ g))
+  (capture THEN
+   (fn g => (Defn.def_suffix := "_from_tactic"; WF_REL_TAC ‘$<’ g)))
+val _ = assert (Option.isSome direct_ind)
+val _ = assert (rejects (fn () => ignore (valOf (!pending) TRUTH)))
 val _ = assert (Option.isSome
   (DB.lookup {Thy="-",Name="native_changed_suffix_from_tactic"}))
 val _ = assert (!Defn.def_suffix = "_from_tactic")
 val _ = Defn.def_suffix := saved_def_suffix
 val _ = OK ()
 
-val _ = tprint "staged flags surround tactics and restore the ambient flags"
-val flag_prepared = prepare_qDefine staged_loc
-  "flag_def[nocompute,schematic,allow_rebind,induction=flag_steps,staged_test]"
-  ‘flag_fun n = if n = 0 then y else flag_fun (n - 1) * 2’
-fun check_flags () =
+val _ = tprint "explicit flags surround tactics and exit before attributes"
+fun check_flags g =
   (assert (Feedback.current_trace "computeLib.auto_import_definitions" = 0);
    assert (Feedback.current_trace "Definition.allow_schema_definition" = 1);
    assert (Feedback.current_trace "Theory.allow_rebinds" = 1);
-   assert (!Defn.def_suffix = "" andalso !Defn.ind_suffix = " flag_steps"))
-val _ = with_prepared_definition flag_prepared check_flags ()
-val _ = assert (rejects (fn () => with_prepared_definition flag_prepared
-  (fn () => (check_flags (); raise mk_HOL_ERR "test" "flags" "")) ()))
+   assert (!Defn.def_suffix = "" andalso !Defn.ind_suffix = " flag_steps");
+   WF_REL_TAC ‘$<’ g)
+val _ = qDefine
+  "flag_def[nocompute,schematic,allow_rebind,induction=flag_steps,finisher_test]"
+  ‘flag_fun n = if n = 0 then y else flag_fun (n - 1) * 2’
+  (SOME check_flags)
 val _ = assert (Feedback.current_trace "computeLib.auto_import_definitions" = 1)
-val _ = finish_with flag_prepared (fn g =>
-  (check_flags (); WF_REL_TAC ‘$<’ g))
 val _ = OK ()
-val _ = convtest ("staged nocompute stays out of EVAL", EVAL,
+val _ = convtest ("nocompute stays out of EVAL", EVAL,
                  “flag_fun y 2”, “flag_fun y 2”)
 
-val _ = tprint "custom driver keeps native binding and ignores trivial tactics"
-val driver_calls = ref 0
-fun staged_driver p tac =
-  (driver_calls := !driver_calls + 1;
-   case termination_goal p of
-       NONE => NONE
-     | SOME (name,g) =>
-       SOME (boolLib.prove_named (Context.snapshot ())
-                                {name=name,goal=g,tac=tac}))
+val _ = tprint "trivial definitions ignore explicit tactics"
 val ignored_calls = ref 0
 fun ignored_tac g = (ignored_calls := !ignored_calls + 1; ALL_TAC g)
-val _ = with_termination_driver staged_driver
-  (qDefine "staged_abbrev_def" ‘staged_abbrev = 7n’) (SOME ignored_tac)
-val _ = with_termination_driver staged_driver
-  (qDefine "staged_prim_def"
-    ‘(staged_prim 0 = 0n) /\ (staged_prim (SUC n) = SUC (staged_prim n))’)
-  (SOME ignored_tac)
-val _ = assert (!driver_calls = 2 andalso !ignored_calls = 0)
+val _ = qDefine "finisher_abbrev_def" ‘finisher_abbrev = 7n’
+                (SOME ignored_tac)
+val _ = qDefine "finisher_prim_def"
+    ‘(finisher_prim 0 = 0n) /\
+     (finisher_prim (SUC n) = SUC (finisher_prim n))’ (SOME ignored_tac)
+val _ = assert (!ignored_calls = 0)
 val _ = OK ()
 
-val _ = tprint "bad completion cannot register a theorem or reuse its handle"
-val bad_prepared = prepare_qDefine staged_loc "bad_staged_def"
-  ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’
-val _ = assert (rejects (fn () =>
-  ignore (finish_definition bad_prepared (SOME TRUTH))))
-val _ = assert (rejects (fn () => abort_definition bad_prepared))
-val _ = assert (not (Option.isSome (DB.lookup {Thy="-",Name="bad_staged_def"})))
-val _ = OK ()
-
-val _ = tprint "abort restores grammar and consumes the handle"
-val abort_prepared = prepare_qDefine staged_loc "abort_staged_def"
-  ‘abort_staged n = if n = 0 then 0n else abort_staged (n - 1) + 1’
-val _ = Parse.overload_on ("staged_abort_marker", “T”)
-val _ = abort_definition abort_prepared
-val _ = assert (not (Option.isSome (Overload.info_for_name
-  (term_grammar.overload_info (Parse.term_grammar ())) "staged_abort_marker")))
-val _ = assert (rejects (fn () => ignore (termination_goal abort_prepared)))
-val _ = assert (rejects (fn () => abort_definition abort_prepared))
-val _ = OK ()
-
-val _ = tprint "interleaved definitions cannot be deleted by staged cleanup"
-val exclusive_prepared = prepare_qDefine staged_loc "exclusive_staged_def"
-  ‘exclusive_staged n = if n = 0 then 0n else exclusive_staged (n - 1) + 1’
-val _ = qDefine "unrelated_staged_def" ‘unrelated_staged = 9n’ NONE
-val _ = assert (rejects (fn () =>
-  ignore (finish_with exclusive_prepared (WF_REL_TAC ‘$<’))))
-val _ = assert (Theory.uptodate_term “scratch$unrelated_staged”)
-val _ = abort_definition exclusive_prepared
-val _ = OK ()
-val _ = tprint "staged completion rejects theory and grammar mutations"
-fun reject_interleaved name mutate =
-  let
-    val binding = name ^ "_def"
-    val p = prepare_qDefine staged_loc binding
-      [QUOTE (name ^ " n = if n = 0 then 0n else " ^
-              name ^ " (n - 1) + 1")]
-    val SOME (goalname,g) = termination_goal p
-    val th = with_prepared_definition p
-      (boolLib.prove_named (Context.snapshot ()))
-      {name=goalname, goal=g, tac=WF_REL_TAC ‘$<’}
-    val _ = mutate ()
-    val _ = assert (rejects (fn () =>
-      with_prepared_definition p (fn () => ()) ()))
-    val _ = assert (rejects (fn () =>
-      ignore (finish_definition p (SOME th))))
-    val _ = assert (rejects (fn () => abort_definition p))
-    val _ = assert (not (Option.isSome (DB.lookup {Thy="-",Name=binding})))
-  in () end
-val _ = reject_interleaved "theorem_guard_staged" (fn () =>
-  ignore (Theory.save_thm ("unrelated_staged_thm", TRUTH)))
-val _ = assert (Option.isSome (DB.lookup {Thy="-",Name="unrelated_staged_thm"}))
-val _ = reject_interleaved "type_guard_staged" (fn () =>
-  Theory.new_type ("unrelated_staged_type", 0))
-val _ = reject_interleaved "grammar_guard_staged" (fn () =>
-  Parse.overload_on ("unrelated_staged_overload", “T”))
-val _ = reject_interleaved "metadata_guard_staged" (fn () =>
-  Theory.set_MLname "unrelated_staged_thm" "unrelated_staged_alias")
+val _ = tprint "invalid completion consumes finisher before registration"
+fun invalid_completion g ctxt =
+  let val finish = valOf (current_termination_finisher ctxt)
+      val _ = assert (rejects (fn () => ignore (finish TRUTH)))
+      val _ = assert (rejects (fn () => ignore (finish TRUTH)))
+  in raise mk_HOL_ERR "selftest" "invalid_completion" "expected failure" end
+val _ = assert (rejects (fn () => ignore
+  (in_repl_mode (qDefine "bad_finisher_def"
+    ‘bad_finisher n = if n = 0 then 0n else bad_finisher (n - 1) + 1’)
+    (SOME invalid_completion))))
+val _ = assert (not (Option.isSome
+  (DB.lookup {Thy="-",Name="bad_finisher_def"})))
 val _ = OK ()
 val _ = proofManagerLib.set_goal user_goal
 
@@ -478,7 +373,7 @@ val _ = if Systeml.ML_SYSNAME <> "poly" then () else let
   fun run args = OS.Process.isSuccess (Systeml.systeml (hol :: args))
   val _ = remove heap
   val _ = remove markers
-  val _ = tprint "staged termination saves a prefix in an isolated process"
+  val _ = tprint "termination finisher saves a prefix in an isolated process"
   val _ = assert (run ["run", "--holstate=numheap", "staged-save.sml"])
   val _ = assert (OS.FileSys.access (heap, []))
   val _ = OK ()

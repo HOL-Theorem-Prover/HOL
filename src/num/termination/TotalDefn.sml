@@ -917,231 +917,68 @@ end
 (* Version of Define where the termination tactic is explicitly supplied.    *)
 (*---------------------------------------------------------------------------*)
 
-type definition_flags =
-  {traces : (string * int) list, def_suffix : string, ind_suffix : string}
+val termination_finisher_slot : (thm -> thm) option Context.Data.slot =
+    Context.Data.new {name = "TotalDefn.termination_finisher", empty = NONE,
+                      pp = K "<termination_finisher>"}
 
-fun definition_flags () : definition_flags =
-  {traces = map (fn s => (s, Feedback.current_trace s))
-                ["computeLib.auto_import_definitions",
-                 "Definition.allow_schema_definition",
-                 "Theory.allow_rebinds", "Definition.delete support defs"],
-   def_suffix = !Defn.def_suffix, ind_suffix = !Defn.ind_suffix}
+fun current_termination_finisher ctxt =
+    Context.Data.get termination_finisher_slot ctxt
 
-fun with_definition_flags ({traces,def_suffix,ind_suffix}:definition_flags) =
-  Feedback.with_traces traces o
-  with_flag (Defn.def_suffix, def_suffix) o
-  with_flag (Defn.ind_suffix, ind_suffix)
-
-fun restore_definition_flags
-      ({traces,def_suffix,ind_suffix}:definition_flags) =
-  (List.app (fn (s,v) => Feedback.set_trace s v) traces;
-   Defn.def_suffix := def_suffix; Defn.ind_suffix := ind_suffix)
-
-type flag_scope = {traces : string list, suffixes : bool}
-
-fun with_flag_scope ({traces = names,suffixes}:flag_scope)
-                    ({traces,def_suffix,ind_suffix}:definition_flags) f x =
-  let
-    val traces = filter (fn (s,_) => Lib.mem s names) traces
-    val f = if suffixes then
-              with_flag (Defn.def_suffix,def_suffix)
-                (with_flag (Defn.ind_suffix,ind_suffix) f)
-            else f
-  in Feedback.with_traces traces f x end
-
-fun restore_flag_scope ({traces = names,suffixes}:flag_scope)
-                       (flags:definition_flags)
-                       (ambient:definition_flags) =
-  (restore_definition_flags flags;
-   List.app (fn (s,v) => if Lib.mem s names then Feedback.set_trace s v
-                        else ()) (#traces ambient);
-   if suffixes then
-     (Defn.def_suffix := #def_suffix ambient;
-      Defn.ind_suffix := #ind_suffix ambient)
-   else ())
-
-datatype definition_state = Prepared | Finishing
-                          | Finished | Failed | Aborted
-
-datatype prepared_definition = PD of
-  {state : definition_state ref,
-   flags : definition_flags ref,
-   active : bool ref,
-   scope : flag_scope,
-   ambient_flags : definition_flags,
-   obligation : (string * (goal * (thm -> thm))) option,
-   check : unit -> unit,
-   complete : thm option -> thm * thm option,
-   post : thm * thm option -> unit,
-   rollback : unit -> unit}
-
-fun require_prepared (PD {state,...}) =
-  case !state of
-      Prepared => ()
-    | _ => raise ERR "prepared_definition" "definition already consumed"
-
-fun termination_goal (p as PD {obligation,...}) =
-  (require_prepared p;
-   Option.map (fn (name,(g,_)) => (name,g)) obligation)
-
-fun with_prepared_definition
-      (p as PD {state,flags,active,scope,ambient_flags,check,...}) f x =
-  let
-    val _ = require_prepared p
-    val _ = check ()
-    val was_active = !active
-    fun record () =
-      case !state of Prepared => flags := definition_flags () | _ => ()
-    fun run x =
-      let val result = f x handle e => (record (); Portable.reraise e)
-          val _ = record ()
-      in result end
-    fun cleanup () =
-      (if was_active andalso !state = Prepared then () else active := false;
-       case !state of Prepared => ()
-                    | _ => restore_flag_scope scope (!flags) ambient_flags)
-    val _ = active := true
-    val result = (if was_active then run x
-                  else with_definition_flags (!flags) run x)
-                 handle e => (cleanup (); Portable.reraise e)
-    val _ = cleanup ()
-  in result end
-
-fun abort_definition
-      (p as PD {state,flags,active,scope,rollback,ambient_flags,...}) =
-  (require_prepared p;
-   if !active then flags := definition_flags () else ();
-   state := Aborted; active := false; rollback ();
-   restore_flag_scope scope (!flags) ambient_flags)
-
-fun finish_definition0 report
-    (p as PD {state,flags,active,scope,ambient_flags,check,
-              complete,post,rollback,...}) th =
-  let
-    val _ = require_prepared p
-    (* A restored heap can still be inside the native driver's flag scope. *)
-    val _ = if !active then flags := definition_flags () else ()
-    (* Consume before validation or any completion side effect. *)
-    val _ = state := Finishing
-    val _ = active := false
-    fun run th =
-      let
-        val result = complete th
-          handle e => (flags := definition_flags (); Portable.reraise e)
-        val _ = flags := definition_flags ()
-      in result end
-    val result =
-      (check ();
-       with_definition_flags (!flags) run th)
-      handle e =>
-        (state := Failed; rollback ();
-         restore_flag_scope scope (!flags) ambient_flags;
-         report (wrap_exn "TotalDefn" "tDefine" e))
-    val _ = restore_flag_scope scope (!flags) ambient_flags
-    (* qDefine's attributes have always run outside the grammar and flag
-       bracket of tDefine. A failing attribute must not roll that back. *)
-    val _ = post result
-            handle e => (state := Failed; Portable.reraise e)
-    val _ = state := Finished
-  in result end
-
-fun finish_definition p th = finish_definition0 Portable.reraise p th
-
-fun prepare_definition scope flags post loc stem q =
-  let
-    val ambient_flags = definition_flags ()
-    val rollback = Parse.grammar_rollback ()
-    fun prepare () =
-      let
-        val thy = current_theory ()
-        val snap1 = thy_consts thy
-        val defn = Defn.Hol_defn stem q
-        val snap2 = thy_consts thy
-        val theory_unchanged = Theory.theory_unchanged ()
-        val grammar_unchanged = Parse.grammar_unchanged ()
-        val ps = Defn.params_of defn
-        val _ = null ps orelse !allow_schema_definition orelse
-                complain_about_rhsfvs "tDefine" ps
-        val obligation = if Defn.triv_defn defn then NONE
-                         else SOME (Defn.tc_obligation defn)
-        fun check () =
-          if theory_unchanged () andalso grammar_unchanged () andalso
-             current_theory () = thy andalso
-             List.all Theory.uptodate_term snap2 andalso
-             List.all Theory.uptodate_thm (Defn.eqns_of defn) andalso
-             HOLset.equal (HOLset.fromList Term.compare snap2,
-                           HOLset.fromList Term.compare (thy_consts thy))
-          then ()
-          else raise ERR "prepared_definition"
-                         "theory changed since definition preparation"
-        fun complete th =
-          case (obligation,th) of
-              (NONE,NONE) =>
+fun located_tDefine_with finish loc stem q tac =
+ let open Defn
+     fun thunk() =
+       let val snap1 = thy_consts (current_theory())
+           val defn = Hol_defn stem q
+           val ps = params_of defn
+           val _ = null ps orelse !allow_schema_definition orelse
+                   complain_about_rhsfvs "tDefine" ps
+       in
+        if triv_defn defn then
+          let val def = fetch_eqns defn
+              val bind = stem ^ !Defn.def_suffix
+              val _ = HOL_MESG "Termination argument ignored (term. proved \
+                               \automatically)"
+          in been_stored (bind,def);
+             Theory.upd_binding bind (DB_dtype.updsrcloc (K loc));
+             (def, NONE)
+          end
+        else
+        let val (name, (g, validate)) = Defn.tc_obligation defn
+            val consumed = ref false
+            fun complete th =
               let
-                val def = Defn.fetch_eqns defn
-                val bind = stem ^ !Defn.def_suffix
-                val _ = HOL_MESG "Termination argument ignored (term. proved \
-                                 \automatically)"
-                val _ = Defn.been_stored (bind,def)
-                val _ = Theory.upd_binding bind (DB_dtype.updsrcloc (K loc))
-              in (def,NONE) end
-            | (SOME (_,(g,validate)), SOME th) =>
-              let
+                val _ = if !consumed then
+                          raise ERR "termination_finisher"
+                                    "Definition already completed or failed"
+                        else consumed := true
                 val _ = aconv (concl th) (#2 g) andalso
                         List.all (fn h => List.exists (aconv h) (#1 g))
-                                 (hyp th) andalso Theory.uptodate_thm th
-                        orelse raise ERR "finish_definition"
-                                         "theorem does not prove the goal"
+                                 (hyp th) andalso
+                        Theory.uptodate_thm th orelse
+                        raise ERR "termination_finisher"
+                                  "Invalid termination theorem"
                 val both = validate th
-                val def = CONJUNCT1 both
-                          |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
+                val def = CONJUNCT1 both |> CONJUNCTS |> map GEN_ALL
+                                        |> LIST_CONJ
                 val ind = CONJUNCT2 both
-                val _ = delete_support defn snap2 snap1
+                val _ = delete_support defn (thy_consts (current_theory()))
+                                       snap1
                 val _ = Defn.store_at loc (stem,def,ind)
-              in (def,SOME ind) end
-            | _ => raise ERR "finish_definition"
-                             "expected a theorem exactly when there is a goal"
-      in
-        PD {state = ref Prepared, flags = ref (definition_flags ()),
-            active = ref false, scope = scope, ambient_flags = ambient_flags,
-            obligation = obligation,
-            check = check, complete = complete, post = post,
-            rollback = rollback}
-      end
-  in
-    with_flag_scope scope flags prepare ()
-    handle e => (rollback (); raise wrap_exn "TotalDefn" "tDefine" e)
-  end
-
-fun prepare_tDefine loc stem q =
-  prepare_definition {traces = [], suffixes = false}
-                     (definition_flags ()) (K ()) loc stem q
-
-fun default_termination_driver p tac =
-  case termination_goal p of
-      NONE => NONE
-    | SOME (name,g) =>
-      SOME (boolLib.prove_named (Context.snapshot ())
-                                {name = name, goal = g, tac = tac})
-
-val termination_driver = Context.Data.new
-  {name = "TotalDefn.termination_driver", empty = default_termination_driver,
-   pp = K "<termination_driver>"}
-
-fun with_termination_driver driver f x =
-  Context.Data.with_slot_value termination_driver driver f x
-
-fun execute_prepared (p as PD {state,...}) tac =
-  let
-    val driver = Context.Data.get termination_driver (Context.snapshot ())
-    val th = with_prepared_definition p (driver p) tac
-      handle e =>
-        (case !state of Prepared => abort_definition p | _ => ();
-         render_exn (wrap_exn "TotalDefn" "tDefine" e))
-  in finish_definition0 render_exn p th end
+              in (def, SOME ind) end
+            val ctxt = Context.Data.put termination_finisher_slot
+                         (SOME (finish complete)) (Context.snapshot ())
+        in
+          complete (boolLib.prove_named ctxt {name=name,goal=g,tac=tac})
+          handle e => (consumed := true; Portable.reraise e)
+        end
+       end
+ in
+  Parse.try_grammar_extension thunk ()
+  handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
+ end
 
 fun located_tDefine loc stem q tac =
-  execute_prepared (prepare_tDefine loc stem q handle e => render_exn e) tac
+    located_tDefine_with (fn complete => #1 o complete) loc stem q tac
 
 val tDefine = located_tDefine DB.Unknown
 
@@ -1173,7 +1010,10 @@ fun tailrecDefine loc nm q =
 val _ = List.app ThmAttribute.reserve_word
                  ["nocompute", "schematic", "tailrecursive"]
 
-fun qDefine_options stem =
+(* The context is the channel the expansion supplies; the quote and the
+   termination proof are handled by the Defn machinery below, which does
+   not take one yet. *)
+fun located_qDefine loc stem q tacopt (_ : Context.t) =
     let
       val {thmname=corename, attrs=attrs,reserved=R,unknown} =
           ThmAttribute.extract_attributes stem
@@ -1187,68 +1027,70 @@ fun qDefine_options stem =
               raise ERR "Definition"
                     ("Unknown attributes: " ^
                      String.concatWith ", " (map #1 unknown))
-      fun flag (s,v) =
-        (s, case s of
-                "computeLib.auto_import_definitions" => if nocomp then 0 else v
-              | "Definition.allow_schema_definition" => if svarsok then 1 else v
-              | "Theory.allow_rebinds" => if rebindok then 1 else v
-              | _ => v)
-      val flags =
-        {traces = map flag (#traces (definition_flags ())),
-         def_suffix = "", ind_suffix = getOpt (Option.map (fn s => " " ^ s)
-                                                          indopt, "")}
-      val scope =
-        {traces = List.mapPartial (fn (b,s) => if b then SOME s else NONE)
-           [(nocomp,"computeLib.auto_import_definitions"),
-            (svarsok,"Definition.allow_schema_definition"),
-            (rebindok,"Theory.allow_rebinds")], suffixes = true}
-      val attrs = if notuserdef then attrs else ("userdef",[]) :: attrs
-      val gen_ind =
-          if tailrecp then (fn th => raise ERR "Unseen" "")
-          else Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
-      fun post (thm,indopt) =
-        (List.app
-           (fn (k,vs) => ThmAttribute.store_at_attribute
-               {name = corename, attrname = k, args = vs, thm = thm}) attrs;
-         if notuserdef then ()
-         else
-           case indopt of
-               NONE => (case total gen_ind thm of
-                            NONE => ()
-                          | SOME p => DefnBase.register_indn p)
-             | SOME ith =>
-               DefnBase.register_indn (ith, DefnBase.constants_of_defn thm))
-    in {stem = corename, tailrec = tailrecp, flags = flags,
-        scope = scope, post = post} end
-
-fun prepare_qDefinition {stem,tailrec,flags,scope,post} loc q =
-  if tailrec then
-    raise ERR "qDefine"
-              "Termination tactic for tail-recursive definition makes no sense"
-  else prepare_definition scope flags post loc stem q
-
-fun prepare_qDefine loc stem q =
-  prepare_qDefinition (qDefine_options stem) loc q
-
-(* The context is the channel the expansion supplies; Defn still parses
-   and prepares in the ambient context. *)
-fun located_qDefine loc stem q tacopt (_ : Context.t) =
-  let
-    val options as {stem,tailrec,flags,scope,post} = qDefine_options stem
-  in
-    case tacopt of
-        SOME tac =>
-        #1 (execute_prepared
-              (prepare_qDefinition options loc q handle e => render_exn e) tac)
-      | NONE =>
+      fun fmod f =
+          f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
+                else (fn f => f))
+            |> (if svarsok then trace ("Definition.allow_schema_definition", 1)
+                else (fn f => f))
+            |> with_flag(Defn.def_suffix, "")
+            |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
+                             | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
+            |> (if rebindok then trace ("Theory.allow_rebinds", 1)
+                else (fn f => f))
+      val scoped_traces =
+          List.mapPartial
+            (fn (enabled, name) =>
+                if enabled then SOME (name, Feedback.current_trace name)
+                else NONE)
+            [(nocomp, "computeLib.auto_import_definitions"),
+             (svarsok, "Definition.allow_schema_definition"),
+             (rebindok, "Theory.allow_rebinds")]
+      val def_suffix = !Defn.def_suffix
+      val ind_suffix = !Defn.ind_suffix
+      fun leave_scope () =
+          (List.app (fn (name, value) => Feedback.set_trace name value)
+                    scoped_traces;
+           Defn.def_suffix := def_suffix;
+           Defn.ind_suffix := ind_suffix)
+      fun post (thm, indopt) =
         let
-          val result =
-            if tailrec then
-              (with_flag_scope scope flags (tailrecDefine loc stem) q, NONE)
-            else with_flag_scope scope flags (located_xDefine loc stem) q
-          val _ = post result
-        in #1 result end
-  end
+          fun proc_attr (k,vs) =
+              ThmAttribute.store_at_attribute{name = corename, attrname = k,
+                                              args = vs, thm = thm}
+          val attrs = if notuserdef then attrs else ("userdef",[]) :: attrs
+          val gen_ind =
+              if tailrecp then (fn th => raise ERR "Unseen" "")
+              else Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
+        in
+          List.app proc_attr attrs;
+          if notuserdef then ()
+          else
+            case indopt of
+                NONE => (case total gen_ind thm of
+                             NONE => ()
+                           | SOME p => DefnBase.register_indn p)
+              | SOME ith =>
+                DefnBase.register_indn (ith, DefnBase.constants_of_defn thm)
+        end
+      fun finish complete th =
+          let val result = complete th
+              val _ = leave_scope ()
+              val _ = post result
+          in #1 result end
+      val result =
+          case (tailrecp, tacopt) of
+              (true, NONE) => (fmod (tailrecDefine loc corename) q, NONE)
+            | (true, SOME _) =>
+              raise ERR "qDefine"
+                    "Termination tactic for tail-recursive definition makes \
+                    \no sense"
+            | (false, NONE) => fmod (located_xDefine loc corename) q
+            | (false, SOME tac) =>
+              fmod (located_tDefine_with finish loc corename q) tac
+    in
+      post result;
+      #1 result
+    end
 
 fun qDefine stem q tacopt =
     located_qDefine DB.Unknown stem q tacopt (Context.snapshot())

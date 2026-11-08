@@ -1,15 +1,15 @@
 open HolKernel Parse boolLib bossLib
 
 val _ = new_theory "staged_source"
-val definition_driver_calls = ref 0
-fun definition_driver p tac =
-  (definition_driver_calls := !definition_driver_calls + 1;
-   case TotalDefn.termination_goal p of
-       NONE => NONE
-     | SOME (name,g) =>
-       SOME (boolLib.prove_named (Context.snapshot ())
-                                {name=name, goal=g, tac=tac}))
-val _ = TotalDefn.with_termination_driver definition_driver
-          QUse.use "tests/stagedSourceScript.sml"
-val _ = if !definition_driver_calls = 1 then ()
-        else raise Fail "termination driver was not called exactly once"
+val finisher_calls = ref 0
+val source_finisher : (thm -> thm) option ref = ref NONE
+fun capture_termination g ctxt =
+  (finisher_calls := !finisher_calls + 1;
+   source_finisher := TotalDefn.current_termination_finisher ctxt;
+   ALL_TAC g ctxt)
+val _ = QUse.use "tests/stagedSourceScript.sml"
+val _ = if !finisher_calls = 1 andalso Option.isSome (!source_finisher)
+        then () else raise Fail "termination context was not captured once"
+val _ = (valOf (!source_finisher) TRUTH;
+         raise Fail "native completion did not consume the finisher")
+        handle HOL_ERR _ => ()

@@ -1,7 +1,7 @@
 Definition staged_source_def[induction=staged_source_steps]:
   staged_source n = if n = 0 then 0n else staged_source (n - 1) + 1
 Termination
-  WF_REL_TAC ‘$<’
+  capture_termination THEN WF_REL_TAC ‘$<’
 End
 
 val _ =
