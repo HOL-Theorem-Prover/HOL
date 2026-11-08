@@ -117,6 +117,9 @@ New features
 Bugs fixed
 ----------
 
+-   Omega's model reconstruction no longer fails when eliminating a variable
+    leaves a single constrained variable and another unconstrained variable.
+
 -   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
     Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
     Recursions through `MAP` and `EVERY` with a substitution-like extra parameter have exactly this shape.
