@@ -354,6 +354,31 @@ val rhs_rewrite =
         blastTheory.b_neq_neg_b,
         blastTheory.neg_b_neq_b])
 
+(* ------------------------------------------------------------------------
+   WORD_LIT_CONV : Rewrites occurances of ``BIT i v`` using theorems
+                   ``BIT i v = (i = p1) \/ ... \/ (i = pn)``, where
+                   v is the numeric value of the literal and p1..pn
+                   are the bit positions for T bits.
+   ------------------------------------------------------------------------ *)
+
+local
+   val BIT_SET_CONV = Conv.REWR_CONV wordsTheory.BIT_SET THENC EVAL_CONV
+
+   fun is_bit_lit tm =
+      case Lib.total bitSyntax.dest_bit tm of
+         SOME (_, n) => numSyntax.is_numeral n
+       | NONE => false
+
+   fun mk_bit_sets tm =
+      let
+         val tms = Lib.op_mk_set aconv (HolKernel.find_terms is_bit_lit tm)
+      in
+         List.map BIT_SET_CONV tms
+      end
+in
+   fun WORD_LIT_CONV tm = PURE_REWRITE_CONV (mk_bit_sets tm) tm
+end
+
 (* --------------------------------------------------------------------
    name_carry : turns  |- BCARRY i x y c = e  into  v = e |- BCARRY i x y c = v
                 for a fresh variable v, unless e is T, F or a variable.
@@ -365,6 +390,7 @@ val rhs_rewrite =
 
 fun name_carry thm =
    let
+      val thm = Conv.RIGHT_CONV_RULE WORD_LIT_CONV thm
       val e = rhsc thm
    in
       if Teq e orelse Feq e orelse Term.is_var e
@@ -542,43 +568,19 @@ in
                      then print ("Found " ^ Int.toString (List.length tms) ^
                                 " summation term(s)\n")
                   else ()
-         val (_, rwts, c_outs) =
+         val (_, rwts) =
             List.foldl
-               (fn ((b,nxyc), (i, rwts, c_outs)) =>
+               (fn ((b,nxyc), (i, rwts)) =>
                    (if !blast_trace > 0
                        then print ("Expanding term... " ^ Int.toString i ^ "\n")
                     else ()
-                    ; if b then (i + 1, rwts, mk_carry rwts nxyc :: c_outs)
-                      else (i + 1, mk_summation rwts nxyc @ rwts, c_outs)))
-                 (1, rws, []) tms
+                    ; (* larger terms may contain this one's carry or sums *)
+                      (i + 1, if b then mk_carry rwts nxyc :: rwts
+                              else mk_summation rwts nxyc @ rwts)))
+                 (1, rws) tms
       in
-         rwts @ c_outs
+         rwts
       end
-end
-
-(* ------------------------------------------------------------------------
-   WORD_LIT_CONV : Rewrites occurances of ``BIT i v`` using theorems
-                   ``BIT i v = (i = p1) \/ ... \/ (i = pn)``, where
-                   v is the numeric value of the literal and p1..pn
-                   are the bit positions for T bits.
-   ------------------------------------------------------------------------ *)
-
-local
-   val BIT_SET_CONV = Conv.REWR_CONV wordsTheory.BIT_SET THENC EVAL_CONV
-
-   fun is_bit_lit tm =
-      case Lib.total bitSyntax.dest_bit tm of
-         SOME (_, n) => numSyntax.is_numeral n
-       | NONE => false
-
-   fun mk_bit_sets tm =
-      let
-         val tms = Lib.op_mk_set aconv (HolKernel.find_terms is_bit_lit tm)
-      in
-         List.map BIT_SET_CONV tms
-      end
-in
-   fun WORD_LIT_CONV tm = PURE_REWRITE_CONV (mk_bit_sets tm) tm
 end
 
 (* ------------------------------------------------------------------------
@@ -1288,7 +1290,9 @@ in
              List.map Term.bvar (HolKernel.find_terms Term.is_abs (rhsc thm)))
         fun blast t =
            let
-              val th = BIT_BLAST_CONV t
+              (* literals left under operators that aren't blasted are
+                 shown as their sets of bits, as before *)
+              val th = Conv.RIGHT_CONV_RULE WORD_LIT_CONV (BIT_BLAST_CONV t)
            in
               if List.exists (fn v => HOLset.member (bvs, v)) (Term.free_vars t)
                  then DISCH_CARRIES th
