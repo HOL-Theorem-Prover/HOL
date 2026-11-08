@@ -250,6 +250,10 @@ val _ = proofManagerLib.drop_all ()
    native completion and failed direct completion. *)
 fun rejects f = (f (); false) handle HOL_ERR _ => true
 fun assert b = if b then () else die "termination finisher check failed"
+fun consumed finish th =
+  (finish th; false) handle HOL_ERR e =>
+    Feedback.top_function_of e = "termination_finisher" andalso
+    Feedback.message_of e = "Definition already completed or failed"
 val pending : (thm -> thm) option ref = ref NONE
 fun capture g ctxt =
   (pending := current_termination_finisher ctxt; ALL_TAC g ctxt)
@@ -271,7 +275,7 @@ val native_fac = located_qDefine finisher_loc
   ‘native_fac n = if n < 2 then 1 else n * native_fac (n - 1)’
   (SOME (capture THEN WF_REL_TAC ‘$<’)) (Context.snapshot ())
 val _ = assert (Option.isSome (!pending))
-val _ = assert (rejects (fn () => ignore (valOf (!pending) TRUTH)))
+val _ = assert (consumed (valOf (!pending)) TRUTH)
 val _ = assert (!attribute_calls = ["native_fac_def"])
 val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="native_fac_def"})))
                 = finisher_loc)
@@ -305,7 +309,7 @@ val (_,direct_ind) = tDefine "native_changed_suffix"
   (capture THEN
    (fn g => (Defn.def_suffix := "_from_tactic"; WF_REL_TAC ‘$<’ g)))
 val _ = assert (Option.isSome direct_ind)
-val _ = assert (rejects (fn () => ignore (valOf (!pending) TRUTH)))
+val _ = assert (consumed (valOf (!pending)) TRUTH)
 val _ = assert (Option.isSome
   (DB.lookup {Thy="-",Name="native_changed_suffix_from_tactic"}))
 val _ = assert (!Defn.def_suffix = "_from_tactic")
@@ -343,7 +347,7 @@ val _ = tprint "invalid completion consumes finisher before registration"
 fun invalid_completion g ctxt =
   let val finish = valOf (current_termination_finisher ctxt)
       val _ = assert (rejects (fn () => ignore (finish TRUTH)))
-      val _ = assert (rejects (fn () => ignore (finish TRUTH)))
+      val _ = assert (consumed finish TRUTH)
   in raise mk_HOL_ERR "selftest" "invalid_completion" "expected failure" end
 val _ = assert (rejects (fn () => ignore
   (in_repl_mode (qDefine "bad_finisher_def"
@@ -374,11 +378,11 @@ val _ = if Systeml.ML_SYSNAME <> "poly" then () else let
   val _ = remove heap
   val _ = remove markers
   val _ = tprint "termination finisher saves a prefix in an isolated process"
-  val _ = assert (run ["run", "--holstate=numheap", "staged-save.sml"])
+  val _ = assert (run ["run", "--holstate=numheap", "tests/staged-save.sml"])
   val _ = assert (OS.FileSys.access (heap, []))
   val _ = OK ()
   val _ = tprint "a fresh process restores and completes without preparation"
-  val _ = assert (run ["run", "--holstate=" ^ heap, "staged-restore.sml"])
+  val _ = assert (run ["run", "--holstate=" ^ heap, "tests/staged-restore.sml"])
   val input = TextIO.openIn markers
   val contents = TextIO.inputAll input
   val _ = TextIO.closeIn input

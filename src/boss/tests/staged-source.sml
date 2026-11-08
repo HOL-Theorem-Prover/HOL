@@ -12,4 +12,7 @@ val _ = if !finisher_calls = 1 andalso Option.isSome (!source_finisher)
         then () else raise Fail "termination context was not captured once"
 val _ = (valOf (!source_finisher) TRUTH;
          raise Fail "native completion did not consume the finisher")
-        handle HOL_ERR _ => ()
+        handle HOL_ERR e =>
+          if Feedback.top_function_of e = "termination_finisher" andalso
+             Feedback.message_of e = "Definition already completed or failed"
+          then () else Portable.reraise (HOL_ERR e)
