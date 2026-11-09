@@ -397,12 +397,16 @@ val cv_inc_weak = DISCH “T ∧ T” cv_inc_thm;
 
 (* the same theorem under a second name is not a conflict *)
 val _ = save_thm ("cv_inc_again[cv_rep]", cv_inc_thm);
+val _ = cv_eval “inc 3” |> concl |> rhs |> aconv “4:num” orelse fail();
 
 (* a different translation of inc is *)
 val _ = test_for_failure save_thm ("cv_inc_weak[cv_rep]", cv_inc_weak);
 
-(* after removing the first translation, the second can be added and used *)
+(* after removing both names of the first translation, the second can be
+   added and used *)
 val _ = cv_rep_delete "cv_inc_thm";
+val _ = test_for_failure save_thm ("cv_inc_weak[cv_rep]", cv_inc_weak);
+val _ = cv_rep_delete "cv_inc_again";
 val _ = save_thm ("cv_inc_weak2[cv_rep]", cv_inc_weak);
 val _ = test_for_failure cv_rep_delete "cv_inc_thm";
 val _ = cv_eval “inc 3” |> concl |> rhs |> aconv “4:num” orelse fail();

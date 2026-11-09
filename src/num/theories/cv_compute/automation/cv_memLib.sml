@@ -147,25 +147,29 @@ fun same_pattern p1 p2 = let
     can (match_term p1) p2 andalso can (match_term p2) p1
   end
 
+(* An entry clashes with another that translates the same pattern with a
+   different theorem; the same theorem under another name is kept too (so
+   that deleting one name leaves the other), but is not a clash.  Only
+   the clashing entries are marked: a theorem can translate several
+   patterns, and the others stay usable. *)
 fun cv_rep_add_entry is_current name ((pat, th), es : cv_rep_entry list) = let
-  val same = filter (fn e => same_pattern pat (#pat e)) es
-  val others = map #name same
+  fun clashes_with (e : cv_rep_entry) =
+    same_pattern pat (#pat e) andalso not (aconv (concl (#th e)) (concl th))
+  val others = map #name (filter clashes_with es)
   fun add_clash (e : cv_rep_entry) =
-    if mem (#name e) others then
+    if clashes_with e then
       {name = #name e, pat = #pat e, th = #th e, clashes = name :: #clashes e}
     else e
+  val entry = {name = name, pat = pat, th = th, clashes = others}
   in
-    if exists (fn e => aconv (concl (#th e)) (concl th)) same then es
-    else if null same then
-      {name = name, pat = pat, th = th, clashes = []} :: es
+    if null others then entry :: es
     else if is_current then
       raise mk_HOL_ERR "cv_memLib" "cv_rep"
         (name ^ " translates " ^ term_to_string pat ^
          ", which " ^ String.concatWith " and " others ^
          " already translates; to replace it, first remove it with " ^
          "cv_transLib.cv_rep_delete " ^ Lib.quote (hd others))
-    else
-      {name = name, pat = pat, th = th, clashes = others} :: map add_clash es
+    else entry :: map add_clash es
   end
 
 fun cv_rep_remove s (es : cv_rep_entry list) = let

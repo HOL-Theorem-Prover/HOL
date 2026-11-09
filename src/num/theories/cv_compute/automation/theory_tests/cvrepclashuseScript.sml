@@ -16,7 +16,11 @@ val _ = (cv_trans quad_def; raise Fail "used an ambiguous translation")
           if String.isSubstring "ambiguous" (Feedback.message_of e) then ()
           else raise HOL_ERR e
 
-val _ = cv_rep_delete "cvrepclash2.cv_dbl_thm"
+(* the other parts of the clashing theorems still work *)
+val _ = assert (aconv “3:num” o rhs o concl) (cv_eval “inc1 2”)
+val _ = assert (aconv “6:num” o rhs o concl) (cv_eval “tpl 2”)
+
+val _ = cv_rep_delete "cvrepclash2.cv_dbl_tpl"
 
 val _ = cv_trans quad_def
 
