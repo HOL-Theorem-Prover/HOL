@@ -13,7 +13,12 @@ holstate=$1
 holmake=$2
 
 echo "Running Holmake in testd directory"
-$holmake --holstate=$holstate
+# Wall alongside CPU, because the two together say what kind of
+# failure a trip is: a loop is CPU-bound, so its real time tracks its
+# user+sys, while a machine busy enough to make ordinary syscalls
+# expensive shows real time far above them.
+TIMEFORMAT='Holmake: real %3R  user %3U  sys %3S'
+time $holmake --holstate=$holstate
 
 retcode=$?
 echo "Holmake completed with code $retcode"
@@ -38,6 +43,13 @@ then
     # children's -- essentially all Holmake's -- second.
     echo "CPU used (line 1 = this script, line 2 = its children):"
     times
+    # Which binary this actually was.  Holmake is built by configure
+    # and by no Holmakefile rule, so bin/build will happily run a
+    # Holmake older than the sources it just compiled against -- it
+    # warns, but the warning is easily lost in a -j build.  Saying so
+    # here settles "was the fix even in?" without another run.
+    echo "Holmake binary under test:"
+    ls -l "$holmake"
     exit 1
 else
     exit 0
