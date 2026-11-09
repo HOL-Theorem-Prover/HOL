@@ -690,6 +690,43 @@ Proof
   simp [finite_mapTheory.FDOM_FINITE]
 QED
 
+(* An executable form of [SUBMAP] on FEMPTY-rooted update chains:
+   [fsub_except f g s] says that [g] agrees with [f] on [f]'s keys outside
+   [s], the keys a later update already shadows.  [SUBMAP] and
+   [FUPDATE]'s domain otherwise reach the evaluator only through a
+   quantifier over [FDOM f]. *)
+Definition fsub_except_def[nocompute]:
+  fsub_except (f : 'a |-> 'b) g s <=>
+    !x. x IN FDOM f /\ x NOTIN s ==> FLOOKUP g x = FLOOKUP f x
+End
+
+Theorem submap_fsub_except[local]:
+  f SUBMAP g <=> fsub_except f g {}
+Proof
+  simp [fsub_except_def, finite_mapTheory.SUBMAP_DEF,
+        finite_mapTheory.FLOOKUP_DEF] >>
+  metis_tac []
+QED
+
+Theorem fsub_except_compute[compute]:
+  (fsub_except FEMPTY g s <=> T) /\
+  (fsub_except (f |+ (k, v)) g s <=>
+     (k IN s \/ FLOOKUP g k = SOME v) /\ fsub_except f g (k INSERT s))
+Proof
+  simp [fsub_except_def, finite_mapTheory.FLOOKUP_UPDATE,
+        finite_mapTheory.FDOM_FUPDATE] >>
+  eq_tac >> rw [] >> gvs [] >>
+  metis_tac []
+QED
+
+(* Keyed on the chain, so that open [f SUBMAP g] is left alone *)
+Theorem submap_compute:
+  (FEMPTY SUBMAP g <=> T) /\
+  ((f |+ (k, v)) SUBMAP g <=> FLOOKUP g k = SOME v /\ fsub_except f g {k})
+Proof
+  simp [submap_fsub_except, fsub_except_compute]
+QED
+
 (* The [FUPDATE/FEMPTY/FAPPLY/FDOM -> fupdate'/fempty'/fapply'/fdom']
    ersatz rows (Refute_ModelFinder_HOL.sml) redirect fmap's primitives
    through FLOOKUP -- registered as [is_fmap'/abs_fmap']'s rep -- and

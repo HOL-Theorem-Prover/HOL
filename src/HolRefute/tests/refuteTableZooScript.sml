@@ -1379,3 +1379,30 @@ QED
 val zoo_opaque_spec =
   new_specification
     ("zoo_opaque_spec", ["zoo_opaque", "zoo_seed"], zoo_opaque_exists);
+
+(* Sets inside definitions: the executable gate admits only goal constants
+   the compset knows, and the set constants are membership predicates to
+   the extractor, so a goal reaches them through a definition. *)
+Definition zoo_in_small_def:
+  zoo_in_small (x : num) <=> x IN {y | y < 3}
+End
+
+Definition zoo_in_either_def:
+  zoo_in_either (x : num) a b <=> x IN a INSERT b INSERT {}
+End
+
+Definition zoo_in_empty_def:
+  zoo_in_empty (x : num) <=> x IN {}
+End
+
+Definition zoo_in_shifted_def:
+  zoo_in_shifted (x : num) <=> x IN {y + 1 | y < 3}
+End
+
+Definition zoo_restrict_small_def:
+  zoo_restrict_small (f : num |-> num) = DRESTRICT f {x | x < 2}
+End
+
+Definition zoo_restrict_to_def:
+  zoo_restrict_to (f : num |-> num) k = DRESTRICT f {k}
+End
