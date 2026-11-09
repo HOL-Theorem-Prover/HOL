@@ -292,6 +292,55 @@ val _ = require_msg
                                 disch_then  ACCEPT_TAC))
           resconj_closure_th
 
+val three_goals = “p /\ q /\ r ==> p /\ q /\ r”
+val three_suspended = Feedback.quiet_messages store_thm
+  ("three_suspended", three_goals,
+   strip_tac >> conj_tac >- suspend "same"
+   >- (conj_tac >> suspend "same"))
+
+val _ = resume {suspension_name = "three_suspended", label_name = "same"}
+               (RESUME_TAC >> FIRST_ASSUM ACCEPT_TAC) (Context.snapshot ())
+
+val _ = tprint "Finalise three goals sharing one suspension label"
+val _ = require_msg
+          (check_result (thm_eq (HOLset.empty Term.compare, three_goals)))
+          thm_to_string
+          (finalise_suspended_thm DB.Unknown)
+          "three_suspended"
+
+val _ = tprint "prim_resume preserves order for three suspended goals"
+val _ = require_msg
+          (check_result
+             (fn {subresult,updated_main} =>
+                  thm_eq (HOLset.empty Term.compare, three_goals) updated_main))
+          (HOLPP.pp_to_string 75 pp)
+          (fn th => prim_resume(th, "same",
+                               RESUME_TAC >> FIRST_ASSUM ACCEPT_TAC))
+          three_suspended
+
+val nested_goal = “(marker$resconj T T) /\ T”
+val nested_suspended = Feedback.quiet_messages store_thm
+  ("nested_suspended", nested_goal, conj_tac >> suspend "nested")
+
+val _ = resume {suspension_name = "nested_suspended", label_name = "nested"}
+               (RESUME_TAC >> ACCEPT_TAC TRUTH) (Context.snapshot ())
+
+val _ = tprint "Finalise preserves resconj inside a suspended goal"
+val _ = require_msg
+          (check_result (thm_eq (HOLset.empty Term.compare, nested_goal)))
+          thm_to_string
+          (finalise_suspended_thm DB.Unknown)
+          "nested_suspended"
+
+val _ = tprint "prim_resume preserves resconj inside a suspended goal"
+val _ = require_msg
+          (check_result
+             (fn {subresult,updated_main} =>
+                  thm_eq (HOLset.empty Term.compare, nested_goal) updated_main))
+          (HOLPP.pp_to_string 75 pp)
+          (fn th => prim_resume(th, "nested", RESUME_TAC >> ACCEPT_TAC TRUTH))
+          nested_suspended
+
 (* Under the new cross-file suspend/resume design, a suspended theorem is
    a perfectly valid export (as a theorem with suspendlabel hypotheses);
    export_theory no longer fails on unfinalised suspensions. *)

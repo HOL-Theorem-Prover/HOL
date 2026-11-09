@@ -28,6 +28,8 @@ val _ = use "../tools/parsing/TacticParse.sig";
 val _ = use "../tools/parsing/TacticParse.sml";
 val _ = use "../tools/parsing/ProofStepPlan.sig";
 val _ = use "../tools/parsing/ProofStepPlan.sml";
+val _ = use "../tools/parsing/TacticLeafSource.sig";
+val _ = use "../tools/parsing/TacticLeafSource.sml";
 val _ = use "poly/sref-bootstrap.ML";
 
 val _ = use "../src/portableML/UniversalType.sig";
@@ -97,7 +99,7 @@ val _ = loadedMods := Binaryset.addList (!loadedMods, [
   "Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
   "Array", "Array2", "Vector", "UniversalType", "DArray", "DString",
   "HOLSourceAST", "HOLSourceParser", "HOLSourceExpand", "HOLSourcePrinter",
-  "HOLSource", "TacticParse", "ProofStepPlan",
+  "HOLSource", "TacticParse", "ProofStepPlan", "TacticLeafSource",
   "Systeml", "PrettyImpl", "LSPExtension", "SHA1"])
 
 fun findUo modPath [] = NONE

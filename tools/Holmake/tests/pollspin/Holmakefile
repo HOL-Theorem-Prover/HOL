@@ -8,4 +8,5 @@ pollspin-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe pollspin-selftest.log spinner/done.txt
+EXTRA_CLEANS = selftest.exe pollspin-selftest.log \
+               quiet/hung spinner/hung talky/talky both/hung both/talky
