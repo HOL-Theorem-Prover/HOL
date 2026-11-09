@@ -328,6 +328,15 @@ structure Refute_Extract :> Refute_Extract = struct
           val equality = "eq_refute_" ^ Int.toString number
           val primitive = classify_primitive context ty
         in
+          (* [classify_primitive] registers the components first, even for a
+             lazy pair or list that ends up a generated datatype, and a
+             component's datatype can mention [ty] again ([v = A ((num # v)
+             list)]).  That inner call has registered [ty] by now; registering
+             it a second time would give it two ML types, one for the
+             constructors that met it inside and one for everything after. *)
+          case lookup_type context ty of
+            SOME (mlty, _) => mlty
+          | NONE =>
           case primitive of
             SOME mlty =>
               (#types context := (ty, mlty, equality) :: !(#types context);
