@@ -1563,19 +1563,18 @@ structure Refute_Core :> Refute_Core = struct
   fun resolve_backend_registrations names =
     let
       val snapshot = Refute_Session.read backend_registry
-      fun requested (registration : backend) =
+      (* Explicit selection also specifies order. *)
+      fun lookup name = Option.map #2
+        (List.find (fn (registered, _) => registered = name) snapshot)
+      val registrations =
         case names of
-            NONE => true
-          | SOME wanted => List.exists
-              (fn name => name = #name registration) wanted
-      fun registered name =
-        List.exists (fn (registered, _) => registered = name) snapshot
-      val registrations = map #2
-        (List.filter (fn (_, registration) => requested registration) snapshot)
+            NONE => map #2 snapshot
+          | SOME wanted =>
+              List.mapPartial lookup (rev (Lib.mk_set (rev wanted)))
       val unknown =
         case names of
             NONE => []
-          | SOME wanted => List.filter (not o registered) wanted
+          | SOME wanted => List.filter (not o Option.isSome o lookup) wanted
     in
       (registrations, unknown)
     end
@@ -1978,8 +1977,8 @@ structure Refute_Core :> Refute_Core = struct
 
   (* Concurrent backends share the call's absolute deadline: because they
      run at once, each can use all of the remaining time without extending
-     the call.  Backends that run in turn split what remains, so one backend
-     cannot consume the whole search before the others start. *)
+     the call.  Sequential backends take half what remains while reserving
+     the rest for later backends; the last takes the remainder. *)
   datatype backend_budget =
       SharedBudget of search_context
     | SplitBudget of {context : search_context, unstarted : int ref}
@@ -1990,7 +1989,8 @@ structure Refute_Core :> Refute_Core = struct
           (* A backend that exhausts or declines early leaves its unspent
              time to the backends behind it. *)
           val left = Int.max (1, !unstarted)
-          val share = Time.toReal (#remaining context ()) / Real.fromInt left
+          val share = Time.toReal (#remaining context ()) /
+            (if left > 1 then 2.0 else 1.0)
           val _ = unstarted := left - 1
         in
           make_search_context_with (#memo context) share
@@ -2154,9 +2154,10 @@ structure Refute_Core :> Refute_Core = struct
           val context = Refute_Session.current ()
           fun admit registration =
             admit_backend context search_context cfg forms registration
-          (* Admission may compile and park a complete smart-generator test.
-             In the default profile every registration gets its own local
-             worker, independently of the process-global thread count. *)
+          (* Admission only checks eligibility; compilation happens in the
+             backend's run.  In the default profile every registration gets
+             its own local worker, independently of the process-global
+             thread count. *)
           val admissions =
             if #sequential cfg then map admit candidates
             else
