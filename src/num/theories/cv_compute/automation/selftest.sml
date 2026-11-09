@@ -56,6 +56,9 @@ val ty = “:('a,'b,'c) word_tree”
 val res = define_from_to ty
 val _ = (type_of “from_scratch_word_tree f0 t” = “:cv$cv”) orelse fail()
 
+(* cv_std already encodes spt: its constructors' translations must be
+   removed before another encoding can translate them *)
+val _ = cv_rep_delete "cv_std.cv_rep_sptree_sptree_spt_datatype"
 val res = define_from_to “:'a sptree$spt”
 
 val _ = Datatype‘
@@ -201,6 +204,8 @@ val num_sum_def = Define `
 `
 
 val res = cv_trans num_sum_def;
+(* cv_std translates LENGTH already; replace that translation *)
+val _ = cv_rep_delete "cv_std.cv_LENGTH_thm";
 val res = cv_trans listTheory.LENGTH;
 (* val res = cv_trans_pre "" lookup_def; *)
 
@@ -382,3 +387,24 @@ val thy = fetch "-" "cv_str_fmap_test_thm"
             |> dest_thy_const |> #Thy;
 
 val _ = (thy = "cv_string_fmap") orelse fail();
+
+(*---------------------------------------------------------------------------*
+  Conflicting cv_rep translations and cv_rep_delete
+ *---------------------------------------------------------------------------*)
+
+val cv_inc_thm = fetch "-" "cv_inc_thm";
+val cv_inc_weak = DISCH “T ∧ T” cv_inc_thm;
+
+(* the same theorem under a second name is not a conflict *)
+val _ = save_thm ("cv_inc_again[cv_rep]", cv_inc_thm);
+
+(* a different translation of inc is *)
+val _ = test_for_failure save_thm ("cv_inc_weak[cv_rep]", cv_inc_weak);
+
+(* after removing the first translation, the second can be added and used *)
+val _ = cv_rep_delete "cv_inc_thm";
+val _ = save_thm ("cv_inc_weak2[cv_rep]", cv_inc_weak);
+val _ = test_for_failure cv_rep_delete "cv_inc_thm";
+val _ = cv_eval “inc 3” |> concl |> rhs |> aconv “4:num” orelse fail();
+
+val _ = test_for_failure cv_rep_delete "no_such_cv_rep_thm";

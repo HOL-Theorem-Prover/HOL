@@ -198,6 +198,11 @@ New examples
 Incompatibilities
 -----------------
 
+-   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
+    Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.
+    When two independently loaded ancestors translate the same pattern differently, loading still works, but using that pattern fails with an "ambiguous translation" error naming both theorems until one is removed with `cv_rep_delete`.
+    The same theorem reached through several ancestors is not a conflict.
+
 -   `Term.subst` now fails if the same redex occurs more than once in its theta-list, whether or not the repeats map it to the same residue.
     Previously such a theta-list was silently resolved by letting the last entry win, which did not agree with the first-match lookup used while terms are being matched.
     Code that builds a substitution by hand and relies on the old behaviour can call the new `Lib.subst_keep_last`, which drops all but the last maplet for each redex.
