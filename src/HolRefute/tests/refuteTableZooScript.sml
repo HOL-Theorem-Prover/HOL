@@ -1,6 +1,6 @@
 Theory refuteTableZoo
 Ancestors
-  refute ltree itreeTau fixedPoint
+  refute ltree itreeTau fixedPoint rich_list
 Libs
   TotalDefn Refute_ModelFinder_Names Refute_Core quotient Omega
 
@@ -1282,6 +1282,48 @@ Inductive zoo_hotel_pinned:
            zoo_hotel_owns s r <> SOME g ==>
            zoo_hotel_pinned s r g)
 End
+
+(* Bounded quantifiers inside a definition's body, as a program's
+   well-formedness predicates have them.  The extractor has to rewrite
+   them into list searches: neither [!x. MEM x l ==> P x] nor the two-index
+   [!i j. i < j /\ j < LENGTH l ==> P i j] is a function equality it can
+   execute.  No compute rules: the selftest supplies the list forms below,
+   so that the executability gate and the certifier see executable
+   equations while extraction reads the quantified ones. *)
+Definition zoo_all_small_def[nocompute]:
+  zoo_all_small (l : num list) <=> !x. MEM x l ==> x < 3
+End
+
+Definition zoo_sorted_def[nocompute]:
+  zoo_sorted (l : num list) <=>
+    !i j. i < j /\ j < LENGTH l ==> EL i l <= EL j l
+End
+
+Definition zoo_pairs_bounded_def[nocompute]:
+  zoo_pairs_bounded (l : num list) (m : num list) <=>
+    !x y. MEM x l /\ MEM y m ==> x + y < 4
+End
+
+Theorem zoo_all_small_compute:
+  zoo_all_small l <=> EVERY (\x. x < 3) l
+Proof
+  simp [zoo_all_small_def, listTheory.EVERY_MEM]
+QED
+
+Theorem zoo_sorted_compute:
+  zoo_sorted l <=>
+    EVERY (\j. EVERY (\i. EL i l <= EL j l) (COUNT_LIST j))
+          (COUNT_LIST (LENGTH l))
+Proof
+  simp [zoo_sorted_def, listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST]
+  >> metis_tac []
+QED
+
+Theorem zoo_pairs_bounded_compute:
+  zoo_pairs_bounded l m <=> EVERY (\x. EVERY (\y. x + y < 4) m) l
+Proof
+  simp [zoo_pairs_bounded_def, listTheory.EVERY_MEM] >> metis_tac []
+QED
 
 (* Point-free relative to its own type, though not relative to its
    pattern: the equation binds two formals, but [strip_fun] on

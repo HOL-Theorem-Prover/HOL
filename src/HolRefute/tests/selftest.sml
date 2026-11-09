@@ -2054,6 +2054,142 @@ val _ = test "native handles MEM, option maps and compound updates" (fn () =>
   both_strategies (native |> upd_size 3)
     ``((SOME 1 =+ T) (upd_f : num option -> bool)) NONE`` native_genuine)
 
+(* Native exhaustive and random testing, and narrowing, all through
+   extraction: a counterexample from each, certified. *)
+val native_small = native |> upd_size 3
+val narrowing_small = nar |> upd_timeout 3.0
+
+fun native_refuted goal =
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies native_small goal certified andalso
+    refute narrowing_small goal |> cex_where certified
+  end
+
+fun native_not_refuted goal =
+  not_refuted (refute (native_small |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (native_small |> only [Random] |> upd_seed (SOME 1))
+                 goal) andalso
+  not_refuted (refute narrowing_small goal)
+
+(* A let-bound local function reaches the extractor as the binding
+   [f x y = e] whichever way it was written (pairSyntax's [dest_anylet]
+   presents [let f = \x y. e] the same way). *)
+val _ = test "let-bound local functions are extracted" (fn () =>
+  List.all native_refuted
+    [``let f x y = x + y : num in f a b = a``,
+     ``let f = \x y. x + y : num in f a b = a``,
+     ``let f (x, y) = x + y : num in f (a, b) = a``,
+     ``let f x = x + 1 : num; g y = y * 2 : num in f (g a) = g (f a)``]
+  andalso
+  List.all native_not_refuted
+    [``let f x y = x + y : num in f a b = f b a``,
+     ``let f = \x y. x + y : num in f a b = f b a``])
+
+val _ = test "bounded quantifiers inside definitions are extracted" (fn () =>
+  with_compset [zoo_all_small_compute, zoo_sorted_compute,
+                zoo_pairs_bounded_compute] (fn () =>
+    List.all native_refuted
+      [``zoo_all_small l ==> EVERY (\x. x < 2) l``,
+       ``zoo_sorted l ==> ALL_DISTINCT l``,
+       ``zoo_pairs_bounded l m ==> EVERY (\x. x < 2) l``]
+    andalso
+    List.all native_not_refuted
+      [``zoo_all_small l ==> EVERY (\x. x < 3) l``,
+       ``zoo_sorted (x :: l) ==> zoo_sorted l``,
+       ``zoo_pairs_bounded l m ==> zoo_pairs_bounded m l``]))
+
+(* Narrowing already matched word literals lazily; the strict pattern is
+   what native exhaustive and random exercise. *)
+val _ = test "a word literal is a strict case pattern" (fn () =>
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies native_small
+      ``(case (w : word8) of 0w => (1 : num) | _ => 2) = 1`` certified andalso
+    (* random draws over all of word8 rarely hit one value *)
+    (refute (native_small |> only [Exhaustive])
+      ``(case (w : word8) of 0w => (1 : num) | 1w => 3 | _ => 2) <> 3``
+     |> cex_where certified) andalso
+    not_refuted (refute (native_small |> only [Exhaustive])
+      ``(case (w : word8) of 0w => (0 : num) | _ => 1) < 2``) andalso
+    not_refuted (refute (native_small |> only [Random] |> upd_seed (SOME 1))
+      ``(case (w : word8) of 0w => (0 : num) | _ => 1) < 2``)
+  end)
+
+val _ = test "FUNPOW and COUNT_LIST are primitives in both modes" (fn () =>
+  List.all native_refuted
+    [``FUNPOW SUC n (m : num) = m``,
+     ``FUNPOW (\xs : num list. 0 :: xs) n [] = []``,
+     ``MEM (x : num) (COUNT_LIST n) ==> x < 2``]
+  andalso
+  List.all native_not_refuted
+    [``FUNPOW SUC n (m : num) = n + m``,
+     ``LENGTH (FUNPOW (\xs : num list. 0 :: xs) n []) = n``,
+     ``MEM (x : num) (COUNT_LIST n) ==> x < n``])
+
+local
+  val bits = exhaustive |> upd_substrate NativeSML |> upd_timeout 60.0
+    |> upd_sequential true |> upd_size 3
+in
+  (* Each goal is false at a word in 0 .. 3, the values exhaustive
+     testing tries at size 3; a hit is certified only when HOL's own
+     evaluation of the bit-field operator agrees with the native one, so
+     the certificate checks the primitive's semantics, including an empty
+     [h < l] field. *)
+  val _ = test "bit-field operators run natively and certify" (fn () =>
+    List.all (fn goal => genuine_certified (refute bits goal))
+      [``!w : 256 word. ((255 >< 128) w : 128 word) = (127 >< 0) w``,
+       ``!a : 128 word. !b : 128 word. ((a @@ b) : 256 word) = b @@ a``,
+       ``!w : 64 word. (1 '' 1) w = (1 -- 1) w``,
+       ``!w : 64 word. (63 -- 60) w = (3 -- 0) w``,
+       ``!w : 64 word. ((1 >< 1) w : 8 word) = 0w``,
+       ``!w : 64 word. (3 -- 5) w = w``,
+       ``!w : 64 word. ((3 >< 5) w : 4 word) = w2w w``])
+
+  (* Fixed inputs where a wrong primitive would differ: the field
+     straddles the top bit, sits at the top bit, is empty ([h < l]) on a
+     nonzero word, and the halves of a join carry different values.
+     Each goal is false exactly when the native value is HOL's, since
+     the certificate replays the evaluation in HOL. *)
+  val _ = test "bit-field primitives agree with HOL on fixed inputs"
+    (fn () =>
+      List.all (fn goal => genuine_certified (refute bits goal))
+        [``!b : bool. b \/ (70 -- 60) (0xF0000000F0000020w : 64 word) <> 15w``,
+         ``!b : bool. b \/ (63 -- 60) (0xF0000000F0000020w : 64 word) <> 15w``,
+         ``!b : bool. b \/ (63 -- 32) (0xF0000000F0000020w : 64 word)
+                            <> 0xF0000000w``,
+         ``!b : bool. b \/ (7 '' 4) (0xF0000000F0000020w : 64 word) <> 0x20w``,
+         ``!b : bool. b \/ (3 -- 5) (0xF0000000F0000020w : 64 word) <> 0w``,
+         ``!b : bool. b \/ (3 '' 5) (0xF0000000F0000020w : 64 word) <> 0w``,
+         ``!b : bool. b \/ ((3 >< 5) (0xF0000000F0000020w : 64 word) : 4 word)
+                            <> 0w``,
+         ``!b : bool. b \/
+                      ((70 >< 60) (0xF0000000F0000020w : 64 word) : 8 word)
+                      <> 15w``,
+         ``!b : bool. b \/ ((35 >< 4) (0xF0000000F0000020w : 64 word) : 8 word)
+                            <> 2w``,
+         ``!b : bool. b \/ (((0xABw : 8 word) @@ (0xCDw : 8 word)) : 16 word)
+                            <> 0xABCDw``,
+         ``!b : bool. b \/ (((0xABw : 8 word) @@ (0xCDw : 8 word)) : 12 word)
+                            <> 0xBCDw``])
+
+  val _ = test "bit-field witnesses agree with Compute" (fn () =>
+    List.all (fn goal =>
+      let
+        val cfg = bits |> upd_size 2
+        fun first s = first_cex (refute (cfg |> upd_substrate s) goal)
+      in
+        case (first NativeSML, first Compute) of
+            (SOME a, SOME b) =>
+              is_genuine a andalso is_genuine b andalso same_bindings a b
+          | _ => false
+      end)
+      [``!w : 64 word. (1 '' 1) w = (1 -- 1) w``,
+       ``!a : 32 word. !b : 32 word. ((a @@ b) : 64 word) = b @@ a``])
+end
+
 (* A specification is keyed by its left-hand side's head constant and hides
    that constant's own definition: [zoo_hidden_pick_spec] shadows
    [zoo_hidden_def] the way [pred_set]'s [GSPECIFICATION] shadows
