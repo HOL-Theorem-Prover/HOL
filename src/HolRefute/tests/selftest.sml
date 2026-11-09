@@ -2171,6 +2171,53 @@ val _ = test "random never claims NoCounterexample for itree" (fn () =>
          (Feedback.exn_to_string e))
   end)
 
+(* A mutual family loaded from an ancestor theory has no [COPY] entry
+   tying its members together: each member is [ORIG], with one shared
+   induction theorem.  Generators must still see one family, or each
+   member's generator asks for the other's forever and no backend
+   starts. *)
+val _ = test "a mutual family from an ancestor theory gets generators"
+  (fn () =>
+    let
+      fun orig ty =
+        case TypeBasePure.induction_of0 (valOf (TypeBase.fetch ty)) of
+          TypeBasePure.ORIG _ => true
+        | TypeBasePure.COPY _ => false
+      val goal = ``!v : api_mval. v <> ApiMArr (ApiMDyn [])``
+    in
+      orig ``:api_mval`` andalso orig ``:api_marr`` andalso
+      genuine (refute (exhaustive |> upd_timeout 5.0) goal) andalso
+      genuine (refute (nar |> upd_timeout 5.0) goal)
+    end)
+
+(* The same shape in the current theory: a theory may install its own
+   mutual induction principle on each type of a group, leaving two [ORIG]
+   entries and no [COPY] link between them. *)
+val _ = Datatype.Datatype
+  `fam_expr = FELit num | FEAt fam_target ;
+   fam_target = FTName num | FTSub fam_target fam_expr`
+
+val _ =
+  let
+    val induction = TypeBase.induction_of ``:fam_expr``
+    fun reinstall ty =
+      TypeBasePure.put_induction (TypeBasePure.ORIG induction)
+        (valOf (TypeBase.fetch ty))
+  in
+    TypeBase.write [reinstall ``:fam_expr``, reinstall ``:fam_target``]
+  end
+
+val _ = test "a group with one ORIG induction per type is one family"
+  (fn () =>
+    let
+      val cfg = qc |> upd_timeout 30.0 |> upd_sequential true
+        |> upd_seed (SOME 42) |> only [Exhaustive] |> upd_size 8
+    in
+      genuine (refute cfg ``!t : fam_target. t <> FTName 2``) andalso
+      genuine (refute cfg
+        ``!e : fam_expr. e <> FEAt (FTSub (FTName 0) (FELit 0))``)
+    end)
+
 (* ------------------------------------------------------------------- *)
 (* Rationals and reals                                                 *)
 (* ------------------------------------------------------------------- *)
