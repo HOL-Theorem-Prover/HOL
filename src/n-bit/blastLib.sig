@@ -7,4 +7,5 @@ sig
     val BBLAST_TAC       : Tactic.tactic
     val FULL_BBLAST_TAC  : Tactic.tactic
     val MP_BLASTABLE_TAC : Tactic.tactic
+    val WORD_SIMP_CONV   : Conv.conv
 end

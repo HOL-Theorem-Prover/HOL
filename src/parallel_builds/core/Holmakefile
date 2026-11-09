@@ -18,7 +18,7 @@ SRCRELNAMES = \
   update
 
 ifneq ($(KERNELID),otknl)
-SRCRELNAMES += num/theories/cv_compute/automation
+SRCRELNAMES += num/theories/cv_compute/automation bvdecide
 endif
 
 INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))

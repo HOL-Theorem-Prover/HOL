@@ -1,0 +1,16 @@
+INCLUDES = ../num/theories/cv_compute/automation
+
+.PHONY: all
+all: $(DEFAULT_TARGETS) selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: bvdecide-selftest.log
+
+bvdecide-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+EXTRA_CLEANS = selftest.exe bvdecide-selftest.log

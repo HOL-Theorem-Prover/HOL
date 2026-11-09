@@ -184,6 +184,16 @@ New tools
     and loads the selected theories. See `src/statementdossier/README.md`
     for examples.
 
+-   `bvDecideLib` (in `src/bvdecide`) proves goals about words of one
+    width in the style of Lean's `bv_decide`. The goal is simplified with
+    blastLib's word simplifier and bit-blasted by a blaster defined and
+    proved sound in HOL (`bvBlastTheory.blast_dag_sound`). CaDiCaL then
+    refutes the resulting CNF, and its LRAT certificate is checked by a
+    verified RUP checker (`lratCheckTheory`) run with `cv_compute`. The
+    theorems carry no oracle tag, and no clause is replayed by inference.
+    CaDiCaL is found through `$HOL_CADICAL` or `cadical` on the `PATH`.
+    `blastLib` now also exports `WORD_SIMP_CONV`.
+
 New examples
 ------------
 
