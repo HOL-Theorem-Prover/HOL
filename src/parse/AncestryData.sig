@@ -54,11 +54,20 @@ sig
      than when the theory is loaded, so apply_delta runs late or not at
      all; apply_to_global and thy_finaliser still run as each theory
      loads.  For instances whose apply_delta has no effects beyond its
-     result.  An apply_delta that calls inference may draw on genvar's
-     counter, and drawing on it later, or not at all, changes the names
-     of the genvars made after it; the instances that do so (the
-     grammar, TypeBase and the srw simpset) draw on it rarely, if ever,
-     and their per-theory values are read only on request *)
+     result.  Two kinds of dependence on when it runs remain:
+       - an apply_delta that calls inference may draw on genvar's
+         counter, and drawing on it later, or not at all, changes the
+         names of the genvars made after it (TypeBase and the srw
+         simpset draw on it rarely, if ever);
+       - an apply_delta that looks code up by name in a registry (the
+         grammar's user printers, absyn postprocessors and state deltas;
+         TypeBase's simpfrag conversions) sees the registry as it is
+         when the value is read.  An eager merge looks it up at each
+         descendant's load, so this matters only when a name is
+         registered, or registered again with different code, after
+         the theory loads.
+     The per-theory values of the grammar, TypeBase and the srw simpset
+     are read only on request (set_*_ancestry, grammarDB, thy_simpset) *)
   val lazy_fullmake : { adinfo : ('delta, 'value) adata_info,
                         uptodate_delta : 'delta -> bool,
                         sexps : { dec : 'delta ThyDataSexp.dec,
