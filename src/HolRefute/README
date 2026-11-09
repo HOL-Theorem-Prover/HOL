@@ -87,8 +87,11 @@ Custom generators (`:rat`, `:real`, `Refute_Gen.GenCustom`) run on Compute
 only; `fmap` is a generator family (`register_generator_family`) that
 NativeSML declines by name.  Compute decides `=` between ground
 `FEMPTY`-rooted update chains through `Refute_EvalFmap` (the stock compset
-only reduces the identical pair).  Both substrates take every word width
-exhaustively, and width `<= 32` or exactly 64 for random draws.
+only reduces the identical pair).  Both substrates take every word width,
+exhaustively and in random draws.  Past the exhaustive range they add the
+boundary values (`Refute_Eval.word_boundary_values`: the ends of the
+unsigned and signed ranges and each single-bit value), and half of the
+random draws pick one, so a wrap at `2 ** w - 1` shows at any width.
 
 Smart generators (default on) serve exhaustive testing only; random
 testing keeps generate-and-guard plans.  They mode-compile `Hol_reln`

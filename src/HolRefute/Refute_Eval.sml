@@ -128,6 +128,75 @@ structure Refute_Eval :> Refute_Eval = struct
 
   val rand_below_limit = rand_output_divisor
 
+  (* Word values a uniform draw never reaches at
+     wide widths: the ends of the unsigned and signed ranges and every
+     single-bit value, below [2 ** width], without repeats. *)
+  fun word_boundary_values width =
+    let
+      val modulus = IntInf.pow (2, width)
+      val half = IntInf.div (modulus, 2)
+      val candidates =
+        [0, 1, 2, half - 1, half, modulus - 1] @
+        List.tabulate (width, fn bit => IntInf.pow (2, bit))
+      fun add (value, values) =
+        if value < modulus andalso
+           not (List.exists (fn seen => seen = value) values)
+        then values @ [value] else values
+    in
+      List.foldl add [] candidates
+    end
+
+  (* The values exhaustive testing tries for a word of [width] bits at
+     [size]: every value for widths within the enumeration cap, otherwise
+     [0 .. size] followed by the boundary values beyond [size].  Both
+     substrates enumerate exactly this list. *)
+  fun word_enum_values width size =
+    let
+      val modulus = IntInf.pow (2, width)
+      val top =
+        if width <= 8 then modulus - 1
+        else IntInf.min (IntInf.fromInt (Int.max (0, size)), modulus - 1)
+      fun from n = if n > top then [] else n :: from (n + 1)
+    in
+      from 0 @ List.filter (fn value => value > top)
+                 (word_boundary_values width)
+    end
+
+  (* A random word of [width] bits.  One draw in four picks a boundary
+     value; the rest are uniform, drawn 32 bits at a time, high chunk
+     first ([rand_below] emits 32 bits).  The normative random-consumption
+     discipline: both substrates must draw exactly this stream. *)
+  fun random_word width state =
+    let
+      fun uniform width state =
+        if width <= 32 then checked_rand_below (IntInf.pow (2, width)) state
+        else
+          let
+            val (high, after_high) = uniform (width - 32) state
+            val (low, next) = checked_rand_below rand_below_limit after_high
+          in
+            (high * rand_below_limit + low, next)
+          end
+      (* A quarter of the draws take one of the six boundary values, a
+         quarter any boundary value (the six or a single bit), the rest
+         are uniform: a wrap at [2^w - 1] then shows within a few dozen
+         draws at any width. *)
+      fun from values after_pick =
+        let
+          val (index, next) =
+            checked_rand_below (IntInf.fromInt (length values)) after_pick
+        in
+          (List.nth (values, IntInf.toInt index), next)
+        end
+      val (pick, after_pick) = checked_rand_below 4 state
+      val boundaries = word_boundary_values width
+      val six = List.take (boundaries, Int.min (6, length boundaries))
+    in
+      if pick = 0 then from six after_pick
+      else if pick = 1 then from boundaries after_pick
+      else uniform width after_pick
+    end
+
   val session_seed = Refute_Session.state "seed" (42 : IntInf.int)
 
   (* Reserving an implicit seed advances the session stream exactly once,

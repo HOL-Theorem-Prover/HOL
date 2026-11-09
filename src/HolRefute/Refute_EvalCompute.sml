@@ -21,16 +21,6 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
       else IsStuck
     end
 
-  fun bounded_power_of_two width limit =
-    let
-      fun loop 0 total = total
-        | loop remaining total =
-            if total >= limit orelse total > limit div 2 then limit
-            else loop (remaining - 1) (2 * total)
-    in
-      if width <= 0 then 1 else loop width 1
-    end
-
   fun numeric_terms Refute_Gen.Num size =
         List.tabulate (Int.max (0, size) + 1, numSyntax.term_of_int)
     | numeric_terms Refute_Gen.Int size =
@@ -41,16 +31,10 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
         List.tabulate (Refute_Gen.enum_cap,
           fn index => stringSyntax.mk_chr (numSyntax.term_of_int index))
     | numeric_terms (Refute_Gen.Word width) size =
-        let
-          (* Finite word types within the enumeration cap are enums even
-             when nested below a datatype constructor. *)
-          val count = if width <= 8 then bounded_power_of_two width 257
-                      else bounded_power_of_two width
-                        (Int.max (0, size) + 1)
-        in
-          List.tabulate (count,
-            fn index => wordsSyntax.mk_wordii (index, width))
-        end
+        (* The exhaustive range, then the boundary values beyond it. *)
+        List.map
+          (fn value => wordsSyntax.mk_wordi (Arbnum.fromLargeInt value, width))
+          (Refute_Eval.word_enum_values width size)
 
   (* The generator half shared by every fraction-shaped carrier
      ([:rat], [:real]): only the literal constructor differs, so the
@@ -528,21 +512,10 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
           (stringSyntax.mk_chr
              (numSyntax.mk_numeral (Arbnum.fromLargeInt value)), next)
         end
-    (* [rand_below] emits 32 bits, so :word64 takes two draws, high half
-       first; the seeded stream has to agree draw for draw across
-       substrates. *)
-    | random_number (Refute_Gen.Word 64) _ state =
-        let
-          val (hi, after_hi) = checked_rand_below rand_below_limit state
-          val (lo, next) = checked_rand_below rand_below_limit after_hi
-        in
-          (wordsSyntax.mk_wordi
-             (Arbnum.fromLargeInt (hi * rand_below_limit + lo), 64), next)
-        end
     | random_number (Refute_Gen.Word width) _ state =
+        (* Every width, with boundary values mixed in. *)
         let
-          val (value, next) =
-            checked_rand_below (IntInf.pow (2, width)) state
+          val (value, next) = Refute_Eval.random_word width state
         in
           (wordsSyntax.mk_wordi (Arbnum.fromLargeInt value, width), next)
         end
@@ -774,15 +747,6 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
           in
             case spec of
                 Refute_Gen.GenEnum _ => ()
-              | Refute_Gen.GenNum (Refute_Gen.Word width) =>
-                  ground_strategy strategy
-                    {exhaustive = fn () => (),
-                     random = fn _ =>
-                       if width <= 32 orelse width = 64 then ()
-                       else add (no_generator_reason ty
-                         ("word width is neither at most 32 nor exactly " ^
-                          "64, the widths rand_below's 32-bit output " ^
-                          "fills"))}
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)
