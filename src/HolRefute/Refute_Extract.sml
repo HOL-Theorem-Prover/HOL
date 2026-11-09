@@ -407,6 +407,15 @@ structure Refute_Extract :> Refute_Extract = struct
        SOME (_, name) => name
      | NONE => raise Fail "Refute_Extract: missing equality name")
 
+  fun generated_constructor context ty wanted =
+    let
+      val _ = ignore (ensure_type context ty)
+      val info = valOf (lookup_datatype context ty)
+    in
+      #3 (valOf (List.find (fn (constructor, _, _) =>
+        kname constructor = wanted) (#constructors info)))
+    end
+
   fun datatype_dependencies context ({hol_ty, constructors, ...} :
       datatype_desc) =
     let
@@ -764,6 +773,11 @@ structure Refute_Extract :> Refute_Extract = struct
     "  | refute_foldr f z (x :: xs) = f x (refute_foldr f z xs)\n" ^
     "fun refute_foldl f z [] = z\n" ^
     "  | refute_foldl f z (x :: xs) = refute_foldl f (f z x) xs\n" ^
+    "fun refute_funpow f n x =\n" ^
+    "  if n <= 0 then x else refute_funpow f (n - 1) (f x)\n" ^
+    "fun refute_count_list n =\n" ^
+    "  List.tabulate (IntInf.toInt n, IntInf.fromInt)\n" ^
+    "  handle Overflow => raise Refute_EvalSML.Stuck \"COUNT_LIST\"\n" ^
     "fun refute_all_distinct eq xs =\n" ^
     "  let fun member x = List.exists (fn y => eq x y)\n" ^
     "      fun loop [] = true\n" ^
@@ -798,6 +812,23 @@ structure Refute_Extract :> Refute_Extract = struct
     "    if refute_signed width value < 0 then refute_norm width ~1 else 0\n" ^
     "  else refute_norm width\n" ^
     "    (IntInf.~>> (refute_signed width value, refute_shift amount))\n" ^
+    (* Bit fields: [h] above the top bit reads as the top bit
+       (wordsTheory.word_bits_n2w's MIN), and [h < l] is 0. *)
+    "fun refute_word_bits width h l w =\n" ^
+    "  let val h = IntInf.min (h, IntInf.fromInt (width - 1)) in\n" ^
+    "    if h < l then 0\n" ^
+    "    else IntInf.mod (IntInf.div (refute_norm width w,\n" ^
+    "                                 IntInf.pow (2, IntInf.toInt l)),\n" ^
+    "                     IntInf.pow (2, IntInf.toInt (h - l + 1)))\n" ^
+    "  end\n" ^
+    "fun refute_word_slice width h l w =\n" ^
+    "  let val h = IntInf.min (h, IntInf.fromInt (width - 1))\n" ^
+    "      val w = refute_norm width w\n" ^
+    "  in\n" ^
+    "    if h < l then 0\n" ^
+    "    else IntInf.mod (w, IntInf.pow (2, IntInf.toInt h + 1)) -\n" ^
+    "         IntInf.mod (w, IntInf.pow (2, IntInf.toInt l))\n" ^
+    "  end\n" ^
     "fun refute_last [] = raise Refute_EvalSML.Stuck \"LAST []\"\n" ^
     "  | refute_last [x] = x\n" ^
     "  | refute_last (_ :: xs) = refute_last xs\n" ^
@@ -1001,7 +1032,102 @@ structure Refute_Extract :> Refute_Extract = struct
       | candidates => SOME (List.last candidates)
     end
 
+  (* Bounded quantifiers inside a definition's right-hand side.
+     [Refute_Core.normalize] rewrites a goal's bounded quantifiers into
+     list searches, but a definition's equations reach the clause compiler
+     as [DefnBase] presents them, so [!x. MEM x l ==> P x] in a body
+     compiled through [FORALL_DEF] as a function equality.  The same
+     rewrites are applied to each equation's right side here, after
+     currying the antecedents ([a /\ b ==> c] to [a ==> b ==> c]) and
+     pushing a binder past the antecedents and conjuncts that do not
+     mention it, so that [!x y. MEM x l /\ MEM y (f x) ==> P] becomes
+     [!x. MEM x l ==> !y. MEM y (f x) ==> P] before the bound of each
+     binder is read.  The two-index shape [!i j. i < j ==> j < n ==> P i j]
+     is a nested count.  Patterns on the left side are untouched. *)
+  val forall_lt_lt_count_list =
+    let
+      val i = Term.mk_var ("i", numSyntax.num)
+      val j = Term.mk_var ("j", numSyntax.num)
+      val n = Term.mk_var ("n", numSyntax.num)
+      val P = Term.mk_var ("P",
+        Type.--> (numSyntax.num, Type.--> (numSyntax.num, Type.bool)))
+      val Pij = Term.list_mk_comb (P, [i, j])
+      (* [!i j. i < j ==> j < n ==> P i j] *)
+      val left = boolSyntax.list_mk_forall ([i, j],
+        boolSyntax.mk_imp (numSyntax.mk_less (i, j),
+          boolSyntax.mk_imp (numSyntax.mk_less (j, n), Pij)))
+      (* [EVERY (\j. EVERY (\i. P i j) (COUNT_LIST j)) (COUNT_LIST n)] *)
+      val right = listSyntax.mk_every
+        (Term.mk_abs (j, listSyntax.mk_every
+           (Term.mk_abs (i, Pij), rich_listSyntax.mk_count_list j)),
+         rich_listSyntax.mk_count_list n)
+      (* [a ==> b ==> c] to [b ==> a ==> c] *)
+      val swap_antecedents =
+        Conv.EVERY_CONV
+          [Conv.REWR_CONV boolTheory.AND_IMP_INTRO,
+           Conv.RATOR_CONV (Conv.RAND_CONV
+             (Conv.REWR_CONV boolTheory.CONJ_COMM)),
+           Conv.REWR_CONV (Conv.GSYM boolTheory.AND_IMP_INTRO)]
+      (* Both sides to [!j. j < n ==> !i. i < j ==> P i j]. *)
+      val from_left =
+        Conv.EVERY_CONV
+          [Conv.HO_REWR_CONV boolTheory.SWAP_FORALL_THM,
+           Conv.STRIP_QUANT_CONV swap_antecedents,
+           Conv.QUANT_CONV
+             (Conv.HO_REWR_CONV boolTheory.RIGHT_FORALL_IMP_THM)] left
+      val from_right =
+        Ho_Rewrite.REWRITE_CONV
+          [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST] right
+    in
+      Thm.TRANS from_left (Thm.SYM from_right)
+    end
+
+  fun definition_body_conv tm =
+    let
+      fun pass theorems = Ho_Rewrite.REWRITE_CONV theorems
+    in
+      (* Curried first: the pair lemma needs [i < j] and [j < n] as
+         separate antecedents, and an interval rule applied to the raw
+         conjunction would consume the inner binder and leave [!i] with
+         no bound.  The bounded rules run on the curried form, where
+         [n < e ==> P n] takes any P, then again refolded, where the
+         interval shapes are conjunctions. *)
+      Conv.EVERY_CONV
+        [pass [Conv.GSYM boolTheory.AND_IMP_INTRO],
+         pass [forall_lt_lt_count_list],
+         pass [boolTheory.RIGHT_FORALL_IMP_THM,
+               boolTheory.RIGHT_EXISTS_AND_THM],
+         pass Refute_Core.bounded_rewrites,
+         pass [boolTheory.AND_IMP_INTRO],
+         pass Refute_Core.bounded_rewrites] tm
+    end
+
+  (* Only a right side with a quantifier is rewritten; any other equation
+     stays as [DefnBase] presents it. *)
+  fun normalize_definition theorem =
+    let
+      fun quantified tm =
+        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
+      fun rhs_of tm =
+        case Lib.total boolSyntax.dest_eq tm of
+            SOME (_, right) => right
+          | NONE => boolSyntax.T
+      fun equations tm =
+        if boolSyntax.is_forall tm then
+          Conv.STRIP_QUANT_CONV equations tm
+        else if boolSyntax.is_conj tm then
+          Conv.BINOP_CONV equations tm
+        else if Lib.can (HolKernel.find_term quantified) (rhs_of tm) then
+          Conv.RAND_CONV definition_body_conv tm
+        else Conv.ALL_CONV tm
+    in
+      Conv.CONV_RULE (Conv.QCONV equations) theorem
+    end
+
   fun definition_theorem context constant =
+    normalize_definition (presented_definition context constant)
+
+  and presented_definition context constant =
     let
       fun without_userdef () =
         case theorem_for_typebase constant of
@@ -1257,6 +1383,14 @@ structure Refute_Extract :> Refute_Extract = struct
       in parens (sml_decimal ^ " : IntInf.int") end
     else if Term.aconv term boolSyntax.T then "true"
     else if Term.aconv term boolSyntax.F then "false"
+    else if wordsSyntax.is_word_literal term then
+      (* The strict representation of a word is its value reduced to the
+         width, so a literal pattern is the reduced numeral. *)
+      let
+        val modulus = Arbnum.pow (Arbnum.two,
+          Arbnum.fromInt (word_width (Term.type_of term)))
+        val value = Arbnum.mod (wordsSyntax.dest_word_literal term, modulus)
+      in parens (Arbnum.toString value ^ " : IntInf.int") end
     else if Literal.is_char_lit term then
       "#" ^ quote (String.str (Literal.dest_char_lit term))
     else if Literal.is_string_lit term then
@@ -1466,6 +1600,9 @@ structure Refute_Extract :> Refute_Extract = struct
           "IntInf.mod (" ^ a ^ ", 2) = 1"))
       | ("arithmetic", "DIV2") => SOME (with1 (fn a =>
           "IntInf.div (" ^ a ^ ", 2)"))
+      | ("arithmetic", "FUNPOW") => SOME (call "refute_funpow" 3 arguments)
+      | ("rich_list", "COUNT_LIST") =>
+          SOME (call "refute_count_list" 1 arguments)
       | ("integer", "int_neg") => SOME (with1 (fn a =>
           parens ("~" ^ parens a)))
       | ("integer", "int_add") => SOME (binary "+" arguments)
@@ -1681,6 +1818,32 @@ structure Refute_Extract :> Refute_Extract = struct
               | [] => reject "w2i has no word argument"
           in SOME (call ("refute_signed " ^ Int.toString width)
             1 arguments) end
+      (* Bit-field operators.  The word arguments' widths come from the
+         head's instantiated type, since the argument terms may be absent
+         under partial application. *)
+      | ("words", "word_bits") => SOME (width_call "refute_word_bits" 3)
+      | ("words", "word_slice") => SOME (width_call "refute_word_slice" 3)
+      | ("words", "word_extract") =>
+          let
+            val output_width = word_result_width head argument_terms
+            val input_width = word_width (List.nth (argument_types (), 2))
+          in
+            SOME (with3 (fn (high, low, value) =>
+              "refute_norm " ^ Int.toString output_width ^
+              " (refute_word_bits " ^ Int.toString input_width ^ " " ^
+              atom high ^ " " ^ atom low ^ " " ^ atom value ^ ")"))
+          end
+      | ("words", "word_concat") =>
+          let
+            val output_width = word_result_width head argument_terms
+            val low_width = word_width (List.nth (argument_types (), 1))
+          in
+            SOME (with2 (fn (high, low) =>
+              "refute_norm " ^ Int.toString output_width ^ " (" ^
+              atom high ^ " * " ^
+              IntInf.toString (IntInf.pow (2, low_width)) ^ " + " ^
+              atom low ^ ")"))
+          end
       | _ => record_primitive context head arguments
     end
 
@@ -1802,6 +1965,29 @@ structure Refute_Extract :> Refute_Extract = struct
                  " => raise Refute_EvalSML.Stuck \"THE NONE\" | " ^
                  named "SOME" ^ " result => result)")
             end))
+        (* The strict text would force the function, which here takes and
+           returns suspensions; only the count is forced. *)
+        | ("arithmetic", "FUNPOW") =>
+            SOME (with3 (fn (f, n, x) =>
+              defer ("let fun refute_funpow refute_n refute_x = " ^
+                "if refute_n <= 0 then refute_x else refute_funpow " ^
+                "(refute_n - 1) " ^ parens (apply f "refute_x") ^
+                " in refute_funpow " ^ parens (force n) ^ " " ^ parens x ^
+                " end")))
+        | ("rich_list", "COUNT_LIST") =>
+            let
+              val ty = #2 (boolSyntax.strip_fun (Term.type_of head))
+              val nil_name = generated_constructor context ty ("list", "NIL")
+              val cons_name = generated_constructor context ty ("list", "CONS")
+            in
+              SOME (with1 (fn n =>
+                delay ("let val refute_count = " ^ force n ^
+                  " fun refute_from refute_i = if refute_i >= refute_count" ^
+                  " then " ^ nil_name ^ " else " ^ cons_name ^ " (" ^
+                  delay "refute_i" ^ ", " ^
+                  delay "refute_from (refute_i + 1)" ^
+                  ") in refute_from 0 end")))
+            end
         | (thy, _) =>
             if Lib.mem thy
               ["num", "arithmetic", "prim_rec", "integer", "words",
@@ -1837,6 +2023,20 @@ structure Refute_Extract :> Refute_Extract = struct
     else if Refute_TypeBase.is_record term then FRecord
     else if Refute_TypeBase.is_case term then FCase
     else FApp
+
+  (* [strip_anylet] presents a binding whose value is an abstraction in
+     function-definition form, [f x y = e] (pairSyntax's [dest_anylet] does
+     so for [let f = \x y. e] as well), which the pattern compilers refuse
+     as a non-constructor pattern.  Rebind it as the variable and its
+     abstraction; the body's applications of [f] compile like any
+     variable's. *)
+  fun let_binding (left, right) =
+    let val (head, arguments) = boolSyntax.strip_comb left
+    in
+      if Term.is_var head andalso not (null arguments) then
+        (head, pairSyntax.list_mk_pabs (arguments, right))
+      else (left, right)
+    end
 
   fun expression context term =
     case classify term of
@@ -2021,6 +2221,7 @@ structure Refute_Extract :> Refute_Extract = struct
   and strict_let_expression context term =
     let
       val (groups, body) = pairSyntax.strip_anylet term
+      val groups = List.map (List.map let_binding) groups
       fun binding (left, right) =
         pattern context left ^ " = " ^ expression context right
       (* A binding group from [strip_anylet] is simultaneous.  SML's
@@ -2039,6 +2240,7 @@ structure Refute_Extract :> Refute_Extract = struct
     let
       val {defer, ...} = context_operations context
       val (groups, body) = pairSyntax.strip_anylet term
+      val groups = List.map (List.map let_binding) groups
       fun compile_groups [] = expression context body
         | compile_groups (bindings :: rest) =
             let
