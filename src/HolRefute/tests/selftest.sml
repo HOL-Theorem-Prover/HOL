@@ -1546,6 +1546,25 @@ val _ = test "random stays Genuine on a specialised relation" (fn () =>
                      |> upd_timeout 300.0)
                   ``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``))
 
+(* Generated whole and filtered, a list of length 40 almost never shows
+   up; built from 40 element variables, every candidate meets the premise.
+   Random testing alone, since narrowing reaches such a list without the
+   plan. *)
+val _ = test "a LENGTH premise generates lists of exactly that length"
+  (fn () =>
+    genuine_certified (refute (random |> upd_timeout 30.0
+                                      |> upd_seed (SOME 42))
+      ``!w : num list. LENGTH w = 40 ==> EVERY (\x. x = 0) w``))
+
+(* Each list's elements are fresh variables, distinct from the other's;
+   reusing names would generate one variable twice, and the Compute
+   substrate would reject the plan. *)
+val _ = test "two LENGTH premises of one element type both generate"
+  (fn () =>
+    genuine_certified (refute (exhaustive |> upd_substrate Compute
+                                          |> upd_size 2 |> upd_sequential true)
+      ``!xs ys : num list. LENGTH xs = 3 /\ LENGTH ys = 3 ==> xs = ys``))
+
 (* ------------------------------------------------------------------- *)
 (* Narrowing backend                                                   *)
 (* ------------------------------------------------------------------- *)

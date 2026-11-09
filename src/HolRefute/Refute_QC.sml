@@ -42,6 +42,8 @@ structure Refute_QC :> Refute_QC = struct
     List.foldr (fn (variable, plan) => guarded_gen variable plan)
       continuation variables
 
+  val max_fixed_length = 64
+
   fun fresh_variables avoids types =
     let
       val avoid_variables = List.concat (List.map Term.free_vars_lr avoids)
@@ -781,7 +783,46 @@ structure Refute_QC :> Refute_QC = struct
                   (Guard {condition = assumption, smart = false,
                           cont = continuation ()})
 
-              fun try_equality (lhs, rhs) =
+              (* [LENGTH v = k], [k] a numeral up to [max_fixed_length]: [v]
+                 is built from [k] fresh element variables rather than
+                 generated whole and filtered, which almost never meets a
+                 length like 32. *)
+              fun fixed_length (lhs, rhs) =
+                if listSyntax.is_length lhs andalso
+                   numSyntax.is_numeral rhs andalso
+                   (* compared as a numeral first: a huge one overflows
+                      [int] *)
+                   Arbnum.<= (numSyntax.dest_numeral rhs,
+                              Arbnum.fromInt max_fixed_length)
+                then
+                  let
+                    val v = listSyntax.dest_length lhs
+                    val count = numSyntax.int_of_term rhs
+                  in
+                    if Term.is_var v andalso not (member v bound) andalso
+                       genspec_available
+                         (listSyntax.dest_list_type (Term.type_of v))
+                    then
+                      let
+                        val element =
+                          listSyntax.dest_list_type (Term.type_of v)
+                        val elements = fresh_variables
+                          (conclusion :: assumptions @ bound)
+                          (List.tabulate (count, fn _ => element))
+                        (* The elements are bound from here on, so a later
+                           premise's fresh variables avoid them. *)
+                        val rest_plan = compile conclusion
+                          (union_terms elements next_bound) rest
+                      in
+                        SOME (gen_all elements
+                          (Bind (v, listSyntax.mk_list (elements, element),
+                                 NONE, rest_plan)))
+                      end
+                    else NONE
+                  end
+                else NONE
+
+              fun variable_equality (lhs, rhs) =
                 if Term.is_var rhs andalso
                    not (member rhs (Term.free_vars_lr lhs)) andalso
                    not (member rhs bound)
@@ -815,6 +856,11 @@ structure Refute_QC :> Refute_QC = struct
                         SOME (gen_all lhs_variables
                           (Split (lhs, [(constructor, variables, branch)])))
                       end
+
+              fun try_equality (lhs, rhs) =
+                case fixed_length (lhs, rhs) of
+                    SOME plan => SOME plan
+                  | NONE => variable_equality (lhs, rhs)
 
               fun ordinary () =
                 if #optimise_equality (#qc config) then
