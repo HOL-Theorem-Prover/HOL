@@ -2338,7 +2338,10 @@ val _ = test "word width variables need a width pin" (fn () =>
                                  word_goal))
           [SOME 1, SOME 2, SOME 3, SOME 4])
 
-val _ = test "word types are classified before encoding" (fn () =>
+(* The next test, and "unregistered typedefs are reported without
+   kodkodi" below, check messages the model finder gives once it has a
+   solver; without kodkodi it answers "no configured backend" first. *)
+val _ = mf_test "word types are classified before encoding" (fn () =>
   let
     val cfg = default_config |> quiet |> upd_timeout 2.0 |> only [ModelFinder]
     fun says goal message =
@@ -2536,7 +2539,7 @@ fun iterator_card (c : counterexample) =
 val mf_num2 = mf |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
 val mf_num3 = mf |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
 
-val _ = test "unregistered typedefs are reported without kodkodi" (fn () =>
+val _ = mf_test "unregistered typedefs are reported without kodkodi" (fn () =>
   List.all (fn goal =>
     case refute (mf |> upd_timeout 2.0) goal of
         Unknown [reason] =>
