@@ -259,15 +259,32 @@ structure Refute_Gen :> Refute_Gen = struct
     | SOME (TypeBasePure.COPY (other, _)) => other = key
     | SOME (TypeBasePure.ORIG _) => TypeBasePure.ty_name_of info = key
 
+  fun induction_concl info =
+    case Lib.total TypeBasePure.induction_of0 info of
+      SOME (TypeBasePure.ORIG th) => SOME (Thm.concl th)
+    | SOME (TypeBasePure.COPY (_, th)) => SOME (Thm.concl th)
+    | NONE => NONE
+
+  (* The [COPY] key ties a mutual family together only in the session that
+     defined it: a theory loaded from disk gives every member an [ORIG] entry
+     carrying the same induction theorem.  Matching that theorem too keeps such
+     a family whole; split, each member's spec asks for the other's, and
+     [spec_of] never returns. *)
   fun family_of ty info =
     let
       val key = induction_key info
+      val induction = induction_concl info
+      fun member other =
+        same_family key other orelse
+        (case (induction, induction_concl other) of
+           (SOME mine, SOME theirs) => Term.aconv mine theirs
+         | _ => false)
       val theta = Type.match_type (TypeBasePure.ty_of info) ty
       fun instantiate family_info =
         Type.type_subst theta (TypeBasePure.ty_of family_info)
     in
       List.map instantiate
-        (List.filter (same_family key) (Refute_TypeBase.elts ()))
+        (List.filter member (Refute_TypeBase.elts ()))
     end
 
   fun type_mentions family ty =
