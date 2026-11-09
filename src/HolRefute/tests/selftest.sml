@@ -1690,6 +1690,49 @@ val _ = test "narrowing publishes an uncertified dependent interval"
     refute narrowing ``!i : num. lo <= i /\ i < LENGTH l ==> EL i l <= k``
     |> cex_where (fn c => is_genuine c andalso uncertified c))
 
+(* A two-column case matrix with a wildcard, as a case expression and as
+   equations, where [Define] expands the wildcard into one equation per
+   remaining constructor pair.  Compiled as a flattened matrix, every row
+   tests several constructors and falls through to the next row; with the
+   rows chained through local closures, Poly/ML copied each closure into
+   every test, and the program did not compile within the budget. *)
+val _ = Datatype.Datatype
+  `rg_cm_key = RGK1 num | RGK2 num | RGK3 | RGK4 | RGK5 num | RGK6`
+val _ = Datatype.Datatype
+  `rg_cm_val = RGV1 bool | RGV2 num | RGV3 num | RGV4 | RGV5 (num list) |
+               RGV6 num | RGV7 | RGV8 num`
+
+val rx_matrix_def = TotalDefn.Define
+  `rx_matrix k v = case (k, v) of
+       (RGK1 n, RGV2 m) => m <= n
+     | (RGK2 n, RGV3 m) => m <= n
+     | (RGK3, RGV1 b) => b
+     | (RGK4, RGV4) => T
+     | (RGK5 n, RGV5 l) => LENGTH l <= n
+     | (RGK6, RGV6 m) => T
+     | (RGK3, RGV8 m) => m = 0
+     | (RGK6, RGV7) => T
+     | _ => F`
+
+val rx_matrix_eqn_def = TotalDefn.Define
+  `(rx_matrix_eqn (RGK1 n) (RGV2 m) = (m <= n)) /\
+   (rx_matrix_eqn (RGK2 n) (RGV3 m) = (m <= n)) /\
+   (rx_matrix_eqn RGK3 (RGV1 b) = b) /\
+   (rx_matrix_eqn RGK4 RGV4 = T) /\
+   (rx_matrix_eqn (RGK5 n) (RGV5 l) = (LENGTH l <= n)) /\
+   (rx_matrix_eqn RGK6 (RGV6 m) = T) /\
+   (rx_matrix_eqn RGK3 (RGV8 m) = (m = 0)) /\
+   (rx_matrix_eqn RGK6 RGV7 = T) /\
+   (rx_matrix_eqn _ _ = F)`
+
+val _ = test "narrowing compiles a two-column case matrix" (fn () =>
+  genuine (refute (nar |> upd_timeout 5.0)
+    ``rx_matrix RGK4 v ==> v <> RGV4``))
+
+val _ = test "narrowing compiles a two-argument equation matrix" (fn () =>
+  genuine (refute (nar |> upd_timeout 5.0)
+    ``rx_matrix_eqn RGK4 v ==> v <> RGV4``))
+
 val _ = test "narrowing declines by name what it cannot enumerate" (fn () =>
   unknown_with "not extractable"
     (refute narrowing ``FLOOKUP (fm : num |-> num) 0 = SOME 0``) andalso

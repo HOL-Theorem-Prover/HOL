@@ -264,6 +264,30 @@ structure Refute_Extract :> Refute_Extract = struct
   fun fresh_pattern ({next_pattern, ...} : context) prefix =
     prefix ^ Int.toString (next_pattern ())
 
+  (* Rows tried in order: each row is given the expression that tries the rows
+     after it.  The chain is one recursive function indexed by row.  Poly/ML
+     copies a local non-recursive fallthrough closure into each of its call
+     sites, and a row tests one pattern per argument and nesting level, so a
+     chain of closures made compile time exponential in the number of rows. *)
+  fun row_chain context rows =
+    case rows of
+        [] => "(raise Match)"
+      | [row] => row "(raise Match)"
+      | _ =>
+          let
+            val name = fresh_pattern context "refute_rows_"
+            val last = length rows - 1
+            fun arm (index, row) =
+              name ^ " " ^ Int.toString index ^ " = " ^
+              row (if index = last then "(raise Match)"
+                   else parens (name ^ " " ^ Int.toString (index + 1)))
+            val arms = List.map arm
+              (ListPair.zip (List.tabulate (length rows, fn i => i), rows))
+          in
+            parens ("let fun " ^ join "\n  | " arms ^ "\n  | " ^ name ^
+              " _ = raise Match in " ^ name ^ " 0 end")
+          end
+
   fun word_width ty =
     let
       val index = wordsSyntax.dest_word_type ty
@@ -2093,17 +2117,12 @@ structure Refute_Extract :> Refute_Extract = struct
       fun string_rows () =
         let
           val value = fresh_pattern context "refute_string_scrutinee_"
-          fun dispatch [] = "(raise Match)"
-            | dispatch ((pat, rhs) :: rest) =
-                let val next = fresh_pattern context "refute_string_next_"
-                in
-                  "let fun " ^ next ^ " () = " ^ dispatch rest ^ " in " ^
-                  lazy_match_pattern context pat value
-                    (expression context rhs) (next ^ " ()") ^ " end"
-                end
+          fun row (pat, rhs) failure =
+            lazy_match_pattern context pat value (expression context rhs)
+              failure
         in
           parens ("let val " ^ value ^ " = " ^ expression context scrutinee ^
-            " in " ^ dispatch rows ^ " end")
+            " in " ^ row_chain context (List.map row rows) ^ " end")
         end
     in
       if is_char_list (Term.type_of scrutinee) then string_rows ()
@@ -2111,26 +2130,27 @@ structure Refute_Extract :> Refute_Extract = struct
         join " | " (List.map row rows))
     end
 
+  (* Rows come from one level of the case tree ([dest_case]), not from the
+     flattened matrix ([strip_case]).  A flattened row repeats the outer tests:
+     a two-column [case (x, y)] with a wildcard flattens into a row per
+     constructor pair.  One level's rows are flat constructor patterns with a
+     single failure test each; nested cases sit in the right-hand sides and are
+     compiled here again. *)
   and lazy_case_expression context term =
     let
       val {defer, ...} = context_operations context
-      val (scrutinee, rows) = Refute_TypeBase.strip_case term
+      val (_, scrutinee, rows) = Refute_TypeBase.dest_case term
+        handle Feedback.HOL_ERR _ =>
+          reject ("unsupported case expression: " ^
+                  Parse.term_to_string term)
       val value = fresh_pattern context "refute_lazy_scrutinee_"
-      fun dispatch [] = "(raise Match)"
-        | dispatch ((pat, rhs) :: rest) =
-            let
-              val next = fresh_pattern context "refute_lazy_next_"
-              val failure = next ^ " ()"
-            in
-              parens ("let fun " ^ next ^ " () = " ^ dispatch rest ^
-                " in " ^ lazy_match_pattern context pat value
-                  (expression context rhs) failure ^ " end")
-            end
+      fun row (pat, rhs) failure =
+        lazy_match_pattern context pat value (expression context rhs) failure
     in
       defer
         (parens ("let val " ^ value ^ " = " ^
-          expression context scrutinee ^ "\nin " ^ dispatch rows ^
-          "\nend"))
+          expression context scrutinee ^ "\nin " ^
+          row_chain context (List.map row rows) ^ "\nend"))
     end
 
   (* Match one HOL pattern against a suspended value.  Constructor spines and
@@ -2281,28 +2301,24 @@ structure Refute_Extract :> Refute_Extract = struct
         else raise Fail "cached definition arity changed"
       val arguments = List.tabulate (arity, fn index =>
         "refute_argument_" ^ Int.toString index)
-      fun dispatch [] = "(raise Match)"
-        | dispatch ((patterns, rhs) :: rest) =
-            let
-              val fallback = "refute_next ()"
-              fun match_arguments bound [] [] = expression context rhs
-                | match_arguments bound (pattern :: patterns)
-                    (argument :: arguments) =
-                    lazy_match_pattern_with context bound pattern argument
-                      (match_arguments
-                         (bound @ Term.free_vars_lr pattern)
-                         patterns arguments)
-                      fallback
-                | match_arguments _ _ _ = raise Fail "malformed rule"
-              val body = match_arguments [] patterns arguments
-            in
-              "(let fun refute_next () = " ^ dispatch rest ^ " in " ^
-              body ^ " end)"
-            end
+      fun row (patterns, rhs) fallback =
+        let
+          fun match_arguments bound [] [] = expression context rhs
+            | match_arguments bound (pattern :: patterns)
+                (argument :: arguments) =
+                lazy_match_pattern_with context bound pattern argument
+                  (match_arguments
+                     (bound @ Term.free_vars_lr pattern)
+                     patterns arguments)
+                  fallback
+            | match_arguments _ _ _ = raise Fail "malformed rule"
+        in
+          match_arguments [] patterns arguments
+        end
       val lhs = if null arguments then name ^ " ()"
                 else name ^ " " ^ join " " arguments
     in
-      lhs ^ " = " ^ dispatch equations
+      lhs ^ " = " ^ row_chain context (List.map row equations)
     end
 
   fun definition_clause context item =
