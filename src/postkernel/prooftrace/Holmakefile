@@ -57,3 +57,5 @@ all: pft-regression.log
 pft-regression.log: selftest.exe
 	$(tee $(PFT_TEST) 2>&1, $@)
 endif
+
+all: PFTCandleComputePreamble.uo
