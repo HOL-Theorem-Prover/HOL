@@ -1196,6 +1196,8 @@ val _ = Datatype.Datatype
 val _ = Datatype.Datatype `rg_custom = RGC0 | RGC1`
 val _ = Datatype.Datatype `rg_reentrant = RGR0 | RGR1`
 val _ = Datatype.Datatype `rg_avl = RGET | RGMKT num rg_avl rg_avl num`
+val _ = Datatype.Datatype
+  `rg_nest = RGNInt num | RGNArr ((num # rg_nest) list)`
 
 val rx_enum_code_def = TotalDefn.Define
   `rx_enum_code RGRed = 0 /\ rx_enum_code RGGreen = 1 /\
@@ -1672,6 +1674,15 @@ val _ = test "finite_functions false refuses function domains" (fn () =>
 
 val _ = test "narrowing reaches MEM" (fn () =>
   genuine (refute narrowing ``!l : num list. MEM 0 l``))
+
+(* A pair list whose element datatype mentions the same pair list again.
+   Lazily, the pair and the list are generated datatypes, and the element's
+   registration meets them while their own is still under way; each must be
+   registered once, or its equality and the element's constructor name two
+   different ML types and the program does not compile. *)
+val _ = test "narrowing compares a pair list nested in its element" (fn () =>
+  genuine (refute nar
+    ``!al : (num # rg_nest) list. ~MEM (1, RGNInt 0) al``))
 
 (* An alternative id denotes the same character at every depth, so the
    generated program needs one reconstruction arm per character, not one
