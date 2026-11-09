@@ -27,7 +27,8 @@ One call owns one absolute deadline (default 10 s) consumed by
 preprocessing, admission, every backend and Kodkodi; cleanup may finish
 after it.  Backends run concurrently in a pool local to the call, each
 seeing the whole remainder, unless `upd_sequential true`, which runs them
-by weight and splits the remainder among those not yet started.  Either
+in turn, by weight or in the order an `Only` list gives, each with half of
+the remainder while others wait and the last with the rest.  Either
 way the search stops at `NoCounterexample` or at a counterexample reaching
 the highest certainty any selected backend declares reachable.
 

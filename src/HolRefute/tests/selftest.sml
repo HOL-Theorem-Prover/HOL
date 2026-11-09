@@ -936,6 +936,23 @@ val _ = test "backend input form selects instances or the original"
             | _ => false)))
     end)
 
+val _ = test "Only runs backends in caller order, once per name" (fn () =>
+  let
+    val enabled = ref false
+    val seen = ref ([] : string list)
+    fun backend name weight = register_backend (stub name weight enabled
+      (fn _ => fn _ => (seen := !seen @ [name]; Unknown [])))
+    val _ = backend "selftest-order-low" ~90
+    val _ = backend "selftest-order-high" ~80
+  in
+    with_enabled [enabled] (fn () =>
+      (ignore (refute (default_config |> quiet |> upd_sequential true
+        |> only [RegisteredBackend "selftest-order-high",
+                 RegisteredBackend "selftest-order-low",
+                 RegisteredBackend "selftest-order-high"]) ``T``);
+       !seen = ["selftest-order-high", "selftest-order-low"]))
+  end)
+
 val _ = test "backends run concurrently unless sequential" (fn () =>
   let
     val enabled = ref false
@@ -1432,8 +1449,7 @@ val _ = test "an expired deadline never claims NoCounterexample" (fn () =>
     val cfg = exhaustive |> only [RegisteredBackend "selftest-expired"]
     val _ = with_enabled [enabled]
       (fn () => ignore (refute cfg ``(b : bool) \/ ~b``))
-    (* The smart-gate cache lives in the call's session, so the backend
-       body needs one even with no call around it. *)
+    (* Substrate work uses the call's session even when driven directly. *)
     fun run_exhaustive config =
       Refute_Session.run (Context.snapshot ()) (fn () =>
         Refute_QC.strategy_run Refute_Eval.Exhaustive config (!seen))
@@ -1782,6 +1798,23 @@ val _ = section "smart generators"
 val linear_goal = ``zoo_sg_linear (n : num) ==> n < 3``
 val native = exhaustive |> upd_substrate NativeSML
 
+val _ = test
+  "sequential search reaches earlier backends before smart compilation"
+  (fn () =>
+    let
+      val enabled = ref false
+      val _ = register_backend (stub "selftest-before-smart" ~80 enabled
+        (fn _ => fn _ => NoCounterexample))
+      val (outcome, text) = with_enabled [enabled] (fn () =>
+        capture 2 (fn () =>
+          refute (default_config |> upd_sequential true |> upd_timeout 2.5
+            |> only [RegisteredBackend "selftest-before-smart", Exhaustive])
+            linear_goal))
+    in
+      outcome == NoCounterexample andalso
+      not (String.isSubstring "Refute substrate selection:" text)
+    end)
+
 val _ = test "an inductive premise is enumerated at depth" (fn () =>
   with_compset [zoo_sg_linear_compute] (fn () =>
     let val cfg = native |> upd_size 1 |> upd_timeout 5.0 in
@@ -2128,9 +2161,9 @@ val _ = test "trace 2 reports selection and the race" (fn () =>
        "selected compute"] andalso
     outcome == NoCounterexample andalso
     List.all (fn needle => String.isSubstring needle race)
-      ["Refute backend started (weight 20): exhaustive",
-       "Refute backend started (weight 30): random",
-       "Refute backend started (weight 40): narrowing"] andalso
+      ["Refute backend started (weight 30): exhaustive",
+       "Refute backend started (weight 20): random",
+       "Refute backend started (weight 10): narrowing"] andalso
     (not kodkodi_configured orelse
      String.isSubstring "Refute backend started (weight 50): kodkod" race)
   end)
