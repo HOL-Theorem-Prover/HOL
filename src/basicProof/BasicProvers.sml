@@ -1313,7 +1313,7 @@ fun finaliser {thyname} deltas ({sset,initp,upds,...} : srw_state) =
 
 val adresult as {DB,get_global_value,get_global_value_of,record_delta,
                  update_global_value,update_global_value_of,...} =
-    ThmSetData.lazy_export_with_ancestry {
+    ThmSetData.export_with_ancestry {
       delta_ops = {
         apply_delta = apply_delta,
         apply_to_global = apply_to_global,

@@ -5,9 +5,9 @@ sig
     apply_delta : 'delta -> 'value -> 'value
   }
 
-  (* the `_of` fields read the supplied context (except that lazy_fullmake's
-     DB_of computes a value not yet read from the ambient one); the others
-     read the ambient one and are defined in terms of them *)
+  (* the `_of` fields read the supplied context (except that DB_of computes
+     a value not read before from the ambient one); the others read the
+     ambient one and are defined in terms of them *)
   type ('delta,'value) fullresult =
        { merge : string list -> 'value option,
          DB : {thyname : string} -> 'value option,
@@ -28,6 +28,37 @@ sig
                         ('a -> 'b) -> ('a -> 'b)
 
 
+  (* The contract on apply_delta, for make and fullmake alike:
+
+       apply_delta returns the new value and writes nothing else.
+       AncestryData may call it any number of times for the same delta,
+       at any point after the theory that recorded the delta is loaded,
+       or never.
+
+     Changes to the state (the global grammar, simpset or compset, say)
+     belong in delta_side_effects (make) or apply_to_global and
+     thy_finaliser (fullmake), which run once for each theory, as it is
+     loaded, in load order.
+
+     A loaded theory's own value (what DB returns, and what merge and
+     set_parents start from) is computed when it is first read, by
+     applying its ancestors' and its own deltas.  It is the theory's
+     state up to the renaming of fresh variables, given the code
+     registered under each name when it is read.  That is all a value
+     computed at load could promise too: which genvars a merge draws
+     depends on how many of the ancestors' deltas it applies, which
+     depends on the shape of the ancestry, and the code behind a
+     registered name is whatever this process registered.  What
+     changes is when apply_delta runs, so:
+       - an exception from apply_delta is raised by the first read
+         (DB, merge, set_parents, and the clients' set_*_ancestry,
+         grammarDB {thyname} and thy_simpset), not by the load;
+       - what apply_delta prints is printed at that read;
+       - inference in apply_delta draws genvars at that read, so the
+         names of genvars made later can differ;
+       - a name apply_delta looks up in a registry (user printers,
+         absyn postprocessors, simpfrag conversions) is looked up at
+         that read. *)
   val make : { info : ('delta, 'value) adata_info,
                get_deltas : {thyname:string} -> 'delta list,
                delta_side_effects : 'delta -> unit } ->
@@ -49,36 +80,6 @@ sig
                      initial_value : 'value}
                  } ->
                  ('delta,'value) fullresult
-
-  (* as fullmake, but each theory's value is computed when first read rather
-     than when the theory is loaded, so apply_delta runs late or not at
-     all; apply_to_global and thy_finaliser still run as each theory
-     loads.  For instances whose apply_delta has no effects beyond its
-     result.  Two kinds of dependence on when it runs remain:
-       - an apply_delta that calls inference may draw on genvar's
-         counter, and drawing on it later, or not at all, changes the
-         names of the genvars made after it (TypeBase and the srw
-         simpset draw on it rarely, if ever);
-       - an apply_delta that looks code up by name in a registry (the
-         grammar's user printers, absyn postprocessors and state deltas;
-         TypeBase's simpfrag conversions) sees the registry as it is
-         when the value is read.  An eager merge looks it up at each
-         descendant's load, so this matters only when a name is
-         registered, or registered again with different code, after
-         the theory loads.
-     The per-theory values of the grammar, TypeBase and the srw simpset
-     are read only on request (set_*_ancestry, grammarDB, thy_simpset) *)
-  val lazy_fullmake : { adinfo : ('delta, 'value) adata_info,
-                        uptodate_delta : 'delta -> bool,
-                        sexps : { dec : 'delta ThyDataSexp.dec,
-                                  enc : 'delta ThyDataSexp.enc },
-                        globinfo : {
-                          apply_to_global : 'delta -> 'value -> 'value,
-                          thy_finaliser : ({thyname:string} -> 'delta list ->
-                                           'value -> 'value) option,
-                          initial_value : 'value}
-                      } ->
-                      ('delta,'value) fullresult
 
 end
 
@@ -162,16 +163,14 @@ end
             they compose into a single context transform instead of
             bracketing a mutation around a window.
 
-    Two constructor functions (and lazy_fullmake, a variant of
-    fullmake described below):
+    Two constructor functions:
 
       - make {info, get_deltas, delta_side_effects}
         The simpler of the two.  Used when the caller stores deltas
         elsewhere (e.g. in a separate ThyDataSexp tag they manage
         themselves) and only wants AncestryData to handle the merge
         logic.  Returns the four-field record { merge, DB, parents,
-        set_parents }.  Each theory's value is computed when first
-        read, as in lazy_fullmake.
+        set_parents }.
       - fullmake {adinfo, uptodate_delta, sexps, globinfo}
         The full-fat version.  Adds:
           - uptodate_delta : called when a theory is loaded to weed
@@ -205,20 +204,22 @@ end
         prunes out-of-date entries on load using uptodate_delta) and
         "<tag>.parents" (the AncestryData parent-list override).
 
-    On theory load, parent_onload computes the theory's value by
-    merging its parents' values, then folds in the theory's own deltas
-    via apply_delta and stashes the result in value_table.  In
-    fullmake, each delta is also fed through delta_side_effects, which
-    either applies apply_to_global one delta at a time (when no
-    finaliser is supplied) or hands the whole batch to thy_finaliser.
-    lazy_fullmake does the same, except that it stores the value as a
-    suspension, forced when first read (by DB, DB_of, merge or
-    set_parents); delta_side_effects still runs at load.  Forcing reads
-    the ancestors' data from the ambient context, whatever context was
-    passed to DB_of.  The value is right whenever that context has the
-    theory's ancestors loaded, as a loaded theory's data does not
-    change; when one is missing, forcing raises, and the value stays
-    unforced.
+    On theory load, parent_onload runs delta_side_effects on the
+    theory's deltas (in fullmake, it either applies apply_to_global
+    one delta at a time, when no finaliser is supplied, or hands the
+    whole batch to thy_finaliser), and stores in value_table a
+    suspension that computes the theory's value by merging its
+    parents' values and folding in its own deltas via apply_delta.
+    The suspension is forced when the value is first read (by DB,
+    DB_of, merge or set_parents).  The theory's deltas and the start
+    of the merge (the first parent with a value, and its ancestry) are
+    fixed at load.  A theory whose parents lead to the current theory
+    or to "-" has its value computed at load instead, as it would
+    otherwise depend on when it is read.  Forcing reads the ancestors'
+    data from the ambient context, whatever context was passed to
+    DB_of.  The value is right whenever that context has the theory's
+    ancestors loaded, as a loaded theory's data does not change; when
+    one is missing, forcing raises, and the value stays unforced.
 
     The merge walk.  AncestryData merges multiple ancestor theories
     by:

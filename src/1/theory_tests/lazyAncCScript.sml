@@ -4,19 +4,20 @@ Ancestors
 Libs
   HolKernel lazyAncestryLib
 
-(* The lazy instance has applied no delta for the theories loaded, while
-   the eager one has, and the two agree on every value *)
-val _ = !lazy_applied = 0 orelse raise Fail "lazyAncL: values not lazy"
+(* Loading the theories applied no delta; reading their values applies
+   each theory's deltas once, and reading them again applies none *)
+val _ = !applied = 0 orelse raise Fail "lazyAnc: values not lazy"
 
-fun same name (e, l) =
-    if e = l then ()
-    else raise Fail (name ^ ": eager and lazy values differ")
-val thys = ["lazyAncA", "lazyAncB1", "lazyAncB2"]
-val _ = List.app (fn thy => same thy (#DB eager {thyname = thy},
-                                      #DB lazy {thyname = thy})) thys
-val _ = !lazy_applied > 0 orelse raise Fail "lazyAncL: DB applied nothing"
-val _ = same "merge" (#merge eager thys, #merge lazy thys)
-val _ = same "global" (#get_global_value eager (), #get_global_value lazy ())
-val _ = case #DB lazy {thyname = "lazyAncB2"} of
-            SOME ["b2", "a2", "a1"] => ()
-          | _ => raise Fail "lazyAncL: unexpected value for lazyAncB2"
+fun db thy = #DB anc {thyname = thy}
+val _ = case (db "lazyAncA", db "lazyAncB1", db "lazyAncB2") of
+            (SOME ["a2", "a1"], SOME ["b1", "a2", "a1"],
+             SOME ["b2", "a2", "a1"]) => ()
+          | _ => raise Fail "lazyAnc: unexpected stored values"
+val _ = !applied = 4 orelse raise Fail "lazyAnc: deltas applied twice"
+val _ = (db "lazyAncA", db "lazyAncB2")
+val _ = !applied = 4 orelse raise Fail "lazyAnc: value computed twice"
+
+val _ = check "merge" ["a1", "a2", "b1", "b2"]
+              (#merge anc ["lazyAncA", "lazyAncB1", "lazyAncB2"])
+val _ = check "global" ["a1", "a2", "b1", "b2"]
+              (SOME (#get_global_value anc ()))

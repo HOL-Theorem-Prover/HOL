@@ -154,8 +154,7 @@ fun merge (info : ('d,'v) info) thys : 'v option =
       Option.map (merge_from info) (merge_start info thys)
     end
 
-(* A theory's value is computed when first read, unless the instance's
-   merges have side effects (eager).  It is also computed at once when the
+(* A theory's value is computed when first read, or at once when the
    theory's ancestry is not fixed (its parents lead to the current theory
    or to "-"), since it would then depend on when it is read. *)
 fun now v = Susp.delay (fn () => v)
@@ -173,7 +172,7 @@ fun fixed_ancestry slot thy ps =
 fun parent_onload extras {thyname,data = data_opt} =
     let
       open ThyDataSexp
-      val {tag,info_ref,delta_side_effects,eager,value_table} = extras
+      val {tag,info_ref,delta_side_effects,value_table} = extras
     in
       (* info_ref is NONE while ThyDataSexp.new runs this hook over the
          theories already loaded; the instance's own onload pass follows *)
@@ -219,20 +218,14 @@ fun parent_onload extras {thyname,data = data_opt} =
               let
                 (* the theory's own deltas are read now *)
                 val uds = get_deltas {thyname = thyname}
-                fun apply_own v0 = rev_itlist apply_delta uds v0
+                fun value () =
+                    rev_itlist apply_delta uds (merge_from info start)
+                val v = if fixed_ancestry ancestors thyname ps
+                        then Susp.delay value
+                        else now (value ())
               in
-                if eager orelse not (fixed_ancestry ancestors thyname ps)
-                then
-                  let
-                    val v0 = merge_from info start
-                  in
-                    delta_side_effects thyname uds;
-                    store (now (apply_own v0))
-                  end
-                else
-                  (delta_side_effects thyname uds;
-                   store (Susp.delay (fn () =>
-                                         apply_own (merge_from info start))))
+                delta_side_effects thyname uds;
+                store v
               end
           end
     end
@@ -258,7 +251,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
       val info_ref = ref NONE
       val parent_extras =
           {tag = tag, info_ref = info_ref, delta_side_effects = side_effects,
-           eager = false, value_table = value_table}
+           value_table = value_table}
 
       val {export = parent_export,
            segment_data = parent_segment_data, ...} =
@@ -348,9 +341,8 @@ type ('delta,'value) fullresult =
        update_global_value_of : ('value -> 'value) -> Context.t ->
                                 Context.t }
 
-fun gen_fullmake eager
-                 {adinfo:('delta,'value)adata_info, sexps, globinfo,
-                  uptodate_delta} =
+fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo,
+              uptodate_delta} =
     let
       open ThyDataSexp
       val {dec,enc} = sexps
@@ -410,7 +402,7 @@ fun gen_fullmake eager
       val parent_extras =
           {tag = tag, info_ref = info_ref,
            delta_side_effects = delta_side_effects,
-           eager = eager, value_table = value_table}
+           value_table = value_table}
       val {export = export_raw_parents, segment_data = get_raw_parents, ...} =
           ThyDataSexp.new {thydataty = tag ^ ".parents",
                            merge = #new,
@@ -461,9 +453,6 @@ fun gen_fullmake eager
        update_global_value = update_global_value,
        update_global_value_of = update_global_value_of}
     end
-
-fun fullmake x = gen_fullmake true x
-fun lazy_fullmake x = gen_fullmake false x
 
 fun with_temp_value (fr:('delta,'value)fullresult) v =
     Portable.genwith_flag ({ get = #get_global_value fr,
