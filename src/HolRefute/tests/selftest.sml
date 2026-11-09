@@ -2818,10 +2818,21 @@ val _ = mf_test "well-foundedness over infinite types is only Potential"
                                                  (NONE, [1, 2, 3])]
               |> upd_max_potential 1)
            ``WF (R : num -> num -> bool) ==> transitive R``
-    |> single_cex_where is_potential andalso
-    refute (mf_wide |> upd_timeout 60.0) ``mf_wf_sortedp (xs : num list) ==>
-                                      LENGTH xs <= 8``
-    |> single_cex_where (fn c => is_genuine c andalso Option.isSome (#cert c)))
+    |> single_cex_where is_potential)
+
+(* Kodkodi's built-in SAT4J does not find this witness within the budget,
+   so the check needs an external solver. *)
+val long_sorted = "a long sorted list has a certified witness"
+
+val _ =
+  case List.find external_sat_ready external_sat_solvers of
+      NONE => skip long_sorted "no external SAT solver configured"
+    | SOME (solver, _, _) =>
+        mf_test long_sorted (fn () =>
+          refute (mf_wide |> upd_timeout 60.0 |> upd_sat_solver solver)
+            ``mf_wf_sortedp (xs : num list) ==> LENGTH xs <= 8``
+          |> single_cex_where
+               (fn c => is_genuine c andalso Option.isSome (#cert c)))
 
 val _ = mf_test "true set and recursion facts are bounds-clean" (fn () =>
   let val cfg = mf |> upd_timeout 30.0 in
