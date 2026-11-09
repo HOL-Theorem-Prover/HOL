@@ -1035,6 +1035,11 @@ structure Refute_Core :> Refute_Core = struct
       collect [] tm
     end
 
+  (* [{}] is a value, as a datatype constructor is, so the compset keys
+     no rule on it.  [INSERT] has [INSERT_CONV], and [FEMPTY]/[FUPDATE]
+     are family constructors. *)
+  val data_constants = [pred_setSyntax.empty_tm]
+
   fun nonexecutable_constants terms =
     let
       val comp_items = computeLib.listItems (computeLib.the_compset ())
@@ -1046,6 +1051,8 @@ structure Refute_Core :> Refute_Core = struct
           comp_items
       fun executable_constant constant =
         Refute_TypeBase.is_constructor constant orelse
+        List.exists (fn data => Term.same_const data constant)
+          data_constants orelse
         Refute_Gen.is_family_constructor constant orelse
         let
           val {Name, Thy, ...} = Term.dest_thy_const constant

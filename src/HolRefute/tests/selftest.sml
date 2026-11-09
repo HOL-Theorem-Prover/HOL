@@ -1691,8 +1691,6 @@ val _ = test "narrowing publishes an uncertified dependent interval"
     |> cex_where (fn c => is_genuine c andalso uncertified c))
 
 val _ = test "narrowing declines by name what it cannot enumerate" (fn () =>
-  unknown_with "not extractable"
-    (refute narrowing ``FLOOKUP (fm : num |-> num) 0 = SOME 0``) andalso
   unknown_with "no TypeBase information for :rat"
     (refute narrowing ``(x : rat) = rat_of_num 1``) andalso
   unknown_with "no TypeBase information for :real"
@@ -1977,6 +1975,138 @@ val _ = test "native char-list primitives" (fn () =>
      ``!s : string. s <> [] ==> FRONT s = s``,
      ``!s : string. ALL_DISTINCT s ==> LENGTH s < 2``])
 
+(* Finite maps are FEMPTY/FUPDATE chains in the generated code, read
+   through their entries, so an operation sees the map and not the chain.
+   Narrowing refines a map through the same constructors. *)
+val native_fmap = native |> upd_size 3
+val narrowing_fmap = nar |> upd_timeout 3.0
+
+fun fmap_refuted goal =
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies native_fmap goal certified andalso
+    refute narrowing_fmap goal |> cex_where certified
+  end
+
+fun fmap_not_refuted goal =
+  not_refuted (refute (native_fmap |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (native_fmap |> only [Random] |> upd_seed (SOME 1))
+                 goal) andalso
+  not_refuted (refute narrowing_fmap goal)
+
+val _ = test "native finite-map primitives refute false properties" (fn () =>
+  List.all fmap_refuted
+    [``FLOOKUP ((f : num |-> num) |+ (k, v)) k = FLOOKUP f k``,
+     ``k IN FDOM (f : num |-> num) ==> k IN FDOM (f \\ k')``,
+     ``((f : num |-> num) |+ (k, v)) ' k' = f ' k'``,
+     ``FLOOKUP (FUNION (f : num |-> num) g) k = FLOOKUP g k``,
+     ``FEVERY (\(k, v). v < 2) ((f : num |-> num) |+ (k, v))``,
+     ``FCARD ((f : num |-> num) |+ (k, v)) = FCARD f + 1``,
+     ``FLOOKUP ((f : bool |-> num) |+ (k, v)) k' = FLOOKUP f k'``,
+     ``FEVERY (\(k, v). v = 0) (f : num |-> num) \/ FCARD f < 2``])
+
+val _ = test "native finite-map primitives leave true properties alone"
+  (fn () =>
+    List.all fmap_not_refuted
+      [``FLOOKUP ((f : num |-> num) |+ (k, v)) k = SOME v``,
+       ``k IN FDOM ((f : num |-> num) \\ k') ==> k IN FDOM f``,
+       ``FLOOKUP (FUNION (f : num |-> num) g) k =
+         (case FLOOKUP f k of NONE => FLOOKUP g k | SOME v => SOME v)``,
+       ``FEVERY (\(k, v). v < 2) (f : num |-> num) ==>
+         FEVERY (\(k, v). v < 2) (f \\ k)``,
+       ``FCARD ((f : num |-> num) \\ k) <= FCARD f``])
+
+val _ = test "native SUBMAP" (fn () =>
+  fmap_refuted ``(f : num |-> num) |+ (k, v) SUBMAP f`` andalso
+  fmap_not_refuted ``((f : num |-> num) \\ k) SUBMAP f``)
+
+(* Certification would discard a structural "counterexample" to a true
+   equality (Compute decides the instance true) and the search would just
+   go on, so the true goals run uncertified: a structural comparison then
+   surfaces as a counterexample.  A refusal (an unextractable type, a
+   substrate declining) would also leave the goals unrefuted, so the
+   outcome must be a search that ran out, not a refusal. *)
+fun fmap_searched goal =
+  let
+    fun searched outcome =
+      not_refuted outcome andalso
+      not (unknown_with "extract" outcome) andalso
+      not (unknown_with "substrate" outcome) andalso
+      not (unknown_with "executable" outcome) andalso
+      not (unknown_with "HOL_ERR" outcome)
+    val uncertified = native_fmap |> upd_certify false
+  in
+    searched (refute (uncertified |> only [Exhaustive]) goal) andalso
+    searched (refute (uncertified |> only [Random] |> upd_seed (SOME 1))
+                goal) andalso
+    searched (refute (narrowing_fmap |> upd_certify false) goal)
+  end
+
+val _ = test "native finite-map equality is extensional" (fn () =>
+  fmap_searched
+    ``(f : num |-> num) |+ (1, 2) |+ (3, 4) = f |+ (3, 4) |+ (1, 2)`` andalso
+  fmap_searched ``(f : num |-> num) |+ (k, 1) |+ (k, 2) = f |+ (k, 2)``
+  andalso
+  fmap_refuted ``(f : num |-> num) |+ (k, 1) = f |+ (k, 2)`` andalso
+  fmap_refuted ``FLOOKUP (f : bool |-> bool) T = FLOOKUP f' T ==> f = f'``)
+
+(* Sets are membership predicates: [EMPTY], [INSERT] and a comprehension
+   [{ x | P x }] compile to functions, and [DRESTRICT] keeps the entries
+   whose key the function accepts.  A smart generator planned from a
+   premise's definition is gated like a goal, so plain enumeration reaches
+   the sets through their definitions. *)
+val set_native = native |> upd_size 4 |> upd_smart_generators false
+
+fun set_refuted goal =
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies set_native goal certified andalso
+    refute narrowing_fmap goal |> cex_where certified
+  end
+
+fun set_not_refuted goal =
+  not_refuted (refute (set_native |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (set_native |> only [Random] |> upd_seed (SOME 1))
+                 goal) andalso
+  not_refuted (refute narrowing_fmap goal)
+
+val _ = test "sets and DRESTRICT are extracted" (fn () =>
+  List.all set_refuted
+    [``zoo_in_small x ==> x < 2``,
+     ``zoo_in_either x a b ==> x = a``,
+     ``zoo_in_empty x \/ x < 2``,
+     ``FLOOKUP (zoo_restrict_small f) k = FLOOKUP f k``,
+     ``FLOOKUP (zoo_restrict_to (f |+ (k, v)) k) k = NONE``] andalso
+  List.all set_not_refuted
+    [``zoo_in_small x ==> x < 3``,
+     ``~zoo_in_empty x``,
+     ``zoo_in_either x a a ==> x = a``,
+     ``FLOOKUP (zoo_restrict_to f k) k = FLOOKUP f k``,
+     ``k IN FDOM (zoo_restrict_small f) ==> k < 2``])
+
+val _ = test "a comprehension that is not a membership predicate is refused"
+  (fn () =>
+    unknown_with "not a membership predicate"
+      (refute (native_fmap |> only [Exhaustive])
+         ``zoo_in_shifted x ==> x < 2``))
+
+val _ = test "finite sets and SUBMAP pass the executable gate" (fn () =>
+  let
+    val cfg = qc |> upd_timeout 30.0 |> upd_sequential true
+      |> upd_seed (SOME 42) |> only [Exhaustive] |> upd_size 8
+  in
+    genuine_certified (refute cfg ``!x : num. x IN {1; 2} ==> x = 1``)
+    andalso
+    (* [{}] is the constant the gate used to refuse *)
+    genuine_certified (refute cfg ``!x : num. x NOTIN {} ==> x = 1``)
+    andalso
+    genuine_certified (refute cfg
+      ``!f : num |-> num. f SUBMAP FEMPTY |+ (1, 2)``) andalso
+    not_refuted (refute cfg ``!f : num |-> num. FEMPTY SUBMAP f``)
+  end)
+
 val _ = test "substrates agree on small goals" (fn () =>
   let
     val base = default_config |> quiet |> upd_iterations 100 |> upd_size 3
@@ -2062,14 +2192,7 @@ val _ = test "an explicit substrate declines by name" (fn () =>
     declines NativeSML "custom generator registered" ex andalso
     declines NativeSML "custom generator registered" rnd andalso
     unknown_with "custom generator registered for :rg_custom_matrix"
-      (refute native ``(x : rg_custom_matrix) = RGCustomA``) andalso
-    (* A registered family must be declined by name, not by dying inside
-       the generator derivation. *)
-    (let val outcome = refute native flookup_goal in
-       is_unknown outcome andalso
-       not (unknown_with "HOL_ERR" outcome) andalso
-       not (unknown_with "axiom_of" outcome)
-     end)
+      (refute native ``(x : rg_custom_matrix) = RGCustomA``)
   end)
 
 (* The three message flags are process-global, and a compiled test's
@@ -2873,8 +2996,7 @@ val _ = mf_test "Hilbert choice is guarded by scope" (fn () =>
       |> upd_card [(SOME ``:num``, [2]), (NONE, [1, 2, 3, 4, 5, 6])]
       |> upd_max_potential 1 |> upd_binary_ints (SOME false)
   in
-    refute cfg ``CARD ({} : 'a set) = 1``
-      |> single_cex_where (fn c => is_genuine c andalso uncertified c)
+    refute cfg ``CARD ({} : 'a set) = 1`` |> single_cex_where is_genuine
     andalso
     refute choice ``($@ (\j : num. j < 3 /\ j > 3)) <> 0``
       |> single_cex_where is_genuine andalso

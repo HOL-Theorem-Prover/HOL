@@ -84,8 +84,11 @@ calls back into it rather than reimplementing it) in the same order, so
 changes to generation order must land in both and in the theory together.
 
 Custom generators (`:rat`, `:real`, `Refute_Gen.GenCustom`) run on Compute
-only; `fmap` is a generator family (`register_generator_family`) that
-NativeSML declines by name.  Compute decides `=` between ground
+only.  `fmap` is a generator family (`register_generator_family`); native
+code holds a map as its `FEMPTY`/`FUPDATE` chain and reads it through the
+chain's entries, and sets as membership functions (`{}`, `INSERT`,
+`{ x | P x }`; a comprehension of images is refused by name).  Compute
+decides `=` between ground
 `FEMPTY`-rooted update chains through `Refute_EvalFmap` (the stock compset
 only reduces the identical pair).  Both substrates take every word width
 exhaustively, and width `<= 32` or exactly 64 for random draws.

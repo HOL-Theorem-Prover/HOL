@@ -225,6 +225,7 @@ structure Refute_Extract :> Refute_Extract = struct
         ((string * string) * computeLib.transform list) list option ref,
       record_fields :
         ((string * string), record_field) Redblackmap.dict option ref,
+      fmaps : hol_type list ref,
       next_type : unit -> int,
       next_const : unit -> int,
       next_pattern : unit -> int }
@@ -241,6 +242,7 @@ structure Refute_Extract :> Refute_Extract = struct
       pending = ref [],
       compset_items = ref NONE,
       record_fields = ref NONE,
+      fmaps = ref [],
       next_type = Portable.make_counter {init = 0, inc = 1},
       next_const = Portable.make_counter {init = 0, inc = 1},
       next_pattern = Portable.make_counter {init = 0, inc = 1} }
@@ -276,6 +278,40 @@ structure Refute_Extract :> Refute_Extract = struct
       reject ("word width is too large: " ^ type_name ty)
 
   val is_char_list = Refute_EvalSML.is_char_list_type
+
+  fun typebase_constructors ty =
+    let
+      val info =
+        case Refute_TypeBase.fetch ty of
+          SOME found => found
+        | NONE => reject ("no TypeBase information for " ^ type_name ty)
+      val generic_ty = TypeBasePure.ty_of info
+      val _ = Type.match_type generic_ty ty
+        handle Feedback.HOL_ERR _ =>
+          reject ("cannot instantiate TypeBase information for " ^
+                  type_name ty)
+      val constructors = List.map (TypeBasePure.cinst ty)
+        (TypeBasePure.constructors_of info)
+    in
+      if null constructors then
+        reject ("abstract or generated type is not extractable: " ^
+                type_name ty)
+      else constructors
+    end
+
+  (* A finite map is the generated datatype of its registered constructor
+     family, FEMPTY and FUPDATE: an FUPDATE chain is the value, which is
+     what the generators and narrowing produce anyway.  A chain is not
+     canonical (a later update shadows an earlier one with the same key),
+     so every operation on it, equality included, goes through the
+     entry-based helpers of [fmap_helper_declarations]. *)
+  fun fmap_constructors ty =
+    (case Refute_Gen.spec_of ty of
+         Refute_Gen.GenDatatype {constrs, ...} => List.map #1 constrs
+       | _ => reject ("finite map has no constructor family: " ^
+                      type_name ty))
+    handle Refute_Gen.NoGenerator (_, reason) =>
+      reject ("finite map is not extractable: " ^ reason)
 
   fun classify_primitive context ty =
     let
@@ -334,23 +370,9 @@ structure Refute_Extract :> Refute_Extract = struct
                mlty)
           | NONE =>
               let
-                val info =
-                  case Refute_TypeBase.fetch ty of
-                    SOME found => found
-                  | NONE =>
-                      reject ("no TypeBase information for " ^ type_name ty)
-                val generic_ty = TypeBasePure.ty_of info
-                val theta = Type.match_type generic_ty ty
-                  handle Feedback.HOL_ERR _ =>
-                    reject ("cannot instantiate TypeBase information for " ^
-                            type_name ty)
-                val constructors = List.map (TypeBasePure.cinst ty)
-                  (TypeBasePure.constructors_of info)
-                val _ =
-                  if null constructors then
-                    reject ("abstract or generated type is not extractable: " ^
-                            type_name ty)
-                  else ()
+                val constructors =
+                  if finite_mapSyntax.is_fmap_ty ty then fmap_constructors ty
+                  else typebase_constructors ty
                 val ml_name = fresh_type context
                 val mlty =
                   #wrap_type (context_operations context)
@@ -407,6 +429,15 @@ structure Refute_Extract :> Refute_Extract = struct
        SOME (_, name) => name
      | NONE => raise Fail "Refute_Extract: missing equality name")
 
+  fun generated_constructor context ty wanted =
+    let
+      val _ = ignore (ensure_type context ty)
+      val info = valOf (lookup_datatype context ty)
+    in
+      #3 (valOf (List.find (fn (constructor, _, _) =>
+        kname constructor = wanted) (#constructors info)))
+    end
+
   fun datatype_dependencies context ({hol_ty, constructors, ...} :
       datatype_desc) =
     let
@@ -422,6 +453,82 @@ structure Refute_Extract :> Refute_Extract = struct
       Lib.mk_set (List.concat
         (List.map (fn (_, arguments, _) =>
           List.concat (List.map collect arguments)) constructors))
+    end
+
+  (* The name of one of a finite-map type's helpers ([lookup], [entries]
+     or [remove]), requesting that they be declared.  They need the key
+     equality, so it is requested here too. *)
+  fun fmap_helper (context as {fmaps, ...} : context) ty which =
+    let
+      val _ = ignore (ensure_type context ty)
+      val (key_ty, _) = finite_mapSyntax.dest_fmap_ty ty
+      val _ = ignore (equality_name context key_ty)
+      val _ = if Util.member_type ty (!fmaps) then ()
+              else fmaps := ty :: !fmaps
+    in
+      "fmap_" ^ which ^ "_" ^ #ml_name (valOf (lookup_datatype context ty))
+    end
+
+  fun fmap_lookup context ty map key =
+    parens (fmap_helper context ty "lookup" ^ " " ^ parens map ^ " " ^
+            parens key)
+
+  fun fmap_entries context ty map =
+    parens (fmap_helper context ty "entries" ^ " " ^ parens map)
+
+  (* A map's helpers read an FUPDATE chain as its entries, newest first
+     with shadowed keys dropped, so that every operation sees the map's
+     denotation.  They take the chain as the extraction represents it: in
+     lazy mode a suspension, whose entries are suspended generated pairs.
+     [force] and [delay] are the identity in strict mode, where an entry
+     is a native pair. *)
+  fun fmap_helper_declarations context ty =
+    let
+      val {force, delay, ...} = context_operations context
+      val (key_ty, value_ty) = finite_mapSyntax.dest_fmap_ty ty
+      val empty = generated_constructor context ty ("finite_map", "FEMPTY")
+      val update = generated_constructor context ty ("finite_map", "FUPDATE")
+      val eq_key = equality_name context key_ty
+      fun helper which = fmap_helper context ty which
+      fun with_entry entry (key, value) body =
+        choose (context_mode context)
+          (fn () =>
+            "let val (" ^ key ^ ", " ^ value ^ ") = " ^ entry ^ " in " ^
+            body ^ " end")
+          (fn () =>
+            "(case " ^ force entry ^ " of " ^
+            generated_constructor context
+              (pairSyntax.mk_prod (key_ty, value_ty)) ("pair", ",") ^
+            " (" ^ key ^ ", " ^ value ^ ") => " ^ body ^ ")")
+      fun chain_case map empty_body update_body =
+        "(case " ^ force map ^ " of " ^ empty ^ " => " ^ empty_body ^
+        " | " ^ update ^ " (refute_rest, refute_entry) => " ^ update_body ^
+        ")"
+      val lookup =
+        helper "lookup" ^ " refute_map refute_key =\n  " ^
+        chain_case "refute_map" "NONE"
+          (with_entry "refute_entry" ("refute_key'", "refute_value")
+            ("if " ^ eq_key ^ " refute_key refute_key' " ^
+             "then SOME refute_value else " ^
+             helper "lookup" ^ " refute_rest refute_key"))
+      val entries =
+        helper "entries" ^ " refute_map =\n  " ^
+        chain_case "refute_map" "[]"
+          (with_entry "refute_entry" ("refute_key", "refute_value")
+            ("(refute_key, refute_value) :: List.filter " ^
+             "(fn (refute_key', _) => not (" ^ eq_key ^
+             " refute_key refute_key')) (" ^
+             helper "entries" ^ " refute_rest)"))
+      val remove =
+        helper "remove" ^ " refute_map refute_key =\n  " ^
+        delay (chain_case "refute_map" empty
+          (with_entry "refute_entry" ("refute_key'", "_")
+            ("if " ^ eq_key ^ " refute_key refute_key' then " ^
+             force (parens (helper "remove" ^ " refute_rest refute_key")) ^
+             " else " ^ update ^ " (" ^ helper "remove" ^
+             " refute_rest refute_key, refute_entry)")))
+    in
+      [lookup, entries, remove]
     end
 
   fun reachable context source target =
@@ -571,6 +678,9 @@ structure Refute_Extract :> Refute_Extract = struct
       val left_value = force left
       val right_value = force right
     in
+      if finite_mapSyntax.is_fmap_ty ty then
+        fmap_equality context ty left right
+      else
       case mlty of
         MLBool =>
           parens ("(" ^ left_value ^ " andalso " ^ right_value ^
@@ -655,6 +765,23 @@ structure Refute_Extract :> Refute_Extract = struct
       | MLSusp _ => raise Fail "Refute_Extract: nested lazy type"
     end
 
+  (* Extensional: the same number of entries, and every entry of the left
+     map is in the right one.  The helpers take the unforced
+     representation, so [left] and [right] are passed as they are. *)
+  and fmap_equality context ty left right =
+    let
+      val (_, value_ty) = finite_mapSyntax.dest_fmap_ty ty
+      val eq_value = equality_name context value_ty
+    in
+      "let val refute_left = " ^ fmap_entries context ty left ^ " in " ^
+      "List.length refute_left = List.length " ^
+      fmap_entries context ty right ^ " andalso " ^
+      "List.all (fn (refute_key, refute_value) => case " ^
+      fmap_lookup context ty right "refute_key" ^
+      " of SOME refute_other => " ^ eq_value ^
+      " refute_value refute_other | NONE => false) refute_left end"
+    end
+
   and datatype_equality context ty left right =
     let
       val force = #force (context_operations context)
@@ -697,16 +824,16 @@ structure Refute_Extract :> Refute_Extract = struct
           | SOME ty =>
               (ignore (equality_body context ty "x" "y");
                discover (ty :: seen))
-      fun one keyword (ty, mlty, name) =
-        keyword ^ " " ^ name ^ " (x : " ^ ml_ty_text mlty ^ ") " ^
+      fun one (ty, mlty, name) =
+        name ^ " (x : " ^ ml_ty_text mlty ^ ") " ^
         "(y : " ^ ml_ty_text mlty ^ ") =\n  " ^
         equality_body context ty "x" "y"
-      fun declarations types =
-        case types of
+      fun declarations items =
+        case items of
             [] => ""
           | first :: rest =>
-              join "\n" (one "fun" first :: List.map (one "and") rest) ^
-              "\n"
+              join "\n" (("fun " ^ first) ::
+                List.map (fn item => "and " ^ item) rest) ^ "\n"
       (* Only a requested equality is declared, in either mode.  Emitting one
          per registered type would make a representation-only compilation,
          or any compilation that merely mentions a function type, fail on an
@@ -717,8 +844,12 @@ structure Refute_Extract :> Refute_Extract = struct
       val types = List.filter (fn (ty, _, _) =>
         Util.member_type ty requested)
         (rev (!(#types context)))
+      (* The finite-map helpers are recursive with the equalities: a
+         helper compares keys, and a map equality reads entries. *)
+      val helpers = List.concat (List.map (fmap_helper_declarations context)
+        (rev (!(#fmaps context))))
     in
-      declarations types
+      declarations (List.map one types @ helpers)
     end
 
   val prelude =
@@ -1367,6 +1498,163 @@ structure Refute_Extract :> Refute_Extract = struct
                   else arity1 with_arity arguments accessor)
           end
 
+  (* A set is a membership predicate (see the [("bool", "IN")] arms), and
+     a set comprehension [{ pat | pred }] is [GSPEC (\pat. (pat, pred))]:
+     the paired abstraction [\pat. pred].  Any other shape, [{ f x | P x }],
+     is a set of images, which no predicate over the pattern denotes. *)
+  fun comprehension_predicate function =
+    let
+      fun refuse () =
+        reject ("set comprehension is not a membership predicate: " ^
+                Parse.term_to_string function)
+    in
+      case Lib.total (fn () =>
+             let
+               val (pat, body) = pairSyntax.dest_pabs function
+               val (element, predicate) = pairSyntax.dest_pair body
+             in (pat, element, predicate) end) () of
+          SOME (pat, element, predicate) =>
+            if Term.aconv element pat then pairSyntax.mk_pabs (pat, predicate)
+            else refuse ()
+        | NONE => refuse ()
+    end
+
+  (* The finite-map operations, in either mode, from the helpers of
+     [fmap_helper_declarations] and the chain constructors.  [FDOM] is a
+     set, so a membership function, as [IN] expects; [FAPPLY] off the
+     domain is unspecified, so it is stuck.  A helper's result is a value
+     ([lookup], [entries]) or, in lazy mode, a suspension ([remove]):
+     [delay] wraps the first kind and [defer] the second, and both are the
+     identity in strict mode. *)
+  fun fmap_primitive context head arguments =
+    let
+      val {force, delay, defer, apply, ...} = context_operations context
+      val saturated = choose (context_mode context)
+        (fn () => with_arity) (fn () => lazy_with_arity context)
+      fun with1 build = arity1 saturated arguments build
+      fun with2 build = arity2 saturated arguments build
+      val argument_types = #1 (boolSyntax.strip_fun (Term.type_of head))
+      fun map_type index = List.nth (argument_types, index)
+      fun lookup ty = fmap_lookup context ty
+      fun entries ty = fmap_entries context ty
+      fun entry ty (key, value) =
+        choose (context_mode context)
+          (fn () => parens (key ^ ", " ^ value))
+          (fn () =>
+            delay (generated_constructor context
+              (pairSyntax.mk_prod (finite_mapSyntax.dest_fmap_ty ty))
+              ("pair", ",") ^ " (" ^ key ^ ", " ^ value ^ ")"))
+      fun option_value ty body =
+        choose (context_mode context)
+          (fn () => body)
+          (fn () =>
+            let
+              val option_ty = optionSyntax.mk_option
+                (#2 (finite_mapSyntax.dest_fmap_ty ty))
+            in
+              delay ("(case " ^ body ^ " of NONE => " ^
+                generated_constructor context option_ty ("option", "NONE") ^
+                " | SOME refute_value => " ^
+                generated_constructor context option_ty ("option", "SOME") ^
+                " refute_value)")
+            end)
+    in
+      case kname head of
+          ("finite_map", "FEMPTY") =>
+            SOME (constructor_expression context head arguments)
+        | ("finite_map", "FUPDATE") =>
+            SOME (constructor_expression context head arguments)
+        | ("finite_map", "FLOOKUP") =>
+            let val ty = map_type 0
+            in
+              SOME (with2 (fn (map, key) =>
+                option_value ty (lookup ty map key)))
+            end
+        | ("finite_map", "FDOM") =>
+            let val ty = map_type 0
+            in
+              SOME (with1 (fn map =>
+                delay (parens ("fn refute_key => " ^
+                  delay ("Option.isSome " ^
+                    lookup ty map "refute_key")))))
+            end
+        | ("finite_map", "FAPPLY") =>
+            let val ty = map_type 0
+            in
+              SOME (with2 (fn (map, key) =>
+                defer ("(case " ^ lookup ty map key ^
+                  " of SOME refute_value => refute_value | NONE => " ^
+                  "raise Refute_EvalSML.Stuck \"FAPPLY\")")))
+            end
+        | ("finite_map", "fdomsub") =>
+            let val ty = map_type 0
+            in
+              SOME (with2 (fn (map, key) =>
+                defer (parens (fmap_helper context ty "remove" ^ " " ^
+                  parens map ^ " " ^ parens key))))
+            end
+        | ("finite_map", "FUNION") =>
+            let
+              val ty = map_type 0
+              val update = generated_constructor context ty
+                ("finite_map", "FUPDATE")
+            in
+              SOME (with2 (fn (left, right) =>
+                defer ("List.foldr (fn ((refute_key, refute_value), " ^
+                  "refute_rest) => " ^
+                  delay (update ^ " (refute_rest, " ^
+                    entry ty ("refute_key", "refute_value") ^ ")") ^
+                  ") " ^ parens right ^ " " ^ entries ty left)))
+            end
+        | ("finite_map", "DRESTRICT") =>
+            let
+              val ty = map_type 0
+              val empty = generated_constructor context ty
+                ("finite_map", "FEMPTY")
+              val update = generated_constructor context ty
+                ("finite_map", "FUPDATE")
+            in
+              SOME (with2 (fn (map, set) =>
+                defer ("List.foldr (fn ((refute_key, refute_value), " ^
+                  "refute_rest) => if " ^
+                  force (apply set "refute_key") ^ " then " ^
+                  delay (update ^ " (refute_rest, " ^
+                    entry ty ("refute_key", "refute_value") ^ ")") ^
+                  " else refute_rest) " ^ parens (delay empty) ^ " " ^
+                  entries ty map)))
+            end
+        | ("finite_map", "FEVERY") =>
+            let val ty = map_type 1
+            in
+              SOME (with2 (fn (predicate, map) =>
+                delay ("List.all (fn (refute_key, refute_value) => " ^
+                  force (apply predicate
+                    (entry ty ("refute_key", "refute_value"))) ^
+                  ") " ^ entries ty map)))
+            end
+        | ("finite_map", "SUBMAP") =>
+            let
+              val ty = map_type 0
+              val eq_value = equality_name context
+                (#2 (finite_mapSyntax.dest_fmap_ty ty))
+            in
+              SOME (with2 (fn (left, right) =>
+                delay ("List.all (fn (refute_key, refute_value) => case " ^
+                  lookup ty right "refute_key" ^
+                  " of SOME refute_other => " ^ eq_value ^
+                  " refute_value refute_other | NONE => false) " ^
+                  entries ty left)))
+            end
+        | ("finite_map", "FCARD") =>
+            let val ty = map_type 0
+            in
+              SOME (with1 (fn map =>
+                delay ("IntInf.fromInt (List.length " ^ entries ty map ^
+                       ")")))
+            end
+        | _ => NONE
+    end
+
   fun word_result_width head arguments =
     let
       val result = #2 (boolSyntax.strip_fun (Term.type_of head))
@@ -1431,6 +1719,17 @@ structure Refute_Extract :> Refute_Extract = struct
          through [definition_theorem]'s own-theory recovery. *)
       | ("bool", "IN") => SOME (with2 (fn (element, set) =>
             parens (parens set ^ " " ^ parens element)))
+      | ("finite_map", _) => fmap_primitive context head arguments
+      | ("pred_set", "EMPTY") =>
+          SOME (with_arity arguments 0 (fn _ => "(fn _ => false)"))
+      | ("pred_set", "INSERT") =>
+          let val equality = equality_name context (hd (argument_types ()))
+          in
+            SOME (with2 (fn (element, set) =>
+              parens ("fn refute_element => " ^ equality ^
+                " refute_element " ^ atom element ^ " orelse " ^
+                atom set ^ " refute_element")))
+          end
       | ("min", "==>") => SOME (with2 (fn (left, right) =>
             parens ("not " ^ parens left ^ " orelse " ^ right)))
       | ("min", "=") =>
@@ -1761,6 +2060,20 @@ structure Refute_Extract :> Refute_Extract = struct
         (* See the strict table: membership is application. *)
         | ("bool", "IN") => SOME
             (with2 (fn (element, set) => apply set element))
+        | ("finite_map", _) => fmap_primitive context head arguments
+        | ("pred_set", "EMPTY") =>
+            SOME (lazy_with_arity context arguments 0 (fn _ =>
+              delay ("fn _ => " ^ delay "false")))
+        | ("pred_set", "INSERT") =>
+            let
+              val equality = equality_name context
+                (hd (#1 (boolSyntax.strip_fun (Term.type_of head))))
+            in
+              SOME (with2 (fn (element, set) =>
+                delay ("fn refute_element => " ^
+                  delay (equality ^ " refute_element " ^ parens element ^
+                    " orelse " ^ force (apply set "refute_element")))))
+            end
         | ("min", "==>") => SOME (binary (fn (left, right) =>
             "not " ^ parens left ^ " orelse " ^ right))
         | ("min", "=") =>
@@ -1896,9 +2209,28 @@ structure Refute_Extract :> Refute_Extract = struct
         List.foldl (fn (argument, result) =>
           apply result argument) head arguments
 
+      (* A set comprehension is compiled as its membership predicate before
+         any argument is: its own abstraction returns a pair that is never
+         evaluated and would only register a pair type. *)
+      fun comprehension_expression argument_terms =
+        case argument_terms of
+            function :: rest =>
+              application
+                (expression context (comprehension_predicate function))
+                (List.map (expression context) rest)
+          | [] => reject "set comprehension without its abstraction"
+
       fun application_expression () =
         let
           val (head, argument_terms) = boolSyntax.strip_comb term
+        in
+          if Term.is_const head andalso kname head = ("pred_set", "GSPEC")
+          then comprehension_expression argument_terms
+          else general_application head argument_terms
+        end
+
+      and general_application head argument_terms =
+        let
           val arguments = List.map (expression context) argument_terms
         in
           if Term.is_const head then
