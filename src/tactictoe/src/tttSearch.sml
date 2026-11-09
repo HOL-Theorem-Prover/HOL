@@ -21,7 +21,10 @@ fun tlerr x = tl x handle Empty => raise ERR "tlerr" ""
    Global parameters
    ------------------------------------------------------------------------- *)
 
-val default_reward = ref 0.0
+(* Value of an open goal when there is no value network.  A node's value is
+   the product of its subgoals' values, so 0.0 would score every tactic that
+   leaves a goal open like one that fails. *)
+val default_reward = ref 1.0
 val conttop_flag = ref false
 val contmid_flag = ref false
 val nocut_flag = ref false

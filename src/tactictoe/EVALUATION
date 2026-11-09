@@ -37,7 +37,7 @@ to replicate the experiments accompanying the paper
   (* directory $HOME/.cache/tactictoe/eval/foo will contain the results *)
   val expname = "foo";
   (* default_reward *)
-  tttSearch.default_reward = 1.0;
+  tttSearch.default_reward := 1.0;
 
 7) Then calling the following command will
    evaluate TacticToe, train the TNN, and evaluate TacticToe + TNN:
