@@ -32,10 +32,8 @@ sig
       {settype : string, delta_ops : 'value ops} ->
       (setdelta,'value) AncestryData.fullresult
   (* as export_with_ancestry, but each theory's value is computed when
-     first read (see AncestryData.lazy_fullmake).  For sets whose
-     apply_delta has no effects and calls no inference that might draw
-     on genvar's counter, since drawing on it later changes the names of
-     the genvars made after it *)
+     first read.  For sets whose apply_delta has no effects beyond its
+     result; see AncestryData.lazy_fullmake on inference and genvars *)
   val lazy_export_with_ancestry:
       {settype : string, delta_ops : 'value ops} ->
       (setdelta,'value) AncestryData.fullresult

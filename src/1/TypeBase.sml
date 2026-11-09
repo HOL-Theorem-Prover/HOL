@@ -116,7 +116,7 @@ val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
                    merge = merge_typebases, update_global_value, ...} =
     let open TypeBasePure
     in
-      AncestryData.fullmake{
+      AncestryData.lazy_fullmake{
         adinfo = {tag = "TypeBase", initial_values = [("min", initial_tydb)],
                   apply_delta = apply_delta
                  },

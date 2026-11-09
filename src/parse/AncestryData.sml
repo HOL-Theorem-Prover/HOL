@@ -258,7 +258,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
       val info_ref = ref NONE
       val parent_extras =
           {tag = tag, info_ref = info_ref, delta_side_effects = side_effects,
-           eager = true, value_table = value_table}
+           eager = false, value_table = value_table}
 
       val {export = parent_export,
            segment_data = parent_segment_data, ...} =
