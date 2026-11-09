@@ -216,8 +216,9 @@ structure Refute_Cert :> Refute_Cert = struct
      exception, budget, deadline, and audit policy for individual steps. *)
   fun normalize_to_pnf step closure =
     let
-      val normalized_equality = step
-        (Ho_Rewrite.REWRITE_CONV Refute_Core.normal_rewrites) closure
+      (* Replays [normal_conv] (the rewrites and the unwinding conversions),
+         not the rewrites alone. *)
+      val normalized_equality = step Refute_Core.normal_conv closure
       val normalized = rhs_of normalized_equality
       val prenex_equality = step Refute_Narrow.prenex_conversion normalized
     in

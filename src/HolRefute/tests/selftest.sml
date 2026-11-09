@@ -1492,6 +1492,126 @@ val _ = test "parallel and sequential agree" (fn () =>
     agree arith andalso agree ``!b : bool. b \/ ~b``
   end)
 
+local
+  val cfg = qc |> upd_timeout 60.0 |> upd_sequential true
+    |> upd_seed (SOME 42) |> only [Exhaustive] |> upd_size 8
+in
+  val _ = test "deterministic existentials run and certify" (fn () =>
+    genuine_certified (refute cfg
+      ``!n : num. ?m. (if n < 3 then SOME (n + 1) else NONE) = SOME m /\
+                      m < 3``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?y. SOME (x + 1) = SOME y /\ y < 5``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. (x, x + 1) = (a, b) /\ b < 5``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. 5 < x \/ ~(?y. SOME (x + 1) = SOME y /\ y < 5)``) andalso
+    (* the negated existential where [SOME_11] cannot reduce the
+       equation, at the top, in an antecedent, and under a disjunction *)
+    genuine_certified (refute cfg
+      ``!x : num. ~?y. (if x = 1 then SOME 1000 else NONE) = SOME y /\
+                       0 < y``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. (?y. (if x = 1 then SOME 1000 else NONE) = SOME y /\
+                       0 < y) ==> x = 2``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. x = 0 \/
+                  ~?y. (if x = 1 then SOME 1000 else NONE) = SOME y /\
+                       0 < y``) andalso
+    (* a pair component that exposes an option equation *)
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. ((if x < 3 then SOME (x + 1) else NONE), x) =
+                        (SOME a, b) /\ a < 3``) andalso
+    (* the equation is not the first conjunct: after a bound, in the
+       middle, and under a negation *)
+    genuine_certified (refute cfg
+      ``!n : num. ?m. m <> 1 /\
+                      (if n < 3 then SOME (n + 1) else NONE) = SOME m``)
+    andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b : num. b < 3 /\ (x, x + 1) = (a, b)``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?m. 0 < x /\
+                      SOME m = (if x < 3 then SOME (x + 1) else NONE) /\
+                      m < 2``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ~?m. m < 2 /\
+                       (if x < 3 then SOME (x + 1) else NONE) = SOME m``)
+    andalso
+    let
+      val outcome = refute (cfg |> upd_timeout 2.0)
+        ``!x : num. ?y. SOME (x + 1) = SOME y /\ 0 < y``
+    in
+      not_refuted outcome andalso
+      not (unknown_with "not executable" outcome)
+    end)
+
+  (* binders the equation does not fix stay quantified, in either
+     order *)
+  val _ = test "an unwound existential keeps its other binders" (fn () =>
+    genuine_certified (refute cfg
+      ``!n : num. ?m (b : bool).
+          (if n < 3 then SOME (n + 1) else NONE) = SOME m /\ (b \/ m < 2)``)
+    andalso
+    genuine_certified (refute cfg
+      ``!n : num. ?(b : bool) m.
+          (if n < 3 then SOME (n + 1) else NONE) = SOME m /\ (b \/ m < 2)``))
+
+  (* a quantifier inside the unwound binder's matrix still joins the
+     prefix, where the counterexample binds it *)
+  val _ = test "quantifiers beside an unwound binder stay prenex"
+    (fn () =>
+      genuine_certified (refute cfg
+        ``!n : num. 0 < n ==>
+            !m. (if n < 3 then SOME n else NONE) = SOME m ==>
+                !k : num. m + k < 4``) andalso
+      genuine_certified (refute cfg
+        ``!x : num. (?y. (if x < 3 then SOME x else NONE) = SOME y /\
+                         ?k : num. y + k = 3) ==> x = 0``))
+
+  val _ = test "constructor existentials unwind to a case split" (fn () =>
+    genuine_certified (refute cfg
+      ``!x : num. ?y. (if x = 0 then NONE else SOME x) = SOME y``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?y. SOME y = (if x = 0 then NONE else SOME x)``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?y. (if x < 2 then INL x else INR (x = 5)) = INL y``)
+    andalso
+    genuine_certified (refute cfg
+      ``!n : num. ?h t. (if n = 0 then [] else [n; n]) = h :: t``)
+    andalso
+    genuine_certified (refute cfg ``!n : num. ?m. n = SUC m /\ m < 3``)
+    andalso
+    genuine_certified (refute cfg
+      ``!x : num. (?y. (if x < 3 then SOME x else NONE) = SOME y /\ 0 < y)
+                  ==> x = 1``))
+
+  val _ = test "a pair equation with a non-pair side unwinds" (fn () =>
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. (if x < 3 then (x, x + 1) else (0, 0)) = (a, b) /\
+                        b < 3``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. (a, b) = (if x < 3 then (x, x + 1) else (0, 0)) /\
+                        b < 3``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b c.
+          (if x < 3 then (x, x + 1, 0 : num) else (0, 0, 0)) =
+          (a, b, c) /\ b < 3``))
+
+  (* A component that is not a binder: no constructor match, so the
+     equation is split into FST/SND equations, wherever it sits in the
+     matrix's conjunction tree. *)
+  val _ = test "a pair equation with a non-binder component splits"
+    (fn () =>
+      genuine_certified (refute cfg
+        ``!x : num. ?a. (if x < 3 then (x, x + 1) else (0, 0)) =
+                        (a, x + 1) /\ a < 3``) andalso
+      genuine_certified (refute cfg
+        ``!x : num. ?a. (x < 10 /\
+                         (if x < 3 then (x, x + 1) else (0, 0)) =
+                         (a, x + 1)) /\ a < 3``))
+end
+
 (* ------------------------------------------------------------------- *)
 (* Random backend                                                      *)
 (* ------------------------------------------------------------------- *)
@@ -1626,7 +1746,7 @@ val _ = test "a witness hole does not divert the existential case split"
 val _ = test "mixed and incomplete prefixes are certified" (fn () =>
   let
     val mixed = ``(b : bool) /\ (?x : rg_enum. rx_enum_code x = 3)``
-    val incomplete = ``?y : bool. (x : num) = 0 /\ y``
+    val incomplete = ``?y : bool. (x : num) = 0 /\ (y \/ x = 1)``
   in
     refute (nar |> upd_size 2) mixed |> single_cex_where (certifies mixed)
     andalso
@@ -1634,9 +1754,10 @@ val _ = test "mixed and incomplete prefixes are certified" (fn () =>
       |> single_cex_where (certifies incomplete)
   end)
 
+(* Not [?n. n = 4], which normalization unwinds to [T]. *)
 val _ = test "an exhausted narrowing search is Unknown" (fn () =>
   List.all (fn cfg => unknown_with "narrowing search exhausted"
-                        (refute cfg ``?n : num. n = 4``))
+                        (refute cfg ``?n : num. n + 1 = 5``))
     [nar |> upd_size 2, nar |> upd_size 2 |> upd_certify false] andalso
   unknown_with "narrowing search exhausted"
     (refute (nar |> upd_size 2) ``?xs : bool list. LENGTH xs = 3``))
@@ -1653,9 +1774,10 @@ val _ = test "true existential goals never yield Genuine" (fn () =>
     sound 2 ``?f : rg_enum -> bool. f RGRed /\ f RGGreen /\ ~f RGBlue`` andalso
     sound 3 ``?p : (rg_enum -> bool) # bool.
                 FST p RGRed /\ FST p RGGreen /\ ~FST p RGBlue`` andalso
-    sound 2 ``!x : num. ?y. y = SUC x`` andalso
-    sound 2 ``!p : num # num. ?n. n = SUC (FST p + SND p)`` andalso
-    sound 2 ``!xs : num list. ?ys. ys = 0 :: xs``
+    (* binder sides that normalization cannot unwind *)
+    sound 2 ``!x : num. ?y. PRE y = x`` andalso
+    sound 2 ``!p : num # num. ?n. PRE n = FST p + SND p`` andalso
+    sound 2 ``!xs : num list. ?ys. DROP 1 ys = xs``
   end)
 
 val _ = test "datatype and custom enumerations" (fn () =>
@@ -1784,6 +1906,20 @@ val _ = test "narrowing declines by name what it cannot enumerate" (fn () =>
     (refute narrowing ``(x : rat) = rat_of_num 1``) andalso
   unknown_with "no TypeBase information for :real"
     (refute narrowing ``(x : real) = real_of_num 1``))
+
+(* The certificate normalizes the goal's closure, whose prefix puts the
+   free [opt] after [x]; the universal fixed through [SOME] must survive
+   there just as it does in the goal narrowing searched. *)
+val _ = test "a universal fixed through SOME certifies beside free variables"
+  (fn () =>
+    let
+      val imp = ``!x : num. opt = SOME x ==> x < 3``
+      val neg = ``!x : num. ~(opt = SOME x /\ 0 < x)``
+    in
+      refute (nar |> upd_size 4) imp |> single_cex_where (certifies imp)
+      andalso
+      refute (nar |> upd_size 4) neg |> single_cex_where (certifies neg)
+    end)
 
 (* ------------------------------------------------------------------- *)
 (* Finite maps and finite sets                                         *)
@@ -3873,7 +4009,8 @@ val needle_rows = [
    genuine_bindings "  f = \206\187x. F"),
   (2, ``?y : bool. !x : bool. x = y``,
    genuine_bindings "  x = if y then F else T"),
-  (2, ``(x : rg_enum) <> RGRed ==> ?y : rg_enum. x = RGRed /\ y = RGGreen``,
+  (2, ``(x : rg_enum) <> RGRed ==>
+        ?y : rg_enum. x = RGRed /\ (y = RGGreen \/ y = RGBlue)``,
    genuine_any)]
 
 val _ = level2 "narrowing acceptance table" (fn () =>
@@ -3882,7 +4019,8 @@ val _ = level2 "narrowing acceptance table" (fn () =>
 val _ = level2 "a stuck existential is only Potential" (fn () =>
   let
     val cfg = narrowing |> upd_substrate NativeSML |> upd_size 2
-    val goal = ``?b : bool. HD ([] : bool list) = b``
+    (* Not [HD [] = b], which normalization unwinds to [T]. *)
+    val goal = ``?b : bool. HD ([] : bool list) = ~b``
     fun stuck outcome =
       outcome |> single_cex_where (fn c =>
         is_potential c andalso uncertified c andalso
@@ -4382,7 +4520,7 @@ val _ = mf_group "Pattern_Nits"
    ("unit constructor", ``(u : unit) = ()``, V ExpectNone, CAny),
    ("Boolean existential", ``?y : bool. b = y``, V ExpectNone, CAny),
    ("pair existential", ``?a b. (p : 'a # 'b) = (a, b)``, V ExpectNone, CAny),
-   ("SUC existential", ``?m : num. n = SUC m``, V ExpectGenuine, CNone),
+   ("SUC existential", ``?m : num. n = SUC m``, V ExpectGenuine, CAny),
    ("SOME existential", ``?y : 'a. (x : 'a option) = SOME y``,
     V ExpectGenuine, CNone),
    ("CONS existential", ``?y ys. (xs : 'a list) = y :: ys``, V ExpectGenuine,

@@ -795,7 +795,7 @@ structure Refute_Core :> Refute_Core = struct
 
   (* Three consumers: [Refute_Cert.eval_original] uses this list
      directly; [Refute_Cert.normalize_to_pnf] and [Refute_Core.normalize]
-     reach it only via [normal_rewrites] below.  Ablating any one
+     reach it only via [normal_conv] below.  Ablating any one
      consumer, or [normal_rewrites] alone, is not decisive; only disabling
      entries here cuts all three. *)
   val bounded_rewrites =
@@ -824,14 +824,23 @@ structure Refute_Core :> Refute_Core = struct
       refuteTheory.bounded_forall_interval_lt_leq_swap,
       refuteTheory.bounded_exists_interval_lt_leq_swap ]
 
-  val normal_rewrites =
+  val prenex_rewrites =
     [ boolTheory.NOT_EXISTS_THM,
       boolTheory.NOT_FORALL_THM,
       boolTheory.AND_IMP_INTRO,
-      boolTheory.FUN_EQ_THM ] @
-    bounded_rewrites @
+      boolTheory.FUN_EQ_THM,
+      (* A deterministic existential, [?x. e = C x /\ P x], is a shape test on
+         [e], not a search: unwound here, so that the binder gate below does
+         not reject it *)
+      boolTheory.UNWIND_THM1,
+      boolTheory.UNWIND_THM2,
+      pairTheory.PAIR_EQ,
+      optionTheory.SOME_11,
+      refuteTheory.exists_some_unwind ] @
     Drule.CONJUNCTS boolTheory.PULL_EXISTS @
     Drule.CONJUNCTS boolTheory.PULL_FORALL
+
+  val normal_rewrites = prenex_rewrites @ bounded_rewrites
 
   fun has_bounded_quantifier tm =
     let
@@ -932,9 +941,315 @@ structure Refute_Core :> Refute_Core = struct
       search tm
     end
 
+  (* Alongside the rewrites, the simplifier's unwinding conversions substitute
+     a deterministic existential (or, once a negation has been pushed through
+     it, universal) wherever its equation sits in a conjunction (a pair, a
+     nested tuple, under a negation), which single rewrite rules cannot.  They
+     run under the goal's leading universals, whose variables a counterexample
+     binds: at the top, the universal half would turn [!c. c <> #"z"] into [F]
+     and leave no variable to bind; for the same reason [forall_some_unwind]
+     is not among the rewrites, which do reach the top.  A goal that is
+     itself a deterministic existential, [?n. n = 4], becomes [T].  The two
+     passes alternate until nothing changes, since unwinding a pair
+     component can expose an option equation, and vice versa; each
+     unwinding removes a binder, but the alternation is bounded anyway so
+     that normalization can never spin. *)
+  (* An option equation [e = SOME x], either way round, anywhere among
+     the conjuncts under [?x], or under [!x] in a negated conjunction or
+     an antecedent, is moved to the front, where [exists_some_unwind] and
+     [forall_some_unwind] match it. *)
+  local
+    fun some_equation x conj =
+      case Lib.total boolSyntax.dest_eq conj of
+          SOME (left, right) =>
+            (optionSyntax.is_some right andalso
+             Term.aconv (optionSyntax.dest_some right) x andalso
+             not (Term.free_in x left)) orelse
+            (optionSyntax.is_some left andalso
+             Term.aconv (optionSyntax.dest_some left) x andalso
+             not (Term.free_in x right))
+        | NONE => false
+    fun front x conj =
+      let
+        val conjs = boolSyntax.strip_conj conj
+        val (equations, rest) = List.partition (some_equation x) conjs
+      in
+        case equations of
+            [] => raise Conv.UNCHANGED
+          | equation :: more =>
+              let
+                val fronted =
+                  boolSyntax.list_mk_conj (equation :: (more @ rest))
+              in
+                if Term.aconv fronted conj then raise Conv.UNCHANGED
+                else tautLib.TAUT_PROVE (boolSyntax.mk_eq (conj, fronted))
+              end
+      end
+    fun body_conv x body =
+      if boolSyntax.is_conj body then front x body
+      else if boolSyntax.is_neg body then Conv.RAND_CONV (front x) body
+      else if boolSyntax.is_imp_only body then
+        Conv.RATOR_CONV (Conv.RAND_CONV (front x)) body
+      else raise Conv.UNCHANGED
+  in
+    fun some_front_conv tm =
+      let
+        val (x, _) =
+          boolSyntax.dest_exists tm
+          handle Feedback.HOL_ERR _ => boolSyntax.dest_forall tm
+      in
+        Conv.QUANT_CONV (body_conv x) tm
+      end
+  end
+
+  (* A constructor equation under a binder prefix,
+     [?x y. e = C x y /\ P x y], is a shape test on [e], not a search, for
+     any TypeBase constructor [C] (SOME, INL, a pair, a user datatype's
+     own), with or without other conjuncts:
+
+       ?xs. e = C xs /\ P xs        becomes  case e of C xs => P xs | _ => F
+       !xs. e = C xs /\ P ==> Q     becomes  case e of C xs => P ==> Q | _ => T
+       !xs. ~(e = C xs /\ P)        becomes  case e of C xs => ~P | _ => T
+
+     where [xs] are distinct binders of the prefix and [e] mentions none
+     of them; binders outside [xs] are quantified outside the case, so
+     the prefix stays prenex.  A binder that another conjunct fixes by a
+     plain equation is not split on: [UNWIND_ss] substitutes it, in all
+     three shapes; one that a second constructor equation fixes stays
+     quantified.  A pair
+     equation whose binder sits inside a component, [?a. p = (a, f b)],
+     has no constructor match; it is split into [FST p = a /\ SND p = f b]
+     for [UNWIND_ss] to substitute.  Each rewrite is proved by a case
+     split on [e]. *)
+  local
+    fun is_binder binders tm = List.exists (Term.aconv tm) binders
+    fun constructor_match binders (e, pattern) =
+      let
+        val (constructor, arguments) = boolSyntax.strip_comb pattern
+      in
+        if Term.is_const constructor andalso not (null arguments) andalso
+           not (Type.is_vartype (Term.type_of pattern)) andalso
+           not (Lib.can Type.dom_rng (Term.type_of pattern)) andalso
+           Refute_TypeBase.is_constructor constructor andalso
+           List.all (is_binder binders) arguments andalso
+           length (Refute_Util.distinct_terms arguments) =
+             length arguments andalso
+           not (List.exists (fn b => Term.free_in b e) binders)
+        then SOME (e, constructor, arguments)
+        else NONE
+      end
+    fun constructor_equation binders conj =
+      case Lib.total boolSyntax.dest_eq conj of
+          NONE => NONE
+        | SOME (left, right) =>
+            (case constructor_match binders (left, right) of
+                 NONE => constructor_match binders (right, left)
+               | found => found)
+    fun pair_split_equation binders conj =
+      case Lib.total boolSyntax.dest_eq conj of
+          NONE => false
+        | SOME (left, right) =>
+            let
+              fun splits (p, pair) =
+                pairSyntax.is_pair pair andalso not (pairSyntax.is_pair p)
+                andalso List.exists (fn b => Term.free_in b pair) binders
+                andalso not (List.exists (fn b => Term.free_in b p) binders)
+            in
+              splits (left, right) orelse splits (right, left)
+            end
+    fun fixes binders conj =
+      case Lib.total boolSyntax.dest_eq conj of
+          NONE => false
+        | SOME (left, right) =>
+            (is_binder binders left andalso not (Term.free_in left right))
+            orelse
+            (is_binder binders right andalso not (Term.free_in right left))
+    fun split_at index others =
+      (List.nth (others, index),
+       List.take (others, index) @ List.drop (others, index + 1))
+    (* [conv] on the first conjunct satisfying [predicate], found by
+       walking the conjunction tree as it is, nested either way. *)
+    fun first_conj_conv predicate conv tm =
+      if boolSyntax.is_conj tm then
+        if List.exists predicate (boolSyntax.strip_conj (boolSyntax.lhand tm))
+        then Conv.LAND_CONV (first_conj_conv predicate conv) tm
+        else Conv.RAND_CONV (first_conj_conv predicate conv) tm
+      else conv tm
+    fun pair_split_conv tm =
+      Conv.FIRST_CONV
+        (map (fn th => Conv.REWR_CONV th)
+           (Drule.CONJUNCTS refuteTheory.pair_eq_split)) tm
+    (* [case e of C xs => branch | _ => default], every other constructor
+       applied to fresh variables. *)
+    fun case_term e (constructor, arguments) branch default =
+      let
+        val ty = Term.type_of e
+        val avoid = ref (Term.free_varsl [e, branch, default] @ arguments)
+        fun fresh arg_ty =
+          let val v = Term.variant (!avoid) (Term.mk_var ("v", arg_ty))
+          in avoid := v :: !avoid; v end
+        fun clause k =
+          let
+            val (_, range) = boolSyntax.strip_fun (Term.type_of k)
+            val k = Term.inst (Type.match_type range ty) k
+          in
+            if Term.same_const k constructor then
+              (Term.list_mk_comb (k, arguments), branch)
+            else
+              (Term.list_mk_comb (k,
+                 map fresh (#1 (boolSyntax.strip_fun (Term.type_of k)))),
+               default)
+          end
+      in
+        Refute_TypeBase.mk_case
+          (e, map clause (Refute_TypeBase.constructors_of ty))
+      end
+    (* The split is on a variable standing for [e]: substituting a
+       compound [e] is not reliable.  Only the boolean rules and those of
+       [e]'s type are used, so the user's simp rules never run on the
+       matrix.  Like certification, it needs a current theory. *)
+    fun prove_by_cases e goal =
+      let
+        val ty = Term.type_of e
+        val v = Term.genvar ty
+        val general = Term.subst [{redex = e, residue = v}] goal
+        val ss = simpLib.++ (boolSimps.bool_ss, simpLib.type_ssfrag ty)
+        val th = Tactical.TAC_PROOF (([], general),
+          Tactical.THEN
+            (Tactic.STRUCT_CASES_TAC
+               (Drule.ISPEC v (Refute_TypeBase.nchotomy_of ty)),
+             simpLib.SIMP_TAC ss []))
+      in
+        Thm.INST [{redex = v, residue = e}] th
+      end
+    (* The binders of [tm]'s prefix, its matrix, and how to rebuild a
+       branch: [conjuncts] are the matrix's conjuncts that the equation
+       is drawn from, [assemble rest] the branch from the others. *)
+    fun shape tm =
+      if boolSyntax.is_exists tm then
+        let val (binders, body) = boolSyntax.strip_exists tm
+        in
+          SOME (binders, boolSyntax.strip_conj body,
+                fn rest => if null rest then boolSyntax.T
+                           else boolSyntax.list_mk_conj rest,
+                boolSyntax.F, boolSyntax.list_mk_exists)
+        end
+      else if boolSyntax.is_forall tm then
+        let val (binders, body) = boolSyntax.strip_forall tm
+        in
+          if boolSyntax.is_neg body then
+            let val inner = boolSyntax.dest_neg body
+            in
+              SOME (binders, boolSyntax.strip_conj inner,
+                    fn rest => if null rest then boolSyntax.F
+                               else boolSyntax.mk_neg
+                                      (boolSyntax.list_mk_conj rest),
+                    boolSyntax.T, boolSyntax.list_mk_forall)
+            end
+          else if boolSyntax.is_imp_only body then
+            let val (antecedent, consequent) = boolSyntax.dest_imp body
+            in
+              SOME (binders, boolSyntax.strip_conj antecedent,
+                    fn rest => if null rest then consequent
+                               else boolSyntax.mk_imp
+                                      (boolSyntax.list_mk_conj rest,
+                                       consequent),
+                    boolSyntax.T, boolSyntax.list_mk_forall)
+            end
+          else NONE
+        end
+      else NONE
+    val under_exists = Conv.STRIP_BINDER_CONV (SOME boolSyntax.existential)
+    val under_forall = Conv.STRIP_BINDER_CONV (SOME boolSyntax.universal)
+    fun matrix_conv tm =
+      if boolSyntax.is_exists tm then under_exists
+      else if boolSyntax.is_neg (#2 (boolSyntax.strip_forall tm)) then
+        fn c => under_forall (Conv.RAND_CONV c)
+      else fn c => under_forall (Conv.LAND_CONV c)
+  in
+    fun constructor_unwind_conv tm =
+      case shape tm of
+          NONE => raise Conv.UNCHANGED
+        | SOME (binders, conjuncts, assemble, default, requantify) =>
+            (case Lib.get_first (fn (index, conj) =>
+                     Option.map (fn found => (index, found))
+                       (constructor_equation binders conj))
+                   (Lib.enumerate 0 conjuncts) of
+                 SOME (index, (e, constructor, arguments)) =>
+                   let
+                     val (_, rest) = split_at index conjuncts
+                     val others =
+                       List.filter (not o is_binder arguments) binders
+                     val _ = if List.exists (fixes others) rest
+                             then raise Conv.UNCHANGED else ()
+                     val target =
+                       case_term e (constructor, arguments) (assemble rest)
+                         default
+                     (* outside the case, so the prefix stays prenex *)
+                     val target =
+                       if null others then target
+                       else requantify (others, target)
+                   in
+                     prove_by_cases e (boolSyntax.mk_eq (tm, target))
+                   end
+               | NONE =>
+                   if List.exists (pair_split_equation binders) conjuncts
+                   then
+                     matrix_conv tm
+                       (first_conj_conv (pair_split_equation binders)
+                          pair_split_conv) tm
+                   else raise Conv.UNCHANGED)
+  end
+
+  local
+    val x = Term.mk_var ("x", Type.alpha)
+    val P = Term.mk_var ("P", Type.bool)
+    fun entry name conv key =
+      {name = name, trace = 1, key = SOME ([], key),
+       conv = Lib.K (Lib.K conv)}
+    fun both name conv =
+      [entry name conv (boolSyntax.mk_exists (x, P)),
+       entry name conv (boolSyntax.mk_forall (x, P))]
+  in
+    val some_unwind_ss =
+      simpLib.SSFRAG
+        {name = SOME "SOME_UNWIND",
+         convs = both "some_front_conv" some_front_conv @
+                 both "constructor_unwind_conv" constructor_unwind_conv,
+         rewrs = [], filter = NONE, ac = [], dprocs = [], congs = []}
+  end
+
+  val unwind_conv =
+    simpLib.SIMP_CONV
+      (simpLib.++ (simpLib.++ (pureSimps.pure_ss, boolSimps.UNWIND_ss),
+                   some_unwind_ss))
+      [refuteTheory.exists_some_unwind, refuteTheory.forall_some_unwind,
+       pairTheory.PAIR_EQ, optionTheory.SOME_11]
+
+  (* The quantifiers are pulled into the prefix first, so that none is
+     left inside a case split the unwinding makes; one under a
+     disjunction is not pulled out, so it stays in the branch.  The
+     unwinding comes before [bounded_rewrites], so that a bounded
+     existential whose bound is not its first conjunct is unwound rather
+     than turned into a list search over its bound. *)
+  fun normal_pass tm =
+    Conv.EVERY_CONV
+      [Ho_Rewrite.REWRITE_CONV prenex_rewrites,
+       Conv.STRIP_BINDER_CONV (SOME boolSyntax.universal) unwind_conv,
+       (* built per call, so that implicit rewrites registered
+          after this module loaded count *)
+       Ho_Rewrite.REWRITE_CONV normal_rewrites] tm
+
+  fun until_fixed 0 conv = Conv.ALL_CONV
+    | until_fixed rounds conv =
+        Conv.ORELSEC
+          (Conv.THENC (Conv.CHANGED_CONV conv, until_fixed (rounds - 1) conv),
+           Conv.ALL_CONV)
+
+  val normal_conv = Conv.QCONV (until_fixed 8 normal_pass)
+
   fun normalize tm =
-    #2 (boolSyntax.dest_eq (Thm.concl
-      (Ho_Rewrite.REWRITE_CONV normal_rewrites tm)))
+    #2 (boolSyntax.dest_eq (Thm.concl (normal_conv tm)))
     handle Interrupt => raise Interrupt
          | _ => tm
 
