@@ -1,0 +1,40 @@
+## `current_termination_finisher`
+
+``` hol4
+TotalDefn.current_termination_finisher : Context.t -> (thm -> thm) option
+```
+
+------------------------------------------------------------------------
+
+Reads the completion function of a nontrivial explicit termination proof.
+
+The context passed to an explicit termination tactic or prover contains
+`SOME finish`. Given a theorem proving that proof's original termination
+goal, `finish` stores the definition and induction theorem, applies the
+normal definition attributes and induction registration, and returns the
+definition theorem. Preparation and the termination proof are not repeated.
+For `qDefine`, completion also exits its explicitly scoped trace and
+suffix overrides before applying attributes. A direct `tDefine` has no
+such overrides or attribute processing.
+
+The function is one-shot. Both normal completion and a call to `finish`
+consume it; a failed call consumes it too. Its theorem must have the
+original goal's conclusion, no additional assumptions, and be up to date.
+Outside this proof context the reader returns `NONE`. It does not install
+state in the ambient context, so unrelated nested proofs do not inherit it.
+Trivial definitions ignore their explicit tactic and have no such context.
+
+This supports checkpoints saved inside a termination proof. A saved
+process retains the prepared definition, its proof context, and live
+scoped flags. After restoring it, finish the original goal and pass its
+theorem to the saved completion function instead of returning through the
+original definition call. The caller must own this process: do not
+interleave unrelated theory changes before completing the definition.
+Discard the process after failure or abandonment; completion provides no
+rollback of theory, grammar, or tactic side effects.
+
+### Failure
+
+The reader does not fail. The returned function fails if already consumed,
+if its theorem does not meet the original obligation, or if definition
+storage or attribute processing fails.

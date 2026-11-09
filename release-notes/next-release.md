@@ -21,6 +21,10 @@ Contents
 New features
 ------------
 
+-   `TotalDefn.current_termination_finisher` reads a one-shot completion
+    function from an explicit termination proof's context. Saved proof
+    processes can complete a definition without repeating its preparation.
+
 -   `sptree` now provides `domain_list` to enumerate keys without constructing
     key/value pairs, with `set_domain_list` proving its set is `domain` and
     a standard CV translation in `cv_std`.

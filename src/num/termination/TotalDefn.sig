@@ -46,6 +46,10 @@ sig
    val qDefine     : string -> term quotation -> tactic option -> thm
    val located_qDefine : DB.thm_src_location -> string -> term quotation ->
                          tactic option -> Context.t -> thm
+   (* Available in a nontrivial explicit termination proof's context.
+      Completes the definition once from its termination theorem. *)
+   val current_termination_finisher : Context.t -> (thm -> thm) option
+
    datatype phase
         = PARSE of term quotation
         | BUILD of term

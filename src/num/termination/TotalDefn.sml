@@ -917,7 +917,14 @@ end
 (* Version of Define where the termination tactic is explicitly supplied.    *)
 (*---------------------------------------------------------------------------*)
 
-fun located_tDefine loc stem q tac =
+val termination_finisher_slot : (thm -> thm) option Context.Data.slot =
+    Context.Data.new {name = "TotalDefn.termination_finisher", empty = NONE,
+                      pp = K "<termination_finisher>"}
+
+fun current_termination_finisher ctxt =
+    Context.Data.get termination_finisher_slot ctxt
+
+fun located_tDefine_with finish loc stem q tac =
  let open Defn
      fun thunk() =
        let val snap1 = thy_consts (current_theory())
@@ -936,17 +943,42 @@ fun located_tDefine loc stem q tac =
              (def, NONE)
           end
         else
-        let val (def,ind) = Defn.tprove0 (defn,tac)
-           val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
+        let val (name, (g, validate)) = Defn.tc_obligation defn
+            val consumed = ref false
+            fun complete th =
+              let
+                val _ = if !consumed then
+                          raise ERR "termination_finisher"
+                                    "Definition already completed or failed"
+                        else consumed := true
+                val _ = aconv (concl th) (#2 g) andalso
+                        List.all (fn h => List.exists (aconv h) (#1 g))
+                                 (hyp th) andalso
+                        Theory.uptodate_thm th orelse
+                        raise ERR "termination_finisher"
+                                  "Invalid termination theorem"
+                val both = validate th
+                val def = CONJUNCT1 both |> CONJUNCTS |> map GEN_ALL
+                                        |> LIST_CONJ
+                val ind = CONJUNCT2 both
+                val _ = delete_support defn (thy_consts (current_theory()))
+                                       snap1
+                val _ = Defn.store_at loc (stem,def,ind)
+              in (def, SOME ind) end
+            val ctxt = Context.Data.put termination_finisher_slot
+                         (SOME (finish complete)) (Context.snapshot ())
         in
-            delete_support defn (thy_consts (current_theory())) snap1
-          ; Defn.store_at loc (stem,def,ind)
-          ; (def, SOME ind) end
+          complete (boolLib.prove_named ctxt {name=name,goal=g,tac=tac})
+          handle e => (consumed := true; Portable.reraise e)
+        end
        end
  in
   Parse.try_grammar_extension thunk ()
   handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
  end
+
+fun located_tDefine loc stem q tac =
+    located_tDefine_with (fn complete => #1 o complete) loc stem q tac
 
 val tDefine = located_tDefine DB.Unknown
 
@@ -1005,7 +1037,47 @@ fun located_qDefine loc stem q tacopt (_ : Context.t) =
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
             |> (if rebindok then trace ("Theory.allow_rebinds", 1)
                 else (fn f => f))
-      val (thm,indopt) =
+      val scoped_traces =
+          List.mapPartial
+            (fn (enabled, name) =>
+                if enabled then SOME (name, Feedback.current_trace name)
+                else NONE)
+            [(nocomp, "computeLib.auto_import_definitions"),
+             (svarsok, "Definition.allow_schema_definition"),
+             (rebindok, "Theory.allow_rebinds")]
+      val def_suffix = !Defn.def_suffix
+      val ind_suffix = !Defn.ind_suffix
+      fun leave_scope () =
+          (List.app (fn (name, value) => Feedback.set_trace name value)
+                    scoped_traces;
+           Defn.def_suffix := def_suffix;
+           Defn.ind_suffix := ind_suffix)
+      fun post (thm, indopt) =
+        let
+          fun proc_attr (k,vs) =
+              ThmAttribute.store_at_attribute{name = corename, attrname = k,
+                                              args = vs, thm = thm}
+          val attrs = if notuserdef then attrs else ("userdef",[]) :: attrs
+          val gen_ind =
+              if tailrecp then (fn th => raise ERR "Unseen" "")
+              else Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
+        in
+          List.app proc_attr attrs;
+          if notuserdef then ()
+          else
+            case indopt of
+                NONE => (case total gen_ind thm of
+                             NONE => ()
+                           | SOME p => DefnBase.register_indn p)
+              | SOME ith =>
+                DefnBase.register_indn (ith, DefnBase.constants_of_defn thm)
+        end
+      fun finish complete th =
+          let val result = complete th
+              val _ = leave_scope ()
+              val _ = post result
+          in #1 result end
+      val result =
           case (tailrecp, tacopt) of
               (true, NONE) => (fmod (tailrecDefine loc corename) q, NONE)
             | (true, SOME _) =>
@@ -1013,25 +1085,11 @@ fun located_qDefine loc stem q tacopt (_ : Context.t) =
                     "Termination tactic for tail-recursive definition makes \
                     \no sense"
             | (false, NONE) => fmod (located_xDefine loc corename) q
-            | (false, SOME tac) => fmod (located_tDefine loc corename q) tac
-      fun proc_attr (k,vs) =
-          ThmAttribute.store_at_attribute{name = corename, attrname = k,
-                                          args = vs, thm = thm}
-      val attrs = if notuserdef then attrs else ("userdef",[]) :: attrs
-      val gen_ind =
-          if tailrecp then (fn th => raise ERR "Unseen" "")
-          else Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
+            | (false, SOME tac) =>
+              fmod (located_tDefine_with finish loc corename q) tac
     in
-      List.app proc_attr attrs;
-      if notuserdef then ()
-      else
-        case indopt of
-            NONE => (case total gen_ind thm of
-                         NONE => ()
-                       | SOME p => DefnBase.register_indn p)
-          | SOME ith =>
-            DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
-      thm
+      post result;
+      #1 result
     end
 
 fun qDefine stem q tacopt =
