@@ -21,15 +21,12 @@ fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
 fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
 
-val (next_axiom_name, add_axiom_name) = let
+val next_axiom_name = let
   val names = ref ["BOOL_CASES_AX", "SELECT_AX", "ETA_AX", "INFINITY_AX"]
-  fun next () = case !names of x::xs => x before names := xs
-                | _ => raise Fail "next_axiom_name"
-  fun add name = names := (!names)@[name]
 in
-  (next, add)
+  fn () => case !names of x::xs => x before names := xs
+                        | _ => raise Fail "next_axiom_name"
 end
-val skip_standard_axiom = next_axiom_name
 
 (*
 val thyname = "bool";

@@ -1,0 +1,13 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+all: talky
+.PHONY: all
+
+# The control for both/: just the chatty job, so that what its own
+# output costs the loop is known separately.
+talky:
+	i=0 ; while [ $$i -lt 400 ] ; do echo chat $$i ; i=$$((i+1)) ; sleep 0.005 ; done ; touch talky
+
+EXTRA_CLEANS = talky

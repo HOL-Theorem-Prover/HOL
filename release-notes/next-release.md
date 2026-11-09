@@ -137,6 +137,11 @@ Bugs fixed
 
 -   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
 
+-   Finally (?), we fixed a soundness bug in the *experimental* kernel to do with the behaviour of `Term.subst`.  The latter has been adjusted in both kernels so that it is now an exception-raising error to try to use a substitution alist that mentions the same l.h.s. (these are usually variables) multiple times.
+
+    The bug was found by [Gemini 4]( https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/) using a [teamwork multi-agent framework in Antigravity]( https://antigravity.google/blog/teamwork-when-ai-becomes-a-research-partner).
+
+
 -   The language server's goal state just after a `rpt`/`REPEAT` tactic, before the next token (*e.g.*, at the space in `rpt strip_tac >> simp[]`), showed the state after a single iteration rather than after the repetition had finished.
 
 -   The contextual decision-procedure cache used by the arithmetic simpset fragments (`numSimps.ARITH_ss`, `realSimps.REAL_ARITH_ss`, `intSimps.OMEGA_ss`/`COOPER_ss`, and `bagSimps.SBAG_SOLVE_ss`) was unbounded.
