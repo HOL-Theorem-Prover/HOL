@@ -117,6 +117,10 @@ New features
 Bugs fixed
 ----------
 
+-   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
+    Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
+    Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
+
 -   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
     Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
     Recursions through `MAP` and `EVERY` with a substitution-like extra parameter have exactly this shape.
