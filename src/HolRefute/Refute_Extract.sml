@@ -2720,15 +2720,6 @@ structure Refute_Extract :> Refute_Extract = struct
                 (validate_type root domain; validate_type root range)
             | Refute_Gen.GenCustom _ =>
                 reject ("custom generator registered for " ^ type_name root)
-            | Refute_Gen.GenNum (Refute_Gen.Word width) =>
-                (case strategy of
-                   Random _ =>
-                     if width <= 32 orelse width = 64 then ()
-                     else reject ("word width is neither at most 32 nor " ^
-                       "exactly 64, the widths rand_below's 32-bit " ^
-                       "output fills, for " ^ type_name root)
-                 | Exhaustive => ()
-                 | Narrowing => ())
             | _ => ()
           end
           handle Refute_Gen.NoGenerator (missing, why) =>
@@ -2854,17 +2845,11 @@ structure Refute_Extract :> Refute_Extract = struct
             pair ("Char.chr n")
               (thunk "Refute_EvalSML.char_term (Char.chr n)") ^ ")"
         | Refute_Gen.Word width =>
-            "refute_range 0 " ^
-            (if width <= 8 then
-               "(IntInf.toInt (IntInf.pow (2, " ^ integer width ^
-               ") - 1))"
-             else
-               "(IntInf.toInt (IntInf.min " ^
-               "(IntInf.fromInt (Int.max (0, size)), " ^
-               "IntInf.pow (2, " ^ integer width ^ ") - 1)))") ^
-            " (fn n => " ^ pair ("IntInf.fromInt n")
-              (thunk ("Refute_EvalSML.word_term " ^ integer width ^
-                " (IntInf.fromInt n)")) ^ ")"
+            (* The exhaustive range, then the boundary values beyond it. *)
+            "List.map (fn n => " ^
+            pair "n" (thunk ("Refute_EvalSML.word_term " ^ integer width ^
+                             " n")) ^
+            ") (Refute_Eval.word_enum_values " ^ integer width ^ " size)"
 
       fun exhaustive_arguments [] _ continuation = continuation []
         | exhaustive_arguments (ty :: tys) size continuation =
@@ -2983,17 +2968,10 @@ structure Refute_Extract :> Refute_Extract = struct
             "    val value = Char.chr (IntInf.toInt draw)\n" ^
             "in (" ^ pair "value"
               (thunk "Refute_EvalSML.char_term value") ^ ", next) end"
-        (* [rand_below] emits 32 bits, so :word64 takes two draws, high
-           half first; the seeded stream has to agree draw for draw. *)
-        | Refute_Gen.Word 64 =>
-            "let val (hi, after_hi) = refute_rand_below 4294967296 state\n" ^
-            "    val (lo, next) = refute_rand_below 4294967296 after_hi\n" ^
-            "    val draw = hi * 4294967296 + lo\n" ^
-            "in (" ^ pair "draw"
-              (thunk "Refute_EvalSML.word_term 64 draw") ^ ", next) end"
         | Refute_Gen.Word width =>
-            "let val (draw, next) = refute_rand_below " ^
-            "(IntInf.pow (2, " ^ integer width ^ ")) state\n" ^
+            (* Every width, with boundary values mixed in. *)
+            "let val (draw, next) = Refute_Eval.random_word " ^
+            integer width ^ " state\n" ^
             "in (" ^ pair "draw"
               (thunk ("Refute_EvalSML.word_term " ^ integer width ^
                 " draw")) ^ ", next) end"

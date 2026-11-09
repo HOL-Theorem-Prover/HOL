@@ -2085,10 +2085,10 @@ val _ = test "substrates agree on small goals" (fn () =>
       agree Compute NativeSML strategy goal) strategies) goals
   end)
 
-(* word64 random draws are two draws of the 64-bit PRNG, one per half, and
-   both substrates must consume them in the same order.  Almost every draw
-   refutes this goal, so the witness is the draw itself and comparing
-   witnesses really compares streams. *)
+(* A word64 random draw takes several draws of the 64-bit PRNG
+   ([Refute_Eval.random_word]), and both substrates must consume them in
+   the same order.  Almost every draw refutes this goal, so the witness is
+   the draw itself and comparing witnesses really compares streams. *)
 val _ = test "word64 random draws agree across substrates" (fn () =>
   let
     val goal = ``!w : word64. w = 0w``
@@ -2401,6 +2401,41 @@ fun witness_width outcome =
       SOME {bindings = [(_, v)], ...} =>
         SOME (fcpSyntax.dest_int_numeric_type (wordsSyntax.dim_of v))
     | _ => NONE
+
+local
+  val wide = qc |> upd_timeout 60.0 |> upd_sequential true
+    |> upd_seed (SOME 42) |> upd_size 3 |> upd_iterations 40
+  fun substrates body = List.all body [NativeSML, Compute]
+  fun top_word width =
+    wordsSyntax.mk_wordi
+      (Arbnum.- (Arbnum.pow (Arbnum.fromInt 2, Arbnum.fromInt width),
+                 Arbnum.one), width)
+  fun msb_word width =
+    wordsSyntax.mk_wordi
+      (Arbnum.pow (Arbnum.fromInt 2, Arbnum.fromInt (width - 1)), width)
+  (* Only [2 ** 256 - 1] refutes the wrap, so a hit at all means the
+     boundary values were generated; the certificate replays it in HOL. *)
+  fun certified_at var value c =
+    is_genuine c andalso Option.isSome (#cert c) andalso
+    binding_is c var value
+  val wrap_goal = ``!w : 256 word. w2n (w + 1w) = w2n w + 1``
+in
+  val _ = test "256-bit wrap is refuted at the top boundary, exhaustively"
+    (fn () => substrates (fn s =>
+      refute (wide |> upd_substrate s |> only [Exhaustive]) wrap_goal
+      |> cex_where (certified_at ``w : 256 word`` (top_word 256))))
+
+  val _ = test "256-bit wrap is refuted by random draws alone"
+    (fn () => substrates (fn s =>
+      refute (wide |> upd_substrate s |> only [Random]) wrap_goal
+      |> cex_where (certified_at ``w : 256 word`` (top_word 256))))
+
+  (* [word_msb] unfolds through [dimindex], which only Compute runs, so
+     the substrate is left to the default choice. *)
+  val _ = test "160-bit sign bit is found" (fn () =>
+    refute (wide |> only [Exhaustive]) ``!a : 160 word. ~word_msb a``
+    |> cex_where (certified_at ``a : 160 word`` (msb_word 160)))
+end
 
 val _ = test "word widths are instantiated from the widths row" (fn () =>
   refute (qc |> upd_timeout 30.0) word_goal |> cex_where (fn c =>

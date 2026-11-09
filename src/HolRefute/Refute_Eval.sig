@@ -112,6 +112,10 @@ signature Refute_Eval = sig
   val rand_below_limit : IntInf.int
   val checked_rand_below :
     IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
+  (* Word values for exhaustive and random testing, at any width. *)
+  val word_boundary_values : int -> IntInf.int list
+  val word_enum_values : int -> int -> IntInf.int list
+  val random_word : int -> IntInf.int -> IntInf.int * IntInf.int
   val normalize_seed : IntInf.int -> IntInf.int
   val take_session_seed : unit -> IntInf.int
 
