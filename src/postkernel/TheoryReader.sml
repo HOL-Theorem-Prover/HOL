@@ -142,6 +142,12 @@ fun decode_thydata {thyname,path,hash} =
             consts := cs;
             stamps := (Theory.incorporate_consts thyname cs andalso !stamps)
           end
+      val thydata =
+          force "thydata" (
+            Option.map (map (fn (ty,d) => {data=d,ty=ty})) o
+            list_decode(pair_decode(string_decode, SOME))
+          )
+          (#thydata rawthy)
       val share_data =
           register_atomically thyname parents (fn () =>
             (Theory.link_parents (thyname, hash) parents;
@@ -155,12 +161,6 @@ fun decode_thydata {thyname,path,hash} =
              in
                (sd, !stamps)
              end))
-      val thydata =
-          force "thydata" (
-            Option.map (map (fn (ty,d) => {data=d,ty=ty})) o
-            list_decode(pair_decode(string_decode, SOME))
-          )
-          (#thydata rawthy)
       val (strings, terms) = shared_vectors share_data
       val refs =
           Vector.foldr (fn (id as {Thy,...}, rs) =>
