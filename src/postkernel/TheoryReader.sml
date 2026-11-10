@@ -91,11 +91,30 @@ fun bind_data ({thyname,strings,terms,theorems,thydata,...} : decoded) =
 val capture = ref false
 val captured : decoded option ref = ref NONE
 
+(* Links [thyname] into the theory graph and adds its kernel entries by
+   [register], all or nothing: on failure the context is rolled back, so
+   no context has the theory linked without its entries; on success the
+   theory is sealed, so they can't be changed afterwards.  The flag
+   [register] returns says whether the entries got canonical stamps. *)
+fun register_atomically thyname parents register =
+    let
+      val _ = not (Thm.is_sealed thyname) orelse
+              raise TheoryReader ("theory " ^ thyname ^ " is already sealed")
+      val ctxt = Context.snapshot ()
+      val (result, stamps_canonical) =
+          register () handle e => (Context.restore ctxt;
+                                   raise e)
+    in
+      Thm.mark_sealed thyname;
+      note_load thyname parents stamps_canonical;
+      result
+    end
+
 (* Decodes a theory's .dat as a load does, linking it into the theory
-   graph under [hash] and adding its types and constants to the kernel
-   signature, but registers nothing else.  The flag says whether the
-   theory's kernel ids are canonical: its own entries got canonical epochs and
-   its parents are canonical. *)
+   graph under [hash], adding its types and constants to the kernel
+   signature and sealing it, but registers nothing else.  The flag says
+   whether the theory's kernel ids are canonical: its own entries got
+   canonical epochs and its parents are canonical. *)
 fun decode_thydata {thyname,path,hash} =
     let
       open HOLsexp
@@ -107,7 +126,6 @@ fun decode_thydata {thyname,path,hash} =
                     ("reading at " ^ path ^ " for theory " ^ thyname ^
                      " and got theory called " ^ stored_name ^ " instead")
       val parents = map mungename parents
-      val _ = Theory.link_parents (thyname, hash) parents
       val {types=new_types,consts=new_consts} = #newsig rawthy
       val stamps = ref true
       val consts = ref []
@@ -121,12 +139,18 @@ fun decode_thydata {thyname,path,hash} =
             stamps := (Theory.incorporate_consts thyname cs andalso !stamps)
           end
       val share_data =
-            dec_sdata {
-              before_types = before_types,
-              before_terms = before_terms,
-              tables = tables,
-              exports = exports
-            }
+          register_atomically thyname parents (fn () =>
+            (Theory.link_parents (thyname, hash) parents;
+             let
+               val sd = dec_sdata {
+                          before_types = before_types,
+                          before_terms = before_terms,
+                          tables = tables,
+                          exports = exports
+                        }
+             in
+               (sd, !stamps)
+             end))
       val thydata =
           force "thydata" (
             Option.map (map (fn (ty,d) => {data=d,ty=ty})) o
@@ -144,14 +168,13 @@ fun decode_thydata {thyname,path,hash} =
         new_types = new_types, new_consts = !consts, refs = refs,
         strings = strings, terms = terms, theorems = theorems,
         thydata = thydata},
-       !stamps andalso List.all (is_canonical o #1) parents)
+       is_canonical thyname)
     end
 
 fun load_thydata_from_dat args =
     let
-      val (d as {thyname,parents,...}, canonical) = decode_thydata args
+      val (d, _) = decode_thydata args
       val named_thms = bind_data d
-      val _ = note_load thyname parents canonical
       val _ = if !capture then captured := SOME d else ()
   in
     List.foldl (fn ((n,th,i), D) => Symtab.update (n, (th,i)) D)
@@ -172,24 +195,31 @@ fun capture_decoded f x =
       capture := false; captured := NONE; (result, d)
     end
 
-fun note_decoded ({thyname,parents,...} : decoded, canonical) =
-    note_load thyname parents canonical
-
 (* The kernel part of load_thydata_from_dat's registration, from decoded
    values: link the theory under [hash] and add its types and constants,
    which must get their canonical stamps again since the values carry
-   them. *)
-fun register_kernel hash ({thyname,parents,new_types,new_consts,...}
+   them, as must its parents, and the other theories' entries the values
+   refer to must be unchanged. *)
+fun register_kernel hash (d as {thyname,parents,new_types,new_consts,...}
                           : decoded) =
     let
-      val _ = Theory.link_parents (thyname, hash) parents
-      val types_ok = Theory.incorporate_types thyname new_types
-      val consts_ok = Theory.incorporate_consts thyname new_consts
+      val _ = List.all (is_canonical o #1) parents andalso refs_current d
+              orelse
+              raise TheoryReader ("theory " ^ thyname ^
+                                  ": decoded against other kernel entries")
+      fun register () =
+          let
+            val _ = Theory.link_parents (thyname, hash) parents
+            val types_ok = Theory.incorporate_types thyname new_types
+            val consts_ok = Theory.incorporate_consts thyname new_consts
+          in
+            types_ok andalso consts_ok orelse
+            raise TheoryReader ("theory " ^ thyname ^
+                                ": kernel entries not canonically stamped");
+            ((), true)
+          end
     in
-      types_ok andalso consts_ok orelse
-      raise TheoryReader ("theory " ^ thyname ^
-                          ": kernel entries not canonically stamped");
-      note_load thyname parents true
+      register_atomically thyname parents register
     end handle Interrupt => raise Interrupt
              | e as TheoryReader _ => raise e
              | e => raise TheoryReader ("Exception raised: " ^

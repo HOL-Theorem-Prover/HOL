@@ -548,11 +548,9 @@ fun write_modules {theories, directory, base_state, output, limit} =
                          (false, []) entries)
         fun decode (e : entry, name, written) =
           let
-            val decoded as (data, canonical) =
+            val (data, canonical) =
                 TheoryReader.decode_thydata
                   {thyname = #thy e, path = #base e ^ ".dat", hash = #hash e}
-            val _ = TheoryReader.note_decoded decoded
-            val _ = Thm.mark_sealed (#thy e)
           in
             case (canonical, module_roots name (#dat_digest e) data bindings) of
                 (true, SOME roots) =>
@@ -569,7 +567,6 @@ fun write_modules {theories, directory, base_state, output, limit} =
                 SOME m =>
                 if usable m then
                   (TheoryReader.register_kernel (#hash e) (#data m);
-                   Thm.mark_sealed (#thy e);
                    written)
                 else (Save.releaseModule (#id m); decode (e, name, written))
               | NONE => decode (e, name, written)
