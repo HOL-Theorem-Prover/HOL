@@ -60,6 +60,9 @@ fun move_written () =
       (List.filter (String.isSuffix ".pmo") (children "written"));
 val source_fingerprint = (probe ["abcd", "nocache"]; read "fingerprint");
 
+val _ = tprint "a failed theory load is rolled back"
+val _ = (command [hol, "run", "--noconfig", "rollback.sml"]; OK ());
+
 val supported = (probe ["abcd"]; OS.FileSys.access ("module-stats", []));
 val _ = if not supported then () else
   let
