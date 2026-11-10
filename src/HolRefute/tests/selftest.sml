@@ -2568,9 +2568,9 @@ val _ = mf_test "exhausted arity rejections retain one counted reason"
              | _ => false)
       | _ => false)
 
-(* Assembly rejects the large scope before displaying the small model.
-   Block that display so the body cannot win a race with its deadline. *)
-val _ = mf_test "arity rejections survive an interrupted model display"
+(* The first adaptive batch includes scopes too large to assemble. Block
+   its first model display so the body cannot race its deadline. *)
+val _ = mf_test "adaptive arity rejections survive interrupted display"
   (fn () => registration_context (fn () =>
     let
       val entered = ref false
@@ -2581,12 +2581,14 @@ val _ = mf_test "arity rejections survive an interrupted model display"
          tm)
       val _ = register_term_postprocessor ``:'a`` display
       val result = refute
-        (arity_config |> upd_card [(NONE, [2, 256])] |> upd_timeout 30.0)
+        (arity_config |> upd_iterative_card [(NONE, [1])]
+          |> upd_batch_size 256 |> upd_timeout 30.0)
         arity_goal
     in
       !entered andalso unknown_with "timed out" result andalso
       unknown_with "2 problems rejected:" result andalso
-      unknown_with "arity 4" result
+      unknown_with "arity 4" result andalso
+      unknown_with "universe of size 256" result
     end))
 
 val _ = mf_test "rejected scopes do not hide a genuine counterexample"
