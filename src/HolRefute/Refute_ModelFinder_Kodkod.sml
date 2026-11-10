@@ -3125,10 +3125,8 @@ fun assemble_problem_once
   end
 
 fun assemble_problem params unsound scope =
-  SOME (with_arity_retry (#ofs scope) (fn offsets =>
-    assemble_problem_once params unsound (scope_with_offsets scope offsets)))
-  handle Util.TOO_LARGE _ => NONE
-       | Util.TOO_SMALL _ => NONE
+  with_arity_retry (#ofs scope) (fn offsets =>
+    assemble_problem_once params unsound (scope_with_offsets scope offsets))
 
 (* Upstream to_set_bool_op and kk_vect_set_bool_op are intentionally
    omitted: no representation reachable in this port dispatches to them,

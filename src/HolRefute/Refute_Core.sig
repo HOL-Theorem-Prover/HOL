@@ -186,6 +186,8 @@ signature Refute_Core = sig
 
   val publish_counterexamples : counterexample list -> unit
   val publish_models : counterexample list -> unit
+  (* Retain current backend diagnostics across an outer deadline. *)
+  val set_backend_reasons : (unit -> string list) -> unit
   val search_context_for : config -> search_context
   val with_search_context : config -> ('a -> 'b) -> 'a -> 'b
   val search_expired : config -> bool

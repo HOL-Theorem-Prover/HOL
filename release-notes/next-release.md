@@ -122,6 +122,10 @@ New features
 Bugs fixed
 ----------
 
+- HolRefute's model finder now builds adaptive scopes one solver batch at
+  a time, avoids repeated cardinality-repair and monotonicity work, and
+  reports counted reasons when Kodkod problems cannot be assembled.
+
 -   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
     Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.

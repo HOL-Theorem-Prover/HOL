@@ -290,20 +290,85 @@ structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
   datatype comp_op = Eq | Neq | Leq
   type comp = annotation_atom * annotation_atom * comp_op * int list
   type assign_clause = assign_literal list
-  type constraint_set = comp list * assign_clause list
+  (* Keep the original constraint lists for
+     identical SAT input order. Persistent indexes make membership and unit
+     contradiction checks independent of the length of those lists; failed
+     alternatives must leave every index unchanged. *)
+  type assign_clauses =
+    {items : assign_clause list,
+     known : assign_clause HOLset.set,
+     units : (int, (sign * annotation) list) Redblackmap.dict}
+  type constraint_set =
+    (comp list * comp HOLset.set) * assign_clauses
 
-  val empty_constraints : constraint_set = ([], [])
+  fun annotation_index Gen = 0
+    | annotation_index New = 1
+    | annotation_index Fls = 2
+    | annotation_index Tru = 3
 
-  fun add_assign_literal (literal as (x, (sign, annotation))) clauses =
+  fun atom_index (A annotation) = ~(annotation_index annotation + 1)
+    | atom_index (V variable) = variable
+
+  fun comparison_index Eq = 0
+    | comparison_index Neq = 1
+    | comparison_index Leq = 2
+
+  fun comp_compare ((left, right, comparison, unless),
+                    (left', right', comparison', unless')) =
+    case Int.compare (atom_index left, atom_index left') of
+        EQUAL =>
+          (case Int.compare (atom_index right, atom_index right') of
+               EQUAL =>
+                 (case Int.compare
+                         (comparison_index comparison,
+                          comparison_index comparison') of
+                      EQUAL => Portable.list_compare Int.compare
+                        (unless, unless')
+                    | order => order)
+             | order => order)
+      | order => order
+
+  fun literal_key (variable, (sign, annotation)) =
+    (variable, ((case sign of Plus => 0 | Minus => 1),
+                annotation_index annotation))
+
+  fun literal_compare (left, right) =
+    Portable.pair_compare
+      (Int.compare, Portable.pair_compare (Int.compare, Int.compare))
+      (literal_key left, literal_key right)
+
+  val empty_constraints : constraint_set =
+    (([], HOLset.empty comp_compare),
+     {items = [], known = HOLset.empty (Portable.list_compare literal_compare),
+      units = Redblackmap.mkDict Int.compare})
+
+  fun insert_comp comp (items, known) =
+    if HOLset.member (known, comp) then (items, known)
+    else (comp :: items, HOLset.add (known, comp))
+
+  fun cons_assign_clause clause ({items, known, units} : assign_clauses) =
+    {items = clause :: items, known = HOLset.add (known, clause),
+     units = case clause of
+         [(variable, literal)] =>
+           Redblackmap.insert (units, variable,
+             Lib.insert literal (Option.getOpt
+               (Redblackmap.peek (units, variable), [])))
+       | _ => units}
+
+  fun insert_assign_clause clause (clauses : assign_clauses) =
+    if HOLset.member (#known clauses, clause) then clauses
+    else cons_assign_clause clause clauses
+
+  fun add_assign_literal (literal as (x, (sign, annotation)))
+        (clauses : assign_clauses) =
     if List.exists
-         (fn [(x', (sign', annotation'))] =>
-                x = x' andalso
-                ((sign = sign' andalso annotation <> annotation') orelse
-                 (sign <> sign' andalso annotation = annotation'))
-           | _ => false) clauses then
+         (fn (sign', annotation') =>
+           (sign = sign' andalso annotation <> annotation') orelse
+           (sign <> sign' andalso annotation = annotation'))
+         (Option.getOpt (Redblackmap.peek (#units clauses, x), [])) then
       NONE
     else
-      SOME ([literal] :: clauses)
+      SOME (cons_assign_clause [literal] clauses)
 
   fun add_assign_disjunct _ NONE = NONE
     | add_assign_disjunct literal (SOME literals) =
@@ -311,7 +376,7 @@ structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
 
   fun add_assign_clause_opt NONE clauses = clauses
     | add_assign_clause_opt (SOME clause) clauses =
-        Lib.insert clause clauses
+        insert_assign_clause clause clauses
 
   fun annotation_comp Eq left right = left = right
     | annotation_comp Neq left right = left <> right
@@ -333,7 +398,7 @@ structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
                  NONE
            | _ =>
                SOME
-                 (Lib.insert (left, right, Leq, []) comps, clauses))
+                 (insert_comp (left, right, Leq, []) comps, clauses))
     | do_annotation_atom_comp comparison [] left right
         (constraints as (comps, clauses)) =
         (case (left, right) of
@@ -350,12 +415,12 @@ structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
                do_annotation_atom_comp comparison [] right left constraints
            | (V _, V _) =>
                SOME
-                 (Lib.insert
+                 (insert_comp
                    (left, right, comparison, []) comps, clauses))
     | do_annotation_atom_comp comparison unless left right
         (comps, clauses) =
         SOME
-          (Lib.insert
+          (insert_comp
             (left, right, comparison, unless) comps, clauses)
 
   fun add_annotation_atom_comp comparison unless left right constraints =
@@ -422,7 +487,7 @@ structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
     | do_notin_mtype_fv Plus [literal] MAlpha (SOME clauses) =
         add_assign_literal literal clauses
     | do_notin_mtype_fv Plus unless MAlpha (SOME clauses) =
-        SOME (Lib.insert unless clauses)
+        SOME (insert_assign_clause unless clauses)
     | do_notin_mtype_fv sign unless
         (MFun (domain, A annotation, range)) constraints =
         let
@@ -580,8 +645,8 @@ structure Refute_ModelFinder_Mono :> Refute_ModelFinder_Mono = struct
           (prop_for_exists_var_assign_literal variables Gen,
            prop_for_comp (left, right, comparison, []))
 
-  fun encode (comps, clauses) =
-    PS.all (map prop_for_comp comps @ map prop_for_assign_clause clauses)
+  fun encode ((comps, _), {items, ...} : assign_clauses) =
+    PS.all (map prop_for_comp comps @ map prop_for_assign_clause items)
 
   (* Only satisfiability is wanted: nothing reads back which annotation
      each variable took. *)

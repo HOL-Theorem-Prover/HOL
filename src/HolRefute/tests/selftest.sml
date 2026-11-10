@@ -2552,6 +2552,47 @@ val _ = mf_test "kodkod refutes and certifies a numeric goal" (fn () =>
     kodkod_genuine c andalso #substrate c = "kodkod" andalso
     Option.isSome (#cert c)))
 
+(* A four-column relation cannot fit a 256-atom universe. Both sound
+   and liberal assembly reject it. *)
+val arity_goal = ``(r : 'a -> 'a -> 'a -> 'a -> bool) a b c d``
+val arity_config = mf |> upd_mono [(NONE, SOME false)]
+
+val _ = mf_test "exhausted arity rejections retain one counted reason"
+  (fn () =>
+    case refute (arity_config |> upd_card [(NONE, [256])]) arity_goal of
+        Unknown reasons =>
+          (case List.filter (String.isSubstring "problems rejected:") reasons of
+               [reason] => String.isSubstring "2 problems rejected:" reason
+                 andalso String.isSubstring "arity 4" reason
+                 andalso String.isSubstring "universe of size 256" reason
+             | _ => false)
+      | _ => false)
+
+val _ = mf_test "arity rejections survive the adaptive search deadline"
+  (fn () =>
+    let val result = refute
+      (arity_config |> upd_iterative_card [(NONE, [1])] |> upd_timeout 2.0)
+      ``(r : char -> char -> char -> char -> bool) a b c d /\ p (x : 'a)``
+    in
+      unknown_with "timed out" result andalso
+      unknown_with "problems rejected:" result andalso
+      unknown_with "arity 4" result
+    end)
+
+val _ = mf_test "rejected scopes do not hide a genuine counterexample"
+  (fn () =>
+    let
+      val (result, text) = capture 2 (fn () =>
+        refute (arity_config |> upd_card [(NONE, [2, 256])]
+          |> upd_quiet false) arity_goal)
+    in
+      result |> cex_where (fn c => kodkod_genuine c andalso
+        List.exists (fn (key, value) =>
+          key = "problems_rejected" andalso value = 2) (#stats c))
+      andalso String.isSubstring "2 problems rejected:" text
+      andalso String.isSubstring "arity 4" text
+    end)
+
 (* [zoo_simp_neg]'s negated [refute_simp] clause restates it, replacing the
    DefnBase equations, so [zoo_simp_neg 0] is unconstrained and models of
    this true goal are found and then discarded.  Keyed on [bool$~] instead
@@ -4490,6 +4531,26 @@ val _ = mf_level2 "type variables share a scope" (fn () =>
         (((\y : 'b. \z : 'b. y = z) O (\x : 'a. \y : 'b. y = f x)) u v)``
   |> cex_where (fn c => is_genuine c andalso scope_of c ``:'a`` = SOME 1
                         andalso scope_of c ``:'b`` = SOME 2))
+
+(* Adaptive refill must reach the solver before materializing the rest
+   of a finite frontier. With batch size one the
+   witness needs a later refill, so one batch cannot become a search cap. *)
+val _ = mf_test "adaptive scopes are materialized one solver batch at a time"
+  (fn () =>
+    let
+      val cfg = mf |> upd_iterative_card [(NONE, [1, 2, 3])]
+        |> upd_batch_size 1 |> upd_quiet false
+      val (result, text) = capture 2 (fn () =>
+        refute cfg ``(x : refute$rf3) = y``)
+      val frontiers = List.filter
+        (String.isSubstring "Refute model scope frontier: ")
+        (String.tokens (fn c => c = #"\n") text)
+    in
+      (case frontiers of
+           first :: _ => String.isSuffix " = 1" first
+         | [] => false) andalso
+      length frontiers >= 2 andalso genuine result
+    end)
 
 val _ = mf_level2 "monotonicity is reported" (fn () =>
   let
