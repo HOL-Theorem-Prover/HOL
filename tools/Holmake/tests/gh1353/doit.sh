@@ -1,7 +1,18 @@
 #!/bin/bash
 
 cd testd
-ulimit -t 2
+# What is being tested is that Holmake's scan of a malformed script
+# terminates: github issue #1353 was a lookahead token the parser
+# took without clearing, so it recursed forever.  A loop is
+# unbounded, so any budget comfortably above the real cost separates
+# it from a healthy run, and the budget should be chosen for that
+# rather than for tightness.  This run wants about a third of a
+# second of CPU with the machine busy; two seconds looked generous
+# but is only six times that, and trips were turning up on loaded
+# machines with nothing looping -- reporting "slow" as "looped".
+# Sixty leaves a healthy run two orders of magnitude of room and
+# still fails inside a minute if the loop comes back.
+ulimit -t 60
 if [ "$#" -ne 2 ]
 then
     echo "Usage:"
