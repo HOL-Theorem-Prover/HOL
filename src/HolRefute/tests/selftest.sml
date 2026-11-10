@@ -2574,15 +2574,10 @@ val _ = mf_test "arity rejections survive an interrupted model display"
   (fn () => registration_context (fn () =>
     let
       val entered = ref false
-      val mutex = Mutex.mutex ()
-      val signal = ConditionVar.conditionVar ()
+      val never = Synchronized.var "rejection deadline test" ()
       fun display tm =
-        (Multithreading.synchronized "rejection deadline test" mutex
-          (fn () =>
-            let
-              val _ = entered := true
-              fun wait () = (ConditionVar.wait (signal, mutex); wait ())
-            in wait () end);
+        (entered := true;
+         Synchronized.guarded_access never (fn _ => NONE);
          tm)
       val _ = register_term_postprocessor ``:'a`` display
       val result = refute
