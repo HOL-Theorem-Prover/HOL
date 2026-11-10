@@ -7,7 +7,13 @@ all: talky
 
 # The control for both/: just the chatty job, so that what its own
 # output costs the loop is known separately.
+#
+# chatter.exe is run from its own directory because it is a wrapper
+# that asks hol to load the `chatter' module, and that is looked up
+# relative to the working directory.  `&&' rather than `;' so that a
+# chatter which failed to run cannot leave a touched target behind
+# looking like a build that worked.
 talky:
-	i=0 ; while [ $$i -lt 400 ] ; do echo chat $$i ; i=$$((i+1)) ; sleep 0.005 ; done ; touch talky
+	( cd .. && ./chatter.exe ) && touch talky
 
 EXTRA_CLEANS = talky
