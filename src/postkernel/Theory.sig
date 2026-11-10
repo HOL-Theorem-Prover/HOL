@@ -150,8 +150,8 @@ sig
  *)
 
   val link_parents           : string*string -> (string*string) list -> unit
-  val incorporate_types      : string -> (string*int) list -> unit
-  val incorporate_consts     : string -> (string*hol_type) list -> unit
+  val incorporate_types      : string -> (string*int) list -> bool
+  val incorporate_consts     : string -> (string*hol_type) list -> bool
   val pp_thm                 : (thm -> HOLPP.pretty) ref
   val pp_type                : (hol_type -> HOLPP.pretty) ref
 

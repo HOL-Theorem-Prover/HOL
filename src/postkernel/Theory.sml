@@ -722,13 +722,18 @@ fun link_parents thy plist =
     end
  end;
 
+(* Theories loaded from disk get sealed kernel entries (see
+   KernelSig.insert_sealed_type/_const); the result says whether every
+   entry got its canonical epoch. *)
 fun incorporate_types thy tys =
-  let fun itype (s,a) = (install_type(s,a,thy);())
-  in List.app itype tys
-  end;
+    List.foldl (fn ((s,a), ok) =>
+                   Type.prim_load_type {Thy = thy, Tyop = s} a andalso ok)
+               true tys
 
 fun incorporate_consts thy consts =
-    List.app (fn (s,ty) => ignore (install_const(s,ty,thy))) consts
+    List.foldl (fn ((s,ty), ok) =>
+                   Term.prim_load_const {Thy = thy, Name = s} ty andalso ok)
+               true consts
 
 (* ----------------------------------------------------------------------
     Theory data functions
