@@ -77,7 +77,7 @@ fun refs_current ({refs,...} : decoded) = List.all same_ref refs
 val canonical_thys : string HOLset.set Sref.t =
     Sref.new (HOLset.singleton String.compare "min")
 fun is_canonical thy = HOLset.member (Sref.value canonical_thys, thy)
-fun note_load thyname parents stamps_canonical =
+fun note_load thyname (parents : (string * string) list) stamps_canonical =
     if stamps_canonical andalso List.all (is_canonical o #1) parents then
       Sref.update canonical_thys (fn s => HOLset.add (s, thyname))
     else ()
