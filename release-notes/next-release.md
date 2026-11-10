@@ -21,10 +21,6 @@ Contents
 New features
 ------------
 
--   `sptree` now provides `domain_list` to enumerate keys without constructing
-    key/value pairs, with `set_domain_list` proving its set is `domain` and
-    a standard CV translation in `cv_std`.
-
 -   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
 
     A type that recurses under an operator gets induction hypotheses stated through that operator's set function, which is correct but is not how a development states its own lemmas, so proofs normalise them by hand at every induction.
@@ -114,8 +110,21 @@ New features
 -   `goalStack` has `expandf_in` and `expand_listf_in`, which run a tactic in a given `Context.t` rather than in a snapshot of the live context; `expandf` and `expand_listf` are now these applied to `Context.snapshot()`.
     A prover installed with `Tactical.set_prover` can use them to run its steps in the context it is passed.
 
+-   `sptree` now provides `domain_list` to enumerate keys without constructing
+    key/value pairs, with `set_domain_list` proving its set is `domain` and
+    a standard CV translation in `cv_std`.
+
+-   CV evaluation now supports `fCARD` on finite sets of natural numbers.
+
+-   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
+    list by a strict upper bound on its sum.
+
 Bugs fixed
 ----------
+
+-   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
+    Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
+    Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
 
 -   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
     Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
@@ -136,6 +145,11 @@ Bugs fixed
     Thanks to Ramana Kumar for finding these!
 
 -   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
+
+-   Finally (?), we fixed a soundness bug in the *experimental* kernel to do with the behaviour of `Term.subst`.  The latter has been adjusted in both kernels so that it is now an exception-raising error to try to use a substitution alist that mentions the same l.h.s. (these are usually variables) multiple times.
+
+    The bug was found by [Gemini 4]( https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/) using a [teamwork multi-agent framework in Antigravity]( https://antigravity.google/blog/teamwork-when-ai-becomes-a-research-partner).
+
 
 -   The language server's goal state just after a `rpt`/`REPEAT` tactic, before the next token (*e.g.*, at the space in `rpt strip_tac >> simp[]`), showed the state after a single iteration rather than after the repetition had finished.
 

@@ -24,7 +24,13 @@ val _ = app convtest [
       ("simplify path case syntax", bossLib.SIMP_CONV (bossLib.srw_ss()) [],
        “case (pcons 3 T (stopped_at 4) : (num,bool) path) of
           stopped_at x => 0
-        | pcons x r p => x”, “3”)
+        | pcons x r p => x”, “3”),
+      ("EVAL path_case stopped_at", bossLib.EVAL,
+       “path_case (stopped_at 3 : (num,bool) path) (\x. x + 1)
+                  (\x r p. x)”, “4”),
+      ("EVAL path_case pcons", bossLib.EVAL,
+       “path_case (pcons 3 T (stopped_at 4) : (num,bool) path) (\x. 0)
+                  (\x r p. if r then x else 0)”, “3”)
    ]
 
 val _ = tprint "path TypeBase registration"

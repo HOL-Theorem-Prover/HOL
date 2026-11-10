@@ -2,10 +2,16 @@ ifdef POLY
 HOLHEAP = $(HOLDIR)/bin/hol.state0
 endif
 
-pollspin-selftest.log: selftest.exe
+pollspin-selftest.log: selftest.exe chatter.exe
 	@$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe pollspin-selftest.log spinner/done.txt
+# talky/ and both/ run this; see chatter.sml for why it is a program
+# rather than a shell loop.
+chatter.exe: chatter.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe chatter.exe pollspin-selftest.log \
+               quiet/hung spinner/hung talky/talky both/hung both/talky

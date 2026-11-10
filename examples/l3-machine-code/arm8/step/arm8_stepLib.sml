@@ -130,6 +130,78 @@ val Address_rwt =
    EV [dfn'Address_def, lem] [NOT_31 "d"] []
       ``dfn'Address (page, imm, d)``
 
+(* Scalar FP step rules for the default non-trapping FPCR configuration. *)
+val fp_rwts =
+   [CheckFP_def, FPRoundingMode_def, D_def, write'D_def,
+    FPSetFlags_def, wordsTheory.word_bit_def,
+    wordsTheory.WORD_AND_CLAUSES, wordsTheory.WORD_EXTRACT_ZERO2]
+
+val FMov_rwt =
+   EV (dfn'FMov_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FMov (n, d)``
+
+val FAbs_rwt =
+   EV (dfn'FAbs_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FAbs (n, d)``
+
+val FNeg_rwt =
+   EV (dfn'FNeg_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FNeg (n, d)``
+
+val FSqrt_rwt =
+   EV (dfn'FSqrt_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FSqrt (n, d)``
+
+val FAdd_rwt =
+   EV (dfn'FAdd_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FAdd (m, n, d)``
+
+val FSub_rwt =
+   EV (dfn'FSub_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FSub (m, n, d)``
+
+val FMul_rwt =
+   EV (dfn'FMul_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FMul (m, n, d)``
+
+val FDiv_rwt =
+   EV (dfn'FDiv_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FDiv (m, n, d)``
+
+val FMAdd_rwt =
+   EV (dfn'FMAdd_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FMAdd (m, a, n, d)``
+
+val FCompare_rwt =
+   EV (dfn'FCompare_def :: fp_rwts) [[``s.FPCR = 0w``]] []
+      ``dfn'FCompare (n, m)``
+
+val FMovToGeneral_rwt =
+   EV (dfn'FMovToGeneral_def :: fp_rwts)
+      [[``s.FPCR = 0w``, ``d <> 31w:word5``]] []
+      ``dfn'FMovToGeneral (sf:word32, n, d)`` @
+   EV (dfn'FMovToGeneral_def :: fp_rwts)
+      [[``s.FPCR = 0w``, ``d <> 31w:word5``]] []
+      ``dfn'FMovToGeneral (sf:word64, n, d)``
+
+val FMovFromGeneral_rwt =
+   EV (dfn'FMovFromGeneral_def :: fp_rwts)
+      [[``s.FPCR = 0w``, ``n <> 31w:word5``]] []
+      ``dfn'FMovFromGeneral (sf:word32, n, d)`` @
+   EV (dfn'FMovFromGeneral_def :: fp_rwts)
+      [[``s.FPCR = 0w``, ``n <> 31w:word5``]] []
+      ``dfn'FMovFromGeneral (sf:word64, n, d)``
+
+val FToInt32_rwt =
+   EV (dfn'FToInt32_def :: fp_rwts)
+      [[``s.FPCR = 0w``, ``d <> 31w:word5``]] []
+      ``dfn'FToInt32 (n, d)``
+
+val FFromInt32_rwt =
+   EV (dfn'FFromInt32_def :: fp_rwts)
+      [[``s.FPCR = 0w``, ``n <> 31w:word5``]] []
+      ``dfn'FFromInt32 (n, d)``
+
 (* ---------------------------- *)
 
 val Nop_rwt =
@@ -568,6 +640,22 @@ end
 
 val ps = (List.concat o List.map decode_rwt)
   [
+   ("FMov", "FFFTTTTFFTTFFFFFFTFFFF__________"),
+   ("FAbs", "FFFTTTTFFTTFFFFFTTFFFF__________"),
+   ("FNeg", "FFFTTTTFFTTFFFFTFTFFFF__________"),
+   ("FSqrt", "FFFTTTTFFTTFFFFTTTFFFF__________"),
+   ("FToInt32", "FFFTTTTFFTTFFFFFFFFFFF__________"),
+   ("FFromInt32", "FFFTTTTFFTTFFFTFFFFFFF__________"),
+   ("FMovToGeneral32", "FFFTTTTFFFTFFTTFFFFFFF__________"),
+   ("FMovToGeneral64", "TFFTTTTFFTTFFTTFFFFFFF__________"),
+   ("FMovFromGeneral32", "FFFTTTTFFFTFFTTTFFFFFF__________"),
+   ("FMovFromGeneral64", "TFFTTTTFFTTFFTTTFFFFFF__________"),
+   ("FAdd", "FFFTTTTFFTT_____FFTFTF__________"),
+   ("FSub", "FFFTTTTFFTT_____FFTTTF__________"),
+   ("FMul", "FFFTTTTFFTT_____FFFFTF__________"),
+   ("FDiv", "FFFTTTTFFTT_____FFFTTF__________"),
+   ("FCompare", "FFFTTTTFFTT_____FFTFFF_____FFFFF"),
+   ("FMAdd", "FFFTTTTTFTF_____F_______________"),
    ("Address",                      "___TFFFF________________________"),
    ("AddSubShiftedRegister32",      "F..FTFTT__F_____F_______________"),
    ("AddSubShiftedRegister64",      "T..FTFTT__F_____________________"),
@@ -678,7 +766,10 @@ local
       MultiplyHigh_rwt @ Reverse32_rwt @ Reverse64_rwt @ CRC_rwt @
       BranchImmediate_rwt @ BranchRegister_rwt @ BranchConditional_rwt @
       CompareAndBranch_rwt @ TestBitAndBranch_rwt @ LoadStoreImmediate_rwt @
-      LoadStoreRegister_rwt @ LoadLiteral_rwt @ LoadStorePair_rwt @ Nop_rwt
+      LoadStoreRegister_rwt @ LoadLiteral_rwt @ LoadStorePair_rwt @ Nop_rwt @
+      FMov_rwt @ FAbs_rwt @ FNeg_rwt @ FSqrt_rwt @ FAdd_rwt @ FSub_rwt @
+      FMul_rwt @ FDiv_rwt @ FMAdd_rwt @ FCompare_rwt @
+      FMovToGeneral_rwt @ FMovFromGeneral_rwt @ FToInt32_rwt @ FFromInt32_rwt
       )
    val net = mk_net net_list
    val get_next = Term.rator o utilsLib.lhsc

@@ -52,9 +52,12 @@ QED
 
 Definition first_def:  first (p:('a,'b) path) = FST (fromPath p)
 End
-Definition stopped_at_def:  stopped_at x:('a,'b) path = toPath (x, LNIL)
+(* The constructors stay folded under EVAL, so that path_case_compute
+   can match them *)
+Definition stopped_at_def[nocompute]:
+  stopped_at x:('a,'b) path = toPath (x, LNIL)
 End
-Definition pcons_def:
+Definition pcons_def[nocompute]:
     pcons x r p : ('a,'b) path =
                       toPath (x, LCONS (r, first p) (SND (fromPath p)))
 End

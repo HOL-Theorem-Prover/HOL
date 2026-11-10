@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Regenerate the HOL definitions from the L3 specification.
+set -euo pipefail
+cd -- "$(dirname -- "$0")"
+l3_bin=${L3:-l3}
+arm8_export_dir=$(mktemp -d)
+trap 'rm -rf -- "$arm8_export_dir"' EXIT
+# L3's 2018 library templates predate Import.gen_inventory. Keep the existing
+# arm8Lib wrapper, which needs no changes when definitions are added.
+printf 'val () = ((HolExport.spec ("v8-base.spec v8-fp.spec v8-iset.spec v8-encode.spec", "%s/arm8 underflowbefore nosigdocs"); OS.Process.exit OS.Process.success) handle exn => (print (General.exnMessage exn ^ "\\n"); OS.Process.exit OS.Process.failure));\n' "$arm8_export_dir" | "$l3_bin"
+printf '\n' >> "$arm8_export_dir/arm8Script.sml"
+# Preserve the existing timestamp/mtime when only the export date changes.
+if ! cmp -s <(tail -n +2 "$arm8_export_dir/arm8Script.sml") <(tail -n +2 ../model/arm8Script.sml); then
+  cp -- "$arm8_export_dir/arm8Script.sml" ../model/arm8Script.sml
+fi

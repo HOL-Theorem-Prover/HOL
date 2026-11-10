@@ -1,0 +1,22 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+all: hung talky
+.PHONY: all
+
+# A hung-up job alongside a chatty one, built together.  This is what
+# a real build looks like, and it is the case a per-round view of
+# idleness gets wrong: talky keeps the loop hearing something, so a
+# loop that asks "did this round achieve anything?" never concludes
+# it is idle, and hung's permanently ready descriptor spins it
+# between talky's messages.  Asking instead "has any one job gone
+# quiet?" sees hung for what it is.
+hung:
+	echo starting ; exec 1>&- 2>&- ; sleep 2 && touch hung
+
+# See talky/Holmakefile for why this runs from the parent directory.
+talky:
+	( cd .. && ./chatter.exe ) && touch talky
+
+EXTRA_CLEANS = hung talky

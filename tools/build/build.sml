@@ -64,10 +64,6 @@ fun link b s1 s2 =
      else die ("Unable to link file "^quote s1^" to file "^quote s2^".")
   end
 
-fun symlink_check() =
-    if OS = "winNT" then
-      die "Sorry; symbolic linking isn't available under Windows NT"
-    else link
 val default_link = if OS = "winNT" then cp else link
 
 fun mem x [] = false
