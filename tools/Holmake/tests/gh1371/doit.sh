@@ -25,43 +25,47 @@ echo "Running unquote"
 # its user+sys, while a machine merely too busy shows real time well
 # above them.
 TIMEFORMAT='unquote: real %3R  user %3U  sys %3S'
+started=$SECONDS
 time $unquote < bugScript.sml > "$out"
 
 retcode=$?
+elapsed=$(($SECONDS - $started))
 cat "$out"
 echo
-echo "unquote completed with code $retcode"
+echo "unquote completed with code $retcode after ${elapsed}s"
 
-if [ $retcode -ge 128 ]
-then
-    # Killed by a signal, which here means the CPU limit above: the
-    # scan did not terminate.  Which signal arrives is not the same
-    # everywhere -- `ulimit -t' sets the soft and hard limits alike,
-    # so macOS reports the SIGXCPU at the soft limit (152 = 128+24)
-    # while Linux goes straight to the SIGKILL at the hard one
-    # (137 = 128+9).
-    echo "Killed by signal $(($retcode - 128)): time limit exceeded"
-    echo "CPU used (line 1 = this script, line 2 = its children):"
-    times
-    # Which binary this actually was.  unquote is built by configure
-    # and by no Holmakefile rule, so a bin/build can compile the
-    # sources and still run an unquote older than them.
-    echo "unquote binary under test:"
-    ls -l "$unquote"
-    exit 1
-fi
-
-# A non-zero exit on its own is not a failure: unquote reports the
-# parse errors this input carries deliberately, and has returned 1
-# for that since well after the test was written.  What matters is
-# that it carried on far enough to emit the theorem sitting after the
-# broken proof, which is exactly what the lexer bug prevented.
+# The exit code decides nothing here, because it cannot: a shell
+# reports a signalled death as 128 plus the signal, and an exit code
+# of 255 is equally something a program may return by itself.  The
+# Moscow ML unquote does exactly that for the parse errors this
+# input carries on purpose, where the Poly/ML one returns 1, and
+# reading either as "killed" was wrong.
+#
+# What the test is about needs none of that.  Issue #1371 was a lexer
+# that never got past the malformed proof, so the question is whether
+# the declaration after it came out, and a scan that failed to
+# terminate cannot have got there however it was eventually stopped.
 if grep -q '"bar"' "$out"
 then
     echo "Reached the declaration after the malformed proof"
     exit 0
-else
-    echo "FAILED: unquote stopped before the declaration following the"
-    echo "malformed proof; its output was expected to mention \"bar\""
-    exit 1
 fi
+
+echo "FAILED: unquote stopped before the declaration following the"
+echo "malformed proof; its output was expected to mention \"bar\""
+# Say which way it stopped.  Running out the clock set above is the
+# non-termination this test exists for; stopping early is some other
+# fault, and the two want different attention.
+if [ $elapsed -ge 55 ]
+then
+    echo "It ran for ${elapsed}s against the limit set above, so the"
+    echo "scan did not terminate."
+    echo "CPU used (line 1 = this script, line 2 = its children):"
+    times
+fi
+# Which binary this actually was.  unquote is built by configure and
+# by no Holmakefile rule, so a bin/build can compile the sources and
+# still run an unquote older than them.
+echo "unquote binary under test:"
+ls -l "$unquote"
+exit 1
