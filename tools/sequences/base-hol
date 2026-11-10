@@ -59,6 +59,7 @@ src/boss
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
+[poly]!tools/Holmake/tests/theory_modules
 src/statementdossier
 
 # The LSP tests are not here: they are INCLUDES of

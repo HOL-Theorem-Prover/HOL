@@ -19,6 +19,38 @@ sig
       ({thyname:string,path:string,hash:string} ->
        (Thm.thm * DB_dtype.thminfo) Symtab.table) ref
 
+  (* Reusing a load: a theory's decoded data, from a load_thydata call
+     made through capture_decoded (NONE if it didn't decode a .dat), and
+     register_decoded to repeat that load's registration from it, under
+     the theory hash its FooTheory.sml names. *)
+  type decoded
+  val decoded_tag : decoded MLSYSPortable.persistent_tag
+  (* A theory structure's theorem values, in its record's order. *)
+  val values_tag : (string * Thm.thm vector) MLSYSPortable.persistent_tag
+  (* The digest of the file a saved module's values were decoded from. *)
+  val digest_tag : string MLSYSPortable.persistent_tag
+  val decoded_name : decoded -> string
+  val decoded_parents : decoded -> string list
+  val decoded_theorems : decoded -> (string * Thm.thm * DB_dtype.thminfo) list
+  val capture_decoded : ('a -> 'b) -> 'a -> 'b * decoded option
+  val register_decoded : string -> decoded -> unit
+  (* Whether the other theories' kernel entries the decoded values refer
+     to are still the ones they were decoded against. *)
+  val refs_current : decoded -> bool
+  (* Decodes a .dat as load_thydata does, linking the theory and adding
+     its types and constants to the kernel signature but registering
+     nothing else; the flag says whether the theory's kernel ids are
+     canonical.  note_decoded records that flag as a load does;
+     register_kernel repeats this much of a load from decoded data. *)
+  val decode_thydata : {thyname:string,path:string,hash:string} ->
+                       decoded * bool
+  val note_decoded : decoded * bool -> unit
+  val register_kernel : string -> decoded -> unit
+  (* Whether a theory's kernel ids are the same in every process that
+     shares the current saved state. *)
+  val is_canonical : string -> bool
+  val default_loader : unit -> bool
+
 end
 
 (* [load_thydata thyname fname] loads the filename and makes the appropriate
