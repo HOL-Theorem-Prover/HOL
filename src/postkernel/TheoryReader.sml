@@ -95,19 +95,23 @@ val captured : decoded option ref = ref NONE
    [register], all or nothing: on failure the context is rolled back, so
    no context has the theory linked without its entries; on success the
    theory is sealed, so they can't be changed afterwards.  The flag
-   [register] returns says whether the entries got canonical stamps. *)
+   [register] returns says whether the entries got canonical stamps.
+   Sealing is inside the rollback's scope, so an interrupt arriving
+   before it rolls the load back, and one arriving after it leaves the
+   theory sealed (the sealed set isn't part of the context). *)
 fun register_atomically thyname parents register =
     let
       val _ = not (Thm.is_sealed thyname) orelse
               raise TheoryReader ("theory " ^ thyname ^ " is already sealed")
       val ctxt = Context.snapshot ()
-      val (result, stamps_canonical) =
-          register () handle e => (Context.restore ctxt;
-                                   raise e)
     in
-      Thm.mark_sealed thyname;
-      note_load thyname parents stamps_canonical;
-      result
+      let
+        val (result, stamps_canonical) = register ()
+      in
+        Thm.mark_sealed thyname;
+        note_load thyname parents stamps_canonical;
+        result
+      end handle e => (Context.restore ctxt; raise e)
     end
 
 (* Decodes a theory's .dat as a load does, linking it into the theory
