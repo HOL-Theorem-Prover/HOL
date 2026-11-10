@@ -37,14 +37,15 @@ sig
   (* Whether the other theories' kernel entries the decoded values refer
      to are still the ones they were decoded against. *)
   val refs_current : decoded -> bool
-  (* Decodes a .dat as load_thydata does, linking the theory and adding
-     its types and constants to the kernel signature but registering
-     nothing else; the flag says whether the theory's kernel ids are
-     canonical.  note_decoded records that flag as a load does;
-     register_kernel repeats this much of a load from decoded data. *)
+  (* Decodes a .dat as load_thydata does, linking the theory, adding its
+     types and constants to the kernel signature and sealing it, but
+     registering nothing else; the flag says whether the theory's kernel
+     ids are canonical.  register_kernel repeats this much of a load from
+     decoded data, refusing data whose parents aren't canonical or whose
+     references aren't current.  Both refuse a sealed theory, and leave
+     the context as it was when they fail. *)
   val decode_thydata : {thyname:string,path:string,hash:string} ->
                        decoded * bool
-  val note_decoded : decoded * bool -> unit
   val register_kernel : string -> decoded -> unit
   (* Whether a theory's kernel ids are the same in every process that
      shares the current saved state. *)
