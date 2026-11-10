@@ -28,8 +28,11 @@ fun read_files_with_objs {dirname} P action a0 =
                       action {fakearcs=[],base=nextfile} a0
                     else a0)
     in
-      loop a0 handle e => (closeDir ds; raise e) before
-      closeDir ds
+      (* loop closes ds itself when readDir runs out; this covers the
+         exception path only.  `handle' binds looser than `before', so a
+         trailing `before closeDir ds' here would sit inside the handler
+         arm after the raise, and never run. *)
+      loop a0 handle e => (closeDir ds; raise e)
     end
 
 fun clean_last () = ()

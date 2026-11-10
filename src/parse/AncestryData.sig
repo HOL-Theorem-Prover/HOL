@@ -185,13 +185,20 @@ end
     by:
 
       1. tts_ancestry "-" : topologically sort the current theory's
-         transitive parents, deepest first, using SymGraph and the
-         BFS in ImplicitGraph.
-      2. purge_redundants : remove theory names from the merge list
-         that are already ancestors of another listed theory, so
-         each theory's deltas are applied at most once.
+         transitive parents, deepest first, using SymGraph and
+         Theory.ancestry.
+      2. Remove theory names from the merge list that are already
+         ancestors of another listed theory, so each theory's deltas
+         are applied at most once.
       3. Fold apply_delta over the resulting ordered delta sequence,
          seeded by the first listed theory's value.
+
+    Steps 2 and 3 test membership in theories' ancestries.  Each
+    instance keeps every loaded theory's ancestry as a set of names
+    in a context slot, computed once from its parents' when the theory
+    is first met, so a merge does not walk the ancestry graph again.
+    The current theory's parents can still change, so its ancestry
+    is computed afresh each time.
 
     The merge function is itself bound as the apply_delta_hook used
     during loading, so the same algorithm computes both the on-load

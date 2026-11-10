@@ -920,8 +920,15 @@ val ieee_rewrites =
       open binary_ieeeTheory
       val sr = SIMP_RULE (srw_ss())
       val sr0 = sr []
-      val spc = Drule.GEN_ALL o sr0 o
-                Q.SPEC `<| Sign := s; Exponent := e; Significand := f |>`
+      (* <| Sign := s; Exponent := e; Significand := f |> : ('t, 'w) float,
+         built without parsing so that a client theory's constants can't
+         capture the variable names *)
+      val float_var =
+         binary_ieeeSyntax.mk_floating_point
+            (Term.mk_var ("s", wordsSyntax.mk_int_word_type 1),
+             Term.mk_var ("e", wordsSyntax.mk_word_type (Type.mk_vartype "'w")),
+             Term.mk_var ("f", wordsSyntax.mk_word_type (Type.mk_vartype "'t")))
+      val spc = Drule.GEN_ALL o sr0 o Thm.SPEC float_var
    in
       [float_to_real, spc float_value_def, float_tests, ulp_def,
        infinity_properties, some_nan_properties, float_infinity_negate_abs,

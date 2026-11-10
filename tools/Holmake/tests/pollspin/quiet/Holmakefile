@@ -1,0 +1,17 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+all: hung
+.PHONY: all
+
+# The control for spinner/: the same recipe, taking the same time, but
+# leaving its output streams open.  Nothing hangs up until the job
+# finishes, so the work loop blocks in poll throughout and cannot
+# spin.  What this costs is what a build of this shape costs on this
+# machine, whatever that machine is like; the spinner/ figure is only
+# interesting beside it.
+hung:
+	echo starting ; sleep 2 ; touch hung
+
+EXTRA_CLEANS = hung

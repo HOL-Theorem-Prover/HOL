@@ -403,6 +403,21 @@ fun subst_assoc test =
 infix 5 |->
 fun (r1 |-> r2) = {redex = r1, residue = r2}
 
+(* Drops all but the last maplet for each redex, preserving order.  Term
+   substitution used to resolve a repeated redex by letting later list
+   entries win; it now rejects such a theta outright, so callers that
+   build one by hand can use this to keep their old behaviour. *)
+fun subst_keep_last eq (theta : ('a,'b) subst) =
+   let
+      fun later r [] = false
+        | later r ({redex, residue = _} :: rst) = eq r redex orelse later r rst
+      fun recurse [] = []
+        | recurse ((m as {redex, residue = _}) :: rst) =
+            if later redex rst then recurse rst else m :: recurse rst
+   in
+      recurse theta
+   end
+
 (*---------------------------------------------------------------------------*
  * Sets as lists                                                             *
  *---------------------------------------------------------------------------*)

@@ -359,6 +359,71 @@ struct
 
   fun elapsed wj = Time.-(Time.now(), #starttime wj)
 
+  (* How long a single pass of the work loop is prepared to wait for a
+     child to say something. *)
+  val poll_interval = Time.fromMilliseconds 100
+
+  (* OS.IO.poll does not always wait for as long as it is asked to.
+     A descriptor belonging to a child that has closed its end is
+     ready the instant it is asked about, for as long as the job
+     lives, and how that shows up here depends on the system: Linux
+     reports the hang-up as POLLHUP, which Poly/ML's binding discards
+     along with POLLERR and POLLNVAL, so poll returns at once with an
+     empty result; macOS reports it as POLLIN as well, so the channel
+     comes back readable and yields "" forever.  Either way the work
+     loop can come round again having achieved nothing and waited no
+     time, and would busy-wait -- burning a core for as long as the
+     child takes to finish dying, which under a CPU rlimit (see
+     tools/Holmake/tests/gh1353) is enough to get Holmake killed.
+
+     What identifies the condition is not the round but the job: a job
+     the loop keeps looking at and keeps hearing nothing from, while
+     waitpid says it is still there.  Each job's `lastevent' already
+     records when it was last heard from, so the longest silence among
+     the running jobs says whether any of them is in this state.
+     Reading it per job rather than per round matters, because a build
+     is usually doing several things at once: judging the round by
+     whether *anything* happened lets one chatty job keep resetting
+     the measurement while a hung-up one spins the loop between its
+     messages.
+
+     A silence shorter than idle_grace is left alone.  Every job ends
+     with one -- the gap between the child closing its pipes and the
+     same child becoming reapable, a millisecond or two on a healthy
+     system -- and padding that would add it to the cost of every
+     target in the build.  Past the grace the round is stretched to
+     about the length of the silence itself, so a job that stays stuck
+     settles at ten rounds a second.  While other jobs are still
+     talking the stretch is capped well below that: a job's output
+     sits in a pipe of bounded size until the loop reads it, and
+     throttling a verbose child to ten reads a second could hold it
+     up.  Even the capped pad cuts the spin by orders of magnitude. *)
+  val idle_grace = Time.fromMilliseconds 10
+  val busy_cap = Time.fromMilliseconds 10
+
+  fun tmax (t1, t2) = if Time.<(t1, t2) then t2 else t1
+  fun tmin (t1, t2) = if Time.<(t1, t2) then t1 else t2
+
+  (* The longest any running job has gone without being heard from. *)
+  fun longest_silence now (wl : 'a worklist) =
+      Binarymap.foldl
+        (fn (_, wj, acc) => tmax (Time.-(now, #lastevent wj), acc))
+        Time.zeroTime
+        (#current_jobs wl)
+
+  fun pad_round roundstart silence others_active =
+      if Time.<(silence, idle_grace) then ()
+      else
+        let
+          val cap = if others_active then busy_cap else poll_interval
+          val want = tmin (silence, cap)
+          val now = Time.now()
+          val spent = Time.-(now, roundstart)
+        in
+          if Time.<(spent, want) then OS.Process.sleep (Time.-(want, spent))
+          else ()
+        end
+
   fun do_work (wl0 : 'a worklist, monitorfn) =
     let
       open Posix.Process
@@ -439,9 +504,9 @@ struct
         if Binarymap.numItems (#current_jobs wl) = 0 then #current_state wl
         else
           let
+            val roundstart = Time.now()
             val polls = worklist_polls wl
-            val active =
-                OS.IO.poll(map #1 polls, SOME (Time.fromMilliseconds 100))
+            val active = OS.IO.poll(map #1 polls, SOME poll_interval)
             fun foldthis (pi, (acc as (cmds, wl),didio)) =
               let
                 val iod = OS.IO.pollToIODesc (OS.IO.infoToPollDesc pi)
@@ -449,8 +514,20 @@ struct
                 case List.find (fn (pd,_) => iod = OS.IO.pollToIODesc pd) polls
                  of
                     NONE => raise Fail "Couldn't find poll-data in List.find"
-                  | SOME (_, (chan, wj)) =>
+                  | SOME (_, (chan, wj0)) =>
                     let
+                      (* `polls' was built before this fold began, so wj0
+                         is as the job stood at the top of the round.  If
+                         the job's other channel has already been handled
+                         it has been written back since, and re-deriving
+                         from wj0 would undo that -- in particular it
+                         would clear an EOF just recorded, and the loop
+                         would keep rediscovering the same EOF instead of
+                         settling down and reaping the child. *)
+                      val wj = case Binarymap.peek (#current_jobs wl,
+                                                    wjkey wj0) of
+                                   SOME wj' => wj'
+                                 | NONE => wj0
                       val s = TextIO.input (wjstrm chan wj)
                       val didio' = wjkey wj :: didio
                     in
@@ -469,6 +546,9 @@ struct
                 List.foldl foldthis ((cmds,wl), []) active
             val (cmds, wl) = workloop didio (cmds, wl)
             val wl = execute_cmds monitorfn cmds wl
+            val _ = pad_round roundstart
+                              (longest_silence (Time.now()) wl)
+                              (not (null didio))
           in
             loop (fill_workq monitorfn ([], wl))
           end

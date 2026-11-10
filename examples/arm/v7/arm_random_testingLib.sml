@@ -683,9 +683,12 @@ local
                  | ("ARM_ARCH", [_])               => arch
                  | _ => raise ERR "component_subst" "")
 
+  (* find_terms returns every occurrence, so a component read twice gives
+     two identical maplets, which Term.subst rejects *)
   fun component_substs tm =
         Term.subst (List.map component_subst
-          (HolKernel.find_terms (Lib.can component_subst) tm)) tm
+          (Lib.op_mk_set aconv
+             (HolKernel.find_terms (Lib.can component_subst) tm))) tm
 
   val component_substs = component_substs o component_substs
 

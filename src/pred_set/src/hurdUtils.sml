@@ -508,8 +508,13 @@ fun subst_vars_in_set ((tm_sub, ty_sub) : substitution) (tm_vars, ty_vars) =
 fun type_refine_subst ty1 ty2 : (hol_type, hol_type) subst =
   ty2 @ (clean_subst o residue_map (type_inst ty2)) ty1;
 
+(* The two term substitutions are concatenated, so a variable bound in
+   both repeats a redex that Term.subst rejects -- and re-typing tm1's
+   redexes can merge two of them besides.  Keep the later maplet, which
+   is the one subst acted on. *)
 fun refine_subst (tm1, ty1) (tm2, ty2) =
-  (tm2 @ (clean_tsubst o subst_map (inst_ty ty2, pinst (tm2, ty2))) tm1,
+  (Lib.subst_keep_last aconv
+     (tm2 @ (clean_tsubst o subst_map (inst_ty ty2, pinst (tm2, ty2))) tm1),
    type_refine_subst ty1 ty2);
 
 (*

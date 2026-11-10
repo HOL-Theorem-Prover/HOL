@@ -369,7 +369,9 @@ fun GSUBST_TAC substfn ths (asl, w) ctxt =
                         (v |-> rhs) :: theta2,
                         (v |-> SYM th) :: theta3)
                     end) ths ([], [], [])
-      val base = substfn theta1 w
+      (* two theorems with the same LHS used to give a repeated redex,
+         resolved by letting the later one win; preserve that *)
+      val base = substfn (subst_keep_last aconv theta1) w
    in
       ([(asl, subst theta2 base)], sing (SUBST theta3 base))
    end

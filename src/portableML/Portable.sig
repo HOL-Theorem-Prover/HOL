@@ -119,6 +119,7 @@ sig
 
   type ('a, 'b) subst = {redex: 'a, residue: 'b} list
   val subst_assoc : ('a -> bool) -> ('a, 'b)subst -> 'b option
+  val subst_keep_last : ('a -> 'a -> bool) -> ('a,'b) subst -> ('a,'b) subst
   val |-> : ('a * 'b) -> {redex: 'a, residue: 'b}
 
   val mem : ''a -> ''a list -> bool

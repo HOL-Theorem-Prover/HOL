@@ -379,6 +379,7 @@ val res = cv_trans sptreeTheory.union_def;
 val res = cv_trans sptreeTheory.inter_def;
 val res = cv_trans sptreeTheory.difference_def;
 
+val res = cv_auto_trans sptreeTheory.domain_list_def;
 val res = cv_auto_trans sptreeTheory.toList_def;
 val res = cv_auto_trans sptreeTheory.mk_wf_def;
 val res = cv_auto_trans sptreeTheory.size_def;
@@ -565,6 +566,16 @@ Proof
         lookup_list_to_num_set, lookup_insert,
         MEM_fset_REP]
   \\ gs[]
+QED
+
+Theorem fCARD_num_cv_rep[cv_rep]:
+  Num (fCARD (s: num fset)) =
+  cv_size' (from_num_fset s)
+Proof
+  rw[from_num_fset_def, GSYM (theorem "cv_size'_thm"), size_list_to_num_set]
+  \\ irule EQ_SYM
+  \\ irule(SIMP_RULE std_ss [quotientTheory.FUN_REL] fCARD_relates)
+  \\ simp[FSET_def]
 QED
 
 Theorem fIN_num_cv_rep[cv_rep]:
