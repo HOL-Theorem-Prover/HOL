@@ -2568,16 +2568,31 @@ val _ = mf_test "exhausted arity rejections retain one counted reason"
              | _ => false)
       | _ => false)
 
-val _ = mf_test "arity rejections survive the adaptive search deadline"
-  (fn () =>
-    let val result = refute
-      (arity_config |> upd_iterative_card [(NONE, [1])] |> upd_timeout 2.0)
-      ``(r : char -> char -> char -> char -> bool) a b c d /\ p (x : 'a)``
+(* Assembly rejects the large scope before displaying the small model.
+   Block that display so the body cannot win a race with its deadline. *)
+val _ = mf_test "arity rejections survive an interrupted model display"
+  (fn () => registration_context (fn () =>
+    let
+      val entered = ref false
+      val mutex = Mutex.mutex ()
+      val signal = ConditionVar.conditionVar ()
+      fun display tm =
+        (Multithreading.synchronized "rejection deadline test" mutex
+          (fn () =>
+            let
+              val _ = entered := true
+              fun wait () = (ConditionVar.wait (signal, mutex); wait ())
+            in wait () end);
+         tm)
+      val _ = register_term_postprocessor ``:'a`` display
+      val result = refute
+        (arity_config |> upd_card [(NONE, [2, 256])] |> upd_timeout 30.0)
+        arity_goal
     in
-      unknown_with "timed out" result andalso
-      unknown_with "problems rejected:" result andalso
+      !entered andalso unknown_with "timed out" result andalso
+      unknown_with "2 problems rejected:" result andalso
       unknown_with "arity 4" result
-    end)
+    end))
 
 val _ = mf_test "rejected scopes do not hide a genuine counterexample"
   (fn () =>
@@ -2592,6 +2607,42 @@ val _ = mf_test "rejected scopes do not hide a genuine counterexample"
       andalso String.isSubstring "2 problems rejected:" text
       andalso String.isSubstring "arity 4" text
     end)
+
+val _ = mf_test "published counterexamples retain rejection stats on timeout"
+  (fn () => registration_context (fn () =>
+    let
+      val calls = ref 0
+      val block_at = ref (NONE : int option)
+      val blocked = ref false
+      val never = Synchronized.var "published counterexample timeout" ()
+      fun display term =
+        (calls := !calls + 1;
+         if SOME (!calls) = !block_at then
+           (blocked := true;
+            Synchronized.guarded_access never (fn _ => NONE))
+         else ();
+         term)
+      val _ = register_term_postprocessor ``:refute$rf3`` display
+      val cfg = arity_config |> upd_timeout 10.0
+        |> upd_card [(SOME ``:refute$rf3``, [3]), (NONE, [1, 256])]
+        |> upd_max_genuine 2 |> upd_max_potential 0
+      val goal = ``(x : refute$rf3) = rf3_1 \/
+        (r : 'a -> 'a -> 'a -> 'a -> bool) a b c d``
+      fun witnesses (Counterexample cs) = cs | witnesses _ = []
+      fun counted (c : counterexample) =
+        List.exists (fn (key, value) =>
+          key = "problems_rejected" andalso value = 2) (#stats c)
+      val normal = witnesses (refute cfg goal)
+      (* Block the final display callback of the second model, after the
+         first witness is published. Only the outer timer can end this run. *)
+      val _ = block_at := SOME (!calls)
+      val _ = calls := 0
+      val recovered = witnesses (refute cfg goal)
+    in
+      length normal = 2 andalso !blocked andalso length recovered = 1
+      andalso List.all counted (normal @ recovered)
+    end))
+
 
 (* [zoo_simp_neg]'s negated [refute_simp] clause restates it, replacing the
    DefnBase equations, so [zoo_simp_neg 0] is unconstrained and models of

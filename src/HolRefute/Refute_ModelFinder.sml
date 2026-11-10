@@ -1447,7 +1447,6 @@ fun run_body config instances =
     fun rejection_reasons () = map (fn ((location, message), count) =>
       Int.toString count ^ " problem" ^ (if count = 1 then "" else "s") ^
       " rejected: " ^ message ^ " (" ^ location ^ ")") (!rejections)
-    val _ = Refute_Core.set_backend_reasons rejection_reasons
 
     fun report_rejections result =
       let
@@ -1463,8 +1462,12 @@ fun run_body config instances =
                 (List.foldl Refute_Core.add_reason more reasons)
           | Refute_Core.Counterexample cexs =>
               Refute_Core.Counterexample (map with_rejections cexs)
+          | Refute_Core.Model models =>
+              Refute_Core.Model (map with_rejections models)
           | other => other
       end
+    val _ = Refute_Core.set_backend_diagnostics rejection_reasons
+      report_rejections
 
     fun search [] cexs reasons all_none _ =
           if not (null cexs) then Refute_Core.Counterexample cexs
