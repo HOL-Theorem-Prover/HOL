@@ -201,8 +201,9 @@ in
        from .dat files; 0 makes the module cache read-only. *)
     val theoryModuleWriteLimit = ref 8
     (* Optional acceleration for generated theory initializers.  Older Poly/ML
-       runtimes and installations without the helper keep source loading. *)
-    fun moduleHelper () =
+       runtimes and installations without the helper keep source loading.
+       NONE once the helper is loaded; otherwise why it can't be. *)
+    fun moduleHelperMissing () =
       let
         fun sub (ns : PolyML.NameSpace.nameSpace) name =
                           Option.map PolyML.NameSpace.Structures.contents
@@ -217,12 +218,26 @@ in
                 ["showHierarchyWithIds", "saveDependentModuleBasic"]
         val helper = HOLDIR ++ "tools-poly/poly/theory_modules.ML"
       in
-        Option.isSome (!moduleCacheConfigure) orelse
-        (supported andalso HFS.access (helper, [HFS.A_READ]) andalso
-         (PolyML.use helper; Option.isSome (!moduleCacheConfigure)))
+        if Option.isSome (!moduleCacheConfigure) then NONE
+        else if not supported then
+          SOME "this Poly/ML lacks PolyML.SaveState.showHierarchyWithIds \
+               \or saveDependentModuleBasic"
+        else if not (HFS.access (helper, [HFS.A_READ])) then
+          SOME ("can't read " ^ helper)
+        else (PolyML.use helper;
+              if Option.isSome (!moduleCacheConfigure) then NONE
+              else SOME (helper ^ " didn't install the cache"))
       end
+    fun moduleHelper () = not (Option.isSome (moduleHelperMissing ()))
+    (* Stderr says why when the cache isn't enabled. *)
     fun configureTheoryModuleCache options =
-      moduleHelper () andalso valOf (!moduleCacheConfigure) options
+      case moduleHelperMissing () of
+          NONE => valOf (!moduleCacheConfigure) options
+        | SOME reason =>
+          (TextIO.output (TextIO.stdErr,
+                          "theory modules: cache not enabled: " ^ reason ^
+                          "\n");
+           false)
     (* Writes, to [output], the modules of up to [limit] theories of a
        load set ([theories], their FooTheory.sml paths in load order)
        that [directory] lacks, from their .dat files alone; returns how

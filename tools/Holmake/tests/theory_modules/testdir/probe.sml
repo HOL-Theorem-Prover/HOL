@@ -17,10 +17,12 @@ val save_namespace = PolyML.NameSpace.Structures.contents
     (PolyML.NameSpace.Structures.contents
       (valOf (#lookupStruct PolyML.globalNameSpace "PolyML"))) "SaveState"));
 (* Meta's own test: modules need both of these, and Poly/ML added
-   showHierarchyWithIds months after saveDependentModuleBasic. *)
+   showHierarchyWithIds months after saveDependentModuleBasic; and only
+   the standard and experimental kernels load theories from modules. *)
 val supported =
     List.all (Option.isSome o #lookupVal save_namespace)
-             ["showHierarchyWithIds", "saveDependentModuleBasic"];
+             ["showHierarchyWithIds", "saveDependentModuleBasic"] andalso
+    (Thm.kernelid = "stdknl" orelse Thm.kernelid = "expknl");
 val _ = flag "nocache" orelse enabled = supported orelse
         raise Fail "module cache capability mismatch";
 val _ = List.app (fn a => if String.isPrefix "limit" a then
