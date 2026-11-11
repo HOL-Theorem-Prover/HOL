@@ -69,14 +69,20 @@ fun same_ref ((id, arity, ty) : kernel_ref) =
          | _ => false)
     end
 
-fun refs_current ({refs,...} : decoded) = List.all same_ref refs
-
 (* Theories whose kernel ids are the same in every process sharing the
    saved state: those in it ("min" is built by the kernel itself) and
    theories loaded with canonical stamps whose parents are canonical. *)
 val canonical_thys : string HOLset.set Sref.t =
     Sref.new (HOLset.singleton String.compare "min")
 fun is_canonical thy = HOLset.member (Sref.value canonical_thys, thy)
+
+(* An entry of another theory can be relied on to carry the id it was
+   decoded with only if that theory is canonical. *)
+fun refs_current ({refs,...} : decoded) =
+    List.all (fn (r as ({Thy, ...}, _, _) : kernel_ref) =>
+                 is_canonical Thy andalso same_ref r)
+             refs
+
 fun note_load thyname (parents : (string * string) list) stamps_canonical =
     if stamps_canonical andalso List.all (is_canonical o #1) parents then
       Sref.update canonical_thys (fn s => HOLset.add (s, thyname))
@@ -96,9 +102,10 @@ val captured : decoded option ref = ref NONE
    no context has the theory linked without its entries; on success the
    theory is sealed, so they can't be changed afterwards.  The flag
    [register] returns says whether the entries got canonical stamps.
-   Sealing is inside the rollback's scope, so an interrupt arriving
-   before it rolls the load back, and one arriving after it leaves the
-   theory sealed (the sealed set isn't part of the context). *)
+   An interrupt arriving before the seal rolls the load back; one
+   arriving after it leaves the sealed theory loaded, since the sealed
+   set isn't part of the context and a rollback would leave the theory
+   sealed but missing. *)
 fun register_atomically thyname parents register =
     let
       val _ = not (Thm.is_sealed thyname) orelse
@@ -111,7 +118,9 @@ fun register_atomically thyname parents register =
         Thm.mark_sealed thyname;
         note_load thyname parents stamps_canonical;
         result
-      end handle e => (Context.restore ctxt; raise e)
+      end handle e => ((if Thm.is_sealed thyname then ()
+                        else Context.restore ctxt);
+                       raise e)
     end
 
 (* Decodes a theory's .dat as a load does, linking it into the theory

@@ -35,7 +35,8 @@ sig
   val capture_decoded : ('a -> 'b) -> 'a -> 'b * decoded option
   val register_decoded : string -> decoded -> unit
   (* Whether the other theories' kernel entries the decoded values refer
-     to are still the ones they were decoded against. *)
+     to are still the ones they were decoded against: those theories are
+     canonical and the entries unchanged. *)
   val refs_current : decoded -> bool
   (* Decodes a .dat as load_thydata does, linking the theory, adding its
      types and constants to the kernel signature and sealing it, but
