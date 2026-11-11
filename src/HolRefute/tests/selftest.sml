@@ -2568,6 +2568,31 @@ val _ = mf_test "exhausted arity rejections retain one counted reason"
              | _ => false)
       | _ => false)
 
+(* A removed working directory makes overlord-mode solver setup fail
+   after problem assembly, independently of directory permissions. *)
+val _ = mf_test "assembly rejections survive solver setup exceptions"
+  (fn () =>
+    let
+      val original = OS.FileSys.getDir ()
+      val directory = OS.FileSys.tmpName ()
+      val _ = OS.FileSys.remove directory
+      val _ = OS.FileSys.mkDir directory
+      val cfg = arity_config |> upd_card [(NONE, [2, 256])]
+        |> upd_overlord true
+      fun run () =
+        let
+          val _ = OS.FileSys.chDir directory
+          val _ = OS.FileSys.rmDir directory
+          val result = refute cfg arity_goal
+        in
+          unknown_with "SysErr" result andalso
+          unknown_with "2 problems rejected:" result andalso
+          unknown_with "arity 4" result
+        end
+    in
+      Portable.finally (fn () => OS.FileSys.chDir original) run ()
+    end)
+
 (* The first adaptive batch includes scopes too large to assemble. Block
    its first model display so the body cannot race its deadline. *)
 val _ = mf_test "adaptive arity rejections survive interrupted display"

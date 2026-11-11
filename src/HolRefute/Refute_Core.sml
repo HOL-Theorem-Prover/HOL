@@ -2038,9 +2038,11 @@ structure Refute_Core :> Refute_Core = struct
                  | SOME (published as Model _) => published
                  | _ => Unknown [name ^ " timed out"])
                | Refute_Gen.NoGenerator pair =>
-                   Unknown [name ^ ": " ^ no_generator_reason pair]
+                   (#2 (!backend_diagnostics))
+                     (Unknown [name ^ ": " ^ no_generator_reason pair])
                | Interrupt => raise Interrupt
-               | e => Unknown [name ^ ": " ^ exception_reason e])) ()
+               | e => (#2 (!backend_diagnostics))
+                   (Unknown [name ^ ": " ^ exception_reason e]))) ()
       val _ = case raw_result of
           Unknown _ => ()
         | _ => List.app (fn reason => Private.say 2
