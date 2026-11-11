@@ -39,7 +39,7 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
           (ignore (type_name id); appList heap typ args))
     fun tm p = visit p (fn p => case shTerm heap p of
         Const (id,ty) => (ignore (const_name id); typ ty)
-      | Fv (_,ty) => typ ty
+      | Fv (name,ty) => (on_fv name; typ ty)
       | Comb (a,b) => (tm a; tm b)
       | Abs (a,b) => (tm a; tm b)
       | Clos (s,t) => (subs s; tm t)

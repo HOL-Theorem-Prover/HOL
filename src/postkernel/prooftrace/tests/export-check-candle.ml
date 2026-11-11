@@ -1,9 +1,14 @@
-(* Load after the PFT reader has replayed both specification fixtures. *)
-let pft_export_check name expected =
+(* Load after the PFT reader has replayed all export fixtures. *)
+let pft_export_check_hyps name expected_hyps expected =
   let th = assoc name (!saved_ths) in
-  if hyp th = [] && aconv (concl th) expected then
+  if length (hyp th) = length expected_hyps &&
+     forall (fun h -> exists (aconv h) (hyp th)) expected_hyps &&
+     aconv (concl th) expected then
     print_endline ("EXPORT_EXACT " ^ name)
   else failwith ("wrong replay sequent: " ^ name);;
+
+let pft_export_check name expected =
+  pft_export_check_hyps name [] expected;;
 
 let _ =
   let x = mk_var ("x",bool_ty) in
@@ -23,4 +28,21 @@ let _ =
   let first = mk_const ("pftExport_overlap$first",[]) in
   let expected = mk_comb (forall_bool,mk_abs (v,mk_eq (first,first))) in
   pft_export_check "pftExport_overlap$OVERLAP" expected;
+  let p = mk_eq (x,x) in
+  let collision name hs tm =
+    pft_export_check_hyps ("pftExport_hypotheses$" ^ name) hs tm in
+  collision "CONJ_LEFT" [p] (conj p p);
+  collision "CONJ_RIGHT" [p] (conj p p);
+  let truth = mk_const ("T",[]) in
+  collision "MP" [truth] p;
+  let imp p q = mk_comb (mk_comb (mk_const ("==>",[]),p),q) in
+  collision "DISJ_CASES" [p;imp p p] p;
+  let y = mk_var ("y",bool_ty) in
+  let guard = mk_comb (forall_bool,
+    mk_abs (y,imp (mk_comb (mk_abs (y,truth),y)) p)) in
+  collision "CHOOSE" [guard] p;
+  let let_tm = inst [bool_ty,mk_vartype "'a";bool_ty,mk_vartype "'b"]
+    (mk_const ("LET",[])) in
+  let result = mk_comb (let_tm,mk_abs (x,truth)) in
+  pft_export_check "pftExport_binder$LET" (mk_eq (result,result));
   print_endline "EXPORTS_REPLAYED_EXACT";;

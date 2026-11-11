@@ -107,6 +107,7 @@ val candle_preamble_axiom : (string * string) list = [
 (* emit_theory                                                               *)
 (* ========================================================================= *)
 
+(* Raw substitution proof lists must already have distinct redexes. *)
 fun emit_theory {trace, output, ruleset} = let
   val is_candle = case ruleset of Candle => true | HOL4 => false
   val tr_name = if is_candle then candle_translate_name else I
@@ -501,6 +502,7 @@ fun emit_theory {trace, output, ruleset} = let
   (* ======================================================================= *)
 
   val candle_pths : (string, int) dict ref = ref (mkDict String.compare)
+  val candle_conj_eq : int option ref = ref NONE
 
   fun candle_load_pth name =
     case peek(!candle_pths, name) of
@@ -510,6 +512,19 @@ fun emit_theory {trace, output, ruleset} = let
       in PFTWriter.load out id name;
          candle_pths := insert(!candle_pths, name, id);
          id
+      end
+
+  (* {p} |- q = (p /\ q), derived before instantiating p and q so
+     coincident conjuncts cannot discharge a premise's own hypotheses. *)
+  fun candle_conj_pth () =
+    case !candle_conj_eq of
+      SOME id => id
+    | NONE => let
+        val id = alloc_th ()
+        val left = candle_load_pth "candle$CONJUNCT2"
+        val right = candle_load_pth "candle$CONJ"
+      in PFTWriter.Candle.deduct_antisym_rule out id left right;
+         candle_conj_eq := SOME id; id
       end
 
   (* Pro-forma theorems are loaded lazily by candle_load_pth on first use. *)
@@ -727,7 +742,7 @@ fun emit_theory {trace, output, ruleset} = let
   (* INST + PROVE_HYP.                                                      *)
   (* ======================================================================= *)
 
-  and emit_thm_candle result_id concl_ptr proof = let
+  and emit_thm_candle result_id hyps_ptr concl_ptr proof = let
     val tm = emit_term
     val th = emit_thm
     val ty = emit_type
@@ -756,6 +771,17 @@ fun emit_theory {trace, output, ruleset} = let
     fun c_sym a            = let val id = alloc_th () in PFTWriter.Candle.sym out id a; id end
     fun c_prove_hyp a b    = let val id = alloc_th () in PFTWriter.Candle.prove_hyp out id a b; id end
     fun c_new_spec a ns    = let val id = alloc_th () in PFTWriter.Candle.new_specification out id a ns; id end
+
+    fun add_hyp h th = let val assumption = c_assume h
+      in c_eq_mp (c_deduct assumption th) assumption end
+
+    (* Sequential cuts may remove an earlier premise's hypothesis, or
+       skip a later premise when its conclusion is no longer assumed. *)
+    fun restore_hyps th = let
+      val result = ref th
+      val () = appSet heap (fn p => result := add_hyp (tm p) (!result))
+        hyps_ptr
+    in !result end
 
     (* Write a command to the pre-allocated result_id (for the final step). *)
     fun r_refl a           = (PFTWriter.Candle.refl out result_id a; result_id)
@@ -810,19 +836,17 @@ fun emit_theory {trace, output, ruleset} = let
        These emit sequences of Candle commands and return theorem IDs. *)
 
     (* do_MP: from ith: A ⊢ a ==> b and ant_th: B ⊢ a, derive
-       A ∪ B ⊢ b using hypothesis-form proforma
-       candle$MP_HYP : {p ==> q, p} ⊢ q. *)
+       A ∪ B ⊢ b using candle$MP : {p} ⊢ (p ==> q) = q. *)
     fun do_MP ith a_tm b_tm ant_th =
-      let val pth = c_inst (candle_load_pth "candle$MP_HYP")
+      let val pth = c_inst (candle_load_pth "candle$MP")
                       [(pvar_p, a_tm), (pvar_q, b_tm)]
-          val tmp = c_prove_hyp ith pth
-      in c_prove_hyp ant_th tmp end
+      in c_eq_mp (c_prove_hyp ant_th pth) ith end
 
     (* do_CONJ: from th1: A ⊢ a and th2: B ⊢ b, derive A ∪ B ⊢ a ∧ b *)
     fun do_CONJ a_tm b_tm th1 th2 =
-      let val ci = c_inst (candle_load_pth "candle$CONJ")
+      let val ci = c_inst (candle_conj_pth ())
                      [(pvar_p, a_tm), (pvar_q, b_tm)]
-      in c_prove_hyp th2 (c_prove_hyp th1 ci) end
+      in c_eq_mp (c_prove_hyp th1 ci) th2 end
 
     (* do_CONJUNCT1: from th: A ⊢ a ∧ b, derive A ⊢ a *)
     fun do_CONJUNCT1 a_tm b_tm th =
@@ -946,9 +970,7 @@ fun emit_theory {trace, output, ruleset} = let
     | CONJ_prf (a, b) => let
         val a_th = th a val b_th = th b
         val a_tm = tm (heap_concl a) val b_tm = tm (heap_concl b)
-        val ci = c_inst (candle_load_pth "candle$CONJ")
-                   [(pvar_p, a_tm), (pvar_q, b_tm)]
-      in r_prove_hyp b_th (c_prove_hyp a_th ci) end
+      in do_CONJ a_tm b_tm a_th b_th end
 
     | CONJUNCT1_prf a => let
         val a_th = th a
@@ -981,10 +1003,9 @@ fun emit_theory {trace, output, ruleset} = let
               val ne = c_inst (candle_load_pth "candle$NOT_ELIM")
                          [(pvar_p, rhs_tm)]
             in (c_prove_hyp a_th ne, rhs_tm, const_F_tm) end
-        val pth = c_inst (candle_load_pth "candle$MP_HYP")
+        val pth = c_inst (candle_load_pth "candle$MP")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
-        val tmp = c_prove_hyp a_th pth
-      in r_prove_hyp b_th tmp end
+      in r_eq_mp (c_prove_hyp b_th pth) a_th end
 
     | EQ_IMP_RULE1_prf a => let
         val a_th = th a
@@ -1102,7 +1123,7 @@ fun emit_theory {trace, output, ruleset} = let
       in fold_gens gen_pairs inner_th end
 
     | SPEC_prf (a, b) =>
-        emit_thm_candle result_id concl_ptr (Specialize_prf (a, b))
+        emit_thm_candle result_id hyps_ptr concl_ptr (Specialize_prf (a, b))
 
     | Specialize_prf (a, b) => let
         val t_tm = tm a val b_th = th b
@@ -1121,7 +1142,7 @@ fun emit_theory {trace, output, ruleset} = let
                     [(pvar_p, p_tm), (pvar_q, q_tm), (pvar_r, r_tm)]
         val th3 = c_prove_hyp a_th pth
         val th4 = c_prove_hyp (do_DISCH p_tm r_tm b_th) th3
-      in r_prove_hyp (do_DISCH q_tm r_tm c_th) th4 end
+      in restore_hyps (r_prove_hyp (do_DISCH q_tm r_tm c_th) th4) end
 
     | CCONTR_prf (a, b) => let
         val p_tm = tm a val b_th = th b
@@ -1159,7 +1180,7 @@ fun emit_theory {trace, output, ruleset} = let
                             [(emit_var "P" Ab_v, pred_tm), (pvar_Q, q_tm)]
         val forall_v_imp = emit_comb
           (emit_const "!" (emit_tyop "fun" [Ab_v, bool_tyid])) (emit_abs v_tm imp_cmb_q)
-      in c_prove_hyp gen_v (c_prove_hyp b_th choose_inst) end
+      in restore_hyps (c_prove_hyp gen_v (c_prove_hyp b_th choose_inst)) end
 
     | SUBST_prf (a, b, c) => let
         val pairs = list heap (tuple2 heap (fn p => p, fn p => p)) a
@@ -1229,26 +1250,23 @@ fun emit_theory {trace, output, ruleset} = let
     | GEN_ABS_prf (a, b, c) => let
         val vars = list heap tm b
         val c_th = th c
-        (* HOL4's GEN_ABS retypes the binder per variable (Thm.list_mk_binder
-           / Logging.GEN_ABS_prf), so we must too — otherwise mixed-type
-           variable lists yield ill-typed MK_COMB terms. *)
-        val step = case option heap (fn p => p) a of
-            NONE => (fn (v_tm, th_acc) => c_abs v_tm th_acc)
-          | SOME c_ptr => let
-              val c_refl0 = c_refl (emit_term c_ptr)
-              fun dom ty_ptr = case shType heap ty_ptr of
-                  Tyapp (_, args) => hd (list heap (fn p => p) args)
-                | _ => raise Fail "GEN_ABS_prf: c's type is not a function"
-              val sigma = case shTerm heap c_ptr of
-                  Const (_, ty) => emit_type (dom (dom ty))
-                | _ => raise Fail "GEN_ABS_prf: c is not a constant"
-              fun refl_at v_ty =
-                if v_ty = sigma then c_refl0
-                else c_inst_type c_refl0 [(sigma, v_ty)]
-            in fn (v_tm, th_acc) =>
-                 c_mk_comb (refl_at (pft_type_of v_tm)) (c_abs v_tm th_acc)
-            end
-      in List.foldr step c_th vars end
+      in case option heap (fn p => p) a of
+           NONE => List.foldr (fn (v, th) => c_abs v th) c_th vars
+         | SOME _ => let
+             val (eq_lhs, _) = pft_dest_comb (tm concl_ptr)
+             val (_, lhs) = pft_dest_comb eq_lhs
+             (* list_mk_binder matches both the variable and body types.
+                Its conclusion already contains each full binder instance. *)
+             fun binders [] _ = []
+               | binders (_::vs) body = let
+                   val (binder, lam) = pft_dest_comb body
+                   val (_, inner) = pft_dest_abs lam
+                 in binder :: binders vs inner end
+             fun step ((binder, v), th) =
+               c_mk_comb (c_refl binder) (c_abs v th)
+           in List.foldr step c_th (ListPair.zipEq (binders vars lhs, vars))
+           end
+      end
 
     (* === Definition commands === *)
     | Def_const_prf (a, b) => let
@@ -1482,9 +1500,8 @@ fun emit_theory {trace, output, ruleset} = let
         val body_th = c_eq_mp (cong body_raw) th_closed
         (* A vacuous existential still introduces its constant. Keep its
            defining hypothesis even if congruence never used that variable. *)
-        val final_th = List.foldl (fn ((_, eq_tm, _), th) => let
-          val assumption = c_assume eq_tm
-        in c_eq_mp (c_deduct assumption th) assumption end) body_th v_eqs
+        val final_th = List.foldl
+          (fn ((_, eq_tm, _), th) => add_hyp eq_tm th) body_th v_eqs
       in PFTWriter.Candle.new_specification out result_id final_th cnames;
          result_id
       end
@@ -2252,7 +2269,7 @@ fun emit_theory {trace, output, ruleset} = let
              val save_name = disk_save_name dep_thy dep_id
            in PFTWriter.load out id save_name; id end
          | _ => let
-             val actual_id = emit_thm_candle id concl_ptr proof
+             val actual_id = emit_thm_candle id hyps_ptr concl_ptr proof
              val () = th_memo_set k actual_id
              val () =
                if !emit_expect then let

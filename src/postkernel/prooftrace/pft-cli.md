@@ -59,6 +59,12 @@ constructor layouts, in either TR32 or 64-bit heap encoding. The historical
 reference-based kernel identifier layout is rejected. The theory name comes
 from the dump's metadata, not its filename.
 
+Raw substitution proof lists must have distinct redexes: each substituted
+variable occurs at most once in an `INST`, `INST_TYPE` or `SUBST` list.
+The converter does not normalize repeated redexes. A trace from an older
+producer that allowed them is unsupported, even if its heap layout matches;
+regenerate it with a producer that enforces this precondition.
+
 HOL4 conversion rejects `deductAntisym`: the portable HOL replayer lacks
 that rule. Candle conversion supports it.
 

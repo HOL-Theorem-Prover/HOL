@@ -27,7 +27,8 @@ for HOL_PFT_TEST in $pft_suites; do
   case "$HOL_PFT_TEST" in
     identity) pft_phases='produce loader-parent loader-child raw convert separate' ;;
     mk-abs) pft_phases='produce replay' ;;
-    export) pft_phases='vacuous shadow overlap' ;;
+    export) pft_phases='vacuous shadow overlap hypotheses binder replay' ;;
+    term-kind) pft_phases='produce replay' ;;
     *) pft_phases=run ;;
   esac
   for HOL_PFT_IDENTITY_PHASE in $pft_phases; do
@@ -36,7 +37,7 @@ for HOL_PFT_TEST in $pft_suites; do
     export HOL_PFT_EXPORT_CASE
     case "$HOL_PFT_TEST:$HOL_PFT_IDENTITY_PHASE" in
       identity:produce) set -- ;;
-      identity:*|mk-abs:replay) set -- --min ;;
+      identity:*|mk-abs:replay|export:replay|term-kind:replay) set -- --min ;;
       *) set -- ;;
     esac
     pft_log=$HOL_PFT_IDENTITY_PHASE.log

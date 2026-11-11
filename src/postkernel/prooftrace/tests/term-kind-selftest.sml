@@ -1,3 +1,14 @@
+val () = load_pft ["PFTReader","PFTReplay"];
+val () = use (test_source ^ "term-kind-check.sml");
+val () = if identity_phase <> "replay" then () else let
+  val () = PFTEmit.emit_theory
+    {trace=Systeml.HOLDIR ^ "/src/bool/.hol/objs/boolTheory.tr.gz",
+     output="hol4/bool.pft.bin",ruleset=PFTEmit.HOL4}
+  val db = List.foldl (fn (file,db) => PFTReplay.replay db file)
+    PFTReplay.empty_trDB ["hol4/bool.pft.bin","term-kinds.hol4.pft.bin"]
+  val () = term_kind_check db
+in print "PFT_TEST_PHASE_PASS\n"; OS.Process.exit OS.Process.success end;
+
 open HolKernel boolSyntax;
 val () = Theory.new_theory "pft_term_kinds";
 val f = mk_var("f",bool --> bool);
@@ -31,7 +42,6 @@ val () = save_exact "EMPTY_BINDER" (mk_eq(empty_outer,empty_outer))
 val () = Theory.export_theory ();
 val () = print "TERM_KIND_ACTUAL_EXPORT_PASS\n";
 
-val () = load_pft [];
 val term_kind_trace = ".hol/objs/pft_term_kindsTheory.tr.gz";
 val () = List.app (fn (name,ruleset) => PFTEmit.emit_theory
   {trace=term_kind_trace,output="term-kinds." ^ name ^ ".pft.bin",

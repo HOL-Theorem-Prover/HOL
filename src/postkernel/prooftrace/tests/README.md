@@ -16,21 +16,25 @@ logs in the scratch dir.
 * `closedness` reproduces the closedness sentinel collision for a closed
   abstraction containing another closed abstraction. It also checks that an
   unvisited term retains its sentinel.
-* `oracle` reproduces lost hypotheses. The HOL checker compares the complete
-  oracle sequent. After Candle replay, load `oracle-check-results.ml` and
+* `oracle` reproduces lost hypotheses and synthetic binder capture in an
+  oracle-only sequent. The HOL checker compares the complete
+  oracle sequent and retains both `oracle_hyps.pft.bin` and
+  `oracle_hyps.candle.pft.bin`. After Candle replay, load `oracle-check-results.ml` and
   call `check_oracle_results ()` for the same exact sequent.
 * `export` checks specification binders: an unused existential, shadowing,
-  and an inner binder named like the introduced constant. Run
-  `export-check-candle.ml` after Candle replay to compare all four exports.
+  and an inner binder named like the introduced constant. It also reproduces
+  hypothesis collisions in CONJ, MP, DISJ_CASES and CHOOSE, and GEN_ABS with a
+  polymorphic LET result. A fresh minimal HOL phase replays `bool` and all
+  five fixtures and compares their exact sequents. Replay their Candle
+  outputs after `bool`, then run `export-check-candle.ml` for the same checks.
 * `compute-binder` checks coincident binder names, delayed substitution,
   a numeral beyond machine integer range, and COMB/ABS capture confusion.
   Replay the traced ancestors through `cv` with the logical and compute
   preambles, then run `compute-binder-check.ml` for the four exact sequents.
 * `term-kind` checks distinct COMB/ABS nodes with identical children during
   substitution and specification, and empty-named binder capture. After replay
-  of `bool` and the fixture,
-  run `term-kind-check.ml` in Candle, or call `term_kind_check db` from
-  `term-kind-check.sml` in a minimal HOL session.
+  of `bool` and the fixture, run `term-kind-check.ml` in Candle. The suite
+  runs `term-kind-check.sml` itself in a fresh minimal HOL replay phase.
 * `mk-abs` reproduces a clashing cosmetic abstraction binder whose converted
   name differs from the raw proof's opened binder. It checks the exact sequent
   in a fresh minimal heap. The converter emits `ABS` and `TRANS` for the
