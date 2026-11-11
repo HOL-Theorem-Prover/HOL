@@ -31,6 +31,8 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
   val () = if phase <> "convert" then () else
     (List.app (fn thy => PFTEmit.emit_theory
        {trace=trace thy,output=output thy,ruleset=PFTEmit.HOL4}) theories;
+     PFTEmit.emit_theory {trace=trace "identity_negation",
+       output="identity_negation.candle.pft",ruleset=PFTEmit.Candle};
      pass ())
   val db = if phase = "separate" then
       List.foldl (fn (thy,db) => PFTReplay.replay db (output thy))
@@ -49,6 +51,17 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
      print ("IDENTITY_EXACT " ^ thy ^ "$RESULT\n")
   end
   val () = List.app check cases
+  val negation = if phase = "raw" then
+      valOf (Symtab.lookup
+        (#1 (ProofTraceReplay.replayed_thms "identity_negation")) "NEGATION")
+    else valOf (PFTReplay.lookup db "identity_negation$NEGATION")
+  val n = Term.mk_comb (Term.prim_mk_const {Thy="bool",Name="~"},
+    Term.prim_mk_const {Thy="bool",Name="T"})
+  val () = require "wrong NOT_INTRO negation sequent"
+    (case Thm.hyp negation of
+       [h] => Term.aconv h n andalso Term.aconv (Thm.concl negation) n
+     | _ => false)
+  val () = print "IDENTITY_NEGATION_EXACT\n"
   fun declared name = case String.fields (fn c => c = #"$") name of
       [thy,nm] => require ("missing constant " ^ name)
         (List.exists (fn tm => #Thy (Term.dest_thy_const tm) = thy)
@@ -133,8 +146,10 @@ val () = identity_export
 (* NOT_INTRO accepts a negation as well as an explicit implication to F. *)
 val () = identity_start "identity_negation";
 val n = mk_neg T;
+val negated = NOT_INTRO (ASSUME n);
+val _ = save_thm ("NEGATION",negated);
 val () = identity_export
-  (identity_keep (DISCH n (NOT_INTRO (ASSUME n))) (REFL T));
+  (identity_keep (DISCH n negated) (REFL T));
 
 (* Adding a theorem after export changes the hash recorded by the child. *)
 val () = identity_start "identity_reexport";

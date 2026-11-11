@@ -1012,9 +1012,14 @@ fun emit_theory {trace, output, ruleset} = let
         val a_th = th a
         val concl_id = tm (heap_concl a)
         val (imp_p_id, _) = pft_dest_comb concl_id
-        val (_, p_tm) = pft_dest_comb imp_p_id
-      in r_prove_hyp a_th (c_inst (candle_load_pth "candle$NOT_INTRO")
-                        [(pvar_p, p_tm)]) end
+      in
+        (* Kernel dest_imp also accepts ~p as p ==> F. *)
+        case total pft_dest_comb imp_p_id of
+          NONE => a_th
+        | SOME (_, p_tm) =>
+            r_prove_hyp a_th (c_inst (candle_load_pth "candle$NOT_INTRO")
+                              [(pvar_p, p_tm)])
+      end
 
     | DISJ1_prf (a, b) => let
         val a_th = th a val q_tm = tm b
