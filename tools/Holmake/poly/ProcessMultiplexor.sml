@@ -401,6 +401,26 @@ struct
   val idle_grace = Time.fromMilliseconds 10
   val busy_cap = Time.fromMilliseconds 10
 
+  (* How many rounds a stretch may run before it is padded whatever
+     the clock says.  Leaving the grace purely a matter of elapsed
+     time let the loop spin as fast as it liked inside it: ten
+     milliseconds is four and a half thousand rounds of poll and
+     waitpid, which costs nothing much where syscalls are cheap and a
+     great deal where they are not.  A job that is merely finishing
+     needs a round or two -- a healthy two-second build takes about
+     twenty in total -- so a cap well above that is free, and it
+     bounds the stretch by work done rather than by how fast the
+     machine happens to be.  The allowance belongs to the stretch, so
+     it is spent once and refilled only when something is actually
+     heard from; refilling it after each pad would hand out another
+     fifty free rounds between every pair of sleeps. *)
+  val free_rounds = 50
+
+  (* Sleeping for less than a millisecond is not possible -- the
+     underlying wait takes whole milliseconds -- so a pad worth
+     applying is at least that. *)
+  val min_pad = Time.fromMilliseconds 1
+
   fun tmax (t1, t2) = if Time.<(t1, t2) then t2 else t1
   fun tmin (t1, t2) = if Time.<(t1, t2) then t1 else t2
 
@@ -411,12 +431,12 @@ struct
         Time.zeroTime
         (#current_jobs wl)
 
-  fun pad_round roundstart silence others_active =
-      if Time.<(silence, idle_grace) then ()
+  fun pad_round roundstart silence others_active free =
+      if Time.<(silence, idle_grace) andalso free < free_rounds then ()
       else
         let
           val cap = if others_active then busy_cap else poll_interval
-          val want = tmin (silence, cap)
+          val want = tmax (min_pad, tmin (silence, cap))
           val now = Time.now()
           val spent = Time.-(now, roundstart)
         in
@@ -424,9 +444,14 @@ struct
           else ()
         end
 
+  (* See the comment on rounds_last_run in the signature. *)
+  val round_count = ref 0
+  fun rounds_last_run () = !round_count
+
   fun do_work (wl0 : 'a worklist, monitorfn) =
     let
       open Posix.Process
+      val _ = round_count := 0
       val (cmds, wl1) = fill_workq monitorfn ([], wl0)
       fun monitor msg cmds =
         case monitorfn msg of
@@ -500,10 +525,14 @@ struct
                           (#current_jobs wl)
         end
 
-      fun loop (cmds, wl : 'a worklist) : 'a =
+      (* `free' counts the rounds since anything was last heard from;
+         see free_rounds. *)
+      fun loop free (cmds, wl : 'a worklist) : 'a =
         if Binarymap.numItems (#current_jobs wl) = 0 then #current_state wl
         else
           let
+            val _ = round_count := !round_count + 1
+            val njobs0 = Binarymap.numItems (#current_jobs wl)
             val roundstart = Time.now()
             val polls = worklist_polls wl
             val active = OS.IO.poll(map #1 polls, SOME poll_interval)
@@ -546,14 +575,18 @@ struct
                 List.foldl foldthis ((cmds,wl), []) active
             val (cmds, wl) = workloop didio (cmds, wl)
             val wl = execute_cmds monitorfn cmds wl
+            val heard = not (null didio) orelse
+                        Binarymap.numItems (#current_jobs wl) <> njobs0
             val _ = pad_round roundstart
                               (longest_silence (Time.now()) wl)
                               (not (null didio))
+                              free
           in
-            loop (fill_workq monitorfn ([], wl))
+            loop (if heard then 0 else free + 1)
+                 (fill_workq monitorfn ([], wl))
           end
     in
-      loop (cmds, wl1)
+      loop 0 (cmds, wl1)
     end
 
   fun fupdAlist k f [] = raise Fail "updAlist: No element with given key"
