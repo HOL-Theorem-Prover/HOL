@@ -81,6 +81,12 @@ New features
 
     See the *Project files* sub-section of *Maintaining HOL Formalizations with Holmake* in the DESCRIPTION manual.
 
+-   `tools/h4pedant` now also checks `Holmakefile`s: a `Holmakefile` that declares an `all` rule must leave `all` as the directory's *default goal*, which is to say `all` must be its first explicit target.
+    Because `Holmake` builds that first target when given none on the command line — and because `src/parallel_builds/core` reaches most of `src/` recursively with `CLINE_OPTIONS = -r`, which asks each included directory for exactly its default goal — a rule written above `all` silently reduces a directory to building that one rule's target.
+    Nothing fails when this happens; the directory just builds less than it owes, and what goes missing is whatever nothing else depends on, typically its self-test.
+    A `Holmakefile` with no `all` rule has nothing to demote and is not checked.
+    The check is disabled for a subtree with `default_goal_ok = true` under `[h4pedant]` or `[[h4pedant.dir]]`, and globally with `--nodefaultgoal`.
+
 -   Holmake now uses recorded build times to do its parallel scheduling of build tasks.
     This can make a big difference to wall clock times when building big projects.
     Further, a project can now commit a *seed* of build times for this purpose, so that a fresh checkout schedules well before it has measured anything itself.
