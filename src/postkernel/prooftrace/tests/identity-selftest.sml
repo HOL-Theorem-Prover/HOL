@@ -10,26 +10,38 @@ fun read file = let val ins = TextIO.openIn file
   in TextIO.inputAll ins before TextIO.closeIn ins end;
 fun write file text = let val out = TextIO.openOut file
   in TextIO.output (out,text); TextIO.closeOut out end;
-val () =
-  (List.app load ["DArray", "PIntMap", "RawTheory_dtype"];
-   List.app (fn name =>
-     (use (source ^ name ^ ".sig"); use (source ^ name ^ ".sml")))
-     ["ProofTraceParser", "ProofTraceWalk", "ProofTraceReplay"]);
+val () = load_pft ["PFTReader","PFTReplay","ProofTraceReplay"];
 
 (* Replay and check before loading the libraries used to produce the traces. *)
-val () = if phase <> "raw" then () else let
+val () = if phase <> "raw" andalso phase <> "convert" andalso
+    phase <> "separate" then () else let
   val cases = [("identity_restore", "identity_restore", "item"),
     ("identity_collision", "bool", "T"), ("identity_closure", "bool", "T"),
     ("identity_negation", "bool", "T"),
     ("identity_reexport", "identity_reexport", "item"),
     ("identity_reexport_child", "identity_reexport", "item"),
     ("identity_trace_loader", "bool", "T")]
-  val () = ProofTraceReplay.replay
-    (Systeml.HOLDIR ^ "/src/bool/.hol/objs/boolTheory.tr.gz")
+  val bootstrap = Systeml.HOLDIR ^
+    "/src/bool/.hol/objs/boolTheory.tr.gz"
+  val theories = "bool" :: map #1 cases
+  fun trace "bool" = bootstrap
+    | trace thy = ".hol/objs/" ^ thy ^ "Theory.tr.gz"
+  fun output thy = "hol4/" ^ thy ^ ".pft.bin"
+  val () = if phase = "raw" then ProofTraceReplay.replay bootstrap else ()
+  val () = if phase <> "convert" then () else
+    (List.app (fn thy => PFTEmit.emit_theory
+       {trace=trace thy,output=output thy,ruleset=PFTEmit.HOL4}) theories;
+     pass ())
+  val db = if phase = "separate" then
+      List.foldl (fn (thy,db) => PFTReplay.replay db (output thy))
+        PFTReplay.empty_trDB theories
+    else PFTReplay.empty_trDB
   fun check (thy, const_thy, name) = let
-    val () = ProofTraceReplay.replay (".hol/objs/" ^ thy ^ "Theory.tr.gz")
-    val th = valOf (Symtab.lookup
-      (#1 (ProofTraceReplay.replayed_thms thy)) "RESULT")
+    val th = if phase = "raw" then
+        (ProofTraceReplay.replay (trace thy);
+         valOf (Symtab.lookup
+           (#1 (ProofTraceReplay.replayed_thms thy)) "RESULT"))
+      else valOf (PFTReplay.lookup db (thy ^ "$RESULT"))
     val tm = Term.prim_mk_const {Thy=const_thy,Name=name}
   in require ("wrong sequent for " ^ thy ^ "$RESULT")
        (null (Thm.hyp th) andalso

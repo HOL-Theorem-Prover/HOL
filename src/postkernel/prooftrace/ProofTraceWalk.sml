@@ -168,7 +168,7 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
         | Comb (t1, t2) =>
             Int.max(compute_closedness t1, compute_closedness t2)
         | Abs (_, t2) =>
-            compute_closedness t2 - 1
+            Int.max(~1, compute_closedness t2 - 1)
         | Clos (sub_ptr, body_ptr) =>
             sub_closedness(sub_ptr, compute_closedness body_ptr)
       in Array.update(closedness, key, result); result end
