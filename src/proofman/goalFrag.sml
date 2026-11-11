@@ -86,6 +86,38 @@ val top_goal = hd o top_goals
 fun open_paren (n, g) = (n+1, apply (fn (gs, v) =>
   Parallel (map (fn g => Base ([g], I)) gs, v)) g)
 
+(* REPEAT's close: run the body again on each goal it produced until
+   it fails there.  Shared by `close_paren', which `finish' uses to
+   close whatever is still open, so that a frame left open closes as
+   it would have under `close_repeat'.  `close_paren' used to apply
+   the body to the whole goal list instead, which stopped as soon as
+   any one goal failed, and never stopped on an empty list -- where
+   nothing can fail. *)
+fun close_repeat_frame (Repeat (Running gs, log, _)) = let
+    fun repeat [] (acc, v) = (acc, v)
+      | repeat (g::gs) (acc, v) =
+        case log ([g], I) of
+          Failed _ => repeat gs (g::acc, (fn (th, thacc) => (hd thacc :: th, tl thacc)) o v)
+        | Running g' => let
+          val (g1, v1) = asBase g'
+          val (acc, v2) = repeat g1 (acc, fn x => ([], x))
+          (* `repeat' prepends each goal's theorem to what it has
+             built, so `v2' hands back the subgoals' theorems in
+             reverse -- which is what the `rev' below the top-level
+             call undoes for the frame's own validation.  `v1' is the
+             body's validation for *this* goal and gets no such
+             treatment, so reverse here: pairing subgoal theorems
+             with the wrong subgoals proves the wrong thing, silently
+             where the statements happen to typecheck. *)
+          fun v' (ths, thacc) =
+              apfst (fn th1 => v1 (rev th1) @ ths) (v2 thacc)
+          in repeat gs (acc, v' o v) end
+    val (gs', v) = asBase gs
+    val (gs', v') = repeat gs' ([], fn x => ([], x))
+    in Base (rev gs', v o rev o fst o v') end
+  | close_repeat_frame (Repeat (Failed _, _, gs)) = Base gs
+  | close_repeat_frame _ = raise Bind
+
 fun close_paren (n, g) = let
   fun go (Base _) = raise Bind
     | go (Parallel gs) = Base (concatMapV asBase gs)
@@ -111,10 +143,7 @@ fun close_paren (n, g) = let
         in Base (lo @ gs' @ hi, validation) end)
     | go (Try (Running gs, _)) = Base (asBase gs)
     | go (Try (Failed e, _)) = Portable.reraise e
-    | go (Repeat (Running gs, v, _)) = let
-      fun repeat gs = case v (asBase gs) of Failed _ => gs | Running gs => repeat gs
-      in repeat gs end
-    | go (Repeat (Failed _, _, gs)) = Base gs
+    | go (t as Repeat _) = close_repeat_frame t
     | go (Done gs) = Base gs
   in (n-1, applyN go (n-1) g) end
 
@@ -150,32 +179,7 @@ fun close_first (n, g) = let
   in (n-1, applyN go (n-1) g) end
 
 fun open_repeat (n, g) = (n+1, apply (fn gs => Repeat (Running $ Base gs, Running o Base, gs)) g)
-fun close_repeat (n, g) = let;
-  fun go (Repeat (Running gs, log, _)) = let
-      fun repeat [] (acc, v) = (acc, v)
-        | repeat (g::gs) (acc, v) =
-          case log ([g], I) of
-            Failed _ => repeat gs (g::acc, (fn (th, thacc) => (hd thacc :: th, tl thacc)) o v)
-          | Running g' => let
-            val (g1, v1) = asBase g'
-            val (acc, v2) = repeat g1 (acc, fn x => ([], x))
-            (* `repeat' prepends each goal's theorem to what it has
-               built, so `v2' hands back the subgoals' theorems in
-               reverse -- which is what the `rev' below the top-level
-               call undoes for the frame's own validation.  `v1' is the
-               body's validation for *this* goal and gets no such
-               treatment, so reverse here: pairing subgoal theorems
-               with the wrong subgoals proves the wrong thing, silently
-               where the statements happen to typecheck. *)
-            fun v' (ths, thacc) =
-                apfst (fn th1 => v1 (rev th1) @ ths) (v2 thacc)
-            in repeat gs (acc, v' o v) end
-      val (gs', v) = asBase gs
-      val (gs', v') = repeat gs' ([], fn x => ([], x))
-      in Base (rev gs', v o rev o fst o v') end
-    | go (Repeat (Failed _, _, gs)) = Base gs
-    | go _ = raise Bind
-  in (n-1, applyN go (n-1) g) end
+fun close_repeat (n, g) = (n-1, applyN close_repeat_frame (n-1) g)
 
 fun open_tacs_to_lt (n, g) = (n+1, apply (fn
     ([], _) => raise ERR "TACS_TO_LT" "length mismatch"

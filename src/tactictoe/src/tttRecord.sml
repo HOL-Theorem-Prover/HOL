@@ -384,13 +384,19 @@ fun record_proof name lflag tac1 tac2 (g:goal) ctxt =
 (* The scripts written by tttUnfold have their new_theory call replaced by
    this one, and they run under `bin/hol run`, which leaves Thm.getCT as
    NONE.  Open a scratch segment so that current_theory answers for the
-   replayed definitions and store_thm calls. *)
+   replayed definitions and store_thm calls.
+
+   Recording exports only this theory's calls, so it starts from no tactic
+   data.  The savestates saved by save_goal keep tacdata_glob for tttEval to
+   search with, so that mode imports the ancestors' data first. *)
 fun start_record_thy thy =
   (
   Thm.setCT "scratch";
   namethm_glob := dempty String.compare;
-  print_endline "importing tactic data";
-  tacdata_glob := create_tacdata ()
+  if !record_savestate_flag
+  then (print_endline "importing ancestors' tactic data for savestates";
+        tacdata_glob := create_tacdata ())
+  else tacdata_glob := empty_tacdata
   )
 
 fun end_record_thy thy =

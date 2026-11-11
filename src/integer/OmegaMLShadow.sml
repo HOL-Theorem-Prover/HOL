@@ -464,6 +464,19 @@ end
 
 
 (* ----------------------------------------------------------------------
+    zero_upto n
+
+    Returns an integer map that maps the integers from 0..n (inclusive)
+    to Arbint.zero.
+   ---------------------------------------------------------------------- *)
+
+fun zero_upto n =
+    if n < 0 then raise Fail "zero_upto called with negative argument"
+    else if n = 0 then PIntMap.add 0 Arbint.zero PIntMap.empty
+    else PIntMap.add n Arbint.zero (zero_upto (n - 1))
+
+
+(* ----------------------------------------------------------------------
     one_var_analysis ptree em
 
     Precondition: the dfactoids in ptree have just one variable with a
@@ -501,20 +514,22 @@ fun one_var_analysis ptree em = let
   end
   val (upper, lower) = dbfold assign_factoid (NONE,NONE) ptree
   open PIntMap
+  (* Reconstruction may need variables absent from the remaining constraints. *)
+  val vmap = zero_upto (Int.-(dbwidth ptree, 2))
 in
   case (upper, lower) of
     (NONE, NONE) => raise Fail "one_var_analysis: this can't happen"
   | (SOME (c, _), NONE) => if em = REAL then NO_CONCL
-                           else SATISFIABLE (add x_var c empty)
+                           else SATISFIABLE (add x_var c vmap)
   | (NONE, SOME (c, _)) => if em = REAL then NO_CONCL
-                           else SATISFIABLE (add x_var c empty)
+                           else SATISFIABLE (add x_var c vmap)
   | (SOME (u,du), SOME (l, dl)) =>
     if u < l then
       if em = DARK orelse em = EDARK then NO_CONCL
       else direct_contradiction(du,dl)
     else
       if em = REAL then NO_CONCL
-      else SATISFIABLE (PIntMap.add x_var u PIntMap.empty)
+      else SATISFIABLE (add x_var u vmap)
 end
 
 (* ----------------------------------------------------------------------
@@ -752,19 +767,6 @@ fun extend_vmap ptree i vmap = let
 in
   PIntMap.add i (valOf lower) vmap
 end
-
-(* ----------------------------------------------------------------------
-    zero_upto n
-
-    Returns an integer map that maps the integers from 0..n (inclusive)
-    to Arbint.zero.
-   ---------------------------------------------------------------------- *)
-
-fun zero_upto n =
-    if n < 0 then raise Fail "zero_upto called with negative argument"
-    else if n = 0 then PIntMap.add 0 Arbint.zero PIntMap.empty
-    else PIntMap.add n Arbint.zero (zero_upto (n - 1))
-
 
 (* ----------------------------------------------------------------------
     one_step ptree em nextstage kont

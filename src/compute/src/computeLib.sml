@@ -456,11 +456,14 @@ fun apply_delta cld () =
           upd_compset (fn cs => set_skip cs t iopt)
       | CLD_delconst t => del_consts [t]
 
+(* The per-theory values are unit; only the global compset is updated.  The
+   per-theory apply_delta must not touch it: ancestry merges re-apply
+   ancestors' deltas, which would undo later add_persistent_funs. *)
 val {record_delta,get_deltas=thy_updates,...} =
     AncestryData.fullmake {
       adinfo = {tag = "computeLib.delta",
                 initial_values = [("min", ())],
-                apply_delta = apply_delta},
+                apply_delta = fn _ => fn () => ()},
       uptodate_delta = uptodate_delta,
       sexps = {dec = decdelta, enc = encdelta},
       globinfo = {apply_to_global = apply_delta,

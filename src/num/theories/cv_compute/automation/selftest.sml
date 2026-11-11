@@ -388,6 +388,11 @@ val thy = fetch "-" "cv_str_fmap_test_thm"
 
 val _ = (thy = "cv_string_fmap") orelse fail();
 
+val _ = testutils.convtest
+  ("cv_eval finite-set cardinality with duplicates", cv_eval,
+   “finite_set$fCARD (finite_set$fset_ABS [1; 2; 1; 3; 2] : num fset)”,
+   “3:num”);
+
 (*---------------------------------------------------------------------------*
   Conflicting cv_rep translations and cv_rep_delete
  *---------------------------------------------------------------------------*)

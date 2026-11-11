@@ -21,7 +21,7 @@ fun export (file, x: 'a) = let
       let open FileSys.S in flags [irusr, iwusr, irgrp, iwgrp, iroth] end)
     val () = IO.dup2 {old = fd, new = FileSys.stdout}
     val () = app IO.close (read::fd::fds)
-    in Process.exec ("/usr/bin/gzip", []) end
+    in Process.exec ("/usr/bin/gzip", ["gzip"]) end
   val pids = if recode_32bit then let
     val {infd = recRead, outfd = recWrite} = IO.pipe ()
     val gzipPid = gzip recRead [pipeRead, pipeWrite, recWrite]
@@ -29,7 +29,7 @@ fun export (file, x: 'a) = let
       val () = IO.dup2 {old = pipeRead, new = FileSys.stdin}
       val () = IO.dup2 {old = recWrite, new = FileSys.stdout}
       val () = app IO.close [pipeRead, pipeWrite, recRead, recWrite]
-      in Process.exec (recode32_path, []) end
+      in Process.exec (recode32_path, ["recode32"]) end
     val () = app IO.close [recRead, recWrite]
     in [recPid, gzipPid] end
   else [gzip pipeRead [pipeWrite]]
@@ -38,7 +38,50 @@ fun export (file, x: 'a) = let
   val () = IO.close pipeWrite
 in app (fn pid => ignore (Process.waitpid (Process.W_CHILD pid, []))) pids end
 
-fun trace_theory name args = export(concat[".hol/objs/",name,".tr.gz"], args)
+fun signature_ids ctxt = let
+  val types = Context.typesig ctxt
+  fun current_type (Type_dtype.Tyv _) = true
+    | current_type (Type_dtype.Tyapp ((id,_), args)) =
+        KernelSig.uptodate_id types id andalso List.all current_type args
+  val const_ids = KernelSig.foldl (fn (_, (id, ty), ids) =>
+    if current_type (Type_dtype.to_hol_type ty) then id :: ids else ids)
+    [] (Context.termsig ctxt)
+  val type_ids = KernelSig.foldl (fn (_, (id, _), ids) => id :: ids)
+    [] types
+in (const_ids, type_ids) end
+
+val const_origins = ref (Redblackmap.mkDict KernelSig.id_compare)
+val type_origins = ref (Redblackmap.mkDict KernelSig.id_compare)
+
+fun record_signature {theory, hash} = let
+  val (const_ids, type_ids) = signature_ids (Context.snapshot ())
+  (* Re-exporting can change the theorem hash without changing an identity.
+     Keep each observed hash, including ones a context restore can revive. *)
+  fun record origins id =
+    if #Thy (KernelSig.name_of_id id) <> theory then ()
+    else let
+      val versions = case Redblackmap.peek (!origins, id) of
+          NONE => [] | SOME xs => xs
+      val origin = (theory, hash)
+    in
+      if List.exists (fn x => x = origin) versions then () else
+        origins := Redblackmap.insert (!origins, id, origin :: versions)
+    end
+in
+  List.app (record const_origins) const_ids;
+  List.app (record type_origins) type_ids
+end
+
+fun trace_theory name args = let
+  val (const_ids, type_ids) = signature_ids (Context.snapshot ())
+  fun entries origins = List.concat
+    (map (fn (id, versions) => map (fn origin => (id, origin)) versions)
+      (Redblackmap.listItems (!origins)))
+in
+  export (concat[".hol/objs/",name,".tr.gz"],
+          (1, const_ids, type_ids,
+           entries const_origins, entries type_origins, args))
+end
 
 fun export_proof {file, tag} th =
   case !TraceMode.mode of
