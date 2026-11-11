@@ -34,16 +34,6 @@ type 'a token = 'a term_tokens.term_token
 type 'a qbuf = 'a qbuf.qbuf
 
 
-fun insert_sorted (k, v) [] = [(k, v)]
-  | insert_sorted kv1 (wholething as (kv2::rest)) = let
-      val (k1, _) = kv1
-      val (k2, _) = kv2
-    in
-      if (k1 < k2) then kv1::wholething
-      else kv2::insert_sorted kv1 rest
-    end
-
-
 fun listtoString f [] = "[]"
   | listtoString f xs = let
       fun lf [x] = f x

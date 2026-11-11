@@ -110,8 +110,21 @@ New features
 -   `goalStack` has `expandf_in` and `expand_listf_in`, which run a tactic in a given `Context.t` rather than in a snapshot of the live context; `expandf` and `expand_listf` are now these applied to `Context.snapshot()`.
     A prover installed with `Tactical.set_prover` can use them to run its steps in the context it is passed.
 
+-   `sptree` now provides `domain_list` to enumerate keys without constructing
+    key/value pairs, with `set_domain_list` proving its set is `domain` and
+    a standard CV translation in `cv_std`.
+
+-   CV evaluation now supports `fCARD` on finite sets of natural numbers.
+
+-   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
+    list by a strict upper bound on its sum.
+
 Bugs fixed
 ----------
+
+-   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
+    Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
+    Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
 
 -   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
     Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
@@ -133,10 +146,22 @@ Bugs fixed
 
 -   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
 
+-   Finally (?), we fixed a soundness bug in the *experimental* kernel to do with the behaviour of `Term.subst`.  The latter has been adjusted in both kernels so that it is now an exception-raising error to try to use a substitution alist that mentions the same l.h.s. (these are usually variables) multiple times.
+
+    The bug was found by [Gemini 4]( https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/) using a [teamwork multi-agent framework in Antigravity]( https://antigravity.google/blog/teamwork-when-ai-becomes-a-research-partner).
+
+
+-   The language server's goal state just after a `rpt`/`REPEAT` tactic, before the next token (*e.g.*, at the space in `rpt strip_tac >> simp[]`), showed the state after a single iteration rather than after the repetition had finished.
+
 -   The contextual decision-procedure cache used by the arithmetic simpset fragments (`numSimps.ARITH_ss`, `realSimps.REAL_ARITH_ss`, `intSimps.OMEGA_ss`/`COOPER_ss`, and `bagSimps.SBAG_SOLVE_ss`) was unbounded.
     In long-running sessions the cache accumulated entries — both in number of cached goals and in the per-key list of `(context, result)` pairs under each goal — and `simp` invocations slowed down approximately linearly with session length, dominated by linear scans of the per-key list under `boolSyntax.F`.
     The cache now uses LRU eviction on the keyspace and a per-key list cap, with both bounds set at cache-creation time.
     See the `Cache.sig` header for the new `{capacity, per_key_cap}` constructor argument.
+
+-   `goalFrag.close_paren`, which `goalFrag.finish` uses to close any frames left open, closed a `REPEAT` frame by applying its body to the whole goal list until that failed.
+    Over an empty list nothing fails, so finishing a state where a repeat had solved every goal looped for ever; this hung the language server's try-tactic request with the cursor inside `rpt`'s argument.
+    It also stopped at the first goal the body failed on, where `REPEAT` carries on with the others.
+    It now closes the frame exactly as `close_repeat` does.
 
 -   metis's finite-model heuristic, which weights clauses by how often they hold in a model of the axioms, sampled its valuations from a single random generator created when `mlibModel` was loaded and never reset, and numbered its models from a counter with the same lifetime — a number that is hashed into the model's interpretation.
     Every metis call therefore started from whatever state the previous one left behind, so what a goal cost depended on what had been proved before it in the same session: repeats of one identical relevant-logic proof in a single process ranged from 0.5s to 40s, and the theory containing it built in either 5.6s or 32s depending only on how far the generator had advanced.
@@ -149,6 +174,10 @@ Bugs fixed
     Reading a file was therefore quadratic in its length: compiling the 49 generated theory files under `integrationTheory` scanned 1,017 million characters and took 7.8s.
     `mkFileline` now reads the text once, keeping the offsets of its newlines and the position after each `#(FILE=…)` / `#(LINE=…)` pragma, and answers each query by binary search; the same files now scan 0.9 million characters and take 2.2s.
     Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
+
+-   Loading a theory merged its parents' simpsets, grammars and other ancestry-based data by walking each parent's whole ancestry again and decoding every parent list on the way, once per kind of data.
+    Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors now takes about half the CPU time it did.
+    What is merged, and in what order, is unchanged.
 
 New theories
 ------------
@@ -193,6 +222,9 @@ Incompatibilities
     theorems have been removed; use `exp_mod_binary` instead.
     Elliptic's `field$modexp` has likewise been replaced by
     `expMod$exp_mod_binary` in the prime-field computation theorems.
+-   `Term.subst` now fails if the same redex occurs more than once in its theta-list, whether or not the repeats map it to the same residue.
+    Previously such a theta-list was silently resolved by letting the last entry win, which did not agree with the first-match lookup used while terms are being matched.
+    Code that builds a substitution by hand and relies on the old behaviour can call the new `Lib.subst_keep_last`, which drops all but the last maplet for each redex.
 
 -   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
     have been changed to return maps of type HOLdict instead of Binarymap.

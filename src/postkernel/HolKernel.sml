@@ -627,16 +627,26 @@ fun separate_insts tyavoids insts = let
         patterns []
   val tyins = get_type_insts tyavoids realinsts ([],[])
 in
-  (betacounts,
-   mapfilter (fn {redex = x, residue = t} => let
-                   val x' = let val (xn, xty) = dest_var x
-                            in
-                              mk_var (xn, type_subst (#1 tyins) xty)
-                            end
-                 in
-                   if aconv t x' then failwith "" else {redex = x', residue = t}
-                 end) realinsts,
-   tyins)
+  let
+    val tmins =
+        mapfilter (fn {redex = x, residue = t} => let
+                       val x' = let val (xn, xty) = dest_var x
+                                in
+                                  mk_var (xn, type_subst (#1 tyins) xty)
+                                end
+                     in
+                       if aconv t x' then failwith ""
+                       else {redex = x', residue = t}
+                     end) realinsts
+  in
+    (* Re-typing the redexes can merge two of them -- x:'a and x:'b both
+       become x:num -- and Term.subst rejects the repeated redex.  Keep
+       the later maplet, which is the one subst acted on.  Only reachable
+       when the type instantiation is non-empty. *)
+    (betacounts,
+     if null (#1 tyins) then tmins else Lib.subst_keep_last aconv tmins,
+     tyins)
+  end
 end
 
 val tmmem = op_mem aconv
@@ -672,6 +682,11 @@ end
 
 fun beta_normalise t = case beta_normalise0 t of NONE => t | SOME x => x
 
+(* Unlike safe_insert, this never rejects: it keeps whatever binding is
+   already recorded for the redex.  See its use in term_homatch. *)
+fun insert_if_unbound (n as {redex, residue}) l =
+  (ignore (find_residue redex l); l) handle NOT_FOUND => n::l
+
 fun all_abconv [] [] = true
   | all_abconv [] _ = false
   | all_abconv _ [] = false
@@ -691,7 +706,18 @@ in
         else let
             val newtyins =
                 tyenv_safe_insert (snd (dest_var vtm) |-> type_of ctm) tyins
-            val newinsts = (vtm |-> ctm)::insts
+            (* Not a plain cons: the fallback below peels rators off both
+               terms, so one pattern variable can arrive here once per hom,
+               and Term.subst rejects a repeated redex.  Keeping the
+               earliest binding is what subst used to settle on -- it took
+               the last entry of the theta-list, and the list is built by
+               consing -- so a peeled occurrence never displaces a binding
+               already made.  That matters: the peeled guess is often the
+               worse one (f |-> g where the whole pattern needs
+               f |-> \i. g 0), and it can also be a mere eta-variant of it
+               (f |-> $/\ a against f |-> \z. a /\ z).  An instantiation
+               that does not in fact match is caught downstream. *)
+            val newinsts = insert_if_unbound (vtm |-> ctm) insts
           in
             term_homatch newtyins (newinsts, tl homs)
           end

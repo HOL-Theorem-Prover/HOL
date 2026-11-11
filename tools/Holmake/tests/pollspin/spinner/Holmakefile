@@ -1,0 +1,15 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+all: hung
+.PHONY: all
+
+# The recipe closes its stdout and stderr and then stays alive.  From
+# the multiplexor's point of view the job's pipes have hung up while
+# the job itself is still there, which is the state that sends the
+# work loop into a busy-wait.
+hung:
+	echo starting ; exec 1>&- 2>&- ; sleep 2 ; touch hung
+
+EXTRA_CLEANS = hung

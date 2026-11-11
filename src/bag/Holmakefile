@@ -8,7 +8,7 @@ EXTRA_CLEANS = selftest.exe bag-selftest.log
 
 ifdef HOLSELFTESTLEVEL
 bag-selftest.log: selftest.exe
-	./selftest.exe > $@ 2>&1
+	$(tee ./selftest.exe 2>&1,$@)
 
 all: bag-selftest.log
 

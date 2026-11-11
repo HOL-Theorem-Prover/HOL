@@ -3272,6 +3272,42 @@ def test_goalState_inside_proof():
         c.close()
 
 
+def test_goalState_after_rpt_shows_every_iteration():
+    """In the gap between a bracket's last tactic and the next token,
+    the walker reports the bracket as run but not closed.  For `rpt'
+    that is wrong: `open_repeat' applies the body once and
+    `close_repeat' does the rest, so `rpt strip_tac‸ >> simp[]' showed
+    one strip.  Two quantifiers, so that one strip and the fixpoint
+    differ; the cursor on `>>' itself was always right, and is the
+    reference."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_rpt_gap.sml"
+        src = ("Theory goalstate_rpt_gap\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem two_vars:\n"
+               "  !n m. n + m = m + n /\\ n * 1 = n\n"
+               "Proof\n"
+               "  rpt strip_tac >> simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 6 = "  rpt strip_tac >> simp[]": 15 is the space before
+        # `>>', 16 the `>>'.
+        on = (_send_goalstate(c, 111, uri, 6, 16) or {}).get("result")
+        assert_true(on is not None, "state on `>>'")
+        goals = [g.get("goal", "") for g in on.get("goals", [])]
+        assert_eq(len(goals), 2, f"both conjuncts on `>>' ({goals!r})")
+        gap = (_send_goalstate(c, 112, uri, 6, 15) or {}).get("result")
+        assert_true(gap is not None, "state in the gap")
+        assert_eq(gap.get("goals"), on.get("goals"),
+                  "the gap shows `rpt' run to its fixpoint")
+    finally:
+        c.close()
+
+
 def test_goalState_with_an_unterminated_quotation():
     """A body still being typed can hold an unterminated quotation.  The
     lexer then runs past the end of the tactic, so the spans downstream
@@ -3454,6 +3490,37 @@ def test_tryTactic_honours_a_step_anchor():
         assert_eq(r0.get("step"), 0, "the step anchor was honoured")
         assert_eq(len(r0["goals"]), 1,
                   f"strip_tac at step 0 leaves one goal ({r0['goals']!r})")
+    finally:
+        c.close()
+
+
+def test_tryTactic_inside_rpt():
+    """The anchor inside `rpt's argument is inside an open `Repeat'
+    frame, and a candidate applied there becomes part of the loop body.
+    One that solves the goal leaves the frame over no goals, and
+    rendering that state runs `finish', whose `close_paren' re-ran the
+    body until it failed -- which over no goals it never does.  The
+    probe never answered."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/gs_try_rpt.sml"
+        src = ("Theory gs_try_rpt\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem probe_rpt:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  rpt strip_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 6 = "  rpt strip_tac": 6 is `strip_tac's first byte.
+        r = _send_trytactic(c, 7321, uri, 6, 6, "simp[]")
+        res = (r or {}).get("result")
+        assert_true(res is not None, f"probe answered ({r!r})")
+        assert_eq(res.get("error"), None, f"no error ({res!r})")
+        assert_eq(res.get("goals"), [], "`simp[]' closes the goal")
     finally:
         c.close()
 
@@ -12761,6 +12828,8 @@ TESTS = [
     ("statement_edit_still_clears_later_proofs",
                                      test_statement_edit_still_clears_later_proofs),
     ("goalState_inside_proof",       test_goalState_inside_proof),
+    ("goalState_after_rpt_shows_every_iteration",
+                    test_goalState_after_rpt_shows_every_iteration),
     ("goalState_with_an_unterminated_quotation",
                     test_goalState_with_an_unterminated_quotation),
     ("goalState_budget_timeout_names_the_step",
@@ -12771,6 +12840,7 @@ TESTS = [
                     test_tryTactic_probes_without_committing),
     ("tryTactic_honours_a_step_anchor",
                     test_tryTactic_honours_a_step_anchor),
+    ("tryTactic_inside_rpt", test_tryTactic_inside_rpt),
     ("tryTactic_says_when_a_candidate_will_not_compile",
                     test_tryTactic_says_when_a_candidate_will_not_compile),
     ("tryTactic_budget_bounds_both_of_its_walks",

@@ -1,0 +1,19 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+all: talky
+.PHONY: all
+
+# The control for both/: just the chatty job, so that what its own
+# output costs the loop is known separately.
+#
+# chatter.exe is run from its own directory because it is a wrapper
+# that asks hol to load the `chatter' module, and that is looked up
+# relative to the working directory.  `&&' rather than `;' so that a
+# chatter which failed to run cannot leave a touched target behind
+# looking like a build that worked.
+talky:
+	( cd .. && ./chatter.exe ) && touch talky
+
+EXTRA_CLEANS = talky

@@ -120,7 +120,9 @@ local
          [``n:bool``, ``z:bool``, ``c:bool``, ``v:bool``]) end
   val write8_pat = WRITE8_def |> SPEC_ALL |> concl |> dest_eq |> fst
   fun remove_write8 (name,tm) = let
-    val xs = find_terms (can (match_term write8_pat)) tm
+    (* find_terms returns every occurrence; repeats would give Term.subst
+       a repeated redex *)
+    val xs = op_mk_set aconv (find_terms (can (match_term write8_pat)) tm)
     in (name,subst (map (fn t => t |-> mk_arb(type_of t)) xs) tm) end
   fun tidy_up_summary (p1,assum1,u1,addr,q1) = let
     val u1 = map remove_write8 u1
@@ -223,7 +225,7 @@ fun find_stack_accesses_for all_summaries sec_name = let
   val read_word_pat = (if !arch_name = RISCV then ``READ64 a (m:word64->word8)``
                                              else ``READ32 a (m:word32->word8)``)
   fun remove_read_word tm = let
-    val xs = find_terms (can (match_term read_word_pat)) tm
+    val xs = op_mk_set aconv (find_terms (can (match_term read_word_pat)) tm)
     val ss = map (fn x => x |-> (mk_arb(type_of x))) xs
     in subst ss tm end
   fun found_stack_access pc s = let

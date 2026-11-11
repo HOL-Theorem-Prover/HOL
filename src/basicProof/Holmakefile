@@ -7,7 +7,7 @@ selftest.exe: selftest.uo
 ifdef HOLSELFTESTLEVEL
 
 selftest.log: selftest.exe
-	./selftest.exe > $@ 2>&1
+	$(tee ./selftest.exe 2>&1,$@)
 
 all: selftest.log
 endif

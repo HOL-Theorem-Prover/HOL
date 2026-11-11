@@ -97,7 +97,9 @@ fun FREEUP [] M g = (ALL_TAC,M)
      in
        ((MAP_EVERY X_GEN_TAC (map snd Vmap)
           THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),
-        subst (map op|-> theta) M)
+        (* a shadowed binder (!x. ... !x. ...) puts the same variable into
+           Vmap twice; the inner binding used to win, so keep it *)
+        subst (subst_keep_last aconv (map op|-> theta)) M)
      end;
 
 (*---------------------------------------------------------------------------*)

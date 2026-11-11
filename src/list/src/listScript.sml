@@ -1415,6 +1415,12 @@ Proof
   LIST_INDUCT_TAC THEN SRW_TAC[] [SUM, MEM] THEN METIS_TAC[]
 QED
 
+Theorem SUM_less_EVERY_less:
+  SUM ls < n ==> EVERY (λx. x < n) ls
+Proof
+  Induct_on ‘ls’ >> simp[SUM, EVERY_DEF]
+QED
+
 Theorem NULL_FILTER:
    !P ls. NULL (FILTER P ls) = !x. MEM x ls ==> ~P x
 Proof

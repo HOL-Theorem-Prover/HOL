@@ -610,13 +610,29 @@ local
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
       addb t (if type_of redex = type_of residue
-              then (insert(A,redex,residue),
-                    is_var redex andalso b)
+              then (insert(A,redex,residue), is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")
+  (* a duplicated redex makes the map smaller than the theta-list; only
+     then is it worth a second pass to say which redex it was. *)
+  fun dup_redex theta =
+      let fun recurse seen [] = NONE
+            | recurse seen ({redex,residue=_}::t) =
+                if HOLset.member(seen, redex) then SOME redex
+                else recurse (HOLset.add(seen, redex)) t
+      in recurse empty_tmset theta
+      end
+  fun dupERR theta =
+      ERR "subst"
+          (case dup_redex theta of
+               SOME (Fv(n,_)) => "redex "^Lib.quote n^" occurs twice in subst"
+             | _ => "redex occurs twice in subst")
 in
 fun subst [] = I
   | subst theta =
     let val (fmap,b) = addb theta (emptysubst, true)
+        (* the map is keyed modulo alpha, so it is smaller than the
+           theta-list exactly when a redex is repeated *)
+        val _ = numItems fmap = length theta orelse raise dupERR theta
         fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
           | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
@@ -976,7 +992,15 @@ fun norm_subst ((tmS,_),(tyS,_)) =
          del (let val redex' = Theta(redex)
               in if residue=redex' then A else (redex' |-> residue)::A
               end) rst
- in (del [] tmS,tyS)
+     val tmS' = del [] tmS
+ in
+   (* Instantiating the redexes can merge two of them -- x:'a and x:'b
+      both become x:num -- and Term.subst rejects the repeated redex.
+      Keep the later maplet of a pair, which is the one subst acted on:
+      del reverses, so that is the earlier entry of tmS.  Only reachable
+      when tyS actually substitutes something, so ground matches keep
+      the cheap path. *)
+   (if null tyS then tmS' else Lib.subst_keep_last aconv tmS', tyS)
  end
 
 fun match_terml tyfixed tmfixed pat ob =

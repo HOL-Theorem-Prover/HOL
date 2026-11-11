@@ -722,6 +722,21 @@ local
 
   fun vsubst_insert (map, k, v) =
       insert (map, k, (Susp.delay (fn () => free_names v), v))
+
+  (* a duplicated redex makes the built map smaller than the theta-list;
+     only then is it worth a second pass to say which redex it was. *)
+  fun dup_redex theta =
+      let fun recurse seen [] = NONE
+            | recurse seen ({redex,residue=_}::t) =
+                if HOLset.member(seen, redex) then SOME redex
+                else recurse (HOLset.add(seen, redex)) t
+      in recurse empty_tmset theta
+      end
+  fun dupERR theta =
+      ERR "subst"
+          (case dup_redex theta of
+               SOME (Var(n,_)) => "redex "^Lib.quote n^" occurs twice in subst"
+             | _ => "redex occurs twice in subst")
 in
 
 (* Due to the missing capture check in ssubst, subst can produce wrong results
@@ -734,14 +749,19 @@ in
 fun subst theta =
     if null theta then I
     else if List.all (is_var o #redex) theta then let
-        fun foldthis ({redex, residue}, acc) = let
+        fun foldthis ({redex, residue}, (acc, ids)) = let
           val _ = type_of redex = type_of residue
                   orelse raise ERR "vsubst" "Bad substitution list"
         in
-          if redex = residue then acc
-          else vsubst_insert (acc, redex, residue)
+          (vsubst_insert (acc, redex, residue),
+           if redex = residue then redex :: ids else ids)
         end
-        val atheta = List.foldl foldthis emptyvsubst theta
+        val (atheta0, ids) = List.foldl foldthis (emptyvsubst, []) theta
+        val _ = numItems atheta0 = length theta orelse raise dupERR theta
+        (* an identity maplet would have augvsubst rename a bound variable
+           to make room for a name the term already has; drop them, but
+           only once they have been counted *)
+        val atheta = List.foldl (fn (v,A) => #1 (remove (A, v))) atheta0 ids
       in
         if numItems atheta = 0 then I
         else (fn tm => vsubst atheta tm handle Unchanged => tm)
@@ -756,6 +776,7 @@ fun subst theta =
         end
         val (theta1, theta2) =
             List.foldl foldthis (emptysubst, emptyvsubst) theta
+        val _ = numItems theta1 = length theta orelse raise dupERR theta
       in
         (fn tm => vsubst theta2 (ssubst theta1 tm)
                   handle Unchanged => tm)
@@ -1065,7 +1086,14 @@ fun norm_subst ((tmS,_),(tyS,_)) =
          del (let val redex' = Theta(redex)
               in if residue=redex' then A else (redex' |-> residue)::A
               end) rst
- in (del [] tmS,tyS)
+     val tmS' = del [] tmS
+ in
+   (* Instantiating the redexes can merge two of them -- x:'a and x:'b
+      both become x:num -- and Term.subst rejects the repeated redex.
+      Keep the later maplet, which is the one subst acted on: del
+      reverses, so that is the earlier entry of tmS.  Only reachable
+      when tyS actually substitutes something. *)
+   (if null tyS then tmS' else Lib.subst_keep_last aconv tmS', tyS)
  end
 
 fun match_terml tyfixed tmfixed pat ob =

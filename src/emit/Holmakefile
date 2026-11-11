@@ -18,7 +18,7 @@ ifdef HOLSELFTESTLEVEL
 all: emit-selftest.log
 
 emit-selftest.log: selftest.exe
-	./selftest.exe > $@ 2>&1
+	$(tee ./selftest.exe 2>&1,$@)
 
 endif
 
