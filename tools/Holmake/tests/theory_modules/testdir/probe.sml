@@ -16,8 +16,11 @@ val save_namespace = PolyML.NameSpace.Structures.contents
   (valOf (#lookupStruct
     (PolyML.NameSpace.Structures.contents
       (valOf (#lookupStruct PolyML.globalNameSpace "PolyML"))) "SaveState"));
-val supported = Option.isSome
-                  (#lookupVal save_namespace "saveDependentModuleBasic");
+(* Meta's own test: modules need both of these, and Poly/ML added
+   showHierarchyWithIds months after saveDependentModuleBasic. *)
+val supported =
+    List.all (Option.isSome o #lookupVal save_namespace)
+             ["showHierarchyWithIds", "saveDependentModuleBasic"];
 val _ = flag "nocache" orelse enabled = supported orelse
         raise Fail "module cache capability mismatch";
 val _ = List.app (fn a => if String.isPrefix "limit" a then
