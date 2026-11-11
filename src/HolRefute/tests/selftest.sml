@@ -1089,13 +1089,14 @@ val _ = test "interrupting the caller unwinds the backends" (fn () =>
       let
         fun forever () =
           Multithreading.synchronized "selftest wait" mutex (fn () =>
-            let fun wait () = (ConditionVar.wait (ready, mutex); wait ())
+            let
+              (* Announce only after finally has installed unwind. *)
+              val _ = (started := !started + 1; ConditionVar.broadcast ready)
+              fun wait () = (ConditionVar.wait (ready, mutex); wait ())
             in wait () end)
         fun unwind () =
           Multithreading.synchronized "selftest unwind" mutex (fn () =>
             (unwound := !unwound + 1; ConditionVar.broadcast ready))
-        val _ = Multithreading.synchronized "selftest start" mutex (fn () =>
-          (started := !started + 1; ConditionVar.broadcast ready))
       in
         Portable.finally unwind forever (); Unknown []
       end
