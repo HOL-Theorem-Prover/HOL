@@ -350,9 +350,11 @@ fun theory_file file =
     | SOME "sig" => String.isSuffix "Theory.sig" file
     | _ => false
 
-fun eligible () =
-  (Thm.kernelid = "stdknl" orelse Thm.kernelid = "expknl") andalso
-  TheoryReader.default_loader ()
+(* The kernels whose theory loads use modules; the others' Thm differs. *)
+val kernel_uses_modules =
+    Thm.kernelid = "stdknl" orelse Thm.kernelid = "expknl"
+
+fun eligible () = kernel_uses_modules andalso TheoryReader.default_loader ()
 
 (* What load_signature found for a theory, for its structure's load:
    the module whose signature it installed, if any; whether a module
@@ -501,6 +503,10 @@ fun decline reason =
    false)
 
 fun configure {directory, base_state} =
+  if not kernel_uses_modules then
+    decline ("the " ^ Thm.kernelid ^
+             " kernel doesn't load theories from modules")
+  else
   let
     val _ = Meta.moduleSourceLoader := (fn use => use)
     val directory = absolute directory
