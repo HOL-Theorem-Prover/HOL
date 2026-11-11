@@ -122,6 +122,9 @@ New features
 Bugs fixed
 ----------
 
+-   Omega's model reconstruction no longer fails when eliminating a variable
+    leaves a single constrained variable and another unconstrained variable.
+
 -   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
     Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
