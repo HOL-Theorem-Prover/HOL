@@ -479,17 +479,26 @@ fun load_source directory base_id use file =
     load_signature directory base_id use file
   else load_structure directory base_id use file
 
+(* The id of [base_state] in the loaded saved-state hierarchy; entries
+   whose paths no longer resolve can't be it.  Raises OS.SysErr if
+   [base_state] doesn't resolve. *)
 fun base_id_of base_state =
   let
+    val base = OS.FileSys.fullPath base_state
     fun same_state (_, path) =
-      OS.FileSys.fullPath path = OS.FileSys.fullPath base_state
+      OS.FileSys.fullPath path = base handle OS.SysErr _ => false
   in
     Option.map #1 (List.find same_state (Save.showHierarchyWithIds ()))
   end
-  handle OS.SysErr _ => NONE
 
 fun absolute directory =
   OS.Path.mkAbsolute {path = directory, relativeTo = OS.FileSys.getDir ()}
+
+(* The cache stays off when configuring fails; stderr says why. *)
+fun decline reason =
+  (TextIO.output (TextIO.stdErr,
+                  "theory modules: cache not enabled: " ^ reason ^ "\n");
+   false)
 
 fun configure {directory, base_state} =
   let
@@ -497,15 +506,20 @@ fun configure {directory, base_state} =
     val directory = absolute directory
   in
     case base_id_of base_state of
-        NONE => false
+        NONE =>
+        decline (base_state ^ " is not among the loaded saved states: " ^
+                 String.concatWith ", "
+                   (map #2 (Save.showHierarchyWithIds ())))
       | SOME base_id =>
         (mkdir directory;
          Meta.moduleSourceLoader := load_source directory base_id;
          true)
   end
-  handle IO.Io _ => false
-       | OS.SysErr _ => false
-       | Fail _ => false
+  handle e as IO.Io _ => decline (General.exnMessage e)
+       | e as OS.SysErr _ =>
+         decline (base_state ^ " or " ^ directory ^ ": " ^
+                  General.exnMessage e)
+       | e as Fail _ => decline (General.exnMessage e)
 
 type entry = {base : string, thy : string, hash : string,
               dat_digest : string, file : string}
@@ -516,7 +530,8 @@ type entry = {base : string, thy : string, hash : string,
    hooks or project code; up to [limit] modules of decoded theories are
    saved to [output].  When every theory has a module, nothing is loaded. *)
 fun write_modules {theories, directory, base_state, output, limit} =
-  case (eligible () andalso unchanged_bindings (), base_id_of base_state) of
+  case (eligible () andalso unchanged_bindings (),
+        base_id_of base_state handle OS.SysErr _ => NONE) of
       (true, SOME base_id) =>
       (let
         val directory = absolute directory
