@@ -2149,13 +2149,11 @@ local
   val a_tm = mk_var("a", real_ty)
   val x_tm = mk_var("x", real_ty)
   val y_tm = mk_var("y", real_ty)
-  val rhs_tm = mk_eq(x_tm, mk_minus(y_tm, a_tm))
+  val shuffle = GSYM (SPECL [x_tm, y_tm, a_tm] REAL_EQ_SUB_LADD)
   val shuffle1 =
-    CONV_RULE (REWR_CONV (REAL_ARITH
-      (mk_eq(mk_eq(mk_plus(a_tm, x_tm), y_tm), rhs_tm))))
-  val shuffle2 =
-    CONV_RULE (REWR_CONV (REAL_ARITH
-      (mk_eq(mk_eq(mk_plus(x_tm, a_tm), y_tm), rhs_tm))))
+    CONV_RULE (REWR_CONV
+      (SUBS [SPECL [x_tm, a_tm] REAL_ADD_COMM] shuffle))
+  val shuffle2 = CONV_RULE (REWR_CONV shuffle)
 
   fun substitutable_monomial fvs tm =
     if is_var tm andalso type_of tm = realSyntax.real_ty
@@ -2305,27 +2303,9 @@ local
   val eq_tm = realSyntax.real_eq_tm
   val x_tm = mk_var("x", real_ty)
   val y_tm = mk_var("y", real_ty)
-  val x_sub_y = mk_minus(x_tm, y_tm)
-  val y_sub_x = mk_minus(y_tm, x_tm)
-
-  val pth_le = REAL_ARITH
-    (mk_eq(mk_leq(x_tm, y_tm), mk_geq(y_sub_x, zero_tm)))
-  val pth_lt = REAL_ARITH
-    (mk_eq(mk_less(x_tm, y_tm), mk_greater(y_sub_x, zero_tm)))
-  val pth_ge = REAL_ARITH
-    (mk_eq(mk_geq(x_tm, y_tm), mk_geq(x_sub_y, zero_tm)))
-  val pth_gt = REAL_ARITH
-    (mk_eq(mk_greater(x_tm, y_tm), mk_greater(x_sub_y, zero_tm)))
-  val pth_eq = REAL_ARITH
-    (mk_eq(mk_eq(x_tm, y_tm), mk_eq(x_sub_y, zero_tm)))
-  val pth_nle = REAL_ARITH
-    (mk_eq(mk_neg(mk_leq(x_tm, y_tm)), mk_greater(x_sub_y, zero_tm)))
-  val pth_nlt = REAL_ARITH
-    (mk_eq(mk_neg(mk_less(x_tm, y_tm)), mk_geq(x_sub_y, zero_tm)))
-  val pth_nge = REAL_ARITH
-    (mk_eq(mk_neg(mk_geq(x_tm, y_tm)), mk_greater(y_sub_x, zero_tm)))
-  val pth_ngt = REAL_ARITH
-    (mk_eq(mk_neg(mk_greater(x_tm, y_tm)), mk_geq(y_sub_x, zero_tm)))
+  val [pth_lt, pth_le, pth_gt, pth_ge, pth_eq,
+       pth_nlt, pth_nle, pth_ngt, pth_nge, _] =
+    CONJUNCTS (fetch "realax" "GEN_REAL_ARITH0_pth_init")
 
   fun norm_ineq th =
     let val tm = concl th
