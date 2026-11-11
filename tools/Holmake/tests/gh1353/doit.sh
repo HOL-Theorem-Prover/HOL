@@ -1,7 +1,18 @@
 #!/bin/bash
 
 cd testd
-ulimit -t 2
+# What is being tested is that Holmake's scan of a malformed script
+# terminates: github issue #1353 was a lookahead token the parser
+# took without clearing, so it recursed forever.  A loop is
+# unbounded, so any budget comfortably above the real cost separates
+# it from a healthy run, and the budget should be chosen for that
+# rather than for tightness.  This run wants about a third of a
+# second of CPU with the machine busy; two seconds looked generous
+# but is only six times that, and trips were turning up on loaded
+# machines with nothing looping -- reporting "slow" as "looped".
+# Sixty leaves a healthy run two orders of magnitude of room and
+# still fails inside a minute if the loop comes back.
+ulimit -t 60
 if [ "$#" -ne 2 ]
 then
     echo "Usage:"
@@ -13,7 +24,12 @@ holstate=$1
 holmake=$2
 
 echo "Running Holmake in testd directory"
-$holmake --holstate=$holstate
+# Wall alongside CPU, because the two together say what kind of
+# failure a trip is: a loop is CPU-bound, so its real time tracks its
+# user+sys, while a machine busy enough to make ordinary syscalls
+# expensive shows real time far above them.
+TIMEFORMAT='Holmake: real %3R  user %3U  sys %3S'
+time $holmake --holstate=$holstate
 
 retcode=$?
 echo "Holmake completed with code $retcode"
@@ -38,6 +54,13 @@ then
     # children's -- essentially all Holmake's -- second.
     echo "CPU used (line 1 = this script, line 2 = its children):"
     times
+    # Which binary this actually was.  Holmake is built by configure
+    # and by no Holmakefile rule, so bin/build will happily run a
+    # Holmake older than the sources it just compiled against -- it
+    # warns, but the warning is easily lost in a -j build.  Saying so
+    # here settles "was the fix even in?" without another run.
+    echo "Holmake binary under test:"
+    ls -l "$holmake"
     exit 1
 else
     exit 0

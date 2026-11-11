@@ -382,3 +382,8 @@ val thy = fetch "-" "cv_str_fmap_test_thm"
             |> dest_thy_const |> #Thy;
 
 val _ = (thy = "cv_string_fmap") orelse fail();
+
+val _ = testutils.convtest
+  ("cv_eval finite-set cardinality with duplicates", cv_eval,
+   “finite_set$fCARD (finite_set$fset_ABS [1; 2; 1; 3; 2] : num fset)”,
+   “3:num”);
