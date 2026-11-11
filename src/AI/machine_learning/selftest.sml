@@ -5,6 +5,13 @@ local open mlFeature mlMatrix mlNearestNeighbor mlNeuralNetwork
 
 open aiLib psTermGen mlTreeNeuralNetwork;
 
+(* split_string retries a character that ended a partial match *)
+val _ = testutils.tprint "aiLib.split_string after a partial match";
+val _ =
+  if split_string "Theory." "vyperASTTheory.expr_induction" =
+     ("vyperAST", "expr_induction")
+  then testutils.OK () else testutils.die "FAILED";
+
 (* operators *)
 val vx = mk_var ("x",alpha);
 val vy = mk_var ("y",alpha);
