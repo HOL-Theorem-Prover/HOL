@@ -13,11 +13,17 @@ load from this checkout, with separate processes for fresh kernel state and
 logs in the scratch dir.
 `compute-binder` also needs `cv_computeLib`.
 
+`run.sh` performs native export, converts both rulesets and runs the HOL
+checks. It does not run Candle. Actual Candle validation requires replaying
+the Candle outputs with their prerequisites and running the `.ml` checkers
+listed below in Candle.
+
 * `closedness` reproduces the closedness sentinel collision for a closed
   abstraction containing another closed abstraction. It also checks that an
   unvisited term retains its sentinel.
-* `oracle` reproduces lost hypotheses and synthetic binder capture in an
-  oracle-only sequent. The HOL checker compares the complete
+* `oracle` reproduces lost hypotheses, synthetic binder capture in an
+  oracle-only sequent and a local polymorphic constant first used at a
+  monomorphic type. A fresh minimal HOL checker compares the complete
   oracle sequent and retains both `oracle_hyps.pft.bin` and
   `oracle_hyps.candle.pft.bin`. After Candle replay, load `oracle-check-results.ml` and
   call `check_oracle_results ()` for the same exact sequent.

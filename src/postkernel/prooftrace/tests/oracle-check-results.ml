@@ -16,4 +16,12 @@ let check_oracle_results () =
   if hyp capture = [] && aconv (concl capture) (mk_eq (lam,lam)) then
     print_endline "PFT_ORACLE_CAPTURE_EXACT_PASS"
   else failwith "oracle abstraction captured a free variable";
+  let c = mk_const ("oracle_hyps$c",[]) in
+  List.iter (fun (name,ty) ->
+    let instance = inst [ty,mk_vartype "'a"] c in
+    let th = load_th ("oracle_hyps$" ^ name) in
+    if hyp th = [] && aconv (concl th) (mk_eq (instance,instance)) then ()
+    else failwith ("wrong polymorphic constant sequent: " ^ name))
+    ["POLY_BOOL",b; "POLY_FUN",mk_fun_ty b b];
+  print_endline "PFT_POLYMORPHIC_DECL_EXACT_PASS";
   print_endline "PFT_ORACLE_ALL_CHECKS_PASSED";;

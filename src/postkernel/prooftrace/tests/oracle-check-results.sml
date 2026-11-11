@@ -23,4 +23,14 @@ fun check_oracle_results db = let
     Term.aconv (Thm.concl capture) (eq lam lam) then
       print "PFT_ORACLE_CAPTURE_EXACT_PASS\n"
     else raise Fail "oracle abstraction captured a free variable"
+  fun check_poly (name,ty) = let
+    val c = Term.mk_thy_const {Thy="oracle_hyps",Name="c",
+      Ty=Type.--> (ty,ty)}
+    val th = valOf (PFTReplay.lookup db ("oracle_hyps$" ^ name))
+  in if null (Thm.hyp th) andalso Term.aconv (Thm.concl th) (eq c c)
+     then () else raise Fail ("wrong polymorphic constant sequent: " ^ name)
+  end
+  val () = List.app check_poly
+    [("POLY_BOOL",Type.bool),("POLY_FUN",Type.--> (Type.bool,Type.bool))]
+  val () = print "PFT_POLYMORPHIC_DECL_EXACT_PASS\n"
 in print "PFT_ORACLE_ALL_CHECKS_PASSED\n" end;

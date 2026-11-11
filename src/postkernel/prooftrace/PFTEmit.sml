@@ -116,6 +116,8 @@ fun emit_theory {trace, output, ruleset} = let
   val {const_name, type_name} = names heap root_ptr
   val {theory = thyname, all_thms, anon_thms, constants, types, ...} =
     shRoot heap root_ptr
+  val declared_const_types = Redblackmap.fromList String.compare
+    (list heap (tuple2 heap (str heap, I)) constants)
 
   (* --- Walk pass --------------------------------------------------------- *)
 
@@ -652,8 +654,16 @@ fun emit_theory {trace, output, ruleset} = let
         val ty_id = emit_type typ
         val qname = tr_name (Thy ^ "$" ^ Name)
         val () = if Thy = thyname andalso not (is_const_done qname)
-                 then (mark_const qname;
-                       PFTWriter.new_const out qname ty_id)
+                 then let
+                   (* A first occurrence may be a monomorphic instance. *)
+                   val declared =
+                     case Redblackmap.peek(declared_const_types, Name) of
+                       SOME ty => ty
+                     | NONE => typ
+                   val declared_id = emit_type declared
+                 in mark_const qname;
+                    PFTWriter.new_const out qname declared_id
+                 end
                  else ()
         val key = (qname, ty_id)
       in case const_lookup key of
