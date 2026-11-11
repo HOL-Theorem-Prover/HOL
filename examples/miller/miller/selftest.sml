@@ -1,6 +1,16 @@
 open HolKernel Parse boolLib bossLib testutils miller_rabinTools
+     miller_rabinTheory
 
 val _ = new_theory "scratch"
+
+val _ = tprint "Witness with modulus one"
+val _ = require (check_result (aconv ``witness 1 2`` o concl))
+                (fn t => prove (t,
+                   RW_TAC arith_ss
+                     [witness_def, Once factor_twos_def,
+                      expModTheory.exp_mod_binary_eqn, witness_tail_def] THEN
+                   RW_TAC arith_ss [witness_tail_def]))
+                ``witness 1 2``
 
 val prime_t = prim_mk_const{Name = "prime", Thy = "divides"}
 

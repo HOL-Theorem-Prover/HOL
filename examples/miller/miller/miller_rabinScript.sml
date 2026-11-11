@@ -4,7 +4,7 @@ Ancestors
   arithmetic group extra_num gcd divides extra_arith finite_group
   abelian_group num_poly extra_binomial binomial summation
   mult_group extra_real real seq state_transformer combin
-  real_probability prob prob_uniform
+  real_probability prob prob_uniform expMod
 Libs
   subtypeTools res_quanTools arithContext ho_proverTools
   listContext hurdUtils groupContext finite_groupContext
@@ -48,19 +48,6 @@ val (factor_twos_def, factor_twos_ind) = Defn.tprove
 val _ = save_thm ("factor_twos_def", factor_twos_def);
 val _ = save_thm ("factor_twos_ind", factor_twos_ind);
 
-val (modexp_def, modexp_ind) = Defn.tprove
-  let val d = Hol_defn "modexp"
-        `modexp n a b = if b = 0 then 1
-                        else let r = modexp n a (b DIV 2)
-                             in let r2 = (r * r) MOD n
-                             in if EVEN b then r2 else (r2 * a) MOD n`
-      val g = `measure (\(x,y,z). z)`
-  in (d, WF_REL_TAC g >> RW_TAC arith_ss [])
-  end;
-
-val _ = save_thm ("modexp_def", modexp_def);
-val _ = save_thm ("modexp_ind", modexp_ind);
-
 Definition witness_tail_def:   (witness_tail n a 0 = ~(a = 1))
   /\ (witness_tail n a (SUC r)
       = let a2 = (a * a) MOD n
@@ -70,7 +57,7 @@ End
 
 Definition witness_def:   witness n a
   = let (r, s) = factor_twos (n - 1)
-    in witness_tail n (modexp n a s) r
+    in witness_tail n (exp_mod_binary a s n) r
 End
 
 Definition miller_rabin_1_def:
@@ -124,41 +111,6 @@ Proof
     >> PROVE_TAC [EVEN_EXISTS]]
 QED
 
-Theorem MODEXP_CORRECT:
-     !n a b. 1 < n ==> (modexp n a b = (a EXP b) MOD n)
-Proof
-   recInduct modexp_ind
-   >> RW_TAC arith_ss []
-   >> ONCE_REWRITE_TAC [modexp_def]
-   >> Cases_on `b = 0` >- R_TAC [EXP]
-   >> AR_TAC []
-   >> Know `0 < n` >- DECIDE_TAC
-   >> STRIP_TAC
-   >> MP_TAC (CONJ (Q.SPEC `n` MOD_MULT1) (Q.SPEC `n` MOD_MULT2))
-   >> ASM_REWRITE_TAC []
-   >> DISCH_THEN
-      (fn th =>
-       RW_TAC std_ss [LET_DEF]
-       >> CONV_TAC
-          (DEPTH_CONV
-           (REWR_CONV (CONJUNCT1 th) ORELSEC REWR_CONV (CONJUNCT2 th)))
-       >> RW_TAC std_ss [GSYM EXP_ADD]) >|
-   [Suff `b DIV 2 + b DIV 2 = b` >- RW_TAC std_ss []
-    >> Suff `2 * (b DIV 2) = b` >- DECIDE_TAC
-    >> MP_TAC (Q.SPECL [`2`, `b`] DIVISION_ALT)
-    >> R_TAC []
-    >> Know `b MOD 2 = 0` >- RW_TAC std_ss [MOD_TWO]
-    >> RW_TAC arith_ss [],
-    Know `!m. m * a = m * a EXP 1` >- R_TAC []
-    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
-    >> RW_TAC std_ss [GSYM EXP_ADD]
-    >> Suff `b DIV 2 + b DIV 2 + 1 = b` >- RW_TAC std_ss []
-    >> Suff `2 * (b DIV 2) + 1 = b` >- DECIDE_TAC
-    >> MP_TAC (Q.SPECL [`2`, `b`] DIVISION_ALT)
-    >> R_TAC [MOD_TWO]
-    >> PROVE_TAC [MULT_COMM]]
-QED
-
 Theorem WITNESS_TAIL_CORRECT:
      !n a r s k.
        ODD s /\ (2 EXP r * s = n - 1) /\ 0 < a /\ a < n /\ k <= r /\
@@ -210,7 +162,7 @@ Proof
    >> Cases_on `factor_twos (n - 1)`
    >> Know `0 < n - 1` >- DECIDE_TAC
    >> STRIP_TAC
-   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, MODEXP_CORRECT]
+   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, exp_mod_binary_eqn]
    >> MP_TAC (Q.SPECL [`n`, `a`, `q`, `r`, `q`] WITNESS_TAIL_CORRECT)
    >> Simplify []
 QED
@@ -310,7 +262,7 @@ Proof
    >> Cases_on `factor_twos (n - 1)`
    >> Know `0 < n - 1` >- DECIDE_TAC
    >> Strip
-   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, MODEXP_CORRECT, WITNESS_TAIL_1]
+   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, exp_mod_binary_eqn, WITNESS_TAIL_1]
 QED
 
 Theorem NONWITNESS_1:
@@ -322,7 +274,7 @@ Proof
    >> Cases_on `factor_twos (n - 1)`
    >> Know `0 < n - 1` >- DECIDE_TAC
    >> Strip
-   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, MODEXP_CORRECT]
+   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, exp_mod_binary_eqn]
    >> MATCH_MP_TAC NONWITNESS_TAIL_1
    >> Q.EXISTS_TAC `q`
    >> Q.EXISTS_TAC `r`
@@ -344,7 +296,7 @@ Proof
    >> MP_TAC (Q.SPECL [`n - 1`, `r`, `s`] FACTOR_TWOS_CORRECT)
    >> ASM_REWRITE_TAC []
    >> DISCH_THEN (REWRITE_TAC o wrap)
-   >> RW_TAC std_ss [MODEXP_CORRECT]
+   >> RW_TAC std_ss [exp_mod_binary_eqn]
    >> MATCH_MP_TAC NONWITNESS_TAIL_2
    >> Q.EXISTS_TAC `r`
    >> Q.EXISTS_TAC `r`

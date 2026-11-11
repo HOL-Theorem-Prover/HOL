@@ -220,8 +220,16 @@ Incompatibilities
     use `expModTheory` for `exp_mod_binary`, `exp_mod_step`, their definitions,
     and their correctness equations. The `exp_mod_compute` wrapper and its
     theorems have been removed; use `exp_mod_binary` instead.
-    Elliptic's `field$modexp` has likewise been replaced by
-    `expMod$exp_mod_binary` in the prime-field computation theorems.
+    Elliptic's `field$modexp` and Miller–Rabin's `miller_rabin$modexp` have
+    likewise been replaced by `expMod$exp_mod_binary`. Miller–Rabin's witness
+    now uses the core function's value for modulus 1 and exponent 0: 0, not 1.
+    The old `MODEXP_CORRECT` and `MODEXP_ML` exports have been removed.
+    The ACL2 example's fuelled `modexpa` now takes a fifth argument, an
+    accumulator: use `modexpa b n a b 1` to compute `exp_mod_binary a b n`.
+    With zero fuel and nonzero modulus it returns `acc MOD n`, rather than
+    the old constant `1`; with modulus zero it follows the core expression
+    `(acc * a ** b) MOD 0`, regardless of fuel.
+
 -   `Term.subst` now fails if the same redex occurs more than once in its theta-list, whether or not the repeats map it to the same residue.
     Previously such a theta-list was silently resolved by letting the last entry win, which did not agree with the first-match lookup used while terms are being matched.
     Code that builds a substitution by hand and relies on the old behaviour can call the new `Lib.subst_keep_last`, which drops all but the last maplet for each redex.
