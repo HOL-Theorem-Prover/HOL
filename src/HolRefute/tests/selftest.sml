@@ -4554,6 +4554,21 @@ val _ = sound_group "real soundness" frac_bounds (List.map (fn (n, g) =>
 
 (* Named model-finder behaviours. *)
 
+val _ = mf_test "polymorphic box patterns box concrete function arguments"
+  (fn () =>
+    let
+      val goal = ``(f : (num -> bool) -> bool) p``
+      fun check configure expected =
+        refute (mf |> cards [1, 2] |> configure) goal
+        |> cex_where (fn c =>
+          Option.isSome (scope_of c ``:(num, bool) refute$funbox``)
+          = expected)
+    in
+      check I false andalso
+      check (upd_box [(SOME ``:num -> bool``, SOME true)]) true andalso
+      check (upd_box [(SOME ``:'a -> bool``, SOME true)]) true
+    end)
+
 val clean_certificate = certifies
 
 val _ = mf_level2 "polymorphic goals are certified at small scopes" (fn () =>

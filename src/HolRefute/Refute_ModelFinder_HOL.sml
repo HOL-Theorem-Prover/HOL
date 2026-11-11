@@ -4337,7 +4337,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     else
       false
   and should_box_type (context as {boxes, ...} : mf_context) position ty =
-    (case Refute_ModelFinder_Util.triple_lookup type_matches_unboxed
+    (case Refute_ModelFinder_Util.triple_lookup
+            (fn (actual, pattern) => type_matches_unboxed (pattern, actual))
             boxes ty of
          SOME (SOME box_me) => box_me
        | _ => is_boxing_worth_it context position ty)
