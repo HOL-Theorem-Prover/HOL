@@ -606,11 +606,13 @@ fun write_modules {theories, directory, base_state, output, limit} =
             [] => 0
           | needed => (mkdir output; loop (needed, 0))
       end
+      (* [theory] handles each theory's own failure, so a failure here
+         comes before any module was saved. *)
       handle e as Interrupt => PolyML.Exception.reraise e
            | e => (TextIO.output (TextIO.stdErr,
                                   "theory modules: " ^
                                   General.exnMessage e ^ "\n");
-                   !writes))
+                   0))
     | _ => 0
 
 val _ = Meta.moduleCacheConfigure := SOME configure
