@@ -67,22 +67,14 @@ structure HFS = HOLFileSys
 val loadpathdb =
     ref (Binarymap.mkDict String.compare : (string,string) Binarymap.dict)
 
-val moduleSourceLoader : ((string -> unit) -> string -> unit) ref =
-    ref (fn use => use)
-val moduleCacheConfigure :
-    ({directory : string, base_state : string} -> bool) option ref = ref NONE
-val moduleWriter :
-    ({theories : string list, directory : string, base_state : string,
-      output : string, limit : int} -> int) option ref = ref NONE
-
-fun quseWith sourceUse s = let
+fun quse s = let
   val _ = if HFS.access (s, [HFS.A_READ]) then ()
           else die ("Use: non-existent file "^s)
   val _ = MDBG (fn _ => "Call quse " ^ s)
   val full = OS.Path.mkCanonical
                (OS.Path.mkAbsolute{path = s, relativeTo = HFS.getDir()})
 in
-  sourceUse s ;
+  QUse.use s ;
   loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
 end handle
     OS.Path.Path => die ("Path exception in quse "^s)
@@ -90,14 +82,13 @@ end handle
     maybeWriteStderr("error in quse " ^ s ^ " : " ^ General.exnMessage e);
     PolyML.Exception.reraise e)
 
-fun myuseWith sourceUse f =
+fun myuse f =
   let val op ++ = OS.Path.concat
       val file = OS.Path.file f
       val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
-    (quseWith sourceUse f
-       handle e => (PolyML.print_depth pd; PolyML.Exception.reraise e));
+    (quse f handle e => (PolyML.print_depth pd; PolyML.Exception.reraise e));
     PolyML.print_depth pd
   end handle OS.Path.Path => die ("Path exception in myuse "^f)
 
@@ -190,45 +181,8 @@ in
     val meta_debug = meta_debug
     val quiet_load = quiet_load
     val loadPlan = load []
-    val qquse = myuseWith QUse.use o holpathdb.subst_pathvars
-    val load = loadPlan
-      (myuseWith (fn path => (!moduleSourceLoader) QUse.use path) o
-       holpathdb.subst_pathvars)
-    val moduleCacheConfigure = moduleCacheConfigure
-    val moduleSourceLoader = moduleSourceLoader
-    val moduleWriter = moduleWriter
-    (* How many theory modules a process may write as it loads theories
-       from .dat files; 0 makes the module cache read-only. *)
-    val theoryModuleWriteLimit = ref 8
-    (* Optional acceleration for generated theory initializers.  Older Poly/ML
-       runtimes and installations without the helper keep source loading. *)
-    fun moduleHelper () =
-      let
-        fun sub (ns : PolyML.NameSpace.nameSpace) name =
-                          Option.map PolyML.NameSpace.Structures.contents
-                          (#lookupStruct ns name)
-        val saveState = Option.mapPartial (fn ns => sub ns "SaveState")
-                          (sub PolyML.globalNameSpace "PolyML")
-        val supported =
-          case saveState of
-              NONE => false
-            | SOME ns =>
-              List.all (Option.isSome o #lookupVal ns)
-                ["showHierarchyWithIds", "saveDependentModuleBasic"]
-        val helper = HOLDIR ++ "tools-poly/poly/theory_modules.ML"
-      in
-        Option.isSome (!moduleCacheConfigure) orelse
-        (supported andalso HFS.access (helper, [HFS.A_READ]) andalso
-         (PolyML.use helper; Option.isSome (!moduleCacheConfigure)))
-      end
-    fun configureTheoryModuleCache options =
-      moduleHelper () andalso valOf (!moduleCacheConfigure) options
-    (* Writes, to [output], the modules of up to [limit] theories of a
-       load set ([theories], their FooTheory.sml paths in load order)
-       that [directory] lacks, from their .dat files alone; returns how
-       many it wrote. *)
-    fun writeTheoryModules options =
-      if moduleHelper () then valOf (!moduleWriter) options else 0
+    val qquse = myuse o holpathdb.subst_pathvars
+    val load = loadPlan qquse
     fun qload s = let
       val x = !quiet_load
       in quiet_load := true; load s; quiet_load := x end

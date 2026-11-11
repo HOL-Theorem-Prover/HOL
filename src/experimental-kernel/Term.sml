@@ -65,13 +65,6 @@ in
   Const(id, hty)
 end
 
-fun prim_load_const (k as {Thy,Name}) ty = let
-  val hty = if Type.polymorphic ty then POLY ty else GRND ty
-in
-  KernelSig.epoch_of (genupd_termsig (KernelSig.insert_sealed_const (k, hty))) =
-  KernelSig.canonical_const_epoch
-end
-
 fun uptodate_term tm = let
   fun recurse tmlist =
       case tmlist of

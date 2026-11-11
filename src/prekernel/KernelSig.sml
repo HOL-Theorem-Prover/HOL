@@ -58,26 +58,6 @@ struct
   fun next_alloc  () = Sref.gen_update alloc_counter  (fn n => (n + 1, n + 1))
   fun next_retire () = Sref.gen_update retire_counter (fn n => (n + 1, n + 1))
 
-  (* Canonical epochs, for types and constants of theories read from
-     disk.  Each set below holds the names that have been given its
-     epoch.  Like the counters, the sets live outside Context.t and are
-     private to this structure: a name receives each canonical epoch at
-     most once per process, whatever table it goes into, so no
-     snapshot/restore cycle or direct table update can make two
-     different entries share an id.  next_alloc only returns positive
-     numbers, so canonical ids never collide with counter stamps, and the
-     two epochs differ, so a type and a constant can share a name. *)
-  val canonical_type_epoch = 0
-  val canonical_const_epoch = ~1
-  val type_stamps : kernelname HOLset.set Sref.t =
-      Sref.new (HOLset.empty name_compare)
-  val const_stamps : kernelname HOLset.set Sref.t =
-      Sref.new (HOLset.empty name_compare)
-  fun take_stamp stamps n =
-      Sref.gen_update stamps
-        (fn ns => if HOLset.member (ns, n) then (ns, false)
-                  else (HOLset.add (ns, n), true))
-
   (* Session-level sealed-theories set.  A theory becomes sealed
      when it is exported or when it is loaded from disk in this
      session — from that point on no new mint or retire may target
@@ -222,41 +202,6 @@ struct
               thymap = thymap', retire_epoch = retire_epoch},
          id)
       end
-
-  (* Entries of a theory read from disk.  Such a theory's identity is
-     fixed by its file, so its ids can be the same in every process:
-     the first time a name is inserted this way it gets the canonical
-     epoch.  The theory must have no live entries; everything else is as
-     insert. *)
-  fun insert_sealed (stamps, canonical) (n as {Thy,Name}, v)
-                    (tab as KTab{thymap,...}) =
-      let
-        val () = sealed_check "insert_sealed" Thy
-        val () = case Symtab.lookup thymap Thy of
-                     SOME m => if Symtab.defined m Name then
-                                 raise Feedback.mk_HOL_ERR "KernelSig"
-                                   "insert_sealed"
-                                   (name_toString n ^ " is already present")
-                               else ()
-                   | NONE => ()
-        val KTab{retire_epoch,size,invmap,thymap} = tab
-        val id = {name = n,
-                  epoch = if take_stamp stamps n then canonical
-                          else next_alloc ()}
-        val thymap' =
-            Symtab.map_default (Thy,Symtab.make[(Name,(id,v))])
-                               (Symtab.update(Name,(id,v)))
-                               thymap
-        val invmap' = Symtab.insert_list equal (Name,Thy) invmap
-      in
-        (KTab{size = size + 1, invmap = invmap',
-              thymap = thymap', retire_epoch = retire_epoch},
-         id)
-      end
-  fun insert_sealed_type x =
-      insert_sealed (type_stamps, canonical_type_epoch) x
-  fun insert_sealed_const x =
-      insert_sealed (const_stamps, canonical_const_epoch) x
 
   fun listItems r =
       List.rev (foldl (fn (knm,v,A) => (knm,v) :: A) [] r)
