@@ -1167,6 +1167,7 @@ fun export_theory_return_hash () = let
             | _ => ());
            List.app commit_temp temps;
            Thm.mark_sealed thyname;
+           Tracing.record_signature {theory=thyname, hash=hash};
            mesg "done.\n";
            if !report_times then
              (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^

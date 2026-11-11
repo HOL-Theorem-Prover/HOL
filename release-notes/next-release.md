@@ -21,10 +21,6 @@ Contents
 New features
 ------------
 
--   `sptree` now provides `domain_list` to enumerate keys without constructing
-    key/value pairs, with `set_domain_list` proving its set is `domain` and
-    a standard CV translation in `cv_std`.
-
 -   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
 
     A type that recurses under an operator gets induction hypotheses stated through that operator's set function, which is correct but is not how a development states its own lemmas, so proofs normalise them by hand at every induction.
@@ -114,6 +110,15 @@ New features
 -   `goalStack` has `expandf_in` and `expand_listf_in`, which run a tactic in a given `Context.t` rather than in a snapshot of the live context; `expandf` and `expand_listf` are now these applied to `Context.snapshot()`.
     A prover installed with `Tactical.set_prover` can use them to run its steps in the context it is passed.
 
+-   `sptree` now provides `domain_list` to enumerate keys without constructing
+    key/value pairs, with `set_domain_list` proving its set is `domain` and
+    a standard CV translation in `cv_std`.
+
+-   CV evaluation now supports `fCARD` on finite sets of natural numbers.
+
+-   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
+    list by a strict upper bound on its sum.
+
 Bugs fixed
 ----------
 
@@ -152,6 +157,11 @@ Bugs fixed
     In long-running sessions the cache accumulated entries — both in number of cached goals and in the per-key list of `(context, result)` pairs under each goal — and `simp` invocations slowed down approximately linearly with session length, dominated by linear scans of the per-key list under `boolSyntax.F`.
     The cache now uses LRU eviction on the keyspace and a per-key list cap, with both bounds set at cache-creation time.
     See the `Cache.sig` header for the new `{capacity, per_key_cap}` constructor argument.
+
+-   `goalFrag.close_paren`, which `goalFrag.finish` uses to close any frames left open, closed a `REPEAT` frame by applying its body to the whole goal list until that failed.
+    Over an empty list nothing fails, so finishing a state where a repeat had solved every goal looped for ever; this hung the language server's try-tactic request with the cursor inside `rpt`'s argument.
+    It also stopped at the first goal the body failed on, where `REPEAT` carries on with the others.
+    It now closes the frame exactly as `close_repeat` does.
 
 -   metis's finite-model heuristic, which weights clauses by how often they hold in a model of the axioms, sampled its valuations from a single random generator created when `mlibModel` was loaded and never reset, and numbered its models from a counter with the same lifetime — a number that is hashed into the model's interpretation.
     Every metis call therefore started from whatever state the previous one left behind, so what a goal cost depended on what had been proved before it in the same session: repeats of one identical relevant-logic proof in a single process ranged from 0.5s to 40s, and the theory containing it built in either 5.6s or 32s depending only on how far the generator had advanced.
