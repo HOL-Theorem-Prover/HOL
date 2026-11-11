@@ -7,6 +7,8 @@ fun term_kind_check db = let
   val nested = Term.mk_abs(f,Term.mk_abs(f,x))
   val truth = Term.mk_thy_const {Thy="bool",Name="T",Ty=b}
   val closed = Term.mk_abs(f,truth)
+  val y = Term.mk_var("y",b)
+  val outer_reference = Term.mk_abs(x,Term.mk_abs(y,x))
   fun check (name,tm) = let
     val ty = Term.type_of tm
     val eq = Term.mk_thy_const
@@ -19,6 +21,7 @@ fun term_kind_check db = let
          else raise Fail ("term-kind sequent mismatch: " ^ name)
      | NONE => raise Fail ("missing term-kind export: " ^ name)
   end
-  val () = List.app check [("RENAME",nested),("SPEC",closed)]
+  val () = List.app check [("RENAME",nested),("SPEC",closed),
+    ("EMPTY_BINDER",outer_reference)]
   val _ = Term.mk_thy_const {Thy="pft_term_kinds",Name="unused",Ty=b}
 in print "TERM_KIND_HOL_ALL_EXACT_PASS\n" end;

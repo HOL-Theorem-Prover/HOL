@@ -21,6 +21,13 @@ val v = mk_var("v",bool);
 val witness = EXISTS (mk_exists(v,concl closed),T) closed;
 val specified = Thm.prim_specification ["unused"] witness;
 val () = save_exact "SPEC" (mk_eq(closed_abs,closed_abs)) specified;
+
+(* An empty cosmetic name is a legal variable name, not a CONST marker. *)
+val y = mk_var("y",bool);
+val empty_inner = Term.rename_bvar "" (mk_abs(y,x));
+val empty_outer = Term.rename_bvar "" (mk_abs(x,empty_inner));
+val () = save_exact "EMPTY_BINDER" (mk_eq(empty_outer,empty_outer))
+  (REFL empty_outer);
 val () = Theory.export_theory ();
 val () = print "TERM_KIND_ACTUAL_EXPORT_PASS\n";
 

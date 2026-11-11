@@ -407,20 +407,20 @@ fun emit_theory {trace, output, ruleset} = let
 
   (* Reverse lookup: PFT VAR term ID -> name.
      Populated by emit_var and emit_binder. *)
-  val var_names : string DArray.darray = DArray.new(4096, "")
+  val var_names : string option DArray.darray = DArray.new(4096, NONE)
 
   fun var_names_ensure id = let
     val sz = DArray.size var_names
-    fun pad 0 = () | pad n = (DArray.push(var_names, ""); pad (n - 1))
+    fun pad 0 = () | pad n = (DArray.push(var_names, NONE); pad (n - 1))
   in if id < sz then () else pad (id - sz + 1)
   end
 
   fun var_names_set id name =
-    (var_names_ensure id; DArray.update(var_names, id, name))
+    (var_names_ensure id; DArray.update(var_names, id, SOME name))
 
   fun var_name_of id =
     if id < DArray.size var_names then DArray.sub(var_names, id)
-    else ""
+    else NONE
 
   (* Memoized free variable computation for PFT terms.
      Returns set of (name, type_id) pairs free in the term. *)
@@ -451,17 +451,17 @@ fun emit_theory {trace, output, ruleset} = let
     let val p1 = if id < DArray.size tm_part1 then DArray.sub(tm_part1, id) else ~1
         val p2 = if id < DArray.size tm_part2 then DArray.sub(tm_part2, id) else ~1
     in if p1 < 0 then
-         (* VAR or CONST: check if it's a VAR by looking up var_names *)
-         let val name = var_name_of id
-         in if name = "" then empty_fv_set  (* CONST *)
-            else Redblackset.singleton name_ty_pft_cmp (name, pft_type_of id)
-         end
+         (* NONE is CONST; SOME "" is a legal empty-named VAR. *)
+         (case var_name_of id of
+            NONE => empty_fv_set
+          | SOME name =>
+              Redblackset.singleton name_ty_pft_cmp (name, pft_type_of id))
        else if pft_is_comb id then
          (* COMB *)
          Redblackset.union(pft_free_vars p1, pft_free_vars p2)
        else
          (* ABS: p1 is binder VAR, p2 is body *)
-         let val binder_name = var_name_of p1
+         let val binder_name = valOf (var_name_of p1)
              val binder_ty = pft_type_of p1
              val body_fvs = pft_free_vars p2
          in Redblackset.delete(body_fvs, (binder_name, binder_ty))

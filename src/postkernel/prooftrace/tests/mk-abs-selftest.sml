@@ -20,6 +20,9 @@ val () = if identity_phase = "produce" then let
     val () = if Term.aconv binder expected_binder then ()
              else raise Fail "unexpected source Mk_abs binder"
     val () = ignore (Theory.save_thm("RESULT",finish child))
+    val matching = Term.mk_abs(expected_binder,expected_binder)
+    val (_,body,finish) = Thm.Mk_abs (Thm.REFL matching)
+    val () = ignore (Theory.save_thm("MATCHING",finish body))
   in Theory.export_theory () end
   else let
     val () = PFTEmit.emit_theory
@@ -33,4 +36,28 @@ val () = if identity_phase = "produce" then let
     val () = if null (Thm.hyp th) andalso
                 Term.aconv (Thm.concl th) expected then ()
              else raise Fail "Mk_abs replay sequent mismatch"
+    val ops = ref []
+    fun skip _ = ()
+    fun instruction opcode (reader:PFTReader.stream_reader) = let
+      val desc = PFTOpcodes.lookup_desc PFTOpcodes.hol4_descs opcode
+      val () = List.app (fn _ => ignore (#readVarint reader ()))
+        (#results desc)
+      val _ = PFTReader.read_raw_args desc reader
+    in ops := #tag desc :: !ops end
+    val _ = PFTReader.read
+      {file="hol4/pft_mk_abs.pft.bin",binary=true,
+       format_handler={tyvar=skip,tyop=skip,var=skip,const=skip,
+         comb=skip,abs=skip,new_const=skip,new_type=skip,axiom=skip,
+         save=skip,load=skip,del=skip,del_range=skip},
+       ruleset_handler=instruction}
+    fun count tag = length (List.filter (fn s => s = tag) (!ops))
+    val () = if count "ABS_THM" = 1 andalso count "TRANS" = 1 andalso
+                count "Mk_abs" = 1 then ()
+             else raise Fail "Mk_abs converter chose the wrong instructions"
+    val x = Term.mk_var("x'",Type.bool)
+    val matching = Term.mk_abs(x,x)
+    val th = valOf (PFTReplay.lookup db "pft_mk_abs$MATCHING")
+    val () = if null (Thm.hyp th) andalso Term.aconv (Thm.concl th)
+                (mk_abs_eq matching matching) then ()
+             else raise Fail "matching Mk_abs replay sequent mismatch"
   in print "MK_ABS_HOL_EXACT_PASS\n" end;

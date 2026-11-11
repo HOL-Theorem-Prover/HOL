@@ -27,13 +27,15 @@ logs in the scratch dir.
   Replay the traced ancestors through `cv` with the logical and compute
   preambles, then run `compute-binder-check.ml` for the four exact sequents.
 * `term-kind` checks distinct COMB/ABS nodes with identical children during
-  substitution and specification. After replay of `bool` and the fixture,
+  substitution and specification, and empty-named binder capture. After replay
+  of `bool` and the fixture,
   run `term-kind-check.ml` in Candle, or call `term_kind_check db` from
   `term-kind-check.sml` in a minimal HOL session.
 * `mk-abs` reproduces a clashing cosmetic abstraction binder whose converted
   name differs from the raw proof's opened binder. It checks the exact sequent
   in a fresh minimal heap. The converter emits `ABS` and `TRANS` for the
-  mismatch; matching binders still use `Mk_abs`.
+  mismatch; matching binders still use `Mk_abs`. The test also checks those
+  instructions, so the replayer's compatibility repair cannot hide a failure.
 
 The `.ml` checkers run in Candle; their producer programs run in HOL.
 
