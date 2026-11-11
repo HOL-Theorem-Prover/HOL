@@ -243,9 +243,18 @@ local
   fun is_def cs tm =
     case total (fst o dest_var o lhs) tm of NONE => false | SOME c => mem c cs;
 
+  (* Type variables of the body that the witness's type lacks become
+     arguments of the Skolem constant, as in normalForms.MIN_CNF. *)
   fun iconst (cs,th) =
-    let val c = (genvar o type_of o fst o dest_exists o concl) th
-    in (fst (dest_var c) :: cs, SKOLEM_CONST_RULE c th)
+    let
+      val (v,body) = dest_exists (concl th)
+      val tys = subtract (type_vars_in_term body) (type_vars (type_of v))
+      val ws = map (genvar o type_of o mk_itself) tys
+      val c = genvar (foldr (fn (w,ty) => type_of w --> ty) (type_of v) ws)
+      val th = SKOLEM_CONST_RULE (list_mk_comb (c,ws)) th
+    in
+      (fst (dest_var c) :: cs,
+       INST (ListPair.map (fn (w,ty) => w |-> mk_itself ty) (ws,tys)) th)
     end;
 
   fun ithm (th,(cs,vths)) =

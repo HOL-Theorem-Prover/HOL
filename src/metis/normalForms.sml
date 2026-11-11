@@ -1457,8 +1457,16 @@ local
         end
       | NONE =>
         let
-          val c = genvar (type_of def_tm)
-          val def0 = foldl comb_beta (ASSUME (mk_eq (c,def_tm))) vs
+          (* Type variables of tm that def_tm's type lacks become
+             arguments of c, so each type instance of the definition
+             defines its own c. *)
+          val ws = map mk_itself
+                       (subtract (type_vars_in_term tm)
+                                 (type_vars (type_of def_tm)))
+          val wvs = map (genvar o type_of) ws
+          val wdef_tm = list_mk_abs (wvs, def_tm)
+          val c = genvar (type_of wdef_tm)
+          val def0 = foldl comb_beta (ASSUME (mk_eq (c,wdef_tm))) (ws @ vs)
           val def = SYM def0
           val def_th = GENL vs def0
           val defs = (def_tm,(vs,tm,def)) :: defs
