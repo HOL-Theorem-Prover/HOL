@@ -1699,6 +1699,45 @@ in
               (ho_match_term [] empty_tmset pat) obj
 end
 
+(* Arguments of an applied pattern variable that instantiate to the same
+   term. *)
+val _ = let
+  fun matches pat obj (tmS, tyS) =
+      aconv (rhs (concl (QCONV (DEPTH_CONV BETA_CONV)
+                               (Term.subst tmS (Term.inst tyS pat)))))
+            obj
+  val pat = ``(r:bool->bool->bool) x y ==> (x = y)``
+  val obj = ``(p /\ q) ==> (F = F)``
+  val pat2 = ``(r:bool->bool->bool) x x /\ x``
+  val obj2 = ``T /\ F``
+in
+  tprint "ho_match_term: applied pattern variable with equal arguments";
+  require_msg (check_result (matches pat obj)) subst_redexes_string
+              (ho_match_term [] empty_tmset pat) obj;
+  tprint "ho_match_term: applied pattern variable with a repeated argument";
+  require_msg (check_result (matches pat2 obj2)) subst_redexes_string
+              (ho_match_term [] empty_tmset pat2) obj2
+end
+
+(* Arguments merged by the type instantiation; built by hand, as the
+   parser unifies same-named frees. *)
+val _ = let
+  val xa = mk_var("x", Type.alpha)
+  val xb = mk_var("x", Type.beta)
+  val r = mk_var("r", Type.alpha --> Type.beta --> Type.bool)
+  val pat = list_mk_conj [list_mk_comb(r, [xa, xb]), mk_eq(xa, xa),
+                          mk_eq(xb, xb)]
+  val obj = ``T /\ (F = F) /\ (F = F)``
+  fun matches (tmS, tyS) =
+      aconv (rhs (concl (QCONV (DEPTH_CONV BETA_CONV)
+                               (Term.subst tmS (Term.inst tyS pat)))))
+            obj
+in
+  tprint "ho_match_term: arguments merged by the type instantiation";
+  require_msg (check_result matches) subst_redexes_string
+              (ho_match_term [] empty_tmset pat) obj
+end
+
 (* Instantiating a match's redexes can merge two of them: x:'a and x:'b
    are distinct variables that raw_match keeps apart, and both become
    x:bool once the match fixes the type variables.  The parser unifies
