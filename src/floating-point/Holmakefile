@@ -2,6 +2,9 @@ INCLUDES = ../real ../integer ../n-bit
 
 WORDS_SYNTAX = $(HOLDIR)/src/n-bit/wordsSyntax.uo
 
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
 TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
 
 # TwmTab.sml instantiates the Table functor for binary_ieeeLib; mosml
@@ -12,9 +15,6 @@ TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
 
 TwmTab.uo: TwmTab.sml $(TABLE_UID) $(dprot $(SIGOBJ)/HolKernel.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
-
-all: $(DEFAULT_TARGETS)
-.PHONY: all
 
 ifdef HOLBUILD
 all: link-to-sigobj

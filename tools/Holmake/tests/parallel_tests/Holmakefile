@@ -27,6 +27,7 @@ DIRNAMES = \
   commandmacros \
   condifeq \
   doublecrnl \
+  library_defaults \
   projclean_loop \
   h4pedant_config \
   projfile_basic \

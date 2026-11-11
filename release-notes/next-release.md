@@ -122,6 +122,10 @@ New features
 Bugs fixed
 ----------
 
+-   Default builds of `src/real` and `src/floating-point` built only table
+    helpers, leaving the libraries incomplete and unexported.
+    The fix restores `all` as the first target in both Holmakefiles.
+
 -   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
     Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.

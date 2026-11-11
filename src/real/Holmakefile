@@ -3,6 +3,9 @@ INCLUDES = ../integer ../hol88 ../pred_set/src/more_theories \
 
 TARGETS = $(subst prove_real_assumsTheory.uo,,$(DEFAULT_TARGETS))
 
+all:  selftest.exe $(TARGETS)
+.PHONY: all
+
 TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
 
 # These files instantiate the Table functor for SOSLib; mosml needs
@@ -20,9 +23,6 @@ IntPairTab.uo: IntPairTab.sml $(TABLE_UID)
 
 IntTripleTab.uo: IntTripleTab.sml $(TABLE_UID)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
-
-all:  selftest.exe $(TARGETS)
-.PHONY: all
 
 ifdef HOLBUILD
 all: link-to-sigobj

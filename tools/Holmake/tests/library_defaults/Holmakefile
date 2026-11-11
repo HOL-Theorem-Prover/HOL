@@ -1,0 +1,9 @@
+library-defaults-selftest.log: selftest.exe \
+    $(dprot $(HOLDIR)/src/real/Holmakefile) \
+    $(dprot $(HOLDIR)/src/floating-point/Holmakefile)
+	$(tee ./selftest.exe,$@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = library-defaults-selftest.log selftest.exe
