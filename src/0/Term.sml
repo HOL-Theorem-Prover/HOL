@@ -56,13 +56,6 @@ fun prim_new_const (k as {Thy,Name}) ty = let
 in
   Const(id, hty)
 end
-
-fun prim_load_const (k as {Thy,Name}) ty = let
-  val hty = if Type.polymorphic ty then POLY ty else GRND ty
-in
-  KernelSig.epoch_of (genupd_termsig (KernelSig.insert_sealed_const (k, hty))) =
-  KernelSig.canonical_const_epoch
-end
 fun del_segment s =
     if KernelSig.is_sealed_thy s then
       raise ERR "del_segment"

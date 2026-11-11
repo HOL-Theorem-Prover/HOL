@@ -100,9 +100,6 @@ sig
 
   val prim_new_const    : KernelSig.kernelname -> hol_type -> term
   val prim_delete_const : KernelSig.kernelname -> unit
-  (* prim_new_const for a theory read from disk (KernelSig.insert_sealed_const);
-     returns whether the constant got the canonical epoch *)
-  val prim_load_const   : KernelSig.kernelname -> hol_type -> bool
 
   (* printed theory functionality *)
   val read_raw : term vector -> string -> term
