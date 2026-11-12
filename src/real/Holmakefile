@@ -11,6 +11,9 @@ TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
 # filter, so the tables live here rather than in SOSLib.sml, which
 # contains HOL quotations.
 
+all:  selftest.exe $(TARGETS)
+.PHONY: all
+
 MonoTab.uo: MonoTab.sml $(TABLE_UID) $(dprot $(SIGOBJ)/Termtab.ui) \
             $(dprot $(SIGOBJ)/HolKernel.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
@@ -20,9 +23,6 @@ IntPairTab.uo: IntPairTab.sml $(TABLE_UID)
 
 IntTripleTab.uo: IntTripleTab.sml $(TABLE_UID)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
-
-all:  selftest.exe $(TARGETS)
-.PHONY: all
 
 ifdef HOLBUILD
 all: link-to-sigobj

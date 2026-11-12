@@ -81,6 +81,12 @@ New features
 
     See the *Project files* sub-section of *Maintaining HOL Formalizations with Holmake* in the DESCRIPTION manual.
 
+-   `tools/h4pedant` now also checks `Holmakefile`s: a `Holmakefile` that declares an `all` rule must leave `all` as the directory's *default goal*, which is to say `all` must be its first explicit target.
+    Because `Holmake` builds that first target when given none on the command line — and because `src/parallel_builds/core` reaches most of `src/` recursively with `CLINE_OPTIONS = -r`, which asks each included directory for exactly its default goal — a rule written above `all` silently reduces a directory to building that one rule's target.
+    Nothing fails when this happens; the directory just builds less than it owes, and what goes missing is whatever nothing else depends on, typically its self-test.
+    A `Holmakefile` with no `all` rule has nothing to demote and is not checked.
+    The check is disabled for a subtree with `default_goal_ok = true` under `[h4pedant]` or `[[h4pedant.dir]]`, and globally with `--nodefaultgoal`.
+
 -   Holmake now uses recorded build times to do its parallel scheduling of build tasks.
     This can make a big difference to wall clock times when building big projects.
     Further, a project can now commit a *seed* of build times for this purpose, so that a fresh checkout schedules well before it has measured anything itself.
@@ -121,6 +127,9 @@ New features
 
 Bugs fixed
 ----------
+
+-   Omega's model reconstruction no longer fails when eliminating a variable
+    leaves a single constrained variable and another unconstrained variable.
 
 -   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
@@ -175,9 +184,17 @@ Bugs fixed
     `mkFileline` now reads the text once, keeping the offsets of its newlines and the position after each `#(FILE=…)` / `#(LINE=…)` pragma, and answers each query by binary search; the same files now scan 0.9 million characters and take 2.2s.
     Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
 
+-   The language server's 30-second backstop on a goal-state or try-tactic answer could fail to fire, leaving the server unresponsive to every later request.
+    Its single interrupt was caught by the pretty-printing of the answer, which renders as empty on any error, so a rendering that looped ran on unbounded.
+    The pretty-printer now lets the interrupt through, and the request answers with a timeout instead.
+    
 -   Loading a theory merged its parents' simpsets, grammars and other ancestry-based data by walking each parent's whole ancestry again and decoding every parent list on the way, once per kind of data.
     Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors now takes about half the CPU time it did.
     What is merged, and in what order, is unchanged.
+
+-   `DefnBase.current_userdefs` and `DefnBase.thy_userdefs` failed with a `prim_mk_const` error in any session that had defined a function with recursion or complex patterns.
+    TFL registers the support definitions it makes on the way (the `_tupled` one, for example) as user definitions and then deletes their constants once the real definition is made, so the table of user definitions kept entries for constants that no longer existed.
+    Such entries are now skipped.
 
 New theories
 ------------
@@ -208,6 +225,11 @@ New examples
 -   The algebra examples now connect fields to the HOL Light-compatible
     ring interface, with inverse laws and a homogeneous-coordinate
     denominator-clearing example checked by `ringLib.RING_TAC`.
+
+-   `examples/algebra/primality` provides kernel-checked Lucas primality
+    certificates, using the shared `expMod` implementation and its `cv_std`
+    translations, with examples for elliptic-curve primes. Decimal certificate
+    keys are normalized before lookup, including keys with leading zeros.
 
 -   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 

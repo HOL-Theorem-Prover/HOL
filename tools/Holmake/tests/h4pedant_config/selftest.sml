@@ -231,3 +231,105 @@ val _ = deeper_wins_case
 val _ = tprint "[[h4pedant.dir]] deeper override wins (mirror direction)"
 val _ = deeper_wins_case
           { parent_ok = false, child_ok = true, expect_success = true }
+
+(* --- Holmakefile default-goal check ------------------------------- *)
+
+(* Given no target on the command line, Holmake builds the first
+   explicit non-.PHONY target of the directory's Holmakefile, so a
+   rule written above `all` quietly becomes the whole of what that
+   directory builds.  The check flags exactly that shape: a
+   Holmakefile that declares `all` but does not leave it as the
+   default goal.  A directory with no `all` to demote is not its
+   business, and neither is one with no Holmakefile.
+
+   `linelen = 0` throughout: these fixtures are about the Holmakefile,
+   and the lexical checks have their own cases above. *)
+fun goal_case { hmf, toml_extra, args, expect_success, msg } =
+    let
+      val root = fresh_dir ()
+      val sub = root ++ "sub"
+      val _ = OS.FileSys.mkDir sub
+      val _ = case hmf of
+                  NONE => ()
+                | SOME contents => write_file (sub ++ "Holmakefile") contents
+      val _ = write_file (root ++ "holproject.toml")
+        ("holmake = false\n\
+         \\n\
+         \[h4pedant]\n\
+         \linelen = 0\n" ^ toml_extra)
+      val r = run_h4pedant_in root args
+    in
+      (if OS.Process.isSuccess r = expect_success then OK ()
+       else die ("FAILED: " ^ msg));
+      rm_rf root
+    end
+
+(* `all` first: the shape every library directory is supposed to have. *)
+val _ = tprint "default goal: `all` first is accepted"
+val _ = goal_case {
+      hmf = SOME "all: zzz.uo\n.PHONY: all\n\nzzz.uo: zzz.sml\n\ttouch $@\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "`all` as the first rule should not be flagged" }
+
+(* The regression this whole check exists for. *)
+val _ = tprint "default goal: a rule above `all` is flagged"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = [], expect_success = false,
+      msg = "a rule preceding `all` should be flagged" }
+
+(* No `all` means nothing was demoted; directories organised around
+   link-to-sigobj (src/float, src/update) legitimately look like this. *)
+val _ = tprint "default goal: a Holmakefile with no `all` is accepted"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "a Holmakefile declaring no `all` should not be flagged" }
+
+val _ = tprint "default goal: a directory with no Holmakefile is accepted"
+val _ = goal_case {
+      hmf = NONE, toml_extra = "", args = [], expect_success = true,
+      msg = "a directory without a Holmakefile should not be flagged" }
+
+(* `.PHONY: all` names `all` as a prerequisite, not as a target, so it
+   must not itself become the default goal -- src/postkernel/prooftrace
+   opens with exactly this line. *)
+val _ = tprint "default goal: a leading `.PHONY: all` is not the goal"
+val _ = goal_case {
+      hmf = SOME ".PHONY: all\n\nall: zzz.uo\n\nzzz.uo: zzz.sml\n\ttouch $@\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "`.PHONY: all` above `all` should not count as a rule" }
+
+(* The check parses with HOLBUILD forced on, because that is what a
+   build sets and because link-to-sigobj rules live behind it. *)
+val _ = tprint "default goal: a rule inside `ifdef HOLBUILD` is seen"
+val _ = goal_case {
+      hmf = SOME "ifdef HOLBUILD\nzzz.uo: zzz.sml\n\ttouch $@\nendif\n\
+                 \\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = [], expect_success = false,
+      msg = "a rule above `all` behind ifdef HOLBUILD should be flagged" }
+
+(* Both opt-outs, over the flagged shape. *)
+val _ = tprint "default goal: `default_goal_ok` silences the check"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "\n[[h4pedant.dir]]\n\
+                   \path = \"sub\"\n\
+                   \default_goal_ok = true\n",
+      args = [], expect_success = true,
+      msg = "default_goal_ok = true should silence the check" }
+
+val _ = tprint "default goal: --nodefaultgoal silences the check"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = ["--nodefaultgoal"], expect_success = true,
+      msg = "--nodefaultgoal should silence the check" }
+
+(* Forcing the conditionals open can reach branches a real build never
+   takes, so an unparseable Holmakefile is reported on stderr and
+   passed over rather than failing the run. *)
+val _ = tprint "default goal: an unparseable Holmakefile does not fail"
+val _ = goal_case {
+      hmf = SOME "include no-such-file.mk\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "an unparseable Holmakefile should be skipped, not flagged" }
