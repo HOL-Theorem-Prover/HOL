@@ -28,6 +28,22 @@ fun get_subdirs d =
     end
 
 
+(* True if d holds a file.  Under an artifact root, a directory's
+   artifact directories also hold those of its subdirectories, so
+   their existence alone does not show that d was built. *)
+fun has_file d =
+    let val ds = OS.FileSys.openDir d
+        fun loop () =
+            case OS.FileSys.readDir ds of
+                NONE => false
+              | SOME f =>
+                not (OS.FileSys.isDir (OS.Path.concat(d, f))
+                     handle OS.SysErr _ => true)
+                orelse loop ()
+    in
+      loop () before OS.FileSys.closeDir ds
+    end handle OS.SysErr _ => false
+
 fun traverse ignores wlist A =
     case wlist of
         [] => A
@@ -40,16 +56,10 @@ fun traverse ignores wlist A =
             val children = List.filter goodWRTIgnores children0
             open OS.FileSys
         in
-          if smlp then
-            let val dstrm =
-                    openDir (HFS_NameMunge.logdir_for d)
-                    handle OS.SysErr _ =>
-                           openDir (HFS_NameMunge.objdir_for d)
-            in
-              closeDir dstrm;
-              traverse ignores (children :: ds :: Ds) A
-            end handle OS.SysErr _ =>
-                       traverse ignores (children :: ds :: Ds) (d :: A)
+          if smlp andalso
+             not (has_file (HFS_NameMunge.logdir_for d) orelse
+                  has_file (HFS_NameMunge.objdir_for d))
+          then traverse ignores (children :: ds :: Ds) (d :: A)
           else traverse ignores (children :: ds :: Ds) A
         end
 

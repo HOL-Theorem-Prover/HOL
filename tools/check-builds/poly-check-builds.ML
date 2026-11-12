@@ -18,10 +18,9 @@ open check_builds
 fun main() =
     let val (ignoring_file, args) = handleArgs (CommandLine.arguments())
         val ignores = case ignoring_file of NONE => [] | SOME f => readIgnores f
-        val _ = configure_layout (case args of
-                                      [d :: _] => d
-                                    | _ => OS.FileSys.getDir())
-        val problem_dirs0 = traverse ignores args []
+        (* Each directory may belong to a different project. *)
+        fun scan (d, A) = (configure_layout d; traverse ignores [[d]] A)
+        val problem_dirs0 = List.foldl scan [] (List.concat args)
         val cpfx = commonPrefix problem_dirs0
         val n = size cpfx
         val problem_dirs = if cpfx = "/" orelse length problem_dirs0 = 1 then

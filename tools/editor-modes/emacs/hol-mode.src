@@ -1302,12 +1302,12 @@ offers any dumped-heap candidates in DIR via `hol--prompt-heap'."
                        (match-beginning 0)
                      (point-max)))))
         (when (re-search-forward
-               (concat "^[ \t]*objroot[ \t]*=[ \t]*"
+               (concat "^[ \t]*\\([\"']?\\)objroot\\1[ \t]*=[ \t]*"
                        "\\(?:\"\\([^\"]*\\)\"\\|'\\([^']*\\)'\\)")
                end t)
           (replace-regexp-in-string
            (regexp-quote "$(HOLDIR)") (directory-file-name hol-dir)
-           (or (match-string 1) (match-string 2)) t t))))))
+           (or (match-string 2) (match-string 3)) t t))))))
 
 (defun hol--lastmaker-path (dir)
   "The lastmaker file Holmake writes for DIR, following its artifact layout.
