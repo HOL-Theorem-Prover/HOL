@@ -182,6 +182,8 @@ val oldrep = Term.prim_new_const
   {Thy="identity_type_names",Name=Globals.oldify epoch "retired" ^ "_rep"} bool;
 val result = identity_keep olddef (identity_keep (REFL oldabs)
   (identity_keep (REFL oldrep) (identity_keep (REFL late) (CONJUNCT1 bij))));
+(* Unrelated live foreign symbols need no recorded import origin. *)
+val _ = Term.prim_new_const {Thy="unused",Name="x"} bool;
 val () = check_type_names_result result;
 val _ = save_thm("RESULT",result);
 val () = export_theory ();

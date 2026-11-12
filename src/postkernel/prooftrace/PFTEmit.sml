@@ -131,8 +131,11 @@ fun emit_theory {trace, output, ruleset} = let
     (string, Type.hol_type ptr) Redblackmap.dict ref =
     ref (Redblackmap.mkDict String.compare)
 
-  val () = if is_candle then
-      appList heap (ignore o const_name) const_ids else ()
+  (* Unreached live symbols need no import-origin validation. *)
+  val () = if is_candle then appList heap (fn p => let
+      val (thy,nm,_) = ident heap p
+    in const_names := add(!const_names, tr_name (thy ^ "$" ^ nm)) end)
+      const_ids else ()
   fun fresh_const_name name =
     if member(!const_names, name) then fresh_const_name (name ^ "'")
     else (const_names := add(!const_names, name); name)
