@@ -29,12 +29,21 @@ fun succeed s = (print (s^"\n"); OS.Process.exit OS.Process.success)
 
 type checkfn = bool -> string -> int -> (string * Substring.substring) -> bool
 
+(* A check that looks at a directory rather than at a line: run once
+   per directory visited, returning SOME (subject, detail) when that
+   directory is in violation.  The check names its own subject file so
+   that the runner stays generic. *)
+type dircheckfn = string -> (string * string) option
+
+datatype check = LineCheck of checkfn
+               | DirCheck of dircheckfn
+
 type t = {
   chattiness : int,
   config_opt : h4pedantConfig.config option,
   files_wmatches : bool,
   help : bool,
-  tests : (string * (checkfn * string)) list
+  tests : (string * (check * string)) list
 };
 
 
@@ -139,6 +148,60 @@ fun check_twspace qp fname linenum (line,ss) =
     else true
   end
 
+(* Holmake takes the first explicit non-.PHONY target of a Holmakefile
+   as that directory's default goal, and ReadHMF hands it back as the
+   fourth component of a parse.  A rule written above `all` therefore
+   demotes it silently: a bare `Holmake` here -- and every parent that
+   reaches this directory under `CLINE_OPTIONS = -r`, which is how
+   src/parallel_builds/core reaches most of src/ -- then builds that
+   one rule's target instead of `all`.  Nothing fails; the directory
+   just builds less than it owes, and what gets dropped is whatever no
+   other directory depends on, typically the selftest.  Ask ReadHMF
+   for the goal it computed rather than re-deriving it, so that .PHONY
+   filtering, pattern rules, variable expansion and conditionals are
+   decided by the parser that actually decides them. *)
+fun default_goal_violation dname =
+  let
+    val hmf = OS.Path.concat(dname, "Holmakefile")
+    fun unparseable msg =
+        (* Forcing the conditionals open below can reach branches a
+           real build never takes, so failing to parse here is not
+           evidence of a style problem.  Say so on stderr -- stdout is
+           the violation stream -- and let the directory pass. *)
+        (warn (hmf ^ ": skipped default-goal check: " ^ msg); NONE)
+  in
+    if not (OS.FileSys.access(hmf, [OS.FileSys.A_READ])) then NONE
+    else
+      let
+        (* `all` and the rules that can precede it both routinely sit
+           inside these conditionals, and a build does set them, so
+           force them open -- the same device, for the same reason, as
+           buildutils' hmakefile_data. *)
+        fun ext (k,v) e =
+            Holmake_types.env_extend (k, [Holmake_types.LIT v]) e
+        val env = ext ("HOLBUILD", "1")
+                      (ext ("HOLSELFTESTLEVEL", "3")
+                           (Holmake_types.base_environment()))
+        val quiet : internal_functions.diags =
+            {info = fn _ => (), warn = fn _ => (),
+             die = fn s => raise internal_functions.HolmakeError s}
+        (* $(DEFAULT_TARGETS) is a lazy $(wildcard *.sml) over the
+           process cwd, so the parse has to happen inside `dname`;
+           pushdir restores the cwd even when the parse raises. *)
+        val (_, rdb, _, tgt1) =
+            Holmake_tools.pushdir dname
+              (fn () => ReadHMF.diagread quiet "Holmakefile" env) ()
+      in
+        case (Binarymap.peek(rdb, "all"), tgt1) of
+            (SOME _, SOME t) =>
+              if t = "all" then NONE else SOME (hmf, t)
+          | _ => NONE
+      end
+      handle Fail msg => unparseable msg
+           | internal_functions.HolmakeError msg => unparseable msg
+           | OS.SysErr (msg, _) => unparseable msg
+  end
+
 fun inc k m =
   case Binarymap.peek(m,k) of
       NONE => Binarymap.insert(m,k,1)
@@ -147,6 +210,10 @@ fun inc k m =
 fun checkfile (opts as {chattiness,files_wmatches,...}:t) sofar fname =
   let
     val istrm = TextIO.openIn fname
+    val linechecks =
+        List.mapPartial (fn (_, (LineCheck f, tag)) => SOME (f, tag)
+                          | _ => NONE)
+                        (#tests opts)
     fun recurse linenum tags sofar =
       case TextIO.inputLine istrm of
           NONE =>
@@ -164,13 +231,13 @@ fun checkfile (opts as {chattiness,files_wmatches,...}:t) sofar fname =
           let
             val ss = Substring.full line
             val qp = (chattiness = 0) orelse files_wmatches
-            fun foldthis ((_, (f, tag)), (b, tags)) =
+            fun foldthis ((f, tag), (b, tags)) =
               let
                 val b' = f qp fname linenum (line,ss)
               in
                 (b andalso b', if not b' then inc tag tags else tags)
               end
-            val (c, tags) = List.foldl foldthis (true, tags) (#tests opts)
+            val (c, tags) = List.foldl foldthis (true, tags) linechecks
           in
             if not c andalso chattiness = 0 then
               (TextIO.closeIn istrm; false)
@@ -212,6 +279,8 @@ fun derive_tests opts_tests (pd : h4pedantConfig.per_dir) =
       val ts =
           if #unicode_ok pd then remove_test "unicode" opts_tests
           else opts_tests
+      val ts =
+          if #default_goal_ok pd then remove_test "default_goal" ts else ts
       val limit = #linelen pd
     in
       if not (List.exists (fn (s, _) => s = "linelength") ts) then ts
@@ -220,7 +289,8 @@ fun derive_tests opts_tests (pd : h4pedantConfig.per_dir) =
         List.map
           (fn entry as (s, _) =>
               if s = "linelength" then
-                ("linelength", (mk_check_length limit, "Line too long"))
+                ("linelength",
+                 (LineCheck (mk_check_length limit), "Line too long"))
               else entry)
           ts
     end
@@ -243,9 +313,31 @@ fun is_excluded_path (opts : t) path =
         NONE => false
       | SOME cfg => h4pedantConfig.is_excluded cfg path
 
+(* Run the directory-level checks for `dname`.  Reports keep the
+   per-file message shape minus the line number, which ReadHMF does
+   not report: "<subject>: <tag>: <detail>". *)
+fun run_dirchecks (opts as {chattiness,files_wmatches,...}:t) dname sofar =
+  let
+    fun foldthis ((_, (c, tag)), acc) =
+        case c of
+            LineCheck _ => acc
+          | DirCheck f =>
+            (case f dname of
+                 NONE => acc
+               | SOME (subject, detail) =>
+                 (if files_wmatches then
+                    print (subject ^ ": " ^ tag ^ "(1)\n")
+                  else if chattiness = 0 then ()
+                  else print (subject ^ ": " ^ tag ^ ": " ^ detail ^ "\n");
+                  false))
+  in
+    List.foldl foldthis sofar (#tests opts)
+  end
+
 fun do_dirstream opts dname ds sofar wlist =
   let
     val opts_here = opts_for_dir opts dname
+    val sofar = run_dirchecks opts_here dname sofar
     fun recurse sofar dworklist =
       case OS.FileSys.readDir ds of
           NONE => (OS.FileSys.closeDir ds; (sofar, dworklist))
@@ -297,12 +389,16 @@ val default : t =
     { help = false, chattiness = 1, config_opt = NONE,
       files_wmatches = false,
       tests =
-        [("unicode", (check_unicode, "Unicode present")),
-         ("tabs", (check_tabs, "TAB present")),
+        [("unicode", (LineCheck check_unicode, "Unicode present")),
+         ("tabs", (LineCheck check_tabs, "TAB present")),
          ("linelength",
-          (mk_check_length (#linelen h4pedantConfig.builtin_default),
+          (LineCheck
+             (mk_check_length (#linelen h4pedantConfig.builtin_default)),
            "Line too long")),
-         ("trailing_wspace", (check_twspace, "Trailing whitespace"))]
+         ("trailing_wspace",
+          (LineCheck check_twspace, "Trailing whitespace")),
+         ("default_goal",
+          (DirCheck default_goal_violation, "Default goal not all"))]
     }
 
 fun fupdtests f t = updateT t (U #tests (f (#tests t))) $$
@@ -315,6 +411,9 @@ in
      desc = NoArg (fn () => fupdbool #help true)},
     {help = "Just print files with problems", long = ["files-with-matches"],
      short = "l", desc = NoArg (fn () => fupdbool #files_wmatches true)},
+    {help = "No Holmakefile default-goal check",
+     long = ["nodefaultgoal"], short = "",
+     desc = NoArg (fn () => fupdtests (remove_test "default_goal"))},
     {help = "No line-length check", long = ["nolinelen"], short = "",
      desc = NoArg (fn () => fupdtests (remove_test "linelength"))},
     {help = "be less chatty", long = ["quiet"], short = "q",

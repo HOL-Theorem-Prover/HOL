@@ -1,10 +1,40 @@
 
 open HolKernel Parse boolLib bossLib cvTheory cv_repTheory cv_primTheory;
-open cv_string_fmapTheory;
+open cv_string_fmapTheory cv_stdTheory;
 open cv_typeTheory cv_typeLib cv_repLib cv_transLib;
 open arithmeticTheory integerTheory wordsTheory sptreeTheory wordsLib;
 
 val _ = new_theory "scratch"
+
+(* These use translations restored from cv_std, before translating locally. *)
+val _ = List.app
+  (fn (tm, expected) =>
+    testutils.convtest ("cv_eval: " ^ term_to_string tm,
+                       cv_eval, tm, expected))
+  [(“exp_mod_binary 3 10 17”, “8:num”),
+   (“exp_mod_binary 3 11 17”, “7:num”),
+   (“exp_mod_binary 3 0 17”, “1:num”),
+   (“exp_mod_binary 0 0 17”, “1:num”),
+   (“exp_mod_binary 0 7 17”, “0:num”),
+   (“exp_mod_binary 3 5 0”, “243:num”),
+   (“exp_mod_binary 3 0 0”, “1:num”),
+   (“exp_mod_binary 3 0 1”, “0:num”),
+   (“exp_mod_binary 3 12 1”, “0:num”),
+   (“exp_mod_step 3 10 17 5”, “6:num”),
+   (“exp_mod_step 3 11 17 5”, “1:num”),
+   (“exp_mod_step 3 0 17 123”, “4:num”),
+   (“exp_mod_step 3 10 17 0”, “0:num”),
+   (“exp_mod_step 3 5 0 5”, “1215:num”),
+   (“exp_mod_binary 3 1000000000000000000000000000001 17”, “3:num”)]
+
+val use_exp_mod_def = Define ‘
+  use_exp_mod b e m = exp_mod_binary b e m
+’
+
+val _ = cv_trans use_exp_mod_def
+val _ = testutils.convtest
+  ("cv_trans: reuse modular exponentiation", cv_eval,
+   “use_exp_mod 3 1000000000000000000000000000001 17”, “3:num”)
 
 (*---------------------------------------------------------------------------*
   Testing only cv_type

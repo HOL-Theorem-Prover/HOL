@@ -547,6 +547,40 @@ val _ =
       else die ("proved " ^ term_to_string (concl th))
     end
 
+(* `finish' closes whatever is still open with `close_paren', which
+   used to repeat a `Repeat' frame's body over the whole goal list
+   until it failed.  Over no goals nothing fails, so a repeat whose
+   body had solved everything looped: the failure mode is a hang. *)
+val _ = tprint "finish closes an open repeat that solved its goal"
+val _ =
+    let
+      val tm = “p ⇒ p”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = goalFrag.open_repeat (goalFrag.new_goal ([], tm))
+      val th = goalFrag.finish
+                 (ex (STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC) st)
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end
+
+(* And the whole-list version stopped as soon as any one goal failed,
+   which REPEAT does not: it carries on with every goal where the
+   body still applies. *)
+val _ = tprint "close_paren repeats goal by goal, as close_repeat does"
+val _ =
+    let
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = goalFrag.open_repeat
+                 (goalFrag.new_goal ([], “(a ∧ b) ∧ c”))
+      val gs = goalFrag.top_goals (goalFrag.close_paren (ex CONJ_TAC st))
+    in
+      if length gs = 3 then OK()
+      else die (Int.toString (length gs) ^ " goals")
+    end
+
 (* The three things the goal state is made of are also asked for one at
    a time: a client that pins the first two above a scrolling view of
    the third would otherwise show them twice.  See `focus_note' and
