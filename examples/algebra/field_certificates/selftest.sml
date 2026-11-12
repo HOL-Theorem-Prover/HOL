@@ -55,6 +55,8 @@ val _ = reject "Reject a different coefficient field" remainder
 val _ = reject "Reject a different modulus" remainder
   ``poly_mod (GF 3) [2n;0;1] [2n;0;1]``;
 val _ = reject "Reject non-polynomial input" remainder ``3n``;
+val _ = reject "Reject an out-of-carrier dividend coefficient" remainder
+  ``poly_mod (GF 3) [0n;0;3] [1n;0;1]``;
 
 val _ = reject "Reject a hypothetical primality theorem"
   (fn tm => polynomialCertificateLib.REMAINDER_CONV

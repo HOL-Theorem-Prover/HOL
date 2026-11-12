@@ -1,0 +1,16 @@
+INCLUDES = ../.. ../../../field_certificates
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo ellipticCertificateLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: elliptic-certificates-selftest.log
+
+elliptic-certificates-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+EXTRA_CLEANS = selftest.exe elliptic-certificates-selftest.log

@@ -7,7 +7,8 @@ sig
   (* Capture once for repeated bounded calculations in a certificate context. *)
   val BOUNDED_CONV : unit -> Abbrev.conv
   (* With prime p and modulus f, prove poly_mod (GF p) a f = b by checking
-     a quotient/remainder identity. f must be monic and have positive degree. *)
+     a quotient/remainder identity. f must be monic and have positive degree.
+     The normalized dividend must satisfy Poly (GF p) before ML division. *)
   val REMAINDER_CONV : Thm.thm -> Term.term -> Abbrev.conv
   (* Prove the remainder of (PolyRing (GF p)).prod.exp a n for literal n,
      using binary powering and checked bounded remainders. *)

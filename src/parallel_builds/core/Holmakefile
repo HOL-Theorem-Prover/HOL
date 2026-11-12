@@ -79,8 +79,8 @@ EXDIRS += RL_Environment
 
 ifneq ($(KERNELID),otknl)
 EXDIRS += cv_compute
-# Include the standalone field certificates in the standard PR selftest build.
-EXDIRS += algebra/field_certificates
+# Include the field and curve certificates in the standard PR selftest build.
+EXDIRS += algebra/field_certificates algebra/elliptic/instances/certificates
 SRCTESTDIRS += num/theories/cv_compute/automation/theory_tests
 endif
 endif

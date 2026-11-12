@@ -125,6 +125,7 @@ fun context prime f =
         val a = dest_remainder "REMAINDER_CONV" tm
         val value = bounded_conv a
         val at = rhs (concl value)
+        val aproof = checked ``Poly ^r ^at``
         val acs = coefficients at
         val (q,b) = divide p (acs,fcs)
         val qt = polynomial q
@@ -133,7 +134,9 @@ fun context prime f =
           (MATCH_MP polynomialCertificateTheory.polynomial_certificate_remainder ring)
         val premise = fst (dest_imp (concl rule))
         val transport = AP_THM (AP_TERM ``poly_mod ^r`` value) f
-      in TRANS transport (MP rule (checked premise)) end
+        val proof = EQT_ELIM
+          ((REWRITE_CONV [aproof] THENC bounded_conv) premise)
+      in TRANS transport (MP rule proof) end
     fun power tm =
       let
         val powerterm = dest_remainder "MODPOW_CONV" tm

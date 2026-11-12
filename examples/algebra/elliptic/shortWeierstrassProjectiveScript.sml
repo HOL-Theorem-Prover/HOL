@@ -184,7 +184,8 @@ Theorem sw_projective_equiv_trans:
   sw_projective_equiv r q s ==> sw_projective_equiv r p s
 Proof
   rw[sw_projective_equiv_def] >>
-  qexists_tac `r.prod.op k' k` >>
+  rename1 `sw_projective_scale r v (sw_projective_scale r u p)` >>
+  qexists_tac `r.prod.op v u` >>
   metis_tac[field_mult_element, field_mult_eq_zero,
             sw_projective_scale_compose]
 QED

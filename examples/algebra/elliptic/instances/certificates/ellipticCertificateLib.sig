@@ -7,8 +7,9 @@ sig
      Each constructed converter retains its successful kernel equalities. *)
   val BINARY_SCALAR_CONV : conv -> thm -> thm -> conv
 
-  (* Decompose a scalar occurrence into separate width-bit milestone goals:
-     the first equation, then implications from each preceding milestone.
+  (* Decompose a curve scalar occurrence into width-bit milestone goals,
+     skipping unrelated monoid powers: the first equation, then implications
+     from each preceding milestone.
      candidate computes literal sw_add results but is untrusted: every
      milestone must be proved by BINARY_SCALAR_STEP_TAC. Validation chains
      the supplied theorems to recover the original scalar equality.

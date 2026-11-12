@@ -221,9 +221,12 @@ New examples
 -   `examples/algebra/elliptic/instances` supplies checked secp256k1, P-256,
     BN254 and BLS12-381 groups, standard-generator orders, full cardinalities,
     cofactors, concrete endomorphisms and twist embeddings. Companion scalar
-    checkers reuse the generic curve and field/certificate packages and the
-    existing primality proofs. Long full-cardinality certificates are selected
-    separately at selftest level 3. No optimized arithmetic, serialization or
+    checkers live in its independently buildable `certificates` subpackage,
+    with small-field regressions selected at selftest level 1. They reuse the
+    generic curve and field/certificate packages and existing primality proofs,
+    without introducing reverse dependencies. Long full-cardinality
+    certificates are selected separately at selftest level 3.
+    No optimized arithmetic, serialization or
     pairing evaluation is introduced.
 
 -   `examples/algebra/elliptic` develops short-Weierstrass curves over the

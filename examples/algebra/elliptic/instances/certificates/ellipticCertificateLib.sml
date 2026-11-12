@@ -25,13 +25,20 @@ val affine = ``ECAffine:num->num->num sw_point``
 val scalar_pattern =
   ``(sw_group (GF p) (a:num) (b:num)).exp (P:num sw_point) n``
 val scalar_head = fst (strip_comb scalar_pattern)
+val curve_group_head = ``sw_group``
 val inverse_head = fst (strip_comb ``(GF (p:num)).prod.inv (x:num)``)
 
 fun scalar_key tm =
-  let val (head,args) = strip_comb tm in
-    if is_const head andalso same_const head scalar_head andalso length args = 3
-    then SOME tm else NONE
-  end
+  case strip_comb tm of
+    (head,[group,_,_]) =>
+      if is_const head andalso same_const head scalar_head then
+        (case strip_comb group of
+           (head,[_,_,_]) =>
+             if is_const head andalso same_const head curve_group_head
+             then SOME tm else NONE
+         | _ => NONE)
+      else NONE
+  | _ => NONE
 
 
 fun point tm =
