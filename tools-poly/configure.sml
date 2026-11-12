@@ -214,8 +214,6 @@ in
          case pkgconfig_info of
              SOME list => list @ [ldruntimepath]
            | _ => default
-       else if String.isPrefix "CYGWIN_NT" sysname (* Cygwin! *) then
-         default
        else
          default
 end;
@@ -345,7 +343,6 @@ local
   val lexdir = fullPath [holdir, "tools", "mllex"]
   val yaccdir = fullPath [holdir, "tools", "mlyacc", "src"]
   val qfdir = fullPath [holdir, "tools", "quote-filter"]
-  val hmakedir = fullPath [toolsdir, "Holmake"]
   val builddir = fullPath [holdir, "tools", "build"]
   val hmakebin = fullPath [holdir, "bin", "Holmake"]
   val buildbin = fullPath [holdir, "bin", "build"]
@@ -353,15 +350,6 @@ local
   val qfbin = fullPath [holdir, "bin", "unquote"]
   val lexer = fullPath [lexdir, "mllex.exe"]
   val yaccer = fullPath [yaccdir, "mlyacc.exe"]
-  fun copyfile from to =
-    let val instrm = BinIO.openIn from
-        val ostrm = BinIO.openOut to
-        val v = BinIO.inputAll instrm
-    in
-      BinIO.output(ostrm, v);
-      BinIO.closeIn instrm;
-      BinIO.closeOut ostrm
-    end;
   fun remove f = (FileSys.remove f handle OS.SysErr _ => ())
 in
 
@@ -373,9 +361,6 @@ val _ = remove comparelogsbin;
 val _ = remove lexer;
 val _ = remove yaccer;
 val _ = remove qfbin;
-val _ = remove (fullPath [hmakedir, "Lexer.lex.sml"]);
-val _ = remove (fullPath [hmakedir, "Parser.grm.sig"]);
-val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
 
 
 fun polyc_compile0 s tgt =

@@ -337,7 +337,8 @@ val _ = augment_srw_ss [armv86a_ss];
 val encode_ss =
   simpLib.named_rewrites "encode" [
     Encode_def,
-    e_data_def, e_branch_def, e_load_store_def, e_sf_def, e_LoadStoreImmediate_def,
+    e_data_def, e_branch_def, e_load_store_def, e_fp_def, e_sf_def,
+    e_LoadStoreImmediate_def,
     EncodeLogicalOp_def, NoOperation_def,
     ShiftType2num_thm, SystemHintOp2num_thm, ShiftType2num_thm
   ];
@@ -384,7 +385,7 @@ val asl_reg_ss =
     sail2_state_monadTheory.write_regS_def,
     sail2_state_monadTheory.readS_def,
     sail2_state_monadTheory.updateS_def,
-    R_ref_def, PSTATE_ref_def, SEE_ref_def,
+    R_ref_def, Z_ref_def, FPCR_ref_def, FPSR_ref_def, PSTATE_ref_def, SEE_ref_def,
     SCTLR_EL1_ref_def, SCTLR_EL1_ref_def, SCTLR_EL2_ref_def, SCTLR_EL3_ref_def,
     PC_ref_def, BranchTaken_ref_def,
     SP_EL0_ref_def, SP_EL1_ref_def, SP_EL2_ref_def, SP_EL3_ref_def,
@@ -406,7 +407,8 @@ val asl_sys_reg_ss =
     highest_el_aarch32_ref_def,
     SCR_EL3_ref_def,
     HCR_EL2_ref_def,
-    CNTControlBase_ref_def
+    CNTControlBase_ref_def,
+    CPACR_EL1_ref_def, CPTR_EL2_ref_def, CPTR_EL3_ref_def
     ];
 
 val sss = [encode_ss, monad_ss, asl_word_ss, asl_reg_ss, l3_reg_ss, asl_sys_reg_ss];
@@ -418,7 +420,7 @@ fun state_rel_tac thms =
   gvs ([
     flag_rel_def, pstate_rel_def, tcr_el1_rel_def, tcr_el2_3_rel_def,
     sctlr_rel_def, branch_hint_rel_def, read_rel_def,
-    reg_rel_def, mem_rel_def, state_rel_def,
+    reg_rel_def, fp_reg_rel_def, mem_rel_def, state_rel_def,
     asl_sys_regs_ok_def,
     asl_reg_rws, l3_reg_rws,
     sail2_operators_mwordsTheory.vec_of_bits_def,

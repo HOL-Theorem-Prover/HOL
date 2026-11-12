@@ -67,27 +67,9 @@ type monomial = int Termtab.table;
 
 val mono_empty : monomial = Termtab.empty;
 
-(* Canonical monomial comparison for use as map keys *)
-fun mono_compare (m1:monomial, m2:monomial) =
-    let val l1 = Termtab.dest m1
-        val l2 = Termtab.dest m2
-        fun cmp ([], []) = EQUAL
-          | cmp ([], _)  = LESS
-          | cmp (_, [])  = GREATER
-          | cmp ((v1,p1)::t1, (v2,p2)::t2) =
-            case Term.compare(v1,v2) of
-                EQUAL => (case Int.compare(p1,p2) of
-                              EQUAL => cmp(t1,t2)
-                            | ord => ord)
-              | ord => ord
-    in cmp(l1, l2)
-    end;
-
-structure MonoTab = Table(
-  type key = monomial
-  val ord = mono_compare
-  fun pp _ = HOLPP.add_string "<monomial>"
-)
+(* Canonical monomial comparison for use as map keys.  The table itself
+   lives in MonoTab.sml; see that file for why. *)
+val mono_compare = MonoTab.Key.ord;
 
 val mono_1 : monomial = mono_empty;
 
@@ -318,18 +300,9 @@ fun term_of_poly (p:poly) =
 (* Matrices are ((rows,cols), ((int*int),rat) map)                       *)
 (* ===================================================================== *)
 
-(* Vectors use Inttab (int keys); matrices use a local IntPairTab. *)
+(* Vectors use Inttab (int keys); matrices use IntPairTab (IntPairTab.sml). *)
 
 fun int_compare (i:int, j:int) = Int.compare(i,j);
-fun intpair_compare ((i1,j1):int*int, (i2,j2):int*int) =
-    case Int.compare(i1,i2) of EQUAL => Int.compare(j1,j2) | ord => ord;
-
-structure IntPairTab = Table(
-  type key = int * int
-  val ord = intpair_compare
-  fun pp (i,j) =
-      HOLPP.add_string ("(" ^ Int.toString i ^ "," ^ Int.toString j ^ ")")
-)
 
 type vector = int * rat Inttab.table;
 type matrix = (int * int) * rat IntPairTab.table;
@@ -1363,20 +1336,7 @@ fun sumofsquares (pol:poly) : rat * (rat * poly) list =
 (* 3-tuple eqvar: (block, row, col) *)
 type eqvar3 = int * int * int;
 
-fun eqvar3_compare ((a1,b1,c1):eqvar3, (a2,b2,c2):eqvar3) =
-    case Int.compare(a1,a2) of
-        EQUAL => (case Int.compare(b1,b2) of
-                      EQUAL => Int.compare(c1,c2)
-                    | ord => ord)
-      | ord => ord;
-
-structure IntTripleTab = Table(
-  type key = eqvar3
-  val ord = eqvar3_compare
-  fun pp (i,j,k) =
-      HOLPP.add_string ("(" ^ Int.toString i ^ "," ^ Int.toString j ^ "," ^
-                        Int.toString k ^ ")")
-)
+val eqvar3_compare = IntTripleTab.Key.ord;
 
 type equation3 = rat IntTripleTab.table;
 val eq3_empty : equation3 = IntTripleTab.empty;
@@ -2186,10 +2146,14 @@ fun SOS_PROVER translator (eqs, les, lts) =
 local
   val zero_real = realSyntax.zero_tm
   val real_mul_tm = realSyntax.mult_tm
+  val a_tm = mk_var("a", real_ty)
+  val x_tm = mk_var("x", real_ty)
+  val y_tm = mk_var("y", real_ty)
+  val shuffle = GSYM (SPECL [x_tm, y_tm, a_tm] REAL_EQ_SUB_LADD)
   val shuffle1 =
-    CONV_RULE (REWR_CONV (REAL_ARITH ``a + x = (y:real) <=> x = y - a``))
-  val shuffle2 =
-    CONV_RULE (REWR_CONV (REAL_ARITH ``x + a = (y:real) <=> x = y - a``))
+    CONV_RULE (REWR_CONV
+      (SUBS [SPECL [x_tm, a_tm] REAL_ADD_COMM] shuffle))
+  val shuffle2 = CONV_RULE (REWR_CONV shuffle)
 
   fun substitutable_monomial fvs tm =
     if is_var tm andalso type_of tm = realSyntax.real_ty
@@ -2339,16 +2303,9 @@ local
   val eq_tm = realSyntax.real_eq_tm
   val x_tm = mk_var("x", real_ty)
   val y_tm = mk_var("y", real_ty)
-
-  val pth_le = REAL_ARITH ``x <= y <=> y - x >= &0:real``
-  val pth_lt = REAL_ARITH ``x < y <=> y - x > &0:real``
-  val pth_ge = REAL_ARITH ``x >= y <=> x - y >= &0:real``
-  val pth_gt = REAL_ARITH ``x > y <=> x - y > &0:real``
-  val pth_eq = REAL_ARITH ``(x = y:real) <=> x - y = &0``
-  val pth_nle = REAL_ARITH ``~(x <= y) <=> x - y > &0:real``
-  val pth_nlt = REAL_ARITH ``~(x < y) <=> x - y >= &0:real``
-  val pth_nge = REAL_ARITH ``~(x >= y) <=> y - x > &0:real``
-  val pth_ngt = REAL_ARITH ``~(x > y) <=> y - x >= &0:real``
+  val [pth_lt, pth_le, pth_gt, pth_ge, pth_eq,
+       pth_nlt, pth_nle, pth_ngt, pth_nge, _] =
+    CONJUNCTS (fetch "realax" "GEN_REAL_ARITH0_pth_init")
 
   fun norm_ineq th =
     let val tm = concl th

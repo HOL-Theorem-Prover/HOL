@@ -1,0 +1,14 @@
+title = "List reversal and append"
+preamble = "Stored statements and the definitions they use."
+theorems = ["list$REVERSE_APPEND"]
+
+# Expand these definitions; leave other constants as boundaries.
+expand_consts = ["list$REVERSE", "list$APPEND"]
+supporting = ["list$REVERSE_REVERSE"]
+
+[source_dirs]
+"src/list/src" = "../list/src"
+
+[outputs]
+markdown = "list-dossier.md"
+html = "list-dossier.html"

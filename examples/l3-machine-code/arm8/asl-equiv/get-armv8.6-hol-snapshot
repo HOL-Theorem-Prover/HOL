@@ -11,3 +11,32 @@ script=A64_ISA_v86A/armv86aScript.sml
 if ! grep -q '"TheoryPP.include_html_docs"' "$script"; then
     perl -i -pe 'print "val _ = Feedback.set_trace \"TheoryPP.include_html_docs\" 0;\n" if /^val _ = export_theory\(\)/' "$script"
 fi
+
+# Correct the snapshot's reversed half-way tests for nearest rounding.
+# In particular, the uncorrected FPToFixed rounds exact zero up to one.
+python3 - "$script" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+source, count = re.subn(r"\berror(\s*)<=", r"error\1>", path.read_text())
+if count != 14:
+    raise SystemExit(f"Expected 14 nearest-rounding corrections, found {count}")
+
+# Read all floating-point conversion fields from the full instruction before
+# the local three-bit opcode binding shadows the 32-bit instruction variable.
+pattern = (
+    r"(?P<indent> +)(?P<opcode>let opcode = \(\(slice opcode[^\n]*\n)"
+    r"(?P<fields>(?:(?P=indent)let (?:rmode|ftype|sf) = \(\(slice opcode[^\n]*\n)+)"
+    r"(?P<decode>(?P=indent)decode_\w+_aarch64_instrs_float_convert_(?:int|fix) )"
+)
+source, count = re.subn(
+    pattern,
+    lambda match: match["fields"] + match["indent"] + match["opcode"] + match["decode"],
+    source,
+)
+if count != 18:
+    raise SystemExit(f"Expected 18 FP decoder field-order corrections, found {count}")
+path.write_text(source)
+PY

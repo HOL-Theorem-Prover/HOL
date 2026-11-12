@@ -68,7 +68,11 @@ fun prove_spec th imp def pre_tm post_tm = let
   fun rename [] (y1,y2) = (y2,y2)
     | rename ((x1,x2)::xs) (y1,y2) = if x1 ~~ y1 then (y2,x2)
                                      else rename xs (y1,y2)
-  val s = map (fn (x,y) => x |-> y) (map (rename fill3) res3)
+  (* two components can carry the same variable -- rename returns it
+     unchanged when it finds no match -- and Term.subst rejects the
+     repeated redex; the later maplet is the one it used to act on *)
+  val s = Lib.subst_keep_last aconv
+            (map (fn (x,y) => x |-> y) (map (rename fill3) res3))
   val th = INST s th
   val th = UNDISCH_ALL (RW [SPEC_MOVE_COND] (SIMP_RULE (bool_ss++sep_cond_ss)  [] th))
   val (m,p,_,q) = (dest_spec o concl o SPEC_ALL) th

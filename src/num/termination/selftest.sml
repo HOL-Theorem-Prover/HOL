@@ -72,6 +72,36 @@ val f4_def = require (check_result (K true)) (quietly Define)`
   f5 (SUC n) (x, y) = f4 n x
 `;
 
+fun rhs_abstractions n th =
+  let val cs = strip_conj (concl th)
+  in length cs = n andalso List.all (is_abs o rhs o snd o strip_forall) cs
+  end
+
+val _ = tprint "Testing mutual recursion with lambda-valued equations"
+
+val f6_def = require (check_result (rhs_abstractions 4)) (quietly Define)`
+  f6 0 = (\b. b) /\
+  f6 (SUC n) = (\b. f7 n b) /\
+  f7 0 = (\b. ~b) /\
+  f7 (SUC n) = (\b. f6 n b)
+`;
+
+val _ = tprint "Testing 2-arg mutual recursion with lambda-valued equations"
+
+val h1_def = require (check_result (rhs_abstractions 4)) (quietly Define)`
+  h1 0 m = (\b. if b then m else 0n) /\
+  h1 (SUC n) m = (\b. h2 n b m) /\
+  h2 0 b = (\m. m:num) /\
+  h2 (SUC n) b = (\m. h1 n m b)
+`;
+
+val _ = tprint "Testing multi-clause recursion with lambda-valued equations"
+
+val g_def = require (check_result (rhs_abstractions 2)) (quietly Define)`
+  g 0 = (\x. x) /\
+  g (SUC n) = (\x. g (n DIV 2) x)
+`;
+
 fun tdefoutput_pp(th,thopt) =
     "(" ^ thm_to_string th ^ ", " ^
     (case thopt of NONE => "NONE"
@@ -201,6 +231,31 @@ in
                                                    (Context.snapshot());
                          valOf $ DB.lookup{Thy="-", Name = "bar"}))
               ()
+end
+
+(* ----------------------------------------------------------------------
+    TFL registers the support definitions it makes on the way
+    (<stem>_tupled_primitive and the like) as user definitions, then
+    deletes their constants once the real definition is made.  Walking
+    the user definitions must skip those entries rather than fail.
+   ---------------------------------------------------------------------- *)
+
+val _ = tprint "current_userdefs/thy_userdefs after TFL deletes _tupled"
+val _ = quietly (fn q => TotalDefn.qDefine "udef_rec_def" q NONE)
+          ‘udef_rec x (y:num) = if y = 0 then x else udef_rec (x + 1) (y - 1)’
+val _ = let
+  fun defines_udef_rec (p : DefnBase.defn_presentation) =
+      same_const (#const p) “udef_rec”
+  fun support_entry (p : DefnBase.defn_presentation) =
+      String.isSubstring "_tupled" (#Name (#thmname p))
+  val cur = DefnBase.current_userdefs ()
+  val thy = DefnBase.thy_userdefs {thyname = current_theory ()}
+in
+  if List.exists defines_udef_rec cur andalso
+     List.exists defines_udef_rec thy andalso
+     not (List.exists support_entry thy)
+  then OK ()
+  else die "udef_rec missing, or a deleted support constant listed"
 end
 
 (* ----------------------------------------------------------------------

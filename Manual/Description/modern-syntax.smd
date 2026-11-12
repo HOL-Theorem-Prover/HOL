@@ -174,7 +174,7 @@ Libraries can enable more attributes than this core set for theorems and definit
 | `Overload`               | `by_nametype`, `inferior`, `local`  |
 | `Proof`                  | `exclude_frags`, `exclude_simps`    |
 | `Resume`                 | `exclude_frags`, `exclude_simps`, `smlname` |
-| `Theorem` (& `Finalise`) | `coinduction`, `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp` |
+| `Theorem` (& `Finalise`) | `coinduction`, `compute`, `cong`, `datatype_simp`, `local`, `mono`, `rule_induction`, `simp` |
 | `Type`                   | `local`, `pp`                       |
 
 \index{Resume keyword@\ml{Resume} keyword}
@@ -211,6 +211,27 @@ The following describes the attributes listed above:
     ```{=latex}
     See Section~\ref{TFL} for more on how these congruence theorems are used.
     ```
+
+`datatype_simp`
+
+:   Used with `Theorem` forms.
+    This adds the theorem to the set used to normalise the induction principle of every datatype declared after it, in the theories that can see it.
+\index{theorem attributes!datatype\_simp@\ml{datatype\_simp}}
+
+    A type that recurses under an operator gets induction hypotheses phrased through that operator's set function, as in
+
+           (∀l e. (∀e0. (∃p. e0 ∈ setSND p ∧ MEM p l) ⇒ P e0) ∧ P e ⇒ P (Letrec l e))
+
+    With nothing tagged, such a hypothesis is rephrased only: the existentials are pulled out and the equalities that leaves are unwound.
+    Tagging `pairTheory.setSND_def`, `pred_setTheory.IN_ABS`, `pairTheory.FORALL_PROD` and `bnfPrelimsTheory.IN_optSET` takes the same clause to
+
+           (∀l e. (∀x e0. MEM (x,e0) l ⇒ P e0) ∧ P e ⇒ P (Letrec l e))
+
+    What a principle is normalised with is therefore a decision a development makes, rather than one the datatype package makes for it.
+    The conclusion of a principle is never rewritten, and a tagged theorem that does not apply is not an error.
+
+    Because a development may tag whatever it likes, the principle as the construction stated it is kept as well, and that is the one code should read: `TypeBase.set_induction_of` gives it, where `TypeBase.induction_of` gives what a reader is meant to see.
+    Setting the trace `datatype_simp` to 0 turns the normalisation off, which is useful when bisecting a change of shape.
 
 `exclude_frags`=...
 

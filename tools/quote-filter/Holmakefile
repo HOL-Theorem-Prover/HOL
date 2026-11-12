@@ -27,6 +27,15 @@ INCLUDES = $(HOLDIR)/tools/Holmake $(HOLDIR)/tools/Holmake/mosml \
 quote-filter: quote-filter.uo
 	$(HOLMOSMLC) -o $@ $<
 
+# quote-filter.sml declares catch_interrupt with Moscow ML's prim_val,
+# which the quote filter cannot parse: it rewrites the declaration into
+# something that does not compile, and exits 0 having done so.  Compile
+# it bare, as configure does -- the file has no antiquotations for the
+# filter to expand.  An explicit rule is what keeps unquote away; the
+# implicit one always applies it.
+quote-filter.uo: quote-filter.sml qfilter_util.uo quotefix.uo
+	$(MOSMLC) -c $<
+
 # Toplevel mode lets mosml-selftest.sml call main.
 selftest.uo selftest.ui: selftest.sml quotefix.uo
 	$(MOSMLC) -toplevel -c $<

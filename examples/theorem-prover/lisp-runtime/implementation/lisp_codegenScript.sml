@@ -31,10 +31,108 @@ val REST = LISP |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr;
 val STAT = LISP |> car |> car |> cdr;
 val VAR_REST = LISP |> car |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr |> cdr;
 
+local
+val ready_formats = let (* derive Hoare triples for mov BYTE [r2+???],??? *)
+  fun foo i = let
+    val e = x64_encodeLib.x64_encode ("mov BYTE [r2+"^(int_to_string i)^"],34")
+    val e = String.substring(e,0,size(e)-2)
+    val (x,_) = x64_spec e
+    in (e,x) end
+  fun genlist i n f = if i = n then [] else
+                        (print (int_to_string (256-i) ^ " "); f i :: genlist (i+1) n f)
+  in genlist 0 256 foo end
+in
+fun instantiate_ready_format s = let
+  val e = String.substring(s,0,size(s)-2)
+  val t = String.substring(s,size(s)-2,2)
+  fun list_find x [] = fail()
+    | list_find x ((y,z)::xs) = if x = y then z else list_find x xs
+  val (th,i,j) = list_find e ready_formats
+  val n = numSyntax.mk_numeral(Arbnum.fromHexString t)
+  val th = INST [mk_var("imm8",``:word8``)|->``(n2w ^n):word8``] th
+  val tm = find_term (can (match_term ``SIGN_EXTEND x y z MOD 256``)) (concl th)
+  val th = RW [EVAL tm] th
+  in (th,i,j) end handle Subscript => fail()
+end;
+
+(* The code emitted for each bytecode instruction is wrapped with
+   `sub r2,<l>' and `add QWORD [r7-96],<l>', where <l> is that
+   instruction's length.  Deriving those afresh for every distinct
+   length used to dominate this file: a single `add QWORD [r7-96],n'
+   spec costs around twenty seconds.  Both carry their immediate in
+   the trailing bytes, so -- exactly as ready_formats does for
+   `mov BYTE [r2+i],_' -- one derivation per encoding form (imm8 below
+   128, imm32 at or above) covers every length.  The three `mov'
+   instructions in the same wrapper are the same for every bytecode
+   instruction, so x64_spec's own cache already handles them. *)
+
+local
+fun wrapper_format nbytes asm = let
+  val e = x64_encodeLib.x64_encode asm
+  val e = String.substring(e,0,size e - 2 * nbytes)
+  val (x,_) = x64_spec e
+  in (e,(nbytes,x)) end
+val wrapper_formats =
+  [wrapper_format 1 "sub r2,1",
+   wrapper_format 4 "sub r2,200",
+   wrapper_format 1 "add QWORD [r7-96],1",
+   wrapper_format 4 "add QWORD [r7-96],200"]
+fun little_endian nbytes hex =
+  foldr (fn (k,acc) =>
+           Arbnum.+(Arbnum.*(acc,Arbnum.fromInt 256),
+                    Arbnum.fromHexString (String.substring(hex,2*k,2))))
+        Arbnum.zero (List.tabulate(nbytes,fn k => k))
+(* Ground arithmetic the symbolic form leaves behind once the
+   immediate is concrete.  Deriving the spec directly would have
+   discharged the MOD through x64_prove_specs' own w2n_MOD rewrite. *)
+fun eval_ground th = let
+  fun eval_matching pat ok th = let
+    fun wanted t = can (match_term pat) t andalso ok t
+    val tms = find_terms wanted (concl th)
+    in foldl (fn (tm,t) => RW [EVAL tm] t) th tms end
+  val th = eval_matching ``SIGN_EXTEND a b c`` (fn _ => true) th
+  (* the imm32 forms spell their code bytes as w2w of the immediate and
+     of its shifts; those must come out as literals or the code is no
+     longer a list of numerals and export_codeLib cannot extract it *)
+  val th = eval_matching ``w2w (x:'a word):'b word`` (null o free_vars) th
+  fun ground_mod tm =
+    numSyntax.is_numeral (rand tm) andalso
+    numSyntax.is_numeral ((rand o rator) tm)
+  in eval_matching ``(m:num) MOD n`` ground_mod th end
+in
+fun instantiate_wrapper_format s = let
+  fun attempt (e,(nbytes,(th,i,j))) = let
+    val _ = if size s = size e + 2 * nbytes then () else fail()
+    val _ = if String.substring(s,0,size e) = e then () else fail()
+    val n = numSyntax.mk_numeral
+              (little_endian nbytes (String.substring(s,size e,2 * nbytes)))
+    val th = if nbytes = 1
+               then INST [mk_var("imm8",``:word8``)|->``(n2w ^n):word8``] th
+               else INST [mk_var("imm32",``:word32``)|->``(n2w ^n):word32``] th
+    in (eval_ground th,i,j) end
+  fun first [] = fail()
+    | first (x::xs) = attempt x handle HOL_ERR _ => first xs
+  in first wrapper_formats end handle Subscript => fail()
+end;
+
+(* Every decompilation in this file goes through these tools, whose
+   spec function consults the format tables above before falling back
+   to a full derivation.  An encoding no table matches falls through
+   unchanged, and a table hit can only be the instruction the table
+   was built from: the match is on the whole encoding bar its trailing
+   immediate, which fixes opcode and modrm. *)
+
+val fast_tools = let
+  val (spec,jump,status,pc) = x64_tools
+  fun fast_spec s =
+    (instantiate_ready_format s,NONE) handle HOL_ERR _ =>
+    ((instantiate_wrapper_format s,NONE) handle HOL_ERR _ => spec s)
+  in (fast_spec,jump,status,pc) end
+
 
 (* is_quote *)
 
-val (thm,mc_is_quote_def) = basic_decompile_strings x64_tools "mc_is_quote"
+val (thm,mc_is_quote_def) = basic_decompile_strings fast_tools "mc_is_quote"
   (SOME (``(r0:word64,r6:word64,df:word64 set,f:word64->word32)``,
          ``(r1:word64,r6:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -78,7 +176,7 @@ val mc_is_quote_thm = prove(
   \\ FULL_SIMP_TAC std_ss [AC WORD_ADD_COMM WORD_ADD_ASSOC]
   \\ Cases_on `CDR (CDR x0) = Sym "NIL"`  \\ ASM_SIMP_TAC std_ss []);
 
-val (mc_is_quote_full_spec,mc_is_quote_full_def) = basic_decompile_strings x64_tools "mc_is_quote_full"
+val (mc_is_quote_full_spec,mc_is_quote_full_def) = basic_decompile_strings fast_tools "mc_is_quote_full"
   (SOME (``(r8:word64,r6:word64,df:word64 set,f:word64->word32)``,
          ``(r0:word64,r1:word64,r8:word64,r6:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -112,7 +210,7 @@ val _ = save_thm("mc_is_quote_full_thm",mc_is_quote_full_thm);
 
 (* lookup constant *)
 
-val (mc_const_load_spec,mc_const_load_def) = basic_decompile_strings x64_tools "mc_const_load"
+val (mc_const_load_spec,mc_const_load_def) = basic_decompile_strings fast_tools "mc_const_load"
   (SOME (``(r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32)``,
          ``(r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -194,7 +292,7 @@ val _ = save_thm("mc_const_load_thm",mc_const_load_thm);
 
 (* store new constant *)
 
-val (mc_const_store_spec,mc_const_store_def) = basic_decompile_strings x64_tools "mc_const_store"
+val (mc_const_store_spec,mc_const_store_def) = basic_decompile_strings fast_tools "mc_const_store"
   (SOME (``(r0:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32)``,
          ``(r0:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -315,7 +413,7 @@ val _ = save_thm("mc_const_store_thm",mc_const_store_thm);
 
 (* xbp set *)
 
-val (mc_xbp_set_spec,mc_xbp_set_def) = basic_decompile_strings x64_tools "mc_xbp_set"
+val (mc_xbp_set_spec,mc_xbp_set_def) = basic_decompile_strings fast_tools "mc_xbp_set"
   (SOME (``(r2:word64,r3:word64,r7:word64,df:word64 set,f:word64->word32)``,
          ``(r2:word64,r3:word64,r7:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -363,7 +461,7 @@ val _ = save_thm("mc_xbp_set_thm",mc_xbp_set_thm);
 
 (* load based on xbp *)
 
-val (mc_xbp_load_spec,mc_xbp_load_def) = basic_decompile_strings x64_tools "mc_xbp_load"
+val (mc_xbp_load_spec,mc_xbp_load_def) = basic_decompile_strings fast_tools "mc_xbp_load"
   (SOME (``(r2:word64,r7:word64,r9:word64,df:word64 set,f:word64->word32)``,
          ``(r2:word64,r7:word64,r9:word64,r12:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -427,7 +525,7 @@ val _ = save_thm("mc_xbp_load_thm",mc_xbp_load_thm);
 
 (* load amnt *)
 
-val (mc_load_amnt_spec,mc_load_amnt_def) = basic_decompile_strings x64_tools "mc_load_amnt"
+val (mc_load_amnt_spec,mc_load_amnt_def) = basic_decompile_strings fast_tools "mc_load_amnt"
   (SOME (``(r7:word64,df:word64 set,f:word64->word32)``,
          ``(r7:word64,r9:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -458,7 +556,7 @@ val _ = save_thm("mc_load_amnt_thm",mc_load_amnt_thm);
 
 (* pops by x1 *)
 
-val (mc_pops_by_var_spec,mc_pops_by_var_def) = basic_decompile_strings x64_tools "mc_pops_by_var"
+val (mc_pops_by_var_spec,mc_pops_by_var_def) = basic_decompile_strings fast_tools "mc_pops_by_var"
   (SOME (``(r2:word64,r3:word64,r9:word64)``,
          ``(r2:word64,r3:word64,r9:word64)``))
   (assemble "x64" `
@@ -496,7 +594,7 @@ val _ = save_thm("mc_pops_by_var_thm",mc_pops_by_var_thm);
 
 (* store based on xbp *)
 
-val (mc_xbp_store_spec,mc_xbp_store_def) = basic_decompile_strings x64_tools "mc_xbp_store"
+val (mc_xbp_store_spec,mc_xbp_store_def) = basic_decompile_strings fast_tools "mc_xbp_store"
   (SOME (``(r2:word64,r7:word64,r8:word64,r9:word64,df:word64 set,f:word64->word32)``,
          ``(r2:word64,r7:word64,r8:word64,r9:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -554,7 +652,7 @@ val _ = save_thm("mc_xbp_store_thm",mc_xbp_store_thm);
 
 (* read code_ptr code *)
 
-val (mc_read_snd_code_spec,mc_read_snd_code_def) = basic_decompile_strings x64_tools "mc_read_snd_code"
+val (mc_read_snd_code_spec,mc_read_snd_code_def) = basic_decompile_strings fast_tools "mc_read_snd_code"
   (SOME (``(r7:word64,r8:word64,df:word64 set,f:word64->word32)``,
          ``(r7:word64,r8:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -599,7 +697,7 @@ End
 Definition SAFE_CDR_def:   SAFE_CDR x = CDR x
 End
 
-val (mc_safe_car_spec,mc_safe_car_def) = basic_decompile_strings x64_tools "mc_safe_car"
+val (mc_safe_car_spec,mc_safe_car_def) = basic_decompile_strings fast_tools "mc_safe_car"
   (SOME (``(r0:word64,r6:word64,r8:word64,df:word64 set,f:word64->word32)``,
          ``(r0:word64,r6:word64,r8:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -609,7 +707,7 @@ val (mc_safe_car_spec,mc_safe_car_def) = basic_decompile_strings x64_tools "mc_s
        mov r8d, [r6+4*r8]
 L: `)
 
-val (mc_safe_cdr_spec,mc_safe_cdr_def) = basic_decompile_strings x64_tools "mc_safe_cdr"
+val (mc_safe_cdr_spec,mc_safe_cdr_def) = basic_decompile_strings fast_tools "mc_safe_cdr"
   (SOME (``(r0:word64,r6:word64,r8:word64,df:word64 set,f:word64->word32)``,
          ``(r0:word64,r6:word64,r8:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `
@@ -900,7 +998,7 @@ fun approx_code inst = let
 
 (* code heap -- write iCONST_NUM, same as iCONST_SYM *)
 
-val (mc_write_num_spec,mc_write_num_def) = basic_decompile_strings x64_tools "mc_write_num"
+val (mc_write_num_spec,mc_write_num_def) = basic_decompile_strings fast_tools "mc_write_num"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1009,8 +1107,8 @@ val mc_write_num_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,GSYM ADD_ASSOC]
   \\ IMP_RES_TAC write_lemma \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1089,8 +1187,8 @@ val mc_write_sym_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,GSYM ADD_ASSOC]
   \\ IMP_RES_TAC write_lemma \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1109,7 +1207,7 @@ val mc_write_sym_thm = prove(
 
 (* code heap -- write iJUMP, iJNIL, iCALL *)
 
-val (mc_write_jump_spec,mc_write_jump_def) = basic_decompile_strings x64_tools "mc_write_jump"
+val (mc_write_jump_spec,mc_write_jump_def) = basic_decompile_strings fast_tools "mc_write_jump"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1135,7 +1233,7 @@ val (mc_write_jump_spec,mc_write_jump_def) = basic_decompile_strings x64_tools "
        mov r1d,1
    `)
 
-val (mc_write_call_spec,mc_write_call_def) = basic_decompile_strings x64_tools "mc_write_call"
+val (mc_write_call_spec,mc_write_call_def) = basic_decompile_strings fast_tools "mc_write_call"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1161,7 +1259,7 @@ val (mc_write_call_spec,mc_write_call_def) = basic_decompile_strings x64_tools "
        mov r1d,1
    `)
 
-val (mc_write_jnil_spec,mc_write_jnil_def) = basic_decompile_strings x64_tools "mc_write_jnil"
+val (mc_write_jnil_spec,mc_write_jnil_def) = basic_decompile_strings fast_tools "mc_write_jnil"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1270,8 +1368,8 @@ fun iJUMP_TAC inst =
     \\ blastLib.BBLAST_TAC)
   \\ ASM_SIMP_TAC std_ss [WORD_SUB_PLUS,WORD_ADD_SUB]
   \\ `code_length bs = code_ptr code` by METIS_TAC [WRITE_CODE_IMP_code_length,ADD_0]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1319,7 +1417,7 @@ val mc_write_jnil_thm = prove(
 
 (* code heap -- write iPOPS, iSTORE, iLOAD *)
 
-val (mc_write_pops_spec,mc_write_pops_def) = basic_decompile_strings x64_tools "mc_write_pops"
+val (mc_write_pops_spec,mc_write_pops_def) = basic_decompile_strings fast_tools "mc_write_pops"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1343,7 +1441,7 @@ val (mc_write_pops_spec,mc_write_pops_def) = basic_decompile_strings x64_tools "
        mov r1d,1
    `)
 
-val (mc_write_store_spec,mc_write_store_def) = basic_decompile_strings x64_tools "mc_write_store"
+val (mc_write_store_spec,mc_write_store_def) = basic_decompile_strings fast_tools "mc_write_store"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1375,7 +1473,7 @@ val (mc_write_store_spec,mc_write_store_def) = basic_decompile_strings x64_tools
        mov r1d,1
    `)
 
-val (mc_write_load_spec,mc_write_load_def) = basic_decompile_strings x64_tools "mc_write_load"
+val (mc_write_load_spec,mc_write_load_def) = basic_decompile_strings fast_tools "mc_write_load"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1493,8 +1591,8 @@ fun iPOPS_TAC inst =
       \\ FULL_SIMP_TAC wstd_ss [w2w_def,w2n_n2w,n2w_11])
   \\ ASM_SIMP_TAC std_ss []
   \\ `code_length bs = code_ptr code` by METIS_TAC [WRITE_CODE_IMP_code_length,ADD_0]
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
@@ -1540,30 +1638,6 @@ val mc_write_load_thm = prove(
 
 (* code heap -- write const instructions *)
 
-local
-val ready_formats = let (* derive Hoare triples for mov BYTE [r2+???],??? *)
-  fun foo i = let
-    val e = x64_encodeLib.x64_encode ("mov BYTE [r2+"^(int_to_string i)^"],34")
-    val e = String.substring(e,0,size(e)-2)
-    val (x,_) = x64_spec e
-    in (e,x) end
-  fun genlist i n f = if i = n then [] else
-                        (print (int_to_string (256-i) ^ " "); f i :: genlist (i+1) n f)
-  in genlist 0 256 foo end
-in
-fun instantiate_ready_format s = let
-  val e = String.substring(s,0,size(s)-2)
-  val t = String.substring(s,size(s)-2,2)
-  fun list_find x [] = fail()
-    | list_find x ((y,z)::xs) = if x = y then z else list_find x xs
-  val (th,i,j) = list_find e ready_formats
-  val n = numSyntax.mk_numeral(Arbnum.fromHexString t)
-  val th = INST [mk_var("imm8",``:word8``)|->``(n2w ^n):word8``] th
-  val tm = find_term (can (match_term ``SIGN_EXTEND x y z MOD 256``)) (concl th)
-  val th = RW [EVAL tm] th
-  in (th,i,j) end handle Subsript => fail()
-end;
-
 fun get_code_for_bc_inst inst = let
   val ys = EVAL (mk_comb(``bc_ref (i,sym)``,inst))
            |> concl |> dest_eq |> snd |> listSyntax.dest_list |> fst
@@ -1586,9 +1660,8 @@ fun get_code_for_bc_inst inst = let
 
 fun straight_line_decompile func_name code in_out_vars = let
   val _ = print "\nStraight-line decompile, "
-  val (spec,_,sts,pc) = x64_tools
-  fun my_spec s = (instantiate_ready_format s,NONE) handle HOL_ERR _ => spec s
-  fun simple_spec s = let val ((th,_,_),_) = my_spec s in HIDE_STATUS_RULE true sts th end;
+  val (spec,_,sts,pc) = fast_tools
+  fun simple_spec s = let val ((th,_,_),_) = spec s in HIDE_STATUS_RULE true sts th end;
   val counter = ref 0
   val total = length code
   fun next x = (counter := 1+(!counter); print ("\n" ^ int_to_string (!counter) ^ " of " ^ int_to_string total ^ " "); x)
@@ -1736,8 +1809,8 @@ set_goal([],goal)
   \\ IMP_RES_TAC write_lemma \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
   \\ Q.PAT_X_ASSUM `xxx (fun2set (d,dd))` ASSUME_TAC
-  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def]
-  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
+  \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,one_byte_list_def,
+       SEP_CLAUSES,STAR_ASSOC,LENGTH_APPEND,LENGTH,GSYM ADD_ASSOC,
        word_arith_lemma1]
   \\ IMP_RES_TAC LENGTH_bs2bytes \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC (GEN_ALL write_list_th) \\ ASM_SIMP_TAC std_ss [])
@@ -1777,7 +1850,7 @@ val consts = LIST_CONJ (map generate_and_verify_write_const all_const_insts);
 
 (* code heap -- update iJUMP, iJNIL *)
 
-val (mc_update_jump_spec,mc_update_jump_def) = basic_decompile_strings x64_tools "mc_update_jump"
+val (mc_update_jump_spec,mc_update_jump_def) = basic_decompile_strings fast_tools "mc_update_jump"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,r9:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,r9:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1798,7 +1871,7 @@ val (mc_update_jump_spec,mc_update_jump_def) = basic_decompile_strings x64_tools
        mov r1d,1
    `)
 
-val (mc_update_jnil_spec,mc_update_jnil_def) = basic_decompile_strings x64_tools "mc_update_jnil"
+val (mc_update_jnil_spec,mc_update_jnil_def) = basic_decompile_strings fast_tools "mc_update_jnil"
   (SOME (``(r1:word64,r2:word64,r7:word64,r8:word64,r9:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``,
          ``(r1:word64,r2:word64,r7:word64,r8:word64,r9:word64,df:word64 set,f:word64->word32,dg:word64 set,g:word64->word8)``))
   (assemble "x64" `
@@ -1999,7 +2072,7 @@ val lisp_inv_write_consts_thm = save_thm("lisp_inv_write_consts_thm",
 
 (* load pointer into code (used by eval) *)
 
-val (mc_calc_addr_spec,mc_calc_addr_def) = basic_decompile_strings x64_tools "mc_calc_addr"
+val (mc_calc_addr_spec,mc_calc_addr_def) = basic_decompile_strings fast_tools "mc_calc_addr"
   (SOME (``(r2:word64,r7:word64,r10:word64,df:word64 set,f:word64->word32)``,
          ``(r2:word64,r7:word64,r10:word64,df:word64 set,f:word64->word32)``))
   (assemble "x64" `

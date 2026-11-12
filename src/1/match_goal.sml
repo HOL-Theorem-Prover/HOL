@@ -30,9 +30,10 @@ val empty_named_tms : named_tms = ([],[])
 type data = named_thms * named_tms
 
 fun is_underscore v =
-  case total dest_var v of NONE
-    => raise(ERR"umatch""unexpected non-variable binding") (* should not happen *)
-  | SOME (s,_) => String.isPrefix "_" s
+  case total dest_var v of
+      NONE => raise(ERR"umatch""unexpected non-variable binding")
+                   (* should not happen *)
+    | SOME (s,_) => String.isPrefix "_" s
 
 val is_uvar = String.isSuffix "_" o #1 o dest_var
 
@@ -47,7 +48,8 @@ fun umatch avoid_tms ((tmS,tyS):named_tms) pat ob : named_tms =
     (tmS'', tyS')
   end
 
-fun umatch_subterms avoid_tms (ntms:named_tms) pat ob : unit -> named_tms stream =
+fun umatch_subterms avoid_tms (ntms:named_tms) pat ob
+    : unit -> named_tms stream =
   stream_append
     (fn () => Stream(umatch avoid_tms ntms pat ob,empty_stream))
     (fn () =>
@@ -119,7 +121,8 @@ val tr1 = Substring.string o Substring.trimr 1 o Substring.full
 fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) ctxt
     : goal list * validation =
   let
-    fun try_tactic ((thms,tms):data) : (unit -> (goal list * validation) stream) =
+    fun try_tactic ((thms,tms):data)
+        : (unit -> (goal list * validation) stream) =
       let
         fun lookup_assum s =
           let
@@ -127,9 +130,12 @@ fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) ctxt
             val tm = List.nth(#1 g,i)
           in ASSUME tm end
         val s =
-          case tms of (tmS,tyS) =>
-            #1 (norm_subst ((tmS,empty_tmset),(tyS,[])))
-            |> List.map (fn {redex,residue} => (tr1(#1(dest_var redex)),residue))
+          case tms of
+              (tmS,tyS) =>
+              #1 (norm_subst ((tmS,empty_tmset),(tyS,[])))
+                 |> List.map
+                     (fn {redex,residue} =>
+                         (tr1(#1(dest_var redex)),residue))
         val tac = mtac (lookup_assum,Lib.C assoc s)
         val r = tac g ctxt
       in
@@ -142,7 +148,8 @@ fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) ctxt
 
     val fvs = FVL (w::asl) empty_tmset
 
-    val matches = map (match_single fvs g o preprocess_matcher (HOLset.listItems fvs)) ms
+    val matches =
+        map (match_single fvs g o preprocess_matcher (HOLset.listItems fvs)) ms
   in
     (case search matches (empty_named_thms,empty_named_tms) () of
        Stream (x,_) => x)

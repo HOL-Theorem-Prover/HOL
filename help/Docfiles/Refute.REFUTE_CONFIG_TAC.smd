@@ -1,0 +1,35 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REFUTE_CONFIG_TAC`
+
+``` hol4
+Refute.REFUTE_CONFIG_TAC : config -> tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample under an exact configuration.
+
+`REFUTE_CONFIG_TAC cfg` runs `refute_goal cfg` on the goal and then
+behaves as `ALL_TAC`.  It ignores the stored configuration.
+
+### Failure
+
+Fails only if `cfg`'s `expect` field is not met.
+
+### Example
+
+>>__ load "Refute";
+>> g `!n : num. n * n <> n + 2`;
+
+>> e (Refute.REFUTE_CONFIG_TAC
+        (Refute.default_config
+           |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+           |> Refute.upd_size 4
+           |> Refute.upd_expect Refute.ExpectGenuine));
+>>__ drop();
+
+### See also
+
+[`Refute.REFUTE_TAC_WITH`](#Refute.REFUTE_TAC_WITH),
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.config`](#Refute.config).

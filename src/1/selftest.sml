@@ -1317,6 +1317,8 @@ val _ = List.app (ignore o substtest) tests
 val _ = print "Testing cond-printer after set_grammar_ancestry\n"
 val _ = set_trace "PP.avoid_unicode" 1
 val _ = set_grammar_ancestry ["bool"]
+val _ = tprint "set_grammar_ancestry naming the current theory"
+val _ = require is_result set_grammar_ancestry [current_theory(), "bool"]
 val _ = app condprinter_test condprinter_tests
 
 val _ = let
@@ -1618,3 +1620,128 @@ val _ =
   in
     check ("variable hypothesis", th)
   end
+
+(* ----------------------------------------------------------------------
+    Term.subst rejects a repeated redex, and nothing above the kernel
+    hands it one.
+
+    A higher-order pattern variable applied to pattern variables that are
+    not yet bound used to be bound once per occurrence: term_homatch's
+    fallback peels rators off both terms, and the peeled variable was
+    consed onto the instantiation instead of being safe_insert'ed.  The
+    repeated redex that resulted made INST raise, so the rewrite silently
+    stopped applying -- pairTheory.PAIR_EQUIV was the first casualty.
+   ---------------------------------------------------------------------- *)
+
+fun subst_redexes (tmS, _) = map (fn {redex, residue} => redex) tmS
+fun subst_redexes_string p =
+    String.concatWith ", " (map term_to_string (subst_redexes p))
+
+val _ = let
+  fun distinct l = length (op_mk_set aconv l) = length l
+in
+  tprint "ho_match_term: repeated h.o. pattern variable";
+  require_msg (check_result (distinct o subst_redexes)) subst_redexes_string
+              (ho_match_term [] empty_tmset ``(R:'a->'a->bool) x = R y``)
+              ``(Q:'a->'a->bool) a = Q b``
+end
+
+(* A pattern in which the same variable occurs both applied and unapplied
+   -- pred_set's IMAGE_IN, f x IN IMAGE f s, is the one that matters --
+   binds it twice: the peeled occurrence arrives eta-contracted while the
+   unpeeled one is the corresponding abstraction.  Those agree, and it is
+   the abstraction that makes the instantiated pattern match the target,
+   so that is the binding to keep.  groupScript's element_coset_property
+   is the proof that noticed. *)
+val _ = let
+  val pat = ``(f:bool->bool) x /\ $! f``
+  val obj = ``(a /\ b) /\ $! (\z. a /\ z)``
+  val fv = mk_var("f", Type.bool --> Type.bool)
+  val absn = ``\z. a /\ z``
+  fun ok (tmS, _) =
+      let
+        val reds = map (fn {redex, residue} => redex) tmS
+        val fres = List.find (fn {redex, residue} => aconv redex fv) tmS
+      in
+        length (op_mk_set aconv reds) = length reds andalso
+        (case Option.map (fn {redex, residue} => residue) fres of
+             SOME r => aconv r absn
+           | NONE => false)
+      end
+in
+  tprint "ho_match_term: eta-variant bindings are not a clash";
+  require_msg (check_result ok) subst_redexes_string
+              (ho_match_term [] empty_tmset pat) obj
+end
+
+(* The peeled occurrence can also disagree outright with the binding
+   already made, and then it is the peeled one that is wrong: it guesses
+   from a single application where the earlier occurrence saw the whole
+   pattern.  Keep the earlier binding, which is what subst settled on. *)
+val _ = let
+  val pat = ``(f:bool->bool) x /\ (f = (\y:bool. y))``
+  val obj = ``~T /\ ((\y:bool.y) = (\y:bool.y))``
+  val fv = mk_var("f", Type.bool --> Type.bool)
+  val idf = ``\y:bool. y``
+  fun ok (tmS, _) =
+      let
+        val reds = map (fn {redex, residue} => redex) tmS
+        val fres = List.find (fn {redex, residue} => aconv redex fv) tmS
+      in
+        length (op_mk_set aconv reds) = length reds andalso
+        (case Option.map (fn {redex, residue} => residue) fres of
+             SOME r => aconv r idf
+           | NONE => false)
+      end
+in
+  tprint "ho_match_term: a peeled binding never displaces an earlier one";
+  require_msg (check_result ok) subst_redexes_string
+              (ho_match_term [] empty_tmset pat) obj
+end
+
+(* Instantiating a match's redexes can merge two of them: x:'a and x:'b
+   are distinct variables that raw_match keeps apart, and both become
+   x:bool once the match fixes the type variables.  The parser unifies
+   same-named frees, so such a pattern only arises from a term built by
+   hand -- automationLib in examples/bootstrap builds them, and the
+   repeated redex made Term.subst raise inside a matcher that swallows
+   HOL_ERR, silently discarding the rule. *)
+val _ = let
+  val P = mk_var("P", Type.alpha --> Type.beta --> Type.bool)
+  val pat = list_mk_comb(P, [mk_var("x", Type.alpha), mk_var("x", Type.beta)])
+  val Pb = mk_var("P", Type.bool --> Type.bool --> Type.bool)
+  val obj = list_mk_comb(Pb, [mk_var("a", Type.bool), mk_var("b", Type.bool)])
+  fun redexes (tmS, _) = map (fn {redex, residue} => redex) tmS
+  fun ok p = let val r = redexes p
+             in length (op_mk_set aconv r) = length r end
+in
+  tprint "match_term: type instantiation cannot repeat a redex";
+  require_msg (check_result ok)
+              (String.concatWith ", " o map term_to_string o redexes)
+              (Term.match_term pat) obj
+end
+
+val _ = let
+  val a = mk_var("a", Type.alpha)
+  val b = mk_var("b", Type.alpha)
+in
+  tprint "Term.subst: distinct redexes unaffected";
+  require (check_result (aconv b)) (Term.subst [a |-> b]) a;
+  shouldfail {checkexn = is_struct_HOL_ERR "Term",
+              printarg = fn _ => "Term.subst: repeated redex rejected",
+              printresult = term_to_string,
+              (* eta-expanded: subst does its work at partial application,
+                 so the raise must happen inside shouldfail *)
+              testfn = fn tm => Term.subst [a |-> b, a |-> b] tm}
+             a
+end
+
+val _ = let
+  val a = mk_var("a", Type.alpha)
+  val b = mk_var("b", Type.alpha)
+  val c = mk_var("c", Type.alpha)
+in
+  tprint "Lib.subst_keep_last: later maplet wins";
+  require (check_result (Lib.subst_eq aconv aconv [a |-> c]))
+          (Lib.subst_keep_last aconv) [a |-> b, a |-> c]
+end

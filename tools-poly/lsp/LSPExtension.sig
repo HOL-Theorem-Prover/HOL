@@ -427,6 +427,13 @@ val theorySealed: (string -> bool) ref
    enqueues a self-contained item and returns an oracle-tagged theorem,
    so elaboration stays fast and something else runs the proofs later.
 
+   The queue itself is not here.  It belongs to the pool in
+   `deferred_proofs.ML`, which is both what fills it and what drains
+   it, and which tags each item with the compile pass that produced it
+   -- a notion this structure, sitting below the kernel, does not
+   have.  What is here is the shape of an item, which is all a reader
+   of `proof_status` needs.
+
    An item's `run` is opaque — it reports a `proof_status` and nothing
    about the theorem — because this structure sits below the kernel and
    cannot name `Context.t`, `goal` or `tactic`.  The hook closes over all
@@ -529,6 +536,18 @@ val deferProofs: bool ref
    Set from `$/setConfig`'s `proofTimeoutMs`, or from
    `HOL_LSP_PROOF_TIMEOUT_MS` in the environment. *)
 val proofTimeout: Time.time ref
+(* What a goal-state walk may spend before the canary interrupts it.
+
+   The default suits the shipped clients, which follow a cursor and so
+   want a keystroke's worth.  A caller replaying a whole proof to
+   measure it wants orders of magnitude more -- and until this was
+   settable, could not ask: a proof whose steps take minutes reported
+   only that the budget blew, which is a fact about the budget rather
+   than about the proof.
+
+   Set from `$/setConfig`'s `walkBudgetMs`, or from
+   `HOL_LSP_WALK_BUDGET_MS` in the environment. *)
+val walkBudgetMs: LargeInt.int ref
 (* Set by the compile driver while it retries a declaration whose tactic
    would not compile, with the proof body replaced by `cheat`.  Such a
    proof must not be enqueued: replaying `cheat` would report `Proved`
@@ -563,10 +582,57 @@ val cheatSubstituted: bool ref
 val addNoCheatSite: string -> bool
 val dropNoCheatSite: string -> unit
 val isNoCheatSite: string -> bool
-val enqueueDeferred: deferred -> unit
-(* Empties the queue and hands back what was in it: the worker pool
-   runs the items itself. *)
-val takeDeferred: unit -> deferred list
+
+(* How long a proof took, keyed by proof name.
+
+   The pool knows this and nothing else did: `proof_status` says whether
+   a proof worked, never what it cost, so a client could report a file's
+   verdict but not which of its proofs was the slow one.  That is the
+   first question anyone asks of a script that takes ten minutes to
+   build, and answering it meant instrumenting the script by hand.
+
+   Keyed by name rather than carried in `proof_state` because the state
+   is constructed in a dozen places, several of them describing proofs
+   that never ran (`Unseen`, a dropped entry announced `Cheated`) and so
+   having no time to offer.  Names are already unique per occurrence --
+   `qualifyProof` appends `#n` -- so the key is as precise as the state
+   it belongs to.
+
+   Recorded by whichever path actually ran the tactic: the deferred
+   replay, and the run-for-real one that elaboration performs itself.
+   An entry is overwritten by the next run of the same proof and
+   otherwise kept, so a stale time belongs to a proof that has not been
+   re-run rather than to a different proof. *)
+val recordProofElapsed: string * Time.time -> unit
+val proofElapsed: string -> Time.time option
+
+(* What each tactic step of the last walk cost.
+
+   The walker has always measured this -- it times every atom it
+   applies -- but kept it to itself, so the one question asked of a
+   proof that takes three minutes, *which tactic*, had no answer short
+   of hand-instrumenting the script.  `proofElapsed` above answers it
+   per proof; this answers it per step.
+
+   `span` is the step's byte range in the file, so a cost maps back to
+   a line.  `goalsBefore`/`goalsAfter` is the other half of the
+   diagnosis: it separates "this tactic is slow" from "this tactic is
+   ordinary but the state it was handed had exploded".
+
+   Published rather than returned because `goal_state_response` is
+   built in nine places, several of them describing walks that ran no
+   steps at all.  Valid for the walk that has just finished; a second
+   concurrent walk overwrites it, which is the exposure the walker's
+   own counter already had. *)
+type step_cost = {span: (int * int) option, ms: int,
+                  goalsBefore: int, goalsAfter: int}
+val lastStepCosts: step_cost list ref
+(* Shift the spans of the walk just finished from tactic-text offsets
+   to file offsets.  The walker measures inside `tacText`, as every
+   other span it produces does; `failedRange` is rebased the same way
+   before it leaves `goal_state_init`.  Call once per walk -- `walkTo`
+   clears the list on entry, so there is nothing to double-shift. *)
+val rebaseStepCosts: int -> unit
 
 (* The byte offset of the declaration currently being elaborated, set by
    the compile driver before each one.  The prover hook reads it when

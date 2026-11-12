@@ -229,22 +229,71 @@ class Session:
             "contentChanges": [{"text": text}]})
         return mark
 
+    #: The three ways a pass can stop.  All of them must be waited on:
+    #: a pass that ends on an edge nobody waits for spends the whole
+    #: timeout and then answers from a half-finished state, which is
+    #: worse than answering slowly.
+    COMPILE_EDGES = ("$/compileCompleted", "$/compileInterrupted",
+                     "$/compileBlocked")
+
     def await_compile(self, path, since, timeout=180):
         """Wait for the pass triggered at `since` to finish.
 
         `$/compileCompleted` is the success edge; `$/compileInterrupted`
         is the give-up edge and must be waited on too, or an abandoned
         pass spends the whole timeout.
+
+        `$/compileBlocked` is the third edge, and the easiest to miss:
+        when a declared dependency cannot be loaded the server never
+        enters `runCompile`, so it sends *neither* of the other two --
+        "No progress to end -- `sendProgressBegin' is inside
+        `runCompile', which this path does not reach" (server.ML).
+        Waiting only for the first two turns the commonest state of a
+        half-built tree into a silent stall for the full timeout,
+        after which every tool answers from a session that never
+        compiled anything.
         """
         uri = path_to_uri(path)
 
         def done(msg):
-            if msg.get("method") not in ("$/compileCompleted",
-                                         "$/compileInterrupted"):
+            if msg.get("method") not in self.COMPILE_EDGES:
                 return False
             return (msg.get("params") or {}).get("uri") == uri
 
         return self.wait_for(done, timeout, since=since)
+
+    def deps_blocked(self, path, since=0):
+        """The last `$/compileBlocked` for `path`, or None.
+
+        The server re-sends this on every edit that leaves the declared
+        dependencies unchanged, so the latest one is always current:
+        there is no "unblocked" message to pair it with, because a pass
+        that gets past the block ends on `$/compileCompleted` instead.
+        Callers therefore read it `since` the mark of the pass they are
+        asking about, not from the start of the session.
+        """
+        uri = path_to_uri(path)
+        latest = None
+        for msg in self.notifications("$/compileBlocked", since=since):
+            params = msg.get("params") or {}
+            if params.get("uri") == uri:
+                latest = params
+        return latest
+
+    def show_messages(self, since=0):
+        """`window/showMessage` texts, oldest first.
+
+        The server explains a heap it could not load exactly once, and
+        only here -- it falls back to `bin/hol.state` and says so in a
+        `window/showMessage`.  Dropping these loses the one account of
+        why a session is answering from the wrong heap.
+        """
+        out = []
+        for msg in self.notifications("window/showMessage", since=since):
+            text = (msg.get("params") or {}).get("message")
+            if text:
+                out.append(text)
+        return out
 
     def proof_states(self, path):
         """Fold the `$/proofStates` transition stream into a state.
@@ -326,8 +375,17 @@ class SessionPool:
     like them to.
     """
 
-    def __init__(self, hol_bin, args=(), env=None, init_timeout=120):
+    def __init__(self, hol_bin, args=(), env=None, init_timeout=120,
+                 hol_resolver=None):
         self.hol_bin = hol_bin
+        # `$(HOLDIR)` is baked into a `bin/hol` at build time, so a
+        # session can only answer about scripts whose dependencies were
+        # built against that same tree.  One binary for every file is
+        # therefore wrong as soon as the caller names a script in a
+        # second checkout -- a git worktree, a sibling clone.  The
+        # resolver maps a script to the tree that owns it; returning
+        # None means "use `hol_bin`", which is the old behaviour.
+        self.hol_resolver = hol_resolver
         self.args = tuple(args)
         self.env = env
         self.init_timeout = init_timeout
@@ -355,9 +413,14 @@ class SessionPool:
             self._sessions[path] = session
             return session
 
+    def _hol_for(self, path):
+        if self.hol_resolver is None:
+            return self.hol_bin
+        return self.hol_resolver(path) or self.hol_bin
+
     def _spawn(self, path):
         cwd = os.path.dirname(path) or "."
-        session = Session(self.hol_bin, cwd, self.args, self.env)
+        session = Session(self._hol_for(path), cwd, self.args, self.env)
         # utf-8 position encoding: every offset the adapter computes is
         # a byte offset, and a HOL script with `.."` quotations is
         # full of multibyte characters, so negotiating utf-16 here

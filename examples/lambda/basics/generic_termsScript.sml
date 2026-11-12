@@ -26,7 +26,8 @@ val _ = augment_srw_ss [rewrites [fv_def]]
 (* The proofs below are about a term and a list of terms at once, which
    is the shape the older construction's principle had.  The package
    proves the one about a term; legacyInduction puts the other back. *)
-val newind = TypeBase.induction_of ``:α pregterm``
+(* the stated principle: legacyInduction reads the set functions *)
+val newind = TypeBase.set_induction_of ``:α pregterm``
 val oldind = legacyInduction.mutual_induction
                (legacyInduction.operators_of newind) newind
 

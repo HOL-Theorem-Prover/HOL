@@ -24,7 +24,7 @@ llist.art: llist.otd
 path.art: path.otd
 endif
 
-selftest.exe: selftest.uo llistTheory.uo
+selftest.exe: selftest.uo llistTheory.uo pathTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe coalgebra-selftest.log

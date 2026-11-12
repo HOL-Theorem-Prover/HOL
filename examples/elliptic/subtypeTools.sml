@@ -97,7 +97,7 @@ local
 in
   fun cache_new () = ref (Binarymap.mkDict compare);
 
-  fun cache_tac (cache : cache) (goal as (_,g)) =
+  fun cache_tac (cache : cache) (goal as (_,g)) _ (* ctxt *) =
       case in_cache (!cache) goal of
         SOME th => ([], fn [] => th | _ => raise Fail "cache_tac: hit")
       | NONE =>
@@ -348,9 +348,24 @@ local
      judgements : tactic list};
 
   local
-    val abbrev_rule = prove
-        (``!v t. Abbrev (v = t) ==> (!s. t IN s ==> v IN s)``,
-         RW_TAC std_ss [markerTheory.Abbrev_def]);
+    val v = mk_var("v", alpha)
+    val t = mk_var("t", alpha)
+    val s = mk_var("s", alpha --> bool)
+    val veqt = mk_eq(v,t)
+    val veqt_th = ASSUME veqt
+    val teqv_th = SYM veqt_th
+    val INeq = AP_TERM boolSyntax.IN_tm teqv_th
+    val INseq = AP_THM INeq s
+    val tINs_t = lhs (concl INseq)
+    val tINs_th = ASSUME tINs_t
+    val vINs_th = EQ_MP INseq tINs_th
+    val fa_imp_th = GEN s (DISCH tINs_t vINs_th)
+    val abbr_eq = ISPEC veqt markerTheory.Abbrev_def
+    val abbr_t = lhs (concl abbr_eq)
+    val abbr_th = EQ_MP abbr_eq (ASSUME abbr_t)
+    val th1 = PROVE_HYP abbr_th fa_imp_th
+    val abbrev_rule = GENL [v,t] (DISCH abbr_t th1)
+      (* !v t. Abbrev(v = t) ==> !s. t IN s ==> v IN s *)
 
     fun reduce_tac th = match_tac th THEN REPEAT CONJ_TAC;
 

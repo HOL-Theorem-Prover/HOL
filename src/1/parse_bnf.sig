@@ -1,7 +1,8 @@
 signature parse_bnf =
 sig
 
-  val parse2ftor : ParseDatatype.AST list -> (string * bnfBase_dtype.bnftor) list
+  val parse2ftor : ParseDatatype.AST list ->
+                   (string * bnfBase_dtype.bnftor) list
 
 end
 

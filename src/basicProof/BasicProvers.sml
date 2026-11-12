@@ -97,7 +97,9 @@ fun FREEUP [] M g = (ALL_TAC,M)
      in
        ((MAP_EVERY X_GEN_TAC (map snd Vmap)
           THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),
-        subst (map op|-> theta) M)
+        (* a shadowed binder (!x. ... !x. ...) puts the same variable into
+           Vmap twice; the inner binding used to win, so keep it *)
+        subst (subst_keep_last aconv (map op|-> theta)) M)
      end;
 
 (*---------------------------------------------------------------------------*)
@@ -708,26 +710,60 @@ fun case_rws tyi =
     |> map BODY_CONJUNCTS
     |> List.concat
 
-val cache = ref (List.concat (map case_rws (TypeBase.elts ())))
+fun case_ss_of rws = boolSimps.bool_ss++simpLib.rewrites rws
 
-fun update_cache tyinfo =
-   let val thms = (case_rws tyinfo)
-   in
-     cache := List.revAppend (thms,!cache)
-   end
+(* Remembers f's result for the last argument, compared by `same'. *)
+fun memo_last same f =
+    let
+      val memo = Sref.new NONE
+      fun derive x =
+          let val y = f x in Sref.update memo (fn _ => SOME (x, y)); y end
+    in
+      fn x => case Sref.value memo of
+                  SOME (x', y) => if same (x', x) then y else derive x
+                | NONE => derive x
+    end
+
+(* The case rewrites and their simpset are a function of the TypeBase, and
+ * the assumption rewriter of the TypeBase and the implicit rewrites.
+ * AncestryData owns the TypeBase and replaces it on paths no hook sees, so
+ * each is cached on the identities of its inputs, as init_memo is for srw:
+ * a script hands the same inputs over and over, and a context holding
+ * others gets its own. *)
+type case_state = {rws : thm list, ss : simpset}
+
+val case_state_of_tyb : TypeBasePure.typeBase -> case_state =
+    memo_last Portable.pointer_eq
+      (fn tyb =>
+          let val rws = List.concat (map case_rws (TypeBasePure.listItems tyb))
+          in {rws = rws, ss = case_ss_of rws} end)
+
+fun case_state_of ctxt = case_state_of_tyb (TypeBase.theTypeBase_of ctxt)
+
+val asm_rule_of_inputs
+    : TypeBasePure.typeBase * Rewrite.rewrites -> thm -> thm =
+    memo_last
+      (fn ((tyb, imp), (tyb', imp')) =>
+          Portable.pointer_eq (tyb, tyb') andalso
+          Portable.pointer_eq (imp, imp'))
+      (fn (tyb, imp) =>
+          Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV imp
+            (#rws (case_state_of_tyb tyb)))
 in
 
-val _ = TypeBase.register_update_fn (fn tyinfo => (update_cache tyinfo;tyinfo))
+(* The simpset is built when PURE_CASE_SIMP_CONV is applied to rws, so a
+ * caller that keeps (PURE_CASE_SIMP_CONV rws) and applies it to many terms
+ * builds it only once. *)
+fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (case_ss_of rws) []
 
-fun case_rwlist () = !cache
+fun case_conv_of ctxt = simpLib.SIMP_CONV (#ss (case_state_of ctxt)) []
 
-(* Add the rewrites into a simpset to avoid re-processing them when
- * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
- * has an order of magnitude speedup on developments with large datatypes *)
-fun PURE_CASE_SIMP_CONV rws =
-    simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
+fun CASE_SIMP_CONV tm = case_conv_of (Context.snapshot()) tm
 
-fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
+fun case_tools ctxt =
+   {conv = case_conv_of ctxt,
+    asm_rule = asm_rule_of_inputs (TypeBase.theTypeBase_of ctxt,
+                                   Rewrite.implicit_rewrites_of ctxt)}
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -773,14 +809,16 @@ fun mset_diff l2 l1 =  (* important to maintain the order of elements in l2 *)
 (* of the assumptions by the new ones.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun simp_old_assums (orig as (asl1,_):goal) (gl as (asl2,_)) =
+fun simp_old_assums (orig as (asl1,_):goal) (gl as (asl2,_)) c =
  let val new = mset_diff asl2 asl1
  in if null new then ALL_TAC
     else let val thms = map ASSUME new
+             val rule = Rewrite.GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV
+                          (Rewrite.implicit_rewrites_of c) thms
          in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
-            RULE_ASSUM_TAC (REWRITE_RULE thms) THEN
+            RULE_ASSUM_TAC rule THEN
             MAP_EVERY ASSUME_TAC thms end
- end gl;
+ end gl c;
 
 fun use_new_assum orig_goal cgoal =
  (TRY (WEAKEN_TAC is_refl) THEN
@@ -792,24 +830,22 @@ fun use_new_assum orig_goal cgoal =
 (* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
 (*---------------------------------------------------------------------------*)
 
-fun CASE_TAC gl =
- (PURE_CASE_TAC THEN use_new_assum gl THEN CONV_TAC CASE_SIMP_CONV) gl;
+fun CASE_TAC gl c =
+ (PURE_CASE_TAC THEN use_new_assum gl THEN CONV_TAC (case_conv_of c)) gl c;
 
-fun TOP_CASE_TAC gl =
- (PURE_TOP_CASE_TAC THEN use_new_assum gl THEN CONV_TAC CASE_SIMP_CONV) gl;
+fun TOP_CASE_TAC gl c =
+ (PURE_TOP_CASE_TAC THEN use_new_assum gl THEN CONV_TAC (case_conv_of c)) gl c;
 
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis anywhere in the goal, then simplify a bit.             *)
 (*---------------------------------------------------------------------------*)
 
-fun FULL_CASE_TAC goal =
- let val rws = case_rwlist()
-     val case_conv = PURE_CASE_SIMP_CONV rws
-     val asm_rule = Rewrite.REWRITE_RULE rws
+fun FULL_CASE_TAC goal c =
+ let val {conv, asm_rule} = case_tools c
  in PURE_FULL_CASE_TAC THEN use_new_assum goal
     THEN RULE_ASSUM_TAC asm_rule
-    THEN CONV_TAC case_conv
- end goal
+    THEN CONV_TAC conv
+ end goal c
 
 (*---------------------------------------------------------------------------*)
 (* Repeatedly do a case analysis anywhere in the goal. Avoids re-computing   *)
@@ -817,15 +853,13 @@ fun FULL_CASE_TAC goal =
 (* than REPEAT FULL_CASE_TAC.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun EVERY_CASE_TAC goal =
- let val rws = case_rwlist()
-     val case_conv = PURE_CASE_SIMP_CONV rws
-     val asm_rule = BETA_RULE o Rewrite.REWRITE_RULE rws
+fun EVERY_CASE_TAC goal c =
+ let val {conv, asm_rule} = case_tools c
      fun tac a = (PURE_FULL_CASE_TAC THEN use_new_assum a THEN
-                  RULE_ASSUM_TAC asm_rule THEN
-                  CONV_TAC case_conv) a
+                  RULE_ASSUM_TAC (BETA_RULE o asm_rule) THEN
+                  CONV_TAC conv) a
  in REPEAT tac
- end goal;
+ end goal c;
 
 val case_tac = CASE_TAC
 val top_case_tac = TOP_CASE_TAC
@@ -1189,12 +1223,15 @@ fun renorm ({sset,initp,upds,...}:srw_state) = mkstate (sset, initp, upds)
 
 (* What an uninitialised state folds in is decided by the state itself
    and by the TypeBase it is initialised against, so one entry keyed on
-   the identity of those two is enough: a script hands the same pair
-   over and over.  The ambient read below shares its answer by writing
-   it to the live cell, which the context-taking read has nowhere to do
-   -- under a pin, not writing is the whole point -- and the fold is
+   the identity of those two is enough for as long as the pair holds
+   still: a script hands the same pair over and over, and the fold is
    ~3ms.  Without this every `srw_ss_of' call redoes it: `listTheory'
-   paid two seconds of them, and said so 651 times. *)
+   paid two seconds of them, and said so 651 times.
+
+   The pair does not hold still across a `[simp]' theorem, which is why
+   both readers also publish an initialised state to the cell they read
+   -- see `srw_ss_of' below.  The memo is what covers the reads between
+   one publication and the next. *)
 val init_memo :
     (srw_state * TypeBasePure.typeBase * srw_state) option Sref.t =
     Sref.new NONE
@@ -1320,21 +1357,58 @@ fun augment_with_typebase tyb =
 
 val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 
-(* init_state is pure, so the context-taking read need not write one; it
-   redoes the fold per call on a state nobody has initialised yet.  The
-   ambient read keeps the write, so that the fold is done once.
+(* `init_state' is pure, so the context-taking read is free to publish
+   its answer to the live cell, and has to: the memo holds one entry,
+   keyed on a state that every `[simp]' theorem replaces, so a script
+   that never names `srw_ss()' itself redoes -- and announces -- the
+   fold once per attribute.  Publishing makes the *next* delta land on
+   an initialised state, where `apply_to_global' takes the
+   `apply_delta' branch and leaves it initialised.  Before this,
+   `nlistTheory' said so 28 times and `relationTheory' 35, while
+   `listTheory', which writes `srw_ss()' by hand 128 times, said so
+   once.
 
-   That holds under a pin as well, a pinned write landing where the
-   pinned read looks (see `Context.with_context'): the fold is done
-   once for the life of the pin, and the live cell is left as the
-   pinned thread found it.  It did not always -- the write went to the
-   live cell while the read came from the pin, so reading back returned
-   the state as it was, `initp = false', TypeBase simpls not folded in
-   and every update the theories parked in `upds' still waiting.  That
-   is not a weaker cache but a weaker simpset, and a proof replayed
-   under a pin -- what the LSP's proof checker does with every proof it
-   defers -- failed on goals a build proves. *)
-fun srw_ss_of ctxt = #sset (init_state_of ctxt (get_global_value_of ctxt))
+   The write is a compare-and-set because the value read came from
+   `ctxt' and the live cell may have moved on since; publishing over a
+   newer state would undo it.  A TypeBase newer than the one the fold
+   saw is covered by the same test, `TypeBase.apply_to_global' running
+   the update functions and ours writing this slot, so the two move
+   together -- except under `set_parents', which replaces the TypeBase
+   without running the hook.  An initialised simpset does not track
+   that either, so this is the behaviour `srw_ss()' already has.
+
+   Under a pin the write goes to the pin, `Context.Data.modify'
+   redirecting it there, which is where the pinned read looks.  That is
+   wanted, not merely tolerated: the memo is one shared entry, so a
+   pool of workers replaying proofs at once evicts each other's, while
+   a worker that has published to its own pin is self-sufficient for
+   the life of that pin.  Nothing escapes to the threads that did not
+   ask for it -- `with_context' discards the pin on release.
+
+   The write must not go to the live cell while the read comes from the
+   pin.  It did once, and reading back returned the state as it was,
+   `initp = false', TypeBase simpls not folded in and every update the
+   theories parked in `upds' still waiting.  That is not a weaker cache
+   but a weaker simpset, and a proof replayed under a pin -- what the
+   LSP's proof checker does with every proof it defers -- failed on
+   goals a build proves.
+
+   `update_global_value' is `Context.Data.modify' on this slot, which
+   must not be called from inside its own callback.  Hence the write
+   lives here rather than in `init_state_of': `diminish_srw_ss0' and
+   the logged-update replay both call `init_state' from inside such a
+   callback. *)
+fun srw_ss_of ctxt =
+    let
+      val st = get_global_value_of ctxt
+      val st' = init_state_of ctxt st
+    in
+      if #initp st then ()
+      else
+        update_global_value
+          (fn cur => if Portable.pointer_eq (cur, st) then st' else cur);
+      #sset st'
+    end
 fun srw_ss () =
     case get_global_value() of
         {sset, initp = true, ...} => sset

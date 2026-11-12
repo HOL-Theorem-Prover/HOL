@@ -3,13 +3,17 @@ struct
 
 (* Resolved per-directory style settings.  `linelen <= 0` means "no
    line-length check at all" for this dir; otherwise it's the
-   inclusive limit. *)
-type per_dir = { linelen : int, unicode_ok : bool }
+   inclusive limit.  `default_goal_ok` carries `unicode_ok`'s
+   polarity: true means "whatever this directory's default goal is,
+   it is acceptable", i.e. the check is off for the subtree. *)
+type per_dir = { linelen : int, unicode_ok : bool,
+                 default_goal_ok : bool }
 
 (* A per-dir override out of the holproject.toml `[[h4pedant.dir]]`
    array: each setting is optional and inherits from the global
    default when absent. *)
-type per_dir_partial = { linelen : int option, unicode_ok : bool option }
+type per_dir_partial = { linelen : int option, unicode_ok : bool option,
+                         default_goal_ok : bool option }
 
 (* The whole loaded h4pedant config.  All paths are absolute and
    canonical.  `overrides` is the parsed `[[h4pedant.dir]]` array.
@@ -25,7 +29,8 @@ type config = {
 }
 
 (* Built-in defaults when [h4pedant] is absent or a key is missing. *)
-val builtin_default : per_dir = { linelen = 80, unicode_ok = false }
+val builtin_default : per_dir = { linelen = 80, unicode_ok = false,
+                                  default_goal_ok = false }
 
 val PROJECT_FILE = "holproject.toml"
 
@@ -35,7 +40,10 @@ fun parse_default tbl : per_dir =
     { linelen = Option.getOpt (HMProject.lookup_int tbl ["linelen"],
                                #linelen builtin_default),
       unicode_ok = Option.getOpt (HMProject.lookup_bool tbl ["unicode_ok"],
-                                  #unicode_ok builtin_default) }
+                                  #unicode_ok builtin_default),
+      default_goal_ok =
+        Option.getOpt (HMProject.lookup_bool tbl ["default_goal_ok"],
+                       #default_goal_ok builtin_default) }
 
 (* Parse one `[[h4pedant.dir]]` table into (abs_path, partial). *)
 fun parse_override root tbl : (string * per_dir_partial) option =
@@ -44,7 +52,9 @@ fun parse_override root tbl : (string * per_dir_partial) option =
       | SOME p =>
           SOME (HMProject.abs_relative_to root p,
                 { linelen = HMProject.lookup_int tbl ["linelen"],
-                  unicode_ok = HMProject.lookup_bool tbl ["unicode_ok"] })
+                  unicode_ok = HMProject.lookup_bool tbl ["unicode_ok"],
+                  default_goal_ok =
+                    HMProject.lookup_bool tbl ["default_goal_ok"] })
 
 (* Extract the [[h4pedant.dir]] array.  TOML's array-of-tables shape
    in the parser is an ARRAY whose elements are TABLE values. *)
@@ -152,7 +162,9 @@ fun effective_for (cfg : config) path : per_dir =
       fun step ((_, partial : per_dir_partial), acc : per_dir) =
           { linelen = Option.getOpt (#linelen partial, #linelen acc),
             unicode_ok = Option.getOpt (#unicode_ok partial,
-                                        #unicode_ok acc) }
+                                        #unicode_ok acc),
+            default_goal_ok = Option.getOpt (#default_goal_ok partial,
+                                             #default_goal_ok acc) }
     in
       List.foldl step (#default cfg) sorted
     end

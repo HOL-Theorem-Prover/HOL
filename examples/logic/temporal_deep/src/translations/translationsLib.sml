@@ -846,7 +846,12 @@ fun ks_fair_emptyness___num___impl thm ltl_type used_vars_num =
 
 
     val f_term = bvar(rand (concl thm))
-    val rewrite = map (fn p => (mk_comb(f_term, snd p) |-> term_of_int (fst p))) (enum_list 0 var_list)
+    (* strip_set keeps repeated elements, so a variable listed twice gets
+       a maplet per occurrence, with its two indices as residues.  Keep
+       the later one, which is the index subst used. *)
+    val rewrite = Lib.subst_keep_last aconv
+      (map (fn p => (mk_comb(f_term, snd p) |-> term_of_int (fst p)))
+           (enum_list 0 var_list))
     val is_empty_ks_term = rhs (rand (body (rand (concl thm))));
     val is_empty_ks_term = subst rewrite is_empty_ks_term
 

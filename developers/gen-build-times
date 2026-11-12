@@ -7,7 +7,8 @@ anything of its own: Holmake reads it, then lets any locally measured
 value in .hol/build-logs/target-times override it (see
 tools/Holmake/core/target_times.sig).
 
-    developers/gen-build-times --graph g.json > build-times
+    developers/gen-build-times --exempt src/real/prove_real_assums \\
+        > build-times
 
 WHY THE COVERAGE GATE.  A seed that omits an expensive target is worse
 than no seed at all: the scheduler orders everything else confidently
@@ -21,25 +22,37 @@ Coverage is checked against a `Holmake --json' dep graph rather than
 against the source tree: the tree is full of scripts a given build
 never reaches (HOLSELFTESTLEVEL, KERNELID, POLY conditionals in
 src/parallel_builds/core/Holmakefile), while the graph already accounts
-for them.  Capture one with:
+for them.  The graph is captured for you, by running Holmake --json in
+src/parallel_builds/core; --graph takes a pre-captured one instead.
 
-    cd src/parallel_builds/core
-    HOLSELFTESTLEVEL=3 Holmake --json > g.json
+Whether that tree's targets are currently up to date makes no
+difference.  Every theory target is in the graph either way; one
+already built merely reports needs_rebuild = false, a field nothing
+here reads.  (A built tree does *add* non-theory nodes -- once a
+generated Theory.sml exists it can be scanned, so its own dependencies
+join the graph -- but it never drops one, and the gate below reads
+theory nodes only.)  holsched_sim shares this graph format and does
+read needs_rebuild, which is what its --assume-all-rebuild is for;
+nothing here needs an equivalent.
 
-from an *unbuilt* tree, or pass --assume-all-rebuild to holsched_sim's
-equivalent; nodes already built report needs_rebuild = false but are
-still listed, and this script ignores that field.
+What the tree must be is *built at least once*, because KERNELID comes
+from $HOLDIR/.kernelidstr and never from the environment: with no such
+file it is empty, and the Holmakefile above then drops
+examples/bootstrap -- seventeen targets, one of them 98s -- out of the
+graph and so out of the gate.  Hence the check before capturing.
 
 The selftest level is part of the contract: a cache from a -t1 build
 checked against a -t1 graph passes, and then leaves users who build -t3
-with exactly the most expensive subtrees uncovered.  Generate from a
-build at the highest level you expect anyone to run.
+with exactly the most expensive subtrees uncovered.  --level (default 3)
+sets HOLSELFTESTLEVEL for the capture and is recorded in the header;
+generate from a build at the highest level you expect anyone to run.
 """
 from __future__ import annotations
-import argparse, datetime, os, socket, sys
+import argparse, datetime, os, socket, subprocess, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from holsched_sim import load_graph, load_log, is_theory_node, node_key
+from holsched_sim import (load_graph, load_log, is_theory_node, node_key,
+                          parse_graph)
 
 
 def note(msg: str) -> None:
@@ -68,6 +81,93 @@ def fmt_cost(v: float) -> str:
 
 
 # --------------------------------------------------------------------
+# graph capture
+
+def read_kernelid(holdir: str) -> str:
+    """The kernel this tree was last built with, '' if never built.
+    Mirrors buildutils.read_kernelid."""
+    try:
+        with open(os.path.join(holdir, '.kernelidstr')) as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+
+def capture_graph(holdir: str, root: str, capture_dir: str | None,
+                  level: str, kernel: str, save_to: str | None) -> list:
+    """Run Holmake --json and return the parsed graph.
+
+    Refuses on a tree that has never been built, because KERNELID is
+    read from .kernelidstr and never from the environment
+    (Holmake_types.base_environment inserts the key unconditionally, so
+    lookup's getEnv fallback cannot fire).  Without that file KERNELID
+    is '', and src/parallel_builds/core/Holmakefile's
+
+        ifeq ($(KERNELID),stdknl)
+        EX2DIRS += bootstrap
+        endif
+
+    drops examples/bootstrap from the graph -- seventeen targets that
+    the gate below would then never ask about.  A silently narrow graph
+    is the one failure this script exists to prevent, so it is worth a
+    precondition rather than a warning."""
+    if not kernel:
+        die(f'no {os.path.join(holdir, ".kernelidstr")}: this tree has '
+            f'never been built. KERNELID comes from that file, never '
+            f'from the environment, so without it examples/bootstrap '
+            f'drops out of the graph and out of the coverage check. '
+            f'Run bin/build first, or pass --graph for a graph '
+            f'captured from a tree that has been built')
+    # Holmakefiles compare the level textually (`ifeq($(HOLSELFTESTLEVEL),3)'
+    # in src/parallel_builds/core/Holmakefile:125), so anything that is not
+    # the digit it should be just quietly matches nothing, and the graph
+    # comes out narrow without a word being said.
+    if not level.isdigit():
+        die(f'--level {level!r} is not a number; it is compared textually '
+            f'against the levels in Holmakefiles, so a non-number silently '
+            f'narrows the graph')
+    if capture_dir is None:
+        capture_dir = os.path.join(holdir, 'src', 'parallel_builds', 'core') \
+                      if root == holdir else root
+    if not os.path.isdir(capture_dir):
+        die(f'{capture_dir} is not a directory: pass --capture-dir, or '
+            f'--graph for a pre-captured graph')
+    holmake = os.path.join(holdir, 'bin', 'Holmake')
+    if not os.path.exists(holmake):
+        die(f'{holmake} does not exist; configure the tree first')
+
+    # Chattiness defaults to 1 and --json quietens scan output at <= 1
+    # (Holmake.sml:802-806), so stdout is the graph and nothing else --
+    # provided we do not ask for -v or -d.
+    env = dict(os.environ, HOLSELFTESTLEVEL=level)
+    note(f'capturing graph: Holmake --json in {capture_dir} '
+         f'(HOLSELFTESTLEVEL={level}, kernel {kernel})')
+    t0 = time.time()
+    try:
+        p = subprocess.run([holmake, '--json'], cwd=capture_dir, env=env,
+                           capture_output=True, text=True)
+    except OSError as e:
+        die(f'cannot run {holmake}: {e}')
+    if p.returncode != 0:
+        die(f'Holmake --json failed in {capture_dir} (exit '
+            f'{p.returncode}):\n{p.stderr.rstrip()}')
+    if not p.stdout.strip():
+        die(f'Holmake --json produced no output in {capture_dir}')
+    note(f'captured in {time.time() - t0:.1f}s')
+    if save_to:
+        try:
+            with open(save_to, 'w') as f:
+                f.write(p.stdout)
+        except OSError as e:
+            die(f'cannot write {save_to}: {e}')
+        note(f'graph saved to {save_to}')
+    try:
+        return parse_graph(p.stdout)
+    except ValueError as e:
+        die(f'cannot parse the captured graph: {e}')
+
+
+# --------------------------------------------------------------------
 
 def main() -> None:
     ap = argparse.ArgumentParser(
@@ -81,8 +181,16 @@ def main() -> None:
                     help='cost cache to read '
                          '(default <root>/.hol/build-logs/target-times)')
     ap.add_argument('--graph', action='append', default=[],
-                    help='Holmake --json graph for the coverage gate; '
+                    help='pre-captured Holmake --json graph for the '
+                         'coverage gate, instead of capturing one; '
                          'repeatable')
+    ap.add_argument('--capture-dir', metavar='DIR',
+                    help='where to run Holmake --json (default '
+                         '<holdir>/src/parallel_builds/core, or --root '
+                         'for a project that is not HOL itself)')
+    ap.add_argument('--save-graph', metavar='FILE',
+                    help='write the captured graph here, for working '
+                         'out why the gate rejected it')
     ap.add_argument('--min-cost', type=float, default=1.0,
                     help='drop entries below this many seconds (default 1)')
     ap.add_argument('--exempt', action='append', default=[], metavar='KEY',
@@ -92,17 +200,30 @@ def main() -> None:
     ap.add_argument('--exempt-keys-file', metavar='FILE',
                     help='file of keys allowed to be uncovered, one per '
                          'line; `#` comments and blanks ignored')
-    ap.add_argument('--level', help='selftest level, recorded in the header')
+    ap.add_argument('--level',
+                    help='selftest level: sets HOLSELFTESTLEVEL for the '
+                         'capture, and recorded in the header (default 3, '
+                         'the highest anyone builds at). With --graph, '
+                         'where the level was settled when that graph was '
+                         'captured, this only writes the header')
     ap.add_argument('--no-coverage-check', action='store_true',
-                    help='write a seed without checking coverage. Only for '
-                         'a project with no graph to check against; the '
-                         'result is unverified')
+                    help='write a seed without checking coverage, and '
+                         'without capturing a graph. Only for a project '
+                         'with no graph to check against; the result is '
+                         'unverified')
     args = ap.parse_args()
 
     root = os.path.abspath(args.root).rstrip('/')
     holdir = os.path.abspath(args.holdir).rstrip('/') if args.holdir else root
     cache_path = args.cache or os.path.join(
         root, '.hol', 'build-logs', 'target-times')
+
+    kernel = read_kernelid(holdir)
+    # Recorded in the header only once it is known: we know it when we
+    # set it ourselves for a capture, and otherwise only because the
+    # caller said so.  A --graph was captured at whatever level it was
+    # captured at, which is not ours to assert.
+    level = args.level
 
     cache = read_cache(cache_path)
     if not cache:
@@ -118,7 +239,7 @@ def main() -> None:
         note(f'dropped {len(foreign)} absolute (out-of-project) keys')
 
     # ---- coverage gate
-    if args.graph:
+    if not args.no_coverage_check:
         exempt = set(args.exempt)
         if args.exempt_keys_file:
             try:
@@ -127,14 +248,29 @@ def main() -> None:
                                if l.strip() and not l.startswith('#')}
             except OSError as e:
                 die(f'cannot read {args.exempt_keys_file}: {e}')
+        if args.graph:
+            graphs = []
+            for gp in args.graph:
+                try:
+                    graphs.append(load_graph(gp))
+                except OSError as e:
+                    die(f'cannot read {gp}: {e}')
+                except ValueError as e:
+                    die(f'cannot parse {gp}: {e}')
+            whence = ', '.join(args.graph)
+        else:
+            level = args.level or '3'
+            graphs = [capture_graph(holdir, root, args.capture_dir,
+                                    level, kernel, args.save_graph)]
+            whence = 'the captured graph'
         wanted = set()
-        for gp in args.graph:
-            for node in load_graph(gp):
+        for nodes in graphs:
+            for node in nodes:
                 if is_theory_node(node['target']):
                     wanted.add(node_key(node['target'], holdir, root))
         if not wanted:
-            die(f'no theory nodes in {", ".join(args.graph)}: not a '
-                f'Holmake --json graph?')
+            die(f'no theory nodes in {whence}: not a Holmake --json '
+                f'graph?')
         # A wrong --root/--holdir shows up here rather than in the
         # overlap with the cache: the graph's targets stop being under
         # either base, so their keys come out absolute.  Cache overlap
@@ -158,9 +294,6 @@ def main() -> None:
                 'builds, pass --exempt <key> for each. A seed that omits '
                 'expensive work schedules worse than no seed at all.')
         note(f'coverage OK: {len(wanted)} theory targets, all measured')
-    elif not args.no_coverage_check:
-        die('no --graph given. Pass one for the coverage gate, or '
-            '--no-coverage-check to write an unverified seed')
     else:
         note('WARNING: coverage unchecked; this seed may be worse than none')
 
@@ -191,13 +324,6 @@ def main() -> None:
         die(f'only {len(kept)} entries survive --min-cost {args.min_cost}; '
             f'that is not a useful seed')
 
-    kernel = ''
-    try:
-        with open(os.path.join(holdir, '.kernelidstr')) as f:
-            kernel = f.read().strip()
-    except OSError:
-        pass
-
     when = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M')
     w = sys.stdout.write
     w('# Holmake build-time seed: scheduling costs for a fresh checkout.\n')
@@ -210,8 +336,8 @@ def main() -> None:
     w(f'# generated : {when} on {socket.gethostname()}\n')
     if kernel:
         w(f'# kernel    : {kernel}\n')
-    if args.level:
-        w(f'# selftest  : {args.level}\n')
+    if level:
+        w(f'# selftest  : {level}\n')
     w(f'# threshold : >= {args.min_cost}s\n')
     w(f'# entries   : {len(kept)} kept, {dropped} below threshold '
       f'({dropped_cost:.1f}s in total)\n')

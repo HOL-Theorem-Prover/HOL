@@ -59,6 +59,10 @@ end
 local
   val s32 = mk_var("s",``:string -> 32 variable``)
   val s64 = mk_var("s",``:string -> 64 variable``)
+  (* find_terms returns every occurrence, so a component looked up twice
+     in the STATE theorem repeats its maplet, and the hand-written
+     overrides prepended below can repeat one too.  Term.subst rejects a
+     repeated redex; keep the later maplet, which is what it acted on. *)
   val arm_state_inst = arm_STATE_thm |> concl |> find_terms var_lookup
           |> map (fn tm =>
             let
@@ -70,7 +74,8 @@ local
                       (``dom_stack:word32 set`` |->
                        ``(var_dom "dom_stack" ^s32):word32 set``)::
                       (``mode:word5`` |->
-                       ``w2w (var_word8 "mode" ^s32):word5``)::x) |> INST
+                       ``w2w (var_word8 "mode" ^s32):word5``)::x)
+          |> Lib.subst_keep_last aconv |> INST
   val arm_state = arm_STATE_thm |> concl |> rator |> rand
   val arm_state_parts = arm_STATE_thm |> concl |> rand |> list_dest dest_star
   val arm_state_type = arm_state_parts |> hd |> type_of
@@ -89,7 +94,8 @@ local
                       (mk_var("count",``:num``) |->
                        ``(var_nat "clock" ^s32):num``)::
                       (``mode:Mode`` |->
-                       ``Mode_Thread:Mode``)::x) |> INST
+                       ``Mode_Thread:Mode``)::x)
+          |> Lib.subst_keep_last aconv |> INST
   val m0_state = m0_STATE_thm |> concl |> rator |> rand
   val m0_state_parts = m0_STATE_thm |> concl |> rand |> list_dest dest_star
   val m0_state_type = m0_state_parts |> hd |> type_of
@@ -104,7 +110,8 @@ local
           |> (fn x => (``dmem:word64 set`` |->
                        ``(var_dom "dom" ^s64):word64 set``)::
                       (``dom_stack:word64 set`` |->
-                       ``(var_dom "dom_stack" ^s64):word64 set``)::x) |> INST
+                       ``(var_dom "dom_stack" ^s64):word64 set``)::x)
+          |> Lib.subst_keep_last aconv |> INST
   val riscv_state = riscv_STATE_thm |> concl |> rator |> rand
   val riscv_state_parts = riscv_STATE_thm |> concl |> rand |> list_dest dest_star
   val riscv_state_type = riscv_state_parts |> hd |> type_of

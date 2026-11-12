@@ -681,7 +681,11 @@ fun graphbuild optinfo g =
   in
     do_work(worklist, monitor)
     before (drain_dirreports(); release_all_locks(); oos_report();
-            final_report(); record_times())
+            final_report(); record_times();
+            (* Worth a diagnostic because it is the one measure of the
+               work loop that does not move with the machine: see
+               ProcessMultiplexor's rounds_last_run. *)
+            diag ("work loop rounds: " ^ Int.toString (rounds_last_run())))
   end
 
 end

@@ -14,7 +14,7 @@ document model, the incremental-resume logic, the global-state locking
 and the diagnostics publishing -- the hard parts.  Encoding JSON twice
 is much the cheaper of the two.
 
-Three things this layer owns, because the server cannot:
+Four things this layer owns, because the server cannot:
 
   * Addressing.  Every server hook takes a URI and a position, because
     it was built for a human with a cursor.  A model has a *name*.
@@ -31,6 +31,18 @@ Three things this layer owns, because the server cannot:
     worth sending, and the thing that gets cut must never be the
     diagnosis.  `_budget` keeps head and tail; every caller puts its
     diagnosis in the footer, which is appended after the cut.
+
+  * Convention.  The server's other clients are editor panes, where
+    the proof is on screen beside the answer and the reader can see
+    what it is about.  Two of its conventions rely on that and mislead
+    without it: goals are listed in HOL's goalstack order, current one
+    LAST, and a goal-state walk reports where it came to rest rather
+    than where the proof failed -- it cheats past a failed `>-` branch
+    by design, because a cursor asks what the state *here* is.  A
+    model has no pane, so `_render_goal_state` numbers the goals from
+    the structured array instead, and `_state_at_failure` asks again
+    at the failure's own position.  Nothing changes in the server:
+    both conventions are right for the clients they were built for.
 """
 import argparse
 import json
@@ -124,6 +136,57 @@ def _position_at(text, offset):
             "character": offset - (head.rfind(b"\n") + 1)}
 
 
+
+def _verdict(num_diags, by_status, settled, proof_timeout):
+    """The SUMMARY line for a tally.
+
+    Pulled out of `check_file` because the two statuses that must not
+    read as clean are reached only by timing -- a replay budget running
+    out, or a pool that has not caught up -- and a rule that cannot be
+    exercised is a rule that rots.
+
+    `broken` is `failed` and `diverged` only.  The other two are not
+    verdicts on a proof, but they are not clean bills either, and the
+    one answer this adapter must never give is a confident "nothing is
+    broken" about proofs nobody checked.
+    """
+    broken = sum(len(by_status.get(s, [])) for s in ("failed", "diverged"))
+    if not settled:
+        # Never claim a clean file from an unsettled tally: that is a
+        # confident "nothing is broken" about a file nobody has
+        # finished checking.
+        still = len(by_status.get("checking", []))
+        return ("\n\nSUMMARY: INCOMPLETE -- %d proof(s) still being "
+                "checked after %ss. %d diagnostic(s) and %d broken "
+                "proof(s) SO FAR; call again for the rest."
+                % (still, proof_timeout, num_diags, broken))
+    verdict = ("\n\nSUMMARY: %d diagnostic(s), %d broken proof(s)."
+               % (num_diags, broken))
+    # "Not a verdict on the proof: a report that we stopped asking"
+    # (LSPExtension.sig).
+    unchecked = len(by_status.get("timedout", []))
+    if unchecked:
+        verdict += (" %d proof(s) NOT CHECKED -- the replay budget ran out "
+                    "before they finished, so this is not a clean bill of "
+                    "health; raise the budget (HOL_LSP_PROOF_TIMEOUT_MS) to "
+                    "settle them." % unchecked)
+    # `cheated` is the same kind of non-verdict.  Per the state model in
+    # server.ML a proof the compile has reached but the pool has not
+    # replayed "is taken on trust", and an edit re-announces the proofs
+    # it invalidates as `cheated` before they are enqueued again.  So a
+    # tally sampled in that window has nothing `checking', settles at
+    # once, and carries the verdicts from *before* the edit -- which is
+    # how a deleted theorem came back `cheated'.
+    untried = len(by_status.get("cheated", []))
+    if untried:
+        verdict += (" %d proof(s) NOT CHECKED -- taken on trust and never "
+                    "replayed, so this is not a clean bill of health. Right "
+                    "after an edit this is the pool still catching up and "
+                    "the other verdicts may predate the edit too; call "
+                    "hol_restart and ask again." % untried)
+    return verdict
+
+
 def _last_token(text, token, start, stop):
     """Byte offset of the last `token` in [start, stop), on word
     boundaries, or None.
@@ -152,6 +215,33 @@ def _last_token(text, token, start, stop):
 
 
 # ---------------------------------------------------------------- #
+def find_hol_tree(path, fallback=None):
+    """The HOL checkout that owns `path`, or `fallback`.
+
+    `$(HOLDIR)` is baked into `bin/hol` when the tree is built
+    (`Holmake_types.sml`), so a session can only answer about a script
+    whose dependencies were built against that same tree.  The adapter
+    is normally registered once, against the governing checkout, while
+    the work happens in a git worktree beside it -- and the governing
+    checkout may not even be built.  So prefer the tree the script
+    actually lives in: walk up for a directory holding both `bin/hol`
+    and `sigobj`, which together mean "a configured HOL checkout".
+
+    A script outside any such tree (CakeML, a user's own project)
+    legitimately falls back: its heap was built against some HOL tree
+    and only the caller knows which.
+    """
+    cur = os.path.dirname(os.path.abspath(path))
+    while True:
+        if (os.path.exists(os.path.join(cur, "bin", "hol"))
+                and os.path.isdir(os.path.join(cur, "sigobj"))):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return fallback
+        cur = parent
+
+
 # HOL-side operations
 # ---------------------------------------------------------------- #
 class Hol:
@@ -169,21 +259,74 @@ class Hol:
             raise ValueError("no such file: %s" % path)
         return path
 
+    def _set_walk_budget(self, session, budget_ms):
+        """Raise what a walk, and the answer around it, may spend.
+
+        Every tool here that reaches a step reaches it by replaying
+        every step before it, so the cursor-sized default (1500ms) is
+        wrong for all of them -- and when it bites, the answer
+        describes the budget rather than the proof.  The server's
+        30s backstop on the whole answer follows this one, so setting
+        it here covers both.
+        """
+        if not budget_ms:
+            return
+        try:
+            session.request("$/setConfig", {"walkBudgetMs": int(budget_ms)},
+                            timeout=30)
+        except Exception as exc:                      # pragma: no cover
+            log("could not raise walkBudgetMs: %s" % exc)
+
     def _ready(self, file, timeout=180):
         """Session with `file` open, compiled, and current with disk.
 
         Re-reads the file every call rather than trusting a cache: the
         model edits scripts with its own tools between calls, and a
         stale buffer answers questions about a file nobody has.
+
+        The fourth element is the `$/compileBlocked` params, or None.
+        A blocked file compiled *nothing*, so every tool that reads a
+        compile result has to say so rather than answer from an empty
+        session -- which is how a missing ancestor used to come back as
+        "no proofs" or "not inside a proof the server can walk".
         """
         path = self._resolve(file)
         with open(path, "r", encoding="utf-8") as handle:
             text = handle.read()
         session = self.pool.get(path)
         mark = session.open_or_sync(path, text)
+        blocked = None
         if mark is not None:
             session.await_compile(path, mark, timeout)
-        return session, path, text
+            blocked = session.deps_blocked(path, since=mark)
+        else:
+            blocked = session.deps_blocked(path)
+        return session, path, text, blocked
+
+    def _blocked_report(self, path, blocked, session=None):
+        """What to say when the server would not compile the file.
+
+        Names the modules, because the action is to build them, and
+        appends any `window/showMessage` -- that is where a heap the
+        server could not load gets explained, and without it a session
+        silently answering from `bin/hol.state` looks like a bad file.
+        """
+        mods = blocked.get("modules") or []
+        lines = ["file: %s" % os.path.relpath(path, self.repo),
+                 "BLOCKED: the server did not compile this file.",
+                 "reason: %s" % plain(blocked.get("message", "")).strip()]
+        if mods:
+            lines.append("unavailable module(s): %s" % ", ".join(mods))
+        notes = session.show_messages() if session is not None else []
+        for note in notes:
+            lines.append("server note: %s" % plain(note).strip())
+        lines.append("")
+        lines.append("Nothing was elaborated, so there is no proof tally "
+                     "and no goal state for any theorem here. Build the "
+                     "module(s) above with Holmake, then call hol_restart "
+                     "on this file -- a running server is pinned to the "
+                     "artifacts it loaded at startup.")
+        return "\n".join(lines)
 
     def _diagnostics(self, session, path):
         uri = path_to_uri(path)
@@ -215,6 +358,15 @@ class Hol:
         `step` given, any position in the body would do and this one
         still does.
 
+        A `Definition ... Termination ... End` has no `QED`, and its
+        obligation is not written in the file at all.  The server
+        derives it, and answers `$/hol/goalState` for a cursor between
+        `Termination` and `End`; the block's `End` closes that range
+        the way `QED` closes a proof body, so it is the same rule
+        applied to the other bracket.  This matters more than it
+        looks: most of what a datatype change breaks is in termination
+        blocks, so refusing them refused the goals most worth seeing.
+
         Occurrence matters: proof identity in this server is name plus
         occurrence precisely because a script may declare the same
         name twice, and positions move under edits.
@@ -235,18 +387,39 @@ class Hol:
         rng = hits[occurrence - 1]["location"]["range"]
         start = _offset_of(text, rng["start"])
         stop = _offset_of(text, rng["end"])
-        qed = _last_token(text, "QED", start, stop)
-        if qed is None:
+        closer = _last_token(text, "QED", start, stop)
+        if closer is None:
+            closer = _last_token(text, "End", start, stop)
+        if closer is None:
             raise ValueError(
-                "%r in %s has no `Proof ... QED' body, so there is no "
-                "goal state to walk. Only `Theorem'/`Resume' proofs "
-                "written that way can be stepped through."
-                % (theorem, os.path.basename(path)))
-        return _position_at(text, qed)
+                "%r in %s has neither a `Proof ... QED' body nor a "
+                "`Termination ... End' block, so there is no goal "
+                "state to walk." % (theorem, os.path.basename(path)))
+        return _position_at(text, closer)
 
     # -- tools -----------------------------------------------------
     def check_file(self, file, timeout=180, proof_timeout=600):
-        session, path, _ = self._ready(file, timeout)
+        # Both budgets are caller-settable because the defaults encode
+        # an assumption -- that no single proof runs for minutes --
+        # which some files break honestly.  When the caller raises the
+        # proof wait, raise the *server's* per-proof budget to match:
+        # otherwise the adapter waits patiently while the server has
+        # already given up at its own 120s default and reported
+        # `timedout`, which reads as a broken file rather than a slow
+        # one.
+        session, path, _, blocked = self._ready(file, timeout)
+        if proof_timeout != 600:
+            try:
+                # A request, not a notification: the server dispatches
+                # `$/setConfig` as a Request, so a notification with the
+                # same method is simply dropped.
+                session.request("$/setConfig",
+                                {"proofTimeoutMs": int(proof_timeout * 1000)},
+                                timeout=30)
+            except Exception as exc:          # pragma: no cover
+                log("could not raise proofTimeoutMs: %s" % exc)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
         diags = self._diagnostics(session, path)
         proofs, settled = session.await_proofs(path, proof_timeout)
 
@@ -256,8 +429,14 @@ class Hol:
                 state.get("name"))
 
         lines = ["file: %s" % os.path.relpath(path, self.repo)]
-        order = ["failed", "diverged", "suspended", "cheated", "checking",
-                 "proved", "unseen"]
+        # Every status the server can send (`sendProofStates`,
+        # server.ML).  `timedout` used to be missing, which dropped it
+        # from the tally, from the detail listing and from the verdict
+        # -- so a file whose proofs were too slow to check came back as
+        # "0 broken proof(s)", the one answer this adapter must never
+        # give.  Keep this list exhaustive.
+        order = ["failed", "diverged", "suspended", "timedout", "cheated",
+                 "checking", "proved", "unseen"]
         if proofs:
             lines.append("proofs: " + ", ".join(
                 "%s=%d" % (k, len(by_status[k]))
@@ -265,7 +444,8 @@ class Hol:
         else:
             lines.append("proofs: (none reported)")
 
-        for status in ("failed", "diverged", "suspended", "cheated"):
+        for status in ("failed", "diverged", "suspended", "timedout",
+                       "cheated"):
             for name in by_status.get(status, []):
                 # Flattened: HOL's exception text is multi-line, and a
                 # newline here breaks the one-per-proof listing into
@@ -274,6 +454,29 @@ class Hol:
                     plain(proofs[name].get("detail", "")).split())
                 tail = " -- " + detail if detail else ""
                 lines.append("  %s: %s%s" % (status, name, tail))
+
+        # The cost table.  A verdict says whether the file is healthy;
+        # this says where its build time went, which is the other
+        # question asked of a script that takes minutes.  Only proofs
+        # that actually ran have a time, so a short table under a long
+        # proof list means most of them were cheated or unseen, not
+        # that they were free.
+        timed = sorted(
+            ((state["elapsedMs"], name)
+             for name, state in proofs.items()
+             if isinstance(state.get("elapsedMs"), int)),
+            reverse=True)
+        if timed:
+            total = sum(ms for ms, _ in timed)
+            lines.append("")
+            lines.append("slowest proofs (%d timed, %.1fs total):"
+                         % (len(timed), total / 1000.0))
+            for ms, name in timed[:15]:
+                share = (100.0 * ms / total) if total else 0.0
+                lines.append("  %8.2fs  %4.1f%%  %s"
+                             % (ms / 1000.0, share, name))
+            if len(timed) > 15:
+                lines.append("  ... %d more" % (len(timed) - 15))
 
         if diags:
             lines.append("")
@@ -289,41 +492,172 @@ class Hol:
 
         broken = sum(len(by_status.get(s, []))
                      for s in ("failed", "diverged"))
-        if settled:
-            verdict = ("\n\nSUMMARY: %d diagnostic(s), %d broken proof(s)."
-                       % (len(diags), broken))
-        else:
-            # Never claim a clean file from an unsettled tally: that is
-            # a confident "nothing is broken" about a file nobody has
-            # finished checking.
-            still = len(by_status.get("checking", []))
-            verdict = ("\n\nSUMMARY: INCOMPLETE -- %d proof(s) still being "
-                       "checked after %ss. %d diagnostic(s) and %d broken "
-                       "proof(s) SO FAR; call again for the rest."
-                       % (still, proof_timeout, len(diags), broken))
+        # `timedout` is deliberately *not* broken: "Not a verdict on the
+        # proof: a report that we stopped asking" (LSPExtension.sig).
+        # But it is equally not clean, and a bare "0 broken proof(s)"
+        # over a pile of unchecked proofs reads as a pass.  So it gets
+        # its own clause in the verdict rather than a bucket.
+        verdict = _verdict(len(diags), by_status, settled, proof_timeout)
         return _budget("\n".join(lines), footer=verdict)
 
     def goal_state(self, file, theorem, step=None, occurrence=1, width=100,
-                   timeout=180):
-        session, path, text = self._ready(file, timeout)
+                   budget_ms=0, timeout=180):
+        session, path, text, blocked = self._ready(file, timeout)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
+        self._set_walk_budget(session, budget_ms)
         pos = self._position_of(session, path, text, theorem, occurrence)
         params = {"textDocument": {"uri": path_to_uri(path)},
                   "position": pos, "width": width}
         if step is not None:
             params["step"] = step
         result = session.request("$/hol/goalState", params)
-        return _render_goal_state(result, theorem, step)
+        at_failure = None
+        if step is None:
+            at_failure = self._state_at_failure(session, path, result, width)
+        return _render_goal_state(result, theorem, step, at_failure)
+
+    def proof_profile(self, file, theorem, occurrence=1, top=25,
+                      budget_ms=600000, timeout=180):
+        """Per-tactic cost of one proof.
+
+        The walker has always timed every step it applies; until now
+        nothing carried the numbers out, so the question a slow proof
+        actually raises -- *which tactic* -- could only be answered by
+        hand-instrumenting the script.  This walks the proof to its
+        `QED` and reports what each step cost.
+
+        `goals` is the other half of the diagnosis.  A step that is
+        slow with the goal count flat is slow in itself; a step that is
+        slow just after the count jumped was handed an exploded state,
+        and the step to fix is the one that exploded it.
+        """
+        session, path, text, blocked = self._ready(file, timeout)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
+        # The walk budget defaults to a keystroke's worth, because the
+        # server's other clients follow a cursor.  Profiling replays a
+        # whole proof, which is the case the default is wrong for: a
+        # proof with minute-long steps would otherwise report only that
+        # the budget blew.
+        self._set_walk_budget(session, budget_ms)
+        pos = self._position_of(session, path, text, theorem, occurrence)
+        result = session.request(
+            "$/hol/goalState",
+            {"textDocument": {"uri": path_to_uri(path)},
+             "position": pos, "width": 100},
+            timeout=max(timeout, budget_ms / 1000.0 + 60))
+        costs = (result or {}).get("stepCosts") or []
+        # A walk that did not finish reports only the steps before it
+        # stopped, which looks exactly like a cheap proof.  Say so, or
+        # the table is a quiet lie.
+        err = (result or {}).get("error")
+        if not costs:
+            return ("no step costs for %r -- the walk ran no steps. "
+                    "A proof whose body is a single atom, or a walk the "
+                    "server refused, both look like this; check "
+                    "hol_goal_state for which." % theorem)
+
+        total = sum(c.get("ms", 0) for c in costs)
+        lines = ["proof: %s   steps: %d   walked: %.1fs"
+                 % (theorem, len(costs), total / 1000.0),
+                 "",
+                 "%8s %6s  %-7s  %s" % ("ms", "share", "goals", "line")]
+        ranked = sorted(enumerate(costs), key=lambda p: -p[1].get("ms", 0))
+        for idx, c in ranked[:top]:
+            ms = c.get("ms", 0)
+            span = c.get("span")
+            where = ("%d" % (_position_at(text, span[0])["line"] + 1)
+                     if span else "-")
+            lines.append("%8d %5.1f%%  %3d->%-3d  %s  (step %d)"
+                         % (ms, (100.0 * ms / total) if total else 0.0,
+                            c.get("goalsBefore", 0), c.get("goalsAfter", 0),
+                            where, idx))
+        if len(costs) > top:
+            rest = sum(c.get("ms", 0) for _, c in ranked[top:])
+            lines.append("  ... %d more steps, %.1fs total"
+                         % (len(costs) - top, rest / 1000.0))
+        footer = None
+        if err:
+            footer = ("INCOMPLETE: the walk stopped early, so the steps "
+                      "below are only those it reached and the total is "
+                      "a lower bound -- %s" % plain(err).strip())
+        return _budget("\n".join(lines), footer=footer)
+
+    def _state_at_failure(self, session, path, result, width):
+        """Ask a second time, anchored where the first walk said the
+        proof failed.
+
+        The walk a goal-state request runs does not stop at a failure.
+        It cannot: a cursor asks "what is the state *here*", and
+        getting there means carrying on past the branches that are not
+        finished yet, which is the ordinary condition of a proof being
+        written.  So it stands `cheat' in for what a failed `>-` branch
+        owed and walks on to the cursor -- which, for a request that
+        names only a theorem, is the `QED`.
+
+        The consequence is that the step it reports is the END of the
+        walk and the goals it reports are the leftovers there, while
+        the failure it reports in `failedRange` is somewhere else
+        entirely.  On cakeml's `reachable_refs_UPDATE1` that was step
+        57 with three goals, against a `metis_tac[]` at line 3848 whose
+        real goal was none of the three.  Both halves of the answer
+        were correct and they were about different places, which is the
+        shape of answer most likely to be acted on wrongly.
+
+        `failedRange` is in the proof body, so it is a cursor like any
+        other: asking for it stops the walk just before the step that
+        failed, and the state that comes back is the one that step was
+        given.  One extra walk, and only when the first reported a
+        failure.
+
+        Returns None when there is nothing better to show, in which
+        case the caller says what the reported step is and is not.
+        """
+        if not isinstance(result, dict):
+            return None
+        start = (result.get("failedRange") or {}).get("start")
+        if not start:
+            return None
+        try:
+            again = session.request("$/hol/goalState", {
+                "textDocument": {"uri": path_to_uri(path)},
+                "position": start, "width": width})
+        except (LspError, SessionDead):
+            # A diagnosis that cost an answer is a bad trade: the
+            # first reply is still a true report of where the walk
+            # ended, so fall back to it rather than fail the call.
+            return None
+        if not isinstance(again, dict):
+            return None
+        if again.get("status") == "pending":
+            return None
+        # Nothing to add: the first reply already showed this state.
+        if again.get("step") == result.get("step"):
+            return None
+        if not (again.get("goals")
+                or plain(again.get("pretty") or "").strip()):
+            return None
+        return again
 
     def try_tactic(self, file, theorem, tactic, step=None, occurrence=1,
                    width=100, budget_ms=0, timeout=180):
-        session, path, text = self._ready(file, timeout)
+        session, path, text, blocked = self._ready(file, timeout)
+        if blocked is not None:
+            return self._blocked_report(path, blocked, session)
+        # `budgetMs` below is what the *candidate* may spend; the walk
+        # to the anchor is a separate budget, and without raising it a
+        # probe deep in a long proof never reaches its own step.
+        self._set_walk_budget(session, budget_ms)
         pos = self._position_of(session, path, text, theorem, occurrence)
         params = {"textDocument": {"uri": path_to_uri(path)},
                   "position": pos, "width": width,
                   "tactic": tactic, "budgetMs": budget_ms}
         if step is not None:
             params["step"] = step
-        result = session.request("$/hol/tryTactic", params)
+        result = session.request(
+            "$/hol/tryTactic", params,
+            timeout=max(timeout, budget_ms / 1000.0 + 60))
         rendered = _render_goal_state(result, theorem, step)
         return ("candidate: %s\n(probe only -- the file is unchanged)\n\n%s"
                 % (tactic, rendered))
@@ -332,11 +666,22 @@ class Hol:
         # A session, not a bare process: patterns are parsed with the
         # file's own grammar, so `f (g x)` means in the search what it
         # would mean in that script.
-        session, _, _ = self._ready(file, timeout)
+        session, _, _, blocked = self._ready(file, timeout)
+        # Search still answers when the file is blocked -- the session
+        # has base HOL loaded -- but only over what did load, so an
+        # empty result is not evidence a theorem does not exist.  Say
+        # which case this is rather than let absence read as proof.
+        caveat = ""
+        if blocked is not None:
+            mods = ", ".join(blocked.get("modules") or []) or "its ancestors"
+            caveat = ("\n\nNOTE: %s could not be loaded, so this searched "
+                      "only the theories that did. A theorem defined in "
+                      "those modules will not appear here."
+                      % mods)
         results = session.request("$/hol/search",
                                   {"query": query, "limit": limit})
         if not results:
-            return "no results for: %s" % query
+            return "no results for: %s%s" % (query, caveat)
         lines = []
         for item in results:
             where = item.get("theory") or ""
@@ -346,7 +691,8 @@ class Hol:
             statement = plain(item.get("statement") or "").strip()
             if statement:
                 lines.append("    " + statement.replace("\n", "\n    "))
-        footer = "\n\nSUMMARY: %d result(s) for %r." % (len(results), query)
+        footer = ("\n\nSUMMARY: %d result(s) for %r.%s"
+                  % (len(results), query, caveat))
         return _budget("\n".join(lines), footer=footer)
 
     def sessions(self):
@@ -368,8 +714,87 @@ class Hol:
                 % os.path.relpath(path, self.repo))
 
 
-def _render_goal_state(result, theorem, step):
-    """One goal-state reply, with its diagnosis in the footer."""
+# The rule HOL draws between a goal's assumptions and its conclusion.
+# Reproduced rather than referred to: each goal below is laid out the
+# way a goals pane lays out a single goal, so the only thing new to a
+# reader is the heading that says which goal it is.
+_RULE = "-" * 36
+
+# Said above a multi-goal listing, not in the footer: the footer is
+# appended after `_budget`'s cut, but the head of the body survives it,
+# and this has to be read *before* the goals it describes.
+_ORDER_NOTE = (
+    "%d goals, in the order the proof has them. Goal 1 is the one the "
+    "next tactic -- and the next `>-` branch -- is applied to. (HOL's "
+    "own goals display prints the current goal LAST; this listing does "
+    "not, so the two read in opposite directions.)")
+
+
+def _indent_lines(text, prefix, first=None):
+    """`text` with `prefix` on every line, continuations included.
+
+    A term rendered at the client's width breaks across lines, and a
+    continuation left at column zero sits flush under the *next*
+    goal's heading -- which is the same "which goal is this" ambiguity
+    the numbering below exists to remove.
+    """
+    lines = plain(text).split("\n")
+    out = [(prefix if first is None else first) + lines[0]]
+    out.extend(prefix + line for line in lines[1:])
+    return "\n".join(out)
+
+
+def _render_goals(goals):
+    """The structured goals, numbered, in the order the server sent.
+
+    The server sends the same state twice: a `goals` array and a
+    `pretty` rendering.  They do not agree on order.  `pretty` comes
+    from HOL's goalstack printer, whose convention is that the
+    *current* goal is printed last, under the others -- right for the
+    editor panes the server's other clients put it in, where the proof
+    is on screen beside it, and wrong here, where a model reading a
+    transcript has nothing to anchor it.  Printing `pretty` verbatim
+    therefore listed the goals bottom-to-top with nothing saying so,
+    and the goal `>-` was about to attack looked like the last one.
+
+    That is not a cosmetic complaint: on cakeml's
+    `evaluate_handle_adj_vars_lemma` the four branches of a `>-` chain
+    were reordered to match the display, and the reordered proof then
+    reported as solved while the real elaboration still failed.
+
+    So print the array, which is in the proof's own order, and number
+    every goal against the total.  Numbered rather than merely
+    reordered, because a reader given neither numbers nor a convention
+    cannot tell a listing that was reordered from one that was not.
+
+    Assumptions are numbered as HOL numbers them: 0 is the *oldest*,
+    which is the last element of `asms`, `top_goals` handing them back
+    newest-first.  Numbering them the other way up would make `0.`
+    here and `0.` in a goals pane two different assumptions, which is
+    the first defect again at one level down.
+    """
+    out = []
+    total = len(goals)
+    for i, goal in enumerate(goals, 1):
+        out.append("goal %d of %d:" % (i, total))
+        asms = list(goal.get("asms") or [])
+        for n, asm in enumerate(reversed(asms)):
+            out.append(_indent_lines(asm, "     ", " %d.  " % n))
+        if asms:
+            out.append(_RULE)
+        out.append(_indent_lines(goal.get("goal", ""), "     "))
+        out.append("")
+    return "\n".join(out).rstrip("\n")
+
+
+def _render_goal_state(result, theorem, step, at_failure=None):
+    """One goal-state reply, with its diagnosis in the footer.
+
+    `at_failure` is a *second* reply, anchored at the step this one
+    blamed (see `Hol._state_at_failure`).  When there is one it is
+    what the body shows: it is the state the failing tactic was
+    actually given, and therefore the state the reader came for.
+    """
     if result is None:
         return ("no goal state for %s%s -- the position is not inside a "
                 "proof the server can walk." % (theorem, _step_suffix(step)))
@@ -378,25 +803,45 @@ def _render_goal_state(result, theorem, step):
         return ("the state for %s is not ready yet (a compile is still "
                 "running). Retry." % theorem)
 
-    goals = result.get("goals", [])
-    pretty = plain(result.get("pretty") or "").strip("\n")
-    if pretty.strip():
+    shown = at_failure if at_failure is not None else result
+    goals = shown.get("goals") or []
+    pretty = plain(shown.get("pretty") or "").strip("\n")
+    if len(goals) > 1:
+        # Deliberately not `pretty`, which is reversed; see
+        # `_render_goals`.  One goal and no goals are left to it: with
+        # nothing to order there is no ambiguity to remove, and
+        # `pretty` is where the server puts the sentences that are not
+        # goals at all ("Initial goal proved.", and the warning that
+        # the only reason none remain is `cheat').
+        body = [_ORDER_NOTE % len(goals), "", _render_goals(goals)]
+    elif pretty.strip():
         body = [pretty]
+    elif goals:
+        body = [_render_goals(goals)]
     else:
-        # No rendered form: fall back to the structured goals.
         body = []
-        for i, goal in enumerate(goals, 1):
-            body.append("goal %d:" % i)
-            for asm in goal.get("asms", []):
-                body.append("    [%s]" % plain(asm))
-            body.append("  %s" % plain(goal.get("goal", "")))
 
-    context = [plain(c) for c in (result.get("context") or [])]
-    note = plain(result.get("note") or "") or None
+    context = [plain(c) for c in (shown.get("context") or [])]
+    note = plain(shown.get("note") or "") or None
 
-    footer_bits = ["\n\nSTATUS: %s at step %s of %s; %d goal(s)."
-                   % (status, result.get("step"),
-                      result.get("theorem", theorem), len(goals))]
+    walk_step = result.get("step")
+    name = result.get("theorem", theorem)
+    if at_failure is None:
+        footer_bits = ["\n\nSTATUS: %s at step %s of %s; %d goal(s)."
+                       % (status, walk_step, name, len(goals))]
+    else:
+        fail_step = at_failure.get("step")
+        footer_bits = [
+            "\n\nSTATUS: %s at step %s of %s; %d goal(s) -- but that is "
+            "where the walk ENDED, not where the proof failed."
+            % (status, walk_step, name, len(result.get("goals") or [])),
+            "SHOWING: the state at step %s instead (%d goal(s)), which is "
+            "the step that failed. A `>-` branch that fails does not stop "
+            "the walk: `cheat' stands in for what the branch owed and the "
+            "walk carries on to the end, so the goals it ends with are "
+            "downstream of the failure and are not the ones that went "
+            "wrong. Ask again with step=%s for the end-of-walk state."
+            % (fail_step, len(goals), walk_step)]
     if context:
         footer_bits.append("OPEN: " + "; ".join(context))
     if note:
@@ -406,9 +851,21 @@ def _render_goal_state(result, theorem, step):
     rng = result.get("failedRange")
     if rng:
         start = rng.get("start", {})
-        footer_bits.append("FAILED AT: line %s col %s"
+        at_step = ("" if at_failure is None
+                   else " (step %s)" % at_failure.get("step"))
+        footer_bits.append("FAILED AT: line %s col %s%s"
                            % (start.get("line", 0) + 1,
-                              start.get("character", 0) + 1))
+                              start.get("character", 0) + 1, at_step))
+        if at_failure is None:
+            # The re-anchored walk is what normally answers this, so
+            # reaching here means it was not run (the caller named a
+            # step) or it declined.  Say the limit rather than leave
+            # the step reading as the failure's own.
+            footer_bits.append(
+                "CAVEAT: the step above is where the walk came to rest, "
+                "which need not be where the proof went wrong -- the "
+                "walk cheats past a failed branch and carries on. The "
+                "line and column are the failure; the goals may not be.")
     return _budget("\n".join(body), footer="\n".join(footer_bits))
 
 
@@ -430,12 +887,62 @@ def tool_schemas():
             "description":
                 "Compile a HOL script and report its diagnostics and the "
                 "status of every proof in it (proved / failed / diverged / "
-                "suspended / cheated). Call this first: it is what makes a "
-                "file's state current, and every other tool here implies it.",
+                "suspended / timedout / cheated). Call this first: it is "
+                "what makes a file's state current, and every other tool "
+                "here implies it.",
             "inputSchema": {
                 "type": "object",
-                "properties": {"file": _FILE},
+                "properties": {
+                    "file": _FILE,
+                    "timeout": {
+                        "type": "integer",
+                        "description":
+                            "Seconds to wait for elaboration. Default 180. "
+                            "Raise it for a very large script."},
+                    "proof_timeout": {
+                        "type": "integer",
+                        "description":
+                            "Seconds to wait for the proofs to settle, and "
+                            "the per-proof budget the server is given. "
+                            "Default 600. A file with a proof that honestly "
+                            "runs for minutes needs this raised, or every "
+                            "such proof comes back `timedout`."},
+                },
                 "required": ["file"],
+            },
+        },
+        {
+            "name": "hol_proof_profile",
+            "description":
+                "What each tactic step of a proof cost, slowest first. "
+                "Use this when a proof is slow and you need to know "
+                "WHICH tactic -- the per-proof total from "
+                "hol_check_file says a proof is expensive, this says "
+                "where inside it the time went. The goals column "
+                "(before->after) separates a tactic that is slow in "
+                "itself from one that was handed a state some earlier "
+                "step exploded.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "file": _FILE,
+                    "theorem": {"type": "string",
+                                "description": "Name as declared."},
+                    "occurrence": {"type": "integer"},
+                    "top": {"type": "integer",
+                            "description": "How many steps to list. "
+                                           "Default 25."},
+                    "budget_ms": {
+                        "type": "integer",
+                        "description":
+                            "Wall-clock the whole walk may spend. "
+                            "Default 600000 (10 min) -- profiling "
+                            "replays the entire proof, so this is far "
+                            "above the server's cursor-following "
+                            "default of 1500ms."},
+                    "timeout": {"type": "integer"},
+                },
+                "required": ["file", "theorem"],
             },
         },
         {
@@ -445,7 +952,10 @@ def tool_schemas():
                 "for the end of the proof, or give a 0-based step index to "
                 "see the state before that tactic ran. Reports which "
                 "combinators are still open, and where the proof failed if "
-                "it did.",
+                "it did -- and when it did fail, shows the state at the "
+                "failing step rather than at the end of the walk, which are "
+                "not the same place. Goals are listed in the proof's own "
+                "order: goal 1 is what the next `>-` branch acts on.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -461,6 +971,13 @@ def tool_schemas():
                             "Only needed when a script declares it twice."},
                     "width": {"type": "integer",
                               "description": "Render width, default 100."},
+                    "budget_ms": {
+                        "type": "integer",
+                        "description":
+                            "Wall-clock the walk to this step may "
+                            "spend. 0 uses the server default of "
+                            "1500ms, which suits a cursor but not a "
+                            "walk deep into a long proof."},
                 },
                 "required": ["file", "theorem"],
             },
@@ -544,11 +1061,19 @@ def tool_schemas():
 
 def dispatch(hol, name, args):
     if name == "hol_check_file":
-        return hol.check_file(args["file"])
+        return hol.check_file(args["file"],
+                              args.get("timeout", 180),
+                              args.get("proof_timeout", 600))
+    if name == "hol_proof_profile":
+        return hol.proof_profile(
+            args["file"], args["theorem"], args.get("occurrence", 1),
+            args.get("top", 25), args.get("budget_ms", 600000),
+            args.get("timeout", 180))
     if name == "hol_goal_state":
         return hol.goal_state(
             args["file"], args["theorem"], args.get("step"),
-            args.get("occurrence", 1), args.get("width", 100))
+            args.get("occurrence", 1), args.get("width", 100),
+            args.get("budget_ms", 0), args.get("timeout", 180))
     if name == "hol_try_tactic":
         return hol.try_tactic(
             args["file"], args["theorem"], args["tactic"], args.get("step"),
@@ -663,10 +1188,16 @@ def main(argv=None):
     here = os.path.dirname(os.path.abspath(__file__))
     default_repo = os.path.normpath(os.path.join(here, "..", "..", ".."))
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--hol", default=None,
-                        help="path to bin/hol (default: <tree>/bin/hol)")
-    parser.add_argument("--repo", default=default_repo,
-                        help="HOL tree relative paths resolve against")
+    # Env vars as well as flags: the adapter is usually registered in a
+    # checked-in `.mcp.json` that names no arguments, so a flag is not
+    # reachable from the session that needs to redirect it.
+    parser.add_argument("--hol", default=os.environ.get("HOL_MCP_HOL"),
+                        help="path to bin/hol (default: <tree>/bin/hol, "
+                             "or $HOL_MCP_HOL)")
+    parser.add_argument("--repo",
+                        default=os.environ.get("HOL_MCP_REPO", default_repo),
+                        help="HOL tree relative paths resolve against "
+                             "(or $HOL_MCP_REPO)")
     opts = parser.parse_args(argv)
 
     repo = os.path.abspath(opts.repo)
@@ -675,9 +1206,14 @@ def main(argv=None):
         log("no such hol binary: %s" % hol_bin)
         return 2
 
-    pool = SessionPool(hol_bin)
+    def hol_for(path):
+        tree = find_hol_tree(path)
+        return os.path.join(tree, "bin", "hol") if tree else None
+
+    pool = SessionPool(hol_bin, hol_resolver=hol_for)
     server = McpServer(Hol(pool, repo))
-    log("serving MCP %s from %s" % (PROTOCOL_VERSION, hol_bin))
+    log("serving MCP %s from %s (per-file tree resolution on)"
+        % (PROTOCOL_VERSION, hol_bin))
     try:
         server.serve()
     except KeyboardInterrupt:

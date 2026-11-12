@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_typedef`
+
+``` hol4
+Refute.register_typedef :
+  {ty : hol_type, abs : term, rep : term, absrep_thms : thm list} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a type definition with the model finder.
+
+`ty`'s parameters must be distinct type variables, and its
+representation type may mention no others.  `abs` and `rep` are the
+abstraction and representation constants.  `absrep_thms` is `[th]`,
+for `th` the theorem `define_new_type_bijections` returns, or `th`'s
+two conjuncts in either order.  The representation predicate is
+checked against the type's `TY_DEF` theorem.
+
+The model finder registers a typedef by itself when `th` or its two
+conjuncts are stored in a theory.  Registrations last for the session.
+
+### Failure
+
+Fails for ill-typed arguments, missing type-definition theorems,
+theorems of the wrong shape or with hypotheses, or a `ty` already
+registered as a different kind of type.
+
+### See also
+
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.register_codatatype`](#Refute.register_codatatype).

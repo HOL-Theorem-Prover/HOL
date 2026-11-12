@@ -1,0 +1,28 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `abstract_generator`
+
+``` hol4
+Refute.abstract_generator :
+  {ty : hol_type, constructors : term list, pred : term option} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a test-data generator building values from constructors.
+
+Values of `ty` are built by applying `constructors` to generated
+arguments, keeping those satisfying `pred`, a closed `ty -> bool` term,
+if present.  Each constructor is a constant whose declared result type
+is `ty`'s type operator applied to type variables.  The generator never
+establishes `NoCounterexample`.  The registration replaces the type's
+previous generator and lasts for the session.
+
+### Failure
+
+Fails if `constructors` is empty, a constructor is not a constant of
+the required result type or is recursive under a function type, or
+`pred` is not a closed `ty -> bool` term.
+
+### See also
+
+[`Refute.register_generator`](#Refute.register_generator).

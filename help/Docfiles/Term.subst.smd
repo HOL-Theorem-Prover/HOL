@@ -9,7 +9,7 @@ Term.subst : (term,term) subst -> term -> term
 
 Substitutes terms in a term.
 
-Given a "(term,term) subst" (a list of `{redex, residue}` records) and a
+Given a `(term,term) subst` (a list of `{redex, residue}` records) and a
 term `tm`, `subst` attempts to replace each free occurrence of a `redex`
 in `tm` by its associated `residue`. The substitution is done in
 parallel, i.e., once a redex has been replaced by its residue, at some
@@ -22,29 +22,23 @@ incoming residue.
 
 Failure occurs if there exists a `{redex, residue}` record in the
 substitution such that the types of the `redex` and `residue` are not
-equal.
+equal or if the same redex occurs more than once in the substitution
+(whether or not it maps to the same residue).
 
 ### Example
 
 ``` hol4
->> load "arithmeticTheory";
+>> subst [“SUC 0” |-> “1”] “SUC(SUC 0)”;
 
->> subst [Term`SUC 0` |-> Term`1`]
-        (Term`SUC(SUC 0)`);
+>> subst [“SUC 0” |-> “1”, “SUC 1” |-> “2”]
+         “SUC(SUC 0)”;
 
->> subst [Term`SUC 0` |-> Term`1`,
-         Term`SUC 1` |-> Term`2`]
-        (Term`SUC(SUC 0)`);
+>> subst [“SUC 0” |-> “1”, “SUC 1” |-> “2”]
+         “SUC(SUC 0) = SUC 1”;
 
->> subst [Term`SUC 0` |-> Term`1`,
-         Term`SUC 1` |-> Term`2`]
-        (Term`SUC(SUC 0) = SUC 1`);
+>> subst [“b:num” |-> “a:num”] “λa:num. b:num”;
 
->> subst [Term`b:num` |-> Term`a:num`]
-        (Term`\a:num. b:num`);
-
->>+ subst [Term`flip:'a` |-> Term`foo:'a`]
-        (Term`waddle:'a`);
+>> subst [“flipper:'a” |-> “foo:'a”] “waddle:'a”;
 ```
 
 ### See also

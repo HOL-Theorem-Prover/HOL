@@ -228,7 +228,10 @@ fun prove_goal hol2deep gg = let
     val (s,i) = match_term inv_v (ty2inv (type_of vname))
     val s2 = (name |-> stringSyntax.fromMLstring (dest_var vname |> fst)) :: s
     in s2 end
-  val s = flatten (map get_substs ups)
+  (* find_terms returns every occurrence, and two updates sharing an
+     invariant give identical maplets, so the concatenation repeats a
+     redex that Term.subst rejects.  Keep the later one, as subst did. *)
+  val s = Lib.subst_keep_last aconv (flatten (map get_substs ups))
   val t3 = INST s t2
   val lemma = hol2deep (x |> rand |> rator |> rand |> rator |> rand |> rand)
   val x = t3 |> concl |> rand |> list_dest dest_forall |> last

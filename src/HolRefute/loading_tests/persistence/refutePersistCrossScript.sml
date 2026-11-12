@@ -1,0 +1,3 @@
+Theory refutePersistCross
+Ancestors
+  refutePersistCrossAType refutePersistCrossBCodata
