@@ -154,6 +154,12 @@ Bugs fixed
 
 -   `Holmake -r` now overrides `--no_prereqs`, as the documentation has always said it does.
 
+-   `Holmake`'s progress display no longer assumes that anything it can call a terminal will act on the carriage returns the display is made of.
+    Emacs runs an `M-x compile` subprocess on a pty, so `Holmake` took its output for a terminal's and animated the running jobs in place; because a compilation buffer never moves back over a line it has printed, a whole build's worth of status updates piled up into one enormous line, which Emacs then hid behind a clickable `[...]` button -- taking every per-target completion line with it.
+    An Emacs compilation or `comint` buffer is now recognised as not being a terminal, whatever `TERM` says, so each job is announced and reported on a line of its own instead; `M-x term`, `ansi-term` and `vterm` are terminals and still get the animated display.
+    The `Scanning` frames of the opening directory walk, which mean something only while each is overwriting the last, are likewise printed only on a terminal: elsewhere just the `Scanned `*n*` directories` line they end with is.
+    `Holmake` also now takes the terminal width from `COLUMNS` when `stty size` cannot answer, which is how Emacs passes it the window width.
+
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
 
