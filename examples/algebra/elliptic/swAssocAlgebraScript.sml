@@ -46,6 +46,10 @@ fun USING_RING_TAC equations (asl, goal) =
        (fn tm => not (is_eq tm) orelse List.exists (aconv tm) equations) asl,
      goal)
 
+(* For two curve solutions in a ring with (x2-x1)*di=1 and
+   m=(y2-y1)*di, y2-y1=m*(x2-x1) and
+   m*(y1+y2)=x1^2+x1*x2+x2^2+a.
+*)
 Theorem sw_secant_equations_algebra:
   !(r:'a Ring) x1 y1 x2 y2 a b di m.
   EVERY (\x. x IN ring_carrier r) [x1; y1; x2; y2; a; b; di; m] /\
@@ -65,6 +69,9 @@ Proof
   CURVE_RING_TAC
 QED
 
+(* In a ring, (2*y)*di=1 and m=(3*x^2+a)*di imply
+   y-y=m*(x-x) and m*(y+y)=x^2+x*x+x^2+a.
+*)
 Theorem sw_tangent_equations_algebra:
   !(r:'a Ring) x y a di m.
   EVERY (\x. x IN ring_carrier r) [x; y; a; di; m] /\
@@ -82,6 +89,10 @@ Proof
   CURVE_RING_TAC
 QED
 
+(* Given the stated coordinate equations and slope identities
+   k-l=m-n and (m-n)*(m+l)=x1-x3, the two final outputs agree:
+   xl=xr and k*(x1-xl)-y1=l*(ux-xr)-uy.
+*)
 Theorem sw_assoc_outputs_algebra:
   !(r:'a Ring) x1 y1 x2 y2 x3 m n ux uy vx vy k l.
   EVERY (\x. x IN ring_carrier r)
@@ -154,6 +165,10 @@ QED
 (* The secant equations also cover a tangent when the two points coincide.
    Keeping these low-degree equations avoids a single large ideal search over
    all curve equations, intermediate coordinates, and denominator inverses. *)
+(* In a ring, the stated slope and sum-coordinate equations,
+   with vx-x1 and x3-ux invertible, give identical coordinates
+   for P+(Q+R) and (P+Q)+R.
+*)
 Theorem sw_assoc_coordinates_algebra:
   !(r:'a Ring) x1 y1 x2 y2 x3 y3 a m n ux uy vx vy k l ia ib.
   EVERY (\x. x IN ring_carrier r)

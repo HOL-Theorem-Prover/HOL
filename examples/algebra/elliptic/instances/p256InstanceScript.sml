@@ -131,6 +131,7 @@ Proof
       p256_scalar_step, p256_scalar_step]
 QED
 
+(* The standard generator G has exact order p256_n. *)
 Theorem p256_generator_order:
   order p256_group p256_generator = p256_n
 Proof
@@ -157,6 +158,7 @@ Proof
   simp[p256_curve, p256_generator_member, p256_base_field_finite_field]
 QED
 
+(* The cyclic subgroup <G> has cardinality p256_n. *)
 Theorem p256_subgroup_card:
   CARD p256_subgroup.carrier = p256_n
 Proof

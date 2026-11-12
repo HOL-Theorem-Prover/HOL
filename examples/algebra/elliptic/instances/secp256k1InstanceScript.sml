@@ -131,6 +131,7 @@ Proof
       secp256k1_scalar_step, secp256k1_scalar_step]
 QED
 
+(* The standard generator G has exact order secp256k1_n. *)
 Theorem secp256k1_generator_order:
   order secp256k1_group secp256k1_generator = secp256k1_n
 Proof
@@ -157,6 +158,7 @@ Proof
   simp[secp256k1_curve, secp256k1_generator_member, secp256k1_base_field_finite_field]
 QED
 
+(* The cyclic subgroup <G> has cardinality secp256k1_n. *)
 Theorem secp256k1_subgroup_card:
   CARD secp256k1_subgroup.carrier = secp256k1_n
 Proof

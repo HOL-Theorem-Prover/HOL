@@ -20,6 +20,8 @@
    point and concludes membership in n-torsion, not explicitly in that
    generated subgroup. Effective hash-to-curve cofactors are not used. *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory bls12381TwistCardinality
 Ancestors
   namedPrimes bls12381TwistCofactorPrimes
@@ -49,6 +51,7 @@ Proof
   CONV_TAC (certificateComputeLib.EVAL_CONV ())
 QED
 
+(* On the BLS12-381 twist, [2]P=O implies P=O. *)
 Theorem bls12381_g2_no_two_torsion:
   !P. P IN sw_points bls12381_fp2 bls12381_g2_a bls12381_g2_b /\
       bls12381_g2_group.exp P 2 = ECInfinity ==> P = ECInfinity
@@ -126,6 +129,9 @@ Proof
                     EVAL ``coprime 3 (23 - 1)``]
 QED
 
+(* For P the large point of order M and each prime q dividing d,
+   f([M/q]P) <> [t]([M/q]P) for every 0<=t<q with t^3=1 mod q.
+*)
 Theorem bls12381_g2_cm_eigenvalue_exclusion:
   !q t. prime q /\ q divides bls12381_g2_torsion_factor /\
         t < q /\ t ** 3 MOD q = 1 ==>
@@ -221,6 +227,9 @@ Proof
             bls12381_g2_second_point_def, bls12381_g2_cm_eigenvalue_exclusion]
 QED
 
+(* The full BLS12-381 twist has |E(F_(p^2))|=h*n,
+   where h=bls12381_g2_full_cofactor and n=bls12381_n.
+*)
 Theorem bls12381_g2_full_cardinality:
   CARD (sw_points bls12381_fp2 bls12381_g2_a bls12381_g2_b) =
     bls12381_g2_full_cofactor * bls12381_n
@@ -257,6 +266,9 @@ Proof
   metis_tac[PSUBSET_DEF, prim_recTheory.LESS_REFL]
 QED
 
+(* Every twist point P satisfies [h]P in E[n], i.e. [n]([h]P)=O,
+   with h the full cofactor and n=bls12381_n.
+*)
 Theorem bls12381_g2_full_cofactor_clearing:
   P IN sw_points bls12381_fp2 bls12381_g2_a bls12381_g2_b ==>
   bls12381_g2_group.exp P bls12381_g2_full_cofactor IN

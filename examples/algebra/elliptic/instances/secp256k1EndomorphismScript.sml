@@ -39,6 +39,7 @@ Definition secp256k1_endo_def:
   secp256k1_endo = sw_cm_map secp256k1_base_field secp256k1_beta
 End
 
+(* The coordinate multiplier satisfies beta^3=1 and beta<>1 in F_p. *)
 Theorem secp256k1_beta_certificate:
   secp256k1_beta IN secp256k1_base_field.carrier /\
   secp256k1_base_field.prod.exp secp256k1_beta 3 =
@@ -97,6 +98,10 @@ in
   val secp256k1_endo_scalar_step = step
 end
 
+(* Write [n]P for scalar multiplication. For the standard generator G,
+   phi(G)=[lambda]G,
+   where phi(x,y)=(beta*x,y).
+*)
 Theorem secp256k1_endo_generator:
   secp256k1_endo secp256k1_generator =
     secp256k1_group.exp secp256k1_generator secp256k1_lambda
@@ -141,6 +146,7 @@ Proof
       CONV_TAC (certificateComputeLib.EVAL_CONV ())]
 QED
 
+(* For every secp256k1 curve point P, phi(P)=[lambda]P. *)
 Theorem secp256k1_endo_is_lambda_scalar:
   P IN sw_points secp256k1_base_field secp256k1_a secp256k1_b ==>
   secp256k1_endo P = secp256k1_group.exp P secp256k1_lambda

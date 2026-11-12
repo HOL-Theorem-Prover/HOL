@@ -217,11 +217,17 @@ Theorem bls12381_fp12_curve:
 Proof
   metis_tac[bls12381_twist_monomorphism]
 QED
+(* With f: F_(p^2)->F_(p^12), T(x,y)=(w^2*f(x),w^3*f(y))
+   satisfies T(P+Q)=T(P)+T(Q) from the BN254 twist to y^2=x^3+3.
+*)
 Theorem bn254_twist_embedding_group_homo:
   GroupHomo bn254_twist_embedding bn254_g2_group bn254_fp12_curve_group
 Proof
   metis_tac[bn254_twist_monomorphism]
 QED
+(* With f: F_(p^2)->F_(p^12), T(x,y)=(w^(-2)*f(x),w^(-3)*f(y))
+   satisfies T(P+Q)=T(P)+T(Q) from the BLS12-381 twist to y^2=x^3+4.
+*)
 Theorem bls12381_twist_embedding_group_homo:
   GroupHomo bls12381_twist_embedding bls12381_g2_group bls12381_fp12_curve_group
 Proof
@@ -260,6 +266,7 @@ Proof
     bls12381_g2_curve, bls12381_fp12_curve]
 QED
 
+(* For BN254 twist points, ord(T(P))=ord(P). *)
 Theorem bn254_twist_embedding_order:
   !P. P IN bn254_g2_group.carrier ==>
     order bn254_fp12_curve_group (bn254_twist_embedding P) = order bn254_g2_group P
@@ -269,6 +276,7 @@ Proof
     short_weierstrass_group, bn254_g2_group_def, bn254_fp12_curve_group_def,
     bn254_g2_curve, bn254_fp12_curve]
 QED
+(* For BLS12-381 twist points, ord(T(P))=ord(P). *)
 Theorem bls12381_twist_embedding_order:
   !P. P IN bls12381_g2_group.carrier ==>
     order bls12381_fp12_curve_group (bls12381_twist_embedding P) = order bls12381_g2_group P

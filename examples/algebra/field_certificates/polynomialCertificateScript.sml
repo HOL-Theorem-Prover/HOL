@@ -29,6 +29,9 @@ open fieldTheory ringTheory polynomialTheory polyWeakTheory pred_setTheory
 
 (* Only bounded polynomial identities are computed by the certificate library.
    The quotient/remainder operations themselves are specified abstractly in HOL. *)
+(* For a polynomial a and monic f of positive degree over a ring,
+   a^(2*n) mod f = ((a^n mod f)*(a^n mod f)) mod f.
+*)
 Theorem polynomial_certificate_pow_even:
   !r:'a ring. Ring r ==> !a f n.
     Poly r a /\ poly_monic r f /\ 0 < poly_deg r f ==>
@@ -53,6 +56,9 @@ Proof
             poly_exp_poly, poly_monic_ulead]
 QED
 
+(* For polynomials over a ring, monic f, a=q*f+b and deg(b)<deg(f)
+   certify a mod f = b.
+*)
 Theorem polynomial_certificate_remainder:
   !r:'a ring. Ring r ==> !a f q b.
     Poly r a /\ poly_monic r f /\ Poly r q /\ Poly r b /\
@@ -65,6 +71,9 @@ QED
 (* Frobenius fixes every coefficient.  Thus two checked remainders at
    indices m and n compose to the remainder at m+n, without expanding
    the much larger exponent CARD r.carrier ** (m+n). *)
+(* Over F_q, if X^(q^m) mod f=a and X^(q^n) mod f=b for monic f,
+   then X^(q^(m+n)) mod f = a(b) mod f.
+*)
 Theorem polynomial_certificate_frobenius_compose:
   !r:'a field. FiniteField r ==> !f a b m n.
     poly_monic r f /\ Poly r a /\ Poly r b /\
@@ -117,6 +126,9 @@ Proof
   metis_tac[poly_mod_sub, poly_mod_mod, poly_mod_poly, poly_add_poly]
 QED
 
+(* Over F_q, monic f with X^q mod f=X+b and u*f+v*b=1
+   has no roots in F_q.
+*)
 Theorem polynomial_certificate_no_roots:
   !r:'a field. FiniteField r ==> !f b u v.
     poly_monic r f /\ Poly r b /\ Poly r u /\ Poly r v /\
@@ -157,6 +169,10 @@ QED
 
 (* Rabin's criterion specialized to 12: the only prime divisors of 12 are
    2 and 3, hence the proper-degree tests occur at 12/2 and 12/3. *)
+(* For monic f of degree 12 over F_q, X^(q^12) mod f=X and
+   Bezout identities for f and X^(q^4)-X, X^(q^6)-X
+   certify that f is irreducible.
+*)
 Theorem polynomial_certificate_rabin12:
   !r:'a field. FiniteField r ==> !f b4 b6 u4 v4 u6 v6.
     poly_monic r f /\ poly_deg r f = 12 /\

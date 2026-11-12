@@ -25,6 +25,9 @@ Definition secp256k1_base_field_def:
   secp256k1_base_field = GF secp256k1_p
 End
 
+(* The base field is F_p with p=secp256k1_p; the following results give
+   |F_p|=p and char(F_p)=p.
+*)
 Theorem secp256k1_base_field_field:
   Field secp256k1_base_field
 Proof
@@ -53,6 +56,9 @@ Definition secp256k1_scalar_field_def:
   secp256k1_scalar_field = GF secp256k1_n
 End
 
+(* The scalar field is F_n with n=secp256k1_n; the following results give
+   |F_n|=n and char(F_n)=n.
+*)
 Theorem secp256k1_scalar_field_field:
   Field secp256k1_scalar_field
 Proof
@@ -81,6 +87,9 @@ Definition p256_base_field_def:
   p256_base_field = GF p256_p
 End
 
+(* The base field is F_p with p=p256_p; the following results give
+   |F_p|=p and char(F_p)=p.
+*)
 Theorem p256_base_field_field:
   Field p256_base_field
 Proof
@@ -109,6 +118,9 @@ Definition p256_scalar_field_def:
   p256_scalar_field = GF p256_n
 End
 
+(* The scalar field is F_n with n=p256_n; the following results give
+   |F_n|=n and char(F_n)=n.
+*)
 Theorem p256_scalar_field_field:
   Field p256_scalar_field
 Proof
@@ -137,6 +149,9 @@ Definition bn254_base_field_def:
   bn254_base_field = GF bn254_p
 End
 
+(* The base field is F_p with p=bn254_p; the following results give
+   |F_p|=p and char(F_p)=p.
+*)
 Theorem bn254_base_field_field:
   Field bn254_base_field
 Proof
@@ -165,6 +180,9 @@ Definition bn254_scalar_field_def:
   bn254_scalar_field = GF bn254_n
 End
 
+(* The scalar field is F_n with n=bn254_n; the following results give
+   |F_n|=n and char(F_n)=n.
+*)
 Theorem bn254_scalar_field_field:
   Field bn254_scalar_field
 Proof
@@ -193,6 +211,9 @@ Definition bls12381_base_field_def:
   bls12381_base_field = GF bls12381_p
 End
 
+(* The base field is F_p with p=bls12381_p; the following results give
+   |F_p|=p and char(F_p)=p.
+*)
 Theorem bls12381_base_field_field:
   Field bls12381_base_field
 Proof
@@ -221,6 +242,9 @@ Definition bls12381_scalar_field_def:
   bls12381_scalar_field = GF bls12381_n
 End
 
+(* The scalar field is F_n with n=bls12381_n; the following results give
+   |F_n|=n and char(F_n)=n.
+*)
 Theorem bls12381_scalar_field_field:
   Field bls12381_scalar_field
 Proof

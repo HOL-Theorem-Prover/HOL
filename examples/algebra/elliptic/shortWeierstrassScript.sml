@@ -44,6 +44,9 @@ Definition sw_discriminant_def:
           (r.prod.op (r.sum.exp r.prod.id 27) (r.prod.exp b 2))))
 End
 
+(* Valid curves have a,b in the field, char(F) <> 2,3 and
+   Delta = -16*(4*a^3+27*b^2) <> 0.
+*)
 Definition ShortWeierstrassCurve_def:
   ShortWeierstrassCurve (r:'a field) a b <=>
     Field r /\
@@ -72,6 +75,7 @@ Proof
   rw[sw_on_curve_def]
 QED
 
+(* (x,y) is on the curve iff x,y are in the field and y^2 = x^3+a*x+b. *)
 Theorem sw_on_curve_ECAffine[simp]:
   !(r:'a field) a b x y.
     sw_on_curve r a b (ECAffine x y) <=>

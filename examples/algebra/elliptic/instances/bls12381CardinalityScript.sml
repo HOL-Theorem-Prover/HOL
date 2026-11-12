@@ -20,6 +20,8 @@
    Coordinates and primality witnesses are proof inputs, not trusted
    external point-count or primality verdicts. *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory bls12381Cardinality
 Ancestors
   namedPrimes bls12381CofactorPrimes
@@ -647,6 +649,9 @@ Proof
       cardinality_scalar_finish]
 QED
 
+(* For P=bls12381_large_point and M=bls12381_large_order,
+   [M]P=O and [M/q]P<>O for every listed prime divisor q of M.
+*)
 Theorem bls12381_large_point_scalar_tests:
   bls12381_g1_group.exp bls12381_large_point bls12381_large_order = ECInfinity /\
   bls12381_g1_group.exp bls12381_large_point (bls12381_large_order DIV 3) <> ECInfinity /\
@@ -943,6 +948,9 @@ Proof
             bls12381_g1_b_def, sw_group_carrier]
 QED
 
+(* With M=bls12381_large_order and d=bls12381_torsion_factor,
+   the second certificate point is Q=[M/d]phi(P).
+*)
 Theorem bls12381_second_point_cm_expression:
   bls12381_second_point = bls12381_g1_group.exp
     (sw_cm_map bls12381_base_field bls12381_cm_beta bls12381_large_point)
@@ -2085,6 +2093,9 @@ Proof
             bls12381_certificate_points_member, generated_subgroup]
 QED
 
+(* The two certificate points generate a subgroup product of
+   size M*d, with M=bls12381_large_order, d=bls12381_torsion_factor.
+*)
 Theorem bls12381_full_certificate_subgroup_product_card:
   CARD bls12381_full_certificate_subgroup.carrier =
     bls12381_large_order * bls12381_torsion_factor
@@ -2124,6 +2135,9 @@ QED
 
 (* The elementary two-points-per-x bound is already strictly below 2N:
    N = p - x > p. No Hasse theorem or assumed curve-order formula is used. *)
+(* For BLS12-381 G1, |E(F_p)| = h*n with h=bls12381_full_cofactor
+   and n=bls12381_n, including points outside the standard subgroup.
+*)
 Theorem bls12381_g1_full_cardinality:
   CARD (sw_points bls12381_base_field 0 4) =
     bls12381_full_cofactor * bls12381_n

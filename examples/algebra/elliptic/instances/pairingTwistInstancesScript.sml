@@ -74,6 +74,7 @@ Theorem bn254_g2_field[local]:
 Proof
   metis_tac[bn254_fp2_finite_field, fieldTheory.FiniteField_def]
 QED
+(* In F_(p^2), b*(9+i)=3, so the BN254 twist is y^2=x^3+3/(9+i). *)
 Theorem bn254_g2_twist_coefficient:
   bn254_fp2.prod.op bn254_g2_b [9;1] = [3]
 Proof
@@ -511,6 +512,7 @@ Proof
    bn254_g2_scalar_step_tac])])])])])])])])])])])])])])])]
 QED
 
+(* The standard BN254 G2 generator has exact order bn254_n. *)
 Theorem bn254_g2_generator_order:
   order bn254_g2_group bn254_g2_generator = bn254_n
 Proof
@@ -537,6 +539,7 @@ Proof
   simp[bn254_g2_curve, bn254_g2_generator_member, bn254_fp2_finite_field]
 QED
 
+(* The standard BN254 G2 subgroup <G> has size bn254_n. *)
 Theorem bn254_g2_subgroup_card:
   CARD bn254_g2_subgroup.carrier = bn254_n
 Proof
@@ -574,6 +577,7 @@ Proof
   metis_tac[bls12381_fp2_finite_field, fieldTheory.FiniteField_def]
 QED
 
+(* The BLS12-381 twist y^2=x^3+(4+4*i) is valid over F_(p^2). *)
 Theorem bls12381_g2_curve:
   ShortWeierstrassCurve bls12381_fp2 bls12381_g2_a bls12381_g2_b
 Proof
@@ -1034,6 +1038,7 @@ Proof
    bls12381_g2_scalar_step_tac])])])])])])])])])])])])])])])]
 QED
 
+(* The standard BLS12-381 G2 generator has exact order bls12381_n. *)
 Theorem bls12381_g2_generator_order:
   order bls12381_g2_group bls12381_g2_generator = bls12381_n
 Proof
@@ -1060,6 +1065,7 @@ Proof
   simp[bls12381_g2_curve, bls12381_g2_generator_member, bls12381_fp2_finite_field]
 QED
 
+(* The standard BLS12-381 G2 subgroup <G> has size bls12381_n. *)
 Theorem bls12381_g2_subgroup_card:
   CARD bls12381_g2_subgroup.carrier = bls12381_n
 Proof

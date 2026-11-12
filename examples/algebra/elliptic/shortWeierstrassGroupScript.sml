@@ -39,12 +39,27 @@ Libs
 
 open fieldTheory ringTheory ringLibTheory
 
+(* ASCII notation in the comments below:
+   F = r.carrier, E = sw_points r a b, O = ECInfinity,
+   (x,y) = ECAffine x y, P+Q = sw_add r a b P Q, -P = sw_neg r P.
+   A valid curve means ShortWeierstrassCurve r a b. In ring algebra
+   comments, all displayed variables are in the ring carrier as stipulated
+   in the theorem. inv(d) denotes the record's multiplicative inverse;
+   x^n denotes exponentiation, and x <> +/-y means x <> y and x <> -y.
+*)
+
+(* For a field r, converting to the ring model and back gives r:
+   fromRing(toRing(r)) = r.
+*)
 Theorem sw_ring_model[local]:
   Field (r:'a field) ==> fromRing (toRing r) = r
 Proof
   rw[from_toRing, field_is_ring]
 QED
 
+(* For a field r, toRing(r) preserves the carrier, 0, 1, -x, x+y,
+   x*y, x^n and the numeral n*1.
+*)
 Theorem sw_ring_ops:
   Field (r:'a field) ==>
   (ring_carrier (toRing r) = r.carrier) /\
@@ -61,24 +76,28 @@ Proof
      ring_of_num_def, sw_ring_model]
 QED
 
+(* For a field r, carrier(toRing(r)) = carrier(r). *)
 Theorem sw_toRing_carrier[local]:
   Field (r:'a field) ==> ring_carrier (toRing r) = r.carrier
 Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* For a field r, 0 in toRing(r) = 0 in r. *)
 Theorem sw_toRing_zero[local]:
   Field (r:'a field) ==> ring_0 (toRing r) = r.sum.id
 Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* For a field r, 1 in toRing(r) = 1 in r. *)
 Theorem sw_toRing_one[local]:
   Field (r:'a field) ==> ring_1 (toRing r) = r.prod.id
 Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* For a field r, -x in toRing(r) = -x in r. *)
 Theorem sw_toRing_neg[local]:
   Field (r:'a field) ==>
   !x. ring_neg (toRing r) x = r.sum.inv x
@@ -86,6 +105,7 @@ Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* For a field r, x+y in toRing(r) = x+y in r. *)
 Theorem sw_toRing_add[local]:
   Field (r:'a field) ==>
   !x y. ring_add (toRing r) x y = r.sum.op x y
@@ -93,6 +113,7 @@ Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* For a field r, x*y in toRing(r) = x*y in r. *)
 Theorem sw_toRing_mul[local]:
   Field (r:'a field) ==>
   !x y. ring_mul (toRing r) x y = r.prod.op x y
@@ -100,6 +121,7 @@ Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* For a field r, x^n in toRing(r) = x^n in r. *)
 Theorem sw_toRing_pow[local]:
   Field (r:'a field) ==>
   !x n. ring_pow (toRing r) x n = r.prod.exp x n
@@ -107,6 +129,7 @@ Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* For a field r, the numeral n in toRing(r) = n*1 in r. *)
 Theorem sw_toRing_of_num[local]:
   Field (r:'a field) ==>
   !n. ring_of_num (toRing r) n = r.sum.exp r.prod.id n
@@ -114,6 +137,9 @@ Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* In a field, d in F and d <> 0 imply inv(d) in F and
+   d * inv(d) = 1.
+*)
 Theorem sw_field_prod_inv:
   !(r:'a field) d.
   Field r /\ d IN r.carrier /\ d <> r.sum.id ==>
@@ -127,6 +153,9 @@ Proof
   metis_tac[field_mult_monoid, monoidTheory.monoid_inv_def]
 QED
 
+(* In a field, for d in F with d <> 0, the record inverse inv(d)
+   equals the inverse of d in the group of multiplicative units.
+*)
 Theorem sw_field_prod_inv_eq:
   Field (r:'a field) /\ d IN r.carrier /\ d <> r.sum.id ==>
   r.prod.inv d = (Invertibles r.prod).inv d
@@ -138,6 +167,11 @@ Proof
   metis_tac[sw_field_prod_inv, field_is_ring, ring_unit_rinv_unique]
 QED
 
+(* In a ring, assume (x2-x1)*di12 = 1 and (x1-x2)*di21 = 1.
+   The secant formulas with m12 = (y2-y1)*di12 and
+   m21 = (y1-y2)*di21 give (x12,y12) = (x21,y21): swapping the
+   inputs does not change the output coordinates.
+*)
 Theorem sw_secant_comm_algebra[local]:
   !(r:'a Ring) x1 y1 x2 y2 di12 di21.
   x1 IN ring_carrier r /\
@@ -167,6 +201,10 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, assume (2*y)*di = 1 and (2*(-y))*dni = 1.
+   With n = 3*x^2+a, the tangent formulas at (x,y) with slope n*di
+   and at (x,-y) with slope n*dni give xn = x3 and yn = -y3.
+*)
 Theorem sw_tangent_neg_algebra[local]:
   !(r:'a Ring) x y a di dni.
   x IN ring_carrier r /\
@@ -197,6 +235,11 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, let m = (y2-y1)*di and mn = ((-y2)-(-y1))*di = -m.
+   Using x3 = m^2-x1-x2 and y3 = m*(x1-x3)-y1, negating both
+   input y-coordinates gives xn = x3 and yn = -y3.
+   This holds for any di in the carrier; no inverse law is needed.
+*)
 Theorem sw_secant_neg_algebra[local]:
   !(r:'a Ring) x1 y1 x2 y2 di.
   x1 IN ring_carrier r /\
@@ -226,6 +269,7 @@ QED
 
 
 
+(* In a ring, x^2 = y^2 implies (y-x)*(y+x) = 0. *)
 Theorem sw_square_factor[local]:
   x IN ring_carrier (r:'a Ring) /\
   y IN ring_carrier r /\
@@ -236,6 +280,10 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, suppose y1^2 = x1^3+a*x1+b, y2^2 = x2^3+a*x2+b
+   and (x2-x1)*di = 1. Set m = (y2-y1)*di, x3 = m^2-x1-x2
+   and y3 = m*(x1-x3)-y1. Then y3^2 = x3^3+a*x3+b.
+*)
 Theorem sw_secant_closure_algebra[local]:
   !(r:'a Ring) x1 y1 x2 y2 a b di.
   x1 IN ring_carrier r /\
@@ -263,6 +311,10 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, suppose y^2 = x^3+a*x+b and (2*y)*di = 1.
+   Set m = (3*x^2+a)*di, x3 = m^2-2*x and y3 = m*(x-x3)-y.
+   Then y3^2 = x3^3+a*x3+b.
+*)
 Theorem sw_tangent_closure_algebra[local]:
   !(r:'a Ring) x y a b di.
   x IN ring_carrier r /\
@@ -339,18 +391,23 @@ Definition sw_group_def:
        op := sw_add r a b |>
 End
 
+(* -O = O: point negation fixes infinity. *)
 Theorem sw_neg_infinity[simp]:
   sw_neg (r:'a field) ECInfinity = ECInfinity
 Proof
   rw[sw_neg_def]
 QED
 
+(* -(x,y) = (x,-y). *)
 Theorem sw_neg_affine[simp]:
   sw_neg (r:'a field) (ECAffine x y) = ECAffine x (r.sum.inv y)
 Proof
   rw[sw_neg_def]
 QED
 
+(* For equal input x-coordinates, m = (3*x^2+a)*inv(2*y).
+   The second y-coordinate y' does not affect this formula.
+*)
 Theorem sw_slope_tangent[simp]:
   sw_slope (r:'a field) a x y x y' =
     r.prod.op
@@ -361,6 +418,7 @@ Proof
   rw[sw_slope_def]
 QED
 
+(* If x1 <> x2, the slope is m = (y2-y1)*inv(x2-x1). *)
 Theorem sw_slope_secant:
   x1 <> x2 ==>
   sw_slope (r:'a field) a x1 y1 x2 y2 =
@@ -370,18 +428,21 @@ Proof
   rw[sw_slope_def]
 QED
 
+(* O + P = P for every point P. *)
 Theorem sw_add_l_infinity[simp]:
   sw_add (r:'a field) a b ECInfinity P = P
 Proof
   Cases_on `P` >> rw[sw_add_def]
 QED
 
+(* P + O = P for every point P. *)
 Theorem sw_add_r_infinity[simp]:
   sw_add (r:'a field) a b P ECInfinity = P
 Proof
   Cases_on `P` >> rw[sw_add_def]
 QED
 
+(* If y1 = -y2, then (x,y1) + (x,y2) = O. *)
 Theorem sw_add_affine_vertical[simp]:
   y1 = r.sum.inv y2 ==>
   sw_add (r:'a field) a b (ECAffine x y1) (ECAffine x y2) = ECInfinity
@@ -389,6 +450,10 @@ Proof
   rw[sw_add_def]
 QED
 
+(* Unless x1 = x2 and y1 = -y2, the sum is (x3,y3), where
+   m is the tangent/secant slope, x3 = m^2-x1-x2 and
+   y3 = m*(x1-x3)-y1.
+*)
 Theorem sw_add_affine_nonvertical:
   ~(x1 = x2 /\ y1 = r.sum.inv y2) ==>
   sw_add (r:'a field) a b (ECAffine x1 y1) (ECAffine x2 y2) =
@@ -400,30 +465,35 @@ Proof
   rw[sw_add_def]
 QED
 
+(* The carrier of sw_group(r,a,b) is E = sw_points(r,a,b). *)
 Theorem sw_group_carrier[simp]:
   (sw_group (r:'a field) a b).carrier = sw_points r a b
 Proof
   rw[sw_group_def]
 QED
 
+(* The identity of sw_group(r,a,b) is O. *)
 Theorem sw_group_id[simp]:
   (sw_group (r:'a field) a b).id = ECInfinity
 Proof
   rw[sw_group_def]
 QED
 
+(* The operation of sw_group(r,a,b) is P + Q = sw_add r a b P Q. *)
 Theorem sw_group_op[simp]:
   (sw_group (r:'a field) a b).op = sw_add r a b
 Proof
   rw[sw_group_def]
 QED
 
+(* O is in E for every r, a and b. *)
 Theorem sw_infinity_mem[simp]:
   ECInfinity IN sw_points (r:'a field) a b
 Proof
   rw[]
 QED
 
+(* (x,y) is in E iff x,y are in F and y^2 = x^3+a*x+b. *)
 Theorem sw_affine_mem[simp]:
   ECAffine x y IN sw_points (r:'a field) a b <=>
   x IN r.carrier /\ y IN r.carrier /\
@@ -432,6 +502,7 @@ Proof
   rw[]
 QED
 
+(* On a valid curve, (x,y) in E implies (x,-y) in E. *)
 Theorem sw_neg_affine_on_curve:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x y) ==>
@@ -441,6 +512,7 @@ Proof
   metis_tac[field_is_ring, ring_neg_element, ring_neg_square]
 QED
 
+(* On a valid curve, P on the curve implies -P on the curve. *)
 Theorem sw_neg_on_curve:
   ShortWeierstrassCurve (r:'a field) a b /\ sw_on_curve r a b P ==>
   sw_on_curve r a b (sw_neg r P)
@@ -450,6 +522,7 @@ Proof
   rw[ring_neg_square, field_is_ring]
 QED
 
+(* On a valid curve, P in E implies -P in E. *)
 Theorem sw_neg_mem:
   ShortWeierstrassCurve (r:'a field) a b /\ P IN sw_points r a b ==>
   sw_neg r P IN sw_points r a b
@@ -457,6 +530,7 @@ Proof
   metis_tac[sw_points_member, sw_neg_on_curve]
 QED
 
+(* On a valid curve, P in E implies -(-P) = P. *)
 Theorem sw_neg_involutive:
   ShortWeierstrassCurve (r:'a field) a b /\ P IN sw_points r a b ==>
   sw_neg r (sw_neg r P) = P
@@ -466,6 +540,9 @@ Proof
      ShortWeierstrassCurve_def, field_neg_neg]
 QED
 
+(* On a valid curve, if (x,y1) and (x,y2) are on the curve, then
+   y2 = y1 or y2 = -y1.
+*)
 Theorem sw_same_x_on_curve:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x y1) /\
@@ -486,6 +563,9 @@ Proof
             field_neg_element]
 QED
 
+(* On a valid curve, distinct points (x,y1), (x,y2) in E with
+   the same x-coordinate satisfy (x,y1) + (x,y2) = O.
+*)
 Theorem sw_add_same_x_distinct:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x y1) /\
@@ -500,6 +580,9 @@ Proof
   rw[sw_add_def]
 QED
 
+(* On a valid curve, P = (x,y) in E and y <> -y imply P+P in E:
+   the nonvertical tangent formula stays on the curve.
+*)
 Theorem sw_add_affine_double_on_curve[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x y) /\ y <> r.sum.inv y ==>
@@ -544,6 +627,9 @@ Proof
   ]
 QED
 
+(* On a valid curve, (x,y1), (x,y2) in E imply
+   (x,y1) + (x,y2) in E, including doubling and vertical cases.
+*)
 Theorem sw_add_affine_same_x_on_curve[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x y1) /\
@@ -567,6 +653,9 @@ Proof
 QED
 
 
+(* On a valid curve, (x1,y1), (x2,y2) in E and x1 <> x2 imply
+   (x1,y1) + (x2,y2) in E.
+*)
 Theorem sw_add_affine_secant_on_curve[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x1 y1) /\
@@ -611,6 +700,7 @@ Proof
   ]
 QED
 
+(* On a valid curve, affine P,Q in E imply P+Q in E. *)
 Theorem sw_add_affine_on_curve:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x1 y1) /\
@@ -622,6 +712,9 @@ Proof
             sw_add_affine_secant_on_curve]
 QED
 
+(* On a valid curve, P and Q on the curve imply P+Q on the curve,
+   including cases involving O.
+*)
 Theorem sw_add_on_curve:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b P /\ sw_on_curve r a b Q ==>
@@ -635,6 +728,7 @@ Proof
   ]
 QED
 
+(* On a valid curve, P,Q in E imply P+Q in E. *)
 Theorem sw_add_mem:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ Q IN sw_points r a b ==>
@@ -643,6 +737,7 @@ Proof
   metis_tac[sw_points_member, sw_add_on_curve]
 QED
 
+(* On a valid curve, affine P,Q in E satisfy P+Q = Q+P. *)
 Theorem sw_add_affine_comm[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x1 y1) /\
@@ -700,6 +795,7 @@ Proof
   metis_tac[]
 QED
 
+(* On a valid curve, P,Q in E satisfy P+Q = Q+P. *)
 Theorem sw_add_comm:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ Q IN sw_points r a b ==>
@@ -713,6 +809,7 @@ Proof
   ]
 QED
 
+(* On a valid curve, P in E implies (-P)+P = O. *)
 Theorem sw_add_neg_l:
   ShortWeierstrassCurve (r:'a field) a b /\ P IN sw_points r a b ==>
   sw_add r a b (sw_neg r P) P = ECInfinity
@@ -723,6 +820,7 @@ Proof
      ShortWeierstrassCurve_def, field_neg_neg]
 QED
 
+(* On a valid curve, P in E implies P+(-P) = O. *)
 Theorem sw_add_neg_r:
   ShortWeierstrassCurve (r:'a field) a b /\ P IN sw_points r a b ==>
   sw_add r a b P (sw_neg r P) = ECInfinity
@@ -730,6 +828,12 @@ Proof
   metis_tac[sw_neg_mem, sw_add_comm, sw_add_neg_l]
 QED
 
+(* Abstract reduction for a closed commutative operation + on P.
+   For a symmetric relation eq on P, associativity follows from
+   checking eq(x,y) or eq(x+y,z), and the generic case where none
+   of eq(x,y), eq(y,z), eq(x,z), eq(x+y,z), eq(y+z,x) holds.
+   Commutativity supplies the remaining permutations.
+*)
 Theorem sw_symmetry_lemma[local]:
   !P eq add.
   (!x y:'a. P x /\ P y /\ eq x y ==> eq y x) /\
@@ -785,6 +889,14 @@ Proof
   ASM_REWRITE_TAC []
 QED
 
+(* Abstract criterion for x+(y+z) = (x+y)+z on P. Assume id is in P,
+   P is closed under + and negation, and the following laws hold on P:
+   a left identity, left inverses, commutativity, -(-x) = x,
+   -(x+y) = (-x)+(-y), x+(x+y) = (x+x)+y and (-x)+(x+y) = y.
+   It suffices to check associativity for x,y,z,u=x+y,v=y+z all
+   different from id, with y <> +/-x, z <> +/-y, z <> +/-x,
+   z <> +/-u and x <> +/-v.
+*)
 Theorem sw_associativity_lemma[local]:
   !P add neg (id:'a).
   P id /\
@@ -840,6 +952,9 @@ Proof
   ]
 QED
 
+(* On a valid curve, affine P,Q in E satisfy
+   -(P+Q) = (-P)+(-Q).
+*)
 Theorem sw_neg_add_affine_law[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x1 y1) /\
@@ -952,6 +1067,7 @@ Proof
   metis_tac[]
 QED
 
+(* On a valid curve, P,Q in E satisfy -(P+Q) = (-P)+(-Q). *)
 Theorem sw_neg_add_law[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ Q IN sw_points r a b ==>
@@ -966,6 +1082,10 @@ Proof
   ]
 QED
 
+(* For two points on a valid curve outside the vertical case,
+   the slope m is in F and satisfies y2-y1 = m*(x2-x1) and
+   m*(y1+y2) = x1^2+x1*x2+x2^2+a, also in the tangent case.
+*)
 Theorem sw_slope_equations[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x1 y1) /\
@@ -1042,6 +1162,9 @@ Proof
      sw_curve_rhs_def]
 QED
 
+(* In a ring, t = m*(x-s)-y and (s-x)*di = 1 imply
+   (t+y)*di = -m: the secant from (x,-y) to (s,t) has slope -m.
+*)
 Theorem sw_reverse_secant_slope_algebra[local]:
   !(r:'a Ring) x y s t m di.
   x IN ring_carrier r /\ y IN ring_carrier r /\
@@ -1055,6 +1178,10 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, assume v-y = m*(u-x),
+   m*(y+v) = x^2+x*u+u^2+a, m^2-x-u = x and (2*(-y))*di = 1.
+   Then (3*x^2+a)*di = -m: the tangent at (x,-y) has slope -m.
+*)
 Theorem sw_reverse_tangent_slope_algebra[local]:
   !(r:'a Ring) x y u v a m di.
   x IN ring_carrier r /\ y IN ring_carrier r /\
@@ -1078,6 +1205,9 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, y^2 = x^3+a*x+b, y = -y and 3*x^2+a = 0 imply
+   -16*(4*a^3+27*b^2) = 0: these conditions force zero discriminant.
+*)
 Theorem sw_singular_algebra[local]:
   !(r:'a Ring) x y a b.
   x IN ring_carrier r /\ y IN ring_carrier r /\
@@ -1095,6 +1225,10 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, v-y = m*(u-x) and s = m^2-x-u imply
+   (-m)^2-x-s = u and (-m)*(x-u)+y = v.
+   Thus slope -m recovers (u,v) from (x,-y) and the sum's x-value s.
+*)
 Theorem sw_reverse_coordinates_algebra[local]:
   !(r:'a Ring) x y u v s m.
   x IN ring_carrier r /\ y IN ring_carrier r /\
@@ -1116,6 +1250,9 @@ Proof
   ]
 QED
 
+(* In a ring, v-y = m*(u-x), m*(y+v) = x^2+x*u+u^2+a
+   and m^2-x-u = x imply 3*x^2+a = (2*y)*m.
+*)
 Theorem sw_tangent_numerator_algebra[local]:
   !(r:'a Ring) x y u v a m.
   x IN ring_carrier r /\ y IN ring_carrier r /\
@@ -1135,6 +1272,9 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* On a valid curve, affine P,Q in E satisfy (-P)+(P+Q) = Q,
+   including all exceptional addition cases.
+*)
 Theorem sw_add_neg_cancel_affine[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x y) /\
@@ -1272,6 +1412,11 @@ Overload "-"[local] = ``ring_sub (r:'a Ring)``
 Overload "*"[local] = ``ring_mul (r:'a Ring)``
 Overload "**"[local] = ``ring_pow (r:'a Ring)``
 
+(* Ring identity for the quadrupling calculation. With P = (x,y),
+   2P = (X,Y), m the doubling slope, n the P-to-2P slope and l
+   the tangent slope at 2P, the stated coordinate/slope equations
+   and d = X-x imply ((m-n)*(m+l)-x+X)*d = 0.
+*)
 Theorem sw_quadruple_tangent_cut_algebra[local]:
   !(r:'a Ring) x y X Y a m n l d.
   EVERY (\z. z IN ring_carrier r) [x; y; X; Y; a; m; n; l; d] /\
@@ -1286,6 +1431,11 @@ Proof
   simp[listTheory.EVERY_DEF] >> ringLib.RING_TAC
 QED
 
+(* Ring identities for 2P = (X,Y), P+2P = (v,w), with slopes
+   m for doubling P, n from P to 2P, k from P to (v,w), and d = X-x.
+   The stated equations imply v-x = (n-m)*(n+m) and
+   (k+n)*(v-x) = (m+n)*d.
+*)
 Theorem sw_quadruple_secant_cut_algebra[local]:
   !(r:'a Ring) x y X Y m n v w k d.
   EVERY (\z. z IN ring_carrier r) [x; y; X; Y; m; n; v; w; k; d] /\
@@ -1314,6 +1464,9 @@ Proof
   ringLib.RING_TAC
 QED
 
+(* In a ring, (m-n)*(m+l) = -d, A = (n-m)*(n+m),
+   (k+n)*A = (m+n)*d and A*ia = 1 imply k-l = m-n.
+*)
 Theorem sw_quadruple_slope_cut_algebra[local]:
   !(r:'a Ring) m n k l d A ia.
   EVERY (\z. z IN ring_carrier r) [m; n; k; l; d; A; ia] /\
@@ -1333,6 +1486,12 @@ fun sw_ring_using equations (asl, goal) =
                  List.exists (fn eq => aconv tm eq) equations) asl,
      goal)
 
+(* Ring calculation comparing P+(P+2P) with 2P+2P. Under the
+   stated coordinate/slope equations for P=(x,y), 2P=(X,Y),
+   P+2P=(v,w), with X-x and v-x invertible, let
+   xl = k^2-x-v and xr = l^2-2*X.
+   Then xl = xr and k*(x-xl)-y = l*(X-xr)-Y.
+*)
 Theorem sw_quadruple_coordinates_algebra[local]:
   !(r:'a Ring) x y X Y a m n v w k l d id ia.
   EVERY (\z. z IN ring_carrier r)
@@ -1395,6 +1554,10 @@ Proof
   FIRST [FIRST_ASSUM ACCEPT_TAC, ACCEPT_TAC TRUTH, sw_ring_using []]
 QED
 
+(* On a valid curve, let affine P,Q,R,U,V be on the curve with
+   P+Q = U and Q+R = V. If x(P) <> x(V) and x(U) <> x(R),
+   then P+V = U+R, i.e. P+(Q+R) = (P+Q)+R.
+*)
 Theorem sw_assoc_affine_nonvertical[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x1 y1) /\
@@ -1476,6 +1639,10 @@ Proof
   rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC
 QED
 
+(* On a valid curve, let P=(x,y), P+P=(X,Y), P+(P+P)=(v,w)
+   all be on the curve. If x <> X, x <> v and Y <> -Y, then
+   P+(P+(P+P)) = (P+P)+(P+P).
+*)
 Theorem sw_quadruple_affine_nonvertical[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x y) /\
@@ -1551,6 +1718,7 @@ Proof
   FIRST [FIRST_ASSUM ACCEPT_TAC, FIRST_ASSUM (ACCEPT_TAC o SYM), REFL_TAC]
 QED
 
+(* On a valid curve, P,Q in E satisfy (-P)+(P+Q) = Q. *)
 Theorem sw_add_neg_cancel_law[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ Q IN sw_points r a b ==>
@@ -1564,6 +1732,7 @@ Proof
   ]
 QED
 
+(* On a valid curve, P,Q in E satisfy P+(P+Q) = (P+P)+Q. *)
 Theorem sw_add_self_assoc_law[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ Q IN sw_points r a b ==>
@@ -1639,6 +1808,10 @@ Proof
   metis_tac[sw_assoc_affine_nonvertical, sw_points_member]
 QED
 
+(* On a valid curve, let p,q,t,u=p+q,v=q+t all be in E and <> O.
+   If q <> +/-p, t <> +/-q, t <> +/-p, t <> +/-u and p <> +/-v,
+   then p+v = u+t, i.e. p+(q+t) = (p+q)+t.
+*)
 Theorem sw_assoc_distinct_affine_coordinates[local]:
   ShortWeierstrassCurve (r:'a field) a b /\
   p IN sw_points r a b /\ q IN sw_points r a b /\
@@ -1679,6 +1852,7 @@ Proof
   ASM_REWRITE_TAC []
 QED
 
+(* On a valid curve, p,q,t in E satisfy (p+q)+t = p+(q+t). *)
 Theorem sw_add_assoc:
   ShortWeierstrassCurve (r:'a field) a b /\
   p IN sw_points r a b /\ q IN sw_points r a b /\
@@ -1712,6 +1886,7 @@ Proof
   ]
 QED
 
+(* On a valid curve, affine P,Q,R in E satisfy (P+Q)+R = P+(Q+R). *)
 Theorem sw_add_affine_assoc:
   ShortWeierstrassCurve (r:'a field) a b /\
   sw_on_curve r a b (ECAffine x1 y1) /\
@@ -1726,6 +1901,7 @@ Proof
   metis_tac[sw_add_assoc, sw_points_member]
 QED
 
+(* For any r,a,b, E is a subset of {O} union {(x,y) | x,y in F}. *)
 Theorem sw_points_subset_coordinates:
   sw_points (r:'a field) a b SUBSET
     {ECInfinity} UNION
@@ -1737,6 +1913,7 @@ Proof
   simp[pairTheory.EXISTS_PROD]
 QED
 
+(* If F is a finite field, E is finite for any coefficients a,b. *)
 Theorem sw_points_finite:
   FiniteField (r:'a field) ==> FINITE (sw_points r a b)
 Proof
@@ -1750,6 +1927,9 @@ Proof
   metis_tac[sw_points_subset_coordinates, pred_setTheory.SUBSET_FINITE]
 QED
 
+(* A valid curve gives the group (E,+,O): addition is closed and
+   associative, O is the identity, and every P in E has an inverse.
+*)
 Theorem short_weierstrass_group:
   ShortWeierstrassCurve (r:'a field) a b ==>
   Group (sw_group r a b)
@@ -1763,6 +1943,9 @@ Proof
   ]
 QED
 
+(* On a valid curve, P in E implies sw_group(r,a,b).inv(P) = -P:
+   the group inverse agrees with coordinate negation.
+*)
 Theorem sw_group_inv:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b ==>
@@ -1773,6 +1956,7 @@ Proof
             sw_neg_on_curve, sw_add_neg_l, sw_points_member]
 QED
 
+(* A valid curve gives an abelian group (E,+,O), since P+Q = Q+P. *)
 Theorem short_weierstrass_abelian_group:
   ShortWeierstrassCurve (r:'a field) a b ==>
   AbelianGroup (sw_group r a b)
@@ -1784,6 +1968,9 @@ Proof
   metis_tac[sw_add_comm, sw_points_member]
 QED
 
+(* A valid curve over a finite field gives a finite abelian group
+   (E,+,O).
+*)
 Theorem short_weierstrass_finite_group:
   FiniteField (r:'a field) /\ ShortWeierstrassCurve r a b ==>
   FiniteAbelianGroup (sw_group r a b)

@@ -30,6 +30,9 @@ open fieldTheory ringTheory polynomialTheory pred_setTheory
    coefficient convention.  Quotient elements remain canonical polynomial
    lists (zero is []), rather than pairs with a separately defined product. *)
 
+(* In a finite field of size q=3 mod 4 and characteristic <> 2,
+   x^2 <> -1 for every field element x.
+*)
 Theorem finite_field_3mod4_no_square_minus_one:
   !r:'a field.
     FiniteField r /\ CARD r.carrier MOD 4 = 3 /\ char r <> 2 ==>
@@ -114,6 +117,7 @@ Proof
             field_exp_element, field_one_element]
 QED
 
+(* For prime p=3 mod 4, X^2+1 is irreducible over F_p. *)
 Theorem prime_3mod4_quadratic_irreducible:
   !p. prime p /\ p MOD 4 = 3 ==>
     irreducible (PolyRing (GF p)) [1;0;1]
@@ -190,6 +194,7 @@ Proof
        bls12381_p_prime, bls12381_p_mod4]
 QED
 
+(* The BN254 quotient F_p[X]/(X^2+1) is a finite field. *)
 Theorem bn254_fp2_finite_field:
   FiniteField bn254_fp2
 Proof
@@ -197,6 +202,7 @@ Proof
        GF_finite_field, bn254_p_prime, bn254_fp2_irreducible]
 QED
 
+(* The BLS12-381 quotient F_p[X]/(X^2+1) is a finite field. *)
 Theorem bls12381_fp2_finite_field:
   FiniteField bls12381_fp2
 Proof
@@ -271,6 +277,7 @@ Proof
 QED
 
 (* Applying the p-power Frobenius twice is the identity. *)
+(* In the BN254 quadratic field, x^(p^2)=x for every field element x. *)
 Theorem bn254_fp2_frobenius_square:
   !x. x IN bn254_fp2.carrier ==>
       bn254_fp2.prod.exp x (bn254_p ** 2) = x
@@ -278,6 +285,7 @@ Proof
   metis_tac[finite_field_fermat_thm, bn254_fp2_finite_field, bn254_fp2_card]
 QED
 
+(* In the BLS12-381 quadratic field, x^(p^2)=x for every element x. *)
 Theorem bls12381_fp2_frobenius_square:
   !x. x IN bls12381_fp2.carrier ==>
       bls12381_fp2.prod.exp x (bls12381_p ** 2) = x

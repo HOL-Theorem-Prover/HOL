@@ -20,6 +20,8 @@
    cofactor. Numerical witnesses propose claims for HOL proofs; external
    discovery is not a proof of their validity. *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory bls12381TwistCardinalityCertificates
 
 (* Kernel-checked scalar and field-power certificates used by the readable
@@ -66,6 +68,9 @@ Proof
   EVAL_TAC
 QED
 
+(* The displayed factorization gives d=13*23 and h*n=M*d,
+   where h is the full cofactor and M is the large point order target.
+*)
 Theorem bls12381_g2_full_cofactor_factorization:
   bls12381_g2_torsion_factor = 13 * 23 /\
   bls12381_g2_full_cofactor =
@@ -8460,6 +8465,9 @@ Proof
    simp[]])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])]
 QED
 
+(* For P=bls12381_g2_large_point, M=bls12381_g2_large_order,
+   [M]P=O and [M/q]P<>O for every listed prime divisor q of M.
+*)
 Theorem bls12381_g2_large_point_scalar_tests:
   bls12381_g2_group.exp bls12381_g2_large_point bls12381_g2_large_order = ECInfinity /\
   bls12381_g2_group.exp bls12381_g2_large_point (bls12381_g2_large_order DIV 13) <> ECInfinity /\
@@ -8602,6 +8610,9 @@ Proof
   cardinality_finish_tac
 QED
 
+(* For U_q=[M/q]P, exclude phi(U_13)=[t]U_13 for t=1,3,9,
+   and phi(U_23)=U_23; these are the required CM eigenvalue tests.
+*)
 Theorem bls12381_g2_cm_scalar_exclusions:
   sw_cm_map bls12381_fp2 bls12381_g2_cm_beta
     (bls12381_g2_group.exp bls12381_g2_large_point (bls12381_g2_large_order DIV 13)) <>
@@ -8632,6 +8643,9 @@ fun cardinality_power_step_tac goal =
   pairingCurveCertificateLib.POWER_STEP_TAC
     cardinality_prime cardinality_field goal;
 
+(* For c=-b in F_(p^2), c<>0 and c^((p^2-1)/3)<>1 certify
+   that c is not a cube.
+*)
 Theorem bls12381_g2_cubic_nonresidue_certificate:
   bls12381_fp2.sum.inv bls12381_g2_b IN bls12381_fp2.carrier /\
   bls12381_fp2.sum.inv bls12381_g2_b <> bls12381_fp2.sum.id /\

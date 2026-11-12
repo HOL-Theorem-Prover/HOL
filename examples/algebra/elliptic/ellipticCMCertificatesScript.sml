@@ -27,6 +27,11 @@ Ancestors
 open arithmeticTheory pred_setTheory cardinalTheory dividesTheory
      numberTheory groupTheory monoidTheory primeTheory ringTheory gcdTheory
 
+(* In comments, [n]P = g.exp P n and <P> is the generated subgroup. *)
+
+(* For prime q with gcd(3,q-1)=1, t^3=1 mod q and 0<=t<q
+   imply t=1.
+*)
 Theorem cm_cube_root_coprime:
   prime q /\ coprime 3 (q - 1) /\ t < q /\ t ** 3 MOD q = 1 ==>
   t = 1
@@ -122,6 +127,9 @@ Proof
   metis_tac[group_homo_element]
 QED
 
+(* If f is a group endomorphism with f^3=id, ord(u)=q>1 and
+   f(u)=[t]u, then t^3=1 mod q.
+*)
 Theorem cm_order_three_eigenvalue:
   Group (g:'a group) /\ GroupEndo f g /\
   (!x. x IN g.carrier ==> f (f (f x)) = x) /\
@@ -148,8 +156,12 @@ Proof
   metis_tac[ONE_MOD]
 QED
 
-(* A nontrivial intersection would supply a common prime-order line.
-   Applying f to its generator then gives a forbidden cubic eigenvalue. *)
+(* In the stated finite group, ord(P)=M and Q=[M/d]f(P).
+   If f^3=id and all listed prime-order eigenvalues are excluded,
+   then <P> and <Q> intersect only at the identity.
+   A nontrivial intersection would give a forbidden cubic eigenvalue
+   on a common prime-order line.
+*)
 Theorem cm_independent:
   FiniteGroup (g:'a group) /\ P IN g.carrier /\
   order g P = M /\ 0 < M /\ 0 < d /\ d divides M /\
@@ -220,6 +232,9 @@ Proof
   ]
 QED
 
+(* Under the same order, divisibility and eigenvalue exclusions,
+   the subgroup product <P>*<Q> has cardinality M*d.
+*)
 Theorem cm_independent_product_card:
   FiniteGroup (g:'a group) /\ P IN g.carrier /\
   order g P = M /\ 0 < M /\ 0 < d /\ d divides M /\

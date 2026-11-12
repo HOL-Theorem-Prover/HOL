@@ -19,6 +19,9 @@ Ancestors
 
 (* Functional equations expose closures before CBV traverses the arguments of
    a neutral record selector.  This matters for large field coefficients. *)
+(* GF(p) arithmetic on residues: add(x,y)=(x+y) mod p;
+   the following multiplication rule gives mul(x,y)=(x*y) mod p.
+*)
 Theorem certificate_gf_add:
   !(p:num). (GF p).sum.op = \x y. (x + y) MOD p
 Proof

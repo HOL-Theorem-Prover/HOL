@@ -47,6 +47,7 @@ Proof
        GF_finite_field, bls12381_p_prime, bls12381_fp12_irreducible]
 QED
 
+(* The BN254 quotient by X^12-18*X^6+82 has p^12 elements. *)
 Theorem bn254_fp12_card:
   CARD bn254_fp12.carrier = bn254_p ** 12
 Proof
@@ -55,6 +56,7 @@ Proof
        GF_card, bn254_fp12_poly_degree]
 QED
 
+(* The BLS12-381 quotient by X^12-2*X^6+2 has p^12 elements. *)
 Theorem bls12381_fp12_card:
   CARD bls12381_fp12.carrier = bls12381_p ** 12
 Proof
@@ -146,6 +148,7 @@ Proof
 QED
 
 (* Twelve iterations of p-power Frobenius are the identity. *)
+(* In the BN254 degree-12 field, x^(p^12)=x for every element x. *)
 Theorem bn254_fp12_frobenius_twelfth:
   !x. x IN bn254_fp12.carrier ==>
       bn254_fp12.prod.exp x (bn254_p ** 12) = x
@@ -153,6 +156,7 @@ Proof
   metis_tac[finite_field_fermat_thm, bn254_fp12_finite_field, bn254_fp12_card]
 QED
 
+(* In the BLS12-381 degree-12 field, x^(p^12)=x for every element x. *)
 Theorem bls12381_fp12_frobenius_twelfth:
   !x. x IN bls12381_fp12.carrier ==>
       bls12381_fp12.prod.exp x (bls12381_p ** 12) = x

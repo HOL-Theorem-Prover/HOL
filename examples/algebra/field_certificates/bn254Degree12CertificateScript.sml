@@ -40,6 +40,7 @@ Proof
   simp[bn254_fp12_poly_def, poly_deg_def]
 QED
 
+(* X^12-18*X^6+82 is irreducible over F_p, with p=bn254_p. *)
 Theorem bn254_fp12_irreducible:
   irreducible (PolyRing (GF bn254_p)) bn254_fp12_poly
 Proof

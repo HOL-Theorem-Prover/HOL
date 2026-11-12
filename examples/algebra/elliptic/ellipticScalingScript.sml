@@ -17,6 +17,8 @@
    u in the field carrier and u <> 0; the inverse uses the field inverse of u.
 *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory ellipticScaling
 Ancestors
   ellipticMorphisms ringLib
@@ -75,6 +77,9 @@ Proof
   metis_tac[sw_scale_power_nonzero, field_nonzero_eq, field_mult_lcancel]
 QED
 
+(* For a valid curve and u<>0 in the field, the coefficients
+   a' = u^4*a, b' = u^6*b also define a valid curve.
+*)
 Theorem sw_scale_curve:
   ShortWeierstrassCurve (r:'a field) a b /\
   u IN r.carrier /\ u <> r.sum.id ==>
@@ -118,6 +123,9 @@ Proof
   metis_tac[sw_scale_on_curve, sw_points_member, ShortWeierstrassCurve_def]
 QED
 
+(* For u<>0 in the field and P on the curve, scaling by u and
+   then by u^(-1), in either order, returns P.
+*)
 Theorem sw_scale_inverse:
   Field (r:'a field) /\ u IN r.carrier /\ u <> r.sum.id /\
   P IN sw_points r a b ==>
@@ -336,6 +344,10 @@ Proof
     [GSYM field_mult_assoc, field_exp_element, field_mult_lone]
 QED
 
+(* For a valid curve and u<>0 in the field,
+   S_u(x,y) = (u^2*x,u^3*y), S_u(O)=O, is a group isomorphism
+   E(a,b) -> E(u^4*a,u^6*b).
+*)
 Theorem sw_scale_group_iso:
   ShortWeierstrassCurve (r:'a field) a b /\
   u IN r.carrier /\ u <> r.sum.id ==>
@@ -376,6 +388,9 @@ Proof
   metis_tac[sw_curve_homo_scalar, sw_scale_curve, sw_scale_group_homo]
 QED
 
+(* For a curve point and nonzero field scale u,
+   ord(S_u(P)) = ord(P).
+*)
 Theorem sw_scale_order:
   ShortWeierstrassCurve (r:'a field) a b /\
   u IN r.carrier /\ u <> r.sum.id /\ P IN sw_points r a b ==>

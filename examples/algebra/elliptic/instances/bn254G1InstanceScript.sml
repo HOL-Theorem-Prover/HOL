@@ -131,6 +131,7 @@ Proof
       bn254_g1_scalar_step, bn254_g1_scalar_step]
 QED
 
+(* The standard generator G has exact order bn254_n. *)
 Theorem bn254_g1_generator_order:
   order bn254_g1_group bn254_g1_generator = bn254_n
 Proof
@@ -157,6 +158,7 @@ Proof
   simp[bn254_g1_curve, bn254_g1_generator_member, bn254_base_field_finite_field]
 QED
 
+(* The cyclic subgroup <G> has cardinality bn254_n. *)
 Theorem bn254_g1_subgroup_card:
   CARD bn254_g1_subgroup.carrier = bn254_n
 Proof

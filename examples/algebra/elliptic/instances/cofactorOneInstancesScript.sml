@@ -84,6 +84,7 @@ Proof
   simp[secp256k1_base_field_def, GF_eval, secp256k1_cubic_root_free]
 QED
 
+(* For secp256k1, |E(F_p)|=secp256k1_n. *)
 Theorem secp256k1_card:
   CARD (sw_points secp256k1_base_field secp256k1_a secp256k1_b) = secp256k1_n
 Proof
@@ -105,6 +106,7 @@ Proof
   simp[secp256k1_card, secp256k1_cofactor_def]
 QED
 
+(* The standard secp256k1 generator spans the full curve group: <G>=E. *)
 Theorem secp256k1_generated_full_group:
   secp256k1_subgroup = secp256k1_group
 Proof
@@ -145,6 +147,7 @@ Proof
   simp[p256_base_field_def, GF_eval, p256_cubic_root_free]
 QED
 
+(* For P-256, |E(F_p)|=p256_n. *)
 Theorem p256_card:
   CARD (sw_points p256_base_field p256_a p256_b) = p256_n
 Proof
@@ -166,6 +169,7 @@ Proof
   simp[p256_card, p256_cofactor_def]
 QED
 
+(* The standard P-256 generator spans the full curve group: <G>=E. *)
 Theorem p256_generated_full_group:
   p256_subgroup = p256_group
 Proof
@@ -206,6 +210,7 @@ Proof
   simp[bn254_base_field_def, GF_eval, bn254_g1_cubic_root_free]
 QED
 
+(* For BN254 G1, |E(F_p)|=bn254_n. *)
 Theorem bn254_g1_card:
   CARD (sw_points bn254_base_field bn254_g1_a bn254_g1_b) = bn254_n
 Proof
@@ -227,6 +232,7 @@ Proof
   simp[bn254_g1_card, bn254_g1_cofactor_def]
 QED
 
+(* The standard BN254 G1 generator spans the full curve group: <G>=E. *)
 Theorem bn254_g1_generated_full_group:
   bn254_g1_subgroup = bn254_g1_group
 Proof

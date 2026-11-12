@@ -29,6 +29,8 @@
      triple and off-curve infinity triples are rejected.
 *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory shortWeierstrassSmall
 Ancestors
   shortWeierstrass shortWeierstrassGroup
@@ -98,6 +100,7 @@ Proof
             sw_GF5_affine_truth_table]
 QED
 
+(* For y^2=x^3+1 over F_5, E = {O,(0,1),(0,4),(2,2),(2,3),(4,0)}. *)
 Theorem sw_GF5_points:
   sw_points (GF 5) 0 1 =
     {ECInfinity;
@@ -194,6 +197,7 @@ Proof
   EVAL_TAC
 QED
 
+(* G=(2,2) has ord(G)=6 on y^2=x^3+1 over F_5. *)
 Theorem sw_GF5_generator_order:
   order (sw_group (GF 5) 0 1) (ECAffine 2 2) = 6
 Proof
@@ -261,6 +265,7 @@ Proof
   EVAL_TAC
 QED
 
+(* The rational 3-torsion over F_5 is E[3] = {O,(0,1),(0,4)}. *)
 Theorem sw_GF5_torsion_three:
   (sw_torsion_group (GF 5) 0 1 3).carrier =
   {ECInfinity; ECAffine 0 1; ECAffine 0 4}
@@ -351,6 +356,9 @@ Proof
   metis_tac[sw_scale_curve, sw_GF5_curve, sw_GF5_scale_parameters]
 QED
 
+(* Over F_5, (x,y)->(4*x,3*y) gives a group isomorphism
+   from y^2=x^3+1 to y^2=x^3+4.
+*)
 Theorem sw_GF5_scale_group_iso:
   GroupIso (sw_scale_point (GF 5) 2)
     (sw_group (GF 5) 0 1) (sw_group (GF 5) 0 4)
@@ -405,6 +413,9 @@ Proof
   simp[sw_projective_valid_def, sw_projective_rep_def, GF_eval]
 QED
 
+(* (2,2,1) ~ (4,4,2) by scaling by 2 in F_5;
+   (4,4,2) is not equivalent to the infinity representative (0,3,0).
+*)
 Theorem sw_GF5_projective_classes:
   sw_projective_equiv (GF 5) (2,2,1) (4,4,2) /\
   ~sw_projective_equiv (GF 5) (4,4,2) (0,3,0)

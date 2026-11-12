@@ -17,6 +17,8 @@
 
 *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory ellipticCMMap
 Ancestors
   ellipticMorphisms ringLib
@@ -97,6 +99,9 @@ Proof
   metis_tac[sw_cm_beta_nonzero, field_nonzero_eq, field_mult_lcancel]
 QED
 
+(* On a valid curve y^2=x^3+b, beta^3=1 in the field implies
+   phi(x,y)=(beta*x,y), phi(O)=O, preserves curve membership.
+*)
 Theorem sw_cm_map_on_curve:
   ShortWeierstrassCurve (r:'a field) r.sum.id b /\
   beta IN r.carrier /\ r.prod.exp beta 3 = r.prod.id /\
@@ -123,6 +128,9 @@ Proof
   metis_tac[sw_points_member, sw_cm_map_on_curve]
 QED
 
+(* Over a field, beta^3=1 implies phi(phi(phi(P)))=P for curve
+   points, where phi(x,y)=(beta*x,y) and phi(O)=O.
+*)
 Theorem sw_cm_map_third:
   Field (r:'a field) /\ beta IN r.carrier /\
   r.prod.exp beta 3 = r.prod.id /\ P IN sw_points r a b ==>
@@ -206,6 +214,9 @@ Proof
   ]
 QED
 
+(* On y^2=x^3+b with beta^3=1 in the field,
+   phi(P+Q) = phi(P)+phi(Q) for points on the valid curve.
+*)
 Theorem sw_cm_map_add:
   ShortWeierstrassCurve (r:'a field) r.sum.id b /\
   beta IN r.carrier /\ r.prod.exp beta 3 = r.prod.id /\
@@ -267,6 +278,9 @@ Proof
   metis_tac[GroupEndo_def, sw_cm_map_group_homo]
 QED
 
+(* For a valid curve y^2=x^3+b and beta^3=1 in the field,
+   phi(x,y)=(beta*x,y), phi(O)=O, is a group automorphism.
+*)
 Theorem sw_cm_map_group_iso:
   ShortWeierstrassCurve (r:'a field) r.sum.id b /\
   beta IN r.carrier /\ r.prod.exp beta 3 = r.prod.id ==>

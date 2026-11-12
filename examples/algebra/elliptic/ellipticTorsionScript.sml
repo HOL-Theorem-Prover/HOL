@@ -30,6 +30,8 @@
    identify a particular generated subgroup or prove a nonzero result.
 *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory ellipticTorsion
 Ancestors
   shortWeierstrass shortWeierstrassGroup
@@ -58,6 +60,7 @@ Proof
   metis_tac[short_weierstrass_group, sw_group_carrier, group_exp_element]
 QED
 
+(* On a valid curve, [m+n]P = [m]P + [n]P for curve points P. *)
 Theorem sw_scalar_add:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b ==>
@@ -77,6 +80,7 @@ Proof
   metis_tac[short_weierstrass_group, sw_group_carrier, group_exp_mult]
 QED
 
+(* On a valid curve, [n](P+Q) = [n]P + [n]Q for curve points P,Q. *)
 Theorem sw_scalar_distrib:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ Q IN sw_points r a b ==>
@@ -119,6 +123,7 @@ Definition sw_torsion_group_def:
       (sw_group r a b) (sw_group r a b)
 End
 
+(* Rational n-torsion is E[n] = {P in E | [n]P = O}. *)
 Theorem sw_torsion_carrier:
   (sw_torsion_group (r:'a field) a b n).carrier =
     {P | P IN sw_points r a b /\
@@ -146,6 +151,7 @@ Proof
   simp[sw_torsion_group_def, kernel_group_def]
 QED
 
+(* On a valid curve, E[n] is a subgroup of E. *)
 Theorem sw_torsion_subgroup:
   ShortWeierstrassCurve (r:'a field) a b ==>
   Subgroup (sw_torsion_group r a b n) (sw_group r a b)
@@ -187,6 +193,9 @@ Proof
   metis_tac[sw_scalar_one, sw_points_member, sw_on_curve_ECInfinity]
 QED
 
+(* For P on a valid curve, P is in E[n] iff ord(P) divides n.
+   HOL uses ord(P)=0 for infinite order.
+*)
 Theorem sw_torsion_order:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b ==>
@@ -249,6 +258,7 @@ Proof
             FiniteAbelianGroup_def_alt, sw_group_carrier]
 QED
 
+(* For a point P on a valid curve with ord(P)>0, |<P>| = ord(P). *)
 Theorem sw_generator_card:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ 0 < order (sw_group r a b) P ==>
@@ -285,6 +295,9 @@ Proof
             sw_generator_card, SUBSET_FINITE]
 QED
 
+(* For a valid curve over a finite field, |E| = h*n implies
+   [h]P is in E[n] for every P in E.
+*)
 Theorem sw_cofactor_clearing:
   FiniteField (r:'a field) /\ ShortWeierstrassCurve r a b /\
   P IN sw_points r a b /\ CARD (sw_points r a b) = h * n ==>
@@ -298,6 +311,7 @@ Proof
             sw_scalar_mult]
 QED
 
+(* On a valid curve, ord(P) = h*n with h,n>0 implies ord([h]P) = n. *)
 Theorem sw_cofactor_clearing_order:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ 0 < h /\ 0 < n /\

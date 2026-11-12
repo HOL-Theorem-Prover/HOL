@@ -131,6 +131,7 @@ Proof
       bls12381_g1_scalar_step, bls12381_g1_scalar_step]
 QED
 
+(* The standard generator G has exact order bls12381_n. *)
 Theorem bls12381_g1_generator_order:
   order bls12381_g1_group bls12381_g1_generator = bls12381_n
 Proof
@@ -157,6 +158,7 @@ Proof
   simp[bls12381_g1_curve, bls12381_g1_generator_member, bls12381_base_field_finite_field]
 QED
 
+(* The cyclic subgroup <G> has cardinality bls12381_n. *)
 Theorem bls12381_g1_subgroup_card:
   CARD bls12381_g1_subgroup.carrier = bls12381_n
 Proof

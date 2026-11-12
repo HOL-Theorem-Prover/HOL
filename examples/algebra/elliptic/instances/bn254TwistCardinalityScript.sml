@@ -20,6 +20,8 @@
    do not silently replace that conclusion with Generated membership.
    Numerical coordinates and Lucas witnesses are untrusted proof inputs. *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory bn254TwistCardinality
 Ancestors
   namedPrimes bn254CofactorPrimes
@@ -4102,6 +4104,9 @@ Proof
    simp[]])])])])])])])])])])])])])])])]
 QED
 
+(* For the full-order certificate point P and target order N,
+   [N]P=O and [N/q]P<>O for each listed prime divisor q of N.
+*)
 Theorem bn254_g2_full_generator_scalar_tests:
   bn254_g2_group.exp bn254_g2_full_generator bn254_g2_full_order = ECInfinity /\
   bn254_g2_group.exp bn254_g2_full_generator (bn254_g2_full_order DIV 10069) <> ECInfinity /\
@@ -4154,6 +4159,9 @@ fun cardinality_power_step_tac goal =
   pairingCurveCertificateLib.POWER_STEP_TAC
     cardinality_prime cardinality_field goal;
 
+(* For the twist coefficient b<>0, (-b)^((p^2-1)/3)<>1
+   is the finite-field certificate that -b is not a cube.
+*)
 Theorem bn254_g2_noncube_certificate:
   bn254_fp2.prod.exp (bn254_fp2.sum.inv bn254_g2_b)
     ((bn254_p ** 2 - 1) DIV 3) <> bn254_fp2.prod.id /\
@@ -4260,6 +4268,7 @@ Proof
   simp[bn254_g2_group_def, bn254_g2_cardinality]
 QED
 
+(* The full BN254 twist has |E(F_(p^2))|=h*n with h=2*p-n. *)
 Theorem bn254_g2_full_cofactor_relation:
   CARD bn254_g2_group.carrier = bn254_g2_full_cofactor * bn254_n /\
   bn254_g2_full_cofactor = 2 * bn254_p - bn254_n
@@ -4292,6 +4301,9 @@ Proof
        bn254_g2_full_order_def, MULT_COMM]
 QED
 
+(* For the full-order certificate point P, ord([h]P)=bn254_n,
+   where h is the full twist cofactor.
+*)
 Theorem bn254_g2_full_generator_cofactor_order:
   order bn254_g2_group
     (bn254_g2_group.exp bn254_g2_full_generator bn254_g2_full_cofactor) = bn254_n

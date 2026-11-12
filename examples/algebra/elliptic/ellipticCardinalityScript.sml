@@ -25,6 +25,8 @@
    divisor q of N. An annihilation equation alone does not prove exact order.
 *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory ellipticCardinality
 Ancestors
   shortWeierstrass shortWeierstrassGroup ellipticTorsion cardinal prime
@@ -32,6 +34,9 @@ Ancestors
 open arithmeticTheory pred_setTheory cardinalTheory dividesTheory
      groupTheory monoidTheory fieldTheory ringTheory primeTheory
 
+(* A finite set with a fixed-point-free involution f
+   (f(f(x))=x and f(x)<>x) has even cardinality.
+*)
 Theorem finite_involution_even_card:
   !s:'a set. FINITE s ==>
   !f. (!x. x IN s ==> f x IN s /\ f (f x) = x /\ f x <> x) ==>
@@ -79,6 +84,9 @@ Proof
   decide_tac
 QED
 
+(* A valid curve over F_q has at most 2*q+1 rational points:
+   at most two per x-coordinate, plus infinity.
+*)
 Theorem sw_points_card_bound:
   ShortWeierstrassCurve (r:'a field) a b /\ FiniteField r ==>
   CARD (sw_points r a b) <= 2 * CARD r.carrier + 1
@@ -130,6 +138,9 @@ Proof
             sw_add_neg_l]
 QED
 
+(* For a valid curve over a finite field, if [2]P=O implies P=O,
+   then |E| is odd.
+*)
 Theorem sw_no_two_torsion_odd_card:
   ShortWeierstrassCurve (r:'a field) a b /\ FiniteField r /\
   (!P. P IN sw_points r a b /\ (sw_group r a b).exp P 2 = ECInfinity ==>
@@ -155,6 +166,9 @@ Proof
     (fn th => REWRITE_TAC [ODD, GSYM EVEN_ODD, th])
 QED
 
+(* For a valid finite-field curve with no nonidentity 2-torsion,
+   N>0 odd, N dividing |E| and 2*|F|+1 < 3*N force |E|=N.
+*)
 Theorem sw_cardinality_from_odd_divisor:
   ShortWeierstrassCurve (r:'a field) a b /\ FiniteField r /\
   0 < N /\ ODD N /\ N divides CARD (sw_points r a b) /\
@@ -206,6 +220,9 @@ Proof
   metis_tac[sw_point_order_divides_card]
 QED
 
+(* On a valid curve, if x^3+a*x+b has no field root, then
+   [2]P=O implies P=O.
+*)
 Theorem sw_root_free_no_two_torsion:
   ShortWeierstrassCurve (r:'a field) a b /\
   (!x. x IN r.carrier ==> sw_curve_rhs r a b x <> r.sum.id) ==>
@@ -228,6 +245,9 @@ Proof
   fs[field_zero_exp] >> metis_tac[]
 QED
 
+(* For a group element P and N>0, [N]P=O and [N/q]P<>O for
+   every prime q dividing N imply ord(P)=N (O is the identity).
+*)
 Theorem group_exact_order_certificate:
   Group (g:'a group) /\ P IN g.carrier /\ 0 < N /\
   g.exp P N = g.id /\

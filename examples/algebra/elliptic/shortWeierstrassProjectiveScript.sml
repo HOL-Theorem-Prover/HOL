@@ -79,6 +79,9 @@ Definition sw_projective_rep_def:
     sw_projective_to_point r (X,Y,Z) = P
 End
 
+(* Homogenize y^2 = x^3+a*x+b to Y^2*Z = X^3+a*X*Z^2+b*Z^3,
+   excluding (0,0,0).
+*)
 Definition sw_projective_on_curve_def:
   sw_projective_on_curve (r:'a field) a b (X,Y,Z) <=>
     sw_projective_valid r (X,Y,Z) /\
@@ -110,6 +113,9 @@ Proof
   metis_tac[field_zero_element, field_one_element, field_one_ne_zero]
 QED
 
+(* Over a field, decoding (x,y,1) gives (x,y), and decoding (0,1,0)
+   gives infinity: decode(encode(P)) = P for curve points.
+*)
 Theorem sw_point_projective_roundtrip:
   Field (r:'a field) /\ P IN sw_points r a b ==>
   sw_projective_to_point r (sw_point_to_projective r P) = P
@@ -201,6 +207,9 @@ Proof
   metis_tac[field_div_cancel, field_div_def]
 QED
 
+(* For a valid triple and k <> 0 in the field,
+   decode(k*X,k*Y,k*Z) = decode(X,Y,Z).
+*)
 Theorem sw_projective_to_point_scale:
   Field (r:'a field) /\ sw_projective_valid r p /\
   k IN r.carrier /\ k <> r.sum.id ==>
@@ -242,6 +251,9 @@ Proof
   metis_tac[sw_projective_mult_shuffle]
 QED
 
+(* Over a field, valid triples p,q decode equally iff q = k*p for
+   some nonzero k, provided Z=0 implies X=0 for each triple.
+*)
 Theorem sw_projective_equiv_iff_to_point:
   !(r:'a field) x y z u v w.
   Field r /\
@@ -289,6 +301,9 @@ Proof
   ]
 QED
 
+(* Over a field, (X,Y,Z) represents infinity iff X=Z=0 and Y<>0
+   is in the field.
+*)
 Theorem sw_projective_rep_infinity:
   Field (r:'a field) ==>
   (sw_projective_rep r a b (x,y,z) ECInfinity <=>
@@ -301,6 +316,9 @@ Proof
   metis_tac[field_zero_element]
 QED
 
+(* (X,Y,Z) represents (u,v) iff X,Y,Z are in the field, Z<>0,
+   (u,v) is on the curve, and u=X/Z, v=Y/Z.
+*)
 Theorem sw_projective_rep_affine:
   sw_projective_rep (r:'a field) a b (x,y,z) (ECAffine u v) <=>
   x IN r.carrier /\ y IN r.carrier /\ z IN r.carrier /\
@@ -397,6 +415,9 @@ Proof
        field_mult_element]
 QED
 
+(* Over a field with a,b in the carrier, the curve points at Z=0
+   are exactly (0,Y,0) with Y<>0 in the carrier.
+*)
 Theorem sw_projective_zero_chart:
   !(r:'a field) a b x y.
   Field (r:'a field) /\ a IN r.carrier /\ b IN r.carrier ==>
@@ -444,6 +465,9 @@ Proof
   metis_tac[sw_projective_finite_chart]
 QED
 
+(* Over a field with a,b in the carrier, p represents P iff
+   p is a valid triple on the homogeneous curve and decode(p) = P.
+*)
 Theorem sw_projective_rep_iff_curve:
   Field (r:'a field) /\ a IN r.carrier /\ b IN r.carrier ==>
   (sw_projective_rep r a b p P <=>

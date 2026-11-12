@@ -19,6 +19,8 @@
    rules require proofs and do not introduce a new scalar operation.
    ------------------------------------------------------------------------- *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory ellipticCertificates
 Ancestors
   shortWeierstrass shortWeierstrassGroup ellipticTorsion fieldInstances
@@ -34,6 +36,9 @@ Proof
   metis_tac[field_add_eq_zero]
 QED
 
+(* In a field, x<>0 and x*y=1 with x,y in the carrier
+   certify inv(x)=y.
+*)
 Theorem sw_field_prod_inv_witness:
   !(r:'a field) x y.
     Field r /\ x IN r.carrier /\ x <> r.sum.id /\
@@ -61,6 +66,7 @@ Proof
 QED
 
 (* Binary certificates concern the existing group exponent, not a new scalar. *)
+(* For a point on a valid curve, [2*n]P = [n]P+[n]P. *)
 Theorem sw_scalar_double:
   !(r:'a field) a b P n.
     ShortWeierstrassCurve r a b /\ P IN sw_points r a b ==>
@@ -73,6 +79,7 @@ Proof
   asm_simp_tac bool_ss [sw_scalar_add]
 QED
 
+(* For a point on a valid curve, [2*n+1]P = P+([n]P+[n]P). *)
 Theorem sw_scalar_double_add:
   !(r:'a field) a b P n.
     ShortWeierstrassCurve r a b /\ P IN sw_points r a b ==>
@@ -86,6 +93,7 @@ Proof
   metis_tac[sw_scalar_add, sw_scalar_one]
 QED
 
+(* For P<>O on a valid curve and prime n, [n]P=O implies ord(P)=n. *)
 Theorem sw_prime_generator_order:
   ShortWeierstrassCurve (r:'a field) a b /\
   P IN sw_points r a b /\ P <> ECInfinity /\ prime n /\
@@ -111,6 +119,9 @@ Proof
   metis_tac[arithmeticTheory.MOD_TIMES2, arithmeticTheory.MOD_MOD]
 QED
 
+(* In a finite field with |F|-1=3*k, c<>0 and c^k<>1 imply
+   x^3<>c for every field element x.
+*)
 Theorem finite_field_cube_nonresidue:
   !(r:'a field) c k.
     FiniteField r /\ c IN r.carrier /\ c <> r.sum.id /\

@@ -156,6 +156,7 @@ Proof
     (rhs (concl (EVAL ``bls12381_fp12_poly``))))
 QED
 
+(* For BN254, i=w^6-9 satisfies i^2+1=0 modulo X^12-18*X^6+82. *)
 Theorem bn254_fp2_modulus_vanishes:
   poly_mod (GF bn254_p)
     (poly_peval (GF bn254_p) bn254_fp2_poly bn254_fp12_i)
@@ -168,6 +169,7 @@ Proof
     (REWRITE_RULE [bn254_p_def] bn254_p_prime)
     (rhs (concl (EVAL ``bn254_fp12_poly``))))) >> REFL_TAC
 QED
+(* For BLS12-381, i=w^6-1 satisfies i^2+1=0 modulo X^12-2*X^6+2. *)
 Theorem bls12381_fp2_modulus_vanishes:
   poly_mod (GF bls12381_p)
     (poly_peval (GF bls12381_p) bls12381_fp2_poly bls12381_fp12_i)
@@ -181,6 +183,9 @@ Proof
     (rhs (concl (EVAL ``bls12381_fp12_poly``))))) >> REFL_TAC
 QED
 
+(* BN254 substitution a+b*i -> a+b*(w^6-9) defines a field
+   homomorphism F_(p^2) -> F_(p^12).
+*)
 Theorem bn254_fp2_to_fp12_field_homo:
   FieldHomo bn254_fp2_to_fp12 bn254_fp2 bn254_fp12
 Proof
@@ -193,6 +198,9 @@ Proof
   REWRITE_TAC [bn254_fp12_i_def, bn254_p_def] >>
   CONV_TAC polynomialCertificateLib.ARITH_CONV
 QED
+(* BLS12-381 substitution a+b*i -> a+b*(w^6-1) defines a field
+   homomorphism F_(p^2) -> F_(p^12).
+*)
 Theorem bls12381_fp2_to_fp12_field_homo:
   FieldHomo bls12381_fp2_to_fp12 bls12381_fp2 bls12381_fp12
 Proof

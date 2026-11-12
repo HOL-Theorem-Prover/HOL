@@ -40,6 +40,7 @@ Proof
   simp[bls12381_fp12_poly_def, poly_deg_def]
 QED
 
+(* X^12-2*X^6+2 is irreducible over F_p, with p=bls12381_p. *)
 Theorem bls12381_fp12_irreducible:
   irreducible (PolyRing (GF bls12381_p)) bls12381_fp12_poly
 Proof

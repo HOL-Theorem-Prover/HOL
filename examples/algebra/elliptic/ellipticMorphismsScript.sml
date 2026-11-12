@@ -22,6 +22,8 @@
    field; the group-isomorphism results require FieldIso, not just FieldHomo.
 *)
 
+(* In comments, O = ECInfinity and [n]P is scalar multiplication by n. *)
+
 Theory ellipticMorphisms
 Ancestors
   shortWeierstrass shortWeierstrassGroup ellipticTorsion fieldMap
@@ -90,6 +92,9 @@ Proof
      field_exp_element]
 QED
 
+(* A field homomorphism preserves the discriminant:
+   f(Delta(a,b)) = Delta(f(a),f(b)) for coefficients in the field.
+*)
 Theorem sw_field_homo_discriminant:
   Field (r:'a field) /\ Field (s:'b field) /\ FieldHomo f r s /\
   a IN r.carrier /\ b IN r.carrier ==>
@@ -254,6 +259,9 @@ Proof
   ]
 QED
 
+(* For a field homomorphism f and source curve points P,Q,
+   f_*(P+Q) = f_*(P)+f_*(Q), where f_*(x,y) = (f(x),f(y)).
+*)
 Theorem sw_field_homo_add:
   ShortWeierstrassCurve (r:'a field) a b /\ Field (s:'b field) /\
   FieldHomo f r s /\ P IN sw_points r a b /\ Q IN sw_points r a b ==>
@@ -355,6 +363,9 @@ Proof
   mp_tac sw_field_homo_affine_iff >> fs[sw_points_member]
 QED
 
+(* A field isomorphism f induces a group isomorphism
+   f_*: E(r,a,b) -> E(s,f(a),f(b)) for a valid source curve.
+*)
 Theorem sw_field_iso_group:
   ShortWeierstrassCurve (r:'a field) a b /\ Field (s:'b field) /\
   FieldIso f r s ==>
@@ -365,6 +376,9 @@ Proof
   metis_tac[sw_field_iso_points_bij]
 QED
 
+(* A group homomorphism h between valid curve groups satisfies
+   h([n]P) = [n]h(P) for source curve points.
+*)
 Theorem sw_curve_homo_scalar:
   ShortWeierstrassCurve (r:'a field) a b /\
   ShortWeierstrassCurve (s:'b field) c d /\
@@ -375,6 +389,9 @@ Proof
   metis_tac[short_weierstrass_group, group_homo_exp, sw_group_carrier]
 QED
 
+(* A group isomorphism h between valid curve groups preserves
+   point orders: ord(h(P)) = ord(P).
+*)
 Theorem sw_curve_iso_order:
   ShortWeierstrassCurve (r:'a field) a b /\
   ShortWeierstrassCurve (s:'b field) c d /\
@@ -434,6 +451,9 @@ Proof
   metis_tac[sw_curve_iso_order, sw_torsion_order]
 QED
 
+(* A group isomorphism f between valid curve groups restricts to
+   an isomorphism E[n] -> E'[n], where E[n] = {P in E | [n]P = O}.
+*)
 Theorem sw_curve_iso_torsion:
   ShortWeierstrassCurve (r:'a field) a b /\
   ShortWeierstrassCurve (s:'b field) c d /\
