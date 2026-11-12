@@ -1292,10 +1292,56 @@ offers any dumped-heap candidates in DIR via `hol--prompt-heap'."
    (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
    '("COPYRIGHT" "tools" "tools-poly" "bin" "sigobj")))
 
+(defun hol--toml-objroot (file)
+  "The top-level `objroot' string in TOML FILE, or nil."
+  (when (file-readable-p file)
+    (with-temp-buffer
+      (insert-file-contents file)
+      (let ((end (save-excursion
+                   (if (re-search-forward "^[ \t]*\\[" nil t)
+                       (match-beginning 0)
+                     (point-max)))))
+        (when (re-search-forward
+               (concat "^[ \t]*objroot[ \t]*=[ \t]*"
+                       "\\(?:\"\\([^\"]*\\)\"\\|'\\([^']*\\)'\\)")
+               end t)
+          (replace-regexp-in-string
+           (regexp-quote "$(HOLDIR)") (directory-file-name hol-dir)
+           (or (match-string 1) (match-string 2)) t t))))))
+
+(defun hol--lastmaker-path (dir)
+  "The lastmaker file Holmake writes for DIR, following its artifact layout.
+The project's objroot (from holproject.local.toml, then holproject.toml)
+wins over HOLOBJROOT and HOLSRCROOT."
+  (let* ((dir (file-name-as-directory (file-truename dir)))
+         (root (locate-dominating-file dir "holproject.toml"))
+         (root (and root (file-name-as-directory (file-truename root))))
+         (toml-objroot
+          (and root
+               (or (hol--toml-objroot (concat root "holproject.local.toml"))
+                   (hol--toml-objroot (concat root "holproject.toml")))))
+         (objroot (if toml-objroot (expand-file-name toml-objroot root)
+                    (let ((e (getenv "HOLOBJROOT")))
+                      (and e (expand-file-name e dir)))))
+         (srcroot (if toml-objroot root
+                    (let ((e (getenv "HOLSRCROOT")))
+                      (if e (expand-file-name e dir) root))))
+         (objroot (and objroot
+                       (file-name-as-directory (file-truename objroot))))
+         (srcroot (and srcroot
+                       (file-name-as-directory (file-truename srcroot)))))
+    (if (and objroot srcroot
+             (string-prefix-p srcroot dir)
+             (not (string-prefix-p objroot dir)))
+        (expand-file-name "lastmaker"
+                          (expand-file-name (file-relative-name dir srcroot)
+                                            (concat objroot "make-deps")))
+      (concat dir ".hol/make-deps/lastmaker"))))
+
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
         (original-name (expand-file-name original-name0))
-        (lastmaker-path ".hol/make-deps/lastmaker"))
+        (lastmaker-path (hol--lastmaker-path dir0)))
     ;; check for lastmaker file
     (if-let*
         (((file-readable-p lastmaker-path))

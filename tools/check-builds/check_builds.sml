@@ -36,13 +36,15 @@ fun traverse ignores wlist A =
         let val (smlp, children0) = get_subdirs d
             fun goodWRTIgnores d =
                 List.all (fn i => not (String.isSubstring i d)) ignores
+                andalso not (HFS_NameMunge.in_objroot d)
             val children = List.filter goodWRTIgnores children0
             open OS.FileSys
         in
           if smlp then
             let val dstrm =
-                    openDir (OS.Path.concat(d,".hol/logs"))
-                    handle OS.SysErr _ => openDir(OS.Path.concat(d, ".hol/objs"))
+                    openDir (HFS_NameMunge.logdir_for d)
+                    handle OS.SysErr _ =>
+                           openDir (HFS_NameMunge.objdir_for d)
             in
               closeDir dstrm;
               traverse ignores (children :: ds :: Ds) A
@@ -51,6 +53,15 @@ fun traverse ignores wlist A =
           else traverse ignores (children :: ds :: Ds) A
         end
 
+
+(* Use the artifact layout Holmake would use when run in dir. *)
+fun configure_layout dir =
+    HFS_NameMunge.configure
+      (HMProject.resolve_layout {start = dir, cli_objroot = NONE,
+                                 cli_srcroot = NONE, no_project = false})
+    handle Fail s =>
+           (TextIO.output(TextIO.stdErr, s ^ "\n");
+            OS.Process.exit OS.Process.failure)
 
 fun commonPrefix2 s1 s2 =
     let

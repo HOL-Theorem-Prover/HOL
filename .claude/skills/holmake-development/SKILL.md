@@ -244,8 +244,10 @@ references.  Holmake passes the layout to children through
 Tests are in `tools/Holmake/tests/objroot`.
 
 Custom-rule outputs and named heaps keep their existing output paths.
-Some tools used to build HOL itself (`help/src-sml`, `tools/check-builds`,
+Some tools used to build HOL itself (`help/src-sml`,
 `developers/Holmake/*.py`) still assume the default layout.
+`tools/check-builds` and `tools/corpus-diff` load `hmcore.ML` and
+call `resolve_layout`, as `h4pedant` does.
 
 ## Rebuild semantics: mtime vs cachekey
 
