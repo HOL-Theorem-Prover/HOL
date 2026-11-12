@@ -38,17 +38,19 @@ fun contains_var tm =
           if (is_var tm) then true
           else if (is_const tm orelse is_num_const tm) then
              (if (is_zero tm) then failwith "fail" else not (is_num_const tm))
-          else if (is_suc tm) then (contains_var' (rand tm) handle _ => false)
+          else if (is_suc tm) then (contains_var' (rand tm)
+                                     handle HOL_ERR _ => false)
           else if (is_plus tm) then
              ((let val b = contains_var' (arg1 tm)
-               in  b orelse (contains_var' (arg2 tm) handle _ => false)
+               in  b orelse (contains_var' (arg2 tm)
+                                handle HOL_ERR _ => false)
                end)
-             handle _ => contains_var' (arg2 tm)
+             handle HOL_ERR _ => contains_var' (arg2 tm)
              )
           else if (is_mult tm) then
              ((contains_var' (arg1 tm)) orelse (contains_var' (arg2 tm)))
           else true
-   in  contains_var' tm handle _ => false
+   in  contains_var' tm handle HOL_ERR _ => false
    end;
 
 (*---------------------------------------------------------------------------*)
@@ -63,7 +65,7 @@ fun is_linear_mult tm =
  (let val (l,r) = dest_mult tm
   in  if (contains_var l) then (not (contains_var r)) else true
   end
- ) handle _ => failwith "is_linear_mult";
+ ) handle HOL_ERR _ => failwith "is_linear_mult";
 
 (*---------------------------------------------------------------------------*)
 (* non_presburger_subterms : term -> term list                               *)
@@ -81,17 +83,17 @@ fun is_linear_mult tm =
 (*---------------------------------------------------------------------------*)
 
 fun non_presburger_subterms tm =
-   (non_presburger_subterms (#Body (dest_forall tm))) handle _ =>
-   (non_presburger_subterms (#Body (dest_exists tm))) handle _ =>
-   (non_presburger_subterms (dest_neg tm)) handle _ =>
-   (non_presburger_subterms (dest_suc tm)) handle _ =>
-   (non_presburger_subterms (dest_pre tm)) handle _ =>
+   (non_presburger_subterms (#Body (dest_forall tm))) handle HOL_ERR _ =>
+   (non_presburger_subterms (#Body (dest_exists tm))) handle HOL_ERR _ =>
+   (non_presburger_subterms (dest_neg tm)) handle HOL_ERR _ =>
+   (non_presburger_subterms (dest_suc tm)) handle HOL_ERR _ =>
+   (non_presburger_subterms (dest_pre tm)) handle HOL_ERR _ =>
    (if (is_conj tm) orelse (is_disj tm) orelse (is_imp tm) orelse
        (is_eq tm) orelse
        (is_less tm) orelse (is_leq tm) orelse
        (is_greater tm) orelse (is_geq tm) orelse
        (is_plus tm) orelse (is_minus tm) orelse
-       (is_linear_mult tm handle _ => false)
+       (is_linear_mult tm handle HOL_ERR _ => false)
     then Lib.op_union aconv
                       (non_presburger_subterms (arg1 tm))
                       (non_presburger_subterms (arg2 tm))

@@ -76,11 +76,11 @@ fun BOOL_REDUCE_CONV tm =
 fun WITNESS binding tm =
  (let val {Bvar,Body} = dest_exists tm
       val num = term_of_int (assoc (#Name (dest_var Bvar)) binding
-                             handle _ => zero)
+                             handle HOL_ERR _ => zero)
   in  EXISTS (tm,num)
          (WITNESS binding (subst [{residue = num,redex = Bvar}] Body))
   end
- ) handle _ => EQT_ELIM (QCONV BOOL_REDUCE_CONV tm);
+ ) handle HOL_ERR _ => EQT_ELIM (QCONV BOOL_REDUCE_CONV tm);
 
 (*---------------------------------------------------------------------------*)
 (* witness : term list -> (string * int) list                                *)
@@ -92,7 +92,8 @@ fun WITNESS binding tm =
 fun witness tml =
    if (null tml)
    then failwith "witness"
-   else Shostak (coeffs_of_leq_set (hd tml)) handle _ => (witness (tl tml));
+   else Shostak (coeffs_of_leq_set (hd tml))
+        handle HOL_ERR _ => (witness (tl tml));
 
 (*---------------------------------------------------------------------------*)
 (* EXISTS_ARITH_CONV : conv                                                  *)

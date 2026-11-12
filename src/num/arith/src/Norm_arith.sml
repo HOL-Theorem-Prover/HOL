@@ -164,7 +164,8 @@ fun FAST_MULT_CONV tm =
       else if (aval = one) then SPEC b ONE_MULT
       else if (bval = zero) then SPEC a MULT_ZERO
       else if (bval = one) then SPEC a MULT_ONE
-      else mult_lookup (!multiplication_theorems) (aval,bval) handle _ =>
+      else mult_lookup (!multiplication_theorems) (aval,bval)
+        handle HOL_ERR _ =>
            (let val th = MULT_CONV tm
             in  if (bval < aval)
                 then let val th' = TRANS (MULT_COMM_CONV (mk_mult (b,a))) th

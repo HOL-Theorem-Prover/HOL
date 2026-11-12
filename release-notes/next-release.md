@@ -201,6 +201,10 @@ Bugs fixed
     The restores (and the matching ones in `Context.with_context`, `Context.in_proof` and `Context.Data.with_slot_value`) now run with interrupts deferred, on the new `Portable.bracket`; an interrupt that arrives meanwhile is delivered once the restore is done.
     `with_traces` also resets the traces it already set when a later one in its list is unknown or out of range.
 
+-   The arithmetic decision procedure (`ARITH_CONV`, `ARITH_ss`) and `congLib` caught `Interrupt` in their catch-all failure handlers.
+    Under `Timeout.apply`, whose timer interrupts once, the interrupt became an ordinary `HOL_ERR`, or the search carried on past the deadline.
+    The handlers now catch only the exceptions they expect (mostly `HOL_ERR`), so `Interrupt` passes through.
+
 New theories
 ------------
 
