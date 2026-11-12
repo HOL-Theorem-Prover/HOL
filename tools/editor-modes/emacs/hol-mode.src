@@ -1322,10 +1322,13 @@ wins over HOLOBJROOT and HOLSRCROOT."
                    (hol--toml-objroot (concat root "holproject.toml")))))
          (objroot (if toml-objroot (expand-file-name toml-objroot root)
                     (let ((e (getenv "HOLOBJROOT")))
-                      (and e (expand-file-name e dir)))))
+                      (and e (not (string= e ""))
+                           (expand-file-name e dir)))))
          (srcroot (if toml-objroot root
                     (let ((e (getenv "HOLSRCROOT")))
-                      (if e (expand-file-name e dir) root))))
+                      (if (and e (not (string= e "")))
+                          (expand-file-name e dir)
+                        root))))
          (objroot (and objroot
                        (file-name-as-directory (file-truename objroot))))
          (srcroot (and srcroot
