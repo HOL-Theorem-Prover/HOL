@@ -199,6 +199,10 @@ Bugs fixed
 New theories
 ------------
 
+-   `expMod` provides binary modular exponentiation and its accumulator
+    correctness equation. AKS numeric computations and elliptic prime-field
+    computations now share this implementation.
+
 -  `lebesgue_measure`: The equivalence of Lebesgue and Gauge integration.
    A (measurable) function is Lebesgue integrable iff it is Gauge absolutely integrable.
    Theorems in this theory (*e.g.*, `lebesgue_eq_gauge_integral`, `lebesgue_eq_gauge_integral_alt`, *etc.*) can be used to calculate concrete Lebesgue integrals found in Probability applications, etc. (in form of `integral lborel (Normal o f)` where `f IN borel_measurable borel`) by Fundamental Theorem of Calculus (FTC) from `integration` theory, if the anti-derivative of `f` is known (or computable by external CAS software).
@@ -233,6 +237,20 @@ New examples
 
 Incompatibilities
 -----------------
+
+-   AKS's `computeBasic` no longer defines numeric modular exponentiation;
+    use `expModTheory` for `exp_mod_binary`, `exp_mod_step`, their definitions,
+    and their correctness equations. The `exp_mod_compute` wrapper and its
+    theorems have been removed; use `exp_mod_binary` instead.
+    Elliptic's `field$modexp` and Miller–Rabin's `miller_rabin$modexp` have
+    likewise been replaced by `expMod$exp_mod_binary`. Miller–Rabin's witness
+    now uses the core function's value for modulus 1 and exponent 0: 0, not 1.
+    The old `MODEXP_CORRECT` and `MODEXP_ML` exports have been removed.
+    The ACL2 example's fuelled `modexpa` now takes a fifth argument, an
+    accumulator: use `modexpa b n a b 1` to compute `exp_mod_binary a b n`.
+    With zero fuel and nonzero modulus it returns `acc MOD n`, rather than
+    the old constant `1`; with modulus zero it follows the core expression
+    `(acc * a ** b) MOD 0`, regardless of fuel.
 
 -   `Term.subst` now fails if the same redex occurs more than once in its theta-list, whether or not the repeats map it to the same residue.
     Previously such a theta-list was silently resolved by letting the last entry win, which did not agree with the first-match lookup used while terms are being matched.
