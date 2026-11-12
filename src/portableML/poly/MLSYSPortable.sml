@@ -62,6 +62,33 @@ fun reraise e = PolyML.Exception.reraise e
 
 fun display_exn f e = reraise e
 
+(* [release] runs however [body] exits, with interrupts deferred, as does
+   [acquire]; [body] runs with the caller's attributes.  The body re-masks
+   inside its own capture, so an interrupt arriving as it returns cannot
+   skip [release]; exit restores the attributes the body left, so a
+   one-shot interrupt the body took stays consumed.  An interrupt that
+   arrives during [acquire] or [release] is delivered on exit. *)
+fun bracket acquire release body =
+  let
+    open Thread_Attributes
+    val atts = get_attributes ()
+    val post = ref NONE
+    fun mask () =
+      let val a = get_attributes ()
+      in set_attributes (defer_interrupts a); post := SOME a end
+    val () = set_attributes (defer_interrupts atts)
+    val a = acquire () handle e => (set_attributes atts; reraise e)
+    val r = Exn.capture (fn () =>
+              ((set_attributes atts; body a) before mask ())
+              handle e => (mask (); reraise e)) ()
+    val exit_atts = case !post of SOME b => b | NONE => get_attributes ()
+    val () = set_attributes (defer_interrupts exit_atts)
+    val rel = Exn.capture release a
+    val () = set_attributes exit_atts
+  in
+    Exn.release rel; Exn.release r
+  end
+
 fun make_counter {inc,init} =
   let
     val counter = Synchronized.var "counter" init

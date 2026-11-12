@@ -7,7 +7,7 @@ UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml)) SHA1_ML.uo
 
 all: $(UOFILES)
 
-MLSYSPortable.uo: Susp.ui
+MLSYSPortable.uo: Susp.ui Exn.ui Thread_Attributes.uo
 
 Multithreading.uo: ConcIsaLib.uo
 

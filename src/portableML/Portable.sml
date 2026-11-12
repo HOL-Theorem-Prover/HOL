@@ -24,12 +24,7 @@ exception Mod = General.Div
 fun assert_exn P x e = if P x then x else raise e
 fun with_exn f x e = f x handle Interrupt => raise Interrupt | _ => raise e
 fun finally finish f x =
-    let
-      val result = Exn.capture f x
-    in
-      finish();
-      Exn.release result
-    end
+    MLSYSPortable.bracket (fn () => ()) finish (fn () => f x)
 
 val int_to_string = Int.toString
 
@@ -724,20 +719,20 @@ end
  *---------------------------------------------------------------------------*)
 
 fun with_flag (flag, b) f x =
-   let
-      val fval = !flag
-      fun doit () = (flag := b; f x)
-      val res = Exn.capture doit ()
-   in
-      flag := fval; Exn.release res
-   end
+    MLSYSPortable.bracket (fn () => !flag before flag := b)
+                          (fn old => flag := old)
+                          (fn _ => f x)
 
 fun genwith_flag({get,set}, v) f x =
     let
-      val old = get()
-      val res = Exn.capture (fn () => (set v; f x)) ()
+      fun acquire () =
+          let val old = get()
+          in
+            set v handle e => (set old; MLSYSPortable.reraise e);
+            old
+          end
     in
-      set old; Exn.release res
+      MLSYSPortable.bracket acquire set (fn _ => f x)
     end
 
 (*---------------------------------------------------------------------------*
