@@ -70,3 +70,47 @@ see comments in pull requests [#1224](https://github.com/HOL-Theorem-Prover/HOL/
     * `finitefield/ffExist`, the classification of finite fields: existence and uniqueness.
     * `finitefield/ffExtend`, field extension by isomorphic subfield.
     * `finitefield/ffSplit`, splitting field of a field polynomial.
+
+* __elliptic__ develops generic short-Weierstrass curves over the existing
+  field records, their Abelian groups, rational torsion, field-induced
+  morphisms, invertible affine coordinate scaling, homogeneous
+  coordinates, elementary cardinality and exact-order certificates,
+  and cube-root endomorphisms, with GF(5) examples.
+    * `elliptic/shortWeierstrass`, point constructors and curve membership.
+    * `elliptic/swAssocAlgebra`, ring identities for the associativity proof.
+    * `elliptic/shortWeierstrassGroup`, addition, inverse and group theorems.
+    * `elliptic/ellipticTorsion`, scalar laws, rational n-torsion, generated
+      groups, point orders and cofactor clearing.
+    * `elliptic/ellipticMorphisms`, field-induced group and torsion maps.
+    * `elliptic/ellipticScaling`, scaling `(x,y)` to `(u^2*x,u^3*y)` with
+      target coefficients `(u^4*a,u^6*b)` for nonzero field element `u`.
+    * `elliptic/shortWeierstrassProjective`, ordinary homogeneous
+      coordinates, nonzero scaling classes and curve representatives.
+    * `elliptic/ellipticCardinality`, the elementary `2*CARD field+1`
+      bound (not Hasse), odd-cardinality criteria and exact-order tests.
+    * `elliptic/ellipticCMMap`, the automorphism `(x,y)` to `(beta*x,y)`
+      on curves with `a = 0` and a carrier element satisfying `beta^3 = 1`.
+    * `elliptic/ellipticCMCertificates`, generic finite-group independence
+      and cardinality bounds from order-three endomorphisms.
+    * `elliptic/shortWeierstrassSmall`, a six-point GF(5) group, its
+      3-torsion and generated group, option-field transport, scaling
+      and homogeneous-coordinate representatives and nonrepresentatives.
+    * See the [theory map and API notes](elliptic/README.md) for hypotheses,
+      native build commands, and the distinction from `examples/elliptic`.
+
+* __field_certificates__ is a standalone numeric-field and polynomial
+  certificate package, independent of elliptic-curve theories.
+    * `namedPrimeFields` reuses the constants and primality proofs from
+      `primality/examples/namedPrimes` for secp256k1, P-256, BN254 and BLS12-381.
+    * BN254 and BLS12-381 quadratic and degree-twelve quotient fields have
+      checked irreducibility certificates and explicit field embeddings.
+    * See [the package README](field_certificates/README.md) for representations,
+      conversion interfaces, trust boundaries and native Holmake commands.
+
+* __elliptic/instances__ specializes the generic curves to secp256k1,
+  P-256, BN254 and BLS12-381, including G2 twists, full cardinalities,
+  cofactors and degree-twelve embeddings.
+    * Scalar and field-operation certificates are checked by
+      `elliptic/certificates`; numerical witnesses are not trusted proofs.
+    * The complete [instance package](elliptic/instances/README.md) is
+      built separately and selected at selftest level 3.
