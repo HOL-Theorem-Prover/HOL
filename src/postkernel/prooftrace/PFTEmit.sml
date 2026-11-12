@@ -113,14 +113,29 @@ fun emit_theory {trace, output, ruleset} = let
   val tr_name = if is_candle then candle_translate_name else I
   val fun_tyname = tr_name "min$fun"
   val (root_ptr, heap) = parse trace
-  val {const_name, type_name} = names heap root_ptr
-  val {theory = thyname, all_thms, anon_thms, constants, types, ...} =
+  val {const_name=source_const_name, type_name} = names heap root_ptr
+  (* Reserve source names before emitting any synthesized type bijections. *)
+  val const_names = ref (empty String.compare)
+  fun const_name p = let
+    val id as (thy,nm) = source_const_name p
+    val () = if is_candle then
+        const_names := add(!const_names, tr_name (thy ^ "$" ^ nm))
+      else ()
+  in id end
+  val {theory = thyname, all_thms, anon_thms, constants, types,
+       const_ids, ...} =
     shRoot heap root_ptr
   val declared_const_types = Redblackmap.fromList String.compare
     (list heap (tuple2 heap (str heap, I)) constants)
   val fallback_const_types :
     (string, Type.hol_type ptr) Redblackmap.dict ref =
     ref (Redblackmap.mkDict String.compare)
+
+  val () = if is_candle then
+      appList heap (ignore o const_name) const_ids else ()
+  fun fresh_const_name name =
+    if member(!const_names, name) then fresh_const_name (name ^ "'")
+    else (const_names := add(!const_names, name); name)
 
   (* --- Walk pass --------------------------------------------------------- *)
 
@@ -1559,8 +1574,8 @@ fun emit_theory {trace, output, ruleset} = let
         val (th_pw, pred_id, pred_body_id, Ab, rep_ty) =
           exist_to_witness b_th (tm (heap_concl b))
 
-        val absname = tyname ^ "_abs"
-        val repname = tyname ^ "_rep"
+        val absname = fresh_const_name (tyname ^ "_abs")
+        val repname = fresh_const_name (tyname ^ "_rep")
         (* new_type_definition produces two theorems at consecutive IDs:
            tydef_id   = ⊢ abs (rep a) = a
            tydef_id+1 = ⊢ P r = (rep (abs r) = r)

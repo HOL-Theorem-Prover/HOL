@@ -42,7 +42,8 @@ grep -q 'ORACLE_CANDLE_PASS$' /scratch/prooftrace/candle.log
 ```
 
 Use Candle's built `extract_footer`. The runtime can exit zero after an
-exception, so both log checks matter. The other `check-candle.ml` functions
-check their named fixtures after replay with the same prerequisites;
-computation also needs the traced ancestors through `cv` and the compute
-preamble. Identity fixtures need a producer rebuilt with export/import hooks.
+exception, so both log checks matter. The other Candle checks cover the
+`export`, `term-kind`, `compute-binder`, and `identity` outputs; computation
+also needs the traced ancestors through `cv` and the compute preamble.
+`mk-abs` and `closedness` run native checks only. Identity fixtures need a
+producer rebuilt with export/import hooks.

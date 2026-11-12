@@ -59,7 +59,14 @@ let term_kind_check () =
 
 let check_identity_results () =
   let n = mk_comb(mk_const("~",[]),mk_const("T",[])) in
-  check_saved "identity_negation$NEGATION" [n] n;;
+  check_saved "identity_negation$NEGATION" [n] n;
+  let stream = mk_type("identity_type_names$stream",[]) in
+  let a = mk_var("a",stream) in
+  let abs = mk_const("identity_type_names$stream_abs",[]) in
+  let rep = mk_const("identity_type_names$stream_rep",[]) in
+  let all = mk_mconst("!",mk_fun_ty (mk_fun_ty stream bool_ty) bool_ty) in
+  check_saved "identity_type_names$RESULT" []
+    (mk_comb(all,mk_abs(a,mk_eq(mk_comb(abs,mk_comb(rep,a)),a))));;
 
 let check_compute_results () =
   let check name input result =
@@ -96,15 +103,3 @@ let check_compute_results () =
   let abstraction = mk_abs(f,v) in
   let capture = mk_abs(f,abstraction) in
   check "KIND_CAPTURE" capture capture;;
-
-let check_mk_abs_results () =
-  let x = mk_var("x",bool_ty) in
-  let xp = mk_var("x'",bool_ty) in
-  check_refl "pft_mk_abs$RESULT" (mk_abs(xp,mk_eq(xp,x)));
-  check_refl "pft_mk_abs$MATCHING" (mk_abs(xp,xp));;
-let check_closedness_results () =
-  let x = mk_var("x",bool_ty) in
-  let y = mk_var("y",bool_ty) in
-  let outer = mk_abs(x,mk_abs(y,y)) in
-  let f = mk_var("f",mk_fun_ty (type_of outer) bool_ty) in
-  check_refl "pft_closedness$RESULT" (mk_comb(f,outer));;

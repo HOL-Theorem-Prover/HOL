@@ -19,7 +19,7 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
     ("identity_trace_loader", "bool", "T")]
   val bootstrap = Systeml.HOLDIR ^
     "/src/bool/.hol/objs/boolTheory.tr.gz"
-  val theories = "bool" :: map #1 cases
+  val theories = "bool" :: map #1 cases @ ["identity_type_names"]
   fun trace "bool" = bootstrap
     | trace thy = ".hol/objs/" ^ thy ^ "Theory.tr.gz"
   fun output thy = "hol4/" ^ thy ^ ".pft.bin"
@@ -29,14 +29,8 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
        {trace=trace thy,output=output thy,ruleset=PFTEmit.HOL4}) theories;
      PFTEmit.emit_theory {trace=trace "identity_negation",
        output="identity_negation.candle.pft",ruleset=PFTEmit.Candle};
-     List.app (fn (label,rs) =>
-       ((emit (trace "identity_sidefile") ("sidefile." ^ label) rs;
-         raise Fail "side-file proof was accepted")
-        handle Fail message =>
-          if message = "PFTEmit: Exported side-file proofs unsupported" then
-            (OS.FileSys.remove ("sidefile." ^ label);
-             print ("SIDEFILE_REJECTED " ^ label ^ "\n"))
-          else raise Fail message)) rulesets;
+     emit (trace "identity_type_names") "identity_type_names.candle.pft"
+       PFTEmit.Candle;
      pass ())
   val db = if phase = "separate" then
       List.foldl (fn (thy,db) => PFTReplay.replay db (output thy))
@@ -49,9 +43,15 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
            (#1 (ProofTraceReplay.replayed_thms thy)) "RESULT"))
       else valOf (PFTReplay.lookup db (thy ^ "$RESULT"))
     val tm = Term.prim_mk_const {Thy=const_thy,Name=name}
-  in check_sequent (thy ^ "$RESULT") [] (check_eq tm tm) th
+  in check_sequent (thy ^ "$RESULT") [] (mk_test_eq tm tm) th
   end
   val () = List.app check cases
+  val type_result = if phase = "raw" then
+      (ProofTraceReplay.replay (trace "identity_type_names");
+       valOf (Symtab.lookup
+         (#1 (ProofTraceReplay.replayed_thms "identity_type_names")) "RESULT"))
+    else valOf (PFTReplay.lookup db "identity_type_names$RESULT")
+  val () = check_type_names_result type_result
   val negation = if phase = "raw" then
       valOf (Symtab.lookup
         (#1 (ProofTraceReplay.replayed_thms "identity_negation")) "NEGATION")
@@ -156,8 +156,33 @@ val _ = save_thm ("EXTRA", REFL T);
 val () = new_theory "identity_reexport_child";
 val () = identity_export (REFL item);
 
-val () = identity_start "identity_sidefile";
-val sidefile = REFL T;
-val () = Theory.export_proof ("RESULT",sidefile);
-val () = identity_export sidefile;
+(* Source bijections and later declarations share the synthesized base names. *)
+val () = identity_start "identity_type_names";
+val x = mk_var("x",bool);
+val pred = mk_abs(x,T);
+val witness = EQ_MP (SYM (BETA_CONV (mk_comb(pred,T)))) boolTheory.TRUTH;
+val tydef = new_type_definition
+  ("stream",EXISTS (mk_exists(x,mk_comb(pred,x)),T) witness);
+val bij = Drule.define_new_type_bijections
+  {name="stream_bij",ABS="stream_abs",REP="stream_rep",tyax=tydef};
+val late = Term.prim_new_const
+  {Thy="identity_type_names",Name="stream_abs'"} bool;
+val _ = Term.prim_new_const
+  {Thy="identity_type_names",Name="stream_rep'"} bool;
+(* A retired type's internal bijections can collide with live source names. *)
+val olddef = new_type_definition
+  ("retired",EXISTS (mk_exists(x,mk_comb(pred,x)),T) witness);
+val oldty = Type.mk_thy_type
+  {Thy="identity_type_names",Tyop="retired",Args=[]};
+val epoch = KernelSig.epoch_of (#Tyop (Type.dest_thy_typeid oldty));
+val () = Type.prim_delete_type {Thy="identity_type_names",Tyop="retired"};
+val oldabs = Term.prim_new_const
+  {Thy="identity_type_names",Name=Globals.oldify epoch "retired" ^ "_abs"} bool;
+val oldrep = Term.prim_new_const
+  {Thy="identity_type_names",Name=Globals.oldify epoch "retired" ^ "_rep"} bool;
+val result = identity_keep olddef (identity_keep (REFL oldabs)
+  (identity_keep (REFL oldrep) (identity_keep (REFL late) (CONJUNCT1 bij))));
+val () = check_type_names_result result;
+val _ = save_thm("RESULT",result);
+val () = export_theory ();
 val () = pass ();

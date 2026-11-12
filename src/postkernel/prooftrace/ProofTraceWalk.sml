@@ -200,7 +200,7 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
     case shTerm heap tm_ptr of
       Abs (t1, t2) => (walk_term t1; walk_term t2)
     | Comb (t1, t2) => (walk_term t1; walk_term t2)
-    | Const (_, typ) => ty typ
+    | Const (id, typ) => (ignore (const_name id); ty typ)
     | Fv (s, typ) => (on_fv s; ty typ)
     | Bv _ => ()
     | Clos (sbp, tmp) => (walk_subs sbp; walk_term tmp)

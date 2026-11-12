@@ -1,7 +1,7 @@
 fun mk_abs_fixture () = let
   val x = Term.mk_var("x",Type.bool)
   val x' = Term.mk_var("x'",Type.bool)
-  val body = check_eq x' x
+  val body = mk_test_eq x' x
   (* The cosmetic x clashes with the free x; dest_abs opens with x'. *)
   val lam = Term.rename_bvar "x" (Term.mk_abs(x',body))
 in (x',lam) end;
@@ -22,7 +22,7 @@ val () = if phase = "produce" then let
       "hol4/pft_mk_abs.pft" PFTEmit.HOL4
     val db = replay ["hol4/pft_mk_abs.pft"]
     val (_,lam) = mk_abs_fixture ()
-    val () = check_saved db "pft_mk_abs$RESULT" [] (check_eq lam lam)
+    val () = check_saved db "pft_mk_abs$RESULT" [] (mk_test_eq lam lam)
     val nodes = ref PIntMap.empty
     val checked = ref []
     fun skip _ = ()
@@ -57,5 +57,5 @@ val () = if phase = "produce" then let
     val x = Term.mk_var("x'",Type.bool)
     val matching = Term.mk_abs(x,x)
     val () = check_saved db "pft_mk_abs$MATCHING" []
-      (check_eq matching matching)
+      (mk_test_eq matching matching)
   in print "MK_ABS_HOL_EXACT_PASS\n" end;

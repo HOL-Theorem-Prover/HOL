@@ -6,7 +6,7 @@ fun check_sequent name hyps expected th =
   else raise Fail ("wrong sequent: " ^ name);
 fun check_saved db name hs tm =
   check_sequent name hs tm (valOf (PFTReplay.lookup db name));
-fun check_eq x y = let
+fun mk_test_eq x y = let
   val ty = Term.type_of x
   val eq = Term.mk_thy_const
     {Thy="min",Name="=",Ty=Type.--> (ty,Type.--> (ty,Type.bool))}
@@ -25,8 +25,17 @@ local
      Term.mk_abs(v,body))
   val x = Term.mk_var("x",b)
   val y = Term.mk_var("y",b)
-  val eq = check_eq
+  val eq = mk_test_eq
 in
+fun check_type_names_result th = let
+  val stream = Type.mk_thy_type
+    {Thy="identity_type_names",Tyop="stream",Args=[]}
+  val a = Term.mk_var("a",stream)
+  val abs = constant "identity_type_names" "stream_abs" (arr b stream)
+  val rep = constant "identity_type_names" "stream_rep" (arr stream b)
+  val goal = forall a (eq (Term.mk_comb(abs,Term.mk_comb(rep,a))) a)
+in check_sequent "identity_type_names$RESULT" [] goal th end;
+
 fun check_export_results db = let
   val truth = truth ()
   val check = check_saved db
