@@ -18,6 +18,43 @@ checks. It does not run Candle. Actual Candle validation requires replaying
 the Candle outputs with their prerequisites and running the `.ml` checkers
 listed below in Candle.
 
+For example, after running the `oracle` suite, convert its public prerequisite
+with the same checkout. Replace the absolute paths below for your builds:
+
+```sh
+/path/to/HOL/src/postkernel/prooftrace/pft preamble \
+  --output /scratch/prooftrace/preamble.pft
+/path/to/HOL/src/postkernel/prooftrace/pft emit --ruleset candle \
+  --trace /path/to/tracing/src/bool/.hol/objs/boolTheory.tr.gz \
+  --output /scratch/prooftrace/bool.candle.pft
+```
+
+Candle's `replay.ml` ends with an example replay. Make a scratch driver that
+replaces that example and uses absolute input paths:
+
+```sh
+sed -e 's|let here = "candle/pft/";;|let here = "";;|' \
+  -e 's|let extract_footer_path = here \^ "extract_footer";;|let extract_footer_path = "/path/to/Candle/candle/pft/extract_footer";;|' \
+  -e '/^let _ = replay_all \[/d' \
+  /path/to/Candle/candle/pft/replay.ml > /scratch/prooftrace/check.ml
+cat >> /scratch/prooftrace/check.ml <<'EOF'
+replay_all ["/scratch/prooftrace/preamble.pft";
+            "/scratch/prooftrace/bool.candle.pft";
+            "/scratch/prooftrace/oracle/oracle_hyps.candle.pft.bin";
+            "/scratch/prooftrace/oracle/oracle_retired_instance.candle.pft"];;
+#use "/path/to/HOL/src/postkernel/prooftrace/tests/oracle-check-results.ml";;
+check_oracle_results ();;
+EOF
+cd /path/to/Candle/candle/build
+./cake --candle < /scratch/prooftrace/check.ml \
+  > /scratch/prooftrace/candle.log 2>&1
+```
+
+Use the Candle build's `extract_footer` executable. Check that the log contains
+`PFT_ORACLE_ALL_CHECKS_PASSED` and no `EXCEPTION`; the runtime can exit zero
+after an exception. The other suites use this same preamble→prerequisites→
+fixture→checker sequence with the files and extra prerequisites listed below.
+
 * `closedness` reproduces the closedness sentinel collision for a closed
   abstraction containing another closed abstraction. It also checks that an
   unvisited term retains its sentinel.
@@ -25,8 +62,10 @@ listed below in Candle.
   oracle-only sequent and a local polymorphic constant first used at a
   monomorphic type. A fresh minimal HOL checker compares the complete
   oracle sequent and retains both `oracle_hyps.pft.bin` and
-  `oracle_hyps.candle.pft.bin`. After Candle replay, load `oracle-check-results.ml` and
-  call `check_oracle_results ()` for the same exact sequent.
+  `oracle_hyps.candle.pft.bin`. It also rejects incompatible types of a retired
+  undefined constant while accepting instances of a generic first occurrence.
+  Replay the accepted `oracle_retired_instance.candle.pft` too, as above;
+  `oracle-check-results.ml` checks both fixtures.
 * `export` checks specification binders: an unused existential, shadowing,
   and an inner binder named like the introduced constant. It also reproduces
   hypothesis collisions in CONJ, MP, DISJ_CASES and CHOOSE, and GEN_ABS with a
@@ -45,7 +84,8 @@ listed below in Candle.
   name differs from the raw proof's opened binder. It checks the exact sequent
   in a fresh minimal heap. The converter emits `ABS` and `TRANS` for the
   mismatch; matching binders still use `Mk_abs`. The test also checks those
-  instructions, so the replayer's compatibility repair cannot hide a failure.
+  instructions at each theorem's `SAVE`, so the replayer's compatibility
+  repair cannot hide an inverted instruction choice.
 
 The `.ml` checkers run in Candle; their producer programs run in HOL.
 

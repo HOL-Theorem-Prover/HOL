@@ -33,4 +33,11 @@ fun check_oracle_results db = let
   val () = List.app check_poly
     [("POLY_BOOL",Type.bool),("POLY_FUN",Type.--> (Type.bool,Type.bool))]
   val () = print "PFT_POLYMORPHIC_DECL_EXACT_PASS\n"
+  val retired = valOf
+    (PFTReplay.lookup db "oracle_retired_instance$RESULT")
+  val truth = Term.mk_thy_const {Thy="bool",Name="T",Ty=Type.bool}
+  val () = if null (Thm.hyp retired) andalso
+    Term.aconv (Thm.concl retired) (eq truth truth) then
+      print "PFT_RETIRED_INSTANCE_EXACT_PASS\n"
+    else raise Fail "wrong retired constant instance sequent"
 in print "PFT_ORACLE_ALL_CHECKS_PASSED\n" end;

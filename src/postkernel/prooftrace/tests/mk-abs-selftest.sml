@@ -36,24 +36,37 @@ val () = if identity_phase = "produce" then let
     val () = if null (Thm.hyp th) andalso
                 Term.aconv (Thm.concl th) expected then ()
              else raise Fail "Mk_abs replay sequent mismatch"
-    val ops = ref []
+    val nodes = ref PIntMap.empty
+    val checked = ref []
     fun skip _ = ()
     fun instruction opcode (reader:PFTReader.stream_reader) = let
       val desc = PFTOpcodes.lookup_desc PFTOpcodes.hol4_descs opcode
-      val () = List.app (fn _ => ignore (#readVarint reader ()))
+      val results = List.map (fn _ => #readVarint reader ())
         (#results desc)
-      val _ = PFTReader.read_raw_args desc reader
-    in ops := #tag desc :: !ops end
+      val args = PFTReader.read_raw_args desc reader
+    in List.app (fn id => nodes := PIntMap.add id (#tag desc,args) (!nodes))
+         results end
+    fun node id = PIntMap.find id (!nodes)
+    fun saved (name,id) = let
+      open PFTOpcodes
+      val valid = case name of
+          "pft_mk_abs$RESULT" =>
+            (case node id of
+               ("TRANS",[VId _,VId abs]) => #1 (node abs) = "ABS_THM"
+             | _ => false)
+        | "pft_mk_abs$MATCHING" => #1 (node id) = "Mk_abs"
+        | _ => true
+    in if valid then checked := name :: !checked
+       else raise Fail ("wrong Mk_abs instructions at SAVE " ^ name) end
     val _ = PFTReader.read
       {file="hol4/pft_mk_abs.pft.bin",binary=true,
        format_handler={tyvar=skip,tyop=skip,var=skip,const=skip,
          comb=skip,abs=skip,new_const=skip,new_type=skip,axiom=skip,
-         save=skip,load=skip,del=skip,del_range=skip},
+         save=saved,load=skip,del=skip,del_range=skip},
        ruleset_handler=instruction}
-    fun count tag = length (List.filter (fn s => s = tag) (!ops))
-    val () = if count "ABS_THM" = 1 andalso count "TRANS" = 1 andalso
-                count "Mk_abs" = 1 then ()
-             else raise Fail "Mk_abs converter chose the wrong instructions"
+    val () = if List.all (fn name => List.exists (fn s => s = name) (!checked))
+                ["pft_mk_abs$RESULT","pft_mk_abs$MATCHING"] then ()
+             else raise Fail "missing Mk_abs SAVE"
     val x = Term.mk_var("x'",Type.bool)
     val matching = Term.mk_abs(x,x)
     val th = valOf (PFTReplay.lookup db "pft_mk_abs$MATCHING")

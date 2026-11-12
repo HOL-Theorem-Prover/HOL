@@ -118,6 +118,9 @@ fun emit_theory {trace, output, ruleset} = let
     shRoot heap root_ptr
   val declared_const_types = Redblackmap.fromList String.compare
     (list heap (tuple2 heap (str heap, I)) constants)
+  val fallback_const_types :
+    (string, Type.hol_type ptr) Redblackmap.dict ref =
+    ref (Redblackmap.mkDict String.compare)
 
   (* --- Walk pass --------------------------------------------------------- *)
 
@@ -585,6 +588,26 @@ fun emit_theory {trace, output, ruleset} = let
   (* Term emission                                                           *)
   (* ======================================================================= *)
 
+  and is_type_instance declared actual = let
+    val bindings = ref (Redblackmap.mkDict String.compare)
+    fun matches pattern instance =
+      case shType heap pattern of
+        Tyv name => let
+          val id = emit_type instance
+        in case Redblackmap.peek(!bindings, name) of
+             SOME bound => bound = id
+           | NONE => (bindings := Redblackmap.insert(!bindings, name, id);
+                      true)
+        end
+      | Tyapp (_, args) =>
+          (case shType heap instance of
+             Tyv _ => false
+           | Tyapp (_, actual_args) =>
+               get_type_id pattern = get_type_id instance andalso
+               ListPair.allEq (fn (p,a) => matches p a)
+                 (list heap I args, list heap I actual_args))
+  in matches declared actual end
+
   and emit_term (tm_ptr : Term.term ptr) : int =
     if not (isPtr tm_ptr) then raise Fail "emit_term: not a ptr"
     else let val k = ptr tm_ptr
@@ -653,13 +676,22 @@ fun emit_theory {trace, output, ruleset} = let
         val () = check_def tm_defs Thy Name
         val ty_id = emit_type typ
         val qname = tr_name (Thy ^ "$" ^ Name)
+        val () = case Redblackmap.peek(!fallback_const_types, qname) of
+            NONE => ()
+          | SOME declared =>
+              if is_type_instance declared typ then ()
+              else raise Fail ("PFTEmit: retired undefined constant " ^
+                qname ^ " has an incompatible instance; " ^
+                "its generic declaration type is unavailable")
         val () = if Thy = thyname andalso not (is_const_done qname)
                  then let
                    (* A first occurrence may be a monomorphic instance. *)
                    val declared =
                      case Redblackmap.peek(declared_const_types, Name) of
                        SOME ty => ty
-                     | NONE => typ
+                     | NONE =>
+                         (fallback_const_types := Redblackmap.insert
+                           (!fallback_const_types, qname, typ); typ)
                    val declared_id = emit_type declared
                  in mark_const qname;
                     PFTWriter.new_const out qname declared_id

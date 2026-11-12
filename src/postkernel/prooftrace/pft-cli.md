@@ -73,6 +73,11 @@ roles, and unsupported foreign-definition proofs are rejected explicitly. Naming
 identity does not recover a missing defining proof or reproduce a retired
 logical registration; this converter does not yet cover all such exports.
 
+A retired undefined local constant has no recorded generic declaration type.
+The converter declares it at its first occurrence's type and accepts later
+instances of that type. It rejects an incompatible occurrence explicitly;
+it cannot recover a more general declaration from the observed instances.
+
 `Exported` side-file proofs and deleted proofs (including tracing gaps) are
 unsupported and fail conversion. No missing proof is replaced by an axiom.
 The AXIOM instruction is nevertheless part of both rulesets; callers must

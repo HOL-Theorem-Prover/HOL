@@ -24,4 +24,9 @@ let check_oracle_results () =
     else failwith ("wrong polymorphic constant sequent: " ^ name))
     ["POLY_BOOL",b; "POLY_FUN",mk_fun_ty b b];
   print_endline "PFT_POLYMORPHIC_DECL_EXACT_PASS";
+  let retired = load_th "oracle_retired_instance$RESULT" in
+  let truth = mk_const ("T",[]) in
+  if hyp retired = [] && aconv (concl retired) (mk_eq (truth,truth)) then
+    print_endline "PFT_RETIRED_INSTANCE_EXACT_PASS"
+  else failwith "wrong retired constant instance sequent";
   print_endline "PFT_ORACLE_ALL_CHECKS_PASSED";;
