@@ -51,7 +51,6 @@ val () = ignore (Theory.save_thm("KIND_CAPTURE",kind_capture_result));
 val () = Theory.export_theory ();
 val () = print "COMPUTE_BINDER_ACTUAL_EXPORT_PASS\n";
 
-val () = load_pft [];
 val () = PFTEmit.emit_theory
   {trace=".hol/objs/pft_compute_bindersTheory.tr.gz",
    output="compute-binders.pft.bin",ruleset=PFTEmit.Candle};

@@ -1,16 +1,12 @@
-(* Each phase runs in a fresh process; raw replay starts without boolTheory. *)
-val source = valOf (OS.Process.getEnv "HOL_PFT_SOURCE_ROOT") ^
-  "/src/postkernel/prooftrace/";
-val phase = valOf (OS.Process.getEnv "HOL_PFT_IDENTITY_PHASE");
-fun pass () = (print "PFT_TEST_PHASE_PASS\n";
-               OS.Process.exit OS.Process.success);
+(* Each phase runs in a fresh process. *)
 fun require message condition =
   if condition then () else raise Fail message;
 fun read file = let val ins = TextIO.openIn file
   in TextIO.inputAll ins before TextIO.closeIn ins end;
 fun write file text = let val out = TextIO.openOut file
   in TextIO.output (out,text); TextIO.closeOut out end;
-val () = load_pft ["PFTReader","PFTReplay","ProofTraceReplay"];
+val () = (use (source ^ "ProofTraceReplay.sig");
+          use (source ^ "ProofTraceReplay.sml"));
 
 (* Replay and check before loading the libraries used to produce the traces. *)
 val () = if phase <> "raw" andalso phase <> "convert" andalso
@@ -33,6 +29,14 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
        {trace=trace thy,output=output thy,ruleset=PFTEmit.HOL4}) theories;
      PFTEmit.emit_theory {trace=trace "identity_negation",
        output="identity_negation.candle.pft",ruleset=PFTEmit.Candle};
+     List.app (fn (label,rs) =>
+       ((emit (trace "identity_sidefile") ("sidefile." ^ label) rs;
+         raise Fail "side-file proof was accepted")
+        handle Fail message =>
+          if message = "PFTEmit: Exported side-file proofs unsupported" then
+            (OS.FileSys.remove ("sidefile." ^ label);
+             print ("SIDEFILE_REJECTED " ^ label ^ "\n"))
+          else raise Fail message)) rulesets;
      pass ())
   val db = if phase = "separate" then
       List.foldl (fn (thy,db) => PFTReplay.replay db (output thy))
@@ -45,10 +49,7 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
            (#1 (ProofTraceReplay.replayed_thms thy)) "RESULT"))
       else valOf (PFTReplay.lookup db (thy ^ "$RESULT"))
     val tm = Term.prim_mk_const {Thy=const_thy,Name=name}
-  in require ("wrong sequent for " ^ thy ^ "$RESULT")
-       (null (Thm.hyp th) andalso
-        Term.aconv (Thm.concl th) (Thm.concl (Thm.REFL tm)));
-     print ("IDENTITY_EXACT " ^ thy ^ "$RESULT\n")
+  in check_sequent (thy ^ "$RESULT") [] (check_eq tm tm) th
   end
   val () = List.app check cases
   val negation = if phase = "raw" then
@@ -57,11 +58,7 @@ val () = if phase <> "raw" andalso phase <> "convert" andalso
     else valOf (PFTReplay.lookup db "identity_negation$NEGATION")
   val n = Term.mk_comb (Term.prim_mk_const {Thy="bool",Name="~"},
     Term.prim_mk_const {Thy="bool",Name="T"})
-  val () = require "wrong NOT_INTRO negation sequent"
-    (case Thm.hyp negation of
-       [h] => Term.aconv h n andalso Term.aconv (Thm.concl negation) n
-     | _ => false)
-  val () = print "IDENTITY_NEGATION_EXACT\n"
+  val () = check_sequent "identity_negation$NEGATION" [n] n negation
   fun declared name = case String.fields (fn c => c = #"$") name of
       [thy,nm] => require ("missing constant " ^ name)
         (List.exists (fn tm => #Thy (Term.dest_thy_const tm) = thy)
@@ -159,4 +156,8 @@ val _ = save_thm ("EXTRA", REFL T);
 val () = new_theory "identity_reexport_child";
 val () = identity_export (REFL item);
 
+val () = identity_start "identity_sidefile";
+val sidefile = REFL T;
+val () = Theory.export_proof ("RESULT",sidefile);
+val () = identity_export sidefile;
 val () = pass ();

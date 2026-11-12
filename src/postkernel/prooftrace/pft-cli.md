@@ -1,6 +1,6 @@
 # Converting proof traces
 
-The `pft` driver converts HOL4 proof dumps into version 0.1.0 binary PFT files.
+The `pft.sh` driver converts HOL4 proof dumps into version 0.1.0 binary PFT files.
 It supports the `hol4` and `candle` rulesets. It needs the original proof
 dumps; loading a theory without a dump does not reconstruct its proof.
 
@@ -21,7 +21,7 @@ another compatible HOL executable when building with an external toolchain.
 Its arguments and file paths may contain spaces. Run it from any directory:
 
 ```sh
-/path/to/HOL/src/postkernel/prooftrace/pft --help
+/path/to/HOL/src/postkernel/prooftrace/pft.sh --help
 ```
 
 ## Convert a theory
@@ -29,22 +29,22 @@ Its arguments and file paths may contain spaces. Run it from any directory:
 Choose the ruleset explicitly for each conversion:
 
 ```sh
-src/postkernel/prooftrace/pft emit --ruleset hol4 \
+src/postkernel/prooftrace/pft.sh emit --ruleset hol4 \
   --trace /path/to/exampleTheory.tr.gz --output example.pft
 ```
 
 For Candle, emit the shared preamble before the converted theories:
 
 ```sh
-src/postkernel/prooftrace/pft preamble --output preamble.pft
-src/postkernel/prooftrace/pft emit --ruleset candle \
+src/postkernel/prooftrace/pft.sh preamble --output preamble.pft
+src/postkernel/prooftrace/pft.sh emit --ruleset candle \
   --trace /path/to/exampleTheory.tr.gz --output example.candle.pft
 ```
 
 Candle proofs using verified computation also need the compute preamble:
 
 ```sh
-src/postkernel/prooftrace/pft compute-preamble --output compute-preamble.pft
+src/postkernel/prooftrace/pft.sh compute-preamble --output compute-preamble.pft
 ```
 
 Place that file after the converted `cv` dependencies and before theories

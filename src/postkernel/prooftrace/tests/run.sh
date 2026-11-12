@@ -31,17 +31,15 @@ for HOL_PFT_TEST in $pft_suites; do
     term-kind|oracle) pft_phases='produce replay' ;;
     *) pft_phases=run ;;
   esac
-  for HOL_PFT_IDENTITY_PHASE in $pft_phases; do
-    export HOL_PFT_IDENTITY_PHASE
-    HOL_PFT_EXPORT_CASE=$HOL_PFT_IDENTITY_PHASE
-    export HOL_PFT_EXPORT_CASE
-    case "$HOL_PFT_TEST:$HOL_PFT_IDENTITY_PHASE" in
+  for HOL_PFT_PHASE in $pft_phases; do
+    export HOL_PFT_PHASE
+    case "$HOL_PFT_TEST:$HOL_PFT_PHASE" in
       identity:produce) set -- ;;
       identity:*|mk-abs:replay|export:replay|term-kind:replay|oracle:replay)
         set -- --min ;;
       *) set -- ;;
     esac
-    pft_log=$HOL_PFT_IDENTITY_PHASE.log
+    pft_log=$HOL_PFT_PHASE.log
     if ! "$pft_hol" run "$@" "$pft_dir/driver.sml" > "$pft_log" 2>&1 ||
        ! grep -q '^PFT_TEST_PHASE_PASS$' "$pft_log"; then
       tail -40 "$pft_log" >&2

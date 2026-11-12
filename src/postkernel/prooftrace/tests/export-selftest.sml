@@ -1,34 +1,13 @@
-val () = load_pft ["PFTReader","PFTReplay"];
-val () = use (test_source ^ "export-check.sml");
-val () = if identity_phase <> "replay" then () else let
-  val () = PFTEmit.emit_theory
-    {trace=Systeml.HOLDIR ^ "/src/bool/.hol/objs/boolTheory.tr.gz",
-     output="hol4/bool.pft.bin",ruleset=PFTEmit.HOL4}
-  val files = "hol4/bool.pft.bin" :: List.map (fn name => name ^ ".hol4.pft")
-    ["vacuous","shadow","overlap","hypotheses","binder"]
-  val db = List.foldl (fn (file,db) => PFTReplay.replay db file)
-    PFTReplay.empty_trDB files
-  val () = check_export_results db
-in print "PFT_TEST_PHASE_PASS\n"; OS.Process.exit OS.Process.success end;
+val () = if phase <> "replay" then () else
+  (check_export_results (replay_bool (map (fn name => name ^ ".hol4.pft")
+     ["vacuous","shadow","overlap","hypotheses","binder"])); pass ());
 
 open HolKernel;
-val case_name = valOf (OS.Process.getEnv "HOL_PFT_EXPORT_CASE");
+val case_name = phase;
 val theory = "pftExport_" ^ case_name;
 val () = Theory.new_theory theory;
 val x = Term.mk_var("x", Type.bool);
 val y = Term.mk_var("y", Type.bool);
-
-fun save_exact name expected th =
-  if null (Thm.hyp th) andalso Term.aconv (Thm.concl th) expected then
-    ignore (Theory.save_thm(name,th))
-  else raise Fail ("wrong source sequent: " ^ name);
-
-fun save_hyps name expected_hyps expected th =
-  if length (Thm.hyp th) = length expected_hyps andalso
-     List.all (fn h => List.exists (Term.aconv h) (Thm.hyp th)) expected_hyps
-     andalso Term.aconv (Thm.concl th) expected then
-    ignore (Theory.save_thm(name,th))
-  else raise Fail ("wrong source sequent: " ^ name);
 
 val () = case case_name of
     "vacuous" => let
@@ -93,11 +72,4 @@ val () = case case_name of
 val () = Theory.export_theory ();
 val () = print ("EXPORT_FIXTURE_PRODUCED " ^ case_name ^ "\n");
 
-val name = valOf (OS.Process.getEnv "HOL_PFT_EXPORT_CASE");
-fun convert (label,ruleset) =
-  PFTEmit.emit_theory
-    {trace=".hol/objs/pftExport_" ^ name ^ "Theory.tr.gz",
-     output=name ^ "." ^ label ^ ".pft",ruleset=ruleset};
-val () = List.app (fn target =>
-  (convert target; print ("EXPORT_CONVERTED " ^ #1 target ^ "\n")))
-  [("hol4",PFTEmit.HOL4),("candle",PFTEmit.Candle)];
+val () = convert theory case_name;

@@ -1,13 +1,5 @@
-val () = load_pft ["PFTReader","PFTReplay"];
-val () = use (test_source ^ "term-kind-check.sml");
-val () = if identity_phase <> "replay" then () else let
-  val () = PFTEmit.emit_theory
-    {trace=Systeml.HOLDIR ^ "/src/bool/.hol/objs/boolTheory.tr.gz",
-     output="hol4/bool.pft.bin",ruleset=PFTEmit.HOL4}
-  val db = List.foldl (fn (file,db) => PFTReplay.replay db file)
-    PFTReplay.empty_trDB ["hol4/bool.pft.bin","term-kinds.hol4.pft.bin"]
-  val () = term_kind_check db
-in print "PFT_TEST_PHASE_PASS\n"; OS.Process.exit OS.Process.success end;
+val () = if phase <> "replay" then () else
+  (term_kind_check (replay_bool ["term-kinds.hol4.pft"]); pass ());
 
 open HolKernel boolSyntax;
 val () = Theory.new_theory "pft_term_kinds";
@@ -17,10 +9,6 @@ val abstraction = mk_abs(f,x);
 val nested = mk_abs(f,abstraction);
 val retained = CONJUNCT2 (CONJ (REFL (mk_comb(f,x))) (REFL nested));
 val renamed = Thm.SUBST [x |-> REFL x] (concl retained) retained;
-fun save_exact name expected th =
-  if null (hyp th) andalso aconv (concl th) expected then
-    ignore (Theory.save_thm(name,th))
-  else raise Fail ("wrong source sequent: " ^ name);
 val () = save_exact "RENAME" (mk_eq(nested,nested)) renamed;
 
 (* The discarded COMB shares its children with this closed ABS. Its proof
@@ -42,9 +30,4 @@ val () = save_exact "EMPTY_BINDER" (mk_eq(empty_outer,empty_outer))
 val () = Theory.export_theory ();
 val () = print "TERM_KIND_ACTUAL_EXPORT_PASS\n";
 
-val term_kind_trace = ".hol/objs/pft_term_kindsTheory.tr.gz";
-val () = List.app (fn (name,ruleset) => PFTEmit.emit_theory
-  {trace=term_kind_trace,output="term-kinds." ^ name ^ ".pft.bin",
-   ruleset=ruleset})
-  [("candle",PFTEmit.Candle),("hol4",PFTEmit.HOL4)];
-val () = print "TERM_KIND_FOCUSED_TESTS_PASS\n";
+val () = convert "pft_term_kinds" "term-kinds";

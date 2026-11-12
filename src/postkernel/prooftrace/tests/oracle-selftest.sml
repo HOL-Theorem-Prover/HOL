@@ -1,14 +1,6 @@
-val () = load_pft ["PFTReader","PFTReplay"];
-val () = use (test_source ^ "oracle-check-results.sml");
-val () = if identity_phase <> "replay" then () else let
-  val () = PFTEmit.emit_theory
-    {trace=Systeml.HOLDIR ^ "/src/bool/.hol/objs/boolTheory.tr.gz",
-     output="hol4/bool.pft.bin",ruleset=PFTEmit.HOL4}
-  val db = List.foldl (fn (file,db) => PFTReplay.replay db file)
-    PFTReplay.empty_trDB ["hol4/bool.pft.bin","oracle_hyps.pft.bin",
-                        "oracle_retired_instance.hol4.pft"]
-  val () = check_oracle_results db
-in print "PFT_TEST_PHASE_PASS\n"; OS.Process.exit OS.Process.success end;
+val () = if phase <> "replay" then () else
+  (check_oracle_results (replay_bool
+     ["oracle_hyps.hol4.pft","oracle_retired_instance.hol4.pft"]); pass ());
 
 open HolKernel;
 val () = Theory.new_theory "oracle_hyps";
@@ -25,7 +17,7 @@ val y = Term.mk_var("y",Type.bool);
 val synthetic = Term.mk_var("x pft%0",Type.bool);
 val body = boolSyntax.mk_eq(x,synthetic);
 val abstraction = Term.rename_bvar "x" (Term.mk_abs(y,body));
-val () = save "capture" (oracle ([],boolSyntax.mk_eq(abstraction,abstraction)));
+val () = save "capture" (oracle ([boolSyntax.mk_eq(abstraction,abstraction)],p));
 val () = Theory.new_constant("c",Type.alpha --> Type.alpha);
 val c = Term.prim_mk_const {Thy="oracle_hyps",Name="c"};
 val cb = Term.inst [Type.alpha |-> Type.bool] c;
@@ -36,13 +28,7 @@ val () = Theory.export_theory ();
 
 val () = print "PFT_ORACLE_FIXTURES_PRODUCED\n";
 
-val separate = "oracle_hyps.pft.bin";
-val () = PFTEmit.emit_theory
-  {trace=".hol/objs/oracle_hypsTheory.tr.gz", output=separate,
-   ruleset=PFTEmit.HOL4};
-val () = PFTEmit.emit_theory
-  {trace=".hol/objs/oracle_hypsTheory.tr.gz",
-   output="oracle_hyps.candle.pft.bin",ruleset=PFTEmit.Candle};
+val () = convert "oracle_hyps" "oracle_hyps";
 
 fun retired_fixture (name,first_generic) = let
   val () = Theory.new_theory name
@@ -77,5 +63,5 @@ val () = List.app (fn (label,ruleset) => let
     {trace=".hol/objs/oracle_retired_instanceTheory.tr.gz",
      output="oracle_retired_instance." ^ label ^ ".pft",ruleset=ruleset}
 in print ("PFT_RETIRED_TYPE_CHECK_PASS " ^ label ^ "\n") end)
-  [("hol4",PFTEmit.HOL4),("candle",PFTEmit.Candle)];
+  rulesets;
 val () = print "PFT_ORACLE_SELFTEST_PASSED\n";

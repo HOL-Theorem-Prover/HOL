@@ -7,7 +7,6 @@ val f = Term.mk_var ("f",Type.--> (Term.type_of outer,Type.bool));
 val () = ignore (Theory.save_thm ("RESULT",
   Thm.REFL (Term.mk_comb (f,outer))));
 val () = Theory.export_theory ();
-val () = load_pft [];
 open ProofTraceParser;
 val (root,heap) = parse ".hol/objs/pft_closednessTheory.tr.gz";
 val {all_thms,anon_thms,theory,...} = shRoot heap root;
