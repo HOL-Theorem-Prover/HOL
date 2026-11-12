@@ -30,18 +30,24 @@ Datatype:
   sw_point = ECInfinity | ECAffine 'a 'a
 End
 
+(* Arithmetic below uses the field record r. Subtraction expands directly
+   to addition of the additive inverse, preserving the underlying terms. *)
+Overload "+"[local] = ``(r:'a field).sum.op``
+Overload "-"[local] = ``\x y. (r:'a field).sum.op x (r.sum.inv y)``
+Overload "*"[local] = ``(r:'a field).prod.op``
+Overload "**"[local] = ``(r:'a field).prod.exp``
+
 Definition sw_curve_rhs_def:
   sw_curve_rhs (r:'a field) a b x =
-    r.sum.op (r.sum.op (r.prod.exp x 3) (r.prod.op a x)) b
+    x ** 3 + a * x + b
 End
 
 Definition sw_discriminant_def:
   sw_discriminant (r:'a field) a b =
     r.sum.inv
-      (r.prod.op (r.sum.exp r.prod.id 16)
-        (r.sum.op
-          (r.prod.op (r.sum.exp r.prod.id 4) (r.prod.exp a 3))
-          (r.prod.op (r.sum.exp r.prod.id 27) (r.prod.exp b 2))))
+      ((r.sum.exp r.prod.id 16) *
+       ((r.sum.exp r.prod.id 4) * a ** 3 +
+        (r.sum.exp r.prod.id 27) * b ** 2))
 End
 
 (* Valid curves have a,b in the field, char(F) <> 2,3 and
@@ -62,7 +68,7 @@ Definition sw_on_curve_def:
   (sw_on_curve r a b (ECAffine x y) <=>
     x IN r.carrier /\
     y IN r.carrier /\
-    r.prod.exp y 2 = sw_curve_rhs r a b x)
+    y ** 2 = sw_curve_rhs r a b x)
 End
 
 Definition sw_points_def:
@@ -81,7 +87,7 @@ Theorem sw_on_curve_ECAffine[simp]:
     sw_on_curve r a b (ECAffine x y) <=>
     x IN r.carrier /\
     y IN r.carrier /\
-    r.prod.exp y 2 = sw_curve_rhs r a b x
+    y ** 2 = sw_curve_rhs r a b x
 Proof
   rw[sw_on_curve_def]
 QED

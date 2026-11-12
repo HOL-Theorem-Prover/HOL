@@ -36,6 +36,13 @@ Libs
 
 open fieldTheory ringTheory
 
+(* Arithmetic below uses the field record r. Subtraction expands directly
+   to addition of the additive inverse, preserving the underlying terms. *)
+Overload "+"[local] = ``(r:'a field).sum.op``
+Overload "-"[local] = ``\x y. (r:'a field).sum.op x (r.sum.inv y)``
+Overload "*"[local] = ``(r:'a field).prod.op``
+Overload "**"[local] = ``(r:'a field).prod.exp``
+
 (* Nonzero homogeneous triples. Off-curve points at infinity remain valid
    projective-space points, but are deliberately not curve representatives. *)
 Definition sw_projective_valid_def:
@@ -46,7 +53,7 @@ End
 
 Definition sw_projective_scale_def:
   sw_projective_scale (r:'a field) k (X,Y,Z) =
-    (r.prod.op k X, r.prod.op k Y, r.prod.op k Z)
+    (k * X, k * Y, k * Z)
 End
 
 Definition sw_projective_equiv_def:
@@ -67,8 +74,8 @@ End
 Definition sw_projective_to_point_def:
   sw_projective_to_point (r:'a field) (X,Y,Z) =
     if Z = r.sum.id then ECInfinity
-    else ECAffine (r.prod.op X ((Invertibles r.prod).inv Z))
-                  (r.prod.op Y ((Invertibles r.prod).inv Z))
+    else ECAffine (X * ((Invertibles r.prod).inv Z))
+                  (Y * ((Invertibles r.prod).inv Z))
 End
 
 Definition sw_projective_rep_def:
@@ -85,11 +92,7 @@ End
 Definition sw_projective_on_curve_def:
   sw_projective_on_curve (r:'a field) a b (X,Y,Z) <=>
     sw_projective_valid r (X,Y,Z) /\
-    r.prod.op (r.prod.exp Y 2) Z =
-      r.sum.op
-        (r.sum.op (r.prod.exp X 3)
-          (r.prod.op (r.prod.op a X) (r.prod.exp Z 2)))
-        (r.prod.op b (r.prod.exp Z 3))
+    Y ** 2 * Z = X ** 3 + a * X * Z ** 2 + b * Z ** 3
 End
 
 Theorem sw_projective_rep_unique:
@@ -158,7 +161,7 @@ Theorem sw_projective_scale_compose[local]:
   Field (r:'a field) /\ sw_projective_valid r p /\
   k IN r.carrier /\ l IN r.carrier ==>
   sw_projective_scale r l (sw_projective_scale r k p) =
-  sw_projective_scale r (r.prod.op l k) p
+  sw_projective_scale r (l * k) p
 Proof
   PairCases_on `p` >>
   simp[sw_projective_valid_def, sw_projective_scale_def, field_mult_assoc]
@@ -199,8 +202,8 @@ QED
 Theorem sw_projective_ratio_scale[local]:
   Field (r:'a field) /\ x IN r.carrier /\ z IN r.carrier /\
   z <> r.sum.id /\ k IN r.carrier /\ k <> r.sum.id ==>
-  r.prod.op (r.prod.op k x) ((Invertibles r.prod).inv (r.prod.op k z)) =
-  r.prod.op x ((Invertibles r.prod).inv z)
+  k * x * ((Invertibles r.prod).inv (k * z)) =
+  x * ((Invertibles r.prod).inv z)
 Proof
   rpt strip_tac >>
   `k IN R+ /\ z IN R+` by simp[field_nonzero_eq] >>
@@ -225,7 +228,7 @@ QED
 Theorem sw_projective_mult_shuffle[local]:
   Field (r:'a field) /\ x IN r.carrier /\ t IN r.carrier /\
   w IN r.carrier ==>
-  r.prod.op (r.prod.op x t) w = r.prod.op (r.prod.op w t) x
+  x * t * w = w * t * x
 Proof
   rpt strip_tac >>
   simp[field_mult_assoc, field_mult_comm, field_mult_assoc_comm,
@@ -236,9 +239,9 @@ Theorem sw_projective_ratio_recover[local]:
   Field (r:'a field) /\
   x IN r.carrier /\ z IN r.carrier /\ z <> r.sum.id /\
   u IN r.carrier /\ w IN r.carrier /\ w <> r.sum.id /\
-  r.prod.op x ((Invertibles r.prod).inv z) =
-  r.prod.op u ((Invertibles r.prod).inv w) ==>
-  u = r.prod.op (r.prod.op w ((Invertibles r.prod).inv z)) x
+  x * ((Invertibles r.prod).inv z) =
+  u * ((Invertibles r.prod).inv w) ==>
+  u = w * ((Invertibles r.prod).inv z) * x
 Proof
   rpt strip_tac >>
   `z IN R+ /\ w IN R+` by simp[field_nonzero_eq] >>
@@ -323,8 +326,8 @@ Theorem sw_projective_rep_affine:
   sw_projective_rep (r:'a field) a b (x,y,z) (ECAffine u v) <=>
   x IN r.carrier /\ y IN r.carrier /\ z IN r.carrier /\
   z <> r.sum.id /\ sw_on_curve r a b (ECAffine u v) /\
-  u = r.prod.op x ((Invertibles r.prod).inv z) /\
-  v = r.prod.op y ((Invertibles r.prod).inv z)
+  u = x * ((Invertibles r.prod).inv z) /\
+  v = y * ((Invertibles r.prod).inv z)
 Proof
   Cases_on `z = r.sum.id` >>
   simp[sw_projective_rep_def, sw_projective_valid_def,

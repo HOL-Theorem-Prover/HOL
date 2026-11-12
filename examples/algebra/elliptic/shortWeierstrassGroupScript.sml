@@ -137,6 +137,13 @@ Proof
   metis_tac[sw_ring_ops]
 QED
 
+(* Arithmetic below uses the field record r. Subtraction expands directly
+   to addition of the additive inverse, preserving the underlying terms. *)
+Overload "+"[local] = ``(r:'a field).sum.op``
+Overload "-"[local] = ``\x y. (r:'a field).sum.op x (r.sum.inv y)``
+Overload "*"[local] = ``(r:'a field).prod.op``
+Overload "**"[local] = ``(r:'a field).prod.exp``
+
 (* In a field, d in F and d <> 0 imply inv(d) in F and
    d * inv(d) = 1.
 *)
@@ -144,7 +151,7 @@ Theorem sw_field_prod_inv:
   !(r:'a field) d.
   Field r /\ d IN r.carrier /\ d <> r.sum.id ==>
   r.prod.inv d IN r.carrier /\
-  r.prod.op d (r.prod.inv d) = r.prod.id
+  d * (r.prod.inv d) = r.prod.id
 Proof
   rpt strip_tac >>
   `d IN R+` by rw[field_nonzero_eq] >>
@@ -167,6 +174,13 @@ Proof
   metis_tac[sw_field_prod_inv, field_is_ring, ring_unit_rinv_unique]
 QED
 
+(* Arithmetic below uses the abstract ring r. *)
+Overload "+"[local] = ``ring_add (r:'a Ring)``
+Overload "-"[local] =
+  ``\x y. ring_add (r:'a Ring) x (ring_neg r y)``
+Overload "*"[local] = ``ring_mul (r:'a Ring)``
+Overload "**"[local] = ``ring_pow (r:'a Ring)``
+
 (* In a ring, assume (x2-x1)*di12 = 1 and (x1-x2)*di21 = 1.
    The secant formulas with m12 = (y2-y1)*di12 and
    m21 = (y1-y2)*di21 give (x12,y12) = (x21,y21): swapping the
@@ -180,20 +194,14 @@ Theorem sw_secant_comm_algebra[local]:
   y2 IN ring_carrier r /\
   di12 IN ring_carrier r /\
   di21 IN ring_carrier r /\
-  ring_mul r (ring_add r x2 (ring_neg r x1)) di12 = ring_1 r /\
-  ring_mul r (ring_add r x1 (ring_neg r x2)) di21 = ring_1 r ==>
-  let m12 = ring_mul r (ring_add r y2 (ring_neg r y1)) di12;
-      m21 = ring_mul r (ring_add r y1 (ring_neg r y2)) di21;
-      x12 = ring_add r
-        (ring_add r (ring_pow r m12 2) (ring_neg r x1)) (ring_neg r x2);
-      x21 = ring_add r
-        (ring_add r (ring_pow r m21 2) (ring_neg r x2)) (ring_neg r x1);
-      y12 = ring_add r
-        (ring_mul r m12 (ring_add r x1 (ring_neg r x12)))
-        (ring_neg r y1);
-      y21 = ring_add r
-        (ring_mul r m21 (ring_add r x2 (ring_neg r x21)))
-        (ring_neg r y2)
+  (x2 - x1) * di12 = ring_1 r /\
+  (x1 - x2) * di21 = ring_1 r ==>
+  let m12 = (y2 - y1) * di12;
+      m21 = (y1 - y2) * di21;
+      x12 = m12 ** 2 - x1 - x2;
+      x21 = m21 ** 2 - x2 - x1;
+      y12 = m12 * (x1 - x12) - y1;
+      y21 = m21 * (x2 - x21) - y2
   in
     x12 = x21 /\ y12 = y21
 Proof
@@ -212,22 +220,16 @@ Theorem sw_tangent_neg_algebra[local]:
   a IN ring_carrier r /\
   di IN ring_carrier r /\
   dni IN ring_carrier r /\
-  ring_mul r (ring_mul r (ring_of_num r 2) y) di = ring_1 r /\
-  ring_mul r (ring_mul r (ring_of_num r 2) (ring_neg r y)) dni =
+  (ring_of_num r 2) * y * di = ring_1 r /\
+  (ring_of_num r 2) * (ring_neg r y) * dni =
     ring_1 r ==>
-  let n = ring_add r
-        (ring_mul r (ring_of_num r 3) (ring_pow r x 2)) a;
-      m = ring_mul r n di;
-      mn = ring_mul r n dni;
-      x3 = ring_add r
-        (ring_add r (ring_pow r m 2) (ring_neg r x)) (ring_neg r x);
-      xn = ring_add r
-        (ring_add r (ring_pow r mn 2) (ring_neg r x)) (ring_neg r x);
-      y3 = ring_add r
-        (ring_mul r m (ring_add r x (ring_neg r x3))) (ring_neg r y);
-      yn = ring_add r
-        (ring_mul r mn (ring_add r x (ring_neg r xn)))
-        (ring_neg r (ring_neg r y))
+  let n = (ring_of_num r 3) * x ** 2 + a;
+      m = n * di;
+      mn = n * dni;
+      x3 = m ** 2 - x - x;
+      xn = mn ** 2 - x - x;
+      y3 = m * (x - x3) - y;
+      yn = mn * (x - xn) - (ring_neg r y)
   in
     xn = x3 /\ yn = ring_neg r y3
 Proof
@@ -247,19 +249,12 @@ Theorem sw_secant_neg_algebra[local]:
   x2 IN ring_carrier r /\
   y2 IN ring_carrier r /\
   di IN ring_carrier r ==>
-  let m = ring_mul r (ring_add r y2 (ring_neg r y1)) di;
-      mn = ring_mul r
-        (ring_add r (ring_neg r y2) (ring_neg r (ring_neg r y1))) di;
-      x3 = ring_add r
-        (ring_add r (ring_pow r m 2) (ring_neg r x1)) (ring_neg r x2);
-      xn = ring_add r
-        (ring_add r (ring_pow r mn 2) (ring_neg r x1)) (ring_neg r x2);
-      y3 = ring_add r
-        (ring_mul r m (ring_add r x1 (ring_neg r x3)))
-        (ring_neg r y1);
-      yn = ring_add r
-        (ring_mul r mn (ring_add r x1 (ring_neg r xn)))
-        (ring_neg r (ring_neg r y1))
+  let m = (y2 - y1) * di;
+      mn = ((ring_neg r y2) - (ring_neg r y1)) * di;
+      x3 = m ** 2 - x1 - x2;
+      xn = mn ** 2 - x1 - x2;
+      y3 = m * (x1 - x3) - y1;
+      yn = mn * (x1 - xn) - (ring_neg r y1)
   in
     xn = x3 /\ yn = ring_neg r y3
 Proof
@@ -273,9 +268,8 @@ QED
 Theorem sw_square_factor[local]:
   x IN ring_carrier (r:'a Ring) /\
   y IN ring_carrier r /\
-  ring_pow r x 2 = ring_pow r y 2 ==>
-  ring_mul r (ring_add r y (ring_neg r x)) (ring_add r y x) =
-  ring_0 r
+  x ** 2 = y ** 2 ==>
+  (y - x) * (y + x) = ring_0 r
 Proof
   ringLib.RING_TAC
 QED
@@ -293,19 +287,14 @@ Theorem sw_secant_closure_algebra[local]:
   a IN ring_carrier r /\
   b IN ring_carrier r /\
   di IN ring_carrier r /\
-  ring_pow r y1 2 =
-    ring_add r (ring_add r (ring_pow r x1 3) (ring_mul r a x1)) b /\
-  ring_pow r y2 2 =
-    ring_add r (ring_add r (ring_pow r x2 3) (ring_mul r a x2)) b /\
-  ring_mul r (ring_add r x2 (ring_neg r x1)) di = ring_1 r ==>
-  let m = ring_mul r (ring_add r y2 (ring_neg r y1)) di;
-      x3 = ring_add r
-        (ring_add r (ring_pow r m 2) (ring_neg r x1)) (ring_neg r x2);
-      y3 = ring_add r
-        (ring_mul r m (ring_add r x1 (ring_neg r x3))) (ring_neg r y1)
+  y1 ** 2 = x1 ** 3 + a * x1 + b /\
+  y2 ** 2 = x2 ** 3 + a * x2 + b /\
+  (x2 - x1) * di = ring_1 r ==>
+  let m = (y2 - y1) * di;
+      x3 = m ** 2 - x1 - x2;
+      y3 = m * (x1 - x3) - y1
   in
-    ring_pow r y3 2 =
-    ring_add r (ring_add r (ring_pow r x3 3) (ring_mul r a x3)) b
+    y3 ** 2 = x3 ** 3 + a * x3 + b
 Proof
   simp[LET_THM] >>
   ringLib.RING_TAC
@@ -322,24 +311,25 @@ Theorem sw_tangent_closure_algebra[local]:
   a IN ring_carrier r /\
   b IN ring_carrier r /\
   di IN ring_carrier r /\
-  ring_pow r y 2 =
-    ring_add r (ring_add r (ring_pow r x 3) (ring_mul r a x)) b /\
-  ring_mul r (ring_mul r (ring_of_num r 2) y) di = ring_1 r ==>
-  let m = ring_mul r
-    (ring_add r (ring_mul r (ring_of_num r 3) (ring_pow r x 2)) a) di;
-      x3 = ring_add r
-        (ring_add r (ring_pow r m 2) (ring_neg r x)) (ring_neg r x);
-      y3 = ring_add r
-        (ring_mul r m (ring_add r x (ring_neg r x3))) (ring_neg r y)
+  y ** 2 = x ** 3 + a * x + b /\
+  (ring_of_num r 2) * y * di = ring_1 r ==>
+  let m = ((ring_of_num r 3) * x ** 2 + a) * di;
+      x3 = m ** 2 - x - x;
+      y3 = m * (x - x3) - y
   in
-    ring_pow r y3 2 =
-    ring_add r (ring_add r (ring_pow r x3 3) (ring_mul r a x3)) b
+    y3 ** 2 = x3 ** 3 + a * x3 + b
 Proof
   simp[LET_THM] >>
   ringLib.RING_TAC
 QED
 
 
+
+(* Return to arithmetic in the field record r. *)
+Overload "+"[local] = ``(r:'a field).sum.op``
+Overload "-"[local] = ``\x y. (r:'a field).sum.op x (r.sum.inv y)``
+Overload "*"[local] = ``(r:'a field).prod.op``
+Overload "**"[local] = ``(r:'a field).prod.exp``
 
 Definition sw_neg_def:
   (sw_neg (r:'a field) ECInfinity = ECInfinity) /\
@@ -349,27 +339,20 @@ End
 Definition sw_slope_def:
   sw_slope (r:'a field) a x1 y1 x2 y2 =
     if x1 = x2 then
-      r.prod.op
-        (r.sum.op
-          (r.prod.op (r.sum.exp r.prod.id 3) (r.prod.exp x1 2)) a)
-        (r.prod.inv (r.prod.op (r.sum.exp r.prod.id 2) y1))
+      ((r.sum.exp r.prod.id 3) * x1 ** 2 + a) *
+      r.prod.inv ((r.sum.exp r.prod.id 2) * y1)
     else
-      r.prod.op (r.sum.op y2 (r.sum.inv y1))
-        (r.prod.inv (r.sum.op x2 (r.sum.inv x1)))
+      (y2 - y1) * (r.prod.inv (x2 - x1))
 End
 
 Definition sw_add_x_def:
   sw_add_x (r:'a field) m x1 x2 =
-    r.sum.op
-      (r.sum.op (r.prod.exp m 2) (r.sum.inv x1))
-      (r.sum.inv x2)
+    m ** 2 - x1 - x2
 End
 
 Definition sw_add_y_def:
   sw_add_y (r:'a field) m x1 y1 x3 =
-    r.sum.op
-      (r.prod.op m (r.sum.op x1 (r.sum.inv x3)))
-      (r.sum.inv y1)
+    m * (x1 - x3) - y1
 End
 
 Definition sw_add_def:
@@ -410,10 +393,8 @@ QED
 *)
 Theorem sw_slope_tangent[simp]:
   sw_slope (r:'a field) a x y x y' =
-    r.prod.op
-      (r.sum.op
-        (r.prod.op (r.sum.exp r.prod.id 3) (r.prod.exp x 2)) a)
-      (r.prod.inv (r.prod.op (r.sum.exp r.prod.id 2) y))
+    ((r.sum.exp r.prod.id 3) * x ** 2 + a) *
+    r.prod.inv ((r.sum.exp r.prod.id 2) * y)
 Proof
   rw[sw_slope_def]
 QED
@@ -422,8 +403,7 @@ QED
 Theorem sw_slope_secant:
   x1 <> x2 ==>
   sw_slope (r:'a field) a x1 y1 x2 y2 =
-    r.prod.op (r.sum.op y2 (r.sum.inv y1))
-      (r.prod.inv (r.sum.op x2 (r.sum.inv x1)))
+    (y2 - y1) * (r.prod.inv (x2 - x1))
 Proof
   rw[sw_slope_def]
 QED
@@ -497,7 +477,7 @@ QED
 Theorem sw_affine_mem[simp]:
   ECAffine x y IN sw_points (r:'a field) a b <=>
   x IN r.carrier /\ y IN r.carrier /\
-  r.prod.exp y 2 = sw_curve_rhs r a b x
+  y ** 2 = sw_curve_rhs r a b x
 Proof
   rw[]
 QED
@@ -1093,12 +1073,8 @@ Theorem sw_slope_equations[local]:
   ~(x1 = x2 /\ y1 = r.sum.inv y2) ==>
   let m = sw_slope r a x1 y1 x2 y2
   in m IN r.carrier /\
-     r.sum.op y2 (r.sum.inv y1) =
-       r.prod.op m (r.sum.op x2 (r.sum.inv x1)) /\
-     r.prod.op m (r.sum.op y1 y2) =
-       r.sum.op
-         (r.sum.op (r.sum.op (r.prod.exp x1 2) (r.prod.op x1 x2))
-           (r.prod.exp x2 2)) a
+     y2 - y1 = m * (x2 - x1) /\
+     m * (y1 + y2) = x1 ** 2 + x1 * x2 + x2 ** 2 + a
 Proof
   simp[LET_THM] >> strip_tac >>
   `Field r /\ a IN r.carrier /\ b IN r.carrier /\
@@ -1162,6 +1138,13 @@ Proof
      sw_curve_rhs_def]
 QED
 
+(* Arithmetic below uses the abstract ring r. *)
+Overload "+"[local] = ``ring_add (r:'a Ring)``
+Overload "-"[local] =
+  ``\x y. ring_add (r:'a Ring) x (ring_neg r y)``
+Overload "*"[local] = ``ring_mul (r:'a Ring)``
+Overload "**"[local] = ``ring_pow (r:'a Ring)``
+
 (* In a ring, t = m*(x-s)-y and (s-x)*di = 1 imply
    (t+y)*di = -m: the secant from (x,-y) to (s,t) has slope -m.
 *)
@@ -1170,10 +1153,9 @@ Theorem sw_reverse_secant_slope_algebra[local]:
   x IN ring_carrier r /\ y IN ring_carrier r /\
   s IN ring_carrier r /\ t IN ring_carrier r /\
   m IN ring_carrier r /\ di IN ring_carrier r /\
-  t = ring_add r (ring_mul r m (ring_add r x (ring_neg r s)))
-        (ring_neg r y) /\
-  ring_mul r (ring_add r s (ring_neg r x)) di = ring_1 r ==>
-  ring_mul r (ring_add r t y) di = ring_neg r m
+  t = m * (x - s) - y /\
+  (s - x) * di = ring_1 r ==>
+  (t + y) * di = ring_neg r m
 Proof
   ringLib.RING_TAC
 QED
@@ -1188,18 +1170,12 @@ Theorem sw_reverse_tangent_slope_algebra[local]:
   u IN ring_carrier r /\ v IN ring_carrier r /\
   a IN ring_carrier r /\ m IN ring_carrier r /\
   di IN ring_carrier r /\
-  ring_add r v (ring_neg r y) =
-    ring_mul r m (ring_add r u (ring_neg r x)) /\
-  ring_mul r m (ring_add r y v) =
-    ring_add r
-      (ring_add r (ring_add r (ring_pow r x 2) (ring_mul r x u))
-        (ring_pow r u 2)) a /\
-  ring_add r (ring_add r (ring_pow r m 2) (ring_neg r x))
-    (ring_neg r u) = x /\
-  ring_mul r (ring_mul r (ring_of_num r 2) (ring_neg r y)) di =
+  v - y = m * (u - x) /\
+  m * (y + v) = x ** 2 + x * u + u ** 2 + a /\
+  m ** 2 - x - u = x /\
+  (ring_of_num r 2) * (ring_neg r y) * di =
     ring_1 r ==>
-  ring_mul r
-    (ring_add r (ring_mul r (ring_of_num r 3) (ring_pow r x 2)) a) di =
+  ((ring_of_num r 3) * x ** 2 + a) * di =
     ring_neg r m
 Proof
   ringLib.RING_TAC
@@ -1212,15 +1188,13 @@ Theorem sw_singular_algebra[local]:
   !(r:'a Ring) x y a b.
   x IN ring_carrier r /\ y IN ring_carrier r /\
   a IN ring_carrier r /\ b IN ring_carrier r /\
-  ring_pow r y 2 =
-    ring_add r (ring_add r (ring_pow r x 3) (ring_mul r a x)) b /\
+  y ** 2 = x ** 3 + a * x + b /\
   y = ring_neg r y /\
-  ring_add r (ring_mul r (ring_of_num r 3) (ring_pow r x 2)) a =
+  (ring_of_num r 3) * x ** 2 + a =
     ring_0 r ==>
   ring_neg r
-    (ring_mul r (ring_of_num r 16)
-      (ring_add r (ring_mul r (ring_of_num r 4) (ring_pow r a 3))
-        (ring_mul r (ring_of_num r 27) (ring_pow r b 2)))) = ring_0 r
+    ((ring_of_num r 16) *
+     ((ring_of_num r 4) * a ** 3 + (ring_of_num r 27) * b ** 2)) = ring_0 r
 Proof
   ringLib.RING_TAC
 QED
@@ -1234,15 +1208,10 @@ Theorem sw_reverse_coordinates_algebra[local]:
   x IN ring_carrier r /\ y IN ring_carrier r /\
   u IN ring_carrier r /\ v IN ring_carrier r /\
   s IN ring_carrier r /\ m IN ring_carrier r /\
-  ring_add r v (ring_neg r y) =
-    ring_mul r m (ring_add r u (ring_neg r x)) /\
-  s = ring_add r (ring_add r (ring_pow r m 2) (ring_neg r x))
-        (ring_neg r u) ==>
-  ring_add r
-    (ring_add r (ring_pow r (ring_neg r m) 2) (ring_neg r x))
-    (ring_neg r s) = u /\
-  ring_add r
-    (ring_mul r (ring_neg r m) (ring_add r x (ring_neg r u))) y = v
+  v - y = m * (u - x) /\
+  s = m ** 2 - x - u ==>
+  (ring_neg r m) ** 2 - x - s = u /\
+  (ring_neg r m) * (x - u) + y = v
 Proof
   rpt strip_tac >| [
     qpat_x_assum `ring_add r v _ = _` kall_tac >> ringLib.RING_TAC,
@@ -1258,19 +1227,21 @@ Theorem sw_tangent_numerator_algebra[local]:
   x IN ring_carrier r /\ y IN ring_carrier r /\
   u IN ring_carrier r /\ v IN ring_carrier r /\
   a IN ring_carrier r /\ m IN ring_carrier r /\
-  ring_add r v (ring_neg r y) =
-    ring_mul r m (ring_add r u (ring_neg r x)) /\
-  ring_mul r m (ring_add r y v) =
-    ring_add r
-      (ring_add r (ring_add r (ring_pow r x 2) (ring_mul r x u))
-        (ring_pow r u 2)) a /\
-  ring_add r (ring_add r (ring_pow r m 2) (ring_neg r x))
-    (ring_neg r u) = x ==>
-  ring_add r (ring_mul r (ring_of_num r 3) (ring_pow r x 2)) a =
-    ring_mul r (ring_mul r (ring_of_num r 2) y) m
+  v - y = m * (u - x) /\
+  m * (y + v) = x ** 2 + x * u + u ** 2 + a /\
+  m ** 2 - x - u = x ==>
+  (ring_of_num r 3) * x ** 2 + a =
+    (ring_of_num r 2) * y * m
 Proof
   ringLib.RING_TAC
 QED
+
+(* Arithmetic below uses the field record r. Subtraction expands directly
+   to addition of the additive inverse, preserving the underlying terms. *)
+Overload "+"[local] = ``(r:'a field).sum.op``
+Overload "-"[local] = ``\x y. (r:'a field).sum.op x (r.sum.inv y)``
+Overload "*"[local] = ``(r:'a field).prod.op``
+Overload "**"[local] = ``(r:'a field).prod.exp``
 
 (* On a valid curve, affine P,Q in E satisfy (-P)+(P+Q) = Q,
    including all exceptional addition cases.
@@ -1553,6 +1524,13 @@ Proof
   rpt conj_tac >>
   FIRST [FIRST_ASSUM ACCEPT_TAC, ACCEPT_TAC TRUTH, sw_ring_using []]
 QED
+
+(* Arithmetic below uses the field record r. Subtraction expands directly
+   to addition of the additive inverse, preserving the underlying terms. *)
+Overload "+"[local] = ``(r:'a field).sum.op``
+Overload "-"[local] = ``\x y. (r:'a field).sum.op x (r.sum.inv y)``
+Overload "*"[local] = ``(r:'a field).prod.op``
+Overload "**"[local] = ``(r:'a field).prod.exp``
 
 (* On a valid curve, let affine P,Q,R,U,V be on the curve with
    P+Q = U and Q+R = V. If x(P) <> x(V) and x(U) <> x(R),
