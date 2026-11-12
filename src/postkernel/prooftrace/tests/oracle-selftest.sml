@@ -57,8 +57,11 @@ val () = List.app (fn (label,ruleset) => let
          andalso String.isSubstring
            "its generic declaration type is unavailable" message
       then (print (message ^ "\n"); true) else raise Fail message
-  val () = if rejected then OS.FileSys.remove output
+  val () = if rejected then ()
            else raise Fail "incompatible retired constant was accepted"
+  val () = if OS.FileSys.access(output,[]) then
+             raise Fail "rejected conversion left a partial output"
+           else ()
   val () = PFTEmit.emit_theory
     {trace=".hol/objs/oracle_retired_instanceTheory.tr.gz",
      output="oracle_retired_instance." ^ label ^ ".pft",ruleset=ruleset}
