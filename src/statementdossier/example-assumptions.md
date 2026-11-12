@@ -3,7 +3,7 @@
 This example explains the input to a stored arithmetic theorem.
 See the [configuration documentation](README.md).
 
-## <=
+## n
 
 The natural number `n` is at most `m`. Equality is allowed; the pinning
 fact below shows that the condition holds when the inputs are equal.
