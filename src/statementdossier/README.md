@@ -9,12 +9,17 @@ proofs, change statements, or infer that a theorem proves a prose claim.
 HTML uses HOL's printer annotations for syntax colours, type tooltips
 and links to definitions, datatypes, overloads and unexpanded constants.
 The annotated printer has the same layout as the plain printer. Both
-formats include free variable types, kernel assumptions, implication
-antecedents, the conclusion and trust tags. `DISK_THM` is reported as a
-load-from-disk tag. HOL's disk tags preserve oracle tags but omit axiom
-dependencies, so the report cannot rule out axioms in loaded theorems.
-The report discloses this limitation beside each disk tag. Absence of
-recorded problems is not a separate proof audit.
+formats lead with numbered antecedents and the conclusion; the stored
+statement and free variable types are folded below them. Recorded kernel
+assumptions, oracles and axiom dependencies remain visible. Routine clean
+tags and `DISK_THM` load markers are omitted. About explains that the
+absence of displayed tags is not an independent proof audit. HOL's disk
+tags omit axiom dependencies, so a consumer requiring an axiom audit must
+check the original in-memory theorem values before serialization. Opening
+text preserves blank-line paragraph breaks and `[label](url)` links in
+both formats. About accepts Markdown, including fenced command blocks.
+Outside the reader view, supporting theorems whose statements print
+longer than 40 lines are folded. Markdown output ends with a single newline.
 
 ## Example
 
@@ -70,7 +75,7 @@ are errors. Omit optional fields to use their defaults.
 | `source_dirs` | Table mapping display labels to directories containing theory scripts. An empty table uses recorded source filenames. |
 | `outputs` | Table with `markdown` and/or `html` paths. HTML includes its CSS and navigation script. |
 | `supporting` | Array of additional stored theorem names, shown without further expansion. |
-| `assumptions` | Table with `theorem` and `prose`. The theorem must be among `theorems`; `prose` is a Markdown file as described below. |
+| `assumptions` | Table with `theorem` and `prose`, or an array of such tables (`[[assumptions]]`), one per theorem. Each theorem must be among `theorems`; `prose` is a Markdown file as described below. |
 | `snippets` | Table with `input` and `output` paths, for the document snippets described below. |
 | `load_path` | Array of directories containing built HOL modules; searched before the normal HOL load path. |
 | `theories` | Array of extra theories to load, for example for names used only in prose. Theories named elsewhere in the configuration load automatically. |
@@ -88,6 +93,31 @@ interactive HOL session; its loader is unavailable in compiled programs.
 `statementDossierLib.run : config -> unit` also accepts an SML record
 directly; its signature documents the corresponding record fields. Each
 report takes a fresh snapshot of the theorem database and sources.
+
+ML callers can use `run_with_presentation
+{about, omit_types, reader_view, theory_sources} config` to
+put additional Markdown prose in About and omit selected built-in type
+layouts, for example `[{Thy="num", Name="num"}]`. Omission affects type
+sections and their links, not formulas or record fields. Record layouts
+precede other datatypes, and types precede definitions. Generated record
+operations remain in formulas and the folded boundary index, but are
+omitted from per-item reference lists and overload explanations. These
+presentation options do not change the definition expansion policy.
+With `reader_view = true`, numbered assumptions/conclusions replace duplicate
+raw statements; definition equations omit empty hypothesis lists and outer
+universal quantifiers, and defining conjunctions become separate clauses.
+Conjunctions and quantifiers within an equation remain intact. Clauses are
+obtained by kernel specialization and conjunction elimination. Real kernel
+hypotheses remain explicit. Traversal bookkeeping and pinning formulas are
+hidden, but the assumption-prose checks still run. Equation lemmas are not
+printed or followed in reader view; its closure follows definitions only.
+Theory-qualified definition headings retain identity, and formula tokens
+retain their type tooltips.
+`theory_sources` maps theory names to source URLs for unexpanded constants;
+links appear in the boundary index in both output formats.
+HTML About prose, like assumption prose, requires pandoc. The ordinary
+`run config` entry point uses empty About prose, omits no types, disables
+reader view and supplies no external source links.
 
 `statementDossierLib.script_theories : string list -> string list` lists
 the theories whose `*Script.sml` files occur below supplied directories.
@@ -128,12 +158,18 @@ not a parser or source map.
 ## Assumption prose
 
 A prose file has an optional `# Title`, an introduction, and one `## key`
-section per hypothesis. Kernel assumptions precede implication
-antecedents. A key is the hypothesis's head constant name, or the
-variable on the left of an equation `v = ...`. Hypotheses sharing a key
-are rejected, so this format is for statements with distinct heads.
-For example, for a theorem with antecedent `P n`, where `P` is a defined
-constant:
+section per key of the hypotheses. Kernel assumptions precede implication
+antecedents. A hypothesis's key is the variable an equation `v = t` or
+`t = v` names; else the key of the body of a negation, of a quantifier,
+or of the conclusion of an implication; else the name of the variable or
+constant a predicate applies; else the key of the first operand of an
+operator or relation (`=`, `<`, `+`) that has one, trying operands with
+free variables first. A record field selection keys as its field. So
+`r.size = 3` keys as `size`, `0 < n` as `n`, `f 3 = 4` as `f`, and `~P x`
+as `P`. Hypotheses with the same key share one section,
+which shows the definition of the constant the key names when the
+dossier expands it. For example, for a theorem with antecedent `P n`,
+where `P` is a defined constant:
 
 ```markdown
 # Inputs
@@ -148,10 +184,16 @@ Pinned by: `P_def`.
 ```
 
 A final paragraph starting exactly `Pinned by:` lists stored theorem
-names in code spans; the report prints those theorems beside the prose.
+names in code spans; the report retains those theorems in a folded
+section beside the prose.
 Use `Thy$Name` to qualify pinning references; ambiguous unqualified names
 are errors. Duplicate selected theorems and pinning names are errors too.
 This checks that the references exist, not that they prove the English.
+
+With one prose file, its section and hypothesis anchors are
+`assumptions` and `hyp-<key>`; with several, `assumptions-<theorem>` and
+`hyp-<theorem>-<key>`, so two assumption entries cannot name theorems
+with the same name.
 
 Missing, extra or duplicate sections are errors. Single names (including
 `Thy$Name` references) in code spans must name something HOL knows: a constant, overload, theorem,

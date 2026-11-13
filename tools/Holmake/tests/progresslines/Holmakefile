@@ -1,0 +1,12 @@
+progresslines-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+# selftest drives Holmake in testdir/ -- those subdirectories are not
+# visited through parallel_tests' INCLUDES, so list their artifacts
+# here for build cleanAll.
+EXTRA_CLEANS = progresslines-selftest.log selftest.exe \
+               testdir/.hol/ testdir/d1/.hol/ testdir/d2/.hol/ \
+               testdir/output

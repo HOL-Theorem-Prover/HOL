@@ -19,14 +19,14 @@ val _ = run {
   theorems = [{Thy = "list", Name = "REVERSE_APPEND"}],
   expand_theories = [], expand_consts = [], stop_theories = [],
   stop_consts = [], equation_lemmas = [], source_dirs = [],
-  outputs = [(Markdown, boot_output)], assumptions = NONE,
+  outputs = [(Markdown, boot_output)], assumptions = [],
   supporting = [], snippets = NONE
 }
 val _ = check "Stored reports need no current theory"
   (contains (read boot_output) "REVERSE_APPEND")
-val _ = check "Disk tags disclose missing axiom dependency metadata"
+val _ = check "Report tags do not claim an independent proof audit"
   (contains (read boot_output)
-    "axiom dependencies are not retained in disk tags")
+    "alone is not an independent proof audit")
 val _ = OS.FileSys.remove boot_output
 
 val _ = new_theory "dossierTest"
@@ -46,6 +46,14 @@ val _ = save_thm ("curried",
   prove (``admissible n ==> n = m ==> second n = m``,
          REWRITE_TAC [definition "second_def", definition "first_def"]
          THEN PROVE_TAC []))
+val _ = save_thm ("literal_argument",
+  prove (``admissible 3 ==> second 3 = 3``,
+         REWRITE_TAC [definition "second_def", definition "first_def"]))
+val _ = Define `third (n:num) = n`
+val _ = save_thm ("closed_equation",
+  prove (``third 3 = 3 ==> second 3 = 3``,
+         REWRITE_TAC [definition "second_def", definition "first_def"]))
+val _ = save_thm ("shadowed", ADD_ASSUM ``admissible n`` (GEN_ALL root))
 val _ = save_thm ("kernel_hypothesis", ADD_ASSUM ``admissible hidden``
   (REFL ``second n``))
 val _ = save_thm ("oracle_result", Thm.mk_oracle_thm "dossier-test"
@@ -66,7 +74,9 @@ fun named s = {Thy = "dossierTest", Name = s}
 
 fun config {theorems, expand_theories, expand_consts, stop_theories,
             stop_consts, assumptions, supporting, snippets} : config = {
-  title = "Statements <&\" >", preamble = "Public selftest",
+  title = "Statements <&\" >",
+  preamble =
+    "First paragraph.\n\nSee [the `list` notes](https://example.org/?a&b).",
   theorems = theorems, expand_theories = expand_theories,
   expand_consts = expand_consts, stop_theories = stop_theories,
   stop_consts = stop_consts, equation_lemmas = [], source_dirs = [],
@@ -76,7 +86,7 @@ fun config {theorems, expand_theories, expand_consts, stop_theories,
 fun basic ns = config {
   theorems = map named ns, expand_theories = ["dossierTest"],
   expand_consts = [], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [], snippets = NONE
+  assumptions = [], supporting = [], snippets = NONE
 }
 fun generate cfg = (run cfg; (read markdown_path, read html_path))
 fun count text part =
@@ -103,6 +113,17 @@ val _ = check "Free variable types are printed"
 val _ = check "HTML title and text are escaped"
   (contains html "Statements &lt;&amp;&quot; &gt;" andalso
    not (contains html "Statements <&\" >"))
+val _ = check "Opening paragraph breaks and links survive HTML rendering"
+  (contains html "<p>First paragraph.</p>" andalso
+   contains html ("<p>See <a href=\"https://example.org/?a&amp;b\">the \
+                  \<code>list</code> notes</a>.</p>"))
+val _ = check "Markdown ends with one newline"
+  (String.isSuffix "\n" md andalso not (String.isSuffix "\n\n" md))
+val _ = check "Structured statement precedes the folded stored statement"
+  (contains html "</pre>\n<details><summary>As stored</summary>")
+val _ = check "Routine tag and missing-location noise is omitted"
+  (not (contains html "Tag status:") andalso
+   not (contains html "no source location recorded"))
 val _ = check "Printed constants have type tooltips and definition links"
   (contains html "href=\"#def-dossierTest-second\" title=\"" andalso
    contains html "dossierTest$second : num -&gt; num")
@@ -137,7 +158,7 @@ val _ = check "Markdown fragment links retain boundary anchors"
 val stopped = config {
   theorems = [named "root"], expand_theories = ["dossierTest"],
   expand_consts = [named "first"], stop_theories = [],
-  stop_consts = [named "first"], assumptions = NONE,
+  stop_consts = [named "first"], assumptions = [],
   supporting = [], snippets = NONE
 }
 val (_, boundary_html) = generate stopped
@@ -147,14 +168,14 @@ val _ = check "An explicit stop wins over expansion"
 val (_, theory_stop_html) = generate (config {
   theorems = [named "root"], expand_theories = ["dossierTest"],
   expand_consts = [named "second"], stop_theories = ["dossierTest"],
-  stop_consts = [], assumptions = NONE, supporting = [], snippets = NONE
+  stop_consts = [], assumptions = [], supporting = [], snippets = NONE
 })
 val _ = check "A theory stop wins over explicit constants"
   (not (contains theory_stop_html "id=\"def-dossierTest-second\""))
 val (_, explicit_html) = generate (config {
   theorems = [named "root"], expand_theories = [],
   expand_consts = [named "second"], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [], snippets = NONE
+  assumptions = [], supporting = [], snippets = NONE
 })
 val _ = check "Single-constant expansion stops at other definitions"
   (contains explicit_html "id=\"def-dossierTest-second\"" andalso
@@ -163,6 +184,11 @@ val _ = check "Single-constant expansion stops at other definitions"
 val (curried_md, _) = generate (basic ["curried"])
 val _ = check "Curried implication antecedents are listed separately"
   (contains curried_md "Assumptions and implication antecedents (2)")
+
+val (shadowed_md, _) = generate (basic ["shadowed"])
+val _ = check "Bound variables are renamed away from hypothesis variables"
+  (contains shadowed_md "second n' = n'" andalso
+   contains shadowed_md "n' : num")
 
 val (hyp_md, hyp_html) = generate (basic ["kernel_hypothesis"])
 val _ = check "Kernel assumptions are shown and traversed"
@@ -178,10 +204,28 @@ val (_, record_html) = generate (basic ["record_result"])
 val _ = check "Record selectors link to their field descriptions"
   (contains record_html "id=\"type-dossierTest-sample\"" andalso
    contains record_html "contents" andalso contains record_html "label")
+val _ = run_with_presentation {
+  about = "Verification\n\n```sh\nholbuild -j1 buildhol\n```",
+  omit_types = [{Thy = "num", Name = "num"}],
+  reader_view = false, theory_sources = []
+} (basic ["record_result"])
+val compact_html = read html_path
+val about_html = Substring.string (#1 (Substring.position
+  "Recorded oracle tags" (#2 (Substring.position "Verification"
+                                  (Substring.full compact_html)))))
+val _ = check "About preserves executable fenced commands"
+  (contains about_html "<pre" andalso contains about_html "holbuild" andalso
+   contains about_html "-j1" andalso contains about_html "buildhol" andalso
+   contains (read markdown_path) "```sh\nholbuild -j1 buildhol\n```")
+val _ = check "Omitting a built-in type keeps record fields and valid links"
+  (not (contains compact_html "id=\"type-num-num\"") andalso
+   not (contains compact_html "href=\"#type-num-num\"") andalso
+   contains compact_html "id=\"type-dossierTest-sample\"" andalso
+   contains compact_html "contents" andalso contains compact_html "label")
 val (recursive_md, _) = generate (config {
   theorems = [named "recursive_result"], expand_theories = ["list"],
   expand_consts = [], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [], snippets = NONE
+  assumptions = [], supporting = [], snippets = NONE
 })
 val _ = check "Recursive equations are shown without primitive encoding"
   (contains recursive_md "LENGTH" andalso
@@ -193,7 +237,7 @@ fun with_prose theorem : config = {
   expand_theories = ["dossierTest"], expand_consts = [],
   stop_theories = [], stop_consts = [], equation_lemmas = [],
   source_dirs = [], outputs = [(Markdown, markdown_path)], snippets = NONE,
-  assumptions = SOME {theorem = theorem, prose = prose_path}, supporting = []
+  assumptions = [{theorem = theorem, prose = prose_path}], supporting = []
 }
 val good_prose = "# Inputs\nA condition on `n`.\n\n## admissible\n\n\
   \The input `n` satisfies `admissible`.\n\nPinned by: `root`.\n"
@@ -213,7 +257,7 @@ val _ = run {
   expand_consts = [], stop_theories = [], stop_consts = [],
   equation_lemmas = [], source_dirs = [],
   outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
-  assumptions = SOME {theorem = named "quantified", prose = prose_path}
+  assumptions = [{theorem = named "quantified", prose = prose_path}]
 }
 val _ = check "Prose can name outer quantified variables"
   (contains (read markdown_path) "The input")
@@ -228,7 +272,7 @@ val _ = bad_prose "Missing assumption prose is rejected" "no prose"
   "# Inputs\n"
 val _ = bad_prose "Duplicate prose sections are rejected" "two sections"
   (good_prose ^ "\n## admissible\nDuplicate.\n")
-val _ = bad_prose "Extra prose sections are rejected" "head of no hypothesis"
+val _ = bad_prose "Extra prose sections are rejected" "key of no hypothesis"
   (good_prose ^ "\n## absent\nExtra.\n")
 val _ = bad_prose "Unknown formal names are rejected" "HOL does not know"
   "## admissible\n`not_a_HOL_name_28471`\n"
@@ -263,13 +307,51 @@ val _ = rejects "Assumptions must belong to a selected theorem"
   "not in theorems" (with_prose (named "kernel_hypothesis"))
 val _ = rejects "Duplicate selected theorems are rejected" "duplicate theorem"
   (basic ["root", "root"])
-val _ = rejects "Repeated hypothesis heads are rejected" "two hypotheses"
+val _ = run
   {title = "Repeated heads", preamble = "",
    theorems = [named "repeated_head"], expand_theories = [],
    expand_consts = [], stop_theories = [], stop_consts = [],
    equation_lemmas = [], source_dirs = [],
    outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
-   assumptions = SOME {theorem = named "repeated_head", prose = prose_path}}
+   assumptions = [{theorem = named "repeated_head", prose = prose_path}]}
+val _ = check "Hypotheses with one key share a section"
+  (count (read markdown_path) "<a id=\"hyp-admissible\"></a>" = 1)
+val curried_prose = OS.FileSys.tmpName ()
+val _ = write curried_prose "## admissible\nAn input.\n\n## n\nIt is `m`.\n"
+val _ = run {
+  title = "Several", preamble = "", theorems = [named "root", named "curried"],
+  expand_theories = ["dossierTest"], expand_consts = [], stop_theories = [],
+  stop_consts = [], equation_lemmas = [], source_dirs = [],
+  outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
+  assumptions = [{theorem = named "root", prose = prose_path},
+                 {theorem = named "curried", prose = curried_prose}]}
+val _ = check "Several theorems' assumption ids carry the theorem name"
+  (List.all (contains (read markdown_path))
+     ["id=\"assumptions-root\"", "id=\"hyp-root-admissible\"",
+      "id=\"assumptions-curried\"", "id=\"hyp-curried-n\""])
+val _ = OS.FileSys.remove curried_prose
+val literal_prose = OS.FileSys.tmpName ()
+val _ = write literal_prose "## admissible\nThe input is admissible.\n"
+val _ = run {
+  title = "Literal", preamble = "", theorems = [named "literal_argument"],
+  expand_theories = ["dossierTest"], expand_consts = [], stop_theories = [],
+  stop_consts = [], equation_lemmas = [], source_dirs = [],
+  outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
+  assumptions = [{theorem = named "literal_argument",
+                  prose = literal_prose}]}
+val _ = check "A predicate applied to a numeral keys by the predicate"
+  (contains (read markdown_path) "<a id=\"hyp-admissible\"></a>")
+val _ = write literal_prose "## third\nThird is fixed.\n"
+val _ = run {
+  title = "Closed", preamble = "", theorems = [named "closed_equation"],
+  expand_theories = ["dossierTest"], expand_consts = [], stop_theories = [],
+  stop_consts = [], equation_lemmas = [], source_dirs = [],
+  outputs = [(Markdown, markdown_path)], supporting = [], snippets = NONE,
+  assumptions = [{theorem = named "closed_equation",
+                  prose = literal_prose}]}
+val _ = check "A function applied to a numeral keys by the function"
+  (contains (read markdown_path) "<a id=\"hyp-third\"></a>")
+val _ = OS.FileSys.remove literal_prose
 val _ = save_thm ("TRUTH", boolTheory.TRUTH)
 val _ = bad_prose "Ambiguous pinning names are rejected" "ambiguous theorem"
   "## admissible\nInput.\n\nPinned by: `TRUTH`.\n"
@@ -278,7 +360,7 @@ val _ = rejects "Unknown selected theorems are rejected" "not found"
 val _ = rejects "Misspelled expansion theories are rejected" "not found"
   (config {theorems = [named "root"], expand_theories = ["dossierTset"],
            expand_consts = [], stop_theories = [], stop_consts = [],
-           assumptions = NONE, supporting = [], snippets = NONE})
+           assumptions = [], supporting = [], snippets = NONE})
 
 (* A later database addition must be visible in the same HOL session. *)
 val _ = save_thm ("first_new_equation",
@@ -291,7 +373,7 @@ val _ = write snippets_in "i(second (3:num))\000bTheorem root: ignored text"
 val (_, _) = generate (config {
   theorems = [named "root"], expand_theories = ["dossierTest"],
   expand_consts = [], stop_theories = [], stop_consts = [],
-  assumptions = NONE, supporting = [],
+  assumptions = [], supporting = [],
   snippets = SOME (snippets_in, snippets_out)
 })
 val snippet_json = read snippets_out
@@ -312,7 +394,7 @@ fun source_config theorem : config = {
   expand_theories = [], expand_consts = [], stop_theories = [],
   stop_consts = [], equation_lemmas = [],
   source_dirs = [("sources", source_dir)],
-  outputs = [(Markdown, markdown_path)], assumptions = NONE,
+  outputs = [(Markdown, markdown_path)], assumptions = [],
   supporting = [], snippets = NONE
 }
 val _ = write source_script "Theorem LESS_EQ_IMP_LESS_SUC:\n"
@@ -337,6 +419,43 @@ val _ = OS.FileSys.remove alias_script
 val _ = OS.FileSys.remove source_script
 
 val _ = OS.FileSys.rmDir source_dir
+
+(* Reader presentation must preserve the logic while removing duplicate
+   formula and traversal noise observed in generated reports. *)
+val _ = Define `(claused ([]:bool list) = T) /\
+                (claused (h::t) = (h /\ claused t))`
+val _ = save_thm ("claused_result", REFL ``claused xs``)
+val reader_options = {about = "", omit_types = [], reader_view = true,
+  theory_sources =
+    [("dossierTest", "https://example.org/dossierTestScript.sml")]}
+val _ = run_with_presentation reader_options (basic ["claused_result"])
+val reader_md = read markdown_path
+val reader_html = read html_path
+val _ = check "Reader clauses retain RHS logic and implicit variables"
+  (contains reader_md "claused []" andalso contains reader_md "claused (h::t)"
+   andalso contains reader_md "h ∧ claused t" andalso
+   not (contains reader_md "[] ⊢") andalso
+   not (contains reader_md "Bucket:") andalso
+   not (contains reader_md "first reached from") andalso
+   not (contains reader_md "As stored"))
+val _ = run_with_presentation reader_options (config {
+  theorems = [named "root"], expand_theories = [], expand_consts = [],
+  stop_theories = [], stop_consts = [], assumptions = [],
+  supporting = [], snippets = NONE
+})
+val _ = check "Boundary sources retain URLs in both formats"
+  (contains (read markdown_path) "](https://example.org/dossierTestScript.sml)"
+   andalso contains (read html_path)
+     "href=\"https://example.org/dossierTestScript.sml\"")
+val _ = write prose_path good_prose
+val _ = run_with_presentation reader_options (with_prose (named "root"))
+val _ = check "Reader prose omits pinning formulas"
+  (contains (read markdown_path) "The input" andalso
+   not (contains (read markdown_path) "Internal equivalence"))
+val _ = run_with_presentation reader_options (basic ["kernel_hypothesis"])
+val _ = check "Reader view retains genuine kernel assumptions"
+  (contains (read markdown_path) "hidden" andalso
+   contains (read markdown_path) "1 assumption(s)")
 
 val _ = List.app OS.FileSys.remove
   [markdown_path, html_path, prose_path, snippets_in, snippets_out]

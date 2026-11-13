@@ -147,6 +147,25 @@ val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 val CLR_EOL = "\027[0K" (* ANSI clear to EOL code *)
 
+(* Emacs runs the subprocesses of M-x compile and of its comint-based
+   modes on a pty, so an isatty test calls them terminals, but those
+   buffers do no carriage-return motion: a \r-overwriting status line
+   accumulates into one enormous line, which Emacs then hides behind a
+   clickable [...] button.  Emacs says which context a subprocess is in
+   through INSIDE_EMACS, whose comma-separated fields name the buffer
+   type ("compile", "comint", "term:0.96", "vterm", ...).  Its terminal
+   emulators -- term, ansi-term, vterm -- do interpret escapes, and all
+   of them say "term" in that list; nothing else does. *)
+fun emacs_nonterminal () =
+    case OS.Process.getEnv "INSIDE_EMACS" of
+        NONE => false
+      | SOME s =>
+          not (List.exists (String.isSubstring "term")
+                           (String.fields (fn c => c = #",") s))
+
+fun fancy_output_ok strm =
+    strmIsTTY strm andalso TERM_isANSI() andalso not (emacs_nonterminal())
+
 fun strip_codes s =
     let
       fun recurse A ss =
@@ -215,6 +234,10 @@ fun getWidth0 () =
     fun positive m x = optbind (m x) (optassert (fn i => i > 0))
   in
     optbind (run "stty size") (positive sttyresult) ++
+    (* Emacs gives a compilation subprocess a pty whose window size it
+       never sets (stty then says 0x0), and passes the real width in
+       COLUMNS instead. *)
+    (fn _ => optbind (OS.Process.getEnv "COLUMNS") (positive Int.fromString))++
     (fn _ => optbind (run "tput cols") (positive tputresult)) ++
     (fn _ => SOME 80)
   end
@@ -300,12 +323,25 @@ fun output_functions {usepfx,chattiness=n,debug} = let
   fun donothing _ = ()
   val warn = if n >= 1 then msg false stdErr else donothing
   val info = if n >= 1 then msg false stdOut else donothing
-  val fancyp = strmIsTTY stdOut andalso TERM_isANSI()
+  val fancyp = fancy_output_ok stdOut
   val (info_inline, info_inline_end) =
       if n >= 1 then
         if fancyp then
           (msg true stdOut, fn () => output(stdOut, "\n"))
-        else (msg false stdOut, donothing)
+        else
+          (* The frames of an in-place animation are only meaningful
+             when they overwrite each other; printed one per line they
+             are just noise.  So hold the latest frame back and emit
+             only it, as a line of its own, when the animation ends --
+             that last frame is the summary the caller leaves on
+             screen. *)
+          let
+            val pending = ref NONE
+          in
+            ((fn s => pending := SOME s),
+             (fn () => (Option.app (msg false stdOut) (!pending);
+                        pending := NONE)))
+          end
       else (donothing, donothing)
   val chatty = if n >= 2 then msg false stdOut else donothing
   val tgtfatal = msg false stdErr

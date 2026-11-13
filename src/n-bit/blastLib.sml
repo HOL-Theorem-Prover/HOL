@@ -50,9 +50,133 @@ fun mk_less_thm (i,j) =
 
 fun mk_size_thm (i,ty) = mk_less_thm (i, wordsSyntax.mk_dimindex ty)
 
+(* ------------------------------------------------------------------------
+   BIT_LIT_CONV : Evaluates  ``BIT j L``  for numerals j and L.  For each
+                  literal L it keeps the theorem
+                    !k. BIT (k + m) L = BIT k (L DIV 2 ** m)
+                  for the largest m reached so far and advances m one bit
+                  at a time, so the bits of a literal cost O(1) inferences
+                  each.  The last few literals are remembered.
+   ------------------------------------------------------------------------ *)
+
+local
+   val k = Term.mk_var ("k", numSyntax.num)
+   val BIT_SUC = (* |- !n i. BIT (SUC n) i = BIT n (DIV2 i) *)
+      bitTheory.BIT_DIV2
+      |> REWRITE_RULE [GSYM arithmeticTheory.DIV2_def]
+      |> Drule.SPEC_ALL |> Thm.SYM |> Drule.GEN_ALL
+   val m = Term.mk_var ("m", numSyntax.num)
+   val (ADD_0_L, ADD_SUC_L) = Drule.CONJ_PAIR arithmeticTheory.ADD
+   val SUC_ADD = (* |- !k m. k + SUC m = SUC k + m *)
+      Thm.GENL [k, m]
+        (Thm.TRANS (Thm.SYM (Drule.SPECL [k, m] arithmeticTheory.ADD_SUC))
+                   (Thm.SYM (Drule.SPECL [k, m] ADD_SUC_L)))
+   val x = Term.mk_var ("x", numSyntax.num)
+   val odd_tm = numSyntax.odd_tm
+   val suc_tm = numSyntax.suc_tm
+   fun NUMERAL_RULE th = Thm.SPEC th arithmeticTheory.NUMERAL_DEF
+   val (s0, s1, s2) =
+      Lib.triple_of_list (Drule.CONJUNCTS numeralTheory.numeral_suc)
+   (* SUC on the raw ZERO/BIT1/BIT2 form of a numeral *)
+   fun RAW_SUC_CONV tm =
+      (Conv.REWR_CONV s0 ORELSEC Conv.REWR_CONV s1 ORELSEC
+       (Conv.REWR_CONV s2 THENC Conv.RAND_CONV RAW_SUC_CONV)) tm
+   val SUC_NUMERAL = (* |- !x. SUC (NUMERAL x) = NUMERAL (SUC x) *)
+      Thm.GEN x (Thm.TRANS (Thm.AP_TERM suc_tm (NUMERAL_RULE x))
+                           (Thm.SYM (NUMERAL_RULE (numSyntax.mk_suc x))))
+   val SUC_CONV =
+      Conv.REWR_CONV (Thm.SYM arithmeticTheory.ONE) ORELSEC
+      (Conv.REWR_CONV SUC_NUMERAL THENC Conv.RAND_CONV RAW_SUC_CONV)
+   val (d0, d1, d2) =
+      Lib.triple_of_list (Drule.CONJUNCTS numeralTheory.numeral_div2)
+   val DIV2_CONV =
+      Conv.REWR_CONV d0 ORELSEC
+      (Conv.REWR_CONV d1 THENC
+       Conv.TRY_CONV (Conv.REWR_CONV arithmeticTheory.NORM_0)) ORELSEC
+      (Conv.REWR_CONV d2 THENC Conv.RAND_CONV RAW_SUC_CONV)
+   val ODD_CONV =
+      let
+         val evenodd =
+            Drule.CONJUNCTS (Drule.SPEC_ALL numeralTheory.numeral_evenodd)
+         val odd1 = List.last evenodd                     (* ODD (BIT1 n) *)
+         val odd2 = List.nth (evenodd, 4)                 (* ~ODD (BIT2 n) *)
+         fun odd_numeral th =       (* ODD b = c  to  ODD (NUMERAL b) = c *)
+            Thm.TRANS
+              (Thm.AP_TERM odd_tm
+                 (NUMERAL_RULE (Term.rand (boolSyntax.lhs (Thm.concl th))))) th
+      in
+         Conv.REWR_CONV (Thm.CONJUNCT1 arithmeticTheory.ODD) ORELSEC
+         Conv.REWR_CONV (odd_numeral (Drule.EQT_INTRO odd1)) ORELSEC
+         Conv.REWR_CONV (odd_numeral (Drule.EQF_INTRO odd2))
+      end
+   val bit_tm = bitSyntax.bit_tm
+   (* a literal's state: m, n = L DIV 2 ** m, the theorem
+      !k. BIT (k + m) L = BIT k n, and the bits below m *)
+   type state = {m : term, n : term, s : thm, bits : thm list}
+   val memo = ref ([] : (Arbnum.num * (term * state ref)) list)
+   fun start l =
+      let
+         val s = Thm.AP_THM
+                   (Thm.AP_TERM bit_tm
+                      (Thm.SPEC k arithmeticTheory.ADD_0)) l
+      in
+         ref {m = numSyntax.zero_tm, n = l, s = Thm.GEN k s, bits = []}
+      end
+   fun step l ({m, n, s, bits} : state) =
+      let
+         val r = Thm.SPEC numSyntax.zero_tm s     (* BIT (0 + m) L = BIT 0 n *)
+         val r = Thm.TRANS
+                   (Thm.SYM (Thm.AP_THM (Thm.AP_TERM bit_tm
+                                           (Thm.SPEC m ADD_0_L)) l)) r
+         val r = Thm.TRANS r (Thm.AP_THM bitTheory.BIT0_ODD n)
+         val r = Thm.TRANS r (ODD_CONV (numSyntax.mk_odd n))
+         val suc = SUC_CONV (numSyntax.mk_suc m) (* SUC m = m' *)
+         val e = Thm.TRANS
+                   (Thm.AP_TERM (Term.mk_comb (numSyntax.plus_tm, k))
+                      (Thm.SYM suc))
+                   (Drule.SPECL [k, m] SUC_ADD)  (* k + m' = SUC k + m *)
+         val d = DIV2_CONV (numSyntax.mk_div2 n)
+         val s' = Thm.AP_THM (Thm.AP_TERM bit_tm e) l
+                  |> Lib.C Thm.TRANS (Thm.SPEC (numSyntax.mk_suc k) s)
+                  |> Lib.C Thm.TRANS (Drule.SPECL [k, n] BIT_SUC)
+                  |> Lib.C Thm.TRANS (Thm.AP_TERM (Term.mk_comb (bit_tm, k)) d)
+      in
+         {m = rhsc suc, n = rhsc d, s = Thm.GEN k s', bits = r :: bits}
+      end
+   fun get l =
+      let val v = numSyntax.dest_numeral l in
+      case List.find (fn (u, _) => u = v) (!memo) of
+         SOME (_, lst) => lst
+       | NONE =>
+           let
+              val lst = (l, start l)
+           in
+              memo := (v, lst) ::
+                      List.take (!memo, Int.min (7, length (!memo)));
+              lst
+           end
+      end
+in
+   fun BIT_LIT_CONV tm =
+      let
+         val (i, l) = bitSyntax.dest_bit tm
+         val j = numSyntax.int_of_term i
+         val (l, st) = get l
+         fun loop () =
+            if length (#bits (!st)) <= j then (st := step l (!st); loop ())
+            else ()
+         val () = loop ()
+         val bits = #bits (!st)
+      in
+         List.nth (bits, List.length bits - 1 - j)
+      end
+end
+
 local
    val e_tys = ref (Redblackset.empty Type.compare)
    val cmp = ref (reduceLib.num_compset
+                  |> computeLib.add_conv (bitSyntax.bit_tm, 2, BIT_LIT_CONV)
+                  |> (fn c => computeLib.set_skip c bitSyntax.bit_tm (SOME 1))
                   |> computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM])
    fun cnv tm = computeLib.CBV_CONV (!cmp) tm
 
@@ -230,6 +354,52 @@ val rhs_rewrite =
         blastTheory.b_neq_neg_b,
         blastTheory.neg_b_neq_b])
 
+(* ------------------------------------------------------------------------
+   WORD_LIT_CONV : Rewrites occurances of ``BIT i v`` using theorems
+                   ``BIT i v = (i = p1) \/ ... \/ (i = pn)``, where
+                   v is the numeric value of the literal and p1..pn
+                   are the bit positions for T bits.
+   ------------------------------------------------------------------------ *)
+
+local
+   val BIT_SET_CONV = Conv.REWR_CONV wordsTheory.BIT_SET THENC EVAL_CONV
+
+   fun is_bit_lit tm =
+      case Lib.total bitSyntax.dest_bit tm of
+         SOME (_, n) => numSyntax.is_numeral n
+       | NONE => false
+
+   fun mk_bit_sets tm =
+      let
+         val tms = Lib.op_mk_set aconv (HolKernel.find_terms is_bit_lit tm)
+      in
+         List.map BIT_SET_CONV tms
+      end
+in
+   fun WORD_LIT_CONV tm = PURE_REWRITE_CONV (mk_bit_sets tm) tm
+end
+
+(* --------------------------------------------------------------------
+   name_carry : turns  |- BCARRY i x y c = e  into  v = e |- BCARRY i x y c = v
+                for a fresh variable v, unless e is T, F or a variable.
+                Naming each carry keeps the next carry, the sums and the
+                final proposition linear in the word length (inlined
+                carries make it quadratic). BBLAST_CONV gives the SAT
+                check these definitions and discharges them at the end.
+   -------------------------------------------------------------------- *)
+
+fun name_carry thm =
+   let
+      val thm = Conv.RIGHT_CONV_RULE WORD_LIT_CONV thm
+      val e = rhsc thm
+   in
+      if Teq e orelse Feq e orelse Term.is_var e
+         then thm
+      else Thm.TRANS thm
+             (Thm.SYM (Thm.ASSUME
+                (boolSyntax.mk_eq (Term.genvar Type.bool, e))))
+   end
+
 (* --------------------------------------------------------------------
    mk_summation : returns theorems of the form  ``BSUM i x y c = exp``
                   for all 0 < i < max, where "exp" is a propositional
@@ -283,9 +453,9 @@ fun mk_summation rwts (max, x, y, c) =
                       (rhs_rewrite
                          (Thm.MP thm1
                             (Drule.LIST_CONJ [x_thm, y_thm, c_thm])) :: s,
-                       rhs_rewrite
+                       name_carry (rhs_rewrite
                          (Thm.MP thm2
-                            (Drule.LIST_CONJ [i_thm, x_thm, y_thm, c_thm])))
+                            (Drule.LIST_CONJ [i_thm, x_thm, y_thm, c_thm]))))
                    end)
               end
    in
@@ -340,9 +510,9 @@ fun mk_carry rwts (max, x, y, c) =
                          else Drule.SPECL [i, n, x_concl, y_concl, c_concl]
                                 iBCARRY_mp
                    in
-                      rhs_rewrite
+                      name_carry (rhs_rewrite
                          (Thm.MP thm
-                            (Drule.LIST_CONJ [i_thm, x_thm, y_thm, c_thm]))
+                            (Drule.LIST_CONJ [i_thm, x_thm, y_thm, c_thm])))
                    end)
               end
    in
@@ -398,43 +568,19 @@ in
                      then print ("Found " ^ Int.toString (List.length tms) ^
                                 " summation term(s)\n")
                   else ()
-         val (_, rwts, c_outs) =
+         val (_, rwts) =
             List.foldl
-               (fn ((b,nxyc), (i, rwts, c_outs)) =>
+               (fn ((b,nxyc), (i, rwts)) =>
                    (if !blast_trace > 0
                        then print ("Expanding term... " ^ Int.toString i ^ "\n")
                     else ()
-                    ; if b then (i + 1, rwts, mk_carry rwts nxyc :: c_outs)
-                      else (i + 1, mk_summation rwts nxyc @ rwts, c_outs)))
-                 (1, rws, []) tms
+                    ; (* larger terms may contain this one's carry or sums *)
+                      (i + 1, if b then mk_carry rwts nxyc :: rwts
+                              else mk_summation rwts nxyc @ rwts)))
+                 (1, rws) tms
       in
-         rwts @ c_outs
+         rwts
       end
-end
-
-(* ------------------------------------------------------------------------
-   WORD_LIT_CONV : Rewrites occurances of ``BIT i v`` using theorems
-                   ``BIT i v = (i = p1) \/ ... \/ (i = pn)``, where
-                   v is the numeric value of the literal and p1..pn
-                   are the bit positions for T bits.
-   ------------------------------------------------------------------------ *)
-
-local
-   val BIT_SET_CONV = Conv.REWR_CONV wordsTheory.BIT_SET THENC EVAL_CONV
-
-   fun is_bit_lit tm =
-      case Lib.total bitSyntax.dest_bit tm of
-         SOME (_, n) => numSyntax.is_numeral n
-       | NONE => false
-
-   fun mk_bit_sets tm =
-      let
-         val tms = Lib.op_mk_set aconv (HolKernel.find_terms is_bit_lit tm)
-      in
-         List.map BIT_SET_CONV tms
-      end
-in
-   fun WORD_LIT_CONV tm = PURE_REWRITE_CONV (mk_bit_sets tm) tm
 end
 
 (* ------------------------------------------------------------------------
@@ -805,7 +951,6 @@ in
    val BLAST_CONV =
       PURE_REWRITE_CONV [GSYM word_sub_def, WORD_SUB]
       THENC cnv
-      THENC WORD_LIT_CONV
 end
 
 (* ------------------------------------------------------------------------
@@ -839,17 +984,27 @@ fun non_prop_terms tm =
 local
    val lem = blastTheory.if_b_T_T
 in
-   fun PROP_PROVE conv tm =
+   (* defs are assumptions (carry definitions) the proof may use *)
+   fun PROP_PROVE conv defs tm =
       let
          val thm = Conv.QCONV (REWRITE_CONV [lem]) tm
          val c = rhsc thm
+         val prove =
+            if List.null defs
+               then conv
+            else let
+                    val d = boolSyntax.list_mk_conj defs
+                    val d_thm = Drule.LIST_CONJ (List.map Thm.ASSUME defs)
+                 in
+                    fn t => Thm.MP (conv (boolSyntax.mk_imp (d, t))) d_thm
+                 end
       in
          if Teq c orelse Feq c
             then thm
          else Conv.RIGHT_CONV_RULE
-                (Conv.REWR_CONV (Drule.EQT_INTRO (conv c))) thm
+                (Conv.REWR_CONV (Drule.EQT_INTRO (prove c))) thm
               handle HOL_ERR _ =>
-                Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
+                Drule.EQF_INTRO (prove (boolSyntax.mk_neg tm))
                 handle HOL_ERR _ =>
                   raise ERR "PROP_PROVE" "contingent proposition"
       end
@@ -860,19 +1015,23 @@ fun SAT_CONV tm = HolSatLib.SAT_PROVE tm (* HolSatLib.SAT_ORACLE *)
 
 fun DPLL_CONV tm = Thm.CCONTR tm (Lib.trye dpll.DPLL_TAUT tm)
 
-fun BIT_TAUT_CONV tm =
+fun BIT_TAUT_CONV defs tm =
    let
-      val insts = HOLset.listItems (non_prop_terms tm)
+      val insts =
+         HOLset.listItems (non_prop_terms (boolSyntax.list_mk_conj (tm::defs)))
       val vars = Term.genvars Type.bool (List.length insts)
       val theta = Lib.map2 (Lib.curry (op |->)) insts vars
       val tm' = Term.subst theta tm
-      val sz = Term.term_size tm'
+      val defs' = List.map (Term.subst theta) defs
+      val sz = List.foldl (fn (d, n) => Term.term_size d + n)
+                 (Term.term_size tm') defs'
       val f = if !blast_trace > 2
                  then (print ("Checking proposition of size: " ^
                               Int.toString sz ^ "\n")
                        ; real_time)
               else I
-      val thm = f (PROP_PROVE (if sz < 100 then DPLL_CONV else SAT_CONV)) tm'
+      val thm =
+         f (PROP_PROVE (if sz < 100 then DPLL_CONV else SAT_CONV) defs') tm'
       val theta' = Lib.map2 (Lib.curry (op |->)) vars insts
    in
       Thm.INST theta' thm
@@ -1046,6 +1205,38 @@ local
   fun FORALL_EQ_RULE vars t =
      List.foldr (fn (v,t) => Drule.FORALL_EQ v t) t vars
      |> Conv.RIGHT_CONV_RULE (Rewrite.REWRITE_CONV [])
+
+  (* Remove the carry definitions  v = e  (see name_carry) from the
+     hypotheses: instantiate each v with its expansion, built bottom-up so
+     that it is shared, and prove each resulting  E = E  by reflexivity. *)
+  fun DISCH_CARRIES thm =
+     let
+        val defs =
+           List.foldl
+              (fn (d, m) => Redblackmap.insert (m, boolSyntax.lhs d,
+                                                boolSyntax.rhs d))
+              (Redblackmap.mkDict Term.compare) (Thm.hyp thm)
+        val memo = ref (Redblackmap.mkDict Term.compare)
+        fun expand v =
+           case Redblackmap.peek (!memo, v) of
+              SOME t => t
+            | NONE =>
+                let
+                   val e = Redblackmap.find (defs, v)
+                   val vs = List.filter
+                              (fn u => Redblackmap.inDomain (defs, u))
+                              (Term.free_vars e)
+                   val t = Term.subst (List.map (fn u => u |-> expand u) vs) e
+                in
+                   memo := Redblackmap.insert (!memo, v, t); t
+                end
+        val theta = List.map (fn (v, _) => v |-> expand v)
+                      (Redblackmap.listItems defs)
+     in
+        List.foldl (fn ({residue, ...}, th) =>
+                      Drule.PROVE_HYP (Thm.REFL residue) th)
+                   (Thm.INST theta thm) theta
+     end
 in
   fun BIT_BLAST_CONV tm =
      let
@@ -1092,11 +1283,26 @@ in
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
         val tms =
             Lib.op_mk_set aconv (HolKernel.find_terms is_blastable (rhsc thm))
-        val thms = Lib.mapfilter BIT_BLAST_CONV tms
-        val res = FORALL_EQ_RULE vars
-                    (Conv.RIGHT_CONV_RULE
-                       (Rewrite.ONCE_REWRITE_CONV thms
-                        THENC Conv.TRY_CONV BIT_TAUT_CONV) thm)
+        (* a theorem with carry hypotheses can't rewrite under a binder of
+           its variables, so discharge those first *)
+        val bvs =
+           HOLset.addList (Term.empty_tmset,
+             List.map Term.bvar (HolKernel.find_terms Term.is_abs (rhsc thm)))
+        fun blast t =
+           let
+              (* literals left under operators that aren't blasted are
+                 shown as their sets of bits, as before *)
+              val th = Conv.RIGHT_CONV_RULE WORD_LIT_CONV (BIT_BLAST_CONV t)
+           in
+              if List.exists (fn v => HOLset.member (bvs, v)) (Term.free_vars t)
+                 then DISCH_CARRIES th
+              else th
+           end
+        val thms = Lib.mapfilter blast tms
+        val thm = Conv.RIGHT_CONV_RULE (Rewrite.ONCE_REWRITE_CONV thms) thm
+        val thm = Conv.RIGHT_CONV_RULE
+                    (Conv.TRY_CONV (BIT_TAUT_CONV (Thm.hyp thm))) thm
+        val res = FORALL_EQ_RULE vars (DISCH_CARRIES thm)
      in
         if term_eq (rhsc res) tm then raise Conv.UNCHANGED else res
      end

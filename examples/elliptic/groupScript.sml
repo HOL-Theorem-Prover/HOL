@@ -229,24 +229,14 @@ Theorem mult_lcancel_gcd_imp:
        0 < n /\ (gcd n a = 1) /\ ((a * b) MOD n = (a * c) MOD n) ==>
        (b MOD n = c MOD n)
 Proof
-   RW_TAC std_ss []
-   >> Cases_on `n = 1` >- METIS_TAC [MOD_1]
-   >> Cases_on `a = 0` >- METIS_TAC [GCD_0R]
-   >> MP_TAC (Q.SPECL [`a`,`n`] LINEAR_GCD)
-   >> RW_TAC std_ss []
-   >> Know
-      `(p MOD n * (a MOD n * b MOD n)) MOD n =
-       (p MOD n * (a MOD n * c MOD n)) MOD n`
-   >- METIS_TAC [MOD_TIMES2, MOD_MOD]
-   >> REWRITE_TAC [MULT_ASSOC]
-   >> Suff `((p MOD n * a MOD n) MOD n) MOD n = 1`
-   >- (simp[] >> METIS_TAC [MOD_TIMES2, MOD_MOD, MULT_CLAUSES]
-   >> RW_TAC arith_ss [MOD_TIMES2]
-   >> MP_TAC (Q.SPEC `n` MOD_PLUS)
-   >> ASM_REWRITE_TAC []
-   >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   >> RW_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
-   >> RW_TAC arith_ss [MOD_MOD]
+  rpt strip_tac >>
+  `((a * b - a * c) MOD n = 0) /\ ((a * c - a * b) MOD n = 0)`
+    by metis_tac [MOD_EQ_DIFF] >>
+  `divides n (b - c) /\ divides n (c - b)` by
+    (fs[GSYM LEFT_SUB_DISTRIB] >>
+     metis_tac [DIVIDES_MOD_0, divides_coprime_mul]) >>
+  Cases_on `b <= c` >>
+  metis_tac [MOD_EQ, DIVIDES_MOD_0, LESS_EQ_CASES]
 QED
 
 Theorem mult_lcancel_gcd:
@@ -1459,25 +1449,9 @@ End
 Theorem group_add_mod:
      !n :: Nonzero. add_mod n IN Group
 Proof
-   RW_TAC resq_ss
-     [Group_def,GSPECIFICATION,add_mod_def,combinTheory.K_THM,Nonzero_def]
-   >> Know `0 < n /\ !m. m < n = (m MOD n = m)` >- RW_TAC arith_ss []
-   >> RW_TAC bool_ss [ZERO_MOD, MOD_MOD, ADD_CLAUSES]
-   >| [METIS_TAC [],
-       Suff `((n - x) MOD n + x MOD n) MOD n = 0`
-       >- METIS_TAC []
-       >> MP_TAC (Q.SPEC `n` MOD_PLUS)
-       >> ASM_REWRITE_TAC []
-       >> DISCH_THEN (fn th => REWRITE_TAC [th])
-       >> POP_ASSUM (K ALL_TAC)
-       >> RW_TAC arith_ss [],
-       Suff `((x + y) MOD n + z MOD n) MOD n = (x MOD n + (y + z) MOD n) MOD n`
-       >- METIS_TAC []
-       >> MP_TAC (Q.SPEC `n` MOD_PLUS)
-       >> ASM_REWRITE_TAC []
-       >> DISCH_THEN (fn th => REWRITE_TAC [th])
-       >> POP_ASSUM (K ALL_TAC)
-       >> RW_TAC arith_ss []]
+  RW_TAC (resq_ss ++ ARITH_ss)
+    [Group_def, GSPECIFICATION, add_mod_def, combinTheory.K_THM, Nonzero_def] >>
+  metis_tac [MOD_ADD_ASSOC, MOD_ADD_INV, ADD_COMM, NOT_ZERO_LT_ZERO]
 QED
 
 Theorem add_mod:
@@ -1522,55 +1496,23 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 Theorem group_mult_mod:
      !p :: Prime. mult_mod p IN Group
 Proof
-   RW_TAC resq_ss
-     [Group_def,GSPECIFICATION,mult_mod_def,combinTheory.K_THM,Prime_def]
-   >> RW_TAC arith_ss [prime_one_lt]
-   >> Cases_on `p = 0` >- METIS_TAC [NOT_PRIME_0]
-   >> Know `0 < p` >- DECIDE_TAC >> STRIP_TAC
-   >> RW_TAC std_ss [DIVISION, GSYM primalityTheory.divides_mod_zero]
-   >| [STRIP_TAC
-       >> MP_TAC (Q.SPECL [`p`,`x`,`y`] P_EUCLIDES)
-       >> RW_TAC std_ss []
-       >> Know `0 < x` >- DECIDE_TAC >> STRIP_TAC
-       >> Know `0 < y` >- DECIDE_TAC >> STRIP_TAC
-       >> METIS_TAC [DIVIDES_LE, NOT_LESS],
-       Know `0 < x` >- DECIDE_TAC >> STRIP_TAC
-       >> Q.SPEC_TAC (`p - 2`, `k`)
-       >> Induct
-       >- (RW_TAC std_ss [EXP]
-           >> STRIP_TAC
-           >> Know `p <= 1` >- METIS_TAC [DIVIDES_LE, DECIDE ``0 < 1``]
-           >> METIS_TAC [NOT_LESS, prime_one_lt])
-       >> RW_TAC std_ss [EXP]
-       >> STRIP_TAC
-       >> MP_TAC (Q.SPECL [`p`,`x`,` x ** k`] P_EUCLIDES)
-       >> RW_TAC std_ss []
-       >> STRIP_TAC
-       >> Know `p <= x` >- METIS_TAC [DIVIDES_LE]
-       >> METIS_TAC [NOT_LESS],
-       MP_TAC (Q.SPEC `p` MOD_TIMES2)
-       >> ASM_REWRITE_TAC []
-       >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-       >> RW_TAC bool_ss [MOD_MOD]
-       >> RW_TAC bool_ss [MOD_TIMES2]
-       >> REWRITE_TAC [GSYM EXP]
-       >> Know `SUC (p - 2) = p - 1`
-       >- (Suff `1 <= p` >- DECIDE_TAC
-           >> DECIDE_TAC)
-       >> DISCH_THEN (fn th => REWRITE_TAC [th])
-       >> RW_TAC std_ss [EXP]
-       >> Suff `~divides p x` >- METIS_TAC [fermat_little]
-       >> METIS_TAC
-            [DIVIDES_LE, DECIDE ``~(x : num = 0) = 0 < x``,
-             DECIDE ``~(a : num < b) = b <= a``],
-       MP_TAC (Q.SPEC `p` MOD_MOD)
-       >> MP_TAC (Q.SPEC `p` MOD_TIMES2)
-       >> ASM_REWRITE_TAC []
-       >> POP_ASSUM_LIST (K ALL_TAC)
-       >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th] >> ASSUME_TAC th)
-       >> DISCH_THEN (fn th => REWRITE_TAC [th])
-       >> ASM_REWRITE_TAC []
-       >> METIS_TAC [MULT_ASSOC, MULT_COMM]]
+  RW_TAC (resq_ss ++ ARITH_ss)
+    [Group_def, GSPECIFICATION, mult_mod_def, combinTheory.K_THM, Prime_def,
+     prime_one_lt] >>
+  `1 < p /\ 0 < p`
+    by metis_tac [prime_one_lt, LESS_TRANS, DECIDE ``0 < 1``] >>
+  `!v. ~(v = 0) /\ v < p ==> (gcd p v = 1)` by
+    metis_tac [prime_gcd_1, DIVIDES_LE, NOT_ZERO_LT_ZERO, NOT_LESS] >|
+  [metis_tac [MOD_NONZERO_WHEN_GCD_ONE, coprime_product_coprime_sym,
+              NOT_ZERO_LT_ZERO],
+   metis_tac [MOD_NONZERO_WHEN_GCD_ONE, coprime_exp_comm,
+              NOT_ZERO_LT_ZERO],
+   ONCE_REWRITE_TAC [GSYM MOD_TIMES2] >>
+   REWRITE_TAC [MOD_MOD] >>
+   REWRITE_TAC [MOD_TIMES2, GSYM (CONJUNCT2 EXP)] >>
+   `SUC (p - 2) = p - 1` by decide_tac >>
+   metis_tac [fermat_little, prime_gcd_1],
+   metis_tac [MOD_MULT_ASSOC, MULT_COMM]]
 QED
 
 Theorem mult_mod:

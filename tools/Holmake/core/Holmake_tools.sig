@@ -84,6 +84,13 @@ sig
   val bold : string -> string
   val dim : string -> string
   val CLR_EOL : string
+  val fancy_output_ok : TextIO.outstream -> bool
+    (* True when `strm' is a terminal that will interpret the escape
+       sequences an in-place progress animation needs (carriage return
+       plus clear-to-end-of-line).  Everything that overwrites a line
+       rather than appending to it should be guarded by this; when it
+       is false the caller must restrict itself to whole, newline-
+       terminated lines. *)
   val getWidth : unit -> int
   val strip_codes : string -> string
   val noesc_size : string -> int

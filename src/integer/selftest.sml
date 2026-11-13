@@ -129,4 +129,25 @@ val _ = require_msg
           parse_msg `42 = T`
 end
 
+local
+  open OmegaMLShadow
+  val rows = [[1,1,1,0], [0,1,0,~2], [0,~1,0,5]]
+  fun insert [] db k = work db k
+    | insert (row :: rest) db k =
+        add_check_factoid db (fromList row, ASM ()) (insert rest) k
+  fun satisfies (SATISFIABLE model) = let
+        val a = PIntMap.find 0 model
+        val b = PIntMap.find 1 model
+        val c = PIntMap.find 2 model
+        open Arbint
+      in
+        zero <= a + b + c andalso fromInt 2 <= b andalso b <= fromInt 5
+      end
+    | satisfies _ = false
+in
+val _ = tprint "Omega reconstructs a model with an unconstrained variable"
+val _ = require (check_result satisfies)
+                (fn () => insert rows (dbempty 4) Lib.I) ()
+end
+
 val _ = Process.exit Process.success;

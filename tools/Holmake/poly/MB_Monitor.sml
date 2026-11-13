@@ -294,9 +294,16 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
               end
       end
     fun id (s:string) = s
+    (* An in-place job display needs more than a file descriptor that
+       happens to be a terminal: it needs one that will act on the
+       carriage returns and clear-to-EOL codes the display is made of.
+       Where that is not so -- a log file, a pipe, an Emacs compilation
+       buffer -- each job is announced and reported on lines of its
+       own instead. *)
+    val fancy = fancy_output_ok TextIO.stdOut
     val (startmsg, infopfx, display_map, green, red, boldyellow, dim, bold,
          CLR_EOL) =
-        if strmIsTTY TextIO.stdOut then
+        if fancy then
           ((fn s => ()), "\r", ttydisplay_map, green, red, boldyellow, dim,
            bold, CLR_EOL)
         else
@@ -553,7 +560,12 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
   in
     (monitor,
      {coloured_info =
-      (fn (s1,s2) => info (lrpad (infopfx ^ s1, s2 ^ " " ^ CLR_EOL))),
+      (* the trailing space keeps the cursor off the line's last
+         character while an animation is overwriting it; with no
+         animation running it would just be trailing whitespace *)
+      (fn (s1,s2) => info (lrpad (infopfx ^ s1,
+                                  if fancy then s2 ^ " " ^ CLR_EOL
+                                  else s2))),
       red = red, green = green, bold = bold,
       dirname = prettydir multitree,
       final_report = final_report})

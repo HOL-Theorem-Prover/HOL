@@ -15,6 +15,11 @@ sig
   (* The conv should evaluate `from <deep_embedding>` *)
   val cv_trans_deep_embedding : conv -> thm -> unit
 
+  (* Removes a stored translation ("thy.name", or "name" in the current
+     theory), here and in descendant theories, so that another can be
+     added in its place *)
+  val cv_rep_delete : string -> unit
+
   datatype pat = datatype cv_trans_dtype.pat
 
   val cv_eqs_for  : term -> thm list
