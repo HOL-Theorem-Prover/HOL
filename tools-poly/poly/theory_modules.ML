@@ -125,24 +125,31 @@ local
          (fn (b, l) => StringCvt.padLeft #"0" 2
                          (String.map Char.toLower (Word8.toString b)) :: l)
          [] bytes)
+  (* NONE when SHA1 returns NULL, which OpenSSL 3 does without writing
+     the digest when its configuration rules SHA-1 out *)
   fun native_sha1 sha1 text =
     let
       val out = Memory.malloc 0w20
       fun get () = Word8Vector.tabulate
                      (20, fn i => Memory.get8 (out, Word.fromInt i))
+      fun digest () =
+        if Memory.voidStar2Sysword
+             (sha1 (Byte.stringToBytes text, String.size text, out)) = 0w0
+        then NONE
+        else SOME (hex_lower (get ()))
     in
-      (ignore (sha1 (Byte.stringToBytes text, String.size text, out));
-       hex_lower (get ()))
-      before Memory.free out
+      digest () before Memory.free out
       handle e => (Memory.free out; raise e)
     end
+  fun ml_sha1 text = SHA1.sha1String (digest_reader text) 0
 in
 fun string_digest text =
   case Susp.force native of
-      SOME sha1 => (native_sha1 sha1 text
-                    handle Foreign.Foreign _ =>
-                           SHA1.sha1String (digest_reader text) 0)
-    | NONE => SHA1.sha1String (digest_reader text) 0
+      SOME sha1 => ((case native_sha1 sha1 text of
+                         SOME d => d
+                       | NONE => ml_sha1 text)
+                    handle Foreign.Foreign _ => ml_sha1 text)
+    | NONE => ml_sha1 text
 end
 
 fun file_digest path =
