@@ -25,3 +25,8 @@ Depends on generic elliptic theories and
 
 Build and test here with `Holmake selftest.exe && ./selftest.exe`.
 These small-field regressions also run at selftest level 1.
+They cover prime-field scalar certificates and arithmetic over
+`GF(7)[i]/(i^2+1)`: a non-real inverse, scalar multiplication, and field
+powers. Scalar and power cases use exponent 65537 to cross the sixteen-bit
+chunk boundary and check continuation, residual goals, exact conclusions,
+and absence of unexpected hypotheses.
