@@ -1003,18 +1003,19 @@ fun simp_rule_reusing rws ss l =
       fun convdata mk_rewrs th =
           let
             val t = concl th
-            fun same (t', _) = Portable.pointer_eq (t', t)
+            fun derive () =
+                let val cds = context_convdata mk_rewrs th
+                in rws := Redblackmap.insert (!rws, t, (t, cds)); cds end
           in
             case (hyp th, Tag.isEmpty (Thm.tag th)) of
                 ([h], true) =>
                 if not (Portable.pointer_eq (h, t)) then
                   context_convdata mk_rewrs th
                 else
-                  (case List.find same (!rws) of
-                       SOME (_, cds) => cds
-                     | NONE =>
-                       let val cds = context_convdata mk_rewrs th
-                       in rws := (t, cds) :: !rws; cds end)
+                  (case Redblackmap.peek (!rws, t) of
+                       SOME (t', cds) =>
+                       if Portable.pointer_eq (t', t) then cds else derive ()
+                     | NONE => derive ())
               | _ => context_convdata mk_rewrs th
           end
       fun conv tm =
@@ -1033,25 +1034,26 @@ fun simp_rule_reusing rws ss l =
 (* SIMP_RULE's result depends only on the simpset, the context's assumptions
    in order and the assumption simplified, so an assumption it left
    unchanged under a context needs no second attempt under the same
-   context.  `seen` records those (assumption, context) pairs, compared by
-   pointer, for one simpset. *)
+   context.  `seen` records those (assumption, context) pairs, found by
+   the assumption and compared by pointer, for one simpset. *)
 fun psr0 (seen, rws) (cfg : simptac_config) ss =
     let
       val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
       fun simp th asl =
           let
             val t = concl th
+            val tried = getOpt (Redblackmap.peek (!seen, t), [])
             fun same (t', asl') =
                 Portable.pointer_eq (t', t) andalso
                 ListPair.allEq Portable.pointer_eq (asl', asl)
           in
-            if List.exists same (!seen) then th
+            if List.exists same tried then th
             else
               let
                 val th' = simp_rule_reusing rws ss (map ASSUME asl) th
               in
                 if Portable.pointer_eq (concl th', t) then
-                  seen := (t, asl) :: !seen
+                  seen := Redblackmap.insert (!seen, t, (t, asl) :: tried)
                 else ();
                 th'
               end
@@ -1060,12 +1062,16 @@ fun psr0 (seen, rws) (cfg : simptac_config) ss =
       popper (fn th => fn (g as (asl, _)) => stdcon cfg (simp th asl) g)
     end
 
-fun psr cfg ss = psr0 (ref [], ref []) cfg ss
+fun new_memo () =
+    (ref (Redblackmap.mkDict Term.compare),
+     ref (Redblackmap.mkDict Term.compare))
+
+fun psr cfg ss = psr0 (new_memo ()) cfg ss
 
 fun allasms0 memo cfg ss (g as (asl,_)) =
     ntac (length asl) (psr0 memo cfg ss) g
 
-fun allasms cfg ss g = allasms0 (ref [], ref []) cfg ss g
+fun allasms cfg ss g = allasms0 (new_memo ()) cfg ss g
 
 fun global_simp_tac cfg ss0 =
     markerLib.mk_require_tac (
@@ -1075,7 +1081,7 @@ fun global_simp_tac cfg ss0 =
              let
                val (ss1,thl') = process_tags ss0 thl
                val ss = ss1 ++ rewrites thl'
-               val memo = (ref [], ref [])
+               val memo = new_memo ()
              in
                rpt (CHANGED_TAC (allasms0 memo cfg ss)) THEN
                ASM_SIMP_TAC ss []
