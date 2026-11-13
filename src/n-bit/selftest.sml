@@ -553,6 +553,14 @@ val _ = blast_true
    ``(x + b * 4w + c * 4w = q + e * 4w - r : word3) =
      (4w * b + 4w * c + 4w * e + x + r = q)``
 
+(* a carry inside the operand of a sum *)
+val _ = blast_true
+   ``(x >>~ x = 0w) \/ (x >>~ x = 0xFFw : word8)``
+
+(* a wide literal mask *)
+val _ = blast_true
+   ``!a:word128. a << 8 >>> 8 = a && 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFw``
+
 val _ = print "\nsimplifier tests\n\n"
 
 val _ = srw_true
