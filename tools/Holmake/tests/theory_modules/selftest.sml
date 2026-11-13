@@ -71,6 +71,15 @@ val _ = if not supported then () else
   let
     val _ = tprint "first load saves a module per theory"
     val _ = expect "cold" [0, 5, 5]
+    val _ = tprint "module names carry each .dat file's SHA-1"
+    fun named_digest m =
+      case String.fields (fn c => c = #"-") (OS.Path.base m) of
+          [_, thy, digest] =>
+          digest = SHA1.sha1_file
+                     {filename = ".hol/objs/" ^ thy ^ "Theory.dat"}
+        | _ => false
+    val _ = if List.all named_digest (modules ()) then OK ()
+            else die "a module name has another digest"
     val _ = tprint "modules load in another order"
     val _ = probe ["cbda"]
     val _ = expect "warm, reversed diamond" [5, 0, 0]
