@@ -576,9 +576,12 @@ val regression_script =
   (tprint "record rewriter regression tactic data";
    read_file (rewrite_record_raw "ttt_regression") before OK ())
 
+fun in_scratch dir sub = aiLib.exists_file (dir ^ "/sml_inspection/" ^ sub)
 val _ = check "rewriting and recording keep to the TacticToe scratch dir"
-  (not (aiLib.exists_file (!aiLib.scratch_dir ^ "/sml_inspection")) andalso
-   aiLib.exists_file (tactictoe_scratch_dir_of () ^ "/sml_inspection"))
+  (List.all
+     (fn sub => not (in_scratch (!aiLib.scratch_dir) sub) andalso
+                in_scratch (tactictoe_scratch_dir_of ()) sub)
+     ["open", "buildheap/buildheap_ttt_regressionScript_ttt"])
 
 val regression_data = read_file (tacdata_file "ttt_regression")
 val regression_info =
