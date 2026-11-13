@@ -2358,6 +2358,22 @@ additional argument, a tactic which should discharge a more
 complex termination goal.  The other variants will fail if they
 cannot prove termination.
 
+#### Conflicting translations
+
+Each constant should have one translation.  Translating a term
+that already has a translation from a different theorem, with
+`cv_trans` or the `cv_rep` attribute, fails.  To replace a
+translation, first remove it with
+`cv_transLib.cv_rep_delete "thy.name"` (the name of the stored
+`cv_rep` theorem); the removal is recorded in the current theory
+and holds in its descendants too.
+
+Two theories that do not depend on each other may still translate
+the same term differently.  Loading both is allowed, but
+translating or evaluating a term that needs that translation then
+fails with an "ambiguous translation" error naming both theorems,
+until `cv_rep_delete` removes all but one of them.
+
 #### Examples: computing squares and factorials
 
 The following example mirrors those in

@@ -248,6 +248,11 @@ New examples
 Incompatibilities
 -----------------
 
+-   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
+    Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.
+    When two independently loaded ancestors translate the same pattern differently, loading still works, but using that pattern fails with an "ambiguous translation" error naming both theorems until one is removed with `cv_rep_delete`.
+    The same theorem reached through several ancestors is not a conflict.
+
 -   AKS's `computeBasic` no longer defines numeric modular exponentiation;
     use `expModTheory` for `exp_mod_binary`, `exp_mod_step`, their definitions,
     and their correctness equations. The `exp_mod_compute` wrapper and its
