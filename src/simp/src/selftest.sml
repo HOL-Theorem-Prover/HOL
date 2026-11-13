@@ -490,30 +490,55 @@ in
   ]
 end
 
-(* global_simp_tac's last round finds every assumption unchanged; the ones
-   whose context is also unchanged since they were last simplified are not
-   simplified again, and the goals are those of the plain rounds. *)
+(* global_simp_tac doesn't simplify an assumption again in a context it
+   left it unchanged in, and derives each assumption's context rewrites once
+   per call; its goals are those of the plain rounds, written out here for
+   assumptions that neither strip nor close the goal. *)
 val _ = let
   val calls = ref 0
+  val derived = ref 0
   val Q_t = “Q (c:'a) : bool”
   val count_ss =
       bool_ss ++ conv_ss {name = "count_Q", trace = 2, key = SOME ([], Q_t),
                           conv = fn _ => fn _ => fn _ =>
                                     (calls := !calls + 1; failwith "count")}
+              ++ SSFRAG {name = SOME "count_rewrs", convs = [], rewrs = [],
+                         ac = [], dprocs = [], congs = [],
+                         filter = SOME (fn th => (derived := !derived + 1;
+                                                  [th]))}
   val cfg = {droptrues=true,elimvars=false,strip=true,oldestfirst=true}
-  val g = ([Q_t, “x:'a = y”, “P (x:'a) : bool”], “p:bool”)
-  fun count tac =
-      (calls := 0; (#1 (runtac tac g), !calls))
-  val (want, plain_calls) =
-      count (rpt (CHANGED_TAC (allasms cfg count_ss)) THEN
-             ASM_SIMP_TAC count_ss [])
-  val (got, gs_calls) = count (global_simp_tac cfg count_ss [])
+  val round : tactic = fn (g as (asl, _)) =>
+      ntac (length asl)
+           (pop_last_assum (fn th =>
+              ASSUM_LIST (fn asms => ASSUME_TAC (SIMP_RULE count_ss asms th))))
+           g
+  val plain = rpt (CHANGED_TAC round) THEN ASM_SIMP_TAC count_ss []
+  fun count tac g =
+      (calls := 0; derived := 0; (#1 (runtac tac g), !calls, !derived))
+  fun counts (a, b) = Int.toString a ^ " vs " ^ Int.toString b
+  fun test (msg, g, fewer) =
+      let
+        val (want, plain_calls, plain_derived) = count plain g
+        val (got, gs_calls, gs_derived) =
+            count (global_simp_tac cfg count_ss []) g
+      in
+        tprint msg;
+        if list_eq goal_eq want got andalso
+           fewer ((gs_calls, plain_calls), (gs_derived, plain_derived))
+        then OK ()
+        else die ("goals " ^ printgoals (got, ()) ^ " vs " ^
+                  printgoals (want, ()) ^ "; Q simplified " ^
+                  counts (gs_calls, plain_calls) ^
+                  " times; rewrites derived " ^
+                  counts (gs_derived, plain_derived) ^ " times")
+      end
 in
-  tprint "global_simp_tac skips unchanged assumptions in unchanged contexts";
-  if list_eq goal_eq want got andalso gs_calls < plain_calls then OK ()
-  else die ("goals " ^ printgoals (got, ()) ^ " vs " ^ printgoals (want, ()) ^
-            "; Q simplified " ^ Int.toString gs_calls ^ " vs " ^
-            Int.toString plain_calls ^ " times")
+  test ("global_simp_tac skips assumptions unchanged in the same context",
+        ([Q_t, “x:'a = y”, “P (x:'a) : bool”], “p:bool”),
+        fn ((a, b), _) => a < b);
+  test ("global_simp_tac derives context rewrites once per assumption",
+        ([Q_t, “Pd (d:'a) : bool”, “Pe (e:'a) : bool”], “p:bool”),
+        fn (_, (a, b)) => a < b)
 end
 
 (* The simpset layer must never use a directive as a rewrite: requirement

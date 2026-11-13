@@ -762,17 +762,18 @@ fun force_add (ss as SS sset) f =
 
  exception CONVNET of net;
 
- fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) = let
+ (* the rewrites a context theorem adds, in the order they are added *)
+ fun context_convdata mk_rewrs th =
+     List.mapPartial mk_rewr_convdata
+       (map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
+            (mk_rewrs (dest_tagged_rewrite th)))
+
+ fun rewriter_with convdata (SS{mk_rewrs,travrules,initial_net,...}) = let
    fun addcontext (context,thms) = let
      val net = (raise context) handle CONVNET net => net
-     val cthms = map dest_tagged_rewrite thms
-     val new_rwts0 = flatten (map mk_rewrs cthms)
-     val new_rwts =
-         map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
-             new_rwts0
    in
      CONVNET
-       (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
+       (net_add_convs net (List.concat (map (convdata mk_rewrs) thms)))
    end
    fun apply {solver,conv,context,stack,relation} tm = let
      val net = (raise context) handle CONVNET net => net
@@ -785,12 +786,14 @@ fun force_add (ss as SS sset) f =
                initial=CONVNET initial_net}
    end;
 
- fun traversedata_for_ss (ss as (SS ssdata)) =
-      {rewriters=[rewriter_for_ss ss],
+ fun traversedata_with convdata (ss as (SS ssdata)) =
+      {rewriters=[rewriter_with convdata ss],
        dprocs= #dprocs ssdata,
        relation= boolSyntax.equality,
        travrules= #travrules ssdata,
        limit = #limit ssdata};
+
+ val traversedata_for_ss = traversedata_with context_convdata
 
  fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);
 
@@ -990,12 +993,49 @@ fun stdcon (c : simptac_config) th =
         (caa_tac0 (not (#oldestfirst c)) c)
         th
 
+(* SIMP_RULE ss l, with the context rewrites of each assumption in l
+   derived once per `rws` and reused.  They are a function of the theorem,
+   and a theorem whose only hypothesis is its untagged conclusion is
+   ASSUME of that conclusion, so they are kept for such theorems only,
+   by conclusion, and only while process_tags leaves ss as it is. *)
+fun simp_rule_reusing rws ss l =
+    let
+      fun convdata mk_rewrs th =
+          let
+            val t = concl th
+            fun same (t', _) = Portable.pointer_eq (t', t)
+          in
+            case (hyp th, Tag.isEmpty (Thm.tag th)) of
+                ([h], true) =>
+                if not (Portable.pointer_eq (h, t)) then
+                  context_convdata mk_rewrs th
+                else
+                  (case List.find same (!rws) of
+                       SOME (_, cds) => cds
+                     | NONE =>
+                       let val cds = context_convdata mk_rewrs th
+                       in rws := (t, cds) :: !rws; cds end)
+              | _ => context_convdata mk_rewrs th
+          end
+      fun conv tm =
+          let
+            val (ss', l') = process_tags ss l
+            val data = if Portable.pointer_eq (ss', ss) then
+                         traversedata_with convdata ss'
+                       else traversedata_for_ss ss'
+          in
+            TRY_CONV (TRAVERSE data l') tm
+          end
+    in
+      CONV_RULE conv
+    end
+
 (* SIMP_RULE's result depends only on the simpset, the context's assumptions
    in order and the assumption simplified, so an assumption it left
    unchanged under a context needs no second attempt under the same
    context.  `seen` records those (assumption, context) pairs, compared by
    pointer, for one simpset. *)
-fun psr0 seen (cfg : simptac_config) ss =
+fun psr0 (seen, rws) (cfg : simptac_config) ss =
     let
       val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
       fun simp th asl =
@@ -1008,7 +1048,7 @@ fun psr0 seen (cfg : simptac_config) ss =
             if List.exists same (!seen) then th
             else
               let
-                val th' = SIMP_RULE ss (map ASSUME asl) th
+                val th' = simp_rule_reusing rws ss (map ASSUME asl) th
               in
                 if Portable.pointer_eq (concl th', t) then
                   seen := (t, asl) :: !seen
@@ -1020,12 +1060,12 @@ fun psr0 seen (cfg : simptac_config) ss =
       popper (fn th => fn (g as (asl, _)) => stdcon cfg (simp th asl) g)
     end
 
-fun psr cfg ss = psr0 (ref []) cfg ss
+fun psr cfg ss = psr0 (ref [], ref []) cfg ss
 
-fun allasms0 seen cfg ss (g as (asl,_)) =
-    ntac (length asl) (psr0 seen cfg ss) g
+fun allasms0 memo cfg ss (g as (asl,_)) =
+    ntac (length asl) (psr0 memo cfg ss) g
 
-fun allasms cfg ss g = allasms0 (ref []) cfg ss g
+fun allasms cfg ss g = allasms0 (ref [], ref []) cfg ss g
 
 fun global_simp_tac cfg ss0 =
     markerLib.mk_require_tac (
@@ -1035,9 +1075,9 @@ fun global_simp_tac cfg ss0 =
              let
                val (ss1,thl') = process_tags ss0 thl
                val ss = ss1 ++ rewrites thl'
-               val seen = ref []
+               val memo = (ref [], ref [])
              in
-               rpt (CHANGED_TAC (allasms0 seen cfg ss)) THEN
+               rpt (CHANGED_TAC (allasms0 memo cfg ss)) THEN
                ASM_SIMP_TAC ss []
              end
         )
