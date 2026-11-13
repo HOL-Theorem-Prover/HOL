@@ -15,6 +15,11 @@ structure Refute_Cert :> Refute_Cert = struct
 
   val default_leaf_rounds = 2
 
+  (* Leaf simplification runs whatever [srw_ss] holds; a looping rewrite
+     or conversion there stops after [leaf_simp_limit] steps rather than
+     spending the caller's whole replay deadline. *)
+  val leaf_simp_limit = 2000
+
   datatype instance_verdict =
       InstanceFalse of Thm.thm
     | InstanceTrue
@@ -117,7 +122,9 @@ structure Refute_Cert :> Refute_Cert = struct
               val theorem = advance "leaf CBV evaluation" eval_original
                 theorem
               val theorem = advance "leaf simplification"
-                (simpLib.SIMP_CONV (BasicProvers.srw_ss ()) []) theorem
+                (simpLib.SIMP_CONV
+                  (simpLib.limit leaf_simp_limit (BasicProvers.srw_ss ())) [])
+                theorem
               val theorem = advance "leaf CBV evaluation" eval_original
                 theorem
               val next = rhs_of theorem

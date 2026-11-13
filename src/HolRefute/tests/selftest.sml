@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Three deliberate reaches outside the [Refute] signature.  One is a
+(* Four deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -17,7 +17,11 @@ local open Refute_Rat Refute_Real in end
    theory bracket, called by "a theory bracket leaves the global message
    flags alone": the defect it pins is a process-global flag held flipped
    while a sibling backend of the same call runs, and the only public
-   observer would be a second backend racing the first. *)
+   observer would be a second backend racing the first.  The fourth is
+   [Refute_Cert.equality_portfolio], called by "a looping srw_ss
+   conversion stops at the step limit": the bound is on one replay step, and
+   the only public observer of a looping step is the whole call's
+   deadline. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -4760,6 +4764,31 @@ val _ = mf_level2 "certificates replay at large and structured scopes"
                                     ``ZooNode (ZooLeaf 0) (ZooLeaf 0)``]))
         ``(?t : zoo_tree. t = ZooLeaf 0) ==> !u : zoo_tree. u = ZooLeaf 0``
     end)
+
+(* ------------------------------------------------------------------- *)
+(* Leaf simplification.                                                 *)
+(* ------------------------------------------------------------------- *)
+
+val _ = section "leaf simplification"
+
+val _ = test "a looping srw_ss conversion stops at the step limit" (fn () =>
+  let
+    val name = "refute_selftest_loop"
+    val loop = simpLib.name_ss name (simpLib.conv_ss
+      {name = name, key = NONE, trace = 2, conv = K (K Thm.REFL)})
+    fun step _ input conversion =
+      SOME (conversion input)
+      handle Interrupt => raise Interrupt | _ => NONE
+    val tm = ``(p : bool) /\ q``
+    val _ = BasicProvers.augment_srw_ss [loop]
+    val result = Exn.capture (Timeout.apply (Time.fromSeconds 30)
+      (Refute_Cert.equality_portfolio 2 step)) tm
+    val _ = BasicProvers.diminish_srw_ss [name]
+  in
+    case Exn.release result of
+        SOME theorem => Term.aconv (Refute_Cert.rhs_of theorem) tm
+      | NONE => false
+  end)
 
 (* ------------------------------------------------------------------- *)
 (* Potential counterexamples and retries.  Registers a restricted       *)
