@@ -541,6 +541,55 @@ in
         fn (_, (a, b)) => a < b)
 end
 
+(* global_simp_tac's goals are those of plain rounds of psr, which starts
+   afresh on every assumption it pops, for every configuration: through
+   variable elimination, stripping, dropped truths, contradictions, a goal
+   closed by an assumption, and an assumption a later round must simplify
+   because its context changed after a round that left it unchanged. *)
+val _ = let
+  fun plain cfg ss =
+      rpt (CHANGED_TAC
+             (fn (g as (asl, _)) => ntac (length asl) (psr cfg ss) g))
+      THEN ASM_SIMP_TAC ss []
+  fun cfg (ev, old) =
+      {droptrues = true, elimvars = ev, strip = true, oldestfirst = old}
+  val cfgs = map cfg [(false, true), (false, false), (true, true),
+                      (true, false)] @
+             [{droptrues = false, elimvars = true, strip = false,
+               oldestfirst = true}]
+  fun cfg_name {droptrues, elimvars, strip, oldestfirst} =
+      String.concat
+        (map (fn (b, s) => if b then s else "")
+             [(elimvars, " ev"), (oldestfirst, " of"), (strip, " st"),
+              (droptrues, " dt")])
+  val goals = [
+    ("later round",
+     ([“(c:'a = e) \/ F”, “P (c:'a) : bool”], “Q (c:'a) : bool”)),
+    ("chain",
+     ([“(d:'a = c) \/ F”, “(c:'a = e) \/ F”, “P (d:'a) : bool”],
+      “Q (d:'a) : bool”)),
+    ("strip/truths/elim",
+     ([“P (x:'a) /\ U (y:'a)”, “R (x:'a) /\ (z:'a = z)”, “x:'a = f y”],
+      “Q (x:'a) : bool”)),
+    ("contradiction",
+     ([“~((a:'a) = a)”, “P (a:'a) : bool”], “Q (a:'a) : bool”)),
+    ("closes goal",
+     ([“P (a:'a) \/ F”, “R (a:'a) : bool”], “P (a:'a) : bool”))
+  ]
+  fun test c (name, g) =
+      let
+        val want = #1 (runtac (plain c bool_ss) g)
+        val got = #1 (runtac (global_simp_tac c bool_ss []) g)
+      in
+        tprint ("global_simp_tac as plain rounds: " ^ name ^ cfg_name c);
+        if list_eq goal_eq want got then OK ()
+        else die ("goals " ^ printgoals (got, ()) ^ " vs " ^
+                  printgoals (want, ()))
+      end
+in
+  List.app (fn c => List.app (test c) goals) cfgs
+end
+
 (* The simpset layer must never use a directive as a rewrite: requirement
    directives are refused (their marker$ hypothesis would otherwise reach
    the result), tactic-only ones are dropped. *)

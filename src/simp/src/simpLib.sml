@@ -1066,7 +1066,7 @@ fun new_memo () =
     (ref (Redblackmap.mkDict Term.compare),
      ref (Redblackmap.mkDict Term.compare))
 
-fun psr cfg ss = psr0 (new_memo ()) cfg ss
+fun psr cfg ss g = psr0 (new_memo ()) cfg ss g
 
 fun allasms0 memo cfg ss (g as (asl,_)) =
     ntac (length asl) (psr0 memo cfg ss) g
