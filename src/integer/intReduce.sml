@@ -65,7 +65,9 @@ local
   fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
   fun reducer t =
     let val (_, args) = strip_comb t
-    in if List.all reducible args then REDUCE_CONV t else Conv.NO_CONV t
+    in
+      if List.all reducible args then Conv.CHANGED_CONV REDUCE_CONV t
+      else Conv.NO_CONV t
     end
   fun mk_conv pat =
      {name = "Integer calculation",
