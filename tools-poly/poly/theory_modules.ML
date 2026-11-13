@@ -110,10 +110,12 @@ fun digest_reader text (offset, count) =
    don't depend on which one ran. *)
 local
   open Foreign
+  (* Foreign loads a library lazily; symbolAsAddress makes it load here,
+     so a missing library raises now and the next name is tried *)
   fun build name =
-    let val lib = loadLibrary name
-    in buildCall3 (getSymbol lib "SHA1", (cByteArray, cSize, cPointer),
-                   cPointer)
+    let val sym = getSymbol (loadLibrary name) "SHA1"
+    in ignore (symbolAsAddress sym);
+       buildCall3 (sym, (cByteArray, cSize, cPointer), cPointer)
     end
   val native =
     Susp.delay (fn () =>

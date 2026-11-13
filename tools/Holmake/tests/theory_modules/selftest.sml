@@ -78,7 +78,9 @@ val _ = if not supported then () else
           digest = SHA1.sha1_file
                      {filename = ".hol/objs/" ^ thy ^ "Theory.dat"}
         | _ => false
-    val _ = if List.all named_digest (modules ()) then OK ()
+    fun names_ok () =
+      not (null (modules ())) andalso List.all named_digest (modules ())
+    val _ = if names_ok () then OK ()
             else die "a module name has another digest"
     val _ = tprint "modules load in another order"
     val _ = probe ["cbda"]
@@ -138,10 +140,29 @@ val _ = if not supported then () else
             else die ("writer wrote " ^ read "module-stats")
     val _ = tprint "a failed load from a module is rolled back"
     val _ = (rollback "modules"; OK ())
+    val _ = tprint "module names keep the SHA-1 when libcrypto refuses it"
+    (* default properties naming a missing provider make libcrypto's
+       SHA1 return NULL *)
+    val output = TextIO.openOut "nosha1.cnf"
+    val _ = TextIO.output (output,
+              "openssl_conf = init\n[init]\nalg_section = props\n\
+              \[props]\ndefault_properties = provider=missing\n")
+            before TextIO.closeOut output
+    val _ = clear "modules"
+    val _ = (remove "module-stats";
+             command ["/usr/bin/env", "OPENSSL_CONF=" ^
+                        OS.Path.mkAbsolute {path = "nosha1.cnf",
+                                            relativeTo = OS.FileSys.getDir ()},
+                      "PROBE_ARGS=abcd", hol, "run", "--noconfig",
+                      "probe.sml"])
+    val _ = expect "cold, no libcrypto SHA-1" [0, 5, 5]
+    val _ = if names_ok () then OK ()
+            else die "a module name has another digest"
   in
     ()
   end;
 val _ = clear "modules";
 val _ = clear "written";
-val _ = app remove ["module-stats", "fingerprint", "probe-fingerprint"];
+val _ = app remove ["module-stats", "fingerprint", "probe-fingerprint",
+                    "nosha1.cnf"];
 val _ = command [holmake, "--no-cache", "cleanAll"];
