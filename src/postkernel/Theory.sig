@@ -163,5 +163,10 @@ sig
      TheoryDelta event to be sent to all registered listeners *)
   val load_complete : string -> unit
 
+  (* True while load_complete is calling the TheoryLoaded listeners on
+     the calling thread.  Work a listener defers can use it to report a
+     later failure as the listener's own would have been reported. *)
+  val in_load_hooks : unit -> bool
+
   val oracle_string_of : thm -> string option
 end
