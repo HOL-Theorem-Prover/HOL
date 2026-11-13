@@ -763,10 +763,12 @@ fun force_add (ss as SS sset) f =
  exception CONVNET of net;
 
  (* the rewrites a context theorem adds, in the order they are added *)
- fun context_convdata mk_rewrs th =
+ fun context_rewrites_convdata rwts =
      List.mapPartial mk_rewr_convdata
        (map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
-            (mk_rewrs (dest_tagged_rewrite th)))
+            rwts)
+ fun context_convdata mk_rewrs th =
+     context_rewrites_convdata (mk_rewrs (dest_tagged_rewrite th))
 
  fun rewriter_with convdata (SS{mk_rewrs,travrules,initial_net,...}) = let
    fun addcontext (context,thms) = let
@@ -997,15 +999,26 @@ fun stdcon (c : simptac_config) th =
    derived once per `rws` and reused.  They are a function of the theorem,
    and a theorem whose only hypothesis is its untagged conclusion is
    ASSUME of that conclusion, so they are kept for such theorems only,
-   by conclusion, and only while process_tags leaves ss as it is. *)
+   by conclusion, and only while process_tags leaves ss as it is.  A
+   bounded rewrite counts its uses in its conversion, so rewrites are kept
+   only when none of them is bounded. *)
 fun simp_rule_reusing rws ss l =
     let
       fun convdata mk_rewrs th =
           let
             val t = concl th
+            fun unbounded (_, UNBOUNDED) = true
+              | unbounded _ = false
             fun derive () =
-                let val cds = context_convdata mk_rewrs th
-                in rws := Redblackmap.insert (!rws, t, (t, cds)); cds end
+                let
+                  val rwts = mk_rewrs (dest_tagged_rewrite th)
+                  val cds = context_rewrites_convdata rwts
+                in
+                  if List.all unbounded rwts then
+                    rws := Redblackmap.insert (!rws, t, (t, cds))
+                  else ();
+                  cds
+                end
           in
             case (hyp th, Tag.isEmpty (Thm.tag th)) of
                 ([h], true) =>

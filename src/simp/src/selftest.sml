@@ -576,18 +576,30 @@ val _ = let
     ("closes goal",
      ([“P (a:'a) \/ F”, “R (a:'a) : bool”], “P (a:'a) : bool”))
   ]
-  fun test c (name, g) =
+  (* each rewrite derived from the context may be used once *)
+  fun once (th, _) = [(th, BoundedRewrites.BOUNDED (ref 1))]
+  val bounded_ss =
+      bool_ss ++ SSFRAG {name = SOME "bounded", convs = [], rewrs = [],
+                         ac = [], dprocs = [], congs = [],
+                         filter = SOME once}
+  val bounded_goal =
+      ([“f (a:'a) = (b:'a)”, “Q (f (a:'a) : 'a) : bool”,
+        “P (f (a:'a) : 'a) : bool”], “R (a:'a) : bool”)
+  fun test0 ss c (name, g) =
       let
-        val want = #1 (runtac (plain c bool_ss) g)
-        val got = #1 (runtac (global_simp_tac c bool_ss []) g)
+        val want = #1 (runtac (plain c ss) g)
+        val got = #1 (runtac (global_simp_tac c ss []) g)
       in
         tprint ("global_simp_tac as plain rounds: " ^ name ^ cfg_name c);
         if list_eq goal_eq want got then OK ()
         else die ("goals " ^ printgoals (got, ()) ^ " vs " ^
                   printgoals (want, ()))
       end
+  val test = test0 bool_ss
 in
-  List.app (fn c => List.app (test c) goals) cfgs
+  List.app (fn c => List.app (test c) goals) cfgs;
+  List.app (fn c => test0 bounded_ss c ("bounded rewrites", bounded_goal))
+           cfgs
 end
 
 (* The simpset layer must never use a directive as a rewrite: requirement
