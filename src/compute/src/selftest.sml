@@ -254,3 +254,23 @@ val _ = check "Checking a progressing add_conv result is used"
               (Rewrite.REWRITE_CONV [boolTheory.AND_CLAUSES]) []
               “T /\ p” “p:bool” 1
 end
+
+(* The global compset applies queued updates on its first read *)
+local
+  val applied = ref 0
+  fun count cs = (applied := !applied + 1; cs)
+  fun check name b = (tprint name; if b then OK() else die "")
+in
+val _ = upd_compset count
+val _ = check "Checking a global compset update waits for a read"
+              (!applied = 0)
+val _ = the_compset ()
+val _ = check "Checking a read applies a queued update once"
+              (!applied = 1 andalso (the_compset (); !applied = 1))
+val _ = upd_compset (fn _ => raise Fail "queued")
+val _ = upd_compset count
+val _ = check "Checking a failed queued update raises from the read"
+              ((the_compset (); false) handle Fail "queued" => true)
+val _ = check "Checking updates queued after a failure still apply"
+              (the_compset (); !applied = 2)
+end
