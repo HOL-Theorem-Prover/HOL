@@ -225,7 +225,7 @@ fun fixed_ancestry (info : ('d,'v) info) thy ps =
       val fx = !result
     in
       Thm.getCT() <> SOME thy andalso
-      List.all (fn p => p = thy orelse Symtab.defined fx p) ps
+      List.all (Symtab.defined fx) ps
     end
 
 fun parent_onload extras {thyname,data = data_opt} =
@@ -266,20 +266,21 @@ fun parent_onload extras {thyname,data = data_opt} =
                         sl
                       end
                 )
+          (* a parent list may name the theory itself; the edge adds
+             nothing, and merging from it would find no value *)
+          val ps = List.filter (fn p => p <> thyname) ps
           val _ = DPRINT ("Calling " ^ tag ^ ":merge[" ^
                           String.concatWith ", " ps ^ "]")
           fun store v =
               Context.Data.modify value_table (Symtab.update (thyname,v))
           val fixed = fixed_ancestry info thyname ps
-          (* With a fixed ancestry and parents that do not name the
-             theory, the ancestor sets and the start of the merge wait
-             for the first read, from the parents' values as they are
-             now.  The theory gets a value when a parent has one:
-             merge_start drops only parents that are ancestors of
+          (* With a fixed ancestry, the ancestor sets and the start of the
+             merge wait for the first read, from the parents' values as
+             they are now.  The theory gets a value when a parent has
+             one: merge_start drops only parents that are ancestors of
              another listed, which then has a value too. *)
           val start =
-              if fixed andalso not (List.exists (fn p => p = thyname) ps)
-              then
+              if fixed then
                 let
                   val caps = map (fn p => (p, #dblookup info {thyname = p})) ps
                   fun lookup {thyname} =

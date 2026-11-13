@@ -213,15 +213,14 @@ end
     The suspension is forced when the value is first read (by DB,
     DB_of, merge or set_parents).  The theory's deltas and its
     parents' values are fixed at load, and the ancestries the merge
-    needs are computed when it is forced (at load when the theory's
-    parents name it).  A theory whose parents lead to the current
-    theory or to "-" has its value computed at load instead, as it
-    would otherwise depend on when it is read.  Forcing reads the
-    ancestors' data from the ambient context, whatever context was
-    passed to DB_of.  The value is right whenever that context has the
-    theory's ancestors loaded, as a loaded theory's data does not
-    change; when one is missing, forcing raises, and the value stays
-    unforced.
+    needs are computed when it is forced.  A theory whose parents lead
+    to the current theory or to "-" has its value computed at load
+    instead, as it would otherwise depend on when it is read.  Forcing
+    reads the ancestors' data from the ambient context, whatever
+    context was passed to DB_of.  The value is right whenever that
+    context has the theory's ancestors loaded, as a loaded theory's
+    data does not change; when one is missing, forcing raises, and the
+    value stays unforced.
 
     The merge walk.  AncestryData merges multiple ancestor theories
     by:
