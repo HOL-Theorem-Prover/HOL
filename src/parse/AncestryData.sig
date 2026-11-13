@@ -211,15 +211,17 @@ end
     suspension that computes the theory's value by merging its
     parents' values and folding in its own deltas via apply_delta.
     The suspension is forced when the value is first read (by DB,
-    DB_of, merge or set_parents).  The theory's deltas and the start
-    of the merge (the first parent with a value, and its ancestry) are
-    fixed at load.  A theory whose parents lead to the current theory
-    or to "-" has its value computed at load instead, as it would
-    otherwise depend on when it is read.  Forcing reads the ancestors'
-    data from the ambient context, whatever context was passed to
-    DB_of.  The value is right whenever that context has the theory's
-    ancestors loaded, as a loaded theory's data does not change; when
-    one is missing, forcing raises, and the value stays unforced.
+    DB_of, merge or set_parents).  The theory's deltas and its
+    parents' values are fixed at load, and the ancestries the merge
+    needs are computed when it is forced (at load when the theory's
+    parents name it).  A theory whose parents lead to the current
+    theory or to "-" has its value computed at load instead, as it
+    would otherwise depend on when it is read.  Forcing reads the
+    ancestors' data from the ambient context, whatever context was
+    passed to DB_of.  The value is right whenever that context has the
+    theory's ancestors loaded, as a loaded theory's data does not
+    change; when one is missing, forcing raises, and the value stays
+    unforced.
 
     The merge walk.  AncestryData merges multiple ancestor theories
     by:
@@ -235,8 +237,8 @@ end
 
     Steps 2 and 3 test membership in theories' ancestries.  Each
     instance keeps every loaded theory's ancestry as a set of names
-    in a context slot, computed once from its parents' when the theory
-    is first met, so a merge does not walk the ancestry graph again.
+    in a context slot, computed once from its parents' when a merge
+    first needs it, so a merge does not walk the ancestry graph again.
     The current theory's parents can still change, so its ancestry
     is computed afresh each time.
 

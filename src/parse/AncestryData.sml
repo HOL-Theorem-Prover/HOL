@@ -59,6 +59,23 @@ fun extend_memo parents (thy, memo) =
         else Symtab.update (thy, ancestor_set memo' thy ps) memo'
       end
 
+(* The theories extend_memo would add to the memo, by the same rule but
+   without their sets: whether a theory's ancestry is fixed is decided at
+   load, its set only when its value is first read *)
+type fixed_set = unit Symtab.table
+fun extend_fixed parents (thy, fx) =
+    if Symtab.defined fx thy orelse thy = "-" then fx
+    else
+      let
+        val ps = proper_parents parents thy
+        val fx' = foldl (extend_fixed parents) fx ps
+      in
+        if Thm.getCT() = SOME thy orelse
+           not (List.all (Symtab.defined fx') ps)
+        then fx'
+        else Symtab.update (thy, ()) fx'
+      end
+
 (* The ancestry of a theory not in the memo *)
 fun fresh_ancestry (memo : ancestor_memo) parents thy =
     let
@@ -97,7 +114,8 @@ type ('d,'v) info =
       dblookup : {thyname : string} -> 'v Susp.susp option,
       apply_delta : 'd -> 'v -> 'v, tag : string,
       parents : {thyname : string} -> string list,
-      ancestors : ancestor_memo Context.Data.slot}
+      ancestors : ancestor_memo Context.Data.slot,
+      fixed : fixed_set Context.Data.slot}
 
 fun fpluck _ [] = NONE
   | fpluck f (h::t) = case f h of
@@ -107,7 +125,7 @@ fun fpluck _ [] = NONE
 (* What a merge of thys starts from: the value of the first theory listed
    that has one, its ancestry, and the other theories, less those that are
    ancestors of theories listed.  NONE when no such theory has a value. *)
-fun merge_start (info : ('d,'v) info) thys =
+fun merge_start_with lookup (info : ('d,'v) info) thys =
     let
       val {parents,ancestors,...} = info
       val ancs = ancestor_sets ancestors parents thys
@@ -116,10 +134,12 @@ fun merge_start (info : ('d,'v) info) thys =
           List.exists (fn t => t <> thy andalso smem (ancs t) thy) thys
       val thys = List.filter (not o redundant) thys
     in
-      case fpluck (fn thy => #dblookup info {thyname=thy}) thys of
+      case fpluck (fn thy => lookup {thyname=thy}) thys of
           NONE => NONE
         | SOME ((h,v0),rest) => SOME (v0, ancs h, rest)
     end
+fun merge_start (info : ('d,'v) info) thys =
+    merge_start_with (#dblookup info) info thys
 
 (* Apply, to the starting value, the deltas of the other theories and of
    their ancestors, each theory once *)
@@ -160,13 +180,19 @@ fun merge (info : ('d,'v) info) thys : 'v option =
 fun now v = Susp.delay (fn () => v)
 
 (* thy's ancestry is fixed when it is not the current theory and its parents
-   are in the memo, as extend_memo would then add it *)
-fun fixed_ancestry slot thy ps =
+   are fixed, as extend_memo would then add it to the memo *)
+fun fixed_ancestry (info : ('d,'v) info) thy ps =
     let
-      val memo = Context.Data.get slot (Context.snapshot())
+      val {fixed, parents, ...} = info
+      val result = ref Symtab.empty
+      fun extend fx =
+          let val fx' = foldl (extend_fixed parents) fx ps
+          in result := fx'; fx' end
+      val _ = Context.Data.modify fixed extend
+      val fx = !result
     in
       Thm.getCT() <> SOME thy andalso
-      List.all (fn p => p = thy orelse Symtab.defined memo p) ps
+      List.all (fn p => p = thy orelse Symtab.defined fx p) ps
     end
 
 fun parent_onload extras {thyname,data = data_opt} =
@@ -181,7 +207,7 @@ fun parent_onload extras {thyname,data = data_opt} =
         | (_, NONE) => ()
         | (false, SOME info) =>
         let
-          val {apply_delta,get_deltas,ancestors,...} = info
+          val {apply_delta,get_deltas,...} = info
           val ps =
               case data_opt of
                   NONE =>
@@ -211,17 +237,39 @@ fun parent_onload extras {thyname,data = data_opt} =
                           String.concatWith ", " ps ^ "]")
           fun store v =
               Context.Data.modify value_table (Symtab.update (thyname,v))
+          val fixed = fixed_ancestry info thyname ps
+          (* With a fixed ancestry and parents that do not name the
+             theory, the ancestor sets and the start of the merge wait
+             for the first read, from the parents' values as they are
+             now.  The theory gets a value when a parent has one:
+             merge_start drops only parents that are ancestors of
+             another listed, which then has a value too. *)
+          val start =
+              if fixed andalso not (List.exists (fn p => p = thyname) ps)
+              then
+                let
+                  val caps = map (fn p => (p, #dblookup info {thyname = p})) ps
+                  fun lookup {thyname} =
+                      case List.find (fn (p, _) => p = thyname) caps of
+                          SOME (_, v) => v
+                        | NONE => NONE
+                in
+                  if List.exists (Option.isSome o #2) caps then
+                    SOME (fn () => valOf (merge_start_with lookup info ps))
+                  else NONE
+                end
+              else Option.map K (merge_start info ps)
         in
-          case merge_start info ps of
+          case start of
               NONE => ()
-            | SOME start =>
+            | SOME get_start =>
               let
                 (* the theory's own deltas are read now *)
                 val uds = get_deltas {thyname = thyname}
                 fun value () =
-                    rev_itlist apply_delta uds (merge_from info start)
-                val v = if fixed_ancestry ancestors thyname ps
-                        then Susp.delay value
+                    rev_itlist apply_delta uds
+                               (merge_from info (get_start ()))
+                val v = if fixed then Susp.delay value
                         else now (value ())
               in
                 delta_side_effects thyname uds;
@@ -268,10 +316,15 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
             {name = "ancestry." ^ tag ^ ".ancestors",
              empty = Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
+      val fixed : fixed_set Context.Data.slot =
+          Context.Data.new
+            {name = "ancestry." ^ tag ^ ".fixed",
+             empty = Symtab.empty,
+             pp = fn _ => "<ancestry." ^ tag ^ ".fixed>"}
       val info = {get_deltas = get_deltas, tag = tag,
                   dblookup = dbsusp,
                   apply_delta = apply_delta,
-                  parents = parents, ancestors = ancestors}
+                  parents = parents, ancestors = ancestors, fixed = fixed}
       val _ = info_ref := SOME info
       fun set_ancestry sl =
           let
@@ -418,10 +471,15 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo,
             {name = "ancestry." ^ tag ^ ".ancestors",
              empty = Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
+      val fixed : fixed_set Context.Data.slot =
+          Context.Data.new
+            {name = "ancestry." ^ tag ^ ".fixed",
+             empty = Symtab.empty,
+             pp = fn _ => "<ancestry." ^ tag ^ ".fixed>"}
       val info =
           {get_deltas = get_deltas, dblookup = dbsusp,
            apply_delta = apply_delta, tag = tag, parents = get_parents,
-           ancestors = ancestors}
+           ancestors = ancestors, fixed = fixed}
       val _ = info_ref := SOME info
       fun set_ancestry sl =
           let
