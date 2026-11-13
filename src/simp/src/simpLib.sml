@@ -990,14 +990,42 @@ fun stdcon (c : simptac_config) th =
         (caa_tac0 (not (#oldestfirst c)) c)
         th
 
-fun psr (cfg : simptac_config) ss =
-    let val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
+(* SIMP_RULE's result depends only on the simpset, the context's assumptions
+   in order and the assumption simplified, so an assumption it left
+   unchanged under a context needs no second attempt under the same
+   context.  `seen` records those (assumption, context) pairs, compared by
+   pointer, for one simpset. *)
+fun psr0 seen (cfg : simptac_config) ss =
+    let
+      val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
+      fun simp th asl =
+          let
+            val t = concl th
+            fun same (t', asl') =
+                Portable.pointer_eq (t', t) andalso
+                ListPair.allEq Portable.pointer_eq (asl', asl)
+          in
+            if List.exists same (!seen) then th
+            else
+              let
+                val th' = SIMP_RULE ss (map ASSUME asl) th
+              in
+                if Portable.pointer_eq (concl th', t) then
+                  seen := (t, asl) :: !seen
+                else ();
+                th'
+              end
+          end
     in
-      popper (fn th =>
-                 ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+      popper (fn th => fn (g as (asl, _)) => stdcon cfg (simp th asl) g)
     end
 
-fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
+fun psr cfg ss = psr0 (ref []) cfg ss
+
+fun allasms0 seen cfg ss (g as (asl,_)) =
+    ntac (length asl) (psr0 seen cfg ss) g
+
+fun allasms cfg ss g = allasms0 (ref []) cfg ss g
 
 fun global_simp_tac cfg ss0 =
     markerLib.mk_require_tac (
@@ -1007,8 +1035,9 @@ fun global_simp_tac cfg ss0 =
              let
                val (ss1,thl') = process_tags ss0 thl
                val ss = ss1 ++ rewrites thl'
+               val seen = ref []
              in
-               rpt (CHANGED_TAC (allasms cfg ss)) THEN
+               rpt (CHANGED_TAC (allasms0 seen cfg ss)) THEN
                ASM_SIMP_TAC ss []
              end
         )
