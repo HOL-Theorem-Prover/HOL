@@ -49,6 +49,15 @@ sig
                      'a worklist
 
   val do_work : ('a worklist * monitor) -> 'a
+
+  (* How many times the work loop went round during the last do_work.
+     A build spends one pass per thing it hears from plus one per idle
+     interval, so this counts in the tens or hundreds; a loop that is
+     busy-waiting counts in the millions.  Unlike anything measured in
+     seconds it does not move with how fast or how busy the machine
+     is, which is what makes it worth reporting.  do_work is not
+     re-entrant and neither is this. *)
+  val rounds_last_run : unit -> int
   val mk_shell_command : {cline: string, extra_env: string list} -> command
   val shell_commands : monitor -> string list * int ->
                        (string * bool) list

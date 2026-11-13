@@ -671,18 +671,15 @@ in
 end;
 
 local
-  val field_single_mult_exp_alt = prove
-    (``!f x n.
-         f IN Field /\ x IN f.carrier ==>
-         (field_exp f x (SUC n) = field_mult f x (field_exp f x n))``,
-     METIS_TAC [field_single_mult_exp, arithmeticTheory.ADD1]);
+  val field_single_mult_exp_alt =
+      SIMP_RULE pureSimps.pure_ss
+        [res_quanTheory.RES_FORALL, GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO,
+         GSYM arithmeticTheory.ADD1] (GSYM field_single_mult_exp);
 
-  val field_exp_mult_exp_alt = prove
-    (``!f x m n.
-         f IN Field /\ x IN f.carrier ==>
-         (field_exp f x (m + n) =
-          field_mult f (field_exp f x m) (field_exp f x n))``,
-     METIS_TAC [field_exp_mult_exp]);
+  val field_exp_mult_exp_alt =
+      SIMP_RULE pureSimps.pure_ss
+        [res_quanTheory.RES_FORALL, GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
+        (GSYM field_exp_mult_exp);
 
   val field_mult_lone_conv =
       let
@@ -1161,12 +1158,8 @@ fun field_poly_ss context term_normalize_ths =
     end;
 
 local
-  val push_disch =
-      let
-        val f = MATCH_MP (PROVE [] ``(a ==> (b = c)) ==> (a ==> b = a ==> c)``)
-      in
-        fn d => fn th => f (DISCH d th)
-      end;
+  fun push_disch d th =
+      MATCH_MP IMP_CONG (CONJ (REFL d) (DISCH d th));
 
   val and_imp_intro = CONV_RULE (BINOP_CONV (REWR_CONV AND_IMP_INTRO));
 in

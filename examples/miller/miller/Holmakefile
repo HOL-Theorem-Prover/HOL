@@ -1,4 +1,4 @@
-INCLUDES = ../prob ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/Crypto/RSA ../groups
+INCLUDES = ../prob ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/Crypto/RSA ../groups $(HOLDIR)/src/num/extra_theories
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all

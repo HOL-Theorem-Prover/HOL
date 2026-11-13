@@ -21,14 +21,14 @@ val () = app load
   ["bossLib", "metisLib", "RealArith",
    "pairTheory", "combinTheory", "listTheory", "arithmeticTheory",
    "state_transformerTheory",
-   "miller_rabinTheory",
+   "miller_rabinTheory", "expModTheory",
    "encodeLib"];
 val () = quietdec := true;
 
 open HolKernel Parse boolLib bossLib metisLib;
 open pairTheory combinTheory listTheory arithmeticTheory;
 open state_transformerTheory;
-open miller_rabinTheory;
+open miller_rabinTheory expModTheory;
 open encodeLib;
 
 (*
@@ -193,53 +193,32 @@ val factor_twosa_lemma = prove(``!x y. x <= y ==> (factor_twos x = factor_twosa 
 val factor_twosa_proof = store_thm("factor_twosa_proof",``!x. factor_twos x = factor_twosa x x``,
         RW_TAC arith_ss [factor_twosa_lemma]);
 
-val (modexp_def,modexp_ind) =
-    (miller_rabinTheory.modexp_def,miller_rabinTheory.modexp_ind);
-(***
-    Defn.tprove
-      let
-        val d =
-            Hol_defn "modexp"
-              `modexp n a b =
-               if b = 0 then 1
-               else
-                 let r = modexp n a (b DIV 2) in
-                 let r2 = (r * r) MOD n in
-                 if EVEN b then r2 else (r2 * a) MOD n`
-
-        val g = `measure (\(x,y,z). z)`
-      in
-        (d,
-         WF_REL_TAC g
-         ++ RW_TAC arith_ss []
-         ++ Know `2 * (b DIV 2) <= b`
-         >> PROVE_TAC [TWO, DIV_THEN_MULT]
-         ++ DECIDE_TAC)
-      end;
-
-val _ = save_thm ("modexp_def", modexp_def);
-val _ = save_thm ("modexp_ind", modexp_ind);
-***)
-
+(* A fuelled version of the core accumulator, including its zero-modulus
+   branch.  The fuel-zero result is only used when the exponent is zero. *)
 val modexpa_def = Define `
-        (modexpa 0 n a b = 1) /\
-        (modexpa _ _ _ 0 = 1) /\
-        (modexpa (SUC v) n a b =
-               let r = modexpa v n a (b DIV 2) in
-               let r2 = (r * r) MOD n in
-               if EVEN b then r2 else (r2 * a) MOD n)`;
+        (modexpa 0 n a b acc =
+           if n = 0 then (acc * a ** b) MOD n else acc MOD n) /\
+        (modexpa (SUC v) n a b acc =
+           if n = 0 then (acc * a ** b) MOD n
+           else if b = 0 then acc MOD n
+           else modexpa v n ((a * a) MOD n) (b DIV 2)
+                  (if EVEN b then acc else (acc * a) MOD n))`;
 
-val modexpa_lemma = prove(``!x y n a. x <= y ==> (modexp n a x = modexpa y n a x)``,
-        GEN_TAC ++ completeInduct_on `x` ++
-        Cases ++ Cases_on `x` ++ ONCE_REWRITE_TAC [modexp_def] ++
-        RW_TAC arith_ss [modexpa_def] ++
-        PAT_ASSUM ``!a:num.P`` (STRIP_ASSUME_TAC o SPEC ``SUC n' DIV 2``) ++
-        FULL_SIMP_TAC arith_ss [DIV_LT_X,DIV_LE_X,DECIDE ``0 < 2n``] ++
-        POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``n:num``) ++
-        FULL_SIMP_TAC arith_ss []);
+val modexpa_lemma = prove(
+  ``!y x n a acc. x <= y ==>
+       (exp_mod_step a x n acc = modexpa y n a x acc)``,
+  Induct_on `y` ++ REPEAT GEN_TAC ++
+  Cases_on `n = 0` ++ Cases_on `x = 0` ++
+  ONCE_REWRITE_TAC [exp_mod_step_def] ++
+  RW_TAC arith_ss [modexpa_def] ++
+  METIS_TAC [DIV_LESS, DECIDE ``1 < 2n``,
+             DECIDE ``~(x = 0n) ==> 0 < x``,
+             DECIDE ``x < z /\ z <= SUC y ==> x <= y``]);
 
-val modexpa_proof = store_thm("modexpa_proof",``!n a b. modexp n a b = modexpa b n a b``,
-        RW_TAC arith_ss [modexpa_lemma]);
+val modexpa_proof = store_thm
+  ("modexpa_proof",
+   ``!n a b. exp_mod_binary a b n = modexpa b n a b 1``,
+   RW_TAC arith_ss [expModTheory.exp_mod_binary_def, modexpa_lemma]);
 
 val witness_tail_def = miller_rabinTheory.witness_tail_def;
 (***
@@ -256,7 +235,7 @@ val witness_def = miller_rabinTheory.witness_def;
     Define
       `witness n a =
        let (r, s) = factor_twos (n - 1) in
-       witness_tail r n (modexp n a s)`;
+       witness_tail r n (exp_mod_binary a s n)`;
 ***)
 
 val exists_witness_def =
@@ -630,7 +609,8 @@ val PROB_UNIFORM_CUT_ML = store_thm
 
 val FACTOR_TWOS_ML = save_thm ("FACTOR_TWOS_ML", factor_twos_def);
 
-val MODEXP_ML = save_thm ("MODEXP_ML", modexp_def);
+val EXP_MOD_STEP_ML = save_thm ("EXP_MOD_STEP_ML", exp_mod_step_def);
+val EXP_MOD_BINARY_ML = save_thm ("EXP_MOD_BINARY_ML", exp_mod_binary_def);
 
 val WITNESS_TAIL_ML = store_thm
   ("WITNESS_TAIL_ML",
@@ -667,11 +647,20 @@ val (_,acl2_factor_twos_def) =
                 [div_terminate,DECIDE ``~(2 = 0n)``]
         factor_twos_def
 
-val (_,acl2_modexp_def) =
+(* MOD is translated only for a nonzero modulus.  The core zero-modulus
+   branch is retained in modexpa above, but is outside this ACL2 encoding. *)
+val (_,acl2_exp_mod_step_def) =
         convert_definition_full
-                (SOME ``\a b c. ~(a = 0n) /\ (0 < c ==> c DIV 2 < c)``)
+                (SOME ``\a b c d. ~(c = 0n) /\
+                                  (0 < b ==> b DIV 2 < b)``)
                 [div_terminate,DECIDE ``~(2 = 0n)``]
-        modexp_def;
+        exp_mod_step_def;
+
+val (_,acl2_exp_mod_binary_def) =
+        convert_definition_full
+                (SOME ``\a b c. ~(c = 0n)``)
+                []
+        exp_mod_binary_def;
 
 val (_,acl2_witness_tail_def) =
         convert_definition_full
@@ -719,7 +708,8 @@ end;
 val _ = output(outs,"(in-package \"ACL2\")\n\n");
 
 val _ = output_thm acl2_factor_twos_def;
-val _ = output_thm acl2_modexp_def;
+val _ = output_thm acl2_exp_mod_step_def;
+val _ = output_thm acl2_exp_mod_binary_def;
 val _ = output_thm acl2_witness_tail_def;
 val _ = output_thm acl2_witness_def;
 val _ = output_thm list_natp_def;
