@@ -273,4 +273,7 @@ val _ = check "Checking a failed queued update raises from the read"
               ((the_compset (); false) handle Fail "queued" => true)
 val _ = check "Checking updates queued after a failure still apply"
               (the_compset (); !applied = 2)
+val _ = upd_compset (fn cs => (the_compset (); count cs))
+val _ = check "Checking an update can read the global compset"
+              (the_compset (); !applied = 3)
 end
