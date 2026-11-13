@@ -31,32 +31,61 @@ fun sadd e s = HOLset.add(s,e)
    context slot.  The current theory's parents can still change, as can
    those of "-" (the fringe of the theory graph), so their ancestries, and
    those of theories whose parents name them, are computed afresh on each
-   use. *)
-type ancestor_memo = string HOLset.set Symtab.table
+   use.  Each theory in the memo has a number, given in the order theories
+   enter it, so its ancestors all have smaller numbers; its ancestry is a
+   bit vector over those numbers. *)
+type bitsets = (int * Word8Vector.vector) Symtab.table
+type ancestor_memo = {next : int, sets : bitsets}
+val empty_ancestor_memo : ancestor_memo = {next = 0, sets = Symtab.empty}
+
+fun bit i = Word8.<< (0w1, Word.fromInt (i mod 8))
+fun bits_member bv i =
+    i div 8 < Word8Vector.length bv andalso
+    Word8.andb (Word8Vector.sub (bv, i div 8), bit i) <> 0w0
+fun byte bv j =
+    if j < Word8Vector.length bv then Word8Vector.sub (bv, j) else 0w0
+fun bits_union (bv1, bv2) =
+    Word8Vector.tabulate
+      (Int.max (Word8Vector.length bv1, Word8Vector.length bv2),
+       fn j => Word8.orb (byte bv1 j, byte bv2 j))
 
 (* A parent list may name the theory itself (e.g., after set_parents
    [current_theory()]); that edge adds nothing to its ancestry *)
 fun proper_parents parents thy =
     List.filter (fn p => p <> thy) (parents {thyname = thy})
 
-fun ancestor_set (memo : ancestor_memo) thy ps =
-    foldl (fn (p, s) => HOLset.union (s, valOf (Symtab.lookup memo p)))
-          (HOLset.singleton String.compare thy) ps
+(* thy (numbered n) and the union of its parents' sets *)
+fun ancestor_bits (sets : bitsets) n ps =
+    let
+      val pbvs = map (fn p => #2 (valOf (Symtab.lookup sets p))) ps
+    in
+      Word8Vector.tabulate
+        (n div 8 + 1,
+         fn j => foldl (fn (bv, w) => Word8.orb (w, byte bv j))
+                       (if j = n div 8 then bit n else 0w0) pbvs)
+    end
+
+fun memo_member (sets : bitsets) bv s =
+    case Symtab.lookup sets s of
+        SOME (i, _) => bits_member bv i
+      | NONE => false
 
 (* Add thy and its ancestors to the memo, except those described above.
    "-" is not visited: the fringe can include a theory whose parents name
    "-" *)
-fun extend_memo parents (thy, memo) =
-    if Symtab.defined memo thy orelse thy = "-" then memo
+fun extend_memo parents (thy, memo : ancestor_memo) =
+    if Symtab.defined (#sets memo) thy orelse thy = "-" then memo
     else
       let
         val ps = proper_parents parents thy
-        val memo' = foldl (extend_memo parents) memo ps
+        val memo' as {next, sets} = foldl (extend_memo parents) memo ps
       in
         if Thm.getCT() = SOME thy orelse
-           not (List.all (Symtab.defined memo') ps)
+           not (List.all (Symtab.defined sets) ps)
         then memo'
-        else Symtab.update (thy, ancestor_set memo' thy ps) memo'
+        else {next = next + 1,
+              sets = Symtab.update (thy, (next, ancestor_bits sets next ps))
+                                   sets}
       end
 
 (* The theories extend_memo would add to the memo, by the same rule but
@@ -76,24 +105,27 @@ fun extend_fixed parents (thy, fx) =
         else Symtab.update (thy, ()) fx'
       end
 
-(* The ancestry of a theory not in the memo *)
-fun fresh_ancestry (memo : ancestor_memo) parents thy =
+(* The ancestry of a theory not in the memo, as a membership test: the
+   theories met outside the memo, and the union of the sets of those in it *)
+fun fresh_ancestry ({sets, ...} : ancestor_memo) parents thy =
     let
-      fun visit (t, acc) =
-          if smem acc t then acc
+      fun visit (t, acc as (names, bv)) =
+          if smem names t orelse memo_member sets bv t then acc
           else
-            case Symtab.lookup memo t of
-                SOME s => HOLset.union (acc, s)
-              | NONE => foldl visit (sadd t acc) (parents {thyname = t})
+            case Symtab.lookup sets t of
+                SOME (_, b) => (names, bits_union (bv, b))
+              | NONE => foldl visit (sadd t names, bv) (parents {thyname = t})
+      val (names, bv) =
+          visit (thy, (HOLset.empty String.compare, Word8Vector.fromList []))
     in
-      visit (thy, HOLset.empty String.compare)
+      fn s => smem names s orelse memo_member sets bv s
     end
 
-(* A function giving the ancestry of each theory in thys and in their
-   ancestries *)
+(* A function giving the ancestry, as a membership test, of each theory in
+   thys and in their ancestries *)
 fun ancestor_sets slot parents thys =
     let
-      val result = ref Symtab.empty
+      val result = ref empty_ancestor_memo
       fun extend memo =
           let
             val memo' = foldl (extend_memo parents) memo thys
@@ -101,11 +133,11 @@ fun ancestor_sets slot parents thys =
             result := memo'; memo'
           end
       val _ = Context.Data.modify slot extend
-      val memo = !result
+      val memo as {sets, ...} = !result
     in
       fn thy =>
-         case Symtab.lookup memo thy of
-             SOME s => s
+         case Symtab.lookup sets thy of
+             SOME (_, bv) => memo_member sets bv
            | NONE => fresh_ancestry memo parents thy
     end
 
@@ -131,7 +163,7 @@ fun merge_start_with lookup (info : ('d,'v) info) thys =
       val ancs = ancestor_sets ancestors parents thys
       (* drop the theories that are ancestors of others in the list *)
       fun redundant thy =
-          List.exists (fn t => t <> thy andalso smem (ancs t) thy) thys
+          List.exists (fn t => t <> thy andalso ancs t thy) thys
       val thys = List.filter (not o redundant) thys
     in
       case fpluck (fn thy => lookup {thyname=thy}) thys of
@@ -143,18 +175,19 @@ fun merge_start (info : ('d,'v) info) thys =
 
 (* Apply, to the starting value, the deltas of the other theories and of
    their ancestors, each theory once *)
-fun merge_from (info : ('d,'v) info) (v0, aset0, rest) : 'v =
+fun merge_from (info : ('d,'v) info) (v0, inanc0, rest) : 'v =
     let
       val {parents,get_deltas,apply_delta,...} = info
+      fun seen aset t = inanc0 t orelse smem aset t
       fun recurse (A, aset) worklist =
           case worklist of
               [] => A
             | Visit thy :: rest =>
-              if smem aset thy then recurse (A, aset) rest
+              if seen aset thy then recurse (A, aset) rest
               else
                 let
                   val ps0 = parents {thyname = thy}
-                  val ps = List.filter (not o smem aset) ps0
+                  val ps = List.filter (not o seen aset) ps0
                   val deltas = get_deltas {thyname = thy}
                 in
                   recurse (A, sadd thy aset)
@@ -163,7 +196,7 @@ fun merge_from (info : ('d,'v) info) (v0, aset0, rest) : 'v =
             | Apply ds :: rest =>
               recurse (rev_itlist apply_delta ds A, aset) rest
     in
-      recurse (Susp.force v0, aset0) (map Visit rest)
+      recurse (Susp.force v0, HOLset.empty String.compare) (map Visit rest)
     end
 
 fun merge (info : ('d,'v) info) thys : 'v option =
@@ -314,7 +347,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
       val ancestors : ancestor_memo Context.Data.slot =
           Context.Data.new
             {name = "ancestry." ^ tag ^ ".ancestors",
-             empty = Symtab.empty,
+             empty = empty_ancestor_memo,
              pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
       val fixed : fixed_set Context.Data.slot =
           Context.Data.new
@@ -469,7 +502,7 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo,
       val ancestors : ancestor_memo Context.Data.slot =
           Context.Data.new
             {name = "ancestry." ^ tag ^ ".ancestors",
-             empty = Symtab.empty,
+             empty = empty_ancestor_memo,
              pp = fn _ => "<ancestry." ^ tag ^ ".ancestors>"}
       val fixed : fixed_set Context.Data.slot =
           Context.Data.new
