@@ -120,14 +120,31 @@ val tactictoe_cache_dir = ref (Option.getOpt (tactictoe_default, ""))
    (opened-structure dumps, generated scripts, heap and dependency
    probes, redirected output).  Everything under it is derived from this
    one ref, so a client that needs a private scratch area -- e.g. a
-   parallel TacticToe recording worker -- rebinds only this. *)
+   parallel TacticToe recording worker -- rebinds only this.
+
+   Unless HOL4_SCRATCH names it, the default is private to this process,
+   so that concurrent processes (two HOL builds run by one user, say)
+   cannot overwrite each other's files.  Made absolute now, so that it
+   names the same directory after the process changes directory. *)
+fun absolute_dir dir =
+  if OS.Path.isAbsolute dir then dir
+  else OS.Path.mkAbsolute {path = dir, relativeTo = OS.FileSys.getDir ()}
+
+val process_scratch_dir =
+  case get_nonempty_env "HOL4_SCRATCH" of
+    SOME _ => NONE
+  | NONE =>
+    Option.map
+      (fn dir => absolute_dir (dir ^ "/" ^ Portable.unique_tmp_suffix ()))
+      (case get_nonempty_env "HOL4_TACTICTOE_CACHE" of
+         SOME dir => SOME (dir ^ "/tmp/scratch")
+       | NONE =>
+           Option.map (fn root => root ^ "/hol4/scratch") (cache_root_opt ()))
+
 val scratch_dir = ref
-  (case tool_cache_dir_opt "HOL4_SCRATCH" "hol4/scratch" of
-     SOME dir => dir
-   | NONE =>
-       case tactictoe_default of
-         SOME dir => dir ^ "/tmp/scratch"
-       | NONE => "")
+  (case get_nonempty_env "HOL4_SCRATCH" of
+     SOME dir => absolute_dir dir
+   | NONE => Option.getOpt (process_scratch_dir, ""))
 
 fun require_dir what dir =
   if dir <> "" then dir else raise ERR what
@@ -146,6 +163,15 @@ fun run_cmd cmd = ignore (OS.Process.system cmd)
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ shell_quote dir ^ "; " ^ cmd)
 fun clean_dir dir = (run_cmd ("rm -rf " ^ shell_quote dir); mkDir_err dir)
+
+(* Remove the process's private scratch directory when it exits.  Only
+   that one: a child process handed its parent's scratch_dir must leave
+   it alone. *)
+val _ =
+  case process_scratch_dir of
+    NONE => ()
+  | SOME dir => OS.Process.atExit (fn () =>
+      if exists_file dir then run_cmd ("rm -rf " ^ shell_quote dir) else ())
 
 (* ------------------------------------------------------------------------
    Comparisons
