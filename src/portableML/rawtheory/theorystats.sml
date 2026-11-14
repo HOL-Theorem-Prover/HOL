@@ -91,9 +91,10 @@ val find_theory_files_action = theoryfiles.find_theory_files_action
 fun find_theory_action dir A =
     let
       open OS.FileSys
-      val objsdirname = dir ++ ".hol/objs"
+      val objsdirname = HFS_NameMunge.objdir_for dir
     in
-      if access (objsdirname, [A_READ, A_EXEC]) andalso isDir objsdirname then
+      if not (HFS_NameMunge.in_objroot dir) andalso
+         access (objsdirname, [A_READ, A_EXEC]) andalso isDir objsdirname then
         let val thys =
                 Portable.listDir objsdirname
                                  |> List.filter (String.isSuffix "Theory.dat")

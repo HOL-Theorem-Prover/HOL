@@ -518,4 +518,17 @@ fun lookup e k =
 
 fun env_extend (k, v) e = Binarymap.insert(e,k,v)
 
+fun extend_with_layout_vars dir env =
+    let
+      val (objroot, srcroot) =
+          case HFS_NameMunge.current_layout () of
+              NONE => ("", "")
+            | SOME {objroot, srcroot} => (objroot, srcroot)
+    in
+      env |> env_extend ("HOLOBJDIR",
+                         [LIT (HFS_NameMunge.holobjdir_var_for dir)])
+          |> env_extend ("HOLOBJROOT", [LIT objroot])
+          |> env_extend ("HOLSRCROOT", [LIT srcroot])
+    end
+
 end (* struct *)

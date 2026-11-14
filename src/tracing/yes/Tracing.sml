@@ -78,7 +78,7 @@ fun trace_theory name args = let
     (map (fn (id, versions) => map (fn origin => (id, origin)) versions)
       (Redblackmap.listItems (!origins)))
 in
-  export (concat[".hol/objs/",name,".tr.gz"],
+  export (HFS_NameMunge.product_file (name ^ ".tr.gz"),
           (1, const_ids, type_ids,
            entries const_origins, entries type_origins, args))
 end

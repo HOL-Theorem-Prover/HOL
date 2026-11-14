@@ -89,7 +89,7 @@ MyDatabase-sig.uo MyDatabase-sig.ui: MyDatabase-sig.sml
 HOLPage.uo: HOLPage.sml MyDatabase.ui
 	$(HOLMOSMLC) -c MyDatabase.ui $<
 
-Htmlsigs.uo: Htmlsigs.sml Htmlsigs.ui MyDatabase.ui
+Htmlsigs.uo: Htmlsigs.sml Htmlsigs.ui MyDatabase.ui HOLPage.uo
 	$(HOLMOSMLC) -c MyDatabase.ui $<
 
 Htmlsigs.ui: Htmlsigs.sig MyDatabase.ui

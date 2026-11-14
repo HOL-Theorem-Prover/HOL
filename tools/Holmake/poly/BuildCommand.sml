@@ -236,6 +236,13 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                         SOME "1" => true
                       | _ => false)
   val thmsrc = #thmsrc (#core optv)
+  (* Pass the layout to hol as command-line options.  The -j1 builder
+     uses Systeml.systeml, which cannot add environment entries. *)
+  val layout_args =
+      case HFS_NameMunge.current_layout () of
+          NONE => []
+        | SOME {objroot, srcroot} =>
+          ["--objroot=" ^ objroot, "--srcroot=" ^ srcroot]
   val interactive_flag = #interactive (#core optv)
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
@@ -267,6 +274,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p ("set -e");
     (* Poly/ML runtime options (--gcthreads) must come before subcommand *)
     p (protect(fullPath [HOLDIR, "bin", "hol"]) ^ " --gcthreads=1 run " ^
+       String.concat (map (fn s => protect s ^ " ") layout_args) ^
        (case #holheap extra of NONE => "--poly"
                              | SOME d => "--holstate="^tgt_toString d) ^ " " ^
        (if isSome debug then "--dbg " else "") ^
@@ -360,7 +368,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             (case maxheap of
                  NONE => []
                | SOME n => ["--maxheap", Int.toString n]) @
-            ["run"] @
+            ["run"] @ layout_args @
             (case #multithread optv of
                  NONE => []
                | SOME i => ["--mt=" ^ Int.toString i]) @
@@ -576,6 +584,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun pr s = s
   fun interpret_graph (g,ok) =
       (if ok then OS.Process.success else OS.Process.failure, g)
+  (* Export the layout to a job's process, as the parallel builder
+     does, so that a Holmake it starts (from a script, say) keeps it. *)
+  fun run_job cl =
+      case layout_exports () of
+          "" => Systeml.systeml cl
+        | exports =>
+          Systeml.system_ps
+            (exports ^ String.concatWith " " (map Systeml.protect cl))
   fun interpret_bres bres =
     case bres of
         BR_OK => true
@@ -586,17 +602,19 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                             search_dirs outs
                             | NONE => false
         in if fetched then true
-           else (prep_for_build (); k warn (Systeml.systeml cl))
+           else (prep_for_build (); k warn (run_job cl))
         end
       | BR_Failed => false
 
 
+  (* Export the layout rather than prefix it, so that every command of
+     a compound recipe (cd sub && $(HOLMAKE)) sees it. *)
   fun system s =
     let val pfx = (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 "
                    else "") ^
                   (case thmsrc of SOME v => "HOL_THMSRC=" ^ v ^ " "
                                 | NONE => "")
-    in Systeml.system_ps (pfx ^ s)
+    in Systeml.system_ps (layout_exports () ^ pfx ^ s)
     end
 
   (* The single-job builder runs each command with its output going

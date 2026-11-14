@@ -532,37 +532,24 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
                             firstsymb := false)
                       else ()
 	    end
-	(* Per-theory doc URL.  When theory_url_base is set (the mdbook
-	   layout, where staged theory pages all live at
-	   <book>/theories/<thy>Theory.html), emit a flat
-	   `<base><thy_file>.html` href.  Otherwise resolve
-	   sigobj/<thy>Theory.sig to the source tree's `.hol/docs/`
-	   location, relative to the file we are currently writing.
-	   Returns NONE for non-theory files or if the legacy symlink
-	   resolution fails. *)
+        (* Per-theory doc URL.  When theory_url_base is set (the mdbook
+           layout, where staged theory pages all live at
+           <book>/theories/<thy>Theory.html), emit a flat
+           `<base><thy_file>.html` href.  Otherwise point at the page
+           that HOLPage.theory_doc_file finds through
+           sigobj/<thy>Theory.sig, relative to the file we are currently
+           writing.  Returns NONE if that resolution fails. *)
 	val outfile_dir = OS.Path.dir outfile
 	fun theory_doc_url thy_file =
 	    if !theory_url_base <> "" then
 	      SOME (!theory_url_base ^ thy_file ^ ".html")
 	    else
-	    let val sigobj_sig =
-		    OS.Path.concat (HOLpath,
-		      OS.Path.concat ("sigobj", thy_file ^ ".sig"))
-	    in
-	      if OS.FileSys.isLink sigobj_sig then
-		let val tgt = OS.FileSys.readLink sigobj_sig
-		    val {dir, ...} = OS.Path.splitDirFile tgt
-		    val src = OS.Path.dir (OS.Path.dir dir)
-		    val abs_doc =
-			OS.Path.concat (src,
-			  OS.Path.concat (".hol/docs", thy_file ^ ".html"))
-		in
-		  SOME (OS.Path.mkRelative
-			  {path = abs_doc, relativeTo = outfile_dir})
-		end
-	      else NONE
-	    end handle OS.SysErr _ => NONE
-		     | OS.Path.Path => NONE
+              case HOLPage.theory_doc_file HOLpath thy_file of
+                  NONE => NONE
+                | SOME abs_doc =>
+                  (SOME (OS.Path.mkRelative
+                           {path = abs_doc, relativeTo = outfile_dir})
+                   handle OS.Path.Path => NONE)
 	fun is_theory_file f = isSome (destProperSuffix "Theory" f)
 	fun mkref key line file =
 	    if is_theory_file file then

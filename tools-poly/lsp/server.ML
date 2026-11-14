@@ -291,11 +291,15 @@ val loadedFrom : (string, string) Binarymap.dict ref =
 
 (* Every file the loader uses, keyed by the module it belongs to.  The
    plan covers transitive dependencies too, so this ends up knowing
-   where more theories came from than the header names. *)
-fun noteLoadedFrom path =
-  (loadedFrom :=
-     Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path))
-  handle _ => ()
+   where more theories came from than the header names.  A plan names
+   files with path variables such as $(HOLDIR), or a project's own,
+   which only the loader expands. *)
+fun noteLoadedFrom path0 =
+  let val path = holpathdb.subst_pathvars path0
+  in
+    loadedFrom :=
+      Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path)
+  end handle _ => ()
 
 (* Holmake writes `d/fooTheory.uo' as `d/.hol/objs/fooTheory.uo' and
    presents it as if it were the former; the script is beside the
@@ -315,18 +319,17 @@ fun scriptBeside path = let
   end handle _ => NONE
 
 (* Where a logical object path really is.  Holmake keeps a directory's
-   objects in `.hol/objs' and presents them as if they sat beside the
-   source, so the path the loader reports is the presented one and
-   stat-ing it answers "absent" for every built directory.  Try the
-   path as given -- an unmunged tree, or sigobj -- then the munged
-   one. *)
+   objects in `.hol/objs', or under an artifact root, and presents them
+   as if they sat beside the source, so the path the loader reports is
+   the presented one and stat-ing it answers "absent" for every built
+   directory.  Try the path as given -- an unmunged tree, or sigobj --
+   then the munged one. *)
 fun physicalArtifact path =
   (if OS.FileSys.access (path, []) then SOME path
-   else let
-     val p = OS.Path.concat
-               (OS.Path.concat (OS.Path.dir path, ".hol"),
-                OS.Path.concat ("objs", OS.Path.file path))
-     in if OS.FileSys.access (p, []) then SOME p else NONE end)
+   else case HFS_NameMunge.HOLtoFS path of
+          SOME {fullfile, ...} =>
+            if OS.FileSys.access (fullfile, []) then SOME fullfile else NONE
+        | NONE => NONE)
   handle _ => NONE
 
 (* Of the modules named, those whose script is newer than the artifact
