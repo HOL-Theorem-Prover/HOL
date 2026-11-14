@@ -317,17 +317,74 @@ val bool_compset =
      branches before the guard is fully true or false *)
   seal (set_skip (from_list bool_redns) boolSyntax.conditional NONE);
 
+(* Loading a theory compiles its compute theorems and datatypes into the
+   global compset, and definitions and datatypes add to it, but nothing
+   reads it until something evaluates.  So every update is queued, as a
+   chain of cells each holding the previous cell and the update, and a
+   read applies the chain in order: the compset it gets is the one eager
+   application would have built, as long as each update depends only on
+   the compset it is given (an update runs at the first read, not when
+   it was made).  An update queued by a load hook (Theory.in_load_hooks)
+   warns on failure, as a load hook does; any other raises from the read
+   that applies it.  The forcing lock keeps two threads from applying
+   the same update twice: updates mutate the per-constant refs of the
+   compset they are given.  An update that reads the global compset
+   itself gets the compset it is updating, as it did when updates were
+   applied at once, rather than waiting on the lock its own thread
+   holds. *)
 local
-  val compset_slot : compset Context.Data.slot =
+  datatype cell = Done of compset | Todo of cell ref * (compset -> compset)
+  val force_lock = Lock.new "computeLib.force"
+  (* the compset the calling thread's forcing is updating, if any *)
+  val forcing : compset option ThreadLocal.t = ThreadLocal.new ()
+  fun forcing_now () = Option.join (ThreadLocal.get forcing)
+  (* Applies the chain oldest first, without recursion: a load queues
+     thousands of updates.  An update that fails or is interrupted has
+     mutated what it got so far; it is marked done rather than left to run
+     again on the same refs. *)
+  fun force r =
+      let
+        fun collect r acc =
+            case !r of
+                Done cs => (cs, acc)
+              | Todo (prev, f) => collect prev ((r, f) :: acc)
+        val (cs0, todo) = collect r []
+        fun apply ((r, f), cs0) =
+            let
+              val _ = ThreadLocal.set (forcing, SOME cs0)
+              val cs = f cs0 handle e => (r := Done cs0; raise e)
+            in r := Done cs; cs end
+        fun done () = ThreadLocal.set (forcing, NONE)
+      in
+        Portable.finally done (List.foldl apply cs0) todo
+      end
+  fun force_locked r =
+      case !r of
+          Done cs => cs
+        | Todo _ =>
+          case forcing_now () of
+              SOME cs => cs
+            | NONE => Lock.synchronized force_lock (fn () => force r)
+  (* A load hook's failure is a warning that leaves the value as it was;
+     a deferred update's failure is reported the same way. *)
+  fun guard f cs =
+      f cs handle Interrupt => raise Interrupt
+                | e => (HOL_WARNING "computeLib" "deferred load update"
+                                    (Feedback.exn_to_string e);
+                        cs)
+  val compset_slot : cell ref Context.Data.slot =
       Context.Data.new
         {name = "computeLib.compset",
-         empty = copy bool_compset,
+         empty = ref (Done (copy bool_compset)),
          pp = fn _ => "<compset>"}
 in
-  fun the_compset_of ctxt = Context.Data.get compset_slot ctxt
+  fun the_compset_of ctxt = force_locked (Context.Data.get compset_slot ctxt)
   fun the_compset () = the_compset_of (Context.snapshot())
-  val put_compset = Context.Data.write compset_slot
-  val upd_compset = Context.Data.modify compset_slot
+  fun put_compset cs = Context.Data.write compset_slot (ref (Done cs))
+  fun upd_compset f =
+      Context.Data.modify compset_slot
+        (fn r => ref (Todo (r, if Theory.in_load_hooks () then guard f
+                               else f)))
 end
 
 fun add_funs thms = upd_compset (add_thms thms)
