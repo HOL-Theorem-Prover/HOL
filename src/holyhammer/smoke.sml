@@ -11,8 +11,14 @@ fun fresh_output () =
     path
   end
 
+fun status_name (hhEval.Szs szs) = hhProver.szs_name szs
+  | status_name hhEval.EvalError = "Error"
+  | status_name hhEval.BrokenDeps = "BrokenDeps"
+  | status_name hhEval.LoadFailure = "LoadFailure"
+
 fun show_result (entry : hhEval.journal_entry) =
-  print (#goal_id entry ^ " [" ^ #prover entry ^ "]: " ^ #szs entry ^
+  print (#goal_id entry ^ " [" ^ #prover entry ^ "]: " ^
+    status_name (#szs entry) ^
     (case #recon_ok entry of
          SOME true => ", reconstructed\n"
        | SOME false => ", reconstruction failed\n"
@@ -29,10 +35,14 @@ fun main () =
         Feedback.quiet_messages Theory.new_theory "hhSmoke"
     val expdir = fresh_output ()
     val entries = hhEval.run_smoke {expdir = expdir, timeout = 30}
+      handle error =>
+        (print ("HolyHammer smoke output kept in " ^ expdir ^ "\n");
+         raise error)
     val _ = app show_result entries
     val _ = print ("HolyHammer smoke passed " ^
       Int.toString (length entries) ^ "/" ^
       Int.toString (length hhEval.smoke_goals) ^ " goals\n")
+    val _ = hhConfig.remove_tree expdir
   in
     OS.Process.success
   end
