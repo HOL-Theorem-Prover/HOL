@@ -33,7 +33,7 @@ AXIOMATIC_THYDIRS = set-theory/vbg set-theory/zfset geometry
 AXIOMATIC_EXAMPLES = $(patsubst %,axiomatic-developments/%,$(AXIOMATIC_THYDIRS))
 
 # example directories to build at selftest level 1
-EXDIRS = algebra/aat \
+EXDIRS = algebra/aat algebra/elliptic \
          arm/arm6-verification arm/armv8-memory-model arm/experimental \
          $(AXIOMATIC_EXAMPLES) \
 	 bnf-datatypes \
@@ -79,6 +79,8 @@ EXDIRS += RL_Environment
 
 ifneq ($(KERNELID),otknl)
 EXDIRS += cv_compute
+# Include the field and curve certificates in the standard PR selftest build.
+EXDIRS += algebra/field_certificates algebra/elliptic/instances/certificates
 SRCTESTDIRS += num/theories/cv_compute/automation/theory_tests
 endif
 endif
@@ -129,6 +131,9 @@ EX3DIRS = arm/ARM_security_properties \
 
 ifdef POLY
 EX3DIRS += machine-code theorem-prover
+ifneq ($(KERNELID),otknl)
+EX3DIRS += algebra/elliptic/instances
+endif
 endif
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX3DIRS))
