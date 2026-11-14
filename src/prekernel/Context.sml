@@ -166,11 +166,9 @@ struct
         report0 ("ambient signature", "live", !sig_action, sig_reported)
   in
     fun in_proof f x =
-        let val n = get ()
-            val () = set (n + 1)
-            val r = f x handle e => (set n; raise e)
+        let fun enter () = let val n = get () in set (n + 1); n end
         in
-          set n; r
+          Portable.bracket enter set (fn _ => f x)
         end
     fun snapshot () =
         (if !action > 0 andalso get () > 0 then
@@ -230,7 +228,7 @@ struct
               Sref.update overrides
                 (fn n => (ThreadLocal.set (override, NONE); n - 1))
         in
-          install (); Portable.finally uninstall f x
+          Portable.bracket install uninstall (fn () => f x)
         end
     fun is_pinned () = Option.isSome (current_pin ())
     (* For the writers outside this block: each of them has to ask
@@ -351,11 +349,11 @@ struct
        because the census counts tactic-level reads and this one has
        never been reported. *)
     fun with_slot_value slot v f x =
-        let val old = get slot (ambient ())
-            val () = write slot v
-            val r = f x handle e => (write slot old; raise e)
-            val () = write slot old
-        in r end
+        let fun enter () =
+                let val old = get slot (ambient ()) in write slot v; old end
+        in
+          Portable.bracket enter (write slot) (fn _ => f x)
+        end
   end
 
 end

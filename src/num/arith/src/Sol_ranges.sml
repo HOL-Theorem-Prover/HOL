@@ -41,7 +41,7 @@ fun less_bound Neg_inf Neg_inf = failwith "less_bound"
   | less_bound Neg_inf Pos_inf = true
   | less_bound (Bound (_,[])) Neg_inf = false
   | less_bound (Bound (r1,[])) (Bound (r2,[])) =
-       ((rat_less r1 r2) handle _ => failwith "less_bound")
+       ((rat_less r1 r2) handle HOL_ERR _ => failwith "less_bound")
   | less_bound (Bound (_,[])) Pos_inf = true
   | less_bound Pos_inf Neg_inf = false
   | less_bound Pos_inf (Bound (_,[])) = false
@@ -53,7 +53,8 @@ fun less_bound Neg_inf Neg_inf = failwith "less_bound"
 (*---------------------------------------------------------------------------*)
 
 fun is_neg_bound (Bound (r,[])) =
-       ((rat_less r rat_zero) handle _ => failwith "is_neg_bound")
+       ((rat_less r rat_zero)
+        handle HOL_ERR _ => failwith "is_neg_bound")
   | is_neg_bound Pos_inf = false
   | is_neg_bound Neg_inf = true
   | is_neg_bound _ = failwith "is_neg_bound";
@@ -107,7 +108,7 @@ fun non_neg_int_between b1 b2 =
      | (Pos_inf,Bound (_,[])) => failwith "fail"
      | (Pos_inf,Pos_inf) => failwith "fail"
      | _ => failwith "fail"
-   ) handle _ => failwith "non_neg_int_between";
+   ) handle HOL_ERR _ => failwith "non_neg_int_between";
 
 (*---------------------------------------------------------------------------*)
 (* inst_var_in_coeffs : (string * int) ->                                    *)
@@ -128,7 +129,7 @@ fun inst_var_in_coeffs (v:string,c) coeffsl =
    else let val (const,bind) = hd coeffsl
             val ((_,coeff),bind') =
                (remove (fn (name,_) => name = v) bind
-                handle _ => ((v,zero),bind))
+                handle Empty => ((v,zero),bind))
         in  (const + (c * coeff),bind')::
                (inst_var_in_coeffs (v,c) (tl coeffsl))
         end
@@ -171,12 +172,14 @@ fun Shostak coeffsl =
                         end
               else failwith "fail"
           end
-       fun try f s = case s () of (Stream (x,s')) => (f x handle _ => try f s')
+       fun try f s =
+          case s () of (Stream (x,s')) => (f x handle HOL_ERR _ => try f s')
        val vars = vars_of_coeffs coeffsl
    in  (if (null vars)
         then Shostak' coeffsl []
         else try (Shostak' coeffsl) (permutations vars)
-       ) handle _ => failwith "Shostak"
+       ) handle HOL_ERR _ => failwith "Shostak"
+              | end_of_stream => failwith "Shostak"
    end;
 
 end

@@ -74,7 +74,8 @@ fun solve_ineqs ineqs var =
                  then (((const',bind')::restl),restr)
                  else (restl,((const',bind')::restr))
              end)
-            handle _ => (restl,restr)
+            handle HOL_ERR _ => (restl,restr)
+                 | Rat_form => (restl,restr)
         end;
 
 (*---------------------------------------------------------------------------*)
@@ -185,7 +186,7 @@ fun SUPP (x,y) =
     | Neg_inf => y
     | (Min_bound bl) => (Min_bound (map (fn y => SUPP (x,y)) bl))
     | (Bound (const,bind)) =>
-         (let val b = (assoc x bind) handle NOT_FOUND => rat_zero
+         (let val b = (assoc x bind) handle HOL_ERR _ => rat_zero
               and bind' = filter (fn p => not (fst p = x)) bind
           in  if ((null bind') andalso (const = rat_zero) andalso
                   (b = rat_one))
@@ -209,7 +210,7 @@ fun INFF (x,y) =
     | Neg_inf => y
     | (Max_bound bl) => (Max_bound (map (fn y => INFF (x,y)) bl))
     | (Bound (const,bind)) =>
-         (let val b = (assoc x bind) handle NOT_FOUND => rat_zero
+         (let val b = (assoc x bind) handle HOL_ERR _ => rat_zero
               and bind' = filter (fn p => not (fst p = x)) bind
           in  if ((null bind') andalso (const = rat_zero) andalso
                   (b = rat_one))

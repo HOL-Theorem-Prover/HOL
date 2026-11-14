@@ -16,6 +16,7 @@ sig
   val private_interrupts: attributes
   val sync_interrupts: attributes -> attributes
   val safe_interrupts: attributes -> attributes
+  val defer_interrupts: attributes -> attributes
   val with_attributes: attributes -> (attributes -> 'a) -> 'a
   val uninterruptible: ((('c -> 'd) -> 'c -> 'd) -> 'a -> 'b) -> 'a -> 'b
   val expose_interrupt: unit -> unit  (*exception Interrupt*)
@@ -87,6 +88,10 @@ fun safe_interrupts (Attributes w) =
     val w' = Word.andb (w, interrupt_state);
     val w'' = Word.andb (w, Word.notb interrupt_state);
   in Attributes (if w' = interrupt_asynch then Word.orb (w'', interrupt_asynch_once) else w) end;
+
+(*deferred, but unlike no_interrupts keeping the broadcast flag, so that
+  a broadcast interrupt is recorded rather than dropped*)
+fun defer_interrupts (Attributes w) = Attributes (Word.andb (w, broadcast));
 
 fun with_attributes new_atts e =
   let

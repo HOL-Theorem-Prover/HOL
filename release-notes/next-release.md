@@ -206,6 +206,15 @@ Bugs fixed
     TFL registers the support definitions it makes on the way (the `_tupled` one, for example) as user definitions and then deletes their constants once the real definition is made, so the table of user definitions kept entries for constants that no longer existed.
     Such entries are now skipped.
 
+-   An interrupt arriving while `with_flag`, `genwith_flag`, `finally` or `with_traces` was putting things back could cut the restore short and leave the flag or trace changed.
+    With `Timeout.apply`, a tactic that returned just before its deadline could leave a slow restore half done.
+    The restores (and the matching ones in `Context.with_context`, `Context.in_proof` and `Context.Data.with_slot_value`) now run with interrupts deferred, on the new `Portable.bracket`; an interrupt that arrives meanwhile is delivered once the restore is done.
+    `with_traces` also resets the traces it already set when a later one in its list is unknown or out of range.
+
+-   The arithmetic decision procedure (`ARITH_CONV`, `ARITH_ss`) and `congLib` caught `Interrupt` in their catch-all failure handlers.
+    Under `Timeout.apply`, whose timer interrupts once, the interrupt became an ordinary `HOL_ERR`, or the search carried on past the deadline.
+    The handlers now catch only the exceptions they expect (mostly `HOL_ERR`), so `Interrupt` passes through.
+
 New theories
 ------------
 

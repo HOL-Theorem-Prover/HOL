@@ -450,20 +450,16 @@ fun current_trace nm =
     | NONE => registered_err "current_trace" nm
 
 fun with_traces flags f x =
-  let fun update_flag (nm,j) =
+  let fun with_trace (nm,j) g y =
           case find_record nm
            of NONE => registered_err "with_traces" nm
             | SOME {value, maximum, ...} =>
-              let val i = trfp_get value
-                  fun reset_value() = trfp_set value i
-              in bound_check "with_traces" nm maximum j;
-                 trfp_set value j;
-                 reset_value end
-      val reset_fns = map update_flag flags
-      fun reset_flags() = List.app (fn f => f()) reset_fns
-      val y = f x handle e => (reset_flags(); Portable.reraise e)
+              let fun set () =
+                      (bound_check "with_traces" nm maximum j;
+                       trfp_get value before trfp_set value j)
+              in Portable.bracket set (trfp_set value) (fn _ => g y) end
   in
-     reset_flags(); y
+    List.foldr (fn (flag, g) => with_trace flag g) f flags x
   end
 
 fun trace flag = with_traces [flag]

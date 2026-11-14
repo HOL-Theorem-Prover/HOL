@@ -252,7 +252,7 @@ end
 
 fun ELIM_COND1 t = find_celim I t t
 
-fun op_of_app tm = op_of_app (rator tm) handle _ => tm
+fun op_of_app tm = op_of_app (rator tm) handle HOL_ERR _ => tm
 
 val COND_ELIM_CONV =
    TOP_DEPTH_CONV

@@ -60,7 +60,7 @@ fun Rat (i,j) =
              then rat ((~i'),(~j'))
              else rat (i',j')
          end
-   ) handle _ => raise Rat_form;
+   ) handle Feedback.HOL_ERR _ => raise Rat_form;
 
 fun Numerator (rat (i,_)) = i;
 

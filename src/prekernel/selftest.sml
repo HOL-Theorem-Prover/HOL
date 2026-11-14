@@ -123,3 +123,17 @@ val _ =
     else die ("FAILED: pinned read " ^ Int.toString restoredInPin ^
               " (want 5), live cell " ^ Int.toString (readSlot ()) ^
               " (want 2)")
+
+val _ = tprint "with_traces resets the traces it set when a later one fails"
+
+val selftest_trace = ref 0
+val () = Feedback.register_trace ("selftest_trace", selftest_trace, 2)
+val bad_traces =
+    Exn.capture
+      (Feedback.with_traces [("selftest_trace", 1), ("no such trace", 1)]
+                            (fn () => ())) ()
+
+val _ =
+    case (bad_traces, !selftest_trace) of
+        (Exn.Exn (Feedback.HOL_ERR _), 0) => print "OK\n"
+      | (_, n) => die ("FAILED: selftest_trace left at " ^ Int.toString n)
