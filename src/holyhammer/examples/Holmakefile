@@ -1,0 +1,3 @@
+# realLib is only linked into sigobj late in a full build; naming its
+# directory lets the examples build after a partial build too.
+INCLUDES = $(HOLDIR)/src/real
