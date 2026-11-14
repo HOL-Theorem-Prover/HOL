@@ -762,17 +762,20 @@ fun force_add (ss as SS sset) f =
 
  exception CONVNET of net;
 
- fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) = let
+ (* the rewrites a context theorem adds, in the order they are added *)
+ fun context_rewrites_convdata rwts =
+     List.mapPartial mk_rewr_convdata
+       (map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
+            rwts)
+ fun context_convdata mk_rewrs th =
+     context_rewrites_convdata (mk_rewrs (dest_tagged_rewrite th))
+
+ fun rewriter_with convdata (SS{mk_rewrs,travrules,initial_net,...}) = let
    fun addcontext (context,thms) = let
      val net = (raise context) handle CONVNET net => net
-     val cthms = map dest_tagged_rewrite thms
-     val new_rwts0 = flatten (map mk_rewrs cthms)
-     val new_rwts =
-         map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
-             new_rwts0
    in
      CONVNET
-       (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
+       (net_add_convs net (List.concat (map (convdata mk_rewrs) thms)))
    end
    fun apply {solver,conv,context,stack,relation} tm = let
      val net = (raise context) handle CONVNET net => net
@@ -785,12 +788,14 @@ fun force_add (ss as SS sset) f =
                initial=CONVNET initial_net}
    end;
 
- fun traversedata_for_ss (ss as (SS ssdata)) =
-      {rewriters=[rewriter_for_ss ss],
+ fun traversedata_with convdata (ss as (SS ssdata)) =
+      {rewriters=[rewriter_with convdata ss],
        dprocs= #dprocs ssdata,
        relation= boolSyntax.equality,
        travrules= #travrules ssdata,
        limit = #limit ssdata};
+
+ val traversedata_for_ss = traversedata_with context_convdata
 
  fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);
 
@@ -990,14 +995,96 @@ fun stdcon (c : simptac_config) th =
         (caa_tac0 (not (#oldestfirst c)) c)
         th
 
-fun psr (cfg : simptac_config) ss =
-    let val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
+(* SIMP_RULE ss l, with the context rewrites of each assumption in l
+   derived once per `rws` and reused.  They are a function of the theorem,
+   and a theorem whose only hypothesis is its untagged conclusion is
+   ASSUME of that conclusion, so they are kept for such theorems only,
+   by conclusion, and only while process_tags leaves ss as it is.  A
+   bounded rewrite counts its uses in its conversion, so rewrites are kept
+   only when none of them is bounded. *)
+fun simp_rule_reusing rws ss l =
+    let
+      fun convdata mk_rewrs th =
+          let
+            val t = concl th
+            fun unbounded (_, UNBOUNDED) = true
+              | unbounded _ = false
+            fun derive () =
+                let
+                  val rwts = mk_rewrs (dest_tagged_rewrite th)
+                  val cds = context_rewrites_convdata rwts
+                in
+                  if List.all unbounded rwts then
+                    rws := Redblackmap.insert (!rws, t, (t, cds))
+                  else ();
+                  cds
+                end
+          in
+            case (hyp th, Tag.isEmpty (Thm.tag th)) of
+                ([h], true) =>
+                if not (Portable.pointer_eq (h, t)) then
+                  context_convdata mk_rewrs th
+                else
+                  (case Redblackmap.peek (!rws, t) of
+                       SOME (t', cds) =>
+                       if Portable.pointer_eq (t', t) then cds else derive ()
+                     | NONE => derive ())
+              | _ => context_convdata mk_rewrs th
+          end
+      fun conv tm =
+          let
+            val (ss', l') = process_tags ss l
+            val data = if Portable.pointer_eq (ss', ss) then
+                         traversedata_with convdata ss'
+                       else traversedata_for_ss ss'
+          in
+            TRY_CONV (TRAVERSE data l') tm
+          end
     in
-      popper (fn th =>
-                 ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+      CONV_RULE conv
     end
 
-fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
+(* SIMP_RULE's result depends only on the simpset, the context's assumptions
+   in order and the assumption simplified, so an assumption it left
+   unchanged under a context needs no second attempt under the same
+   context.  `seen` records those (assumption, context) pairs, found by
+   the assumption and compared by pointer, for one simpset. *)
+fun psr0 (seen, rws) (cfg : simptac_config) ss =
+    let
+      val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
+      fun simp th asl =
+          let
+            val t = concl th
+            val tried = getOpt (Redblackmap.peek (!seen, t), [])
+            fun same (t', asl') =
+                Portable.pointer_eq (t', t) andalso
+                ListPair.allEq Portable.pointer_eq (asl', asl)
+          in
+            if List.exists same tried then th
+            else
+              let
+                val th' = simp_rule_reusing rws ss (map ASSUME asl) th
+              in
+                if Portable.pointer_eq (concl th', t) then
+                  seen := Redblackmap.insert (!seen, t, (t, asl) :: tried)
+                else ();
+                th'
+              end
+          end
+    in
+      popper (fn th => fn (g as (asl, _)) => stdcon cfg (simp th asl) g)
+    end
+
+fun new_memo () =
+    (ref (Redblackmap.mkDict Term.compare),
+     ref (Redblackmap.mkDict Term.compare))
+
+fun psr cfg ss g = psr0 (new_memo ()) cfg ss g
+
+fun allasms0 memo cfg ss (g as (asl,_)) =
+    ntac (length asl) (psr0 memo cfg ss) g
+
+fun allasms cfg ss g = allasms0 (new_memo ()) cfg ss g
 
 fun global_simp_tac cfg ss0 =
     markerLib.mk_require_tac (
@@ -1007,8 +1094,9 @@ fun global_simp_tac cfg ss0 =
              let
                val (ss1,thl') = process_tags ss0 thl
                val ss = ss1 ++ rewrites thl'
+               val memo = new_memo ()
              in
-               rpt (CHANGED_TAC (allasms cfg ss)) THEN
+               rpt (CHANGED_TAC (allasms0 memo cfg ss)) THEN
                ASM_SIMP_TAC ss []
              end
         )

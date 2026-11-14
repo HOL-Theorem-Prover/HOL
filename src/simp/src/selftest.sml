@@ -490,6 +490,118 @@ in
   ]
 end
 
+(* global_simp_tac doesn't simplify an assumption again in a context it
+   left it unchanged in, and derives each assumption's context rewrites once
+   per call; its goals are those of the plain rounds, written out here for
+   assumptions that neither strip nor close the goal. *)
+val _ = let
+  val calls = ref 0
+  val derived = ref 0
+  val Q_t = “Q (c:'a) : bool”
+  val count_ss =
+      bool_ss ++ conv_ss {name = "count_Q", trace = 2, key = SOME ([], Q_t),
+                          conv = fn _ => fn _ => fn _ =>
+                                    (calls := !calls + 1; failwith "count")}
+              ++ SSFRAG {name = SOME "count_rewrs", convs = [], rewrs = [],
+                         ac = [], dprocs = [], congs = [],
+                         filter = SOME (fn th => (derived := !derived + 1;
+                                                  [th]))}
+  val cfg = {droptrues=true,elimvars=false,strip=true,oldestfirst=true}
+  val round : tactic = fn (g as (asl, _)) =>
+      ntac (length asl)
+           (pop_last_assum (fn th =>
+              ASSUM_LIST (fn asms => ASSUME_TAC (SIMP_RULE count_ss asms th))))
+           g
+  val plain = rpt (CHANGED_TAC round) THEN ASM_SIMP_TAC count_ss []
+  fun count tac g =
+      (calls := 0; derived := 0; (#1 (runtac tac g), !calls, !derived))
+  fun counts (a, b) = Int.toString a ^ " vs " ^ Int.toString b
+  fun test (msg, g, fewer) =
+      let
+        val (want, plain_calls, plain_derived) = count plain g
+        val (got, gs_calls, gs_derived) =
+            count (global_simp_tac cfg count_ss []) g
+      in
+        tprint msg;
+        if list_eq goal_eq want got andalso
+           fewer ((gs_calls, plain_calls), (gs_derived, plain_derived))
+        then OK ()
+        else die ("goals " ^ printgoals (got, ()) ^ " vs " ^
+                  printgoals (want, ()) ^ "; Q simplified " ^
+                  counts (gs_calls, plain_calls) ^
+                  " times; rewrites derived " ^
+                  counts (gs_derived, plain_derived) ^ " times")
+      end
+in
+  test ("global_simp_tac skips assumptions unchanged in the same context",
+        ([Q_t, “x:'a = y”, “P (x:'a) : bool”], “p:bool”),
+        fn ((a, b), _) => a < b);
+  test ("global_simp_tac derives context rewrites once per assumption",
+        ([Q_t, “Pd (d:'a) : bool”, “Pe (e:'a) : bool”], “p:bool”),
+        fn (_, (a, b)) => a < b)
+end
+
+(* global_simp_tac's goals are those of plain rounds of psr, which starts
+   afresh on every assumption it pops, for every configuration: through
+   variable elimination, stripping, dropped truths, contradictions, a goal
+   closed by an assumption, and an assumption a later round must simplify
+   because its context changed after a round that left it unchanged. *)
+val _ = let
+  fun plain cfg ss =
+      rpt (CHANGED_TAC
+             (fn (g as (asl, _)) => ntac (length asl) (psr cfg ss) g))
+      THEN ASM_SIMP_TAC ss []
+  fun cfg (ev, old) =
+      {droptrues = true, elimvars = ev, strip = true, oldestfirst = old}
+  val cfgs = map cfg [(false, true), (false, false), (true, true),
+                      (true, false)] @
+             [{droptrues = false, elimvars = true, strip = false,
+               oldestfirst = true}]
+  fun cfg_name {droptrues, elimvars, strip, oldestfirst} =
+      String.concat
+        (map (fn (b, s) => if b then s else "")
+             [(elimvars, " ev"), (oldestfirst, " of"), (strip, " st"),
+              (droptrues, " dt")])
+  val goals = [
+    ("later round",
+     ([“(c:'a = e) \/ F”, “P (c:'a) : bool”], “Q (c:'a) : bool”)),
+    ("chain",
+     ([“(d:'a = c) \/ F”, “(c:'a = e) \/ F”, “P (d:'a) : bool”],
+      “Q (d:'a) : bool”)),
+    ("strip/truths/elim",
+     ([“P (x:'a) /\ U (y:'a)”, “R (x:'a) /\ (z:'a = z)”, “x:'a = f y”],
+      “Q (x:'a) : bool”)),
+    ("contradiction",
+     ([“~((a:'a) = a)”, “P (a:'a) : bool”], “Q (a:'a) : bool”)),
+    ("closes goal",
+     ([“P (a:'a) \/ F”, “R (a:'a) : bool”], “P (a:'a) : bool”))
+  ]
+  (* each rewrite derived from the context may be used once *)
+  fun once (th, _) = [(th, BoundedRewrites.BOUNDED (ref 1))]
+  val bounded_ss =
+      bool_ss ++ SSFRAG {name = SOME "bounded", convs = [], rewrs = [],
+                         ac = [], dprocs = [], congs = [],
+                         filter = SOME once}
+  val bounded_goal =
+      ([“f (a:'a) = (b:'a)”, “Q (f (a:'a) : 'a) : bool”,
+        “P (f (a:'a) : 'a) : bool”], “R (a:'a) : bool”)
+  fun test0 ss c (name, g) =
+      let
+        val want = #1 (runtac (plain c ss) g)
+        val got = #1 (runtac (global_simp_tac c ss []) g)
+      in
+        tprint ("global_simp_tac as plain rounds: " ^ name ^ cfg_name c);
+        if list_eq goal_eq want got then OK ()
+        else die ("goals " ^ printgoals (got, ()) ^ " vs " ^
+                  printgoals (want, ()))
+      end
+  val test = test0 bool_ss
+in
+  List.app (fn c => List.app (test c) goals) cfgs;
+  List.app (fn c => test0 bounded_ss c ("bounded rewrites", bounded_goal))
+           cfgs
+end
+
 (* The simpset layer must never use a directive as a rewrite: requirement
    directives are refused (their marker$ hypothesis would otherwise reach
    the result), tactic-only ones are dropped. *)
