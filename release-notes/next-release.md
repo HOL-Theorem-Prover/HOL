@@ -202,6 +202,10 @@ Bugs fixed
     Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors now takes about half the CPU time it did.
     What is merged, and in what order, is unchanged.
 
+-   When a process loaded a theory's ancestors, each kind of ancestry-based data (simpsets, grammars, theorem sets and the rest) built the set of ancestors of every loaded theory, though most of these sets were never read.
+    A theory's ancestor sets are now built when its data is first read, and kept as bit vectors; on a theory with 3,832 ancestors, the live heap after loading them falls from 1,756 MB to 1,066 MB.
+    What is merged, and in what order, is unchanged, except that a loaded theory whose recorded ancestry names the theory itself (as after `set_grammar_ancestry [current_theory(), "bool"]`) now gets its own value; before, it had none.
+
 -   `DefnBase.current_userdefs` and `DefnBase.thy_userdefs` failed with a `prim_mk_const` error in any session that had defined a function with recursion or complex patterns.
     TFL registers the support definitions it makes on the way (the `_tupled` one, for example) as user definitions and then deletes their constants once the real definition is made, so the table of user definitions kept entries for constants that no longer existed.
     Such entries are now skipped.

@@ -28,6 +28,12 @@ sig
                                       'value -> 'value) option,
                      uptodate_delta : setdelta -> bool, initial_value : 'value,
                      apply_delta : setdelta -> 'value -> 'value}
+  (* apply_delta returns the new value and writes nothing else: it may be
+     called any number of times for the same delta, at any point after the
+     theory that recorded it is loaded, or never.  Changes to the state
+     belong in apply_to_global and thy_finaliser, which run once for each
+     theory as it is loaded.  Each theory's own value (DB) is computed
+     when first read; see AncestryData.fullmake *)
   val export_with_ancestry:
       {settype : string, delta_ops : 'value ops} ->
       (setdelta,'value) AncestryData.fullresult
