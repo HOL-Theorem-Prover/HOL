@@ -26,12 +26,20 @@ fun bOpcode out opc = bByte out (Word8.fromInt opc)
 
 (* --- Header and footer ---------------------------------------------------- *)
 
+(* A failed flush can leave the stream open; retry closing after it. *)
+fun abortOut out = BinIO.closeOut out handle _ => BinIO.closeOut out
+
 fun openOut {file, version, ruleset} = let
   val out = BinIO.openOut file
-in bBytes out (Byte.stringToBytes "PFT\000");
+in
+  (bBytes out (Byte.stringToBytes "PFT\000");
    bString out version;
    bString out ruleset;
-   out
+   out)
+  handle e =>
+    ((abortOut out handle _ => ());
+     (OS.FileSys.remove file handle _ => ());
+     raise e)
 end
 
 fun closeOut out {n_ty, n_tm, n_th} = let
@@ -47,6 +55,7 @@ fun closeOut out {n_ty, n_tm, n_th} = let
 in bByte out lo; bByte out hi;
    BinIO.closeOut out
 end
+
 
 (* --- Type commands ------------------------------------------------------- *)
 

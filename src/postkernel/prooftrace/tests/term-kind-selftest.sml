@@ -1,0 +1,33 @@
+val () = if phase <> "replay" then () else
+  (term_kind_check (replay_bool ["term-kinds.hol4.pft"]); pass ());
+
+open HolKernel boolSyntax;
+val () = Theory.new_theory "pft_term_kinds";
+val f = mk_var("f",bool --> bool);
+val x = mk_var("x",bool);
+val abstraction = mk_abs(f,x);
+val nested = mk_abs(f,abstraction);
+val retained = CONJUNCT2 (CONJ (REFL (mk_comb(f,x))) (REFL nested));
+val renamed = Thm.SUBST [x |-> REFL x] (concl retained) retained;
+val () = save_exact "RENAME" (mk_eq(nested,nested)) renamed;
+
+(* The discarded COMB shares its children with this closed ABS. Its proof
+   remains reachable, while the existential's body has no free variables. *)
+val closed_abs = mk_abs(f,T);
+val closed = CONJUNCT2
+  (CONJ (REFL (mk_comb(f,T))) (REFL closed_abs));
+val v = mk_var("v",bool);
+val witness = EXISTS (mk_exists(v,concl closed),T) closed;
+val specified = Thm.prim_specification ["unused"] witness;
+val () = save_exact "SPEC" (mk_eq(closed_abs,closed_abs)) specified;
+
+(* An empty cosmetic name is a legal variable name, not a CONST marker. *)
+val y = mk_var("y",bool);
+val empty_inner = Term.rename_bvar "" (mk_abs(y,x));
+val empty_outer = Term.rename_bvar "" (mk_abs(x,empty_inner));
+val () = save_exact "EMPTY_BINDER" (mk_eq(empty_outer,empty_outer))
+  (REFL empty_outer);
+val () = Theory.export_theory ();
+val () = print "TERM_KIND_ACTUAL_EXPORT_PASS\n";
+
+val () = convert "pft_term_kinds" "term-kinds";

@@ -9,6 +9,9 @@ signature PFTWriter = sig
   (* Close the stream. Writes the footer (namespace array bounds). *)
   val closeOut : pft_out -> {n_ty: int, n_tm: int, n_th: int} -> unit
 
+  (* Close an aborted stream without writing a footer. *)
+  val abortOut : pft_out -> unit
+
   (* Type commands *)
   val tyvar : pft_out -> int -> string -> unit
   val tyop  : pft_out -> int -> string -> int list -> unit
