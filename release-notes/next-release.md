@@ -135,6 +135,10 @@ Bugs fixed
 -   Omega's model reconstruction no longer fails when eliminating a variable
     leaves a single constrained variable and another unconstrained variable.
 
+-   Once `intLib` was loaded, simplifying a ground integer division by zero with `srw_ss`, *e.g.*, `SIMP_CONV (srw_ss()) [] “5 % 0i”`, never returned.
+    The simplifier's integer-calculation conversion now fails on terms it cannot reduce, as the `num` one already did.
+    HolRefute's certificate replay also bounds the simplification of each leaf, so a looping rewrite there no longer uses up the whole replay deadline.
+
 -   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
     Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
