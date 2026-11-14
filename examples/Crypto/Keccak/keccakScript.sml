@@ -4200,8 +4200,6 @@ val _ = chi_spt_def |> SRULE [mapi_def] |> cv_auto_trans;
 
 val _ = cv_trans spt_to_string_def;
 
-val _ = cv_trans b2w_def;
-
 val pre = rc_step_def |> SRULE [LET_THM] |> cv_trans_pre "rc_step_pre";
 Theorem rc_step_pre[cv_pre]:
   ∀r. rc_step_pre r ⇔ 8 ≤ LENGTH r
