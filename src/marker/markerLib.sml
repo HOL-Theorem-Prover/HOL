@@ -1051,6 +1051,7 @@ val (susp_enc, susp_dec) = bij_ed (
                   ("rm", pair_ed (string_ed, string_ed)))
 
 val {record_delta = record_suspension_delta_raw,
+     get_deltas = get_susp_deltas, set_deltas = set_susp_deltas,
      get_global_value = get_susp_global,
      update_global_value = update_susp_global,
      DB = susp_DB,
@@ -1128,6 +1129,7 @@ val (res_enc, res_dec) = bij_ed (
                   ("rm", pair_ed (string_ed, string_ed)))
 
 val {record_delta = record_resumption_delta_raw,
+     get_deltas = get_res_deltas, set_deltas = set_res_deltas,
      get_global_value = get_res_global,
      update_global_value = update_res_global,
      DB = res_DB,
@@ -1148,6 +1150,45 @@ val {record_delta = record_resumption_delta_raw,
 fun record_resumption_delta d =
     (update_res_global (apply_res_delta d);
      record_resumption_delta_raw d)
+
+(* At export, drop each add that a later remove in the current
+   theory's own delta list cancels (finalise records the removes), so
+   descendants don't load theorems no lookup can reach.  Every remove
+   stays: it may cancel an ancestor's add.  The list is rewritten only
+   when an add was dropped, so theories without such adds keep their
+   data as it is.  key d is (true, k) when d removes k and (false, k)
+   when it adds under k. *)
+fun drop_cancelled_adds key ds =
+    let
+      fun step (d, (rms, kept)) =
+          case key d of
+              (true, k) => (k :: rms, d :: kept)
+            | (false, k) => if mem k rms then (rms, kept)
+                            else (rms, d :: kept)
+    in
+      #2 (List.foldr step ([], []) ds)
+    end
+
+fun compact_deltas get set key =
+    let
+      val ds = get {thyname = Theory.current_theory()}
+      val ds' = drop_cancelled_adds key ds
+    in
+      if length ds' < length ds then set ds' else ()
+    end
+
+fun susp_key (AddSuspended (k, _)) = (false, k)
+  | susp_key (RemoveSuspended k) = (true, k)
+
+fun res_key (AddResumption ((thy, nm, _), _)) = (false, (thy, nm))
+  | res_key (RemoveResumptions p) = (true, p)
+
+val _ = Theory.register_hook
+  ("markerLib.compact_suspension_deltas",
+   fn TheoryDelta.ExportTheory _ =>
+        (compact_deltas get_susp_deltas set_susp_deltas susp_key;
+         compact_deltas get_res_deltas set_res_deltas res_key)
+     | _ => ())
 
 (* Public lookup helpers. *)
 

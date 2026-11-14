@@ -295,6 +295,7 @@ type ('delta,'value) fullresult =
        DB_of : Context.t -> {thyname : string} -> 'value option,
        get_deltas : {thyname : string} -> 'delta list,
        record_delta : 'delta -> unit,
+       set_deltas : 'delta list -> unit,
        parents : {thyname : string} -> string list,
        set_parents : string list -> 'value option,
        get_global_value : unit -> 'value,
@@ -397,6 +398,7 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
             vopt
           end
       fun record_delta d = export_raw_delta (ThyDataSexp.List [enc d])
+      fun set_deltas ds = set_raw_deltas (ThyDataSexp.List (map enc ds))
       fun onload s =
           parent_onload parent_extras {thyname = s,
                                        data = get_raw_parents {thyname = s}}
@@ -405,6 +407,7 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
       {merge = merge info, DB = valueDB, DB_of = valueDB_of,
        get_deltas = get_deltas,
        record_delta = record_delta,
+       set_deltas = set_deltas,
        parents = get_parents,
        set_parents = set_ancestry,
        get_global_value = get_global_value,
