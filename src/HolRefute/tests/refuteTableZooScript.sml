@@ -1,6 +1,6 @@
 Theory refuteTableZoo
 Ancestors
-  refute ltree itreeTau fixedPoint
+  refute ltree itreeTau fixedPoint rich_list
 Libs
   TotalDefn Refute_ModelFinder_Names Refute_Core quotient Omega
 
@@ -1283,6 +1283,48 @@ Inductive zoo_hotel_pinned:
            zoo_hotel_pinned s r g)
 End
 
+(* Bounded quantifiers inside a definition's body, as a program's
+   well-formedness predicates have them.  The extractor has to rewrite
+   them into list searches: neither [!x. MEM x l ==> P x] nor the two-index
+   [!i j. i < j /\ j < LENGTH l ==> P i j] is a function equality it can
+   execute.  No compute rules: the selftest supplies the list forms below,
+   so that the executability gate and the certifier see executable
+   equations while extraction reads the quantified ones. *)
+Definition zoo_all_small_def[nocompute]:
+  zoo_all_small (l : num list) <=> !x. MEM x l ==> x < 3
+End
+
+Definition zoo_sorted_def[nocompute]:
+  zoo_sorted (l : num list) <=>
+    !i j. i < j /\ j < LENGTH l ==> EL i l <= EL j l
+End
+
+Definition zoo_pairs_bounded_def[nocompute]:
+  zoo_pairs_bounded (l : num list) (m : num list) <=>
+    !x y. MEM x l /\ MEM y m ==> x + y < 4
+End
+
+Theorem zoo_all_small_compute:
+  zoo_all_small l <=> EVERY (\x. x < 3) l
+Proof
+  simp [zoo_all_small_def, listTheory.EVERY_MEM]
+QED
+
+Theorem zoo_sorted_compute:
+  zoo_sorted l <=>
+    EVERY (\j. EVERY (\i. EL i l <= EL j l) (COUNT_LIST j))
+          (COUNT_LIST (LENGTH l))
+Proof
+  simp [zoo_sorted_def, listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST]
+  >> metis_tac []
+QED
+
+Theorem zoo_pairs_bounded_compute:
+  zoo_pairs_bounded l m <=> EVERY (\x. EVERY (\y. x + y < 4) m) l
+Proof
+  simp [zoo_pairs_bounded_def, listTheory.EVERY_MEM] >> metis_tac []
+QED
+
 (* Point-free relative to its own type, though not relative to its
    pattern: the equation binds two formals, but [strip_fun] on
    [(num -> num) -> num -> (num -> num)] peels the trailing arrow too,
@@ -1379,3 +1421,30 @@ QED
 val zoo_opaque_spec =
   new_specification
     ("zoo_opaque_spec", ["zoo_opaque", "zoo_seed"], zoo_opaque_exists);
+
+(* Sets inside definitions: the executable gate admits only goal constants
+   the compset knows, and the set constants are membership predicates to
+   the extractor, so a goal reaches them through a definition. *)
+Definition zoo_in_small_def:
+  zoo_in_small (x : num) <=> x IN {y | y < 3}
+End
+
+Definition zoo_in_either_def:
+  zoo_in_either (x : num) a b <=> x IN a INSERT b INSERT {}
+End
+
+Definition zoo_in_empty_def:
+  zoo_in_empty (x : num) <=> x IN {}
+End
+
+Definition zoo_in_shifted_def:
+  zoo_in_shifted (x : num) <=> x IN {y + 1 | y < 3}
+End
+
+Definition zoo_restrict_small_def:
+  zoo_restrict_small (f : num |-> num) = DRESTRICT f {x | x < 2}
+End
+
+Definition zoo_restrict_to_def:
+  zoo_restrict_to (f : num |-> num) k = DRESTRICT f {k}
+End

@@ -936,6 +936,23 @@ val _ = test "backend input form selects instances or the original"
             | _ => false)))
     end)
 
+val _ = test "Only runs backends in caller order, once per name" (fn () =>
+  let
+    val enabled = ref false
+    val seen = ref ([] : string list)
+    fun backend name weight = register_backend (stub name weight enabled
+      (fn _ => fn _ => (seen := !seen @ [name]; Unknown [])))
+    val _ = backend "selftest-order-low" ~90
+    val _ = backend "selftest-order-high" ~80
+  in
+    with_enabled [enabled] (fn () =>
+      (ignore (refute (default_config |> quiet |> upd_sequential true
+        |> only [RegisteredBackend "selftest-order-high",
+                 RegisteredBackend "selftest-order-low",
+                 RegisteredBackend "selftest-order-high"]) ``T``);
+       !seen = ["selftest-order-high", "selftest-order-low"]))
+  end)
+
 val _ = test "backends run concurrently unless sequential" (fn () =>
   let
     val enabled = ref false
@@ -1072,13 +1089,14 @@ val _ = test "interrupting the caller unwinds the backends" (fn () =>
       let
         fun forever () =
           Multithreading.synchronized "selftest wait" mutex (fn () =>
-            let fun wait () = (ConditionVar.wait (ready, mutex); wait ())
+            let
+              (* Announce only after finally has installed unwind. *)
+              val _ = (started := !started + 1; ConditionVar.broadcast ready)
+              fun wait () = (ConditionVar.wait (ready, mutex); wait ())
             in wait () end)
         fun unwind () =
           Multithreading.synchronized "selftest unwind" mutex (fn () =>
             (unwound := !unwound + 1; ConditionVar.broadcast ready))
-        val _ = Multithreading.synchronized "selftest start" mutex (fn () =>
-          (started := !started + 1; ConditionVar.broadcast ready))
       in
         Portable.finally unwind forever (); Unknown []
       end
@@ -1196,6 +1214,8 @@ val _ = Datatype.Datatype
 val _ = Datatype.Datatype `rg_custom = RGC0 | RGC1`
 val _ = Datatype.Datatype `rg_reentrant = RGR0 | RGR1`
 val _ = Datatype.Datatype `rg_avl = RGET | RGMKT num rg_avl rg_avl num`
+val _ = Datatype.Datatype
+  `rg_nest = RGNInt num | RGNArr ((num # rg_nest) list)`
 
 val rx_enum_code_def = TotalDefn.Define
   `rx_enum_code RGRed = 0 /\ rx_enum_code RGGreen = 1 /\
@@ -1432,8 +1452,7 @@ val _ = test "an expired deadline never claims NoCounterexample" (fn () =>
     val cfg = exhaustive |> only [RegisteredBackend "selftest-expired"]
     val _ = with_enabled [enabled]
       (fn () => ignore (refute cfg ``(b : bool) \/ ~b``))
-    (* The smart-gate cache lives in the call's session, so the backend
-       body needs one even with no call around it. *)
+    (* Substrate work uses the call's session even when driven directly. *)
     fun run_exhaustive config =
       Refute_Session.run (Context.snapshot ()) (fn () =>
         Refute_QC.strategy_run Refute_Eval.Exhaustive config (!seen))
@@ -1473,6 +1492,126 @@ val _ = test "parallel and sequential agree" (fn () =>
   in
     agree arith andalso agree ``!b : bool. b \/ ~b``
   end)
+
+local
+  val cfg = qc |> upd_timeout 60.0 |> upd_sequential true
+    |> upd_seed (SOME 42) |> only [Exhaustive] |> upd_size 8
+in
+  val _ = test "deterministic existentials run and certify" (fn () =>
+    genuine_certified (refute cfg
+      ``!n : num. ?m. (if n < 3 then SOME (n + 1) else NONE) = SOME m /\
+                      m < 3``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?y. SOME (x + 1) = SOME y /\ y < 5``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. (x, x + 1) = (a, b) /\ b < 5``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. 5 < x \/ ~(?y. SOME (x + 1) = SOME y /\ y < 5)``) andalso
+    (* the negated existential where [SOME_11] cannot reduce the
+       equation, at the top, in an antecedent, and under a disjunction *)
+    genuine_certified (refute cfg
+      ``!x : num. ~?y. (if x = 1 then SOME 1000 else NONE) = SOME y /\
+                       0 < y``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. (?y. (if x = 1 then SOME 1000 else NONE) = SOME y /\
+                       0 < y) ==> x = 2``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. x = 0 \/
+                  ~?y. (if x = 1 then SOME 1000 else NONE) = SOME y /\
+                       0 < y``) andalso
+    (* a pair component that exposes an option equation *)
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. ((if x < 3 then SOME (x + 1) else NONE), x) =
+                        (SOME a, b) /\ a < 3``) andalso
+    (* the equation is not the first conjunct: after a bound, in the
+       middle, and under a negation *)
+    genuine_certified (refute cfg
+      ``!n : num. ?m. m <> 1 /\
+                      (if n < 3 then SOME (n + 1) else NONE) = SOME m``)
+    andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b : num. b < 3 /\ (x, x + 1) = (a, b)``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?m. 0 < x /\
+                      SOME m = (if x < 3 then SOME (x + 1) else NONE) /\
+                      m < 2``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ~?m. m < 2 /\
+                       (if x < 3 then SOME (x + 1) else NONE) = SOME m``)
+    andalso
+    let
+      val outcome = refute (cfg |> upd_timeout 2.0)
+        ``!x : num. ?y. SOME (x + 1) = SOME y /\ 0 < y``
+    in
+      not_refuted outcome andalso
+      not (unknown_with "not executable" outcome)
+    end)
+
+  (* binders the equation does not fix stay quantified, in either
+     order *)
+  val _ = test "an unwound existential keeps its other binders" (fn () =>
+    genuine_certified (refute cfg
+      ``!n : num. ?m (b : bool).
+          (if n < 3 then SOME (n + 1) else NONE) = SOME m /\ (b \/ m < 2)``)
+    andalso
+    genuine_certified (refute cfg
+      ``!n : num. ?(b : bool) m.
+          (if n < 3 then SOME (n + 1) else NONE) = SOME m /\ (b \/ m < 2)``))
+
+  (* a quantifier inside the unwound binder's matrix still joins the
+     prefix, where the counterexample binds it *)
+  val _ = test "quantifiers beside an unwound binder stay prenex"
+    (fn () =>
+      genuine_certified (refute cfg
+        ``!n : num. 0 < n ==>
+            !m. (if n < 3 then SOME n else NONE) = SOME m ==>
+                !k : num. m + k < 4``) andalso
+      genuine_certified (refute cfg
+        ``!x : num. (?y. (if x < 3 then SOME x else NONE) = SOME y /\
+                         ?k : num. y + k = 3) ==> x = 0``))
+
+  val _ = test "constructor existentials unwind to a case split" (fn () =>
+    genuine_certified (refute cfg
+      ``!x : num. ?y. (if x = 0 then NONE else SOME x) = SOME y``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?y. SOME y = (if x = 0 then NONE else SOME x)``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?y. (if x < 2 then INL x else INR (x = 5)) = INL y``)
+    andalso
+    genuine_certified (refute cfg
+      ``!n : num. ?h t. (if n = 0 then [] else [n; n]) = h :: t``)
+    andalso
+    genuine_certified (refute cfg ``!n : num. ?m. n = SUC m /\ m < 3``)
+    andalso
+    genuine_certified (refute cfg
+      ``!x : num. (?y. (if x < 3 then SOME x else NONE) = SOME y /\ 0 < y)
+                  ==> x = 1``))
+
+  val _ = test "a pair equation with a non-pair side unwinds" (fn () =>
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. (if x < 3 then (x, x + 1) else (0, 0)) = (a, b) /\
+                        b < 3``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b. (a, b) = (if x < 3 then (x, x + 1) else (0, 0)) /\
+                        b < 3``) andalso
+    genuine_certified (refute cfg
+      ``!x : num. ?a b c.
+          (if x < 3 then (x, x + 1, 0 : num) else (0, 0, 0)) =
+          (a, b, c) /\ b < 3``))
+
+  (* A component that is not a binder: no constructor match, so the
+     equation is split into FST/SND equations, wherever it sits in the
+     matrix's conjunction tree. *)
+  val _ = test "a pair equation with a non-binder component splits"
+    (fn () =>
+      genuine_certified (refute cfg
+        ``!x : num. ?a. (if x < 3 then (x, x + 1) else (0, 0)) =
+                        (a, x + 1) /\ a < 3``) andalso
+      genuine_certified (refute cfg
+        ``!x : num. ?a. (x < 10 /\
+                         (if x < 3 then (x, x + 1) else (0, 0)) =
+                         (a, x + 1)) /\ a < 3``))
+end
 
 (* ------------------------------------------------------------------- *)
 (* Random backend                                                      *)
@@ -1527,6 +1666,25 @@ val _ = test "random stays Genuine on a specialised relation" (fn () =>
   genuine (refute (seeded |> upd_max_counterexamples 1 |> upd_iterations 100
                      |> upd_timeout 300.0)
                   ``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``))
+
+(* Generated whole and filtered, a list of length 40 almost never shows
+   up; built from 40 element variables, every candidate meets the premise.
+   Random testing alone, since narrowing reaches such a list without the
+   plan. *)
+val _ = test "a LENGTH premise generates lists of exactly that length"
+  (fn () =>
+    genuine_certified (refute (random |> upd_timeout 30.0
+                                      |> upd_seed (SOME 42))
+      ``!w : num list. LENGTH w = 40 ==> EVERY (\x. x = 0) w``))
+
+(* Each list's elements are fresh variables, distinct from the other's;
+   reusing names would generate one variable twice, and the Compute
+   substrate would reject the plan. *)
+val _ = test "two LENGTH premises of one element type both generate"
+  (fn () =>
+    genuine_certified (refute (exhaustive |> upd_substrate Compute
+                                          |> upd_size 2 |> upd_sequential true)
+      ``!xs ys : num list. LENGTH xs = 3 /\ LENGTH ys = 3 ==> xs = ys``))
 
 (* ------------------------------------------------------------------- *)
 (* Narrowing backend                                                   *)
@@ -1589,7 +1747,7 @@ val _ = test "a witness hole does not divert the existential case split"
 val _ = test "mixed and incomplete prefixes are certified" (fn () =>
   let
     val mixed = ``(b : bool) /\ (?x : rg_enum. rx_enum_code x = 3)``
-    val incomplete = ``?y : bool. (x : num) = 0 /\ y``
+    val incomplete = ``?y : bool. (x : num) = 0 /\ (y \/ x = 1)``
   in
     refute (nar |> upd_size 2) mixed |> single_cex_where (certifies mixed)
     andalso
@@ -1597,9 +1755,10 @@ val _ = test "mixed and incomplete prefixes are certified" (fn () =>
       |> single_cex_where (certifies incomplete)
   end)
 
+(* Not [?n. n = 4], which normalization unwinds to [T]. *)
 val _ = test "an exhausted narrowing search is Unknown" (fn () =>
   List.all (fn cfg => unknown_with "narrowing search exhausted"
-                        (refute cfg ``?n : num. n = 4``))
+                        (refute cfg ``?n : num. n + 1 = 5``))
     [nar |> upd_size 2, nar |> upd_size 2 |> upd_certify false] andalso
   unknown_with "narrowing search exhausted"
     (refute (nar |> upd_size 2) ``?xs : bool list. LENGTH xs = 3``))
@@ -1616,9 +1775,10 @@ val _ = test "true existential goals never yield Genuine" (fn () =>
     sound 2 ``?f : rg_enum -> bool. f RGRed /\ f RGGreen /\ ~f RGBlue`` andalso
     sound 3 ``?p : (rg_enum -> bool) # bool.
                 FST p RGRed /\ FST p RGGreen /\ ~FST p RGBlue`` andalso
-    sound 2 ``!x : num. ?y. y = SUC x`` andalso
-    sound 2 ``!p : num # num. ?n. n = SUC (FST p + SND p)`` andalso
-    sound 2 ``!xs : num list. ?ys. ys = 0 :: xs``
+    (* binder sides that normalization cannot unwind *)
+    sound 2 ``!x : num. ?y. PRE y = x`` andalso
+    sound 2 ``!p : num # num. ?n. PRE n = FST p + SND p`` andalso
+    sound 2 ``!xs : num list. ?ys. DROP 1 ys = xs``
   end)
 
 val _ = test "datatype and custom enumerations" (fn () =>
@@ -1673,6 +1833,15 @@ val _ = test "finite_functions false refuses function domains" (fn () =>
 val _ = test "narrowing reaches MEM" (fn () =>
   genuine (refute narrowing ``!l : num list. MEM 0 l``))
 
+(* A pair list whose element datatype mentions the same pair list again.
+   Lazily, the pair and the list are generated datatypes, and the element's
+   registration meets them while their own is still under way; each must be
+   registered once, or its equality and the element's constructor name two
+   different ML types and the program does not compile. *)
+val _ = test "narrowing compares a pair list nested in its element" (fn () =>
+  genuine (refute nar
+    ``!al : (num # rg_nest) list. ~MEM (1, RGNInt 0) al``))
+
 (* An alternative id denotes the same character at every depth, so the
    generated program needs one reconstruction arm per character, not one
    per (depth, character).  Emitting the depth-indexed form instead makes
@@ -1690,13 +1859,68 @@ val _ = test "narrowing publishes an uncertified dependent interval"
     refute narrowing ``!i : num. lo <= i /\ i < LENGTH l ==> EL i l <= k``
     |> cex_where (fn c => is_genuine c andalso uncertified c))
 
+(* A two-column case matrix with a wildcard, as a case expression and as
+   equations, where [Define] expands the wildcard into one equation per
+   remaining constructor pair.  Compiled as a flattened matrix, every row
+   tests several constructors and falls through to the next row; with the
+   rows chained through local closures, Poly/ML copied each closure into
+   every test, and the program did not compile within the budget. *)
+val _ = Datatype.Datatype
+  `rg_cm_key = RGK1 num | RGK2 num | RGK3 | RGK4 | RGK5 num | RGK6`
+val _ = Datatype.Datatype
+  `rg_cm_val = RGV1 bool | RGV2 num | RGV3 num | RGV4 | RGV5 (num list) |
+               RGV6 num | RGV7 | RGV8 num`
+
+val rx_matrix_def = TotalDefn.Define
+  `rx_matrix k v = case (k, v) of
+       (RGK1 n, RGV2 m) => m <= n
+     | (RGK2 n, RGV3 m) => m <= n
+     | (RGK3, RGV1 b) => b
+     | (RGK4, RGV4) => T
+     | (RGK5 n, RGV5 l) => LENGTH l <= n
+     | (RGK6, RGV6 m) => T
+     | (RGK3, RGV8 m) => m = 0
+     | (RGK6, RGV7) => T
+     | _ => F`
+
+val rx_matrix_eqn_def = TotalDefn.Define
+  `(rx_matrix_eqn (RGK1 n) (RGV2 m) = (m <= n)) /\
+   (rx_matrix_eqn (RGK2 n) (RGV3 m) = (m <= n)) /\
+   (rx_matrix_eqn RGK3 (RGV1 b) = b) /\
+   (rx_matrix_eqn RGK4 RGV4 = T) /\
+   (rx_matrix_eqn (RGK5 n) (RGV5 l) = (LENGTH l <= n)) /\
+   (rx_matrix_eqn RGK6 (RGV6 m) = T) /\
+   (rx_matrix_eqn RGK3 (RGV8 m) = (m = 0)) /\
+   (rx_matrix_eqn RGK6 RGV7 = T) /\
+   (rx_matrix_eqn _ _ = F)`
+
+val _ = test "narrowing compiles a two-column case matrix" (fn () =>
+  genuine (refute (nar |> upd_timeout 5.0)
+    ``rx_matrix RGK4 v ==> v <> RGV4``))
+
+val _ = test "narrowing compiles a two-argument equation matrix" (fn () =>
+  genuine (refute (nar |> upd_timeout 5.0)
+    ``rx_matrix_eqn RGK4 v ==> v <> RGV4``))
+
 val _ = test "narrowing declines by name what it cannot enumerate" (fn () =>
-  unknown_with "not extractable"
-    (refute narrowing ``FLOOKUP (fm : num |-> num) 0 = SOME 0``) andalso
   unknown_with "no TypeBase information for :rat"
     (refute narrowing ``(x : rat) = rat_of_num 1``) andalso
   unknown_with "no TypeBase information for :real"
     (refute narrowing ``(x : real) = real_of_num 1``))
+
+(* The certificate normalizes the goal's closure, whose prefix puts the
+   free [opt] after [x]; the universal fixed through [SOME] must survive
+   there just as it does in the goal narrowing searched. *)
+val _ = test "a universal fixed through SOME certifies beside free variables"
+  (fn () =>
+    let
+      val imp = ``!x : num. opt = SOME x ==> x < 3``
+      val neg = ``!x : num. ~(opt = SOME x /\ 0 < x)``
+    in
+      refute (nar |> upd_size 4) imp |> single_cex_where (certifies imp)
+      andalso
+      refute (nar |> upd_size 4) neg |> single_cex_where (certifies neg)
+    end)
 
 (* ------------------------------------------------------------------- *)
 (* Finite maps and finite sets                                         *)
@@ -1781,6 +2005,23 @@ val _ = section "smart generators"
 
 val linear_goal = ``zoo_sg_linear (n : num) ==> n < 3``
 val native = exhaustive |> upd_substrate NativeSML
+
+val _ = test
+  "sequential search reaches earlier backends before smart compilation"
+  (fn () =>
+    let
+      val enabled = ref false
+      val _ = register_backend (stub "selftest-before-smart" ~80 enabled
+        (fn _ => fn _ => NoCounterexample))
+      val (outcome, text) = with_enabled [enabled] (fn () =>
+        capture 2 (fn () =>
+          refute (default_config |> upd_sequential true |> upd_timeout 2.5
+            |> only [RegisteredBackend "selftest-before-smart", Exhaustive])
+            linear_goal))
+    in
+      outcome == NoCounterexample andalso
+      not (String.isSubstring "Refute substrate selection:" text)
+    end)
 
 val _ = test "an inductive premise is enumerated at depth" (fn () =>
   with_compset [zoo_sg_linear_compute] (fn () =>
@@ -1950,6 +2191,142 @@ val _ = test "native handles MEM, option maps and compound updates" (fn () =>
   both_strategies (native |> upd_size 3)
     ``((SOME 1 =+ T) (upd_f : num option -> bool)) NONE`` native_genuine)
 
+(* Native exhaustive and random testing, and narrowing, all through
+   extraction: a counterexample from each, certified. *)
+val native_small = native |> upd_size 3
+val narrowing_small = nar |> upd_timeout 3.0
+
+fun native_refuted goal =
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies native_small goal certified andalso
+    refute narrowing_small goal |> cex_where certified
+  end
+
+fun native_not_refuted goal =
+  not_refuted (refute (native_small |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (native_small |> only [Random] |> upd_seed (SOME 1))
+                 goal) andalso
+  not_refuted (refute narrowing_small goal)
+
+(* A let-bound local function reaches the extractor as the binding
+   [f x y = e] whichever way it was written (pairSyntax's [dest_anylet]
+   presents [let f = \x y. e] the same way). *)
+val _ = test "let-bound local functions are extracted" (fn () =>
+  List.all native_refuted
+    [``let f x y = x + y : num in f a b = a``,
+     ``let f = \x y. x + y : num in f a b = a``,
+     ``let f (x, y) = x + y : num in f (a, b) = a``,
+     ``let f x = x + 1 : num; g y = y * 2 : num in f (g a) = g (f a)``]
+  andalso
+  List.all native_not_refuted
+    [``let f x y = x + y : num in f a b = f b a``,
+     ``let f = \x y. x + y : num in f a b = f b a``])
+
+val _ = test "bounded quantifiers inside definitions are extracted" (fn () =>
+  with_compset [zoo_all_small_compute, zoo_sorted_compute,
+                zoo_pairs_bounded_compute] (fn () =>
+    List.all native_refuted
+      [``zoo_all_small l ==> EVERY (\x. x < 2) l``,
+       ``zoo_sorted l ==> ALL_DISTINCT l``,
+       ``zoo_pairs_bounded l m ==> EVERY (\x. x < 2) l``]
+    andalso
+    List.all native_not_refuted
+      [``zoo_all_small l ==> EVERY (\x. x < 3) l``,
+       ``zoo_sorted (x :: l) ==> zoo_sorted l``,
+       ``zoo_pairs_bounded l m ==> zoo_pairs_bounded m l``]))
+
+(* Narrowing already matched word literals lazily; the strict pattern is
+   what native exhaustive and random exercise. *)
+val _ = test "a word literal is a strict case pattern" (fn () =>
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies native_small
+      ``(case (w : word8) of 0w => (1 : num) | _ => 2) = 1`` certified andalso
+    (* random draws over all of word8 rarely hit one value *)
+    (refute (native_small |> only [Exhaustive])
+      ``(case (w : word8) of 0w => (1 : num) | 1w => 3 | _ => 2) <> 3``
+     |> cex_where certified) andalso
+    not_refuted (refute (native_small |> only [Exhaustive])
+      ``(case (w : word8) of 0w => (0 : num) | _ => 1) < 2``) andalso
+    not_refuted (refute (native_small |> only [Random] |> upd_seed (SOME 1))
+      ``(case (w : word8) of 0w => (0 : num) | _ => 1) < 2``)
+  end)
+
+val _ = test "FUNPOW and COUNT_LIST are primitives in both modes" (fn () =>
+  List.all native_refuted
+    [``FUNPOW SUC n (m : num) = m``,
+     ``FUNPOW (\xs : num list. 0 :: xs) n [] = []``,
+     ``MEM (x : num) (COUNT_LIST n) ==> x < 2``]
+  andalso
+  List.all native_not_refuted
+    [``FUNPOW SUC n (m : num) = n + m``,
+     ``LENGTH (FUNPOW (\xs : num list. 0 :: xs) n []) = n``,
+     ``MEM (x : num) (COUNT_LIST n) ==> x < n``])
+
+local
+  val bits = exhaustive |> upd_substrate NativeSML |> upd_timeout 60.0
+    |> upd_sequential true |> upd_size 3
+in
+  (* Each goal is false at a word in 0 .. 3, the values exhaustive
+     testing tries at size 3; a hit is certified only when HOL's own
+     evaluation of the bit-field operator agrees with the native one, so
+     the certificate checks the primitive's semantics, including an empty
+     [h < l] field. *)
+  val _ = test "bit-field operators run natively and certify" (fn () =>
+    List.all (fn goal => genuine_certified (refute bits goal))
+      [``!w : 256 word. ((255 >< 128) w : 128 word) = (127 >< 0) w``,
+       ``!a : 128 word. !b : 128 word. ((a @@ b) : 256 word) = b @@ a``,
+       ``!w : 64 word. (1 '' 1) w = (1 -- 1) w``,
+       ``!w : 64 word. (63 -- 60) w = (3 -- 0) w``,
+       ``!w : 64 word. ((1 >< 1) w : 8 word) = 0w``,
+       ``!w : 64 word. (3 -- 5) w = w``,
+       ``!w : 64 word. ((3 >< 5) w : 4 word) = w2w w``])
+
+  (* Fixed inputs where a wrong primitive would differ: the field
+     straddles the top bit, sits at the top bit, is empty ([h < l]) on a
+     nonzero word, and the halves of a join carry different values.
+     Each goal is false exactly when the native value is HOL's, since
+     the certificate replays the evaluation in HOL. *)
+  val _ = test "bit-field primitives agree with HOL on fixed inputs"
+    (fn () =>
+      List.all (fn goal => genuine_certified (refute bits goal))
+        [``!b : bool. b \/ (70 -- 60) (0xF0000000F0000020w : 64 word) <> 15w``,
+         ``!b : bool. b \/ (63 -- 60) (0xF0000000F0000020w : 64 word) <> 15w``,
+         ``!b : bool. b \/ (63 -- 32) (0xF0000000F0000020w : 64 word)
+                            <> 0xF0000000w``,
+         ``!b : bool. b \/ (7 '' 4) (0xF0000000F0000020w : 64 word) <> 0x20w``,
+         ``!b : bool. b \/ (3 -- 5) (0xF0000000F0000020w : 64 word) <> 0w``,
+         ``!b : bool. b \/ (3 '' 5) (0xF0000000F0000020w : 64 word) <> 0w``,
+         ``!b : bool. b \/ ((3 >< 5) (0xF0000000F0000020w : 64 word) : 4 word)
+                            <> 0w``,
+         ``!b : bool. b \/
+                      ((70 >< 60) (0xF0000000F0000020w : 64 word) : 8 word)
+                      <> 15w``,
+         ``!b : bool. b \/ ((35 >< 4) (0xF0000000F0000020w : 64 word) : 8 word)
+                            <> 2w``,
+         ``!b : bool. b \/ (((0xABw : 8 word) @@ (0xCDw : 8 word)) : 16 word)
+                            <> 0xABCDw``,
+         ``!b : bool. b \/ (((0xABw : 8 word) @@ (0xCDw : 8 word)) : 12 word)
+                            <> 0xBCDw``])
+
+  val _ = test "bit-field witnesses agree with Compute" (fn () =>
+    List.all (fn goal =>
+      let
+        val cfg = bits |> upd_size 2
+        fun first s = first_cex (refute (cfg |> upd_substrate s) goal)
+      in
+        case (first NativeSML, first Compute) of
+            (SOME a, SOME b) =>
+              is_genuine a andalso is_genuine b andalso same_bindings a b
+          | _ => false
+      end)
+      [``!w : 64 word. (1 '' 1) w = (1 -- 1) w``,
+       ``!a : 32 word. !b : 32 word. ((a @@ b) : 64 word) = b @@ a``])
+end
+
 (* A specification is keyed by its left-hand side's head constant and hides
    that constant's own definition: [zoo_hidden_pick_spec] shadows
    [zoo_hidden_def] the way [pred_set]'s [GSPECIFICATION] shadows
@@ -1977,6 +2354,138 @@ val _ = test "native char-list primitives" (fn () =>
      ``!s : string. s <> [] ==> FRONT s = s``,
      ``!s : string. ALL_DISTINCT s ==> LENGTH s < 2``])
 
+(* Finite maps are FEMPTY/FUPDATE chains in the generated code, read
+   through their entries, so an operation sees the map and not the chain.
+   Narrowing refines a map through the same constructors. *)
+val native_fmap = native |> upd_size 3
+val narrowing_fmap = nar |> upd_timeout 3.0
+
+fun fmap_refuted goal =
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies native_fmap goal certified andalso
+    refute narrowing_fmap goal |> cex_where certified
+  end
+
+fun fmap_not_refuted goal =
+  not_refuted (refute (native_fmap |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (native_fmap |> only [Random] |> upd_seed (SOME 1))
+                 goal) andalso
+  not_refuted (refute narrowing_fmap goal)
+
+val _ = test "native finite-map primitives refute false properties" (fn () =>
+  List.all fmap_refuted
+    [``FLOOKUP ((f : num |-> num) |+ (k, v)) k = FLOOKUP f k``,
+     ``k IN FDOM (f : num |-> num) ==> k IN FDOM (f \\ k')``,
+     ``((f : num |-> num) |+ (k, v)) ' k' = f ' k'``,
+     ``FLOOKUP (FUNION (f : num |-> num) g) k = FLOOKUP g k``,
+     ``FEVERY (\(k, v). v < 2) ((f : num |-> num) |+ (k, v))``,
+     ``FCARD ((f : num |-> num) |+ (k, v)) = FCARD f + 1``,
+     ``FLOOKUP ((f : bool |-> num) |+ (k, v)) k' = FLOOKUP f k'``,
+     ``FEVERY (\(k, v). v = 0) (f : num |-> num) \/ FCARD f < 2``])
+
+val _ = test "native finite-map primitives leave true properties alone"
+  (fn () =>
+    List.all fmap_not_refuted
+      [``FLOOKUP ((f : num |-> num) |+ (k, v)) k = SOME v``,
+       ``k IN FDOM ((f : num |-> num) \\ k') ==> k IN FDOM f``,
+       ``FLOOKUP (FUNION (f : num |-> num) g) k =
+         (case FLOOKUP f k of NONE => FLOOKUP g k | SOME v => SOME v)``,
+       ``FEVERY (\(k, v). v < 2) (f : num |-> num) ==>
+         FEVERY (\(k, v). v < 2) (f \\ k)``,
+       ``FCARD ((f : num |-> num) \\ k) <= FCARD f``])
+
+val _ = test "native SUBMAP" (fn () =>
+  fmap_refuted ``(f : num |-> num) |+ (k, v) SUBMAP f`` andalso
+  fmap_not_refuted ``((f : num |-> num) \\ k) SUBMAP f``)
+
+(* Certification would discard a structural "counterexample" to a true
+   equality (Compute decides the instance true) and the search would just
+   go on, so the true goals run uncertified: a structural comparison then
+   surfaces as a counterexample.  A refusal (an unextractable type, a
+   substrate declining) would also leave the goals unrefuted, so the
+   outcome must be a search that ran out, not a refusal. *)
+fun fmap_searched goal =
+  let
+    fun searched outcome =
+      not_refuted outcome andalso
+      not (unknown_with "extract" outcome) andalso
+      not (unknown_with "substrate" outcome) andalso
+      not (unknown_with "executable" outcome) andalso
+      not (unknown_with "HOL_ERR" outcome)
+    val uncertified = native_fmap |> upd_certify false
+  in
+    searched (refute (uncertified |> only [Exhaustive]) goal) andalso
+    searched (refute (uncertified |> only [Random] |> upd_seed (SOME 1))
+                goal) andalso
+    searched (refute (narrowing_fmap |> upd_certify false) goal)
+  end
+
+val _ = test "native finite-map equality is extensional" (fn () =>
+  fmap_searched
+    ``(f : num |-> num) |+ (1, 2) |+ (3, 4) = f |+ (3, 4) |+ (1, 2)`` andalso
+  fmap_searched ``(f : num |-> num) |+ (k, 1) |+ (k, 2) = f |+ (k, 2)``
+  andalso
+  fmap_refuted ``(f : num |-> num) |+ (k, 1) = f |+ (k, 2)`` andalso
+  fmap_refuted ``FLOOKUP (f : bool |-> bool) T = FLOOKUP f' T ==> f = f'``)
+
+(* Sets are membership predicates: [EMPTY], [INSERT] and a comprehension
+   [{ x | P x }] compile to functions, and [DRESTRICT] keeps the entries
+   whose key the function accepts.  A smart generator planned from a
+   premise's definition is gated like a goal, so plain enumeration reaches
+   the sets through their definitions. *)
+val set_native = native |> upd_size 4 |> upd_smart_generators false
+
+fun set_refuted goal =
+  let
+    fun certified c = native_genuine c andalso Option.isSome (#cert c)
+  in
+    both_strategies set_native goal certified andalso
+    refute narrowing_fmap goal |> cex_where certified
+  end
+
+fun set_not_refuted goal =
+  not_refuted (refute (set_native |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (set_native |> only [Random] |> upd_seed (SOME 1))
+                 goal) andalso
+  not_refuted (refute narrowing_fmap goal)
+
+val _ = test "sets and DRESTRICT are extracted" (fn () =>
+  List.all set_refuted
+    [``zoo_in_small x ==> x < 2``,
+     ``zoo_in_either x a b ==> x = a``,
+     ``zoo_in_empty x \/ x < 2``,
+     ``FLOOKUP (zoo_restrict_small f) k = FLOOKUP f k``,
+     ``FLOOKUP (zoo_restrict_to (f |+ (k, v)) k) k = NONE``] andalso
+  List.all set_not_refuted
+    [``zoo_in_small x ==> x < 3``,
+     ``~zoo_in_empty x``,
+     ``zoo_in_either x a a ==> x = a``,
+     ``FLOOKUP (zoo_restrict_to f k) k = FLOOKUP f k``,
+     ``k IN FDOM (zoo_restrict_small f) ==> k < 2``])
+
+val _ = test "a comprehension that is not a membership predicate is refused"
+  (fn () =>
+    unknown_with "not a membership predicate"
+      (refute (native_fmap |> only [Exhaustive])
+         ``zoo_in_shifted x ==> x < 2``))
+
+val _ = test "finite sets and SUBMAP pass the executable gate" (fn () =>
+  let
+    val cfg = qc |> upd_timeout 30.0 |> upd_sequential true
+      |> upd_seed (SOME 42) |> only [Exhaustive] |> upd_size 8
+  in
+    genuine_certified (refute cfg ``!x : num. x IN {1; 2} ==> x = 1``)
+    andalso
+    (* [{}] is the constant the gate used to refuse *)
+    genuine_certified (refute cfg ``!x : num. x NOTIN {} ==> x = 1``)
+    andalso
+    genuine_certified (refute cfg
+      ``!f : num |-> num. f SUBMAP FEMPTY |+ (1, 2)``) andalso
+    not_refuted (refute cfg ``!f : num |-> num. FEMPTY SUBMAP f``)
+  end)
+
 val _ = test "substrates agree on small goals" (fn () =>
   let
     val base = default_config |> quiet |> upd_iterations 100 |> upd_size 3
@@ -1998,10 +2507,10 @@ val _ = test "substrates agree on small goals" (fn () =>
       agree Compute NativeSML strategy goal) strategies) goals
   end)
 
-(* word64 random draws are two draws of the 64-bit PRNG, one per half, and
-   both substrates must consume them in the same order.  Almost every draw
-   refutes this goal, so the witness is the draw itself and comparing
-   witnesses really compares streams. *)
+(* A word64 random draw takes several draws of the 64-bit PRNG
+   ([Refute_Eval.random_word]), and both substrates must consume them in
+   the same order.  Almost every draw refutes this goal, so the witness is
+   the draw itself and comparing witnesses really compares streams. *)
 val _ = test "word64 random draws agree across substrates" (fn () =>
   let
     val goal = ``!w : word64. w = 0w``
@@ -2062,14 +2571,7 @@ val _ = test "an explicit substrate declines by name" (fn () =>
     declines NativeSML "custom generator registered" ex andalso
     declines NativeSML "custom generator registered" rnd andalso
     unknown_with "custom generator registered for :rg_custom_matrix"
-      (refute native ``(x : rg_custom_matrix) = RGCustomA``) andalso
-    (* A registered family must be declined by name, not by dying inside
-       the generator derivation. *)
-    (let val outcome = refute native flookup_goal in
-       is_unknown outcome andalso
-       not (unknown_with "HOL_ERR" outcome) andalso
-       not (unknown_with "axiom_of" outcome)
-     end)
+      (refute native ``(x : rg_custom_matrix) = RGCustomA``)
   end)
 
 (* The three message flags are process-global, and a compiled test's
@@ -2128,9 +2630,9 @@ val _ = test "trace 2 reports selection and the race" (fn () =>
        "selected compute"] andalso
     outcome == NoCounterexample andalso
     List.all (fn needle => String.isSubstring needle race)
-      ["Refute backend started (weight 20): exhaustive",
-       "Refute backend started (weight 30): random",
-       "Refute backend started (weight 40): narrowing"] andalso
+      ["Refute backend started (weight 30): exhaustive",
+       "Refute backend started (weight 20): random",
+       "Refute backend started (weight 10): narrowing"] andalso
     (not kodkodi_configured orelse
      String.isSubstring "Refute backend started (weight 50): kodkod" race)
   end)
@@ -2170,6 +2672,53 @@ val _ = test "random never claims NoCounterexample for itree" (fn () =>
        String.isSubstring "random search exhausted"
          (Feedback.exn_to_string e))
   end)
+
+(* A mutual family loaded from an ancestor theory has no [COPY] entry
+   tying its members together: each member is [ORIG], with one shared
+   induction theorem.  Generators must still see one family, or each
+   member's generator asks for the other's forever and no backend
+   starts. *)
+val _ = test "a mutual family from an ancestor theory gets generators"
+  (fn () =>
+    let
+      fun orig ty =
+        case TypeBasePure.induction_of0 (valOf (TypeBase.fetch ty)) of
+          TypeBasePure.ORIG _ => true
+        | TypeBasePure.COPY _ => false
+      val goal = ``!v : api_mval. v <> ApiMArr (ApiMDyn [])``
+    in
+      orig ``:api_mval`` andalso orig ``:api_marr`` andalso
+      genuine (refute (exhaustive |> upd_timeout 5.0) goal) andalso
+      genuine (refute (nar |> upd_timeout 5.0) goal)
+    end)
+
+(* The same shape in the current theory: a theory may install its own
+   mutual induction principle on each type of a group, leaving two [ORIG]
+   entries and no [COPY] link between them. *)
+val _ = Datatype.Datatype
+  `fam_expr = FELit num | FEAt fam_target ;
+   fam_target = FTName num | FTSub fam_target fam_expr`
+
+val _ =
+  let
+    val induction = TypeBase.induction_of ``:fam_expr``
+    fun reinstall ty =
+      TypeBasePure.put_induction (TypeBasePure.ORIG induction)
+        (valOf (TypeBase.fetch ty))
+  in
+    TypeBase.write [reinstall ``:fam_expr``, reinstall ``:fam_target``]
+  end
+
+val _ = test "a group with one ORIG induction per type is one family"
+  (fn () =>
+    let
+      val cfg = qc |> upd_timeout 30.0 |> upd_sequential true
+        |> upd_seed (SOME 42) |> only [Exhaustive] |> upd_size 8
+    in
+      genuine (refute cfg ``!t : fam_target. t <> FTName 2``) andalso
+      genuine (refute cfg
+        ``!e : fam_expr. e <> FEAt (FTSub (FTName 0) (FELit 0))``)
+    end)
 
 (* ------------------------------------------------------------------- *)
 (* Rationals and reals                                                 *)
@@ -2268,6 +2817,41 @@ fun witness_width outcome =
         SOME (fcpSyntax.dest_int_numeric_type (wordsSyntax.dim_of v))
     | _ => NONE
 
+local
+  val wide = qc |> upd_timeout 60.0 |> upd_sequential true
+    |> upd_seed (SOME 42) |> upd_size 3 |> upd_iterations 40
+  fun substrates body = List.all body [NativeSML, Compute]
+  fun top_word width =
+    wordsSyntax.mk_wordi
+      (Arbnum.- (Arbnum.pow (Arbnum.fromInt 2, Arbnum.fromInt width),
+                 Arbnum.one), width)
+  fun msb_word width =
+    wordsSyntax.mk_wordi
+      (Arbnum.pow (Arbnum.fromInt 2, Arbnum.fromInt (width - 1)), width)
+  (* Only [2 ** 256 - 1] refutes the wrap, so a hit at all means the
+     boundary values were generated; the certificate replays it in HOL. *)
+  fun certified_at var value c =
+    is_genuine c andalso Option.isSome (#cert c) andalso
+    binding_is c var value
+  val wrap_goal = ``!w : 256 word. w2n (w + 1w) = w2n w + 1``
+in
+  val _ = test "256-bit wrap is refuted at the top boundary, exhaustively"
+    (fn () => substrates (fn s =>
+      refute (wide |> upd_substrate s |> only [Exhaustive]) wrap_goal
+      |> cex_where (certified_at ``w : 256 word`` (top_word 256))))
+
+  val _ = test "256-bit wrap is refuted by random draws alone"
+    (fn () => substrates (fn s =>
+      refute (wide |> upd_substrate s |> only [Random]) wrap_goal
+      |> cex_where (certified_at ``w : 256 word`` (top_word 256))))
+
+  (* [word_msb] unfolds through [dimindex], which only Compute runs, so
+     the substrate is left to the default choice. *)
+  val _ = test "160-bit sign bit is found" (fn () =>
+    refute (wide |> only [Exhaustive]) ``!a : 160 word. ~word_msb a``
+    |> cex_where (certified_at ``a : 160 word`` (msb_word 160)))
+end
+
 val _ = test "word widths are instantiated from the widths row" (fn () =>
   refute (qc |> upd_timeout 30.0) word_goal |> cex_where (fn c =>
     is_genuine c andalso
@@ -2338,7 +2922,10 @@ val _ = test "word width variables need a width pin" (fn () =>
                                  word_goal))
           [SOME 1, SOME 2, SOME 3, SOME 4])
 
-val _ = test "word types are classified before encoding" (fn () =>
+(* The next test, and "unregistered typedefs are reported before
+   solving" below, check messages the model finder gives once it has a
+   solver; without kodkodi it answers "no configured backend" first. *)
+val _ = mf_test "word types are classified before encoding" (fn () =>
   let
     val cfg = default_config |> quiet |> upd_timeout 2.0 |> only [ModelFinder]
     fun says goal message =
@@ -2536,7 +3123,7 @@ fun iterator_card (c : counterexample) =
 val mf_num2 = mf |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
 val mf_num3 = mf |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
 
-val _ = test "unregistered typedefs are reported without kodkodi" (fn () =>
+val _ = mf_test "unregistered typedefs are reported before solving" (fn () =>
   List.all (fn goal =>
     case refute (mf |> upd_timeout 2.0) goal of
         Unknown [reason] =>
@@ -2818,10 +3405,21 @@ val _ = mf_test "well-foundedness over infinite types is only Potential"
                                                  (NONE, [1, 2, 3])]
               |> upd_max_potential 1)
            ``WF (R : num -> num -> bool) ==> transitive R``
-    |> single_cex_where is_potential andalso
-    refute (mf_wide |> upd_timeout 60.0) ``mf_wf_sortedp (xs : num list) ==>
-                                      LENGTH xs <= 8``
-    |> single_cex_where (fn c => is_genuine c andalso Option.isSome (#cert c)))
+    |> single_cex_where is_potential)
+
+(* Kodkodi's built-in SAT4J does not find this witness within the budget,
+   so the check needs an external solver. *)
+val long_sorted = "a long sorted list has a certified witness"
+
+val _ =
+  case List.find external_sat_ready external_sat_solvers of
+      NONE => skip long_sorted "no external SAT solver configured"
+    | SOME (solver, _, _) =>
+        mf_test long_sorted (fn () =>
+          refute (mf_wide |> upd_timeout 60.0 |> upd_sat_solver solver)
+            ``mf_wf_sortedp (xs : num list) ==> LENGTH xs <= 8``
+          |> single_cex_where
+               (fn c => is_genuine c andalso Option.isSome (#cert c)))
 
 val _ = mf_test "true set and recursion facts are bounds-clean" (fn () =>
   let val cfg = mf |> upd_timeout 30.0 in
@@ -2873,8 +3471,7 @@ val _ = mf_test "Hilbert choice is guarded by scope" (fn () =>
       |> upd_card [(SOME ``:num``, [2]), (NONE, [1, 2, 3, 4, 5, 6])]
       |> upd_max_potential 1 |> upd_binary_ints (SOME false)
   in
-    refute cfg ``CARD ({} : 'a set) = 1``
-      |> single_cex_where (fn c => is_genuine c andalso uncertified c)
+    refute cfg ``CARD ({} : 'a set) = 1`` |> single_cex_where is_genuine
     andalso
     refute choice ``($@ (\j : num. j < 3 /\ j > 3)) <> 0``
       |> single_cex_where is_genuine andalso
@@ -3413,7 +4010,8 @@ val needle_rows = [
    genuine_bindings "  f = \206\187x. F"),
   (2, ``?y : bool. !x : bool. x = y``,
    genuine_bindings "  x = if y then F else T"),
-  (2, ``(x : rg_enum) <> RGRed ==> ?y : rg_enum. x = RGRed /\ y = RGGreen``,
+  (2, ``(x : rg_enum) <> RGRed ==>
+        ?y : rg_enum. x = RGRed /\ (y = RGGreen \/ y = RGBlue)``,
    genuine_any)]
 
 val _ = level2 "narrowing acceptance table" (fn () =>
@@ -3422,7 +4020,8 @@ val _ = level2 "narrowing acceptance table" (fn () =>
 val _ = level2 "a stuck existential is only Potential" (fn () =>
   let
     val cfg = narrowing |> upd_substrate NativeSML |> upd_size 2
-    val goal = ``?b : bool. HD ([] : bool list) = b``
+    (* Not [HD [] = b], which normalization unwinds to [T]. *)
+    val goal = ``?b : bool. HD ([] : bool list) = ~b``
     fun stuck outcome =
       outcome |> single_cex_where (fn c =>
         is_potential c andalso uncertified c andalso
@@ -3922,7 +4521,7 @@ val _ = mf_group "Pattern_Nits"
    ("unit constructor", ``(u : unit) = ()``, V ExpectNone, CAny),
    ("Boolean existential", ``?y : bool. b = y``, V ExpectNone, CAny),
    ("pair existential", ``?a b. (p : 'a # 'b) = (a, b)``, V ExpectNone, CAny),
-   ("SUC existential", ``?m : num. n = SUC m``, V ExpectGenuine, CNone),
+   ("SUC existential", ``?m : num. n = SUC m``, V ExpectGenuine, CAny),
    ("SOME existential", ``?y : 'a. (x : 'a option) = SOME y``,
     V ExpectGenuine, CNone),
    ("CONS existential", ``?y ys. (xs : 'a list) = y :: ys``, V ExpectGenuine,

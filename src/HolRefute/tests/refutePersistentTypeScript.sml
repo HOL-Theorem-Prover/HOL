@@ -113,3 +113,10 @@ Theorem api_partial_thm = api_quot_def
 val _ = new_constant ("api_local_other", ``:api_local -> api_local``);
 val _ = new_constant ("api_local_other_case",
   ``:api_local -> (api_local -> 'a) -> 'a``);
+
+(* A mutual family the selftest loads from disk, where TypeBase gives each
+   member its own [ORIG] induction entry. *)
+Datatype:
+  api_mval = ApiMNone | ApiMArr api_marr ;
+  api_marr = ApiMDyn (api_mval list) | ApiMPairs ((num # api_mval) list)
+End

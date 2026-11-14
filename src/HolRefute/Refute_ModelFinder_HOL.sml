@@ -75,8 +75,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      Successful harvests live in the class registry itself.  The session
      index records only theories directly mentioned by relevant theorem
      conclusions: the theorem's own theory and the owning theories of its
-     constants.  In particular, neither index maintenance nor lookup walks a
-     theory ancestry or enumerates the session's constants. *)
+     constants.  Apart from seeding the pending list once with the theories
+     loaded before this module, neither index maintenance nor lookup walks
+     a theory ancestry or enumerates the session's constants. *)
   type harvest_fingerprint = int * (string * int) list
   type harvest_miss = harvest_fingerprint KNametab.table
   type harvest_index_entry =
@@ -174,7 +175,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       operator_generations = KNametab.empty,
       operator_generation = 0,
       indexed_theories = Symtab.empty,
-      pending_theories = [],
+      (* Theories loaded before this module never reach the TheoryLoaded
+         hook below, so they start out pending: the first harvest indexes
+         them like the ones the hook reports. *)
+      pending_theories = Theory.ancestry "-",
       db_generation = 0,
       theory_generations = Symtab.empty} : registrations)
 

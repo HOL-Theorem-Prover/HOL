@@ -11,6 +11,8 @@ signature Refute_TypeBase = sig
   val mk_case : Term.term * (Term.term * Term.term) list -> Term.term
   val is_case : Term.term -> bool
   val strip_case : Term.term -> Term.term * (Term.term * Term.term) list
+  val dest_case :
+    Term.term -> Term.term * Term.term * (Term.term * Term.term) list
   val is_record : Term.term -> bool
   val dest_record : Term.term -> Type.hol_type * (string * Term.term) list
 end
