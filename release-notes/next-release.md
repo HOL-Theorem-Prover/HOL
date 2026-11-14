@@ -132,6 +132,11 @@ New features
 Bugs fixed
 ----------
 
+- HolRefute's model finder now builds adaptive scopes one solver batch at
+  a time, avoids repeated cardinality-repair and monotonicity work, and
+  reports counted reasons when Kodkod problems cannot be assembled.
+
+-   HolRefute now applies polymorphic `upd_box` type patterns to concrete instances.
 -   Omega's model reconstruction no longer fails when eliminating a variable
     leaves a single constrained variable and another unconstrained variable.
 

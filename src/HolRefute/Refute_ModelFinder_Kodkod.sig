@@ -23,7 +23,9 @@ signature Refute_ModelFinder_Kodkod = sig
      nondef_us : nut list,
      def_us : nut list,
      need_us : nut list}
+  (* Raises Refute_ModelFinder_Util.TOO_LARGE/TOO_SMALL if assembly still cannot
+     fit after the existing offset retry. *)
   val assemble_problem :
     assembly_params -> bool -> Refute_ModelFinder_Scope.scope ->
-    rich_problem option
+    rich_problem
 end
