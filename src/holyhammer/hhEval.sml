@@ -1924,14 +1924,15 @@ fun run_format_smoke expdir timeout options (config, slice) =
       {cond_id = "smoke-format-" ^ #prover slice, regime = Bushy,
        selector = Deps, engine = Prover (#prover slice), timeout = timeout,
        reconstruct = true}
-    val root = hhSchedule.new_problem_dir
-      (join (hhConfig.state_dir ()) "problems")
-    val _ = hhSchedule.export_problems root options goal
-      [(#filter slice, premises)] [(config, slice)]
-    val result = hhProver.run config
-      {timeout = timeout, format = #format slice,
-       problem = hhSchedule.problem_path root slice, extra = #extra_opts slice,
-       debug_dir = #debug_dir options}
+    val result =
+      hhSchedule.with_problem_dir (join (hhConfig.state_dir ()) "problems")
+        options (fn root =>
+          (hhSchedule.export_problems root options goal
+             [(#filter slice, premises)] [(config, slice)];
+           hhProver.run config
+             {timeout = timeout, format = #format slice,
+              problem = hhSchedule.problem_path root slice,
+              extra = #extra_opts slice, debug_dir = #debug_dir options}))
     val (recon_ok, _, _, recon_detail) = reconstruct condition result goal
     val parsed_axioms =
       case #used_axioms result of
@@ -2015,14 +2016,15 @@ fun soundness_case options timeout goal (config, slice) =
     (* A short query is enough to catch an unsound immediate theorem while
        keeping the deliberately parser-rejected candidates smoke-friendly. *)
     val query_timeout = Int.min (timeout, 3)
-    val root = hhSchedule.new_problem_dir
-      (join (hhConfig.state_dir ()) "problems")
-    val _ = hhSchedule.export_problems root options ([], goal)
-      [(#filter slice, [])] [(config, slice)]
-    val result = hhProver.run config
-      {timeout = query_timeout, format = #format slice,
-       problem = hhSchedule.problem_path root slice, extra = #extra_opts slice,
-       debug_dir = #debug_dir options}
+    val result =
+      hhSchedule.with_problem_dir (join (hhConfig.state_dir ()) "problems")
+        options (fn root =>
+          (hhSchedule.export_problems root options ([], goal)
+             [(#filter slice, [])] [(config, slice)];
+           hhProver.run config
+             {timeout = query_timeout, format = #format slice,
+              problem = hhSchedule.problem_path root slice,
+              extra = #extra_opts slice, debug_dir = #debug_dir options}))
   in
     #szs result <> hhProver.SzsTheorem
   end

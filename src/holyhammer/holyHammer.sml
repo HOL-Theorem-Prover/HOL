@@ -119,17 +119,17 @@ fun failed caller root options found =
     end
 
 fun run_schedule caller parent options rankings goal =
-  let
-    val root = hhSchedule.new_problem_dir parent
-    val found = ref ([] : unverified list)
-    val result = hhSchedule.run_in root
-      {options = options, goal = goal, rankings = rankings,
-       progress = SOME (progress found)}
-  in
-    case #suggestions result of
-        suggestion :: _ => suggestion
-      | [] => failed caller root options (!found)
-  end
+  hhSchedule.with_problem_dir parent options (fn root =>
+    let
+      val found = ref ([] : unverified list)
+      val result = hhSchedule.run_in root
+        {options = options, goal = goal, rankings = rankings,
+         progress = SOME (progress found)}
+    in
+      case #suggestions result of
+          suggestion :: _ => suggestion
+        | [] => failed caller root options (!found)
+    end)
 
 fun explicit_rankings schedule premises =
   map (fn (filter, _) => (filter, premises))

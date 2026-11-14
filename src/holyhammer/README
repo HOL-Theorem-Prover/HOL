@@ -32,6 +32,12 @@ information with short descriptions.  Runtime settings take precedence over
 the user or system configuration and environment; use `hh_unset` to remove a
 runtime override.
 
+Each call writes its TPTP problems to a fresh directory below the state
+directory (`$HOME/.hol4/hammer`, or `$HOL4_HAMMER_DIR`) and deletes it when
+the call returns, also on failure or interruption.  With `debug_dir` set,
+the problems are kept instead, in `debug_dir/problems`, next to the raw
+prover output.
+
 The options are `timeout`, `max_proofs`, `provers`, `slices`, `cores`,
 `filter`, `max_facts`, `format`, `type_enc`, `lam_trans`, `mono_iters`,
 `mono_instances`, `minimize`, `preplay_timeout`, `minimize_timeout`, `cache`,

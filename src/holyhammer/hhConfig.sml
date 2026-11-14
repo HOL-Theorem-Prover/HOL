@@ -55,6 +55,30 @@ fun ensure_dir path =
         if is_dir path then () else raise Fail ("cannot create " ^ path)
     end
 
+(* Best effort: errors are ignored, and a symbolic link is removed rather
+   than followed, so only files below path itself are deleted. *)
+fun remove_tree path =
+  let
+    val link = OS.FileSys.isLink path handle OS.SysErr _ => false
+  in
+    if not link andalso is_dir path then
+      let
+        val stream = OS.FileSys.openDir path
+        fun loop names =
+          case OS.FileSys.readDir stream of
+              NONE => names
+            | SOME name => loop (name :: names)
+        val names =
+          (loop [] handle error => (OS.FileSys.closeDir stream; raise error))
+        val _ = OS.FileSys.closeDir stream
+      in
+        List.app (fn name => remove_tree (join path name)) names;
+        OS.FileSys.rmDir path
+      end
+    else OS.FileSys.remove path
+  end
+  handle OS.SysErr _ => ()
+
 (* HHCONFIG_TEST_ROOT is used only by the hermetic selftest. *)
 fun test_root () = OS.Process.getEnv "HHCONFIG_TEST_ROOT"
 
@@ -316,7 +340,8 @@ val option_specs : option_spec list =
     expected = "a positive integer", doc = "maximum cached result count",
     valid = positive_int},
    {name = "debug_dir", default = fn () => "",
-    expected = "a path or empty", doc = "directory for retained prover output",
+    expected = "a path or empty",
+    doc = "directory for retained problems and prover output",
     valid = fn _ => true}]
 
 val defaults =

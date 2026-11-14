@@ -3009,9 +3009,14 @@ fun test_schedule_max_proofs parser =
     val slices =
       [fixture_slice name ["0", "schedule-truth.out"] 1,
        fixture_slice name ["0", "schedule-t-def.out"] 1]
-    val paths = ref ([] : string list)
+    (* The problem files are deleted after the run, so check them while
+       the prover runs. *)
+    val paths = ref ([] : (string * bool) list)
+    fun readable path = OS.FileSys.access (path, [OS.FileSys.A_READ])
     val config = printer_config name slices
-      (fn request => paths := #problem request :: !paths) parser
+      (fn request =>
+         paths := (#problem request, readable (#problem request)) :: !paths)
+      parser
     val _ = hhProver.register config
     val options1 = fixture_options [name] 2 2 5 1 false "" NONE
     val options2 = fixture_options [name] 2 2 5 2 false "" NONE
@@ -3032,8 +3037,9 @@ fun test_schedule_max_proofs parser =
     val _ = expect "scheduler event ordering is sane"
       (schedule_events_sane events2)
     val _ = expect "scheduler exports the zero-fact prefix"
-      (not (null (!paths)) andalso List.all (fn path =>
-        OS.FileSys.access (path, [OS.FileSys.A_READ])) (!paths))
+      (not (null (!paths)) andalso List.all #2 (!paths))
+    val _ = expect "scheduler removes its problem files"
+      (List.all (fn (path, _) => not (readable path)) (!paths))
   in
     ()
   end
@@ -3258,6 +3264,7 @@ fun test_schedule_isolation parser =
     val first_path = ref NONE
     val second_path = ref NONE
     val first_text = ref ""
+    val second_text = ref ""
     val release = ref false
     val intact = ref false
     fun note (request : hhProver.run_request) =
@@ -3273,7 +3280,7 @@ fun test_schedule_isolation parser =
            await_schedule_test "overlapping export did not finish"
              (fn () => locked (fn () => !release));
            intact := !first_text = String.concat (read_lines path))
-        else ()
+        else second_text := String.concat (read_lines path)
       end
     val _ = hhProver.register (printer_config name [slice] note parser)
     val options = fixture_options [name] 1 1 5 1 false "" NONE
@@ -3288,13 +3295,14 @@ fun test_schedule_isolation parser =
       (fn () => not (Thread.isActive thread))
     val _ = expect "overlapping schedulers preserve their own prover inputs"
       (!first_path <> !second_path andalso !intact andalso
-       !first_text <> String.concat (read_lines (valOf (!second_path)))
+       !second_text <> "" andalso !first_text <> !second_text
        andalso Option.isSome (!first_result) andalso
        #stopped second_result = hhSchedule.Exhausted)
     val roots = map (OS.Path.dir o OS.Path.dir o valOf)
       [!first_path, !second_path]
   in
-    List.app remove_tree roots
+    expect "overlapping schedulers each remove only their own root"
+      (not (List.exists is_dir roots) andalso is_dir (OS.Path.dir (hd roots)))
   end
 
 fun test_schedule_timeout parser =
@@ -3416,6 +3424,67 @@ fun test_schedule_knn_anchor_export () =
     remove_tree root
   end
 
+fun test_with_problem_dir () =
+  let
+    val parent = OS.FileSys.tmpName ()
+    val _ = OS.FileSys.remove parent
+    val outside = OS.FileSys.tmpName ()
+    val _ = OS.FileSys.remove outside
+    val _ = mkdir outside
+    val kept_file = join outside "kept"
+    val _ = write_file kept_file "kept"
+    fun options debug_dir =
+      fixture_options ["e"] 1 1 5 1 false "" debug_dir
+    fun populate root =
+      let
+        val slice_dir = join root "e.knn.fof...32"
+        val _ = mkdir slice_dir
+        val _ = write_file (join slice_dir "atp_in") "fof(a, axiom, $true)."
+        val _ = Posix.FileSys.symlink {old = outside, new = join root "link"}
+      in
+        root
+      end
+    val ok_root = hhSchedule.with_problem_dir parent (options NONE) populate
+    val failed_root = ref ""
+    val raised =
+      (hhSchedule.with_problem_dir parent (options NONE)
+         (fn root => (failed_root := populate root; raise Fail "boom"));
+       false)
+      handle Fail "boom" => true
+    val debug_root =
+      hhSchedule.with_problem_dir parent (options (SOME outside)) populate
+    val roots = Array.array (4, "")
+    val threads = List.tabulate (4, fn i =>
+      Thread.fork (fn () =>
+        Array.update (roots, i,
+          hhSchedule.with_problem_dir parent (options NONE) populate), []))
+    fun wait () =
+      if List.exists Thread.isActive threads then
+        (OS.Process.sleep (Time.fromMilliseconds 10); wait ())
+      else ()
+    val _ = wait ()
+    val thread_roots = Array.foldr (op ::) [] roots
+    fun distinct [] = true
+      | distinct (x :: xs) = not (List.exists (fn y => y = x) xs) andalso
+                             distinct xs
+    val _ = expect "with_problem_dir removes its root after success"
+      (not (is_dir ok_root) andalso is_dir parent)
+    val _ = expect "with_problem_dir removes its root when the call raises"
+      (raised andalso !failed_root <> "" andalso not (is_dir (!failed_root)))
+    val _ = expect "with_problem_dir keeps its root in debug_dir"
+      (is_dir debug_root andalso
+       OS.Path.dir debug_root = join outside "problems")
+    val _ = expect "remove_tree does not follow symbolic links"
+      (OS.FileSys.access (kept_file, []))
+    val _ = expect "concurrent with_problem_dir calls use and remove own roots"
+      (List.all (fn root => root <> "" andalso not (is_dir root))
+         thread_roots andalso
+       distinct (ok_root :: debug_root :: thread_roots))
+  in
+    (* The selftest's own remove_tree follows symbolic links. *)
+    List.app hhConfig.remove_tree [parent, outside]
+  end
+
 fun test_schedule_export_wiring () =
   let
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
@@ -3512,6 +3581,7 @@ fun test_hhSchedule () =
             (Time.toReal (Time.- (Time.now (), started)) < 60.0)
         end
 
+val _ = test_with_problem_dir ()
 val _ = test_schedule_export_wiring ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_hhSchedule ()

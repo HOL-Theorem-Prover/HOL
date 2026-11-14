@@ -19,8 +19,13 @@ sig
      slices_run : (hhProver.slice * hhProver.szs * real * bool) list,
      stopped : stop_reason, t_total : real}
 
-  (* run_in and export_problems require a root reserved for this invocation. *)
+  (* run_in and export_problems require a root reserved for this invocation.
+     with_problem_dir parent options f reserves one below parent, applies f
+     to it and then deletes it, also when f raises.  If debug_dir is set in
+     options, the root is reserved below debug_dir/problems and kept. *)
   val new_problem_dir : string -> string
+  val with_problem_dir :
+    string -> hhConfig.hh_options -> (string -> 'a) -> 'a
   val problem_path : string -> hhProver.slice -> string
   val default_progress : event -> unit
   val export_problems : string -> hhConfig.hh_options -> goal ->

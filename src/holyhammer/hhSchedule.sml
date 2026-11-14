@@ -81,6 +81,21 @@ fun new_problem_dir parent =
     reserve ()
   end
 
+(* Each call removes only the root it reserved, never parent, so parallel
+   calls in this or other processes do not interfere.  With debug_dir set,
+   the problems are kept there instead, next to the prover output. *)
+fun with_problem_dir parent (options : hhConfig.hh_options) f =
+  case #debug_dir options of
+      SOME directory => f (new_problem_dir (join directory "problems"))
+    | NONE =>
+        let
+          val root = new_problem_dir parent
+          fun cleanup () = hhConfig.remove_tree root
+          val result = f root handle error => (cleanup (); raise error)
+        in
+          cleanup (); result
+        end
+
 fun problem_dir root (slice : hhProver.slice) =
   join root (problem_key slice)
 
@@ -540,6 +555,7 @@ fun run_in root {options, goal, rankings, progress} =
   end
 
 fun run request =
-  run_in (new_problem_dir (join (hhConfig.state_dir ()) "problems")) request
+  with_problem_dir (join (hhConfig.state_dir ()) "problems")
+    (#options request) (fn root => run_in root request)
 
 end

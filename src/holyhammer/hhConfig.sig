@@ -24,6 +24,7 @@ sig
   (* Small filesystem and string helpers, shared with hhProver and hhEval. *)
   val is_dir : string -> bool
   val ensure_dir : string -> unit
+  val remove_tree : string -> unit
   val directory_names : string -> string list
   val trim : string -> string
   val trim_left : string -> string
