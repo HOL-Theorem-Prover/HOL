@@ -13,6 +13,7 @@ sig
          DB_of : Context.t -> {thyname : string} -> 'value option,
          get_deltas : {thyname : string} -> 'delta list,
          record_delta : 'delta -> unit,
+         set_deltas : 'delta list -> unit,
          parents : {thyname : string} -> string list,
          set_parents : string list -> 'value option,
          get_global_value : unit -> 'value,
@@ -99,7 +100,8 @@ end
           - apply_delta : how a single delta transforms a value.
 
       ('delta, 'value) fullresult = { merge, DB, get_deltas,
-        record_delta, parents, set_parents, get_global_value,
+        record_delta, set_deltas, parents, set_parents,
+        get_global_value,
         update_global_value }
         The richer return shape from fullmake.  Callers can:
           - merge thys                : walk the ancestry from the
@@ -113,6 +115,11 @@ end
             stored in a theory.
           - record_delta d            : append a delta to the
             *current* theory's stream and persist it.
+          - set_deltas ds             : replace the *current*
+            theory's stored delta stream with ds (e.g. to drop
+            deltas that later ones cancel before export).  Neither
+            the global value nor the theory's value changes, so ds
+            must leave both as the stored stream does.
           - parents {thyname}         : AncestryData's view of the
             theory's parents.  Normally equals Theory.parents but
             differs if set_parents has been called.

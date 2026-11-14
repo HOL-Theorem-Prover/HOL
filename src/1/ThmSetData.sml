@@ -312,6 +312,7 @@ fun export_with_ancestry
        DB_of = #DB_of fullresult,
        get_deltas = get_fulldeltas,
        record_delta = #record_delta fullresult o mk_raw,
+       set_deltas = #set_deltas fullresult o map mk_raw,
        parents = #parents fullresult, set_parents = #set_parents fullresult,
        get_global_value = #get_global_value fullresult,
        get_global_value_of = #get_global_value_of fullresult,
