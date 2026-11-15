@@ -145,6 +145,9 @@ Bugs fixed
 -   Omega's model reconstruction no longer fails when eliminating a variable
     leaves a single constrained variable and another unconstrained variable.
 
+-   HolRefute's narrowing finds counterexamples it used to miss or end on with an internal error: `?x. f x` gets `f = \x. F` instead of "narrowing search exhausted", and an existential over a function type, such as `?g:bool->bool. f g`, no longer ends `Unknown` on "malformed transformed value".
+    In the model replay, a case combination that fails to prove is now a failed candidate, so the replay goes on to the next one instead of ending as an internal failure.
+
 -   Once `intLib` was loaded, simplifying a ground integer division by zero with `srw_ss`, *e.g.*, `SIMP_CONV (srw_ss()) [] “5 % 0i”`, never returned.
     The simplifier's integer-calculation conversion now fails on terms it cannot reduce, as the `num` one already did.
     HolRefute's certificate replay also bounds the simplification of each leaf, so a looping rewrite there no longer uses up the whole replay deadline.
