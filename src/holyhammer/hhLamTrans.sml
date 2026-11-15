@@ -169,11 +169,21 @@ struct
         let
           val (bound, matrix) = strip_abs tm
           val captured = free_vars_lr tm
+          (* A type variable occurring only inside the body would vanish
+             from the symbol's type, so instances of the definition at
+             different types would all define one symbol.  Pass it as a
+             (:'b) argument to keep it in the type. *)
+          val visible =
+            Type.type_vars (list_mk_fun (map type_of captured, type_of tm))
+          val hidden =
+            List.filter (fn ty => not (mem ty visible))
+              (type_vars_in_term tm)
+          val arguments = map mk_itself hidden @ captured
           val matrix' =
             if type_of matrix = Type.bool then formula matrix else term matrix
-          val lam_type = list_mk_fun (map type_of captured, type_of tm)
+          val lam_type = list_mk_fun (map type_of arguments, type_of tm)
           val lam = mk_var (fresh_name (), lam_type)
-          val replacement = list_mk_comb (lam, captured)
+          val replacement = list_mk_comb (lam, arguments)
           val lhs = list_mk_comb (replacement, bound)
           val definition = list_mk_forall (captured @ bound,
             mk_eq (lhs, matrix'))
@@ -193,8 +203,9 @@ struct
       val (_, equation) = strip_forall definition
       val (left, right) = dest_eq equation
       val (head, args) = strip_comb left
+      val (witnesses, variables) = Lib.partition (not o is_var) args
     in
-      mk_eq (head, list_mk_abs (args, right))
+      mk_eq (list_mk_comb (head, witnesses), list_mk_abs (variables, right))
     end
 
   fun translate Lifting formulas = lift formulas

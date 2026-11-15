@@ -742,6 +742,18 @@ fun test_hhLamTrans () =
        List.exists (fn (_, definition) =>
          List.exists (fn ty => ty = alpha) (Term.type_vars_in_term definition))
          lift_defs)
+    val hidden_fixture = ``(\x:num. !y:'b. y = y) = (\x. T)``
+    val (_, hidden_defs) =
+      hhLamTrans.translate hhLamTrans.Lifting [hidden_fixture]
+    fun lambda_symbol definition =
+      #1 (strip_comb (lhs (#2 (strip_forall definition))))
+    val _ = expect "lifting keeps body-only type variables in symbol types"
+      (List.exists (fn (_, definition) =>
+         List.exists (fn ty => ty = Type.beta)
+           (Type.type_vars (Term.type_of (lambda_symbol definition))))
+         hidden_defs andalso
+       length (#2 (hhLamTrans.translate hhLamTrans.CombsAndLifting
+         [hidden_fixture])) = 2 * length hidden_defs)
     val _ = expect "combs removes fixture abstractions"
       (null comb_defs andalso List.all (not o formula_abs) combs)
     val _ = expect "combs beta-normalise to the closed input"
