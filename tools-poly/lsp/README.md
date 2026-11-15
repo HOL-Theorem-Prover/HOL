@@ -626,6 +626,64 @@ served by that tree's server, silently.  The first line of the eglot
 log says which one; `cat .hol/make-deps/lastmaker` says the same
 thing without starting anything.
 
+## Where a term error is squiggled
+
+A parse or type error inside a quotation — a `Theorem`'s goal, a
+`Definition` or `Inductive` body, a `Termination` obligation — is
+reported on the subterm at fault, not on the declaration's keyword.
+
+The position is HOL's own and arrives in buffer coordinates already.
+`HOLSourceExpand.mkLocPragma` prefixes every quotation literal the
+expander emits with `(*#loc LINE COL*)` in whole-file coordinates, and
+`base_lexer`'s `dolocpragma` rebases each token through
+`locn.rel_to_abs`, so the `locn` inside the `HOL_ERR` that escapes the
+declaration is a pair of absolute `LocA`s in the text the client sent.
+
+`server.ML` cannot read any of that: it is compiled before HOL exists
+and cannot name `Feedback` or `locn`.  The seam is
+`LSPExtension.exnReport`, installed by `error_locn_init.ML`, which
+answers with a byte-counting line/column range and HOL's own message.
+
+Three things about it are easy to get wrong:
+
+  - **The innermost origin, not the first.**  `Q.store_thm_at` catches
+    and re-raises through `wrap_exn`, which conses an origin carrying
+    `Loc_Unknown` onto the *front* — so `Feedback.top_location_of`
+    answers about the wrapper.  Nor is the first *located* origin
+    right: an intermediate one can hold a `locn.between`-merged span
+    straddling two different pragmas, which as a range runs from
+    somewhere else entirely to the fault.  `exnToReportIn` re-checks
+    the answer against the declaration's start byte for that reason.
+
+  - **The end is widened as an offset, never as a column.**  A region
+    whose last character ends a line has an end column past that line,
+    and `fromLineColBytes` clamps such a column back onto the line —
+    collapsing the range to nothing.  `hover_quote_init`'s `locn_range`
+    had this right first.
+
+  - **`locn` columns count bytes**, as does the column a `(*#loc*)`
+    pragma carries.  Handing them to a client that negotiated utf-16
+    without converting agrees exactly under utf-8 and skews every
+    position on a line holding a non-ASCII character.
+
+The message is `Feedback.message_of`, not `format_ERR`: the latter
+prepends `Exception raised ` and prints the whole origin chain *with*
+its locations, which is the squiggle's job.  Where a range was found,
+a trailing line that is nothing but `locn.toString` text is dropped —
+the term grammar bakes its own location into its message.
+
+An exception with no usable `locn` keeps the old answer, a zero-width
+range at the declaration's start.  So does one that is not a
+`HOL_ERR`, which also keeps the old rendering.
+
+Two limits worth knowing.  `Pretype.unify` reports `Loc_Unknown`
+(`src/parse/Pretype.sml`), so the position is the enclosing
+application's *argument* rather than the exact clashing subterm; in
+practice that is the subterm a reader would point at anyway.  And a
+term quotation inside a *tactic* fails during proof replay, in the
+pool, where the exception is reduced to a string before a diagnostic
+is built — those are still reported against the failing tactic.
+
 ## Proof checking
 
 Elaboration does not run tactics: `holide.ML` swaps in a prover that
