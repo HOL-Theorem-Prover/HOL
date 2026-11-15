@@ -1259,4 +1259,46 @@ val _ =
     end
 end (* local *)
 
+(* --------------------------------------------------------------------
+   `typedTerm_in' keeps the quotation's file positions
+   -------------------------------------------------------------------- *)
+
+(* It wraps its argument as `( <q> ):ty', and that `(' is HOL's own.
+   When it went in ahead of the fragment's `(*#loc*)' pragma the lexer
+   had nothing to rebase it against, so an unclosed paren in the body
+   -- which is what leaves this one on the parser's stack at end of
+   input -- was reported "at frag 0 row 0 col 1": a position in a
+   string no reader ever sees, and one an editor cannot turn into a
+   squiggle.  The pragma is now repeated in front of the paren, which
+   puts it at the quotation's first character.
+
+   `(*#loc 12 5*)' is 1-origin, as the quote filter writes it, and
+   comes back as the 0-origin `LocA (11, 4)' every other consumer
+   works in. *)
+local
+  fun innermost e =
+      List.foldl (fn (org, best) =>
+                     case #source_location org of
+                         l as locn.Loc (locn.LocA _, locn.LocA _) => SOME l
+                       | _ => best)
+                 NONE (Feedback.origins_of e)
+  (* The grammar echoes its complaint through `HOL_INFO' as well as
+     raising it; what it raises is what this is about, and a selftest
+     log reads better without the copy. *)
+  fun locOf q =
+      Feedback.quiet_info
+        (fn () =>
+            (ignore (Parse.typedTerm_in (Context.snapshot()) q Type.bool);
+             NONE)
+              handle Feedback.HOL_ERR e => innermost e) ()
+in
+val _ = tprint "typedTerm_in: an unclosed paren gets a file position"
+val _ =
+    case locOf [QUOTE " (*#loc 12 5*)\n  (x\n"] of
+        SOME (locn.Loc (locn.LocA (11, 4), _)) => OK()
+      | SOME l => die ("\nwanted line 12 character 4, got " ^
+                       locn.toString l)
+      | NONE => die "\nno located error raised"
+end
+
 val _ = exit_count0 failcount

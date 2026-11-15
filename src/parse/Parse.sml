@@ -450,9 +450,34 @@ fun Term_in ctxt q =
     absyn_to_term (get_term_grammar ctxt) (Absyn_in ctxt q)
 fun Term q = Term_in (Context.snapshot()) q
 
+(* The leading `(*#loc r c*)' of a quotation fragment, or "".
+
+   A fragment the quote filter wrote starts with one, and it is what
+   gives every token after it a position in the file.  A token written
+   *before* it has none -- the lexer has nothing to rebase it against
+   -- so it is reported as "frag 0 row 0 col 1", which names nothing a
+   reader can go to.  `typedTerm_in' below writes exactly one such
+   token, and the parser can blame it. *)
+fun loc_pragma_of s = let
+  val ss = Substring.dropl Char.isSpace (Substring.full s)
+in
+  if Substring.isPrefix "(*#loc" ss then
+    let val (body, close) = Substring.position "*)" ss
+    in if Substring.isEmpty close then "" else Substring.string body ^ "*)" end
+  else ""
+end
+
 fun typedTerm_in ctxt qtm ty = let
   val tyclose = [ANTIQUOTE (ty_antiq ty), QUOTE ""]
-  fun open_ (QUOTE s) t = QUOTE ("(" ^ s) :: t
+  (* The `(' is HOL's, not the user's, and it goes in ahead of the
+     fragment's own location pragma -- so repeat that pragma in front
+     of it, putting it at the quotation's first character.  Without
+     this an unclosed paren in the body, which leaves this one on the
+     parser's stack, is reported against a fragment offset instead of
+     against the file.  The body's copy of the pragma still follows
+     and still resets the lexer, so nothing inside the quotation
+     moves. *)
+  fun open_ (QUOTE s) t = QUOTE (loc_pragma_of s ^ "(" ^ s) :: t
     | open_ frag      t = QUOTE "(" :: frag :: t
   fun close (QUOTE s)   = QUOTE (s ^ "):") :: tyclose
     | close frag        = frag :: QUOTE "):" :: tyclose
