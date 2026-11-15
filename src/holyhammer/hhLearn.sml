@@ -151,7 +151,8 @@ fun create_thmdata_for target =
     val key = (target, entries)
     fun add ((name, theorem), (facts, seen)) =
       let val theorem_goal = dest_thm theorem in
-        if dmem theorem_goal seen orelse not (uptodate_thm theorem) then
+        if dmem theorem_goal seen orelse not (uptodate_thm theorem) orelse
+           not (null (hyp theorem)) then
           (facts, seen)
         else
           ((name, mlFeature.fea_of_goal_cached true theorem_goal) :: facts,
@@ -416,6 +417,14 @@ fun conclusion_of thmid =
   case total mlThmData.thm_of_name thmid of
       SOME (SOME (_, theorem)) => SOME (Thm.concl theorem)
     | _ => NONE
+
+(* A theorem with hypotheses is no premise: exporters would state its
+   conclusion unconditionally (or discharged), and Metis replay cites it
+   by name, hypotheses included, so a proof using it never verifies. *)
+fun has_hypotheses thmid =
+  case total mlThmData.thm_of_name thmid of
+      SOME (SOME (_, theorem)) => not (null (hyp theorem))
+    | _ => false
 
 fun train_nb_from_thmdata constants idf dependencies statures (_, facts) =
   let
@@ -767,9 +776,16 @@ fun make_context_for current
 fun make_context parameters =
   make_context_for (Theory.current_theory ()) parameters
 
-fun build_context_for current thmdata = make_context_for current
-  {thmdata = thmdata, model_thmdata = thmdata,
-   dependencies = create_dep_table thmdata}
+(* Externally built thmdata (mlThmData.create_thmdata, as holyhammer and
+   TacticToe pass it) may hold top-level theorems with hypotheses. *)
+fun build_context_for current (weights, all_facts) =
+  let
+    val thmdata = (weights, filter (not o has_hypotheses o #1) all_facts)
+  in
+    make_context_for current
+      {thmdata = thmdata, model_thmdata = thmdata,
+       dependencies = create_dep_table thmdata}
+  end
 
 fun create_context_for current thmdata =
   let

@@ -4668,12 +4668,15 @@ fun test_hhLearn_production_exclusion_and_mash () =
       (Thm.concl induction,
        Term.mk_var
          ("hhLearn_marker_" ^ Int.toString index, Type.bool))
+    (* Premises must be free of hypotheses, so fixtures are oracles. *)
+    fun fixture conclusion =
+      Thm.mk_oracle_thm "hhLearn_selftest" ([], conclusion)
     val regular_theorems = List.tabulate (101, fn index =>
-      Thm.ASSUME (regular_conclusion index))
+      fixture (regular_conclusion index))
     fun save (name, theorem) =
       Feedback.quiet_messages Theory.save_thm (name, theorem)
     val _ = Feedback.quiet_messages Theory.save_thm
-      (induction_base, Thm.ASSUME (Thm.concl induction))
+      (induction_base, fixture (Thm.concl induction))
     val _ = List.app (ignore o save)
       (ListPair.zip (regular_bases, regular_theorems))
     val prefix = Theory.current_theory () ^ "Theory."
@@ -4822,6 +4825,62 @@ fun test_hhLearn_target_thmdata () =
   end
 
 val _ = test_hhLearn_target_thmdata ()
+
+(* A theorem with hypotheses is no premise.  Exported by its bare
+   conclusion, [F] |- F hands the provers a false axiom (ContradictoryAxioms,
+   bogus proofs Metis then rejects); discharged, it is unusable by replay. *)
+fun test_hypothesis_premises () =
+  let
+    val base = "hh_hypothesis_fixture"
+    val theory = Theory.current_theory ()
+    val fixture = theory ^ "Theory." ^ base
+    val closed = theory ^ "Theory.unrelated_theorem"
+    val truth = "boolTheory.TRUTH"
+    val _ = Feedback.quiet_messages Theory.save_thm
+      (base, Thm.ASSUME boolSyntax.F)
+    val _ = hhLearn.clean_context_cache ()
+    val target_names = map #1 (#2 (hhLearn.create_thmdata_for theory))
+    val goal = ([], boolSyntax.T)
+    val features = mlFeature.fea_of_goal true goal
+    val rows = [(truth, features), (fixture, features)]
+    val context =
+      hhLearn.create_context (mlFeature.learn_tfidf rows, rows)
+    val none = hhLearn.rank context
+      {filter = "none", pool = NONE, goal = goal, n = 2}
+    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val options : hhConfig.hh_options =
+      {timeout = 30, max_proofs = 1, provers = ["e"], slices = 1, cores = 1,
+       filter = "none", max_facts = NONE, format = "", type_enc = "",
+       lam_trans = "", mono_iters = 3, mono_instances = NONE,
+       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
+       cache = false, cache_dir = "", cache_max_entries = 100,
+       debug_dir = NONE}
+    fun slice type_enc lam_trans : hhProver.slice =
+      {prover = "e", format = "fof", type_enc = type_enc,
+       lam_trans = lam_trans, nfacts = 0, filter = "none",
+       extra_opts = [], slice_size = 1}
+    val slices = [slice "" "", slice "mono_guards" "lifting"]
+    fun export ranking =
+      (hhSchedule.export_problems root options goal [("none", ranking)]
+         (map (fn s => (prover "e", s)) slices);
+       map (String.concat o read_lines o hhSchedule.problem_path root)
+         slices)
+    val with_fixture = export [truth, fixture]
+    val without_fixture = export [truth]
+  in
+    expect "target thmdata skips theorems with hypotheses"
+      (List.exists (fn name => name = closed) target_names andalso
+       not (List.exists (fn name => name = fixture) target_names));
+    expect "premise ranking skips theorems with hypotheses"
+      (hhLearn.context_thmids context = [truth] andalso none = [truth]);
+    expect "legacy and generated exports drop theorems with hypotheses"
+      (with_fixture = without_fixture);
+    remove_tree root;
+    Theory.delete_binding base;
+    hhLearn.clean_context_cache ()
+  end
+
+val _ = test_hypothesis_premises ()
 
 local open hhReconstruct hhTranslate holyHammer hhExportLib hhExportFof
   hhExportTf0 hhExportTh0 hhExportTf1 hhExportTh1 hhConfig hhProver hhSlice

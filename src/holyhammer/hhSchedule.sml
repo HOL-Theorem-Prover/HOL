@@ -156,7 +156,10 @@ fun export_problems root options goal rankings schedule =
         | NONE =>
             let
               val selected = first_n count premises
-              val named = smlRedirect.hidef mlThmData.thml_of_namel selected
+              (* Theorems with hypotheses are no premises (see hhLearn);
+                 explicit hh_pb lists bypass premise selection. *)
+              val named = List.filter (null o hyp o #2)
+                (smlRedirect.hidef mlThmData.thml_of_namel selected)
             in
               named_memo := ((filter, nfacts), named) :: !named_memo;
               named
