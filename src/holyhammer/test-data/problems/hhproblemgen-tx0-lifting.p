@@ -26,10 +26,10 @@ tff(ty_2Ety__2Emin__2Efun__28num__2Enum__2Cmin__2Efun__28num__2Enum__2Cnum__2Enu
     ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cnum_2Enum_29_29 : $tType).
 tff(sy_2Epxy__2Eite__2Enum__2Enum, type,
     pxy_2Eite_2Enum_2Enum : ($o * ty_2Enum_2Enum * ty_2Enum_2Enum) > ty_2Enum_2Enum).
-tff(sy_2Elam__2E0, type,
-    lam_2E0 : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29).
-tff(sy_2Elam__2E1, type,
-    lam_2E1 : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29).
+tff(sy_2Elam__2E0__2Emin__2Efun__28num__2Enum__2Cnum__2Enum__29, type,
+    lam_2E0_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29 : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29).
+tff(sy_2Elam__2E1__2Emin__2Efun__28num__2Enum__2Cnum__2Enum__29, type,
+    lam_2E1_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29 : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29).
 tff(sy_2Epxy__2Enot, type,
     pxy_2Enot : ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Ebool_29).
 tff(sy_2Eapp__9ef68b7b5caf32d0, type,

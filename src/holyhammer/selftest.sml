@@ -1278,6 +1278,116 @@ fun test_hhProblemGen () =
 
 val _ = test_hhProblemGen ()
 
+(* A sort checker for monomorphic TFF problems (TF0 and TX0): every
+   symbol has a single declaration and every application, equation, and
+   atom is well sorted.  It mirrors the checks Vampire and E apply. *)
+fun mono_tff_errors (problem : hhTptpProblem.problem) =
+  let
+    open hhTptpProblem
+    val bool_sort = TyCon ("$o", [])
+    fun strip (TyFun (domain, range)) =
+          let val (domains, result) = strip range in
+            (domain :: domains, result)
+          end
+      | strip ty = ([], ty)
+    val lines = List.concat (map #2 problem)
+    val errors = ref ([] : string list)
+    fun error message = errors := message :: !errors
+    val table = List.foldl (fn (SymDecl (_, symbol, ty), table) =>
+        (case Redblackmap.peek (table, symbol) of
+             SOME old =>
+               (if old = ty then ()
+                else error ("conflicting declarations of " ^ symbol);
+                table)
+           | NONE => Redblackmap.insert (table, symbol, ty))
+      | (_, table) => table) (Redblackmap.mkDict String.compare) lines
+    fun sort_of env (Tm ((symbol, _), args)) =
+          let val arg_sorts = map (sort_of env) args in
+            case (List.find (fn (name, _) => name = symbol) env, args) of
+                (SOME (_, ty), []) => SOME ty
+              | (SOME _, _) => (error ("applied variable " ^ symbol); NONE)
+              | (NONE, _) =>
+                if symbol = "$true" orelse symbol = "$false" then
+                  SOME bool_sort
+                else if symbol = "$ite" then
+                  (case arg_sorts of
+                       [SOME test, SOME left, SOME right] =>
+                         if test = bool_sort andalso left = right then
+                           SOME left
+                         else (error "ill-sorted $ite"; NONE)
+                     | _ => NONE)
+                else
+                  case Redblackmap.peek (table, symbol) of
+                      NONE => (error ("undeclared " ^ symbol); NONE)
+                    | SOME ty =>
+                        let val (domains, result) = strip ty in
+                          if length domains = length args andalso
+                             ListPair.all (fn (domain, actual) =>
+                               actual = NONE orelse actual = SOME domain)
+                               (domains, arg_sorts)
+                          then SOME result
+                          else (error ("ill-sorted application of " ^
+                                       symbol); NONE)
+                        end
+          end
+      | sort_of _ (TmAbs _) = (error "lambda in TFF"; NONE)
+    fun formula env (Quant (_, bound, body)) =
+          formula (map (fn (name, ty) =>
+            (name, case ty of SOME ty => ty
+                            | NONE => TyCon ("$i", []))) bound @ env) body
+      | formula env (TyQuant (_, _, body)) = formula env body
+      | formula env (Conn (Equal, [Atom left, Atom right])) =
+          (case (sort_of env left, sort_of env right) of
+               (SOME left_sort, SOME right_sort) =>
+                 if left_sort = right_sort then ()
+                 else error "ill-sorted equation"
+             | _ => ())
+      | formula env (Conn (_, bodies)) = List.app (formula env) bodies
+      | formula env (Atom tm) =
+          (case sort_of env tm of
+               SOME sort =>
+                 if sort = bool_sort then () else error "non-Boolean atom"
+             | NONE => ())
+    val _ = List.app (fn FormLine (_, _, body) => formula [] body
+                       | _ => ()) lines
+  in
+    List.rev (!errors)
+  end
+
+
+(* Lambda lifting runs before monomorphization.  MAP_ID's lifted identity
+   is therefore polymorphic, and the conjecture grounds it at num and at
+   num -> num; each instance must be a separately declared symbol. *)
+fun test_hhProblemGen_mono_sorts () =
+  let
+    val goal = ``MAP (f : num -> num) l = l /\
+                 MAP (g : (num -> num) -> num -> num) fs = fs``
+    val terms = {conjecture = goal,
+                 facts = [("MAP_ID", Thm.concl (DB.fetch "list" "MAP_ID"))]}
+    fun check (format, encoding, mode) =
+      let
+        val problem = hhProblemGen.generate_problem
+          {format = hhTypeEnc.format_of_string format,
+           type_enc = hhTypeEnc.of_string encoding,
+           lam_trans = hhLamTrans.mode_of_string mode, mono_iters = 3,
+           mono_instances = 100} terms
+        val errors = mono_tff_errors problem
+      in
+        tprint ("hhProblemGen " ^ format ^ " " ^ mode ^
+                " problem is well sorted");
+        if null errors then OK ()
+        else die ("FAILED: " ^ String.concatWith "; " errors)
+      end
+  in
+    List.app check
+      [("tx0", "mono_native_fool", "lifting"),
+       ("tx0-", "mono_native_fool", "combs_and_lifting"),
+       ("tf0", "mono_native", "lifting"),
+       ("tx0", "mono_native_fool", "combs")]
+  end
+
+val _ = test_hhProblemGen_mono_sorts ()
+
 fun prover name =
   case hhProver.lookup name of
       SOME config => config

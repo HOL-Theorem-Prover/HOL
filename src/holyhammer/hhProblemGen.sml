@@ -529,6 +529,16 @@ struct
     else if is_generated_var head then proxy_type_args head
     else []
 
+  fun is_lambda_var head =
+    is_var head andalso String.isPrefix "lam." (fst (dest_var head))
+
+  (* Lambda lifting runs before monomorphization, so a lifted lam.<n> can
+     be polymorphic and reach the mono printer at several ground types.
+     Being a variable, it has no generic type to match against: its whole
+     type names the instance, as type arguments do for constants. *)
+  fun mono_type_args head =
+    if is_lambda_var head then [type_of head] else type_args_of_head head
+
   fun encoded_symbol encoding head =
     if is_var head andalso not (is_generated_var head) then
       variable_name (raw_symbol head)
@@ -541,7 +551,7 @@ struct
                           else raw_symbol head)
         | _ =>
             let
-              val args = type_args_of_head head
+              val args = mono_type_args head
               val base = if raw_symbol head = "$ite" then "pxy.ite"
                          else raw_symbol head
             in

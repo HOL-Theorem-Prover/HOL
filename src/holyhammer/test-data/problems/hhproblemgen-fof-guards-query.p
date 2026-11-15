@@ -49,9 +49,9 @@ fof(help_2Epp_2Efalse, axiom,
     ((~ pp_2E(pxy_2Efalse)))).
 % Facts (2)
 fof(lam_2E0, axiom,
-    ((![X]: (app_2E(lam_2E0,X) = X)))).
+    ((![X]: (app_2E(lam_2E0_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29,X) = X)))).
 fof(lam_2E1, axiom,
-    ((![X]: (app_2E(lam_2E1,X) = X)))).
+    ((![X]: (app_2E(lam_2E1_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29,X) = X)))).
 % Conjecture (1)
 fof(conjecture, conjecture,
-    ((![P]: (gd_2Ety__2Emin__2Ebool(P) => (![X]: (![Y]: (![V_use__bool]: (gd_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Ebool__29(V_use__bool) => ((app_2E(c_2Ebool_2ECOND_2Enum_2Enum(P,X),Y) = X) & ((lam_2E0 = lam_2E1) & (pp_2E(app_2E(V_use__bool,app_2E(pxy_2Enot,P))) & (X = X)))))))))))).
+    ((![P]: (gd_2Ety__2Emin__2Ebool(P) => (![X]: (![Y]: (![V_use__bool]: (gd_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Ebool__29(V_use__bool) => ((app_2E(c_2Ebool_2ECOND_2Enum_2Enum(P,X),Y) = X) & ((lam_2E0_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29 = lam_2E1_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29) & (pp_2E(app_2E(V_use__bool,app_2E(pxy_2Enot,P))) & (X = X)))))))))))).
