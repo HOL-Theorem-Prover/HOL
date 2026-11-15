@@ -1144,6 +1144,15 @@ fun test_hhProblemGen () =
        String.isSubstring "help_2Ebool__cases" cond_helpers andalso
        not (String.isSubstring "help_2Eif__True" no_helpers) andalso
        not (String.isSubstring "help_2Eif__False" no_helpers))
+    (* Through pp, b = T as an iff is a tautology; bool_cases must be a
+       term equation, or a test such as X = Y never reaches if_True. *)
+    val cond_guards = problem fof "mono_guards"
+      (input (mk_eq (cond_tm, x)))
+    val _ = expect "hhProblemGen states bool_cases as term equations"
+      (String.isSubstring "((HB = pxy_2Etrue) | (HB = pxy_2Efalse))"
+         cond_helpers andalso
+       String.isSubstring "((HB = pxy_2Etrue) | (HB = pxy_2Efalse))"
+         cond_guards)
     val _ = expect "hhProblemGen injects EQ_EXT iff app occurs"
       (String.isSubstring "help_2Eeq__ext" app_helpers andalso
        not (String.isSubstring "help_2Eeq__ext" no_helpers))

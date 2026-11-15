@@ -32,7 +32,7 @@ tff(help_2Eif__True, axiom,
 tff(help_2Eif__False, axiom,
     ((!>[A_27a : $tType]: (![HX : A_27a]: (![HY : A_27a]: (c_2Ebool_2ECOND(A_27a,pxy_2Efalse,HX,HY) = HY)))))).
 tff(help_2Ebool__cases, axiom,
-    ((![HB : $o]: ((pp_2E(HB) <=> pp_2E(pxy_2Etrue)) | (pp_2E(HB) <=> pp_2E(pxy_2Efalse)))))).
+    ((![HB : $o]: ((HB = pxy_2Etrue) | (HB = pxy_2Efalse))))).
 tff(help_2Epxy_2Etrue, axiom,
     ((pp_2E(pxy_2Etrue) <=> pp_2E(pxy_2Etrue)))).
 tff(help_2Epxy_2Efalse, axiom,

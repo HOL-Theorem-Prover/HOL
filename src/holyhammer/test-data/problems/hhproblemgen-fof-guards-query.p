@@ -32,7 +32,7 @@ fof(help_2Eif__False_2E3, axiom,
 fof(help_2Eif__False_2E4, axiom,
     ((![HX]: (![HY]: (c_2Ebool_2ECOND_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29(pxy_2Efalse,HX,HY) = HY))))).
 fof(help_2Ebool__cases, axiom,
-    ((![HB]: (gd_2Ety__2Emin__2Ebool(HB) => ((pp_2E(HB) <=> pp_2E(pxy_2Etrue)) | (pp_2E(HB) <=> pp_2E(pxy_2Efalse))))))).
+    ((![HB]: (gd_2Ety__2Emin__2Ebool(HB) => ((HB = pxy_2Etrue) | (HB = pxy_2Efalse)))))).
 fof(help_2Epxy_2Etrue, axiom,
     ((pp_2E(pxy_2Etrue) <=> pp_2E(pxy_2Etrue)))).
 fof(help_2Epxy_2Efalse, axiom,

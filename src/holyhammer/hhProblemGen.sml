@@ -970,11 +970,24 @@ struct
           val y = mk_var ("HY", Type.alpha)
           val b = mk_var ("HB", Type.bool)
           fun cond test = list_mk_comb (conditional, [test, x, y])
+          (* Where bool is $o, b = T is an iff and this is what $o
+             already knows.  Where bool is a term sort read through pp,
+             the skeleton would turn b = T into the tautology
+             pp(b) <=> pp(true).  The law must equate terms instead, or
+             no COND test other than T or F could reach if_True/False:
+             build it with the $equal head that stands for TPTP
+             equality. *)
+          val bool_is_o = is_full_ho format orelse is_fool format
+          val term_eq = mk_var ("$equal",
+            Type.bool --> Type.bool --> Type.bool)
+          fun bool_eq (left, right) =
+            if bool_is_o then mk_eq (left, right)
+            else list_mk_comb (term_eq, [left, right])
         in
           [("help.if_True", list_mk_forall ([x, y], mk_eq (cond T, x))),
            ("help.if_False", list_mk_forall ([x, y], mk_eq (cond F, y))),
            ("help.bool_cases", mk_forall (b,
-             mk_disj (mk_eq (b, T), mk_eq (b, F))))]
+             mk_disj (bool_eq (b, T), bool_eq (b, F))))]
         end
         else []
     in

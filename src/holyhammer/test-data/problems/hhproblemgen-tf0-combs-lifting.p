@@ -20,6 +20,8 @@ tff(ty_2Ety__2Emin__2Efun__28min__2Efun__28min__2Ebool__2Cmin__2Ebool__29__2Cmin
     ty_2Emin_2Efun_28min_2Efun_28min_2Ebool_2Cmin_2Ebool_29_2Cmin_2Efun_28min_2Efun_28min_2Ebool_2Cmin_2Ebool_29_2Cmin_2Ebool_29_29 : $tType).
 tff(ty_2Ety__2Emin__2Efun__28min__2Efun__28min__2Ebool__2Cmin__2Ebool__29__2Cmin__2Ebool__29, type,
     ty_2Emin_2Efun_28min_2Efun_28min_2Ebool_2Cmin_2Ebool_29_2Cmin_2Ebool_29 : $tType).
+tff(ty_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Efun__28min__2Ebool__2Cmin__2Ebool__29__29, type,
+    ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Efun_28min_2Ebool_2Cmin_2Ebool_29_29 : $tType).
 tff(ty_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Efun__28min__2Efun__28num__2Enum__2Cnum__2Enum__29__2Cmin__2Efun__28min__2Efun__28num__2Enum__2Cnum__2Enum__29__2Cmin__2Efun__28num__2Enum__2Cnum__2Enum__29__29__29__29, type,
     ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Efun_28min_2Efun_28num_2Enum_2Cnum_2Enum_29_2Cmin_2Efun_28min_2Efun_28num_2Enum_2Cnum_2Enum_29_2Cmin_2Efun_28num_2Enum_2Cnum_2Enum_29_29_29_29 : $tType).
 tff(ty_2Ety__2Emin__2Efun__28min__2Efun__28num__2Enum__2Cnum__2Enum__29__2Cmin__2Efun__28min__2Efun__28num__2Enum__2Cnum__2Enum__29__2Cmin__2Efun__28num__2Enum__2Cnum__2Enum__29__29__29, type,
@@ -38,8 +40,6 @@ tff(ty_2Ety__2Emin__2Efun__28num__2Enum__2Cmin__2Efun__28num__2Enum__2Cnum__2Enu
     ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cnum_2Enum_29_29 : $tType).
 tff(ty_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Efun__28min__2Ebool__2Cmin__2Efun__28min__2Ebool__2Cmin__2Ebool__29__29__29, type,
     ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Efun_28min_2Ebool_2Cmin_2Efun_28min_2Ebool_2Cmin_2Ebool_29_29_29 : $tType).
-tff(ty_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Efun__28min__2Ebool__2Cmin__2Ebool__29__29, type,
-    ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Efun_28min_2Ebool_2Cmin_2Ebool_29_29 : $tType).
 tff(sy_2Ec__2Ebool__2ECOND__2Enum__2Enum, type,
     c_2Ebool_2ECOND_2Enum_2Enum : (ty_2Emin_2Ebool * ty_2Enum_2Enum) > ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29).
 tff(sy_2Elam__2E0__2Emin__2Efun__28num__2Enum__2Cnum__2Enum__29, type,
@@ -108,7 +108,7 @@ tff(help_2Eif__False_2E3, axiom,
 tff(help_2Eif__False_2E4, axiom,
     ((![HX : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29]: (![HY : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29]: (c_2Ebool_2ECOND_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29(pxy_2Efalse,HX,HY) = HY))))).
 tff(help_2Ebool__cases, axiom,
-    ((![HB : ty_2Emin_2Ebool]: ((pp_2E(HB) <=> pp_2E(pxy_2Etrue)) | (pp_2E(HB) <=> pp_2E(pxy_2Efalse)))))).
+    ((![HB : ty_2Emin_2Ebool]: ((HB = pxy_2Etrue) | (HB = pxy_2Efalse))))).
 tff(help_2Epxy_2Etrue, axiom,
     ((pp_2E(pxy_2Etrue) <=> pp_2E(pxy_2Etrue)))).
 tff(help_2Epxy_2Efalse, axiom,
