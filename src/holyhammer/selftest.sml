@@ -3300,6 +3300,32 @@ fun test_schedule_without_minimization () =
     ()
   end
 
+(* Five slices report the same list, which Metis cannot replay within
+   preplay_timeout (1 s).  Replaying it once per slice took 5 s. *)
+fun test_schedule_failed_list_once () =
+  let
+    val name = "hh-schedule-failed-list-once"
+    val lemmas =
+      map (fn lemma => "arithmeticTheory." ^ lemma)
+        ["ADD_COMM", "ADD_ASSOC", "ADD_CLAUSES", "MULT_COMM",
+         "LEFT_ADD_DISTRIB", "ADD1"]
+    val slices =
+      List.tabulate (5, fn index =>
+        fixture_slice name ["0", "schedule-truth.out", Int.toString index]
+          1)
+    val config = printer_config name slices (fn _ => ())
+      (fn _ => (hhProver.SzsTheorem, SOME lemmas))
+    val _ = hhProver.register config
+    val options = fixture_options [name] 5 5 20 1 false "" NONE
+    val (result, events) = run_schedule_on ([], ``!n. n + 1 = n``) options
+    val found = List.filter (String.isPrefix "found|") events
+  in
+    expect "scheduler replays a lemma list that failed only once"
+      (length found = 5 andalso null (#suggestions result) andalso
+       #stopped result = hhSchedule.Exhausted andalso
+       #t_total result < 3.0)
+  end
+
 fun test_schedule_early_stop parser =
   let
     val slow1 = "hh-schedule-slow-one"
@@ -3767,6 +3793,7 @@ fun test_hhSchedule () =
           val _ = test_schedule_max_proofs parser
           val _ = test_schedule_reconstruction_failure parser
           val _ = test_schedule_without_minimization ()
+          val _ = test_schedule_failed_list_once ()
           val _ = test_schedule_early_stop parser
           val _ = test_schedule_budget_truncation parser
           val _ = test_schedule_cache parser

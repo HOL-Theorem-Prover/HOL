@@ -242,7 +242,10 @@ fun run_in root {options, goal, rankings, progress} =
     val slices_run = ref
       ([] : (hhProver.slice * hhProver.szs * real * bool) list)
     val suggestions = ref ([] : suggestion list)
-    val verified_keys = ref ([] : string list)
+    (* Lemma lists already reconstructed, successfully or not.  Metis
+       does the same on the same list, so a list found again by another
+       slice is not replayed again. *)
+    val tried_keys = ref ([] : string list)
     val stopping = ref false
     val reason = ref (NONE : stop_reason option)
     val running = ref ([] : (int * bool ref * (unit -> unit)) list)
@@ -433,7 +436,8 @@ fun run_in root {options, goal, rankings, progress} =
       let
         val key = lemma_key lemmas
         val duplicate = with_mutex state_mutex (fn () =>
-          List.exists (fn other => key = other) (!verified_keys))
+          List.exists (fn other => key = other) (!tried_keys) orelse
+          (tried_keys := key :: !tried_keys; false))
       in
         if duplicate then ()
         else
@@ -457,7 +461,6 @@ fun run_in root {options, goal, rankings, progress} =
                  t_prover = t_prover, t_recon = t_recon}
               val reached = with_mutex state_mutex (fn () =>
                 (suggestions := suggestion :: !suggestions;
-                 verified_keys := key :: !verified_keys;
                  length (!suggestions) >= #max_proofs options))
               val _ = emit (Verified suggestion)
             in
