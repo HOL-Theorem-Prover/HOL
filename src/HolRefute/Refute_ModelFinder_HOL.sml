@@ -27,7 +27,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      stem : string,
      members : kname list,
      rules : term list,
-     cases : term list}
+     cases : term list,
+     (* Derived from a [p = lfp F] (or [gfp]) definition, whose leastness
+        is the definition's. *)
+     derived : bool}
   type fixpoint_cache = (kname * fixpoint_group option) list
   type type_operator = {Thy : string, Tyop : string}
   type ersatz = {original : kname, replacement : kname}
@@ -278,6 +281,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      iterator_table : iterator_table,
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
+     fixpoint_checks : (term * string * bool) list ref,
      choice_guard_inserted : bool ref,
      choice_empty_cache : (term * bool) list ref,
      choice_predicate_attempts : int ref,
@@ -1358,6 +1362,55 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     end
     handle HOL_ERR _ => NONE
 
+  (* The conclusion of the cases theorem a fixpoint constant's encodings
+     would read, unvalidated; [] for any other constant. *)
+  fun candidate_cases constant =
+    let val kind = raw_fixpoint_kind constant
+    in
+      if kind = NoFp then []
+      else
+        case locate_cases_theorem kind (original_const_key constant) of
+            SOME (_, theorem) => [Thm.concl theorem]
+          | NONE => []
+    end
+    handle HOL_ERR _ => []
+
+  (* Whether a constant in the bodies of the cases equations [equations]
+     ([!xs. p xs <=> B], one per member), other than the members, reaches
+     a member through [definitions] (the theorems, as terms, the model
+     finder would send for a constant), transitively.  Every encoding of
+     a predicate assumes that its cases bodies depend on its group only
+     through the members' own occurrences; an IndDefLib cases theorem
+     passes, since every constant in it predates the predicate. *)
+  fun cases_reach_members definitions equations =
+    let
+      val sides = map (boolSyntax.dest_eq o #2 o boolSyntax.strip_forall)
+        equations
+      val members = map (#1 o HolKernel.strip_comb o #1) sides
+      fun is_member c = List.exists (Term.same_const c) members
+      val constants = HolKernel.find_terms Term.is_const
+      fun reach _ [] = false
+        | reach seen (c :: rest) =
+            is_member c orelse
+            (if List.exists (Term.same_const c) seen then reach seen rest
+             else reach (c :: seen)
+                    (List.concat (map constants (definitions c)) @ rest))
+    in
+      reach [] (List.filter (not o is_member)
+                  (List.concat (map (constants o #2) sides)))
+    end
+
+  (* The theorems, as terms, the model finder may send for a constant:
+     its definitional equations from every table, its choice
+     specification and its cases theorem. *)
+  fun sent_definitions
+        (context as {def_tables = (unfold_table, fallback_table),
+                     simp_table, psimp_table, ...} : mf_context) constant =
+    List.concat (map (fn table => def_props_for_const table constant)
+      [unfold_table, fallback_table, !simp_table, psimp_table]) @
+    choice_spec_props_for_const context constant @
+    candidate_cases constant
+
   fun fixpoint_base_theorem_name Lfp = "lfp_fixedpoint"
     | fixpoint_base_theorem_name Gfp = "gfp_greatest_fixedpoint"
     | fixpoint_base_theorem_name NoFp =
@@ -1509,7 +1562,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           val group : fixpoint_group =
             {kind = kind, stem = #Name (original_const_key constant),
              members = [original_const_key constant],
-             rules = rules, cases = cases}
+             rules = rules, cases = cases, derived = true}
           fun extend table props = List.foldl
             (fn (prop, entries) =>
               let val (head, value) = pair_for_prop prop
@@ -1595,13 +1648,18 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                            List.all (fn member =>
                              registered_stem kind member stem) members andalso
                            List.all (fn head => List.exists
-                             (same_key head) members) rule_heads
+                             (same_key head) members) rule_heads andalso
+                           (* A theorem whose bodies reach the predicate
+                              through a definition hides recursion: the
+                              predicate has no cases theorem. *)
+                           not (cases_reach_members
+                                  (sent_definitions context) cases)
                          val _ = if valid then () else
                            raise err "fixpoint_group_of_const"
                              "malformed fixpoint theorem group"
                          val group : fixpoint_group =
                            {kind = kind, stem = stem, members = members,
-                            rules = rules, cases = cases}
+                            rules = rules, cases = cases, derived = false}
                          fun install (member, entries) =
                            (member, SOME group) ::
                            List.filter (fn (other, _) =>
@@ -1702,10 +1760,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           end
           handle HOL_ERR _ => NONE
 
-  fun intro_props_for_const context constant =
-    (ignore (fixpoint_group_of_const context constant);
-     def_props_for_const (!(#intro_table context)) constant)
-
   fun case_props_for_const context constant =
     (ignore (fixpoint_group_of_const context constant);
      def_props_for_const (!(#case_table context)) constant)
@@ -1733,6 +1787,287 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     is_raw_equational_fun context constant orelse
     is_raw_inductive_pred context constant
 
+  fun same_fixpoint_const left right =
+    same_key (original_const_key left) (original_const_key right) andalso
+    Lib.can (Type.match_type (Term.type_of right)) (Term.type_of left)
+    handle HOL_ERR _ => false
+
+  (* Each encoding condition a group's encoding rests on is proved once
+     per group and recorded in [fixpoint_checks] as (first member,
+     condition, proved); a model that relies on an unproved one is not
+     Genuine. *)
+  fun record_check ({fixpoint_checks, ...} : mf_context) condition members
+                   prove =
+    if List.exists (fn (member, other, _) => other = condition andalso
+         List.exists (same_fixpoint_const member) members) (!fixpoint_checks)
+    then ()
+    else fixpoint_checks :=
+      (hd members, condition, prove ()) :: !fixpoint_checks
+
+  (* Whether the members [members] are the least (greatest, [Gfp])
+     solution of their cases equations [equations] ([!xs. p xs <=> B], one
+     per member): the kernel proves, within [timeout], [(!xs. B_i[Ps] xs
+     ==> P_i xs) /\ ... ==> (!xs. p_i fixed xs ==> P_i xs) /\ ...]
+     (coinductive: [P_i xs ==> B_i[Ps] xs] and [P_i xs ==> p_i fixed xs])
+     for the very [B_i] the equations state, from one of [inductions].  An
+     induction theorem is read by its shape, not by its name: no
+     hypotheses, one conjunct per member, each member applied to its fixed
+     parameters and the conjunct's own binders, pairwise distinct
+     variables and none a predicate variable, the same fixed parameters in
+     every conjunct; the members occur in each [B_i] only applied to
+     those. *)
+  fun cases_extremal timeout kind members equations inductions =
+    let
+      fun distinct vs = length (Lib.op_mk_set Term.aconv vs) = length vs
+      fun shape () = raise err "cases_extremal" "unexpected shape"
+      fun lemma induction =
+        let
+          val _ = if null (Thm.hyp induction) then () else shape ()
+          val generic = HolKernel.find_term (fn t =>
+            Term.is_const t andalso Term.same_const t (hd members))
+            (Thm.concl induction)
+          val induction = Thm.INST_TYPE (Type.match_type
+            (Term.type_of generic) (Term.type_of (hd members))) induction
+          val (outer, body) = boolSyntax.strip_forall (Thm.concl induction)
+          val (_, conclusion) = boolSyntax.dest_imp body
+          fun read conjunct =
+            let
+              val (xs, implication) = boolSyntax.strip_forall conjunct
+              val (left, right) = boolSyntax.dest_imp implication
+              val (applied, variable) =
+                if kind = Gfp then (right, left) else (left, right)
+              val (p, arguments) = HolKernel.strip_comb applied
+              val (v, vargs) = HolKernel.strip_comb variable
+              val (fixed, rest) =
+                Lib.split_after (length arguments - length xs) arguments
+            in
+              if Lib.op_mem Term.aconv p members andalso
+                 Lib.op_mem Term.aconv v outer andalso
+                 Lib.all2 Term.aconv rest xs andalso
+                 Lib.all2 Term.aconv vargs xs andalso
+                 List.all (fn f => Lib.op_mem Term.aconv f outer) fixed
+              then (p, v, fixed, xs) else shape ()
+            end
+          val read = map read (boolSyntax.strip_conj conclusion)
+          val fixed = #3 (hd read)
+          val variables = map #2 read
+          val _ =
+            if length read = length members andalso
+               distinct (map #1 read) andalso distinct variables andalso
+               List.all (fn (_, _, other, xs) =>
+                 Lib.all2 Term.aconv other fixed andalso
+                 distinct (fixed @ xs) andalso
+                 not (List.exists (fn x => Lib.op_mem Term.aconv x variables)
+                        (fixed @ xs))) read
+            then () else shape ()
+          val applied = map (fn (p, v, _, _) =>
+            {redex = HolKernel.list_mk_comb (p, fixed), residue = v}) read
+          fun closure (p, v, _, xs) =
+            let
+              val equation =
+                case List.find (fn equation =>
+                       Term.aconv p (#1 (HolKernel.strip_comb (boolSyntax.lhs
+                         (#2 (boolSyntax.strip_forall equation))))))
+                       equations of
+                    SOME equation => equation
+                  | NONE => shape ()
+              val (left, right) =
+                boolSyntax.dest_eq (#2 (boolSyntax.strip_forall equation))
+              val arguments = #2 (HolKernel.strip_comb left)
+              val parameters = fixed @ xs
+              val _ =
+                if List.all Term.is_var arguments andalso distinct arguments
+                   andalso length arguments = length parameters andalso
+                   List.all (fn z => Lib.op_mem Term.aconv z arguments orelse
+                               not (Lib.op_mem Term.aconv z parameters))
+                     (Term.free_vars right)
+                then () else shape ()
+              val instance = Term.subst (ListPair.map (fn (a, b) =>
+                {redex = a, residue = b}) (arguments, parameters)) right
+              val replaced = Term.subst applied instance
+              val _ = if List.exists (fn member =>
+                           Lib.can (HolKernel.find_term (fn t =>
+                             Term.is_const t andalso Term.aconv t member))
+                             replaced) members
+                      then shape () else ()
+              val head = HolKernel.list_mk_comb (v, xs)
+            in
+              boolSyntax.list_mk_forall (xs,
+                if kind = Gfp then boolSyntax.mk_imp (head, replaced)
+                else boolSyntax.mk_imp (replaced, head))
+            end
+          val closures = map closure read
+          val goal = boolSyntax.mk_imp
+            (boolSyntax.list_mk_conj closures, conclusion)
+          open Tactical Tactic
+          fun closure_for v =
+            case List.find (fn ((_, other, _, _), _) => Term.aconv v other)
+                   (ListPair.zip (read, closures)) of
+                SOME (_, closure) => closure
+              | NONE => shape ()
+          fun metis goal =
+            trace_tac ("metis", 0) (metisLib.METIS_TAC []) goal
+          (* The disjunct of [B_i] that states the rule, its existentials
+             instantiated by matching: its equations' patterns against the
+             rule's arguments, then its other conjuncts against the rule's
+             premises; what is left is reflexive or a premise. *)
+          fun rule_disjunct (assumptions, goal) =
+            let
+              val disjuncts = boolSyntax.strip_disj goal
+              val last = length disjuncts - 1
+              fun select k =
+                NTAC k DISJ2_TAC THEN (if k = last then ALL_TAC else DISJ1_TAC)
+              fun witnesses disjunct =
+                let
+                  val (bound_vs, body) = boolSyntax.strip_exists disjunct
+                  (* Renamed apart, so that a witness that is a variable of
+                     the same name is still a binding. *)
+                  val avoid = Term.free_varsl (goal :: assumptions)
+                  val vs = List.rev (#2 (List.foldl (fn (v, (avoid, vs)) =>
+                    let val v' = Term.variant avoid v
+                    in (v' :: avoid, v' :: vs) end) (avoid, []) bound_vs))
+                  val conjuncts = boolSyntax.strip_conj (Term.subst
+                    (ListPair.map (fn (v, v') => {redex = v, residue = v'})
+                      (bound_vs, vs)) body)
+                  fun bound theta v =
+                    List.exists (fn {redex, ...} => Term.aconv redex v) theta
+                  fun open_in theta t = List.exists (fn v =>
+                    not (bound theta v) andalso Term.free_in v t) vs
+                  fun extend theta (pattern, object) =
+                    let
+                      val pattern = Term.subst theta pattern
+                      val fixed = List.filter (fn v =>
+                        not (Lib.op_mem Term.aconv v vs))
+                        (Term.free_vars pattern)
+                      val (more, types) = Term.match_terml []
+                        (HOLset.fromList Term.compare fixed) pattern object
+                    in
+                      if null types then theta @ more else shape ()
+                    end
+                  fun by_equation (conjunct, theta) =
+                    (case Lib.total boolSyntax.dest_eq conjunct of
+                         SOME (left, right) =>
+                           if not (open_in theta left) andalso
+                              open_in theta right
+                           then extend theta (right, left)
+                           else if not (open_in theta right) andalso
+                                   open_in theta left
+                           then extend theta (left, right)
+                           else theta
+                       | NONE => theta)
+                    handle HOL_ERR _ => theta
+                  fun by_premise (conjunct, theta) =
+                    if open_in theta conjunct then
+                      case List.mapPartial (fn premise =>
+                             Lib.total (extend theta) (conjunct, premise))
+                             assumptions of
+                          theta' :: _ => theta'
+                        | [] => theta
+                    else theta
+                  val theta = List.foldl by_premise
+                    (List.foldl by_equation [] conjuncts) conjuncts
+                in
+                  if List.all (bound theta) vs
+                  then map (Term.subst theta) vs else shape ()
+                end
+              fun attempt (k, disjunct) =
+                let val instances = witnesses disjunct
+                in
+                  select k THEN MAP_EVERY EXISTS_TAC instances THEN
+                  REPEAT CONJ_TAC THEN
+                  FIRST [REFL_TAC, FIRST_ASSUM ACCEPT_TAC]
+                end
+              fun first [] = NO_TAC
+                | first (candidate :: rest) =
+                    (case Lib.total attempt candidate of
+                         SOME tactic => tactic ORELSE first rest
+                       | NONE => first rest)
+            in
+              first (Lib.enumerate 0 disjuncts) (assumptions, goal)
+            end
+          val finish = FIRST [FIRST_ASSUM ACCEPT_TAC, rule_disjunct, metis]
+          (* Each conjunct of the hypothesis is one rule ([P_i args] under
+             its premises) or, coinductive, one [P_i xs ==> B'_i xs]: the
+             matching closure leaves [B_i] at the rule's arguments, or
+             gives [B_i xs]. *)
+          val step =
+            if kind = Gfp then
+              REPEAT GEN_TAC THEN DISCH_TAC THEN
+              (fn (assumptions, goal) =>
+                 let
+                   val hypothesis = hd assumptions
+                   val closure = closure_for
+                     (#1 (HolKernel.strip_comb hypothesis))
+                 in
+                   MP_TAC (Drule.MATCH_MP (Thm.ASSUME closure)
+                             (Thm.ASSUME hypothesis)) (assumptions, goal)
+                 end) THEN
+              FIRST [Thm_cont.DISCH_THEN ACCEPT_TAC,
+                     DISCH_TAC THEN metis]
+            else
+              REPEAT GEN_TAC THEN
+              REPEAT (Thm_cont.DISCH_THEN (Thm_cont.REPEAT_TCL
+                Thm_cont.CONJUNCTS_THEN ASSUME_TAC)) THEN
+              (fn (assumptions, goal) =>
+                 MATCH_MP_TAC (Thm.ASSUME (closure_for
+                   (#1 (HolKernel.strip_comb goal)))) (assumptions, goal))
+              THEN finish
+          val tactic =
+            Thm_cont.DISCH_THEN (Thm_cont.REPEAT_TCL Thm_cont.CONJUNCTS_THEN
+              ASSUME_TAC) THEN
+            MATCH_MP_TAC (Drule.SPECL outer induction) THEN
+            REPEAT CONJ_TAC THEN step
+        in
+          Lib.can Tactical.TAC_PROOF (([], goal), tactic)
+        end
+        handle HOL_ERR _ => false
+    in
+      Util.apply_within_budget timeout (List.exists lemma) inductions
+    end
+    handle Timeout.TIMEOUT _ => false
+         | HOL_ERR _ => false
+
+  (* Whether [pred] is the least (greatest) fixpoint of the cases
+     equations its group encodes: by the definition for a derived group,
+     otherwise by [cases_extremal] from the stem's [_ind] ([_coind]) and
+     the registered induction theorems. *)
+  fun fixpoint_extremal context pred =
+    case fixpoint_group_of_const context pred of
+        SOME {derived = true, ...} => true
+      | SOME {stem, ...} =>
+          (case instantiated_fixpoint_group context pred of
+               SOME {kind, members, cases, ...} =>
+                 let
+                   val thy = #Thy (original_const_key pred)
+                   fun named suffix = [DB.fetch thy (stem ^ suffix)]
+                     handle HOL_ERR _ => []
+                   fun registered table = List.concat (map (fn member =>
+                     Option.getOpt (KNametab.lookup table
+                       (original_const_key member), [])) members)
+                   val inductions =
+                     if kind = Gfp then
+                       named "_coind" @
+                       registered (CoIndDefLib.coinduction_map ())
+                     else
+                       named "_ind" @
+                       registered (IndDefLib.rule_induction_map ())
+                 in
+                   cases_extremal (#tac_timeout context) kind members cases
+                     inductions
+                 end
+             | NONE => false)
+      | NONE => false
+
+  (* Records, for the bound and starred encodings, which rest on it. *)
+  fun record_extremal context pred =
+    case instantiated_fixpoint_group context pred of
+        SOME {kind, members, ...} =>
+          record_check context
+            (if kind = Gfp then "its greatest fixpoint"
+             else "its least fixpoint")
+            members (fn () => fixpoint_extremal context pred)
+      | NONE => ()
+
   fun substituted_fixpoint_axioms context generated =
     let
       val key = original_const_key generated
@@ -1748,6 +2083,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             SOME group => group
           | NONE => raise err "substituted_fixpoint_axioms"
               "fixpoint bound has no theorem group"
+      (* A bound is the predicate's only if it is the least (greatest)
+         fixpoint. *)
+      val _ = record_extremal context original
       fun bound member =
         let
           val member_key = original_const_key member
@@ -1789,11 +2127,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                     | NONE => [])
              | psimps => psimps)
       | simps => simps
-
-  fun same_fixpoint_const left right =
-    same_key (original_const_key left) (original_const_key right) andalso
-    Lib.can (Type.match_type (Term.type_of right)) (Term.type_of left)
-    handle HOL_ERR _ => false
 
   fun term_mentions_const constant term =
     List.exists (fn candidate =>
@@ -2183,19 +2516,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             val _ = cache_wf timeout proposition result
           in result end
 
-  fun uncached_is_well_founded_inductive_pred context constant =
-    let
-      val rules = intro_props_for_const context constant
-      val {malformed, proposition, argument_tys, pairs, recursive} =
-        wf_problem constant rules
-    in
-      if malformed orelse null rules then false
-      else if not recursive then true
-      else cached_wf_result (#tac_timeout context) proposition
-        (fn () => wf_candidates argument_tys pairs)
-    end
-    handle HOL_ERR _ => false
-
   fun uncached_is_well_founded_group context members rules =
     let
       val {malformed, proposition, argument_tyss, recursive} =
@@ -2232,6 +2552,151 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         SOME value => SOME value
       | NONE => default_wf_override rows
 
+  (* The introduction rules the cases equations [!xs. p xs <=> B] (each
+     [xs] distinct variables) state right to left: one per disjunct of B,
+     its existentials (renamed apart) universally quantified, and each
+     equation [x = t] or [t = x] on an argument [x] not free in [t]
+     substituted into the conclusion. *)
+  fun rules_of_cases equations =
+    let
+      fun rule (p, xs) disjunct =
+        let
+          fun strip avoid tm =
+            if boolSyntax.is_exists tm then
+              let
+                val (y, body) = boolSyntax.dest_exists tm
+                val y' = Term.variant avoid y
+              in
+                strip (y' :: avoid)
+                  (Term.subst [{redex = y, residue = y'}] body)
+              end
+            else tm
+          val body = strip (xs @ Term.free_vars disjunct) disjunct
+          fun substitute (args, done, []) = (args, rev done)
+            | substitute (args, done, conjunct :: rest) =
+                let
+                  fun head_equation (x, t) =
+                    Lib.op_mem Term.aconv x args andalso
+                    not (Lib.op_mem Term.aconv x (Term.free_vars t))
+                  val oriented =
+                    if not (boolSyntax.is_eq conjunct) then NONE
+                    else
+                      let val (l, r) = boolSyntax.dest_eq conjunct
+                      in if head_equation (l, r) then SOME (l, r)
+                         else if head_equation (r, l) then SOME (r, l)
+                         else NONE
+                      end
+                in
+                  case oriented of
+                    SOME (x, t) =>
+                      let val s = Term.subst [{redex = x, residue = t}]
+                      in substitute (map s args, map s done, map s rest)
+                      end
+                  | NONE => substitute (args, conjunct :: done, rest)
+                end
+          val (args, conditions) =
+            substitute (xs, [], boolSyntax.strip_conj body)
+          val conclusion = HolKernel.list_mk_comb (p, args)
+          val implication =
+            if null conditions then conclusion
+            else boolSyntax.mk_imp (boolSyntax.list_mk_conj conditions,
+                                    conclusion)
+        in
+          boolSyntax.list_mk_forall (Term.free_vars implication, implication)
+        end
+      fun rules equation =
+        let
+          val (left, body) =
+            boolSyntax.dest_eq (#2 (boolSyntax.strip_forall equation))
+          val (p, xs) = HolKernel.strip_comb left
+        in
+          if List.all Term.is_var xs andalso
+             length (Lib.op_mk_set Term.aconv xs) = length xs
+          then map (rule (p, xs)) (boolSyntax.strip_disj body)
+          else raise err "rules_of_cases"
+            "arguments are not distinct variables"
+        end
+    in
+      List.concat (map rules equations)
+    end
+
+  (* Whether the recursion in the cases equations [equations] of a group
+     (one per member, in order) is well-founded, decided on the rules they
+     state ([rules_of_cases]) by the problem and prover used for a
+     predicate's own rules; equations that cannot be read so are not.  The
+     user's [wfs] override, an explicit assertion, comes first. *)
+  fun is_well_founded_cases (context as {wfs, ...} : mf_context) equations =
+    let
+      val members = map (fn equation => #1 (HolKernel.strip_comb
+        (boolSyntax.lhs (#2 (boolSyntax.strip_forall equation)))))
+        equations
+    in
+      case (case members of
+                [constant] => wf_override wfs constant
+              | _ => group_wf_override wfs members) of
+          SOME (SOME result) => result
+        | _ =>
+            let val rules = rules_of_cases equations
+            in
+              case members of
+                  [constant] =>
+                    let
+                      val {malformed, proposition, argument_tys, pairs,
+                           recursive} = wf_problem constant rules
+                    in
+                      if malformed orelse null rules then false
+                      else if not recursive then true
+                      else cached_wf_result (#tac_timeout context)
+                        proposition
+                        (fn () => wf_candidates argument_tys pairs)
+                    end
+                | _ => uncached_is_well_founded_group context members rules
+            end
+    end
+    handle HOL_ERR _ => false
+
+  (* Whether the bodies of the cases equations [equations] ([!xs. p xs <=>
+     B], one per member) are monotone in the members, proved by
+     IndDefLib's own prover within [timeout]. *)
+  fun cases_monotone timeout equations =
+    let
+      val split = map (fn equation =>
+        let
+          val (left, body) =
+            boolSyntax.dest_eq (#2 (boolSyntax.strip_forall equation))
+          val (p, xs) = HolKernel.strip_comb left
+        in (p, xs, body) end) equations
+      val members = map #1 split
+      val ps = map (Term.genvar o Term.type_of) members
+      val qs = map (Term.genvar o Term.type_of) members
+      fun replace vs = Term.subst (ListPair.map (fn (p, v) =>
+        {redex = p, residue = v}) (members, vs))
+      fun below (p, q) =
+        let
+          val zs = map Term.genvar (#1 (boolSyntax.strip_fun
+                                          (Term.type_of p)))
+        in
+          boolSyntax.list_mk_forall (zs, boolSyntax.mk_imp
+            (HolKernel.list_mk_comb (p, zs), HolKernel.list_mk_comb (q, zs)))
+        end
+      val goal = boolSyntax.list_mk_forall (ps @ qs, boolSyntax.mk_imp
+        (boolSyntax.list_mk_conj (ListPair.map below (ps, qs)),
+         boolSyntax.list_mk_conj (map (fn (_, xs, body) =>
+           boolSyntax.list_mk_forall (xs, boolSyntax.mk_imp
+             (replace ps body, replace qs body))) split)))
+      open Tactical Tactic
+      val tactic =
+        REPEAT GEN_TAC THEN
+        Thm_cont.DISCH_THEN (Thm_cont.REPEAT_TCL Thm_cont.CONJUNCTS_THEN ASSUME_TAC)
+        THEN REPEAT CONJ_TAC THEN
+        InductiveDefinition.MONO_TAC (!IndDefLib.the_monoset)
+    in
+      Util.apply_within_budget timeout
+        (Lib.can Tactical.TAC_PROOF) (([], goal), tactic)
+    end
+    handle Timeout.TIMEOUT _ => false
+         | HOL_ERR _ => false
+
   fun is_well_founded_inductive_pred
         (context as {wfs, wf_cache, ...} : mf_context) constant =
     let
@@ -2264,14 +2729,11 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                    let
                      val kind = fixpoint_kind_of_const context constant
                      val result = kind <> NoFp andalso
+                       (* Decided on the cases equations the encoding
+                          uses, not on the rules. *)
                        (case instance of
-                            SOME {rules, ...} =>
-                              if length members > 1 then
-                                uncached_is_well_founded_group
-                                  context members rules
-                              else
-                                uncached_is_well_founded_inductive_pred
-                                  context constant
+                            SOME {cases, ...} =>
+                              is_well_founded_cases context cases
                           | NONE => false)
                      val _ = remember kind result
                    in result end)
@@ -4106,6 +4568,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   fun starred_linear_pred_const context pred =
     let
+      (* The starred form is the least fixpoint of the equation, which is
+         the predicate only if it is. *)
+      val _ = record_extremal context pred
       val (_, variables, premises, arguments, right) =
         fixpoint_case_equation context pred
       val _ = if null premises then () else
@@ -4181,6 +4646,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               SOME group => group
             | NONE => raise err "unrolled_inductive_pred_const"
                 "fixpoint predicate has no theorem group"
+        (* The unrolling approximates the predicate only if its cases
+           bodies are monotone. *)
+        val _ = record_check context "monotone" members
+          (fn () => cases_monotone (#tac_timeout context) cases)
         val iterator_ty = iterator_type_for_const context gfp pred
         fun mk_unrolled member =
           let
@@ -6795,6 +7264,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        iterator_table = ref [],
        ersatz_table = current_ersatz_table (),
        whack_weakening = ref false,
+       fixpoint_checks = ref [],
        choice_guard_inserted = ref false,
        choice_empty_cache = ref [],
        choice_predicate_attempts = ref 0,
