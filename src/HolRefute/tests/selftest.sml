@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Four deliberate reaches outside the [Refute] signature.  One is a
+(* Five deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -21,7 +21,10 @@ local open Refute_Rat Refute_Real in end
    [Refute_Cert.equality_portfolio], called by "a looping srw_ss
    conversion stops at the step limit": the bound is on one replay step, and
    the only public observer of a looping step is the whole call's
-   deadline. *)
+   deadline.  The fifth is [Refute_Cert_Model.certify_portfolio_detailed_rich],
+   called by "a failed case split goes on to the next candidate": the
+   order in which the model replay tries its candidates is not visible
+   through [Refute]. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -31,6 +34,9 @@ local
        refuteHarvestAbsTheory wordsLib stringLib
 in end
 
+(* [hol run] starts with no current theory; [no_theory] keeps that
+   context for the test of a case split that cannot be proved. *)
+val no_theory = Context.snapshot ()
 val _ = Thm.setCT "scratch"
 val _ = numLib.prefer_num ()
 val _ = HOLFlags.set_flag (Refute_Core.Private.trace, 0)
@@ -1577,6 +1583,33 @@ val _ = test "existential replay is certified" (fn () =>
     |> single_cex_where (fn c => is_genuine c andalso uncertified c) andalso
   unknown_with "allow_existentials"
     (refute (nar |> upd_size 2 |> upd_allow_existentials false) exists_goal))
+
+(* With no current theory, a tactic proof fails.  Given the hints [0] and
+   [40], the model replay first splits on the existential's instance and
+   cannot combine the split; it must go on to the witness [40] and certify
+   the goal. *)
+val _ = test "a failed case split goes on to the next candidate" (fn () =>
+  let
+    val goal = ``?n : num. (\k : num. k < 40 /\ n < 5) = (\k. T)``
+    fun hint tm = {term = tm, source = Refute_Cert_Model.SkolemValue,
+                   provenance = NONE}
+    fun certify () =
+      #1 (Refute_Cert_Model.certify_portfolio_detailed_rich
+            {original = goal, env = [], holes = [],
+             hints = [hint ``0 : num``, hint ``40 : num``],
+             policy = Refute_Cert_Model.default_policy 10000,
+             deadline = NONE})
+    val saved = Context.snapshot ()
+    val result =
+      (Context.restore no_theory;
+       Portable.finally (fn () => Context.restore saved) certify ())
+  in
+    case result of
+        Refute_Cert_Model.Certified theorem =>
+          Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal) andalso
+          null (Thm.hyp theorem)
+      | _ => false
+  end)
 
 (* A universal witness keeps its unrefined positions as free variables, so
    the existential leaf below one holds [num]-typed holes.  The case split
