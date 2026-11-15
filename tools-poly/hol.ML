@@ -745,6 +745,11 @@ in
         initStep "Future" (fn () => Meta.load "Future");
         initStep "Event_Timer" (fn () => Meta.load "Event_Timer");
         initStep "Timeout" (fn () => Meta.load "Timeout");
+        (* Where a HOL exception blames, so a term error can be
+           squiggled inside the quotation that caused it rather than
+           on the declaration's first keyword.  Before the files
+           below, because any of them can raise one. *)
+        useInit "tools-poly/lsp/error_locn_init.ML";
         useInit "tools-poly/lsp/deferred_proofs.ML";
         (* Pretty printers for thm/term/hol_type, so hover can print a
            value of one of those types instead of `?'.  Installed

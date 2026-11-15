@@ -2641,18 +2641,69 @@ fun start {diag, dbg, warnings} = let
       PolyML.PrettyBreak(1, 3),
       PolyML.PrettyString "raised"])
 
-  fun exnToReport i e = Error {hard = true,
-    pos = case PolyML.Exception.exceptionLocation e of
-      (* A HOL kernel exception (raised from Theory.new_theory or
-         similar) carries a location inside the HOL source that
-         raised it — mapping its byte offset via the current file's
-         `lines` table produces a nonsense line.  Trust the
-         location only when its `file` field is empty (meaning
-         "the anonymous compile unit we're currently feeding to
-         PolyML.compiler"). *)
-      SOME (l as {file = "", ...}) => locToRange l
-    | _ => (i, i),
-    msg = encPretty textWidth (exceptionMessage e)}
+  (* An exception escaping a declaration, as a diagnostic.
+
+     `i' is where the declaration begins, and used to be the whole
+     answer for anything HOL raised: a type error in a `Theorem' goal
+     landed as a zero-width squiggle on the `Theorem' keyword.  It is
+     still the fallback, and still the only answer for an exception
+     that knows nothing about the file.
+
+     `bounds' is the window a claimed position has to fall inside --
+     the declaration's start byte and the end of the text being
+     compiled.  A `HOL_ERR' is a chain of origins and only the
+     innermost speaks about the user's term; `exnReport' picks that
+     one, and this is the check that it did.  Rejecting a position
+     below `#1 bounds' is what keeps a span merged across two
+     different quotations from painting a whole declaration red.
+
+     `linesOpt' is NONE where there is no file to be positioned in --
+     the `$/eval' channel -- which is also how that caller keeps the
+     behaviour it had before any of this. *)
+  fun exnToReportIn linesOpt bounds i e = let
+    val fallback =
+      case PolyML.Exception.exceptionLocation e of
+        (* A HOL kernel exception (raised from Theory.new_theory or
+           similar) carries a location inside the HOL source that
+           raised it — mapping its byte offset via the current file's
+           `lines` table produces a nonsense line.  Trust the
+           location only when its `file` field is empty (meaning
+           "the anonymous compile unit we're currently feeding to
+           PolyML.compiler"). *)
+        SOME (l as {file = "", ...}) => locToRange l
+      | _ => (i, i)
+    val {range, message} = !LSPExtension.exnReport e
+    (* `locn' columns count bytes, so the conversion out of them does
+       too; `encDiagAt' turns the byte offsets back into whatever the
+       client negotiated.  Going through the client's units here would
+       agree under utf-8 and skew every position on a line holding a
+       non-ASCII character under utf-16. *)
+    val pos =
+      case (linesOpt, range) of
+        (SOME lines, SOME (p1, p2)) => let
+          val (lo, hi) = bounds
+          val s = LSPExtension.fromLineColBytes lines p1
+          (* `p2' names the last character, and the byte after it is
+             what a range ends at.  Widening here rather than in the
+             column keeps a region ending at a line's last character
+             from collapsing: that column is past the line, and
+             `fromLineColBytes' clamps it back. *)
+          val t = LSPExtension.fromLineColBytes lines p2 + 1
+        in
+          if lo <= s andalso s < t andalso t <= hi then (s, t)
+          else fallback
+        end
+      | _ => fallback
+    (* The message is about rendering, not about position, so it
+       stands even where the position above was refused. *)
+    val msg = case message of
+                  SOME m => encString m
+                | NONE => encPretty textWidth (exceptionMessage e)
+  in
+    Error {hard = true, pos = pos, msg = msg}
+  end
+
+  fun exnToReport i e = exnToReportIn NONE (0, 0) i e
 
   fun mergeInto msg buf =
     case (msg, DArray.last buf) of
@@ -2722,6 +2773,16 @@ fun start {diag, dbg, warnings} = let
 
   fun compileForReport uri code startByte stopAfter lastPos builtTree
                        onDecStarted' onDecCompleted report = let
+    (* The line table for `code', for turning a HOL exception's
+       `locn.LocA' line/column back into a byte offset.  Built on first
+       use and not before: a compile that raises nothing never pays for
+       the scan, and most compiles raise nothing. *)
+    val codeLinesRef = ref (NONE : LSPExtension.lines option)
+    fun codeLines () =
+      case !codeLinesRef of
+          SOME ls => ls
+        | NONE => let val ls = LSPExtension.mkLineCounter code
+                  in codeLinesRef := SOME ls; ls end
     (* A deferred proof belongs to the declaration being compiled when it
        is enqueued, so record that declaration's start as each one
        begins.  Elaboration is single-threaded, so a plain ref is
@@ -2782,7 +2843,12 @@ fun start {diag, dbg, warnings} = let
       progress = fn i => (lastPos := i; report (Progress i)),
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
-      runtimeExn = fn e => report (exnToReport (!lastPos) e),
+      (* The declaration's own start as the floor for a claimed
+         position, so an exception cannot squiggle something above the
+         declaration that raised it. *)
+      runtimeExn = fn e => report (exnToReportIn (SOME (codeLines ()))
+                                                 (!lastPos, size code)
+                                                 (!lastPos) e),
       builtTree = builtTree,
       onDecStarted = onDecStarted,
       onDecCompleted = onDecCompleted,

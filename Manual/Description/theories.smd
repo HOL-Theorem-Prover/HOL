@@ -1018,11 +1018,11 @@ theory `one` are:
 
 \index{one_Axiom@\ml{one\_Axiom}}
 ```repl
->>__ open oneTheory; show_types := true;
+>>__ open oneTheory; HOLFlags.set_bflag(show_types, true);
 ##thm one_axiom
 ##thm one
 ##thm one_Axiom
->>__ show_types := false;
+>>__ HOLFlags.set_bflag(show_types, false);
 ```
 
 These three theorems are equivalent characterizations of the type
@@ -1728,10 +1728,10 @@ illustrates how overloading and integers literals are treated.
 ```repl
 >> “1i = &(1n + 0n)”;
 
->> show_numeral_types := true;
+>> HOLFlags.set_bflag(HOLFlags.show_numeral_types, true);
 
 >> “&1 = &(1n + 0n)”;
->>_ show_numeral_types := false;
+>>__ HOLFlags.set_bflag(HOLFlags.show_numeral_types, false);
 ```
 
 In addition, there is an absolute value function `ABS`:

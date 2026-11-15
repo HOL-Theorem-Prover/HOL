@@ -7328,6 +7328,312 @@ def test_position_encoding_diagnostics_follow_the_choice():
 
 
 # ------------------------------------------------------------------
+# Where a HOL term error is squiggled
+# ------------------------------------------------------------------
+# `HOLSourceExpand.mkLocPragma' prefixes every quotation literal the
+# expander emits with `(*#loc LINE COL*)' in whole-file coordinates,
+# and `base_lexer' rebases each token through it, so the `locn' in a
+# `HOL_ERR' raised while elaborating a quotation is already an
+# absolute `LocA' pair in the buffer the client sent.
+# `error_locn_init.ML' digs it out and `exnToReportIn' uses it.
+#
+# Before that the position was the declaration's start byte -- the
+# only one the server had -- so every term error in a file, whatever
+# it was and wherever it was, arrived as a zero-width squiggle on the
+# declaration's first keyword.
+
+
+def _byte_of(text, line, char):
+    """(line, character) -> byte offset.
+
+    Only right for a client that negotiated utf-8, which is what
+    `_init' does unless told otherwise, and which is what makes
+    `character' a byte count.  The utf-16 half is
+    `test_located_range_follows_the_position_encoding'."""
+    b = text.encode("utf8")
+    at = 0
+    for _ in range(line):
+        at = b.index(b"\n", at) + 1
+    return at + char
+
+
+def _diag_span(text, d):
+    r = d["range"]
+    return (_byte_of(text, r["start"]["line"], r["start"]["character"]),
+            _byte_of(text, r["end"]["line"], r["end"]["character"]))
+
+
+def _spans(text, diags):
+    """Every diagnostic as (start, end, the text it covers, message).
+
+    What goes in a failure message: a bare range tells the reader
+    nothing about whether it is the right one."""
+    b = text.encode("utf8")
+    out = []
+    for d in diags:
+        s, e = _diag_span(text, d)
+        out.append((s, e, b[s:e].decode("utf8", "replace"),
+                    d.get("message", "")))
+    return out
+
+
+def _diags_for(src, name, timeout=60):
+    """Open SRC as /tmp/<name>.sml, let it compile, return what it was
+    squiggled with."""
+    uri = f"file:///tmp/{name}.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", timeout),
+                    f"{name}: compileCompleted")
+        return _diag_count(c, uri)
+    finally:
+        c.close()
+
+
+def _assert_covers(src, diags, want, what):
+    """Some diagnostic covers exactly WANT, a substring of SRC given as
+    (offset, length) -- and none is pinned to the declaration keyword,
+    which is where they all used to land."""
+    spans = _spans(src, diags)
+    off, length = want
+    assert_true(any((s, e) == (off, off + length) for s, e, _, _ in spans),
+                f"{what} ({spans!r})")
+    decl = min(src.index(kw) for kw in ("Theorem ", "Definition ",
+                                        "Inductive ")
+               if kw in src)
+    assert_true(not any(s == e == decl for s, e, _, _ in spans),
+                f"nothing is reported against the declaration keyword "
+                f"({spans!r})")
+
+
+def test_term_error_points_inside_a_theorem_goal():
+    """A type error in a Theorem's goal is squiggled on the subterm
+    that is wrong, and carries HOL's own words for it.
+
+    Two regressions in one test because they are one change: the
+    position used to be the `Theorem' keyword, and the message used to
+    be `PolyML.prettyRepresentation' of the exception value -- a dump
+    of `HOL_ERROR {origins = [...], message = ...}' -- because no
+    pretty-printer for `Feedback.hol_error' is installed in an LSP
+    session."""
+    src = ("Theory goalerr\n"
+           "Ancestors arithmetic\n"
+           "\n"
+           "Theorem bad_goal:\n"
+           "  1 /\\ T\n"
+           "Proof\n"
+           "  ALL_TAC\n"
+           "QED\n")
+    diags = _diags_for(src, "goalerr")
+    _assert_covers(src, diags, (src.index("1 /\\ T"), 1),
+                   "the squiggle covers the `1'")
+    msg = [m for _, _, _, m in _spans(src, diags)]
+    assert_true(any("Type error in function application" in m for m in msg),
+                f"the message is HOL's own ({msg!r})")
+    assert_true(not any("origins" in m for m in msg),
+                f"not the raw exception representation ({msg!r})")
+
+
+def test_term_error_points_inside_a_definition():
+    """The same for a `Definition' body, which reaches the parser by a
+    different route -- `TotalDefn.located_qDefine' -> `Defn.Hol_defn'
+    -> `Defn.parse_quote' -- and so arrives wrapped in three further
+    origins.  Only the innermost one speaks about the term: an
+    intermediate `Defn.Hol_defn' origin holds a `locn.between'-merged
+    span straddling two different pragmas, which as a range runs from
+    somewhere else entirely to the fault."""
+    src = ("Theory deferr\n"
+           "Ancestors arithmetic\n"
+           "\n"
+           "Definition bad_def:\n"
+           "  bad_def n = n + T\n"
+           "End\n")
+    diags = _diags_for(src, "deferr")
+    _assert_covers(src, diags, (src.index("n + T") + 4, 1),
+                   "the squiggle covers the `T' inside the definition")
+
+
+def test_term_error_points_at_the_inductive_rule_that_is_wrong():
+    """A labelled `Inductive' body is not one quotation: `expandQuote-
+    Core' emits one `QUOTE' per rule, each with its own `(*#loc*)',
+    joined by synthetic `") /\\ ("' fragments that carry none.  So the
+    rule that is wrong has to be found through its own pragma, not by
+    counting from the body's start."""
+    src = ("Theory inderr\n"
+           "Ancestors arithmetic\n"
+           "\n"
+           "Inductive ok_and_bad:\n"
+           "[ind_zero:]\n"
+           "  ok_and_bad 0\n"
+           "[ind_step:]\n"
+           "  !n. ok_and_bad n ==> ok_and_bad (n + T)\n"
+           "End\n")
+    diags = _diags_for(src, "inderr")
+    _assert_covers(src, diags, (src.index("(n + T)") + 5, 1),
+                   "the squiggle covers the `T' in the second rule")
+
+
+def test_a_term_parse_error_points_into_the_goal():
+    """Not only type errors: the term grammar raises through
+    `mk_HOL_ERRloc' too (`TermParse.sml'), so a half-written binder is
+    located as well.
+
+    It also bakes its own location into its message --
+    `parse_term.sml' appends `locn.toString a ^ " and " ^
+    locn.toString b ^ "."' on a line of its own -- which once the
+    squiggle is in the right place is the editor saying the same thing
+    twice.  That line is dropped."""
+    src = ("Theory parseerr\n"
+           "Ancestors arithmetic\n"
+           "\n"
+           "Theorem bad_parse:\n"
+           "  !x\n"
+           "Proof\n"
+           "  ALL_TAC\n"
+           "QED\n")
+    diags = _diags_for(src, "parseerr")
+    spans = _spans(src, diags)
+    _assert_covers(src, diags, (src.index("!x"), 1),
+                   "the squiggle covers the dangling binder")
+    msg = [m for _, _, _, m in spans]
+    assert_true(any("Don't expect to find" in m for m in msg),
+                f"the grammar's own message ({msg!r})")
+    assert_true(not any("at line" in m for m in msg),
+                f"and not its location, which the squiggle now says "
+                f"({msg!r})")
+
+
+def test_an_unclosed_paren_points_at_the_quotation():
+    """An unclosed paren is the one parse error whose blame falls on a
+    token HOL wrote rather than one the user did.  `Parse.typedTerm_in'
+    wraps a `Theorem's goal as `( <goal> ):bool', and it is that `('
+    the parser is left holding at end of input.
+
+    It used to go in AHEAD of the fragment's `(*#loc*)' pragma, so the
+    lexer had nothing to rebase it against and the error read
+    `at frag 0 row 0 col 1' -- a position in a string the user never
+    saw, which `error_locn_init' cannot use and which was printed into
+    the message as well.  `typedTerm_in' now repeats the pragma in
+    front of the paren, which puts it at the quotation's first
+    character.  Everything inside the quotation keeps the position it
+    had: the body's own copy of the pragma still follows.
+
+    So the squiggle is at the end of the `Theorem ...:' line, where
+    the goal starts.  There is no better answer -- both parens are
+    open, and the one the parser names is not in the file at all."""
+    src = ("Theory parenerr\n"
+           "Ancestors arithmetic\n"
+           "\n"
+           "Theorem bad_paren:\n"
+           "  (1 + 2\n"
+           "Proof\n"
+           "  ALL_TAC\n"
+           "QED\n")
+    diags = _diags_for(src, "parenerr")
+    spans = _spans(src, diags)
+    quote = src.index("Theorem bad_paren:") + len("Theorem bad_paren:")
+    assert_true(any(s == quote for s, _, _, _ in spans),
+                f"the squiggle starts where the goal does ({spans!r})")
+    msg = [m for _, _, _, m in spans]
+    assert_true(not any("frag" in m for m in msg),
+                f"no fragment-relative position reaches the client "
+                f"({msg!r})")
+
+
+def test_term_error_points_at_the_continuation_line():
+    """A goal spanning several lines: the fault is on the second of
+    them, and that is where the squiggle goes.  `rel_to_abs' only
+    applies the pragma's column on the fragment's FIRST line -- after a
+    newline the column is already absolute -- so a continuation line
+    getting this right is a different case from the first line."""
+    src = ("Theory multierr\n"
+           "Ancestors arithmetic\n"
+           "\n"
+           "Theorem bad_multi:\n"
+           "  T /\\\n"
+           "    (0 + T)\n"
+           "Proof\n"
+           "  ALL_TAC\n"
+           "QED\n")
+    diags = _diags_for(src, "multierr")
+    spans = _spans(src, diags)
+    _assert_covers(src, diags, (src.index("(0 + T)") + 5, 1),
+                   "the squiggle covers the `T' on the second goal line")
+    assert_true(any(d["range"]["start"]["line"] == 5 for d in diags),
+                f"on the continuation line, not the first ({spans!r})")
+
+
+def test_an_unlocated_exception_still_lands_on_the_declaration():
+    """Nothing is lost where there is no location to find.  An
+    exception raised from compiled HOL source with no `locn' -- here
+    `Feedback.failwith', whose origin carries `Loc_Unknown' -- keeps
+    the old answer: a zero-width range at the declaration's start.
+
+    The message still improves, because that does not depend on having
+    a position."""
+    src = ("Theory noloc\n"
+           "Ancestors arithmetic\n"
+           "\n"
+           "val boom = Feedback.failwith \"kaboom\";\n")
+    diags = _diags_for(src, "noloc")
+    spans = _spans(src, diags)
+    decl = src.index("val boom")
+    assert_true(any(s == e == decl for s, e, _, _ in spans),
+                f"reported at the declaration's start ({spans!r})")
+    msg = [m for _, _, _, m in spans]
+    assert_true(any("kaboom" in m for m in msg),
+                f"the message is HOL's ({msg!r})")
+    assert_true(not any("origins" in m for m in msg),
+                f"not the raw exception representation ({msg!r})")
+
+
+# `T' sits after a ∀ (3 bytes in UTF-8, one utf-16 code unit), so its
+# byte column and its utf-16 column differ by 2.
+_LOCENC_GOAL = "  ∀n:num. T /\\ (0 + T)"
+_LOCENC_SRC = ("Theory locencd\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem bad_enc:\n" + _LOCENC_GOAL + "\n"
+               "Proof\n"
+               "  ALL_TAC\n"
+               "QED\n")
+_LOCENC_PREFIX = _LOCENC_GOAL[:_LOCENC_GOAL.index("(0 + T)") + 5]
+
+
+def test_located_range_follows_the_position_encoding():
+    """`locn.LocA' columns count bytes and a `(*#loc*)' column counts
+    bytes, so the conversion out of them has to count bytes too and
+    hand the client its own units once, at the boundary.  Mixing the
+    two agrees exactly under utf-8, which is why getting it wrong is
+    invisible until a line holds a non-ASCII character -- and HOL
+    scripts are full of them."""
+    byte_col = len(_LOCENC_PREFIX.encode("utf8"))
+    utf16_col = len(_LOCENC_PREFIX)
+    # Or the test proves nothing.
+    assert_true(byte_col != utf16_col,
+                "the two encodings disagree about this column")
+    for encodings, expected in ((("utf-8",), byte_col),
+                                (("utf-16",), utf16_col)):
+        uri = f"file:///tmp/locencd_{encodings[0]}.sml"
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp", encodings=encodings)
+            _did_open(c, uri, _LOCENC_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        f"compileCompleted ({encodings[0]})")
+            diags = _diag_count(c, uri)
+            starts = [(d["range"]["start"]["line"],
+                       d["range"]["start"]["character"]) for d in diags]
+            assert_true((4, expected) in starts,
+                        f"{encodings[0]}: squiggle at column {expected} "
+                        f"(got {starts!r}, diags {diags!r})")
+        finally:
+            c.close()
+
+
+# ------------------------------------------------------------------
 # Goal-state render width
 # ------------------------------------------------------------------
 def test_goalState_honours_the_requested_width():
@@ -12734,6 +13040,22 @@ TESTS = [
                             test_position_encoding_utf16_when_utf8_not_offered),
     ("position_encoding_diagnostics_follow_the_choice",
                           test_position_encoding_diagnostics_follow_the_choice),
+    ("term_error_points_inside_a_theorem_goal",
+                             test_term_error_points_inside_a_theorem_goal),
+    ("term_error_points_inside_a_definition",
+                               test_term_error_points_inside_a_definition),
+    ("term_error_points_at_the_inductive_rule_that_is_wrong",
+                 test_term_error_points_at_the_inductive_rule_that_is_wrong),
+    ("a_term_parse_error_points_into_the_goal",
+                             test_a_term_parse_error_points_into_the_goal),
+    ("an_unclosed_paren_points_at_the_quotation",
+                           test_an_unclosed_paren_points_at_the_quotation),
+    ("term_error_points_at_the_continuation_line",
+                          test_term_error_points_at_the_continuation_line),
+    ("an_unlocated_exception_still_lands_on_the_declaration",
+                 test_an_unlocated_exception_still_lands_on_the_declaration),
+    ("located_range_follows_the_position_encoding",
+                         test_located_range_follows_the_position_encoding),
     ("goalState_honours_the_requested_width",
                                 test_goalState_honours_the_requested_width),
     ("goalState_completed_proof_with_rpt",

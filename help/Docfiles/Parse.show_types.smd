@@ -19,12 +19,13 @@ Parse.show_types : HOLFlags.bflag
 
 Flag controlling printing of HOL types (in terms).
 
-Normally HOL types in terms are not printed, since this makes terms hard
-to read. Type printing is enabled by `show_types := true`, and disabled
-by `show_types := false`. When printing of types is enabled, not all
-variables and constants are annotated with a type. The intention is to
-provide sufficient type information to remove any ambiguities without
-swamping the term with type information.
+Normally HOL types in terms are not printed, since this makes terms
+hard to read. Type printing is enabled by setting the `show_types`
+flag to `true`, and disabled by setting it to `false`. When printing
+of types is enabled, not all variables and constants are annotated
+with a type. The intention is to provide sufficient type information
+to remove any ambiguities without swamping the term with type
+information.
 
 ### Failure
 
@@ -35,7 +36,7 @@ Never fails.
 ``` hol4
 >> BOOL_CASES_AX;;
 
->> HOLFlags.set_bflag (Parse.show_types, true);
+>> HOLFlags.set_bflag (show_types, true);
 
 >> BOOL_CASES_AX;;
 ```
