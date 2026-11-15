@@ -210,6 +210,12 @@ Bugs fixed
     TFL registers the support definitions it makes on the way (the `_tupled` one, for example) as user definitions and then deletes their constants once the real definition is made, so the table of user definitions kept entries for constants that no longer existed.
     Such entries are now skipped.
 
+-   `global_simp_tac` (behind `gvs` and `gs`) did a lot of work again on every round.
+    Each round simplifies every assumption in the context of the others, and it re-simplified assumptions that had come out unchanged under exactly the same context the round before, and turned every context assumption into rewrites again for every assumption it simplified.
+    It now skips the first and reuses the second; and the contextual decision-procedure cache behind `ARITH_ss` and its kin summarises each context once rather than on every lookup.
+    The tactics' results are unchanged.
+    Over 476 slow `gvs`/`gs` calls recorded from a large development, skipping the unchanged assumptions and summarising each context once cut the time from 96.1s to 84.8s, with identical subgoals for every call.
+
 -   The scratch files of the SML-inspection tools (`smlOpen`, `smlExecScripts`, `smlRedirect`, and so TacticToe) went by default to one directory per user, `$XDG_CACHE_HOME/hol4/scratch`, so two HOL builds run at once by the same user overwrote each other's files there, and one could fail with `OpenStruct` while building the documentation.
     Unless `HOL4_SCRATCH` names a directory, each process now uses a subdirectory of its own there, which is removed when the process exits.
     When `HOL4_TACTICTOE_CACHE` is set, those subdirectories go under its `tmp/scratch` directory, as was intended; before, that setting was ignored whenever `XDG_CACHE_HOME` or `HOME` was set.
