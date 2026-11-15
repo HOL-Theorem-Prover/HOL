@@ -2552,6 +2552,31 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         SOME value => SOME value
       | NONE => default_wf_override rows
 
+  fun cases_members equations =
+    map (fn equation => #1 (HolKernel.strip_comb
+      (boolSyntax.lhs (#2 (boolSyntax.strip_forall equation)))))
+      equations
+
+  fun is_member members c =
+    List.exists (fn m => Term.aconv c m orelse Term.same_const c m) members
+
+  fun mentions_member members t =
+    Lib.can (HolKernel.find_term (is_member members)) t
+
+  (* Whether a member occurs in the arguments of a member's application
+     in [rules].  The well-foundedness problem constrains only the
+     outermost call, so such rules are not read as well-founded. *)
+  fun nested_member_calls members rules =
+    let
+      fun call t =
+        let val (head, args) = HolKernel.strip_comb t
+        in not (null args) andalso is_member members head end
+      fun nested t =
+        List.exists (mentions_member members) (#2 (HolKernel.strip_comb t))
+    in
+      List.exists (List.exists nested o HolKernel.find_terms call) rules
+    end
+
   (* The introduction rules the cases equations [!xs. p xs <=> B] (each
      [xs] distinct variables) state right to left: one per disjunct of B,
      its existentials (renamed apart) universally quantified, and each
@@ -2560,13 +2585,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      recursion stays a condition, where the checks on the rules see it. *)
   fun rules_of_cases equations =
     let
-      val members = map (fn equation => #1 (HolKernel.strip_comb
-        (boolSyntax.lhs (#2 (boolSyntax.strip_forall equation)))))
-        equations
-      fun mentions_member t =
-        Lib.can (HolKernel.find_term (fn c =>
-          List.exists (fn m => Term.aconv c m orelse Term.same_const c m)
-            members)) t
+      val mentions_member = mentions_member (cases_members equations)
       fun rule (p, xs) disjunct =
         let
           fun strip avoid tm =
@@ -2632,13 +2651,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   (* Whether the recursion in the cases equations [equations] of a group
      (one per member, in order) is well-founded, decided on the rules they
      state ([rules_of_cases]) by the problem and prover used for a
-     predicate's own rules; equations that cannot be read so are not.  The
+     predicate's own rules; equations that cannot be read so, or that
+     recurse inside a call's arguments, are not.  The
      user's [wfs] override, an explicit assertion, comes first. *)
   fun is_well_founded_cases (context as {wfs, ...} : mf_context) equations =
     let
-      val members = map (fn equation => #1 (HolKernel.strip_comb
-        (boolSyntax.lhs (#2 (boolSyntax.strip_forall equation)))))
-        equations
+      val members = cases_members equations
     in
       case (case members of
                 [constant] => wf_override wfs constant
@@ -2647,6 +2665,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         | _ =>
             let val rules = rules_of_cases equations
             in
+              if nested_member_calls members rules then false else
               case members of
                   [constant] =>
                     let

@@ -1438,6 +1438,20 @@ Proof
   simp [zoo_rb_sub_cases]
 QED
 
+(* [zoo_rb_nest]'s rebound cases recurse inside a recursive call's
+   argument, [zoo_rb_nest (if zoo_rb_nest n then 0 else 1)], which
+   [n = 0] satisfies too. *)
+Inductive zoo_rb_nest:
+  !n : num. n <> 1 ==> zoo_rb_nest n
+End
+
+Theorem zoo_rb_nest_cases[allow_rebind]:
+  !n. zoo_rb_nest n <=>
+      n = 0 \/ 1 < n /\ zoo_rb_nest (if zoo_rb_nest n then 0 else 1)
+Proof
+  simp [zoo_rb_nest_cases] >> Cases_on `n = 0` >> simp []
+QED
+
 (* Predicates with rebound cases theorems that reach the predicate
    through a later definition, so the recursion hides behind the helper:
    [zoo_hid] (well-founded on its face), [zoo_hid2] (two definitions

@@ -2772,6 +2772,9 @@ val _ = mf_test "a rebound p <=> p cases theorem: the true goal"
 val _ = mf_test "a rebound cases theorem recursing in an argument equation"
   (fn () => not (refute mf_num3 ``zoo_rb_sub T`` |> cex_where is_genuine))
 
+val _ = mf_test "a rebound cases theorem recursing in a call's argument"
+  (fn () => not (refute mf_num3 ``zoo_rb_nest 2`` |> cex_where is_genuine))
+
 val _ = mf_test "a rebound well-founded cases theorem is the definition"
   (fn () =>
     refute mf_num3 ``zoo_rb_down 1`` |> cex_where is_genuine andalso
