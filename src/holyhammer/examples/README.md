@@ -216,9 +216,6 @@ What it is not good at:
     fact and hammer that first.
   * Heavy higher-order reasoning: set comprehensions, nested lambdas,
     `case` expressions.  Presimplify these away first (`hh09`, `hh10`).
-  * Definitions that test equality inside `if-then-else`, such as
-    `count_occ x (y::l) = (if x = y then 1 else 0) + ...`.  State the
-    two branches as separate lemmas (`hh07`).
   * Arithmetic that a decision procedure does instantly.  Use
     `DECIDE_TAC`, `intLib.ARITH_TAC`, `REAL_ARITH_TAC` or `EVAL_TAC`
     instead.
@@ -353,14 +350,9 @@ which one wins.  When in doubt, qualify the name.
 
 **What does `ContradictoryAxioms` mean?**  The prover found the selected
 premises inconsistent *without* using the goal.  With library theorems
-this should not happen.  The usual cause is a theorem with assumptions
-bound at the top level of your session, which the translation currently
-treats as an unconditional fact.  For example,
-`val th = TAC_PROOF (([``x < y``, ``y < z``], ``x < z + 1``), hh)` then
-looks like `!x z. x < z + 1` to later hammer calls.  Reconstruction
-rejects any such "proof", so soundness is not at risk, but the call is
-wasted.  Discharge assumptions (`DISCH_ALL`) before binding a theorem at
-the top level.
+this should not happen.  Theorems with assumptions, such as
+`val th = TAC_PROOF (([``x < y``, ``y < z``], ``x < z + 1``), hh)`
+bound at the top level of your session, are never used as premises.
 
 **The hammer failed.  Is my goal false?**  Not necessarily.  "ATPs could
 not find a proof" only means that no proof was found from the selected

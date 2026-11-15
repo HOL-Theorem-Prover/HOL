@@ -179,19 +179,14 @@ Definition count_occ_def:
   (count_occ x (y::ys) = (if x = y then 1 else 0) + count_occ x ys)
 End
 
-(* A known weak spot.  With count_occ_def as the only description of
-   count_occ, the hammer fails on goals as simple as
+(* With count_occ_def alone the hammer proves goals such as
      count_occ x (x::l) = count_occ x l + 1
-   and on both cases of count_occ_append below.  The provers see the
-   definition, but the translation has to encode the boolean test x = y
-   inside the if-then-else as a term, and the provers do not manage to
-   connect that encoding with ordinary equality.
-
-   The remedy is to state the two branches as separate equations.  The
-   simplifier proves them at once, since it handles if-then-else well,
-   and after that the hammer works normally.  (For count_occ_append
-   alone, Induct_on `l1` >> rw [count_occ_def] is also a complete proof:
-   when the simplifier can do a goal, prefer it.) *)
+   and both cases of count_occ_append below.  Stating the two branches
+   of the if-then-else as separate equations still pays off: the
+   simplifier proves them at once, and the lemmas give the provers, and
+   Metis, short proofs.  (For count_occ_append alone,
+   Induct_on `l1` >> rw [count_occ_def] is also a complete proof: when
+   the simplifier can do a goal, prefer it.) *)
 Theorem count_occ_same:
   count_occ x (x::l) = count_occ x l + 1
 Proof
