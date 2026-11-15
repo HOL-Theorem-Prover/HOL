@@ -2556,9 +2556,17 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      [xs] distinct variables) state right to left: one per disjunct of B,
      its existentials (renamed apart) universally quantified, and each
      equation [x = t] or [t = x] on an argument [x] not free in [t]
-     substituted into the conclusion. *)
+     substituted into the conclusion, unless [t] mentions a member: that
+     recursion stays a condition, where the checks on the rules see it. *)
   fun rules_of_cases equations =
     let
+      val members = map (fn equation => #1 (HolKernel.strip_comb
+        (boolSyntax.lhs (#2 (boolSyntax.strip_forall equation)))))
+        equations
+      fun mentions_member t =
+        Lib.can (HolKernel.find_term (fn c =>
+          List.exists (fn m => Term.aconv c m orelse Term.same_const c m)
+            members)) t
       fun rule (p, xs) disjunct =
         let
           fun strip avoid tm =
@@ -2577,7 +2585,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                 let
                   fun head_equation (x, t) =
                     Lib.op_mem Term.aconv x args andalso
-                    not (Lib.op_mem Term.aconv x (Term.free_vars t))
+                    not (Lib.op_mem Term.aconv x (Term.free_vars t)) andalso
+                    not (mentions_member t)
                   val oriented =
                     if not (boolSyntax.is_eq conjunct) then NONE
                     else
@@ -2687,7 +2696,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       open Tactical Tactic
       val tactic =
         REPEAT GEN_TAC THEN
-        Thm_cont.DISCH_THEN (Thm_cont.REPEAT_TCL Thm_cont.CONJUNCTS_THEN ASSUME_TAC)
+        Thm_cont.DISCH_THEN
+          (Thm_cont.REPEAT_TCL Thm_cont.CONJUNCTS_THEN ASSUME_TAC)
         THEN REPEAT CONJ_TAC THEN
         InductiveDefinition.MONO_TAC (!IndDefLib.the_monoset)
     in

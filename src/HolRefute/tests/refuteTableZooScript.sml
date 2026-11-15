@@ -1426,6 +1426,18 @@ Proof
   simp [zoo_rb_nm_cases]
 QED
 
+(* [zoo_rb_sub]'s rebound cases state its recursion as an argument
+   equation, [b = zoo_rb_sub T], which negation satisfies too. *)
+Inductive zoo_rb_sub:
+  !b. b ==> zoo_rb_sub b
+End
+
+Theorem zoo_rb_sub_cases[allow_rebind]:
+  !b. zoo_rb_sub b <=> b = zoo_rb_sub T
+Proof
+  simp [zoo_rb_sub_cases]
+QED
+
 (* Predicates with rebound cases theorems that reach the predicate
    through a later definition, so the recursion hides behind the helper:
    [zoo_hid] (well-founded on its face), [zoo_hid2] (two definitions
