@@ -26,6 +26,9 @@ include Abbrev
   val translate_nocache : term -> term
   val translate : term -> term
   val translate_thm : thm -> term
+  (* Lifted subterms get existential, not universal, definitions. *)
+  val translate_axiom : term -> term
+  val translate_axiom_thm : thm -> term
 
   (* arity equations *)
   val strip_type : hol_type -> (hol_type list * hol_type)

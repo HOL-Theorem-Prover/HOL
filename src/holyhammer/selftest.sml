@@ -928,6 +928,31 @@ fun test_hhMonomorph () =
 
 val _ = test_hhMonomorph ()
 
+(* Legacy FOF lifts the test of an if-then-else to a new variable F0.  As
+   an axiom, !F0. (!x y. F0 x y <=> x = y) ==> .. is usable only once a
+   prover builds such an F0; the definition must be existential there. *)
+fun test_hhTranslate_lifted_axioms () =
+  let
+    open boolSyntax
+    val lifted = ``!x y:num. g x y = if x = y then 1 else 0n``
+    val plain = ``!x:num. x + 0 = x``
+    val as_axiom = hhTranslate.translate_axiom lifted
+    val as_conjecture = hhTranslate.translate lifted
+    val (axiom_vars, axiom_body) = strip_exists as_axiom
+    val (conjecture_vars, conjecture_body) = strip_forall as_conjecture
+  in
+    expect "legacy FOF defines lifted terms existentially in axioms"
+      (length axiom_vars = 1 andalso is_conj axiom_body andalso
+       Term.aconv (rand axiom_body) (rand conjecture_body));
+    expect "legacy FOF keeps lifted definitions universal in conjectures"
+      (length conjecture_vars = 1 andalso is_imp conjecture_body);
+    expect "legacy FOF translates unlifted axioms unchanged"
+      (Term.aconv (hhTranslate.translate_axiom plain)
+         (hhTranslate.translate plain))
+  end
+
+val _ = test_hhTranslate_lifted_axioms ()
+
 fun test_hhProblemGen () =
   let
     open boolSyntax hhTptpProblem hhProblemGen
