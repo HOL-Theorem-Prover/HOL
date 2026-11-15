@@ -48,9 +48,12 @@ fun default_progress (SliceStarted slice) =
          Real.toString time ^ " s)")
   | default_progress (ProofFound (slice, lemmas)) =
       (print_endline ("  proof found by " ^ #prover slice ^ ":");
-       print_endline ("    " ^ mlThmData.mk_metis_call lemmas))
+       print_endline
+         ("    metis_tac [" ^
+          String.concatWith ", " (map mlThmData.dbfetch_of_thmid lemmas) ^
+          "]"))
   | default_progress (Verified suggestion) =
-      print_endline ("  verified proof:  \n    " ^ #stac suggestion)
+      print_endline ("  verified proof:\n    " ^ #stac suggestion)
   | default_progress (ScheduleDone _) = ()
 
 fun problem_key (slice : hhProver.slice) =

@@ -133,7 +133,7 @@ The two entry points
       ...
       e slice: Theorem (0.13 s)
       proof found by e:
-        metisTools.METIS_TAC [listTheory.EVERY_MEM]
+        metis_tac [listTheory.EVERY_MEM]
       verified proof:
         metis_tac [EVERY_MEM]
       ...

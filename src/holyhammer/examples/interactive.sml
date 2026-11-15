@@ -65,7 +65,7 @@ val th1 = holyhammer ``MEM x l /\ EVERY P l ==> P x``;
       ...                                    (one line per core)
       vampire slice: Theorem (0.252441 s)
       proof found by vampire:
-        metisTools.METIS_TAC [listTheory.EVERY_MEM]
+        metis_tac [listTheory.EVERY_MEM]
       verified proof:
         metis_tac [listTheory.EVERY_MEM]
       zipperposition slice: Timeout (0.17836 s)
@@ -108,9 +108,8 @@ val th2 =
         starting vampire slice (512 facts)
         ...                                  (only Vampire slices now)
         proof found by vampire:
-          metisTools.METIS_TAC [listTheory.REVERSE_REVERSE ,
-            listTheory.REVERSE_DEF , listTheory.REVERSE_APPEND ,
-            listTheory.APPEND]
+          metis_tac [listTheory.REVERSE_REVERSE, listTheory.REVERSE_DEF,
+                     listTheory.REVERSE_APPEND, listTheory.APPEND]
         verified proof:
           metis_tac [listTheory.REVERSE_DEF, listTheory.REVERSE_APPEND,
                      listTheory.APPEND]
@@ -175,8 +174,7 @@ val th6 = TAC_PROOF (pb_goal,
 
 (*      vampire slice: Theorem (0.751689 s)
         proof found by vampire:
-          metisTools.METIS_TAC [pred_setTheory.IMAGE_SURJ ,
-                                pred_setTheory.IN_IMAGE]
+          metis_tac [pred_setTheory.IMAGE_SURJ, pred_setTheory.IN_IMAGE]
       ...
       ATPs found proofs, but reconstruction failed for:
       vampire: [pred_setTheory.IMAGE_SURJ, pred_setTheory.IN_IMAGE]
