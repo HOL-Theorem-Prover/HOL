@@ -1667,6 +1667,17 @@ val _ = test "function witnesses are updates and lambdas" (fn () =>
          binding_is c ``f : (bool -> bool) -> bool``
                       ``\g : bool -> bool. F``))
 
+(* The lambda witness for [f] leaves a beta-redex in the existential's
+   body; the replayed refutation of the existential must keep it. *)
+val lambda_exists_goal = ``?x : bool. (f : bool -> bool) x``
+
+val _ = test "an existential applying a lambda witness is certified"
+  (fn () =>
+    refute (nar |> upd_size 1) lambda_exists_goal
+      |> single_cex_where (fn c =>
+           certifies lambda_exists_goal c andalso
+           binding_is c ``f : bool -> bool`` ``\x : bool. F``))
+
 val _ = test "finite_functions false refuses function domains" (fn () =>
   let val outcome = refute (nar |> upd_size 2 |> upd_finite_functions false)
                            ``(f : bool -> bool) F = f T``

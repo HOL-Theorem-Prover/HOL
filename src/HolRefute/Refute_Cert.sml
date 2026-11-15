@@ -206,11 +206,16 @@ structure Refute_Cert :> Refute_Cert = struct
     end
 
   (* Turn a generalized refutation of [body] into a refutation of the
-     corresponding existential formula. *)
+     corresponding existential formula.  Only the two beta-redexes that
+     instantiating [NOT_EXISTS_THM] creates are reduced: [body] may hold
+     redexes of its own, such as a lambda witness applied to an argument,
+     and [generalized] keeps them. *)
   fun refute_exists label variable body generalized =
     let
       val conversion = Conv.CONV_RULE
-        (Conv.DEPTH_CONV Thm.BETA_CONV)
+        (Conv.FORK_CONV
+           (Conv.RAND_CONV (Conv.RAND_CONV (Conv.ABS_CONV Thm.BETA_CONV)),
+            Conv.RAND_CONV (Conv.ABS_CONV (Conv.RAND_CONV Thm.BETA_CONV))))
         (Drule.ISPEC (Term.mk_abs (variable, body))
           boolTheory.NOT_EXISTS_THM)
       val target = rhs_of conversion
