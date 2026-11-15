@@ -1246,9 +1246,33 @@ struct
       val preliminary_fo = firstorder (combined preliminary_helpers)
       val proxy_source = proxy_helpers (heads_of preliminary_fo)
       val with_proxies = initial @ proxy_source
-      val extensionality = if #used_app main_fo then
-        [("help.eq_ext", Thm.concl boolTheory.EQ_EXT)] else []
-      val helper_terms = translate_helpers (with_proxies @ extensionality)
+      (* EQ_EXT's only constant is equality, and app is introduced only
+         after monomorphization, so the ground pool seldom grounds it at a
+         function type that app is used at.  A mono problem then got
+         EQ_EXT only at opaque sorts, where it is useless: two lifted
+         lambdas, say, could never be proved equal.  Show the
+         monomorphizer an equation at each app function type.  EQ_EXT has
+         no lambda in term position, so the lambda pass would not change
+         it. *)
+      val extensionality =
+        if not (#used_app main_fo) then []
+        else
+          let
+            val ext = ("help.eq_ext", Thm.concl boolTheory.EQ_EXT)
+            val {conjecture, facts, ...} = preliminary_fo
+            val app_types = distinct_types (map #1 (rev (List.foldl
+              app_signatures_formula [] (conjecture :: map #2 facts))))
+            fun witness ty = let val f = mk_var ("f", ty) in
+              mk_eq (f, f)
+            end
+            val pool = list_mk_conj (ground_pool :: map witness app_types)
+          in
+            case #facts (pass_monomorph type_enc caps
+                           {conjecture = pool, facts = [ext]}) of
+                [] => [ext]
+              | instances => instances
+          end
+      val helper_terms = translate_helpers with_proxies @ extensionality
       val final_fo = firstorder (combined helper_terms)
       val needs = needs_of type_enc (combined helper_terms)
     in

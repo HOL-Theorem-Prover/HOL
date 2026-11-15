@@ -1388,6 +1388,31 @@ fun test_hhProblemGen_mono_sorts () =
 
 val _ = test_hhProblemGen_mono_sorts ()
 
+(* The lifted identity is only applied through app at num -> num, and the
+   problem has no equality at that type, so monomorphization alone leaves
+   EQ_EXT at opaque sorts.  It must be instantiated at app's type. *)
+fun test_hhProblemGen_mono_extensionality () =
+  let
+    open hhTptpProblem
+    val goal = ``MAP (\x : num. x) l = l``
+    val problem = hhProblemGen.generate_problem
+      {format = hhTypeEnc.format_of_string "tx0",
+       type_enc = hhTypeEnc.of_string "mono_native_fool",
+       lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+       mono_instances = 100} {conjecture = goal, facts = []}
+    val num_to_num =
+      TyCon (aiLib.escape ("ty.min.fun(num.num,num.num)"), [])
+    fun ext_at_num (FormLine (name, _, Quant (_, [(_, SOME ty)], _))) =
+          String.isPrefix (aiLib.escape "help.eq_ext") name andalso
+          ty = num_to_num
+      | ext_at_num _ = false
+  in
+    expect "hhProblemGen instantiates EQ_EXT at mono app types"
+      (List.exists ext_at_num (List.concat (map #2 problem)))
+  end
+
+val _ = test_hhProblemGen_mono_extensionality ()
+
 fun prover name =
   case hhProver.lookup name of
       SOME config => config
