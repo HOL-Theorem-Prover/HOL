@@ -141,9 +141,6 @@ Bugs fixed
   a time, avoids repeated cardinality-repair and monotonicity work, and
   reports counted reasons when Kodkod problems cannot be assembled.
 
--   HolRefute's model finder no longer reports a `Genuine` counterexample to a true goal about an inductive predicate whose cases theorem a theory has rebound (with `[allow_rebind]`) to another valid statement.
-    It checks the cases theorem it encodes: well-foundedness is decided on that theorem's recursion, the kernel proves that it describes the least (greatest) fixpoint and that its bodies are monotone before a model through those encodings counts as `Genuine`, and a cases theorem that reaches its predicate through another definition is not used.
-
 -   HolRefute now applies polymorphic `upd_box` type patterns to concrete instances.
 -   Omega's model reconstruction no longer fails when eliminating a variable
     leaves a single constrained variable and another unconstrained variable.
