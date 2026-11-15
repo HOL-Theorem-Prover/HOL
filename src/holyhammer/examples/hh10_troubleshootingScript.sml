@@ -117,9 +117,10 @@ QED
      hhConfig.hh_set ("timeout", "60");
 
    Vampire found a proof in 0.4 seconds, using 37 facts about complex
-   numbers, sin and cos.  The call still took 34 seconds: replaying the
-   proof in Metis and minimising the list (each attempt may take up to
-   minimize_timeout) took the rest.  Long lists like this one are
+   numbers, sin and cos.  Replaying the proof in Metis and minimising
+   the list took most of the call's time: every attempt to drop a fact
+   is a Metis replay (bounded by twice the last successful replay time,
+   and by minimize_timeout).  Long lists like this one are
    typical of proofs that unfold definitions (complex_of_real,
    complex_mul, RE, IM).  If a call is slow, look at the slice
    timings: when the prover answered early, more time will not change

@@ -134,7 +134,7 @@ The two entry points
       e slice: Theorem (0.13 s)
       proof found by e:
         metis_tac [listTheory.EVERY_MEM]
-      verified proof:
+      verified proof (replays in 0.00 s):
         metis_tac [EVERY_MEM]
       ...
     val th = ⊢ MEM x l ∧ EVERY P l ⇒ P x: thm
@@ -157,8 +157,9 @@ How to read the output:
     (the selected premises do not imply the goal, which does not mean the
     goal is false), and `ContradictoryAxioms` (see the FAQ).
   * `proof found by <prover>:` lists *all* the facts the prover used.
-  * `verified proof:` is the minimised tactic that actually re-proved
-    the goal in HOL4.  **This is the line to copy into your script.**
+  * `verified proof (replays in t s):` is the minimised tactic that
+    actually re-proved the goal in HOL4; `t` is how long its Metis
+    replay took.  **This is the line to copy into your script.**
     Facts from the current theory print as `fetch "thy" "name"`
     (`DB.fetch`).  In a script you can write plain `name` if the theorem
     is bound as an ML value (`Theorem name: ...` and `Definition

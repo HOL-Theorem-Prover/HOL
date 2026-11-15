@@ -22,7 +22,7 @@ Ancestors
    ("starting vampire slice (96 facts)", ...), a line for every slice
    that finishes ("vampire slice: Theorem (0.25 s)"), and finally
 
-     verified proof:
+     verified proof (replays in 0.00 s):
        metis_tac [listTheory.EVERY_MEM]
 
    and returns the theorem.  The whole call takes a few seconds, even

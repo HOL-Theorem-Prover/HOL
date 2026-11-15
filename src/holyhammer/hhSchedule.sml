@@ -53,7 +53,10 @@ fun default_progress (SliceStarted slice) =
           String.concatWith ", " (map mlThmData.dbfetch_of_thmid lemmas) ^
           "]"))
   | default_progress (Verified suggestion) =
-      print_endline ("  verified proof:\n    " ^ #stac suggestion)
+      print_endline
+        ("  verified proof (replays in " ^
+         Real.fmt (StringCvt.FIX (SOME 2)) (#t_replay suggestion) ^
+         " s):\n    " ^ #stac suggestion)
   | default_progress (ScheduleDone _) = ()
 
 fun problem_key (slice : hhProver.slice) =

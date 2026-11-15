@@ -66,7 +66,7 @@ val th1 = holyhammer ``MEM x l /\ EVERY P l ==> P x``;
       vampire slice: Theorem (0.252441 s)
       proof found by vampire:
         metis_tac [listTheory.EVERY_MEM]
-      verified proof:
+      verified proof (replays in 0.00 s):
         metis_tac [listTheory.EVERY_MEM]
       zipperposition slice: Timeout (0.17836 s)
       e slice: Timeout (0.286808 s)
@@ -81,7 +81,7 @@ g `!l1 l2. ALL_DISTINCT (l1 ++ l2) ==> DISJOINT (set l1) (set l2)`;
 e (rpt strip_tac);
 e hh;
 
-(*      verified proof:
+(*      verified proof (replays in 0.00 s):
           metis_tac [listTheory.ALL_DISTINCT_APPEND']
       ...
     Goal proved.
@@ -110,7 +110,7 @@ val th2 =
         proof found by vampire:
           metis_tac [listTheory.REVERSE_REVERSE, listTheory.REVERSE_DEF,
                      listTheory.REVERSE_APPEND, listTheory.APPEND]
-        verified proof:
+        verified proof (replays in 0.00 s):
           metis_tac [listTheory.REVERSE_DEF, listTheory.REVERSE_APPEND,
                      listTheory.APPEND]
 
@@ -136,7 +136,7 @@ hhConfig.hh_set ("filter", "magic")
 
 hhConfig.hh_set ("filter", "mepo");
 val th3 = holyhammer ``LENGTH (FILTER P l) <= LENGTH l``;
-(*      verified proof:
+(*      verified proof (replays in 0.00 s):
           metis_tac [rich_listTheory.LENGTH_FILTER_LEQ]                   *)
 hhConfig.hh_unset "filter";
 
@@ -145,7 +145,7 @@ val th4 = holyhammer ``LENGTH (FILTER P l) <= LENGTH l``;
 (*      starting e slice (16 facts)
         starting zipperposition slice (16 facts)
         ...
-        verified proof:
+        verified proof (replays in 0.00 s):
           metis_tac [th3]
 
     Note the proof: th3, the theorem bound by the previous command, is
@@ -195,7 +195,7 @@ val th6 = TAC_PROOF (pb_goal,
 
 hhConfig.hh_set ("minimize", "false");
 val th7 = holyhammer ``LENGTH (REVERSE l ++ l) = 2 * LENGTH l``;
-(*      verified proof:
+(*      verified proof (replays in 0.01 s):
           metisTools.METIS_TAC [arithmeticTheory.NUMERAL_DEF ,
             arithmeticTheory.ALT_ZERO , arithmeticTheory.ADD_SYM ,
             arithmeticTheory.TIMES2 , listTheory.LENGTH_REVERSE ,
@@ -219,11 +219,10 @@ hhConfig.hh_unset "minimize";
 load "transcTheory";
 hhConfig.hh_set ("debug_dir", "/tmp/hh-debug");
 val th8 = holyhammer ``x < y ==> (x + y) / 2r < y``;
-(*      verified proof:
-          metis_tac [real_sigmaTheory.REAL_LT_POW2, realTheory.POW_1,
-                     realTheory.REAL_DOUBLE, realTheory.REAL_ADD_COMM,
-                     realTheory.REAL_MUL_COMM, realTheory.REAL_LT_LDIV_EQ,
-                     realTheory.REAL_LT_LADD]
+(*      verified proof (replays in 0.01 s):
+          metis_tac [realTheory.REAL_HALF_DOUBLE, realTheory.REAL_LT_ADD2,
+                     realaxTheory.REAL_LT_RADD,
+                     realaxTheory.REAL_LT_TOTAL]
 
     /tmp/hh-debug now contains one file per prover run (e-2.out,
     vampire-7.out, ...) with the prover's own output.  The matching
@@ -260,7 +259,7 @@ EVAL ``LENGTH ([] ++ [1]) = LENGTH ([] : num list)``;
 
 val th12 =
   holyhammer ``EVERY P l /\ EVERY Q l /\ MEM x l ==> P x /\ Q x``;
-(*      verified proof:
+(*      verified proof (replays in 0.01 s):
           metis_tac [th1]
 
     th1 (section 3) is exactly the lemma needed.  In a script, give such
