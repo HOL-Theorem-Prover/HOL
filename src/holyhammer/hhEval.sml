@@ -1405,7 +1405,8 @@ fun json_string_list values =
 fun reconstruction_settings () : hhReconstruct.settings =
   let val options = hhConfig.snapshot () in
     {minimize = true, preplay_timeout = #preplay_timeout options,
-     minimize_timeout = #minimize_timeout options}
+     minimize_timeout = #minimize_timeout options,
+     minimize_deadline = NONE}
   end
 
 fun reconstruct condition result goal =
@@ -1417,7 +1418,7 @@ fun reconstruct condition result goal =
         NONE => (NONE, NONE, NONE, NONE)
       | SOME axioms =>
           ((let
-              val ((stac, _), elapsed) =
+              val ({stac, ...}, elapsed) =
                 add_time (hhReconstruct.hh_reconstruct_with
                   (reconstruction_settings ()) axioms) goal
             in

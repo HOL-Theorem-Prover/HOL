@@ -438,13 +438,17 @@ fun run_in root {options, goal, rankings, progress} =
         if duplicate then ()
         else
           ((let
-              val ((stac, tac), t_recon) =
+              (* Minimisation stops at the deadline, so that a verified
+                 proof found late is still returned before the hard
+                 deadline interrupts this thread. *)
+              val ({stac, tac, ...}, t_recon) =
                 add_time
                   (smlRedirect.hidef
                     (hhReconstruct.hh_reconstruct_with
                       {minimize = #minimize options,
                        preplay_timeout = #preplay_timeout options,
-                       minimize_timeout = #minimize_timeout options}
+                       minimize_timeout = #minimize_timeout options,
+                       minimize_deadline = SOME deadline}
                       lemmas))
                   goal
               val suggestion : suggestion =

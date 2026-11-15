@@ -2980,6 +2980,69 @@ fun test_holyHammer_e () =
                 expect "holyHammer hh_pb end-to-end e" success
               end
 
+(* Metis replays the lemma lists below in milliseconds, or runs until
+   it is stopped. *)
+fun reconstruct_timed minimize timeout deadline lemmas goal =
+  let
+    val started = Time.now ()
+    val result =
+      SOME (smlRedirect.hidef (hhReconstruct.hh_reconstruct_with
+        {minimize = minimize, preplay_timeout = timeout,
+         minimize_timeout = timeout, minimize_deadline = deadline}
+        lemmas) goal)
+      handle Interrupt => raise Interrupt | Feedback.HOL_ERR _ => NONE
+  in
+    (result, Time.toReal (Time.- (Time.now (), started)))
+  end
+
+fun replays_in_kernel goal ({tac, ...} : hhReconstruct.reconstruction) =
+  (ignore (Tactical.TAC_PROOF (goal, tac)); true)
+  handle Interrupt => raise Interrupt | _ => false
+
+fun test_hhReconstruct () =
+  let
+    val arith = map (fn name => "arithmeticTheory." ^ name)
+    val false_goal = ([], ``!n. n + 1 = n``)
+    val false_lemmas =
+      arith ["ADD_COMM", "ADD_ASSOC", "ADD_CLAUSES", "MULT_COMM",
+             "LEFT_ADD_DISTRIB", "ADD1"]
+    (* Each of the seven attempts used to run out the full timeout. *)
+    val (failed, failed_time) =
+      reconstruct_timed true 0.5 NONE false_lemmas false_goal
+    val _ = expect "reconstruction of an unreplayable list fails at once"
+      (not (Option.isSome failed) andalso failed_time < 2.0)
+    val goal = ([], ``x * (y + z) = z * x + x * y : num``)
+    val lemmas =
+      arith ["ADD_ASSOC", "LEFT_ADD_DISTRIB", "ADD_COMM", "MULT_COMM",
+             "MULT_ASSOC"]
+    (* Without LEFT_ADD_DISTRIB, Metis runs until it is stopped. *)
+    val (minimized, minimize_time) =
+      reconstruct_timed true 10.0 NONE lemmas goal
+    val _ = expect "minimisation attempts are bounded by the replay time"
+      (case minimized of
+           SOME (result as {stac, t_replay, ...}) =>
+             String.isSubstring "LEFT_ADD_DISTRIB" stac andalso
+             not (String.isSubstring "ASSOC" stac) andalso
+             t_replay < 10.0 andalso replays_in_kernel goal result
+         | NONE => false)
+    val _ = expect "minimisation without a needed lemma stays fast"
+      (minimize_time < 5.0)
+    val (unminimized, _) =
+      reconstruct_timed true 10.0 (SOME (Time.now ())) lemmas goal
+    val _ = expect "minimisation past its deadline keeps the verified list"
+      (case unminimized of
+           SOME (result as {stac, ...}) =>
+             List.all (fn name => String.isSubstring name stac)
+               ["ADD_ASSOC", "LEFT_ADD_DISTRIB", "ADD_COMM", "MULT_COMM",
+                "MULT_ASSOC"] andalso
+             replays_in_kernel goal result
+         | NONE => false)
+  in
+    ()
+  end
+
+val _ = test_hhReconstruct ()
+
 val _ = test_szs_status_words ()
 val _ = test_hhProver ()
 val _ = test_hhSlice ()
