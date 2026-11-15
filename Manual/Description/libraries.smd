@@ -595,11 +595,11 @@ type `:bool`, while in the second, a type constraint ensures that
 `~~x` has type `:int`.
 
 ```repl
->>__ show_types := true;
+>>__ HOLFlags.set_bflag (Parse.show_types, true);
 >> Term `~(x = ~~x)`;
 
 >> Term `~(x:int = ~~x)`;
->>__ show_types := false;
+>>__ HOLFlags.set_bflag (Parse.show_types, false);
 ```
 
 Note that the symbol `~` stands for two different constants in the
@@ -839,11 +839,11 @@ type variables get assigned names by the system.  Usually, this
 assignment does the right thing.  However, at times, the most
 general type is not what is desired and the user must add type
 constraints to the relevant subterms.  For tricky situations, the
-global variable `show_types` can be assigned.  When this flag
+global flag `show_types` can be assigned.  When this flag
 is set, the prettyprinters for terms and theorems will show how
 types have been assigned to subterms.  If you do not want the
-system to assign type variables for you, the global variable
-`guessing_tyvars` can be set to `false`, in which case the
+system to assign type variables for you, the flag
+`Preterm.guess_tyvars` can be set to `false`, in which case the
 existence of unassigned type variables at the end of type
 inference will raise an exception.
 \index{type inference!in HOL parser@in \HOL{} parser|)}
@@ -1194,7 +1194,7 @@ no maximum.  Subterms nested more deeply than the maximum print
 depth are printed as `...`.  For example:
 
 ```repl
->>__ show_types := false;
+>>__ HOLFlags.set_bflag (Parse.show_types, false);
 >> arithmeticTheory.ADD_CLAUSES;
 
 >> max_print_depth := 3;

@@ -329,7 +329,7 @@ typeset by renewing the `\HOLRuleName` command.)
 **`showtypes`*n*** (For use with `\HOLthm` and `\HOLtm`.)  Causes
 the term or theorem to be printed with the `types` trace set to
 level *n*.  The *n* is optional and defaults to $1$ if omitted
-(equivalent to having the `show_types` reference set to `true`).
+(equivalent to having the `show_types` flag set to `true`).
 
 **`stackedrule`** (For use with `\HOLthm` and `\HOLtm`.)  This is
 similar to the `rule` option, but causes implication hypotheses to

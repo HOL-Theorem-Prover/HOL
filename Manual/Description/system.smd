@@ -679,10 +679,10 @@ These points are illustrated with a theorem inferred, for example purposes, from
 ```repl
 >> val th = UNDISCH (SPEC_ALL SELECT_AX);
 
->> show_assums := true;
+>> HOLFlags.set_bflag(HOLFlags.show_assums, true);
 
 >> th;
->>__ show_assums := false;
+>>__ HOLFlags.set_bflag(HOLFlags.show_assums, false);
 ```
 
 ### Primitive Rules of Inference of the HOL Logic
@@ -865,9 +865,9 @@ not a type variable.
 
 For example:
 ```repl
->> show_types := true;
+>> HOLFlags.set_bflag (Parse.show_types, true);
 >> INST_TYPE [“:α” |-> “:num”] listTheory.LENGTH;
->>__ show_types := false;
+>>__ HOLFlags.set_bflag (Parse.show_types, false);
 ```
 
 
