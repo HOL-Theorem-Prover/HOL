@@ -1641,7 +1641,7 @@ fun test_hhSlice () =
        expected "zipperposition" "th1" "mono_native_higher_fool"
          "keep_lams" 128,
        expected "e" "th0" "mono_native_higher" "keep_lams" 512,
-       expected "vampire" "th0" "mono_native_higher" "keep_lams" 512,
+       expected "vampire" "th0" "mono_native_higher" "lifting" 512,
        expected "e" "tx0-" "mono_native_fool" "combs_and_lifting" 1024,
        expected "vampire" "tx0" "mono_native_fool" "combs" 512,
        expected "zipperposition" "fof" "" "" 32]

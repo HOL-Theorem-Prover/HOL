@@ -22,7 +22,7 @@ the option interface instead:
     hhConfig.hh_set ("provers", "e vampire");
     hhConfig.hh_set ("format", "th0");
     hhConfig.hh_set ("type_enc", "mono_native_higher");
-    hhConfig.hh_set ("lam_trans", "keep_lams");
+    hhConfig.hh_set ("lam_trans", "lifting");
     hhConfig.hh_params ();
     hhConfig.print_params ();
 

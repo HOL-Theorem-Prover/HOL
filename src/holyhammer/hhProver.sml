@@ -367,8 +367,11 @@ val portfolio =
    mk_slice "e" ("th0", "mono_native_higher", "keep_lams") "knn" 512,
    (* Substitution: Vampire 5.0.1 rejects TF1 rank-1 type quantifiers (!>)
       as higher-order types.  TH0 is its next tested table candidate; this
-      is a parser-equivalence correction, not a tuning change. *)
-   mk_slice "vampire" ("th0", "mono_native_higher", "keep_lams") "knn" 512,
+      is a parser-equivalence correction, not a tuning change.  The pinned
+      build runs its generic FOF schedule on THF and superposes into
+      lambda bodies with loose bound variables, refuting consistent
+      axioms, so its TH0 problems are lambda-lifted. *)
+   mk_slice "vampire" ("th0", "mono_native_higher", "lifting") "knn" 512,
    (* Substitution: E 3.2.5-ho rejects the generated TF0 polymorphic proxy
       declaration used by combs_and_lifting.  TX0- preserves that lambda
       mode and is its parser-supported candidate. *)
