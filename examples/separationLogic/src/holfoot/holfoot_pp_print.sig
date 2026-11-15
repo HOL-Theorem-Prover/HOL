@@ -2,7 +2,7 @@ signature holfoot_pp_print =
 sig
   include Abbrev
 
-  (* trace "use holfoot_pp" for turning pretty printing on and off *);
+  (* trace "holfoot.use_pp" for turning pretty printing on and off *);
 
   val holfoot_pretty_printer_block_indent : int ref
 
@@ -13,5 +13,7 @@ sig
   val remove_holfoot_pp       : unit -> unit
   val add_holfoot_pp_quiet    : unit -> unit
   val remove_holfoot_pp_quiet : unit -> unit
+
+  val use_pp : HOLFlags.bflag
 
 end

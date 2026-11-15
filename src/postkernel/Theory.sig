@@ -164,4 +164,11 @@ sig
   val load_complete : string -> unit
 
   val oracle_string_of : thm -> string option
+
+  (* traces owned by this module *)
+  val debug              : HOLFlags.bflag
+  val allow_rebinds      : HOLFlags.bflag
+  val report_thy_times   : HOLFlags.bflag
+  val save_thm_reporting : HOLFlags.flag
+  val include_html_docs  : HOLFlags.bflag
 end

@@ -4,4 +4,7 @@ sig
     val prove_lthm : Thm.thm -> Thm.thm
     val prove_ltb : PrimitiveBddRules.term_bdd -> PrimitiveBddRules.term_bdd
     val testlz : string -> (unit -> Thm.thm) -> Thm.thm -> unit
+  val lazy     : HOLFlags.bflag
+  val dbg_lazy : HOLFlags.bflag
+
 end

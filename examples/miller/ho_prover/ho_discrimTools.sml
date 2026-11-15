@@ -21,7 +21,7 @@ val () = app load
    "gcdTheory",
    "probLib",
    "HurdUseful"];
-val () = show_assums := true;
+val () = HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open hurdUtils ho_basicTools;

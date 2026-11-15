@@ -8,7 +8,7 @@ app load ["totoTheory", "totoTacs", "inttoTheory", "intLib"];
 *)
 open Parse HolKernel boolLib bossLib;
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 open totoTheory totoTacs inttoTheory intLib;
 
 val AR = ASM_REWRITE_TAC [];

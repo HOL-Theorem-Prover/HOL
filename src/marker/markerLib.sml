@@ -157,11 +157,13 @@ fun ABB l r =
 
 fun ABBREV_TAC eq = let val (l,r) = dest_eq eq in ABB l r end;
 
+val {flag = PAT_ABBREV_TAC_match_var_const, ...} =
+    HOLFlags.create_btrace(
+      {group = "markerLib", name = "PAT_ABBREV_TAC_match_var_const"},
+      true
+    )
 local
-   val match_var_or_const = ref true
 in
-   val () = Feedback.register_btrace
-               ("PAT_ABBREV_TAC: match var/const", match_var_or_const)
 
    fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) ctxt =
       let
@@ -177,7 +179,9 @@ in
            case List.find (fn v => HOLset.member(rvs, v)) bvs of
                SOME _ => NONE
              | NONE =>
-               if (is_var t orelse is_const t) andalso not (!match_var_or_const)
+               if (is_var t orelse is_const t) andalso
+                  not (HOLFlags.get_bflagC ctxt
+                                           PAT_ABBREV_TAC_match_var_const)
                then NONE
                else
                  case Lib.total matchr t of
@@ -1494,7 +1498,7 @@ fun finalise_suspended_thm loc nm0 =
                     FromStore =>
                       boolLib.save_thm_attrs loc (attrblock, clean_th)
                   | FromDB =>
-                      Feedback.trace ("Theory.allow_rebinds", 1)
+                      HOLFlags.with_bflags [(Theory.allow_rebinds, true)]
                         (fn () =>
                             boolLib.save_thm_attrs loc (attrblock, clean_th)) ()
             (* Drop this name from the suspension store so it's no

@@ -2,7 +2,7 @@
 ## `set_trace`
 
 ``` hol4
-Feedback.set_trace : string -> int -> unit
+HOLFlags.set_trace : string -> int -> unit
 ```
 
 ------------------------------------------------------------------------
@@ -40,9 +40,9 @@ or if it is greater than the trace's specified maximum value.
 
 ### See also
 
-[`Feedback`](#Feedback),
-[`Feedback.register_trace`](#Feedback.register_trace),
-[`Feedback.reset_trace`](#Feedback.reset_trace),
-[`Feedback.reset_traces`](#Feedback.reset_traces),
-[`Feedback.trace`](#Feedback.trace),
-[`Feedback.traces`](#Feedback.traces)
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

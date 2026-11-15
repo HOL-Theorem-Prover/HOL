@@ -90,9 +90,9 @@ val HolBddTag = Tag.read HolBddTag_string
 (* Setup trace variable for controlling debug output                         *)
 (*****************************************************************************)
 
-val trace_level = ref 0
-
-val _ = register_trace("HolBdd",trace_level,5)
+val {get = trace_level, ...} =
+    HOLFlags.create_trace ({group = "HolBdd", name = "trace"},
+                           {initial = 0, max = 5})
 
 in
 
@@ -229,7 +229,7 @@ fun BddEqMp th (TermBdd(tg,ass,vm,t1,b)) =
  in
    if aconv l t1
     then TermBdd(Tag.merge tg (Thm.tag th),HOLset.addList(ass,asl),vm,r,b)
-   else if (!trace_level)>=1 then
+   else if trace_level()>=1 then
        let val _ = print "BddEqMp Error\n"
            val _ = print "Theorem:\n"
            val _ = print_thm th

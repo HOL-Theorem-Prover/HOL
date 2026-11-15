@@ -8,4 +8,6 @@ sig
       -> thm list
        -> term * term -> term * thm -> thm * term list * bool
 
+  val TC_extraction : HOLFlags.flag
+
 end

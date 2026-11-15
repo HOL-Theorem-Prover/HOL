@@ -36,7 +36,7 @@ val fcp_ss   = armLib.fcp_ss;
 
 val WL = ``dimindex (:'a)``;
 
-val tt = set_trace "types";
+val tt = HOLFlags.set_trace "PP.types";
 
 val FST_COND_RAND = ISPEC `FST` COND_RAND;
 val SND_COND_RAND = ISPEC `SND` COND_RAND;

@@ -8,7 +8,7 @@ Libs
   numLib fcpLib wordsLib listLib hurdUtils
 
 
-val _ = guessing_word_lengths := true;
+val _ = HOLFlags.set_bflag (guessing_word_lengths, true);
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 Type    block[pp] = “:word32 # word32”
 

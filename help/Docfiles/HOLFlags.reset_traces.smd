@@ -2,7 +2,7 @@
 ## `reset_traces`
 
 ``` hol4
-Feedback.reset_traces : unit -> unit
+HOLFlags.reset_traces : unit -> unit
 ```
 
 ------------------------------------------------------------------------
@@ -16,8 +16,8 @@ Fails if a `set` function associated with a "functional" trace (see
 
 ### See also
 
-[`Feedback`](#Feedback), [`Feedback.set_trace`](#Feedback.set_trace),
-[`Feedback.register_trace`](#Feedback.register_trace),
-[`Feedback.reset_trace`](#Feedback.reset_trace),
-[`Feedback.trace`](#Feedback.trace),
-[`Feedback.traces`](#Feedback.traces)
+[`HOLFlags`](#HOLFlags), [`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

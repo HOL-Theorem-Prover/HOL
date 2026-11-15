@@ -92,4 +92,6 @@ sig
   val extract_tcs : term quotation -> (thm * term list * bool) list
   val extract_tcs_from_term : term -> (thm * term list * bool) list
 
+  val storage_message : HOLFlags.bflag
+
 end

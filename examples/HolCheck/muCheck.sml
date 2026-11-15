@@ -301,8 +301,8 @@ fun cache_get cch ie tb_func gth_func dp nodes mf seth sel state =
         val _ = dbgTools.DST (dpfx^  (Int.toString(Vector.length rsc)))  (*DBG*)
         val _ = dbgTools.DST (dpfx^  " rsc length\n") (*DBG*)*)
         fun check_rv rsc dp = if (dp=(~1)) then true else if (Vector.sub(rsc,dp)=0) then check_rv rsc (dp-1) else false
-        (*val _ = with_flag (show_types,true) dbgTools.DTM (dpfx^  ie)  val _ = dbgTools.DST (dpfx^  " ie\n") (*DBG*)
-        val _ = with_flag (show_types,true) dbgTools.DTM (dpfx^  env)  val _ = dbgTools.DST (dpfx^  " env\n") (*DBG*)*)
+        (*val _ = HOLFlags.with_bflags [(Parse.show_types, true)] dbgTools.DTM (dpfx^  ie)  val _ = dbgTools.DST (dpfx^  " ie\n") (*DBG*)
+        val _ = HOLFlags.with_bflags [(Parse.show_types, true)] dbgTools.DTM (dpfx^  env)  val _ = dbgTools.DST (dpfx^  " env\n") (*DBG*)*)
      val res = if (Term.compare(env,ie)=EQUAL)
        then
            if (Option.isSome tb)
@@ -316,7 +316,7 @@ fun cache_get cch ie tb_func gth_func dp nodes mf seth sel state =
                    if (Option.isSome gth)
                    then let
                             val _ = dbgTools.DST (dpfx^"cg_ gth SOME\n") (*DBG*)
-                            (*val _ = with_flag(show_types,true) dbgTools.DTH (dpfx^  (Option.valOf gth))  (*DBG*)
+                            (*val _ = HOLFlags.with_bflags [(Parse.show_types, true)] dbgTools.DTH (dpfx^  (Option.valOf gth))  (*DBG*)
                               val _ = dbgTools.DST (dpfx^  " gth\n") (*DBG*)*)
                             val sth = get_spec_thm ie gth_func (Option.valOf gth) mf (* could be an RV *)
                             val tb = tb_func mf sth
@@ -367,7 +367,7 @@ fun cache_get cch ie tb_func gth_func dp nodes mf seth sel state =
                else let val _ = dbgTools.DST (dpfx^"cg_ recompute NONE gth\n") (*DBG*)
                         val gth = gth_func mf
                         val sth = if (is_RV mf) then gth else ISPEC ie gth
-                        (*val _ = with_flag(show_types,true) dbgTools.DTH (dpfx^  gth)
+                        (*val _ = HOLFlags.with_bflags [(Parse.show_types, true)] dbgTools.DTH (dpfx^  gth)
                          val _ = dbgTools.DST (dpfx^  " gth\n") (*DBG*) *)
                         val tb = tb_func mf sth
                         val _ = upd_cch_tb cch tb val _ = upd_cch_sth cch sth

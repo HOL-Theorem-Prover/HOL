@@ -28,8 +28,14 @@ FinalNet-sig.uo: FinalNet-sig.sml
 FinalContext-sig.uo: FinalContext-sig.sml
 	$(HOLMOSMLC) -c -toplevel $<
 
+FinalHOLFlags-sig.uo: FinalHOLFlags-sig.sml
+	$(HOLMOSMLC) -c -toplevel $<
+
 KNametab.uo: KNametab.sml $(dprot $(SIGOBJ)/Table.ui)
 	$(HOLMOSMLC) -c Table.ui $<
+
+HOLFlags.ui: HOLFlags.sig FinalHOLFlags-sig.uo
+	$(HOLMOSMLC) -c FinalHOLFlags-sig.ui $<
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<

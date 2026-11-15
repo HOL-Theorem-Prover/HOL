@@ -588,7 +588,8 @@ fun qlinenum q =
     | _ => NONE
 
 fun by0 k (q, tac) (g as (asl,w)) ctxt = let
-  val a = trace ("syntax_error", 0) Parse.Absyn q
+  (* TODO: read this from ctxt instead *)
+  val a = HOLFlags.with_bflags [(Parse.show_syntax_errors, false)] Parse.Absyn q
   open errormonad
   val (goal_pt, finisher) =
       case Lib.total Absyn.dest_eq a of
@@ -600,7 +601,7 @@ fun by0 k (q, tac) (g as (asl,w)) ctxt = let
           else
             raise ERR "by" "Top assumption must be an equality"
       | x => (Parse.absyn_to_preterm a, STRIP_ASSUME_TAC)
-  val tm = trace ("show_typecheck_errors", 0)
+  val tm = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
                  (Preterm.smash
                      (goal_pt >-
                       TermParse.ctxt_preterm_to_term
@@ -880,16 +881,17 @@ val every_case_tac = EVERY_CASE_TAC
 val var_eq = Tactic.eliminable
 fun ASSUM_TAC f P = first_x_assum (f o assert (P o concl))
 
-val old_behaviour = ref false
-val tracename = "BasicProvers.var_eq_old"
-val _ = Feedback.register_btrace(tracename, old_behaviour)
-val behaviour_value = get_tracefn tracename
-fun VAR_EQ_TAC (g as (asl,_)) =
+val {flag = veq_old,...} = HOLFlags.create_btrace(
+      {group = "BasicProvers", name = "var_eq_old"},
+      false
+    )
+
+fun VAR_EQ_TAC (g as (asl,_)) ctxt =
     let
-      val tidy = if behaviour_value() = 1 then ALL_TAC
+      val tidy = if HOLFlags.get_bflagC ctxt veq_old then ALL_TAC
                  else markerLib.TIDY_ABBREVS
     in
-      (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g
+      (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g ctxt
     end
 val var_eq_tac = VAR_EQ_TAC
 

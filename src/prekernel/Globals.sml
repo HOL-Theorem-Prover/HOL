@@ -50,14 +50,6 @@ val show_axioms = ref true
 val show_scrub = ref true
 
 (*---------------------------------------------------------------------------*
- * Prettyprinting flags                                                      *
- *---------------------------------------------------------------------------*)
-
-val type_pp_prefix = ref "`" and type_pp_suffix = ref "`"
-val term_pp_prefix = ref "`" and term_pp_suffix = ref "`"
-val thm_pp_prefix = ref "|- " and thm_pp_suffix = ref ""
-
-(*---------------------------------------------------------------------------*
  * Tells the prettyprinters how wide the page is.                            *
  *---------------------------------------------------------------------------*)
 
@@ -72,51 +64,14 @@ val linewidth = CoreReplVARS.linewidth
 
 val max_print_depth = ref ~1
 
-val pp_flags = {show_types = ref false, show_numeral_types = ref false}
-
 (*---------------------------------------------------------------------------*
  * Controls how many elements to print for list forms. Mirrors print depth.  *
  *---------------------------------------------------------------------------*)
 
 val max_print_length = ref ~1
 
-(*---------------------------------------------------------------------------*
- * For prettyprinting type information in a term.                            *
- *---------------------------------------------------------------------------*)
-
-val show_types = #show_types pp_flags
-val show_types_verbosely = ref false
-
-(*---------------------------------------------------------------------------*
- * To make the system print out character suffixes on numerals to identify   *
- * them as belonging to particular types.                                    *
- *---------------------------------------------------------------------------*)
-
-val show_numeral_types = #show_numeral_types pp_flags
-
 val goal_line = ref "------------------------------------"
 
-(*---------------------------------------------------------------------------*
- * At the end of type inference, HOL now guesses names for unconstrained     *
- * type variables, if this flag is set.                                      *
- *---------------------------------------------------------------------------*)
-
-val guessing_tyvars = ref true
-
-(*---------------------------------------------------------------------------*
- * At the end of type inference, HOL will guess which instance of an         *
- * overloaded constant to pick if there there is more than one choice, if    *
- * this flag is set.                                                         *
- *---------------------------------------------------------------------------*)
-
-val guessing_overloads = ref true
-
-(*---------------------------------------------------------------------------*
- * If this flag is set, then the system will print a message when such       *
- * guesses are made.                                                         *
- *---------------------------------------------------------------------------*)
-
-val notify_on_tyvar_guess = ref true
 
 (*---------------------------------------------------------------------------*
  * Whether or not to be strict about what name a type or constant has.       *

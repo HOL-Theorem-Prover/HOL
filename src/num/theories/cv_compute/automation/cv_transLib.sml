@@ -445,11 +445,11 @@ fun preprocess_def def = let
         val _ = cv_print Silent
                   ("Definition of " ^ name ^
                    " is higher-order due to the following arguments:\n")
-        val b = !show_types
-        val _ = (show_types := true)
+        val b = HOLFlags.get_bflag Parse.show_types
+        val _ = (HOLFlags.set_bflag (Parse.show_types, true))
         val _ = app (indent_print_term Silent "\n" "\n") bad_args
         val _ = cv_print Silent "\n"
-        val _ = (show_types := b)
+        val _ = (HOLFlags.set_bflag (Parse.show_types, b))
       in failwith "Argument contains function type" end
     end
   val _ = app check_arg_tys defs

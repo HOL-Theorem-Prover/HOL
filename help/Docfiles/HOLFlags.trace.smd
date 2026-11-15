@@ -2,7 +2,7 @@
 ## `trace`
 
 ``` hol4
-Feedback.trace : string * int -> ('a -> 'b) -> 'a -> 'b
+HOLFlags.trace : string * int -> ('a -> 'b) -> 'a -> 'b
 ```
 
 ------------------------------------------------------------------------
@@ -26,17 +26,17 @@ variable. Also fails if the function invocation fails.
 ``` hol4
 >> load "mesonLib";
 
->> trace ("meson",2) prove
+>> HOLFlags.trace ("meson.chatting",2) prove
      (concl SKOLEM_THM,mesonLib.MESON_TAC []);
 
->> traces();
+>> HOLFlags.traces();
 ```
 
 ### See also
 
-[`Feedback`](#Feedback),
-[`Feedback.register_trace`](#Feedback.register_trace),
-[`Feedback.reset_trace`](#Feedback.reset_trace),
-[`Feedback.reset_traces`](#Feedback.reset_traces),
-[`Feedback.set_trace`](#Feedback.set_trace),
-[`Feedback.traces`](#Feedback.traces), [`Lib.with_flag`](#Lib.with_flag)
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.traces`](#HOLFlags.traces), [`Lib.with_flag`](#Lib.with_flag)

@@ -2,10 +2,12 @@ signature FinalType =
 sig
 
  eqtype hol_type
+ type bflag
 
  val type_epoch    : unit -> int
  val display_name_of_id : KernelSig.kernelid -> string
  val mk_vartype    : string -> hol_type
+ val vartype_fmt_complaint : bflag
  val gen_tyvar     : unit -> hol_type
  val dest_vartype  : hol_type -> string
  val is_vartype    : hol_type -> bool

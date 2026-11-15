@@ -11,7 +11,10 @@ type ('delta,'value) adata_info = {
 
 val ERR = mk_HOL_ERR "AncestryData"
 
-val tdebug = get_tracefn "Theory.debug"
+fun smem s e = HOLset.member(s,e)
+fun sadd e s = HOLset.add(s,e)
+
+fun tdebug () = HOLFlags.current_trace "Theory.debug"
 
 fun DPRINT s = if tdebug() > 0 then print ("* " ^s^"\n") else ()
 

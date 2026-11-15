@@ -950,14 +950,14 @@ useful theorems, *e.g.*, to use as test data for derived rules of
 inference.  Another tag is used to implement so-called ‘validity
 checking’ for tactics.
 
-The tags in a theorem can be viewed by setting `Globals.show_tags` to
+The tags in a theorem can be viewed by setting `HOLFlags.show_tags` to
 true.
 
 ```repl
->> Globals.show_tags := true;
+>> HOLFlags.show_tags := true;
 
 >> mk_thm([], Term `F`);
->>__ Globals.show_tags := false;
+>>__ HOLFlags.show_tags := false;
 ```
 
 There are three elements to the left of the turnstile in the fully printed
