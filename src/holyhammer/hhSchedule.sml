@@ -18,7 +18,7 @@ and stop_reason = MaxProofs | Timeout | Exhausted | Interrupted
 withtype suggestion =
   {stac : string, tac : tactic, lemmas : string list,
    prover : string, slice : hhProver.slice,
-   t_prover : real, t_recon : real}
+   t_prover : real, t_recon : real, t_replay : real}
 
 type result =
   {suggestions : suggestion list,
@@ -445,7 +445,7 @@ fun run_in root {options, goal, rankings, progress} =
               (* Minimisation stops at the deadline, so that a verified
                  proof found late is still returned before the hard
                  deadline interrupts this thread. *)
-              val ({stac, tac, ...}, t_recon) =
+              val ({stac, tac, t_replay}, t_recon) =
                 add_time
                   (smlRedirect.hidef
                     (hhReconstruct.hh_reconstruct_with
@@ -458,7 +458,8 @@ fun run_in root {options, goal, rankings, progress} =
               val suggestion : suggestion =
                 {stac = stac, tac = tac, lemmas = lemmas,
                  prover = #prover slice, slice = slice,
-                 t_prover = t_prover, t_recon = t_recon}
+                 t_prover = t_prover, t_recon = t_recon,
+                 t_replay = t_replay}
               val reached = with_mutex state_mutex (fn () =>
                 (suggestions := suggestion :: !suggestions;
                  length (!suggestions) >= #max_proofs options))

@@ -9,10 +9,12 @@ sig
     | Verified of suggestion
     | ScheduleDone of stop_reason
   and stop_reason = MaxProofs | Timeout | Exhausted | Interrupted
+  (* t_recon is the whole reconstruction time, minimisation included;
+     t_replay is the time the replay of stac took. *)
   withtype suggestion =
     {stac : string, tac : tactic, lemmas : string list,
      prover : string, slice : hhProver.slice,
-     t_prover : real, t_recon : real}
+     t_prover : real, t_recon : real, t_replay : real}
 
   type result =
     {suggestions : suggestion list,

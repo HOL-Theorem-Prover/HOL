@@ -3232,6 +3232,10 @@ fun test_schedule_max_proofs parser =
          lemma_sets andalso
        List.exists (fn lemmas => lemmas = ["boolTheory.T_DEF"])
          lemma_sets)
+    val _ = expect "scheduler suggestions carry their replay time"
+      (List.all (fn {t_replay, t_recon, ...} : hhSchedule.suggestion =>
+          0.0 <= t_replay andalso t_replay <= t_recon)
+         (#suggestions result2))
     val _ = expect "scheduler event ordering is sane"
       (schedule_events_sane events2)
     val _ = expect "scheduler exports the zero-fact prefix"
