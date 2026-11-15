@@ -885,6 +885,17 @@ fun test_hhMonomorph () =
     val reference_branch = map (fn subst =>
       ("branch", Term.inst subst branch_schema))
       (List.take (Listsort.sort reference_compare exhaustive_substs, 10))
+    (* The goal's 'a is a fixed type.  A premise schematic in 'a (or in
+       'b) must still be instantiated at it. *)
+    val rigid_goal = eq_nil (list_ty alpha)
+    val rigid = hhMonomorph.monomorph
+      {max_iters = 3, max_new_instances = 100} rigid_goal
+      [("same", schematic), ("other", eq_nil (list_ty beta))]
+    val _ = expect "monomorphization instantiates at goal type variables"
+      (List.exists (fn (_, tm) => Term.aconv tm rigid_goal)
+         (named "same" rigid) andalso
+       List.exists (fn (_, tm) => Term.aconv tm rigid_goal)
+         (named "other" rigid))
     val _ = expect "monomorphization closes the list/num fixture"
       (length (named "ground" basic) = 1 andalso
        List.exists (fn (_, tm) => Term.aconv tm expected)

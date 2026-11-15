@@ -76,8 +76,25 @@ struct
       List.all (tvar_is_bound schematic_tvars) tvars
     end
 
-  fun classify rank (nickname, theorem) =
+  (* The goal's type variables are rigid: they name fixed, unknown types,
+     and the printer gives each its own opaque sort.  A premise's type
+     variables are schematic.  Renaming those that clash apart lets a
+     premise match a goal occurrence such as count_occ : 'a -> ... at the
+     goal's own 'a; Type.match_type drops identity bindings, so an
+     unrenamed premise could never be instantiated there. *)
+  fun rename_apart rigid theorem =
     let
+      val clashing = List.filter (fn ty => mem_type ty rigid)
+        (Term.type_vars_in_term theorem)
+    in
+      if null clashing then theorem
+      else Term.inst (map (fn ty =>
+        {redex = ty, residue = Type.gen_tyvar ()}) clashing) theorem
+    end
+
+  fun classify rigid rank (nickname, original) =
+    let
+      val theorem = rename_apart rigid original
       val tvars = Term.type_vars_in_term theorem
       val schematics = schematic_consts theorem
       val prioritized = Listsort.sort (fn ((left_name, left_ty),
@@ -118,12 +135,15 @@ struct
       update name (insert_type ty (lookup name table)) table
     else table
 
-  fun add_grounds tm table =
+  fun is_ground rigid ty =
+    List.all (fn tvar => mem_type tvar rigid) (Type.type_vars ty)
+
+  fun add_grounds rigid tm table =
     let
       fun walk current result =
         if is_const current then
           let val constant as (_, ty) = dest_const current in
-            if Type.polymorphic ty then result
+            if not (is_ground rigid ty) then result
             else add_ground constant result
           end
         else if is_comb current then
@@ -265,11 +285,11 @@ struct
       loop candidates []
     end
 
-  fun grounds_from_instances instances table =
-    List.foldl (fn ((_, _, theorem), result) => add_grounds theorem result)
-      table instances
+  fun grounds_from_instances rigid instances table =
+    List.foldl (fn ((_, _, theorem), result) =>
+      add_grounds rigid theorem result) table instances
 
-  fun process_fact round known new remaining fact next_new =
+  fun process_fact rigid round known new remaining fact next_new =
     case fact of
         Schematic {nickname, theorem, tvars, schematics, initial_round,
                    instances, ...} =>
@@ -299,7 +319,7 @@ struct
               val _ = instances := !instances @ selected
               val _ = remaining := !remaining - length selected
             in
-              grounds_from_instances selected next_new
+              grounds_from_instances rigid selected next_new
             end
       | _ => next_new
 
@@ -310,11 +330,12 @@ struct
 
   fun monomorph {max_iters, max_new_instances} goal premises =
     let
-      val infos = Portable.mapi classify premises
+      val rigid = Term.type_vars_in_term goal
+      val infos = Portable.mapi (classify rigid) premises
       val names = schema_names infos
-      val initial = add_grounds goal
+      val initial = add_grounds rigid goal
         (List.foldl (fn (Ground (_, theorem), result) =>
-                       add_grounds theorem result
+                       add_grounds rigid theorem result
                       | (_, result) => result) names infos)
       val remaining = ref (Int.max (0, max_new_instances))
 
@@ -324,7 +345,8 @@ struct
           let
             val next = List.foldl
               (fn (fact, result) =>
-                process_fact round known new remaining fact result) names infos
+                process_fact rigid round known new remaining fact result)
+                names infos
           in
             rounds (round + 1) (merge_grounds known new) next
           end
