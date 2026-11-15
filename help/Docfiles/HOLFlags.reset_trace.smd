@@ -2,7 +2,7 @@
 ## `reset_trace`
 
 ``` hol4
-Feedback.reset_trace : string -> unit
+HOLFlags.reset_trace : string -> unit
 ```
 
 ------------------------------------------------------------------------
@@ -21,9 +21,9 @@ variable, or if a `set` function associated with a "functional" trace
 
 ### See also
 
-[`Feedback`](#Feedback),
-[`Feedback.register_trace`](#Feedback.register_trace),
-[`Feedback.set_trace`](#Feedback.set_trace),
-[`Feedback.reset_traces`](#Feedback.reset_traces),
-[`Feedback.trace`](#Feedback.trace),
-[`Feedback.traces`](#Feedback.traces)
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

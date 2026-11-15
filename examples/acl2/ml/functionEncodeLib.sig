@@ -186,4 +186,6 @@ sig
         thm list -> tactic -> (thm -> thm -> tactic) -> thm
     val convert_abstracted_nonrec_definition : (term -> bool) -> hol_type ->
         string -> term list -> thm list -> thm -> thm
+  val Trace_flag : HOLFlags.flag
+
 end

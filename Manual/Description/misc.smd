@@ -487,6 +487,27 @@ component, and given up before the trailing components are.  In a
 narrow terminal the column ends up blank rather than pushing the
 time and verdict columns out of alignment.
 
+All of this is drawn rather than logged: the line showing the
+running jobs is rewritten in place, and the completion lines are
+what survives it.  That needs a standard output which will act on
+the carriage returns and clear-to-end-of-line codes the display is
+made of, so `Holmake` draws it only when it has one.  A file or a
+pipe will not; neither will an Emacs compilation or `comint`
+buffer, which Emacs runs on a pty -- so an `isatty` test by itself
+is fooled -- but which never moves back over a line it has
+printed.  `Holmake` reads Emacs's `INSIDE_EMACS` variable to tell
+those apart from `M-x term`, `ansi-term` and `vterm`, which are
+terminals and do get the display.
+
+Without a terminal, each job is announced as it starts and
+reported as it finishes on lines of its own, and the `Scanning`
+frames of the opening directory walk -- which mean something only
+while each is overwriting the last -- give way to the single
+`Scanned `*n*` directories` line that ends them.  The width that
+the columns are laid out in comes from `stty size`, or, where that
+cannot answer -- as it cannot for the pty of an Emacs compilation
+buffer -- from `COLUMNS`.
+
 ### Project files: `holproject.toml`
 
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}}

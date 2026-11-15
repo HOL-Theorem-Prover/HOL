@@ -199,5 +199,6 @@ signature Refute_Core = sig
     val enabled : int -> bool
     val say : int -> string -> unit
     val warn : string -> string -> string -> unit
+    val trace : HOLFlags.flag
   end
 end

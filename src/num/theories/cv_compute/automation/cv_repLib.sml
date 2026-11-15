@@ -17,11 +17,19 @@ fun from_for ty = cv_typeLib.from_term_for ty;
 
 fun match_memory hyps tm = let
   fun match [] = NONE
-    | match ((pat,th)::rest) =
-        SOME (match_term pat tm,th)
-        handle HOL_ERR _ => match rest
+    | match ((pat,th,clashes)::rest) =
+        (case total (match_term pat) tm of
+            NONE => match rest
+          | SOME m =>
+              if null clashes then SOME (m,th) else
+                raise mk_HOL_ERR "cv_repLib" "match_memory"
+                  ("ambiguous translation of " ^ term_to_string tm ^
+                   ": loaded theories translate it differently in " ^
+                   String.concatWith ", " clashes ^ "; keep one by" ^
+                   " removing the others with cv_transLib.cv_rep_delete"))
+  val hyp_entries = map (fn (pat,th) => (pat,th,[])) hyps
   in
-    case match (hyps @ cv_rep_thms ()) of
+    case match (hyp_entries @ cv_rep_entries ()) of
        NONE => NONE
      | SOME ((i,s),th) => let
         val th1 = INST i (INST_TYPE s th)

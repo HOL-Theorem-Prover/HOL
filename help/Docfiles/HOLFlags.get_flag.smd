@@ -1,0 +1,25 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `get_flag`
+
+``` hol4
+HOLFlags.get_flag : flag -> int
+```
+
+------------------------------------------------------------------------
+
+Read an integer-valued flag.
+
+A call to `get_flag f` returns the current value of `f` in the ambient
+context. `get_flagC` reads it from a context the caller supplies
+instead.
+
+### Failure
+
+Fails if `f` does not name a trace.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.set_flag`](#HOLFlags.set_flag),
+[`HOLFlags.get_flagC`](#HOLFlags.get_flagC),
+[`HOLFlags.get_bflag`](#HOLFlags.get_bflag)

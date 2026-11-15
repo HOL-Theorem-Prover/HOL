@@ -208,7 +208,7 @@ details.
 #### Tracing
 
 Tracing output can be controlled via
-`Feedback.set_trace "HolSmtLib"`.  See the source code in
+`HOLFlags.set_trace "HolSmtLib"`.  See the source code in
 `Library.sml` for possible values.
 
 Communication between HOL and external SMT solvers is via temporary

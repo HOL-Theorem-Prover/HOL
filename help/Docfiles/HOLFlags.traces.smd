@@ -2,8 +2,7 @@
 ## `traces`
 
 ``` hol4
-Feedback.traces : unit -> {name : string, max : int, aliases : string list,
-                  trace_level : int, default : int} list
+HOLFlags.traces : unit -> trace_elt list
 ```
 
 ------------------------------------------------------------------------
@@ -22,8 +21,8 @@ Never fails.
 
 ### See also
 
-[`Feedback.register_trace`](#Feedback.register_trace),
-[`Feedback.set_trace`](#Feedback.set_trace),
-[`Feedback.reset_trace`](#Feedback.reset_trace),
-[`Feedback.reset_traces`](#Feedback.reset_traces),
-[`Feedback.trace`](#Feedback.trace)
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.trace`](#HOLFlags.trace)

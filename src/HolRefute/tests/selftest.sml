@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Three deliberate reaches outside the [Refute] signature.  One is a
+(* Four deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -17,7 +17,11 @@ local open Refute_Rat Refute_Real in end
    theory bracket, called by "a theory bracket leaves the global message
    flags alone": the defect it pins is a process-global flag held flipped
    while a sibling backend of the same call runs, and the only public
-   observer would be a second backend racing the first. *)
+   observer would be a second backend racing the first.  The fourth is
+   [Refute_Cert.equality_portfolio], called by "a looping srw_ss
+   conversion stops at the step limit": the bound is on one replay step, and
+   the only public observer of a looping step is the whole call's
+   deadline. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -29,7 +33,7 @@ in end
 
 val _ = Thm.setCT "scratch"
 val _ = numLib.prefer_num ()
-val _ = Feedback.set_trace "Refute" 0
+val _ = HOLFlags.set_flag (Refute_Core.Private.trace, 0)
 
 val erc = ref 0
 val _ = diemode := Remember erc
@@ -80,7 +84,7 @@ fun capture level action =
     fun output text = chunks := text :: !chunks
     val result = Lib.with_flag (Feedback.MESG_outstream, output)
       (Lib.with_flag (Feedback.WARNING_outstream, output)
-        (Feedback.with_traces [("Refute", level)] action)) ()
+        (HOLFlags.with_traces [("Refute.trace", level)] action)) ()
   in
     (result, String.concat (rev (!chunks)))
   end
@@ -760,9 +764,9 @@ val _ = test "quiet suppresses all output" (fn () =>
   end)
 
 val _ = test "quiet restores the output state after an exception" (fn () =>
-  Feedback.with_traces [("Refute", 4)] (fn () =>
+  HOLFlags.with_traces [("Refute.trace", 4)] (fn () =>
     ((ignore (refute (exhaustive |> upd_expect ExpectNone) arith); false)
-     handle HOL_ERR _ => Feedback.current_trace "Refute" = 4)) ())
+     handle HOL_ERR _ => HOLFlags.current_trace "Refute.trace" = 4)) ())
 
 val _ = test "polymorphic goals never get a QC-only NoCounterexample"
   (fn () =>
@@ -2081,10 +2085,10 @@ val _ = test "a theory bracket leaves the global message flags alone"
   (fn () =>
     let
       val saved_info = !Feedback.emit_INFO
-      val saved_tyvar = !Globals.notify_on_tyvar_guess
+      val saved_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
       fun restore () =
         (Feedback.emit_INFO := saved_info;
-         Globals.notify_on_tyvar_guess := saved_tyvar)
+         HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, saved_tyvar))
     in
       (* Compare against a baseline this test sets, never the ambient one.
          Every Refute call above has already used a quiet window, so a
@@ -2094,16 +2098,16 @@ val _ = test "a theory bracket leaves the global message flags alone"
       Portable.finally restore (fn () =>
         let
           val _ = Feedback.emit_INFO := true
-          val _ = Globals.notify_on_tyvar_guess := true
+          val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true)
           val held = Refute_EvalEnum.held_bracket (fn () => ())
           val _ = Refute_EvalEnum.start_held_bracket held (fn () => ())
           val held_info = !Feedback.emit_INFO
-          val held_tyvar = !Globals.notify_on_tyvar_guess
+          val held_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
           val _ = Refute_EvalEnum.close_held_bracket held
           val quiet =
             Refute_EvalEnum.quiet_theory_work (fn () => !Feedback.emit_INFO)
           val after_info = !Feedback.emit_INFO
-          val after_tyvar = !Globals.notify_on_tyvar_guess
+          val after_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
           val restored_after_raise =
             (Refute_EvalEnum.quiet_theory_work
                (fn () => raise Fail "quiet_theory_work"); false)
@@ -4760,6 +4764,31 @@ val _ = mf_level2 "certificates replay at large and structured scopes"
                                     ``ZooNode (ZooLeaf 0) (ZooLeaf 0)``]))
         ``(?t : zoo_tree. t = ZooLeaf 0) ==> !u : zoo_tree. u = ZooLeaf 0``
     end)
+
+(* ------------------------------------------------------------------- *)
+(* Leaf simplification.                                                 *)
+(* ------------------------------------------------------------------- *)
+
+val _ = section "leaf simplification"
+
+val _ = test "a looping srw_ss conversion stops at the step limit" (fn () =>
+  let
+    val name = "refute_selftest_loop"
+    val loop = simpLib.name_ss name (simpLib.conv_ss
+      {name = name, key = NONE, trace = 2, conv = K (K Thm.REFL)})
+    fun step _ input conversion =
+      SOME (conversion input)
+      handle Interrupt => raise Interrupt | _ => NONE
+    val tm = ``(p : bool) /\ q``
+    val _ = BasicProvers.augment_srw_ss [loop]
+    val result = Exn.capture (Timeout.apply (Time.fromSeconds 30)
+      (Refute_Cert.equality_portfolio 2 step)) tm
+    val _ = BasicProvers.diminish_srw_ss [name]
+  in
+    case Exn.release result of
+        SOME theorem => Term.aconv (Refute_Cert.rhs_of theorem) tm
+      | NONE => false
+  end)
 
 (* ------------------------------------------------------------------- *)
 (* Potential counterexamples and retries.  Registers a restricted       *)

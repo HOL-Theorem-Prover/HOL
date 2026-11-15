@@ -5,6 +5,10 @@ exception Interrupt = General.Interrupt
 
 val listDir = Mosml.listDir
 
+(* Moscow ML has no saved modules; see the Poly/ML version. *)
+type 'a persistent_tag = unit
+fun new_persistent_tag () = ()
+
 (*---------------------------------------------------------------------------
     Efficiency hack.
  ---------------------------------------------------------------------------*)

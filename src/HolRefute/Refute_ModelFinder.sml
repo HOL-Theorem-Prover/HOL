@@ -84,7 +84,7 @@ fun format_bool_function value =
             case (at boolSyntax.F, at boolSyntax.T) of
                 (SOME at_false, SOME at_true) =>
                   let val arrow =
-                    if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
+                    if HOLFlags.get_bflag Parse.avoid_unicode then
                       "|->"
                     else
                       "↦"

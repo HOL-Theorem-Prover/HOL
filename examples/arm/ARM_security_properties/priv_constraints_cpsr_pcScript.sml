@@ -11,7 +11,7 @@ Libs
 val _ = diminish_srw_ss ["one"]
 val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 
-val _ = goalStack.chatting := !Globals.interactive
+val _ = HOLFlags.set_bflag (goalStack.chatting, !Globals.interactive)
 
 (**** the problem: vector table is based on mode not exception type ******)
 

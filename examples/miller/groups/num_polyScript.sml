@@ -12,7 +12,7 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 
 (* interactive mode
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 loadPath := union ["..", "../finished"] (!loadPath);
 app load
 ["bossLib", "listTheory", "millerTools", "subtypeTools",

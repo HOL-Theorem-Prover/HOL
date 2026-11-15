@@ -673,7 +673,7 @@ fun hol pp x PlainText = print_with PPBackEnd.raw_terminal pp x
 
 fun hol_term tm = hol pp_term tm
 fun hol_thm th target =
-  Lib.with_flag (Globals.show_assums, true) (hol pp_thm th) target
+  HOLFlags.with_bflags [(Parse.show_assums, true)] (hol pp_thm th) target
 
 (* A type, without the colon the printer puts before it *)
 fun hol_type ty target =
@@ -1177,7 +1177,7 @@ fun snippet_html (cfg : config) href context record =
           in SOME ("Theorem " ^ link ^ ":\n" ^ hol_thm th (Linked href)) end
       | NONE =>
           let
-            val tm = Feedback.trace ("show_typecheck_errors", 0)
+            val tm = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
                        (parse_in_context context) [QUOTE text]
           in
             if null (type_vars_in_term tm) andalso
@@ -2135,7 +2135,7 @@ fun run_with_presentation presentation (cfg : config) =
         TextIO.closeOut out
       end
   in
-    Feedback.trace ("Unicode", 1)
+    HOLFlags.with_bflags [(Parse.avoid_unicode, false)]
       (fn () => let val doc as (_, _, href) = render presentation cfg in
                   List.app (write doc) (#outputs cfg);
                   Option.app (write_snippets cfg href) (#snippets cfg)

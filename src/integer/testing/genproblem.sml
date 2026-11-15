@@ -35,7 +35,7 @@ in
   else mk_imp (gen_formula(), gen_formula())
 end
 
-val _ = Globals.show_types := true;
+val _ = HOLFlags.set_bflag (Parse.show_types, true);
 fun gen n = if n <= 0 then ()
             else (Parse.print_term (gen_formula());
                   print "\n\n";

@@ -1,5 +1,5 @@
 (* interactive mode
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 loadPath := ["../ho_prover","../subtypes","../RSA","../formalize"] @ !loadPath;
 app load
   ["bossLib", "listTheory", "subtypeTools", "res_quanTools",

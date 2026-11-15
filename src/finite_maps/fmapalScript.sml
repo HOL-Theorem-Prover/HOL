@@ -10,7 +10,7 @@ Libs
   pred_setLib res_quanLib PairRules
 
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 val _ = ParseExtras.temp_loose_equality()
 val cpn_case_def = TypeBase.case_def_of ``:ordering``
 val cpn_distinct = TypeBase.distinct_of ``:ordering``

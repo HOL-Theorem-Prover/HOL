@@ -37,7 +37,7 @@ Specializing the built-in theorem `num_CASES` gives the theorem:
 Using two additional theorems, each having one disjunct as a hypothesis:
 
 ``` hol4
-   >> show_assums := true;
+   >> HOLFlags.set_bflag (Parse.show_assums, true);
    >> val th1 = EQT_ELIM $
         REWRITE_CONV [ASSUME “m = 0”, prim_recTheory.PRE] “PRE m = m ⇔ m = 0”;
 
@@ -69,4 +69,4 @@ hypothesis, but otherwise `DISJ_CASES` is pointless.
 [`Thm_cont.DISJ_CASES_THEN2`](#Thm_cont.DISJ_CASES_THEN2),
 [`Drule.DISJ_CASES_UNION`](#Drule.DISJ_CASES_UNION),
 [`Thm.DISJ1`](#Thm.DISJ1), [`Thm.DISJ2`](#Thm.DISJ2)
->>__ show_assums := false;
+>>__ HOLFlags.set_bflag (Parse.show_assums, false);

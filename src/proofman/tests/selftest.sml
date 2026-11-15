@@ -3,9 +3,9 @@ open testutils
 
 val _ = new_theory "scratch"
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
-val _ = goalStack.chatting := false
+val _ = HOLFlags.set_bflag (goalStack.chatting, false)
 
 val _ = tprint "Itself case-eq properly polymorphic"
 val _ =
@@ -82,7 +82,7 @@ fun mkstk0 t tacopt =
 
 fun mkstk t = mkstk0 t (SOME (rpt strip_tac))
 
-val _ = set_trace "Goalstack.other_subgoals_pretty_limit" 5
+val _ = HOLFlags.set_flag (goalStack.other_subgoals_limit, 5)
 
 val _ = current_backend := PPBackEnd.vt100_terminal;
 
@@ -102,7 +102,7 @@ fun rawstr slist =
 fun mkgstkstr strings =
   let
     val t = boolSyntax.list_mk_conj (map(fn s => mk_var(s,bool)) strings)
-    val gstk = with_flag (goalStack.chatting, false) mkstk t
+    val gstk = HOLFlags.with_bflags [(goalStack.chatting, false)] mkstk t
   in
     HOLPP.pp_to_string 70 goalStack.pp_gstk gstk
   end
@@ -129,11 +129,12 @@ val _ = test "Stack printing; big stack" rawstr "abcdefg"
 val _ = tprint "Stack printing; howmany_printed_subgoals = 0"
 val _ =
     let
+      open HOLFlags
       val t = boolSyntax.list_mk_conj
                 (map (fn s => mk_var(s,bool)) ["a","b","c"])
-      val gstk = with_flag (goalStack.chatting, false) mkstk t
-      fun pr g = trace ("Goalstack.howmany_printed_subgoals", 0)
-                       (HOLPP.pp_to_string 70 goalStack.pp_gstk) g
+      val gstk = with_bflags [(goalStack.chatting, false)] mkstk t
+      fun pr g = with_flags [(goalStack.subgoal_print_count, 0)]
+                            (HOLPP.pp_to_string 70 goalStack.pp_gstk) g
     in
       case Exn.capture pr gstk of
           Exn.Exn Interrupt => raise Interrupt
@@ -146,13 +147,13 @@ val _ =
 fun narrow_uni_off f =
   HOLPP.pp_to_string 50
        (f |> with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
-          |> trace ("Unicode", 0))
+          |> HOLFlags.with_bflags [(Parse.avoid_unicode, true)])
 
 val ppgstk = narrow_uni_off goalStack.pp_gstk
 
 fun mkgstkstr t =
   let
-    val gstk = with_flag (goalStack.chatting, false) mkstk t
+    val gstk = HOLFlags.with_bflags [(goalStack.chatting, false)] mkstk t
   in
     ppgstk gstk
   end
@@ -184,7 +185,7 @@ val _ = List.app testf [
  ``(P a b ==> !x y z. Q a x /\ R b y (f z) ==> R2 (ggg a b x y)) /\
    P (f a) (hhhh b) ==>
      R2 (ggg (hhhh a) b c dd)``,
- trace ("Goalstack.print_goal_at_top", 1) mkgstkstr,
+ HOLFlags.with_bflags [(goalStack.goal_at_top, true)] mkgstkstr,
  "\n\
  \     R2 (ggg (hhhh a) b c dd)\n\
  \------------------------------------\n\
@@ -194,7 +195,7 @@ val _ = List.app testf [
  \ 1.  P (f a) (hhhh b)\n"),
 ("Stack printing; more than 10 assumptions",
  ``p1 /\ p2 /\ p3 /\ p4 /\ p5 /\ p6 /\ p7 /\ p8 /\ p9 /\ p10 /\ p11 ==> q``,
- trace ("Goalstack.print_goal_at_top", 1) mkgstkstr,
+ HOLFlags.with_bflags [(goalStack.goal_at_top, true)] mkgstkstr,
  "\n\
  \     q\n\
  \------------------------------------\n\
@@ -250,8 +251,9 @@ val _ = List.app tpp ["$var$(*\\))", "$var$((*\\z)"]
 
 val _ = let
   open boolSyntax
-  fun parse s = trace("notify type variable guesses", 0) Parse.Term [QUOTE s]
-  fun tts t = trace("types", 1) term_to_string t
+  fun parse s =
+      HOLFlags.with_bflags [(Parse.notify_on_tyvar_guess, false)] Parse.Term [QUOTE s]
+  fun tts t = HOLFlags.with_bflags [(show_types, true)] term_to_string t
   fun roundtrip t =
     (tprint ("Round-tripping "^term_to_string t);
      require_msg (check_result (aconv t)) term_to_string (parse o tts) t)
@@ -304,19 +306,21 @@ val _ = let
    different linewidth than the invocation of tpp_expected *)
 (*  fun test (wdth, s, t) =
       with_flag(Globals.linewidth,wdth)
-               (trace ("types", 1) tpp_expected)
-               {input = trace ("types", 1) term_to_string t,
+               (HOLFlags.with_bflags [(Parse.show_types, true)] tpp_expected)
+               {input = HOLFlags.with_bflags [(Parse.show_types, true)] term_to_string t,
                 output = s,
                 testf = fn s =>
                            "Width=" ^ Int.toString wdth ^
                            " type-annotation of “" ^ s ^ "”"}
 *)
 fun test (wdth, s, t) =
-  let val tstr = with_flag (Globals.linewidth,wdth)
-                     (trace ("types", 1) term_to_string) t
+  let val tstr =
+          with_flag (Globals.linewidth,wdth)
+                    (HOLFlags.with_bflags [(show_types, true)] term_to_string)
+                    t
       val _ = print ("\ntstr:\n\n"^tstr^"\n\n")
   in with_flag(testutils.linewidth,wdth)
-       (trace ("types", 1) tpp_expected)
+       (HOLFlags.with_bflags [(show_types, true)] tpp_expected)
        {input = tstr,
         output = s,
         testf = fn s => "Width=" ^ Int.toString wdth ^
@@ -638,21 +642,22 @@ val _ =
     end
 
 local
+  open HOLFlags
   val slot = Context.Data.new {name = "proofman-selftest.marker",
                                empty = "ambient", pp = fn s => s}
   val ctxt = Context.Data.put slot "explicit" (Context.snapshot())
   val seen = ref ""
   fun record_tac g c = (seen := Context.Data.get slot c; ALL_TAC g c)
   fun record_ltac gs c = (seen := Context.Data.get slot c; ALL_LT gs c)
-  val gstk0 = with_flag (goalStack.chatting, false)
-                        (new_goal ([], “p ⇒ p”)) Lib.I
+  val gstk0 = with_bflags [(goalStack.chatting, false)]
+                          (new_goal ([], “p ⇒ p”)) Lib.I
   (* The step runs with the live slot set to "live", after `f` has been
      applied to everything but the goalstack, so a context read any
      earlier than the step itself shows up as "ambient". *)
   fun check nm expected f =
       (tprint nm;
        seen := "";
-       ignore (with_flag (goalStack.chatting, false)
+       ignore (with_bflags [(goalStack.chatting, false)]
                  (Context.Data.with_slot_value slot "live" f) gstk0);
        if !seen = expected then OK()
        else die ("saw " ^ String.toString (!seen)))
