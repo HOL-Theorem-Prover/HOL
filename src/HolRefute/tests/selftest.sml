@@ -1711,6 +1711,22 @@ val _ = test "an existential applying a lambda witness is certified"
            certifies lambda_exists_goal c andalso
            binding_is c ``f : bool -> bool`` ``\x : bool. F``))
 
+(* The search refines only [f]; the existential over [g] stays a variable,
+   which the replay keeps at its function type.  The true variant has a
+   witness, [\x. T]. *)
+val unrefined_function_exists =
+  ``?g : bool -> bool. (f : (bool -> bool) -> bool) g``
+
+val _ = test "an unrefined function-typed existential is certified"
+  (fn () =>
+    refute (nar |> upd_size 1) unrefined_function_exists
+      |> single_cex_where (fn c =>
+           certifies unrefined_function_exists c andalso
+           binding_is c ``f : (bool -> bool) -> bool``
+                        ``\g : bool -> bool. F``) andalso
+    not_refuted (refute (nar |> upd_size 1)
+      ``?g : bool -> bool. (f : (bool -> bool) -> bool) g \/ ~f (\x. T)``))
+
 val _ = test "finite_functions false refuses function domains" (fn () =>
   let val outcome = refute (nar |> upd_size 2 |> upd_finite_functions false)
                            ``(f : bool -> bool) F = f T``
