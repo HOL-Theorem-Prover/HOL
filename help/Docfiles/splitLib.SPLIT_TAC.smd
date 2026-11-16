@@ -8,8 +8,7 @@ splitLib.SPLIT_TAC : thm list -> tactic
 
 ------------------------------------------------------------------------
 
-Performs one case split with split rules. No persistent split registration
-or call to `enable_split_attribute` is needed.
+Performs one case split with split rules.
 
 A split rule is a theorem without hypotheses of the form
 
@@ -36,7 +35,7 @@ Fails if a rule is malformed, or if no rule applies.
 ### Example
 
 ``` hol4
->> val c = Context.snapshot();
+>>__ val c = Context.snapshot();
 >> splitLib.SPLIT_TAC [splitLib.type_split_of “:bool”]
      ([], “P (if b then 1 else 2) : bool”) c;
 >> splitLib.SPLIT_TAC (splitLib.type_split_rules “:bool”)

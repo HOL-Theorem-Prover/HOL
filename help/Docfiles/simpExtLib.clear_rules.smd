@@ -8,10 +8,13 @@ simpExtLib.clear_rules : simpExtLib.simpset -> simpExtLib.simpset
 
 ------------------------------------------------------------------------
 
-Removes rewrites, conversions, congruences, decision procedures, loopers and
-fragments, retaining the rewrite maker, limit, solvers, subgoaler, condition
-depth and term order. `simpExtLib.SIMP_TAC (clear_rules ss) ths` therefore
-simplifies with `ths` alone under the retained settings.
+Removes the rules from an extension simpset, keeping its settings.
+
+`clear_rules ss` removes the rewrites, conversions, congruences, decision
+procedures, loopers and fragments of `ss`. It keeps the rewrite maker, the
+limit, the solvers, the subgoaler, the side-condition depth and the term
+order. Simplifying with `clear_rules ss` and theorems `ths` therefore uses
+`ths` alone, under the settings of `ss`.
 
 ### Failure
 
@@ -20,11 +23,9 @@ Never fails.
 ### Example
 
 ``` hol4
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
->>+ simpExtLib.SIMP_CONV
-      (simpExtLib.clear_rules ext_bool_ss) [] “p ∧ T”;
->> simpExtLib.SIMP_CONV (simpExtLib.clear_rules ext_bool_ss)
-     [boolTheory.AND_CLAUSES] “p ∧ T”;
+>>_ val ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> simpExtLib.SIMP_CONV (simpExtLib.clear_rules ss)
+     [boolTheory.AND_CLAUSES] “p ∧ T ∧ (x:num = x)”;
 ```
 
 ### See also

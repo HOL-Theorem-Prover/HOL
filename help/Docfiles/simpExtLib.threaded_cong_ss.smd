@@ -8,19 +8,14 @@ simpExtLib.threaded_cong_ss : thm list -> simpExtLib.ssfrag
 
 ------------------------------------------------------------------------
 
-Creates an extension fragment containing threaded congruence rules.
-The fragment must be installed in a `simpExtLib.simpset`, not an ordinary
-`simpLib.simpset`.
+Creates an extension fragment of threaded congruence rules.
 
-`threaded_cong_ss ths` is an anonymous fragment of congruence rules,
-normalised in the same way as the `congs` field of `simpExtLib.SSFRAG`.
-Add it with `simpExtLib.++`, or pass it through `simpExtLib.SF` after
-naming/registering it in the extension fragment registry.
-
-A threaded rule may name an intermediate result only in a later
-antecedent, rather than in the conclusion's right-hand side. For example,
-`Q` and `g` below are results of the first two recursive simplifications;
-the third antecedent consumes them to produce the final result `h`:
+In an ordinary congruence rule (see `simpLib.SSFRAG`), the variables
+standing for simplified subterms occur in the conclusion. In a threaded
+rule, such a variable may instead be used only in a later antecedent,
+which combines earlier results into the final one. For example, `Q` and
+`g` below are the results of the first two simplifications, and the third
+antecedent uses them to produce the result `h`:
 
 ``` hol4
    |- (!x. P x = Q x) ==> (!x. Q x ==> (f x = g x)) ==>
@@ -28,17 +23,15 @@ the third antecedent consumes them to produce the final result `h`:
       ((?x. P x /\ f x) = (?x. h x))
 ```
 
-Applied higher-order result variables are beta-reduced in the rebuilt
-right-hand side after instantiation. This does not beta-reduce the
-original term on the left-hand side. These extensions apply only to
-rules in `threaded_cong_ss`; the `congs` field of `simpExtLib.SSFRAG`
-and `simpExtLib.Cong`, like `simpLib.SSFRAG` and `simpLib.Cong`, use
-ordinary congruence handling.
+Beta-redexes created by instantiating higher-order variables in the
+right-hand side of the conclusion are reduced. `threaded_cong_ss ths` is an
+unnamed fragment containing the rules `ths`; congruence rules given to
+`simpExtLib.SSFRAG` or `simpExtLib.Cong` are not threaded.
 
 ### Failure
 
-Never fails. Malformed congruence rules can cause later addition of the
-fragment to a simpset, or simplification with that simpset, to fail.
+Never fails. Using a malformed rule can make adding the fragment, or
+simplifying with the result, fail.
 
 ### Example
 
@@ -51,14 +44,14 @@ fragment to a simpset, or simplification with that simpset, to fail.
       DISCH_THEN (fn rebuilt => REWRITE_TAC [GSYM rebuilt]) THEN
       AP_TERM_TAC THEN ABS_TAC THEN ASM_REWRITE_TAC [] THEN
       ASM_CASES_TAC “Q (x:'a) : bool” THEN RES_TAC THEN ASM_REWRITE_TAC []);
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
->>_ val ss : simpExtLib.simpset = simpExtLib.++
-     (ext_bool_ss, simpExtLib.threaded_cong_ss [threaded]);
+>>_ val ss = simpExtLib.++ (simpExtLib.lift_simpset boolSimps.bool_ss,
+     simpExtLib.threaded_cong_ss [threaded]);
 >> simpExtLib.SIMP_CONV ss [ASSUME “!y:'a. bnd y ==> (bdy y <=> bdy' y)”]
      “?x:'a. bnd x /\ bdy x”;
 ```
 
 ### See also
 
-[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset),
-[`simpLib.Cong`](#simpLib.Cong).
+[`simpLib.SSFRAG`](#simpLib.SSFRAG),
+[`simpLib.Cong`](#simpLib.Cong),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset).

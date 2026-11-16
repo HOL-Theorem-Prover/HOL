@@ -9,8 +9,10 @@ simpExtLib.looper_ss : string * (simpExtLib.simpset -> tactic) ->
 
 ------------------------------------------------------------------------
 
-Creates an anonymous extension fragment containing one looper. Installation
-has the same ordering and replacement behavior as `add_looper`.
+Creates an extension fragment containing one looper.
+
+Adding `looper_ss (name, mk)` to a simpset has the same effect as
+`simpExtLib.add_looper (name, mk)`. The fragment is unnamed.
 
 ### Failure
 
@@ -22,9 +24,6 @@ Never fails.
 >>_ val ss = simpExtLib.++ (simpExtLib.lift_simpset boolSimps.bool_ss,
      simpExtLib.looper_ss ("conj", fn _ => CONJ_TAC));
 ```
-
-The fragment and simpset are extension-owned from construction; an ordinary
-`simpLib.ssfrag` is not accepted here.
 
 ### See also
 

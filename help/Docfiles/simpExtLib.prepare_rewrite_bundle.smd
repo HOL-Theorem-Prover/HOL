@@ -18,57 +18,44 @@ simpExtLib.install_rewrite_bundle : simpExtLib.rewrite_bundle ->
 
 ------------------------------------------------------------------------
 
-Prepares supplied rewrites once for an extension invocation, so nested
-consumers and associated views can share their actual compiled controls.
+Prepares a theorem-list argument once, for use in several simplifier calls.
 
-First use `prepare_rewrite_arguments ss ths` to apply directives and obtain
-an extension set and plain supplied rules. This is explicit construction:
-it can install fragments, replay history and run makers/collectors.
-Compatible surviving installed sources retain their actual controls,
-including partially spent or exhausted counters. It never imports an
-ordinary simpset. Requirements and other tactic-only processing still
-belong to the tactic layer.
+`prepare_rewrite_arguments ss ths` applies the directives in `ths` (such
+as `simpExtLib.ExclX`, `SF` and `Split`) to `ss`, returning the resulting
+simpset and the remaining theorems.
 
-`prepare_rewrite_bundle base rules` compiles supplied rules without
-installing them or priming ambient reducers. `rewrite_bundle_rules` exposes
-the supplied rules with their compiled source handles for view derivation.
-`install_rewrite_bundle bundle views base` installs the binding and any
-attached views. Install it **once per simpset**; pass the same installed
-binding to nested consumers rather than supplying its rules again.
+`prepare_rewrite_bundle ss ths` turns the theorems `ths`, which should
+contain no directives, into rewrites using the rewrite maker of `ss`,
+without adding them to `ss`. `install_rewrite_bundle bundle views ss` adds
+them to `ss`, together with the views `views` (see
+`simpExtLib.rewrite_views`). `rewrite_bundle_rules bundle` returns each
+theorem of the bundle with the handles of the rewrites made from it.
+`combine_rewrite_bundles` joins bundles.
 
-`combine_rewrite_bundles` combines existing compiled bindings without
-refreshing quotas or origins and rejects duplicate bindings. Installation
-retains each constituent event. History replay retains cached compiled
-shapes without rerunning their rewrite maker. Ordinary reset replay resets
-declared quotas while retaining conjunct sharing; explicit
-control-preserving replay keeps the compatible sources' actual remaining
-uses. Extracting either traversal projection never resets those controls.
-
-The `GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND` tactic expects the bundle to be
-already installed in its invocation simpset. Its last theorem-list argument
-is for local directives, not another copy of the bundle's rules. It retains
-the untagged solver context and does not reinstall/recompile the bundle.
+The rewrites of a bundle are made only once: wherever it is installed,
+bounded rewrites (`Once`, `Ntimes`) share one count of remaining uses.
+`simpExtLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND` takes a bundle already
+installed in its simpset.
 
 ### Failure
 
-Argument processing, compilation and callbacks can fail. Duplicate bundle
-bindings/installations and invalid attached views are rejected.
+`prepare_rewrite_arguments` fails if a directive fails.
+`install_rewrite_bundle` fails if the bundle is already installed in the
+simpset, and `combine_rewrite_bundles` if a bundle occurs twice. Views
+whose source is not a rewrite of the bundle are ignored.
 
 ### Example
 
 ``` hol4
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
->>_ val (base, rules) = simpExtLib.prepare_rewrite_arguments
-     ext_bool_ss [BoundedRewrites.Once boolTheory.AND_CLAUSES];
->>_ val bundle : simpExtLib.rewrite_bundle =
-     simpExtLib.prepare_rewrite_bundle base rules;
->>_ val invocation : simpExtLib.simpset =
-     simpExtLib.install_rewrite_bundle bundle [] base;
->> simpExtLib.SIMP_CONV invocation [] “T ∧ p”;
+>>_ val (ss, ths) = simpExtLib.prepare_rewrite_arguments
+     (simpExtLib.lift_simpset boolSimps.bool_ss)
+     [BoundedRewrites.Once boolTheory.AND_CLAUSES];
+>>_ val bundle = simpExtLib.prepare_rewrite_bundle ss ths;
+>>_ val ss' = simpExtLib.install_rewrite_bundle bundle [] ss;
+>> simpExtLib.SIMP_CONV ss' [] “T ∧ p”;
 ```
 
 ### See also
 
-[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset),
 [`simpExtLib.rewrite_source_handles`](#simpExtLib.rewrite_source_handles),
 [`simpExtLib.GEN_GLOBAL_SIMP_TAC`](#simpExtLib.GEN_GLOBAL_SIMP_TAC).

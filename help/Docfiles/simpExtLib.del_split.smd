@@ -8,30 +8,29 @@ simpExtLib.del_split : string -> simpExtLib.simpset -> simpExtLib.simpset
 
 ------------------------------------------------------------------------
 
-Removes local split loopers. `del_split name ss` removes `split name` and
-`split_asm name`; a name already beginning with one of those prefixes removes
-only that looper. Missing names leave the set unchanged.
+Removes split loopers from an extension simpset.
 
-Persistent attribute rules are unaffected. Use `ExclX ("split:" ^ name)` for
-invocation-local suppression, or `splitLib.exclude_split "Thy.Name"` after
-explicit registration for persistent retraction. Local removal requires no
-registration.
+`del_split name ss` removes the loopers `split name` and `split_asm name`
+added by `add_split`. If `name` itself begins with `split ` or
+`split_asm `, only that looper is removed. Rules with the persistent
+`[split]` attribute are not affected; use `ExclX ("split:" ^ name)` to
+exclude one from a simplifier call, or `splitLib.exclude_split` to
+retract it.
 
 ### Failure
 
-Never fails.
+Never fails. If there is no matching looper, `ss` is returned.
 
 ### Example
 
 ``` hol4
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
 >>_ val ss = simpExtLib.add_split (splitLib.type_split_of “:'a option”)
-     ext_bool_ss;
->>_ val without_option = simpExtLib.del_split "option$option_CASE" ss;
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>>_ val ss' = simpExtLib.del_split "option$option_CASE" ss;
 ```
 
 ### See also
 
-[`splitLib.exclude_split`](#splitLib.exclude_split),
 [`simpExtLib.add_split`](#simpExtLib.add_split),
+[`splitLib.exclude_split`](#splitLib.exclude_split),
 [`simpExtLib.ExclX`](#simpExtLib.ExclX).

@@ -13,38 +13,30 @@ simpExtLib.filter_rewrites_preserving_controls :
 
 ------------------------------------------------------------------------
 
-Removes the rewrites that a predicate rejects from a tracked extension
-simpset. There is no corresponding ordinary `simpLib` export.
+Removes the rewrites of an extension simpset that a predicate rejects.
 
 `filter_rewrites keep ss` removes every rewrite `(name, th)`, as it was
-added to `ss`, for which `keep` returns false. Everything else in `ss`
-is kept, including the exclusions, limit, rewrite maker and strategy that
-rebuilding from `ssfrags_of ss` would lose. This filters fragment inputs,
-not individual compiled conjuncts; use `suspend_rewrite_sources` to suspend
-exact compiled occurrences and their views.
+added to `ss`, for which `keep` returns false. Everything else in `ss` is
+kept, including its exclusions, limit, rewrite maker, solvers and
+loopers, which rebuilding from `ssfrags_of ss` would lose. If nothing is
+rejected, `ss` itself is returned.
 
-When filtering changes the history, `filter_rewrites` replays it and resets
-declared bounded allowances. `filter_rewrites_preserving_controls` instead
-shares compatible surviving sources' actual controls with the input,
-including exhausted counters and aliases. Both return the input itself
-without replay if nothing is rejected; neither raises `Conv.UNCHANGED`.
-Removed or incompatible sources invalidate their installed views. Select
-tracked construction before installing rules; filtering cannot import an
-ordinary simpset or recover its source identities.
+The simpset is rebuilt, so bounded rewrites (`Once`, `Ntimes`) start again
+with their full number of uses. With `filter_rewrites_preserving_controls`
+they keep the number of uses they had left.
 
 ### Failure
 
-The predicate and replay callbacks can raise exceptions.
+Fails if `keep` fails.
 
 ### Example
 
 ``` hol4
 >> fun keep (_, th) = not (aconv (concl th) (concl AND_CLAUSES));
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
->>+ simpExtLib.SIMP_CONV
-      (simpExtLib.filter_rewrites keep ext_bool_ss) [] “p ∧ T”;
->> simpExtLib.SIMP_CONV
-     (simpExtLib.filter_rewrites keep ext_bool_ss) [] “p ∨ F”;
+>>_ val ss = simpExtLib.filter_rewrites keep
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>> QCONV (simpExtLib.SIMP_CONV ss []) “p ∧ T”;
+>> simpExtLib.SIMP_CONV ss [] “p ∨ F”;
 ```
 
 ### See also

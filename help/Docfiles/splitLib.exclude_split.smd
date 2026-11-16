@@ -7,32 +7,21 @@ splitLib.exclude_split : string -> unit
 
 ------------------------------------------------------------------------
 
-Persistently retracts a named split rule from the library-owned private store.
+Persistently retracts a `[split]` rule.
 
-The argument is `"Thy.Name"`, or `"Name"` for the current theory. It is
-resolved when written, not when a descendant replays it. For example,
-`splitLib.exclude_split "mySplits.rule"` retracts that ancestor rule without
-removing a descendant's identically named theorem. The key shown by
-`named_split_thms` is the corresponding kernel name `"mySplits$rule"`;
-use dot-qualified names, not display keys, as arguments to this function.
+`exclude_split "Thy.name"` removes the rule `name` of theory `Thy` from
+the rules of the `[split]` attribute, in the current theory and its
+descendants; `exclude_split "name"` refers to the current theory. The
+theorem itself is not deleted. Retracting a name that is not a split rule
+has no effect.
 
-The operation updates the current persistent store and exports a REMOVE
-for descendant replay. Retracting an absent name is harmless. It does not
-delete the theorem from the database. Add rules with an explicitly enabled
-`[split]` attribute. Initialization and fresh-import ordering are described
-under `splitLib.enable_split_attribute`.
-
-Unlike `simpExtLib.del_split` and `ExclX "split:Thy$Name"`, this is persistent
-rather than an exclusion in a local simpset. It requires the registration to
-be enabled and never initializes or adopts a foreign set.
-Queries return no persistent rules before opt-in; local and TypeBase
-splitting remain available without it.
+To exclude a split rule from a single simplifier call, use
+`simpExtLib.ExclX ("split:" ^ name)`.
 
 ### Failure
 
-Fails without mutation if registration is absent, or if the name is
-malformed. Also rejects retractions
-inside a pinned context rather than writing to a different live context.
+Fails if the `[split]` attribute has not been enabled with
+`splitLib.enable_split_attribute`, or if the name is malformed.
 
 ### See also
 

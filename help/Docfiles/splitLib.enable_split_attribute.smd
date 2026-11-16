@@ -7,70 +7,43 @@ splitLib.enable_split_attribute : unit -> unit
 
 ------------------------------------------------------------------------
 
-Explicitly enables the `[split]` attribute with private persistent storage.
+Enables the persistent `[split]` theorem attribute.
 
-Call this before using `Theorem name[split]: ...`, or before importing
-split-bearing theories whose data must replay. Loading `splitLib`,
-`simpExtLib`, or `congExtLib` alone does not enable persistence; ordinary
-`simpLib`/`congLib` do not even load the split modules. Initialization does
-not depend on `simpLib`.
+After `enable_split_attribute ()`, a theorem declared with the `split`
+attribute (`Theorem name[split]: ...`) is recorded as a split rule. The
+rules are exported with the theory, used by `simpExtLib.split_ss`, and
+returned by `splitLib.split_thms` and `splitLib.named_split_thms`. Before
+the attribute is enabled, these return no rules. Split rules passed
+directly (`splitLib.SPLIT_TAC`, `simpExtLib.Split`, `simpExtLib.add_split`)
+and datatype case splitting do not need the attribute.
 
-Repeated calls preserve the library's existing registration and rules.
-If the private dispatcher was removed, explicit initialization reinstalls
-that same function without replaying ancestors or changing the rules.
-The registration and the data handles follow `Context.restore`.
-`splitLib.split_thms ()` and `named_split_thms ()` return empty lists
-before initialization, without registering anything or adopting foreign
-data.
-
-The library registers no generic `ThmSetData` set or exporter callback.
-Use `splitLib.split_thms` and `named_split_thms` to query rules and
-`exclude_split` to retract them. Stored `[split]` declarations record an
-ADD event; local declarations affect live rules without writing events.
-
-Pure split conversions/tactics, local `Split`/`add_split` rules, and
-TypeBase-driven `split_ss` do not need initialization.
+Calling the function again has no effect.
 
 ### Failure
 
-Fails before mutation if another owner has claimed either namespace, or
-if `split` is reserved/an abbreviation. Also rejects foreign listeners
-under its private listener name, and initialization inside a pinned
-context, including an already-enabled registration.
-Malformed rules supplied later to the attribute are rejected separately.
+Fails if a `split` attribute or theorem set has already been registered by
+other code.
 
 ### Comments
 
-For a fresh import, explicit initialization must execute before the
-imported theory's data replay. An exporting script's call is not itself
-serialized as import-time initialization. Use the explicit opt-in module
-`splitPersistLib` in the earliest split-bearing script (before any `[split]`
-declaration):
+A theory's `[split]` rules are only loaded when the attribute is already
+enabled when the theory is loaded. A script declaring `[split]` rules
+should therefore use the library `splitPersistLib`, which enables the
+attribute when it is loaded, and make it a dependency of the exported
+theory:
 
 ``` hol4
-Theory mySplits[bare]
+Theory mySplits
 Libs
-  HolKernel Parse boolLib splitLib splitPersistLib
+  splitLib splitPersistLib
 
 val _ = Theory.add_ML_dependency "splitPersistLib"
 ```
 
-`Libs` enables registration for the script; `add_ML_dependency` makes the
-exported theory load the module before its data is decoded and replayed.
-Put the dependency on the earliest split-bearing theory, not only a child:
-parents load before a child's own ML dependencies. Descendant imports then
-inherit additions and `splitLib.exclude_split` removals in fresh processes.
-There is no implicit opt-in from ordinary `simpLib`/`splitLib` or queries.
-
-Alternatively an explicit loader prelude may call this function before
-loading the entire split-bearing theory graph. After `Context.restore`
-to before registration, call this function again: the process-global ML
-loader may already consider `splitPersistLib` loaded and not rerun its body.
-Registration is serialized theory initialization, not a concurrent proof
-operation. Arbitrary late/current-segment replay is not the supported
-ordering contract.
-
-The private stream is `splitLib.persistent.rules.v1`.
+This is needed in the earliest theory declaring `[split]` rules;
+descendant theories then see the rules, and their retraction by
+`splitLib.exclude_split`. After `Context.restore` to a point before the
+attribute was enabled, call `enable_split_attribute ()` again.
 
 ### See also
 

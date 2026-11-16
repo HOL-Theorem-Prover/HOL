@@ -133,12 +133,6 @@ The `name` field of the record is an optional name for the simpset
 fragment that is used when it, and simpsets that it becomes part of are
 pretty-printed.
 
-This ordinary constructor takes `Traverse.reducer` decision procedures.
-Configured reducers belong to the distinct `TraverseExt.reducer` type and
-must be installed with `simpExtLib.SSFRAG` or `simpExtLib.dproc_ss` in an
-extension set. `TraverseExt.lift` explicitly adapts an ordinary reducer;
-it does not recover an inventory of rewrites hidden inside its closure.
-
 ### Failure
 
 Never fails. Failure to provide theorems of just the right form may

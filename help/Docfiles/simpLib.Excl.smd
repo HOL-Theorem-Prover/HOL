@@ -7,60 +7,37 @@ simpLib.Excl : string -> thm
 
 ------------------------------------------------------------------------
 
-Excludes named rewrites, conversions and decision procedures for one
-invocation.
+Excludes named rewrites, conversions and decision procedures from one
+simplifier call.
 
-`Excl name` is a directive in the theorem list of a simplification
-conversion or tactic. It uses exactly the same strict name parser and
-rule deletion as `ss -* [name]`. Qualification uses dots, not the kernel
-`Thy$Name` spelling:
+Passing `Excl name` in the theorem list of a simplification conversion or
+tactic has the effect of simplifying with `ss -* [name]`. The name is read
+as follows:
 
-- A name without dots is unqualified.
-- A two-part dotted name with an empty or all-digit second part is also
-  unqualified (for example, `name.` or `name.1`); the full string is kept.
-  Otherwise its first part must be an ancestor theory; an unknown theory
-  raises `bad theory name`.
-- A three-part dotted name is read as `Thy.Name.suffix` without an
-  ancestry check. More dots raise `User key has too many dots`.
+- a name without dots, or of the form `name.` or `name.n` with `n` a
+  numeral, is unqualified;
+- `Thy.name` names `name` in theory `Thy`, which must be an ancestor of
+  the current theory;
+- `Thy.name.suffix` is read as theory `Thy` and name `name.suffix`.
 
-Deletion filters the installed rewrite/conversion net, not a source-theorem
-inventory. For a parsed name `n`, an entry matches if its stored name is
-`n`, `rewrite:n`, or begins with `rewrite:n.`, and its theory matches when
-one was supplied. Named decision procedures are removed by exact string
-equality with the original, unparsed string.
-
-There is no namespace interpretation or strategy fallback: `rule:`,
-`looper:`, `solver:`, `split:` and `case:` have no special meaning in an
-`Excl` string. In particular, `Excl "bool$AND_CLAUSES"` does not exclude
-the rewrite `bool.AND_CLAUSES`. Ordinary `simpLib` has no looper, solver or
-split-strategy state to delete. Use [`simpExtLib.ExclX`](#simpExtLib.ExclX)
-with an explicitly constructed extension simpset for extended exclusions.
-
-An unmatched name is silent, but still records the same deletion history
-as `-*`; it is not discarded just because no current rule matches.
-Strict names are reparsed when that history is replayed, in the then-current
-theory context (including after `Context.restore`). A later addition may
-reinstall a deleted rule; this is not a prohibition on future additions.
+This removes the rewrites derived from the theorem `name` (from the given
+theory, if one is supplied), conversions named `name`, and the decision
+procedure whose name is exactly the string given. Kernel-style names
+(`Thy$name`) are not recognised.
 
 ### Failure
 
-The constructor never fails. Processing the directive can fail for an
-invalid name under the strict parser, just as `-*` can. Unmatched names
-are not errors.
+Never fails. The simplifier call fails if the theory is not an ancestor
+or the name has more than two dots. A name that matches nothing is ignored.
 
 ### Example
 
 ``` hol4
->> SIMP_CONV bool_ss [Excl "bool$AND_CLAUSES"] “T ∧ p”;
->> QCONV (SIMP_CONV bool_ss [Excl "bool.AND_CLAUSES"]) “T ∧ p”;
->> SIMP_CONV bool_ss [Excl "name."] “T ∧ p”;
+>> SIMP_CONV bool_ss [] “p ∧ T”;
+>> QCONV (SIMP_CONV bool_ss [Excl "bool.AND_CLAUSES"]) “p ∧ T”;
 ```
 
 ### See also
 
-[`simpExtLib.ExclX`](#simpExtLib.ExclX),
 [`simpLib.SIMP_CONV`](#simpLib.SIMP_CONV),
-[`simpExtLib.add_looper`](#simpExtLib.add_looper),
-[`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
-[`simpExtLib.add_split`](#simpExtLib.add_split),
-[`simpExtLib.split_ss`](#simpExtLib.split_ss).
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).

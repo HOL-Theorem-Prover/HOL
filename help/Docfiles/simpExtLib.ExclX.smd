@@ -8,115 +8,48 @@ simpExtLib.ExclX : string -> thm
 
 ------------------------------------------------------------------------
 
-Excludes named simplifier components for one invocation.
+Excludes named simplifier components from one extension simplifier call.
 
-`ExclX name` is a directive in the theorem list of a simplification
-conversion or tactic on a `simpExtLib.simpset`. Unlike literal
-[`simpLib.Excl`](#simpLib.Excl), it resolves an exclusion target and supports
-explicit namespaces:
+`ExclX target` is used in the theorem list of a `simpExtLib`
+simplification conversion or tactic. Unlike
+[`simpLib.Excl`](#simpLib.Excl), the target may select what kind of
+component to exclude:
 
-- `rule:name` excludes matching rewrites, conversions and named decision
-  procedures.
-  Rewrite names accept `Thy$Name` as well as dotted qualification, and
-  the theory need not be an ancestor of the current theory. A spelling
-  with exactly one `$` and nonempty theory and name parts is split at
-  `$` before any dots are considered: `rule:Thy$r.a.b.c` is valid when
-  that rewrite is installed. Otherwise parsing uses dots: a name with
-  no dots is unqualified, as is a two-part name with an empty or
-  all-digit second part. Other two-part names mean `Thy.Name`, three
-  parts mean `Thy.Name.suffix`, and more parts are invalid.
-  Decision procedures match the exact name string after `rule:`.
-- `looper:name` excludes the ordinary looper named `name`.
-- `solver:name` excludes the named solver from the safe and unsafe lists.
-- `split:name` excludes the matching `split name` and `split_asm name`
-  displays, including rules registered with the `split` attribute.
-- `case:ty` excludes the datatype splits for `ty`, which may be an
-  unqualified type operator or a kernel-qualified `Thy$Tyop`.
+- `rule:name` excludes rewrites, conversions and decision procedures,
+  as `Excl name` does. The name may also be written `Thy$name`, in which
+  case the theory need not be an ancestor and `name` may contain dots.
+- `looper:name` excludes the looper `name`.
+- `solver:name` excludes the safe and unsafe solvers called `name`.
+- `split:name` excludes the split loopers `split name` and
+  `split_asm name`, including persistent `[split]` rules.
+- `case:ty` excludes datatype case splitting for the type operator `ty`,
+  written `ty` or `Thy$ty`.
 
-A bare name first goes through the same strict dots-only parser as
-`Excl` and `-*`, including its ancestry check. A matching rewrite or
-named decision procedure takes precedence over every strategy target.
-Only if neither matches does lookup fall back to ordinary loopers,
-solvers, split displays and case displays. Matching more than one of
-these strategy kinds is an ambiguity error; use a namespace to select
-the intended kind. Bare names cannot bypass strict parsing: use
-`ExclX "case:bool"`, not `ExclX "split.case bool"`, whose dot invokes
-the strict parser.
+A target without a prefix is first read as for `Excl`. If it names a
+rewrite, conversion or decision procedure, those are excluded; otherwise it
+must name exactly one looper, solver, split rule or case split.
 
-Every unmatched `ExclX` name is an error, including an unmatched bare
-name. This differs from the silent unmatched deletion of `Excl` and `-*`.
-Constructing a reusable conversion or tactic need not process the directive
-until application. The supplied simpset is unchanged; exclusions affect only
-the invocation. Constructing or processing this marker does not enable the
-persistent `split` attribute. Local split rules and TypeBase targets remain
-available without registration.
-
-### History and repetition
-
-`ss && [ExclX name]` records the exclusion in the resulting simpset's
-history. Rule exclusions retain their resolved pattern, even for bare
-names; unlike `Excl`, replay does not reparse them in the current theory.
-Rule, ordinary looper and solver deletions act at that point in history:
-a later addition can reinstall the target.
-
-Split/case exclusions instead record suppression of the resolved displays,
-including across fragment removal/replay and `Context.restore`. A later
-local addition with the same excluded display remains suppressed. This is
-local simpset state, not a persistent split-rule REMOVE; use
-`splitLib.exclude_split` for the latter.
-
-Replaying suppression is idempotent, but a newly processed `ExclX` must
-still resolve a target. Repeating a rule, ordinary looper or solver deletion
-usually fails once its target is gone. Repeating a split/case exclusion
-works while its ambient persistent/TypeBase target is still present; a
-removed local-only split no longer matches.
-
-`Once (ExclX name)` and `Ntimes (ExclX name) n` are still invocation-wide
-controls, not bounded deletions: the bound qualifies the directive rather
-than installing its marker as a rewrite, and does not count exclusions or
-rewrite uses. Local invocation replay preserves all installed controls,
-including ambient bounded rules, rather than refreshing their allowances.
-Requirement wrappers (`Req0`, `ReqD`) are tactic-only and retain their usual
-precedence and checks; wrapping an exclusion does not bypass them.
-
-This simplifier-specific marker uses `simpMarker$ExcludeX` and preserves
-the string literally. It introduces no unqualified parser mapping.
-`Req0`, `ReqD`, and bounded wrappers are processed before the marker.
-Generic marker tactics do not interpret this extension; use it only in
-simplifier theorem lists.
+The simpset itself is unchanged. If an exclusion is added to a simpset
+with `&&`, rule, looper and solver exclusions remove what the simpset
+contains at that point, while split and case exclusions also suppress
+matching split rules added later.
 
 ### Failure
 
-The constructor never fails: it stores the string without parsing or
-looking up a target. Processing the directive can fail for an invalid
-name, an ambiguous strategy target or any unmatched name.
+Never fails. The simplifier call fails if the target is malformed,
+ambiguous or matches nothing.
 
 ### Example
 
 ``` hol4
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
->> QCONV (simpExtLib.SIMP_CONV ext_bool_ss
-     [simpExtLib.ExclX "rule:bool$AND_CLAUSES"]) “T ∧ p”;
->> QCONV (simpExtLib.SIMP_CONV ext_bool_ss
-     [BoundedRewrites.Once (simpExtLib.ExclX "rule:bool$AND_CLAUSES")])
-     “T ∧ p”;
-```
-
-Kernel qualification also permits rewrite names containing several dots:
-
-``` hol4
->> val dotted_ss = simpExtLib.++ (simpExtLib.lift_simpset pureSimps.pure_ss,
-     simpExtLib.rewrites_with_names
-       [({Thy="Thy", Name="r.a.b.c"}, boolTheory.AND_CLAUSES)]);
->> simpExtLib.SIMP_CONV dotted_ss [] “T ∧ p”;
->> QCONV (simpExtLib.SIMP_CONV dotted_ss
-     [simpExtLib.ExclX "rule:Thy$r.a.b.c"]) “T ∧ p”;
+>>_ val ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> QCONV (simpExtLib.SIMP_CONV ss
+     [simpExtLib.ExclX "rule:bool$AND_CLAUSES"]) “p ∧ T”;
 ```
 
 ### See also
 
 [`simpLib.Excl`](#simpLib.Excl),
-[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
 [`simpExtLib.add_looper`](#simpExtLib.add_looper),
 [`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
 [`simpExtLib.add_split`](#simpExtLib.add_split),

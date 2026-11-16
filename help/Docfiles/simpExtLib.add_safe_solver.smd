@@ -9,22 +9,26 @@ simpExtLib.add_safe_solver : TraverseExt.ssolver ->
 
 ------------------------------------------------------------------------
 
-Appends a named safe solver unless a safe solver of that name is installed.
-Safe solvers are final solvers of `GEN_SIMP_TAC {safe = true}` and are never
-used for side conditions. Contexts and solver types belong to `TraverseExt`.
+Adds a safe solver to an extension simpset.
+
+Safe solvers are the final solvers of `simpExtLib.GEN_SIMP_TAC {safe =
+true}`. They are not used for the side conditions of conditional rewrites.
+The solver is added after the existing safe solvers, unless one with the
+same name is already present, in which case the simpset is unchanged. See
+`simpExtLib.add_unsafe_solver` for the solver type.
 
 ### Failure
 
-Never fails at installation.
+Never fails.
 
 ### Example
 
 ``` hol4
->> val c = Context.snapshot();
->> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
->>_ val ss = simpExtLib.add_safe_solver decide ext_bool_ss;
->> simpExtLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”) c;
+>>_ val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
+>>_ val ss = simpExtLib.add_safe_solver decide
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>> simpExtLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”)
+     (Context.snapshot());
 ```
 
 ### See also

@@ -8,81 +8,55 @@ simpExtLib.mk_simpset : simpExtLib.ssfrag list -> simpExtLib.simpset
 
 ------------------------------------------------------------------------
 
-Constructs a tracked extension simpset by adding fragments, in order, to
-`simpExtLib.empty_ss`. Fragment installation compiles native rewrites with
-source identities and paired runners sharing their actual bounded controls.
-Merge order matters for rewrite makers and congruences.
+Constructs an extension simpset from a list of fragments.
 
-### Typed construction
+`mk_simpset frags` adds `frags`, in order, to `simpExtLib.empty_ss`. As
+with `simpLib.mk_simpset`, the order matters for rewrite makers and
+congruence rules.
 
-Ordinary `simpLib.ssfrag`, `simpLib.simpset` and `Traverse.reducer` values
-are distinct from the extension types and need no extension load.
-Configured, source-sensitive and child-first clients must choose extension
-construction **before** installing the rules they need to track:
+`simpExtLib` is an opt-in simplifier that adds solvers, loopers, split
+rules, configurable side-condition handling and child-first traversal to
+the ordinary simplifier of `simpLib`. Its `ssfrag` and `simpset` types are
+distinct from those of `simpLib`:
 
-- Use `simpExtLib.empty_ss`, or an ordinary simpset lifted by
-  `simpExtLib.lift_simpset` (e.g. `simpExtLib.lift_simpset boolSimps.bool_ss`)
-  as the base, and `simpExtLib` fragment constructors and update operations
-  thereafter. `simpExtLib.lift_ssfrag` lifts ordinary fragments, such as
-  `pureSimps.PURE_ss`, the `boolSimps` catalog or `combinSimps.COMBIN_ss`;
-  lifting the same named fragment again returns the same fragment.
-- `simpExtLib.dproc_ss` and the `dprocs` field of `simpExtLib.SSFRAG` take
-  `TraverseExt.reducer` values. Use `TraverseExt.lift ordinary_reducer`
-  explicitly for an opaque ordinary reducer. Lifting preserves its callback
-  interface but discovers no internal sources or rewrite quotas; there is
-  no reverse adapter into ordinary `Traverse`.
-- `simpExtLib.SSFRAG.rewrs`, like the ordinary field, takes
-  `(KernelSig.kernelname option * thm) list`; use `rewrites` for plain
-  theorem lists. Native rewrites, not arbitrary conversions or lifted
-  reducer internals, populate source inventories.
-- Register extension fragments with `simpExtLib.register_frag`.
-  `simpExtLib.SF` and extension tactics also resolve names registered with
-  `simpLib.register_frag`, lifted, unless an extension fragment of the same
-  name is registered. Ordinary tactics never see extension registrations.
-- Configured congruence clients use `congExtLib` with an extension simpset
-  and a newly built extension congset. `congExtLib.lift_fragment` adapts
-  public ordinary `congLib.CSFRAG` data, explicitly lifting its reducers;
-  it does not promote an opaque compiled `congLib.congset`.
+- `simpExtLib.lift_ssfrag` turns an ordinary fragment into an extension
+  fragment, and `simpExtLib.lift_simpset` an ordinary simpset into an
+  extension simpset; for example,
+  `simpExtLib.lift_simpset boolSimps.bool_ss`. A simpset that is extended
+  over time, such as `bossLib.srw_ss()`, must be lifted again to see the
+  additions.
+- Decision procedures in extension fragments have type
+  `TraverseExt.reducer`; `TraverseExt.lift` turns an ordinary
+  `Traverse.reducer` into one.
+- Fragments registered with `simpExtLib.register_frag` are found by
+  `simpExtLib.SF`, as are fragments registered with
+  `simpLib.register_frag`, unless an extension fragment of the same name
+  is registered. The ordinary simplifier does not see extension
+  registrations.
 
-### Lifting rebuilds
-
-`simpExtLib.lift_simpset` replays the ordinary simpset's history (fragments,
-deletions and weakeners), limit and exclusions, creating new compiled
-objects: makers, collectors and compilation traces run again, and declared
-bounded allowances start anew. It cannot preserve an ordinary set's
-partially consumed or exhausted counters, and later ordinary updates are not
-mirrored. `ssfrags_of` is inspection, not a reconstruction recipe:
-fragments alone lose deletions, excluded-fragment state, limits and other
-history.
-
-For an already tracked set, both traversal projections share installed
-controls without recompilation or quota refresh. History operations are a
-different contract: `remove_ssfrags` and `filter_rewrites` reset declared
-allowances when they replay; their `_preserving_controls` variants retain
-compatible surviving sources' actual counters, including exhaustion and
-sharing with existing views. Local extension tactic directive replay also
-preserves installed controls.
+`simpExtLib.ssfrags_of ss` gives only the fragments of `ss`: a simpset
+rebuilt from them loses the deletions, exclusions, limit and settings of
+`ss`.
 
 ### Failure
 
-Fragment compilation and user callbacks can fail or raise exceptions.
+Fails if adding a fragment fails.
 
 ### Example
 
 ``` hol4
->>_ val fragment : simpExtLib.ssfrag =
-     simpExtLib.rewrites [boolTheory.AND_CLAUSES];
->>_ val ss : simpExtLib.simpset =
-     simpExtLib.mk_simpset [simpExtLib.lift_ssfrag pureSimps.PURE_ss, fragment];
->>_ val data : TraverseExt.xtraverse_data =
-     simpExtLib.xtraversedata_for_ss ss;
->> TraverseExt.XTRAVERSE data [] “T ∧ p”;
+>>_ val ss = simpExtLib.mk_simpset
+     [simpExtLib.lift_ssfrag pureSimps.PURE_ss,
+      simpExtLib.rewrites [boolTheory.AND_CLAUSES]];
+>> simpExtLib.SIMP_CONV ss [] “T ∧ p”;
 ```
 
 ### See also
 
-[`simpExtLib.xtraversedata_for_ss`](#simpExtLib.xtraversedata_for_ss),
-[`simpExtLib.rewrite_source_handles`](#simpExtLib.rewrite_source_handles),
-[`simpExtLib.prepare_rewrite_bundle`](#simpExtLib.prepare_rewrite_bundle),
+[`simpLib.mk_simpset`](#simpLib.mk_simpset),
+[`simpExtLib.lift_ssfrag`](#simpExtLib.lift_ssfrag),
+[`TraverseExt.CONFIG_REDUCER`](#TraverseExt.CONFIG_REDUCER),
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
 [`simpExtLib.filter_rewrites`](#simpExtLib.filter_rewrites),
+[`simpExtLib.prepare_rewrite_bundle`](#simpExtLib.prepare_rewrite_bundle),
 [`splitLib.enable_split_attribute`](#splitLib.enable_split_attribute).

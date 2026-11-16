@@ -8,20 +8,22 @@ simpExtLib.del_looper : string -> simpExtLib.simpset -> simpExtLib.simpset
 
 ------------------------------------------------------------------------
 
-Removes a named extension looper installed by `add_looper`, `set_looper`
-or `looper_ss`. Use `del_split` for split rules.
+Removes a named looper from an extension simpset.
+
+`del_looper name ss` removes the looper `name` added by `add_looper`,
+`set_looper` or `looper_ss`. Split loopers are removed with `del_split`.
 
 ### Failure
 
-Never fails. A missing name produces a warning and returns the input set.
+Never fails. If there is no looper `name`, a warning is printed and `ss`
+is returned.
 
 ### Example
 
 ``` hol4
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
 >>_ val ss = simpExtLib.add_looper ("conj", fn _ => CONJ_TAC)
-     ext_bool_ss;
->>_ val without_conj = simpExtLib.del_looper "conj" ss;
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>>_ val ss' = simpExtLib.del_looper "conj" ss;
 ```
 
 ### See also

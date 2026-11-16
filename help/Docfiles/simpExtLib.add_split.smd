@@ -8,27 +8,26 @@ simpExtLib.add_split : thm -> simpExtLib.simpset -> simpExtLib.simpset
 
 ------------------------------------------------------------------------
 
-Adds a local split looper applying `splitLib.SPLIT_TAC [th]`.
+Adds a split rule to an extension simpset.
 
-The name is `split name` (or `split_asm name` for an assumption rule), where
-`name` is the theorem's database name, or its redex head constant's `thy$c`
-when unnamed. Reusing the looper name replaces it. `ExclX "split:name"`
-disables it for an invocation. This never registers or updates the persistent
-`split` set.
+`add_split th ss` adds a looper applying `splitLib.SPLIT_TAC [th]`. It is
+named `split name`, or `split_asm name` for an assumption rule, where
+`name` is the theorem's name in the theorem database or, failing that,
+the `Thy$c` name of the rule's case constant. A split looper with the
+same name is replaced.
 
 ### Failure
 
-Fails if the theorem is not a split rule.
+Fails if `th` is not a split rule.
 
 ### Example
 
 ``` hol4
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
 >>_ val ss = simpExtLib.add_split (splitLib.type_split_of “:'a option”)
-     ext_bool_ss;
->> val c = Context.snapshot();
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
 >> simpExtLib.GEN_SIMP_TAC {safe = false} ss []
-     ([], “P (case x of NONE => 0 | SOME n => n + 1) : bool”) c;
+     ([], “P (case x of NONE => 0 | SOME n => n + 1) : bool”)
+     (Context.snapshot());
 ```
 
 ### See also

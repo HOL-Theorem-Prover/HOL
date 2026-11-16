@@ -13,66 +13,43 @@ simpExtLib.rewrite_source_compare :
   simpExtLib.rewrite_source * simpExtLib.rewrite_source -> order
 simpExtLib.rewrite_views :
   (simpExtLib.rewrite_source * thm) list -> simpExtLib.ssfrag
+simpExtLib.suspend_rewrite_sources :
+  simpExtLib.rewrite_source list -> simpExtLib.simpset -> simpExtLib.simpset
 ```
 
 ------------------------------------------------------------------------
 
-Inspects native compiled rewrite occurrences in an already tracked simpset.
-Handles distinguish duplicate installations, AC components and compiled
-conjuncts; they are not merely theorem names or equality of conclusions.
-Installed views are omitted. Conversions and internals of opaque lifted
-reducers are not source inventories. Inspection does not replay history,
-invoke makers/collectors, compile rules, emit compilation traces or create
-new rewrite allowances.
+Identifies the individual rewrites installed in an extension simpset.
 
-`source_rewrite` returns the compiled rule and its optional kernel name.
-`same_rewrite_source` tests occurrence compatibility across history replay;
-`rewrite_source_compare` gives stable origin order, but comparison alone
-is not a compatibility test.
+`rewrite_source_handles ss` returns a handle for each rewrite that `ss`
+made from a theorem, one per rewrite when a theorem gives several (for
+example, one per conjunct). Conversions and decision procedures have no
+handles. `source_rewrite h` returns the rewrite with the name of the
+theorem it was made from. `same_rewrite_source (h1, h2)` holds if `h1`
+and `h2` identify the same rewrite; this survives rebuilding the simpset
+(for example by `filter_rewrites`) as long as the rewrite is unchanged.
+`rewrite_source_compare` orders handles by installation.
 
-`rewrite_views [(source, th)]` makes an extension fragment of aliases.
-An installed compatible view shares the source's exact compiled name and
-actual remaining allowance, including exhaustion. Replay keeps it only
-while the source survives with a compatible compiled statement. Removing,
-filtering or suspending that source disables its views, even if their
-history event remains. A view is not an independently budgeted rewrite.
-
-`suspend_rewrite_sources handles ss` suspends exact active compiled
-occurrences and their attached views; other conjuncts keep their names and
-remaining allowances. Missing/incompatible handles leave the set unchanged.
-`rewrite_context_changes (old, current)` reports changed conversion keys,
-a `rebuild` flag and `context_sensitive` dependencies. Invalidation of an
-installed view's source requires rebuilding; compatible replay or quota
-consumption alone does not. Native rule changes must also be checked
-through source handles, not just the returned conversion keys.
-
-### Construction caveat
-
-Start with `simpExtLib` recipes before installing source-sensitive rules.
-Lifting or recompiling recipes cannot recover spent quotas, and
-`ssfrags_of` alone loses history. Use `prepare_rewrite_arguments` before
-inspecting theorem-list directives; `rewrite_sources ss ths` is read-only
-and rejects directives rather than applying them implicitly.
+`rewrite_views [(h, th)]` is a fragment that adds `th` as an alias of the
+rewrite `h`: it has the same name, shares its remaining uses if `h` is
+bounded, and stops applying when `h` is removed or changed. A view whose
+`h` is not in the simpset, or whose `th` cannot be used as a rewrite, is
+ignored. `suspend_rewrite_sources hs ss` disables the rewrites `hs` and
+their aliases in `ss`.
 
 ### Failure
 
-Invalid views can fail at construction or installation. User callbacks in
-subsequent history operations may raise exceptions.
+Never fails.
 
 ### Example
 
 ``` hol4
->>_ val ss : simpExtLib.simpset = simpExtLib.++
-     (simpExtLib.lift_simpset pureSimps.pure_ss,
-      simpExtLib.rewrites [BoundedRewrites.Once boolTheory.AND_CLAUSES]);
->>_ val sources : simpExtLib.rewrite_source list =
-     simpExtLib.rewrite_source_handles ss;
->> List.all (fn source => simpExtLib.same_rewrite_source (source, source))
-     sources;
+>>_ val ss = simpExtLib.++ (simpExtLib.lift_simpset pureSimps.pure_ss,
+     simpExtLib.rewrites [boolTheory.AND_CLAUSES]);
+>> map simpExtLib.source_rewrite (simpExtLib.rewrite_source_handles ss);
 ```
 
 ### See also
 
-[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset),
 [`simpExtLib.prepare_rewrite_bundle`](#simpExtLib.prepare_rewrite_bundle),
 [`simpExtLib.filter_rewrites`](#simpExtLib.filter_rewrites).

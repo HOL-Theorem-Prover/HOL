@@ -9,7 +9,10 @@ simpExtLib.set_looper : string * (simpExtLib.simpset -> tactic) ->
 
 ------------------------------------------------------------------------
 
-Replaces all extension loopers, including split loopers, with one looper.
+Replaces all the loopers of an extension simpset with one looper.
+
+`set_looper (name, mk) ss` removes every looper of `ss`, including split
+loopers, and adds `mk` as `simpExtLib.add_looper (name, mk)` does.
 
 ### Failure
 
@@ -23,8 +26,6 @@ Never fails.
 >>_ val conjunctions = simpExtLib.set_looper
      ("conj", fn _ => CONJ_TAC) cases;
 ```
-
-Only the conjunction looper remains in `conjunctions`.
 
 ### See also
 

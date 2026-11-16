@@ -18,12 +18,12 @@ Never fails.
 ### Example
 
 ``` hol4
->> val c = Context.snapshot();
 >> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
 >>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
 >>_ val ss = simpExtLib.++
      (ext_bool_ss,simpExtLib.safe_solver_ss decide);
->> simpExtLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”) c;
+>> simpExtLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”)
+     (Context.snapshot());
 ```
 
 ### See also

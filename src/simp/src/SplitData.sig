@@ -1,5 +1,5 @@
-(* Internal persistence for splitLib. Loading this module claims no public
-   namespace and installs no theory-data operations or listeners. *)
+(* The storage of splitLib's [split] rules.  Loading this module does not
+   enable the attribute: splitLib.enable_split_attribute does. *)
 signature SplitData =
 sig
   datatype raw_delta = Add of KernelSig.kernelname | Remove of string

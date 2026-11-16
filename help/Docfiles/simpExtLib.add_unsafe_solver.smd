@@ -9,36 +9,41 @@ simpExtLib.add_unsafe_solver : TraverseExt.ssolver ->
 
 ------------------------------------------------------------------------
 
-Appends a named unsafe solver unless an unsafe solver of that name is already
-installed. Solver types belong to `TraverseExt`:
+Adds an unsafe solver to an extension simpset.
+
+Solvers have the types
 
 ``` hol4
-type ssolver = {name : string, solve : simp_prover_ctxt -> term -> thm}
-type simp_prover_ctxt =
+type TraverseExt.ssolver =
+  {name : string, solve : simp_prover_ctxt -> term -> thm}
+type TraverseExt.simp_prover_ctxt =
   {stack : term list, context_thms : thm list, recurse : term -> thm}
 ```
 
-`solve ctxt c` must prove `c` or raise `HOL_ERR`. `stack` holds pending side
-conditions, `context_thms` contains untagged supplied facts, selected
-assumptions and congruence context, and `recurse c` returns `|- c = c'`.
-Recursive simplification shares the invocation's supplied-rule controls.
+`solve ctxt c` must prove `c` or raise `HOL_ERR`. In `ctxt`, `stack` holds
+the side conditions already being attempted, `context_thms` the theorems
+in the simplifier's context (supplied theorems, assumptions and facts
+assumed by congruence rules), and `recurse c` simplifies `c`, returning
+`|- c = c'`.
 
-Unsafe solvers handle residual conditions after the subgoaler reduces them,
-even in safe tactic mode. They are also final solvers in unsafe mode.
-`ExclX ("solver:" ^ name)` disables both safe and unsafe solvers of that name
-for an invocation. Bare names try strict rewrite/dproc lookup first.
+Unsafe solvers prove the side conditions of conditional rewrites that
+the subgoaler (see `simpExtLib.set_subgoaler`) does not reduce to `T`;
+they are tried on the subgoaler's result. They are also the final solvers of
+`simpExtLib.GEN_SIMP_TAC {safe = false}`. The solver is added after the
+existing unsafe solvers, unless one with the same name is already present,
+in which case the simpset is unchanged.
 
 ### Failure
 
-Never fails at installation.
+Never fails.
 
 ### Example
 
 ``` hol4
->> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
 >> simpExtLib.SIMP_CONV
-     (simpExtLib.add_unsafe_solver decide ext_bool_ss)
+     (simpExtLib.add_unsafe_solver decide
+        (simpExtLib.lift_simpset boolSimps.bool_ss))
      [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
 ```
 
@@ -50,5 +55,4 @@ Never fails at installation.
 [`simpExtLib.remove_solver`](#simpExtLib.remove_solver),
 [`simpExtLib.solver_ss`](#simpExtLib.solver_ss),
 [`simpExtLib.mk_tactic_solver`](#simpExtLib.mk_tactic_solver),
-[`simpExtLib.set_subgoaler`](#simpExtLib.set_subgoaler),
-[`simpExtLib.ExclX`](#simpExtLib.ExclX).
+[`simpExtLib.set_subgoaler`](#simpExtLib.set_subgoaler).

@@ -8,10 +8,12 @@ simpExtLib.set_cond_depth : int -> simpExtLib.simpset -> simpExtLib.simpset
 
 ------------------------------------------------------------------------
 
-Sets the side-condition depth limit. A conditional rewrite is not applied if
-its conditions would make the stack longer than the limit. Without an
-explicit setting, the live value of `Cond_rewr.stack_limit` is used (initially
-4), rather than a captured default.
+Sets the side-condition depth limit of an extension simpset.
+
+A conditional rewrite is not applied if its side conditions, together
+with those already being solved, number more than the limit. If no limit
+is set, the current value of `Cond_rewr.stack_limit` (initially 4) is
+used.
 
 ### Failure
 
@@ -23,8 +25,8 @@ Never fails.
 >> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
 >>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
 >>_ val ss = simpExtLib.add_unsafe_solver decide ext_bool_ss;
->>+ simpExtLib.SIMP_CONV (simpExtLib.set_cond_depth 0 ss)
-      [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
+>> QCONV (simpExtLib.SIMP_CONV (simpExtLib.set_cond_depth 0 ss)
+     [arithmeticTheory.LESS_MOD]) “x MOD (x + 1)”;
 >> simpExtLib.SIMP_CONV (simpExtLib.set_cond_depth 1 ss)
      [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
 ```

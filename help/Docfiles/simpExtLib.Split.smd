@@ -8,30 +8,25 @@ simpExtLib.Split : thm -> thm
 
 ------------------------------------------------------------------------
 
-Marks a theorem as a local split rule for one extension simplifier call.
-`Split th` adds `th` as `simpExtLib.add_split` does. Malformed rules are
-ignored with a warning. No persistent attribute is claimed and no theorem-set
-data is exported. Use the ML constructor or qualified `simpMarker$Split`
-constant; no unqualified parser mapping is installed.
+Marks a split rule for use in one extension simplifier call.
 
-Nested requirement and bounded wrappers are processed before the directive.
-A bound qualifies the directive; it does not install the marker as a rewrite
-or count split applications. Generic marker tactics do not interpret this
-simplifier-owned extension.
+Passing `Split th` in the theorem list of a `simpExtLib` simplification
+tactic adds `th` as a split looper for that call, as
+`simpExtLib.add_split th` does. A rule that is not a split rule is ignored
+with a warning.
 
 ### Failure
 
-Construction never fails. Enclosing requirement checks can fail when processed.
+Never fails.
 
 ### Example
 
 ``` hol4
->> val c = Context.snapshot();
->>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
->> simpExtLib.GEN_SIMP_TAC {safe = false} ext_bool_ss
-     [BoundedRewrites.Once (simpExtLib.Req0
-       (simpExtLib.Split (splitLib.type_split_of “:'a option”)))]
-     ([], “P (case x of NONE => 0 | SOME n => n + 1) : bool”) c;
+>>_ val ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> simpExtLib.GEN_SIMP_TAC {safe = false} ss
+     [simpExtLib.Split (splitLib.type_split_of “:'a option”)]
+     ([], “P (case x of NONE => 0 | SOME n => n + 1) : bool”)
+     (Context.snapshot());
 ```
 
 ### See also
