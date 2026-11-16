@@ -46,7 +46,7 @@ Theorem inv_antimono:
   0 < x /\ x < y ==> inv y < inv x
 Proof
   hh
-  (* metis_tac [real_sigmaTheory.REAL_LT_INV2] *)
+  (* metis_tac [REAL_LT_INV2] *)
 QED
 
 Theorem inv_mul_distrib:
@@ -60,7 +60,7 @@ Theorem square_nonneg:
   0 <= x * x
 Proof
   hh
-  (* metis_tac [realaxTheory.REAL_LE_SQUARE] *)
+  (* metis_tac [REAL_LE_SQUARE] *)
 QED
 
 Theorem le_mul_nonneg_right:
@@ -104,9 +104,8 @@ Theorem max_le_abs_sum:
   max x y <= abs x + abs y
 Proof
   hh
-  (* metis_tac [real_sigmaTheory.REAL_MAX_REDUCE, realaxTheory.REAL_LE_TRANS,
-                ABS_LE, REAL_ABS_POS, REAL_LTE_TOTAL, REAL_LE_ADDR,
-                REAL_LE_ADDL] *)
+  (* metis_tac [real_sigmaTheory.REAL_MAX_REDUCE, REAL_LE_TRANS, ABS_LE,
+                REAL_ABS_POS, REAL_LTE_TOTAL, REAL_LE_ADDR, REAL_LE_ADDL] *)
 QED
 
 (* -------------------------------------------------------------------------

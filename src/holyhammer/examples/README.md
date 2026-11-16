@@ -129,15 +129,6 @@ The two entry points
 `holyhammer : term -> thm` proves a closed statement:
 
     > val th = holyhammer ``MEM x l /\ EVERY P l ==> P x``;
-      starting vampire slice (96 facts)
-      starting e slice (128 facts)
-      ...
-      e slice: Theorem (0.13 s)
-      proof found by e:
-        metis_tac [listTheory.EVERY_MEM]
-      verified proof (replays in 0.00 s):
-        metis_tac [EVERY_MEM]
-      ...
 
     Prove the statement in a script with:
       metis_tac [EVERY_MEM]
@@ -155,7 +146,20 @@ When it succeeds, `hh` ends with the tactic to put in your script:
     Replace `hh` with:
       metis_tac [ALL_DISTINCT_APPEND']
 
-How to read the output:
+The tactic is verified: Metis has replayed it through the HOL4 kernel.
+It names a fact by its plain name where that name, in the current
+context, denotes the same theorem; otherwise it qualifies it, as in
+`listTheory.EVERY_MEM`.  A fact of the current theory has no
+`...Theory` structure yet, so the plain name is used where `Theorem
+name: ...` or `Definition name: ...` bound it.  Automatically generated
+theorems such as `foo_compute` or `foo_ind` are only stored, and print
+as `fetch "thy" "name"` (`DB.fetch`).
+
+By default nothing else is printed.  To watch the proof search, set
+
+    hhConfig.hh_set ("verbose", "true");
+
+How to read the verbose output:
 
   * `starting <prover> slice (N facts)`: a prover was started on a
     problem containing the N best-ranked premises.  Different slices
@@ -171,12 +175,6 @@ How to read the output:
     replay took.  It is repeated in the last message (`Replace `hh`
     with:`), after every slice has reported: **that is the tactic to
     copy into your script.**
-    Facts from the current theory print as `fetch "thy" "name"`
-    (`DB.fetch`).  In a script you can write plain `name` if the theorem
-    is bound as an ML value (`Theorem name: ...` and `Definition
-    name: ...` bind it).  Automatically generated theorems such as
-    `foo_compute` or `foo_ind` are only stored, so keep the `fetch` for
-    those.
   * Once a proof is verified, the remaining slices are stopped.  The last
     few `Timeout` lines are those slices being shut down.
 

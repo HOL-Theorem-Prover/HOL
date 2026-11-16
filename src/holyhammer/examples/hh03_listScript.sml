@@ -106,7 +106,7 @@ Theorem front_last_split:
   LENGTH l = n + 1 ==> l = FRONT l ++ [LAST l]
 Proof
   hh
-  (* metis_tac [APPEND_FRONT_LAST, listTheory.NOT_CONS_NIL, LENGTH_EQ_NUM,
+  (* metis_tac [APPEND_FRONT_LAST, NOT_CONS_NIL, LENGTH_EQ_NUM,
                 numeralTheory.numeral_suc, arithmeticTheory.NUMERAL_DEF,
                 arithmeticTheory.ADD_CLAUSES] *)
 QED
