@@ -54,12 +54,16 @@ fun replay t stac g =
   end
   handle Interrupt => raise Interrupt | _ => NONE
 
-(* A theorem of the current theory has no Theory structure yet, so
-   mk_metis_call fetches it from DB, which prints as fetch "thy" "name".
-   Where the top-level ML value of that name is the theorem, as Theorem
-   and Definition bind it in a script, the lemma is renamed so that the
-   call uses the name.  The value's type is looked up before it is
-   compiled, so that a name bound to something else prints no error. *)
+(* A lemma is renamed to its bare name, so that the call uses the name,
+   where the top-level ML value of that name states the same theorem.
+   This matters in two cases.  A theorem of the current theory has no
+   Theory structure yet, so mk_metis_call fetches it from DB, which
+   prints as fetch "thy" "name"; Theorem and Definition bind its name in
+   a script.  And a theory may re-export an ancestor's theorem under the
+   same name, as rich_list does MAP_REVERSE: the bare name then denotes
+   the copy, which the prettifier, comparing pointers, does not
+   recognise.  The value's type is looked up before it is compiled, so
+   that a name bound to something else prints no error. *)
 fun bound_name lemma =
   let
     val (thy, name) = split_string "Theory." lemma
@@ -67,19 +71,17 @@ fun bound_name lemma =
       aconv (concl th) (concl stored) andalso
       HOLset.equal (hypset th, hypset stored)
   in
-    if thy <> current_theory () then lemma
-    else
-      case #lookupVal PolyML.globalNameSpace name of
-          NONE => lemma
-        | SOME value =>
-            if not (is_thm_value [(name, value)] name) then lemma
-            else
-              case thm_of_sml name of
-                  SOME (_, th) =>
-                    if same th (DB.fetch thy name)
-                    then namespace_tag ^ "Theory." ^ name
-                    else lemma
-                | NONE => lemma
+    case #lookupVal PolyML.globalNameSpace name of
+        NONE => lemma
+      | SOME value =>
+          if not (is_thm_value [(name, value)] name) then lemma
+          else
+            case thm_of_sml name of
+                SOME (_, th) =>
+                  if same th (DB.fetch thy name)
+                  then namespace_tag ^ "Theory." ^ name
+                  else lemma
+              | NONE => lemma
   end
   handle Interrupt => raise Interrupt | _ => lemma
 

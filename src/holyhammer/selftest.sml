@@ -3144,7 +3144,9 @@ fun test_hhReconstruct () =
          | NONE => false)
     (* A theorem of the current theory has no Theory structure.  The
        proof names it by the top-level ML value bound to it, as Theorem
-       binds it in a script, and else fetches it from DB. *)
+       binds it in a script, and else fetches it from DB.  A theorem of
+       an ancestor is named by a value of its name that is a copy, as
+       rich_list's MAP_REVERSE is of list's. *)
     val thy = Theory.current_theory ()
     fun save name = ignore
       (Feedback.quiet_messages Theory.save_thm (name, arithmeticTheory.ADD_0))
@@ -3152,14 +3154,16 @@ fun test_hhReconstruct () =
     val _ = smlExecute.quse_string
       ("val hh_bound_add0 = DB.fetch " ^ Lib.quote thy ^
        " \"hh_bound_add0\"; val hh_int_add0 = 0; " ^
-       "val hh_other_add0 = arithmeticTheory.ADD_COMM;")
+       "val hh_other_add0 = arithmeticTheory.ADD_COMM; " ^
+       "val ADD_0 = Drule.GEN_ALL (Drule.SPEC_ALL arithmeticTheory.ADD_0);")
     val add0_goal = ([], ``x + 0 = x``)
-    fun stac_of name =
-      case #1 (reconstruct_timed true 1.0 NONE [thy ^ "Theory." ^ name]
+    fun stac_in theory name =
+      case #1 (reconstruct_timed true 1.0 NONE [theory ^ "Theory." ^ name]
                   add0_goal) of
           SOME (result as {stac, ...}) =>
             if replays_in_kernel add0_goal result then stac else ""
         | NONE => ""
+    val stac_of = stac_in thy
     fun fetched name =
       String.isSubstring
         ("fetch " ^ Lib.quote thy ^ " " ^ Lib.quote name ^ "]")
@@ -3168,6 +3172,8 @@ fun test_hhReconstruct () =
       (String.isSuffix " [hh_bound_add0]" (stac_of "hh_bound_add0"))
     val _ = expect "a lemma whose name is not bound to it is fetched"
       (fetched "hh_int_add0" andalso fetched "hh_other_add0")
+    val _ = expect "an ancestor's lemma is named by a copy bound to its name"
+      (String.isSuffix " [ADD_0]" (stac_in "arithmetic" "ADD_0"))
   in
     ()
   end
