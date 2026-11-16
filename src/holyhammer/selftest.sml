@@ -3086,6 +3086,27 @@ fun test_hhReconstruct () =
       reconstruct_timed true 0.5 NONE false_lemmas false_goal
     val _ = expect "reconstruction of an unreplayable list fails at once"
       (not (Option.isSome failed) andalso failed_time < 2.0)
+    (* The step case of LENGTH (flatten t) = size t, with the tree's
+       recursion equations as hypotheses.  Metis replays the list in
+       about 0.03 s without the permutative ADD_SYM and needs over 1 s
+       with it. *)
+    val step_goal =
+      ([], ``fl = a ++ ([x] ++ b) ++ [y] /\ s = m + 1 + n + 1 /\
+             LENGTH a = m /\ LENGTH b = n ==> LENGTH fl = s``)
+    val step_lemmas =
+      arith ["ADD_SYM", "ADD_ASSOC", "SUC_ONE_ADD", "NUMERAL_DEF",
+             "ALT_ZERO", "ADD_CLAUSES"] @
+      map (fn name => "listTheory." ^ name)
+        ["APPEND_ASSOC", "LENGTH", "LENGTH_APPEND"]
+    val (repaired, _) =
+      reconstruct_timed false 0.3 NONE step_lemmas step_goal
+    val _ = expect "a list blocked by a permutative lemma replays without it"
+      (case repaired of
+           SOME (result as {stac, ...}) =>
+             not (String.isSubstring "ADD_SYM" stac) andalso
+             String.isSubstring "LENGTH_APPEND" stac andalso
+             replays_in_kernel step_goal result
+         | NONE => false)
     val goal = ([], ``x * (y + z) = z * x + x * y : num``)
     val lemmas =
       arith ["ADD_ASSOC", "LEFT_ADD_DISTRIB", "ADD_COMM", "MULT_COMM",

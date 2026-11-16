@@ -91,6 +91,45 @@ fun minimize_lemmas minimize_timeout deadline g lemmas best =
     loop [] lemmas best
   end
 
+(* A permutative equation, such as commutativity, has sides that are
+   instances of each other but not equal.  Metis cannot orient it, and
+   one such fact can keep it from replaying a list it proves in
+   milliseconds without it: the provers' list for the step case of
+   LENGTH (flatten t) = size t replays in 0.2 s without ADD_COMM and not
+   in 10 s with it. *)
+fun is_permutative_eq tm =
+  let val (l, r) = dest_eq (snd (strip_forall tm)) in
+    not (aconv l r) andalso can (match_term l) r andalso
+    can (match_term r) l
+  end
+  handle HOL_ERR _ => false
+
+fun is_permutative_lemma lemma =
+  case thm_of_name lemma of
+      SOME (_, th) =>
+        List.exists is_permutative_eq
+          (strip_conj (snd (strip_forall (concl th))))
+    | NONE => false
+  handle Interrupt => raise Interrupt | _ => false
+
+(* The lists Metis is asked to replay, in order: the full list, then,
+   if that fails, the list without its permutative equations.  Each try
+   costs at most preplay_timeout, so a list that cannot be replayed still
+   fails quickly. *)
+fun preplay preplay_timeout lemmas g =
+  case replay preplay_timeout (mk_metis_call lemmas) g of
+      SOME found => SOME (lemmas, found)
+    | NONE =>
+        let
+          val (permutative, others) =
+            List.partition is_permutative_lemma lemmas
+        in
+          if null permutative then NONE
+          else
+            Option.map (fn found => (others, found))
+              (replay preplay_timeout (mk_metis_call others) g)
+        end
+
 fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
                           minimize_deadline} : settings) lemmas g =
   if not (!reconstruct_flag)
@@ -98,20 +137,19 @@ fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
         raise ERR "hh_minimize" "reconstruction off")
   else
     let
-      val stac = mk_metis_call lemmas
       fun result stac (tac, time) : reconstruction =
         {stac = stac, tac = tac, t_replay = time}
     in
-      (* Replay the full list first: a list Metis cannot replay fails at
+      (* Replay before minimising: a list Metis cannot replay fails at
          once instead of being minimised attempt by attempt. *)
-      case replay preplay_timeout stac g of
+      case preplay preplay_timeout lemmas g of
           NONE => raise ERR "hh_reconstruct" "reconstruction failed"
-        | SOME full =>
-            if not minimize then result stac full
+        | SOME (replayed, full) =>
+            if not minimize then result (mk_metis_call replayed) full
             else
               let
                 val (kept, best) = minimize_lemmas minimize_timeout
-                  minimize_deadline g lemmas full
+                  minimize_deadline g replayed full
                 val raw = mk_metis_call kept
                 val pretty = prettify_stac raw
               in
