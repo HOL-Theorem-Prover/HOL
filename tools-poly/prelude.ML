@@ -19,7 +19,7 @@
 (* this is an -*- sml -*- file *)
 val () = PolyML.print_depth 0;
 
-open HolKernel Parse boolLib proofManagerLib
+open HolKernel HOLFlags Parse boolLib proofManagerLib
 
 (* Install pretty-printers *)
 val _ = let
