@@ -87,7 +87,6 @@ QED
 Theorem distinct_append_disjoint:
   !l1 l2. ALL_DISTINCT (l1 ++ l2) ==> DISJOINT (set l1) (set l2)
 Proof
-  rpt strip_tac >>
   hh
   (* metis_tac [ALL_DISTINCT_APPEND'] *)
 QED
