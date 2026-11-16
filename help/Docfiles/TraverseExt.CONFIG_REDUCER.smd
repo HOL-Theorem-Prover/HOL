@@ -47,10 +47,11 @@ Never fails.
 
 ``` hol4
 >>_ exception NoContext;
->>_ val beta = TraverseExt.CONFIG_REDUCER
+>>_ val beta_reducer = TraverseExt.CONFIG_REDUCER
      {name = SOME "beta", initial = NoContext, addcontext = #1,
       apply = fn _ => BETA_CONV};
->> simpExtLib.SIMP_CONV (simpExtLib.mk_simpset [simpExtLib.dproc_ss beta])
+>> simpExtLib.SIMP_CONV
+     (simpExtLib.mk_simpset [simpExtLib.dproc_ss beta_reducer])
      [] “(λx. x ∧ y) p”;
 ```
 
