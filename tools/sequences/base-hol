@@ -49,6 +49,9 @@ src/datatype
 !src/datatype/theory_tests
 src/monad
 src/list/src
+# Full native simplifier coverage needs the option/list exports, not just
+# the bootstrap bool cases available when src/simp/src is first built.
+!src/simp/tests/native-extension
 src/quantHeuristics
 src/pattern_matches
 !src/pattern_matches/interactive_tests

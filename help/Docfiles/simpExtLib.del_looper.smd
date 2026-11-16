@@ -1,0 +1,30 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `del_looper`
+
+``` hol4
+simpExtLib.del_looper : string -> simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes a named extension looper installed by `add_looper`, `set_looper`
+or `looper_ss`. Use `del_split` for split rules.
+
+### Failure
+
+Never fails. A missing name produces a warning and returns the input set.
+
+### Example
+
+``` hol4
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.add_looper ("conj", fn _ => CONJ_TAC)
+     ext_bool_ss;
+>>_ val without_conj = simpExtLib.del_looper "conj" ss;
+```
+
+### See also
+
+[`simpExtLib.add_looper`](#simpExtLib.add_looper),
+[`simpExtLib.del_split`](#simpExtLib.del_split).

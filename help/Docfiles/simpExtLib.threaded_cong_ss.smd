@@ -1,0 +1,64 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `threaded_cong_ss`
+
+``` hol4
+simpExtLib.threaded_cong_ss : thm list -> simpExtLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Creates an extension fragment containing threaded congruence rules.
+The fragment must be installed in a `simpExtLib.simpset`, not an ordinary
+`simpLib.simpset`.
+
+`threaded_cong_ss ths` is an anonymous fragment of congruence rules,
+normalised in the same way as the `congs` field of `simpExtLib.SSFRAG`.
+Add it with `simpExtLib.++`, or pass it through `simpExtLib.SF` after
+naming/registering it in the extension fragment registry.
+
+A threaded rule may name an intermediate result only in a later
+antecedent, rather than in the conclusion's right-hand side. For example,
+`Q` and `g` below are results of the first two recursive simplifications;
+the third antecedent consumes them to produce the final result `h`:
+
+``` hol4
+   |- (!x. P x = Q x) ==> (!x. Q x ==> (f x = g x)) ==>
+      (!x. (Q x /\ g x) = h x) ==>
+      ((?x. P x /\ f x) = (?x. h x))
+```
+
+Applied higher-order result variables are beta-reduced in the rebuilt
+right-hand side after instantiation. This does not beta-reduce the
+original term on the left-hand side. These extensions apply only to
+rules in `threaded_cong_ss`; the `congs` field of `simpExtLib.SSFRAG`
+and `simpExtLib.Cong`, like `simpLib.SSFRAG` and `simpLib.Cong`, use
+ordinary congruence handling.
+
+### Failure
+
+Never fails. Malformed congruence rules can cause later addition of the
+fragment to a simpset, or simplification with that simpset, to fail.
+
+### Example
+
+``` hol4
+>>_ val threaded = prove(
+      “(!x:'a. P x = Q x) ==> (!x:'a. Q x ==> (f x = g x)) ==>
+       (!x:'a. (Q x /\ g x) = h x) ==>
+       ((?x:'a. P x /\ f x) = (?x:'a. h x))”,
+      DISCH_TAC THEN DISCH_TAC THEN
+      DISCH_THEN (fn rebuilt => REWRITE_TAC [GSYM rebuilt]) THEN
+      AP_TERM_TAC THEN ABS_TAC THEN ASM_REWRITE_TAC [] THEN
+      ASM_CASES_TAC “Q (x:'a) : bool” THEN RES_TAC THEN ASM_REWRITE_TAC []);
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss : simpExtLib.simpset = simpExtLib.++
+     (ext_bool_ss, simpExtLib.threaded_cong_ss [threaded]);
+>> simpExtLib.SIMP_CONV ss [ASSUME “!y:'a. bnd y ==> (bdy y <=> bdy' y)”]
+     “?x:'a. bnd x /\ bdy x”;
+```
+
+### See also
+
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset),
+[`simpLib.Cong`](#simpLib.Cong).

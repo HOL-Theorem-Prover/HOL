@@ -1,0 +1,40 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_split`
+
+``` hol4
+simpExtLib.add_split : thm -> simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Adds a local split looper applying `splitLib.SPLIT_TAC [th]`.
+
+The name is `split name` (or `split_asm name` for an assumption rule), where
+`name` is the theorem's database name, or its redex head constant's `thy$c`
+when unnamed. Reusing the looper name replaces it. `ExclX "split:name"`
+disables it for an invocation. This never registers or updates the persistent
+`split` set.
+
+### Failure
+
+Fails if the theorem is not a split rule.
+
+### Example
+
+``` hol4
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.add_split (splitLib.type_split_of “:'a option”)
+     ext_bool_ss;
+>> val c = Context.snapshot();
+>> simpExtLib.GEN_SIMP_TAC {safe = false} ss []
+     ([], “P (case x of NONE => 0 | SOME n => n + 1) : bool”) c;
+```
+
+### See also
+
+[`splitLib.SPLIT_TAC`](#splitLib.SPLIT_TAC),
+[`simpExtLib.del_split`](#simpExtLib.del_split),
+[`simpExtLib.Split`](#simpExtLib.Split),
+[`simpExtLib.split_ss`](#simpExtLib.split_ss),
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).

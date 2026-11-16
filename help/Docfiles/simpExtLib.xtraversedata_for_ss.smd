@@ -1,0 +1,60 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `xtraversedata_for_ss`
+
+``` hol4
+simpExtLib.xtraversedata_for_ss :
+  simpExtLib.simpset -> TraverseExt.xtraverse_data
+```
+
+------------------------------------------------------------------------
+
+Extracts a configured extension traversal description paired with subgoaler,
+unsafe solvers, condition depth and term order. Its native rewriter is
+built by `TraverseExt.CONFIG_REDUCER`; supplied extension decision
+procedures are unchanged. The data contains equality, traversal rules and the
+set's limit.
+
+Pass the pair to `TraverseExt.XTRAVERSE`. For configured reducer data alone,
+use `#1 (simpExtLib.xtraversedata_for_ss ss)`. The extension default projection
+`simpExtLib.traversedata_for_ss` returns `TraverseExt.traverse_data` with an
+explicitly lifted native rewriter and omits strategy settings. Neither is a
+projection into ordinary `Traverse` or an import of an ordinary simpset.
+
+Extraction invokes no collectors, recompiles no rules and shares installed
+bounded controls without resetting them. `XTRAVERSE pair facts` refreshes
+private contexts on each application, even with default settings.
+`TraverseExt.TRAVERSE` initializes contexts at construction instead; taking
+`#1` neither transports the configuration nor changes that lifetime.
+
+### Failure
+
+Construction or application can fail as for the selected traversal.
+
+### Example
+
+``` hol4
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.set_cond_depth 2 ext_bool_ss;
+>>_ val pair = simpExtLib.xtraversedata_for_ss ss;
+>> val TraverseExt.ConfigReducer =
+     TraverseExt.reducer_kind (hd (#rewriters (#1 pair)));
+>> TraverseExt.XTRAVERSE pair [] “T ∧ p”;
+```
+
+Ordinary simpsets use `simpLib.traversedata_for_ss` and `Traverse`.
+Extension callers use the default or configured projection of their
+already tracked object; there is no ordinary projection of an extension
+simpset.
+
+Start with an extension recipe before installing source-sensitive rules.
+There is no transparent import from an ordinary simpset: recompiling known
+recipes creates new identities and declared allowances, not the original
+remaining quotas. `ssfrags_of` alone also loses history; see
+`simpExtLib.mk_simpset` for construction and rebuilding requirements.
+
+### See also
+
+[`simpExtLib.set_cond_depth`](#simpExtLib.set_cond_depth),
+[`simpLib.traversedata_for_ss`](#simpLib.traversedata_for_ss),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset).

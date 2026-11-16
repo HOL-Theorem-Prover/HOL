@@ -1,0 +1,50 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `split_ss`
+
+``` hol4
+simpExtLib.split_ss : simpExtLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Splits datatype case expressions and registered split rules during extension
+simplification. The fragment is named `"split"`; its `"splitter"` looper uses
+TypeBase rules for fully applied case constants in the goal, and persistent
+`split` rules when explicitly enabled. It also rewrites
+`(b ==> t) /\ (~b ==> t)` to `t`.
+
+Loading the fragment does not register the attribute or theorem set. Without
+initialization, TypeBase and local `Split` rules still work. Persistent
+registration must precede replay: exporting theories load `splitPersistLib`
+and record it with `Theory.add_ML_dependency` on the earliest split-bearing
+theory. Ancestor additions and `splitLib.exclude_split` removals then replay
+on fresh import; see `splitLib.enable_split_attribute` for ordering.
+
+`ExclX "split:thy$name"` suppresses an attribute rule for one invocation;
+`ExclX "case:ty"` suppresses datatype splits.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> val c = Context.snapshot();
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.++ (ext_bool_ss,simpExtLib.split_ss);
+>> simpExtLib.GEN_SIMP_TAC {safe = false} ss []
+     ([], “P (if b then 1 else 2) : bool”) c;
+>> simpExtLib.GEN_SIMP_TAC {safe = false} ss
+     [simpExtLib.ExclX "case:bool"] ([], “P (if b then 1 else 2) : bool”) c;
+```
+
+### See also
+
+[`splitLib.enable_split_attribute`](#splitLib.enable_split_attribute),
+[`splitLib.exclude_split`](#splitLib.exclude_split),
+[`simpExtLib.add_split`](#simpExtLib.add_split),
+[`simpExtLib.del_split`](#simpExtLib.del_split),
+[`simpExtLib.Split`](#simpExtLib.Split),
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).

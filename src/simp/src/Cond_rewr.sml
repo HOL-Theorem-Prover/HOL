@@ -168,20 +168,30 @@ fun ac_term_ord(tm1,tm2) =
        vperm(tm1,tm2) andalso
        HOLset.equal(FVL [tm1] empty_tmset, FVL [tm2] empty_tmset)
 
-   fun COND_REWR_CONV (nm,th) bounded =
+   type config =
+     {solver : term list -> term -> thm, stack : term list,
+      cond_depth : int option, term_ord : term * term -> order}
+   type runners =
+     {legacy : (term list -> term -> thm) -> term list -> conv,
+      configured : config -> conv}
+
+   (* One construction (theorem analysis and matcher) serves two runners.
+      The legacy runner reads stack_limit at each application and orders
+      permutative rewrites by ac_term_ord; the configured runner takes
+      both from its argument, NONE depth again meaning stack_limit. *)
+   fun COND_REWR_CONVS (nm,th) bounded =
       let val eqn = snd (strip_imp (concl th))
           val isperm = is_var_perm (dest_eq eqn)
           val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
                        handle HOL_ERR _ => ERR("COND_REWR_CONV",
                          "bad theorem argument (not a conditional equation)")
-      in
-      fn solver => fn stack => fn tm =>
+          fun apply solver stack depth term_ord tm =
        (let val conditional_eqn = instth tm
             val (conditions,eqn) = strip_imp (concl conditional_eqn)
             val _ = if exists (C (op_mem aconv) stack) conditions
                         then (trace(1, TEXT "looping - cut");
                               failwith "looping!") else ()
-            val _ = if length stack + length conditions > (!stack_limit)
+            val _ = if length stack + length conditions > depth
                     then (trace(1, TEXT "looping - stack limit reached");
                           failwith "stack limit") else ()
             val (l,r) = dest_eq eqn
@@ -191,7 +201,7 @@ fun ac_term_ord(tm1,tm2) =
                  failwith "looping rewrite")
               else ()
 
-            val _ = if isperm andalso ac_term_ord(l, r) <> GREATER andalso
+            val _ = if isperm andalso term_ord(l, r) <> GREATER andalso
                        not bounded
                     then
                       (trace(4, IGNORE("possibly looping",conditional_eqn));
@@ -221,8 +231,19 @@ fun ac_term_ord(tm1,tm2) =
             final_thm
         end
         handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
+      in
+        {legacy = fn solver => fn stack => fn tm =>
+                     apply solver stack (!stack_limit) ac_term_ord tm,
+         configured = fn {solver,stack,cond_depth,term_ord} => fn tm =>
+                         apply solver stack
+                               (case cond_depth of
+                                    NONE => !stack_limit
+                                  | SOME n => n)
+                               term_ord tm}
       end
       handle e  => WRAP_ERR("COND_REWR_CONV (construction) ",e);
+
+   fun COND_REWR_CONV nmth bounded = #legacy (COND_REWR_CONVS nmth bounded)
 
 
 val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",

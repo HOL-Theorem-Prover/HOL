@@ -1,0 +1,34 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+INCLUDES = ../../src
+EXTRA_CLEANS = selftest.exe datatypes.exe
+
+all: selftest.exe
+.PHONY: all
+
+selftest.uo: NativePrelude.uo
+selftest.exe: selftest.uo NativePrelude.uo
+	$(HOLMOSMLC) -o $@ $<
+
+datatypes.uo: NativePrelude.uo
+datatypes.exe: datatypes.uo NativePrelude.uo
+	$(HOLMOSMLC) -o $@ $<
+
+# Integration suite of the extension engine; it imports both engines, so it
+# is never linked into the ordinary selftest.
+.PHONY: check datatypes-check
+check: selftest.exe
+	./selftest.exe
+
+datatypes-check: datatypes.exe
+	./datatypes.exe
+
+# The option/pair/list cases need theories built after simp.
+# tools/sequences/base-hol reruns this directory after list/src, when they
+# are available.
+ifneq ($(wildcard $(HOLDIR)/sigobj/listTheory.uo),)
+check: datatypes-check
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: check
+endif

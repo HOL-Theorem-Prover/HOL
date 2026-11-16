@@ -1,0 +1,54 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `filter_rewrites`
+
+``` hol4
+simpExtLib.filter_rewrites :
+  ((simpExtLib.thname option * thm) -> bool) ->
+  simpExtLib.simpset -> simpExtLib.simpset
+simpExtLib.filter_rewrites_preserving_controls :
+  ((simpExtLib.thname option * thm) -> bool) ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes the rewrites that a predicate rejects from a tracked extension
+simpset. There is no corresponding ordinary `simpLib` export.
+
+`filter_rewrites keep ss` removes every rewrite `(name, th)`, as it was
+added to `ss`, for which `keep` returns false. Everything else in `ss`
+is kept, including the exclusions, limit, rewrite maker and strategy that
+rebuilding from `ssfrags_of ss` would lose. This filters fragment inputs,
+not individual compiled conjuncts; use `suspend_rewrite_sources` to suspend
+exact compiled occurrences and their views.
+
+When filtering changes the history, `filter_rewrites` replays it and resets
+declared bounded allowances. `filter_rewrites_preserving_controls` instead
+shares compatible surviving sources' actual controls with the input,
+including exhausted counters and aliases. Both return the input itself
+without replay if nothing is rejected; neither raises `Conv.UNCHANGED`.
+Removed or incompatible sources invalidate their installed views. Select
+tracked construction before installing rules; filtering cannot import an
+ordinary simpset or recover its source identities.
+
+### Failure
+
+The predicate and replay callbacks can raise exceptions.
+
+### Example
+
+``` hol4
+>> fun keep (_, th) = not (aconv (concl th) (concl AND_CLAUSES));
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>+ simpExtLib.SIMP_CONV
+      (simpExtLib.filter_rewrites keep ext_bool_ss) [] “p ∧ T”;
+>> simpExtLib.SIMP_CONV
+     (simpExtLib.filter_rewrites keep ext_bool_ss) [] “p ∨ F”;
+```
+
+### See also
+
+[`simpExtLib.clear_rules`](#simpExtLib.clear_rules),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset),
+[`simpExtLib.rewrite_source_handles`](#simpExtLib.rewrite_source_handles).

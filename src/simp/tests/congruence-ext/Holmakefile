@@ -1,0 +1,22 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+INCLUDES = ../../src
+EXTRA_CLEANS = selftest.exe ordinary.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ordinary.exe: ordinary.uo
+	$(HOLMOSMLC) -o $@ $<
+
+.PHONY: check ordinary-check
+check: selftest.exe
+	./selftest.exe
+
+# ordinary.sml inspects the loaded modules with Meta.loaded, which only
+# the Poly/ML toolchain provides.
+ordinary-check: ordinary.exe
+	./ordinary.exe
+
+ifdef POLY
+check: ordinary-check
+endif

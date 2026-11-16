@@ -1,0 +1,43 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_looper`
+
+``` hol4
+simpExtLib.add_looper : string * (simpExtLib.simpset -> tactic) ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Adds a named looper to an extension simpset.
+
+`add_looper (name, mk) ss` passes the current invocation simpset to `mk`.
+Loopers run after rewriting and final solvers leave the goal open. New names
+append; an existing name is replaced in place. A looper must fail when
+inapplicable (`Conv.UNCHANGED` also counts) and make progress when successful.
+`ExclX ("looper:" ^ name)` disables it for one invocation. Bare exclusions
+try strict rewrite/dproc lookup before strategy fallback.
+
+### Failure
+
+Never fails at installation.
+
+### Example
+
+``` hol4
+>> val c = Context.snapshot();
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.add_looper ("conj", fn _ => CONJ_TAC)
+     ext_bool_ss;
+>> simpExtLib.GEN_SIMP_TAC {safe = false} ss [] ([], “p ∧ q”) c;
+>> simpExtLib.GEN_SIMP_TAC {safe = false} ss
+     [simpExtLib.ExclX "looper:conj"] ([], “p ∧ q”) c;
+```
+
+### See also
+
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
+[`simpExtLib.del_looper`](#simpExtLib.del_looper),
+[`simpExtLib.set_looper`](#simpExtLib.set_looper),
+[`simpExtLib.looper_ss`](#simpExtLib.looper_ss),
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).

@@ -1,0 +1,54 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_unsafe_solver`
+
+``` hol4
+simpExtLib.add_unsafe_solver : TraverseExt.ssolver ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Appends a named unsafe solver unless an unsafe solver of that name is already
+installed. Solver types belong to `TraverseExt`:
+
+``` hol4
+type ssolver = {name : string, solve : simp_prover_ctxt -> term -> thm}
+type simp_prover_ctxt =
+  {stack : term list, context_thms : thm list, recurse : term -> thm}
+```
+
+`solve ctxt c` must prove `c` or raise `HOL_ERR`. `stack` holds pending side
+conditions, `context_thms` contains untagged supplied facts, selected
+assumptions and congruence context, and `recurse c` returns `|- c = c'`.
+Recursive simplification shares the invocation's supplied-rule controls.
+
+Unsafe solvers handle residual conditions after the subgoaler reduces them,
+even in safe tactic mode. They are also final solvers in unsafe mode.
+`ExclX ("solver:" ^ name)` disables both safe and unsafe solvers of that name
+for an invocation. Bare names try strict rewrite/dproc lookup first.
+
+### Failure
+
+Never fails at installation.
+
+### Example
+
+``` hol4
+>> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> simpExtLib.SIMP_CONV
+     (simpExtLib.add_unsafe_solver decide ext_bool_ss)
+     [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
+```
+
+### See also
+
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
+[`simpExtLib.add_safe_solver`](#simpExtLib.add_safe_solver),
+[`simpExtLib.set_unsafe_solvers`](#simpExtLib.set_unsafe_solvers),
+[`simpExtLib.remove_solver`](#simpExtLib.remove_solver),
+[`simpExtLib.solver_ss`](#simpExtLib.solver_ss),
+[`simpExtLib.mk_tactic_solver`](#simpExtLib.mk_tactic_solver),
+[`simpExtLib.set_subgoaler`](#simpExtLib.set_subgoaler),
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).

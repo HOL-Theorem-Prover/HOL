@@ -1,0 +1,32 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `looper_ss`
+
+``` hol4
+simpExtLib.looper_ss : string * (simpExtLib.simpset -> tactic) ->
+  simpExtLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Creates an anonymous extension fragment containing one looper. Installation
+has the same ordering and replacement behavior as `add_looper`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpExtLib.++ (simpExtLib.lift_simpset boolSimps.bool_ss,
+     simpExtLib.looper_ss ("conj", fn _ => CONJ_TAC));
+```
+
+The fragment and simpset are extension-owned from construction; an ordinary
+`simpLib.ssfrag` is not accepted here.
+
+### See also
+
+[`simpExtLib.add_looper`](#simpExtLib.add_looper),
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC).

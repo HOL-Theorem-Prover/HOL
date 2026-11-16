@@ -1,0 +1,90 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `GEN_GLOBAL_SIMP_TAC`
+
+``` hol4
+simpExtLib.GEN_GLOBAL_SIMP_TAC : simpExtLib.simp_mode ->
+  simpExtLib.xsimptac_config -> simpExtLib.simpset -> thm list -> tactic
+simpExtLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST :
+  TraverseExt.child_first_policy -> simpExtLib.simp_mode ->
+  simpExtLib.xsimptac_config -> simpExtLib.simpset -> thm list -> tactic
+simpExtLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND :
+  TraverseExt.child_first_policy -> simpExtLib.simp_mode ->
+  simpExtLib.xsimptac_config -> simpExtLib.simpset ->
+  simpExtLib.rewrite_bundle -> thm list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Simplifies assumptions and conclusion together to a fixpoint.
+
+``` hol4
+type simptac_config =
+  {strip : bool, elimvars : bool, droptrues : bool, oldestfirst : bool}
+type xsimptac_config =
+  {base : simptac_config, concl_in_fixpoint : bool,
+   imp_rebuild : bool, imp_premises : bool}
+```
+
+These configuration types belong to `simpExtLib`. `#base cfg` controls
+stripping simplified assumptions, eliminating variables by substitution,
+dropping true assumptions and processing oldest assumptions first.
+
+`GEN_GLOBAL_SIMP_TAC mode cfg ss ths` repeatedly simplifies assumptions with
+the other selected assumptions, then simplifies the conclusion with the
+solver/looper pipeline. Additional flags enable:
+
+- `concl_in_fixpoint`: simplify the conclusion after each assumption pass;
+  restart the passes if it changes.
+- `imp_premises`: first attempt root rewriting of an implicational conclusion,
+  then move antecedents into the assumptions.
+- `imp_rebuild`: try root rewrites of implications rebuilt from the conclusion
+  and assumptions (most recent first); restart after the first successful one.
+
+Child-first traversal is opt-in. Supplied rules share invocation-wide bounded
+controls across passes and branches. Solver contexts are untagged. `NoAsms`
+and `IgnAsm` are respected by both bound and unbound global paths, including
+recursive passes and options beneath bounded wrappers. The looper round
+limit is shared across all conclusion/fixpoint reentry and sibling branches
+in one invocation; applying a saved tactic again starts a fresh round budget.
+
+For `BOUND`, install the bundle exactly once in the supplied invocation
+simpset before calling the tactic. The bundle retains its untagged solver
+context. Use the last argument for local directives; do not resupply the
+bundle's rules there, which would compile them as additional rewrites.
+Local replay preserves all installed controls, including partially spent or
+exhausted ambient rules; `BOUND` never reinstalls or recompiles its bundle.
+Attached views reuse their compiled matchers and share surviving controls.
+Use an extension recipe from the start, not an ordinary simpset converted
+at this boundary.
+
+### Failure
+
+May diverge. Invalid directives and failed requirements can raise `HOL_ERR`.
+
+### Example
+
+``` hol4
+>> val c = Context.snapshot();
+>>_ val cfg : simpExtLib.xsimptac_config =
+     {base = {strip = true, elimvars = false,
+              droptrues = true, oldestfirst = true},
+      concl_in_fixpoint = true, imp_rebuild = false, imp_premises = true};
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> simpExtLib.GEN_GLOBAL_SIMP_TAC {safe = false} cfg
+     ext_bool_ss [] ([], “x = 1 ⇒ y = x ⇒ P y”) c;
+>>_ val policy = TraverseExt.charge_only (fn () => ());
+>>_ val (base,args) = simpExtLib.prepare_rewrite_arguments
+     ext_bool_ss [BoundedRewrites.Once boolTheory.AND_CLAUSES];
+>>_ val bundle = simpExtLib.prepare_rewrite_bundle base args;
+>>_ val invocation = simpExtLib.install_rewrite_bundle bundle [] base;
+>> simpExtLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND policy {safe = false}
+     cfg invocation bundle [markerLib.NoAsms] ([], “p ∧ T”) c;
+```
+
+### See also
+
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
+[`simpExtLib.xtraversedata_for_ss`](#simpExtLib.xtraversedata_for_ss),
+[`simpExtLib.prepare_rewrite_bundle`](#simpExtLib.prepare_rewrite_bundle),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset).

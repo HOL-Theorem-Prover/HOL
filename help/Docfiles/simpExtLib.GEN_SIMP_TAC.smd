@@ -1,0 +1,61 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `GEN_SIMP_TAC`
+
+``` hol4
+simpExtLib.GEN_SIMP_TAC : simpExtLib.simp_mode ->
+  simpExtLib.simpset -> thm list -> tactic
+simpExtLib.GEN_SIMP_TAC_CHILD_FIRST : TraverseExt.child_first_policy ->
+  simpExtLib.simp_mode -> simpExtLib.simpset -> thm list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Simplifies a goal, then applies an extension simpset's solvers and loopers.
+
+`GEN_SIMP_TAC {safe} ss ths` processes directives, simplifies with the
+selected assumptions, tries final solvers in order (safe if `safe`, unsafe
+otherwise), then applies the first successful looper and repeats on its
+subgoals. Unsafe solvers still handle conditional rewrite premises in safe
+mode. Final solver proofs must have the goal as conclusion and only goal
+assumptions as hypotheses. `limit n ss` allows at most `n` successful looper
+applications in the invocation.
+
+Supplied rules are bound once per invocation, sharing their actual bounded
+controls across branches, recursive passes and solver `recurse` calls.
+Solver contexts contain untagged theorems, not bounded-marker statements.
+Local directive replay preserves all installed controls, not just supplied
+rules. `NoAsms` and `IgnAsm` select assumptions again for each pass, including
+when nested under requirement or bounded wrappers. Bounds qualify directives;
+they do not turn them into rewrite rules.
+
+The child-first variant explicitly selects `TraverseExt` traversal. Both
+variants require extension sets constructed from, for example,
+`simpExtLib.lift_simpset boolSimps.bool_ss`. Conversions do not run final
+solvers or loopers.
+
+### Failure
+
+May diverge if a looper succeeds without progress and no limit is set.
+Invalid directives or failed requirement checks can raise `HOL_ERR`.
+
+### Example
+
+``` hol4
+>> val c = Context.snapshot();
+>>_ val ss = simpExtLib.add_safe_solver
+     (simpExtLib.mk_tactic_solver ("arith", DECIDE_TAC))
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>> simpExtLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”) c;
+>> simpExtLib.GEN_SIMP_TAC_CHILD_FIRST
+     (TraverseExt.charge_only (fn () => ())) {safe = false}
+     ss [markerLib.NoAsms] ([], “x < x + 1”) c;
+```
+
+### See also
+
+[`simpExtLib.add_looper`](#simpExtLib.add_looper),
+[`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
+[`simpExtLib.add_safe_solver`](#simpExtLib.add_safe_solver),
+[`simpExtLib.GEN_GLOBAL_SIMP_TAC`](#simpExtLib.GEN_GLOBAL_SIMP_TAC),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset).

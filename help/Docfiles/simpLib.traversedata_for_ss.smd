@@ -1,0 +1,52 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `traversedata_for_ss`
+
+``` hol4
+simpLib.traversedata_for_ss : simpset -> Traverse.traverse_data
+```
+
+------------------------------------------------------------------------
+
+Extracts the legacy traversal description of a simpset. Its native rewriter
+is a `Traverse.REDUCER`; supplied decision procedures retain their original
+representation. The result carries equality as its relation and the
+simpset's traversal rules and limit.
+
+Every ordinary simpset has this projection. Ordinary `simpLib` has no
+configured subgoaler, solver list, condition-depth or term-order fields,
+and needs no eligibility test or optional dispatch accessor.
+
+Extraction does not invoke collectors, recompile installed rewrites or
+reset their remaining bounded uses. The returned rewriter shares the
+installed index, matchers and actual bounded controls. Subsequent traversal
+construction and application retain the chosen Traverse entry point's
+context lifetime: `Traverse.TRAVERSE data facts` initializes private reducer
+contexts at conversion construction and reuses them on application.
+The total `simpLib.SIMP_CONV` wrapper delays construction until application;
+its lifetime must not be inferred from raw `TRAVERSE`.
+
+Configured extraction is a separate extension API:
+`simpExtLib.xtraversedata_for_ss` takes a `simpExtLib.simpset`, such as
+`simpExtLib.lift_simpset boolSimps.bool_ss`, and returns data for
+`TraverseExt.XTRAVERSE`. Consumers needing only configured reducer data
+use `#1 (simpExtLib.xtraversedata_for_ss ss)` on that extension set.
+
+### Failure
+
+Extraction does not raise a simplification failure. Constructing or
+applying the returned traversal can fail as for `Traverse.TRAVERSE`.
+
+### Example
+
+Legacy constructor inspection needs no opt-in:
+
+``` hol4
+>>_ val data = simpLib.traversedata_for_ss simpLib.empty_ss;
+>> val Traverse.REDUCER _ = hd (#rewriters data);
+>> Traverse.TRAVERSE (simpLib.traversedata_for_ss bool_ss) [] “T ∧ p”;
+```
+
+### See also
+
+[`simpExtLib.xtraversedata_for_ss`](#simpExtLib.xtraversedata_for_ss),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset).

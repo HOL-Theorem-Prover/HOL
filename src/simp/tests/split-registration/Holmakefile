@@ -1,0 +1,5 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+INCLUDES = ../../src
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<

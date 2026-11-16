@@ -1,0 +1,35 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_safe_solver`
+
+``` hol4
+simpExtLib.add_safe_solver : TraverseExt.ssolver ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Appends a named safe solver unless a safe solver of that name is installed.
+Safe solvers are final solvers of `GEN_SIMP_TAC {safe = true}` and are never
+used for side conditions. Contexts and solver types belong to `TraverseExt`.
+
+### Failure
+
+Never fails at installation.
+
+### Example
+
+``` hol4
+>> val c = Context.snapshot();
+>> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.add_safe_solver decide ext_bool_ss;
+>> simpExtLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”) c;
+```
+
+### See also
+
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
+[`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
+[`simpExtLib.set_safe_solvers`](#simpExtLib.set_safe_solvers),
+[`simpExtLib.safe_solver_ss`](#simpExtLib.safe_solver_ss).

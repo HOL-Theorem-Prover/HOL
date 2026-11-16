@@ -1,25 +1,34 @@
-+ =====================================================================	+
-|									|
-| LIBRARY	: simp							|
-|									|
-| DESCRIPTION   : A conditional/contextual Isabelle-style simplifier.	|
-|									|
-| AUTHOR	: D.R.Syme						|
-| DATE		: 1996							|
-|									|
-| MODIFIED      : R.J.Boulton						|
-| DATE		: 6 August 1996						|
-+ =====================================================================	+
+HOL4 conditional/contextual simplifier
+======================================
 
-A conditional/contextual Isabelle-style simplifier, with additional
-integration of the "ARITH" decision procedure for natural numbers.
-There is some documentation in doc/simp.tex.  Some test code is included in
-src/test.sml.
+The ordinary simplifier is simpLib/congLib, built on Traverse, Cond_rewr,
+Opening and Travrules, with the pureSimps/boolSimps/combinSimps fragments.
+Loading these does not load the extension engine, its strategy state,
+source inventories or split persistence.
 
-Structures: Simplifier, Simpsets, arith_ss, Trace, Theorems and others
+The extension engine is opt-in. Its clients use the simpExtLib/TraverseExt
+types; ordinary fragments and simpsets enter by simpExtLib.lift_ssfrag/
+lift_simpset. Configured congruence uses congExtLib; threaded factories are
+Opening.THREADED_CONGPROC and Travrules.mk_threaded_travrules; paired
+conditional compilation uses Cond_rewrExt. Both engines share TraverseCore,
+congLibFn and simpCommon.
 
-Important functions:
-   Tactics:         SIMP_TAC, ASM_SIMP_TAC, FULL_SIMP_TAC
-   Making simpsets: rewrites, mk_simpset , see examples in src/Simpsets.sml
-   Tracing:         trace_level := ...
+Documentation:
+  src/notes.md                           types, engines and controls
+  src/MANIFEST                           defining modules and dependency rules
+  tests/api-audit/Documentation.sml      executable typed examples
+  tests/simp-ext/APIExamples.sml         configured/global tactic examples
+  help/Docfiles/simpExtLib.*.smd         extension reference (repository root)
 
+From the repository root:
+  bin/Holmake --holstate="$PWD/bin/hol.state0" \
+    -C src/simp/src -j1 HOLSELFTESTLEVEL=1 all
+
+The ordinary selftest.sml does not import the extension engine. Extension
+tests, public source clients and fresh-load/persistence fixtures have
+independent processes and normal-level targets. After list theories are
+built, the normal build sequence runs tests/native-extension again,
+including the option/pair/list cases that the earlier run skips.
+
+Persistent [split] declarations require explicit splitPersistLib loading and
+Theory.add_ML_dependency "splitPersistLib" on the earliest declaring theory.

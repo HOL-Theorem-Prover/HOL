@@ -1,0 +1,32 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `safe_solver_ss`
+
+``` hol4
+simpExtLib.safe_solver_ss : TraverseExt.ssolver -> simpExtLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Creates an anonymous extension fragment containing one safe solver.
+Installing it has the same effect as `add_safe_solver`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> val c = Context.snapshot();
+>> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.++
+     (ext_bool_ss,simpExtLib.safe_solver_ss decide);
+>> simpExtLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”) c;
+```
+
+### See also
+
+[`simpExtLib.add_safe_solver`](#simpExtLib.add_safe_solver),
+[`simpExtLib.solver_ss`](#simpExtLib.solver_ss).

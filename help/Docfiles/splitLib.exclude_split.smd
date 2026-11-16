@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `exclude_split`
+
+``` hol4
+splitLib.exclude_split : string -> unit
+```
+
+------------------------------------------------------------------------
+
+Persistently retracts a named split rule from the library-owned private store.
+
+The argument is `"Thy.Name"`, or `"Name"` for the current theory. It is
+resolved when written, not when a descendant replays it. For example,
+`splitLib.exclude_split "mySplits.rule"` retracts that ancestor rule without
+removing a descendant's identically named theorem. The key shown by
+`named_split_thms` is the corresponding kernel name `"mySplits$rule"`;
+use dot-qualified names, not display keys, as arguments to this function.
+
+The operation updates the current persistent store and exports a REMOVE
+for descendant replay. Retracting an absent name is harmless. It does not
+delete the theorem from the database. Add rules with an explicitly enabled
+`[split]` attribute. Initialization and fresh-import ordering are described
+under `splitLib.enable_split_attribute`.
+
+Unlike `simpExtLib.del_split` and `ExclX "split:Thy$Name"`, this is persistent
+rather than an exclusion in a local simpset. It requires the registration to
+be enabled and never initializes or adopts a foreign set.
+Queries return no persistent rules before opt-in; local and TypeBase
+splitting remain available without it.
+
+### Failure
+
+Fails without mutation if registration is absent, or if the name is
+malformed. Also rejects retractions
+inside a pinned context rather than writing to a different live context.
+
+### See also
+
+[`splitLib.enable_split_attribute`](#splitLib.enable_split_attribute),
+[`simpExtLib.del_split`](#simpExtLib.del_split),
+[`simpExtLib.split_ss`](#simpExtLib.split_ss).

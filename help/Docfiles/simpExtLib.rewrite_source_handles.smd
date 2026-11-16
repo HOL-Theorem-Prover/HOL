@@ -1,0 +1,78 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `rewrite_source_handles`
+
+``` hol4
+simpExtLib.rewrite_source_handles :
+  simpExtLib.simpset -> simpExtLib.rewrite_source list
+simpExtLib.source_rewrite :
+  simpExtLib.rewrite_source -> simpExtLib.thname option * thm
+simpExtLib.same_rewrite_source :
+  simpExtLib.rewrite_source * simpExtLib.rewrite_source -> bool
+simpExtLib.rewrite_source_compare :
+  simpExtLib.rewrite_source * simpExtLib.rewrite_source -> order
+simpExtLib.rewrite_views :
+  (simpExtLib.rewrite_source * thm) list -> simpExtLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Inspects native compiled rewrite occurrences in an already tracked simpset.
+Handles distinguish duplicate installations, AC components and compiled
+conjuncts; they are not merely theorem names or equality of conclusions.
+Installed views are omitted. Conversions and internals of opaque lifted
+reducers are not source inventories. Inspection does not replay history,
+invoke makers/collectors, compile rules, emit compilation traces or create
+new rewrite allowances.
+
+`source_rewrite` returns the compiled rule and its optional kernel name.
+`same_rewrite_source` tests occurrence compatibility across history replay;
+`rewrite_source_compare` gives stable origin order, but comparison alone
+is not a compatibility test.
+
+`rewrite_views [(source, th)]` makes an extension fragment of aliases.
+An installed compatible view shares the source's exact compiled name and
+actual remaining allowance, including exhaustion. Replay keeps it only
+while the source survives with a compatible compiled statement. Removing,
+filtering or suspending that source disables its views, even if their
+history event remains. A view is not an independently budgeted rewrite.
+
+`suspend_rewrite_sources handles ss` suspends exact active compiled
+occurrences and their attached views; other conjuncts keep their names and
+remaining allowances. Missing/incompatible handles leave the set unchanged.
+`rewrite_context_changes (old, current)` reports changed conversion keys,
+a `rebuild` flag and `context_sensitive` dependencies. Invalidation of an
+installed view's source requires rebuilding; compatible replay or quota
+consumption alone does not. Native rule changes must also be checked
+through source handles, not just the returned conversion keys.
+
+### Construction caveat
+
+Start with `simpExtLib` recipes before installing source-sensitive rules.
+Lifting or recompiling recipes cannot recover spent quotas, and
+`ssfrags_of` alone loses history. Use `prepare_rewrite_arguments` before
+inspecting theorem-list directives; `rewrite_sources ss ths` is read-only
+and rejects directives rather than applying them implicitly.
+
+### Failure
+
+Invalid views can fail at construction or installation. User callbacks in
+subsequent history operations may raise exceptions.
+
+### Example
+
+``` hol4
+>>_ val ss : simpExtLib.simpset = simpExtLib.++
+     (simpExtLib.lift_simpset pureSimps.pure_ss,
+      simpExtLib.rewrites [BoundedRewrites.Once boolTheory.AND_CLAUSES]);
+>>_ val sources : simpExtLib.rewrite_source list =
+     simpExtLib.rewrite_source_handles ss;
+>> List.all (fn source => simpExtLib.same_rewrite_source (source, source))
+     sources;
+```
+
+### See also
+
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset),
+[`simpExtLib.prepare_rewrite_bundle`](#simpExtLib.prepare_rewrite_bundle),
+[`simpExtLib.filter_rewrites`](#simpExtLib.filter_rewrites).

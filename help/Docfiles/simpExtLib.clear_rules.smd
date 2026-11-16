@@ -1,0 +1,33 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `clear_rules`
+
+``` hol4
+simpExtLib.clear_rules : simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes rewrites, conversions, congruences, decision procedures, loopers and
+fragments, retaining the rewrite maker, limit, solvers, subgoaler, condition
+depth and term order. `simpExtLib.SIMP_TAC (clear_rules ss) ths` therefore
+simplifies with `ths` alone under the retained settings.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>+ simpExtLib.SIMP_CONV
+      (simpExtLib.clear_rules ext_bool_ss) [] “p ∧ T”;
+>> simpExtLib.SIMP_CONV (simpExtLib.clear_rules ext_bool_ss)
+     [boolTheory.AND_CLAUSES] “p ∧ T”;
+```
+
+### See also
+
+[`simpExtLib.set_cond_depth`](#simpExtLib.set_cond_depth),
+[`simpExtLib.set_subgoaler`](#simpExtLib.set_subgoaler).

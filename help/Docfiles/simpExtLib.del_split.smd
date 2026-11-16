@@ -1,0 +1,37 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `del_split`
+
+``` hol4
+simpExtLib.del_split : string -> simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes local split loopers. `del_split name ss` removes `split name` and
+`split_asm name`; a name already beginning with one of those prefixes removes
+only that looper. Missing names leave the set unchanged.
+
+Persistent attribute rules are unaffected. Use `ExclX ("split:" ^ name)` for
+invocation-local suppression, or `splitLib.exclude_split "Thy.Name"` after
+explicit registration for persistent retraction. Local removal requires no
+registration.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.add_split (splitLib.type_split_of “:'a option”)
+     ext_bool_ss;
+>>_ val without_option = simpExtLib.del_split "option$option_CASE" ss;
+```
+
+### See also
+
+[`splitLib.exclude_split`](#splitLib.exclude_split),
+[`simpExtLib.add_split`](#simpExtLib.add_split),
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).
