@@ -3020,10 +3020,15 @@ fun test_holyHammer_e () =
                 val _ = remove_tree root
                 val _ = mkdir root
                 val add1 = DB.fetch "arithmetic" "ADD1"
+                val output = OS.Path.concat (root, "stdout")
+                fun call () =
+                  (ignore (holyHammer.hh_pb root ["e"]
+                     ["arithmeticTheory.ADD1"] (Thm.dest_thm add1));
+                   TextIO.flushOut TextIO.stdOut)
                 val success =
                   ((holyHammer.set_timeout 10;
-                    ignore (holyHammer.hh_pb root ["e"]
-                      ["arithmeticTheory.ADD1"] (Thm.dest_thm add1));
+                    TextIO.flushOut TextIO.stdOut;
+                    smlRedirect.hide_in_file output call ();
                     true)
                    handle Interrupt =>
                      raise Interrupt
@@ -3032,9 +3037,22 @@ fun test_holyHammer_e () =
                         | exn =>
                      (print (General.exnMessage exn ^ "\n"); false))
                 val _ = hhConfig.hh_unset "timeout"
+                val printed =
+                  if success then aiLib.readl output else []
                 val _ = remove_tree root
+                (* The tactic to use is the last thing printed, after
+                   every slice has reported. *)
+                val announced_last =
+                  case List.rev printed of
+                      tactic :: heading :: _ =>
+                        heading = "Replace `hh_pb` with:" andalso
+                        String.isPrefix "  " tactic andalso
+                        String.isSubstring "ADD1" tactic
+                    | _ => false
               in
-                expect "holyHammer hh_pb end-to-end e" success
+                expect "holyHammer hh_pb end-to-end e" success;
+                expect "holyHammer hh_pb ends with the tactic to use"
+                  announced_last
               end
 
 (* Metis replays the lemma lists below in milliseconds, or runs until
