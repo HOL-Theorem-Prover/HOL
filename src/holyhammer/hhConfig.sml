@@ -319,7 +319,8 @@ val option_specs : option_spec list =
     valid = positive_int},
    {name = "mono_instances", default = fn () => "",
     expected = "empty or a positive integer",
-    doc = "new monomorphization-instance cap (empty means per-prover)",
+    doc = "new monomorphization-instance cap (empty: the slice's fact " ^
+          "count, at least the prover's own cap)",
     valid = optional_positive_int},
    {name = "minimize", default = fn () => "true",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",

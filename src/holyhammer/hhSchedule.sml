@@ -123,8 +123,17 @@ fun distinct_problem_slices slices =
     collect [] slices
   end
 
-fun mono_instances options config =
-  Option.getOpt (#mono_instances options, #mono_instances config)
+(* The cap on new monomorphic instances.  The monomorphiser instantiates
+   the facts in rank order and drops a polymorphic fact that gets no
+   instance, and it makes about one instance per fact, so a cap below the
+   slice's fact count silently cuts its lowest-ranked polymorphic facts:
+   at the prover's own 256, a 512-fact slice for SORTED $<= l ==>
+   isort l = l lost SORTED_PERM_EQ (ranked 158).  The prover's cap is
+   therefore only a floor.  An explicit mono_instances is used as is. *)
+fun mono_instances options config (slice : hhProver.slice) =
+  case #mono_instances options of
+      SOME cap => cap
+    | NONE => Int.max (#mono_instances config, #nfacts slice)
 
 (* This function is called before any scheduler thread is created.  Both
    thml_of_namel and the exporters touch HOL process-global state. *)
@@ -187,7 +196,7 @@ fun export_problems root options goal rankings schedule =
               hhProblemGen.export_pb_in memo
                 {format = format, type_enc = type_enc, lam_trans = lam_trans,
                  mono_iters = #mono_iters options,
-                 mono_instances = mono_instances options config}
+                 mono_instances = mono_instances options config slice}
                 (problem_path root slice) (conjecture, named)
       end
   in

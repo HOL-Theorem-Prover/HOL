@@ -3748,6 +3748,50 @@ fun test_schedule_knn_anchor_export () =
     remove_tree root
   end
 
+(* The monomorphiser makes about one instance per fact and drops a
+   polymorphic fact that gets none, so a prover's instance cap below the
+   slice's fact count used to cut the lowest-ranked facts. *)
+fun test_schedule_mono_cap_export () =
+  let
+    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val {name, exec_names, env_var, version_args, parse_version,
+         tested_versions, supported_formats, mk_command, parse_output,
+         slices, legacy, ...} = prover "e"
+    val small_cap : hhProver.prover_config =
+      {name = name, exec_names = exec_names, env_var = env_var,
+       version_args = version_args, parse_version = parse_version,
+       tested_versions = tested_versions,
+       supported_formats = supported_formats, mk_command = mk_command,
+       parse_output = parse_output, mono_instances = 2, slices = slices,
+       legacy = legacy}
+    val facts = ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND",
+                 "REVERSE_APPEND"]
+    val slice : hhProver.slice =
+      {prover = name, format = "tx0-", type_enc = "mono_native_fool",
+       lam_trans = "lifting", nfacts = length facts, filter = "knn",
+       extra_opts = [], slice_size = 1}
+    val options : hhConfig.hh_options =
+      {timeout = 5, max_proofs = 1, provers = [name], slices = 1,
+       cores = 1, filter = "knn", max_facts = NONE, format = "",
+       type_enc = "", lam_trans = "", mono_iters = 3,
+       mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
+       minimize_timeout = 1.0, cache = false, cache_dir = "",
+       cache_max_entries = 100, debug_dir = NONE}
+    val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = LENGTH (REVERSE [1; 2n])``)
+    val _ = smlRedirect.hidef (hhSchedule.export_problems root options goal
+      [("knn", map (fn fact => "listTheory." ^ fact) facts)])
+      [(small_cap, slice)]
+    val problem =
+      String.concat (read_lines (hhSchedule.problem_path root slice))
+    fun exported fact =
+      String.isSubstring ("thm_2ElistTheory_2E" ^
+        String.translate (fn #"_" => "__" | c => str c) fact) problem
+    val _ = expect "a prover's mono cap does not cut a slice's facts"
+      (List.all exported facts)
+  in
+    remove_tree root
+  end
+
 fun test_with_problem_dir () =
   let
     val parent = OS.FileSys.tmpName ()
@@ -3909,6 +3953,7 @@ fun test_hhSchedule () =
 val _ = test_with_problem_dir ()
 val _ = test_schedule_export_wiring ()
 val _ = test_schedule_knn_anchor_export ()
+val _ = test_schedule_mono_cap_export ()
 val _ = test_hhSchedule ()
 
 fun test_main_hh_lemmas_hook parser =

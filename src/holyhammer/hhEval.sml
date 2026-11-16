@@ -710,7 +710,7 @@ fun json_corpus_entry {thy, theorem_count, dep_stamp} =
 
 (* Preserve effective values across fresh worker processes.  The default
    mono_instances value is special: setting it would impose an explicit cap
-   instead of allowing each prover's own cap. *)
+   instead of allowing the default per-slice cap. *)
 fun eval_hammer_options () =
   List.mapPartial (fn (key, value, source) =>
     if key = "mono_instances" andalso source = "default" then NONE
