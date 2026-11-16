@@ -917,29 +917,38 @@ local
         SOME n =>
            Arbint.negate (Arbint.fromNat (wordsSyntax.dest_word_literal n))
       | NONE => Arbint.fromNat (wordsSyntax.dest_word_literal t)
-   fun gen_is_negative pick_word_l tm =
+   (* classify may decide the sign tests for a known-size literal without
+      evaluation; NONE falls back to evaluating them *)
+   fun gen_is_negative classify pick_word_l tm =
       if is_known_word_size tm
-         then is_negative tm andalso (pick_word_l orelse not (is_eq_word_L tm))
+         then case classify tm of
+                 SOME {negative, minimum} =>
+                    negative andalso (pick_word_l orelse not minimum)
+               | NONE =>
+                    is_negative tm andalso
+                    (pick_word_l orelse not (is_eq_word_L tm))
       else Arbint.<= (gen_dest_word_literal tm, Arbint.fromInt ~1)
    fun is_zero tm =
      case Lib.total gen_dest_word_literal tm of
         SOME i => i = Arbint.zero
       | NONE => false
-   fun pick_left_coeff x z =
+   fun pick_left_coeff classify x z =
       if is_known_word_size x
-         then gen_is_negative false (wordsSyntax.mk_word_sub (x, z))
+         then gen_is_negative classify false (wordsSyntax.mk_word_sub (x, z))
       else Arbint.< (gen_dest_word_literal x, gen_dest_word_literal z)
    fun partition_same t l = List.partition (fn (_, y) => y ~~ t) l
-   fun pick_coeff_terms a =
-      fn ([], l) => a @ List.filter (gen_is_negative true o fst) l
+   fun pick_coeff_terms classify a =
+      fn ([], l) => a @ List.filter (gen_is_negative classify true o fst) l
        | ((x, y) :: t, l) =>
          (case partition_same y l of
              ([], _) =>
-               pick_coeff_terms
-                 (if gen_is_negative false x then (x, y) :: a else a) (t, l)
+               pick_coeff_terms classify
+                 (if gen_is_negative classify false x then (x, y) :: a else a)
+                 (t, l)
            | ([(z, _)], r) =>
-               pick_coeff_terms
-                 ((if pick_left_coeff x z then x else z, y) :: a) (t, r)
+               pick_coeff_terms classify
+                 ((if pick_left_coeff classify x z then x else z, y) :: a)
+                 (t, r)
            | _ => raise ERR "pick_coeff_terms" "")
    fun join_coeff_terms (z as (_, y)) l =
       if Lib.all (fn (_, x) => x !~ y) l then z::l
@@ -977,14 +986,18 @@ local
      Term.compare (wordsSyntax.mk_word_mul x, wordsSyntax.mk_word_mul y)
    val is_lit_coeff = fn [r] => wordsSyntax.is_word_literal (snd r)
                        | _ => false
-   fun is_word_L_lit tm = is_word_literal tm andalso is_eq_word_L tm
-   fun swap_sides l =
+   fun is_word_L_lit classify tm =
+      is_word_literal tm andalso
+      (case classify tm of
+          SOME {minimum, ...} => minimum
+        | NONE => is_eq_word_L tm)
+   fun swap_sides classify l =
       fn [] => false
        | r =>
           not (is_lit_coeff r)
           andalso
              let
-                val (xl, fl) = List.partition (is_word_L_lit o fst) l
+                val (xl, fl) = List.partition (is_word_L_lit classify o fst) l
              in
                 if List.null xl
                    then case Int.compare (List.length l, List.length r) of
@@ -999,7 +1012,7 @@ local
                      | GREATER => true
              end
 in
-   fun WORD_CANCEL_CONV0 tm =
+   fun WORD_CANCEL_CONV0 classify tm =
    let
       val (l, r) = boolSyntax.dest_eq tm
       val _ = wordsSyntax.is_word_type (Term.type_of l)
@@ -1009,8 +1022,8 @@ in
       val l = if is_zero l then [] else get_coeff_terms [] l
       val r = if is_zero r then [] else get_coeff_terms [] r
    in
-      case pick_coeff_terms [] (l, r) of
-         [] => if swap_sides l r
+      case pick_coeff_terms classify [] (l, r) of
+         [] => if swap_sides classify l r
                   then Conv.REWR_CONV boolTheory.EQ_SYM_EQ tm
                else raise ERR "WORD_CANCEL_CONV" "Nothing to cancel"
        | ps => (List.foldl
@@ -1084,18 +1097,20 @@ fun normsubs t =
      RAND_CONV (REWR_CONV WORD_NEG_LMUL THENC
                 PURE_REWRITE_CONV [WORD_MULT_RID, WORD_NEG_NEG]) THENC
      TRY_CONV (LAND_CONV normsubs)) t
-val WORD_CANCEL_CONV =
-    WORD_CANCEL_CONV0 THENC
+fun WORD_CANCEL_CONV_WITH classify =
+    WORD_CANCEL_CONV0 classify THENC
     BINOP_CONV (TRY_CONV (normsubs THENC WORD_ADD_CANON_CONV))
-val WORD_CANCEL_ss =
+val WORD_CANCEL_CONV = WORD_CANCEL_CONV_WITH (K NONE)
+fun WORD_CANCEL_ss_WITH classify =
    simpLib.named_merge_ss "word cancel"
      [simpLib.rewrites
         [WORD_LEFT_ADD_DISTRIB, WORD_RIGHT_ADD_DISTRIB,
          WORD_NOT, hd (CONJUNCTS SHIFT_ZERO)],
       simpLib.std_conv_ss
-        {conv = WORD_CANCEL_CONV,
+        {conv = WORD_CANCEL_CONV_WITH classify,
          name = "WORD_CANCEL_CONV",
          pats = [``w = y :'a word``]}]
+val WORD_CANCEL_ss = WORD_CANCEL_ss_WITH (K NONE)
 
 val WORD_ABS_ss =
    simpLib.rewrites

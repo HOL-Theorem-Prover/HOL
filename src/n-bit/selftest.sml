@@ -702,4 +702,33 @@ val _ = convtest
    computeLib.CBV_CONV wordsLib.words_compset,
    “ALL_DISTINCT [NONE : num option]”, “T”)
 
+(* WORD_CANCEL_CONV_WITH consults the caller's classifier and, given a
+   correct one, agrees with WORD_CANCEL_CONV. *)
+local
+  fun eval_classify calls tm =
+    let
+      fun holds t = can EQT_ELIM (wordsLib.WORD_EVAL_CONV t)
+      val L = wordsSyntax.mk_word_L (wordsSyntax.dim_of tm)
+    in
+      calls := !calls + 1;
+      SOME {negative = holds (wordsSyntax.mk_word_msb tm),
+            minimum = holds (mk_eq (tm, L))}
+    end
+  fun check tm =
+    let
+      val calls = ref 0
+      val conv = wordsLib.WORD_CANCEL_CONV_WITH (eval_classify calls)
+      val expected = concl (wordsLib.WORD_CANCEL_CONV tm)
+    in
+      tprint ("WORD_CANCEL_CONV_WITH: " ^ term_to_string tm);
+      require_msg
+        (check_result (fn th => aconv (concl th) expected andalso !calls > 0))
+        thm_to_string conv tm
+    end
+in
+  val _ = List.app check
+    [“3w * a + b = a + b : word8”, “a + 255w * b = a : word8”,
+     “a + b = 128w * a + b : word8”]
+end
+
 val _ = OS.Process.exit OS.Process.success
