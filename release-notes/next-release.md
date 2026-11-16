@@ -220,6 +220,11 @@ Bugs fixed
     A theory's ancestor sets are now built when its data is first read, and kept as bit vectors; on a theory with 3,832 ancestors, the live heap after loading them falls from 1,756 MB to 1,066 MB.
     What is merged, and in what order, is unchanged, except that a loaded theory whose recorded ancestry names the theory itself (as after `set_grammar_ancestry [current_theory(), "bool"]`) now gets its own value; before, it had none.
 
+-   Loading a theory compiled its compute theorems and datatypes into the global compset (the rewrites `EVAL` uses), and `Define` and `Datatype` added to it, even in sessions that never evaluate.
+    Updates to the global compset are now delayed and applied in order the first time it is read (`EVAL`, `computeLib.the_compset`), so a session that never evaluates never builds it.
+    An update now runs at that first read rather than when it is made, so it should depend only on the compset it is given.
+    An update that fails now raises when the compset is read rather than from the call that made it, and is retried at each later read until `computeLib.put_compset` replaces the compset.
+
 -   `DefnBase.current_userdefs` and `DefnBase.thy_userdefs` failed with a `prim_mk_const` error in any session that had defined a function with recursion or complex patterns.
     TFL registers the support definitions it makes on the way (the `_tupled` one, for example) as user definitions and then deletes their constants once the real definition is made, so the table of user definitions kept entries for constants that no longer existed.
     Such entries are now skipped.

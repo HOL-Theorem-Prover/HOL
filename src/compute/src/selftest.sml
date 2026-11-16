@@ -2,6 +2,19 @@ open testutils HolKernel Parse boolLib computeLib
 
 val _ = new_theory "scratch"
 
+(* Runs before the first read of the global compset.  new_compset shares
+   bool_compset's entries, so a compset built from it can extend them;
+   that must not reach the global compset. *)
+val _ = tprint "Checking new_compset rules stay out of the global compset"
+val _ = new_compset [mk_thm ([], “ARB = T”),
+                     mk_thm ([], “((p:bool) = ARB) = F”)]
+val _ = let val t = “(q:bool) = ARB”
+        in
+          if (rhs (concl (CBV_CONV (the_compset ()) t)) ~~ t
+              handle Conv.UNCHANGED => true)
+          then OK() else die ""
+        end
+
 val _ = tprint "Checking monitoring output goes to Feedback MESG"
 
 fun capture_mesg f x =
@@ -256,3 +269,32 @@ val _ = check "Checking a progressing add_conv result is used"
               (Rewrite.REWRITE_CONV [boolTheory.AND_CLAUSES]) []
               “T /\ p” “p:bool” 1
 end
+
+(* The global compset applies delayed updates on its first read *)
+local
+  val applied = ref 0
+  fun count cs = (applied := !applied + 1; cs)
+  fun check name b = (tprint name; if b then OK() else die "")
+in
+val _ = upd_compset count
+val _ = check "Checking a global compset update waits for a read"
+              (!applied = 0)
+val _ = the_compset ()
+val _ = check "Checking a read applies a delayed update once"
+              (!applied = 1 andalso (the_compset (); !applied = 1))
+end
+
+(* A compute theorem the compset can't take is refused when it is stored *)
+val _ = save_thm ("bad_compute", ASSUME “f (x:bool) = (y:bool)”)
+val _ = tprint "Checking a hypothetical compute theorem is refused"
+val _ = if can add_persistent_funs ["bad_compute"] then die ""
+        else if can EVAL “T /\ F” then OK() else die "EVAL broke"
+val _ = save_thm ("neg_eq_compute", mk_thm ([], “(~p = ~q) = (p = q)”))
+val _ = add_persistent_funs ["neg_eq_compute"]
+val _ = tprint "Checking the store-time check leaves new compsets alone"
+val _ = let val t = “~a = ~b”
+        in
+          if (rhs (concl (CBV_CONV (new_compset []) t)) ~~ t
+              handle Conv.UNCHANGED => true)
+          then OK() else die ""
+        end
